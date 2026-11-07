@@ -3,11 +3,13 @@
 #include "Engine/Sequencer/SequenceAsset.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Sequencer/SequenceSpanTracks.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 
@@ -17,6 +19,50 @@ namespace sw
 {
     namespace
     {
+        constexpr uint16 kFieldBinding  = makeSequenceFieldBit( SequenceItemField::Binding );
+        constexpr uint16 kFieldPrefab   = makeSequenceFieldBit( SequenceItemField::Prefab );
+        constexpr uint16 kFieldPreset   = makeSequenceFieldBit( SequenceItemField::Preset );
+        constexpr uint16 kFieldScenario = makeSequenceFieldBit( SequenceItemField::Scenario );
+        constexpr uint16 kFieldClip     = makeSequenceFieldBit( SequenceItemField::Clip );
+        constexpr uint16 kFieldSound    = makeSequenceFieldBit( SequenceItemField::Sound );
+        constexpr uint16 kFieldText     = makeSequenceFieldBit( SequenceItemField::Text );
+
+        /**
+         * @brief 항목 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceItemKind` 값 순서입니다.** 종류의 칸 · 재생 동작 · 색은 이 줄이 전부다.
+         * @details 칸: 필수(`_requiredFields`)는 비면 읽기 오류, 허용(`_allowedFields`) 밖의 칸이 차 있어도 읽기 오류다 — 다른 종류의 칸이 남은 파일은 무엇을 뜻하는지 모른다.
+         *          이벤트 · 시나리오는 대상이 없어도 된다(알림만 한다). 소리는 대상이 없으면 화면 소리다. 자막은 대상이 화자다(없으면 화자 없이).
+         *          구간 처리기가 있는 종류는 재생 · 미리보기가 들어가기 · 머물기 · 나가기를 그 처리기로 돈다(`SequenceTimelineUtil::applySpans`) — 새 구간 종류는 처리기 하나와 이 줄 하나다.
+         */
+        constexpr SequenceItemKindInfo kArrSequenceItemKindInfo[] = {
+            // 종류, 색, 필수 칸, 허용 칸, 구간 처리기, 대상 켬, 지날 때 알림, 컷, 흔들림, 스폰, 시나리오
+            {       SequenceItemKind::Clip, 0xFF80AA80u,                kFieldBinding,                  kFieldBinding,                        nullptr,  true, false, false, false, false, false},
+            {      SequenceItemKind::Event, 0xFF8080AAu,                           0u,                  kFieldBinding,                        nullptr, false,  true, false, false, false, false},
+            {  SequenceItemKind::CameraCut, 0xFFAA80AAu,                kFieldBinding,   kFieldBinding | kFieldPreset,                        nullptr, false, false,  true, false, false, false},
+            {SequenceItemKind::CameraShake, 0xFF80A0C0u,                kFieldBinding,                  kFieldBinding,                        nullptr, false, false, false,  true, false, false},
+            {      SequenceItemKind::Spawn, 0xFF80C0A0u, kFieldBinding | kFieldPrefab,   kFieldBinding | kFieldPrefab,                        nullptr, false, false, false, false,  true, false},
+            { SequenceItemKind::Appearance, 0xFFC0A070u, kFieldBinding | kFieldPreset,   kFieldBinding | kFieldPreset,                        nullptr, false,  true, false, false, false, false},
+            {   SequenceItemKind::Scenario, 0xFF70A0C0u,               kFieldScenario, kFieldBinding | kFieldScenario,                        nullptr, false,  true, false, false, false, false},
+            {  SequenceItemKind::Animation, 0xFFA0A060u,   kFieldBinding | kFieldClip,     kFieldBinding | kFieldClip, &kSequenceAnimationSpanHandler, false, false, false, false, false, false},
+            {      SequenceItemKind::Audio, 0xFF6080C0u,                  kFieldSound,    kFieldBinding | kFieldSound,     &kSequenceAudioSpanHandler, false, false, false, false, false, false},
+            {   SequenceItemKind::Subtitle, 0xFFB0B0B0u,                   kFieldText,     kFieldBinding | kFieldText,  &kSequenceSubtitleSpanHandler, false, false, false, false, false, false},
+        };
+
+        static_assert( SW_COUNT_OF( kArrSequenceItemKindInfo ) == static_cast<size_t>( SequenceItemKind::Count ), "SequenceItemKind 를 늘렸으면 kArrSequenceItemKindInfo 에도 줄을 더할 것" );
+
+        /** @brief 종류 표가 값 순서이고 필수 칸이 허용 칸 안인지 확인합니다. `findItemKindInfo` 가 값으로 바로 찾습니다. */
+        constexpr bool isKindTableOrdered()
+        {
+            for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( kArrSequenceItemKindInfo ); ++kindIndex )
+            {
+                const SequenceItemKindInfo& info = kArrSequenceItemKindInfo[kindIndex];
+                if ( info._kind != static_cast<SequenceItemKind>( kindIndex ) || ( info._requiredFields & ~info._allowedFields ) != 0 )
+                    return false;
+            }
+            return true;
+        }
+
+        static_assert( isKindTableOrdered(), "kArrSequenceItemKindInfo must be ordered by SequenceItemKind and its required fields must be allowed" );
+
         /** @brief 프레임 번호가 `kSequenceFrameLimit` 안이면 true 입니다. 밖이면 오류를 남깁니다(@p pWhat 은 칸 이름). */
         bool isFrameWithinLimit( float64 frame, string_view sourceLabel, const utf8* pWhat )
         {
@@ -41,19 +87,6 @@ namespace sw
             }
             (void)curve.addKey( frame, value );
         }
-
-        /** @brief 종류 테이블이 값 순서인지 확인합니다. `findItemKindInfo` 가 값으로 바로 찾습니다. */
-        constexpr bool isKindTableOrdered()
-        {
-            for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( kArrSequenceItemKindInfo ); ++kindIndex )
-            {
-                if ( kArrSequenceItemKindInfo[kindIndex]._kind != static_cast<SequenceItemKind>( kindIndex ) )
-                    return false;
-            }
-            return true;
-        }
-
-        static_assert( isKindTableOrdered(), "kArrSequenceItemKindInfo must be ordered by SequenceItemKind" );
     } // namespace
 } // namespace sw
 
@@ -123,12 +156,33 @@ namespace sw
         return true;
     }
 
+    bool SequenceAsset::validateBindings( string_view sourceLabel ) const
+    {
+        bool                  bValid = true;
+        unordered_set<uint32> setID;
+        for ( const SequenceBinding& binding : _listBinding )
+        {
+            if ( binding._id == kSequenceNoBinding || binding._id >= _nextBindingID )
+            {
+                SW_LOG_ERROR_ID( "SequenceAsset.BindingIDRange", "Sequence '%#': binding '%#' id %# must be 1 or more and below _nextBindingID %#", sourceLabel, binding._name, binding._id, _nextBindingID );
+                bValid = false;
+            }
+            if ( setID.insert( binding._id ).second == false )
+            {
+                SW_LOG_ERROR_ID( "SequenceAsset.BindingIDDuplicate", "Sequence '%#': binding id %# appears twice ('%#')", sourceLabel, binding._id, binding._name );
+                bValid = false;
+            }
+        }
+        return bValid;
+    }
+
     bool SequenceAsset::validateFile( string_view sourceLabel ) const
     {
         // 프레임 번호는 `kSequenceFrameLimit` 안이어야 아래의 `+ 1` 과 재생 · 타임라인 쪽의 뺄셈들이 넘치지 않는다.
         bool bValid = isFrameWithinLimit( _frameMin, sourceLabel, "_frameMin" );
         bValid      = isFrameWithinLimit( _frameMax, sourceLabel, "_frameMax" ) && bValid;
         bValid      = isFrameWithinLimit( _cameraPrerollFrames, sourceLabel, "_cameraPrerollFrames" ) && bValid;
+        bValid      = validateBindings( sourceLabel ) && bValid;
         if ( _frameMax <= _frameMin )
         {
             SW_LOG_ERROR_ID( "Sequence.FrameOrder", "Sequence '%#': _frameMax %# must be after _frameMin %#", sourceLabel, _frameMax, _frameMin );
@@ -144,7 +198,8 @@ namespace sw
                 SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemPrerollFramesMust", "Sequence '%#': item '%#' _prerollFrames %# must be 0 or more (-1: the sequence value)", sourceLabel, item._name, item._prerollFrames );
                 bValid = false;
             }
-            const SequenceItemFieldIssue issue = item.findFieldIssue();
+            SequenceItemField            field = SequenceItemField::Count;
+            const SequenceItemFieldIssue issue = item.findFieldIssue( &field );
             switch ( issue )
             {
                 case SequenceItemFieldIssue::None:
@@ -156,25 +211,33 @@ namespace sw
                     SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemNoItem", "Sequence '%#': item '%#' has no item kind", sourceLabel, item._name );
                     break;
                 }
-                case SequenceItemFieldIssue::SpawnParams:
+                case SequenceItemFieldIssue::MissingField:
+                case SequenceItemFieldIssue::FieldNotAllowed:
                 {
-                    SW_LOG_ERROR_ID( "SequenceAsset.SequenceSpawnItemNeeds", "Sequence '%#': spawn item '%#' needs both _prefab and _targetObject", sourceLabel, item._name );
-                    break;
-                }
-                case SequenceItemFieldIssue::PresetParams:
-                {
-                    SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemNeedsBoth", "Sequence '%#': item '%#' needs both a target object and a preset for its kind", sourceLabel, item._name );
-                    break;
-                }
-                case SequenceItemFieldIssue::ScenarioMissing:
-                case SequenceItemFieldIssue::ScenarioNotAllowed:
-                {
-                    SW_LOG_ERROR_ID( "SequenceAsset.SequenceScenarioField", "Sequence '%#': item '%#' - _scenario is %# for its kind", sourceLabel, item._name,
-                                     issue == SequenceItemFieldIssue::ScenarioMissing ? "required" : "not allowed" );
+                    SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemField", "Sequence '%#': item '%#' - %# is %# for its kind", sourceLabel, item._name, SequenceTrackItem::getFieldPropertyName( field ),
+                                     issue == SequenceItemFieldIssue::MissingField ? "required" : "not allowed" );
                     break;
                 }
             }
             bValid = issue == SequenceItemFieldIssue::None && bValid;
+            if ( item._binding != kSequenceNoBinding && findBinding( item._binding ) == nullptr )
+            {
+                SW_LOG_ERROR_ID( "SequenceAsset.ItemBindingUnknown", "Sequence '%#': item '%#' refers to binding %# that the sequence does not have", sourceLabel, item._name, item._binding );
+                bValid = false;
+            }
+        }
+        // 스폰 바인딩은 시퀀스가 채운다 — 둘이 같은 바인딩을 스폰하면 어느 오브젝트가 그 바인딩인지 정할 수 없다.
+        unordered_set<uint32> setSpawned;
+        for ( const SequenceTrackItem& item : _listItem )
+        {
+            const SequenceItemKindInfo* pInfo = findItemKindInfo( item._kind );
+            if ( pInfo == nullptr || pInfo->_bSpawns == false || item._binding == kSequenceNoBinding )
+                continue;
+            if ( setSpawned.insert( item._binding ).second == false )
+            {
+                SW_LOG_ERROR_ID( "SequenceAsset.SpawnBindingTwice", "Sequence '%#': two spawn items fill binding %# - each spawned object needs its own binding", sourceLabel, item._binding );
+                bValid = false;
+            }
         }
         for ( const SequenceKeyTrack& track : _listTrack )
         {
@@ -183,6 +246,11 @@ namespace sw
             {
                 SW_LOG_ERROR_ID( "SequenceAsset.SequenceTrackNeedsChannel", "Sequence '%#': track '%#' needs %# channel(s) for its kind, has %#", sourceLabel, track._name, channelCount,
                                  track._listChannel.size() );
+                bValid = false;
+            }
+            if ( findBinding( track._binding ) == nullptr )
+            {
+                SW_LOG_ERROR_ID( "SequenceAsset.TrackBindingUnknown", "Sequence '%#': track '%#' refers to binding %# that the sequence does not have", sourceLabel, track._name, track._binding );
                 bValid = false;
             }
             for ( const FloatCurve& channel : track._listChannel )
@@ -196,22 +264,89 @@ namespace sw
         return bValid;
     }
 
-    SequenceItemFieldIssue SequenceTrackItem::findFieldIssue() const
+    SequenceItemFieldIssue SequenceTrackItem::findFieldIssue( SequenceItemField* pOutField ) const
     {
         const SequenceItemKindInfo* pKindInfo = SequenceAsset::findItemKindInfo( _kind );
         if ( pKindInfo == nullptr )
             return SequenceItemFieldIssue::UnknownKind;
-        // 스폰은 무엇을 어떤 이름으로 만들지가 필수다 — 빈 채로 두면 재생이 조용히 아무것도 만들지 않는다.
-        if ( pKindInfo->_bSpawns && ( _prefab.empty() || _targetObject.empty() ) )
-            return SequenceItemFieldIssue::SpawnParams;
-        if ( pKindInfo->_bNeedsPreset && ( _preset.empty() || _targetObject.empty() ) )
-            return SequenceItemFieldIssue::PresetParams;
-        // 시나리오 항목은 무엇을 재생할지가 필수다 — 빈 채로 두면 연출이 조용히 아무것도 부르지 않는다.
-        if ( pKindInfo->_bPlaysScenario && _scenario.empty() )
-            return SequenceItemFieldIssue::ScenarioMissing;
-        if ( pKindInfo->_bPlaysScenario == false && _scenario.empty() == false )
-            return SequenceItemFieldIssue::ScenarioNotAllowed;
+        // 빈 필수 칸을 두면 재생이 조용히 아무것도 하지 않는다(스폰이 만들지 않고, 시나리오가 부르지 않는다). 남은 다른 종류의 칸은 뜻이 없다.
+        for ( uint32 fieldIndex = 0; fieldIndex < static_cast<uint32>( SequenceItemField::Count ); ++fieldIndex )
+        {
+            const SequenceItemField field   = static_cast<SequenceItemField>( fieldIndex );
+            const bool              bFilled = hasField( field );
+            SequenceItemFieldIssue  issue   = SequenceItemFieldIssue::None;
+            if ( pKindInfo->requiresField( field ) && bFilled == false )
+                issue = SequenceItemFieldIssue::MissingField;
+            else if ( pKindInfo->allowsField( field ) == false && bFilled )
+                issue = SequenceItemFieldIssue::FieldNotAllowed;
+            if ( issue == SequenceItemFieldIssue::None )
+                continue;
+            if ( pOutField != nullptr )
+                *pOutField = field;
+            return issue;
+        }
         return SequenceItemFieldIssue::None;
+    }
+
+    bool SequenceTrackItem::hasField( SequenceItemField field ) const
+    {
+        if ( field == SequenceItemField::Binding )
+            return _binding != kSequenceNoBinding;
+        const string* const pText = findTextField( field );
+        return pText != nullptr && pText->empty() == false;
+    }
+
+    string* SequenceTrackItem::accessTextField( SequenceItemField field )
+    {
+        // 칸 고르기는 const 쪽 한 곳이다(같은 switch 를 두 벌 두지 않는다).
+        return const_cast<string*>( static_cast<const SequenceTrackItem*>( this )->findTextField( field ) );
+    }
+
+    const string* SequenceTrackItem::findTextField( SequenceItemField field ) const
+    {
+        switch ( field )
+        {
+            case SequenceItemField::Prefab:
+                return &_prefab;
+            case SequenceItemField::Preset:
+                return &_preset;
+            case SequenceItemField::Scenario:
+                return &_scenario;
+            case SequenceItemField::Clip:
+                return &_clip;
+            case SequenceItemField::Sound:
+                return &_sound;
+            case SequenceItemField::Text:
+                return &_text;
+            case SequenceItemField::Binding:
+            case SequenceItemField::Count:
+                return nullptr;
+        }
+        return nullptr;
+    }
+
+    const utf8* SequenceTrackItem::getFieldPropertyName( SequenceItemField field )
+    {
+        switch ( field )
+        {
+            case SequenceItemField::Binding:
+                return "_binding";
+            case SequenceItemField::Prefab:
+                return "_prefab";
+            case SequenceItemField::Preset:
+                return "_preset";
+            case SequenceItemField::Scenario:
+                return "_scenario";
+            case SequenceItemField::Clip:
+                return "_clip";
+            case SequenceItemField::Sound:
+                return "_sound";
+            case SequenceItemField::Text:
+                return "_text";
+            case SequenceItemField::Count:
+                return "?";
+        }
+        return "?";
     }
 
     string SequenceAsset::toXML() const
@@ -225,6 +360,53 @@ namespace sw
         if ( kindIndex < 0 || kindIndex >= static_cast<int32>( SequenceItemKind::Count ) )
             return nullptr;
         return &kArrSequenceItemKindInfo[kindIndex];
+    }
+
+    const SequenceBinding* SequenceAsset::findBinding( uint32 bindingID ) const
+    {
+        if ( bindingID == kSequenceNoBinding )
+            return nullptr;
+        for ( const SequenceBinding& binding : _listBinding )
+        {
+            if ( binding._id == bindingID )
+                return &binding;
+        }
+        return nullptr;
+    }
+
+    uint32 SequenceAsset::addBinding( string_view name )
+    {
+        SequenceBinding binding{};
+        binding._id   = _nextBindingID;
+        binding._name = string{ name };
+        ++_nextBindingID;
+        _listBinding.push_back( std::move( binding ) );
+        return _listBinding.back()._id;
+    }
+
+    uint32 SequenceAsset::countBindingUses( uint32 bindingID ) const
+    {
+        uint32 useCount = 0;
+        for ( const SequenceTrackItem& item : _listItem )
+        {
+            useCount += item._binding == bindingID ? 1u : 0u;
+        }
+        for ( const SequenceKeyTrack& track : _listTrack )
+        {
+            useCount += track._binding == bindingID ? 1u : 0u;
+        }
+        return useCount;
+    }
+
+    const SequenceTrackItem* SequenceAsset::findSpawnItem( uint32 bindingID ) const
+    {
+        for ( const SequenceTrackItem& item : _listItem )
+        {
+            const SequenceItemKindInfo* pInfo = findItemKindInfo( item._kind );
+            if ( pInfo != nullptr && pInfo->_bSpawns && item._binding == bindingID )
+                return &item;
+        }
+        return nullptr;
     }
 
     bool SequenceAsset::hasCameraCut() const
@@ -279,6 +461,10 @@ namespace sw
             {
                 return kSequenceTransformChannelCount;
             }
+            case SequenceTrackKind::CameraLens:
+            {
+                return kSequenceLensChannelCount;
+            }
             case SequenceTrackKind::Property:
             case SequenceTrackKind::RigSlot:
             {
@@ -297,6 +483,8 @@ namespace sw
             return "?";
         if ( _kind == SequenceTrackKind::Transform && channelIndex < kSequenceTransformChannelCount )
             return kArrSequenceTransformChannelName[channelIndex];
+        if ( _kind == SequenceTrackKind::CameraLens && channelIndex < kSequenceLensChannelCount )
+            return kArrSequenceLensChannelName[channelIndex];
         return _propertyPath.empty() ? "Value" : _propertyPath.c_str();
     }
 
@@ -340,6 +528,30 @@ namespace sw
             }
         }
         return bRemoved;
+    }
+
+    bool SequenceKeyTrack::moveKeysAt( float32 fromFrame, float32 toFrame )
+    {
+        if ( MathUtil::abs( fromFrame - toFrame ) < kSequenceKeyFrameTolerance )
+            return false;
+        bool bMoved = false;
+        for ( FloatCurve& channel : _listChannel )
+        {
+            const auto itFrom = std::find_if( channel._listKey.begin(), channel._listKey.end(), [fromFrame]( const FloatCurveKey& key )
+            { return MathUtil::abs( key._time - fromFrame ) < kSequenceKeyFrameTolerance; } );
+            if ( itFrom == channel._listKey.end() )
+                continue;
+            FloatCurveKey moved = *itFrom;
+            moved._time         = toFrame;
+            channel._listKey.erase( itFrom );
+            // 놓은 자리의 키는 옮긴 키가 덮는다.
+            (void)VectorUtil::removeIf( channel._listKey, [toFrame]( const FloatCurveKey& key )
+            { return MathUtil::abs( key._time - toFrame ) < kSequenceKeyFrameTolerance; } );
+            channel._listKey.push_back( moved );
+            channel.sortAndComputeAutoTangents();
+            bMoved = true;
+        }
+        return bMoved;
     }
 
     bool SequenceKeyTrack::hasKeyAt( float32 frame ) const

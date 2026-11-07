@@ -1,14 +1,22 @@
-<!-- 시네마틱 시나리오(automation/cinematic)의 컷 둘 — 프레임 30 에 CutA, 60 에 CutB(같은 프레임에 Actor 가 전사 외형으로), 86 에 끝나 게임 카메라로 0.5 초 섞어 나온다. 프리롤 10 프레임이 대기 뷰를 낸다(30 fps). -->
+<!-- 시네마틱 시나리오(automation/cinematic)의 컷 둘 — 프레임 30 에 CutA, 60 에 CutB(같은 프레임에 Actor 가 전사 외형으로), 86 에 끝나 게임 카메라로 0.5 초 섞어 나온다. 프리롤 10 프레임이 대기 뷰를 낸다(30 fps).
+     대상은 바인딩 id 다 — 어느 오브젝트인지는 씬의 Director(SequencePlayerComponent._listBinding)가 정한다. 끝나면 대상 상태를 되돌린다(외형은 이벤트라 되돌리지 않는다). -->
 <SequenceAsset _frameMin="0"
                _frameMax="100"
                _note="cinematic scenario: two camera cuts with preroll and a blend back to the game camera"
+               _nextBindingID="4"
+               _whenFinished="RestoreState"
                _cameraBlendInSeconds="0"
                _cameraBlendOutSeconds="0.5"
                _cameraPrerollFrames="10">
+	<_listBinding>
+		<SequenceBinding _id="1" _name="CutA" />
+		<SequenceBinding _id="2" _name="CutB" />
+		<SequenceBinding _id="3" _name="Actor" />
+	</_listBinding>
 	<_listItem>
-		<SequenceTrackItem _name="CutA" _targetObject="CutA" _start="30" _end="59" _kind="CameraCut" />
-		<SequenceTrackItem _name="CutB" _targetObject="CutB" _start="60" _end="86" _kind="CameraCut" />
-		<SequenceTrackItem _name="Armor" _targetObject="Actor" _start="60" _end="61" _kind="Appearance" _preset="SkeletonWarrior" />
+		<SequenceTrackItem _name="CutA" _binding="1" _start="30" _end="59" _kind="CameraCut" />
+		<SequenceTrackItem _name="CutB" _binding="2" _start="60" _end="86" _kind="CameraCut" />
+		<SequenceTrackItem _name="Armor" _binding="3" _start="60" _end="61" _kind="Appearance" _preset="SkeletonWarrior" />
 	</_listItem>
 	<_listTrack />
 </SequenceAsset>

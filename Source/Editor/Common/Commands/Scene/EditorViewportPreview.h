@@ -3,11 +3,14 @@
  * @brief 도구 패널 미리보기를 선택 오브젝트·씬에 적용합니다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
 {
     struct FunctionInfo;
+    struct SequenceBindingView;
+    struct SequenceSpanState;
     struct TypeInfo;
 
     class Material;
@@ -28,8 +31,11 @@ namespace sw::editor
 
         /** @brief 선택한 오브젝트와 이 그래프를 쓰는 오브젝트들의 스프라이트 애니메이터에서 노드 이름의 클립을 재생합니다. */
         static void applyAnimationNode( string_view nodeName, string_view graphPath = {} );
-        /** @brief 시퀀스 프레임의 활성 클립을 대상 오브젝트 활성/트랜스폼에 적용합니다. */
-        static void applySequenceFrame( const sw::SequenceAsset& asset, int32 frame );
+        /**
+         * @brief 시퀀스 프레임을 활성 씬에 적용합니다 — 클립 · 컷 · 키 트랙(`applyFrame`)과 구간 동작(애니메이션 · 소리 · 자막, `applySpans`)입니다. 대상은 @p bindings 로 찾는다.
+         * @param inoutListSpan 미리보기가 들어간 구간 상태(패널이 쥔다 — 멈출 때 `SequenceTimelineUtil::releaseSpans`).
+         */
+        static void applySequenceFrame( const sw::SequenceAsset& asset, const sw::SequenceBindingView& bindings, int32 frame, float32 framesPerSecond, vector<sw::SequenceSpanState>& inoutListSpan );
         /**
          * @brief 화자 오브젝트를 선택하고, 대사 미리보기 메서드(`EditorPreview = "DialogueLine"`)가 있는 컴포넌트마다 대사를 넣습니다.
          * @details 컴포넌트는 타입 이름이 아니라 메서드 메타로 찾습니다 — EditorModule 은 GameFramework 를 링크하지 않으므로

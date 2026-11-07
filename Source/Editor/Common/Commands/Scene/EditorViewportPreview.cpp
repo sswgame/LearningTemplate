@@ -109,9 +109,11 @@ namespace sw::editor
         }
     }
 
-    void EditorViewportPreview::applySequenceFrame( const SequenceAsset& asset, int32 frame )
+    void EditorViewportPreview::applySequenceFrame( const SequenceAsset& asset, const SequenceBindingView& bindings, int32 frame, float32 framesPerSecond, vector<SequenceSpanState>& inoutListSpan )
     {
-        SequenceTimelineUtil::applyFrame( editor::getActiveObjectManager(), asset, frame );
+        GameObjectManager* pManager = editor::getActiveObjectManager();
+        SequenceTimelineUtil::applyFrame( pManager, asset, bindings, frame );
+        SequenceTimelineUtil::applySpans( pManager, asset, bindings, frame, framesPerSecond, inoutListSpan );
     }
 
     void EditorViewportPreview::applyDialogueLine( string_view speaker, string_view text )

@@ -6,12 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Reflection/ReflectedValue.h"
-#include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Sequencer/SequenceTimelineUtil.h"
+#include <algorithm>
 
 namespace sw::editor
 {
@@ -55,6 +50,31 @@ namespace sw::editor
             {
                 return SequenceModel::isRotationChannel( track, channelIndex ) ? MathUtil::kRadianToDegree : 1.0f;
             }
+
+            /** @brief 트랙 종류의 새 이름 머리입니다. */
+            [[nodiscard]] static const utf8* getTrackNamePrefix( SequenceTrackKind kind )
+            {
+                switch ( kind )
+                {
+                    case SequenceTrackKind::Transform:
+                        return "Transform";
+                    case SequenceTrackKind::Property:
+                        return "Property";
+                    case SequenceTrackKind::RigSlot:
+                        return "Rig Slot";
+                    case SequenceTrackKind::CameraLens:
+                        return "Lens";
+                    case SequenceTrackKind::Count:
+                        return "Track";
+                }
+                return "Track";
+            }
+
+            /** @brief 두 키 프레임이 같은 키인지입니다(반 프레임 안). */
+            [[nodiscard]] static bool isSameKeyFrame( float32 left, float32 right )
+            {
+                return MathUtil::abs( left - right ) < kSequenceKeyFrameTolerance;
+            }
         };
     } // namespace
 
@@ -65,6 +85,8 @@ namespace sw::editor
         , _selectedTrack{ -1 }
         , _curveTrack{ -1 }
         , _curveChannel{ 0 }
+        , _selectedBinding{ kSequenceNoBinding }
+        , _listSelectedKey{}
         , _bItemDraft{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -77,14 +99,60 @@ namespace sw::editor
         _selectedTrack = SequenceModelInternal::clampSelection( _selectedTrack, _asset._listTrack.size() );
         if ( _curveTrack >= static_cast<int32>( _asset._listTrack.size() ) )
             _curveTrack = -1;
+        if ( _asset.findBinding( _selectedBinding ) == nullptr )
+            _selectedBinding = _asset._listBinding.empty() ? kSequenceNoBinding : _asset._listBinding[0]._id;
+        // 고른 키는 지금 문서의 프레임을 가리킨다 — 되돌린 문서에는 없을 수 있다.
+        _listSelectedKey.clear();
     }
 
     void SequenceModel::resetSelection()
     {
-        _selectedItem  = -1;
-        _selectedTrack = _asset._listTrack.empty() ? -1 : 0;
-        _curveTrack    = -1;
-        _bItemDraft    = SW_FALSE;
+        _selectedItem    = -1;
+        _selectedTrack   = _asset._listTrack.empty() ? -1 : 0;
+        _curveTrack      = -1;
+        _selectedBinding = _asset._listBinding.empty() ? kSequenceNoBinding : _asset._listBinding[0]._id;
+        _bItemDraft      = SW_FALSE;
+        _listSelectedKey.clear();
+    }
+
+    uint32 SequenceModel::addBinding( string_view name )
+    {
+        if ( name.empty() )
+            return kSequenceNoBinding;
+        _selectedBinding = _asset.addBinding( name );
+        return _selectedBinding;
+    }
+
+    bool SequenceModel::renameBinding( uint32 bindingID, string_view name )
+    {
+        if ( name.empty() )
+            return false;
+        for ( SequenceBinding& binding : _asset._listBinding )
+        {
+            if ( binding._id != bindingID )
+                continue;
+            binding._name = string{ name };
+            return true;
+        }
+        return false;
+    }
+
+    bool SequenceModel::removeBinding( uint32 bindingID )
+    {
+        if ( _asset.findBinding( bindingID ) == nullptr || _asset.countBindingUses( bindingID ) > 0 )
+            return false;
+        (void)VectorUtil::removeIf( _asset._listBinding, [bindingID]( const SequenceBinding& binding )
+        { return binding._id == bindingID; } );
+        if ( _selectedBinding == bindingID )
+            _selectedBinding = _asset._listBinding.empty() ? kSequenceNoBinding : _asset._listBinding[0]._id;
+        return true;
+    }
+
+    bool SequenceModel::isItemAcceptable( const SequenceTrackItem& item ) const
+    {
+        if ( item.findFieldIssue() != SequenceItemFieldIssue::None )
+            return false;
+        return item._binding == kSequenceNoBinding || _asset.findBinding( item._binding ) != nullptr;
     }
 
     int32 SequenceModel::addItem( SequenceItemKind kind, string_view kindName )
@@ -94,12 +162,16 @@ namespace sw::editor
         if ( pInfo == nullptr )
             return -1;
         SequenceTrackItem item{};
-        item._kind  = kind;
-        item._start = _asset._frameMin;
-        item._end   = MathUtil::min( _asset._frameMin + SequenceModelInternal::kNewItemFrameLength, _asset._frameMax );
-        item._color = pInfo->_defaultColor;
-        item._name  = SequenceModelInternal::makeNumberedName( _asset._listItem, kindName );
-        if ( item.findFieldIssue() != SequenceItemFieldIssue::None )
+        item._kind    = kind;
+        item._start   = _asset._frameMin;
+        item._end     = MathUtil::min( _asset._frameMin + SequenceModelInternal::kNewItemFrameLength, _asset._frameMax );
+        item._color   = pInfo->_defaultColor;
+        item._name    = SequenceModelInternal::makeNumberedName( _asset._listItem, kindName );
+        item._binding = pInfo->allowsField( SequenceItemField::Binding ) ? _selectedBinding : kSequenceNoBinding;
+        // 스폰은 바인딩 하나를 혼자 채운다 — 이미 스폰하는 바인딩이면 초안에서 다른 바인딩을 고른다.
+        if ( pInfo->_bSpawns && _asset.findSpawnItem( item._binding ) != nullptr )
+            item._binding = kSequenceNoBinding;
+        if ( isItemAcceptable( item ) == false )
         {
             _itemEdit   = std::move( item );
             _bItemDraft = SW_TRUE;
@@ -116,7 +188,7 @@ namespace sw::editor
 
     int32 SequenceModel::commitItemDraft()
     {
-        if ( isDraftingItem() == false || _itemEdit.findFieldIssue() != SequenceItemFieldIssue::None )
+        if ( isDraftingItem() == false || isItemAcceptable( _itemEdit ) == false )
             return -1;
         _asset._listItem.push_back( _itemEdit );
         _bItemDraft   = SW_FALSE;
@@ -147,11 +219,20 @@ namespace sw::editor
         SequenceTrackItem& item      = _asset._listItem[static_cast<size_t>( _selectedItem )];
         SequenceTrackItem  candidate = item;
         candidate._name              = _itemEdit._name;
-        candidate._targetObject      = _itemEdit._targetObject;
-        candidate._prefab            = _itemEdit._prefab;
-        candidate._preset            = _itemEdit._preset;
-        candidate._scenario          = _itemEdit._scenario;
-        if ( candidate.findFieldIssue() != SequenceItemFieldIssue::None )
+        candidate._binding           = _itemEdit._binding;
+        // 글 칸은 종류 표의 칸 목록 그대로 옮긴다(칸을 하나 더해도 여기를 고치지 않는다).
+        for ( uint32 fieldIndex = 0; fieldIndex < static_cast<uint32>( SequenceItemField::Count ); ++fieldIndex )
+        {
+            const SequenceItemField field = static_cast<SequenceItemField>( fieldIndex );
+            string*                 pTo   = candidate.accessTextField( field );
+            string*                 pFrom = _itemEdit.accessTextField( field );
+            const bool              bText = pTo != nullptr && pFrom != nullptr;
+            if ( bText )
+                *pTo = *pFrom;
+        }
+        const SequenceTrackItem* pSpawnOwner = _asset.findSpawnItem( candidate._binding );
+        const bool               bSpawnClash = pSpawnOwner != nullptr && pSpawnOwner != &item && SequenceAsset::findItemKindInfo( candidate._kind )->_bSpawns;
+        if ( isItemAcceptable( candidate ) == false || bSpawnClash )
         {
             _itemEdit = item;
             return false;
@@ -176,7 +257,10 @@ namespace sw::editor
     {
         if ( itemIndex < 0 || itemIndex >= static_cast<int32>( _asset._listItem.size() ) )
             return -1;
-        SequenceTrackItem copy = _asset._listItem[static_cast<size_t>( itemIndex )];
+        SequenceTrackItem           copy  = _asset._listItem[static_cast<size_t>( itemIndex )];
+        const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( copy._kind );
+        if ( pInfo != nullptr && pInfo->_bSpawns )
+            return -1; // 두 스폰이 한 바인딩을 채우면 파일이 읽히지 않는다
         copy._name += " Copy";
         if ( SequenceModelInternal::isNameTaken( _asset._listItem, copy._name ) )
             copy._name = SequenceModelInternal::makeNumberedName( _asset._listItem, copy._name );
@@ -184,20 +268,65 @@ namespace sw::editor
         return static_cast<int32>( _asset._listItem.size() ) - 1;
     }
 
-    void SequenceModel::addTrack( SequenceTrackKind kind, string_view targetObject )
+    void SequenceModel::collectCutLane( vector<int32>& outListItemIndex ) const
     {
+        outListItemIndex.clear();
+        for ( int32 itemIndex = 0; itemIndex < static_cast<int32>( _asset._listItem.size() ); ++itemIndex )
+        {
+            const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( _asset._listItem[static_cast<size_t>( itemIndex )]._kind );
+            if ( pInfo != nullptr && pInfo->_bCutsCamera )
+                outListItemIndex.push_back( itemIndex );
+        }
+        std::stable_sort( outListItemIndex.begin(), outListItemIndex.end(), [this]( int32 left, int32 right )
+        { return _asset._listItem[static_cast<size_t>( left )]._start < _asset._listItem[static_cast<size_t>( right )]._start; } );
+    }
+
+    int32 SequenceModel::addCameraCut( int32 frame )
+    {
+        const bool bInvalid = _asset.findBinding( _selectedBinding ) == nullptr || frame < _asset._frameMin || frame > _asset._frameMax;
+        if ( bInvalid )
+            return -1;
+        vector<int32> listCut;
+        collectCutLane( listCut );
+        int32 end = _asset._frameMax;
+        for ( const int32 cutIndex : listCut )
+        {
+            SequenceTrackItem& cut = _asset._listItem[static_cast<size_t>( cutIndex )];
+            if ( cut._start > frame )
+            {
+                end = MathUtil::min( end, cut._start - 1 );
+                continue;
+            }
+            // 이 프레임을 덮던 컷은 여기 앞에서 끝난다(컷이 시작 프레임에 있으면 새 컷이 그 자리를 갖고 앞 컷은 그대로 — 둘이 같은 프레임에서 시작할 수 없다).
+            if ( cut._start < frame && frame <= cut._end )
+                cut._end = frame - 1;
+            else if ( cut._start == frame )
+                return -1;
+        }
+        SequenceTrackItem item{};
+        item._kind    = SequenceItemKind::CameraCut;
+        item._binding = _selectedBinding;
+        item._start   = frame;
+        item._end     = MathUtil::max( end, frame );
+        item._color   = SequenceAsset::findItemKindInfo( SequenceItemKind::CameraCut )->_defaultColor;
+        item._name    = SequenceModelInternal::makeNumberedName( _asset._listItem, "Cut" );
+        _asset._listItem.push_back( std::move( item ) );
+        _selectedItem = static_cast<int32>( _asset._listItem.size() ) - 1;
+        return _selectedItem;
+    }
+
+    bool SequenceModel::addTrack( SequenceTrackKind kind )
+    {
+        if ( _asset.findBinding( _selectedBinding ) == nullptr || SequenceKeyTrack::getChannelCount( kind ) == 0 )
+            return false;
         SequenceKeyTrack track{};
-        track._kind         = kind;
-        track._targetObject = string{ targetObject };
-        const utf8* pPrefix = "Property";
-        if ( kind == SequenceTrackKind::Transform )
-            pPrefix = "Transform";
-        else if ( kind == SequenceTrackKind::RigSlot )
-            pPrefix = "Rig Slot";
-        track._name = SequenceModelInternal::makeNumberedName( _asset._listTrack, pPrefix );
+        track._kind    = kind;
+        track._binding = _selectedBinding;
+        track._name    = SequenceModelInternal::makeNumberedName( _asset._listTrack, SequenceModelInternal::getTrackNamePrefix( kind ) );
         track.fitChannelsToKind();
         _asset._listTrack.push_back( std::move( track ) );
         _selectedTrack = static_cast<int32>( _asset._listTrack.size() ) - 1;
+        return true;
     }
 
     bool SequenceModel::removeSelectedTrack()
@@ -207,6 +336,7 @@ namespace sw::editor
         _asset._listTrack.erase( _asset._listTrack.begin() + _selectedTrack );
         _selectedTrack = -1;
         _curveTrack    = -1;
+        _listSelectedKey.clear(); // 트랙 번호가 당겨졌다
         return true;
     }
 
@@ -234,6 +364,74 @@ namespace sw::editor
         if ( pTrack == nullptr || _curveChannel < 0 || _curveChannel >= static_cast<int32>( pTrack->_listChannel.size() ) )
             return nullptr;
         return &pTrack->_listChannel[static_cast<size_t>( _curveChannel )];
+    }
+
+    void SequenceModel::selectKey( int32 trackIndex, float32 frame, bool bToggle )
+    {
+        auto itFound = std::find_if( _listSelectedKey.begin(), _listSelectedKey.end(), [trackIndex, frame]( const SequenceKeyRef& key )
+        { return key._track == trackIndex && SequenceModelInternal::isSameKeyFrame( key._frame, frame ); } );
+        if ( bToggle )
+        {
+            if ( itFound != _listSelectedKey.end() )
+                _listSelectedKey.erase( itFound );
+            else
+                _listSelectedKey.push_back( SequenceKeyRef{ trackIndex, frame } );
+            return;
+        }
+        // 고른 키를 다시 누르면 다중 선택을 지킨다(끌기 시작) — 고르지 않은 키를 누르면 그 키만 고른다.
+        if ( itFound != _listSelectedKey.end() )
+            return;
+        _listSelectedKey.clear();
+        _listSelectedKey.push_back( SequenceKeyRef{ trackIndex, frame } );
+    }
+
+    bool SequenceModel::isKeySelected( int32 trackIndex, float32 frame ) const
+    {
+        for ( const SequenceKeyRef& key : _listSelectedKey )
+        {
+            if ( key._track == trackIndex && SequenceModelInternal::isSameKeyFrame( key._frame, frame ) )
+                return true;
+        }
+        return false;
+    }
+
+    bool SequenceModel::moveSelectedKeys( int32 frameDelta )
+    {
+        if ( frameDelta == 0 || _listSelectedKey.empty() )
+            return false;
+        const float32 delta = static_cast<float32>( frameDelta );
+        for ( const SequenceKeyRef& key : _listSelectedKey )
+        {
+            const float32 target   = MathUtil::round( key._frame + delta );
+            const bool    bOutside = key._track < 0 || key._track >= static_cast<int32>( _asset._listTrack.size() ) || target < static_cast<float32>( _asset._frameMin ) ||
+                                  target > static_cast<float32>( _asset._frameMax );
+            if ( bOutside )
+                return false;
+        }
+        // 옮기는 쪽 끝부터 — 앞의 키가 아직 옮기지 않은 고른 키를 덮지 않는다.
+        std::sort( _listSelectedKey.begin(), _listSelectedKey.end(), [frameDelta]( const SequenceKeyRef& left, const SequenceKeyRef& right )
+        { return frameDelta > 0 ? left._frame > right._frame : left._frame < right._frame; } );
+        bool bMoved = false;
+        for ( SequenceKeyRef& key : _listSelectedKey )
+        {
+            const float32 target = MathUtil::round( key._frame + delta );
+            bMoved               = _asset._listTrack[static_cast<size_t>( key._track )].moveKeysAt( key._frame, target ) || bMoved;
+            key._frame           = target;
+        }
+        return bMoved;
+    }
+
+    uint32 SequenceModel::removeSelectedKeys()
+    {
+        uint32 removedCount = 0;
+        for ( const SequenceKeyRef& key : _listSelectedKey )
+        {
+            const bool bValidTrack = 0 <= key._track && key._track < static_cast<int32>( _asset._listTrack.size() );
+            if ( bValidTrack && _asset._listTrack[static_cast<size_t>( key._track )].removeKeysAt( key._frame ) )
+                ++removedCount;
+        }
+        _listSelectedKey.clear();
+        return removedCount;
     }
 
     std::optional<int32> SequenceModel::findPreviousKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const
@@ -275,9 +473,18 @@ namespace sw::editor
         return ( frame - static_cast<float32>( _asset._frameMin ) ) / static_cast<float32>( getFrameSpan() );
     }
 
+    int32 SequenceModel::computeFrameDelta( float32 pixelDelta, float32 stripWidth ) const
+    {
+        if ( stripWidth <= 0.0f )
+            return 0;
+        return static_cast<int32>( MathUtil::round( pixelDelta / stripWidth * static_cast<float32>( getFrameSpan() ) ) );
+    }
+
     bool SequenceModel::isRotationChannel( const SequenceKeyTrack& track, uint32 channelIndex )
     {
-        return track._kind == SequenceTrackKind::Transform && channelIndex >= 3 && channelIndex < 6;
+        const bool bTransformRotation = track._kind == SequenceTrackKind::Transform && channelIndex >= 3 && channelIndex < 6;
+        const bool bLensFieldOfView   = track._kind == SequenceTrackKind::CameraLens && channelIndex == 0;
+        return bTransformRotation || bLensFieldOfView;
     }
 
     float32 SequenceModel::computeChannelDisplayValue( const SequenceKeyTrack& track, uint32 channelIndex, float32 frame, float32 currentValue )
@@ -289,47 +496,6 @@ namespace sw::editor
     bool SequenceModel::setChannelDisplayValue( SequenceKeyTrack& track, uint32 channelIndex, float32 frame, float32 displayValue )
     {
         return track.setChannelKey( channelIndex, frame, displayValue / SequenceModelInternal::getChannelDisplayScale( track, channelIndex ) );
-    }
-
-    bool SequenceModel::readTrackValues( GameObjectManager* pManager, const SequenceKeyTrack& track, float32* pOutArrValue, uint32 valueCapacity )
-    {
-        GameObject* pTarget               = SequenceTimelineUtil::findTarget( pManager, track._targetObject );
-        const bool  bInvalidSampleRequest = pTarget == nullptr || pOutArrValue == nullptr || valueCapacity < SequenceKeyTrack::getChannelCount( track._kind );
-        if ( bInvalidSampleRequest )
-            return false;
-        if ( track._kind == SequenceTrackKind::Transform )
-        {
-            const SceneComponent* pScene = pTarget->getPrimarySceneComponent();
-            if ( pScene == nullptr )
-                return false;
-            const float3 arrValue[3] = { pScene->getLocalPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
-            for ( uint32 groupIndex = 0; groupIndex < 3; ++groupIndex )
-            {
-                pOutArrValue[groupIndex * 3 + 0] = arrValue[groupIndex]._x;
-                pOutArrValue[groupIndex * 3 + 1] = arrValue[groupIndex]._y;
-                pOutArrValue[groupIndex * 3 + 2] = arrValue[groupIndex]._z;
-            }
-            return true;
-        }
-        if ( track._kind == SequenceTrackKind::RigSlot )
-        {
-            const PoseModifierComponent* pModifier = pTarget->getComponent<PoseModifierComponent>();
-            if ( pModifier == nullptr )
-                return false;
-            pOutArrValue[0] = pModifier->getSlotWeight( hashed_string( track._propertyPath.c_str() ) );
-            return true;
-        }
-        if ( track._kind != SequenceTrackKind::Property )
-            return false;
-        Component*          pComponent{ nullptr };
-        const PropertyInfo* pProperty{ nullptr };
-        if ( SequenceTimelineUtil::findTrackProperty( pTarget, track, pComponent, pProperty ) == false )
-            return false;
-        float64 number{ 0.0 };
-        if ( ReflectedValueUtil::readNumber( ReflectedValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<const void*>( pComponent ) ), number ) == false )
-            return false;
-        pOutArrValue[0] = static_cast<float32>( number );
-        return true;
     }
 
     std::optional<int32> SequenceModel::findTimelineFrame( float32 keyFrame ) const

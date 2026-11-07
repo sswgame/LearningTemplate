@@ -4,12 +4,14 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Sequencer/SequenceDiagnostics.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 #include "Engine/Sequencer/SequenceTimelineUtil.h"
 
@@ -40,11 +42,32 @@ namespace sw
                 outValue.setText( pCut != nullptr ? pCut->getName().c_str() : "none" );
                 return true;
             }
+
+            /**
+             * @brief 컷씬 디버거의 시네마틱 카메라 해석입니다 — 플레이어 옆 시네마틱 컴포넌트가 아는 컷 카메라와, 플레이어 카메라 매니저의 실제 블렌드 진행량(가중치)입니다.
+             * @details 엔진 시퀀서는 블렌드 시간만 알고 실제 섞임은 게임 프레임워크 카메라가 한다 — 그래서 이 키트가 제공자로 보탠다(`SW_SEQUENCE_DIAGNOSTIC`).
+             */
+            [[nodiscard]] static bool describeForSequenceDebugger( const SequencePlayerComponent& player, string& outText )
+            {
+                const GameObject*               pOwner     = player.getOwner();
+                const CinematicCameraComponent* pCinematic = pOwner != nullptr ? pOwner->getComponent<CinematicCameraComponent>() : nullptr;
+                const GameObjectManager*        pManager   = pOwner != nullptr ? pOwner->getManager() : nullptr;
+                if ( pCinematic == nullptr || pManager == nullptr )
+                    return false;
+                const GameObject*             pCut           = pCinematic->isCinematicActive() ? pManager->resolveGameObject( pCinematic->getCurrentCutCamera() ) : nullptr;
+                const CameraManagerComponent* pCameraManager = CameraManagerComponent::findForPlayer( *pManager, pCinematic->getLocalPlayerIndex() );
+                outText                                      = formatToString( "Cut camera: %#", pCut != nullptr ? pCut->getName().c_str() : "none" );
+                if ( pCameraManager != nullptr )
+                    outText += formatToString( "
+Player camera blend: %# (weight %#)", pCameraManager->isBlending() ? "blending" : "settled", pCameraManager->getBlendWeight() );
+                return true;
+            }
         };
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( cinematicCutCamera, "Cinematic.CutCamera", "Name of the cut camera the target's cinematic component knows covers the screen; none between cinematics",
                                &CinematicCameraComponentInternal::readCutCamera, true, false );
+    SW_SEQUENCE_DIAGNOSTIC( cinematicCamera, "Cinematic camera", &CinematicCameraComponentInternal::describeForSequenceDebugger );
 } // namespace sw
 
 namespace sw
@@ -112,13 +135,11 @@ namespace sw
         }
     }
 
-    GameObject* CinematicCameraComponent::findSceneObject( string_view name ) const
+    GameObject* CinematicCameraComponent::findSignalTarget( const SequenceCameraSignal& signal ) const
     {
         const GameObject*  pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr || name.empty() )
-            return nullptr;
-        return pManager->findGameObjectByName( hashed_string{ name } );
+        return pManager != nullptr ? pManager->resolveGameObject( signal._target ) : nullptr;
     }
 
     CameraDirectorComponent* CinematicCameraComponent::findDirector( const GameObject* pObject ) const
@@ -145,7 +166,7 @@ namespace sw
 
     void CinematicCameraComponent::applyCut( const SequenceCameraSignal& signal )
     {
-        GameObject* pTarget = findSceneObject( signal._item._targetObject );
+        GameObject* pTarget = findSignalTarget( signal );
         if ( pTarget == nullptr )
             return;
         const GameObject*        pOwner          = getOwner();
@@ -175,7 +196,7 @@ namespace sw
 
     void CinematicCameraComponent::beginCinematic( const SequenceCameraSignal& signal )
     {
-        GameObject* pTarget = findSceneObject( signal._item._targetObject );
+        GameObject* pTarget = findSignalTarget( signal );
         if ( pTarget == nullptr )
             return;
         _currentCutCamera = pTarget->getHandle();
@@ -220,7 +241,7 @@ namespace sw
     {
         const GameObject*        pOwner   = getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameObject*        pTarget  = findSceneObject( signal._item._targetObject );
+        const GameObject*        pTarget  = findSignalTarget( signal );
         if ( pManager == nullptr || pTarget == nullptr )
             return;
         CameraManagerComponent* pCameraManager = CameraManagerComponent::findForPlayer( *pManager, _localPlayerIndex );
@@ -234,7 +255,7 @@ namespace sw
 
     void CinematicCameraComponent::applyShake( const SequenceCameraSignal& signal )
     {
-        GameObject* pTarget = findSceneObject( signal._item._targetObject );
+        GameObject* pTarget = findSignalTarget( signal );
         if ( pTarget == nullptr )
             return;
         CameraImpulseDef impulse;

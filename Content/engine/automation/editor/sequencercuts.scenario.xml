@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — Sequencer 바인딩 · 카메라 컷 차선: 테스트 씬(sequencerkeys/sequencerkeys.scene.xml)과 시퀀스를 연다.
+  ① 계층에서 CamA 를 고르고 "선택에서 바인딩 더하기" → 바인딩 2, 묶이지 않은 바인딩 0(Director 의 플레이어에 묶였다 — 되돌리기 한 단계).
+  ② 프레임 0 에서 컷 더하기 → 컷 1. ③ CamB 를 고르고 바인딩을 더한 뒤 프레임 50 에서 컷 더하기 → 컷 2(앞 컷은 49 에서 끝난다 — 모델 테스트 AddCameraCutSplitsTheLane).
+  ④ 컷 차선 · 바인딩 목록 화면을 찍는다(카메라 이름이 컷 띠에 보이고, 묶이지 않음 빨간 글이 없다).
+  실행: App -EnableEditor -scenario=engine/automation/editor/sequencercuts.scenario.xml -unattended
+-->
+<Scenario name="editor.sequencercuts" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<DevCommand line="scene.open engine/automation/editor/sequencerkeys/sequencerkeys.scene.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Ctrl+P"/>
+	<EditorWaitSettled/>
+	<EditorText value="sequencerkeys.seq.xml"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Enter"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.SequencerBindingCount" equals="1" timeoutFrames="120"/>
+	<Expect watch="Editor.SequencerCutCount" equals="0"/>
+	<!-- ① CamA 바인딩 -->
+	<EditorClick mark="hierarchy.row.CamA"/>
+	<EditorWaitSettled/>
+	<Remember watch="Editor.UndoIndex" as="undoBefore"/>
+	<EditorClick mark="sequencer.addBindingFromSelection"/>
+	<WaitUntil watch="Editor.SequencerBindingCount" equals="2" timeoutFrames="60"/>
+	<Expect watch="Editor.SequencerUnboundCount" equals="0"/>
+	<Expect watch="Editor.UndoIndex" differsFrom="undoBefore"/>
+	<!-- ② 프레임 0 에서 컷 -->
+	<EditorClick mark="sequencer.addCut"/>
+	<WaitUntil watch="Editor.SequencerCutCount" equals="1" timeoutFrames="60"/>
+	<!-- ③ CamB 바인딩 · 프레임 50 컷 -->
+	<EditorClick mark="hierarchy.row.CamB"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="sequencer.addBindingFromSelection"/>
+	<WaitUntil watch="Editor.SequencerBindingCount" equals="3" timeoutFrames="60"/>
+	<EditorClick mark="sequencer.scrub" mods="ctrl"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitSettled/>
+	<EditorText value="50"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Enter"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="sequencer.addCut"/>
+	<WaitUntil watch="Editor.SequencerCutCount" equals="2" timeoutFrames="60"/>
+	<Expect watch="Editor.SequencerUnboundCount" equals="0"/>
+	<EditorWaitSettled/>
+	<!-- ④ 화면 -->
+	<CaptureEditorUI file="sequencercuts/cutlane.png" maxMagentaFraction="0"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

@@ -1,0 +1,48 @@
+<Scene formatVersion="2" name="SequencerKeys">
+	<!-- 시퀀서 시나리오(editor/sequencerkeys · sequencercuts)의 무대 — Director 의 플레이어가 sequencerkeys.seq.xml 을 틀고, 바인딩 1(Mover)을 Mover 에 묶는다.
+	     시퀀서 패널은 이 플레이어의 바인딩 표로 미리 본다(바인딩 문맥). CamA · CamB 는 컷 차선 시나리오가 바인딩을 더해 컷을 놓는 카메라다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,4,-12" _localRotation="0.2,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Mover">
+			<GameObject _schemaVersion="0" _name="Mover" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="CamA">
+			<GameObject _schemaVersion="0" _name="CamA" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="-3,1.5,-5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="CamB">
+			<GameObject _schemaVersion="0" _name="CamB" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="3,1.5,-5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Custom" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Director">
+			<GameObject _schemaVersion="0" _name="Director" _bActive="true">
+				<_listComponent>
+					<SequencePlayerComponent _sequencePath="engine/automation/editor/sequencerkeys/sequencerkeys.seq.xml" _framesPerSecond="30" _bLoop="false" _bAutoPlay="false">
+						<_listBinding>
+							<SequenceBindingSlot _binding="1" _object="2" />
+						</_listBinding>
+					</SequencePlayerComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

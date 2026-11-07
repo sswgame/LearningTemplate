@@ -19,16 +19,20 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
+#include "Engine/Sequencer/SequencePlayerComponent.h"
 #include "Engine/Sequencer/SequenceTimelineUtil.h"
 
 #include <imgui.h>
@@ -122,23 +126,39 @@ namespace sw::editor
 
     namespace
     {
+        /** @brief 항목의 글 칸 하나를 그리는 법입니다(종류 표가 허용한 칸만 그린다 — 칸을 더하면 이 표에 한 줄). 글은 `SequencerPanelInternal::findFieldLabel` · `findFieldTip`. */
+        struct SequenceItemFieldView
+        {
+            SequenceItemField _field;
+            const utf8*       _pStableID;
+            const utf8*       _pDropExtension; ///< 끌어 놓기로 받을 확장자(없으면 nullptr)
+            const utf8*       _pMark;
+        };
+
+        constexpr SequenceItemFieldView kArrItemFieldView[] = {
+            {  SequenceItemField::Prefab,   "Prefab",   ".prefab.xml",   "sequencer.item.prefab"},
+            {  SequenceItemField::Preset,   "Preset",         nullptr,   "sequencer.item.preset"},
+            {SequenceItemField::Scenario, "Scenario", ".scenario.xml", "sequencer.item.scenario"},
+            {    SequenceItemField::Clip,     "Clip",     ".animclip",     "sequencer.item.clip"},
+            {   SequenceItemField::Sound,    "Sound",         nullptr,    "sequencer.item.sound"},
+            {    SequenceItemField::Text,     "Text",         nullptr,     "sequencer.item.text"},
+        };
+
         struct SequencerPanelInternal
         {
             /** @brief 트랙 이름 필드의 폭(픽셀, DPI 전)입니다. 나머지 폭이 키 띠다. */
             static constexpr float32 kTrackLabelWidth = 180.0f;
             /** @brief 커브 편집기 구역의 높이(픽셀, DPI 전)입니다. */
             static constexpr float32 kCurveAreaLines = 12.0f; ///< 커브 영역 높이(글자 줄 수)
-            /** @brief 키 마름모의 반지름(픽셀, DPI 전)입니다. */
+            /** @brief 키 마름모의 반지름(픽셀, DPI 전)입니다. 누름 판정도 이 반지름 안이다. */
             static constexpr float32 kKeyMarkerRadius = 4.0f;
+            /** @brief 컷 차선의 높이(글자 줄 수)입니다. */
+            static constexpr float32 kCutLaneLines = 1.5f;
 
-            /**
-             * @brief 에디터에서 고른 오브젝트의 이름입니다. 고른 것이 없으면 빈 문자열입니다.
-             * @details 트랙은 이름으로 레벨의 오브젝트에 묶여 레벨에서 재생된다 — 메인 씬의 선택이다(언리얼 시퀀서도 레벨 선택의 액터를 트랙에 더한다).
-             */
-            static string findSelectedObjectName()
+            /** @brief 에디터에서 고른 오브젝트입니다. 고른 것이 없으면 nullptr 입니다(메인 씬의 선택 — 언리얼 시퀀서도 레벨 선택의 액터를 바인딩에 더한다). */
+            static GameObject* findSelectedObject()
             {
-                GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
-                return pObject != nullptr ? string{ pObject->getName().c_str() } : string{};
+                return editor::getMainSceneSelection().getPrimaryObject();
             }
 
             /**
@@ -161,6 +181,77 @@ namespace sw::editor
                     EditorWidgets::drawTooltip( pTooltip );
                 return bEdited;
             }
+
+            /** @brief 칸의 이름표입니다. */
+            static const utf8* findFieldLabel( SequenceItemField field )
+            {
+                switch ( field )
+                {
+                    case SequenceItemField::Prefab:
+                        return SW_LOCKEY( "EdWidget", "Prefab" );
+                    case SequenceItemField::Preset:
+                        return SW_LOCKEY( "EdWidget", "Preset" );
+                    case SequenceItemField::Scenario:
+                        return SW_LOCKEY( "EditorSequencer", "ScenarioLabel" );
+                    case SequenceItemField::Clip:
+                        return SW_LOCKEY( "EditorSequencer", "ClipLabel" );
+                    case SequenceItemField::Sound:
+                        return SW_LOCKEY( "EditorSequencer", "SoundLabel" );
+                    case SequenceItemField::Text:
+                        return SW_LOCKEY( "EditorSequencer", "TextLabel" );
+                    case SequenceItemField::Binding:
+                    case SequenceItemField::Count:
+                        return "?";
+                }
+                return "?";
+            }
+
+            /** @brief 칸의 풀이입니다. */
+            static const utf8* findFieldTip( SequenceItemField field )
+            {
+                switch ( field )
+                {
+                    case SequenceItemField::Prefab:
+                        return SW_LOCKEY( "EditorSequencer", "PrefabTip" );
+                    case SequenceItemField::Preset:
+                        return SW_LOCKEY( "EditorSequencer", "PresetTip" );
+                    case SequenceItemField::Scenario:
+                        return SW_LOCKEY( "EditorSequencer", "ScenarioTip" );
+                    case SequenceItemField::Clip:
+                        return SW_LOCKEY( "EditorSequencer", "ClipTip" );
+                    case SequenceItemField::Sound:
+                        return SW_LOCKEY( "EditorSequencer", "SoundTip" );
+                    case SequenceItemField::Text:
+                        return SW_LOCKEY( "EditorSequencer", "TextTip" );
+                    case SequenceItemField::Binding:
+                    case SequenceItemField::Count:
+                        return nullptr;
+                }
+                return nullptr;
+            }
+
+            /** @brief 키 띠에서 포인터 x 에 가장 가까운 키 프레임입니다(마름모 반지름 안). 없으면 비어 있습니다. */
+            static std::optional<float32> findKeyUnderPointer( const SequenceModel& document, const vector<float32>& listKeyFrame, float32 originX, float32 width, float32 radius, float32 pointerX )
+            {
+                std::optional<float32> hit;
+                float32                bestDistance = radius;
+                for ( const float32 keyFrame : listKeyFrame )
+                {
+                    const float32 distance = MathUtil::abs( originX + document.computeRatioAtFrame( keyFrame ) * width - pointerX );
+                    if ( distance <= bestDistance )
+                    {
+                        bestDistance = distance;
+                        hit          = keyFrame;
+                    }
+                }
+                return hit;
+            }
+
+            /** @brief 키 마름모 하나를 그립니다. */
+            static void drawKeyDiamond( ImDrawList& drawList, float32 x, float32 centerY, float32 radius, uint32 color )
+            {
+                drawList.AddQuadFilled( ImVec2( x, centerY - radius ), ImVec2( x + radius, centerY ), ImVec2( x, centerY + radius ), ImVec2( x - radius, centerY ), color );
+            }
         };
     } // namespace
 
@@ -172,18 +263,19 @@ namespace sw::editor
         , _previewPlayer{ make_unique<sw::SequencePlayer>() }
         , _listTimingBefore{}
         , _listKeyFrame{}
+        , _listCutItem{}
+        , _listPreviewSpan{}
+        , _listPreviewSpawn{}
         , _curveState{}
+        , _contextPlayer{}
         , _currentFrame{ 0 }
         , _firstFrame{ 0 }
+        , _keyDragTrack{ -1 }
+        , _keyDragDelta{ 0 }
         , _bExpanded{ true }
     {
-        (void)_document.addItem( SequenceItemKind::Clip, "Clip" );
         (void)_document.addItem( SequenceItemKind::Event, "Event" );
-        vector<SequenceTrackItem>& listItem = _document._asset._listItem;
-        listItem[0]._name                   = "Intro";
-        listItem[1]._name                   = "Cut";
-        listItem[1]._start                  = 20;
-        listItem[1]._end                    = 40;
+        _document._asset._listItem[0]._name = "Intro";
     }
 
     SequencerPanel::~SequencerPanel() = default;
@@ -220,7 +312,7 @@ namespace sw::editor
                 _previewPlayer->stop();
                 _currentFrame = _document._asset._frameMin;
                 previewCurrentFrame();
-                SequenceTimelineUtil::releaseCameraCut( editor::getActiveObjectManager(), _previewPlayer->getAsset() );
+                releasePreview();
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "StopTip" ) );
             ImGui::SameLine();
@@ -244,7 +336,10 @@ namespace sw::editor
         EditorSelfTestMarks::record( "sequencer.scrub" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ScrubTip" ) );
 
-        // 키 트랙이 위, 구간 항목이 아래다 — 자주 고치는 쪽(키 · 커브)이 패널이 낮아도 보인다.
+        // 바인딩이 맨 위다 — 트랙 · 컷 · 항목이 모두 바인딩을 대상으로 고른다(언리얼 Sequencer 의 바인딩 줄 아래 트랙).
+        drawBindings();
+        drawCutLane();
+        // 키 트랙이 항목 위다 — 자주 고치는 쪽(키 · 커브)이 패널이 낮아도 보인다.
         drawKeyTracks();
 
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "ClipsEventsAndCameraCuts" ) );
@@ -275,9 +370,242 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CinematicNoteTip" ) );
     }
 
+    SequencePlayerComponent* SequencerPanel::findBindingContext() const
+    {
+        GameObjectManager* pManager = editor::getActiveObjectManager();
+        if ( pManager == nullptr || getLoadedAssetPath().empty() )
+            return nullptr;
+        SequencePlayerComponent* pFirst = nullptr;
+        for ( GameObject* pObject : pManager->getAllGameObjects() )
+        {
+            SequencePlayerComponent* pPlayer = pObject != nullptr ? pObject->getComponent<SequencePlayerComponent>() : nullptr;
+            // 리소스 id 는 대소문자를 가리지 않는다.
+            if ( pPlayer == nullptr || StringUtil::equals( pPlayer->getSequencePath(), getLoadedAssetPath(), true ) == false )
+                continue;
+            if ( pObject->getHandle() == _contextPlayer )
+                return pPlayer;
+            if ( pFirst == nullptr )
+                pFirst = pPlayer;
+        }
+        return pFirst;
+    }
+
+    SequenceBindingView SequencerPanel::makePreviewBindingView( const SequenceAsset& asset ) const
+    {
+        static const vector<SequenceBindingSlot> s_listNoSlot{}; // 문맥이 없을 때 가리킬 빈 표(읽기만 한다)
+        const SequencePlayerComponent*           pContext = findBindingContext();
+        SequenceBindingView                      view;
+        view._pAsset       = &asset;
+        view._pListSlot    = pContext != nullptr ? &pContext->getBindings() : &s_listNoSlot;
+        view._pListSpawned = &_listPreviewSpawn;
+        return view;
+    }
+
+    const utf8* SequencerPanel::findBindingName( uint32 bindingID ) const
+    {
+        const SequenceBinding* pBinding = _document._asset.findBinding( bindingID );
+        return pBinding != nullptr ? pBinding->_name.c_str() : "?";
+    }
+
+    uint32 SequencerPanel::countUnboundBindings() const
+    {
+        const SequenceBindingView view     = makePreviewBindingView( _document._asset );
+        GameObjectManager*        pManager = editor::getActiveObjectManager();
+        uint32                    unbound  = 0;
+        for ( const SequenceBinding& binding : _document._asset._listBinding )
+        {
+            const bool bSpawned = _document._asset.findSpawnItem( binding._id ) != nullptr;
+            if ( bSpawned == false && SequenceTimelineUtil::findTarget( pManager, view, binding._id ) == nullptr )
+                ++unbound;
+        }
+        return unbound;
+    }
+
+    void SequencerPanel::bindSelectionTo( uint32 bindingID )
+    {
+        SequencePlayerComponent* pContext = findBindingContext();
+        GameObject*              pTarget  = SequencerPanelInternal::findSelectedObject();
+        GameObject*              pOwner   = pContext != nullptr ? pContext->getOwner() : nullptr;
+        if ( pOwner == nullptr || pTarget == nullptr )
+            return;
+        // 묶음은 씬의 데이터(플레이어의 바인딩 표)다 — 오브젝트 수정으로 되돌리기에 남긴다.
+        const ObjectSnapshot before = EditorTransaction::captureSnapshot( pOwner );
+        pContext->setBinding( bindingID, pTarget->getHandle() );
+        EditorTransaction::recordModify( pOwner, before, EditorTransaction::captureSnapshot( pOwner ), "Bind Sequence Object" );
+        previewCurrentFrame();
+    }
+
+    void SequencerPanel::drawBindings()
+    {
+        ImGui::SeparatorText( SW_LOCKEY( "EditorSequencer", "BindingsSection" ) );
+        SequencePlayerComponent* pContext  = findBindingContext();
+        GameObject*              pSelected = SequencerPanelInternal::findSelectedObject();
+        if ( pContext == nullptr )
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSequencer", "NoBindingContextHint" ) );
+        else
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorSequencer", "BindingContextFormat", TextArgumentList().addText( "player", pContext->getOwner()->getName().c_str() ) ).c_str() );
+
+        const SequenceBindingView view       = makePreviewBindingView( _document._asset );
+        GameObjectManager*        pManager   = editor::getActiveObjectManager();
+        const float32             labelWidth = SequencerPanelInternal::kTrackLabelWidth * EditorThemeUtil::getDPIScale();
+        for ( size_t bindingIndex = 0; bindingIndex < _document._asset._listBinding.size(); ++bindingIndex )
+        {
+            const SequenceBinding& binding = _document._asset._listBinding[bindingIndex];
+            ImGui::PushID( static_cast<int32>( binding._id ) );
+            if ( ImGui::Selectable( binding._name.c_str(), binding._id == _document._selectedBinding, ImGuiSelectableFlags_None, ImVec2( labelWidth, 0.0f ) ) )
+                _document._selectedBinding = binding._id;
+            fixed_string<constant::buffer::kMax64> mark;
+            formatstring( mark.data(), mark.capacity(), "sequencer.binding.%#", bindingIndex );
+            EditorSelfTestMarks::record( mark.c_str() );
+            ImGui::SameLine();
+            // 묶인 오브젝트 · 스폰 · 묶이지 않음(오류 색 하나 — 고칠 일이 있는 줄)입니다.
+            const GameObject* pBound   = SequenceTimelineUtil::findTarget( pManager, view, binding._id );
+            const bool        bSpawned = _document._asset.findSpawnItem( binding._id ) != nullptr;
+            if ( bSpawned )
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorSequencer", "SpawnedBinding" ) );
+            else if ( pBound != nullptr )
+                ImGui::TextUnformatted( pBound->getName().c_str() );
+            else
+                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", SW_LOCKEY( "EditorSequencer", "UnboundBinding" ) );
+            ImGui::SameLine();
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EditorSequencer", "BindingUsesFormat", TextArgumentList().addInteger( "count", static_cast<int64>( _document._asset.countBindingUses( binding._id ) ) ) ).c_str() );
+            ImGui::PopID();
+        }
+        if ( _document._asset._listBinding.empty() )
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSequencer", "NoBindingsHint" ) );
+
+        const utf8* const pAdd = SW_LOCKEY( "EditorSequencer", "AddBindingFromSelection" );
+        ImGui::BeginDisabled( pSelected == nullptr );
+        if ( ImGui::Button( pAdd ) && pSelected != nullptr )
+        {
+            const uint32 bindingID = _document.addBinding( pSelected->getName().c_str() );
+            notifyDocumentEdited( "Add Sequence Binding" );
+            bindSelectionTo( bindingID );
+        }
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "sequencer.addBindingFromSelection" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddBindingFromSelectionTip" ) );
+
+        const utf8* const pBind = SW_LOCKEY( "EditorSequencer", "BindSelection" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pBind ) );
+        ImGui::BeginDisabled( pContext == nullptr || pSelected == nullptr || _document._asset.findBinding( _document._selectedBinding ) == nullptr );
+        if ( ImGui::Button( pBind ) )
+            bindSelectionTo( _document._selectedBinding );
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "sequencer.bindSelection" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "BindSelectionTip" ) );
+
+        const utf8* const pDelete = SW_LOCKEY( "EditorSequencer", "DeleteBinding" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pDelete ) );
+        const bool bUsed = _document._asset.countBindingUses( _document._selectedBinding ) > 0;
+        ImGui::BeginDisabled( _document._asset.findBinding( _document._selectedBinding ) == nullptr || bUsed );
+        if ( ImGui::Button( pDelete ) && _document.removeBinding( _document._selectedBinding ) )
+            notifyDocumentEdited( "Delete Sequence Binding" );
+        ImGui::EndDisabled();
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "DeleteBindingTip" ) );
+
+        // 고른 바인딩의 이름(표시용 — 오브젝트를 찾는 데 쓰지 않는다)입니다.
+        for ( SequenceBinding& binding : _document._asset._listBinding )
+        {
+            if ( binding._id != _document._selectedBinding )
+                continue;
+            string name = binding._name;
+            EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorSequencer", "BindingNameLabel" ), SW_LOCKEY( "EditorSequencer", "BindingNameTip" ) );
+            (void)EditorWidgets::drawTextField( "##bindingName", name, -1.0f );
+            if ( ImGui::IsItemDeactivatedAfterEdit() && _document.renameBinding( binding._id, name ) )
+                notifyDocumentEdited( "Rename Sequence Binding", "sequence-binding" );
+            break;
+        }
+    }
+
+    void SequencerPanel::drawCutLane()
+    {
+        ImGui::SeparatorText( SW_LOCKEY( "EditorSequencer", "CameraCutsSection" ) );
+        const utf8* const pAddCut = SW_LOCKEY( "EditorSequencer", "AddCutButton" );
+        ImGui::BeginDisabled( _document._asset.findBinding( _document._selectedBinding ) == nullptr );
+        if ( ImGui::Button( pAddCut ) && _document.addCameraCut( _currentFrame ) >= 0 )
+        {
+            notifyDocumentEdited( "Add Camera Cut" );
+            previewCurrentFrame();
+        }
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "sequencer.addCut" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddCutTip" ) );
+
+        _document.collectCutLane( _listCutItem );
+        const float32 height = ImGui::GetTextLineHeight() * SequencerPanelInternal::kCutLaneLines;
+        const float32 width  = MathUtil::max( ImGui::GetContentRegionAvail().x, 1.0f );
+        const ImVec2  origin = ImGui::GetCursorScreenPos();
+        if ( ImGui::InvisibleButton( "##cutLane", ImVec2( width, height ) ) )
+        {
+            // 누른 프레임을 덮는 컷을 고르고 그 프레임으로 간다(언리얼 컷 트랙의 섹션 고르기).
+            const int32 frame = _document.findFrameAtRatio( ( EditorInputGUI::readPointer()._position._x - origin.x ) / width );
+            for ( const int32 cutIndex : _listCutItem )
+            {
+                const SequenceTrackItem& cut = _document._asset._listItem[static_cast<size_t>( cutIndex )];
+                if ( cut._start <= frame && frame <= cut._end )
+                    _document._selectedItem = cutIndex;
+            }
+            _currentFrame = frame;
+            previewCurrentFrame();
+        }
+        EditorSelfTestMarks::record( "sequencer.cutLane" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CutLaneTip" ) );
+
+        ImDrawList* pDrawList = ImGui::GetWindowDrawList();
+        pDrawList->AddRectFilled( origin, ImVec2( origin.x + width, origin.y + height ), ImGui::GetColorU32( ImGuiCol_FrameBg ) );
+        for ( const int32 cutIndex : _listCutItem )
+        {
+            const SequenceTrackItem& cut   = _document._asset._listItem[static_cast<size_t>( cutIndex )];
+            const float32            left  = origin.x + MathUtil::saturate( _document.computeRatioAtFrame( static_cast<float32>( cut._start ) ) ) * width;
+            const float32            right = origin.x + MathUtil::saturate( _document.computeRatioAtFrame( static_cast<float32>( cut._end + 1 ) ) ) * width;
+            const bool               bPick = cutIndex == _document._selectedItem;
+            const uint32             fill  = bPick ? ImGui::GetColorU32( ImGuiCol_HeaderActive ) : cut._color;
+            pDrawList->AddRectFilled( ImVec2( left, origin.y ), ImVec2( MathUtil::max( right - 1.0f, left + 1.0f ), origin.y + height ), fill );
+            // 컷 이름이 아니라 카메라(바인딩) 이름을 적는다 — 촬영자가 보는 것은 어느 카메라인지다. 칸보다 길면 잘린다.
+            const ImVec4 clip( left, origin.y, right, origin.y + height );
+            pDrawList->AddText( nullptr, 0.0f, ImVec2( left + ImGui::GetStyle().FramePadding.x, origin.y + ( height - ImGui::GetTextLineHeight() ) * 0.5f ), ImGui::GetColorU32( ImGuiCol_Text ),
+                                findBindingName( cut._binding ), nullptr, 0.0f, &clip );
+        }
+        if ( _listCutItem.empty() )
+            pDrawList->AddText( ImVec2( origin.x + ImGui::GetStyle().FramePadding.x, origin.y + ( height - ImGui::GetTextLineHeight() ) * 0.5f ), ImGui::GetColorU32( ImGuiCol_TextDisabled ),
+                                SW_LOCKEY( "EditorSequencer", "NoCutsHint" ) );
+        const float32 cursorX = origin.x + _document.computeRatioAtFrame( static_cast<float32>( _currentFrame ) ) * width;
+        pDrawList->AddLine( ImVec2( cursorX, origin.y ), ImVec2( cursorX, origin.y + height ), ImGui::GetColorU32( ImGuiCol_CheckMark ) );
+    }
+
+    bool SequencerPanel::drawItemBindingCombo( SequenceTrackItem& edit, const SequenceItemKindInfo& kindInfo )
+    {
+        bool        bEdited   = false;
+        const bool  bRequired = kindInfo.requiresField( SequenceItemField::Binding );
+        const utf8* pPreview  = edit._binding == kSequenceNoBinding ? SW_LOCKEY( "EditorSequencer", "NoBindingChoice" ) : findBindingName( edit._binding );
+        if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EditorSequencer", "BindingLabel" ), "Binding" ), pPreview ) )
+        {
+            if ( bRequired == false && ImGui::Selectable( SW_LOCKEY( "EditorSequencer", "NoBindingChoice" ), edit._binding == kSequenceNoBinding ) )
+            {
+                edit._binding = kSequenceNoBinding;
+                bEdited       = true;
+            }
+            for ( const SequenceBinding& binding : _document._asset._listBinding )
+            {
+                ImGui::PushID( static_cast<int32>( binding._id ) );
+                if ( ImGui::Selectable( binding._name.c_str(), binding._id == edit._binding ) )
+                {
+                    edit._binding = binding._id;
+                    bEdited       = true;
+                }
+                ImGui::PopID();
+            }
+            ImGui::EndCombo();
+        }
+        EditorSelfTestMarks::record( "sequencer.item.binding" );
+        EditorWidgets::drawTooltip( kindInfo._bSpawns ? SW_LOCKEY( "EditorSequencer", "SpawnBindingTip" ) : SW_LOCKEY( "EditorSequencer", "ItemBindingTip" ) );
+        return bEdited;
+    }
+
     void SequencerPanel::drawItemFields()
     {
-        constexpr float32 kClipFieldRowCount = 4.0f; // 이름 · 대상 · 종류의 필수 칸 · 안내(초안이면 만들기 단추)
+        constexpr float32 kClipFieldRowCount = 4.0f; // 이름 · 바인딩 · 종류의 칸 · 안내(초안이면 만들기 단추)
         // 고른 항목의 편집 필드는 늘 같은 높이의 구역에 그린다 — 고를 때만 필드가 생기면 그만큼 타임라인이 밀려 내려간다.
         EditorSectionDesc clipDesc{};
         clipDesc._pID       = "##sequence_clip";
@@ -296,15 +624,18 @@ namespace sw::editor
         {
             SequenceTrackItem& edit    = _document._itemEdit;
             bool               bEdited = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "ItemName" ), "Item Name" ), edit._name, nullptr, nullptr, "sequencer.item.name" );
-            bEdited                    = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "TargetObject" ), "Target Object" ), edit._targetObject,
-                                                             pKindInfo->_bSpawns ? SW_LOCKEY( "EditorSequencer", "SpawnNameTip" ) : SW_LOCKEY( "EditorSequencer", "ItemTargetTip" ), nullptr, "sequencer.item.target" ) ||
-                      bEdited;
-            if ( pKindInfo->_bSpawns )
-                bEdited = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Prefab" ), "Prefab" ), edit._prefab, SW_LOCKEY( "EditorSequencer", "PrefabTip" ), ".prefab.xml", "sequencer.item.prefab" ) || bEdited;
-            if ( pKindInfo->_bNeedsPreset )
-                bEdited = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Preset" ), "Preset" ), edit._preset, SW_LOCKEY( "EditorSequencer", "PresetTip" ), nullptr, "sequencer.item.preset" ) || bEdited;
-            if ( pKindInfo->_bPlaysScenario )
-                bEdited = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EditorSequencer", "ScenarioLabel" ), "Scenario" ), edit._scenario, SW_LOCKEY( "EditorSequencer", "ScenarioTip" ), ".scenario.xml", "sequencer.item.scenario" ) || bEdited;
+            if ( pKindInfo->allowsField( SequenceItemField::Binding ) )
+                bEdited = drawItemBindingCombo( edit, *pKindInfo ) || bEdited;
+            // 종류가 쓰는 칸만 그린다 — 칸 목록은 종류 표 한 곳이다(`SequenceItemKindInfo::_allowedFields`).
+            for ( const SequenceItemFieldView& view : kArrItemFieldView )
+            {
+                string* pText = edit.accessTextField( view._field );
+                if ( pText == nullptr || pKindInfo->allowsField( view._field ) == false )
+                    continue;
+                bEdited = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SequencerPanelInternal::findFieldLabel( view._field ), view._pStableID ), *pText,
+                                                                 SequencerPanelInternal::findFieldTip( view._field ), view._pDropExtension, view._pMark ) ||
+                          bEdited;
+            }
 
             if ( _document.isDraftingItem() )
             {
@@ -314,8 +645,11 @@ namespace sw::editor
             {
                 // 거절되면 칸이 항목의 값으로 돌아간다. 비운 채 치는 동안에는 아래 안내가 그 사실을 미리 알린다.
                 if ( bEdited && _document.commitItemEdit() )
+                {
                     notifyDocumentEdited( "Edit Sequence Item", "sequence-item" );
-                if ( edit.findFieldIssue() != SequenceItemFieldIssue::None )
+                    previewCurrentFrame();
+                }
+                if ( _document.isItemAcceptable( edit ) == false )
                     ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", SW_LOCKEY( "EditorSequencer", "RequiredFieldHint" ) );
             }
         }
@@ -325,7 +659,7 @@ namespace sw::editor
     void SequencerPanel::drawItemDraftButtons()
     {
         const utf8* const pCreate = SW_LOCKEY( "EditorSequencer", "CreateItemButton" );
-        ImGui::BeginDisabled( _document._itemEdit.findFieldIssue() != SequenceItemFieldIssue::None );
+        ImGui::BeginDisabled( _document.isItemAcceptable( _document._itemEdit ) == false );
         if ( ImGui::Button( pCreate ) && _document.commitItemDraft() >= 0 )
             notifyDocumentEdited( "Add Sequence Item" );
         ImGui::EndDisabled();
@@ -347,6 +681,8 @@ namespace sw::editor
     void SequencerPanel::drawKeyTracks()
     {
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "KeyTracks" ) );
+        // 트랙은 고른 바인딩에 붙는다 — 고른 바인딩이 없으면 더할 대상이 없다.
+        ImGui::BeginDisabled( _document._asset.findBinding( _document._selectedBinding ) == nullptr );
         if ( ImGui::Button( "+ Transform Track" ) )
             addKeyTrack( SequenceTrackKind::Transform );
         EditorSelfTestMarks::record( "sequencer.addTransformTrack" );
@@ -360,12 +696,29 @@ namespace sw::editor
         if ( ImGui::Button( "+ Rig Slot Track" ) )
             addKeyTrack( SequenceTrackKind::RigSlot );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddRigSlotTrackTip" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "+ Lens Track" ) );
+        if ( ImGui::Button( "+ Lens Track" ) )
+            addKeyTrack( SequenceTrackKind::CameraLens );
+        EditorSelfTestMarks::record( "sequencer.addLensTrack" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddLensTrackTip" ) );
+        ImGui::EndDisabled();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "DeleteTrack" ) ) );
         ImGui::BeginDisabled( _document._selectedTrack < 0 );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "DeleteTrack" ) ) && _document.removeSelectedTrack() )
             notifyDocumentEdited( "Delete Sequence Track" );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "DeleteTrackTip" ) );
+        const utf8* const pDeleteKeys = SW_LOCKEY( "EditorSequencer", "DeleteSelectedKeys" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pDeleteKeys ) );
+        ImGui::BeginDisabled( _document.getSelectedKeys().empty() );
+        if ( ImGui::Button( pDeleteKeys ) && _document.removeSelectedKeys() > 0 )
+        {
+            notifyDocumentEdited( "Delete Sequence Keys" );
+            previewCurrentFrame();
+        }
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "sequencer.deleteSelectedKeys" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "DeleteSelectedKeysTip" ) );
 
         const vector<SequenceKeyTrack>& listTrack = _document._asset._listTrack;
         if ( listTrack.empty() )
@@ -380,8 +733,7 @@ namespace sw::editor
             const SequenceKeyTrack& track = listTrack[static_cast<size_t>( trackIndex )];
             ImGui::PushID( trackIndex );
             fixed_string<constant::buffer::kMax256> label;
-            formatstring( label.data(), label.capacity(), "%# (%#)", track._name.empty() ? "Track" : track._name.c_str(),
-                          track._targetObject.empty() ? "no target" : track._targetObject.c_str() );
+            formatstring( label.data(), label.capacity(), "%# (%#)", track._name.empty() ? "Track" : track._name.c_str(), findBindingName( track._binding ) );
             if ( ImGui::Selectable( label.c_str(), trackIndex == _document._selectedTrack, ImGuiSelectableFlags_None, ImVec2( labelWidth, 0.0f ) ) )
                 _document._selectedTrack = trackIndex;
             fixed_string<constant::buffer::kMax64> mark;
@@ -389,6 +741,8 @@ namespace sw::editor
             EditorSelfTestMarks::record( mark.c_str() );
             ImGui::SameLine();
             drawKeyStrip( track, trackIndex );
+            formatstring( mark.data(), mark.capacity(), "sequencer.keyStrip.%#", trackIndex );
+            EditorSelfTestMarks::record( mark.c_str() );
             ImGui::PopID();
         }
 
@@ -403,26 +757,60 @@ namespace sw::editor
         const float32 height = ImGui::GetTextLineHeight();
         const float32 width  = MathUtil::max( ImGui::GetContentRegionAvail().x, 1.0f );
         const ImVec2  origin = ImGui::GetCursorScreenPos();
-        if ( ImGui::InvisibleButton( "##keyStrip", ImVec2( width, height ) ) )
+        const float32 radius = SequencerPanelInternal::kKeyMarkerRadius * EditorThemeUtil::getDPIScale();
+        track.collectKeyFrames( _listKeyFrame );
+        (void)ImGui::InvisibleButton( "##keyStrip", ImVec2( width, height ) );
+        const EditorPointerState pointer = EditorInputGUI::readPointer();
+        if ( ImGui::IsItemActivated() )
         {
-            _document._selectedTrack = trackIndex;
-            _currentFrame            = _document.findFrameAtRatio( ( EditorInputGUI::readPointer()._position._x - origin.x ) / width );
-            previewCurrentFrame();
+            // 누른 자리에 키가 있으면 고르고(Ctrl 은 더하기 · 빼기) 끌기를 시작한다. 없으면 그 트랙 · 그 프레임으로 간다(예전 띠 누름과 같다).
+            _document._selectedTrack                   = trackIndex;
+            const std::optional<float32> keyUnderMouse = SequencerPanelInternal::findKeyUnderPointer( _document, _listKeyFrame, origin.x, width, radius, pointer._position._x );
+            if ( keyUnderMouse.has_value() )
+            {
+                _document.selectKey( trackIndex, *keyUnderMouse, pointer.hasModifier( ModifierKey::Ctrl ) );
+                _keyDragTrack = trackIndex;
+                _keyDragDelta = 0;
+            }
+            else
+            {
+                if ( pointer.hasModifier( ModifierKey::Ctrl ) == false )
+                    _document.clearKeySelection();
+                _currentFrame = _document.findFrameAtRatio( ( pointer._position._x - origin.x ) / width );
+                previewCurrentFrame();
+            }
         }
+        const bool bDraggingHere = _keyDragTrack == trackIndex && ImGui::IsItemActive();
+        if ( bDraggingHere && pointer.isDragging( EditorMouseButton::Left ) )
+            _keyDragDelta = _document.computeFrameDelta( pointer._arrDragDelta[static_cast<size_t>( EditorMouseButton::Left )]._x, width );
+        if ( _keyDragTrack == trackIndex && ImGui::IsItemDeactivated() )
+        {
+            // 놓을 때 한 번 옮긴다 — 되돌리기 한 단계, 정수 프레임 스냅. 타임라인 밖으로 나가는 끌기는 옮기지 않는다.
+            if ( _keyDragDelta != 0 && _document.moveSelectedKeys( _keyDragDelta ) )
+            {
+                notifyDocumentEdited( "Move Sequence Keys" );
+                previewCurrentFrame();
+            }
+            _keyDragTrack = -1;
+            _keyDragDelta = 0;
+        }
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "KeyStripTip" ) );
 
         ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
-        const float32 radius    = SequencerPanelInternal::kKeyMarkerRadius * EditorThemeUtil::getDPIScale();
         const float32 centerY   = origin.y + height * 0.5f;
         pDrawList->AddRectFilled( origin, ImVec2( origin.x + width, origin.y + height ), ImGui::GetColorU32( ImGuiCol_FrameBg ) );
-        track.collectKeyFrames( _listKeyFrame );
+        const float32 dragOffset = _keyDragTrack >= 0 ? static_cast<float32>( _keyDragDelta ) : 0.0f;
         for ( const float32 keyFrame : _listKeyFrame )
         {
-            const float32 x = origin.x + _document.computeRatioAtFrame( keyFrame ) * width;
-            pDrawList->AddQuadFilled( ImVec2( x, centerY - radius ), ImVec2( x + radius, centerY ), ImVec2( x, centerY + radius ), ImVec2( x - radius, centerY ),
-                                      ImGui::GetColorU32( ImGuiCol_PlotHistogram ) );
+            // 고른 키는 선택 색(강조는 선택에만), 끄는 중이면 놓을 자리에 그린다. 고른 키는 모든 트랙에서 함께 움직인다.
+            const bool    bSelected = _document.isKeySelected( trackIndex, keyFrame );
+            const float32 drawFrame = bSelected ? keyFrame + dragOffset : keyFrame;
+            const float32 x         = origin.x + _document.computeRatioAtFrame( drawFrame ) * width;
+            SequencerPanelInternal::drawKeyDiamond( *pDrawList, x, centerY, bSelected ? radius * 1.25f : radius,
+                                                    ImGui::GetColorU32( bSelected ? ImGuiCol_CheckMark : ImGuiCol_PlotHistogram ) );
         }
         const float32 cursorX = origin.x + _document.computeRatioAtFrame( static_cast<float32>( _currentFrame ) ) * width;
-        pDrawList->AddLine( ImVec2( cursorX, origin.y ), ImVec2( cursorX, origin.y + height ), ImGui::GetColorU32( ImGuiCol_CheckMark ) );
+        pDrawList->AddLine( ImVec2( cursorX, origin.y ), ImVec2( cursorX, origin.y + height ), ImGui::GetColorU32( ImGuiCol_Text ) );
     }
 
     void SequencerPanel::drawTrackTextField( const utf8* pLabel, string& inoutText, const utf8* pTooltip, bool bPreviewOnEdit )
@@ -445,16 +833,19 @@ namespace sw::editor
     {
         ImGui::Separator();
         drawTrackTextField( SW_LOCKEY( "EditorSequencer", "TrackNameLabel" ), track._name, nullptr, false );
-        drawTrackTextField( SW_LOCKEY( "EditorSequencer", "TrackTargetLabel" ), track._targetObject, nullptr, true );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EditorSequencer", "TrackTargetLabel" ) );
+        ImGui::TextUnformatted( findBindingName( track._binding ) );
         if ( track._kind == SequenceTrackKind::Property )
             drawTrackTextField( SW_LOCKEY( "EditorSequencer", "PropertyLabel" ), track._propertyPath, SW_LOCKEY( "EditorSequencer", "PropertyPathTip" ), true );
         else if ( track._kind == SequenceTrackKind::RigSlot )
             drawTrackTextField( SW_LOCKEY( "EditorSequencer", "RigSlotLabel" ), track._propertyPath, SW_LOCKEY( "EditorSequencer", "RigSlotTip" ), true );
 
-        GameObjectManager* pManager = editor::getActiveObjectManager();
-        const float32      frame    = static_cast<float32>( _currentFrame );
-        float32            arrCurrent[kSequenceTransformChannelCount]{};
-        const bool         bTargetFound = SequenceModel::readTrackValues( pManager, track, arrCurrent, kSequenceTransformChannelCount );
+        GameObjectManager*   pManager = editor::getActiveObjectManager();
+        const float32        frame    = static_cast<float32>( _currentFrame );
+        const SequenceAsset& asset    = _document._asset;
+        GameObject*          pTarget  = SequenceTimelineUtil::findTarget( pManager, makePreviewBindingView( asset ), track._binding );
+        float32              arrCurrent[kSequenceMaxChannelCount]{};
+        const bool           bTargetFound = SequenceTimelineUtil::readTrackValues( pTarget, track, arrCurrent, kSequenceMaxChannelCount );
 
         drawKeyButtons( track, frame, arrCurrent, bTargetFound );
         drawChannelRows( track, frame, arrCurrent );
@@ -465,7 +856,7 @@ namespace sw::editor
         ImGui::BeginDisabled( bTargetFound == false );
         if ( ImGui::Button( SW_LOCKEY( "EditorSequencer", "KeyButton" ) ) )
         {
-            track.setKey( frame, pArrCurrent, kSequenceTransformChannelCount );
+            track.setKey( frame, pArrCurrent, kSequenceMaxChannelCount );
             notifyDocumentEdited( "Add Sequence Key" );
         }
         ImGui::EndDisabled();
@@ -476,6 +867,7 @@ namespace sw::editor
         ImGui::BeginDisabled( track.hasKeyAt( frame ) == false );
         if ( ImGui::Button( pDeleteKey ) && track.removeKeysAt( frame ) )
         {
+            _document.clearKeySelection(); // 지운 키를 고른 채 두지 않는다
             notifyDocumentEdited( "Delete Sequence Key" );
             previewCurrentFrame();
         }
@@ -512,6 +904,8 @@ namespace sw::editor
                 pMissing = SW_LOCKEY( "EditorSequencer", "PropertyTargetNotFound" );
             else if ( track._kind == SequenceTrackKind::RigSlot )
                 pMissing = SW_LOCKEY( "EditorSequencer", "RigSlotTargetNotFound" );
+            else if ( track._kind == SequenceTrackKind::CameraLens )
+                pMissing = SW_LOCKEY( "EditorSequencer", "LensTargetNotFound" );
             ImGui::TextDisabled( "%s", pMissing );
         }
     }
@@ -524,8 +918,8 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( channelIndex ) );
             const bool bKeyed    = track.findChannelKey( channelIndex, frame ) != constant::invalid_index::kUint32;
             const bool bRotation = SequenceModel::isRotationChannel( track, channelIndex );
-            // 키가 없는 채널은 대상의 지금 값을 보인다(트랜스폼 채널만 지금 값이 있다).
-            const float32 currentValue = channelIndex < kSequenceTransformChannelCount ? pArrCurrent[channelIndex] : 0.0f;
+            // 키가 없는 채널은 대상의 지금 값을 보인다.
+            const float32 currentValue = channelIndex < kSequenceMaxChannelCount ? pArrCurrent[channelIndex] : 0.0f;
             float32       value        = SequenceModel::computeChannelDisplayValue( track, channelIndex, frame, currentValue );
             // 키가 있는 프레임이면 표식을 강조색으로 — 언리얼 Sequencer 채널 줄의 키 마름모에 해당한다.
             ImGui::TextColored( bKeyed ? ImGui::GetStyleColorVec4( ImGuiCol_CheckMark ) : ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ), bKeyed ? "<>" : "--" );
@@ -594,8 +988,8 @@ namespace sw::editor
 
     void SequencerPanel::addKeyTrack( SequenceTrackKind kind )
     {
-        _document.addTrack( kind, SequencerPanelInternal::findSelectedObjectName() );
-        notifyDocumentEdited( "Add Sequence Track" );
+        if ( _document.addTrack( kind ) )
+            notifyDocumentEdited( "Add Sequence Track" );
     }
 
     bool SequencerPanel::findSelectedTrackKeyFrameCount( uint32& outCount ) const
@@ -611,7 +1005,23 @@ namespace sw::editor
 
     void SequencerPanel::previewCurrentFrame()
     {
-        EditorViewportPreview::applySequenceFrame( captureAsset(), _currentFrame );
+        const SequenceAsset asset = captureAsset();
+        applyPreviewFrame( asset, _currentFrame );
+    }
+
+    void SequencerPanel::applyPreviewFrame( const SequenceAsset& asset, int32 frame )
+    {
+        const SequencePlayerComponent* pContext = findBindingContext();
+        const float32                  fps      = pContext != nullptr ? pContext->getFramesPerSecond() : 30.0f;
+        EditorViewportPreview::applySequenceFrame( asset, makePreviewBindingView( asset ), frame, fps, _listPreviewSpan );
+    }
+
+    void SequencerPanel::releasePreview()
+    {
+        const SequenceAsset asset    = captureAsset();
+        GameObjectManager*  pManager = editor::getActiveObjectManager();
+        SequenceTimelineUtil::releaseSpans( pManager, asset, makePreviewBindingView( asset ), 30.0f, _listPreviewSpan );
+        SequenceTimelineUtil::releaseCameraCut( pManager, asset );
     }
 
     ToolAssetLoadResult SequencerPanel::loadDocument()
@@ -627,9 +1037,14 @@ namespace sw::editor
             acceptFocusedDocument();
         if ( result == ToolAssetLoadResult::Loaded )
         {
+            releasePreview(); // 앞 문서의 구간 번호를 새 문서에 쓰지 않는다
             applyAsset( asset );
             _document.resetSelection();
-            _currentFrame = asset._frameMin;
+            _currentFrame                           = asset._frameMin;
+            _contextPlayer                          = GameObjectHandle{};
+            const SequencePlayerComponent* pContext = findBindingContext();
+            if ( pContext != nullptr && pContext->getOwner() != nullptr )
+                _contextPlayer = pContext->getOwner()->getHandle();
         }
         return result;
     }
@@ -696,6 +1111,6 @@ namespace sw::editor
             return;
         _previewPlayer->update( deltaSeconds );
         _currentFrame = _previewPlayer->getCurrentFrame();
-        EditorViewportPreview::applySequenceFrame( _previewPlayer->getAsset(), _currentFrame );
+        applyPreviewFrame( _previewPlayer->getAsset(), _currentFrame );
     }
 } // namespace sw::editor

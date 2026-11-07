@@ -16,12 +16,14 @@ namespace
 {
     struct CinematicCameraTestUtil
     {
-        static SequenceCameraSignal makeSignal( SequenceCameraSignalKind kind, const utf8* pTarget, float32 blendSeconds )
+        /** @brief 플레이어가 바인딩을 풀어 대상 핸들을 채운 신호입니다(신호는 이름이 아니라 묶인 오브젝트를 싣는다). */
+        static SequenceCameraSignal makeSignal( SequenceCameraSignalKind kind, GameObjectHandle target, float32 blendSeconds )
         {
             SequenceCameraSignal signal;
-            signal._kind               = kind;
-            signal._item._targetObject = pTarget;
-            signal._blendSeconds       = blendSeconds;
+            signal._kind          = kind;
+            signal._item._binding = 1;
+            signal._target        = target;
+            signal._blendSeconds  = blendSeconds;
             return signal;
         }
     };
@@ -54,18 +56,18 @@ SW_TEST_CASE( CinematicCameraTest, SignalsReachThePlayerCameraManager )
 
     SW_EXPECT_TRUE( CameraManagerComponent::findForPlayer( manager, 0 ) == pCameraManager );
 
-    pCinematic->handleCameraSignal( Util::makeSignal( SequenceCameraSignalKind::CutPrewarm, "Cut", 0.0f ) );
+    pCinematic->handleCameraSignal( Util::makeSignal( SequenceCameraSignalKind::CutPrewarm, pCut->getHandle(), 0.0f ) );
     SW_EXPECT_TRUE( pCameraManager->hasPendingView() );
     SW_EXPECT_TRUE( pCameraManager->getPendingView()._camera == pCut->getHandle() );
     SW_EXPECT_FALSE( pCinematic->isCinematicActive() );
 
-    pCinematic->handleCameraSignal( Util::makeSignal( SequenceCameraSignalKind::CutBegin, "Cut", 0.0f ) );
+    pCinematic->handleCameraSignal( Util::makeSignal( SequenceCameraSignalKind::CutBegin, pCut->getHandle(), 0.0f ) );
     SW_EXPECT_FALSE( pCameraManager->hasPendingView() );
     SW_EXPECT_TRUE( pCinematic->isCinematicActive() );
     SW_EXPECT_TRUE( pCinematic->getCurrentCutCamera() == pCut->getHandle() );
 
     SW_EXPECT_FALSE( pCameraManager->isBlending() );
-    pCinematic->handleCameraSignal( Util::makeSignal( SequenceCameraSignalKind::CinematicEnd, "Cut", 0.5f ) );
+    pCinematic->handleCameraSignal( Util::makeSignal( SequenceCameraSignalKind::CinematicEnd, pCut->getHandle(), 0.5f ) );
     SW_EXPECT_FALSE( pCinematic->isCinematicActive() );
     SW_EXPECT_TRUE( pCameraManager->isBlending() );
 }

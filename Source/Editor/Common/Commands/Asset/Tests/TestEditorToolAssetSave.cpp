@@ -27,7 +27,7 @@ SW_TEST_CASE( EditorToolAssetSaveTest, GoodDocumentIsSaved )
 // 결함: 저장은 값을 검사하지 않아, 다시 읽지 못할 문서가 멀쩡한 파일을 덮었다 - 도구 문서 다섯 종류가 지나는 한 길에서 막는다.
 SW_TEST_CASE( EditorToolAssetSaveTest, DocumentThatCannotBeReadBackKeepsTheSavedFile )
 {
-    SW_EXPECT_LOG( "SequenceAsset.SequenceSpawnItemNeeds" );
+    SW_EXPECT_LOG( "SequenceAsset.SequenceItemField" );
     SW_EXPECT_LOG( "EditorToolAssetCommands.WouldNotReadBack" );
     const string  path = test::makeScratchPath( "kept.seq.xml" );
     SequenceAsset good;

@@ -56,9 +56,12 @@ namespace sw
         bool isCinematicActive() const { return _currentCutCamera.isValid(); }
         /** @brief 지금 화면을 덮는 컷 카메라 오브젝트입니다. 없으면 빈 핸들입니다. */
         const GameObjectHandle& getCurrentCutCamera() const { return _currentCutCamera; }
+        /** @brief 대기 뷰 · 끝 블렌드를 받는 지역 플레이어 번호입니다. */
+        uint32 getLocalPlayerIndex() const { return _localPlayerIndex; }
 
     private:
-        GameObject*              findSceneObject( string_view name ) const;
+        /** @brief 신호가 싣고 온 대상(항목의 바인딩이 묶인 오브젝트)입니다. 묶이지 않았거나 지워졌으면 nullptr 입니다. */
+        GameObject*              findSignalTarget( const SequenceCameraSignal& signal ) const;
         CameraDirectorComponent* findDirector( const GameObject* pObject ) const;
         CameraComponent*         findGameCamera() const;
         void                     applyCut( const SequenceCameraSignal& signal );

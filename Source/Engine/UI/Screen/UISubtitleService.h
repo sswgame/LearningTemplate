@@ -75,8 +75,8 @@ namespace sw
          * @return 줄 번호(1 부터)입니다.
          */
         uint32 post( string_view speaker, string_view text, float32 durationSeconds = 0.0f );
-        /** @brief 읽기 시간으로 줄을 올립니다(`ISubtitleSink` — 게임 코드의 대화 진행이 부른다). */
-        void postSubtitle( string_view speaker, string_view text ) override { (void)post( speaker, text ); }
+        /** @brief 줄을 올립니다(`ISubtitleSink` — 게임 코드의 대화 진행은 읽기 시간(0), 시퀀서 자막은 구간 길이를 준다). */
+        void postSubtitle( string_view speaker, string_view text, float32 durationSeconds ) override { (void)post( speaker, text, durationSeconds ); }
         /**
          * @brief 음성 이벤트의 자막 신호(`AudioEngine::takeSubtitleCues`)를 받은 순서대로 올립니다. 키를 지금 문화권으로 풀고 표시 시간은 읽기 시간입니다.
          * @details 엔진 프레임이 UI 갱신 직전에 부른다. 자막 데이터의 기준은 이벤트 라이브러리(`AudioClipEntry::_subtitleKey`, `AudioEventDef::_subtitleSpeakerKey`)다.

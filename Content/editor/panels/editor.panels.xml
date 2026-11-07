@@ -17,6 +17,7 @@
 		<EditorPanelText _title="Clip Preview" _label="Clip Preview" />
 		<EditorPanelText _title="Command Palette" _label="Command Palette" />
 		<EditorPanelText _title="Content Browser" _label="Content Browser" />
+		<EditorPanelText _title="Cutscene Debugger" _label="Cutscene Debugger" />
 		<EditorPanelText _title="Data Layers" _label="Data Layers" />
 		<EditorPanelText _title="Data Table Editor" _label="Data Table Editor" />
 		<EditorPanelText _title="Dialogue Graph" _label="Dialogue Graph" />

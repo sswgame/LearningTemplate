@@ -353,6 +353,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Cutscene Debugger" source="Cutscene Debugger" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Data Layers" source="Data Layers" context="EditorPanelText._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
@@ -7668,7 +7673,87 @@
 				<item>Source/Editor/Panels/Scene/HierarchyPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequenceDebugger.ActiveSection" source="Active items">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequenceDebugger.BindingsSection" source="Bindings">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequenceDebugger.EmptyHistoryHint" source="Nothing recorded yet. Play the sequence to see its events and camera signals.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequenceDebugger.HistorySection" source="Recent playback">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequenceDebugger.NoActiveItemsHint" source="No item covers the current frame.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequenceDebugger.NoBindingsHint" source="This sequence has no bindings.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequenceDebugger.NoPlayersHint" source="No Sequence Player in the active scene. Open a scene with one, or press Play.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequenceDebugger.NotSpawnedYet" source="Not spawned yet">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequenceDebugger.PlayerLabel" source="Player">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequenceDebugger.PlayheadFormat" source="Frame {frame} of {frameMin} to {frameMax}, {state}">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequenceDebugger.Unbound" source="Unbound">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequenceDebuggerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.AddBindingFromSelection" source="Add binding from selection">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.AddBindingFromSelectionTip" source="Add a binding named after the selected object and bind it in this scene's Sequence Player.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.AddCutButton" source="Add cut">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.AddCutTip" source="Start a camera cut at the current frame through the selected binding's camera; the cut it splits ends just before.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.AddKeyTip" source="Key the target's current values on every channel at this frame.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.AddLensTrackTip" source="Add a lens track (field of view, focus, aperture, lens shift) for the selected binding's camera.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7691,6 +7776,51 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.BindSelection" source="Bind selection">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.BindSelectionTip" source="Bind the selected binding to the object selected in the scene. Undo restores the previous object.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.BindingContextFormat" source="Bindings of Sequence Player on {player}">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.BindingLabel" source="Binding">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.BindingNameLabel" source="Binding name">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.BindingNameTip" source="Shown in the editor and given to spawned objects; objects are found by binding id, not by this name.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.BindingUsesFormat" source="{count} uses">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.BindingsSection" source="Bindings">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.CameraCutsSection" source="Camera cuts">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.CancelItemTip" source="Discard the new item.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
@@ -7698,6 +7828,16 @@
 		</entry>
 		<entry key="EditorSequencer.CinematicNoteTip"
 		       source="Free-form notes saved with the sequence. It does not affect playback.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ClipLabel" source="Clip">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ClipTip" source="Animation clip blended over the bound object's animation during the span. Type a resource id or drop one from the Content Browser.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7718,12 +7858,37 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.CutLaneTip" source="Camera cuts by camera. Click a cut to select it and move to that frame.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.DeleteBinding" source="Delete binding">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.DeleteBindingTip" source="Delete the selected binding. Remove the items and tracks that use it first.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.DeleteKeyButton" source="Delete key">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.DeleteKeyTip" source="Remove this track's keys at the current frame on every channel.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.DeleteSelectedKeys" source="Delete selected keys">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.DeleteSelectedKeysTip" source="Remove every selected key on every channel.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7738,6 +7903,11 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.ItemBindingTip" source="Binding of the object this item acts on.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.ItemTargetTip" source="Name of the scene object this item acts on.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
@@ -7748,12 +7918,42 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.KeyStripTip" source="Click a key to select it, Ctrl+click to add or remove, drag to move the selected keys by whole frames. Click empty space to go to that frame.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.LensTargetNotFound" source="Target has no Camera">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.LoadTip" source="Reload the focused .seq file from disk, discarding unsaved edits.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.NextKeyTip" source="Go to the next key">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.NoBindingChoice" source="(none)">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.NoBindingContextHint" source="No Sequence Player in this scene plays this sequence. Add one to bind objects and preview.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.NoBindingsHint" source="No bindings. Select an object and add a binding from it.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.NoCutsHint" source="No camera cuts. Select a camera binding and add a cut.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7862,7 +8062,27 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.SoundLabel" source="Sound">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.SoundTip" source="Audio event posted when the start frame is crossed and stopped when the span ends.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.SpawnBindingTip" source="Binding the spawned object fills; its name is the binding name.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.SpawnNameTip" source="Name the spawned object gets.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.SpawnedBinding" source="Spawned by the sequence">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7878,12 +8098,27 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.TextLabel" source="Text">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.TextTip" source="Localization key (Namespace.Key) of the subtitle line shown for the span.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.TrackNameLabel" source="Name">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.TrackTargetLabel" source="Target">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.UnboundBinding" source="Unbound">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>

@@ -85,7 +85,9 @@ namespace sw
         /** @brief 대기 뷰가 바뀔 때 부를 델리게이트를 등록합니다. 돌려준 구독이 사라지면 뗍니다. */
         [[nodiscard]] Subscription registerPendingViewListener( const OnCameraPendingViewDelegate& delegate );
 
-        bool              isBlending() const { return _blender.isBlending(); }
+        bool isBlending() const { return _blender.isBlending(); }
+        /** @brief 지금 블렌드의 가중치(0 = 나가는 화면, 1 = 들어오는 화면)입니다. 블렌드 중이 아니면 1 입니다(컷씬 디버거가 실제 전환 진행량으로 보인다). */
+        float32           getBlendWeight() const { return _blender.getWeight(); }
         const CameraPose& getPose() const { return _blender.getPose(); }
         uint32            getLocalPlayerIndex() const { return _localPlayerIndex; }
 

@@ -266,7 +266,7 @@ namespace sw
             // 자막은 화면 스택 위의 엔진 서비스다 — 게임 코드는 창구만 안다. 창구가 없으면(전용 서버) 보일 곳이 없다.
             ISubtitleSink* pSubtitles = _pSubtitleSinkOverride != nullptr ? _pSubtitleSinkOverride : game::findSubsystem<ISubtitleSink>();
             if ( pSubtitles != nullptr && _currentText.empty() == false )
-                pSubtitles->postSubtitle( _currentSpeaker, _currentText );
+                pSubtitles->postSubtitle( _currentSpeaker, _currentText, 0.0f ); // 읽기 시간
         }
         if ( _onLine.isBound() == false )
             return;

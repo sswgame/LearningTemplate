@@ -8,6 +8,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Sequencer/SequenceTimelineUtil.h"
 
 #include <initializer_list>
 
@@ -33,17 +34,32 @@ namespace
             return listKeyFrame;
         }
 
-        /** @brief 항목 종류가 요구하는 글 칸을 채웁니다. */
-        static void fillRequiredFields( SequenceTrackItem& item )
+        /** @brief 바인딩 Hero(1) 를 고른 문서입니다 — 새 항목 · 트랙의 대상이다. */
+        static SequenceModel makeDocument()
+        {
+            SequenceModel document = SequenceModelTestUtil::makeDocument();
+            (void)document.addBinding( "Hero" );
+            return document;
+        }
+
+        /** @brief 항목 종류가 요구하는 칸을 채웁니다(종류 표의 필수 칸). 스폰은 혼자 채울 바인딩 @p spawnBinding 을 받는다. */
+        static void fillRequiredFields( SequenceTrackItem& item, uint32 spawnBinding = 1 )
         {
             const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
-            item._targetObject                = "Hero";
-            if ( pInfo->_bSpawns )
+            if ( pInfo->requiresField( SequenceItemField::Binding ) )
+                item._binding = pInfo->_bSpawns ? spawnBinding : 1;
+            if ( pInfo->requiresField( SequenceItemField::Prefab ) )
                 item._prefab = "a.prefab.xml";
-            if ( pInfo->_bNeedsPreset )
+            if ( pInfo->requiresField( SequenceItemField::Preset ) )
                 item._preset = "wet";
-            if ( pInfo->_bPlaysScenario )
+            if ( pInfo->requiresField( SequenceItemField::Scenario ) )
                 item._scenario = "a.scenario.xml";
+            if ( pInfo->requiresField( SequenceItemField::Clip ) )
+                item._clip = "a.animclip";
+            if ( pInfo->requiresField( SequenceItemField::Sound ) )
+                item._sound = "Cinematic.Hit";
+            if ( pInfo->requiresField( SequenceItemField::Text ) )
+                item._text = "Cinematic.Line";
         }
 
         /** @brief 필수 칸을 채운 항목입니다(파일에서 온 항목처럼 문서에 바로 넣는다). */
@@ -64,7 +80,7 @@ SW_TEST_CASE( SequenceModelTest, RestoreKeepsEveryAssetField )
     asset._cameraBlendInSeconds  = 0.5f;
     asset._cameraBlendOutSeconds = 0.25f;
     asset._cameraPrerollFrames   = 7;
-    SequenceModel document;
+    SequenceModel document       = SequenceModelTestUtil::makeDocument();
     document.restoreAsset( asset );
     SW_EXPECT_NEAR( 0.5f, document._asset._cameraBlendInSeconds, 1e-5f );
     SW_EXPECT_NEAR( 0.25f, document._asset._cameraBlendOutSeconds, 1e-5f );
@@ -75,11 +91,11 @@ SW_TEST_CASE( SequenceModelTest, RestoreKeepsEveryAssetField )
 // 되돌리기가 항목을 줄이면 고른 번호가 없는 항목을 가리켜 타임라인이 빈 줄을 강조했다.
 SW_TEST_CASE( SequenceModelTest, RestoreClampsTheSelection )
 {
-    SequenceModel document;
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
     (void)document.addItem( SequenceItemKind::Clip, "Clip" );
     (void)document.addItem( SequenceItemKind::Clip, "Clip" );
-    document.addTrack( SequenceTrackKind::Transform, "" );
-    document.addTrack( SequenceTrackKind::Transform, "" );
+    (void)document.addTrack( SequenceTrackKind::Transform );
+    (void)document.addTrack( SequenceTrackKind::Transform );
     document._selectedItem = 1;
     document._curveTrack   = 1;
 
@@ -99,9 +115,9 @@ SW_TEST_CASE( SequenceModelTest, RestoreClampsTheSelection )
 
 SW_TEST_CASE( SequenceModelTest, ResetSelectionPicksTheFirstTrack )
 {
-    SequenceModel document;
-    document.addTrack( SequenceTrackKind::Transform, "" );
-    document.addTrack( SequenceTrackKind::Property, "" );
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
+    (void)document.addTrack( SequenceTrackKind::Transform );
+    (void)document.addTrack( SequenceTrackKind::Property );
     document._selectedItem = 3;
     document._curveTrack   = 1;
     document.resetSelection();
@@ -113,16 +129,18 @@ SW_TEST_CASE( SequenceModelTest, ResetSelectionPicksTheFirstTrack )
 // 스폰 · 외형 · 시나리오는 필수 칸이 빈 채 문서에 들어가면 저장한 파일과 되돌리기 스냅숏이 읽기 오류가 됐다 - 칸을 채운 뒤에만 항목이 된다.
 SW_TEST_CASE( SequenceModelTest, EveryKindCanBeCreatedAndSurvivesSaveAndLoad )
 {
-    SequenceModel document;
-    for ( const SequenceItemKindInfo& info : kArrSequenceItemKindInfo )
+    SequenceModel document     = SequenceModelTestUtil::makeDocument();
+    const uint32  spawnBinding = document._asset.addBinding( "Prop" ); // 스폰은 바인딩 하나를 혼자 채운다
+    for ( uint32 kindIndex = 0; kindIndex < SequenceAsset::getItemKindCount(); ++kindIndex )
     {
-        if ( document.addItem( info._kind, "Kind" ) >= 0 )
+        const SequenceItemKind kind = static_cast<SequenceItemKind>( kindIndex );
+        if ( document.addItem( kind, "Kind" ) >= 0 )
             continue;
         SW_REQUIRE_TRUE( document.isDraftingItem() );
-        SequenceModelTestUtil::fillRequiredFields( document._itemEdit );
+        SequenceModelTestUtil::fillRequiredFields( document._itemEdit, spawnBinding );
         SW_EXPECT_TRUE( document.commitItemDraft() >= 0 );
     }
-    SW_REQUIRE_EQUAL( SW_COUNT_OF( kArrSequenceItemKindInfo ), document._asset._listItem.size() );
+    SW_REQUIRE_EQUAL( size_t{ SequenceAsset::getItemKindCount() }, document._asset._listItem.size() );
     SequenceAsset readBack;
     SW_REQUIRE_TRUE( readBack.loadFromXMLText( document._asset.toXML() ) );
     const SequenceTrackItem& spawn = readBack._listItem[static_cast<size_t>( SequenceItemKind::Spawn )];
@@ -134,7 +152,7 @@ SW_TEST_CASE( SequenceModelTest, EveryKindCanBeCreatedAndSurvivesSaveAndLoad )
 
 SW_TEST_CASE( SequenceModelTest, KindsThatNeedFieldsOpenADraftInsteadOfAnItem )
 {
-    SequenceModel document;
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
     for ( const SequenceItemKind kind : { SequenceItemKind::Spawn, SequenceItemKind::Appearance, SequenceItemKind::Scenario } )
     {
         SW_EXPECT_EQUAL( -1, document.addItem( kind, "Kind" ) );
@@ -151,21 +169,22 @@ SW_TEST_CASE( SequenceModelTest, KindsThatNeedFieldsOpenADraftInsteadOfAnItem )
 // 초안이 열려 있어도 문서는 언제나 저장 · 되돌리기 스냅숏으로 읽힌다 - 이 불변식이 설계의 전부다.
 SW_TEST_CASE( SequenceModelTest, DraftWithEmptyFieldsNeverEntersTheDocument )
 {
-    SequenceModel document;
+    SequenceModel document    = SequenceModelTestUtil::makeDocument();
     document._asset._frameMin = 5;
     document._asset._frameMax = 8;
     SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Spawn, "Spawn" ) );
     const string snapshot = document._asset.toXML();
 
     SW_EXPECT_EQUAL( -1, document.commitItemDraft() );
-    document._itemEdit._prefab = "a.prefab.xml";
-    SW_EXPECT_EQUAL( -1, document.commitItemDraft() ); // 스폰은 이름도 필수다
+    document._itemEdit._prefab  = "a.prefab.xml";
+    document._itemEdit._binding = 9;
+    SW_EXPECT_EQUAL( -1, document.commitItemDraft() ); // 시퀀스에 없는 바인딩이다
     SW_EXPECT_TRUE( document.isDraftingItem() );
     SW_EXPECT_TRUE( document._asset.toXML() == snapshot );
     SequenceAsset readBack;
     SW_EXPECT_TRUE( readBack.loadFromXMLText( document._asset.toXML() ) );
 
-    document._itemEdit._targetObject = "Spawned";
+    document._itemEdit._binding = 1;
     SW_REQUIRE_EQUAL( 0, document.commitItemDraft() );
     SW_EXPECT_FALSE( document.isDraftingItem() );
     SW_EXPECT_EQUAL( 0, document._selectedItem );
@@ -174,14 +193,14 @@ SW_TEST_CASE( SequenceModelTest, DraftWithEmptyFieldsNeverEntersTheDocument )
     SW_EXPECT_TRUE( item._kind == SequenceItemKind::Spawn );
     SW_EXPECT_EQUAL( 5, item._start );
     SW_EXPECT_EQUAL( 8, item._end );
-    SW_EXPECT_EQUAL( kArrSequenceItemKindInfo[static_cast<size_t>( SequenceItemKind::Spawn )]._defaultColor, item._color );
+    SW_EXPECT_EQUAL( SequenceAsset::findItemKindInfo( SequenceItemKind::Spawn )->_defaultColor, item._color );
     SW_EXPECT_EQUAL( -1, document.commitItemDraft() ); // 닫힌 초안을 두 번 더하지 않는다
     SW_EXPECT_EQUAL( size_t{ 1 }, document._asset._listItem.size() );
 }
 
 SW_TEST_CASE( SequenceModelTest, DraftClosesOnCancelPlainAddAndNewDocument )
 {
-    SequenceModel document;
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
     SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Scenario, "Scenario" ) );
     document.cancelItemDraft();
     SW_EXPECT_FALSE( document.isDraftingItem() );
@@ -199,7 +218,7 @@ SW_TEST_CASE( SequenceModelTest, DraftClosesOnCancelPlainAddAndNewDocument )
 // 되돌리기는 문서만 바꾼다 - 치던 초안을 잃지 않고, 사본이 고른 항목으로 덮이지도 않는다.
 SW_TEST_CASE( SequenceModelTest, UndoKeepsTheOpenDraft )
 {
-    SequenceModel document;
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
     (void)document.addItem( SequenceItemKind::Clip, "Clip" );
     document._selectedItem = 0;
     SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Scenario, "Scenario" ) );
@@ -217,15 +236,15 @@ SW_TEST_CASE( SequenceModelTest, UndoKeepsTheOpenDraft )
 // 결함: 파일에서 온 스폰 항목의 대상 칸을 패널에서 비우면 문서가 그대로 비어 저장 · 되돌리기 스냅숏이 읽기 오류가 됐다.
 SW_TEST_CASE( SequenceModelTest, ClearingARequiredFieldIsRefusedAndRestored )
 {
-    SequenceModel document;
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
     document._asset._listItem.push_back( SequenceModelTestUtil::makeFilledItem( SequenceItemKind::Spawn ) );
     document._selectedItem = 0;
     document.syncItemEdit();
 
-    document._itemEdit._targetObject.clear();
+    document._itemEdit._binding = kSequenceNoBinding;
     SW_EXPECT_FALSE( document.commitItemEdit() );
-    SW_EXPECT_TRUE( document._asset._listItem[0]._targetObject == "Hero" );
-    SW_EXPECT_TRUE( document._itemEdit._targetObject == "Hero" ); // 칸이 앞 값으로 돌아온다
+    SW_EXPECT_EQUAL( 1u, document._asset._listItem[0]._binding );
+    SW_EXPECT_EQUAL( 1u, document._itemEdit._binding ); // 칸이 앞 값으로 돌아온다
 
     document._itemEdit._prefab.clear();
     SW_EXPECT_FALSE( document.commitItemEdit() );
@@ -241,7 +260,7 @@ SW_TEST_CASE( SequenceModelTest, ClearingARequiredFieldIsRefusedAndRestored )
 // 사본은 글 칸만 적용한다 - 칸을 고치는 사이 타임라인이 옮긴 구간을 옛 값으로 덮지 않는다.
 SW_TEST_CASE( SequenceModelTest, ItemEditKeepsTheTimelineSpan )
 {
-    SequenceModel document;
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
     (void)document.addItem( SequenceItemKind::Event, "Event" );
     document._selectedItem = 0;
     document.syncItemEdit();
@@ -256,7 +275,7 @@ SW_TEST_CASE( SequenceModelTest, ItemEditKeepsTheTimelineSpan )
 
 SW_TEST_CASE( SequenceModelTest, ItemEditFollowsTheSelection )
 {
-    SequenceModel document;
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
     SW_EXPECT_FALSE( document.hasEditedItem() );
     SW_EXPECT_FALSE( document.commitItemEdit() );
 
@@ -276,7 +295,7 @@ SW_TEST_CASE( SequenceModelTest, ItemEditFollowsTheSelection )
 // 위젯이 주던 고정 길이 10 은 짧은 타임라인을 넘어 띠 밖으로 나갔다.
 SW_TEST_CASE( SequenceModelTest, NewItemStaysInsideTheTimeline )
 {
-    SequenceModel document;
+    SequenceModel document    = SequenceModelTestUtil::makeDocument();
     document._asset._frameMin = 5;
     document._asset._frameMax = 8;
     const int32 itemIndex     = document.addItem( SequenceItemKind::Event, "Event" );
@@ -285,13 +304,13 @@ SW_TEST_CASE( SequenceModelTest, NewItemStaysInsideTheTimeline )
     SW_EXPECT_EQUAL( 5, item._start );
     SW_EXPECT_EQUAL( 8, item._end );
     SW_EXPECT_TRUE( item._kind == SequenceItemKind::Event );
-    SW_EXPECT_EQUAL( kArrSequenceItemKindInfo[static_cast<size_t>( SequenceItemKind::Event )]._defaultColor, item._color );
+    SW_EXPECT_EQUAL( SequenceAsset::findItemKindInfo( SequenceItemKind::Event )->_defaultColor, item._color );
 }
 
 // 번호가 목록 길이뿐이면 지운 뒤 더한 이름이 남은 이름과 겹쳤다.
 SW_TEST_CASE( SequenceModelTest, NewNamesDoNotCollideAfterRemoval )
 {
-    SequenceModel document;
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
     (void)document.addItem( SequenceItemKind::Clip, "Clip" );
     (void)document.addItem( SequenceItemKind::Clip, "Clip" );
     SW_EXPECT_TRUE( document._asset._listItem[1]._name == "Clip 1" );
@@ -299,11 +318,11 @@ SW_TEST_CASE( SequenceModelTest, NewNamesDoNotCollideAfterRemoval )
     (void)document.addItem( SequenceItemKind::Clip, "Clip" );
     SW_EXPECT_TRUE( document._asset._listItem[1]._name == "Clip 2" );
 
-    document.addTrack( SequenceTrackKind::Transform, "" );
-    document.addTrack( SequenceTrackKind::Transform, "" );
+    (void)document.addTrack( SequenceTrackKind::Transform );
+    (void)document.addTrack( SequenceTrackKind::Transform );
     document._selectedTrack = 0;
     SW_EXPECT_TRUE( document.removeSelectedTrack() );
-    document.addTrack( SequenceTrackKind::Transform, "" );
+    (void)document.addTrack( SequenceTrackKind::Transform );
     SW_EXPECT_TRUE( document._asset._listTrack[0]._name == "Transform 1" );
     SW_EXPECT_TRUE( document._asset._listTrack[1]._name == "Transform 2" );
 }
@@ -311,7 +330,7 @@ SW_TEST_CASE( SequenceModelTest, NewNamesDoNotCollideAfterRemoval )
 // 앞 항목을 지워도 고른 번호가 그대로면 이름 칸이 옆 항목을 고쳤다.
 SW_TEST_CASE( SequenceModelTest, RemoveItemKeepsTheSelectedItem )
 {
-    SequenceModel document;
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
     (void)document.addItem( SequenceItemKind::Clip, "A" );
     (void)document.addItem( SequenceItemKind::Clip, "B" );
     (void)document.addItem( SequenceItemKind::Clip, "C" );
@@ -329,7 +348,7 @@ SW_TEST_CASE( SequenceModelTest, RemoveItemKeepsTheSelectedItem )
 
 SW_TEST_CASE( SequenceModelTest, DuplicateCopiesTheItemWithANewName )
 {
-    SequenceModel document;
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
     (void)document.addItem( SequenceItemKind::Event, "Event" );
     document._asset._listItem[0]._name  = "Cut";
     document._asset._listItem[0]._start = 3;
@@ -345,13 +364,13 @@ SW_TEST_CASE( SequenceModelTest, DuplicateCopiesTheItemWithANewName )
 
 SW_TEST_CASE( SequenceModelTest, AddTrackFitsChannelsAndSelects )
 {
-    SequenceModel document;
-    document.addTrack( SequenceTrackKind::Transform, "Hero" );
-    document.addTrack( SequenceTrackKind::RigSlot, "" );
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
+    (void)document.addTrack( SequenceTrackKind::Transform );
+    (void)document.addTrack( SequenceTrackKind::RigSlot );
     SW_EXPECT_EQUAL( 1, document._selectedTrack );
     const vector<SequenceKeyTrack>& listTrack = document._asset._listTrack;
     SW_EXPECT_EQUAL( kSequenceTransformChannelCount, static_cast<uint32>( listTrack[0]._listChannel.size() ) );
-    SW_EXPECT_TRUE( listTrack[0]._targetObject == "Hero" );
+    SW_EXPECT_EQUAL( 1u, listTrack[0]._binding );
     SW_EXPECT_TRUE( listTrack[0]._name == "Transform 0" );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( listTrack[1]._listChannel.size() ) );
     SW_EXPECT_TRUE( listTrack[1]._name == "Rig Slot 1" );
@@ -359,9 +378,9 @@ SW_TEST_CASE( SequenceModelTest, AddTrackFitsChannelsAndSelects )
 
 SW_TEST_CASE( SequenceModelTest, RemoveSelectedTrackClosesTheCurve )
 {
-    SequenceModel document;
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
     SW_EXPECT_FALSE( document.removeSelectedTrack() );
-    document.addTrack( SequenceTrackKind::Property, "" );
+    (void)document.addTrack( SequenceTrackKind::Property );
     document._curveTrack   = 0;
     document._curveChannel = 0;
     SW_EXPECT_TRUE( document.findCurveChannel() != nullptr );
@@ -377,7 +396,7 @@ SW_TEST_CASE( SequenceModelTest, RemoveSelectedTrackClosesTheCurve )
 
 SW_TEST_CASE( SequenceModelTest, KeyNavigationSkipsTheKeyAtTheCurrentFrame )
 {
-    SequenceModel         document;
+    SequenceModel         document     = SequenceModelTestUtil::makeDocument();
     const vector<float32> listKeyFrame = SequenceModelTestUtil::makeKeyFrames( { 10.0f, 20.0f, 30.0f } );
     SW_EXPECT_EQUAL( 10, document.findPreviousKeyFrame( listKeyFrame, 20 ).value() );
     SW_EXPECT_EQUAL( 30, document.findNextKeyFrame( listKeyFrame, 20 ).value() );
@@ -390,7 +409,7 @@ SW_TEST_CASE( SequenceModelTest, KeyNavigationSkipsTheKeyAtTheCurrentFrame )
 // 커브 편집기로 소수 프레임에 놓은 키도 정수 프레임으로 가고, 이동은 지금 자리에 머물지 않는다.
 SW_TEST_CASE( SequenceModelTest, KeyNavigationRoundsFractionalKeys )
 {
-    SequenceModel         document;
+    SequenceModel         document = SequenceModelTestUtil::makeDocument();
     const vector<float32> listKeyFrame{ 10.6f };
     const int32           nextFrame = document.findNextKeyFrame( listKeyFrame, 5 ).value();
     SW_EXPECT_EQUAL( 11, nextFrame );
@@ -401,7 +420,7 @@ SW_TEST_CASE( SequenceModelTest, KeyNavigationRoundsFractionalKeys )
 // 타임라인 밖의 키로 가면 시간 막대가 갈 수 없는 프레임에 머물렀다. 1e10 은 int32 로 바꾸기 전에 걸러야 한다.
 SW_TEST_CASE( SequenceModelTest, KeyNavigationStaysInsideTheTimeline )
 {
-    SequenceModel document;
+    SequenceModel document             = SequenceModelTestUtil::makeDocument();
     document._asset._frameMin          = 0;
     document._asset._frameMax          = 100;
     const vector<float32> listKeyFrame = { -5.0f, 50.0f, 150.0f, 1e10f };
@@ -413,7 +432,7 @@ SW_TEST_CASE( SequenceModelTest, KeyNavigationStaysInsideTheTimeline )
 
 SW_TEST_CASE( SequenceModelTest, RatioAndFrameAreInverse )
 {
-    SequenceModel document;
+    SequenceModel document    = SequenceModelTestUtil::makeDocument();
     document._asset._frameMin = 10;
     document._asset._frameMax = 30;
     SW_EXPECT_EQUAL( 10, document.findFrameAtRatio( 0.0f ) );
@@ -469,38 +488,152 @@ SW_TEST_CASE( SequenceModelTest, ReadTrackValuesReadsTheTransformInChannelOrder 
     pScene->setLocalScale( float3{ 4.0f, 5.0f, 6.0f } );
 
     SequenceKeyTrack track{};
-    track._kind         = SequenceTrackKind::Transform;
-    track._targetObject = "SequenceModelTestHero";
+    track._kind = SequenceTrackKind::Transform;
     float32 arrValue[kSequenceTransformChannelCount]{};
-    SW_REQUIRE_TRUE( SequenceModel::readTrackValues( &manager, track, arrValue, kSequenceTransformChannelCount ) );
+    SW_REQUIRE_TRUE( SequenceTimelineUtil::readTrackValues( pObject, track, arrValue, kSequenceTransformChannelCount ) );
     SW_EXPECT_NEAR( 1.0f, arrValue[0], 1e-5f );
     SW_EXPECT_NEAR( 3.0f, arrValue[2], 1e-5f );
     SW_EXPECT_NEAR( 0.2f, arrValue[4], 1e-5f );
     SW_EXPECT_NEAR( 6.0f, arrValue[8], 1e-5f );
 
     // 자리가 모자라면 넘겨 쓰지 않는다.
-    SW_EXPECT_FALSE( SequenceModel::readTrackValues( &manager, track, arrValue, 1 ) );
-    SW_EXPECT_FALSE( SequenceModel::readTrackValues( &manager, track, nullptr, kSequenceTransformChannelCount ) );
+    SW_EXPECT_FALSE( SequenceTimelineUtil::readTrackValues( pObject, track, arrValue, 1 ) );
+    SW_EXPECT_FALSE( SequenceTimelineUtil::readTrackValues( pObject, track, nullptr, kSequenceTransformChannelCount ) );
 }
 
 SW_TEST_CASE( SequenceModelTest, ReadTrackValuesFailsWithoutATargetOrComponent )
 {
     GameObjectManager manager;
-    (void)manager.createGameObject( hashed_string( "SequenceModelTestBare" ) );
-    float32 arrValue[kSequenceTransformChannelCount]{};
+    GameObject*       pBare = manager.createGameObject( hashed_string( "SequenceModelTestBare" ) );
+    float32           arrValue[kSequenceTransformChannelCount]{};
 
     SequenceKeyTrack track{};
-    track._kind         = SequenceTrackKind::Transform;
-    track._targetObject = "SequenceModelTestMissing";
-    SW_EXPECT_FALSE( SequenceModel::readTrackValues( &manager, track, arrValue, kSequenceTransformChannelCount ) );
-
-    track._targetObject = "SequenceModelTestBare";
-    SW_EXPECT_FALSE( SequenceModel::readTrackValues( &manager, track, arrValue, kSequenceTransformChannelCount ) );
+    track._kind = SequenceTrackKind::Transform;
+    SW_EXPECT_FALSE( SequenceTimelineUtil::readTrackValues( nullptr, track, arrValue, kSequenceTransformChannelCount ) );
+    SW_EXPECT_FALSE( SequenceTimelineUtil::readTrackValues( pBare, track, arrValue, kSequenceTransformChannelCount ) );
 
     track._kind = SequenceTrackKind::RigSlot;
-    SW_EXPECT_FALSE( SequenceModel::readTrackValues( &manager, track, arrValue, kSequenceTransformChannelCount ) );
+    SW_EXPECT_FALSE( SequenceTimelineUtil::readTrackValues( pBare, track, arrValue, kSequenceTransformChannelCount ) );
+
+    track._kind = SequenceTrackKind::CameraLens;
+    SW_EXPECT_FALSE( SequenceTimelineUtil::readTrackValues( pBare, track, arrValue, kSequenceTransformChannelCount ) );
 
     track._kind         = SequenceTrackKind::Property;
     track._propertyPath = "NoSuchComponent.value";
-    SW_EXPECT_FALSE( SequenceModel::readTrackValues( &manager, track, arrValue, kSequenceTransformChannelCount ) );
+    SW_EXPECT_FALSE( SequenceTimelineUtil::readTrackValues( pBare, track, arrValue, kSequenceTransformChannelCount ) );
+}
+
+// 바인딩을 쓰는 항목 · 트랙이 남은 채 바인딩을 지우면 파일이 읽히지 않는다 - 쓰는 곳이 없을 때만 지운다. id 는 다시 쓰지 않는다.
+SW_TEST_CASE( SequenceModelTest, BindingsAreRemovedOnlyWhenUnused )
+{
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
+    SW_EXPECT_EQUAL( 1u, document._selectedBinding );
+    SW_REQUIRE_TRUE( document.addTrack( SequenceTrackKind::Transform ) );
+    SW_EXPECT_FALSE( document.removeBinding( 1 ) );
+    SW_EXPECT_TRUE( document.renameBinding( 1, "Knight" ) );
+    SW_EXPECT_FALSE( document.renameBinding( 1, "" ) );
+    SW_EXPECT_TRUE( document._asset.findBinding( 1 )->_name == "Knight" );
+
+    const uint32 extraID = document.addBinding( "Extra" );
+    SW_EXPECT_EQUAL( 2u, extraID );
+    SW_EXPECT_EQUAL( extraID, document._selectedBinding );
+    SW_EXPECT_TRUE( document.removeBinding( extraID ) );
+    SW_EXPECT_EQUAL( 1u, document._selectedBinding );
+    SW_EXPECT_EQUAL( 3u, document.addBinding( "Again" ) ); // 지운 id 2 는 다시 주지 않는다
+
+    SequenceModel empty;
+    SW_EXPECT_FALSE( empty.addTrack( SequenceTrackKind::Transform ) ); // 고른 바인딩이 없으면 트랙을 더할 대상이 없다
+    SW_EXPECT_EQUAL( -1, empty.addItem( SequenceItemKind::Clip, "Clip" ) );
+    SW_EXPECT_TRUE( empty.isDraftingItem() );
+}
+
+// 컷 차선: 컷을 더하면 앞 컷은 그 프레임 앞에서 끝나고 새 컷은 다음 컷 앞까지다(언리얼 Camera Cut 트랙).
+SW_TEST_CASE( SequenceModelTest, AddCameraCutSplitsTheLane )
+{
+    SequenceModel document    = SequenceModelTestUtil::makeDocument();
+    document._asset._frameMin = 0;
+    document._asset._frameMax = 100;
+    SW_REQUIRE_EQUAL( 0, document.addCameraCut( 0 ) );
+    SW_EXPECT_EQUAL( 100, document._asset._listItem[0]._end );
+    const uint32 secondCamera = document.addBinding( "CamB" );
+    SW_REQUIRE_EQUAL( 1, document.addCameraCut( 40 ) );
+    SW_EXPECT_EQUAL( 39, document._asset._listItem[0]._end );
+    SW_EXPECT_EQUAL( 100, document._asset._listItem[1]._end );
+    SW_EXPECT_EQUAL( secondCamera, document._asset._listItem[1]._binding );
+    SW_EXPECT_EQUAL( 1, document._selectedItem );
+    SW_REQUIRE_EQUAL( 2, document.addCameraCut( 20 ) );
+    SW_EXPECT_EQUAL( 19, document._asset._listItem[0]._end );
+    SW_EXPECT_EQUAL( 39, document._asset._listItem[2]._end ); // 다음 컷 앞까지
+    SW_EXPECT_EQUAL( -1, document.addCameraCut( 40 ) );       // 같은 프레임에서 두 컷이 시작하지 않는다
+    SW_EXPECT_EQUAL( -1, document.addCameraCut( 200 ) );
+
+    vector<int32> listLane;
+    document.collectCutLane( listLane );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listLane.size() );
+    SW_EXPECT_EQUAL( 0, listLane[0] );
+    SW_EXPECT_EQUAL( 2, listLane[1] );
+    SW_EXPECT_EQUAL( 1, listLane[2] );
+    SequenceAsset readBack;
+    SW_EXPECT_TRUE( readBack.loadFromXMLText( document._asset.toXML() ) );
+}
+
+// 키 고르기: 누르면 그 키만, Ctrl 은 더하기 · 빼기, 고른 키를 다시 누르면 다중 선택을 지킨다(끌기 시작).
+SW_TEST_CASE( SequenceModelTest, KeySelectionTogglesAndKeeps )
+{
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
+    document.selectKey( 0, 10.0f, false );
+    document.selectKey( 0, 20.0f, true );
+    document.selectKey( 1, 10.0f, true );
+    SW_EXPECT_EQUAL( size_t{ 3 }, document.getSelectedKeys().size() );
+    document.selectKey( 0, 20.0f, false ); // 고른 키 — 선택을 지킨다
+    SW_EXPECT_EQUAL( size_t{ 3 }, document.getSelectedKeys().size() );
+    document.selectKey( 1, 10.0f, true ); // 빼기
+    SW_EXPECT_FALSE( document.isKeySelected( 1, 10.0f ) );
+    document.selectKey( 0, 30.0f, false ); // 고르지 않은 키 — 그 키만
+    SW_EXPECT_EQUAL( size_t{ 1 }, document.getSelectedKeys().size() );
+    SW_EXPECT_TRUE( document.isKeySelected( 0, 30.2f ) );
+}
+
+// 키 끌기: 고른 키 여럿을 한 번에 옮기고, 같은 트랙의 앞 키가 아직 옮기지 않은 고른 키를 덮지 않는다. 타임라인 밖으로는 옮기지 않는다.
+SW_TEST_CASE( SequenceModelTest, MoveSelectedKeysKeepsEveryKey )
+{
+    SequenceModel document    = SequenceModelTestUtil::makeDocument();
+    document._asset._frameMax = 100;
+    SW_REQUIRE_TRUE( document.addTrack( SequenceTrackKind::Property ) );
+    SW_REQUIRE_TRUE( document.addTrack( SequenceTrackKind::Property ) );
+    SequenceKeyTrack& first  = document._asset._listTrack[0];
+    SequenceKeyTrack& second = document._asset._listTrack[1];
+    (void)first.setChannelKey( 0, 10.0f, 1.0f );
+    (void)first.setChannelKey( 0, 20.0f, 2.0f );
+    (void)second.setChannelKey( 0, 10.0f, 3.0f );
+    document.selectKey( 0, 10.0f, false );
+    document.selectKey( 0, 20.0f, true );
+    document.selectKey( 1, 10.0f, true );
+
+    SW_EXPECT_TRUE( document.moveSelectedKeys( 10 ) );
+    SW_EXPECT_NEAR( 1.0f, first.evaluateChannel( 0, 20.0f ).value(), 1e-5f ); // 10 → 20, 20 → 30 이 서로 덮지 않았다
+    SW_EXPECT_NEAR( 2.0f, first.evaluateChannel( 0, 30.0f ).value(), 1e-5f );
+    SW_EXPECT_EQUAL( size_t{ 2 }, first._listChannel[0]._listKey.size() );
+    SW_EXPECT_TRUE( second.hasKeyAt( 20.0f ) );
+    SW_EXPECT_TRUE( document.isKeySelected( 0, 30.0f ) );
+
+    SW_EXPECT_FALSE( document.moveSelectedKeys( 90 ) ); // 30 + 90 은 타임라인 밖이다
+    SW_EXPECT_TRUE( first.hasKeyAt( 30.0f ) );
+    SW_EXPECT_EQUAL( 2, document.computeFrameDelta( 20.0f, 1000.0f ) ); // 1000 px 에 100 프레임 — 20 px 는 2 프레임
+
+    SW_EXPECT_EQUAL( 3u, document.removeSelectedKeys() );
+    SW_EXPECT_TRUE( first._listChannel[0]._listKey.empty() );
+    SW_EXPECT_TRUE( document.getSelectedKeys().empty() );
+}
+
+// 렌즈 트랙의 화각은 도로 보이고 라디안으로 저장한다(인스펙터의 화각과 같은 규칙).
+SW_TEST_CASE( SequenceModelTest, LensFieldOfViewShowsDegrees )
+{
+    SequenceKeyTrack lens{};
+    lens._kind = SequenceTrackKind::CameraLens;
+    lens.fitChannelsToKind();
+    SW_EXPECT_TRUE( SequenceModel::isRotationChannel( lens, 0 ) );
+    SW_EXPECT_FALSE( SequenceModel::isRotationChannel( lens, 1 ) );
+    SW_EXPECT_TRUE( SequenceModel::setChannelDisplayValue( lens, 0, 0.0f, 45.0f ) );
+    SW_EXPECT_NEAR( MathUtil::toRadian( 45.0f ), lens.evaluateChannel( 0, 0.0f ).value(), 1e-4f );
 }

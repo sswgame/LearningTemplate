@@ -1,12 +1,17 @@
 <SequenceAsset _frameMin="0"
                _frameMax="100"
-               _note="sequencerkeys scenario: key GameCamera location X at two frames"
+               _note="sequencerkeys scenario: key the Mover binding location X at two frames"
+               _nextBindingID="2"
+               _whenFinished="RestoreState"
                _cameraBlendInSeconds="0"
                _cameraBlendOutSeconds="0"
                _cameraPrerollFrames="0">
+	<_listBinding>
+		<SequenceBinding _id="1" _name="Mover" />
+	</_listBinding>
 	<_listItem />
 	<_listTrack>
-		<SequenceKeyTrack _name="Move" _targetObject="GameCamera" _propertyPath="" _kind="Transform">
+		<SequenceKeyTrack _name="Move" _propertyPath="" _binding="1" _kind="Transform">
 			<_listChannel>
 				<FloatCurve>
 					<_listKey />

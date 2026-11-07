@@ -8,6 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayerComponent.h"
+#include "Engine/Sequencer/SequenceTimelineUtil.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
@@ -38,24 +39,25 @@ namespace sw
         Component::onEndPlay();
     }
 
-    void SequenceAppearanceComponent::handleSequenceEvent( const SequenceTrackItem& item )
+    void SequenceAppearanceComponent::handleSequenceEvent( const SequenceFiredEvent& event )
     {
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr )
-            (void)applyAppearanceItem( *pManager, item ); // 실패는 안에서 오류로 남겼다
+            (void)applyAppearanceItem( *pManager, event ); // 실패는 안에서 오류로 남겼다
     }
 
-    bool SequenceAppearanceComponent::applyAppearanceItem( GameObjectManager& manager, const SequenceTrackItem& item )
+    bool SequenceAppearanceComponent::applyAppearanceItem( GameObjectManager& manager, const SequenceFiredEvent& event )
     {
+        const SequenceTrackItem& item = event._item;
         if ( item._kind != SequenceItemKind::Appearance )
             return false;
-        GameObject*                   pTarget     = manager.findGameObjectByName( hashed_string{ item._targetObject.c_str() } );
+        GameObject*                   pTarget     = manager.resolveGameObject( event._target );
         CharacterAppearanceComponent* pAppearance = pTarget != nullptr ? pTarget->getComponent<CharacterAppearanceComponent>() : nullptr;
         if ( pAppearance == nullptr )
         {
-            SW_LOG_ERROR_ID( "SequenceAppearance.SequenceItemWantsPreset", "Sequence item '%#' wants preset '%#' on '%#' but the object %#", item._name.c_str(), item._preset.c_str(), item._targetObject.c_str(),
-                             pTarget == nullptr ? "is not in the scene" : "has no CharacterAppearanceComponent" );
+            SW_LOG_ERROR_ID( "SequenceAppearance.SequenceItemWantsPreset", "Sequence item '%#' wants preset '%#' on binding %# but the object %#", item._name.c_str(), item._preset.c_str(), item._binding,
+                             pTarget == nullptr ? "is not bound or no longer exists" : "has no CharacterAppearanceComponent" );
             return false;
         }
         pAppearance->setPreset( hashed_string{ item._preset.c_str() }, static_cast<uint32>( pAppearance->getSeed() ) );

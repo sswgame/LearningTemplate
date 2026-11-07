@@ -93,8 +93,65 @@ namespace sw::editor
             outValue = static_cast<float64>( count );
             return true;
         }
+
+        /** @brief 열린 Sequencer 패널입니다. 닫혔으면 nullptr 입니다. */
+        [[nodiscard]] const SequencerPanel* findOpenSequencer( const utf8* pCaller )
+        {
+            EditorContext* pContext = getWatchContext( pCaller );
+            if ( pContext == nullptr )
+                return nullptr;
+            const SequencerPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<SequencerPanel>();
+            return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+        }
+
+        /** @brief Sequencer 문서의 바인딩 수입니다. */
+        [[nodiscard]] bool readSequencerBindingCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getDocument()._asset._listBinding.size() );
+            return true;
+        }
+
+        /** @brief Sequencer 의 바인딩 문맥(이 시퀀스를 트는 플레이어)에서 묶이지 않은 바인딩 수입니다. */
+        [[nodiscard]] bool readSequencerUnboundCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->countUnboundBindings() );
+            return true;
+        }
+
+        /** @brief Sequencer 문서의 카메라 컷 수입니다(컷 차선). */
+        [[nodiscard]] bool readSequencerCutCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            vector<int32> listCut;
+            pPanel->getDocument().collectCutLane( listCut );
+            outValue = static_cast<float64>( listCut.size() );
+            return true;
+        }
+
+        /** @brief Sequencer 에서 고른 키 수입니다. */
+        [[nodiscard]] bool readSequencerSelectedKeyCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            const SequencerPanel* pPanel = findOpenSequencer( __func__ );
+            if ( pPanel == nullptr )
+                return false;
+            outValue = static_cast<float64>( pPanel->getDocument().getSelectedKeys().size() );
+            return true;
+        }
     } // namespace
 
+    SW_AUTOMATION_WATCH( editorSequencerBindingCount, "Editor.SequencerBindingCount", "Bindings in the sequence open in the Sequencer panel", &readSequencerBindingCount );
+    SW_AUTOMATION_WATCH( editorSequencerUnboundCount, "Editor.SequencerUnboundCount", "Bindings of the open sequence that the scene's Sequence Player does not bind to a live object",
+                         &readSequencerUnboundCount );
+    SW_AUTOMATION_WATCH( editorSequencerCutCount, "Editor.SequencerCutCount", "Camera cuts in the sequence open in the Sequencer panel", &readSequencerCutCount );
+    SW_AUTOMATION_WATCH( editorSequencerSelectedKeyCount, "Editor.SequencerSelectedKeyCount", "Keys selected in the Sequencer panel's key strips", &readSequencerSelectedKeyCount );
     SW_AUTOMATION_WATCH( editorAnimationGraphLinkCount, "Editor.AnimationGraphLinkCount", "Transitions in the open animation graph document",
                          &readAnimationGraphLinkCount );
     SW_AUTOMATION_WATCH( editorAnimationGraphConditionCount, "Editor.AnimationGraphConditionCount", "Transitions with a condition in the open animation graph document",

@@ -215,5 +215,10 @@
 	<EditorWaitSettled/>
 	<DevCommand line="panel.close map_check"/>
 	<EditorWaitSettled/>
+	<DevCommand line="panel.focus sequence_debugger"/>
+	<CaptureEditorUI file="audit/42_sequence_debugger.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.close sequence_debugger"/>
+	<EditorWaitSettled/>
 	<Pass/>
 </Scenario>

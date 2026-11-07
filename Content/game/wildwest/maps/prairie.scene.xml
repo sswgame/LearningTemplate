@@ -1324,7 +1324,12 @@
 					                         _sequencePath="game/wildwest/data/arrival.seq.xml"
 					                         _framesPerSecond="30"
 					                         _bLoop="false"
-					                         _bAutoPlay="false" />
+					                         _bAutoPlay="false">
+						<_listBinding>
+							<SequenceBindingSlot _binding="1" _object="110" />
+							<SequenceBindingSlot _binding="2" _object="111" />
+						</_listBinding>
+					</SequencePlayerComponent>
 					<CinematicCameraComponent _componentName="CinematicCameraComponent" _bActive="true" _localPlayerIndex="0" />
 				</_listComponent>
 			</GameObject>
