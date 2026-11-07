@@ -177,9 +177,9 @@ namespace sw
                 case UIBindingSource::Poll:
                 {
                     ++_polledCount;
-                    const string text           = UIBindingValue::readValue( binding._source, _pViewModel ).toText();
-                    const bool   bReformat      = context._bTextRevisionChanged && binding._expression._format.empty() == false;
-                    const bool   bPollUnchanged = binding._bPollKnown && binding._lastPollText == text && bReformat == false;
+                    const UIBindingValue polled         = UIBindingValue::readValue( binding._source, _pViewModel ); // 값으로 비교한다 — 대부분 프레임은 그대로이고 글은 쓸 때만 필요하다
+                    const bool           bReformat      = context._bTextRevisionChanged && binding._expression._format.empty() == false;
+                    const bool           bPollUnchanged = binding._bPollKnown && binding._lastPollValue.isSameValue( polled ) && bReformat == false;
                     if ( bPollUnchanged )
                         break;
                     (void)apply( binding, context ); // 필드가 바뀌었는지는 쓴 횟수(`_writeCount`)로 센다
@@ -517,8 +517,8 @@ namespace sw
         _bApplying           = SW_FALSE;
         if ( binding._expression._source == UIBindingSource::Poll )
         {
-            binding._lastPollText = value.toText();
-            binding._bPollKnown   = true;
+            binding._lastPollValue = value;
+            binding._bPollKnown    = true;
         }
         if ( transform( binding, context, value ) == false )
             return false;

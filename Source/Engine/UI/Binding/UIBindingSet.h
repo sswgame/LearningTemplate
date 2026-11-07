@@ -95,18 +95,18 @@ namespace sw
         struct ActiveBinding
         {
             UIBindingExpression _expression;
-            UIPropertyPath      _target;       ///< 위젯 기준 필드입니다.
-            UIPropertyPath      _source;       ///< 뷰모델 기준 필드입니다.
-            UIPropertyPath      _rangeMin;     ///< 설정 바인딩에서 위젯의 `_minValue` 입니다(없으면 무효).
-            UIPropertyPath      _rangeMax;     ///< 설정 바인딩에서 위젯의 `_maxValue` 입니다.
-            UIPropertyPath      _rangeStep;    ///< 설정 바인딩에서 위젯의 `_step` 입니다.
-            UIPropertyPath      _optionList;   ///< 설정 바인딩에서 위젯의 `_listOption`(텍스트 목록)입니다.
-            UIBindingConverter  _converter;    ///< 변환기입니다(이름이 비면 없음).
-            string              _lastPollText; ///< 폴링에서 지난 프레임에 본 값입니다(텍스트 표기).
-            hashed_string       _sourceField;  ///< 뷰모델의 맨 위 필드 이름입니다(알림 단위). 설정 바인딩이면 설정 id 입니다.
-            uint64              _skipSerial;   ///< 양방향에서 이 바인딩이 되쓰며 낸 알림 번호입니다. 그 알림으로는 위젯에 다시 쓰지 않습니다.
+            UIPropertyPath      _target;        ///< 위젯 기준 필드입니다.
+            UIPropertyPath      _source;        ///< 뷰모델 기준 필드입니다.
+            UIPropertyPath      _rangeMin;      ///< 설정 바인딩에서 위젯의 `_minValue` 입니다(없으면 무효).
+            UIPropertyPath      _rangeMax;      ///< 설정 바인딩에서 위젯의 `_maxValue` 입니다.
+            UIPropertyPath      _rangeStep;     ///< 설정 바인딩에서 위젯의 `_step` 입니다.
+            UIPropertyPath      _optionList;    ///< 설정 바인딩에서 위젯의 `_listOption`(텍스트 목록)입니다.
+            UIBindingConverter  _converter;     ///< 변환기입니다(이름이 비면 없음).
+            UIBindingValue      _lastPollValue; ///< 폴링에서 지난 프레임에 본 값입니다.
+            hashed_string       _sourceField;   ///< 뷰모델의 맨 위 필드 이름입니다(알림 단위). 설정 바인딩이면 설정 id 입니다.
+            uint64              _skipSerial;    ///< 양방향에서 이 바인딩이 되쓰며 낸 알림 번호입니다. 그 알림으로는 위젯에 다시 쓰지 않습니다.
             WidgetID            _widget;
-            bool                _bPollKnown; ///< 폴링에서 `_lastPollText` 가 유효한지 나타냅니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                _bPollKnown; ///< 폴링에서 `_lastPollValue` 가 유효한지 나타냅니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool                _bDirty;     ///< 설정에서 되쓴 뒤 다시 읽어야 하는지 나타냅니다(보정되거나 거절된 경우). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 

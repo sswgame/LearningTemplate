@@ -287,6 +287,25 @@ namespace sw
         return 0.0;
     }
 
+    bool UIBindingValue::isSameValue( const UIBindingValue& other ) const
+    {
+        if ( _kind != other._kind )
+            return false;
+        switch ( _kind )
+        {
+            case UIBindingValueKind::Bool:
+                return _bValue == other._bValue;
+            case UIBindingValueKind::Number:
+                return _bInteger == other._bInteger && Memory::compare( &_number, &other._number, sizeof( _number ) ) == 0;
+            case UIBindingValueKind::Text:
+            case UIBindingValueKind::Other:
+                return _text == other._text;
+            case UIBindingValueKind::None:
+                return true;
+        }
+        return false;
+    }
+
     string UIBindingValue::toText() const
     {
         switch ( _kind )

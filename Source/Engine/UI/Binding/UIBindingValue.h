@@ -62,6 +62,8 @@ namespace sw
         float64 toNumber() const;
         /** @brief 텍스트로 씁니다(숫자는 가장 짧은 왕복 표기이고, 정수면 소수점 없이 씁니다). */
         string toText() const;
+        /** @brief 같은 값이면 true 입니다(글을 만들지 않고 비교한다). 숫자는 비트로 본다 — 글이 달라지는 -0 과 0 은 다른 값이다. */
+        bool isSameValue( const UIBindingValue& other ) const;
 
         // 바인딩 값과 프로퍼티 경로 도우미입니다.
         /** @brief 리플렉션 타입 이름의 종류를 반환합니다. */
