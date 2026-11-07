@@ -13,6 +13,7 @@
 #include "Core/String/string_splitter.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestRunner.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
@@ -69,18 +70,28 @@ namespace sw
                 const string& resourceRoot     = engine::getSubsystem<AssetPaths>().getRootFolderPath();
                 uint32        sceneFailedCount = 0;
                 // 쿠킹용 씬도 런타임 씬과 같은 엔진 서비스 묶음(씬 매니저의 것 — 의존 칸에 있다)으로 짓는다.
-                const SceneEngineServices&    sceneServices              = engine::getSubsystem<SceneManager>().getEngineServices();
-                const uint32                  sceneCount                 = SceneCooker::cookAllScenes( sceneServices, resourceRoot, cookedDir, cookStore, sceneFailedCount );
-                uint32                        prefabFailedCount          = 0;
+                const SceneEngineServices& sceneServices = engine::getSubsystem<SceneManager>().getEngineServices();
+                // 쿠커별 시간(`Headless.CookStageTimes`) — 씬 쿠킹 병렬화가 빌드 시간을 줄일 수 있는지의 근거다.
+                Stopwatch    stageStopwatch;
+                const uint32 sceneCount        = SceneCooker::cookAllScenes( sceneServices, resourceRoot, cookedDir, cookStore, sceneFailedCount );
+                const int64  sceneMs           = stageStopwatch.getElapsedMilliseconds();
+                uint32       prefabFailedCount = 0;
+                stageStopwatch.restart();
                 [[maybe_unused]] const uint32 prefabCount                = PrefabCache::cookAllPrefabs( resourceRoot, cookedDir, cookStore, prefabFailedCount );
+                const int64                   prefabMs                   = stageStopwatch.getElapsedMilliseconds();
                 uint32                        vertexAnimationFailedCount = bCrowdSettingsLoaded ? 0u : 1u;
+                stageStopwatch.restart();
                 [[maybe_unused]] const uint32 vertexAnimationCount =
                     bCrowdSettingsLoaded
                         ? VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, cookStore, vertexAnimationFailedCount )
                         : 0u;
+                const int64 vertexAnimationMs = stageStopwatch.getElapsedMilliseconds();
                 // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
-                uint32                        navMeshFailedCount = 0;
-                [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( sceneServices, resourceRoot, cookedDir, cookStore, navMeshFailedCount );
+                uint32 navMeshFailedCount = 0;
+                stageStopwatch.restart();
+                [[maybe_unused]] const uint32 navMeshCount = SceneNavigationCooker::cookAll( sceneServices, resourceRoot, cookedDir, cookStore, navMeshFailedCount );
+                SW_LOG_INFO_ID( "Headless.CookStageTimes", "Cook stage times: scenes %# ms, prefabs %# ms, vertex animations %# ms, navmeshes %# ms", sceneMs, prefabMs,
+                                vertexAnimationMs, stageStopwatch.getElapsedMilliseconds() );
                 SW_LOG_INFO_ID( "Headless.CookedScenesFailuresPrefabs", "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# vertex animations (%# failures), "
                                                                         "%# navmeshes (%# failures).",
                                 sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, vertexAnimationCount,

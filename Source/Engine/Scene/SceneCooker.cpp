@@ -8,6 +8,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cook/CookStore.h"
@@ -637,7 +638,11 @@ namespace sw
         const CookJobDesc desc           = makeCookJobDesc( registry );
         const CookJobDesc preloadDesc    = makePreloadCookJobDesc();
 
+        // 병렬 씬 쿠킹 판단(DesignBacklog "비동기 · 병렬"): 다시 구운 씬의 시간 합과 가장 느린 씬. 합이 쿠킹 전체를 지배할 때만 캐시 격리 · 결과 병합을 설계한다.
         CookStats tally;
+        int64     cookedNanoseconds  = 0;
+        int64     slowestNanoseconds = 0;
+        string    slowestScene;
         for ( const string& scenePath : listSceneFile )
         {
             if ( StringUtil::endsWith( scenePath, ".scene.xml", true ) == false )
@@ -653,10 +658,19 @@ namespace sw
                 outputPath += '/';
             outputPath += outputID;
 
+            const Stopwatch  sceneStopwatch;
             const CookResult result = store.cookFile( desc, outputID, outputPath, [&]()
             { return SceneCookerInternal::cookScene( services, registry, scenePath, relativeScene, activePackRoot, outputPath ); } );
             outFailedCount += result == CookResult::Failed ? 1u : 0u;
             tally.add( result );
+            const int64 sceneNanoseconds = sceneStopwatch.getElapsedNanoseconds();
+            if ( result == CookResult::Cooked )
+                cookedNanoseconds += sceneNanoseconds;
+            if ( result == CookResult::Cooked && sceneNanoseconds > slowestNanoseconds )
+            {
+                slowestNanoseconds = sceneNanoseconds;
+                slowestScene       = relativeScene;
+            }
 
             // 쿠킹한 씬마다 프리로드 목록을 옆에 굽는다(레벨 전환이 `PreloadSet` 으로 연다). 씬 쿠킹이 실패했거나 건너뛴 씬은 목록도 없다.
             const bool bSceneWritten = result == CookResult::Cooked || result == CookResult::Reused;
@@ -670,6 +684,8 @@ namespace sw
         }
 
         SW_LOG_INFO_ID( "SceneCooker.SceneCookReusedDDC", "Scene cook: %# reused from the DDC, %# cooked", tally._reusedCount, tally._cookedCount );
+        SW_LOG_INFO_ID( "SceneCooker.SceneCookTime", "Scene cook time: %# ms over %# cooked scenes, slowest %# ms ('%#')", cookedNanoseconds / constant::time::kNanosecondsPerMillisecond,
+                        tally._cookedCount, slowestNanoseconds / constant::time::kNanosecondsPerMillisecond, slowestScene );
         return tally.getWrittenCount();
     }
 
