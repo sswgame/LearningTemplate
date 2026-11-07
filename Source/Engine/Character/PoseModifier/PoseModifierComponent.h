@@ -26,6 +26,8 @@
 
 namespace sw
 {
+    struct PhysicsAsset;
+
     class GameObject;
     class PoseModifierComponent;
     class ResolvedSocketTable;
@@ -241,10 +243,10 @@ namespace sw
 
         PROPERTY( Category = "Rig", DisplayName = "Rig", Tooltip = "Post-process rig asset (*.rig.xml): ordered IK / constraint / spring nodes" )
         AssetRef<RigAsset> _rigPath;
-        PROPERTY( Category = "Rig", DisplayName = "Sockets", AssetPath, AssetType = "SocketSet", Tooltip = "This unit's socket asset (*.sockets.xml) for socket targets" )
-        string _socketSetPath;
-        PROPERTY( Category = "Rig", DisplayName = "Physics Asset", AssetPath, AssetType = "PhysicsAsset", Tooltip = "Sphere / capsule bodies used as spring bone colliders" )
-        string _physicsAssetPath;
+        PROPERTY( Category = "Rig", DisplayName = "Sockets", Tooltip = "This unit's socket asset (*.sockets.xml) for socket targets" )
+        AssetRef<SocketSet> _socketSetPath;
+        PROPERTY( Category = "Rig", DisplayName = "Physics Asset", Tooltip = "Sphere / capsule bodies used as spring bone colliders" )
+        AssetRef<PhysicsAsset> _physicsAssetPath;
 
         PoseModifierBinding                             _binding;
         PoseModifierCurveSource                         _curveSource;         ///< 리그의 커브 출처다(`_instance` 가 빌린다)

@@ -244,9 +244,9 @@ namespace sw
 
     void PoseModifierComponent::setSocketSetPath( string_view path )
     {
-        _socketSetPath = string{ path };
+        _socketSetPath = path;
         // 소켓 세트는 공유 캐시 한 길로 받는다 — `SocketSetComponent` 와 같은 객체다. 예전에는 여기서 파일과 기본 소켓 종류 표를 직접 다시 읽었다(같은 일 두 벌).
-        _ownSockets = _socketSetPath.empty() ? nullptr : SharedAssetCache<SocketSet>::acquire( _socketSetPath );
+        _ownSockets = _socketSetPath.acquire();
         if ( _socketSetPath.empty() == false && _ownSockets == nullptr )
             SW_LOG_ERROR_ID( "PoseModifier.SocketsCouldNotLoaded", "Sockets '%#' could not be loaded for the rig", _socketSetPath.c_str() );
         bindRig();
@@ -260,7 +260,7 @@ namespace sw
 
     void PoseModifierComponent::setPhysicsAssetPath( string_view path )
     {
-        _physicsAssetPath = string{ path };
+        _physicsAssetPath = path;
         loadSharedColliders();
     }
 

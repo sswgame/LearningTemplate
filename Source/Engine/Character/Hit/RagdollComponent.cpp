@@ -164,14 +164,14 @@ namespace sw
 
     void RagdollComponent::setPhysicsAssetPath( string_view path )
     {
-        _physicsAssetPath = string{ path };
+        _physicsAssetPath = path;
         loadAsset();
     }
 
     void RagdollComponent::loadAsset()
     {
         _seenAssetReloadCount = SharedAssetCache<PhysicsAsset>::getReloadCount();
-        _asset                = _physicsAssetPath.empty() ? nullptr : SharedAssetCache<PhysicsAsset>::acquire( _physicsAssetPath );
+        _asset                = _physicsAssetPath.acquire();
         if ( _physicsAssetPath.empty() == false && _asset == nullptr )
             SW_LOG_ERROR_ID( "Ragdoll.PhysicsAssetCouldNot", "'%#': physics asset '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _physicsAssetPath.c_str() );
         _bRebuild = true;

@@ -55,7 +55,7 @@ namespace sw
 
 namespace sw
 {
-    SW_SHARED_ASSET_CACHE( SocketSet, SocketSet, AssetTypeDef::makeCacheOnly( "SocketSet", AssetTypeLoader::with<SocketSet, &CharacterDataCacheInternal::loadSocketSet>( MemoryTag::Animation ) ) );
+    SW_SHARED_ASSET_CACHE( SocketSet, SocketSet, SocketSet::kAssetType.withLoader( AssetTypeLoader::with<SocketSet, &CharacterDataCacheInternal::loadSocketSet>( MemoryTag::Animation ) ) );
     SW_SHARED_ASSET_CACHE( BodyShapeSet, BodyShapeSet,
                            AssetTypeDef::makeDataFile( "bodyshape", AssetPathRule{ {}, {}, ".bodyshape.xml" }, AssetTypeLoader::of<BodyShapeSet>( MemoryTag::Animation ) ) );
     SW_SHARED_ASSET_CACHE( AnimationNotifyTable, AnimationNotifyTable,
@@ -63,7 +63,7 @@ namespace sw
     /** 돌고 있는 세션이 옛 에셋의 역할 인덱스를 읽으므로 제자리에서 바꾸지 않고 떼어 낸다. */
     SW_SHARED_ASSET_CACHE( PairedAnimationDef, PairedAnimationDef,
                            PairedAnimationDef::kAssetType.withLoader( AssetTypeLoader::of<PairedAnimationDef>( MemoryTag::Animation, SharedAssetReloadMode::Detach ) ) );
-    SW_SHARED_ASSET_CACHE( PhysicsAsset, PhysicsAsset, AssetTypeDef::makeCacheOnly( "PhysicsAsset", AssetTypeLoader::of<PhysicsAsset>( MemoryTag::Physics ) ) );
+    SW_SHARED_ASSET_CACHE( PhysicsAsset, PhysicsAsset, PhysicsAsset::kAssetType.withLoader( AssetTypeLoader::of<PhysicsAsset>( MemoryTag::Physics ) ) );
     SW_SHARED_ASSET_CACHE( FitTables, FitTables, AssetTypeDef::makeCacheOnly( "FitTables", AssetTypeLoader::with<FitTables, &CharacterDataCacheInternal::loadFitTables>( MemoryTag::Animation ) ) );
     SW_SHARED_ASSET_CACHE( FitPartDef, FitPartDef, AssetTypeDef::makeCacheOnly( "FitPartDef", AssetTypeLoader::of<FitPartDef>( MemoryTag::Animation ) ) );
 } // namespace sw

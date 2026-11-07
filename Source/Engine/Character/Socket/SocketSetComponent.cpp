@@ -63,13 +63,13 @@ namespace sw
 
     void SocketSetComponent::setSocketSetPath( string_view path )
     {
-        _socketSetPath = string{ path };
+        _socketSetPath = path;
         loadSocketSet();
     }
 
     void SocketSetComponent::loadSocketSet()
     {
-        _socketSet = _socketSetPath.empty() ? nullptr : SharedAssetCache<SocketSet>::acquire( _socketSetPath );
+        _socketSet = _socketSetPath.acquire();
         if ( _socketSetPath.empty() == false && _socketSet == nullptr )
             SW_LOG_ERROR_ID( "SocketSet.SocketSetCouldNot", "'%#': socket set '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _socketSetPath.c_str() );
         validateAgainstUnit();

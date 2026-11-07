@@ -24,6 +24,7 @@
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Physics/Asset/PhysicsRagdoll.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -89,7 +90,7 @@ namespace sw
 
         /** @brief 물리 에셋 경로를 바꿉니다(바디를 다시 만듭니다). */
         void          setPhysicsAssetPath( string_view path );
-        const string& getPhysicsAssetPath() const { return _physicsAssetPath; }
+        const string& getPhysicsAssetPath() const { return _physicsAssetPath.path(); }
         /** @brief 물리 에셋입니다(없으면 nullptr). */
         const PhysicsAsset* getPhysicsAsset() const { return _asset.get(); }
         /** @brief 만든 바디들을 반환합니다(시작 전이거나 에셋이 없으면 비어 있습니다). */
@@ -164,8 +165,8 @@ namespace sw
         /** @brief 래그돌 동안 관절 모터를 섞기 전 애니메이션 포즈로 끌고(`_poweredMaxTorque` > 0), 벗어나면 끕니다. */
         void drivePoweredMotors( IPhysicsScene3D& scene );
 
-        PROPERTY( Category = "Ragdoll", DisplayName = "Physics Asset", AssetPath, AssetType = "PhysicsAsset", Tooltip = "Bodies, joints and hit zones (*.physics.xml)" )
-        string _physicsAssetPath;
+        PROPERTY( Category = "Ragdoll", DisplayName = "Physics Asset", Tooltip = "Bodies, joints and hit zones (*.physics.xml)" )
+        AssetRef<PhysicsAsset> _physicsAssetPath;
         PROPERTY( Category = "Ragdoll", DisplayName = "Partial Root Bone", Tooltip = "Bodies under this bone go limp in a partial ragdoll" )
         hashed_string _partialRootBone;
         PROPERTY( Category = "Ragdoll", DisplayName = "Get Up Clip (Face Up)", Tooltip = "Clip played when getting up lying on the back" )

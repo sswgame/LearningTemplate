@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -51,7 +52,7 @@ namespace sw
 
         /** @brief 소켓 에셋 경로를 바꾸고 다시 읽습니다. */
         void          setSocketSetPath( string_view path );
-        const string& getSocketSetPath() const { return _socketSetPath; }
+        const string& getSocketSetPath() const { return _socketSetPath.path(); }
 
         /**
          * @brief 소켓의 유닛 공간 변환을 구합니다(부모 본, 가상 본, 루트). @p pUnit 이 없으면 본을 부모로 둔 소켓은 구하지 못합니다.
@@ -65,8 +66,8 @@ namespace sw
         /** @brief 부모 본 이름을 유닛 스켈레톤과 대조합니다(모르는 본은 오류). */
         void validateAgainstUnit() const;
 
-        PROPERTY( Category = "Socket", DisplayName = "Socket Set", AssetPath, AssetType = "SocketSet", Tooltip = "Sockets and markers asset (*.sockets.xml)" )
-        string _socketSetPath;
+        PROPERTY( Category = "Socket", DisplayName = "Socket Set", Tooltip = "Sockets and markers asset (*.sockets.xml)" )
+        AssetRef<SocketSet> _socketSetPath;
 
         shared_ptr<const SocketSet> _socketSet;       ///< 캐시가 제자리에서 다시 읽으므로, 파일을 고치면 이 객체가 새 내용이다.
         Subscription                _boneRequirement; ///< 소켓 부모 본(가상 본의 두 끝 포함)을 유닛 본 LOD 의 핵심 본으로 지키는 구독

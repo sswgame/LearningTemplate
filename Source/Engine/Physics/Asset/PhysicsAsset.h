@@ -30,6 +30,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -124,6 +125,15 @@ namespace sw
         friend struct AssetTypeLoader;
 
         REFLECT_BODY();
+
+        /** @brief 물리 에셋 파일의 확장자입니다. */
+        static constexpr string_view kExtension = ".physics.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `CharacterDataCache.cpp` 의 공유 캐시 줄). 타입 있는 참조 `AssetRef<PhysicsAsset>` 가 접미사로 가른다. */
+        static constexpr AssetTypeDef kAssetType{ "PhysicsAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         PROPERTY( Tooltip = "Collision layer of bodies that do not name one" )
         hashed_string _defaultLayer{ "Ragdoll" };

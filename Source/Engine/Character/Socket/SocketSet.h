@@ -27,6 +27,7 @@
 
 #include "Engine/Character/CharacterIssue.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -190,6 +191,12 @@ namespace sw
     public:
         /** @brief 소켓 에셋 파일의 확장자입니다(편집 창이 문서를 고르는 판정). */
         static constexpr const utf8* kExtension = ".sockets.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `CharacterDataCache.cpp` 의 공유 캐시 줄). 타입 있는 참조 `AssetRef<SocketSet>` 가 접미사로 가른다. */
+        static constexpr AssetTypeDef kAssetType{ "SocketSet", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /**
          * @brief XML 텍스트에서 읽습니다(현재 내용은 비웁니다). 모르는 속성이나 원소, 종류(@p kinds 에 없음), 겹친 이름은 오류입니다.
