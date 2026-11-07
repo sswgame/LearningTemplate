@@ -65,6 +65,10 @@ SW_TEST_CASE( AutomationPerBackendTest, BackendListAllFollowsPlatformAvailabilit
     const sw::vector<sw::string> listExpectedAll{ "dx11", "dx12", "vk", "gl" };
 #elif defined( SW_PLATFORM_LINUX )
     const sw::vector<sw::string> listExpectedAll{ "vk", "gl" };
+#elif defined( SW_PLATFORM_ANDROID )
+    const sw::vector<sw::string> listExpectedAll{ "vk" };
+#elif defined( SW_PLATFORM_WEB )
+    const sw::vector<sw::string> listExpectedAll{ "wgpu" };
 #else
     #error "Unsupported platform"
 #endif

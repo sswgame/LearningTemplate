@@ -173,7 +173,15 @@ namespace sw
                         "RHI 커맨드 리스트를 프레임 끝에 모아 제출하지 않고 즉시 제출 (디버깅용, 오버헤드 큼)" );
 
     // 전용 렌더 스레드를 쓸지 정한다(false 면 게임 스레드가 바로 제출한다). 읽는 곳은 이 파일뿐이다(`attach` 와 `submit`).
-    SW_GLOBAL_VARIABLE( bool, gv_useRenderThread, true, "전용 RenderThread 사용 (false = 게임 스레드 인라인 submit)" );
+    // 웹은 끈다 — 브라우저의 WebGPU 장치는 만든 스레드(메인)에서만 쓸 수 있다(JS 객체는 워커를 넘지 못한다, docs/PlatformTargets.md).
+#if defined( SW_PLATFORM_WEB )
+    constexpr bool kUseRenderThreadByDefault = false;
+#elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+    constexpr bool kUseRenderThreadByDefault = true;
+#else
+    #error "Unsupported platform"
+#endif
+    SW_GLOBAL_VARIABLE( bool, gv_useRenderThread, kUseRenderThreadByDefault, "전용 RenderThread 사용 (false = 게임 스레드 인라인 submit)" );
 
     /** @brief 받은 렌더 타깃 읽기 하나입니다. 티켓을 직접 쥐고 소멸할 때 버립니다 — `PendingReadback` 은 쥔 동안 같은 스레드의 `...AndWait`(스크린샷)를 단언으로 막아 쓰지 않는다. */
     struct RenderThread::PendingRenderTargetRead

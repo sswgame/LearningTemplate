@@ -30,6 +30,16 @@
     #define SW_NATIVE_BINDLESS 1
 #endif
 
+// 분리 샘플러 에뮬 — 고정 슬롯 텍스처를 정적 샘플러 세트(s9..s15)로 읽는 백엔드다. DX11 은 샘플러 슬롯이 16 개뿐이라서, WebGPU 는 WGSL 이 텍스처 · 샘플러를
+// 나눠 받아서 이 모양이다. GL 은 결합 샘플러뿐이라 슬롯마다 짝 샘플러를 둔다(ARB_gl_spirv). WebGPU 는 SPIR-V 를 거치지만(__spirv__) GL 의 결합 갈래를 타지 않는다.
+#if defined( DX11 ) || defined( WEBGPU )
+    #define SW_SEPARATE_SAMPLER_EMULATION 1
+#endif
+// GL 결합 샘플러 갈래 — SPIR-V 중 GL 만이다(WebGPU 는 분리 샘플러, Vulkan 은 네이티브 bindless 라 슬롯 텍스처를 선언하지 않는다).
+#if defined( __spirv__ ) && !defined( SW_SEPARATE_SAMPLER_EMULATION )
+    #define SW_COMBINED_SAMPLER_SLOTS 1
+#endif
+
 // ------------------------------------------------------------------------------
 // 1) SPIR-V 바인딩 속성 — OpenGL 만 명시한다 (GL 은 set 을 버리고 binding 이 곧 UBO/SSBO/텍스처 유닛 번호다).
 //    Vulkan 은 DXC 시프트에 맡긴다: b# → SW_VK_B_SHIFT+#, t# → SW_VK_T_SHIFT+#, u# → SW_VK_U_SHIFT+# (모두 set 0).
@@ -68,6 +78,10 @@
 #if defined( OPENGL )
     #define SW_DECLARE_RW_TEXTURE2D( texName, slot, glUnit, glFormat ) \
         [[vk::binding( glUnit, 0 )]] [[vk::image_format( glFormat )]] RWTexture2D<float4> texName : register( SW_CAT( u, slot ) )
+#elif defined( WEBGPU )
+    // WGSL 의 저장 텍스처는 형식을 적어야 한다(GL 과 같은 까닭) — binding 은 DXC 의 u 시프트가 정한다. 읽고 쓰는 저장 텍스처는 r32 형식만 된다(WebGPU 명세, 기억).
+    #define SW_DECLARE_RW_TEXTURE2D( texName, slot, glUnit, glFormat ) \
+        [[vk::image_format( glFormat )]] RWTexture2D<float4> texName : register( SW_CAT( u, slot ) )
 #else
     #define SW_DECLARE_RW_TEXTURE2D( texName, slot, glUnit, glFormat ) \
         RWTexture2D<float4> texName : register( SW_CAT( u, slot ) )
@@ -88,6 +102,11 @@
 // ------------------------------------------------------------------------------
 #if defined( OPENGL )
     #define SW_ROOT_CONSTANTS_BEGIN [[vk::binding( SW_SLOT_ROOT_CB_EMUL, 0 )]] cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) )
+    #define SW_ROOT_CONSTANTS_END
+    #define SW_ROOT( field ) field
+#elif defined( WEBGPU )
+    // WebGPU 는 푸시 상수가 없다 — DX11 과 같은 b2 상수 버퍼 에뮬이고 binding 은 DXC 의 b 시프트가 정한다(shaderslot::wgpu).
+    #define SW_ROOT_CONSTANTS_BEGIN cbuffer SwRootConstants : register( SW_CAT( b, SW_SLOT_ROOT_CB_EMUL ) )
     #define SW_ROOT_CONSTANTS_END
     #define SW_ROOT( field ) field
 #elif defined( __spirv__ )
@@ -119,7 +138,7 @@
 // 4) 텍스처 / 샘플러 — 에뮬 백엔드(DX11/GL)의 고정 슬롯 (binding.hlsli 가 쓴다). 네이티브 bindless 텍스처 배열은
 //    binding.hlsli 가 SW_SPACE_BINDLESS_TEX / SW_VK_TEXTURE_SET 으로 직접 선언한다.
 // ------------------------------------------------------------------------------
-#if defined( __spirv__ )
+#if defined( SW_COMBINED_SAMPLER_SLOTS )
     #define SW_DECLARE_TEXTURE2D_SAMPLER( texName, samplerName, slot )                                                \
         [[vk::combinedImageSampler]] [[vk::binding( slot, 0 )]] Texture2D    texName : register( SW_CAT( t, slot ) ); \
         [[vk::combinedImageSampler]] [[vk::binding( slot, 0 )]] SamplerState samplerName : register( SW_CAT( s, slot ) )
@@ -140,7 +159,7 @@
 // 엔진 텍스처 칸 ordinal(리터럴 0..SW_ENGINE_TEXTURE_COUNT-1)의 이름 · 샘플러 · 선언(에뮬 — binding.hlsli 11-2). HLSL 레지스터는 SW_SLOT_ENGINE_TEX<n>(DX11),
 // GL 텍스처 유닛은 칸 번호 그대로다(binding_slots.hlsli 2). DX11 은 짝 샘플러 없이 정적 세트의 엔진 텍스처 샘플러로 읽는다.
 #define SW_ENGINE_TEXTURE( ordinal ) SW_CAT( g_SwEngineTex, ordinal )
-#if defined( __spirv__ )
+#if defined( SW_COMBINED_SAMPLER_SLOTS )
     #define SW_ENGINE_SAMPLER( ordinal ) SW_CAT( SW_ENGINE_TEXTURE( ordinal ), Sampler )
     #define SW_DECLARE_ENGINE_TEXTURE( ordinal )                                                                                                                            \
         [[vk::combinedImageSampler]] [[vk::binding( ordinal, 0 )]] Texture2D SW_ENGINE_TEXTURE( ordinal ) : register( SW_CAT( t, SW_CAT( SW_SLOT_ENGINE_TEX, ordinal ) ) ); \

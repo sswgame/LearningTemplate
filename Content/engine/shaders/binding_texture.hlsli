@@ -212,7 +212,7 @@ SW_DECLARE_ENGINE_TEXTURE( 11 );
         // 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸) — 번호는 binding_slots.hlsli 가 정한다 (C++ shaderslot::kMaterialTexture0 와 같은 파일).
         // DX11 은 샘플러 슬롯이 16 개뿐이라 머티리얼 슬롯에 짝 샘플러를 두지 않는다 — 정적 세트의 머티리얼 샘플러(SW_MATERIAL_TEXTURE_SAMPLER)로 읽는다.
         // GL 은 결합 샘플러뿐이라 슬롯마다 짝을 두고, 엔진이 그 유닛에 머티리얼 샘플러를 건다(OpenGLRHIDevice 초기화).
-        #if defined( DX11 )
+        #if defined( SW_SEPARATE_SAMPLER_EMULATION )
 SW_DECLARE_TEXTURE2D( g_SwMaterialTex0, SW_SLOT_MATERIAL_TEX0 );
 SW_DECLARE_TEXTURE2D( g_SwMaterialTex1, SW_SLOT_MATERIAL_TEX1 );
 SW_DECLARE_TEXTURE2D( g_SwMaterialTex2, SW_SLOT_MATERIAL_TEX2 );
@@ -248,7 +248,7 @@ SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex14, g_SwMaterialTex14Sampler, SW_SL
 SW_DECLARE_TEXTURE2D_SAMPLER( g_SwMaterialTex15, g_SwMaterialTex15Sampler, SW_SLOT_MATERIAL_TEX15 );
         #endif
 
-        #if defined( DX11 )
+        #if defined( SW_SEPARATE_SAMPLER_EMULATION )
 // DX11 정적 샘플러 세트 s9..s15 (binding_slots.hlsli 4) — 엔진이 디바이스 초기화 때 건다(D3D11RHIDevice::bindStaticSamplers).
 // DX12 와 같은 표(SW_SAMPLER_*)라 셰이더가 고른 samplerID 가 DX11 에서도 존중된다.
 SamplerState g_SwSampler0 : register( SW_CAT( s, SW_DX11_STATIC_SAMPLER0 ) );
@@ -391,7 +391,7 @@ static float4 PassTexture::gatherDepthRed( float2 uv )
         return float4( 1, 1, 1, 1 );
     return SW_ENGINE_TEXTURE( SW_EMU_SLOT_SceneDepth ).GatherRed( SW_ENGINE_SAMPLER( SW_EMU_SLOT_SceneDepth ), uv );
 }
-        #if defined( DX11 )
+        #if defined( SW_SEPARATE_SAMPLER_EMULATION )
 /** @brief DX11: 텍스처는 역할의 칸(Bindless::sampleIndex 와 같은 표), 샘플러는 정적 세트에서 samplerID 로 고른다. */
 static float4 Bindless::sampleIndexWith( uint index, uint samplerID, float2 uv )
 {
@@ -573,7 +573,7 @@ static float4 MaterialTexture::sampleMipColor( uint index, float2 uv )
         #else
     switch ( index )
     {
-            #if defined( DX11 )
+            #if defined( SW_SEPARATE_SAMPLER_EMULATION )
         case 0u:
             return ViewMode::computeMipColor( g_SwMaterialTex0.CalculateLevelOfDetail( g_SwSampler0, uv ) );
         case 1u:
@@ -664,7 +664,7 @@ static float4 MaterialTexture::sampleIndexTexture( uint index, float2 uv )
     // DX11 은 정적 세트의 머티리얼 샘플러로, GL 은 슬롯의 결합 샘플러(엔진이 머티리얼 샘플러를 건다)로 읽는다.
     switch ( index )
     {
-        #if defined( DX11 )
+        #if defined( SW_SEPARATE_SAMPLER_EMULATION )
         case 0u:
             return Bindless::sampleSlotWith( g_SwMaterialTex0, SW_MATERIAL_TEXTURE_SAMPLER, uv );
         case 1u:
@@ -771,7 +771,7 @@ static float4 MaterialTexture::sampleLevelZero( uint index, float2 uv )
     #else
     switch ( index )
     {
-        #if defined( DX11 )
+        #if defined( SW_SEPARATE_SAMPLER_EMULATION )
         case 0u:
             return g_SwMaterialTex0.SampleLevel( g_SwSampler0, uv, 0.0f );
         case 1u:

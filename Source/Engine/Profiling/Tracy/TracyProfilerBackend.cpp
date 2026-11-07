@@ -41,7 +41,7 @@ namespace sw
             static_assert( offsetof( ProfileZoneSite, _line ) == offsetof( ___tracy_source_location_data, line ), "line offset" );
             static_assert( offsetof( ProfileZoneSite, _color ) == offsetof( ___tracy_source_location_data, color ), "color offset" );
 
-            /** @brief Tracy 의 GPU 컨텍스트 종류 번호입니다(서버 `GpuContextType` — OpenGl 1 · Vulkan 2 · Direct3D12 4 · Direct3D11 5). */
+            /** @brief Tracy 의 GPU 컨텍스트 종류 번호입니다(서버 `GpuContextType` — OpenGl 1 · Vulkan 2 · Direct3D12 4 · Direct3D11 5 · Custom 7, 기억). WebGPU 는 Tracy 에 종류가 없어 Custom 이다. */
             static uint8 toTracyGPUType( ProfilerGraphicsAPI api )
             {
                 switch ( api )
@@ -54,6 +54,8 @@ namespace sw
                         return 4;
                     case ProfilerGraphicsAPI::Direct3D11:
                         return 5;
+                    case ProfilerGraphicsAPI::WebGPU:
+                        return 7;
                 }
                 return 1;
             }

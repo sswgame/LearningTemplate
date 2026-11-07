@@ -29,5 +29,6 @@ namespace sw
         DirectX12 = 1, ///< Direct3D 12 (Bindless)
         Vulkan    = 2, ///< Vulkan 1.2 (Bindless)
         OpenGL    = 3, ///< OpenGL 4.5+
+        WebGPU    = 4, ///< WebGPU(브라우저 · Dawn) — bindless 없이 고정 슬롯(docs/PlatformTargets.md)
     };
 } // namespace sw

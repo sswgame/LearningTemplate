@@ -97,6 +97,26 @@ namespace sw
             return caps;
         }
 
+        /**
+         * @brief WebGPU 의 능력입니다. bindless 는 DX11 · GL 과 같은 고정 슬롯 에뮬이고, 멀티 드로우 · 와이어프레임 · 병렬 기록이 없다(docs/PlatformTargets.md 의 표).
+         * @details 장치는 만든 스레드에서만 쓴다 — 브라우저의 JS 객체는 워커를 넘지 못한다. GPU 컬링은 컴퓨트가 간접 인자를 저장 버퍼로 쓰고 같은 버퍼를 간접 드로우로 읽는다
+         *          (WebGPU 는 한 버퍼에 Storage | Indirect 를 같이 준다 — DX11 이 컬링을 끈 까닭이 없다). 웨이브 연산은 쿠킹이 뺀다(`SW_NO_WAVE_OPS`).
+         */
+        static constexpr RHICapabilities makeWebGPUCapabilities()
+        {
+            RHICapabilities caps{};
+            caps._bBindless                   = SW_TRUE;
+            caps._bNativeBindless             = SW_FALSE;
+            caps._bCompute                    = SW_TRUE;
+            caps._bGPUCulling                 = SW_TRUE;
+            caps._bGPUMeshMorph               = SW_TRUE;
+            caps._bMultiDrawIndirect          = SW_FALSE;
+            caps._bParallelCommandRecording   = SW_FALSE;
+            caps._bThreadSafeResourceCreation = SW_FALSE;
+            caps._bWireframeFill              = SW_FALSE;
+            return caps;
+        }
+
         static constexpr RHICapabilities makeOpenGlCapabilities()
         {
             RHICapabilities caps{};
@@ -130,6 +150,7 @@ namespace sw
             {RHIBackend::DirectX12, "DirectX12",   ShaderTargetFormat::DXIL_D3D12,   "RHI_DX12", ProfilerGraphicsAPI::Direct3D12, RHIStaticCapabilities::makeDirectX12Capabilities()},
             {   RHIBackend::Vulkan,    "Vulkan", ShaderTargetFormat::SPIRV_Vulkan, "RHI_Vulkan",     ProfilerGraphicsAPI::Vulkan,    RHIStaticCapabilities::makeVulkanCapabilities()},
             {   RHIBackend::OpenGL,    "OpenGL", ShaderTargetFormat::SPIRV_OpenGL,     "RHI_GL",     ProfilerGraphicsAPI::OpenGl,    RHIStaticCapabilities::makeOpenGlCapabilities()},
+            {   RHIBackend::WebGPU,    "WebGPU",  ShaderTargetFormat::WGSL_WebGPU, "RHI_WebGPU",     ProfilerGraphicsAPI::WebGPU,    RHIStaticCapabilities::makeWebGPUCapabilities()},
         };
 
         /** @brief 그 백엔드의 항목입니다. 열거 범위 밖 값이면 nullptr 입니다. */
@@ -168,6 +189,8 @@ namespace sw
             static constexpr RHIBackend kArrOrder[] = { SW_RHI_BACKEND_ORDER_Linux( SW_RHI_BACKEND_ORDER_ROW ) };
 #elif defined( SW_PLATFORM_ANDROID )
             static constexpr RHIBackend kArrOrder[] = { SW_RHI_BACKEND_ORDER_Android( SW_RHI_BACKEND_ORDER_ROW ) };
+#elif defined( SW_PLATFORM_WEB )
+            static constexpr RHIBackend kArrOrder[] = { SW_RHI_BACKEND_ORDER_Web( SW_RHI_BACKEND_ORDER_ROW ) };
 #else
     #error "Unsupported platform"
 #endif

@@ -1,0 +1,19 @@
+{
+    "_name": "RHI_WebGPU",
+    "_version": "1.0.0",
+    "_kind": "RHI",
+    "_description": "WebGPU 백엔드(Dev 의 MODULE — 배포본은 SW_SHIPPING_RHI_BACKEND 하나를 Engine 에 정적 링크). 데스크톱에서 Dawn 으로 돌릴 때는 Dawn 포트를 붙이고 Windows · Linux 를 제외 목록에서 뺀다(docs/PlatformTargets.md)",
+    "_listDependency": [],
+    "_listExcludedPlatform": [
+        "Windows",
+        "Linux",
+        "Android"
+    ],
+    "_listConfiguration": [
+        "Dev"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

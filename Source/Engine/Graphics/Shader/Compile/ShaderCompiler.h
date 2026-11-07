@@ -108,6 +108,7 @@ namespace sw
         DXIL_D3D12,   ///< Direct3D 12용 DXIL 바이트코드(dxc 사용)
         SPIRV_Vulkan, ///< Vulkan 1.2용 SPIR-V 바이트코드(dxc -spirv 사용)
         SPIRV_OpenGL, ///< OpenGL용 SPIR-V 바이트코드(dxc -spirv 사용)
+        WGSL_WebGPU,  ///< WebGPU 용 WGSL. dxc -spirv 로 낸 SPIR-V 를 Tint 가 WGSL 로 옮기고, 둘을 한 꾸러미에 담는다(`WebGPUShaderContainer` — 리플렉션은 안의 SPIR-V 를 읽는다)
         Count
     };
 
@@ -124,7 +125,7 @@ namespace sw
         ShaderTargetFormat _format;
         ShaderCompilerTool _tool;
         const utf8*        _pExtension; ///< 쿠킹 바이너리 확장자. SPIR-V 둘은 같아야 한다
-        uint8              _bSpirv : 1;
+        uint8              _bSpirv : 1; ///< 리플렉션 · 바인딩 검사가 SPIR-V 를 읽는다(WGSL 꾸러미는 안의 SPIR-V 를 꺼내 읽는다 — `WebGPUShaderContainer::findSpirv`)
     };
 
     /** @brief 형식 표입니다. 새 대상(WebGPU 의 SPIR-V → WGSL)은 여기와 컴파일러 표에 한 줄씩이다(언리얼 `IShaderFormat` 자리, 기억). */
@@ -135,6 +136,7 @@ namespace sw
             {  ShaderTargetFormat::DXIL_D3D12, ShaderCompilerTool::Dxc, ".dxil", 0},
             {ShaderTargetFormat::SPIRV_Vulkan, ShaderCompilerTool::Dxc,  ".spv", 1},
             {ShaderTargetFormat::SPIRV_OpenGL, ShaderCompilerTool::Dxc,  ".spv", 1},
+            { ShaderTargetFormat::WGSL_WebGPU, ShaderCompilerTool::Dxc, ".wgsl", 1},
         };
 
         /** @brief 형식의 행입니다. `Count` 이상이면 nullptr 입니다. */

@@ -317,6 +317,27 @@ namespace sw
             inline constexpr uint32 kImageUnit0  = SW_GL_IMAGE_UNIT0; ///< 컴퓨트 RW 텍스처 u5..u7이 이미지 유닛 0..2 에 대응한다.
         } // namespace gl
 
+        /**
+         * @brief WebGPU 바인드 그룹 0 의 번호입니다. binding = 레지스터 종류별 시프트 + 번호(DXC -fvk-b/t/s/u-shift 와 같은 값)이고 그룹은 하나다.
+         * @details 셰이더는 이 값을 읽지 않는다 — DXC 인자(ShaderCompiler)와 백엔드의 바인드 그룹(WebGPURHICommandContext)과 리플렉션의 번호 되돌림(ShaderReflection)만 쓴다.
+         *          t 띠가 엔진 텍스처 칸(t32..t43)까지 가므로 t 폭이 가장 넓다. 샘플러가 따로 있다 — WGSL 은 텍스처 · 샘플러를 나눠 받는다(DX11 과 같은 모양, GL 의 결합 샘플러가 아니다).
+         */
+        namespace wgpu
+        {
+            inline constexpr uint32 kBShift    = 0;
+            inline constexpr uint32 kBRange    = 16;
+            inline constexpr uint32 kTShift    = 64;
+            inline constexpr uint32 kTRange    = 64;
+            inline constexpr uint32 kSShift    = 128;
+            inline constexpr uint32 kSRange    = 32;
+            inline constexpr uint32 kUShift    = 160;
+            inline constexpr uint32 kURange    = 32;
+            inline constexpr uint32 kGroupSize = kUShift + kURange; ///< 바인딩 번호의 끝(그룹 하나 — WebGPU 기본 한도 maxBindingsPerBindGroup 1000 안)
+            static_assert( kBShift + kBRange <= kTShift && kTShift + kTRange <= kSShift && kSShift + kSRange <= kUShift, "WebGPU 시프트 띠가 겹친다" );
+            static_assert( kConstantBufferSlotCount <= kBRange && kEngineTexture0 + kEngineTextureCount <= kTRange && dx11::kMaxSamplerSlotCount <= kSRange,
+                           "WebGPU 띠가 슬롯 계약(b · t · s)을 다 담지 못한다" );
+        } // namespace wgpu
+
         /// @brief 엔진 예약 CB 이름입니다(리플렉션 매칭 키).
         namespace cbname
         {

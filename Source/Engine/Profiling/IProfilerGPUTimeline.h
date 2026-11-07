@@ -40,6 +40,7 @@ namespace sw
         Direct3D12,
         Vulkan,
         OpenGl,
+        WebGPU,
     };
 } // namespace sw
 

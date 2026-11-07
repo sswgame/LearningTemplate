@@ -11,6 +11,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/Process/Process.h"
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Content/AssetPaths.h"
@@ -22,6 +23,7 @@
 #include "Engine/Graphics/Shader/Compile/SPIRVOpenGLPatch.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
+#include "Engine/Graphics/Shader/Compile/WebGPUShaderContainer.h"
 
 #include <algorithm>
 
@@ -435,24 +437,116 @@ namespace sw
                 listArgument.push_back( L"0" );
             }
 
+            /**
+             * @brief WebGPU SPIR-V 인자입니다. 바인드 그룹 0 하나에 b · t · s · u 를 띠로 나눠 둔다(`shaderslot::wgpu`). WEBGPU 는 DX11 과 같은 고정 슬롯 갈래를 쓰고
+             *        루트 상수는 b2 상수 버퍼 에뮬이다(common.hlsli). 웨이브 연산은 뺀다(`SW_NO_WAVE_OPS` — WebGPU 의 subgroups 는 선택 기능).
+             */
+            static void appendSpirvWebGPUArguments( vector<LPCWSTR>& listArgument )
+            {
+                namespace wgpu = shaderslot::wgpu;
+                listArgument.push_back( L"-spirv" );
+                listArgument.push_back( L"-fspv-target-env=vulkan1.1" ); // Tint 의 SPIR-V 입력이 받는 판(기억) — 1.2 의 기능은 쓰지 않는다
+                listArgument.push_back( L"-fvk-use-dx-position-w" );
+                listArgument.push_back( L"-fvk-use-dx-layout" ); // 다른 백엔드와 같은 원소 레이아웃(머티리얼 데이터를 한 벌로 채운다)
+                static const wstring s_bShift      = StringUtil::utf8ToUTF16( to_string( wgpu::kBShift ).c_str() );
+                static const wstring s_tShift      = StringUtil::utf8ToUTF16( to_string( wgpu::kTShift ).c_str() );
+                static const wstring s_sShift      = StringUtil::utf8ToUTF16( to_string( wgpu::kSShift ).c_str() );
+                static const wstring s_uShift      = StringUtil::utf8ToUTF16( to_string( wgpu::kUShift ).c_str() );
+                const LPCWSTR        arrShift[][2] = {
+                    {L"-fvk-b-shift", s_bShift.c_str()},
+                    {L"-fvk-t-shift", s_tShift.c_str()},
+                    {L"-fvk-s-shift", s_sShift.c_str()},
+                    {L"-fvk-u-shift", s_uShift.c_str()},
+                };
+                for ( const auto& shift : arrShift )
+                {
+                    listArgument.push_back( shift[0] );
+                    listArgument.push_back( shift[1] );
+                    listArgument.push_back( L"0" );
+                }
+                listArgument.push_back( L"-D" );
+                listArgument.push_back( L"SW_NO_WAVE_OPS=1" );
+            }
+
+            /** @brief GL 패치를 후처리 표의 모양(실패를 알리는 함수)으로 부릅니다. 패치는 실패하지 않는다. */
+            static bool applyOpenGLPatch( vector<uint8>& inoutBytecode, string& outError )
+            {
+                (void)outError;
+                SPIRVOpenGLPatch::apply( inoutBytecode );
+                return true;
+            }
+
+            /**
+             * @brief SPIR-V 를 Tint 로 WGSL 로 옮기고 둘을 한 꾸러미로 묶습니다(`WebGPUShaderContainer`). Tint 는 DXC 처럼 실행 파일 옆에 둔다(`tint` — Dawn 빌드가 낸다).
+             * @details Tint 를 라이브러리로 링크하지 않는다 — Dawn 은 새 의존성이라 아직 붙이지 않았다(docs/PlatformTargets.md). 실행 파일이 없으면 오류로 멈춘다(WGSL 없이 구울 수 없다).
+             *          임시 파일은 시스템 임시 폴더에 둔다 — 병렬 쿠킹이 같은 파일을 쓰지 않게 바이트 해시를 이름에 넣는다(같은 바이트면 같은 결과라 겹쳐도 된다).
+             */
+            static bool convertSpirvToWgsl( vector<uint8>& inoutBytecode, string& outError )
+            {
+    #if defined( SW_PLATFORM_WINDOWS )
+                constexpr const utf8* kTintName = "tint.exe";
+    #elif defined( SW_PLATFORM_POSIX )
+                constexpr const utf8* kTintName = "tint";
+    #else
+        #error "Unsupported platform"
+    #endif
+                const string                      tintText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), kTintName );
+                const std::optional<AbsolutePath> tintPath = AbsolutePath::tryMake( tintText );
+                if ( tintPath.has_value() == false || FileUtil::isRegularFile( tintText ) == false )
+                {
+                    outError = "Tint (SPIR-V -> WGSL) is not next to the executable: " + tintText + " - the WebGPU shader target needs it (docs/PlatformTargets.md)";
+                    return false;
+                }
+                const uint64 hash      = HashUtil::appendBytes64( HashUtil::kFNVOffset64, inoutBytecode.data(), inoutBytecode.size() );
+                const string stem      = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_tint_" + to_string( hash ) );
+                const string spirvPath = stem + ".spv";
+                const string wgslPath  = stem + ".wgsl";
+                if ( FileUtil::writeFile( spirvPath, inoutBytecode.data(), inoutBytecode.size() ) == false )
+                {
+                    outError = "could not write the SPIR-V for Tint: " + spirvPath;
+                    return false;
+                }
+                string        toolOutput;
+                const auto    onOutput = SW_DELEGATE_LAMBDA( ProcessOutputDelegate, [&toolOutput]( string_view line )
+                   {
+                    toolOutput += line;
+                    toolOutput += ' ';
+                } );
+                const int32   exitCode = Process::execute( ProcessCommand::at( *tintPath, { "--format", "wgsl", "-o", wgslPath, spirvPath } ), {}, onOutput );
+                vector<uint8> wgslBytes;
+                const bool    bRead = exitCode == 0 && FileUtil::readFile( wgslPath, wgslBytes );
+                (void)FileUtil::removeFile( spirvPath );
+                (void)FileUtil::removeFile( wgslPath );
+                if ( bRead == false )
+                {
+                    outError = "Tint failed (exit " + to_string( exitCode ) + "): " + toolOutput;
+                    return false;
+                }
+                vector<uint8> container;
+                WebGPUShaderContainer::pack( inoutBytecode, string_view( reinterpret_cast<const utf8*>( wgslBytes.data() ), wgslBytes.size() ), container );
+                inoutBytecode = std::move( container );
+                return true;
+            }
+
             /** @brief 대상 형식 하나의 DXC 쪽 일입니다. 행 순서는 `ShaderTargetFormat` 과 같습니다. 새 대상은 이 표와 `ShaderTargetFormatTable` 에 한 줄씩이고, 후처리(GL 패치 · 앞으로의 Tint)도 여기에 적습니다. */
             struct DxcTargetRow
             {
                 ShaderTargetFormat _format;
-                LPCWSTR            _pBackendDefine;                             ///< 셰이더가 백엔드를 가르는 매크로
-                void ( *_pfnAppendArguments )( vector<LPCWSTR>& listArgument ); ///< 형식별 인자. 없으면 nullptr
-                void ( *_pfnPostProcess )( vector<uint8>& inoutBytecode );      ///< 나온 바이트코드 후처리. 없으면 nullptr
-                const utf8* _pLogName;                                          ///< 로그 이름
-                uint8       _bNativeBindless : 1;                               ///< 네이티브 bindless 텍스처 배열을 쓴다(common.hlsli SW_NATIVE_BINDLESS). DX12 는 t0 space1 무제한 배열(버퍼는 space0 슬롯), Vulkan 은 세트 1 배열(버퍼는 세트 0 의 시프트된 binding)
+                LPCWSTR            _pBackendDefine;                                          ///< 셰이더가 백엔드를 가르는 매크로
+                void ( *_pfnAppendArguments )( vector<LPCWSTR>& listArgument );              ///< 형식별 인자. 없으면 nullptr
+                bool ( *_pfnPostProcess )( vector<uint8>& inoutBytecode, string& outError ); ///< 나온 바이트코드 후처리. 없으면 nullptr. 실패하면 이유를 남기고 false
+                const utf8* _pLogName;                                                       ///< 로그 이름
+                uint8       _bNativeBindless : 1;                                            ///< 네이티브 bindless 텍스처 배열을 쓴다(common.hlsli SW_NATIVE_BINDLESS). DX12 는 t0 space1 무제한 배열(버퍼는 space0 슬롯), Vulkan 은 세트 1 배열(버퍼는 세트 0 의 시프트된 binding)
             };
 
             static const DxcTargetRow& getDxcTargetRow( ShaderTargetFormat format )
             {
                 static const DxcTargetRow kArrDxcTargetRow[] = {
-                    {  ShaderTargetFormat::DXBC_D3D11,   L"DX11=1",                     nullptr,                  nullptr,                       "D3D11 (DXBC)", 0},
-                    {  ShaderTargetFormat::DXIL_D3D12,   L"DX12=1",                     nullptr,                  nullptr,             "D3D12 (DXIL Row-Major)", 1},
-                    {ShaderTargetFormat::SPIRV_Vulkan, L"VULKAN=1", &appendSpirvVulkanArguments,                  nullptr, "Vulkan (SPIR-V, Vulkan API target)", 1},
-                    {ShaderTargetFormat::SPIRV_OpenGL, L"OPENGL=1", &appendSpirvOpenGLArguments, &SPIRVOpenGLPatch::apply,          "OpenGL (SPIR-V vulkan1.1)", 0},
+                    {  ShaderTargetFormat::DXBC_D3D11,   L"DX11=1",                     nullptr,             nullptr,                       "D3D11 (DXBC)", 0},
+                    {  ShaderTargetFormat::DXIL_D3D12,   L"DX12=1",                     nullptr,             nullptr,             "D3D12 (DXIL Row-Major)", 1},
+                    {ShaderTargetFormat::SPIRV_Vulkan, L"VULKAN=1", &appendSpirvVulkanArguments,             nullptr, "Vulkan (SPIR-V, Vulkan API target)", 1},
+                    {ShaderTargetFormat::SPIRV_OpenGL, L"OPENGL=1", &appendSpirvOpenGLArguments,   &applyOpenGLPatch,          "OpenGL (SPIR-V vulkan1.1)", 0},
+                    { ShaderTargetFormat::WGSL_WebGPU, L"WEBGPU=1", &appendSpirvWebGPUArguments, &convertSpirvToWgsl,      "WebGPU (SPIR-V -> WGSL, Tint)", 0},
                 };
                 static_assert( std::size( kArrDxcTargetRow ) == static_cast<size_t>( ShaderTargetFormat::Count ), "kArrDxcTargetRow needs one row per ShaderTargetFormat" );
                 const size_t index = static_cast<size_t>( format );
@@ -611,8 +705,13 @@ namespace sw
 
                 const uint8* pData = static_cast<const uint8*>( shaderBlob->GetBufferPointer() );
                 outResult._bytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
-                if ( getDxcTargetRow( desc._targetFormat )._pfnPostProcess != nullptr )
-                    getDxcTargetRow( desc._targetFormat )._pfnPostProcess( outResult._bytecode );
+                const auto pfnPostProcess = getDxcTargetRow( desc._targetFormat )._pfnPostProcess;
+                if ( pfnPostProcess != nullptr && pfnPostProcess( outResult._bytecode, outResult._errorMessage ) == false )
+                {
+                    SW_LOG_ERROR_ID( "ShaderCompiler.PostProcessFailed", "%# (%#)", outResult._errorMessage.c_str(), desc._source.c_str() );
+                    outResult._bytecode.clear();
+                    return DxcResult::Rejected;
+                }
                 outResult._listIncludedFile = pIncludeRecorder->takeIncludedFiles();
                 outResult._bSuccess         = true;
     #if defined( SW_DEBUG )

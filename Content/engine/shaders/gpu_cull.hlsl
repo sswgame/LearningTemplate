@@ -189,8 +189,8 @@ void appendVisible( uint batchIndex, uint entry )
     // 배치 번호가 표 밖이면 아래 g_BatchInfo · g_IndirectArgs 가 범위 밖을 읽고 쓴다 — 여기서 알린다(막지는 않는다, 백엔드가 범위 밖을 다르게 다룬다).
     SW_GPU_ASSERT( batchIndex < g_BatchCount, SW_GPU_ASSERT_ID_CULL_BATCH_RANGE, batchIndex );
     uint slot = 0;
-#if defined( DX11 )
-    // SM5.0 에는 웨이브 인트린식이 없다 — 스레드마다 원자 연산을 한다.
+#if defined( DX11 ) || defined( SW_NO_WAVE_OPS )
+    // SM5.0 에는 웨이브 인트린식이 없다 — 스레드마다 원자 연산을 한다. WebGPU 는 subgroups 가 선택 기능이라 쿠킹이 SW_NO_WAVE_OPS 로 뺀다.
     // (DX11 은 간접 인자 제약으로 컬링 자체를 돌리지 않으므로 이 경로는 실제로 쓰이지 않는다.)
     InterlockedAdd( g_IndirectArgs[batchIndex]._instanceCount, 1u, slot );
 #else
