@@ -42,6 +42,7 @@ from lint.PlatformChains import checkPlatformChains  # noqa: E402
 from lint.ServerUIIncludes import checkServerUIIncludes  # noqa: E402
 from generate.ClientOnlyTypes import checkClientOnlyTypes  # noqa: E402
 from lint.StateShape import checkStateShape  # noqa: E402
+from lint.ThreadOwners import checkThreadOwners  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 
 
@@ -195,6 +196,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[TickSceneWalk] FAIL — 틱에서 씬 전체를 도는 곳 {len(listTickSceneWalk)}건")
         for problem in listTickSceneWalk:
             print(f"  - {problem}")
+
+    # --- 작업 시스템 밖의 스레드(정상 형식이라 형식으로 막지 못한다 — ThreadOwners.py 머리말) ---------------
+    listThreadProblem = checkThreadOwners(projectRoot)
+    if listThreadProblem:
+        hasErrors = True
+        print(f"[ThreadOwners] FAIL — 허용 목록 밖의 자체 스레드 {len(listThreadProblem)}건")
+        for line in listThreadProblem:
+            print(f"  - {line}")
 
     # --- 참조 0 인 컴포넌트 · 감시 값 · 개발 명령(쓰는 곳은 형식이 말하지 못한다 — FeatureReferences.py 머리말) ---------------
     listFeatureProblem = checkFeatureReferences(projectRoot)
