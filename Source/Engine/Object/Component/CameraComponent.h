@@ -7,8 +7,8 @@
 #include "Core/Delegate/Subscription.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
-#include "Engine/Object/Component/CameraDepthOfFieldValues.h"
-#include "Engine/Object/Component/CameraPostProcessValues.h"
+#include "Engine/Graphics/View/CameraDepthOfFieldValues.h"
+#include "Engine/Graphics/View/CameraPostProcessValues.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

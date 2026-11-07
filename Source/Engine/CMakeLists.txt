@@ -48,7 +48,7 @@ if(NOT SW_ENABLE_AUTOMATION)
 endif()
 
 # 이 타깃이 짓지 않는 폴더(전용 서버의 `Renderer/` — 목록은 cmake/Engine/BuildLayout.cmake 의 `SW_UNBUILT_ENGINE_FOLDERS`).
-# .cpp 만 뺀다 — 헤더의 값 타입(뷰 요청 · 델리게이트)은 `Engine.h` 를 거쳐 서버도 읽는다. 리플렉션 헤더도 아래 8) 에서 뺀다.
+# 그 폴더의 헤더는 타깃 게이트 `serverbuild` 가 막는다(서버는 `IEngineRenderDriver` 만 본다). 리플렉션 헤더도 아래 8) 에서 뺀다.
 set(swUnbuiltFolderRegex "")
 foreach(swUnbuiltFolder IN LISTS SW_UNBUILT_ENGINE_FOLDERS)
 	sw_excludeUnbuiltSources(ENGINE_SOURCES "/Source/Engine/${swUnbuiltFolder}/.*\\.(c|cpp)$")

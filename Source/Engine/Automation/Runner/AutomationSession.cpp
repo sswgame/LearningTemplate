@@ -21,15 +21,14 @@
 #include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/View/IEngineRenderDriver.h"
+#include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Renderer/RHISubsystem.h"
-#include "Engine/Renderer/RenderThread.h"
-#include "Engine/Renderer/ScreenshotRequestQueue.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
@@ -72,7 +71,7 @@ namespace sw
         _pRunner.reset();
         _pChain.reset();
         _recordPath.clear();
-        _pRenderThread = nullptr;
+        _pRenderDriver = nullptr;
     }
 
     bool AutomationSession::beginRecording( string_view outputPath, string_view watchList )
@@ -137,11 +136,11 @@ namespace sw
 
     void AutomationSession::applyPresentPolicy()
     {
-        if ( _pRenderThread == nullptr || _pRunner == nullptr )
+        if ( _pRenderDriver == nullptr || _pRunner == nullptr )
             return;
         // 보는 사람이 없으면 내보내지 않는다(그림 · 사진은 같다). 표시 경로를 보는 시나리오는 내보낸다. 지켜보는 실행(-unattended 없음)은 늘 보인다.
         const bool bPresentSkipped = _bUnattended && _pRunner->getScenario().getTestOptions()._bPresents == false;
-        _pRenderThread->setPresentSkipped( bPresentSkipped );
+        _pRenderDriver->setPresentSkipped( bPresentSkipped );
         // 무인 실행은 창도 띄우지 않는다(App 이 띄우지 않았다 — 언리얼 -RenderOffScreen). 내보내는 단계만 메인 창을 보이고, 다음 단계가 다시 정한다.
         MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         if ( _bUnattended && pWindowHost != nullptr && pWindowHost->getWindow() != nullptr )
@@ -336,8 +335,8 @@ namespace sw
         // 사진을 실은 패킷은 방금 제출했고 렌더 스레드가 아직 그리는 중일 수 있다. 이제 돌 단계가 렌더 스레드가 그릴 때 읽는 전역 변수(gv_upscaler …)를 바꾸면
         // 그 값이 사진에 섞인다 — 백엔드마다 렌더 스레드가 뒤처지는 정도가 달라 Vulkan · GL 만 FSR 이 섞였다(useroptions scale). 단계 앞에서 패킷을 비운다(언리얼 FlushRenderingCommands).
         // 시계를 붙잡지 않는다 — 붙잡으면 게임이 그동안 더 돌아 뒤 사진의 게임 시간이 렌더 지연에 따라 흔들린다.
-        if ( _pRenderThread != nullptr && _pRunner->hasPendingScreenshot() )
-            _pRenderThread->pollPackets();
+        if ( _pRenderDriver != nullptr && _pRunner->hasPendingScreenshot() )
+            _pRenderDriver->flushSubmittedPackets();
         const AutomationResult result = _pRunner->onFrameEnd( *context._pInput );
         if ( result == AutomationResult::Running )
             return kEngineFrameRunning;
@@ -349,20 +348,14 @@ namespace sw
 
     uint32 AutomationSession::findCompletedScreenshotCount()
     {
-        uint32 completedCount = 0u;
-        if constexpr ( build::kWithClientCode ) // 우편함의 칸 정의는 Renderer 폴더에 있다 — 그 폴더를 짓지 않는 Server 타깃은 묻지 않는다(찍을 그림도 없다)
-        {
-            const ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
-            completedCount                               = pMailbox != nullptr ? pMailbox->getCompletedPacketSerial() : 0u;
-        }
-        return completedCount;
+        const ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
+        return pMailbox != nullptr ? pMailbox->getCompletedPacketSerial() : 0u;
     }
 
     void AutomationSession::updateRunTitle()
     {
         MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-        const RHISubsystem* const  pRHIHost    = engine::findSubsystem<RHISubsystem>();
-        const RHI* const           pRHI        = pRHIHost != nullptr ? pRHIHost->findRHI() : nullptr;
+        const RHI* const           pRHI        = _pRenderDriver != nullptr ? _pRenderDriver->findRHI() : nullptr;
         const utf8* const          pBackend    = pRHI != nullptr && pRHI->hasDevice() ? RHI::getBackendTypeName( pRHI->getCommittedBackend() ) : "";
         AutomationRunStatus        status{};
         const bool                 bRunning = _pRunner != nullptr && _pRunner->isActive();
@@ -443,14 +436,14 @@ namespace sw
         string scenarioPath;
         string reportPath;
         (void)commandLine.getArgument( CommandLineArgument::SCENARIO_REPORT, reportPath ); // 없으면 보고 파일을 쓰지 않는다
-        RenderThread* pRenderThread = engine.getRenderThread();
-        const bool    bKeepGoing    = commandLine.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );
-        _owner._bUnattended         = commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED );
-        const bool bScenario        = commandLine.getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false;
-        const bool bStarted         = bScenario && _owner.begin( scenarioPath, reportPath, bKeepGoing );
-        if ( bStarted && pRenderThread != nullptr )
-            pRenderThread->setScenarioCaptureEnabled( true );
-        _owner._pRenderThread = pRenderThread;
+        IEngineRenderDriver* const pRenderDriver = engine.getRenderDriver();
+        const bool                 bKeepGoing    = commandLine.isArgumentProvided( CommandLineArgument::SCENARIO_KEEP_GOING );
+        _owner._bUnattended                      = commandLine.isArgumentProvided( CommandLineArgument::UNATTENDED );
+        const bool bScenario                     = commandLine.getArgument( CommandLineArgument::SCENARIO, scenarioPath ) && scenarioPath.empty() == false;
+        const bool bStarted                      = bScenario && _owner.begin( scenarioPath, reportPath, bKeepGoing );
+        if ( bStarted && pRenderDriver != nullptr )
+            pRenderDriver->setScenarioCaptureEnabled( true );
+        _owner._pRenderDriver = pRenderDriver;
         if ( bStarted )
             _owner.applyPresentPolicy(); // 첫 단계는 렌더 스레드를 받기 전에 시작했다 — 다음 단계는 시작할 때 다시 정한다
 

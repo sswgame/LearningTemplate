@@ -78,13 +78,13 @@ namespace sw
         return GameModuleManager::loadModuleLibraries( pLiveReloadManager, catalog, resolution );
     }
 
-    bool EditorModuleManager::initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor )
+    bool EditorModuleManager::initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor )
     {
         _bEnableEditor = bEnableEditor ? SW_TRUE : SW_FALSE;
 
         // 게임이 먼저, 에디터가 나중이다. 게임은 처음 여는 씬을 요청하고(`GameSceneFlow::requestFirstScene`) 에디터는 제 시작 씬
         // (`-gv_editorStartupScene`)을 요청한다. 씬 매니저는 마지막 요청을 남기므로 나중에 요청한 에디터의 씬이 열린다(`GameSettings::_startMap` 주석).
-        if ( initializeGame( pLiveReloadManager, pRHI, pWindow, pRenderThread ) == false )
+        if ( initializeGame( pLiveReloadManager, pRHI, pWindow, pRenderDriver ) == false )
             return false;
 
         // 에디터 모듈을 리로드 그래프에 올리는 일은 개발 구성에만 있다(`EditorModuleManager.cpp` 의 개발 전용 구역 — 배포는 짓지 않는다).

@@ -2,21 +2,25 @@
 
 #include "Engine/Automation/AutomationCaptureUtil.h"
 
-#include "Core/Foundation/BuildInfo.h"
-
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/View/IEngineRenderDriver.h"
+#include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Renderer/Capture/CaptureReadiness.h"
-#include "Engine/Renderer/ScreenshotRequestQueue.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
     bool AutomationCaptureUtil::isReadyForCapture( const GameObjectManager* pManager )
     {
-        return AutomationStepRegistry::findCaptureBlocker() == nullptr && CaptureReadiness::countPendingWork( pManager ) == 0;
+        return AutomationStepRegistry::findCaptureBlocker() == nullptr && countPendingWork( pManager ) == 0;
+    }
+
+    uint32 AutomationCaptureUtil::countPendingWork( const GameObjectManager* pManager )
+    {
+        const IEngineRenderDriver* const pRenderDriver = engine::findSubsystem<IEngineRenderDriver>();
+        return pRenderDriver != nullptr ? pRenderDriver->countPendingCaptureWork( pManager ) : 0u;
     }
 } // namespace sw
 
@@ -47,13 +51,8 @@ namespace sw
         /** @brief 받았지만 아직 쓰지 않은 스크린샷(에디터 툴바 · 개발 명령 `screenshot` · 패킷 사진)이 있으면 true 입니다 — 시나리오가 그 파일 · 로그를 보기 전에 끝나게 한다. */
         bool isScreenshotPending()
         {
-            bool bPending = false;
-            if constexpr ( build::kWithClientCode ) // 전용 서버는 Renderer 폴더를 짓지 않고 찍을 그림도 없다
-            {
-                const ScreenshotRequestQueue* pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
-                bPending                               = pMailbox != nullptr && pMailbox->hasUnfinishedRequest();
-            }
-            return bPending;
+            const ScreenshotRequestQueue* pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
+            return pMailbox != nullptr && pMailbox->hasUnfinishedRequest();
         }
     } // namespace
 

@@ -76,8 +76,8 @@ endif()
 message(STATUS "[BuildConfig] Target type: ${SW_TARGET_TYPE}")
 
 # 이 타깃이 짓지 않는 Engine 폴더(`Source/Engine/` 기준) — 정본은 이 목록 하나다.
-# Engine 은 그 폴더의 소스 · 리플렉션 헤더를 뺀다(Source/Engine/CMakeLists.txt). 헤더는 남는다 — 값 타입(뷰 요청 · 델리게이트)은 서버도 읽는다.
-# 전용 서버는 렌더러를 짓지 않는다. 그 폴더를 부르는 Engine 본문은 `SW_WITH_CLIENT_CODE` 로 가른다(Engine.cpp · HeadlessSubsystem.cpp · ModuleManager.cpp).
+# Engine 은 그 폴더의 소스 · 리플렉션 헤더를 뺀다(Source/Engine/CMakeLists.txt). 헤더도 읽지 못한다 — 타깃 게이트 `serverbuild`(`sw_applyTargetLayerGate`)가 막는다.
+# 전용 서버는 렌더러를 짓지 않는다. 엔진 루프 · 호스트는 `IEngineRenderDriver`(Engine/Graphics/View)만 보고, 뷰 요청 값(`FrameViewports`)도 그 폴더에 있다.
 # 리눅스도 Windows 처럼 표시한 것(`SW_API` 등)만 공개한다. 켜 두지 않아 공개 매크로가 아무 일도 하지 않고 모든 모듈이 전부를 공개했다 - 확장 모듈의 링커가 자기 ImGui 사본 대신
 # 에디터 모듈의 심볼을 잡아, 확장의 결속기가 에디터의 할당자를 덮어쓰고 확장이 내려간 뒤 없는 코드로 뛰었다. 정적 라이브러리(vcpkg)는 숨김으로 짓지 않아 링크에서 따로 가린다.
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -88,11 +88,6 @@ endif()
 set(SW_UNBUILT_ENGINE_FOLDERS "")
 if(SW_TARGET_TYPE STREQUAL "Server")
 	list(APPEND SW_UNBUILT_ENGINE_FOLDERS "Renderer")
-	# Windows 의 `dllexport` 클래스는 쓰지 않는 inline 멤버까지 오브젝트에 내보내, 헤더만 읽는 렌더러 클래스가 짓지 않는 정의를 부른다(ELF 에는 없는 일이라 Linux 서버는 링크된다).
-	if(MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-		# Jolt 오브젝트만 뺀다 — Jolt 헤더의 함수 안 thread_local 은 이 옵션과 함께 dllimport 로 읽혀 컴파일되지 않는다.
-		target_compile_options(sw_global_options INTERFACE "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:$<STREQUAL:$<TARGET_PROPERTY:NAME>,EngineJolt_objects>>>:/Zc:dllexportInlines->")
-	endif()
 endif()
 
 if(SW_SHIPPING_BUILD)

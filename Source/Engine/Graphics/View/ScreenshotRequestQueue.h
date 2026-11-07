@@ -1,5 +1,5 @@
 /**
- * @file Engine/Renderer/ScreenshotRequestQueue.h
+ * @file Engine/Graphics/View/ScreenshotRequestQueue.h
  * @brief 스크린샷 요청의 우편함입니다 — 게임 스레드 · 개발 명령 · 에디터가 요청을 넣고 렌더 스레드가 꺼내 쓴 뒤 결과를 알립니다.
  * @details 엔진 범위의 서비스(선택 행)입니다. 렌더 스레드(`RenderThread`)의 정적 창구(`requestScreenshot` · `getCompletedScreenshotSerial` …)가 `engine::findSubsystem<ScreenshotRequestQueue>()`
  *          로 찾아 부릅니다. 우편함은 엔진 범위와 함께 서고 사라지므로 엔진을 다시 세우면 마지막 경로 · 장부가 비어 시작하고, 우편함이 없는 호스트(전용 서버)에서는 요청을 오류로 알리고 버립니다.

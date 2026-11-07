@@ -298,7 +298,11 @@ include("${CMAKE_BINARY_DIR}/generated/sw/config/TargetLayers.cmake")
 set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Scripts/generate/rules/TargetLayers.toml")
 
 function(sw_applyTargetLayerGate TARGET_NAME)
-	foreach(gate IN LISTS ARGN)
+	set(listGate ${ARGN})
+	if(SW_TARGET_TYPE STREQUAL "Server")
+		list(APPEND listGate serverbuild) # 전용 서버 구성은 렌더러 헤더를 읽지 않는다
+	endif()
+	foreach(gate IN LISTS listGate)
 		if(NOT gate IN_LIST SW_TARGET_LAYER_GATES)
 			message(FATAL_ERROR "sw_applyTargetLayerGate(${TARGET_NAME}): unknown gate '${gate}' (Scripts/generate/rules/TargetLayers.toml, or a module without a manifest)")
 		endif()

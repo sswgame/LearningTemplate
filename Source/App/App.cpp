@@ -304,7 +304,7 @@ namespace sw
         {
             case HostServiceID::Game:
             {
-                const bool bStarted = getModuleManager()->initialize( _launch.getLiveReloadManager(), _launch.getEngine().getRHI(), _pWindow, _launch.getEngine().getRenderThread(), bEnableEditor );
+                const bool bStarted = getModuleManager()->initialize( _launch.getLiveReloadManager(), _launch.getEngine().getRHI(), _pWindow, _launch.getEngine().getRenderDriver(), bEnableEditor );
                 if ( bStarted == false )
                 {
                     SW_LOG_ERROR_ID( "App.GameModuleManagerInitializationFailed", "GameModuleManager initialization failed." );

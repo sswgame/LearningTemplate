@@ -25,7 +25,7 @@ namespace sw
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 항목이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "RHI";
+        static constexpr const utf8* kSubsystemName = kRHISubsystemName;
 
         /** @brief 디바이스 없는 RHI 객체를 만듭니다(창과 디바이스는 `initializeSubsystem` 이 만듭니다). */
         RHISubsystem();

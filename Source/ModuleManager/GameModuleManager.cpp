@@ -12,12 +12,12 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/View/IEngineRenderDriver.h"
 #include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Module/ModuleRegistrationHost.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UI/UISystem.h"
@@ -63,7 +63,7 @@ namespace sw
         , _pLiveReloadManager{ nullptr }
         , _pRHI{ nullptr }
         , _pWindow{ nullptr }
-        , _pRenderThread{ nullptr }
+        , _pRenderDriver{ nullptr }
         , _pSceneManager{ nullptr }
         , _pUISystem{ nullptr }
         , _listGameSavedState{}
@@ -78,12 +78,12 @@ namespace sw
         shutdown();
     }
 
-    bool GameModuleManager::initializeGame( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread )
+    bool GameModuleManager::initializeGame( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver )
     {
         _pLiveReloadManager = pLiveReloadManager;
         _pRHI               = pRHI;
         _pWindow            = pWindow;
-        _pRenderThread      = pRenderThread;
+        _pRenderDriver      = pRenderDriver;
 
         // 프레임 경로가 매 프레임 전역 조회를 하지 않도록 여기서 한 번 읽는다. 서비스 테이블이 비어 있으면 그 일을 건너뛴다.
         const bool bServicesBound = engine::areEngineServicesBound();
@@ -248,10 +248,8 @@ namespace sw
 
     void GameModuleManager::waitRenderThreadIdle()
     {
-#if defined( SW_WITH_CLIENT_CODE )
-        if ( _pRenderThread != nullptr )
-            _pRenderThread->waitIdle( RHIWaitIdleReason::HotReload ); // 새 에디터 인스턴스(모듈 리로드 · RHI 교체 직후)의 첫 UI 프레임
-#endif
+        if ( _pRenderDriver != nullptr )
+            _pRenderDriver->waitRenderThreadIdle( RHIWaitIdleReason::HotReload ); // 새 에디터 인스턴스(모듈 리로드 · RHI 교체 직후)의 첫 UI 프레임
     }
 
     void GameModuleManager::flushRenderWorkers( FlushReason reason )
@@ -268,12 +266,8 @@ namespace sw
             waitReason = RHIWaitIdleReason::Shutdown;
         else if ( reason == FlushReason::Restart )
             waitReason = RHIWaitIdleReason::Tool;
-#if defined( SW_WITH_CLIENT_CODE )
-        if ( _pRenderThread != nullptr )
-            _pRenderThread->waitIdle( waitReason );
-#else
-        SW_ASSERT( _pRenderThread == nullptr ); // Server 타깃은 렌더러를 짓지 않는다 — 렌더 스레드가 있을 수 없다
-#endif
+        if ( _pRenderDriver != nullptr )
+            _pRenderDriver->waitRenderThreadIdle( waitReason );
         // **디바이스가 없는 RHI 가 있다.** 백엔드 교체가 실패하면 RHI 객체는 남고 디바이스만 사라지는데, `getDevice()` 는 널
         // 참조를 반환하므로 그 상태로 물으면 죽는다. 종료 경로가 반드시 이곳을 지난다(`Engine::shutdown` 도 같은 이유로
         // `hasDevice()` 를 먼저 확인한다).

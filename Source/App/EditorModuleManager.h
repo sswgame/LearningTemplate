@@ -42,10 +42,10 @@ namespace sw
          * @param pLiveReloadManager Dev 모드 전용 모듈 매니저(Shipping 에서는 nullptr)
          * @param pRHI 활성 RHI
          * @param pWindow 플랫폼 창
-         * @param pRenderThread 렌더 스레드(워커 비우기용)
+         * @param pRenderDriver 렌더러 창구(워커 비우기용)
          * @param bEnableEditor 에디터 모드 여부
          */
-        [[nodiscard]] bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor );
+        [[nodiscard]] bool initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver, bool bEnableEditor );
 
         /**
          * @brief 에디터 인스턴스 없이 에디터 모듈만 로드해 @p kind 원본을 임포트하거나 대조합니다(`App --import-textures`, `--import-models` 와 `--check-*`).

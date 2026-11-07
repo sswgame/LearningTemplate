@@ -34,6 +34,7 @@
 #include "Engine/Graphics/2D/Render2DSettingsSubsystem.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
+#include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -45,13 +46,15 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Renderer/Cook/ShaderCookDriver.h"
-#include "Engine/Renderer/RHISubsystem.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/SplashSubsystem.h"
+
+#if defined( SW_WITH_CLIENT_CODE )
+    #include "Engine/Renderer/Cook/ShaderCookDriver.h" // 셰이더 쿠킹은 렌더러의 일이다 — 전용 서버는 그 폴더를 짓지 않는다
+#endif
 
 namespace sw
 {
@@ -592,7 +595,7 @@ namespace sw
     span<const utf8* const> HeadlessSubsystem::getSubsystemDependents() const
     {
         // 스플래시도 막는다 — 창을 띄우지 않는 작업(단위 테스트 · 쿠킹 · 백엔드마다 시나리오를 자식으로 돌리는 조정 프로세스)에 스플래시가 서면 작업 내내 갱신되지 않은 채 떠 있었다.
-        static constexpr const utf8* kArrDependent[] = { FontService::kSubsystemName, RHISubsystem::kSubsystemName, UserSettingsManager::kSubsystemName, SplashSubsystem::kSubsystemName };
+        static constexpr const utf8* kArrDependent[] = { FontService::kSubsystemName, kRHISubsystemName, UserSettingsManager::kSubsystemName, SplashSubsystem::kSubsystemName };
         return kArrDependent;
     }
 } // namespace sw

@@ -16,10 +16,9 @@
 #include "Engine/EngineStartupExtension.h"
 #include "Engine/Foundation/QuitRequest.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
+#include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Profiling/FrameProfileSession.h"
-#include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
-#include "Engine/Renderer/Frame/View/RenderView.h"
 
 namespace sw
 {
@@ -39,9 +38,9 @@ namespace sw
     class EventDispatcher;
     class FontService;
     class FrameProfiler;
-    class FrameRenderer;
     class GlobalVariableManager;
     class IAudioService;
+    class IEngineRenderDriver;
     class InputManager;
     class InputMap;
     class IRHIDevice;
@@ -50,13 +49,10 @@ namespace sw
     class RenderThread;
     class RHI;
     class RHIBackendRegistry;
-    class RHISubsystem;
     class SceneManager;
     class TaskManager;
     class TypeRegistry;
     class UISystem;
-
-    // `ViewCameraProviderDelegate`(씬 뷰 카메라 조회)는 그것을 부르는 패킷 시점 헤더(`RenderPacketViewSetup.h`, 패킷 빌더 헤더가 끌어온다)에 있습니다.
 
     /** @brief 엔진을 띄우는 호스트의 역할입니다 — 기동 표의 대상(`SubsystemHostMask`) · 오디오 장치 · 허용하는 헤드리스 작업을 가릅니다. */
     enum class EngineHostRole : uint8
@@ -116,7 +112,7 @@ namespace sw
         /** @brief 입력 종료 등 프레임의 마지막 단계입니다. */
         void endFrame();
 
-        /** @brief 대기 중인 RHI 핫스왑을 수행합니다. 렌더러 몫(이것 · 창 크기 · 렌더 패킷)의 구현은 `Engine.cpp` 끝의 `SW_WITH_CLIENT_CODE` 구역 이고 렌더러를 짓는 타깃에만 있습니다(전용 서버 타깃은 부르지 않는다 — `build::kWithClientCode`). */
+        /** @brief 대기 중인 RHI 핫스왑을 수행합니다(`IEngineRenderDriver::applyPendingBackendChange`). 렌더러가 없으면(전용 서버) false 입니다. */
         [[nodiscard]] bool applyPendingBackendChange();
 
         // ----------------------------------------------------------------------
@@ -155,7 +151,10 @@ namespace sw
         /** @brief 코어 범위의 명령줄입니다. 기동 전 · 종료 뒤에는 nullptr 입니다. */
         CommandLineManager* getCommandLineManager() const;
         RHI*                getRHI() const { return _pRHI; }
-        RenderThread*       getRenderThread() const { return _pRenderThread; }
+        /** @brief 렌더러 창구입니다. 렌더러를 짓지 않는 구성(전용 서버)과 렌더러를 두지 않은 기동은 nullptr 입니다. */
+        IEngineRenderDriver* getRenderDriver() const { return _pRenderDriver; }
+        /** @brief 렌더 스레드입니다(클라이언트 호스트 전용 — 서지 않았으면 nullptr). 다른 호스트는 `getRenderDriver` 만 씁니다. */
+        RenderThread* getRenderThread() const;
         /**
          * @brief 서비스 · 기동 범위의 서브시스템 초기화 시간을 오래 걸린 것부터 "이름=ms" 로 이은 글입니다(1 ms 미만은 뺀다). 시동 요약 로그의 재료입니다.
          * @details `SubsystemCollection::getInitTimings` 를 모은 것이라 `initialize` 가 끝난 뒤에만 뜻이 있습니다.
@@ -172,26 +171,8 @@ namespace sw
         RHIInitResult getRHIInitResult() const { return _rhiInitResult; }
 
     private:
-        /**
-         * @brief 디바이스 재생성 뒤 내렸던 단계(렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스)를 다시 세웁니다. 모두 섰으면 true 입니다.
-         * @param pOutTiming 주면 자원 다시 올리기 · 단계 다시 세우기에 든 시간을 한 줄로 받습니다(교체 로그).
-         */
-        [[nodiscard]] bool rebindSceneAfterDeviceRecreate( string* pOutTiming = nullptr );
         /** @brief 설정 파일을 다시 읽었습니다(`ConfigManager::onConfigReloaded`). 게임 설정 활성본 · 선호 수직 동기화를 다시 맞춥니다. */
         void onConfigReloaded( const hashed_string& configTypeName );
-        /**
-         * @brief 주 창 크기가 바뀌었습니다 — 렌더 스레드를 쉬게 한 뒤 스왑체인 크기를 바꿉니다(창 스레드).
-         * @details 창 · RHI · 렌더 스레드를 모두 가진 엔진의 일이다(언리얼 `FSceneViewport::ResizeFrame` · Godot RenderingServer 와 같은 자리). 호스트는 모른다.
-         */
-        void onMainWindowResize( uint32 width, uint32 height );
-        /** @brief 렌더 스레드가 받은 패킷을 모두 끝낼 때까지 기다립니다(렌더 스레드가 없으면 할 일이 없다). */
-        void flushRenderThreadPackets();
-        /** @brief 기동 단계를 구성한 직후 렌더러 몫의 서브시스템(RHI 단계 · 프레임 렌더러 · 패킷 빌더)을 잡아 둡니다. 전용 서버는 할 일이 없습니다. */
-        void bindRendererParts( const engine::StartupParts& parts );
-        /** @brief 기동 단계가 돈 뒤 RHI · 렌더 스레드 · 주 창 크기 구독을 잡습니다(서지 않은 것은 nullptr). 전용 서버는 할 일이 없습니다. */
-        void bindRendererAfterStartup( const engine::StartupParts& parts );
-        /** @brief `-gv_screenshotQuit` 의 사진을 모두 찍었으면 그 결과로 종료를 요청합니다(프레임 끝). 전용 서버는 찍을 사진이 없습니다. */
-        void requestQuitAfterCaptures();
         /** @brief 프레임 관찰자에게 넘길 이번 프레임의 문맥(입력 · 렌더 스레드가 쓴 스크린샷 수 · 프레임 시간 · 활성 씬)을 만듭니다. */
         EngineFrameContext makeFrameContext() const;
         /** @brief 프레임 앞 서비스를 돌립니다 — 셰이더 핫 리로드, 파일 대화 상자 결과, 에셋 스트리밍 큐, 씬 전환, 이벤트, 오디오(`update` 의 첫 구간). */
@@ -203,8 +184,6 @@ namespace sw
         void updateScenes( float32 deltaTime, const FrameViewports& views, uint32 vpWidth, uint32 vpHeight, bool bTickScene );
         /** @brief 런타임 UI 를 이번 프레임의 게임 상태로 돌립니다(게임 틱 뒤 · 렌더 패킷 앞). 디버그 HUD 와 음성 자막을 먼저 넘기고, 뷰포트는 게임이 그려지는 화면으로 정합니다. */
         void updateRuntimeUI( const ViewportTarget& mainOutput, uint32 vpWidth, uint32 vpHeight );
-        /** @brief 머티리얼을 올리고 렌더 프레임 패킷을 채워 렌더 스레드에 냅니다. 렌더러를 짓는 타깃에만 있습니다. */
-        void submitRenderPacket( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider );
 
     private:
         /**
@@ -222,8 +201,6 @@ namespace sw
         ConfigManager* _pConfigManager;
         /** @brief 설정 다시 읽기 알림(`ConfigManager::onConfigReloaded`)의 구독입니다. 설정 표가 먼저 사라지면 무효가 된다. */
         Subscription _configReloadedSubscription;
-        /** @brief 주 창 크기 칸의 구독입니다(RHI 가 선 클라이언트만). `shutdown` 이 창보다 먼저 놓는다. */
-        Subscription _mainWindowResizeSubscription;
         /** @brief 서비스 범위의 디버그 키 맵입니다(`_services` 소유 — 빌려 쓴다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 맵을 놓는다. */
         DebugKeyActions* _pDebugKeyActions;
         /**
@@ -259,8 +236,8 @@ namespace sw
         MemoryBudgetSubsystem* _pMemoryBudget;
         /** @brief 엔진 범위(기동 단계)입니다 — 선언된 의존으로 위상 정렬해 초기화하고 역순으로 종료 · 소멸합니다. 부모는 `_services`. 서브시스템 객체를 소유합니다. */
         SubsystemScope _startup;
-        /** @brief 서브시스템 `RHI` 입니다(`_startup` 소유). 백엔드 교체가 이것에 기대는 단계만 내렸다가 다시 세운다. */
-        RHISubsystem* _pRHISubsystem;
+        /** @brief 렌더러 창구입니다(`_startup` 소유 — 빌려 쓴다). 렌더러를 짓지 않는 구성과 렌더러를 두지 않은 기동은 nullptr 이고, 루프는 그것을 보고 건너뜁니다. */
+        IEngineRenderDriver* _pRenderDriver;
         /** @brief 서브시스템 `RHI` 의 RHI 입니다(`_startup` 소유 — 그 단계가 선 뒤부터 빌려 쓴다). 서지 않았으면(전용 서버 · 헤드리스) nullptr 입니다. */
         RHI* _pRHI;
         /** @brief 서브시스템 `Fonts` 입니다(`_startup` 소유 — 빌려 쓴다). 렌더 패킷의 캔버스가 글리프 캐시를 싣는다. */
@@ -273,14 +250,5 @@ namespace sw
         IAudioService* _pAudioService;
         /** @brief 서브시스템 `Scene` 의 씬 매니저입니다(`_startup` 소유 — 빌려 쓴다). 프레임마다 전환 · 틱 · 디버그 그리기 · 패킷이 쓴다. */
         SceneManager* _pSceneManager;
-        /** @brief 서브시스템 `FrameRenderer` 의 렌더러입니다(`_startup` 소유 — 빌려 쓴다). */
-        FrameRenderer* _pFrameRenderer;
-        /**
-         * @brief 프레임 패킷을 채우는 GT 쪽 상태(씬 스냅샷 빌더 · 패킷 · 업로드 큐 · 추가 뷰 스케줄러)입니다(서브시스템 `FrameRenderer` 소유 — 빌려 쓴다).
-         *        그 단계가 세우고 내린다(헤드리스 작업에서는 서지 않는다).
-         */
-        RenderPacketBuilder* _pPacketBuilder;
-        /** @brief 서브시스템 `RenderThread` 의 렌더 스레드입니다(소유는 그 단계 — 처음 설 때부터 해제까지 빌려 쓴다). 전용 서버에는 없다. */
-        RenderThread* _pRenderThread;
     };
 } // namespace sw

@@ -18,9 +18,9 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
+#include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 #include "Engine/Renderer/RenderThread.h"
-#include "Engine/Renderer/ScreenshotRequestQueue.h"
 
 #include <cstring>
 #include <imgui.h>

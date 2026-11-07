@@ -27,6 +27,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -36,7 +37,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Renderer/ScreenshotRequestQueue.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
@@ -172,14 +172,10 @@ namespace sw
 
     void AutomationRunner::forwardPendingScreenshot()
     {
-        // 전용 서버는 Renderer 폴더를 짓지 않고 찍을 그림도 없다.
-        if constexpr ( build::kWithClientCode )
-        {
-            ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
-            string                        path;
-            if ( pMailbox != nullptr && pMailbox->isPacketSlotFree() && _run.takePendingScreenshotPath( path ) )
-                (void)pMailbox->putForNextPacket( path ); // 칸이 비어 있음을 방금 봤다 — 같은 게임 스레드만 채우고 꺼낸다
-        }
+        ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
+        string                        path;
+        if ( pMailbox != nullptr && pMailbox->isPacketSlotFree() && _run.takePendingScreenshotPath( path ) )
+            (void)pMailbox->putForNextPacket( path ); // 칸이 비어 있음을 방금 봤다 — 같은 게임 스레드만 채우고 꺼낸다
     }
 
     void AutomationRunner::acquireWriteGate()

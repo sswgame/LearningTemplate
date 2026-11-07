@@ -8,8 +8,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Object/Component/CameraDepthOfFieldValues.h"
-#include "Engine/Object/Component/CameraPostProcessValues.h"
+#include "Engine/Graphics/View/CameraDepthOfFieldValues.h"
+#include "Engine/Graphics/View/CameraPostProcessValues.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

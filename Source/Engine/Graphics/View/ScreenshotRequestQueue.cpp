@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/ScreenshotRequestQueue.h"
+#include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 

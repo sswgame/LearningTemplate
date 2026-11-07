@@ -14,8 +14,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/Module/HostInterfaces.h"
-#include "Engine/Renderer/Frame/View/RenderView.h"
 
 #include "ModuleAPI/ABI/GameAPI.h"
 #include "ModuleAPI/Service/IModuleCompiler.h"
@@ -25,10 +25,10 @@ namespace sw
     struct ModuleAPISymbols;
     struct ModuleResolution;
 
+    class IEngineRenderDriver;
     class IWindow;
     class LiveReloadManager;
     class ModuleCatalog;
-    class RenderThread;
     class RHI;
     class SceneManager;
     class UISystem;
@@ -227,9 +227,9 @@ namespace sw
          * @brief 콜백을 등록하고 게임 인스턴스를 만듭니다(게임 모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했습니다). App 과 서버 기동의 공통 본체입니다.
          * @param pRHI 활성 RHI. 주면 게임은 디바이스가 있어야 만들어지고, nullptr 이면(전용 서버) 디바이스 없이 만듭니다.
          * @param pWindow 플랫폼 창(없으면 nullptr)
-         * @param pRenderThread 렌더 스레드(워커 비우기용, 없으면 nullptr)
+         * @param pRenderDriver 렌더러 창구(워커 비우기용, 없으면 nullptr)
          */
-        [[nodiscard]] bool initializeGame( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread );
+        [[nodiscard]] bool initializeGame( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, IEngineRenderDriver* pRenderDriver );
         /** @brief RHI 교체 뒤 게임을 다시 만듭니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
         [[nodiscard]] bool recreateGameInstance( void* pGameModule );
         /** @brief 호스트가 모듈에 넘기는 서비스 테이블을 채웁니다. @p bGameModule 이면 게임에 허용된 것(GameVisible)만 채웁니다. */
@@ -307,10 +307,10 @@ namespace sw
         /** @brief 게임 모듈에 넘긴 호스트 서비스 범위입니다(`rebindGameService` 가 새로 만든다 — 모듈이 들고 있는 동안 산다). */
         unique_ptr<SubsystemScope> _gameServices;
 
-        LiveReloadManager* _pLiveReloadManager; // 소유하지 않는다.
-        RHI*               _pRHI;               // 소유하지 않는다.
-        IWindow*           _pWindow;            // 소유하지 않는다.
-        RenderThread*      _pRenderThread;      // 소유하지 않는다.
+        LiveReloadManager*   _pLiveReloadManager; // 소유하지 않는다.
+        RHI*                 _pRHI;               // 소유하지 않는다.
+        IWindow*             _pWindow;            // 소유하지 않는다.
+        IEngineRenderDriver* _pRenderDriver;      // 소유하지 않는다.
         /**
          * @brief 프레임 경로(`beginFrame`)가 쓰는 엔진 서비스입니다. `initializeGame` 이 바인딩된 서비스 테이블에서 한 번 읽습니다(소유하지 않음).
          * @details 비어 있으면 그 일을 건너뜁니다. 종료 · 리로드 경로는 서비스가 이미 해제됐을 수 있어 `engine::areEngineServicesBound()` 로 확인한 뒤 전역 조회를 씁니다.

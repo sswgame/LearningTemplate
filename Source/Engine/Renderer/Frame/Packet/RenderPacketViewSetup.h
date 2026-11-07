@@ -4,17 +4,15 @@
  * @details `RenderPacketBuilder` 가 값으로 소유합니다. 언리얼 `FSceneViewFamily` 를 만드는 자리(`FSceneView` 설정과 씬 캡처 뷰 일정)에 해당합니다.
  */
 #pragma once
-#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/View/FrameViewports.h"
+
 namespace sw
 {
-    struct FrameViewports;
     struct RenderFramePacket;
-
-    enum class RenderViewMode : uint8;
 
     class CameraComponent;
     class FrameRenderer;
@@ -22,13 +20,6 @@ namespace sw
     class RenderViewScheduler;
     class RHI;
     class Scene;
-
-    /**
-     * @brief 이번 프레임의 뷰 카메라를 반환합니다.
-     * @details tick 안의 핫 리로드와 씬 전환이 GameObject 를 파괴할 수 있으므로,
-     *          카메라는 미리 잡아 두지 않고 파괴 단계가 끝난 뒤 이 델리게이트로 조회합니다.
-     */
-    SW_DECLARE_DELEGATE( CameraComponent*, ViewCameraProviderDelegate, void );
 
     /** @brief `RenderPacketViewSetup::setupMainView` 가 고른 이번 프레임의 시점입니다. 추가 뷰 고르기와 씬 내용 채우기가 읽습니다. */
     struct RenderPacketMainView

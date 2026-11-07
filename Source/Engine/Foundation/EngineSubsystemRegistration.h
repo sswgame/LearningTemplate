@@ -41,6 +41,7 @@ namespace sw
     class FrameRendererSubsystem;
     class GameNetSession;
     class IAudioService;
+    class IEngineRenderDriver;
     class InputManager;
     class ReflectionSubsystem;
     class RenderThreadSubsystem;
@@ -82,6 +83,7 @@ namespace sw
             CompressionCodecRegistry* _pCodecRegistry{ nullptr };
             ConfigManager*            _pConfigManager{ nullptr };
             RHISubsystem*             _pRHI{ nullptr };
+            IEngineRenderDriver*      _pRenderDriver{ nullptr }; ///< 엔진 루프의 렌더러 창구(`EngineRenderDriver`)
             FrameRendererSubsystem*   _pFrameRendererSubsystem{ nullptr };
             RenderThreadSubsystem*    _pRenderThread{ nullptr };
             InputManager*             _pInputManager{ nullptr };

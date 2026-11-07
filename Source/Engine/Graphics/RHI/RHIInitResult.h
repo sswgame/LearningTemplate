@@ -22,6 +22,9 @@ namespace sw
         Failed,            ///< 그 밖의 실패입니다. 결함일 수 있습니다
     };
 
+    /** @brief RHI 기동 단계의 서브시스템 이름입니다(`RHISubsystem::kSubsystemName`). 렌더러를 모르는 층이 "이 단계보다 먼저" 를 적을 때 씁니다(`HeadlessSubsystem`). */
+    inline constexpr const utf8* kRHISubsystemName = "RHI";
+
     /** @brief App 이 "이 기계에서 그 백엔드를 못 돌린다"로 끝날 때의 종료 코드입니다(automake 와 CTest `SKIP_RETURN_CODE` 의 건너뜀 관례). */
     inline constexpr int32 kRHIUnusableHereExitCode = static_cast<int32>( ProcessExitCode::RHIUnusableHere ); // 값은 종료 코드 표(ProcessExitCodes.json)
 } // namespace sw
