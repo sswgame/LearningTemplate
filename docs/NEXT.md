@@ -48,7 +48,7 @@
 - S8 측정 · 성능 후보 · 매직 리터럴 집계 · 장르 키트 시연(K1) · 장르 완결 루프 시나리오.
 - 2 차 묶음: `GF_Housing` · `GF_ModSupport` · 오픈월드 싱글 · 액션 MMO 수직 슬라이스 · 반사 RPC 메타데이터의 실제 경로.
 
-**2. 사용자에게 받을 것.** 영수증 · 푸시 · 외부 로그인의 실제 계정과 키(지금은 로컬 가짜 끝점까지 잇는다 — `Config/Server/Online/Providers/`, `Scripts/net/OnlineLocalRun.py`). 새 의존성(Dawn, 인코더 라이브러리)의 라이선스.
+**2. 사용자에게 받을 것.** strix 실행용 LLM 키(또는 strix 클라우드 계정 — 비용) — 온라인 서버 보안 점검(CLAUDE.md 보조 도구). 영수증 · 푸시 · 외부 로그인의 실제 계정과 키(지금은 로컬 가짜 끝점까지 잇는다 — `Config/Server/Online/Providers/`, `Scripts/net/OnlineLocalRun.py`). 새 의존성(Dawn, 인코더 라이브러리)의 라이선스.
 
 **3. Linux.** 큰 일이 끝난 뒤 `LinuxScenarios.py all`, `.linux` 골든, 에디터 체인 18 단계(아래 5 절). 엔진은 Vulkan 1.2 로 낮췄다(R4) — dzn(`~/lt-deps/dzn`)으로 시나리오를 다시 돌려 본다.
 
