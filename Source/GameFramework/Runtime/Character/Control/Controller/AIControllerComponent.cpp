@@ -8,6 +8,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
+#include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
 
@@ -28,9 +29,11 @@ namespace sw
     AIControllerComponent::AIControllerComponent()
         : _turnRate{ 6.0f }
         , _arriveDistance{ 0.3f }
+        , _behaviorTree{}
+        , _pBehaviorTree{}
+        , _runner{}
         , _blackboard{}
         , _stateName{}
-        , _pBehaviorTreeRunner{ nullptr }
         , _pending{}
         , _destination{}
         , _focusPoint{}
@@ -41,8 +44,49 @@ namespace sw
         , _bDestinationSent{ SW_FALSE }
         , _bStopPending{ SW_FALSE }
         , _bWarnedDriveMode{ SW_FALSE }
+        , _bTreeRequired{ SW_FALSE }
+        , _bTreePrepared{ SW_FALSE }
         , _reserved{ 0 }
     {
+    }
+
+    bool AIControllerComponent::prepareBehaviorTree()
+    {
+        if ( _bTreePrepared == SW_TRUE )
+            return _pBehaviorTree != nullptr;
+        _bTreePrepared   = SW_TRUE;
+        const utf8* name = getOwner() != nullptr ? getOwner()->getName().c_str() : "?";
+        if ( _behaviorTree.empty() )
+        {
+            if ( _bTreeRequired == SW_TRUE )
+                SW_LOG_ERROR_ID( "AIControllerComponent.BehaviorTreeMissing", "AI controller '%#' decides only through a behavior tree but _behaviorTree is empty - it stands still", name );
+            return false;
+        }
+        _pBehaviorTree = _behaviorTree.acquire();
+        if ( _pBehaviorTree == nullptr || _pBehaviorTree->getTree().isValid() == false )
+        {
+            SW_LOG_ERROR_ID( "AIControllerComponent.BehaviorTreeUnreadable", "AI controller '%#' could not read behavior tree '%#' - it stands still", name, _behaviorTree.path() );
+            _pBehaviorTree = nullptr;
+            return false;
+        }
+        // 트리의 동작 · 조건이 이 조종자를 칸으로 찾는다(`AIControllerSlot`). 블랙보드 칸과 씨앗은 실행기가 틱마다 얹는다.
+        GameplayContext world;
+        world.set<AIControllerSlot>( this );
+        _runner.initialize( &_pBehaviorTree->getTree() );
+        _runner.setGameplayContext( world );
+        return true;
+    }
+
+    void AIControllerComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
+    {
+        if ( prepareBehaviorTree() == false )
+        {
+            if ( _bTreeRequired == SW_TRUE )
+                stopMoving();
+            return;
+        }
+        updateBlackboard( context, pawn );
+        (void)_runner.tick( _blackboard, this, context._deltaTime ); // 루트의 결과는 쓰지 않는다 — 잎이 이미 목표를 정했다
     }
 
     void AIControllerComponent::produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent )

@@ -97,6 +97,16 @@ namespace sw
         acquireValue( key, BlackboardValueType::Object )._object = objectID;
     }
 
+    bool Blackboard::copyValue( const hashed_string& from, const hashed_string& to )
+    {
+        const BlackboardValue* pSource = findValue( from );
+        if ( pSource == nullptr || pSource->_type == BlackboardValueType::None )
+            return false;
+        const BlackboardValue copied     = *pSource; // 대상 칸을 만들며 표가 다시 자리를 잡아도 원본을 잃지 않게 먼저 베낀다
+        acquireValue( to, copied._type ) = copied;
+        return true;
+    }
+
     void Blackboard::clearValue( const hashed_string& key )
     {
         if ( _mapValue.erase( key ) > 0 )

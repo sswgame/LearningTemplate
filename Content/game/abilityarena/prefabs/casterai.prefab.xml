@@ -6,11 +6,7 @@
 			                       _possessAtStart="0"
 			                       _turnRate="20"
 			                       _arriveDistance="0.3"
-			                       _kind="Caster"
-			                       _meleeReach="1.4"
-			                       _preferredMin="5"
-			                       _preferredMax="9"
-			                       _fireRange="12" />
+			                       _behaviorTree="game/abilityarena/data/ai/caster.bt.xml" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

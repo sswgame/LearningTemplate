@@ -6,10 +6,8 @@
 			                            _possessAtStart="0"
 			                            _turnRate="20"
 			                            _arriveDistance="0.3"
-			                            _crowdRadius="2.5"
-			                            _crowdCount="3"
-			                            _meleeRange="2"
-			                            _healBelow="0.5" />
+			                            _behaviorTree="game/abilityarena/data/ai/autobattle.bt.xml"
+			                            _crowdRadius="2.5" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

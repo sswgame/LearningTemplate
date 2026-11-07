@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WildWest 말(HorseFollowAIController)의 판단 — 주인이 8 m 넘게 멀어지거나 휘파람(Called)을 들으면 주인 곁으로 오고, 3 m 안에 닿으면 멈추고 휘파람을 잊는다.
+  가는 중이면(목적지가 걸려 있으면) 닿을 때까지 계속 간다. 감각은 FollowPosition · OwnerDistance(주인이 없으면 지운다)와 Called.
+-->
+<BehaviorTree>
+	<Selector id="root" name="Horse">
+		<Sequence id="noOwner" name="NoOwner">
+			<Condition test="!hasBlackboard(FollowPosition)"/>
+			<Action name="Wait" task="ai.stop"/>
+		</Sequence>
+		<Sequence id="arrived" name="Arrived">
+			<Condition test="blackboard(OwnerDistance) &lt;= 3"/>
+			<Action task="blackboard.clear" key="Called"/>
+			<ForceSuccess>
+				<Sequence name="StopIfMoving">
+					<Condition test="aiHasDestination"/>
+					<Action name="Stop" task="ai.stop"/>
+				</Sequence>
+			</ForceSuccess>
+		</Sequence>
+		<Sequence id="follow" name="Follow">
+			<Condition test="blackboard(Called) || blackboard(OwnerDistance) > 8 || aiHasDestination"/>
+			<Action name="Follow" task="ai.moveTo" key="FollowPosition"/>
+		</Sequence>
+	</Selector>
+</BehaviorTree>

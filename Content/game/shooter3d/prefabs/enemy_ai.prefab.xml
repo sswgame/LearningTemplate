@@ -6,7 +6,7 @@
 			                                   _possessAtStart="0"
 			                                   _turnRate="6"
 			                                   _arriveDistance="0.3"
-			                                   _retargetDistance="0.5" />
+			                                   _behaviorTree="game/shooter3d/data/ai/skeleton.bt.xml" />
 		</_listComponent>
 	</GameObject>
 </Prefab>

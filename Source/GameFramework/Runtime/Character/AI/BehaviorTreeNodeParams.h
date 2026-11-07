@@ -132,6 +132,30 @@ namespace sw
         PROPERTY( Tooltip = "Number to store" )
         float32 _value{ 1.0f };
     };
+
+    /** @brief `blackboard.add` 의 칸입니다. 수치 값에 더합니다(없는 키는 실패 — 처음 값은 감각이나 `blackboard.set` 이 둔다). */
+    REFLECT()
+    struct SW_GF_API BlackboardAddParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Blackboard key of a number" )
+        hashed_string _key{};
+        PROPERTY( Required, Tooltip = "Amount to add (negative subtracts)" )
+        float32 _value{ 0.0f };
+    };
+
+    /** @brief `blackboard.copy` 의 칸입니다. 값을 종류째(위치 · 수 · 참거짓 · 오브젝트) 옮겨 적습니다. */
+    REFLECT()
+    struct SW_GF_API BlackboardCopyParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Blackboard key to read" )
+        hashed_string _from{};
+        PROPERTY( Required, Tooltip = "Blackboard key to write" )
+        hashed_string _to{};
+    };
 } // namespace sw
 
 namespace sw

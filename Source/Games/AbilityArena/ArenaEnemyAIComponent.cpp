@@ -11,15 +11,11 @@
 namespace sw
 {
     ArenaEnemyAIComponent::ArenaEnemyAIComponent()
-        : _kind{ ArenaUnitKind::Grunt }
-        , _meleeReach{ 1.4f }
-        , _preferredMin{ 5.0f }
-        , _preferredMax{ 9.0f }
-        , _fireRange{ 12.0f }
     {
+        requireBehaviorTree();
     }
 
-    void ArenaEnemyAIComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
+    void ArenaEnemyAIComponent::updateBlackboard( const ControlFrameContext& context, const PawnComponent& pawn )
     {
         (void)context;
         const ArenaGameModeComponent* pGameMode = ArenaGameModeComponent::findForPawn( pawn );
@@ -28,46 +24,16 @@ namespace sw
         float3                        targetPosition{};
         const bool                    bHasTarget = pGameMode != nullptr && pOwner != nullptr && pGameMode->findUnitPosition( pOwner->getHandle(), selfPosition ) &&
                                 pGameMode->findNearestHostilePosition( pOwner->getHandle(), targetPosition );
+        Blackboard& blackboard = getBlackboard();
         if ( bHasTarget == false )
         {
-            setStateName( "Idle" );
-            stopMoving();
-            clearFocus();
+            blackboard.clearValue( "SelfPosition" );
+            blackboard.clearValue( "TargetPosition" );
+            blackboard.clearValue( "TargetDistance" );
             return;
         }
-        const float3  toTarget = targetPosition - selfPosition;
-        const float32 distance = toTarget.getLength();
-        setFocus( targetPosition );
-        if ( _kind == ArenaUnitKind::Caster )
-        {
-            // 원거리 — 적당한 거리를 지키며 쏜다. 물러나도 대상을 본다(초점). 상태 이름은 움직임 쪽이다(쏘기는 거리마다 겹친다).
-            if ( distance > _preferredMax )
-            {
-                setStateName( "Chase" );
-                moveTo( targetPosition );
-            }
-            else if ( distance < _preferredMin )
-            {
-                setStateName( "Retreat" );
-                moveTo( selfPosition - ArenaUnitComponent::flattenDirection( toTarget, float3{ 0.0f, 0.0f, 1.0f } ) * _preferredMin );
-            }
-            else
-            {
-                setStateName( "Hold" );
-                stopMoving();
-            }
-            if ( distance <= _fireRange )
-                pressButton( hashed_string( "Arena.Fireball" ) );
-            return;
-        }
-        if ( distance > _meleeReach )
-        {
-            setStateName( "Chase" );
-            moveTo( targetPosition );
-            return;
-        }
-        setStateName( "Strike" );
-        stopMoving();
-        pressButton( hashed_string( "Arena.Melee" ) );
+        blackboard.setVector( "SelfPosition", selfPosition );
+        blackboard.setVector( "TargetPosition", targetPosition );
+        blackboard.setFloat( "TargetDistance", ( targetPosition - selfPosition ).getLength() );
     }
 } // namespace sw

@@ -80,6 +80,8 @@ namespace sw
         void setBool( const hashed_string& key, bool bValue );
         void setVector( const hashed_string& key, const float3& value );
         void setObject( const hashed_string& key, uint64 objectID );
+        /** @brief @p from 의 값을 종류째 @p to 에 복사합니다. @p from 이 없으면 false 이고 @p to 는 그대로입니다. */
+        [[nodiscard]] bool copyValue( const hashed_string& from, const hashed_string& to );
         /** @brief 값을 지웁니다. 지운 뒤에는 `isSet` 이 false 입니다. */
         void clearValue( const hashed_string& key );
         void clear();

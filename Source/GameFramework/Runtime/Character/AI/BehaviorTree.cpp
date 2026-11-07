@@ -50,6 +50,22 @@ namespace sw
                 return ActionResult::Succeeded;
             }
 
+            static ActionResult runAddBlackboard( ActionContext& context, const BlackboardAddParams& params )
+            {
+                Blackboard*                  pBlackboard = context._world.find<BlackboardWriteSlot>();
+                const std::optional<float32> current     = pBlackboard != nullptr ? pBlackboard->getFloat( params._key ) : std::nullopt;
+                if ( current.has_value() == false )
+                    return ActionResult::Failed;
+                pBlackboard->setFloat( params._key, *current + params._value );
+                return ActionResult::Succeeded;
+            }
+
+            static ActionResult runCopyBlackboard( ActionContext& context, const BlackboardCopyParams& params )
+            {
+                Blackboard* pBlackboard = context._world.find<BlackboardWriteSlot>();
+                return pBlackboard != nullptr && pBlackboard->copyValue( params._from, params._to ) ? ActionResult::Succeeded : ActionResult::Failed;
+            }
+
             static bool abortsSelf( BehaviorAbortMode mode ) { return mode == BehaviorAbortMode::Self || mode == BehaviorAbortMode::Both; }
             static bool abortsLowerPriority( BehaviorAbortMode mode ) { return mode == BehaviorAbortMode::LowerPriority || mode == BehaviorAbortMode::Both; }
         };
@@ -59,6 +75,8 @@ namespace sw
     SW_CONDITION( hasBlackboard, ConditionNameArg, &BehaviorTreeInternal::hasBlackboard );
     SW_GAME_ACTION( BlackboardSet, "blackboard.set", BlackboardSetParams, &BehaviorTreeInternal::runSetBlackboard );
     SW_GAME_ACTION( BlackboardClear, "blackboard.clear", BlackboardClearParams, &BehaviorTreeInternal::runClearBlackboard );
+    SW_GAME_ACTION( BlackboardAdd, "blackboard.add", BlackboardAddParams, &BehaviorTreeInternal::runAddBlackboard );
+    SW_GAME_ACTION( BlackboardCopy, "blackboard.copy", BlackboardCopyParams, &BehaviorTreeInternal::runCopyBlackboard );
 } // namespace sw
 
 namespace sw

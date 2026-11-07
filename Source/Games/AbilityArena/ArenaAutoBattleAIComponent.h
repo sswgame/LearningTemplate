@@ -13,11 +13,13 @@ namespace sw
 {
     /**
      * @class ArenaAutoBattleAIComponent
-     * @brief 반쯤 깎이면 회복, 가까우면 근접, 멀면 다가가며 화염구, 둘러싸이면 반대쪽으로 대시 — 플레이어와 같은 폰 버튼만 누릅니다.
+     * @brief 감각(체력 비율 · 대상 · 둘러싼 적 수 · 대시 중)만 냅니다. 판단(회복 · 근접 · 화염구 · 대시)은 행동 트리 데이터(`data/ai/autobattle.bt.xml`)이고, 플레이어와 같은 폰 버튼만 누릅니다.
      * @details 몸 안의 자동 플레이 분기가 아니라 조종자 바꾸기입니다(언리얼에서 자동 플레이 AIController 가 플레이어 폰을 Possess 하는 것과 같다) — 움직임 ·
      *          어빌리티는 키보드로 할 때와 같은 `ArenaUnitComponent` 를 지납니다. 플레이어 유닛은 움직이는 쪽을 바라봅니다(대시는 물러나는 쪽으로).
+     *          블랙보드: `SelfPosition` · `TargetPosition`(위치), `TargetDistance`(m), `HealthRatio`(체력 어트리뷰트가 있을 때만), `NearbyEnemyCount`(`_crowdRadius` 안), `Dashing`.
+     *          전투 문맥(어빌리티 · 디렉터 · 자기 자리)이 없으면 `SelfPosition` 을 지우고, 대상이 없으면 `TargetPosition` · `TargetDistance` 를 지웁니다.
      */
-    REFLECT( Category = "AbilityArena", DisplayName = "Arena Auto Battle AI", Tooltip = "AI controller that plays the arena player while auto play is on" )
+    REFLECT( Category = "AbilityArena", DisplayName = "Arena Auto Battle AI", Tooltip = "AI controller that plays the arena player while auto play is on; its behavior tree decides" )
     class ArenaAutoBattleAIComponent : public AIControllerComponent
     {
     public:
@@ -27,16 +29,10 @@ namespace sw
         virtual ~ArenaAutoBattleAIComponent() override = default;
 
     protected:
-        void think( const ControlFrameContext& context, const PawnComponent& pawn ) override;
+        void updateBlackboard( const ControlFrameContext& context, const PawnComponent& pawn ) override;
 
     private:
-        PROPERTY( Category = "Auto Play", DisplayName = "Crowd Radius", Tooltip = "Enemies inside this distance count as surrounding the player", Min = 0.0, Units = m )
+        PROPERTY( Category = "Auto Play", DisplayName = "Crowd Radius", Tooltip = "Enemies inside this distance count into NearbyEnemyCount", Min = 0.0, Units = m )
         float32 _crowdRadius;
-        PROPERTY( Category = "Auto Play", DisplayName = "Crowd Count", Tooltip = "Dash away when this many enemies surround the player", Min = 1 )
-        uint32 _crowdCount;
-        PROPERTY( Category = "Auto Play", DisplayName = "Melee Range", Tooltip = "Switch to melee inside this distance", Min = 0.0, Units = m )
-        float32 _meleeRange;
-        PROPERTY( Category = "Auto Play", DisplayName = "Heal Below", Tooltip = "Heal when health falls below this share of max health", Min = 0.0, Max = 1.0, Units = ratio )
-        float32 _healBelow;
     };
 } // namespace sw

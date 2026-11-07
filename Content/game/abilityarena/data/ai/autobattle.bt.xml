@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AbilityArena 자동 전투(플레이어 유닛)의 판단 — 체력이 절반 아래면 회복, 적 셋 이상에 둘러싸이면 반대쪽으로 4 m 물러나며 대시,
+  대시 중이면 걸어 둔 목적지를 그대로 두고, 2 m 밖이면 다가가며 화염구, 안이면 멈춰 근접 공격한다.
+  감각은 ArenaAutoBattleAIComponent(SelfPosition · TargetPosition · TargetDistance · HealthRatio · NearbyEnemyCount · Dashing).
+  둘러싸임은 같은 틱에 물러나는 쪽으로 걸어 유닛이 그쪽을 바라본 뒤 대시가 그 쪽으로 미끄러진다.
+-->
+<BehaviorTree>
+	<Selector id="root" name="AutoBattle">
+		<Sequence id="battle" name="Battle">
+			<Condition test="hasBlackboard(SelfPosition)"/>
+			<ForceSuccess>
+				<Sequence id="heal" name="Heal">
+					<Condition test="blackboard(HealthRatio) &lt; 0.5"/>
+					<Action name="Heal" task="ai.press" button="Arena.Heal"/>
+				</Sequence>
+			</ForceSuccess>
+			<Selector id="engage" name="Engage">
+				<Sequence id="noTarget" name="NoTarget">
+					<Condition test="!hasBlackboard(TargetPosition)"/>
+					<Action name="Wait" task="ai.stop"/>
+				</Sequence>
+				<Sequence id="escape" name="Escape">
+					<Condition test="blackboard(NearbyEnemyCount) >= 3"/>
+					<Action task="ai.moveAway" from="SelfPosition" away="TargetPosition" distance="4"/>
+					<Action name="Dash" task="ai.press" button="Arena.Dash"/>
+				</Sequence>
+				<Condition id="dashing" name="Dashing" test="blackboard(Dashing)"/>
+				<Sequence id="ranged" name="Ranged">
+					<Condition test="blackboard(TargetDistance) > 2"/>
+					<Action task="ai.moveTo" key="TargetPosition"/>
+					<Action name="Fireball" task="ai.press" button="Arena.Fireball"/>
+				</Sequence>
+				<Sequence id="melee" name="Melee">
+					<Action task="ai.stop"/>
+					<Action name="Melee" task="ai.press" button="Arena.Melee"/>
+				</Sequence>
+			</Selector>
+		</Sequence>
+		<Action id="outOfBattle" name="OutOfBattle" task="ai.stop"/>
+	</Selector>
+</BehaviorTree>

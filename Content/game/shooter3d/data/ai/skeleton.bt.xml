@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 스켈레톤 적(ShooterEnemyAIControllerComponent)의 판단. 감각은 PlayerFeet · PlayerDistance · Reach · StopDistance · PlayerAlive 와 몸의 단계(Rising · Chasing · Attacking · Staggered · Dying 중 하나만 참).
+  - 손이 닿는 거리 안이고 플레이어가 살아 있으면 Attack 버튼을 누르고 있는다(휘두르기 간격 · 맞는 시각은 폰의 규칙).
+  - 쫓지 않는 단계(일어남 · 휘두름 · 움찔 · 쓰러짐)에는 멈춘다. 휘두르는 동안과 가까이 선 동안은 플레이어(발 위 1 m)를 바라본다.
+  - 쫓는 동안은 움직이는 쪽을 보고, 플레이어가 0.5 m 넘게 움직였을 때만 경로를 다시 잡는다.
+  상태 이름(ai.state, 감시 값 AI.State)은 단계 이름이다: Rise · Chase · Attack · Stagger · Die.
+-->
+<BehaviorTree>
+	<Selector id="root" name="Skeleton">
+		<Sequence id="inactive" name="Inactive">
+			<Condition test="!hasBlackboard(PlayerFeet)"/>
+			<Action task="ai.hold" button="Attack" held="false"/>
+			<Action name="Wait" task="ai.stop"/>
+			<Action task="ai.clearFocus"/>
+		</Sequence>
+		<Sequence id="active" name="Active">
+			<Selector id="attackButton" name="AttackButton">
+				<Sequence name="InReach">
+					<Condition test="blackboard(PlayerDistance) &lt; blackboard(Reach) &amp;&amp; blackboard(PlayerAlive)"/>
+					<Action name="HoldAttack" task="ai.hold" button="Attack" held="true"/>
+				</Sequence>
+				<Action name="ReleaseAttack" task="ai.hold" button="Attack" held="false"/>
+			</Selector>
+			<Selector id="phase" name="Phase">
+				<Sequence id="rise" name="Rise">
+					<Condition test="blackboard(Rising)"/>
+					<Action name="Rise" task="ai.state" state="Rise"/>
+					<Action task="ai.stop"/>
+					<Action task="ai.clearFocus"/>
+				</Sequence>
+				<Sequence id="attack" name="Attack">
+					<Condition test="blackboard(Attacking)"/>
+					<Action name="Attack" task="ai.state" state="Attack"/>
+					<Action task="ai.stop"/>
+					<Action task="ai.focus" key="PlayerFeet" height="1"/>
+				</Sequence>
+				<Sequence id="stagger" name="Stagger">
+					<Condition test="blackboard(Staggered)"/>
+					<Action name="Stagger" task="ai.state" state="Stagger"/>
+					<Action task="ai.stop"/>
+					<Action task="ai.clearFocus"/>
+				</Sequence>
+				<Sequence id="die" name="Die">
+					<Condition test="blackboard(Dying)"/>
+					<Action name="Die" task="ai.state" state="Die"/>
+					<Action task="ai.stop"/>
+					<Action task="ai.clearFocus"/>
+				</Sequence>
+				<Sequence id="chase" name="Chase">
+					<Action name="Chase" task="ai.state" state="Chase"/>
+					<Selector name="ChaseOrHold">
+						<Sequence id="closeIn" name="CloseIn">
+							<Condition test="blackboard(PlayerDistance) &lt;= blackboard(StopDistance)"/>
+							<Action task="ai.stop"/>
+							<Action task="ai.focus" key="PlayerFeet" height="1"/>
+						</Sequence>
+						<Sequence id="follow" name="Follow">
+							<Action task="ai.clearFocus"/>
+							<Action name="ChasePlayer" task="ai.moveTo" key="PlayerFeet" repathDistance="0.5"/>
+						</Sequence>
+					</Selector>
+				</Sequence>
+			</Selector>
+		</Sequence>
+	</Selector>
+</BehaviorTree>

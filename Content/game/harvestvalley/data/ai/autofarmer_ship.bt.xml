@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 자동 농부의 출하 가지 — autofarmer.bt.xml 이 두 자리(급한 출하 · 남은 수확물)에서 펼친다. 출하함 옆자리로 가서 0.25 초마다 한 번 넣는다. -->
+<BehaviorTree>
+	<Sequence name="Ship">
+		<Action name="Ship" task="ai.state" state="Ship"/>
+		<Action task="blackboard.copy" from="ShipSpot" to="StandPosition"/>
+		<ForceSuccess>
+			<Sequence name="ShipAtBin">
+				<Action task="ai.arrive" key="ShipSpot" self="PlayerPosition" tolerance="0.2"/>
+				<Condition test="blackboard(ActionTimer) &lt;= 0"/>
+				<Action task="blackboard.set" key="ActionTimer" value="0.25"/>
+				<Action name="ShipProduce" task="ai.press" button="Farm.Ship"/>
+			</Sequence>
+		</ForceSuccess>
+	</Sequence>
+</BehaviorTree>

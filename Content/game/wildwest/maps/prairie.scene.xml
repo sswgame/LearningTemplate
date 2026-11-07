@@ -519,9 +519,8 @@
 					                         _possessAtStart="5"
 					                         _turnRate="6"
 					                         _arriveDistance="1"
-					                         _ownerObject="4"
-					                         _followDistance="8"
-					                         _stopDistance="3" />
+					                         _behaviorTree="game/wildwest/data/ai/horse.bt.xml"
+					                         _ownerObject="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -533,9 +532,8 @@
 					                         _possessAtStart="6"
 					                         _turnRate="6"
 					                         _arriveDistance="1"
-					                         _ownerObject="4"
-					                         _followDistance="8"
-					                         _stopDistance="3" />
+					                         _behaviorTree="game/wildwest/data/ai/horse.bt.xml"
+					                         _ownerObject="4" />
 				</_listComponent>
 			</GameObject>
 		</entity>

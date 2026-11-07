@@ -6,24 +6,45 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
+#include "Engine/Gameplay/ActionRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 
 namespace sw
 {
-    class FarmGameModeComponent;
+    /** @brief `farm.walkUpTo` 의 칸입니다. 칸 아래(−Z) 통로로 갔다가 위(+Z)를 보며 걸어 들어갑니다. */
+    REFLECT()
+    struct FarmWalkUpToParams
+    {
+        REFLECT_BODY();
 
+        PROPERTY( Required, Tooltip = "Blackboard key of the stand spot below the tile" )
+        hashed_string _key{};
+        PROPERTY( Required, Min = 0.0, Units = m, Tooltip = "Counts as standing on the spot inside this distance" )
+        float32 _tolerance{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Units = m, Tooltip = "How far below the stand spot the farmer steps back, to walk up into it facing up" )
+        float32 _approachBack{ 0.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class FarmAutoFarmerAIComponent
-     * @brief 할 일을 고른다 — 늦었거나 지쳤으면 출하하고 잔다, 거둘 것 → 물 → 심기 → 갈기 → 씨앗 사기. 플레이어와 같은 폰 버튼(`Farm.*`)과 이동 축만 냅니다.
-     * @details 농부의 자리 · 체력 · 도구 · 밭은 디렉터의 판 상태이고, 이 조종자는 그것을 **읽기만** 합니다(판단은 조종 시스템이 틱 전에 게임 스레드에서 부른다).
-     *          칸에 도구를 쓸 때는 칸 아래(−Z) 한 칸에 서서 위(+Z)를 봐야 하므로 그 아래 자리로 먼저 간 뒤 위로 걸어 들어갑니다 — 디렉터는 걷는 쪽으로
-     *          바라보는 쪽을 정한다(네 방향). 가게에서는 한 번 서면 `_buyBatch` 개까지 이어서 삽니다.
+     * @brief 감각만 냅니다 — 농부의 자리 · 체력 · 도구 · 가방 · 밭을 블랙보드에 적고, 할 일 고르기(늦었거나 지쳤으면 출하하고 잔다, 거둘 것 → 물 → 심기 → 씨앗 사기 → 갈기)는
+     *        행동 트리 데이터(`data/ai/autofarmer.bt.xml`)가 합니다. 플레이어와 같은 폰 버튼(`Farm.*`)과 이동 축만 냅니다.
+     * @details 농부의 자리 · 체력 · 도구 · 밭은 디렉터의 판 상태이고, 이 조종자는 그것을 **읽기만** 합니다(감각은 조종 시스템이 틱 전에 게임 스레드에서 부른다).
+     *          칸에 도구를 쓸 때는 칸 아래(−Z) 한 칸에 서서 위(+Z)를 봐야 하므로 트리가 `farm.walkUpTo` 로 그 아래 자리로 먼저 간 뒤 위로 걸어 들어갑니다 — 디렉터는 걷는 쪽으로
+     *          바라보는 쪽을 정한다(네 방향).
+     *          블랙보드(감각): `FarmReady` · `PlayerPosition` · `FacingUp` · `NearShop` · `Stamina` · `Tired` · `ProduceCount` · `SelectedSeedCount` · `SeedSelected` · `HasSeed` · `CanAffordSeed`,
+     *          할 일 자리 `HarvestTile` · `WaterTile` · `SowTile` · `TillTile`(칸 순서로 그 일의 첫 칸, 없으면 지운다) · `ShipSpot` · `ShopSpot`, 손에 든 도구 `HoldingHoe` · `HoldingWateringCan` · `HoldingSeeds` · `HoldingHand`,
+     *          `ActionTimer`(판단마다 경과 시간만큼 줄인다 — 트리가 행동마다 다시 채운다). 트리가 쓰는 칸: `BuyRemaining` · `SeedCountAtBuy` · `StandPosition`.
      */
-    REFLECT( Category = "Farming", DisplayName = "Farm Auto Farmer AI", Tooltip = "AI controller that farms while auto play is on" )
+    REFLECT( Category = "Farming", DisplayName = "Farm Auto Farmer AI", Tooltip = "AI controller that farms while auto play is on; senses the farm, its behavior tree decides" )
     class FarmAutoFarmerAIComponent : public AIControllerComponent
     {
     public:
@@ -35,30 +56,16 @@ namespace sw
         /** @brief 따를 디렉터입니다(디렉터가 세운 뒤 · 빙의시키기 전에 부른다). */
         void assignGameMode( GameObjectHandle gameMode ) { _gameMode = gameMode; }
 
+        /** @brief `farm.walkUpTo` 입니다. 섰고 위를 보면 멈추고 성공, 아니면 걸으며 실패합니다(뒤따르는 도구 쓰기를 돌리지 않는다). 트리 데이터가 이름으로 부른다. */
+        static ActionResult taskWalkUpTo( ActionContext& context, const FarmWalkUpToParams& params );
+
     protected:
-        void think( const ControlFrameContext& context, const PawnComponent& pawn ) override;
+        void updateBlackboard( const ControlFrameContext& context, const PawnComponent& pawn ) override;
 
     private:
-        /** @brief 칸 아래 자리로 갔다가 위로 걸어 들어갑니다. 섰고 위를 보면 true 입니다. */
-        bool walkUpTo( const FarmGameModeComponent& gameMode, const float3& standPosition );
-        /** @brief @p standPosition 으로 갑니다. 섰으면 true 입니다. */
-        bool walkTo( const FarmGameModeComponent& gameMode, const float3& standPosition );
-
-    private:
-        PROPERTY( Category = "Auto Play", DisplayName = "Action Interval", Tooltip = "Seconds between actions on a tile or at the bin", Min = 0.0, Units = s )
-        float32 _actionInterval;
-        PROPERTY( Category = "Auto Play", DisplayName = "Cultivate Limit", Tooltip = "Tiles the auto farmer looks after (what one day of stamina covers)", Min = 0 )
+        PROPERTY( Category = "Auto Play", DisplayName = "Cultivate Limit", Tooltip = "Tiles the auto farmer tills at most (what one day of stamina covers); TillTile stays empty beyond it", Min = 0 )
         int32 _cultivateLimit;
-        PROPERTY( Category = "Auto Play", DisplayName = "Buy Batch", Tooltip = "Seeds bought in one visit to the shop", Min = 1 )
-        int32 _buyBatch;
-        PROPERTY( Category = "Auto Play", DisplayName = "Stand Tolerance", Tooltip = "Counts as standing on the spot inside this distance", Min = 0.0, Units = m )
-        float32 _standTolerance;
-        PROPERTY( Category = "Auto Play", DisplayName = "Approach Back", Tooltip = "How far below the tile's stand spot the farmer steps back, to walk up into it facing up", Min = 0.0, Units = m )
-        float32 _approachBack;
 
-        GameObjectHandle _gameMode;       ///< 따르는 디렉터의 오브젝트
-        float32          _actionTimer;    ///< 0 이하가 되면 다음 행동
-        int32            _buyRemaining;   ///< 가게에서 이어서 살 남은 개수(0 이면 사지 않는 중)
-        int32            _seedCountAtBuy; ///< 지난 사기 누름 때 가방의 고른 씨앗 수(못 샀는지 본다)
+        GameObjectHandle _gameMode; ///< 따르는 디렉터의 오브젝트
     };
 } // namespace sw

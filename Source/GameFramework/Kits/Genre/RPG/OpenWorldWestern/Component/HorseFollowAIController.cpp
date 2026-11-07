@@ -2,8 +2,6 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/HorseFollowAIController.h"
 
-#include "Core/Math/MathUtil.h"
-
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -12,18 +10,37 @@
 
 namespace sw
 {
+    namespace
+    {
+        struct HorseFollowAIControllerInternal
+        {
+            static constexpr const utf8* kCalledKey = "Called"; ///< 휘파람을 들었다(트리가 닿으면 지운다)
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
     HorseFollowAIController::HorseFollowAIController()
         : _ownerObject{}
-        , _followDistance{ 8.0f }
-        , _stopDistance{ 3.0f }
-        , _bCalled{ SW_FALSE }
-        , _reserved{ 0 }
     {
+        requireBehaviorTree();
     }
 
-    void HorseFollowAIController::think( const ControlFrameContext& context, const PawnComponent& pawn )
+    void HorseFollowAIController::whistle()
+    {
+        getBlackboard().setBool( HorseFollowAIControllerInternal::kCalledKey, true );
+    }
+
+    bool HorseFollowAIController::isCalled() const
+    {
+        return getBlackboard().isSet( HorseFollowAIControllerInternal::kCalledKey );
+    }
+
+    void HorseFollowAIController::updateBlackboard( const ControlFrameContext& context, const PawnComponent& pawn )
     {
         (void)context;
+        Blackboard&              blackboard = getBlackboard();
         const GameObject*        pHorse     = pawn.getOwner();
         const GameObjectManager* pManager   = pHorse != nullptr ? pHorse->getManager() : nullptr;
         const GameObject*        pOwner     = pManager != nullptr && _ownerObject.isValid() ? pManager->resolveGameObject( _ownerObject ) : nullptr;
@@ -31,23 +48,14 @@ namespace sw
         const SceneComponent*    pOwnerRoot = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pHorseRoot == nullptr || pOwnerRoot == nullptr )
         {
-            stopMoving();
+            blackboard.clearValue( "FollowPosition" );
+            blackboard.clearValue( "OwnerDistance" );
             return;
         }
-        const float3  ownerPosition = pOwnerRoot->getWorldPosition();
-        const float3  horsePosition = pHorseRoot->getWorldPosition();
-        const float32 deltaX        = ownerPosition._x - horsePosition._x;
-        const float32 deltaZ        = ownerPosition._z - horsePosition._z;
-        const float32 distance      = MathUtil::sqrt( deltaX * deltaX + deltaZ * deltaZ );
-        if ( distance <= _stopDistance )
-        {
-            _bCalled = SW_FALSE;
-            if ( hasDestination() )
-                stopMoving();
-            return;
-        }
-        const bool bShouldMoveToOwner = _bCalled == SW_TRUE || distance > _followDistance || hasDestination();
-        if ( bShouldMoveToOwner )
-            moveTo( float3{ ownerPosition._x, horsePosition._y, ownerPosition._z } );
+        const float3 ownerPosition = pOwnerRoot->getWorldPosition();
+        const float3 horsePosition = pHorseRoot->getWorldPosition();
+        // 말은 땅을 걷는다 — 목적지 높이는 말의 것이고, 거리도 수평으로 잰다.
+        blackboard.setVector( "FollowPosition", float3{ ownerPosition._x, horsePosition._y, ownerPosition._z } );
+        blackboard.setFloat( "OwnerDistance", float3::getHorizontalDistance( horsePosition, ownerPosition ) );
     }
 } // namespace sw

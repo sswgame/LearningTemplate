@@ -1,7 +1,7 @@
 <Prefab formatVersion="0" _base="game/abilityarena/prefabs/casterai.prefab.xml" name="ArenaGruntAI">
 	<PrefabOverrides>
 		<Override key="ArenaEnemyAIComponent#0">
-			<ArenaEnemyAIComponent _kind="Grunt" />
+			<ArenaEnemyAIComponent _behaviorTree="game/abilityarena/data/ai/grunt.bt.xml" />
 		</Override>
 	</PrefabOverrides>
 </Prefab>
