@@ -15,6 +15,7 @@
 #include "Engine/Environment/Foliage/FoliageInfluencerComponent.h"
 #include "Engine/Environment/Foliage/WindComponent.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -577,7 +578,13 @@ namespace sw
             vector<PlacementInstance>*  _pOut{ nullptr };
             vector<PlacementCandidate>* _pCandidates{ nullptr }; ///< 이 레이어의 후보 목록 - 바깥 목록은 부르는 스레드에서 미리 집는다(워커가 바깥 목록에 쓰기 접근을 하지 않게)
             uint32                      _layerIndex{ 0 };
-            void                        run() { _pSelf->computeLayerInstances( _layerIndex, _pTerrain, _pDirtyArea, _pCandidates, *_pOut ); }
+            void                        run() const { _pSelf->computeLayerInstances( _layerIndex, _pTerrain, _pDirtyArea, _pCandidates, *_pOut ); }
+            /** @brief 레이어 구간 하나를 돕니다(`runParallelByCost` 의 본문). */
+            static void runRange( const LayerJob* arrJob, uint32 start, uint32 end )
+            {
+                for ( uint32 layerIndex = start; layerIndex < end; ++layerIndex )
+                    arrJob[layerIndex].run();
+            }
         };
         const uint32 layerCount = static_cast<uint32>( _listLayer.size() );
         outListLayerInstance.clear();
@@ -586,26 +593,17 @@ namespace sw
         for ( uint32 layerIndex = 0; layerIndex < layerCount; ++layerIndex )
             listJob[layerIndex] = LayerJob{ this, pTerrain, pDirtyArea, &outListLayerInstance[layerIndex], pTerrain != nullptr ? &_listLayerCandidate[layerIndex] : nullptr, layerIndex };
         // 평면 경로(지형 없음)는 레이어마다 오너 트랜스폼 · 씬을 읽어(늦게 갱신하는 캐시일 수 있다) 차례로 돈다 - 가볍다.
-        TaskManager* pTaskManager = engine::findSubsystem<TaskManager>(); // 선택: 작업 시스템 없는 호스트(테스트)는 차례로 돈다
-        if ( pTaskManager == nullptr || layerCount < 2 || pTerrain == nullptr )
+        if ( pTerrain == nullptr )
         {
-            for ( LayerJob& job : listJob )
-                job.run();
+            LayerJob::runRange( listJob.data(), 0, layerCount );
             return;
         }
-        TaskStageHandle stage = pTaskManager->createStage( "FoliageLayers" );
-        for ( LayerJob& job : listJob )
-        {
-            TaskHandle handle = pTaskManager->emplaceTask( "FoliageLayer", SW_DELEGATE_METHOD( TaskDelegate, &LayerJob::run, &job ) );
-            if ( handle.isValid() == false )
-            {
-                job.run(); // 작업을 넣지 못했다(풀이 바닥났거나 종료 중) - 여기서 돈다
-                continue;
-            }
-            stage.addTask( handle );
-            pTaskManager->submit( handle );
-        }
-        pTaskManager->waitStage( stage );
+        // 포크-조인이다 — 스테이지를 만들고 레이어마다 태스크를 내어 기다리는 대신 병렬 for 하나로 낸다(부르는 스레드도 함께 돈다, 언리얼 ParallelFor).
+        // 레이어 안의 후보 판정도 병렬 for 라 겹쳐 돈다(`PlacementRule::sampleCandidates`). 작업 시스템이 없으면(테스트) 이 스레드에서 차례로 돈다.
+        const LayerJob* const arrJob     = listJob.data();
+        auto                  layerRange = [arrJob]( uint32 start, uint32 end )
+        { LayerJob::runRange( arrJob, start, end ); };
+        engine::runParallelByCost( layerCount, SW_DELEGATE_LAMBDA( ParallelBlockDelegate, layerRange ) );
     }
 
     void FoliageComponent::computeLayerInstances( uint32 layerIndex, const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea,

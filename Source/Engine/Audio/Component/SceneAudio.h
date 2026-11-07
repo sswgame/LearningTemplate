@@ -105,6 +105,13 @@ namespace sw
             float32       _intensity{ 0.0f };
         };
 
+        /** @brief 에미터 하나의 이번 프레임 소리 자리 · 속도입니다(`updateEmitters` 의 병렬 본문이 자기 칸에 쓴다). */
+        struct EmitterMotion
+        {
+            float3 _position{};
+            float3 _velocity{};
+        };
+
         // 등록 구독이 풀렸습니다 — 목록마다 해제 함수 하나. 주소로만 찾고 역참조하지 않는다(컴포넌트가 소멸 중에 놓는다).
         /** @brief 리스너를 뺍니다. */
         void releaseListener( AudioListenerComponent* pListener );
@@ -116,8 +123,13 @@ namespace sw
         // `update` 의 단계들 — 잠금을 잡은 채로 부른다.
         /** @brief 리스너 — 리스너 컴포넌트가 있으면 그것들, 없으면 게임 카메라(직교면 2D 화면 팬). 지난 프레임에 켰는데 이번에 없는 칸은 끈다. */
         void updateListeners( AudioEngine& audioEngine, float32 deltaSeconds, const CameraComponent* pCamera ) SW_REQUIRES_LOCK( _mutex );
-        /** @brief 에미터 자리 · 속도를 엔진에 넣고 가림 측정이 돌 사본 목록을 만듭니다. @p bListenerMoved 가 거짓이고 에미터 트랜스폼이 그대로면 자리를 다시 구하지 않습니다. */
-        void updateEmitters( AudioEngine& audioEngine, float32 deltaSeconds, bool bListenerMoved ) SW_REQUIRES_LOCK( _mutex );
+        /** @brief 쓸 수 있는 에미터를 사본 목록(`_listEmitterSnapshot`)에 모읍니다 — 자리 진행과 가림 측정이 잠금 밖에서 이 사본을 돈다. */
+        void collectEmitters() SW_REQUIRES_LOCK( _mutex );
+        /**
+         * @brief 사본의 에미터 자리 · 속도를 구해(워커로 나눈다) 엔진에 넣습니다. @p bListenerMoved 가 거짓이고 에미터 트랜스폼이 그대로면 자리를 다시 구하지 않습니다.
+         * @details 잠금 밖에서 부른다 — 병렬 합류를 기다리며 돕는 태스크가 등록으로 같은 잠금을 잡을 수 있다.
+         */
+        void updateEmitters( AudioEngine& audioEngine, float32 deltaSeconds, bool bListenerMoved );
         /** @brief 가림 — 프레임마다 몇 개씩 돌아가며 측정한다(엔진이 부드럽게 따라간다). */
         void updateOcclusion( AudioEngine& audioEngine, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D );
         /** @brief 리버브 존 — 스냅샷마다 가장 큰 세기. 바뀐 것만 넣고, 이번에 거는 존이 없는 스냅샷은 0 으로 내린다. */
@@ -128,6 +140,7 @@ namespace sw
         IndexedPtrList<AudioEmitterComponent> _emitter     SW_GUARDED_BY( _mutex );     /**< 에미터 컴포넌트입니다. 수가 많고 씬 중에 자주 오르내려 넣기 · 빼기가 O(1) 이다(순회 순서는 보존되지 않는다 — 가림 측정이 도는 순서만 달라진다). */
         RegistrationList<AudioReverbZoneComponent> _zone   SW_GUARDED_BY( _mutex );     /**< 리버브 존입니다(구독으로 올린다). 레벨 디자이너가 방 · 구역마다 손으로 놓아 많아야 수십 개이고 씬 중에 오르내리지 않으므로 선형 등록 목록으로 충분하다(수천 개로 자라면 `IndexedPtrList`). */
         vector<AudioEmitterComponent*>                     _listEmitterSnapshot;        /**< 프레임마다 잠금 밖에서 도는 에미터 사본입니다. */
+        vector<EmitterMotion>                              _listEmitterMotion;          /**< 사본과 같은 순서의 이번 프레임 자리 · 속도(재사용)입니다. 워커는 자기 칸에만 쓴다. */
         vector<ZoneValue> _listZoneValue                   SW_GUARDED_BY( _mutex );     /**< 지난 프레임의 스냅샷 세기입니다. */
         vector<ZoneValue>                                  _listZoneCurrent;            /**< 이번 프레임의 스냅샷 세기(작업 목록)입니다. */
         GameObjectManager&                                 _manager;                    /**< 이 서비스를 가진 씬의 매니저입니다(카메라 · 물리 서비스를 찾는다). */

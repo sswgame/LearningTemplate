@@ -45,6 +45,7 @@ namespace sw
     private:
         GameObjectManager&                      _manager;
         unordered_map<const Material*, float32> _mapMaterialScreenSize; ///< 머티리얼마다 이번 프레임의 가장 큰 화면 크기(재사용). 같은 머티리얼을 쓰는 메시가 경로 글을 되풀이하지 않는다
+        vector<float32>                         _listMeshScreenSize;    ///< 프리미티브 목록(`PrimitiveRegistry::getAll`)과 같은 순서의 화면 크기(재사용). 워커는 자기 칸에만 쓴다
         vector<string>                          _listPathScratch;       ///< 머티리얼 하나의 텍스처 경로(재사용)
     };
 } // namespace sw

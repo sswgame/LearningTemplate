@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -90,8 +91,16 @@ namespace sw
         string explainLOD( const MeshComponent& component ) const;
 
     private:
+        /** @brief `_listPickedLOD` 칸의 "단계를 건드리지 않는다" 입니다(구간 컴포넌트 · GPU 가 고르는 것 · 뷰 없음). */
+        static constexpr uint32 kKeepLOD = constant::invalid_index::kUint32;
+
+        /** @brief 컴포넌트 하나에 이번 프레임 줄 단계입니다(`kKeepLOD` 면 그대로). 읽기만 하므로 워커가 부른다(`update` 의 병렬 본문). */
+        uint32 pickLOD( const MeshComponent& component, int32 forcedLOD, bool bGPUPicks ) const;
+
+    private:
         GameObjectManager& _manager;
         vector<LODView>    _listView;
+        vector<uint32>     _listPickedLOD; ///< LOD 목록과 같은 순서로 이번 프레임에 고른 단계(재사용). 워커는 자기 칸에만 쓰고 적용은 게임 스레드가 차례로 한다
         LODView            _pendingView;
         int32              _forcedLOD;           ///< 씬 단위로 고정한 단계(-1 = 화면 크기로 고른다)
         uint8              _bViewsSet;           ///< 뷰를 한 번이라도 받았다(받지 않으면 고르지 않는다)

@@ -12,6 +12,7 @@
 #include "Engine/Audio/Component/PhysicsAudioOcclusionQuery.h"
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -106,6 +107,7 @@ namespace sw
         , _emitter{}
         , _zone{ "SceneAudio.ReverbZone", RegistrationList<AudioReverbZoneComponent>::ReleaseFunction::create<&SceneAudio::releaseReverbZone>( this ) }
         , _listEmitterSnapshot{}
+        , _listEmitterMotion{}
         , _listZoneValue{}
         , _listZoneCurrent{}
         , _manager{ manager }
@@ -201,11 +203,19 @@ namespace sw
         AudioEngine* pEngine = findAudioEngine();
         if ( pEngine == nullptr )
             return;
-        ScopedLock<mutex> lock{ _mutex };
-        const float3      previousListenerPosition = _primaryListenerPosition;
-        updateListeners( *pEngine, deltaSeconds, pCamera );
-        updateEmitters( *pEngine, deltaSeconds, previousListenerPosition != _primaryListenerPosition );
+        bool bListenerMoved = false;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            const float3      previousListenerPosition = _primaryListenerPosition;
+            updateListeners( *pEngine, deltaSeconds, pCamera );
+            collectEmitters();
+            bListenerMoved = previousListenerPosition != _primaryListenerPosition;
+        }
+        // 에미터 진행은 잠금 밖이다 — 병렬 합류를 기다리는 이 스레드가 다른 태스크를 돕다 등록(`addEmitter`, 비동기 씬 로드)으로 같은 잠금을 다시 잡으면 교착한다.
+        // 사본의 에미터는 이 스레드(게임 스레드)의 파괴 단계에서만 사라지므로 사본을 도는 동안 살아 있다.
+        updateEmitters( *pEngine, deltaSeconds, bListenerMoved );
         updateOcclusion( *pEngine, pScene3D, pScene2D );
+        ScopedLock<mutex> lock{ _mutex };
         updateReverbZones( *pEngine );
     }
 
@@ -275,26 +285,46 @@ namespace sw
         _activeListenerMask = listenerMask;
     }
 
+    void SceneAudio::collectEmitters()
+    {
+        _listEmitterSnapshot.clear();
+        for ( AudioEmitterComponent* pEmitter : _emitter.items() )
+        {
+            if ( SceneAudioInternal::isUsable( pEmitter ) )
+                _listEmitterSnapshot.push_back( pEmitter );
+        }
+    }
+
     void SceneAudio::updateEmitters( AudioEngine& audioEngine, float32 deltaSeconds, bool bListenerMoved )
     {
         // 에미터 자리 · 속도. 자리는 에미터의 트랜스폼과(넓은 소리는) 리스너 자리를 따르므로, 둘 다 그대로면(월드 변경 번호 · 리스너 자리) 지난 자리를
         // 그대로 쓰고 속도는 0 이다. 엔진에는 그래도 넣는다 — 엔진이 지난 값을 들고 있는지에 기대지 않는다.
-        _listEmitterSnapshot.clear();
-        for ( AudioEmitterComponent* pEmitter : _emitter.items() )
+        // 자리 구하기는 에미터마다 독립이라 워커로 나눈다(언리얼 오디오 컴포넌트 갱신의 ParallelFor 자리). 스레드 안전: 본문은 리스너 자리(이 객체, 병렬 동안 바뀌지 않는다) ·
+        // 에미터의 월드 캐시를 읽고, 쓰는 것은 그 에미터 자신의 지난 상태 칸과 결과 칸 `_listEmitterMotion[index]` 뿐이다(사본에 같은 에미터는 한 번).
+        // 엔진에 넣기(`setEmitter` — 엔진의 명령 줄)는 이 스레드가 사본 순서로 한다. 월드 캐시는 `FlushEnd`(펼친 뒤)라 읽기만이다.
+        const uint32 count = static_cast<uint32>( _listEmitterSnapshot.size() );
+        _listEmitterMotion.resize( count );
+        AudioEmitterComponent* const* const arrEmitter = _listEmitterSnapshot.data();
+        EmitterMotion* const                arrMotion  = _listEmitterMotion.data();
+        const float3                        listener   = _primaryListenerPosition;
+        auto                                moveRange  = [arrEmitter, arrMotion, listener, deltaSeconds, bListenerMoved]( uint32 start, uint32 end )
         {
-            if ( SceneAudioInternal::isUsable( pEmitter ) == false )
-                continue;
-            const uint32 version             = pEmitter->getWorldTransformVersion();
-            const bool   bUnmoved            = pEmitter->_bHasLastAudioPosition && bListenerMoved == false && version == pEmitter->_seenTransformVersion;
-            const float3 position            = bUnmoved ? pEmitter->_lastAudioPosition : pEmitter->computeAudioPosition( _primaryListenerPosition );
-            const float3 velocity            = bUnmoved ? float3{}
-                                                        : SceneAudioInternal::computeVelocity( position, pEmitter->_lastAudioPosition, pEmitter->_bHasLastAudioPosition, deltaSeconds );
-            pEmitter->_lastAudioPosition     = position;
-            pEmitter->_seenTransformVersion  = version;
-            pEmitter->_bHasLastAudioPosition = true;
-            audioEngine.setEmitter( pEmitter->getEmitterID(), position, velocity );
-            _listEmitterSnapshot.push_back( pEmitter );
-        }
+            for ( uint32 index = start; index < end; ++index )
+            {
+                AudioEmitterComponent& emitter  = *arrEmitter[index];
+                const uint32           version  = emitter.getWorldTransformVersion();
+                const bool             bUnmoved = emitter._bHasLastAudioPosition && bListenerMoved == false && version == emitter._seenTransformVersion;
+                EmitterMotion&         motion   = arrMotion[index];
+                motion._position                = bUnmoved ? emitter._lastAudioPosition : emitter.computeAudioPosition( listener );
+                motion._velocity                = bUnmoved ? float3{} : SceneAudioInternal::computeVelocity( motion._position, emitter._lastAudioPosition, emitter._bHasLastAudioPosition, deltaSeconds );
+                emitter._lastAudioPosition      = motion._position;
+                emitter._seenTransformVersion   = version;
+                emitter._bHasLastAudioPosition  = true;
+            }
+        };
+        engine::runParallelByCost( count, SW_DELEGATE_LAMBDA( ParallelBlockDelegate, moveRange ) );
+        for ( uint32 index = 0; index < count; ++index )
+            audioEngine.setEmitter( arrEmitter[index]->getEmitterID(), arrMotion[index]._position, arrMotion[index]._velocity );
     }
 
     void SceneAudio::updateOcclusion( AudioEngine& audioEngine, const IPhysicsQueryScene3D* pScene3D, const IPhysicsQueryScene2D* pScene2D )

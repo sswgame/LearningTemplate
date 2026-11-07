@@ -9,6 +9,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -35,6 +36,7 @@ namespace sw
     MeshLODSystem::MeshLODSystem( GameObjectManager& manager )
         : _manager{ manager }
         , _listView{}
+        , _listPickedLOD{}
         , _pendingView{}
         , _forcedLOD{ -1 }
         , _bViewsSet{ SW_FALSE }
@@ -136,26 +138,43 @@ namespace sw
         const bool                     bGPUPicks     = _bGPUSelectionActive == SW_TRUE && needsCPUSelection() == false;
         const vector<ScenePrimitive*>& listPrimitive = _manager.getPrimitiveRegistry().getLODPrimitives();
         const int32                    forcedLOD     = gv_meshLodForce >= 0 ? gv_meshLodForce : _forcedLOD;
-        for ( ScenePrimitive* pPrimitive : listPrimitive )
+        const uint32                   count         = static_cast<uint32>( listPrimitive.size() );
+        // 고르기(화면 크기 · 판정)는 컴포넌트마다 독립이라 워커로 나누고, 적용(`setLODIndex`)은 이 스레드가 목록 순서로 한다(언리얼 ParallelFor + 게임 스레드 반영).
+        // 스레드 안전: 본문은 뷰 · 고정 단계(이 객체, 병렬 동안 바뀌지 않는다) · 컴포넌트의 메시 · 월드 캐시를 읽고 자기 칸 `_listPickedLOD[index]` 에만 쓴다.
+        // 적용을 본문에 두지 않는 까닭 — `setLODIndex` 는 오너의 구간 컴포넌트 단계를 함께 쓰므로 한 오너의 주 메시 둘이 같은 구간을 다툰다.
+        // 월드 캐시는 읽기만 해야 한다(더티 노드를 읽으면 `ensureWorldCache` 가 계층을 합성해 쓴다) — 남은 더티가 있으면 먼저 펼친다(`runFrameStepFrameSystems` 와 같은 규칙).
+        if ( _manager.hasDirtySceneTransforms() )
+            _manager.flushSceneTransforms();
+        _listPickedLOD.resize( count );
+        uint32* const arrPicked = _listPickedLOD.data();
+        auto          pickRange = [this, &listPrimitive, arrPicked, forcedLOD, bGPUPicks]( uint32 start, uint32 end )
         {
-            // 레지스트리에 들어오는 것은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식). LOD 목록에는 메시가 단계 여럿일 때만 든다(`MeshComponent::onMeshAssigned`).
-            MeshComponent& component = static_cast<MeshComponent&>( *pPrimitive );
-            const Mesh*    pMesh     = component.getRawMesh();
-            // 구간 컴포넌트는 따르는 주 메시의 단계를 받는다(`MeshComponent::setLODIndex`) — 따로 고르면 경계에서 단계가 갈린다.
-            if ( pMesh == nullptr || castTo<MeshSectionComponent>( &component ) != nullptr )
-                continue;
-            if ( bGPUPicks && isGPUSelectable( *pMesh, component.getSkinSlot() ) )
-                continue;
-            if ( forcedLOD >= 0 )
-            {
-                component.setLODIndex( static_cast<uint32>( forcedLOD ) );
-                continue;
-            }
-            // 뷰를 받기 전(렌더 없는 실행)에는 원본을 그린다.
-            if ( _bViewsSet == SW_FALSE )
-                continue;
-            component.setLODIndex( selectNextLOD( *pMesh, computeScreenSize( component ), component.getLODIndex() ) );
+            for ( uint32 index = start; index < end; ++index )
+                arrPicked[index] = pickLOD( static_cast<const MeshComponent&>( *listPrimitive[index] ), forcedLOD, bGPUPicks );
+        };
+        engine::runParallelByCost( count, SW_DELEGATE_LAMBDA( ParallelBlockDelegate, pickRange ) );
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            if ( arrPicked[index] != kKeepLOD )
+                static_cast<MeshComponent&>( *listPrimitive[index] ).setLODIndex( arrPicked[index] );
         }
+    }
+
+    uint32 MeshLODSystem::pickLOD( const MeshComponent& component, int32 forcedLOD, bool bGPUPicks ) const
+    {
+        // 레지스트리에 들어오는 것은 메시 계열뿐이다(`ScenePrimitive.h` 의 불변식). LOD 목록에는 메시가 단계 여럿일 때만 든다(`MeshComponent::onMeshAssigned`).
+        const Mesh* pMesh = component.getRawMesh();
+        // 구간 컴포넌트는 따르는 주 메시의 단계를 받는다(`MeshComponent::setLODIndex`) — 따로 고르면 경계에서 단계가 갈린다.
+        if ( pMesh == nullptr || castTo<MeshSectionComponent>( &component ) != nullptr )
+            return kKeepLOD;
+        if ( bGPUPicks && isGPUSelectable( *pMesh, component.getSkinSlot() ) )
+            return kKeepLOD;
+        if ( forcedLOD >= 0 )
+            return static_cast<uint32>( forcedLOD );
+        // 뷰를 받기 전(렌더 없는 실행)에는 원본을 그린다.
+        if ( _bViewsSet == SW_FALSE )
+            return kKeepLOD;
+        return selectNextLOD( *pMesh, computeScreenSize( component ), component.getLODIndex() );
     }
 } // namespace sw
 
