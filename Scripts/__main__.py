@@ -61,6 +61,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("platform-chains", "lint.PlatformChains", "플랫폼 #if 사슬이 빠진 플랫폼을 컴파일 오류로 내는지 본다(--self-check)"),
     Subcommand("client-only-types", "generate.ClientOnlyTypes", "전용 서버가 짓지 않는 소스의 리플렉션 형식 이름 표를 쓴다(--check 는 낡았는지만 본다)"),
     Subcommand("server-ui", "lint.ServerUIIncludes", "서버도 짓는 게임 코드가 클라이언트 전용 기능(UI · 오디오 · 렌더러 · Client/)을 직접 부르는지 본다(--self-check)"),
+    Subcommand("editor-view-includes", "lint.EditorViewIncludes", "MVVM 으로 옮긴 에디터 패널 View 가 모델 · 씬 헤더를 include 하는지 본다(--self-check)"),
     Subcommand("common-shapes", "lint.CommonShapes", "공통 기반을 두고 손으로 적은 모양 검사(--self-check)"),
     Subcommand("shader-kill-order", "lint.ShaderKillOrder", "픽셀 버리기(clip · discard) 뒤의 미분 읽기 검사(--self-check)"),
     Subcommand("frame-intern", "lint.FrameIntern", "틱 · 갱신 · 칠하기 함수 안의 리터럴 hashed_string 을 찾는다(--self-check)"),

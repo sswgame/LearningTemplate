@@ -1,0 +1,21 @@
+{
+    "_comment": "에디터 MVVM 전환 중의 표(docs/agents/EditorUI.md 'MVVM' 절, 린트 Scripts/lint/EditorViewIncludes.py). _migratedViews 의 View(패널 .h · .cpp, 확장자 없이)는 _bannedIncludePatterns 의 모델 · 씬 헤더를 include 하지 않는다 — 직접, 그리고 include 한 패널 Model 폴더 헤더(ViewModel)를 거쳐서도. _allowedHeaders 는 금지 폴더 안에 있지만 값 · 창구라 View 가 써도 되는 헤더와 그 까닭이다. 모든 패널을 옮기면 Source/Editor/CMakeLists.txt 의 View 부분에 같은 금지를 #error 껍데기로 걸고 이 표와 린트를 지운다.",
+    "_bannedIncludePatterns": [
+        "^Editor/Common/Workspace/",
+        "^Editor/Common/Commands/",
+        "^Engine/Object/",
+        "^Engine/Scene/",
+        "^Engine/.+/Component/"
+    ],
+    "_allowedHeaders": {
+        "Editor/Common/Commands/EditorCommandRegistry.h": "등록된 명령을 id 로 부르는 창구 — 명령은 다음 프레임 시작에 메인 스레드가 돈다(queueCommand)",
+        "Editor/Common/Commands/EditorCommandTarget.h": "명령이 받는 대상 값(종류 · 선택 스냅숏 · id) — 포인터가 없다",
+        "Editor/Common/Commands/EditorDragPayload.h": "끌어 놓기 페이로드 값({종류, id})",
+        "Editor/Common/Workspace/EditorPanelID.h": "패널 id 형식과 상수 — 값",
+        "Editor/Common/Workspace/Play/EditorSessionPolicy.h": "미저장 · 플레이 중 편집 판정 값(IEditorPanel 이 쓴다)",
+        "Editor/Common/Workspace/Asset/EditorAssetType.h": "에셋 종류 서술(IEditorPanel 이 쓴다)"
+    },
+    "_migratedViews": [
+        "Source/Editor/Panels/Scene/DataLayersPanel"
+    ]
+}

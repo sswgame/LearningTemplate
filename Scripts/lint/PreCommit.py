@@ -32,6 +32,7 @@ from lint.ShaderKillOrder import checkShaderKillOrder  # noqa: E402
 from lint.CMakePathCase import checkCMakePathCase  # noqa: E402
 from lint.CoreTiers import checkCoreTiers  # noqa: E402
 from lint.CppShape import checkCppShape  # noqa: E402
+from lint.EditorViewIncludes import checkEditorViewIncludes  # noqa: E402
 from lint.EditorWidgetLabels import checkEditorWidgetLabels  # noqa: E402
 from lint.FeatureReferences import checkFeatureReferences  # noqa: E402
 from lint.FrameIntern import checkFrameIntern  # noqa: E402
@@ -159,6 +160,13 @@ def main(argv: list[str] | None = None) -> int:
         hasErrors = True
         print(f"[PlatformChains] FAIL — 빠진 플랫폼을 컴파일 오류로 내지 않는 사슬 {len(listChainProblem)}건")
         for line in listChainProblem:
+            print(f"  - {line}")
+    # --- MVVM 으로 옮긴 에디터 View 의 모델 · 씬 include(옮기는 동안의 목록 — 다 옮기면 View 부분의 #error 껍데기로 바꾼다, EditorViewIncludes.py 머리말)
+    listViewIncludeProblem = checkEditorViewIncludes(projectRoot)
+    if listViewIncludeProblem:
+        hasErrors = True
+        print(f"[EditorViewIncludes] FAIL — MVVM View 의 모델 · 씬 include {len(listViewIncludeProblem)}건")
+        for line in listViewIncludeProblem:
             print(f"  - {line}")
     # --- 서버도 짓는 게임 코드의 UI include(한 DLL 안의 폴더라 타깃 게이트가 못 가른다 — ServerUIIncludes.py 머리말)
     listServerUIProblem = checkServerUIIncludes(projectRoot)

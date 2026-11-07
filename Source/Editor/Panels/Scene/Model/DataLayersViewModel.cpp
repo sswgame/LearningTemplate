@@ -1,31 +1,44 @@
 #include "pch.h"
 
-#include "Editor/Panels/Scene/Model/DataLayersModel.h"
+#include "Editor/Panels/Scene/Model/DataLayersViewModel.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/Commands/Scene/EditorSceneSettingsCommands.h"
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"
+#include "Engine/Scene/SceneManager.h"
+#include "Engine/Scene/SceneSettings.h"
 
 namespace sw::editor
 {
-    DataLayersModel::DataLayersModel()
+    DataLayersViewModel::DataLayersViewModel()
         : _uniqueHiddenLayer{}
         , _sceneGeneration{ 0 }
     {
     }
 
-    void DataLayersModel::discardIfSceneChanged( const uint64 sceneGeneration )
+    void DataLayersViewModel::gather( DataLayersViewState& outState )
     {
-        if ( _sceneGeneration == sceneGeneration )
+        outState._listRow.clear();
+        outState._content           = DataLayersContent::NoActiveScene;
+        Scene* const        pScene  = editor::getActiveScene();
+        SceneManager* const pScenes = editor::findSubsystem<SceneManager>();
+        if ( pScene == nullptr || pScenes == nullptr || pScene->getObjectManager() == nullptr )
             return;
-        _sceneGeneration = sceneGeneration;
-        _uniqueHiddenLayer.clear();
+        if ( _sceneGeneration != pScenes->getSceneGeneration() )
+        {
+            _sceneGeneration = pScenes->getSceneGeneration();
+            _uniqueHiddenLayer.clear();
+        }
+        collectRows( *pScene, outState._listRow );
+        outState._content = outState._listRow.empty() ? DataLayersContent::NoLayers : DataLayersContent::Layers;
     }
 
-    void DataLayersModel::collectRows( const Scene& scene, vector<DataLayerRow>& outListRow ) const
+    void DataLayersViewModel::collectRows( const Scene& scene, vector<DataLayerRow>& outListRow ) const
     {
         outListRow.clear();
         const SceneDataLayerSubsystem& layers = scene.getObjectManager()->getSubsystem<SceneDataLayerSubsystem>();
@@ -42,9 +55,12 @@ namespace sw::editor
         }
     }
 
-    void DataLayersModel::setLayerShown( Scene& scene, const string& name, const bool bShown )
+    void DataLayersViewModel::setLayerShown( const string& name, const bool bShown )
     {
-        SceneDataLayerSubsystem& layers = scene.getObjectManager()->getSubsystem<SceneDataLayerSubsystem>();
+        Scene* const pScene = editor::getActiveScene();
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return;
+        SceneDataLayerSubsystem& layers = pScene->getObjectManager()->getSubsystem<SceneDataLayerSubsystem>();
         if ( EditorPlaySession::isStopped() == false )
         {
             (void)layers.setLayerActive( name, bShown ); // 선언한 이름만 줄로 그린다
@@ -60,23 +76,26 @@ namespace sw::editor
             _uniqueHiddenLayer.insert( name );
         }
         vector<uint64> listObjectID;
-        scene.collectObjectsOnDataLayer( name, listObjectID );
+        pScene->collectObjectsOnDataLayer( name, listObjectID );
         for ( const uint64 objectID : listObjectID )
         {
-            GameObject* pObject = scene.getObjectManager()->findGameObjectByID( objectID );
+            GameObject* pObject = pScene->getObjectManager()->findGameObjectByID( objectID );
             if ( pObject != nullptr )
                 EditorSceneCommands::setHiddenInEditor( pObject, bShown == false );
         }
     }
 
-    void DataLayersModel::setInitiallyActive( Scene& scene, const string& name, const bool bInitiallyActive )
+    void DataLayersViewModel::setLayerInitiallyActive( const string& name, const bool bInitiallyActive )
     {
-        SceneSettings settings = scene.getSceneSettings();
+        Scene* const pScene = editor::getActiveScene();
+        if ( pScene == nullptr )
+            return;
+        SceneSettings settings = pScene->getSceneSettings();
         for ( SceneDataLayerDef& layer : settings._listDataLayer )
         {
             if ( layer._name == name )
                 layer._bInitiallyActive = bInitiallyActive;
         }
-        scene.setSceneSettings( settings );
+        (void)EditorSceneSettingsCommands::apply( *pScene, settings, "Set Data Layer On At Load" );
     }
 } // namespace sw::editor

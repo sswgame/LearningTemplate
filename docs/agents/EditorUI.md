@@ -1,6 +1,24 @@
 > 질문: 에디터 UI(ImGui 패널)를 고치거나 검토할 때 무엇을 지키고, 결과 화면을 어떻게 판정하는가?
 > 독자: 에디터 패널 · 공용 위젯 · 테마 토큰 · 에디터 입력을 고치는 에이전트와 사람.
-> 결론: 색 · 간격은 토큰 키로만, 결함은 공용 위젯 · 토큰에서 고치고, 화면은 `uiaudit` · `uicapture` 캡처를 아래 체크리스트로 직접 본다. 입력 · 맥락 메뉴는 입력 맵과 `EditorInputGUI` 하나가 정한다.
+> 결론: 패널은 MVVM(View 는 ImGui 와 ViewState 만, 모델 접근은 ViewModel 하나)으로 짓는다. 색 · 간격은 토큰 키로만, 결함은 공용 위젯 · 토큰에서 고치고, 화면은 `uiaudit` · `uicapture` 캡처를 아래 체크리스트로 직접 본다. 입력 · 맥락 메뉴는 입력 맵과 `EditorInputGUI` 하나가 정한다.
+
+## MVVM: View, ViewModel, model
+
+A panel is split so that the ImGui frame can later leave the game (main) thread (`docs/DesignBacklog.md` "에디터 UI 스레드 분리 검토" · "에디터 MVVM 계약"). Immediate-mode UI redraws every frame, so there is no data binding or change notification (Unreal UMG MVVM and Unity UI Toolkit bindings exist for retained UI).
+
+| Layer | Where | Does | Must not |
+| --- | --- | --- | --- |
+| Model | `Common/Workspace` · `Common/Commands` · `Engine/*` | Scene, assets, editor commands, workspace — unchanged | — |
+| ViewModel | `Panels/<Panel>/Model/<Name>ViewModel.{h,cpp}` (ImGui-free part, `#error` on `imgui.h`) | The only code of the panel that reads or writes the model. `gather( <Name>ViewState& )` fills a value-only state; intent arrives as command methods | Include model headers in its **header** (forward-declare; the `.cpp` includes them) |
+| ViewState | next to the ViewModel | Plain values: strings, numbers, enums, ids, vectors of row structs | Hold a pointer or reference (`GameObject*`, `Scene&`, a span into the scene) |
+| View | `Panels/<Panel>/<Name>Panel.{h,cpp}` | ImGui calls, reading the ViewState, calling ViewModel commands | Include a model or scene header (`Config/Dev/EditorViewIncludes.json` lists the banned folders and the value headers that stay allowed) |
+
+- **One `gather` per frame, at the top of `drawContent`.** It is the synchronisation point: today it runs on the main thread inside the frame; when the UI leaves the main thread the main thread calls it and hands the state over. Keep the state in a panel member so its vectors reuse their storage.
+- **Commands are methods named for the intent** (`setLayerInitiallyActive( name, bOn )`), taking ids and values, never pointers. They are the only mutation path from the View; later they become queued and run at frame start.
+- **A command that changes document data goes through the undo stack**: an editor command that records a data undo step (`SW_UNDO_STEP`) and marks the scene dirty. Scene settings go through `EditorSceneSettingsCommands::apply` (one path for every `SceneSettings` field); objects through `EditorSceneCommands` · `EditorTransaction`. A command that changes only the view (hide in editor, expand a row, a filter) records nothing and says so in a comment.
+- **Headless test** for every ViewModel command that edits data: `Panels/<Panel>/Model/Tests/Test<Name>ViewModel.cpp` binds a local `CommandStack` in a `SubsystemScope` (`ScopedEditorScope`), runs the command, checks one undo step, undoes and redoes.
+- **Name**: a class that gathers view values and takes commands for one panel is a `…ViewModel`; a class of pure rules shared by several ViewModels keeps its own name (`…Util`, `…Rules`).
+- **While migrating** the lint `EditorViewIncludes` (`py -3 -m Scripts editor-view-includes`, run by the commit hook) checks the views listed in `_migratedViews`, directly and through the panel `Model` headers they include. Add a view to the list in the commit that migrates it. When every panel is migrated, the View parts in `Source/Editor/CMakeLists.txt` get `#error` stubs for the banned headers (the same device as the tier stubs) and the list and lint are deleted. The shared GUI headers (`IEditorPanel.h` · `EditorPanelManager.h` · `EditorPreviewPanel.h` · `EditorDocumentPanel.h`) must stop reaching the banned folders before that, because a stub blocks transitive includes too.
 
 ## Tokens, not numbers
 

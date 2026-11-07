@@ -19,7 +19,7 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 | add a helper or a TU-private type | [Helpers](docs/agents/Helpers.md) | owner type first; ownerless → `Util` / `Internal`, one anonymous namespace per file |
 | write C++ bodies or code that runs in parallel | [CppStyle](docs/agents/CppStyle.md) | branches, loops, types, parallel-safe code |
 | make code behave differently in Dev and Shipping (or Client and Server) | [BuildConfigSwitch](docs/agents/BuildConfigSwitch.md) | `build::kShipping` vs `#if` vs variant file |
-| change or review an editor panel, shared widget, theme token or editor input | [EditorUI](docs/agents/EditorUI.md) | tokens, app-screen rules, UI capture, review checklist, context-menu and input rules |
+| change or review an editor panel, shared widget, theme token or editor input | [EditorUI](docs/agents/EditorUI.md) | MVVM split (View · ViewModel · ViewState), tokens, app-screen rules, UI capture, review checklist, context-menu and input rules |
 | write a render pipeline or render pass XML, or change what a pass reads from it | [RenderPipelineXml](docs/agents/RenderPipelineXml.md) | XML values are what runs; invalid combinations are load errors; compute and optional stages |
 | write a data file that inherits another (`_base`), or put a new data format on that structure | [DataInheritance](docs/agents/DataInheritance.md) | field and list merge rules, schema for a new format, cooking, prefab variants, saving without default values |
 | add a material graph node or change the graph compiler | [MaterialGraph](docs/agents/MaterialGraph.md) | node registration syntax, generated files, errors |

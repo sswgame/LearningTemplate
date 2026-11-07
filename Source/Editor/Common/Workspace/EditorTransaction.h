@@ -32,6 +32,11 @@ namespace sw::editor
         /** @brief 오브젝트 수명 편집의 방향입니다(엔진의 `ObjectLifetimeEdit`). */
         using ObjectLifetimeEdit = sw::ObjectLifetimeEdit;
 
+        /**
+         * @brief 활성 씬을 dirty 로 표시합니다. 기록할 때와 데이터 단계가 되돌리기 · 다시 하기로 씬을 바꿀 때 부릅니다.
+         * @details 컨텍스트가 없으면(테스트 · 도구) 지역 서비스로 건 워크스페이스에 표시합니다.
+         */
+        static void markActiveSceneDirty();
         /** @brief 복합 트랜잭션을 시작합니다. */
         static void beginTransaction( string_view label = "" );
         /** @brief 복합 트랜잭션을 커밋하고 종료합니다. */
