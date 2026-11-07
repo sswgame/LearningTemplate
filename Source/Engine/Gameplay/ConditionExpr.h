@@ -1,7 +1,9 @@
 /**
  * @file ConditionExpr.h
  * @brief 조건 어휘입니다. 등록 줄 `SW_CONDITION` 과, 글을 읽을 때 후위 배열과 함수 포인터로 컴파일한 식 `ConditionExpr` 를 정의합니다.
- * @details 문법은 우선순위가 낮은 것부터 `a || b`, `a && b`, `!a`, 비교(`== != < <= > >=`), 괄호, 그리고 피연산자다. 피연산자는 다음 넷이다.
+ * @details 문법은 우선순위가 낮은 것부터 `a || b`, `a && b`, `!a`, 비교(`== != < <= > >=`), 더하기 · 빼기(`+ -`), 곱하기 · 나누기(`* /`), 괄호, 그리고 피연산자다.
+ *          산술은 수치 칸(지역 프로필의 피해 · 배율 · 세기)이 조건과 같은 문법 · 문맥으로 값을 내려고 있다 — `20 * (1 - target.FireResist)`, `5 + timeInside * 2`.
+ *          0 으로 나누면 값이 없음(NaN)이다. 피연산자는 다음 넷이다.
  *          - 수: `3`, `-2`, `0.5`
  *          - 호출: `weather(rain, storm)`, `tag(Quest.Done)` — 등록되지 않은 이름은 오류다
  *          - 인자 없는 등록 이름: `affinity >= 4`
@@ -132,7 +134,11 @@ namespace sw
         Less,
         LessEqual,
         Greater,
-        GreaterEqual
+        GreaterEqual,
+        Add,
+        Subtract,
+        Multiply,
+        Divide
     };
 
     /** @brief 명령 하나입니다. 호출이면 함수와 인자, 호출 자리 번호, 수이면 값을 씁니다. */

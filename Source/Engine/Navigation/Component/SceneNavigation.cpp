@@ -78,6 +78,7 @@ namespace sw
         , _listLink{}
         , _listGeometrySource{ "SceneNavigation.GeometrySource", RegistrationList<INavGeometrySource>::ReleaseFunction::create<&SceneNavigation::releaseGeometrySource>( this ) }
         , _listFailedAgentType{}
+        , _listAreaCostOverride{}
         , _tileRebaker{}
         , _debugView{}
         , _pManager{ &manager }
@@ -109,6 +110,7 @@ namespace sw
         }
         _listRuntime.clear();
         _tileRebaker.clear();
+        _listAreaCostOverride.clear(); // 지역 프로필이 정한 비용은 그 씬의 것이다
     }
 
     void SceneNavigation::setSettings( const NavMeshSettings& settings )
@@ -281,6 +283,63 @@ namespace sw
         return nullptr;
     }
 
+    bool SceneNavigation::setAgentAreaCost( const hashed_string& agentType, const hashed_string& areaName, float32 cost, bool bAllowed )
+    {
+        const NavMeshSettings& settings  = getSettings();
+        const NavAgentTypeDef* pType     = settings.findAgentType( agentType );
+        uint8                  areaIndex = 0;
+        if ( pType == nullptr || settings.findAreaIndex( areaName, areaIndex ) == false )
+        {
+            SW_LOG_ERROR_ID( "SceneNavigation.AreaCostUnknown", "setAgentAreaCost: agent type '%#' or area '%#' is not in the navigation settings", agentType.c_str(), areaName.c_str() );
+            return false;
+        }
+        AreaCostOverride* pExisting = nullptr;
+        for ( AreaCostOverride& entry : _listAreaCostOverride )
+        {
+            if ( entry._agentType == pType->_name && entry._areaIndex == areaIndex )
+                pExisting = &entry;
+        }
+        if ( pExisting == nullptr )
+        {
+            _listAreaCostOverride.push_back( AreaCostOverride{ pType->_name, areaIndex, SW_TRUE, 1.0f } );
+            pExisting = &_listAreaCostOverride.back();
+        }
+        pExisting->_cost     = MathUtil::max( cost, 1.0f ); // Recast 비용은 1 이상이다(보통 땅이 1)
+        pExisting->_bAllowed = bAllowed ? SW_TRUE : SW_FALSE;
+        if ( NavMeshRuntime* pRuntime = findRuntime( pType->_name ) )
+        {
+            applyAreaCostOverrides( pType->_name, pRuntime->_filter );
+            if ( pRuntime->_pCrowd != nullptr )
+                pRuntime->_pCrowd->setQueryFilter( pRuntime->_filter );
+        }
+        return true;
+    }
+
+    bool SceneNavigation::findAgentAreaCost( const hashed_string& agentType, const hashed_string& areaName, float32& outCost, bool& outbAllowed )
+    {
+        const NavMeshSettings& settings  = getSettings();
+        const NavAgentTypeDef* pType     = settings.findAgentType( agentType );
+        uint8                  areaIndex = 0;
+        if ( pType == nullptr || settings.findAreaIndex( areaName, areaIndex ) == false )
+            return false;
+        NavQueryFilter filter = settings.makeDefaultFilter();
+        applyAreaCostOverrides( pType->_name, filter );
+        outCost     = filter._arrAreaCost[areaIndex];
+        outbAllowed = ( filter._excludeAreaMask & static_cast<uint16>( 1u << areaIndex ) ) == 0;
+        return true;
+    }
+
+    void SceneNavigation::applyAreaCostOverrides( const hashed_string& agentType, NavQueryFilter& inoutFilter ) const
+    {
+        for ( const AreaCostOverride& entry : _listAreaCostOverride )
+        {
+            if ( entry._agentType != agentType )
+                continue;
+            inoutFilter._arrAreaCost[entry._areaIndex] = entry._cost;
+            inoutFilter.setAreaAllowed( entry._areaIndex, entry._bAllowed == SW_TRUE );
+        }
+    }
+
     NavMeshRuntime* SceneNavigation::findRuntime( const hashed_string& agentType ) const
     {
         // 빈 이름은 기본 종류 — 표의 `_defaultAgentType`, 그것도 비면 첫 종류(`NavMeshSettings::findAgentType` 과 같은 규칙).
@@ -361,8 +420,9 @@ namespace sw
         pRuntime->_agentType                = pType->_name;
         pRuntime->_pSurface                 = findSurface( pType->_name );
         pRuntime->_filter                   = _settings.makeDefaultFilter();
-        const float32 reach                 = MathUtil::max( 1.0f, pType->_radius * 4.0f );
-        pRuntime->_searchExtent             = float3{ reach, MathUtil::max( 1.0f, pType->_height ), reach };
+        applyAreaCostOverrides( pType->_name, pRuntime->_filter );
+        const float32 reach     = MathUtil::max( 1.0f, pType->_radius * 4.0f );
+        pRuntime->_searchExtent = float3{ reach, MathUtil::max( 1.0f, pType->_height ), reach };
 
         shared_ptr<NavMeshGeometry> pGeometry        = make_shared<NavMeshGeometry>();
         const uint32                pendingMeshCount = NavGeometryCollector::collectGeometry( *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource.getItems(), arrival, *pGeometry );

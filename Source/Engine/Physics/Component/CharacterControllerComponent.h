@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Physics/Component/PhysicsComponent.h"
+#include "Engine/Physics/PhysicsField.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -57,13 +58,23 @@ namespace sw
         void addSurfaceVelocity( const float3& velocity );
         /**
          * @brief 이번 물리 프레임의 걷는 속도(요청 속도 · 루트 모션)에 곱할 이동 계수를 얹습니다(눈 · 모래 · 물 · 함몰 구역). 프레임마다 다시 불러야 이어지고, 여럿이면 가장 작은 값입니다.
-         * @details 환경이 주는 이동 저항의 한 입력이다 — 표면(`GroundSurfaceComponent`)과 구역(`SinkingSandZoneComponent`)이 각자 부른다.
+         * @details 환경이 주는 이동 저항의 한 입력이다 — 표면(`GroundSurfaceComponent`)과 이펙트의 이동 제약(GameFramework `MovementConstraint`)이 각자 부른다.
          *          결정: 곱이 아니라 최솟값이다 — 물리 스텝이 없는 렌더 프레임이 끼면 같은 호출이 두 번 쌓이는데, 최솟값은 몇 번 불러도 같다(곱은 0.8 이 0.64 가 된다).
          *          면 속도 · 발사 · 관성은 곱하지 않는다(걷는 힘이 아니다). 아무 스레드에서 불러도 됩니다. 음수는 0 으로 둡니다.
          */
         void applyMoveScale( float32 scale );
         /** @brief 지난 물리 프레임에 걷는 속도에 곱한 계수입니다(진단 · 감시 값). */
         float32 getMoveScale() const { return _frameMoveScale; }
+        /**
+         * @brief 이번 게임 프레임에 받는 물리 필드(중력 배율 · 가속 · 흐름 · 저항 · 부력 · 마찰)를 얹습니다. 여러 지역이면 `PhysicsFieldSample::combine` 으로 합친다.
+         * @details 물리 프레임이 시작할 때(`beginPhysicsFrame`) 모은 값을 그 프레임의 필드로 옮기고 비운다 — 프레임마다 다시 받아야 이어지고, 스텝이 없는 프레임이 끼어도
+         *          한 프레임의 값이 두 번 쌓이지 않는다. 중립 필드면 이동은 필드가 없을 때와 같다. 아무 스레드에서 불러도 된다.
+         */
+        void applyPhysicsField( const PhysicsFieldSample& sample );
+        /** @brief 지난 물리 프레임에 쓴 필드입니다(진단 · 감시 값). */
+        const PhysicsFieldSample& getPhysicsField() const { return _frameField; }
+        /** @brief 지난 스텝이 필드로 고른 이동 방식입니다(걷기 · 낙하 · 수영 · 부유). */
+        CharacterMovementMode getMovementMode() const { return _movementMode; }
         /** @brief 마지막 스텝에 바닥을 딛고 있었는지입니다. */
         bool isGrounded() const { return _state._bGrounded; }
         /** @brief 마지막 스텝의 바닥 법선입니다. */
@@ -78,6 +89,10 @@ namespace sw
         const PhysicsCharacterState3D& getCharacterState() const { return _state; }
         /** @brief 조종이 요청한 수평 속도(`setMoveVelocity`)입니다 — 루트 모션 · 면 속도 · 공중 관성을 더하기 전 값이라 "요청 → 실제" 를 비교한다. 아무 스레드에서 읽어도 된다. */
         float3 getRequestedMoveVelocity() const;
+
+        static constexpr float32 kFrictionResponse   = 10.0f; ///< 접지 1 일 때 걷는 속도가 요청으로 가는 빠르기(1/s) — 접지에 곱한다(빙판 0.05 면 0.5/s)
+        static constexpr float32 kFieldGroundDamping = 4.0f;  ///< 디딘 채로 필드가 쌓은 수평 속도가 줄어드는 빠르기(1/s, 접지에 곱한다)
+        static constexpr float32 kBodyDensity        = 1.0f;  ///< 캐릭터 몸의 밀도(물 = 1) — 유체 밀도가 이보다 크면 떠오른다
 
         /** @brief 스텝 기록 한 칸입니다(이동 디버거가 미끄러짐 · 벽 걸림 · 착지 판정을 전후로 본다). */
         struct StepRecord
@@ -135,26 +150,31 @@ namespace sw
         PROPERTY( Category = "Character", DisplayName = "Inner Body", Tooltip = "Keep a kinematic capsule body on the character so cloth and sensors feel it (it also pushes dynamic bodies harder)" )
         bool _bInnerBody;
 
-        PhysicsCharacterHandle          _character;
-        PhysicsCharacterState3D         _state;
-        mutable SpinLock                _commandLock;
-        float3 _moveVelocity            SW_GUARDED_BY( _commandLock ); ///< 요청된 수평 속도(`_commandLock`)
-        float3 _pendingRootMotion       SW_GUARDED_BY( _commandLock ); ///< 아직 스텝에 넘기지 않은 루트 모션 이동(`_commandLock`)
-        ThreadRole                      _physicsStep;                  ///< 물리 스텝 역할 — 이번 프레임 속도 · 공중 속도는 prePhysicsStep 만 만진다(잠금이 아니라 분석용 능력)
-        float3 _frameRootMotionVelocity SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 스텝마다 더할 루트 모션 속도
-        float3 _pendingSurfaceVelocity  SW_GUARDED_BY( _commandLock ); ///< 이번 프레임에 쌓인 면 속도(`_commandLock`)
-        float3 _frameSurfaceVelocity    SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 면 속도
-        float32 _pendingMoveScale       SW_GUARDED_BY( _commandLock ); ///< 이번 프레임에 받은 이동 계수의 최솟값(`_commandLock`)
-        float32 _frameMoveScale         SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 이동 계수
-        float3 _pendingLaunch           SW_GUARDED_BY( _commandLock ); ///< 0 이 아니면 다음 스텝에 쏜다(`_commandLock`)
-        float3 _airVelocity             SW_GUARDED_BY( _physicsStep ); ///< 발사 · 떠난 바닥의 수평 속도 — 땅에 다시 닿으면 0
-        float3                          _previousPosition;
-        float3                          _worldScale;    ///< 트랜스폼의 월드 배율(변경 번호가 바뀔 때만 다시 읽는다)
-        quaternion                      _worldRotation; ///< 트랜스폼의 월드 회전(바닥이 돈 각을 얹어 쓴다). 변경 번호가 같으면 그대로다
-        float32                         _verticalSpeed;
-        float32 _pendingJumpSpeed       SW_GUARDED_BY( _commandLock ); ///< 0 이 아니면 다음 스텝에 준다(`_commandLock`)
-        float32                         _pendingGroundYaw;             ///< 마지막 쓰기 뒤 디딘 바닥이 위 축 둘레로 돈 각(rad) — 다음 트랜스폼 쓰기에 얹는다
-        vector<StepRecord>              _listStepHistory;              ///< 스텝 기록 고리(`setStepHistoryEnabled` 가 켜졌을 때 처음 칸을 만든다 — 꺼져 있으면 비어 있다)
-        uint32                          _stepHistoryCount;             ///< 기록한 스텝의 누계(고리의 다음 칸은 `% kStepHistoryCapacity`)
+        PhysicsCharacterHandle           _character;
+        PhysicsCharacterState3D          _state;
+        mutable SpinLock                 _commandLock;
+        float3 _moveVelocity             SW_GUARDED_BY( _commandLock ); ///< 요청된 수평 속도(`_commandLock`)
+        float3 _pendingRootMotion        SW_GUARDED_BY( _commandLock ); ///< 아직 스텝에 넘기지 않은 루트 모션 이동(`_commandLock`)
+        ThreadRole                       _physicsStep;                  ///< 물리 스텝 역할 — 이번 프레임 속도 · 공중 속도는 prePhysicsStep 만 만진다(잠금이 아니라 분석용 능력)
+        float3 _frameRootMotionVelocity  SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 스텝마다 더할 루트 모션 속도
+        float3 _pendingSurfaceVelocity   SW_GUARDED_BY( _commandLock ); ///< 이번 프레임에 쌓인 면 속도(`_commandLock`)
+        float3 _frameSurfaceVelocity     SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 면 속도
+        float32 _pendingMoveScale        SW_GUARDED_BY( _commandLock ); ///< 이번 프레임에 받은 이동 계수의 최솟값(`_commandLock`)
+        float32 _frameMoveScale          SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 이동 계수
+        float3 _pendingLaunch            SW_GUARDED_BY( _commandLock ); ///< 0 이 아니면 다음 스텝에 쏜다(`_commandLock`)
+        float3 _airVelocity              SW_GUARDED_BY( _physicsStep ); ///< 발사 · 떠난 바닥의 수평 속도 — 땅에 다시 닿으면 0
+        PhysicsFieldSample _pendingField SW_GUARDED_BY( _commandLock ); ///< 이번 게임 프레임에 모인 물리 필드(`_commandLock`)
+        PhysicsFieldSample               _frameField;                   ///< 이번 물리 프레임의 필드(`beginPhysicsFrame` 이 옮긴다)
+        float3 _walkVelocity             SW_GUARDED_BY( _physicsStep ); ///< 지난 스텝에 실제로 낸 걷는 속도 — 접지가 낮으면(빙판) 요청 속도로 천천히 간다
+        float3 _fieldVelocity            SW_GUARDED_BY( _physicsStep ); ///< 필드의 가속 · 흐름이 쌓은 수평 속도(당김 · 해류) — 디디면 접지만큼 줄어든다
+        CharacterMovementMode            _movementMode;                 ///< 지난 스텝의 이동 방식
+        float3                           _previousPosition;
+        float3                           _worldScale;    ///< 트랜스폼의 월드 배율(변경 번호가 바뀔 때만 다시 읽는다)
+        quaternion                       _worldRotation; ///< 트랜스폼의 월드 회전(바닥이 돈 각을 얹어 쓴다). 변경 번호가 같으면 그대로다
+        float32                          _verticalSpeed;
+        float32 _pendingJumpSpeed        SW_GUARDED_BY( _commandLock ); ///< 0 이 아니면 다음 스텝에 준다(`_commandLock`)
+        float32                          _pendingGroundYaw;             ///< 마지막 쓰기 뒤 디딘 바닥이 위 축 둘레로 돈 각(rad) — 다음 트랜스폼 쓰기에 얹는다
+        vector<StepRecord>               _listStepHistory;              ///< 스텝 기록 고리(`setStepHistoryEnabled` 가 켜졌을 때 처음 칸을 만든다 — 꺼져 있으면 비어 있다)
+        uint32                           _stepHistoryCount;             ///< 기록한 스텝의 누계(고리의 다음 칸은 `% kStepHistoryCapacity`)
     };
 } // namespace sw

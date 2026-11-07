@@ -187,6 +187,16 @@ namespace sw
         NavPathStatus      findPath( const hashed_string& agentType, const float3& start, const float3& end, const NavQueryFilter& filter, NavPath& outPath ) const;
         [[nodiscard]] bool findNearestPoint( const hashed_string& agentType, const float3& position, NavLocation& outLocation ) const;
         [[nodiscard]] bool raycast( const hashed_string& agentType, const float3& start, const float3& end, NavRaycastHit& outHit ) const;
+        /**
+         * @brief 에이전트 종류 @p agentType 이 영역 @p areaName 을 지나는 비용 배율 @p cost 와 통행(@p bAllowed)을 정합니다(Recast 영역 비용 · 제외 비트).
+         * @details 지역 프로필의 내비 비용 모듈(GameFramework `NavArea`)이 부른다 — 일반 NPC 는 용암을 돌아가고 화염 정령은 지난다(행위자 종류 = 에이전트 종류).
+         *          이미 마련한 내비메시의 거름 · 군중에 바로 들고, 씬을 비울 때까지 기억해 그 뒤 마련하는 내비메시에도 든다. 같은 종류 · 영역을 다시 정하면 나중 값이다.
+         *          언리얼 `UNavArea` 의 기본 비용과 `FNavigationQueryFilter` 의 영역 제외 · 유니티 `NavMesh.SetAreaCost` 의 자리다(기억).
+         * @return 모르는 종류 · 영역이면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool setAgentAreaCost( const hashed_string& agentType, const hashed_string& areaName, float32 cost, bool bAllowed );
+        /** @brief 에이전트 종류의 영역 비용 · 통행입니다(`setAgentAreaCost` 를 반영한 값, 진단 · 테스트). 모르는 종류 · 영역이면 false 입니다. */
+        [[nodiscard]] bool findAgentAreaCost( const hashed_string& agentType, const hashed_string& areaName, float32& outCost, bool& outbAllowed );
 
         /** @brief 베이크하는 중이거나 줄에 선 타일 수입니다. */
         uint32 getPendingTileCount() const;
@@ -224,6 +234,17 @@ namespace sw
         static AABB computeBakeBounds( const NavMeshSurfaceComponent* pSurface, const NavMeshGeometry& geometry );
 
     private:
+        /** @brief 영역 비용 덮어쓰기 하나입니다(`setAgentAreaCost`). */
+        struct AreaCostOverride
+        {
+            hashed_string _agentType{};
+            uint8         _areaIndex{ 0 };
+            uint8         _bAllowed{ SW_TRUE };
+            float32       _cost{ 1.0f };
+        };
+
+        /** @brief 덮어쓰기를 거름 @p inoutFilter 에 얹습니다(종류 @p agentType 의 것만). */
+        void            applyAreaCostOverrides( const hashed_string& agentType, NavQueryFilter& inoutFilter ) const;
         NavMeshRuntime* findRuntime( const hashed_string& agentType ) const;
         /**
          * @brief 종류의 내비메시를 마련합니다(쿠킹본 또는 베이크). 모르는 종류 · 마련 실패면 nullptr 입니다.
@@ -258,8 +279,9 @@ namespace sw
         vector<NavMeshObstacleComponent*>  _listObstacle;
         vector<NavMeshLinkComponent*>      _listLink; ///< 링크 컴포넌트(등록 · 해제는 `_navIndex` 로 O(1)). 순회는 매 갱신 `applyLinkStates` 의 켜짐 표지 확인과 `findLink`(에이전트가 링크에 오른 첫 갱신) 뿐이다. 링크는 문 · 사다리 · 점프 지점이라 씬당 수십 ~ 수백이어서 선형으로 충분하다. 수천이 되면 껐다 켠 링크만 모으는 목록과 id 색인으로 바꾼다
 
-        RegistrationList<INavGeometrySource> _listGeometrySource;  ///< 구독으로 올린다. 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다. 순서가 뜻이라 순서를 버리는 `IndexedPtrList` 로 바꾸지 않는다(소스가 수천이 되면 순서 보존 색인이 필요하다)
-        vector<hashed_string>                _listFailedAgentType; ///< 모르는 종류 — 오류를 한 번만
+        RegistrationList<INavGeometrySource> _listGeometrySource;   ///< 구독으로 올린다. 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다. 순서가 뜻이라 순서를 버리는 `IndexedPtrList` 로 바꾸지 않는다(소스가 수천이 되면 순서 보존 색인이 필요하다)
+        vector<hashed_string>                _listFailedAgentType;  ///< 모르는 종류 — 오류를 한 번만
+        vector<AreaCostOverride>             _listAreaCostOverride; ///< 에이전트 종류별 영역 비용 · 통행 덮어쓰기(씬을 비울 때까지)
         NavTileRebaker                       _tileRebaker;
         NavDebugView                         _debugView;
         GameObjectManager*                   _pManager;

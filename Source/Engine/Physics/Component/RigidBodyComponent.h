@@ -16,6 +16,7 @@
 #include "Engine/Physics/Component/SocketPhysicsBody.h"
 #include "Engine/Physics/IPhysicsBodyScene.h"
 #include "Engine/Physics/PhysicsDesc.h"
+#include "Engine/Physics/PhysicsField.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -116,6 +117,16 @@ namespace sw
         float3 getAngularVelocity() const { return _lastAngularVelocity; }
         /** @brief 바디의 질량(kg)입니다(바디가 없으면 0). */
         float32 getBodyMass() const;
+        /**
+         * @brief 이번 게임 프레임에 받는 물리 필드를 얹습니다(여러 지역이면 합친다). 움직이는 바디만 쓴다 — 중력 배율 · 가속 · 흐름 쪽 저항 · 부력을 스텝마다 힘으로 준다.
+         * @details 부력은 자기 재질의 밀도(`PhysicsMaterialDef::_density`, 물 1000)와 유체 밀도를 견준다 — 나무는 뜨고 돌은 가라앉는다. 물리 프레임이 시작할 때 모은 값을
+         *          그 프레임의 필드로 옮기고 비우므로 프레임마다 다시 받아야 이어진다(`CharacterControllerComponent::applyPhysicsField` 와 같은 규칙). 아무 스레드에서 불러도 된다.
+         */
+        void applyPhysicsField( const PhysicsFieldSample& sample );
+        /** @brief 지난 물리 프레임에 쓴 필드입니다(진단 · 감시 값). */
+        const PhysicsFieldSample& getPhysicsField() const { return _frameField; }
+        /** @brief 이 바디 재질의 상대 밀도(물 = 1)입니다. 설정에 재질이 없으면 1 입니다(이름 검증이 따로 알린다). */
+        float32 computeRelativeDensity( const ScenePhysics& physics ) const;
         /** @brief 바디가 잠들었는지입니다. */
         bool isSleeping() const;
         /** @brief 소켓 부착이 물리로 뗄 때 쓰는 얼굴입니다(`SocketBindingComponent` 가 같은 오브젝트의 강체를 찾아 건다). */
@@ -144,6 +155,8 @@ namespace sw
         void readSteppedPose( const IPhysicsBodyScene3D& scene, uint64 stepCount );
         /** @brief 지금 속성과 자세 @p position · @p rotation · @p scale 의 바디 서술자입니다. */
         PhysicsBodyDesc3D makeBodyDesc( const ScenePhysics& physics, const float3& position, const quaternion& rotation, const float3& scale ) const;
+        /** @brief 이번 물리 프레임의 필드가 이 스텝에 바디에 줄 힘입니다(중력 배율의 차이 · 가속 · 부력 · 흐름 쪽 저항). */
+        float3 computeFieldForce( const ScenePhysics& physics, IPhysicsBodyScene3D& scene, float32 fixedDeltaTime ) const;
         /** @brief 지금 속성 · 자세로 바디를 만듭니다. */
         void createBody( ScenePhysics& physics, IPhysicsBodyScene3D& scene, const float3& position, const quaternion& rotation, const float3& scale );
 
@@ -178,7 +191,9 @@ namespace sw
         PhysicsBodyHandle                               _body;
         mutable SpinLock                                _commandLock; ///< 아무 스레드의 입력(`addForce` …) → 물리 스텝의 꺼내기를 지킨다 — 다른 물리 컴포넌트와 같은 규약(검사는 `SW_GUARDED_BY`)
         PhysicsBodyCommand<PhysicsDimension3D> _command SW_GUARDED_BY( _commandLock );
-        uint64                                          _movedStep; ///< 바디가 마지막으로 깨어 있던 스텝 번호(`ScenePhysics::getStepCount`, `readSteppedPose`)
+        PhysicsFieldSample _pendingField                SW_GUARDED_BY( _commandLock ); ///< 이번 게임 프레임에 모인 물리 필드
+        PhysicsFieldSample                              _frameField;                   ///< 이번 물리 프레임의 필드(`beginPhysicsFrame` 이 옮긴다)
+        uint64                                          _movedStep;                    ///< 바디가 마지막으로 깨어 있던 스텝 번호(`ScenePhysics::getStepCount`, `readSteppedPose`)
         float3                                          _previousPosition;
         float3                                          _currentPosition;
         float3                                          _worldScale; ///< 트랜스폼에서 마지막으로 읽은 월드 배율(변경 번호가 같으면 그대로다)

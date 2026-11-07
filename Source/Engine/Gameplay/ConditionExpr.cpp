@@ -247,13 +247,76 @@ namespace sw
             return true;
         }
 
+        /** @brief 괄호 하나 또는 피연산자 하나입니다. 괄호 안은 식 전체(`||` 부터)입니다. */
+        void parsePrimary()
+        {
+            if ( consume( "(" ) )
+            {
+                if ( ++_depth > ConditionExpr::kMaxDepth )
+                {
+                    fail( "the expression nests too deep" );
+                    return;
+                }
+                parseOr();
+                if ( hasError() == false && consume( ")" ) == false )
+                    fail( "a parenthesis is not closed" );
+                --_depth;
+                return;
+            }
+            parseOperand();
+        }
+
+        void parseTerm()
+        {
+            parsePrimary();
+            while ( hasError() == false )
+            {
+                if ( consume( "*" ) )
+                {
+                    parsePrimary();
+                    emit( ConditionOpCode::Multiply );
+                }
+                else if ( consume( "/" ) )
+                {
+                    parsePrimary();
+                    emit( ConditionOpCode::Divide );
+                }
+                else
+                {
+                    return;
+                }
+            }
+        }
+
+        void parseAdditive()
+        {
+            parseTerm();
+            while ( hasError() == false )
+            {
+                if ( consume( "+" ) )
+                {
+                    parseTerm();
+                    emit( ConditionOpCode::Add );
+                }
+                else if ( consume( "-" ) )
+                {
+                    parseTerm();
+                    emit( ConditionOpCode::Subtract );
+                }
+                else
+                {
+                    return;
+                }
+            }
+        }
+
         void parseComparison()
         {
-            parseOperand();
+            parseAdditive();
             ConditionOpCode op{ ConditionOpCode::Equal };
             if ( hasError() == false && consumeCompare( op ) )
             {
-                parseOperand();
+                parseAdditive();
                 emit( op );
             }
         }
@@ -273,15 +336,9 @@ namespace sw
                 parseUnary();
                 emit( ConditionOpCode::Not );
             }
-            else if ( consume( "(" ) )
-            {
-                parseOr();
-                if ( hasError() == false && consume( ")" ) == false )
-                    fail( "a parenthesis is not closed" );
-            }
             else
             {
-                parseComparison();
+                parseComparison(); // 괄호는 피연산자 자리(`parsePrimary`)에서 읽는다 — `(a || b) && c` 도 `20 * (1 - x)` 도 같은 길이다
             }
             --_depth;
         }
@@ -355,9 +412,42 @@ namespace sw
                 case ConditionOpCode::Not:
                 case ConditionOpCode::And:
                 case ConditionOpCode::Or:
+                case ConditionOpCode::Add:
+                case ConditionOpCode::Subtract:
+                case ConditionOpCode::Multiply:
+                case ConditionOpCode::Divide:
                     return false;
             }
             return false;
+        }
+
+        /** @brief 산술 하나입니다. 값이 없음(NaN)은 그대로 퍼지고, 0 으로 나누면 값이 없음입니다. */
+        static float64 computeArithmetic( ConditionOpCode op, float64 lhs, float64 rhs )
+        {
+            switch ( op )
+            {
+                case ConditionOpCode::Add:
+                    return lhs + rhs;
+                case ConditionOpCode::Subtract:
+                    return lhs - rhs;
+                case ConditionOpCode::Multiply:
+                    return lhs * rhs;
+                case ConditionOpCode::Divide:
+                    return rhs == 0.0 ? std::nan( "" ) : lhs / rhs;
+                case ConditionOpCode::PushNumber:
+                case ConditionOpCode::Call:
+                case ConditionOpCode::Not:
+                case ConditionOpCode::And:
+                case ConditionOpCode::Or:
+                case ConditionOpCode::Equal:
+                case ConditionOpCode::NotEqual:
+                case ConditionOpCode::Less:
+                case ConditionOpCode::LessEqual:
+                case ConditionOpCode::Greater:
+                case ConditionOpCode::GreaterEqual:
+                    return std::nan( "" );
+            }
+            return std::nan( "" );
         }
     };
 } // namespace sw
@@ -507,6 +597,15 @@ namespace sw
                 {
                     --top;
                     arrStack[top - 1] = Internal::toNumber( Internal::compareValues( instruction._opCode, arrStack[top - 1], arrStack[top] ) );
+                    break;
+                }
+                case ConditionOpCode::Add:
+                case ConditionOpCode::Subtract:
+                case ConditionOpCode::Multiply:
+                case ConditionOpCode::Divide:
+                {
+                    --top;
+                    arrStack[top - 1] = Internal::computeArithmetic( instruction._opCode, arrStack[top - 1], arrStack[top] );
                     break;
                 }
             }

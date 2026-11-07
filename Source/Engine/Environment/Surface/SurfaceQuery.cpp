@@ -103,7 +103,7 @@ namespace sw
             float32                   depth  = 0.0f;
             if ( pWater != nullptr && pWater->isUnderwater( hit._point, depth ) && depth > 0.0f )
             {
-                sample._material   = table._waterKind;
+                sample._material   = pWater->getSurfaceKind().empty() ? table._waterKind : pWater->getSurfaceKind(); // 용암 호수는 같은 물 질의에 제 종류를 낸다
                 sample._waterDepth = depth;
                 sample._source     = SurfaceSource::Water;
             }

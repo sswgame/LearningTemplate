@@ -152,6 +152,9 @@ namespace sw
         const vector<float3>& getRiverPoints() const { return _listRiverPoint; }
         float32               getRiverWidth() const { return _riverWidth; }
         void                  setMaterialPath( string_view path ) { _materialPath = path; }
+        /** @brief 이 액체가 내는 표면 종류 이름입니다. 비면 표의 물 종류다(`SurfaceQuery`) — 용암 호수는 같은 물 질의에 `Lava` 를 낸다. */
+        const hashed_string& getSurfaceKind() const { return _surfaceKind; }
+        void                 setSurfaceKind( const hashed_string& kind ) { _surfaceKind = kind; }
 
     private:
         /** @brief 강에서 (x, z) 에 가장 가까운 경로 위 점의 기준 높이와 그 구간의 진행 방향(xz, 정규화)을 찾습니다. 띠 밖이면 false 를 반환합니다. */
@@ -172,6 +175,9 @@ namespace sw
         WaterBodyShape _shape;
         PROPERTY( Category = "Water", DisplayName = "Material", Tooltip = "Empty uses the engine default water material" )
         AssetRef<Material> _materialPath; ///< 비면 엔진 기본 에셋 표의 `_waterMaterial` 이다
+        PROPERTY( Category = "Water", DisplayName = "Surface Kind",
+                  Tooltip = "Surface kind a foot or body in this liquid reports (empty: the table's water kind); a lava lake names Lava and its zone profile does the rest" )
+        hashed_string _surfaceKind;
         PROPERTY( Category = "Water", DisplayName = "Size", Units = m, Tooltip = "Lake extent along x and z, centered on the owner" )
         float2 _size;
         PROPERTY( Category = "Water", DisplayName = "Cell Size", Min = 0.1, Units = m, Tooltip = "Surface grid spacing (waves need vertices)" )

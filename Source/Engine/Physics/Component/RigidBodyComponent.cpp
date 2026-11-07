@@ -2,11 +2,14 @@
 
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
+#include "Core/Math/MathUtil.h"
+
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/PhysicsNameValidation.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/PhysicsSettings.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
@@ -59,6 +62,8 @@ namespace sw
         , _body{}
         , _commandLock{}
         , _command{}
+        , _pendingField{}
+        , _frameField{}
         , _movedStep{ 0 }
         , _previousPosition{}
         , _currentPosition{}
@@ -176,6 +181,21 @@ namespace sw
     {
         const IPhysicsBodyScene3D* pScene = findScene();
         return pScene != nullptr ? pScene->getBodyMass( _body ) : 0.0f;
+    }
+
+    void RigidBodyComponent::applyPhysicsField( const PhysicsFieldSample& sample )
+    {
+        ScopedLock<SpinLock> lock{ _commandLock };
+        _pendingField.combine( sample );
+    }
+
+    float32 RigidBodyComponent::computeRelativeDensity( const ScenePhysics& physics ) const
+    {
+        const PhysicsSettings* pSettings = physics.findSettings();
+        if ( pSettings == nullptr || pSettings->_listMaterial.empty() )
+            return 1.0f;
+        const PhysicsMaterialDef* pMaterial = _material.empty() ? &pSettings->_listMaterial.front() : pSettings->findMaterial( _material );
+        return pMaterial != nullptr ? pMaterial->_density / kWaterDensity : 1.0f;
     }
 
     bool RigidBodyComponent::isSleeping() const
@@ -308,6 +328,8 @@ namespace sw
         PhysicsBodyCommand<PhysicsDimension3D> command;
         {
             ScopedLock<SpinLock> lock{ _commandLock };
+            _frameField                   = _pendingField; // 이번 게임 프레임의 필드 — 스텝이 없는 프레임이 끼어도 두 번 쌓이지 않는다
+            _pendingField                 = PhysicsFieldSample{};
             command                       = _command;
             _command._impulse             = float3{};
             _command._bSetLinearVelocity  = false;
@@ -320,8 +342,8 @@ namespace sw
             pScene->setAngularVelocity( _body, command._angularVelocity );
         if ( command._impulse.getLengthSquared() > 0.0f )
             pScene->addImpulse( _body, command._impulse );
-        if ( command._bWake )
-            pScene->wakeBody( _body );
+        if ( command._bWake || ( _bodyType == PhysicsBodyType::Dynamic && _frameField.hasEffect() ) )
+            pScene->wakeBody( _body ); // 잠든 바디는 힘을 받지 않는다 — 필드 안에서는 깨어 있어야 뜨고 흐른다
     }
 
     void RigidBodyComponent::prePhysicsStep( ScenePhysics& physics, float32 fixedDeltaTime, uint32 stepIndex, uint32 stepCount )
@@ -353,10 +375,30 @@ namespace sw
             force  = _command._force;
             torque = _command._torque;
         }
+        if ( _frameField.hasEffect() )
+            force = force + computeFieldForce( physics, *pScene, fixedDeltaTime );
         if ( force.getLengthSquared() > 0.0f )
             pScene->addForce( _body, force );
         if ( torque.getLengthSquared() > 0.0f )
             pScene->addTorque( _body, torque );
+    }
+
+    float3 RigidBodyComponent::computeFieldForce( const ScenePhysics& physics, IPhysicsBodyScene3D& scene, float32 fixedDeltaTime ) const
+    {
+        const IPhysicsScene3D* pWorld = physics.findScene3D();
+        if ( pWorld == nullptr )
+            return float3{};
+        const PhysicsFieldSample& field         = _frameField;
+        const float3              gravity       = pWorld->getGravity();
+        const float32             gravityLength = gravity.getLength();
+        const float3              up            = gravityLength > 0.0f ? gravity * ( -1.0f / gravityLength ) : float3{ 0.0f, 1.0f, 0.0f };
+        // 백엔드가 이미 중력 × `_gravityFactor` 를 준다 — 필드 배율의 차이만 더한다. 부력은 잠긴 비율 × 유체 밀도 ÷ 바디 밀도만큼 위로 민다.
+        float3 acceleration = gravity * ( _gravityFactor * ( field._gravityScale - 1.0f ) ) + field._acceleration;
+        acceleration        = acceleration + up * field.computeBuoyancy( gravityLength, computeRelativeDensity( physics ) );
+        // 저항은 흐름과의 속도 차를 줄인다. 한 스텝에 차이를 넘겨 줄이지 않게 1/dt 로 자른다(진동하지 않는다).
+        if ( field._drag > 0.0f && fixedDeltaTime > 0.0f )
+            acceleration = acceleration + ( field._flowVelocity - scene.getLinearVelocity( _body ) ) * MathUtil::min( field._drag, 1.0f / fixedDeltaTime );
+        return acceleration * scene.getBodyMass( _body );
     }
 
     void RigidBodyComponent::readSteppedPose( const IPhysicsBodyScene3D& scene, uint64 stepCount )

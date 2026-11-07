@@ -68,6 +68,11 @@ namespace sw
         , _frameMoveScale{ 1.0f }
         , _pendingLaunch{}
         , _airVelocity{}
+        , _pendingField{}
+        , _frameField{}
+        , _walkVelocity{}
+        , _fieldVelocity{}
+        , _movementMode{ CharacterMovementMode::Walking }
         , _previousPosition{}
         , _worldScale{ 1.0f, 1.0f, 1.0f }
         , _worldRotation{}
@@ -167,6 +172,12 @@ namespace sw
         _pendingMoveScale = MathUtil::min( _pendingMoveScale, MathUtil::max( scale, 0.0f ) );
     }
 
+    void CharacterControllerComponent::applyPhysicsField( const PhysicsFieldSample& sample )
+    {
+        ScopedLock<SpinLock> lock{ _commandLock };
+        _pendingField.combine( sample );
+    }
+
     void CharacterControllerComponent::setRadius( float32 radius )
     {
         _radius = radius;
@@ -208,6 +219,12 @@ namespace sw
         IPhysicsScene3D* pScene = physics.getScene3D();
         if ( pScene == nullptr )
             return;
+        // 이번 게임 프레임에 모인 필드를 이 물리 프레임의 것으로 옮긴다 — 스텝이 없는 프레임이 끼어도 한 프레임의 필드가 두 번 쌓이지 않는다.
+        {
+            ScopedLock<SpinLock> lock{ _commandLock };
+            _frameField   = _pendingField;
+            _pendingField = PhysicsFieldSample{};
+        }
         if ( consumeRebuild() )
             releasePhysics( physics );
 
@@ -278,11 +295,26 @@ namespace sw
             }
         }
         // 이동 계수는 걷는 몫(요청 · 루트 모션)에만 든다 — 면이 나르는 속도와 공중 관성은 환경 저항과 상관없다.
-        moveVelocity = ( moveVelocity + _frameRootMotionVelocity ) * _frameMoveScale + _frameSurfaceVelocity + _airVelocity;
-        // 서 있으면 떨어지는 속도를 지우고, 떠 있으면 중력을 쌓는다. 점프는 그 위에 덮는다.
+        const PhysicsFieldSample& field         = _frameField;
+        const float3              requestedWalk = ( moveVelocity + _frameRootMotionVelocity ) * _frameMoveScale;
+        // 접지(빙판): 디딘 채로 접지가 보통보다 낮으면 걷는 속도가 요청으로 천천히 간다(미끄러진다). 보통 접지 · 공중은 요청 그대로다(필드가 없을 때와 같다).
+        const bool bSlippery = _state._bGrounded && field._friction < 1.0f;
+        _walkVelocity        = bSlippery ? float3::lerp( _walkVelocity, requestedWalk, MathUtil::saturate( field._friction * kFrictionResponse * fixedDeltaTime ) ) : requestedWalk;
+        // 필드의 가속 · 흐름이 쌓는 수평 속도(당김 · 해류). 저항은 흐름으로 끌고, 디디면 접지만큼 줄어든다.
+        _fieldVelocity = _fieldVelocity + float3{ field._acceleration._x, 0.0f, field._acceleration._z } * fixedDeltaTime;
+        if ( field._drag > 0.0f )
+            _fieldVelocity = _fieldVelocity + ( float3{ field._flowVelocity._x, 0.0f, field._flowVelocity._z } - _fieldVelocity ) * MathUtil::saturate( field._drag * fixedDeltaTime );
+        if ( _state._bGrounded )
+            _fieldVelocity = _fieldVelocity * ( 1.0f - MathUtil::saturate( kFieldGroundDamping * field._friction * fixedDeltaTime ) );
+        moveVelocity = _walkVelocity + _fieldVelocity + _frameSurfaceVelocity + _airVelocity;
+        // 서 있으면 떨어지는 속도를 지우고, 떠 있으면 중력을 쌓는다(필드의 중력 배율 · 부력 · 가속 · 저항). 점프는 그 위에 덮는다.
         if ( _state._bGrounded && _verticalSpeed < 0.0f )
             _verticalSpeed = 0.0f;
-        _verticalSpeed += pScene->getGravity()._y * _gravityScale * fixedDeltaTime;
+        const float32 gravityY = pScene->getGravity()._y;
+        _verticalSpeed += gravityY * _gravityScale * field._gravityScale * fixedDeltaTime;
+        _verticalSpeed += ( field.computeBuoyancy( MathUtil::abs( gravityY ), kBodyDensity ) + field._acceleration._y ) * fixedDeltaTime;
+        if ( field._drag > 0.0f )
+            _verticalSpeed += ( field._flowVelocity._y - _verticalSpeed ) * MathUtil::saturate( field._drag * fixedDeltaTime );
         if ( jumpSpeed > 0.0f )
             _verticalSpeed = jumpSpeed;
 
@@ -299,6 +331,7 @@ namespace sw
             };
             ++_stepHistoryCount;
         }
+        _movementMode = field.selectMovementMode( _state._bGrounded );
         // 결정: 바닥이 돌면 위치만이 아니라 방향(yaw)도 같이 돈다 — 이번 스텝에 바닥이 돈 각을 모아 두고 트랜스폼을 쓸 때 얹는다.
         _pendingGroundYaw += _state._groundYawRate * fixedDeltaTime;
         // 천장에 막혔으면 오르던 속도가 줄었다 — 실제로 난 수직 속도를 잇는다. 디디면 수직 속도는 0 이다.

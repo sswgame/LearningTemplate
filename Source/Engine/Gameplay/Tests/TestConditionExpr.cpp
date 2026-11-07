@@ -101,6 +101,39 @@ SW_TEST_CASE( ConditionExprTest, GrammarAndEvaluation )
     SW_EXPECT_TRUE( XTestUtil::run( "!x == 0", context ) );        // `!` 뒤는 비교 하나다
 }
 
+/** @brief [ConditionExprTest] 산술(`+ - * /`)은 비교보다 먼저 묶이고 곱이 합보다 먼저다. 수치 칸이 같은 문법으로 값을 낸다. 0 으로 나누면 값이 없음이다 */
+SW_TEST_CASE( ConditionExprTest, ArithmeticForNumericFields )
+{
+    TestValues values;
+    values._x = 0.25;
+    values._y = 4.0;
+    GameplayContext context;
+    context.set<TestValuesSlot>( &values );
+
+    const auto number = [&context]( string_view text ) -> float64
+    {
+        ConditionExpr expr;
+        SW_EXPECT_TRUE( ConditionExpr::compile( text, "test", expr, "testName" ) );
+        return expr.evaluateNumber( context );
+    };
+    SW_EXPECT_NEAR( 14.0, number( "2 + 3 * 4" ), 1.0e-9 );
+    SW_EXPECT_NEAR( 20.0, number( "(2 + 3) * 4" ), 1.0e-9 );
+    SW_EXPECT_NEAR( 15.0, number( "20 * (1 - x)" ), 1.0e-9 ); // 지역 피해 · 저항의 모양
+    SW_EXPECT_NEAR( 13.0, number( "5 + y * 2" ), 1.0e-9 );
+    SW_EXPECT_NEAR( 2.0, number( "y / 2" ), 1.0e-9 );
+    SW_EXPECT_NEAR( 6.0, number( "3 - -3" ), 1.0e-9 );
+    SW_EXPECT_NEAR( 14.0, number( "testFixed * 2" ), 1.0e-9 );
+    SW_EXPECT_TRUE( XTestUtil::run( "y * 2 > 7 && x + y == 4.25", context ) );
+    SW_EXPECT_TRUE( XTestUtil::run( "!(y / 0 > 0) && !(y / 0 <= 0)", context ) ); // 값이 없음은 어떤 비교에도 거짓이다
+
+    SW_EXPECT_LOG( "ConditionExpr.Invalid" );
+    for ( const utf8* pBad : { "1 +", "* 2", "x * / y", "(1 + 2", "1 + )" } )
+    {
+        ConditionExpr expr;
+        SW_EXPECT_FALSE( ConditionExpr::compile( pBad, "test", expr, "testName" ) );
+    }
+}
+
 /** @brief [ConditionExprTest] 틀린 글과 모르는 이름은 읽기 오류이고 식은 비어 있다 */
 SW_TEST_CASE( ConditionExprTest, InvalidTextFailsToCompile )
 {

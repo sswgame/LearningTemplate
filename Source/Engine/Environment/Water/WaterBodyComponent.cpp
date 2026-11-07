@@ -141,6 +141,7 @@ namespace sw
     WaterBodyComponent::WaterBodyComponent()
         : _shape{ WaterBodyShape::Lake }
         , _materialPath{}
+        , _surfaceKind{}
         , _size{ 64.0f, 64.0f }
         , _cellSize{ 1.0f }
         , _listRiverPoint{}
