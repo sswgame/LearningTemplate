@@ -6,11 +6,11 @@
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Runtime/Online/Local/FileLocalSlotStorage.h"
-#include "GameFramework/Runtime/Online/Local/LocalStoreFactory.h"
-#include "GameFramework/Runtime/Online/Local/MemoryLocalStore.h"
-#include "GameFramework/Runtime/Online/Local/Tests/LocalStoreContract.h"
-#include "GameFramework/Runtime/Online/Local/ThreadedLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/FileLocalSlotStorage.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreFactory.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/Tests/LocalStoreContract.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/ThreadedLocalStore.h"
 
 // LocalStoreMemoryTest · LocalStoreFileTest — 로컬 저장: 메모리 저장소와 파일 저장소(전용 스레드 + 파일 바닥)가 같은 계약 아홉(왕복 · 나열 · 압축 · 봉인 셋 · 이름 ·
 // 순서 · 내리기)을 지킨다. 메모리는 쓰기 도중 꺼짐 · 슬롯 이름 규칙, 파일은 슬롯 → 파일 경로와 꺼진 쓰기의 임시 파일 지우기, 공장(file · memory · 모르는 이름 · 기반 이름 덮기)(nogpu).

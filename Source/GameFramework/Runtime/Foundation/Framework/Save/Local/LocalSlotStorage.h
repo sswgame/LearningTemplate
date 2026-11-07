@@ -10,8 +10,8 @@
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Online/Local/LocalSlotEnvelope.h"
-#include "GameFramework/Runtime/Online/Local/LocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSlotEnvelope.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStore.h"
 
 namespace sw
 {

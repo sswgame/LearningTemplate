@@ -16,7 +16,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Online/Local/LocalSlotEnvelope.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSlotEnvelope.h"
 
 namespace sw
 {

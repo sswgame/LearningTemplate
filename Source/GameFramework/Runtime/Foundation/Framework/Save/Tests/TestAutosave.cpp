@@ -5,7 +5,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
-#include "GameFramework/Runtime/Online/Local/MemoryLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
 
 // AutosaveTest — 자동 저장 정책(순환 슬롯 · 요청 합치기 · 최소 간격 · 막기 · 종료 · 체크포인트 되돌리기). 슬롯은 메모리 로컬 저장소에 쓴다(nogpu, 디스크 없음).
 

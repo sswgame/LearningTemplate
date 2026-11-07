@@ -19,8 +19,8 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStore.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Runtime/Online/Local/LocalStore.h"
 
 #include <algorithm>
 

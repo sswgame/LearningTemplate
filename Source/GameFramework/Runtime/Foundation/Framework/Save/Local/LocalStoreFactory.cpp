@@ -1,13 +1,13 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Local/LocalStoreFactory.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreFactory.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/String/RegistrationList.h"
 
-#include "GameFramework/Runtime/Online/Local/FileLocalSlotStorage.h"
-#include "GameFramework/Runtime/Online/Local/MemoryLocalStore.h"
-#include "GameFramework/Runtime/Online/Local/ThreadedLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/FileLocalSlotStorage.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/ThreadedLocalStore.h"
 
 namespace sw
 {

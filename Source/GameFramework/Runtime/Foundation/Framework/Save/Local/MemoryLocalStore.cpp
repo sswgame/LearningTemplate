@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Local/MemoryLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"

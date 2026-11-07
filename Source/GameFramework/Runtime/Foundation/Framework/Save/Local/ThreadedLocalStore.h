@@ -13,7 +13,7 @@
 #include "Core/Task/DedicatedWorker.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Online/Local/LocalSlotStorage.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSlotStorage.h"
 
 namespace sw
 {

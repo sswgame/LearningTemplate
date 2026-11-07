@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Local/LocalSlotEnvelope.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSlotEnvelope.h"
 
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/ICompressionCodec.h"

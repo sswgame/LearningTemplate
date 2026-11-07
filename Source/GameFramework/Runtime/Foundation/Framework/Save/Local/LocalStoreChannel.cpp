@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Local/LocalStoreChannel.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreChannel.h"
 
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/VectorUtil.h"
@@ -8,8 +8,8 @@
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 
-#include "GameFramework/Runtime/Online/Local/LocalDeviceKeyProvider.h"
-#include "GameFramework/Runtime/Online/Local/LocalStoreFactory.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalDeviceKeyProvider.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreFactory.h"
 
 namespace sw
 {

@@ -8,7 +8,7 @@
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLMigrationRunner.h"
-#include "GameFramework/Runtime/Online/Local/LocalStoreFactory.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreFactory.h"
 
 namespace sw
 {

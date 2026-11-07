@@ -11,8 +11,8 @@
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/AutosaveTriggerComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/TickedPathMoverComponent.h"
-#include "GameFramework/Runtime/Online/Local/MemoryLocalStore.h"
 
 // ActivatorVolumeTest — 볼륨 바탕(한 번 · 거리로 들어오기, 안에 있는 동안 되풀이하지 않기)을 자동 저장 볼륨으로 보고, 틱 함수 바닥의 자리 계산을 본다. 슬롯은 메모리 저장소다(nogpu, 물리 없음).
 

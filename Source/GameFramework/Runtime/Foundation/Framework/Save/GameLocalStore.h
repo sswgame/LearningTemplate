@@ -13,8 +13,8 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameInstanceSubsystem.h"
-#include "GameFramework/Runtime/Online/Local/LocalStore.h"
-#include "GameFramework/Runtime/Online/Local/LocalStoreChannel.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreChannel.h"
 
 namespace sw
 {

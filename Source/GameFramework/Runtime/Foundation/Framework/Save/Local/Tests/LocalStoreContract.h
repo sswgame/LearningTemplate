@@ -13,9 +13,9 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "GameFramework/Runtime/Online/Local/LocalSlotEnvelope.h"
-#include "GameFramework/Runtime/Online/Local/LocalSlotStorage.h"
-#include "GameFramework/Runtime/Online/Local/LocalStore.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSlotEnvelope.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSlotStorage.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStore.h"
 #include "GameFramework/Runtime/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
 
 #include <algorithm>

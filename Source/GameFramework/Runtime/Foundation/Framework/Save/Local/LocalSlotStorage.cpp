@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Online/Local/LocalSlotStorage.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSlotStorage.h"
 
 namespace sw
 {

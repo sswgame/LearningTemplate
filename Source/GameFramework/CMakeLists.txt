@@ -43,7 +43,7 @@ sw_markDeterministicSources(GameFramework
 	Runtime/Character/Combat/Weapon/Weapon.cpp
 	Runtime/Foundation/Utility/Math/RayMath.cpp
 )
-# 로컬 저장의 장치 키(Runtime/Online/Local/LocalDeviceKeyProvider)는 Windows DPAPI 로 감싼다.
+# 로컬 저장의 장치 키(Runtime/Foundation/Framework/Save/Local/LocalDeviceKeyProvider)는 Windows DPAPI 로 감싼다.
 if(WIN32)
 	target_link_libraries(GameFramework PRIVATE crypt32)
 endif()
