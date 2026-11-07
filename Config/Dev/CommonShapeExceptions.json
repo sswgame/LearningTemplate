@@ -3,7 +3,8 @@
     "enumNameSwitch": {
         "Source/Engine/Serialization/Fixed/FixedLayout.cpp|FixedReadResult": "리플렉션 생성 코드(ReflectGenerated.h)가 이 헤더를 끌어 ENUM() 을 달 수 없는 아래 층이다",
         "Source/Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.cpp|?": "바깥 표준 철자(VkResult 상수)다",
-        "Source/Engine/Animation/Rig/RigConstraintNodes.cpp|Mode": ".cpp 안 열거라 리플렉션이 보지 못한다. 글은 노드 종류 이름이다"
+        "Source/Engine/Animation/Rig/RigConstraintNodes.cpp|Mode": ".cpp 안 열거라 리플렉션이 보지 못한다. 글은 노드 종류 이름이다",
+        "Source/DevTools/AssetReload/ReloadTracker.cpp|ReloadSource": "DevTools 는 리플렉션 코드젠을 하지 않는 모듈이라 ENUM() 을 달 수 없다(개발 명령 표의 글이다)"
     },
     "reloadCount": {
         "Source/Engine/Asset/Cache/AssetReloadWatch.h": "기반 자신이다",

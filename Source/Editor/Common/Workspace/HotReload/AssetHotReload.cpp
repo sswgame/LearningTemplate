@@ -10,6 +10,8 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "DevTools/AssetReload/ReloadTracker.h"
+
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetImportJob.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -642,7 +644,11 @@ namespace sw::editor
                 return ReloadResult::NotTracked;
             // 소스를 임포트하는 종류는 임포트하는 것이 리로드다 — 임포트된 결과의 쓰기가 다음 감시 이벤트로 온다(그 결과를 읽는 캐시가 없어도 임포트는 한다).
             if ( route._pfnImportSource( editor::getSubsystem<AssetPaths>(), relativePath ) )
+            {
+                if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )
+                    pTracker->record( ReloadSource::Asset, relativePath, ReloadResult::Reloaded );
                 return ReloadResult::Reloaded;
+            }
         }
         return reloadCaches( route, assetID );
     }
@@ -669,12 +675,16 @@ namespace sw::editor
             if ( pCache == nullptr )
             {
                 SW_LOG_ERROR_ID( "AssetHotReload.HotReloadNoAsset", "Hot reload: no asset cache '%#' is registered for %#", route._pCacheKindName, relativePath );
+                if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )
+                    pTracker->record( ReloadSource::Asset, relativePath, ReloadResult::Failed, "no asset cache is registered for its kind" );
                 return ReloadResult::Failed;
             }
             const AssetCacheReloadFunction pReload = pResources->findReloadFunction( pCache );
             if ( pReload == nullptr )
             {
                 SW_LOG_ERROR_ID( "AssetHotReload.HotReloadAssetCache", "Hot reload: asset cache '%#' has no reload function (registered without SW_ASSET_CACHE_RELOAD_FUNCTION) - %# is not reloaded", route._pCacheKindName, relativePath );
+                if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )
+                    pTracker->record( ReloadSource::Asset, relativePath, ReloadResult::Failed, "its asset cache has no reload function" );
                 return ReloadResult::Failed;
             }
             SW_LOG_INFO_ID( "AssetHotReload.HotReloadingAsset", "Hot-Reloading asset: %#", relativePath );
@@ -685,6 +695,8 @@ namespace sw::editor
         GameObjectManager* pObjects = ( pScene != nullptr ) ? pScene->getObjectManager() : nullptr;
         if ( pObjects != nullptr )
             (void)notifyAssetUsers( *pObjects, relativePath );
+        if ( ReloadTracker* const pTracker = findSubsystem<ReloadTracker>() )
+            pTracker->record( ReloadSource::Asset, relativePath, ReloadResult::Reloaded );
         return ReloadResult::Reloaded;
     }
 

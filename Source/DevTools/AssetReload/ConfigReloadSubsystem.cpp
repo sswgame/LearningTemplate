@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 
 #include "DevTools/AssetReload/FileWatchDispatcher.h"
+#include "DevTools/AssetReload/ReloadTracker.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
@@ -94,7 +95,10 @@ namespace sw
             return;
         const string fullPath = FileUtil::joinPath( changeEvent._directory, changeEvent._filename );
         // 모르는 파일은 NotTracked 로 지나간다. 깨진 파일은 읽는 쪽이 키 이름과 오류를 남겼다 — 이전 값으로 돈다는 것만 덧붙인다.
-        if ( reloadChangedFile( fullPath ) == ReloadResult::Failed )
+        const ReloadResult result = reloadChangedFile( fullPath );
+        if ( ReloadTracker* const pTracker = engine::findSubsystem<ReloadTracker>() )
+            pTracker->record( ReloadSource::Config, fullPath, result, "the file did not parse - see the log for the key" );
+        if ( result == ReloadResult::Failed )
             SW_LOG_WARNING_ID( "ConfigReload.ConfigReloadKeptPrevious", "Config reload kept the previous values - fix and save %# again", fullPath.c_str() );
     }
 } // namespace sw

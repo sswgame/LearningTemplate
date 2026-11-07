@@ -4,6 +4,8 @@
 
 #include "Core/Concurrency/mutex.h"
 
+#include "DevTools/AssetReload/ReloadTracker.h"
+
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
@@ -59,9 +61,10 @@ namespace sw
             _listPendingReload.clear();
         }
 
-        ShaderCache& shaderCache = engine::getSubsystem<ShaderCache>();
-        uint32       changed     = 0;
-        uint32       failed      = 0;
+        ShaderCache&         shaderCache = engine::getSubsystem<ShaderCache>();
+        uint32               changed     = 0;
+        uint32               failed      = 0;
+        ReloadTracker* const pTracker    = engine::findSubsystem<ReloadTracker>();
         for ( const ShaderCompileDesc& desc : listToCompile )
         {
             // 셰이더 DDC 는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 컴파일러 안에서 DDC 에 맞아 컴파일러를
@@ -74,6 +77,8 @@ namespace sw
             if ( newResult._bSuccess == false )
             {
                 ++failed;
+                if ( pTracker != nullptr )
+                    pTracker->record( ReloadSource::Shader, desc._source.str(), ReloadResult::Failed, newResult._errorMessage );
                 SW_LOG_ERROR_ID( "ShaderRecompiler.ShaderReloadFailedEntry", "Shader reload failed for %# (Entry: %#):\n%#",
                                  desc._source.c_str(), desc._entryPoint.c_str(), newResult._errorMessage.c_str() );
                 continue;
@@ -87,6 +92,8 @@ namespace sw
                 continue;
 
             ++changed;
+            if ( pTracker != nullptr )
+                pTracker->record( ReloadSource::Shader, desc._source.str(), ReloadResult::Reloaded );
             if ( _onAnyRecompiled.isBound() )
                 _onAnyRecompiled.get()( desc._source.str(), newResult );
         }

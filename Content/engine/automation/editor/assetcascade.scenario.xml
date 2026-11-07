@@ -25,5 +25,9 @@
 	<Expect watch="RHI.GPUIdleWaits" sameAs="idleBeforeEdit"/>
 	<ExpectLog id="AssetHotReload.CascadeReload" contains="scratch/assetcascade/parent.material (inlines scratch/assetcascade/grand.material)" count="1"/>
 	<ExpectLog id="AssetHotReload.CascadeReload" contains="scratch/assetcascade/child.material (inlines scratch/assetcascade/grand.material)" count="1"/>
+	<!-- 리로드 결과 집계(reload.status): 연쇄 둘이 성공으로 적혔고 낡은(이전 값으로 도는) 경로가 없다 -->
+	<Expect watch="DevTools.ReloadAssetCount" atLeast="2"/>
+	<Expect watch="DevTools.ReloadStaleCount" equals="0"/>
+	<DevCommand line="reload.status"/>
 	<Pass/>
 </Scenario>
