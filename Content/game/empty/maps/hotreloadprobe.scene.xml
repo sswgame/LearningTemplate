@@ -1,0 +1,22 @@
+<Scene formatVersion="2" name="HotReloadProbe">
+	<!-- 핫 리로드 디버그 확인(Scripts/dev/HotReloadDebugCheck.py, 시나리오 automation/debugger/*)의 무대 — 확인용 컴포넌트 하나가 리로드를 건너야 하는 값 42 를 든다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,0,-4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.9" _nearZ="0.1" _farZ="60" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Probe">
+			<GameObject _schemaVersion="0" _name="Probe" _bActive="true">
+				<_listComponent>
+					<HotReloadProbeComponent _keptValue="42" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

@@ -408,6 +408,31 @@ def ensureDebuggerInternal(root: Path, search: dict) -> None:
             source = tarHandle.extractfile(member)
             (binDir / "lldb.exe").write_bytes(source.read())
 
+    # lldb 의 파이썬 바인딩(`lib/site-packages/lldb` — `import lldb` 와 `command script import` 가 쓴다). liblldb.dll 이 bin 옆 `../lib/site-packages` 에서 찾는다.
+    sitePackages = root / "lib" / "site-packages"
+    if not (sitePackages / "lldb" / "__init__.py").is_file():
+        url = search[kKeyLlvmDownloadUrls][platformKey()]
+        archive = ensureCachedDownload(url, toolsCacheDir() / url.rsplit("/", 1)[-1], minSize=50_000_000, label="Llvm")
+        print("[Llvm] Adding the lldb Python package from the cached LLVM archive...")
+        with tarfile.open(archive, "r:*") as tarHandle:
+            count = 0
+            for member in tarHandle:
+                marker = "/lib/site-packages/"
+                if marker not in member.name or not (member.isfile() or member.islnk() or member.issym()):
+                    continue
+                relative = member.name.split(marker, 1)[1]
+                if ".." in Path(relative).parts:
+                    raise RuntimeError(f"[Llvm] unsafe path in {archive.name}: {member.name}")
+                target = sitePackages / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                source = tarHandle.extractfile(member)
+                if source is None:
+                    raise RuntimeError(f"[Llvm] {archive.name}: cannot read {member.name}")
+                target.write_bytes(source.read())
+                count += 1
+        if not (sitePackages / "lldb" / "__init__.py").is_file():
+            raise RuntimeError(f"[Llvm] {archive.name} has no lib/site-packages/lldb ({count} files extracted)")
+
     pythonVersion = search[kKeyLldbPythonVersion]
     pythonDll = "python" + "".join(pythonVersion.split(".")[:2]) + ".dll"
     if not (binDir / pythonDll).is_file():
