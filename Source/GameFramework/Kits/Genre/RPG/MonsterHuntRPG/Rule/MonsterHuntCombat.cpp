@@ -5,12 +5,12 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Catalog/MonsterHuntCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Rule/SkillTree.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -138,7 +138,7 @@ namespace sw
     void MonsterHuntCombat::writeState( Archive& outArchive ) const
     {
         _stamina.writeState( outArchive );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _adrenaline;
     }
 
@@ -147,7 +147,7 @@ namespace sw
         ResourceGauge stamina = _stamina; // 게이지 설정은 `initialize` 에서 받은 것이므로 값만 읽는다
         GameRandom    random;
         float32       adrenaline = 0.0f;
-        if ( _pCatalog == nullptr || stamina.readState( archive ) == false || StateArchiveUtil::readRandom( archive, random ) == false )
+        if ( _pCatalog == nullptr || stamina.readState( archive ) == false || StateIO::readRandom( archive, random ) == false )
             return false;
         archive >> adrenaline;
         // 상한 밖 · NaN 은 포인트 변환(`static_cast<int32>`)과 피해 배율을 깨뜨린다. NaN 은 비교가 거짓이라 `<` 로는 걸러지지 않는다.

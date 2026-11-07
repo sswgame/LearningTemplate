@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardBattle/CardBattle.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
@@ -11,7 +12,6 @@
 #include "GameFramework/Kits/Genre/Casual/CardGame/Matgo/MatgoGame.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
 #include "GameFramework/Kits/Genre/Casual/CardGame/Uno/UnoGame.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 // CardGameReadStateTest — 카드 게임 상태 바이트의 신뢰 경계: 더미의 빈 카드 · 겹친 번호, 더미 사이의 복제 카드, 덱에 없는 카드, 음수 · 범위 밖 값을 거절하고 상태를 그대로 둔다.
 // 꾸민 바이트는 `writeState` 의 형식을 그대로 손으로 적는다. 칸마다 맞는 값을 기본으로 두고 한 칸씩 망가뜨린다. 키트 GF_CardGame(nogpu).
@@ -96,7 +96,7 @@ namespace
             _hand1.writeState( written );
             _drawPile.writeState( written );
             _discardPile.writeState( written );
-            sw::StateArchiveUtil::writeRandom( written, sw::GameRandom( 9u ) );
+            sw::StateIO::writeRandom( written, sw::GameRandom( 9u ) );
             written << _currentPlayer;
             written << _direction;
             written << _pendingDraw;
@@ -233,8 +233,8 @@ namespace
         {
             sw::Archive written;
             written << static_cast<uint32>( 2 );
-            sw::StateArchiveUtil::writeName( written, "strike" );
-            sw::StateArchiveUtil::writeName( written, "strike" );
+            sw::StateIO::writeName( written, "strike" );
+            sw::StateIO::writeName( written, "strike" );
             _drawPile.writeState( written );
             _hand.writeState( written );
             sw::CardPile{}.writeState( written );
@@ -245,7 +245,7 @@ namespace
             written << _enemyHP;
             written << _enemyBlock;
             written << _intentIndex;
-            sw::StateArchiveUtil::writeRandom( written, sw::GameRandom( 9u ) );
+            sw::StateIO::writeRandom( written, sw::GameRandom( 9u ) );
             written << _playerHP;
             written << _playerBlock;
             written << _energy;

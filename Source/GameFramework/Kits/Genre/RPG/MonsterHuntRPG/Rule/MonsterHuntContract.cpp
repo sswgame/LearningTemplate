@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Catalog/MonsterHuntCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
 
 namespace sw
@@ -231,12 +231,12 @@ namespace sw
 
     void MonsterHuntInvestigation::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _pContract != nullptr ? _pContract->_id : hashed_string{} );
+        StateIO::writeName( outArchive, _pContract != nullptr ? _pContract->_id : hashed_string{} );
         outArchive << _stepIndex;
         outArchive << static_cast<uint32>( _listFound.size() );
         for ( const hashed_string& clueID : _listFound )
         {
-            StateArchiveUtil::writeName( outArchive, clueID );
+            StateIO::writeName( outArchive, clueID );
         }
     }
 
@@ -245,7 +245,7 @@ namespace sw
         hashed_string contractID;
         int32         stepIndex = 0;
         uint32        count     = 0;
-        if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, contractID ) == false )
+        if ( _pCatalog == nullptr || StateIO::readName( archive, contractID ) == false )
             return false;
         const MonsterHuntContractDef* pContract = _pCatalog->findContract( contractID );
         archive >> stepIndex;
@@ -263,7 +263,7 @@ namespace sw
         vector<hashed_string> listFound( count );
         for ( hashed_string& clueID : listFound )
         {
-            if ( StateArchiveUtil::readName( archive, clueID ) == false || VectorUtil::containsBy<&MonsterHuntClueDef::_id>( pStep->_listClue, clueID ) == false )
+            if ( StateIO::readName( archive, clueID ) == false || VectorUtil::containsBy<&MonsterHuntClueDef::_id>( pStep->_listClue, clueID ) == false )
                 return false;
         }
         _pContract = pContract;
@@ -275,7 +275,7 @@ namespace sw
 
     void MonsterHuntHaggle::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _pContract != nullptr ? _pContract->_id : hashed_string{} );
+        StateIO::writeName( outArchive, _pContract != nullptr ? _pContract->_id : hashed_string{} );
         outArchive << _anger;
         outArchive << _offer;
         outArchive << _finalReward;
@@ -289,7 +289,7 @@ namespace sw
         int32         offer       = 0;
         int32         finalReward = 0;
         uint8         bClosed     = SW_FALSE;
-        if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, contractID ) == false )
+        if ( _pCatalog == nullptr || StateIO::readName( archive, contractID ) == false )
             return false;
         const MonsterHuntContractDef* pContract = _pCatalog->findContract( contractID );
         archive >> anger;

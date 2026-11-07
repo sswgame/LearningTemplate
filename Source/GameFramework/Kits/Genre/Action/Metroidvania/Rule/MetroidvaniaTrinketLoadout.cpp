@@ -5,10 +5,10 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -125,12 +125,12 @@ namespace sw
         outArchive << static_cast<uint32>( _listOwned.size() );
         for ( const hashed_string& charmID : _listOwned )
         {
-            StateArchiveUtil::writeName( outArchive, charmID );
+            StateIO::writeName( outArchive, charmID );
         }
         outArchive << static_cast<uint32>( _listEquipped.size() );
         for ( const hashed_string& charmID : _listEquipped )
         {
-            StateArchiveUtil::writeName( outArchive, charmID );
+            StateIO::writeName( outArchive, charmID );
         }
         outArchive << _notchCount;
     }
@@ -152,7 +152,7 @@ namespace sw
             for ( uint32 entry = 0; entry < charmCount; ++entry )
             {
                 hashed_string charmID;
-                if ( StateArchiveUtil::readName( archive, charmID ) == false )
+                if ( StateIO::readName( archive, charmID ) == false )
                     return false;
                 const bool bOwnedIfEquipped = listIndex == 0 || VectorUtil::contains( listOwned, charmID );
                 const bool bValid           = _pCatalog->findCharm( charmID ) != nullptr && VectorUtil::contains( listCharm, charmID ) == false && bOwnedIfEquipped;

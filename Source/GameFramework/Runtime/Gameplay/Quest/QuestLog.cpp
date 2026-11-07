@@ -7,8 +7,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 
 namespace sw
@@ -340,8 +340,8 @@ namespace sw
         outArchive << static_cast<uint32>( _listProgress.size() );
         for ( const QuestProgress& progress : _listProgress )
         {
-            StateArchiveUtil::writeName( outArchive, progress._questID );
-            StateArchiveUtil::writeName( outArchive, progress._stageID );
+            StateIO::writeName( outArchive, progress._questID );
+            StateIO::writeName( outArchive, progress._stageID );
             outArchive << static_cast<uint32>( progress._listCount.size() );
             for ( const int32 count : progress._listCount )
             {
@@ -366,7 +366,7 @@ namespace sw
         {
             QuestProgress progress;
             uint32        objectiveCount = 0;
-            const bool    bHeadRead      = StateArchiveUtil::readName( archive, progress._questID ) && StateArchiveUtil::readName( archive, progress._stageID ) &&
+            const bool    bHeadRead      = StateIO::readName( archive, progress._questID ) && StateIO::readName( archive, progress._stageID ) &&
                                    archive.readCount( 4, objectiveCount );
             if ( bHeadRead == false )
                 return false;

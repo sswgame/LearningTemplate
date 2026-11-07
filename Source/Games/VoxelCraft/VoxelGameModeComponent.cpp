@@ -11,13 +11,13 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelTerrain.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include "Games/VoxelCraft/VoxelAutoPlayControllerComponent.h"
 #include "Games/VoxelCraft/VoxelChunkComponent.h"
@@ -165,13 +165,13 @@ namespace sw
 
     void VoxelGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion );
+        StateIO::writeHeader( outArchive, VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion );
         _world.writeState( outArchive );
     }
 
     bool VoxelGameModeComponent::readState( Archive& archive )
     {
-        if ( StateArchiveUtil::readHeader( archive, VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion ) == false )
+        if ( StateIO::readHeader( archive, VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion ) == false )
             return false;
         return _world.readState( archive ) && archive.getRemainingBytes() == 0;
     }

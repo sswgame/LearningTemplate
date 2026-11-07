@@ -6,11 +6,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -373,15 +373,15 @@ namespace sw
 
     void GhostEncounter::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << static_cast<uint32>( _listGhost.size() );
         for ( const GhostInstance& ghost : _listGhost )
         {
-            StateArchiveUtil::writeName( outArchive, ghost._pDef->_id );
+            StateIO::writeName( outArchive, ghost._pDef->_id );
             outArchive << ghost._position;
             outArchive << ghost._fleeDirection;
             outArchive << ghost._hp;
-            StateArchiveUtil::writeCountdown( outArchive, ghost._timer );
+            StateIO::writeCountdown( outArchive, ghost._timer );
             outArchive << ghost._id;
             outArchive << static_cast<uint8>( ghost._state );
         }
@@ -399,20 +399,20 @@ namespace sw
         GameRandom random = _random;
         uint32     count  = 0;
         // 유령마다 이름(4) + 위치, 도망 방향(24) + 체력, 시간, 번호(12) + 상태(1) 이상
-        if ( StateArchiveUtil::readRandom( archive, random ) == false || archive.readCount( 41, count ) == false )
+        if ( StateIO::readRandom( archive, random ) == false || archive.readCount( 41, count ) == false )
             return false;
         vector<GhostInstance> listGhost( count );
         for ( GhostInstance& ghost : listGhost )
         {
             hashed_string ghostID;
             uint8         state = 0;
-            if ( StateArchiveUtil::readName( archive, ghostID ) == false )
+            if ( StateIO::readName( archive, ghostID ) == false )
                 return false;
             ghost._pDef = _pCatalog->findGhost( ghostID );
             archive >> ghost._position;
             archive >> ghost._fleeDirection;
             archive >> ghost._hp;
-            const bool bTimerRead = StateArchiveUtil::readCountdown( archive, ghost._timer );
+            const bool bTimerRead = StateIO::readCountdown( archive, ghost._timer );
             archive >> ghost._id;
             archive >> state;
             const bool bValid = bTimerRead && archive.isOk() && ghost._pDef != nullptr && state <= static_cast<uint8>( GhostState::Caught );

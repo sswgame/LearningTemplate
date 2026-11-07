@@ -6,8 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -449,12 +448,12 @@ namespace sw
     {
         outArchive << _position;
         outArchive << _velocity;
-        StateArchiveUtil::writeCountdown( outArchive, _coyote );
-        StateArchiveUtil::writeCountdown( outArchive, _jumpBuffer );
-        StateArchiveUtil::writeCountdown( outArchive, _wallLock );
-        StateArchiveUtil::writeCountdown( outArchive, _dash );
-        StateArchiveUtil::writeCountdown( outArchive, _dashCooldown );
-        StateArchiveUtil::writeCountdown( outArchive, _dropThrough );
+        StateIO::writeCountdown( outArchive, _coyote );
+        StateIO::writeCountdown( outArchive, _jumpBuffer );
+        StateIO::writeCountdown( outArchive, _wallLock );
+        StateIO::writeCountdown( outArchive, _dash );
+        StateIO::writeCountdown( outArchive, _dashCooldown );
+        StateIO::writeCountdown( outArchive, _dropThrough );
         outArchive << _extraJumpsLeft;
         outArchive << _airDashesLeft;
         outArchive << _wallSide;
@@ -470,9 +469,9 @@ namespace sw
         archive >> restored._position;
         archive >> restored._velocity;
         const bool bTimerRead =
-            StateArchiveUtil::readCountdown( archive, restored._coyote ) && StateArchiveUtil::readCountdown( archive, restored._jumpBuffer ) &&
-            StateArchiveUtil::readCountdown( archive, restored._wallLock ) && StateArchiveUtil::readCountdown( archive, restored._dash ) &&
-            StateArchiveUtil::readCountdown( archive, restored._dashCooldown ) && StateArchiveUtil::readCountdown( archive, restored._dropThrough );
+            StateIO::readCountdown( archive, restored._coyote ) && StateIO::readCountdown( archive, restored._jumpBuffer ) &&
+            StateIO::readCountdown( archive, restored._wallLock ) && StateIO::readCountdown( archive, restored._dash ) &&
+            StateIO::readCountdown( archive, restored._dashCooldown ) && StateIO::readCountdown( archive, restored._dropThrough );
         archive >> restored._extraJumpsLeft;
         archive >> restored._airDashesLeft;
         archive >> restored._wallSide;

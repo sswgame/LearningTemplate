@@ -4,12 +4,12 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorCatalog.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorEncounter.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorSession.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/Tests/StateBytesTestUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
@@ -75,7 +75,7 @@ namespace
             outArchive << static_cast<uint32>( listName.size() );
             for ( const hashed_string& name : listName )
             {
-                StateArchiveUtil::writeName( outArchive, name );
+                StateIO::writeName( outArchive, name );
             }
         }
 
@@ -84,7 +84,7 @@ namespace
             outArchive << static_cast<uint32>( listEntry.size() );
             for ( const std::pair<hashed_string, int32>& entry : listEntry )
             {
-                StateArchiveUtil::writeName( outArchive, entry.first );
+                StateIO::writeName( outArchive, entry.first );
                 outArchive << entry.second;
             }
         }
@@ -103,10 +103,10 @@ namespace
             written << static_cast<uint32>( _listLink.size() );
             for ( const SurvivalHorrorClueLink& link : _listLink )
             {
-                StateArchiveUtil::writeName( written, link._first );
-                StateArchiveUtil::writeName( written, link._second );
+                StateIO::writeName( written, link._first );
+                StateIO::writeName( written, link._second );
             }
-            StateArchiveUtil::writeName( written, _area );
+            StateIO::writeName( written, _area );
             written << _health;
             written << _saveCount;
             written << _wrongCount;
@@ -204,7 +204,7 @@ namespace
         static bool readForged( SurvivalHorrorEncounter& inoutEncounter, const hashed_string& monsterID, const SurvivalHorrorInvestigator& investigator, const TurnOrder& order, int32 toughness, SurvivalHorrorEncounterState state )
         {
             Archive written;
-            StateArchiveUtil::writeName( written, monsterID );
+            StateIO::writeName( written, monsterID );
             written << static_cast<uint32>( 1 );
             written << investigator._speed;
             written << investigator._actorID;
@@ -215,7 +215,7 @@ namespace
             written << investigator._bDefeated;
             order.writeState( written );
             const GameRandom random;
-            StateArchiveUtil::writeRandom( written, random );
+            StateIO::writeRandom( written, random );
             written << toughness;
             written << static_cast<int32>( 0 );
             written << static_cast<uint8>( state );
@@ -1368,7 +1368,7 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnOrderReadRefusesForgedBytes )
             written << actorID;
         }
         const GameRandom random;
-        StateArchiveUtil::writeRandom( written, random );
+        StateIO::writeRandom( written, random );
         written << round;
         written << static_cast<uint8>( TurnOrderMode::Rounds );
         Archive   reading( written.getData(), written.getSize() );

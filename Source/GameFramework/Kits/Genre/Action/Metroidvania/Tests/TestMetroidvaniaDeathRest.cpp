@@ -3,13 +3,13 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaDeathRestState.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaDuelist.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -95,14 +95,14 @@ namespace
             outArchive << static_cast<uint32>( listSpawn.size() );
             for ( const sw::hashed_string& spawn : listSpawn )
             {
-                sw::StateArchiveUtil::writeName( outArchive, spawn );
+                sw::StateIO::writeName( outArchive, spawn );
                 outArchive << static_cast<uint8>( SW_FALSE );
             }
-            sw::StateArchiveUtil::writeName( outArchive, sw::hashed_string{} );
+            sw::StateIO::writeName( outArchive, sw::hashed_string{} );
             outArchive << sw::float2{ corpseX, 0.0f };
             outArchive << static_cast<int32>( 0 );
             outArchive << static_cast<uint8>( SW_FALSE );
-            sw::StateArchiveUtil::writeName( outArchive, respawnSite );
+            sw::StateIO::writeName( outArchive, respawnSite );
             outArchive << static_cast<int32>( 0 );
             outArchive << flaskCharges;
             outArchive << flaskMaxCharges;

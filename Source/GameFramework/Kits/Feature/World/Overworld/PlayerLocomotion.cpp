@@ -3,8 +3,7 @@
 #include "GameFramework/Kits/Feature/World/Overworld/PlayerLocomotion.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -73,7 +72,7 @@ namespace sw
     {
         outArchive << static_cast<uint8>( _state );
         outArchive << static_cast<uint8>( _facing );
-        StateArchiveUtil::writeCountdown( outArchive, _stateTimer );
+        StateIO::writeCountdown( outArchive, _stateTimer );
     }
 
     bool PlayerLocomotion::readState( Archive& archive )
@@ -83,7 +82,7 @@ namespace sw
         Countdown stateTimer;
         archive >> state;
         archive >> facing;
-        if ( StateArchiveUtil::readCountdown( archive, stateTimer ) == false )
+        if ( StateIO::readCountdown( archive, stateTimer ) == false )
             return false;
         const bool bValid = archive.isOk() && state <= static_cast<uint8>( LocomotionState::Interact ) && facing <= static_cast<uint8>( FacingDir::Up );
         const bool bBusy  = state != static_cast<uint8>( LocomotionState::Idle );

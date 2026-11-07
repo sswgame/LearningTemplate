@@ -3,11 +3,11 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmShippingBin.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -42,7 +42,7 @@ namespace
             sw::Archive written;
             written << static_cast<int32>( 1 );
             written << static_cast<int32>( 1 );
-            sw::StateArchiveUtil::writeName( written, _cropID );
+            sw::StateIO::writeName( written, _cropID );
             written << _growth;
             written << _flags;
             sw::Archive reading( written.getData(), written.getSize() );
@@ -286,9 +286,9 @@ SW_TEST_CASE( FarmingTest, ShippingBinStateRefusesRepeatedItemsAndSettlesLargeCo
 
     sw::Archive repeated;
     repeated << static_cast<uint32>( 2 );
-    sw::StateArchiveUtil::writeName( repeated, kTurnip );
+    sw::StateIO::writeName( repeated, kTurnip );
     repeated << static_cast<int32>( 0x7FFFFFFF );
-    sw::StateArchiveUtil::writeName( repeated, kTurnip );
+    sw::StateIO::writeName( repeated, kTurnip );
     repeated << static_cast<int32>( 1 );
     sw::Archive readingRepeated( repeated.getData(), repeated.getSize() );
     SW_EXPECT_FALSE( bin.readState( readingRepeated ) );
@@ -296,7 +296,7 @@ SW_TEST_CASE( FarmingTest, ShippingBinStateRefusesRepeatedItemsAndSettlesLargeCo
 
     sw::Archive large;
     large << static_cast<uint32>( 1 );
-    sw::StateArchiveUtil::writeName( large, kTurnip );
+    sw::StateIO::writeName( large, kTurnip );
     large << static_cast<int32>( 0x7FFFFFFF );
     sw::Archive readingLarge( large.getData(), large.getSize() );
     SW_REQUIRE_TRUE( bin.readState( readingLarge ) );

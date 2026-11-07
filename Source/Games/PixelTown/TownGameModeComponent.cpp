@@ -11,11 +11,11 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/TileMap/Component/TileMapRendererComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/UI/Dialogue/DialogueRunnerComponent.h"
 
 namespace sw
@@ -259,19 +259,19 @@ namespace sw
     // ------------------------------------------------------------------------------
     void TownGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, kTownStateTag, kTownStateVersion );
+        StateIO::writeHeader( outArchive, kTownStateTag, kTownStateVersion );
         Archive moverBody;
         _mover.writeState( moverBody );
-        StateArchiveUtil::writeSection( outArchive, OverworldTileMover::kStateTag, OverworldTileMover::kStateVersion, moverBody );
+        StateIO::writeSection( outArchive, OverworldTileMover::kStateTag, OverworldTileMover::kStateVersion, moverBody );
     }
 
     bool TownGameModeComponent::readState( Archive& archive )
     {
-        if ( StateArchiveUtil::readHeader( archive, kTownStateTag, kTownStateVersion ) == false )
+        if ( StateIO::readHeader( archive, kTownStateTag, kTownStateVersion ) == false )
             return false;
         Archive            moverBody;
         OverworldTileMover mover      = _mover;
-        const bool         bMoverRead = StateArchiveUtil::readExpectedSection( archive, OverworldTileMover::kStateTag, OverworldTileMover::kStateVersion, moverBody ) &&
+        const bool         bMoverRead = StateIO::readExpectedSection( archive, OverworldTileMover::kStateTag, OverworldTileMover::kStateVersion, moverBody ) &&
                                 mover.readState( moverBody ) && moverBody.getRemainingBytes() == 0;
         const bool bStateRead = bMoverRead && archive.isError() == false && archive.getRemainingBytes() == 0;
         if ( bStateRead == false )

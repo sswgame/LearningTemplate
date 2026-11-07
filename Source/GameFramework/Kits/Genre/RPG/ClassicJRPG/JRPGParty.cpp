@@ -6,10 +6,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -279,18 +279,18 @@ namespace sw
         outArchive << static_cast<uint32>( _listMember.size() );
         for ( const JRPGMember& member : _listMember )
         {
-            StateArchiveUtil::writeName( outArchive, member._id );
-            StateArchiveUtil::writeName( outArchive, member._classID );
+            StateIO::writeName( outArchive, member._id );
+            StateIO::writeName( outArchive, member._classID );
             outArchive << string_view( member._name );
             outArchive << static_cast<uint32>( member._listSpell.size() );
             for ( const hashed_string& spellID : member._listSpell )
             {
-                StateArchiveUtil::writeName( outArchive, spellID );
+                StateIO::writeName( outArchive, spellID );
             }
             outArchive << static_cast<uint32>( member._listManual.size() );
             for ( const JRPGManualProgress& progress : member._listManual )
             {
-                StateArchiveUtil::writeName( outArchive, progress._manualID );
+                StateIO::writeName( outArchive, progress._manualID );
                 outArchive << progress._proficiency;
             }
             // 장비는 슬롯 순서대로 아이템 id 만 쓴다(빈 슬롯은 빈 이름). 슬롯 구성은 `initialize` 에서 받은 것이다.
@@ -298,7 +298,7 @@ namespace sw
             outArchive << static_cast<uint32>( listSlot.size() );
             for ( const EquipmentSlot& slot : listSlot )
             {
-                StateArchiveUtil::writeName( outArchive, slot._item.isEmpty() ? hashed_string{} : slot._item._itemID );
+                StateIO::writeName( outArchive, slot._item.isEmpty() ? hashed_string{} : slot._item._itemID );
             }
             member._level.writeState( outArchive );
             for ( const int32 stat : member._arrStat )
@@ -322,7 +322,7 @@ namespace sw
         for ( JRPGMember& member : listMember )
         {
             uint32     count     = 0;
-            const bool bHeadRead = StateArchiveUtil::readName( archive, member._id ) && StateArchiveUtil::readName( archive, member._classID );
+            const bool bHeadRead = StateIO::readName( archive, member._id ) && StateIO::readName( archive, member._classID );
             if ( bHeadRead == false )
                 return false;
             archive >> member._name;
@@ -331,7 +331,7 @@ namespace sw
             member._listSpell.resize( count );
             for ( hashed_string& spellID : member._listSpell )
             {
-                if ( StateArchiveUtil::readName( archive, spellID ) == false )
+                if ( StateIO::readName( archive, spellID ) == false )
                     return false;
             }
             // 비급마다 이름(4) + 숙련(4) 바이트
@@ -340,7 +340,7 @@ namespace sw
             member._listManual.resize( count );
             for ( JRPGManualProgress& progress : member._listManual )
             {
-                if ( StateArchiveUtil::readName( archive, progress._manualID ) == false )
+                if ( StateIO::readName( archive, progress._manualID ) == false )
                     return false;
                 archive >> progress._proficiency;
             }
@@ -351,7 +351,7 @@ namespace sw
             for ( uint32 slotIndex = 0; slotIndex < count; ++slotIndex )
             {
                 hashed_string itemID;
-                if ( StateArchiveUtil::readName( archive, itemID ) == false )
+                if ( StateIO::readName( archive, itemID ) == false )
                     return false;
                 if ( itemID.empty() )
                     continue;

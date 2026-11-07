@@ -3,6 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternHonor.h"
@@ -11,7 +12,6 @@
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternLaw.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternSurvival.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -131,7 +131,7 @@ namespace
             written << static_cast<uint32>( bTwice ? 2 : 1 );
             for ( int32 record = 0; record < ( bTwice ? 2 : 1 ); ++record )
             {
-                sw::StateArchiveUtil::writeName( written, _region );
+                sw::StateIO::writeName( written, _region );
                 written << unseenTime;
                 written << bounty;
                 written << wantedLevel;
@@ -149,11 +149,11 @@ namespace
             sw::Archive written;
             written << static_cast<uint32>( 0 );
             written << static_cast<uint32>( 1 );
-            sw::StateArchiveUtil::writeName( written, "theft" );
-            sw::StateArchiveUtil::writeName( written, _region );
+            sw::StateIO::writeName( written, "theft" );
+            sw::StateIO::writeName( written, _region );
             written << static_cast<uint64>( 77 );
             written << incidentID;
-            sw::StateArchiveUtil::writeCountdown( written, sw::Countdown( 3.0f ) );
+            sw::StateIO::writeCountdown( written, sw::Countdown( 3.0f ) );
             written << static_cast<uint8>( SW_FALSE );
             written << nextIncidentID;
             written << static_cast<uint8>( SW_FALSE );
@@ -185,15 +185,15 @@ namespace
             sw::GameRandom random;
             random.setSeed( 7 );
             sw::Archive written;
-            sw::StateArchiveUtil::writeName( written, horseID );
+            sw::StateIO::writeName( written, horseID );
             written << static_cast<uint32>( listAbility.size() );
             for ( const sw::hashed_string& ability : listAbility )
             {
-                sw::StateArchiveUtil::writeName( written, ability );
+                sw::StateIO::writeName( written, ability );
             }
             _horse.getHealth().writeState( written );
             _horse.getStamina().writeState( written );
-            sw::StateArchiveUtil::writeRandom( written, random );
+            sw::StateIO::writeRandom( written, random );
             written << healthCore;
             written << staminaCore;
             sw::LevelProgress bond;

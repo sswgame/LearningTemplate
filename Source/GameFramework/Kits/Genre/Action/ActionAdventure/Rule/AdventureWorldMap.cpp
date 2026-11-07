@@ -4,11 +4,11 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureVitals.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
 namespace sw

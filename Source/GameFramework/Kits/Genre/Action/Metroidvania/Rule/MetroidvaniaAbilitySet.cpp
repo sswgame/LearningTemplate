@@ -7,9 +7,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 namespace sw
@@ -193,7 +193,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listAbility.size() );
         for ( const hashed_string& abilityID : _listAbility )
         {
-            StateArchiveUtil::writeName( outArchive, abilityID );
+            StateIO::writeName( outArchive, abilityID );
         }
     }
 
@@ -209,7 +209,7 @@ namespace sw
         for ( uint32 entry = 0; entry < abilityCount; ++entry )
         {
             hashed_string abilityID;
-            if ( StateArchiveUtil::readName( archive, abilityID ) == false )
+            if ( StateIO::readName( archive, abilityID ) == false )
                 return false;
             const bool bDuplicate = VectorUtil::contains( listAbility, abilityID );
             if ( _pCatalog->findAbility( abilityID ) == nullptr || bDuplicate )

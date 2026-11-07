@@ -1,25 +1,119 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
-#include "Core/Container/string.h"
 #include "Core/Math/Math.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
-#include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
-
 namespace sw
 {
-    void StateArchiveUtil::writeHeader( Archive& outArchive, uint32 tag, uint32 version )
+    void StateIO::value( hashed_string& inoutName )
+    {
+        if ( isReading() )
+        {
+            (void)readName( _archive, inoutName ); // 실패는 아카이브 오류에 남는다
+            return;
+        }
+        writeName( _archive, inoutName );
+    }
+
+    void StateIO::value( string& inoutText )
+    {
+        if ( isReading() )
+        {
+            _archive >> inoutText;
+            return;
+        }
+        _archive << string_view( inoutText );
+    }
+
+    void StateIO::value( int2& inoutValue )
+    {
+        if ( isReading() )
+        {
+            readInt2( _archive, inoutValue );
+            return;
+        }
+        writeInt2( _archive, inoutValue );
+    }
+
+    void StateIO::value( Countdown& inoutCountdown )
+    {
+        if ( isReading() )
+        {
+            check( readCountdown( _archive, inoutCountdown ) );
+            return;
+        }
+        writeCountdown( _archive, inoutCountdown );
+    }
+
+    void StateIO::value( FixedStepTimer& inoutTimer )
+    {
+        if ( isReading() )
+        {
+            check( readStepTimer( _archive, inoutTimer ) );
+            return;
+        }
+        writeStepTimer( _archive, inoutTimer );
+    }
+
+    void StateIO::value( RateAccumulator& inoutAccumulator )
+    {
+        if ( isReading() )
+        {
+            check( readRateAccumulator( _archive, inoutAccumulator ) );
+            return;
+        }
+        writeRateAccumulator( _archive, inoutAccumulator );
+    }
+
+    void StateIO::valueRandom( DeterministicRandom32& inoutRandom )
+    {
+        if ( isReading() )
+        {
+            check( readRandom( _archive, inoutRandom ) );
+            return;
+        }
+        writeRandom( _archive, inoutRandom );
+    }
+
+    void StateIO::header( uint32 tag, uint32 version )
+    {
+        if ( isReading() )
+        {
+            check( readHeader( _archive, tag, version ) );
+            return;
+        }
+        writeHeader( _archive, tag, version );
+    }
+
+    bool StateIO::check( bool bCondition )
+    {
+        if ( isReading() && bCondition == false )
+        {
+            _archive.setError();
+        }
+        return isOk();
+    }
+
+    void StateIO::count( uint32 minBytesPerElement, uint32& inoutCount )
+    {
+        if ( isReading() )
+        {
+            (void)_archive.readCount( minBytesPerElement, inoutCount ); // 실패는 아카이브 오류에 남는다
+            return;
+        }
+        _archive << inoutCount;
+    }
+
+    void StateIO::writeHeader( Archive& outArchive, uint32 tag, uint32 version )
     {
         outArchive << tag;
         outArchive << version;
     }
 
-    bool StateArchiveUtil::readHeader( Archive& archive, uint32 tag, uint32 version )
+    bool StateIO::readHeader( Archive& archive, uint32 tag, uint32 version )
     {
         uint32 readTag     = 0;
         uint32 readVersion = 0;
@@ -28,13 +122,13 @@ namespace sw
         return archive.isOk() && readTag == tag && readVersion == version;
     }
 
-    void StateArchiveUtil::writeSection( Archive& outArchive, uint32 tag, uint32 version, const Archive& body )
+    void StateIO::writeSection( Archive& outArchive, uint32 tag, uint32 version, const Archive& body )
     {
         writeHeader( outArchive, tag, version );
         outArchive.writeSection( body.getData(), static_cast<uint32>( body.getSize() ) );
     }
 
-    bool StateArchiveUtil::readSection( Archive& archive, uint32& outTag, uint32& outVersion, Archive& outBody )
+    bool StateIO::readSection( Archive& archive, uint32& outTag, uint32& outVersion, Archive& outBody )
     {
         uint32 tag      = 0;
         uint32 version  = 0;
@@ -53,20 +147,20 @@ namespace sw
         return outBody.isOk();
     }
 
-    bool StateArchiveUtil::readExpectedSection( Archive& archive, uint32 tag, uint32 version, Archive& outBody )
+    bool StateIO::readExpectedSection( Archive& archive, uint32 tag, uint32 version, Archive& outBody )
     {
         uint32 readTag     = 0;
         uint32 readVersion = 0;
         return readSection( archive, readTag, readVersion, outBody ) && readTag == tag && readVersion == version;
     }
 
-    void StateArchiveUtil::writeName( Archive& outArchive, const hashed_string& name )
+    void StateIO::writeName( Archive& outArchive, const hashed_string& name )
     {
         // 빈 이름의 c_str() 는 "None" 이다 - 그대로 쓰면 읽을 때 "None" 이라는 이름으로 돌아온다. 빈 이름은 빈 글로 쓴다.
         outArchive << ( name.empty() ? string_view{} : string_view( name.c_str() ) );
     }
 
-    bool StateArchiveUtil::readName( Archive& archive, hashed_string& outName )
+    bool StateIO::readName( Archive& archive, hashed_string& outName )
     {
         string text;
         archive >> text;
@@ -103,41 +197,41 @@ namespace sw
         }
     } // namespace
 
-    void StateArchiveUtil::writeIDList( Archive& outArchive, const vector<uint32>& listID )
+    void StateIO::writeIDList( Archive& outArchive, const vector<uint32>& listID )
     {
         writeIDListImpl( outArchive, listID );
     }
-    bool StateArchiveUtil::readIDList( Archive& archive, vector<uint32>& outListID )
+    bool StateIO::readIDList( Archive& archive, vector<uint32>& outListID )
     {
         return readIDListImpl( archive, outListID );
     }
-    void StateArchiveUtil::writeIDList( Archive& outArchive, const vector<uint64>& listID )
+    void StateIO::writeIDList( Archive& outArchive, const vector<uint64>& listID )
     {
         writeIDListImpl( outArchive, listID );
     }
-    bool StateArchiveUtil::readIDList( Archive& archive, vector<uint64>& outListID )
+    bool StateIO::readIDList( Archive& archive, vector<uint64>& outListID )
     {
         return readIDListImpl( archive, outListID );
     }
 
-    void StateArchiveUtil::writeInt2( Archive& outArchive, const int2& value )
+    void StateIO::writeInt2( Archive& outArchive, const int2& value )
     {
         outArchive << value._x;
         outArchive << value._y;
     }
 
-    void StateArchiveUtil::readInt2( Archive& archive, int2& outValue )
+    void StateIO::readInt2( Archive& archive, int2& outValue )
     {
         archive >> outValue._x;
         archive >> outValue._y;
     }
 
-    void StateArchiveUtil::writeRandom( Archive& outArchive, const GameRandom& random )
+    void StateIO::writeRandom( Archive& outArchive, const DeterministicRandom32& random )
     {
         outArchive << random.getState();
     }
 
-    bool StateArchiveUtil::readRandom( Archive& archive, GameRandom& outRandom )
+    bool StateIO::readRandom( Archive& archive, DeterministicRandom32& outRandom )
     {
         uint32 state = 0;
         archive >> state;
@@ -147,12 +241,12 @@ namespace sw
         return true;
     }
 
-    void StateArchiveUtil::writeStepTimer( Archive& outArchive, const FixedStepTimer& timer )
+    void StateIO::writeStepTimer( Archive& outArchive, const FixedStepTimer& timer )
     {
         outArchive << timer._accumulator;
     }
 
-    bool StateArchiveUtil::readStepTimer( Archive& archive, FixedStepTimer& inoutTimer )
+    bool StateIO::readStepTimer( Archive& archive, FixedStepTimer& inoutTimer )
     {
         float32 accumulator = 0.0f;
         archive >> accumulator;
@@ -164,12 +258,12 @@ namespace sw
         return true;
     }
 
-    void StateArchiveUtil::writeCountdown( Archive& outArchive, const Countdown& countdown )
+    void StateIO::writeCountdown( Archive& outArchive, const Countdown& countdown )
     {
         outArchive << countdown._remaining;
     }
 
-    bool StateArchiveUtil::readCountdown( Archive& archive, Countdown& outCountdown )
+    bool StateIO::readCountdown( Archive& archive, Countdown& outCountdown )
     {
         float32 remaining = 0.0f;
         archive >> remaining;
@@ -180,12 +274,12 @@ namespace sw
         return true;
     }
 
-    void StateArchiveUtil::writeRateAccumulator( Archive& outArchive, const RateAccumulator& accumulator )
+    void StateIO::writeRateAccumulator( Archive& outArchive, const RateAccumulator& accumulator )
     {
         outArchive << accumulator._fraction;
     }
 
-    bool StateArchiveUtil::readRateAccumulator( Archive& archive, RateAccumulator& outAccumulator )
+    bool StateIO::readRateAccumulator( Archive& archive, RateAccumulator& outAccumulator )
     {
         float32 fraction = 0.0f;
         archive >> fraction;

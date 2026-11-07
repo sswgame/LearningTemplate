@@ -12,6 +12,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/HorseFollowAIController.h"
@@ -19,7 +20,6 @@
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
@@ -87,13 +87,13 @@ namespace sw
     void WildWestGameModeComponent::writeState( Archive& outArchive ) const
     {
         // 플레이어의 삶만 싣는다 — 지갑 · 평판 · 시계 · 날씨는 판 상태가, 말 상태는 말 컴포넌트가, 자리는 씬 오브젝트가 싣는다.
-        StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
+        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
         _outlaw.writeState( outArchive );
     }
 
     bool WildWestGameModeComponent::readState( Archive& archive )
     {
-        return StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) && _outlaw.readState( archive ) && archive.getRemainingBytes() == 0;
+        return StateIO::readHeader( archive, kStateTag, kStateVersion ) && _outlaw.readState( archive ) && archive.getRemainingBytes() == 0;
     }
 
     bool WildWestGameModeComponent::startGame()

@@ -10,10 +10,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -37,7 +37,7 @@ namespace sw
             {
                 Archive body;
                 state.writeState( body );
-                StateArchiveUtil::writeSection( outArchive, TState::kStateTag, TState::kStateVersion, body );
+                StateIO::writeSection( outArchive, TState::kStateTag, TState::kStateVersion, body );
             }
 
             /** @brief 구간 하나를 사본에 읽고 끝까지 맞으면 반영합니다. 버전이 다르거나 깨졌으면 경고를 남기고 그대로 두며, 이 경우 그 상태는 새 판입니다. */
@@ -214,7 +214,7 @@ namespace sw
             outArchive.writeBytes( _pendingStateBytes.data(), _pendingStateBytes.size() );
             return;
         }
-        StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
+        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
         outArchive << SessionStateComponentInternal::kSectionCount;
         SessionStateComponentInternal::writeStateSection( outArchive, _wallet );
         SessionStateComponentInternal::writeStateSection( outArchive, _flags );
@@ -285,7 +285,7 @@ namespace sw
 
     bool SessionStateComponent::readState( Archive& archive )
     {
-        if ( StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) == false )
+        if ( StateIO::readHeader( archive, kStateTag, kStateVersion ) == false )
             return false;
         uint32 sectionCount = 0;
         // 구간마다 태그, 버전, 길이(12바이트) 이상
@@ -296,7 +296,7 @@ namespace sw
         listSection.resize( sectionCount );
         for ( SessionStateComponentInternal::Section& section : listSection )
         {
-            if ( StateArchiveUtil::readSection( archive, section._tag, section._version, section._body ) == false )
+            if ( StateIO::readSection( archive, section._tag, section._version, section._body ) == false )
                 return false;
         }
         if ( archive.getRemainingBytes() != 0 )

@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Match/TeamAttitude.h"
 
 #include <algorithm>
@@ -426,8 +426,8 @@ namespace sw
     {
         _matchState.writeState( outArchive );
         _zone.writeState( outArchive );
-        StateArchiveUtil::writeRandom( outArchive, _random );
-        StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
+        StateIO::writeRandom( outArchive, _random );
+        StateIO::writeStepTimer( outArchive, _stepTimer );
         outArchive << _time;
         outArchive << _nextSupplyDrop;
         outArchive << static_cast<uint32>( _listPlayer.size() );
@@ -452,7 +452,7 @@ namespace sw
             for ( const BattleRoyaleGroundItem& item : drop._listItem )
             {
                 outArchive << item._position;
-                StateArchiveUtil::writeName( outArchive, item._itemID );
+                StateIO::writeName( outArchive, item._itemID );
                 outArchive << item._count;
                 outArchive << item._spotIndex;
             }
@@ -473,8 +473,8 @@ namespace sw
         float32          time           = 0.0f;
         int32            nextSupplyDrop = 0;
         uint32           playerCount    = 0;
-        const bool       bHeadRead      = matchState.readState( archive ) && zone.readState( archive ) && StateArchiveUtil::readRandom( archive, random ) &&
-                               StateArchiveUtil::readStepTimer( archive, stepTimer );
+        const bool       bHeadRead      = matchState.readState( archive ) && zone.readState( archive ) && StateIO::readRandom( archive, random ) &&
+                               StateIO::readStepTimer( archive, stepTimer );
         archive >> time;
         archive >> nextSupplyDrop;
         // 사람마다 팀(4) + 부활 수(4) + 진행(4) + 위치(8) + 정수 4개(16) 바이트 이상
@@ -532,7 +532,7 @@ namespace sw
             for ( BattleRoyaleGroundItem& item : drop._listItem )
             {
                 archive >> item._position;
-                if ( StateArchiveUtil::readName( archive, item._itemID ) == false )
+                if ( StateIO::readName( archive, item._itemID ) == false )
                     return false;
                 archive >> item._count;
                 archive >> item._spotIndex;

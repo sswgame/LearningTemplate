@@ -5,11 +5,11 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyItemSpawner.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyRoundSeries.h"
 #include "GameFramework/Kits/Genre/Casual/PartyArena/TrampolineArena.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include <cstring>
 #include <limits>
@@ -218,12 +218,12 @@ namespace
             for ( uint32 index = 0; index < count; ++index )
             {
                 written << float3{};
-                StateArchiveUtil::writeName( written, hashed_string( pItemID ) );
+                StateIO::writeName( written, hashed_string( pItemID ) );
                 written << age;
                 written << serial + static_cast<int32>( index );
             }
-            StateArchiveUtil::writeRandom( written, random );
-            StateArchiveUtil::writeCountdown( written, Countdown{} );
+            StateIO::writeRandom( written, random );
+            StateIO::writeCountdown( written, Countdown{} );
             written << nextSerial;
             Archive reading( written.getData(), written.getSize() );
             return spawner.readState( reading );

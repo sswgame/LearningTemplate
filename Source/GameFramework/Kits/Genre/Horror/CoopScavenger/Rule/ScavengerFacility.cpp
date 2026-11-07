@@ -8,11 +8,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLWriter.h"
 
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
 
@@ -298,7 +298,7 @@ namespace sw
 
     void ScavengerFacility::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _layoutMoonID );
+        StateIO::writeName( outArchive, _layoutMoonID );
         outArchive << _layoutSeed;
         outArchive << static_cast<uint32>( _listGroundScrap.size() );
         for ( const ScavengerScrap& scrap : _listGroundScrap )
@@ -308,7 +308,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listUnlockedFlag.size() );
         for ( const hashed_string& flag : _listUnlockedFlag )
         {
-            StateArchiveUtil::writeName( outArchive, flag );
+            StateIO::writeName( outArchive, flag );
         }
         outArchive << _nextUid;
         outArchive << _roomCount;
@@ -319,7 +319,7 @@ namespace sw
     {
         // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 빌린 플래그 포인터는 사본도 그대로 가지고 있다.
         ScavengerFacility restored = *this;
-        if ( StateArchiveUtil::readName( archive, restored._layoutMoonID ) == false )
+        if ( StateIO::readName( archive, restored._layoutMoonID ) == false )
             return false;
         archive >> restored._layoutSeed;
 
@@ -339,7 +339,7 @@ namespace sw
         restored._listUnlockedFlag.assign( flagCount, hashed_string{} );
         for ( hashed_string& flag : restored._listUnlockedFlag )
         {
-            if ( StateArchiveUtil::readName( archive, flag ) == false )
+            if ( StateIO::readName( archive, flag ) == false )
                 return false;
         }
         archive >> restored._nextUid;
@@ -374,8 +374,8 @@ namespace sw
 
     void ScavengerFacility::writeScrap( Archive& outArchive, const ScavengerScrap& scrap )
     {
-        StateArchiveUtil::writeName( outArchive, scrap._scrapID );
-        StateArchiveUtil::writeName( outArchive, scrap._areaID );
+        StateIO::writeName( outArchive, scrap._scrapID );
+        StateIO::writeName( outArchive, scrap._areaID );
         outArchive << scrap._weight;
         outArchive << scrap._uid;
         outArchive << scrap._value;
@@ -387,7 +387,7 @@ namespace sw
     bool ScavengerFacility::readScrap( Archive& archive, ScavengerScrap& outScrap )
     {
         ScavengerScrap scrap;
-        if ( StateArchiveUtil::readName( archive, scrap._scrapID ) == false || StateArchiveUtil::readName( archive, scrap._areaID ) == false )
+        if ( StateIO::readName( archive, scrap._scrapID ) == false || StateIO::readName( archive, scrap._areaID ) == false )
             return false;
         archive >> scrap._weight;
         archive >> scrap._uid;

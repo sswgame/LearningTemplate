@@ -6,10 +6,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
@@ -70,7 +70,7 @@ namespace sw
             [[nodiscard]] static bool readStaff( Archive& archive, StaffMember& outStaff )
             {
                 uint8 role = 0;
-                if ( StateArchiveUtil::readName( archive, outStaff._name ) == false || outStaff._level.readState( archive ) == false )
+                if ( StateIO::readName( archive, outStaff._name ) == false || outStaff._level.readState( archive ) == false )
                     return false;
                 archive >> outStaff._busyMinutes;
                 archive >> outStaff._dailyWage;
@@ -89,7 +89,7 @@ namespace sw
             [[nodiscard]] static bool readCustomer( Archive& archive, int32 seatCount, RestaurantCustomer& outCustomer )
             {
                 uint8 state = 0;
-                if ( StateArchiveUtil::readName( archive, outCustomer._typeID ) == false || StateArchiveUtil::readName( archive, outCustomer._dishID ) == false )
+                if ( StateIO::readName( archive, outCustomer._typeID ) == false || StateIO::readName( archive, outCustomer._dishID ) == false )
                     return false;
                 archive >> outCustomer._waited;
                 archive >> outCustomer._patience;
@@ -114,7 +114,7 @@ namespace sw
             /** @brief `writeState` 가 쓴 주문 하나를 읽습니다. 요리사 번호가 @p staffCount 밖이면 false 입니다. */
             [[nodiscard]] static bool readOrder( Archive& archive, int32 staffCount, KitchenOrder& outOrder )
             {
-                if ( StateArchiveUtil::readName( archive, outOrder._dishID ) == false || StateArchiveUtil::readName( archive, outOrder._station ) == false )
+                if ( StateIO::readName( archive, outOrder._dishID ) == false || StateIO::readName( archive, outOrder._station ) == false )
                     return false;
                 archive >> outOrder._remaining;
                 archive >> outOrder._customerID;
@@ -405,7 +405,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listStaff.size() );
         for ( const StaffMember& staff : _listStaff )
         {
-            StateArchiveUtil::writeName( outArchive, staff._name );
+            StateIO::writeName( outArchive, staff._name );
             staff._level.writeState( outArchive );
             outArchive << staff._busyMinutes;
             outArchive << staff._dailyWage;
@@ -416,8 +416,8 @@ namespace sw
         outArchive << static_cast<uint32>( _listCustomer.size() );
         for ( const RestaurantCustomer& customer : _listCustomer )
         {
-            StateArchiveUtil::writeName( outArchive, customer._typeID );
-            StateArchiveUtil::writeName( outArchive, customer._dishID );
+            StateIO::writeName( outArchive, customer._typeID );
+            StateIO::writeName( outArchive, customer._dishID );
             outArchive << customer._waited;
             outArchive << customer._patience;
             outArchive << customer._eatRemaining;
@@ -432,8 +432,8 @@ namespace sw
         outArchive << static_cast<uint32>( _listOrder.size() );
         for ( const KitchenOrder& order : _listOrder )
         {
-            StateArchiveUtil::writeName( outArchive, order._dishID );
-            StateArchiveUtil::writeName( outArchive, order._station );
+            StateIO::writeName( outArchive, order._dishID );
+            StateIO::writeName( outArchive, order._station );
             outArchive << order._remaining;
             outArchive << order._customerID;
             outArchive << order._cook;
@@ -443,14 +443,14 @@ namespace sw
         outArchive << static_cast<uint32>( _listMenu.size() );
         for ( const MenuEntry& entry : _listMenu )
         {
-            StateArchiveUtil::writeName( outArchive, entry._dishID );
+            StateIO::writeName( outArchive, entry._dishID );
             outArchive << entry._price;
             outArchive << entry._bOnMenu;
         }
         outArchive << static_cast<uint32>( _listStation.size() );
         for ( const StationSlot& slot : _listStation )
         {
-            StateArchiveUtil::writeName( outArchive, slot._station );
+            StateIO::writeName( outArchive, slot._station );
             outArchive << slot._count;
         }
         outArchive << static_cast<uint32>( _listSatisfaction.size() );
@@ -473,11 +473,11 @@ namespace sw
         outArchive << _today._walkouts;
         outArchive << _today._noChoice;
         outArchive << _today._unservedAtClose;
-        StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
-        StateArchiveUtil::writeRandom( outArchive, _random );
-        StateArchiveUtil::writeName( outArchive, _weatherID );
+        StateIO::writeStepTimer( outArchive, _stepTimer );
+        StateIO::writeRandom( outArchive, _random );
+        StateIO::writeName( outArchive, _weatherID );
         outArchive << _minutes;
-        StateArchiveUtil::writeRateAccumulator( outArchive, _arrival );
+        StateIO::writeRateAccumulator( outArchive, _arrival );
         outArchive << _pendingSpoilageCost;
         outArchive << _nextCustomerID;
         outArchive << _bOpen;
@@ -525,7 +525,7 @@ namespace sw
             return false;
         for ( MenuEntry& entry : restored._listMenu )
         {
-            if ( StateArchiveUtil::readName( archive, entry._dishID ) == false )
+            if ( StateIO::readName( archive, entry._dishID ) == false )
                 return false;
             archive >> entry._price;
             archive >> entry._bOnMenu;
@@ -540,7 +540,7 @@ namespace sw
         restored._listStation.assign( count, StationSlot{} );
         for ( StationSlot& slot : restored._listStation )
         {
-            if ( StateArchiveUtil::readName( archive, slot._station ) == false )
+            if ( StateIO::readName( archive, slot._station ) == false )
                 return false;
             archive >> slot._count;
             if ( slot._station.empty() || slot._count < 0 )
@@ -560,10 +560,10 @@ namespace sw
         if ( bPartRead == false )
             return false;
         RestaurantSimulationInternal::readDaySummary( archive, restored._today );
-        const bool bTailRead = StateArchiveUtil::readStepTimer( archive, restored._stepTimer ) && StateArchiveUtil::readRandom( archive, restored._random ) &&
-                               StateArchiveUtil::readName( archive, restored._weatherID );
+        const bool bTailRead = StateIO::readStepTimer( archive, restored._stepTimer ) && StateIO::readRandom( archive, restored._random ) &&
+                               StateIO::readName( archive, restored._weatherID );
         archive >> restored._minutes;
-        const bool bArrivalRead = StateArchiveUtil::readRateAccumulator( archive, restored._arrival );
+        const bool bArrivalRead = StateIO::readRateAccumulator( archive, restored._arrival );
         archive >> restored._pendingSpoilageCost;
         archive >> restored._nextCustomerID;
         archive >> restored._bOpen;

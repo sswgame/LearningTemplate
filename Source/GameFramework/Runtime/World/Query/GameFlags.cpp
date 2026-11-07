@@ -7,8 +7,8 @@
 
 #include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 #include <algorithm>
@@ -123,7 +123,7 @@ namespace sw
         outArchive << static_cast<uint32>( listEntry.size() );
         for ( const GameFlagEntry& entry : listEntry )
         {
-            StateArchiveUtil::writeName( outArchive, entry._name );
+            StateIO::writeName( outArchive, entry._name );
             outArchive << entry._value;
         }
     }
@@ -139,7 +139,7 @@ namespace sw
         for ( uint32 index = 0; index < count; ++index )
         {
             GameFlagEntry entry;
-            if ( StateArchiveUtil::readName( archive, entry._name ) == false )
+            if ( StateIO::readName( archive, entry._name ) == false )
                 return false;
             archive >> entry._value;
             if ( archive.isError() )

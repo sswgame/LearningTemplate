@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -164,7 +164,7 @@ namespace sw
 
     void ActionStageRun::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _pStage != nullptr ? _pStage->_id : hashed_string{} );
+        StateIO::writeName( outArchive, _pStage != nullptr ? _pStage->_id : hashed_string{} );
         outArchive << static_cast<uint8>( _state );
         outArchive << _elapsed;
         outArchive << _lives;
@@ -174,12 +174,12 @@ namespace sw
         outArchive << static_cast<uint32>( _listSecretCommitted.size() );
         for ( const hashed_string& secretID : _listSecretCommitted )
         {
-            StateArchiveUtil::writeName( outArchive, secretID );
+            StateIO::writeName( outArchive, secretID );
         }
         outArchive << static_cast<uint32>( _listSecretPending.size() );
         for ( const hashed_string& secretID : _listSecretPending )
         {
-            StateArchiveUtil::writeName( outArchive, secretID );
+            StateIO::writeName( outArchive, secretID );
         }
     }
 
@@ -187,7 +187,7 @@ namespace sw
     {
         hashed_string stageID;
         uint8         state = 0;
-        if ( StateArchiveUtil::readName( archive, stageID ) == false )
+        if ( StateIO::readName( archive, stageID ) == false )
             return false;
         // 사본에 읽고 끝까지 맞으면 바꾼다.
         ActionStageRun restored = *this;
@@ -221,7 +221,7 @@ namespace sw
             for ( uint32 secretIndex = 0; secretIndex < secretCount; ++secretIndex )
             {
                 hashed_string secretID;
-                const bool    bSecretValid = StateArchiveUtil::readName( archive, secretID ) && restored._pStage != nullptr && VectorUtil::contains( restored._pStage->_listSecret, secretID ) && restored.isSecretFound( secretID ) == false;
+                const bool    bSecretValid = StateIO::readName( archive, secretID ) && restored._pStage != nullptr && VectorUtil::contains( restored._pStage->_listSecret, secretID ) && restored.isSecretFound( secretID ) == false;
                 if ( bSecretValid == false )
                     return false;
                 listSecret.push_back( secretID );

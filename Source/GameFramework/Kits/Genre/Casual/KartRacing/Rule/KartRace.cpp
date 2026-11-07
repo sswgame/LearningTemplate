@@ -6,13 +6,13 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartGhost.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartTrack.h"
 #include "GameFramework/Runtime/Character/Combat/LockOnSelector.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -37,15 +37,15 @@ namespace sw
                 {
                     outArchive << lapTime;
                 }
-                StateArchiveUtil::writeName( outArchive, kart._itemID );
+                StateIO::writeName( outArchive, kart._itemID );
                 outArchive << kart._previousPosition;
                 outArchive << kart._distance;
                 outArchive << kart._progress;
                 outArchive << kart._lapStartTime;
                 outArchive << kart._bestLapTime;
                 outArchive << kart._finishTime;
-                StateArchiveUtil::writeCountdown( outArchive, kart._spinTime );
-                StateArchiveUtil::writeCountdown( outArchive, kart._shieldTime );
+                StateIO::writeCountdown( outArchive, kart._spinTime );
+                StateIO::writeCountdown( outArchive, kart._shieldTime );
                 outArchive << kart._wrongWayTime;
                 outArchive << kart._itemHeldTime;
                 outArchive << kart._speedScale;
@@ -86,7 +86,7 @@ namespace sw
                 {
                     archive >> lapTime;
                 }
-                if ( StateArchiveUtil::readName( archive, outKart._itemID ) == false )
+                if ( StateIO::readName( archive, outKart._itemID ) == false )
                     return false;
                 archive >> outKart._previousPosition;
                 archive >> outKart._distance;
@@ -94,7 +94,7 @@ namespace sw
                 archive >> outKart._lapStartTime;
                 archive >> outKart._bestLapTime;
                 archive >> outKart._finishTime;
-                const bool bTimersRead = StateArchiveUtil::readCountdown( archive, outKart._spinTime ) && StateArchiveUtil::readCountdown( archive, outKart._shieldTime );
+                const bool bTimersRead = StateIO::readCountdown( archive, outKart._spinTime ) && StateIO::readCountdown( archive, outKart._shieldTime );
                 archive >> outKart._wrongWayTime;
                 archive >> outKart._itemHeldTime;
                 archive >> outKart._speedScale;
@@ -923,17 +923,17 @@ namespace sw
         outArchive << static_cast<uint32>( _listItemBoxTimer.size() );
         for ( const Countdown& boxTimer : _listItemBoxTimer )
         {
-            StateArchiveUtil::writeCountdown( outArchive, boxTimer );
+            StateIO::writeCountdown( outArchive, boxTimer );
         }
         outArchive << static_cast<uint32>( _listPlaceOrder.size() );
         for ( const int32 racer : _listPlaceOrder )
         {
             outArchive << racer;
         }
-        StateArchiveUtil::writeRandom( outArchive, _random );
-        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        StateIO::writeRandom( outArchive, _random );
+        StateIO::writeStepTimer( outArchive, _timer );
         outArchive << _raceTime;
-        StateArchiveUtil::writeCountdown( outArchive, _countdown );
+        StateIO::writeCountdown( outArchive, _countdown );
         outArchive << _bestLapTime;
         outArchive << _firstFinishTime;
         outArchive << _finishedCount;
@@ -976,7 +976,7 @@ namespace sw
             return false;
         for ( Countdown& boxTimer : race._listItemBoxTimer )
         {
-            if ( StateArchiveUtil::readCountdown( archive, boxTimer ) == false )
+            if ( StateIO::readCountdown( archive, boxTimer ) == false )
                 return false;
         }
         uint32 placeCount = 0;
@@ -992,9 +992,9 @@ namespace sw
         }
 
         uint8      phase       = 0;
-        const bool bRandomRead = StateArchiveUtil::readRandom( archive, race._random ) && StateArchiveUtil::readStepTimer( archive, race._timer );
+        const bool bRandomRead = StateIO::readRandom( archive, race._random ) && StateIO::readStepTimer( archive, race._timer );
         archive >> race._raceTime;
-        const bool bCountdownRead = StateArchiveUtil::readCountdown( archive, race._countdown );
+        const bool bCountdownRead = StateIO::readCountdown( archive, race._countdown );
         archive >> race._bestLapTime;
         archive >> race._firstFinishTime;
         archive >> race._finishedCount;

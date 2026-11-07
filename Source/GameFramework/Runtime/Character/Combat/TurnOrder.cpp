@@ -7,8 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include <algorithm>
 
@@ -181,7 +180,7 @@ namespace sw
         {
             outArchive << actorID;
         }
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _round;
         outArchive << static_cast<uint8>( _mode );
     }
@@ -217,7 +216,7 @@ namespace sw
                 return false;
         }
         uint8      mode        = 0;
-        const bool bRandomRead = StateArchiveUtil::readRandom( archive, restored._random );
+        const bool bRandomRead = StateIO::readRandom( archive, restored._random );
         archive >> restored._round;
         archive >> mode;
         const bool bValid = bRandomRead && archive.isOk() && 0 <= restored._round && mode <= static_cast<uint8>( TurnOrderMode::Timeline );

@@ -3,11 +3,11 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSelection.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 #include <cstring>
@@ -190,7 +190,7 @@ namespace
         static void writeDeadSlot( sw::Archive& outArchive )
         {
             outArchive << static_cast<uint32>( 1 );
-            sw::StateArchiveUtil::writeName( outArchive, sw::hashed_string{} );
+            sw::StateIO::writeName( outArchive, sw::hashed_string{} );
             outArchive << static_cast<uint32>( 0 );
             outArchive << static_cast<uint32>( 0 );
             writeUnitFields( outArchive, sw::int2{ -1, -1 }, 0, 0.0f, 1.0f, 0.0f, -1, 0, 0, 0, SW_FALSE );
@@ -201,7 +201,7 @@ namespace
             outArchive << sw::float3{ 1.5f, 0.0f, 1.5f };
             outArchive << sw::float3{};
             outArchive << sw::float3{};
-            sw::StateArchiveUtil::writeInt2( outArchive, cell );
+            sw::StateIO::writeInt2( outArchive, cell );
             outArchive << idPacked;
             for ( int32 linked = 0; linked < 5; ++linked )
             {
@@ -231,13 +231,13 @@ namespace
             written << sw::vector<uint8>( kSize * kSize, _terrain );
             written << static_cast<uint32>( _bDeadSecondSlot != SW_FALSE ? 2 : 1 );
             written << _generation;
-            sw::StateArchiveUtil::writeName( written, _defID );
+            sw::StateIO::writeName( written, _defID );
             written << static_cast<uint32>( _bWithOrder != SW_FALSE ? 1 : 0 );
             if ( _bWithOrder != SW_FALSE )
             {
-                sw::StateArchiveUtil::writeName( written, _orderBuildID );
+                sw::StateIO::writeName( written, _orderBuildID );
                 written << sw::float3{ 2.5f, 0.0f, 2.5f };
-                sw::StateArchiveUtil::writeInt2( written, sw::int2{ -1, -1 } );
+                sw::StateIO::writeInt2( written, sw::int2{ -1, -1 } );
                 written << static_cast<uint64>( 0 );
                 written << _arriveRadius;
                 written << static_cast<uint8>( sw::RTSOrderType::Move );
@@ -246,7 +246,7 @@ namespace
             written << static_cast<uint32>( _listProduction.size() );
             for ( const sw::hashed_string& productionID : _listProduction )
             {
-                sw::StateArchiveUtil::writeName( written, productionID );
+                sw::StateIO::writeName( written, productionID );
             }
             writeUnitFields( written, _cell, _idPacked, _hp, _buildProgress, _gatherTimer, _owner, _resourceLeft, _cargoAmount, _supplyReserved, _bAlive );
             if ( _bDeadSecondSlot != SW_FALSE )
@@ -267,7 +267,7 @@ namespace
             written << static_cast<uint32>( 1 );
             written << sw::vector<uint8>( kSize * kSize, _visibility );
             written << 0.0f;
-            sw::StateArchiveUtil::writeStepTimer( written, sw::FixedStepTimer{ 0.05f, 0.25f } );
+            sw::StateIO::writeStepTimer( written, sw::FixedStepTimer{ 0.05f, 0.25f } );
             written << _time;
             written << _winningTeam;
             sw::Archive reading( written.getData(), written.getSize() );
@@ -523,11 +523,11 @@ SW_TEST_CASE( RTSWorldTest, SelectionStateRefusesRepeatedAndOverLimit )
 {
     const auto writeLists = []( const sw::vector<uint64>& listSelected, const sw::vector<uint64>& listFirstGroup, sw::Archive& outArchive )
     {
-        sw::StateArchiveUtil::writeIDList( outArchive, listSelected );
-        sw::StateArchiveUtil::writeIDList( outArchive, listFirstGroup );
+        sw::StateIO::writeIDList( outArchive, listSelected );
+        sw::StateIO::writeIDList( outArchive, listFirstGroup );
         for ( int32 group = 1; group < sw::RTSSelection::kGroupCount; ++group )
         {
-            sw::StateArchiveUtil::writeIDList( outArchive, sw::vector<uint64>{} );
+            sw::StateIO::writeIDList( outArchive, sw::vector<uint64>{} );
         }
     };
     const uint64 first  = sw::RTSUnitID::make( 1, 1 ).packed();

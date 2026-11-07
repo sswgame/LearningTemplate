@@ -3,11 +3,11 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaAbilitySet.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaTrinketLoadout.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 // MetroidvaniaCatalogTest — 카탈로그: 규칙을 기반 설정으로 옮기기, 패리 창 필수, 원소별 거절.
@@ -49,7 +49,7 @@ namespace
             outArchive << static_cast<uint32>( listName.size() );
             for ( const sw::hashed_string& name : listName )
             {
-                sw::StateArchiveUtil::writeName( outArchive, name );
+                sw::StateIO::writeName( outArchive, name );
             }
         }
 

@@ -5,8 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include <algorithm>
 
@@ -25,7 +24,7 @@ namespace sw
         outArchive << static_cast<uint32>( listItem.size() );
         for ( const hashed_string& itemID : listItem )
         {
-            StateArchiveUtil::writeName( outArchive, itemID );
+            StateIO::writeName( outArchive, itemID );
             outArchive << getItemCount( itemID );
         }
     }
@@ -40,7 +39,7 @@ namespace sw
         {
             hashed_string itemID;
             int32         itemCount = 0;
-            if ( StateArchiveUtil::readName( archive, itemID ) == false )
+            if ( StateIO::readName( archive, itemID ) == false )
                 return false;
             archive >> itemCount;
             // `writeState` 는 아이템마다 한 줄을 쓴다. 겹친 줄을 합치면 int32 를 넘겨 음수 개수가 된다.

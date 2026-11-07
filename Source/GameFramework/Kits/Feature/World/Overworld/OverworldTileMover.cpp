@@ -3,10 +3,10 @@
 #include "GameFramework/Kits/Feature/World/Overworld/OverworldTileMover.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Feature/World/Overworld/TileMap.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -145,10 +145,10 @@ namespace sw
 
     void OverworldTileMover::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeInt2( outArchive, _tile );
+        StateIO::writeInt2( outArchive, _tile );
         _loco.writeState( outArchive );
         outArchive << string_view( _pendingWarpMap );
-        StateArchiveUtil::writeInt2( outArchive, _pendingWarpSpawn );
+        StateIO::writeInt2( outArchive, _pendingWarpSpawn );
         // 조우 셈은 조우 칸 걸음 수만 싣는다(주기 판정은 그것만 본다, 유예 0). 바이트는 예전 `uint32` 칸 그대로다.
         outArchive << static_cast<uint32>( _encounterSteps.getTotalSteps() );
         outArchive << static_cast<uint8>( _bMoved );
@@ -161,11 +161,11 @@ namespace sw
     bool OverworldTileMover::readState( Archive& archive )
     {
         OverworldTileMover restored = *this;
-        StateArchiveUtil::readInt2( archive, restored._tile );
+        StateIO::readInt2( archive, restored._tile );
         if ( restored._loco.readState( archive ) == false )
             return false;
         archive >> restored._pendingWarpMap;
-        StateArchiveUtil::readInt2( archive, restored._pendingWarpSpawn );
+        StateIO::readInt2( archive, restored._pendingWarpSpawn );
         uint32 encounterSteps = 0;
         archive >> encounterSteps;
         if ( encounterSteps > static_cast<uint32>( StepEncounterCounter::kNoEncounterYet ) ||

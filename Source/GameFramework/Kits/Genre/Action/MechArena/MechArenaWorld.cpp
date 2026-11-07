@@ -9,13 +9,13 @@
 #include "Engine/Net/NetMessageChannel.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaSnapshot.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Match/TeamAttitude.h"
 
 namespace sw
@@ -144,7 +144,7 @@ namespace sw
                 for ( uint32 index = 0; index < deckCount; ++index )
                 {
                     hashed_string mechID;
-                    if ( StateArchiveUtil::readName( archive, mechID ) == false )
+                    if ( StateIO::readName( archive, mechID ) == false )
                         return false;
                     const MechDef* pMech = catalog.findMech( mechID );
                     if ( pMech == nullptr || pMech->_listMode.empty() )
@@ -157,7 +157,7 @@ namespace sw
                 for ( uint32 index = 0; index < skillCount; ++index )
                 {
                     hashed_string skillID;
-                    if ( StateArchiveUtil::readName( archive, skillID ) == false )
+                    if ( StateIO::readName( archive, skillID ) == false )
                         return false;
                     const MechSkillDef* pSkill = catalog.findSkill( skillID );
                     if ( pSkill == nullptr )
@@ -175,8 +175,8 @@ namespace sw
             {
                 for ( size_t index = 0; index < outPilot._listSkill.size(); ++index )
                 {
-                    const bool bSkillRead = StateArchiveUtil::readCountdown( archive, outPilot._listSkillRemaining[index] ) &&
-                                            StateArchiveUtil::readCountdown( archive, outPilot._listSkillCooldown[index] );
+                    const bool bSkillRead = StateIO::readCountdown( archive, outPilot._listSkillRemaining[index] ) &&
+                                            StateIO::readCountdown( archive, outPilot._listSkillCooldown[index] );
                     archive >> outPilot._listSkillSpent[index];
                     const bool bPilotSkillInvalid = bSkillRead == false || archive.isError() || outPilot._listSkillSpent[index] > SW_TRUE;
                     if ( bPilotSkillInvalid )
@@ -190,12 +190,12 @@ namespace sw
                 outArchive << static_cast<uint32>( pilot._listDeckMech.size() );
                 for ( const MechDef* pMech : pilot._listDeckMech )
                 {
-                    StateArchiveUtil::writeName( outArchive, pMech->_id );
+                    StateIO::writeName( outArchive, pMech->_id );
                 }
                 outArchive << static_cast<uint32>( pilot._listSkill.size() );
                 for ( const MechSkillDef* pSkill : pilot._listSkill )
                 {
-                    StateArchiveUtil::writeName( outArchive, pSkill->_id );
+                    StateIO::writeName( outArchive, pSkill->_id );
                 }
                 outArchive << pilot._spawnPosition;
                 outArchive << pilot._team;
@@ -220,13 +220,13 @@ namespace sw
                 outArchive << pilot._velocity;
                 outArchive << pilot._forward;
                 outArchive << pilot._dashDirection;
-                StateArchiveUtil::writeCountdown( outArchive, pilot._dashRemaining );
-                StateArchiveUtil::writeCountdown( outArchive, pilot._staggerRemaining );
-                StateArchiveUtil::writeCountdown( outArchive, pilot._transformCooldown );
+                StateIO::writeCountdown( outArchive, pilot._dashRemaining );
+                StateIO::writeCountdown( outArchive, pilot._staggerRemaining );
+                StateIO::writeCountdown( outArchive, pilot._transformCooldown );
                 for ( size_t index = 0; index < pilot._listSkill.size(); ++index )
                 {
-                    StateArchiveUtil::writeCountdown( outArchive, pilot._listSkillRemaining[index] );
-                    StateArchiveUtil::writeCountdown( outArchive, pilot._listSkillCooldown[index] );
+                    StateIO::writeCountdown( outArchive, pilot._listSkillRemaining[index] );
+                    StateIO::writeCountdown( outArchive, pilot._listSkillCooldown[index] );
                     outArchive << pilot._listSkillSpent[index];
                 }
                 writeInput( outArchive, pilot._input );
@@ -239,7 +239,7 @@ namespace sw
                 for ( size_t index = 0; index < pilot._listWeaponState.size(); ++index )
                 {
                     pilot._listWeaponState[index].writeState( outArchive );
-                    StateArchiveUtil::writeCountdown( outArchive, pilot._listSpecialCooldown[index] );
+                    StateIO::writeCountdown( outArchive, pilot._listSpecialCooldown[index] );
                 }
             }
 
@@ -1131,12 +1131,12 @@ namespace sw
         outArchive << static_cast<uint32>( _listTeamName.size() );
         for ( const hashed_string& name : _listTeamName )
         {
-            StateArchiveUtil::writeName( outArchive, name );
+            StateIO::writeName( outArchive, name );
         }
         outArchive << _bStarted;
         outArchive << _bEndReported;
         outArchive << _tick;
-        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        StateIO::writeStepTimer( outArchive, _timer );
         _match.writeState( outArchive );
         outArchive << static_cast<uint32>( _listPilot.size() );
         for ( const MechPilot& pilot : _listPilot )
@@ -1158,14 +1158,14 @@ namespace sw
         restored._listTeamName.assign( teamCount, hashed_string{} );
         for ( hashed_string& name : restored._listTeamName )
         {
-            if ( StateArchiveUtil::readName( archive, name ) == false )
+            if ( StateIO::readName( archive, name ) == false )
                 return false;
         }
         archive >> restored._bStarted;
         archive >> restored._bEndReported;
         archive >> restored._tick;
         const bool bHeadValid = archive.isOk() && restored._bStarted <= SW_TRUE && restored._bEndReported <= SW_TRUE;
-        if ( bHeadValid == false || StateArchiveUtil::readStepTimer( archive, restored._timer ) == false )
+        if ( bHeadValid == false || StateIO::readStepTimer( archive, restored._timer ) == false )
             return false;
         restored._match.initialize( restored._bStarted == SW_TRUE ? makeMatchSettings() : MatchSettings{} );
         if ( restored._match.readState( archive ) == false )
@@ -1270,9 +1270,9 @@ namespace sw
         archive >> outPilot._velocity;
         archive >> outPilot._forward;
         archive >> outPilot._dashDirection;
-        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, outPilot._dashRemaining ) &&
-                                StateArchiveUtil::readCountdown( archive, outPilot._staggerRemaining ) &&
-                                StateArchiveUtil::readCountdown( archive, outPilot._transformCooldown );
+        const bool bTimerRead = StateIO::readCountdown( archive, outPilot._dashRemaining ) &&
+                                StateIO::readCountdown( archive, outPilot._staggerRemaining ) &&
+                                StateIO::readCountdown( archive, outPilot._transformCooldown );
         if ( bTimerRead == false || MechArenaWorldInternal::readSkillTimers( archive, outPilot ) == false )
             return false;
         const bool bBodyRead = MechArenaWorldInternal::readInput( archive, outPilot._input ) && MechArenaWorldInternal::readInput( archive, outPilot._previousInput ) &&
@@ -1288,7 +1288,7 @@ namespace sw
         for ( uint32 index = 0; index < weaponCount; ++index )
         {
             if ( outPilot._listWeaponState[index].readState( archive ) == false ||
-                 StateArchiveUtil::readCountdown( archive, outPilot._listSpecialCooldown[index] ) == false )
+                 StateIO::readCountdown( archive, outPilot._listSpecialCooldown[index] ) == false )
                 return false;
         }
         return MechArenaWorldInternal::isMeleeStateValid( outPilot ) && MechArenaWorldInternal::isCombatHealthFittingState( outPilot );

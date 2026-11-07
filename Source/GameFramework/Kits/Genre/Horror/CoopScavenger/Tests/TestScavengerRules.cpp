@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Catalog/ScavengerCatalog.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerCarry.h"
@@ -11,7 +12,6 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerFacility.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerQuota.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
 
@@ -66,7 +66,7 @@ namespace
         bool readForged( sw::ScavengerFacility& facility, uint32 seed, const sw::ScavengerScrap& scrap, int32 nextUid )
         {
             sw::Archive written;
-            sw::StateArchiveUtil::writeName( written, "rust" );
+            sw::StateIO::writeName( written, "rust" );
             written << seed;
             written << static_cast<uint32>( 1 );
             sw::ScavengerFacility::writeScrap( written, scrap );
@@ -186,16 +186,16 @@ namespace
             {
                 _expedition.findCrewMember( player )->_combatHealth.writeState( written );
                 ( player == 0 ? carry : _expedition.findCrewMember( player )->_carry ).writeState( written );
-                sw::StateArchiveUtil::writeName( written, "ship" );
+                sw::StateIO::writeName( written, "ship" );
                 written << static_cast<uint8>( SW_FALSE );
             }
             written << static_cast<uint32>( 0 );
-            sw::StateArchiveUtil::writeName( written, "rust" );
+            sw::StateIO::writeName( written, "rust" );
             written << static_cast<uint8>( sw::ScavengerPhase::InOrbit );
             written << static_cast<uint8>( SW_FALSE );
             written << static_cast<uint32>( 11 );
             written << hoursOnMoon;
-            sw::StateArchiveUtil::writeRandom( written, random );
+            sw::StateIO::writeRandom( written, random );
             _expedition.getQuota().writeState( written );
             _expedition.getFacility().writeState( written );
             director.writeState( written );

@@ -5,8 +5,8 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 
@@ -171,7 +171,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listBatch.size() );
         for ( const IngredientBatch& batch : _listBatch )
         {
-            StateArchiveUtil::writeName( outArchive, batch._itemID );
+            StateIO::writeName( outArchive, batch._itemID );
             outArchive << batch._unitCost;
             outArchive << batch._count;
             outArchive << batch._daysLeft;
@@ -187,7 +187,7 @@ namespace sw
         vector<IngredientBatch> listBatch( count );
         for ( IngredientBatch& batch : listBatch )
         {
-            if ( StateArchiveUtil::readName( archive, batch._itemID ) == false )
+            if ( StateIO::readName( archive, batch._itemID ) == false )
                 return false;
             archive >> batch._unitCost;
             archive >> batch._count;

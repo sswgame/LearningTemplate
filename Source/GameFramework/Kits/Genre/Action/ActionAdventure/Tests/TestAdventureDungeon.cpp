@@ -4,9 +4,9 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureDungeon.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
@@ -69,7 +69,7 @@ namespace
         static void writeOneDungeon( sw::Archive& outArchive, const sw::hashed_string& dungeonID, int32 smallKeys, uint8 bBossKey, uint32 deviceCount, int32 litCount )
         {
             outArchive << static_cast<uint32>( 1 );
-            sw::StateArchiveUtil::writeName( outArchive, dungeonID );
+            sw::StateIO::writeName( outArchive, dungeonID );
             outArchive << smallKeys;
             outArchive << static_cast<int32>( 0 );
             outArchive << bBossKey;

@@ -20,6 +20,7 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
@@ -27,7 +28,6 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
@@ -243,14 +243,14 @@ namespace sw
 
     void FarmGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion );
+        StateIO::writeHeader( outArchive, FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion );
         Archive fieldBody;
         _field.writeState( fieldBody );
-        StateArchiveUtil::writeSection( outArchive, FarmField::kStateTag, FarmField::kStateVersion, fieldBody );
+        StateIO::writeSection( outArchive, FarmField::kStateTag, FarmField::kStateVersion, fieldBody );
         Archive shipmentBody;
         _shipment.writeState( shipmentBody );
-        StateArchiveUtil::writeSection( outArchive, FarmShippingBin::kStateTag, FarmShippingBin::kStateVersion, shipmentBody );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeSection( outArchive, FarmShippingBin::kStateTag, FarmShippingBin::kStateVersion, shipmentBody );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _playerPosition;
         outArchive << _facing;
         outArchive << _stamina;
@@ -262,7 +262,7 @@ namespace sw
 
     bool FarmGameModeComponent::readState( Archive& archive )
     {
-        if ( StateArchiveUtil::readHeader( archive, FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion ) == false )
+        if ( StateIO::readHeader( archive, FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion ) == false )
             return false;
         FarmField       field;
         FarmShippingBin shipment;
@@ -270,10 +270,10 @@ namespace sw
         field.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
         Archive    fieldBody;
         Archive    shipmentBody;
-        const bool bSectionsRead = StateArchiveUtil::readExpectedSection( archive, FarmField::kStateTag, FarmField::kStateVersion, fieldBody ) &&
-                                   StateArchiveUtil::readExpectedSection( archive, FarmShippingBin::kStateTag, FarmShippingBin::kStateVersion, shipmentBody );
+        const bool bSectionsRead = StateIO::readExpectedSection( archive, FarmField::kStateTag, FarmField::kStateVersion, fieldBody ) &&
+                                   StateIO::readExpectedSection( archive, FarmShippingBin::kStateTag, FarmShippingBin::kStateVersion, shipmentBody );
         const bool bSimulationRead = bSectionsRead && field.readState( fieldBody ) && fieldBody.getRemainingBytes() == 0 && shipment.readState( shipmentBody ) &&
-                                     shipmentBody.getRemainingBytes() == 0 && StateArchiveUtil::readRandom( archive, random );
+                                     shipmentBody.getRemainingBytes() == 0 && StateIO::readRandom( archive, random );
         if ( bSimulationRead == false )
             return false;
         float3 playerPosition{};

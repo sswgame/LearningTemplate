@@ -3,8 +3,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Match/MatchState.h"
 
 // MatchState 상태 읽기. 결함: 팀 −1 과 범위 밖 공격자 번호를 받아 `reportKill` 이 팀 · 참가자 목록 밖을 읽었다.
@@ -18,18 +18,18 @@ namespace
         {
             sw::Archive written;
             written << static_cast<uint32>( 1 );
-            sw::StateArchiveUtil::writeName( written, sw::hashed_string( "A" ) );
+            sw::StateIO::writeName( written, sw::hashed_string( "A" ) );
             written << static_cast<int32>( 0 ); // 점수
             written << static_cast<int32>( 0 ); // 게이지
             written << static_cast<int32>( 0 ); // 순위
             written << static_cast<uint8>( SW_TRUE );
             written << static_cast<uint8>( SW_FALSE );
             written << static_cast<uint32>( 1 );
-            sw::StateArchiveUtil::writeName( written, sw::hashed_string( "role" ) );
+            sw::StateIO::writeName( written, sw::hashed_string( "role" ) );
             written << static_cast<uint32>( 1 );
             written << attacker;
             written << 0.0f;
-            sw::StateArchiveUtil::writeCountdown( written, sw::Countdown{} );
+            sw::StateIO::writeCountdown( written, sw::Countdown{} );
             written << 0.0f; // 준 피해
             written << team;
             for ( int32 stat = 0; stat < 4; ++stat )

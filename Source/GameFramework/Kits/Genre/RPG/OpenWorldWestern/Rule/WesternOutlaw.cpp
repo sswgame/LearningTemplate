@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
@@ -271,19 +271,19 @@ namespace sw
 
     void WesternOutlaw::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
+        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
         _law.writeState( outArchive );
         _survival.writeState( outArchive );
         outArchive << static_cast<uint32>( _listCarcass.size() );
         for ( const WesternCarcass& carcass : _listCarcass )
         {
-            StateArchiveUtil::writeName( outArchive, carcass._animalID );
+            StateIO::writeName( outArchive, carcass._animalID );
             outArchive << carcass._ageHours << carcass._stars;
         }
         outArchive << static_cast<uint32>( _listPelt.size() );
         for ( const WesternPelt& pelt : _listPelt )
         {
-            StateArchiveUtil::writeName( outArchive, pelt._animalID );
+            StateIO::writeName( outArchive, pelt._animalID );
             outArchive << pelt._stars;
         }
         outArchive << _centsCarry;
@@ -291,7 +291,7 @@ namespace sw
 
     bool WesternOutlaw::readState( Archive& archive )
     {
-        if ( _pCatalog == nullptr || StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) == false )
+        if ( _pCatalog == nullptr || StateIO::readHeader( archive, kStateTag, kStateVersion ) == false )
             return false;
         // 끝까지 읽은 뒤에 한 번에 바꾼다 — 중간에 깨지면 지금 상태를 그대로 둔다.
         WesternLawState law;
@@ -306,7 +306,7 @@ namespace sw
         vector<WesternCarcass> listCarcass( carcassCount );
         for ( WesternCarcass& carcass : listCarcass )
         {
-            if ( StateArchiveUtil::readName( archive, carcass._animalID ) == false || _pCatalog->findAnimal( carcass._animalID ) == nullptr )
+            if ( StateIO::readName( archive, carcass._animalID ) == false || _pCatalog->findAnimal( carcass._animalID ) == nullptr )
                 return false;
             archive >> carcass._ageHours >> carcass._stars;
         }
@@ -317,7 +317,7 @@ namespace sw
         vector<WesternPelt> listPelt( peltCount );
         for ( WesternPelt& pelt : listPelt )
         {
-            if ( StateArchiveUtil::readName( archive, pelt._animalID ) == false || _pCatalog->findAnimal( pelt._animalID ) == nullptr )
+            if ( StateIO::readName( archive, pelt._animalID ) == false || _pCatalog->findAnimal( pelt._animalID ) == nullptr )
                 return false;
             archive >> pelt._stars;
         }

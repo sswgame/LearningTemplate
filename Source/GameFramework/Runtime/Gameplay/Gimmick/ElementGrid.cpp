@@ -6,8 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -400,8 +399,8 @@ namespace sw
         {
             cell.write( outArchive );
         }
-        StateArchiveUtil::writeInt2( outArchive, _wind );
-        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        StateIO::writeInt2( outArchive, _wind );
+        StateIO::writeStepTimer( outArchive, _timer );
         outArchive << _stepCount;
     }
 
@@ -425,8 +424,8 @@ namespace sw
         int2           wind      = {};
         FixedStepTimer timer     = _timer;
         uint32         stepCount = 0;
-        StateArchiveUtil::readInt2( archive, wind );
-        const bool bTimerRead = StateArchiveUtil::readStepTimer( archive, timer );
+        StateIO::readInt2( archive, wind );
+        const bool bTimerRead = StateIO::readStepTimer( archive, timer );
         archive >> stepCount;
         if ( bTimerRead == false || archive.isError() )
             return false;

@@ -3,8 +3,7 @@
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGEncounter.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -46,7 +45,7 @@ namespace sw
 
     void JRPGEncounterWalker::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _counter.getStepsSinceEncounter();
         outArchive << _counter.getTotalSteps();
     }
@@ -56,7 +55,7 @@ namespace sw
         GameRandom random;
         int32      stepsSinceEncounter = 0;
         int32      totalSteps          = 0;
-        if ( StateArchiveUtil::readRandom( archive, random ) == false )
+        if ( StateIO::readRandom( archive, random ) == false )
             return false;
         archive >> stepsSinceEncounter;
         archive >> totalSteps;

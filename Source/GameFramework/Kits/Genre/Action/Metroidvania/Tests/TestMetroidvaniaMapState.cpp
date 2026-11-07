@@ -3,10 +3,10 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaMapState.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
@@ -77,7 +77,7 @@ namespace
                 outArchive << static_cast<uint32>( pList->size() );
                 for ( const sw::hashed_string& name : *pList )
                 {
-                    sw::StateArchiveUtil::writeName( outArchive, name );
+                    sw::StateIO::writeName( outArchive, name );
                 }
             }
         }

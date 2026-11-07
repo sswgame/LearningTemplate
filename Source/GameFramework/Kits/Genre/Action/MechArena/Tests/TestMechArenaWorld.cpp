@@ -3,10 +3,10 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaSnapshot.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaWorld.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include <cstring>
 
@@ -187,8 +187,8 @@ namespace
         {
             Archive prefix;
             prefix << static_cast<uint32>( 2 );
-            StateArchiveUtil::writeName( prefix, hashed_string( "A" ) );
-            StateArchiveUtil::writeName( prefix, hashed_string( "B" ) );
+            StateIO::writeName( prefix, hashed_string( "A" ) );
+            StateIO::writeName( prefix, hashed_string( "B" ) );
             prefix << static_cast<uint8>( SW_TRUE );
             prefix << static_cast<uint8>( SW_FALSE );
             prefix << _world.getTick();
@@ -199,12 +199,12 @@ namespace
             prefix << static_cast<uint32>( first._listDeckMech.size() );
             for ( const MechDef* pMech : first._listDeckMech )
             {
-                StateArchiveUtil::writeName( prefix, pMech->_id );
+                StateIO::writeName( prefix, pMech->_id );
             }
             prefix << static_cast<uint32>( first._listSkill.size() );
             for ( const MechSkillDef* pSkill : first._listSkill )
             {
-                StateArchiveUtil::writeName( prefix, pSkill->_id );
+                StateIO::writeName( prefix, pSkill->_id );
             }
             prefix << first._spawnPosition;
             return static_cast<size_t>( prefix.getSize() );

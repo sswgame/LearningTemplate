@@ -5,13 +5,13 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleGear.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleLoot.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
@@ -59,11 +59,11 @@ namespace
     {
         static void writeLoadoutBytes( sw::Archive& outArchive, const sw::hashed_string& helmet, float32 helmetDurability, const sw::hashed_string& vest, float32 vestDurability, const sw::hashed_string& bag )
         {
-            sw::StateArchiveUtil::writeName( outArchive, helmet );
+            sw::StateIO::writeName( outArchive, helmet );
             outArchive << helmetDurability;
-            sw::StateArchiveUtil::writeName( outArchive, vest );
+            sw::StateIO::writeName( outArchive, vest );
             outArchive << vestDurability;
-            sw::StateArchiveUtil::writeName( outArchive, bag );
+            sw::StateIO::writeName( outArchive, bag );
         }
 
         /** @brief 쏴서 탄창을 @p shots 발 비웁니다. */

@@ -5,9 +5,9 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
@@ -206,7 +206,7 @@ namespace sw
             outArchive << static_cast<uint32>( pListID->size() );
             for ( const hashed_string& id : *pListID )
             {
-                StateArchiveUtil::writeName( outArchive, id );
+                StateIO::writeName( outArchive, id );
             }
         }
     }
@@ -229,7 +229,7 @@ namespace sw
             for ( uint32 entry = 0; entry < idCount; ++entry )
             {
                 hashed_string id;
-                if ( StateArchiveUtil::readName( archive, id ) == false )
+                if ( StateIO::readName( archive, id ) == false )
                     return false;
                 bool bKnown = false;
                 if ( listIndex == 0 )

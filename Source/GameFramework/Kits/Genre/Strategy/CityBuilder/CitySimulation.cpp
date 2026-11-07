@@ -6,10 +6,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 namespace sw
@@ -49,15 +49,15 @@ namespace sw
             [[nodiscard]] static bool readBuilding( Archive& archive, const CityCatalog& catalog, CityBuilding& outBuilding )
             {
                 hashed_string defID;
-                if ( StateArchiveUtil::readName( archive, defID ) == false )
+                if ( StateIO::readName( archive, defID ) == false )
                     return false;
                 outBuilding._pDef = defID.empty() ? nullptr : catalog.findBuilding( defID );
                 if ( defID.empty() == false && outBuilding._pDef == nullptr )
                     return false;
                 if ( outBuilding._stock.readState( archive ) == false )
                     return false;
-                StateArchiveUtil::readInt2( archive, outBuilding._origin );
-                StateArchiveUtil::readInt2( archive, outBuilding._accessTile );
+                StateIO::readInt2( archive, outBuilding._origin );
+                StateIO::readInt2( archive, outBuilding._accessTile );
                 archive >> outBuilding._efficiency;
                 archive >> outBuilding._walkerTimer;
                 archive >> outBuilding._productionProgress;
@@ -143,7 +143,7 @@ namespace sw
                 outListTile.resize( count );
                 for ( int2& tile : outListTile )
                 {
-                    StateArchiveUtil::readInt2( archive, tile );
+                    StateIO::readInt2( archive, tile );
                 }
                 return true;
             }
@@ -152,13 +152,13 @@ namespace sw
             [[nodiscard]] static bool readWalker( Archive& archive, uint32 buildingCount, CityWalker& outWalker )
             {
                 const bool bListRead = readTileList( archive, outWalker._listPath ) && readTileList( archive, outWalker._listVisited );
-                if ( bListRead == false || StateArchiveUtil::readName( archive, outWalker._cargoGood ) == false )
+                if ( bListRead == false || StateIO::readName( archive, outWalker._cargoGood ) == false )
                     return false;
                 uint8 kind    = 0;
                 uint8 service = 0;
-                StateArchiveUtil::readInt2( archive, outWalker._tile );
-                StateArchiveUtil::readInt2( archive, outWalker._previousTile );
-                StateArchiveUtil::readInt2( archive, outWalker._nextTile );
+                StateIO::readInt2( archive, outWalker._tile );
+                StateIO::readInt2( archive, outWalker._previousTile );
+                StateIO::readInt2( archive, outWalker._nextTile );
                 archive >> outWalker._progress;
                 archive >> outWalker._homeBuilding;
                 archive >> outWalker._targetBuilding;
@@ -1165,10 +1165,10 @@ namespace sw
         outArchive << static_cast<uint32>( _listBuilding.size() );
         for ( const CityBuilding& building : _listBuilding )
         {
-            StateArchiveUtil::writeName( outArchive, building._pDef != nullptr ? building._pDef->_id : hashed_string{} );
+            StateIO::writeName( outArchive, building._pDef != nullptr ? building._pDef->_id : hashed_string{} );
             building._stock.writeState( outArchive );
-            StateArchiveUtil::writeInt2( outArchive, building._origin );
-            StateArchiveUtil::writeInt2( outArchive, building._accessTile );
+            StateIO::writeInt2( outArchive, building._origin );
+            StateIO::writeInt2( outArchive, building._accessTile );
             outArchive << building._efficiency;
             outArchive << building._walkerTimer;
             outArchive << building._productionProgress;
@@ -1191,17 +1191,17 @@ namespace sw
             outArchive << static_cast<uint32>( walker._listPath.size() );
             for ( const int2& tile : walker._listPath )
             {
-                StateArchiveUtil::writeInt2( outArchive, tile );
+                StateIO::writeInt2( outArchive, tile );
             }
             outArchive << static_cast<uint32>( walker._listVisited.size() );
             for ( const int2& tile : walker._listVisited )
             {
-                StateArchiveUtil::writeInt2( outArchive, tile );
+                StateIO::writeInt2( outArchive, tile );
             }
-            StateArchiveUtil::writeName( outArchive, walker._cargoGood );
-            StateArchiveUtil::writeInt2( outArchive, walker._tile );
-            StateArchiveUtil::writeInt2( outArchive, walker._previousTile );
-            StateArchiveUtil::writeInt2( outArchive, walker._nextTile );
+            StateIO::writeName( outArchive, walker._cargoGood );
+            StateIO::writeInt2( outArchive, walker._tile );
+            StateIO::writeInt2( outArchive, walker._previousTile );
+            StateIO::writeInt2( outArchive, walker._nextTile );
             outArchive << walker._progress;
             outArchive << walker._homeBuilding;
             outArchive << walker._targetBuilding;
@@ -1212,8 +1212,8 @@ namespace sw
             outArchive << walker._bReturning;
             outArchive << walker._bAlive;
         }
-        StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeStepTimer( outArchive, _stepTimer );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _time;
         outArchive << _floodFertility;
         outArchive << _wageDebt;
@@ -1273,7 +1273,7 @@ namespace sw
 
         FixedStepTimer stepTimer = _stepTimer;
         GameRandom     random;
-        if ( StateArchiveUtil::readStepTimer( archive, stepTimer ) == false || StateArchiveUtil::readRandom( archive, random ) == false )
+        if ( StateIO::readStepTimer( archive, stepTimer ) == false || StateIO::readRandom( archive, random ) == false )
             return false;
         float32 time               = 0.0f;
         float32 floodFertility     = 0.0f;

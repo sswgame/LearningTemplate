@@ -6,10 +6,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Catalog/MonsterHuntCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -147,7 +147,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listEntry.size() );
         for ( const Entry& entry : _listEntry )
         {
-            StateArchiveUtil::writeName( outArchive, entry._monsterID );
+            StateIO::writeName( outArchive, entry._monsterID );
             outArchive << entry._knowledge;
             outArchive << entry._killCount;
         }
@@ -162,7 +162,7 @@ namespace sw
         vector<Entry> listEntry( count );
         for ( Entry& entry : listEntry )
         {
-            if ( StateArchiveUtil::readName( archive, entry._monsterID ) == false || _pCatalog->findMonster( entry._monsterID ) == nullptr )
+            if ( StateIO::readName( archive, entry._monsterID ) == false || _pCatalog->findMonster( entry._monsterID ) == nullptr )
                 return false;
             archive >> entry._knowledge;
             archive >> entry._killCount;

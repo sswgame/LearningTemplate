@@ -5,10 +5,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Navigation/GridReachability.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -551,13 +551,13 @@ namespace sw
         outArchive << _topology._height;
         for ( const SRPGTerrainDef* pTerrain : _listTerrain )
         {
-            StateArchiveUtil::writeName( outArchive, pTerrain != nullptr ? pTerrain->_id : hashed_string{} );
+            StateIO::writeName( outArchive, pTerrain != nullptr ? pTerrain->_id : hashed_string{} );
         }
         outArchive << static_cast<uint32>( _listUnit.size() );
         for ( const SRPGUnit& unit : _listUnit )
         {
-            StateArchiveUtil::writeName( outArchive, unit._pDef->_id );
-            StateArchiveUtil::writeName( outArchive, unit._pPilot->_id );
+            StateIO::writeName( outArchive, unit._pDef->_id );
+            StateIO::writeName( outArchive, unit._pPilot->_id );
             outArchive << static_cast<uint32>( unit._listAmmo.size() );
             for ( const int32 ammo : unit._listAmmo )
             {
@@ -565,7 +565,7 @@ namespace sw
             }
             unit._pilotLevel.writeState( outArchive );
             unit._unitLevel.writeState( outArchive );
-            StateArchiveUtil::writeInt2( outArchive, unit._cell );
+            StateIO::writeInt2( outArchive, unit._cell );
             outArchive << unit._hp;
             outArchive << unit._en;
             outArchive << unit._morale;
@@ -580,7 +580,7 @@ namespace sw
             outArchive << unit._bSupportUsed;
         }
         _turnOrder.writeState( outArchive );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _turn;
         outArchive << _activeUnit;
         outArchive << static_cast<uint8>( _phaseTeam );
@@ -600,7 +600,7 @@ namespace sw
         for ( const SRPGTerrainDef*& pTerrain : restored._listTerrain )
         {
             hashed_string terrainID;
-            if ( StateArchiveUtil::readName( archive, terrainID ) == false )
+            if ( StateIO::readName( archive, terrainID ) == false )
                 return false;
             pTerrain = terrainID.empty() ? nullptr : _pCatalog->findTerrain( terrainID );
             if ( terrainID.empty() == false && pTerrain == nullptr )
@@ -618,7 +618,7 @@ namespace sw
             hashed_string pilotID;
             uint32        ammoCount = 0;
             const bool    bHeadRead =
-                StateArchiveUtil::readName( archive, unitID ) && StateArchiveUtil::readName( archive, pilotID ) && archive.readCount( 4, ammoCount );
+                StateIO::readName( archive, unitID ) && StateIO::readName( archive, pilotID ) && archive.readCount( 4, ammoCount );
             if ( bHeadRead == false )
                 return false;
             unit._pDef   = _pCatalog->findUnit( unitID );
@@ -635,7 +635,7 @@ namespace sw
             }
             uint8      team       = 0;
             const bool bLevelRead = unit._pilotLevel.readState( archive ) && unit._unitLevel.readState( archive );
-            StateArchiveUtil::readInt2( archive, unit._cell );
+            StateIO::readInt2( archive, unit._cell );
             archive >> unit._hp;
             archive >> unit._en;
             archive >> unit._morale;
@@ -658,7 +658,7 @@ namespace sw
         }
 
         uint8      phaseTeam = 0;
-        const bool bPartRead = restored._turnOrder.readState( archive ) && StateArchiveUtil::readRandom( archive, restored._random );
+        const bool bPartRead = restored._turnOrder.readState( archive ) && StateIO::readRandom( archive, restored._random );
         archive >> restored._turn;
         archive >> restored._activeUnit;
         archive >> phaseTeam;

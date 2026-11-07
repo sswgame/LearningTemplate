@@ -12,6 +12,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -19,7 +20,6 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Online/Local/LocalStore.h"
 
 #include <algorithm>
@@ -469,11 +469,11 @@ namespace sw
     bool AutosaveManager::writeSlotInfo( const AutosaveSlotInfo& info, vector<uint8>& outBytes )
     {
         Archive archive;
-        StateArchiveUtil::writeHeader( archive, AutosaveInternal::kInfoTag, AutosaveInternal::kInfoVersion );
+        StateIO::writeHeader( archive, AutosaveInternal::kInfoTag, AutosaveInternal::kInfoVersion );
         archive << info._sequence;
         archive << info._playTime;
         archive << static_cast<uint8>( info._trigger );
-        StateArchiveUtil::writeName( archive, info._label );
+        StateIO::writeName( archive, info._label );
         if ( archive.isError() )
             return false;
         outBytes.assign( archive.getData(), archive.getData() + archive.getSize() );
@@ -483,13 +483,13 @@ namespace sw
     bool AutosaveManager::readSlotInfo( const vector<uint8>& bytes, AutosaveSlotInfo& outInfo )
     {
         Archive archive( bytes.data(), bytes.size() );
-        if ( StateArchiveUtil::readHeader( archive, AutosaveInternal::kInfoTag, AutosaveInternal::kInfoVersion ) == false )
+        if ( StateIO::readHeader( archive, AutosaveInternal::kInfoTag, AutosaveInternal::kInfoVersion ) == false )
             return false;
         uint8 trigger = 0;
         archive >> outInfo._sequence;
         archive >> outInfo._playTime;
         archive >> trigger;
-        const bool bInvalidSlotInfo = StateArchiveUtil::readName( archive, outInfo._label ) == false || archive.isError() || trigger > static_cast<uint8>( AutosaveTrigger::Manual ) ||
+        const bool bInvalidSlotInfo = StateIO::readName( archive, outInfo._label ) == false || archive.isError() || trigger > static_cast<uint8>( AutosaveTrigger::Manual ) ||
                                       outInfo._sequence == 0;
         if ( bInvalidSlotInfo )
             return false;

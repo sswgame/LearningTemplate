@@ -6,11 +6,11 @@
 #include "Core/Math/Ray.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
 #include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -286,7 +286,7 @@ namespace sw
 
     void ActionCombatRig::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _pCombo != nullptr ? _pCombo->_id : hashed_string{} );
+        StateIO::writeName( outArchive, _pCombo != nullptr ? _pCombo->_id : hashed_string{} );
         _timeline.writeState( outArchive );
         outArchive << _comboIndex;
         outArchive << _attackBufferFrames;
@@ -305,7 +305,7 @@ namespace sw
         ActionCombatRig restored = *this;
         hashed_string   comboID;
         uint8           bGunEquipped = SW_FALSE;
-        if ( StateArchiveUtil::readName( archive, comboID ) == false )
+        if ( StateIO::readName( archive, comboID ) == false )
             return false;
         restored._pCombo = comboID.empty() ? nullptr : _pCatalog->findCombo( comboID );
         if ( comboID.empty() == false && restored._pCombo == nullptr )

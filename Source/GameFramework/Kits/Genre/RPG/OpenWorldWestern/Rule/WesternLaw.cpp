@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 namespace sw
@@ -220,7 +220,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listRecord.size() );
         for ( const RegionRecord& record : _listRecord )
         {
-            StateArchiveUtil::writeName( outArchive, record._regionID );
+            StateIO::writeName( outArchive, record._regionID );
             outArchive << record._unseenTime;
             outArchive << record._bounty;
             outArchive << record._wantedLevel;
@@ -229,11 +229,11 @@ namespace sw
         outArchive << static_cast<uint32>( _listPending.size() );
         for ( const PendingReport& report : _listPending )
         {
-            StateArchiveUtil::writeName( outArchive, report._crimeID );
-            StateArchiveUtil::writeName( outArchive, report._regionID );
+            StateIO::writeName( outArchive, report._crimeID );
+            StateIO::writeName( outArchive, report._regionID );
             outArchive << report._witnessID;
             outArchive << report._incidentID;
-            StateArchiveUtil::writeCountdown( outArchive, report._remaining );
+            StateIO::writeCountdown( outArchive, report._remaining );
             outArchive << report._bMasked;
         }
         outArchive << _nextIncidentID;
@@ -250,7 +250,7 @@ namespace sw
         for ( size_t recordIndex = 0; recordIndex < listRecord.size(); ++recordIndex )
         {
             RegionRecord& record = listRecord[recordIndex];
-            if ( StateArchiveUtil::readName( archive, record._regionID ) == false )
+            if ( StateIO::readName( archive, record._regionID ) == false )
                 return false;
             const WesternRegionDef* pRegion = _pCatalog->findRegion( record._regionID );
             if ( pRegion == nullptr )
@@ -277,13 +277,13 @@ namespace sw
         vector<PendingReport> listPending( pendingCount );
         for ( PendingReport& report : listPending )
         {
-            const bool bNamesRead         = StateArchiveUtil::readName( archive, report._crimeID ) && StateArchiveUtil::readName( archive, report._regionID );
+            const bool bNamesRead         = StateIO::readName( archive, report._crimeID ) && StateIO::readName( archive, report._regionID );
             const bool bInvalidReportData = bNamesRead == false || _pCatalog->findCrime( report._crimeID ) == nullptr || _pCatalog->findRegion( report._regionID ) == nullptr;
             if ( bInvalidReportData )
                 return false;
             archive >> report._witnessID;
             archive >> report._incidentID;
-            if ( StateArchiveUtil::readCountdown( archive, report._remaining ) == false )
+            if ( StateIO::readCountdown( archive, report._remaining ) == false )
                 return false;
             archive >> report._bMasked;
             if ( archive.isError() || report._bMasked > SW_TRUE )

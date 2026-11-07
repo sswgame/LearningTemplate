@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -279,7 +279,7 @@ namespace sw
                 continue;
             const uint8 flags = static_cast<uint8>( ( projectile._bAlive == SW_TRUE ? ProjectileSimulationInternal::kFlagAlive : 0u ) |
                                                     ( projectile._bReflected == SW_TRUE ? ProjectileSimulationInternal::kFlagReflected : 0u ) );
-            StateArchiveUtil::writeName( outArchive, projectile._defID );
+            StateIO::writeName( outArchive, projectile._defID );
             outArchive << projectile._position;
             outArchive << projectile._velocity;
             outArchive << projectile._damage;
@@ -318,7 +318,7 @@ namespace sw
         for ( ProjectileState& projectile : listProjectile )
         {
             uint8 flags = 0;
-            if ( StateArchiveUtil::readName( archive, projectile._defID ) == false )
+            if ( StateIO::readName( archive, projectile._defID ) == false )
                 return false;
             archive >> projectile._position;
             archive >> projectile._velocity;

@@ -6,11 +6,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
@@ -65,7 +65,7 @@ namespace sw
                 outListName.assign( count, hashed_string{} );
                 for ( hashed_string& name : outListName )
                 {
-                    if ( StateArchiveUtil::readName( archive, name ) == false )
+                    if ( StateIO::readName( archive, name ) == false )
                         return false;
                 }
                 return true;
@@ -75,9 +75,9 @@ namespace sw
             [[nodiscard]] static bool readHabitat( Archive& archive, int32 tileCount, HabitatInstance& outHabitat )
             {
                 uint32 habitatTileCount = 0;
-                if ( StateArchiveUtil::readName( archive, outHabitat._habitatID ) == false )
+                if ( StateIO::readName( archive, outHabitat._habitatID ) == false )
                     return false;
-                StateArchiveUtil::readInt2( archive, outHabitat._origin );
+                StateIO::readInt2( archive, outHabitat._origin );
                 archive >> outHabitat._id;
                 archive >> outHabitat._rotation;
                 if ( archive.readCount( 4, habitatTileCount ) == false )
@@ -100,7 +100,7 @@ namespace sw
             [[nodiscard]] static bool readCreature( Archive& archive, TownCreature& outCreature )
             {
                 uint32     abilityCount = 0;
-                const bool bHeadRead    = StateArchiveUtil::readName( archive, outCreature._speciesID ) && archive.readCount( 4, abilityCount );
+                const bool bHeadRead    = StateIO::readName( archive, outCreature._speciesID ) && archive.readCount( 4, abilityCount );
                 if ( bHeadRead == false )
                     return false;
                 outCreature._listAbilityUse.resize( abilityCount, 0 );
@@ -775,13 +775,13 @@ namespace sw
         outArchive << _topology._height;
         for ( const hashed_string& object : _listObject )
         {
-            StateArchiveUtil::writeName( outArchive, object );
+            StateIO::writeName( outArchive, object );
         }
         outArchive << static_cast<uint32>( _listHabitat.size() );
         for ( const HabitatInstance& habitat : _listHabitat )
         {
-            StateArchiveUtil::writeName( outArchive, habitat._habitatID );
-            StateArchiveUtil::writeInt2( outArchive, habitat._origin );
+            StateIO::writeName( outArchive, habitat._habitatID );
+            StateIO::writeInt2( outArchive, habitat._origin );
             outArchive << habitat._id;
             outArchive << habitat._rotation;
             outArchive << static_cast<uint32>( habitat._listTile.size() );
@@ -793,7 +793,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listCreature.size() );
         for ( const TownCreature& creature : _listCreature )
         {
-            StateArchiveUtil::writeName( outArchive, creature._speciesID );
+            StateIO::writeName( outArchive, creature._speciesID );
             outArchive << static_cast<uint32>( creature._listAbilityUse.size() );
             for ( const int32 useCount : creature._listAbilityUse )
             {
@@ -811,15 +811,15 @@ namespace sw
             outArchive << static_cast<uint32>( house._listResident.size() );
             for ( const hashed_string& resident : house._listResident )
             {
-                StateArchiveUtil::writeName( outArchive, resident );
+                StateIO::writeName( outArchive, resident );
             }
-            StateArchiveUtil::writeInt2( outArchive, house._tile );
+            StateIO::writeInt2( outArchive, house._tile );
             outArchive << house._capacity;
         }
         outArchive << static_cast<uint32>( _listOpenRequest.size() );
         for ( const hashed_string& questID : _listOpenRequest )
         {
-            StateArchiveUtil::writeName( outArchive, questID );
+            StateIO::writeName( outArchive, questID );
         }
         outArchive << _nextHabitatID;
         outArchive << _lastAttractKey;
@@ -839,7 +839,7 @@ namespace sw
         const int32  tileCount = width * height;
         for ( hashed_string& object : town._listObject )
         {
-            if ( StateArchiveUtil::readName( archive, object ) == false )
+            if ( StateIO::readName( archive, object ) == false )
                 return false;
         }
 
@@ -874,7 +874,7 @@ namespace sw
         {
             if ( CreatureTownInternal::readNameList( archive, house._listResident ) == false )
                 return false;
-            StateArchiveUtil::readInt2( archive, house._tile );
+            StateIO::readInt2( archive, house._tile );
             archive >> house._capacity;
             if ( house._capacity < 1 || _topology.isInside( house._tile._x, house._tile._y ) == false )
                 return false;

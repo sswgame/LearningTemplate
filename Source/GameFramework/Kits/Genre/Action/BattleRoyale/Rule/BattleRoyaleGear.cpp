@@ -5,11 +5,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Catalog/BattleRoyaleCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
 namespace sw
@@ -111,10 +111,10 @@ namespace sw
     {
         for ( const BattleRoyaleArmorSlot* pSlot : { &_helmet, &_vest } )
         {
-            StateArchiveUtil::writeName( outArchive, pSlot->_pDef != nullptr ? pSlot->_pDef->_id : hashed_string{} );
+            StateIO::writeName( outArchive, pSlot->_pDef != nullptr ? pSlot->_pDef->_id : hashed_string{} );
             outArchive << pSlot->_durability;
         }
-        StateArchiveUtil::writeName( outArchive, _backpackID );
+        StateIO::writeName( outArchive, _backpackID );
     }
 
     bool BattleRoyaleLoadout::readState( Archive& archive )
@@ -127,7 +127,7 @@ namespace sw
         {
             BattleRoyaleArmorSlot& slot = arrSlot[slotIndex];
             hashed_string          armorID;
-            if ( StateArchiveUtil::readName( archive, armorID ) == false )
+            if ( StateIO::readName( archive, armorID ) == false )
                 return false;
             archive >> slot._durability;
             if ( archive.isError() )
@@ -145,7 +145,7 @@ namespace sw
                 return false;
         }
         hashed_string backpackID;
-        if ( StateArchiveUtil::readName( archive, backpackID ) == false )
+        if ( StateIO::readName( archive, backpackID ) == false )
             return false;
         if ( backpackID.empty() == false && _pCatalog->findBackpack( backpackID ) == nullptr )
             return false;

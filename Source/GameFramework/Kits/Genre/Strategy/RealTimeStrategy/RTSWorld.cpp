@@ -6,10 +6,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Match/TeamAttitude.h"
 
@@ -32,10 +32,10 @@ namespace sw
                 uint64 targetUnit = 0;
                 uint8  type       = 0;
                 uint8  bFlowField = SW_FALSE;
-                if ( StateArchiveUtil::readName( archive, outOrder._buildID ) == false )
+                if ( StateIO::readName( archive, outOrder._buildID ) == false )
                     return false;
                 archive >> outOrder._target;
-                StateArchiveUtil::readInt2( archive, outOrder._buildCell );
+                StateIO::readInt2( archive, outOrder._buildCell );
                 archive >> targetUnit;
                 archive >> outOrder._arriveRadius;
                 archive >> type;
@@ -75,7 +75,7 @@ namespace sw
                 archive >> outUnit._position;
                 archive >> outUnit._rallyPoint;
                 archive >> outUnit._moveGoal;
-                StateArchiveUtil::readInt2( archive, outUnit._cell );
+                StateIO::readInt2( archive, outUnit._cell );
                 archive >> id;
                 archive >> attackTarget;
                 archive >> gatherTarget;
@@ -119,7 +119,7 @@ namespace sw
             [[nodiscard]] static bool readUnit( Archive& archive, const RTSCatalog& catalog, const RTSSettings& settings, RTSUnit& outUnit, vector<uint8>& outListFlowFieldOrder )
             {
                 hashed_string defID;
-                if ( StateArchiveUtil::readName( archive, defID ) == false )
+                if ( StateIO::readName( archive, defID ) == false )
                     return false;
                 outUnit._pDef = defID.empty() ? nullptr : catalog.find( defID );
                 if ( defID.empty() == false && outUnit._pDef == nullptr )
@@ -138,7 +138,7 @@ namespace sw
                 for ( uint32 productionIndex = 0; productionIndex < productionCount; ++productionIndex )
                 {
                     hashed_string productionID;
-                    if ( StateArchiveUtil::readName( archive, productionID ) == false || catalog.find( productionID ) == nullptr )
+                    if ( StateIO::readName( archive, productionID ) == false || catalog.find( productionID ) == nullptr )
                         return false;
                     outUnit._listProduction.push_back( productionID );
                 }
@@ -1811,13 +1811,13 @@ namespace sw
         {
             const RTSUnit& unit = _listUnit[index];
             outArchive << _listGeneration[index];
-            StateArchiveUtil::writeName( outArchive, unit._pDef != nullptr ? unit._pDef->_id : hashed_string{} );
+            StateIO::writeName( outArchive, unit._pDef != nullptr ? unit._pDef->_id : hashed_string{} );
             outArchive << static_cast<uint32>( unit._listOrder.size() );
             for ( const RTSOrder& order : unit._listOrder )
             {
-                StateArchiveUtil::writeName( outArchive, order._buildID );
+                StateIO::writeName( outArchive, order._buildID );
                 outArchive << order._target;
-                StateArchiveUtil::writeInt2( outArchive, order._buildCell );
+                StateIO::writeInt2( outArchive, order._buildCell );
                 outArchive << order._targetUnit.packed();
                 outArchive << order._arriveRadius;
                 outArchive << static_cast<uint8>( order._type );
@@ -1826,12 +1826,12 @@ namespace sw
             outArchive << static_cast<uint32>( unit._listProduction.size() );
             for ( const hashed_string& productionID : unit._listProduction )
             {
-                StateArchiveUtil::writeName( outArchive, productionID );
+                StateIO::writeName( outArchive, productionID );
             }
             outArchive << unit._position;
             outArchive << unit._rallyPoint;
             outArchive << unit._moveGoal;
-            StateArchiveUtil::writeInt2( outArchive, unit._cell );
+            StateIO::writeInt2( outArchive, unit._cell );
             outArchive << unit._id.packed();
             outArchive << unit._attackTarget.packed();
             outArchive << unit._gatherTarget.packed();
@@ -1870,7 +1870,7 @@ namespace sw
             outArchive << player._bHadBuilding;
         }
         _vision.writeState( outArchive );
-        StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
+        StateIO::writeStepTimer( outArchive, _stepTimer );
         outArchive << _time;
         outArchive << _winningTeam;
     }
@@ -1941,7 +1941,7 @@ namespace sw
         FixedStepTimer stepTimer   = _stepTimer;
         float32        time        = 0.0f;
         int32          winningTeam = -1;
-        if ( StateArchiveUtil::readStepTimer( archive, stepTimer ) == false )
+        if ( StateIO::readStepTimer( archive, stepTimer ) == false )
             return false;
         archive >> time;
         archive >> winningTeam;

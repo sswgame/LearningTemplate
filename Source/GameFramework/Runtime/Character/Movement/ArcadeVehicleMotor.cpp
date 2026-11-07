@@ -5,8 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -380,12 +379,12 @@ namespace sw
 
     void ArcadeVehicleMotor::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        StateIO::writeStepTimer( outArchive, _timer );
         outArchive << _position;
         outArchive << _velocity;
         outArchive << _yaw;
         outArchive << _driftCharge;
-        StateArchiveUtil::writeCountdown( outArchive, _boost );
+        StateIO::writeCountdown( outArchive, _boost );
         outArchive << _nitroGauge;
         outArchive << _nitroCount;
         outArchive << _driftDirection;
@@ -404,12 +403,12 @@ namespace sw
         int32          nitroCount     = 0;
         int32          driftDirection = 0;
         uint8          bAirborne      = SW_FALSE;
-        const bool     bTimerRead     = StateArchiveUtil::readStepTimer( archive, timer );
+        const bool     bTimerRead     = StateIO::readStepTimer( archive, timer );
         archive >> position;
         archive >> velocity;
         archive >> yaw;
         archive >> driftCharge;
-        const bool bBoostRead = StateArchiveUtil::readCountdown( archive, boost );
+        const bool bBoostRead = StateIO::readCountdown( archive, boost );
         archive >> nitroGauge;
         archive >> nitroCount;
         archive >> driftDirection;

@@ -5,8 +5,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Match/TeamAttitude.h"
 
 namespace sw
@@ -332,7 +332,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listTeam.size() );
         for ( const MatchTeam& team : _listTeam )
         {
-            StateArchiveUtil::writeName( outArchive, team._name );
+            StateIO::writeName( outArchive, team._name );
             outArchive << team._score;
             outArchive << team._costPool;
             outArchive << team._placement;
@@ -342,14 +342,14 @@ namespace sw
         outArchive << static_cast<uint32>( _listParticipant.size() );
         for ( const MatchParticipant& participant : _listParticipant )
         {
-            StateArchiveUtil::writeName( outArchive, participant._role );
+            StateIO::writeName( outArchive, participant._role );
             outArchive << static_cast<uint32>( participant._listDamage.size() );
             for ( const MatchParticipant::DamageRecord& record : participant._listDamage )
             {
                 outArchive << record._attacker;
                 outArchive << record._time;
             }
-            StateArchiveUtil::writeCountdown( outArchive, participant._respawnTimer );
+            StateIO::writeCountdown( outArchive, participant._respawnTimer );
             outArchive << participant._damageDealt;
             outArchive << participant._team;
             outArchive << participant._kills;
@@ -374,7 +374,7 @@ namespace sw
         vector<MatchTeam> listTeam( teamCount );
         for ( MatchTeam& team : listTeam )
         {
-            if ( StateArchiveUtil::readName( archive, team._name ) == false )
+            if ( StateIO::readName( archive, team._name ) == false )
                 return false;
             archive >> team._score;
             archive >> team._costPool;
@@ -393,7 +393,7 @@ namespace sw
         for ( MatchParticipant& participant : listParticipant )
         {
             uint32 damageCount = 0;
-            if ( StateArchiveUtil::readName( archive, participant._role ) == false || archive.readCount( 8, damageCount ) == false )
+            if ( StateIO::readName( archive, participant._role ) == false || archive.readCount( 8, damageCount ) == false )
                 return false;
             participant._listDamage.resize( damageCount );
             for ( MatchParticipant::DamageRecord& record : participant._listDamage )
@@ -404,7 +404,7 @@ namespace sw
                 if ( record._attacker < 0 || record._attacker >= static_cast<int32>( participantCount ) )
                     return false;
             }
-            if ( StateArchiveUtil::readCountdown( archive, participant._respawnTimer ) == false )
+            if ( StateIO::readCountdown( archive, participant._respawnTimer ) == false )
                 return false;
             archive >> participant._damageDealt;
             archive >> participant._team;

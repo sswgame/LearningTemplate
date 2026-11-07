@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -222,7 +222,7 @@ namespace sw
         outArchive << _maxBonus;
         outArchive << _regenScale;
         outArchive << _timeSinceUse;
-        StateArchiveUtil::writeCountdown( outArchive, _overheatPenalty );
+        StateIO::writeCountdown( outArchive, _overheatPenalty );
         outArchive << _bLocked;
     }
 
@@ -233,7 +233,7 @@ namespace sw
         archive >> restored._maxBonus;
         archive >> restored._regenScale;
         archive >> restored._timeSinceUse;
-        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._overheatPenalty );
+        const bool bTimerRead = StateIO::readCountdown( archive, restored._overheatPenalty );
         archive >> restored._bLocked;
         const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._value && restored._value <= restored.getMax() && restored._bLocked <= SW_TRUE;
         if ( bValid == false )

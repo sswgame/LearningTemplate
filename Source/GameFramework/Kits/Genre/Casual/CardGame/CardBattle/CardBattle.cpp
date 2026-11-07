@@ -7,11 +7,11 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -264,7 +264,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listDefIndex.size() );
         for ( const int32 defIndex : _listDefIndex )
         {
-            StateArchiveUtil::writeName( outArchive, _pCatalog->getAt( static_cast<size_t>( defIndex ) )._id );
+            StateIO::writeName( outArchive, _pCatalog->getAt( static_cast<size_t>( defIndex ) )._id );
         }
         _drawPile.writeState( outArchive );
         _hand.writeState( outArchive );
@@ -279,7 +279,7 @@ namespace sw
         outArchive << _enemy._hp;
         outArchive << _enemy._block;
         outArchive << _enemy._intentIndex;
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _playerHP;
         outArchive << _playerBlock;
         outArchive << _energy;
@@ -301,7 +301,7 @@ namespace sw
         for ( int32& defIndex : battle._listDefIndex )
         {
             hashed_string defID;
-            if ( StateArchiveUtil::readName( archive, defID ) == false )
+            if ( StateIO::readName( archive, defID ) == false )
                 return false;
             defIndex = _pCatalog->findIndex( defID );
             if ( defIndex < 0 )
@@ -330,7 +330,7 @@ namespace sw
         archive >> battle._enemy._hp;
         archive >> battle._enemy._block;
         archive >> battle._enemy._intentIndex;
-        if ( StateArchiveUtil::readRandom( archive, battle._random ) == false )
+        if ( StateIO::readRandom( archive, battle._random ) == false )
             return false;
         uint8 phase = 0;
         archive >> battle._playerHP;

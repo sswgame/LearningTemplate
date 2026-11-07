@@ -6,10 +6,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -200,15 +200,15 @@ namespace sw
 
     void WesternHorse::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _pDef != nullptr ? _pDef->_id : hashed_string{} );
+        StateIO::writeName( outArchive, _pDef != nullptr ? _pDef->_id : hashed_string{} );
         outArchive << static_cast<uint32>( _listAbility.size() );
         for ( const hashed_string& ability : _listAbility )
         {
-            StateArchiveUtil::writeName( outArchive, ability );
+            StateIO::writeName( outArchive, ability );
         }
         _health.writeState( outArchive );
         _stamina.writeState( outArchive );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _healthCore;
         outArchive << _staminaCore;
         _bond.writeState( outArchive );
@@ -222,7 +222,7 @@ namespace sw
     bool WesternHorse::readState( Archive& archive )
     {
         hashed_string horseID;
-        if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, horseID ) == false )
+        if ( _pCatalog == nullptr || StateIO::readName( archive, horseID ) == false )
             return false;
         // 사본에 읽고 끝까지 맞으면 바꾼다. 품종이 다르면 사본을 그 품종으로 열어 게이지 설정을 맞춘다(값은 아래에서 덮어쓴다).
         WesternHorse restored = *this;
@@ -235,11 +235,11 @@ namespace sw
         restored._listAbility.resize( abilityCount );
         for ( hashed_string& ability : restored._listAbility )
         {
-            if ( StateArchiveUtil::readName( archive, ability ) == false )
+            if ( StateIO::readName( archive, ability ) == false )
                 return false;
         }
         const bool bGaugesRead = restored._health.readState( archive ) && restored._stamina.readState( archive ) &&
-                                 StateArchiveUtil::readRandom( archive, restored._random );
+                                 StateIO::readRandom( archive, restored._random );
         if ( bGaugesRead == false )
             return false;
         archive >> restored._healthCore;

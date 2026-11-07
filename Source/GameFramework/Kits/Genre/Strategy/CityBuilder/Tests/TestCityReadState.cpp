@@ -3,11 +3,11 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 // CityReadStateTest — 도시 상태 바이트의 신뢰 경계: 타일 · 건물 · 일꾼이 서로 맞지 않는 값과 범위 밖 값을 거절하고 도시를 그대로 둔다.
@@ -67,7 +67,7 @@ namespace
             outArchive << static_cast<uint32>( listTile.size() );
             for ( const sw::int2& tile : listTile )
             {
-                sw::StateArchiveUtil::writeInt2( outArchive, tile );
+                sw::StateIO::writeInt2( outArchive, tile );
             }
         }
 
@@ -87,10 +87,10 @@ namespace
             written << static_cast<uint32>( _listBuilding.size() );
             for ( const sw::CityBuilding& building : _listBuilding )
             {
-                sw::StateArchiveUtil::writeName( written, building._pDef != nullptr ? building._pDef->_id : sw::hashed_string{} );
+                sw::StateIO::writeName( written, building._pDef != nullptr ? building._pDef->_id : sw::hashed_string{} );
                 building._stock.writeState( written );
-                sw::StateArchiveUtil::writeInt2( written, building._origin );
-                sw::StateArchiveUtil::writeInt2( written, building._accessTile );
+                sw::StateIO::writeInt2( written, building._origin );
+                sw::StateIO::writeInt2( written, building._accessTile );
                 written << building._efficiency;
                 written << building._walkerTimer;
                 written << building._productionProgress;
@@ -112,10 +112,10 @@ namespace
             {
                 writeTiles( written, walker._listPath );
                 writeTiles( written, walker._listVisited );
-                sw::StateArchiveUtil::writeName( written, walker._cargoGood );
-                sw::StateArchiveUtil::writeInt2( written, walker._tile );
-                sw::StateArchiveUtil::writeInt2( written, walker._previousTile );
-                sw::StateArchiveUtil::writeInt2( written, walker._nextTile );
+                sw::StateIO::writeName( written, walker._cargoGood );
+                sw::StateIO::writeInt2( written, walker._tile );
+                sw::StateIO::writeInt2( written, walker._previousTile );
+                sw::StateIO::writeInt2( written, walker._nextTile );
                 written << walker._progress;
                 written << walker._homeBuilding;
                 written << walker._targetBuilding;
@@ -126,8 +126,8 @@ namespace
                 written << walker._bReturning;
                 written << walker._bAlive;
             }
-            sw::StateArchiveUtil::writeStepTimer( written, sw::FixedStepTimer{} );
-            sw::StateArchiveUtil::writeRandom( written, sw::GameRandom( 9u ) );
+            sw::StateIO::writeStepTimer( written, sw::FixedStepTimer{} );
+            sw::StateIO::writeRandom( written, sw::GameRandom( 9u ) );
             written << _time;
             written << _floodFertility;
             written << _wageDebt;

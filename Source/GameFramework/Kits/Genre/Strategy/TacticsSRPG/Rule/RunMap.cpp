@@ -6,12 +6,12 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
 
@@ -253,7 +253,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listNode.size() );
         for ( const RunNode& node : _listNode )
         {
-            StateArchiveUtil::writeName( outArchive, node._kind );
+            StateIO::writeName( outArchive, node._kind );
             outArchive << node._floor;
             outArchive << node._column;
             outArchive << static_cast<uint32>( node._listNext.size() );
@@ -282,7 +282,7 @@ namespace sw
         for ( RunNode& node : listNode )
         {
             uint32 nextCount = 0;
-            if ( StateArchiveUtil::readName( archive, node._kind ) == false )
+            if ( StateIO::readName( archive, node._kind ) == false )
                 return false;
             archive >> node._floor;
             archive >> node._column;

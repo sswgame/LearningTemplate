@@ -24,11 +24,11 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Control/InputActionCheckUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"
 
@@ -307,7 +307,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     void SkirmishGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, SkirmishGameModeComponentInternal::kStateTag, SkirmishGameModeComponentInternal::kStateVersion );
+        StateIO::writeHeader( outArchive, SkirmishGameModeComponentInternal::kStateTag, SkirmishGameModeComponentInternal::kStateVersion );
         _match.writeState( outArchive );
         _selection.writeState( outArchive );
         outArchive << _timeScale;
@@ -316,7 +316,7 @@ namespace sw
 
     bool SkirmishGameModeComponent::readState( Archive& archive )
     {
-        if ( StateArchiveUtil::readHeader( archive, SkirmishGameModeComponentInternal::kStateTag, SkirmishGameModeComponentInternal::kStateVersion ) == false )
+        if ( StateIO::readHeader( archive, SkirmishGameModeComponentInternal::kStateTag, SkirmishGameModeComponentInternal::kStateVersion ) == false )
             return false;
         if ( _match.readState( archive ) == false || _selection.readState( archive ) == false )
             return false;

@@ -5,23 +5,22 @@
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
-
-// StateArchiveUtilTest — 상태 구간: 기대한 표 · 버전의 구간만 읽히고(다른 버전은 거절), 표로 갈라 읽는 쪽은 아무 구간이나 받는다.
+// StateIOTest — 상태 구간: 기대한 표 · 버전의 구간만 읽히고(다른 버전은 거절), 표로 갈라 읽는 쪽은 아무 구간이나 받는다.
 // 누적기: 음수와 터무니없는 값을 거절한다(1e30 은 빼도 줄지 않아 소비 고리가 끝나지 않는다)(nogpu).
 
 /**
- * @brief [StateArchiveUtilTest] 결함: 걸음 타이머가 음수만 보아, 터무니없는 누적 하나로 `FixedStepTimer::consume` 이 끝나지 않았다. 한 프레임 상한까지만 받고 값을 둔다
+ * @brief [StateIOTest] 결함: 걸음 타이머가 음수만 보아, 터무니없는 누적 하나로 `FixedStepTimer::consume` 이 끝나지 않았다. 한 프레임 상한까지만 받고 값을 둔다
  */
-SW_TEST_CASE( StateArchiveUtilTest, StepTimerRefusesAccumulatorPastOneFrame )
+SW_TEST_CASE( StateIOTest, StepTimerRefusesAccumulatorPastOneFrame )
 {
     const auto readForged = []( float32 accumulator, sw::FixedStepTimer& inoutTimer )
     {
         sw::Archive written;
         written << accumulator;
         sw::Archive reading( written.getData(), written.getSize() );
-        return sw::StateArchiveUtil::readStepTimer( reading, inoutTimer );
+        return sw::StateIO::readStepTimer( reading, inoutTimer );
     };
     sw::FixedStepTimer timer( 0.05f, 0.25f );
     SW_REQUIRE_TRUE( readForged( 0.03f, timer ) );
@@ -40,16 +39,16 @@ SW_TEST_CASE( StateArchiveUtilTest, StepTimerRefusesAccumulatorPastOneFrame )
 }
 
 /**
- * @brief [StateArchiveUtilTest] 결함: 비율 누적이 음수만 보아, 터무니없는 값 하나로 `takeOne` 고리가 끝나지 않았다. 0..1 밖을 거절하고 값을 둔다
+ * @brief [StateIOTest] 결함: 비율 누적이 음수만 보아, 터무니없는 값 하나로 `takeOne` 고리가 끝나지 않았다. 0..1 밖을 거절하고 값을 둔다
  */
-SW_TEST_CASE( StateArchiveUtilTest, RateAccumulatorRefusesWholeAmounts )
+SW_TEST_CASE( StateIOTest, RateAccumulatorRefusesWholeAmounts )
 {
     const auto readForged = []( float32 fraction, sw::RateAccumulator& inoutAccumulator )
     {
         sw::Archive written;
         written << fraction;
         sw::Archive reading( written.getData(), written.getSize() );
-        return sw::StateArchiveUtil::readRateAccumulator( reading, inoutAccumulator );
+        return sw::StateIO::readRateAccumulator( reading, inoutAccumulator );
     };
     sw::RateAccumulator accumulator;
     SW_REQUIRE_TRUE( readForged( 0.5f, accumulator ) );
@@ -70,54 +69,54 @@ namespace
         sw::Archive body;
         body << value;
         sw::Archive outer;
-        sw::StateArchiveUtil::writeSection( outer, kTag, version, body );
+        sw::StateIO::writeSection( outer, kTag, version, body );
         return outer;
     }
 } // namespace
 
 /**
- * @brief [StateArchiveUtilTest] readExpectedSection 은 표와 버전이 모두 같을 때만 본문을 주고, 버전 · 표가 다르면 거절한다(옛 판을 새 판으로 읽지 않는다)
+ * @brief [StateIOTest] readExpectedSection 은 표와 버전이 모두 같을 때만 본문을 주고, 버전 · 표가 다르면 거절한다(옛 판을 새 판으로 읽지 않는다)
  */
-SW_TEST_CASE( StateArchiveUtilTest, ExpectedSectionRejectsOtherVersionOrTag )
+SW_TEST_CASE( StateIOTest, ExpectedSectionRejectsOtherVersionOrTag )
 {
     const sw::Archive written = makeSection( 2, 42 );
 
     sw::Archive same( written.getData(), written.getSize() );
     sw::Archive body;
-    SW_REQUIRE_TRUE( sw::StateArchiveUtil::readExpectedSection( same, kTag, 2, body ) );
+    SW_REQUIRE_TRUE( sw::StateIO::readExpectedSection( same, kTag, 2, body ) );
     int32 value = 0;
     body >> value;
     SW_EXPECT_EQUAL( 42, value );
     SW_EXPECT_EQUAL( size_t{ 0 }, same.getRemainingBytes() );
 
     sw::Archive oldVersion( written.getData(), written.getSize() );
-    SW_EXPECT_FALSE( sw::StateArchiveUtil::readExpectedSection( oldVersion, kTag, 1, body ) );
+    SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( oldVersion, kTag, 1, body ) );
     sw::Archive otherTag( written.getData(), written.getSize() );
-    SW_EXPECT_FALSE( sw::StateArchiveUtil::readExpectedSection( otherTag, kTag + 1, 2, body ) );
+    SW_EXPECT_FALSE( sw::StateIO::readExpectedSection( otherTag, kTag + 1, 2, body ) );
 
     sw::Archive any( written.getData(), written.getSize() );
     uint32      tag     = 0;
     uint32      version = 0;
-    SW_REQUIRE_TRUE( sw::StateArchiveUtil::readSection( any, tag, version, body ) );
+    SW_REQUIRE_TRUE( sw::StateIO::readSection( any, tag, version, body ) );
     SW_EXPECT_EQUAL( kTag, tag );
     SW_EXPECT_EQUAL( 2u, version );
 }
 
 /**
- * @brief [StateArchiveUtilTest] 결함: 빈 이름의 c_str() 가 "None" 이라 빈 이름이 "None" 이라는 이름으로 돌아왔다. 빈 이름과 이름이 그대로 왕복하는지 검증
+ * @brief [StateIOTest] 결함: 빈 이름의 c_str() 가 "None" 이라 빈 이름이 "None" 이라는 이름으로 돌아왔다. 빈 이름과 이름이 그대로 왕복하는지 검증
  */
-SW_TEST_CASE( StateArchiveUtilTest, EmptyNameRoundTripsEmpty )
+SW_TEST_CASE( StateIOTest, EmptyNameRoundTripsEmpty )
 {
     sw::Archive written;
-    sw::StateArchiveUtil::writeName( written, sw::hashed_string{} );
-    sw::StateArchiveUtil::writeName( written, sw::hashed_string( "gunner" ) );
+    sw::StateIO::writeName( written, sw::hashed_string{} );
+    sw::StateIO::writeName( written, sw::hashed_string( "gunner" ) );
     SW_EXPECT_EQUAL( int64{ 4 + 4 + 6 }, static_cast<int64>( written.getSize() ) ); // 빈 이름은 길이 칸만
 
     sw::Archive       reading( written.getData(), written.getSize() );
     sw::hashed_string first( "x" );
     sw::hashed_string second;
-    SW_REQUIRE_TRUE( sw::StateArchiveUtil::readName( reading, first ) );
-    SW_REQUIRE_TRUE( sw::StateArchiveUtil::readName( reading, second ) );
+    SW_REQUIRE_TRUE( sw::StateIO::readName( reading, first ) );
+    SW_REQUIRE_TRUE( sw::StateIO::readName( reading, second ) );
     SW_EXPECT_TRUE( first.empty() );
     SW_EXPECT_TRUE( second == sw::hashed_string( "gunner" ) );
 }

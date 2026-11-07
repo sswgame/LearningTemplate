@@ -6,8 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include <algorithm>
 
@@ -34,14 +33,14 @@ namespace sw
                 {
                     listPacked.push_back( unitID.packed() );
                 }
-                StateArchiveUtil::writeIDList( outArchive, listPacked );
+                StateIO::writeIDList( outArchive, listPacked );
             }
 
             /** @brief `writeList` 가 쓴 유닛 id 목록 하나를 읽습니다. */
             [[nodiscard]] static bool readList( Archive& archive, vector<RTSUnitID>& outListUnit )
             {
                 vector<uint64> listPacked;
-                if ( StateArchiveUtil::readIDList( archive, listPacked ) == false )
+                if ( StateIO::readIDList( archive, listPacked ) == false )
                     return false;
                 // 선택과 부대는 유닛마다 한 번이다(`addUnit`). 꾸민 바이트의 긴 목록이 제곱 시간을 쓰지 않게 정렬해 본다.
                 vector<uint64> listSorted = listPacked;

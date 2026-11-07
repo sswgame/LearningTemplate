@@ -4,13 +4,13 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterBattle.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterCollectorCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterInstance.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
 
@@ -115,9 +115,9 @@ namespace
             written << static_cast<uint8>( 0 );
 
             order.writeState( written );
-            sw::StateArchiveUtil::writeRandom( written, random );
+            sw::StateIO::writeRandom( written, random );
             _captured.writeState( written );
-            sw::StateArchiveUtil::writeName( written, _weatherID );
+            sw::StateIO::writeName( written, _weatherID );
             written << _weatherTurns;
             written << _escapeAttempts;
             written << _result;

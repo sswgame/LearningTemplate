@@ -4,12 +4,12 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorMatch.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorSnapshot.h"
 #include "GameFramework/Runtime/Character/AI/AIPerception.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/Tests/StateBytesTestUtil.h"
 
 #include <cstring>
@@ -85,7 +85,7 @@ namespace
             match.writeState( written );
             _listByte.assign( written.getData(), written.getData() + written.getSize() );
             Archive name;
-            StateArchiveUtil::writeName( name, AsymmetricHorrorTestUtil::makeSettings()._killerID );
+            StateIO::writeName( name, AsymmetricHorrorTestUtil::makeSettings()._killerID );
             Archive matchBytes;
             match.getMatch().writeState( matchBytes );
             _stageBase = static_cast<size_t>( name.getSize() ) + 1 + 1 + 4 + 4 + static_cast<size_t>( matchBytes.getSize() ) + 4 + 4; // 살인마 id, 시작, 알림, 걸음, 시간, 판, 팀 둘

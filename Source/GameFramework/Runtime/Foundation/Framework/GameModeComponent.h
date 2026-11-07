@@ -96,7 +96,7 @@ namespace sw
             return false;
         }
 
-        /** @brief 판의 상태를 씁니다. `ComponentStateStore::capture` 가 부르며, 첫 값은 `StateArchiveUtil::writeHeader` 가 쓰는 표와 버전입니다. */
+        /** @brief 판의 상태를 씁니다. `ComponentStateStore::capture` 가 부르며, 첫 값은 `StateIO::writeHeader` 가 쓰는 표와 버전입니다. */
         virtual void writeState( Archive& outArchive ) const = 0;
         /**
          * @brief `writeState` 의 바이트로 판을 복원합니다. `ComponentStateStore::restore` 가 다시 만든 디렉터에 부릅니다.

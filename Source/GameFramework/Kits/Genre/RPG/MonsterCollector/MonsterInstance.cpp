@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -61,12 +61,12 @@ namespace sw
 
     void MonsterInstance::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _speciesID );
-        StateArchiveUtil::writeName( outArchive, _natureID );
+        StateIO::writeName( outArchive, _speciesID );
+        StateIO::writeName( outArchive, _natureID );
         outArchive << string_view( _nickname );
         for ( const MonsterMoveSlot& slot : _arrMove )
         {
-            StateArchiveUtil::writeName( outArchive, slot._moveID );
+            StateIO::writeName( outArchive, slot._moveID );
             outArchive << slot._pp;
             outArchive << slot._ppMax;
         }
@@ -87,13 +87,13 @@ namespace sw
     bool MonsterInstance::readState( Archive& archive )
     {
         MonsterInstance restored;
-        const bool      bNamesRead = StateArchiveUtil::readName( archive, restored._speciesID ) && StateArchiveUtil::readName( archive, restored._natureID );
+        const bool      bNamesRead = StateIO::readName( archive, restored._speciesID ) && StateIO::readName( archive, restored._natureID );
         if ( bNamesRead == false )
             return false;
         archive >> restored._nickname;
         for ( MonsterMoveSlot& slot : restored._arrMove )
         {
-            if ( StateArchiveUtil::readName( archive, slot._moveID ) == false )
+            if ( StateIO::readName( archive, slot._moveID ) == false )
                 return false;
             archive >> slot._pp;
             archive >> slot._ppMax;

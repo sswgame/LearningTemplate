@@ -85,7 +85,7 @@ namespace sw
      *            게임(화면)이 소유한다. 참조해서 쓰는 키트는 알림을 꺼내지 않고 상태(`QuestLog::getStatus` 등)를 본다.
      *          - **여는 쪽**: 같은 오브젝트의 첫 디렉터가 `startGame` 에서 `initialize` 를 부른다. 시작값(공유 상태를 건드리는 시작 배치 포함)은
      *            `isFreshGame()` 일 때만 넣는다. 복원한 판 위에 시작값이 중복으로 쌓이지 않게 하기 위해서다.
-     *          - **세이브**: `writeState` 는 상태마다 구간 하나(`StateArchiveUtil::writeSection`)를 쓴다. 알 수 없는 구간은 건너뛰고, 빠진 구간은 새 판으로 둔다.
+     *          - **세이브**: `writeState` 는 상태마다 구간 하나(`StateIO::writeSection`)를 쓴다. 알 수 없는 구간은 건너뛰고, 빠진 구간은 새 판으로 둔다.
      *            게임 인스턴스가 생성자에서 `getStateSnapshot().registerStatefulComponent<SessionStateComponent>()` 로 스냅샷에 등록한다.
      */
     REFLECT( Category = "Framework", DisplayName = "Game State", Tooltip = "Shared state (wallet, flags, clock, quests, reputation) used by the kit directors on the same object" )

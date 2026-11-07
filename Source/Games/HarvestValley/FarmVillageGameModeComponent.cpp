@@ -12,9 +12,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
@@ -184,7 +184,7 @@ namespace sw
 
     void FarmVillageGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, FarmVillageGameModeComponentInternal::kStateTag, FarmVillageGameModeComponentInternal::kStateVersion );
+        StateIO::writeHeader( outArchive, FarmVillageGameModeComponentInternal::kStateTag, FarmVillageGameModeComponentInternal::kStateVersion );
         ScheduleSaveState state;
         if ( _bHasPendingSave )
             state = _pendingSave; // 아직 걸지 않은 저장은 그대로 다시 싣는다(일정이 서기 전의 핫 리로드)
@@ -199,7 +199,7 @@ namespace sw
     {
         using Internal = FarmVillageGameModeComponentInternal;
         // 판이 정확히 같을 때만 읽는다(첫 출시 전이라 옛 판 리더가 없다).
-        if ( StateArchiveUtil::readHeader( archive, Internal::kStateTag, Internal::kStateVersion ) == false )
+        if ( StateIO::readHeader( archive, Internal::kStateTag, Internal::kStateVersion ) == false )
             return false;
         // 임시에 끝까지 읽은 뒤에만 바꾼다(반쯤 읽은 상태를 남기지 않는다).
         ScheduleSaveState state;

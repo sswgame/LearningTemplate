@@ -7,13 +7,13 @@
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/ActionCombatEvents.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -472,9 +472,9 @@ namespace sw
     {
         outArchive << static_cast<uint8>( _kind );
         outArchive << static_cast<uint8>( _bCleared );
-        StateArchiveUtil::writeCountdown( outArchive, _attackCooldown );
-        StateArchiveUtil::writeCountdown( outArchive, _dashCooldown );
-        StateArchiveUtil::writeCountdown( outArchive, _invulnerable );
+        StateIO::writeCountdown( outArchive, _attackCooldown );
+        StateIO::writeCountdown( outArchive, _dashCooldown );
+        StateIO::writeCountdown( outArchive, _invulnerable );
         outArchive << static_cast<uint32>( _listMonsterDef.size() );
         for ( const MonsterDef& def : _listMonsterDef )
         {
@@ -485,7 +485,7 @@ namespace sw
         {
             outArchive << actor._position;
             outArchive << actor._hp;
-            StateArchiveUtil::writeCountdown( outArchive, actor._attackTimer );
+            StateIO::writeCountdown( outArchive, actor._attackTimer );
             outArchive << actor._defIndex;
             outArchive << static_cast<uint8>( actor._bAlive );
         }
@@ -500,8 +500,8 @@ namespace sw
         uint8      bCleared = SW_FALSE;
         archive >> kind;
         archive >> bCleared;
-        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._attackCooldown ) &&
-                                StateArchiveUtil::readCountdown( archive, restored._dashCooldown ) && StateArchiveUtil::readCountdown( archive, restored._invulnerable );
+        const bool bTimerRead = StateIO::readCountdown( archive, restored._attackCooldown ) &&
+                                StateIO::readCountdown( archive, restored._dashCooldown ) && StateIO::readCountdown( archive, restored._invulnerable );
         const bool bHeadValid = bTimerRead && archive.isOk() && kind <= static_cast<uint8>( ActionRoomKind::Boss ) && bCleared <= SW_TRUE;
         if ( bHeadValid == false )
             return false;
@@ -517,7 +517,7 @@ namespace sw
         for ( uint32 defIndex = 0; defIndex < defCount; ++defIndex )
         {
             hashed_string monsterID;
-            if ( StateArchiveUtil::readName( archive, monsterID ) == false )
+            if ( StateIO::readName( archive, monsterID ) == false )
                 return false;
             if ( restored.getOrCreateMonsterDef( monsterID ) != static_cast<int32>( defIndex ) )
                 return false;
@@ -533,7 +533,7 @@ namespace sw
             uint8 bAlive = SW_FALSE;
             archive >> actor._position;
             archive >> actor._hp;
-            if ( StateArchiveUtil::readCountdown( archive, actor._attackTimer ) == false )
+            if ( StateIO::readCountdown( archive, actor._attackTimer ) == false )
                 return false;
             archive >> actor._defIndex;
             archive >> bAlive;

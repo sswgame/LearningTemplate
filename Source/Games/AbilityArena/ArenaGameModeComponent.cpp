@@ -15,6 +15,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
@@ -22,7 +23,6 @@
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
@@ -273,7 +273,7 @@ namespace sw
 
     void ArenaGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, ArenaGameModeComponentInternal::kStateTag, ArenaGameModeComponentInternal::kStateVersion );
+        StateIO::writeHeader( outArchive, ArenaGameModeComponentInternal::kStateTag, ArenaGameModeComponentInternal::kStateVersion );
         outArchive << _wave;
         outArchive << _killCount;
     }
@@ -282,7 +282,7 @@ namespace sw
     {
         uint32 wave      = 0;
         uint32 killCount = 0;
-        if ( StateArchiveUtil::readHeader( archive, ArenaGameModeComponentInternal::kStateTag, ArenaGameModeComponentInternal::kStateVersion ) == false )
+        if ( StateIO::readHeader( archive, ArenaGameModeComponentInternal::kStateTag, ArenaGameModeComponentInternal::kStateVersion ) == false )
             return false;
         archive >> wave;
         archive >> killCount;

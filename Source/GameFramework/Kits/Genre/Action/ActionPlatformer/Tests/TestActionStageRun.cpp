@@ -3,10 +3,10 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionStageRun.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 // ActionStageRunTest — 스테이지 한 판: 시간 · 피격 · 수집 점수와 등급 경계, 체크포인트 순서, 죽으면 다시 놓이는 비밀, 게임 오버 뒤 멈춤, 깨진 상태 바이트 거절(스테이지 없는 진행 판 · 겹친 비밀).
 // ActionPlatformerCatalogTest — 카탈로그 거절: 등급표 없음 · 가중치 0 · 겹친 이름 · 모르는 상태. 키트 GF_ActionPlatformer(nogpu).
@@ -36,7 +36,7 @@ namespace
         static void writeRunBytes( sw::Archive& outArchive, const sw::hashed_string& stageID, sw::ActionStageState state, int32 checkpointIndex, const sw::vector<sw::hashed_string>& listCommitted,
                                    const sw::vector<sw::hashed_string>& listPending )
         {
-            sw::StateArchiveUtil::writeName( outArchive, stageID );
+            sw::StateIO::writeName( outArchive, stageID );
             outArchive << static_cast<uint8>( state );
             outArchive << 1.0f;                    // 경과 시간
             outArchive << static_cast<int32>( 1 ); // 목숨
@@ -46,12 +46,12 @@ namespace
             outArchive << static_cast<uint32>( listCommitted.size() );
             for ( const sw::hashed_string& secretID : listCommitted )
             {
-                sw::StateArchiveUtil::writeName( outArchive, secretID );
+                sw::StateIO::writeName( outArchive, secretID );
             }
             outArchive << static_cast<uint32>( listPending.size() );
             for ( const sw::hashed_string& secretID : listPending )
             {
-                sw::StateArchiveUtil::writeName( outArchive, secretID );
+                sw::StateIO::writeName( outArchive, secretID );
             }
         }
     };

@@ -13,10 +13,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/MeadowVillage/MeadowVillageData.h"
@@ -63,10 +63,10 @@ namespace sw
 
     void MeadowFarmGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
+        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
         Archive body;
         _field.writeState( body );
-        StateArchiveUtil::writeSection( outArchive, FarmField::kStateTag, FarmField::kStateVersion, body );
+        StateIO::writeSection( outArchive, FarmField::kStateTag, FarmField::kStateVersion, body );
     }
 
     bool MeadowFarmGameModeComponent::startGame()
@@ -100,8 +100,8 @@ namespace sw
     bool MeadowFarmGameModeComponent::readState( Archive& archive )
     {
         Archive    body;
-        const bool bFrameRead = StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) &&
-                                StateArchiveUtil::readExpectedSection( archive, FarmField::kStateTag, FarmField::kStateVersion, body );
+        const bool bFrameRead = StateIO::readHeader( archive, kStateTag, kStateVersion ) &&
+                                StateIO::readExpectedSection( archive, FarmField::kStateTag, FarmField::kStateVersion, body );
         if ( bFrameRead == false )
             return false;
         FarmField field;

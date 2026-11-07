@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
@@ -572,7 +572,7 @@ namespace sw
         {
             member._combatHealth.writeState( outArchive );
             member._carry.writeState( outArchive );
-            StateArchiveUtil::writeName( outArchive, member._areaID );
+            StateIO::writeName( outArchive, member._areaID );
             outArchive << member._bBodyRecovered;
         }
         outArchive << static_cast<uint32>( _listShipScrap.size() );
@@ -580,12 +580,12 @@ namespace sw
         {
             ScavengerFacility::writeScrap( outArchive, scrap );
         }
-        StateArchiveUtil::writeName( outArchive, _pMoon != nullptr ? _pMoon->_id : hashed_string{} );
+        StateIO::writeName( outArchive, _pMoon != nullptr ? _pMoon->_id : hashed_string{} );
         outArchive << static_cast<uint8>( _phase );
         outArchive << _bDuskAnnounced;
         outArchive << _seed;
         outArchive << _hoursOnMoon;
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         _quota.writeState( outArchive );
         _facility.writeState( outArchive );
         _indoorDirector.writeState( outArchive );
@@ -605,7 +605,7 @@ namespace sw
         ScavengerExpedition restored = *this;
         for ( ScavengerCrewMember& member : restored._listCrew )
         {
-            const bool bMemberRead = member._combatHealth.readState( archive ) && member._carry.readState( archive ) && StateArchiveUtil::readName( archive, member._areaID );
+            const bool bMemberRead = member._combatHealth.readState( archive ) && member._carry.readState( archive ) && StateIO::readName( archive, member._areaID );
             if ( bMemberRead == false )
                 return false;
             archive >> member._bBodyRecovered;
@@ -625,13 +625,13 @@ namespace sw
 
         hashed_string moonID;
         uint8         phase = 0;
-        if ( StateArchiveUtil::readName( archive, moonID ) == false )
+        if ( StateIO::readName( archive, moonID ) == false )
             return false;
         archive >> phase;
         archive >> restored._bDuskAnnounced;
         archive >> restored._seed;
         archive >> restored._hoursOnMoon;
-        const bool bHeadValid = StateArchiveUtil::readRandom( archive, restored._random ) && phase <= static_cast<uint8>( ScavengerPhase::GameOver ) &&
+        const bool bHeadValid = StateIO::readRandom( archive, restored._random ) && phase <= static_cast<uint8>( ScavengerPhase::GameOver ) &&
                                 restored._bDuskAnnounced <= SW_TRUE && 0.0f <= restored._hoursOnMoon; // NaN 이면 자정 비교가 늘 거짓이라 우주선이 뜨지 않는다
         if ( bHeadValid == false )
             return false;

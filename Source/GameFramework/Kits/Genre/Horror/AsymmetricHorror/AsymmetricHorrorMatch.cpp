@@ -9,12 +9,12 @@
 #include "Engine/Net/NetMessageChannel.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorSnapshot.h"
 #include "GameFramework/Runtime/Character/AI/AIPerception.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -1198,11 +1198,11 @@ namespace sw
 
     void AsymmetricHorrorMatch::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _settings._killerID );
+        StateIO::writeName( outArchive, _settings._killerID );
         outArchive << _bStarted;
         outArchive << _bEndReported;
         outArchive << _tick;
-        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        StateIO::writeStepTimer( outArchive, _timer );
         _match.writeState( outArchive );
         outArchive << _survivorTeam;
         outArchive << _killerTeam;
@@ -1212,7 +1212,7 @@ namespace sw
         outArchive << _bHatchOpen;
         outArchive << _bHatchClosed;
         outArchive << _bCollapseStarted;
-        StateArchiveUtil::writeCountdown( outArchive, _collapseRemaining );
+        StateIO::writeCountdown( outArchive, _collapseRemaining );
         outArchive << _hatchPosition;
 
         // 무대: 위치를 먼저 싣고(읽는 쪽이 add... 로 다시 만든다) 그 위에 상태를 덮는다.
@@ -1263,13 +1263,13 @@ namespace sw
             survivor._healing.writeState( outArchive );
             survivor._score.writeState( outArchive );
             outArchive << survivor._lastMoveSpeed;
-            StateArchiveUtil::writeCountdown( outArchive, survivor._hasteRemaining );
+            StateIO::writeCountdown( outArchive, survivor._hasteRemaining );
             outArchive << survivor._hookTimer;
             outArchive << survivor._struggleIdle;
             outArchive << survivor._wiggleProgress;
-            StateArchiveUtil::writeCountdown( outArchive, survivor._vaultRemaining );
+            StateIO::writeCountdown( outArchive, survivor._vaultRemaining );
             outArchive << survivor._noiseRadius;
-            StateArchiveUtil::writeCountdown( outArchive, survivor._noiseRemaining );
+            StateIO::writeCountdown( outArchive, survivor._noiseRemaining );
             outArchive << survivor._vaultExit;
             outArchive << survivor._hookStage;
             outArchive << survivor._activityTarget;
@@ -1285,10 +1285,10 @@ namespace sw
         outArchive << _killer._position;
         outArchive << _killer._forward;
         outArchive << _killer._busyExit;
-        StateArchiveUtil::writeCountdown( outArchive, _killer._attackCooldown );
-        StateArchiveUtil::writeCountdown( outArchive, _killer._stunRemaining );
-        StateArchiveUtil::writeCountdown( outArchive, _killer._busyRemaining );
-        StateArchiveUtil::writeCountdown( outArchive, _killer._abilityCooldown );
+        StateIO::writeCountdown( outArchive, _killer._attackCooldown );
+        StateIO::writeCountdown( outArchive, _killer._stunRemaining );
+        StateIO::writeCountdown( outArchive, _killer._busyRemaining );
+        StateIO::writeCountdown( outArchive, _killer._abilityCooldown );
         outArchive << _killer._carrying;
         outArchive << _killer._breakingPallet;
         outArchive << _killer._participant;
@@ -1300,7 +1300,7 @@ namespace sw
         if ( _pCatalog == nullptr || _killer._pDef == nullptr )
             return false;
         hashed_string killerID;
-        if ( StateArchiveUtil::readName( archive, killerID ) == false || killerID != _settings._killerID )
+        if ( StateIO::readName( archive, killerID ) == false || killerID != _settings._killerID )
             return false;
         // 같은 설정과 카탈로그로 새 판을 열고, 무대와 생존자를 add... 로 다시 만든 뒤(규칙에서 오는 설정) 상태를 덮는다. 끝까지 맞을 때만 바꾼다.
         AsymmetricHorrorMatch restored;
@@ -1311,7 +1311,7 @@ namespace sw
         archive >> restored._bEndReported;
         archive >> restored._tick;
         const bool bHeadValid = archive.isOk() && bStarted <= SW_TRUE && restored._bEndReported <= SW_TRUE;
-        if ( bHeadValid == false || StateArchiveUtil::readStepTimer( archive, restored._timer ) == false )
+        if ( bHeadValid == false || StateIO::readStepTimer( archive, restored._timer ) == false )
             return false;
         restored._match.initialize( bStarted == SW_TRUE ? makeMatchSettings() : MatchSettings{} );
         if ( restored._match.readState( archive ) == false )
@@ -1324,7 +1324,7 @@ namespace sw
         archive >> restored._bHatchOpen;
         archive >> restored._bHatchClosed;
         archive >> restored._bCollapseStarted;
-        const bool bCollapseRead = StateArchiveUtil::readCountdown( archive, restored._collapseRemaining );
+        const bool bCollapseRead = StateIO::readCountdown( archive, restored._collapseRemaining );
         archive >> restored._hatchPosition;
         const uint8 flags =
             static_cast<uint8>( restored._bGatesPowered | restored._bHatchPlaced | restored._bHatchOpen | restored._bHatchClosed | restored._bCollapseStarted );
@@ -1533,13 +1533,13 @@ namespace sw
         if ( bSurvivorStateReadFailed )
             return false;
         archive >> outSurvivor._lastMoveSpeed;
-        const bool bHasteRead = StateArchiveUtil::readCountdown( archive, outSurvivor._hasteRemaining );
+        const bool bHasteRead = StateIO::readCountdown( archive, outSurvivor._hasteRemaining );
         archive >> outSurvivor._hookTimer;
         archive >> outSurvivor._struggleIdle;
         archive >> outSurvivor._wiggleProgress;
-        const bool bVaultRead = StateArchiveUtil::readCountdown( archive, outSurvivor._vaultRemaining );
+        const bool bVaultRead = StateIO::readCountdown( archive, outSurvivor._vaultRemaining );
         archive >> outSurvivor._noiseRadius;
-        const bool bNoiseRead = StateArchiveUtil::readCountdown( archive, outSurvivor._noiseRemaining );
+        const bool bNoiseRead = StateIO::readCountdown( archive, outSurvivor._noiseRemaining );
         archive >> outSurvivor._vaultExit;
         archive >> outSurvivor._hookStage;
         archive >> outSurvivor._activityTarget;
@@ -1652,10 +1652,10 @@ namespace sw
         archive >> killer._position;
         archive >> killer._forward;
         archive >> killer._busyExit;
-        const bool bKillerTimerRead = StateArchiveUtil::readCountdown( archive, killer._attackCooldown ) &&
-                                      StateArchiveUtil::readCountdown( archive, killer._stunRemaining ) &&
-                                      StateArchiveUtil::readCountdown( archive, killer._busyRemaining ) &&
-                                      StateArchiveUtil::readCountdown( archive, killer._abilityCooldown );
+        const bool bKillerTimerRead = StateIO::readCountdown( archive, killer._attackCooldown ) &&
+                                      StateIO::readCountdown( archive, killer._stunRemaining ) &&
+                                      StateIO::readCountdown( archive, killer._busyRemaining ) &&
+                                      StateIO::readCountdown( archive, killer._abilityCooldown );
         archive >> killer._carrying;
         archive >> killer._breakingPallet;
         archive >> killer._participant;

@@ -6,10 +6,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/FrontierTown/FrontierTownData.h"
@@ -48,7 +48,7 @@ namespace sw
 
     void FrontierSkirmishGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
+        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
         const uint8 bPatrolToB = _bPatrolToB;
         outArchive << _tickCount;
         outArchive << bPatrolToB;
@@ -111,7 +111,7 @@ namespace sw
     bool FrontierSkirmishGameModeComponent::readState( Archive& archive )
     {
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        if ( pState == nullptr || StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) == false )
+        if ( pState == nullptr || StateIO::readHeader( archive, kStateTag, kStateVersion ) == false )
             return false;
         int32  tickCount    = 0;
         uint8  bPatrolToB   = SW_TRUE;

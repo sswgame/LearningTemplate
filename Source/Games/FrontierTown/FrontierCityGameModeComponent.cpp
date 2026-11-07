@@ -13,11 +13,11 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/FrontierTown/FrontierTownData.h"
@@ -57,12 +57,12 @@ namespace sw
 
     void FrontierCityGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
+        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
         const uint8 bLaidOut = _bLaidOut;
         outArchive << bLaidOut;
         Archive body;
         _city.writeState( body );
-        StateArchiveUtil::writeSection( outArchive, CitySimulation::kStateTag, CitySimulation::kStateVersion, body );
+        StateIO::writeSection( outArchive, CitySimulation::kStateTag, CitySimulation::kStateVersion, body );
     }
 
     bool FrontierCityGameModeComponent::initializeCity( CitySimulation& outCity, SessionStateComponent& state )
@@ -109,11 +109,11 @@ namespace sw
         SessionStateComponent* pState   = SessionStateComponent::findOnOwner( *this );
         uint8                  bLaidOut = SW_FALSE;
         Archive                body;
-        const bool             bHeadRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion );
+        const bool             bHeadRead = pState != nullptr && StateIO::readHeader( archive, kStateTag, kStateVersion );
         if ( bHeadRead == false )
             return false;
         archive >> bLaidOut;
-        const bool bInvalidCityHeader = archive.isError() || StateArchiveUtil::readExpectedSection( archive, CitySimulation::kStateTag, CitySimulation::kStateVersion, body ) == false;
+        const bool bInvalidCityHeader = archive.isError() || StateIO::readExpectedSection( archive, CitySimulation::kStateTag, CitySimulation::kStateVersion, body ) == false;
         if ( bInvalidCityHeader )
             return false;
         CitySimulation city;

@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 
 namespace sw
@@ -211,7 +211,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listClothing.size() );
         for ( const hashed_string& clothingID : _listClothing )
         {
-            StateArchiveUtil::writeName( outArchive, clothingID );
+            StateIO::writeName( outArchive, clothingID );
         }
         outArchive << static_cast<uint32>( _listMark.size() );
         for ( const uint64 targetID : _listMark )
@@ -237,7 +237,7 @@ namespace sw
         restored._listClothing.resize( count );
         for ( hashed_string& clothingID : restored._listClothing )
         {
-            if ( StateArchiveUtil::readName( archive, clothingID ) == false )
+            if ( StateIO::readName( archive, clothingID ) == false )
                 return false;
         }
         if ( archive.readCount( 8, count ) == false )

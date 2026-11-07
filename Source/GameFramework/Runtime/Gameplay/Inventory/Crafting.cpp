@@ -7,11 +7,11 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
 #include <algorithm>
@@ -282,12 +282,12 @@ namespace sw
         outArchive << static_cast<uint32>( listLearned.size() );
         for ( const hashed_string& recipeID : listLearned )
         {
-            StateArchiveUtil::writeName( outArchive, recipeID );
+            StateIO::writeName( outArchive, recipeID );
         }
         outArchive << static_cast<uint32>( _listJob.size() );
         for ( const CraftJob& job : _listJob )
         {
-            StateArchiveUtil::writeName( outArchive, job._recipeID );
+            StateIO::writeName( outArchive, job._recipeID );
             outArchive << job._remaining;
             outArchive << job._count;
         }
@@ -302,7 +302,7 @@ namespace sw
         for ( uint32 index = 0; index < count; ++index )
         {
             hashed_string recipeID;
-            if ( StateArchiveUtil::readName( archive, recipeID ) == false )
+            if ( StateIO::readName( archive, recipeID ) == false )
                 return false;
             uniqueLearned.insert( recipeID );
         }
@@ -313,7 +313,7 @@ namespace sw
         for ( uint32 index = 0; index < count; ++index )
         {
             CraftJob job;
-            if ( StateArchiveUtil::readName( archive, job._recipeID ) == false )
+            if ( StateIO::readName( archive, job._recipeID ) == false )
                 return false;
             archive >> job._remaining;
             archive >> job._count;

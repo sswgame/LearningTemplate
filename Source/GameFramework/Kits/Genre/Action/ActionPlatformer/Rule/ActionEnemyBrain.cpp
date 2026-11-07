@@ -3,9 +3,9 @@
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionEnemyBrain.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -109,8 +109,8 @@ namespace sw
 
     void ActionEnemyBrain::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _pPattern != nullptr ? _pPattern->_id : hashed_string{} );
-        StateArchiveUtil::writeName( outArchive, getStateID() );
+        StateIO::writeName( outArchive, _pPattern != nullptr ? _pPattern->_id : hashed_string{} );
+        StateIO::writeName( outArchive, getStateID() );
         outArchive << _stateFrame;
         outArchive << _facing;
         outArchive << _bEntered;
@@ -123,7 +123,7 @@ namespace sw
         int32         stateFrame = 0;
         int32         facing     = 1;
         uint8         bEntered   = SW_FALSE;
-        const bool    bNameRead  = StateArchiveUtil::readName( archive, patternID ) && StateArchiveUtil::readName( archive, stateID );
+        const bool    bNameRead  = StateIO::readName( archive, patternID ) && StateIO::readName( archive, stateID );
         archive >> stateFrame;
         archive >> facing;
         archive >> bEntered;

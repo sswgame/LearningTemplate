@@ -5,11 +5,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.h"
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -673,11 +673,11 @@ namespace sw
         outArchive << static_cast<uint32>( _listEnemy.size() );
         for ( const JRPGEnemyState& enemy : _listEnemy )
         {
-            StateArchiveUtil::writeName( outArchive, enemy._enemyID );
+            StateIO::writeName( outArchive, enemy._enemyID );
             outArchive << static_cast<uint32>( enemy._listLock.size() );
             for ( const hashed_string& lock : enemy._listLock )
             {
-                StateArchiveUtil::writeName( outArchive, lock );
+                StateIO::writeName( outArchive, lock );
             }
             outArchive << enemy._hp;
             outArchive << enemy._castTurnsLeft;
@@ -688,13 +688,13 @@ namespace sw
         for ( size_t memberIndex = 0; memberIndex < _listCommand.size(); ++memberIndex )
         {
             const JRPGCommand& command = _listCommand[memberIndex];
-            StateArchiveUtil::writeName( outArchive, command._id );
+            StateIO::writeName( outArchive, command._id );
             outArchive << command._target;
             outArchive << static_cast<uint8>( command._kind );
             outArchive << _listDefending[memberIndex];
         }
         _turnOrder.writeState( outArchive );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _rewardExp;
         outArchive << _rewardGold;
         outArchive << _comboPoints;
@@ -736,14 +736,14 @@ namespace sw
         for ( JRPGEnemyState& enemy : restored._listEnemy )
         {
             uint32 lockCount = 0;
-            if ( StateArchiveUtil::readName( archive, enemy._enemyID ) == false || _pCatalog->findEnemy( enemy._enemyID ) == nullptr )
+            if ( StateIO::readName( archive, enemy._enemyID ) == false || _pCatalog->findEnemy( enemy._enemyID ) == nullptr )
                 return false;
             if ( archive.readCount( 4, lockCount ) == false )
                 return false;
             enemy._listLock.resize( lockCount );
             for ( hashed_string& lock : enemy._listLock )
             {
-                if ( StateArchiveUtil::readName( archive, lock ) == false )
+                if ( StateIO::readName( archive, lock ) == false )
                     return false;
             }
             archive >> enemy._hp;
@@ -767,7 +767,7 @@ namespace sw
             JRPGCommand& command = restored._listCommand[memberIndex];
             uint8        kind    = 0;
             uint8        bDefend = SW_FALSE;
-            if ( StateArchiveUtil::readName( archive, command._id ) == false )
+            if ( StateIO::readName( archive, command._id ) == false )
                 return false;
             archive >> command._target;
             archive >> kind;
@@ -782,7 +782,7 @@ namespace sw
         }
 
         uint8 result = 0;
-        if ( restored._turnOrder.readState( archive ) == false || StateArchiveUtil::readRandom( archive, restored._random ) == false )
+        if ( restored._turnOrder.readState( archive ) == false || StateIO::readRandom( archive, restored._random ) == false )
             return false;
         archive >> restored._rewardExp;
         archive >> restored._rewardGold;

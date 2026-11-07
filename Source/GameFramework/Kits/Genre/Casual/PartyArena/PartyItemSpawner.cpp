@@ -7,11 +7,11 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include <optional>
 
@@ -55,12 +55,12 @@ namespace sw
         for ( const PartyItemInstance& instance : _listInstance )
         {
             outArchive << instance._position;
-            StateArchiveUtil::writeName( outArchive, instance._itemID );
+            StateIO::writeName( outArchive, instance._itemID );
             outArchive << instance._age;
             outArchive << instance._serial;
         }
-        StateArchiveUtil::writeRandom( outArchive, _random );
-        StateArchiveUtil::writeCountdown( outArchive, _spawnTimer );
+        StateIO::writeRandom( outArchive, _random );
+        StateIO::writeCountdown( outArchive, _spawnTimer );
         outArchive << _nextSerial;
     }
 
@@ -74,7 +74,7 @@ namespace sw
         for ( PartyItemInstance& instance : listInstance )
         {
             archive >> instance._position;
-            if ( StateArchiveUtil::readName( archive, instance._itemID ) == false || findItem( instance._itemID ) == nullptr )
+            if ( StateIO::readName( archive, instance._itemID ) == false || findItem( instance._itemID ) == nullptr )
                 return false;
             archive >> instance._age;
             archive >> instance._serial;
@@ -84,7 +84,7 @@ namespace sw
         GameRandom random     = _random;
         Countdown  spawnTimer = {};
         int32      nextSerial = 0;
-        const bool bRead      = StateArchiveUtil::readRandom( archive, random ) && StateArchiveUtil::readCountdown( archive, spawnTimer );
+        const bool bRead      = StateIO::readRandom( archive, random ) && StateIO::readCountdown( archive, spawnTimer );
         archive >> nextSerial;
         if ( bRead == false || archive.isError() || nextSerial < 1 )
             return false;

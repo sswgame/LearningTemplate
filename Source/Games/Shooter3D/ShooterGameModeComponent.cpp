@@ -22,6 +22,7 @@
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
 
@@ -29,7 +30,6 @@
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
@@ -197,7 +197,7 @@ namespace sw
 
     void ShooterGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, ShooterGameModeComponentInternal::kStateTag, ShooterGameModeComponentInternal::kStateVersion );
+        StateIO::writeHeader( outArchive, ShooterGameModeComponentInternal::kStateTag, ShooterGameModeComponentInternal::kStateVersion );
         outArchive << _killCount;
         outArchive << static_cast<uint8>( _bPacingReady );
         if ( _bPacingReady == SW_TRUE )
@@ -208,7 +208,7 @@ namespace sw
     {
         uint32 killCount = 0;
         uint8  bPacing   = SW_FALSE;
-        if ( StateArchiveUtil::readHeader( archive, ShooterGameModeComponentInternal::kStateTag, ShooterGameModeComponentInternal::kStateVersion ) == false )
+        if ( StateIO::readHeader( archive, ShooterGameModeComponentInternal::kStateTag, ShooterGameModeComponentInternal::kStateVersion ) == false )
             return false;
         archive >> killCount;
         archive >> bPacing;

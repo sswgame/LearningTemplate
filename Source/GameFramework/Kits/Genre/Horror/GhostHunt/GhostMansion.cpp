@@ -5,11 +5,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
@@ -364,14 +364,14 @@ namespace sw
     void GhostMansion::writeState( Archive& outArchive ) const
     {
         _encounter.writeState( outArchive );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << static_cast<uint32>( _listBoo.size() );
         for ( const HidingGhostRuntime& boo : _listBoo )
         {
-            StateArchiveUtil::writeName( outArchive, boo._room );
-            StateArchiveUtil::writeName( outArchive, boo._furniture );
+            StateIO::writeName( outArchive, boo._room );
+            StateIO::writeName( outArchive, boo._furniture );
             outArchive << boo._hp;
-            StateArchiveUtil::writeCountdown( outArchive, boo._timer );
+            StateIO::writeCountdown( outArchive, boo._timer );
             outArchive << static_cast<uint8>( boo._state );
         }
         outArchive << static_cast<uint32>( _listSearched.size() );
@@ -379,12 +379,12 @@ namespace sw
         {
             outArchive << bSearched;
         }
-        StateArchiveUtil::writeName( outArchive, _currentRoom );
+        StateIO::writeName( outArchive, _currentRoom );
         outArchive << _seed;
         outArchive << static_cast<uint32>( _listPendingKeyRoom.size() );
         for ( const hashed_string& roomID : _listPendingKeyRoom )
         {
-            StateArchiveUtil::writeName( outArchive, roomID );
+            StateIO::writeName( outArchive, roomID );
         }
     }
 
@@ -395,18 +395,18 @@ namespace sw
         uint32       booCount = 0;
         // 부마다 이름 둘(8) + 체력, 시간(8) + 상태(1) 이상
         const bool bHeadRead =
-            restored._encounter.readState( archive ) && StateArchiveUtil::readRandom( archive, restored._random ) && archive.readCount( 17, booCount );
+            restored._encounter.readState( archive ) && StateIO::readRandom( archive, restored._random ) && archive.readCount( 17, booCount );
         if ( bHeadRead == false || booCount != _listBoo.size() )
             return false;
         for ( size_t booIndex = 0; booIndex < restored._listBoo.size(); ++booIndex )
         {
             HidingGhostRuntime& boo       = restored._listBoo[booIndex];
             uint8               state     = 0;
-            const bool          bNameRead = StateArchiveUtil::readName( archive, boo._room ) && StateArchiveUtil::readName( archive, boo._furniture );
+            const bool          bNameRead = StateIO::readName( archive, boo._room ) && StateIO::readName( archive, boo._furniture );
             if ( bNameRead == false )
                 return false;
             archive >> boo._hp;
-            const bool bTimerRead = StateArchiveUtil::readCountdown( archive, boo._timer );
+            const bool bTimerRead = StateIO::readCountdown( archive, boo._timer );
             archive >> state;
             const bool bInvalidBooState = bTimerRead == false || archive.isError() || state > static_cast<uint8>( HidingGhostState::Caught );
             if ( bInvalidBooState )
@@ -427,7 +427,7 @@ namespace sw
             if ( bSearched > SW_TRUE )
                 archive.setError();
         }
-        if ( StateArchiveUtil::readName( archive, restored._currentRoom ) == false || isKnownRoom( restored._currentRoom ) == false )
+        if ( StateIO::readName( archive, restored._currentRoom ) == false || isKnownRoom( restored._currentRoom ) == false )
             return false;
         archive >> restored._seed;
         uint32 pendingCount = 0;
@@ -436,7 +436,7 @@ namespace sw
         restored._listPendingKeyRoom.assign( pendingCount, hashed_string{} );
         for ( hashed_string& roomID : restored._listPendingKeyRoom )
         {
-            if ( StateArchiveUtil::readName( archive, roomID ) == false || _pCatalog->findRoom( roomID ) == nullptr )
+            if ( StateIO::readName( archive, roomID ) == false || _pCatalog->findRoom( roomID ) == nullptr )
                 return false;
         }
         restored._eventBuffer.clear();

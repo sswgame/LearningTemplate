@@ -6,9 +6,9 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -85,13 +85,13 @@ namespace sw
                 outArchive << body._input._bPoundPressed;
                 outArchive << body._landTime;
                 outArchive << body._jumpPressTime;
-                StateArchiveUtil::writeCountdown( outArchive, body._contactTimer );
-                StateArchiveUtil::writeCountdown( outArchive, body._attackTimer );
-                StateArchiveUtil::writeCountdown( outArchive, body._attackCooldown );
-                StateArchiveUtil::writeCountdown( outArchive, body._stunTimer );
-                StateArchiveUtil::writeCountdown( outArchive, body._invulnerableTimer );
+                StateIO::writeCountdown( outArchive, body._contactTimer );
+                StateIO::writeCountdown( outArchive, body._attackTimer );
+                StateIO::writeCountdown( outArchive, body._attackCooldown );
+                StateIO::writeCountdown( outArchive, body._stunTimer );
+                StateIO::writeCountdown( outArchive, body._invulnerableTimer );
                 outArchive << body._lastHitTime;
-                StateArchiveUtil::writeCountdown( outArchive, body._heavyTimer );
+                StateIO::writeCountdown( outArchive, body._heavyTimer );
                 outArchive << body._knockbackTaken;
                 outArchive << body._knockbackDealt;
                 outArchive << body._combo;
@@ -115,11 +115,11 @@ namespace sw
                 archive >> outBody._input._bPoundPressed;
                 archive >> outBody._landTime;
                 archive >> outBody._jumpPressTime;
-                const bool bTimersRead = StateArchiveUtil::readCountdown( archive, outBody._contactTimer ) && StateArchiveUtil::readCountdown( archive, outBody._attackTimer ) &&
-                                         StateArchiveUtil::readCountdown( archive, outBody._attackCooldown ) && StateArchiveUtil::readCountdown( archive, outBody._stunTimer ) &&
-                                         StateArchiveUtil::readCountdown( archive, outBody._invulnerableTimer );
+                const bool bTimersRead = StateIO::readCountdown( archive, outBody._contactTimer ) && StateIO::readCountdown( archive, outBody._attackTimer ) &&
+                                         StateIO::readCountdown( archive, outBody._attackCooldown ) && StateIO::readCountdown( archive, outBody._stunTimer ) &&
+                                         StateIO::readCountdown( archive, outBody._invulnerableTimer );
                 archive >> outBody._lastHitTime;
-                const bool bHeavyRead = StateArchiveUtil::readCountdown( archive, outBody._heavyTimer );
+                const bool bHeavyRead = StateIO::readCountdown( archive, outBody._heavyTimer );
                 uint8      state      = 0;
                 archive >> outBody._knockbackTaken;
                 archive >> outBody._knockbackDealt;
@@ -339,7 +339,7 @@ namespace sw
         }
         _itemSpawner.writeState( outArchive );
         _match.writeState( outArchive );
-        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        StateIO::writeStepTimer( outArchive, _timer );
         outArchive << _time;
     }
 
@@ -356,7 +356,7 @@ namespace sw
             if ( TrampolineArenaInternal::readPlayer( archive, static_cast<int32>( playerCount ), _settings._maxCombo, body ) == false )
                 return false;
         }
-        const bool bPartsRead = arena._itemSpawner.readState( archive ) && arena._match.readState( archive ) && StateArchiveUtil::readStepTimer( archive, arena._timer );
+        const bool bPartsRead = arena._itemSpawner.readState( archive ) && arena._match.readState( archive ) && StateIO::readStepTimer( archive, arena._timer );
         archive >> arena._time;
         if ( bPartsRead == false || archive.isError() || arena._time < 0.0f )
             return false;

@@ -9,6 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
@@ -17,7 +18,6 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include "Games/VoxelCraft/VoxelAutoPlayControllerComponent.h"
 #include "Games/VoxelCraft/VoxelGameModeComponent.h"
@@ -237,7 +237,7 @@ namespace sw
 
     void VoxelPlayerComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, VoxelPlayerComponentInternal::kStateTag, VoxelPlayerComponentInternal::kStateVersion );
+        StateIO::writeHeader( outArchive, VoxelPlayerComponentInternal::kStateTag, VoxelPlayerComponentInternal::kStateVersion );
         outArchive << _body.getPosition();
         _hotbar.writeState( outArchive );
         outArchive << _brokenCount;
@@ -260,7 +260,7 @@ namespace sw
         uint32      brokenCount = 0;
         uint32      placedCount = 0;
         uint8       bBodyPlaced = SW_FALSE;
-        bool        bRead       = StateArchiveUtil::readHeader( archive, VoxelPlayerComponentInternal::kStateTag, VoxelPlayerComponentInternal::kStateVersion );
+        bool        bRead       = StateIO::readHeader( archive, VoxelPlayerComponentInternal::kStateTag, VoxelPlayerComponentInternal::kStateVersion );
         archive >> position;
         bRead = bRead && hotbar.readState( archive );
         archive >> brokenCount;

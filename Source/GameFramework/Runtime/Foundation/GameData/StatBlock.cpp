@@ -6,10 +6,10 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -117,7 +117,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listValue.size() );
         for ( const StatValue& value : _listValue )
         {
-            StateArchiveUtil::writeName( outArchive, value._name );
+            StateIO::writeName( outArchive, value._name );
             outArchive << value._value;
         }
     }
@@ -131,7 +131,7 @@ namespace sw
         vector<StatValue> listValue( count );
         for ( StatValue& value : listValue )
         {
-            if ( StateArchiveUtil::readName( archive, value._name ) == false )
+            if ( StateIO::readName( archive, value._name ) == false )
                 return false;
             archive >> value._value;
             if ( archive.isError() || value._name.empty() )

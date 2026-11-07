@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -376,7 +376,7 @@ namespace sw
         }
         _drawPile.writeState( outArchive );
         _discardPile.writeState( outArchive );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _currentPlayer;
         outArchive << _direction;
         outArchive << _pendingDraw;
@@ -399,7 +399,7 @@ namespace sw
                 return false;
         }
         const bool bPilesRead = game._drawPile.readState( archive ) && game._discardPile.readState( archive );
-        if ( bPilesRead == false || StateArchiveUtil::readRandom( archive, game._random ) == false )
+        if ( bPilesRead == false || StateIO::readRandom( archive, game._random ) == false )
             return false;
         uint8 color = 0;
         archive >> game._currentPlayer;

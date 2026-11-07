@@ -7,11 +7,10 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -197,9 +196,9 @@ namespace sw
 
     void WeatherSystem::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, getCurrent() );
-        StateArchiveUtil::writeName( outArchive, getPrevious() );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeName( outArchive, getCurrent() );
+        StateIO::writeName( outArchive, getPrevious() );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _remaining;
         outArchive << _transitionElapsed;
     }
@@ -211,7 +210,7 @@ namespace sw
         GameRandom    random            = _random;
         float32       remaining         = 0.0f;
         float32       transitionElapsed = 0.0f;
-        const bool    bRead             = StateArchiveUtil::readName( archive, currentID ) && StateArchiveUtil::readName( archive, previousID ) && StateArchiveUtil::readRandom( archive, random );
+        const bool    bRead             = StateIO::readName( archive, currentID ) && StateIO::readName( archive, previousID ) && StateIO::readRandom( archive, random );
         archive >> remaining;
         archive >> transitionElapsed;
         if ( bRead == false || archive.isError() )

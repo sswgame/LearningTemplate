@@ -7,12 +7,12 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -250,9 +250,9 @@ namespace sw
         outArchive << static_cast<uint32>( _listAllowedTag.size() );
         for ( const hashed_string& tag : _listAllowedTag )
         {
-            StateArchiveUtil::writeName( outArchive, tag );
+            StateIO::writeName( outArchive, tag );
         }
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _budget;
         outArchive << _budgetScale;
         outArchive << _time;
@@ -289,7 +289,7 @@ namespace sw
         vector<hashed_string> listAllowedTag( count );
         for ( hashed_string& tag : listAllowedTag )
         {
-            if ( StateArchiveUtil::readName( archive, tag ) == false )
+            if ( StateIO::readName( archive, tag ) == false )
                 return false;
         }
         GameRandom random       = _random;
@@ -299,7 +299,7 @@ namespace sw
         int32      pendingIndex = -1;
         uint32     nextSpawnID  = 1;
         uint8      bRefund      = SW_FALSE;
-        const bool bRandomRead  = StateArchiveUtil::readRandom( archive, random );
+        const bool bRandomRead  = StateIO::readRandom( archive, random );
         archive >> budget;
         archive >> budgetScale;
         archive >> time;

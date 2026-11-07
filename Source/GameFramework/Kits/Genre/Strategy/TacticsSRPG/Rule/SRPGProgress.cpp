@@ -3,11 +3,11 @@
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGProgress.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGBattlefield.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -188,8 +188,8 @@ namespace sw
         {
             entry._pilotLevel.writeState( outArchive );
             entry._unitLevel.writeState( outArchive );
-            StateArchiveUtil::writeName( outArchive, entry._unitID );
-            StateArchiveUtil::writeName( outArchive, entry._pilotID );
+            StateIO::writeName( outArchive, entry._unitID );
+            StateIO::writeName( outArchive, entry._pilotID );
             outArchive << entry._bLost;
         }
         outArchive << _seed;
@@ -208,7 +208,7 @@ namespace sw
         for ( SRPGRosterEntry& entry : listRoster )
         {
             const bool bEntryRead = entry._pilotLevel.readState( archive ) && entry._unitLevel.readState( archive ) &&
-                                    StateArchiveUtil::readName( archive, entry._unitID ) && StateArchiveUtil::readName( archive, entry._pilotID );
+                                    StateIO::readName( archive, entry._unitID ) && StateIO::readName( archive, entry._pilotID );
             if ( bEntryRead == false )
                 return false;
             archive >> entry._bLost;

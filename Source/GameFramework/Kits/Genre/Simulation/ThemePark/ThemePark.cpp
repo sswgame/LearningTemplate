@@ -6,10 +6,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 #include <algorithm>
@@ -31,7 +31,7 @@ namespace sw
             /** @brief `writeState` 가 쓴 놀이기구 하나를 읽습니다. */
             [[nodiscard]] static bool readRide( Archive& archive, ParkRide& outRide )
             {
-                if ( StateArchiveUtil::readName( archive, outRide._id ) == false )
+                if ( StateIO::readName( archive, outRide._id ) == false )
                     return false;
                 archive >> outRide._name;
                 archive >> outRide._excitement;
@@ -43,7 +43,7 @@ namespace sw
                 archive >> outRide._price;
                 archive >> outRide._runningCostPerMinute;
                 archive >> outRide._bOpen;
-                if ( StateArchiveUtil::readIDList( archive, outRide._listQueue ) == false || StateArchiveUtil::readIDList( archive, outRide._listRider ) == false )
+                if ( StateIO::readIDList( archive, outRide._listQueue ) == false || StateIO::readIDList( archive, outRide._listRider ) == false )
                     return false;
                 archive >> outRide._cycleTimer._remaining;
                 archive >> outRide._totalRiders;
@@ -692,7 +692,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listRide.size() );
         for ( const ParkRide& ride : _listRide )
         {
-            StateArchiveUtil::writeName( outArchive, ride._id );
+            StateIO::writeName( outArchive, ride._id );
             outArchive << string_view( ride._name );
             outArchive << ride._excitement;
             outArchive << ride._intensity;
@@ -703,8 +703,8 @@ namespace sw
             outArchive << ride._price;
             outArchive << ride._runningCostPerMinute;
             outArchive << ride._bOpen;
-            StateArchiveUtil::writeIDList( outArchive, ride._listQueue );
-            StateArchiveUtil::writeIDList( outArchive, ride._listRider );
+            StateIO::writeIDList( outArchive, ride._listQueue );
+            StateIO::writeIDList( outArchive, ride._listRider );
             outArchive << ride._cycleTimer._remaining;
             outArchive << ride._totalRiders;
             outArchive << ride._totalIncome;
@@ -731,8 +731,8 @@ namespace sw
             outArchive << static_cast<uint8>( guest._state );
             outArchive << static_cast<uint8>( guest._thought );
         }
-        StateArchiveUtil::writeStepTimer( outArchive, _stepTimer );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeStepTimer( outArchive, _stepTimer );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _arrival._fraction;
         outArchive << _runningCost._fraction;
         outArchive << _elapsedTime;
@@ -765,7 +765,7 @@ namespace sw
         }
         FixedStepTimer stepTimer = _stepTimer;
         GameRandom     random;
-        if ( StateArchiveUtil::readStepTimer( archive, stepTimer ) == false || StateArchiveUtil::readRandom( archive, random ) == false )
+        if ( StateIO::readStepTimer( archive, stepTimer ) == false || StateIO::readRandom( archive, random ) == false )
             return false;
         float32 arrivalAccumulator = 0.0f;
         float32 costAccumulator    = 0.0f;

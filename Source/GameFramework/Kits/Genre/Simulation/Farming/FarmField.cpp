@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -43,7 +43,7 @@ namespace sw
         outArchive << _topology._height;
         for ( const FarmTile& tile : _listTile )
         {
-            StateArchiveUtil::writeName( outArchive, tile._cropID );
+            StateIO::writeName( outArchive, tile._cropID );
             outArchive << tile._growth;
             const uint8 flags = static_cast<uint8>( ( tile._bTilled != SW_FALSE ? 1u : 0u ) | ( tile._bWatered != SW_FALSE ? 2u : 0u ) |
                                                     ( tile._bReady != SW_FALSE ? 4u : 0u ) | ( tile._bWithered != SW_FALSE ? 8u : 0u ) );
@@ -64,7 +64,7 @@ namespace sw
         for ( FarmTile& tile : listTile )
         {
             uint8 flags = 0;
-            if ( StateArchiveUtil::readName( archive, tile._cropID ) == false )
+            if ( StateIO::readName( archive, tile._cropID ) == false )
                 return false;
             archive >> tile._growth;
             archive >> flags;

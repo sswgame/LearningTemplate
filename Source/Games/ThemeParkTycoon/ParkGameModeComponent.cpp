@@ -20,12 +20,12 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include "Games/ThemeParkTycoon/CoasterCarComponent.h"
 #include "Games/ThemeParkTycoon/FlatRideComponent.h"
@@ -323,7 +323,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ParkGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion );
+        StateIO::writeHeader( outArchive, ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion );
         _simulation.writeState( outArchive );
         outArchive << static_cast<uint32>( _listPlacement.size() );
         for ( const RidePlacement& placement : _listPlacement )
@@ -345,7 +345,7 @@ namespace sw
 
     bool ParkGameModeComponent::readState( Archive& archive )
     {
-        if ( StateArchiveUtil::readHeader( archive, ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion ) == false )
+        if ( StateIO::readHeader( archive, ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion ) == false )
             return false;
         ThemeParkSimulation simulation;
         simulation.initialize( _settings, makeRefs() );

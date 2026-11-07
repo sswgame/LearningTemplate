@@ -5,10 +5,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -367,8 +367,8 @@ namespace sw
         outArchive << _poise;
         outArchive << _timeSinceDamage;
         outArchive << _timeSincePoiseDamage;
-        StateArchiveUtil::writeCountdown( outArchive, _poiseBreak );
-        StateArchiveUtil::writeCountdown( outArchive, _invulnerable );
+        StateIO::writeCountdown( outArchive, _poiseBreak );
+        StateIO::writeCountdown( outArchive, _invulnerable );
         outArchive << _reviveElapsed;
         outArchive << _reviveSpeedScale;
         outArchive << _reviverID;
@@ -390,7 +390,7 @@ namespace sw
         archive >> restored._poise;
         archive >> restored._timeSinceDamage;
         archive >> restored._timeSincePoiseDamage;
-        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._poiseBreak ) && StateArchiveUtil::readCountdown( archive, restored._invulnerable );
+        const bool bTimerRead = StateIO::readCountdown( archive, restored._poiseBreak ) && StateIO::readCountdown( archive, restored._invulnerable );
         archive >> restored._reviveElapsed;
         archive >> restored._reviveSpeedScale;
         archive >> restored._reviverID;

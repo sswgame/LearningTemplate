@@ -5,8 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -308,7 +307,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listItem.size() );
         for ( const GridItem& item : _listItem )
         {
-            StateArchiveUtil::writeName( outArchive, item._itemID );
+            StateIO::writeName( outArchive, item._itemID );
             outArchive << item._instanceID;
             outArchive << item._count;
             outArchive << item._x;
@@ -341,7 +340,7 @@ namespace sw
         vector<GridItem> listItem( itemCount );
         for ( GridItem& item : listItem )
         {
-            if ( StateArchiveUtil::readName( archive, item._itemID ) == false )
+            if ( StateIO::readName( archive, item._itemID ) == false )
                 return false;
             archive >> item._instanceID;
             archive >> item._count;

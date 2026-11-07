@@ -3,10 +3,10 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 // ThemeParkReadStateTest — 놀이공원 상태 바이트의 신뢰 경계: 음수 · 범위 밖 값, 손님과 맞지 않는 줄과 탑승자를 거절하고 공원을 그대로 둔다.
@@ -55,8 +55,8 @@ namespace
             written << static_cast<uint32>( _listRide.size() );
             for ( const sw::ParkRide& ride : _listRide )
             {
-                sw::StateArchiveUtil::writeName( written, ride._id );
-                sw::StateArchiveUtil::writeName( written, "Wheel" ); // 표시 이름도 길이가 붙은 글자이다
+                sw::StateIO::writeName( written, ride._id );
+                sw::StateIO::writeName( written, "Wheel" ); // 표시 이름도 길이가 붙은 글자이다
                 written << ride._excitement;
                 written << ride._intensity;
                 written << ride._nausea;
@@ -66,8 +66,8 @@ namespace
                 written << ride._price;
                 written << ride._runningCostPerMinute;
                 written << ride._bOpen;
-                sw::StateArchiveUtil::writeIDList( written, ride._listQueue );
-                sw::StateArchiveUtil::writeIDList( written, ride._listRider );
+                sw::StateIO::writeIDList( written, ride._listQueue );
+                sw::StateIO::writeIDList( written, ride._listRider );
                 written << ride._cycleTimer._remaining;
                 written << ride._totalRiders;
                 written << ride._totalIncome;
@@ -94,8 +94,8 @@ namespace
                 written << static_cast<uint8>( guest._state );
                 written << static_cast<uint8>( guest._thought );
             }
-            sw::StateArchiveUtil::writeStepTimer( written, sw::FixedStepTimer{} );
-            sw::StateArchiveUtil::writeRandom( written, sw::GameRandom( 9u ) );
+            sw::StateIO::writeStepTimer( written, sw::FixedStepTimer{} );
+            sw::StateIO::writeRandom( written, sw::GameRandom( 9u ) );
             written << _arrival;
             written << _runningCost;
             written << _elapsedTime;

@@ -6,8 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -405,7 +404,7 @@ namespace sw
         outArchive << _velocity;
         outArchive << _anchor;
         outArchive << _ropeLength;
-        StateArchiveUtil::writeCountdown( outArchive, _drillSearchTimer );
+        StateIO::writeCountdown( outArchive, _drillSearchTimer );
         outArchive << _bInsideDirt;
     }
 
@@ -425,7 +424,7 @@ namespace sw
         archive >> restored._velocity;
         archive >> restored._anchor;
         archive >> restored._ropeLength;
-        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._drillSearchTimer );
+        const bool bTimerRead = StateIO::readCountdown( archive, restored._drillSearchTimer );
         archive >> restored._bInsideDirt;
         const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._ropeLength && restored._bInsideDirt <= SW_TRUE;
         if ( bValid == false )

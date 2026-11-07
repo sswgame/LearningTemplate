@@ -6,8 +6,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -225,14 +224,14 @@ namespace sw
         }
         const vector<uint8>& bytes = writer.getBytes();
         outArchive.writeSection( bytes.data(), static_cast<uint32>( bytes.size() ) );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
     }
 
     bool BattleRoyaleZone::readState( Archive& archive )
     {
         vector<uint8> bytes;
         GameRandom    random = _random;
-        if ( archive.readSection( bytes ) == false || StateArchiveUtil::readRandom( archive, random ) == false )
+        if ( archive.readSection( bytes ) == false || StateIO::readRandom( archive, random ) == false )
             return false;
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
         if ( readState( reader ) == false ) // 넷 코덱으로 읽는다(임시 객체에 읽어서 끝까지 맞을 때만 바꾼다)

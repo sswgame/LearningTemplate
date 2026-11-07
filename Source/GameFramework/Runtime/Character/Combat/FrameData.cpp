@@ -7,11 +7,10 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -303,7 +302,7 @@ namespace sw
         outArchive << _bPlaying;
         if ( _bPlaying == SW_FALSE )
             return;
-        StateArchiveUtil::writeName( outArchive, _move._id );
+        StateIO::writeName( outArchive, _move._id );
         outArchive << _frame;
         outArchive << _hitstopRemaining;
         outArchive << _bContact;
@@ -326,7 +325,7 @@ namespace sw
         int32         hitstopRemaining = 0;
         uint8         bContact         = SW_FALSE;
         uint8         bBlocked         = SW_FALSE;
-        if ( StateArchiveUtil::readName( archive, moveID ) == false )
+        if ( StateIO::readName( archive, moveID ) == false )
             return false;
         archive >> frame;
         archive >> hitstopRemaining;

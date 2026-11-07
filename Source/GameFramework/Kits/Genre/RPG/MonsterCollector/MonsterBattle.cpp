@@ -6,10 +6,10 @@
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -782,9 +782,9 @@ namespace sw
             outArchive << static_cast<uint8>( side._bNeedsSwitch ? SW_TRUE : SW_FALSE );
         }
         _turnOrder.writeState( outArchive );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         _captured.writeState( outArchive );
-        StateArchiveUtil::writeName( outArchive, _weatherID );
+        StateIO::writeName( outArchive, _weatherID );
         outArchive << _weatherTurns;
         outArchive << _escapeAttempts;
         outArchive << static_cast<uint8>( _result );
@@ -830,9 +830,9 @@ namespace sw
 
         uint8 outcome = 0;
         uint8 bWild   = SW_FALSE;
-        if ( restored._turnOrder.readState( archive ) == false || StateArchiveUtil::readRandom( archive, restored._random ) == false )
+        if ( restored._turnOrder.readState( archive ) == false || StateIO::readRandom( archive, restored._random ) == false )
             return false;
-        if ( restored._captured.readState( archive ) == false || StateArchiveUtil::readName( archive, restored._weatherID ) == false )
+        if ( restored._captured.readState( archive ) == false || StateIO::readName( archive, restored._weatherID ) == false )
             return false;
         archive >> restored._weatherTurns;
         archive >> restored._escapeAttempts;

@@ -3,12 +3,12 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/IngredientStock.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/RestaurantSimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
@@ -90,7 +90,7 @@ namespace
             outArchive << static_cast<uint32>( _listStaff.size() );
             for ( const sw::StaffMember& staff : _listStaff )
             {
-                sw::StateArchiveUtil::writeName( outArchive, staff._name );
+                sw::StateIO::writeName( outArchive, staff._name );
                 staff._level.writeState( outArchive );
                 outArchive << staff._busyMinutes;
                 outArchive << staff._dailyWage;
@@ -101,8 +101,8 @@ namespace
             outArchive << static_cast<uint32>( _listCustomer.size() );
             for ( const sw::RestaurantCustomer& customer : _listCustomer )
             {
-                sw::StateArchiveUtil::writeName( outArchive, customer._typeID );
-                sw::StateArchiveUtil::writeName( outArchive, customer._dishID );
+                sw::StateIO::writeName( outArchive, customer._typeID );
+                sw::StateIO::writeName( outArchive, customer._dishID );
                 outArchive << customer._waited;
                 outArchive << customer._patience;
                 outArchive << customer._eatRemaining;
@@ -117,8 +117,8 @@ namespace
             outArchive << static_cast<uint32>( _listOrder.size() );
             for ( const sw::KitchenOrder& order : _listOrder )
             {
-                sw::StateArchiveUtil::writeName( outArchive, order._dishID );
-                sw::StateArchiveUtil::writeName( outArchive, order._station );
+                sw::StateIO::writeName( outArchive, order._dishID );
+                sw::StateIO::writeName( outArchive, order._station );
                 outArchive << order._remaining;
                 outArchive << order._customerID;
                 outArchive << order._cook;
@@ -128,14 +128,14 @@ namespace
             outArchive << static_cast<uint32>( _listMenu.size() );
             for ( const sw::MenuEntry& entry : _listMenu )
             {
-                sw::StateArchiveUtil::writeName( outArchive, entry._dishID );
+                sw::StateIO::writeName( outArchive, entry._dishID );
                 outArchive << entry._price;
                 outArchive << entry._bOnMenu;
             }
             outArchive << static_cast<uint32>( _listStation.size() );
             for ( const ForgedStation& station : _listStation )
             {
-                sw::StateArchiveUtil::writeName( outArchive, station._name );
+                sw::StateIO::writeName( outArchive, station._name );
                 outArchive << station._count;
             }
             outArchive << static_cast<uint32>( _listSatisfaction.size() );
@@ -146,7 +146,7 @@ namespace
             outArchive << static_cast<uint32>( _listBatch.size() );
             for ( const ForgedBatch& batch : _listBatch )
             {
-                sw::StateArchiveUtil::writeName( outArchive, batch._itemID );
+                sw::StateIO::writeName( outArchive, batch._itemID );
                 outArchive << batch._unitCost;
                 outArchive << batch._count;
                 outArchive << batch._daysLeft;
@@ -167,11 +167,11 @@ namespace
             outArchive << _today._walkouts;
             outArchive << _today._noChoice;
             outArchive << _today._unservedAtClose;
-            sw::StateArchiveUtil::writeStepTimer( outArchive, sw::FixedStepTimer( sw::RestaurantSimulation::kStepMinutes, 24.0f * 60.0f ) );
-            sw::StateArchiveUtil::writeRandom( outArchive, sw::GameRandom( 9u ) );
-            sw::StateArchiveUtil::writeName( outArchive, "rain" );
+            sw::StateIO::writeStepTimer( outArchive, sw::FixedStepTimer( sw::RestaurantSimulation::kStepMinutes, 24.0f * 60.0f ) );
+            sw::StateIO::writeRandom( outArchive, sw::GameRandom( 9u ) );
+            sw::StateIO::writeName( outArchive, "rain" );
             outArchive << _minutes;
-            sw::StateArchiveUtil::writeRateAccumulator( outArchive, sw::RateAccumulator{} );
+            sw::StateIO::writeRateAccumulator( outArchive, sw::RateAccumulator{} );
             outArchive << _pendingSpoilageCost;
             outArchive << _nextCustomerID;
             outArchive << static_cast<uint8>( SW_TRUE );
@@ -456,10 +456,10 @@ SW_TEST_CASE( RestaurantReadStateTestShop, ShopStateRefusesNegativePrices )
     {
         sw::Archive written;
         written << static_cast<uint32>( 1 );
-        sw::StateArchiveUtil::writeName( written, "market" );
+        sw::StateIO::writeName( written, "market" );
         written << static_cast<uint32>( 0 ); // 재고
         written << static_cast<uint32>( 1 ); // 포화 품목
-        sw::StateArchiveUtil::writeName( written, "noodle" );
+        sw::StateIO::writeName( written, "noodle" );
         written << sellFactor;
         written << static_cast<uint32>( 0 ); // 거절 분류
         written << buyModifier;

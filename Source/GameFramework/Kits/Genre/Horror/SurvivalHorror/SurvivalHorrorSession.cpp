@@ -6,10 +6,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
@@ -50,7 +50,7 @@ namespace sw
                 outArchive << static_cast<uint32>( listName.size() );
                 for ( const hashed_string& name : listName )
                 {
-                    StateArchiveUtil::writeName( outArchive, name );
+                    StateIO::writeName( outArchive, name );
                 }
             }
 
@@ -63,7 +63,7 @@ namespace sw
                 for ( uint32 index = 0; index < count; ++index )
                 {
                     hashed_string name;
-                    if ( StateArchiveUtil::readName( archive, name ) == false || outUniqueName.insert( name ).second == false )
+                    if ( StateIO::readName( archive, name ) == false || outUniqueName.insert( name ).second == false )
                         return false;
                 }
                 return true;
@@ -82,7 +82,7 @@ namespace sw
                 outArchive << static_cast<uint32>( listName.size() );
                 for ( const hashed_string& name : listName )
                 {
-                    StateArchiveUtil::writeName( outArchive, name );
+                    StateIO::writeName( outArchive, name );
                     outArchive << mapNameToCount.find( name )->second;
                 }
             }
@@ -98,7 +98,7 @@ namespace sw
                 {
                     hashed_string name;
                     int32         value = 0;
-                    if ( StateArchiveUtil::readName( archive, name ) == false )
+                    if ( StateIO::readName( archive, name ) == false )
                         return false;
                     archive >> value;
                     if ( archive.isError() || outMapNameToCount.emplace( name, value ).second == false )
@@ -551,10 +551,10 @@ namespace sw
         outArchive << static_cast<uint32>( _listClueLink.size() );
         for ( const SurvivalHorrorClueLink& link : _listClueLink )
         {
-            StateArchiveUtil::writeName( outArchive, link._first );
-            StateArchiveUtil::writeName( outArchive, link._second );
+            StateIO::writeName( outArchive, link._first );
+            StateIO::writeName( outArchive, link._second );
         }
-        StateArchiveUtil::writeName( outArchive, _currentArea );
+        StateIO::writeName( outArchive, _currentArea );
         outArchive << _health;
         outArchive << _saveCount;
         outArchive << _wrongDeductionCount;
@@ -580,10 +580,10 @@ namespace sw
         restored._listClueLink.assign( linkCount, SurvivalHorrorClueLink{} );
         for ( SurvivalHorrorClueLink& link : restored._listClueLink )
         {
-            if ( StateArchiveUtil::readName( archive, link._first ) == false || StateArchiveUtil::readName( archive, link._second ) == false )
+            if ( StateIO::readName( archive, link._first ) == false || StateIO::readName( archive, link._second ) == false )
                 return false;
         }
-        if ( StateArchiveUtil::readName( archive, restored._currentArea ) == false )
+        if ( StateIO::readName( archive, restored._currentArea ) == false )
             return false;
         archive >> restored._health;
         archive >> restored._saveCount;

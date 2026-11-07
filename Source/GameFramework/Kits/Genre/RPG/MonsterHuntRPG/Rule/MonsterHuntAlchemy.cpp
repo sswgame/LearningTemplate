@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Catalog/MonsterHuntCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
 namespace sw
@@ -253,17 +253,17 @@ namespace sw
         outArchive << static_cast<uint32>( _listCharge.size() );
         for ( const ChargeEntry& charge : _listCharge )
         {
-            StateArchiveUtil::writeName( outArchive, charge._itemID );
+            StateIO::writeName( outArchive, charge._itemID );
             outArchive << charge._charges;
         }
         outArchive << static_cast<uint32>( _listEffect.size() );
         for ( const MonsterHuntActiveEffect& effect : _listEffect )
         {
-            StateArchiveUtil::writeName( outArchive, effect._itemID );
-            StateArchiveUtil::writeCountdown( outArchive, effect._remaining );
+            StateIO::writeName( outArchive, effect._itemID );
+            StateIO::writeCountdown( outArchive, effect._remaining );
             outArchive << effect._lockedToxicity;
         }
-        StateArchiveUtil::writeName( outArchive, _oilID );
+        StateIO::writeName( outArchive, _oilID );
         outArchive << _floatingToxicity;
         outArchive << _oilHits;
     }
@@ -281,7 +281,7 @@ namespace sw
         restored._listCharge.assign( count, ChargeEntry{} );
         for ( ChargeEntry& charge : restored._listCharge )
         {
-            if ( StateArchiveUtil::readName( archive, charge._itemID ) == false || _pCatalog->findAlchemy( charge._itemID ) == nullptr )
+            if ( StateIO::readName( archive, charge._itemID ) == false || _pCatalog->findAlchemy( charge._itemID ) == nullptr )
                 return false;
             archive >> charge._charges;
             if ( charge._charges < 0 )
@@ -293,14 +293,14 @@ namespace sw
         restored._listEffect.assign( count, MonsterHuntActiveEffect{} );
         for ( MonsterHuntActiveEffect& effect : restored._listEffect )
         {
-            const bool bHeadRead = StateArchiveUtil::readName( archive, effect._itemID ) && StateArchiveUtil::readCountdown( archive, effect._remaining );
+            const bool bHeadRead = StateIO::readName( archive, effect._itemID ) && StateIO::readCountdown( archive, effect._remaining );
             if ( bHeadRead == false || _pCatalog->findAlchemy( effect._itemID ) == nullptr )
                 return false;
             archive >> effect._lockedToxicity;
             if ( ( 0.0f <= effect._lockedToxicity ) == false ) // 음수는 총 독성을 깎고, NaN 은 독성 판정을 모두 통과시킨다
                 return false;
         }
-        if ( StateArchiveUtil::readName( archive, restored._oilID ) == false )
+        if ( StateIO::readName( archive, restored._oilID ) == false )
             return false;
         archive >> restored._floatingToxicity;
         archive >> restored._oilHits;

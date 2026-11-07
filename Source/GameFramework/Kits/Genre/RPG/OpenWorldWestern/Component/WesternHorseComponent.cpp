@@ -9,10 +9,10 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternGameModeComponent.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseMountComponent.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -142,7 +142,7 @@ namespace sw
 
     void WesternHorseComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
+        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
         outArchive << _bOpened;
         if ( _bOpened == SW_TRUE )
             _horse.writeState( outArchive );
@@ -161,7 +161,7 @@ namespace sw
             return;
         Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
         uint8      bWasOpened = SW_FALSE;
-        const bool bHeader    = StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion );
+        const bool bHeader    = StateIO::readHeader( archive, kStateTag, kStateVersion );
         if ( bHeader )
             archive >> bWasOpened;
         const bool bRead = bHeader && ( bWasOpened == SW_FALSE || _horse.readState( archive ) ) && archive.getRemainingBytes() == 0;

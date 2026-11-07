@@ -6,10 +6,10 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
@@ -425,7 +425,7 @@ namespace sw
         for ( size_t dungeonIndex = 0; dungeonIndex < _listRuntime.size(); ++dungeonIndex )
         {
             const DungeonRuntime& runtime = _listRuntime[dungeonIndex];
-            StateArchiveUtil::writeName( outArchive, pListDungeon != nullptr ? ( *pListDungeon )[dungeonIndex]._id : hashed_string{} );
+            StateIO::writeName( outArchive, pListDungeon != nullptr ? ( *pListDungeon )[dungeonIndex]._id : hashed_string{} );
             outArchive << runtime._progress._smallKeyCount;
             outArchive << runtime._progress._smallKeyUsedCount;
             outArchive << runtime._progress._bBossKey;
@@ -434,7 +434,7 @@ namespace sw
             outArchive << static_cast<uint32>( runtime._listDevice.size() );
             for ( const DeviceRuntime& device : runtime._listDevice )
             {
-                StateArchiveUtil::writeCountdown( outArchive, device._timer );
+                StateIO::writeCountdown( outArchive, device._timer );
                 outArchive << device._litCount;
                 outArchive << device._bActive;
             }
@@ -454,7 +454,7 @@ namespace sw
         for ( uint32 entry = 0; entry < dungeonCount; ++entry )
         {
             hashed_string dungeonID;
-            if ( StateArchiveUtil::readName( archive, dungeonID ) == false )
+            if ( StateIO::readName( archive, dungeonID ) == false )
                 return false;
             const int32 dungeonIndex = _pCatalog->findIndex( dungeonID );
             if ( dungeonIndex < 0 || static_cast<size_t>( dungeonIndex ) >= listRuntime.size() )
@@ -479,7 +479,7 @@ namespace sw
             for ( size_t deviceIndex = 0; deviceIndex < runtime._listDevice.size(); ++deviceIndex )
             {
                 DeviceRuntime& device = runtime._listDevice[deviceIndex];
-                if ( StateArchiveUtil::readCountdown( archive, device._timer ) == false )
+                if ( StateIO::readCountdown( archive, device._timer ) == false )
                     return false;
                 archive >> device._litCount;
                 archive >> device._bActive;

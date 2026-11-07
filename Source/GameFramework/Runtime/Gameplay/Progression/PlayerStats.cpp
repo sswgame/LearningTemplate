@@ -10,11 +10,10 @@
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -181,7 +180,7 @@ namespace sw
 
     void PlayerStats::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, PlayerStatsInternal::kStateTag, PlayerStatsInternal::kStateVersion );
+        StateIO::writeHeader( outArchive, PlayerStatsInternal::kStateTag, PlayerStatsInternal::kStateVersion );
         // 카탈로그 순서대로 쓴다. 같은 값이면 같은 바이트가 나온다. 카탈로그에 없는 값은 애초에 보관하지 않는다.
         uint32 count = 0;
         if ( _pCatalog != nullptr )
@@ -198,7 +197,7 @@ namespace sw
         {
             if ( hasValue( def._id ) == false )
                 continue;
-            StateArchiveUtil::writeName( outArchive, def._id );
+            StateIO::writeName( outArchive, def._id );
             outArchive << getValue( def._id );
         }
     }
@@ -206,7 +205,7 @@ namespace sw
     bool PlayerStats::readState( Archive& archive )
     {
         uint32 count = 0;
-        if ( StateArchiveUtil::readHeader( archive, PlayerStatsInternal::kStateTag, PlayerStatsInternal::kStateVersion ) == false ||
+        if ( StateIO::readHeader( archive, PlayerStatsInternal::kStateTag, PlayerStatsInternal::kStateVersion ) == false ||
              archive.readCount( sizeof( uint32 ) + sizeof( float64 ), count ) == false )
             return false;
         unordered_map<hashed_string, float64> mapValue;
@@ -214,7 +213,7 @@ namespace sw
         {
             hashed_string id;
             float64       value = 0.0;
-            if ( StateArchiveUtil::readName( archive, id ) == false )
+            if ( StateIO::readName( archive, id ) == false )
                 return false;
             archive >> value;
             if ( archive.isError() )

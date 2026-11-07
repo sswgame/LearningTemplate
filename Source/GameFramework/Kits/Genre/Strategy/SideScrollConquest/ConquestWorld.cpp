@@ -8,7 +8,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -43,7 +43,7 @@ namespace sw
                 hashed_string siteID;
                 uint8         owner       = 0;
                 uint8         captureTeam = 0;
-                if ( StateArchiveUtil::readName( archive, siteID ) == false || catalog.findSite( siteID ) != outSite._pDef )
+                if ( StateIO::readName( archive, siteID ) == false || catalog.findSite( siteID ) != outSite._pDef )
                     return false;
                 archive >> outSite._gateHealth;
                 archive >> outSite._wallHealth;
@@ -65,7 +65,7 @@ namespace sw
             {
                 hashed_string buildingID;
                 uint32        queueCount = 0;
-                if ( StateArchiveUtil::readName( archive, buildingID ) == false || archive.readCount( 4, queueCount ) == false )
+                if ( StateIO::readName( archive, buildingID ) == false || archive.readCount( 4, queueCount ) == false )
                     return false;
                 outBuilding._pDef = catalog.findBuilding( buildingID );
                 if ( outBuilding._pDef == nullptr )
@@ -73,7 +73,7 @@ namespace sw
                 outBuilding._listQueue.assign( queueCount, hashed_string{} );
                 for ( hashed_string& unitID : outBuilding._listQueue )
                 {
-                    if ( StateArchiveUtil::readName( archive, unitID ) == false || VectorUtil::contains( outBuilding._pDef->_listTrainable, unitID ) == false || catalog.findUnit( unitID ) == nullptr )
+                    if ( StateIO::readName( archive, unitID ) == false || VectorUtil::contains( outBuilding._pDef->_listTrainable, unitID ) == false || catalog.findUnit( unitID ) == nullptr )
                         return false;
                 }
                 archive >> outBuilding._cycleProgress;
@@ -90,12 +90,12 @@ namespace sw
                 hashed_string unitID;
                 uint8         team  = 0;
                 uint8         order = 0;
-                if ( StateArchiveUtil::readName( archive, unitID ) == false )
+                if ( StateIO::readName( archive, unitID ) == false )
                     return false;
                 outUnit._pDef = catalog.findUnit( unitID );
                 archive >> outUnit._x;
                 archive >> outUnit._health;
-                const bool bCooldownRead = StateArchiveUtil::readCountdown( archive, outUnit._attackCooldown );
+                const bool bCooldownRead = StateIO::readCountdown( archive, outUnit._attackCooldown );
                 archive >> outUnit._holdX;
                 archive >> outUnit._damageDealt;
                 archive >> outUnit._unitID;
@@ -324,7 +324,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listSite.size() );
         for ( const ConquestSite& site : _listSite )
         {
-            StateArchiveUtil::writeName( outArchive, site._pDef->_id );
+            StateIO::writeName( outArchive, site._pDef->_id );
             outArchive << site._gateHealth;
             outArchive << site._wallHealth;
             outArchive << site._captureProgress;
@@ -334,11 +334,11 @@ namespace sw
         outArchive << static_cast<uint32>( _listBuilding.size() );
         for ( const ConquestBuilding& building : _listBuilding )
         {
-            StateArchiveUtil::writeName( outArchive, building._pDef->_id );
+            StateIO::writeName( outArchive, building._pDef->_id );
             outArchive << static_cast<uint32>( building._listQueue.size() );
             for ( const hashed_string& unitID : building._listQueue )
             {
-                StateArchiveUtil::writeName( outArchive, unitID );
+                StateIO::writeName( outArchive, unitID );
             }
             outArchive << building._cycleProgress;
             outArchive << building._trainProgress;
@@ -348,10 +348,10 @@ namespace sw
         outArchive << static_cast<uint32>( _listUnit.size() );
         for ( const ConquestUnit& unit : _listUnit )
         {
-            StateArchiveUtil::writeName( outArchive, unit._pDef->_id );
+            StateIO::writeName( outArchive, unit._pDef->_id );
             outArchive << unit._x;
             outArchive << unit._health;
-            StateArchiveUtil::writeCountdown( outArchive, unit._attackCooldown );
+            StateIO::writeCountdown( outArchive, unit._attackCooldown );
             outArchive << unit._holdX;
             outArchive << unit._damageDealt;
             outArchive << unit._unitID;
@@ -364,12 +364,12 @@ namespace sw
         _resource.writeState( outArchive );
         outArchive << _commander._x;
         outArchive << _commander._health;
-        StateArchiveUtil::writeCountdown( outArchive, _commander._attackCooldown );
-        StateArchiveUtil::writeCountdown( outArchive, _commander._respawnTimer );
+        StateIO::writeCountdown( outArchive, _commander._attackCooldown );
+        StateIO::writeCountdown( outArchive, _commander._respawnTimer );
         outArchive << _commander._moveAxis;
         outArchive << _commander._facing;
         outArchive << _commander._bAlive;
-        StateArchiveUtil::writeStepTimer( outArchive, _timer );
+        StateIO::writeStepTimer( outArchive, _timer );
         outArchive << _elapsed;
         outArchive << _incomeTimer;
         outArchive << _waveTimer;
@@ -420,11 +420,11 @@ namespace sw
         archive >> restored._commander._x;
         archive >> restored._commander._health;
         const bool bCommanderTimerRead =
-            StateArchiveUtil::readCountdown( archive, restored._commander._attackCooldown ) && StateArchiveUtil::readCountdown( archive, restored._commander._respawnTimer );
+            StateIO::readCountdown( archive, restored._commander._attackCooldown ) && StateIO::readCountdown( archive, restored._commander._respawnTimer );
         archive >> restored._commander._moveAxis;
         archive >> restored._commander._facing;
         archive >> restored._commander._bAlive;
-        const bool bStepRead = StateArchiveUtil::readStepTimer( archive, restored._timer );
+        const bool bStepRead = StateIO::readStepTimer( archive, restored._timer );
         archive >> restored._elapsed;
         archive >> restored._incomeTimer;
         archive >> restored._waveTimer;

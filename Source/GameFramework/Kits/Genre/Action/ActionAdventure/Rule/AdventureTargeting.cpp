@@ -5,8 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -126,8 +125,8 @@ namespace sw
     {
         _selector.writeState( outArchive );
         outArchive << _targetPosition;
-        StateArchiveUtil::writeCountdown( outArchive, _evade );
-        StateArchiveUtil::writeCountdown( outArchive, _invulnerable );
+        StateIO::writeCountdown( outArchive, _evade );
+        StateIO::writeCountdown( outArchive, _invulnerable );
         outArchive << static_cast<uint8>( _state );
         outArchive << _bHeld;
     }
@@ -140,7 +139,7 @@ namespace sw
         if ( restored._selector.readState( archive ) == false )
             return false;
         archive >> restored._targetPosition;
-        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._evade ) && StateArchiveUtil::readCountdown( archive, restored._invulnerable );
+        const bool bTimerRead = StateIO::readCountdown( archive, restored._evade ) && StateIO::readCountdown( archive, restored._invulnerable );
         archive >> state;
         archive >> restored._bHeld;
         const bool bValid = bTimerRead && archive.isOk() && state <= static_cast<uint8>( AdventureTargetingState::SideHopRight ) && restored._bHeld <= SW_TRUE;

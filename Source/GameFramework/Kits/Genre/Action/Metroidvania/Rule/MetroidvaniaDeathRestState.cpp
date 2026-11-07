@@ -5,12 +5,12 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -202,14 +202,14 @@ namespace sw
         outArchive << static_cast<uint32>( _listKill.size() );
         for ( const MetroidvaniaKillRecord& kill : _listKill )
         {
-            StateArchiveUtil::writeName( outArchive, kill._spawnID );
+            StateIO::writeName( outArchive, kill._spawnID );
             outArchive << kill._bBoss;
         }
-        StateArchiveUtil::writeName( outArchive, _corpse._area );
+        StateIO::writeName( outArchive, _corpse._area );
         outArchive << _corpse._position;
         outArchive << _corpse._currency;
         outArchive << _corpse._bActive;
-        StateArchiveUtil::writeName( outArchive, _respawnSite );
+        StateIO::writeName( outArchive, _respawnSite );
         outArchive << _lostCurrency;
         outArchive << _flaskCharges;
         outArchive << _flaskMaxCharges;
@@ -225,7 +225,7 @@ namespace sw
         vector<MetroidvaniaKillRecord> listKill( killCount );
         for ( MetroidvaniaKillRecord& kill : listKill )
         {
-            if ( StateArchiveUtil::readName( archive, kill._spawnID ) == false )
+            if ( StateIO::readName( archive, kill._spawnID ) == false )
                 return false;
             archive >> kill._bBoss;
             if ( archive.isError() || kill._bBoss > SW_TRUE )
@@ -246,12 +246,12 @@ namespace sw
         int32              flaskCharges      = 0;
         int32              flaskMaxCharges   = 0;
         int32              flaskPotencyLevel = 0;
-        if ( StateArchiveUtil::readName( archive, corpse._area ) == false )
+        if ( StateIO::readName( archive, corpse._area ) == false )
             return false;
         archive >> corpse._position;
         archive >> corpse._currency;
         archive >> corpse._bActive;
-        if ( StateArchiveUtil::readName( archive, respawnSite ) == false )
+        if ( StateIO::readName( archive, respawnSite ) == false )
             return false;
         archive >> lostCurrency;
         archive >> flaskCharges;

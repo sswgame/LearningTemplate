@@ -11,10 +11,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/MeadowVillage/MeadowVillageData.h"
@@ -53,10 +53,10 @@ namespace sw
 
     void MeadowTownGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
+        StateIO::writeHeader( outArchive, kStateTag, kStateVersion );
         Archive body;
         _town.writeState( body );
-        StateArchiveUtil::writeSection( outArchive, CreatureTown::kStateTag, CreatureTown::kStateVersion, body );
+        StateIO::writeSection( outArchive, CreatureTown::kStateTag, CreatureTown::kStateVersion, body );
     }
 
     bool MeadowTownGameModeComponent::startGame()
@@ -85,8 +85,8 @@ namespace sw
     {
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         Archive                body;
-        const bool             bFrameRead = pState != nullptr && StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) &&
-                                StateArchiveUtil::readExpectedSection( archive, CreatureTown::kStateTag, CreatureTown::kStateVersion, body );
+        const bool             bFrameRead = pState != nullptr && StateIO::readHeader( archive, kStateTag, kStateVersion ) &&
+                                StateIO::readExpectedSection( archive, CreatureTown::kStateTag, CreatureTown::kStateVersion, body );
         if ( bFrameRead == false )
             return false;
         CreatureTown town;

@@ -5,10 +5,10 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestWorld.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
 #include <limits>
@@ -130,7 +130,7 @@ namespace
             {
                 const sw::ConquestSiteDef& def   = listSite[index];
                 const bool                 bKeep = def._id == sw::hashed_string( "keep" );
-                sw::StateArchiveUtil::writeName( written, index == 0 ? _firstSiteID : def._id );
+                sw::StateIO::writeName( written, index == 0 ? _firstSiteID : def._id );
                 written << ( bKeep ? _keepGate : def._gateHealth );
                 written << ( bKeep ? _keepWall : def._wallHealth );
                 written << ( bKeep ? _keepCapture : 0.0f );
@@ -141,10 +141,10 @@ namespace
             written << static_cast<uint32>( _buildingCount );
             for ( int32 building = 0; building < _buildingCount; ++building )
             {
-                sw::StateArchiveUtil::writeName( written, _buildingID );
+                sw::StateIO::writeName( written, _buildingID );
                 written << static_cast<uint32>( _queueUnit.empty() ? 0 : 1 );
                 if ( _queueUnit.empty() == false )
-                    sw::StateArchiveUtil::writeName( written, _queueUnit );
+                    sw::StateIO::writeName( written, _queueUnit );
                 written << _cycle;
                 written << _train;
                 written << _siteIndex;
@@ -154,10 +154,10 @@ namespace
             written << static_cast<uint32>( _unitCount );
             for ( int32 unit = 0; unit < _unitCount; ++unit )
             {
-                sw::StateArchiveUtil::writeName( written, _unitName );
+                sw::StateIO::writeName( written, _unitName );
                 written << 5.0f;
                 written << _unitHealth;
-                sw::StateArchiveUtil::writeCountdown( written, sw::Countdown{} );
+                sw::StateIO::writeCountdown( written, sw::Countdown{} );
                 written << 5.0f;
                 written << 0.0f;
                 written << _unitID;
@@ -176,12 +176,12 @@ namespace
             timer._accumulator = _accumulator;
             written << 0.0f;
             written << _commanderHealth;
-            sw::StateArchiveUtil::writeCountdown( written, sw::Countdown{} );
-            sw::StateArchiveUtil::writeCountdown( written, sw::Countdown{} );
+            sw::StateIO::writeCountdown( written, sw::Countdown{} );
+            sw::StateIO::writeCountdown( written, sw::Countdown{} );
             written << _moveAxis;
             written << _facing;
             written << _commanderAlive;
-            sw::StateArchiveUtil::writeStepTimer( written, timer );
+            sw::StateIO::writeStepTimer( written, timer );
             written << _elapsed;
             written << _incomeTimer;
             written << _waveTimer;

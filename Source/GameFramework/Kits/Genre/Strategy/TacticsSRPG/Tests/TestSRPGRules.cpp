@@ -5,6 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/RunMap.h"
@@ -13,7 +14,6 @@
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCommanderAI.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGProgress.h"
 #include "GameFramework/Runtime/Character/Navigation/GridReachability.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 // 택틱스 SRPG 키트의 규칙: 전투 공식(명중 · 피해 · 크리티컬), 공격 순서(반격 · 지원 · 동기 · MAP), 전장(지형 · 이동 · ZOC · 차례 · 개발), AI 계획, 승패, 로그라이트 지도와 캠페인, 카탈로그 오류, 상태 바이트의 범위 검사.
 // 숫자가 정확히 떨어지도록 능력치 0 인 파일럿과 명중 100 · 크리티컬 0 인 무기(sure)를 쓴다. 땅 빌리기(`bindLand`)는 기반 쪽이라 보지 않는다. 키트 GF_TacticsSRPG(nogpu).
@@ -94,14 +94,14 @@ namespace
             sw::Archive written;
             written << static_cast<int32>( 1 );
             written << static_cast<int32>( 1 );
-            sw::StateArchiveUtil::writeName( written, "plain" );
+            sw::StateIO::writeName( written, "plain" );
             written << static_cast<uint32>( 1 );
-            sw::StateArchiveUtil::writeName( written, "dummy" );
-            sw::StateArchiveUtil::writeName( written, "rookie" );
+            sw::StateIO::writeName( written, "dummy" );
+            sw::StateIO::writeName( written, "rookie" );
             written << static_cast<uint32>( 0 );
             sw::LevelProgress{}.writeState( written );
             sw::LevelProgress{}.writeState( written );
-            sw::StateArchiveUtil::writeInt2( written, cell );
+            sw::StateIO::writeInt2( written, cell );
             written << hp;
             written << en;
             written << morale;
@@ -113,7 +113,7 @@ namespace
                 written << static_cast<uint8>( flag == 0 ? SW_TRUE : SW_FALSE ); // 살아 있음 뒤로 다섯이 꺼져 있다
             }
             order.writeState( written );
-            sw::StateArchiveUtil::writeRandom( written, random );
+            sw::StateIO::writeRandom( written, random );
             written << static_cast<int32>( 1 );
             written << static_cast<int32>( -1 );
             written << static_cast<uint8>( 0 );
@@ -1222,7 +1222,7 @@ SW_TEST_CASE( SRPGRunMapTest, ReadStateChecksCells )
     {
         sw::Archive forged;
         forged << static_cast<uint32>( 1 );
-        sw::StateArchiveUtil::writeName( forged, "Battle" );
+        sw::StateIO::writeName( forged, "Battle" );
         forged << floor;
         forged << column;
         forged << static_cast<uint32>( 0 );

@@ -5,8 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -161,7 +160,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listOwnerName.size() );
         for ( const hashed_string& ownerName : _listOwnerName )
         {
-            StateArchiveUtil::writeName( outArchive, ownerName );
+            StateIO::writeName( outArchive, ownerName );
         }
         for ( const Cell& cell : _listCell )
         {
@@ -189,7 +188,7 @@ namespace sw
         for ( uint32 index = 0; index < ownerCount; ++index )
         {
             hashed_string ownerName;
-            if ( StateArchiveUtil::readName( archive, ownerName ) == false || ownerName.empty() )
+            if ( StateIO::readName( archive, ownerName ) == false || ownerName.empty() )
                 return false;
             listOwnerMap.push_back( land.registerOwner( ownerName ) );
         }

@@ -9,11 +9,10 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
 
@@ -211,7 +210,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listEntry.size() );
         for ( const Entry& entry : _listEntry )
         {
-            StateArchiveUtil::writeName( outArchive, entry._factionID );
+            StateIO::writeName( outArchive, entry._factionID );
             outArchive << entry._value;
         }
     }
@@ -227,7 +226,7 @@ namespace sw
         for ( uint32 index = 0; index < count; ++index )
         {
             Entry entry;
-            if ( StateArchiveUtil::readName( archive, entry._factionID ) == false )
+            if ( StateIO::readName( archive, entry._factionID ) == false )
                 return false;
             archive >> entry._value;
             if ( archive.isError() || entry._factionID.empty() )

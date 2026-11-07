@@ -8,11 +8,11 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 namespace sw
@@ -237,11 +237,11 @@ namespace sw
 
     void WeaponState::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _def._id );
-        StateArchiveUtil::writeName( outArchive, _shot._projectileID );
-        StateArchiveUtil::writeRandom( outArchive, _random );
-        StateArchiveUtil::writeCountdown( outArchive, _cooldown );
-        StateArchiveUtil::writeCountdown( outArchive, _reload );
+        StateIO::writeName( outArchive, _def._id );
+        StateIO::writeName( outArchive, _shot._projectileID );
+        StateIO::writeRandom( outArchive, _random );
+        StateIO::writeCountdown( outArchive, _cooldown );
+        StateIO::writeCountdown( outArchive, _reload );
         outArchive << _currentSpread;
         outArchive << _magazineAmmo;
         outArchive << _reserveAmmo;
@@ -251,14 +251,14 @@ namespace sw
     {
         hashed_string defID;
         hashed_string projectileID;
-        if ( StateArchiveUtil::readName( archive, defID ) == false || defID != _def._id )
+        if ( StateIO::readName( archive, defID ) == false || defID != _def._id )
             return false;
         // 장전한 탄은 쓰는 쪽이 `loadProjectile` 로 먼저 맞춘다 — 다른 탄의 상태는 받지 않는다(탄 값이 들어맞지 않는다).
-        if ( StateArchiveUtil::readName( archive, projectileID ) == false || projectileID != _shot._projectileID )
+        if ( StateIO::readName( archive, projectileID ) == false || projectileID != _shot._projectileID )
             return false;
         WeaponState restored = *this;
-        const bool  bRead    = StateArchiveUtil::readRandom( archive, restored._random ) && StateArchiveUtil::readCountdown( archive, restored._cooldown ) &&
-                           StateArchiveUtil::readCountdown( archive, restored._reload );
+        const bool  bRead    = StateIO::readRandom( archive, restored._random ) && StateIO::readCountdown( archive, restored._cooldown ) &&
+                           StateIO::readCountdown( archive, restored._reload );
         archive >> restored._currentSpread;
         archive >> restored._magazineAmmo;
         archive >> restored._reserveAmmo;

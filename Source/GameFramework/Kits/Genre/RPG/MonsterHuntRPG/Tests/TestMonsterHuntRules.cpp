@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Catalog/MonsterHuntCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Rule/MonsterHuntAlchemy.h"
@@ -14,7 +15,6 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Rule/SkillTree.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
@@ -128,13 +128,13 @@ namespace
             sw::Archive written;
             _alchemy.getCrafter().writeState( written );
             written << static_cast<uint32>( 1 );
-            sw::StateArchiveUtil::writeName( written, "swallow" );
+            sw::StateIO::writeName( written, "swallow" );
             written << charges;
             written << static_cast<uint32>( 1 );
-            sw::StateArchiveUtil::writeName( written, "decoct" );
-            sw::StateArchiveUtil::writeCountdown( written, sw::Countdown( 5.0f ) );
+            sw::StateIO::writeName( written, "decoct" );
+            sw::StateIO::writeCountdown( written, sw::Countdown( 5.0f ) );
             written << lockedToxicity;
-            sw::StateArchiveUtil::writeName( written, oilID );
+            sw::StateIO::writeName( written, oilID );
             written << 0.0f;
             written << oilHits;
             sw::Archive reading( written.getData(), written.getSize() );
@@ -168,7 +168,7 @@ namespace
             random.setSeed( 7 );
             sw::Archive written;
             _combat.getStamina().writeState( written );
-            sw::StateArchiveUtil::writeRandom( written, random );
+            sw::StateIO::writeRandom( written, random );
             written << adrenaline;
             sw::Archive reading( written.getData(), written.getSize() );
             return _combat.readState( reading );
@@ -192,12 +192,12 @@ namespace
         static bool readForgedInvestigation( sw::MonsterHuntInvestigation& investigation, const sw::hashed_string& contractID, int32 stepIndex, const sw::vector<sw::hashed_string>& listFound )
         {
             sw::Archive written;
-            sw::StateArchiveUtil::writeName( written, contractID );
+            sw::StateIO::writeName( written, contractID );
             written << stepIndex;
             written << static_cast<uint32>( listFound.size() );
             for ( const sw::hashed_string& clueID : listFound )
             {
-                sw::StateArchiveUtil::writeName( written, clueID );
+                sw::StateIO::writeName( written, clueID );
             }
             sw::Archive reading( written.getData(), written.getSize() );
             return investigation.readState( reading );
@@ -206,7 +206,7 @@ namespace
         static bool readForgedHaggle( sw::MonsterHuntHaggle& haggle, const sw::hashed_string& contractID, float32 anger, int32 offer, int32 finalReward, uint8 bClosed )
         {
             sw::Archive written;
-            sw::StateArchiveUtil::writeName( written, contractID );
+            sw::StateIO::writeName( written, contractID );
             written << anger;
             written << offer;
             written << finalReward;
@@ -234,12 +234,12 @@ namespace
             written << level;
             written << static_cast<uint32>( 2 );
             written << static_cast<uint32>( 2 );
-            sw::StateArchiveUtil::writeName( written, slot00 );
-            sw::StateArchiveUtil::writeName( written, slot01 );
-            sw::StateArchiveUtil::writeName( written, mutagen0 );
+            sw::StateIO::writeName( written, slot00 );
+            sw::StateIO::writeName( written, slot01 );
+            sw::StateIO::writeName( written, mutagen0 );
             written << static_cast<uint32>( 1 );
-            sw::StateArchiveUtil::writeName( written, slot10 );
-            sw::StateArchiveUtil::writeName( written, sw::hashed_string{} );
+            sw::StateIO::writeName( written, slot10 );
+            sw::StateIO::writeName( written, sw::hashed_string{} );
             sw::Archive reading( written.getData(), written.getSize() );
             return _mutagens.readState( reading );
         }
@@ -553,7 +553,7 @@ SW_TEST_CASE( MonsterHuntBestiaryTest, StateRoundTripsAndRefusesBadEntries )
     {
         sw::Archive forged;
         forged << static_cast<uint32>( 1 );
-        sw::StateArchiveUtil::writeName( forged, monsterID );
+        sw::StateIO::writeName( forged, monsterID );
         forged << knowledge;
         forged << kills;
         sw::Archive forgedReading( forged.getData(), forged.getSize() );

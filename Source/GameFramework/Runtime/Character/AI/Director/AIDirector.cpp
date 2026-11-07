@@ -12,9 +12,9 @@
 
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 #include <algorithm>
@@ -578,7 +578,7 @@ namespace sw
     void AIDirector::writeState( Archive& outArchive ) const
     {
         using Internal = AIDirectorInternal;
-        StateArchiveUtil::writeHeader( outArchive, Internal::kStateTag, Internal::kStateVersion );
+        StateIO::writeHeader( outArchive, Internal::kStateTag, Internal::kStateVersion );
         const int32 phaseCount = _pProfile != nullptr ? static_cast<int32>( _pProfile->getPhases().size() ) : 0;
         outArchive << phaseCount;
         outArchive << _time;
@@ -587,7 +587,7 @@ namespace sw
         outArchive << _phaseIndex;
         outArchive << _cycle;
         outArchive << _pickSerial;
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << static_cast<uint32>( _listPoolState.size() );
         for ( const PoolState& state : _listPoolState )
         {
@@ -629,7 +629,7 @@ namespace sw
     bool AIDirector::readState( Archive& archive )
     {
         using Internal = AIDirectorInternal;
-        if ( _pProfile == nullptr || StateArchiveUtil::readHeader( archive, Internal::kStateTag, Internal::kStateVersion ) == false )
+        if ( _pProfile == nullptr || StateIO::readHeader( archive, Internal::kStateTag, Internal::kStateVersion ) == false )
             return false;
         int32   phaseCount = 0;
         float32 time       = 0.0f;
@@ -647,7 +647,7 @@ namespace sw
         archive >> pickSerial;
         GameRandom random;
         uint32     poolCount = 0;
-        if ( StateArchiveUtil::readRandom( archive, random ) == false || archive.readCount( Internal::kPoolMinBytes, poolCount ) == false )
+        if ( StateIO::readRandom( archive, random ) == false || archive.readCount( Internal::kPoolMinBytes, poolCount ) == false )
             return false;
         const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
         const bool                       bShape   = phaseCount == static_cast<int32>( _pProfile->getPhases().size() ) && 0 <= phaseIndex && phaseIndex < phaseCount && poolCount == listPool.size();

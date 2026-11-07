@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -234,12 +234,12 @@ namespace sw
         {
             outArchive << participant;
         }
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _seed;
         outArchive << _skillCheckActor;
         outArchive << _progress;
         outArchive << _time;
-        StateArchiveUtil::writeCountdown( outArchive, _skillCheckCountdown );
+        StateIO::writeCountdown( outArchive, _skillCheckCountdown );
         outArchive << _skillCheckTarget;
         outArchive << _bCompleted;
         outArchive << _bSkillCheckPending;
@@ -257,13 +257,13 @@ namespace sw
         {
             archive >> participant;
         }
-        if ( StateArchiveUtil::readRandom( archive, restored._random ) == false )
+        if ( StateIO::readRandom( archive, restored._random ) == false )
             return false;
         archive >> restored._seed;
         archive >> restored._skillCheckActor;
         archive >> restored._progress;
         archive >> restored._time;
-        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._skillCheckCountdown );
+        const bool bTimerRead = StateIO::readCountdown( archive, restored._skillCheckCountdown );
         archive >> restored._skillCheckTarget;
         archive >> restored._bCompleted;
         archive >> restored._bSkillCheckPending;

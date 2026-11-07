@@ -5,10 +5,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -155,7 +155,7 @@ namespace sw
         _stamina.writeState( outArchive );
         outArchive << _time;
         outArchive << _parryPressTime;
-        StateArchiveUtil::writeCountdown( outArchive, _riposteWindow );
+        StateIO::writeCountdown( outArchive, _riposteWindow );
         outArchive << _damageTakenScale;
         outArchive << _bGuarding;
     }
@@ -167,7 +167,7 @@ namespace sw
         const bool          bBodyRead = restored._combatHealth.readState( archive ) && restored._stamina.readState( archive );
         archive >> restored._time;
         archive >> restored._parryPressTime;
-        const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._riposteWindow );
+        const bool bTimerRead = StateIO::readCountdown( archive, restored._riposteWindow );
         archive >> restored._damageTakenScale;
         archive >> restored._bGuarding;
         const bool bValid = bBodyRead && bTimerRead && archive.isOk() && 0.0f <= restored._time && 0.0f < restored._damageTakenScale && restored._bGuarding <= SW_TRUE;

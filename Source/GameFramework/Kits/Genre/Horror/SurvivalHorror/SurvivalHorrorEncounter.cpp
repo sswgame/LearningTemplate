@@ -8,7 +8,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -178,7 +178,7 @@ namespace sw
 
     void SurvivalHorrorEncounter::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _monster._id );
+        StateIO::writeName( outArchive, _monster._id );
         outArchive << static_cast<uint32>( _listInvestigator.size() );
         for ( const SurvivalHorrorInvestigator& investigator : _listInvestigator )
         {
@@ -191,7 +191,7 @@ namespace sw
             outArchive << investigator._bDefeated;
         }
         _turnOrder.writeState( outArchive );
-        StateArchiveUtil::writeRandom( outArchive, _random );
+        StateIO::writeRandom( outArchive, _random );
         outArchive << _monsterToughness;
         outArchive << _turnCount;
         outArchive << static_cast<uint8>( _state );
@@ -202,7 +202,7 @@ namespace sw
         hashed_string monsterID;
         uint32        count = 0;
         // 조사자마다 속도, 번호, 체력, 정신력, 의지, 힘(24) + 빠짐(1)
-        const bool bHeadRead = StateArchiveUtil::readName( archive, monsterID ) && archive.readCount( 25, count );
+        const bool bHeadRead = StateIO::readName( archive, monsterID ) && archive.readCount( 25, count );
         if ( bHeadRead == false || monsterID != _monster._id )
             return false;
         // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 괴물 정의와 성공 눈은 사본도 그대로 가지고 있다.
@@ -221,7 +221,7 @@ namespace sw
                 return false;
         }
         uint8      state     = 0;
-        const bool bPartRead = restored._turnOrder.readState( archive ) && StateArchiveUtil::readRandom( archive, restored._random );
+        const bool bPartRead = restored._turnOrder.readState( archive ) && StateIO::readRandom( archive, restored._random );
         archive >> restored._monsterToughness;
         archive >> restored._turnCount;
         archive >> state;

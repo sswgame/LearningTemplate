@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGBattle.h"
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGCatalog.h"
@@ -11,7 +12,6 @@
 #include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGParty.h"
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
@@ -110,11 +110,11 @@ namespace
             sw::GameRandom random;
             random.setSeed( 3 );
             written << static_cast<uint32>( 1 );
-            sw::StateArchiveUtil::writeName( written, _enemyID );
+            sw::StateIO::writeName( written, _enemyID );
             written << static_cast<uint32>( _lockCount );
             for ( int32 lock = 0; lock < _lockCount; ++lock )
             {
-                sw::StateArchiveUtil::writeName( written, "Sword" );
+                sw::StateIO::writeName( written, "Sword" );
             }
             written << _hp;
             written << _castTurnsLeft;
@@ -123,13 +123,13 @@ namespace
             written << static_cast<uint32>( _commandCount );
             for ( int32 command = 0; command < _commandCount; ++command )
             {
-                sw::StateArchiveUtil::writeName( written, _commandID );
+                sw::StateIO::writeName( written, _commandID );
                 written << static_cast<int32>( 0 );
                 written << _commandKind;
                 written << _defending;
             }
             order.writeState( written );
-            sw::StateArchiveUtil::writeRandom( written, random );
+            sw::StateIO::writeRandom( written, random );
             written << _rewardExp;
             written << _rewardGold;
             written << _comboPoints;
@@ -1137,7 +1137,7 @@ SW_TEST_CASE_F( JRPGRulesTest, StepEncounterState )
     const auto refuses = [&]( int32 stepsSince, int32 total )
     {
         sw::Archive forged;
-        sw::StateArchiveUtil::writeRandom( forged, random );
+        sw::StateIO::writeRandom( forged, random );
         forged << stepsSince;
         forged << total;
         sw::Archive readingForged( forged.getData(), forged.getSize() );

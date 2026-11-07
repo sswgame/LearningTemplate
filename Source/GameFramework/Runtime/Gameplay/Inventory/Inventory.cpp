@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 
@@ -399,7 +399,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listSlot.size() );
         for ( const InventorySlot& slot : _listSlot )
         {
-            StateArchiveUtil::writeName( outArchive, slot._itemID );
+            StateIO::writeName( outArchive, slot._itemID );
             outArchive << slot._count;
             outArchive << slot._durability;
             outArchive << slot._damage;
@@ -407,14 +407,14 @@ namespace sw
             outArchive << static_cast<uint32>( listValue.size() );
             for ( const CustomizationValue& value : listValue )
             {
-                StateArchiveUtil::writeName( outArchive, value._parameter );
-                StateArchiveUtil::writeName( outArchive, value._option );
+                StateIO::writeName( outArchive, value._parameter );
+                StateIO::writeName( outArchive, value._option );
                 outArchive << value._number;
             }
             outArchive << static_cast<uint32>( slot._listDetachedPart.size() );
             for ( const hashed_string& part : slot._listDetachedPart )
             {
-                StateArchiveUtil::writeName( outArchive, part );
+                StateIO::writeName( outArchive, part );
             }
         }
     }
@@ -432,7 +432,7 @@ namespace sw
         for ( InventorySlot& slot : listSlot )
         {
             uint32 valueCount = 0;
-            if ( StateArchiveUtil::readName( archive, slot._itemID ) == false )
+            if ( StateIO::readName( archive, slot._itemID ) == false )
                 return false;
             archive >> slot._count;
             archive >> slot._durability;
@@ -443,7 +443,7 @@ namespace sw
             for ( uint32 valueIndex = 0; valueIndex < valueCount; ++valueIndex )
             {
                 CustomizationValue value;
-                if ( StateArchiveUtil::readName( archive, value._parameter ) == false || StateArchiveUtil::readName( archive, value._option ) == false )
+                if ( StateIO::readName( archive, value._parameter ) == false || StateIO::readName( archive, value._option ) == false )
                     return false;
                 archive >> value._number;
                 slot._customization.setValue( value );
@@ -454,7 +454,7 @@ namespace sw
             slot._listDetachedPart.resize( partCount );
             for ( hashed_string& part : slot._listDetachedPart )
             {
-                if ( StateArchiveUtil::readName( archive, part ) == false )
+                if ( StateIO::readName( archive, part ) == false )
                     return false;
             }
             const bool bValid = archive.isOk() && 0 <= slot._count && ( slot._count == 0 || slot._itemID.empty() == false );

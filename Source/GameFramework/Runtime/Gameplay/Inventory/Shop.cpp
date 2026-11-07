@@ -7,11 +7,11 @@
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
@@ -106,7 +106,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listBalance.size() );
         for ( const WalletBalance& balance : _listBalance )
         {
-            StateArchiveUtil::writeName( outArchive, balance._currency );
+            StateIO::writeName( outArchive, balance._currency );
             outArchive << balance._amount;
         }
     }
@@ -122,7 +122,7 @@ namespace sw
         for ( uint32 index = 0; index < count; ++index )
         {
             WalletBalance balance;
-            if ( StateArchiveUtil::readName( archive, balance._currency ) == false )
+            if ( StateIO::readName( archive, balance._currency ) == false )
                 return false;
             archive >> balance._amount;
             const bool bValid = archive.isOk() && balance._currency.empty() == false;
@@ -506,7 +506,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listRuntime.size() );
         for ( const ShopRuntime& runtime : _listRuntime )
         {
-            StateArchiveUtil::writeName( outArchive, runtime._shopID );
+            StateIO::writeName( outArchive, runtime._shopID );
             outArchive << static_cast<uint32>( runtime._listStockCount.size() );
             for ( const int32 count : runtime._listStockCount )
             {
@@ -515,13 +515,13 @@ namespace sw
             outArchive << static_cast<uint32>( runtime._listSaturatedItem.size() );
             for ( size_t index = 0; index < runtime._listSaturatedItem.size(); ++index )
             {
-                StateArchiveUtil::writeName( outArchive, runtime._listSaturatedItem[index] );
+                StateIO::writeName( outArchive, runtime._listSaturatedItem[index] );
                 outArchive << ( index < runtime._listSellFactor.size() ? runtime._listSellFactor[index] : 1.0f );
             }
             outArchive << static_cast<uint32>( runtime._listExtraRefused.size() );
             for ( const hashed_string& category : runtime._listExtraRefused )
             {
-                StateArchiveUtil::writeName( outArchive, category );
+                StateIO::writeName( outArchive, category );
             }
             outArchive << runtime._buyModifier;
             outArchive << runtime._sellModifier;
@@ -540,7 +540,7 @@ namespace sw
         {
             ShopRuntime saved;
             uint32      count = 0;
-            if ( StateArchiveUtil::readName( archive, saved._shopID ) == false || archive.readCount( 4, count ) == false )
+            if ( StateIO::readName( archive, saved._shopID ) == false || archive.readCount( 4, count ) == false )
                 return false;
             saved._listStockCount.resize( count, 0 );
             for ( int32& stockCount : saved._listStockCount )
@@ -553,7 +553,7 @@ namespace sw
             saved._listSellFactor.resize( count, 1.0f );
             for ( uint32 index = 0; index < count; ++index )
             {
-                if ( StateArchiveUtil::readName( archive, saved._listSaturatedItem[index] ) == false )
+                if ( StateIO::readName( archive, saved._listSaturatedItem[index] ) == false )
                     return false;
                 archive >> saved._listSellFactor[index];
             }
@@ -562,7 +562,7 @@ namespace sw
             saved._listExtraRefused.resize( count );
             for ( hashed_string& category : saved._listExtraRefused )
             {
-                if ( StateArchiveUtil::readName( archive, category ) == false )
+                if ( StateIO::readName( archive, category ) == false )
                     return false;
             }
             archive >> saved._buyModifier;

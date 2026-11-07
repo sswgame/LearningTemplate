@@ -5,10 +5,10 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Catalog/MonsterHuntCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
@@ -149,9 +149,9 @@ namespace sw
             outArchive << static_cast<uint32>( group._listSkill.size() );
             for ( const hashed_string& skillID : group._listSkill )
             {
-                StateArchiveUtil::writeName( outArchive, skillID );
+                StateIO::writeName( outArchive, skillID );
             }
-            StateArchiveUtil::writeName( outArchive, group._mutagenID );
+            StateIO::writeName( outArchive, group._mutagenID );
         }
     }
 
@@ -172,7 +172,7 @@ namespace sw
                 return false;
             for ( hashed_string& skillID : group._listSkill )
             {
-                if ( StateArchiveUtil::readName( archive, skillID ) == false )
+                if ( StateIO::readName( archive, skillID ) == false )
                     return false;
                 if ( skillID.empty() )
                     continue;
@@ -180,7 +180,7 @@ namespace sw
                     return false;
                 listSeenSkill.push_back( skillID );
             }
-            if ( StateArchiveUtil::readName( archive, group._mutagenID ) == false )
+            if ( StateIO::readName( archive, group._mutagenID ) == false )
                 return false;
             if ( group._mutagenID.empty() == false && _pCatalog->findMutagen( group._mutagenID ) == nullptr )
                 return false;

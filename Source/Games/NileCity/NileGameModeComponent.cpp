@@ -22,10 +22,10 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include "Games/NileCity/NileBuildingComponent.h"
 #include "Games/NileCity/NileWalkerComponent.h"
@@ -466,7 +466,7 @@ namespace sw
 
     void NileGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, NileGameModeComponentInternal::kStateTag, NileGameModeComponentInternal::kStateVersion );
+        StateIO::writeHeader( outArchive, NileGameModeComponentInternal::kStateTag, NileGameModeComponentInternal::kStateVersion );
         _city.writeState( outArchive );
         _planner.writeState( outArchive );
         _wallet.writeState( outArchive );
@@ -481,7 +481,7 @@ namespace sw
 
     bool NileGameModeComponent::readState( Archive& archive )
     {
-        if ( StateArchiveUtil::readHeader( archive, NileGameModeComponentInternal::kStateTag, NileGameModeComponentInternal::kStateVersion ) == false )
+        if ( StateIO::readHeader( archive, NileGameModeComponentInternal::kStateTag, NileGameModeComponentInternal::kStateVersion ) == false )
             return false;
         CitySimulation  city;
         NileCityPlanner planner;

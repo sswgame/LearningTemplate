@@ -6,8 +6,7 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 namespace sw
 {
@@ -342,13 +341,13 @@ namespace sw
     void CameraDirector::writeState( Archive& outArchive ) const
     {
         using Internal = CameraDirectorInternal;
-        StateArchiveUtil::writeHeader( outArchive, Internal::kStateTag, Internal::kStateVersion );
+        StateIO::writeHeader( outArchive, Internal::kStateTag, Internal::kStateVersion );
         outArchive << static_cast<uint8>( _bHasPose );
         Internal::writePose( outArchive, _outputPose );
         outArchive << static_cast<uint32>( _listLayer.size() );
         for ( const Layer& layer : _listLayer )
         {
-            StateArchiveUtil::writeName( outArchive, layer._def._id );
+            StateIO::writeName( outArchive, layer._def._id );
             outArchive << layer._bFrozen;
             Internal::writeBlend( outArchive, layer._blend );
             outArchive << layer._elapsed;
@@ -362,7 +361,7 @@ namespace sw
     bool CameraDirector::readState( Archive& archive, const CameraPresetCatalog& catalog )
     {
         using Internal = CameraDirectorInternal;
-        if ( StateArchiveUtil::readHeader( archive, Internal::kStateTag, Internal::kStateVersion ) == false )
+        if ( StateIO::readHeader( archive, Internal::kStateTag, Internal::kStateVersion ) == false )
             return false;
         uint8      bHasPose = SW_FALSE;
         CameraPose outputPose;
@@ -376,7 +375,7 @@ namespace sw
         for ( Layer& layer : listLayer )
         {
             hashed_string id;
-            if ( StateArchiveUtil::readName( archive, id ) == false )
+            if ( StateIO::readName( archive, id ) == false )
                 return false;
             archive >> layer._bFrozen;
             if ( Internal::readBlend( archive, layer._blend ) == false )

@@ -4,12 +4,12 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostEncounter.h"
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostMansion.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/Tests/StateBytesTestUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
@@ -67,16 +67,16 @@ namespace
         void write( Archive& outArchive ) const
         {
             const GameRandom random;
-            StateArchiveUtil::writeRandom( outArchive, random );
+            StateIO::writeRandom( outArchive, random );
             const uint32 count = _bTwice == SW_TRUE ? 2u : 1u;
             outArchive << count;
             for ( uint32 index = 0; index < count; ++index )
             {
-                StateArchiveUtil::writeName( outArchive, _kind );
+                StateIO::writeName( outArchive, _kind );
                 outArchive << float3{};
                 outArchive << _flee;
                 outArchive << _hp;
-                StateArchiveUtil::writeCountdown( outArchive, Countdown( 1.0f ) );
+                StateIO::writeCountdown( outArchive, Countdown( 1.0f ) );
                 outArchive << _id;
                 outArchive << _state;
             }
@@ -106,10 +106,10 @@ namespace
 
         void write( Archive& outArchive ) const
         {
-            StateArchiveUtil::writeName( outArchive, _room );
-            StateArchiveUtil::writeName( outArchive, _furniture );
+            StateIO::writeName( outArchive, _room );
+            StateIO::writeName( outArchive, _furniture );
             outArchive << _hp;
-            StateArchiveUtil::writeCountdown( outArchive, Countdown{} );
+            StateIO::writeCountdown( outArchive, Countdown{} );
             outArchive << _state;
         }
     };
@@ -212,7 +212,7 @@ namespace
             Archive written;
             _mansion.getEncounter().writeState( written );
             const GameRandom random;
-            StateArchiveUtil::writeRandom( written, random );
+            StateIO::writeRandom( written, random );
             written << booCount;
             boo.write( written );
             for ( uint32 index = 1; index < booCount; ++index )
@@ -228,7 +228,7 @@ namespace
             {
                 written << searched;
             }
-            StateArchiveUtil::writeName( written, currentRoom );
+            StateIO::writeName( written, currentRoom );
             written << static_cast<uint32>( 5 ); // 씨앗
             written << static_cast<uint32>( 0 ); // 맡아 둔 열쇠
             Archive reading( written.getData(), written.getSize() );

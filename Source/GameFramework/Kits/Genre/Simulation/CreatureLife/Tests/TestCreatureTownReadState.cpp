@@ -3,11 +3,11 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 // CreatureTownReadStateTest — 생물 마을 상태 바이트의 신뢰 경계: 없는 종 · 서식지 · 집, 겹친 항목, 서로 맞지 않는 입주, 범위 밖 값을 거절하고 마을을 그대로 둔다.
 // 꾸민 바이트는 `writeState` 의 형식을 그대로 손으로 적는다. 칸마다 맞는 값을 기본으로 두고 한 칸씩 망가뜨린다.
@@ -65,13 +65,13 @@ namespace
             written << kTownSize;
             for ( int32 tile = 0; tile < kTownSize * kTownSize; ++tile )
             {
-                sw::StateArchiveUtil::writeName( written, sw::hashed_string{} );
+                sw::StateIO::writeName( written, sw::hashed_string{} );
             }
             written << static_cast<uint32>( _listHabitat.size() );
             for ( const sw::HabitatInstance& habitat : _listHabitat )
             {
-                sw::StateArchiveUtil::writeName( written, habitat._habitatID );
-                sw::StateArchiveUtil::writeInt2( written, habitat._origin );
+                sw::StateIO::writeName( written, habitat._habitatID );
+                sw::StateIO::writeInt2( written, habitat._origin );
                 written << habitat._id;
                 written << habitat._rotation;
                 written << static_cast<uint32>( habitat._listTile.size() );
@@ -83,7 +83,7 @@ namespace
             written << static_cast<uint32>( _listCreature.size() );
             for ( const sw::TownCreature& creature : _listCreature )
             {
-                sw::StateArchiveUtil::writeName( written, creature._speciesID );
+                sw::StateIO::writeName( written, creature._speciesID );
                 written << static_cast<uint32>( creature._listAbilityUse.size() );
                 for ( const int32 useCount : creature._listAbilityUse )
                 {
@@ -101,15 +101,15 @@ namespace
                 written << static_cast<uint32>( house._listResident.size() );
                 for ( const sw::hashed_string& resident : house._listResident )
                 {
-                    sw::StateArchiveUtil::writeName( written, resident );
+                    sw::StateIO::writeName( written, resident );
                 }
-                sw::StateArchiveUtil::writeInt2( written, house._tile );
+                sw::StateIO::writeInt2( written, house._tile );
                 written << house._capacity;
             }
             written << static_cast<uint32>( _listOpenRequest.size() );
             for ( const sw::hashed_string& questID : _listOpenRequest )
             {
-                sw::StateArchiveUtil::writeName( written, questID );
+                sw::StateIO::writeName( written, questID );
             }
             written << _nextHabitatID;
             written << _lastAttractKey;
