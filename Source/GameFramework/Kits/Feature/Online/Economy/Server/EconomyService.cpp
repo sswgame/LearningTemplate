@@ -72,7 +72,7 @@ namespace sw
         : _localCalls{}
         , _mapTicketToCall{}
         , _settings{}
-        , _mapPresenceRequestToNotice{}
+        , _presenceFinds{}
         , _uniqueSetDeliveryInFlight{}
         , _uniqueSetDeliveryAlarmed{}
         , _balanceNotice{ *this }
@@ -118,7 +118,7 @@ namespace sw
         _settings = settings;
         _refundCursorJob.setPeriod( settings._refundCursorRetryMs ); // 첫 틱에 읽고, 못 읽었으면 이 간격 뒤에 다시 읽는다
         _deliveryJob.setPeriod( settings._deliveryScanIntervalMs );  // 기동 직후 한 번 읽는다
-        _findOwner       = settings._pPresence != nullptr ? settings._pPresence->openFindOwner() : Subscription{};
+        _presenceFinds.bind( settings._pPresence );
         _pMetricRegistry = settings._pMetricRegistry;
         if ( settings._pScheduler != nullptr )
         {
@@ -147,8 +147,7 @@ namespace sw
         _localCalls.clear();
         _mapTicketToCall.clear();
         setReady( false );
-        _findOwner.reset(); // 잔액 알림 찾기가 이 객체를 부르지 않게 한다(저장 작업을 회수한 뒤 — 그 완료가 찾기를 낼 수 있다)
-        _mapPresenceRequestToNotice.clear();
+        _presenceFinds.unbind(); // 잔액 알림 찾기가 이 객체를 부르지 않게 한다(저장 작업을 회수한 뒤 — 그 완료가 찾기를 낼 수 있다). 기다리던 알림은 버린다
         _store.bindStore( nullptr );
     }
 
@@ -555,7 +554,7 @@ namespace sw
     {
         (void)host;
         _pHost = nullptr;
-        _mapPresenceRequestToNotice.clear(); // 접속 상태 답은 호스트가 이미 회수했다
+        _presenceFinds.unbind(); // 접속 상태 답은 호스트가 이미 회수했다 — 기다리던 알림은 버린다
     }
 
     void EconomyService::notifyBalancesChanged( AccountID accountID, const vector<LedgerBalance>& listBalance )
@@ -573,21 +572,12 @@ namespace sw
         }
         if ( _pHost->sendPush( accountID, EconomyMethod::BalanceChanged::kKind, body ) )
             return; // 이 서버에 붙어 있다
-        if ( _settings._pPresence == nullptr )
-            return; // 서버가 하나이고 붙어 있지 않다. 다음 로그인이 지갑을 읽는다
-        const uint64 requestID                 = _settings._pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&EconomyService::onBalancePresenceFound>( this ), _findOwner );
-        _mapPresenceRequestToNotice[requestID] = std::move( changed );
-    }
-
-    void EconomyService::onBalancePresenceFound( const AccountPresenceResult& result )
-    {
-        const auto noticeIt = _mapPresenceRequestToNotice.find( result._requestID );
-        if ( noticeIt == _mapPresenceRequestToNotice.end() )
-            return;
-        const EconomyBalanceChanged changed = std::move( noticeIt->second );
-        _mapPresenceRequestToNotice.erase( noticeIt );
-        if ( result.isOnline() )
-            (void)_settings._pPresence->sendRemotePush( result._identity._accountID, EconomyPushName::BalanceChanged, changed ); // 붙어 있지 않으면 보내지 않는다
+        // 서버가 하나면 찾지 않는다 — 붙어 있지 않으니 다음 로그인이 지갑을 읽는다.
+        (void)_presenceFinds.findByAccount( accountID, accountID, [this, changed = std::move( changed )]( const AccountPresenceResult& result )
+        {
+            if ( result.isOnline() && _presenceFinds.hasPresence() )
+                (void)_presenceFinds.getPresence()->sendRemotePush( result._identity._accountID, EconomyPushName::BalanceChanged, changed ); // 붙어 있지 않으면 보내지 않는다
+        } );
     }
 
     void EconomyService::pollRefunds()

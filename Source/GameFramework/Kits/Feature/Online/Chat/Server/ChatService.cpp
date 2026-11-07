@@ -207,7 +207,6 @@ namespace sw
     ChatService::ChatService()
         : _mapAccountToMember{}
         , _mapChannelToMember{}
-        , _mapPresenceRequestToWhisper{}
         , _listHistoryQueue{}
         , _completionBuffer{}
         , _deliveryBuffer{}
@@ -217,6 +216,7 @@ namespace sw
         , _reportGuard{}
         , _settings{}
         , _dependencies{}
+        , _presenceFinds{}
         , _serverTopic{}
         , _sequence{ 0 }
         , _reportSequence{ 0 }
@@ -239,7 +239,7 @@ namespace sw
         }
         _dependencies = dependencies;
         _store.bindStore( dependencies._pStore );
-        _findOwner   = dependencies._pPresence != nullptr ? dependencies._pPresence->openFindOwner() : Subscription{};
+        _presenceFinds.bind( dependencies._pBus != nullptr ? dependencies._pPresence : nullptr ); // 버스가 없으면 다른 서버로 보낼 길이 없다
         _settings    = settings;
         _serverTopic = ChatProtocol::makeServerTopic( dependencies._serverID );
         // 정규화(건너뛸 글자)는 금칙어 거르개와 도배 방지기가 함께 쓴다 — 데이터라 없으면 서비스가 서지 않는다.
@@ -267,11 +267,10 @@ namespace sw
         _store.flushUntilIdle();
         if ( _store.isIdle() == false )
             SW_LOG_ERROR_ID( "ChatService.ChatServiceShutDownStore", "ChatService shut down with %# store works still pending", _store.getOpenCount() );
-        // 맡긴 찾기를 회수한다. 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다. 저장 작업을 회수한 뒤에 한다. 그 완료가 찾기를 낼 수 있기 때문이다
-        _findOwner.reset();
+        // 맡긴 찾기를 회수한다(기다리던 귓속말은 답 없이 버린다). 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다. 저장 작업을 회수한 뒤에 한다. 그 완료가 찾기를 낼 수 있기 때문이다
+        _presenceFinds.unbind();
         _mapAccountToMember.clear();
         _mapChannelToMember.clear();
-        _mapPresenceRequestToWhisper.clear();
         _listHistoryQueue.clear();
         _dependencies = ChatServiceDependencies{};
         _store.bindStore( nullptr );
@@ -582,31 +581,24 @@ namespace sw
             completeMessage( method, send._requestTag, std::move( message ) );
             return;
         }
-        if ( _dependencies._pPresence == nullptr || _dependencies._pBus == nullptr )
-        {
-            completeSimple( method, send._requestTag, ChatResult::TargetOffline );
-            return;
-        }
-        // 다른 서버에 있으면 접속 상태로 서버를 찾는다. 결과는 항상 나중에 onPresenceFound 로 온다
-        const uint64 requestID = _dependencies._pPresence->submitFindByAccount( send._recipientID, AccountPresenceDelegate::create<&ChatService::onPresenceFound>( this ), _findOwner );
-        _mapPresenceRequestToWhisper.emplace( requestID, PendingWhisper{ std::move( message ), send._requestTag } );
+        // 다른 서버에 있으면 접속 상태로 서버를 찾는다. 답은 항상 나중에 온다(접속 상태 · 버스가 없으면 맡지 않는다)
+        const uint64 requestTag = send._requestTag;
+        const bool   bFinding   = _presenceFinds.findByAccount( send._recipientID, accountID, [this, message = std::move( message ), requestTag]( const AccountPresenceResult& result ) mutable
+            { finishRemoteWhisper( result, std::move( message ), requestTag ); } );
+        if ( bFinding == false )
+            completeSimple( method, requestTag, ChatResult::TargetOffline );
     }
 
-    void ChatService::onPresenceFound( const AccountPresenceResult& result )
+    void ChatService::finishRemoteWhisper( const AccountPresenceResult& result, ChatMessage&& message, uint64 requestTag )
     {
-        const auto whisperIt = _mapPresenceRequestToWhisper.find( result._requestID );
-        if ( whisperIt == _mapPresenceRequestToWhisper.end() )
-            return; // 종료한 뒤에 온 결과이다
-        PendingWhisper pending = std::move( whisperIt->second );
-        _mapPresenceRequestToWhisper.erase( whisperIt );
         if ( result.isOnline() == false || result._serverID == _dependencies._serverID )
         {
-            completeSimple( ChatMethod::Whisper::kID, pending._requestTag, ChatResult::TargetOffline ); // 이 서버였다면 그사이 떠난 것이다
+            completeSimple( ChatMethod::Whisper::kID, requestTag, ChatResult::TargetOffline ); // 이 서버였다면 그사이 떠난 것이다
             return;
         }
-        publishMessage( ChatBus::kServerTopic, ServiceKeyUtil::makeHex64( result._serverID ), pending._message );
-        queueHistory( pending._message );
-        completeMessage( ChatMethod::Whisper::kID, pending._requestTag, std::move( pending._message ) ); // 받는 서버가 차단으로 버려도 보낸 사람에게는 보낸 것으로 보인다
+        publishMessage( ChatBus::kServerTopic, ServiceKeyUtil::makeHex64( result._serverID ), message );
+        queueHistory( message );
+        completeMessage( ChatMethod::Whisper::kID, requestTag, std::move( message ) ); // 받는 서버가 차단으로 버려도 보낸 사람에게는 보낸 것으로 보인다
     }
 
     void ChatService::publishMessage( const ServerBusTopicFamily<ChatMessage>& family, string_view suffix, const ChatMessage& message )

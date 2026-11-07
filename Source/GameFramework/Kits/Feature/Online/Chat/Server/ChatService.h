@@ -35,15 +35,14 @@
 #include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatTypes.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatSpamGuard.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatWordFilter.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
 {
-    struct AccountPresenceResult;
 
-    class IAccountPresence;
     class IServiceStore;
     class ServerBus;
     class ServerBusMessage;
@@ -185,7 +184,7 @@ namespace sw
 
         int32 getLocalMemberCount( string_view channelID ) const;
         /** @brief 맡겨 두고 끝나지 않은 작업(저장, 접속 상태 찾기)의 수입니다. */
-        int32 getPendingCount() const { return _store.getOpenCount() + static_cast<int32>( _mapPresenceRequestToWhisper.size() ); }
+        int32 getPendingCount() const { return _store.getOpenCount() + _presenceFinds.getOpenCount(); }
         int32 getQueuedHistoryCount() const { return static_cast<int32>( _listHistoryQueue.size() ); }
 
     private:
@@ -215,13 +214,8 @@ namespace sw
             uint8               _bSanctionChanged{ SW_FALSE }; ///< 읽는 도중 GM 이 바꿨다. 그 읽기는 이전 값일 수 있어 다시 읽는다
         };
 
-        struct PendingWhisper
-        {
-            ChatMessage _message{};
-            uint64      _requestTag{ 0 };
-        };
-
-        void        onPresenceFound( const AccountPresenceResult& result );
+        /** @brief 다른 서버에 있을 수 있는 상대를 찾은 답입니다. 받는 서버로 보내거나 상대가 없다고 끝낸다. */
+        void        finishRemoteWhisper( const AccountPresenceResult& result, ChatMessage&& message, uint64 requestTag );
         Member*     ensureMember( AccountID accountID, UnixMilliseconds nowMs );
         bool        isSanctionFresh( const Member& member, UnixMilliseconds nowMs ) const;
         void        startSanctionRead( AccountID accountID, Member& member, UnixMilliseconds nowMs );
@@ -243,7 +237,6 @@ namespace sw
     private:
         unordered_map<AccountID, Member>         _mapAccountToMember;
         unordered_map<string, vector<AccountID>> _mapChannelToMember;
-        unordered_map<uint64, PendingWhisper>    _mapPresenceRequestToWhisper;
         vector<ChatMessage>                      _listHistoryQueue;
         EventBuffer<ChatCompletion>              _completionBuffer;
         EventBuffer<ChatDelivery>                _deliveryBuffer;
@@ -253,7 +246,7 @@ namespace sw
         TokenBucketMap                           _reportGuard;
         ChatServiceConfig                        _settings;
         ChatServiceDependencies                  _dependencies;
-        Subscription                             _findOwner; ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        AccountPresenceTracker                   _presenceFinds; ///< 다른 서버 귓속말의 상대 찾기(`initialize` 가 묶고 `shutdown` 이 푼다)
         string                                   _serverTopic;
         uint32                                   _sequence;
         uint32                                   _reportSequence; ///< 신고 키의 고유 값(서버 id 와 섞는다)

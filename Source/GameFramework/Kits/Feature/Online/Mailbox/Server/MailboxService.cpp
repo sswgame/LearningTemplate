@@ -80,7 +80,7 @@ namespace sw
     MailboxService::MailboxService()
         : _listCampaign{}
         , _settings{}
-        , _mapPresenceRequestToNotice{}
+        , _presenceFinds{}
         , _pHost{ nullptr }
         , _arrExpiredCounter{}
         , _nowMs{ 0 }
@@ -107,7 +107,7 @@ namespace sw
         _sweepJob.setPeriod( settings._pScheduler == nullptr ? settings._sweepIntervalMs : 0 ); // 예약 테이블이 있으면 회차가 부른다
         _campaignJob.setPeriod( settings._campaignRefreshMs );
         _noticeJob.setPeriod( settings._noticeIntervalMs ); // 0 이면 알림을 보내지 않는다
-        _findOwner = settings._pPresence != nullptr ? settings._pPresence->openFindOwner() : Subscription{};
+        _presenceFinds.bind( settings._pPresence );
         initializeCalls( settings._pMetricRegistry, "mailbox" );
         if ( settings._pMetricRegistry != nullptr )
         {
@@ -139,8 +139,7 @@ namespace sw
         _store.flushUntilIdle( [this]()
         { return isIdle(); } );
         _calls.abandonAll();
-        _findOwner.reset(); // 기다리던 찾기의 알림을 잃는다. 우편은 목록에 있다
-        _mapPresenceRequestToNotice.clear();
+        _presenceFinds.unbind(); // 기다리던 찾기의 알림을 잃는다. 우편은 목록에 있다
         _store.bindStore( nullptr );
         _pHost = nullptr;
     }
@@ -202,13 +201,10 @@ namespace sw
             const bool      bWritten = MailboxProtocol::MessageTypes::write( body, newMail );
             if ( bWritten && _pHost->sendPush( accountID, MailboxMethod::NewMail::kKind, body ) )
                 continue; // 이 서버에 붙어 있다
-            if ( _settings._pPresence == nullptr )
-            {
+            const bool bFinding = _presenceFinds.findByAccount( accountID, accountID, [this, newMail = std::move( newMail )]( const AccountPresenceResult& result )
+            { finishRemoteNotice( result, newMail ); } );
+            if ( bFinding == false )
                 sendOfflinePush( accountID ); // 서버가 하나이고 붙어 있지 않다
-                continue;
-            }
-            const uint64 requestID                 = _settings._pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&MailboxService::onNoticePresenceFound>( this ), _findOwner );
-            _mapPresenceRequestToNotice[requestID] = std::move( newMail );
         }
     }
 
@@ -220,15 +216,10 @@ namespace sw
         _settings._pBalanceNotice->notifyBalancesChanged( accountID, reply._listBalance ); // 지갑은 서버의 잔액 변경 알림으로 맞는다 — 게임이 응답의 잔액을 옮기지 않는다
     }
 
-    void MailboxService::onNoticePresenceFound( const AccountPresenceResult& result )
+    void MailboxService::finishRemoteNotice( const AccountPresenceResult& result, const MailboxNewMail& newMail )
     {
-        const auto noticeIt = _mapPresenceRequestToNotice.find( result._requestID );
-        if ( noticeIt == _mapPresenceRequestToNotice.end() )
-            return;
-        const MailboxNewMail newMail = std::move( noticeIt->second );
-        _mapPresenceRequestToNotice.erase( noticeIt );
         const AccountID accountID = result._identity._accountID;
-        if ( result.isOnline() && _settings._pPresence->sendRemotePush( accountID, MailboxPushName::NewMail, newMail ) )
+        if ( result.isOnline() && _presenceFinds.hasPresence() && _presenceFinds.getPresence()->sendRemotePush( accountID, MailboxPushName::NewMail, newMail ) )
             return; // 다른 서버에 붙어 있다
         sendOfflinePush( accountID );
     }

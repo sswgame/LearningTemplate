@@ -9,12 +9,11 @@
 #pragma once
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
-#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
@@ -66,26 +65,30 @@ namespace sw
             UnixMilliseconds _nowMs{ 0 };
         };
 
+        /** @brief 이름 찾기가 답한 신청입니다. 다음 서비스 틱에 초대로 잇는다. */
+        struct FoundLookup
+        {
+            PendingLookup _lookup{};
+            AccountID     _peerID{ kInvalidAccountID }; ///< 찾은 상대(못 찾았으면 무효)
+        };
+
         void        pushSnapshot( OnlineServiceHost& host, const TradeSnapshot& snapshot );
         void        respondImmediately( uint64 callID, TradeOutcome result );
-        void        onPresenceFound( const AccountPresenceResult& found );
         static void collectBalances( const LedgerTransferResult& ledger, AccountID accountID, vector<TradeBalance>& outListBalance );
         /** @brief 정산으로 바뀐 잔액을 계정마다 알립니다(경제 키트의 `BalanceChanged`). */
         void notifySettledBalances( const LedgerTransferResult& ledger );
 
     private:
         unordered_map<uint64, AccountID>            _mapCallToAccount; ///< 응답을 기다리는 호출의 계정이다. 정산 잔액을 그 계정 몫만 싣는다
-        unordered_map<uint64, PendingLookup>        _mapLookupToCall;  ///< 접속 상태 관리자의 이름 찾기에서 신청으로 가는 맵이다
         unordered_map<uint64, LedgerTransferResult> _mapTradeToLedger; ///< 이번 틱에 정산된 거래의 이동 뒤 잔액이다. 알림에 싣는다
         vector<TradeCompletion>                     _listCompletionScratch;
         vector<TradeSnapshot>                       _listUpdateScratch;
-        vector<AccountPresenceResult>               _listFound; ///< 접속 상태 관리자가 알린 찾기 결과이다. 다음 서비스 틱에 신청으로 이어 간다
-        vector<AccountPresenceResult>               _listFoundScratch;
+        vector<FoundLookup>                         _listFound; ///< 이름 찾기가 답한 신청이다. 다음 서비스 틱에 초대로 이어 간다
+        vector<FoundLookup>                         _listFoundScratch;
         TradeService*                               _pTradeService;
         const IAccountDirectory*                    _pDirectory;
-        IAccountPresence*                           _pPresence;
         IBalanceChangedListener*                    _pBalanceNotice; ///< 정산 잔액을 두 당사자의 지갑에 알린다(`setBalanceNotice`)
-        Subscription                                _findOwner;      ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        AccountPresenceTracker                      _presenceFinds;  ///< 상대 이름 찾기 · 다른 서버로의 알림(서버 여러 대일 때만 묶인다)
         UnixMilliseconds                            _nowMs;
     };
 } // namespace sw

@@ -39,8 +39,7 @@ namespace sw
         , _pQueue{ nullptr }
         , _pAgent{ nullptr }
         , _mapAccountToGraceEnd{}
-        , _mapPresenceRequestToAccount{}
-        , _pPresence{ nullptr }
+        , _presenceFinds{}
         , _pGroupChannels{ nullptr }
         , _pHost{ nullptr }
         , _nowMs{ 0 }
@@ -54,20 +53,14 @@ namespace sw
         _pPartyLobby = pPartyLobby;
         _pQueue      = pQueue;
         _pAgent      = pAgent;
-        _pPresence   = pPresence;
-        _findOwner   = pPresence != nullptr ? pPresence->openFindOwner() : Subscription{};
+        _presenceFinds.bind( pPresence );
         initializeCalls( pMetricRegistry, "matchmaking" );
         setReady( pPartyLobby != nullptr && pQueue != nullptr );
     }
 
     void MatchmakingServer::shutdown()
     {
-        _findOwner.reset(); // 기다리던 찾기가 이 객체를 부르지 않게 한다. 답을 못 받은 계정은 유예를 지금 끝낸다
-        for ( const auto& [requestID, accountID] : _mapPresenceRequestToAccount )
-        {
-            _mapAccountToGraceEnd[accountID] = _nowMs.count();
-        }
-        _mapPresenceRequestToAccount.clear();
+        _presenceFinds.unbind(); // 기다리던 찾기가 이 객체를 부르지 않게 한다. 답을 못 받은 계정은 취소 완료가 유예를 지금 끝낸다(`finishGraceFind`)
         if ( _pPartyLobby != nullptr )
         {
             for ( const auto& [accountID, graceEndMs] : _mapAccountToGraceEnd )
@@ -84,7 +77,6 @@ namespace sw
         _pPartyLobby    = nullptr;
         _pQueue         = nullptr;
         _pAgent         = nullptr;
-        _pPresence      = nullptr;
         _pGroupChannels = nullptr;
     }
 
@@ -271,23 +263,20 @@ namespace sw
             }
             const AccountID accountID = graceIt->first;
             graceIt                   = _mapAccountToGraceEnd.erase( graceIt );
-            if ( _pPresence == nullptr )
-            {
+            const bool bFinding       = _presenceFinds.findByAccount( accountID, accountID, [this, accountID]( const AccountPresenceResult& result, PendingRequestEnd end )
+                  { finishGraceFind( accountID, result, end ); } );
+            if ( bFinding == false )
                 _pPartyLobby->removeAccount( accountID ); // 서버가 한 대이고 돌아오지 않았다
-                continue;
-            }
-            const uint64 requestID                  = _pPresence->submitFindByAccount( accountID, AccountPresenceDelegate::create<&MatchmakingServer::onGracePresenceFound>( this ), _findOwner );
-            _mapPresenceRequestToAccount[requestID] = accountID;
         }
     }
 
-    void MatchmakingServer::onGracePresenceFound( const AccountPresenceResult& result )
+    void MatchmakingServer::finishGraceFind( AccountID accountID, const AccountPresenceResult& result, PendingRequestEnd end )
     {
-        const auto requestIt = _mapPresenceRequestToAccount.find( result._requestID );
-        if ( requestIt == _mapPresenceRequestToAccount.end() )
+        if ( end == PendingRequestEnd::Cancelled )
+        {
+            _mapAccountToGraceEnd[accountID] = _nowMs.count(); // 내려가는 서버는 유예를 지킬 수 없다 — 아래 정리가 뺀다
             return;
-        const AccountID accountID = requestIt->second;
-        _mapPresenceRequestToAccount.erase( requestIt );
+        }
         if ( result.isOnline() || _pPartyLobby == nullptr )
             return; // 다른 서버(또는 이 서버)로 돌아왔다. 파티와 로비에 그대로 둔다
         _pPartyLobby->removeAccount( accountID );
@@ -367,8 +356,8 @@ namespace sw
             return; // write 가 범위 밖 값을 로그에 남겼다
         if ( host.sendPush( accountID, kind, body ) )
             return;
-        if ( _pPresence != nullptr ) // 다른 서버에 접속한 멤버이다. 받는 서버가 자기 빌드의 번호와 B 로 다시 쓴다
-            (void)_pPresence->sendRemotePush( accountID, static_cast<MatchmakingPushName>( kind - MatchmakingMethod::kFirstPush ), message );
+        if ( _presenceFinds.hasPresence() ) // 다른 서버에 접속한 멤버이다. 받는 서버가 자기 빌드의 번호와 B 로 다시 쓴다
+            (void)_presenceFinds.getPresence()->sendRemotePush( accountID, static_cast<MatchmakingPushName>( kind - MatchmakingMethod::kFirstPush ), message );
     }
 } // namespace sw
 

@@ -18,6 +18,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
@@ -27,7 +28,6 @@
 
 namespace sw
 {
-    struct AccountPresenceResult;
     struct ServiceMailNotification;
 
     class IAccountDirectory;
@@ -105,21 +105,21 @@ namespace sw
         /** @brief 요청 하나의 저장소 작업을 맡깁니다. 내려가는 중이면 일시 장애로 답합니다. */
         template <typename TMethod>
         void submitCall( OnlineServerCall<TMethod> call, const OnlineCallContext& context, const typename TMethod::Request& request, bool bWithCampaigns );
-        void onNoticePresenceFound( const AccountPresenceResult& result );
+        /** @brief 다른 서버에 있을 수 있는 계정을 찾은 답입니다. 붙어 있으면 중계하고, 아니면 기기 푸시를 보낸다. */
+        void finishRemoteNotice( const AccountPresenceResult& result, const MailboxNewMail& newMail );
         void sendOfflinePush( AccountID accountID );
         /** @brief 수령으로 바뀐 잔액을 그 계정에 알립니다(경제 키트의 `BalanceChanged`). 경제 키트가 없으면 하지 않는다. */
         void notifyClaimedBalances( AccountID accountID, const MailboxOutcome& outcome, const MailboxClaimReply& reply );
 
     private:
-        vector<ServiceMailCampaign>           _listCampaign;
-        MailboxServiceConfig                  _settings;
-        Subscription                          _findOwner;                  ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
-        unordered_map<uint64, MailboxNewMail> _mapPresenceRequestToNotice; ///< 접속 상태를 묻는 중인 알림(받는 계정은 결과에 있다)
-        OnlineServiceHost*                    _pHost;                      ///< 알림을 보낼 호스트이다. 첫 틱에 받는다
-        MetricCounter*                        _arrExpiredCounter[3];       ///< discarded · returned · removed
-        UnixMilliseconds                      _nowMs;
-        ServicePeriodicJob                    _sweepJob;    ///< 만료 정리이다. 예약 테이블이 있으면 주기 없이 회차로만 돈다
-        ServicePeriodicJob                    _campaignJob; ///< 캠페인 다시 읽기이다
-        ServicePeriodicJob                    _noticeJob;   ///< 새 우편 알림 가져가기이다
+        vector<ServiceMailCampaign> _listCampaign;
+        MailboxServiceConfig        _settings;
+        AccountPresenceTracker      _presenceFinds;        ///< 다른 서버에 붙은 계정을 찾는 새 우편 알림(`initialize` 가 묶고 `shutdown` 이 푼다)
+        OnlineServiceHost*          _pHost;                ///< 알림을 보낼 호스트이다. 첫 틱에 받는다
+        MetricCounter*              _arrExpiredCounter[3]; ///< discarded · returned · removed
+        UnixMilliseconds            _nowMs;
+        ServicePeriodicJob          _sweepJob;    ///< 만료 정리이다. 예약 테이블이 있으면 주기 없이 회차로만 돈다
+        ServicePeriodicJob          _campaignJob; ///< 캠페인 다시 읽기이다
+        ServicePeriodicJob          _noticeJob;   ///< 새 우편 알림 가져가기이다
     };
 } // namespace sw

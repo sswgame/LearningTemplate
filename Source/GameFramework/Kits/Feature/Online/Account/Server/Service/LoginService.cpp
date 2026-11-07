@@ -212,10 +212,10 @@ namespace sw
         , _ticketAuthority{}
         , _settings{}
         , _registeredPlatformProvider{ "LoginServicePlatformProvider", RegistrationOrder::Insertion, true }
-        , _listPendingVerification{}
+        , _verifications{}
         , _listVerificationScratch{}
         , _listRevocationScratch{}
-        , _listPendingRevocation{}
+        , _revocations{}
         , _mapAccountToSession{}
         , _mapAccountToIdentity{}
         , _mapNameKeyToAccount{}
@@ -246,8 +246,8 @@ namespace sw
         _mapAccountToSession.clear();
         _mapAccountToIdentity.clear();
         _mapNameKeyToAccount.clear();
-        _listPendingVerification.clear();
-        _listPendingRevocation.clear();
+        _verifications.cancelAll(); // 답을 기다리던 요청은 버린다 — 연결이 닫히며 호스트가 답 없는 요청을 끝낸다
+        _revocations.cancelAll();   // 철회 대기열 항목은 저장소에 남아 다음 기동이 다시 한다
         _registeredPlatformProvider.clear();
         _eventBuffer.clear();
         _remoteRevokeBuffer.clear();
@@ -277,17 +277,7 @@ namespace sw
             (void)pProvider->pollVerifications( _listVerificationScratch );
             for ( const PlatformLoginVerification& verification : _listVerificationScratch )
             {
-                for ( size_t pendingIndex = 0; pendingIndex < _listPendingVerification.size(); ++pendingIndex )
-                {
-                    const PendingVerification& pending  = _listPendingVerification[pendingIndex];
-                    const bool                 bMatches = pending._pProvider == pProvider && pending._verificationID == verification._verificationID;
-                    if ( bMatches == false )
-                        continue;
-                    const PendingVerification finished = pending;
-                    _listPendingVerification.erase( _listPendingVerification.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
-                    finishVerification( finished, verification );
-                    break;
-                }
+                (void)_verifications.answer( ProviderRequestKey{ pProvider, verification._verificationID }, verification ); // 모르는 번호(내린 뒤의 답)는 버린다
             }
         }
         updateRevocations( nowMs );
@@ -305,25 +295,11 @@ namespace sw
             (void)pProvider->pollRevocations( _listRevocationScratch );
             for ( const PlatformLoginRevocation& revocation : _listRevocationScratch )
             {
-                for ( size_t pendingIndex = 0; pendingIndex < _listPendingRevocation.size(); ++pendingIndex )
-                {
-                    const PendingRevocation& pending = _listPendingRevocation[pendingIndex];
-                    if ( pending._pProvider != pProvider || pending._revocationID != revocation._revocationID )
-                        continue;
-                    if ( revocation._bUnavailable == SW_FALSE && _store.hasStore() )
-                    {
-                        // 지우지 못하면 다음 읽기가 같은 철회를 다시 한다(제공자는 이미 무효인 토큰을 받아들인다)
-                        _store.submit( [key = pending._queueKey]( IServiceStoreConnection& connection )
-                        { (void)LoginStoreLogic::eraseRevocation( connection, key ); },
-                                       []() {} );
-                    }
-                    _listPendingRevocation.erase( _listPendingRevocation.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
-                    break; // 제공자에 닿지 못했으면 대기열에 남아 다음 읽기가 다시 한다
-                }
+                (void)_revocations.answer( ProviderRequestKey{ pProvider, revocation._revocationID }, revocation );
             }
         }
         const bool bSecretsReadable = _pSecretVault != nullptr && _pSecretVault->isReady();
-        const bool bMayScan         = bAnyRevoker && bSecretsReadable && _listPendingRevocation.empty() && _store.hasStore();
+        const bool bMayScan         = bAnyRevoker && bSecretsReadable && _revocations.isIdle() && _store.hasStore();
         if ( bMayScan == false || _revocationScanJob.tryStart( nowMs ) == false )
             return;
         const int32 maxCount = _settings._revocationBatchSize;
@@ -355,11 +331,18 @@ namespace sw
                 SW_LOG_ERROR_ID( "LoginService.LoginRevokeQueueEntry", "login revoke queue entry '%#' cannot be opened (wrong secret key?) - it stays in the queue", entry._key.c_str() );
                 continue;
             }
-            PendingRevocation& pending = _listPendingRevocation.emplace_back();
-            pending._queueKey          = std::move( entry._key );
-            pending._pProvider         = pProvider;
-            pending._revocationID      = pProvider->submitRevocation( secret, nowMs );
+            const uint64 revocationID = pProvider->submitRevocation( secret, nowMs );
             StringUtil::wipeSecret( secret ); // 풀어 낸 비밀을 남기지 않는다
+            (void)_revocations.track( ProviderRequestKey{ pProvider, revocationID }, 0, [this, key = std::move( entry._key )]( const PlatformLoginRevocation& revocation )
+            {
+                // 제공자에 닿지 못했으면 대기열에 남아 다음 읽기가 다시 한다. 지우지 못하면 다음 읽기가 같은 철회를 다시 한다(제공자는 이미 무효인 토큰을 받아들인다).
+                if ( revocation._bUnavailable == SW_FALSE && _store.hasStore() )
+                {
+                    _store.submit( [key]( IServiceStoreConnection& connection )
+                    { (void)LoginStoreLogic::eraseRevocation( connection, key ); },
+                                   []() {} );
+                }
+            } );
         }
     }
 
@@ -756,16 +739,18 @@ namespace sw
             pushImmediate( operation, requestTag, LoginResult::ProviderRejected, LoginGrant{} );
             return;
         }
-        PendingVerification& pending = _listPendingVerification.emplace_back();
-        pending._token               = token;
-        pending._provider            = string( provider );
-        pending._storeURL            = buildGrant._storeURL;
-        pending._pProvider           = pProvider;
-        pending._requestTag          = requestTag;
-        pending._nowMs               = nowMs;
-        pending._operation           = operation;
-        pending._bUpdateRecommended  = buildGrant._bUpdateRecommended;
-        pending._verificationID      = pProvider->submitVerification( ticketBytes, nowMs );
+        PendingVerification pending;
+        pending._token              = token;
+        pending._provider           = string( provider );
+        pending._storeURL           = buildGrant._storeURL;
+        pending._requestTag         = requestTag;
+        pending._nowMs              = nowMs;
+        pending._operation          = operation;
+        pending._bUpdateRecommended = buildGrant._bUpdateRecommended;
+        const ProviderRequestKey key{ pProvider, pProvider->submitVerification( ticketBytes, nowMs ) };
+        if ( _verifications.track( key, 0, [this, pending = std::move( pending )]( const PlatformLoginVerification& verification )
+        { finishVerification( pending, verification ); } ) == false )
+            pushImmediate( operation, requestTag, LoginResult::ProviderUnavailable, LoginGrant{} ); // 제공자가 같은 확인 번호를 두 번 냈다
     }
 
     void LoginService::finishVerification( const PendingVerification& pending, const PlatformLoginVerification& verification )

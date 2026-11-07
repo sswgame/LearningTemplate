@@ -22,12 +22,12 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/PartyLobbyService.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
 namespace sw
 {
-    struct AccountPresenceResult;
 
     class IAccountPresence;
     class IGroupChannelMembership;
@@ -86,7 +86,8 @@ namespace sw
         void attachHost( OnlineServiceHost& host );
         /** @brief 유예가 끝난 계정을 접속 상태로 묻거나(서버 여러 대) 바로 뺍니다. */
         void expireGrace( UnixMilliseconds nowMs );
-        void onGracePresenceFound( const AccountPresenceResult& result );
+        /** @brief 유예가 끝난 계정 @p accountID 를 찾은 답입니다. 어느 서버에도 돌아오지 않았으면 파티 · 로비에서 뺀다. 서비스가 내려가 취소되면 유예를 지금 끝낸다. */
+        void finishGraceFind( AccountID accountID, const AccountPresenceResult& result, PendingRequestEnd end );
         void onPartyFound( uint64 lookupTag, MatchmakingOutcome result, const PartySnapshot& party );
         /** @brief 이 서버 계정 @p recipientID 가 받은 파티 스냅숏으로 파티 채널 멤버를 맞춥니다. 멤버가 비었으면 빠진 것이다. */
         void syncPartyChannel( AccountID recipientID, const PartySnapshot& party );
@@ -106,10 +107,8 @@ namespace sw
         PartyLobbyService*                  _pPartyLobby;
         MatchQueueService*                  _pQueue;
         MatchServerAgent*                   _pAgent;
-        unordered_map<AccountID, int64>     _mapAccountToGraceEnd;        ///< 떠났지만 파티와 로비에 남겨 둔 계정과 유예 끝 시각이다
-        unordered_map<uint64, AccountID>    _mapPresenceRequestToAccount; ///< 유예가 끝나 접속 상태를 묻는 중인 계정이다
-        IAccountPresence*                   _pPresence;
-        Subscription                        _findOwner; ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        unordered_map<AccountID, int64>     _mapAccountToGraceEnd; ///< 떠났지만 파티와 로비에 남겨 둔 계정과 유예 끝 시각이다
+        AccountPresenceTracker              _presenceFinds;        ///< 유예가 끝나 접속 상태를 묻는 계정 · 다른 서버로의 중계(서버 여러 대일 때만 묶인다)
         IGroupChannelMembership*            _pGroupChannels;
         OnlineServiceHost*                  _pHost; ///< 붙은 호스트이다(첫 서비스 틱에 붙는다). 붙었는지만 본다
         UnixMilliseconds                    _nowMs;

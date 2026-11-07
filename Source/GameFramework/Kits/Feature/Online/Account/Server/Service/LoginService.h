@@ -21,6 +21,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/TimePoint.h"
@@ -32,6 +33,7 @@
 #include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
+#include "GameFramework/Runtime/Online/Service/PendingRequestTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStoreTracker.h"
 
 namespace sw
@@ -157,7 +159,7 @@ namespace sw
         bool               isAccountOnline( AccountID accountID ) const override { return _mapAccountToSession.find( accountID ) != _mapAccountToSession.end(); }
 
         /** @brief 맡겨 두고 아직 끝나지 않은 요청 수입니다. 외부 확인 대기도 포함합니다. */
-        int32                       getPendingCount() const { return _store.getOpenCount() + static_cast<int32>( _listPendingVerification.size() ); }
+        int32                       getPendingCount() const { return _store.getOpenCount() + _verifications.getOpenCount(); }
         const LoginTicketAuthority& getTicketAuthority() const { return _ticketAuthority; }
         const LoginServiceConfig&   getSettings() const { return _settings; }
         int32                       getOnlineCount() const { return static_cast<int32>( _mapAccountToSession.size() ); }
@@ -165,26 +167,26 @@ namespace sw
         uint64 findOnlineSessionID( AccountID accountID ) const;
 
     private:
-        /** @brief 외부 제공자의 확인을 기다리는 요청입니다. */
+        /** @brief 외부 제공자의 확인을 기다리는 요청입니다(확인 완료 람다가 값으로 잡는다). */
         struct PendingVerification
         {
-            LoginSessionToken       _token{}; ///< LinkPlatform
-            string                  _provider{};
-            string                  _storeURL{};
-            IPlatformLoginProvider* _pProvider{ nullptr };
-            uint64                  _verificationID{ 0 };
-            uint64                  _requestTag{ 0 };
-            UnixMilliseconds        _nowMs{ 0 };
-            LoginOperation          _operation{ LoginOperation::PlatformLogin };
-            uint8                   _bUpdateRecommended{ SW_FALSE };
+            LoginSessionToken _token{}; ///< LinkPlatform
+            string            _provider{};
+            string            _storeURL{};
+            uint64            _requestTag{ 0 };
+            UnixMilliseconds  _nowMs{ 0 };
+            LoginOperation    _operation{ LoginOperation::PlatformLogin };
+            uint8             _bUpdateRecommended{ SW_FALSE };
         };
 
-        /** @brief 철회를 맡기고 결과를 기다리는 항목입니다. */
-        struct PendingRevocation
+        /** @brief 제공자 하나에 맡긴 요청(확인 · 철회)의 열쇠입니다. 번호는 제공자마다 따로 센다. */
+        struct ProviderRequestKey
         {
-            string                  _queueKey{}; ///< 끝나면 대기열에서 지우는 키
-            IPlatformLoginProvider* _pProvider{ nullptr };
-            uint64                  _revocationID{ 0 };
+            const IPlatformLoginProvider* _pProvider{ nullptr };
+            uint64                        _requestID{ 0 };
+
+            bool   operator==( const ProviderRequestKey& other ) const { return _pProvider == other._pProvider && _requestID == other._requestID; }
+            uint64 computeHash() const { return HashUtil::makeHash( _pProvider, _requestID ); }
         };
 
         [[nodiscard]] bool consumeAttempt( uint64 clientKey, UnixMilliseconds nowMs, int64& outRetryAfterMs );
@@ -208,25 +210,25 @@ namespace sw
         void applyRevocationScan( vector<LoginRevocationEntry>&& listEntry, bool bReadOk, UnixMilliseconds nowMs );
 
     private:
-        EventBuffer<LoginEvent>                  _eventBuffer;
-        EventBuffer<LoginEvent>                  _remoteRevokeBuffer;
-        EventBuffer<LoginCompletion>             _completionBuffer;
-        LoginTicketAuthority                     _ticketAuthority;
-        LoginServiceConfig                       _settings;
-        RegistrationList<IPlatformLoginProvider> _registeredPlatformProvider; ///< 이름은 제공자 이름이다. 빈 이름 · 겹치는 이름은 이 형식이 거절한다
-        vector<PendingVerification>              _listPendingVerification;
-        vector<PlatformLoginVerification>        _listVerificationScratch;
-        vector<PlatformLoginRevocation>          _listRevocationScratch;
-        vector<PendingRevocation>                _listPendingRevocation;
-        unordered_map<uint64, uint64>            _mapAccountToSession;      ///< 이 프로세스에 접속해 있는 계정에서 세션으로 가는 맵이다
-        unordered_map<uint64, AccountIdentity>   _mapAccountToIdentity;     ///< 접속해 있는 계정의 신원이다. 디렉터리가 쓴다
-        unordered_map<string, uint64>            _mapNameKeyToAccount;      ///< 소문자 이름에서 계정으로 가는 맵이다. 접속해 있는 계정만 담는다
-        TokenBucketMap                           _mapClientToAttemptBucket; ///< 시도 제한이다. 원격 주소 해시마다 버킷을 둔다
-        ILoginCrypto*                            _pCrypto;
-        const RemoteConfig*                      _pRemoteConfig;
-        const LoginSecretVault*                  _pSecretVault;
-        size_t                                   _refreshCursor;
-        ServicePeriodicJob                       _revocationScanJob; ///< 철회 대기열 읽기이다(`_revocationScanMs` 주기)
-        ServiceStoreTracker                      _store;             ///< 저장소에 맡긴 일의 앞이다
+        EventBuffer<LoginEvent>                                            _eventBuffer;
+        EventBuffer<LoginEvent>                                            _remoteRevokeBuffer;
+        EventBuffer<LoginCompletion>                                       _completionBuffer;
+        LoginTicketAuthority                                               _ticketAuthority;
+        LoginServiceConfig                                                 _settings;
+        RegistrationList<IPlatformLoginProvider>                           _registeredPlatformProvider; ///< 이름은 제공자 이름이다. 빈 이름 · 겹치는 이름은 이 형식이 거절한다
+        PendingRequestTable<ProviderRequestKey, PlatformLoginVerification> _verifications;              ///< 제공자의 확인을 기다리는 요청(완료가 `finishVerification` 으로 잇는다)
+        vector<PlatformLoginVerification>                                  _listVerificationScratch;
+        vector<PlatformLoginRevocation>                                    _listRevocationScratch;
+        PendingRequestTable<ProviderRequestKey, PlatformLoginRevocation>   _revocations;              ///< 제공자에 맡긴 연동 철회(완료가 대기열 항목을 지운다)
+        unordered_map<uint64, uint64>                                      _mapAccountToSession;      ///< 이 프로세스에 접속해 있는 계정에서 세션으로 가는 맵이다
+        unordered_map<uint64, AccountIdentity>                             _mapAccountToIdentity;     ///< 접속해 있는 계정의 신원이다. 디렉터리가 쓴다
+        unordered_map<string, uint64>                                      _mapNameKeyToAccount;      ///< 소문자 이름에서 계정으로 가는 맵이다. 접속해 있는 계정만 담는다
+        TokenBucketMap                                                     _mapClientToAttemptBucket; ///< 시도 제한이다. 원격 주소 해시마다 버킷을 둔다
+        ILoginCrypto*                                                      _pCrypto;
+        const RemoteConfig*                                                _pRemoteConfig;
+        const LoginSecretVault*                                            _pSecretVault;
+        size_t                                                             _refreshCursor;
+        ServicePeriodicJob                                                 _revocationScanJob; ///< 철회 대기열 읽기이다(`_revocationScanMs` 주기)
+        ServiceStoreTracker                                                _store;             ///< 저장소에 맡긴 일의 앞이다
     };
 } // namespace sw

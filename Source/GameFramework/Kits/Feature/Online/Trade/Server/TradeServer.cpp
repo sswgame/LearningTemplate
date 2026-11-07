@@ -11,7 +11,6 @@ namespace sw
 {
     TradeServer::TradeServer()
         : _mapCallToAccount{}
-        , _mapLookupToCall{}
         , _mapTradeToLedger{}
         , _listCompletionScratch{}
         , _listUpdateScratch{}
@@ -19,8 +18,8 @@ namespace sw
         , _listFoundScratch{}
         , _pTradeService{ nullptr }
         , _pDirectory{ nullptr }
-        , _pPresence{ nullptr }
         , _pBalanceNotice{ nullptr }
+        , _presenceFinds{}
         , _nowMs{ 0 }
     {
         setReady( false );
@@ -30,19 +29,17 @@ namespace sw
     {
         _pTradeService = pTradeService;
         _pDirectory    = pDirectory;
-        _pPresence     = pPresence;
-        _findOwner     = pPresence != nullptr ? pPresence->openFindOwner() : Subscription{};
+        _presenceFinds.bind( pPresence );
         initializeCalls( pMetricRegistry, "trade" );
         setReady( pTradeService != nullptr );
     }
 
     void TradeServer::shutdown()
     {
-        _findOwner.reset(); // 맡긴 이름 찾기를 회수한다. 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다
-        _mapCallToAccount.clear();
-        _mapLookupToCall.clear();
-        _listFound.clear();
         _calls.clear();
+        _presenceFinds.unbind(); // 맡긴 이름 찾기를 회수한다(호출 표를 비운 뒤라 취소 완료의 실패 답은 버려진다). 접속 상태 관리자가 이 객체보다 오래 살아도 이 객체를 부르지 않게 하려는 것이다
+        _mapCallToAccount.clear();
+        _listFound.clear();
         _pTradeService = nullptr;
         setReady( false );
     }
@@ -63,13 +60,16 @@ namespace sw
             _pTradeService->invite( context._accountID, peer._accountID, context._nowMs, call._callID );
             return;
         }
-        if ( _pPresence == nullptr )
-        {
-            respondImmediately( call._callID, TradeResult::PeerOffline );
-            return;
-        }
-        const uint64 lookupID      = _pPresence->submitFindByDisplayName( request._peerDisplayName, AccountPresenceDelegate::create<&TradeServer::onPresenceFound>( this ), _findOwner );
-        _mapLookupToCall[lookupID] = PendingLookup{ call._callID, context._accountID, context._nowMs };
+        const PendingLookup lookup{ call._callID, context._accountID, context._nowMs };
+        const bool          bFinding = _presenceFinds.findByDisplayName( request._peerDisplayName, context._accountID, [this, lookup]( const AccountPresenceResult& found, PendingRequestEnd end )
+                 {
+            if ( end == PendingRequestEnd::Cancelled )
+                (void)_calls.fail( lookup._callID, OnlineError::kUnavailable ); // 신청한 계정이 떠났다 — 호출을 표에 남기지 않는다. 닫힌 연결의 답은 호스트가 버린다
+            else
+                _listFound.push_back( FoundLookup{ lookup, found._identity._accountID } );
+        } );
+        if ( bFinding == false )
+            respondImmediately( call._callID, TradeResult::PeerOffline ); // 서버가 한 대이고 이 프로세스에 없다
     }
 
     void TradeServer::handleCall( OnlineServerCall<TradeMethod::Respond> call, const OnlineCallContext& context, const TradeRespondRequest& request )
@@ -108,25 +108,18 @@ namespace sw
         if ( _pTradeService == nullptr )
             return;
         _calls.publishPendingCount();
-        if ( _pPresence != nullptr )
+        _listFoundScratch.clear();
+        _listFoundScratch.swap( _listFound );
+        for ( const FoundLookup& found : _listFoundScratch )
         {
-            _listFoundScratch.clear();
-            _listFoundScratch.swap( _listFound );
-            for ( const AccountPresenceResult& found : _listFoundScratch )
+            const PendingLookup& lookup = found._lookup;
+            if ( found._peerID == kInvalidAccountID )
             {
-                const auto lookupIt = _mapLookupToCall.find( found._requestID );
-                if ( lookupIt == _mapLookupToCall.end() )
-                    continue;
-                const PendingLookup lookup = lookupIt->second;
-                _mapLookupToCall.erase( lookupIt );
-                if ( found._identity._accountID == kInvalidAccountID )
-                {
-                    respondImmediately( lookup._callID, TradeResult::PeerOffline );
-                    continue;
-                }
-                _mapCallToAccount[lookup._callID] = lookup._accountID;
-                _pTradeService->invite( lookup._accountID, found._identity._accountID, lookup._nowMs, lookup._callID );
+                respondImmediately( lookup._callID, TradeResult::PeerOffline );
+                continue;
             }
+            _mapCallToAccount[lookup._callID] = lookup._accountID;
+            _pTradeService->invite( lookup._accountID, found._peerID, lookup._nowMs, lookup._callID );
         }
         _pTradeService->update( nowMs );
         _listCompletionScratch.clear();
@@ -164,17 +157,16 @@ namespace sw
         if ( _pTradeService == nullptr )
             return;
         // 이름 찾기를 기다리던 신청도 함께 거둔다 — 찾기가 뒤에 끝나면 떠난 계정이 신청한 거래가 열려 아무도 닫지 않는다(초대 시한까지 양쪽이 "거래 중" 이다).
-        for ( auto lookupIt = _mapLookupToCall.begin(); lookupIt != _mapLookupToCall.end(); )
+        _presenceFinds.cancelOwnedBy( accountID ); // 답을 기다리는 찾기 — 취소 완료가 호출을 실패로 끝낸다
+        for ( auto foundIt = _listFound.begin(); foundIt != _listFound.end(); )
         {
-            if ( lookupIt->second._accountID == accountID )
+            if ( foundIt->_lookup._accountID != accountID )
             {
-                (void)_calls.fail( lookupIt->second._callID, OnlineError::kUnavailable ); // 호출을 표에 남기지 않는다. 닫힌 연결의 답은 호스트가 버린다
-                lookupIt = _mapLookupToCall.erase( lookupIt );
+                ++foundIt;
+                continue;
             }
-            else
-            {
-                ++lookupIt;
-            }
+            (void)_calls.fail( foundIt->_lookup._callID, OnlineError::kUnavailable ); // 답했지만 아직 잇지 않은 신청도 거둔다
+            foundIt = _listFound.erase( foundIt );
         }
         _pTradeService->closeForAccount( accountID, TradeCloseReason::PartyLeft, _nowMs );
     }
@@ -199,14 +191,9 @@ namespace sw
             BitWriter body;
             if ( TradeProtocol::MessageTypes::write( body, push ) == false )
                 continue; // write 가 범위 밖 값을 로그에 남겼다
-            if ( host.sendPush( accountID, kind, body ) == false && _pPresence != nullptr )
-                (void)_pPresence->sendRemotePush( accountID, static_cast<TradePushName>( kind - TradeMethod::kFirstPush ), push ); // 상대가 다른 서버에 접속해 있다
+            if ( host.sendPush( accountID, kind, body ) == false && _presenceFinds.hasPresence() )
+                (void)_presenceFinds.getPresence()->sendRemotePush( accountID, static_cast<TradePushName>( kind - TradeMethod::kFirstPush ), push ); // 상대가 다른 서버에 접속해 있다
         }
-    }
-
-    void TradeServer::onPresenceFound( const AccountPresenceResult& found )
-    {
-        _listFound.push_back( found );
     }
 
     void TradeServer::respondImmediately( uint64 callID, TradeOutcome result )

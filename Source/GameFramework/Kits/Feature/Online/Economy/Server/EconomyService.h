@@ -32,6 +32,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/EconomyProtocol.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Schedule/ServicePeriodicJob.h"
@@ -41,7 +42,6 @@
 
 namespace sw
 {
-    struct AccountPresenceResult;
     struct EconomyBalanceChange;
     struct LedgerAuditReport;
     struct ReceiptDeliveryTask;
@@ -282,24 +282,22 @@ namespace sw
         /** @brief 끝난 지급 알림의 레코드를 지우고, 때가 되면 남은 레코드를 읽어 다시 보냅니다. */
         void updateDeliveries( UnixMilliseconds nowMs );
         void startDelivery( const ReceiptDeliveryTask& task );
-        void onBalancePresenceFound( const AccountPresenceResult& result );
 
     private:
-        LocalCallTable                               _localCalls;
-        unordered_map<uint64, EconomyReceiptCall>    _mapTicketToCall; ///< 영수증 검증을 기다리는 호출(검증 표지 → 호출)
-        EconomyServiceConfig                         _settings;
-        Subscription                                 _findOwner;                  ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
-        unordered_map<uint64, EconomyBalanceChanged> _mapPresenceRequestToNotice; ///< 접속 상태를 묻는 중인 잔액 변경 알림(받는 계정은 결과에 있다)
-        unordered_set<string>                        _uniqueSetDeliveryInFlight;  ///< 제공자에 맡겨 결과를 기다리는 지급 알림의 레코드 키
-        unordered_set<string>                        _uniqueSetDeliveryAlarmed;   ///< 기한 오류 로그를 이미 남긴 레코드 키
-        BalanceChangedListener                       _balanceNotice;              ///< 잔액 변경 알림 창구(`getBalanceNotice`)
-        OnlineServiceHost*                           _pHost;                      ///< `onServiceTick` 이 붙잡는다. 알림을 이 서버에 붙은 계정에 바로 보낸다
-        MetricRegistry*                              _pMetricRegistry;            ///< 환불 결과 지표를 센다(설정에서 복사)
-        ServicePeriodicJob                           _auditJob;                   ///< 원장 보존 검사이다. 주기 없이 예약 회차와 `requestLedgerAudit` 로 돈다
-        ServicePeriodicJob                           _refundCursorJob;            ///< 환불 조회 기준 시각 읽기이다. 못 읽으면 `_refundCursorRetryMs` 뒤에 다시 읽는다
-        ServicePeriodicJob                           _deliveryJob;                ///< 남은 지급 알림 훑기이다. 기동 직후 한 번, 그 뒤 `_deliveryScanIntervalMs` 마다
-        uint8                                        _bLastAuditBalanced;
-        uint8                                        _bRefundCursorsRestored; ///< 기준 시각을 제공자에 넘겼다(넘길 제공자가 없어도 선다)
-        UnixMilliseconds                             _nowMs;
+        LocalCallTable                            _localCalls;
+        unordered_map<uint64, EconomyReceiptCall> _mapTicketToCall; ///< 영수증 검증을 기다리는 호출(검증 표지 → 호출)
+        EconomyServiceConfig                      _settings;
+        AccountPresenceTracker                    _presenceFinds;             ///< 다른 서버에 붙은 계정을 찾는 잔액 변경 알림(`initialize` 가 묶고 `shutdown` 이 푼다)
+        unordered_set<string>                     _uniqueSetDeliveryInFlight; ///< 제공자에 맡겨 결과를 기다리는 지급 알림의 레코드 키
+        unordered_set<string>                     _uniqueSetDeliveryAlarmed;  ///< 기한 오류 로그를 이미 남긴 레코드 키
+        BalanceChangedListener                    _balanceNotice;             ///< 잔액 변경 알림 창구(`getBalanceNotice`)
+        OnlineServiceHost*                        _pHost;                     ///< `onServiceTick` 이 붙잡는다. 알림을 이 서버에 붙은 계정에 바로 보낸다
+        MetricRegistry*                           _pMetricRegistry;           ///< 환불 결과 지표를 센다(설정에서 복사)
+        ServicePeriodicJob                        _auditJob;                  ///< 원장 보존 검사이다. 주기 없이 예약 회차와 `requestLedgerAudit` 로 돈다
+        ServicePeriodicJob                        _refundCursorJob;           ///< 환불 조회 기준 시각 읽기이다. 못 읽으면 `_refundCursorRetryMs` 뒤에 다시 읽는다
+        ServicePeriodicJob                        _deliveryJob;               ///< 남은 지급 알림 훑기이다. 기동 직후 한 번, 그 뒤 `_deliveryScanIntervalMs` 마다
+        uint8                                     _bLastAuditBalanced;
+        uint8                                     _bRefundCursorsRestored; ///< 기준 시각을 제공자에 넘겼다(넘길 제공자가 없어도 선다)
+        UnixMilliseconds                          _nowMs;
     };
 } // namespace sw
