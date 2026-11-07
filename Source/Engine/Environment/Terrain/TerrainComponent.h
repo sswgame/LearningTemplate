@@ -28,6 +28,7 @@ namespace sw
     class GameObjectManager;
     class MeshInstanceBatch;
     class PrimitiveRegistry;
+    class ValidationContext;
 
     /** @brief 지형 레이어 하나(풀, 흙, 바위, 모래 등)입니다. 스플랫 맵의 한 채널이며 최대 넷입니다. */
     REFLECT()
@@ -234,6 +235,11 @@ namespace sw
             bool                          _bMeshStale{ false }; ///< 높이를 썼고 메시는 아직이다(`_listStaleChunk` 에 있다)
         };
 
+        /**
+         * @brief 지형은 월드 자리만 쓴다 — 회전이나 배율이 걸려 있으면 경고합니다(편집 UI 가 그 제약을 알린다). 높이 · 충돌 · 레이어 질의 · 표면 질의가 모두 축 정렬을 가정한다.
+         * @details 언리얼 랜드스케이프는 회전을 받지만 이 지형은 받지 않는다 — 조용히 무시하면 보이는 자리와 충돌이 어긋난 것처럼 보인다.
+         */
+        void validatePlacement( ValidationContext& context ) const;
         /** @brief 청크 배치 모두를 더티로 표시합니다. 활성 상태가 바뀌었을 때 호출합니다. */
         void markChunksDirty();
         /** @brief 청크 배치를 레지스트리에서 빼고 놓습니다. */
@@ -283,7 +289,8 @@ namespace sw
         AssetRef<Texture2D> _detailTexturePath;
         PROPERTY( Category = "Terrain", DisplayName = "Layers", Tooltip = "Up to eight layers, one per splat channel (two RGBA splat maps)" )
         vector<TerrainLayer> _listLayer;
-        PROPERTY( Category = "Terrain", DisplayName = "Size", Units = m, Tooltip = "World extent along x and z" )
+        PROPERTY( Category = "Terrain", DisplayName = "Size", Units = m, Tooltip = "World extent along x and z (the terrain uses only its world position: rotation and scale are not applied)",
+                  Validate = validatePlacement )
         float2 _size;
         PROPERTY( Category = "Terrain", DisplayName = "Height Min", Units = m )
         float32 _heightMin;

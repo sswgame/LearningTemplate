@@ -20,6 +20,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Rendering/MeshInstanceBatch.h"
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -942,5 +943,18 @@ namespace sw
                 return pTerrain;
         }
         return nullptr;
+    }
+
+    void TerrainComponent::validatePlacement( ValidationContext& context ) const
+    {
+        const float4x4    world        = getWorldMatrix();
+        const float3      axisX        = float3::transformVector( float3{ 1.0f, 0.0f, 0.0f }, world );
+        const float3      axisY        = float3::transformVector( float3{ 0.0f, 1.0f, 0.0f }, world );
+        const float3      axisZ        = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );
+        constexpr float32 kTolerance   = 1.0e-3f;
+        const bool        bAxisAligned = ( axisX - float3{ 1.0f, 0.0f, 0.0f } ).getLength() <= kTolerance && ( axisY - float3{ 0.0f, 1.0f, 0.0f } ).getLength() <= kTolerance &&
+                                  ( axisZ - float3{ 0.0f, 0.0f, 1.0f } ).getLength() <= kTolerance;
+        if ( bAxisAligned == false )
+            context.addWarning( "The terrain uses only its world position - rotation and scale on it or its parents are not applied (drawing, collision, layer and surface queries stay axis aligned)" );
     }
 } // namespace sw

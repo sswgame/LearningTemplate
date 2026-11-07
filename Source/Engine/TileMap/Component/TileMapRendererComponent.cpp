@@ -15,6 +15,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Physics/Component/PhysicsNameValidation.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Reflection/ReflectionValidation.h"
@@ -28,6 +29,7 @@ namespace sw
         , _sortingLayer{ "Default" }
         , _orderInLayer{ 0 }
         , _colliderLayer{ 0 }
+        , _colliderMaterial{}
         , _bGenerateColliders{ true }
         , _map{}
         , _pTileSet{}
@@ -501,6 +503,7 @@ namespace sw
             desc._position = ( minB + maxB ) * 0.5f;
             desc._type     = PhysicsBodyType::Static;
             desc._layer    = static_cast<uint8>( _colliderLayer );
+            desc._material = _colliderMaterial;
             desc._userData = pOwner->getObjectID();
             _listBody.push_back( pScene->createBody( desc ) );
         }
@@ -532,6 +535,11 @@ namespace sw
 
 namespace sw
 {
+    void TileMapRendererComponent::validateColliderMaterial( ValidationContext& context ) const
+    {
+        PhysicsNameValidation::validateMaterial( context, "_colliderMaterial", _colliderMaterial );
+    }
+
     void TileMapRendererComponent::validateSortingLayer( ValidationContext& context ) const
     {
         SortingLayerNameValidation::validate( context, "_sortingLayer", _sortingLayer );

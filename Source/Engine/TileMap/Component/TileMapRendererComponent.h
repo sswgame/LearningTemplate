@@ -112,6 +112,8 @@ namespace sw
     private:
         /** @brief `_sortingLayer` 가 정렬 레이어 표에 있는지 봅니다(`SortingLayerNameValidation`). */
         void validateSortingLayer( ValidationContext& context ) const;
+        /** @brief `_colliderMaterial` 이 물리 재질 표에 있는지 봅니다(`PhysicsNameValidation`). */
+        void validateColliderMaterial( ValidationContext& context ) const;
 
     private:
         /** @brief 청크 배치를 모두 놓고, 칠한 칸이 있는 청크만 다시 만들어 모든 칸을 놓습니다. 바디는 건드리지 않습니다. 관리자가 없으면 false 입니다. */
@@ -142,6 +144,9 @@ namespace sw
         int32 _orderInLayer;
         PROPERTY( Category = "Physics", DisplayName = "Collider Layer", Tooltip = "Collision layer of the merged solid rectangles" )
         int32 _colliderLayer;
+        /** @brief 단단한 타일 바디의 물리 재질입니다 — 표면 질의(`SurfaceQuery`)가 이 이름으로 표면 종류(발소리 · 발자국 · 이동 계수)를 고른다(타일맵의 표면 어댑터). 비면 첫 재질. */
+        PROPERTY( Category = "Physics", DisplayName = "Collider Material", Tooltip = "Physics material of the solid tile bodies; also the surface kind footsteps read. Empty: the first material", Validate = validateColliderMaterial )
+        hashed_string _colliderMaterial;
         PROPERTY( Category = "Physics", DisplayName = "Generate Colliders", Tooltip = "Turn solid tiles into merged rectangle bodies" )
         bool _bGenerateColliders;
 
