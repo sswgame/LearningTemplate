@@ -5,6 +5,7 @@
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Net/GameNetSession.h"
 
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountConnectAuthenticator.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
@@ -18,9 +19,7 @@
 // 계정 키트의 게임 서버 조립(`gameConnect`, OnlineKits F5) — 전용 게임 서버의 UDP 게임 포트가 로그인 서버가 낸 접속 티켓만 받게 한다.
 // 로그인 서버와 같은 주 키로 티켓 확인기(`LoginTicketAuthority`)만 세우고(저장소 없음), 접속 인증기를 엔진의 자리(`GameConnectSecurity`)에 묶는다.
 // 서버 설정 `_bGameConnectTicket` 이 게임 포트를 그 자리에 잇는다. 매칭 키트의 `gameServer` 가 있으면 배정받은 계정만, 없으면 티켓이 맞는 모든 계정을 받는다.
-// 옵션:
-//   ticketKeySecretEnvironment  로그인 서버와 같은 티켓 주 키의 환경 변수(`account` 와 같은 규칙 — Dev 는 비우면 개발용 키).
-//   serverName                  티켓이 가리켜야 하는 이 서버의 이름(필수 — 클라이언트가 `AccountClient::issueGameTicket` 에 주는 이름).
+// 설정은 `AccountGameConnectKitConfig` 이다.
 
 namespace sw
 {
@@ -46,20 +45,17 @@ namespace sw
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
                 (void)context;
-                string ticketKeyEnvironment;
-                if ( entry.readOptions( {
-                                            {"ticketKeySecretEnvironment", ticketKeyEnvironment},
-                                            {                "serverName",          _serverName}
-                },
-                                        outError ) == false )
+                AccountGameConnectKitConfig kitConfig;
+                if ( entry.readSettings( kitConfig, outError ) == false )
                     return false;
-                if ( _serverName.empty() )
+                if ( kitConfig._serverName.empty() )
                 {
-                    outError = "gameConnect needs serverName - the name game tickets are issued for";
+                    outError = "gameConnect needs _serverName - the name game tickets are issued for";
                     return false;
                 }
+                _serverName = std::move( kitConfig._serverName );
                 uint8 arrTicketKey[LoginTicketAuthority::kMasterKeySize];
-                if ( LoginTicketKey::readFromEnvironment( ticketKeyEnvironment, arrTicketKey, outError ) == false )
+                if ( LoginTicketKey::readFromEnvironment( kitConfig._ticketKeySecretEnvironment, arrTicketKey, outError ) == false )
                     return false;
                 _ticketAuthority.initialize( &_crypto, arrTicketKey );
                 Memory::wipe( arrTicketKey, sizeof( arrTicketKey ) );

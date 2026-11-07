@@ -3,9 +3,9 @@
  * @brief 전용 서버가 띄우는 온라인 서비스(로그인, 채팅, 디렉터리, 매칭 …)의 운영 설정입니다. 서버 설정 파일 옆의 `<이름>.online.json` 에서 읽습니다.
  * @details - 서버 설정이 `Config/Server/Empty.json` 이면 온라인 설정은 `Config/Server/Empty.online.json` 입니다. 파일이 없으면 온라인 서비스를 띄우지 않습니다.
  *            서비스 포트는 서버 설정의 `_servicePort`, 저장소와 캐시 항목은 서버 설정의 `_listStore` · `_listCache` 를 이름으로 가리킵니다.
- *          - 키트 항목(`_listKit`)은 이름과 키-값 옵션입니다. 띄울 키트는 모두 적어야 합니다(비우면 기동 실패). 옵션의 뜻은 키트마다 다르고 각 키트 조립 파일(`<키트>OnlineServerKit.cpp`) 머리에 있습니다.
+ *          - 키트 항목(`_listKit`)은 이름과 키트 설정 객체(`_settings`)입니다. 띄울 키트는 모두 적어야 합니다(비우면 기동 실패). 칸의 뜻과 범위는 키트의 설정 구조체(`<키트>KitConfig`)의 `PROPERTY` 가 정본입니다.
  *            언리얼 ini 의 서브시스템 섹션, Nakama 설정 파일의 런타임 항목에 해당합니다.
- *          - 비밀(티켓 키, DB 비밀번호)은 이 파일에 쓰지 않습니다. 옵션에는 환경 변수 이름만 둡니다(`ServerSecret::read`).
+ *          - 비밀(티켓 키, DB 비밀번호)은 이 파일에 쓰지 않습니다. 설정에는 환경 변수 이름만 둡니다(`ServerSecret::read`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -20,61 +20,8 @@
 
 namespace sw
 {
-    /** @brief 키트 옵션 하나입니다(키-값). 같은 키를 여러 번 적어 목록을 만들 수 있습니다(예: 매칭 모드 여럿). */
-    REFLECT()
-    struct SW_GF_API OnlineServerOption
-    {
-        REFLECT_BODY();
+    struct TypeInfo;
 
-        PROPERTY()
-        string _key{};
-        PROPERTY()
-        string _value{};
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @class OnlineServerKitOptionField
-     * @brief 키트 옵션 테이블의 한 줄입니다. 옵션 이름과 값을 읽어 넣을 필드를 둡니다. 필드의 타입이 읽는 방법을 정합니다.
-     * @details 정수는 `StringUtil::parseInt`, 참거짓은 `1`, `true`, `0`, `false`, 문자열은 첫 값, 문자열 목록은 같은 키의 값 전부(적은 순서)입니다.
-     *          파일 경로(`std::optional<AbsolutePath>`)는 첫 값을 이 자리에서 절대 경로로 푼다(R5 - 상대면 프로젝트 루트 아래). 풀 수 없는 값(빈 글 · 드라이브 상대)은 오류다 -
-     *          키트가 글을 받아 저마다 다시 풀면 못 푼 경로가 "정하지 않음"으로 읽혀 다른 동작(개발 인증서 · 제공자 없음)으로 물러났다.
-     *          옵션이 없으면 필드를 그대로 두므로 기본값은 필드에 미리 넣어 둡니다. 필드는 `readOptions` 동안만 빌려 씁니다.
-     */
-    class SW_GF_API OnlineServerKitOptionField
-    {
-    public:
-        OnlineServerKitOptionField( const utf8* pKey, int32& target );
-        OnlineServerKitOptionField( const utf8* pKey, bool& target );
-        OnlineServerKitOptionField( const utf8* pKey, string& target );
-        OnlineServerKitOptionField( const utf8* pKey, vector<string>& listTarget );
-        OnlineServerKitOptionField( const utf8* pKey, std::optional<AbsolutePath>& target );
-
-        const utf8* getKey() const { return _pKey; }
-
-        /** @brief 같은 키의 값 @p listValue (적은 순서)를 필드에 넣습니다. 형식이 틀리면 false 와 @p outError 입니다. */
-        [[nodiscard]] bool readValues( const vector<const string*>& listValue, const string& kitName, string& outError ) const;
-
-    private:
-        enum class Kind : uint8
-        {
-            Int,
-            Bool,
-            Text,
-            TextList,
-            FilePath,
-        };
-
-        const utf8* _pKey;
-        void*       _pTarget;
-        Kind        _kind;
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 띄울 키트 하나입니다. */
     REFLECT()
     struct SW_GF_API OnlineServerKitEntry
@@ -84,14 +31,30 @@ namespace sw
         /** @brief 키트 이름(`account`, `chat`, `directory` …)입니다. 키트가 등록한 이름과 같아야 하며, 모르는 이름이면 기동이 멈춥니다. */
         PROPERTY()
         string _name{};
+        /** @brief 키트 설정 객체입니다. 파일에는 JSON 객체(`"_settings": { "_sweepIntervalMs": 60000 }`)로 적고, 읽기가 그 글을 그대로 담아 두면 키트가 자기 형식으로 푼다 — 설정 형식은 키트 모듈에 있어 이 구조체가 모른다. */
         PROPERTY()
-        vector<OnlineServerOption> _listOption{};
+        string _settings{};
 
         /**
-         * @brief 키트의 옵션 테이블 @p listField 로 옵션을 모두 읽습니다. 키트는 이 호출 하나로 옵션을 읽습니다(옵션이 없는 키트는 빈 테이블).
-         * @return 테이블에 없는 키(철자가 틀린 옵션을 조용히 넘기지 않는다)나 형식이 틀린 값이 있으면 false 와 @p outError 입니다.
+         * @brief `_settings` 를 키트의 설정 구조체 @p outSettings 로 읽습니다. 키트의 설정 읽기는 이 호출 하나입니다(`ConfigManager::readConfigJSON`).
+         * @details 모르는 키, 읽지 못한 값, 빠진 필수 칸(`PROPERTY( Required )`), 범위 밖 값은 키 이름과 함께 오류 로그를 남기고 false 와 @p outError 입니다. 설정을 적지 않은 키트는 빈 객체로 읽습니다.
+         *          언리얼 `UDeveloperSettings` · Unity ScriptableObject 설정의 자리입니다(기억에 의존).
          */
-        [[nodiscard]] bool readOptions( std::initializer_list<OnlineServerKitOptionField> listField, string& outError ) const;
+        template <typename TSettings>
+        [[nodiscard]] bool readSettings( TSettings& outSettings, string& outError ) const
+        {
+            return readSettingsInto( &outSettings, *TSettings::StaticType(), outError );
+        }
+
+        /**
+         * @brief 설정의 파일 경로 글 @p text 를 절대 경로로 풉니다(상대면 프로젝트 루트 아래). 빈 글은 "정하지 않음"으로 @p outPath 를 비우고 true 입니다.
+         * @details 풀 수 없는 값(드라이브 상대)은 오류입니다 — 못 푼 경로가 "정하지 않음"으로 읽히면 다른 동작(개발 인증서 · 제공자 없음)으로 물러난다.
+         * @param pFieldName 오류 글에 쓸 칸 이름
+         */
+        [[nodiscard]] bool resolveFile( const string& text, const utf8* pFieldName, std::optional<AbsolutePath>& outPath, string& outError ) const;
+
+    private:
+        [[nodiscard]] bool readSettingsInto( void* pSettings, const TypeInfo& typeInfo, string& outError ) const;
     };
 } // namespace sw
 

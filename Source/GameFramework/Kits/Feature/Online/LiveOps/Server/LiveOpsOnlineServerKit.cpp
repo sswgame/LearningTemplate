@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsDevOptions.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsServer.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsService.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fake/FakePushProvider.h"
@@ -15,10 +16,7 @@
 
 // 라이브 운영 키트의 서버 조립 — 기간 이벤트 · 원격 설정 값 · 기기 등록 · 푸시 발송 서비스와 바인딩을 만든다.
 // 실제 푸시 제공자는 설정이 있을 때만 만든다 — 자격(서비스 계정 키)은 환경 변수에서 읽고, 없으면 서버 기동이 실패한다. 지금은 FCM 이다.
-// 옵션:
-//   fakePush           1 이면 가짜 푸시 제공자("fake")를 등록한다(DevOnline 단위만 — 확장점 `LiveOpsDevOptions`, 그 단위가 없는 구성은 기동 실패).
-//   pushProvidersFile  실제 푸시 제공자 설정 JSON(프로젝트 루트 기준, 항목 형식은 `PushProviderSet::readEntry`). 기동 때 절대 경로로 풀고 못 풀면 기동 실패. 비우면 실제 제공자가 없다.
-//   pushTrustFile      제공자 `https://` 서버를 검증할 CA 번들 PEM. `pushProvidersFile` 이 https 주소를 쓰면 필수다.
+// 설정은 `LiveOpsKitConfig` 이다.
 
 namespace sw
 {
@@ -65,19 +63,14 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                bool                        bFakePush = false;
+                LiveOpsKitConfig            kitConfig;
                 std::optional<AbsolutePath> providersFile;
                 std::optional<AbsolutePath> trustFile;
-                if ( entry.readOptions( {
-                                            {         "fakePush",     bFakePush},
-                                            {"pushProvidersFile", providersFile},
-                                            {    "pushTrustFile",     trustFile}
-                },
-                                        outError ) == false )
+                if ( entry.readSettings( kitConfig, outError ) == false || entry.resolveFile( kitConfig._pushProvidersFile, "_pushProvidersFile", providersFile, outError ) == false || entry.resolveFile( kitConfig._pushTrustFile, "_pushTrustFile", trustFile, outError ) == false )
                     return false;
                 _dispatcher.initialize( context._pStore, PushDispatcherConfig{} );
                 // 오프라인 푸시는 우편함 키트가 접속하지 않은 계정의 새 우편에, 이벤트 운영은 GM 키트가 쓴다. 부르는 것은 모든 키트가 시작한 뒤다.
-                const bool bAssembled = createPushProviders( providersFile, trustFile, context._clock, outError ) && registerFakePush( bFakePush, outError ) && registerServerService( context, entry, &_server, outError ) && exposeInterface<IOfflinePushSender>( context, entry, _offlinePush, outError ) && exposeInterface<ILiveEventControl>( context, entry, _service, outError );
+                const bool bAssembled = createPushProviders( providersFile, trustFile, context._clock, outError ) && registerFakePush( kitConfig._bFakePush, outError ) && registerServerService( context, entry, &_server, outError ) && exposeInterface<IOfflinePushSender>( context, entry, _offlinePush, outError ) && exposeInterface<ILiveEventControl>( context, entry, _service, outError );
                 if ( bAssembled == false )
                     shutdown(); // 초기화에 실패한 키트는 shutdown 을 받지 않는다 — 만든 제공자를 여기서 내린다
                 return bAssembled;
@@ -113,7 +106,7 @@ namespace sw
             }
 
         private:
-            /** @brief 옵션 `fakePush` 이면 가짜 제공자를 발송기에 올립니다(DevOnline 단위가 만든다 — 그 단위가 없는 구성은 거절한다). */
+            /** @brief 설정 `_bFakePush` 이면 가짜 제공자를 발송기에 올립니다(DevOnline 단위가 만든다 — 그 단위가 없는 구성은 거절한다). */
             [[nodiscard]] bool registerFakePush( bool bFakePush, string& outError )
             {
                 if ( bFakePush == false )
@@ -132,7 +125,7 @@ namespace sw
             [[nodiscard]] bool createPushProviders( const std::optional<AbsolutePath>& providersFile, const std::optional<AbsolutePath>& trustFile, const IClock& clock, string& outError )
             {
                 vector<PushProviderConfig> listSettings;
-                const bool                 bRead = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "pushProvidersFile", "pushTrustFile", &PushProviderSet::readEntry,
+                const bool                 bRead = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "_pushProvidersFile", "_pushTrustFile", &PushProviderSet::readEntry,
                                                                                                  listSettings, outError );
                 if ( bRead == false || _providerSet.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock, outError ) == false )
                     return false;
@@ -152,7 +145,7 @@ namespace sw
             LiveOpsServer                         _server;
             PushNotificationDispatcher            _dispatcher;
             LiveOpsOfflinePush                    _offlinePush;   ///< 발송기를 빌려 쓰므로 뒤에 선언한다
-            unique_ptr<IPushNotificationProvider> _pFakeProvider; ///< `fakePush` 의 가짜 제공자(DevOnline 단위가 만든다). 발송기가 빌려 쓴다
+            unique_ptr<IPushNotificationProvider> _pFakeProvider; ///< `_bFakePush` 의 가짜 제공자(DevOnline 단위가 만든다). 발송기가 빌려 쓴다
             PushProviderSet                       _providerSet;
         };
 
@@ -170,7 +163,7 @@ namespace sw
 
 namespace sw
 {
-    SW_DEFINE_DEV_ONLINE_EXTENSION( LiveOpsDevOptions, "fakePush" );
+    SW_DEFINE_DEV_ONLINE_EXTENSION( LiveOpsDevOptions, "_bFakePush" );
 
     SW_REGISTER_ONLINE_SERVER_KIT( LiveOpsOnlineServerKit, OnlineServerKitName::kLiveOps );
 

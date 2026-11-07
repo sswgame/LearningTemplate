@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryServer.h"
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Server/ServerDirectoryService.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
@@ -8,8 +9,7 @@
 
 // 서버 디렉터리 키트의 서버 조립 — 점검 · 공지 · 접속 서버 배정 서비스와 바인딩을 만든다.
 // 이 서버를 디렉터리에 등록하는 일(하트비트)은 키트가 아니라 런타임이 온라인 설정의 `_publicAddress` 로 한다.
-// 옵션:
-//   serverKind  배정과 목록을 받는 서버 종류(여러 번 적는다). 비우면 "game".
+// 설정은 `ServerDirectoryKitConfig` 이다.
 
 namespace sw
 {
@@ -31,13 +31,10 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                if ( entry.readOptions( {
-                                            { "serverKind", _settings._listServerKind }
-                },
-                                        outError ) == false )
+                ServerDirectoryKitConfig kitConfig;
+                if ( entry.readSettings( kitConfig, outError ) == false )
                     return false;
-                if ( _settings._listServerKind.empty() )
-                    _settings._listServerKind.push_back( "game" );
+                _settings._listServerKind = std::move( kitConfig._listServerKind );
                 // 점검 · 공지 창은 GM 키트가 `start` 에서 읽는다(GM 키트의 선택 의존).
                 return registerServerService( context, entry, &_server, outError ) && exposeInterface<IServerDirectoryControl>( context, entry, _service, outError );
             }

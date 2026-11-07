@@ -4,32 +4,29 @@
     "_listKit": [
         {
             "_name": "account",
-            "_listOption": [
-                {
-                    "_key": "lightPasswordHash",
-                    "_value": "1"
-                },
-                {
-                    "_key": "seedTestAccounts",
-                    "_value": "shooter_dev:shooter_dev_pw"
-                }
-            ]
+            "_settings": {
+                "_bLightPasswordHash": true,
+                "_listSeedTestAccount": [
+                    {
+                        "_loginName": "shooter_dev",
+                        "_password": "shooter_dev_pw"
+                    }
+                ]
+            }
         },
         {
-            "_name": "chat"
+            "_name": "chat",
+            "_settings": {
+                "_bannedWordsFile": "Config/Server/chat_banned_words.txt",
+                "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt"
+            }
         },
         {
             "_name": "economy",
-            "_listOption": [
-                {
-                    "_key": "currencyCatalog",
-                    "_value": "game/shooter3d/data/shooter3d.currencies.xml"
-                },
-                {
-                    "_key": "offerCatalog",
-                    "_value": "game/shooter3d/data/shooter3d.offers.xml"
-                }
-            ]
+            "_settings": {
+                "_currencyCatalog": "game/shooter3d/data/shooter3d.currencies.xml",
+                "_offerCatalog": "game/shooter3d/data/shooter3d.offers.xml"
+            }
         },
         {
             "_name": "mailbox"

@@ -220,7 +220,7 @@ namespace sw
         PROPERTY()
         int64 _experience{ 0 }; ///< 길드 경험치이다. 서버 시스템(`GuildService::addExperience`)만 늘린다
         PROPERTY()
-        int32 _level{ 1 }; ///< 경험치와 서버 설정의 레벨 표(`guildLevelExperience`)로 응답할 때 정한다. 저장하지 않는다
+        int32 _level{ 1 }; ///< 경험치와 서버 설정의 레벨 표(`SocialKitConfig::_listGuildLevelExperience`)로 응답할 때 정한다. 저장하지 않는다
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bOpenToApply{ SW_FALSE }; ///< 누구나 가입 신청을 낼 수 있는 공개 길드이면 1 이다
     };

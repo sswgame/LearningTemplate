@@ -1,13 +1,12 @@
 #include "pch.h"
 
+#include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
-// 우편함 키트의 서버 조립 — 우편함 서비스를 만든다. 수령은 원장 이동이라 계정 잔액 상한을 경제 키트의 원장 정책(화폐 카탈로그)으로 받는다.
-// 옵션:
-//   sweepIntervalMs  만료 정리 주기(밀리초, 기본 60000, 1 분 이상). 이 주기의 예약 작업(`mail.sweep`)을 등록해 서버 하나만 정리한다.
+// 우편함 키트의 서버 조립 — 우편함 서비스를 만든다. 수령은 원장 이동이라 계정 잔액 상한을 경제 키트의 원장 정책(화폐 카탈로그)으로 받는다. 설정은 `MailboxKitConfig` 이다.
 
 namespace sw
 {
@@ -28,13 +27,10 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                int32 sweepIntervalMs = static_cast<int32>( _settings._sweepIntervalMs );
-                if ( entry.readOptions( {
-                                            { "sweepIntervalMs", sweepIntervalMs }
-                },
-                                        outError ) == false )
+                MailboxKitConfig kitConfig;
+                if ( entry.readSettings( kitConfig, outError ) == false )
                     return false;
-                _settings._sweepIntervalMs = sweepIntervalMs;
+                _settings._sweepIntervalMs = kitConfig._sweepIntervalMs;
                 if ( registerServerService( context, entry, &_service, outError ) == false )
                     return false;
                 return true;

@@ -21,7 +21,7 @@ namespace sw::test
         public:
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                return entry.readOptions( {}, outError ) && registerServerService( context, entry, &_service, outError );
+                return registerServerService( context, entry, &_service, outError );
             }
 
             [[nodiscard]] bool start( OnlineServerKitContext& context, string& outError ) override

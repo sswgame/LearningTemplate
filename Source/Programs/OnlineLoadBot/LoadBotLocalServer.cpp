@@ -6,6 +6,8 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/WallClock.h"
 
+#include "Engine/Serialization/JSON/JSONDocument.h"
+
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
@@ -35,9 +37,15 @@ namespace sw
                 {
                     if ( kit._name != kAccountKit )
                         continue;
-                    OnlineServerOption& option = kit._listOption.emplace_back();
-                    option._key                = "lightPasswordHash";
-                    option._value              = "1";
+                    // 설정 글은 키트 모듈의 형식이라 봇이 모른다. 부하 값 하나만 글 위에 얹는다.
+                    JSONDocument document;
+                    if ( document.parse( kit._settings.empty() ? string_view( "{}" ) : string_view( kit._settings ) ) == false )
+                    {
+                        outError = "the account kit settings are not JSON";
+                        return false;
+                    }
+                    document.getRoot().set( "_bLightPasswordHash" ).setBool( true );
+                    kit._settings = document.dump();
                     return true;
                 }
                 outError = "--light-hash needs the account kit in the online config";

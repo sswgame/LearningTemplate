@@ -1,7 +1,6 @@
 #include "pch.h"
 
-#include "Core/File/ProcessRoots.h"
-
+#include "GameFramework/Kits/Feature/Online/Chat/Server/ChatKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatServer.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
@@ -12,21 +11,12 @@
 
 // 채팅 키트의 서버 조립 — 채팅 서비스와 바인딩을 만든다. 표시 이름과 접속 여부는 계정 키트(필수), 다른 서버 귓속말은 접속 상태, 차단은 친구 키트의 차단 목록을 받는다.
 // 길드와 파티 채널의 멤버 창(`IGroupChannelMembership`)을 문맥에 내놓는다. 친구 키트(길드)와 매칭 키트(파티)가 자기 이벤트에서 부른다.
-// 옵션:
-//   bannedWords        금칙어 파일(프로젝트 루트 기준). 기본 `Config/Server/chat_banned_words.txt`. `none` 이면 거르지 않는다.
-//   ignoredCharacters  정규화가 건너뛸 글자 파일(프로젝트 루트 기준, 필수 — `ChatTextNormalizer`). 기본 `Config/Server/chat_ignored_characters.txt`.
+// 설정은 `ChatKitConfig` 이다.
 
 namespace sw
 {
     namespace
     {
-        struct ChatOnlineServerKitInternal
-        {
-            static constexpr const utf8* kDefaultBannedWordsPath       = "Config/Server/chat_banned_words.txt";
-            static constexpr const utf8* kNoBannedWords                = "none";
-            static constexpr const utf8* kDefaultIgnoredCharactersPath = "Config/Server/chat_ignored_characters.txt";
-        };
-
         /** @brief 친구 키트의 차단 목록을 채팅 정책으로 씁니다. 받는 사람이 보낸 사람을 막았는가입니다. */
         class ChatBlockPolicy final : public IChatPolicy
         {
@@ -96,32 +86,15 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                string bannedWords{ ChatOnlineServerKitInternal::kDefaultBannedWordsPath };
-                string ignoredCharacters{ ChatOnlineServerKitInternal::kDefaultIgnoredCharactersPath };
-                if ( entry.readOptions( {
-                                            {      "bannedWords",       bannedWords},
-                                            {"ignoredCharacters", ignoredCharacters}
-                },
-                                        outError ) == false )
+                ChatKitConfig kitConfig;
+                if ( entry.readSettings( kitConfig, outError ) == false )
                     return false;
-                if ( bannedWords != ChatOnlineServerKitInternal::kNoBannedWords )
-                {
-                    // 상대 경로는 프로젝트 루트 기준이다 - 입력 경계에서 한 번 푼다(R5, 예전에는 작업 폴더 기준으로 열었다).
-                    const std::optional<AbsolutePath> bannedWordsPath = AbsolutePath::tryResolve( bannedWords, ProcessRoots::get()._project );
-                    if ( bannedWordsPath.has_value() == false )
-                    {
-                        outError = "chat option bannedWords '" + bannedWords + "' is not a file path (or 'none')";
-                        return false;
-                    }
-                    _settings._bannedWordsPath = bannedWordsPath->str();
-                }
-                const std::optional<AbsolutePath> ignoredCharactersPath = AbsolutePath::tryResolve( ignoredCharacters, ProcessRoots::get()._project );
-                if ( ignoredCharactersPath.has_value() == false )
-                {
-                    outError = "chat option ignoredCharacters '" + ignoredCharacters + "' is not a file path";
+                std::optional<AbsolutePath> bannedWordsPath;
+                std::optional<AbsolutePath> ignoredCharactersPath;
+                if ( entry.resolveFile( kitConfig._bannedWordsFile, "_bannedWordsFile", bannedWordsPath, outError ) == false || entry.resolveFile( kitConfig._ignoredCharactersFile, "_ignoredCharactersFile", ignoredCharactersPath, outError ) == false )
                     return false;
-                }
-                _settings._ignoredCharactersPath = ignoredCharactersPath->str();
+                _settings._bannedWordsPath       = bannedWordsPath.has_value() ? bannedWordsPath->str() : string();
+                _settings._ignoredCharactersPath = ignoredCharactersPath.has_value() ? ignoredCharactersPath->str() : string();
                 // 멤버 창은 친구와 매칭 키트가 `start` 에서 읽는다. 부르는 것은 모든 키트가 시작한 뒤다.
                 return registerServerService( context, entry, &_server, outError ) && exposeInterface<IGroupChannelMembership>( context, entry, _groupChannels, outError );
             }

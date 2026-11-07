@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountDevOptions.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSet.h"
@@ -17,17 +18,7 @@
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
 // 계정 키트의 서버 조립 — 로그인 서비스 · 바인딩을 만들고 신원(디렉터리) · 접속 상태 · 세션 끊기 · 이름 찾기 · 외부 로그인 연동 조회를 문맥에 내놓는다.
-// 옵션:
-//   ticketKeySecretEnvironment  게임 접속 티켓 주 키(32 B, 16 진수 64 자)를 담은 환경 변수 이름. 비우면 개발 키(DevOnline 단위), 그 단위가 없는 구성(배포)은 기동 실패.
-//   attemptBurst                주소마다 한꺼번에 받는 로그인 시도 수(부하 봇은 크게).
-//   lightPasswordHash           1 이면 가벼운 Argon2id(테스트 · 부하 봇 — DevOnline 단위만, 실제 비용을 재려면 끈다).
-//   seedTestAccounts            `이름:비밀번호` 를 쉼표로 이은 목록. 서버가 서자마자 이 계정들을 가입시켜 둔다(개발 · 두 프로세스 시나리오 `Scripts/net/NetPairRun.py` 용 — 이미 있으면 그대로 둔다).
-//                               **DevOnline 단위만** — 그 단위가 없는 구성(배포)은 기동 실패(비밀번호를 설정 파일에 적어 두는 길을 운영에 남기지 않는다). 상용 엔진의 테스트 계정 시드(언리얼 서버의 `-ini` 계정 · 유니티 UGS 의 테스트 플레이어)와 같은 자리다.
-//   개발 옵션의 값(가벼운 해시 · 시드 읽기 · 개발 티켓 키)은 확장점 `AccountDevOptions`(이 파일 아래의 등록이 올린다)가 준다.
-//   platformProvidersFile       외부 로그인 제공자 설정 JSON(프로젝트 루트 기준, 항목 형식은 `PlatformLoginProviderFactory::readEntry`). 기동 때 절대 경로로 풀고 못 풀면 기동 실패. 비우면 외부 로그인이 없다.
-//   platformTrustFile           제공자 HTTPS 를 검증할 CA 번들 PEM(프로젝트 루트 기준). `https://` 제공자가 있으면 필수다.
-//   linkSecretKeySecretEnvironment  연동 비밀(애플의 refresh token)을 저장소에 쓰기 전에 암호화할 키(32 B, 16 진수 64 자)를 담은 환경 변수 이름.
-//                               탈퇴 때 연동 토큰을 철회하는 제공자(애플 로그인)를 쓰면 필수다 — 평문으로 저장하지 않는다.
+// 설정은 `AccountKitConfig` 이고, 개발 설정의 값(가벼운 해시 · 개발 티켓 키)은 확장점 `AccountDevOptions`(이 파일 아래의 등록이 올린다)가 준다.
 
 namespace sw
 {
@@ -58,38 +49,30 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                LoginServiceConfig          loginSettings;
-                bool                        bLightHash = false;
-                string                      ticketKeyEnvironment;
+                AccountKitConfig            kitConfig;
                 std::optional<AbsolutePath> providersFile;
                 std::optional<AbsolutePath> trustFile;
-                string                      linkSecretKeyEnvironment;
-                string                      seedTestAccounts;
-                const bool                  bOptionOk = entry.readOptions( {
-                                                              {    "ticketKeySecretEnvironment",        ticketKeyEnvironment},
-                                                              {                  "attemptBurst", loginSettings._attemptBurst},
-                                                              {             "lightPasswordHash",                  bLightHash},
-                                                              {         "platformProvidersFile",               providersFile},
-                                                              {             "platformTrustFile",                   trustFile},
-                                                              {"linkSecretKeySecretEnvironment",    linkSecretKeyEnvironment},
-                                                              {              "seedTestAccounts",            seedTestAccounts}
-                },
-                                                                           outError );
-                if ( bOptionOk == false )
+                if ( entry.readSettings( kitConfig, outError ) == false || entry.resolveFile( kitConfig._platformProvidersFile, "_platformProvidersFile", providersFile, outError ) == false || entry.resolveFile( kitConfig._platformTrustFile, "_platformTrustFile", trustFile, outError ) == false )
                     return false;
-                // 개발 옵션은 DevOnline 단위가 준 값으로만 푼다 — 그 단위가 없는 구성(배포)은 기동 오류다.
-                const bool bDevOption = bLightHash || seedTestAccounts.empty() == false;
+                LoginServiceConfig loginSettings;
+                loginSettings._attemptBurst = kitConfig._attemptBurst;
+                // 개발 설정은 DevOnline 단위가 있을 때만 받는다 — 그 단위가 없는 구성(배포)은 기동 오류다.
+                const bool bDevOption = kitConfig._bLightPasswordHash || kitConfig._listSeedTestAccount.empty() == false;
                 if ( bDevOption )
                 {
                     const AccountDevOptions* pDevOptions = AccountDevOptions::s_devOnline.require( outError );
                     if ( pDevOptions == nullptr )
                         return false;
-                    if ( bLightHash )
+                    if ( kitConfig._bLightPasswordHash )
                         loginSettings._passwordHashParams = pDevOptions->_lightPasswordHashParams;
-                    if ( seedTestAccounts.empty() == false && pDevOptions->_pParseSeedTestAccounts( seedTestAccounts, _listSeedAccount, outError ) == false )
-                        return false;
+                    for ( const AccountSeedEntry& seed : kitConfig._listSeedTestAccount )
+                    {
+                        _listSeedAccount.push_back( LoginCredential{ seed._loginName, seed._password } );
+                    }
                 }
-                uint8 arrTicketKey[LoginTicketAuthority::kMasterKeySize];
+                const string& ticketKeyEnvironment     = kitConfig._ticketKeySecretEnvironment;
+                const string& linkSecretKeyEnvironment = kitConfig._linkSecretKeySecretEnvironment;
+                uint8         arrTicketKey[LoginTicketAuthority::kMasterKeySize];
                 if ( LoginTicketKey::readFromEnvironment( ticketKeyEnvironment, arrTicketKey, outError ) == false )
                     return false;
                 _loginService.initialize( context._pStore, &_crypto, loginSettings, arrTicketKey );
@@ -118,7 +101,7 @@ namespace sw
                 {
                     _loginService.seedAccount( credential, nowMs, AccountOnlineServerKitInternal::kSeedRequestTag );
                 }
-                SW_LOG_INFO_ID( "AccountOnlineServerKit.SeededTestAccountDevelopment", "Seeded %# test account(s) (development option seedTestAccounts)", static_cast<uint32>( _listSeedAccount.size() ) );
+                SW_LOG_INFO_ID( "AccountOnlineServerKit.SeededTestAccountDevelopment", "Seeded %# test account(s) (development setting _listSeedTestAccount)", static_cast<uint32>( _listSeedAccount.size() ) );
                 _listSeedAccount.clear();
             }
 
@@ -150,7 +133,7 @@ namespace sw
                                                         const IClock& clock, string& outError )
             {
                 vector<PlatformLoginProviderConfig> listSettings;
-                if ( OnlineProviderFile::read<PlatformLoginProviderConfig>( providersFile, trustFile, "platformProvidersFile", "platformTrustFile", &PlatformLoginProviderFactory::readEntry,
+                if ( OnlineProviderFile::read<PlatformLoginProviderConfig>( providersFile, trustFile, "_platformProvidersFile", "_platformTrustFile", &PlatformLoginProviderFactory::readEntry,
                                                                             listSettings, outError ) == false )
                     return false;
                 if ( _platformProviders.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock, outError ) == false )
@@ -170,7 +153,7 @@ namespace sw
                 // 탈퇴 때 토큰을 철회하는 제공자가 있다 — 연동 비밀을 암호화할 키가 반드시 있어야 한다(개발용 키로 대신하지 않는다).
                 if ( linkSecretKeyEnvironment.empty() )
                 {
-                    outError = "a login provider revokes link secrets on account deletion - set the option linkSecretKeySecretEnvironment";
+                    outError = "a login provider revokes link secrets on account deletion - set _linkSecretKeySecretEnvironment";
                     return false;
                 }
                 uint8 arrVaultKey[LoginSecretVault::kKeySize];
@@ -190,7 +173,7 @@ namespace sw
             AccountServer            _accountServer;
             AccountNameIndex         _nameIndex;
             AccountExternalLinks     _externalLinks;
-            vector<LoginCredential>  _listSeedAccount; ///< 첫 틱에 가입시킬 개발용 계정(`seedTestAccounts`)
+            vector<LoginCredential>  _listSeedAccount; ///< 첫 틱에 가입시킬 개발용 계정(`_listSeedTestAccount`)
         };
 
         struct AccountDevOnlineInternal
@@ -199,34 +182,9 @@ namespace sw
             static constexpr uint32 kLightHashIterations = 1;
             static constexpr uint8  kDevTicketKeyByte    = 0x5A; ///< 개발 티켓 주 키의 바이트(모든 바이트 같은 값) — 로그인 서버와 게임 서버가 같은 값을 본다
 
-            /** @brief `seedTestAccounts` 옵션(`이름:비밀번호,…`)을 읽어 @p outListCredential 에 더합니다. 형식이 틀리면 false 와 까닭입니다. */
-            [[nodiscard]] static bool parseSeedTestAccounts( const string& text, vector<LoginCredential>& outListCredential, string& outError )
-            {
-                size_t begin = 0;
-                while ( begin <= text.size() )
-                {
-                    size_t end = text.find( ',', begin );
-                    if ( end == string::npos )
-                        end = text.size();
-                    const string item  = text.substr( begin, end - begin );
-                    const size_t colon = item.find( ':' );
-                    if ( colon == string::npos || colon == 0 || colon + 1 >= item.size() )
-                    {
-                        outError = "seedTestAccounts entries must look like name:password, got '" + item + "'";
-                        return false;
-                    }
-                    LoginCredential credential;
-                    credential._loginName = item.substr( 0, colon );
-                    credential._password  = item.substr( colon + 1 );
-                    outListCredential.push_back( std::move( credential ) );
-                    begin = end + 1;
-                }
-                return true;
-            }
-
             static constexpr AccountDevOptions kDevOptions{
                 NetPasswordHashParams{ kLightHashMemoryKiB, kLightHashIterations },
-                &parseSeedTestAccounts, kDevTicketKeyByte
+                kDevTicketKeyByte
             };
         };
     } // namespace
@@ -234,7 +192,7 @@ namespace sw
 
 namespace sw
 {
-    SW_DEFINE_DEV_ONLINE_EXTENSION( AccountDevOptions, "the Account kit development options (lightPasswordHash, seedTestAccounts, empty ticketKeySecretEnvironment)" );
+    SW_DEFINE_DEV_ONLINE_EXTENSION( AccountDevOptions, "the Account kit development settings (_bLightPasswordHash, _listSeedTestAccount, empty _ticketKeySecretEnvironment)" );
 
     SW_REGISTER_ONLINE_SERVER_KIT( AccountOnlineServerKit, OnlineServerKitName::kAccount );
 

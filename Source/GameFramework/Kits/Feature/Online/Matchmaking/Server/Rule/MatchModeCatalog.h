@@ -8,7 +8,6 @@
  *               baseRatingWindow="100" ratingWindowPerSecond="25" maxRatingWindow="1000" buildVersion="0"/>
  *     </MatchModeCatalog>
  * @endcode
- *          도구와 테스트처럼 데이터 파일이 없는 조립은 `parseCompactMode`(`<id>:<팀 수>x<팀 인원>`)로 같은 정의를 만듭니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -43,9 +42,6 @@ namespace sw
         static constexpr AssetTypeDef kAssetType{ "MatchModeCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         const vector<MatchModeDef>& getModes() const { return _listMode; }
-
-        /** @brief `<id>:<팀 수>x<팀 인원>`(예: `duo:2x2`)을 읽습니다. 나머지 값은 기본값입니다. 형식이 틀리거나 범위 밖이면 false 이고 @p outError 에 이유를 적습니다(범위를 못 보는 프로세스면 그 사실). */
-        [[nodiscard]] static bool parseCompactMode( string_view text, MatchModeDef& outMode, string& outError );
 
     private:
         static constexpr const utf8* kXMLRootName = "MatchModeCatalog";

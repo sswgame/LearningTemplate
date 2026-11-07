@@ -3,6 +3,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 
+#include "GameFramework/Kits/Feature/Online/Trade/Server/TradeKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeServer.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
@@ -12,19 +13,12 @@
 
 // 거래 키트의 서버 조립 — 거래 서비스(양쪽 확정 → 원장 분개 하나로 정산)와 바인딩을 만든다. 상대 찾기는 계정 키트(필수), 다른 서버의 상대는 접속 상태,
 // 계정 잔액 상한은 경제 키트의 원장 정책을 받는다.
-// 옵션:
-//   tradable        거래할 수 있는 자산 id 접두어(여러 번 적는다 — 예: `cur.gold`, `item.`). 하나는 있어야 한다.
-//   maxLegsPerSide  한쪽이 내놓을 수 있는 자산 줄 수(기본 8).
+// 설정은 `TradeKitConfig` 이다.
 
 namespace sw
 {
     namespace
     {
-        struct TradeOnlineServerKitInternal
-        {
-            static constexpr int32 kDefaultMaxLegsPerSide = 8;
-        };
-
         /** @brief 설정의 접두어로 거래 가능 여부를 답하는 거래 정책입니다. 게임이 더 세밀한 규칙을 원하면 자기 정책으로 조립합니다. */
         class PrefixTradePolicy final : public ITradePolicy
         {
@@ -33,7 +27,7 @@ namespace sw
             int32          _maxLegsPerSide;
             PrefixTradePolicy()
                 : _listTradablePrefix{}
-                , _maxLegsPerSide{ TradeOnlineServerKitInternal::kDefaultMaxLegsPerSide }
+                , _maxLegsPerSide{ 0 }
             {
             }
 
@@ -61,17 +55,16 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                if ( entry.readOptions( {
-                                            {      "tradable", _policy._listTradablePrefix},
-                                            {"maxLegsPerSide",     _policy._maxLegsPerSide}
-                },
-                                        outError ) == false )
+                TradeKitConfig kitConfig;
+                if ( entry.readSettings( kitConfig, outError ) == false )
                     return false;
-                if ( _policy._listTradablePrefix.empty() )
+                if ( kitConfig._listTradablePrefix.empty() )
                 {
-                    outError = "the trade kit needs at least one tradable option (an asset id prefix)";
+                    outError = "the trade kit needs at least one _listTradablePrefix entry (an asset id prefix)";
                     return false;
                 }
+                _policy._listTradablePrefix = std::move( kitConfig._listTradablePrefix );
+                _policy._maxLegsPerSide     = kitConfig._maxLegsPerSide;
                 if ( registerServerService( context, entry, &_server, outError ) == false )
                     return false;
                 return true;

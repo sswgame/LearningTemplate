@@ -12,6 +12,7 @@
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
+#include "GameFramework/Runtime/Online/Server/Tests/OnlineConfigTestTypes.h"
 
 // OnlineServerRuntimeTest — 온라인 서비스 서버 조립: 키트를 이름 의존 순서로 세우고(설정 순서 · 이름 순서와 상관없이) 반대로 내린다, 앞 키트가 지역 범위에 건 인터페이스를
 // 뒤 키트가 받는다, 모르는 키트 · 빠진 필수 키트 · 초기화와 시작 실패는 기동을 멈추고 만든 것을 되돌린다, 상태 검사(online_services)(nogpu).
@@ -76,7 +77,7 @@ namespace
         TestDirectory _directory;
     };
 
-    /** @brief 앞 키트의 신원을 받아 쓰는 키트입니다(필수 의존). 옵션 `fail=init` · `fail=start` 이면 그 단계에 실패합니다. */
+    /** @brief 앞 키트의 신원을 받아 쓰는 키트입니다(필수 의존). 설정 `_failStage` 가 `init` · `start` 이면 그 단계에 실패합니다. */
     class ConsumerTestKit final : public IOnlineServerKit
     {
     public:
@@ -89,12 +90,10 @@ namespace
         [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
         {
             (void)context;
-            string failStage;
-            if ( entry.readOptions( {
-                                        { "fail", failStage }
-            },
-                                    outError ) == false )
+            OnlineRuntimeTestKitConfig kitConfig;
+            if ( entry.readSettings( kitConfig, outError ) == false )
                 return false;
+            const string& failStage = kitConfig._failStage;
             if ( failStage == "init" )
             {
                 outError = "test init failure";
@@ -156,13 +155,6 @@ namespace
             }
             return settings;
         }
-
-        static void addOption( OnlineServerKitEntry& entry, const utf8* pKey, const utf8* pValue )
-        {
-            OnlineServerOption& option = entry._listOption.emplace_back();
-            option._key                = pKey;
-            option._value              = pValue;
-        }
     };
 } // namespace
 
@@ -218,8 +210,8 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, MissingRequiredKitStopsStartup )
 SW_TEST_CASE_F( OnlineServerRuntimeTest, KitInitializeFailureSkipsItsOwnShutdown )
 {
     {
-        OnlineServerRuntimeConfig settings = makeSettings( { ProviderTestKit::kName, ConsumerTestKit::kName } );
-        addOption( settings._config._listKit[1], "fail", "init" );
+        OnlineServerRuntimeConfig settings     = makeSettings( { ProviderTestKit::kName, ConsumerTestKit::kName } );
+        settings._config._listKit[1]._settings = R"({ "_failStage": "init" })";
         OnlineServerRuntime runtime;
         string              error;
         SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ) );
@@ -249,9 +241,9 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, UnknownKitStopsStartup )
 SW_TEST_CASE_F( OnlineServerRuntimeTest, KitStartFailureUnwindsEveryKit )
 {
     {
-        OnlineServerRuntimeConfig settings = makeSettings( { ProviderTestKit::kName, ConsumerTestKit::kName } );
-        addOption( settings._config._listKit[1], "fail", "start" );
-        settings._listenAddress = NetAddress::makeLoopback( 7452 );
+        OnlineServerRuntimeConfig settings     = makeSettings( { ProviderTestKit::kName, ConsumerTestKit::kName } );
+        settings._config._listKit[1]._settings = R"({ "_failStage": "start" })";
+        settings._listenAddress                = NetAddress::makeLoopback( 7452 );
         OnlineServerRuntime runtime;
         string              error;
         SW_EXPECT_FALSE( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ) );

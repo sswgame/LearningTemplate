@@ -5,7 +5,7 @@
   py -3 -m Scripts net-pair check <서버 로그> <클라이언트 로그>   # 이미 있는 두 로그만 판정한다
 
 준비(`run` 이 `Saved/NetPairRun/` 아래에 쓴다): 서버 설정(`NetPair.json` — 게임 포트 · 서비스 포트 · `_bGameConnectTicket`)과 옆 온라인 설정(`NetPair.online.json` —
-계정 키트의 개발용 시드 계정 옵션 `seedTestAccounts`, 게임 접속 조립 `gameConnect`). 서버는 `-server-config=<경로>` 로 그 설정을 읽는다.
+계정 키트의 개발용 시드 계정 설정 `_listSeedTestAccount`, 게임 접속 조립 `gameConnect`). 서버는 `-server-config=<경로>` 로 그 설정을 읽는다.
 계정 시드는 서버 명령줄 인자가 아니라 온라인 설정의 옵션이다(설정이 정본 — 인자를 하나 더 두면 같은 값이 둘이 된다). Shipping 은 그 옵션을 거절하므로 시드 시설은 Dev 에만 있다.
 
 판정: 서버 로그에 `Net session client <n> connected`(암호화 UDP 접속이 열림)가 있고, 두 로그에 `[Error]` · `[Warning]` 가 없고(종료 코드 0 이어도 경고는 실패), 서버가 종료 코드 0 으로 끝난다.
@@ -73,15 +73,15 @@ def writeConfigs(outDir: Path, gamePort: int, servicePort: int) -> Path:
         "_storeName": "local",
         "_cacheName": "local",
         "_listKit": [
-            {"_name": "account", "_listOption": [
-                {"_key": "ticketKeySecretEnvironment", "_value": _kTicketKeyEnvironment},
-                {"_key": "lightPasswordHash", "_value": "1"},
-                {"_key": "seedTestAccounts", "_value": f"{_kAccount}:{_kPassword}"},
-            ]},
-            {"_name": "gameConnect", "_listOption": [
-                {"_key": "ticketKeySecretEnvironment", "_value": _kTicketKeyEnvironment},
-                {"_key": "serverName", "_value": _kServerName},
-            ]},
+            {"_name": "account", "_settings": {
+                "_ticketKeySecretEnvironment": _kTicketKeyEnvironment,
+                "_bLightPasswordHash": True,
+                "_listSeedTestAccount": [{"_loginName": _kAccount, "_password": _kPassword}],
+            }},
+            {"_name": "gameConnect", "_settings": {
+                "_ticketKeySecretEnvironment": _kTicketKeyEnvironment,
+                "_serverName": _kServerName,
+            }},
         ],
     }
     serverPath = outDir / "NetPair.json"

@@ -2,7 +2,7 @@
  * @file OnlineProviderFile.h
  * @brief 온라인 서버 키트의 외부 제공자 설정 파일(`{ "providers": [ { … }, … ] }`)을 읽는 한 곳입니다.
  * @details 계정(외부 로그인) · 경제(영수증) · 라이브 운영(푸시) 키트가 같은 모양의 파일을 저마다 읽었다(파일 읽기 · JSON · `providers` 배열 · 항목이 객체인지 · 신뢰 PEM 짝 검사가 세 벌).
- *          이제 그 틀은 여기 하나이고 키트는 항목 하나를 읽는 함수만 준다. 경로는 키트 옵션의 파일 경로 칸(`OnlineServerKitOptionField` 의 `std::optional<AbsolutePath>`)이 이미 풀었다.
+ *          이제 그 틀은 여기 하나이고 키트는 항목 하나를 읽는 함수만 준다. 경로는 키트 설정 읽기(`OnlineServerKitEntry::resolveFile`)가 이미 풀었다.
  */
 #pragma once
 #include "Core/Container/string.h"

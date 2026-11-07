@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardServer.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Server/LeaderboardService.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
@@ -9,10 +10,7 @@
 
 // 순위표 키트의 서버 조립 — 순위표 서비스와 바인딩을 만들고, 보드 · 업적 정의 데이터를 등록하며, 시즌 정산을 예약 작업에 건다.
 // 표시 이름과 접속 여부는 계정 키트, 다른 서버 계정의 업적 알림은 접속 상태를 받는다.
-// 옵션:
-//   catalog  보드 · 업적 정의(리소스 경로, `<LeaderboardCatalog>`).
-//   board    기본 정의(내림차순 · Best · 초기화 없음 · 서버만 제출)의 보드 id(여러 번 적는다). 데이터 파일 없이 도는 도구 · 테스트용이다.
-//   둘 다 없으면 보드가 없다(경고).
+// 설정은 `LeaderboardKitConfig` 이다.
 
 namespace sw
 {
@@ -35,21 +33,19 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                string catalogPath;
-                if ( entry.readOptions( {
-                                            {"catalog",        catalogPath},
-                                            {  "board", _listInlineBoardID}
-                },
-                                        outError ) == false )
+                LeaderboardKitConfig kitConfig;
+                if ( entry.readSettings( kitConfig, outError ) == false )
                     return false;
-                _pCatalog = catalogPath.empty() ? nullptr : SharedAssetCache<LeaderboardCatalog>::acquire( catalogPath );
+                const string& catalogPath = kitConfig._catalog;
+                _listInlineBoardID        = std::move( kitConfig._listBoardID );
+                _pCatalog                 = catalogPath.empty() ? nullptr : SharedAssetCache<LeaderboardCatalog>::acquire( catalogPath );
                 if ( catalogPath.empty() == false && _pCatalog == nullptr )
                 {
                     outError = "the leaderboard catalog '" + catalogPath + "' could not be read";
                     return false;
                 }
                 if ( catalogPath.empty() && _listInlineBoardID.empty() )
-                    SW_LOG_WARNING_ID( "LeaderboardOnlineServerKit.LeaderboardKitNeitherCatalog", "Leaderboard kit: neither a catalog nor a board option - no boards are registered" );
+                    SW_LOG_WARNING_ID( "LeaderboardOnlineServerKit.LeaderboardKitNeitherCatalog", "Leaderboard kit: neither _catalog nor _listBoardID - no boards are registered" );
                 // 매칭 키트가 실력 모드의 통계를 읽는다. 접속한 계정의 통계만 메모리에 있다.
                 return registerServerService( context, entry, &_server, outError ) && exposeInterface<IAccountStatSource>( context, entry, _service, outError );
             }
@@ -135,8 +131,8 @@ namespace sw
             }
 
         private:
-            shared_ptr<const LeaderboardCatalog> _pCatalog;          ///< 옵션 `catalog` 의 공유 캐시 한 벌(옵션이 없으면 nullptr)
-            vector<string>                       _listInlineBoardID; ///< 옵션 `board` 의 id
+            shared_ptr<const LeaderboardCatalog> _pCatalog;          ///< 설정 `_catalog` 의 공유 캐시 한 벌(없으면 nullptr)
+            vector<string>                       _listInlineBoardID; ///< 설정 `_listBoardID`
             LeaderboardService                   _service;
             LeaderboardServer                    _server;
         };

@@ -1,8 +1,7 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
-
 #include "GameFramework/Kits/Feature/Online/Social/Server/GuildService.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialServer.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
@@ -12,8 +11,7 @@
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
 // 친구 키트의 서버 조립 — 친구 · 길드 서비스와 바인딩을 만들고, 차단 목록을 기반 인터페이스(`IAccountBlockList`)로 문맥에 내놓는다(채팅이 차단을 지킨다).
-// 옵션:
-//   guildLevelExperience  레벨 2 부터의 누적 경험치(같은 키를 레벨 순서로 여러 번). 늘어나야 하며 없으면 모든 길드가 레벨 1 이다.
+// 설정은 `SocialKitConfig` 이다.
 // 접속 상태는 계정 키트가, 이름 찾기는 계정 키트의 이름 인덱스가 준다(없으면 이름으로 신청하기가 NotFound 로 끝난다).
 // 길드 창고에서 꺼낼 때의 화폐 상한은 경제 키트가 문맥에 내놓은 원장 정책을 쓴다.
 // 채팅 키트가 있으면 길드 이벤트(가입, 떠남, 접속한 멤버 붙이기)로 길드 채널 멤버를 바꾼다. 접속한 계정의 길드는 바인딩이 로그인 때 붙인다.
@@ -56,27 +54,13 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                vector<string> listLevelText;
-                if ( entry.readOptions( {
-                                            { "guildLevelExperience", listLevelText }
-                },
-                                        outError ) == false )
+                SocialKitConfig kitConfig;
+                if ( entry.readSettings( kitConfig, outError ) == false )
                     return false;
-                vector<int64> listLevelExperience;
-                for ( const string& text : listLevelText )
-                {
-                    int64 experience = 0;
-                    if ( StringUtil::parseInt64( text, experience ) == false )
-                    {
-                        outError = "social: guildLevelExperience '" + text + "' is not an integer";
-                        return false;
-                    }
-                    listLevelExperience.push_back( experience );
-                }
                 string tableError;
-                if ( _guildService.setLevelTable( listLevelExperience, tableError ) == false )
+                if ( _guildService.setLevelTable( kitConfig._listGuildLevelExperience, tableError ) == false )
                 {
-                    outError = "social: guildLevelExperience: " + tableError;
+                    outError = "social: _listGuildLevelExperience: " + tableError;
                     return false;
                 }
                 return registerServerService( context, entry, &_socialServer, outError ) && exposeInterface<IAccountBlockList>( context, entry, _blockList, outError );

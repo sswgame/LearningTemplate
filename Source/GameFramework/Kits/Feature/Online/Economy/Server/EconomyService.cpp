@@ -262,7 +262,7 @@ namespace sw
 
 namespace sw
 {
-    SW_DEFINE_DEV_ONLINE_EXTENSION( EconomyDevOptions, "fakeReceipts" );
+    SW_DEFINE_DEV_ONLINE_EXTENSION( EconomyDevOptions, "_bFakeReceipts" );
 
     EconomyService::EconomyService()
         : _calls{}

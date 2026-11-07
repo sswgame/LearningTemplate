@@ -10,22 +10,18 @@
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
+#include "GameFramework/Runtime/Online/Server/Tests/OnlineConfigTestTypes.h"
 
-// OnlineServerConfigTest — 온라인 서버 설정의 키트 옵션 읽기(형식별 규칙 · 모르는 키 거절 · 형식 오류 · 없는 옵션은 기본값), 설정 파일 경로,
+// OnlineServerConfigTest — 온라인 서버 설정의 키트 설정 읽기(`_settings` 객체 · 모르는 키 거절 · 형식 오류 · 없는 칸은 초기값), 설정 파일 경로,
 // 키트 팩토리 레지스트리(이름으로 찾기 · 내리기 · 만들기 함수 없는 팩토리 거절). 파일 · 네트워크 없음(nogpu).
 
 namespace
 {
-    sw::OnlineServerKitEntry makeEntry( std::initializer_list<std::pair<const utf8*, const utf8*>> listOption )
+    sw::OnlineServerKitEntry makeEntry( const utf8* pSettingsJSON )
     {
         sw::OnlineServerKitEntry entry;
-        entry._name = "testkit";
-        for ( const auto& [pKey, pValue] : listOption )
-        {
-            sw::OnlineServerOption& option = entry._listOption.emplace_back();
-            option._key                    = pKey;
-            option._value                  = pValue;
-        }
+        entry._name     = "testkit";
+        entry._settings = pSettingsJSON;
         return entry;
     }
 
@@ -36,113 +32,66 @@ namespace
 } // namespace
 
 /**
- * @brief [OnlineServerConfigTest] 옵션 테이블로 정수 · 참거짓 · 글 · 글 목록을 읽는다 — 글은 첫 값, 목록은 같은 키의 값 전부(적은 순서), 없는 옵션은 기본값 그대로
+ * @brief [OnlineServerConfigTest] 온라인 설정의 `_settings` 객체가 키트 설정 구조체로 읽힌다 — 글 · 정수 · 참거짓 · 글 목록, 적지 않은 칸은 초기값
  */
-SW_TEST_CASE( OnlineServerConfigTest, ReadOptionsFillsEachFieldKind )
+SW_TEST_CASE( OnlineServerConfigTest, SettingsObjectFillsTheKitConfig )
 {
-    const sw::OnlineServerKitEntry entry =
-        makeEntry( {
-            { "port",   "7777"},
-            {"debug",   "true"},
-            { "name",  "first"},
-            { "name", "second"},
-            { "mode",   "duel"},
-            { "mode",  "squad"}
-    } );
-
-    int32                  port   = 0;
-    bool                   bDebug = false;
-    sw::string             name   = "default";
-    sw::vector<sw::string> listMode;
-    int32                  untouched = 42;
-    sw::string             error;
-    SW_REQUIRE_TRUE( entry.readOptions( {
-                                            {  "port",      port},
-                                            { "debug",    bDebug},
-                                            {  "name",      name},
-                                            {  "mode",  listMode},
-                                            {"absent", untouched},
-    },
-                                        error ) );
-    SW_EXPECT_TRUE( error.empty() );
-    SW_EXPECT_EQUAL( 7777, port );
-    SW_EXPECT_TRUE( bDebug );
-    SW_EXPECT_EQUAL( sw::string( "first" ), name );
-    SW_REQUIRE_EQUAL( size_t( 2 ), listMode.size() );
-    SW_EXPECT_EQUAL( sw::string( "duel" ), listMode[0] );
-    SW_EXPECT_EQUAL( sw::string( "squad" ), listMode[1] );
-    SW_EXPECT_EQUAL( 42, untouched );
+    sw::ConfigManager manager;
+    SW_REQUIRE_TRUE( manager.loadConfigFromJSON<sw::OnlineServerConfig>( R"({ "_listKit": [ { "_name": "testkit", "_settings": { "_port": 7777, "_bDebug": true, "_listMode": [ "duel", "squad" ] } } ] })", "inline" ) );
+    const sw::OnlineServerConfig* pConfig = manager.getConfig<sw::OnlineServerConfig>();
+    SW_REQUIRE_EQUAL( size_t( 1 ), pConfig->_listKit.size() );
+    sw::OnlineConfigTestKitConfig kitConfig;
+    sw::string                    error;
+    SW_REQUIRE_TRUE_MSG( pConfig->_listKit[0].readSettings( kitConfig, error ), error.c_str() );
+    SW_EXPECT_EQUAL( 7777, kitConfig._port );
+    SW_EXPECT_TRUE( kitConfig._bDebug );
+    SW_REQUIRE_EQUAL( size_t( 2 ), kitConfig._listMode.size() );
+    SW_EXPECT_EQUAL( sw::string( "squad" ), kitConfig._listMode[1] );
+    SW_EXPECT_EQUAL( 42, kitConfig._untouched );
 }
 
 /**
- * @brief [OnlineServerConfigTest] 참거짓은 `0` · `false` 도 읽고 음수 정수도 읽는다. 옵션이 없는 키트는 빈 테이블로 통과한다
+ * @brief [OnlineServerConfigTest] 설정을 적지 않은 키트는 빈 객체로 읽는다 — 초기값 그대로이고, 필수 칸이 있으면 빠졌다고 알린다
  */
-SW_TEST_CASE( OnlineServerConfigTest, ReadOptionsAcceptsFalseNegativeAndEmptyTable )
+SW_TEST_CASE( OnlineServerConfigTest, MissingSettingsReadAsEmptyObject )
 {
-    bool       bOn   = true;
-    bool       bOff  = true;
-    int32      delta = 0;
-    sw::string error;
-    SW_REQUIRE_TRUE( makeEntry( {
-                                    {   "on",     "0"},
-                                    {  "off", "false"},
-                                    {"delta",   "-15"}
-    } )
-                         .readOptions( { { "on", bOn }, { "off", bOff }, { "delta", delta } }, error ) );
-    SW_EXPECT_FALSE( bOn );
-    SW_EXPECT_FALSE( bOff );
-    SW_EXPECT_EQUAL( -15, delta );
+    sw::OnlineConfigTestKitConfig kitConfig;
+    sw::string                    error;
+    SW_EXPECT_TRUE( makeEntry( "" ).readSettings( kitConfig, error ) );
+    SW_EXPECT_EQUAL( 1, kitConfig._port );
 
-    SW_EXPECT_TRUE( makeEntry( {} ).readOptions( {}, error ) );
-}
-
-/**
- * @brief [OnlineServerConfigTest] 테이블에 없는 키(철자 틀림)는 다른 필드를 하나도 읽기 전에 거절하고, 오류에 키와 키트 이름을 싣는다
- */
-SW_TEST_CASE( OnlineServerConfigTest, ReadOptionsRejectsUnknownKeyBeforeReading )
-{
-    int32      port = 1;
-    sw::string error;
-    SW_EXPECT_FALSE( makeEntry( {
-                                    {"port", "9000"},
-                                    {"prot", "9001"}
-    } )
-                         .readOptions( { { "port", port } }, error ) );
-    SW_EXPECT_EQUAL( 1, port );
-    SW_EXPECT_TRUE( error.find( "'prot'" ) != sw::string::npos );
+    SW_EXPECT_LOG( "Config.KeyMissing" );
+    sw::OnlineConfigTestRequiredConfig required;
+    SW_EXPECT_FALSE( makeEntry( "" ).readSettings( required, error ) );
     SW_EXPECT_TRUE( error.find( "'testkit'" ) != sw::string::npos );
 }
 
 /**
- * @brief [OnlineServerConfigTest] 정수가 아닌 값 · 참거짓이 아닌 값은 false 와 오류이고, 필드는 바꾸지 않는다
+ * @brief [OnlineServerConfigTest] 모르는 키(철자 틀림)와 형식이 틀린 값은 오류이고 오류 글에 키트 이름을 싣는다
  */
-SW_TEST_CASE( OnlineServerConfigTest, ReadOptionsRejectsMalformedValues )
+SW_TEST_CASE( OnlineServerConfigTest, SettingsRejectUnknownKeyAndMalformedValue )
 {
-    int32      port = 5;
-    sw::string error;
-    SW_EXPECT_FALSE( makeEntry( {
-                                    { "port", "77x" }
-    } )
-                         .readOptions( { { "port", port } }, error ) );
-    SW_EXPECT_EQUAL( 5, port );
-    SW_EXPECT_TRUE( error.find( "integer" ) != sw::string::npos );
+    SW_EXPECT_LOG( "Config.KeyUnknown" );
+    sw::OnlineConfigTestKitConfig kitConfig;
+    sw::string                    error;
+    SW_EXPECT_FALSE( makeEntry( R"({ "_prot": 9001 })" ).readSettings( kitConfig, error ) );
+    SW_EXPECT_TRUE( error.find( "'testkit'" ) != sw::string::npos );
+    SW_EXPECT_FALSE( makeEntry( R"({ "_port": "77x" })" ).readSettings( kitConfig, error ) );
+}
 
-    bool bFlag = true;
-    error.clear();
-    SW_EXPECT_FALSE( makeEntry( {
-                                    { "flag", "maybe" }
-    } )
-                         .readOptions( { { "flag", bFlag } }, error ) );
-    SW_EXPECT_TRUE( bFlag );
-    SW_EXPECT_TRUE( error.find( "boolean" ) != sw::string::npos );
-
-    int32 empty = 3;
-    error.clear();
-    SW_EXPECT_FALSE( makeEntry( {
-                                    { "count", "" }
-    } )
-                         .readOptions( { { "count", empty } }, error ) );
-    SW_EXPECT_EQUAL( 3, empty );
+/**
+ * @brief [OnlineServerConfigTest] 파일 경로는 빈 글이면 "정하지 않음"이고, 상대 경로는 프로젝트 루트 아래로 푼다
+ */
+SW_TEST_CASE( OnlineServerConfigTest, ResolveFileHandlesEmptyAndRelativePaths )
+{
+    const sw::OnlineServerKitEntry  entry = makeEntry( "" );
+    std::optional<sw::AbsolutePath> path;
+    sw::string                      error;
+    SW_REQUIRE_TRUE( entry.resolveFile( "", "_file", path, error ) );
+    SW_EXPECT_FALSE( path.has_value() );
+    SW_REQUIRE_TRUE( entry.resolveFile( "Config/Server/a.txt", "_file", path, error ) );
+    SW_REQUIRE_TRUE( path.has_value() );
+    SW_EXPECT_TRUE( path->str().find( "a.txt" ) != sw::string::npos );
 }
 
 /**
@@ -213,7 +162,7 @@ SW_TEST_CASE( OnlineServerConfigTest, KitRegistryRejectsDuplicateName )
 
 /**
  * @brief [OnlineServerConfigTest] 저장소의 온라인 서버 설정 쌍(`Config/Server/Online`)이 모두 엄격하게 읽히고 저장소 · 캐시 항목이 이름으로 풀린다
- * @details 온라인 설정은 키트 옵션까지 기동에서 읽으므로, 파일 모양이 틀리면 전용 서버가 뜨지 않는다. 활성 게임만이 아니라 모든 파일을 본다.
+ * @details 온라인 설정은 키트 설정까지 기동에서 읽으므로, 파일 모양이 틀리면 전용 서버가 뜨지 않는다. 활성 게임만이 아니라 모든 파일을 본다.
  */
 SW_TEST_CASE( OnlineServerConfigTest, RepositoryOnlineConfigsResolve )
 {

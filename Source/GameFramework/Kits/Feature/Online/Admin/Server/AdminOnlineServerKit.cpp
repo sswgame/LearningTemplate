@@ -1,7 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
-
+#include "GameFramework/Kits/Feature/Online/Admin/Server/AdminKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
@@ -10,50 +9,12 @@
 // GM 키트의 서버 조립 — GM 서비스를 만든다. 표시 이름 · 접속 여부와 세션 끊기는 계정 키트, 지급 상한은 경제 키트의 원장 정책, 제재 알림은 버스를 쓴다.
 // GM 포트는 플레이어 포트와 따로 사설망에 둔다 — 서버 설정 `_adminServicePort` · `_adminListenAddress` 를 주면 GM 서비스는 그 리슨의 연결만 받는다(`AdminService::getExposure`).
 // 0 이면 서비스 포트 하나가 GM 서비스도 받는다. 그때 격리하려면 GM 키트만 적은 온라인 설정으로 서버를 하나 더 띄운다.
-// 옵션:
-//   seedAdmin  `<계정 id>:<등급>`(viewer|support|operator|super). 레코드가 없을 때만 넣는 첫 관리자(여러 번 적는다).
+// 설정은 `AdminKitConfig` 이다.
 
 namespace sw
 {
     namespace
     {
-        struct AdminOnlineServerKitInternal
-        {
-            /** @brief 첫 관리자 하나입니다. */
-            struct SeedAdmin
-            {
-                AccountID _accountID{ kInvalidAccountID };
-                AdminRole _role{ AdminRole::None };
-            };
-
-            [[nodiscard]] static bool parseRole( string_view text, AdminRole& outRole )
-            {
-                if ( text == "viewer" )
-                    outRole = AdminRole::Viewer;
-                else if ( text == "support" )
-                    outRole = AdminRole::Support;
-                else if ( text == "operator" )
-                    outRole = AdminRole::Operator;
-                else if ( text == "super" )
-                    outRole = AdminRole::Super;
-                else
-                    return false;
-                return true;
-            }
-
-            [[nodiscard]] static bool parseSeed( string_view text, SeedAdmin& outSeed )
-            {
-                const size_t colon = text.find( ':' );
-                if ( colon == string_view::npos )
-                    return false;
-                int64 accountID = 0;
-                if ( StringUtil::parseInt64( text.substr( 0, colon ), accountID ) == false || accountID <= 0 )
-                    return false;
-                outSeed._accountID = static_cast<AccountID>( accountID );
-                return parseRole( text.substr( colon + 1 ), outSeed._role );
-            }
-        };
-
         /**
          * @class AdminOnlineServerKit
          * @brief GM 키트의 서버 조립입니다.
@@ -69,22 +30,18 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                vector<string> listSeedText;
-                if ( entry.readOptions( {
-                                            { "seedAdmin", listSeedText }
-                },
-                                        outError ) == false )
+                AdminKitConfig kitConfig;
+                if ( entry.readSettings( kitConfig, outError ) == false )
                     return false;
-                for ( const string& seedText : listSeedText )
+                for ( const AdminSeedEntry& seed : kitConfig._listSeedAdmin )
                 {
-                    AdminOnlineServerKitInternal::SeedAdmin seed;
-                    if ( AdminOnlineServerKitInternal::parseSeed( seedText, seed ) == false )
+                    if ( seed._role == AdminRole::None || seed._role == AdminRole::Count )
                     {
-                        outError = "seedAdmin '" + seedText + "' must be <account id>:<viewer|support|operator|super>";
+                        outError = "_listSeedAdmin needs a role of Viewer, Support, Operator or Super";
                         return false;
                     }
-                    _listSeed.push_back( seed );
                 }
+                _listSeed = std::move( kitConfig._listSeedAdmin );
                 if ( registerServerService( context, entry, &_service, outError ) == false )
                     return false;
                 return true;
@@ -108,9 +65,9 @@ namespace sw
                     outError = "the admin service needs a store";
                     return false;
                 }
-                for ( const AdminOnlineServerKitInternal::SeedAdmin& seed : _listSeed )
+                for ( const AdminSeedEntry& seed : _listSeed )
                 {
-                    _service.seedRole( seed._accountID, seed._role, context._nowMs );
+                    _service.seedRole( static_cast<AccountID>( seed._accountID ), seed._role, context._nowMs );
                 }
                 return true;
             }
@@ -133,8 +90,8 @@ namespace sw
             }
 
         private:
-            AdminService                                    _service;
-            vector<AdminOnlineServerKitInternal::SeedAdmin> _listSeed;
+            AdminService           _service;
+            vector<AdminSeedEntry> _listSeed;
         };
     } // namespace
 } // namespace sw

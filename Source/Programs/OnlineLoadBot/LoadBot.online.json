@@ -6,12 +6,12 @@
     "_requestBurstPerRemote": 1000000,
     "_requestBurstPerAccount": 1000000,
     "_listKit": [
-        { "_name": "account", "_listOption": [ { "_key": "attemptBurst", "_value": "1000000" } ] },
+        { "_name": "account", "_settings": { "_attemptBurst": 1000000 } },
         { "_name": "directory" },
-        { "_name": "chat", "_listOption": [ { "_key": "bannedWords", "_value": "none" } ] },
+        { "_name": "chat", "_settings": { "_bannedWordsFile": "", "_ignoredCharactersFile": "Config/Server/chat_ignored_characters.txt" } },
         { "_name": "social" },
-        { "_name": "leaderboard", "_listOption": [ { "_key": "board", "_value": "kills" } ] },
-        { "_name": "matchmaking", "_listOption": [ { "_key": "mode", "_value": "solo:2x1" }, { "_key": "mode", "_value": "duo:2x2" } ] },
+        { "_name": "leaderboard", "_settings": { "_listBoardID": [ "kills" ] } },
+        { "_name": "matchmaking", "_settings": { "_listMode": [ { "_modeID": "solo", "_teamCount": 2, "_teamSize": 1 }, { "_modeID": "duo", "_teamCount": 2, "_teamSize": 2 } ] } },
         { "_name": "liveops" }
     ]
 }

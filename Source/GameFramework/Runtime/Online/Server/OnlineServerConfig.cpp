@@ -5,6 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/ProcessRoots.h"
 
+#include "Engine/Config/ConfigManager.h"
+
 namespace sw
 {
     namespace
@@ -19,117 +21,25 @@ namespace sw
 
 namespace sw
 {
-    OnlineServerKitOptionField::OnlineServerKitOptionField( const utf8* pKey, int32& target )
-        : _pKey{ pKey }
-        , _pTarget{ &target }
-        , _kind{ Kind::Int }
+    bool OnlineServerKitEntry::readSettingsInto( void* pSettings, const TypeInfo& typeInfo, string& outError ) const
     {
-    }
-
-    OnlineServerKitOptionField::OnlineServerKitOptionField( const utf8* pKey, bool& target )
-        : _pKey{ pKey }
-        , _pTarget{ &target }
-        , _kind{ Kind::Bool }
-    {
-    }
-
-    OnlineServerKitOptionField::OnlineServerKitOptionField( const utf8* pKey, string& target )
-        : _pKey{ pKey }
-        , _pTarget{ &target }
-        , _kind{ Kind::Text }
-    {
-    }
-
-    OnlineServerKitOptionField::OnlineServerKitOptionField( const utf8* pKey, vector<string>& listTarget )
-        : _pKey{ pKey }
-        , _pTarget{ &listTarget }
-        , _kind{ Kind::TextList }
-    {
-    }
-
-    OnlineServerKitOptionField::OnlineServerKitOptionField( const utf8* pKey, std::optional<AbsolutePath>& target )
-        : _pKey{ pKey }
-        , _pTarget{ &target }
-        , _kind{ Kind::FilePath }
-    {
-    }
-
-    bool OnlineServerKitOptionField::readValues( const vector<const string*>& listValue, const string& kitName, string& outError ) const
-    {
-        if ( listValue.empty() )
+        const string label = "kit '" + _name + "' settings";
+        if ( ConfigManager::readConfigJSON( pSettings, typeInfo, _settings.empty() ? string_view( "{}" ) : string_view( _settings ), label.c_str() ) )
             return true;
-        const string& first = *listValue.front();
-        switch ( _kind )
-        {
-            case Kind::Int:
-            {
-                if ( StringUtil::parseInt( first, *static_cast<int32*>( _pTarget ) ) )
-                    return true;
-                outError = "option '" + string( _pKey ) + "' of kit '" + kitName + "' must be an integer (got '" + first + "')";
-                return false;
-            }
-            case Kind::Bool:
-            {
-                if ( StringUtil::tryParseBool( first, *static_cast<bool*>( _pTarget ) ) )
-                    return true;
-                outError = "option '" + string( _pKey ) + "' of kit '" + kitName + "' must be a boolean (0, 1, true or false; got '" + first + "')";
-                return false;
-            }
-            case Kind::Text:
-            {
-                *static_cast<string*>( _pTarget ) = first;
-                return true;
-            }
-            case Kind::TextList:
-            {
-                vector<string>& target = *static_cast<vector<string>*>( _pTarget );
-                for ( const string* pValue : listValue )
-                {
-                    target.push_back( *pValue );
-                }
-                return true;
-            }
-            case Kind::FilePath:
-            {
-                std::optional<AbsolutePath>& target = *static_cast<std::optional<AbsolutePath>*>( _pTarget );
-                target                              = AbsolutePath::tryResolve( first, ProcessRoots::get()._project );
-                if ( target.has_value() )
-                    return true;
-                outError = "option '" + string( _pKey ) + "' of kit '" + kitName + "' must be a file path (absolute or relative to the project root; got '" + first + "')";
-                return false;
-            }
-        }
-        return true;
+        outError = "the settings of kit '" + _name + "' are invalid (see the errors above)";
+        return false;
     }
 
-    bool OnlineServerKitEntry::readOptions( std::initializer_list<OnlineServerKitOptionField> listField, string& outError ) const
+    bool OnlineServerKitEntry::resolveFile( const string& text, const utf8* pFieldName, std::optional<AbsolutePath>& outPath, string& outError ) const
     {
-        for ( const OnlineServerOption& option : _listOption )
-        {
-            bool bKnown = false;
-            for ( const OnlineServerKitOptionField& field : listField )
-            {
-                bKnown = bKnown || option._key == field.getKey();
-            }
-            if ( bKnown == false )
-            {
-                outError = "unknown option '" + option._key + "' of kit '" + _name + "'";
-                return false;
-            }
-        }
-        vector<const string*> listValue;
-        for ( const OnlineServerKitOptionField& field : listField )
-        {
-            listValue.clear();
-            for ( const OnlineServerOption& option : _listOption )
-            {
-                if ( option._key == field.getKey() )
-                    listValue.push_back( &option._value );
-            }
-            if ( field.readValues( listValue, _name, outError ) == false )
-                return false;
-        }
-        return true;
+        outPath.reset();
+        if ( text.empty() )
+            return true;
+        outPath = AbsolutePath::tryResolve( text, ProcessRoots::get()._project );
+        if ( outPath.has_value() )
+            return true;
+        outError = "setting '" + string( pFieldName ) + "' of kit '" + _name + "' must be a file path (absolute or relative to the project root; got '" + text + "')";
+        return false;
     }
 
     string OnlineServerConfig::makeConfigPath( string_view serverConfigPath )

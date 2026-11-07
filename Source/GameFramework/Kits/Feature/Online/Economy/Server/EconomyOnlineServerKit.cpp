@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyDevOptions.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptProviderSet.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
@@ -14,14 +15,7 @@
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
 // 경제 키트의 서버 조립 — 화폐 · 상품 카탈로그를 읽어 경제 서비스를 만들고, 화폐 카탈로그를 원장 정책(계정 잔액 상한)으로 문맥에 내놓는다(우편함 · GM · 거래가 쓴다).
-// 옵션:
-//   currencyCatalog        화폐 카탈로그(리소스 경로, `<CurrencyCatalog>`). 필수.
-//   offerCatalog           상품 카탈로그(리소스 경로, `<OfferCatalog>`). 필수.
-//   fakeReceipts           1 이면 가짜 영수증 제공자("fake")를 등록한다(DevOnline 단위만 — 확장점 `EconomyDevOptions`, 그 단위가 없는 구성은 기동 실패).
-//   acceptSandboxReceipts  1 이면 스토어의 샌드박스 영수증을 받는다(스테이징 서버).
-//   receiptProvidersFile   실제 영수증 제공자 설정 JSON(프로젝트 루트 기준, 항목 형식은 `ReceiptProviderSet::readEntry`). 기동 때 절대 경로로 풀고 못 풀면 기동 실패. 비우면 실제 제공자가 없다 —
-//                          있으면 자격(키 · 서비스 계정)을 환경 변수에서 읽고, 읽지 못하면 서버 기동이 실패한다(OnlineKits H3).
-//   receiptTrustFile       제공자 `https://` 서버를 검증할 CA 번들 PEM. `receiptProvidersFile` 이 https 주소를 쓰면 필수다.
+// 설정은 `EconomyKitConfig` 이다.
 
 namespace sw
 {
@@ -46,29 +40,14 @@ namespace sw
 
             [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
             {
-                string                      currencyPath;
-                string                      offerPath;
+                EconomyKitConfig            kitConfig;
                 std::optional<AbsolutePath> providersFile;
                 std::optional<AbsolutePath> trustFile;
-                bool                        bFakeReceipts  = false;
-                bool                        bAcceptSandbox = false;
-                const bool                  bOptionOk      = entry.readOptions( {
-                                                              {      "currencyCatalog",   currencyPath},
-                                                              {         "offerCatalog",      offerPath},
-                                                              {         "fakeReceipts",  bFakeReceipts},
-                                                              {"acceptSandboxReceipts", bAcceptSandbox},
-                                                              { "receiptProvidersFile",  providersFile},
-                                                              {     "receiptTrustFile",      trustFile}
-                },
-                                                                                outError );
-                if ( bOptionOk == false )
+                if ( entry.readSettings( kitConfig, outError ) == false || entry.resolveFile( kitConfig._receiptProvidersFile, "_receiptProvidersFile", providersFile, outError ) == false || entry.resolveFile( kitConfig._receiptTrustFile, "_receiptTrustFile", trustFile, outError ) == false )
                     return false;
-                if ( currencyPath.empty() || offerPath.empty() )
-                {
-                    outError = "the economy kit needs the currencyCatalog and offerCatalog options";
-                    return false;
-                }
-                _pCurrencyCatalog = SharedAssetCache<CurrencyCatalog>::acquire( currencyPath );
+                const string& currencyPath = kitConfig._currencyCatalog;
+                const string& offerPath    = kitConfig._offerCatalog;
+                _pCurrencyCatalog          = SharedAssetCache<CurrencyCatalog>::acquire( currencyPath );
                 if ( _pCurrencyCatalog == nullptr )
                 {
                     outError = "the currency catalog could not be read ('" + currencyPath + "')";
@@ -80,7 +59,7 @@ namespace sw
                     outError = "the offer catalog could not be read ('" + offerPath + "')";
                     return false;
                 }
-                if ( bFakeReceipts && registerFakeReceipts( outError ) == false )
+                if ( kitConfig._bFakeReceipts && registerFakeReceipts( outError ) == false )
                     return false;
                 // 여기부터 실패하면 세운 것을 스스로 내린다 — 초기화에 실패한 키트는 stop · shutdown 을 받지 않는다.
                 if ( createReceiptProviders( providersFile, trustFile, context._clock, outError ) == false )
@@ -97,7 +76,7 @@ namespace sw
                 settings._pScheduler             = context._pScheduler;                               // 원장 보존 검사를 매일 서버 하나가 돌린다
                 settings._pPresence              = context._kits.find<IAccountPresence>();            // 계정 키트(다른 서버에 붙은 계정에 잔액 변경 알림을 중계). 선택 의존이라 먼저 섰다
                 settings._pExternalLinks         = context._kits.find<const IAccountExternalLinks>(); // 계정 키트(영수증 구매자를 외부 로그인으로 묶는 제공자가 쓴다 — 그런 제공자가 있는데 없으면 서비스가 거절한다)
-                settings._bAcceptSandboxReceipts = bAcceptSandbox ? SW_TRUE : SW_FALSE;
+                settings._bAcceptSandboxReceipts = kitConfig._bAcceptSandboxReceipts ? SW_TRUE : SW_FALSE;
                 if ( _service.initialize( context._pStore, settings ) == false )
                 {
                     outError = "the economy service refused its settings (see the error above)";
@@ -149,7 +128,7 @@ namespace sw
             [[nodiscard]] bool createReceiptProviders( const std::optional<AbsolutePath>& providersFile, const std::optional<AbsolutePath>& trustFile, const IClock& clock, string& outError )
             {
                 vector<ReceiptProviderConfig> listSettings;
-                const bool                    bRead = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, trustFile, "receiptProvidersFile", "receiptTrustFile",
+                const bool                    bRead = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, trustFile, "_receiptProvidersFile", "_receiptTrustFile",
                                                                                                        &ReceiptProviderSet::readEntry, listSettings, outError );
                 if ( bRead == false || _receiptProviders.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock, outError ) == false )
                     return false;
@@ -164,7 +143,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 옵션 `fakeReceipts` 의 가짜 스토어를 레지스트리에 올립니다(DevOnline 단위가 만든다 — 그 단위가 없는 구성은 거절한다). */
+            /** @brief 설정 `_bFakeReceipts` 의 가짜 스토어를 레지스트리에 올립니다(DevOnline 단위가 만든다 — 그 단위가 없는 구성은 거절한다). */
             [[nodiscard]] bool registerFakeReceipts( string& outError )
             {
                 const EconomyDevOptions* pDevOptions = EconomyDevOptions::s_devOnline.require( outError );
@@ -180,7 +159,7 @@ namespace sw
         private:
             shared_ptr<const CurrencyCatalog> _pCurrencyCatalog; ///< 공유 캐시의 한 벌
             shared_ptr<const OfferCatalog>    _pOfferCatalog;    ///< 공유 캐시의 한 벌
-            unique_ptr<IReceiptValidator>     _pFakeValidator;   ///< `fakeReceipts` 의 가짜 스토어(DevOnline 단위가 만든다). 레지스트리보다 오래 산다(먼저 선언)
+            unique_ptr<IReceiptValidator>     _pFakeValidator;   ///< `_bFakeReceipts` 의 가짜 스토어(DevOnline 단위가 만든다). 레지스트리보다 오래 산다(먼저 선언)
             ReceiptProviderSet                _receiptProviders; ///< 레지스트리보다 오래 산다(먼저 선언)
             ReceiptValidatorRegistry          _receiptRegistry;
             EconomyService                    _service;

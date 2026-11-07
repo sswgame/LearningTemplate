@@ -13,40 +13,6 @@
 
 namespace sw
 {
-    bool MatchModeCatalog::parseCompactMode( string_view text, MatchModeDef& outMode, string& outError )
-    {
-        constexpr const utf8* kShapeError = "must be <id>:<team count>x<team size>";
-        const size_t          colon       = text.find( ':' );
-        if ( colon == string_view::npos || colon == 0 )
-        {
-            outError = kShapeError;
-            return false;
-        }
-        const string_view shape = text.substr( colon + 1 );
-        const size_t      cross = shape.find( 'x' );
-        if ( cross == string_view::npos )
-        {
-            outError = kShapeError;
-            return false;
-        }
-        MatchModeDef mode;
-        const bool   bNumbers = StringUtil::parseInt( shape.substr( 0, cross ), mode._teamCount ) && StringUtil::parseInt( shape.substr( cross + 1 ), mode._teamSize );
-        if ( bNumbers == false )
-        {
-            outError = kShapeError;
-            return false;
-        }
-        // 팀 수 · 인원의 범위는 `MatchModeDef` 의 `PROPERTY` 하나가 원본이다. 손으로 다시 적지 않는다.
-        // 범위를 볼 수 없는 프로세스(타입 레지스트리 없음)는 그 사실이 이유로 나온다 — 올바른 형식을 형식 오류로 오해하지 않게 한다.
-        outError = ConfigRangeUtil::describeRangeErrors( mode );
-        if ( outError.empty() == false )
-            return false;
-        outMode._modeID    = string( text.substr( 0, colon ) );
-        outMode._teamCount = mode._teamCount;
-        outMode._teamSize  = mode._teamSize;
-        return true;
-    }
-
     uint32 MatchModeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
