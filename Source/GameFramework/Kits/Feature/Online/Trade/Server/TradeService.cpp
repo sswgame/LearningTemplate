@@ -85,7 +85,7 @@ namespace sw
 
                 void complete() override
                 {
-                    const bool bExpiryFailed = _completion._operation == TradeOperation::Expire && _completion._result == TradeResult::Unavailable;
+                    const bool bExpiryFailed = _completion._operation == TradeOperation::Expire && _completion._result.hasError( OnlineError::kUnavailable );
                     if ( bExpiryFailed )
                         _pService->retryExpiry( _tradeID, _nowMs );
                     _pService->applyCompletion( std::move( _completion ), _listChanged );

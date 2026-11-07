@@ -131,13 +131,13 @@ namespace
     class TradePushSink final : public IOnlineClientService
     {
     public:
-        vector<uint16>     _listKind{};
-        vector<TradeReply> _listReply{};
+        vector<uint16>      _listKind{};
+        vector<TradeNotice> _listReply{};
 
         const OnlineProtocolEntry& getProtocol() const override { return TradeProtocol::kOnlineEntry; }
         void                       onServicePush( uint16 kind, BitReader& body ) override
         {
-            TradeReply reply;
+            TradeNotice reply;
             SW_EXPECT_TRUE( TradeProtocol::MessageTypes::read( body, reply ) == FixedReadResult::Ok );
             _listKind.push_back( kind );
             _listReply.push_back( std::move( reply ) );
@@ -280,12 +280,14 @@ namespace
             return sendRaw( slot, method, body );
         }
 
-        /** @brief 답 하나를 받아야 하는 요청입니다. */
+        /** @brief 답 하나를 받아야 하는 요청입니다. 공통 범주로 끝났으면 빈 응답이고 이유는 `_response._errorCode` 이다. */
         template <typename TMessage>
         TradeReply call( int32 slot, uint16 method, const TMessage& message )
         {
             const TradeResponseSink& response = send( slot, method, message );
             SW_EXPECT_EQUAL( 1, response._count );
+            if ( response._bOk == SW_FALSE )
+                return TradeReply{};
             return response.readReply();
         }
 
@@ -390,7 +392,8 @@ SW_TEST_CASE( TradeServerTest, UnknownPeerAndSelf )
     TradeServerFixture rig;
     SW_EXPECT_TRUE( rig.invite( kAliceSlot, "nobody" )._result == TradeResult::PeerOffline );
     SW_EXPECT_TRUE( rig.invite( kAliceSlot, "" )._result == TradeResult::PeerOffline );
-    SW_EXPECT_TRUE( rig.invite( kAliceSlot, "alice" )._result == TradeResult::Invalid );
+    (void)rig.invite( kAliceSlot, "alice" );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig._response._errorCode ); // 자기 자신에게는 신청할 수 없다
     SW_EXPECT_EQUAL( 0, rig._tradeService.getOpenTradeCount() );
 }
 
@@ -441,9 +444,12 @@ SW_TEST_CASE( TradeServerTest, ForgedValuesAreRefused )
     SW_EXPECT_TRUE( rig.lock( kCarolSlot, tradeID )._result == TradeResult::NotParty );
     SW_EXPECT_TRUE( rig.offer( kCarolSlot, tradeID, "cur.gold", 1 )._result == TradeResult::NotParty );
 
-    SW_EXPECT_TRUE( rig.offer( kAliceSlot, tradeID, "cur.gold", -5 )._result == TradeResult::Invalid );
-    SW_EXPECT_TRUE( rig.offer( kAliceSlot, tradeID, "cur.gold", 0 )._result == TradeResult::Invalid );
-    SW_EXPECT_TRUE( rig.offer( kAliceSlot, tradeID, "cur.gold", LedgerConstant::kMaxAmount + 1 )._result == TradeResult::Invalid );
+    (void)rig.offer( kAliceSlot, tradeID, "cur.gold", -5 );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig._response._errorCode );
+    (void)rig.offer( kAliceSlot, tradeID, "cur.gold", 0 );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig._response._errorCode );
+    (void)rig.offer( kAliceSlot, tradeID, "cur.gold", LedgerConstant::kMaxAmount + 1 );
+    SW_EXPECT_EQUAL( OnlineError::kInvalidRequest, rig._response._errorCode );
 
     TradeOfferRequest tooMany;
     tooMany._tradeID = tradeID;
@@ -504,7 +510,7 @@ SW_TEST_CASE( TradeServerTest, SettlementCarriesOwnBalances )
 
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._arrSink[kAliceSlot]._listKind.size() );
     SW_EXPECT_EQUAL( TradeMethod::Closed::kKind, rig._arrSink[kAliceSlot]._listKind[0] );
-    const TradeReply& alicePush = rig._arrSink[kAliceSlot]._listReply[0];
+    const TradeNotice& alicePush = rig._arrSink[kAliceSlot]._listReply[0];
     SW_EXPECT_TRUE( alicePush._snapshot._state == TradeState::Settled );
     SW_EXPECT_EQUAL( int64( 60 ), TradeServerTestUtil::findBalance( alicePush._listBalance, "cur.gold" ) );
     SW_EXPECT_EQUAL( int64( 20 ), TradeServerTestUtil::findBalance( alicePush._listBalance, "cur.gem" ) );
@@ -646,13 +652,11 @@ SW_TEST_CASE( TradeServerTest, FeatureFlagBlocksRequests )
     SW_EXPECT_EQUAL( 1, rig._tradeService.getOpenTradeCount() );
 }
 
-/** @brief [TradeServerTest] 다시 시도할 결과(저장소 일시 장애 — `TradeReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 거래 명령 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
+/** @brief [TradeServerTest] 다시 시도할 공통 범주(저장소 일시 장애)는 요청 층이 기억하지 않아 같은 멱등 키의 거래 명령 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
 SW_TEST_CASE( TradeServerTest, RetryableReplyReachesTheServiceAgain )
 {
     test::ReplyRetentionFixture<TradeProtocol, TradeReply> rig;
     TradeReply                                             finished;
     finished._result = TradeResult::Ok;
-    TradeReply unavailable;
-    unavailable._result = TradeResult::Unavailable;
-    rig.expectRetryReachesService( TradeMethod::Invite::kID, unavailable, finished );
+    rig.expectFailureReachesService( TradeMethod::Invite::kID, OnlineError::kUnavailable, finished );
 }

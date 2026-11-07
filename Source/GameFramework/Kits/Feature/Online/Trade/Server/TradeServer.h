@@ -64,7 +64,7 @@ namespace sw
         };
 
         void        pushSnapshot( OnlineServiceHost& host, const TradeSnapshot& snapshot );
-        void        respondImmediately( uint64 callID, TradeResult result );
+        void        respondImmediately( uint64 callID, TradeOutcome result );
         void        onPresenceFound( const AccountPresenceResult& found );
         static void collectBalances( const LedgerTransferResult& ledger, AccountID accountID, vector<TradeBalance>& outListBalance );
 

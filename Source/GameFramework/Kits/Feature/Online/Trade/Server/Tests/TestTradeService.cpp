@@ -166,8 +166,8 @@ SW_TEST_CASE( TradeServiceTest, InviteRules )
 {
     TradeWorld    world;
     TradeFixture& rig = world._rig;
-    SW_EXPECT_TRUE( rig.invite( kAlice, kAlice )._result == TradeResult::Invalid );
-    SW_EXPECT_TRUE( rig.invite( kAlice, kInvalidAccountID )._result == TradeResult::Invalid );
+    SW_EXPECT_TRUE( rig.invite( kAlice, kAlice )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.invite( kAlice, kInvalidAccountID )._result.hasError( OnlineError::kInvalidRequest ) );
 
     const TradeCompletion invited = rig.invite( kAlice, kBob );
     SW_EXPECT_TRUE( invited._result == TradeResult::Ok );
@@ -379,6 +379,6 @@ SW_TEST_CASE( TradeServiceTest, StoreFailureLeavesTradeIntact )
     TradeFixture& rig     = world._rig;
     const uint64  tradeID = rig.invite( kAlice, kBob )._snapshot._tradeID;
     world._database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( rig.respond( kBob, tradeID )._result == TradeResult::Unavailable );
+    SW_EXPECT_TRUE( rig.respond( kBob, tradeID )._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_TRUE( rig.respond( kBob, tradeID )._result == TradeResult::Ok );
 }

@@ -133,16 +133,16 @@ SW_TEST_CASE( TradeStateMachineTest, OfferRulesRejectBadLegs )
     for ( int32 index = 0; index <= TradeConstant::kMaxLegsPerSide; ++index )
         listTooMany.push_back( makeLeg( "item.gem" + to_string( index ), 1 ) );
     SW_EXPECT_TRUE( TradeStateMachine::validateOffer( listTooMany, getPolicy() ) == TradeResult::TooManyLegs );
-    SW_EXPECT_TRUE( TradeStateMachine::validateOffer( { makeLeg( "cur.gold", 0 ) }, getPolicy() ) == TradeResult::Invalid );
-    SW_EXPECT_TRUE( TradeStateMachine::validateOffer( { makeLeg( "cur.gold", LedgerConstant::kMaxAmount + 1 ) }, getPolicy() ) == TradeResult::Invalid );
+    SW_EXPECT_TRUE( TradeStateMachine::validateOffer( { makeLeg( "cur.gold", 0 ) }, getPolicy() ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( TradeStateMachine::validateOffer( { makeLeg( "cur.gold", LedgerConstant::kMaxAmount + 1 ) }, getPolicy() ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( TradeStateMachine::validateOffer( { makeLeg( "xp.level", 1 ) }, getPolicy() ) == TradeResult::NotTradable );
-    SW_EXPECT_TRUE( TradeStateMachine::validateOffer( { makeLeg( "cur.gold", 1 ), makeLeg( "cur.gold", 2 ) }, getPolicy() ) == TradeResult::Invalid );
+    SW_EXPECT_TRUE( TradeStateMachine::validateOffer( { makeLeg( "cur.gold", 1 ), makeLeg( "cur.gold", 2 ) }, getPolicy() ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( TradeStateMachine::validateOffer( {}, getPolicy() ) == TradeResult::Ok ); // 빈 제시(선물 받기)도 된다
 
     string instanceID;
     SW_EXPECT_TRUE( LedgerItemInstance::makeAssetID( "sword", 0x1234, instanceID ) );
     SW_EXPECT_TRUE( TradeStateMachine::validateOffer( { makeLeg( instanceID, 1 ) }, getPolicy() ) == TradeResult::Ok );
-    SW_EXPECT_TRUE( TradeStateMachine::validateOffer( { makeLeg( instanceID, 2 ) }, getPolicy() ) == TradeResult::Invalid );
+    SW_EXPECT_TRUE( TradeStateMachine::validateOffer( { makeLeg( instanceID, 2 ) }, getPolicy() ).hasError( OnlineError::kInvalidRequest ) );
 
     TradeSnapshot trade = makeTrade( TradeState::Open );
     SW_EXPECT_TRUE( TradeStateMachine::apply( trade, makeOffer( kInviter, { makeLeg( "xp.level", 1 ) } ), getPolicy(), 9 ) == TradeResult::NotTradable );

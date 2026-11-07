@@ -18,6 +18,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 
 namespace sw
 {
@@ -91,11 +92,14 @@ namespace sw
         TooManyLegs,
         InsufficientFunds,
         CapExceeded,
-        Unavailable, ///< 저장소를 쓸 수 없다. 같은 멱등 키로 다시 시도한다
-        Invalid,
-        UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
         Count
     };
+
+    /**
+     * @brief 거래 결과입니다. 업무 결과(`TradeResult`) 또는 공통 범주(`OnlineError`)입니다.
+     * @details 규칙 밖 값(자기 자신 · 0 · 범위 밖 양 · 겹친 자산)은 `kInvalidRequest`, 저장소 장애는 `kUnavailable`(같은 멱등 키로 다시 한다)이다.
+     */
+    using TradeOutcome = OnlineOutcome<TradeResult>;
 } // namespace sw
 
 namespace sw

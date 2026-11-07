@@ -129,9 +129,25 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 응답과 알림의 본문입니다. 결과, 스냅샷, 정산이면 이 계정의 이동 뒤 잔액입니다. */
+    /**
+     * @brief 거래 명령의 응답입니다. 결과, 스냅샷, 정산이면 이 계정의 이동 뒤 잔액입니다.
+     * @details 여섯 명령이 모두 거래 하나의 상태를 바꾸고 그 상태(스냅샷)를 돌려주므로 응답 형식이 하나다 — 메서드마다 나누면 같은 칸의 사본이 여섯 벌이다.
+     */
     REFLECT()
-    struct SW_KIT_API TradeReply
+    struct TradeReply
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        TradeSnapshot _snapshot{};
+        PROPERTY( MaxCount = TradeConstant::kMaxLegsOnWire )
+        vector<TradeBalance> _listBalance{}; ///< 상한은 양쪽 항목 수(`TradeConstant::kMaxLegsPerSide` 의 두 배)이다
+        PROPERTY()
+        TradeResult _result{ TradeResult::Ok };
+    };
+
+    /** @brief 거래 알림(초대 · 바뀜 · 닫힘)의 본문입니다. 스냅샷과, 정산이면 이 계정의 이동 뒤 잔액입니다. 알림에는 결과가 없다. */
+    REFLECT()
+    struct SW_KIT_API TradeNotice
     {
         REFLECT_BODY();
         static constexpr uint32 kBusVersion = 1; ///< push 중계(`OnlinePushRelay`)의 의미 버전
@@ -139,11 +155,6 @@ namespace sw
         TradeSnapshot _snapshot{};
         PROPERTY( MaxCount = TradeConstant::kMaxLegsOnWire )
         vector<TradeBalance> _listBalance{}; ///< 상한은 양쪽 항목 수(`TradeConstant::kMaxLegsPerSide` 의 두 배)이다
-        PROPERTY()
-        TradeResult _result{ TradeResult::Ok };
-
-        /** @brief 같은 멱등 키로 다시 시도할 결과(저장소 일시 장애)인지입니다. 서버는 이 답을 기억하지 않는다(`OnlineServiceHost::respondReply`). */
-        [[nodiscard]] bool isRetryable() const { return _result == TradeResult::Unavailable; }
     };
 } // namespace sw
 
@@ -174,9 +185,9 @@ namespace sw
         using Lock     = Method<MethodName::Lock, TradeIDRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
         using Confirm  = Method<MethodName::Confirm, TradeConfirmRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 내가 본 내 제시 버전, 내가 본 상대 제시 버전을 받는다
         using Cancel   = Method<MethodName::Cancel, TradeIDRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using Invited  = Push<PushName::Invited, TradeReply>; ///< 초대받았다는 알림이며 스냅샷을 싣는다
-        using Update   = Push<PushName::Update, TradeReply>;  ///< 바뀌었다는 알림이며 스냅샷을 싣는다
-        using Closed   = Push<PushName::Closed, TradeReply>;  ///< 닫혔다는 알림이며 스냅샷을 싣고 정산이면 잔액도 싣는다
+        using Invited  = Push<PushName::Invited, TradeNotice>; ///< 초대받았다는 알림이며 스냅샷을 싣는다
+        using Update   = Push<PushName::Update, TradeNotice>;  ///< 바뀌었다는 알림이며 스냅샷을 싣는다
+        using Closed   = Push<PushName::Closed, TradeNotice>;  ///< 닫혔다는 알림이며 스냅샷을 싣고 정산이면 잔액도 싣는다
     };
 } // namespace sw
 
@@ -191,14 +202,6 @@ namespace sw
         using Table        = OnlineProtocolTable<TradeMethod, OnlineMethodList<TradeMethod::Invite, TradeMethod::Respond, TradeMethod::SetOffer, TradeMethod::Lock, TradeMethod::Confirm, TradeMethod::Cancel>, OnlinePushList<TradeMethod::Invited, TradeMethod::Update, TradeMethod::Closed>>;
         using MessageTypes = Table::MessageTypes;
         using ResultName   = TradeResult;
-
-        /** @brief 공통 범주 표입니다. 로직이 낸 값이 표에 있으면 서버는 공통 오류로 답하고(지표 · 보존이 여기서 나온다), 클라이언트는 공통 오류를 이 값으로 채웁니다. 세 번째 칸은 클라이언트 쪽만 쓰는 줄입니다. */
-        static constexpr OnlineErrorResult<TradeResult> kArrCommonResult[] = {
-            { OnlineError::kUnavailable, TradeResult::Unavailable },
-            { OnlineError::kInvalidRequest, TradeResult::Invalid, true },
-            { OnlineError::kVersionMismatch, TradeResult::UpdateRequired },
-            { OnlineError::kUpdateRequired, TradeResult::UpdateRequired },
-        };
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
 

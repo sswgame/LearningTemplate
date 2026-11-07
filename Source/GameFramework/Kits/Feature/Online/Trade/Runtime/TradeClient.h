@@ -30,7 +30,7 @@ namespace sw
         NetIdempotencyKey    _idempotencyKey{}; ///< 재시도할 때 그대로 다시 넘기는 키이다
         uint64               _requestID{ 0 };
         uint16               _method{ 0 };
-        uint16               _errorCode{ 0 }; ///< 전송 오류나 공통 오류(`OnlineError`)이다. 0이 아니면 `_result` 는 Unavailable 이나 Invalid 이다
+        uint16               _errorCode{ 0 }; ///< 전송 오류나 공통 범주(`OnlineError`)이다. 0이 아니면 `_result` 는 뜻이 없다
         TradeResult          _result{ TradeResult::Ok };
     };
 } // namespace sw
@@ -57,10 +57,10 @@ namespace sw
     public:
         /**
          * @brief 거래 화면이 인벤토리 슬롯 @p listSlot 에서 거래 항목을 만듭니다. 슬롯을 (원장 자산 id, 수량)으로 바꾸며 같은 아이템의 슬롯은 한 항목으로 합칩니다.
-         * @details 빈 슬롯 · 범위 밖 · 같은 슬롯 두 번은 Invalid 이고, 인스턴스 상태가 있는 슬롯(꾸미기, 떨어진 부품, 외형 피해, 내구도)이나 바꿀 수 없는 아이템은 NotTradable 입니다.
+         * @details 빈 슬롯 · 범위 밖 · 같은 슬롯 두 번은 공통 범주 `kInvalidRequest` 이고, 인스턴스 상태가 있는 슬롯(꾸미기, 떨어진 부품, 외형 피해, 내구도)이나 바꿀 수 없는 아이템은 NotTradable 입니다.
          *          인벤토리 슬롯에는 서버의 인스턴스 아이템 id 가 없기 때문이다. 인스턴스 아이템(`LedgerItemInstance`)은 게임이 그 자산 id 와 양 1 로 다리를 직접 만든다.
          */
-        static TradeResult makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIDFromItem pAssetIDFromItem, vector<TradeLeg>& outListLeg );
+        static TradeOutcome makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIDFromItem pAssetIDFromItem, vector<TradeLeg>& outListLeg );
 
         TradeClient();
 
@@ -82,16 +82,16 @@ namespace sw
         const TradeSnapshot& getSnapshot() const { return _snapshot; }
 
         // OnlineProtocolClient 의 훅
-        void onPush( TradeMethod::Invited, const TradeReply& body );
-        void onPush( TradeMethod::Update, const TradeReply& body );
-        void onPush( TradeMethod::Closed, const TradeReply& body );
+        void onPush( TradeMethod::Invited, const TradeNotice& body );
+        void onPush( TradeMethod::Update, const TradeNotice& body );
+        void onPush( TradeMethod::Closed, const TradeNotice& body );
 
     private:
         /** @brief 메서드 @p TMethod 를 보냅니다. 응답은 `pollReplies` 로 꺼냅니다. 이 클래스의 `.cpp` 안에서만 부릅니다. */
         template <typename TMethod>
         uint64 send( const typename TMethod::Request& request, const NetIdempotencyKey& key );
         void   onReply( const OnlineResult<TradeReply>& result );
-        void   recordUpdate( uint16 kind, const TradeReply& body );
+        void   recordUpdate( uint16 kind, const TradeNotice& body );
         void   observe( const TradeSnapshot& snapshot );
 
     private:

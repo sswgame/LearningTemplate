@@ -141,10 +141,10 @@ namespace sw
             const AccountID accountID = callIt->second;
             _mapCallToAccount.erase( callIt );
             TradeReply reply;
-            reply._result   = completion._result;
+            reply._result   = completion._result._result;
             reply._snapshot = completion._snapshot;
             collectBalances( completion._ledger, accountID, reply._listBalance );
-            (void)completeCall( completion._requestTag, reply ); // 일시 장애는 표(`kArrCommonResult`)가 공통 오류로 바꾼다
+            (void)finishCall( completion._requestTag, completion._result, reply ); // 규칙 밖 값 · 일시 장애는 공통 범주로 끝난다
         }
         _listUpdateScratch.clear();
         _pTradeService->pollUpdates( _listUpdateScratch );
@@ -188,7 +188,7 @@ namespace sw
             if ( kind == TradeMethod::Invited::kKind && sideIndex == 0 )
                 continue; // 신청한 쪽은 응답으로 알게 된다
             const AccountID accountID = snapshot._arrSide[sideIndex]._accountID;
-            TradeReply      push;
+            TradeNotice     push;
             push._snapshot = snapshot;
             if ( ledgerIt != _mapTradeToLedger.end() )
                 collectBalances( ledgerIt->second, accountID, push._listBalance );
@@ -205,11 +205,11 @@ namespace sw
         _listFound.push_back( found );
     }
 
-    void TradeServer::respondImmediately( uint64 callID, TradeResult result )
+    void TradeServer::respondImmediately( uint64 callID, TradeOutcome result )
     {
         TradeReply reply;
-        reply._result = result;
-        (void)completeCall( callID, reply );
+        reply._result = result._result;
+        (void)finishCall( callID, result, reply );
     }
 
     void TradeServer::collectBalances( const LedgerTransferResult& ledger, AccountID accountID, vector<TradeBalance>& outListBalance )
@@ -225,7 +225,7 @@ namespace sw
 namespace sw
 {
     // 다른 서버에 접속한 계정에게 가는 알림이다. 받는 서버가 이 항목으로 자기 빌드의 번호와 B 를 만든다(OnlinePushRelay.h).
-    const OnlinePushRelayEntry kTradeInvitedRelay{ "Trade.Invited", TradeMethod{}, TradePushName::Invited, TradeProtocol::MessageTypes{}, OnlinePushBody<TradeReply>{} };
-    const OnlinePushRelayEntry kTradeUpdateRelay{ "Trade.Update", TradeMethod{}, TradePushName::Update, TradeProtocol::MessageTypes{}, OnlinePushBody<TradeReply>{} };
-    const OnlinePushRelayEntry kTradeClosedRelay{ "Trade.Closed", TradeMethod{}, TradePushName::Closed, TradeProtocol::MessageTypes{}, OnlinePushBody<TradeReply>{} };
+    const OnlinePushRelayEntry kTradeInvitedRelay{ "Trade.Invited", TradeMethod{}, TradePushName::Invited, TradeProtocol::MessageTypes{}, OnlinePushBody<TradeNotice>{} };
+    const OnlinePushRelayEntry kTradeUpdateRelay{ "Trade.Update", TradeMethod{}, TradePushName::Update, TradeProtocol::MessageTypes{}, OnlinePushBody<TradeNotice>{} };
+    const OnlinePushRelayEntry kTradeClosedRelay{ "Trade.Closed", TradeMethod{}, TradePushName::Closed, TradeProtocol::MessageTypes{}, OnlinePushBody<TradeNotice>{} };
 } // namespace sw

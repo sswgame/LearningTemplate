@@ -88,22 +88,22 @@ namespace sw
         return count;
     }
 
-    void TradeClient::onPush( TradeMethod::Invited, const TradeReply& body )
+    void TradeClient::onPush( TradeMethod::Invited, const TradeNotice& body )
     {
         recordUpdate( TradeMethod::Invited::kKind, body );
     }
 
-    void TradeClient::onPush( TradeMethod::Update, const TradeReply& body )
+    void TradeClient::onPush( TradeMethod::Update, const TradeNotice& body )
     {
         recordUpdate( TradeMethod::Update::kKind, body );
     }
 
-    void TradeClient::onPush( TradeMethod::Closed, const TradeReply& body )
+    void TradeClient::onPush( TradeMethod::Closed, const TradeNotice& body )
     {
         recordUpdate( TradeMethod::Closed::kKind, body );
     }
 
-    void TradeClient::recordUpdate( uint16 kind, const TradeReply& body )
+    void TradeClient::recordUpdate( uint16 kind, const TradeNotice& body )
     {
         TradeClientUpdate update;
         update._kind        = kind;
@@ -126,7 +126,7 @@ namespace sw
         reply._method         = result._method;
         reply._idempotencyKey = result._idempotencyKey;
         reply._errorCode      = result._errorCode;
-        reply._result         = result._reply._result; // 공통 오류면 표(`kArrCommonResult`)가 채웠다
+        reply._result         = result._reply._result; // 공통 범주면 기본값이고 `_errorCode` 가 이유다
         if ( result._errorCode == OnlineError::kOk )
         {
             reply._snapshot    = result._reply._snapshot;
@@ -148,24 +148,24 @@ namespace sw
 
 namespace sw
 {
-    TradeResult TradeClient::makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIDFromItem pAssetIDFromItem, vector<TradeLeg>& outListLeg )
+    TradeOutcome TradeClient::makeLegs( const Inventory& inventory, const vector<int32>& listSlot, AssetIDFromItem pAssetIDFromItem, vector<TradeLeg>& outListLeg )
     {
         outListLeg.clear();
         if ( pAssetIDFromItem == nullptr )
-            return TradeResult::Invalid;
+            return TradeOutcome::fail( OnlineError::kInvalidRequest );
         for ( size_t slotIndex = 0; slotIndex < listSlot.size(); ++slotIndex )
         {
             const int32 slot = listSlot[slotIndex];
             for ( size_t previousIndex = 0; previousIndex < slotIndex; ++previousIndex )
             {
                 if ( listSlot[previousIndex] == slot )
-                    return TradeResult::Invalid; // 같은 슬롯을 두 번 지정했다
+                    return TradeOutcome::fail( OnlineError::kInvalidRequest ); // 같은 슬롯을 두 번 지정했다
             }
             if ( slot < 0 || slot >= inventory.getSlotCount() )
-                return TradeResult::Invalid;
+                return TradeOutcome::fail( OnlineError::kInvalidRequest );
             const InventorySlot& stack = inventory.getSlot( slot );
             if ( stack.isEmpty() )
-                return TradeResult::Invalid;
+                return TradeOutcome::fail( OnlineError::kInvalidRequest );
             if ( stack.hasInstanceState() || stack._durability > 0.0f )
                 return TradeResult::NotTradable;
             string assetID;
@@ -184,7 +184,7 @@ namespace sw
             }
             pLeg->_amount += stack._count;
         }
-        return static_cast<int32>( outListLeg.size() ) > TradeConstant::kMaxLegsPerSide ? TradeResult::TooManyLegs : TradeResult::Ok;
+        return static_cast<int32>( outListLeg.size() ) > TradeConstant::kMaxLegsPerSide ? TradeOutcome{ TradeResult::TooManyLegs } : TradeOutcome{ TradeResult::Ok };
     }
 } // namespace sw
 
