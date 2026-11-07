@@ -116,11 +116,10 @@ namespace sw
         }
 
         // 응답 처리기 — 키트마다 하나(지연 · 오류만 본다)
-        void onSocialReply( const SocialClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
         void onMatchmakingReply( const MatchmakingClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
         void onDirectoryStatus( const OnlineResult<ServerDirectoryStatus>& result );
         void onDirectoryAssignment( const OnlineResult<ServerAssignment>& result );
-        void onFriendAccepted( const SocialClient::Reply& reply );
+        void onFriendAccepted( const OnlineResult<SocialLinkReply>& reply );
 
     private:
         OnlineServiceClient        _client;

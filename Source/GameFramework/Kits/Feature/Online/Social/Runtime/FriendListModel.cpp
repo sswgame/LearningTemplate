@@ -34,18 +34,16 @@ namespace sw
         , _revision{ 0 }
         , _pendingRequestCount{ 0 }
         , _errorCode{ OnlineError::kOk }
-        , _result{ SocialResult::Ok }
         , _state{ FriendListState::Idle }
         , _bStale{ SW_FALSE }
     {
     }
 
-    void FriendListModel::fail( uint16 errorCode, SocialResult result )
+    void FriendListModel::fail( uint16 errorCode )
     {
         _listEntry.clear(); // 낡은 목록을 새것처럼 남기지 않는다
         _pendingRequestCount = 0;
         _errorCode           = errorCode;
-        _result              = result;
         _state               = FriendListState::Failed;
         ++_revision;
     }
@@ -56,32 +54,31 @@ namespace sw
             return false;
         if ( _pClient == nullptr )
         {
-            fail( OnlineError::kUnavailable, SocialResult::Unavailable );
+            fail( OnlineError::kUnavailable );
             return false;
         }
         _state     = FriendListState::Loading;
         _errorCode = OnlineError::kOk;
-        _result    = SocialResult::Ok;
         _bStale    = SW_FALSE;
         ++_revision; // 로딩 표시를 그리게 한다
         // 준비되지 않은 클라이언트는 이 호출 안에서 바로 onLinksReply(오류)로 끝난다.
-        (void)_pClient->call<SocialMethod::ListLinks>( SocialClient::ReplyDelegate::create<&FriendListModel::onLinksReply>( this ) );
+        (void)_pClient->call<SocialMethod::ListLinks>( OnlineReplyDelegate<SocialMethod::ListLinks>::create<&FriendListModel::onLinksReply>( this ) );
         return _state != FriendListState::Failed;
     }
 
-    void FriendListModel::onLinksReply( const SocialClient::Reply& reply )
+    void FriendListModel::onLinksReply( const OnlineResult<SocialLinksReply>& reply )
     {
-        if ( reply._errorCode != OnlineError::kOk || reply._reply._result != SocialResult::Ok )
+        if ( reply._errorCode != OnlineError::kOk )
         {
-            fail( reply._errorCode, reply._reply._result );
+            fail( reply._errorCode );
             return;
         }
         applyLinks( reply._reply );
         // 접속 상태는 서버가 관계를 읽은 뒤에야 답할 수 있어 관계 목록 다음에 묻는다.
-        (void)_pClient->call<SocialMethod::FriendPresence>( SocialClient::ReplyDelegate::create<&FriendListModel::onPresenceReply>( this ) );
+        (void)_pClient->call<SocialMethod::FriendPresence>( OnlineReplyDelegate<SocialMethod::FriendPresence>::create<&FriendListModel::onPresenceReply>( this ) );
     }
 
-    void FriendListModel::applyLinks( const SocialReply& reply )
+    void FriendListModel::applyLinks( const SocialLinksReply& reply )
     {
         _listEntry.clear();
         _pendingRequestCount = 0;
@@ -98,11 +95,11 @@ namespace sw
         }
     }
 
-    void FriendListModel::onPresenceReply( const SocialClient::Reply& reply )
+    void FriendListModel::onPresenceReply( const OnlineResult<SocialPresenceReply>& reply )
     {
-        if ( reply._errorCode != OnlineError::kOk || reply._reply._result != SocialResult::Ok )
+        if ( reply._errorCode != OnlineError::kOk )
         {
-            fail( reply._errorCode, reply._reply._result );
+            fail( reply._errorCode );
             return;
         }
         for ( const SocialPresence& presence : reply._reply._listPresence )

@@ -246,26 +246,60 @@ namespace sw
         _pSocialService->takeCompletions( _listSocialScratch );
         for ( SocialCompletion& completion : _listSocialScratch )
         {
-            SocialReply reply;
-            reply._result       = completion._result;
-            reply._otherID      = completion._otherID;
-            reply._listLink     = std::move( completion._listLink );
-            reply._listPresence = std::move( completion._listPresence );
-            (void)completeCall( completion._requestTag, reply ); // 요청 태그가 0이면(내부에서 건 작업) 버린다. 연결이 닫혔으면 호스트가 버린다
+            (void)completeByMethod( completion._requestTag, completion ); // 응답 타입은 호출의 메서드가 정한다(`fillReply`). 요청 태그가 0이면(내부에서 건 작업) 버린다
         }
 
         _listGuildScratch.clear();
         _pGuildService->takeCompletions( _listGuildScratch );
         for ( GuildCompletion& completion : _listGuildScratch )
         {
-            SocialReply reply;
-            reply._result          = completion._result;
-            reply._guild           = std::move( completion._info );
-            reply._listStorage     = std::move( completion._listStorage );
-            reply._listApplication = std::move( completion._listApplication );
-            (void)completeCall( completion._requestTag, reply ); // 요청 태그가 0이면(내부에서 건 작업) 버린다. 연결이 닫혔으면 호스트가 버린다
+            (void)completeByMethod( completion._requestTag, completion ); // 연결이 닫혔으면 호스트가 버린다
         }
         sendNotifications( host );
+    }
+
+    void SocialServer::fillReply( SocialResultReply& reply, SocialCompletion& completion )
+    {
+        reply._result = completion._result._result;
+    }
+
+    void SocialServer::fillReply( SocialLinkReply& reply, SocialCompletion& completion )
+    {
+        reply._otherID = completion._otherID;
+        reply._result  = completion._result._result;
+    }
+
+    void SocialServer::fillReply( SocialLinksReply& reply, SocialCompletion& completion )
+    {
+        reply._listLink = std::move( completion._listLink );
+    }
+
+    void SocialServer::fillReply( SocialPresenceReply& reply, SocialCompletion& completion )
+    {
+        reply._listPresence = std::move( completion._listPresence );
+    }
+
+    void SocialServer::fillReply( SocialResultReply& reply, GuildCompletion& completion )
+    {
+        reply._result = completion._result._result;
+    }
+
+    void SocialServer::fillReply( GuildInfoReply& reply, GuildCompletion& completion )
+    {
+        reply._guild  = std::move( completion._info );
+        reply._result = completion._result._result;
+    }
+
+    void SocialServer::fillReply( GuildStorageReply& reply, GuildCompletion& completion )
+    {
+        reply._listStorage = std::move( completion._listStorage );
+        reply._result      = completion._result._result;
+    }
+
+    void SocialServer::fillReply( GuildApplicationsReply& reply, GuildCompletion& completion )
+    {
+        reply._listApplication = std::move( completion._listApplication );
+        reply._result          = completion._result._result;
     }
 
     void SocialServer::onAccountJoined( OnlineServiceHost& host, AccountID accountID )

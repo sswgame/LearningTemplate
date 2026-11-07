@@ -23,7 +23,7 @@ namespace sw
         Idle = 0, ///< 아직 묻지 않았다
         Loading,
         Loaded,
-        Failed ///< 오류는 `getErrorCode` · `getResult`
+        Failed ///< 오류는 `getErrorCode`(공통 범주)
     };
 
     /** @brief 친구 한 줄입니다. */
@@ -59,21 +59,20 @@ namespace sw
         void update();
 
         // 클라이언트의 응답과 알림이 들어오는 길입니다. 시험도 같은 길로 값을 넣습니다.
-        void onLinksReply( const SocialClient::Reply& reply );
+        void onLinksReply( const OnlineResult<SocialLinksReply>& reply );
         /** @brief 관계 목록 응답에서 친구 줄(접속 상태는 아직 `Offline`)과 받은 신청 수를 만듭니다. 상태는 바꾸지 않는다 — 접속 상태 응답이 와야 `Loaded` 다. */
-        void applyLinks( const SocialReply& reply );
-        void onPresenceReply( const SocialClient::Reply& reply );
+        void applyLinks( const SocialLinksReply& reply );
+        void onPresenceReply( const OnlineResult<SocialPresenceReply>& reply );
         void applyNotification( const SocialNotification& notification );
 
         FriendListState            getState() const { return _state; }
         uint16                     getErrorCode() const { return _errorCode; }
-        SocialResult               getResult() const { return _result; }
         uint64                     getRevision() const { return _revision; }
         uint32                     getPendingRequestCount() const { return _pendingRequestCount; }
         const vector<FriendEntry>& getEntries() const { return _listEntry; }
 
     private:
-        void fail( uint16 errorCode, SocialResult result );
+        void fail( uint16 errorCode );
         void sortEntries();
 
     private:
@@ -84,7 +83,6 @@ namespace sw
         uint64                     _revision;
         uint32                     _pendingRequestCount;
         uint16                     _errorCode;
-        SocialResult               _result;
         FriendListState            _state;
         uint8                      _bStale : 1; ///< 목록을 다시 물어야 한다(친구가 바뀌었다는 알림을 받았다)
     };

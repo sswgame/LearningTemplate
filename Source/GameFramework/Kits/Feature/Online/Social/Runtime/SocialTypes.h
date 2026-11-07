@@ -16,6 +16,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 
 namespace sw
 {
@@ -24,17 +25,13 @@ namespace sw
     enum class SocialResult : uint8
     {
         Ok = 0,
-        NotSignedIn,
-        Invalid,  ///< 자기 자신이거나 0이거나 규칙에 맞지 않는 값이다
         NotFound, ///< 그런 관계, 신청, 계정이 없다
         AlreadyFriend,
         AlreadyRequested,
         FriendLimit,
         PendingLimit, ///< 내가 보낸 신청이나 상대가 받은 신청이 가득 찼다
         BlockLimit,
-        YouBlocked,  ///< 내가 막은 상대이다
-        Unavailable, ///< 저장소나 캐시를 쓸 수 없다. 다시 하면 된다
-        Conflict,    ///< 다시 해도 경합이 난다. 잠시 뒤에 시도한다
+        YouBlocked, ///< 내가 막은 상대이다
         GuildNameTaken,
         AlreadyInGuild,
         NotInGuild,
@@ -44,10 +41,15 @@ namespace sw
         InsufficientFunds, ///< 길드 창고 — 맡기는 계정이나 꺼낼 창고의 잔액이 모자란다
         CapExceeded,       ///< 길드 창고 — 꺼내면 계정 잔액 상한을 넘는다
         StorageNotEmpty,   ///< 길드 창고에 남은 것이 있어 길드를 해산할 수 없다(먼저 꺼낸다)
-        UpdateRequired,    ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
         GuildClosed,       ///< 가입 신청을 받지 않는 길드이다
         Count
     };
+
+    /**
+     * @brief 친구 · 길드 결과입니다. 업무 결과(`SocialResult`) 또는 공통 범주(`OnlineError`)입니다.
+     * @details 자기 자신 · 0 · 규칙 밖 값은 `kInvalidRequest`, 저장소 · 캐시 장애는 `kUnavailable`, 다시 해도 경합이면 `kBusy`, 로그인 없음은 `kUnauthenticated` 이다.
+     */
+    using SocialOutcome = OnlineOutcome<SocialResult>;
 } // namespace sw
 
 namespace sw
@@ -67,7 +69,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 관계 한 줄입니다. 응답(`SocialReply`)에 고정 배치형으로 실립니다. */
+    /** @brief 관계 한 줄입니다. 응답(`SocialLinksReply`)에 고정 배치형으로 실립니다. */
     REFLECT()
     struct SocialLink
     {
@@ -198,7 +200,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 길드 정보입니다. 조회는 멤버 목록까지 담고, 만들기 응답은 id 와 이름만 담습니다. 응답(`SocialReply`)에 고정 배치형으로 실립니다. */
+    /** @brief 길드 정보입니다. 조회는 멤버 목록까지 담고, 만들기 응답은 id 와 이름만 담습니다. 응답(`GuildInfoReply`)에 고정 배치형으로 실립니다. */
     REFLECT()
     struct GuildInfo
     {

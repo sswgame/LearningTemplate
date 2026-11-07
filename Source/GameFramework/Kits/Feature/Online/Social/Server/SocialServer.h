@@ -71,6 +71,16 @@ namespace sw
         void onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
         void onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
+        // 완료에서 응답으로 — 응답 타입은 호출의 메서드가 고른다(`OnlineProtocolService::completeByMethod`). 완료 형식마다 답할 수 있는 응답 타입만 있다
+        void fillReply( SocialResultReply& reply, SocialCompletion& completion );
+        void fillReply( SocialLinkReply& reply, SocialCompletion& completion );
+        void fillReply( SocialLinksReply& reply, SocialCompletion& completion );
+        void fillReply( SocialPresenceReply& reply, SocialCompletion& completion );
+        void fillReply( SocialResultReply& reply, GuildCompletion& completion );
+        void fillReply( GuildInfoReply& reply, GuildCompletion& completion );
+        void fillReply( GuildStorageReply& reply, GuildCompletion& completion );
+        void fillReply( GuildApplicationsReply& reply, GuildCompletion& completion );
+
     private:
         void attachHost( OnlineServiceHost& host );
         /** @brief 길드 요청에 호출 공통 칸(계정, 시각, 창고 분개 키)을 채워 로직에 맡깁니다. */

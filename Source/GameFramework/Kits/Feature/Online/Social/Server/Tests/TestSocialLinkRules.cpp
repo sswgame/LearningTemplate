@@ -88,7 +88,7 @@ SW_TEST_CASE( SocialLinkRulesTest, LimitsStopTheWrite )
         decide( Op::Accept, State::Incoming, State::Outgoing, {}, fullFriends ),
         decide( Op::Block, State::None, State::None, fullBlocked, {} ),
     };
-    const SocialResult listExpected[] = { SocialResult::PendingLimit, SocialResult::PendingLimit, SocialResult::FriendLimit, SocialResult::FriendLimit, SocialResult::BlockLimit };
+    const SocialOutcome listExpected[] = { SocialResult::PendingLimit, SocialResult::PendingLimit, SocialResult::FriendLimit, SocialResult::FriendLimit, SocialResult::BlockLimit };
     for ( size_t index = 0; index < std::size( listDecision ); ++index )
     {
         SW_EXPECT_TRUE( listDecision[index]._result == listExpected[index] );

@@ -60,7 +60,7 @@ namespace sw
         vector<SocialPresence> _listPresence{}; ///< 친구의 접속 상태이다
         uint64                 _requestTag{ 0 };
         AccountID              _otherID{ kInvalidAccountID }; ///< 관계를 바꾼 상대이다. 이름으로 찾았으면 찾은 계정이다
-        SocialResult           _result{ SocialResult::Ok };
+        SocialOutcome          _result{ SocialResult::Ok };
     };
 } // namespace sw
 
@@ -155,7 +155,7 @@ namespace sw
         /** @brief 접속 상태 캐시 값을 씁니다. 값을 못 쓰면 오류 로그를 남기고 false 이며 캐시에 아무것도 보내지 않습니다. */
         [[nodiscard]] bool writePresenceRecord( const SocialPresence& presence );
         void               onPresenceReply( const EphemeralReply& reply );
-        void               pushCompletion( uint64 requestTag, SocialResult result );
+        void               pushCompletion( uint64 requestTag, SocialOutcome result );
 
     private:
         unordered_map<AccountID, LocalAccount> _mapAccountToLocal;

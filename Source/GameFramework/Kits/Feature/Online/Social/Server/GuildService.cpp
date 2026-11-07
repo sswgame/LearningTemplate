@@ -230,19 +230,19 @@ namespace sw
                     if ( result != ServiceStoreResult::Conflict )
                     {
                         if ( _outcome._result == SocialResult::Ok )
-                            _outcome._result = SocialResult::Unavailable;
+                            _outcome._result = SocialOutcome::fail( OnlineError::kUnavailable );
                         return;
                     }
                 }
                 _outcome         = GuildResult{};
-                _outcome._result = SocialResult::Conflict;
+                _outcome._result = SocialOutcome::fail( OnlineError::kBusy );
             }
 
             void complete() override { _pService->applyOutcome( _request, _requestTag, std::move( _outcome ) ); }
 
         private:
             /** @brief 규칙 실패를 처리합니다. 결과를 적고 Invalid 를 반환하며 다시 시도하지 않습니다. */
-            ServiceStoreResult fail( SocialResult result )
+            ServiceStoreResult fail( SocialOutcome result )
             {
                 _outcome._result = result;
                 return ServiceStoreResult::Invalid;
@@ -303,7 +303,7 @@ namespace sw
             {
                 using Internal = GuildServiceInternal;
                 if ( GuildService::isValidName( _request._text ) == false )
-                    return fail( SocialResult::Invalid );
+                    return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
                 ServiceRecord            nameRecord;
                 ServiceRecord            sequenceRecord;
                 const string             nameKey      = Internal::makeNameKey( _request._text );
@@ -385,7 +385,7 @@ namespace sw
             {
                 using Internal = GuildServiceInternal;
                 if ( _request._amount <= 0 )
-                    return fail( SocialResult::Invalid );
+                    return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
                 ServiceRecord guildRecord;
                 GuildInfo     info;
                 const string  guildKey = ServiceKeyUtil::makeHex64( _request._guildID );
@@ -488,7 +488,7 @@ namespace sw
                         if ( selfMember._role < GuildRole::Officer )
                             return fail( SocialResult::NotAllowed );
                         if ( _request._text.size() > static_cast<size_t>( GuildLimit::kMaxNoticeSize ) )
-                            return fail( SocialResult::Invalid );
+                            return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
                         info._notice = _request._text;
                         transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
                         return connection.commit( transaction );
@@ -520,7 +520,7 @@ namespace sw
                     }
                     default:
                     {
-                        return fail( SocialResult::Invalid );
+                        return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
                     }
                 }
             }
@@ -532,7 +532,7 @@ namespace sw
                 if ( selfMember._role < GuildRole::Officer )
                     return fail( SocialResult::NotAllowed );
                 if ( _request._targetID == kInvalidAccountID || _request._targetID == _request._accountID )
-                    return fail( SocialResult::Invalid );
+                    return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
                 uint64                   targetGuildID = 0;
                 ServiceRecord            targetRecord;
                 const ServiceStoreResult targetRead = readAccountGuild( connection, _request._targetID, targetGuildID, targetRecord );
@@ -685,7 +685,7 @@ namespace sw
                 if ( selfMember._role != GuildRole::Master )
                     return fail( SocialResult::NotAllowed );
                 if ( _request._role >= GuildRole::Count ) // 와이어에서 온 값이다. 그대로 쓰면 그 멤버 레코드를 다시 읽지 못한다
-                    return fail( SocialResult::Invalid );
+                    return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
                 transaction.put( Internal::getMemberTable(), targetMemberKey, Internal::encodeMember( _request._role, targetMember._joinedMs ), targetMemberRecord._version );
                 if ( _request._role == GuildRole::Master ) // 길드장을 넘기면 나는 임원이 된다
                 {
@@ -711,7 +711,7 @@ namespace sw
                     case LedgerResult::Unavailable:
                         return ServiceStoreResult::Unavailable;
                     default:
-                        return fail( SocialResult::Invalid ); // 규칙 밖의 자산이나 양, 다른 내용에 다시 쓴 멱등 키이다
+                        return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) ); // 규칙 밖의 자산이나 양, 다른 내용에 다시 쓴 멱등 키이다
                 }
             }
 
@@ -726,7 +726,7 @@ namespace sw
                 const bool bValid = LedgerUtil::isValidAssetID( _request._assetID ) && _request._amount > 0 && _request._amount <= LedgerConstant::kMaxAmount &&
                                     LedgerUtil::isValidJournalKey( _request._journalKey );
                 if ( bValid == false )
-                    return fail( SocialResult::Invalid );
+                    return fail( SocialOutcome::fail( OnlineError::kInvalidRequest ) );
                 const LedgerHolder storage = Internal::makeStorageHolder( guildID );
                 const LedgerHolder account = LedgerHolder::makeAccount( _request._accountID );
 

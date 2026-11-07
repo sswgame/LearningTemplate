@@ -368,7 +368,7 @@ namespace sw
                     return;
                 }
                 _awaitKind = AwaitKind::Response;
-                (void)_socialClient.call<SocialMethod::RequestFriend>( SocialAccountRequest{ pOther->getAccountID() }, SocialClient::ReplyDelegate::create<&LoadBot::onSocialReply>( this ) );
+                callKit<SocialMethod::RequestFriend>( _socialClient, SocialAccountRequest{ pOther->getAccountID() } );
                 return;
             }
             default:
@@ -450,7 +450,7 @@ namespace sw
                 SocialPresenceRequest request;
                 request._status = LoadBotInternal::findStatus( step._text );
                 request._text   = step._secondText;
-                (void)_socialClient.call<SocialMethod::SetPresence>( request, SocialClient::ReplyDelegate::create<&LoadBot::onSocialReply>( this ) );
+                callKit<SocialMethod::SetPresence>( _socialClient, request );
                 return true;
             }
             case LoadBotAction::LeaderboardTop:
@@ -565,7 +565,7 @@ namespace sw
         for ( const SocialNotification& notification : _listSocialNotification )
         {
             if ( notification._kind == SocialNotificationKind::FriendRequested ) // 받은 신청은 바로 수락한다(측정하지 않는다)
-                (void)_socialClient.call<SocialMethod::RespondFriend>( SocialRespondRequest{ notification._otherID, SW_TRUE }, SocialClient::ReplyDelegate::create<&LoadBot::onFriendAccepted>( this ) );
+                (void)_socialClient.call<SocialMethod::RespondFriend>( SocialRespondRequest{ notification._otherID, SW_TRUE }, OnlineReplyDelegate<SocialMethod::RespondFriend>::create<&LoadBot::onFriendAccepted>( this ) );
         }
     }
 
@@ -631,7 +631,7 @@ namespace sw
         finishWithResult( result._errorCode, 0 );
     }
 
-    void LoadBot::onFriendAccepted( const SocialClient::Reply& reply )
+    void LoadBot::onFriendAccepted( const OnlineResult<SocialLinkReply>& reply )
     {
         (void)reply;
     }

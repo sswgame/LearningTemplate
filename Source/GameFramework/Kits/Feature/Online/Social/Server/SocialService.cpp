@@ -166,12 +166,12 @@ namespace sw
                     if ( commitResult != ServiceStoreResult::Conflict )
                     {
                         _decision         = SocialLinkDecision{};
-                        _decision._result = SocialResult::Unavailable;
+                        _decision._result = SocialOutcome::fail( OnlineError::kUnavailable );
                         return;
                     }
                 }
                 _decision         = SocialLinkDecision{};
-                _decision._result = SocialResult::Conflict;
+                _decision._result = SocialOutcome::fail( OnlineError::kBusy );
             }
 
             void complete() override { _pService->applyLinkChange( _requestTag, _accountID, _otherID, _decision ); }
@@ -185,13 +185,13 @@ namespace sw
                                                                         : ServiceStoreResult::NotFound;
                 if ( found != ServiceStoreResult::Ok )
                 {
-                    _decision._result = found == ServiceStoreResult::NotFound ? SocialResult::NotFound : SocialResult::Unavailable;
+                    _decision._result = found == ServiceStoreResult::NotFound ? SocialResult::NotFound : SocialOutcome::fail( OnlineError::kUnavailable );
                     return false;
                 }
                 _otherID = identity._accountID;
                 if ( _otherID == _accountID || _otherID == kInvalidAccountID )
                 {
-                    _decision._result = SocialResult::Invalid;
+                    _decision._result = SocialOutcome::fail( OnlineError::kInvalidRequest );
                     return false;
                 }
                 return true;
@@ -347,7 +347,7 @@ namespace sw
     {
         if ( otherID == kInvalidAccountID || otherID == accountID )
         {
-            pushCompletion( requestTag, SocialResult::Invalid );
+            pushCompletion( requestTag, SocialOutcome::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         submitLinkWork( operation, accountID, otherID, string_view{}, nowMs, requestTag );
@@ -357,7 +357,7 @@ namespace sw
     {
         if ( displayName.empty() )
         {
-            pushCompletion( requestTag, SocialResult::Invalid );
+            pushCompletion( requestTag, SocialOutcome::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         submitLinkWork( SocialLinkOperation::Request, accountID, kInvalidAccountID, displayName, nowMs, requestTag );
@@ -428,7 +428,7 @@ namespace sw
             return; // 내부에서 건 읽기이다. 첫 요청이나 버스 알림에서 시작한 것이다
         SocialCompletion completion;
         completion._requestTag = requestTag;
-        completion._result     = bReadOk ? SocialResult::Ok : SocialResult::Unavailable;
+        completion._result     = bReadOk ? SocialResult::Ok : SocialOutcome::fail( OnlineError::kUnavailable );
         completion._listLink   = std::move( listLink );
         _completionBuffer.push( std::move( completion ) );
     }
@@ -452,12 +452,12 @@ namespace sw
                             activity.size() <= static_cast<size_t>( SocialLimit::kMaxActivitySize );
         if ( bValid == false )
         {
-            pushCompletion( requestTag, SocialResult::Invalid );
+            pushCompletion( requestTag, SocialOutcome::fail( OnlineError::kInvalidRequest ) );
             return;
         }
         if ( writePresenceRecord( SocialPresence{ string( activity ), accountID, status } ) == false )
         {
-            pushCompletion( requestTag, SocialResult::Invalid ); // 캐시 값을 못 쓰면 이 서버의 상태도 바꾸지 않는다
+            pushCompletion( requestTag, SocialOutcome::fail( OnlineError::kInvalidRequest ) ); // 캐시 값을 못 쓰면 이 서버의 상태도 바꾸지 않는다
             return;
         }
         LocalAccount& local      = ensureLocal( accountID );
@@ -626,7 +626,7 @@ namespace sw
         _mapQuery.erase( queryIt );
     }
 
-    void SocialService::pushCompletion( uint64 requestTag, SocialResult result )
+    void SocialService::pushCompletion( uint64 requestTag, SocialOutcome result )
     {
         SocialCompletion completion;
         completion._requestTag = requestTag;

@@ -49,7 +49,7 @@ namespace sw
         SocialCounts    _otherDelta{};
         SocialLinkState _newSelfState{ SocialLinkState::None };
         SocialLinkState _newOtherState{ SocialLinkState::None };
-        SocialResult    _result{ SocialResult::Ok };
+        SocialOutcome   _result{ SocialResult::Ok };
         uint8           _bWrite{ SW_FALSE }; ///< true 이면 쓴다. 아무것도 쓰지 않는 Ok 는 나를 막은 사람에게 신청했거나 이미 막은 경우이다
         uint8           _bNotifyOtherRequested{ SW_FALSE };
         uint8           _bNotifyBothAdded{ SW_FALSE };

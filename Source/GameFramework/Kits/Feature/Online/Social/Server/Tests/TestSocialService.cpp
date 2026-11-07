@@ -125,7 +125,7 @@ namespace
             return listCompletion.empty() ? SocialCompletion{} : std::move( listCompletion[0] );
         }
 
-        SocialResult change( SocialLinkOperation operation, AccountID accountID, AccountID otherID )
+        SocialOutcome change( SocialLinkOperation operation, AccountID accountID, AccountID otherID )
         {
             _service.changeLink( operation, accountID, otherID, UnixMilliseconds{ kNowMs }, _nextTag++ );
             return take()._result;
@@ -152,7 +152,7 @@ namespace
             (void)takeNotifications();
         }
 
-        SocialResult setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity = "", int64 nowMs = kNowMs )
+        SocialOutcome setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity = "", int64 nowMs = kNowMs )
         {
             _service.setPresence( accountID, status, activity, UnixMilliseconds{ nowMs }, _nextTag++ );
             return take()._result;
@@ -190,8 +190,8 @@ SW_TEST_CASE( SocialServiceTest, RequestAndAcceptNotifyBothSides )
 {
     SocialWorld    world;
     SocialFixture& rig = world._rig;
-    SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kAlice ) == SocialResult::Invalid );
-    SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kInvalidAccountID ) == SocialResult::Invalid );
+    SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kAlice ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kInvalidAccountID ).hasError( OnlineError::kInvalidRequest ) );
 
     SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kBob ) == SocialResult::Ok );
     vector<SocialNotification> listNotification = rig.takeNotifications();
@@ -237,11 +237,11 @@ SW_TEST_CASE( SocialServiceTest, RequestByName )
     rig._service.requestFriendByName( kAlice, "nobody", UnixMilliseconds{ kNowMs }, 2 );
     SW_EXPECT_TRUE( rig.take()._result == SocialResult::NotFound );
     rig._service.requestFriendByName( kAlice, "alice", UnixMilliseconds{ kNowMs }, 3 );
-    SW_EXPECT_TRUE( rig.take()._result == SocialResult::Invalid );
+    SW_EXPECT_TRUE( rig.take()._result.hasError( OnlineError::kInvalidRequest ) );
     rig._service.requestFriendByName( kAlice, "", UnixMilliseconds{ kNowMs }, 4 );
-    SW_EXPECT_TRUE( rig.take()._result == SocialResult::Invalid );
+    SW_EXPECT_TRUE( rig.take()._result.hasError( OnlineError::kInvalidRequest ) );
     rig._service.requestFriendByName( kAlice, "unavailable", UnixMilliseconds{ kNowMs }, 5 );
-    SW_EXPECT_TRUE( rig.take()._result == SocialResult::Unavailable );
+    SW_EXPECT_TRUE( rig.take()._result.hasError( OnlineError::kUnavailable ) );
 }
 
 /** @brief [SocialServiceTest] 차단 조회: 관계를 바꾸면 이 서버 메모리가 따라가고, 막은 쪽에서만 true 다 */
@@ -289,12 +289,12 @@ SW_TEST_CASE( SocialServiceTest, StoreFailures )
     (void)rig.takeNotifications();
 
     world._database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kCarol ) == SocialResult::Unavailable );
+    SW_EXPECT_TRUE( rig.change( SocialLinkOperation::Request, kAlice, kCarol ).hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_TRUE( rig.takeNotifications().empty() );
 
     world._database.armFault( ServiceStoreFault::RejectRead );
     rig._service.listLinks( kAlice, 9 );
-    SW_EXPECT_TRUE( rig.take()._result == SocialResult::Unavailable );
+    SW_EXPECT_TRUE( rig.take()._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_TRUE( rig._service.isBlockedLocal( kAlice, kBob ) );
 }
 
@@ -311,8 +311,8 @@ SW_TEST_CASE( SocialServiceTest, PresenceReachesFriends )
     (void)rigA.takeNotifications();
     (void)rigB.takeNotifications();
 
-    SW_EXPECT_TRUE( rigA.setPresence( kAlice, SocialPresenceStatus::Offline ) == SocialResult::Invalid );
-    SW_EXPECT_TRUE( rigA.setPresence( kAlice, SocialPresenceStatus::Online, string( static_cast<size_t>( SocialLimit::kMaxActivitySize ) + 1, 'x' ) ) == SocialResult::Invalid );
+    SW_EXPECT_TRUE( rigA.setPresence( kAlice, SocialPresenceStatus::Offline ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rigA.setPresence( kAlice, SocialPresenceStatus::Online, string( static_cast<size_t>( SocialLimit::kMaxActivitySize ) + 1, 'x' ) ).hasError( OnlineError::kInvalidRequest ) );
 
     SW_EXPECT_TRUE( rigA.setPresence( kAlice, SocialPresenceStatus::Online, "dungeon" ) == SocialResult::Ok );
     const vector<SocialNotification> listB = rigB.takeNotifications();
@@ -381,16 +381,12 @@ SW_TEST_CASE( SocialServiceTest, PresenceExpiresWithoutRefresh )
     SW_EXPECT_TRUE( other.queryPresence( kBob )[0]._status == SocialPresenceStatus::Offline );
 }
 
-/** @brief [SocialServiceTest] 다시 시도할 결과(일시 장애 · 경합 — `SocialReply::isRetryable`)는 요청 층이 기억하지 않아 같은 멱등 키의 관계 바꾸기 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
+/** @brief [SocialServiceTest] 다시 시도할 공통 범주(일시 장애 · 경합)는 요청 층이 기억하지 않아 같은 멱등 키의 관계 바꾸기 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
 SW_TEST_CASE( SocialServiceTest, RetryableReplyReachesTheServiceAgain )
 {
-    test::ReplyRetentionFixture<SocialProtocol, SocialReply> rig;
-    SocialReply                                              finished;
+    test::ReplyRetentionFixture<SocialProtocol, SocialLinkReply> rig;
+    SocialLinkReply                                              finished;
     finished._result = SocialResult::Ok;
-    SocialReply unavailable;
-    unavailable._result = SocialResult::Unavailable;
-    rig.expectRetryReachesService( SocialMethod::RequestFriend::kID, unavailable, finished );
-    SocialReply conflict;
-    conflict._result = SocialResult::Conflict;
-    rig.expectRetryReachesService( SocialMethod::RequestFriend::kID, conflict, finished );
+    rig.expectFailureReachesService( SocialMethod::RequestFriend::kID, OnlineError::kUnavailable, finished );
+    rig.expectFailureReachesService( SocialMethod::RequestFriend::kID, OnlineError::kBusy, finished );
 }

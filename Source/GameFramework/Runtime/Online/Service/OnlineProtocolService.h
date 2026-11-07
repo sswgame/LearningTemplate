@@ -128,6 +128,17 @@ namespace sw
             return false;
         }
 
+        /** @brief 아직 응답을 기다리는 @p callID 의 메서드 번호(0부터, 열거자 순서)입니다. 없으면 -1 이고 로그를 남기지 않습니다. */
+        [[nodiscard]] int32 findMethodIndex( uint64 callID ) const
+        {
+            for ( const Call& call : _listCall )
+            {
+                if ( call._callID == callID )
+                    return call._methodIndex;
+            }
+            return -1;
+        }
+
         /** @brief 기다리는 호출 수를 지표 `service_store_pending` 에 씁니다. 서비스가 틱마다 부릅니다. */
         void publishPendingCount() { _metrics.setPendingStoreWorkCount( static_cast<int32>( _listCall.size() ) ); }
 
@@ -274,6 +285,25 @@ namespace sw
             return outcome.isFailed() ? failCall( callID, outcome._errorCode ) : completeCall( callID, reply );
         }
 
+        /**
+         * @brief 로직의 완료 @p completion 으로 호출 @p callID 를 끝냅니다. 응답 타입은 그 호출의 메서드(표지)에서 나옵니다.
+         * @details 완료가 메서드를 모르는 로직(친구 · 길드처럼 완료 형식 하나로 답하는 키트)이 씁니다. 파생은 응답 타입마다 공개 `fillReply( XxxReply&, TCompletion& )` 를 두고,
+         *          완료의 `_result` 는 `OnlineOutcome` 이어야 합니다(공통 범주면 `failCall`). 그 메서드의 응답 타입에 맞는 `fillReply` 가 없으면 조립 실수이므로
+         *          어서션을 내고 `kInternal` 로 끝냅니다. 표에 없는 번호(내부 작업 · 끝난 호출)는 조용히 false 입니다.
+         */
+        template <typename TCompletion>
+        bool completeByMethod( uint64 callID, TCompletion& completion )
+        {
+            const int32 methodIndex = _calls.findMethodIndex( callID );
+            if ( methodIndex < 0 )
+                return false;
+            if ( completion._result.isFailed() )
+                return failCall( callID, completion._result._errorCode );
+            CompletionVisitor<TCompletion> visitor{ *this, completion, callID, SW_FALSE };
+            (void)TProtocol::Table::visitMethod( static_cast<uint16>( TProtocol::Table::MethodTable::kFirstMethod + methodIndex ), visitor );
+            return visitor._bDone == SW_TRUE;
+        }
+
         /** @brief 공통 범주 @p errorCode 로 끝냅니다. 저장소 완료가 부릅니다. */
         template <typename TMethod>
         bool fail( OnlineServerCall<TMethod> call, uint16 errorCode )
@@ -322,6 +352,43 @@ namespace sw
             void visit()
             {
                 _service.template receive<TMethod>( _host, _context, _body );
+            }
+        };
+
+        /** @brief 파생에 `fillReply( TReply&, TCompletion& )` 가 있는지입니다. */
+        template <typename TReply, typename TCompletion, typename = void>
+        struct HasFillReply : std::false_type
+        {
+        };
+
+        template <typename TReply, typename TCompletion>
+        struct HasFillReply<TReply, TCompletion, std::void_t<decltype( std::declval<TService&>().fillReply( std::declval<TReply&>(), std::declval<TCompletion&>() ) )>> : std::true_type
+        {
+        };
+
+        template <typename TCompletion>
+        struct CompletionVisitor
+        {
+            OnlineProtocolService& _service;
+            TCompletion&           _completion;
+            uint64                 _callID;
+            uint8                  _bDone : 1; ///< 응답했다
+
+            template <typename TMethod>
+            void visit()
+            {
+                using Reply = typename TMethod::Reply;
+                if constexpr ( HasFillReply<Reply, TCompletion>::value )
+                {
+                    Reply reply{};
+                    static_cast<TService&>( _service ).fillReply( reply, _completion );
+                    _bDone = _service.completeCall( _callID, reply ) ? SW_TRUE : SW_FALSE;
+                }
+                else
+                {
+                    SW_ASSERT( false ); // 이 완료 형식으로 답할 수 없는 메서드이다(조립 실수)
+                    _bDone = _service.failCall( _callID, OnlineError::kInternal ) ? SW_TRUE : SW_FALSE;
+                }
             }
         };
 

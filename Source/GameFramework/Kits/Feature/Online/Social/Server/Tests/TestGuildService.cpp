@@ -74,7 +74,7 @@ namespace
             return std::move( listCompletion[0] );
         }
 
-        SocialResult setRole( AccountID accountID, AccountID targetID, GuildRole role )
+        SocialOutcome setRole( AccountID accountID, AccountID targetID, GuildRole role )
         {
             GuildRequest request;
             request._operation = GuildOperation::SetRole;
@@ -97,7 +97,7 @@ namespace
             return runRequest( request );
         }
 
-        SocialResult setOpen( AccountID accountID, bool bOpen )
+        SocialOutcome setOpen( AccountID accountID, bool bOpen )
         {
             GuildRequest request;
             request._operation = GuildOperation::SetJoinPolicy;
@@ -193,8 +193,8 @@ SW_TEST_CASE( GuildServiceTest, InviteAndAccept )
     const uint64 guildID = rig.makeGuild();
 
     SW_EXPECT_TRUE( rig.run( GuildOperation::Invite, kMember, kOutside )._result == SocialResult::NotAllowed );
-    SW_EXPECT_TRUE( rig.run( GuildOperation::Invite, kOfficer, kOfficer )._result == SocialResult::Invalid );
-    SW_EXPECT_TRUE( rig.run( GuildOperation::Invite, kOfficer, kInvalidAccountID )._result == SocialResult::Invalid );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::Invite, kOfficer, kOfficer )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::Invite, kOfficer, kInvalidAccountID )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.run( GuildOperation::Invite, kOfficer, kMember )._result == SocialResult::AlreadyInGuild );
     SW_EXPECT_TRUE( rig.run( GuildOperation::Invite, kOutside, kMember )._result == SocialResult::NotInGuild );
 
@@ -307,8 +307,8 @@ SW_TEST_CASE( GuildServiceTest, RoleChangesAndMasterTransfer )
 
     SW_EXPECT_TRUE( rig.setRole( kOfficer, kMember, GuildRole::Officer ) == SocialResult::NotAllowed );
     SW_EXPECT_TRUE( rig.setRole( kMaster, kMaster, GuildRole::Member ) == SocialResult::NotFound );
-    SW_EXPECT_TRUE( rig.setRole( kMaster, kMember, GuildRole::Count ) == SocialResult::Invalid );
-    SW_EXPECT_TRUE( rig.setRole( kMaster, kMember, static_cast<GuildRole>( 200 ) ) == SocialResult::Invalid );
+    SW_EXPECT_TRUE( rig.setRole( kMaster, kMember, GuildRole::Count ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.setRole( kMaster, kMember, static_cast<GuildRole>( 200 ) ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.run( GuildOperation::Get, kMember )._result == SocialResult::Ok ); // 레코드가 그대로 읽힌다
 
     SW_EXPECT_TRUE( rig.setRole( kMaster, kMember, GuildRole::Master ) == SocialResult::Ok );
@@ -332,7 +332,7 @@ SW_TEST_CASE( GuildServiceTest, NoticeIsValidatedAndShared )
     SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kMember, kInvalidAccountID, "hi" )._result == SocialResult::NotAllowed );
     SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, "hello\nworld" )._result == SocialResult::Ok );
     SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._notice );
-    SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, string( static_cast<size_t>( GuildLimit::kMaxNoticeSize ) + 1, 'x' ) )._result == SocialResult::Invalid );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, string( static_cast<size_t>( GuildLimit::kMaxNoticeSize ) + 1, 'x' ) )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._notice );
 }
 
@@ -355,10 +355,10 @@ SW_TEST_CASE( GuildServiceTest, StorageMovesFundsOnce )
     SW_EXPECT_EQUAL( int64( 60 ), replayed._listStorage[0]._amount );
     SW_EXPECT_EQUAL( int64( 40 ), rig.balanceOf( kMember ) );
 
-    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 61, "test/dep.1" )._result == SocialResult::Invalid ); // 같은 키에 다른 내용
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 61, "test/dep.1" )._result.hasError( OnlineError::kInvalidRequest ) ); // 같은 키에 다른 내용
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 41, "test/dep.2" )._result == SocialResult::InsufficientFunds );
-    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 1, "" )._result == SocialResult::Invalid );
-    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 0, "test/dep.3" )._result == SocialResult::Invalid );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 1, "" )._result.hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kMember, 0, "test/dep.3" )._result.hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Deposit, kOutside, 1, "test/dep.4" )._result == SocialResult::NotInGuild );
 
     SW_EXPECT_TRUE( rig.transfer( GuildOperation::Withdraw, kMember, 1, "test/wd.1" )._result == SocialResult::NotAllowed );
@@ -532,7 +532,7 @@ SW_TEST_CASE( GuildServiceTest, StoreFailuresChangeNothing )
     const uint64 hashBefore = rig._database.computeContentHash();
 
     rig._database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( rig.run( GuildOperation::Leave, kMember )._result == SocialResult::Unavailable );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::Leave, kMember )._result.hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_EQUAL( hashBefore, rig._database.computeContentHash() );
     SW_EXPECT_TRUE( rig._sink._listEvent.empty() );
     vector<SocialNotification> listNotification;
@@ -540,7 +540,7 @@ SW_TEST_CASE( GuildServiceTest, StoreFailuresChangeNothing )
     SW_EXPECT_TRUE( listNotification.empty() );
 
     rig._database.armFault( ServiceStoreFault::RejectRead );
-    SW_EXPECT_TRUE( rig.run( GuildOperation::Get, kMember )._result == SocialResult::Unavailable );
+    SW_EXPECT_TRUE( rig.run( GuildOperation::Get, kMember )._result.hasError( OnlineError::kUnavailable ) );
 
     SW_EXPECT_TRUE( rig.run( GuildOperation::Leave, kMember )._result == SocialResult::Ok );
 }
