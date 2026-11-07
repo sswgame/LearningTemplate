@@ -12,6 +12,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -34,7 +35,7 @@ namespace sw
     struct SW_API PlatformFileUtil
     {
         /** @brief 오프셋 · 크기 질의가 실패했음을 나타내는 값입니다. */
-        static constexpr int64 kInvalidOffset = -1;
+        static constexpr int64 kInvalidOffset = constant::invalid_index::kInt64;
 
         /**
          * @brief 파일을 엽니다. 실패하면 nullptr 입니다.

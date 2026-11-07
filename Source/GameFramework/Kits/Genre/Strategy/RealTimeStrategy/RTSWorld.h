@@ -7,6 +7,7 @@
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -235,7 +236,7 @@ namespace sw
     class SW_KIT_API RTSWorld
     {
     public:
-        static constexpr int32 kNoOwner = -1;
+        static constexpr int32 kNoOwner = constant::invalid_index::kInt32;
 
         RTSWorld();
 

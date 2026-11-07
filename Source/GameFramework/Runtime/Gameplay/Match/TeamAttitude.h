@@ -6,6 +6,7 @@
  *          키트가 역할 이름으로 쓰는 팀 enum(`SRPGTeam`, `ConquestTeam`)은 각자의 `isHostile` 을 둔다.
  */
 #pragma once
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
@@ -27,7 +28,7 @@ namespace sw
      */
     struct TeamAttitudeUtil
     {
-        static constexpr int32 kNoTeam = -1; ///< 팀 없음. 누구와도 중립이다
+        static constexpr int32 kNoTeam = constant::invalid_index::kInt32; ///< 팀 없음. 누구와도 중립이다
 
         /** @brief @p team 이 @p other 를 보는 태도입니다. 어느 한쪽이 팀 없음(음수)이면 중립이고, 같으면 아군이고, 다르면 적입니다. */
         static constexpr TeamAttitude computeAttitude( int32 team, int32 other )

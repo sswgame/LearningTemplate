@@ -4,6 +4,8 @@
  * @details 수집 결과 타입은 ParsedReflection.h, 어노테이션 문자열 적용은 AnnotationApply.* 입니다.
  */
 #pragma once
+#include "Core/Foundation/Constants.h"
+
 #include "Engine/EngineMinimal.h"
 
 #include "Programs/ReflectionParser/ParsedReflection.h"
@@ -48,7 +50,7 @@ namespace sw
         void onEnumDeclaration( CXCursor cursor, ParsedHeader& outHeader );
 
     private:
-        static constexpr int32 kNoTarget = -1;
+        static constexpr int32 kNoTarget = constant::invalid_index::kInt32;
 
         CXTranslationUnit      _translationUnit;
         const ParserSession*   _pSession;

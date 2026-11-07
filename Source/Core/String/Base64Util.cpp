@@ -2,6 +2,8 @@
 
 #include "Core/String/Base64Util.h"
 
+#include "Core/Foundation/Constants.h"
+
 namespace sw
 {
     namespace
@@ -10,7 +12,7 @@ namespace sw
         {
             static constexpr utf8  kStandardAlphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
             static constexpr utf8  kURLAlphabet[]      = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-            static constexpr int32 kInvalidDigit       = -1;
+            static constexpr int32 kInvalidDigit       = constant::invalid_index::kInt32;
 
             static string encode( const uint8* pData, size_t size, const utf8* pAlphabet, bool bPad )
             {

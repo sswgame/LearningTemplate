@@ -6,6 +6,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -88,7 +89,7 @@ namespace sw
         using AbilityPresentationDelegate = Delegate<void( const AbilityPresentationEvent& )>;
 
         /** @brief 입력에 묶이지 않은 어빌리티의 입력 번호입니다. */
-        static constexpr int32 kNoInputID = -1;
+        static constexpr int32 kNoInputID = constant::invalid_index::kInt32;
 
         AbilityComponent();
         ~AbilityComponent() override;

@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -94,8 +95,8 @@ namespace sw
     {
     public:
         REFLECT_BODY();
-        static constexpr int32  kNoWinner            = -1; ///< 우승자 없음을 뜻한다(끝나지 않았거나 무승부). `reportRoundWinner` 에서는 무승부 라운드를 뜻한다
-        static constexpr uint32 kMaxParticipantCount = 64; ///< 고정 배치형이 싣는 참가자 수의 상한
+        static constexpr int32  kNoWinner            = constant::invalid_index::kInt32; ///< 우승자 없음을 뜻한다(끝나지 않았거나 무승부). `reportRoundWinner` 에서는 무승부 라운드를 뜻한다
+        static constexpr uint32 kMaxParticipantCount = 64;                              ///< 고정 배치형이 싣는 참가자 수의 상한
 
         RoundSeries();
 

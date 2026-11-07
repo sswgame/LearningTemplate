@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -30,7 +31,7 @@ namespace sw
     class SW_GF_API GridReachability
     {
     public:
-        static constexpr int32 kUnreached = -1;
+        static constexpr int32 kUnreached = constant::invalid_index::kInt32;
 
         /**
          * @param stepCost `int32( const int2& from, const int2& to )` 는 들어가는 비용이다. 음수면 들어가지 못한다

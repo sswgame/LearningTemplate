@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -25,7 +26,7 @@ namespace sw
         /** @brief 없는 폴리곤입니다. */
         static constexpr NavPolyRef kInvalidPolyRef = 0;
         /** @brief 없는 군중 에이전트입니다. */
-        static constexpr NavCrowdAgentID kInvalidAgentID = -1;
+        static constexpr NavCrowdAgentID kInvalidAgentID = constant::invalid_index::kInt32;
         /** @brief 영역 테이블의 최대 항목 수입니다(영역 하나가 폴리곤 표시 비트 하나이며 16 비트입니다). */
         static constexpr uint32 kMaxAreaCount = 16;
         /** @brief 걸을 수 없는 영역입니다(장애물, 구멍). 베이크에서 그 위치를 뺍니다. 테이블의 번호가 아닙니다. */

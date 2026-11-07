@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -26,7 +27,7 @@ namespace sw
     {
     public:
         /** @brief 방향이 없는 셀(목적지 · 닿지 못함)입니다. */
-        static constexpr int8 kNoDirection = -1;
+        static constexpr int8 kNoDirection = constant::invalid_index::kInt8;
 
         FlowField();
 
