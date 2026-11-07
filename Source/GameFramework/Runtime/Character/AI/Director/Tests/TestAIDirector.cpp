@@ -510,3 +510,38 @@ SW_TEST_CASE( AIDirectorProfileTest, SharedCacheGivesOneObjectAndReloadDetaches 
     SW_EXPECT_TRUE( pFresh.get() != pHeld.get() );
     SW_EXPECT_NEAR( 3.0f, pFresh->getPhases()[static_cast<size_t>( peak )]._spawnScale, 0.0001f );
 }
+
+/**
+ * @brief [AIDirectorStateTest] 판을 이어 가며 프로필을 바꾸면 국면 · 시계가 그대로 이어지고, 구조(풀 수)가 바뀐 프로필은 거절하고 옛 프로필과 상태로 되돌리는지 검증
+ * @details 핫 리로드가 떼어 낸 새 객체를 슈터 게임 모드가 판 도중에 받는 길이다(`AIDirector::rebindProfile`).
+ */
+SW_TEST_CASE( AIDirectorStateTest, RebindProfileContinuesTheRun )
+{
+    DirectorRig rig;
+    rig.run( 20.0f );
+    const hashed_string phaseBefore = rig._director.getPhase();
+    const float32       timeBefore  = rig._director.getTime();
+
+    string       tuned = DirectorRig::kProfileXML;
+    const size_t at    = tuned.find( "<Phase id=\"Peak\" spawnScale=\"2\">" );
+    SW_REQUIRE_TRUE( at != string::npos );
+    tuned.replace( at, string_view( "<Phase id=\"Peak\" spawnScale=\"2\">" ).size(), "<Phase id=\"Peak\" spawnScale=\"3\">" );
+    AIDirectorProfile tunedProfile;
+    SW_REQUIRE_TRUE( tunedProfile.loadFromXMLText( tuned, "DirectorTest" ) );
+    SW_REQUIRE_TRUE( rig._director.rebindProfile( &tunedProfile ) );
+    SW_EXPECT_TRUE( rig._director.getProfile() == &tunedProfile );
+    SW_EXPECT_TRUE( rig._director.getPhase() == phaseBefore );
+    SW_EXPECT_NEAR( timeBefore, rig._director.getTime(), 0.0001f );
+
+    // 풀이 하나 더 있는 프로필은 번호를 이을 수 없다 — 거절하고 쥔 프로필과 상태로 되돌린다.
+    string       reshaped = DirectorRig::kProfileXML;
+    const size_t endAt    = reshaped.find( "</AIDirector>" );
+    SW_REQUIRE_TRUE( endAt != string::npos );
+    reshaped.insert( endAt, "<Pool id=\"extra\" trigger=\"Interval\" interval=\"10\"><Encounter id=\"lurker\"/></Pool>\n" );
+    AIDirectorProfile reshapedProfile;
+    SW_REQUIRE_TRUE( reshapedProfile.loadFromXMLText( reshaped, "DirectorTest" ) );
+    const uint64 hashBefore = rig._director.computeStateHash();
+    SW_EXPECT_FALSE( rig._director.rebindProfile( &reshapedProfile ) );
+    SW_EXPECT_TRUE( rig._director.getProfile() == &tunedProfile );
+    SW_EXPECT_EQUAL( hashBefore, rig._director.computeStateHash() );
+}

@@ -609,6 +609,26 @@ namespace sw
         _spawnDirector.writeState( outArchive );
     }
 
+    bool AIDirector::rebindProfile( const AIDirectorProfile* pProfile )
+    {
+        if ( pProfile == nullptr || _pProfile == nullptr )
+            return false;
+        Archive saved;
+        writeState( saved );
+        const AIDirectorProfile* pOldProfile = _pProfile;
+        initialize( pProfile, _pSpawnTable, _seed );
+        Archive reading( saved.getData(), saved.getSize() );
+        if ( readState( reading ) )
+            return true;
+        // 구조가 달라 번호를 이을 수 없다 — 옛 프로필로 되돌린다. 같은 프로필이 쓴 바이트라 다시 읽힌다.
+        initialize( pOldProfile, _pSpawnTable, _seed );
+        Archive    restoring( saved.getData(), saved.getSize() );
+        const bool bRestored = readState( restoring );
+        SW_ASSERT( bRestored );
+        (void)bRestored;
+        return false;
+    }
+
     bool AIDirector::readState( Archive& archive )
     {
         using Internal = AIDirectorInternal;

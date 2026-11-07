@@ -154,6 +154,7 @@ namespace sw
         , _spawnCursor{ 0 }
         , _killCount{ 0 }
         , _traceFrame{ 0 }
+        , _seenProfileReloadCount{ 0 }
         , _appliedAutoPlay{ -1 }
         , _bAmmoPending{ SW_FALSE }
         , _bPacingReady{ SW_FALSE }
@@ -234,6 +235,26 @@ namespace sw
         GameModeComponent::onEndPlay();
     }
 
+    void ShooterGameModeComponent::adoptReloadedProfile()
+    {
+        const uint32 reloadCount = SharedAssetCache<AIDirectorProfile>::getReloadCount();
+        if ( reloadCount == _seenProfileReloadCount )
+            return;
+        _seenProfileReloadCount                       = reloadCount;
+        shared_ptr<const AIDirectorProfile> pReloaded = SharedAssetCache<AIDirectorProfile>::acquire( _pacingProfile );
+        if ( pReloaded == nullptr || pReloaded == _pProfile )
+            return; // 다른 프로필이 다시 읽혔거나 읽지 못했다(읽기가 오류를 남겼다) — 쥔 프로필로 계속 돈다
+        // 판을 이어 간다 — 국면 · 풀 번호 · 시계 · 예산을 새 프로필로 옮긴다. 구조가 바뀌었으면 옛 프로필로 이 판을 끝까지 돌고 다음 시작에서 새 것을 쓴다.
+        if ( _director.rebindProfile( pReloaded.get() ) )
+        {
+            _pProfile = std::move( pReloaded );
+            SW_LOG_INFO_ID( "ShooterGameMode.PacingProfileReloaded", "[Shooter] pacing profile '%#' reloaded - the run continues in phase '%#'", _pacingProfile.c_str(), _director.getPhase().c_str() );
+            return;
+        }
+        SW_LOG_WARNING_ID( "ShooterGameMode.PacingProfileShapeChanged", "[Shooter] pacing profile '%#' changed its phases or pools - this run keeps the previous profile, the next start uses the new one",
+                           _pacingProfile.c_str() );
+    }
+
     void ShooterGameModeComponent::updateGame( float32 deltaTime )
     {
         const float32 step = MathUtil::min( deltaTime, 0.1f );
@@ -245,6 +266,7 @@ namespace sw
             updateEnemies();
             if ( _bPacingReady == SW_TRUE )
             {
+                adoptReloadedProfile();
                 _director.update( step );
                 applyDirectorEvents();
             }
@@ -383,7 +405,8 @@ namespace sw
         }
         if ( bPresetsKnown == false )
             return;
-        _pProfile = SharedAssetCache<AIDirectorProfile>::acquire( _pacingProfile );
+        _seenProfileReloadCount = SharedAssetCache<AIDirectorProfile>::getReloadCount();
+        _pProfile               = SharedAssetCache<AIDirectorProfile>::acquire( _pacingProfile );
         if ( _pProfile == nullptr )
         {
             SW_LOG_ERROR_ID( "ShooterGameMode.PacingProfileCouldNot", "[Shooter] pacing profile '%#' could not be loaded - no enemies will come", _pacingProfile.c_str() );

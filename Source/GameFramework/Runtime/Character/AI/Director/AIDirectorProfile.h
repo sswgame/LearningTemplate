@@ -289,7 +289,8 @@ namespace sw
     /**
      * @brief 페이싱 프로필을 경로마다 한 벌 나눠 줍니다("aidirector", 인스턴스화는 `AIDirectorProfile.cpp`).
      * @details 다시 읽기는 떼어 낸다(`Detach`) — 감독(`AIDirector`)은 국면 · 풀 번호로 프로필을 읽고 그 번호가 상태(저장 포함)에 남는다. 제자리에서 바뀌면 번호가 어긋난다.
-     *          쥔 쪽은 옛 프로필로 한 판을 끝까지 돌고 다음 시작에서 새 객체를 받는다(언리얼 AI 감독 데이터 에셋 한 벌, 기억에 의존).
+     *          쥔 쪽은 다시 읽은 횟수가 바뀌면 새 객체를 받아 감독이 번호를 이어 옮긴다(`AIDirector::rebindProfile` — 구조가 같은 변경만, 구조가 바뀌면 그 판은 옛 객체로 돈다).
+     *          언리얼 AI 감독 데이터 에셋 한 벌과 같은 자리다(기억에 의존).
      */
     extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<AIDirectorProfile>;
 } // namespace sw

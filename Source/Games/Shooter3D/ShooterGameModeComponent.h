@@ -182,6 +182,8 @@ namespace sw
         void collectBoxes();
         void startPacing();
         void applyDirectorEvents();
+        /** @brief 페이싱 프로필이 다시 읽혔으면(핫 리로드) 판을 이어 새 프로필로 옮깁니다(`AIDirector::rebindProfile`). 구조가 바뀌었으면 이 판은 옛 프로필로 돈다. */
+        void adoptReloadedProfile();
         void requestEnemies( int32 count, float32 healthScale, uint32 spawnID, bool bElite );
         void spawnEffectPools( GameObjectManager& manager );
         void spawnPool( GameObjectManager& manager, const string& prefab, int32 count, const utf8* pName, EffectPool& outPool );
@@ -231,7 +233,7 @@ namespace sw
 
         vector<ShooterArenaBox>             _listBox;
         vector<ShooterEnemyView>            _listEnemyView;
-        shared_ptr<const AIDirectorProfile> _pProfile; ///< 페이싱 프로필(공유 캐시의 한 벌, 떼어 내는 종류 — 한 판은 받은 객체로 끝까지 돈다)
+        shared_ptr<const AIDirectorProfile> _pProfile; ///< 페이싱 프로필(공유 캐시의 한 벌, 떼어 내는 종류 — 다시 읽으면 감독이 번호를 이어 새 객체로 옮긴다)
         shared_ptr<const SpawnTable>        _pTable;
         AIDirector                          _director;
         vector<AIDirectorEvent>             _listDirectorEvent;
@@ -249,10 +251,11 @@ namespace sw
         float32                             _pendingHeal; ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
         uint32                              _spawnCursor; ///< 다음 적의 스폰 위치 순번.
         uint32                              _killCount;
-        uint32                              _traceFrame;       ///< 움직임 기록의 프레임 번호.
-        int8                                _appliedAutoPlay;  ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
-        uint8                               _bAmmoPending : 1; ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
-        uint8                               _bPacingReady : 1; ///< 프로필과 스폰 테이블을 읽었다.
+        uint32                              _traceFrame;             ///< 움직임 기록의 프레임 번호.
+        uint32                              _seenProfileReloadCount; ///< 프로필을 받을 때의 프로필 캐시 다시 읽기 횟수(바뀌면 판을 이어 새 프로필로 옮긴다)
+        int8                                _appliedAutoPlay;        ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
+        uint8                               _bAmmoPending : 1;       ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
+        uint8                               _bPacingReady : 1;       ///< 프로필과 스폰 테이블을 읽었다.
         uint8                               _bPlayerAlive : 1;
         uint8                               _reserved     : 5;
     };
