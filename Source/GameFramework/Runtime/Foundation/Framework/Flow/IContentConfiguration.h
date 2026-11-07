@@ -17,7 +17,7 @@ namespace sw
     public:
         virtual ~IContentConfiguration() = default;
 
-        /** @brief 구성 해시입니다. 구성이 비었으면 0 입니다 — 넷 와이어 버전에 섞인다(`GameNetSession::foldContentConfigHash`). */
+        /** @brief 구성 해시입니다. 구성이 비었으면 0 입니다 — 넷 와이어 버전에 섞인다(`GameNetSession::combineContentConfigHash`). */
         virtual uint64 getContentConfigHash() const = 0;
         /** @brief 세이브 봉투 머리에 적는 글입니다(빈 구성은 빈 글). `checkSaveCompatible` 이 이 글을 받는다. */
         virtual string makeContentConfigText() const = 0;

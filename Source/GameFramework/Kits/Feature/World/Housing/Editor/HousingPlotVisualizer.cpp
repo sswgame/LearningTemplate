@@ -42,7 +42,7 @@ namespace sw::editor
             {
                 float3  origin   = {};
                 float32 cellSize = 0.0f;
-                if ( plot.readPlotFrame( origin, cellSize ) == false )
+                if ( plot.tryGetPlotGrid( origin, cellSize ) == false )
                     return; // 루트 · 카탈로그가 없는 부지는 맵 검사가 알린다
                 const HousingPlotSettings& settings = plot.getSettings();
                 const float32              sizeX    = static_cast<float32>( settings._sizeX ) * cellSize;
@@ -99,7 +99,7 @@ namespace sw::editor
                 {
                     float3  origin   = {};
                     float32 cellSize = 0.0f;
-                    count += pPlot->readPlotFrame( origin, cellSize ) ? 1 : 0;
+                    count += pPlot->tryGetPlotGrid( origin, cellSize ) ? 1 : 0;
                 } );
                 outValue = static_cast<float64>( count );
                 return true;

@@ -296,7 +296,7 @@ namespace sw
                 const HousingPlotComponent* pPlot = findTarget( query, outValue );
                 if ( pPlot == nullptr )
                     return false;
-                outValue.setNumber( pPlot->getLayout().isLandBound() ? 1.0 : 0.0 );
+                outValue.setNumber( pPlot->getLayout().hasClaimedLand() ? 1.0 : 0.0 );
                 return true;
             }
 
@@ -502,7 +502,7 @@ namespace sw
         return pRoot != nullptr ? pRoot->getWorldPosition() : float3{ 0.0f, 0.0f, 0.0f }; // 열린 부지는 startGame 이 루트를 확인했다
     }
 
-    bool HousingPlotComponent::readPlotFrame( float3& outOrigin, float32& outCellSize ) const
+    bool HousingPlotComponent::tryGetPlotGrid( float3& outOrigin, float32& outCellSize ) const
     {
         const GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || pOwner->getPrimarySceneComponent() == nullptr )

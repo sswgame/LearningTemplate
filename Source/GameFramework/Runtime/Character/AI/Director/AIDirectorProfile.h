@@ -181,9 +181,9 @@ namespace sw
         int32 _minCycle{ 0 };
 
         /** @brief 한 판에 이미 @p count 번 나왔을 때 더 나올 수 있는지입니다(상한이 없으면 늘 된다). */
-        bool allowsAnotherRun( int32 count ) const { return _maxCount == kUnlimitedCount || count < _maxCount; }
+        bool canTriggerAgain( int32 count ) const { return _maxCount == kUnlimitedCount || count < _maxCount; }
         /** @brief 긴장도 @p intensity 가 위 끝을 넘었는지입니다(위 끝이 없으면 늘 아니다 — 음수가 위 끝 없음이다). */
-        bool isAboveIntensityCap( float32 intensity ) const { return _maxIntensity >= 0.0f && intensity > _maxIntensity; }
+        bool isAboveMaxIntensity( float32 intensity ) const { return _maxIntensity >= 0.0f && intensity > _maxIntensity; }
     };
 } // namespace sw
 

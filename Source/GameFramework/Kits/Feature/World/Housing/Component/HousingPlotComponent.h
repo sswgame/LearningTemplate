@@ -75,7 +75,7 @@ namespace sw
          * @brief 부지의 월드 틀(원점 · 칸 한 변)을 읽습니다 — 에디터 뷰포트의 부지 경계 그리기가 씁니다(플레이 전에도).
          * @details 연 부지는 들고 있는 카탈로그, 열지 않은 부지는 카탈로그 에셋을 얻어 칸 크기를 읽는다. 루트 장면 컴포넌트나 카탈로그가 없으면 false 다(맵 검사가 까닭을 알린다).
          */
-        [[nodiscard]] bool readPlotFrame( float3& outOrigin, float32& outCellSize ) const;
+        [[nodiscard]] bool tryGetPlotGrid( float3& outOrigin, float32& outCellSize ) const;
         /** @brief 맵 검사: 카탈로그를 읽을 수 있는지, 부품마다 스냅 지점이 맞고 부지에 들어가는지, 같은 씬의 다른 부지와 겹치지 않는지 봅니다(`REFLECT( Validate )`). */
         void validatePlot( ValidationContext& context ) const;
 

@@ -50,7 +50,7 @@ namespace sw
 
         bool hasAnyTag( const vector<hashed_string>& listTag ) const;
         /** @brief 살아 있는 수 @p aliveCount 에서 하나를 더 낼 수 있는지입니다(상한이 없으면 늘 된다). */
-        bool allowsOneMore( int32 aliveCount ) const { return _max == kUnlimitedAlive || aliveCount < _max; }
+        bool canSpawnMore( int32 aliveCount ) const { return _max == kUnlimitedAlive || aliveCount < _max; }
     };
 } // namespace sw
 

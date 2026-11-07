@@ -126,9 +126,9 @@ namespace sw
         /** @brief 단가를 적었는지입니다(아니면 아이템 값). */
         bool hasFixedPrice() const { return _price != kUseItemValue; }
         /** @brief 재고에 끝이 있는지입니다. */
-        bool isStockLimited() const { return _count != kUnlimitedStock; }
+        bool hasFiniteStock() const { return _count != kUnlimitedStock; }
         /** @brief 남은 재고 수 @p stockCount 가 끝이 있는 재고인지입니다(무한 재고는 `kUnlimitedStock` 로 든다). */
-        static bool isLimitedCount( int32 stockCount ) { return stockCount != kUnlimitedStock; }
+        static bool isFiniteStock( int32 stockCount ) { return stockCount != kUnlimitedStock; }
     };
 } // namespace sw
 

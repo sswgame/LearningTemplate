@@ -499,7 +499,7 @@ namespace sw
         return true;
     }
 
-    uint32 GameNetSession::foldContentConfigHash( uint32 wireVersion, uint64 contentConfigHash )
+    uint32 GameNetSession::combineContentConfigHash( uint32 wireVersion, uint64 contentConfigHash )
     {
         if ( contentConfigHash == 0 )
             return wireVersion;
@@ -524,7 +524,7 @@ namespace sw
                 return true;
             case GameNetLaunch::Open:
             {
-                params._hostSettings._wireVersion = foldContentConfigHash( params._hostSettings._wireVersion, contentConfigHash );
+                params._hostSettings._wireVersion = combineContentConfigHash( params._hostSettings._wireVersion, contentConfigHash );
                 if ( initialize( params ) == false )
                     return false;                       // 실패는 initialize 가 알린다
                 _contentConfigHash = contentConfigHash; // initialize 가 앞 세션을 닫으며 지웠다 — 연 뒤에 적는다

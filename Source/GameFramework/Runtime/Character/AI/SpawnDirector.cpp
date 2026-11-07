@@ -123,7 +123,7 @@ namespace sw
     {
         const SpawnEntryDef& entry       = _pTable->getEntries()[static_cast<size_t>( entryIndex )];
         const bool           bTimeOk     = entry._minTime <= _time;
-        const bool           bCountOk    = entry.allowsOneMore( _listAliveCount[static_cast<size_t>( entryIndex )] );
+        const bool           bCountOk    = entry.canSpawnMore( _listAliveCount[static_cast<size_t>( entryIndex )] );
         const bool           bTagOk      = _listAllowedTag.empty() || entry._listTag.empty() || entry.hasAnyTag( _listAllowedTag );
         const bool           bAffordable = entry._cost <= _pTable->getMaxBudget();
         return entry._weight > 0.0f && bTimeOk && bCountOk && bTagOk && bAffordable;

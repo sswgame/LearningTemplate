@@ -365,7 +365,7 @@ SW_TEST_CASE( HousingLayoutTest, PlotClaimsItsCellsOnTheSharedLand )
     land.initialize( 16, 16, 1.0f, float3{ 0.0f, 0.0f, 0.0f } );
     HousingFixture home;
     SW_REQUIRE_TRUE( home._layout.bindLand( &land, int2{ 2, 2 } ) );
-    SW_EXPECT_TRUE( home._layout.isLandBound() );
+    SW_EXPECT_TRUE( home._layout.hasClaimedLand() );
     SW_EXPECT_TRUE( land.getOwnerName( 2, 2 ) == hashed_string( "Housing.home" ) );
     SW_EXPECT_TRUE( land.getOwnerName( 7, 7 ) == hashed_string( "Housing.home" ) ); // 6 x 6 칸의 끝
     SW_EXPECT_TRUE( land.getOwnerName( 8, 8 ).empty() );
@@ -376,13 +376,13 @@ SW_TEST_CASE( HousingLayoutTest, PlotClaimsItsCellsOnTheSharedLand )
     neighbour._layout.initialize( neighbour._settings, neighbour._catalog );
     SW_EXPECT_LOG( "HousingLayout.LandTaken" );
     SW_EXPECT_FALSE( neighbour._layout.bindLand( &land, int2{ 5, 5 } ) ); // home 의 칸과 겹친다
-    SW_EXPECT_FALSE( neighbour._layout.isLandBound() );
+    SW_EXPECT_FALSE( neighbour._layout.hasClaimedLand() );
     SW_EXPECT_TRUE( land.getOwnerName( 10, 10 ).empty() ); // 반쯤 차지하지 않는다
 
     home._layout.releaseLand();
     SW_EXPECT_TRUE( land.getOwnerName( 2, 2 ).empty() );
     SW_EXPECT_TRUE( neighbour._layout.bindLand( &land, int2{ 5, 5 } ) );
     SW_EXPECT_TRUE( neighbour._layout.bindLand( nullptr, int2{} ) ); // 땅 없는 부지는 단독이다 — 다시 묶으면 앞의 차지를 반납한다
-    SW_EXPECT_FALSE( neighbour._layout.isLandBound() );
+    SW_EXPECT_FALSE( neighbour._layout.hasClaimedLand() );
     SW_EXPECT_TRUE( land.getOwnerName( 5, 5 ).empty() );
 }

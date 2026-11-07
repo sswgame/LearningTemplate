@@ -169,7 +169,7 @@ namespace sw
     {
         if ( _state._stock.isEmpty() )
         {
-            const bool bRecycleLeft = _settings.allowsRecycle( _state._recycleCount );
+            const bool bRecycleLeft = _settings.canRecycle( _state._recycleCount );
             if ( _state._waste.isEmpty() || bRecycleLeft == false )
                 return false;
             pushHistory();

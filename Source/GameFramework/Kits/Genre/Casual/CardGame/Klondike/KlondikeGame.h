@@ -35,7 +35,7 @@ namespace sw
         int32 _maxRecycle{ kUnlimitedRecycle }; ///< 웨이스트를 스톡으로 되돌릴 수 있는 횟수이다(`kUnlimitedRecycle` 이면 제한이 없다)
 
         /** @brief @p recycleCount 번 되돌린 뒤 한 번 더 되돌릴 수 있는지입니다. */
-        bool allowsRecycle( int32 recycleCount ) const { return _maxRecycle == kUnlimitedRecycle || recycleCount < _maxRecycle; }
+        bool canRecycle( int32 recycleCount ) const { return _maxRecycle == kUnlimitedRecycle || recycleCount < _maxRecycle; }
         /** @brief 되돌린 수 @p recycleCount 가 이 규칙에서 있을 수 있는 값인지입니다(저장 검사). */
         bool isRecycleCountValid( int32 recycleCount ) const { return 0 <= recycleCount && ( _maxRecycle == kUnlimitedRecycle || recycleCount <= _maxRecycle ); }
     };

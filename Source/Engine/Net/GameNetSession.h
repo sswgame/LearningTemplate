@@ -195,7 +195,7 @@ namespace sw
          * @brief `makeLaunchParams` 가 정한 역할(실행 인자, 없으면 전용 서버 설정)로 세션을 엽니다. 이미 열려 있으면 그대로 둡니다(리로드로 다시 선 게임 인스턴스).
          * @details 둘 다 없으면 열지 않고 true 다(혼자 하는 게임). 인자 · 설정이 틀렸거나 고른 역할을 열지 못하면(포트 사용 중) false 다 —
          *          게임 인스턴스는 기동을 멈춘다. 서버 · 클라이언트로 띄운 프로세스가 혼자 하는 게임으로 서 있으면 멀티 프로세스 재생과 테스트가 접속 줄을 기다리다 시간 초과로 진다.
-         *          @p contentConfigHash 는 이 실행의 콘텐츠 구성(켠 모드 등, 없으면 0)이고 와이어 버전에 섞인다(`foldContentConfigHash`) — 구성이 다른 상대는 핸드셰이크에서
+         *          @p contentConfigHash 는 이 실행의 콘텐츠 구성(켠 모드 등, 없으면 0)이고 와이어 버전에 섞인다(`combineContentConfigHash`) — 구성이 다른 상대는 핸드셰이크에서
          *          `VersionMismatch` 로 갈린다. 열린 세션을 이어받는 리로드가 다른 구성이면 오류로 false 다(붙은 상대와 다른 콘텐츠로 계속 돌지 않는다).
          */
         [[nodiscard]] bool openFromLaunch( uint64 contentConfigHash );
@@ -203,7 +203,7 @@ namespace sw
          * @brief 와이어 버전 @p wireVersion 에 콘텐츠 구성 해시를 섞습니다. 해시가 0(구성 없음)이면 그대로입니다 — 모드 없는 실행의 와이어 버전은 바뀌지 않는다.
          * @details 언리얼이 콘텐츠 해시를 넷 버전에 섞는 자리(`FNetworkVersion::GetLocalNetworkVersionOverride`)와 같다(기억에 의존). 섞는 규칙은 이 함수 하나다.
          */
-        static uint32 foldContentConfigHash( uint32 wireVersion, uint64 contentConfigHash );
+        static uint32 combineContentConfigHash( uint32 wireVersion, uint64 contentConfigHash );
         /** @brief 세션을 연 콘텐츠 구성 해시입니다(열지 않았으면 0). */
         uint64 getContentConfigHash() const { return _contentConfigHash; }
 

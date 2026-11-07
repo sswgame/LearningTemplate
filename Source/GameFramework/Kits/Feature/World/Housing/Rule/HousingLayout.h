@@ -150,7 +150,7 @@ namespace sw
         /** @brief 차지한 땅을 반납합니다(부지를 닫을 때). 차지하지 않았으면 아무것도 하지 않는다. */
         void releaseLand();
         /** @brief 공유 땅을 차지했으면 true 입니다. */
-        bool isLandBound() const { return _land.isBound(); }
+        bool hasClaimedLand() const { return _land.isBound(); }
 
         /** @brief 스냅하고 검증합니다. 아무것도 바꾸지 않습니다(고스트 미리보기). */
         HousingPlaceCheck evaluate( const HousingCandidate& candidate ) const;
