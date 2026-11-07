@@ -117,10 +117,10 @@ namespace sw
         if ( pManager == nullptr || _radius <= 0.0f )
             return;
         pManager->executeOrDeferPostTickOnComponent( *this, [center]( ExplosiveBarrelComponent& self, GameObjectManager& manager )
-        { self.applyBlast( manager, center ); } );
+        { self.applyRadialDamage( manager, center ); } );
     }
 
-    void ExplosiveBarrelComponent::applyBlast( GameObjectManager& manager, const float3& center ) const
+    void ExplosiveBarrelComponent::applyRadialDamage( GameObjectManager& manager, const float3& center ) const
     {
         // 반경 안의 것에 거리 감쇠 피해를 준다. 다른 드럼통은 자기 스텝에 터지며 연쇄가 이어진다. 파괴 오브젝트는 경계가 반경에 닿으면 위치 기반 폭발로 깬다.
         // 대상이 "반경 안 무엇이든" 이라 등록 목록이 없다 — 폭발 순간 한 번 씬을 돈다(틱마다가 아니다, Config/Dev/TickSceneWalkExceptions.json).

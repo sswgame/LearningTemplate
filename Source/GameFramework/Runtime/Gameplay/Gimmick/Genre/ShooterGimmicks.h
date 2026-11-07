@@ -29,7 +29,7 @@ namespace sw
      * @details 터짐은 스텝(60 Hz) 끝에 한 번 일어난다. 연쇄 폭발은 다음 스텝으로 이어지므로 한 프레임에 무한히 번지지 않는다. `_fuseTime` 이 있으면 플레이 시작부터 그만큼
      *          지난 뒤 스스로 터진다(시한 폭탄, 쇼케이스). 반경에 닿은 파괴 오브젝트(자기 포함)에는
      *          중심 변형 `_fractureStrain` 과 충격량 `_blastImpulse` 의 폭발 피해를 주고, 자기에게 파괴 컴포넌트가 있으면 몸을 끄지 않고 조각으로 날아간다.
-     *          반경 안 다른 오브젝트에 쓰는 일(`applyBlast`)은 틱 뒤 게임 스레드에서 한다 — 병렬 틱에서 남의 오브젝트(파괴 조각)에 쓰지 않는다. 같은 프레임의 물리 앞이다.
+     *          반경 안 다른 오브젝트에 쓰는 일(`applyRadialDamage`)은 틱 뒤 게임 스레드에서 한다 — 병렬 틱에서 남의 오브젝트(파괴 조각)에 쓰지 않는다. 같은 프레임의 물리 앞이다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Explosive Barrel", Tooltip = "Explodes after enough damage, damaging everything in a radius (chains)" )
     class SW_GF_API ExplosiveBarrelComponent : public Component
@@ -48,7 +48,7 @@ namespace sw
     private:
         void explode( GameObject& owner );
         /** @brief @p center 에서 반경 안 다른 오브젝트에 거리 감쇠 피해 · 파괴 오브젝트에 폭발 피해를 줍니다(게임 스레드, 틱 밖). */
-        void applyBlast( GameObjectManager& manager, const float3& center ) const;
+        void applyRadialDamage( GameObjectManager& manager, const float3& center ) const;
 
     private:
         PROPERTY( Category = "Barrel", DisplayName = "Health", Min = 0.0 )
