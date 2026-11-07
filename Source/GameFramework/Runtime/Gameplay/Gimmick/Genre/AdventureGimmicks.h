@@ -10,11 +10,13 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/ElementGrid.h"
+#include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleTable.h"
 
 namespace sw
 {
@@ -94,8 +96,8 @@ namespace sw
         void publishSignal();
 
     private:
-        PROPERTY( Category = "Element", DisplayName = "Rule Table", AssetPath, Tooltip = "Element rule table (required)" )
-        string _tablePath;
+        PROPERTY( Category = "Element", DisplayName = "Rule Table", Tooltip = "Element rule table (required)" )
+        AssetRef<ElementRuleTable> _tablePath;
         PROPERTY( Category = "Element", DisplayName = "Material", Tooltip = "Material name in the table" )
         hashed_string _material;
         PROPERTY( Category = "Element", DisplayName = "Signal Status", Tooltip = "Status that sets the gimmick sensor signal (Burning for torches)" )

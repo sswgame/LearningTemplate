@@ -11,6 +11,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -41,6 +42,8 @@ namespace sw
         friend class XMLCatalog<SkirmishUnitModelCatalog>;
 
     public:
+        /** @brief 이 데이터 종류입니다(등록은 `SkirmishUnitComponent.cpp` 의 공유 캐시 줄이 로더를 더한다). 접미사가 없어 타입 있는 참조 `AssetRef<SkirmishUnitModelCatalog>` 는 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "skirmishunitmodels", AssetPathRule{ "game/", {}, "/data/unitmodels.xml" }, {} );
         /** @brief 모델 표의 모든 모델 경로입니다(겹치는 모델은 한 번). 판을 열 때 미리 읽는다. */
         vector<string> makeAllModelPaths() const;
 

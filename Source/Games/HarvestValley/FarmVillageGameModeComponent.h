@@ -71,8 +71,8 @@ namespace sw
         /** @brief 내비 격자를 세우고 장애물 이름 목록의 씬 오브젝트 자리를 막습니다. 격자 크기가 없으면 false 입니다. */
         [[nodiscard]] bool rebuildNavGrid();
 
-        PROPERTY( Category = "Data", DisplayName = "Schedule Data", AssetPath, Tooltip = "Schedule catalog XML (places, routines, NPCs)" )
-        string _scheduleDataPath;
+        PROPERTY( Category = "Data", DisplayName = "Schedule Data", Tooltip = "Schedule catalog XML (places, routines, NPCs)" )
+        AssetRef<ScheduleCatalog> _scheduleDataPath;
         PROPERTY( Category = "Prefabs", DisplayName = "Villager Prefab", Tooltip = "Body spawned for each schedule NPC (needs a FarmVillagerComponent)" )
         AssetRef<PrefabAsset> _villagerPrefab;
         PROPERTY( Category = "Prefabs", DisplayName = "Villager Presets", Tooltip = "Appearance preset per NPC (cycled by NPC index, seeded by it); empty keeps the prefab's preset" )

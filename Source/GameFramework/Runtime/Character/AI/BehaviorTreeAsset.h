@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -103,6 +104,12 @@ namespace sw
         static constexpr const utf8* kDataKind = "behaviortree";
         /** @brief 파일 접미입니다. */
         static constexpr string_view kExtension = ".bt.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 경로 규칙이 아니라 접미사라 카탈로그 편집기에는 나오지 않는다. */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `BehaviorTreeAsset.cpp` 의 공유 캐시 줄). 타입 있는 참조 `AssetRef<BehaviorTreeAsset>` 가 접미사로 가른다. */
+        static constexpr AssetTypeDef kAssetType{ kDataKind, kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         BehaviorTreeAsset();
 

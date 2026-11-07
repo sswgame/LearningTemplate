@@ -27,7 +27,7 @@ namespace sw
 
     /** 격자가 옛 테이블을 가리키므로 제자리에서 바꾸지 않고 떼어 낸다. 스키마 테스트와 카탈로그 편집기도 이 정의로 파일을 읽는다. */
     SW_MODULE_SHARED_ASSET_CACHE( ElementRules, ElementRuleTable, SW_GF_API,
-                                  AssetTypeDef::makeDataFile( "elementrules", AssetPathRule{ {}, {}, ".elements.xml" }, AssetTypeLoader::of<ElementRuleTable>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
+                                  ElementRuleTable::kAssetType.withLoader( AssetTypeLoader::of<ElementRuleTable>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
 } // namespace sw
 
 namespace sw

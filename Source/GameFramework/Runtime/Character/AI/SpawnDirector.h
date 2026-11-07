@@ -12,6 +12,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Curve/FloatCurve.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -79,6 +80,8 @@ namespace sw
         friend class XMLCatalog<SpawnTable>;
 
     public:
+        /** @brief 이 데이터 종류입니다(등록은 `SpawnDirector.cpp` 의 공유 캐시 줄이 로더를 더한다). 접미사가 없어 타입 있는 참조 `AssetRef<SpawnTable>` 는 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "spawntable", AssetPathRule{ {}, {}, ".spawns.xml" }, {} );
         SpawnTable();
 
         /** @brief @p time 의 예산 배율입니다. 곡선 점 사이는 선형으로 잇고, 끝 밖은 끝 값을 쓰며, 곡선이 없으면 1 입니다. */

@@ -9,6 +9,7 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
@@ -66,8 +67,8 @@ namespace sw
         void mountNearestHorse();
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Western Data", AssetPath, Tooltip = "WesternCatalog XML (horse breeds, bond levels, survival)" )
-        string _westernDataPath;
+        PROPERTY( Category = "Data", DisplayName = "Western Data", Tooltip = "WesternCatalog XML (horse breeds, bond levels, survival)" )
+        AssetRef<WesternCatalog> _westernDataPath;
         PROPERTY( Category = "Scene", DisplayName = "Player", Tooltip = "Rider object (pawn with Mount Interaction)" )
         GameObjectHandle _player;
         PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent that follows the rider" )

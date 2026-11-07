@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Screen/UILayer.h"
@@ -171,8 +172,8 @@ namespace sw
         [[nodiscard]] bool applyPendingState();
 
     private:
-        PROPERTY( Category = "Camera", DisplayName = "Presets", AssetPath, Tooltip = "Camera preset XML (<CameraPresetCatalog>)" )
-        string _catalogPath;
+        PROPERTY( Category = "Camera", DisplayName = "Presets", Tooltip = "Camera preset XML (<CameraPresetCatalog>)" )
+        AssetRef<CameraPresetCatalog> _catalogPath;
         PROPERTY( Category = "Camera", DisplayName = "Initial Preset", Tooltip = "Preset active at begin play; empty uses the first preset" )
         hashed_string _initialPreset;
         PROPERTY( Category = "Camera", DisplayName = "Target", Tooltip = "Object the presets follow (focus = its world position, yaw / pitch = its facing)" )

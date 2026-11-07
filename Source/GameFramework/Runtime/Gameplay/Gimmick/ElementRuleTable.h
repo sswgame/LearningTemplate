@@ -32,6 +32,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -231,10 +232,12 @@ namespace sw
     class SW_GF_API ElementRuleTable
     {
     public:
-        static constexpr int32   kMaxFlagCount     = 32;
-        static constexpr int32   kMaxStatusCount   = 4;
-        static constexpr int32   kMaxMaterialCount = 255;
-        static constexpr float32 kDefaultStepTime  = 0.25f; ///< `stepTime` 을 적지 않은 표의 스텝 길이(초)
+        /** @brief 이 데이터 종류입니다(등록은 `ElementRuleTable.cpp` 의 공유 캐시 줄이 로더를 더한다). 접미사가 없어 타입 있는 참조 `AssetRef<ElementRuleTable>` 는 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType        = AssetTypeDef::makeDataFile( "elementrules", AssetPathRule{ {}, {}, ".elements.xml" }, {} );
+        static constexpr int32        kMaxFlagCount     = 32;
+        static constexpr int32        kMaxStatusCount   = 4;
+        static constexpr int32        kMaxMaterialCount = 255;
+        static constexpr float32      kDefaultStepTime  = 0.25f; ///< `stepTime` 을 적지 않은 표의 스텝 길이(초)
 
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );

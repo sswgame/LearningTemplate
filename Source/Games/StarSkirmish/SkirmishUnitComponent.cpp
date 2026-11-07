@@ -220,5 +220,5 @@ namespace sw
 namespace sw
 {
     /** @brief StarSkirmish 유닛 모델 표(`SkirmishUnitModelCatalog`)의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 알아본다). */
-    SW_MODULE_SHARED_ASSET_CACHE( SkirmishUnitModels, SkirmishUnitModelCatalog, , AssetTypeDef::makeDataFile( "skirmishunitmodels", AssetPathRule{ "game/", {}, "/data/unitmodels.xml" }, AssetTypeLoader::of<SkirmishUnitModelCatalog>( MemoryTag::Game ) ) );
+    SW_MODULE_SHARED_ASSET_CACHE( SkirmishUnitModels, SkirmishUnitModelCatalog, , SkirmishUnitModelCatalog::kAssetType.withLoader( AssetTypeLoader::of<SkirmishUnitModelCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

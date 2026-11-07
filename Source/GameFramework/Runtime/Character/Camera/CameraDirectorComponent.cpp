@@ -162,7 +162,7 @@ namespace sw
             // 프리셋 표는 공유 캐시의 한 벌이다 — 같은 표를 쓰는 디렉터 · 에디터가 같은 객체를 읽고, 다시 읽기가 제자리로 닿는다.
             shared_ptr<const CameraPresetCatalog> pLoaded = SharedAssetCache<CameraPresetCatalog>::acquire( _catalogPath );
             if ( pLoaded == nullptr )
-                SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraPresetsDidNot", "Camera presets '%#' did not load", _catalogPath );
+                SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraPresetsDidNot", "Camera presets '%#' did not load", _catalogPath.c_str() );
             else
                 _pCatalog = std::move( pLoaded );
         }
@@ -173,7 +173,7 @@ namespace sw
         {
             const hashed_string startID = resolveStartPreset();
             if ( _director.activatePreset( *_pCatalog, startID ) == false )
-                SW_LOG_ERROR_ID( "Camera.UnknownPreset", "Camera preset '%#' is not in '%#'", startID.c_str(), _catalogPath );
+                SW_LOG_ERROR_ID( "Camera.UnknownPreset", "Camera preset '%#' is not in '%#'", startID.c_str(), _catalogPath.c_str() );
         }
         updateCamera( 0.0f );
     }
@@ -287,7 +287,7 @@ namespace sw
         cut._curve    = BlendCurve::Cut;
         cut._duration = 0.0f;
         if ( _director.activatePreset( *_pCatalog, id, cut ) == false )
-            SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraPresetNot", "Camera preset '%#' is not in '%#'", id.c_str(), _catalogPath );
+            SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraPresetNot", "Camera preset '%#' is not in '%#'", id.c_str(), _catalogPath.c_str() );
     }
 
     bool CameraDirectorComponent::findGroundPoint( const float2& mouseNormalized, float32 groundHeight, float3& outPoint ) const
@@ -341,7 +341,7 @@ namespace sw
             if ( _pCatalog->find( overrideID ) != nullptr )
                 return overrideID;
             // 요청한 프리셋이 없으면 기본 프리셋으로 조용히 넘어가지 않는다 - 시나리오가 틀린 화면으로 골든을 뜰 수 있었다.
-            SW_LOG_ERROR_ID( "Camera.UnknownPreset", "-gv_cameraPreset='%#' is not a preset in '%#'", gv_cameraPreset.c_str(), _catalogPath );
+            SW_LOG_ERROR_ID( "Camera.UnknownPreset", "-gv_cameraPreset='%#' is not a preset in '%#'", gv_cameraPreset.c_str(), _catalogPath.c_str() );
         }
         return _initialPreset.empty() ? _pCatalog->getAll().front()._id : _initialPreset;
     }

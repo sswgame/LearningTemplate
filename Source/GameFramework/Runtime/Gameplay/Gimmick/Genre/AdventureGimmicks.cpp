@@ -185,7 +185,7 @@ namespace sw
 
     void ElementStatusComponent::setTablePath( string_view path )
     {
-        _tablePath = string( path );
+        _tablePath = path;
         rebuild();
         publishSignal();
     }

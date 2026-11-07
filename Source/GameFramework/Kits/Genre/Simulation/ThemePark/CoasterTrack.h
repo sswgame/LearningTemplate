@@ -17,6 +17,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -237,6 +238,8 @@ namespace sw
     public:
         /** @brief 데이터 종류 이름입니다(`SW_ASSET_TYPE` 등록 줄과 팩 경로 `GamePackDataUtil::tryMakeKindPath` 가 이것을 쓴다). */
         static constexpr const utf8* kDataKind = "coasters";
+        /** @brief 이 데이터 종류입니다(등록은 `ThemeParkDataKind.cpp` 의 공유 캐시 줄이 로더를 더한다). 접미사가 없어 타입 있는 참조 `AssetRef<CoasterLayoutCatalog>` 는 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( kDataKind, AssetPathRule{ "game/", {}, "/data/coasters.xml" }, {} );
 
         CoasterLayoutCatalog();
 

@@ -212,7 +212,7 @@ namespace sw
                 continue;
             BehaviorTreeDebugRunner& entry = outList.emplace_back();
             entry._name                    = player == 0 ? "Player 0" : "Player 1"; // 판은 두 플레이어(kPlayerCount)
-            entry._treePath                = _owner._commanderTreePath;
+            entry._treePath                = _owner._commanderTreePath.path();
             entry._pRunner                 = &pAI->getRunner();
         }
     }

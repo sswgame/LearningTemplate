@@ -216,8 +216,8 @@ namespace sw
         int32 getToolStaminaCost( FarmTool tool ) const;
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Crop Data", AssetPath, Tooltip = "Crop catalog XML" )
-        string _cropDataPath;
+        PROPERTY( Category = "Data", DisplayName = "Crop Data", Tooltip = "Crop catalog XML" )
+        AssetRef<CropCatalog> _cropDataPath;
         PROPERTY( Category = "Prefabs" )
         AssetRef<PrefabAsset> _soilPrefab;
         PROPERTY( Category = "Prefabs" )

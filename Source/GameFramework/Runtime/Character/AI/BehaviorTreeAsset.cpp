@@ -454,5 +454,5 @@ namespace sw
 namespace sw
 {
     /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<BehaviorTreeAsset>::acquire`). 파일 규칙이 없는 종류라 카탈로그 편집기에는 나오지 않는다. */
-    SW_MODULE_SHARED_ASSET_CACHE( BehaviorTreeAsset, BehaviorTreeAsset, SW_GF_API, AssetTypeDef::makeCacheOnly( BehaviorTreeAsset::kDataKind, AssetTypeLoader::of<BehaviorTreeAsset>( MemoryTag::Game ) ) );
+    SW_MODULE_SHARED_ASSET_CACHE( BehaviorTreeAsset, BehaviorTreeAsset, SW_GF_API, BehaviorTreeAsset::kAssetType.withLoader( AssetTypeLoader::of<BehaviorTreeAsset>( MemoryTag::Game ) ) );
 } // namespace sw

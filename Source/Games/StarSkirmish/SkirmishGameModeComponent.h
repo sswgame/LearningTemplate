@@ -138,12 +138,12 @@ namespace sw
         CameraDirectorComponent* findCameraRig() const;
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Unit Data", AssetPath, Tooltip = "Unit catalog XML" )
-        string _unitDataPath;
-        PROPERTY( Category = "Data", DisplayName = "Unit Models", AssetPath, Tooltip = "Unit model table XML (unit id -> kit model and width); every unit of the unit catalog needs a row" )
-        string _unitModelPath;
-        PROPERTY( Category = "Data", DisplayName = "Commander Tree", AssetPath, Tooltip = "Behavior tree (.bt.xml) of the computer opponent; its task names are the rts.* tasks of the RTS kit" )
-        string _commanderTreePath;
+        PROPERTY( Category = "Data", DisplayName = "Unit Data", Tooltip = "Unit catalog XML" )
+        AssetRef<RTSCatalog> _unitDataPath;
+        PROPERTY( Category = "Data", DisplayName = "Unit Models", Tooltip = "Unit model table XML (unit id -> kit model and width); every unit of the unit catalog needs a row" )
+        AssetRef<SkirmishUnitModelCatalog> _unitModelPath;
+        PROPERTY( Category = "Data", DisplayName = "Commander Tree", Tooltip = "Behavior tree (.bt.xml) of the computer opponent; its task names are the rts.* tasks of the RTS kit" )
+        AssetRef<BehaviorTreeAsset> _commanderTreePath;
         PROPERTY( Category = "Prefabs", DisplayName = "Cliff Prefabs", AssetPath, AssetType = "Prefab",
                   Tooltip = "One is placed on every cliff tile, picked and turned by the tile position (rocks); at least one" )
         vector<string> _listCliffPrefab;

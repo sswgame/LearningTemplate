@@ -216,8 +216,8 @@ namespace sw
         float32 _arenaHalfSize;
         PROPERTY( Category = "Pacing", AssetPath, DisplayName = "Pacing Profile", Tooltip = "AI director profile (*.director.xml): intensity, phases, encounter and reward pools" )
         string _pacingProfile;
-        PROPERTY( Category = "Pacing", AssetPath, DisplayName = "Spawn Table", Tooltip = "Enemy spawn budget (*.spawns.xml) the director scales per phase" )
-        string _spawnTable;
+        PROPERTY( Category = "Pacing", DisplayName = "Spawn Table", Tooltip = "Enemy spawn budget (*.spawns.xml) the director scales per phase" )
+        AssetRef<SpawnTable> _spawnTable;
         PROPERTY( Category = "Pacing", DisplayName = "Pacing Seed", Tooltip = "Seed of the director; the same seed and inputs give the same pacing" )
         int32 _pacingSeed;
         PROPERTY( Category = "Arena", DisplayName = "Effect Pool Size", Tooltip = "Hit and flash spheres kept hidden and reused", Min = 1 )
