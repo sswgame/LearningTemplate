@@ -270,7 +270,7 @@ namespace sw
         if ( isUnlocked( stock ) == false )
             return ShopResult::Locked;
         const int32 stockCount = pRuntime->_listStockCount[static_cast<size_t>( stockIndex )];
-        if ( stockCount >= 0 && stockCount < count )
+        if ( ShopStockDef::isLimitedCount( stockCount ) && stockCount < count )
             return ShopResult::OutOfStock;
         const int64 total = static_cast<int64>( computeBuyPrice( shopID, itemID ) ) * count;
         if ( wallet.canAfford( pShop->_currency, total ) == false )
@@ -295,7 +295,7 @@ namespace sw
         if ( addedCount != count )
             SW_LOG_WARNING_ID( "Shop.InventoryAcceptedAfterHasRoomFor", "inventory accepted %# of %# '%#' after hasRoomFor said yes", addedCount, count, itemID.c_str() );
         int32& stockCount = pRuntime->_listStockCount[static_cast<size_t>( stockIndex )];
-        if ( stockCount >= 0 )
+        if ( ShopStockDef::isLimitedCount( stockCount ) )
             stockCount -= count;
         _eventBuffer.push( ShopEvent{ shopID, itemID, total, count, ShopEvent::Kind::Bought } );
         if ( pOutPaid != nullptr )
@@ -372,7 +372,7 @@ namespace sw
             {
                 const ShopStockDef& stock        = pShop->_listStock[stockIndex];
                 int32&              stockCount   = runtime._listStockCount[stockIndex];
-                const bool          bSkipRestock = stock._count < 0 || stock._restock <= 0 || stockCount >= stock._count;
+                const bool          bSkipRestock = stock.isStockLimited() == false || stock._restock <= 0 || stockCount >= stock._count;
                 if ( bSkipRestock )
                     continue;
                 const int32 newCount = MathUtil::min( stock._count, stockCount + stock._restock );
@@ -473,7 +473,7 @@ namespace sw
 
     int32 ShopState::computeBasePrice( const ShopStockDef& stock ) const
     {
-        if ( stock._price >= 0 )
+        if ( stock.hasFixedPrice() )
             return stock._price;
         const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->find( stock._itemID ) : nullptr;
         return pItem != nullptr ? pItem->_value : 0;

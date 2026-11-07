@@ -424,8 +424,8 @@ namespace sw::editor
             /** @brief 클립 부가 데이터(루프 덮어쓰기 · 알림 · 커브)를 가져온 클립에 얹습니다. */
             static void applyClipExtra( const ModelImportAnimation::ClipExtra& extra, ModelImportClip& inoutImported )
             {
-                if ( extra._loopOverride >= 0 )
-                    inoutImported._clip.setLooping( extra._loopOverride != 0 );
+                if ( extra._loop.has_value() )
+                    inoutImported._clip.setLooping( *extra._loop );
                 for ( const AnimationNotifyEvent& event : extra._listNotify )
                 {
                     inoutImported._clip.addNotify( event );

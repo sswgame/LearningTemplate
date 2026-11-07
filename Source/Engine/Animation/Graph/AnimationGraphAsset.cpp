@@ -325,13 +325,12 @@ namespace sw
                 continue;
             }
             AnimationGraphNode node{};
-            node._id          = params._id;
-            node._name        = params._name;
-            node._position    = float2{ params._x, params._y };
-            node._syncGroup   = params._syncGroup;
-            node._maxLODGrade = params._maxLod;
-            if ( loop.has_value() )
-                node._loopOverride = *loop ? 1 : 0;
+            node._id                    = params._id;
+            node._name                  = params._name;
+            node._position              = float2{ params._x, params._y };
+            node._syncGroup             = params._syncGroup;
+            node._maxLODGrade           = params._maxLod;
+            node._loop                  = loop;
             const XMLNode blendSpaceXML = Internal::findFilledChild( nodeXML, "blend_space" );
             if ( blendSpaceXML.isValid() && parseBlendSpace( blendSpaceXML, node ) == false )
                 bValid = false;
@@ -581,8 +580,8 @@ namespace sw
         params._maxLod        = node._maxLODGrade;
         const XMLNode nodeXML = nodesXML.appendChild( "node" );
         XMLFields::writeFields( nodeXML, params );
-        if ( node._loopOverride >= 0 )
-            nodeXML.appendAttribute( "loop", node._loopOverride != 0 );
+        if ( node._loop.has_value() )
+            nodeXML.appendAttribute( "loop", *node._loop );
         if ( node.hasBlendSpace() )
         {
             const AnimationGraphBlendSpaceDef& def = node._blendSpace;

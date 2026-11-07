@@ -109,7 +109,7 @@ namespace sw
     {
         _currentNodeID    = node._id;
         _currentStateName = hashed_string( node._name );
-        int8 loop         = node._loopOverride >= 0 ? node._loopOverride : loopWhenUnspecified;
+        int8 loop         = node._loop.has_value() ? ( *node._loop ? kLoopYes : kLoopNo ) : loopWhenUnspecified;
         if ( loop == kLoopFromPlayable )
         {
             const IAnimationPlayable* pPlayable = ( _pSource != nullptr ) ? _pSource->findPlayable( _currentStateName ) : nullptr;

@@ -51,7 +51,7 @@ namespace sw::editor
         {
             vector<AnimationNotifyEvent> _listNotify;
             vector<AnimationClipCurve>   _listCurve;
-            int8                         _loopOverride{ -1 };
+            std::optional<bool>          _loop{}; ///< 적지 않았으면 값이 없다(클립 기본을 쓴다)
         };
 
         /** @brief 노드의 로컬 TRS 를 glTF 공간으로 읽습니다. 행렬로 적힌 노드는 분해합니다. */

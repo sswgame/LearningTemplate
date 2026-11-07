@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    /** @brief `<node>` 입니다. `loop` 는 적지 않음 · 참 · 거짓 셋이라 칸이 아니라 손으로 읽는다(`AnimationGraphNode::_loopOverride`). */
+    /** @brief `<node>` 입니다. `loop` 는 적지 않음 · 참 · 거짓 셋이라 칸이 아니라 손으로 읽는다(`AnimationGraphNode::_loop`). */
     REFLECT()
     struct SW_API AnimationGraphNodeParams
     {

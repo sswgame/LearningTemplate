@@ -72,7 +72,7 @@ namespace sw
                             return false;
                     }
                 }
-                const bool bRecycleValid = 0 <= state._recycleCount && ( settings._maxRecycle < 0 || state._recycleCount <= settings._maxRecycle );
+                const bool bRecycleValid = settings.isRecycleCountValid( state._recycleCount );
                 return bRecycleValid && 0 <= state._moveCount && CardPile::arePilesValid( listPile, &CardPile::isStandardCard );
             }
         };
@@ -169,7 +169,7 @@ namespace sw
     {
         if ( _state._stock.isEmpty() )
         {
-            const bool bRecycleLeft = _settings._maxRecycle < 0 || _state._recycleCount < _settings._maxRecycle;
+            const bool bRecycleLeft = _settings.allowsRecycle( _state._recycleCount );
             if ( _state._waste.isEmpty() || bRecycleLeft == false )
                 return false;
             pushHistory();

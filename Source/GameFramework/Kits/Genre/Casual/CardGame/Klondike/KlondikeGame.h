@@ -28,8 +28,16 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( Min = 1, Max = 3 )
         int32 _drawCount{ 1 }; ///< 스톡에서 한 번에 뒤집는 장수이다(규칙은 1 또는 3)
+        /** @brief `_maxRecycle` 가 이 값이면 되돌리기 횟수에 제한이 없다. */
+        static constexpr int32 kUnlimitedRecycle = -1;
+
         PROPERTY( Min = -1 )
-        int32 _maxRecycle{ -1 }; ///< 웨이스트를 스톡으로 되돌릴 수 있는 횟수이다(-1 이면 제한이 없다)
+        int32 _maxRecycle{ kUnlimitedRecycle }; ///< 웨이스트를 스톡으로 되돌릴 수 있는 횟수이다(`kUnlimitedRecycle` 이면 제한이 없다)
+
+        /** @brief @p recycleCount 번 되돌린 뒤 한 번 더 되돌릴 수 있는지입니다. */
+        bool allowsRecycle( int32 recycleCount ) const { return _maxRecycle == kUnlimitedRecycle || recycleCount < _maxRecycle; }
+        /** @brief 되돌린 수 @p recycleCount 가 이 규칙에서 있을 수 있는 값인지입니다(저장 검사). */
+        bool isRecycleCountValid( int32 recycleCount ) const { return 0 <= recycleCount && ( _maxRecycle == kUnlimitedRecycle || recycleCount <= _maxRecycle ); }
     };
 } // namespace sw
 

@@ -111,12 +111,24 @@ namespace sw
         PROPERTY( Name = "requires" )
         string        _requirement{}; ///< 잠금 조건 식입니다(공통 어휘, `ConditionExpr`). 비어 있으면 항상 열려 있습니다
         ConditionExpr _condition{};   ///< 읽을 때 `_requirement` 를 컴파일한 식
-        PROPERTY()
-        int32 _price{ -1 }; ///< 단가(-1 이면 `ItemDef::_value`)
+        /** @brief `_price` 가 이 값이면 아이템 정의의 값(`ItemDef::_value`)을 단가로 쓴다(적지 않음). */
+        static constexpr int32 kUseItemValue = -1;
+        /** @brief `_count` · 가게의 남은 재고가 이 값이면 재고가 무한이다. */
+        static constexpr int32 kUnlimitedStock = -1;
+
         PROPERTY( Min = -1 )
-        int32 _count{ -1 }; ///< 처음 재고이자 최대 재고(-1 이면 무한)
+        int32 _price{ kUseItemValue }; ///< 단가(`kUseItemValue` 이면 `ItemDef::_value`)
+        PROPERTY( Min = -1 )
+        int32 _count{ kUnlimitedStock }; ///< 처음 재고이자 최대 재고(`kUnlimitedStock` 이면 무한)
         PROPERTY( Min = 0 )
         int32 _restock{ 0 }; ///< 재입고할 때 더하는 수(최대 재고까지)
+
+        /** @brief 단가를 적었는지입니다(아니면 아이템 값). */
+        bool hasFixedPrice() const { return _price != kUseItemValue; }
+        /** @brief 재고에 끝이 있는지입니다. */
+        bool isStockLimited() const { return _count != kUnlimitedStock; }
+        /** @brief 남은 재고 수 @p stockCount 가 끝이 있는 재고인지입니다(무한 재고는 `kUnlimitedStock` 로 든다). */
+        static bool isLimitedCount( int32 stockCount ) { return stockCount != kUnlimitedStock; }
     };
 } // namespace sw
 

@@ -164,16 +164,26 @@ namespace sw
         float32 _minTime{ 0.0f };
         PROPERTY()
         float32 _minIntensity{ 0.0f };
+        /** @brief `_maxIntensity` 가 이 값이면(음수) 긴장도 위 끝이 없다. */
+        static constexpr float32 kNoIntensityCap = -1.0f;
+        /** @brief `_maxCount` 가 이 값이면 한 판에 나오는 수에 상한이 없다. */
+        static constexpr int32 kUnlimitedCount = -1;
+
         PROPERTY( Tooltip = "Negative is no upper bound" )
-        float32 _maxIntensity{ -1.0f };
+        float32 _maxIntensity{ kNoIntensityCap };
         PROPERTY( Tooltip = "Value handed to the game (strength, size)" )
         float32 _scale{ 1.0f };
         PROPERTY( Min = 0, Tooltip = "Count handed to the game (how many to spawn)" )
         int32 _count{ 1 };
-        PROPERTY( Tooltip = "Cap per run; -1 is none" )
-        int32 _maxCount{ -1 };
+        PROPERTY( Min = -1, Tooltip = "Cap per run; -1 is none" )
+        int32 _maxCount{ kUnlimitedCount };
         PROPERTY( Min = 0, Tooltip = "Pacing cycles completed (returns to the start phase) before this can appear" )
         int32 _minCycle{ 0 };
+
+        /** @brief 한 판에 이미 @p count 번 나왔을 때 더 나올 수 있는지입니다(상한이 없으면 늘 된다). */
+        bool allowsAnotherRun( int32 count ) const { return _maxCount == kUnlimitedCount || count < _maxCount; }
+        /** @brief 긴장도 @p intensity 가 위 끝을 넘었는지입니다(위 끝이 없으면 늘 아니다 — 음수가 위 끝 없음이다). */
+        bool isAboveIntensityCap( float32 intensity ) const { return _maxIntensity >= 0.0f && intensity > _maxIntensity; }
     };
 } // namespace sw
 

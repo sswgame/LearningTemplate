@@ -600,13 +600,13 @@ namespace sw::editor
             notifyDocumentEdited( "Rename Animation State" );
         }
         const utf8* const arrLoop[] = { "Default", "Loop", "Once" };
-        int32             loopIndex = pNode->_loopOverride < 0 ? 0 : ( pNode->_loopOverride > 0 ? 1 : 2 );
+        int32             loopIndex = pNode->_loop.has_value() == false ? 0 : ( *pNode->_loop ? 1 : 2 );
         ImGui::TextUnformatted( "Loop" );
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -FLT_MIN );
         if ( ImGui::Combo( "##stateLoop", &loopIndex, arrLoop, 3 ) )
         {
-            pNode->_loopOverride = loopIndex == 0 ? int8{ -1 } : ( loopIndex == 1 ? int8{ 1 } : int8{ 0 } );
+            pNode->_loop = loopIndex == 0 ? std::optional<bool>{} : std::optional<bool>( loopIndex == 1 );
             notifyDocumentEdited( "Edit Animation State" );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StateLoopTip" ) );

@@ -42,10 +42,15 @@ namespace sw
         float32 _weight{ 1.0f };
         PROPERTY( Min = 0.0, Units = s )
         float32 _minTime{ 0.0f }; ///< 이 시각(초) 전에는 내지 않는다
+        /** @brief `_max` 가 이 값이면 동시에 살아 있는 수에 상한이 없다. */
+        static constexpr int32 kUnlimitedAlive = -1;
+
         PROPERTY( Min = -1 )
-        int32 _max{ -1 }; ///< 동시에 살아 있는 상한. -1 이면 없음
+        int32 _max{ kUnlimitedAlive }; ///< 동시에 살아 있는 상한(`kUnlimitedAlive` 이면 없음)
 
         bool hasAnyTag( const vector<hashed_string>& listTag ) const;
+        /** @brief 살아 있는 수 @p aliveCount 에서 하나를 더 낼 수 있는지입니다(상한이 없으면 늘 된다). */
+        bool allowsOneMore( int32 aliveCount ) const { return _max == kUnlimitedAlive || aliveCount < _max; }
     };
 } // namespace sw
 

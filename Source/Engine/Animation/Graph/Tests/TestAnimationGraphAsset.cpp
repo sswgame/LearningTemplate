@@ -53,8 +53,8 @@ SW_TEST_CASE( AnimationGraphAssetTest, ReadsElementsThroughSchemas )
     sw::AnimationGraphAsset graph;
     SW_REQUIRE_TRUE( graph.loadFromXMLText( kGraph ) );
     SW_REQUIRE_EQUAL( size_t{ 3 }, graph._listNode.size() );
-    SW_EXPECT_EQUAL( int8{ 1 }, graph._listNode[0]._loopOverride );
-    SW_EXPECT_EQUAL( int8{ -1 }, graph._listNode[1]._loopOverride );
+    SW_EXPECT_TRUE( graph._listNode[0]._loop == std::optional<bool>( true ) );
+    SW_EXPECT_FALSE( graph._listNode[1]._loop.has_value() );                      // 적지 않음 — 값이 없다
     SW_EXPECT_TRUE( graph._listNode[1]._position == sw::float2( 40.0f, 40.0f ) ); // 적지 않은 자리는 스키마 기본값
     SW_EXPECT_TRUE( graph._listNode[1]._blendSpace._notifyMode == sw::AnimationBlendSpaceNotifyMode::HighestWeight );
     SW_EXPECT_EQUAL( uint32{ 2 }, graph._listNode[1]._blendSpace._space.getSampleCount() );
@@ -113,8 +113,8 @@ SW_TEST_CASE( AnimationGraphAssetTest, ChildMergesByKeys )
                                                          "<links><link id=\"1\" blend=\"0.4\"/><link id=\"2\" from=\"2\" to=\"3\"/></links>"
                                                          "<layers><layer name=\"Breath\" _op=\"Remove\"/><layer name=\"Upper\" weight=\"0.25\"/></layers>" ) );
     SW_REQUIRE_EQUAL( size_t{ 3 }, graph._listNode.size() );
-    SW_EXPECT_EQUAL( int8{ 1 }, graph._listNode[0]._loopOverride ); // 물려받음
-    SW_EXPECT_EQUAL( int32{ 2 }, graph._listNode[1]._id );          // 이름으로 짚었으니 id 는 물려받음
+    SW_EXPECT_TRUE( graph._listNode[0]._loop == std::optional<bool>( true ) ); // 물려받음
+    SW_EXPECT_EQUAL( int32{ 2 }, graph._listNode[1]._id );                     // 이름으로 짚었으니 id 는 물려받음
     SW_EXPECT_TRUE( graph._listNode[1]._blendSpace._parameterX == sw::hashed_string( "Pace" ) );
     SW_REQUIRE_EQUAL( uint32{ 1 }, graph._listNode[1]._blendSpace._space.getSampleCount() );
     SW_EXPECT_TRUE( graph._listNode[1]._blendSpace._space.getSamples()[0]._clipName == sw::hashed_string( "Run" ) );

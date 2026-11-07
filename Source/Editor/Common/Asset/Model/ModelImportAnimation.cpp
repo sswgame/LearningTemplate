@@ -291,7 +291,7 @@ namespace sw::editor
                 const std::optional<bool> bLoop = clipValue.readRequired<bool>( "loop" );
                 if ( bLoop.has_value() == false )
                     return false;
-                extra._loopOverride = *bLoop ? 1 : 0;
+                extra._loop = bLoop;
             }
             const JSONValue notifies = clipValue.get( "notifies" );
             for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )

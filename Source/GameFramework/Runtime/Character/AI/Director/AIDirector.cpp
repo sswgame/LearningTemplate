@@ -381,14 +381,14 @@ namespace sw
             mask |= AIDirectorBlock::kPacing;
         if ( state._lastTime >= 0.0f && _time - state._lastTime < encounter._cooldown )
             mask |= AIDirectorBlock::kCooldown;
-        if ( encounter._maxCount >= 0 && state._count >= encounter._maxCount )
+        if ( encounter.allowsAnotherRun( state._count ) == false )
             mask |= AIDirectorBlock::kMaxCount;
         if ( _cycle < encounter._minCycle )
             mask |= AIDirectorBlock::kCycle;
         if ( _time < encounter._minTime )
             mask |= AIDirectorBlock::kTime;
         const bool bBelowMin = _intensity < encounter._minIntensity;
-        const bool bAboveMax = encounter._maxIntensity >= 0.0f && _intensity > encounter._maxIntensity;
+        const bool bAboveMax = encounter.isAboveIntensityCap( _intensity );
         if ( bBelowMin || bAboveMax )
             mask |= AIDirectorBlock::kIntensity;
         if ( encounter._listArea.empty() == false && VectorUtil::containsIf( encounter._listArea, [this]( const hashed_string& area )
