@@ -198,6 +198,28 @@ namespace sw
             return kArrOrder;
         }
 
+        /**
+         * @brief 검증 체인(`-scenario-backends=all`)이 이 플랫폼에서 묶음마다 도는 백엔드입니다(쿠킹 표 `scenario_backends` — 만들 수 있는 것의 부분집합).
+         * @details 만들 수 있다고 모두 검증 체인에 드는 것은 아니다 — 골든을 갖춘 백엔드만 든다(언리얼 자동화도 플랫폼 기본 RHI 로 돌고 다른 RHI 는 따로 지정한다).
+         */
+        static span<const RHIBackend> getScenarioBackends() noexcept
+        {
+#define SW_RHI_SCENARIO_BACKEND_ROW( Backend ) RHIBackend::Backend,
+#if defined( SW_PLATFORM_WINDOWS )
+            static constexpr RHIBackend kArrScenario[] = { SW_RHI_SCENARIO_BACKENDS_Windows( SW_RHI_SCENARIO_BACKEND_ROW ) };
+#elif defined( SW_PLATFORM_LINUX )
+            static constexpr RHIBackend kArrScenario[] = { SW_RHI_SCENARIO_BACKENDS_Linux( SW_RHI_SCENARIO_BACKEND_ROW ) };
+#elif defined( SW_PLATFORM_ANDROID )
+            static constexpr RHIBackend kArrScenario[] = { SW_RHI_SCENARIO_BACKENDS_Android( SW_RHI_SCENARIO_BACKEND_ROW ) };
+#elif defined( SW_PLATFORM_WEB )
+            static constexpr RHIBackend kArrScenario[] = { SW_RHI_SCENARIO_BACKENDS_Web( SW_RHI_SCENARIO_BACKEND_ROW ) };
+#else
+    #error "Unsupported platform"
+#endif
+#undef SW_RHI_SCENARIO_BACKEND_ROW
+            return kArrScenario;
+        }
+
         /** @brief 이 OS/빌드에서 해당 백엔드를 만들 수 있으면 true 입니다. */
         static bool isAvailable( RHIBackend backend ) noexcept
         {

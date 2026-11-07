@@ -54,7 +54,7 @@ SW_TEST_CASE( AutomationPerBackendTest, RecordMismatchReportsMissingAndRenamedLi
 }
 
 /**
- * @brief [AutomationPerBackendTest] all 은 이 플랫폼이 만들 수 있는 백엔드만(Windows 넷, 리눅스 vk · gl), 이름을 적은 백엔드는 플랫폼과 무관하게 표 순서로 고른다
+ * @brief [AutomationPerBackendTest] all 은 이 플랫폼의 검증 백엔드(쿠킹 표 scenario_backends — Windows 넷, 리눅스 vk · gl, 데스크톱 WebGPU 는 만들 수 있어도 아니다), 이름을 적은 백엔드는 플랫폼과 무관하게 표 순서로 고른다
  */
 SW_TEST_CASE( AutomationPerBackendTest, BackendListAllFollowsPlatformAvailability )
 {

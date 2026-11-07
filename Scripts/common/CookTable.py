@@ -64,10 +64,18 @@ class CookContractSpec:
         self.mapBackendOrderByPlatform: dict[str, tuple[str, ...]] = {
             str(row["platform"]): tuple(str(name) for name in row["backends"]) for row in spec["platform_rhi_backends"]
         }
+        #: 플랫폼 → 검증 체인(`-scenario-backends=all`)이 묶음마다 도는 백엔드 — 만들 수 있는 것의 부분집합. 새 백엔드는 골든을 갖춘 뒤 여기에 든다
+        #: (데스크톱 WebGPU 는 만들 수 있지만 골든이 없어 아직 아니다 — 언리얼 자동화도 플랫폼 기본 RHI 로 돌고 다른 RHI 는 따로 지정한다).
+        self.mapScenarioBackendsByPlatform: dict[str, tuple[str, ...]] = {
+            str(row["platform"]): tuple(str(name) for name in row["scenario_backends"]) for row in spec["platform_rhi_backends"]
+        }
         kBackendNames = {backend.name for backend in self.listBackend}
         for platform, listName in self.mapBackendOrderByPlatform.items():
             if not listName or any(name not in kBackendNames for name in listName):
                 raise ValueError(f"platform_rhi_backends '{platform}': 비었거나 rhi_backends 에 없는 이름이 있습니다 {listName}")
+            listScenario = self.mapScenarioBackendsByPlatform[platform]
+            if not listScenario or any(name not in listName for name in listScenario):
+                raise ValueError(f"platform_rhi_backends '{platform}': scenario_backends 는 그 플랫폼 backends 의 비지 않은 부분집합이어야 합니다 {listScenario}")
         defaultName = str(spec["default_rhi_backend"])
         self.defaultBackend: RhiBackendSpec = next(
             (backend for backend in self.listBackend if backend.name == defaultName), None

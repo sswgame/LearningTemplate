@@ -20,6 +20,8 @@
 	<Expect watch="Boat.PitchPeak" target="Upwind" atMost="0.1"/>
 	<Expect watch="Boat.ForwardSpeed" target="Rowboat" near="0" tolerance="0.3"/>
 
+	<Wait frames="1"/>
+
 	<!-- 조타륜 좌석 -->
 	<Possess controller="Captain" pawn="Helmsman"/>
 	<Wait frames="1"/>

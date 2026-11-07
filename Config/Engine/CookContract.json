@@ -12,6 +12,7 @@
         "  graphics_libs = 플랫폼 그래픽 라이브러리 INTERFACE 타깃(cmake/Modules/Platform), shipping_define = 배포 빌드가 백엔드 하나를 Engine 에 넣을 때 붙이는 매크로.",
         "  CMake 는 configure 가 쓴 generated/sw/config/CookContract.cmake 로 읽는다. 백엔드가 어느 플랫폼에 있는지는 모듈 매니페스트 _listExcludedPlatform 이 정본이다.",
         "platform_rhi_backends: 플랫폼마다 이 빌드가 만들 수 있는 백엔드와 건너갈 순서. 맨 앞이 그 플랫폼의 기본이다. 웹은 WebGPU 하나다(없는 플랫폼은 컴파일 오류). 데스크톱의 WebGPU 는 맨 끝이다 — vcpkg Dawn 위에서 웹 백엔드를 돌려 보는 길이고 기본으로 고르지 않는다(ThirdParty/dawn).",
+        "  scenario_backends: 검증 체인(-scenario-backends=all)이 묶음마다 도는 백엔드 — backends 의 부분집합. 새 백엔드는 골든을 갖춘 뒤 든다(데스크톱 WebGPU 는 만들 수 있지만 아직 아니다).",
         "target_excluded_asset_kinds: 빌드 타깃(SW_TARGET_TYPE)마다 패키지에서 빼는 묶음 — 엔진 에셋 종류의 제외 묶음 이름(AssetTypeDef::_excludeGroup, 모르는 이름은 AssetTypeRegistryTest 가 막는다). 쿠커(--build-target)는 그 파일을 팩에 넣지 않고,",
         "  같은 호스트의 런타임(AssetPaths::setHostTarget)은 그 종류를 읽지 않고 없는 것으로 친다(파일 없음 오류를 내지 않는다).",
         "  전용 서버: 텍스처 · 셰이더 바이너리 · 오디오를 뺀다. 메시 · 애니메이션은 충돌 · 소켓 · 히트박스 · 루트 모션 때문에 남긴다."
@@ -33,10 +34,10 @@
     ],
 
     "platform_rhi_backends": [
-        { "platform": "Windows", "backends": [ "DirectX12", "DirectX11", "Vulkan", "OpenGL", "WebGPU" ] },
-        { "platform": "Linux", "backends": [ "Vulkan", "OpenGL", "WebGPU" ] },
-        { "platform": "Android", "backends": [ "Vulkan" ] },
-        { "platform": "Web", "backends": [ "WebGPU" ] }
+        { "platform": "Windows", "backends": [ "DirectX12", "DirectX11", "Vulkan", "OpenGL", "WebGPU" ], "scenario_backends": [ "DirectX12", "DirectX11", "Vulkan", "OpenGL" ] },
+        { "platform": "Linux", "backends": [ "Vulkan", "OpenGL", "WebGPU" ], "scenario_backends": [ "Vulkan", "OpenGL" ] },
+        { "platform": "Android", "backends": [ "Vulkan" ], "scenario_backends": [ "Vulkan" ] },
+        { "platform": "Web", "backends": [ "WebGPU" ], "scenario_backends": [ "WebGPU" ] }
     ],
 
     "target_excluded_asset_kinds": [
