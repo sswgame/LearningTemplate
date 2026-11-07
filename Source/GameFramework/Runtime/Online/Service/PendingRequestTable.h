@@ -83,7 +83,7 @@ namespace sw
                 listCancelled.push_back( std::move( entryIt->second._pCompletion ) );
                 entryIt = _mapKeyToEntry.erase( entryIt );
             }
-            invokeCancelled( listCancelled );
+            notifyCancelled( listCancelled );
         }
 
         /** @brief 열린 요청을 모두 취소로 끝냅니다. 서비스가 내려갈 때 부릅니다(완료가 잡은 객체가 아직 살아 있어야 한다). */
@@ -97,7 +97,7 @@ namespace sw
                 listCancelled.push_back( std::move( entry._pCompletion ) );
             }
             _mapKeyToEntry.clear();
-            invokeCancelled( listCancelled );
+            notifyCancelled( listCancelled );
         }
 
         /** @brief 답을 기다리는 요청 수입니다. */
@@ -141,7 +141,7 @@ namespace sw
         };
 
         /** @brief 지운 줄들의 완료를 취소로 부릅니다(표를 다 고친 뒤 — 완료가 새 요청을 맡겨도 된다). */
-        static void invokeCancelled( vector<unique_ptr<ICompletion>>& listCancelled )
+        static void notifyCancelled( vector<unique_ptr<ICompletion>>& listCancelled )
         {
             const TResult none{};
             for ( unique_ptr<ICompletion>& pCompletion : listCancelled )

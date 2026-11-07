@@ -215,7 +215,7 @@ namespace sw
         };
 
         /** @brief 다른 서버에 있을 수 있는 상대를 찾은 답입니다. 받는 서버로 보내거나 상대가 없다고 끝낸다. */
-        void        finishRemoteWhisper( const AccountPresenceResult& result, ChatMessage&& message, uint64 requestTag );
+        void        handleWhisperPresenceResult( const AccountPresenceResult& result, ChatMessage&& message, uint64 requestTag );
         Member*     ensureMember( AccountID accountID, UnixMilliseconds nowMs );
         bool        isSanctionFresh( const Member& member, UnixMilliseconds nowMs ) const;
         void        startSanctionRead( AccountID accountID, Member& member, UnixMilliseconds nowMs );

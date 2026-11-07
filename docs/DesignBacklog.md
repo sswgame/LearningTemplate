@@ -202,7 +202,7 @@ float3 ShooterPlayerComponent::findMuzzlePosition()
 |---|---|---|
 | 같은 파일의 id 연결(필수) | 로드 · 쿠킹 실패 | 참조 표 `Content/engine/settings/datacatalogreferences.xml`(런타임 `XMLCatalogLoader` · 쿠커 `PackCooker` 가 같은 표). Schedules(장소 · 약속 · 아키타입 · NPC 11 줄) · Metroidvania(줍는 것 → 능력 · 부적)까지 올렸다 |
 | 다른 팩 · 코드가 채울 수 있는 연결 | 경고만(`optional="true"`) | 같은 표 |
-| 코드 등록 이름(스케줄 활동 · 몸 설정 이름) | 오류, 로드 실패 | 그 카탈로그 코드(`ScheduleCatalog::checkActivityNames`) — 표에 적을 수 없다 |
+| 코드 등록 이름(스케줄 활동 · 몸 설정 이름) | 오류, 로드 실패 | 그 카탈로그 코드(`ScheduleCatalog::validateActivityNames`) — 표에 적을 수 없다 |
 | 다른 파일 카탈로그로의 연결(무기 → 탄 · 아이템, 격투 기술 → 프레임) | 둘을 함께 쥐는 쪽이 시작할 때 보고 깨지면 서지 않는다 | `WeaponCatalog::checkProjectiles` · `findUnknownItems` 를 Shooter3DGame · MechArenaWorld 가 부른다. 쿠커는 보지 못한다(텍스트로 읽는 카탈로그 · 다른 폴더 조합이 있어 "같은 폴더 형제 파일" 규칙을 두지 않았다) |
 | 원소 자기 칸의 오류(모르는 속성 · 범위 밖 · 시각 · 겹침) | 오류 · 경고와 그 원소 제외 | 각 카탈로그 읽기(`XMLFields`) — `ResourceDataSchemaTest` 가 경고도 실패로 잡는다 |
 

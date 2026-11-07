@@ -252,7 +252,7 @@ namespace sw
      *          엄격도(카탈로그 공통 계약 — DesignBacklog "데이터 기반 카탈로그 참조 전수 점검"):
      *          - 같은 파일의 id 연결(장소 · 약속 · 아키타입 · NPC — 약속 장소, NPC 집 · 아키타입, 아키타입 부모, 행사 참가자, 블록의 장소 · 약속)은 참조 표
      *            (`engine/settings/datacatalogreferences.xml` 의 `Schedules`)가 보고, 깨지면 로드 · 쿠킹 실패다.
-     *          - 코드 등록 이름(활동 — 블록 `activity` · NPC `idle`)은 표로 적을 수 없어 이 카탈로그가 본다(`checkActivityNames`). 모르면 오류이고 로드 실패다.
+     *          - 코드 등록 이름(활동 — 블록 `activity` · NPC `idle`)은 표로 적을 수 없어 이 카탈로그가 본다(`validateActivityNames`). 모르면 오류이고 로드 실패다.
      *          - 원소 자기 칸의 오류(모르는 속성 · 원소, 요일 · 계절 · 날씨, 시각, 시작 ≥ 끝, 겹치는 블록)는 경고하고 그 항목을 뺀다. 아키타입 순환은 부모를 끊는다.
      *          `ResourceDataSchemaTest` 가 그 경고도 실패로 잡는다.
      */
@@ -321,7 +321,7 @@ namespace sw
          * @brief 원문의 모든 `Block` 의 `activity` 가 활동 레지스트리에 있는지 봅니다(NPC 의 `idle` 은 `loadNPC` 가 보고 `_bUnknownIdleActivity` 에 적는다).
          * @return 모르는 이름이 있으면 오류를 남기고 false 입니다(로드 실패 — 코드 등록 이름은 참조 표에 적을 수 없다).
          */
-        [[nodiscard]] bool checkActivityNames( const XMLNode& root, string_view sourceName ) const;
+        [[nodiscard]] bool validateActivityNames( const XMLNode& root, string_view sourceName ) const;
         /** @brief NPC 마다 아키타입 체인의 루틴을 이어 붙이고 약속 참가자를 모읍니다. 순환이나 모르는 이름은 경고합니다. */
         void resolveReferences( string_view sourceName );
 

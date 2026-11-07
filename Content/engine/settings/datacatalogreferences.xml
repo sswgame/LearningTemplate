@@ -28,7 +28,7 @@
 	<Catalog root="SkillTreeCatalog">
 		<Reference owner="Tree/Skill" attribute="requires" target="Skill" inEntry="true" named="true"/>
 	</Catalog>
-	<!-- 스케줄: 같은 파일의 장소 · 약속 · 아키타입 · NPC 연결. 활동 이름(코드 등록)은 ScheduleCatalog::checkActivityNames 가 같은 정책(로드 실패)으로 본다. -->
+	<!-- 스케줄: 같은 파일의 장소 · 약속 · 아키타입 · NPC 연결. 활동 이름(코드 등록)은 ScheduleCatalog::validateActivityNames 가 같은 정책(로드 실패)으로 본다. -->
 	<Catalog root="Schedules">
 		<Reference owner="Appointment" attribute="place" target="Place"/>
 		<Reference owner="NPC" attribute="home" target="Place"/>

@@ -201,7 +201,7 @@ namespace sw
         const uint32          loadedCount = XMLCatalogReader::readInTableOrder( reader, root, sourceName, kArrElement )._loadedCount;
         resolveReferences( sourceName );
         // 같은 파일의 id 연결은 참조 표가 본다(로드 실패). 코드 등록 이름(활동)은 여기서 보고 같은 정책(로드 실패)으로 맞춘다.
-        const bool bActivitiesKnown = checkActivityNames( root, sourceName ) && _bUnknownIdleActivity == SW_FALSE;
+        const bool bActivitiesKnown = validateActivityNames( root, sourceName ) && _bUnknownIdleActivity == SW_FALSE;
         return bActivitiesKnown ? loadedCount : 0;
     }
 
@@ -388,7 +388,7 @@ namespace sw
             return false;
         }
 
-        // 모르는 활동 · 장소는 로드 실패다(활동은 `checkActivityNames`, 장소는 참조 표가 남긴다) — 여기서는 그 칸만 빼고 다시 알리지 않는다.
+        // 모르는 활동 · 장소는 로드 실패다(활동은 `validateActivityNames`, 장소는 참조 표가 남긴다) — 여기서는 그 칸만 빼고 다시 알리지 않는다.
         const ScheduleActivityDef* pActivity = getActivityRegistry().findActivity( outBlock._activity );
         if ( pActivity == nullptr || ( outBlock._place.empty() == false && findPlace( outBlock._place ) == nullptr ) )
             return false;
@@ -554,7 +554,7 @@ namespace sw
         }
     }
 
-    bool ScheduleCatalog::checkActivityNames( const XMLNode& root, string_view sourceName ) const
+    bool ScheduleCatalog::validateActivityNames( const XMLNode& root, string_view sourceName ) const
     {
         const ScheduleActivityRegistry& registry = getActivityRegistry();
         bool                            bKnown   = true;

@@ -202,7 +202,7 @@ namespace sw
             if ( bWritten && _pHost->sendPush( accountID, MailboxMethod::NewMail::kKind, body ) )
                 continue; // 이 서버에 붙어 있다
             const bool bFinding = _presenceFinds.findByAccount( accountID, accountID, [this, newMail = std::move( newMail )]( const AccountPresenceResult& result )
-            { finishRemoteNotice( result, newMail ); } );
+            { handleMailPresenceResult( result, newMail ); } );
             if ( bFinding == false )
                 sendOfflinePush( accountID ); // 서버가 하나이고 붙어 있지 않다
         }
@@ -216,7 +216,7 @@ namespace sw
         _settings._pBalanceNotice->notifyBalancesChanged( accountID, reply._listBalance ); // 지갑은 서버의 잔액 변경 알림으로 맞는다 — 게임이 응답의 잔액을 옮기지 않는다
     }
 
-    void MailboxService::finishRemoteNotice( const AccountPresenceResult& result, const MailboxNewMail& newMail )
+    void MailboxService::handleMailPresenceResult( const AccountPresenceResult& result, const MailboxNewMail& newMail )
     {
         const AccountID accountID = result._identity._accountID;
         if ( result.isOnline() && _presenceFinds.hasPresence() && _presenceFinds.getPresence()->sendRemotePush( accountID, MailboxPushName::NewMail, newMail ) )

@@ -584,12 +584,12 @@ namespace sw
         // 다른 서버에 있으면 접속 상태로 서버를 찾는다. 답은 항상 나중에 온다(접속 상태 · 버스가 없으면 맡지 않는다)
         const uint64 requestTag = send._requestTag;
         const bool   bFinding   = _presenceFinds.findByAccount( send._recipientID, accountID, [this, message = std::move( message ), requestTag]( const AccountPresenceResult& result ) mutable
-            { finishRemoteWhisper( result, std::move( message ), requestTag ); } );
+            { handleWhisperPresenceResult( result, std::move( message ), requestTag ); } );
         if ( bFinding == false )
             completeSimple( method, requestTag, ChatResult::TargetOffline );
     }
 
-    void ChatService::finishRemoteWhisper( const AccountPresenceResult& result, ChatMessage&& message, uint64 requestTag )
+    void ChatService::handleWhisperPresenceResult( const AccountPresenceResult& result, ChatMessage&& message, uint64 requestTag )
     {
         if ( result.isOnline() == false || result._serverID == _dependencies._serverID )
         {

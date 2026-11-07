@@ -60,7 +60,7 @@ namespace sw
 
     void MatchmakingServer::shutdown()
     {
-        _presenceFinds.unbind(); // 기다리던 찾기가 이 객체를 부르지 않게 한다. 답을 못 받은 계정은 취소 완료가 유예를 지금 끝낸다(`finishGraceFind`)
+        _presenceFinds.unbind(); // 기다리던 찾기가 이 객체를 부르지 않게 한다. 답을 못 받은 계정은 취소 완료가 유예를 지금 끝낸다(`handleGracePresenceResult`)
         if ( _pPartyLobby != nullptr )
         {
             for ( const auto& [accountID, graceEndMs] : _mapAccountToGraceEnd )
@@ -264,13 +264,13 @@ namespace sw
             const AccountID accountID = graceIt->first;
             graceIt                   = _mapAccountToGraceEnd.erase( graceIt );
             const bool bFinding       = _presenceFinds.findByAccount( accountID, accountID, [this, accountID]( const AccountPresenceResult& result, PendingRequestEnd end )
-                  { finishGraceFind( accountID, result, end ); } );
+                  { handleGracePresenceResult( accountID, result, end ); } );
             if ( bFinding == false )
                 _pPartyLobby->removeAccount( accountID ); // 서버가 한 대이고 돌아오지 않았다
         }
     }
 
-    void MatchmakingServer::finishGraceFind( AccountID accountID, const AccountPresenceResult& result, PendingRequestEnd end )
+    void MatchmakingServer::handleGracePresenceResult( AccountID accountID, const AccountPresenceResult& result, PendingRequestEnd end )
     {
         if ( end == PendingRequestEnd::Cancelled )
         {

@@ -106,7 +106,7 @@ namespace sw
         template <typename TMethod>
         void submitCall( OnlineServerCall<TMethod> call, const OnlineCallContext& context, const typename TMethod::Request& request, bool bWithCampaigns );
         /** @brief 다른 서버에 있을 수 있는 계정을 찾은 답입니다. 붙어 있으면 중계하고, 아니면 기기 푸시를 보낸다. */
-        void finishRemoteNotice( const AccountPresenceResult& result, const MailboxNewMail& newMail );
+        void handleMailPresenceResult( const AccountPresenceResult& result, const MailboxNewMail& newMail );
         void sendOfflinePush( AccountID accountID );
         /** @brief 수령으로 바뀐 잔액을 그 계정에 알립니다(경제 키트의 `BalanceChanged`). 경제 키트가 없으면 하지 않는다. */
         void notifyClaimedBalances( AccountID accountID, const MailboxOutcome& outcome, const MailboxClaimReply& reply );

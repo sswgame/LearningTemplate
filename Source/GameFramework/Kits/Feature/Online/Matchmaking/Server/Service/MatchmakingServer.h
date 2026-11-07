@@ -87,7 +87,7 @@ namespace sw
         /** @brief 유예가 끝난 계정을 접속 상태로 묻거나(서버 여러 대) 바로 뺍니다. */
         void expireGrace( UnixMilliseconds nowMs );
         /** @brief 유예가 끝난 계정 @p accountID 를 찾은 답입니다. 어느 서버에도 돌아오지 않았으면 파티 · 로비에서 뺀다. 서비스가 내려가 취소되면 유예를 지금 끝낸다. */
-        void finishGraceFind( AccountID accountID, const AccountPresenceResult& result, PendingRequestEnd end );
+        void handleGracePresenceResult( AccountID accountID, const AccountPresenceResult& result, PendingRequestEnd end );
         void onPartyFound( uint64 lookupTag, MatchmakingOutcome result, const PartySnapshot& party );
         /** @brief 이 서버 계정 @p recipientID 가 받은 파티 스냅숏으로 파티 채널 멤버를 맞춥니다. 멤버가 비었으면 빠진 것이다. */
         void syncPartyChannel( AccountID recipientID, const PartySnapshot& party );
