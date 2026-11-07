@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  장르 완결 루프 — 액션 컴뱃 키트(GF_ActionCombat)의 한 판: 홀 전투 → 보스 룸 → 승리. 플레이어와 같은 입력 맵 액션(Move · KitDemo.Attack)으로만 움직이고 테스트 전용 경로를 쓰지 않는다.
+  씬: 플레이어는 (0,0) 오른쪽을 보고 선다. 홀 졸개 둘(1.2,0) · (-1.5,0), 보스 (1.6,0) — 모두 제자리라 닿은 피해가 들지 않는다. 공격 30(34 - 방어 4): 졸개 두 번, 보스 네 번.
+  감시 값: KitDemo.Combat.Phase(0 홀, 1 보스 대기, 2 보스, 3 승리, 4 패배) · KitDemo.Combat.Alive · KitDemo.Combat.PlayerHP · KitDemo.Combat.PlayerX.
+  실행: ctest -R Scenario.game.empty.kitdemo_actioncombat
+-->
+<Scenario name="game.empty.kitdemo_actioncombat" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/kitdemo_actioncombat.scene.xml"/>
+	<WaitUntil watch="KitDemo.Combat.Alive" equals="2" timeoutFrames="120"/>
+	<Expect watch="KitDemo.Combat.Phase" equals="0"/>
+	<Expect watch="KitDemo.Combat.PlayerHP" equals="100"/>
+	<!-- 홀: 오른쪽 졸개를 두 번 친다(쿨다운 0.28 초) -->
+	<Action name="KitDemo.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="KitDemo.Attack"/>
+	<WaitUntil watch="KitDemo.Combat.Alive" equals="1" timeoutFrames="60"/>
+	<!-- 왼쪽으로 0.1 초(0.4 m) 걸어 돌아서고 왼쪽 졸개를 두 번 친다 -->
+	<ActionAxis name="Move" x="-1" seconds="0.1"/>
+	<Wait seconds="0.2"/>
+	<Expect watch="KitDemo.Combat.PlayerX" near="-0.4" tolerance="0.1"/>
+	<Action name="KitDemo.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="KitDemo.Attack"/>
+	<WaitUntil watch="KitDemo.Combat.Phase" equals="1" timeoutFrames="60"/>
+	<ExpectLog id="KitDemo.CombatHallCleared" count="1"/>
+	<!-- 보스 룸이 열린다(1 초) -->
+	<WaitUntil watch="KitDemo.Combat.Phase" equals="2" timeoutFrames="120"/>
+	<Expect watch="KitDemo.Combat.Alive" equals="1"/>
+	<!-- 오른쪽으로 돌아서 보스를 네 번 친다 -->
+	<ActionAxis name="Move" x="1" seconds="0.1"/>
+	<Wait seconds="0.2"/>
+	<Action name="KitDemo.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="KitDemo.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="KitDemo.Attack"/>
+	<Wait seconds="0.4"/>
+	<Action name="KitDemo.Attack"/>
+	<WaitUntil watch="KitDemo.Combat.Phase" equals="3" timeoutFrames="60"/>
+	<Expect watch="KitDemo.Combat.Alive" equals="0"/>
+	<Expect watch="KitDemo.Combat.PlayerHP" equals="100"/>
+	<ExpectLog id="KitDemo.CombatVictory" count="1"/>
+	<Record watch="KitDemo.Combat.PlayerX"/>
+	<Pass/>
+</Scenario>

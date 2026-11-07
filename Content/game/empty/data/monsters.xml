@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Empty 의 몬스터 정의(MonsterCatalog — 게임의 필수 데이터, EmptyGame 이 게임 서비스로 건다). 장르 키트 시연 액션 룸(maps/kitdemo_actioncombat)이 종 id 로 찾는다.
+  수치는 시연 시나리오(automation/kitdemo_actioncombat)가 기대는 값이다: 플레이어 공격 34 - 방어 4 = 30 이라 졸개(HP 50)는 두 번, 보스(HP 120)는 네 번에 쓰러진다.
+  속도 0 이라 제자리에 서고(닿은 피해가 들지 않는 자리에 둔다), 쏘지 않아 탄 카탈로그가 필요 없다.
+-->
+<MonsterCatalog>
+	<Monster id="demo_grunt" name="Demo Grunt" archetype="MeleePatrol">
+		<Stats hp="50" maxHP="50" atk="6" def="4" speed="0" radius="0.5" invincibility="0"/>
+		<Drop exp="5" gold="2"/>
+	</Monster>
+	<Monster id="demo_boss" name="Demo Boss" archetype="ChargerRush">
+		<Stats hp="120" maxHP="120" atk="12" def="4" speed="0" radius="0.7" invincibility="0"/>
+		<Drop exp="40" gold="20"/>
+	</Monster>
+</MonsterCatalog>

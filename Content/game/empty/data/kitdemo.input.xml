@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Empty 의 장르 키트 시연 입력 — 공통 묶음(gamesettings.xml 의 <inputMap> 줄: base · move) 위에 얹힌다. 시연 디렉터(Source/Games/Empty/KitDemo)는 키를 묻지 않고
+  액션 이름만 묻는다. 한 게임만 쓰는 이름은 접두(KitDemo.)다. 걷기 · 커서는 공통 `Move` 축이다.
+-->
+<InputMap>
+	<!-- 액션 룸: 공격 · 대시 -->
+	<action name="KitDemo.Attack" layer="Gameplay" trigger="Pressed">
+		<bind source="Key" code="J"/>
+		<bind source="Gamepad" code="X"/>
+	</action>
+	<action name="KitDemo.Dash" layer="Gameplay" trigger="Pressed">
+		<bind source="Key" code="LeftShift"/>
+		<bind source="Gamepad" code="B"/>
+	</action>
+	<!-- 액션 플랫포머: 점프(누르는 동안 높게) -->
+	<action name="KitDemo.Jump" layer="Gameplay" trigger="Down">
+		<bind source="Key" code="Space"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+	<!-- 택틱스: 고르기 · 차례 끝 -->
+	<action name="KitDemo.Confirm" layer="Gameplay" trigger="Pressed">
+		<bind source="Key" code="Enter"/>
+		<bind source="Gamepad" code="Y"/>
+	</action>
+	<action name="KitDemo.EndTurn" layer="Gameplay" trigger="Pressed">
+		<bind source="Key" code="E"/>
+		<bind source="Gamepad" code="RightShoulder"/>
+	</action>
+</InputMap>

@@ -4,6 +4,10 @@
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
   <Engine _windowTitle="SWEngine" />
   <startMap>game/empty/maps/editortest.scene.xml</startMap>
+  <!-- 장르 키트 시연(maps/kitdemo_*)의 입력 — 기본 맵 · 걷기 축 · 시연 액션(docs/InputMapBundle.md). 다른 씬은 이 액션을 묻지 않는다. -->
+  <inputMap path="common/input/base.input.xml"/>
+  <inputMap path="common/input/move.input.xml"/>
+  <inputMap path="game/empty/data/kitdemo.input.xml"/>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <!-- 벤치 캐릭터 프리팹(-gv_stressTestCharacterPrefab — 부하 시나리오 load/townsfolk)의 외형은 공용 팩(common)의 외형 데이터다. 외형이 장비 아이템을 참조하므로 아이템도 함께 -->
   <RequiredData kind="items" pack="common"/>

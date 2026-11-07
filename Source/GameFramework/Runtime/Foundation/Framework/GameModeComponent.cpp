@@ -245,6 +245,14 @@ namespace sw
         return pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).wasActionTriggered( action );
     }
 
+    float2 GameModeComponent::getActionVector2D( const hashed_string& action ) const
+    {
+        const InputManager* pInput = game::findSubsystem<InputManager>();
+        if ( pInput == nullptr )
+            return float2{ 0.0f, 0.0f };
+        return GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).getVector2D( action );
+    }
+
     void GameModeComponent::compactSpawned( const GameObjectManager& manager )
     {
         if ( _listSpawned.size() < _compactThreshold )

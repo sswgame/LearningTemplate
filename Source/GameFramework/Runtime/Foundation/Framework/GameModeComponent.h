@@ -189,6 +189,8 @@ namespace sw
         [[nodiscard]] bool isActionDown( const hashed_string& action ) const;
         /** @brief 입력 맵의 동작이 이번 프레임에 발동했으면 true 입니다(`UIInputMapView`). */
         [[nodiscard]] bool wasActionTriggered( const hashed_string& action ) const;
+        /** @brief 입력 맵의 2D 축 동작(`Move`)입니다. 위젯이 받은 입력은 게임으로 새지 않습니다(`UIInputMapView`). 입력 서비스가 없으면 0 입니다. */
+        [[nodiscard]] float2 getActionVector2D( const hashed_string& action ) const;
         /** @brief 틱 뒤에 낼 소리를 쌓는 큐입니다. */
         GameSoundQueue& getSoundQueue() { return _soundQueue; }
         /** @brief 지금 상태의 모습이 서 있으면 true 입니다(걷으면 다음 플러시까지 false). */

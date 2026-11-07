@@ -6,6 +6,7 @@
  *          `-gv_stressTestMeshes=N` 이 주어졌을 때만 깨운다. 이 폴더를 복사해 새 게임을 시작할
  *          때는 `Client/` 폴더와 아래 `_clientPart` 를 지우면 된다.
  *          벤치 · 렌더 확장 시연 · UI 시연은 그리는 일이라 클라이언트 전용 소스(`Client/`)다 — 게임은 그 부분을 `IGameClientPart` 로만 들고, 전용 서버는 그 소스를 짓지 않아 없이 선다.
+ *          장르 키트 시연(액션 룸 · 액션 플랫포머 · 택틱스 SRPG — `KitDemo/`)은 씬 하나씩이고, 그 몬스터 정의(`data/monsters.xml`)를 여기서 게임 서비스로 건다.
  */
 #include "pch.h"
 
@@ -15,6 +16,7 @@
 #include "Engine/Config/GameConfig.h"
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSession.h"
+#include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IGameClientPart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -46,6 +48,9 @@ namespace sw
         unique_ptr<ModSession> _mods;
         /** @brief 클라이언트 전용 부분(벤치 · 렌더 확장 시연, `Client/EmptyClientPart.cpp`)입니다. 공장이 없는 구성(전용 서버)에는 nullptr 이다. */
         unique_ptr<IGameClientPart> _clientPart;
+
+        /** @brief 장르 키트 시연(액션 룸 — `game/empty/maps/kitdemo_actioncombat`)의 몬스터 정의입니다. 액션 룸이 게임 서비스로 찾는다(공유 캐시의 한 벌). */
+        shared_ptr<const MonsterCatalog> _pMonsterCatalog;
     };
 } // namespace sw
 
@@ -54,6 +59,7 @@ namespace sw
     EmptyGame::EmptyGame()
         : _mods{ nullptr }
         , _clientPart{ nullptr }
+        , _pMonsterCatalog{ nullptr }
     {
     }
 
@@ -66,6 +72,11 @@ namespace sw
         _mods = make_unique<ModSession>( game::getSubsystem<AssetManager>() );
         if ( _mods->applyForGame( game::getSubsystem<const GameConfig>()._packRoot.get() ) == false || getGameScope().bind( _mods.get() ) == false )
             return false;
+
+        // 장르 키트 시연의 필수 데이터 — 액션 룸은 몬스터 정의를 게임 서비스로 찾는다(코드 폴백 없음). 못 읽으면 게임을 띄우지 않는다.
+        if ( loadRequiredCatalog( _pMonsterCatalog ) == false )
+            return false;
+
 
         if ( IGameClientPartFactory* const pFactory = game::findSubsystem<IGameClientPartFactory>() )
             _clientPart = pFactory->createClientPart();

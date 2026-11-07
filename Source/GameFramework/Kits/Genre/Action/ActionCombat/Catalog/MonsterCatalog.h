@@ -163,12 +163,15 @@ namespace sw
         friend struct AssetTypeLoader;
 
     public:
+        /** @brief 데이터 종류 이름입니다. 액션 룸이 게임 서비스로 찾으므로 게임은 `GameInstance::loadRequiredCatalog` 로 팩의 `data/monsters.xml` 을 건다(탄 `ProjectileCatalog` 와 같은 길). */
+        static constexpr const utf8* kDataKind = "MonsterCatalog";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). 타입 있는 참조 `AssetRef<MonsterCatalog>` 가 접미사로 가른다. */
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { ".monsters.xml", AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `MonsterCatalog.cpp` 의 줄이 로더를 더한다). */
-        static constexpr AssetTypeDef kAssetType{ "MonsterCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        /** @brief 이 에셋 종류입니다(등록은 `MonsterCatalog.cpp` 의 줄이 로더를 더한다). 팩의 `data/monsters.xml` 은 경로 규칙으로 가른다(게임의 필수 데이터). */
+        static constexpr AssetTypeDef kAssetType =
+            AssetTypeDef{ kDataKind, kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} }.withPathRule( AssetPathRule{ "game/", {}, "/data/monsters.xml" } );
 
         MonsterCatalog();
         ~MonsterCatalog();
