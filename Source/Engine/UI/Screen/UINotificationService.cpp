@@ -322,7 +322,7 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( UINotificationService, GameVisible, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( UINotificationService, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         const bool bExposed = scope.expose<IPlayerNoticeSink>( scope.emplaceSubsystem<UINotificationService>() );

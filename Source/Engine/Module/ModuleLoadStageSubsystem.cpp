@@ -38,9 +38,9 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SUBSYSTEM( ModuleLoadStageSubsystem, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( ModuleLoadStageSubsystem, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
-        (void)scope.emplaceSubsystem<ModuleLoadStageSubsystem>( &scope );
+        (void)scope.emplaceSubsystem<ModuleLoadStageSubsystem>( &scope.getScope() );
     } );
 } // namespace sw

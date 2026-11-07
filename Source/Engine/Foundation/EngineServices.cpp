@@ -25,17 +25,21 @@ namespace sw
 
     namespace engine
     {
-        const utf8* bindEngineServices( const ISubsystemLocator& subsystems )
+        EngineServiceBindResult bindEngineServices( const ISubsystemLocator& subsystems )
         {
-            const utf8* const pMissing = EngineRegistrationList::getGlobal().bindServices( subsystems );
-            s_pSubsystems              = &subsystems;
-            s_bServicesBound.store( pMissing == nullptr, std::memory_order_release );
-            return pMissing;
+            const EngineServiceBindResult result = EngineRegistrationList::getGlobal().bindServices( subsystems );
+            if ( result._kind == EngineServiceBindKind::AlreadyBound )
+                return result; // 앞 엔진의 범위 · 플래그를 그대로 둔다
+            s_pSubsystems = &subsystems;
+            s_bServicesBound.store( result.isBound(), std::memory_order_release );
+            return result;
         }
 
-        void unbindEngineServices()
+        void unbindEngineServices( const ISubsystemLocator& subsystems )
         {
-            EngineRegistrationList::getGlobal().unbindServices();
+            if ( s_pSubsystems != &subsystems )
+                return; // 묶지 못한 엔진의 종료가 앞 엔진의 칸을 비우지 않는다
+            EngineRegistrationList::getGlobal().unbindServices( subsystems );
             s_pSubsystems = nullptr;
             s_bServicesBound.store( false, std::memory_order_release );
         }

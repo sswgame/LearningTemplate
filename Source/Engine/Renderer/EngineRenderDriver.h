@@ -44,6 +44,8 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
         SubsystemHostMask   getSubsystemHost() const override;
+        /** @brief 받은 렌더 스레드 단계(그 아래 렌더러 · RHI)보다 늦게 서고 먼저 내린다 — 공장이 세 단계를 받아 든다(`EngineRegistrationList::findLifetimeMismatch`). */
+        span<const utf8* const> getSubsystemDependencies() const override;
 
         void                                         onStartupFinished() override;
         void                                         onShutdownBegin() override;

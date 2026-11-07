@@ -62,7 +62,7 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SUBSYSTEM( EngineDefaultAssetsSubsystem, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( EngineDefaultAssetsSubsystem, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         engine::StartupSetup& setup = *build._pStartupSetup;
         if ( setup._defaultAssets == nullptr )

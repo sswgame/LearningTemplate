@@ -45,7 +45,7 @@ namespace sw
 namespace sw
 {
     // 타입 표 — 하네스가 대역을 넘기지 않았으면 엔진의 표를 만든다.
-    SW_ENGINE_SUBSYSTEM( ReflectionSubsystem, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( ReflectionSubsystem, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         SW_MEMORY_SCOPE( Reflection );
         engine::StartupSetup& setup = *build._pStartupSetup;

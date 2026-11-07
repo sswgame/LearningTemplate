@@ -165,7 +165,7 @@ namespace sw
 namespace sw
 {
     // 창 · 디바이스 · 렌더러 · 렌더 스레드 · 씬의 디바이스는 클라이언트 호스트의 것이다(전용 서버는 거르고, Server 타깃은 렌더러 폴더를 짓지 않는다).
-    SW_ENGINE_SUBSYSTEM( RHISubsystem, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( RHISubsystem, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         if ( build._pStartupSetup->_bRenderer == false )
             return;

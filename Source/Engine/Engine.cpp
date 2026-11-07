@@ -253,9 +253,16 @@ namespace sw
             _pRenderDriver              = startupParts._pRenderDriver;
         }
         // 서비스 표는 엔진 범위(부모 범위까지)에서 행마다 한 번 찾아 둔다. 필수 행이 비면 서지 않는다 — 넣지 않은 서브시스템이다.
-        if ( const utf8* pMissing = engine::bindEngineServices( _startup ) )
+        // 칸은 타입마다 프로세스에 하나다 — 이미 엔진이 묶였으면 서지 않는다(프로세스당 엔진 하나가 계약이다).
+        const engine::EngineServiceBindResult bindResult = engine::bindEngineServices( _startup );
+        if ( bindResult._kind == engine::EngineServiceBindKind::AlreadyBound )
         {
-            SW_LOG_ERROR_ID( "Engine.RequiredEngineServiceNot", "Required engine service '%#' is not in any subsystem scope", pMissing );
+            SW_LOG_ERROR_ID( "Engine.SecondEngineInProcess", "Another Engine already bound the engine services in this process - one Engine per process is the contract" );
+            return false;
+        }
+        if ( bindResult._kind == engine::EngineServiceBindKind::MissingRequired )
+        {
+            SW_LOG_ERROR_ID( "Engine.RequiredEngineServiceNot", "Required engine service '%#' is not in any subsystem scope", bindResult._pTypeName );
             return false;
         }
         _pQuitRequest                      = &engine::getSubsystem<QuitRequest>();
@@ -377,7 +384,7 @@ namespace sw
         _services.destroyAll();
         _pEventDispatcher = nullptr;
         _pDebugKeyActions = nullptr;
-        engine::unbindEngineServices();
+        engine::unbindEngineServices( _startup );
         // 호스트 범위는 엔진 범위가 사라진 뒤(모듈 라이브러리 창구는 위 기동 단계 종료가 마지막으로 썼다), 종료 누수 창을 닫는 코어보다 먼저 비운다.
         hostScope.destroyAll();
         // 남은 렌더 리소스는 누수다(레지스트리 저장소는 마지막 리소스가 사라질 때 스스로 돌아간다 — 남았으면 돌아가지 않은 채로 보고에 보인다).

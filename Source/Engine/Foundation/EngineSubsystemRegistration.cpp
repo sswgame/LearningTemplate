@@ -4,6 +4,7 @@
 
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/SubsystemCollection.h"
 
 namespace sw::engine
@@ -26,6 +27,26 @@ namespace sw::engine
 
             /** @brief 이름 순으로 앞인지입니다(링크 순서와 무관하게 결정적인 보고 · 동점 순서). */
             static bool isNameBefore( const utf8* pLeft, const utf8* pRight ) { return string_view{ pLeft } < string_view{ pRight }; }
+
+            /** @brief @p from 에서 간선(@p listEdge)을 따라 @p to 에 닿는지입니다. 넓이 우선으로 걷는다(기동 때 한 번, 수십 개). */
+            static bool isReachable( const vector<vector<uint32>>& listEdge, uint32 from, uint32 to )
+            {
+                vector<uint8>  listVisited( listEdge.size(), SW_FALSE );
+                vector<uint32> listQueue{ from };
+                for ( size_t head = 0; head < listQueue.size(); ++head )
+                {
+                    for ( const uint32 next : listEdge[listQueue[head]] )
+                    {
+                        if ( next == to )
+                            return true;
+                        if ( listVisited[next] == SW_TRUE )
+                            continue;
+                        listVisited[next] = SW_TRUE;
+                        listQueue.push_back( next );
+                    }
+                }
+                return false;
+            }
 
             /** @brief 목록에서 @p typeHash 의 공장 등록입니다. 없으면 nullptr 입니다. */
             static const EngineSubsystemRecord* findSubsystem( const EngineSubsystemRecord* pHead, uint64 typeHash )
@@ -66,9 +87,34 @@ namespace sw::engine
         list._pSubsystemHead = this;
     }
 
+    EngineSubsystemFactoryScope::EngineSubsystemFactoryScope( SubsystemScope& scope, const EngineSubsystemRecord& record )
+        : _scope{ scope }
+        , _record{ record }
+    {
+    }
+
+    bool EngineSubsystemFactoryScope::isDeclared( uint64 typeHash ) const
+    {
+        for ( const uint64 afterHash : _record._listAfterHash )
+        {
+            if ( afterHash == typeHash )
+                return true;
+        }
+        return false;
+    }
+
+    void EngineSubsystemFactoryScope::requireDeclared( uint64 typeHash, const utf8* pLookup ) const
+    {
+        if ( isDeclared( typeHash ) )
+            return;
+        SW_FATAL( "Engine subsystem factory '%#' looks up a type it does not list in its after list %# (%#) - add the type to the parentheses of its SW_ENGINE_SUBSYSTEM line",
+                  _record._pTypeName, _record._pAfterNames, pLookup );
+    }
+
     EngineRegistrationList::EngineRegistrationList()
         : _pServiceHead{ nullptr }
         , _pSubsystemHead{ nullptr }
+        , _pBoundScope{ nullptr }
     {
     }
 
@@ -78,21 +124,31 @@ namespace sw::engine
         return s_list;
     }
 
-    const utf8* EngineRegistrationList::bindServices( const ISubsystemLocator& subsystems )
+    EngineServiceBindResult EngineRegistrationList::bindServices( const ISubsystemLocator& subsystems )
     {
+        // 칸은 타입마다 프로세스에 하나다 — 두 번째 범위가 덮으면 앞 엔진의 조회가 소리 없이 다른 객체로 간다. 덮지 않고 알린다.
+        if ( _pBoundScope != nullptr )
+            return EngineServiceBindResult{ EngineServiceBindKind::AlreadyBound, nullptr };
         for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
             pRecord->_pSlot->_pBound = EngineRegistrationListInternal::locate( &subsystems, pRecord->_typeHash );
         }
-        return findMissingRequiredService();
+        _pBoundScope               = &subsystems;
+        const utf8* const pMissing = findMissingRequiredService();
+        if ( pMissing != nullptr )
+            return EngineServiceBindResult{ EngineServiceBindKind::MissingRequired, pMissing };
+        return EngineServiceBindResult{ EngineServiceBindKind::Bound, nullptr };
     }
 
-    void EngineRegistrationList::unbindServices()
+    void EngineRegistrationList::unbindServices( const ISubsystemLocator& subsystems )
     {
+        if ( _pBoundScope != &subsystems )
+            return; // 묶지 못한 범위(두 번째 엔진)는 앞 엔진의 칸을 비우지 않는다
         for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
             pRecord->_pSlot->_pBound = nullptr;
         }
+        _pBoundScope = nullptr;
     }
 
     const utf8* EngineRegistrationList::findMissingRequiredService() const
@@ -172,15 +228,81 @@ namespace sw::engine
         return true;
     }
 
+    bool EngineRegistrationList::findLifetimeMismatch( const vector<const EngineSubsystemRecord*>& listOrder, const vector<vector<uint32>>& listBuilt, const SubsystemCollection& collection,
+                                                       string& outError )
+    {
+        outError.clear();
+        // 수명 의존 그래프 — 이름으로 잇는다(서브시스템 목록의 정렬과 같은 규칙: 내 의존 칸, 그리고 상대가 나를 적은 의존자 칸).
+        const uint32           subsystemCount = collection.getSubsystemCount();
+        vector<vector<uint32>> listEdge( subsystemCount );
+        for ( uint32 index = 0; index < subsystemCount; ++index )
+        {
+            const ISubsystem& subsystem = collection.getSubsystem( index );
+            for ( uint32 other = 0; other < subsystemCount; ++other )
+            {
+                const ISubsystem& candidate = collection.getSubsystem( other );
+                for ( const utf8* const pName : subsystem.getSubsystemDependencies() )
+                {
+                    if ( string_view{ pName } == candidate.getSubsystemName() )
+                        listEdge[index].push_back( other );
+                }
+                for ( const utf8* const pName : candidate.getSubsystemDependents() )
+                {
+                    if ( string_view{ pName } == subsystem.getSubsystemName() )
+                        listEdge[index].push_back( other );
+                }
+            }
+        }
+        for ( size_t recordIndex = 0; recordIndex < listOrder.size(); ++recordIndex )
+        {
+            const EngineSubsystemRecord& record = *listOrder[recordIndex];
+            for ( const uint64 afterHash : record._listAfterHash )
+            {
+                size_t afterIndex = listOrder.size();
+                for ( size_t candidate = 0; candidate < recordIndex; ++candidate )
+                {
+                    if ( listOrder[candidate]->_typeHash == afterHash )
+                        afterIndex = candidate;
+                }
+                if ( afterIndex == listOrder.size() )
+                    continue; // 순서 정렬이 이미 거절했다(모르는 타입 · 다른 단계)
+                for ( const uint32 builtIndex : listBuilt[recordIndex] )
+                {
+                    for ( const uint32 requiredIndex : listBuilt[afterIndex] )
+                    {
+                        if ( EngineRegistrationListInternal::isReachable( listEdge, builtIndex, requiredIndex ) )
+                            continue;
+                        outError = string( "Engine subsystem '" ) + collection.getSubsystem( builtIndex ).getSubsystemName() + "' is built from '" +
+                                   collection.getSubsystem( requiredIndex ).getSubsystemName() + "' (after list of " + record._pTypeName +
+                                   ") but does not depend on it - list it in getSubsystemDependencies so it starts first and shuts down last";
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
     void EngineRegistrationList::buildSubsystems( EngineSubsystemStage stage, SubsystemScope& scope, EngineSubsystemBuild& build ) const
     {
         vector<const EngineSubsystemRecord*> listOrder;
         string                               error;
         if ( orderSubsystems( stage, listOrder, error ) == false )
             SW_FATAL( "%#", error.c_str() );
-        for ( const EngineSubsystemRecord* const pRecord : listOrder )
+        // 공장마다 그 공장이 더한 서브시스템 번호 — 수명 의존 대조(`findLifetimeMismatch`)가 쓴다.
+        vector<vector<uint32>> listBuilt( listOrder.size() );
+        for ( size_t recordIndex = 0; recordIndex < listOrder.size(); ++recordIndex )
         {
-            pRecord->_pfnFactory( scope, build );
+            const EngineSubsystemRecord& record     = *listOrder[recordIndex];
+            const uint32                 countStart = scope.getCollection().getSubsystemCount();
+            EngineSubsystemFactoryScope  factoryScope{ scope, record };
+            record._pfnFactory( factoryScope, build );
+            for ( uint32 index = countStart; index < scope.getCollection().getSubsystemCount(); ++index )
+            {
+                listBuilt[recordIndex].push_back( index );
+            }
         }
+        if ( findLifetimeMismatch( listOrder, listBuilt, scope.getCollection(), error ) == false )
+            SW_FATAL( "%#", error.c_str() );
     }
 } // namespace sw::engine

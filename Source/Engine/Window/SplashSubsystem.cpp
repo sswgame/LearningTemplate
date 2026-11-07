@@ -36,7 +36,7 @@ namespace sw
 {
     // 에셋 · 헤드리스 판정 뒤에 스플래시를 띄운다 — 엔진 초기화(RHI 디바이스 생성)를 기다리지 않는다.
     // 창 없는 전용 서버 역할은 기동 설정이 렌더러를 끈다(`StartupSetup::_bRenderer`) — 만들지 않는다.
-    SW_ENGINE_SUBSYSTEM( SplashSubsystem, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( SplashSubsystem, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         if ( build._pStartupSetup->_bRenderer == false )
             return;

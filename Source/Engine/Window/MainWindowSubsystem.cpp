@@ -54,7 +54,7 @@ namespace sw
 {
     // 주 창의 소유자 — RHI 가 기본 창을 만들면 여기에 넘기고, App 이 직접 만든 창도 여기로 간다. RHI 보다 먼저 서고 나중에 내려간다(RHI 가 의존한다). 렌더러를 두는 호스트만 —
     // 전용 서버 역할은 기동 설정이 렌더러를 끈다(`StartupSetup::_bRenderer`). 칸은 늘 있어 서버의 자동화 · 입력 코드가 `findSubsystem` 으로 묻고 nullptr 을 받는다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( MainWindowSubsystem, HostOnly, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( MainWindowSubsystem, HostOnly, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         if ( build._pStartupSetup->_bRenderer == false )
             return;

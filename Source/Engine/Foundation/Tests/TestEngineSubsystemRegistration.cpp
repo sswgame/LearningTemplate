@@ -1,4 +1,5 @@
-// 엔진 등록 목록 — 등록 → 칸 → 찾기, 필수 칸 누락 보고, 게임 노출 거르기, 만드는 순서(의존 · 이름) · 순환 · 모르는 타입 · 다른 단계 오류.
+// 엔진 등록 목록 — 등록 → 칸 → 찾기, 필수 칸 누락 보고, 프로세스당 한 바인딩, 게임 노출 거르기, 만드는 순서(의존 · 이름) · 순환 · 모르는 타입 · 다른 단계 오류,
+// 공장의 찾기가 먼저 만들 타입에 묶이는 것, 만드는 순서와 수명 의존의 대조.
 // 테스트는 자기 목록(`EngineRegistrationList`)에 자기 등록을 단다 — 엔진의 전역 목록과 칸을 건드리지 않는다.
 #include "pch.h"
 
@@ -9,6 +10,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Foundation/QuitRequest.h"
 
 // 칸을 가진 타입은 외부 연결이어야 한다(칸이 `SW_API` 정적 멤버다) — 익명 namespace 에 둘 수 없다.
 namespace sw::engine_registration_test
@@ -25,26 +27,47 @@ namespace sw::engine_registration_test
         int32 _value;
     };
 
-    /** @brief 만드는 순서를 보는 서브시스템입니다(인자 없이 만든다). 이름은 형식의 상수다. */
-    template <int32 TId>
+    /** @brief 번호 @p id 의 서브시스템 이름입니다(없는 번호는 nullptr). */
+    constexpr const utf8* findOrderedName( int32 id )
+    {
+        return id == 0 ? "Alpha" : id == 1 ? "Bravo"
+                             : id == 2     ? "Charlie"
+                             : id == 3     ? "Delta"
+                             : id == 4     ? "Echo"
+                             : id == 5     ? "Foxtrot"
+                                           : nullptr;
+    }
+
+    /** @brief 만드는 순서를 보는 서브시스템입니다(인자 없이 만든다). 이름은 형식의 상수이고, @p TDependencyId 가 0 이상이면 그 번호의 서브시스템에 수명으로 기댄다. */
+    template <int32 TId, int32 TDependencyId = -1>
     class OrderedSubsystem final : public ISubsystem
     {
     public:
         static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc;
-        static constexpr const utf8* kSubsystemName      = TId == 0 ? "Alpha" : TId == 1 ? "Bravo"
-                                                                          : TId == 2     ? "Charlie"
-                                                                          : TId == 3     ? "Delta"
-                                                                                         : "Echo";
+        static constexpr const utf8* kSubsystemName      = findOrderedName( TId );
 
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        SubsystemInitResult     initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                    shutdownSubsystem() override {}
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override
+        {
+            if constexpr ( TDependencyId < 0 )
+            {
+                return {};
+            }
+            else
+            {
+                static constexpr const utf8* kArrDependency[] = { findOrderedName( TDependencyId ) };
+                return kArrDependency;
+            }
+        }
     };
     using Alpha   = OrderedSubsystem<0>;
     using Bravo   = OrderedSubsystem<1>;
     using Charlie = OrderedSubsystem<2>;
-    using Delta   = OrderedSubsystem<3>;
-    using Echo    = OrderedSubsystem<4>;
+    using Delta   = OrderedSubsystem<3, 0>; // Alpha 에 기댄다
+    using Echo    = OrderedSubsystem<4, 3>; // Delta(그리고 간접으로 Alpha)에 기댄다
+    using Foxtrot = OrderedSubsystem<5>;    // 아무것에도 기대지 않는다
 } // namespace sw::engine_registration_test
 
 namespace sw
@@ -139,13 +162,13 @@ SW_TEST_CASE( EngineRegistrationTest, BindFillsSlotAndAccessReadsIt )
     SW_REQUIRE_TRUE( parentScope.bind( &required ) ); // 부모 범위까지 찾는다
     SW_REQUIRE_TRUE( scope.bind( &optional ) );
 
-    SW_EXPECT_NULL( list.bindServices( scope ) );
+    SW_EXPECT_TRUE( list.bindServices( scope ).isBound() );
     SW_EXPECT_TRUE( &engine::getSubsystem<RequiredValue>() == &required );
     SW_EXPECT_EQUAL( 7, engine::getSubsystem<RequiredValue>()._value );
     SW_EXPECT_TRUE( engine::findSubsystem<OptionalValue>() == &optional );
     SW_EXPECT_TRUE( engine::findSubsystem<RequiredValue>() == &required );
 
-    list.unbindServices();
+    list.unbindServices( scope );
     SW_EXPECT_NULL( engine::findSubsystem<RequiredValue>() );
     SW_EXPECT_NULL( engine::findSubsystem<OptionalValue>() );
 }
@@ -157,17 +180,19 @@ SW_TEST_CASE( EngineRegistrationTest, MissingRequiredSlotIsReportedByName )
     const TestServiceRecord<RequiredValue> requiredRecord{ list, engine::EngineServiceVisibility::GameVisible };
     const TestServiceRecord<OptionalValue> optionalRecord{ list, engine::EngineServiceVisibility::HostOnly };
     SubsystemScope                         emptyScope;
-    const utf8* const                      pMissing = list.bindServices( emptyScope );
-    SW_REQUIRE_NOT_NULL( pMissing );
-    SW_EXPECT_EQUAL( string( "engine_registration_test::RequiredValue" ), string( pMissing ) );
+    const engine::EngineServiceBindResult  missing = list.bindServices( emptyScope );
+    SW_REQUIRE_TRUE( missing._kind == engine::EngineServiceBindKind::MissingRequired );
+    SW_REQUIRE_NOT_NULL( missing._pTypeName );
+    SW_EXPECT_EQUAL( string( "engine_registration_test::RequiredValue" ), string( missing._pTypeName ) );
     SW_EXPECT_NULL( engine::findSubsystem<RequiredValue>() );
+    list.unbindServices( emptyScope ); // 서지 못한 호스트도 끊는다 — 다음 바인딩이 거절되지 않게
 
     RequiredValue  required{ 1 };
     SubsystemScope scope;
     SW_REQUIRE_TRUE( scope.bind( &required ) );
-    SW_EXPECT_NULL( list.bindServices( scope ) ); // 선택 칸(OptionalValue)은 비었다
+    SW_EXPECT_TRUE( list.bindServices( scope ).isBound() ); // 선택 칸(OptionalValue)은 비었다
     SW_EXPECT_NULL( list.findMissingRequiredService() );
-    list.unbindServices();
+    list.unbindServices( scope );
     SW_EXPECT_NOT_NULL( list.findMissingRequiredService() );
 }
 
@@ -182,7 +207,7 @@ SW_TEST_CASE( EngineRegistrationTest, ModuleScopeFiltersByVisibility )
     SubsystemScope                         scope;
     SW_REQUIRE_TRUE( scope.bind( &required ) );
     SW_REQUIRE_TRUE( scope.bind( &optional ) );
-    SW_REQUIRE_TRUE( list.bindServices( scope ) == nullptr );
+    SW_REQUIRE_TRUE( list.bindServices( scope ).isBound() );
 
     SubsystemScope gameScope;
     list.bindModuleServices( gameScope, true, false );
@@ -202,7 +227,7 @@ SW_TEST_CASE( EngineRegistrationTest, ModuleScopeFiltersByVisibility )
     SW_EXPECT_TRUE( prefilledScope.find<RequiredValue>() == &own );
     SW_EXPECT_TRUE( prefilledScope.find<OptionalValue>() == &optional );
 
-    list.unbindServices();
+    list.unbindServices( scope );
     SubsystemScope unboundScope;
     list.bindModuleServices( unboundScope, false, false );
     SW_EXPECT_NULL( unboundScope.find<RequiredValue>() );
@@ -262,4 +287,91 @@ SW_TEST_CASE( EngineRegistrationTest, BuildOrderRejectsCycleUnknownAndOtherStage
         SW_EXPECT_FALSE( list.orderSubsystems( Util::kStartup, listOrder, error ) );
         SW_EXPECT_TRUE_MSG( error.find( "another stage" ) != string::npos, error );
     }
+}
+
+/** @brief [EngineRegistrationTest] 칸은 프로세스에 하나라 묶는 범위도 하나다 — 두 번째 바인딩은 칸을 덮지 않고 거절되고, 그 범위의 끊기는 앞 바인딩을 건드리지 않는다 */
+SW_TEST_CASE( EngineRegistrationTest, SecondBindIsRejectedAndKeepsTheFirst )
+{
+    engine::EngineRegistrationList         list;
+    const TestServiceRecord<RequiredValue> requiredRecord{ list, engine::EngineServiceVisibility::GameVisible };
+    RequiredValue                          first{ 1 };
+    RequiredValue                          second{ 2 };
+    SubsystemScope                         firstScope;
+    SubsystemScope                         secondScope;
+    SW_REQUIRE_TRUE( firstScope.bind( &first ) );
+    SW_REQUIRE_TRUE( secondScope.bind( &second ) );
+
+    SW_REQUIRE_TRUE( list.bindServices( firstScope ).isBound() );
+    const engine::EngineServiceBindResult again = list.bindServices( secondScope );
+    SW_EXPECT_TRUE( again._kind == engine::EngineServiceBindKind::AlreadyBound );
+    SW_EXPECT_NULL( again._pTypeName );
+    SW_EXPECT_TRUE( &engine::getSubsystem<RequiredValue>() == &first ); // 앞 엔진의 조회가 그대로다
+    SW_EXPECT_TRUE( list.findBoundScope() == &firstScope );
+
+    list.unbindServices( secondScope ); // 묶지 못한 쪽의 종료 — 아무것도 하지 않는다
+    SW_EXPECT_TRUE( engine::findSubsystem<RequiredValue>() == &first );
+    list.unbindServices( firstScope );
+    SW_EXPECT_NULL( engine::findSubsystem<RequiredValue>() );
+    SW_EXPECT_NULL( list.findBoundScope() );
+    SW_EXPECT_TRUE( list.bindServices( secondScope ).isBound() ); // 끊은 뒤에는 다시 묶인다
+    SW_EXPECT_TRUE( &engine::getSubsystem<RequiredValue>() == &second );
+    list.unbindServices( secondScope );
+}
+
+/** @brief [EngineRegistrationTest] 하네스의 엔진이 선 프로세스에서 엔진 서비스를 또 묶으면 거절되고 지금 엔진의 서비스가 그대로다(프로세스당 엔진 하나) */
+SW_TEST_CASE( EngineRegistrationTest, RunningEngineRejectsASecondEngineBinding )
+{
+    SW_REQUIRE_TRUE( engine::areEngineServicesBound() );
+    QuitRequest* const                    pBefore = &engine::getSubsystem<QuitRequest>();
+    SubsystemScope                        otherScope;
+    const engine::EngineServiceBindResult result = engine::bindEngineServices( otherScope );
+    SW_EXPECT_TRUE( result._kind == engine::EngineServiceBindKind::AlreadyBound );
+    engine::unbindEngineServices( otherScope ); // 두 번째 엔진의 종료 길 — 지금 엔진의 칸을 비우지 않는다
+    SW_EXPECT_TRUE( engine::areEngineServicesBound() );
+    SW_EXPECT_TRUE( &engine::getSubsystem<QuitRequest>() == pBefore );
+    SW_EXPECT_TRUE( engine::getEngineSubsystems() != &otherScope );
+}
+
+/** @brief [EngineRegistrationTest] 공장이 받는 범위는 등록이 적은 먼저 만들 타입만 찾는다 — 먼저 서 있어도 적지 않은 타입은 찾기로 받지 않는다 */
+SW_TEST_CASE( EngineRegistrationTest, FactoryScopeDeclaresOnlyTheAfterList )
+{
+    engine::EngineRegistrationList          list;
+    const TestSubsystemRecord<Delta, Alpha> deltaRecord{ list, Util::kStartup };
+    SubsystemScope                          scope;
+    (void)scope.emplaceSubsystem<Alpha>();
+    (void)scope.emplaceSubsystem<Bravo>(); // 먼저 서 있지만 적지 않았다
+    engine::EngineSubsystemFactoryScope factoryScope{ scope, deltaRecord };
+    SW_EXPECT_TRUE( factoryScope.isDeclared( getSubsystemTypeHash<Alpha>() ) );
+    SW_EXPECT_FALSE( factoryScope.isDeclared( getSubsystemTypeHash<Bravo>() ) );
+    SW_EXPECT_TRUE( &factoryScope.get<Alpha>() == scope.find<Alpha>() );
+    SW_EXPECT_TRUE( &factoryScope.getScope() == &scope );
+}
+
+/** @brief [EngineRegistrationTest] 먼저 만든 서브시스템을 받아 만든 서브시스템은 그것에 (간접으로라도) 수명으로 기대야 한다 — 아니면 두 이름을 대며 거절한다 */
+SW_TEST_CASE( EngineRegistrationTest, LifetimeDependencyMustFollowTheAfterList )
+{
+    engine::EngineRegistrationList            list;
+    const TestSubsystemRecord<Alpha>          alphaRecord{ list, Util::kStartup };
+    const TestSubsystemRecord<Delta, Alpha>   deltaRecord{ list, Util::kStartup };   // Delta 는 Alpha 에 기댄다
+    const TestSubsystemRecord<Echo, Alpha>    echoRecord{ list, Util::kStartup };    // Echo 는 Delta 를 거쳐 Alpha 에 닿는다
+    const TestSubsystemRecord<Foxtrot, Alpha> foxtrotRecord{ list, Util::kStartup }; // Foxtrot 은 Alpha 를 받았는데 기대지 않는다
+    SubsystemScope                            scope;
+    (void)scope.emplaceSubsystem<Alpha>();
+    (void)scope.emplaceSubsystem<Delta>();
+    (void)scope.emplaceSubsystem<Echo>();
+    (void)scope.emplaceSubsystem<Foxtrot>();
+    string error;
+
+    const vector<const engine::EngineSubsystemRecord*> listGood{ &alphaRecord, &deltaRecord, &echoRecord };
+    const vector<vector<uint32>>                       listGoodBuilt{ { 0 }, { 1 }, { 2 } };
+    SW_EXPECT_TRUE_MSG( engine::EngineRegistrationList::findLifetimeMismatch( listGood, listGoodBuilt, scope.getCollection(), error ), error );
+
+    const vector<const engine::EngineSubsystemRecord*> listBad{ &alphaRecord, &foxtrotRecord };
+    const vector<vector<uint32>>                       listBadBuilt{ { 0 }, { 3 } };
+    SW_EXPECT_FALSE( engine::EngineRegistrationList::findLifetimeMismatch( listBad, listBadBuilt, scope.getCollection(), error ) );
+    SW_EXPECT_TRUE_MSG( error.find( "Foxtrot" ) != string::npos && error.find( "Alpha" ) != string::npos && error.find( "does not depend" ) != string::npos, error );
+
+    // 서브시스템이 아닌 것만 건 공장(인터페이스 줄)은 대조할 것이 없다.
+    const vector<vector<uint32>> listNothingBuilt{ { 0 }, {} };
+    SW_EXPECT_TRUE_MSG( engine::EngineRegistrationList::findLifetimeMismatch( listBad, listNothingBuilt, scope.getCollection(), error ), error );
 }

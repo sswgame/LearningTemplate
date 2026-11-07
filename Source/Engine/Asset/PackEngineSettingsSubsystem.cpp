@@ -54,7 +54,7 @@ namespace sw
 namespace sw
 {
     // 활성 팩의 `<Engine>` 요소(창 제목 · 스키마 · UI 규칙) — 팩을 마운트한 뒤에 읽는다. 창 · 사용자 설정 · UI 가 이 뒤에 선다.
-    SW_ENGINE_SUBSYSTEM( PackEngineSettingsSubsystem, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( PackEngineSettingsSubsystem, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         const PackEngineSettingsSubsystem& packSettings = scope.emplaceSubsystem<PackEngineSettingsSubsystem>();

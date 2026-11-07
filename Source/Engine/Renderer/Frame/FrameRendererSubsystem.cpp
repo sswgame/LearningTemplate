@@ -127,7 +127,7 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SUBSYSTEM( FrameRendererSubsystem, Startup, ( RHISubsystem ), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( FrameRendererSubsystem, Startup, ( RHISubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         if ( build._pStartupSetup->_bRenderer == false )
             return;

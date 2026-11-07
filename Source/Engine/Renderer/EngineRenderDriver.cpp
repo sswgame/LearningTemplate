@@ -62,6 +62,12 @@ namespace sw
         return EngineSubsystemHost::kClient;
     }
 
+    span<const utf8* const> EngineRenderDriver::getSubsystemDependencies() const
+    {
+        static constexpr const utf8* kArrDependency[] = { RenderThreadSubsystem::kSubsystemName };
+        return kArrDependency;
+    }
+
     void EngineRenderDriver::onStartupFinished()
     {
         _pRHI           = _rhiSubsystem.findRHI();
@@ -297,11 +303,11 @@ namespace sw
 namespace sw
 {
     // 세 단계를 빌려 든다 — 공장이 찾으므로 먼저 만든다. 렌더러를 두지 않는 호스트(헤드리스 작업이 아니라 하네스)는 만들지 않는다.
-    SW_ENGINE_SUBSYSTEM( EngineRenderDriver, Startup, ( RHISubsystem, FrameRendererSubsystem, RenderThreadSubsystem ), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( EngineRenderDriver, Startup, ( RHISubsystem, FrameRendererSubsystem, RenderThreadSubsystem ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         if ( build._pStartupSetup->_bRenderer == false )
             return;
-        EngineRenderDriver& driver   = scope.emplaceSubsystem<EngineRenderDriver>( scope, scope.get<RHISubsystem>(), scope.get<FrameRendererSubsystem>(), scope.get<RenderThreadSubsystem>() );
+        EngineRenderDriver& driver   = scope.emplaceSubsystem<EngineRenderDriver>( scope.getScope(), scope.get<RHISubsystem>(), scope.get<FrameRendererSubsystem>(), scope.get<RenderThreadSubsystem>() );
         const bool          bExposed = scope.expose<IEngineRenderDriver>( driver );
         SW_ASSERT( bExposed );
         (void)bExposed;

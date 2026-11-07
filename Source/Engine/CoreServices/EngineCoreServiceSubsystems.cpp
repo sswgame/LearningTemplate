@@ -42,12 +42,12 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( EventDispatcher, GameVisible, Services, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( EventDispatcher, GameVisible, Services, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         build._pServiceParts->_pEventDispatcher = &scope.emplaceSubsystem<EventDispatcher>();
     } );
 
-    SW_ENGINE_SERVICE_SUBSYSTEM( CompressionCodecRegistry, GameVisible, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( CompressionCodecRegistry, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         build._pStartupParts->_pCodecRegistry = &scope.emplaceSubsystem<CompressionCodecRegistry>();
         (void)scope.emplaceSubsystem<EngineCompressionCodecs>( *build._pStartupParts->_pCodecRegistry );
@@ -56,7 +56,7 @@ namespace sw
     SW_ENGINE_SERVICE_SUBSYSTEM( TaskManager, HostOnly, Startup, (), SW_ENGINE_DEFAULT_FACTORY( TaskManager ) );
 
     // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다. 공장이 태스크 매니저를 찾으므로 그것을 먼저 만든다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( AsyncFileIO, HostOnly, Startup, ( TaskManager ), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( AsyncFileIO, HostOnly, Startup, ( TaskManager ), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         AsyncFileIOConfig fileIOSettings{};

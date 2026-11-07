@@ -22,6 +22,7 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Foundation/EngineScope.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 #include <type_traits>
 
@@ -38,13 +39,14 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief @p subsystems(엔진 범위 — 부모 범위까지 찾는다)에서 등록된 칸을 모두 찾아 둡니다.
-         * @return 비어 있는 **필수 칸의 타입 이름**(이름 순으로 첫 것)입니다. 모두 찾았으면 nullptr 입니다. 호스트는 이것이 nullptr 가 아니면 서지 않는다 —
-         *         그 함수로 게이팅되는 스무 곳이 조용히 폴백으로 가는 것(배포본에서 셰이더 캐시를 건너뛰고 DXC 를 부르다 죽은 적이 있다)을 기동에서 막는다.
+         * @return `Bound` 가 아니면 호스트는 서지 않는다. `MissingRequired` 는 비어 있는 **필수 칸의 타입 이름**을 준다 — 그 함수로 게이팅되는 스무 곳이 조용히
+         *         폴백으로 가는 것(배포본에서 셰이더 캐시를 건너뛰고 DXC 를 부르다 죽은 적이 있다)을 기동에서 막는다. `AlreadyBound` 는 이 프로세스에 이미 엔진이
+         *         묶였다는 뜻이다 — **프로세스당 엔진 하나**가 계약이라(칸은 타입마다 하나) 앞 엔진의 칸을 덮지 않고 거절한다.
          * @note 로케이터는 끊을 때까지 살아 있어야 합니다(`getEngineSubsystems` 가 돌려준다).
          */
-        [[nodiscard]] SW_API const utf8* bindEngineServices( const ISubsystemLocator& subsystems );
-        /** @brief 바인딩을 끊습니다. 찾아 둔 서비스가 소멸하기 전에 부릅니다. */
-        SW_API void unbindEngineServices();
+        [[nodiscard]] SW_API EngineServiceBindResult bindEngineServices( const ISubsystemLocator& subsystems );
+        /** @brief @p subsystems 로 묶은 바인딩을 끊습니다. 찾아 둔 서비스가 소멸하기 전에 부릅니다. 다른 범위(묶지 못한 엔진)면 아무것도 하지 않는다. */
+        SW_API void unbindEngineServices( const ISubsystemLocator& subsystems );
         /**
          * @brief 필수 칸(`SW_SERVICE_SLOT( T, Required )`)을 모두 찾았는지 반환합니다. bind/unbind 때 한 번 센 플래그입니다.
          * @details `Component::getTypeInfo()` 가 캐스트마다 이것을 부르므로 부를 때마다 칸을 훑지 않는다.

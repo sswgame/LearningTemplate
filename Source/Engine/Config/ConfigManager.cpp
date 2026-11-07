@@ -200,7 +200,7 @@ namespace sw
 namespace sw
 {
     // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽어 자기 자리에 둔다(Resource 가 그 뒤에 서서 팩 루트를 안다).
-    SW_ENGINE_SUBSYSTEM( ConfigManager, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( ConfigManager, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         ConfigManager& configManager          = scope.emplaceSubsystem<ConfigManager>();
         build._pStartupParts->_pConfigManager = &configManager;

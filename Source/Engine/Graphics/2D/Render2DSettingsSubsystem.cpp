@@ -45,7 +45,7 @@ namespace sw
 namespace sw
 {
     // 2D 렌더 설정(정렬 레이어 · 투명 정렬 축)은 엔진 파일이다 - 마운트한 뒤에 읽는다. 2D 컴포넌트를 읽는 단계(헤드리스 쿠킹 · 렌더러)가 이 뒤에 선다.
-    SW_ENGINE_SUBSYSTEM( Render2DSettingsSubsystem, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( Render2DSettingsSubsystem, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         const Render2DSettingsSubsystem& render2DSettings = scope.emplaceSubsystem<Render2DSettingsSubsystem>();

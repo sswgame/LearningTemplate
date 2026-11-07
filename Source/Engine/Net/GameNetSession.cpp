@@ -1020,7 +1020,7 @@ namespace sw
 namespace sw
 {
     // 게임 네트워크 세션 — 게임 모듈 리로드를 넘어 연결을 지킨다.
-    SW_ENGINE_SERVICE_SUBSYSTEM( GameNetSession, GameVisible, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( GameNetSession, GameVisible, Startup, (), []( engine::EngineSubsystemFactoryScope& scope, engine::EngineSubsystemBuild& build )
     {
         build._pStartupParts->_pNetSession = &scope.emplaceSubsystem<GameNetSession>();
     } );
