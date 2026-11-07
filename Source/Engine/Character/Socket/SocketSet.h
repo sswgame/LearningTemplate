@@ -251,6 +251,12 @@ namespace sw
          * @return 부모를 찾지 못하면 false 입니다.
          */
         bool computeSocketTransform( const SocketDef& socket, const CharacterBoneArray& bones, float4x4& outUnitTransform ) const;
+        /**
+         * @brief 항목의 부모(부모 본 · 가상 본, 비었으면 유닛 루트 = 단위 행렬)의 유닛 공간 변환입니다. 항목의 변환은 이 위에 얹힌다(`makeLocalTransform() × 이것`).
+         * @details 에디터의 소켓 기즈모가 끈 월드 자리를 부모 기준 로컬로 되돌릴 때 쓴다 — 런타임과 같은 부모 해석이어야 저장한 값이 같은 자리에 붙는다.
+         * @return 부모를 찾지 못하면 false 입니다.
+         */
+        [[nodiscard]] bool computeParentTransform( const SocketDef& socket, const CharacterBoneArray& bones, float4x4& outUnitTransform ) const;
         /** @brief 가상 본의 유닛 공간 변환입니다. 두 본 중 하나라도 없으면 false 입니다. */
         static bool computeVirtualBoneTransform( const VirtualBoneDef& virtualBone, const CharacterBoneArray& bones, float4x4& outUnitTransform );
 

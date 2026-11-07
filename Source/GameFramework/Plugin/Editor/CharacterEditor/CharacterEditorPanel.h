@@ -46,16 +46,18 @@ namespace sw::editor
         /** @brief 자동화 감시 값이 읽는 값입니다. 패널이 그릴 때마다 게시합니다(게임 스레드). 값은 이 패널 인스턴스의 것이라 에디터마다 따로이고 패널과 함께 사라집니다. */
         struct Published
         {
-            uint32 _boneCount{ 0 };
-            uint32 _socketCount{ 0 };
-            uint32 _equippedSlotCount{ 0 };
-            uint32 _presetCount{ 0 };
-            uint32 _exportCount{ 0 };          ///< 이 패널이 데이터 프리셋으로 내보낸 수
-            uint32 _previewAssembleCount{ 0 }; ///< 미리보기 몸을 조립한 수(미리보기 탭을 그릴 때 게시)
-            uint32 _clipPlaying{ 0 };          ///< 미리보기 몸이 고른 클립을 재생 중이면 1(미리보기 탭을 그릴 때 게시)
-            uint32 _penetrationMarkCount{ 0 }; ///< 지난 그리기에 뷰포트에 찍은 관통 점 수
-            uint32 _boneGizmoPlaced{ 0 };      ///< 고른 본에 기즈모 표식을 놓았으면 1
-            uint32 _statusSet{ 0 };            ///< 상태 줄에 글(오류 · 진행)이 있으면 1 — 시나리오가 편집 오류가 남지 않았는지 본다
+            uint32  _boneCount{ 0 };
+            uint32  _socketCount{ 0 };
+            uint32  _equippedSlotCount{ 0 };
+            uint32  _presetCount{ 0 };
+            uint32  _exportCount{ 0 };          ///< 이 패널이 데이터 프리셋으로 내보낸 수
+            uint32  _previewAssembleCount{ 0 }; ///< 미리보기 몸을 조립한 수(미리보기 탭을 그릴 때 게시)
+            uint32  _clipPlaying{ 0 };          ///< 미리보기 몸이 고른 클립을 재생 중이면 1(미리보기 탭을 그릴 때 게시)
+            uint32  _penetrationMarkCount{ 0 }; ///< 지난 그리기에 뷰포트에 찍은 관통 점 수
+            uint32  _boneGizmoPlaced{ 0 };      ///< 고른 본에 기즈모 표식을 놓았으면 1
+            uint32  _socketGizmoPlaced{ 0 };    ///< 고른 소켓에 기즈모 표식을 놓았으면 1
+            float32 _selectedSocketX{ 0.0f };   ///< 고른 소켓의 로컬 위치 x(m) — 시나리오가 기즈모 끌기 · 되돌리기를 본다
+            uint32  _statusSet{ 0 };            ///< 상태 줄에 글(오류 · 진행)이 있으면 1 — 시나리오가 편집 오류가 남지 않았는지 본다
         };
 
         CharacterEditorPanel();
@@ -109,11 +111,20 @@ namespace sw::editor
         /** @brief 뷰포트 위에 소켓 파일의 소켓 축(몸이 조립한 자리)을 긋습니다. 고른 소켓은 길고 밝다. */
         void drawSocketAxes( const CharacterAppearanceComponent& appearance );
         /**
-         * @brief 스켈레톤 탭에서 고른 본(`CharacterEditorModel::getSelectedBone`)의 기즈모를 미리보기 씬에 놓고, 기즈모로 옮긴 만큼을 레퍼런스 포즈 덮어쓰기(`BonePoseEditModel::setTranslation` · `setRotationDegrees`)로 바꿉니다.
-         * @details 표시 오브젝트(SceneComponent 하나)를 본의 월드 자리(몸 월드 × 덮어쓴 모델 변환)에 놓고 창 선택에 올린다. 다음 그리기에 그 월드 변환이 놓은 값과 다르면
-         *          기즈모가 옮긴 것이다 — 부모 월드의 역으로 로컬을 구해 모델에 넣는다(끄는 동안은 한 되돌리기 단계). 본을 고르지 않았으면 표시 오브젝트를 지운다.
+         * @brief 미리보기 기즈모를 그 주인(`CharacterEditorModel::getGizmoTarget` — 마지막에 고른 본 · 소켓)의 월드 자리에 놓고, 기즈모로 옮긴 만큼을 주인의 데이터로 바꿉니다.
+         * @details 표시 오브젝트(SceneComponent 하나)를 주인의 자리에 놓고 창 선택에 올린다. 다음 그리기에 그 월드 변환이 놓은 값과 다르면 기즈모가 옮긴 것이다 —
+         *          부모 월드의 역으로 로컬을 구해 모델에 넣는다(`applyGizmoWorld`, 끄는 동안은 한 되돌리기 단계). 프리뷰 오브젝트만 움직이지 않는다 — 다음 그리기는 모델 값으로 다시 놓는다.
+         *          주인이 없거나 자리를 못 구하면 표시 오브젝트를 지운다.
          */
-        void syncBoneGizmo();
+        void syncPreviewGizmo();
+        /** @brief 고른 본의 월드 자리(몸 월드 × 덮어쓴 모델 변환)와 그 부모의 월드 자리입니다. 본을 못 찾으면 false 입니다. */
+        [[nodiscard]] bool findBoneGizmoFrame( const float4x4& bodyWorld, float4x4& outWorld, float4x4& outParentWorld ) const;
+        /** @brief 고른 소켓의 월드 자리(로컬 × 부모 본 × 몸 월드, 지금 포즈)와 그 부모의 월드 자리입니다. 소켓 · 부모를 못 찾으면 false 입니다. */
+        [[nodiscard]] bool findSocketGizmoFrame( const GameObject& body, float4x4& outWorld, float4x4& outParentWorld ) const;
+        /** @brief 기즈모가 옮긴 월드 자리 @p world 를 @p target 의 데이터로 씁니다 — 본은 레퍼런스 포즈 덮어쓰기, 소켓은 소켓 파일의 부모 기준 로컬 변환입니다. */
+        void applyGizmoWorld( CharacterGizmoTarget target, const float4x4& world, const float4x4& parentWorld );
+        /** @brief 자동화가 기즈모 가운데를 끌 수 있게 그 화면 자리를 표시(`charactereditor.gizmoCenter`)로 남깁니다. */
+        void recordGizmoMark();
         /** @brief 피팅이 찾은 관통 점(`FitPenetration::_listPoint`, 바인드 공간)을 몸의 월드 변환으로 옮겨 빨간 십자로 긋습니다. 관통이 없으면 아무것도 긋지 않습니다. */
         void drawPenetrationPoints( const GameObject& body );
         /**
@@ -167,11 +178,12 @@ namespace sw::editor
         uint8                                   _bModelsWereDirty     : 1; ///< 지난 그리기에 소켓 · 포즈 모델이 미저장이었다(되돌리기로 저장 상태에 돌아오면 dirty 를 내린다)
         uint8                                   _bCustomizationOpen   : 1; ///< 꾸미기 머리글이 펼쳐져 있다 — 뷰포트가 슬라이더 몇 줄 자리를 남긴다
         uint8                                   _bCustomizationActive : 1; ///< 꾸미기 슬라이더를 끄는 중이다(`drawCustomizationSliders`) — 미리보기 몸 다시 입히기를 놓을 때까지 미룬다
-        uint8                                   _bBoneGizmoPlaced     : 1; ///< `_placedBoneWorld` 가 유효하다
+        uint8                                   _bGizmoPlaced         : 1; ///< `_placedGizmoWorld` 가 유효하다
         uint32                                  _seenFitRevision;          ///< 확인 표시에 올린 피팅 결과의 세대(`CharacterAppearanceComponent::getFitResultRevision`)
-        EditorPreviewGizmo                      _gizmo;                    ///< 고른 본의 기즈모(`syncBoneGizmo`)
-        GameObjectHandle                        _boneGizmoTarget;          ///< 기즈모가 잡는 미리보기 씬의 표시 오브젝트 — 고른 본의 월드 자리에 놓는다
-        float4x4                                _placedBoneWorld;          ///< 지난 그리기에 표시 오브젝트를 놓은 월드 변환 — 달라졌으면 기즈모가 옮긴 것이다
+        EditorPreviewGizmo                      _gizmo;                    ///< 고른 본 · 소켓의 기즈모(`syncPreviewGizmo`)
+        GameObjectHandle                        _gizmoProxy;               ///< 기즈모가 잡는 미리보기 씬의 표시 오브젝트 — 주인의 월드 자리에 놓는다
+        float4x4                                _placedGizmoWorld;         ///< 지난 그리기에 표시 오브젝트를 놓은 월드 변환 — 달라졌으면 기즈모가 옮긴 것이다
+        CharacterGizmoTarget                    _placedGizmoTarget;        ///< 그 자리를 놓은 주인 — 바뀌면 지난 자리와 견주지 않는다
         bool                                    _bRigPreview;              ///< 제약 리그를 미리보기 몸에 켠다(`syncRigPreview`) NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
         Published                               _published;                ///< 감시 값이 읽는 게시 값
         string                                  _socketResolveError;       ///< 미리보기가 지난 프레임에 상태 줄에 올린 소켓 풀기 오류(풀리면 지운다)

@@ -64,7 +64,7 @@ namespace sw::editor
             static constexpr float32 kSocketAxisLength         = 0.08f;   ///< 미리보기 소켓 축 길이(m)
             static constexpr float32 kSelectedSocketAxisLength = 0.18f;   ///< 고른 소켓의 축 길이(m)
             static constexpr float32 kPenetrationMarkLength    = 0.01f;   ///< 관통 점 십자의 한 팔 길이(m)
-            static constexpr float32 kBoneGizmoTolerance       = 1.0e-4f; ///< 놓은 월드 변환과 이만큼 다르면 기즈모가 옮긴 것이다(행렬 성분)
+            static constexpr float32 kGizmoTolerance           = 1.0e-4f; ///< 놓은 월드 변환과 이만큼 다르면 기즈모가 옮긴 것이다(행렬 성분)
 
             /** @brief 입력칸의 글을 이름으로 바꿉니다. 비어 있으면 빈 이름입니다. */
             static hashed_string makeName( const utf8* pText )
@@ -124,6 +124,20 @@ namespace sw::editor
             [[nodiscard]] static bool readBoneGizmoPlaced( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 return readPublished( &CharacterEditorPanel::Published::_boneGizmoPlaced, outValue );
+            }
+            [[nodiscard]] static bool readSocketGizmoPlaced( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readPublished( &CharacterEditorPanel::Published::_socketGizmoPlaced, outValue );
+            }
+            /** @brief 고른 소켓의 로컬 위치 x 입니다(실수라 `readPublished` 가 아니라 따로 읽는다). 패널이 없으면 false 입니다. */
+            [[nodiscard]] static bool readSelectedSocketX( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorPanelManager*   pManager = editor::findSubsystem<EditorPanelManager>();
+                const CharacterEditorPanel* pPanel   = pManager != nullptr ? pManager->findPanel<CharacterEditorPanel>() : nullptr;
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getPublished()._selectedSocketX );
+                return true;
             }
             [[nodiscard]] static bool readPenetrationMarkCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -192,6 +206,10 @@ namespace sw::editor
                          &CharacterEditorPanelInternal::readPenetrationMarkCount );
     SW_AUTOMATION_WATCH( editorCharacterEditorBoneGizmoPlaced, "Editor.CharacterEditorBoneGizmoPlaced", "1 while the Character Editor preview holds a gizmo marker on the selected bone",
                          &CharacterEditorPanelInternal::readBoneGizmoPlaced );
+    SW_AUTOMATION_WATCH( editorCharacterEditorSocketGizmoPlaced, "Editor.CharacterEditorSocketGizmoPlaced", "1 while the Character Editor preview holds the gizmo on the selected socket",
+                         &CharacterEditorPanelInternal::readSocketGizmoPlaced );
+    SW_AUTOMATION_WATCH( editorCharacterEditorSelectedSocketX, "Editor.CharacterEditorSelectedSocketX", "Local translation x (m) of the socket selected in the Character Editor",
+                         &CharacterEditorPanelInternal::readSelectedSocketX );
     SW_AUTOMATION_WATCH( editorCharacterEditorPreviewClipPlaying, "Editor.CharacterEditorPreviewClipPlaying", "1 while the Character Editor preview body plays the selected clip (published while the Preview tab draws)",
                          &CharacterEditorPanelInternal::readClipPlaying );
     SW_AUTOMATION_WATCH( editorPreviewViewportOrbitDistance, "Editor.PreviewViewportOrbitDistance",
@@ -213,11 +231,12 @@ namespace sw::editor
         , _bModelsWereDirty{ SW_FALSE }
         , _bCustomizationOpen{ SW_TRUE }
         , _bCustomizationActive{ SW_FALSE }
-        , _bBoneGizmoPlaced{ SW_FALSE }
+        , _bGizmoPlaced{ SW_FALSE }
         , _seenFitRevision{ 0 }
         , _gizmo{}
-        , _boneGizmoTarget{}
-        , _placedBoneWorld{}
+        , _gizmoProxy{}
+        , _placedGizmoWorld{}
+        , _placedGizmoTarget{ CharacterGizmoTarget::None }
         , _bRigPreview{ false }
         , _published{}
         , _thumbnailCapturePath{}
@@ -263,12 +282,14 @@ namespace sw::editor
         }
         ImGui::Separator();
 
-        Published& published         = _published;
-        published._boneCount         = _document.getPoseModel().getSkeleton().getBoneCount();
-        published._socketCount       = static_cast<uint32>( _document.getSocketModel().getSockets().getSockets().size() );
-        published._statusSet         = _document.getStatus().empty() ? 0u : 1u;
-        published._presetCount       = static_cast<uint32>( _document.getPresetStore().getPresets().size() );
-        published._equippedSlotCount = _document.countEquippedSlots();
+        Published& published              = _published;
+        published._boneCount              = _document.getPoseModel().getSkeleton().getBoneCount();
+        published._socketCount            = static_cast<uint32>( _document.getSocketModel().getSockets().getSockets().size() );
+        published._statusSet              = _document.getStatus().empty() ? 0u : 1u;
+        published._presetCount            = static_cast<uint32>( _document.getPresetStore().getPresets().size() );
+        published._equippedSlotCount      = _document.countEquippedSlots();
+        const SocketDef* pPublishedSocket = _document.getSocketModel().findSocket( _document.getSelectedSocket() );
+        published._selectedSocketX        = pPublishedSocket != nullptr ? pPublishedSocket->_translation._x : 0.0f;
 
         if ( ImGui::BeginTabBar( "##CharacterEditorTabs" ) )
         {
@@ -392,9 +413,10 @@ namespace sw::editor
         // 뷰포트가 남은 높이를 모두 차지하면 슬라이더가 늘 접힌 아래로 밀려 스크롤 없이는 닿지 못한다 — 펼쳐졌을 때는 아래 몇 줄 자리를 남긴다.
         const float32 reserve        = _bCustomizationOpen ? CharacterEditorPanelInternal::kCustomizationReserve * EditorThemeUtil::getDPIScale() : 0.0f;
         const float32 viewportHeight = available._y - reserve;
-        syncBoneGizmo();
+        syncPreviewGizmo();
         drawPreviewViewport( float2{ available._x, viewportHeight > minHeight ? viewportHeight : minHeight }, _gizmo.hasMouse() );
         _gizmo.draw( *this );
+        recordGizmoMark();
         EditorSelfTestMarks::record( "charactereditor.previewScene" );
         if ( pAppearance != nullptr )
             drawSocketAxes( *pAppearance );
@@ -415,24 +437,95 @@ namespace sw::editor
             _bCustomizationActive = SW_FALSE;
     }
 
-    void CharacterEditorPanel::syncBoneGizmo()
+    void CharacterEditorPanel::syncPreviewGizmo()
     {
-        GameObjectManager* pManager   = findPreviewManager();
-        GameObject*        pBody      = pManager != nullptr ? pManager->resolveGameObject( _previewBody ) : nullptr;
-        GameObject*        pTarget    = pManager != nullptr ? pManager->resolveGameObject( _boneGizmoTarget ) : nullptr;
-        BonePoseEditModel& pose       = _document.getPoseModel();
-        const Skeleton&    skeleton   = pose.getSkeleton();
-        const int32        boneIndex  = _document.getSelectedBone().empty() ? -1 : skeleton.findBoneIndex( _document.getSelectedBone() );
-        SceneComponent*    pBodyScene = pBody != nullptr ? pBody->getPrimarySceneComponent() : nullptr;
-        if ( boneIndex < 0 || pBodyScene == nullptr )
+        GameObjectManager*         pManager   = findPreviewManager();
+        GameObject*                pBody      = pManager != nullptr ? pManager->resolveGameObject( _previewBody ) : nullptr;
+        GameObject*                pProxy     = pManager != nullptr ? pManager->resolveGameObject( _gizmoProxy ) : nullptr;
+        const SceneComponent*      pBodyScene = pBody != nullptr ? pBody->getPrimarySceneComponent() : nullptr;
+        const CharacterGizmoTarget target     = _document.getGizmoTarget();
+        float4x4                   desiredWorld{};
+        float4x4                   parentWorld{};
+        bool                       bFrame = false;
+        if ( pBodyScene != nullptr && target == CharacterGizmoTarget::Bone )
+            bFrame = findBoneGizmoFrame( pBodyScene->getWorldMatrix(), desiredWorld, parentWorld );
+        else if ( pBodyScene != nullptr && target == CharacterGizmoTarget::Socket )
+            bFrame = findSocketGizmoFrame( *pBody, desiredWorld, parentWorld );
+        if ( bFrame == false )
         {
-            if ( pTarget != nullptr )
-                pManager->destroyGameObject( pTarget );
-            _boneGizmoTarget            = GameObjectHandle{};
-            _bBoneGizmoPlaced           = SW_FALSE;
-            _published._boneGizmoPlaced = 0;
+            if ( pProxy != nullptr )
+                pManager->destroyGameObject( pProxy );
+            _gizmoProxy                   = GameObjectHandle{};
+            _bGizmoPlaced                 = SW_FALSE;
+            _published._boneGizmoPlaced   = 0;
+            _published._socketGizmoPlaced = 0;
             return;
         }
+        if ( pProxy == nullptr )
+        {
+            pProxy = pManager->createGameObject( hashed_string( "GizmoProxy" ) );
+            if ( pProxy == nullptr || pProxy->addComponent<SceneComponent>() == nullptr )
+            {
+                _document.setStatus( "The gizmo target could not be created" );
+                return;
+            }
+            _gizmoProxy   = pProxy->getHandle();
+            _bGizmoPlaced = SW_FALSE;
+        }
+        SceneComponent* pScene = pProxy->getPrimarySceneComponent();
+        if ( pScene == nullptr )
+            return;
+        if ( getPreviewSelection().getPrimaryObject() != pProxy )
+            getPreviewSelection().selectObject( pProxy );
+        // 주인이 바뀌었으면 지난 자리와 견주지 않는다 — 다른 본 · 소켓의 자리를 "끌었다" 로 읽어 옮기면 안 된다.
+        if ( target != _placedGizmoTarget )
+        {
+            _bGizmoPlaced = SW_FALSE;
+            _document.getPoseModel().endContinuousEdit();
+            _document.getSocketModel().endContinuousEdit();
+        }
+        // 지난 그리기에 놓은 자리와 달라졌으면 기즈모가 옮긴 것이다 — 주인의 데이터(포즈 덮어쓰기 · 소켓 로컬 변환)로 되돌린다.
+        bool           bMoved       = false;
+        const float4x4 currentWorld = pScene->getWorldMatrix();
+        if ( _bGizmoPlaced )
+        {
+            for ( uint32 element = 0; element < 16 && bMoved == false; ++element )
+            {
+                bMoved = MathUtil::abs( currentWorld.data()[element] - _placedGizmoWorld.data()[element] ) > CharacterEditorPanelInternal::kGizmoTolerance;
+            }
+        }
+        if ( bMoved )
+        {
+            applyGizmoWorld( target, currentWorld, parentWorld );
+        }
+        else if ( _bGizmoPlaced && _gizmo.hasMouse() == false )
+        {
+            // 끌기가 끝났다 — 다음 편집은 새 되돌리기 단계
+            _document.getPoseModel().endContinuousEdit();
+            _document.getSocketModel().endContinuousEdit();
+        }
+        if ( bMoved == false )
+        {
+            pScene->setWorldTransform( desiredWorld );
+            _placedGizmoWorld = pScene->getWorldMatrix();
+        }
+        else
+        {
+            _placedGizmoWorld = currentWorld; // 다음 그리기는 모델 값으로 다시 놓는다(위 `bMoved == false` 경로가 desired 로 맞춘다)
+        }
+        _bGizmoPlaced                 = SW_TRUE;
+        _placedGizmoTarget            = target;
+        _published._boneGizmoPlaced   = target == CharacterGizmoTarget::Bone ? 1u : 0u;
+        _published._socketGizmoPlaced = target == CharacterGizmoTarget::Socket ? 1u : 0u;
+    }
+
+    bool CharacterEditorPanel::findBoneGizmoFrame( const float4x4& bodyWorld, float4x4& outWorld, float4x4& outParentWorld ) const
+    {
+        const BonePoseEditModel& pose      = _document.getPoseModel();
+        const Skeleton&          skeleton  = pose.getSkeleton();
+        const int32              boneIndex = skeleton.findBoneIndex( _document.getSelectedBone() );
+        if ( boneIndex < 0 )
+            return false;
         // 덮어쓴 값을 얹은 모델 변환 — 부모까지 줄을 올라가 루트부터 곱한다(행벡터: 자식 × 부모).
         vector<int32> listChain;
         for ( int32 index = boneIndex; index >= 0; index = skeleton.getBone( static_cast<uint32>( index ) )._parentIndex )
@@ -445,63 +538,82 @@ namespace sw::editor
         {
             BoneTransform local{};
             if ( pose.getEffectiveTransform( skeleton.getBone( static_cast<uint32>( listChain[chainIndex - 1] ) )._name, local ) == false )
-                return;
+                return false;
             parentModel = boneModel;
             boneModel   = local.toMatrix() * boneModel;
         }
-        const float4x4 bodyWorld    = pBodyScene->getWorldMatrix();
-        const float4x4 desiredWorld = boneModel * bodyWorld;
-        if ( pTarget == nullptr )
+        outWorld       = boneModel * bodyWorld;
+        outParentWorld = parentModel * bodyWorld;
+        return true;
+    }
+
+    bool CharacterEditorPanel::findSocketGizmoFrame( const GameObject& body, float4x4& outWorld, float4x4& outParentWorld ) const
+    {
+        // 편집 중(저장 전) 소켓 정의를 몸의 지금 포즈에 얹는다 — 소켓 축(`drawSocketAxes`)과 같은 뼈 배열이다. 부모 해석은 런타임의 것(`SocketSet::computeParentTransform`)이다.
+        const SkeletalMeshComponent* pUnit      = body.getComponent<SkeletalMeshComponent>();
+        const SceneComponent*        pBodyScene = body.getPrimarySceneComponent();
+        const SocketSet&             sockets    = _document.getSocketModel().getSockets();
+        const SocketDef*             pSocket    = sockets.findSocket( _document.getSelectedSocket() );
+        if ( pUnit == nullptr || pBodyScene == nullptr || pSocket == nullptr )
+            return false;
+        CharacterBoneArray poseBones;
+        CharacterPoseUtil::makeBindBones( pUnit->getSkeleton(), poseBones );
+        (void)CharacterPoseUtil::copyUnitPose( *pUnit, poseBones ); // 포즈가 아직 없으면 바인드 포즈 그대로 둔다(정상)
+        float4x4 parentUnit{};
+        if ( sockets.computeParentTransform( *pSocket, poseBones, parentUnit ) == false )
+            return false; // 모르는 부모 본 — 소켓 축이 상태 줄에 이유를 남긴다
+        outParentWorld = parentUnit * pBodyScene->getWorldMatrix();
+        outWorld       = pSocket->makeLocalTransform() * outParentWorld;
+        return true;
+    }
+
+    void CharacterEditorPanel::applyGizmoWorld( CharacterGizmoTarget target, const float4x4& world, const float4x4& parentWorld )
+    {
+        string error;
+        switch ( target )
         {
-            pTarget = pManager->createGameObject( hashed_string( "BoneGizmoTarget" ) );
-            if ( pTarget == nullptr || pTarget->addComponent<SceneComponent>() == nullptr )
+            case CharacterGizmoTarget::None:
+                break;
+            case CharacterGizmoTarget::Bone:
             {
-                _document.setStatus( "The bone gizmo target could not be created" );
-                return;
+                // 부모 월드의 역으로 본의 로컬을 구해 레퍼런스 포즈 덮어쓰기에 넣는다(끄는 동안은 한 되돌리기 단계).
+                BonePoseEditModel&  pose    = _document.getPoseModel();
+                const BoneTransform local   = BoneTransform::makeFromMatrix( world * parentWorld.invert() );
+                const float3        degrees = local._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
+                (void)pose.setTranslation( _document.getSelectedBone(), local._translation, true, error ); // 같은 값이면 false 이고 오류는 비어 있다
+                (void)pose.setRotationDegrees( _document.getSelectedBone(), degrees, true, error );        // 같은 값이면 false 이고 오류는 비어 있다
+                _document.setStatus( error );
+                break;
             }
-            _boneGizmoTarget  = pTarget->getHandle();
-            _bBoneGizmoPlaced = SW_FALSE;
+            case CharacterGizmoTarget::Socket:
+            {
+                // 월드 두 행렬에 몸의 월드가 함께 곱혀 있어 나누면 유닛 공간과 같은 로컬이다 — 소켓 파일의 부모 기준 변환으로 쓴다.
+                _document.reportEdit( _document.getSocketModel().setUnitTransform( _document.getSelectedSocket(), world, parentWorld, true, _document.editStatus() ) );
+                break;
+            }
         }
-        SceneComponent* pScene = pTarget->getPrimarySceneComponent();
-        if ( pScene == nullptr )
+    }
+
+    void CharacterEditorPanel::recordGizmoMark()
+    {
+        // 시나리오가 기즈모 가운데(화면 평면 이동 손잡이)를 끌 수 있게 표시 오브젝트의 화면 자리를 적는다.
+        if ( EditorSelfTestMarks::isEnabled() == false || _bGizmoPlaced == SW_FALSE )
             return;
-        if ( getPreviewSelection().getPrimaryObject() != pTarget )
-            getPreviewSelection().selectObject( pTarget );
-        // 지난 그리기에 놓은 자리와 달라졌으면 기즈모가 옮긴 것이다 — 부모 월드의 역으로 본의 로컬을 구해 모델에 넣는다.
-        bool           bMoved       = false;
-        const float4x4 currentWorld = pScene->getWorldMatrix();
-        if ( _bBoneGizmoPlaced )
-        {
-            for ( uint32 element = 0; element < 16 && bMoved == false; ++element )
-            {
-                bMoved = MathUtil::abs( currentWorld.data()[element] - _placedBoneWorld.data()[element] ) > CharacterEditorPanelInternal::kBoneGizmoTolerance;
-            }
-        }
-        if ( bMoved )
-        {
-            const BoneTransform local = BoneTransform::makeFromMatrix( currentWorld * ( parentModel * bodyWorld ).invert() );
-            const hashed_string bone  = skeleton.getBone( static_cast<uint32>( boneIndex ) )._name;
-            string              error;
-            const float3        degrees = local._rotation.getEulerAngles() * MathUtil::kRadianToDegree;
-            (void)pose.setTranslation( bone, local._translation, true, error ); // 같은 값이면 false 이고 오류는 비어 있다
-            (void)pose.setRotationDegrees( bone, degrees, true, error );        // 같은 값이면 false 이고 오류는 비어 있다
-            _document.setStatus( error );
-        }
-        else if ( _bBoneGizmoPlaced && _gizmo.hasMouse() == false )
-        {
-            pose.endContinuousEdit(); // 끌기가 끝났다 — 다음 편집은 새 되돌리기 단계
-        }
-        if ( bMoved == false )
-        {
-            pScene->setWorldTransform( desiredWorld );
-            _placedBoneWorld = pScene->getWorldMatrix();
-        }
-        else
-        {
-            _placedBoneWorld = currentWorld; // 다음 그리기는 모델 값으로 다시 놓는다(위 `bMoved == false` 경로가 desired 로 맞춘다)
-        }
-        _bBoneGizmoPlaced           = SW_TRUE;
-        _published._boneGizmoPlaced = 1;
+        const EditorPreviewViewport& viewport = getPreviewViewport();
+        const float2                 position = viewport.getImagePosition();
+        const float2                 size     = viewport.getImageSize();
+        if ( size._x <= 0.0f || size._y <= 0.0f )
+            return;
+        float4x4 viewProjection{};
+        float3   eye{};
+        viewport.computeViewProjection( size._x / size._y, viewProjection, eye );
+        const float3 origin = _placedGizmoWorld.getTranslation();
+        const float4 clip   = float4::transform( float4{ origin._x, origin._y, origin._z, 1.0f }, viewProjection );
+        if ( clip._w <= MathUtil::kEpsilon )
+            return;
+        const float2  screen{ position._x + ( clip._x / clip._w * 0.5f + 0.5f ) * size._x, position._y + ( 0.5f - clip._y / clip._w * 0.5f ) * size._y };
+        const float32 half = ImGui::GetFontSize() * 0.25f;
+        EditorSelfTestMarks::recordRect( "charactereditor.gizmoCenter", float2{ screen._x - half, screen._y - half }, float2{ screen._x + half, screen._y + half } );
     }
 
     void CharacterEditorPanel::drawPenetrationPoints( const GameObject& body )
@@ -759,6 +871,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Undo" ) ) )
             (void)sockets.undo(); // 기록이 있을 때만 켜져 있다
         ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "charactereditor.socketUndo" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "Redo" ) ) );
         ImGui::BeginDisabled( sockets.canRedo() == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Redo" ) ) )

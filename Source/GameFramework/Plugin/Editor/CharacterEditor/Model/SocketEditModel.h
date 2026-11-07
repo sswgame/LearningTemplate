@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
@@ -83,6 +84,12 @@ namespace sw::editor
         /** @brief 회전을 도(피치 · 요 · 롤, 파일의 `rotation` 과 같은 배치)로 정합니다. */
         [[nodiscard]] bool setRotationDegrees( const hashed_string& name, const float3& degrees, bool bContinuous, string& outError );
         [[nodiscard]] bool setScale( const hashed_string& name, const float3& scale, bool bContinuous, string& outError );
+        /**
+         * @brief 뷰포트 기즈모가 놓은 유닛 공간 자리 @p unitTransform 을 부모(@p parentUnitTransform, `SocketSet::computeParentTransform`) 기준 로컬로 되돌려 위치 · 회전 · 크기를 한 번에 씁니다.
+         * @details 세 칸을 한 되돌리기 단계로 묶는다(끄는 동안 `bContinuous` — 칸마다 따로 쌓으면 끌기 한 번이 세 단계가 된다). 크기가 그대로면 크기 칸을 적지 않는다(적은 칸만 저장한다).
+         *          프리뷰 오브젝트가 아니라 소켓 데이터를 고친다 — 저장 · 다시 읽기 뒤에도 같은 자리다.
+         */
+        [[nodiscard]] bool setUnitTransform( const hashed_string& name, const float4x4& unitTransform, const float4x4& parentUnitTransform, bool bContinuous, string& outError );
         [[nodiscard]] bool setPreviewMesh( const hashed_string& name, string_view previewMesh, string& outError );
         [[nodiscard]] bool setAnchor( const hashed_string& name, SocketAnchor anchor, string& outError );
         [[nodiscard]] bool setFallback( const hashed_string& name, const vector<hashed_string>& listFallback, string& outError );

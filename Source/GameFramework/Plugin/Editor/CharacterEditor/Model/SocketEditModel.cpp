@@ -248,6 +248,40 @@ namespace sw::editor
         return true;
     }
 
+    bool SocketEditModel::setUnitTransform( const hashed_string& name, const float4x4& unitTransform, const float4x4& parentUnitTransform, bool bContinuous,
+                                            string& outError )
+    {
+        // 소켓의 유닛 변환은 로컬 × 부모(행벡터)다 — 로컬 = 유닛 × 부모⁻¹.
+        float3     translation;
+        quaternion rotation;
+        float3     scale;
+        if ( ( unitTransform * parentUnitTransform.invert() ).decompose( scale, rotation, translation ) == false )
+        {
+            outError = string( "Socket '" ) + name.c_str() + "' got a transform with no scale to take apart";
+            return false;
+        }
+        const SocketDef* pSocket = _sockets.findSocket( name );
+        if ( pSocket == nullptr )
+        {
+            outError = string( "Socket '" ) + name.c_str() + "' does not exist";
+            return false;
+        }
+        constexpr float32 kScaleTolerance = 1.0e-4f; // 끌기의 부동소수 오차로 크기 칸을 적지 않는다
+        const float3      scaleDelta      = scale - pSocket->_scale;
+        const bool        bScaleChanged   = MathUtil::abs( scaleDelta._x ) > kScaleTolerance || MathUtil::abs( scaleDelta._y ) > kScaleTolerance ||
+                                   MathUtil::abs( scaleDelta._z ) > kScaleTolerance;
+        const uint16 fieldBits = static_cast<uint16>( SocketFieldBit::kTranslation | SocketFieldBit::kRotation | ( bScaleChanged ? SocketFieldBit::kScale : 0u ) );
+        SocketDef    socket;
+        if ( beginFieldEdit( name, fieldBits, bContinuous, "transform", socket, outError ) == false )
+            return false;
+        socket._translation = translation;
+        socket._rotation    = rotation;
+        if ( bScaleChanged )
+            socket._scale = scale;
+        _sockets.addSocket( socket );
+        return true;
+    }
+
     bool SocketEditModel::setPreviewMesh( const hashed_string& name, string_view previewMesh, string& outError )
     {
         SocketDef socket;

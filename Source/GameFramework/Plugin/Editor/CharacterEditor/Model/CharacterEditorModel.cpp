@@ -70,6 +70,7 @@ namespace sw::editor
         , _packDataMessage{}
         , _previewPresetID{}
         , _packDataState{ PackDataState::Unread }
+        , _gizmoTarget{ CharacterGizmoTarget::None }
         , _bClipNamesLoaded{ SW_FALSE }
         , _bKindTableReady{ SW_FALSE }
         , _bDatabaseLoaded{ SW_FALSE }
@@ -567,6 +568,30 @@ namespace sw::editor
         {
             _listClipName.push_back( hashed_string( string_view{ entry._name } ) );
         }
+    }
+
+    void CharacterEditorModel::selectSocket( const hashed_string& name )
+    {
+        _selectedSocket = name;
+        if ( name.empty() == false )
+            _gizmoTarget = CharacterGizmoTarget::Socket;
+    }
+
+    void CharacterEditorModel::selectBone( const hashed_string& name )
+    {
+        _selectedBone = name;
+        if ( name.empty() == false )
+            _gizmoTarget = CharacterGizmoTarget::Bone;
+    }
+
+    CharacterGizmoTarget CharacterEditorModel::getGizmoTarget() const
+    {
+        // 주인을 지웠으면(소켓 삭제 · 본 해제) 다른 쪽이 남아 있어도 기즈모를 두지 않는다 — 고르지 않은 것을 끌게 하지 않는다.
+        if ( _gizmoTarget == CharacterGizmoTarget::Socket && _selectedSocket.empty() )
+            return CharacterGizmoTarget::None;
+        if ( _gizmoTarget == CharacterGizmoTarget::Bone && _selectedBone.empty() )
+            return CharacterGizmoTarget::None;
+        return _gizmoTarget;
     }
 
     void CharacterEditorModel::reportEdit( bool bSucceeded )

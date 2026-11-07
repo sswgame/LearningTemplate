@@ -449,24 +449,28 @@ namespace sw
 
     bool SocketSet::computeSocketTransform( const SocketDef& socket, const CharacterBoneArray& bones, float4x4& outUnitTransform ) const
     {
-        const float4x4 local = socket.makeLocalTransform();
+        float4x4 parentTransform;
+        if ( computeParentTransform( socket, bones, parentTransform ) == false )
+            return false;
+        outUnitTransform = socket.makeLocalTransform() * parentTransform;
+        return true;
+    }
+
+    bool SocketSet::computeParentTransform( const SocketDef& socket, const CharacterBoneArray& bones, float4x4& outUnitTransform ) const
+    {
         if ( socket._parent.empty() )
         {
-            outUnitTransform = local;
+            outUnitTransform = float4x4::Identity;
             return true;
         }
         const int32 boneIndex = bones.findBone( socket._parent );
         if ( boneIndex >= 0 )
         {
-            outUnitTransform = local * bones._listModel[static_cast<size_t>( boneIndex )];
+            outUnitTransform = bones._listModel[static_cast<size_t>( boneIndex )];
             return true;
         }
         const VirtualBoneDef* pVirtualBone = findVirtualBone( socket._parent );
-        float4x4              parentTransform;
-        if ( pVirtualBone == nullptr || computeVirtualBoneTransform( *pVirtualBone, bones, parentTransform ) == false )
-            return false;
-        outUnitTransform = local * parentTransform;
-        return true;
+        return pVirtualBone != nullptr && computeVirtualBoneTransform( *pVirtualBone, bones, outUnitTransform );
     }
 
     bool SocketSet::computeVirtualBoneTransform( const VirtualBoneDef& virtualBone, const CharacterBoneArray& bones, float4x4& outUnitTransform )

@@ -56,6 +56,17 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
+     * @brief 미리보기 기즈모가 잡는 것입니다. 마지막에 고른 쪽이다 — 언리얼 스켈레톤 에디터도 트리에서 마지막에 고른 본 · 소켓에 기즈모를 둔다.
+     * @details 고른 본과 고른 소켓은 따로 남아(탭마다 상세가 그것을 보인다) 둘 다 있을 수 있으므로, 기즈모의 주인은 고른 순서로 정한다.
+     */
+    enum class CharacterGizmoTarget : uint8
+    {
+        None = 0, ///< 고른 것이 없다
+        Bone,     ///< 스켈레톤 탭의 고른 본(레퍼런스 포즈 덮어쓰기)
+        Socket,   ///< 소켓 탭의 고른 소켓(소켓 파일의 로컬 변환)
+    };
+
+    /**
      * @class CharacterEditorModel
      * @brief 캐릭터 편집 창의 상태와 명령입니다. 파일 머리말 참고.
      */
@@ -179,9 +190,13 @@ namespace sw::editor
         // 고른 것 · 상태 줄 · 모델
         // ------------------------------------------------------------------------------
         const hashed_string& getSelectedSocket() const { return _selectedSocket; }
-        void                 selectSocket( const hashed_string& name ) { _selectedSocket = name; }
+        /** @brief 소켓을 고릅니다. 빈 이름이 아니면 미리보기 기즈모가 이 소켓으로 옮겨 갑니다. */
+        void                 selectSocket( const hashed_string& name );
         const hashed_string& getSelectedBone() const { return _selectedBone; }
-        void                 selectBone( const hashed_string& name ) { _selectedBone = name; }
+        /** @brief 본을 고릅니다. 빈 이름이 아니면 미리보기 기즈모가 이 본으로 옮겨 갑니다. */
+        void selectBone( const hashed_string& name );
+        /** @brief 미리보기 기즈모의 주인입니다. 주인의 이름이 비었으면 `None` 입니다. */
+        CharacterGizmoTarget getGizmoTarget() const;
         const hashed_string& getSelectedClip() const { return _selectedClip; }
         void                 selectClip( const hashed_string& name ) { _selectedClip = name; }
 
@@ -246,6 +261,7 @@ namespace sw::editor
         string                        _packDataMessage; ///< `Invalid` 의 이유
         hashed_string                 _previewPresetID; ///< 팩 데이터의 미리보기 몸 프리셋(선택에 기준 프리셋이 없을 때)
         PackDataState                 _packDataState;
+        CharacterGizmoTarget          _gizmoTarget;          ///< 마지막에 고른 쪽(`selectSocket` · `selectBone`)
         uint8                         _bClipNamesLoaded : 1; ///< 클립 이름을 한 번 모았다(팩 데이터가 바뀌면 다시 모은다)
         uint8                         _bKindTableReady  : 1;
         uint8                         _bDatabaseLoaded  : 1;
