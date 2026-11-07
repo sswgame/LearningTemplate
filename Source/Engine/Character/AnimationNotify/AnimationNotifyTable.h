@@ -32,6 +32,7 @@
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Notify/AnimationFootContact.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 
 namespace sw
 {
@@ -116,6 +117,15 @@ namespace sw
     class SW_API AnimationNotifyTable
     {
     public:
+        /** @brief 알림 테이블 파일의 확장자입니다. */
+        static constexpr string_view kExtension = ".notifies.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `CharacterDataCache.cpp` 의 공유 캐시 줄). 타입 있는 참조 `AssetRef<AnimationNotifyTable>` 가 접미사로 가른다. */
+        static constexpr AssetTypeDef kAssetType{ "AnimationNotifyTable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+
         /** @brief XML 텍스트에서 읽습니다(지금 내용을 비우고). 처리기는 @p registry 에서 이름으로 찾습니다. 오류가 있으면 모두 로그로 내고 false 입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const AnimationNotifyHandlerRegistry& registry );
         /** @brief 리소스 파일에서 읽습니다. */

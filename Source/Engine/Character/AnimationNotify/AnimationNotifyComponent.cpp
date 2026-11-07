@@ -77,7 +77,7 @@ namespace sw
 
     void AnimationNotifyComponent::setNotifyTablePath( string_view path )
     {
-        _notifyTablePath = string{ path };
+        _notifyTablePath = path;
         loadNotifyTable();
     }
 

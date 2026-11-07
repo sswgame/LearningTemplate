@@ -14,6 +14,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Notify/AnimationNotifyListener.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -85,7 +86,7 @@ namespace sw
 
         /** @brief 알림 테이블 경로를 바꾸고 다시 받습니다. */
         void          setNotifyTablePath( string_view path );
-        const string& getNotifyTablePath() const { return _notifyTablePath; }
+        const string& getNotifyTablePath() const { return _notifyTablePath.path(); }
         /** @brief 테이블을 직접 정합니다(테스트와 절차 생성용이며 저장되지 않습니다). */
         void setNotifyTable( shared_ptr<const AnimationNotifyTable> table );
         /** @brief 지금 표입니다. 없으면 nullptr 입니다. */
@@ -153,8 +154,8 @@ namespace sw
         /** @brief 테이블의 발 닿음 본을 같은 오브젝트 유닛의 본 LOD 핵심 본으로 알립니다 — 빠지면 발이 레퍼런스 포즈로 굳어 발소리가 나지 않는다. */
         void requireFootBones();
 
-        PROPERTY( Category = "Animation", DisplayName = "Notify Table", AssetPath, AssetType = "AnimationNotifyTable", Tooltip = "Notify name to handler table (*.notifies.xml)" )
-        string _notifyTablePath;
+        PROPERTY( Category = "Animation", DisplayName = "Notify Table", Tooltip = "Notify name to handler table (*.notifies.xml)" )
+        AssetRef<AnimationNotifyTable> _notifyTablePath;
 
         AnimationNotifyListenerBinding         _binding;
         shared_ptr<const AnimationNotifyTable> _table;
