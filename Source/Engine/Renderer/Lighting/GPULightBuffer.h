@@ -131,10 +131,10 @@ namespace sw
          * @brief 이번 프레임의 라이트와 그림자 타일 원소를 업로드 목록에 담습니다. 업로드는 뷰가 정해진 뒤 `update` 가 합니다.
          * @details 상한 처리(`shaderslot::kMaxFrameLight` 에서 GPU 구간을 뺀 몫)는 GPU 구간 수를 아는 `update` 가 합니다.
          *          @p listShadowTileElement(점광과 스폿 그림자 타일)는 라이트 뒤에 붙고 `getCount` 에 들지 않습니다.
-         *          @p listProbeElement(라이트 프로브 SH9, `collectSceneLights`)는 따로 프로브 버퍼(t13)로 올라갑니다.
+         *          @p inoutListProbeElement(라이트 프로브 SH9, `collectSceneLights`)는 따로 프로브 버퍼(t13)로 올라갑니다. 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다(베이크 반사 프로브는 프로브 하나에 수 MB 까지 간다).
          * @param bProbeWritable 실시간 프로브 볼륨이 있어 컴퓨트(`probe_update.hlsl`)가 프로브 버퍼를 쓴다 — 프로브 버퍼가 UAV 가 있는 기본 힙 버퍼가 된다.
          */
-        void populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, const vector<float4>& listProbeElement, bool bProbeWritable );
+        void populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, vector<float4>& inoutListProbeElement, bool bProbeWritable );
 
         /**
          * @brief 라이트 버퍼를 올리고, 뷰마다 라이트 그리드를 준비합니다.

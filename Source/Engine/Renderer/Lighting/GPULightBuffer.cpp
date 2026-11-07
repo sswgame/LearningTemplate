@@ -232,13 +232,13 @@ namespace sw
         return MathUtil::min( requestedSlotCount, kMaxGPULight );
     }
 
-    void GPULightBuffer::populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, const vector<float4>& listProbeElement, bool bProbeWritable )
+    void GPULightBuffer::populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, vector<float4>& inoutListProbeElement, bool bProbeWritable )
     {
         _bProbeWritable = bProbeWritable ? SW_TRUE : SW_FALSE;
         // 상한(GPU 구간을 뺀 몫)은 GPU 구간 수를 아는 update 가 맞춘다.
         _listLightScratch.assign( listLight.begin(), listLight.end() );
         _listTileScratch.assign( listShadowTileElement.begin(), listShadowTileElement.end() );
-        _listProbeScratch.assign( listProbeElement.begin(), listProbeElement.end() );
+        _listProbeScratch.swap( inoutListProbeElement );
     }
 
     void GPULightBuffer::update( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj, LightGridProducer producer, uint32 requestedGPULightSlotCount )
