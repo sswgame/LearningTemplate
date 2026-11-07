@@ -38,6 +38,8 @@ namespace sw::editor
         bool selectRowObject( uint32 rowIndex ) const;
         /** @brief 지난 그리기의 줄 수(거른 뒤)입니다. */
         uint32 getRowCount() const { return static_cast<uint32>( _listRow.size() ); }
+        /** @brief 지난 그리기에서 안전한 고침(`ValidationPropertyEdit`)이 있는 줄 수입니다(Fix All 단추의 수, 프로브 `Editor.MapCheckFixableRows`). */
+        uint32 getFixableRowCount() const { return _fixableRowCount; }
 
     private:
         /** @brief 결과 번호가 바뀌었거나 거르기가 바뀌었으면 줄을 다시 만듭니다. */
@@ -49,6 +51,7 @@ namespace sw::editor
         string                                  _builtSearch; ///< 줄을 만들 때의 검색어
         MapCheckCounts                          _counts;
         uint64                                  _builtRevisionKey; ///< 줄을 만들 때의 결과 열쇠(활성 씬 세대 + 표의 결과 번호)
+        uint32                                  _fixableRowCount;  ///< 지난 그리기에서 안전한 고침이 있는 줄 수
         uint8                                   _bShowErrors   : 1;
         uint8                                   _bShowWarnings : 1;
         uint8                                   _bRowsDirty    : 1;

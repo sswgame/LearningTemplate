@@ -27,15 +27,31 @@ namespace sw
         Error,
     };
 
+    /**
+     * @brief 검증 결과의 안전한 고침입니다 — 그 오브젝트의 한 프로퍼티를 한 값(프로퍼티 텍스트 형식)으로 바꾼다. 데이터일 뿐이고 적용은 맵 검사 패널이 한다(되돌리기 한 단계).
+     * @details 값이 분명할 때만 둔다(기본값으로 되돌리기 · 런타임이 이미 쓰는 값을 적기). 모호하거나 데이터를 잃을 수 있는 결과는 고침 없이 적는다.
+     *          언리얼 Map Check 의 수정 가능 메시지 · Godot 의 구성 경고 빠른 수정과 같은 자리다.
+     */
+    struct ValidationPropertyEdit
+    {
+        hashed_string _propertyName; ///< 바꿀 프로퍼티(비면 고침 없음). 적을 때 비우면 검증 범위의 프로퍼티다
+        string        _valueText;    ///< 그 프로퍼티의 텍스트 값(`SerializerUtil::formatPropertyText` 와 같은 형식)
+        string        _description;  ///< 패널 단추 툴팁 · 되돌리기 이름("Set Radius to 6 m")
+
+        /** @brief 고칠 프로퍼티가 있으면 true 입니다. */
+        bool isValid() const noexcept { return _propertyName.empty() == false; }
+    };
+
     /** @brief 검증 결과 하나입니다. */
     struct ValidationIssue
     {
-        string             _message;
-        string             _sourceLabel;  ///< 어느 오브젝트(이름 · 경로)에서 났는가 — 부르는 쪽이 정한다
-        hashed_string      _typeName;     ///< 검증 함수가 속한 타입(FQN)
-        hashed_string      _propertyName; ///< 프로퍼티 검증이면 그 이름, 타입 검증이면 비어 있다
-        uint64             _sourceID{ 0 };
-        ValidationSeverity _severity{ ValidationSeverity::Warning };
+        ValidationPropertyEdit _fix; ///< 안전한 고침. `_fix.isValid()` 가 false 면 손으로 고친다
+        string                 _message;
+        string                 _sourceLabel;  ///< 어느 오브젝트(이름 · 경로)에서 났는가 — 부르는 쪽이 정한다
+        hashed_string          _typeName;     ///< 검증 함수가 속한 타입(FQN)
+        hashed_string          _propertyName; ///< 프로퍼티 검증이면 그 이름, 타입 검증이면 비어 있다
+        uint64                 _sourceID{ 0 };
+        ValidationSeverity     _severity{ ValidationSeverity::Warning };
     };
 } // namespace sw
 
@@ -51,6 +67,10 @@ namespace sw
         void addError( string_view message );
         /** @brief 경고를 적습니다. */
         void addWarning( string_view message );
+        /** @brief 안전한 고침이 있는 문제를 적습니다. @p fix 의 프로퍼티가 비면 지금 범위의 프로퍼티입니다. */
+        void addErrorWithFix( string_view message, const ValidationPropertyEdit& fix );
+        /** @brief 안전한 고침이 있는 경고를 적습니다. */
+        void addWarningWithFix( string_view message, const ValidationPropertyEdit& fix );
 
         /** @brief 적힌 결과입니다. */
         const vector<ValidationIssue>& getIssues() const noexcept { return _listIssue; }
@@ -65,7 +85,7 @@ namespace sw
         void setScope( const hashed_string& typeName, const hashed_string& propertyName );
 
     private:
-        void add( ValidationSeverity severity, string_view message );
+        void add( ValidationSeverity severity, string_view message, const ValidationPropertyEdit& fix );
 
     private:
         vector<ValidationIssue> _listIssue;

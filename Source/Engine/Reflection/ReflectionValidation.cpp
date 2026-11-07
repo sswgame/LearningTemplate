@@ -129,12 +129,22 @@ namespace sw
 
     void ValidationContext::addError( const string_view message )
     {
-        add( ValidationSeverity::Error, message );
+        add( ValidationSeverity::Error, message, ValidationPropertyEdit{} );
     }
 
     void ValidationContext::addWarning( const string_view message )
     {
-        add( ValidationSeverity::Warning, message );
+        add( ValidationSeverity::Warning, message, ValidationPropertyEdit{} );
+    }
+
+    void ValidationContext::addErrorWithFix( const string_view message, const ValidationPropertyEdit& fix )
+    {
+        add( ValidationSeverity::Error, message, fix );
+    }
+
+    void ValidationContext::addWarningWithFix( const string_view message, const ValidationPropertyEdit& fix )
+    {
+        add( ValidationSeverity::Warning, message, fix );
     }
 
     bool ValidationContext::hasError() const noexcept
@@ -154,9 +164,17 @@ namespace sw
         _propertyName = propertyName;
     }
 
-    void ValidationContext::add( const ValidationSeverity severity, const string_view message )
+    void ValidationContext::add( const ValidationSeverity severity, const string_view message, const ValidationPropertyEdit& fix )
     {
         ValidationIssue issue;
+        issue._fix = fix;
+        if ( fix._valueText.empty() == false || fix._description.empty() == false )
+        {
+            // 고칠 프로퍼티를 적지 않았으면 지금 검증하는 프로퍼티다(프로퍼티 검증 함수의 흔한 경우)
+            if ( issue._fix._propertyName.empty() )
+                issue._fix._propertyName = _propertyName;
+            SW_ASSERT( issue._fix._propertyName.empty() == false ); // 타입 검증 함수의 고침은 프로퍼티를 적어야 한다
+        }
         issue._message      = string( message );
         issue._sourceLabel  = _sourceLabel;
         issue._typeName     = _typeName;

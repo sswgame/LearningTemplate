@@ -3,6 +3,7 @@
 #include "Editor/Panels/MapCheck/MapCheckPanel.h"
 
 #include "Core/Log/LogOnce.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -21,9 +22,11 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/MapCheck/Model/MapCheckFixCommands.h"
 #include "Editor/Panels/Scene/EditorSceneViewUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -137,6 +140,27 @@ namespace sw::editor
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 return pManager != nullptr && issue._sourceID != 0 ? pManager->findGameObjectByID( issue._sourceID ) : nullptr;
             }
+
+            /** @brief 감시 값 `Editor.MapCheckFixableRows` — 맵 검사 창이 지난 그리기에서 안전한 고침이 있다고 본 줄 수입니다. 창이 없으면 값을 내지 않는다. */
+            [[nodiscard]] static bool readFixableRows( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext*       pContext = editor::findSubsystem<EditorContext>();
+                const MapCheckPanel* pPanel   = pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<MapCheckPanel>() : nullptr;
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getFixableRowCount() );
+                return true;
+            }
+
+            /** @brief 감시 값 `Editor.MapCheckIssueCount` — 활성 씬 표의 결과 수(거르기 전)입니다. */
+            [[nodiscard]] static bool readIssueCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ValidationIssueLog* pLog = findActiveIssueLog();
+                if ( pLog == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pLog->getIssueCount() );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -145,6 +169,10 @@ namespace sw::editor
 {
     SW_EDITOR_PANEL( MapCheckPanel, MapCheckPanel::kPanelID, EditorPanelCategory::Tool, 2040 );
     SW_EDITOR_STATUS_BAR_ITEM( MapCheck, MapCheckPanel::kPanelID, 100, &MapCheckPanelInternal::drawStatusItem );
+    SW_AUTOMATION_WATCH( editorMapCheckFixableRows, "Editor.MapCheckFixableRows", "Map Check rows with a safe fix in the last drawn frame (the Fix All count)",
+                         &MapCheckPanelInternal::readFixableRows );
+    SW_AUTOMATION_WATCH( editorMapCheckIssueCount, "Editor.MapCheckIssueCount", "Validation issues of the active scene (before the Map Check filter)",
+                         &MapCheckPanelInternal::readIssueCount );
 
     MapCheckPanel::MapCheckPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
@@ -153,6 +181,7 @@ namespace sw::editor
         , _builtSearch{}
         , _counts{}
         , _builtRevisionKey{ 0 }
+        , _fixableRowCount{ 0 }
         , _bShowErrors{ SW_TRUE }
         , _bShowWarnings{ SW_TRUE }
         , _bRowsDirty{ SW_TRUE }
@@ -235,6 +264,21 @@ namespace sw::editor
             _bRowsDirty    = SW_TRUE;
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "ShowWarnings" ) );
+        // 보이는 줄 가운데 안전한 고침이 있는 것을 한 번에 고친다(되돌리기 한 단계). 고칠 것이 없으면 꺼 둔다
+        uint32 fixableCount = 0;
+        for ( const ValidationIssue& issue : _listRow )
+            fixableCount += MapCheckFixCommands::canFix( issue ) ? 1u : 0u;
+        _fixableRowCount = fixableCount;
+        fixed_string<constant::buffer::kMax64> fixAllLabel;
+        formatstring( fixAllLabel.data(), fixAllLabel.capacity(), "%# (%#)###mapCheckFixAll", SW_LOCKEY( "EdButton", "FixAll" ), fixableCount );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( fixAllLabel.c_str() ) );
+        ImGui::BeginDisabled( fixableCount == 0 );
+        const bool bFixAll = ImGui::Button( fixAllLabel.c_str() );
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::record( "mapCheck.fixAll" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "FixAllTooltip" ) );
+        if ( bFixAll )
+            (void)MapCheckFixCommands::applyFixes( editor::getActiveObjectManager(), _listRow, "Map Check: Fix All" ); // 고친 결과는 표에서 빠지고 다음 그리기가 줄을 다시 만든다
         ImGui::SameLine();
         EditorWidgets::drawSearchField( "##mapcheck_search", _searchBuffer, SW_LOCKEY( "EditorMapCheck", "SearchHint" ), 0.0f, false );
 
@@ -250,7 +294,7 @@ namespace sw::editor
 
         constexpr ImGuiTableFlags kTableFlags =
             ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
-        if ( ImGui::BeginTable( "##mapcheck_rows", 5, kTableFlags, ImGui::GetContentRegionAvail() ) == false )
+        if ( ImGui::BeginTable( "##mapcheck_rows", 6, kTableFlags, ImGui::GetContentRegionAvail() ) == false )
             return;
         const float32 dpiScale = EditorThemeUtil::getDPIScale();
         ImGui::TableSetupColumn( "", ImGuiTableColumnFlags_WidthFixed, 24.0f * dpiScale );
@@ -258,7 +302,9 @@ namespace sw::editor
         ImGui::TableSetupColumn( "Type", ImGuiTableColumnFlags_WidthStretch, 1.0f );
         ImGui::TableSetupColumn( "Property", ImGuiTableColumnFlags_WidthStretch, 0.8f );
         ImGui::TableSetupColumn( "Message", ImGuiTableColumnFlags_WidthStretch, 2.4f );
+        ImGui::TableSetupColumn( "Fix", ImGuiTableColumnFlags_WidthFixed, 48.0f * dpiScale );
         ImGui::TableHeadersRow();
+        uint32 fixRowIndex = MathUtil::kMaxUInt32; // 이번 그리기에 누른 고침 줄 — 그린 뒤에 적용한다(적용이 줄 목록을 바꾼다)
 
         const GameObject* pPrimary = editor::getMainSceneSelection().getPrimaryObject();
         for ( uint32 rowIndex = 0; rowIndex < static_cast<uint32>( _listRow.size() ); ++rowIndex )
@@ -297,8 +343,27 @@ namespace sw::editor
             ImGui::TextUnformatted( issue._propertyName.c_str() );
             ImGui::TableSetColumnIndex( 4 );
             ImGui::TextUnformatted( issue._message.c_str() );
+            ImGui::TableSetColumnIndex( 5 );
+            if ( MapCheckFixCommands::canFix( issue ) )
+            {
+                // 고칠 수 없는 줄은 단추를 두지 않는다(빈 칸) — 손으로 고칠 줄이다
+                if ( ImGui::SmallButton( SW_LOCKEY( "EdButton", "Fix" ) ) )
+                    fixRowIndex = rowIndex;
+                EditorWidgets::drawTooltip( issue._fix._description.c_str() );
+                if ( EditorSelfTestMarks::isEnabled() )
+                {
+                    fixed_string<constant::buffer::kMax64> mark;
+                    formatstring( mark.data(), mark.capacity(), "mapCheck.fix.%#", rowIndex );
+                    EditorSelfTestMarks::record( mark.c_str() );
+                }
+            }
             ImGui::PopID();
         }
         ImGui::EndTable();
+        if ( fixRowIndex < _listRow.size() )
+        {
+            const ValidationIssue issue = _listRow[fixRowIndex];
+            (void)MapCheckFixCommands::applyFixes( editor::getActiveObjectManager(), { issue }, issue._fix._description.empty() ? "Map Check: Fix" : issue._fix._description.c_str() );
+        }
     }
 } // namespace sw::editor

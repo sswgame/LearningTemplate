@@ -78,3 +78,21 @@ SW_TEST_CASE( ReflectionValidationTest, ValidatorsRunOnPropertiesTypesAndNestedV
     SW_REQUIRE_NOT_NULL( pPlain );
     SW_EXPECT_FALSE( sw::ReflectionValidation::hasValidator( *pPlain ) );
 }
+
+/**
+ * @brief [ReflectionValidationTest] 안전한 고침은 데이터로 남는다 — 프로퍼티를 적지 않으면 지금 검증 범위의 프로퍼티다. 고침 없는 결과는 고칠 수 없다(맵 검사 Fix 단추 없음)
+ */
+SW_TEST_CASE( ReflectionValidationTest, FixDefaultsToScopeProperty )
+{
+    sw::ValidationContext context;
+    context.setSource( 7, "Lamp" );
+    context.setScope( sw::hashed_string( "sw::PointLightComponent" ), sw::hashed_string( "_radius" ) );
+    context.addErrorWithFix( "radius is 0", sw::ValidationPropertyEdit{ sw::hashed_string{}, "6", "Set Radius to 6 m" } );
+    context.addWarning( "no fix here" );
+    const sw::vector<sw::ValidationIssue>& listIssue = context.getIssues();
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 2 ), listIssue.size() );
+    SW_EXPECT_TRUE( listIssue[0]._fix.isValid() );
+    SW_EXPECT_TRUE( listIssue[0]._fix._propertyName == sw::hashed_string( "_radius" ) );
+    SW_EXPECT_EQUAL( sw::string( "6" ), listIssue[0]._fix._valueText );
+    SW_EXPECT_FALSE( listIssue[1]._fix.isValid() );
+}

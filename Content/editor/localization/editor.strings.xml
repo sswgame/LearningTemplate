@@ -428,6 +428,16 @@
 				<item>Source/Editor/Panels/Scene/SceneViewPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdButton.Fix" source="Fix">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdButton.FixAll" source="Fix All">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdButton.NewFolder" source="New Folder">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
@@ -6504,6 +6514,11 @@
 			</origins>
 		</entry>
 		<entry key="EditorMapCheck.CheckMap" source="Validate every object of the active scene again">
+			<origins>
+				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMapCheck.FixAllTooltip" source="Apply every safe fix in the visible rows as one undo step. Rows without a Fix button need a hand fix">
 			<origins>
 				<item>Source/Editor/Panels/MapCheck/MapCheckPanel.cpp</item>
 			</origins>
