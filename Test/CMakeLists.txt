@@ -135,6 +135,12 @@ if(TARGET EditorModule)
 	endforeach()
 endif()
 
+# 생성 표 동시 갱신 — 빌드 폴더 여럿이 저장소의 참조 칸 표(`Config/Dev/AssetReferenceFields.generated.json`)를 함께 고쳐도 주인 줄을 잃지 않는다(잠금 + 원자 교체).
+# 표의 사본을 임시 폴더에 두고 자식 프로세스 열둘이 서로 다른 주인을 동시에 갈아 끼운다.
+add_test(NAME Scripts.AssetReferenceFieldList
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/Tests/TestAssetReferenceFieldList.py")
+set_tests_properties(Scripts.AssetReferenceFieldList PROPERTIES LABELS nogpu TIMEOUT 120)
+
 # 온라인 부하 봇의 짧은 시나리오 — 같은 프로세스 서버(`--local-server=0`, OS 가 고른 포트라 나란히 돌아도 다투지 않는다)에 봇 여덟이 붙어
 # 로그인 · 채팅 · 순위를 한 번씩 돈다. 오류율 · 보고서 쓰기 실패가 종료 코드다(엔진 · 모듈이 서지 못하면 3). 봇 로그는 `-log-file` 로 같은 폴더에 남는다.
 if(TARGET OnlineLoadBot)
