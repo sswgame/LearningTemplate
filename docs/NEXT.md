@@ -30,7 +30,7 @@
 
 **2. 단계 5 가 남긴 것(W1).** 형식별 입구 12 곳(`Skeleton` · `Material` · `RigAsset` · `SpriteLibrary` · `PhysicsAsset` · `SceneDocument` 등)이 리소스 id 를 넘기지 않아 층 · 다시 읽기 · 해시 대조를 받지 못한다. 배포 구성에는 규칙 표가 없어 카탈로그 층이 오류로 멈춘다(표를 `Config/Dev` 밖으로 옮긴다). 편집기 저장이 `_when` 을 지금 태그로 푼 값으로 굳힌다. 접속 뒤에 합성한 리소스는 대조하지 않는다. 위 코드의 근거는 `docs/ResourceStructure.md` 끝 절.
 
-**3. 이름 정리 남은 것(규칙은 [NamingCpp](agents/NamingCpp.md) 용어 표).** 작업자 코드가 옛 이름을 썼을 수 있어 먼저 표를 다시 돌린다: `py -3 .claude/handoff/surveys/rename.py .claude/handoff/surveys/r<번호>.txt`(단어 경계 치환 + 파일 줄기 `git mv`, 표 r1 ~ r8 · r1_gamemode · ru*). include 정렬은 `sortinc.py`. 그 뒤:
+**3. 이름 정리 남은 것(규칙은 [NamingCpp](agents/NamingCpp.md) 용어 표).** 통합 뒤 개명 표의 옛 이름은 남지 않았다(2026-11-07 확인). 표와 도구는 `.claude/handoff/surveys/`(`rename.py` · `r*.txt` · `sortinc.py`, `rename.py` 는 단어 경계 치환 + 파일 줄기 `git mv`). 남은 것:
 - `Vitality` → 체력 상태 기계 이름: `HealthState` 는 서버 상태 점검이 쓰고, `getVitality().getHealth()` · 멤버 `_vitality` 와 기존 `_health` 칸이 섞여 기계적으로 못 바꿨다. 형식과 멤버를 함께 손으로 바꾼다.
 - 지역 이름 `director` · `pDirector`(게임 모드를 가리키는 것만 `gameMode` 로 — 카메라 디렉터와 섞여 있다).
 - 읽기 동사 나머지: `loadText` · `loadFromText`(XML 일 때), `loadElement` · `loadFromNode` · `readFromNode` · `parseNode` → `loadFromXML( const XMLNode& )`, 에셋 id 를 받는 `loadFromFile( AssetID )`(머티리얼 · 그래프 등 → `loadFromAsset`, 겹치는지 먼저 본다), `SceneDocument::saveXML( 경로 )` → `saveToFile`.
