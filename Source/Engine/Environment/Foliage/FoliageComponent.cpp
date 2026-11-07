@@ -20,7 +20,6 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
-#include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Rendering/MeshInstanceBatch.h"
@@ -709,8 +708,11 @@ namespace sw
             const PlacementInstance& instance = listInstance[listIndex[entry]];
             const float4x4           world    = PlacementScatter::makeWorldMatrix( instance, float3::Zero );
             // 밝기 흔들기는 인스턴스 색 필드로 한다(머티리얼을 가르지 않는다).
-            const float32               shade  = 1.0f - layer._tintVariation * PlacementScatter::toUnit( instance._hash );
-            const GPUSpriteInstanceData sprite = GPUSpriteInstanceData::make( float4{ 0.0f, 0.0f, 1.0f, 1.0f }, float4{ shade, shade, shade, 1.0f } );
+            const float32             shade = 1.0f - layer._tintVariation * PlacementScatter::toUnit( instance._hash );
+            const InstanceSpriteFrame sprite{
+                float4{ 0.0f,  0.0f,  1.0f, 1.0f},
+                float4{shade, shade, shade, 1.0f}
+            };
             for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
             {
                 pBatch->setWorld( entry, world );

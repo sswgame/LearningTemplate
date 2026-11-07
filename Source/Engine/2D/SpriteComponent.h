@@ -42,7 +42,7 @@ namespace sw
      *          언리얼의 Paper2D(`UPaperSpriteComponent`)에 해당한다.
      *
      *          **무엇을 보여 주나.** 아틀라스의 한 프레임(UV 사각형)과 색이다. 둘 다 머티리얼 인스턴스가 아니라 GPU 인스턴스에 실린다
-     *          (`MeshComponent::getSpriteInstanceData` → `GPUInstance::_sprite`). 그래서 프레임이 넘어가거나 알파가 줄어도 배치는 그대로다.
+     *          (`MeshComponent::getSpriteFrame` → 빌더가 담아 `GPUInstance::_sprite`). 그래서 프레임이 넘어가거나 알파가 줄어도 배치는 그대로다.
      *          프레임은 클립(`_clipPath`, `.sprite.xml`)이 있으면 그 클립의 `_clipFrame` 번째 프레임이고, 없으면 `_uvRect` 다.
      *          텍스처 경로가 비어 있으면 클립의 아틀라스를 쓴다. 애니메이터(`SpriteAnimatorComponent`)는 `setClipFrame` 으로 프레임 번호만 넘긴다.
      *
@@ -156,8 +156,8 @@ namespace sw
         void validateClipLabels() const;
         /** @brief 지금 보일 클립 프레임입니다. 클립이 없거나 프레임이 없으면 nullptr 입니다. */
         const SpriteClipFrame* findDisplayedFrame() const;
-        /** @brief 보일 프레임과 색을 GPU 인스턴스 슬롯으로 묶어 넘깁니다(`MeshComponent::setSpriteInstanceData`). */
-        void refreshSpriteInstanceData();
+        /** @brief 보일 프레임과 색을 GPU 인스턴스 슬롯 값으로 넘깁니다(`MeshComponent::setSpriteFrame`). */
+        void refreshSpriteFrame();
         /**
          * @brief 그리기 방식, 크기, 테두리에 맞는 메시를 설정합니다. Sliced 와 Tiled 는 `SpriteMeshBuilder::acquireSlicedMesh`(같은 값끼리 공유),
          *        Simple 은 공유 사각형을 씁니다. 같은 메시면 아무것도 하지 않습니다.

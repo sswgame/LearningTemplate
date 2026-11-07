@@ -77,7 +77,7 @@ namespace sw
         markEntryDirty( index );
     }
 
-    void MeshInstanceBatch::setSprite( uint32 index, const GPUSpriteInstanceData& sprite )
+    void MeshInstanceBatch::setSprite( uint32 index, const InstanceSpriteFrame& sprite )
     {
         const bool bUnchanged = index >= _listEntry.size() || _listEntry[index]._sprite == sprite;
         if ( bUnchanged || acceptsCPUWrite() == false )
@@ -86,7 +86,7 @@ namespace sw
         markEntryDirty( index );
     }
 
-    void MeshInstanceBatch::setCustomData( uint32 index, const GPUInstanceCustomData& customData )
+    void MeshInstanceBatch::setCustomData( uint32 index, const InstanceCustomData& customData )
     {
         const bool bUnchanged = index >= _listEntry.size() || _listEntry[index]._customData == customData;
         if ( bUnchanged || acceptsCPUWrite() == false )

@@ -262,7 +262,7 @@ namespace sw
              */
             GPUSpriteInstanceData _sprite{};
             /** @brief 인스턴스 사용자 값입니다(GPUInstance::_customData 로 전달됩니다). 스프라이트 칸과 같이 **내용**이며 배치 키가 아닙니다. */
-            GPUInstanceCustomData _customData{};
+            InstanceCustomData _customData{};
             /**
              * @brief (셰이더 경로 + define) 해시입니다. **어느 PSO 로 그릴지**를 정하는 값입니다.
              * @details 배치 키에 들어가야 한다. 머티리얼과 인스턴스 **포인터가 그대로여도** 인스턴스의
@@ -344,7 +344,7 @@ namespace sw
         };
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역폭입니다. 필드 크기의 합을 정렬 단위로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 빌드를 멈춥니다.
         static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) * 2 + sizeof( float32 ) * 2 + sizeof( uint32 ) * 7 +
-                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( GPUInstanceCustomData ) + sizeof( uint64 ) * 2 +
+                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( InstanceCustomData ) + sizeof( uint64 ) * 2 +
                                                     sizeof( uint8 ) * 2 + sizeof( float32 ) * 2 + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),
                        "DrawCandidate has padding between fields (or a field was added without adding its size here)" );

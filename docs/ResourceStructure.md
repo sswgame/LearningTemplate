@@ -225,7 +225,7 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 | 파라미터 | 머티리얼 파라미터 묶음(`*.matparams.xml`): 프로퍼티가 묶음의 이름을 가리키고 값이 바뀌면 다시 패킹한다. 슬롯을 새로 두지 않아 네 백엔드가 같은 길이다. 구현됨 | 언리얼 Material Parameter Collection(묶음마다 유니폼 버퍼 — 값 바꾸기가 O(1) 이지만 셰이더가 배치를 안다) |
 | 파라미터 | 머티리얼 층: 층 파일 한 벌을 Layer 노드로 쌓고 켜고 끄기 · 값은 자식 `.material` 칸(`docs/agents/MaterialGraph.md` 의 층) | 언리얼 Material Layers · 유니티 HDRP Layered Lit |
 | 파라미터 | VFX 방출기 `InheritKey` 와 사용자 파라미터(색 · 크기 곱, 재생 중 덮기), 오디오 라이브러리 · 믹서 `_base`, 이벤트 프리셋 `_parentEvent`. 구현됨 | 언리얼 Niagara 부모 이미터 · User Parameters · MetaSound Preset |
-| 인스턴스 값 | 파일 없이 인스턴스마다 float4 둘(`GPUInstanceCustomData`, 인스턴스 원소 160 바이트). 내용이고 배치 키가 아니다. `MaterialInstance` 는 값 · 텍스처 · 키워드를 덮는 드로우 단위로 남는다. 구현됨 | 언리얼 Custom Primitive Data · 유니티 MaterialPropertyBlock |
+| 인스턴스 값 | 파일 없이 인스턴스마다 float4 둘(`InstanceCustomData`, 인스턴스 원소 160 바이트). 내용이고 배치 키가 아니다. `MaterialInstance` 는 값 · 텍스처 · 키워드를 덮는 드로우 단위로 남는다. 구현됨 | 언리얼 Custom Primitive Data · 유니티 MaterialPropertyBlock |
 | 파라미터 | 외형 구간 머티리얼: 부품 · 변형 · 규칙 · 피해 단계가 메시 구간 이름마다 머티리얼과 매개변수를 정한다(`AppearanceSectionDef`, `ResolvedMaterialValue::_section`). 병합해도 구간이 남는다. 런타임 아틀라스는 두지 않는다. 구현됨 | 언리얼 Material Slot 덮어쓰기 · 유니티 `Renderer.materials`(여기는 번호가 아니라 이름) |
 | 조립 | 씬 인스턴스(`<entity scene="…">` + `<Part path>`): 씬을 다른 씬에 넣고 덮어쓴다. 읽을 때 평평한 엔티티로 펼치고 쿠킹본도 펼친 것을 담는다 | 언리얼 Level Instance · Godot 씬 상속 |
 | 조립 | 씬 상속(루트 `_base`): 엔티티 id 가 열쇠인 차이만 적는다. 씬 템플릿 자리를 겸한다 | Godot 씬 상속 |

@@ -36,7 +36,7 @@ namespace sw
         , _blendMode{ RHIBlendMode::Opaque }
         , _gpuSpinSeed{ 0 }
         , _sectionName{}
-        , _spriteInstanceData{}
+        , _spriteFrame{}
         , _customData0{}
         , _customData1{}
         , _vertexAnimationPhase{ 0.0f }
@@ -467,22 +467,23 @@ namespace sw
         markRenderStateDirty();
     }
 
-    void MeshComponent::setSpriteInstanceData( const GPUSpriteInstanceData& data )
+    void MeshComponent::setSpriteFrame( const float4& uvRect, const float4& tint )
     {
         // 프레임 · 색을 바꾸는 쪽은 스냅 단위를 모른다 — 지금 값을 지킨다.
-        GPUSpriteInstanceData merged = data;
-        merged._pixelSnap            = _spriteInstanceData._pixelSnap;
-        if ( _spriteInstanceData == merged )
+        InstanceSpriteFrame merged = _spriteFrame;
+        merged._uvRect             = uvRect;
+        merged._tint               = tint;
+        if ( _spriteFrame == merged )
             return;
-        _spriteInstanceData = merged;
+        _spriteFrame = merged;
         markRenderStateDirty();
     }
 
     void MeshComponent::setCustomData( uint32 index, const float4& value )
     {
-        if ( index >= GPUInstanceCustomData::kCount )
+        if ( index >= InstanceCustomData::kCount )
         {
-            SW_LOG_ERROR_ID( "MeshComponent.CustomDataIndex", "Custom data index %# is out of range (%# slots)", index, GPUInstanceCustomData::kCount );
+            SW_LOG_ERROR_ID( "MeshComponent.CustomDataIndex", "Custom data index %# is out of range (%# slots)", index, InstanceCustomData::kCount );
             return;
         }
         float4& slot = index == 0u ? _customData0 : _customData1;
@@ -492,9 +493,9 @@ namespace sw
         markRenderStateDirty();
     }
 
-    GPUInstanceCustomData MeshComponent::getInstanceCustomData() const
+    InstanceCustomData MeshComponent::getInstanceCustomData() const
     {
-        GPUInstanceCustomData data{};
+        InstanceCustomData data{};
         data._arrValue[0] = _customData0;
         data._arrValue[1] = _customData1;
         return data;
@@ -502,11 +503,11 @@ namespace sw
 
     void MeshComponent::setPixelSnapUnit( float32 unit )
     {
-        GPUSpriteInstanceData snapped = _spriteInstanceData;
-        snapped._pixelSnap            = MathUtil::max( unit, 0.0f );
-        if ( _spriteInstanceData == snapped )
+        InstanceSpriteFrame snapped = _spriteFrame;
+        snapped._pixelSnap          = MathUtil::max( unit, 0.0f );
+        if ( _spriteFrame == snapped )
             return;
-        _spriteInstanceData = snapped;
+        _spriteFrame = snapped;
         markRenderStateDirty();
     }
 

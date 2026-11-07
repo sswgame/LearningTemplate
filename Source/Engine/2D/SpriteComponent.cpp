@@ -56,7 +56,7 @@ namespace sw
         refreshClip();
         validateClipLabels();
         refreshTextureInstance();
-        refreshSpriteInstanceData();
+        refreshSpriteFrame();
         refreshDrawModeMesh();
         refreshSortKey();
     }
@@ -83,7 +83,7 @@ namespace sw
             refreshClip();
             validateClipLabels();
             refreshTextureInstance();
-            refreshSpriteInstanceData();
+            refreshSpriteFrame();
             refreshDrawModeMesh();
         }
         else if ( propertyName == s_textureName || propertyName == s_normalMapName )
@@ -92,7 +92,7 @@ namespace sw
         }
         else if ( bInstanceDataChanged )
         {
-            refreshSpriteInstanceData();
+            refreshSpriteFrame();
             refreshDrawModeMesh(); // 프레임마다 테두리가 다를 수 있다
         }
         else if ( bDrawModeMeshChanged )
@@ -123,7 +123,7 @@ namespace sw
         refreshClip();
         validateClipLabels();
         refreshTextureInstance();
-        refreshSpriteInstanceData();
+        refreshSpriteFrame();
         refreshDrawModeMesh();
     }
 
@@ -133,27 +133,27 @@ namespace sw
         refreshClip();
         validateClipLabels();
         refreshTextureInstance();
-        refreshSpriteInstanceData();
+        refreshSpriteFrame();
         refreshDrawModeMesh();
     }
 
     void SpriteComponent::setClipFrame( int32 frame )
     {
         _clipFrame = MathUtil::max( frame, 0 );
-        refreshSpriteInstanceData();
+        refreshSpriteFrame();
         refreshDrawModeMesh();
     }
 
     void SpriteComponent::setUvRect( const float4& uvRect )
     {
         _uvRect = uvRect;
-        refreshSpriteInstanceData();
+        refreshSpriteFrame();
     }
 
     void SpriteComponent::setTint( const float4& tint )
     {
         _tint = tint;
-        refreshSpriteInstanceData();
+        refreshSpriteFrame();
     }
 
     void SpriteComponent::setSortingLayer( const hashed_string& layerName )
@@ -323,9 +323,9 @@ namespace sw
         setSortKey( SpriteRenderUtil::resolveSortKey( _sortingLayer, _orderInLayer, ownerName.c_str() ) );
     }
 
-    void SpriteComponent::refreshSpriteInstanceData()
+    void SpriteComponent::refreshSpriteFrame()
     {
-        setSpriteInstanceData( GPUSpriteInstanceData::make( getDisplayedUvRect(), _tint ) );
+        setSpriteFrame( getDisplayedUvRect(), _tint );
     }
 
     bool SpriteComponent::getWorldBounds( float3& outCenter, float32& outRadius ) const

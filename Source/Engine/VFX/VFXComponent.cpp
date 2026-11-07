@@ -16,7 +16,6 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
-#include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -575,7 +574,10 @@ namespace sw
             const float3       local{ particle._positionSize._x, particle._positionSize._y, particle._positionSize._z };
             pBatch->setWorld( entry, float4x4::makeScale( size ) * float4x4::makeTranslation( local ) * world );
             pBatch->setBoundsRadius( entry, meshRadius * size * sizeScale );
-            pBatch->setSprite( entry, GPUSpriteInstanceData::make( float4{ 0.0f, 0.0f, 1.0f, 1.0f }, particle._color ) );
+            pBatch->setSprite( entry, InstanceSpriteFrame{
+                                          float4{ 0.0f, 0.0f, 1.0f, 1.0f },
+                                          particle._color
+            } );
         }
     }
 

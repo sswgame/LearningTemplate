@@ -11,7 +11,6 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
-#include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Rendering/MeshInstanceBatch.h"
@@ -125,7 +124,7 @@ namespace sw
         // 그대로인 자리는 더티로 찍지 않는다 — 서 있는 캐릭터의 HP 바가 프레임마다 다시 모이지 않게(행렬은 비트로 비교한다).
         if ( Memory::compare( &_batch->getEntry( index )._world, &world, sizeof( world ) ) != 0 )
             _batch->setWorld( index, world );
-        _batch->setSprite( index, GPUSpriteInstanceData::make( uvRect, tint ) );
+        _batch->setSprite( index, InstanceSpriteFrame{ uvRect, tint } );
         _batch->setEntryVisible( index, true );
     }
 

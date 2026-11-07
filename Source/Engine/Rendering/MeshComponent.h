@@ -14,10 +14,10 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/RHI/RHIEnums.h"
-#include "Engine/Graphics/Shader/Binding/GPUInstanceCustomData.h"
-#include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
+#include "Engine/Presentation/InstanceCustomData.h"
 #include "Engine/Presentation/InstanceHighlight.h"
+#include "Engine/Presentation/InstanceSpriteFrame.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -137,18 +137,18 @@ namespace sw
         virtual uint32 getSkinSlot() const { return constant::invalid_index::kUint32; }
 
         /**
-         * @brief GPU 인스턴스에 실을 스프라이트 프레임(UV 사각형)과 색입니다. 빌더가 `GPUInstance::_sprite` 로 옮깁니다.
+         * @brief GPU 인스턴스에 실을 스프라이트 프레임(UV 사각형) · 색 · 픽셀 스냅 단위입니다. 빌더가 담아(`GPUSpriteInstanceData::make`) `GPUInstance::_sprite` 로 옮깁니다.
          * @details 기본값(텍스처 전체, 흰색)이면 아무 일도 하지 않는다. 읽는 셰이더는 sprite_2d.hlsl 이고, 값을 정하는 쪽은 파생 타입
          *          (`SpriteComponent`)이다. 그래서 세터는 protected 이다(읽는 셰이더가 없는 메시에 색을 줄 수 있는 것처럼 보이지 않게 하려는 것이다).
          */
-        const GPUSpriteInstanceData& getSpriteInstanceData() const { return _spriteInstanceData; }
+        const InstanceSpriteFrame& getSpriteFrame() const { return _spriteFrame; }
         /**
          * @brief 인스턴스 사용자 값 @p index (0 또는 1)를 정합니다(언리얼 `SetCustomPrimitiveDataVector4`). 파일도 머티리얼 인스턴스도 없이 인스턴스마다 다른 값을 머티리얼 셰이더에 줍니다.
          * @details 머티리얼이 같으면 값이 달라도 한 배치이고, 값이 달라졌을 때만 그 인스턴스가 더티가 된다. 뜻은 읽는 셰이더가 정한다(`instance_custom_color.hlsl`). 번호가 틀리면 오류입니다.
          */
         void setCustomData( uint32 index, const float4& value );
         /** @brief 빌더가 `GPUInstance::_customData` 로 옮기는 사용자 값입니다. */
-        GPUInstanceCustomData getInstanceCustomData() const;
+        InstanceCustomData getInstanceCustomData() const;
         /**
          * @brief 2D 픽셀 스냅 단위(에셋 픽셀 하나의 월드 길이 = 1 / PPU, 0 이면 끔)를 정합니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시합니다.
          * @details 픽셀 퍼펙트 카메라가 줌이 바뀔 때 씬의 모든 메시에 알리고, 새로 등록되는 메시는 카메라 레지스트리의 값을 읽는다. 읽는 셰이더는 sprite_2d 이다.
@@ -271,8 +271,11 @@ namespace sw
         virtual string_view getDefaultMeshID() const { return {}; }
         /** @brief `_materialPath` 가 비었을 때의 머티리얼 경로입니다. 비어 있으면 씬 기본 머티리얼이며, 렌더러가 고릅니다. */
         virtual hashed_string getDefaultMaterialPath() const { return {}; }
-        /** @brief 스프라이트 프레임과 색을 바꿉니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시하므로, 같은 프레임을 다시 넣는 애니메이터는 비용이 없습니다. */
-        void setSpriteInstanceData( const GPUSpriteInstanceData& data );
+        /**
+         * @brief 스프라이트 프레임(UV 사각형)과 색을 바꿉니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시하므로, 같은 프레임을 다시 넣는 애니메이터는 비용이 없습니다.
+         * @details 픽셀 스냅 단위는 그대로 둔다(픽셀 퍼펙트 카메라가 `setPixelSnapUnit` 으로 정한다).
+         */
+        void setSpriteFrame( const float4& uvRect, const float4& tint );
         /** @brief 구간 이름이 지금 메시에 있는지 보고, 없으면 오류를 남깁니다(그리지 않는다 — `findDrawSection`). 메시가 바뀌거나 이름이 바뀔 때 부릅니다. */
         void validateSectionName() const;
         /** @brief 이 컴포넌트의 메시를 따라 그리는 구간 컴포넌트(`MeshSectionComponent`)에 메시가 바뀌었다고 알립니다. */
@@ -328,8 +331,8 @@ namespace sw
         uint32 _gpuSpinSeed;
         PROPERTY( Category = "Rendering", DisplayName = "Section", Tooltip = "Mesh section to draw (material section of an imported model); empty draws the whole mesh" )
         hashed_string _sectionName;
-        /** @brief GPU 인스턴스의 스프라이트 슬롯 데이터입니다. 저장하지 않으며, 파생 타입의 저장되는 값(프레임, 색)에서 만듭니다. */
-        GPUSpriteInstanceData _spriteInstanceData;
+        /** @brief GPU 인스턴스의 스프라이트 슬롯 값입니다(담기 전). 저장하지 않으며, 파생 타입의 저장되는 값(프레임, 색)에서 만듭니다. */
+        InstanceSpriteFrame _spriteFrame;
         PROPERTY( Category = "Rendering", DisplayName = "Custom Data 0", Tooltip = "Per-instance value the material shader reads; does not split the batch" )
         float4 _customData0;
         PROPERTY( Category = "Rendering", DisplayName = "Custom Data 1", Tooltip = "Per-instance value the material shader reads; does not split the batch" )

@@ -387,7 +387,7 @@ namespace sw
         candidate._boundsRadius         = candidate._localBoundsRadius * world.getMaximumAxisScale();
         candidate._bReverseCulling      = GPUSceneBuilderInternal::computeReverseCulling( world );
         candidate._spinSeed             = pMeshComp->getGPUSpinSeed();
-        candidate._sprite               = pMeshComp->getSpriteInstanceData();
+        candidate._sprite               = GPUSpriteInstanceData::make( pMeshComp->getSpriteFrame() ); // 담는 법은 렌더러가 안다
         candidate._customData           = pMeshComp->getInstanceCustomData();
         candidate._highlight            = GPUInstanceHighlight::pack( pMeshComp->getHighlight() ); // 담는 법은 렌더러가 안다
         candidate._skinSlot             = pMeshComp->getSkinSlot();
@@ -450,7 +450,7 @@ namespace sw
         candidate._boundsRadius              = item._boundsRadius * item._world.getMaximumAxisScale();
         candidate._bReverseCulling           = GPUSceneBuilderInternal::computeReverseCulling( item._world );
         candidate._spinSeed                  = item._spinSeed;
-        candidate._sprite                    = item._sprite;
+        candidate._sprite                    = GPUSpriteInstanceData::make( item._sprite );
         candidate._customData                = item._customData;
         candidate._highlight                 = 0;                                // 인스턴스 배치 항목(데미지 숫자 · HP 바)은 강조하지 않는다
         candidate._skinSlot                  = constant::invalid_index::kUint32; // 인스턴스 배치 항목은 스키닝하지 않는다

@@ -9,7 +9,7 @@
  * Data · 유니티 MaterialPropertyBlock 의 자리). 배치 키는 머티리얼 인스턴스라, 프레임마다 바뀌는 아틀라스 프레임 · 색을 인스턴스로
  * 바꾸면 스프라이트마다 배치가 갈린다. 여기 실으면 같은 텍스처의 스프라이트는 프레임 · 색이 달라도 한 드로우다.
  * 지금 읽는 셰이더는 sprite_2d.hlsl 하나다(다른 셰이더에서는 그냥 실려 다니는 16 바이트 — 프레임 · 색 · 픽셀 스냅).
- * 사용자 값 칸(customData0 · 1)은 뜻을 머티리얼 셰이더가 정하는 실수 float4 둘이다(언리얼 Custom Primitive Data, C++ GPUInstanceCustomData). 본보기는 instance_custom_color.hlsl 이다.
+ * 사용자 값 칸(customData0 · 1)은 뜻을 머티리얼 셰이더가 정하는 실수 float4 둘이다(언리얼 Custom Primitive Data, C++ InstanceCustomData). 본보기는 instance_custom_color.hlsl 이다.
  */
 
 #ifndef SW_ENGINE_INSTANCEDATA_HLSLI
@@ -32,7 +32,7 @@ struct InstanceData
     uint     _highlight;            // 강조 — 하위 3 바이트 RGB8 색, 상위 바이트 방식(0 없음 · 1 외곽선 · 2 감각). C++ `GPUInstanceHighlight` — highlight_outline.hlsl 이 읽는다
     float    _appearance;           // 등장 비율(0 ~ 1) — 1 보다 작으면 디더 변형(SW_APPEARANCE_DITHER)이 그 비율만큼의 픽셀만 남긴다(binding.hlsli Appearance::clipDither)
     uint     _skinSlot;             // 스킨 칸(유닛 · 군중 묶음마다 게임 스레드가 준 번호) — g_SwSkinResultOffsets 로 스킨 결과 시작을 찾는다. kInvalidIndex 면 스킨 결과를 읽지 않는다(C++ GPUInstance::_skinSlot)
-    float4   _customData0;          // 사용자 값 0(C++ GPUInstanceCustomData) — 머티리얼 셰이더가 getCustomData 로 읽는다. 배치 키가 아니다
+    float4   _customData0;          // 사용자 값 0(C++ InstanceCustomData) — 머티리얼 셰이더가 getCustomData 로 읽는다. 배치 키가 아니다
     float4   _customData1;          // 사용자 값 1
 
     // 멤버 함수는 원소 레이아웃을 바꾸지 않는다. 정의는 이 파일 아래(강조 · 스프라이트 칸)와 binding.hlsli(읽기 · 정점 애니메이션)다.
