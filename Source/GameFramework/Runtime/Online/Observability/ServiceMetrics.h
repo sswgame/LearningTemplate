@@ -41,8 +41,21 @@ namespace sw
             initializeWithNames( pRegistry, pServiceName, makeLabelNames<TMethodName>(), makeLabelNames<TResult>() );
         }
 
+        /** @brief `initialize` 와 같고 결과 라벨 뒤에 공통 범주(`OnlineError`)를 더합니다. 프로토콜 표로 선 키트(`OnlineServerCallTable`)가 쓰며, 공통 범주는 `observeError` 로 셉니다. */
+        template <typename TMethodName, typename TResult>
+        void initializeWithErrors( MetricRegistry* pRegistry, const utf8* pServiceName )
+        {
+            vector<string> listResultName = makeLabelNames<TResult>();
+            const int32    errorBase      = static_cast<int32>( listResultName.size() );
+            appendErrorLabelNames( listResultName );
+            initializeWithNames( pRegistry, pServiceName, makeLabelNames<TMethodName>(), listResultName );
+            _errorResultBase = errorBase;
+        }
+
         /** @brief 끝난 요청 하나를 셉니다. 요청 수에 더하고 @p receivedNanoseconds(`MonotonicClock`)부터 지금까지를 지연 히스토그램에 넣습니다. 범위 밖 번호는 무시합니다. */
         void observeRequest( int32 methodIndex, int32 resultIndex, int64 receivedNanoseconds );
+        /** @brief 공통 범주 @p errorCode 로 끝난 요청 하나를 셉니다. 표에 없는 코드는 `internal` 로 셉니다. */
+        void observeError( int32 methodIndex, uint16 errorCode, int64 receivedNanoseconds );
         void setPendingStoreWorkCount( int32 pendingCount );
 
     private:
@@ -58,7 +71,8 @@ namespace sw
             return listName;
         }
 
-        void initializeWithNames( MetricRegistry* pRegistry, const utf8* pServiceName, const vector<string>& listMethodName, const vector<string>& listResultName );
+        static void appendErrorLabelNames( vector<string>& inoutListName );
+        void        initializeWithNames( MetricRegistry* pRegistry, const utf8* pServiceName, const vector<string>& listMethodName, const vector<string>& listResultName );
 
     private:
         vector<MetricCounter*>   _listRequestCounter; ///< 메서드 × 결과
@@ -66,5 +80,6 @@ namespace sw
         MetricGauge*             _pPending;
         int32                    _methodCount;
         int32                    _resultCount;
+        int32                    _errorResultBase; ///< 공통 범주 라벨의 첫 결과 번호(`initializeWithErrors`). 없으면 음수이고 `observeError` 는 지연만 잰다
     };
 } // namespace sw

@@ -6,6 +6,7 @@
 #include "Core/Network/Connection/NetEndpointSecurity.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/Protocol/AccountProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 
 namespace sw
 {
@@ -335,4 +336,26 @@ namespace sw
             reply._result             = failure;
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct AccountClientRegistration
+        {
+            /** @brief 계정 클라이언트는 로그인에 빌드 글 · 플랫폼을 싣는다. */
+            static unique_ptr<IOnlineClientService> create( OnlineServiceClient& client, const OnlineSessionInfo& info )
+            {
+                AccountClientInfo clientInfo;
+                clientInfo._build                 = info._gameBuild;
+                clientInfo._platform              = info._platform;
+                unique_ptr<AccountClient> pClient = make_unique<AccountClient>();
+                pClient->initialize( &client, clientInfo );
+                return pClient;
+            }
+        };
+    } // namespace
+
+    SW_REGISTER_ONLINE_CLIENT_WITH( AccountClient, &AccountClientRegistration::create );
 } // namespace sw

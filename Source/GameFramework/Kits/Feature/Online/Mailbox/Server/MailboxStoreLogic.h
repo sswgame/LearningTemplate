@@ -25,6 +25,9 @@ namespace sw
 {
     class ILedgerPolicy;
 
+    /** @brief 저장 함수의 결과입니다. 업무 결과이거나 공통 범주(충돌 `kBusy` · 일시 장애 `kUnavailable`)입니다. */
+    using MailboxOutcome = OnlineOutcome<MailboxResult>;
+
     /** @brief 수령 입력입니다. */
     struct MailboxClaimInput
     {
@@ -67,13 +70,13 @@ namespace sw
         static constexpr int32 kMaxClaimAllCount = 16;
 
         /** @brief 개인 우편을 최근 것부터 @p outReply 에 채우고, 활성이고 받지 않은 캠페인은 첫 페이지의 맨 앞에 채웁니다. 만료된 것은 뺍니다. */
-        static MailboxResult listMail( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const vector<ServiceMailCampaign>& listActiveCampaign,
-                                       const MailboxRequest& request, MailboxReply& outReply );
-        static MailboxResult markRead( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey );
-        static MailboxResult claim( IServiceStoreConnection& connection, const MailboxClaimInput& input, MailboxReply& outReply );
+        static MailboxOutcome listMail( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const vector<ServiceMailCampaign>& listActiveCampaign,
+                                        const MailboxListRequest& request, MailboxListReply& outReply );
+        static MailboxOutcome markRead( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey );
+        static MailboxOutcome claim( IServiceStoreConnection& connection, const MailboxClaimInput& input, MailboxClaimReply& outReply );
         /** @brief 첨부가 있고 받지 않은 우편을 `kMaxClaimAllCount` 개까지 우편마다 따로 커밋합니다. 하나가 상한에 걸려도 나머지는 받습니다. */
-        static MailboxResult claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const ILedgerPolicy* pPolicy, MailboxReply& outReply );
-        static MailboxResult deleteMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey );
+        static MailboxOutcome claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const ILedgerPolicy* pPolicy, MailboxClaimReply& outReply );
+        static MailboxOutcome deleteMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey );
         /** @brief 만료 인덱스를 시각 순서로 @p maxCount 개까지 처리합니다. */
         static void sweepExpired( IServiceStoreConnection& connection, int64 nowMs, int32 maxCount, MailboxSweepStats& outStats );
     };

@@ -70,9 +70,10 @@
     {
       "name": "Ninja-Debug",
       "displayName": "Windows Ninja Debug (Clang-cl)",
-      "description": "Windows Debug build using Ninja + Clang-cl",
+      "description": "Windows Debug build using Ninja + Clang-cl — 활성 게임에 Shooter3D 를 함께 지어 온라인 키트(계정 · 채팅 · 경제 · 우편함과 서버 짝)가 매일 컴파일되고 UnitTests.Shooter3D 가 그 테스트를 돈다",
       "inherits": "base-windows",
       "cacheVariables": {
+        "SW_GAMES": "Shooter3D",
         "CMAKE_BUILD_TYPE": "Debug"
       }
     },

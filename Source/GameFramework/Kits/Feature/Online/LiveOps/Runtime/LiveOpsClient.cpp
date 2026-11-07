@@ -5,6 +5,8 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
+
 namespace sw
 {
     LiveOpsClient::LiveOpsClient()
@@ -59,4 +61,9 @@ namespace sw
         _listEvent = reply._listEvent;
         ++_revision;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_REGISTER_ONLINE_CLIENT( LiveOpsClient );
 } // namespace sw

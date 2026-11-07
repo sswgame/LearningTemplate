@@ -56,14 +56,14 @@ namespace
         return balance._amount;
     }
 
-    MailboxResult claim( MemoryServiceDatabase& database, uint64 accountID, const string& mailKey, const ILedgerPolicy& policy )
+    MailboxOutcome claim( MemoryServiceDatabase& database, uint64 accountID, const string& mailKey, const ILedgerPolicy& policy )
     {
         MailboxClaimInput input;
         input._mailKey   = mailKey;
         input._pPolicy   = &policy;
         input._accountID = accountID;
         input._nowMs     = kNowMs + 1000;
-        MailboxReply reply;
+        MailboxClaimReply reply;
         return MailboxStoreLogic::claim( database, input, reply );
     }
 } // namespace
@@ -122,7 +122,7 @@ SW_TEST_CASE( MailboxStoreLogicTest, CapExceededLeavesTheMail )
     (void)sendReward( batch, "batch.a", "gold", 60 );
     (void)sendReward( batch, "batch.b", "gold", 90 );
     (void)sendReward( batch, "batch.c", "gems", 3 );
-    MailboxReply reply;
+    MailboxClaimReply reply;
     SW_EXPECT_TRUE( MailboxStoreLogic::claimAll( batch, kRecipient, kNowMs + 1000, &policy, reply ) == MailboxResult::Ok );
     SW_EXPECT_EQUAL( reply._claimedCount, 2 ); // 금 하나 + 보석, 남은 금 우편은 상한에 걸린다
     SW_EXPECT_TRUE( readBalance( batch, kRecipient, "gold" ) <= 100 );

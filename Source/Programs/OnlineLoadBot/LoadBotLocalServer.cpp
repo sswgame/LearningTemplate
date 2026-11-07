@@ -6,6 +6,7 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/WallClock.h"
 
+#include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 
@@ -68,7 +69,9 @@ namespace sw
         runtimeSettings._listenAddress = NetAddress::makeLoopback( settings._port );
         runtimeSettings._pTransport    = pTransport;
         runtimeSettings._gamePort      = Internal::kGameServerPort;
-        runtimeSettings._bTLS          = SW_FALSE; // 봇과 테스트는 평문 루프백이다
+        runtimeSettings._bTLS          = SW_FALSE;               // 봇과 테스트는 평문 루프백이다
+        runtimeSettings._store._driver = kMemoryStoreDriverName; // 봇 서버는 부하를 재고 사라진다 - 저장을 남기지 않는다
+        runtimeSettings._cache._driver = kMemoryStoreDriverName;
         runtimeSettings._pClock        = settings._pClock;
         const UnixMilliseconds startMs = settings._startMs != UnixMilliseconds{ 0 } ? settings._startMs : WallClock::nowUnixMilliseconds();
         return _runtime->initialize( std::move( runtimeSettings ), startMs, outError );

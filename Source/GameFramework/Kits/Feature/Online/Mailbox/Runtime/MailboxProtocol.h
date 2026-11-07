@@ -1,8 +1,8 @@
 /**
  * @file MailboxProtocol.h
- * @brief 우편함 서비스의 와이어 형식입니다. 메서드 번호(영역 `OnlineMethodRange::kMailbox`), 결과, 화면에 보이는 우편, 요청과 응답 형식을 정의합니다.
- * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
- *          업무 결과는 응답 본문(`MailboxReply::_result`)에 담으며 경제와 거래 키트도 같다.
+ * @brief 우편함 서비스의 와이어 형식입니다. 메서드와 요청 · 응답의 짝(`MailboxMethod`), 결과, 화면에 보이는 우편을 정의합니다. 프로토콜 서술자로 옮긴 첫 키트이고, 나머지 키트의 본보기입니다.
+ * @details 메서드마다 요청과 응답 타입이 있어 메서드가 쓰지 않는 칸이 없다. 본문은 고정 배치형(B)이고 바이트 배치는 `PROPERTY` 선언 순서와 키가 정한다.
+ *          결과는 두 층이다. 업무 결과(`MailboxResult`)는 응답의 `_result` 이고, 로그인 없음 · 깨진 요청 · 충돌 · 일시 장애는 공통 범주(`OnlineError`)로 `OnlineResult::_errorCode` 에 온다.
  *          캠페인 우편의 키는 `campaign/<id 16진>` 이다. 개인 우편의 키는 받는 계정의 16진 문자열로 시작하므로 겹치지 않는다.
  *          수령 응답의 잔액은 게임이 경제 클라이언트(`EconomyClient::applyBalances`)로 넘긴다. 키트끼리는 서로 모른다.
  */
@@ -46,38 +46,16 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 우편함 메서드 번호입니다. 번호는 열거자 순서에서 나오며 그 이름 순서가 온라인 스키마 해시에 섞입니다(`OnlineMethodTable`). */
-    struct MailboxMethod : OnlineMethodTable<MailboxMethodName, OnlineMethodRange::kMailbox, MailboxPushName>
-    {
-        static constexpr uint16 kList        = toMethod( MailboxMethodName::List );
-        static constexpr uint16 kMarkRead    = toMethod( MailboxMethodName::MarkRead );
-        static constexpr uint16 kClaim       = toMethod( MailboxMethodName::Claim );    ///< 멱등 키가 필수이다
-        static constexpr uint16 kClaimAll    = toMethod( MailboxMethodName::ClaimAll ); ///< 멱등 키가 필수이다
-        static constexpr uint16 kDelete      = toMethod( MailboxMethodName::Delete );
-        static constexpr uint16 kPushNewMail = toPush( MailboxPushName::NewMail ); ///< `MailboxNewMail`. 새 우편이 왔다. 클라이언트는 목록을 다시 읽는다
-
-        /** @brief 상태를 바꾸는 수령이면 true 입니다. 멱등 키가 필수입니다. */
-        static constexpr bool isClaim( uint16 method ) { return method == kClaim || method == kClaimAll; }
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 우편함 결과입니다. 와이어 값이므로 새 값은 끝에만 추가합니다. */
+    /** @brief 우편함 업무 결과입니다. 공통 범주(로그인 · 충돌 · 일시 장애 · 버전)는 `OnlineError` 이고 여기 적지 않습니다. 와이어 값이므로 새 값은 끝에만 추가합니다. */
     ENUM( Count = Count )
     enum class MailboxResult : uint8
     {
         Ok = 0,
-        NotSignedIn,
-        InvalidRequest,
         NotFound, ///< 없는 우편이거나 다른 사람의 우편이다
         AlreadyClaimed,
         Expired,
         HasAttachments, ///< 받지 않은 첨부가 있어서 지울 수 없다
         CapExceeded,    ///< 받으면 상한을 넘는다. 우편은 그대로 남는다
-        Busy,
-        Unavailable,
-        UpdateRequired, ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
         Count
     };
 } // namespace sw
@@ -114,40 +92,57 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 모든 메서드의 요청입니다. 메서드마다 쓰는 필드만 채웁니다. */
+    /** @brief 목록 요청입니다. */
     REFLECT()
-    struct MailboxRequest
+    struct MailboxListRequest
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
+        string _cursor{}; ///< 앞 응답의 `_nextCursor` 이며 처음에는 빈 문자열이다. 상한은 `OnlineLimit::kMaxKeySize` 와 같다
+        PROPERTY( Min = 1, Max = MailboxProtocol::kMaxListCount )
+        int32 _maxCount{ 20 }; ///< 상한은 `MailboxProtocol::kMaxListCount` 와 같다
+    };
+
+    /** @brief 우편 하나를 가리키는 요청입니다(읽음 · 수령 · 지우기). */
+    REFLECT()
+    struct MailboxMailRequest
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
         string _mailKey{}; ///< 상한은 `OnlineLimit::kMaxKeySize` 와 같다
-        PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
-        string _cursor{}; ///< List 에서 쓴다. 앞 응답의 `_nextCursor` 이며 처음에는 빈 문자열이다
-        PROPERTY( Min = 1, Max = MailboxProtocol::kMaxListCount )
-        int32 _maxCount{ 20 }; ///< 상한은 `MailboxProtocol::kMaxListCount` 와 같다
     };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 모든 메서드의 응답입니다. 메서드마다 쓰는 필드만 채웁니다. */
+    /** @brief 목록 응답입니다. */
     REFLECT()
-    struct MailboxReply
+    struct MailboxListReply
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = MailboxProtocol::kMaxViewCount )
         vector<MailView> _listMail{}; ///< 캠페인이 개인 우편 앞에 끼어들므로 상한은 `MailboxProtocol::kMaxListCount` 의 두 배이다
-        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
-        vector<LedgerBalance> _listBalance{}; ///< 수령과 모두 받기에서 바뀐 잔액이다. 게임이 EconomyClient::applyBalances 로 넘긴다
         PROPERTY( MaxCount = OnlineLimit::kMaxKeySize )
         string _nextCursor{};
+    };
+
+    /** @brief 수령과 모두 받기의 응답입니다. */
+    REFLECT()
+    struct MailboxClaimReply
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
+        vector<LedgerBalance> _listBalance{}; ///< 바뀐 잔액이다. 게임이 EconomyClient::applyBalances 로 넘긴다
         PROPERTY()
         int32 _claimedCount{ 0 };
         PROPERTY()
         MailboxResult _result{ MailboxResult::Ok };
+    };
 
-        /** @brief 같은 멱등 키로 다시 시도할 결과(버전 충돌 · 일시 장애)인지입니다. 서버는 이 답을 기억하지 않는다(`OnlineServiceHost::respondReply`). */
-        [[nodiscard]] bool isRetryable() const { return _result == MailboxResult::Busy || _result == MailboxResult::Unavailable; }
+    /** @brief 결과만 있는 응답입니다(읽음 · 지우기). */
+    REFLECT()
+    struct MailboxResultReply
+    {
+        REFLECT_BODY();
+        PROPERTY()
+        MailboxResult _result{ MailboxResult::Ok };
     };
 } // namespace sw
 
@@ -168,20 +163,34 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 우편함 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
+    struct MailboxMethod : OnlineMethodTable<MailboxMethodName, OnlineMethodRange::kMailbox, MailboxPushName>
+    {
+        using List     = Method<MethodName::List, MailboxListRequest, MailboxListReply>;
+        using MarkRead = Method<MethodName::MarkRead, MailboxMailRequest, MailboxResultReply>;
+        using Claim    = Method<MethodName::Claim, MailboxMailRequest, MailboxClaimReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using ClaimAll = Method<MethodName::ClaimAll, OnlineNoBody, MailboxClaimReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using Delete   = Method<MethodName::Delete, MailboxMailRequest, MailboxResultReply>;
+        using NewMail  = Push<PushName::NewMail, MailboxNewMail>; ///< 새 우편이 왔다. 클라이언트는 목록을 다시 읽는다
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @struct MailboxProtocol
-     * @brief 우편함 키트의 메시지 타입 목록, 등록 항목, 목록 상한입니다. 본문은 고정 배치형(B)이며 `MessageTypes::write` · `read` 로만 쓰고 읽습니다.
+     * @brief 우편함 키트의 프로토콜 표, 메시지 목록, 등록 항목, 목록 상한입니다.
      */
     struct SW_KIT_API MailboxProtocol
     {
-        using MessageTypes = OnlineMessageTypes<MailboxRequest, MailboxReply, MailboxNewMail>;
+        using Table        = OnlineProtocolTable<MailboxMethod, OnlineMethodList<MailboxMethod::List, MailboxMethod::MarkRead, MailboxMethod::Claim, MailboxMethod::ClaimAll, MailboxMethod::Delete>,
+                                                 OnlinePushList<MailboxMethod::NewMail>>;
+        using MessageTypes = Table::MessageTypes;
+        using ResultName   = MailboxResult;
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
         static constexpr int32           kMaxListCount   = 50;
         static constexpr int32           kMaxViewCount   = kMaxListCount * 2; ///< 응답 한 번의 우편 수. 캠페인이 개인 우편 앞에 끼어든다
         static constexpr const utf8*     kCampaignPrefix = "campaign/";
-
-        /** @brief 공통 오류 코드(`OnlineError`)를 결과로 바꿉니다. 로그인 없음, 손상된 본문, 충돌은 각각 대응하는 결과로, 나머지는 Unavailable 로 바꿉니다. */
-        static MailboxResult fromErrorCode( uint16 errorCode );
     };
 } // namespace sw

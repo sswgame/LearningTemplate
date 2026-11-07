@@ -4,9 +4,11 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
+#include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
@@ -145,6 +147,8 @@ namespace
             settings._pClock                = &_clock;
             settings._pTransport            = _transport.get();
             settings._config._ioThreadCount = 0;
+            settings._store._driver         = kMemoryStoreDriverName;
+            settings._cache._driver         = kMemoryStoreDriverName;
             for ( const utf8* pName : listKitName )
             {
                 OnlineServerKitEntry& entry = settings._config._listKit.emplace_back();
@@ -285,4 +289,57 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, EmptyKitListStopsStartup )
     SW_EXPECT_TRUE( error.find( "lists no kits" ) != string::npos );
     runtime.shutdown();
     SW_EXPECT_TRUE( getKitEventLog().empty() );
+}
+
+/** @brief [OnlineServerRuntimeTest] 저장소 · 캐시 드라이버가 비면 메모리로 대신하지 않고 기동을 멈춘다(재시작에 데이터를 잃는 서버가 정상으로 뜨지 않게) */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, EmptyDriverStopsStartup )
+{
+    OnlineServerRuntimeConfig noStore = makeSettings( { ProviderTestKit::kName } );
+    noStore._store._driver.clear();
+    OnlineServerRuntime runtime;
+    string              error;
+    SW_EXPECT_FALSE( runtime.initialize( std::move( noStore ), UnixMilliseconds{ 1000 }, error ) );
+    SW_EXPECT_TRUE( error.find( "store and a cache driver" ) != string::npos );
+    runtime.shutdown();
+
+    OnlineServerRuntimeConfig noCache = makeSettings( { ProviderTestKit::kName } );
+    noCache._cache._driver.clear();
+    OnlineServerRuntime runtimeNoCache;
+    SW_EXPECT_FALSE( runtimeNoCache.initialize( std::move( noCache ), UnixMilliseconds{ 1000 }, error ) );
+}
+
+/** @brief [OnlineServerRuntimeTest] 온라인 설정이 이름으로 고른 항목만 쓴다 - 이름이 비었거나 목록에 없으면 첫 항목으로 대신하지 않고 오류이다 */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, ResolveStoresNeedsNamedEntries )
+{
+    ServerConfig serverConfig;
+    serverConfig._listStore.push_back( ServerStoreEntry{} );
+    serverConfig._listStore[0]._name   = "first";
+    serverConfig._listStore[0]._driver = "sqlite";
+    serverConfig._listStore.push_back( ServerStoreEntry{} );
+    serverConfig._listStore[1]._name   = "local";
+    serverConfig._listStore[1]._driver = kMemoryStoreDriverName;
+    serverConfig._listCache.push_back( ServerCacheEntry{} );
+    serverConfig._listCache[0]._name   = "local";
+    serverConfig._listCache[0]._driver = kMemoryStoreDriverName;
+
+    OnlineServerConfig        onlineConfig;
+    OnlineServerRuntimeConfig settings;
+    string                    error;
+    SW_EXPECT_FALSE( OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings, error ) ); // 이름을 적지 않았다
+    SW_EXPECT_TRUE( error.find( "_storeName" ) != string::npos );
+
+    onlineConfig._storeName = "missing";
+    onlineConfig._cacheName = "local";
+    SW_EXPECT_FALSE( OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings, error ) );
+    SW_EXPECT_TRUE( error.find( "missing" ) != string::npos );
+
+    onlineConfig._storeName = "local";
+    onlineConfig._cacheName = "";
+    SW_EXPECT_FALSE( OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings, error ) );
+    SW_EXPECT_TRUE( error.find( "_cacheName" ) != string::npos );
+
+    onlineConfig._cacheName = "local";
+    SW_REQUIRE_TRUE( OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings, error ) );
+    SW_EXPECT_EQUAL( string( kMemoryStoreDriverName ), settings._store._driver );
+    SW_EXPECT_EQUAL( string( kMemoryStoreDriverName ), settings._cache._driver );
 }

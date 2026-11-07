@@ -5,6 +5,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerDirectoryProtocol.h"
+#include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 
 namespace sw
 {
@@ -116,4 +117,9 @@ namespace sw
         if ( onServerList.isBound() )
             onServerList( errorCode, listReply._listEntry );
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_REGISTER_ONLINE_CLIENT( ServerDirectoryClient );
 } // namespace sw

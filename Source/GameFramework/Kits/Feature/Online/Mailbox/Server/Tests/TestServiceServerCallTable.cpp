@@ -2,6 +2,7 @@
 // 응답 안에서 다시 올려도 되며, 키트 칸으로 찾는다. 지표 라벨에 닫힌 메서드 · 결과 열거형이 필요해 우편함 메시지로 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
+#include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Observability/MetricRegistry.h"
@@ -18,15 +19,34 @@ namespace
         uint64 _ticket{ 0 };
     };
 
-    using MailboxCallTable = ServiceServerCallTable<MailboxReply, MailboxProtocol::MessageTypes>;
-    using TicketCallTable  = ServiceServerCallTable<MailboxReply, MailboxProtocol::MessageTypes, TicketExtra>;
+    /** @brief 표가 요구하는 칸만 가진 응답입니다. 호스트 없이 델리게이트 경로만 보므로 와이어에 쓰지 않습니다. */
+    struct TestReply
+    {
+        MailboxResult _result{ MailboxResult::Ok };
+
+        [[nodiscard]] bool isRetryable() const { return false; }
+    };
+
+    struct TestMessages
+    {
+        template <typename TMessage>
+        [[nodiscard]] static bool write( BitWriter& outWriter, const TMessage& message )
+        {
+            (void)outWriter;
+            (void)message;
+            return true;
+        }
+    };
+
+    using MailboxCallTable = ServiceServerCallTable<TestReply, TestMessages>;
+    using TicketCallTable  = ServiceServerCallTable<TestReply, TestMessages, TicketExtra>;
 
     struct ReplySink
     {
-        vector<MailboxReply> _listReply{};
-        MailboxCallTable*    _pReopenTable{ nullptr }; ///< 있으면 첫 응답 안에서 이 표에 호출 하나를 더 올린다
+        vector<TestReply> _listReply{};
+        MailboxCallTable* _pReopenTable{ nullptr }; ///< 있으면 첫 응답 안에서 이 표에 호출 하나를 더 올린다
 
-        void onReply( const MailboxReply& reply )
+        void onReply( const TestReply& reply )
         {
             _listReply.push_back( reply );
             if ( _pReopenTable == nullptr || _listReply.size() != 1 )
@@ -37,9 +57,9 @@ namespace
 
     struct ServiceServerCallTableTestUtil
     {
-        static MailboxReply makeReply( MailboxResult result )
+        static TestReply makeReply( MailboxResult result )
         {
-            MailboxReply reply;
+            TestReply reply;
             reply._result = result;
             return reply;
         }
@@ -53,19 +73,19 @@ SW_TEST_CASE( ServiceServerCallTableTest, DelegateCallIsAnsweredOnceAndCounted )
     MailboxCallTable table;
     table.initialize<MailboxMethodName, MailboxResult>( &registry, "mailbox" );
     ReplySink    sink;
-    const int32  listIndex = MailboxMethod::toIndex( MailboxMethod::kList );
+    const int32  listIndex = MailboxMethod::List::kIndex;
     const uint64 callID    = table.open( MailboxCallTable::Origin::fromDelegate( MailboxCallTable::ReplyDelegate::create<&ReplySink::onReply>( &sink ) ), listIndex );
     SW_EXPECT_EQUAL( 1, table.getCount() );
 
-    SW_EXPECT_TRUE( table.finish( callID, ServiceServerCallTableTestUtil::makeReply( MailboxResult::NotSignedIn ) ) );
+    SW_EXPECT_TRUE( table.finish( callID, ServiceServerCallTableTestUtil::makeReply( MailboxResult::AlreadyClaimed ) ) );
     SW_REQUIRE_EQUAL( sink._listReply.size(), size_t( 1 ) );
-    SW_EXPECT_TRUE( sink._listReply[0]._result == MailboxResult::NotSignedIn );
+    SW_EXPECT_TRUE( sink._listReply[0]._result == MailboxResult::AlreadyClaimed );
     SW_EXPECT_TRUE( table.isEmpty() );
 
     const vector<MetricLabel> listRequestLabel = {
-        {"service",       "mailbox"},
-        { "method",          "list"},
-        { "result", "not_signed_in"}
+        {"service",         "mailbox"},
+        { "method",            "list"},
+        { "result", "already_claimed"}
     };
     const MetricCounter* pCounter = registry.registerCounter( "service_requests_total", "Service requests by method and result", listRequestLabel );
     SW_REQUIRE_TRUE( pCounter != nullptr );

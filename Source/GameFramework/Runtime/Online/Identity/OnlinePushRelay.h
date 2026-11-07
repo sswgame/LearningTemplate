@@ -77,6 +77,17 @@ namespace sw
         {
             static_assert( HasServerBusVersion<TBody>::value, "a relayed push body declares its semantic version as 'static constexpr uint32 kBusVersion'" );
         }
+        /**
+         * @param pName 위와 같습니다.
+         * 나머지는 알림 서술자(`XxxMethod::NewMail`)와 키트 메시지 목록입니다. 열거자와 본문 타입이 서술자 하나에서 나옵니다.
+         */
+        template <typename TPush, typename TMessageTypes>
+        OnlinePushRelayEntry( const utf8* pName, TPush, TMessageTypes )
+            : OnlinePushRelayEntry( pName, TPush::kKind, static_cast<int64>( TPush::kName ), &typeFqn<typename TPush::PushType>, &getBodyFqn<typename TPush::Body>,
+                                    &convertBody<TMessageTypes, typename TPush::Body> )
+        {
+            static_assert( HasServerBusVersion<typename TPush::Body>::value, "a relayed push body declares its semantic version as 'static constexpr uint32 kBusVersion'" );
+        }
         ~OnlinePushRelayEntry();
 
         OnlinePushRelayEntry( const OnlinePushRelayEntry& )            = delete;

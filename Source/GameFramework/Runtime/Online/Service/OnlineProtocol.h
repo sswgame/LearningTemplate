@@ -9,6 +9,9 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include <type_traits>
+#include <utility>
+
 namespace sw
 {
     /**
@@ -48,6 +51,24 @@ namespace sw
         Count,
     };
 
+    /** @brief 본문이 없는 요청 · 응답 · 알림의 자리표입니다. 와이어에 아무것도 싣지 않고 스키마 해시에도 섞이지 않습니다(`OnlineMessageTypes`). */
+    struct OnlineNoBody
+    {
+    };
+
+    /** @brief 메서드 서술자의 호출 규칙입니다. 규칙은 와이어의 뜻이므로 표의 해시에 섞입니다(`OnlineProtocolTable::computeMessageHash`). */
+    enum class OnlineMethodFlag : uint8
+    {
+        None                   = 0,
+        RequiresIdempotencyKey = 1u << 0, ///< 상태를 바꾸므로 멱등 키가 필수이다. 클라이언트는 없으면 만들고, 서버는 없으면 `kInvalidRequest` 로 답한다
+        Anonymous              = 1u << 1, ///< 로그인 없이 부를 수 있다
+    };
+
+    constexpr OnlineMethodFlag operator|( OnlineMethodFlag left, OnlineMethodFlag right )
+    {
+        return static_cast<OnlineMethodFlag>( static_cast<uint8>( left ) | static_cast<uint8>( right ) );
+    }
+
     /**
      * @brief 키트의 요청 메서드와 알림 종류의 표입니다. @p TMethodName 과 @p TPushName 은 `ENUM( Count = Count )` 열거형이고, 열거자 순서가 와이어 번호입니다.
      *        메서드는 @p RangeBase + 1 부터, 알림은 @p RangeBase + 0x80 부터 연속입니다. 알림이 없는 키트는 @p TPushName 으로 `OnlineNoPushName` 을 적습니다.
@@ -71,6 +92,35 @@ namespace sw
 
         static constexpr uint16 toMethod( TMethodName name ) { return static_cast<uint16>( kFirstMethod + static_cast<uint16>( name ) ); }
         static constexpr uint16 toPush( TPushName name ) { return static_cast<uint16>( kFirstPush + static_cast<uint16>( name ) ); }
+
+        /**
+         * @brief 메서드 서술자입니다. 메서드와 요청 · 응답 타입의 짝, 호출 규칙을 형식 하나에 적습니다. 키트는 `using Claim = Method<MethodName::Claim, XRequest, XReply, ...>;` 로 씁니다.
+         * @details 번호는 지금까지처럼 열거자 순서이고, 짝은 `OnlineProtocolTable` 이 스키마 해시에 섞습니다. gRPC `rpc Claim(ClaimRequest) returns (ClaimReply)`, 언리얼 Online Services 의 `struct FOp { Params; Result; }` 자리입니다(기억에 의존).
+         */
+        template <TMethodName Name, typename TRequest, typename TReply, OnlineMethodFlag Flags = OnlineMethodFlag::None>
+        struct Method
+        {
+            using Request = TRequest;
+            using Reply   = TReply;
+
+            static constexpr uint16 kID                     = static_cast<uint16>( RangeBase + 1 + static_cast<uint16>( Name ) );
+            static constexpr int32  kIndex                  = static_cast<int32>( Name );
+            static constexpr uint8  kFlagBits               = static_cast<uint8>( Flags );
+            static constexpr bool   kRequiresIdempotencyKey = ( kFlagBits & static_cast<uint8>( OnlineMethodFlag::RequiresIdempotencyKey ) ) != 0;
+            static constexpr bool   kAnonymous              = ( kFlagBits & static_cast<uint8>( OnlineMethodFlag::Anonymous ) ) != 0;
+        };
+
+        /** @brief 알림 서술자입니다. 알림과 본문 타입의 짝을 적습니다. 키트는 `using NewMail = Push<PushName::NewMail, XBody>;` 로 씁니다. 다른 서버로 중계하는 알림은 서버 `.cpp` 의 `OnlinePushRelayEntry` 가 이 서술자를 받습니다. */
+        template <TPushName Name, typename TBody>
+        struct Push
+        {
+            using PushType = TPushName;
+            using Body     = TBody;
+
+            static constexpr TPushName kName  = Name;
+            static constexpr uint16    kKind  = static_cast<uint16>( RangeBase + OnlineMethodRange::kMethodCount + static_cast<uint16>( Name ) );
+            static constexpr int32     kIndex = static_cast<int32>( Name );
+        };
         /** @brief 0부터 시작하는 번호입니다(열거자 순서). 지표와 테이블의 인덱스로 씁니다. 모르는 메서드이면 -1 입니다. */
         static constexpr int32 toIndex( uint16 method )
         {
@@ -124,10 +174,11 @@ namespace sw
         static constexpr uint16 kNotFound        = 8;
         static constexpr uint16 kConflict        = 9;
         static constexpr uint16 kFeatureDisabled = 10; ///< 원격 기능 플래그가 껐다
+        static constexpr uint16 kBusy            = 11; ///< 저장소 버전 충돌을 재시도 안에 풀지 못했다. 같은 멱등 키로 다시 한다
         static constexpr uint16 kInternal        = 255;
 
-        /** @brief 같은 멱등 키로 다시 시도할 오류(`kRateLimited` · `kUnavailable`)인지입니다. 서버는 이 오류를 멱등 응답으로 기억하지 않는다(`OnlineServiceHost::respondError`). */
-        static constexpr bool isRetryable( uint16 errorCode ) { return errorCode == kRateLimited || errorCode == kUnavailable; }
+        /** @brief 같은 멱등 키로 다시 시도할 오류(`kRateLimited` · `kUnavailable` · `kBusy`)인지입니다. 서버는 이 오류를 멱등 응답으로 기억하지 않는다(`OnlineServiceHost::respondError`). */
+        static constexpr bool isRetryable( uint16 errorCode ) { return errorCode == kRateLimited || errorCode == kUnavailable || errorCode == kBusy; }
 
         /**
          * @brief @p errorCode 를 키트 테이블 @p arrRow 에서 찾아 키트 결과로 바꿉니다. 테이블에 없으면 @p fallback 입니다.
@@ -143,6 +194,53 @@ namespace sw
             }
             return fallback;
         }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 응답에 키트 결과 칸 `_result` 가 있는지입니다. 결과 칸이 없는 응답(목록)은 답을 받았으면 성공입니다. */
+    template <typename TReply, typename = void>
+    struct OnlineReplyHasResult : std::false_type
+    {
+    };
+
+    template <typename TReply>
+    struct OnlineReplyHasResult<TReply, std::void_t<decltype( std::declval<const TReply&>()._result )>> : std::true_type
+    {
+    };
+
+    /**
+     * @brief 서버 저장 함수의 결과입니다. 키트 업무 결과(`TResult`, 끝난 결과) 또는 공통 범주(`OnlineError`, `fail`)입니다.
+     * @details 키트 결과 열거형에서 `Busy` · `Unavailable` 을 없앨 수 있게 둘을 나눕니다. `TResult` 는 `Ok` 를 가지고 암시 변환으로 받으므로 저장 함수는 `return XResult::NotFound;` 로 씁니다.
+     */
+    template <typename TResult>
+    struct OnlineOutcome
+    {
+        TResult _result;
+        uint16  _errorCode;
+
+        OnlineOutcome()
+            : _result{ TResult::Ok }
+            , _errorCode{ OnlineError::kOk }
+        {
+        }
+        OnlineOutcome( TResult result ) // NOLINT(google-explicit-constructor): 저장 함수가 업무 결과를 그대로 돌려주는 자리다
+            : _result{ result }
+            , _errorCode{ OnlineError::kOk }
+        {
+        }
+
+        [[nodiscard]] static OnlineOutcome fail( uint16 errorCode )
+        {
+            OnlineOutcome outcome;
+            outcome._errorCode = errorCode;
+            return outcome;
+        }
+
+        [[nodiscard]] bool isFailed() const { return _errorCode != OnlineError::kOk; }
+        [[nodiscard]] bool operator==( TResult result ) const { return isFailed() == false && _result == result; }
+        [[nodiscard]] bool operator!=( TResult result ) const { return ( *this == result ) == false; }
     };
 } // namespace sw
 

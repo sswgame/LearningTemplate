@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shooter3D 온라인 화폐 — 서버 경제 키트의 원장 정책(계정 상한)이 읽는다. Config/Server/Online/Shooter3D.online.json 이 가리킨다. -->
+<CurrencyCatalog>
+  <Currency id="cur.gold" cap="999999"/>
+  <Currency id="cur.gem"/>
+</CurrencyCatalog>

@@ -4,6 +4,8 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
+
 namespace sw
 {
     LeaderboardClient::LeaderboardClient()
@@ -82,4 +84,9 @@ namespace sw
         const NetIdempotencyKey key = method == LeaderboardMethod::kSubmitScore ? NetIdempotencyKey::makeRandom() : NetIdempotencyKey{};
         return sendRequest( method, request, key, onReply );
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_REGISTER_ONLINE_CLIENT( LeaderboardClient );
 } // namespace sw

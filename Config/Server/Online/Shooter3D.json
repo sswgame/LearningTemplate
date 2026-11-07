@@ -1,0 +1,18 @@
+{
+    "_listenAddress": "127.0.0.1",
+    "_gamePort": 17790,
+    "_servicePort": 17793,
+    "_bConsoleInput": true,
+    "_listStore": [
+        {
+            "_name": "local",
+            "_driver": "memory"
+        }
+    ],
+    "_listCache": [
+        {
+            "_name": "local",
+            "_driver": "memory"
+        }
+    ]
+}

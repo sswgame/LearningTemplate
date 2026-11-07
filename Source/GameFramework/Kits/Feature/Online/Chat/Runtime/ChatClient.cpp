@@ -4,6 +4,8 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
+
 namespace sw
 {
     ChatClient::ChatClient()
@@ -69,4 +71,9 @@ namespace sw
         if ( ChatProtocol::MessageTypes::read( body, message ) == FixedReadResult::Ok )
             _messageBuffer.push( std::move( message ) );
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_REGISTER_ONLINE_CLIENT( ChatClient );
 } // namespace sw

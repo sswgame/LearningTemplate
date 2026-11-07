@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shooter3D 온라인 상품 — 서버 경제 키트의 가격표다. -->
+<OfferCatalog>
+  <Offer id="gem_from_gold">
+    <Price currency="cur.gold" amount="100"/>
+    <Grant asset="cur.gem" amount="1"/>
+  </Offer>
+</OfferCatalog>

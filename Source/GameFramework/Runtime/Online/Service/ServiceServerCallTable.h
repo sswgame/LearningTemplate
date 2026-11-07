@@ -1,7 +1,7 @@
 /**
  * @file ServiceServerCallTable.h
  * @brief 서버 서비스가 응답을 기다리는 요청을 두는 표입니다. 응답 경로(호스트 토큰 또는 델리게이트), 호출 id, 받은 시각, 메서드 번호와 표준 지표를 한 벌로 맡습니다.
- * @details 클라이언트 쪽 `ServiceClientCallTable` 의 짝이다. 저장소 작업으로 요청을 처리하는 서비스(경제 · GM · 우편함)는 요청을 `open` 으로 올리고, 작업의 `complete` 에서
+ * @details 클라이언트 쪽 `ServiceClientCallTable` 의 짝이다. 저장소 작업으로 요청을 처리하고 아직 프로토콜 표(`OnlineProtocolService`)로 옮기지 않은 서비스(경제 · GM)는 요청을 `open` 으로 올리고, 작업의 `complete` 에서
  *          `finish` 로 응답한다. `finish` 는 표에서 빼고 응답한 뒤 `service_requests_total` · `service_request_seconds` 를 센다(`ServiceMetrics`).
  *
  *          - 요청 경로는 둘이다. 서비스 프레임워크의 요청은 `Origin::fromHost`(키트 메시지 목록 @p TMessageTypes 로 응답), 같은 프로세스와 테스트의 요청은 `Origin::fromDelegate` 이다.

@@ -1,7 +1,7 @@
 /**
  * @file MailboxService.h
  * @brief 우편함 서비스(서버)입니다. 목록, 읽음, 수령, 모두 받기, 지우기를 저장소 작업으로 맡기고 완료에서 응답하며, 주기마다 만료 정리와 캠페인 다시 읽기를 맡깁니다.
- * @details - 경제 서비스와 같은 구조이다. 요청 경로는 둘이며 서비스 프레임워크의 `onServiceRequest` 와 전송과 무관한 `submitCall` 이다. 작업 하나가 요청 하나이고, 저장소 완료는 호스트가 서비스 틱 전에 회수한다.
+ * @details - 프로토콜 표로 선다(`OnlineProtocolService`). 메서드마다 `handleCall` 이 저장소 작업 하나를 맡기고, 완료가 같은 표지로 응답한다. 저장소 완료는 호스트가 서비스 틱 전에 회수한다.
  *          - 수령과 모두 받기에는 멱등 키가 필수이다. 전송 계층의 응답 기억이 재시도를 받아 주고, 원장 쪽은 우편 토큰 분개 키가 중복을 막는다.
  *          - 만료 정리는 서버가 여러 대여도 된다. 우편마다 버전 조건과 분개 키를 쓰므로 하나만 이기고, 진 쪽은 실패 수에 들어간다.
  *          - 캠페인 목록은 메모리에 두고 `_campaignRefreshMs` 마다 다시 읽는다. 서버가 둘이면 그만큼 늦게 보일 수 있으며, 수령은 저장소가 막는다.
@@ -20,8 +20,8 @@
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMailCampaign.h"
 #include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocolService.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
-#include "GameFramework/Runtime/Online/Service/ServiceServerCallTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
@@ -58,31 +58,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 전송과 무관한 요청 하나입니다. */
-    struct MailboxCall
-    {
-
-        MailboxRequest    _request{};
-        NetIdempotencyKey _idempotencyKey{};
-        AccountID         _accountID{ kInvalidAccountID };
-        UnixMilliseconds  _nowMs;
-        uint16            _method{ 0 };
-        /** @param nowMs 요청의 시각(서버 루프의 유닉스 밀리초)입니다. 필수입니다 — 서비스가 다른 시각으로 메우지 않습니다. */
-        explicit MailboxCall( UnixMilliseconds nowMs )
-            : _nowMs{ nowMs }
-        {
-        }
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @class MailboxService @brief 우편함 요청 처리기입니다. 서비스 스레드에서 씁니다. */
-    class SW_KIT_SERVER_API MailboxService final : public IOnlineServerService
+    class SW_KIT_SERVER_API MailboxService final : public OnlineProtocolService<MailboxService, MailboxProtocol>
     {
     public:
-        using CallTable                          = ServiceServerCallTable<MailboxReply, MailboxProtocol::MessageTypes>;
-        using ReplyDelegate                      = CallTable::ReplyDelegate;
         static constexpr const utf8* kSweepJobID = "mail.sweep";
 
         MailboxService();
@@ -96,21 +75,23 @@ namespace sw
         /** @brief 맡긴 작업(요청, 만료 정리, 캠페인)이 끝날 때까지 저장소를 회수합니다. 상한은 5초이며 저장소를 종료하기 전에 부릅니다. */
         void shutdown();
 
-        void submitCall( const MailboxCall& call, ReplyDelegate onReply );
+        // 프로토콜 표의 메서드 - 저장소 작업 하나를 맡기고 완료에서 응답한다. 로그인 · 본문 · 멱등 키는 기반이 먼저 걸렀다.
+        void handleCall( OnlineServerCall<MailboxMethod::List> call, const OnlineCallContext& context, const MailboxListRequest& request );
+        void handleCall( OnlineServerCall<MailboxMethod::MarkRead> call, const OnlineCallContext& context, const MailboxMailRequest& request );
+        void handleCall( OnlineServerCall<MailboxMethod::Claim> call, const OnlineCallContext& context, const MailboxMailRequest& request );
+        void handleCall( OnlineServerCall<MailboxMethod::ClaimAll> call, const OnlineCallContext& context, const OnlineNoBody& request );
+        void handleCall( OnlineServerCall<MailboxMethod::Delete> call, const OnlineCallContext& context, const MailboxMailRequest& request );
+
         /** @brief 주기가 되면 만료 정리와 캠페인 다시 읽기 작업을 맡깁니다. 앞의 작업이 끝나지 않았으면 건너뜁니다. */
         void update( UnixMilliseconds nowMs );
         /** @brief 예약 작업이 부르는 만료 정리 한 번입니다. 주기와 별개이며 다음 `tick` 에 맡기고, 이미 돌고 있으면 무시합니다. */
         void requestSweep();
 
         // IOnlineServerService
-        const OnlineProtocolEntry& getProtocol() const override { return MailboxProtocol::kOnlineEntry; }
-        void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
-        void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
+        void onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         // 예약 작업 — 만료 정리 회차를 차지했다
         void onScheduledRun( const ScheduledRun& run );
 
-        /** @brief 작업의 `complete` 가 호출합니다. */
-        void completeCall( uint64 callID, const MailboxReply& reply );
         /** @brief 만료 정리 작업의 `complete` 입니다. 지표 `mailbox_expired_total{action}` 을 갱신하며 `_bMore` 이면 다음 틱에 바로 다시 정리합니다. */
         void completeSweep( const MailboxSweepStats& stats, ServiceStoreCompletion completion );
         /** @brief 새 우편 알림 작업의 `complete` 입니다. 이 서버의 계정에는 알림을, 다른 서버의 계정에는 중계를, 접속하지 않은 계정에는 기기 푸시를 보냅니다. */
@@ -122,13 +103,14 @@ namespace sw
         int32                              getPendingCallCount() const { return _calls.getCount(); }
 
     private:
-        void startCall( const MailboxCall& call, const CallTable::Origin& origin );
+        /** @brief 요청 하나의 저장소 작업을 맡깁니다. 내려가는 중이면 일시 장애로 답합니다. */
+        template <typename TMethod>
+        void submitCall( OnlineServerCall<TMethod> call, const OnlineCallContext& context, const typename TMethod::Request& request, bool bWithCampaigns );
         void onNoticePresenceFound( const AccountPresenceResult& result );
         void sendOfflinePush( AccountID accountID );
         bool isIdle() const;
 
     private:
-        CallTable                             _calls;
         vector<ServiceMailCampaign>           _listCampaign;
         MailboxServiceConfig                  _settings;
         Subscription                          _findOwner;                  ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)

@@ -659,6 +659,11 @@ function(sw_collectUnusedKits ACTIVE_LIST_VAR OUT_VAR)
 		list(APPEND swReached ${swName})
 		get_property(swDependencies GLOBAL PROPERTY SW_MODULE_${swName}_DEPENDENCIES)
 		list(APPEND swPending ${swDependencies})
+		# 키트 하나는 최대 세 모듈이다(공유 · 서버 전용 · 클라이언트 전용, `ModuleCatalog.h`) — 게임은 공유 모듈에만 의존할 수 있으므로(서버 전용은 클라이언트 구성에 없다) 공유 모듈을 쓰면 짝도 쓰인다.
+		# 언리얼 플러그인을 켜면 그 플러그인의 Runtime · ServerOnly 모듈이 함께 켜지는 것과 같다(기억에 의존). 대상이 맞지 않는 짝은 앞의 대상 검사가 이미 껐다.
+		if(swName MATCHES "^GF_(.+)$" AND NOT swName MATCHES "^GF_(Server|Client|EditorPlugin)_")
+			list(APPEND swPending GF_Server_${CMAKE_MATCH_1} GF_Client_${CMAKE_MATCH_1})
+		endif()
 	endwhile()
 
 	set(swUnused "")

@@ -106,10 +106,10 @@ namespace sw
         /** @brief 띄울 키트입니다. 설정에 적은 순서와 상관없이 키트의 시작 순서로 붙습니다. */
         PROPERTY()
         vector<OnlineServerKitEntry> _listKit{};
-        /** @brief 서버 설정 `_listStore` 에서 쓸 항목 이름입니다. 비우면 첫 항목, 항목이 없으면 프로세스 안 메모리 저장소입니다. */
+        /** @brief 서버 설정 `_listStore` 에서 쓸 항목 이름입니다. 전용 서버는 필수이며, 프로세스 안 저장소도 `memory` 드라이버 항목으로 고릅니다(`OnlineServerRuntime::resolveStores`). */
         PROPERTY()
         string _storeName{};
-        /** @brief 서버 설정 `_listCache` 에서 쓸 항목 이름입니다. 비우면 첫 항목, 항목이 없으면 프로세스 안 메모리 캐시입니다. */
+        /** @brief 서버 설정 `_listCache` 에서 쓸 항목 이름입니다. 전용 서버는 필수이며, 프로세스 안 캐시도 `memory` 드라이버 항목으로 고릅니다(`OnlineServerRuntime::resolveStores`). */
         PROPERTY()
         string _cacheName{};
         /** @brief 이 서버의 디렉터리 등록 종류(`game`, `lobby`)입니다. */

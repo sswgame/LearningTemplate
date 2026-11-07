@@ -15,8 +15,10 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
+#include "Games/Shooter3D/ShooterOnlineFlow.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
@@ -32,6 +34,7 @@ namespace sw
 
     protected:
         bool onInitialize() override;
+        void onUpdate( float32 deltaTime ) override;
 
     private:
         /** @brief 탄마다 이 게임의 두 표면(적의 몸 `Body`, 상자 · 바닥 `Cover`)에 맞음 표 줄이 있는지 봅니다. 없으면 탄마다 오류를 남기고 false 입니다(탄착이 말없이 사라지지 않게). */
@@ -40,6 +43,7 @@ namespace sw
     private:
         shared_ptr<const WeaponCatalog>     _pWeaponCatalog;     ///< 공유 캐시의 한 벌(게임 범위 서비스)
         shared_ptr<const ProjectileCatalog> _pProjectileCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
+        ShooterOnlineFlow                   _onlineFlow;         ///< 온라인 키트를 쓰는 흐름(게임 범위 서비스). 연결은 세션(`OnlineSession`)이 맡는다
     };
 } // namespace sw
 
@@ -48,6 +52,7 @@ namespace sw
     Shooter3DGame::Shooter3DGame()
         : _pWeaponCatalog{}
         , _pProjectileCatalog{}
+        , _onlineFlow{}
     {
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
         getStateSnapshot().registerGameMode<ShooterGameModeComponent>();
@@ -80,9 +85,16 @@ namespace sw
             }
             return false;
         }
+        bindScopedService( &_onlineFlow );
         // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
         (void)getSubsystem<GameSceneFlow>().requestFirstScene();
         return true;
+    }
+
+    void Shooter3DGame::onUpdate( float32 deltaTime )
+    {
+        (void)deltaTime;
+        _onlineFlow.update( getSubsystem<OnlineSession>() );
     }
 
     bool Shooter3DGame::checkImpacts() const

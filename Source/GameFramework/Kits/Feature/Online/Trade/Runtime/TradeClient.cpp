@@ -6,6 +6,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
+#include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 #include "GameFramework/Runtime/Online/Service/OnlineReplyUtil.h"
 
 namespace sw
@@ -207,4 +208,9 @@ namespace sw
         }
         return static_cast<int32>( outListLeg.size() ) > TradeConstant::kMaxLegsPerSide ? TradeResult::TooManyLegs : TradeResult::Ok;
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_REGISTER_ONLINE_CLIENT( TradeClient );
 } // namespace sw

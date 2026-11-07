@@ -16,17 +16,20 @@
 
 namespace sw
 {
-    /** @brief 영속 저장소(SQL) 하나입니다 — 키트가 `_name` 으로 찾습니다(`accounts` · `trades`). */
+    /**
+     * @brief 영속 저장소 하나입니다 — 온라인 설정의 `_storeName` 이 `_name` 으로 하나를 고르고 그 서버의 모든 키트가 나눠 씁니다(키트별 저장소가 아닙니다).
+     * @details 드라이버는 필수입니다. 프로세스 안 저장소도 `memory` 라고 적습니다 — 항목을 빠뜨린 운영 서버가 재시작에 데이터를 잃는 저장소로 조용히 뜨지 않게 합니다(Nakama `database.address` 와 같은 자리, 기억에 의존).
+     */
     REFLECT()
     struct SW_API ServerStoreEntry
     {
         REFLECT_BODY();
 
-        PROPERTY()
-        string _name{}; ///< 키트가 찾는 저장소 이름(`accounts` · `trades`)
+        PROPERTY( Required )
+        string _name{}; ///< 온라인 설정(`_storeName`)이 고르는 이름
         /** @brief 드라이버 이름(`postgres` · `sqlite` · `memory`)입니다. 해석은 서버 전용 모듈이 합니다. */
-        PROPERTY()
-        string _driver{ "memory" };
+        PROPERTY( Required )
+        string _driver{};
         /** @brief 비밀이 빠진 접속 문자열(`host=127.0.0.1 port=5432 dbname=game user=game` · SQLite 파일 경로)입니다. */
         PROPERTY()
         string _connection{};
@@ -38,17 +41,17 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 메모리 캐시(RESP — Valkey · Garnet, 또는 프로세스 안) 하나입니다. */
+    /** @brief 메모리 캐시(RESP — Valkey · Garnet, 또는 프로세스 안) 하나입니다. 온라인 설정의 `_cacheName` 이 `_name` 으로 고르고, 드라이버는 저장소처럼 필수입니다. */
     REFLECT()
     struct SW_API ServerCacheEntry
     {
         REFLECT_BODY();
 
-        PROPERTY()
-        string _name{}; ///< 키트가 찾는 캐시 이름(`presence` · `sessions`)
+        PROPERTY( Required )
+        string _name{}; ///< 온라인 설정(`_cacheName`)이 고르는 이름
         /** @brief 드라이버 이름(`resp` · `memory`)입니다. */
-        PROPERTY()
-        string _driver{ "memory" };
+        PROPERTY( Required )
+        string _driver{};
         /** @brief `host:port`(RESP)입니다. `memory` 는 비웁니다. */
         PROPERTY()
         string _endpoint{};

@@ -1,9 +1,15 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
+
+#include "Engine/Config/ConfigManager.h"
+#include "Engine/Config/Server/ServerConfig.h"
 
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 
 // OnlineServerConfigTest — 온라인 서버 설정의 키트 옵션 읽기(형식별 규칙 · 모르는 키 거절 · 형식 오류 · 없는 옵션은 기본값), 설정 파일 경로,
 // 키트 팩토리 레지스트리(이름으로 찾기 · 내리기 · 만들기 함수 없는 팩토리 거절). 파일 · 네트워크 없음(nogpu).
@@ -203,4 +209,33 @@ SW_TEST_CASE( OnlineServerConfigTest, KitRegistryRejectsDuplicateName )
     SW_EXPECT_TRUE( sw::OnlineServerKitRegistry::findFactory( "__test_online_kit_dup" ) == &first ); // 올라 있지 않은 것을 내려도 남은 것은 그대로
     sw::OnlineServerKitRegistry::unregisterFactory( &first );
     SW_EXPECT_NULL( sw::OnlineServerKitRegistry::findFactory( "__test_online_kit_dup" ) );
+}
+
+/**
+ * @brief [OnlineServerConfigTest] 저장소의 온라인 서버 설정 쌍(`Config/Server/Online`)이 모두 엄격하게 읽히고 저장소 · 캐시 항목이 이름으로 풀린다
+ * @details 온라인 설정은 키트 옵션까지 기동에서 읽으므로, 파일 모양이 틀리면 전용 서버가 뜨지 않는다. 활성 게임만이 아니라 모든 파일을 본다.
+ */
+SW_TEST_CASE( OnlineServerConfigTest, RepositoryOnlineConfigsResolve )
+{
+    const sw::string       directory = sw::FileUtil::joinPath( sw::ProcessRoots::get()._project.str(), "Config/Server/Online" );
+    sw::vector<sw::string> listFile;
+    SW_REQUIRE_TRUE( sw::FileUtil::collectFiles( directory, ".json", listFile, false ) );
+    int32 pairCount = 0;
+    for ( const sw::string& filePath : listFile )
+    {
+        if ( filePath.find( ".online.json" ) != sw::string::npos )
+            continue;
+        sw::string serverText;
+        sw::string onlineText;
+        SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( filePath, serverText ) );
+        SW_REQUIRE_TRUE_MSG( sw::FileUtil::readTextFile( sw::OnlineServerConfig::makeConfigPath( filePath ), onlineText ), filePath.c_str() );
+        sw::ConfigManager manager;
+        SW_REQUIRE_TRUE_MSG( manager.loadConfigFromJSON<sw::ServerConfig>( serverText, filePath.c_str() ), filePath.c_str() );
+        SW_REQUIRE_TRUE_MSG( manager.loadConfigFromJSON<sw::OnlineServerConfig>( onlineText, filePath.c_str() ), filePath.c_str() );
+        sw::OnlineServerRuntimeConfig settings;
+        sw::string                    error;
+        SW_EXPECT_TRUE_MSG( sw::OnlineServerRuntime::resolveStores( *manager.getConfig<sw::ServerConfig>(), *manager.getConfig<sw::OnlineServerConfig>(), settings, error ), error.c_str() );
+        ++pairCount;
+    }
+    SW_EXPECT_TRUE( pairCount > 0 );
 }

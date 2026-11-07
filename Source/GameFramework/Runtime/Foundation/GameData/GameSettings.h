@@ -79,6 +79,15 @@ namespace sw
         PROPERTY()
         DataPath _audioEvents; ///< 게임의 사운드 이벤트 라이브러리(`*.audioevents.xml`). `GameInstance` 가 `onInitialize` 앞에 올리고, 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 이벤트 없음
 
+        PROPERTY()
+        string _onlineServerAddress; ///< 온라인 서비스 서버 `주소:포트`(`OnlineSession::connect`). 적지 않으면 온라인을 쓰지 않는 게임이다
+
+        PROPERTY()
+        string _onlineTrustFile; ///< 온라인 서버 인증서를 믿을 CA 번들 PEM(프로젝트 루트 기준). 비면 개발 구성만 개발 인증서를 못 박아 믿고 배포 구성은 연결 오류다
+
+        PROPERTY()
+        string _onlineGameBuild; ///< Hello 와 로그인에 싣는 게임 빌드 글(점으로 나눈 정수열). 온라인 서버를 적었으면 필수다
+
         /**
          * 필수 데이터를 이 게임 팩 밖에서 읽는 종류와 그 팩입니다 — `<RequiredData kind="items" pack="common"/>`, 종류 이름 → 팩 루트.
          * 자리는 어느 팩이든 등록 줄의 팩 안 규칙 하나(`GamePackDataUtil::tryMakeKindPath`)로 만든다. 적지 않은 종류는 이 게임 팩이다.

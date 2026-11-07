@@ -32,6 +32,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
+#include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
 namespace sw
 {
@@ -62,6 +63,8 @@ namespace sw
         _gameScope.emplaceSubsystem<GameSceneFlow>( _packConfig._data, screenTransition, loadingScreen );
         // 로컬 저장소(세이브 슬롯)는 게임 범위 하나다 - 게임 상태 세이브 · 자동 저장 · 계정 장치 비밀이 함께 쓴다.
         _gameScope.emplaceSubsystem<GameLocalStore>();
+        // 온라인 세션은 키트 클라이언트를 묶을 뿐 연결은 게임이 연다 - 온라인을 쓰지 않는 게임에는 비용이 없다.
+        _gameScope.emplaceSubsystem<OnlineSession>( _packConfig._data );
     }
 
     GameInstance::~GameInstance()
@@ -307,6 +310,7 @@ namespace sw
         getSubsystem<GameLocalStore>().update(); // 끝난 세이브 · 자동 저장 요청의 콜백(세이브 이벤트)
         // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션을 열지 않았으면 바로 돌아온다. 필수 서비스라 없으면 멈춘다.
         game::getSubsystem<GameNetSession>().update();
+        getSubsystem<OnlineSession>().update(); // 키트 응답 · 알림을 게임 프레임 앞에서 처리기에 넘긴다
         if ( _pAppearanceWatcher != nullptr )
             _pAppearanceWatcher->update( *_pAppearanceDatabase, _pItemCatalog.get() );
         onUpdate( deltaTime );

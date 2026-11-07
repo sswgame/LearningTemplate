@@ -45,72 +45,81 @@ namespace sw
             ServiceStoreResult              _result;
         };
 
+        /** @brief 저장소 스레드가 쓰는 요청 쪽 값입니다. 복사한 값이며 서비스 멤버를 건드리지 않습니다. */
+        struct MailboxCallInput
+        {
+            vector<ServiceMailCampaign> _listCampaign{}; ///< 목록 첫 페이지에 끼울 활성 캠페인이다
+            const ILedgerPolicy*        _pPolicy{ nullptr };
+            AccountID                   _accountID{ kInvalidAccountID };
+            int64                       _nowMs{ 0 };
+        };
+
+        /** @brief 메서드마다의 저장 함수입니다. 오버로드라 표에 메서드를 더하고 줄을 빠뜨리면 컴파일되지 않습니다. */
+        struct MailboxStoreCall
+        {
+            static MailboxOutcome run( MailboxMethod::List, IServiceStoreConnection& connection, const MailboxListRequest& request, const MailboxCallInput& input, MailboxListReply& outReply )
+            {
+                return MailboxStoreLogic::listMail( connection, input._accountID, input._nowMs, input._listCampaign, request, outReply );
+            }
+
+            static MailboxOutcome run( MailboxMethod::MarkRead, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxResultReply& outReply )
+            {
+                const MailboxOutcome outcome = MailboxStoreLogic::markRead( connection, input._accountID, request._mailKey );
+                outReply._result             = outcome._result;
+                return outcome;
+            }
+
+            static MailboxOutcome run( MailboxMethod::Claim, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxClaimReply& outReply )
+            {
+                MailboxClaimInput claimInput;
+                claimInput._mailKey          = request._mailKey;
+                claimInput._accountID        = input._accountID;
+                claimInput._nowMs            = input._nowMs;
+                claimInput._pPolicy          = input._pPolicy;
+                const MailboxOutcome outcome = MailboxStoreLogic::claim( connection, claimInput, outReply );
+                outReply._result             = outcome._result;
+                return outcome;
+            }
+
+            static MailboxOutcome run( MailboxMethod::ClaimAll, IServiceStoreConnection& connection, const OnlineNoBody& request, const MailboxCallInput& input, MailboxClaimReply& outReply )
+            {
+                (void)request;
+                return MailboxStoreLogic::claimAll( connection, input._accountID, input._nowMs, input._pPolicy, outReply );
+            }
+
+            static MailboxOutcome run( MailboxMethod::Delete, IServiceStoreConnection& connection, const MailboxMailRequest& request, const MailboxCallInput& input, MailboxResultReply& outReply )
+            {
+                const MailboxOutcome outcome = MailboxStoreLogic::deleteMail( connection, input._accountID, request._mailKey );
+                outReply._result             = outcome._result;
+                return outcome;
+            }
+        };
+
         /** @brief 우편함 요청 하나의 저장소 왕복입니다. */
+        template <typename TMethod>
         class MailboxRequestJob final : public IServiceStoreJob
         {
         public:
-            MailboxRequestJob( MailboxService* pService, const MailboxCall& call, const vector<ServiceMailCampaign>& listCampaign, const ILedgerPolicy* pPolicy, uint64 callID )
-                : _call{ call }
-                , _listCampaign{ listCampaign }
+            MailboxRequestJob( MailboxService* pService, OnlineServerCall<TMethod> call, const typename TMethod::Request& request, MailboxCallInput input )
+                : _input{ std::move( input ) }
+                , _request{ request }
                 , _reply{}
+                , _outcome{}
                 , _pService{ pService }
-                , _pPolicy{ pPolicy }
-                , _callID{ callID }
+                , _call{ call }
             {
             }
 
-            void run( IServiceStoreConnection& connection ) override
-            {
-                const uint64 accountID = _call._accountID;
-                switch ( _call._method )
-                {
-                    case MailboxMethod::kList:
-                    {
-                        (void)MailboxStoreLogic::listMail( connection, accountID, _call._nowMs.count(), _listCampaign, _call._request, _reply );
-                        break;
-                    }
-                    case MailboxMethod::kMarkRead:
-                    {
-                        _reply._result = MailboxStoreLogic::markRead( connection, accountID, _call._request._mailKey );
-                        break;
-                    }
-                    case MailboxMethod::kClaim:
-                    {
-                        MailboxClaimInput input;
-                        input._mailKey   = _call._request._mailKey;
-                        input._accountID = accountID;
-                        input._nowMs     = _call._nowMs.count();
-                        input._pPolicy   = _pPolicy;
-                        _reply._result   = MailboxStoreLogic::claim( connection, input, _reply );
-                        break;
-                    }
-                    case MailboxMethod::kClaimAll:
-                    {
-                        (void)MailboxStoreLogic::claimAll( connection, accountID, _call._nowMs.count(), _pPolicy, _reply );
-                        break;
-                    }
-                    case MailboxMethod::kDelete:
-                    {
-                        _reply._result = MailboxStoreLogic::deleteMail( connection, accountID, _call._request._mailKey );
-                        break;
-                    }
-                    default:
-                    {
-                        _reply._result = MailboxResult::InvalidRequest;
-                        break;
-                    }
-                }
-            }
-
-            void complete() override { _pService->completeCall( _callID, _reply ); }
+            void run( IServiceStoreConnection& connection ) override { _outcome = MailboxStoreCall::run( TMethod{}, connection, _request, _input, _reply ); }
+            void complete() override { (void)_pService->finish( _call, _outcome, _reply ); } // 모르는 표지는 호출 표가 경고한다
 
         private:
-            MailboxCall                 _call;
-            vector<ServiceMailCampaign> _listCampaign; ///< 목록 첫 페이지에 끼울 활성 캠페인이다. 복사한 값이며 서비스 멤버를 건드리지 않는다
-            MailboxReply                _reply;
-            MailboxService*             _pService;
-            const ILedgerPolicy*        _pPolicy;
-            uint64                      _callID;
+            MailboxCallInput          _input;
+            typename TMethod::Request _request;
+            typename TMethod::Reply   _reply;
+            MailboxOutcome            _outcome;
+            MailboxService*           _pService;
+            OnlineServerCall<TMethod> _call;
         };
 
         /** @brief 만료 정리 한 번입니다. */
@@ -160,8 +169,7 @@ namespace sw
 namespace sw
 {
     MailboxService::MailboxService()
-        : _calls{}
-        , _listCampaign{}
+        : _listCampaign{}
         , _settings{}
         , _mapPresenceRequestToNotice{}
         , _pStore{ nullptr }
@@ -195,7 +203,7 @@ namespace sw
         _pStore    = pStore;
         _settings  = settings;
         _findOwner = settings._pPresence != nullptr ? settings._pPresence->openFindOwner() : Subscription{};
-        _calls.initialize<MailboxMethodName, MailboxResult>( settings._pMetricRegistry, "mailbox" );
+        initializeCalls( settings._pMetricRegistry, "mailbox" );
         if ( settings._pMetricRegistry != nullptr )
         {
             for ( int32 actionIndex = 0; actionIndex < static_cast<int32>( SW_COUNT_OF( _arrExpiredCounter ) ); ++actionIndex )
@@ -230,11 +238,6 @@ namespace sw
         _mapPresenceRequestToNotice.clear();
         _pStore = nullptr;
         _pHost  = nullptr;
-    }
-
-    void MailboxService::submitCall( const MailboxCall& call, ReplyDelegate onReply )
-    {
-        startCall( call, CallTable::Origin::fromDelegate( onReply ) );
     }
 
     void MailboxService::update( UnixMilliseconds nowMs )
@@ -282,7 +285,7 @@ namespace sw
             MailboxNewMail  newMail{ std::move( notice._mailKey ), std::move( notice._titleKey ) };
             BitWriter       body;
             const bool      bWritten = MailboxProtocol::MessageTypes::write( body, newMail );
-            if ( bWritten && _pHost->sendPush( accountID, MailboxMethod::kPushNewMail, body ) )
+            if ( bWritten && _pHost->sendPush( accountID, MailboxMethod::NewMail::kKind, body ) )
                 continue; // 이 서버에 붙어 있다
             if ( _settings._pPresence == nullptr )
             {
@@ -326,51 +329,52 @@ namespace sw
         _bSweepRequested = SW_TRUE;
     }
 
-    void MailboxService::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
-    {
-        MailboxCall call{ context._nowMs };
-        call._method         = context._method;
-        call._accountID      = context._accountID;
-        call._idempotencyKey = context._idempotencyKey;
-        if ( MailboxProtocol::MessageTypes::read( body, call._request ) != FixedReadResult::Ok )
-        {
-            (void)host.respondError( context._token, OnlineError::kInvalidRequest );
-            return;
-        }
-        startCall( call, CallTable::Origin::fromHost( host, context._token ) );
-    }
-
     void MailboxService::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
     {
         _pHost = &host;
         update( nowMs );
     }
 
-    void MailboxService::startCall( const MailboxCall& call, const CallTable::Origin& origin )
+    template <typename TMethod>
+    void MailboxService::submitCall( OnlineServerCall<TMethod> call, const OnlineCallContext& context, const typename TMethod::Request& request, bool bWithCampaigns )
     {
-        const int32  methodIndex = MailboxMethod::toIndex( call._method );
-        const uint64 callID      = _calls.open( origin, methodIndex );
-
-        MailboxReply refused;
-        refused._result = MailboxResult::Ok;
-        if ( methodIndex < 0 || _pStore == nullptr )
-            refused._result = MailboxResult::InvalidRequest;
-        else if ( call._accountID == kInvalidAccountID )
-            refused._result = MailboxResult::NotSignedIn;
-        else if ( MailboxMethod::isClaim( call._method ) && call._idempotencyKey.isValid() == false )
-            refused._result = MailboxResult::InvalidRequest; // 수령에는 멱등 키가 필수이다
-        if ( refused._result != MailboxResult::Ok )
+        if ( _pStore == nullptr )
         {
-            (void)_calls.finish( callID, refused );
+            (void)fail( call, OnlineError::kUnavailable ); // 내려가는 중이다
             return;
         }
-        const bool bFirstPage = call._method == MailboxMethod::kList && call._request._cursor.empty();
-        _pStore->submit( sw::make_unique<MailboxRequestJob>( this, call, bFirstPage ? _listCampaign : vector<ServiceMailCampaign>{}, _settings._pPolicy, callID ) );
+        MailboxCallInput input;
+        input._pPolicy   = _settings._pPolicy;
+        input._accountID = context._accountID;
+        input._nowMs     = context._nowMs.count();
+        if ( bWithCampaigns )
+            input._listCampaign = _listCampaign;
+        _pStore->submit( sw::make_unique<MailboxRequestJob<TMethod>>( this, call, request, std::move( input ) ) );
     }
 
-    void MailboxService::completeCall( uint64 callID, const MailboxReply& reply )
+    void MailboxService::handleCall( OnlineServerCall<MailboxMethod::List> call, const OnlineCallContext& context, const MailboxListRequest& request )
     {
-        (void)_calls.finish( callID, reply ); // 모르는 id 는 표가 경고한다
+        submitCall( call, context, request, request._cursor.empty() ); // 캠페인은 첫 페이지 앞에 끼운다
+    }
+
+    void MailboxService::handleCall( OnlineServerCall<MailboxMethod::MarkRead> call, const OnlineCallContext& context, const MailboxMailRequest& request )
+    {
+        submitCall( call, context, request, false );
+    }
+
+    void MailboxService::handleCall( OnlineServerCall<MailboxMethod::Claim> call, const OnlineCallContext& context, const MailboxMailRequest& request )
+    {
+        submitCall( call, context, request, false );
+    }
+
+    void MailboxService::handleCall( OnlineServerCall<MailboxMethod::ClaimAll> call, const OnlineCallContext& context, const OnlineNoBody& request )
+    {
+        submitCall( call, context, request, false );
+    }
+
+    void MailboxService::handleCall( OnlineServerCall<MailboxMethod::Delete> call, const OnlineCallContext& context, const MailboxMailRequest& request )
+    {
+        submitCall( call, context, request, false );
     }
 
     void MailboxService::completeSweep( const MailboxSweepStats& stats, ServiceStoreCompletion completion )
@@ -426,5 +430,5 @@ namespace sw
 
 namespace sw
 {
-    const OnlinePushRelayEntry kMailboxNewMailRelay{ "Mailbox.NewMail", MailboxMethod{}, MailboxPushName::NewMail, MailboxProtocol::MessageTypes{}, OnlinePushBody<MailboxNewMail>{} };
+    const OnlinePushRelayEntry kMailboxNewMailRelay{ "Mailbox.NewMail", MailboxMethod::NewMail{}, MailboxProtocol::MessageTypes{} };
 } // namespace sw

@@ -6,6 +6,38 @@
 
 #include "Engine/Observability/MetricRegistry.h"
 
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct ServiceMetricsInternal
+        {
+            struct ErrorLabel
+            {
+                uint16      _errorCode;
+                const utf8* _pName;
+            };
+
+            /** @brief 서비스가 낼 수 있는 공통 범주의 라벨입니다. 키트 결과 라벨과 겹치지 않게 앞에 `error_` 를 붙입니다. 맨 끝은 표에 없는 코드가 드는 자리입니다. */
+            static constexpr ErrorLabel kArrErrorLabel[] = {
+                {OnlineError::kUnauthenticated,  "error_unauthenticated"},
+                {      OnlineError::kForbidden,        "error_forbidden"},
+                {    OnlineError::kRateLimited,     "error_rate_limited"},
+                { OnlineError::kInvalidRequest,  "error_invalid_request"},
+                {    OnlineError::kUnavailable,      "error_unavailable"},
+                {           OnlineError::kBusy,             "error_busy"},
+                { OnlineError::kUpdateRequired,  "error_update_required"},
+                {       OnlineError::kNotFound,        "error_not_found"},
+                {       OnlineError::kConflict,         "error_conflict"},
+                {OnlineError::kFeatureDisabled, "error_feature_disabled"},
+                {       OnlineError::kInternal,         "error_internal"},
+            };
+        };
+    } // namespace
+} // namespace sw
+
 namespace sw
 {
     ServiceMetrics::ServiceMetrics()
@@ -14,16 +46,38 @@ namespace sw
         , _pPending{ nullptr }
         , _methodCount{ 0 }
         , _resultCount{ 0 }
+        , _errorResultBase{ -1 }
     {
+    }
+
+    void ServiceMetrics::appendErrorLabelNames( vector<string>& inoutListName )
+    {
+        for ( const ServiceMetricsInternal::ErrorLabel& label : ServiceMetricsInternal::kArrErrorLabel )
+        {
+            inoutListName.push_back( label._pName );
+        }
+    }
+
+    void ServiceMetrics::observeError( int32 methodIndex, uint16 errorCode, int64 receivedNanoseconds )
+    {
+        const int32 labelCount = static_cast<int32>( SW_COUNT_OF( ServiceMetricsInternal::kArrErrorLabel ) );
+        int32       labelIndex = labelCount - 1; // 표에 없는 코드는 `error_internal` 이다
+        for ( int32 index = 0; index < labelCount; ++index )
+        {
+            if ( ServiceMetricsInternal::kArrErrorLabel[index]._errorCode == errorCode )
+                labelIndex = index;
+        }
+        observeRequest( methodIndex, _errorResultBase >= 0 ? _errorResultBase + labelIndex : -1, receivedNanoseconds );
     }
 
     void ServiceMetrics::initializeWithNames( MetricRegistry* pRegistry, const utf8* pServiceName, const vector<string>& listMethodName, const vector<string>& listResultName )
     {
         _listRequestCounter.clear();
         _listLatency.clear();
-        _pPending    = nullptr;
-        _methodCount = 0;
-        _resultCount = 0;
+        _pPending        = nullptr;
+        _methodCount     = 0;
+        _resultCount     = 0;
+        _errorResultBase = -1;
         if ( pRegistry == nullptr )
             return;
         _methodCount                    = static_cast<int32>( listMethodName.size() );

@@ -66,8 +66,12 @@ def writeConfigs(outDir: Path, gamePort: int, servicePort: int) -> Path:
         "_servicePort": servicePort,
         "_bGameConnectTicket": True,
         "_bConsoleInput": True,  # 표준 입력 `quit` 로 드레인 없이 정상 종료한다
+        "_listStore": [{"_name": "local", "_driver": "memory"}],  # 드라이버는 필수다 - 메모리도 적는다
+        "_listCache": [{"_name": "local", "_driver": "memory"}],
     }
     onlineConfig = {
+        "_storeName": "local",
+        "_cacheName": "local",
         "_listKit": [
             {"_name": "account", "_listOption": [
                 {"_key": "ticketKeySecretEnvironment", "_value": _kTicketKeyEnvironment},

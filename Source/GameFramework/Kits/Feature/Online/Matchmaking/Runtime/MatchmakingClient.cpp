@@ -4,6 +4,8 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
+
 namespace sw
 {
     MatchmakingClient::MatchmakingClient()
@@ -128,4 +130,9 @@ namespace sw
             }
         }
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_REGISTER_ONLINE_CLIENT( MatchmakingClient );
 } // namespace sw

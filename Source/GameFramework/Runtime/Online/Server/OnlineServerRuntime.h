@@ -25,6 +25,7 @@
 namespace sw
 {
     struct OnlineServerKitContext;
+    struct ServerConfig;
     struct ServerShutdownNotice;
 
     class IClock;
@@ -36,7 +37,7 @@ namespace sw
     /** @brief 저장소나 캐시 하나의 드라이버 항목입니다. 비밀은 이미 환경 변수에서 읽은 값입니다. */
     struct OnlineServerStoreConfig
     {
-        string _driver{ "memory" };
+        string _driver{};     ///< 필수. 프로세스 안 저장소도 `kMemoryStoreDriverName` 이라고 적는다 - 비면 런타임이 기동을 멈춘다
         string _connection{}; ///< 저장소의 접속 문자열 · 캐시의 엔드포인트
         string _secret{};     ///< 런타임이 드라이버에 넘긴 뒤 비운다
     };
@@ -84,6 +85,12 @@ namespace sw
 
         OnlineServerRuntime( const OnlineServerRuntime& )            = delete;
         OnlineServerRuntime& operator=( const OnlineServerRuntime& ) = delete;
+
+        /**
+         * @brief 온라인 설정이 고른 저장소 · 캐시 항목을 서버 설정에서 찾아 @p outSettings 의 `_store` · `_cache` 를 채우고 비밀을 환경 변수에서 읽습니다.
+         * @details 전용 서버와 설정 파일로 서는 테스트(`OnlineRuntimeFixture`)가 같은 규칙을 지납니다. 이름이 비었거나 목록에 없으면 false 와 @p outError 입니다 - 다른 항목이나 메모리로 대신하지 않습니다.
+         */
+        [[nodiscard]] static bool resolveStores( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeConfig& outSettings, string& outError );
 
         /** @brief 조립하고 받기 시작합니다. 실패하면 false 와 @p outError 이며, 만든 것은 `shutdown` 이 정리합니다. @p nowMs 는 서비스 시각입니다. */
         [[nodiscard]] bool initialize( OnlineServerRuntimeConfig settings, UnixMilliseconds nowMs, string& outError );

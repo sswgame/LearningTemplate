@@ -18,6 +18,8 @@
  *            번호를 맞바꾸면 이름 순서가 바뀌어 해시가 달라지므로, 빌드가 다른 서버와 클라이언트는 접속 때 갈립니다.
  *          - 메시지마다 머리에 싣는 타입 스키마 해시(`FixedLayout::write`)는 메서드와 타입의 짝을 확인합니다. 테이블은 메서드의 이름과 번호만 담고 그 메서드가 받는 타입은
  *            담지 않으므로, 한 메서드가 받는 타입을 목록 안의 다른 타입으로 바꾼 빌드는 해시가 같습니다. 그 어긋남은 읽기가 `SchemaMismatch` 로 거절합니다.
+ *          - 프로토콜 표(`OnlineProtocolTable`)로 선 키트는 메시지 목록을 따로 적지 않고 표의 메서드 · 알림 서술자에서 끌어냅니다. 그 해시는 메서드마다 (요청, 응답, 호출 규칙)을 차례로 섞으므로
+ *            위 문단의 어긋남(받는 타입을 목록 안의 다른 타입으로 바꾼 빌드)도 접속에서 갈립니다.
  *          - 메시지 타입에 코덱이 없으면(적격이 아니면) 해시를 계산하는 기동 때 이유와 함께 프로세스가 멈춥니다(`FixedLayout::getSchemaHash`).
  *          언리얼 `FNetworkVersion::GetLocalNetworkVersion`(빌드에서 나온 값 하나를 접속 때 비교)에 해당합니다(기억에 의존).
  */
@@ -34,6 +36,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 
+#include <tuple>
 #include <type_traits>
 
 namespace sw
@@ -55,10 +58,19 @@ namespace sw
         [[nodiscard]] static bool write( BitWriter& outWriter, const T& message )
         {
             static_assert( kContains<T>, "the type is not in this kit's OnlineMessageTypes - add it there so its schema hash joins the online schema hash" );
-            if ( FixedLayout::write( message, outWriter ) )
+            if constexpr ( std::is_same_v<T, OnlineNoBody> )
+            {
+                (void)outWriter;
+                (void)message;
                 return true;
-            SW_LOG_ERROR_ID( "OnlineProtocol.MessageOutOfRange", "Online message '%#' has a value outside its declared range and was not written", typeFqn<T>().c_str() );
-            return false;
+            }
+            else
+            {
+                if ( FixedLayout::write( message, outWriter ) )
+                    return true;
+                SW_LOG_ERROR_ID( "OnlineProtocol.MessageOutOfRange", "Online message '%#' has a value outside its declared range and was not written", typeFqn<T>().c_str() );
+                return false;
+            }
         }
 
         /** @brief @p reader 에 남은 비트 전체를 메시지 하나로 읽습니다. `Ok` 일 때만 @p inoutMessage 를 바꿉니다. 받은 바이트라 로그는 부르는 쪽이 정합니다. */
@@ -66,7 +78,16 @@ namespace sw
         [[nodiscard]] static FixedReadResult read( BitReader& reader, T& inoutMessage )
         {
             static_assert( kContains<T>, "the type is not in this kit's OnlineMessageTypes - add it there so its schema hash joins the online schema hash" );
-            return FixedLayout::read( reader, inoutMessage );
+            if constexpr ( std::is_same_v<T, OnlineNoBody> )
+            {
+                (void)reader;
+                (void)inoutMessage;
+                return FixedReadResult::Ok;
+            }
+            else
+            {
+                return FixedLayout::read( reader, inoutMessage );
+            }
         }
 
         /** @brief 목록 순서대로 타입마다의 스키마 해시를 섞습니다. 코덱이 없는 타입이 있으면 이유와 함께 멈춥니다. */
@@ -75,6 +96,91 @@ namespace sw
             uint64 hash = 0;
             ( ( hash = HashUtil::combine( hash, FixedLayout::getSchemaHash<TMessage>() ) ), ... );
             return hash;
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 키트의 메서드 서술자 목록입니다(`OnlineMethodTable::Method`). */
+    template <typename... TMethod>
+    struct OnlineMethodList
+    {
+    };
+
+    /** @brief 키트의 알림 서술자 목록입니다(`OnlineMethodTable::Push`). */
+    template <typename... TPush>
+    struct OnlinePushList
+    {
+    };
+
+    template <typename TMethodTable, typename TMethodList, typename TPushList>
+    struct OnlineProtocolTable;
+
+    /**
+     * @brief 키트 프로토콜의 표입니다. 메서드와 타입의 짝, 호출 규칙, 알림 본문을 형식 하나에 모읍니다. 메시지 목록 · 해시 · 서버 디스패치 · 클라이언트 `call` 이 모두 여기서 나옵니다.
+     * @details 표에는 열거자마다 서술자가 열거자 순서로 하나씩 있어야 합니다. 빠지거나 순서가 다르면 컴파일이 멈춥니다 — 메서드를 더할 때 고칠 곳은 열거자 · 메시지 · 서술자 줄 · 서버 `handleCall` 넷이고, 넷째를 빠뜨려도 컴파일이 잡습니다.
+     * @tparam TMethodTable 키트의 `XxxMethod`(`OnlineMethodTable` 상속)
+     */
+    template <typename TMethodTable, typename... TMethod, typename... TPush>
+    struct OnlineProtocolTable<TMethodTable, OnlineMethodList<TMethod...>, OnlinePushList<TPush...>>
+    {
+        using MethodTable  = TMethodTable;
+        using MessageTypes = OnlineMessageTypes<typename TMethod::Request..., typename TMethod::Reply..., typename TPush::Body...>;
+        /** @brief 메서드마다 @p TPerMethod 하나를 담는 튜플입니다(클라이언트의 메서드별 대기 표). */
+        template <template <typename> class TPerMethod>
+        using MethodTuple = std::tuple<TPerMethod<TMethod>...>;
+
+        /** @brief 번호가 @p methodID 인 메서드의 `visitor.visit<TMethod>()` 를 부릅니다. 표에 없으면 false 입니다. */
+        template <typename TVisitor>
+        static bool visitMethod( uint16 methodID, TVisitor& visitor )
+        {
+            (void)visitor;
+            return ( ( methodID == TMethod::kID ? ( visitor.template visit<TMethod>(), true ) : false ) || ... );
+        }
+
+        /** @brief 번호가 @p kind 인 알림의 `visitor.visit<TPush>()` 를 부릅니다. 표에 없으면 false 입니다. */
+        template <typename TVisitor>
+        static bool visitPush( uint16 kind, TVisitor& visitor )
+        {
+            (void)visitor;
+            return ( ( kind == TPush::kKind ? ( visitor.template visit<TPush>(), true ) : false ) || ... );
+        }
+
+        /** @brief 로그인 없이 부를 수 있는 메서드인지입니다. */
+        static constexpr bool isAnonymous( uint16 methodID ) { return ( ( methodID == TMethod::kID && TMethod::kAnonymous ) || ... ); }
+
+        /** @brief 메서드마다 (요청, 응답, 호출 규칙), 알림마다 본문을 차례로 섞습니다. 그래서 한 메서드의 타입만 목록 안의 다른 타입으로 바꾼 빌드도 값이 다릅니다. */
+        [[nodiscard]] static uint64 computeMessageHash()
+        {
+            static_assert( sizeof...( TMethod ) == static_cast<size_t>( TMethodTable::kCount ) && sizeof...( TPush ) == static_cast<size_t>( TMethodTable::kPushCount ),
+                           "the protocol table needs one descriptor per enumerator" );
+            static_assert( isInEnumeratorOrder(), "the protocol table lists its descriptors in enumerator order" );
+            uint64 hash = 0;
+            ( ( hash = HashUtil::combine( HashUtil::combine( HashUtil::combine( hash, computeBodyHash<typename TMethod::Request>() ), computeBodyHash<typename TMethod::Reply>() ), TMethod::kFlagBits ) ), ... );
+            ( ( hash = HashUtil::combine( hash, computeBodyHash<typename TPush::Body>() ) ), ... );
+            return hash;
+        }
+
+    private:
+        template <typename TBody>
+        [[nodiscard]] static uint64 computeBodyHash()
+        {
+            if constexpr ( std::is_same_v<TBody, OnlineNoBody> )
+                return 0;
+            else
+                return FixedLayout::getSchemaHash<TBody>();
+        }
+
+        static constexpr bool isInEnumeratorOrder()
+        {
+            int32      methodIndex = 0;
+            int32      pushIndex   = 0;
+            const bool bMethodOk   = ( ( TMethod::kIndex == methodIndex++ ) && ... );
+            const bool bPushOk     = ( ( TPush::kIndex == pushIndex++ ) && ... );
+            (void)methodIndex;
+            (void)pushIndex;
+            return bMethodOk && bPushOk;
         }
     };
 } // namespace sw
@@ -97,6 +203,13 @@ namespace sw
         template <typename TMethodName, uint16 RangeBase, typename TPushName, typename... TMessage>
         OnlineProtocolEntry( const utf8* pName, OnlineMethodTable<TMethodName, RangeBase, TPushName>, OnlineMessageTypes<TMessage...> )
             : OnlineProtocolEntry( pName, RangeBase, &computeMethodHash<TMethodName, TPushName>, &OnlineMessageTypes<TMessage...>::computeSchemaHash )
+        {
+        }
+        /** @param pName 위와 같습니다. 두 번째 인자는 키트의 프로토콜 표입니다. 영역, 이름 순서, 메서드와 타입의 짝을 여기서 가져옵니다. */
+        template <typename TMethodTable, typename TMethodList, typename TPushList>
+        OnlineProtocolEntry( const utf8* pName, OnlineProtocolTable<TMethodTable, TMethodList, TPushList> )
+            : OnlineProtocolEntry( pName, TMethodTable::kRangeBase, &computeMethodHash<typename TMethodTable::MethodName, typename TMethodTable::PushName>,
+                                   &OnlineProtocolTable<TMethodTable, TMethodList, TPushList>::computeMessageHash )
         {
         }
         ~OnlineProtocolEntry();

@@ -4,6 +4,8 @@
 
 #include "Core/Serialization/BitStream.h"
 
+#include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
+
 namespace sw
 {
     SocialClient::SocialClient()
@@ -161,4 +163,9 @@ namespace sw
         const NetIdempotencyKey key     = bChange ? NetIdempotencyKey::makeRandom() : NetIdempotencyKey{};
         return sendRequest( method, request, key, onReply );
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_REGISTER_ONLINE_CLIENT( SocialClient );
 } // namespace sw

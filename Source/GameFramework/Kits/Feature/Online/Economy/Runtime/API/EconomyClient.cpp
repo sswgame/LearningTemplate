@@ -5,6 +5,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/EconomyMirror.h"
+#include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 
 namespace sw
 {
@@ -94,4 +95,9 @@ namespace sw
         if ( bSnapshot || reply._listBalance.empty() == false )
             applyBalances( reply._listBalance, bSnapshot );
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_REGISTER_ONLINE_CLIENT( EconomyClient );
 } // namespace sw

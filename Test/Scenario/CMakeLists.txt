@@ -104,6 +104,10 @@ endif()
 
 set(swSequentialScenarioPacks shooter3d) # 백엔드를 차례로 돌릴 게임 팩 체인(아래 `Scenario.<팩>`)
 foreach(game IN LISTS listBuiltGame)
+	# Debug 가 함께 짓는 게임은 키트가 컴파일되는지와 단위 테스트(`UnitTests.<게임>`)를 보려는 것이다 - 시나리오 체인은 Release 가 돈다(텍스처 임포트가 Debug 보다 훨씬 빠르다).
+	if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT game STREQUAL SW_ACTIVE_GAME)
+		continue()
+	endif()
 	sw_requireJSONValue(gamePackRoot "${CMAKE_SOURCE_DIR}/${SW_DIR_RUNTIME_GAME_PRESET}/${game}.json" _packRoot) # `game/<팩>`
 	get_filename_component(pack "${gamePackRoot}" NAME)
 	set(gameArgument "")

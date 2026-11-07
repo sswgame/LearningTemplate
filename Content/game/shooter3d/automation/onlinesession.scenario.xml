@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 온라인 세션 끝단 — 프로세스 안 서버(Config/Server/Online/Shooter3D.json, 전용 서버와 같은 파일)에 붙어 로그인 → 우편 목록 → 모두 받기 → 지갑을 값으로 본다.
+  세션이 키트 클라이언트를 정적 등록에서 만들었는지(수), 프로토콜 표로 옮긴 우편함이 끝까지 도는지(수 · 잔액), 수령 응답의 잔액이 경제 클라이언트에 닿는지(금화)를 판정한다.
+  실행: App -game=Shooter3D -scenario=game/shooter3d/automation/onlinesession.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.onlinesession" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" requiresModule="GF_Server_Mailbox">
+	<AllowLog id="LoginTicketKey.AccountKitNoTicketKeySecretEnvironment" reason="프로세스 안 개발 서버는 티켓 주 키 없이 개발 키를 쓴다 - 게임 접속 티켓을 쓰지 않는다"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<Expect watch="Online.SessionClientCount" atLeast="4"/>
+	<Expect watch="Online.SessionState" equals="0"/>
+	<Wait frames="1"/>
+	<DevCommand line="online.local.start Config/Server/Online/Shooter3D.json"/>
+	<WaitUntil watch="Online.SessionState" atLeast="3" timeoutSeconds="20"/>
+	<Expect watch="Online.SessionState" equals="3"/>
+	<Wait frames="1"/>
+	<DevCommand line="shooter.online.login"/>
+	<WaitUntil watch="Shooter3D.OnlineLoggedIn" equals="1" timeoutSeconds="20"/>
+	<DevCommand line="shooter.online.sendmail 5"/>
+	<WaitUntil watch="Shooter3D.OnlineSelfMailSent" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="shooter.online.listmail"/>
+	<WaitUntil watch="Shooter3D.OnlineMailCount" equals="1" timeoutSeconds="10"/>
+	<DevCommand line="shooter.online.claimall"/>
+	<WaitUntil watch="Shooter3D.OnlineGold" equals="5" timeoutSeconds="10"/>
+	<Wait frames="1"/>
+	<DevCommand line="online.disconnect"/>
+	<Expect watch="Online.SessionState" equals="0"/>
+	<Pass/>
+</Scenario>

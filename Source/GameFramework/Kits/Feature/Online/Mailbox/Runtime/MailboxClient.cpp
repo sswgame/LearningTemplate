@@ -2,56 +2,22 @@
 
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxClient.h"
 
+#include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
+
 namespace sw
 {
     MailboxClient::MailboxClient()
         : _listMail{}
+        , _newMailGate{}
         , _newMailBuffer{}
         , _revision{ 0 }
     {
     }
 
-    void MailboxClient::onServicePush( uint16 kind, BitReader& body )
+    void MailboxClient::onPush( MailboxMethod::NewMail, const MailboxNewMail& body )
     {
-        if ( kind != MailboxMethod::kPushNewMail )
-            return;
-        MailboxNewMail newMail;
-        if ( MailboxProtocol::MessageTypes::read( body, newMail ) == FixedReadResult::Ok )
-            _newMailBuffer.push( std::move( newMail ) );
-    }
-
-    uint64 MailboxClient::requestList( string_view cursor, int32 maxCount, ReplyDelegate onReply )
-    {
-        MailboxRequest request;
-        request._cursor   = string( cursor );
-        request._maxCount = maxCount;
-        return send( MailboxMethod::kList, request, NetIdempotencyKey{}, onReply );
-    }
-
-    uint64 MailboxClient::requestMarkRead( string_view mailKey, ReplyDelegate onReply )
-    {
-        MailboxRequest request;
-        request._mailKey = string( mailKey );
-        return send( MailboxMethod::kMarkRead, request, NetIdempotencyKey{}, onReply );
-    }
-
-    uint64 MailboxClient::requestClaim( string_view mailKey, const NetIdempotencyKey& key, ReplyDelegate onReply )
-    {
-        MailboxRequest request;
-        request._mailKey = string( mailKey );
-        return send( MailboxMethod::kClaim, request, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
-    }
-
-    uint64 MailboxClient::requestClaimAll( const NetIdempotencyKey& key, ReplyDelegate onReply )
-    {
-        return send( MailboxMethod::kClaimAll, MailboxRequest{}, key.isValid() ? key : NetIdempotencyKey::makeRandom(), onReply );
-    }
-
-    uint64 MailboxClient::requestDelete( string_view mailKey, ReplyDelegate onReply )
-    {
-        MailboxRequest request;
-        request._mailKey = string( mailKey );
-        return send( MailboxMethod::kDelete, request, NetIdempotencyKey{}, onReply );
+        MailboxNewMail newMail = body;
+        _newMailBuffer.push( std::move( newMail ) );
     }
 
     int32 MailboxClient::countUnread() const
@@ -64,36 +30,62 @@ namespace sw
         return unreadCount;
     }
 
-    uint64 MailboxClient::send( uint16 method, const MailboxRequest& request, const NetIdempotencyKey& key, ReplyDelegate onReply )
+    int32 MailboxClient::findMailIndex( const string& mailKey ) const
     {
-        const bool bFirstPage = method == MailboxMethod::kList && request._cursor.empty();
-        return sendRequest( method, request, key, onReply, MailboxCallContext{ request._mailKey, static_cast<uint8>( bFirstPage ? SW_TRUE : SW_FALSE ) } );
-    }
-
-    void MailboxClient::onCallSucceeded( const Call& call, const MailboxReply& reply )
-    {
-        if ( call._method == MailboxMethod::kList )
-        {
-            if ( call._context._bFirstPage == SW_TRUE )
-            {
-                _listMail = reply._listMail;
-                ++_revision;
-            }
-            return;
-        }
         for ( size_t mailIndex = 0; mailIndex < _listMail.size(); ++mailIndex )
         {
-            MailView& mail = _listMail[mailIndex];
-            if ( mail._mailKey != call._context._mailKey )
-                continue;
-            if ( call._method == MailboxMethod::kDelete || ( call._method == MailboxMethod::kClaim && mail._bCampaign == SW_TRUE ) )
-                _listMail.erase( _listMail.begin() + static_cast<ptrdiff_t>( mailIndex ) ); // 받은 캠페인은 목록에서 뺀다
-            else if ( call._method == MailboxMethod::kClaim )
-                mail._state = ServiceMailState::Claimed;
-            else if ( call._method == MailboxMethod::kMarkRead && mail._state == ServiceMailState::Unread )
-                mail._state = ServiceMailState::Read;
-            ++_revision;
-            return;
+            if ( _listMail[mailIndex]._mailKey == mailKey )
+                return static_cast<int32>( mailIndex );
         }
+        return -1;
     }
+
+    void MailboxClient::onCallSucceeded( MailboxMethod::List, const MailboxListRequest& request, const MailboxListReply& reply )
+    {
+        if ( request._cursor.empty() == false )
+            return;
+        _listMail = reply._listMail;
+        ++_revision;
+    }
+
+    void MailboxClient::onCallSucceeded( MailboxMethod::MarkRead, const MailboxMailRequest& request, const MailboxResultReply& reply )
+    {
+        (void)reply;
+        const int32 mailIndex = findMailIndex( request._mailKey );
+        if ( mailIndex < 0 )
+            return;
+        MailView& mail = _listMail[static_cast<size_t>( mailIndex )];
+        if ( mail._state == ServiceMailState::Unread )
+            mail._state = ServiceMailState::Read;
+        ++_revision;
+    }
+
+    void MailboxClient::onCallSucceeded( MailboxMethod::Claim, const MailboxMailRequest& request, const MailboxClaimReply& reply )
+    {
+        (void)reply;
+        const int32 mailIndex = findMailIndex( request._mailKey );
+        if ( mailIndex < 0 )
+            return;
+        MailView& mail = _listMail[static_cast<size_t>( mailIndex )];
+        if ( mail._bCampaign == SW_TRUE )
+            _listMail.erase( _listMail.begin() + static_cast<ptrdiff_t>( mailIndex ) ); // 받은 캠페인은 목록에서 뺀다
+        else
+            mail._state = ServiceMailState::Claimed;
+        ++_revision;
+    }
+
+    void MailboxClient::onCallSucceeded( MailboxMethod::Delete, const MailboxMailRequest& request, const MailboxResultReply& reply )
+    {
+        (void)reply;
+        const int32 mailIndex = findMailIndex( request._mailKey );
+        if ( mailIndex < 0 )
+            return;
+        _listMail.erase( _listMail.begin() + static_cast<ptrdiff_t>( mailIndex ) );
+        ++_revision;
+    }
+} // namespace sw
+
+namespace sw
+{
+    SW_REGISTER_ONLINE_CLIENT( MailboxClient );
 } // namespace sw

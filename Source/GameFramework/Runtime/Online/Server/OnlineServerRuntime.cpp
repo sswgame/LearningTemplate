@@ -3,10 +3,13 @@
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/Clock.h"
 
+#include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -34,7 +37,22 @@ namespace sw
             /** @brief 원격 설정을 저장소에서 다시 읽는 간격입니다. 바꾼 서버는 버스로 바로 알리므로, 이것은 버스를 놓친 서버의 늦은 따라잡기다. */
             static constexpr int64 kRemoteConfigReloadMs = 60000;
 
-            static bool isMemoryDriver( string_view driver ) { return driver.empty() || driver == kMemoryStoreDriverName; }
+            static bool isMemoryDriver( string_view driver ) { return driver == kMemoryStoreDriverName; }
+
+            /** @brief 서버 설정의 항목 목록에서 @p name 을 찾습니다. 비었거나 없으면 nullptr 과 @p outError 입니다(첫 항목이나 메모리로 대신하지 않는다). */
+            template <typename TEntry>
+            [[nodiscard]] static const TEntry* findEntry( const vector<TEntry>& listEntry, const string& name, const utf8* pNameField, const utf8* pListField, string& outError )
+            {
+                if ( name.empty() )
+                {
+                    outError = string( "the online service config must name its entry in " ) + pNameField + " (use a 'memory' driver entry for an in-process one)";
+                    return nullptr;
+                }
+                const TEntry* const pEntry = VectorUtil::findBy<&TEntry::_name>( listEntry, name );
+                if ( pEntry == nullptr )
+                    outError = "'" + name + "' (" + pNameField + ") is not in the server config " + pListField;
+                return pEntry;
+            }
 
             static constexpr int64 kDayMs = 24 * constant::time::kSecondsPerHour * constant::time::kMillisecondsPerSecond;
             /** @brief 분개를 내역보다 하루 더 남긴다 — 내역이 가리키는 분개가 먼저 사라지지 않게 한다. */
@@ -296,6 +314,32 @@ namespace sw
         shutdown();
     }
 
+    bool OnlineServerRuntime::resolveStores( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeConfig& outSettings, string& outError )
+    {
+        using Internal                 = OnlineServerRuntimeInternal;
+        const ServerStoreEntry* pStore = Internal::findEntry( serverConfig._listStore, onlineConfig._storeName, "_storeName", "_listStore", outError );
+        if ( pStore == nullptr )
+            return false;
+        outSettings._store._driver     = pStore->_driver;
+        outSettings._store._connection = pStore->_connection;
+        if ( ServerSecret::read( pStore->_secretEnvironment, outSettings._store._secret ) == false )
+        {
+            outError = "the secret environment variable of store '" + pStore->_name + "' is not set";
+            return false;
+        }
+        const ServerCacheEntry* pCache = Internal::findEntry( serverConfig._listCache, onlineConfig._cacheName, "_cacheName", "_listCache", outError );
+        if ( pCache == nullptr )
+            return false;
+        outSettings._cache._driver     = pCache->_driver;
+        outSettings._cache._connection = pCache->_endpoint;
+        if ( ServerSecret::read( pCache->_secretEnvironment, outSettings._cache._secret ) == false )
+        {
+            outError = "the secret environment variable of cache '" + pCache->_name + "' is not set";
+            return false;
+        }
+        return true;
+    }
+
     bool OnlineServerRuntime::initialize( OnlineServerRuntimeConfig settings, UnixMilliseconds nowMs, string& outError )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
@@ -358,6 +402,14 @@ namespace sw
     {
         using Internal = OnlineServerRuntimeInternal;
         Parts& parts   = *_parts;
+        // 드라이버는 필수다 - 항목을 빠뜨린 설정이 재시작에 데이터를 잃는 저장소로 정상 기동하지 않게 한다.
+        if ( settings._store._driver.empty() || settings._cache._driver.empty() )
+        {
+            outError = "the online runtime needs a store and a cache driver (use 'memory' for an in-process one)";
+            StringUtil::wipeSecret( settings._store._secret );
+            StringUtil::wipeSecret( settings._cache._secret );
+            return false;
+        }
         if ( Internal::isMemoryDriver( settings._store._driver ) )
         {
             parts._store = make_unique<MemoryServiceStore>( &parts._memoryDatabase );
