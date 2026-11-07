@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -13,6 +14,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
 #include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
 
 namespace sw
@@ -372,4 +374,80 @@ namespace sw
         return bRestored;
     }
 
+} // namespace sw
+
+namespace sw
+{
+    void SessionStateComponent::writeProgressDebugLines( DebugHUDSectionWriter& writer, uint32 maxLines ) const
+    {
+        uint32     lineCount = 0;
+        uint32     skipped   = 0;
+        const auto add       = [&]( const string& label, const string& value )
+        {
+            if ( lineCount >= maxLines )
+            {
+                ++skipped;
+                return;
+            }
+            writer.addLine( label, value );
+            ++lineCount;
+        };
+        vector<GameFlagEntry> listFlag;
+        _flags.fillEntries( listFlag );
+        for ( const GameFlagEntry& flag : listFlag )
+        {
+            add( string( "flag " ) + flag._name.c_str(), to_string( flag._value ) );
+        }
+        for ( const WalletBalance& balance : _wallet.getBalances() )
+        {
+            add( string( "wallet " ) + balance._currency.c_str(), to_string( balance._amount ) );
+        }
+        for ( int32 slot = 0; slot < _inventory.getSlotCount(); ++slot )
+        {
+            const InventorySlot& content = _inventory.getSlot( slot );
+            if ( content.isEmpty() == false )
+                add( "slot " + to_string( slot ), string( content._itemID.c_str() ) + " x" + to_string( content._count ) );
+        }
+        if ( skipped > 0 )
+            writer.addLine( "...", to_string( skipped ) + " more" );
+    }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 판 상태를 읽는 게임플레이 디버그 섹션(퀘스트 · 진행 조건)입니다. 대상은 `debug.target`, 없으면 첫 열린 판 상태입니다. */
+        struct SessionStateDebugSectionsInternal
+        {
+            static const SessionStateComponent* findTarget( DebugHUDSectionWriter& writer )
+            {
+                const GameObjectManager* const pManager = GameplayDebugTarget::findActiveObjectManager();
+                const SessionStateComponent*   pState   = pManager != nullptr ? GameplayDebugTarget::findTargetComponent<SessionStateComponent>( *pManager ) : nullptr;
+                if ( pState == nullptr || pState->isInitialized() == false )
+                {
+                    writer.addLine( "target", "none (no open game state in the active scene)" );
+                    return nullptr;
+                }
+                writer.addLine( "target", pState->getOwner() != nullptr ? string( pState->getOwner()->getName().c_str() ) : string( "?" ) );
+                return pState;
+            }
+
+            /** @brief 진행 중 퀘스트의 단계 · 목표 달성도, 받지 않은 퀘스트의 잠금 사유입니다(레벨 조건은 판정하지 않고 표시만 — 판 상태는 레벨을 모른다). */
+            static void writeQuest( DebugHUDSectionWriter& writer )
+            {
+                if ( const SessionStateComponent* pState = findTarget( writer ) )
+                    pState->getQuestLog().writeDebugLines( writer, MathUtil::kMaxInt32, GameplayDebugTarget::kMaxLines );
+            }
+
+            static void writeProgress( DebugHUDSectionWriter& writer )
+            {
+                if ( const SessionStateComponent* pState = findTarget( writer ) )
+                    pState->writeProgressDebugLines( writer, GameplayDebugTarget::kMaxLines );
+            }
+        };
+    } // namespace
+
+    SW_DEBUG_HUD_SECTION( quest, "quest", "Quests", 200, DebugHUDSectionFlag::kNone, &SessionStateDebugSectionsInternal::writeQuest );
+    SW_DEBUG_HUD_SECTION( progress, "progress", "Progress (flags, wallet, bag)", 210, DebugHUDSectionFlag::kNone, &SessionStateDebugSectionsInternal::writeProgress );
 } // namespace sw

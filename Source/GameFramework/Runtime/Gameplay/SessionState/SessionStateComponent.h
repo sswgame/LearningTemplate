@@ -26,6 +26,7 @@
 namespace sw
 {
     class Archive;
+    class DebugHUDSectionWriter;
     class GameObjectManager;
     class ItemCatalog;
     class QuestCatalog;
@@ -137,6 +138,11 @@ namespace sw
         const ReputationState& getReputation() const { return _reputation; }
         LandRegistry&          getLand() { return _land; }
         const LandRegistry&    getLand() const { return _land; }
+        /**
+         * @brief 진행 조건 디버거(HUD 섹션 `progress`)의 줄을 씁니다 — 읽기만 한다. 플래그(조건식이 읽는 이름별 값) · 지갑 · 가방(빈 칸 제외) 순이고 @p maxLines 에서 끊는다.
+         * @details 퀘스트의 "왜 못 받나" 는 `QuestLog::writeDebugLines`(섹션 `quest`)가 적는다. 카탈로그 정의값이 아니라 이 판의 값이다.
+         */
+        void writeProgressDebugLines( DebugHUDSectionWriter& writer, uint32 maxLines ) const;
         /** @brief 이번 틱에 시계가 넘은 경계 목록입니다. 읽기만 하며, 다음 틱 처음에 비웁니다. */
         const vector<WorldClockEvent>& getClockEvents() const { return _listClockEvent; }
 

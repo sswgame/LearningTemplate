@@ -3,6 +3,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
@@ -100,6 +101,39 @@ SW_TEST_CASE_F( QuestLogTest, StartRules )
     _log.collectActive( listActive );
     SW_REQUIRE_EQUAL( size_t( 1 ), listActive.size() );
     SW_EXPECT_TRUE( listActive[0] == hashed_string( "wolves" ) );
+}
+
+/** @brief [QuestLogTest] 런타임 디버거 줄: 진행 중 단계 · 목표 달성도(필수 · 선택 · 끝남), 받지 않은 퀘스트는 잠금 사유(빠진 선행 퀘스트 이름), 끝난 퀘스트, 줄 상한 */
+SW_TEST_CASE_F( QuestLogTest, DebugLinesExplainProgressAndLocks )
+{
+    const auto findLine = []( const DebugHUDSectionWriter& writer, string_view label ) -> string
+    {
+        for ( uint32 index = 0; index < writer.getLineCount(); ++index )
+        {
+            if ( writer.getLineAt( index )._label == label )
+                return writer.getLineAt( index )._value;
+        }
+        return "(missing)";
+    };
+    DebugHUDSectionWriter before;
+    _log.writeDebugLines( before, 99, 64 );
+    SW_EXPECT_EQUAL( string( "locked: RequirementMissing (intro)" ), findLine( before, "wolves" ) );
+    SW_EXPECT_EQUAL( string( "available" ), findLine( before, "intro" ) );
+
+    finishIntro();
+    SW_REQUIRE_TRUE( _log.start( "wolves", 2 ) == QuestStartResult::Ok );
+    (void)_log.notify( "Kill", "wolf" );
+    DebugHUDSectionWriter during;
+    _log.writeDebugLines( during, 99, 64 );
+    SW_EXPECT_EQUAL( string( "Completed x1" ), findLine( during, "intro" ) );
+    SW_EXPECT_EQUAL( string( "Active stage hunt t=0s" ), findLine( during, "wolves" ) );
+    SW_EXPECT_EQUAL( string( "1/2" ), findLine( during, "  Kill wolf" ) );
+    SW_EXPECT_EQUAL( string( "0/3 optional" ), findLine( during, "  Collect pelt" ) );
+
+    DebugHUDSectionWriter capped;
+    _log.writeDebugLines( capped, 99, 2 );
+    SW_EXPECT_EQUAL( uint32( 3 ), capped.getLineCount() ); // 두 줄 + "… N more"
+    SW_EXPECT_EQUAL( string( "..." ), capped.getLineAt( 2 )._label );
 }
 
 /** @brief [QuestLogTest] 목표: 맞는 종류 · 대상만 세고 목표 수를 넘지 않는다. 필수를 다 하면 선택 목표가 남아도 넘어간다. 0 이하를 알리면 아무 일도 없다 */

@@ -162,7 +162,7 @@ namespace sw
                                     static_cast<uint32>( frameCount ) <= BugReport::kMaxInputFrameCount;
                 if ( bValid == false )
                 {
-                    outReply = "bugreport.input.start <frames 1.." + std::to_string( BugReport::kMaxInputFrameCount ) + ">";
+                    outReply = "bugreport.input.start <frames 1.." + to_string( BugReport::kMaxInputFrameCount ) + ">";
                     return false;
                 }
                 if ( engine::areEngineServicesBound() == false )
@@ -171,7 +171,7 @@ namespace sw
                     return false;
                 }
                 engine::getSubsystem<InputManager>().startSessionRecording( static_cast<uint32>( frameCount ) );
-                outReply = "bugreport.input.start -> recording up to " + std::to_string( frameCount ) + " frames";
+                outReply = "bugreport.input.start -> recording up to " + to_string( frameCount ) + " frames";
                 return true;
             }
 
@@ -182,7 +182,7 @@ namespace sw
                     return false;
                 InputManager& input = engine::getSubsystem<InputManager>();
                 input.stopSessionRecording();
-                outReply = "bugreport.input.stop -> " + std::to_string( input.getSessionRecording().getFrameCount() ) + " frames";
+                outReply = "bugreport.input.stop -> " + to_string( input.getSessionRecording().getFrameCount() ) + " frames";
                 return true;
             }
 
@@ -246,7 +246,7 @@ namespace sw
         text += string( BugReportInternal::kKeyTarget ) + " = " + _target + "\n";
         text += string( BugReportInternal::kKeySceneHash ) + " = " + _sceneHash + "\n";
         text += string( BugReportInternal::kKeyConfigHash ) + " = " + _configHash + "\n";
-        text += string( BugReportInternal::kKeyInputFrames ) + " = " + std::to_string( _inputFrameCount ) + "\n";
+        text += string( BugReportInternal::kKeyInputFrames ) + " = " + to_string( _inputFrameCount ) + "\n";
         text += string( BugReportInternal::kKeyInputSeconds ) + " = " + BugReportInternal::formatFloat( _inputSeconds ) + "\n";
         return FileUtil::writeTextFile( FileUtil::joinPath( directory, kInfoFileName ), text );
     }

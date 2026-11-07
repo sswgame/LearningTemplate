@@ -23,9 +23,11 @@ namespace sw
     struct QuestStage;
 
     class Archive;
+    class DebugHUDSectionWriter;
     class QuestCatalog;
 
     /** @brief 퀘스트 상태입니다. */
+    ENUM()
     enum class QuestStatus : uint8
     {
         NotStarted = 0,
@@ -130,6 +132,14 @@ namespace sw
         /** @brief 진행 중인 퀘스트의 id 목록입니다. 받은 순서입니다. */
         void collectActive( vector<hashed_string>& outListQuest ) const;
         void pollEvents( vector<QuestEvent>& outListEvent );
+        /** @brief 퀘스트 정의 카탈로그입니다(`initialize` 전이면 nullptr). */
+        const QuestCatalog* getCatalog() const { return _pCatalog; }
+        /**
+         * @brief 런타임 퀘스트 디버거(HUD 섹션 `quest`)의 줄을 씁니다 — 읽기만 한다.
+         * @details 진행 중: 상태 · 단계 · 단계 시간/제한 · 선택 대기, 목표마다 개수/필요(선택 · 끝남). 받지 않은 퀘스트: 왜 못 받는지(빠진 선행 퀘스트 · 필요 레벨)
+         *          또는 받을 수 있음. 끝난 · 실패한 퀘스트는 한 줄. @p playerLevel 은 레벨 조건을 판정할 값이다. 줄은 @p maxLines 에서 끊고 남은 수를 적는다.
+         */
+        void writeDebugLines( DebugHUDSectionWriter& writer, int32 playerLevel, uint32 maxLines ) const;
         /**
          * @brief 퀘스트마다 진행 상황(단계, 목표 개수, 단계 시간, 완료 횟수, 상태, 선택 대기)을 씁니다.
          *        `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.

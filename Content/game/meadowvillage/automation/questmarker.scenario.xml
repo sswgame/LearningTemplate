@@ -32,5 +32,11 @@
 	<WaitUntil watch="UI.MarkerVisible" target="OrchardSite" equals="0" timeoutFrames="30"/>
 	<ExpectVisited watch="Quest.Status" target="meadow_request" sequence="NotStarted, Active, Completed"/>
 	<ExpectVisited watch="UI.MarkerVisible" target="OrchardSite" sequence="0, 1, 0"/>
+	<!-- 런타임 퀘스트 · 진행 조건 디버거(HUD 섹션 quest · progress)를 HUD 없이 한 번 돌려 줄을 로그로 본다 — 끝난 부탁이 Completed 로 적힌다 -->
+	<DevCommand line="debug.target clear"/>
+	<DevCommand line="hud.print quest"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[quest] meadow_request: Completed x1" atLeast="1"/>
+	<DevCommand line="hud.print progress"/>
+	<ExpectLog id="DebugHUD.PrintLine" contains="[progress] target: " atLeast="1"/>
 	<Pass/>
 </Scenario>

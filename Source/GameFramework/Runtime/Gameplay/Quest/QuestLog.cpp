@@ -2,10 +2,13 @@
 
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -89,6 +92,81 @@ namespace sw
         if ( level < pQuest->_requiredLevel )
             return QuestStartResult::LevelTooLow;
         return QuestStartResult::Ok;
+    }
+
+    void QuestLog::writeDebugLines( DebugHUDSectionWriter& writer, int32 playerLevel, uint32 maxLines ) const
+    {
+        uint32     lineCount = 0;
+        uint32     skipped   = 0;
+        const auto add       = [&]( const string& label, const string& value )
+        {
+            if ( lineCount >= maxLines )
+            {
+                ++skipped;
+                return;
+            }
+            writer.addLine( label, value );
+            ++lineCount;
+        };
+        for ( const QuestProgress& progress : _listProgress )
+        {
+            const QuestDef*   pQuest = _pCatalog != nullptr ? _pCatalog->find( progress._questID ) : nullptr;
+            const QuestStage* pStage = pQuest != nullptr ? pQuest->findStage( progress._stageID ) : nullptr;
+            if ( progress._status != QuestStatus::Active )
+            {
+                add( string( progress._questID.c_str() ), string( getEnumName( progress._status ) ) + " x" + to_string( progress._completedCount ) );
+                continue;
+            }
+            string state = string( "Active stage " ) + progress._stageID.c_str() + " t=" + to_string( static_cast<int32>( progress._stageTime ) ) + "s";
+            if ( pStage != nullptr && pStage->_timeLimit > 0.0f )
+                state += "/" + to_string( static_cast<int32>( pStage->_timeLimit ) ) + "s";
+            if ( progress._bAwaitingChoice == SW_TRUE )
+                state += " (awaiting choice)";
+            add( string( progress._questID.c_str() ), state );
+            if ( pStage == nullptr )
+                continue;
+            for ( size_t index = 0; index < pStage->_listObjective.size() && index < progress._listCount.size(); ++index )
+            {
+                const QuestObjective& objective = pStage->_listObjective[index];
+                const int32           count     = progress._listCount[index];
+                string                value     = to_string( count ) + "/" + to_string( objective._count );
+                if ( count >= objective._count )
+                    value += " done";
+                else if ( objective._bOptional )
+                    value += " optional";
+                add( string( "  " ) + objective._kind.c_str() + " " + objective._target.c_str(), value );
+            }
+        }
+        if ( _pCatalog == nullptr )
+            return;
+        // 받지 않은 퀘스트는 "왜 못 받나" 를 적는다 — 빠진 선행 퀘스트의 이름까지(판정은 evaluateStart 와 같은 순서).
+        for ( const QuestDef& quest : _pCatalog->getAll() )
+        {
+            if ( findProgress( quest._id ) != nullptr )
+                continue;
+            const QuestStartResult result = evaluateStart( quest._id, playerLevel );
+            string                 reason = getEnumName( result );
+            if ( result == QuestStartResult::RequirementMissing )
+            {
+                for ( const hashed_string& requiredID : quest._listRequiredQuest )
+                {
+                    const QuestProgress* pRequired = findProgress( requiredID );
+                    if ( pRequired == nullptr || pRequired->_completedCount <= 0 )
+                    {
+                        reason += string( " (" ) + requiredID.c_str() + ")";
+                        break;
+                    }
+                }
+            }
+            else if ( result == QuestStartResult::LevelTooLow )
+                reason += " (needs " + to_string( quest._requiredLevel ) + ")";
+            string available = "available";
+            if ( quest._requiredLevel > 0 )
+                available += " (level " + to_string( quest._requiredLevel ) + "+)";
+            add( string( quest._id.c_str() ), result == QuestStartResult::Ok ? available : "locked: " + reason );
+        }
+        if ( skipped > 0 )
+            writer.addLine( "...", to_string( skipped ) + " more" );
     }
 
     QuestStartResult QuestLog::start( const hashed_string& questID, int32 level )

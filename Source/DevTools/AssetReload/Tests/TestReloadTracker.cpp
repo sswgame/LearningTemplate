@@ -1,6 +1,7 @@
 // 리로드 결과 집계 — 경로마다 마지막 상태, 낡음(실패 뒤 이전 값), 고정 용량, 표 글.
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/AssetReload/ReloadTracker.h"
@@ -58,7 +59,7 @@ SW_TEST_CASE( ReloadTrackerTest, CapacityEvictsOldest )
     ReloadTracker tracker;
     for ( uint32 index = 0; index <= ReloadTracker::kMaxPathCount; ++index )
     {
-        tracker.record( ReloadSource::Asset, "game/" + std::to_string( index ), ReloadResult::Reloaded );
+        tracker.record( ReloadSource::Asset, "game/" + to_string( index ), ReloadResult::Reloaded );
     }
     const vector<ReloadTrackerEntry> listEntry = tracker.copyEntries();
     SW_EXPECT_EQUAL( size_t( ReloadTracker::kMaxPathCount ), listEntry.size() );

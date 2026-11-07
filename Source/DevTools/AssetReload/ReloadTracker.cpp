@@ -2,6 +2,7 @@
 
 #include "DevTools/AssetReload/ReloadTracker.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -162,7 +163,7 @@ namespace sw
             if ( entry.isStale() )
                 ++stale;
         }
-        string text = "reload.status: " + std::to_string( listEntry.size() ) + " path(s), " + std::to_string( stale ) + " stale (running on previous values)";
+        string text = "reload.status: " + to_string( static_cast<uint64>( listEntry.size() ) ) + " path(s), " + to_string( stale ) + " stale (running on previous values)";
         for ( const ReloadTrackerEntry& entry : listEntry )
         {
             if ( bStaleOnly && entry.isStale() == false )
@@ -171,8 +172,8 @@ namespace sw
             text += getSourceName( entry._source );
             text += entry.isStale() ? " STALE " : " OK    ";
             text += entry._path;
-            text += " attempts=" + std::to_string( entry._attemptCount ) + " failures=" + std::to_string( entry._failureCount );
-            text += entry._appliedSequence == 0 ? string( " applied=never" ) : " applied=#" + std::to_string( entry._appliedSequence );
+            text += " attempts=" + to_string( entry._attemptCount ) + " failures=" + to_string( entry._failureCount );
+            text += entry._appliedSequence == 0 ? string( " applied=never" ) : " applied=#" + to_string( entry._appliedSequence );
             if ( entry._reason.empty() == false )
                 text += " - " + entry._reason;
         }
