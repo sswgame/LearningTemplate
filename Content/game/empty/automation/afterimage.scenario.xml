@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  캐릭터 잔상(PoseAfterimageComponent, S5) — 해골(Actor)이 외형을 입으면 0.1 초마다 포즈를 고정한 반투명 사본을 남긴다(풀 6, 0.6 초에 사라짐).
+  ① 외형이 메시를 입힌 뒤 잔상이 쌓인다(Afterimage.CaptureCount ≥ 3, 보이는 사본은 풀 크기 6 이하).
+  ② Actor 를 옆(x 1.5 · x 3)으로 옮기면 옛 자리에 잔상이 남는다 — 옮기기 전 · 뒤 두 장이 다르다(골든 없음, 같은 실행끼리만 견준다).
+  ③ 볼 그림: 뒤 장에서 x 0 · 1.5 자리에 푸른 반투명 해골이 옅어지며 서 있고 x 3 에 불투명 해골이 있다. 그림자는 사본에 없다(반투명 머티리얼).
+  실행: App -scenario=game/empty/automation/afterimage.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.afterimage" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/afterimage.scene.xml"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Afterimage.CaptureCount" atLeast="3" timeoutSeconds="3"/>
+	<Expect watch="Afterimage.Visible" atLeast="1"/>
+	<Expect watch="Afterimage.Visible" atMost="6"/>
+	<Screenshot file="afterimage_still.ppm"/>
+	<DevCommand line="object.place Actor 1.5 0 0"/>
+	<Wait frames="8"/>
+	<DevCommand line="object.place Actor 3 0 0"/>
+	<Wait frames="8"/>
+	<Expect watch="Afterimage.Visible" atLeast="2"/>
+	<Screenshot file="afterimage_moved.ppm" waitForSettle="false"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="afterimage_still.ppm" second="afterimage_moved.ppm" minDiffering="0.02"/>
+	<Pass/>
+</Scenario>

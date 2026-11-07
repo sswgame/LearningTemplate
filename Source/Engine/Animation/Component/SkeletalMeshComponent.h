@@ -95,6 +95,10 @@ namespace sw
          *          군중에서 나온 뒤 새 원본으로 사본을 다시 정한다(다음 평가가 다시 묶는다). 원본 메시로 돌아갈 때도 같은 함수에 그 메시를 넘긴다.
          */
         void setSkinSourceMesh( shared_ptr<Mesh> source );
+        /** @brief 스킨 원본 메시입니다(없으면 nullptr). 잔상(`PoseAfterimageComponent`)이 같은 원본 · 고정 포즈로 사본을 그린다. */
+        const shared_ptr<Mesh>& getSkinSourceMesh() const { return _skinSourceMesh; }
+        /** @brief 스켈레톤의 공유 포인터입니다(잔상 사본이 같은 스켈레톤을 쥔다). 데이터 스켈레톤이 없으면 암묵 스켈레톤이다. */
+        const shared_ptr<const Skeleton>& getSharedSkeleton() const { return _skeleton; }
 
         /**
          * @brief 로컬 포즈입니다. 기본 포즈 단계의 작업이 여기에 씁니다. 군중 묶음과 나누는 중이면 묶음의 포즈이며, 그때는 포즈 단계가 돌지 않아 아무도 쓰지 않습니다.
