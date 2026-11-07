@@ -7,9 +7,9 @@
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
-#include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -185,7 +185,7 @@ namespace sw
         , _pieceMaterial{ "Flesh" }
         , _bloodChannel{ "Blood" }
         , _pieceMass{ 4.0f }
-        , _regionTable{}
+        , _pRegionTable{}
         , _surfaceState{}
         , _listSeveredRegion{}
         , _lastPiece{}
@@ -217,10 +217,12 @@ namespace sw
     void DismembermentComponent::loadRegionTable()
     {
         _bTableLoaded = false;
+        _pRegionTable.reset();
         if ( _regionTablePath.empty() )
             return;
-        const FitSolver solver;
-        if ( _regionTable.loadFromAsset( AssetID{ _regionTablePath }, solver.getOperatorRegistry() ) == false )
+        // 영역 표는 외형과 같은 공유 캐시의 한 벌이다(엔진 기본 연산으로 읽는다 — `FitSolver` 의 것과 같다).
+        _pRegionTable = SharedAssetCache<FitTables>::acquire( _regionTablePath );
+        if ( _pRegionTable == nullptr )
         {
             SW_LOG_ERROR_ID( "Dismemberment.RegionTableCouldNot", "'%#': region table '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _regionTablePath.c_str() );
             return;
@@ -237,21 +239,27 @@ namespace sw
             SW_LOG_ERROR_ID( "Dismemberment.DismembermentNeedsEngineDefault", "Dismemberment needs the engine default assets for its surface channels - dismemberment stays off" );
             return;
         }
-        const string&       channelsPath = pDefaultAssets->_defaultSurfaceChannels.get();
-        SurfaceChannelTable channels;
-        if ( channels.loadFromAsset( AssetID{ channelsPath } ) == false )
+        const string&                               channelsPath = pDefaultAssets->_defaultSurfaceChannels.get();
+        const shared_ptr<const SurfaceChannelTable> pChannels    = SharedAssetCache<SurfaceChannelTable>::acquire( channelsPath );
+        if ( pChannels == nullptr )
         {
             // 채널 없는 표면 상태로 자르면 상처 · 피가 조용히 빠진다 — 표를 읽지 않은 것으로 두고 멈춘다.
             SW_LOG_ERROR_ID( "Dismemberment.DefaultSurfaceChannelsCould", "Default surface channels '%#' could not be loaded - dismemberment stays off", channelsPath.c_str() );
             return;
         }
-        _surfaceState.initialize( channels, static_cast<uint32>( _regionTable.getRegions().size() ), 0 );
+        _surfaceState.initialize( *pChannels, static_cast<uint32>( _pRegionTable->getRegions().size() ), 0 );
         _bTableLoaded = true;
+    }
+
+    const vector<BodyRegionDef>& DismembermentComponent::getRegions() const
+    {
+        static const vector<BodyRegionDef> s_noRegion{}; // 표를 받기 전 · 못 받았을 때는 영역 없음이다(자를 곳이 없다)
+        return _pRegionTable != nullptr ? _pRegionTable->getRegions() : s_noRegion;
     }
 
     int32 DismembermentComponent::findRegionIndex( const hashed_string& region ) const
     {
-        const vector<BodyRegionDef>& listRegion = _regionTable.getRegions();
+        const vector<BodyRegionDef>& listRegion = getRegions();
         for ( size_t regionIndex = 0; regionIndex < listRegion.size(); ++regionIndex )
         {
             if ( listRegion[regionIndex]._name == region )
@@ -262,7 +270,7 @@ namespace sw
 
     hashed_string DismembermentComponent::findRegionOfBone( const hashed_string& bone ) const
     {
-        for ( const BodyRegionDef& region : _regionTable.getRegions() )
+        for ( const BodyRegionDef& region : getRegions() )
         {
             for ( const hashed_string& regionBone : region._listBone )
             {
@@ -310,7 +318,7 @@ namespace sw
         // 1) 위상: 위치로 이은 형상과 정점마다 영역을 구해 자른다.
         const shared_ptr<Mesh>& mesh = pUnit->getMesh();
         DismembermentResult     result;
-        if ( Internal::computeSeveredTriangles( *mesh, pUnit->getSkeleton(), _regionTable, regionIndex, result ) == false )
+        if ( Internal::computeSeveredTriangles( *mesh, pUnit->getSkeleton(), *_pRegionTable, regionIndex, result ) == false )
             return false;
 
         // 2) 남은 몸: 잘린 삼각형을 빼고 남은 몸 캡을 붙인 메시로 바꾼다.
@@ -353,7 +361,7 @@ namespace sw
         // 4) 그 영역 뼈의 래그돌 바디를 끈다. 보이지 않는 바디가 남아 부딪히지 않게 하려는 것이다.
         RagdollComponent* pRagdoll = pOwner->getComponent<RagdollComponent>();
         if ( pRagdoll != nullptr )
-            pRagdoll->detachBoneBodies( _regionTable.getRegions()[static_cast<size_t>( regionIndex )]._listBone );
+            pRagdoll->detachBoneBodies( getRegions()[static_cast<size_t>( regionIndex )]._listBone );
 
         // 5) 표면 상태: 잘린 영역에 피를 올린다.
         (void)_surfaceState.setRegionValue( static_cast<uint32>( regionIndex ), _bloodChannel, 1.0f );

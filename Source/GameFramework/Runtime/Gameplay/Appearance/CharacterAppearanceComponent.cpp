@@ -17,6 +17,7 @@
 #include "Engine/Character/Fit/FitPartDef.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/Fit/FitTables.h"
+#include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
@@ -1211,8 +1212,9 @@ namespace sw
         const bool   bFits     = hasSurfaceState() && _surface.getPartCount() >= partCount;
         if ( bSameData && bFits )
             return;
-        SurfaceChannelTable channels;
-        if ( channels.loadFromAsset( AssetID{ _surfaceChannelsPath } ) == false )
+        // 채널 표는 공유 캐시의 한 벌이다 — 캐릭터마다 다시 읽지 않는다(표면 상태는 만들 때 표를 복사해 든다).
+        const shared_ptr<const SurfaceChannelTable> pChannels = SharedAssetCache<SurfaceChannelTable>::acquire( _surfaceChannelsPath );
+        if ( pChannels == nullptr )
         {
             SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceSurfaceChannelsCould", "Appearance '%#' surface channels '%#' could not be read - the surface state stays off", _presetID.c_str(), _surfaceChannelsPath.c_str() );
             _surfaceBinding.releaseTextures();
@@ -1222,7 +1224,7 @@ namespace sw
             return;
         }
         _surfaceBinding.releaseTextures();
-        _surface.initialize( channels, regionCount, partCount );
+        _surface.initialize( *pChannels, regionCount, partCount );
         _loadedSurfaceChannels  = _surfaceChannelsPath;
         _surfaceRegionCount     = regionCount;
         _surfaceAppliedRevision = constant::invalid_index::kUint64;

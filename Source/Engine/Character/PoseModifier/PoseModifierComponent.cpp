@@ -680,12 +680,14 @@ namespace sw
     void PoseModifierComponent::loadSharedColliders()
     {
         vector<RigSpringCollider> listCollider;
-        if ( _physicsAssetPath.empty() == false && _pUnit != nullptr )
+        // 물리 에셋은 래그돌과 같은 공유 캐시의 한 벌이다(사본을 읽지 않는다).
+        const bool                           bWanted = _physicsAssetPath.empty() == false && _pUnit != nullptr;
+        const shared_ptr<const PhysicsAsset> pAsset  = bWanted ? SharedAssetCache<PhysicsAsset>::acquire( _physicsAssetPath ) : nullptr;
+        if ( bWanted && pAsset == nullptr )
+            SW_LOG_ERROR_ID( "PoseModifier.PhysicsAssetCouldNot", "Physics asset '%#' could not be loaded for spring colliders", _physicsAssetPath.c_str() );
+        if ( pAsset != nullptr )
         {
-            PhysicsAsset asset;
-            if ( asset.loadFromAsset( AssetID{ _physicsAssetPath } ) == false )
-                SW_LOG_ERROR_ID( "PoseModifier.PhysicsAssetCouldNot", "Physics asset '%#' could not be loaded for spring colliders", _physicsAssetPath.c_str() );
-            for ( const PhysicsAssetBodyDef& body : asset._listBody )
+            for ( const PhysicsAssetBodyDef& body : pAsset->_listBody )
             {
                 const int32 bone = _pUnit->getSkeleton().findBoneIndex( body._bone );
                 if ( bone < 0 )

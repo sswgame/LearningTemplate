@@ -24,6 +24,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -57,14 +58,14 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 표면 채널 표입니다. */
+    /** @brief 표면 채널 표입니다. 파일에서 읽는 길은 공유 캐시 하나다(`SharedAssetCache<SurfaceChannelTable>::acquire`). */
     class SW_API SurfaceChannelTable
     {
+        friend struct AssetTypeLoader;
+
     public:
         /** @brief XML 텍스트에서 읽습니다(기존 내용은 비웁니다). 모르는 속성이나 원소, 겹친 이름은 오류입니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
-        /** @brief 리소스 파일에서 읽습니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 채널을 더합니다(같은 이름은 바꿈). */
         void addChannel( const SurfaceChannelDef& channel );
         /** @brief 이름의 채널 번호입니다. 없으면 -1 입니다. */
@@ -73,11 +74,19 @@ namespace sw
         const vector<SurfaceChannelDef>& getChannels() const { return _listChannel; }
 
     private:
-        void readRoot( const XMLNode& root, CharacterDataReader& reader );
+        /** @brief 리소스 파일에서 읽습니다. 종류의 로더(공유 캐시)만 부른다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        void               readRoot( const XMLNode& root, CharacterDataReader& reader );
 
     private:
         vector<SurfaceChannelDef> _listChannel;
     };
+
+    /**
+     * @brief 표면 채널 표를 경로마다 한 벌 나눠 줍니다("surfacechannels", 인스턴스화는 `SurfaceState.cpp`). 제자리에서 다시 읽습니다.
+     * @details 캐릭터마다 엔진 기본 채널 표를 다시 읽지 않는다. 표면 상태(`CharacterSurfaceState`)는 만들 때 표를 복사해 든다(영역 × 채널 값의 배치가 표 순서다).
+     */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<SurfaceChannelTable>;
 } // namespace sw
 
 namespace sw

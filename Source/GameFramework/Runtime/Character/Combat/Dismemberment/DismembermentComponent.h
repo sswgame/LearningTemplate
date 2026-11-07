@@ -16,6 +16,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Character/Fit/FitTables.h"
@@ -78,6 +79,8 @@ namespace sw
 
     private:
         void loadRegionTable();
+        /** @brief 영역 표의 영역들입니다. 표를 받지 못했으면 빈 목록입니다. */
+        const vector<BodyRegionDef>& getRegions() const;
 
         PROPERTY( Category = "Dismemberment", DisplayName = "Region Table", AssetPath, Tooltip = "Body regions (*.fit.xml <Region> rows, bone weights)" )
         string _regionTablePath;
@@ -92,10 +95,10 @@ namespace sw
         PROPERTY( Category = "Dismemberment", DisplayName = "Piece Mass", Min = 0.1, Units = kg )
         float32 _pieceMass;
 
-        FitTables             _regionTable;
-        CharacterSurfaceState _surfaceState;
-        vector<hashed_string> _listSeveredRegion;
-        GameObjectHandle      _lastPiece;
-        bool                  _bTableLoaded;
+        shared_ptr<const FitTables> _pRegionTable; ///< 영역 표(공유 캐시의 한 벌). 받지 못했으면 nullptr
+        CharacterSurfaceState       _surfaceState;
+        vector<hashed_string>       _listSeveredRegion;
+        GameObjectHandle            _lastPiece;
+        bool                        _bTableLoaded;
     };
 } // namespace sw
