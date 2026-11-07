@@ -3,6 +3,7 @@
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
+#include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
@@ -20,25 +21,6 @@ namespace sw::editor
     {
         struct ViewportInputOverlayInternal
         {
-            static constexpr Color kBackground{ Color::fromBytes( 15, 18, 25 ) };
-            static constexpr Color kBorder{ Color::fromBytes( 50, 160, 240 ) };
-            static constexpr Color kTitle{ Color::fromBytes( 180, 220, 255 ) };
-            static constexpr Color kStickBase{ Color::fromBytes( 30, 35, 45 ) };
-            static constexpr Color kStickRing{ Color::fromBytes( 80, 120, 180 ) };
-            static constexpr Color kStickDot{ Color::fromBytes( 50, 255, 120 ) };
-            static constexpr Color kTriggerTrack{ Color::fromBytes( 40, 45, 55 ) };
-            static constexpr Color kTriggerFill{ Color::fromBytes( 240, 180, 40 ) };
-            static constexpr Color kButtonADown{ Color::fromBytes( 50, 255, 100 ) };
-            static constexpr Color kButtonAUp{ Color::fromBytes( 30, 80, 40 ) };
-            static constexpr Color kButtonBDown{ Color::fromBytes( 255, 60, 60 ) };
-            static constexpr Color kButtonBUp{ Color::fromBytes( 90, 30, 30 ) };
-            static constexpr Color kButtonXDown{ Color::fromBytes( 60, 140, 255 ) };
-            static constexpr Color kButtonXUp{ Color::fromBytes( 30, 40, 90 ) };
-            static constexpr Color kButtonYDown{ Color::fromBytes( 255, 230, 50 ) };
-            static constexpr Color kButtonYUp{ Color::fromBytes( 90, 80, 20 ) };
-            static constexpr Color kButtonLabel{ Color::fromBytes( 255, 255, 255 ) };
-            static constexpr Color kActiveAction{ Color::fromBytes( 255, 220, 100 ) };
-
             /** @brief 오버레이 불투명도를 알파로 씌운 ImGui 색입니다. */
             static uint32 fade( const Color& color, const float32 alpha )
             {
@@ -63,16 +45,16 @@ namespace sw::editor
                 GamepadButton _button;
                 float32       _offsetX; ///< 다이아몬드 중심에서의 방향(-1 · 0 · 1) — 거리는 `btnDist`
                 float32       _offsetY;
-                Color         _downColor;
-                Color         _upColor;
+                const utf8*   _pDownColorKey; ///< 눌렸을 때의 테마 색 토큰(`InputOverlay.*`)
+                const utf8*   _pUpColorKey;   ///< 뗐을 때의 테마 색 토큰
                 const utf8*   _pLabel;
             };
 
             static constexpr FaceButton kArrFaceButton[] = {
-                {GamepadButton::A,  0.0f,  1.0f, kButtonADown, kButtonAUp, "A"}, // 아래
-                {GamepadButton::B,  1.0f,  0.0f, kButtonBDown, kButtonBUp, "B"}, // 오른쪽
-                {GamepadButton::X, -1.0f,  0.0f, kButtonXDown, kButtonXUp, "X"}, // 왼쪽
-                {GamepadButton::Y,  0.0f, -1.0f, kButtonYDown, kButtonYUp, "Y"}, // 위
+                {GamepadButton::A,  0.0f,  1.0f, "InputOverlay.ButtonADown", "InputOverlay.ButtonAUp", "A"}, // 아래
+                {GamepadButton::B,  1.0f,  0.0f, "InputOverlay.ButtonBDown", "InputOverlay.ButtonBUp", "B"}, // 오른쪽
+                {GamepadButton::X, -1.0f,  0.0f, "InputOverlay.ButtonXDown", "InputOverlay.ButtonXUp", "X"}, // 왼쪽
+                {GamepadButton::Y,  0.0f, -1.0f, "InputOverlay.ButtonYDown", "InputOverlay.ButtonYUp", "Y"}, // 위
             };
 
             /** @brief 설정의 모서리에 맞춰 상자의 왼쪽 위를 정합니다. */
@@ -101,17 +83,17 @@ namespace sw::editor
             /** @brief 스틱 하나(바탕 원 · 테 · 기울기 점)를 그립니다. */
             static void drawStick( const DrawFrame& frame, const ImVec2& center, const float32 radius, const float2& stick, const float32 dotRadius )
             {
-                frame._pDrawList->AddCircleFilled( center, radius, frame.color( kStickBase ) );
-                frame._pDrawList->AddCircle( center, radius, frame.color( kStickRing ), 16, 1.0f );
+                frame._pDrawList->AddCircleFilled( center, radius, frame.color( SW_THEME_COLOR( "InputOverlay", "StickBase" ) ) );
+                frame._pDrawList->AddCircle( center, radius, frame.color( SW_THEME_COLOR( "InputOverlay", "StickRing" ) ), 16, 1.0f );
                 const ImVec2 dot = ImVec2( center.x + stick._x * radius, center.y - stick._y * radius );
-                frame._pDrawList->AddCircleFilled( dot, dotRadius, frame.color( kStickDot ) );
+                frame._pDrawList->AddCircleFilled( dot, dotRadius, frame.color( SW_THEME_COLOR( "InputOverlay", "StickDot" ) ) );
             }
 
             /** @brief 트리거 막대 하나(바탕 · 눌린 만큼 채움)를 그립니다. */
             static void drawTrigger( const DrawFrame& frame, const ImVec2& barMin, const ImVec2& barMax, const float32 value )
             {
-                frame._pDrawList->AddRectFilled( barMin, barMax, frame.color( kTriggerTrack ) );
-                frame._pDrawList->AddRectFilled( barMin, ImVec2( barMin.x + ( barMax.x - barMin.x ) * value, barMax.y ), frame.color( kTriggerFill ) );
+                frame._pDrawList->AddRectFilled( barMin, barMax, frame.color( SW_THEME_COLOR( "InputOverlay", "TriggerTrack" ) ) );
+                frame._pDrawList->AddRectFilled( barMin, ImVec2( barMin.x + ( barMax.x - barMin.x ) * value, barMax.y ), frame.color( SW_THEME_COLOR( "InputOverlay", "TriggerFill" ) ) );
             }
 
             /** @brief 양쪽 스틱과 두 트리거를 그립니다. 패드가 없으면 모두 가운데 · 0 입니다. */
@@ -139,8 +121,8 @@ namespace sw::editor
                 {
                     const bool   bDown = pGamepad != nullptr && pGamepad->isButtonDown( face._button );
                     const ImVec2 pos   = ImVec2( faceCenter.x + face._offsetX * btnDist, faceCenter.y + face._offsetY * btnDist );
-                    frame._pDrawList->AddCircleFilled( pos, btnRadius, frame.color( bDown ? face._downColor : face._upColor ) );
-                    frame._pDrawList->AddText( ImVec2( pos.x - 3.0f, pos.y - 6.0f ), frame.color( kButtonLabel ), face._pLabel );
+                    frame._pDrawList->AddCircleFilled( pos, btnRadius, frame.color( EditorThemeUtil::findColor( hashed_string{ bDown ? face._pDownColorKey : face._pUpColorKey } ) ) );
+                    frame._pDrawList->AddText( ImVec2( pos.x - 3.0f, pos.y - 6.0f ), frame.color( SW_THEME_COLOR( "InputOverlay", "ButtonLabel" ) ), face._pLabel );
                 }
             }
 
@@ -153,7 +135,7 @@ namespace sw::editor
                     if ( inputMap.isActionDown( act ) == false )
                         continue;
                     const string text = InputGlyphResolver::findActionGlyph( inputMap, sw::hashed_string( act.view() ) ) + " " + string( act.c_str() );
-                    frame._pDrawList->AddText( ImVec2( frame.at( 150.0f, 0.0f ).x, frame._boxMin.y + offsetY ), frame.color( kActiveAction ), text.c_str() );
+                    frame._pDrawList->AddText( ImVec2( frame.at( 150.0f, 0.0f ).x, frame._boxMin.y + offsetY ), frame.color( SW_THEME_COLOR( "InputOverlay", "ActiveAction" ) ), text.c_str() );
                     offsetY += 14.0f;
                     if ( offsetY > boxH - 10.0f )
                         break;
@@ -181,9 +163,9 @@ namespace sw::editor
         const ImVec2 boxMax = ImVec2( frame._boxMin.x + boxW, frame._boxMin.y + boxH );
 
         // 반투명 배경 · 테두리 · 제목
-        pDrawList->AddRectFilled( frame._boxMin, boxMax, frame.color( Internal::kBackground ), 8.0f );
-        pDrawList->AddRect( frame._boxMin, boxMax, frame.color( Internal::kBorder ), 8.0f, 0, 1.5f );
-        pDrawList->AddText( ImVec2( frame._boxMin.x + 10.0f, frame._boxMin.y + 6.0f ), frame.color( Internal::kTitle ), "INPUT OVERLAY" );
+        pDrawList->AddRectFilled( frame._boxMin, boxMax, frame.color( SW_THEME_COLOR( "InputOverlay", "Background" ) ), 8.0f );
+        pDrawList->AddRect( frame._boxMin, boxMax, frame.color( SW_THEME_COLOR( "InputOverlay", "Border" ) ), 8.0f, 0, 1.5f );
+        pDrawList->AddText( ImVec2( frame._boxMin.x + 10.0f, frame._boxMin.y + 6.0f ), frame.color( SW_THEME_COLOR( "InputOverlay", "Title" ) ), "INPUT OVERLAY" );
 
         GamepadDevice* pGamepad = pInput->getGamepad( 0 );
         if ( config._bShowStick == SW_TRUE )

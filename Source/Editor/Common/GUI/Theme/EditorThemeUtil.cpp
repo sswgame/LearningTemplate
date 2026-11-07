@@ -489,25 +489,21 @@ namespace sw::editor
                 setAccentColor( Color{ arrAccentRaw[0], arrAccentRaw[1], arrAccentRaw[2], arrAccentRaw[3] } );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeAccentColor" ) );
 
-            // 3) 빠른 액센트 팔레트 스와치(테마와 무관한 추천 색이다)
+            // 3) 빠른 액센트 팔레트 스와치 — 색은 테마 토큰(`AccentSwatch.*`, 기본 테마가 정하고 다른 테마가 물려받는다), 여기는 놓는 순서만 든다
             ImGui::TextUnformatted( SW_LOCKEY( "EdText", "AccentSwatches" ) );
             ImGui::SameLine();
-            static constexpr Color kArrSwatch[] = {
-                {0.27f, 0.57f,  1.0f, 1.0f}, // Electric Blue
-                {0.15f, 0.75f, 0.55f, 1.0f}, // Emerald Cyan
-                {0.65f, 0.35f, 0.95f, 1.0f}, // Neon Violet
-                {0.95f, 0.55f, 0.15f, 1.0f}, // Amber Gold
-                {0.90f, 0.25f, 0.35f, 1.0f}  // Crimson
-            };
-            const float32 swatchSize = ImGui::GetFrameHeight();
-            for ( int32 index = 0; index < static_cast<int32>( SW_COUNT_OF( kArrSwatch ) ); ++index )
+            static constexpr const utf8* kArrSwatchKey[] = { "AccentSwatch.ElectricBlue", "AccentSwatch.EmeraldCyan", "AccentSwatch.NeonViolet", "AccentSwatch.AmberGold",
+                                                             "AccentSwatch.Crimson" };
+            const float32                swatchSize      = ImGui::GetFrameHeight();
+            for ( int32 index = 0; index < static_cast<int32>( SW_COUNT_OF( kArrSwatchKey ) ); ++index )
             {
                 if ( index > 0 )
                     ImGui::SameLine();
                 ImGui::PushID( index );
-                if ( ImGui::ColorButton( "##swatch", EditorThemeInternal::toImVec4( kArrSwatch[index] ), ImGuiColorEditFlags_NoAlpha, ImVec2( swatchSize, swatchSize ) ) )
+                const Color swatch = findColor( hashed_string{ kArrSwatchKey[index] } );
+                if ( ImGui::ColorButton( "##swatch", EditorThemeInternal::toImVec4( swatch ), ImGuiColorEditFlags_NoAlpha, ImVec2( swatchSize, swatchSize ) ) )
                 {
-                    setAccentColor( kArrSwatch[index] );
+                    setAccentColor( swatch );
                     editorConfig = getActiveTheme();
                 }
                 if ( index == 2 )
