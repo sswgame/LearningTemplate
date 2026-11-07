@@ -25,6 +25,12 @@
 
 **작업자가 못 끝낸 것도 한다(사용자 지시 2026-11-07).** 보고의 "옮기지 못한 목록" 은 통합 때 그 자리에서 처리하거나 다음 작업자 범위에 넣는다 — 인계에 쌓아 두지 않는다.
 
+**0. 2026-11-08 인계(여기부터).** 본 트리에 8 차 T2 · T4 · T8 을 합쳤고 Debug 빌드 · 관련 단위 테스트(49) 통과. 에디터 체인 실패 넷(maskpaint · flowterrain · mapcheckfix · savedsearch)과 abilitycatalog 는 고쳐 단독 통과. 표면 결함(댕글링 표 → 이동 계수 0)과 모자가 안 가라앉는 결함(소켓 유닛 공간)을 고쳤다. 아직 push 전 — 검증은 `bash Scripts/dev/VerifyBundle.sh --no-linux --show`(사용자에게 창을 보인다).
+- 합칠 것: T1(지역 효과, 아직 도는 중) · T3(`KinematicVehicle…`, 5 커밋) · T5(웹 · Android, dawn vcpkg — 재구성 오래 걸림) · T6 · T7 · T9(Velmora) · T10(LanternVale · RemoteCall). 브랜치 `worktree-agent-<id>`, 시작 `4f3d3c2ec1`, 스크래치 `pickw.sh . $(git rev-list --reverse 4f3d3c2ec1..<브랜치>)`. 각 보고의 볼 값은 작업 출력 파일에 있다.
+- 남은 Empty 시나리오 실패: `surfacewet`(Wet 채널 0 — 날씨 · 침수가 `Wet` 에 닿지 않음), `surfacefootprint`(첫 판정 `FootprintPlaced == 0` 이 1 — Walker 가 눈 위에서 시작), `kitdemo_actioncombat`(Phase 가 0 에서 안 움직임), `kitdemo_tactics`(Turn 3, 기대 2), `boat`(`<Possess>` 앞에 `<Wait frames="1"/>` 필요 — LoadError). 새 시나리오 `inertia` · `boat` · `velmora` · `lanternvale` 골든은 그림을 본 뒤 기록.
+- `ToolCheckText`: 합친 뒤 `App --gather-text` 한 번.
+- 그 뒤: Empty 게임 이름을 TestBed 로 전수 개명(옛 이름 린트로 막기), S8 측정 6 건, dzn SPIR-V→DXIL 충돌, 웹 · Android 실제 빌드.
+
 **1. 통합 대기(작업자가 끝낸 커밋 — 볼 값은 각 보고).** 6 차 R2 · R3 · R5 · R6 · R7 · R8, 7 차 S1 · S2. 합치면서 함께 할 것:
 - R3: 전용 서버에서 `Engine/Audio` 빼기(`IAudioService` Optional · 엔진 루프 · 볼륨 · 립싱크 · 알림 소리 · 씬 오디오 컴포넌트), 엔진 컴포넌트의 RHI 형식 칸(`GPUInstanceCustomData` · `GPUSpriteInstanceData`).
 - R2: 손으로 세는 대기(Chat `_mapPresenceRequestToWhisper` · Login `_listPendingVerification`)를 `ServiceStoreTracker` 모양으로. 스캐폴드 `new-online-kit` 로 키트 하나를 실제로 지어 본다.
