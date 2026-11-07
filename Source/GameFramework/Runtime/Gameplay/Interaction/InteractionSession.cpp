@@ -4,6 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
+
 namespace sw
 {
     InteractionSession::InteractionSession()
@@ -112,7 +114,7 @@ namespace sw
                 if ( bPressed )
                     _mashProgress += 1.0f / static_cast<float32>( MathUtil::max( 1, step._presses ) );
                 else
-                    _mashProgress = MathUtil::max( 0.0f, _mashProgress - step._decay * deltaTime );
+                    (void)DepletingValue::take( _mashProgress, step._decay * deltaTime ); // 쉬면 줄고 0 에서 멈춘다(음수 감쇠는 깎지 않는다) — 깎은 양은 쓰지 않는다
                 if ( _mashProgress >= 1.0f - 1.0e-5f )
                     completeStep();
                 break;
