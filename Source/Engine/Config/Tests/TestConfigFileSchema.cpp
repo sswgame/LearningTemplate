@@ -122,6 +122,7 @@ namespace
             {                    "Config/Engine/MemoryBudget.json",                                                                                     "",                &loadMemoryBudget},
             {                      "Config/Engine/PackConfig.json",                                                                                     "",   &loadBaseLayer<sw::PackConfig>},
             {                    "Config/Engine/CookContract.json",                                       "Scripts/generate/ConfigureFiles.py (configure)",                          nullptr},
+            {       "Config/Engine/ClientOnlyTypes.generated.json",             "Scripts/generate/ClientOnlyTypes.py (py -3 -m Scripts client-only-types)",                          nullptr},
             {                "Config/Engine/ProcessExitCodes.json",                                     "Scripts/generate/ProcessExitCodes.py (configure)",                          nullptr},
             {                                       "Config/Game/",                                                                                     "",      &loadStrict<sw::GameConfig>},
             {                "Config/Server/chat_banned_words.txt",                                               "chat word filter (word list, not keys)",                          nullptr},
