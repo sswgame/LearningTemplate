@@ -98,6 +98,7 @@ if(MSVC)
 		# -g 는 GNU 드라이버만이 아니라 clang-cl 에도 건다(/Z7 와 겹친다). 빼는 것은 디버그 정보 동작을
 		# 바꾸는 일이라 검증 없이 하지 말 것.
 		$<$<CONFIG:Debug>:-g>
+		$<$<CONFIG:Debug>:-gcodeview-ghash> # 형식 레코드 해시를 오브젝트에 미리 넣는다(/DEBUG:GHASH 링크가 쓴다)
 
 		# Release · Shipping 디버그 정보(`SW_RELEASE_DEBUG_INFO`). /Z7 은 정보를 오브젝트에 넣는다(/Zi 의 공유 PDB 는 병렬 컴파일이 한 파일을 다툰다).
 		$<$<AND:$<CONFIG:Release>,$<STREQUAL:${SW_RELEASE_DEBUG_INFO},full>>:/Z7>
@@ -152,6 +153,7 @@ message(STATUS "[Clang.cmake] LLD linker: ${SW_LLD_LINK_EXE}")
 if(MSVC)
 	target_link_options(sw_compiler_clang INTERFACE
 		$<$<CONFIG:Debug>:/INCREMENTAL:NO> # 단일 패스 결정론적 빠른 링킹
+		$<$<CONFIG:Debug>:/DEBUG:GHASH> # 형식 레코드를 해시로 합친다(오브젝트에 해시가 없으면 lld 가 병렬로 계산) — 측정은 커밋 메시지
 		# Release 도 PDB 와 RSDS 서명을 만든다 — 크래시 덤프를 그 빌드의 심볼과 짝짓는 열쇠(`ModuleBuildID`). /DEBUG 는 /OPT:REF · /OPT:ICF 를 끄므로 아래에 다시 켠다.
 		# PDB 경로는 이름만 적는다(/PDBALTPATH:%_PDB%) — 빌드 기계의 경로가 배포물에 새지 않고, 심볼 서버는 이름 + GUID 로 찾는다.
 		$<$<CONFIG:Release>:/DEBUG:FULL>
