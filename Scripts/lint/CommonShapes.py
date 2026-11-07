@@ -12,8 +12,10 @@ Scripts/lint/CommonShapes.py
 4. 스키마만 읽는 한 줄 검사 함수: `AutomationStep::validateFields<TParams>` 가 맡는다.
 5. 캔버스 지우기 손 구간: `ed::BeginDelete`. `EditorNodeGraph::collectRemovals` 가 맡는다.
 6. 저장 글 칸 · 부모 차이 손 저장: `string _savedText` 는 `EditorDocumentState`, `DataInheritance::makeDelta` 는 `ResourceComposer::saveDelta` 가 맡는다.
-7. id 를 버리는 리소스 입구: `loadFromAsset` · `loadFromFile( const AssetID& )` 가 글을 읽은 뒤 id 없이 글 입구로 넘기면 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받지 못한다(조용히 빠진다).
-   id 를 싣는 길(`ResourceContext::withAsset` · `XMLDocument::parseResourceText` · `XMLReadUtil::parseResourceRoot` · `loadResource…`)을 지나야 한다.
+7. id 를 버리는 리소스 입구: 이름이 `load…` 인 입구(`loadFromAsset` · `loadFromFile` · `loadFromPack` · `load` …)가 리소스 글(`AssetIO::readTextAsset`)을 읽은 뒤
+   id 없이 글 입구로 넘기면 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조를 받지 못한다(조용히 빠진다). id 를 싣는 길(`ResourceContext::withAsset` ·
+   `XMLDocument::parseResourceText` · `XMLReadUtil::parseResourceRoot` · `loadResource…`)을 지나거나, 읽은 id 변수를 그대로 다음 함수에 넘겨야 한다.
+   예전에는 이름 둘(`loadFromAsset` · `loadFromFile( const AssetID& )`)만 보아 다른 이름의 입구(타일맵 `load`)가 빠졌다 — 입구는 이름이 아니라 "load 로 시작하고 리소스 글을 읽는다" 로 고른다.
 
 예외는 `Config/Dev/CommonShapeExceptions.json` 에 까닭과 함께 적는다. 낡은 예외(더는 없는 자리)도 위반이다.
 `py -3 -m Scripts common-shapes [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
@@ -49,8 +51,9 @@ kOneLineValidatorPattern = re.compile(r"bool\s+(?:\w+::)?\w+\(\s*const Automatio
 kCanvasDeletePattern = re.compile(r"\bed::BeginDelete\(")
 kSavedTextPattern = re.compile(r"^\s*string\s+_savedText\s*;", re.M)
 kMakeDeltaPattern = re.compile(r"\bDataInheritance::makeDelta\(")
-kAssetEntrancePattern = re.compile(r"\b(\w+::(?:loadFromAsset|loadFromFile))\(\s*const AssetID& \w+[^)]*\)\s*(?:const\s*)?\{")
-kReadTextAssetPattern = re.compile(r"\bAssetIO::readTextAsset\(")
+# 정의 줄만 본다(줄머리에 반환 형식이 있다) — `if ( A::loadX( y ) )` 같은 호출은 걸리지 않는다.
+kAssetEntrancePattern = re.compile(r"^[ \t]*(?:\[\[nodiscard\]\]\s*)?(?:static\s+)?[\w:<>]+[\s*&]+(\w+::load\w*)\([^;{}]*\)\s*(?:const\s*)?\{", re.M)
+kReadTextAssetPattern = re.compile(r"\bAssetIO::readTextAsset\(\s*(\w+)?")
 kAssetCarrierPattern = re.compile(r"withAsset\(|parseResourceText\(|parseResourceRoot\(|loadResource\w*\(|loadFromAsset\(")
 
 
@@ -86,7 +89,11 @@ def findIdDroppingEntrances(code: str) -> list[str]:
     for match in kAssetEntrancePattern.finditer(code):
         body = code[match.end() - 1:findClosingBrace(code, match.end() - 1)]
         readMatch = kReadTextAssetPattern.search(body)
-        if readMatch and not kAssetCarrierPattern.search(body, readMatch.end()):
+        if readMatch is None or kAssetCarrierPattern.search(body, readMatch.end()):
+            continue
+        idName = readMatch.group(1)
+        bPassesID = idName is not None and idName != "AssetID" and re.search(rf"[(,]\s*{re.escape(idName)}\s*[,)]", body[readMatch.end():]) is not None
+        if not bPassesID:
             listEntrance.append(match.group(1))
     return listEntrance
 
@@ -170,6 +177,12 @@ def runSelfCheck() -> None:
     carrying = dropping.replace("loadFromXMLText( text, assetID.view() )", "loadComposed( text, assetID.view(), ResourceContext::forType( *StaticType() ).withAsset( assetID ) )")
     assert findIdDroppingEntrances(dropping) == ["A::loadFromAsset"], findIdDroppingEntrances(dropping)
     assert findIdDroppingEntrances(carrying) == []
+    otherName = "bool B::loadFromPack( const DataPath& root )\n{\n    string text;\n    if ( AssetIO::readTextAsset( AssetID{ path }, text ) == false )\n        return false;\n    return loadFromXMLText( text, path );\n}"
+    assert findIdDroppingEntrances(otherName) == ["B::loadFromPack"], "이름이 loadFromAsset 이 아니어도 입구다"
+    passing = "bool C::loadDesc( const AssetID& assetID )\n{\n    string text;\n    if ( AssetIO::readTextAsset( assetID, text ) == false )\n        return false;\n    return parseDesc( assetID.view(), assetID, text );\n}"
+    assert findIdDroppingEntrances(passing) == [], "읽은 id 를 그대로 넘기면 싣는 것이다"
+    calling = "void D::f()\n{\n    if ( E::loadThing( x ) )\n    {\n        AssetIO::readTextAsset( AssetID{ p }, t );\n    }\n}"
+    assert findIdDroppingEntrances(calling) == [], "호출은 입구가 아니다"
 
 
 def main(argv: Sequence[str] | None = None) -> int:

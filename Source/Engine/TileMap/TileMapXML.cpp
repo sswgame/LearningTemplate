@@ -434,8 +434,9 @@ namespace sw
             SW_LOG_ERROR_ID( "TileMap.FileNotFound", "TileMap file not found: %#", path );
             return false;
         }
-
-        if ( loadFromXML( text ) == false )
+        // 리소스 id 를 실어 읽는다 — 덮어쓰기 층 · 다시 읽기 기록 · 접속 대조가 타일맵도 본다(글 입구로 넘기면 조용히 빠졌다).
+        XMLDocument doc;
+        if ( doc.parseResourceText( text, assetID ) == false || loadFromDocument( doc ) == false )
             return false;
         _sourcePath = path;
         return true;
@@ -461,11 +462,18 @@ namespace sw
 
     bool TileMapXMLData::loadFromXML( string_view xml )
     {
-        *this = {};
-
         XMLDocument doc;
         if ( doc.parse( xml ) == false )
+        {
+            *this = {};
             return false;
+        }
+        return loadFromDocument( doc );
+    }
+
+    bool TileMapXMLData::loadFromDocument( const XMLDocument& doc )
+    {
+        *this = {};
 
         const XMLNode root = doc.getRoot( "TileMap" );
         if ( root.isValid() == false )

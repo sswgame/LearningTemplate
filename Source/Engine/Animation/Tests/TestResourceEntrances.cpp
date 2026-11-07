@@ -23,6 +23,7 @@
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/TileMap/TileMapXML.h"
 
 using namespace sw;
 using sw::test::ScopedScratchDomain;
@@ -153,6 +154,22 @@ SW_TEST_CASE( ResourceEntranceTest, SettingsAndRootFormatsRecordTheComposition )
     SW_REQUIRE_TRUE( track.loadFromAsset( trackID ) );
     SW_EXPECT_EQUAL( 1u, track.getFrameCount() );
     SW_EXPECT_TRUE( Util::isRecorded( trackID ) );
+}
+
+/**
+ * @brief [ResourceEntranceTest] 이름이 `loadFromAsset` 이 아닌 입구(타일맵 `load`)도 id 로 읽으면 기록된다
+ * @details 예전에는 타일맵이 글을 읽은 뒤 글 입구(`loadFromXML`)로 넘겨 층 · 다시 읽기 · 접속 대조를 조용히 받지 못했다. 린트 assetEntrance 가 이제 `load…` 이름을 모두 본다.
+ */
+SW_TEST_CASE( ResourceEntranceTest, TileMapLoadRecordsTheComposition )
+{
+    const ScopedScratchDomain domain;
+    const XEntranceScope      scope;
+    Util::write( domain, "a.tilemap.xml", string( "<TileMap><width>2</width><height>1</height>" ) + Util::kWhen + "</TileMap>" );
+    const AssetID  tileMapID = ScopedScratchDomain::makeID( "a.tilemap.xml" );
+    TileMapXMLData tileMap;
+    SW_REQUIRE_TRUE( tileMap.load( tileMapID ) );
+    SW_EXPECT_EQUAL( 2, tileMap._width );
+    SW_EXPECT_TRUE( Util::isRecorded( tileMapID ) );
 }
 
 /** @brief [ResourceEntranceTest] 글 입구는 id 가 없어 기록을 남기지 않는다 — 같은 글을 id 로 읽은 것과 갈린다 */

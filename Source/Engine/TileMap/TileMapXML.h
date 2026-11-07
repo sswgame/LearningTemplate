@@ -83,6 +83,7 @@ namespace sw
     };
 
     class TileSetAsset;
+    class XMLDocument;
 
     /**
      * @brief 셀마다 켜고 끄는 타일 플래그 레이어입니다.
@@ -255,8 +256,10 @@ namespace sw
         [[nodiscard]] SW_API bool load( const AssetID& assetID );
         /** @brief **디스크 파일**의 타일맵 XML 을 읽습니다. 리소스 id 로 풀지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] SW_API bool loadFromDiskFile( string_view diskPath );
-        /** @brief XML 본문에서 타일맵을 읽습니다. */
+        /** @brief XML 본문에서 타일맵을 읽습니다(리소스가 아닌 글 — 덮어쓰기 층 · 다시 읽기 기록을 받지 않는다). */
         [[nodiscard]] SW_API bool loadFromXML( string_view xml );
+        /** @brief 읽어 둔 문서(`load` 는 리소스 id 를 싣고 `parseResourceText` 로 읽는다)에서 타일맵을 읽습니다. */
+        [[nodiscard]] SW_API bool loadFromDocument( const XMLDocument& doc );
         /** @brief Resource 상대 또는 절대 경로로 타일맵 XML을 씁니다. */
         [[nodiscard]] SW_API bool save( const AbsolutePath& absPath ) const;
         /**
