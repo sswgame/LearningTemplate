@@ -1,8 +1,21 @@
 #!/bin/bash
 # 묶음 끝 전체 검증: Windows(Debug · Release 빌드 · 단위 · ctest, 서버 빌드 · 단위, 배포 구성)가 모두 통과한 뒤에만 Linux 를 돌린다.
 # 인자는 Linux 로 넘긴다(--record). --no-linux 면 Windows 까지만 돈다(Linux 골든이 곧 바뀌는 묶음 사이). 로그는 build/<프리셋>/Testing/Logs/verify.* · build/verify.linux.log. 끝 줄 VERIFIED=<sha> 가 나와야 push 한다.
+# --from debug|release|server|shipping 은 앞 단계를 건너뛴다. 앞 단계가 통과한 뒤 바뀐 것이 그 단계에 영향을 주지 않을 때만 쓴다(실패한 단계부터 다시 돌린다). 끝 줄에 어디서 시작했는지 적는다.
 cd "$(dirname "$0")/../.." || exit 2
 SHA=$(git rev-parse HEAD)
+FROM=debug
+if [ "$1" = "--from" ]; then
+  FROM=$2
+  shift 2
+fi
+case "$FROM" in
+  debug) STAGE=1 ;;
+  release) STAGE=2 ;;
+  server) STAGE=3 ;;
+  shipping) STAGE=4 ;;
+  *) echo "--from 은 debug · release · server · shipping 중 하나다: $FROM"; exit 2 ;;
+esac
 
 windows_failed() {
   echo "WINDOWS_FAILED ($1) - Linux 를 돌리지 않는다 sha=$SHA"
@@ -31,24 +44,30 @@ run_ctest() {
   [ $RC -eq 0 ] || windows_failed "$P ctest"
 }
 
-build_preset Ninja-Debug
-echo "== unit $(date +%T)"
-build/Ninja-Debug/Bin/App.exe --test > build/Ninja-Debug/Testing/Logs/verify.unit.log 2>&1
-RC=$?
-echo "unit exit=$RC"
-tail -3 build/Ninja-Debug/Testing/Logs/verify.unit.log
-[ $RC -eq 0 ] || windows_failed "Debug unit"
-run_ctest Ninja-Debug
+if [ $STAGE -le 1 ]; then
+  build_preset Ninja-Debug
+  echo "== unit $(date +%T)"
+  build/Ninja-Debug/Bin/App.exe --test > build/Ninja-Debug/Testing/Logs/verify.unit.log 2>&1
+  RC=$?
+  echo "unit exit=$RC"
+  tail -3 build/Ninja-Debug/Testing/Logs/verify.unit.log
+  [ $RC -eq 0 ] || windows_failed "Debug unit"
+  run_ctest Ninja-Debug
+fi
 
-build_preset Ninja-Release
-run_ctest Ninja-Release
+if [ $STAGE -le 2 ]; then
+  build_preset Ninja-Release
+  run_ctest Ninja-Release
+fi
 
-build_preset Ninja-Debug-Server
-build/Ninja-Debug-Server/Bin/Server.exe --test -unattended > build/Ninja-Debug-Server/Testing/Logs/verify.unit.log 2>&1
-RC=$?
-echo "server unit exit=$RC"
-grep -E "case run" build/Ninja-Debug-Server/Testing/Logs/verify.unit.log
-[ $RC -eq 0 ] || windows_failed "server unit"
+if [ $STAGE -le 3 ]; then
+  build_preset Ninja-Debug-Server
+  build/Ninja-Debug-Server/Bin/Server.exe --test -unattended > build/Ninja-Debug-Server/Testing/Logs/verify.unit.log 2>&1
+  RC=$?
+  echo "server unit exit=$RC"
+  grep -E "case run" build/Ninja-Debug-Server/Testing/Logs/verify.unit.log
+  [ $RC -eq 0 ] || windows_failed "server unit"
+fi
 
 echo "== shipping-check $(date +%T)"
 py -3 -m Scripts shipping-check 2>&1 | tail -n 8
@@ -57,7 +76,7 @@ echo "shipping-check exit=$RC"
 [ $RC -eq 0 ] || windows_failed "shipping-check"
 
 if [ "$1" = "--no-linux" ]; then
-  echo "WINDOWS_VERIFIED=$SHA (Linux 를 돌리지 않았다)"
+  echo "WINDOWS_VERIFIED=$SHA (Linux 를 돌리지 않았다, 시작 단계 $FROM)"
   exit 0
 fi
 echo "== WINDOWS_OK, linux 시작 $(date +%T)"
@@ -66,4 +85,4 @@ RC=$?
 tail -n 40 build/verify.linux.log
 echo "== done $(date +%T)"
 [ $RC -eq 0 ] || { echo "LINUX_FAILED sha=$SHA"; exit 1; }
-echo "VERIFIED=$SHA"
+echo "VERIFIED=$SHA (시작 단계 $FROM)"

@@ -11,6 +11,7 @@ description: "이 저장소의 묶음 끝 전체 검증과 push 절차: Windows 
 
 1. 커밋이 다 됐는지 본다: `git status`, HEAD 변화. 훅이 커밋을 막을 수 있으니 메시지만 믿지 않는다.
 2. **`bash Scripts/dev/VerifyBundle.sh` 를 백그라운드로 한 번.** Windows(Debug · Release · 서버 · `shipping-check`)가 모두 통과해야 Linux(`linux-verify` 의 `all`)가 시작한다. Windows 가 지면 Linux 를 돌리지 않는다(사용자 결정). 이 동안 본 트리의 Source · Content 를 고치지 않는다. 그 사이 코드는 다음 묶음으로 미룬다.
+   한 단계가 지면 고친 뒤 처음부터 돌리지 않는다: 고친 것이 앞 단계에 영향을 주지 않으면 `--from release|server|shipping` 으로 그 단계부터 돌린다.
 3. **로그 분류:** `build/<프리셋>/Testing/Logs/*.log` 의 Error · Warning 을 id 별로 모아 테스트가 선언한 것인지 본다. 통과만 보지 않는다.
 4. **push:** 끝 줄이 `VERIFIED=<sha>` 이면 `git push origin <sha>:main`. 검증 뒤에 코드를 고쳤으면 그 커밋은 아직 검증되지 않았다.
 
