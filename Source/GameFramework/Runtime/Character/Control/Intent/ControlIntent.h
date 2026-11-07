@@ -22,7 +22,7 @@ namespace sw
      *          조종 시스템은 로컬 조종자의 의도도 `quantize` 를 거쳐 폰에 넣습니다. 그래서 로컬, 원격, 재생이 같은 값으로 움직입니다.
      *          **발동 순간의 시선**(`_bTriggerLook`)은 CS2 식 서브틱 입력이다. 프레임 끝의 조종 회전이 아니라 클릭한 순간의 회전으로 쏘게 한다.
      *          선택 필드라 없으면 비트 하나만 싣는다. AI · 원격 조종자는 이 필드를 채우지 않고, 쓰는 쪽은 비었으면 `_controlYaw` · `_controlPitch` 로 돌아간다.
-     *          모터마다의 입력 형식(`ArcadeVehicleInput`, `PlatformerInput` …)은 폰의 이동 컴포넌트가 이것에서 만드는 변환으로 남습니다.
+     *          모터마다의 입력 형식(`KinematicVehicleInput`, `PlatformerInput` …)은 폰의 이동 컴포넌트가 이것에서 만드는 변환으로 남습니다.
      */
     struct SW_GF_API ControlIntent
     {

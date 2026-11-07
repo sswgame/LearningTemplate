@@ -174,7 +174,7 @@
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
-					<ArcadeVehicleComponent _driftButton="Drift"
+					<KinematicVehicleComponent _driftButton="Drift"
 					                        _boostButton="Boost"
 					                        _jumpButton="Jump"
 					                        _maxSpeed="30"

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Character/Movement/ArcadeVehicleMotor.h"
+#include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -11,7 +11,7 @@ namespace sw
 {
     namespace
     {
-        struct ArcadeVehicleMotorInternal
+        struct KinematicVehicleMotorInternal
         {
             static constexpr float32 kStopEpsilon = 0.05f; ///< 이보다 느리면 멈춘 것으로 본다(브레이크 → 후진 전환)
 
@@ -22,7 +22,7 @@ namespace sw
 
 namespace sw
 {
-    ArcadeVehicleMotor::ArcadeVehicleMotor()
+    KinematicVehicleMotor::KinematicVehicleMotor()
         : _settings{}
         , _eventBuffer{}
         , _timer{ constant::time::kDefaultFixedStepSeconds, 0.25f }
@@ -39,7 +39,7 @@ namespace sw
     {
     }
 
-    void ArcadeVehicleMotor::reset( const float3& position, float32 yaw )
+    void KinematicVehicleMotor::reset( const float3& position, float32 yaw )
     {
         _position    = position;
         _velocity    = float3{};
@@ -54,7 +54,7 @@ namespace sw
         _eventBuffer.clear();
     }
 
-    void ArcadeVehicleMotor::addImpulse( const float3& impulse )
+    void KinematicVehicleMotor::addImpulse( const float3& impulse )
     {
         _velocity._x += impulse._x;
         _velocity._y += impulse._y;
@@ -63,7 +63,7 @@ namespace sw
             endDrift( false );
     }
 
-    void ArcadeVehicleMotor::startBoost( float32 duration, int32 source )
+    void KinematicVehicleMotor::startBoost( float32 duration, int32 source )
     {
         if ( duration <= 0.0f )
             return;
@@ -74,18 +74,18 @@ namespace sw
             _velocity._z += forward._z * _settings._boostImpulse;
         }
         _boost.extendTo( duration );
-        pushEvent( ArcadeVehicleEvent::Kind::BoostStarted, source );
+        pushEvent( KinematicVehicleEvent::Kind::BoostStarted, source );
     }
 
-    void ArcadeVehicleMotor::update( const ArcadeVehicleInput& input, float32 deltaTime )
+    void KinematicVehicleMotor::update( const KinematicVehicleInput& input, float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;
-        const float32      throttle = MathUtil::clamp( input._throttle, -1.0f, 1.0f );
-        const float32      steer    = MathUtil::clamp( input._steer, -1.0f, 1.0f );
-        ArcadeVehicleInput clamped  = input;
-        clamped._throttle           = throttle;
-        clamped._steer              = steer;
+        const float32         throttle = MathUtil::clamp( input._throttle, -1.0f, 1.0f );
+        const float32         steer    = MathUtil::clamp( input._steer, -1.0f, 1.0f );
+        KinematicVehicleInput clamped  = input;
+        clamped._throttle              = throttle;
+        clamped._steer                 = steer;
 
         // 1) 지금 방향으로 속도를 앞 · 옆으로 나눈다.
         float32 forwardSpeed = getForwardSpeed();
@@ -136,7 +136,7 @@ namespace sw
         float32       newSide  = worldX * newCos - worldZ * newSin;
         if ( isAirborne() == false )
         {
-            // 접지는 옆 성분을 앞으로 돌린다(빠르기는 그대로 — 아케이드 손맛: 돌거나 미끄러져도 속도를 잃지 않는다).
+            // 접지는 옆 성분을 앞으로 돌린다(빠르기는 그대로 — 돌거나 미끄러져도 속도를 잃지 않는다).
             const float32 grip        = isDrifting() ? _settings._driftGrip : _settings._grip;
             const float32 speedSquare = newAhead * newAhead + newSide * newSide;
             newSide /= 1.0f + grip * deltaTime;
@@ -148,7 +148,7 @@ namespace sw
 
         // 7) 부스트 시간.
         if ( _boost.update( deltaTime ) )
-            pushEvent( ArcadeVehicleEvent::Kind::BoostEnded, 0 );
+            pushEvent( KinematicVehicleEvent::Kind::BoostEnded, 0 );
 
         // 8) 위치 · 위아래.
         _position._x += _velocity._x * deltaTime;
@@ -156,10 +156,10 @@ namespace sw
         updateVertical( clamped, deltaTime );
     }
 
-    int32 ArcadeVehicleMotor::advance( const ArcadeVehicleInput& input, float32 frameTime )
+    int32 KinematicVehicleMotor::advance( const KinematicVehicleInput& input, float32 frameTime )
     {
-        const int32        stepCount = _timer.consume( frameTime );
-        ArcadeVehicleInput stepInput = input;
+        const int32           stepCount = _timer.consume( frameTime );
+        KinematicVehicleInput stepInput = input;
         for ( int32 stepIndex = 0; stepIndex < stepCount; ++stepIndex )
         {
             update( stepInput, _timer.getStep() );
@@ -169,12 +169,12 @@ namespace sw
         return stepCount;
     }
 
-    void ArcadeVehicleMotor::pollEvents( vector<ArcadeVehicleEvent>& outListEvent )
+    void KinematicVehicleMotor::pollEvents( vector<KinematicVehicleEvent>& outListEvent )
     {
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    float32 ArcadeVehicleMotor::computeSteerRate( float32 speed ) const
+    float32 KinematicVehicleMotor::computeSteerRate( float32 speed ) const
     {
         const float32 absSpeed   = MathUtil::abs( speed );
         const float32 speedRatio = _settings._maxSpeed > 0.0f ? MathUtil::saturate( absSpeed / _settings._maxSpeed ) : 0.0f;
@@ -184,7 +184,7 @@ namespace sw
         return rate;
     }
 
-    float32 ArcadeVehicleMotor::computeSpeedCap() const
+    float32 KinematicVehicleMotor::computeSpeedCap() const
     {
         const bool bBoosting = isBoosting();
         float32    cap       = _settings._maxSpeed;
@@ -198,22 +198,22 @@ namespace sw
         return cap;
     }
 
-    float3 ArcadeVehicleMotor::computeForward() const
+    float3 KinematicVehicleMotor::computeForward() const
     {
         return float3{ MathUtil::sin( _yaw ), 0.0f, MathUtil::cos( _yaw ) };
     }
 
-    float32 ArcadeVehicleMotor::getForwardSpeed() const
+    float32 KinematicVehicleMotor::getForwardSpeed() const
     {
         return _velocity._x * MathUtil::sin( _yaw ) + _velocity._z * MathUtil::cos( _yaw );
     }
 
-    float32 ArcadeVehicleMotor::getLateralSpeed() const
+    float32 KinematicVehicleMotor::getLateralSpeed() const
     {
         return _velocity._x * MathUtil::cos( _yaw ) - _velocity._z * MathUtil::sin( _yaw );
     }
 
-    int32 ArcadeVehicleMotor::getDriftTier() const
+    int32 KinematicVehicleMotor::getDriftTier() const
     {
         int32 tier = 0;
         for ( int32 tierIndex = 0; tierIndex < kVehicleMiniTurboTierCount; ++tierIndex )
@@ -224,19 +224,19 @@ namespace sw
         return tier;
     }
 
-    float32 ArcadeVehicleMotor::sampleHeight( float32 x, float32 z ) const
+    float32 KinematicVehicleMotor::sampleHeight( float32 x, float32 z ) const
     {
         return _pGround != nullptr ? _pGround->sampleHeight( x, z ) : 0.0f;
     }
 
-    float32 ArcadeVehicleMotor::sampleSurfaceScale() const
+    float32 KinematicVehicleMotor::sampleSurfaceScale() const
     {
         if ( _pGround == nullptr )
             return 1.0f;
         return MathUtil::saturate( _pGround->sampleSpeedScale( _position._x, _position._z ) );
     }
 
-    void ArcadeVehicleMotor::updateForwardSpeed( const ArcadeVehicleInput& input, float32 deltaTime, float32& inoutForwardSpeed ) const
+    void KinematicVehicleMotor::updateForwardSpeed( const KinematicVehicleInput& input, float32 deltaTime, float32& inoutForwardSpeed ) const
     {
         const float32 cap      = computeSpeedCap();
         const float32 throttle = input._throttle;
@@ -249,7 +249,7 @@ namespace sw
         }
         else if ( throttle > 0.0f )
         {
-            if ( speed < -ArcadeVehicleMotorInternal::kStopEpsilon )
+            if ( speed < -KinematicVehicleMotorInternal::kStopEpsilon )
                 speed = MathUtil::min( 0.0f, speed + _settings._brakeDeceleration * throttle * deltaTime );
             else if ( speed < cap * throttle )
                 speed = MathUtil::min( cap * throttle, speed + _settings._acceleration * throttle * deltaTime );
@@ -258,7 +258,7 @@ namespace sw
         }
         else if ( throttle < 0.0f )
         {
-            if ( speed > ArcadeVehicleMotorInternal::kStopEpsilon )
+            if ( speed > KinematicVehicleMotorInternal::kStopEpsilon )
                 speed = MathUtil::max( 0.0f, speed + _settings._brakeDeceleration * throttle * deltaTime );
             else
             {
@@ -276,17 +276,17 @@ namespace sw
         inoutForwardSpeed = speed;
     }
 
-    void ArcadeVehicleMotor::updateDrift( const ArcadeVehicleInput& input, float32 forwardSpeed, float32 deltaTime )
+    void KinematicVehicleMotor::updateDrift( const KinematicVehicleInput& input, float32 forwardSpeed, float32 deltaTime )
     {
         if ( isDrifting() == false )
         {
-            const int32 steerSign   = ArcadeVehicleMotorInternal::signOf( input._steer );
+            const int32 steerSign   = KinematicVehicleMotorInternal::signOf( input._steer );
             const bool  bStartDrift = input._bDriftHeld != SW_FALSE && isAirborne() == false && steerSign != 0 && forwardSpeed >= _settings._driftMinSpeed;
             if ( bStartDrift )
             {
                 _driftDirection = steerSign;
                 _driftCharge    = 0.0f;
-                pushEvent( ArcadeVehicleEvent::Kind::DriftStarted, steerSign );
+                pushEvent( KinematicVehicleEvent::Kind::DriftStarted, steerSign );
             }
             return;
         }
@@ -304,7 +304,7 @@ namespace sw
         _driftCharge += deltaTime;
         const int32 tier = getDriftTier();
         if ( tier > previousTier )
-            pushEvent( ArcadeVehicleEvent::Kind::DriftTierReached, tier );
+            pushEvent( KinematicVehicleEvent::Kind::DriftTierReached, tier );
 
         _nitroGauge += _settings._nitroFillPerSecond * deltaTime;
         while ( _nitroGauge >= 1.0f )
@@ -316,24 +316,24 @@ namespace sw
             }
             _nitroGauge -= 1.0f;
             ++_nitroCount;
-            pushEvent( ArcadeVehicleEvent::Kind::NitroCharged, _nitroCount );
+            pushEvent( KinematicVehicleEvent::Kind::NitroCharged, _nitroCount );
         }
     }
 
-    void ArcadeVehicleMotor::endDrift( bool bReward )
+    void KinematicVehicleMotor::endDrift( bool bReward )
     {
         const int32 tier = bReward ? getDriftTier() : 0;
         _driftDirection  = 0;
         _driftCharge     = 0.0f;
-        pushEvent( ArcadeVehicleEvent::Kind::DriftEnded, tier );
+        pushEvent( KinematicVehicleEvent::Kind::DriftEnded, tier );
         if ( tier > 0 )
         {
-            pushEvent( ArcadeVehicleEvent::Kind::MiniTurbo, tier );
+            pushEvent( KinematicVehicleEvent::Kind::MiniTurbo, tier );
             startBoost( _settings._arrMiniTurboBoost[tier - 1], tier );
         }
     }
 
-    void ArcadeVehicleMotor::updateVertical( const ArcadeVehicleInput& input, float32 deltaTime )
+    void KinematicVehicleMotor::updateVertical( const KinematicVehicleInput& input, float32 deltaTime )
     {
         const float32 groundHeight = sampleHeight( _position._x, _position._z );
         if ( isAirborne() == false )
@@ -342,14 +342,14 @@ namespace sw
             {
                 _velocity._y = _settings._jumpSpeed;
                 _bAirborne   = SW_TRUE;
-                pushEvent( ArcadeVehicleEvent::Kind::Jumped, 0 );
+                pushEvent( KinematicVehicleEvent::Kind::Jumped, 0 );
             }
             else if ( _position._y - groundHeight > _settings._groundSnapDistance )
             {
                 // 턱 너머로 땅이 꺼졌다 — 앞으로 날아간다.
                 _velocity._y = 0.0f;
                 _bAirborne   = SW_TRUE;
-                pushEvent( ArcadeVehicleEvent::Kind::LeftGround, 0 );
+                pushEvent( KinematicVehicleEvent::Kind::LeftGround, 0 );
             }
             else
             {
@@ -365,19 +365,19 @@ namespace sw
             _position._y = groundHeight;
             _velocity._y = 0.0f;
             _bAirborne   = SW_FALSE;
-            pushEvent( ArcadeVehicleEvent::Kind::Landed, 0 );
+            pushEvent( KinematicVehicleEvent::Kind::Landed, 0 );
         }
     }
 
-    void ArcadeVehicleMotor::pushEvent( ArcadeVehicleEvent::Kind kind, int32 value )
+    void KinematicVehicleMotor::pushEvent( KinematicVehicleEvent::Kind kind, int32 value )
     {
-        ArcadeVehicleEvent event;
+        KinematicVehicleEvent event;
         event._kind  = kind;
         event._value = value;
         _eventBuffer.push( event );
     }
 
-    void ArcadeVehicleMotor::serializeState( StateIO& io )
+    void KinematicVehicleMotor::serializeState( StateIO& io )
     {
         io.value( _timer );
         io.value( _position );

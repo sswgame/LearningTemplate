@@ -31,7 +31,7 @@ namespace sw
 {
     /**
      * @class PhysicsCarComponent
-     * @brief 물리 차(동적 차체, `WheeledVehicleComponent`, 폰, 좌석)에 붙습니다. 의도는 아케이드 차와 말처럼 "가고 싶은 월드 방향" 이고, 차 방향으로
+     * @brief 물리 차(동적 차체, `WheeledVehicleComponent`, 폰, 좌석)에 붙습니다. 의도는 키네마틱 차(바디 없는 차)와 말처럼 "가고 싶은 월드 방향" 이고, 차 방향으로
      *        투영해서 앞 성분은 페달, 옆 성분은 조향으로 씁니다. 앞으로 가는 중에 뒤를 원하면 먼저 브레이크를 밟고, 거의 멈췄으면 후진합니다(`toCarInput`).
      * @details PrePhysics 틱에서 운전 입력을 기록해 두면 이번 물리 프레임에 반영된다. 핸드브레이크는 폰 스키마의 버튼(`_handBrakeButton`)으로 받는다.
      */

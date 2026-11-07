@@ -9,7 +9,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
-#include "GameFramework/Runtime/Character/Movement/ArcadeVehicleMotor.h"
+#include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
 
 namespace sw
 {
@@ -65,7 +65,7 @@ namespace sw
         void setDriftSide( int32 driftSide ) { _driftSide = driftSide; }
 
         /** @brief 이번 걸음의 입력을 계산합니다. @p trackDistance 는 차의 중심선 거리입니다. */
-        ArcadeVehicleInput computeInput( const KartTrack& track, const ArcadeVehicleMotor& motor, float32 trackDistance );
+        KinematicVehicleInput computeInput( const KartTrack& track, const KinematicVehicleMotor& motor, float32 trackDistance );
         /** @brief 지금 아이템을 써야 하는지 반환합니다. */
         bool shouldUseItem( const KartAIContext& context ) const;
 

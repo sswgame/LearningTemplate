@@ -4,8 +4,8 @@
  * @details 출발 격자와 카운트다운을 처리하고, 체크포인트를 순서대로 지나야 한 바퀴로 인정한다(지름길 방지). 바퀴 수와 중심선 진행 거리로 실시간 순위를 구하고,
  *          역주행을 감지하며, 랩 타임과 최고 기록을 남기고, 결승과 순위를 확정한다. 아이템 상자, 순위 가중 뽑기, 아이템 효과(바나나, 껍질, 유도, 부스터, 방어막, 1등 공격),
  *          맞았을 때의 회전과 감속, AI 운전과 러버밴딩, 고스트 기록도 이 클래스가 다룬다.
- *          차는 기반 `ArcadeVehicleMotor` 이고 트랙이 그 차의 땅이다. 경기는 고정 걸음(`FixedStepTimer`)으로 돌고 난수는 시드를 고정(`GameRandom`)하므로
- *          같은 입력이면 같은 경기가 나온다(리플레이, 락스텝). 차끼리의 충돌은 처리하지 않으며, 게임(물리)이 `ArcadeVehicleMotor::addImpulse` 로 넣는다.
+ *          차는 기반 `KinematicVehicleMotor` 이고 트랙이 그 차의 땅이다. 경기는 고정 걸음(`FixedStepTimer`)으로 돌고 난수는 시드를 고정(`GameRandom`)하므로
+ *          같은 입력이면 같은 경기가 나온다(리플레이, 락스텝). 차끼리의 충돌은 처리하지 않으며, 게임(물리)이 `KinematicVehicleMotor::addImpulse` 로 넣는다.
  *
  *          한 바퀴: 결승선(문 0)을 앞으로 지날 때 그 바퀴의 체크포인트(문 1..)를 **모두 차례로** 지났으면 바퀴가 오른다. 체크포인트를 뒤로 지나면 그 통과가
  *          취소되고, 결승선을 뒤로 넘으면 바퀴가 내려간다. 그 바퀴 기록도 지우므로 앞뒤로 넘나들며 짧은 랩 타임을 만들 수 없다.
@@ -30,7 +30,7 @@
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartAI.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
-#include "GameFramework/Runtime/Character/Movement/ArcadeVehicleMotor.h"
+#include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Match/MatchPhase.h"
 
@@ -74,8 +74,8 @@ namespace sw
     /** @brief 사람 차가 한 걸음에 받는 입력입니다. 눌림(`_bBoostPressed`, `_bJumpPressed`, `_bUseItem`)은 다음 걸음 하나에만 반영합니다. */
     struct KartRacerInput
     {
-        ArcadeVehicleInput _vehicle{};
-        uint8              _bUseItem{ SW_FALSE };
+        KinematicVehicleInput _vehicle{};
+        uint8                 _bUseItem{ SW_FALSE };
     };
 } // namespace sw
 
@@ -84,31 +84,31 @@ namespace sw
     /** @brief 차 한 대의 경기 상태입니다. */
     struct KartRacer
     {
-        ArcadeVehicleMotor    _motor{};
-        KartAIDriver          _ai{};
-        ArcadeVehicleSettings _baseSettings{};
-        KartRacerInput        _input{};
-        vector<float32>       _listLapTime{};
-        hashed_string         _itemID{}; ///< 들고 있는 아이템이다(비어 있으면 없다)
-        float3                _previousPosition{};
-        float32               _distance{ 0.0f }; ///< 중심선 거리
-        float32               _progress{ 0.0f }; ///< 순위 진행값
-        float32               _lapStartTime{ 0.0f };
-        float32               _bestLapTime{ 0.0f }; ///< 0 이면 아직 없다
-        float32               _finishTime{ 0.0f };  ///< 0 이면 결승 전이거나 들어오지 못한 것이다
-        Countdown             _spinTime{};          ///< 남아 있으면 맞아서 도는 중이다(조작 불가)
-        Countdown             _shieldTime{};
-        float32               _wrongWayTime{ 0.0f };
-        float32               _itemHeldTime{ 0.0f };
-        float32               _speedScale{ 1.0f };  ///< 러버밴딩 배율
-        int32                 _lap{ 0 };            ///< 지금 바퀴이다(0 은 출발선 전)
-        int32                 _nextCheckpoint{ 0 }; ///< 이번 바퀴에 지난 체크포인트 수
-        int32                 _place{ 0 };
-        int32                 _finishPlace{ 0 }; ///< 확정 순위이다(0 은 아직 정해지지 않음)
-        int32                 _lastBoostPad{ -1 };
-        uint8                 _bAI{ SW_FALSE };
-        uint8                 _bFinished{ SW_FALSE };
-        uint8                 _bWrongWay{ SW_FALSE };
+        KinematicVehicleMotor    _motor{};
+        KartAIDriver             _ai{};
+        KinematicVehicleSettings _baseSettings{};
+        KartRacerInput           _input{};
+        vector<float32>          _listLapTime{};
+        hashed_string            _itemID{}; ///< 들고 있는 아이템이다(비어 있으면 없다)
+        float3                   _previousPosition{};
+        float32                  _distance{ 0.0f }; ///< 중심선 거리
+        float32                  _progress{ 0.0f }; ///< 순위 진행값
+        float32                  _lapStartTime{ 0.0f };
+        float32                  _bestLapTime{ 0.0f }; ///< 0 이면 아직 없다
+        float32                  _finishTime{ 0.0f };  ///< 0 이면 결승 전이거나 들어오지 못한 것이다
+        Countdown                _spinTime{};          ///< 남아 있으면 맞아서 도는 중이다(조작 불가)
+        Countdown                _shieldTime{};
+        float32                  _wrongWayTime{ 0.0f };
+        float32                  _itemHeldTime{ 0.0f };
+        float32                  _speedScale{ 1.0f };  ///< 러버밴딩 배율
+        int32                    _lap{ 0 };            ///< 지금 바퀴이다(0 은 출발선 전)
+        int32                    _nextCheckpoint{ 0 }; ///< 이번 바퀴에 지난 체크포인트 수
+        int32                    _place{ 0 };
+        int32                    _finishPlace{ 0 }; ///< 확정 순위이다(0 은 아직 정해지지 않음)
+        int32                    _lastBoostPad{ -1 };
+        uint8                    _bAI{ SW_FALSE };
+        uint8                    _bFinished{ SW_FALSE };
+        uint8                    _bWrongWay{ SW_FALSE };
     };
 } // namespace sw
 
@@ -178,7 +178,7 @@ namespace sw
          */
         [[nodiscard]] bool initialize( const KartRaceSettings& settings, const KartTrack* pTrack, const KartItemCatalog* pItemCatalog, const ProjectileCatalog* pProjectileCatalog );
         /** @brief 차를 추가하고 차 번호를 반환합니다(`Waiting` 단계에서만 가능합니다). 실패하면 -1 입니다. 반환한 `KartRacer` 포인터는 다음 `addRacer` 까지만 유효합니다. */
-        int32 addRacer( const ArcadeVehicleSettings& vehicleSettings, bool bAI );
+        int32 addRacer( const KinematicVehicleSettings& vehicleSettings, bool bAI );
         void  setRacerAI( int32 racer, const KartAISettings& settings );
         /** @brief 차를 출발 격자에 세우고 카운트다운을 시작합니다. 차가 없으면 아무것도 하지 않습니다. */
         void start();
@@ -191,7 +191,7 @@ namespace sw
 
         /**
          * @brief 차를 멈춰 세운 채 옮깁니다(코스 밖이나 낙사 구조, 테스트용). 옮겨도 문을 지난 것으로 치지 않습니다.
-         * @details 드리프트는 보상 없이 끊고, 부스트와 니트로는 남긴다(`ArcadeVehicleMotor::reset` 은 니트로까지 비운다).
+         * @details 드리프트는 보상 없이 끊고, 부스트와 니트로는 남긴다(`KinematicVehicleMotor::reset` 은 니트로까지 비운다).
          */
         void placeRacer( int32 racer, const float3& position, float32 yaw );
         /** @brief 차 @p racer 의 입력을 @p pGhost 에 기록합니다(빌려 쓰는 포인터). 출발 위치에서 기록을 시작하고 결승에서 멈춥니다. */
@@ -232,14 +232,14 @@ namespace sw
         bool isValidRacer( int32 racer ) const { return 0 <= racer && racer < static_cast<int32>( _listRacer.size() ); }
         bool isKnownItem( const hashed_string& itemID ) const; ///< 빈 id 이거나 카탈로그에 있는 아이템인지 반환한다(상태 읽기에서 쓴다)
         /** @brief 날거나 놓이는 아이템 @p item 의 탄 정의입니다. 탄 카탈로그가 없거나 그 탄이 없거나 탄을 쓰지 않는 종류면 nullptr 입니다. */
-        const ProjectileDef* findItemProjectile( const KartItemDef& item ) const;
-        ArcadeVehicleInput   resolveInput( int32 racer, bool& outUseItem );
-        void                 updateProgress( int32 racer );
-        void                 completeLap( int32 racer );
-        void                 finishRacer( int32 racer );
-        float32              computeProgress( const KartRacer& kart ) const;
-        void                 updateItemBoxes( float32 deltaTime );
-        void                 updateProjectiles( float32 deltaTime );
+        const ProjectileDef*  findItemProjectile( const KartItemDef& item ) const;
+        KinematicVehicleInput resolveInput( int32 racer, bool& outUseItem );
+        void                  updateProgress( int32 racer );
+        void                  completeLap( int32 racer );
+        void                  finishRacer( int32 racer );
+        float32               computeProgress( const KartRacer& kart ) const;
+        void                  updateItemBoxes( float32 deltaTime );
+        void                  updateProjectiles( float32 deltaTime );
         /** @brief 1등 공격이 터집니다. 범위는 탄의 폭발 반지름(`ProjectileState::_blastRadius`)이고 맞은 차의 반응은 @p def 입니다. */
         void  explode( const ProjectileState& projectile, const KartItemDef& def );
         int32 pickRedShellTarget( int32 owner ) const;

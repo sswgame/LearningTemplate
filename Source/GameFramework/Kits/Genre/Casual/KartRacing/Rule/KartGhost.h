@@ -2,7 +2,7 @@
  * @file KartGhost.h
  * @brief 타임어택 고스트를 구현합니다. 고정 걸음마다 입력을 양자화해 기록하고, 같은 차와 같은 트랙에서 같은 규칙으로 다시 돌려 같은 경로를 냅니다.
  * @details 위치는 기록하지 않고 **입력만** 기록한다(한 걸음에 3바이트). 다시 돌려도 같은 경로가 나오는 이유는 세 가지이다.
- *          첫째, 차(`ArcadeVehicleMotor`)는 고정 걸음이고 결정적이다. 둘째, 기록하는 쪽(`KartRace`)도 그 차에 **양자화한 입력**을 넣는다(`quantizeInput`).
+ *          첫째, 차(`KinematicVehicleMotor`)는 고정 걸음이고 결정적이다. 둘째, 기록하는 쪽(`KartRace`)도 그 차에 **양자화한 입력**을 넣는다(`quantizeInput`).
  *          셋째, 차에 손대는 트랙 규칙(부스트 패드)을 `KartGhostPlayer` 가 같은 순서로 되풀이한다.
  *          아이템과 다른 차와의 충돌은 고스트에 없다. 타임어택은 혼자 달리기 때문이다.
  *          같은 프레임 형식(`writeFrame`, `readFrame`)은 락스텝 넷 게임이 입력을 실어 보낼 때도 쓴다.
@@ -14,7 +14,7 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Movement/ArcadeVehicleMotor.h"
+#include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
 
 namespace sw
 {
@@ -48,10 +48,10 @@ namespace sw
 
         KartGhost();
 
-        static KartGhostFrame     encodeInput( const ArcadeVehicleInput& input, bool bUseItem = false );
-        static ArcadeVehicleInput decodeInput( const KartGhostFrame& frame );
+        static KartGhostFrame        encodeInput( const KinematicVehicleInput& input, bool bUseItem = false );
+        static KinematicVehicleInput decodeInput( const KartGhostFrame& frame );
         /** @brief 기록했다가 되돌린 것과 똑같은 입력을 반환합니다. 기록하는 차는 이 입력으로 달립니다. */
-        static ArcadeVehicleInput quantizeInput( const ArcadeVehicleInput& input ) { return decodeInput( encodeInput( input ) ); }
+        static KinematicVehicleInput quantizeInput( const KinematicVehicleInput& input ) { return decodeInput( encodeInput( input ) ); }
         /** @brief 프레임 하나를 씁니다. 축이 -127..127 밖이면(-128) 아무것도 쓰지 않고 false 입니다. */
         [[nodiscard]] static bool writeFrame( BitWriter& writer, const KartGhostFrame& frame );
         /** @brief 프레임 하나를 읽습니다. 비트가 모자라거나 축이 범위 밖이면 false 입니다. */
@@ -59,7 +59,7 @@ namespace sw
 
         /** @brief 기록을 비우고 출발 위치, 방향(라디안), 걸음 크기를 설정합니다. */
         void begin( const float3& startPosition, float32 startYaw, float32 step );
-        void record( const ArcadeVehicleInput& input, bool bUseItem = false );
+        void record( const KinematicVehicleInput& input, bool bUseItem = false );
         void setFinishTime( float32 finishTime ) { _finishTime = finishTime; }
 
         /** @brief 바이트로 씁니다(세이브와 서버 순위표용). 프레임 하나라도 쓰지 못하면(`writeFrame`) false 이고 @p outBuffer 는 쓰면 안 됩니다. */
@@ -95,22 +95,22 @@ namespace sw
         KartGhostPlayer();
 
         /** @brief @p ghost(빌려 쓰는 포인터)를 처음부터 돌릴 준비를 합니다. */
-        void initialize( const KartGhost* pGhost, const ArcadeVehicleSettings& settings, const KartTrack* pTrack );
+        void initialize( const KartGhost* pGhost, const KinematicVehicleSettings& settings, const KartTrack* pTrack );
         /** @brief 한 걸음 진행합니다. 기록이 끝났으면 false 를 반환합니다. */
         bool step();
         /** @brief 프레임 시간만큼(고정 걸음으로 나눠) 진행하고, 진행한 걸음 수를 반환합니다. */
         int32 advance( float32 frameTime );
 
-        bool                      isFinished() const;
-        int32                     getFrameIndex() const { return _frameIndex; }
-        const ArcadeVehicleMotor& getMotor() const { return _motor; }
+        bool                         isFinished() const;
+        int32                        getFrameIndex() const { return _frameIndex; }
+        const KinematicVehicleMotor& getMotor() const { return _motor; }
 
     private:
-        ArcadeVehicleMotor _motor;
-        FixedStepTimer     _timer;
-        const KartGhost*   _pGhost;
-        const KartTrack*   _pTrack;
-        int32              _frameIndex;
-        int32              _lastBoostPad;
+        KinematicVehicleMotor _motor;
+        FixedStepTimer        _timer;
+        const KartGhost*      _pGhost;
+        const KartTrack*      _pTrack;
+        int32                 _frameIndex;
+        int32                 _lastBoostPad;
     };
 } // namespace sw

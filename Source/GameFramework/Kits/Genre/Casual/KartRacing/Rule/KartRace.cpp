@@ -191,7 +191,7 @@ namespace sw
         return _pProjectileCatalog != nullptr && item.isProjectile() ? _pProjectileCatalog->find( item._projectileID ) : nullptr;
     }
 
-    int32 KartRace::addRacer( const ArcadeVehicleSettings& vehicleSettings, bool bAI )
+    int32 KartRace::addRacer( const KinematicVehicleSettings& vehicleSettings, bool bAI )
     {
         const bool bCannotAddRacer = _phase != MatchPhase::Waiting || _pTrack == nullptr || _pTrack->isValid() == false;
         if ( bCannotAddRacer )
@@ -295,10 +295,10 @@ namespace sw
         const int32 racerCount = static_cast<int32>( _listRacer.size() );
         for ( int32 racer = 0; racer < racerCount; ++racer )
         {
-            KartRacer&               kart     = _listRacer[static_cast<size_t>( racer )];
-            bool                     bUseItem = false;
-            const ArcadeVehicleInput input    = resolveInput( racer, bUseItem );
-            const bool               bRecord  = _pGhost != nullptr && racer == _ghostRacer && kart._bFinished == SW_FALSE;
+            KartRacer&                  kart     = _listRacer[static_cast<size_t>( racer )];
+            bool                        bUseItem = false;
+            const KinematicVehicleInput input    = resolveInput( racer, bUseItem );
+            const bool                  bRecord  = _pGhost != nullptr && racer == _ghostRacer && kart._bFinished == SW_FALSE;
             if ( bRecord )
                 _pGhost->record( input, bUseItem );
             if ( bUseItem )
@@ -325,14 +325,14 @@ namespace sw
         resolveRaceEnd();
     }
 
-    ArcadeVehicleInput KartRace::resolveInput( int32 racer, bool& outUseItem )
+    KinematicVehicleInput KartRace::resolveInput( int32 racer, bool& outUseItem )
     {
         KartRacer& kart = _listRacer[static_cast<size_t>( racer )];
         outUseItem      = false;
         if ( kart._spinTime.isActive() )
         {
             kart._input = KartRacerInput{}; // 도는 동안의 눌림은 버린다
-            return ArcadeVehicleInput{};
+            return KinematicVehicleInput{};
         }
         if ( kart._bAI != SW_FALSE )
         {
@@ -353,7 +353,7 @@ namespace sw
             return kart._ai.computeInput( *_pTrack, kart._motor, kart._distance );
         }
         // 사람은 양자화한 입력으로 달린다(고스트와 락스텝이 같은 경로를 내게 하려는 것이다).
-        const ArcadeVehicleInput input      = KartGhost::quantizeInput( kart._input._vehicle );
+        const KinematicVehicleInput input   = KartGhost::quantizeInput( kart._input._vehicle );
         outUseItem                          = kart._input._bUseItem != SW_FALSE;
         kart._input._vehicle._bBoostPressed = SW_FALSE;
         kart._input._vehicle._bJumpPressed  = SW_FALSE;
@@ -790,8 +790,8 @@ namespace sw
         const float32 scale = computeRubberBandScale( racer );
         if ( scale == kart._speedScale )
             return;
-        kart._speedScale               = scale;
-        ArcadeVehicleSettings settings = kart._baseSettings;
+        kart._speedScale                  = scale;
+        KinematicVehicleSettings settings = kart._baseSettings;
         settings._maxSpeed *= scale;
         kart._motor.setSettings( settings );
     }
@@ -880,7 +880,7 @@ namespace sw
             if ( io.isOk() == false || io.check( isKnownItem( kart._itemID ) ) == false )
                 return;
             // 러버밴딩 배율이 바꾼 최고 속도를 기본 설정에서 다시 계산한다(`updateRubberBand` 와 같은 식이다).
-            ArcadeVehicleSettings settings = kart._baseSettings;
+            KinematicVehicleSettings settings = kart._baseSettings;
             settings._maxSpeed *= kart._speedScale;
             kart._motor.setSettings( settings );
         }

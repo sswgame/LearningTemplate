@@ -321,7 +321,7 @@ namespace sw
         return -1;
     }
 
-    bool KartTrack::applyBoostPad( ArcadeVehicleMotor& motor, int32& inoutLastPad ) const
+    bool KartTrack::applyBoostPad( KinematicVehicleMotor& motor, int32& inoutLastPad ) const
     {
         const int32 pad  = motor.isAirborne() ? -1 : findBoostPadAt( motor.getPosition() );
         const bool  bNew = pad >= 0 && pad != inoutLastPad;

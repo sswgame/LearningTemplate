@@ -40,7 +40,7 @@ namespace sw
     {
     }
 
-    KartGhostFrame KartGhost::encodeInput( const ArcadeVehicleInput& input, bool bUseItem )
+    KartGhostFrame KartGhost::encodeInput( const KinematicVehicleInput& input, bool bUseItem )
     {
         KartGhostFrame frame;
         frame._throttle = KartGhostInternal::encodeAxis( input._throttle );
@@ -56,9 +56,9 @@ namespace sw
         return frame;
     }
 
-    ArcadeVehicleInput KartGhost::decodeInput( const KartGhostFrame& frame )
+    KinematicVehicleInput KartGhost::decodeInput( const KartGhostFrame& frame )
     {
-        ArcadeVehicleInput input;
+        KinematicVehicleInput input;
         input._throttle      = KartGhostInternal::decodeAxis( frame._throttle );
         input._steer         = KartGhostInternal::decodeAxis( frame._steer );
         input._bDriftHeld    = ( frame._buttons & kButtonDrift ) != 0 ? SW_TRUE : SW_FALSE;
@@ -100,7 +100,7 @@ namespace sw
         _finishTime    = 0.0f;
     }
 
-    void KartGhost::record( const ArcadeVehicleInput& input, bool bUseItem )
+    void KartGhost::record( const KinematicVehicleInput& input, bool bUseItem )
     {
         _listFrame.push_back( encodeInput( input, bUseItem ) );
     }
@@ -179,7 +179,7 @@ namespace sw
     {
     }
 
-    void KartGhostPlayer::initialize( const KartGhost* pGhost, const ArcadeVehicleSettings& settings, const KartTrack* pTrack )
+    void KartGhostPlayer::initialize( const KartGhost* pGhost, const KinematicVehicleSettings& settings, const KartTrack* pTrack )
     {
         _pGhost       = pGhost;
         _pTrack       = pTrack;

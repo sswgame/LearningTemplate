@@ -14,9 +14,9 @@ namespace sw
     {
     }
 
-    ArcadeVehicleInput KartAIDriver::computeInput( const KartTrack& track, const ArcadeVehicleMotor& motor, float32 trackDistance )
+    KinematicVehicleInput KartAIDriver::computeInput( const KartTrack& track, const KinematicVehicleMotor& motor, float32 trackDistance )
     {
-        ArcadeVehicleInput input;
+        KinematicVehicleInput input;
         if ( track.isValid() == false )
             return input;
         const float32 speed     = MathUtil::max( 0.0f, motor.getForwardSpeed() );

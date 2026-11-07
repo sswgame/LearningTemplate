@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Vehicle/ArcadeVehicleComponent.h"
+#include "GameFramework/Runtime/Gameplay/Vehicle/KinematicVehicleComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -18,7 +18,7 @@ namespace sw
 {
     namespace
     {
-        struct ArcadeVehicleComponentInternal
+        struct KinematicVehicleComponentInternal
         {
             /** @brief 땅 광선을 차 위 몇 미터에서 쏘는지 나타냅니다. */
             static constexpr float32 kProbeAbove = 2.0f;
@@ -30,16 +30,16 @@ namespace sw
 
 namespace sw
 {
-    ArcadeVehicleComponent::PhysicsGround::PhysicsGround()
+    KinematicVehicleComponent::PhysicsGround::PhysicsGround()
         : _pManager{ nullptr }
         , _fallbackHeight{ 0.0f }
         , _probeTop{ 0.0f }
     {
     }
 
-    float32 ArcadeVehicleComponent::PhysicsGround::sampleHeight( float32 x, float32 z ) const
+    float32 KinematicVehicleComponent::PhysicsGround::sampleHeight( float32 x, float32 z ) const
     {
-        using Internal                     = ArcadeVehicleComponentInternal;
+        using Internal                     = KinematicVehicleComponentInternal;
         const IPhysicsQueryScene3D* pScene = _pManager != nullptr ? _pManager->getSubsystem<sw::ScenePhysics>().findScene3D() : nullptr;
         if ( pScene == nullptr )
             return _fallbackHeight;
@@ -50,7 +50,7 @@ namespace sw
         return _probeTop - hit._distance;
     }
 
-    ArcadeVehicleComponent::ArcadeVehicleComponent()
+    KinematicVehicleComponent::KinematicVehicleComponent()
         : _driftButton{ "Drift" }
         , _boostButton{ "Boost" }
         , _jumpButton{ "Jump" }
@@ -71,9 +71,9 @@ namespace sw
         setCanEverTick( true );
     }
 
-    ArcadeVehicleSettings ArcadeVehicleComponent::makeSettings() const
+    KinematicVehicleSettings KinematicVehicleComponent::makeSettings() const
     {
-        ArcadeVehicleSettings settings;
+        KinematicVehicleSettings settings;
         settings._maxSpeed            = _maxSpeed;
         settings._acceleration        = _acceleration;
         settings._brakeDeceleration   = _brakeDeceleration;
@@ -83,7 +83,7 @@ namespace sw
         return settings;
     }
 
-    void ArcadeVehicleComponent::onBeginPlay()
+    void KinematicVehicleComponent::onBeginPlay()
     {
         Component::onBeginPlay();
         setTickGroup( TickGroup::PrePhysics );
@@ -101,13 +101,13 @@ namespace sw
         _motor.reset( start, pRoot != nullptr ? pRoot->getLocalRotation()._y : 0.0f );
     }
 
-    ArcadeVehicleInput ArcadeVehicleComponent::toVehicleInput( const ControlIntent& intent, float32 vehicleYaw, int32 driftIndex, int32 boostIndex, int32 jumpIndex )
+    KinematicVehicleInput KinematicVehicleComponent::toVehicleInput( const ControlIntent& intent, float32 vehicleYaw, int32 driftIndex, int32 boostIndex, int32 jumpIndex )
     {
         // 가고 싶은 월드 방향을 차 기준으로 바꾼다. 앞 성분은 페달, 옆 성분은 조향이다. 요가 0 이면 앞은 +Z 이고 오른쪽은 +X 이다.
-        const float3       worldMove = intent.computeWorldMove();
-        const float32      sinYaw    = MathUtil::sin( vehicleYaw );
-        const float32      cosYaw    = MathUtil::cos( vehicleYaw );
-        ArcadeVehicleInput input{};
+        const float3          worldMove = intent.computeWorldMove();
+        const float32         sinYaw    = MathUtil::sin( vehicleYaw );
+        const float32         cosYaw    = MathUtil::cos( vehicleYaw );
+        KinematicVehicleInput input{};
         input._throttle      = MathUtil::clamp( worldMove._x * sinYaw + worldMove._z * cosYaw, -1.0f, 1.0f );
         input._steer         = MathUtil::clamp( worldMove._x * cosYaw - worldMove._z * sinYaw, -1.0f, 1.0f );
         input._bDriftHeld    = intent.isDown( driftIndex ) ? SW_TRUE : SW_FALSE;
@@ -116,18 +116,18 @@ namespace sw
         return input;
     }
 
-    void ArcadeVehicleComponent::onTick( float32 deltaTime )
+    void KinematicVehicleComponent::onTick( float32 deltaTime )
     {
-        using Internal = ArcadeVehicleComponentInternal;
+        using Internal = KinematicVehicleComponentInternal;
         Component::onTick( deltaTime );
         GameObject*          pOwner = getOwner();
         const PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         SceneComponent*      pRoot  = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pRoot == nullptr )
             return;
-        const ControlIntent      intent = pPawn != nullptr ? pPawn->getIntent() : ControlIntent{};
-        const ArcadeVehicleInput input  = toVehicleInput( intent, _motor.getYaw(), _driftIndex, _boostIndex, _jumpIndex );
-        _ground._probeTop               = _motor.getPosition()._y + Internal::kProbeAbove;
+        const ControlIntent         intent = pPawn != nullptr ? pPawn->getIntent() : ControlIntent{};
+        const KinematicVehicleInput input  = toVehicleInput( intent, _motor.getYaw(), _driftIndex, _boostIndex, _jumpIndex );
+        _ground._probeTop                  = _motor.getPosition()._y + Internal::kProbeAbove;
         (void)_motor.advance( input, deltaTime );
         _listFrameEvent.clear();
         _motor.pollEvents( _listFrameEvent );

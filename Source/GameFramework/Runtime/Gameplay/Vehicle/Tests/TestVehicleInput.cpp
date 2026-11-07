@@ -6,10 +6,10 @@
 #include "Engine/Physics/Component/WheeledVehicleComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/ArcadeVehicleComponent.h"
+#include "GameFramework/Runtime/Gameplay/Vehicle/KinematicVehicleComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/PhysicsCarComponent.h"
 
-// VehicleInputTest — 의도(가고 싶은 월드 방향)를 페달 · 조향으로 바꾸는 규칙(물리 차 · 아케이드 차)과 바퀴 차 서술자. 물리 씬 없이 돈다(nogpu). 실제 주행은 시나리오 game.empty.vehicles 가 본다.
+// VehicleInputTest — 의도(가고 싶은 월드 방향)를 페달 · 조향으로 바꾸는 규칙(물리 차 · 키네마틱 차(바디 없는 차))과 바퀴 차 서술자. 물리 씬 없이 돈다(nogpu). 실제 주행은 시나리오 game.empty.vehicles 가 본다.
 
 using namespace sw;
 
@@ -56,20 +56,20 @@ SW_TEST_CASE( VehicleInputTest, PhysicsCarProjectsOnTheCarHeading )
     SW_EXPECT_TRUE( MathUtil::abs( input._right + 1.0f ) < 1.0e-4f ); // +X 를 보는 차에 +Z 는 왼쪽이다
 }
 
-/** @brief [VehicleInputTest] 아케이드 차: 요를 따라 앞 · 옆으로 투영하고 버튼을 옮긴다 */
-SW_TEST_CASE( VehicleInputTest, ArcadeCarProjectsOnYawAndCarriesButtons )
+/** @brief [VehicleInputTest] 키네마틱 차(바디 없는 차): 요를 따라 앞 · 옆으로 투영하고 버튼을 옮긴다 */
+SW_TEST_CASE( VehicleInputTest, KinematicCarProjectsOnYawAndCarriesButtons )
 {
     ControlIntent intent = Util::makeMove( 0.0f, 1.0f );
     intent.setButton( 0, true, false );
     intent.setButton( 1, true, true );
-    const ArcadeVehicleInput straight = ArcadeVehicleComponent::toVehicleInput( intent, 0.0f, 0, 1, -1 );
+    const KinematicVehicleInput straight = KinematicVehicleComponent::toVehicleInput( intent, 0.0f, 0, 1, -1 );
     SW_EXPECT_TRUE( MathUtil::abs( straight._throttle - 1.0f ) < 1.0e-4f );
     SW_EXPECT_TRUE( MathUtil::abs( straight._steer ) < 1.0e-4f );
     SW_EXPECT_EQUAL( SW_TRUE, static_cast<uint8>( straight._bDriftHeld ) );
     SW_EXPECT_EQUAL( SW_TRUE, static_cast<uint8>( straight._bBoostPressed ) );
     SW_EXPECT_EQUAL( SW_FALSE, static_cast<uint8>( straight._bJumpPressed ) );
 
-    const ArcadeVehicleInput turned = ArcadeVehicleComponent::toVehicleInput( intent, MathUtil::kPi * 0.5f, 0, 1, -1 );
+    const KinematicVehicleInput turned = KinematicVehicleComponent::toVehicleInput( intent, MathUtil::kPi * 0.5f, 0, 1, -1 );
     SW_EXPECT_TRUE( MathUtil::abs( turned._throttle ) < 1.0e-4f );
     SW_EXPECT_TRUE( MathUtil::abs( turned._steer + 1.0f ) < 1.0e-4f );
 }

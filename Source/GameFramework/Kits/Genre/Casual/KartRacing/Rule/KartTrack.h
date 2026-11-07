@@ -1,7 +1,7 @@
 /**
  * @file KartTrack.h
  * @brief 카트 트랙을 정의합니다. 닫힌 중심선(Catmull-Rom 보간과 누적 거리 테이블), 폭, 체크포인트 문(지름길 방지), 아이템 상자, 부스트 패드, 오프로드 구간과 XML 카탈로그를 다룹니다.
- * @details 좌표는 기반 `ArcadeVehicleMotor` 와 같다. +Y 가 위이고, 요 0 이 +Z 이며, 오른쪽은 (tz, 0, -tx) 이다. 트랙 위의 위치는 "중심선 거리(0..길이) + 옆 비킴(오른쪽 +)" 으로 나타낸다.
+ * @details 좌표는 기반 `KinematicVehicleMotor` 와 같다. +Y 가 위이고, 요 0 이 +Z 이며, 오른쪽은 (tz, 0, -tx) 이다. 트랙 위의 위치는 "중심선 거리(0..길이) + 옆 비킴(오른쪽 +)" 으로 나타낸다.
  *          트랙은 `IVehicleGround` 이므로 차가 그대로 밟는다. 높이는 중심선 높이이고, 폭 밖과 오프로드 구간은 속도 배율이 1 보다 작다.
  *          결승선은 거리 0 이고 체크포인트는 그 사이의 거리이다. 문은 중심선에 직각인 선분이므로, 안쪽 풀밭을 가로지르는 지름길은 문을 지나지 않는다.
  */
@@ -18,7 +18,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Movement/ArcadeVehicleMotor.h"
+#include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
 
@@ -228,7 +228,7 @@ namespace sw
          * @brief 부스트 패드 규칙입니다. 땅에 붙은 차가 패드에 **새로 올라서면** 부스트를 겁니다(같은 패드 위에 있는 동안은 한 번만 겁니다).
          * @details 경기와 고스트 재생이 이 함수를 같은 순서(차 걸음 다음)로 호출하므로 경로가 같아진다. 부스트를 걸었으면 true 를 반환한다.
          */
-        [[nodiscard]] bool applyBoostPad( ArcadeVehicleMotor& motor, int32& inoutLastPad ) const;
+        [[nodiscard]] bool applyBoostPad( KinematicVehicleMotor& motor, int32& inoutLastPad ) const;
         /** @brief 길 폭 안에 있는지 반환합니다. */
         bool isOnRoad( const float3& position ) const;
 

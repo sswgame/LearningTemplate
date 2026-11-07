@@ -1,6 +1,6 @@
 /**
- * @file ArcadeVehicleMotor.h
- * @brief 물리 엔진 없이 움직이는 아케이드 차량의 몸을 정의합니다.
+ * @file KinematicVehicleMotor.h
+ * @brief 물리 엔진 없이 움직이는 물리 바디 없이 힘을 적분하는 탈것의 몸을 정의합니다.
  * @details XZ 평면과 높이만으로 가속, 브레이크, 후진, 속도에 따라 둔해지는 조향, 옆 미끄러짐(접지), 드리프트, 미니터보 단계, 부스트, 니트로 게이지,
  *          오프로드 감속, 점프와 착지를 계산한다.
  *          카트라이더, 마리오카트, 배틀로얄 차량, 레드 데드의 마차가 같은 몸을 쓴다.
@@ -54,7 +54,7 @@ namespace sw
     constexpr int32 kVehicleMiniTurboTierCount = 3;
 
     /** @brief 차 한 종류의 수치입니다. 속도는 월드 단위/초, 조향은 라디안/초입니다. */
-    struct ArcadeVehicleSettings
+    struct KinematicVehicleSettings
     {
         float32 _maxSpeed{ 30.0f };
         float32 _acceleration{ 18.0f };
@@ -90,7 +90,7 @@ namespace sw
 namespace sw
 {
     /** @brief 한 걸음의 입력입니다. */
-    struct ArcadeVehicleInput
+    struct KinematicVehicleInput
     {
         float32 _throttle{ 0.0f }; ///< -1(브레이크, 후진)..1
         float32 _steer{ 0.0f };    ///< -1(왼쪽)..1(오른쪽)
@@ -103,7 +103,7 @@ namespace sw
 namespace sw
 {
     /** @brief 차에 일어난 일(이벤트)입니다. */
-    struct ArcadeVehicleEvent
+    struct KinematicVehicleEvent
     {
         enum class Kind : uint8
         {
@@ -126,8 +126,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ArcadeVehicleMotor
-     * @brief 아케이드 차량의 몸입니다. 고정 걸음(권장 1/60)으로 `update` 를 부르거나 `advance` 에 프레임 시간을 넘깁니다.
+     * @class KinematicVehicleMotor
+     * @brief 물리 바디 없이 힘을 적분하는 탈것의 몸입니다. 고정 걸음(권장 1/60)으로 `update` 를 부르거나 `advance` 에 프레임 시간을 넘깁니다.
      * @details `advance` 는 안의 `FixedStepTimer` 가 프레임 시간을 고정 걸음으로 나누므로 프레임 속도와 상관없이 같은 결과가 나온다.
      *          한 걸음은 다음 순서로 진행한다.
      *          땅 배율, 앞 속도(가속, 브레이크, 후진, 관성, 부스트, 상한), 드리프트, 조향(yaw)을 차례로 처리한다.
@@ -135,12 +135,12 @@ namespace sw
      *          드리프트는 버튼을 누른 채 조향하면 그 방향으로 시작한다. 시간이 쌓이면 미니터보 단계가 오르고, 버튼을 떼면 단계만큼 부스트한다.
      *          드리프트하는 동안 니트로 게이지가 차서 1 이 될 때마다 니트로가 하나 생기며(최대 `_maxNitroCount`), `_bBoostPressed` 로 쓴다.
      */
-    class SW_GF_API ArcadeVehicleMotor
+    class SW_GF_API KinematicVehicleMotor
     {
     public:
-        ArcadeVehicleMotor();
+        KinematicVehicleMotor();
 
-        void setSettings( const ArcadeVehicleSettings& settings ) { _settings = settings; }
+        void setSettings( const KinematicVehicleSettings& settings ) { _settings = settings; }
         /** @brief 땅을 정합니다. 빌려 쓰며, nullptr 이면 높이 0 의 평평한 길입니다. */
         void setGround( const IVehicleGround* pGround ) { _pGround = pGround; }
         /** @brief 위치와 방향을 두고 멈춘 상태로 돌립니다. 드리프트, 부스트, 니트로도 비웁니다. */
@@ -154,10 +154,10 @@ namespace sw
         void startBoost( float32 duration, int32 source = -1 );
 
         /** @brief 한 걸음 나아갑니다. */
-        void update( const ArcadeVehicleInput& input, float32 deltaTime );
+        void update( const KinematicVehicleInput& input, float32 deltaTime );
         /** @brief 프레임 시간을 고정 걸음으로 나눠 나아갑니다. 눌림 입력은 첫 걸음에만 주며, 진행한 걸음 수를 반환합니다. */
-        int32 advance( const ArcadeVehicleInput& input, float32 frameTime );
-        void  pollEvents( vector<ArcadeVehicleEvent>& outListEvent );
+        int32 advance( const KinematicVehicleInput& input, float32 frameTime );
+        void  pollEvents( vector<KinematicVehicleEvent>& outListEvent );
         /** @brief 쌓인 알림을 꺼내지 않고 버립니다. 알림을 쓰지 않는 쪽이 받을 목록을 만들어 복사하지 않도록 둔 함수입니다. */
         void discardEvents() { _eventBuffer.clear(); }
 
@@ -167,22 +167,22 @@ namespace sw
         float32 computeSpeedCap() const;
         float3  computeForward() const;
 
-        const float3&                getPosition() const { return _position; }
-        const float3&                getVelocity() const { return _velocity; }
-        float32                      getYaw() const { return _yaw; }
-        float32                      getForwardSpeed() const;
-        float32                      getLateralSpeed() const;
-        bool                         isDrifting() const { return _driftDirection != 0; }
-        int32                        getDriftDirection() const { return _driftDirection; }
-        float32                      getDriftCharge() const { return _driftCharge; }
-        int32                        getDriftTier() const;
-        float32                      getBoostTime() const { return _boost.getRemaining(); }
-        bool                         isBoosting() const { return _boost.isActive(); }
-        bool                         isAirborne() const { return _bAirborne != SW_FALSE; }
-        float32                      getNitroGauge() const { return _nitroGauge; }
-        int32                        getNitroCount() const { return _nitroCount; }
-        const ArcadeVehicleSettings& getSettings() const { return _settings; }
-        FixedStepTimer&              getTimer() { return _timer; }
+        const float3&                   getPosition() const { return _position; }
+        const float3&                   getVelocity() const { return _velocity; }
+        float32                         getYaw() const { return _yaw; }
+        float32                         getForwardSpeed() const;
+        float32                         getLateralSpeed() const;
+        bool                            isDrifting() const { return _driftDirection != 0; }
+        int32                           getDriftDirection() const { return _driftDirection; }
+        float32                         getDriftCharge() const { return _driftCharge; }
+        int32                           getDriftTier() const;
+        float32                         getBoostTime() const { return _boost.getRemaining(); }
+        bool                            isBoosting() const { return _boost.isActive(); }
+        bool                            isAirborne() const { return _bAirborne != SW_FALSE; }
+        float32                         getNitroGauge() const { return _nitroGauge; }
+        int32                           getNitroCount() const { return _nitroCount; }
+        const KinematicVehicleSettings& getSettings() const { return _settings; }
+        FixedStepTimer&                 getTimer() { return _timer; }
 
         /**
          * @brief 고정 스텝의 남은 시간, 위치, 속도, 요, 드리프트, 부스트, 니트로, 공중 여부를 씁니다. 설정과 지면 포인터는 싣지 않고, 알림은 읽을 때 비웁니다.
@@ -193,25 +193,25 @@ namespace sw
     private:
         float32 sampleHeight( float32 x, float32 z ) const;
         float32 sampleSurfaceScale() const;
-        void    updateForwardSpeed( const ArcadeVehicleInput& input, float32 deltaTime, float32& inoutForwardSpeed ) const;
-        void    updateDrift( const ArcadeVehicleInput& input, float32 forwardSpeed, float32 deltaTime );
+        void    updateForwardSpeed( const KinematicVehicleInput& input, float32 deltaTime, float32& inoutForwardSpeed ) const;
+        void    updateDrift( const KinematicVehicleInput& input, float32 forwardSpeed, float32 deltaTime );
         void    endDrift( bool bReward );
-        void    updateVertical( const ArcadeVehicleInput& input, float32 deltaTime );
-        void    pushEvent( ArcadeVehicleEvent::Kind kind, int32 value );
+        void    updateVertical( const KinematicVehicleInput& input, float32 deltaTime );
+        void    pushEvent( KinematicVehicleEvent::Kind kind, int32 value );
 
     private:
-        ArcadeVehicleSettings           _settings;
-        EventBuffer<ArcadeVehicleEvent> _eventBuffer;
-        FixedStepTimer                  _timer;
-        const IVehicleGround*           _pGround;
-        float3                          _position;
-        float3                          _velocity; ///< 월드 속도(_y 는 위아래)
-        float32                         _yaw;
-        float32                         _driftCharge; ///< 이번 드리프트의 시간
-        Countdown                       _boost;
-        float32                         _nitroGauge; ///< 0..1
-        int32                           _nitroCount;
-        int32                           _driftDirection; ///< -1 은 왼쪽, 1 은 오른쪽, 0 은 드리프트 아님
-        uint8                           _bAirborne;
+        KinematicVehicleSettings           _settings;
+        EventBuffer<KinematicVehicleEvent> _eventBuffer;
+        FixedStepTimer                     _timer;
+        const IVehicleGround*              _pGround;
+        float3                             _position;
+        float3                             _velocity; ///< 월드 속도(_y 는 위아래)
+        float32                            _yaw;
+        float32                            _driftCharge; ///< 이번 드리프트의 시간
+        Countdown                          _boost;
+        float32                            _nitroGauge; ///< 0..1
+        int32                              _nitroCount;
+        int32                              _driftDirection; ///< -1 은 왼쪽, 1 은 오른쪽, 0 은 드리프트 아님
+        uint8                              _bAirborne;
     };
 } // namespace sw
