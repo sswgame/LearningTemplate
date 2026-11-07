@@ -499,4 +499,13 @@ namespace sw
             }
         };
     } // namespace
+
+    // 등록 줄은 기능 파일로 옮길 때(165e16647c) 빠졌다 — 함수만 남아 명령이 없었다.
+    SW_DEV_COMMAND( CheatHeal, "cheat.heal", "cheat.heal", "Fill health to max health on every ability system in the active scene", &AbilityDevCommandsInternal::runHeal );
+    SW_DEV_COMMAND( CheatAttribute, "cheat.attribute", "cheat.attribute <name> <value>", "Set an attribute's base value on every ability system in the active scene that has it",
+                    &AbilityDevCommandsInternal::runAttribute );
+    SW_DEV_COMMAND( CheatGod, "cheat.god", "cheat.god [on|off]", "Toggle invulnerability (health never goes down) on every player-controlled ability system",
+                    &AbilityDevCommandsInternal::runGod );
+    SW_DEV_COMMAND( CheatResetCooldowns, "cheat.resetCooldowns", "cheat.resetCooldowns", "Remove the cooldown effects of every granted ability in the active scene",
+                    &AbilityDevCommandsInternal::runResetCooldowns );
 } // namespace sw
