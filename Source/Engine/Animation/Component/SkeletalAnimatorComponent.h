@@ -510,7 +510,7 @@ namespace sw
         PROPERTY( Category = "Playback", DisplayName = "Blend Seconds", Tooltip = "Default crossfade length for transitions", Min = 0.0, Max = 5.0, Units = s )
         float32 _blendSeconds;
         PROPERTY( Category = "Sync", DisplayName = "Sync Group", Tooltip = "Units in the same sync group follow the heaviest one's phase" )
-        string _syncGroup;
+        hashed_string _syncGroup;
         PROPERTY( Category = "Sync", DisplayName = "Sync Weight", Tooltip = "Leader is the member with the largest weight", Min = 0.0 )
         float32 _syncWeight;
 

@@ -812,7 +812,10 @@ namespace sw
         _playerFeet   = pPlayer->getFeetPosition();
         _bPlayerAlive = pPlayer->isAlive() ? SW_TRUE : SW_FALSE;
         if ( _bPacingReady == SW_TRUE )
-            (void)_director.getBuiltinIntensityModel().setSignal( hashed_string( "lowAmmo" ), pPlayer->computeAmmoShortage() );
+        {
+            static const hashed_string s_lowAmmoSignal( "lowAmmo" );
+            (void)_director.getBuiltinIntensityModel().setSignal( s_lowAmmoSignal, pPlayer->computeAmmoShortage() );
+        }
     }
 
     void ShooterGameModeComponent::logStatus( float32 deltaTime )

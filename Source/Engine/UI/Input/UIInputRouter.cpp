@@ -369,14 +369,14 @@ namespace sw
         }
 
         // 일시정지(Esc)가 메뉴를 열면 UI 층이 켜지는데, 그 Esc 를 아직 누르고 있어도 입력 맵이 눌린 채 켜진 입력을 Held 로 시작시키므로(`InputMap::update`) Back 은 발화하지 않는다.
-        const hashed_string arrRoutedAction[] = { hashed_string( UIActionName::kAccept ), hashed_string( UIActionName::kTabNext ),
-                                                  hashed_string( UIActionName::kTabPrevious ) };
-        for ( const hashed_string& action : arrRoutedAction )
+        static const hashed_string s_arrRoutedAction[] = { hashed_string( UIActionName::kAccept ), hashed_string( UIActionName::kTabNext ),
+                                                           hashed_string( UIActionName::kTabPrevious ) };
+        for ( const hashed_string& action : s_arrRoutedAction )
         {
             if ( bTextFocus || uiMap.wasActionTriggered( action ) == false )
                 continue;
             // 위젯이 먼저 처리하고, 아무도 소비하지 않은 탭 액션은 화면이 처리한다(옵션 메뉴의 탭 줄).
-            const bool bScreenAction = action != hashed_string( UIActionName::kAccept );
+            const bool bScreenAction = action != s_arrRoutedAction[0];
             if ( routeAction( *pActive, action, float2{} ) || ( bScreenAction && pActive->onUnhandledAction( action ) ) )
                 consumeAction( uiMap, action );
         }

@@ -64,12 +64,14 @@ namespace sw
         UIScreen::onTick( deltaSeconds );
         if ( getUISystem() == nullptr )
             return;
-        const UIGlobalCommandRegistry& commands = engine::getSubsystem<UIGlobalCommandRegistry>();
-        for ( const utf8* pButtonName : PauseMenuScreenInternal::kArrSessionButton )
+        const UIGlobalCommandRegistry& commands          = engine::getSubsystem<UIGlobalCommandRegistry>();
+        static const hashed_string     s_arrButtonName[] = { hashed_string( PauseMenuScreenInternal::kArrSessionButton[0] ), hashed_string( PauseMenuScreenInternal::kArrSessionButton[1] ) };
+        static_assert( SW_COUNT_OF( s_arrButtonName ) == SW_COUNT_OF( PauseMenuScreenInternal::kArrSessionButton ) );
+        for ( const hashed_string& buttonName : s_arrButtonName )
         {
-            Widget* pButton = getTree().findWidgetByName( hashed_string( pButtonName ) );
+            Widget* pButton = getTree().findWidgetByName( buttonName );
             if ( pButton != nullptr )
-                pButton->setVisibility( commands.hasCommand( hashed_string( pButtonName ) ) ? WidgetVisibility::Visible : WidgetVisibility::Collapsed );
+                pButton->setVisibility( commands.hasCommand( buttonName ) ? WidgetVisibility::Visible : WidgetVisibility::Collapsed );
         }
     }
 } // namespace sw

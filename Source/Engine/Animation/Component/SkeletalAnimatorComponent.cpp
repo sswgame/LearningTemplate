@@ -55,7 +55,7 @@ namespace sw
     {
         if ( _owner._syncGroup.empty() )
             return nullptr;
-        outGroupName = hashed_string( _owner._syncGroup );
+        outGroupName = _owner._syncGroup;
         outWeight    = _owner._syncWeight;
         return &_owner._graphPlayer.getPlayer();
     }
@@ -929,7 +929,7 @@ namespace sw
 
     void SkeletalAnimatorComponent::setSyncGroup( const hashed_string& groupName, float32 weight )
     {
-        _syncGroup  = groupName.c_str();
+        _syncGroup  = groupName;
         _syncWeight = weight;
     }
 

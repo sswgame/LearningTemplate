@@ -149,8 +149,9 @@ namespace sw
             applyProgress( *pScreen, loadProgress );
             if ( bLoading || _shownSeconds < _settings._minimumSeconds )
             {
-                _spinnerAngle    = MathUtil::fmod( _spinnerAngle + kSpinnerRadiansPerSecond * deltaSeconds, MathUtil::kPi * 2.0f );
-                Widget* pSpinner = pScreen->getTree().findWidgetByName( hashed_string( kSpinnerWidgetName ) );
+                _spinnerAngle = MathUtil::fmod( _spinnerAngle + kSpinnerRadiansPerSecond * deltaSeconds, MathUtil::kPi * 2.0f );
+                static const hashed_string s_spinnerName( kSpinnerWidgetName );
+                Widget*                    pSpinner = pScreen->getTree().findWidgetByName( s_spinnerName );
                 if ( pSpinner != nullptr )
                 {
                     WidgetRenderTransform transform = pSpinner->getRenderTransform();

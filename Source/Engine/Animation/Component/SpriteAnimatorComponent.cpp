@@ -359,7 +359,7 @@ namespace sw
     void SpriteAnimatorComponent::syncStateFromPlayer()
     {
         const hashed_string& state = _graphPlayer.getCurrentStateName();
-        if ( state.empty() || state.isEqual( hashed_string( _currentAnimation ), NameCase::CaseSensitive ) )
+        if ( state.empty() || StringUtil::equals( state.view(), _currentAnimation ) ) // 스프라이트마다 틱마다 지난다(워커) — 글을 intern 하지 않고 철자를 맞댄다
             return;
         // "끝나면 다음" 으로 넘어갔다 — 이름 · 반복(다음 상태는 반복하지 않는다)과 구간은 상태 기계가 풀어 둔 것을 따른다.
         _currentAnimation = state.c_str();

@@ -33,6 +33,7 @@ from lint.CoreTiers import checkCoreTiers  # noqa: E402
 from lint.CppShape import checkCppShape  # noqa: E402
 from lint.EditorWidgetLabels import checkEditorWidgetLabels  # noqa: E402
 from lint.FeatureReferences import checkFeatureReferences  # noqa: E402
+from lint.FrameIntern import checkFrameIntern  # noqa: E402
 from lint.NamingWords import checkNamingWords  # noqa: E402
 from lint.StateShape import checkStateShape  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
@@ -155,6 +156,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[PlatformChains] FAIL — 빠진 플랫폼을 컴파일 오류로 내지 않는 사슬 {len(listChainProblem)}건")
         for line in listChainProblem:
             print(f"  - {line}")
+    # --- 프레임 함수 안의 리터럴 이름(정상 코드라 형식으로 막지 못한다 — FrameIntern.py 머리말)
+    listFrameIntern = checkFrameIntern(projectRoot)
+    if listFrameIntern:
+        hasErrors = True
+        print(f"[FrameIntern] FAIL — 프레임 함수 안의 리터럴 이름 {len(listFrameIntern)}건")
+        for problem in listFrameIntern:
+            print(f"  - {problem}")
 
     # --- 참조 0 인 컴포넌트 · 감시 값 · 개발 명령(쓰는 곳은 형식이 말하지 못한다 — FeatureReferences.py 머리말) ---------------
     listFeatureProblem = checkFeatureReferences(projectRoot)

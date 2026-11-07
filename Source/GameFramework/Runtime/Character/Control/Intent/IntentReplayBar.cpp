@@ -135,8 +135,10 @@ namespace sw
         uint32 earliest   = 0;
         if ( _pSession->findEarliestSeekableTick( earliest ) == false )
             earliest = tick;
-        SliderWidget* pScrub = pScreen->getTree().findWidget<SliderWidget>( hashed_string( IntentReplayBarInternal::kScrub ) );
-        TextWidget*   pTime  = pScreen->getTree().findWidget<TextWidget>( hashed_string( IntentReplayBarInternal::kTimeText ) );
+        static const hashed_string s_scrubName( IntentReplayBarInternal::kScrub );
+        static const hashed_string s_timeName( IntentReplayBarInternal::kTimeText );
+        SliderWidget*              pScrub = pScreen->getTree().findWidget<SliderWidget>( s_scrubName );
+        TextWidget*                pTime  = pScreen->getTree().findWidget<TextWidget>( s_timeName );
         if ( pScrub != nullptr )
         {
             const float32 minValue = static_cast<float32>( earliest );
