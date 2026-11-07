@@ -125,7 +125,7 @@ namespace sw
         {
             if ( bucket->getReferenceCount() > 0 && bucket->getMesh() != nullptr )
                 appendPalette( inoutSnapshot, *listRow, *listWeight, bucket->getMesh(), bucket->getSkinSlot(), constant::invalid_index::kUint32, bucket->getSkinPalette(), nullptr,
-                               SkinningMethod::Linear ); // 멤버마다 단계 · 방식이 다르다 — 모든 단계, 선형
+                               bucket->getSkinningMethod() ); // 멤버마다 단계가 다르다 — 모든 단계. 방식은 열쇠라 멤버가 같다
         }
         _paletteRowCountHint               = listRow->size();
         _morphWeightCountHint              = listWeight->size();

@@ -49,18 +49,6 @@ namespace sw
 
 namespace sw
 {
-    /**
-     * @enum SkinningMethod
-     * @brief 본 가중치로 정점을 섞는 방식입니다(GPU 스키닝 컴퓨트 mesh_skin.hlsl 이 유닛마다 고른다).
-     * @details 선형(LBS)은 행렬을 가중 합하고, 듀얼 쿼터니언(DQS)은 회전 · 이동을 듀얼 쿼터니언으로 섞어(스케일은 따로 선형) 비틀린 관절이 가늘어지지 않는다(캔디 래퍼).
-     *          Maya · Blender 의 Skin/Armature "Dual Quaternion" 과 같은 선택이다(언리얼 · 유니티는 기본이 선형). 비용은 DQS 가 조금 더 크다.
-     */
-    ENUM()
-    enum class SkinningMethod : uint8
-    {
-        Linear = 0,     ///< 행렬 가중 합(기본). 스케일 · 전단도 그대로 섞인다.
-        DualQuaternion, ///< 듀얼 쿼터니언 혼합 — 비틀림에서 부피를 지킨다. 스케일은 축별 선형 혼합이다.
-    };
 
     /**
      * @class SkeletalMeshComponent
@@ -117,8 +105,8 @@ namespace sw
         const vector<float4x4>& getModelSpaceTransforms() const { return _pCrowdBucket != nullptr ? _pCrowdBucket->getModelSpaceTransforms() : _listModelSpace; }
         /** @brief 스킨 팔레트(메시의 역 바인드 × 모델 공간)입니다. 렌더러가 스냅샷으로 옮깁니다. 묶음과 나누는 중이면 묶음의 것입니다. */
         const vector<float4x4>& getSkinPalette() const { return _pCrowdBucket != nullptr ? _pCrowdBucket->getSkinPalette() : _listSkinPalette; }
-        /** @brief 스키닝 방식(PROPERTY)입니다. 군중 묶음과 나누는 중이면 묶음의 팔레트를 선형으로 그린다(묶음 멤버마다 방식이 다를 수 있다). */
-        SkinningMethod getSkinningMethod() const { return _pCrowdBucket != nullptr ? SkinningMethod::Linear : _skinningMethod; }
+        /** @brief 스키닝 방식(PROPERTY)입니다. 군중 묶음도 같은 방식의 유닛끼리만 나눈다(묶음 열쇠의 일부 — `AnimationCrowdBucketKey`). */
+        SkinningMethod getSkinningMethod() const { return _skinningMethod; }
         /** @brief 스키닝 방식을 바꿉니다. 다음 스냅샷부터 적용된다. */
         void setSkinningMethod( SkinningMethod method ) { _skinningMethod = method; }
         /** @brief 이름이 일치하는 본의 모델 공간 행렬을 반환합니다. 없으면 false 입니다. */

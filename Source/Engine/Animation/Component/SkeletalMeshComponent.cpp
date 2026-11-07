@@ -680,7 +680,7 @@ namespace sw
         const bool                   bOwnPoseDiffers = hasPoseWriter() || hasActiveMorphWeights();
         if ( bLeaderShared == false || bOwnPoseDiffers )
             return false;
-        AnimationCrowdBucket* pBucket = crowd.joinFollowerBucket( _pCrowdBucket, *pLeader->_pCrowdBucket, _skeleton, _skinSourceMesh );
+        AnimationCrowdBucket* pBucket = crowd.joinFollowerBucket( _pCrowdBucket, *pLeader->_pCrowdBucket, _skeleton, _skinSourceMesh, _skinningMethod );
         if ( pBucket == nullptr )
             return false;
         enterCrowdBucket( crowd, *pBucket, bVisible );
@@ -739,6 +739,7 @@ namespace sw
         shared_ptr<const AnimationClip> nextClip;
         if ( describeSharedPose( request ) )
         {
+            request._skinningMethod            = _skinningMethod; // 묶음은 같은 방식의 유닛끼리만 나눈다
             const IAnimationPhaseTask* pWriter = findSolePoseWriter();
             clip                               = pWriter->findSharedPoseClip( request._pClip );
             if ( request._pNextClip != nullptr )
@@ -759,7 +760,8 @@ namespace sw
         else if ( clip != nullptr )
         {
             // 아주 멀면 VAT — 따르는 유닛이 없고 재생 속도가 1 일 때(셰이더는 VAT 시계를 그대로 흘린다).
-            const bool bUseVertexAnimation = _lodState._bVertexAnimation == SW_TRUE && _bHasDependents == SW_FALSE && request._playRate == 1.0f;
+            // VAT 는 선형으로 굽는다(`MeshVertexAnimationBaker`) — 듀얼 쿼터니언 유닛은 묶음으로 남는다.
+            const bool bUseVertexAnimation = _lodState._bVertexAnimation == SW_TRUE && _bHasDependents == SW_FALSE && request._playRate == 1.0f && _skinningMethod == SkinningMethod::Linear;
             if ( bUseVertexAnimation )
             {
                 shared_ptr<Mesh> vertexMesh =

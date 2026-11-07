@@ -230,7 +230,11 @@ namespace sw
         const RHIStructuredBuffer& getSkinWeightBuffer() const { return _skinWeight; }
         /** @brief 스킨 인스턴스 테이블입니다(인스턴스 하나가 uint4 둘이며 `GPUSkinInstanceRow` 입니다). */
         const RHIStructuredBuffer& getSkinInstanceBuffer() const { return _skinInstance; }
-        /** @brief 스킨 팔레트 버퍼입니다(본 하나가 float4 셋입니다). */
+        /**
+         * @brief 스킨 팔레트 버퍼입니다. 앞은 본 구간(본 하나가 float4 `shaderslot::kSkinFloat4PerBone` 개 — 선형이면 행렬 세 열, 듀얼 쿼터니언이면 실수부 · 허수부 · 스케일)이고,
+         *        그 뒤가 프레임 값 구간(float 를 넷씩 묶어 싣는다)입니다. 인스턴스마다 프레임 값은 머리 `shaderslot::kSkinFrameHeaderFloats` 개(첫 값이 스키닝 방식
+         *        `SW_SKIN_METHOD_*`)와 그 뒤 모프 가중치(타깃 수만큼)이고, 시작 위치는 인스턴스 행이 든다(mesh_skin.hlsl 의 `loadFrameValue`).
+         */
         const RHIStructuredBuffer& getSkinPaletteBuffer() const { return _skinPalette; }
         /** @brief 컴퓨트가 쓸 수 있는 상태인지(레스트 SRV 와 결과 UAV 가 둘 다 있는지) 확인합니다. */
         bool isDispatchable() const;

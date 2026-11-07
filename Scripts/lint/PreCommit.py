@@ -28,6 +28,7 @@ from lint.AssetReferences import checkStagedAssetReferences  # noqa: E402
 from lint.ByteReadShape import checkByteReadShape  # noqa: E402
 from lint.CatalogRootShape import checkCatalogRootShape  # noqa: E402
 from lint.CommonShapes import checkCommonShapes  # noqa: E402
+from lint.ShaderKillOrder import checkShaderKillOrder  # noqa: E402
 from lint.CMakePathCase import checkCMakePathCase  # noqa: E402
 from lint.CoreTiers import checkCoreTiers  # noqa: E402
 from lint.CppShape import checkCppShape  # noqa: E402
@@ -195,6 +196,13 @@ def main(argv: list[str] | None = None) -> int:
         for line in listCommonProblem:
             print(f"  - {line}")
 
+    # --- 픽셀 버리기 뒤의 미분 읽기(HLSL 에 미분을 쓰는 함수를 적을 형식이 없다 — ShaderKillOrder.py 머리말) ---------------
+    listKillOrderProblem = checkShaderKillOrder(projectRoot)
+    if listKillOrderProblem:
+        hasErrors = True
+        print(f"[ShaderKillOrder] FAIL — 픽셀을 버린 뒤 미분을 쓰는 읽기 {len(listKillOrderProblem)}건")
+        for line in listKillOrderProblem:
+            print(f"  - {line}")
     # --- clang-format(셰이더도 같은 설정, Content/.clang-format) -------------------
     if stagedCppFiles or stagedShaderFiles:
         if runClangFormatBatch(stagedCppFiles + stagedShaderFiles, checkOnly=True, cwd=projectRoot) != 0:

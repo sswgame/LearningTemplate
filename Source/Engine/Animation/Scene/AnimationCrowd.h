@@ -48,19 +48,34 @@ namespace sw
     };
 
     /**
+     * @enum SkinningMethod
+     * @brief 본 가중치로 정점을 섞는 방식입니다(GPU 스키닝 컴퓨트 mesh_skin.hlsl 이 유닛 · 군중 묶음마다 고른다).
+     * @details 선형(LBS)은 행렬을 가중 합하고, 듀얼 쿼터니언(DQS)은 회전 · 이동을 듀얼 쿼터니언으로 섞어(스케일은 따로 선형) 비틀린 관절이 가늘어지지 않는다(캔디 래퍼).
+     *          Maya · Blender 의 Skin/Armature "Dual Quaternion" 과 같은 선택이다(언리얼 · 유니티는 기본이 선형). 비용은 DQS 가 조금 더 크다.
+     *          군중 묶음의 열쇠에 들어 같은 방식의 유닛끼리만 팔레트를 나눈다 — 그래서 유닛 컴포넌트가 아니라 군중과 같은 층에 둔다.
+     */
+    ENUM()
+    enum class SkinningMethod : uint8
+    {
+        Linear = 0,     ///< 행렬 가중 합(기본). 스케일 · 전단도 그대로 섞인다.
+        DualQuaternion, ///< 듀얼 쿼터니언 혼합 — 비틀림에서 부피를 지킨다. 스케일은 축별 선형 혼합이다.
+    };
+
+    /**
      * @struct AnimationSharedPoseRequest
      * @brief 유닛이 "이번 프레임 포즈를 나눌 수 있다"고 답할 때의 내용입니다(`IAnimationPhaseTask::describeSharedPose`).
      */
     struct AnimationSharedPoseRequest
     {
-        const AnimationClip* _pClip{ nullptr };              ///< 지금 재생하는 반복 클립 하나
-        float32              _time{ 0.0f };                  ///< 유닛 자신의 클립 시간(초)이다. 변형 구간을 고르는 데 쓴다
-        float32              _playRate{ 1.0f };              ///< 재생 속도 배율(키의 일부)
-        uint8                _bAnchorRootMotion{ SW_FALSE }; ///< 루트 모션 본을 시작 위치에 고정하는지 나타낸다(키의 일부)
-        const AnimationClip* _pNextClip{ nullptr };          ///< 섞는 중이면 들어가는 반복 클립(아니면 nullptr)
-        float32              _nextTime{ 0.0f };              ///< 들어가는 클립의 유닛 시각(초)
-        float32              _blendAlpha{ 0.0f };            ///< 들어가는 클립의 섞임 가중치(0..1, 플레이어의 `getBlendAlpha`)
-        float32              _fadeSeconds{ 0.0f };           ///< 섞기 길이(초, 키의 일부 — 같이 시작한 유닛은 같은 가중치로 간다)
+        const AnimationClip* _pClip{ nullptr };                         ///< 지금 재생하는 반복 클립 하나
+        float32              _time{ 0.0f };                             ///< 유닛 자신의 클립 시간(초)이다. 변형 구간을 고르는 데 쓴다
+        float32              _playRate{ 1.0f };                         ///< 재생 속도 배율(키의 일부)
+        uint8                _bAnchorRootMotion{ SW_FALSE };            ///< 루트 모션 본을 시작 위치에 고정하는지 나타낸다(키의 일부)
+        const AnimationClip* _pNextClip{ nullptr };                     ///< 섞는 중이면 들어가는 반복 클립(아니면 nullptr)
+        float32              _nextTime{ 0.0f };                         ///< 들어가는 클립의 유닛 시각(초)
+        float32              _blendAlpha{ 0.0f };                       ///< 들어가는 클립의 섞임 가중치(0..1, 플레이어의 `getBlendAlpha`)
+        float32              _fadeSeconds{ 0.0f };                      ///< 섞기 길이(초, 키의 일부 — 같이 시작한 유닛은 같은 가중치로 간다)
+        SkinningMethod       _skinningMethod{ SkinningMethod::Linear }; ///< 유닛의 스키닝 방식(키의 일부 — 묶음 팔레트를 그 방식으로 싣는다)
     };
 } // namespace sw
 
@@ -108,9 +123,10 @@ namespace sw
         float32              _playRate{ 1.0f };
         uint32               _variation{ 0 };
         uint8                _bAnchorRootMotion{ SW_FALSE };
-        const AnimationClip* _pNextClip{ nullptr }; ///< 섞기 묶음이면 들어가는 클립(아니면 nullptr)
-        float32              _fadeSeconds{ 0.0f };  ///< 섞기 묶음의 섞기 길이
-        uint32               _blendStartFrame{ 0 }; ///< 섞기 묶음이 생긴 군중 프레임 — 같은 프레임에 같은 전이를 시작한 유닛만 같은 가중치다
+        const AnimationClip* _pNextClip{ nullptr };                     ///< 섞기 묶음이면 들어가는 클립(아니면 nullptr)
+        float32              _fadeSeconds{ 0.0f };                      ///< 섞기 묶음의 섞기 길이
+        uint32               _blendStartFrame{ 0 };                     ///< 섞기 묶음이 생긴 군중 프레임 — 같은 프레임에 같은 전이를 시작한 유닛만 같은 가중치다
+        SkinningMethod       _skinningMethod{ SkinningMethod::Linear }; ///< 멤버의 스키닝 방식 — 팔레트를 이 방식으로 싣는다(방식이 다른 유닛은 다른 묶음)
 
         bool operator==( const AnimationCrowdBucketKey& other ) const { return isSameState( other ) && _variation == other._variation; }
         /** @brief 변형 번호만 다르면 true 입니다(같은 상태). */
@@ -118,7 +134,7 @@ namespace sw
         {
             const bool bSameBlend = _pNextClip == other._pNextClip && _fadeSeconds == other._fadeSeconds && _blendStartFrame == other._blendStartFrame;
             return _pSkeleton == other._pSkeleton && _skinDataID == other._skinDataID && _pClip == other._pClip && _playRate == other._playRate &&
-                   _bAnchorRootMotion == other._bAnchorRootMotion && bSameBlend;
+                   _bAnchorRootMotion == other._bAnchorRootMotion && _skinningMethod == other._skinningMethod && bSameBlend;
         }
     };
 } // namespace sw
@@ -133,7 +149,7 @@ namespace sw
             size_t hash = reinterpret_cast<size_t>( key._pSkeleton ) * 1315423911u;
             hash ^= static_cast<size_t>( key._skinDataID ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             hash ^= reinterpret_cast<size_t>( key._pClip ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
-            hash ^= static_cast<size_t>( key._variation * 2u + key._bAnchorRootMotion ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= static_cast<size_t>( ( key._variation * 2u + key._bAnchorRootMotion ) * 2u + static_cast<uint32>( key._skinningMethod ) ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             hash ^= reinterpret_cast<size_t>( key._pNextClip ) + static_cast<size_t>( key._blendStartFrame ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             return hash;
         }
@@ -159,6 +175,8 @@ namespace sw
         void evaluate( float64 clock );
 
         const AnimationCrowdBucketKey& getKey() const { return _key; }
+        /** @brief 멤버의 스키닝 방식입니다(열쇠의 일부). 렌더 빌더가 묶음 팔레트를 이 방식으로 싣는다. */
+        SkinningMethod getSkinningMethod() const { return _key._skinningMethod; }
         /** @brief 멤버가 그리는 메시(스킨 원본의 사본)입니다. */
         const shared_ptr<Mesh>& getMesh() const { return _mesh; }
         /** @brief 이 묶음의 스킨 칸입니다 — 멤버가 몇이든 결과 구간 하나 · 팔레트 하나다. */
@@ -258,7 +276,7 @@ namespace sw
          * @return 묶음(소유는 군중). 스켈레톤이나 스킨 원본이 없으면 nullptr 입니다.
          */
         AnimationCrowdBucket* joinFollowerBucket( AnimationCrowdBucket* pCurrent, const AnimationCrowdBucket& leaderBucket, const shared_ptr<const Skeleton>& skeleton,
-                                                  const shared_ptr<Mesh>& sourceMesh );
+                                                  const shared_ptr<Mesh>& sourceMesh, SkinningMethod skinningMethod );
         /** @brief 유닛이 묶음을 가리키기 시작하거나 그쳤음을 알립니다(참조 수이며, 가리키는 묶음은 지우지 않습니다). */
         static void addReference( AnimationCrowdBucket* pBucket );
         static void releaseReference( AnimationCrowdBucket* pBucket );

@@ -221,6 +221,7 @@ namespace sw
         key._pClip             = request._pClip;
         key._playRate          = request._playRate;
         key._bAnchorRootMotion = request._bAnchorRootMotion;
+        key._skinningMethod    = request._skinningMethod;
         // 같은 상태면 칸을 바꾸지 않는다 — 유닛 시각과 묶음 시각은 같은 dt 로 흘러 어긋나지 않는다(바꾸면 메시가 바뀌어 배치가 다시 짜인다).
         if ( pCurrent != nullptr && pCurrent->_key.isSameState( key ) )
             return pCurrent;
@@ -245,10 +246,12 @@ namespace sw
         key._bAnchorRootMotion = request._bAnchorRootMotion;
         key._pNextClip         = request._pNextClip;
         key._fadeSeconds       = request._fadeSeconds;
+        key._skinningMethod    = request._skinningMethod;
         // 이미 같은 전이의 섞기 묶음이면 그대로 — 시작 프레임은 처음 든 프레임이다.
         const bool bSameBlend = pCurrent != nullptr && pCurrent->isBlend() && pCurrent->_key._pSkeleton == key._pSkeleton && pCurrent->_key._skinDataID == key._skinDataID &&
                                 pCurrent->_key._pClip == key._pClip && pCurrent->_key._pNextClip == key._pNextClip && pCurrent->_key._playRate == key._playRate &&
-                                pCurrent->_key._fadeSeconds == key._fadeSeconds && pCurrent->_key._bAnchorRootMotion == key._bAnchorRootMotion;
+                                pCurrent->_key._fadeSeconds == key._fadeSeconds && pCurrent->_key._bAnchorRootMotion == key._bAnchorRootMotion &&
+                                pCurrent->_key._skinningMethod == key._skinningMethod;
         if ( bSameBlend )
         {
             pCurrent->_blendAlpha = request._blendAlpha;
@@ -273,7 +276,7 @@ namespace sw
     }
 
     AnimationCrowdBucket* AnimationCrowd::joinFollowerBucket( AnimationCrowdBucket* pCurrent, const AnimationCrowdBucket& leaderBucket,
-                                                              const shared_ptr<const Skeleton>& skeleton, const shared_ptr<Mesh>& sourceMesh )
+                                                              const shared_ptr<const Skeleton>& skeleton, const shared_ptr<Mesh>& sourceMesh, SkinningMethod skinningMethod )
     {
         if ( skeleton == nullptr || sourceMesh == nullptr )
             return nullptr;
@@ -282,6 +285,7 @@ namespace sw
         AnimationCrowdBucketKey key   = leaderBucket._key;
         key._pSkeleton                = skeleton.get();
         key._skinDataID               = sourceMesh->getSkinDataID();
+        key._skinningMethod           = skinningMethod; // 부품은 제 방식으로 그린다 — 몸과 다르면 다른 묶음이다
         AnimationCrowdBucket* pBucket = ( pCurrent != nullptr && pCurrent->_key == key ) ? pCurrent : nullptr;
         if ( pBucket == nullptr )
         {
