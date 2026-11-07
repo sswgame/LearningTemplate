@@ -1,0 +1,20 @@
+{
+    "_name": "GF_ModSupport",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "콘텐츠 전용 모드 키트 — 매니페스트 · 판 · 의존 · 충돌 · 우선순위 검증, 세션 시작 때 고정하는 팩 마운트와 캐시 갱신, 구성 해시 · 서버 허용 목록 — GameFramework.dll delay-load",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client",
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}
