@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -249,10 +250,11 @@ namespace sw
      */
     class SW_GF_API AIDirectorProfile
     {
+        friend struct AssetTypeLoader;
+
     public:
         AIDirectorProfile();
 
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
 
@@ -267,6 +269,8 @@ namespace sw
         void collectEncounterIDs( vector<hashed_string>& outListID ) const;
 
     private:
+        /** @brief 리소스 경로의 프로필을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<AIDirectorProfile>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
         [[nodiscard]] bool readIntensity( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool readPhase( const XMLNode& node, string_view sourceName );
@@ -281,4 +285,11 @@ namespace sw
         hashed_string              _startPhase;
         int32                      _startPhaseIndex;
     };
+
+    /**
+     * @brief 페이싱 프로필을 경로마다 한 벌 나눠 줍니다("aidirector", 인스턴스화는 `AIDirectorProfile.cpp`).
+     * @details 다시 읽기는 떼어 낸다(`Detach`) — 감독(`AIDirector`)은 국면 · 풀 번호로 프로필을 읽고 그 번호가 상태(저장 포함)에 남는다. 제자리에서 바뀌면 번호가 어긋난다.
+     *          쥔 쪽은 옛 프로필로 한 판을 끝까지 돌고 다음 시작에서 새 객체를 받는다(언리얼 AI 감독 데이터 에셋 한 벌, 기억에 의존).
+     */
+    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<AIDirectorProfile>;
 } // namespace sw

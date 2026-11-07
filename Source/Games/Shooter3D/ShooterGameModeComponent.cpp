@@ -135,7 +135,7 @@ namespace sw
         , _repairHealthPerScale{ 10.0f }
         , _listBox{}
         , _listEnemyView{}
-        , _profile{}
+        , _pProfile{}
         , _pTable{}
         , _director{}
         , _listDirectorEvent{}
@@ -383,7 +383,8 @@ namespace sw
         }
         if ( bPresetsKnown == false )
             return;
-        if ( _profile.loadFromAsset( AssetID{ _pacingProfile } ) == false )
+        _pProfile = SharedAssetCache<AIDirectorProfile>::acquire( _pacingProfile );
+        if ( _pProfile == nullptr )
         {
             SW_LOG_ERROR_ID( "ShooterGameMode.PacingProfileCouldNot", "[Shooter] pacing profile '%#' could not be loaded - no enemies will come", _pacingProfile.c_str() );
             return;
@@ -396,7 +397,7 @@ namespace sw
         }
         // 감독은 ID 만 낸다. 이 게임이 모르는 ID 는 아무 일도 하지 않으므로 데이터 오타를 여기서 알린다.
         vector<hashed_string> listID;
-        _profile.collectEncounterIDs( listID );
+        _pProfile->collectEncounterIDs( listID );
         for ( const hashed_string& id : listID )
         {
             if ( Internal::isKnownID( id, Internal::kArrKnownEncounter ) == false )
@@ -407,7 +408,7 @@ namespace sw
             if ( Internal::isKnownID( entry._id, Internal::kArrKnownSpawn ) == false )
                 SW_LOG_ERROR_ID( "ShooterGameMode.SpawnTableNamesGame", "[Shooter] spawn table '%#' names '%#' this game does not know", _spawnTable.c_str(), entry._id.c_str() );
         }
-        _director.initialize( &_profile, _pTable.get(), static_cast<uint32>( _pacingSeed ) );
+        _director.initialize( _pProfile.get(), _pTable.get(), static_cast<uint32>( _pacingSeed ) );
         _bPacingReady = SW_TRUE;
         applyDirectorEvents(); // 시작 단계 사건
     }
@@ -442,7 +443,7 @@ namespace sw
                 {
                     // 쌓기로 돌아왔다 = 새 웨이브. 진행 사건(동의가 없으면 텔레메트리가 버린다).
                     TelemetryService* pTelemetry = game::findSubsystem<TelemetryService>();
-                    const bool        bNewWave   = event._source.empty() == false && event._id == _profile.getPhases()[static_cast<size_t>( _profile.getStartPhaseIndex() )]._id;
+                    const bool        bNewWave   = event._source.empty() == false && event._id == _pProfile->getPhases()[static_cast<size_t>( _pProfile->getStartPhaseIndex() )]._id;
                     if ( pTelemetry != nullptr && bNewWave )
                     {
                         TelemetryEvent waveReached( "progression.waveReached" );

@@ -7,6 +7,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
@@ -306,6 +307,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `AIDirectorProfile` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
-    SW_ASSET_TYPE( AIDirector, AssetTypeDef::makeDataFile( "aidirector", AssetPathRule{ {}, {}, ".director.xml" }, AssetTypeLoader::of<AIDirectorProfile>() ) );
+    /**
+     * `AIDirectorProfile` 의 데이터 파일 종류와 그 공유 캐시입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다).
+     * 감독이 국면 · 풀 번호로 읽으므로 다시 읽기는 떼어 낸다(`Detach`).
+     */
+    SW_MODULE_SHARED_ASSET_CACHE( AIDirector, AIDirectorProfile, SW_GF_API,
+                                  AssetTypeDef::makeDataFile( "aidirector", AssetPathRule{ {}, {}, ".director.xml" }, AssetTypeLoader::of<AIDirectorProfile>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
 } // namespace sw
