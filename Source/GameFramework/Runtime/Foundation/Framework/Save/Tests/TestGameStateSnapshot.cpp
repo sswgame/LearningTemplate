@@ -25,7 +25,7 @@ namespace
     {
         sw::string _text;
 
-        sw::uint64 getContentConfigHash() const override { return _text.empty() ? 0u : 1u; }
+        uint64     getContentConfigHash() const override { return _text.empty() ? 0u : 1u; }
         sw::string makeContentConfigText() const override { return _text; }
         bool       checkSaveCompatible( sw::string_view savedText ) const override
         {

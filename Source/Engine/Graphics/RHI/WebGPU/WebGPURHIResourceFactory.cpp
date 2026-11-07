@@ -37,12 +37,15 @@ namespace sw
             static uint32 toPhysicalExtent( uint32 extent, uint32 blockSize ) { return MathUtil::align( MathUtil::max( extent, 1u ), blockSize ); }
 
             /** @brief 큐가 지금까지 낸 일이 끝나면 부르는 콜백입니다. userdata1 은 전송 표지입니다. */
-            static void onQueueWorkDone( WGPUQueueWorkDoneStatus status, void* pUserdata1, void* pUserdata2 )
+            static void onQueueWorkDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
             {
                 (void)pUserdata2;
                 WebGPUTransferProbe* const pProbe = static_cast<WebGPUTransferProbe*>( pUserdata1 );
                 if ( status != WGPUQueueWorkDoneStatus_Success )
+                {
+                    SW_LOG_ERROR_ONCE_ID( "WebGPU.TransferWorkFailed", "WebGPU: a transfer submission did not complete (status %#): %#", static_cast<uint32>( status ), WebGPURHIUtil::fromStringView( message ) );
                     pProbe->_bFailed.store( SW_TRUE );
+                }
                 pProbe->_bDone.store( SW_TRUE );
             }
         };
@@ -131,7 +134,7 @@ namespace sw
             WGPUVertexBufferLayout& layout = arrBufferLayout[slot];
             if ( arrAttributeCount[slot] == 0 )
             {
-                layout.stepMode = WGPUVertexStepMode_VertexBufferNotUsed; // 안 쓰는 자리(뒤 슬롯이 쓰면 앞 자리를 비워 둔다)
+                layout.stepMode = WGPUVertexStepMode_Undefined; // 안 쓰는 자리 = Undefined + 속성 0 개(webgpu-headers #439 — 옛 VertexBufferNotUsed). 뒤 슬롯이 쓰면 앞 자리를 비워 둔다
                 continue;
             }
             const bool bInstance  = pAttribute[0]._inputSlot == slot ? false : constant::render::kInstanceSlotStreamSlot == slot;

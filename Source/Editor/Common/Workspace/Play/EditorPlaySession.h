@@ -157,8 +157,8 @@ namespace sw::editor
         static bool isPaused();
         /** @brief 정지(편집 모드) 상태이면 true 입니다. 확장 모듈(`GF_EditorPlugin_*`)의 패널이 런타임 상태 유무를 가르는 데 쓰므로 내보낸다. */
         SW_EDITOR_API static bool isStopped();
-        /** @brief 플레이 세션이 정지(Stop) 상태일 때만 씬 오브젝트를 편집할 수 있습니다(`EditorSessionPolicy`). */
-        static bool areSceneEditsAllowed();
+        /** @brief 플레이 세션이 정지(Stop) 상태일 때만 씬 오브젝트를 편집할 수 있습니다(`EditorSessionPolicy`). 확장 모듈의 인스펙터(`InspectorObjectEdit` 인라인)가 부르므로 내보낸다. */
+        SW_EDITOR_API static bool areSceneEditsAllowed();
         /**
          * @brief 씬 편집이 막혀 있으면 거절 이유를 경고 로그(`Editor.SceneEditRefused`)로 남기고 true 를 반환합니다. 편집 명령이 맨 앞에서 묻습니다.
          * @details 명령이 조용히 반환하면 사용자도 호출자도 왜 아무 일도 없었는지 알 수 없다 — 거절 이유를 한 자리에서 남긴다.

@@ -95,7 +95,7 @@ namespace sw
     RHIDescriptorIndex WebGPUBindlessTable::add( uint64 handle, bool bTexture )
     {
         // 등록마다 새 번호다(다섯 백엔드 같은 계약) — 같은 자원을 여러 쪽이 등록해도 각자의 번호를 각자 놓는다.
-        const WebGPUBindlessEntry entry{ handle, bTexture ? SW_TRUE : SW_FALSE };
+        const WebGPUBindlessEntry entry{ handle, static_cast<uint8>( bTexture ? SW_TRUE : SW_FALSE ) };
         if ( _listFree.empty() == false )
         {
             const RHIDescriptorIndex index = _listFree.back();
@@ -1290,12 +1290,12 @@ namespace sw
         }
     }
 
-    void WebGPURHIDevice::onFrameWorkDone( WGPUQueueWorkDoneStatus status, void* pUserdata1, void* pUserdata2 )
+    void WebGPURHIDevice::onFrameWorkDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 )
     {
         (void)pUserdata2;
         WebGPUFrameFence* const pFence = static_cast<WebGPUFrameFence*>( pUserdata1 );
         if ( status != WGPUQueueWorkDoneStatus_Success )
-            SW_LOG_ERROR_ONCE_ID( "WebGPU.FrameWorkFailed", "WebGPU: a submitted frame did not complete (status %#)", static_cast<uint32>( status ) );
+            SW_LOG_ERROR_ONCE_ID( "WebGPU.FrameWorkFailed", "WebGPU: a submitted frame did not complete (status %#): %#", static_cast<uint32>( status ), WebGPURHIUtil::fromStringView( message ) );
         pFence->_bWorkDone.store( SW_TRUE, std::memory_order_release );
     }
 

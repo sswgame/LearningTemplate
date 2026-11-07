@@ -63,7 +63,7 @@ SW_TEST_CASE( GameFlowTest, GameWithoutTitleScene )
     GameSettings            settings;
     ScreenTransitionManager transition;
     LoadingScreenController loading;
-    GameSceneFlow           flow( settings, transition, &loading );
+    GameSceneFlow           flow( settings, transition, &loading.getLoadingScreen() );
     SW_EXPECT_FALSE( flow.requestTitleScene() );
 
     UIGlobalCommandRegistry commands;

@@ -6,11 +6,12 @@
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeInfo.h"
 #include "Engine/Reflection/TypeRegistry.h"
+
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
 {
@@ -50,7 +51,7 @@ namespace sw
                 const int32         builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
                 if ( 0 <= builtinIndex )
                     return ReflectedValueUtil::getBuiltinClass( builtinIndex ) != ReflectBuiltinClass::Other;
-                return engine::getSubsystem<TypeRegistry>().findEnum( typeName ) != nullptr;
+                return game::getSubsystem<TypeRegistry>().findEnum( typeName ) != nullptr;
             }
 
             /** @brief 받은 이름으로 함수를 찾습니다. 이름을 전역 표에 넣지 않습니다(남이 보낸 글이다). */
@@ -70,7 +71,7 @@ namespace sw
                 {
                     const int32 builtinIndex = ReflectedValueUtil::findBuiltinIndex( argument._typeName );
                     const bool  bBuiltinText = 0 <= builtinIndex && ReflectedValueUtil::getBuiltinClass( builtinIndex ) != ReflectBuiltinClass::Other;
-                    const bool  bEnum        = bBuiltinText == false && engine::getSubsystem<TypeRegistry>().findEnum( argument._typeName ) != nullptr;
+                    const bool  bEnum        = bBuiltinText == false && game::getSubsystem<TypeRegistry>().findEnum( argument._typeName ) != nullptr;
                     if ( bBuiltinText == false && bEnum == false )
                         return false;
                     outListText.push_back( argument.toText() );

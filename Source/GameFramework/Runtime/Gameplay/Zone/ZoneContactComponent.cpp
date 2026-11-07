@@ -189,7 +189,7 @@ namespace sw
         SurfaceSample                       ground;
         const GroundSurfaceComponent* const pGround = pOwner->getComponent<GroundSurfaceComponent>();
         const bool                          bGround = pGround != nullptr ? pGround->getGroundKind().empty() == false
-                                                                         : SurfaceQuery::sampleBelow( manager, *pTable, feet + float3{ 0.0f, Internal::kProbeLift, 0.0f }, feet - float3{ 0.0f, _probeLength, 0.0f },
+                                                                         : SurfaceQuery::sampleBelow( manager, pTable, feet + float3{ 0.0f, Internal::kProbeLift, 0.0f }, feet - float3{ 0.0f, _probeLength, 0.0f },
                                                                                                       pOwner->getObjectID(), false, ground );
         if ( bGround )
         {
@@ -228,7 +228,7 @@ namespace sw
                 CharacterRayHit hit;
                 SurfaceSample   touched;
                 if ( CharacterRayHit::raycast3D( manager, waist, direction, pController->getRadius() + _touchDistance, Internal::kAllLayers, pOwner->getObjectID(), hit ) == false ||
-                     SurfaceQuery::resolveHit( manager, *pTable, hit, touched ) == false )
+                     SurfaceQuery::resolveHit( manager, pTable, hit, touched ) == false )
                     continue;
                 ContactRecord contact;
                 contact._kind        = touched._pKind->_name;

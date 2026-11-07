@@ -71,6 +71,8 @@ namespace sw
         , _riderLean{}
         , _pendingFieldOfViewKick{ 0.0f }
         , _pendingBumpShake{ 0.0f }
+        , _pendingFeedbackSpeed{ 0.0f }
+        , _pendingFeedbackSlip{ 0.0f }
         , _rideSampleCount{ 0 }
         , _bFieldOfViewKickArmed{ 1 }
         , _bBumpArmed{ 1 }
@@ -151,10 +153,10 @@ namespace sw
             _pendingBumpShake = ( vertical - _rideFeel._bumpAcceleration ) * _rideFeel._bumpShakePerAcceleration;
         _bBumpArmed = bBump ? 0 : 1;
 
-        const float32 speed = MathUtil::sqrt( velocity.dot( velocity ) );
-        const float32 slip  = MathUtil::abs( _rideAcceleration._x );
-        pManager->executeOrDeferPostTickOnComponent( *this, [speed, slip]( VehicleSeatComponent& seat )
-        { seat.applyRideFeedback( speed, slip ); } );
+        _pendingFeedbackSpeed = MathUtil::sqrt( velocity.dot( velocity ) );
+        _pendingFeedbackSlip  = MathUtil::abs( _rideAcceleration._x );
+        pManager->executeOrDeferPostTickOnComponent( *this, []( VehicleSeatComponent& seat )
+        { seat.applyRideFeedback( seat._pendingFeedbackSpeed, seat._pendingFeedbackSlip ); } );
     }
 
     void VehicleSeatComponent::applyRiderLean( GameObjectManager& manager )

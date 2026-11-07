@@ -73,7 +73,7 @@ namespace sw
         , _ownEncoder{ nullptr }
         , _finishedCommandBuffer{ nullptr }
         , _state{}
-        , _bOwnEncoder{ bOwnEncoder ? SW_TRUE : SW_FALSE }
+        , _bOwnEncoder{ static_cast<uint8>( bOwnEncoder ? SW_TRUE : SW_FALSE ) }
         , _reserved{ 0 }
     {
     }

@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 
 namespace sw
@@ -28,7 +29,7 @@ namespace sw::editor
      * @class EditorSceneCommands
      * @brief GameObject 의 생성, 복제, 부모 변경, 삭제, 이름 변경을 트랜잭션과 함께 수행합니다.
      */
-    class EditorSceneCommands
+    class SW_EDITOR_API EditorSceneCommands
     {
     public:
         /** @brief 빈 GameObject 를 만들고 SceneComponent 를 붙인 뒤 선택합니다. */

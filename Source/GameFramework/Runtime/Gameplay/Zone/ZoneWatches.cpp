@@ -113,7 +113,9 @@ namespace sw
                 string joined;
                 for ( const string& name : listName )
                 {
-                    joined += joined.empty() ? name : "," + name;
+                    if ( joined.empty() == false )
+                        joined += ',';
+                    joined += name;
                 }
                 outValue.setText( joined.empty() ? string( "None" ) : joined );
                 return true;

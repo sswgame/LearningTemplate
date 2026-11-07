@@ -38,7 +38,7 @@ namespace sw
     BuoyancyComponent::BuoyancyComponent()
         : PhysicsComponent{ PhysicsComponentPhase::Joint }
         , _listPontoon{ BuoyancyPontoon{} }
-        , _waterDensity{ 1000.0f }
+        , _waterDensity{ PhysicsMaterialDef::kWaterDensity }
         , _linearDrag{ 200.0f }
         , _submergedPontoonCount{ 0 }
     {

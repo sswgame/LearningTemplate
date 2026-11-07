@@ -66,6 +66,7 @@ namespace sw
         , _frameSurfaceVelocity{}
         , _pendingMoveScale{ 1.0f }
         , _frameMoveScale{ 1.0f }
+        , _reportedMoveScale{ 1.0f }
         , _pendingLaunch{}
         , _airVelocity{}
         , _pendingField{}
@@ -286,6 +287,7 @@ namespace sw
                 _pendingSurfaceVelocity    = float3{};
                 _frameMoveScale            = _pendingMoveScale;
                 _pendingMoveScale          = 1.0f;
+                _reportedMoveScale.store( _frameMoveScale, std::memory_order_relaxed );
             }
             if ( _pendingLaunch.getLengthSquared() > 0.0f )
             {

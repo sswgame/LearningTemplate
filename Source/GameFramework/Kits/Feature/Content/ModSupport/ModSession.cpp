@@ -533,7 +533,7 @@ namespace sw
         }
         for ( const string& layerPath : manifest._listLayer )
         {
-            if ( VectorUtil::contains( listEntryPath, layerPrefix + layerPath ) == false )
+            if ( VectorUtil::contains( listEntryPath, string( layerPrefix + layerPath ) ) == false )
             {
                 SW_LOG_ERROR_ID( "ModSession.LayerNotInPack", "Mod '%#' declares layer '%#' but its pack does not hold '%#'", manifest._id, layerPath, layerPrefix + layerPath );
                 return false;

@@ -36,8 +36,11 @@ namespace sw
         float32 _friction{ 0.5f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Bounciness: 0 stops, 1 keeps the speed" )
         float32 _restitution{ 0.0f };
+        /** @brief 물의 밀도(kg/m^3)입니다 — 재질 밀도의 기준이자 기본값이고, 부력은 이것과 견준다(나무는 뜨고 돌은 가라앉는다). */
+        static constexpr float32 kWaterDensity = 1000.0f;
+
         PROPERTY( Min = 0.0, Tooltip = "Mass per volume (3D, kg/m^3) or per area (2D, kg/m^2)" )
-        float32 _density{ 1000.0f };
+        float32 _density{ kWaterDensity };
     };
 } // namespace sw
 

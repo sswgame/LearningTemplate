@@ -345,7 +345,7 @@ namespace sw
         /** @brief 앞에서부터 끝난 프레임을 거둬 완료 시리얼을 올립니다(`processCompletions`). */
         void retireFinishedFrames();
         /** @brief 큐 완료 콜백입니다(userdata1 = 프레임 완료). */
-        static void onFrameWorkDone( WGPUQueueWorkDoneStatus status, void* pUserdata1, void* pUserdata2 );
+        static void onFrameWorkDone( WGPUQueueWorkDoneStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
         /** @brief 읽기 버퍼 매핑 콜백입니다(userdata1 = 프레임 완료). */
         static void onFrameBufferMapped( WGPUMapAsyncStatus status, WGPUStringView message, void* pUserdata1, void* pUserdata2 );
         /** @brief 잡히지 않은 검증 오류를 남깁니다(장치 생성 때 건다). 브라우저는 파이프라인 오류도 여기로 늦게 온다. */

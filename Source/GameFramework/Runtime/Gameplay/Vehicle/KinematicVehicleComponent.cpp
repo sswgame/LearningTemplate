@@ -64,7 +64,7 @@ namespace sw
             return surface;
         const float3 from{ x, _probeTop, z };
         const float3 to{ x, _probeTop - Internal::kProbeLength, z };
-        if ( SurfaceQuery::sampleBelow( *_pManager, *_pSurfaceTable, from, to, _ownerID, false, sample ) == false || sample._pKind == nullptr )
+        if ( SurfaceQuery::sampleBelow( *_pManager, _pSurfaceTable, from, to, _ownerID, false, sample ) == false || sample._pKind == nullptr )
             return surface; // 맞은 것이 없다 — 평면 위(구름 저항 0). 표에 없는 재질은 질의가 이름마다 오류를 남겼다
         surface._rollingResistance = sample._pKind->_rollingResistance;
         surface._gripScale         = sample._pKind->_gripScale;

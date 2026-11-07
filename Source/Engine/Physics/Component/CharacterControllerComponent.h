@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Concurrency/SpinLock.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -64,7 +65,7 @@ namespace sw
          */
         void applyMoveScale( float32 scale );
         /** @brief 지난 물리 프레임에 걷는 속도에 곱한 계수입니다(진단 · 감시 값). */
-        float32 getMoveScale() const { return _frameMoveScale; }
+        float32 getMoveScale() const { return _reportedMoveScale.load( std::memory_order_relaxed ); }
         /**
          * @brief 이번 게임 프레임에 받는 물리 필드(중력 배율 · 가속 · 흐름 · 저항 · 부력 · 마찰)를 얹습니다. 여러 지역이면 `PhysicsFieldSample::combine` 으로 합친다.
          * @details 물리 프레임이 시작할 때(`beginPhysicsFrame`) 모은 값을 그 프레임의 필드로 옮기고 비운다 — 프레임마다 다시 받아야 이어지고, 스텝이 없는 프레임이 끼어도
@@ -161,6 +162,7 @@ namespace sw
         float3 _frameSurfaceVelocity     SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 면 속도
         float32 _pendingMoveScale        SW_GUARDED_BY( _commandLock ); ///< 이번 프레임에 받은 이동 계수의 최솟값(`_commandLock`)
         float32 _frameMoveScale          SW_GUARDED_BY( _physicsStep ); ///< 이번 물리 프레임의 이동 계수
+        atomic<float32>                  _reportedMoveScale;            ///< 진단 · 감시 값이 읽는 사본(`getMoveScale`) — 물리 스텝이 쓰고 게임 스레드가 읽는다
         float3 _pendingLaunch            SW_GUARDED_BY( _commandLock ); ///< 0 이 아니면 다음 스텝에 쏜다(`_commandLock`)
         float3 _airVelocity              SW_GUARDED_BY( _physicsStep ); ///< 발사 · 떠난 바닥의 수평 속도 — 땅에 다시 닿으면 0
         PhysicsFieldSample _pendingField SW_GUARDED_BY( _commandLock ); ///< 이번 게임 프레임에 모인 물리 필드(`_commandLock`)

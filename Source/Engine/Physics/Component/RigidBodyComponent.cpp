@@ -195,7 +195,7 @@ namespace sw
         if ( pSettings == nullptr || pSettings->_listMaterial.empty() )
             return 1.0f;
         const PhysicsMaterialDef* pMaterial = _material.empty() ? &pSettings->_listMaterial.front() : pSettings->findMaterial( _material );
-        return pMaterial != nullptr ? pMaterial->_density / kWaterDensity : 1.0f;
+        return pMaterial != nullptr ? pMaterial->_density / PhysicsMaterialDef::kWaterDensity : 1.0f;
     }
 
     bool RigidBodyComponent::isSleeping() const
