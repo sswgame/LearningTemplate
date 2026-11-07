@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -146,10 +147,11 @@ namespace sw
      */
     class SW_KIT_API RhythmChart
     {
+        friend struct AssetTypeLoader;
+
     public:
         RhythmChart();
 
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
 
         /** @brief 박의 음악 시각(초)을 반환합니다. 박 0 보다 앞은 첫 BPM 으로 늘려서 계산합니다. */
@@ -184,6 +186,8 @@ namespace sw
         float32 getEndTime() const { return _endTime; }
 
     private:
+        /** @brief 리소스 경로의 악보를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<RhythmChart>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
         void               makeTimingPoints( const vector<RhythmBpmChange>& listBpmChange, const vector<RhythmStop>& listStop );
 
@@ -200,4 +204,10 @@ namespace sw
         int32                       _laneCount;
         int32                       _judgmentCount;
     };
+
+    /**
+     * @brief 악보를 경로마다 한 벌 나눠 줍니다("RhythmChart", 인스턴스화는 `RhythmChart.cpp`). 제자리에서 다시 읽습니다.
+     * @details 연주 세션(`RhythmPlaySession`)은 악보를 빌려 읽고 실행 상태(판정 · 콤보)는 자기가 든다 — 같은 곡을 여러 자리가 연주해도 악보는 한 벌이다.
+     */
+    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<RhythmChart>;
 } // namespace sw

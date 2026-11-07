@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -124,26 +125,36 @@ namespace sw
     /**
      * @class FighterCatalog
      * @brief 다음 형식의 XML 을 읽는 캐릭터 카탈로그입니다.
-     *        `<FighterCatalog buttons="1,2,3,4"><Fighter id="kaz" name="Kaz" health="170" walkSpeed="0.03" hurtRadius="0.35" pushRadius="0.3"
+     *        `<FighterCatalog buttons="1,2,3,4" moves="game/x/data/moves.xml"><Fighter id="kaz" name="Kaz" health="170" walkSpeed="0.03" hurtRadius="0.35" pushRadius="0.3"
      *        standHeight="1.8" crouchHeight="1.1" sidestepAngle="0.698" sidestepFrames="16" sidestep="u" sidestepDown="d,n" jump="u/f"
      *        jumpFrames="40" jumpHeight="1" jumpDistance="0.8">
      *        <Move id="jab" command="1" priority="0" maxGap="10" from="Standing,Crouching" stance="" enterStance="" stringOnly="false" tracking="false"
      *        screw="false" bound="false" groundHit="false" nearWall="false" rageArt="false" heatBurst="false" breakButtons="1" pushback="0.1"/>
      *        </Fighter></FighterCatalog>`
-     * @details 기술의 프레임 데이터는 함께 넘긴 기반 `MoveCatalog` 에서 같은 id 로 복사해 온다(`frames="다른id"` 로 다른 id 를 지정할 수 있다).
+     * @details 기술의 프레임 데이터는 기반 `MoveCatalog` 에서 같은 id 로 복사해 온다(`frames="다른id"` 로 다른 id 를 지정할 수 있다).
+     *          파일에서 읽는 길은 공유 캐시 하나다(`SharedAssetCache<FighterCatalog>::acquire`) — 경로만으로 나눠 주므로 기반은 루트의 `moves`(기술 카탈로그 경로)가 정하고,
+     *          로더가 그 카탈로그를 공유 캐시에서 받는다(호출하는 쪽이 문맥을 넘기지 않는다). 테스트 · 에디터 미리 보기는 `loadFromXMLText` 에 기반을 넘긴다.
      *          프레임 데이터가 없거나 커맨드 · 자세 · 풀기 버튼을 읽지 못하면 오류를 남기고 그 기술만 버린다. 캐릭터의 칸 · 횡이동 · 점프 커맨드가 틀리거나 id 가 겹치면 캐릭터를 넣지 않는다.
      *          `stance` 가 있으면 시작 자세는 `Stance` 다. `breakButtons` 는 커맨드 표기("1" 또는 "1+2")로 쓴다.
      */
     class SW_KIT_API FighterCatalog : public GameCatalog<FighterDef>
     {
+        friend struct AssetTypeLoader;
+
     public:
         FighterCatalog();
 
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID, const MoveCatalog& moveCatalog );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, const MoveCatalog& moveCatalog, string_view sourceName = {} );
         void               addFighter( const FighterDef& fighter );
 
     private:
+        /** @brief 리소스 경로의 카탈로그를 읽습니다. 루트의 `moves` 가 가리키는 기술 카탈로그를 공유 캐시에서 받아 기반으로 씁니다. 종류의 로더(공유 캐시)만 부른다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief 파일 루트 읽기입니다 — `moves` 의 기술 카탈로그를 받아 `loadRoot` 에 넘깁니다. 없거나 읽지 못하면 오류이고 0 입니다. */
+        uint32 loadFileRoot( const XMLNode& root, string_view sourceName );
         uint32 loadRoot( const XMLNode& root, const MoveCatalog& moveCatalog, string_view sourceName );
     };
+
+    /** @brief 캐릭터 카탈로그를 경로마다 한 벌 나눠 줍니다("FighterCatalog", 인스턴스화는 `FighterCatalog.cpp`). 제자리에서 다시 읽습니다(쥔 쪽은 id 로 찾는다). */
+    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<FighterCatalog>;
 } // namespace sw

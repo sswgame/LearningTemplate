@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
@@ -154,9 +155,27 @@ namespace sw
     {
     }
 
-    bool FighterCatalog::loadFromAsset( const AssetID& assetID, const MoveCatalog& moveCatalog )
+    bool FighterCatalog::loadFromAsset( const AssetID& assetID )
     {
-        return GameDataXML::loadFromFile( *this, &FighterCatalog::loadRoot, moveCatalog, assetID, "FighterCatalog" );
+        return GameDataXML::loadFromFile( *this, &FighterCatalog::loadFileRoot, assetID, "FighterCatalog" );
+    }
+
+    uint32 FighterCatalog::loadFileRoot( const XMLNode& root, string_view sourceName )
+    {
+        // 기반 기술 카탈로그는 데이터가 정한다 — 공유 캐시는 경로만으로 나눠 주므로 호출하는 쪽의 문맥을 받을 수 없다(작물의 계절과 같은 규칙).
+        const string_view movesPath = root.getAttributeText( "moves" );
+        if ( movesPath.empty() )
+        {
+            SW_LOG_ERROR_ID( "FighterCatalog.FileNeedsMoves", "%#: <FighterCatalog> read from a file needs moves=\"<move catalog path>\"", sourceName );
+            return 0;
+        }
+        const shared_ptr<const MoveCatalog> pMoves = SharedAssetCache<MoveCatalog>::acquire( movesPath );
+        if ( pMoves == nullptr )
+        {
+            SW_LOG_ERROR_ID( "FighterCatalog.MovesCouldNot", "%#: the move catalog '%#' could not be read", sourceName, movesPath );
+            return 0;
+        }
+        return loadRoot( root, *pMoves, sourceName ); // 프레임 데이터는 기술마다 복사해 온다 — 기반을 쥐지 않는다
     }
 
     bool FighterCatalog::loadFromXMLText( string_view xmlText, const MoveCatalog& moveCatalog, string_view sourceName )
@@ -218,4 +237,10 @@ namespace sw
             SW_LOG_WARNING_ID( "FighterCatalog.NoFighterEntries", "%#: no <Fighter> entries", sourceName );
         return loadedCount;
     }
+} // namespace sw
+
+namespace sw
+{
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<FighterCatalog>::acquire`). 파일 규칙이 없는 종류라 카탈로그 편집기에는 나오지 않는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( FighterCatalog, FighterCatalog, SW_KIT_API, AssetTypeDef::makeCacheOnly( "FighterCatalog", AssetTypeLoader::of<FighterCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

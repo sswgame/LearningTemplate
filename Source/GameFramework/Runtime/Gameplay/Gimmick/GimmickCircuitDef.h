@@ -22,6 +22,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -100,11 +101,11 @@ namespace sw
      */
     class SW_GF_API GimmickCircuitDef
     {
+        friend struct AssetTypeLoader;
+
     public:
         /** @brief 기본 고정 스텝(초)입니다. 60 Hz 입니다. */
 
-        /** @brief 리소스 경로의 `<GimmickCircuit>` 를 읽습니다. 형식이 깨졌으면 false 입니다. 이름의 뜻은 `GimmickCircuit::populate` 가 검사합니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 텍스트를 읽습니다. 테스트와 에디터에서 씁니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
 
@@ -130,6 +131,11 @@ namespace sw
         void   setSourceName( string_view sourceName ) { _sourceName = string( sourceName ); }
 
     private:
+        /**
+         * @brief 리소스 경로의 `<GimmickCircuit>` 를 읽습니다. 형식이 깨졌으면 false 입니다. 이름의 뜻은 `GimmickCircuit::populate` 가 검사합니다.
+         * @details 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<GimmickCircuitDef>::acquire` 로 한 벌을 쥐고 회로 실행 상태(`GimmickCircuit`)는 자기가 짓는다.
+         */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadRoot( const XMLNode& root );
 
     private:
@@ -138,4 +144,10 @@ namespace sw
         string                 _sourceName{};
         float32                _stepTime{ constant::time::kDefaultFixedStepSeconds };
     };
+
+    /**
+     * @brief 기믹 회로 정의를 경로마다 한 벌 나눠 줍니다("GimmickCircuitDef", 인스턴스화는 `GimmickCircuitDef.cpp`). 제자리에서 다시 읽습니다.
+     * @details 회로(`GimmickCircuit::populate`)는 정의에서 노드 · 배선 상태를 지어 자기가 든다 — 같은 회로를 여러 오브젝트가 써도 정의는 한 벌이다.
+     */
+    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<GimmickCircuitDef>;
 } // namespace sw
