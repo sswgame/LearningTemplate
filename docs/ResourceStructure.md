@@ -213,14 +213,14 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 - **애니메이션 셋:** `base` 를 공통 `_base` 로 옮겼다. `set`(줄 하나를 다른 셋에서 빌림)은 여러 파일을 섞는 믹스인이라 `_listRenderPassRef` 와 같은 까닭으로 남긴다. 셋을 바꾸면 상태 · 위상과 코드 레이어가 새 셋의 같은 이름 클립으로 잇는다.
 - **그래프:** 상태는 이름(자식이 더한 상태의 id 가 부모와 겹치면 오류로 드러난다), 전이는 id, 레이어 · 마스크는 이름이 열쇠다. 연결 레이어는 `<layer slot>` 을 `SkeletalAnimatorComponent::_listLinkedLayer` 의 그래프로 채운다. 채운 그래프의 클립 이름과 파라미터는 애니메이터의 것을 함께 쓰고, 레이어 안의 레이어는 없다(한 단계).
 - **노드 · 레이어 LOD:** 등급은 한 축이다(`AnimationLODState::_lodGrade` = `animationlod.xml` 의 주기 단계 + 예산이 주기를 두 배로 늘린 횟수). 그래프 `<layer>` · 블렌드 스페이스 `<node>` 와 리그 노드(IK · 룩앳 · 스프링 본)가 `max_lod` 칸으로 그 등급에서 꺼지고, `_nodeFadeSeconds` 동안 가중치를 옮겨 튀지 않는다(`AnimationLODFade`, 언리얼 LOD Threshold 는 끊는다). 칸이라 먼 NPC 변형은 `<layer name="Aim" max_lod="1"/>` 만 적는다. 본 LOD 와는 따로 돈다 — 리그 노드가 쓰는 본은 본 LOD(`SkeletonBoneLOD`)의 핵심 본(`SkeletalMeshComponent::requireBones`)이라 빠지지 않고, 레이어가 빠진 본을 써도 그 본은 그리는 메시가 쓰지 않는다.
-- **2 차 물리 LOD:** 흔들림 본 · 망토 · 머리 가닥은 리그 `SpringChain` 이라 위 `max_lod` 로 끈다(다 꺼지면 상태를 버리고, 켜지면 애니메이션 포즈에서 섞여 들어온다). 물리 천(`ClothComponent`, Jolt 소프트 바디)은 아직 LOD 가 없다 — 확장 지점은 천이 조상 스켈레탈 메시의 등급을 읽고(`findBoneWorld` 가 이미 그 메시를 찾는다) 등급마다 반복 수를 낮추거나(`IPhysicsSoftBodyScene` 에 반복 수 · 잠재우기 함수를 더한다) 끄는 것이다. 다시 켤 때 고정점이 옮겨 가 튀므로 스킨 구속으로 한 프레임 붙인 뒤 풀어야 한다.
+- **2 차 물리 LOD:** 흔들림 본 · 망토 · 머리 가닥은 리그 `SpringChain` 이라 위 `max_lod` 로 끈다(다 꺼지면 상태를 버리고, 켜지면 애니메이션 포즈에서 섞여 들어온다). 물리 천(`ClothComponent`, Jolt 소프트 바디)은 조상 스켈레탈 메시의 같은 등급을 읽어 반복 수를 낮추고(`_listLODIterationCount` — 등급 g 는 g − 1 번째, 끝을 넘으면 마지막, 등급 0 은 `_iterationCount`. 다시 만들지 않고 `IPhysicsSoftBodyScene::setSoftBodyIterationCount`) `_maxLOD` 를 넘으면 내린다. 내린 동안은 고정 자세에 건 쉬는 격자를 그린다(언리얼 Chaos Cloth 가 시뮬레이션을 끈 LOD 에서 스킨 메시를 그리는 자리 — 그쪽은 LOD 마다 시뮬레이션 메시를 따로 두지만 여기 격자는 하나다, 기억에 의존한 비교). 다시 켜면 지금 고정 자세에서 새로 만든다(스킨이면 그 프레임에 스킨 위치로) — 옛 정점에서 이으면 내린 동안 옮겨 간 고정점이 천을 잡아채 튄다. 스켈레탈 메시 조상이 없는 천(커튼 · 깃발)은 등급 0 이다. 확인은 단위 테스트 `ClothLODTest` 다 — 저장소에 캐릭터에 단 물리 천이 아직 없어 그림 시나리오를 두지 않았다.
 - **스프라이트 라이브러리:** 아틀라스는 파일에 하나다. 라벨마다 텍스처가 다르면 프레임을 넘길 때 머티리얼 인스턴스가 바뀌어 배치가 깨진다.
 - **소켓 · 알림 표:** 원소 종류가 섞이고 열쇠 칸이 달라 `DataCatalogInheritance.json` 규칙 한 줄이다. 리그 · 리타겟은 `SW_DATA_INHERITANCE_SCHEMA`, 물리 에셋은 `PROPERTY( InheritKey )` 다.
 - **뺀 것:** 물리 셰이프(이름이 없다) · 충돌 쌍(열쇠가 뼈 둘이다), 리그 · 리타겟 안의 뼈 목록(순서가 뜻이다)은 통째로 바뀐다. 입력 레이어는 이번에 하지 않았다.
 
 ### 7. 무기와 발사체 조합
 
-지금은 탄속 · 낙차 · 피해가 `WeaponDef` 안에 있어 "소총 + 폭발탄" 하나에 무기 정의 하나가 든다. 발사체 구조체도 키트마다 따로다(`Ballistics::Projectile`, `ProjectileComponent`, `MechProjectile`, `KartProjectile`, `ActionProjectile`, `ArenaProjectileComponent`). 정의를 나눠 무기 N 종과 발사체 M 종이 파일 N + M 개로 조합되게 한다.
+지금은 탄속 · 낙차 · 피해가 `WeaponDef` 안에 있어 "소총 + 폭발탄" 하나에 무기 정의 하나가 든다. 발사체 구조체도 키트마다 따로였다(`Ballistics::Projectile`, `ProjectileComponent`, `MechProjectile`, `KartProjectile`, `ActionProjectile`, `ArenaProjectileComponent` — 모두 아래 시뮬레이션 하나로 옮겼다). 정의를 나눠 무기 N 종과 발사체 M 종이 파일 N + M 개로 조합되게 한다.
 
 | 정의 | 가지는 것 |
 |---|---|
@@ -250,8 +250,9 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 - **키트는 데이터와 반응만 갖는다.** 기체 대전 · 카트 · 액션 플랫포머 · 액션 룸이 `IProjectileWorld` 로 맞을 대상(적 조종사 구 · 차의 수평 거리 · 벽 칸 · 없음)을 답하고, 사건(`ProjectileEvent`)을 받아 다운치 · 아이템 효과 · 폭발 범위를 준다. 반응 수치는 탄에 베끼지 않고 가리킨다(기체 대전은 `_payload` = 기체 번호 × 256 + 슬롯, 카트는 `_defID` = 아이템 id).
 - **2D 는 평면 제약 3D 다.** 언리얼 ProjectileMovement 의 평면 제약과 같은 길이다. 유니티 · Godot 는 2D 물리를 따로 두지만, 그러면 관통 · 튕김 · 유도 · 반사를 차원마다 두 벌 쓴다. 액션 플랫포머 · 액션 룸은 (x, y, 0) 에 법선 Z, 카트는 법선 Y 로 돌고 높이는 키트가 트랙을 따라 맞춘다.
 - **결정성:** `ProjectileDef.cpp` · `ProjectileSimulation.cpp` 는 `sw_markDeterministicSources` 에 있고 삼각함수는 `DeterministicMathUtil` 이다. 중력은 쓰는 쪽이 값으로 넘겨 물리 설정을 읽지 않는다. 상태 바이트는 한 벌(`ProjectileSimulation::writeState`)이고 쓰는 쪽은 자기 번호의 범위만 본다. 걸음 안에서 세계를 바꾸지 않고(사건은 걸음 뒤에 반응), 그래서 같은 걸음에 둘이 한 대상을 맞히면 둘 다 소비된다(예전 기체 대전은 앞 탄이 격추하면 뒤 탄이 지나갔다).
-- **옮기지 않은 것:** `ArenaProjectileComponent`(AbilityArena 게임)는 탄이 어빌리티 이펙트 스펙을 실어 나르는 오브젝트다. 어빌리티 이펙트는 복제 · 예측 규칙 때문에 어휘에도 합치지 않은 자리라(5 절) 그 키트의 복제 규칙과 함께 옮긴다. 몬스터 사격(`MonsterShotDef`) · 기체 특수기 · 카트 아이템은 탄 수치를 자기 표에 두고 공통 시뮬레이션만 쓴다 — 탄 표(`ProjectileCatalog`)를 가리키게 바꾸면 그 키트의 게임이 카탈로그를 서비스로 걸어야 하는데 아직 그 게임이 없다.
-- 확인: 단위 테스트 `ProjectileTest`(조합 · 받음 · 순서 · 맞음 표 · 맞음 동작 · 관통 · 튕김 · 유도 · 사거리 · 수명 · 상태 왕복), 시나리오 `game.shooter3d.projectilecombo`(같은 소총에 소이탄을 넣으면 피해 감시값과 탄도선 그림이 바뀐다).
+- **키트 탄 표:** 몬스터 사격(`MonsterShotDef` — `angle` · `projectile`) · 기체 특수기(Special 슬롯의 `projectile`) · 카트 아이템(날거나 놓이는 아이템의 `projectile`)은 쏘는 법과 맞은 뒤의 반응만 갖고 탄 수치는 탄 정의다. 키트가 카탈로그를 받는 길은 그 키트가 자기 카탈로그를 받는 길과 같다 — 액션 룸은 게임 서비스(몬스터 카탈로그처럼 `game::findSubsystem`, 종을 처음 세울 때 탄을 풀어 둔다), 기체 대전 · 카트 경기는 생성 인자(`initialize` — 판이 서비스를 찾지 않아 테스트 · 리플레이 · 서버가 같은 판을 연다). 카트 탄의 정의 id 는 반응을 찾는 아이템 id 로 둔다(상태 바이트가 그대로다). 벽이 없는 판(액션 룸 · 아레나)은 수명이나 사거리가 없는 탄을, 기체 특수기는 사거리 없는 탄을 받지 않는다.
+- **어빌리티 탄(AbilityArena):** 탄은 디렉터의 시뮬레이션 하나가 바닥 평면에서 돌리고(`ArenaGameModeComponent`, PrePhysics 스냅샷으로 맞음), 실은 어빌리티 이펙트 스펙은 탄 id 로 찾는 짐(`ProjectileCargo`)이다. 스펙은 쏜 쪽 어빌리티 시스템을 가리키는 런타임 값이라 탄 상태 바이트에 넣지 않고 상태 저장 전에 모습과 함께 걷는다. 맞으면 틱 뒤 게임 스레드에서 맞은 쪽 어빌리티 시스템에 건다 — 적용 · 차단은 그 시스템의 규칙이고 탄은 나르기만 한다. 이 엔진의 어빌리티는 복제 · 예측이 없고, 언리얼 GAS 도 투사체는 서버 액터가 스펙을 들고 날아 서버에서 거는 길이라(기억에 의존한 비교) 복제가 생기면 결정적 시뮬레이션은 서버 권위로 두고 짐만 서버에 남긴다. `ArenaProjectileComponent` 는 탄을 읽기만 하는 모습이다. 탄 수치는 어빌리티의 `<Param name="projectile">` 이 가리키는 탄(`game/abilityarena/data/projectiles.xml`)이고 피해는 피해 이펙트의 SetByCaller 로 간다.
+- 확인: 단위 테스트 `ProjectileTest`(조합 · 받음 · 순서 · 맞음 표 · 맞음 동작 · 관통 · 튕김 · 유도 · 사거리 · 수명 · 상태 왕복), `ActionRoomTest.ShotsResolveFromTheProjectileCatalog` · `KartRaceTest.ItemsFlyByTheirProjectile` · `MechArenaRulesTest`(특수기의 탄), 시나리오 `game.shooter3d.projectilecombo`(같은 소총에 소이탄을 넣으면 피해 감시값과 탄도선 그림이 바뀐다), `game.abilityarena.control`(화염구가 날아 처치 수가 오른다).
 
 ## 순서
 
