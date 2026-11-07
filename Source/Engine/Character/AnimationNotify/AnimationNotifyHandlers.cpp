@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/YawUtil.h"
 
 #include "Engine/Animation/Scene/MotionWarpingComponent.h"
 #include "Engine/Asset/AssetManager.h"
@@ -13,6 +14,9 @@
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/MeleeHitWindow.h"
+#include "Engine/Environment/Surface/SurfaceFootprintSystem.h"
+#include "Engine/Environment/Surface/SurfaceKind.h"
+#include "Engine/Environment/Surface/SurfaceQuery.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -116,7 +120,11 @@ namespace sw
                 };
             };
 
-            /** @class FootstepHandler @brief 발 소켓 아래의 물리 재질을 바닥 종류로 고르고, 소리 경로의 `{surface}` 를 그 이름으로 바꿉니다. */
+            /**
+             * @class FootstepHandler
+             * @brief 발 소켓 아래를 공통 표면 질의(`SurfaceQuery`)로 읽어 소리 경로의 `{surface}` 를 그 종류의 발소리 분류로 바꾸고, 씬의 발걸음 반응
+             *        (`SurfaceFootprintSystem` — 종류마다 세기 · 눈 발자국)에 알립니다. 높이장 · 충돌은 고치지 않습니다.
+             */
             class FootstepHandler final : public IAnimationNotifyHandler
             {
             public:
@@ -129,21 +137,27 @@ namespace sw
                     const float3               foot     = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socket ) );
                     const float32              distance = MathUtil::max( context._entry.getFloatParam( s_distance ), 0.01f );
                     // 발 위 반 거리에서 아래로 쏜다. 발이 바닥에 조금 묻혀 있어도 바닥을 맞힌다.
-                    const float3    from = foot + float3{ 0.0f, distance * 0.5f, 0.0f };
-                    const float3    to   = foot - float3{ 0.0f, distance, 0.0f };
-                    CharacterRayHit hit;
-                    if ( context._component.castFromTo( from, to, 0.0f, kAllLayers, hit ) == false )
+                    const float3                             from     = foot + float3{ 0.0f, distance * 0.5f, 0.0f };
+                    const float3                             to       = foot - float3{ 0.0f, distance, 0.0f };
+                    GameObjectManager*                       pManager = context._owner.getManager();
+                    const shared_ptr<const SurfaceKindTable> pTable   = pManager != nullptr ? SurfaceKindTable::findDefault() : nullptr;
+                    CharacterRayHit                          hit;
+                    SurfaceSample                            sample;
+                    const bool                               bSampled = pTable != nullptr && context._component.castFromTo( from, to, 0.0f, kAllLayers, hit ) && SurfaceQuery::resolveHit( *pManager, *pTable, hit, sample );
+                    if ( bSampled == false )
                     {
                         record( context, hashed_string{}, foot, 0, AnimationNotifyPhase::Instant );
                         return;
                     }
-                    static const hashed_string s_default( "Default" );
-                    const hashed_string        surface = hit._material.empty() ? s_default : hit._material;
-                    const string               sound   = context._entry.getTextParam( s_sound );
-                    IAudioService*             pAudio  = findAudioService( context );
+                    const string   sound  = context._entry.getTextParam( s_sound );
+                    IAudioService* pAudio = findAudioService( context );
                     if ( sound.empty() == false && pAudio != nullptr )
-                        (void)pAudio->play( AssetID{ StringUtil::replace( sound, "{surface}", StringUtil::toLower( surface.c_str() ) ) } );
-                    record( context, surface, hit._point, hit._pObject != nullptr ? hit._pObject->getObjectID() : 0, AnimationNotifyPhase::Instant );
+                        (void)pAudio->play( AssetID{ StringUtil::replace( sound, "{surface}", sample._pKind->_footstep.c_str() ) } );
+                    // 발자국 방향은 몸의 앞(루트의 +Z)이다 — 발 뼈의 축은 리그마다 다르다.
+                    float4x4 root;
+                    (void)context._component.findSocketWorldTransform( hashed_string{}, root ); // 빈 이름은 루트 변환을 담고 false 다(선언 설명)
+                    pManager->getSubsystem<SurfaceFootprintSystem>().addFootstep( *pTable, *sample._pKind, sample._point, YawUtil::fromWorld( root ) );
+                    record( context, sample._pKind->_name, sample._point, sample._objectID, AnimationNotifyPhase::Instant );
                 }
 
             private:
