@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  근접 판정 · 유닛 스탯(ActionCombat 키트의 MeleeHitboxComponent · UnitStatsComponent, maps/meleeduel) — 값으로 판정한다(골든 없음).
+  ① 휘두르기(개발 명령 combat.swing — 게임의 공격 입력 · AI 가 부르는 beginAttack 과 같은 함수)가 칼날 안의 Dummy 를 한 번 맞혀 HP 30 → 20(방어 0).
+  ② 한 창 안에서는 같은 대상을 다시 맞히지 않는다. ③ 다음 휘두르기(25)로 쓰러진다. 휘두른 쪽(공격자 계층)은 맞지 않는다.
+  실행: App -scenario=game/empty/automation/meleeduel.scenario.xml -unattended (체인: ctest -R Scenario.empty)
+-->
+<Scenario name="game.empty.meleeduel" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/meleeduel.scene.xml"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="5"/>
+	<Expect watch="UnitStats.HP" target="Dummy" equals="30"/>
+
+	<DevCommand line="combat.swing Fighter 10 0.2"/>
+	<WaitUntil watch="UnitStats.HP" target="Dummy" equals="20" timeoutFrames="5"/>
+	<Wait frames="20"/>
+	<Expect watch="UnitStats.HP" target="Dummy" equals="20"/>
+	<Expect watch="UnitStats.HP" target="Fighter" equals="50"/>
+
+	<DevCommand line="combat.swing Fighter 25 0.2"/>
+	<WaitUntil watch="UnitStats.HP" target="Dummy" atMost="0" timeoutFrames="5"/>
+	<Expect watch="Object.Property" target="Dummy" key="UnitStatsComponent._bIsDead" equals="1"/>
+	<Pass/>
+</Scenario>

@@ -2,11 +2,15 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Component/MeleeHitboxComponent.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
 #include "Engine/Character/Hit/MeleeHitWindow.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Scene/SceneManager.h"
 
 namespace sw
 {
@@ -126,4 +130,35 @@ namespace sw
         (void)MeleeHit::sweep( *pAttacker, _listPreviousPoint, listCurrent, params, MeleeHit::getProcessAuthority(), _listHitTarget, listHit );
         _listPreviousPoint = std::move( listCurrent );
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct MeleeHitboxCommandsInternal
+        {
+            /** @brief `combat.swing <name> <damage> <duration>` — 이름 붙은 오브젝트의 근접 판정을 엽니다(게임의 공격 입력 · AI 가 부르는 `beginAttack` 과 같은 함수). */
+            static bool runSwing( const vector<string>& listArgument, string& outReply )
+            {
+                int32      damage   = 0;
+                float32    duration = 0.0f;
+                const bool bBad     = listArgument.size() != 3 || StringUtil::parseInt( listArgument[1], damage ) == false || StringUtil::parseFloat( listArgument[2], duration ) == false;
+                if ( bBad )
+                    return false;
+                GameObject*           pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                MeleeHitboxComponent* pHitbox = pObject != nullptr ? pObject->getComponent<MeleeHitboxComponent>() : nullptr;
+                if ( pHitbox == nullptr )
+                {
+                    outReply = "no object named '" + listArgument[0] + "' with a MeleeHitboxComponent in the active scene";
+                    return false;
+                }
+                pHitbox->beginAttack( damage, duration );
+                outReply = "swinging";
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( CombatSwing, "combat.swing", "combat.swing <name> <damage> <duration>", "Open the melee hitbox of a named object of the active scene for a swing", &MeleeHitboxCommandsInternal::runSwing );
 } // namespace sw

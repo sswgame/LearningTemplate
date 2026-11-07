@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -244,4 +245,29 @@ namespace sw
         if ( IDamageNumberSink* pDamageNumbers = game::findSubsystem<IDamageNumberSink>() )
             pDamageNumbers->spawnDamageNumber( *pManager, position, amount );
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct UnitStatsWatchesInternal
+        {
+            /** @brief 감시 값 `UnitStats.HP` 입니다. 대상 유닛의 지금 HP 입니다. */
+            [[nodiscard]] static bool readHP( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject*         pTarget = query.findTargetObject();
+                const UnitStatsComponent* pStats  = pTarget != nullptr ? pTarget->getComponent<UnitStatsComponent>() : nullptr;
+                if ( pStats == nullptr )
+                {
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "unit stats" ) );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( pStats->getHP() ) );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( unitStatsHP, "UnitStats.HP", "Current HP of the target's UnitStatsComponent", &UnitStatsWatchesInternal::readHP, true, false );
 } // namespace sw

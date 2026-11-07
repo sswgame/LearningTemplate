@@ -1,8 +1,6 @@
 {
     "_folders": {},
     "_components": {
-        "MeleeHitboxComponent": "ActionCombat 키트는 어떤 게임도 싣지 않아 데이터 배치가 없다(unfinished_survey K1) - 그 시연 게임을 세울 때 놓는다",
-        "UnitStatsComponent": "ActionCombat 키트는 어떤 게임도 싣지 않아 데이터 배치가 없다(unfinished_survey K1) - 그 시연 게임을 세울 때 놓는다"
     },
     "_watches": {
         "Editor.LoadingScreenShown": "에디터 체인에서는 앞 단계의 상태를 따라가 값으로 판정하면 흔들린다. 로딩 화면은 시나리오 loadingscreen 이 그림으로 본다",
