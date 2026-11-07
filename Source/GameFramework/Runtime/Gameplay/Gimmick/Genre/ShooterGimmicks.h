@@ -72,6 +72,39 @@ namespace sw
 
 namespace sw
 {
+    class IWorldQuery;
+
+    /** @brief 포탑 탄이 맞힐 대상 하나입니다(이번 스텝의 자리와 오브젝트). */
+    struct TurretShotTarget
+    {
+        float3 _position{};
+        uint64 _objectID{ 0 };
+    };
+
+    /**
+     * @class TurretShotWorld
+     * @brief 포탑 탄이 묻는 세계입니다. 대상은 구(`_other` 는 목록 번호)이고, 대상이 아닌 막는 바디(벽 · 문)는 표면입니다.
+     * @details 발사 순간의 시야만 보지 않는다 — 걸음마다 선분을 막는 질의(`IWorldQuery`)에 묻으므로 쏜 뒤 생긴 벽에 탄이 맞아 끝난다.
+     *          대상의 몸(물리 바디)은 막지 않는다. 쏜 포탑 자신은 건너뛴다. 언리얼 ProjectileMovement 가 매 이동을 스윕하는 것과 같은 자리다(기억에 의존한 비교).
+     */
+    class SW_GF_API TurretShotWorld final : public IProjectileWorld
+    {
+    public:
+        TurretShotWorld( const vector<TurretShotTarget>& listTarget, float32 hitRadius, const IWorldQuery& blockers, uint64 ownerID );
+
+        bool findTargetPoint( const ProjectileState& projectile, float3& outPoint ) const override;
+        bool sweep( const ProjectileState& projectile, const float3& from, const float3& to, ProjectileHit& outHit ) const override;
+
+    private:
+        bool isTarget( uint64 objectID ) const;
+
+    private:
+        const vector<TurretShotTarget>& _listTarget;
+        const IWorldQuery&              _blockers;
+        uint64                          _ownerID;
+        float32                         _hitRadius;
+    };
+
     /**
      * @class TurretComponent
      * @brief 사거리, 시야각, 시야 안에서 태그(`_targetTags`)를 가진 가장 가까운 것을 고르고(`InteractionSelector` 와 같은 방식), 요를 `_turnSpeed` 로 돌립니다.
@@ -79,6 +112,7 @@ namespace sw
      * @details 회로의 Enable 노드로 켜고 끈다(오브젝트 켜기). 요는 소유자 로컬 회전의 Y 이다(3D). 스텝은 60 Hz 이다.
      *          날아가는 탄은 대상의 속도(스텝 사이 자리 차이)로 앞을 겨눈다(`computeAim` → `Ballistics`). 언리얼 `SuggestProjectileVelocity` 의 자리다(기억에 의존한 비교).
      *          따라잡을 수 없거나 닿지 않는 대상에는 쏘지 않는다. 날아가는 중인 탄은 값 목록(`ProjectileSimulation`)이고 세이브에 싣지 않는다 — 불러온 뒤 다음 발부터 쏜다.
+     *          날아가는 탄은 걸음마다 막는 것을 본다(`TurretShotWorld`) — 쏜 뒤 끼어든 벽에 맞아 끝난다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Turret", Tooltip = "Picks the nearest visible tagged target, turns, fires hitscan shots" )
     class SW_GF_API TurretComponent : public Component
@@ -143,6 +177,7 @@ namespace sw
         FixedStepTimer               _clock;
         vector<InteractionCandidate> _listCandidate;          ///< 스텝마다 대상 후보를 모으는 버퍼(용량 재사용)
         vector<GameObject*>          _listTagged;             ///< 스텝마다 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)
+        vector<TurretShotTarget>     _listShotTarget;         ///< 날아가는 탄이 이번 스텝에 맞힐 대상(용량 재사용)
         ProjectileSimulation         _projectiles;            ///< 날아가는 탄
         GameObjectHandle             _previousTarget;         ///< 지난 스텝의 대상(속도를 잴 때 같은 대상인지 본다)
         float3                       _previousTargetPosition; ///< 지난 스텝의 대상 자리

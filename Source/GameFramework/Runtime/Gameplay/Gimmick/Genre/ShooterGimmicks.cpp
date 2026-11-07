@@ -20,62 +20,12 @@
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickSensorComponent.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionSelector.h"
+#include "GameFramework/Runtime/World/Query/WorldQuery.h"
 
 namespace sw
 {
     namespace
     {
-        /**
-         * @brief 포탑 탄이 묻는 세계입니다. 태그를 가진 대상들을 구로 답합니다(`_other` 는 목록 번호).
-         * @details shortcut: 벽을 보지 않는다 — 쏠 때 시야를 확인했으므로 쏜 뒤 사이에 끼어든 벽만 뚫는다. 탄이 벽에 막혀야 하는 포탑이 생기면 물리 질의를 더한다.
-         */
-        class TurretProjectileWorld final : public IProjectileWorld
-        {
-        public:
-            TurretProjectileWorld( const vector<GameObject*>& listTarget, float32 hitRadius )
-                : _listTarget{ listTarget }
-                , _hitRadius{ hitRadius }
-            {
-            }
-
-            bool findTargetPoint( const ProjectileState& projectile, float3& outPoint ) const override
-            {
-                (void)projectile;
-                (void)outPoint;
-                return false; // 포탑 탄은 유도하지 않는다
-            }
-
-            bool sweep( const ProjectileState& projectile, const float3& from, const float3& to, ProjectileHit& outHit ) const override
-            {
-                const float3  path   = to - from;
-                const float32 length = path.getLength();
-                if ( length <= 1.0e-5f )
-                    return false;
-                Ray ray;
-                ray._origin    = from;
-                ray._direction = path * ( 1.0f / length );
-                float32 best   = length;
-                bool    bFound = false;
-                for ( size_t targetIndex = 0; targetIndex < _listTarget.size(); ++targetIndex )
-                {
-                    const SceneComponent* pScene = _listTarget[targetIndex]->getPrimarySceneComponent();
-                    float32               hit    = 0.0f;
-                    if ( pScene == nullptr || RayMath::intersectSphere( ray, pScene->getWorldPosition(), _hitRadius + projectile._radius, best, hit ) == false )
-                        continue;
-                    best             = hit;
-                    bFound           = true;
-                    outHit._other    = static_cast<int32>( targetIndex );
-                    outHit._position = from + ray._direction * hit;
-                    outHit._kind     = ProjectileHitKind::Target;
-                }
-                return bFound;
-            }
-
-        private:
-            const vector<GameObject*>& _listTarget;
-            float32                    _hitRadius;
-        };
-
         struct ShooterGimmicksInternal
         {
             static void sendCue( const GameObject& source, const hashed_string& cue, const float3& position, float32 magnitude )
@@ -187,6 +137,63 @@ namespace sw
         } );
     }
 
+    TurretShotWorld::TurretShotWorld( const vector<TurretShotTarget>& listTarget, float32 hitRadius, const IWorldQuery& blockers, uint64 ownerID )
+        : _listTarget{ listTarget }
+        , _blockers{ blockers }
+        , _ownerID{ ownerID }
+        , _hitRadius{ hitRadius }
+    {
+    }
+
+    bool TurretShotWorld::findTargetPoint( const ProjectileState& /*projectile*/, float3& /*outPoint*/ ) const
+    {
+        return false; // 포탑 탄은 유도하지 않는다
+    }
+
+    bool TurretShotWorld::sweep( const ProjectileState& projectile, const float3& from, const float3& to, ProjectileHit& outHit ) const
+    {
+        const float3  path   = to - from;
+        const float32 length = path.getLength();
+        if ( length <= 1.0e-5f )
+            return false;
+        Ray ray;
+        ray._origin    = from;
+        ray._direction = path * ( 1.0f / length );
+        float32 best   = length;
+        bool    bFound = false;
+        for ( size_t targetIndex = 0; targetIndex < _listTarget.size(); ++targetIndex )
+        {
+            float32 hit = 0.0f;
+            if ( RayMath::intersectSphere( ray, _listTarget[targetIndex]._position, _hitRadius + projectile._radius, best, hit ) == false )
+                continue;
+            best             = hit;
+            bFound           = true;
+            outHit._other    = static_cast<int32>( targetIndex );
+            outHit._position = from + ray._direction * hit;
+            outHit._kind     = ProjectileHitKind::Target;
+        }
+        // 비행 중에도 막는 것을 본다 — 쏜 뒤 생긴 벽 · 닫힌 문에 탄이 맞는다. 대상(태그를 가진 것)의 몸은 막지 않는다(그 대상은 구로 맞힌다).
+        WorldRayHit  blocker;
+        const float3 end = from + ray._direction * best;
+        if ( _blockers.raycast( from, end, _ownerID, blocker ) == false || isTarget( blocker._objectID ) )
+            return bFound;
+        outHit._other    = -1;
+        outHit._position = blocker._point;
+        outHit._normal   = ray._direction * -1.0f; // 질의가 법선을 주지 않는다 — 튕기지 않는 탄이라 쓰지 않는다
+        outHit._kind     = ProjectileHitKind::Surface;
+        return true;
+    }
+
+    bool TurretShotWorld::isTarget( uint64 objectID ) const
+    {
+        for ( const TurretShotTarget& target : _listTarget )
+        {
+            if ( objectID != 0 && target._objectID == objectID )
+                return true;
+        }
+        return false;
+    }
+
     TurretComponent::TurretComponent()
         : _targetTags{}
         , _range{ 15.0f }
@@ -205,6 +212,7 @@ namespace sw
         , _clock{ GenreGimmickUtil::makeClock() }
         , _listCandidate{}
         , _listTagged{}
+        , _listShotTarget{}
         , _projectiles{}
         , _previousTarget{}
         , _previousTargetPosition{}
@@ -229,15 +237,27 @@ namespace sw
 
     void TurretComponent::stepProjectiles( GameObject& owner )
     {
-        if ( _projectiles.getProjectiles().empty() )
+        GameObjectManager* pManager = owner.getManager();
+        if ( _projectiles.getProjectiles().empty() || pManager == nullptr )
             return;
-        const TurretProjectileWorld world{ _listTagged, _hitRadius };
+        _listShotTarget.clear();
+        for ( const GameObject* pObject : _listTagged )
+        {
+            const SceneComponent* pScene = pObject->getPrimarySceneComponent();
+            if ( pScene != nullptr )
+                _listShotTarget.push_back( TurretShotTarget{ pScene->getWorldPosition(), pObject->getObjectID() } );
+        }
+        const ScenePhysicsWorldQuery sceneQuery{ *pManager };
+        const TurretShotWorld        world{ _listShotTarget, _hitRadius, WorldQuery::select( sceneQuery ), owner.getObjectID() };
         for ( const ProjectileEvent& event : _projectiles.step( constant::time::kDefaultFixedStepSeconds, world ) )
         {
             if ( event._kind != ProjectileEvent::Kind::Hit || event._hit._kind != ProjectileHitKind::Target )
                 continue;
+            GameObject* pVictim = pManager->resolveGameObject( GameObjectHandle::make( _listShotTarget[static_cast<size_t>( event._hit._other )]._objectID ) );
+            if ( pVictim == nullptr )
+                continue;
             ++_hitCount;
-            GimmickDamageUtil::applyDamage( *_listTagged[static_cast<size_t>( event._hit._other )], &owner, hashed_string( "Turret" ), event._projectile._damage );
+            GimmickDamageUtil::applyDamage( *pVictim, &owner, hashed_string( "Turret" ), event._projectile._damage );
         }
     }
 

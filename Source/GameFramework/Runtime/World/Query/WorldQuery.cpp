@@ -49,13 +49,16 @@ namespace sw
         return bHit;
     }
 
-    bool WorldQuery::raycast( const GameObjectManager& manager, const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit )
+    const IWorldQuery& WorldQuery::select( const ScenePhysicsWorldQuery& sceneQuery )
     {
         const IWorldQuery* pService = game::findSubsystem<IWorldQuery>();
-        if ( pService != nullptr )
-            return pService->raycast( from, to, ignoreObjectID, outHit );
+        return pService != nullptr ? *pService : sceneQuery;
+    }
+
+    bool WorldQuery::raycast( const GameObjectManager& manager, const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit )
+    {
         const ScenePhysicsWorldQuery scene{ manager };
-        return scene.raycast( from, to, ignoreObjectID, outHit );
+        return select( scene ).raycast( from, to, ignoreObjectID, outHit );
     }
 
     bool WorldQuery::hasLineOfSight( const GameObjectManager& manager, const float3& from, const float3& to, uint64 viewerObjectID, uint64 targetObjectID )

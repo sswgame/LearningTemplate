@@ -70,7 +70,9 @@ namespace sw
      */
     struct SW_GF_API WorldQuery
     {
-        static bool raycast( const GameObjectManager& manager, const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit );
+        /** @brief 묻을 질의입니다. 등록된 서비스가 있으면 그것, 없으면 @p sceneQuery 입니다. 질의를 객체로 넘겨야 하는 쪽(포탑 탄의 세계)이 `raycast` 와 같은 규칙으로 고릅니다. */
+        static const IWorldQuery& select( const ScenePhysicsWorldQuery& sceneQuery );
+        static bool               raycast( const GameObjectManager& manager, const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit );
         /**
          * @brief @p from 에서 @p to 가 보이면 true 입니다. 보는 쪽(@p viewerObjectID)은 건너뛰고, 처음 맞은 것이 없거나 대상(@p targetObjectID) 자신이면 보이는 것으로 봅니다.
          */
