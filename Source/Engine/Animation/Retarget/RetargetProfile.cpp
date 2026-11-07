@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Rig/RigNode.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
@@ -276,5 +277,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ASSET_TYPE( RetargetProfile, RetargetProfile::kAssetType );
+    SW_SHARED_ASSET_CACHE( RetargetProfile, RetargetProfile, RetargetProfile::kAssetType.withLoader( AssetTypeLoader::of<RetargetProfile>( MemoryTag::Animation ) ) );
 } // namespace sw

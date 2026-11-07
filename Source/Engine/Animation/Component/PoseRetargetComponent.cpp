@@ -43,7 +43,7 @@ namespace sw
     PoseRetargetComponent::PoseRetargetComponent()
         : _profilePath{}
         , _binding{ *this }
-        , _profile{}
+        , _pProfile{}
         , _retargeter{}
         , _targetReference{}
         , _source{}
@@ -93,17 +93,17 @@ namespace sw
 
     void PoseRetargetComponent::setProfilePath( string_view path )
     {
-        _profilePath   = string{ path };
-        _bProfileReady = SW_FALSE;
-        if ( _profilePath.empty() == false && _profile.loadFromAsset( AssetID{ _profilePath } ) )
-            _bProfileReady = SW_TRUE;
+        _profilePath = string{ path };
+        // 프로필은 공유 캐시의 한 벌이다 — 제자리 다시 읽기 뒤 핫 리로드가 이 칸을 알리면(`onPropertyChanged`) 같은 객체를 다시 받고 리타기터를 다시 묶는다.
+        _pProfile             = _profilePath.acquire();
+        _bProfileReady        = _pProfile != nullptr ? SW_TRUE : SW_FALSE;
         _pBoundSourceSkeleton = nullptr; // 다음 평가가 다시 묶는다
     }
 
-    void PoseRetargetComponent::setProfile( const RetargetProfile& profile )
+    void PoseRetargetComponent::setProfile( shared_ptr<const RetargetProfile> pProfile )
     {
-        _profile              = profile;
-        _bProfileReady        = SW_TRUE;
+        _pProfile             = std::move( pProfile );
+        _bProfileReady        = _pProfile != nullptr ? SW_TRUE : SW_FALSE;
         _pBoundSourceSkeleton = nullptr;
     }
 
@@ -165,7 +165,7 @@ namespace sw
         {
             // 스켈레톤이 바뀌었을 때만 다시 묶는다(이름 찾기 · 레퍼런스 모델 공간).
             const bool bOverride = _bReferenceOverride == SW_TRUE && _targetReference.getBoneCount() == targetSkeleton.getBoneCount();
-            if ( _retargeter.initialize( _profile, sourceSkeleton, targetSkeleton, bOverride ? &_targetReference : nullptr ) == false )
+            if ( _retargeter.initialize( *_pProfile, sourceSkeleton, targetSkeleton, bOverride ? &_targetReference : nullptr ) == false )
             {
                 SW_LOG_ERROR_ID( "PoseRetarget.RetargetProfileDoesNot", "Retarget profile '%#' does not fit the source/target skeletons", _profilePath.c_str() );
                 _bProfileReady = SW_FALSE;

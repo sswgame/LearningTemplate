@@ -10,6 +10,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -141,6 +142,8 @@ namespace sw
      */
     class SW_API RetargetProfile
     {
+        friend struct AssetTypeLoader;
+
     public:
         /** @brief 프로필 확장자입니다. */
         static constexpr string_view kExtension = ".retarget.xml";
@@ -148,15 +151,13 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `RetargetProfile.cpp` 의 `SW_ASSET_TYPE`). */
+        /** @brief 이 에셋 종류입니다(등록은 `RetargetProfile.cpp` 의 캐시 등록 줄 `SW_SHARED_ASSET_CACHE`). */
         static constexpr AssetTypeDef kAssetType{ "RetargetProfile", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         RetargetProfile();
 
         /** @brief XML 본문을 읽습니다. 틀리면 false 이고 내용은 비웁니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
-        /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 같은 형식의 XML 로 씁니다(`loadFromXMLText` 이 그대로 다시 읽는다 — 에디터 리타깃 창이 저장한다). 기본값인 선택 키는 쓰지 않습니다. */
         string toXML() const;
         void   clear();
@@ -198,6 +199,8 @@ namespace sw
                                RetargetTranslationMode mode );
 
     private:
+        /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<RetargetProfile>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
 
     private:
@@ -214,4 +217,11 @@ namespace sw
         RetargetTranslationMode  _translationMode;
         uint8                    _bMapSameNames;
     };
+
+    /**
+     * @brief 리타깃 프로필을 경로마다 한 벌 나눠 줍니다("RetargetProfile", 인스턴스화는 `RetargetProfile.cpp`). 제자리에서 다시 읽습니다.
+     * @details 같은 프로필을 쓰는 캐릭터가 파일을 다시 읽지 않는다. 쥔 쪽(`PoseRetargetComponent`)은 핫 리로드 알림(`onPropertyChanged`)에서 리타기터를 다시 묶는다.
+     *          에디터 리타깃 창은 이 한 벌을 사본으로 받아 고친다(언리얼 IK Retargeter 에셋 한 벌, 기억에 의존).
+     */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<RetargetProfile>;
 } // namespace sw

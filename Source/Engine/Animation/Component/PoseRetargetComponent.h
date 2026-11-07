@@ -8,6 +8,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
@@ -67,8 +68,8 @@ namespace sw
 
         /** @brief 프로필 경로(`*.retarget.xml`)를 바꾸고 읽습니다. */
         void setProfilePath( string_view path );
-        /** @brief 프로필을 런타임에 정합니다(저장되지 않습니다). */
-        void setProfile( const RetargetProfile& profile );
+        /** @brief 프로필을 런타임에 정합니다(저장되지 않습니다). nullptr 이면 옮기지 않습니다. */
+        void setProfile( shared_ptr<const RetargetProfile> pProfile );
         /** @brief 원본 유닛을 정합니다(의존이 됩니다). nullptr 이면 뗍니다. */
         void setSource( SkeletalMeshComponent* pSource );
         /** @brief 대상 레퍼런스 덮어쓰기(본 비율을 건 포즈)입니다. 본 수가 이 유닛 스켈레톤과 같아야 쓰입니다. */
@@ -91,7 +92,7 @@ namespace sw
 
         PoseRetargetBinding                     _binding;
         Subscription                            _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        RetargetProfile                         _profile;
+        shared_ptr<const RetargetProfile>       _pProfile;            ///< 쥔 프로필(경로로 받았으면 공유 캐시의 한 벌)
         PoseRetargeter                          _retargeter;
         Pose                                    _targetReference;
         TComponentHandle<SkeletalMeshComponent> _source;

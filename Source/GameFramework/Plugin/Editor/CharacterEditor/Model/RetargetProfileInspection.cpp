@@ -3,7 +3,9 @@
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileInspection.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Memory/Memory.h"
 
+#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -167,11 +169,10 @@ namespace sw::editor
 
     bool RetargetProfileInspector::inspect( const RetargetProfile& profile, RetargetProfileInspection& outInspection, string& outError )
     {
-        Skeleton   sourceSkeleton;
-        Skeleton   targetSkeleton;
-        const bool bSource = profile.getSourceSkeletonPath().empty() == false && sourceSkeleton.loadFromAsset( AssetID{ profile.getSourceSkeletonPath() } );
-        const bool bTarget = profile.getTargetSkeletonPath().empty() == false && targetSkeleton.loadFromAsset( AssetID{ profile.getTargetSkeletonPath() } );
-        return inspect( profile, bSource ? &sourceSkeleton : nullptr, bTarget ? &targetSkeleton : nullptr, outInspection, outError );
+        // 스켈레톤은 런타임과 같은 공유 캐시의 한 벌을 읽는다(빈 경로는 읽지 않는다 — nullptr).
+        const shared_ptr<const Skeleton> pSourceSkeleton = SharedAssetCache<Skeleton>::acquire( profile.getSourceSkeletonPath() );
+        const shared_ptr<const Skeleton> pTargetSkeleton = SharedAssetCache<Skeleton>::acquire( profile.getTargetSkeletonPath() );
+        return inspect( profile, pSourceSkeleton.get(), pTargetSkeleton.get(), outInspection, outError );
     }
 
     bool RetargetProfileInspector::inspect( const RetargetProfile& profile, const Skeleton* pSourceSkeleton, const Skeleton* pTargetSkeleton, RetargetProfileInspection& outInspection, string& outError )

@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -367,22 +368,21 @@ namespace sw
     {
         const string_view sourceClipPath = sourceClipID.view();
         const string_view profilePath    = profileID.view();
-        RetargetProfile   profile;
-        Skeleton          sourceSkeleton;
-        Skeleton          targetSkeleton;
-        AnimationClip     sourceClip;
-        const bool        bLoaded = profile.loadFromAsset( profileID ) && sourceSkeleton.loadFromAsset( AssetID{ profile.getSourceSkeletonPath() } ) &&
-                             targetSkeleton.loadFromAsset( AssetID{ profile.getTargetSkeletonPath() } ) && sourceClip.loadFromAsset( sourceClipID );
-        if ( bLoaded == false )
+        // 프로필 · 스켈레톤 · 클립은 공유 캐시의 한 벌을 읽는다(같은 프로필로 클립 여럿을 구울 때 다시 읽지 않는다).
+        const shared_ptr<const RetargetProfile> pProfile        = SharedAssetCache<RetargetProfile>::acquire( profilePath );
+        const shared_ptr<const Skeleton>        pSourceSkeleton = pProfile != nullptr ? SharedAssetCache<Skeleton>::acquire( pProfile->getSourceSkeletonPath() ) : nullptr;
+        const shared_ptr<const Skeleton>        pTargetSkeleton = pProfile != nullptr ? SharedAssetCache<Skeleton>::acquire( pProfile->getTargetSkeletonPath() ) : nullptr;
+        const shared_ptr<const AnimationClip>   pSourceClip     = SharedAssetCache<AnimationClip>::acquire( sourceClipPath );
+        if ( pProfile == nullptr || pSourceSkeleton == nullptr || pTargetSkeleton == nullptr || pSourceClip == nullptr )
         {
             SW_LOG_ERROR_ID( "PoseRetargeter.RetargetBakeCouldNot", "Retarget bake: '%#' / '%#' could not be loaded", profilePath, sourceClipPath );
             return false;
         }
-        const IAnimationCodec* pCodec = AnimationCodecRegistry::findCodec( sourceClip.getCodecID() );
+        const IAnimationCodec* pCodec = AnimationCodecRegistry::findCodec( pSourceClip->getCodecID() );
         PoseRetargeter         retargeter;
         AnimationClip          baked;
-        const bool             bBaked = pCodec != nullptr && retargeter.initialize( profile, sourceSkeleton, targetSkeleton, nullptr ) &&
-                            bakeClip( retargeter, sourceClip, sourceSkeleton, targetSkeleton, PoseRetargeterInternal::kBakeSampleRate, *pCodec, AnimationCodecSettings{},
+        const bool             bBaked = pCodec != nullptr && retargeter.initialize( *pProfile, *pSourceSkeleton, *pTargetSkeleton, nullptr ) &&
+                            bakeClip( retargeter, *pSourceClip, *pSourceSkeleton, *pTargetSkeleton, PoseRetargeterInternal::kBakeSampleRate, *pCodec, AnimationCodecSettings{},
                                       baked );
         const std::optional<AbsolutePath> clipFile = FileUtil::requireAbsolutePath( outClipPath );
         if ( clipFile.has_value() == false || bBaked == false || baked.saveToFile( *clipFile ) == false )
