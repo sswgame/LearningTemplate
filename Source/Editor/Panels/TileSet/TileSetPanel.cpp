@@ -12,8 +12,6 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -36,10 +34,10 @@ namespace sw::editor
             /** @brief 문서를 읽은 열린 타일셋 창입니다. 없으면 nullptr 입니다. */
             [[nodiscard]] static const TileSetPanel* findLoadedPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return nullptr;
-                const TileSetPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileSetPanel>();
+                const TileSetPanel* pPanel = pPanels->findPanel<TileSetPanel>();
                 return pPanel != nullptr && pPanel->isOpen() && pPanel->isTileSetDocumentLoaded() ? pPanel : nullptr;
             }
 

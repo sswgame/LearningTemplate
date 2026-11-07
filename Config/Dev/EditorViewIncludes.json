@@ -18,6 +18,8 @@
     "_migratedViews": [
         "Source/Editor/Panels/Autosave/RecoveredWorkPanel",
         "Source/Editor/Panels/BugReport/BugReportPanel",
-        "Source/Editor/Panels/Scene/DataLayersPanel"
+        "Source/Editor/Panels/MaterialGraph/MaterialGraphPanel",
+        "Source/Editor/Panels/Scene/DataLayersPanel",
+        "Source/Editor/Panels/TileSet/TileSetPanel"
     ]
 }

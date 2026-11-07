@@ -12,8 +12,6 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -32,10 +30,10 @@ namespace sw::editor
             /** @brief 열린 데이터 테이블 창의 현지화 표 레코드 수 · 보이는 행 수를 읽습니다. 창이 닫혔거나 표를 읽지 않았으면 false 입니다. */
             [[nodiscard]] static bool readRecordCounts( uint32& outRecordCount, uint32& outVisibleCount )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return false;
-                const DataTablePanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<DataTablePanel>();
+                const DataTablePanel* pPanel = pPanels->findPanel<DataTablePanel>();
                 return pPanel != nullptr && pPanel->isOpen() && pPanel->findLocalizationRecordCounts( outRecordCount, outVisibleCount );
             }
 

@@ -90,6 +90,14 @@ namespace sw::editor
         EditorPanelManager& operator=( const EditorPanelManager& ) = delete;
 
         /** @brief 패널을 등록합니다. 메뉴에 보이는 이름은 패널의 `getPanelTitle()` 입니다. */
+        /**
+         * @brief 지금 에디터 컨텍스트의 패널 관리자입니다. 컨텍스트가 없으면(에디터 밖 테스트 · 종료 뒤) nullptr 입니다.
+         * @details 패널 View 가 자기 패널을 찾는 길(감시 값 · 개발 명령)이다 — View 는 작업 공간 헤더(`EditorContext`)를 보지 않는다(`docs/agents/EditorUI.md` MVVM 계약).
+         */
+        [[nodiscard]] static EditorPanelManager* findInEditorContext();
+        /** @brief 지금 에디터 컨텍스트의 패널 관리자입니다. 에디터가 서 있을 때만 부른다(명령 표의 실행 함수) — 없으면 멈춘다. */
+        [[nodiscard]] static EditorPanelManager& getInEditorContext();
+
         void registerPanel( unique_ptr<IEditorPanel> pPanel,
                             string_view              panelID,
                             EditorPanelCategory      category = EditorPanelCategory::Core );

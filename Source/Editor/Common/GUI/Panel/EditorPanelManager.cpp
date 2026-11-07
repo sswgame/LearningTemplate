@@ -9,6 +9,8 @@
 
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 namespace sw::editor
 {
@@ -51,6 +53,17 @@ namespace sw::editor
     }
 
     EditorPanelManager::~EditorPanelManager() = default;
+
+    EditorPanelManager* EditorPanelManager::findInEditorContext()
+    {
+        EditorContext* const pContext = editor::findSubsystem<EditorContext>();
+        return pContext != nullptr ? &pContext->getSubsystem<EditorPanelManager>() : nullptr;
+    }
+
+    EditorPanelManager& EditorPanelManager::getInEditorContext()
+    {
+        return editor::getSubsystem<EditorContext>().getSubsystem<EditorPanelManager>();
+    }
 
     void EditorPanelManager::registerPanel( unique_ptr<IEditorPanel> pPanel,
                                             string_view              panelID,

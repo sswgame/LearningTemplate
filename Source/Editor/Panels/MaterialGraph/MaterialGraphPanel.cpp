@@ -15,8 +15,6 @@
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Material/Model/MaterialModel.h"
 #include "Editor/Panels/Material/Model/MaterialPreviewShading.h"
 
@@ -51,8 +49,7 @@ namespace sw::editor
             /** @brief 창을 엽니다(명령 표의 실행 함수). */
             static void openPanel()
             {
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<MaterialGraphPanel>( true );
+                (void)EditorPanelManager::getInEditorContext().setPanelOpen<MaterialGraphPanel>( true );
             }
         };
     } // namespace
