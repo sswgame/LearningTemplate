@@ -190,6 +190,26 @@ namespace sw
                 return true;
             }
 
+            /** @brief 이름 붙은 오브젝트의 주 씬 컴포넌트를 로컬 위치 (x, y, z) 에 둡니다(시나리오가 카메라를 멀리 두어 LOD 를 바꾸는 단계). */
+            static bool runObjectPlace( const vector<string>& listArgument, string& outReply )
+            {
+                float3     position{};
+                const bool bParsed = listArgument.size() == 4 && StringUtil::parseFloat( listArgument[1], position._x ) && StringUtil::parseFloat( listArgument[2], position._y ) &&
+                                     StringUtil::parseFloat( listArgument[3], position._z );
+                if ( bParsed == false )
+                    return false;
+                GameObject*     pObject = engine::findActiveObject( hashed_string( listArgument[0] ) );
+                SceneComponent* pScene  = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+                if ( pScene == nullptr )
+                {
+                    outReply = "no object named '" + listArgument[0] + "' with a scene component in the active scene";
+                    return false;
+                }
+                pScene->setLocalPosition( position );
+                outReply = "placed " + listArgument[0];
+                return true;
+            }
+
             static bool runStateHash( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() == false )
@@ -900,6 +920,8 @@ namespace sw
     SW_DEV_COMMAND( SceneTree, "scene.tree", "scene.tree [limit]", "List the objects of the active scene (id, name, parent, active, components)", &SceneInspectCommandsInternal::runTree );
     SW_DEV_COMMAND( ObjectDump, "object.dump", "object.dump <name>", "Print the components and property values of a named object of the active scene",
                     &SceneInspectCommandsInternal::runObjectDump );
+    SW_DEV_COMMAND( ObjectPlace, "object.place", "object.place <name> <x> <y> <z>", "Put a named object of the active scene at a local position (scenarios move the camera to change LOD)",
+                    &SceneInspectCommandsInternal::runObjectPlace );
     SW_DEV_COMMAND( StateHash, "state.hash", "state.hash", "Print the state hash of the active scene right now", &SceneInspectCommandsInternal::runStateHash );
     SW_DEV_COMMAND( StateObjects, "state.objects", "state.objects", "Print one hash per named object of the active scene (compare two processes to find which object differs)",
                     &SceneInspectCommandsInternal::runStateObjects );

@@ -3,6 +3,8 @@
 #include "Engine/Physics/Component/ClothComponent.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Automation/Watch/AutomationComponentWatch.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -34,7 +36,35 @@ namespace sw
             vertex._arrColor[3]    = 1.0f;
             return vertex;
         }
+
+        /** @brief 천 LOD 감시 값(시나리오 `game/empty/automation/clothlod`)입니다. 씬의 첫 천을 읽는다. */
+        struct ClothComponentWatchInternal
+        {
+            [[nodiscard]] static bool readIterationCount( const ClothComponent& cloth, float64& outValue )
+            {
+                outValue = static_cast<float64>( cloth.getAppliedIterationCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readSuspended( const ClothComponent& cloth, float64& outValue )
+            {
+                outValue = cloth.isLODSuspended() ? 1.0 : 0.0;
+                return true;
+            }
+
+            [[nodiscard]] static bool readGrade( const ClothComponent& cloth, float64& outValue )
+            {
+                outValue = static_cast<float64>( cloth.readLODGrade() );
+                return true;
+            }
+        };
     } // namespace
+
+    SW_AUTOMATION_COMPONENT_WATCH( clothIterationCount, "Cloth.IterationCount", "Solver iterations given to the first cloth's soft body (0: no soft body, e.g. suspended by LOD)", ClothComponent,
+                                   &ClothComponentWatchInternal::readIterationCount );
+    SW_AUTOMATION_COMPONENT_WATCH( clothLODSuspended, "Cloth.LODSuspended", "1 while the first cloth is suspended by its LOD (_maxLOD) and shows its rest grid", ClothComponent,
+                                   &ClothComponentWatchInternal::readSuspended );
+    SW_AUTOMATION_COMPONENT_WATCH( clothLODGrade, "Cloth.LODGrade", "Animation LOD grade the first cloth reads from its ancestor skeletal mesh", ClothComponent, &ClothComponentWatchInternal::readGrade );
 } // namespace sw
 
 namespace sw

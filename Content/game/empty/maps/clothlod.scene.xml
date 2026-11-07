@@ -1,0 +1,129 @@
+<Scene formatVersion="2" name="clothlod">
+	<!-- 시나리오 automation/clothlod 의 무대 — 기사(animgraphlod 와 같은 캐릭터) 등에 단 물리 천(등 장식 천, 기사의 자식 오브젝트)이다.
+	     천 LOD 는 기사 스켈레탈 메시의 애니메이션 LOD 등급을 읽는다: 등급 0 은 6 반복, 1 은 4, 2 는 2, 3 부터는 내린다(_maxLOD="2").
+	     시나리오가 카메라를 멀리 옮겨(object.place) 화면 크기로 등급을 바꾼다. 카메라 먼 면은 그 거리까지 보이게 넓혔다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.0,-3.4"
+					                 _localRotation="0.05,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="400"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.6,3.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.2"
+					                           _ambient="0.3"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Knight">
+			<GameObject _schemaVersion="0" _name="Knight" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					                       _bActive="true"
+					                       _localPosition="0,0,0"
+					                       _localRotation="0,3.1415927,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachOwnerID="0"
+					                       _attachComponent="None"
+					                       _meshID="common/models/kaykit/knight.mesh"
+					                       _materialPath="common/materials/kaykit_knight.material"
+					                       _boundsRadius="2"
+					                       _blendMode="Opaque"
+					                       _gpuSpinSeed="0"
+					                       _bVisible="true"
+					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"
+					                       _updateRateDivisor="1"
+					                       _bFollowParentPose="false"
+					                       _bAnimateWhenOffscreen="false" />
+					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					                           _bActive="true"
+					                           _animationGraphPath="game/empty/data/anim/animgraphlod.animgraph.xml"
+					                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"
+					                           _initialState="Idle"
+					                           _currentState=""
+					                           _stateTime="0"
+					                           _playRate="1"
+					                           _blendSeconds="0.2"
+					                           _syncGroup=""
+					                           _syncWeight="1"
+					                           _bExtractRootMotion="false"
+					                           _bPlayOnBegin="true">
+						<_listLinkedLayer>
+							<AnimationLinkedLayerBinding _slot="Weapon" _graphPath="game/empty/data/anim/animvariant_weapon.animgraph.xml" />
+						</_listLinkedLayer>
+					</SkeletalAnimatorComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="BackBanner">
+			<GameObject _schemaVersion="0" _name="BackBanner" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,1.35,-0.35"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="Knight"
+					               _attachOwnerID="3"
+					               _attachComponent="SkeletalMeshComponent#0"
+					               _meshID=""
+					               _materialPath="game/empty/materials/toonshowcase_lit.material"
+					               _boundsRadius="1"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+					<ClothComponent _componentName="ClothComponent"
+					                _bActive="true"
+					                _width="0.5"
+					                _height="0.7"
+					                _columnCount="9"
+					                _rowCount="9"
+					                _pinMode="TopEdge"
+					                _mass="0.4"
+					                _stretchCompliance="0"
+					                _shearCompliance="0"
+					                _bendCompliance="0.001"
+					                _linearDamping="0.1"
+					                _friction="0.2"
+					                _gravityFactor="1"
+					                _vertexRadius="0.02"
+					                _iterationCount="6"
+					                _layer="Default"
+					                _maxLOD="2">
+						<_listLODIterationCount>
+							<item>4</item>
+							<item>2</item>
+						</_listLODIterationCount>
+					</ClothComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
