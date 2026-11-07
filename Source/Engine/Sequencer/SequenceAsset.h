@@ -183,7 +183,7 @@ namespace sw
 
         PROPERTY( Min = 1, Tooltip = "Stable id the items and key tracks refer to (never reused in this sequence)" )
         uint32 _id{ kSequenceNoBinding };
-        PROPERTY( Tooltip = "Display name; also the name a spawned object gets (not used to find scene objects)" )
+        PROPERTY( Meta = "Localizable", Tooltip = "Display name (localization key or text; the subtitle speaker); also the name a spawned object gets (not used to find scene objects)" )
         string _name;
     };
 
@@ -382,7 +382,7 @@ namespace sw
         int32 _frameMin{ 0 };
         PROPERTY( Tooltip = "Last frame of the sequence (after the first)" )
         int32 _frameMax{ 100 };
-        PROPERTY( Tooltip = "Free note" )
+        PROPERTY( Meta = "NotLocalizable", Tooltip = "Free note" )
         string _note;
         /** @brief 대상 자리입니다. 씬은 `SequencePlayerComponent::_listBinding` 으로 이 id 마다 오브젝트를 묶는다. */
         PROPERTY( Tooltip = "Objects the sequence drives, by stable id; the scene binds each id to an object" )

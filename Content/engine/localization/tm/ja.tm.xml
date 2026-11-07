@@ -62,6 +62,8 @@
 		<entry source="Bone scale" text="ボーンスケール" />
 		<entry source="Bone translation" text="ボーン移動" />
 		<entry source="Borderless" text="ボーダーレス" />
+		<entry source="Bounds and cells of every housing plot in the scene, with its id and size"
+		       text="シーンのハウジング敷地ごとの境界とマス、ID とサイズ" />
 		<entry source="CPU only (Recompute Normals)" text="CPU のみ (法線の再計算)" />
 		<entry source="CPU only:" text="CPU のみ:" />
 		<entry source="Camera Shake" text="カメラの揺れ" />
@@ -116,6 +118,8 @@
 		<entry source="Dismiss" text="閉じる" />
 		<entry source="Display" text="ディスプレイ" />
 		<entry source="Down" text="下" />
+		<entry source="Drop this placement override and use the preset again."
+		       text="この配置の上書きを削除してプリセットを再び使います。" />
 		<entry source="Dropped: {dropped}" text="除外: {dropped}" />
 		<entry source="Duplicate" text="複製" />
 		<entry source="Duplicate row" text="行を複製" />
@@ -283,11 +287,14 @@
 		       text="貫通 {partA} / {partB}: 点 {vertexCount} 個、深さ {maxDepth}" />
 		<entry source="Pick a base preset to see which rules hid or changed what."
 		       text="基準プリセットを選ぶと、どのルールが何を隠した・変えたかが見えます。" />
+		<entry source="Pick a zone profile (*.zone.xml) to see its modules."
+		       text="モジュールを見るにはゾーンプロファイル(*.zone.xml)を選んでください。" />
 		<entry source="Pick an ability system..." text="アビリティシステムを選択..." />
 		<entry source="Pick an entry on the left to see what it uses and what uses it."
 		       text="左で項目を選ぶと、その項目が使うものと使われている場所が見えます。" />
 		<entry source="Place" text="場所" />
 		<entry source="Play" text="재생" />
+		<entry source="Plots" text="敷地" />
 		<entry source="Point" text="点" />
 		<entry source="Position" text="位置" />
 		<entry source="Post notice" text="お知らせを掲示" />
@@ -345,6 +352,7 @@
 		<entry source="Retarget pose" text="リターゲットポーズ" />
 		<entry source="Return to Title" text="タイトルに戻る" />
 		<entry source="Revert" text="元に戻す" />
+		<entry source="Revert zone module" text="ゾーンモジュールを元に戻す" />
 		<entry source="Reverting in" text="元に戻すまで" />
 		<entry source="Revoke" text="回収" />
 		<entry source="Ride" text="アトラクション" />
@@ -444,6 +452,8 @@
 		<entry source="The catalog file the game reads. Edits keep its comments and layout."
 		       text="ゲームが読むカタログファイルです。編集してもコメントと配置は残ります。" />
 		<entry source="The node editor could not be created" text="ノードエディタを作成できませんでした" />
+		<entry source="The overrides do not apply to this profile - see the log for the module name."
+		       text="上書きがこのプロファイルに合いません - モジュール名はログを見てください。" />
 		<entry source="The park layout could not be read ({path}). Fix the file (see the log) and press Reload."
 		       text="パーク配置を読み込めませんでした({path})。ログを確認してファイルを修正し、再読み込みしてください。" />
 		<entry source="The runtime loader could not read the saved file. See the log for the reason."
@@ -493,6 +503,7 @@
 		       text="基準プリセット ''{basePresetID}'' に {slot} を装着(組み立て {appearance} 回)" />
 		<entry source="Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)"
 		       text="基準プリセット ''{basePresetID}'' に {wearing, select, none {スロットアイテムなし} other {選択中のもの}} を装着(組み立て {appearance} 回)" />
+		<entry source="When" text="条件" />
 		<entry source="Why does it look like this? (rules)" text="なぜこう見えるか(ルール)" />
 		<entry source="Why this activity now" text="今この行動をする理由" />
 		<entry source="Window Mode" text="ウィンドウモード" />
@@ -501,10 +512,16 @@
 		<entry source="World Space" text="ワールド空間" />
 		<entry source="Yaw (deg)" text="ヨー(度)" />
 		<entry source="You have changes that are not applied." text="適用していない変更があります。" />
+		<entry source="Zone modules" text="ゾーンモジュール" />
 		<entry source="Zoom fit" text="ズームフィット" />
 		<entry source="[action=UI.Accept] Select" text="[action=UI.Accept] 選択" />
+		<entry source="added here" text="ここで追加" />
+		<entry source="changed here" text="ここで変更" />
+		<entry source="inherited" text="継承" />
 		<entry source="offset {offsetX}, {offsetY}, {offsetZ}  distance {distance}  pitch {pitch}  yaw {yaw}  fov {computeFieldOfViewY}"
 		       text="オフセット {offsetX}, {offsetY}, {offsetZ}  距離 {distance}  ピッチ {pitch}  ヨー {yaw}  視野角 {computeFieldOfViewY}" />
+		<entry source="removed here" text="ここで削除" />
+		<entry source="replaced here" text="ここで置換" />
 		<entry source="tick {tick}  input focus: world {inputFocus}"
 		       text="ティック {tick}  入力フォーカス: ワールド {inputFocus}" />
 		<entry source="{anchor}  clip {clip}  {stage} {clipSeconds} s{f}"

@@ -64,7 +64,7 @@ namespace sw
 
         PROPERTY( Required, InheritKey, Tooltip = "Parameter name the module kind declares" )
         hashed_string _name{};
-        PROPERTY( Tooltip = "Value: a number or an expression (numeric fields), or text (names, action lists)" )
+        PROPERTY( Meta = "NotLocalizable", Tooltip = "Value: a number or an expression (numeric fields), or text (names, action lists)" )
         string _value{};
     };
 
@@ -76,9 +76,9 @@ namespace sw
 
         PROPERTY( Required, InheritKey, Tooltip = "Case name (key for variants and placement overrides)" )
         hashed_string _name{};
-        PROPERTY( Tooltip = "Condition expression; empty always matches (put the catch-all last)" )
+        PROPERTY( Meta = "NotLocalizable", Tooltip = "Condition expression; empty always matches (put the catch-all last)" )
         string _condition{};
-        PROPERTY( Tooltip = "Actions run when this case is the first match, separated by ';' (empty: do nothing)" )
+        PROPERTY( Meta = "NotLocalizable", Tooltip = "Actions run when this case is the first match, separated by ';' (empty: do nothing)" )
         string _do{};
         PROPERTY( Tooltip = "Placement overrides only: merge, replace or remove the inherited case" )
         ZoneOverrideOp _op{ ZoneOverrideOp::Merge };
@@ -99,7 +99,7 @@ namespace sw
         hashed_string _kind{};
         PROPERTY( Tooltip = "Reusable module asset (*.zonemodule.xml); the fields written here override it" )
         DataPath _modulePath;
-        PROPERTY( Tooltip = "Condition expression the target must meet (empty: always); zone values (zoneDepth01, timeInside, immersion, impactSpeed ...) and tag() are readable" )
+        PROPERTY( Meta = "NotLocalizable", Tooltip = "Condition expression the target must meet (empty: always); zone values (zoneDepth01, timeInside, immersion, impactSpeed ...) and tag() are readable" )
         string _condition{};
         PROPERTY( Tooltip = "Who the module acts on" )
         ZoneTargetRole _target{ ZoneTargetRole::Inherit };

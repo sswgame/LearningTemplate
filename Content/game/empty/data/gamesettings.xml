@@ -13,6 +13,7 @@
   <inputMap path="common/input/base.input.xml"/>
   <inputMap path="common/input/move.input.xml"/>
   <inputMap path="game/empty/data/kitdemo.input.xml"/>
+  <localizationProject>game/empty/data/localization/empty.locproject.xml</localizationProject>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <!-- 시네마틱 시퀀스의 소리 구간이 내는 이벤트 -->
   <audioEvents>game/empty/audio/empty.audioevents.xml</audioEvents>

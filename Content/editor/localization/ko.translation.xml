@@ -2011,7 +2011,9 @@
 		<entry key="EditorDialogueGraph.SaveTip"
 		       text="대화 그래프와 노드 배치를 애셋 파일에 씁니다."
 		       sourceHash="ec60155945a56850" />
-		<entry key="EditorDialogueGraph.SpeakerNameTip" text="화자로 보이는 이름 또는 현지화 키입니다." sourceHash="9aa39997271510e1" />
+		<entry key="EditorDialogueGraph.SpeakerNameTip"
+		       text="화자로 보이는 이름 또는 현지화 키입니다."
+		       sourceHash="9aa39997271510e1" />
 		<entry key="EditorDialogueGraph.SpeakerTip"
 		       text="이 대사의 화자입니다. 그래프의 화자 목록에서 고릅니다. 말하는 씬 오브젝트는 대화 러너의 Speakers 목록에서 정합니다."
 		       sourceHash="8c626fc01e423af6" />
@@ -2619,7 +2621,9 @@
 		<entry key="EditorRenderTarget.FormatNotReadable"
 		       text="이 포맷은 다시 읽어 올 수 없습니다."
 		       sourceHash="64a9f8e6f23715e7" />
-		<entry key="EditorRenderTarget.Lifetime" text="패스 {firstPass} 부터 {lastPass} 까지 쓰입니다(파이프라인 순서)" sourceHash="b93871319673c4a4" />
+		<entry key="EditorRenderTarget.Lifetime"
+		       text="패스 {firstPass} 부터 {lastPass} 까지 쓰입니다(파이프라인 순서)"
+		       sourceHash="b93871319673c4a4" />
 		<entry key="EditorRenderTarget.LinearLabel" text="선형" sourceHash="ac3191c5ecc66e60" />
 		<entry key="EditorRenderTarget.LinearizeTip"
 		       text="Near/Far 로 저장된 깊이를 뷰 거리로 되돌립니다. 원근 깊이는 1 근처에 몰려 있어 그대로 보면 거의 흰색입니다."

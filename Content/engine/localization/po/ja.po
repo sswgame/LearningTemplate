@@ -324,6 +324,41 @@ msgctxt "EdAbilityDebug.SectionTags"
 msgid "Owned Tags"
 msgstr "所有タグ"
 
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdButton.ZoneRevert"
+msgid "Revert"
+msgstr "元に戻す"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdLabel.ZoneAdded"
+msgid "added here"
+msgstr "ここで追加"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdLabel.ZoneChanged"
+msgid "changed here"
+msgstr "ここで変更"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdLabel.ZoneCondition"
+msgid "When"
+msgstr "条件"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdLabel.ZoneInherited"
+msgid "inherited"
+msgstr "継承"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdLabel.ZoneRemoved"
+msgid "removed here"
+msgstr "ここで削除"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdLabel.ZoneReplaced"
+msgid "replaced here"
+msgstr "ここで置換"
+
 #: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.AddItem"
 msgid "Add Item"
@@ -1822,6 +1857,16 @@ msgctxt "EdSchedule.WhyNow"
 msgid "Why this activity now"
 msgstr "今この行動をする理由"
 
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdSection.ZoneModules"
+msgid "Zone modules"
+msgstr "ゾーンモジュール"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdUndo.ZoneRevertModule"
+msgid "Revert zone module"
+msgstr "ゾーンモジュールを元に戻す"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EditorCharacterEditor.AddSocketButton"
 msgid "Add"
@@ -1836,6 +1881,21 @@ msgstr "新しいソケット名"
 msgctxt "EditorCharacterEditor.SocketNoSelection"
 msgid "Select a socket in the list to edit it."
 msgstr "一覧からソケットを選んで編集します。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EditorTip.ZoneNoProfile"
+msgid "Pick a zone profile (*.zone.xml) to see its modules."
+msgstr "モジュールを見るにはゾーンプロファイル(*.zone.xml)を選んでください。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EditorTip.ZoneOverridesInvalid"
+msgid "The overrides do not apply to this profile - see the log for the module name."
+msgstr "上書きがこのプロファイルに合いません - モジュール名はログを見てください。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EditorTip.ZoneRevert"
+msgid "Drop this placement override and use the preset again."
+msgstr "この配置の上書きを削除してプリセットを再び使います。"
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml

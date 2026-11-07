@@ -1,0 +1,24 @@
+<SourceStringTable culture="en">
+	<entries>
+		<entry key="Actor" source="Actor" context="SequenceBinding._name">
+			<origins>
+				<item>game/empty/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="CutA" source="CutA" context="SequenceBinding._name">
+			<origins>
+				<item>game/empty/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="CutB" source="CutB" context="SequenceBinding._name">
+			<origins>
+				<item>game/empty/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+		<entry key="The warrior wakes." source="The warrior wakes." context="SequenceTrackItem._text">
+			<origins>
+				<item>game/empty/data/cinematic.seq.xml</item>
+			</origins>
+		</entry>
+	</entries>
+</SourceStringTable>

@@ -49,7 +49,7 @@ namespace sw
         hashed_string _id{};
         PROPERTY( Tooltip = "Node kind name (GimmickNodeRegistry)" )
         hashed_string _kind{};
-        PROPERTY( Tooltip = "Parameters as name=value pairs separated by ';'" )
+        PROPERTY( Meta = "NotLocalizable", Tooltip = "Parameters as name=value pairs separated by ';'" )
         string _params{};
         /** @brief 기믹 그래프 창 캔버스의 자리입니다. 회로는 읽지 않는다(언리얼 블루프린트 노드 좌표처럼 편집 배치 데이터다). 모두 (0, 0) 이면 창이 처음 배치를 한다. */
         PROPERTY( Tooltip = "Position of the node on the gimmick graph canvas; the circuit does not read it" )

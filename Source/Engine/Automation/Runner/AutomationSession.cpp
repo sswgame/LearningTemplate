@@ -25,6 +25,7 @@
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/HeadlessSubsystem.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -227,6 +228,8 @@ namespace sw
             restoreStartWindowSize();
             // 엔진이 모르는 모듈 상태(편집기의 패널 · 팝업 · 배치)도 새 프로세스처럼 — 그 상태를 가진 모듈이 등록한 되돌리기를 부른다.
             (void)AutomationStageResetRegistry::resetAll();
+            // 앞 단계가 찾지 못한 번역 키(시네마틱 자막 같은 것)도 비운다 — 판정의 로그 게이트가 그 목록을 세므로, 남기면 뒤 단계가 모두 그 키로 진다.
+            engine::getSubsystem<LocalizationManager>().clearMissingKeys();
             // 단계 사이 초기화가 든 시간이다 - 다음 시나리오가 시작하기까지의 프레임(새 게임 · 첫 씬)은 그 실행의 timeline `start` 가 센다.
             SW_LOG_INFO_ID( "AutomationSession.StageResetTookMs", "[Scenario] stage reset took %#ms", static_cast<uint32>( ( static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 - resetStartSeconds ) * 1000.0 ) );
         }

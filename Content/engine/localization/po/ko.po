@@ -324,6 +324,41 @@ msgctxt "EdAbilityDebug.SectionTags"
 msgid "Owned Tags"
 msgstr "소유 태그"
 
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdButton.ZoneRevert"
+msgid "Revert"
+msgstr "되돌리기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdLabel.ZoneAdded"
+msgid "added here"
+msgstr "여기서 더함"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdLabel.ZoneChanged"
+msgid "changed here"
+msgstr "여기서 바꿈"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdLabel.ZoneCondition"
+msgid "When"
+msgstr "조건"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdLabel.ZoneInherited"
+msgid "inherited"
+msgstr "물려받음"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdLabel.ZoneRemoved"
+msgid "removed here"
+msgstr "여기서 뺌"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdLabel.ZoneReplaced"
+msgid "replaced here"
+msgstr "여기서 갈아끼움"
+
 #: Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp
 msgctxt "EdMeshModifiers.AddItem"
 msgid "Add Item"
@@ -1822,6 +1857,16 @@ msgctxt "EdSchedule.WhyNow"
 msgid "Why this activity now"
 msgstr "지금 왜 이 행동인가"
 
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdSection.ZoneModules"
+msgid "Zone modules"
+msgstr "지역 모듈"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EdUndo.ZoneRevertModule"
+msgid "Revert zone module"
+msgstr "지역 모듈 되돌리기"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EditorCharacterEditor.AddSocketButton"
 msgid "Add"
@@ -1836,6 +1881,21 @@ msgstr "새 소켓 이름"
 msgctxt "EditorCharacterEditor.SocketNoSelection"
 msgid "Select a socket in the list to edit it."
 msgstr "목록에서 소켓을 골라 편집합니다."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EditorTip.ZoneNoProfile"
+msgid "Pick a zone profile (*.zone.xml) to see its modules."
+msgstr "모듈을 보려면 지역 프로필(*.zone.xml)을 고르세요."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EditorTip.ZoneOverridesInvalid"
+msgid "The overrides do not apply to this profile - see the log for the module name."
+msgstr "덮어쓰기가 이 프로필에 맞지 않습니다 - 모듈 이름은 로그를 보세요."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp
+msgctxt "EditorTip.ZoneRevert"
+msgid "Drop this placement override and use the preset again."
+msgstr "이 배치 덮어쓰기를 지우고 프리셋을 다시 씁니다."
 
 #. Context: TextWidget._text
 #: engine/ui/confirm_countdown.ui.xml

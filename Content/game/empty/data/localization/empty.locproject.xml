@@ -1,0 +1,15 @@
+<LocalizationProject name="empty" sourceCulture="en">
+	<!-- Empty(테스트 무대) 게임의 문자열 — 시네마틱 자막 · 화자, 시연 UI 글. 원문 표는 App --gather-text -loc-project=<이 파일> 이 채운다. -->
+	<cultures>
+		<item>ko</item>
+	</cultures>
+	<stringTables>
+		<item>empty.strings.xml</item>
+	</stringTables>
+	<codeRoots>
+		<item>Source/Games/Empty</item>
+	</codeRoots>
+	<assetRoots>
+		<item>game/empty</item>
+	</assetRoots>
+</LocalizationProject>

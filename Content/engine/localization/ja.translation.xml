@@ -85,6 +85,13 @@
 		<entry key="EdAbilityDebug.SectionEffects" text="有効なエフェクト" sourceHash="6991d93fa865e70d" />
 		<entry key="EdAbilityDebug.SectionLog" text="最近のエフェクト" sourceHash="562c325175e2853c" />
 		<entry key="EdAbilityDebug.SectionTags" text="所有タグ" sourceHash="35d4aac5d07d7ce3" />
+		<entry key="EdButton.ZoneRevert" text="元に戻す" sourceHash="d89a2e529b31ef43" />
+		<entry key="EdLabel.ZoneAdded" text="ここで追加" sourceHash="1d0422d2923a2619" />
+		<entry key="EdLabel.ZoneChanged" text="ここで変更" sourceHash="b670513a18b222f7" />
+		<entry key="EdLabel.ZoneCondition" text="条件" sourceHash="c683c10250a1b719" />
+		<entry key="EdLabel.ZoneInherited" text="継承" sourceHash="45228ea14dc64581" />
+		<entry key="EdLabel.ZoneRemoved" text="ここで削除" sourceHash="d595b30d28c16df7" />
+		<entry key="EdLabel.ZoneReplaced" text="ここで置換" sourceHash="821d05431d192019" />
 		<entry key="EdMeshModifiers.AddItem" text="項目を追加" sourceHash="1373a4ab54d88333" />
 		<entry key="EdMeshModifiers.AddModifier" text="モディファイアを追加" sourceHash="f4d95a66cf236fed" />
 		<entry key="EdMeshModifiers.Axis" text="軸" sourceHash="b035a78b241ed7d4" />
@@ -474,7 +481,9 @@
 		       text="ターゲットの基準ポーズがソースと合うよう、ターゲットのボーンを親空間で回します(度) — 例: T ポーズのソースを A ポーズのターゲットに合わせて腕を下げる"
 		       sourceHash="513b712b24165aff" />
 		<entry key="EdPluginVisualizer.HousingPlotLabel" text="敷地" sourceHash="01c091af962d4963" />
-		<entry key="EdPluginVisualizer.HousingPlotTip" text="シーンのハウジング敷地ごとの境界とマス、ID とサイズ" sourceHash="6414cac62d24e333" />
+		<entry key="EdPluginVisualizer.HousingPlotTip"
+		       text="シーンのハウジング敷地ごとの境界とマス、ID とサイズ"
+		       sourceHash="6414cac62d24e333" />
 		<entry key="EdPluginVisualizer.MeshModifiersLabel" text="モディファイア" sourceHash="87ca97e3a5f400d9" />
 		<entry key="EdPluginVisualizer.MeshModifiersStageLabel" text="ステージ" sourceHash="ae5da213b7f896ed" />
 		<entry key="EdPluginVisualizer.MeshModifiersStageTip"
@@ -544,11 +553,22 @@
 		<entry key="EdSchedule.SelectNPCHint" text="左で NPC を選択してください" sourceHash="2d4aa57458132d18" />
 		<entry key="EdSchedule.SystemIndex" text="スケジュールシステム" sourceHash="22b2a2f792a7281d" />
 		<entry key="EdSchedule.WhyNow" text="今この行動をする理由" sourceHash="998a39497efff850" />
+		<entry key="EdSection.ZoneModules" text="ゾーンモジュール" sourceHash="643c9a42b27e108a" />
+		<entry key="EdUndo.ZoneRevertModule" text="ゾーンモジュールを元に戻す" sourceHash="bdcc597ed31c7231" />
 		<entry key="EditorCharacterEditor.AddSocketButton" text="追加" sourceHash="f9aee319a006c9b4" />
 		<entry key="EditorCharacterEditor.NewSocketHint" text="新しいソケット名" sourceHash="d60dbc5a471e4bc5" />
 		<entry key="EditorCharacterEditor.SocketNoSelection"
 		       text="一覧からソケットを選んで編集します。"
 		       sourceHash="b4fb8b5bd632d035" />
+		<entry key="EditorTip.ZoneNoProfile"
+		       text="モジュールを見るにはゾーンプロファイル(*.zone.xml)を選んでください。"
+		       sourceHash="454c1cabe79af977" />
+		<entry key="EditorTip.ZoneOverridesInvalid"
+		       text="上書きがこのプロファイルに合いません - モジュール名はログを見てください。"
+		       sourceHash="4e2d23130ef7db97" />
+		<entry key="EditorTip.ZoneRevert"
+		       text="この配置の上書きを削除してプリセットを再び使います。"
+		       sourceHash="53a9278b632e3703" />
 		<entry key="Keep" text="維持" sourceHash="d60a7dde73859828" />
 		<entry key="Keep these display settings?"
 		       text="この表示設定を維持しますか?"

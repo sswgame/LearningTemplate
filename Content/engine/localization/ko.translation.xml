@@ -87,6 +87,13 @@
 		<entry key="EdAbilityDebug.SectionEffects" text="걸린 이펙트" sourceHash="6991d93fa865e70d" />
 		<entry key="EdAbilityDebug.SectionLog" text="최근 이펙트" sourceHash="562c325175e2853c" />
 		<entry key="EdAbilityDebug.SectionTags" text="소유 태그" sourceHash="35d4aac5d07d7ce3" />
+		<entry key="EdButton.ZoneRevert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
+		<entry key="EdLabel.ZoneAdded" text="여기서 더함" sourceHash="1d0422d2923a2619" />
+		<entry key="EdLabel.ZoneChanged" text="여기서 바꿈" sourceHash="b670513a18b222f7" />
+		<entry key="EdLabel.ZoneCondition" text="조건" sourceHash="c683c10250a1b719" />
+		<entry key="EdLabel.ZoneInherited" text="물려받음" sourceHash="45228ea14dc64581" />
+		<entry key="EdLabel.ZoneRemoved" text="여기서 뺌" sourceHash="d595b30d28c16df7" />
+		<entry key="EdLabel.ZoneReplaced" text="여기서 갈아끼움" sourceHash="821d05431d192019" />
 		<entry key="EdMeshModifiers.AddItem" text="항목 추가" sourceHash="1373a4ab54d88333" />
 		<entry key="EdMeshModifiers.AddModifier" text="모디파이어 추가" sourceHash="f4d95a66cf236fed" />
 		<entry key="EdMeshModifiers.Axis" text="축" sourceHash="b035a78b241ed7d4" />
@@ -466,7 +473,9 @@
 		       text="대상 기준 자세가 원본 기준 자세와 맞게 대상 뼈를 부모 공간에서 돌립니다(도) — 예: T 자세 원본을 A 자세 대상에 맞게 팔을 내린다"
 		       sourceHash="513b712b24165aff" />
 		<entry key="EdPluginVisualizer.HousingPlotLabel" text="부지" sourceHash="01c091af962d4963" />
-		<entry key="EdPluginVisualizer.HousingPlotTip" text="씬의 하우징 부지마다 경계와 칸, id 와 크기" sourceHash="6414cac62d24e333" />
+		<entry key="EdPluginVisualizer.HousingPlotTip"
+		       text="씬의 하우징 부지마다 경계와 칸, id 와 크기"
+		       sourceHash="6414cac62d24e333" />
 		<entry key="EdPluginVisualizer.MeshModifiersLabel" text="모디파이어" sourceHash="87ca97e3a5f400d9" />
 		<entry key="EdPluginVisualizer.MeshModifiersStageLabel" text="단계" sourceHash="ae5da213b7f896ed" />
 		<entry key="EdPluginVisualizer.MeshModifiersStageTip"
@@ -534,11 +543,22 @@
 		<entry key="EdSchedule.SelectNPCHint" text="왼쪽에서 NPC 를 고르세요" sourceHash="2d4aa57458132d18" />
 		<entry key="EdSchedule.SystemIndex" text="일정 시스템" sourceHash="22b2a2f792a7281d" />
 		<entry key="EdSchedule.WhyNow" text="지금 왜 이 행동인가" sourceHash="998a39497efff850" />
+		<entry key="EdSection.ZoneModules" text="지역 모듈" sourceHash="643c9a42b27e108a" />
+		<entry key="EdUndo.ZoneRevertModule" text="지역 모듈 되돌리기" sourceHash="bdcc597ed31c7231" />
 		<entry key="EditorCharacterEditor.AddSocketButton" text="추가" sourceHash="f9aee319a006c9b4" />
 		<entry key="EditorCharacterEditor.NewSocketHint" text="새 소켓 이름" sourceHash="d60dbc5a471e4bc5" />
 		<entry key="EditorCharacterEditor.SocketNoSelection"
 		       text="목록에서 소켓을 골라 편집합니다."
 		       sourceHash="b4fb8b5bd632d035" />
+		<entry key="EditorTip.ZoneNoProfile"
+		       text="모듈을 보려면 지역 프로필(*.zone.xml)을 고르세요."
+		       sourceHash="454c1cabe79af977" />
+		<entry key="EditorTip.ZoneOverridesInvalid"
+		       text="덮어쓰기가 이 프로필에 맞지 않습니다 - 모듈 이름은 로그를 보세요."
+		       sourceHash="4e2d23130ef7db97" />
+		<entry key="EditorTip.ZoneRevert"
+		       text="이 배치 덮어쓰기를 지우고 프리셋을 다시 씁니다."
+		       sourceHash="53a9278b632e3703" />
 		<entry key="Keep" text="유지" sourceHash="d60a7dde73859828" />
 		<entry key="Keep these display settings?"
 		       text="이 디스플레이 설정을 유지할까요?"

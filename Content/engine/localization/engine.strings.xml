@@ -313,6 +313,41 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdButton.ZoneRevert" source="Revert">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ZoneAdded" source="added here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ZoneChanged" source="changed here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ZoneCondition" source="When">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ZoneInherited" source="inherited">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ZoneRemoved" source="removed here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.ZoneReplaced" source="replaced here">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdMeshModifiers.AddItem" source="Add Item">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/MeshModifiers/MeshModifiersPanel.cpp</item>
@@ -1566,7 +1601,8 @@
 				<item>Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginVisualizer.HousingPlotTip" source="Bounds and cells of every housing plot in the scene, with its id and size">
+		<entry key="EdPluginVisualizer.HousingPlotTip"
+		       source="Bounds and cells of every housing plot in the scene, with its id and size">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/World/Housing/Editor/HousingPlotVisualizer.cpp</item>
 			</origins>
@@ -1860,6 +1896,16 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Schedule/ScheduleDebugPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdSection.ZoneModules" source="Zone modules">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdUndo.ZoneRevertModule" source="Revert zone module">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorCharacterEditor.AddSocketButton" source="Add">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
@@ -1873,6 +1919,22 @@
 		<entry key="EditorCharacterEditor.SocketNoSelection" source="Select a socket in the list to edit it.">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.ZoneNoProfile" source="Pick a zone profile (*.zone.xml) to see its modules.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.ZoneOverridesInvalid"
+		       source="The overrides do not apply to this profile - see the log for the module name.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTip.ZoneRevert" source="Drop this placement override and use the preset again.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Zone/ZoneVolumeInspector.cpp</item>
 			</origins>
 		</entry>
 		<entry key="Keep" source="Keep" context="TextWidget._text">
