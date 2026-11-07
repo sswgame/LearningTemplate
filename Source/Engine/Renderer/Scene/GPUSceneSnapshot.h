@@ -133,7 +133,7 @@ namespace sw
          *          배치 키에 들어간다. 한 배치의 인스턴스는 모두 같은 부호다(`FramePSOManager::psoForBatch`).
          */
         uint8 _bReverseCulling{ SW_FALSE };
-        /** @brief 머티리얼 데이터 그룹(셰이더 타입) 인덱스입니다(`_listMaterialGroup`). 없으면 kInvalidMaterialGroup 입니다. */
+        /** @brief 머티리얼 데이터 그룹(셰이더 타입) 인덱스입니다(`GPUSceneSnapshot::getMaterialGroups`). 없으면 kInvalidMaterialGroup 입니다. */
         uint32 _materialGroup{ 0xFFFFFFFFu };
         /**
          * @brief 이 배치를 그릴 셰이더 퍼뮤테이션입니다. `_pListShaderPermutation` 의 인덱스이며 `GPUScene::findShaderPermutation` 으로 찾습니다.
@@ -387,10 +387,10 @@ namespace sw
          *
          *          배치 목록도 공유한다(아래 비공개 `_pListBatch`, 불투명 · 투명은 그 구간 뷰). RT 가 쓰는 GPU 값은 `GPUScene` 이 배치 번호로 따로 든다
          *          (`GPUMeshBatchBinding`) — 예전에는 그 값을 배치에 덧써서 공유하지 못하고 패킷마다 통째로 베꼈다(배치마다 shared_ptr 원자 연산).
-         *          머티리얼 그룹은 그대로 값이다.
+         *          머티리얼 그룹 · 원소 목록도 같은 규칙으로 공유한다(`getMaterialGroups` · `editMaterialGroups`). 렌더 스레드는 그룹을 읽기만 한다 —
+         *          덧쓰는 칸이 없어 배치처럼 뗄 것이 없다(원소의 상수 버퍼는 `MaterialRenderProxy` 가, 그룹 버퍼는 `GPUScene` 이 따로 든다).
          */
         shared_ptr<const vector<GPUInstance>> _pListInstance;
-        vector<GPUMaterialGroup>              _listMaterialGroup; ///< 셰이더 타입별 머티리얼 원소
         /**
          * @brief 퍼뮤테이션 목록입니다. 배치의 `_shaderPermutation` 이 가리킵니다. **불변 목록을 공유합니다.**
          * @details 문자열 경로와 define 목록이 든 값이라 프레임마다 복사하면 그 문자열들이 모두 힙 할당이다(프레임당 약 30회).
@@ -467,6 +467,26 @@ namespace sw
         vector<GPUTransparentParticleSlot> _listParticleSlot;
         /** @brief GPU 로 시뮬레이션하는 메시 방출기들입니다. 입자 그리기와 같이 매번 다시 모은다(인스턴스 칸은 배치 구성을 따른다). */
         vector<GPUVFXMeshEmitter> _listVFXMeshEmitter;
+
+        /** @brief 셰이더 타입별 머티리얼 원소 목록입니다(배치의 `_materialGroup` 이 가리킨다). 아직 없으면 빈 목록입니다. */
+        const vector<GPUMaterialGroup>& getMaterialGroups() const
+        {
+            static const vector<GPUMaterialGroup> s_listEmpty{};
+            return ( _pListMaterialGroup != nullptr ) ? *_pListMaterialGroup : s_listEmpty;
+        }
+        /**
+         * @brief 고칠 머티리얼 그룹 목록입니다(게임 스레드의 `GPUMaterialRegistry` 만 부른다). 공유 중이면 베낀 새 목록을 둔다(copy-on-write).
+         * @details 고치는 프레임(새 원소 · 회수 · 사본이 바뀐 원소)에만 부르게 해야 공유가 산다 — 바뀌지 않은 프레임은 목록 포인터 하나만 패킷으로 간다.
+         *          use_count 가 1 이면 다른 참조가 없다(새 참조는 게임 스레드의 내보내기에서만 생긴다).
+         */
+        vector<GPUMaterialGroup>& editMaterialGroups()
+        {
+            if ( _pListMaterialGroup == nullptr )
+                _pListMaterialGroup = make_shared<vector<GPUMaterialGroup>>();
+            else if ( _pListMaterialGroup.use_count() > 1 )
+                _pListMaterialGroup = make_shared<vector<GPUMaterialGroup>>( *_pListMaterialGroup );
+            return *_pListMaterialGroup;
+        }
 
         /** @brief 입자 그리기 · 그 자리 · GPU 메시 방출기를 함께 비웁니다(앞의 둘은 길이 · 순서가 같아야 한다). */
         void clearParticles()
@@ -593,6 +613,8 @@ namespace sw
          *          공유 중인 목록을 제자리에서 고치는 일이 없다. 바뀌지 않은 프레임의 내보내기(`GPUSceneBuilder::exportCPUSnapshot`)는 포인터 하나다.
          */
         shared_ptr<vector<GPUMeshBatch>> _pListBatch;
-        uint32                           _opaqueBatchCount{ 0 }; ///< 앞쪽 불투명 배치 수. 불투명 · 투명의 경계는 이 값 하나다(인스턴스 · 원소의 경계는 여기서 끌어낸다).
+        /** @brief 셰이더 타입별 머티리얼 원소 목록입니다(공유 값, `getMaterialGroups` · `editMaterialGroups`). */
+        shared_ptr<vector<GPUMaterialGroup>> _pListMaterialGroup;
+        uint32                               _opaqueBatchCount{ 0 }; ///< 앞쪽 불투명 배치 수. 불투명 · 투명의 경계는 이 값 하나다(인스턴스 · 원소의 경계는 여기서 끌어낸다).
     };
 } // namespace sw

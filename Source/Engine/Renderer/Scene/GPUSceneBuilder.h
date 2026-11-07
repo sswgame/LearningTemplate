@@ -187,7 +187,7 @@ namespace sw
         /** @brief 마지막 `computeViewTransparentOrders` 가 만든 추가 뷰마다의 투명 순서입니다. */
         const vector<GPUViewTransparentOrder>& getViewTransparentOrders() const { return _snapshot._listViewTransparentOrder; }
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹(CPU 스냅샷)을 반환합니다. */
-        const vector<GPUMaterialGroup>& getMaterialGroups() const { return _snapshot._listMaterialGroup; }
+        const vector<GPUMaterialGroup>& getMaterialGroups() const { return _snapshot.getMaterialGroups(); }
         /** @brief 퍼뮤테이션 하나를 반환합니다. 인덱스가 없으면 nullptr 입니다. */
         const GPUShaderPermutation* findShaderPermutation( uint32 index ) const
         {

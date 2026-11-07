@@ -2,7 +2,7 @@
  * @file GPUMaterialRegistry.h
  * @brief 머티리얼 그룹(셰이더 타입), 머티리얼 원소의 영속 인덱스, 셰이더 퍼뮤테이션 테이블을 관리합니다(언리얼 GPUScene 의 영속 ID 에 해당).
  * @details `GPUSceneBuilder` 가 값 멤버로 두고 직접 부릅니다(가상 호출 없음). 렌더 스레드가 읽는 것(그룹의 경로와 원소, 퍼뮤테이션 목록)은
- *          스냅샷(`GPUSceneSnapshot::_listMaterialGroup`, `_pListShaderPermutation`)에 두고, 찾는 맵, 회수 시계, 프리리스트는 여기에 둡니다.
+ *          스냅샷(`GPUSceneSnapshot::getMaterialGroups`, `_pListShaderPermutation`)에 두고, 찾는 맵, 회수 시계, 프리리스트는 여기에 둡니다.
  *          스냅샷은 빌더가 가지고 매 프레임 복사해 내보내므로 함수마다 인자로 받습니다(포인터로 붙들면 빌더를 옮길 때 끊어집니다).
  */
 #pragma once
@@ -89,7 +89,7 @@ namespace sw
             shared_ptr<MaterialInstance> _instance;
         };
         /**
-         * @brief 머티리얼 그룹의 원소 인덱스 테이블입니다. `GPUSceneSnapshot::_listMaterialGroup` 과 같은 인덱스로 나란히 둡니다.
+         * @brief 머티리얼 그룹의 원소 인덱스 테이블입니다. `GPUSceneSnapshot::getMaterialGroups` 과 같은 인덱스로 나란히 둡니다.
          * @details 스냅샷의 그룹에는 RT 가 읽는 것(경로, 원소)만 남기고 테이블은 여기 둡니다. 프레임마다 패킷으로 복사되지 않습니다.
          */
         struct MaterialGroupState
@@ -107,7 +107,7 @@ namespace sw
             uint8                 _bHasLast{ SW_FALSE };
         };
 
-        /// @brief 셰이더 경로에서 `GPUSceneSnapshot::_listMaterialGroup` 인덱스를 찾는 맵입니다. 배치마다 그룹 목록을 string 비교로 훑지 않기 위한 것입니다.
+        /// @brief 셰이더 경로에서 `GPUSceneSnapshot::getMaterialGroups` 인덱스를 찾는 맵입니다. 배치마다 그룹 목록을 string 비교로 훑지 않기 위한 것입니다.
         unordered_map<string, uint32> _mapShaderPathToGroup;
         vector<MaterialGroupState>    _listMaterialGroupState;
         /// @brief 퍼뮤테이션 해시에서 `GPUSceneSnapshot::_pListShaderPermutation` 의 인덱스를 찾는 맵입니다.

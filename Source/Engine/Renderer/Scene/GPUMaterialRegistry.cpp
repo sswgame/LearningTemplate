@@ -58,7 +58,8 @@ namespace sw
 
     void GPUMaterialRegistry::reset( GPUSceneSnapshot& inoutSnapshot )
     {
-        inoutSnapshot._listMaterialGroup.clear();
+        if ( inoutSnapshot.getMaterialGroups().empty() == false )
+            inoutSnapshot.editMaterialGroups().clear();
         _listMaterialGroupState.clear();
         _mapShaderPathToGroup.clear();
         inoutSnapshot._pListShaderPermutation.reset();
@@ -76,10 +77,11 @@ namespace sw
             return it->second;
 
         GPUMaterialGroup group{};
-        group._shaderPath = shaderPath;
-        inoutSnapshot._listMaterialGroup.push_back( std::move( group ) );
+        group._shaderPath                   = shaderPath;
+        vector<GPUMaterialGroup>& listGroup = inoutSnapshot.editMaterialGroups();
+        listGroup.push_back( std::move( group ) );
         _listMaterialGroupState.emplace_back();
-        const uint32 groupIndex = static_cast<uint32>( inoutSnapshot._listMaterialGroup.size() - 1 );
+        const uint32 groupIndex = static_cast<uint32>( listGroup.size() - 1 );
         _mapShaderPathToGroup.emplace( shaderPath, groupIndex );
         return groupIndex;
     }
@@ -121,10 +123,9 @@ namespace sw
     {
         Material* const         pMaterial             = material.get();
         MaterialInstance* const pInstance             = instance.get();
-        const bool              bInvalidMaterialGroup = pMaterial == nullptr || groupIndex >= inoutSnapshot._listMaterialGroup.size() || groupIndex >= _listMaterialGroupState.size();
+        const bool              bInvalidMaterialGroup = pMaterial == nullptr || groupIndex >= inoutSnapshot.getMaterialGroups().size() || groupIndex >= _listMaterialGroupState.size();
         if ( bInvalidMaterialGroup )
             return 0;
-        GPUMaterialGroup&           group = inoutSnapshot._listMaterialGroup[groupIndex];
         MaterialGroupState&         state = _listMaterialGroupState[groupIndex];
         const GPUMaterialElementKey key{ pMaterial, pInstance };
         // 배치 안의 인스턴스는 같은 원소를 연속으로 조회한다. 포인터 비교 한 번으로 끝낸다.
@@ -139,7 +140,9 @@ namespace sw
         else
         {
             // 회수된 슬롯을 먼저 재사용한다. 새 슬롯만 늘리면 버퍼가 단조 증가한다. 사본은 이번 빌드의 `refreshMaterialBindings` 가 채운다.
-            elementIndex = allocateFreeListIndex( group._listEntry, state._listFreeEntry, GPUMaterialElement{ key, MaterialRenderBinding{} } );
+            // 그룹 목록은 새 원소가 생길 때만 고친다(공유 중이면 이때 베낀다 — `GPUSceneSnapshot::editMaterialGroups`).
+            GPUMaterialGroup& group = inoutSnapshot.editMaterialGroups()[groupIndex];
+            elementIndex            = allocateFreeListIndex( group._listEntry, state._listFreeEntry, GPUMaterialElement{ key, MaterialRenderBinding{} } );
             if ( elementIndex >= state._listEntryLastUsedBuild.size() )
                 state._listEntryLastUsedBuild.resize( elementIndex + 1 );
             if ( elementIndex >= state._listEntryOwner.size() )
@@ -184,22 +187,24 @@ namespace sw
             return;
         const uint64 staleBefore = _buildCounter - constant::render::kRenderFrameQueueDepth;
 
-        const size_t groupCount = MathUtil::min( inoutSnapshot._listMaterialGroup.size(), _listMaterialGroupState.size() );
+        // 그룹 목록은 회수할 원소가 있을 때만 고친다(공유 중이면 그때 베낀다). 베끼면 옛 목록은 다른 쪽이 놓을 수 있으므로 참조를 들고 있지 않고 매번 다시 읽는다.
+        const size_t groupCount = MathUtil::min( inoutSnapshot.getMaterialGroups().size(), _listMaterialGroupState.size() );
         for ( size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex )
         {
-            GPUMaterialGroup&   group = inoutSnapshot._listMaterialGroup[groupIndex];
-            MaterialGroupState& state = _listMaterialGroupState[groupIndex];
-            for ( uint32 index = 0; index < group._listEntry.size(); ++index )
+            MaterialGroupState& state      = _listMaterialGroupState[groupIndex];
+            const uint32        entryCount = static_cast<uint32>( inoutSnapshot.getMaterialGroups()[groupIndex]._listEntry.size() );
+            for ( uint32 index = 0; index < entryCount; ++index )
             {
-                if ( group._listEntry[index]._key._pMaterial == nullptr )
+                const GPUMaterialElementKey key = inoutSnapshot.getMaterialGroups()[groupIndex]._listEntry[index]._key;
+                if ( key._pMaterial == nullptr )
                     continue;
                 if ( index < state._listEntryLastUsedBuild.size() && state._listEntryLastUsedBuild[index] >= staleBefore )
                     continue;
 
-                state._mapEntryToIndex.erase( group._listEntry[index]._key );
+                state._mapEntryToIndex.erase( key );
                 // 슬롯은 비워 두고 프리리스트로 돌린다. 뒤 원소를 당겨오면 그들의 인덱스가 바뀌어
                 // 이미 인스턴스에 기록된 materialIndex 가 엉뚱한 머티리얼을 가리킨다.
-                group._listEntry[index] = GPUMaterialElement{};
+                inoutSnapshot.editMaterialGroups()[groupIndex]._listEntry[index] = GPUMaterialElement{};
                 if ( index < state._listEntryOwner.size() )
                     state._listEntryOwner[index] = MaterialElementOwner{};
                 state._listFreeEntry.push_back( index );
@@ -218,18 +223,23 @@ namespace sw
         _bElementsChanged  = SW_FALSE;
         _lastRefreshInputs = inputs;
         SW_PROFILE_COUNT( "GT.Material.refreshBindings", 1 );
-        const size_t groupCount = MathUtil::min( inoutSnapshot._listMaterialGroup.size(), _listMaterialGroupState.size() );
+        // 사본이 바뀐 원소가 있을 때만 그룹 목록을 고친다(공유 중이면 그때 베낀다) — 맞추기가 돌아도 값이 그대로면 패킷은 같은 목록을 받는다.
+        // 베끼면 옛 목록은 다른 쪽이 놓을 수 있으므로 참조를 들고 있지 않고 매번 다시 읽는다.
+        const size_t groupCount = MathUtil::min( inoutSnapshot.getMaterialGroups().size(), _listMaterialGroupState.size() );
         for ( size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex )
         {
-            GPUMaterialGroup&         group      = inoutSnapshot._listMaterialGroup[groupIndex];
             const MaterialGroupState& state      = _listMaterialGroupState[groupIndex];
-            const size_t              entryCount = MathUtil::min( group._listEntry.size(), state._listEntryOwner.size() );
+            const size_t              entryCount = MathUtil::min( inoutSnapshot.getMaterialGroups()[groupIndex]._listEntry.size(), state._listEntryOwner.size() );
             for ( size_t index = 0; index < entryCount; ++index )
             {
                 const MaterialElementOwner& owner = state._listEntryOwner[index];
                 if ( owner._material == nullptr )
                     continue;
-                group._listEntry[index]._binding = ( owner._instance != nullptr ) ? owner._instance->getRenderBinding() : owner._material->getRenderBinding();
+                MaterialRenderBinding        binding = ( owner._instance != nullptr ) ? owner._instance->getRenderBinding() : owner._material->getRenderBinding();
+                const MaterialRenderBinding& current = inoutSnapshot.getMaterialGroups()[groupIndex]._listEntry[index]._binding;
+                if ( binding._proxy == current._proxy && binding._data == current._data )
+                    continue;
+                inoutSnapshot.editMaterialGroups()[groupIndex]._listEntry[index]._binding = std::move( binding );
             }
         }
     }

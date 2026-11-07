@@ -127,7 +127,7 @@ namespace sw
         // RT 에서만 하는 두 가지: 머티리얼 사본을 프록시의 상수 버퍼에 올리고, 메시를 GPU 에 올린다(정점 풀, 풀 밖이면 initRHI).
         {
             SW_PROFILE_SCOPE( "RT.GPUScene.bindMaterials" );
-            GPUSceneInternal::bindBatchMaterialResources( pDevice, _snapshot.getAllBatches(), _listBatchBinding, _snapshot._listMaterialGroup );
+            GPUSceneInternal::bindBatchMaterialResources( pDevice, _snapshot.getAllBatches(), _listBatchBinding, _snapshot.getMaterialGroups() );
         }
         updateVertexPool( pDevice );
         // 머티리얼 데이터 구조버퍼(셰이더 타입별). 값이 프레임마다 바뀔 수 있어 스냅샷 dirty 와 무관하게 매번 본다(바이트가 같으면 올리지 않는다).
@@ -647,12 +647,13 @@ namespace sw
         // 배치마다 셰이더 **경로 문자열**로 해시 조회를 하면 그룹은 한둘인데 배치는 수백이라 같은 답을 배치 수만큼
         // 다시 구한다(Release 실측 프레임당 86us, RT 렌더 시간의 12%).
         // 그룹 수만큼만 조회해 표로 만들어 두면 배치 루프는 저장 몇 번으로 끝난다. 표는 멤버라 프레임마다 힙을 만지지 않는다.
-        const uint32           groupCount   = static_cast<uint32>( _snapshot._listMaterialGroup.size() );
-        vector<ResolvedGroup>& listResolved = _listResolvedGroupScratch;
+        const vector<GPUMaterialGroup>& listGroup    = _snapshot.getMaterialGroups();
+        const uint32                    groupCount   = static_cast<uint32>( listGroup.size() );
+        vector<ResolvedGroup>&          listResolved = _listResolvedGroupScratch;
         listResolved.assign( groupCount, ResolvedGroup{} );
         for ( uint32 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
         {
-            const GPUMaterialGroup& group = _snapshot._listMaterialGroup[groupIndex];
+            const GPUMaterialGroup& group = listGroup[groupIndex];
             const auto              it    = _mapMaterialGroupBuffer.find( group._shaderPath );
             if ( it == _mapMaterialGroupBuffer.end() )
                 continue;
@@ -684,7 +685,7 @@ namespace sw
         if ( pDevice == nullptr )
             return;
 
-        for ( const GPUMaterialGroup& group : _snapshot._listMaterialGroup )
+        for ( const GPUMaterialGroup& group : _snapshot.getMaterialGroups() )
         {
             if ( group._listEntry.empty() )
                 continue;
