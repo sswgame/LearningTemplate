@@ -67,7 +67,7 @@ namespace sw
              pBase->findProperty( Internal::getTexelName() ) == nullptr )
         {
             const hashed_string ownerName = pOwner != nullptr ? pOwner->getName() : hashed_string{};
-            SW_LOG_ERROR_ONCE_FOR_ID( "Surface.DeformMeshMaterialMissing", ownerName.c_str(),
+            SW_LOG_ERROR_ONCE_FOR_ID( "Surface.DeformMeshMaterialMissing", string_view( ownerName.c_str() ),
                                       "'%#' has a SurfaceDeformMeshComponent but no mesh whose material has _deformMap, _deformParams and _deformTexel (use a surface_deform.hlsl material)",
                                       ownerName.c_str() );
             _boundRevision = deform.getBindingRevision(); // 같은 바인딩으로 다시 묻지 않는다 — 다음 바인딩이 바뀔 때 다시 본다

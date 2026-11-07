@@ -28,7 +28,7 @@ namespace sw
                 return string{ TextureCache::kCPUTexturePrefix } + "surface/deform" + to_string( s_serial.fetch_add( 1u, std::memory_order_relaxed ) );
             }
 
-            static SurfaceDeformSystem* findSystem( const AutomationWatchQuery& query )
+            static const SurfaceDeformSystem* findSystem( const AutomationWatchQuery& query )
             {
                 return query._pManager != nullptr ? &query._pManager->getSubsystem<SurfaceDeformSystem>() : nullptr;
             }

@@ -107,7 +107,7 @@ namespace sw
         float32 _rudderForce;
         PROPERTY( Category = "Rudder", DisplayName = "Rudder Position", Units = m, Tooltip = "Where the rudder pushes, body local (the stern: negative z)" )
         float3 _rudderPosition;
-        PROPERTY( Category = "Propulsion", DisplayName = "Engine Thrust", Min = 0.0, Meta = "Units=N", Tooltip = "Oars or engine force along the bow at full throttle (0: none)" )
+        PROPERTY( Category = "Propulsion", DisplayName = "Engine Thrust", Min = 0.0, Units = N, Tooltip = "Oars or engine force along the bow at full throttle (0: none)" )
         float32 _engineThrust;
         PROPERTY( Category = "Propulsion", DisplayName = "Sail Area", Min = 0.0, Meta = "Units=m2", Tooltip = "Sail area (0: no sail)" )
         float32 _sailArea;
