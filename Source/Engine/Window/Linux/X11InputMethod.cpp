@@ -10,6 +10,12 @@
     #include "Core/Foundation/X11Headers.h"
 
     #include <clocale>
+    #include <cwchar>
+
+    // XIM 의 wide_char 와 로캘 변환(`mbrtowc`)의 wchar_t 를 유니코드 코드 포인트로 읽는다 — glibc 는 늘 그렇다. 아닌 C 라이브러리면 컴파일에서 멈춘다.
+    #if !defined( __STDC_ISO_10646__ )
+        #error "X11InputMethod reads wchar_t as Unicode code points - this C library does not promise __STDC_ISO_10646__"
+    #endif
 
 namespace sw
 {
@@ -38,7 +44,8 @@ namespace sw
 
             /**
              * @brief 조합 글의 일부가 바뀌었습니다.
-             * @details shortcut: 다중 바이트 글은 UTF-8 로 읽는다 - UTF-8 이 아닌 로캘(EUC-KR 등)에서는 조합 글이 깨진다(확정 글은 `Xutf8LookupString` 이라 괜찮다), 그런 로캘을 지원하게 되면 `mbstowcs` 를 거친다.
+             * @details 다중 바이트 글은 로캘 인코딩이다 — 로캘 변환으로 UTF-8 로 바꾼다(`appendLocaleText`). 예전에는 UTF-8 로 가정해 EUC-KR 같은 로캘의 조합 글이 깨졌다
+             *          (확정 글은 `Xutf8LookupString` 이라 처음부터 UTF-8 이다).
              */
             static void onPreeditDraw( XIM /*pIM*/, XPointer pClient, XIMPreeditDrawCallbackStruct* pCall )
             {
@@ -56,7 +63,7 @@ namespace sw
                         }
                     }
                     else if ( text.encoding_is_wchar == 0 && text.string.multi_byte != nullptr )
-                        inserted = text.string.multi_byte;
+                        (void)X11InputMethod::appendLocaleText( text.string.multi_byte, inserted ); // 틀린 바이트는 함수가 오류로 남겼다 — 그 앞까지만 조합 글이다
                 }
                 const uint32 first = pCall->chg_first > 0 ? static_cast<uint32>( pCall->chg_first ) : 0;
                 const uint32 count = pCall->chg_length > 0 ? static_cast<uint32>( pCall->chg_length ) : 0;
@@ -77,6 +84,30 @@ namespace sw
 
 namespace sw
 {
+    bool X11InputMethod::appendLocaleText( const char* pMultiByte, string& outUTF8 )
+    {
+        if ( pMultiByte == nullptr )
+            return true;
+        std::mbstate_t state{};
+        const size_t   length = string_view{ pMultiByte }.size();
+        size_t         offset = 0;
+        while ( offset < length )
+        {
+            wchar_t      character = 0;
+            const size_t consumed  = std::mbrtowc( &character, pMultiByte + offset, length - offset, &state );
+            const bool   bInvalid  = consumed == static_cast<size_t>( -1 ) || consumed == static_cast<size_t>( -2 ) || consumed == 0;
+            if ( bInvalid )
+            {
+                SW_LOG_ERROR_ID( "X11InputMethod.BadLocaleText", "Input method text is not valid in the locale '%#' at byte %# - the rest of the composition is dropped",
+                                 std::setlocale( LC_CTYPE, nullptr ), static_cast<uint32>( offset ) );
+                return false;
+            }
+            StringUtil::appendUTF8( outUTF8, static_cast<uint32>( character ) );
+            offset += consumed;
+        }
+        return true;
+    }
+
     X11InputMethod::X11InputMethod()
         : _textSink{}
         , _composition{}

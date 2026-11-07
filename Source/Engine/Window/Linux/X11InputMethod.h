@@ -45,6 +45,12 @@ namespace sw
         /** @brief 후보 창 자리(`XNSpotLocation`, 포커스를 가진 창 기준)를 알립니다. */
         void setArea( const WindowTextInputArea& area );
 
+        /**
+         * @brief 지금 로캘(`LC_CTYPE`)의 다중 바이트 글 @p pMultiByte 를 UTF-8 로 바꿔 @p outUTF8 뒤에 붙입니다(XIM 조합 글의 `multi_byte` 는 로캘 인코딩이다 — EUC-KR 등).
+         * @return 로캘에서 틀린 바이트를 만나면 오류를 남기고 false 입니다. 그때까지 바꾼 글은 붙어 있다. Linux 클라이언트 빌드에만 있다.
+         */
+        [[nodiscard]] static bool appendLocaleText( const char* pMultiByte, string& outUTF8 );
+
         // 아래는 .cpp 의 C 콜백만 부른다(XIM 타입을 헤더에 두지 않으려고 공개다).
         void onInputMethodAvailable();
         void onInputMethodDestroyed();
