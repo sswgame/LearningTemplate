@@ -148,7 +148,7 @@ namespace sw
         vector<StreamingUpgrade> _listStreamingUpgrade SW_GUARDED_BY( _streamingMutex ); ///< 위쪽 밉을 기다리는 텍스처(먼저 들어온 것부터, `updateStreaming` 이 비운다)
         TextureStreamingRetireList                     _retired;                         ///< 바꿔 끼운 옛 GPU 자원(`releaseRetiredTextures` 가 해제한다)
         vector<string> _listUpgrading                  SW_GUARDED_BY( _streamingMutex ); ///< 위쪽 밉 업로드를 제출했고 끝남 확인을 기다리는 텍스처의 키(`updateStreaming` 이 폴링한다)
-        unordered_map<string, float32>                 _mapScreenSize;                   ///< 이번 프레임에 알린 화면 크기(`recordScreenSize`, `_streamingMutex`) — `updateStreaming` 이 줄을 정렬한 뒤 비운다
+        unordered_map<string, float32>                 _mapScreenSize;                   ///< 이번 프레임에 알린 화면 크기(`recordScreenSizes`, `_streamingMutex`) — `updateStreaming` 이 줄을 정렬한 뒤 비운다
 
         /** @brief `submitRegionUpdate` 의 결과: 올림 · 다음 프레임에 다시(`Busy` 이면 이번 차례의 나머지도 미룬다) · 버림. */
         enum class RegionFlushResult : uint8
@@ -664,14 +664,16 @@ namespace sw
         return upgradedCount;
     }
 
-    void TextureCache::recordScreenSize( string_view relativePath, float32 screenSize )
+    void TextureCache::recordScreenSizes( const vector<string>& listRelativePath, float32 screenSize )
     {
         if ( screenSize <= 0.0f )
             return;
-        const string      key = FileUtil::normalizePath( relativePath );
         ScopedLock<mutex> lock{ _impl->_streamingMutex };
-        float32&          noted = _impl->_mapScreenSize[key];
-        noted                   = MathUtil::max( noted, screenSize );
+        for ( const string& relativePath : listRelativePath )
+        {
+            float32& noted = _impl->_mapScreenSize[FileUtil::normalizePath( relativePath )];
+            noted          = MathUtil::max( noted, screenSize );
+        }
     }
 
     bool TextureCache::hasPendingStreamingUpgrades() const

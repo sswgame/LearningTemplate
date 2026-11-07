@@ -4,11 +4,14 @@
  *        `SceneFrameStep::FlushEnd` 단계(그리기 전)에서 돕니다.
  * @details 텍스처 밉 스트리밍(`TextureCache::updateStreaming`)은 아래쪽 밉으로 먼저 보이고 위쪽 밉을 프레임에 둘씩 바꿔 끼운다. 순서가 읽힌 차례뿐이면 멀리 있는 작은 물체의 텍스처가 가까운 큰 물체보다
  *          먼저 선명해질 수 있다(언리얼 텍스처 스트리머는 보이는 것의 wanted mip 부터 올린다). 여기서는 메시 컴포넌트마다 `MeshLODSystem` 이 쓰는 같은 화면 크기(경계 구의 화면 높이 비율, 주 시점 ·
- *          추가 뷰 · 대기 뷰 중 가장 큰 것)를 구해 그 머티리얼의 텍스처마다 가장 큰 값을 `TextureCache::recordScreenSize` 로 알린다. 대기 뷰(컷 프리롤)가 있으면 곧 볼 것도 같이 앞선다.
+ *          추가 뷰 · 대기 뷰 중 가장 큰 것)를 구해 그 머티리얼의 텍스처마다 가장 큰 값을 `TextureCache::recordScreenSizes` 로 알린다. 대기 뷰(컷 프리롤)가 있으면 곧 볼 것도 같이 앞선다.
  *          **싸게 만든다**: 위쪽 밉을 기다리는 텍스처가 없으면 메시를 훑지 않는다(`TextureCache::hasPendingStreamingUpgrades`) — 스트리밍이 몰리는 때(씬 로드 직후 · 새 오브젝트)만 돈다.
  *          UV 밀도(텍셀 대 화면 픽셀)는 모르므로 화면 크기만 쓴다 — 같은 머티리얼의 텍스처는 같은 우선도를 받는다.
  */
 #pragma once
+#include "Core/Container/string.h"
+#include "Core/Container/unordered_map.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -17,6 +20,7 @@
 namespace sw
 {
     class GameObjectManager;
+    class Material;
 
     /** @class TextureStreamingSystem @brief 씬 하나의 텍스처 밉 요청 우선순위 알림입니다. 파일 머리말 참고. */
     class SW_API TextureStreamingSystem final : public ISceneService
@@ -39,6 +43,8 @@ namespace sw
         void onSceneCleared() override {}
 
     private:
-        GameObjectManager& _manager;
+        GameObjectManager&                      _manager;
+        unordered_map<const Material*, float32> _mapMaterialScreenSize; ///< 머티리얼마다 이번 프레임의 가장 큰 화면 크기(재사용). 같은 머티리얼을 쓰는 메시가 경로 글을 되풀이하지 않는다
+        vector<string>                          _listPathScratch;       ///< 머티리얼 하나의 텍스처 경로(재사용)
     };
 } // namespace sw

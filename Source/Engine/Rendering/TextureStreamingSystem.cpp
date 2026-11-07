@@ -4,6 +4,7 @@
 
 #include "Core/Container/vector.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Material/Material.h"
@@ -27,6 +28,8 @@ namespace sw
 
     TextureStreamingSystem::TextureStreamingSystem( GameObjectManager& manager )
         : _manager{ manager }
+        , _mapMaterialScreenSize{}
+        , _listPathScratch{}
     {
     }
 
@@ -45,7 +48,8 @@ namespace sw
         if ( lodSystem.areViewsSet() == false )
             return; // 렌더가 뷰를 넣기 전에는 화면 크기를 모른다
         SW_PROFILE_SCOPE( "GT.TextureStreaming.recordScreenSize" );
-        vector<string> listPath;
+        // 메시 패스는 머티리얼별 최댓값만 구한다. 글 만들기 · 경로 정규화 · 잠금은 머티리얼마다 한 번이다(결과는 최댓값 규칙이라 순서와 무관하다).
+        _mapMaterialScreenSize.clear();
         _manager.forEachComponentOfType<MeshComponent>( [&]( MeshComponent* pMesh )
         {
             const Material* pMaterial = pMesh->getMaterial();
@@ -54,12 +58,14 @@ namespace sw
             const float32 screenSize = lodSystem.computeScreenSize( *pMesh );
             if ( screenSize <= 0.0f )
                 return;
-            listPath.clear();
-            pMaterial->collectTexturePaths( listPath );
-            for ( const string& path : listPath )
-            {
-                textures.recordScreenSize( path, screenSize );
-            }
+            float32& maxScreenSize = _mapMaterialScreenSize[pMaterial];
+            maxScreenSize          = MathUtil::max( maxScreenSize, screenSize );
         } );
+        for ( const auto& [pMaterial, screenSize] : _mapMaterialScreenSize )
+        {
+            _listPathScratch.clear();
+            pMaterial->collectTexturePaths( _listPathScratch );
+            textures.recordScreenSizes( _listPathScratch, screenSize );
+        }
     }
 } // namespace sw
