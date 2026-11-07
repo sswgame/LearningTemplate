@@ -19,8 +19,9 @@ namespace sw
         static const hashed_string s_assetRefType( AssetRefBase::kTypeName );
         if ( prop._typeName == s_assetRefType )
         {
+            // 내장 에셋(`Cube`)은 파일이 아니다 — 프리로드 · 핫 리로드가 파일로 찾지 않게 빈 값이다.
             const AssetRefBase* pValue = prop.getValuePtr<AssetRefBase>( pComponent );
-            return pValue != nullptr ? string_view( pValue->path() ) : string_view{};
+            return pValue != nullptr && pValue->isBuiltin() == false ? string_view( pValue->path() ) : string_view{};
         }
         // 읽을 C++ 타입과 같은 자리(`ReflectBuiltinOf<T>`)로 묻는다 — 이름 글과 캐스트 타입이 따로 놀지 않고 별칭도 같은 자리가 된다.
         const int32 builtinIndex = ReflectValueUtil::findBuiltinIndex( prop._typeName );

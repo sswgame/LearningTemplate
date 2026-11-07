@@ -16,7 +16,7 @@ namespace sw
 
     struct SW_API ComponentAssetPathUtil
     {
-        /** @brief 에셋 경로 프로퍼티의 값입니다. 경로 프로퍼티가 아니거나 문자열이 아니면 빈 값입니다. 값은 컴포넌트 안을 가리키므로 컴포넌트가 사는 동안만 씁니다. */
+        /** @brief 에셋 경로 프로퍼티의 값입니다. 경로 프로퍼티가 아니거나 문자열이 아니거나 내장 에셋(`AssetRefBase::isBuiltin`)이면 빈 값입니다. 값은 컴포넌트 안을 가리키므로 컴포넌트가 사는 동안만 씁니다. */
         static string_view readAssetPath( const PropertyInfo& prop, const Component* pComponent );
     };
 } // namespace sw

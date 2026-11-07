@@ -54,8 +54,13 @@ namespace sw
         /** @brief 참조를 비웁니다. */
         void clear() { _path.clear(); }
 
-        /** @brief @p path 의 접미사가 종류 @p type 의 것이면 true 입니다(대소문자 무시). 접미사가 없는 종류는 파일로 가를 수 없어 모든 경로를 받는다. */
+        /**
+         * @brief @p path 가 종류 @p type 의 에셋이면 true 입니다 — 내장 이름(철자 그대로), 접미사(대소문자 무시), 접미사가 없는 카탈로그는 경로 규칙(`AssetPathRule`) 순으로 본다.
+         * @details 셋 다 없는 종류는 경로로 가를 수 없어 어떤 경로도 받지 않는다(`AssetRef<T>` 는 그런 대상을 컴파일에서 막는다 — `AssetTypeDef::canTellPath`).
+         */
         [[nodiscard]] static bool isPathOfTarget( string_view path, const AssetTypeDef& type );
+        /** @brief 값이 대상 종류의 내장 에셋 이름(`Cube`)이면 true 입니다. 내장 에셋은 파일이 아니므로 캐시 · 쿠킹 · 참조 검사가 파일로 찾지 않는다. */
+        [[nodiscard]] bool isBuiltin() const;
 
         /** @brief 리플렉션 글 처리기("AssetRef")를 직렬화 문맥에 등록합니다. 기본 문맥이 만들어질 때 한 번 부른다. */
         static void registerSerializeHandler( SerializeContext& context );

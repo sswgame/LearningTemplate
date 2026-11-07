@@ -132,22 +132,51 @@ namespace sw
      */
     struct AssetTypeDef
     {
-        string_view        _name{};             ///< 종류 이름 — 로그 · 에디터 레이블 키 · 공유 캐시의 종류 이름. 등록된 종류끼리 겹치지 않는다(대소문자 무시)
-        const AssetSuffix* _pSuffix{ nullptr }; ///< 접미사 목록(파일로 가르지 않는 종류는 nullptr)
-        uint32             _suffixCount{ 0 };   ///< `_pSuffix` 의 수
-        string_view        _cookedSuffix{};     ///< 쿠킹본 접미사(쿠킹하지 않는 종류는 빈 글)
-        AssetFormatVersion _formatVersion{ 0 }; ///< 저작 XML 의 현재 판. 저장 형태가 호환되지 않게 바뀌면 올린다
-        string_view        _excludeGroup{};     ///< 빌드 타깃이 패키지에서 뺄 수 있는 묶음(`Texture` · `ShaderBinary` · `Audio`). 없으면 빈 글 — 쿠킹 표의 `target_excluded_asset_kinds` 가 이 이름을 가리킨다
-        AssetPathRule      _pathRule{};         ///< 접미사로 가를 수 없는 데이터 파일의 경로 규칙(`/data/items.xml`). 비어 있으면 카탈로그가 아니다
-        AssetTypeLoader    _loader{};           ///< 진짜 로더와 읽는 방식(등록 줄이 넣는다)
+        string_view        _name{};                  ///< 종류 이름 — 로그 · 에디터 레이블 키 · 공유 캐시의 종류 이름. 등록된 종류끼리 겹치지 않는다(대소문자 무시)
+        const AssetSuffix* _pSuffix{ nullptr };      ///< 접미사 목록(파일로 가르지 않는 종류는 nullptr)
+        uint32             _suffixCount{ 0 };        ///< `_pSuffix` 의 수
+        string_view        _cookedSuffix{};          ///< 쿠킹본 접미사(쿠킹하지 않는 종류는 빈 글)
+        AssetFormatVersion _formatVersion{ 0 };      ///< 저작 XML 의 현재 판. 저장 형태가 호환되지 않게 바뀌면 올린다
+        string_view        _excludeGroup{};          ///< 빌드 타깃이 패키지에서 뺄 수 있는 묶음(`Texture` · `ShaderBinary` · `Audio`). 없으면 빈 글 — 쿠킹 표의 `target_excluded_asset_kinds` 가 이 이름을 가리킨다
+        AssetPathRule      _pathRule{};              ///< 접미사로 가를 수 없는 데이터 파일의 경로 규칙(`/data/items.xml`). 비어 있으면 카탈로그가 아니다
+        AssetTypeLoader    _loader{};                ///< 진짜 로더와 읽는 방식(등록 줄이 넣는다)
+        const string_view* _pBuiltinName{ nullptr }; ///< 파일이 아니라 엔진이 만드는 에셋의 이름(내장 도형 `Cube`). 없으면 nullptr
+        uint32             _builtinNameCount{ 0 };   ///< `_pBuiltinName` 의 수
 
-        /** @brief @p rule 을 경로 규칙으로 가진 사본입니다(등록 줄). */
+        /**
+         * @brief @p rule 을 경로 규칙으로 가진 사본입니다. 카탈로그 종류는 헤더의 `kAssetType` 에 규칙을 적어(`makeDataFile`) 타입 있는 참조(`AssetRef<T>`)가 경로를 가른다.
+         */
         [[nodiscard]] constexpr AssetTypeDef withPathRule( const AssetPathRule& rule ) const
         {
             AssetTypeDef copy = *this;
             copy._pathRule    = rule;
             return copy;
         }
+        /**
+         * @brief @p arrName 을 내장 에셋 이름으로 가진 사본입니다(헤더의 `kAssetType`).
+         * @details 내장 이름은 철자 그대로만 맞는다(대소문자를 가리지 않으면 같은 에셋을 여러 철자로 적어 캐시 자리가 갈린다 — `MeshUtil`). 모르는 이름은 받지 않는다.
+         *          언리얼은 내장 도형을 엔진 콘텐츠의 진짜 에셋(`/Engine/BasicShapes/Cube`)으로, Godot 은 `PrimitiveMesh` 리소스로 둔다(기억에 의존) — 여기는 파일이 없으므로 종류가 이름 목록을 가진다.
+         */
+        template <uint32 Count>
+        [[nodiscard]] constexpr AssetTypeDef withBuiltinNames( const string_view ( &arrName )[Count] ) const
+        {
+            AssetTypeDef copy      = *this;
+            copy._pBuiltinName     = arrName;
+            copy._builtinNameCount = Count;
+            return copy;
+        }
+        /** @brief @p name 이 이 종류의 내장 에셋 이름이면 true 입니다(철자 그대로). */
+        [[nodiscard]] constexpr bool isBuiltinName( string_view name ) const
+        {
+            for ( uint32 index = 0; index < _builtinNameCount; ++index )
+            {
+                if ( _pBuiltinName[index] == name )
+                    return true;
+            }
+            return false;
+        }
+        /** @brief 경로로 이 종류의 에셋인지 가를 수 있으면(접미사 · 경로 규칙 · 내장 이름 중 하나가 있으면) true 입니다. 가를 수 없는 종류는 타입 있는 참조의 대상이 될 수 없다. */
+        [[nodiscard]] constexpr bool canTellPath() const { return _suffixCount > 0 || _pathRule.isEmpty() == false || _builtinNameCount > 0; }
         /** @brief @p loader 를 로더로 가진 사본입니다(등록 줄). */
         [[nodiscard]] constexpr AssetTypeDef withLoader( const AssetTypeLoader& loader ) const
         {

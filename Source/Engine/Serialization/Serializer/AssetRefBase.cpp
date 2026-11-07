@@ -11,14 +11,22 @@ namespace sw
 {
     bool AssetRefBase::isPathOfTarget( string_view path, const AssetTypeDef& type )
     {
-        if ( type._suffixCount == 0 )
+        if ( type.isBuiltinName( path ) )
             return true;
         for ( uint32 index = 0; index < type._suffixCount; ++index )
         {
             if ( StringUtil::endsWith( path, type._pSuffix[index]._text, true ) )
                 return true;
         }
-        return false;
+        // 접미사가 있는 종류는 접미사로만 가른다. 접미사가 없는 카탈로그는 경로 규칙(`/data/crops.xml`)으로 가른다.
+        if ( type._suffixCount > 0 || type._pathRule.isEmpty() )
+            return false;
+        return type._pathRule.matches( path );
+    }
+
+    bool AssetRefBase::isBuiltin() const
+    {
+        return _pTargetType->isBuiltinName( _path );
     }
 
     bool AssetRefBase::assign( string_view path )
