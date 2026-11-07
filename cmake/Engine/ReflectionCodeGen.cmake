@@ -40,7 +40,7 @@ function(sw_scanReflectionHeaders OUT_HEADERS OUT_OTHERS TARGET_NAME EXCLUDE_REG
 	endif()
 	# 배포 구성은 개발 전용 소스(단위 테스트 `Tests/` 등, `SW_DEV_ONLY_SOURCE_PATTERNS`)를 짓지 않는다 — 그 폴더의 테스트용 반사 타입도 코드젠하지 않는다
 	# (빼지 않으면 테스트 타입이 배포 이미지의 타입 목록에 오른다). 소스를 빼는 규칙과 같은 목록을 쓴다.
-	if(SW_SHIPPING_BUILD)
+	if(SW_SHIPPING_BUILD OR SW_TARGET_TYPE STREQUAL "Server")
 		foreach(devOnlyPattern IN LISTS SW_DEV_ONLY_SOURCE_PATTERNS)
 			list(FILTER listCandidateHeader EXCLUDE REGEX "${devOnlyPattern}")
 		endforeach()
@@ -390,8 +390,8 @@ endfunction()
 # ------------------------------------------------------------------------------
 function(sw_addAssetReferenceFieldList)
 	# 배포 구성은 개발 전용 소스(`SW_DEV_ONLY_SOURCE_PATTERNS` — Tests/ · Dev/)를 짓지 않아 그 형식의 칸을 모른다 — 표를 다시 쓰면 그 칸이 빠져 구성마다 표가 갈린다.
-	# 표는 개발 구성(검사 `ToolCheckAssetRefs` 가 도는 곳)만 쓴다.
-	if(SW_SHIPPING_BUILD)
+	# 표는 클라이언트 개발 구성(검사 `ToolCheckAssetRefs` 가 도는 곳)만 쓴다 — 서버 구성은 렌더 칸을 짓지 않아 그 줄을 지운다.
+	if(SW_SHIPPING_BUILD OR SW_TARGET_TYPE STREQUAL "Server")
 		return()
 	endif()
 	get_property(listEntry GLOBAL PROPERTY SW_ASSET_REFERENCE_FIELD_LISTS)
