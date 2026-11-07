@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Graph/RenderGraph.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -19,6 +20,13 @@
 
 namespace sw
 {
+    /**
+     * @brief `-gv_renderGraphParallelMinWidth=N`: 패스가 N 개보다 적은 레벨은 병렬로 기록하지 않고 렌더 스레드가 이어 기록합니다(기본 2 — 패스 하나짜리 레벨만 이어 기록하던 지금 동작).
+     * @details 레벨마다 리스트를 열고 · 태스크로 넘겨 기다리고 · 제출하는 고정 비용이 좁은 레벨에서 이득을 지우는지 같은 실행에서 A/B 로 재는 스위치다(`RT.Graph.parallelLevel` ·
+     *          `RT.Graph.maxLevelWidth`). 측정에서 3 이상이 낫게 나오면 기본값을 그 값으로 바꾼다. gv_gpuUploadQueue 와 같은 종류.
+     */
+    SW_GLOBAL_VARIABLE( int32, gv_renderGraphParallelMinWidth, 2, "이보다 패스가 적은 렌더 그래프 레벨은 병렬로 기록하지 않는다 (2=패스 하나짜리 레벨만 이어 기록)" );
+
     namespace
     {
         /** @brief 패스 하나를 열린 리스트 @p pCmdList 에 기록합니다(열고 닫지 않는다). */
@@ -426,17 +434,23 @@ namespace sw
             const vector<ParallelPassEntry>& listPassEntry = _pParallelScratch->_listPassEntry;
             if ( listPassEntry.empty() )
                 continue;
-            maxLevelWidth = MathUtil::max( maxLevelWidth, listPassEntry.size() );
-            if ( listPassEntry.size() == 1 )
+            maxLevelWidth                 = MathUtil::max( maxLevelWidth, listPassEntry.size() );
+            const size_t parallelMinWidth = static_cast<size_t>( MathUtil::max( static_cast<int32>( gv_renderGraphParallelMinWidth ), 2 ) );
+            const bool   bRecordSerially  = listPassEntry.size() < parallelMinWidth;
+            if ( bRecordSerially )
             {
-                ++serialPassCount;
+                serialPassCount += listPassEntry.size();
                 if ( pSerialList == nullptr )
                 {
                     pSerialList = listPassEntry[0]._pPassCmdList; // 이어 기록하는 동안 다른 패스의 리스트는 이 프레임에 쓰이지 않는다
                     pSerialList->beginCommandList();
                 }
+                // 레벨의 배리어를 먼저 한 번, 그 뒤 패스를 레벨 순서대로 — 같은 리스트 안의 기록 순서가 GPU 순서다.
                 issueBarriers( pSerialList );
-                recordPassBody( *listPassEntry[0]._pNode, pSerialList );
+                for ( const ParallelPassEntry& entry : listPassEntry )
+                {
+                    recordPassBody( *entry._pNode, pSerialList );
+                }
                 continue;
             }
             submitSerialList();
