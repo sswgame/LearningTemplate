@@ -147,6 +147,7 @@ namespace sw
         , _listScratchComponentRoot{}
         , _listScratchComponentOf{}
         , _listScratchComponentCursor{}
+        , _groupSyncScratch{}
         , _lodSettings{}
         , _crowd{}
 #if SW_ANIMATION_REWIND_ENABLED
@@ -766,9 +767,12 @@ namespace sw
 
     void AnimationSystem::synchronizeGroups()
     {
-        vector<AnimationPlayer*> listPlayer;
-        vector<float32>          listWeight;
-        vector<hashed_string>    listGroup;
+        vector<AnimationPlayer*>& listPlayer = _groupSyncScratch._listPlayer;
+        vector<float32>&          listWeight = _groupSyncScratch._listWeight;
+        vector<hashed_string>&    listGroup  = _groupSyncScratch._listGroup;
+        listPlayer.clear();
+        listWeight.clear();
+        listGroup.clear();
         // 순서: 성분 순서(성분 안은 위 유닛이 먼저). 의존이 없는 장면에서는 등록 순서와 같다. 같은 그룹에서 가중치가 같은 플레이어는 이 순서의 앞이 리더가 된다.
         for ( SkeletalMeshComponent* pSkeletalMesh : _componentActive.getUnits() )
         {
@@ -779,10 +783,13 @@ namespace sw
 
         // 그룹 이름 → 그룹 번호(처음 나온 순서)를 해시로 잡고, 번호별로 안정 정렬(계수 정렬)해 그룹마다 연속 구간으로 모은다 — 플레이어 P 개 · 그룹 G 개에 O(P) (옛 방식은 O(P·G)).
         // 그룹 안 순서는 등록 순서 그대로이고 그룹은 처음 나온 순서로 처리한다(옛 방식과 같다).
-        const size_t                         playerCount = listPlayer.size();
-        unordered_map<hashed_string, uint32> mapGroupIndex;
-        vector<uint32>                       listGroupOfPlayer( playerCount );
-        vector<uint32>                       listGroupStart{ 0 }; // 그룹마다 시작 위치(누적 전에는 개수를 센다)
+        const size_t                          playerCount       = listPlayer.size();
+        unordered_map<hashed_string, uint32>& mapGroupIndex     = _groupSyncScratch._mapGroupIndex;
+        vector<uint32>&                       listGroupOfPlayer = _groupSyncScratch._listGroupOfPlayer;
+        vector<uint32>&                       listGroupStart    = _groupSyncScratch._listGroupStart; // 그룹마다 시작 위치(누적 전에는 개수를 센다)
+        mapGroupIndex.clear();
+        listGroupOfPlayer.resize( playerCount );
+        listGroupStart.assign( 1, 0 );
         for ( size_t playerIndex = 0; playerIndex < playerCount; ++playerIndex )
         {
             const auto   inserted   = mapGroupIndex.emplace( listGroup[playerIndex], static_cast<uint32>( listGroupStart.size() - 1 ) );
@@ -797,9 +804,12 @@ namespace sw
         {
             listGroupStart[groupIndex + 1] += listGroupStart[groupIndex];
         }
-        vector<AnimationPlayer*> listSortedPlayer( playerCount );
-        vector<float32>          listSortedWeight( playerCount );
-        vector<uint32>           listCursor( listGroupStart.begin(), listGroupStart.end() - 1 );
+        vector<AnimationPlayer*>& listSortedPlayer = _groupSyncScratch._listSortedPlayer;
+        vector<float32>&          listSortedWeight = _groupSyncScratch._listSortedWeight;
+        vector<uint32>&           listCursor       = _groupSyncScratch._listCursor;
+        listSortedPlayer.resize( playerCount );
+        listSortedWeight.resize( playerCount );
+        listCursor.assign( listGroupStart.begin(), listGroupStart.end() - 1 );
         for ( size_t playerIndex = 0; playerIndex < playerCount; ++playerIndex )
         {
             const uint32 slot      = listCursor[listGroupOfPlayer[playerIndex]]++;

@@ -594,6 +594,19 @@ namespace sw
         void endEvaluationFrame( float32 deltaSeconds );
         /** @brief 같은 이름의 동기 그룹끼리 위상을 맞춥니다. */
         void synchronizeGroups();
+        /** @brief `synchronizeGroups` 의 배열과 맵입니다. 활성 유닛이 있는 프레임마다 쓰므로 들고 재사용한다. */
+        struct GroupSyncScratch
+        {
+            vector<AnimationPlayer*>             _listPlayer;
+            vector<float32>                      _listWeight;
+            vector<hashed_string>                _listGroup;
+            unordered_map<hashed_string, uint32> _mapGroupIndex;
+            vector<uint32>                       _listGroupOfPlayer;
+            vector<uint32>                       _listGroupStart;
+            vector<AnimationPlayer*>             _listSortedPlayer;
+            vector<float32>                      _listSortedWeight;
+            vector<uint32>                       _listCursor;
+        };
         /** @brief 군중 공유를 켠 유닛의 묶음, 사본, VAT 를 정하고 묶음을 평가합니다(시간 단계 뒤). */
         void updateCrowd();
 #if SW_ANIMATION_REWIND_ENABLED
@@ -624,6 +637,7 @@ namespace sw
         vector<uint32>                              _listScratchComponentRoot;   ///< 유닛마다 같은 성분의 대표 유닛 번호다(union-find, 대표는 성분에서 가장 작은 번호, 재사용)
         vector<uint32>                              _listScratchComponentOf;     ///< 유닛마다 성분 번호다(재사용)
         vector<uint32>                              _listScratchComponentCursor; ///< 성분 구간을 채우는 칸 번호다(재사용)
+        GroupSyncScratch                            _groupSyncScratch;           ///< `synchronizeGroups` 의 배열과 맵(재사용)
         AnimationLODSettings                        _lodSettings;
         AnimationCrowd                              _crowd;
 #if SW_ANIMATION_REWIND_ENABLED
