@@ -1,5 +1,5 @@
 /**
- * @file CombatHealth.h
+ * @file HealthStateMachine.h
  * @brief 체력 상태 기계를 정의합니다.
  * @details 실드(먼저 깎인다), 체력, 재생, 기절(출혈과 부활), 죽음, 무적 시간, 경직 게이지를 다룬다.
  *          배틀로얄(실드, 기절, 동료 부활), 데드 바이 데이라이트(빈사, 치료, 갈고리 단계는 최대 기절 횟수), 캡슐파이터(다운치),
@@ -24,10 +24,10 @@ namespace sw
 
     /**
      * @brief 체력 설정입니다. 시간은 초, 비율은 0..1 입니다. 재생 속도가 0 이면 재생하지 않습니다.
-     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `CombatHealth::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
+     * @details 범위는 필드의 `PROPERTY( Min · Max )` 이고, 벗어난 값은 `HealthStateMachine::initialize` 가 오류로 거절한다(`ConfigRangeUtil`). 값을 조용히 맞추지 않는다(폴백 금지 원칙).
      */
     REFLECT()
-    struct SW_GF_API CombatHealthSettings
+    struct SW_GF_API HealthSettings
     {
         REFLECT_BODY();
         PROPERTY( Min = 1.0 )
@@ -74,7 +74,7 @@ namespace sw
 namespace sw
 {
     /** @brief 체력 상태입니다. */
-    enum class CombatHealthState : uint8
+    enum class LifeState : uint8
     {
         Alive = 0,
         Downed, ///< 기절이나 빈사. 출혈 체력이 줄고 부활을 기다린다
@@ -82,7 +82,7 @@ namespace sw
     };
 
     /** @brief 체력 알림(이벤트)의 종류입니다. */
-    enum class CombatHealthEventType : uint8
+    enum class HealthEventType : uint8
     {
         Damaged = 0,       ///< `_amount` = 실드 + 체력(또는 출혈 체력) 피해
         ShieldBroken,      ///< 실드가 0 이 됐다
@@ -97,18 +97,18 @@ namespace sw
     };
 
     /** @brief 체력 알림 하나입니다. */
-    struct CombatHealthEvent
+    struct HealthEvent
     {
-        float32               _amount{ 0.0f };
-        int32                 _instigatorID{ -1 };
-        CombatHealthEventType _type{ CombatHealthEventType::Damaged };
+        float32         _amount{ 0.0f };
+        int32           _instigatorID{ -1 };
+        HealthEventType _type{ HealthEventType::Damaged };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief `applyDamage` 한 번의 결과입니다. */
-    struct CombatHealthDamageResult
+    struct HealthDamageResult
     {
         float32 _shieldAbsorbed{ 0.0f }; ///< 실드가 받은 양
         float32 _healthDamage{ 0.0f };   ///< 체력(기절 중이면 출혈 체력)이 받은 양
@@ -123,23 +123,23 @@ namespace sw
 namespace sw
 {
     /**
-     * @class CombatHealth
+     * @class HealthStateMachine
      * @brief 한 개체의 체력입니다. 피해는 실드, 체력 순서로 깎이고, 체력이 0 이 되면 설정에 따라 기절하거나 죽습니다.
      * @details 넘친 피해는 실드에서 체력으로 넘어가지만, 체력에서 출혈 체력으로는 넘어가지 않는다. 기절한 순간의 한 방이 바로 죽이지 않게 하려는 것이다.
      *          기절 중에는 실드, 재생, 경직이 멈추고 `heal` 도 듣지 않는다. 복원하는 길은 부활(`startRevive`) 하나뿐이다.
      *          부활은 여럿이 함께 살릴 수 있도록 속도 배율을 받는다. `startRevive` 를 다시 부르면 배율만 바뀐다.
      */
-    class SW_GF_API CombatHealth
+    class SW_GF_API HealthStateMachine
     {
     public:
-        /** @brief 기본 설정(`CombatHealthSettings{}`, 범위 안)으로 가득 찬 상태입니다. 다른 설정은 `initialize` 로 줍니다. */
-        CombatHealth();
+        /** @brief 기본 설정(`HealthSettings{}`, 범위 안)으로 가득 찬 상태입니다. 다른 설정은 `initialize` 로 줍니다. */
+        HealthStateMachine();
 
         /**
          * @brief 설정을 두고 가득 찬 상태로 시작합니다. 죽음, 기절 횟수, 알림도 비웁니다.
-         * @details 범위 밖 값(`CombatHealthSettings` 의 `PROPERTY( Min · Max )`)은 오류를 남기고 거절하며 false 를 반환한다. 거절하면 상태는 그대로이다. 값을 조용히 맞추지 않는다.
+         * @details 범위 밖 값(`HealthSettings` 의 `PROPERTY( Min · Max )`)은 오류를 남기고 거절하며 false 를 반환한다. 거절하면 상태는 그대로이다. 값을 조용히 맞추지 않는다.
          */
-        [[nodiscard]] bool initialize( const CombatHealthSettings& settings );
+        [[nodiscard]] bool initialize( const HealthSettings& settings );
         /** @brief 지금 설정 그대로 처음 상태로 되돌립니다(가득 찬 체력, 기절 횟수와 알림을 비움). 설정을 새로 받지 않으므로 실패하지 않습니다. 이미 `initialize` 한 개체를 다시 쓸 때 부릅니다. */
         void reset();
         /** @brief 같은 설정으로 가득 찬 상태로 복원합니다(리스폰). 기절 횟수는 남기며, 지우려면 `resetDownCount` 를 부릅니다. */
@@ -154,7 +154,7 @@ namespace sw
          * @brief 피해를 줍니다. @p amount 는 실드 → 체력 순서, @p poiseDamage 는 경직 게이지에 갑니다.
          * @param instigatorID 때린 쪽이다. 게임이 정한 번호이며 알림과 죽음 귀속에 실린다.
          */
-        CombatHealthDamageResult applyDamage( float32 amount, float32 poiseDamage = 0.0f, int32 instigatorID = -1 );
+        HealthDamageResult applyDamage( float32 amount, float32 poiseDamage = 0.0f, int32 instigatorID = -1 );
         /** @brief 체력을 최대까지 채웁니다. 살아 있을 때만 채우며, 실제로 찬 양을 반환합니다. */
         float32 heal( float32 amount );
         /** @brief 실드를 최대까지 채웁니다(실드 전지). 살아 있을 때만 채우며, 실제로 찬 양을 반환합니다. */
@@ -181,27 +181,27 @@ namespace sw
          * @brief 지금 들어오는 피해가 아무 일도 일으키지 않으면 true 입니다(죽음 · 무적 시간 · 피해 면역). `applyDamage` 가 `_bIgnored` 로 돌려주는 판정과 같고,
          *        맞는 쪽의 규칙(가드 스태미나 · 피격 연출 · 소리)이 피해를 적용하기 전에 물을 수 있게 한다 — 막힌 피격에 연출만 나가는 일을 막는다.
          */
-        bool ignoresDamage() const { return _state == CombatHealthState::Dead || isInvulnerable() || isDamageImmune(); }
+        bool ignoresDamage() const { return _state == LifeState::Dead || isInvulnerable() || isDamageImmune(); }
         /** @brief 상태를 가리지 않고 죽입니다. 낙사, 존 밖, 갈고리 희생에 씁니다. 이미 죽었으면 아무 일도 없습니다. */
         void kill( int32 instigatorID = -1 );
         void resetDownCount() { _downCount = 0; }
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
-        void pollEvents( vector<CombatHealthEvent>& outListEvent );
+        void pollEvents( vector<HealthEvent>& outListEvent );
         /** @brief 쌓인 알림을 꺼내지 않고 버립니다. 알림을 쓰지 않는 쪽이 받을 목록을 만들어 복사하지 않도록 둔 함수입니다. */
         void discardEvents() { _eventBuffer.clear(); }
 
-        const CombatHealthSettings& getSettings() const { return _settings; }
-        CombatHealthState           getState() const { return _state; }
-        bool                        isAlive() const { return _state == CombatHealthState::Alive; }
-        bool                        isDowned() const { return _state == CombatHealthState::Downed; }
-        bool                        isDead() const { return _state == CombatHealthState::Dead; }
-        float32                     getHealth() const { return _health; }
-        float32                     getHealthRatio() const;
-        float32                     getShield() const { return _shield; }
-        float32                     getDownedHealth() const { return _downedHealth; }
-        int32                       getDownCount() const { return _downCount; }
-        bool                        isReviving() const { return _bReviving == SW_TRUE; }
-        int32                       getReviverID() const { return _reviverID; }
+        const HealthSettings& getSettings() const { return _settings; }
+        LifeState             getState() const { return _state; }
+        bool                  isAlive() const { return _state == LifeState::Alive; }
+        bool                  isDowned() const { return _state == LifeState::Downed; }
+        bool                  isDead() const { return _state == LifeState::Dead; }
+        float32               getHealth() const { return _health; }
+        float32               getHealthRatio() const;
+        float32               getShield() const { return _shield; }
+        float32               getDownedHealth() const { return _downedHealth; }
+        int32                 getDownCount() const { return _downCount; }
+        bool                  isReviving() const { return _bReviving == SW_TRUE; }
+        int32                 getReviverID() const { return _reviverID; }
         /** @brief 부활 진행 0..1 입니다. */
         float32 getReviveProgress() const;
         bool    isInvulnerable() const { return _invulnerable.isActive(); }
@@ -216,30 +216,30 @@ namespace sw
 
     private:
         /** @brief 범위를 본 뒤의 설정으로 상태를 비웁니다(`initialize` 와 기본 생성자가 부른다). */
-        void applySettings( const CombatHealthSettings& settings );
+        void applySettings( const HealthSettings& settings );
         void enterDowned( int32 instigatorID );
         void enterDead( int32 instigatorID );
         void finishRevive();
-        void pushEvent( CombatHealthEventType type, float32 amount, int32 instigatorID );
+        void pushEvent( HealthEventType type, float32 amount, int32 instigatorID );
 
     private:
-        CombatHealthSettings           _settings;
-        EventBuffer<CombatHealthEvent> _eventBuffer;
-        float32                        _health;
-        float32                        _shield;
-        float32                        _downedHealth;
-        float32                        _poise;
-        float32                        _timeSinceDamage;      ///< 마지막 피해 뒤 지난 시간(재생 지연)
-        float32                        _timeSincePoiseDamage; ///< 마지막 경직 피해 뒤 지난 시간
-        Countdown                      _poiseBreak;
-        Countdown                      _invulnerable;
-        float32                        _reviveElapsed; ///< 배율을 곱해 쌓인 부활 시간
-        float32                        _reviveSpeedScale;
-        int32                          _reviverID;
-        int32                          _lastInstigatorID;
-        int32                          _downCount;
-        CombatHealthState              _state;
-        uint8                          _bReviving;
-        uint8                          _bDamageImmune; ///< `setDamageImmune` — 상태 바이트에 싣지 않는다
+        HealthSettings           _settings;
+        EventBuffer<HealthEvent> _eventBuffer;
+        float32                  _health;
+        float32                  _shield;
+        float32                  _downedHealth;
+        float32                  _poise;
+        float32                  _timeSinceDamage;      ///< 마지막 피해 뒤 지난 시간(재생 지연)
+        float32                  _timeSincePoiseDamage; ///< 마지막 경직 피해 뒤 지난 시간
+        Countdown                _poiseBreak;
+        Countdown                _invulnerable;
+        float32                  _reviveElapsed; ///< 배율을 곱해 쌓인 부활 시간
+        float32                  _reviveSpeedScale;
+        int32                    _reviverID;
+        int32                    _lastInstigatorID;
+        int32                    _downCount;
+        LifeState                _state;
+        uint8                    _bReviving;
+        uint8                    _bDamageImmune; ///< `setDamageImmune` — 상태 바이트에 싣지 않는다
     };
 } // namespace sw

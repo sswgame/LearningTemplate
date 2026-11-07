@@ -40,7 +40,7 @@ namespace sw
      * @class FarmVillageGameModeComponent
      * @brief 마을 사람 일정의 디렉터입니다. 틱(PrePhysics)에서 일정을 공유 시계까지 흘리고 마을 사람마다 일정상 위치와 몸의 걸음 설정을 적어 둡니다. 뷰는 그것만 읽습니다.
      */
-    REFLECT( Category = "Farming", DisplayName = "Farm Village Director", Tooltip = "Runs the villagers' daily schedules on the shared game clock and spawns their bodies" )
+    REFLECT( Category = "Farming", DisplayName = "Farm Village Game Mode", Tooltip = "Runs the villagers' daily schedules on the shared game clock and spawns their bodies" )
     class FarmVillageGameModeComponent : public GameModeComponent
     {
     public:

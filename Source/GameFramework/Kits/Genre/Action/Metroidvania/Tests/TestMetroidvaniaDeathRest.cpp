@@ -55,7 +55,7 @@ namespace
     {
         sw::MetroidvaniaCatalog        _catalog;
         sw::Wallet                     _wallet;
-        sw::CombatHealth               _combatHealth;
+        sw::HealthStateMachine         _healthMachine;
         sw::MetroidvaniaDeathRestState _state;
         sw::GameFlags                  _flags;
         sw::LootCatalog                _loot;
@@ -69,7 +69,7 @@ namespace
             sw::SessionStateRefs refs;
             refs._pWallet = &_wallet;
             _state.initialize( &_catalog, refs );
-            return _combatHealth.initialize( _catalog.getRules()._health );
+            return _healthMachine.initialize( _catalog.getRules()._health );
         }
 
         int32 kill( const sw::hashed_string& spawnID, const sw::hashed_string& enemyID ) { return _state.registerKill( spawnID, enemyID, _flags, &_loot, _random, _drops ); }
@@ -118,19 +118,19 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, RestingRefreshesTheWorld )
 {
     DeathRestBench bench;
     SW_REQUIRE_TRUE( bench.setUp() );
-    SW_EXPECT_FALSE( bench._state.rest( sw::hashed_string( "sign" ), bench._combatHealth ) );
-    SW_EXPECT_FALSE( bench._state.rest( sw::hashed_string( "ghost" ), bench._combatHealth ) );
+    SW_EXPECT_FALSE( bench._state.rest( sw::hashed_string( "sign" ), bench._healthMachine ) );
+    SW_EXPECT_FALSE( bench._state.rest( sw::hashed_string( "ghost" ), bench._healthMachine ) );
     SW_EXPECT_TRUE( bench._state.getRespawnSite().empty() );
 
-    (void)bench._combatHealth.applyDamage( 60.0f );
-    SW_REQUIRE_TRUE( bench._state.drinkFlask( bench._combatHealth ) );
+    (void)bench._healthMachine.applyDamage( 60.0f );
+    SW_REQUIRE_TRUE( bench._state.drinkFlask( bench._healthMachine ) );
     SW_EXPECT_EQUAL( 5, bench.kill( kSpawnA, kHusk ) );
     SW_EXPECT_EQUAL( 300, bench.kill( kSpawnB, kHornet ) );
     SW_EXPECT_FALSE( bench._state.isSpawnAlive( kSpawnA ) );
     (void)bench.countEvents( sw::MetroidvaniaDeathRestEventKind::Rested );
 
-    SW_EXPECT_TRUE( bench._state.rest( kBench, bench._combatHealth ) );
-    SW_EXPECT_NEAR( 100.0f, bench._combatHealth.getHealth(), kDuelTolerance );
+    SW_EXPECT_TRUE( bench._state.rest( kBench, bench._healthMachine ) );
+    SW_EXPECT_NEAR( 100.0f, bench._healthMachine.getHealth(), kDuelTolerance );
     SW_EXPECT_EQUAL( 2, bench._state.getFlaskCharges() );
     SW_EXPECT_EQUAL( kBench, bench._state.getRespawnSite() );
     SW_EXPECT_TRUE( bench._state.isSpawnAlive( kSpawnA ) );
@@ -145,16 +145,16 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, DeathDropsACorpse )
 {
     DeathRestBench bench;
     SW_REQUIRE_TRUE( bench.setUp() );
-    SW_REQUIRE_TRUE( bench._state.rest( kBench, bench._combatHealth ) );
-    bench._combatHealth.kill( -1 );
+    SW_REQUIRE_TRUE( bench._state.rest( kBench, bench._healthMachine ) );
+    bench._healthMachine.kill( -1 );
 
-    SW_EXPECT_EQUAL( kBench, bench._state.die( kCave, sw::float2{ 1.0f, 2.0f }, bench._combatHealth ) ); // 빈손
+    SW_EXPECT_EQUAL( kBench, bench._state.die( kCave, sw::float2{ 1.0f, 2.0f }, bench._healthMachine ) ); // 빈손
     SW_EXPECT_TRUE( bench._state.getCorpse()._bActive == SW_FALSE );
-    SW_EXPECT_TRUE( bench._combatHealth.isAlive() );
+    SW_EXPECT_TRUE( bench._healthMachine.isAlive() );
 
     bench._wallet.add( kGeo, 120 );
     (void)bench.kill( kSpawnA, kHusk );
-    SW_EXPECT_EQUAL( kBench, bench._state.die( kCave, sw::float2{ 3.0f, 4.0f }, bench._combatHealth ) );
+    SW_EXPECT_EQUAL( kBench, bench._state.die( kCave, sw::float2{ 3.0f, 4.0f }, bench._healthMachine ) );
     const sw::MetroidvaniaCorpse& corpse = bench._state.getCorpse();
     SW_EXPECT_TRUE( corpse._bActive == SW_TRUE );
     SW_EXPECT_EQUAL( 125, corpse._currency );
@@ -173,16 +173,16 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, SecondDeathLosesTheFirstCorpse )
     DeathRestBench bench;
     SW_REQUIRE_TRUE( bench.setUp() );
     bench._wallet.add( kGeo, 100 );
-    SW_EXPECT_TRUE( bench._state.die( kHall, sw::float2{}, bench._combatHealth ).empty() );
+    SW_EXPECT_TRUE( bench._state.die( kHall, sw::float2{}, bench._healthMachine ).empty() );
 
     bench._wallet.add( kGeo, 30 );
-    (void)bench._state.die( kCave, sw::float2{}, bench._combatHealth );
+    (void)bench._state.die( kCave, sw::float2{}, bench._healthMachine );
     SW_EXPECT_EQUAL( 100, bench._state.getLostCurrency() );
     SW_EXPECT_EQUAL( 30, bench._state.getCorpse()._currency );
     SW_EXPECT_EQUAL( kCave, bench._state.getCorpse()._area );
     SW_EXPECT_EQUAL( 1, bench.countEvents( sw::MetroidvaniaDeathRestEventKind::CurrencyLost ) );
 
-    (void)bench._state.die( kCave, sw::float2{}, bench._combatHealth );
+    (void)bench._state.die( kCave, sw::float2{}, bench._healthMachine );
     SW_EXPECT_EQUAL( 130, bench._state.getLostCurrency() );
     SW_EXPECT_TRUE( bench._state.getCorpse()._bActive == SW_FALSE );
 }
@@ -196,7 +196,7 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, CorpseRecoveryNeedsSameAreaAndRadius )
     SW_REQUIRE_TRUE( bench.setUp() );
     SW_EXPECT_FALSE( bench._state.tryRecoverCorpse( kCave, sw::float2{} ) ); // 시체 없음
     bench._wallet.add( kGeo, 50 );
-    (void)bench._state.die( kCave, sw::float2{ 10.0f, 0.0f }, bench._combatHealth );
+    (void)bench._state.die( kCave, sw::float2{ 10.0f, 0.0f }, bench._healthMachine );
 
     SW_EXPECT_FALSE( bench._state.tryRecoverCorpse( kHall, sw::float2{ 10.0f, 0.0f } ) );
     SW_EXPECT_FALSE( bench._state.tryRecoverCorpse( kCave, sw::float2{ 12.5f, 0.0f } ) );
@@ -215,13 +215,13 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, FlaskChargesAndUpgrades )
 {
     DeathRestBench bench;
     SW_REQUIRE_TRUE( bench.setUp() );
-    (void)bench._combatHealth.applyDamage( 90.0f );
-    SW_EXPECT_TRUE( bench._state.drinkFlask( bench._combatHealth ) );
-    SW_EXPECT_NEAR( 40.0f, bench._combatHealth.getHealth(), kDuelTolerance );
-    SW_EXPECT_TRUE( bench._state.drinkFlask( bench._combatHealth ) );
-    SW_EXPECT_FALSE( bench._state.drinkFlask( bench._combatHealth ) );
+    (void)bench._healthMachine.applyDamage( 90.0f );
+    SW_EXPECT_TRUE( bench._state.drinkFlask( bench._healthMachine ) );
+    SW_EXPECT_NEAR( 40.0f, bench._healthMachine.getHealth(), kDuelTolerance );
+    SW_EXPECT_TRUE( bench._state.drinkFlask( bench._healthMachine ) );
+    SW_EXPECT_FALSE( bench._state.drinkFlask( bench._healthMachine ) );
     SW_EXPECT_EQUAL( 0, bench._state.getFlaskCharges() );
-    SW_EXPECT_NEAR( 70.0f, bench._combatHealth.getHealth(), kDuelTolerance );
+    SW_EXPECT_NEAR( 70.0f, bench._healthMachine.getHealth(), kDuelTolerance );
 
     SW_EXPECT_TRUE( bench._state.upgradeFlaskCharges() );
     SW_EXPECT_EQUAL( 1, bench._state.getFlaskCharges() );
@@ -231,8 +231,8 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, FlaskChargesAndUpgrades )
     bench._state.upgradeFlaskPotency();
     SW_EXPECT_NEAR( 40.0f, bench._state.computeFlaskHeal(), kDuelTolerance );
 
-    bench._combatHealth.kill( -1 );
-    SW_EXPECT_FALSE( bench._state.drinkFlask( bench._combatHealth ) );
+    bench._healthMachine.kill( -1 );
+    SW_EXPECT_FALSE( bench._state.drinkFlask( bench._healthMachine ) );
     SW_EXPECT_EQUAL( 1, bench._state.getFlaskCharges() ); // 죽어서 못 마신 충전은 그대로다
 }
 
@@ -275,14 +275,14 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, MissingWalletOrCatalogIsSafe )
     sw::MetroidvaniaDeathRestState noWallet;
     noWallet.initialize( &bench._catalog, sw::SessionStateRefs{} );
     SW_EXPECT_EQUAL( 5, noWallet.registerKill( kSpawnA, kHusk, bench._flags, nullptr, bench._random, bench._drops ) );
-    (void)noWallet.die( kHall, sw::float2{}, bench._combatHealth );
+    (void)noWallet.die( kHall, sw::float2{}, bench._healthMachine );
     SW_EXPECT_TRUE( noWallet.getCorpse()._bActive == SW_FALSE );
 
     sw::MetroidvaniaDeathRestState noCatalog;
     noCatalog.initialize( nullptr, sw::SessionStateRefs{} );
-    SW_EXPECT_FALSE( noCatalog.rest( kBench, bench._combatHealth ) );
+    SW_EXPECT_FALSE( noCatalog.rest( kBench, bench._healthMachine ) );
     SW_EXPECT_EQUAL( -1, noCatalog.registerKill( kSpawnA, kHusk, bench._flags, nullptr, bench._random, bench._drops ) );
-    SW_EXPECT_FALSE( noCatalog.drinkFlask( bench._combatHealth ) );
+    SW_EXPECT_FALSE( noCatalog.drinkFlask( bench._healthMachine ) );
     SW_EXPECT_FALSE( noCatalog.upgradeFlaskCharges() );
     SW_EXPECT_NEAR( 0.0f, noCatalog.computeFlaskHeal(), kDuelTolerance );
 }
@@ -295,8 +295,8 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, StateRoundTripResumes )
     DeathRestBench original;
     SW_REQUIRE_TRUE( original.setUp() );
     original._wallet.add( kGeo, 40 );
-    SW_REQUIRE_TRUE( original._state.rest( sw::hashed_string( "second" ), original._combatHealth ) );
-    (void)original._state.die( kCave, sw::float2{ 5.0f, 6.0f }, original._combatHealth );
+    SW_REQUIRE_TRUE( original._state.rest( sw::hashed_string( "second" ), original._healthMachine ) );
+    (void)original._state.die( kCave, sw::float2{ 5.0f, 6.0f }, original._healthMachine );
     (void)original.kill( kSpawnB, kHornet );
     (void)original.kill( kSpawnA, kHusk );
     original._state.upgradeFlaskPotency();
@@ -317,7 +317,7 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, StateRoundTripResumes )
     SW_EXPECT_EQUAL( 3, restored._state.getFlaskMaxCharges() );
     SW_EXPECT_NEAR( 40.0f, restored._state.computeFlaskHeal(), kDuelTolerance );
 
-    SW_REQUIRE_TRUE( restored._state.rest( kBench, restored._combatHealth ) ); // 보스 표시도 이어졌다
+    SW_REQUIRE_TRUE( restored._state.rest( kBench, restored._healthMachine ) ); // 보스 표시도 이어졌다
     SW_EXPECT_TRUE( restored._state.isSpawnAlive( kSpawnA ) );
     SW_EXPECT_FALSE( restored._state.isSpawnAlive( kSpawnB ) );
 }
@@ -329,7 +329,7 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, ReadRejectsBrokenBytes )
 {
     DeathRestBench bench;
     SW_REQUIRE_TRUE( bench.setUp() );
-    SW_REQUIRE_TRUE( bench._state.rest( kBench, bench._combatHealth ) );
+    SW_REQUIRE_TRUE( bench._state.rest( kBench, bench._healthMachine ) );
 
     const auto expectRejected = [&bench]( const sw::Archive& bytes )
     {
@@ -402,7 +402,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, ActionsSpendStamina )
 
     sw::MetroidvaniaDuelist dead;
     SW_REQUIRE_TRUE( dead.initialize( &catalog ) );
-    dead.getCombatHealth().kill( -1 );
+    dead.getHealthMachine().kill( -1 );
     SW_EXPECT_FALSE( dead.tryAttack() );
     SW_EXPECT_FALSE( dead.tryDodge() );
 }
@@ -424,8 +424,8 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, ParryWindowBoundaries )
     SW_EXPECT_TRUE( outcome._result == sw::MetroidvaniaDefenseResult::Parried );
     SW_EXPECT_EQUAL( sw::hashed_string( "Perfect" ), outcome._parryGrade );
     SW_EXPECT_NEAR( 0.0f, outcome._healthDamage, kDuelTolerance );
-    SW_EXPECT_NEAR( 90.0f, duelist.getCombatHealth().getHealth(), kDuelTolerance );
-    SW_EXPECT_NEAR( 30.0f, duelist.getCombatHealth().getPoise(), kDuelTolerance ); // 패리는 강인도 피해도 없다
+    SW_EXPECT_NEAR( 90.0f, duelist.getHealthMachine().getHealth(), kDuelTolerance );
+    SW_EXPECT_NEAR( 30.0f, duelist.getHealthMachine().getPoise(), kDuelTolerance ); // 패리는 강인도 피해도 없다
     SW_EXPECT_TRUE( duelist.isRiposteReady() );
     SW_EXPECT_TRUE( duelist.receiveAttack( 10.0f, 0.0f )._result == sw::MetroidvaniaDefenseResult::Hit ); // 한 번만 쓴다
 
@@ -454,20 +454,20 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, GuardSpendsStaminaAndCanBreak )
     sw::MetroidvaniaDefenseOutcome outcome = duelist.receiveAttack( 5.0f, 4.0f );
     SW_EXPECT_TRUE( outcome._result == sw::MetroidvaniaDefenseResult::Hit );
     SW_EXPECT_NEAR( 10.0f, outcome._healthDamage, kDuelTolerance );
-    SW_EXPECT_NEAR( 26.0f, duelist.getCombatHealth().getPoise(), kDuelTolerance );
+    SW_EXPECT_NEAR( 26.0f, duelist.getHealthMachine().getPoise(), kDuelTolerance );
     duelist.setDamageTakenScale( 0.0f ); // 0 이하는 배율 없음
     duelist.setDamageTakenScale( -3.0f );
     SW_EXPECT_NEAR( 5.0f, duelist.receiveAttack( 5.0f, 0.0f )._healthDamage, kDuelTolerance );
 
     duelist.setGuarding( true );
     SW_EXPECT_TRUE( duelist.isGuarding() );
-    const float32 healthBefore = duelist.getCombatHealth().getHealth();
+    const float32 healthBefore = duelist.getHealthMachine().getHealth();
     outcome                    = duelist.receiveAttack( 40.0f, 8.0f );
     SW_EXPECT_TRUE( outcome._result == sw::MetroidvaniaDefenseResult::Blocked );
     SW_EXPECT_NEAR( 10.0f, outcome._healthDamage, kDuelTolerance ); // 40 × 0.25
-    SW_EXPECT_NEAR( healthBefore - 10.0f, duelist.getCombatHealth().getHealth(), kDuelTolerance );
+    SW_EXPECT_NEAR( healthBefore - 10.0f, duelist.getHealthMachine().getHealth(), kDuelTolerance );
     SW_EXPECT_NEAR( 60.0f, duelist.getStamina().getValue(), kDuelTolerance );
-    SW_EXPECT_NEAR( 22.0f, duelist.getCombatHealth().getPoise(), kDuelTolerance ); // 8 의 절반
+    SW_EXPECT_NEAR( 22.0f, duelist.getHealthMachine().getPoise(), kDuelTolerance ); // 8 의 절반
 
     outcome = duelist.receiveAttack( 60.0f, 0.0f ); // 스태미나 정확히 60 — 막는다
     SW_EXPECT_TRUE( outcome._result == sw::MetroidvaniaDefenseResult::Blocked );
@@ -479,7 +479,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, GuardSpendsStaminaAndCanBreak )
     SW_EXPECT_TRUE( outcome._result == sw::MetroidvaniaDefenseResult::GuardBroken );
     SW_EXPECT_NEAR( 20.0f, outcome._healthDamage, kDuelTolerance ); // 다 맞는다(health 는 남아 있다)
     SW_EXPECT_NEAR( 0.0f, duelist.getStamina().getValue(), kDuelTolerance );
-    SW_EXPECT_NEAR( 20.0f, duelist.getCombatHealth().getPoise(), kDuelTolerance ); // 강인도도 그대로 깎인다
+    SW_EXPECT_NEAR( 20.0f, duelist.getHealthMachine().getPoise(), kDuelTolerance ); // 강인도도 그대로 깎인다
 }
 
 /**
@@ -500,8 +500,8 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, InvalidDamageDoesNotBreakTheGuard )
         SW_EXPECT_TRUE( outcome._result == sw::MetroidvaniaDefenseResult::Blocked );
         SW_EXPECT_NEAR( 0.0f, outcome._healthDamage, kDuelTolerance );
         SW_EXPECT_NEAR( 100.0f, duelist.getStamina().getValue(), kDuelTolerance );
-        SW_EXPECT_NEAR( 100.0f, duelist.getCombatHealth().getHealth(), kDuelTolerance );
-        SW_EXPECT_NEAR( 30.0f, duelist.getCombatHealth().getPoise(), kDuelTolerance );
+        SW_EXPECT_NEAR( 100.0f, duelist.getHealthMachine().getHealth(), kDuelTolerance );
+        SW_EXPECT_NEAR( 30.0f, duelist.getHealthMachine().getPoise(), kDuelTolerance );
     }
 }
 
@@ -516,16 +516,16 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, IgnoredAttacksCostNothing )
     SW_REQUIRE_TRUE( duelist.initialize( &catalog ) );
     duelist.setGuarding( true );
     duelist.pressParry();
-    duelist.getCombatHealth().setInvulnerable( 1.0f );
+    duelist.getHealthMachine().setInvulnerable( 1.0f );
     SW_EXPECT_TRUE( duelist.receiveAttack( 10.0f, 5.0f )._result == sw::MetroidvaniaDefenseResult::Ignored );
     SW_EXPECT_NEAR( 100.0f, duelist.getStamina().getValue(), kDuelTolerance );
     SW_EXPECT_FALSE( duelist.isRiposteReady() );
     SW_EXPECT_TRUE( duelist.receiveAttack( 10.0f, 5.0f )._result == sw::MetroidvaniaDefenseResult::Ignored ); // 패리 누름도 남아 있다
-    duelist.getCombatHealth().setInvulnerable( 0.0f );
+    duelist.getHealthMachine().setInvulnerable( 0.0f );
 
     sw::MetroidvaniaDuelist dead;
     SW_REQUIRE_TRUE( dead.initialize( &catalog ) );
-    dead.getCombatHealth().kill( -1 );
+    dead.getHealthMachine().kill( -1 );
     SW_EXPECT_TRUE( dead.receiveAttack( 10.0f, 5.0f )._result == sw::MetroidvaniaDefenseResult::Ignored );
 }
 
@@ -564,7 +564,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, RiposteAndStaggerMultiplyOnce )
     SW_EXPECT_NEAR( 30.0f, attacker.computeAttackDamage( 10.0f, target ), kDuelTolerance ); // 둘 다여도 3 배 한 번
 
     target.update( 1.0f );
-    SW_EXPECT_FALSE( target.getCombatHealth().isPoiseBroken() );
+    SW_EXPECT_FALSE( target.getHealthMachine().isPoiseBroken() );
     SW_EXPECT_NEAR( 10.0f, attacker.computeAttackDamage( 10.0f, target ), kDuelTolerance );
 }
 
@@ -616,7 +616,7 @@ SW_TEST_CASE( MetroidvaniaDuelistTest, StateRoundTripAndRejection )
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( target.readState( reading ) );
     SW_EXPECT_NEAR( 1.0f, target.getTime(), kDuelTolerance );
-    SW_EXPECT_NEAR( 90.0f, target.getCombatHealth().getHealth(), kDuelTolerance );
+    SW_EXPECT_NEAR( 90.0f, target.getHealthMachine().getHealth(), kDuelTolerance );
     SW_EXPECT_NEAR( 85.0f, target.getStamina().getValue(), kDuelTolerance );
     SW_EXPECT_TRUE( target.isGuarding() );
     SW_EXPECT_TRUE( target.receiveAttack( 10.0f, 0.0f )._result == sw::MetroidvaniaDefenseResult::Parried ); // 눌러 둔 패리가 이어졌다

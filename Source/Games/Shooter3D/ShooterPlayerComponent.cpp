@@ -182,7 +182,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief `cheat.shooter.heal` — 살아 있는 슈터 플레이어의 체력을 가득 채웁니다(쓰러진 플레이어는 `CombatHealth` 가 회복을 받지 않는다). */
+            /** @brief `cheat.shooter.heal` — 살아 있는 슈터 플레이어의 체력을 가득 채웁니다(쓰러진 플레이어는 `HealthStateMachine` 가 회복을 받지 않는다). */
             static bool runHeal( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() == false )
@@ -204,7 +204,7 @@ namespace sw
 
             /**
              * @brief `cheat.shooter.god` — 슈터 플레이어의 피해 면역을 뒤집습니다. 첫 플레이어의 지금 값을 기준으로 모두 같은 값이 됩니다.
-             * @details `cheat.god`(어빌리티 시스템 태그)은 `CombatHealth` 를 쓰는 슈터 플레이어에 닿지 않아 따로 둔다.
+             * @details `cheat.god`(어빌리티 시스템 태그)은 `HealthStateMachine` 를 쓰는 슈터 플레이어에 닿지 않아 따로 둔다.
              */
             static bool runGod( const vector<string>& listArgument, string& outReply )
             {
@@ -266,7 +266,7 @@ namespace sw
         , _tracerLifetime{ 0.07f }
         , _muzzleFlashColor{ 4.0f, 2.8f, 0.8f, 1.0f }
         , _arrWeapon{}
-        , _combatHealth{}
+        , _healthMachine{}
         , _weaponSockets{}
         , _listPendingShot{}
         , _listMeleePrevious{}
@@ -312,13 +312,13 @@ namespace sw
             setCanEverTick( false ); // 무기 데이터가 틀리면 플레이어가 서지 않는다 — 이유는 equipWeapons 가 남겼다
             return;
         }
-        CombatHealthSettings settings;
+        HealthSettings settings;
         settings._maxHealth        = _maxHealth;
         settings._healthRegenDelay = _regenDelay;
         settings._healthRegenRate  = _regenPerSecond;
-        if ( _combatHealth.initialize( settings ) == false )
+        if ( _healthMachine.initialize( settings ) == false )
         {
-            setCanEverTick( false ); // 체력 설정이 범위 밖이면 플레이어가 서지 않는다 — 이유는 CombatHealth 가 남겼다
+            setCanEverTick( false ); // 체력 설정이 범위 밖이면 플레이어가 서지 않는다 — 이유는 HealthStateMachine 가 남겼다
             return;
         }
         _weaponIndex                            = 0;
@@ -372,8 +372,8 @@ namespace sw
         _bRoundJustRestarted                                  = SW_FALSE;
         GameObject*                     pOwner                = getOwner();
         FirstPersonCameraComponent*     pCamera               = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const ShooterGameModeComponent* pDirector             = findGameMode<ShooterGameModeComponent>();
-        const bool                      bMissingCameraContext = pCamera == nullptr || pDirector == nullptr || deltaTime <= 0.0f;
+        const ShooterGameModeComponent* pGameMode             = findGameMode<ShooterGameModeComponent>();
+        const bool                      bMissingCameraContext = pCamera == nullptr || pGameMode == nullptr || deltaTime <= 0.0f;
         if ( bMissingCameraContext )
             return;
         const float32 step = MathUtil::min( deltaTime, 0.1f );
@@ -399,10 +399,10 @@ namespace sw
         {
             weapon.update( step );
         }
-        _combatHealth.update( step );
+        _healthMachine.update( step );
         _timeSinceShot += step;
         _hitMarkerTimer -= step;
-        if ( _combatHealth.isAlive() == false )
+        if ( _healthMachine.isAlive() == false )
         {
             // 쓰러짐 클립이 도는 동안 멈춰 있다가 판을 처음부터 다시 시작한다.
             _downTimer += step;
@@ -418,7 +418,7 @@ namespace sw
         const PawnComponent*          pPawn     = pMovement == nullptr || pMovement->isSuspended() == false ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
             applyWeaponIntent( *pPawn );
-        if ( pMovement != nullptr && pMovement->stepMovement( pDirector->getBoxes(), step ) )
+        if ( pMovement != nullptr && pMovement->stepMovement( pGameMode->getBoxes(), step ) )
             _soundQueue.queueEvent( Internal::kSoundLand );
         const bool bTrigger     = pPawn != nullptr && pPawn->isButtonDown( pPawn->findButton( hashed_string( Internal::kFireButton ) ) );
         const bool bJustPressed = pPawn != nullptr && pPawn->wasButtonTriggered( pPawn->findButton( hashed_string( Internal::kFireButton ) ) );
@@ -429,7 +429,7 @@ namespace sw
             float3               aimDirection = pCamera->getLook().getForward();
             if ( bJustPressed && intent._bTriggerLook )
                 aimDirection = RayMath::computeLookDirection( intent._triggerYaw, intent._triggerPitch );
-            fireWeapon( *pDirector, *pCamera, aimDirection, bJustPressed );
+            fireWeapon( *pGameMode, *pCamera, aimDirection, bJustPressed );
         }
         if ( _bMeleeActive == SW_TRUE )
         {
@@ -451,30 +451,30 @@ namespace sw
 
     void ShooterPlayerComponent::takeDamage( float32 amount )
     {
-        if ( _bRoundJustRestarted == SW_TRUE || _combatHealth.isAlive() == false )
+        if ( _bRoundJustRestarted == SW_TRUE || _healthMachine.isAlive() == false )
             return;
-        const CombatHealthDamageResult result    = _combatHealth.applyDamage( amount );
-        GameObject*                    pOwner    = getOwner();
-        GameObjectManager*             pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameObject*              pObject   = pManager != nullptr ? pManager->resolveGameObject( getGameMode() ) : nullptr;
-        ShooterGameModeComponent*      pDirector = pObject != nullptr ? pObject->getComponent<ShooterGameModeComponent>() : nullptr;
+        const HealthDamageResult  result    = _healthMachine.applyDamage( amount );
+        GameObject*               pOwner    = getOwner();
+        GameObjectManager*        pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameObject*         pObject   = pManager != nullptr ? pManager->resolveGameObject( getGameMode() ) : nullptr;
+        ShooterGameModeComponent* pGameMode = pObject != nullptr ? pObject->getComponent<ShooterGameModeComponent>() : nullptr;
         if ( result._bIgnored == SW_TRUE )
             return;
         ++_hitReactionCount;
-        if ( pDirector != nullptr )
-            pDirector->reportPlayerDamage( amount );
+        if ( pGameMode != nullptr )
+            pGameMode->reportPlayerDamage( amount );
         if ( result._bDied == SW_FALSE )
             return;
         _downTimer = 0.0f;
-        if ( pDirector != nullptr )
+        if ( pGameMode != nullptr )
         {
-            SW_LOG_INFO_ID( "ShooterPlayer.YouOverrunWaveAfter", "[Shooter] you were overrun on wave %# after %# kills - starting over", pDirector->getWave(), pDirector->getKillCount() );
+            SW_LOG_INFO_ID( "ShooterPlayer.YouOverrunWaveAfter", "[Shooter] you were overrun on wave %# after %# kills - starting over", pGameMode->getWave(), pGameMode->getKillCount() );
             TelemetryService* pTelemetry = game::findSubsystem<TelemetryService>();
             if ( pTelemetry != nullptr )
             {
                 TelemetryEvent roundEnded( "progression.roundEnded" );
-                roundEnded.setInt( "wave", pDirector->getWave() ).setInt( "kills", pDirector->getKillCount() );
-                roundEnded.setFloat( "seconds", static_cast<float64>( pDirector->getPacingDirector().getTime() ) );
+                roundEnded.setInt( "wave", pGameMode->getWave() ).setInt( "kills", pGameMode->getKillCount() );
+                roundEnded.setFloat( "seconds", static_cast<float64>( pGameMode->getPacingDirector().getTime() ) );
                 roundEnded.setFloat( "accuracy", _shotCount > 0u ? static_cast<float64>( _hitCount ) / static_cast<float64>( _shotCount ) : 0.0 );
                 (void)pTelemetry->record( roundEnded );
             }
@@ -509,7 +509,7 @@ namespace sw
 
     void ShooterPlayerComponent::restoreHealth( float32 amount )
     {
-        (void)_combatHealth.heal( MathUtil::max( 0.0f, amount ) );
+        (void)_healthMachine.heal( MathUtil::max( 0.0f, amount ) );
     }
 
     float32 ShooterPlayerComponent::computeAmmoShortage() const
@@ -647,7 +647,7 @@ namespace sw
             SW_LOG_INFO_ID( "ShooterPlayer.Reloading", "[Shooter] reloading %#", _arrWeapon[_weaponIndex].getDef()._name.c_str() );
     }
 
-    void ShooterPlayerComponent::fireWeapon( const ShooterGameModeComponent& director, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed )
+    void ShooterPlayerComponent::fireWeapon( const ShooterGameModeComponent& gameMode, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed )
     {
         WeaponState& weapon = _arrWeapon[_weaponIndex];
         Ray          aim;
@@ -682,7 +682,7 @@ namespace sw
             pending._projectileID  = loaded._projectileID;
             pending._tracerColor   = loaded._tracerColor;
             pending._tracerWidth   = loaded._tracerWidth;
-            pending._coverDistance = traceCover( director, ray );
+            pending._coverDistance = traceCover( gameMode, ray );
             pending._range         = loaded._range;
             pending._damage        = loaded._damage;
             pending._volley        = _shotCount;
@@ -693,10 +693,10 @@ namespace sw
         camera.addRecoil( kick, kick * 0.25f * ( ( _shotCount % 2u ) == 0u ? 1.0f : -1.0f ) );
     }
 
-    float32 ShooterPlayerComponent::traceCover( const ShooterGameModeComponent& director, const Ray& ray ) const
+    float32 ShooterPlayerComponent::traceCover( const ShooterGameModeComponent& gameMode, const Ray& ray ) const
     {
         float32 nearest = _arrWeapon[_weaponIndex].getShot()._range;
-        for ( const ShooterArenaBox& box : director.getBoxes() )
+        for ( const ShooterArenaBox& box : gameMode.getBoxes() )
         {
             float32 distance = 0.0f;
             if ( RayMath::intersectAABB( ray, box._min, box._max, nearest, distance ) && distance < nearest )
@@ -917,13 +917,13 @@ namespace sw
         ShooterHUDViewModel* pViewModel = pHUD->getOrCreateViewModel<ShooterHUDViewModel>();
         if ( pViewModel == nullptr )
             return; // 다른 뷰모델이 걸려 있다 — HUD 컨트롤러가 오류를 남겼다
-        const bool bCrosshair = _bFirstPerson == SW_TRUE && _combatHealth.isAlive();
+        const bool bCrosshair = _bFirstPerson == SW_TRUE && _healthMachine.isAlive();
         pViewModel->setCrosshairShown( bCrosshair );
         pViewModel->setHitMarkerShown( bCrosshair && _hitMarkerTimer > 0.0f );
         if ( _bServerHealth == SW_TRUE )
             pViewModel->setHealth( _serverHealth, _maxHealth > 0.0f ? _serverHealth / _maxHealth : 0.0f );
         else
-            pViewModel->setHealth( _combatHealth.getHealth(), _combatHealth.getHealthRatio() );
+            pViewModel->setHealth( _healthMachine.getHealth(), _healthMachine.getHealthRatio() );
         const WeaponState& weapon = getCurrentWeapon();
         pViewModel->setAmmo( weapon.getMagazineAmmo(), weapon.getReserveAmmo() );
         // 무기의 이름은 무기의 장비 아이템(무기 표의 item)의 이름 하나가 원본이고, 아이템 표의 원문이 현지화 키다. 두 줄(WeaponName · ItemName)이 같은 값을 읽는다.
@@ -938,7 +938,7 @@ namespace sw
 
     void ShooterPlayerComponent::resetRound()
     {
-        _combatHealth.respawn();
+        _healthMachine.respawn();
         _downTimer                              = 0.0f;
         _bRoundJustRestarted                    = SW_TRUE;
         ShooterBodyMovementComponent* pMovement = findMovement();
@@ -989,17 +989,17 @@ namespace sw
         // 쏜 광선을 적의 히트박스에 묻고 맞음을 보낸다. 적은 움찔하거나 쓰러지고, 디렉터가 다음 틱에 센다. 탄도선 · 탄착 · 소리도 여기서 쌓인다.
         resolveShots( *pManager );
         resolveMelee( *pManager );
-        const GameObject*         pDirectorObject = pManager->resolveGameObject( getGameMode() );
-        ShooterGameModeComponent* pDirector       = pDirectorObject != nullptr ? pDirectorObject->getComponent<ShooterGameModeComponent>() : nullptr;
-        if ( pDirector != nullptr )
+        const GameObject*         pGameModeObject = pManager->resolveGameObject( getGameMode() );
+        ShooterGameModeComponent* pGameMode       = pGameModeObject != nullptr ? pGameModeObject->getComponent<ShooterGameModeComponent>() : nullptr;
+        if ( pGameMode != nullptr )
         {
             for ( const EffectRequest& effect : _listPendingEffect )
             {
-                pDirector->spawnEffect( effect._position, effect._size, effect._color, effect._lifetime );
+                pGameMode->spawnEffect( effect._position, effect._size, effect._color, effect._lifetime );
             }
             for ( const TracerRequest& tracer : _listPendingTracer )
             {
-                pDirector->spawnTracer( tracer._from, tracer._to, tracer._width, tracer._color, _tracerLifetime );
+                pGameMode->spawnTracer( tracer._from, tracer._to, tracer._width, tracer._color, _tracerLifetime );
             }
         }
         _listPendingEffect.clear();
@@ -1021,10 +1021,10 @@ namespace sw
             applyViewMode();
         updateHUD();
         // 쓰러짐 클립이 끝났다. 디렉터가 적을 정리하고 감독을 처음부터 다시 돌리며, 플레이어는 처음 위치에서 다시 시작한다.
-        if ( _combatHealth.isAlive() == false && _downTimer >= _downTime )
+        if ( _healthMachine.isAlive() == false && _downTimer >= _downTime )
         {
-            if ( pDirector != nullptr )
-                pDirector->restartRound();
+            if ( pGameMode != nullptr )
+                pGameMode->restartRound();
             resetRound();
         }
     }

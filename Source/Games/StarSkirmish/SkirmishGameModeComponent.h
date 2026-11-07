@@ -48,7 +48,7 @@ namespace sw
      * @details 판(월드, AI 진행, 선택, 속도)은 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드와 세이브를
      *          넘긴다(`StarSkirmishGame`). 움직이던 유닛은 앞 명령의 경로를 다시 구한다. 스폰한 오브젝트는 핸들로 보관하고, 상태를 저장하기 전에 정리한다.
      */
-    REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Director", Tooltip = "Runs the skirmish match, the human commands and spawns the unit views" )
+    REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Game Mode", Tooltip = "Runs the skirmish match, the human commands and spawns the unit views" )
     class SkirmishGameModeComponent : public GameModeComponent
     {
     public:

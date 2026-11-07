@@ -8,7 +8,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
-#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
+#include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
@@ -46,7 +46,7 @@ namespace sw
         _flaskPotencyLevel = 0;
     }
 
-    bool MetroidvaniaDeathRestState::rest( const hashed_string& siteID, CombatHealth& combatHealth )
+    bool MetroidvaniaDeathRestState::rest( const hashed_string& siteID, HealthStateMachine& healthMachine )
     {
         if ( _pCatalog == nullptr )
             return false;
@@ -54,12 +54,12 @@ namespace sw
         if ( pSite == nullptr || pSite->_bRest == false )
             return false;
         _respawnSite = pSite->_id;
-        refreshWorld( combatHealth );
+        refreshWorld( healthMachine );
         pushEvent( MetroidvaniaDeathRestEventKind::Rested, pSite->_id, 0 );
         return true;
     }
 
-    hashed_string MetroidvaniaDeathRestState::die( const hashed_string& areaID, const float2& position, CombatHealth& combatHealth )
+    hashed_string MetroidvaniaDeathRestState::die( const hashed_string& areaID, const float2& position, HealthStateMachine& healthMachine )
     {
         // 되찾지 못한 시체가 있으면 그 통화는 영영 사라진다. 두 번째 죽음의 대가다.
         if ( _corpse._bActive == SW_TRUE )
@@ -79,7 +79,7 @@ namespace sw
             _pWallet->charge( currency, _corpse._currency );
             pushEvent( MetroidvaniaDeathRestEventKind::CorpseDropped, areaID, _corpse._currency );
         }
-        refreshWorld( combatHealth );
+        refreshWorld( healthMachine );
         pushEvent( MetroidvaniaDeathRestEventKind::Died, _respawnSite, 0 );
         return _respawnSite;
     }
@@ -99,12 +99,12 @@ namespace sw
         return true;
     }
 
-    bool MetroidvaniaDeathRestState::drinkFlask( CombatHealth& combatHealth )
+    bool MetroidvaniaDeathRestState::drinkFlask( HealthStateMachine& healthMachine )
     {
-        if ( _flaskCharges <= 0 || combatHealth.isAlive() == false )
+        if ( _flaskCharges <= 0 || healthMachine.isAlive() == false )
             return false;
         --_flaskCharges;
-        (void)combatHealth.heal( computeFlaskHeal() );
+        (void)healthMachine.heal( computeFlaskHeal() );
         pushEvent( MetroidvaniaDeathRestEventKind::FlaskUsed, hashed_string{}, _flaskCharges );
         return true;
     }
@@ -166,9 +166,9 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    void MetroidvaniaDeathRestState::refreshWorld( CombatHealth& combatHealth )
+    void MetroidvaniaDeathRestState::refreshWorld( HealthStateMachine& healthMachine )
     {
-        combatHealth.respawn();
+        healthMachine.respawn();
         _flaskCharges = _flaskMaxCharges;
         // 보스는 남기고 나머지 적은 모두 다시 나온다.
         int32 respawnedCount = 0;

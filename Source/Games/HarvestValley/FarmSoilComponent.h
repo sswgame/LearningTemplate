@@ -18,7 +18,7 @@ namespace sw
      * @brief `TickGroup::PostUpdate` 에서 디렉터를 읽기만 하고 자기 오브젝트의 메시에만 씁니다. 디렉터는 핸들로 들고 매 프레임 풉니다.
      * @details 상태가 바뀔 때만 모습(디렉터가 나눠 주는 머티리얼 인스턴스)을 바꿉니다.
      */
-    REFLECT( Category = "Farming", DisplayName = "Farm Soil View", Tooltip = "Colours one field tile by the farm gameMode soil state" )
+    REFLECT( Category = "Farming", DisplayName = "Farm Soil View", Tooltip = "Colours one field tile by the farm game mode soil state" )
     class FarmSoilComponent : public GameModeBoundComponent
     {
     public:
@@ -34,7 +34,7 @@ namespace sw
         void assignTile( GameObjectHandle gameMode, int32 tileIndex );
 
     private:
-        PROPERTY( Category = "Tile", DisplayName = "Tile Index", Tooltip = "Row-major tile of the gameMode's field" )
+        PROPERTY( Category = "Tile", DisplayName = "Tile Index", Tooltip = "Row-major tile of the game mode's field" )
         int32 _tileIndex;
 
         int32 _soilState; ///< 지금 입은 흙 상태(−1 이면 아직 없다)

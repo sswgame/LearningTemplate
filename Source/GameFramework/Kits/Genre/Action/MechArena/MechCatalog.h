@@ -150,7 +150,7 @@ namespace sw
         PROPERTY( Min = 0.0 )
         float32 _hoverPerSecond{ 30.0f }; ///< 공중 부유의 초당 소비량
         PROPERTY( Name = "down", Min = 0.0 )
-        float32 _downMax{ 100.0f }; ///< 다운치 한도(기반 `CombatHealth` 의 poise)
+        float32 _downMax{ 100.0f }; ///< 다운치 한도(기반 `HealthStateMachine` 의 poise)
         PROPERTY( Min = 0.0 )
         float32 _downRecovery{ 25.0f }; ///< 초당 빠지는 다운치
         PROPERTY( Min = 0.0 )

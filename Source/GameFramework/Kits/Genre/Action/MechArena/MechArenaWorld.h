@@ -3,7 +3,7 @@
  * @brief 기체 대전 한 판(서버 권위)을 진행합니다. 조종사, 기체 덱, 이동(대시, 점프, 부유), 부스트 오버히트, 록온, 사격, 유도탄, 근접 콤보, 특수기, 다운치와 다운, 기상 무적, 경직, 넉백,
  *        변형, 스킬, 팀 전력 게이지, 리스폰, 기체 교체, 승패까지 다룹니다.
  * @details 고정 걸음(`FixedStepTimer`, 기본 60Hz로 근접 기술의 프레임과 같다)으로만 흐르므로 같은 입력이면 같은 결과가 나온다. 기반 클래스는 다음과 같이 쓴다.
- *          - 체력, 다운치, 기상 무적은 `CombatHealth` 가 맡는다(poise 가 다운치이며, 0까지 깎이면 다운되고 붕괴 시간이 누운 시간이다).
+ *          - 체력, 다운치, 기상 무적은 `HealthStateMachine` 가 맡는다(poise 가 다운치이며, 0까지 깎이면 다운되고 붕괴 시간이 누운 시간이다).
  *          - 부스트는 과열형 `ResourceGauge` 가 맡는다(쓰면 열이 오르고 최대에 닿으면 오버히트가 되며, 식을 때까지 대시, 점프, 부유가 잠긴다).
  *          - 록온은 `LockOnSelector`, 주무기는 `WeaponState`(탄은 `ProjectileCatalog`), 근접은 `MoveTimeline` 이 맡는다(캔슬 창이 다음 콤보 단을 연다).
  *          - 날아가는 탄은 단일 발사체 시뮬레이션(`ProjectileSimulation`)이 돌린다. 키트는 맞을 대상(적 조종사 · 판 밖)을 답하고 맞은 뒤의 반응(다운치 · 경직 · 넉백)만 한다.
@@ -28,7 +28,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/MechArena/MechCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/FrameData.h"
-#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
+#include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Runtime/Character/Combat/LockOnSelector.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
@@ -160,7 +160,7 @@ namespace sw
     /** @brief 조종사 하나의 상태입니다. 월드가 가지고 있고, 읽기 전용으로 내줍니다. */
     struct SW_KIT_API MechPilot
     {
-        CombatHealth                _combatHealth{};
+        HealthStateMachine          _healthMachine{};
         ResourceGauge               _boost{};
         LockOnSelector              _lockOn{};
         MoveTimeline                _melee{};

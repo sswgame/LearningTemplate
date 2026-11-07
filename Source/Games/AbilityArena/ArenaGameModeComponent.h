@@ -69,7 +69,7 @@ namespace sw
      *          GameMode 가 폰의 AIController 를 스폰하는 것에 해당한다). 플레이어 폰은 자동 빙의(`Player0`)로 플레이어 조종자가 조종하다가, 자동 플레이 스위치가 켜지면
      *          자동 전투 AI(`_autoBattleAIPrefab`)가, 꺼지면 다시 플레이어 조종자가 조종한다. 몸 안에 자동 플레이 분기는 없다.
      */
-    REFLECT( Category = "AbilityArena", DisplayName = "Arena Director", Tooltip = "Runs the arena waves, kills, respawns and the runtime spawns" )
+    REFLECT( Category = "AbilityArena", DisplayName = "Arena Game Mode", Tooltip = "Runs the arena waves, kills, respawns and the runtime spawns" )
     class ArenaGameModeComponent : public GameModeComponent
     {
     public:

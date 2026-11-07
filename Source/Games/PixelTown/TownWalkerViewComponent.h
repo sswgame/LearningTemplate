@@ -23,7 +23,7 @@ namespace sw
      *          앞뒤 정렬은 깊이(Z)다: 직교 카메라의 투명 정렬(`engine/data/render2d.xml` 의 Auto = 시선 축)이 Z 가 큰 것을 먼저 그리므로,
      *          화면 위쪽(월드 Y 가 큰) 캐릭터가 뒤에 그려지도록 Z = 발 Y × `_depthPerUnitY` 로 둔다(유니티 Custom Axis (0, 1, 0) 와 같은 결과).
      */
-    REFLECT( Category = "Overworld", DisplayName = "Town Walker View", Tooltip = "Follows the town gameMode hero and picks the walk or idle animation for its facing" )
+    REFLECT( Category = "Overworld", DisplayName = "Town Walker View", Tooltip = "Follows the town game mode hero and picks the walk or idle animation for its facing" )
     class TownWalkerViewComponent : public GameModeBoundComponent
     {
     public:

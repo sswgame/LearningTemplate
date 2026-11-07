@@ -245,13 +245,13 @@ SW_TEST_CASE( AdventureVitalsTest, HealthEventsCanBeDrained )
     (void)vitals.heal( 1 );
     SW_EXPECT_TRUE( vitals.applyDamage( 100 ) );
 
-    sw::vector<sw::CombatHealthEvent> listEvent;
+    sw::vector<sw::HealthEvent> listEvent;
     vitals.pollHealthEvents( listEvent );
     SW_REQUIRE_EQUAL( size_t( 4 ), listEvent.size() );
-    SW_EXPECT_TRUE( listEvent[0]._type == sw::CombatHealthEventType::Damaged );
-    SW_EXPECT_TRUE( listEvent[1]._type == sw::CombatHealthEventType::Healed );
-    SW_EXPECT_TRUE( listEvent[2]._type == sw::CombatHealthEventType::Damaged );
-    SW_EXPECT_TRUE( listEvent[3]._type == sw::CombatHealthEventType::Died );
+    SW_EXPECT_TRUE( listEvent[0]._type == sw::HealthEventType::Damaged );
+    SW_EXPECT_TRUE( listEvent[1]._type == sw::HealthEventType::Healed );
+    SW_EXPECT_TRUE( listEvent[2]._type == sw::HealthEventType::Damaged );
+    SW_EXPECT_TRUE( listEvent[3]._type == sw::HealthEventType::Died );
 
     listEvent.clear();
     vitals.pollHealthEvents( listEvent );

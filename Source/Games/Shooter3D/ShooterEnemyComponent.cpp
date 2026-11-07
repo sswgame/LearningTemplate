@@ -31,9 +31,9 @@ namespace sw
             static constexpr const utf8* kAttackButton = "Attack"; ///< 폰 스키마의 휘두르기 버튼(AI 조종자가 누른다)
 
             /** @brief 최대 체력만 정한 체력 설정을 만듭니다. 실드 · 회복 · 기절은 기본값(꺼짐)입니다. */
-            static CombatHealthSettings makeCombatHealthSettings( float32 maxHealth )
+            static HealthSettings makeHealthSettings( float32 maxHealth )
             {
-                CombatHealthSettings settings;
+                HealthSettings settings;
                 settings._maxHealth = maxHealth;
                 return settings;
             }
@@ -62,7 +62,7 @@ namespace sw
         , _position{ 0.0f, 0.0f, 0.0f }
         , _yaw{ 0.0f }
         , _replicaPreviousPosition{ 0.0f, 0.0f, 0.0f }
-        , _combatHealth{}
+        , _healthMachine{}
         , _speed{ 3.0f }
         , _phaseTime{ 0.0f }
         , _attackCooldown{}
@@ -82,7 +82,7 @@ namespace sw
 
     bool ShooterEnemyComponent::launch( GameObjectHandle gameMode, const float3& position, float32 yaw, float32 health, float32 speed )
     {
-        if ( _combatHealth.initialize( ShooterEnemyComponentInternal::makeCombatHealthSettings( health ) ) == false )
+        if ( _healthMachine.initialize( ShooterEnemyComponentInternal::makeHealthSettings( health ) ) == false )
             return false;
         _gameMode = gameMode;
         _position = position;
@@ -125,7 +125,7 @@ namespace sw
 
     void ShooterEnemyComponent::launchReplica( GameObjectHandle gameMode, const float3& position, float32 yaw )
     {
-        (void)_combatHealth.initialize( ShooterEnemyComponentInternal::makeCombatHealthSettings( 1.0f ) ); // 1 은 범위 안이다 — 체력은 서버 몫이고 살아 있음만 뜻한다
+        (void)_healthMachine.initialize( ShooterEnemyComponentInternal::makeHealthSettings( 1.0f ) ); // 1 은 범위 안이다 — 체력은 서버 몫이고 살아 있음만 뜻한다
         _gameMode                = gameMode;
         _position                = position;
         _replicaPreviousPosition = position;
@@ -178,11 +178,11 @@ namespace sw
     {
         if ( isAlive() == false )
             return false;
-        (void)_combatHealth.applyDamage( amount ); // 결과는 아래 isAlive 로 읽는다
-        _combatHealth.discardEvents();             // 피해 알림은 notifyHealthChanged 가 맡는다
+        (void)_healthMachine.applyDamage( amount ); // 결과는 아래 isAlive 로 읽는다
+        _healthMachine.discardEvents();             // 피해 알림은 notifyHealthChanged 가 맡는다
         // 체력 신호 — HP 바가 보이기 · 숨기기를 스스로 정한다(프리팹의 `_bShowWhenHurt` · `_bHideWhenDead`). 쓰러짐은 읽기(`isDead`)가 정한다.
         notifyHealthChanged( false );
-        if ( _combatHealth.isAlive() == false )
+        if ( _healthMachine.isAlive() == false )
         {
             enterPhase( ShooterEnemyPhase::Dying );
             requestDropSocketParts();
@@ -216,8 +216,8 @@ namespace sw
     HealthReading ShooterEnemyComponent::getHealthReading() const
     {
         HealthReading reading;
-        reading._health    = _combatHealth.getHealth();
-        reading._maxHealth = _combatHealth.getSettings()._maxHealth;
+        reading._health    = _healthMachine.getHealth();
+        reading._maxHealth = _healthMachine.getSettings()._maxHealth;
         reading._bDead     = isDead() ? SW_TRUE : SW_FALSE;
         return reading;
     }

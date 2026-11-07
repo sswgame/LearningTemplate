@@ -1,7 +1,7 @@
 /**
  * @file MetroidvaniaDuelist.h
  * @brief 2D 소울라이크의 맞붙기를 다룹니다. 스태미나(기반 `ResourceGauge`), 패리(기반 `TimingJudge` 창이며 성공하면 반격 배율), 막기(스태미나로 받고 모자라면 가드 붕괴),
- *        강인도(기반 `CombatHealth` 의 poise이며 깎이면 비틀거리고 그 상대에게는 반격 배율)를 관리합니다.
+ *        강인도(기반 `HealthStateMachine` 의 poise이며 깎이면 비틀거리고 그 상대에게는 반격 배율)를 관리합니다.
  * @details 시간은 `update` 로만 흐른다(결정적이다). 패리 판정의 목표 시각은 "공격이 닿는 순간", 곧 `receiveAttack` 을 호출한 시각이고, 누른 시각은 `pressParry` 를
  *          호출한 시각이다. 너무 일찍 누르면(창 밖) 패리가 아니라 그냥 맞는다.
  */
@@ -15,7 +15,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
+#include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
 
 namespace sw
@@ -85,23 +85,23 @@ namespace sw
          */
         float32 computeAttackDamage( float32 baseDamage, const MetroidvaniaDuelist& target );
 
-        bool                 isRiposteReady() const { return _riposteWindow.isActive(); }
-        bool                 isGuarding() const { return _bGuarding == SW_TRUE; }
-        float32              getTime() const { return _time; }
-        const CombatHealth&  getCombatHealth() const { return _combatHealth; }
-        CombatHealth&        getCombatHealth() { return _combatHealth; }
-        const ResourceGauge& getStamina() const { return _stamina; }
-        ResourceGauge&       getStamina() { return _stamina; }
+        bool                      isRiposteReady() const { return _riposteWindow.isActive(); }
+        bool                      isGuarding() const { return _bGuarding == SW_TRUE; }
+        float32                   getTime() const { return _time; }
+        const HealthStateMachine& getHealthMachine() const { return _healthMachine; }
+        HealthStateMachine&       getHealthMachine() { return _healthMachine; }
+        const ResourceGauge&      getStamina() const { return _stamina; }
+        ResourceGauge&            getStamina() { return _stamina; }
 
         /**
-         * @brief 체력(`CombatHealth`), 지구력(`ResourceGauge`), 시각, 패리를 누른 시각, 반격 창, 받는 피해 배율, 막기를 씁니다. 카탈로그 규칙은 `initialize` 에서 받은 것이라 싣지 않습니다.
+         * @brief 체력(`HealthStateMachine`), 지구력(`ResourceGauge`), 시각, 패리를 누른 시각, 반격 창, 받는 피해 배율, 막기를 씁니다. 카탈로그 규칙은 `initialize` 에서 받은 것이라 싣지 않습니다.
          *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          */
         SW_DECLARE_STATE_IO();
 
     private:
         const MetroidvaniaCatalog* _pCatalog;
-        CombatHealth               _combatHealth;
+        HealthStateMachine         _healthMachine;
         ResourceGauge              _stamina;
         float32                    _time;
         float32                    _parryPressTime; ///< 마지막으로 패리를 누른 시각(쓰고 나면 아주 먼 과거로 돌린다)

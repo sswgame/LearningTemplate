@@ -4,7 +4,7 @@
  *        폭발 소음, 걷어차기 퇴행), 탈출구(전원, 열기), 해치, 엔드게임 붕괴, 판자, 창틀, 사물함, 살인마(속도, 공격 쿨다운, 헛방, 위협 반경, 능력),
  *        블러드포인트, 결과(탈출과 희생)를 다룹니다.
  * @details 고정 걸음(`FixedStepTimer`)으로만 흐르고 스킬 체크는 시드로 정해지므로, 같은 호출이면 같은 결과가 나온다. 기반은 이렇게 쓴다.
- *          - 체력 상태: `CombatHealth`(체력 2 는 건강, 1 은 부상, 기절은 빈사이며, 출혈 체력은 남은 출혈 초이고 기절 중 부활은 빈사 회복이다)
+ *          - 체력 상태: `HealthStateMachine`(체력 2 는 건강, 1 은 부상, 기절은 빈사이며, 출혈 체력은 남은 출혈 초이고 기절 중 부활은 빈사 회복이다)
  *          - 수리, 치료, 탈출구: `InteractionProgress`(인원 배율, 스킬 체크 `TimingJudge`, 실패 소음, 퇴행)
  *          - 판과 결과: `MatchState`(생존자 팀과 살인마 팀이며, 탈출과 희생은 탈락이고, 점수를 쓴다)
  *          - 살인마 봇의 감각: `collectKillerStimuli` 가 `AIPerception::sense` 에 넣을 자극(위치와 소음 반경)을 채운다.
@@ -25,7 +25,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
+#include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionProgress.h"
 #include "GameFramework/Runtime/Gameplay/Match/MatchState.h"
@@ -85,7 +85,7 @@ namespace sw
     /** @brief 생존자 하나입니다. */
     struct AsymmetricHorrorSurvivor
     {
-        CombatHealth        _combatHealth{};
+        HealthStateMachine  _healthMachine{};
         InteractionProgress _healing{}; ///< 이 생존자를 치료하는 진행이다(치료하는 쪽들이 붙는다)
         StatBlock           _score{};   ///< 블러드포인트 범주별 점수이다
         float3              _position{};

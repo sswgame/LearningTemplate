@@ -18,7 +18,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
+#include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Runtime/Character/Input/TimingJudge.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -143,7 +143,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `<Health>` 의 스키마입니다. 읽은 값은 `MetroidvaniaRules::_health`(기반 `CombatHealthSettings`)로 옮깁니다. */
+    /** @brief `<Health>` 의 스키마입니다. 읽은 값은 `MetroidvaniaRules::_health`(기반 `HealthSettings`)로 옮깁니다. */
     REFLECT()
     struct MetroidvaniaHealthDef
     {
@@ -192,7 +192,7 @@ namespace sw
         REFLECT_BODY();
 
         hashed_string         _currency{ "geo" }; ///< 죽으면 떨어뜨리는 통화의 이름(표시용, 루트 `currency`)
-        CombatHealthSettings  _health{};          ///< 체력과 강인도(`poise`)
+        HealthSettings        _health{};          ///< 체력과 강인도(`poise`)
         ResourceGaugeSettings _stamina{};
         TimingJudge           _parryJudge{}; ///< 패리 창이다. 목표 시각은 공격이 닿는 순간이다(`<Parry>` 에 창을 하나 이상 적는다)
         PROPERTY( Min = 0.0 )

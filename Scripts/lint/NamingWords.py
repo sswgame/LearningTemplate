@@ -8,6 +8,7 @@ Scripts/lint/NamingWords.py
 **왜 린트인가.** 이름이 업계 용어인지는 형식이 말할 수 없다. 표 없이 눈에 띈 이름만 고치면 `drain` · `Since` 처럼 같은 일에 새 낱말이
 계속 들어온다(2026-11-07). 새 낱말은 언리얼 · 유니티 · Godot 과 대조한 뒤 `Config/Dev/NamingWords.json` 에 올린다.
 `_banned` 는 쓰지 않기로 한 낱말과 대신 쓸 말이고, `_keep` 은 그 낱말을 쓰는 까닭이 있는 이름 하나씩이다.
+`_bannedNames` 는 전수 개명한 옛 식별자(통째 이름)와 새 이름이다 — 개명 뒤 다른 작업자 브랜치 · 붙여 넣은 코드가 옛 이름을 되살리지 못하게 한다(주석 · 문자열 밖 코드만 본다).
 
 `py -3 -m Scripts naming-words [--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 돌린다.
 """
@@ -62,7 +63,15 @@ def findProblems(listSource: Iterable[tuple[str, str]], table: dict) -> list[str
         hint = banned[word] if word in banned else f"업계 용어와 대조한 뒤 {kConfigPath} 의 {column} 에 올린다"
         listProblem.append(f"{path}: {label} '{word}'({name}) 가 표에 없다 — {hint}")
 
+    bannedNames = table.get("_bannedNames", {})
+    bannedPattern = re.compile(r"\b(" + "|".join(map(re.escape, bannedNames)) + r")\b") if bannedNames else None
     for path, text in listSource:
+        if bannedPattern is not None:
+            for match in bannedPattern.finditer(kString.sub('""', kComment.sub("", text))):
+                name = match.group(1)
+                if f"name:{name}" not in seen:
+                    seen.add(f"name:{name}")
+                    listProblem.append(f"{path}: 옛 이름 '{name}' — {bannedNames[name]}")
         listFunction, listSuffix = collectWords(text)
         for word, name in listFunction:
             if word not in allowedFunction and name not in keep:
@@ -97,6 +106,9 @@ def runSelfCheck() -> None:
     assert len(bad) == 2, bad
     assert "flush 또는 poll" in bad[0], bad[0]
     assert "'Verdict'" in bad[1], bad[1]
+    tableNames = dict(table, _bannedNames={"CombatHealth": "HealthStateMachine"})
+    assert findProblems([("a.h", "// CombatHealth\nconst char* s = \"CombatHealth\";")], tableNames) == [], "주석 · 문자열의 옛 이름은 본다고 하지 않는다"
+    assert len(findProblems([("a.h", "CombatHealth health; int getCombatHealthRatio();")], tableNames)) == 1, "통째 이름만 막는다"
 
 
 def main(argv: Sequence[str] | None = None) -> int:

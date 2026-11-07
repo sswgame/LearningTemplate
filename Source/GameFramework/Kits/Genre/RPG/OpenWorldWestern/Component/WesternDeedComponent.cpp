@@ -123,7 +123,7 @@ namespace sw
                 const WesternGameModeComponent* pGameMode = pTarget != nullptr ? pTarget->getComponent<WesternGameModeComponent>() : nullptr;
                 const WesternOutlaw*            pOutlaw   = pGameMode != nullptr ? pGameMode->findOutlaw() : nullptr;
                 if ( pOutlaw == nullptr )
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "opened western gameMode" ) );
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "opened western game mode" ) );
                 return pOutlaw;
             }
 
@@ -194,13 +194,13 @@ namespace sw
         };
     } // namespace
 
-    SW_AUTOMATION_QUERY_WATCH( westernHonor, "Western.Honor", "Honor of the western gameMode on target", &WesternOutlawWatchesInternal::readHonor, true, false );
-    SW_AUTOMATION_QUERY_WATCH( westernBounty, "Western.Bounty", "Bounty in the region of the western gameMode on target", &WesternOutlawWatchesInternal::readBounty, true, false );
-    SW_AUTOMATION_QUERY_WATCH( westernWanted, "Western.Wanted", "Wanted level in the region of the western gameMode on target", &WesternOutlawWatchesInternal::readWanted, true, false );
-    SW_AUTOMATION_QUERY_WATCH( westernPendingReports, "Western.PendingReports", "Witnesses waiting to report on the western gameMode on target", &WesternOutlawWatchesInternal::readPendingReports, true, false );
-    SW_AUTOMATION_QUERY_WATCH( westernMoney, "Western.Money", "Money in the catalog currency of the western gameMode on target", &WesternOutlawWatchesInternal::readMoney, true, false );
-    SW_AUTOMATION_QUERY_WATCH( westernCarcasses, "Western.Carcasses", "Carcasses held by the western gameMode on target", &WesternOutlawWatchesInternal::readCarcasses, true, false );
-    SW_AUTOMATION_QUERY_WATCH( westernPelts, "Western.Pelts", "Pelts held by the western gameMode on target", &WesternOutlawWatchesInternal::readPelts, true, false );
-    SW_AUTOMATION_QUERY_WATCH( westernStaminaCore, "Western.StaminaCore", "Stamina core (0..100) of the western gameMode on target", &WesternOutlawWatchesInternal::readStaminaCore, true, false );
-    SW_AUTOMATION_QUERY_WATCH( westernWarmth, "Western.Warmth", "Warmth of the clothes worn on the western gameMode on target", &WesternOutlawWatchesInternal::readWarmth, true, false );
+    SW_AUTOMATION_QUERY_WATCH( westernHonor, "Western.Honor", "Honor of the western game mode on target", &WesternOutlawWatchesInternal::readHonor, true, false );
+    SW_AUTOMATION_QUERY_WATCH( westernBounty, "Western.Bounty", "Bounty in the region of the western game mode on target", &WesternOutlawWatchesInternal::readBounty, true, false );
+    SW_AUTOMATION_QUERY_WATCH( westernWanted, "Western.Wanted", "Wanted level in the region of the western game mode on target", &WesternOutlawWatchesInternal::readWanted, true, false );
+    SW_AUTOMATION_QUERY_WATCH( westernPendingReports, "Western.PendingReports", "Witnesses waiting to report on the western game mode on target", &WesternOutlawWatchesInternal::readPendingReports, true, false );
+    SW_AUTOMATION_QUERY_WATCH( westernMoney, "Western.Money", "Money in the catalog currency of the western game mode on target", &WesternOutlawWatchesInternal::readMoney, true, false );
+    SW_AUTOMATION_QUERY_WATCH( westernCarcasses, "Western.Carcasses", "Carcasses held by the western game mode on target", &WesternOutlawWatchesInternal::readCarcasses, true, false );
+    SW_AUTOMATION_QUERY_WATCH( westernPelts, "Western.Pelts", "Pelts held by the western game mode on target", &WesternOutlawWatchesInternal::readPelts, true, false );
+    SW_AUTOMATION_QUERY_WATCH( westernStaminaCore, "Western.StaminaCore", "Stamina core (0..100) of the western game mode on target", &WesternOutlawWatchesInternal::readStaminaCore, true, false );
+    SW_AUTOMATION_QUERY_WATCH( westernWarmth, "Western.Warmth", "Warmth of the clothes worn on the western game mode on target", &WesternOutlawWatchesInternal::readWarmth, true, false );
 } // namespace sw

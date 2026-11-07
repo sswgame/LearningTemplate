@@ -30,7 +30,7 @@ namespace sw
         MaxMP,
         Strength,
         Agility,
-        CombatHealth,
+        HealthStateMachine,
         Intellect,
         Luck,
         Count

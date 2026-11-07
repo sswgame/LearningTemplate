@@ -22,7 +22,7 @@ namespace sw
      *          디렉터가 `PrePhysics` 에 돌린 탄의 위치를 읽기만 하고 자기 메시를 옮긴다. 탄이 끝났으면(맞음 · 사거리 · 판 밖) 자기 오브젝트를 지운다.
      *          탄을 게임 오브젝트로 돌리지 않으므로 탄 수가 늘어도 규칙 비용은 시뮬레이션 하나다. 모습은 상태 저장 전에 디렉터가 걷는다.
      */
-    REFLECT( Category = "AbilityArena", DisplayName = "Arena Projectile", Tooltip = "Shows one projectile of the arena gameMode's projectile simulation" )
+    REFLECT( Category = "AbilityArena", DisplayName = "Arena Projectile", Tooltip = "Shows one projectile of the arena game mode's projectile simulation" )
     class ArenaProjectileComponent : public GameModeBoundComponent
     {
     public:

@@ -117,7 +117,7 @@ namespace sw
      *          **네트 클라이언트의 월드**(넷 링크 역할이 Client)는 판을 돌리지 않는다 — 페이싱 감독 · 적 규칙은 서버 몫이고, 스냅샷의 적을 복제 모습으로 세워(`ShooterEnemyComponent::launchReplica`)
      *          적 목록(`getEnemyViews`)을 그 자리로 채운다. 그래서 자동 플레이 AI · 사격 예측 · 근접 예측이 혼자 하는 게임과 같은 목록을 본다. 역할은 프로세스 구성(한 프로세스 재생 · 전용 서버 + 앱)을 가리지 않고 링크가 정한다.
      */
-    REFLECT( Category = "Shooter3D", DisplayName = "Shooter Director", Tooltip = "Runs the skeleton waves, kills, blockers, the effect pools and the runtime spawns" )
+    REFLECT( Category = "Shooter3D", DisplayName = "Shooter Game Mode", Tooltip = "Runs the skeleton waves, kills, blockers, the effect pools and the runtime spawns" )
     class ShooterGameModeComponent : public GameModeComponent
     {
     public:

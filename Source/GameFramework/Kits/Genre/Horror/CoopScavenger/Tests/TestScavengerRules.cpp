@@ -188,7 +188,7 @@ namespace
             written << static_cast<uint32>( 2 );
             for ( int32 player = 0; player < 2; ++player )
             {
-                _expedition.findCrewMember( player )->_combatHealth.writeState( written );
+                _expedition.findCrewMember( player )->_healthMachine.writeState( written );
                 ( player == 0 ? carry : _expedition.findCrewMember( player )->_carry ).writeState( written );
                 sw::StateIO::writeName( written, "ship" );
                 written << static_cast<uint8>( SW_FALSE );

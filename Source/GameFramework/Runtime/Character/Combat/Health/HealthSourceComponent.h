@@ -37,7 +37,7 @@ namespace sw
      *          (`getComponent<HealthSourceComponent>()`, 언리얼의 `FindComponentByClass`).
      *
      *          알림은 `notifyHealthChanged` 한 곳에서 보냅니다. 비율과 종류(초기화, 바뀜, 쓰러짐)를 읽기에서 정해 같은 오브젝트의 `HealthListenerComponent`(HP 바)에
-     *          보냅니다. 시뮬레이션 키트(`CombatHealth`, 정수 HP 배열, 상태 바이트, 롤백)는 유닛이 오브젝트가 아니라서 상속하지 않습니다. 그 유닛 위에 HP 바를 띄울
+     *          보냅니다. 시뮬레이션 키트(`HealthStateMachine`, 정수 HP 배열, 상태 바이트, 롤백)는 유닛이 오브젝트가 아니라서 상속하지 않습니다. 그 유닛 위에 HP 바를 띄울
      *          게임은 뷰 컴포넌트가 이 베이스를 상속해 스냅샷을 읽습니다.
      */
     REFLECT( Abstract, Category = "Combat", DisplayName = "Health Source", Tooltip = "Base of the components that own their object's health (unit stats, ability system)" )

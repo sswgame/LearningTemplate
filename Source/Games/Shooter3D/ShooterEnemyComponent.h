@@ -12,8 +12,8 @@
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
 #include "GameFramework/Runtime/Character/Combat/Health/HealthSourceComponent.h"
+#include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 
 namespace sw
 {
@@ -77,8 +77,8 @@ namespace sw
 
         bool isLaunched() const { return _bLaunched == SW_TRUE; }
         bool isReplica() const { return _bReplica == SW_TRUE; }
-        bool isAlive() const { return _bLaunched == SW_TRUE && _combatHealth.isAlive(); }
-        bool isDead() const { return _bLaunched == SW_TRUE && _combatHealth.isAlive() == false; }
+        bool isAlive() const { return _bLaunched == SW_TRUE && _healthMachine.isAlive(); }
+        bool isDead() const { return _bLaunched == SW_TRUE && _healthMachine.isAlive() == false; }
         /** @brief 체력 원천의 읽기입니다 — 쓰러짐은 `isDead()`. */
         HealthReading getHealthReading() const override;
         /** @brief 쓰러진 뒤 시체 시간이 지나 걷어도 되면 true 입니다. */
@@ -115,7 +115,7 @@ namespace sw
         void requestDropSocketParts() const;
 
     private:
-        PROPERTY( Category = "Enemy", DisplayName = "Director", Tooltip = "Object with the ShooterGameModeComponent" )
+        PROPERTY( Category = "Enemy", DisplayName = "Game Mode", Tooltip = "Object with the ShooterGameModeComponent" )
         GameObjectHandle _gameMode;
         PROPERTY( Category = "Enemy", DisplayName = "Radius", Tooltip = "Capsule radius of the hit box and the body", Min = 0.0, Units = m )
         float32 _radius;
@@ -146,22 +146,22 @@ namespace sw
         PROPERTY( Category = "Enemy", DisplayName = "Walk Clip Speed", Tooltip = "Below this speed the standing clip plays", Min = 0.0, Units = "m/s" )
         float32 _walkClipSpeed;
 
-        float3            _position; ///< 발
-        float32           _yaw;
-        float3            _replicaPreviousPosition; ///< 복제 모습 — 지난 틱의 자리(걷기 클립을 고르는 빠르기)
-        CombatHealth      _combatHealth;            ///< 체력(플레이어와 같은 Base 체력 — 실드 · 회복 · 기절은 쓰지 않는다)
-        float32           _speed;
-        float32           _phaseTime;
-        Countdown         _attackCooldown; ///< 휘두르기 간격(늦음을 잇는다)
-        uint32            _netEntityID;    ///< 복제 엔티티 번호(0 은 아직 없음)
-        ShooterEnemyPhase _phase;
-        uint8             _bLaunched                : 1;
-        uint8             _bHitPending              : 1; ///< 다음 틱에 애니메이터에 Hit 트리거를 건다
-        uint8             _bAttackLanded            : 1; ///< 이번 휘두름이 이미 맞았다
-        uint8             _bAttackStarting          : 1; ///< 다음 틱에 애니메이터에 Attack 트리거를 건다
-        uint8             _bAttackHitEvent          : 1; ///< 이번 휘두름의 맞는 알림을 받았다(다음 틱이 맞힘을 처리한다)
-        uint8             _bHitEventMissingReported : 1; ///< 맞는 알림 없이 끝난 휘두름을 이미 오류로 알렸다(한 번만)
-        uint8             _bReplica                 : 1; ///< 네트 클라이언트의 복제 모습이다(규칙이 돌지 않는다)
-        uint8             _reserved                 : 1;
+        float3             _position; ///< 발
+        float32            _yaw;
+        float3             _replicaPreviousPosition; ///< 복제 모습 — 지난 틱의 자리(걷기 클립을 고르는 빠르기)
+        HealthStateMachine _healthMachine;           ///< 체력(플레이어와 같은 Base 체력 — 실드 · 회복 · 기절은 쓰지 않는다)
+        float32            _speed;
+        float32            _phaseTime;
+        Countdown          _attackCooldown; ///< 휘두르기 간격(늦음을 잇는다)
+        uint32             _netEntityID;    ///< 복제 엔티티 번호(0 은 아직 없음)
+        ShooterEnemyPhase  _phase;
+        uint8              _bLaunched                : 1;
+        uint8              _bHitPending              : 1; ///< 다음 틱에 애니메이터에 Hit 트리거를 건다
+        uint8              _bAttackLanded            : 1; ///< 이번 휘두름이 이미 맞았다
+        uint8              _bAttackStarting          : 1; ///< 다음 틱에 애니메이터에 Attack 트리거를 건다
+        uint8              _bAttackHitEvent          : 1; ///< 이번 휘두름의 맞는 알림을 받았다(다음 틱이 맞힘을 처리한다)
+        uint8              _bHitEventMissingReported : 1; ///< 맞는 알림 없이 끝난 휘두름을 이미 오류로 알렸다(한 번만)
+        uint8              _bReplica                 : 1; ///< 네트 클라이언트의 복제 모습이다(규칙이 돌지 않는다)
+        uint8              _reserved                 : 1;
     };
 } // namespace sw

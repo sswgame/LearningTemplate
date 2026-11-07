@@ -57,9 +57,9 @@ namespace sw
             }
 
             /** @brief 시나리오 프로브입니다. 첫 공원 디렉터의 손님 수를 반환하며, 그림자 장면이 비어 있지 않다는 전제를 확인합니다. */
-            [[nodiscard]] static bool readGuestCount( const ParkGameModeComponent& director, float64& outValue )
+            [[nodiscard]] static bool readGuestCount( const ParkGameModeComponent& gameMode, float64& outValue )
             {
-                outValue = static_cast<float64>( director.getSimulation().getGuestCount() );
+                outValue = static_cast<float64>( gameMode.getSimulation().getGuestCount() );
                 return true;
             }
         };
@@ -443,7 +443,7 @@ namespace sw
     void ParkGameModeComponent::spawnGuestPool( GameObjectManager& manager )
     {
         // 최대 손님 수만큼 미리 스폰하고 숨긴다(오브젝트를 매 프레임 만들고 지우지 않는다). 손님 하나는 뷰 컴포넌트 하나가 시뮬레이션의 같은 번호를 따라간다.
-        const GameObjectHandle director = getOwner()->getHandle();
+        const GameObjectHandle gameMode = getOwner()->getHandle();
         for ( int32 guestIndex = 0; guestIndex < _settings._maxGuests; ++guestIndex )
         {
             GameObject*    pGuest = spawnPrefab( manager, _guestPrefab, "ParkGuest" );
@@ -465,7 +465,7 @@ namespace sw
             pMesh->setVisible( false );
             ParkGuestComponent* pView = pGuest->getComponent<ParkGuestComponent>();
             if ( pView != nullptr )
-                pView->assignGuest( director, guestIndex );
+                pView->assignGuest( gameMode, guestIndex );
         }
     }
 
@@ -533,14 +533,14 @@ namespace sw
                     pSupport->setLocalScale( float3{ _modelScale, railBottom, _modelScale } );
             }
         }
-        const GameObjectHandle director = getOwner()->getHandle();
+        const GameObjectHandle gameMode = getOwner()->getHandle();
         for ( uint32 carIndex = 0; carIndex < _carCount; ++carIndex )
         {
             GameObject* pCar = spawnPrefab( manager, carIndex == 0 ? _carFrontPrefab : _carPrefab, "CoasterCar" );
             (void)Internal::placeMesh( pCar, coaster._train.getFrame()._position, float3{ 0.0f, 0.0f, 0.0f } );
             CoasterCarComponent* pView = pCar != nullptr ? pCar->getComponent<CoasterCarComponent>() : nullptr;
             if ( pView != nullptr )
-                pView->assignCar( director, coasterIndex, static_cast<int32>( carIndex ) );
+                pView->assignCar( gameMode, coasterIndex, static_cast<int32>( carIndex ) );
         }
     }
 
@@ -693,5 +693,5 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_COMPONENT_WATCH( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park director", ParkGameModeComponent, &ParkGameModeComponentInternal::readGuestCount );
+    SW_AUTOMATION_COMPONENT_WATCH( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park game mode", ParkGameModeComponent, &ParkGameModeComponentInternal::readGuestCount );
 } // namespace sw

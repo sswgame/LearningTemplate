@@ -2,7 +2,7 @@
  * @file AdventureVitals.h
  * @brief 젤다의 몸 상태입니다. 하트(4분의 1 단위), 하트 조각(모으면 그릇 하나), 하트 그릇, 마법 게이지(두 배 마법), 스태미나 그릇을 다룹니다.
  *        오르기, 질주, 활공, 수영은 스태미나를 쓰고, 스태미나가 바닥나면 각각 떨어지거나 멈추거나 물에 빠집니다.
- * @details 하트는 기반 `CombatHealth`(체력 = 하트 × 4)가, 마법과 스태미나는 기반 `ResourceGauge` 가 맡는다. 스태미나를 0까지 쓰면 탈진 상태가 되어 `_staminaRecoverLevel` 까지 다시 찰 때까지 어떤 행동도 스태미나를 쓰지 못한다(야생의 숨결의 붉은 바퀴).
+ * @details 하트는 기반 `HealthStateMachine`(체력 = 하트 × 4)가, 마법과 스태미나는 기반 `ResourceGauge` 가 맡는다. 스태미나를 0까지 쓰면 탈진 상태가 되어 `_staminaRecoverLevel` 까지 다시 찰 때까지 어떤 행동도 스태미나를 쓰지 못한다(야생의 숨결의 붉은 바퀴).
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -14,7 +14,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
+#include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
 
 namespace sw
@@ -126,22 +126,22 @@ namespace sw
         bool addStaminaVessel();
 
         /** @brief 쌓인 체력 알림(맞음, 찬 양, 죽음)을 @p outListEvent 뒤에 붙이고 비웁니다. 부르지 않으면 알림이 끝없이 쌓입니다. */
-        void pollHealthEvents( vector<CombatHealthEvent>& outListEvent ) { _health.pollEvents( outListEvent ); }
+        void pollHealthEvents( vector<HealthEvent>& outListEvent ) { _health.pollEvents( outListEvent ); }
 
         const AdventureVitalsSettings& getSettings() const { return _settings; }
         int32                          getHeartCount() const { return _heartCount; }
         int32                          getHeartPieceCount() const { return _heartPieceCount; }
         /** @brief 남은 체력(4분의 1 하트 단위)입니다. */
-        int32                computeHealthQuarters() const;
-        int32                getMaxHealthQuarters() const { return _heartCount * kQuartersPerHeart; }
-        bool                 isDead() const { return _health.isDead(); }
-        const CombatHealth&  getHealth() const { return _health; }
-        const ResourceGauge& getMagic() const { return _magic; }
-        const ResourceGauge& getStamina() const { return _stamina; }
-        bool                 isMagicUpgraded() const { return _bMagicUpgraded == SW_TRUE; }
+        int32                     computeHealthQuarters() const;
+        int32                     getMaxHealthQuarters() const { return _heartCount * kQuartersPerHeart; }
+        bool                      isDead() const { return _health.isDead(); }
+        const HealthStateMachine& getHealth() const { return _health; }
+        const ResourceGauge&      getMagic() const { return _magic; }
+        const ResourceGauge&      getStamina() const { return _stamina; }
+        bool                      isMagicUpgraded() const { return _bMagicUpgraded == SW_TRUE; }
 
         /**
-         * @brief 하트 수, 조각 수, 두 배 마법, 체력(`CombatHealth`), 마력과 지구력(`ResourceGauge`)을 씁니다. 설정은 `initialize` 에서 받은 것이라 싣지 않습니다. 체력 최대값은 하트 수로 다시 계산합니다.
+         * @brief 하트 수, 조각 수, 두 배 마법, 체력(`HealthStateMachine`), 마력과 지구력(`ResourceGauge`)을 씁니다. 설정은 `initialize` 에서 받은 것이라 싣지 않습니다. 체력 최대값은 하트 수로 다시 계산합니다.
          *        `writeState` 가 쓴 바이트로 상태를 바꿉니다. 하트 수가 설정 범위 밖이거나, 체력 · 마력 · 지구력이 그 최대를 넘거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          */
         SW_DECLARE_STATE_IO();
@@ -152,7 +152,7 @@ namespace sw
 
     private:
         AdventureVitalsSettings _settings;
-        CombatHealth            _health;
+        HealthStateMachine      _health;
         ResourceGauge           _magic;
         ResourceGauge           _stamina;
         int32                   _heartCount;

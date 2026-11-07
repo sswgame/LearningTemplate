@@ -96,7 +96,7 @@ namespace sw
      *          **빙의**: 농부(씬의 `_farmer` 오브젝트의 폰)는 자동 빙의(`Player0`)로 플레이어 조종자가 조종하다가, 자동 플레이 스위치가 켜지면 틱이 끝난 뒤 플러시에서
      *          자동 농부 AI(`_autoFarmerPrefab`)가, 꺼지면 다시 플레이어 조종자가 조종한다. 디렉터 안에 자동 플레이 분기는 없다.
      */
-    REFLECT( Category = "Farming", DisplayName = "Farm Director", Tooltip = "Runs the farm rules, the farmer, time and weather, and spawns the field tiles" )
+    REFLECT( Category = "Farming", DisplayName = "Farm Game Mode", Tooltip = "Runs the farm rules, the farmer, time and weather, and spawns the field tiles" )
     class FarmGameModeComponent : public GameModeComponent
     {
     public:

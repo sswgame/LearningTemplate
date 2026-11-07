@@ -28,7 +28,7 @@ namespace sw
     class ItemStackList;
     class LootCatalog;
     class MetroidvaniaCatalog;
-    class CombatHealth;
+    class HealthStateMachine;
     class Wallet;
 
     /** @brief 죽음과 휴식 알림의 종류입니다. */
@@ -80,7 +80,7 @@ namespace sw
 {
     /**
      * @class MetroidvaniaDeathRestState
-     * @brief 통화, 시체, 물약, 처치 기록, 되살아날 위치를 관리합니다. 체력은 기반 `CombatHealth` 를 빌려 받습니다.
+     * @brief 통화, 시체, 물약, 처치 기록, 되살아날 위치를 관리합니다. 체력은 기반 `HealthStateMachine` 를 빌려 받습니다.
      */
     class SW_KIT_API MetroidvaniaDeathRestState
     {
@@ -97,21 +97,21 @@ namespace sw
         void initialize( const MetroidvaniaCatalog* pCatalog, const SessionStateRefs& refs );
 
         /**
-         * @brief 쉬는 지점에서 쉽니다. 체력을 가득 채우고(`CombatHealth::respawn`), 물약을 충전하고, 보스가 아닌 적을 부활시키고, 되살아날 위치를 갱신합니다.
+         * @brief 쉬는 지점에서 쉽니다. 체력을 가득 채우고(`HealthStateMachine::respawn`), 물약을 충전하고, 보스가 아닌 적을 부활시키고, 되살아날 위치를 갱신합니다.
          * @return 쉬는 지점이 아니면 아무 일도 하지 않고 false 를 반환합니다.
          */
-        [[nodiscard]] bool rest( const hashed_string& siteID, CombatHealth& combatHealth );
+        [[nodiscard]] bool rest( const hashed_string& siteID, HealthStateMachine& healthMachine );
         /**
          * @brief 죽습니다. 가진 통화를 그 자리에 시체로 떨어뜨리고(이미 시체가 있으면 그 통화는 영영 사라집니다), 마지막으로 쉰 위치에서 되살아납니다
          *        (체력과 물약은 가득 차고, 보스가 아닌 적은 부활합니다).
          * @return 되살아날 지점 id 입니다(쉰 적이 없으면 빈 이름).
          */
-        hashed_string die( const hashed_string& areaID, const float2& position, CombatHealth& combatHealth );
+        hashed_string die( const hashed_string& areaID, const float2& position, HealthStateMachine& healthMachine );
         /** @brief 시체를 되찾습니다. 같은 방이고 `_corpseRecoverRadius` 안이어야 합니다. 되찾았으면 true 를 반환합니다. */
         [[nodiscard]] bool tryRecoverCorpse( const hashed_string& areaID, const float2& position );
 
         /** @brief 물약을 마십니다. 충전이 남았고 살아 있으면 회복하고 true 를 반환합니다. */
-        bool drinkFlask( CombatHealth& combatHealth );
+        bool drinkFlask( HealthStateMachine& healthMachine );
         /** @brief 물약 충전 수를 하나 늘립니다(상한까지). 늘었으면 true 를 반환하며, 늘어난 충전은 바로 찹니다. */
         bool upgradeFlaskCharges();
         /** @brief 물약 회복량을 한 단계 올립니다. */
@@ -144,7 +144,7 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        void          refreshWorld( CombatHealth& combatHealth );
+        void          refreshWorld( HealthStateMachine& healthMachine );
         void          pushEvent( MetroidvaniaDeathRestEventKind type, const hashed_string& id, int32 amount );
         hashed_string getCurrencyName() const;
 

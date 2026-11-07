@@ -72,40 +72,40 @@ namespace sw
         };
 
         /** @brief 선택한 유닛 중 @p bMoveOnly 면 앞 명령이 이동인 것만 셉니다. */
-        [[nodiscard]] bool countSelected( const SkirmishGameModeComponent& director, bool bMoveOnly, float64& outValue )
+        [[nodiscard]] bool countSelected( const SkirmishGameModeComponent& gameMode, bool bMoveOnly, float64& outValue )
         {
             int32 count = 0;
-            director.getWorld().forEachUnit( [&director, bMoveOnly, &count]( const RTSUnit& unit )
+            gameMode.getWorld().forEachUnit( [&gameMode, bMoveOnly, &count]( const RTSUnit& unit )
             {
                 const RTSOrder* pOrder = unit.findOrder();
-                if ( director.isSelected( unit._id ) && ( bMoveOnly == false || ( pOrder != nullptr && pOrder->_type == RTSOrderType::Move ) ) )
+                if ( gameMode.isSelected( unit._id ) && ( bMoveOnly == false || ( pOrder != nullptr && pOrder->_type == RTSOrderType::Move ) ) )
                     ++count;
             } );
             outValue = static_cast<float64>( count );
             return true;
         }
 
-        [[nodiscard]] bool readSelectedCount( const SkirmishGameModeComponent& director, float64& outValue )
+        [[nodiscard]] bool readSelectedCount( const SkirmishGameModeComponent& gameMode, float64& outValue )
         {
-            return countSelected( director, false, outValue );
+            return countSelected( gameMode, false, outValue );
         }
 
-        [[nodiscard]] bool readSelectedMovingCount( const SkirmishGameModeComponent& director, float64& outValue )
+        [[nodiscard]] bool readSelectedMovingCount( const SkirmishGameModeComponent& gameMode, float64& outValue )
         {
-            return countSelected( director, true, outValue );
+            return countSelected( gameMode, true, outValue );
         }
 
         /** @brief 감시 값 `Skirmish.AITask` 입니다. 플레이어 `key`(0 · 1)를 맡은 컴퓨터 상대의 행동 트리가 도는 잎(`GatherIdle` · `TrainWorkers` · `Defend` …)입니다. */
         [[nodiscard]] bool readAITask( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
         {
-            const SkirmishGameModeComponent* pDirector = AutomationComponentWatch::findFirst<SkirmishGameModeComponent>( query._pManager );
+            const SkirmishGameModeComponent* pGameMode = AutomationComponentWatch::findFirst<SkirmishGameModeComponent>( query._pManager );
             int32                            player    = -1;
-            if ( pDirector == nullptr || StringUtil::parseInt( query._key, player ) == false )
+            if ( pGameMode == nullptr || StringUtil::parseInt( query._key, player ) == false )
             {
-                outValue.setText( pDirector == nullptr ? string( "no skirmish director" ) : "key must be a player index, got '" + string( query._key ) + "'" );
+                outValue.setText( pGameMode == nullptr ? string( "no skirmish game mode" ) : "key must be a player index, got '" + string( query._key ) + "'" );
                 return false;
             }
-            const RTSCommanderAI* pAI = pDirector->getMatch().findAI( player );
+            const RTSCommanderAI* pAI = pGameMode->getMatch().findAI( player );
             if ( pAI == nullptr )
             {
                 outValue.setText( "player " + string( query._key ) + " is not played by the AI" );
@@ -350,13 +350,13 @@ namespace sw
             return false;
         if ( hasValidNames() == false )
         {
-            SW_LOG_ERROR_ID( "SkirmishGameMode.DirectorInputActionsUnit", "[Skirmish] the director's input actions or unit ids do not match the data - the match cannot start" );
+            SW_LOG_ERROR_ID( "SkirmishGameMode.DirectorInputActionsUnit", "[Skirmish] the game mode's input actions or unit ids do not match the data - the match cannot start" );
             return false;
         }
         const bool bAIStylesSet = _rushAI.isSet() && _macroAI.isSet() && _opponentAI.isSet();
         if ( bAIStylesSet == false )
         {
-            SW_LOG_ERROR_ID( "SkirmishGameMode.DirectorNeedsRushAIMacroAI", "[Skirmish] the director needs _rushAI, _macroAI and _opponentAI (worker, production and attack targets) - the match cannot start" );
+            SW_LOG_ERROR_ID( "SkirmishGameMode.DirectorNeedsRushAIMacroAI", "[Skirmish] the game mode needs _rushAI, _macroAI and _opponentAI (worker, production and attack targets) - the match cannot start" );
             return false;
         }
         _bHuman = isAutoPlayOn() ? SW_FALSE : SW_TRUE;

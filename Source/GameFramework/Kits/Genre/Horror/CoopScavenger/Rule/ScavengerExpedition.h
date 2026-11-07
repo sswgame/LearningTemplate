@@ -19,7 +19,7 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerFacility.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerQuota.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
-#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
+#include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
@@ -62,12 +62,12 @@ namespace sw
     /** @brief 사람 하나입니다. */
     struct ScavengerCrewMember
     {
-        CombatHealth   _combatHealth{};
-        ScavengerCarry _carry{};
-        hashed_string  _areaID{};                   ///< 있는 곳이다(`ship`, `outside`, 시설 방)
-        uint8          _bBodyRecovered{ SW_FALSE }; ///< 죽었고 시신이 우주선에 실렸다
+        HealthStateMachine _healthMachine{};
+        ScavengerCarry     _carry{};
+        hashed_string      _areaID{};                   ///< 있는 곳이다(`ship`, `outside`, 시설 방)
+        uint8              _bBodyRecovered{ SW_FALSE }; ///< 죽었고 시신이 우주선에 실렸다
 
-        bool isDead() const { return _combatHealth.isDead(); }
+        bool isDead() const { return _healthMachine.isDead(); }
     };
 } // namespace sw
 

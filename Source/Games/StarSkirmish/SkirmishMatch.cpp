@@ -114,7 +114,7 @@ namespace sw
                                                                                               : _settings._macroAI;
             if ( bAI )
             {
-                SW_ASSERT( _settings._pCommanderTree != nullptr && "the gameMode must read the commander behavior tree before starting a match with a computer opponent" );
+                SW_ASSERT( _settings._pCommanderTree != nullptr && "the game mode must read the commander behavior tree before starting a match with a computer opponent" );
                 _arrAI[player].initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style, _settings ), *_settings._pCommanderTree );
             }
         }

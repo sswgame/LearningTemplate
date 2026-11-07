@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
+#include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -24,7 +24,7 @@ namespace sw
 
 namespace sw
 {
-    CombatHealth::CombatHealth()
+    HealthStateMachine::HealthStateMachine()
         : _settings{}
         , _eventBuffer{}
         , _health{ 0.0f }
@@ -40,32 +40,32 @@ namespace sw
         , _reviverID{ -1 }
         , _lastInstigatorID{ -1 }
         , _downCount{ 0 }
-        , _state{ CombatHealthState::Alive }
+        , _state{ LifeState::Alive }
         , _bReviving{ SW_FALSE }
         , _bDamageImmune{ SW_FALSE }
     {
         // 기본 설정은 선언된 범위 안이다(테스트 `VitalityDefaultSettingsAreInRange` 가 지킨다) — 검사하지 않고 바로 쓴다.
-        applySettings( CombatHealthSettings{} );
+        applySettings( HealthSettings{} );
     }
 
-    bool CombatHealth::initialize( const CombatHealthSettings& settings )
+    bool HealthStateMachine::initialize( const HealthSettings& settings )
     {
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
-            SW_LOG_ERROR_ID( "CombatHealth.VitalityRefusedSettings", "CombatHealth: refused settings - %#", rangeError.c_str() );
+            SW_LOG_ERROR_ID( "HealthStateMachine.VitalityRefusedSettings", "HealthStateMachine: refused settings - %#", rangeError.c_str() );
             return false;
         }
         applySettings( settings );
         return true;
     }
 
-    void CombatHealth::reset()
+    void HealthStateMachine::reset()
     {
-        applySettings( CombatHealthSettings( _settings ) );
+        applySettings( HealthSettings( _settings ) );
     }
 
-    void CombatHealth::applySettings( const CombatHealthSettings& settings )
+    void HealthStateMachine::applySettings( const HealthSettings& settings )
     {
         _settings = settings;
         _eventBuffer.clear();
@@ -73,9 +73,9 @@ namespace sw
         respawn();
     }
 
-    void CombatHealth::respawn()
+    void HealthStateMachine::respawn()
     {
-        _state                = CombatHealthState::Alive;
+        _state                = LifeState::Alive;
         _health               = _settings._maxHealth;
         _shield               = _settings._maxShield;
         _downedHealth         = 0.0f;
@@ -91,7 +91,7 @@ namespace sw
         _lastInstigatorID = -1;
     }
 
-    void CombatHealth::setMaxHealth( float32 maxHealth, bool bFill )
+    void HealthStateMachine::setMaxHealth( float32 maxHealth, bool bFill )
     {
         if ( maxHealth <= 0.0f )
             return;
@@ -101,15 +101,15 @@ namespace sw
             const float32 healed = maxHealth - _health;
             _health              = maxHealth;
             if ( healed > 0.0f )
-                pushEvent( CombatHealthEventType::Healed, healed, -1 );
+                pushEvent( HealthEventType::Healed, healed, -1 );
             return;
         }
         _health = MathUtil::min( _health, maxHealth );
     }
 
-    CombatHealthDamageResult CombatHealth::applyDamage( float32 amount, float32 poiseDamage, int32 instigatorID )
+    HealthDamageResult HealthStateMachine::applyDamage( float32 amount, float32 poiseDamage, int32 instigatorID )
     {
-        CombatHealthDamageResult result;
+        HealthDamageResult result;
         amount      = MathUtil::max( 0.0f, amount );
         poiseDamage = MathUtil::max( 0.0f, poiseDamage );
         if ( ignoresDamage() )
@@ -120,16 +120,16 @@ namespace sw
         _lastInstigatorID = instigatorID;
         _timeSinceDamage  = 0.0f;
 
-        if ( _state == CombatHealthState::Downed )
+        if ( _state == LifeState::Downed )
         {
             // 기절 중 — 실드 · 경직은 없다. 출혈 체력을 깎고, 설정이면 부활을 끊는다.
             result._healthDamage = DepletingValue::take( _downedHealth, amount )._taken;
             if ( result._healthDamage > 0.0f )
-                pushEvent( CombatHealthEventType::Damaged, result._healthDamage, instigatorID );
+                pushEvent( HealthEventType::Damaged, result._healthDamage, instigatorID );
             const bool bReviveInterrupted = amount > 0.0f && isReviving() && _settings._bDamageInterruptsRevive == SW_TRUE;
             if ( bReviveInterrupted )
             {
-                pushEvent( CombatHealthEventType::ReviveInterrupted, 0.0f, instigatorID );
+                pushEvent( HealthEventType::ReviveInterrupted, 0.0f, instigatorID );
                 stopRevive();
             }
             if ( _downedHealth <= 0.0f && amount > 0.0f )
@@ -145,12 +145,12 @@ namespace sw
         result._shieldAbsorbed = DepletingValue::take( _shield, amount )._taken;
         result._healthDamage   = DepletingValue::take( _health, amount - result._shieldAbsorbed )._taken;
         if ( result._shieldAbsorbed + result._healthDamage > 0.0f )
-            pushEvent( CombatHealthEventType::Damaged, result._shieldAbsorbed + result._healthDamage, instigatorID );
+            pushEvent( HealthEventType::Damaged, result._shieldAbsorbed + result._healthDamage, instigatorID );
         if ( bHadShield && _shield <= 0.0f )
         {
             _shield               = 0.0f;
             result._bShieldBroken = SW_TRUE;
-            pushEvent( CombatHealthEventType::ShieldBroken, 0.0f, instigatorID );
+            pushEvent( HealthEventType::ShieldBroken, 0.0f, instigatorID );
         }
 
         // 경직 — 붕괴 중에는 더 쌓지 않는다(붕괴가 끝나면 가득 찬다).
@@ -163,7 +163,7 @@ namespace sw
             {
                 _poiseBreak.start( MathUtil::max( _settings._poiseBreakDuration, 1.0e-6f ) );
                 result._bPoiseBroken = SW_TRUE;
-                pushEvent( CombatHealthEventType::PoiseBroken, poiseDamage, instigatorID );
+                pushEvent( HealthEventType::PoiseBroken, poiseDamage, instigatorID );
             }
         }
 
@@ -186,33 +186,33 @@ namespace sw
         return result;
     }
 
-    float32 CombatHealth::heal( float32 amount )
+    float32 HealthStateMachine::heal( float32 amount )
     {
-        if ( _state != CombatHealthState::Alive || amount <= 0.0f )
+        if ( _state != LifeState::Alive || amount <= 0.0f )
             return 0.0f;
         const float32 healed = MathUtil::min( amount, _settings._maxHealth - _health );
         _health += healed;
         if ( healed > 0.0f )
-            pushEvent( CombatHealthEventType::Healed, healed, -1 );
+            pushEvent( HealthEventType::Healed, healed, -1 );
         return healed;
     }
 
-    float32 CombatHealth::addShield( float32 amount )
+    float32 HealthStateMachine::addShield( float32 amount )
     {
-        if ( _state != CombatHealthState::Alive || amount <= 0.0f )
+        if ( _state != LifeState::Alive || amount <= 0.0f )
             return 0.0f;
         const float32 added = MathUtil::min( amount, _settings._maxShield - _shield );
         _shield += added;
         return added;
     }
 
-    void CombatHealth::update( float32 deltaTime )
+    void HealthStateMachine::update( float32 deltaTime )
     {
-        if ( deltaTime <= 0.0f || _state == CombatHealthState::Dead )
+        if ( deltaTime <= 0.0f || _state == LifeState::Dead )
             return;
         _invulnerable.update( deltaTime );
 
-        if ( _state == CombatHealthState::Downed )
+        if ( _state == LifeState::Downed )
         {
             if ( isReviving() )
             {
@@ -241,7 +241,7 @@ namespace sw
             {
                 _poise                = _settings._poiseMax;
                 _timeSincePoiseDamage = 0.0f;
-                pushEvent( CombatHealthEventType::PoiseRecovered, 0.0f, -1 );
+                pushEvent( HealthEventType::PoiseRecovered, 0.0f, -1 );
             }
             return;
         }
@@ -250,23 +250,23 @@ namespace sw
         _poise                       = MathUtil::min( _settings._poiseMax, _poise + _settings._poiseRegenRate * poiseRegenTime );
     }
 
-    bool CombatHealth::startRevive( int32 reviverID, float32 speedScale )
+    bool HealthStateMachine::startRevive( int32 reviverID, float32 speedScale )
     {
-        if ( _state != CombatHealthState::Downed )
+        if ( _state != LifeState::Downed )
             return false;
         _reviveSpeedScale = MathUtil::max( 0.0f, speedScale );
         _reviverID        = reviverID;
         if ( isReviving() == false )
         {
             _bReviving = SW_TRUE;
-            pushEvent( CombatHealthEventType::ReviveStarted, 0.0f, reviverID );
+            pushEvent( HealthEventType::ReviveStarted, 0.0f, reviverID );
         }
         if ( _settings._reviveTime <= 0.0f )
             finishRevive();
         return true;
     }
 
-    void CombatHealth::stopRevive()
+    void HealthStateMachine::stopRevive()
     {
         if ( isReviving() == false )
             return;
@@ -277,38 +277,38 @@ namespace sw
             _reviveElapsed = 0.0f;
     }
 
-    void CombatHealth::setInvulnerable( float32 seconds )
+    void HealthStateMachine::setInvulnerable( float32 seconds )
     {
         _invulnerable.extendTo( seconds );
     }
 
-    void CombatHealth::kill( int32 instigatorID )
+    void HealthStateMachine::kill( int32 instigatorID )
     {
-        if ( _state == CombatHealthState::Dead )
+        if ( _state == LifeState::Dead )
             return;
         enterDead( instigatorID );
     }
 
-    void CombatHealth::pollEvents( vector<CombatHealthEvent>& outListEvent )
+    void HealthStateMachine::pollEvents( vector<HealthEvent>& outListEvent )
     {
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    float32 CombatHealth::getHealthRatio() const
+    float32 HealthStateMachine::getHealthRatio() const
     {
         return _health / _settings._maxHealth;
     }
 
-    float32 CombatHealth::getReviveProgress() const
+    float32 HealthStateMachine::getReviveProgress() const
     {
         if ( _settings._reviveTime <= 0.0f )
-            return _state == CombatHealthState::Downed ? 0.0f : 1.0f;
+            return _state == LifeState::Downed ? 0.0f : 1.0f;
         return MathUtil::saturate( _reviveElapsed / _settings._reviveTime );
     }
 
-    void CombatHealth::enterDowned( int32 instigatorID )
+    void HealthStateMachine::enterDowned( int32 instigatorID )
     {
-        _state        = CombatHealthState::Downed;
+        _state        = LifeState::Downed;
         _health       = 0.0f;
         _shield       = 0.0f;
         _downedHealth = _settings._downedHealth;
@@ -317,25 +317,25 @@ namespace sw
         _reviverID     = -1;
         _bReviving     = SW_FALSE;
         ++_downCount;
-        pushEvent( CombatHealthEventType::Downed, 0.0f, instigatorID );
+        pushEvent( HealthEventType::Downed, 0.0f, instigatorID );
     }
 
-    void CombatHealth::enterDead( int32 instigatorID )
+    void HealthStateMachine::enterDead( int32 instigatorID )
     {
-        _state        = CombatHealthState::Dead;
+        _state        = LifeState::Dead;
         _health       = 0.0f;
         _shield       = 0.0f;
         _downedHealth = 0.0f;
         _poiseBreak.clear();
         _reviverID = -1;
         _bReviving = SW_FALSE;
-        pushEvent( CombatHealthEventType::Died, 0.0f, instigatorID );
+        pushEvent( HealthEventType::Died, 0.0f, instigatorID );
     }
 
-    void CombatHealth::finishRevive()
+    void HealthStateMachine::finishRevive()
     {
         const int32 reviverID = _reviverID;
-        _state                = CombatHealthState::Alive;
+        _state                = LifeState::Alive;
         _health               = _settings._maxHealth * _settings._reviveHealthRatio;
         _shield               = 0.0f;
         _downedHealth         = 0.0f;
@@ -347,23 +347,23 @@ namespace sw
         _reviverID            = -1;
         _bReviving            = SW_FALSE;
         _invulnerable.extendTo( _settings._invulnerableAfterRevive );
-        pushEvent( CombatHealthEventType::Revived, _health, reviverID );
+        pushEvent( HealthEventType::Revived, _health, reviverID );
     }
 
-    void CombatHealth::pushEvent( CombatHealthEventType type, float32 amount, int32 instigatorID )
+    void HealthStateMachine::pushEvent( HealthEventType type, float32 amount, int32 instigatorID )
     {
-        CombatHealthEvent event;
+        HealthEvent event;
         event._type         = type;
         event._amount       = amount;
         event._instigatorID = instigatorID;
         _eventBuffer.push( event );
     }
 
-    void CombatHealth::serializeState( StateIO& io )
+    void HealthStateMachine::serializeState( StateIO& io )
     {
         if ( io.isReading() )
         {
-            CombatHealth restored;
+            HealthStateMachine restored;
             restored._settings      = _settings;
             restored._bDamageImmune = _bDamageImmune; // 개발 스위치는 상태가 아니다
             *this                   = std::move( restored );
@@ -381,7 +381,7 @@ namespace sw
         io.value( _reviverID );
         io.value( _lastInstigatorID );
         io.value( _downCount );
-        io.enumValue( _state, CombatHealthState::Dead );
+        io.enumValue( _state, LifeState::Dead );
         io.flag( _bReviving );
         io.check( 0.0f <= _health && _health <= _settings._maxHealth && 0.0f <= _shield && _shield <= _settings._maxShield && 0.0f <= _downedHealth && _downedHealth <= _settings._downedHealth && 0 <= _downCount );
     }

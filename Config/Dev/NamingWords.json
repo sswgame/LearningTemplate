@@ -11,6 +11,22 @@
         "Fields": "Params(리플렉션으로 읽는 칸 묶음)",
         "Work": "Job"
     },
+    "_bannedNames": {
+        "CombatHealth": "HealthStateMachine(체력 상태 기계 — HealthState 는 서버 상태 점검이 쓴다)",
+        "CombatHealthSettings": "HealthSettings",
+        "CombatHealthState": "LifeState",
+        "CombatHealthEvent": "HealthEvent",
+        "CombatHealthEventType": "HealthEventType",
+        "CombatHealthDamageResult": "HealthDamageResult",
+        "getCombatHealth": "getHealthMachine",
+        "_combatHealth": "_healthMachine",
+        "loadModuleLibrarys": "loadModuleLibraries",
+        "_pModuleImageHost": "_pModuleLoader",
+        "isEditorImageUsable": "isEditorLibraryUsable",
+        "_gameModuleManager": "_moduleManager",
+        "_backendSwap": "_backendSwitcher",
+        "UIInputMapView": "GameInputView(Engine/Input/Map)"
+    },
     "_keep": {
         "MailboxOutcome": "우편 업무 값과 전송 공통 범주를 두 층으로 가른 온라인 키트의 업무 층",
         "OnlineOutcome": "온라인 공통 범주(OnlineResult 는 호출 결과를 담는 형식이다)",

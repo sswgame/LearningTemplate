@@ -118,10 +118,10 @@ SW_TEST_CASE( BattleRoyaleMatchTest, DamageIsRejectedWhenItShouldNotCount )
     SW_EXPECT_NEAR( 0.0f, bench._match.applyDamage( 0, 2, -5.0f, sw::BattleRoyaleHitZone::Limb ), kMatchTolerance );
     SW_EXPECT_NEAR( 0.0f, bench._match.applyDamage( 0, 2, std::numeric_limits<float32>::quiet_NaN(), sw::BattleRoyaleHitZone::Limb ), kMatchTolerance );
     SW_EXPECT_NEAR( 0.0f, bench._match.applyDamage( 0, 1, 10.0f, sw::BattleRoyaleHitZone::Limb ), kMatchTolerance ); // 같은 팀
-    SW_EXPECT_NEAR( 100.0f, bench.player( 0 )._combatHealth.getHealth(), kMatchTolerance );
+    SW_EXPECT_NEAR( 100.0f, bench.player( 0 )._healthMachine.getHealth(), kMatchTolerance );
 
     SW_EXPECT_NEAR( 40.0f, bench._match.applyDamage( 0, 2, 40.0f, sw::BattleRoyaleHitZone::Limb ), kMatchTolerance );
-    SW_EXPECT_NEAR( 60.0f, bench.player( 0 )._combatHealth.getHealth(), kMatchTolerance );
+    SW_EXPECT_NEAR( 60.0f, bench.player( 0 )._healthMachine.getHealth(), kMatchTolerance );
     SW_EXPECT_NEAR( 10.0f, bench._match.applyDamage( 0, 0, 10.0f, sw::BattleRoyaleHitZone::Limb ), kMatchTolerance ); // 자기 자신은 같은 팀이 아니라 받는다
 }
 
@@ -146,11 +146,11 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ArmorFiltersDamageUntilDowned )
     SW_EXPECT_EQUAL( 2, listBroken[0]._other );
 
     SW_EXPECT_NEAR( 30.0f, bench._match.applyDamage( 0, 2, 40.0f, sw::BattleRoyaleHitZone::Body ), kMatchTolerance );
-    SW_EXPECT_NEAR( 50.0f, bench.player( 0 )._combatHealth.getHealth(), kMatchTolerance );
+    SW_EXPECT_NEAR( 50.0f, bench.player( 0 )._healthMachine.getHealth(), kMatchTolerance );
     (void)bench._match.applyDamage( 0, 2, 1000.0f, sw::BattleRoyaleHitZone::Limb );
     SW_REQUIRE_TRUE( bench.player( 0 ).isDowned() );
     SW_EXPECT_NEAR( 8.0f, bench._match.applyDamage( 0, 2, 8.0f, sw::BattleRoyaleHitZone::Body ), kMatchTolerance ); // 조끼를 지나지 않는다
-    SW_EXPECT_NEAR( 42.0f, bench.player( 0 )._combatHealth.getDownedHealth(), kMatchTolerance );
+    SW_EXPECT_NEAR( 42.0f, bench.player( 0 )._healthMachine.getDownedHealth(), kMatchTolerance );
 }
 
 /**
@@ -204,11 +204,11 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ReviveRestoresTheDownedTeammate )
 
     bench.stepFor( 15 ); // 부활 2 초 중 1.5 초
     SW_EXPECT_TRUE( bench.player( 0 ).isDowned() );
-    SW_EXPECT_NEAR( 50.0f, bench.player( 0 )._combatHealth.getDownedHealth(), kMatchTolerance );
+    SW_EXPECT_NEAR( 50.0f, bench.player( 0 )._healthMachine.getDownedHealth(), kMatchTolerance );
 
     bench.stepFor( 10 );
     SW_REQUIRE_TRUE( bench.player( 0 ).isAlive() );
-    SW_EXPECT_NEAR( 50.0f, bench.player( 0 )._combatHealth.getHealth(), kMatchTolerance ); // 최대 × 0.5
+    SW_EXPECT_NEAR( 50.0f, bench.player( 0 )._healthMachine.getHealth(), kMatchTolerance ); // 최대 × 0.5
     SW_EXPECT_EQUAL( -1, bench.player( 1 )._revivingTarget );
     SW_EXPECT_EQUAL( -1, bench.player( 0 )._downedBy );
     const sw::vector<sw::BattleRoyaleEvent> listRevived = bench.drainKind( EventKind::PlayerRevived );
@@ -258,9 +258,9 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ReviveInterruptions )
     bench._match.endRevive( 99 ); // 없는 사람은 아무 일도 없다
     SW_EXPECT_EQUAL( -1, bench.player( 1 )._revivingTarget );
     SW_EXPECT_NEAR( 0.0f, bench.player( 0 )._revive.getProgress(), kMatchTolerance );
-    const float32 bleedBefore = bench.player( 0 )._combatHealth.getDownedHealth();
+    const float32 bleedBefore = bench.player( 0 )._healthMachine.getDownedHealth();
     bench.stepFor( 5 );
-    SW_EXPECT_TRUE( bench.player( 0 )._combatHealth.getDownedHealth() < bleedBefore );
+    SW_EXPECT_TRUE( bench.player( 0 )._healthMachine.getDownedHealth() < bleedBefore );
 }
 
 /**
@@ -278,7 +278,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, DownedReviverStops )
     SW_EXPECT_EQUAL( -1, bench.player( 1 )._revivingTarget );
     SW_EXPECT_EQUAL( 0, bench.player( 0 )._revive.getParticipantCount() );
     bench.stepFor( 5 );
-    SW_EXPECT_TRUE( bench.player( 0 )._combatHealth.getDownedHealth() < 50.0f );
+    SW_EXPECT_TRUE( bench.player( 0 )._healthMachine.getDownedHealth() < 50.0f );
 }
 
 /**
@@ -385,8 +385,8 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ZoneDamageIgnoresArmorAndRevives )
     bench._match.setPlayerPosition( 99, center ); // 없는 사람은 아무 일도 없다
 
     bench.stepFor( 10 ); // 1 초
-    SW_EXPECT_NEAR( 90.0f, bench.player( 0 )._combatHealth.getHealth(), kMatchTolerance );
-    SW_EXPECT_NEAR( 100.0f, bench.player( 1 )._combatHealth.getHealth(), kMatchTolerance );
+    SW_EXPECT_NEAR( 90.0f, bench.player( 0 )._healthMachine.getHealth(), kMatchTolerance );
+    SW_EXPECT_NEAR( 100.0f, bench.player( 1 )._healthMachine.getHealth(), kMatchTolerance );
     SW_EXPECT_NEAR( 1000.0f, bench.player( 0 )._loadout.getVest()._durability, kMatchTolerance );
 
     (void)bench._match.applyDamage( 0, 2, 200.0f, sw::BattleRoyaleHitZone::Limb );
@@ -394,7 +394,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ZoneDamageIgnoresArmorAndRevives )
     SW_REQUIRE_TRUE( bench._match.beginRevive( 1, 0 ) );
     bench.stepFor( 10 );
     SW_EXPECT_EQUAL( 1, bench.player( 0 )._revive.getParticipantCount() );
-    SW_EXPECT_NEAR( 40.0f, bench.player( 0 )._combatHealth.getDownedHealth(), kMatchTolerance ); // 출혈은 멈췄고 자기장만 깎는다
+    SW_EXPECT_NEAR( 40.0f, bench.player( 0 )._healthMachine.getDownedHealth(), kMatchTolerance ); // 출혈은 멈췄고 자기장만 깎는다
 }
 
 /**
@@ -448,7 +448,7 @@ SW_TEST_CASE( BattleRoyaleMatchTest, ZoneTieLosesByLowerHealth )
 {
     MatchBench bench;
     SW_REQUIRE_TRUE( bench.setUp( kLethalXML, 1 ) );
-    (void)bench._match.findPlayerMutable( 1 )->_combatHealth.applyDamage( 10.0f, 0.0f, -1 );
+    (void)bench._match.findPlayerMutable( 1 )->_healthMachine.applyDamage( 10.0f, 0.0f, -1 );
     bench.stepFor( 1 );
     SW_EXPECT_TRUE( bench.player( 1 ).isDead() );
     SW_EXPECT_TRUE( bench.player( 0 ).isAlive() );

@@ -214,12 +214,12 @@ namespace
         size_t computeLockOnOffset() const
         {
             const MechPilot& first = pilot( 0 );
-            Archive          combatHealth;
-            first._combatHealth.writeState( combatHealth );
+            Archive          healthMachine;
+            first._healthMachine.writeState( healthMachine );
             Archive boost;
             first._boost.writeState( boost );
             return computePilotHead() + kMechFieldParticipant + 4 + 4 * first._listParticipant.size() + kMechPositionsSize + kMechTimersSize + 2 * kMechInputSize +
-                   static_cast<size_t>( combatHealth.getSize() ) + static_cast<size_t>( boost.getSize() );
+                   static_cast<size_t>( healthMachine.getSize() ) + static_cast<size_t>( boost.getSize() );
         }
 
         /** @brief 같은 카탈로그의 새 판에 바이트를 읽습니다. */
@@ -254,8 +254,8 @@ SW_TEST_CASE_F( MechArenaRulesTest, ShotLocksOnAndHits )
     step( 1 );
     SW_EXPECT_EQUAL( 1, countEvents( MechArenaEvent::Kind::Fired ) );
     SW_EXPECT_EQUAL( 1, countEvents( MechArenaEvent::Kind::Hit ) );
-    SW_EXPECT_NEAR( 90.0f, pilot( 1 )._combatHealth.getHealth(), kMechTolerance );
-    SW_EXPECT_NEAR( 90.0f, pilot( 1 )._combatHealth.getPoise(), kMechTolerance );
+    SW_EXPECT_NEAR( 90.0f, pilot( 1 )._healthMachine.getHealth(), kMechTolerance );
+    SW_EXPECT_NEAR( 90.0f, pilot( 1 )._healthMachine.getPoise(), kMechTolerance );
     SW_EXPECT_NEAR( 11.0f, pilot( 1 )._position._z, kMechTolerance );
     SW_EXPECT_FALSE( pilot( 1 ).canAct() );
     SW_EXPECT_EQUAL( uint64( 2 ), pilot( 0 )._lockOn.getTarget() ); // 조종사 번호 + 1
@@ -324,7 +324,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, HomingSpecialFollowsItsTarget )
 
     _world.teleport( 1, float3{ 5.0f, 0.0f, 10.0f } );
     step( 40 );
-    SW_EXPECT_NEAR( 80.0f, pilot( 1 )._combatHealth.getHealth(), kMechTolerance );
+    SW_EXPECT_NEAR( 80.0f, pilot( 1 )._healthMachine.getHealth(), kMechTolerance );
     SW_EXPECT_TRUE( _world.getProjectiles().empty() );
 }
 
@@ -363,11 +363,11 @@ SW_TEST_CASE_F( MechArenaRulesTest, MeleeComboAdvancesAndKnocksDown )
     _world.setInput( 0, melee );
     step( 1 );
     SW_EXPECT_EQUAL( 0, pilot( 0 )._comboStage );
-    SW_EXPECT_NEAR( 100.0f, pilot( 1 )._combatHealth.getHealth(), kMechTolerance );
+    SW_EXPECT_NEAR( 100.0f, pilot( 1 )._healthMachine.getHealth(), kMechTolerance );
 
     _world.setInput( 0, hold );
     step( 1 );
-    SW_EXPECT_NEAR( 70.0f, pilot( 1 )._combatHealth.getHealth(), kMechTolerance ); // 15 x 근거리 근접 2
+    SW_EXPECT_NEAR( 70.0f, pilot( 1 )._healthMachine.getHealth(), kMechTolerance ); // 15 x 근거리 근접 2
     SW_EXPECT_TRUE( pilot( 1 )._staggerRemaining.isActive() );
 
     _world.setInput( 0, melee );
@@ -377,7 +377,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, MeleeComboAdvancesAndKnocksDown )
 
     _world.setInput( 0, hold );
     step( 1 );
-    SW_EXPECT_NEAR( 30.0f, pilot( 1 )._combatHealth.getHealth(), kMechTolerance ); // 20 x 2
+    SW_EXPECT_NEAR( 30.0f, pilot( 1 )._healthMachine.getHealth(), kMechTolerance ); // 20 x 2
     SW_EXPECT_TRUE( pilot( 1 )._state == MechPilotState::Down );
     SW_EXPECT_EQUAL( 1, countEvents( MechArenaEvent::Kind::Downed ) );
     SW_EXPECT_NEAR( 0.0f, pilot( 0 )._position._x, kMechTolerance );
@@ -401,20 +401,20 @@ SW_TEST_CASE_F( MechArenaRulesTest, DownThenWakeWithInvulnerability )
     SW_EXPECT_EQUAL( 1, countEvents( MechArenaEvent::Kind::Downed ) );
     _world.applyDamage( 0, 1, 1.0f, 100.0f, 0.0f ); // 누운 채 맞아도 다시 쓰러지지 않는다
     SW_EXPECT_EQUAL( 1, countEvents( MechArenaEvent::Kind::Downed ) );
-    SW_EXPECT_NEAR( 98.0f, pilot( 1 )._combatHealth.getHealth(), kMechTolerance );
+    SW_EXPECT_NEAR( 98.0f, pilot( 1 )._healthMachine.getHealth(), kMechTolerance );
 
     step( 21 );
     SW_EXPECT_TRUE( pilot( 1 )._state == MechPilotState::Active );
     SW_EXPECT_EQUAL( 1, countEvents( MechArenaEvent::Kind::WokeUp ) );
-    SW_EXPECT_TRUE( pilot( 1 )._combatHealth.isInvulnerable() );
-    SW_EXPECT_NEAR( 100.0f, pilot( 1 )._combatHealth.getPoise(), kMechTolerance );
+    SW_EXPECT_TRUE( pilot( 1 )._healthMachine.isInvulnerable() );
+    SW_EXPECT_NEAR( 100.0f, pilot( 1 )._healthMachine.getPoise(), kMechTolerance );
     _world.applyDamage( 0, 1, 10.0f, 0.0f, 0.0f );
-    SW_EXPECT_NEAR( 98.0f, pilot( 1 )._combatHealth.getHealth(), kMechTolerance );
+    SW_EXPECT_NEAR( 98.0f, pilot( 1 )._healthMachine.getHealth(), kMechTolerance );
     SW_EXPECT_EQUAL( 2, countEvents( MechArenaEvent::Kind::Hit ) );
 
     SW_REQUIRE_TRUE( openDuel( "gunner", "sniper" ) );
     _world.applyDamage( 0, 1, 0.0f, 30.0f, 0.0f );
-    SW_EXPECT_NEAR( 40.0f, pilot( 1 )._combatHealth.getPoise(), kMechTolerance ); // 원거리 보정 x2
+    SW_EXPECT_NEAR( 40.0f, pilot( 1 )._healthMachine.getPoise(), kMechTolerance ); // 원거리 보정 x2
 }
 
 /**
@@ -545,7 +545,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, ManualSkillAppliesThenEndsAndCoolsDown )
     SW_EXPECT_EQUAL( 1, countEvents( MechArenaEvent::Kind::SkillStarted ) );
     SW_EXPECT_NEAR( 2.0f, _world.computeModifier( 0, defense ), kMechTolerance );
     _world.applyDamage( 1, 0, 10.0f, 0.0f, 0.0f );
-    SW_EXPECT_NEAR( 95.0f, pilot( 0 )._combatHealth.getHealth(), kMechTolerance );
+    SW_EXPECT_NEAR( 95.0f, pilot( 0 )._healthMachine.getHealth(), kMechTolerance );
 
     _world.setInput( 0, MechInput{} );
     step( 21 );
@@ -575,7 +575,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, TriggeredSkillsAndSlotLimit )
     SW_EXPECT_EQUAL( 1, countEvents( MechArenaEvent::Kind::SkillStarted ) );
     SW_EXPECT_NEAR( 2.0f, _world.computeModifier( 0, hashed_string( "attack" ) ), kMechTolerance );
     _world.applyDamage( 0, 1, 10.0f, 0.0f, 0.0f );
-    SW_EXPECT_NEAR( 80.0f, pilot( 1 )._combatHealth.getHealth(), kMechTolerance ); // 10 x 2
+    SW_EXPECT_NEAR( 80.0f, pilot( 1 )._healthMachine.getHealth(), kMechTolerance ); // 10 x 2
 
     _world.applyDamage( 1, 0, 1.0f, 100.0f, 0.0f );
     SW_EXPECT_EQUAL( 2, countEvents( MechArenaEvent::Kind::SkillStarted ) ); // 다운 스킬
@@ -609,7 +609,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, GaugeRespawnsThenEndsTheMatch )
 
     step( 12 );
     SW_EXPECT_TRUE( pilot( 1 )._state == MechPilotState::Active );
-    SW_EXPECT_NEAR( 100.0f, pilot( 1 )._combatHealth.getHealth(), kMechTolerance );
+    SW_EXPECT_NEAR( 100.0f, pilot( 1 )._healthMachine.getHealth(), kMechTolerance );
     SW_EXPECT_NEAR( 0.0f, pilot( 1 )._position._x, kMechTolerance );
     SW_EXPECT_EQUAL( 1, countEvents( MechArenaEvent::Kind::Respawned ) );
     SW_EXPECT_EQUAL( 1, countEvents( MechArenaEvent::Kind::SkillStarted ) );
@@ -667,7 +667,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, EliminatedTeamRetiresWhileTheMatchGoesOn )
     SW_EXPECT_TRUE( pilot( 2 )._state == MechPilotState::Retired );
     SW_EXPECT_TRUE( pilot( 3 )._state == MechPilotState::Retired );
     _world.applyDamage( 0, 3, 10.0f, 0.0f, 0.0f );
-    SW_EXPECT_NEAR( 100.0f, pilot( 3 )._combatHealth.getHealth(), kMechTolerance );
+    SW_EXPECT_NEAR( 100.0f, pilot( 3 )._healthMachine.getHealth(), kMechTolerance );
 }
 
 /**
@@ -727,7 +727,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, NothingRunsBeforeStartAndUnknownPilotsAreIgn
     _world.update( 1.0f );
     SW_EXPECT_EQUAL( uint32( 0 ), _world.getTick() );
     kill( 0, 1 );
-    SW_EXPECT_NEAR( 100.0f, pilot( 1 )._combatHealth.getHealth(), kMechTolerance );
+    SW_EXPECT_NEAR( 100.0f, pilot( 1 )._healthMachine.getHealth(), kMechTolerance );
     SW_EXPECT_TRUE( pilot( 1 )._state == MechPilotState::Waiting );
 
     _world.start();

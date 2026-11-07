@@ -1,6 +1,6 @@
 /**
  * @file BattleRoyaleMatch.h
- * @brief 배틀로얄 한 판을 진행합니다. 팀과 순위(기반 MatchState: 부활 없음, 마지막 팀 승리), 기절(기반 CombatHealth), 팀원 부활 진행(기반 InteractionProgress),
+ * @brief 배틀로얄 한 판을 진행합니다. 팀과 순위(기반 MatchState: 부활 없음, 마지막 팀 승리), 기절(기반 HealthStateMachine), 팀원 부활 진행(기반 InteractionProgress),
  *        팀 전원 기절 시 전멸 처리, 자기장 피해, 보급 상자, 남은 인원과 킬 피드 알림을 다룹니다.
  */
 #pragma once
@@ -18,7 +18,7 @@
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleGear.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleLoot.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleZone.h"
-#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
+#include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionProgress.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
@@ -34,7 +34,7 @@ namespace sw
     /** @brief 한 사람입니다. 번호는 `MatchState` 참가자 번호와 같습니다. */
     struct BattleRoyalePlayer
     {
-        CombatHealth        _combatHealth{};
+        HealthStateMachine  _healthMachine{};
         InteractionProgress _revive{}; ///< 이 사람을 살리는 진행(팀원이 붙는다)
         Inventory           _inventory{};
         BattleRoyaleLoadout _loadout{};
@@ -45,9 +45,9 @@ namespace sw
         int32               _downedBy{ -1 };       ///< 기절시킨 사람(출혈사와 전멸 처치의 귀속 대상)
         int32               _revivingTarget{ -1 }; ///< 지금 살리고 있는 팀원
 
-        bool isAlive() const { return _combatHealth.isAlive(); }
-        bool isDowned() const { return _combatHealth.isDowned(); }
-        bool isDead() const { return _combatHealth.isDead(); }
+        bool isAlive() const { return _healthMachine.isAlive(); }
+        bool isDowned() const { return _healthMachine.isDowned(); }
+        bool isDead() const { return _healthMachine.isDead(); }
     };
 } // namespace sw
 
@@ -95,9 +95,9 @@ namespace sw
      * @class BattleRoyaleMatch
      * @brief 판의 규칙만 돌립니다. 몸, 총알, 화면은 게임이 처리하고, 맞은 피해와 위치를 이 클래스에 알려 줍니다. 카탈로그 세 개는 빌려 씁니다.
      * @details 고정 걸음(`kFixedStep`)마다 자기장, 원 밖 피해(방어구 무시, 귀속 없음), 체력(출혈), 부활 진행, 보급 상자 순서로 처리한다.
-     *          - 피해는 방어구(맞은 부위), `CombatHealth` 순서로 들어간다. 체력이 0이면 기절하고, 팀에 서 있는 사람이 없으면 기절한 팀원이 모두 죽는다(팀 전멸).
+     *          - 피해는 방어구(맞은 부위), `HealthStateMachine` 순서로 들어간다. 체력이 0이면 기절하고, 팀에 서 있는 사람이 없으면 기절한 팀원이 모두 죽는다(팀 전멸).
      *          - 부활은 팀원이 `beginRevive` 로 붙는 `InteractionProgress` 다. 여럿이 붙으면 빨라지고, 모두 떠나거나 기절한 쪽이 맞으면 처음부터 다시 시작한다.
-     *            살리는 동안 출혈이 멈추고, 다 차면 `CombatHealth` 가 살아난다.
+     *            살리는 동안 출혈이 멈추고, 다 차면 `HealthStateMachine` 가 살아난다.
      *          - 죽음은 `MatchState::reportKill` 로 알린다. 부활이 없어서 바로 탈락하고, 팀이 다 떨어지면 남은 팀 수에 1을 더한 값이 순위가 되며, 한 팀만 남으면 그 팀이 이긴다.
      *          - 출혈사, 전멸, 기절 뒤 자기장 사망은 기절시킨 사람의 처치로 센다.
      *          시드가 같고 같은 순서로 호출하면 같은 판이 나온다.
@@ -156,7 +156,7 @@ namespace sw
         /** @brief 카탈로그 설정으로 사람 하나를 만듭니다(체력, 부활, 장비, 가방). 체력 설정이 범위 밖이라 거절되면 false 입니다. */
         [[nodiscard]] bool initializePlayer( BattleRoyalePlayer& outPlayer, int32 team, int32 participant ) const;
         void               stepFixed( float32 deltaTime );
-        void               processCombatHealth( int32 player );
+        void               processHealthMachine( int32 player );
         void               handleDowned( int32 player, int32 instigator );
         void               handleDeath( int32 player, int32 instigator );
         void               interruptRevive( int32 target, bool bNotify );

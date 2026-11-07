@@ -148,23 +148,23 @@ namespace sw
         // 다른 오브젝트(말 AI · 좌석)를 바꾸는 일과 UI 바인딩은 틱 뒤에 한다.
         const bool bWhistle = pPlayerPawn->wasButtonTriggered( pPlayerPawn->findButton( _whistleButton ) );
         if ( bWhistle )
-            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& director )
-            { director.whistleHorses(); } );
+            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& gameMode )
+            { gameMode.whistleHorses(); } );
         const bool bUse = pPlayerPawn->wasButtonTriggered( pPlayerPawn->findButton( _useButton ) );
         if ( bUse )
-            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& director )
-            { director.useDeed(); } );
+            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& gameMode )
+            { gameMode.useDeed(); } );
         const bool bAutoMount = isAutoPlayOn() && _bAutoMountRequested == SW_FALSE;
         if ( bAutoMount )
         {
             _bAutoMountRequested = SW_TRUE;
-            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& director )
-            { director.mountNearestHorse(); } );
+            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& gameMode )
+            { gameMode.mountNearestHorse(); } );
         }
-        pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& director )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& gameMode )
         {
-            director.updateLawSight();
-            director.updateHUD();
+            gameMode.updateLawSight();
+            gameMode.updateHUD();
         } );
     }
 
@@ -316,17 +316,17 @@ namespace sw
             [[nodiscard]] static bool readOutlawStatus( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
                 const GameObject*                pTarget   = query.findTargetObject();
-                const WildWestGameModeComponent* pDirector = pTarget != nullptr ? pTarget->getComponent<WildWestGameModeComponent>() : nullptr;
-                if ( pDirector == nullptr )
+                const WildWestGameModeComponent* pGameMode = pTarget != nullptr ? pTarget->getComponent<WildWestGameModeComponent>() : nullptr;
+                if ( pGameMode == nullptr )
                 {
-                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "Wild West Director" ) );
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "Wild West Game Mode" ) );
                     return false;
                 }
-                outValue.setText( string_view{ pDirector->formatOutlawStatus() } );
+                outValue.setText( string_view{ pGameMode->formatOutlawStatus() } );
                 return true;
             }
         };
     } // namespace
 
-    SW_AUTOMATION_QUERY_WATCH( wildWestOutlawStatus, "WildWest.OutlawStatus", "Outlaw line the director on target writes to the HUD (empty when nothing happened)", &WildWestWatchesInternal::readOutlawStatus, true, false );
+    SW_AUTOMATION_QUERY_WATCH( wildWestOutlawStatus, "WildWest.OutlawStatus", "Outlaw line the game mode on target writes to the HUD (empty when nothing happened)", &WildWestWatchesInternal::readOutlawStatus, true, false );
 } // namespace sw

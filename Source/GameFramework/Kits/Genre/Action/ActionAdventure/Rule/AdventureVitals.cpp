@@ -35,7 +35,7 @@ namespace sw
         }
 
         // 따로 만들어 모두 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
-        CombatHealthSettings healthSettings;
+        HealthSettings healthSettings;
         healthSettings._maxHealth = static_cast<float32>( settings._startHeartCount * kQuartersPerHeart );
         ResourceGaugeSettings magicSettings;
         magicSettings._max       = settings._magicMax;
@@ -45,13 +45,13 @@ namespace sw
         staminaSettings._regenRate        = settings._staminaRegenRate;
         staminaSettings._regenDelay       = settings._staminaRegenDelay;
         staminaSettings._exhaustThreshold = settings._staminaRecoverLevel;
-        CombatHealth  health;
-        ResourceGauge magic;
-        ResourceGauge stamina;
-        const bool    bHealthAccepted  = health.initialize( healthSettings );
-        const bool    bMagicAccepted   = magic.initialize( magicSettings );
-        const bool    bStaminaAccepted = stamina.initialize( staminaSettings );
-        const bool    bAllAccepted     = bHealthAccepted && bMagicAccepted && bStaminaAccepted;
+        HealthStateMachine health;
+        ResourceGauge      magic;
+        ResourceGauge      stamina;
+        const bool         bHealthAccepted  = health.initialize( healthSettings );
+        const bool         bMagicAccepted   = magic.initialize( magicSettings );
+        const bool         bStaminaAccepted = stamina.initialize( staminaSettings );
+        const bool         bAllAccepted     = bHealthAccepted && bMagicAccepted && bStaminaAccepted;
         if ( bAllAccepted == false )
             return false;
 
@@ -67,7 +67,7 @@ namespace sw
 
     bool AdventureVitals::resetHealth()
     {
-        CombatHealthSettings health;
+        HealthSettings health;
         health._maxHealth = static_cast<float32>( _heartCount * kQuartersPerHeart );
         return _health.initialize( health );
     }
@@ -76,7 +76,7 @@ namespace sw
     {
         if ( quarters <= 0 )
             return false;
-        const CombatHealthDamageResult result = _health.applyDamage( static_cast<float32>( quarters ) );
+        const HealthDamageResult result = _health.applyDamage( static_cast<float32>( quarters ) );
         return result._bDied == SW_TRUE;
     }
 

@@ -61,20 +61,20 @@ namespace sw
             static vector<hashed_string> makeSeasons() { return { hashed_string( "Spring" ), hashed_string( "Summer" ), hashed_string( "Fall" ), hashed_string( "Winter" ) }; }
         };
 
-        [[nodiscard]] bool readFarmerX( const FarmGameModeComponent& director, float64& outValue )
+        [[nodiscard]] bool readFarmerX( const FarmGameModeComponent& gameMode, float64& outValue )
         {
-            outValue = static_cast<float64>( director.getPlayerPosition()._x );
+            outValue = static_cast<float64>( gameMode.getPlayerPosition()._x );
             return true;
         }
 
-        [[nodiscard]] bool readTilledCount( const FarmGameModeComponent& director, float64& outValue )
+        [[nodiscard]] bool readTilledCount( const FarmGameModeComponent& gameMode, float64& outValue )
         {
             int32 tilledCount = 0;
             for ( int32 y = 0; y < FarmGameModeComponent::kFieldHeight; ++y )
             {
                 for ( int32 x = 0; x < FarmGameModeComponent::kFieldWidth; ++x )
                 {
-                    const FarmTile* pTile = director.getField().findTile( x, y );
+                    const FarmTile* pTile = gameMode.getField().findTile( x, y );
                     tilledCount += pTile != nullptr && pTile->_bTilled != SW_FALSE ? 1 : 0;
                 }
             }
@@ -82,9 +82,9 @@ namespace sw
             return true;
         }
 
-        [[nodiscard]] bool readCropCount( const FarmGameModeComponent& director, float64& outValue )
+        [[nodiscard]] bool readCropCount( const FarmGameModeComponent& gameMode, float64& outValue )
         {
-            outValue = director.getField().getCropCount();
+            outValue = gameMode.getField().getCropCount();
             return true;
         }
 
@@ -345,20 +345,20 @@ namespace sw
         // 출하함과 가게는 씬에 놓인 오브젝트다(필수 참조). 에디터에서 옮기면 농부가 서는 위치가 따라온다.
         if ( tryGetObjectPosition( _shippingBin, _shippingBinPosition ) == false || tryGetObjectPosition( _shop, _shopPosition ) == false )
         {
-            SW_LOG_ERROR_ID( "FarmGameMode.DirectorShippingBinShop", "[Farm] the director's Shipping Bin and Shop must point at objects in the scene - the farm cannot start" );
+            SW_LOG_ERROR_ID( "FarmGameMode.DirectorShippingBinShop", "[Farm] the game mode's Shipping Bin and Shop must point at objects in the scene - the farm cannot start" );
             return false;
         }
         // 작물 모델 표는 씬 데이터다. 기본 자라는 모델이 없으면 뷰가 고를 모델이 없다 — 시작하지 않는다.
         if ( _listDefaultGrowingModel.empty() )
         {
-            SW_LOG_ERROR_ID( "FarmGameMode.DirectorDefaultGrowingModels", "[Farm] the director's Default Growing Models is empty - the farm cannot start" );
+            SW_LOG_ERROR_ID( "FarmGameMode.DirectorDefaultGrowingModels", "[Farm] the game mode's Default Growing Models is empty - the farm cannot start" );
             return false;
         }
         for ( const FarmCropModel& model : _listCropModel )
         {
             if ( _pCropCatalog->findCrop( model._cropID ) == nullptr )
             {
-                SW_LOG_ERROR_ID( "FarmGameMode.DirectorCropModelsNames", "[Farm] the director's Crop Models names crop '%#', which %# does not have - the farm cannot start", model._cropID.c_str(), _cropDataPath.c_str() );
+                SW_LOG_ERROR_ID( "FarmGameMode.DirectorCropModelsNames", "[Farm] the game mode's Crop Models names crop '%#', which %# does not have - the farm cannot start", model._cropID.c_str(), _cropDataPath.c_str() );
                 return false;
             }
         }
@@ -465,7 +465,7 @@ namespace sw
     void FarmGameModeComponent::spawnField( GameObjectManager& manager )
     {
         // 타일마다 흙과 작물을 하나씩 둔다. 각 뷰가 밭의 같은 타일을 따라 모습을 맞춘다(PostUpdate).
-        const GameObjectHandle director = getOwner()->getHandle();
+        const GameObjectHandle gameMode = getOwner()->getHandle();
         for ( int32 y = 0; y < kFieldHeight; ++y )
         {
             for ( int32 x = 0; x < kFieldWidth; ++x )
@@ -487,10 +487,10 @@ namespace sw
                     pCropMesh->setLocalPosition( center );
                 FarmSoilComponent* pSoilView = pSoil->getComponent<FarmSoilComponent>();
                 if ( pSoilView != nullptr )
-                    pSoilView->assignTile( director, tileIndex );
+                    pSoilView->assignTile( gameMode, tileIndex );
                 FarmCropComponent* pCropView = pCrop->getComponent<FarmCropComponent>();
                 if ( pCropView != nullptr )
-                    pCropView->assignTile( director, tileIndex );
+                    pCropView->assignTile( gameMode, tileIndex );
             }
         }
     }

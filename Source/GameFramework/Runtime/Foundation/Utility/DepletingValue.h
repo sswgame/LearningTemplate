@@ -2,7 +2,7 @@
  * @file DepletingValue.h
  * @brief 깎여서 0 에 닿는 수치(체력 · 내구도 · 정신력)를 깎는 한 곳입니다. 칸은 그대로 `int32` · `float32` 입니다.
  * @details 칸을 감싸는 형식으로 두지 않습니다 — `_hp` 는 리플렉션 칸 · 상태 바이트 · 상수 비교에 그대로 쓰여, 형식을 바꾸면 세이브와 스키마가 흔들립니다. 깎는 규칙만 한 벌로 둡니다.
- *          언리얼 GAS 어트리뷰트의 고정(clamp) 자리이지만 수정자 층은 없습니다(기억에 의존). 실드 · 재생 · 기절까지 필요하면 `CombatHealth` 를 씁니다.
+ *          언리얼 GAS 어트리뷰트의 고정(clamp) 자리이지만 수정자 층은 없습니다(기억에 의존). 실드 · 재생 · 기절까지 필요하면 `HealthStateMachine` 을 씁니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

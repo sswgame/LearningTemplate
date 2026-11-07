@@ -22,7 +22,7 @@ namespace sw
     {
         struct AsymmetricHorrorMatchInternal
         {
-            static constexpr float32 kNeverReviveTime = 1.0e9f; ///< 빈사 회복은 치료 진행이 정하므로, CombatHealth 의 부활 시계는 멈춤용으로만 쓴다
+            static constexpr float32 kNeverReviveTime = 1.0e9f; ///< 빈사 회복은 치료 진행이 정하므로, HealthStateMachine 의 부활 시계는 멈춤용으로만 쓴다
             static constexpr uint32  kHealSeedMix     = 0x85EBCA6Bu;
             static constexpr uint32  kGateSeedMix     = 0xC2B2AE35u;
             static constexpr float32 kTiny            = 1.0e-5f;
@@ -132,14 +132,14 @@ namespace sw
         const AsymmetricHorrorRules& rules = _pCatalog->getRules();
         const int32                  index = static_cast<int32>( _listSurvivor.size() );
 
-        CombatHealthSettings combatHealth;
-        combatHealth._maxHealth               = 2.0f;
-        combatHealth._bDownedEnabled          = SW_TRUE;
-        combatHealth._downedHealth            = rules._bleedoutTime;
-        combatHealth._bleedoutRate            = 1.0f;
-        combatHealth._reviveTime              = AsymmetricHorrorMatchInternal::kNeverReviveTime;
-        combatHealth._invulnerableAfterRevive = 0.0f;
-        combatHealth._bDamageInterruptsRevive = SW_FALSE;
+        HealthSettings healthMachine;
+        healthMachine._maxHealth               = 2.0f;
+        healthMachine._bDownedEnabled          = SW_TRUE;
+        healthMachine._downedHealth            = rules._bleedoutTime;
+        healthMachine._bleedoutRate            = 1.0f;
+        healthMachine._reviveTime              = AsymmetricHorrorMatchInternal::kNeverReviveTime;
+        healthMachine._invulnerableAfterRevive = 0.0f;
+        healthMachine._bDamageInterruptsRevive = SW_FALSE;
 
         InteractionConfig heal;
         heal._duration             = rules._heal._time;
@@ -151,7 +151,7 @@ namespace sw
         heal._maxParticipants      = rules._heal._maxHealers;
 
         AsymmetricHorrorSurvivor survivor;
-        if ( survivor._combatHealth.initialize( combatHealth ) == false )
+        if ( survivor._healthMachine.initialize( healthMachine ) == false )
             return -1;
         if ( survivor._healing.initialize( heal, &_pCatalog->getJudge(), GameRandom::deriveSeed( _settings._seed, static_cast<uint32>( index + 1 ) * AsymmetricHorrorMatchInternal::kHealSeedMix ) ) == false )
             return -1;
@@ -436,7 +436,7 @@ namespace sw
         if ( target._healing.join( static_cast<uint32>( healer ) ) == false )
             return false;
         if ( target._state == SurvivorState::Dying )
-            (void)target._combatHealth.startRevive( healer, 0.0f ); // 치료받는 동안 출혈이 멈춘다
+            (void)target._healthMachine.startRevive( healer, 0.0f ); // 치료받는 동안 출혈이 멈춘다
         doctor._activity       = SurvivorActivity::Healing;
         doctor._activityTarget = patient;
         return true;
@@ -693,10 +693,10 @@ namespace sw
         leaveActivity( victim );
         _killer._attackCooldown.start( def._hitCooldown );
         _match.reportDamage( _killer._participant, target._participant, 1.0f );
-        (void)target._combatHealth.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
-        target._combatHealth.discardEvents();
+        (void)target._healthMachine.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
+        target._healthMachine.discardEvents();
         awardScore( _killer._score, "Hit", 1.0f );
-        if ( target._combatHealth.isDowned() )
+        if ( target._healthMachine.isDowned() )
         {
             target._state = SurvivorState::Dying;
             releaseHealers( victim, true );
@@ -718,7 +718,7 @@ namespace sw
         if ( target._state != SurvivorState::Dying || isNear( _killer._position, target._position, _pCatalog->getRules()._interactRange ) == false )
             return false;
         releaseHealers( survivor, true );
-        target._combatHealth.stopRevive();
+        target._healthMachine.stopRevive();
         target._state          = SurvivorState::Carried;
         target._wiggleProgress = 0.0f;
         target._position       = _killer._position;
@@ -820,11 +820,11 @@ namespace sw
         AsymmetricHorrorSurvivor& target = _listSurvivor[static_cast<size_t>( occupant )];
         leaveActivity( occupant );
         releaseHealers( occupant, true );
-        while ( target._combatHealth.isAlive() )
+        while ( target._healthMachine.isAlive() )
         {
-            (void)target._combatHealth.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
+            (void)target._healthMachine.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
         }
-        target._combatHealth.discardEvents();
+        target._healthMachine.discardEvents();
         target._state          = SurvivorState::Carried;
         target._wiggleProgress = 0.0f;
         target._position       = _killer._position;
@@ -934,18 +934,18 @@ namespace sw
         }
         else if ( target._state == SurvivorState::Injured )
         {
-            (void)target._combatHealth.heal( 1.0f );
+            (void)target._healthMachine.heal( 1.0f );
             target._state = SurvivorState::Healthy;
         }
-        target._combatHealth.discardEvents();
+        target._healthMachine.discardEvents();
         pushEvent( AsymmetricHorrorEvent::Kind::Healed, -1, patient, static_cast<float32>( target._state ), target._position );
     }
 
     void AsymmetricHorrorMatch::restoreInjured( AsymmetricHorrorSurvivor& survivor )
     {
-        survivor._combatHealth.respawn();
-        (void)survivor._combatHealth.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
-        survivor._combatHealth.discardEvents();
+        survivor._healthMachine.respawn();
+        (void)survivor._healthMachine.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 pollEvents 가 이벤트로 읽는다
+        survivor._healthMachine.discardEvents();
         survivor._state          = SurvivorState::Injured;
         survivor._wiggleProgress = 0.0f;
         survivor._bWiggling      = SW_FALSE;
@@ -960,8 +960,8 @@ namespace sw
         releaseHealers( survivorIndex, true );
         if ( _killer._carrying == survivorIndex )
             _killer._carrying = -1;
-        survivor._combatHealth.kill( -1 );
-        survivor._combatHealth.discardEvents();
+        survivor._healthMachine.kill( -1 );
+        survivor._healthMachine.discardEvents();
         survivor._state    = SurvivorState::Sacrificed;
         survivor._bBledOut = bBledOut ? SW_TRUE : SW_FALSE;
         _match.reportKill( survivor._participant, _killer._participant );
@@ -989,7 +989,7 @@ namespace sw
                     AsymmetricHorrorSurvivor& patient = _listSurvivor[static_cast<size_t>( target )];
                     (void)patient._healing.leave( static_cast<uint32>( survivorIndex ) );
                     if ( patient._healing.getParticipantCount() == 0 )
-                        patient._combatHealth.stopRevive(); // 아무도 치료하지 않으면 다시 피를 흘린다
+                        patient._healthMachine.stopRevive(); // 아무도 치료하지 않으면 다시 피를 흘린다
                 }
                 break;
             }
@@ -1077,9 +1077,9 @@ namespace sw
         const bool bNotSurvivorHealthState = survivor._state != SurvivorState::Healthy && survivor._state != SurvivorState::Injured && survivor._state != SurvivorState::Dying;
         if ( bNotSurvivorHealthState )
             return;
-        if ( survivor._combatHealth.isDowned() )
+        if ( survivor._healthMachine.isDowned() )
             survivor._state = SurvivorState::Dying;
-        else if ( survivor._combatHealth.getHealth() >= 2.0f )
+        else if ( survivor._healthMachine.getHealth() >= 2.0f )
             survivor._state = SurvivorState::Healthy;
         else
             survivor._state = SurvivorState::Injured;
@@ -1155,7 +1155,7 @@ namespace sw
             entry._position       = survivor._position;
             entry._hookTimer      = survivor._hookTimer;
             entry._healProgress   = survivor._healing.getProgress();
-            entry._bleedout       = survivor._combatHealth.isDowned() ? survivor._combatHealth.getDownedHealth() : 0.0f;
+            entry._bleedout       = survivor._healthMachine.isDowned() ? survivor._healthMachine.getDownedHealth() : 0.0f;
             entry._wiggleProgress = survivor._wiggleProgress;
             entry._hookStage      = survivor._hookStage;
             entry._state          = survivor._state;
@@ -1308,29 +1308,29 @@ namespace sw
         vector<int32> listHealer( _listSurvivor.size(), 0 );
         for ( int32 index = 0; index < getSurvivorCount(); ++index )
         {
-            const AsymmetricHorrorSurvivor& survivor     = _listSurvivor[static_cast<size_t>( index )];
-            const CombatHealth&             combatHealth = survivor._combatHealth;
-            bool                            bBodyValid   = false;
+            const AsymmetricHorrorSurvivor& survivor      = _listSurvivor[static_cast<size_t>( index )];
+            const HealthStateMachine&       healthMachine = survivor._healthMachine;
+            bool                            bBodyValid    = false;
             switch ( survivor._state )
             {
                 case SurvivorState::Healthy:
-                    bBodyValid = combatHealth.isAlive() && combatHealth.getHealth() >= 2.0f;
+                    bBodyValid = healthMachine.isAlive() && healthMachine.getHealth() >= 2.0f;
                     break;
                 case SurvivorState::Injured:
-                    bBodyValid = combatHealth.isAlive() && combatHealth.getHealth() < 2.0f;
+                    bBodyValid = healthMachine.isAlive() && healthMachine.getHealth() < 2.0f;
                     break;
                 case SurvivorState::Dying:
                 case SurvivorState::Carried:
-                    bBodyValid = combatHealth.isDowned();
+                    bBodyValid = healthMachine.isDowned();
                     break;
                 case SurvivorState::Hooked:
-                    bBodyValid = combatHealth.isDowned() && 1 <= survivor._hookStage && survivor._hookStage < rules._hook._stages;
+                    bBodyValid = healthMachine.isDowned() && 1 <= survivor._hookStage && survivor._hookStage < rules._hook._stages;
                     break;
                 case SurvivorState::Sacrificed:
-                    bBodyValid = combatHealth.isDead();
+                    bBodyValid = healthMachine.isDead();
                     break;
                 case SurvivorState::Escaped:
-                    bBodyValid = combatHealth.isAlive();
+                    bBodyValid = healthMachine.isAlive();
                     break;
             }
             const MatchParticipant* pEntry        = _match.findParticipant( survivor._participant );
@@ -1434,7 +1434,7 @@ namespace sw
 
     void AsymmetricHorrorMatch::serializeSurvivor( StateIO& io, AsymmetricHorrorSurvivor& survivor ) const
     {
-        io.value( survivor._combatHealth );
+        io.value( survivor._healthMachine );
         io.value( survivor._healing );
         io.value( survivor._score );
         io.value( survivor._lastMoveSpeed );
@@ -1639,9 +1639,9 @@ namespace sw
             case SurvivorState::Injured:
             case SurvivorState::Dying:
             {
-                survivor._combatHealth.update( deltaTime );
-                survivor._combatHealth.discardEvents();
-                if ( survivor._combatHealth.isDead() )
+                survivor._healthMachine.update( deltaTime );
+                survivor._healthMachine.discardEvents();
+                if ( survivor._healthMachine.isDead() )
                 {
                     sacrifice( survivorIndex, true ); // 출혈사
                     return;

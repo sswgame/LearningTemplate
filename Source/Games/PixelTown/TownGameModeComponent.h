@@ -39,7 +39,7 @@ namespace sw
      * @details 걸음 상태(칸, 바라보는 방향, 걷는 중)는 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷에 실려 핫 리로드와 세이브를 넘긴다.
      *          대화는 저장하지 않는다(복원하면 대화 밖에서 시작한다).
      */
-    REFLECT( Category = "Overworld", DisplayName = "Town Director", Tooltip = "Runs the tile-step town: hero walking, tile collision and talking to villagers" )
+    REFLECT( Category = "Overworld", DisplayName = "Town Game Mode", Tooltip = "Runs the tile-step town: hero walking, tile collision and talking to villagers" )
     class TownGameModeComponent : public GameModeComponent
     {
     public:

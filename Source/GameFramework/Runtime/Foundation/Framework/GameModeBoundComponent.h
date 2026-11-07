@@ -21,7 +21,7 @@ namespace sw
      * @class GameModeBoundComponent
      * @brief 게임 모드가 있는 오브젝트의 핸들을 들고, 매 프레임 찾아 씁니다. 포인터를 보관하지 않습니다(게임 모드가 먼저 사라질 수 있다).
      */
-    REFLECT( Abstract, Category = "Framework", DisplayName = "Game Mode Bound", Tooltip = "Base of the components that read a game director through a handle" )
+    REFLECT( Abstract, Category = "Framework", DisplayName = "Game Mode Bound", Tooltip = "Base of the components that read a game mode through a handle" )
     class SW_GF_API GameModeBoundComponent : public Component
     {
     public:

@@ -21,7 +21,7 @@ namespace sw
      *          낮의 비율(해 뜸 0 → 해 짐 1)로 높이 곡선 sin(비율 × π)을 만들고, 세기 · 높이각은 지평선 값과 한낮 값 사이를 그 높이로, 방위각은 아침 값과
      *          저녁 값 사이를 비율로 잇는다. 곡선의 수치는 모두 PROPERTY(씬 데이터)다.
      */
-    REFLECT( Category = "Environment", DisplayName = "Daylight", Tooltip = "Drives the directional light on this object from the game director clock and weather" )
+    REFLECT( Category = "Environment", DisplayName = "Daylight", Tooltip = "Drives the directional light on this object from the game mode clock and weather" )
     class SW_GF_API DaylightComponent : public Component
     {
     public:
@@ -34,7 +34,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
     private:
-        PROPERTY( Category = "Sun", DisplayName = "Director", Tooltip = "Object with the game director that answers the time of day" )
+        PROPERTY( Category = "Sun", DisplayName = "Game Mode", Tooltip = "Object with the game mode that answers the time of day" )
         GameObjectHandle _gameMode;
         PROPERTY( Category = "Sun", DisplayName = "Rain Dimming", Tooltip = "Intensity factor while it rains or snows", Min = 0.0, Max = 1.0 )
         float32 _rainDimming;

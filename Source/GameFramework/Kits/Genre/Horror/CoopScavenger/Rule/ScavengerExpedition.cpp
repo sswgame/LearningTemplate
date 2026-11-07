@@ -80,11 +80,11 @@ namespace sw
             _pWallet->setBalance( data._pCatalog->getCurrency(), data._pCatalog->getQuotaSettings()._startCredits );
         if ( data._pCatalog->getMoons().empty() == false )
             _pMoon = &data._pCatalog->getMoons().front();
-        CombatHealthSettings crewCombatHealth;
-        crewCombatHealth._maxHealth = data._pCatalog->getCrewHealth();
+        HealthSettings crewHealthMachine;
+        crewHealthMachine._maxHealth = data._pCatalog->getCrewHealth();
         for ( ScavengerCrewMember& member : _listCrew )
         {
-            if ( member._combatHealth.initialize( crewCombatHealth ) == false )
+            if ( member._healthMachine.initialize( crewHealthMachine ) == false )
                 return false;
         }
         resetCrew();
@@ -166,7 +166,7 @@ namespace sw
         for ( ScavengerCrewMember& member : _listCrew )
         {
             if ( member.isDead() == false )
-                member._combatHealth.update( deltaTime );
+                member._healthMachine.update( deltaTime );
         }
         if ( _pMoon->_bCompany == false )
         {
@@ -264,7 +264,7 @@ namespace sw
         ScavengerCrewMember& member = _listCrew[static_cast<size_t>( player )];
         if ( member.isDead() )
             return 0.0f;
-        const CombatHealthDamageResult result = member._combatHealth.applyDamage( amount );
+        const HealthDamageResult result = member._healthMachine.applyDamage( amount );
         if ( result._bDied == SW_TRUE )
             handleDeath( player, false );
         return result._healthDamage;
@@ -275,7 +275,7 @@ namespace sw
         const bool bCannotKill = _phase != ScavengerPhase::Landed || isValidPlayer( player ) == false || _listCrew[static_cast<size_t>( player )].isDead();
         if ( bCannotKill )
             return;
-        _listCrew[static_cast<size_t>( player )]._combatHealth.kill();
+        _listCrew[static_cast<size_t>( player )]._healthMachine.kill();
         handleDeath( player, false );
     }
 
@@ -446,7 +446,7 @@ namespace sw
                 }
                 continue;
             }
-            member._combatHealth.kill();
+            member._healthMachine.kill();
             handleDeath( static_cast<int32>( index ), true );
         }
         pushEvent( ScavengerEvent::Kind::ShipDeparted, -1, bAuto ? 1 : 0 );
@@ -528,7 +528,7 @@ namespace sw
             return;
         for ( ScavengerCrewMember& member : _listCrew )
         {
-            member._combatHealth.reset(); // 설정(최대 체력)은 initialize 가 이미 범위를 보고 받았다
+            member._healthMachine.reset(); // 설정(최대 체력)은 initialize 가 이미 범위를 보고 받았다
             member._carry.initialize( _data._pCatalog->getCarrySettings() );
             member._areaID         = hashed_string( kShipAreaID );
             member._bBodyRecovered = SW_FALSE;
@@ -575,7 +575,7 @@ namespace sw
         const int32 crewCount = static_cast<int32>( _listCrew.size() );
         for ( ScavengerCrewMember& member : _listCrew )
         {
-            io.value( member._combatHealth );
+            io.value( member._healthMachine );
             io.value( member._carry );
             io.value( member._areaID );
             io.flag( member._bBodyRecovered );

@@ -80,16 +80,16 @@ namespace sw
         BattleRoyalePlayer&          player         = outPlayer;
         player._team                                = team;
 
-        CombatHealthSettings combatHealth;
-        combatHealth._maxHealth               = playerSettings._maxHealth;
-        combatHealth._downedHealth            = playerSettings._downedHealth;
-        combatHealth._bleedoutRate            = playerSettings._bleedoutRate;
-        combatHealth._reviveTime              = playerSettings._reviveTime;
-        combatHealth._reviveHealthRatio       = playerSettings._reviveHealthRatio;
-        combatHealth._invulnerableAfterRevive = 0.0f;
-        combatHealth._bDownedEnabled          = SW_TRUE;
-        combatHealth._bDamageInterruptsRevive = SW_FALSE; // 부활이 끊기는 조건은 이 키트가 정한다(자기장 피해는 부활을 끊지 않는다)
-        if ( player._combatHealth.initialize( combatHealth ) == false )
+        HealthSettings healthMachine;
+        healthMachine._maxHealth               = playerSettings._maxHealth;
+        healthMachine._downedHealth            = playerSettings._downedHealth;
+        healthMachine._bleedoutRate            = playerSettings._bleedoutRate;
+        healthMachine._reviveTime              = playerSettings._reviveTime;
+        healthMachine._reviveHealthRatio       = playerSettings._reviveHealthRatio;
+        healthMachine._invulnerableAfterRevive = 0.0f;
+        healthMachine._bDownedEnabled          = SW_TRUE;
+        healthMachine._bDamageInterruptsRevive = SW_FALSE; // 부활이 끊기는 조건은 이 키트가 정한다(자기장 피해는 부활을 끊지 않는다)
+        if ( player._healthMachine.initialize( healthMachine ) == false )
             return false;
 
         InteractionConfig revive;
@@ -151,11 +151,11 @@ namespace sw
         {
             interruptRevive( victim, true ); // 기절한 사람이 적에게 맞으면 부활이 처음부터 다시 시작된다
         }
-        const CombatHealthDamageResult result = target._combatHealth.applyDamage( bodyDamage, 0.0f, instigator );
-        const float32                  dealt  = result._shieldAbsorbed + result._healthDamage;
+        const HealthDamageResult result = target._healthMachine.applyDamage( bodyDamage, 0.0f, instigator );
+        const float32            dealt  = result._shieldAbsorbed + result._healthDamage;
         if ( isValidPlayer( attacker ) && dealt > 0.0f )
             _matchState.reportDamage( attacker, victim, dealt );
-        processCombatHealth( victim );
+        processHealthMachine( victim );
         return dealt;
     }
 
@@ -172,8 +172,8 @@ namespace sw
         helper._revivingTarget = target;
         if ( downed._revive.getParticipantCount() == 1 )
         {
-            // 살리는 동안 출혈을 멈춘다. 진행은 InteractionProgress 가 가지고 있고, CombatHealth 의 부활 시계는 배율 0으로 멈춰 둔다.
-            (void)downed._combatHealth.startRevive( reviver, 0.0f );
+            // 살리는 동안 출혈을 멈춘다. 진행은 InteractionProgress 가 가지고 있고, HealthStateMachine 의 부활 시계는 배율 0으로 멈춰 둔다.
+            (void)downed._healthMachine.startRevive( reviver, 0.0f );
             pushEvent( BattleRoyaleEvent::Kind::ReviveStarted, target, reviver, downed._team, 0 );
         }
         return true;
@@ -191,7 +191,7 @@ namespace sw
         BattleRoyalePlayer& downed = _listPlayer[static_cast<size_t>( target )];
         (void)downed._revive.leave( static_cast<uint32>( reviver ) );
         if ( downed._revive.getParticipantCount() == 0 )
-            downed._combatHealth.stopRevive();
+            downed._healthMachine.stopRevive();
     }
 
     void BattleRoyaleMatch::pollEvents( vector<BattleRoyaleEvent>& outListEvent )
@@ -240,7 +240,7 @@ namespace sw
             const BattleRoyalePlayer& rightPlayer = _listPlayer[static_cast<size_t>( right )];
             if ( leftPlayer.isDowned() != rightPlayer.isDowned() )
                 return leftPlayer.isDowned();
-            return leftPlayer.isDowned() ? leftPlayer._combatHealth.getDownedHealth() < rightPlayer._combatHealth.getDownedHealth() : leftPlayer._combatHealth.getHealth() < rightPlayer._combatHealth.getHealth();
+            return leftPlayer.isDowned() ? leftPlayer._healthMachine.getDownedHealth() < rightPlayer._healthMachine.getDownedHealth() : leftPlayer._healthMachine.getHealth() < rightPlayer._healthMachine.getHealth();
         } );
         for ( size_t order = 0; order < listZoneOrder.size() && _matchState.getPhase() == MatchPhase::InProgress; ++order )
         {
@@ -250,8 +250,8 @@ namespace sw
             const float32 zoneDamage = _zone.computeDamagePerSecond( player._position ) * deltaTime;
             if ( zoneDamage > 0.0f )
             {
-                (void)player._combatHealth.applyDamage( zoneDamage, 0.0f, -1 ); // 결과는 processCombatHealth 가 사건으로 읽는다
-                processCombatHealth( listZoneOrder[order] );
+                (void)player._healthMachine.applyDamage( zoneDamage, 0.0f, -1 ); // 결과는 processHealthMachine 가 사건으로 읽는다
+                processHealthMachine( listZoneOrder[order] );
             }
         }
         for ( size_t index = 0; index < _listPlayer.size() && _matchState.getPhase() == MatchPhase::InProgress; ++index )
@@ -259,8 +259,8 @@ namespace sw
             BattleRoyalePlayer& player = _listPlayer[index];
             if ( player.isDead() )
                 continue;
-            player._combatHealth.update( deltaTime );
-            processCombatHealth( static_cast<int32>( index ) );
+            player._healthMachine.update( deltaTime );
+            processHealthMachine( static_cast<int32>( index ) );
             if ( player.isDowned() && player._revive.getParticipantCount() > 0 )
             {
                 player._revive.update( deltaTime );
@@ -280,17 +280,17 @@ namespace sw
         collectMatchEvents();
     }
 
-    void BattleRoyaleMatch::processCombatHealth( int32 player )
+    void BattleRoyaleMatch::processHealthMachine( int32 player )
     {
         BattleRoyalePlayer& target = _listPlayer[static_cast<size_t>( player )];
         // 지역 목록에 복사해 둔다. 처리 중에 다른 사람의 알림을 다시 꺼내기 때문이다(팀 전멸).
-        vector<CombatHealthEvent> listEvent;
-        target._combatHealth.pollEvents( listEvent );
-        for ( const CombatHealthEvent& event : listEvent )
+        vector<HealthEvent> listEvent;
+        target._healthMachine.pollEvents( listEvent );
+        for ( const HealthEvent& event : listEvent )
         {
-            if ( event._type == CombatHealthEventType::Downed )
+            if ( event._type == HealthEventType::Downed )
                 handleDowned( player, event._instigatorID );
-            else if ( event._type == CombatHealthEventType::Died )
+            else if ( event._type == HealthEventType::Died )
                 handleDeath( player, event._instigatorID );
         }
     }
@@ -339,7 +339,7 @@ namespace sw
                 other._revivingTarget = -1;
         }
         downed._revive.reset();
-        downed._combatHealth.stopRevive();
+        downed._healthMachine.stopRevive();
         if ( bNotify )
             pushEvent( BattleRoyaleEvent::Kind::ReviveInterrupted, target, -1, downed._team, 0 );
     }
@@ -356,10 +356,10 @@ namespace sw
                 _listPlayer[index]._revivingTarget = -1;
             }
         }
-        // 진행이 다 찼다. 멈춰 둔 CombatHealth 의 부활 시계를 한 번에 끝까지 돌린다.
-        (void)downed._combatHealth.startRevive( reviver, 1.0f );
-        downed._combatHealth.update( downed._combatHealth.getSettings()._reviveTime );
-        downed._combatHealth.discardEvents();
+        // 진행이 다 찼다. 멈춰 둔 HealthStateMachine 의 부활 시계를 한 번에 끝까지 돌린다.
+        (void)downed._healthMachine.startRevive( reviver, 1.0f );
+        downed._healthMachine.update( downed._healthMachine.getSettings()._reviveTime );
+        downed._healthMachine.discardEvents();
         downed._revive.reset();
         downed._downedBy = -1;
         pushEvent( BattleRoyaleEvent::Kind::PlayerRevived, target, reviver, downed._team, 0 );
@@ -378,8 +378,8 @@ namespace sw
             BattleRoyalePlayer& player = _listPlayer[index];
             if ( player._team != team || player.isDowned() == false )
                 continue;
-            player._combatHealth.kill( player._downedBy );
-            processCombatHealth( static_cast<int32>( index ) );
+            player._healthMachine.kill( player._downedBy );
+            processHealthMachine( static_cast<int32>( index ) );
         }
     }
 
@@ -452,7 +452,7 @@ namespace sw
             io.value( team );
             if ( io.isReading() && io.check( _matchState.findTeam( team ) != nullptr && initializePlayer( player, team, static_cast<int32>( index ) ) ) == false )
                 return;
-            io.value( player._combatHealth );
+            io.value( player._healthMachine );
             io.value( player._revive ); // 부활 진행(붙은 팀원과 붙은 순서, 진행량, 시계)
             if ( io.isOk() == false )
                 return;

@@ -640,7 +640,7 @@ namespace sw
         const float32 yaw = MathUtil::atan2( -position._x, -position._z );
         if ( pEnemy->launch( getOwner()->getHandle(), position, yaw, request._health, request._speed ) == false )
         {
-            // 체력 설정이 거절됐다(이유는 CombatHealth 가 남겼다) — 올려서 대신 세우지 않고 정리한다.
+            // 체력 설정이 거절됐다(이유는 HealthStateMachine 가 남겼다) — 올려서 대신 세우지 않고 정리한다.
             manager.destroyGameObject( pObject );
             if ( request._spawnID != 0 && _bPacingReady == SW_TRUE )
                 (void)_director.notifyDespawned( request._spawnID );
@@ -924,18 +924,18 @@ namespace sw
                 bool bFound = false;
                 if ( pManager == nullptr )
                     return false;
-                pManager->forEachComponentOfType<ShooterGameModeComponent>( [&bFound, &outValue]( ShooterGameModeComponent* pDirector )
+                pManager->forEachComponentOfType<ShooterGameModeComponent>( [&bFound, &outValue]( ShooterGameModeComponent* pGameMode )
                 {
                     if ( bFound )
                         return;
                     bFound   = true;
-                    outValue = static_cast<float64>( pDirector->getEffectCreatedCount() );
+                    outValue = static_cast<float64>( pGameMode->getEffectCreatedCount() );
                 } );
                 return bFound;
             }
         };
     } // namespace
 
-    SW_AUTOMATION_WATCH( shooterEffectCreatedCount, "Shooter3D.EffectCreatedCount", "Instances the effect pools of the shooter director created so far (reuse does not count)",
+    SW_AUTOMATION_WATCH( shooterEffectCreatedCount, "Shooter3D.EffectCreatedCount", "Instances the effect pools of the shooter game mode created so far (reuse does not count)",
                          &ShooterEffectWatchInternal::readEffectCreatedCount );
 } // namespace sw

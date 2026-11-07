@@ -17,7 +17,7 @@ namespace sw
      * @class FlatRideComponent
      * @brief `TickGroup::PostUpdate` 에서 디렉터 시뮬레이션의 탑승자 수를 읽기만 하고 자기 오브젝트의 메시만 돌립니다.
      */
-    REFLECT( Category = "ThemePark", DisplayName = "Flat Ride View", Tooltip = "Spins a flat ride while the park gameMode's simulation has riders on it" )
+    REFLECT( Category = "ThemePark", DisplayName = "Flat Ride View", Tooltip = "Spins a flat ride while the park game mode's simulation has riders on it" )
     class FlatRideComponent : public GameModeBoundComponent
     {
     public:

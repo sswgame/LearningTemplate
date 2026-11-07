@@ -42,7 +42,7 @@ namespace sw
      *          틱이 끝난 뒤 플러시에서 플레이어 폰의 조종자를 바꿉니다.
      *          켜면 `VoxelAutoPlayControllerComponent`(스폰한 오브젝트)에게, 끄면 플레이어 0의 조종자(`ControlSystem::findOrCreatePlayerController`)에게 넘깁니다.
      */
-    REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Director", Tooltip = "Owns the voxel world: terrain, block edits, chunk spawns and rebuild scheduling" )
+    REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Game Mode", Tooltip = "Owns the voxel world: terrain, block edits, chunk spawns and rebuild scheduling" )
     class VoxelGameModeComponent : public GameModeComponent
     {
     public:

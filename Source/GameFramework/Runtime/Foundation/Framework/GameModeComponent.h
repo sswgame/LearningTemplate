@@ -52,7 +52,7 @@ namespace sw
      *          모듈 정적 변수나 컴포넌트 PROPERTY 가 아닌 곳에 둔 상태는 핫 리로드에서 사라지므로, 상태는 `writeState` 로만 넘겨야 한다.
      *          Lyra 는 게임 상태를 GameState 컴포넌트에 붙이는데, 여기서는 디렉터 하나가 그 역할을 한다.
      */
-    REFLECT( Abstract, Category = "Framework", DisplayName = "Game Director", Tooltip = "Base of the components that run a game's rules and spawn its runtime objects" )
+    REFLECT( Abstract, Category = "Framework", DisplayName = "Game Mode", Tooltip = "Base of the components that run a game's rules and spawn its runtime objects" )
     class SW_GF_API GameModeComponent : public Component
     {
     public:
@@ -210,11 +210,11 @@ namespace sw
         void compactSpawned( const GameObjectManager& manager );
 
     private:
-        PROPERTY( Category = "Director", DisplayName = "Auto Play", Tooltip = "The game drives itself (the game's -gv_<game>AutoPlay=1 also turns it on)" )
+        PROPERTY( Category = "Game Mode", DisplayName = "Auto Play", Tooltip = "The game drives itself (the game's -gv_<game>AutoPlay=1 also turns it on)" )
         bool _bAutoPlay;
 
-        PROPERTY( Category = "Director", DisplayName = "Tick After",
-                  Tooltip = "Run this gameMode's rules after the gameMode on that object (cross-object order; same-object order is the component order)" )
+        PROPERTY( Category = "Game Mode", DisplayName = "Tick After",
+                  Tooltip = "Run this game mode's rules after the game mode on that object (cross-object order; same-object order is the component order)" )
         GameObjectHandle _tickAfter;
 
         vector<GameObjectHandle> _listSpawned;

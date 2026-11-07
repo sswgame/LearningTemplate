@@ -656,19 +656,19 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, HealingDyingStopsBleeding )
     SW_REQUIRE_TRUE( _match.addSurvivor( AsymmetricHorrorTestUtil::at( 0.0f, 1.5f ) ) == 1 );
     _match.start();
     downAtOrigin();
-    const float32 bleedBefore = survivor( 0 )._combatHealth.getDownedHealth();
+    const float32 bleedBefore = survivor( 0 )._healthMachine.getDownedHealth();
     SW_REQUIRE_TRUE( _match.startHeal( 1, 0 ) );
     advance( 0.5f );
-    SW_EXPECT_NEAR( bleedBefore, survivor( 0 )._combatHealth.getDownedHealth(), kAsymmetricTolerance );
+    SW_EXPECT_NEAR( bleedBefore, survivor( 0 )._healthMachine.getDownedHealth(), kAsymmetricTolerance );
 
     _match.stopActivity( 1 );
     advance( 0.5f );
-    SW_EXPECT_NEAR( bleedBefore - 0.5f, survivor( 0 )._combatHealth.getDownedHealth(), kAsymmetricTolerance );
+    SW_EXPECT_NEAR( bleedBefore - 0.5f, survivor( 0 )._healthMachine.getDownedHealth(), kAsymmetricTolerance );
 
     SW_REQUIRE_TRUE( _match.startHeal( 1, 0 ) );
     advance( 0.7f );
     SW_EXPECT_TRUE( survivor( 0 )._state == SurvivorState::Injured );
-    SW_EXPECT_TRUE( survivor( 0 )._combatHealth.isAlive() );
+    SW_EXPECT_TRUE( survivor( 0 )._healthMachine.isAlive() );
 }
 
 /**
@@ -1033,7 +1033,7 @@ SW_TEST_CASE_F( AsymmetricHorrorRulesTest, LockersHideAndGrab )
 
     SW_EXPECT_TRUE( _match.searchLocker( 0 ) );
     SW_EXPECT_TRUE( survivor( 0 )._state == SurvivorState::Carried );
-    SW_EXPECT_TRUE( survivor( 0 )._combatHealth.isDowned() );
+    SW_EXPECT_TRUE( survivor( 0 )._healthMachine.isDowned() );
     SW_EXPECT_EQUAL( 0, _match.getKiller()._carrying );
     SW_EXPECT_EQUAL( 1, countEvents( AsymmetricHorrorEvent::Kind::LockerGrab ) );
     SW_EXPECT_TRUE( survivor( 0 )._activity == SurvivorActivity::None );

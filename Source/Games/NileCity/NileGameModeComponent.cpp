@@ -624,7 +624,7 @@ namespace sw
     void NileGameModeComponent::spawnWalkers( GameObjectManager& manager, size_t count )
     {
         // 일꾼 수만큼 미리 스폰하고 남으면 뷰가 숨긴다(오브젝트를 매 프레임 만들고 지우지 않는다). 목록 슬롯은 다른 일꾼에게 넘어갈 수 있다.
-        const GameObjectHandle director = getOwner()->getHandle();
+        const GameObjectHandle gameMode = getOwner()->getHandle();
         while ( _listWalkerObject.size() < count )
         {
             GameObject* pWalker = spawnPrefab( manager, _walkerPrefab, "NileWalker" );
@@ -635,7 +635,7 @@ namespace sw
                 prepareWalkerLooks( pMesh->getMaterial() );
             NileWalkerComponent* pView = pWalker->getComponent<NileWalkerComponent>();
             if ( pView != nullptr )
-                pView->assignWalker( director, static_cast<int32>( _listWalkerObject.size() ) );
+                pView->assignWalker( gameMode, static_cast<int32>( _listWalkerObject.size() ) );
             _listWalkerObject.push_back( pWalker->getHandle() );
         }
     }

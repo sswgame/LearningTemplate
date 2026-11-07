@@ -46,7 +46,7 @@ namespace sw
      * @brief 도시 한 판을 진행합니다. 플레이가 시작되면 도시 데이터를 읽고 땅을 칠한 새 도시를 엽니다.
      * @details 도시는 PROPERTY 가 아닌 런타임 상태이므로 핫 리로드 뒤 처음부터 다시 만든다. 스폰한 오브젝트는 핸들로 보관하고, 상태를 저장하기 전에 정리한다.
      */
-    REFLECT( Category = "CityBuilder", DisplayName = "Nile Director", Tooltip = "Runs the Nile city simulation, the auto plan and mouse building, and spawns the city views" )
+    REFLECT( Category = "CityBuilder", DisplayName = "Nile Game Mode", Tooltip = "Runs the Nile city simulation, the auto plan and mouse building, and spawns the city views" )
     class NileGameModeComponent : public GameModeComponent
     {
     public:

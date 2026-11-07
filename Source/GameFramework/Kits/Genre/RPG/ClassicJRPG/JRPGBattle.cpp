@@ -326,7 +326,7 @@ namespace sw
         const JRPGMember&     member  = _pParty->getMember( memberIndex );
         const JRPGClassDef*   pClass  = _pCatalog->findClass( member._classID );
         const JRPGEnemyDef*   pEnemy  = _pCatalog->findEnemy( _listEnemy[static_cast<size_t>( target )]._enemyID );
-        const int32           defense = pEnemy != nullptr ? pEnemy->_arrStat[static_cast<size_t>( JRPGStat::CombatHealth )] / 2 : 0;
+        const int32           defense = pEnemy != nullptr ? pEnemy->_arrStat[static_cast<size_t>( JRPGStat::HealthStateMachine )] / 2 : 0;
         vector<hashed_string> listType;
         if ( pClass != nullptr && pClass->_attackType.empty() == false )
             listType.push_back( pClass->_attackType );

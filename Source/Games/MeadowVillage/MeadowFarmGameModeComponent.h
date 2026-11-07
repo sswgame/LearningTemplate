@@ -28,7 +28,7 @@ namespace sw
      * @details 상태는 밭 하나(구간 'FFLD')이고, 돈 · 시계 · 수확 수(`farm.harvested`)는 공유 상태에 있다. `FastForward`(Space)를 누르는 동안,
      *          또는 자동 플레이면 시계가 8 배로 흐른다. 카메라는 이 디렉터도 마을 디렉터도 만지지 않는다(씬의 고정 카메라).
      */
-    REFLECT( Category = "Meadow", DisplayName = "Meadow Farm Director", Tooltip = "Runs the farm kit on the shared game state and spawns the field tiles" )
+    REFLECT( Category = "Meadow", DisplayName = "Meadow Farm Game Mode", Tooltip = "Runs the farm kit on the shared game state and spawns the field tiles" )
     class MeadowFarmGameModeComponent : public GameModeComponent
     {
     public:

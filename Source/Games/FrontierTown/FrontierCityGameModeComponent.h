@@ -28,7 +28,7 @@ namespace sw
      *          공유 시계의 날 넘김이 도시의 달 결산이다(`settleMonth`). `FastForward`(Space)를 누르는 동안, 또는 자동 플레이면 시계가 `_fastTimeScale` 배로 흐른다.
      *          시계를 미는 것은 이 디렉터 하나다(RTS 는 읽기만). 상태는 도시 하나(구간 'CITY')와 배치를 마쳤는지이고, 돈 · 시계 · 땅은 공유 상태에 있다.
      */
-    REFLECT( Category = "Frontier", DisplayName = "Frontier City Director", Tooltip = "Runs the city kit on the shared land, wallet and clock and spawns the building tiles" )
+    REFLECT( Category = "Frontier", DisplayName = "Frontier City Game Mode", Tooltip = "Runs the city kit on the shared land, wallet and clock and spawns the building tiles" )
     class FrontierCityGameModeComponent : public GameModeComponent
     {
     public:

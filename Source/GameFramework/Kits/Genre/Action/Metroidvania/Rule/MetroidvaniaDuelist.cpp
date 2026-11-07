@@ -26,7 +26,7 @@ namespace sw
 {
     MetroidvaniaDuelist::MetroidvaniaDuelist()
         : _pCatalog{ nullptr }
-        , _combatHealth{}
+        , _healthMachine{}
         , _stamina{}
         , _time{ 0.0f }
         , _parryPressTime{ MetroidvaniaDuelistInternal::kNeverPressed }
@@ -44,12 +44,12 @@ namespace sw
             return false;
         }
         // 따로 만들어 둘 다 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
-        CombatHealth  combatHealth;
-        ResourceGauge stamina;
-        if ( combatHealth.initialize( pCatalog->getRules()._health ) == false || stamina.initialize( pCatalog->getRules()._stamina ) == false )
+        HealthStateMachine healthMachine;
+        ResourceGauge      stamina;
+        if ( healthMachine.initialize( pCatalog->getRules()._health ) == false || stamina.initialize( pCatalog->getRules()._stamina ) == false )
             return false;
         _pCatalog         = pCatalog;
-        _combatHealth     = combatHealth;
+        _healthMachine    = healthMachine;
         _stamina          = stamina;
         _time             = 0.0f;
         _parryPressTime   = MetroidvaniaDuelistInternal::kNeverPressed;
@@ -65,18 +65,18 @@ namespace sw
             return;
         _time += deltaTime;
         _riposteWindow.update( deltaTime );
-        _combatHealth.update( deltaTime );
+        _healthMachine.update( deltaTime );
         _stamina.update( deltaTime );
     }
 
     bool MetroidvaniaDuelist::tryAttack()
     {
-        return _pCatalog != nullptr && _combatHealth.isAlive() && _stamina.trySpend( _pCatalog->getRules()._attackStaminaCost );
+        return _pCatalog != nullptr && _healthMachine.isAlive() && _stamina.trySpend( _pCatalog->getRules()._attackStaminaCost );
     }
 
     bool MetroidvaniaDuelist::tryDodge()
     {
-        return _pCatalog != nullptr && _combatHealth.isAlive() && _stamina.trySpend( _pCatalog->getRules()._dodgeStaminaCost );
+        return _pCatalog != nullptr && _healthMachine.isAlive() && _stamina.trySpend( _pCatalog->getRules()._dodgeStaminaCost );
     }
 
     void MetroidvaniaDuelist::pressParry()
@@ -88,7 +88,7 @@ namespace sw
     {
         MetroidvaniaDefenseOutcome outcome;
         // 죽었거나 무적(시간 · 면역)이면 맞은 것이 아니다 — 가드 스태미나를 쓰거나 패리 창을 열거나 맞음 연출을 낼 결과를 주지 않는다.
-        const bool bNothingHappens = _pCatalog == nullptr || _combatHealth.isAlive() == false || _combatHealth.ignoresDamage();
+        const bool bNothingHappens = _pCatalog == nullptr || _healthMachine.isAlive() == false || _healthMachine.ignoresDamage();
         if ( bNothingHappens )
         {
             outcome._result = MetroidvaniaDefenseResult::Ignored;
@@ -128,9 +128,9 @@ namespace sw
                 (void)_stamina.reduce( _stamina.getValue() );
             }
         }
-        const CombatHealthDamageResult damageResult = _combatHealth.applyDamage( healthDamage, poise, attackerID );
-        outcome._healthDamage                       = damageResult._healthDamage;
-        outcome._bStaggered                         = damageResult._bPoiseBroken;
+        const HealthDamageResult damageResult = _healthMachine.applyDamage( healthDamage, poise, attackerID );
+        outcome._healthDamage                 = damageResult._healthDamage;
+        outcome._bStaggered                   = damageResult._bPoiseBroken;
         return outcome;
     }
 
@@ -144,14 +144,14 @@ namespace sw
             _riposteWindow.clear();
             return baseDamage * multiplier;
         }
-        if ( target.getCombatHealth().isPoiseBroken() )
+        if ( target.getHealthMachine().isPoiseBroken() )
             return baseDamage * multiplier;
         return baseDamage;
     }
 
     void MetroidvaniaDuelist::serializeState( StateIO& io )
     {
-        io.value( _combatHealth );
+        io.value( _healthMachine );
         io.value( _stamina );
         io.value( _time );
         io.value( _parryPressTime );

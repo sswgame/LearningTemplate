@@ -18,7 +18,7 @@ namespace sw
      * @brief 판을 연 디렉터가 읽은 서부극 카탈로그(`<Horse>` 품종 · 유대 · 생존)를 답합니다. 게임의 디렉터가 이것을 상속합니다.
      * @details 키트의 말 컴포넌트(`WesternHorseComponent`)가 게임 디렉터 형식을 모르고 카탈로그를 찾게 한다(RTTI 를 끄고 빌드해 인터페이스 캐스트 대신 기반 형식).
      */
-    REFLECT( Abstract, Category = "Western", DisplayName = "Western Director", Tooltip = "Base of the game directors that open a western catalog" )
+    REFLECT( Abstract, Category = "Western", DisplayName = "Western Game Mode", Tooltip = "Base of the game modes that open a western catalog" )
     class SW_KIT_API WesternGameModeComponent : public GameModeComponent
     {
     public:

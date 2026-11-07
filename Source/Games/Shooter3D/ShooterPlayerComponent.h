@@ -1,6 +1,6 @@
 /**
  * @file ShooterPlayerComponent.h
- * @brief 슈터 플레이어(폰)를 구현합니다. 무기 세 종류(연사, 탄창, 재장전, 퍼짐, 반동), 히트스캔, 체력(`CombatHealth`), HUD(조준선, 맞음 표시, 체력, 탄약, 무기 이름), 몸(KayKit 캐릭터), 탄도선을 맡으며 입력은 의도만 읽습니다.
+ * @brief 슈터 플레이어(폰)를 구현합니다. 무기 세 종류(연사, 탄창, 재장전, 퍼짐, 반동), 히트스캔, 체력(`HealthStateMachine`), HUD(조준선, 맞음 표시, 체력, 탄약, 무기 이름), 몸(KayKit 캐릭터), 탄도선을 맡으며 입력은 의도만 읽습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -17,7 +17,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Character/Combat/Health/CombatHealth.h"
+#include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/WeaponMath.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
@@ -92,9 +92,9 @@ namespace sw
         void addWaveAmmo();
         /** @brief 수리 보상입니다. 체력을 채웁니다(틱이 끝난 뒤 게임 스레드에서 부릅니다). */
         void restoreHealth( float32 amount );
-        /** @brief 치트 `cheat.shooter.god` 입니다. 켜면 피해를 받지 않습니다(`CombatHealth::setDamageImmune`, 판을 다시 시작해도 남는다). */
-        void setDamageImmune( bool bImmune ) { _combatHealth.setDamageImmune( bImmune ); }
-        bool isDamageImmune() const { return _combatHealth.isDamageImmune(); }
+        /** @brief 치트 `cheat.shooter.god` 입니다. 켜면 피해를 받지 않습니다(`HealthStateMachine::setDamageImmune`, 판을 다시 시작해도 남는다). */
+        void setDamageImmune( bool bImmune ) { _healthMachine.setDamageImmune( bImmune ); }
+        bool isDamageImmune() const { return _healthMachine.isDamageImmune(); }
         /** @brief 스폰한 몸을 지웁니다(상태를 저장하기 전). 다음 틱이 끝난 뒤 다시 스폰합니다. */
         void despawnViews();
         /**
@@ -109,9 +109,9 @@ namespace sw
         float3 getFeetPosition() const;
         /** @brief 그릴 발 자리입니다 — 시뮬레이션 자리에 예측 보정을 녹이는 오프셋을 더한 것(몸 · 카메라). 판정(사격 · 감독)은 `getFeetPosition` 입니다. */
         float3             getDisplayFeetPosition() const;
-        float32            getHealth() const { return _combatHealth.getHealth(); }
+        float32            getHealth() const { return _healthMachine.getHealth(); }
         float32            getMaxHealth() const { return _maxHealth; }
-        bool               isAlive() const { return _combatHealth.isAlive(); }
+        bool               isAlive() const { return _healthMachine.isAlive(); }
         const WeaponState& getCurrentWeapon() const { return _arrWeapon[_weaponIndex]; }
         /** @brief 무기 슬롯 @p weaponIndex(0 소총, 1 산탄총, 2 권총)의 무기입니다. */
         const WeaponState& getWeapon( int32 weaponIndex ) const { return _arrWeapon[weaponIndex]; }
@@ -254,7 +254,7 @@ namespace sw
         float4 _muzzleFlashColor;
 
         WeaponState              _arrWeapon[kWeaponCount];
-        CombatHealth             _combatHealth;
+        HealthStateMachine       _healthMachine;
         AppearanceSocketSetCache _weaponSockets; ///< 1인칭 총구. 무기 외형의 소켓 에셋.
         vector<PendingShot>      _listPendingShot;
         vector<float3>           _listMeleePrevious;  ///< 지난 프레임의 칼날(근접 창의 첫 프레임은 비었다)

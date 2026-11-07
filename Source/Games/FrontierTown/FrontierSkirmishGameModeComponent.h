@@ -28,7 +28,7 @@ namespace sw
      *          둘째 틱에 일꾼에게 `_barracksX`, `_barracksY` 에 병영 짓기를, 해병에게 두 지점(`_patrol*`) 사이 이동을 준다. 해병은 도착할 때마다 반대쪽으로 다시 간다.
      *          이 디렉터는 입력과 시계를 만지지 않는다(도시 디렉터가 민다). 모습은 유닛마다 판 하나이고, 유닛이 있으면 틱마다 위치를 옮긴다.
      */
-    REFLECT( Category = "Frontier", DisplayName = "Frontier Skirmish Director", Tooltip = "Runs the RTS kit on the shared land and wallet and spawns the unit tiles" )
+    REFLECT( Category = "Frontier", DisplayName = "Frontier Skirmish Game Mode", Tooltip = "Runs the RTS kit on the shared land and wallet and spawns the unit tiles" )
     class FrontierSkirmishGameModeComponent : public GameModeComponent
     {
     public:

@@ -298,7 +298,7 @@ namespace sw
         SessionStateComponent* pState = findOnOwner( component );
         if ( pState == nullptr )
         {
-            SW_LOG_ERROR_ID( "SessionState.MissingOnOwner", "no SessionStateComponent in front of the director on this object - the game cannot start" );
+            SW_LOG_ERROR_ID( "SessionState.MissingOnOwner", "no SessionStateComponent in front of the game mode on this object - the game cannot start" );
             return nullptr;
         }
         outResult = pState->initialize( settings );

@@ -31,7 +31,7 @@ namespace sw
      *          판 상태는 플레이어의 삶(`WesternOutlaw`)이고 지갑 · 평판 · 시계 · 날씨는 판 상태가 싣는다. 말 상태는 말 컴포넌트가 스냅숏에 싣는다. 자동 플레이(`-gv_wildWestAutoPlay=1`)는 기수를 가장 가까운 말에 태운다.
      *          HUD 는 게임의 `WildWestHUDViewModel` 을 HUD 컨트롤러에 건다 — 탑승 상태 글(`_rideStatus`), 말 스태미나(`_stamina` · `_staminaRatio`), 무법자 글(`_outlawStatus`)이고 문서(`ui/hud.ui.xml`)가 그렇게 잇는다.
      */
-    REFLECT( Category = "WildWest", DisplayName = "Wild West Director", Tooltip = "Opens the western catalog, follows the rider with the camera, whistles horses and writes the HUD line" )
+    REFLECT( Category = "WildWest", DisplayName = "Wild West Game Mode", Tooltip = "Opens the western catalog, follows the rider with the camera, whistles horses and writes the HUD line" )
     class WildWestGameModeComponent : public WesternGameModeComponent
     {
     public:

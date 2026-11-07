@@ -50,20 +50,20 @@ namespace sw
         bValid                            = Internal::readOptionalChild( root, "Stamina", sourceName, stamina ) && bValid;
         rules._currency                   = rootDef._currency;
 
-        CombatHealthSettings& combatHealth = rules._health;
-        combatHealth._maxHealth            = health._maxHealth;
-        combatHealth._poiseMax             = health._poiseMax;
-        combatHealth._poiseRegenDelay      = health._poiseRegenDelay;
-        combatHealth._poiseRegenRate       = health._poiseRegenRate;
-        combatHealth._poiseBreakDuration   = health._poiseBreakDuration;
-        combatHealth._healthRegenRate      = health._healthRegenRate;
-        combatHealth._bDownedEnabled       = SW_FALSE; // 소울라이크는 기절이 없다. 체력이 0이 되면 죽는다
-        ResourceGaugeSettings& gauge       = rules._stamina;
-        gauge._max                         = stamina._max;
-        gauge._regenRate                   = stamina._regenRate;
-        gauge._regenDelay                  = stamina._regenDelay;
-        gauge._exhaustThreshold            = stamina._exhaustThreshold;
-        gauge._bOverheatMode               = SW_FALSE;
+        HealthSettings& healthMachine     = rules._health;
+        healthMachine._maxHealth          = health._maxHealth;
+        healthMachine._poiseMax           = health._poiseMax;
+        healthMachine._poiseRegenDelay    = health._poiseRegenDelay;
+        healthMachine._poiseRegenRate     = health._poiseRegenRate;
+        healthMachine._poiseBreakDuration = health._poiseBreakDuration;
+        healthMachine._healthRegenRate    = health._healthRegenRate;
+        healthMachine._bDownedEnabled     = SW_FALSE; // 소울라이크는 기절이 없다. 체력이 0이 되면 죽는다
+        ResourceGaugeSettings& gauge      = rules._stamina;
+        gauge._max                        = stamina._max;
+        gauge._regenRate                  = stamina._regenRate;
+        gauge._regenDelay                 = stamina._regenDelay;
+        gauge._exhaustThreshold           = stamina._exhaustThreshold;
+        gauge._bOverheatMode              = SW_FALSE;
 
         // 패리 창은 판정의 유일한 근거다 — 코드가 대신 정한 창을 쓰지 않는다.
         const XMLNode parry = root.findChild( "Parry" );
