@@ -1501,7 +1501,7 @@ namespace sw
         // 렌더 텍스처 · 호스트 타깃 뷰에는 그리지 않는다. 그릴 것이 없으면 렌더 패스를 열지 않는다. 대상 전체가 뷰포트다(화면 사각형 설정과 무관).
         FramePassContext&   context = input._context;
         const PresentTarget target  = resolvePresentTarget();
-        const bool          bDraw   = _pActiveView == _pMainOutputCanvasView && _state._canvasFrame._mainOutput.isEmpty() == false && target._width > 0 && target._height > 0;
+        const bool          bDraw   = _pActiveView == _pMainOutputCanvasView && _state._canvasFrame.getMainOutput().isEmpty() == false && target._width > 0 && target._height > 0;
         if ( bDraw )
         {
             const RHIPipelineStateHandle psoCanvas = _psoManager.findOutputPSO( RenderPassType::Canvas, target._format ); // 셋업에 없으면 멈춘다(다른 포맷의 PSO 로 대신하지 않는다)
@@ -1513,7 +1513,7 @@ namespace sw
             beginInfo._width             = target._width;
             beginInfo._height            = target._height;
             context._pCmd->beginRenderPass( beginInfo );
-            (void)_state._canvasRenderer.drawList( *context._pCmd, _state._canvasFrame._mainOutput, _state._canvasRenderer.getMainQuadBase(), psoCanvas, target._width, target._height,
+            (void)_state._canvasRenderer.drawList( *context._pCmd, _state._canvasFrame.getMainOutput(), _state._canvasRenderer.getMainQuadBase(), psoCanvas, target._width, target._height,
                                                    _pDevice->supportsNativeBindlessSampling(), _state._canvasFrame._colorVisionMode );
             context._pCmd->endRenderPass();
         }

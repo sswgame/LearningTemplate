@@ -203,9 +203,14 @@ namespace sw
     /** @brief 한 프레임의 캔버스 전부입니다. 렌더 프레임 패킷이 가지고 있습니다. */
     struct SW_API CanvasFrameData
     {
-        CanvasDrawList               _mainOutput{};      ///< 주 출력(백버퍼, 게임 뷰 RT, 스크린샷 캡처)에 Present 뒤 그리는 목록
-        vector<CanvasTargetDrawList> _listTarget{};      ///< 렌더 텍스처 대상 목록(장면 앞에서 그리며 월드 공간 UI 에 해당한다)
-        vector<GlyphAtlasUpload>     _listAtlasUpload{}; ///< 지난 프레임 뒤 바뀐 글리프 아틀라스 구간(`GlyphAtlas::takeUploads`)
+        /**
+         * @brief 주 출력(백버퍼, 게임 뷰 RT, 스크린샷 캡처)에 Present 뒤 그리는 목록입니다. 없으면 nullptr 입니다(`getMainOutput` 은 빈 목록).
+         * @details 불변 공유 값이다 — UI 가 칠한 목록(`UICanvasPaintState::getSharedCanvas`)을 포인터로 싣고 베끼지 않는다. 예전에는 내용 번호가 같아도 프레임마다
+         *          사각형(144 바이트)을 모두 패킷에 베꼈다. 디버그 그리기 · 테스트 그림을 겹치는 프레임만 사본을 만들어 그 위에 칠한다(`RenderPacketCanvasCollector`).
+         */
+        shared_ptr<const CanvasDrawList> _pMainOutput{};
+        vector<CanvasTargetDrawList>     _listTarget{};      ///< 렌더 텍스처 대상 목록(장면 앞에서 그리며 월드 공간 UI 에 해당한다)
+        vector<GlyphAtlasUpload>         _listAtlasUpload{}; ///< 지난 프레임 뒤 바뀐 글리프 아틀라스 구간(`GlyphAtlas::takeUploads`)
         /** @brief 업로드를 낸 아틀라스입니다. 렌더러 거울이 묶음을 놓쳤을 때 `GlyphAtlas::requestFullUpload`(원자 표시) 하나만 부른다 — 다른 멤버는 렌더 스레드에서 읽지 않는다. */
         GlyphAtlas* _pAtlasSource{ nullptr };
         /** @brief 주 출력 사각형의 `_anchor` 가 가리키는 앵커입니다. 프레임마다 바뀌어도 `_contentRevision` 을 증가시키지 않습니다. 렌더러가 앵커 구간만 업로드합니다. */
@@ -228,6 +233,8 @@ namespace sw
          */
         uint32 _colorVisionMode{ 0 };
 
+        /** @brief 주 출력 목록입니다. 실은 것이 없으면 빈 목록입니다. */
+        const CanvasDrawList& getMainOutput() const;
         /** @brief 비웁니다(용량은 남깁니다. 패킷 재사용이며 `RenderFramePacket::resetForFrame` 이 부릅니다). */
         void clear();
     };

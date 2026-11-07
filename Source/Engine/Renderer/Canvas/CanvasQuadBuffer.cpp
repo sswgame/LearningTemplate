@@ -42,7 +42,7 @@ namespace sw
         // 사각형은 올리지 않고 바뀐 앵커만 올린다(번호 0 은 "모른다" 라 늘 올린다).
         const uint32 anchorCount = static_cast<uint32>( frame._listAnchor.size() );
         _mainQuadBase            = anchorCount;
-        uint32 quadCount         = anchorCount + static_cast<uint32>( frame._mainOutput._listQuad.size() );
+        uint32 quadCount         = anchorCount + static_cast<uint32>( frame.getMainOutput()._listQuad.size() );
         uint64 signature         = frame._contentRevision;
         bool   bKnown            = frame._contentRevision != 0;
         _listTargetQuadBase.clear();
@@ -69,11 +69,12 @@ namespace sw
             uploadAnchors( device, frame._listAnchor, false );
             return;
         }
-        const CanvasQuad* pQuads = frame._mainOutput._listQuad.data();
+        const vector<CanvasQuad>& listMainQuad = frame.getMainOutput()._listQuad;
+        const CanvasQuad*         pQuads       = listMainQuad.data();
         if ( frame._listTarget.empty() == false )
         {
             _listQuadScratch.clear();
-            _listQuadScratch.insert( _listQuadScratch.end(), frame._mainOutput._listQuad.begin(), frame._mainOutput._listQuad.end() );
+            _listQuadScratch.insert( _listQuadScratch.end(), listMainQuad.begin(), listMainQuad.end() );
             for ( const CanvasTargetDrawList& target : frame._listTarget )
             {
                 _listQuadScratch.insert( _listQuadScratch.end(), target._list._listQuad.begin(), target._list._listQuad.end() );

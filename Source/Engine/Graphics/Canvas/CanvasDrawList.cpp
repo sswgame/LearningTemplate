@@ -141,9 +141,15 @@ namespace sw
         return true;
     }
 
+    const CanvasDrawList& CanvasFrameData::getMainOutput() const
+    {
+        static const CanvasDrawList kEmpty{};
+        return _pMainOutput != nullptr ? *_pMainOutput : kEmpty;
+    }
+
     void CanvasFrameData::clear()
     {
-        _mainOutput.clear();
+        _pMainOutput.reset();
         _listTarget.clear();
         _listAtlasUpload.clear();
         _pAtlasSource = nullptr;
