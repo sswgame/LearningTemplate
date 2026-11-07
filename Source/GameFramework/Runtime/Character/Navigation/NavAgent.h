@@ -10,11 +10,11 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Character/Navigation/GridPathfinder.h"
 
 namespace sw
 {
     class FlowField;
-    class GridPathfinder;
     class NavGrid;
 
     /** @brief 행위자의 몸과 움직임 설정입니다. */
@@ -81,8 +81,17 @@ namespace sw
         void setSettings( const NavAgentSettings& settings ) { _settings = settings; }
         /** @brief 위치를 옮기고 멈춥니다. 소환과 순간이동에 씁니다. */
         void setPosition( const float3& position );
-        /** @brief A* 로 @p target 까지의 경로를 구해 따라갑니다. 닿지 못하면 가장 가까운 곳까지 가며, 갈 수 없으면 false 입니다. */
+        /**
+         * @brief A* 로 @p target 까지의 경로를 구해 따라갑니다. 닿지 못하면 가장 가까운 곳까지 가며, 갈 수 없으면 false 입니다.
+         * @details 그 자리에서 구하는 동기 길이다 — 한 번 묻는 이동(`NavGridMover` · 이벤트 하나)이 쓴다. 대상 수만큼 매 걸음 다시 구하는 곳은
+         *          요청 줄(`PathRequestQueue<GridPathSolver>`)에 세우고 결과를 `followPath` 로 넘긴다(RTS 유닛).
+         */
         [[nodiscard]] bool moveTo( const NavGrid& grid, GridPathfinder& pathfinder, const float3& target );
+        /**
+         * @brief @p from 에서 @p target 까지 행위자가 따라갈 월드 경로를 @p outListPoint 에 만듭니다(A*, 다듬기). 상태가 없어 워커에서 불러도 됩니다(탐색기는 스레드마다 하나).
+         * @details 첫 점(지금 칸 가운데)은 빼고, 닿았으면 끝점은 칸 가운데가 아니라 실제 목표다. 갈 수 없으면(`NoPath` · `InvalidStart`) @p outListPoint 는 비어 있다.
+         */
+        static GridPathResult planPath( const NavGrid& grid, GridPathfinder& pathfinder, const float3& from, const float3& target, vector<float3>& outListPoint );
         /** @brief 이미 구한 월드 경로를 따라갑니다. */
         void followPath( const vector<float3>& listPoint );
         /** @brief 흐름장을 따라 @p target(흐름장의 목적지 근처)까지 갑니다. */

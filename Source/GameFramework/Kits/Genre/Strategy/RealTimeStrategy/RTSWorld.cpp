@@ -185,7 +185,8 @@ namespace sw
     RTSWorld::RTSWorld()
         : _grid{}
         , _airGrid{}
-        , _pathfinder{}
+        , _pathSolver{ _grid }
+        , _pathQueue{ _pathSolver }
         , _listUnit{}
         , _listGeneration{}
         , _listFreeSlot{}
@@ -504,6 +505,7 @@ namespace sw
             if ( unit._bAlive )
                 updateUnit( unit, deltaTime );
         }
+        applyPathResults();
         if ( _vision.updateRepaintTimer( deltaTime, _settings._visionInterval ) )
             updateVision();
         updateDefeat();
@@ -1525,8 +1527,33 @@ namespace sw
             return;
         unit._moveGoal = target;
         unit._repathTimer.start( _settings._repathInterval );
-        if ( unit._agent.moveTo( _grid, _pathfinder, target ) == false )
-            nudgeToWalkable( unit );
+        // 걸음 끝에 모아 푼다(`applyPathResults`) — 유닛 수만큼의 A* 가 워커로 나뉜다. 같은 걸음에 다시 다가가면 앞 요청은 버린다(마지막 목표가 이긴다).
+        _pathQueue.cancel( unit._pathRequest );
+        GridPathJob job;
+        job._from         = unit._position;
+        job._target       = target;
+        unit._pathRequest = _pathQueue.request( std::move( job ) );
+    }
+
+    void RTSWorld::applyPathResults()
+    {
+        _pathQueue.launch( "RTSPath" );
+        (void)_pathQueue.complete(); // 격자는 걸음 안에서만 바뀌고 그 뒤에 풀므로 격자 쪽에 증표를 넘길 데가 없다
+        // 유닛 순서(슬롯 순서)로 적용한다 — 결과는 요청 순서 · 레인과 상관없이 같고, 적용 순서도 늘 같다(결정적).
+        for ( RTSUnit& unit : _listUnit )
+        {
+            if ( unit._pathRequest.isValid() == false )
+                continue;
+            GridPathJob            job;
+            const PathRequestState state = _pathQueue.takeResult( unit._pathRequest, job );
+            unit._pathRequest            = PathRequestHandle{};
+            if ( state != PathRequestState::Ready || unit._bAlive == SW_FALSE )
+                continue;
+            if ( job._result == GridPathResult::Found || job._result == GridPathResult::Partial )
+                unit._agent.followPath( job._listPoint );
+            else
+                nudgeToWalkable( unit );
+        }
     }
 
     void RTSWorld::nudgeToWalkable( RTSUnit& unit )

@@ -94,29 +94,38 @@ namespace sw
 
     bool NavAgent::moveTo( const NavGrid& grid, GridPathfinder& pathfinder, const float3& target )
     {
+        vector<float3>       listPoint;
+        const GridPathResult result = planPath( grid, pathfinder, _position, target, listPoint );
+        if ( result != GridPathResult::Found && result != GridPathResult::Partial )
+            return false;
+        followPath( listPoint );
+        return true;
+    }
+
+    GridPathResult NavAgent::planPath( const NavGrid& grid, GridPathfinder& pathfinder, const float3& from, const float3& target, vector<float3>& outListPoint )
+    {
+        outListPoint.clear();
         GridPathQuery query;
-        query._start = grid.computeCell( _position );
+        query._start = grid.computeCell( from );
         query._goal  = grid.computeCell( target );
         vector<int2>         listCell;
         const GridPathResult result = pathfinder.findPath( grid, query, listCell );
         if ( result != GridPathResult::Found && result != GridPathResult::Partial )
-            return false;
-        vector<float3> listPoint;
-        GridPathfinder::makeWorldPath( grid, listCell, listPoint );
+            return result;
+        GridPathfinder::makeWorldPath( grid, listCell, outListPoint );
         // 첫 점은 지금 칸 가운데 — 이미 그 칸 안이니 건너뛰고, 엔드포인트는 칸 가운데가 아니라 실제 목표(닿은 경우).
-        if ( listPoint.empty() == false )
-            listPoint.erase( listPoint.begin() );
+        if ( outListPoint.empty() == false )
+            outListPoint.erase( outListPoint.begin() );
         if ( result == GridPathResult::Found )
         {
-            if ( listPoint.empty() )
-                listPoint.push_back( target );
+            if ( outListPoint.empty() )
+                outListPoint.push_back( target );
             else
-                listPoint.back() = float3{ target._x, listPoint.back()._y, target._z };
+                outListPoint.back() = float3{ target._x, outListPoint.back()._y, target._z };
         }
-        if ( listPoint.empty() )
-            listPoint.push_back( _position );
-        followPath( listPoint );
-        return true;
+        if ( outListPoint.empty() )
+            outListPoint.push_back( from );
+        return result;
     }
 
     void NavAgent::followPath( const vector<float3>& listPoint )

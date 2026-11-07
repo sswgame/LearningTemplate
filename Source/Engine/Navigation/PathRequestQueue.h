@@ -1,11 +1,11 @@
 /**
  * @file PathRequestQueue.h
  * @brief 비동기 경로 요청 줄입니다 — 요청(아무 스레드) → 줄 → 워커(`TaskManager` 스테이지) → 정해진 자리의 수확(`complete`) → 요청자가 받기. 핸들은 칸 번호 + 세대입니다.
- * @details 내비메시 경로(`SceneNavigation::requestPath`)와 격자 A*(GameFramework `GridPathBatch` — RTS 유닛 경로)가 함께 쓰는 한 벌입니다. 바뀌는 것(무엇을 어떻게 구하는가)은
+ * @details 내비메시 경로(`SceneNavigation::requestPath`)와 격자 A*(GameFramework `GridPathSolver` — RTS 유닛 경로)가 함께 쓰는 한 벌입니다. 바뀌는 것(무엇을 어떻게 구하는가)은
  *          풀이 타입 `TSolver` 하나가 갖습니다:
  *          - `using Job = …;` — 질의와 결과를 함께 담는 값(기본 생성 · 이동 가능). 요청자가 질의 칸을 채워 넘기고, 받을 때 결과 칸을 읽는다.
  *          - `void prepareBatch( vector<Job>& inoutListJob, uint32 laneCount )` — 게임 스레드, 워커에 넘기기 직전. 질의가 가리키는 자원을 풀고(에이전트 종류 → 내비메시) 레인마다의 스크래치를 마련한다.
- *          - `void solve( Job& inoutJob, uint32 laneIndex ) const` — 워커. 자기 일과 자기 레인의 스크래치만 만진다.
+ *          - `void solve( Job& inoutJob, uint32 laneIndex )` — 워커. 자기 일과 자기 레인의 스크래치만 만진다(레인 하나는 태스크 하나라 레인 스크래치를 둘이 함께 쓰지 않는다).
  *
  *          **언제 무엇이 도는가**(형식이 정한다):
  *          - `request` · `cancel` · `takeResult` 는 아무 스레드에서 부릅니다(병렬 틱). 칸 표 · 대기 줄만 잠금 아래 만집니다.

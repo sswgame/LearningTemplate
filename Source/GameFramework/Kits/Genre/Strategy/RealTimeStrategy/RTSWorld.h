@@ -15,6 +15,7 @@
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
+#include "Engine/Navigation/PathRequestQueue.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -24,6 +25,7 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSVision.h"
 #include "GameFramework/Runtime/Character/Navigation/FlowField.h"
 #include "GameFramework/Runtime/Character/Navigation/FlowFieldCache.h"
+#include "GameFramework/Runtime/Character/Navigation/GridPathSolver.h"
 #include "GameFramework/Runtime/Character/Navigation/GridPathfinder.h"
 #include "GameFramework/Runtime/Character/Navigation/NavAgent.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
@@ -147,6 +149,7 @@ namespace sw
         RTSUnitID            _harvester{};      ///< 자원과 정제소가 쓴다. 지금 캐고 있는 일꾼
         RTSUnitID            _builder{};        ///< 건설 중인 건물이 쓴다. 짓고 있는 일꾼
         RTSUnitID            _linkedResource{}; ///< 정제소가 쓴다. 아래에 있는 간헐천
+        PathRequestHandle    _pathRequest{};    ///< 이번 걸음에 세운 땅 경로 요청(걸음 끝 `applyPathResults` 가 받는다 — 걸음을 넘겨 남지 않아 저장하지 않는다)
         float32              _hp{ 0.0f };
         Countdown            _cooldown{};            ///< 다음 공격까지 남은 시간
         float32              _buildProgress{ 1.0f }; ///< 0..1 범위이고 1이면 건설이 끝난 것이다
@@ -381,7 +384,9 @@ namespace sw
         void             finishOrder( RTSUnit& unit );
         void             clearOrders( RTSUnit& unit );
         /** @brief 목표 쪽으로 걷습니다. 목표가 움직이면 간격을 두고 경로를 다시 구합니다. */
-        void    approach( RTSUnit& unit, const float3& target, bool bForce );
+        void approach( RTSUnit& unit, const float3& target, bool bForce );
+        /** @brief 이번 걸음의 땅 경로 요청을 워커로 풀고 유닛 순서로 적용합니다(경로를 따라가거나, 갈 수 없으면 걸을 수 있는 칸으로 민다). 걸음마다 유닛 갱신 뒤에 한 번입니다. */
+        void    applyPathResults();
         bool    isWithinReach( const RTSUnit& unit, const RTSUnit& target, float32 reach ) const;
         float32 computeEdgeDistance( const RTSUnit& unit, const RTSUnit& target ) const;
         bool    canAttack( const RTSUnit& attacker, const RTSUnit& target ) const;
@@ -401,26 +406,27 @@ namespace sw
         void               pushEvent( RTSEvent::Kind kind, int32 player, RTSUnitID unitID, const hashed_string& defID, int32 value = 0, RTSUnitID otherID = RTSUnitID{} );
 
     private:
-        NavGrid               _grid;
-        NavGrid               _airGrid; ///< 하늘 격자이다. 모두 열려 있고 크기는 같으며, 공중 유닛은 지형과 건물을 넘는다
-        GridPathfinder        _pathfinder;
-        deque<RTSUnit>        _listUnit;       ///< 슬롯 번호가 id 의 index 이다(deque 라서 걸음 중에 유닛이 생겨도 다른 유닛 참조가 유지된다)
-        vector<uint32>        _listGeneration; ///< 슬롯마다의 세대
-        vector<uint32>        _listFreeSlot;
-        vector<RTSPlayer>     _listPlayer;
-        EventBuffer<RTSEvent> _eventBuffer;
-        vector<uint8>         _listTerrainBlocked;
-        RTSVision             _vision;  ///< 팀 시야(안개)와 다시 칠하기 타이머
-        RTSUnitBuckets        _buckets; ///< 이웃 탐색 버킷(버킷 하나는 `_settings._bucketSize` 셀)
-        vector<float3>        _listNeighborScratch;
-        vector<RTSUnitID>     _listQueryScratch;
-        FlowFieldCache        _flowParams; ///< 무리 이동이 목적지마다 나눠 쓰는 흐름장(땅 격자)
-        const RTSCatalog*     _pCatalog;
-        RTSSettings           _settings;
-        FixedStepTimer        _stepTimer;
-        float32               _time;
-        LandBinding           _land; ///< 빌린 공유 땅(없으면 단독 동작)
-        int32                 _winningTeam;
-        uint32                _landRevision; ///< 마지막으로 땅 격자를 칠한 땅 리비전
+        NavGrid                          _grid;
+        NavGrid                          _airGrid;        ///< 하늘 격자이다. 모두 열려 있고 크기는 같으며, 공중 유닛은 지형과 건물을 넘는다
+        GridPathSolver                   _pathSolver;     ///< 땅 격자 경로 풀이(레인마다 탐색기) — `_pathQueue` 보다 먼저 선언한다
+        PathRequestQueue<GridPathSolver> _pathQueue;      ///< 이번 걸음의 땅 경로 요청 — 걸음 끝에 한 번 워커로 풀고 요청 순서대로 적용한다
+        deque<RTSUnit>                   _listUnit;       ///< 슬롯 번호가 id 의 index 이다(deque 라서 걸음 중에 유닛이 생겨도 다른 유닛 참조가 유지된다)
+        vector<uint32>                   _listGeneration; ///< 슬롯마다의 세대
+        vector<uint32>                   _listFreeSlot;
+        vector<RTSPlayer>                _listPlayer;
+        EventBuffer<RTSEvent>            _eventBuffer;
+        vector<uint8>                    _listTerrainBlocked;
+        RTSVision                        _vision;  ///< 팀 시야(안개)와 다시 칠하기 타이머
+        RTSUnitBuckets                   _buckets; ///< 이웃 탐색 버킷(버킷 하나는 `_settings._bucketSize` 셀)
+        vector<float3>                   _listNeighborScratch;
+        vector<RTSUnitID>                _listQueryScratch;
+        FlowFieldCache                   _flowParams; ///< 무리 이동이 목적지마다 나눠 쓰는 흐름장(땅 격자)
+        const RTSCatalog*                _pCatalog;
+        RTSSettings                      _settings;
+        FixedStepTimer                   _stepTimer;
+        float32                          _time;
+        LandBinding                      _land; ///< 빌린 공유 땅(없으면 단독 동작)
+        int32                            _winningTeam;
+        uint32                           _landRevision; ///< 마지막으로 땅 격자를 칠한 땅 리비전
     };
 } // namespace sw
