@@ -17,7 +17,7 @@
 #include "Editor/Common/EditorColor.h"
 #include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 
 namespace sw
 {

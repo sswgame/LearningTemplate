@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLMigrationRunner.h"

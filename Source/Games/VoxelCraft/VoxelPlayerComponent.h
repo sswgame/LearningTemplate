@@ -3,7 +3,6 @@
  * @brief 복셀 월드의 1인칭 몸과 손(폰 쪽)입니다. 걷기, 점프, 헤엄(몸 충돌), 바라보는 블록 부수기(단단할수록 오래 걸립니다), 블록 놓기, 핫바를 맡습니다. 같은 오브젝트에 있는 폰의 의도만 읽습니다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -11,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

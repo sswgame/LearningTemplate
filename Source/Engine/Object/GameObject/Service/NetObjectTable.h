@@ -16,12 +16,12 @@
  *          표를 쓰는 기능은 시작할 때 `captureSceneObjects` 를 부르고, 생성 번호가 늘었는지는 `getSpawnedRevision` 으로 본다. 씬을 비우면 모두 지운다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 
 namespace sw

@@ -3,11 +3,11 @@
  * @brief 날아가는 투사체 하나의 모습 — 디렉터의 발사체 시뮬레이션에서 자기 탄을 읽어 메시를 옮깁니다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

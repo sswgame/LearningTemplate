@@ -6,7 +6,7 @@
  *          실수는 `StateHashBuilder` 가 -0.0 · NaN 을 정규화해 접는다. 같은 씬을 같은 입력으로 돌린 두 프로세스는 같은 틱에 같은 값을 냅니다.
  *          오브젝트 ID 는 넣지 않습니다(프로세스마다 다를 수 있다). 비용은 프로파일 구간 `GT.StateHash.collect` 와 카운터 `GT.StateHash.objects` 로 잰다.
  *          이력은 엔진 서비스(`StateHashHistory`) 하나이고 게임 스레드만 씁니다. 용량 0(기본)이면 꺼져 있어 해시를 계산하지 않습니다(`-gv_stateHashHistory=N`).
- *          전용 서버는 자기 틱 번호로, 클라이언트(App)는 서버가 알린 틱 번호(`GameNetSession::tryGetServerTick`)로 남겨 두 이력의 틱이 같은 뜻이다.
+ *          전용 서버는 자기 틱 번호로, 클라이언트(App)는 서버가 알린 틱 번호(`GameNetSession` 의 프레임 끝 훅)로 남겨 두 이력의 틱이 같은 뜻이다.
  *          개발 명령 `state.hash`(지금 값)와 `state.hashes <from> <count>`(이력)가 같은 줄 형식으로 답하고, `parseReport` 가 그 글을 되읽습니다.
  */
 #pragma once

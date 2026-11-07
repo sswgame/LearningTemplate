@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Input/Map/InputMapBundle.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"

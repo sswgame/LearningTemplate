@@ -3,7 +3,6 @@
  * @brief 유닛 하나의 모습 — 디렉터 판의 같은 id 유닛을 따라 자리 · 크기(지은 만큼 · 남은 자원만큼) · 방향 · 편 색 · 고름을 맞춥니다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -11,7 +10,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

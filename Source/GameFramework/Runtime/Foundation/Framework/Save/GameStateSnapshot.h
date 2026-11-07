@@ -7,11 +7,11 @@
  *          스레드: 게임 스레드에서만 쓴다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 #include "GameFramework/GameFrameworkExports.h"

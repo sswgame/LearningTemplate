@@ -22,8 +22,8 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Environment/Placement/SurfaceLayerWeights.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
 
 namespace sw
 {

@@ -7,13 +7,13 @@
  *          이 플래그에 기대고 있으므로 타깃과 플래그 이름은 바꾸지 않는다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 
 #include "Games/Empty/StressTestFraming.h"

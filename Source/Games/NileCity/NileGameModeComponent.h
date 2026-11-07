@@ -9,7 +9,6 @@
  *          바뀐 도로 타일과 건물 타일을 쌓아 두면 베이스 `GameModeComponent` 가 틱이 끝난 뒤 `onFlush` 로 스폰한다. 효과음도 그때 낸다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -17,6 +16,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"

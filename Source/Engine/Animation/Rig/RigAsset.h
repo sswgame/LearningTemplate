@@ -15,7 +15,7 @@
 
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 
 namespace sw
 {

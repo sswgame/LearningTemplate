@@ -234,6 +234,8 @@ namespace sw
         EngineStartupExtensionDelegate _startupExtension; ///< 호스트가 건 기동 확장(`setStartupExtension`, 없으면 비었다)
         /** @brief 기동 단계 `Telemetry` 가 붙인 텔레메트리 관찰자의 구독입니다. 목록보다 뒤에 선언해 먼저 사라진다. */
         Subscription _telemetryFrameSubscription;
+        /** @brief 클라이언트 호스트의 넷 세션 훅 구독입니다(`GameNetSession::makeClientHostFrameHooks`). 텔레메트리 구독처럼 `shutdown` 이 목록을 비울 때 끝난다. */
+        Subscription _netFrameSubscription;
 
         /** @brief 이 엔진을 띄운 호스트의 역할입니다. 서비스를 만들기 전에 정한다(오디오 장치 · 기동 표 대상). */
         EngineHostRole _hostRole;

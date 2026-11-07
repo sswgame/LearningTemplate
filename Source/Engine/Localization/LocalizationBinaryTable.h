@@ -20,7 +20,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
 
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 
 namespace sw
 {

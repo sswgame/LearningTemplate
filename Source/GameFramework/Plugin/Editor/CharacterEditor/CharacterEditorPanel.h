@@ -10,7 +10,6 @@
  *            선택에 기준 프리셋이 없으면 팩 데이터의 `previewPreset` 위에 입힌다. 외형 데이터를 읽기 전에는 몸이 없다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
@@ -19,6 +18,8 @@
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
+
+#include "Engine/Foundation/GameObjectHandle.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorModel.h"
 

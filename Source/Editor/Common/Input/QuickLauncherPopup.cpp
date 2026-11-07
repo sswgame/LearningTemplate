@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Popups/QuickLauncherPopup.h"
+#include "Editor/Common/Input/QuickLauncherPopup.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"

@@ -14,8 +14,6 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/ComponentHandle.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/PagedArray.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -26,6 +24,8 @@
 #include "Core/Memory/PoolAllocator.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 

@@ -30,7 +30,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"

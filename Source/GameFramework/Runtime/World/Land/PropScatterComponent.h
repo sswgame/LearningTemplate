@@ -5,7 +5,6 @@
  *          규칙 모드는 Engine 의 배치 코어(`PlacementScatter`)를 쓰고, 영역 아래 지형(`TerrainComponent`)을 표면으로 읽는다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -13,6 +12,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/Placement/PlacementRule.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Object/Component/Component.h"

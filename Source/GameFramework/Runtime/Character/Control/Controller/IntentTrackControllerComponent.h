@@ -3,13 +3,13 @@
  * @brief 기록 조종자입니다. 의도 목록(`.swintent` 트랙, 시나리오 `<Intent>`)을 틱 순서로 냅니다. AI 조종자와 같은 역할입니다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"

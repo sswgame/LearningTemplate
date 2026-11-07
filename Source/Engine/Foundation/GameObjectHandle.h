@@ -2,7 +2,8 @@
  * @file GameObjectHandle.h
  * @brief 게임 오브젝트 핸들입니다. 프레임을 넘겨 들고 있을 때는 핸들을, 지금 바로 쓸 때만 `GameObject*` 를 씁니다.
  *
- * @note `ComponentHandle` 과 같은 곳(`Core/Container`)에 둡니다. objectID 정수 하나뿐인 값 타입이라 Core 밖을 모릅니다.
+ * @note `ComponentHandle` 과 같은 곳(엔진 바닥 `Engine/Foundation`)에 둡니다. 게임 오브젝트 개념이라 Core 의 것이 아니고(언리얼 `FObjectHandle` 도 CoreUObject 다 — 기억),
+ *       objectID 정수 하나뿐인 값 타입이라 Core 만 include 합니다.
  */
 #pragma once
 #include "Core/Foundation/StdHeaders.h"

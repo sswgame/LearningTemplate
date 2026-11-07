@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
 #include "GameFramework/GameFrameworkExports.h"

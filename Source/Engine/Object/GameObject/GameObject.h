@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -15,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/TagID.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
 #include "Engine/Reflection/ReflectionCast.h"

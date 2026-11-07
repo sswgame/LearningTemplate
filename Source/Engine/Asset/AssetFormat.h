@@ -10,8 +10,8 @@
 #pragma once
 #include "Core/Hash/HashUtil.h"
 
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/EngineMinimal.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw

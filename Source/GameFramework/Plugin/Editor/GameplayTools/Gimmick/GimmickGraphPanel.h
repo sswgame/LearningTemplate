@@ -7,7 +7,6 @@
  *          컴포넌트가 바깥에서 바뀌면(되돌리기, 인스펙터) 저장 목록의 서명이 달라지는 것으로 알아보고 모델을 다시 읽는다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -17,6 +16,8 @@
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+
+#include "Engine/Foundation/GameObjectHandle.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphModel.h"
 

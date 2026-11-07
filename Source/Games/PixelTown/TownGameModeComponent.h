@@ -14,11 +14,11 @@
  *          모습(주인공 스프라이트의 자리와 애니메이션)은 뷰 컴포넌트(`TownWalkerViewComponent`)가 이 컴포넌트를 **읽기만** 해서 맞춘다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Feature/World/Overworld/OverworldTileMover.h"

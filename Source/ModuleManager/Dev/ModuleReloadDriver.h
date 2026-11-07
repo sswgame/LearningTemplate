@@ -12,7 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "ModuleManager/HostDevLayer.h"
+#include "ModuleManager/Host/HostDevLayer.h"
 
 namespace sw
 {

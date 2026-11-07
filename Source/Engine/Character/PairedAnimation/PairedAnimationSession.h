@@ -12,7 +12,6 @@
  *          - **복제**: 상태는 `captureSnapshot` 으로 복사하고 `restore` 로 이어 받는다(늦게 들어온 클라이언트, 롤백).
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -21,6 +20,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Character/PairedAnimation/PairedAnimationSnapshot.h"
+#include "Engine/Foundation/ComponentHandle.h"
 
 namespace sw
 {

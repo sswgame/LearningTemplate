@@ -8,7 +8,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw

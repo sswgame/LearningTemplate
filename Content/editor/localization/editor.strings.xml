@@ -557,12 +557,12 @@
 		</entry>
 		<entry key="EdCommon.BoneNoSelection" source="No selection. Select an object in the Hierarchy.">
 			<origins>
-				<item>Source/Editor/Popups/BoneHierarchyPopup.cpp</item>
+				<item>Source/Editor/Panels/Animation/BoneHierarchyPopup.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.BoneObjectNotFound" source="Object not found in the active scene.">
 			<origins>
-				<item>Source/Editor/Popups/BoneHierarchyPopup.cpp</item>
+				<item>Source/Editor/Panels/Animation/BoneHierarchyPopup.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.BuildCompiling" source="Modules are being built in the background.">
@@ -603,7 +603,7 @@
 		</entry>
 		<entry key="EdCommon.CommandPaletteHint" source="Type a command or search objects... (Esc to close)">
 			<origins>
-				<item>Source/Editor/Popups/CommandPalettePopup.cpp</item>
+				<item>Source/Editor/Common/Input/CommandPalettePopup.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.CompileGame"
@@ -882,7 +882,7 @@
 		</entry>
 		<entry key="EdCommon.NoActiveScene" source="No active scene.">
 			<origins>
-				<item>Source/Editor/Popups/BoneHierarchyPopup.cpp</item>
+				<item>Source/Editor/Panels/Animation/BoneHierarchyPopup.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.NoAssetsOfKind" source="No assets of this kind under Content/.">
@@ -1253,17 +1253,17 @@
 		</entry>
 		<entry key="EdCommon.QuickOpenHint" source="Type to search assets, scenes, game objects (ESC to cancel)...">
 			<origins>
-				<item>Source/Editor/Popups/QuickLauncherPopup.cpp</item>
+				<item>Source/Editor/Common/Input/QuickLauncherPopup.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.QuickOpenIndexing" source="Indexing assets...">
 			<origins>
-				<item>Source/Editor/Popups/QuickLauncherPopup.cpp</item>
+				<item>Source/Editor/Common/Input/QuickLauncherPopup.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.QuickOpenNoMatches" source="No matching assets or game objects found.">
 			<origins>
-				<item>Source/Editor/Popups/QuickLauncherPopup.cpp</item>
+				<item>Source/Editor/Common/Input/QuickLauncherPopup.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.RHIBackend" source="Current graphics RHI backend: {backend} ({fps} FPS)">
@@ -2093,7 +2093,7 @@
 		</entry>
 		<entry key="EdFormat.SelectedObject" source="Selected Object: {name}">
 			<origins>
-				<item>Source/Editor/Popups/BoneHierarchyPopup.cpp</item>
+				<item>Source/Editor/Panels/Animation/BoneHierarchyPopup.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdFormat.SeparateFromAnimationGraph"

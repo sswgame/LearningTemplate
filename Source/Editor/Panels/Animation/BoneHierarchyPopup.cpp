@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Popups/BoneHierarchyPopup.h"
+#include "Editor/Panels/Animation/BoneHierarchyPopup.h"
 
 #include "Core/Container/StringUtil.h"
 

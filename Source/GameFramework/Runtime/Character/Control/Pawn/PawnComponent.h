@@ -5,7 +5,6 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -13,6 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

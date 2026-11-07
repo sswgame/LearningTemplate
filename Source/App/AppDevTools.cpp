@@ -13,7 +13,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Renderer/RenderThread.h"
 
-#include "ModuleManager/HostDevLayer.h"
+#include "ModuleManager/Host/HostDevLayer.h"
 
 #include "sw/config/ConfigConstants.h"
 

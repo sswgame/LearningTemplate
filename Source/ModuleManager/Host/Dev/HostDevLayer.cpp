@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "ModuleManager/HostDevLayer.h"
+#include "ModuleManager/Host/HostDevLayer.h"
 
-#include "ModuleManager/Dev/HostDevTools.h"
 #include "ModuleManager/Dev/ModuleReloadDriver.h"
+#include "ModuleManager/Host/Dev/HostDevTools.h"
 
 namespace sw
 {

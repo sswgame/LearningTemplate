@@ -6,7 +6,6 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -14,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

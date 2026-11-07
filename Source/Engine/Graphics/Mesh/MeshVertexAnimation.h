@@ -15,7 +15,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 
 namespace sw
 {

@@ -5,9 +5,10 @@
  *          (언리얼 애니메이션 시퀀스 에디터의 미리보기 씬 상태와 뷰포트가 나뉜 것과 같다). 씬은 패널이 넘긴다(모델은 씬을 갖지 않는다).
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+
+#include "Engine/Foundation/GameObjectHandle.h"
 
 namespace sw
 {

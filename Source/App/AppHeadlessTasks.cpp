@@ -8,8 +8,15 @@
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Engine.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Renderer/Capture/PortraitBatchUtil.h"
+#include "Engine/Renderer/RenderThread.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/CrashReportUploader.h"
+#include "Engine/Window/SplashSubsystem.h"
+#include "Engine/Window/SplashWindow.h"
 
 namespace sw
 {
@@ -121,6 +128,33 @@ namespace sw
                 }
             }
 
+            /**
+             * @brief 초상화 굽기(`--render-portraits=a.prefab.xml,b.prefab.xml`)입니다. 게임 컴포넌트 타입이 로드된 뒤 그리고 끝낸다(창은 띄우지 않는다).
+             * @details 스튜디오 씬 · 패킷은 이 스레드가, 그리기 · 읽기는 렌더 스레드가 명령으로 한다(`PortraitStudio`). 하나라도 실패하면 실패다.
+             */
+            static TaskResult runPortraitBake( const CommandLineManager& commandLine, Engine& hostEngine )
+            {
+                string portraitList;
+                if ( commandLine.getArgument( CommandLineArgument::RENDER_PORTRAITS, portraitList ) == false || portraitList.empty() )
+                    return TaskResult::NotRequested;
+                int32  portraitSize = 256;
+                string portraitDir;
+                commandLine.getArgument( CommandLineArgument::PORTRAIT_SIZE, portraitSize );
+                commandLine.getArgument( CommandLineArgument::PORTRAIT_DIR, portraitDir );
+                // 굽는 동안 스플래시를 남기지 않는다. 렌더러 없는 구성은 스플래시 단계가 없다.
+                if ( SplashSubsystem* const pSplashHost = engine::findSubsystem<SplashSubsystem>() )
+                    pSplashHost->getSplash().dismiss();
+                RenderThread* const pRenderThread = hostEngine.getRenderThread();
+                if ( pRenderThread == nullptr || pRenderThread->getDevice() == nullptr )
+                {
+                    SW_LOG_ERROR_ID( "App.PortraitBakeNeedsRender", "Portrait bake needs a render thread with a device (--render-portraits)" );
+                    return TaskResult::Failed;
+                }
+                const bool bBaked = PortraitBatchUtil::renderPrefabList( *pRenderThread, engine::getSubsystem<SceneManager>().getEngineServices(), portraitList, portraitDir,
+                                                                         static_cast<uint32>( portraitSize > 0 ? portraitSize : 256 ) );
+                return bBaked ? TaskResult::Finished : TaskResult::Failed;
+            }
+
             /** @brief 헤드리스 작업 표입니다. 새 작업은 인자를 `ArgumentList.xxx` 에 추가하고 여기에 항목 하나를 더합니다. 에디터 모듈의 작업이면 인자를 `kArrEditorToolArgument` 에도 더한다(엔진이 헤드리스로 서는 판정). */
             static constexpr AppHeadlessTasks::TaskFunction kArrHeadlessTask[] = {
                 &runCrashReporter,
@@ -129,6 +163,11 @@ namespace sw
                 &runEditorImport<EditorImportKind::Texture, CommandLineArgument::IMPORT_TEXTURES, CommandLineArgument::CHECK_TEXTURES>,
                 &runEditorImport<EditorImportKind::Model, CommandLineArgument::IMPORT_MODELS, CommandLineArgument::CHECK_MODELS>,
                 &runEditorImport<EditorImportKind::Heightfield, CommandLineArgument::IMPORT_HEIGHTFIELDS, CommandLineArgument::CHECK_HEIGHTFIELDS>,
+            };
+
+            /** @brief 호스트 서비스 뒤 작업 표입니다(`AppHeadlessTasks::runAfterHostServices`). 새 작업은 항목 하나를 더합니다. */
+            static constexpr AppHeadlessTasks::AfterHostServicesTask kArrAfterHostServicesTask[] = {
+                &runPortraitBake,
             };
         };
     } // namespace
@@ -141,5 +180,16 @@ namespace sw
         if ( pCommandLine == nullptr )
             return true;
         return runTable( AppHeadlessTasksInternal::kArrHeadlessTask, static_cast<uint32>( std::size( AppHeadlessTasksInternal::kArrHeadlessTask ) ), *pCommandLine );
+    }
+
+    AppHeadlessTasks::TaskResult AppHeadlessTasks::runAfterHostServices( const CommandLineManager& commandLine, Engine& hostEngine )
+    {
+        for ( const AfterHostServicesTask pTask : AppHeadlessTasksInternal::kArrAfterHostServicesTask )
+        {
+            const TaskResult result = pTask( commandLine, hostEngine );
+            if ( result != TaskResult::NotRequested )
+                return result;
+        }
+        return TaskResult::NotRequested;
     }
 } // namespace sw

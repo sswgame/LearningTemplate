@@ -1,5 +1,5 @@
 // ModuleCatalogLoaderTest — 함께 지은 게임 팩만 닿는 키트를 빼는 규칙과, 실행 파일 옆 매니페스트의 실제 읽기 · 해석(nogpu).
-// ModuleManager 는 정적 라이브러리라 그 안의 테스트 등록은 링크에서 빠진다 - 실행 파일인 App 에 둔다.
+// App 이 ModuleManager 를 통째로 링크해 이 등록이 남는다(`Source/App/CMakeLists.txt` 의 `sw_linkWholeArchive`) — Server 는 이 스위트를 돌리지 않는다.
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"

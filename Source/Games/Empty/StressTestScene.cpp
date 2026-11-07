@@ -20,7 +20,7 @@
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"

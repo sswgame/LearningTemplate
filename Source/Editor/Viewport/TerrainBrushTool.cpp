@@ -2,7 +2,6 @@
 
 #include "Editor/Viewport/TerrainBrushTool.h"
 
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -31,6 +30,7 @@
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

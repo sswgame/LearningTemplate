@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterMirrorUtil.h"
 

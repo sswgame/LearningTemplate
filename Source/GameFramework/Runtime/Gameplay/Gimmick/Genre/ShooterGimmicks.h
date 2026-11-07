@@ -6,13 +6,13 @@
  *          파괴 오브젝트에 위치 기반 폭발 피해(`applyRadialDamageAtWorld`)를 주어 벽과 상자를 맞은 위치에서 깨뜨린다. 그래서 연쇄 폭발이 근처의 파괴물도 부순다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"

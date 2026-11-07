@@ -7,6 +7,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetEndpointThread.h"
@@ -19,11 +20,13 @@
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/DedicatedServer/ServerServiceRegistry.h"
+#include "Engine/EngineFrameHooks.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Scene/SceneStateHash.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 #include <algorithm>
@@ -241,6 +244,8 @@ namespace sw
         , _shutdownNotice{}
         , _bShutdownNoticeKnown{ SW_FALSE }
         , _bServerTickKnown{ SW_FALSE }
+        , _clientHostFrameNumber{ 0 }
+        , _bFrameClockShown{ SW_FALSE }
     {
     }
 
@@ -636,6 +641,34 @@ namespace sw
             return false;
         outTick = _latestServerTick;
         return true;
+    }
+
+    EngineFrameHooks GameNetSession::makeClientHostFrameHooks()
+    {
+        EngineFrameHooks hooks{};
+        hooks._onFrameBegin = SW_DELEGATE_METHOD( EngineFrameDelegate, &GameNetSession::onClientHostFrameBegin, this );
+        hooks._onFrameEnd   = SW_DELEGATE_METHOD( EngineFrameExitDelegate, &GameNetSession::onClientHostFrameEnd, this );
+        return hooks;
+    }
+
+    void GameNetSession::onClientHostFrameBegin( const EngineFrameContext& /*context*/ )
+    {
+        const bool bListenHost = _role == GameNetRole::Server;
+        if ( bListenHost )
+            Logger::setClockNumber( LogClock::Frame, _clientHostFrameNumber );
+        else if ( _bFrameClockShown == SW_TRUE )
+            Logger::clearClockNumber();
+        _bFrameClockShown = bListenHost ? SW_TRUE : SW_FALSE;
+        ++_clientHostFrameNumber;
+    }
+
+    int32 GameNetSession::onClientHostFrameEnd( const EngineFrameContext& /*context*/ )
+    {
+        StateHashHistory* pStateHashHistory = engine::areEngineServicesBound() ? engine::findSubsystem<StateHashHistory>() : nullptr;
+        uint64            serverTick        = 0;
+        if ( pStateHashHistory != nullptr && pStateHashHistory->isRecording() && tryGetServerTick( serverTick ) )
+            pStateHashHistory->recordActiveScene( serverTick );
+        return kEngineFrameRunning;
     }
 
     uint16 GameNetSession::EngineMessageHandler::getMessageKindMask() const

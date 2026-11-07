@@ -6,7 +6,6 @@
  *          그래서 확장 모듈이 없는 런타임(게임 · Shipping)에서도 씬과 에셋이 그대로 읽힌다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -15,6 +14,7 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"

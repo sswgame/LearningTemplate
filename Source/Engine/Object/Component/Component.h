@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -12,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Foundation/AnimationNotifyPhase.h"
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/PhysicsHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Reflection/TypeCastHeader.h"

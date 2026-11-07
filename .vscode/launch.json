@@ -68,7 +68,6 @@
                 "EngineTest",
                 "CoreTest",
                 "ReflectionTest",
-                "SmokeTest",
                 "EditorTest",
                 "EditorUITest",
                 "AppTest"

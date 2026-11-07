@@ -6,8 +6,6 @@
  *          언리얼의 Control Rig(후처리 노드)와 IK Rig, 유니티의 Animation Rigging(Rig Builder, 제약 컴포넌트)에 해당한다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
@@ -21,6 +19,8 @@
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

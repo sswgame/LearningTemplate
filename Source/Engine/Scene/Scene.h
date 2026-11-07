@@ -1,12 +1,12 @@
 #pragma once
 #include "Core/Concurrency/StopToken.h"
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Scene/SceneDataLayerSubsystem.h"

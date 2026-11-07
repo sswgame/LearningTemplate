@@ -4,7 +4,6 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/InlineAllocator.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/vector.h"
@@ -13,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/SceneTransformStorage.h"
 
 namespace sw

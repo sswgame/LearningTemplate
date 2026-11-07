@@ -18,7 +18,7 @@
 
 #if SW_ANIMATION_REWIND_ENABLED
 
-    #include "Core/Container/ComponentHandle.h"
+    #include "Engine/Foundation/ComponentHandle.h"
     #include "Core/Container/string.h"
     #include "Core/Container/vector.h"
     #include "Core/Math/MatrixMath.h"

@@ -190,7 +190,7 @@ namespace sw
         if ( pOld == pNew )
             return 0;
         // 한쪽이 없으면 다른 쪽이 정한 필드가 모두 바뀐 필드다. 빈 스타일 정적 객체는 두지 않는다. 텍스트 필드(폰트, 전환)가 힙을 잡아
-        // 처음 부른 프레임의 태그(UI)로 프로세스 끝까지 남기 때문이다(AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline).
+        // 처음 부른 프레임의 태그(UI)로 프로세스 끝까지 남기 때문이다.
         if ( pOld == nullptr || pNew == nullptr )
             return ( pOld != nullptr ? pOld->_setMask : 0u ) | ( pNew != nullptr ? pNew->_setMask : 0u );
         const UIComputedStyle& oldStyle = *pOld;

@@ -13,7 +13,6 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -22,6 +21,8 @@
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
+
+#include "Engine/Foundation/GameObjectHandle.h"
 
 namespace sw
 {

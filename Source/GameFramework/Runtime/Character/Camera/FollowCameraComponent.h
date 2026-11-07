@@ -4,10 +4,10 @@
  * @details AbilityArena 의 `FollowCameraComponent` 를 옮겼다 — 초점만 디렉터에게 묻고 오프셋은 씬 데이터라 어느 게임이든 쓴다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -8,13 +8,13 @@
  *          네트워크 클라이언트는 서버가 정한 id 와 상태(`PairedAnimationSessionSnapshot`)로 `restoreSession` 을 불러 세션을 이어 받는다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 
 namespace sw

@@ -3,11 +3,11 @@
  * @brief 자동 농부 — 농부 폰에 빙의하는 AI 조종자입니다. 자동 플레이 스위치(`-gv_farmAutoPlay`)를 켜면 디렉터가 이것을 농부에 빙의시키고, 끄면 플레이어 조종자가 되찾습니다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"

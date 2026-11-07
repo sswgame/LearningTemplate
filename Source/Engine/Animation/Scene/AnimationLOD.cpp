@@ -11,7 +11,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 
 namespace sw
 {

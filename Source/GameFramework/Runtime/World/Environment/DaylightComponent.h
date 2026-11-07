@@ -4,9 +4,9 @@
  * @details HarvestValley 의 `DaylightComponent` 를 옮겼다 — 시각만 디렉터에게 묻고 곡선은 씬 데이터라 어느 게임이든 쓴다(언리얼 SkyAtmosphere 의 해 구동이 엔진 쪽인 것과 같은 자리).
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

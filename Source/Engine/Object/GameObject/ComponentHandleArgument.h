@@ -6,9 +6,9 @@
  *          확인이 지면 오류를 남기고 메서드를 부르지 않는다 — 빈 핸들로 바꿔 부르면 타입이 틀린 값이 "대상 없음" 으로 조용히 바뀐다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 

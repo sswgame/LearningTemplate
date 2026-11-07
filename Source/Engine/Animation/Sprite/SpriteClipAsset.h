@@ -14,7 +14,7 @@
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

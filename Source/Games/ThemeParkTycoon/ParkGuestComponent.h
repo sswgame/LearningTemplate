@@ -3,9 +3,9 @@
  * @brief 손님 한 명의 모습 — 디렉터 시뮬레이션의 같은 번호 손님을 따라 자리 · 보임 · 기분 색을 맞춥니다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

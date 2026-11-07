@@ -4,7 +4,6 @@
  * @details 폰마다 틱별 `ControlIntent` 고리와 그 파일 형식(`.swintent`)을 다룬다. 게임플레이 리플레이, 킬캠, 버그 재현이 행동 층을 이 기록에 적는다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -16,6 +15,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/ComponentHandle.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"

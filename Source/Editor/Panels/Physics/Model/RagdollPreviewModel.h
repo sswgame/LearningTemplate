@@ -5,13 +5,13 @@
  *          (언리얼 Physics Asset 에디터의 툴킷 상태와 뷰포트 클라이언트가 나뉜 것과 같다). 씬은 패널이 넘긴다(모델은 씬을 갖지 않는다).
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Physics/PhysicsTypes.h"
 
 namespace sw

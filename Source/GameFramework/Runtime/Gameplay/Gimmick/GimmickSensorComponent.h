@@ -7,10 +7,10 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"

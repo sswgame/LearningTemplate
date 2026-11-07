@@ -2,8 +2,8 @@
  * @file ComponentHandle.h
  * @brief 컴포넌트 핸들입니다. 보관할 때는 핸들을 쓰고, T* 는 핸들을 푼 그 순간에만 씁니다.
  *
- * @note `SlotHandle` 과 같은 곳(`Core/Container`)에 둡니다. objectID 와 componentID 두 정수뿐인 값 타입이라 Core 밖을
- *       전혀 모릅니다. 그래서 직렬화기가 Object 를 include 하지 않고 이 핸들의 텍스트 핸들러를 등록합니다.
+ * @note 엔진 바닥(`Engine/Foundation`)에 둡니다. objectID 와 componentID 두 정수뿐인 값 타입이라 Core 만 include 합니다.
+ *       그래서 직렬화기(층 1)가 Object(층 5)를 include 하지 않고 이 핸들의 텍스트 핸들러를 등록합니다.
  */
 #pragma once
 #include "Core/Foundation/StdHeaders.h"

@@ -59,7 +59,7 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Absolute disk path as a value | `Core/Path/AbsolutePath.h` `AbsolutePath::tryMake` (rejects `C:foo`, `\foo`, relative) | `FileUtil::isAbsolutePath` for validation |
 | Read stdin commands | `Core/Process/StandardInputReader.h` | a blocking `std::cin` loop |
 | Containers | `Core/Container/` `vector` · `unordered_map` · `map` · `set` · `deque` · `string` · `span` · `sparse_set` | `std::` containers |
-| Stable handle to pooled data | `Core/Container/SlotHandleTable.h` · `SlotHandle.h` · `IndexFreeList.h`; objects: `GameObjectHandle.h` · `ComponentHandle.h` | raw pointers or indices into pooled storage |
+| Stable handle to pooled data | `Core/Container/SlotHandleTable.h` · `SlotHandle.h` · `IndexFreeList.h`; objects: `Engine/Foundation/GameObjectHandle.h` · `ComponentHandle.h` | raw pointers or indices into pooled storage |
 | Own a byte block or object | `Core/Memory/MemoryBlock.h` `MemoryBlock`; `make_unique<T>`; `vector<T>` | `malloc` · `Memory::allocate` · raw `new` |
 | Many short-lived allocations | `Core/Memory/LinearAllocator.h` · `PoolAllocator.h`; per frame: `Core/Container/FrameArenaAllocator.h`; small inline: `InlineAllocator.h` | a private free list |
 | Reach a service | `getSubsystem<T>()` · `findSubsystem<T>()` in the owning scope | singletons, `getInstance()` |

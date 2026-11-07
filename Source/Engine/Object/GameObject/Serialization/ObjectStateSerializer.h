@@ -4,8 +4,6 @@
  * @details JSON 은 도구 사이에서 주고받는 용도입니다. Shipping 쿠킹 결과는 Prefab 과 Scene 바이너리입니다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -14,6 +12,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
 #include <optional>

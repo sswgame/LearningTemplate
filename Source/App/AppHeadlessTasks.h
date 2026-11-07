@@ -8,6 +8,7 @@
 namespace sw
 {
     class CommandLineManager;
+    class Engine;
 
     /**
      * @struct AppHeadlessTasks
@@ -27,13 +28,22 @@ namespace sw
             Finished,     ///< 이 작업만 하고 끝낸다(성공). 뒤의 항목은 보지 않는다.
         };
         using TaskFunction = TaskResult ( * )( const CommandLineManager& commandLine );
+        /** @brief 호스트 서비스가 선 뒤에 도는 작업입니다. 게임 타입 · 렌더 스레드가 있어 엔진을 받습니다. */
+        using AfterHostServicesTask = TaskResult ( * )( const CommandLineManager& commandLine, Engine& hostEngine );
 
         /** @brief App 의 작업 표를 차례로 실행합니다. 실패한 작업이 하나라도 있으면 false 를 반환합니다(명령줄이 없으면 아무것도 실행하지 않고 true). */
         [[nodiscard]] static bool runAll( const CommandLineManager* pCommandLine );
 
         /**
+         * @brief 호스트 서비스(게임 · 에디터 인스턴스)가 선 뒤 한 번 하고 끝나는 작업의 표를 위에서부터 봅니다. 처음으로 실행한 작업의 결과를 돌려주고 끝냅니다.
+         * @details 창과 RHI 없이 시작하는 위 표와 달리 이 작업들은 일반 기동(창 · 렌더 스레드 · 모듈)을 모두 거친 뒤에 돈다 — `--render-portraits` 는 게임 컴포넌트 타입과 디바이스가 있어야 그린다.
+         * @return 실행한 작업이 없으면 `NotRequested` 입니다(기동을 이어 간다). 그 밖이면 App 은 메인 루프에 들어가지 않고 끝낸다.
+         */
+        [[nodiscard]] static TaskResult runAfterHostServices( const CommandLineManager& commandLine, Engine& hostEngine );
+
+        /**
          * @brief 작업 @p pArrTask 를 위에서부터 차례로 실행합니다. 결과 규칙은 `TaskResult` 와 같습니다.
-         * @details 표와 떼어 둔 것은 규칙(실패해도 계속, `Finished` 에서 멈춤)을 모듈 없이 테스트하기 위해서입니다(`SmokeTest` 의 `AppHeadlessTasksTest`).
+         * @details 표와 떼어 둔 것은 규칙(실패해도 계속, `Finished` 에서 멈춤)을 모듈 없이 테스트하기 위해서입니다(`App/Tests/TestAppHeadlessTasks.cpp`).
          * @return 실패한 작업이 없으면 true 를 반환합니다.
          */
         [[nodiscard]] static bool runTable( const TaskFunction* pArrTask, uint32 taskCount, const CommandLineManager& commandLine )

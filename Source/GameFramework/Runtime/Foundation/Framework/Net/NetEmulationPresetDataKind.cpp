@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Engine/Config/NetEmulationPresetTable.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 
 namespace sw
 {

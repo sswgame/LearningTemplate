@@ -1,5 +1,5 @@
 /**
- * @file ModuleManager/HostServiceUtil.h
+ * @file ModuleManager/Host/HostServiceUtil.h
  * @brief App 과 Server 가 호스트 서비스를 세우는 한 줄 — 의존 순서로 세우고, 선 순서를 남기고, 아무도 가져가지 않은 `-gv_*` 를 알립니다.
  * @details 예전에는 두 호스트가 이 세 걸음을 저마다 적어 Server 만 모르는 `-gv_*` 를 조용히 버렸다(App 만 경고). 세우는 길을 하나로 두어 갈라지지 않게 한다.
  *          언리얼은 `FEngineLoop::PreInit` 하나가 게임 · 서버 대상을 함께 세운다.

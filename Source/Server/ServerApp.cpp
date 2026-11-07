@@ -14,6 +14,7 @@
 #include "Core/Process/ProcessSession.h"
 #include "Core/Process/ShutdownSignal.h"
 #include "Core/String/fixed_string.h"
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
@@ -23,8 +24,10 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/DedicatedServer/ServerServiceManager.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"
+#include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/HostInterfaces.h"
+#include "Engine/Module/ModuleCatalog.h"
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -38,7 +41,7 @@
 #include "Engine/Telemetry/CrashReportService.h"
 
 #include "ModuleManager/GameModuleManager.h"
-#include "ModuleManager/HostServiceUtil.h"
+#include "ModuleManager/Host/HostDevLayer.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -95,14 +98,8 @@ namespace sw
     } // namespace
 
     ServerApp::ServerApp()
-        : _host{}
-        , _pModuleImageHost{ nullptr }
-        , _pDevLayer{ nullptr }
-        , _engine{}
-        , _gameModuleManager{ nullptr }
+        : _launch{}
         , _pDebugControl{ nullptr }
-        , _moduleCatalog{}
-        , _moduleResolution{}
         , _console{}
         , _observability{}
         , _serverServices{ nullptr }
@@ -118,7 +115,6 @@ namespace sw
         , _statusTickMaxNanoseconds{ 0 }
         , _statusTickSampleCount{ 0 }
         , _droppedTickCount{ 0 }
-        , _hostServices{}
         , _bReady{ SW_FALSE }
         , _bRestartServerServices{ SW_FALSE }
         , _bDraining{ SW_FALSE }
@@ -143,44 +139,31 @@ namespace sw
     bool ServerApp::initialize( int32 argc, utf8* pArgv[] )
     {
         _startNanoseconds = MonotonicClock::nowNanoseconds();
-        // 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleLoadStage` 단계가 여기서 모듈 라이브러리 창구를 찾아 서버 대상 모듈을 올린다(`loadModuleLibrarys`).
+        // 호스트 범위를 먼저 세운다 — 엔진 범위의 부모다. 엔진의 `ModuleLoadStage` 단계가 여기서 모듈 라이브러리 창구를 찾아 서버 대상 모듈을 올린다(`loadModuleLibraries`).
         // 종료 신호 처리기도 이 범위에 둔다 — 엔진 종료가 끝날 때까지 걸려 있어야 하고, 기동 중에 온 신호는 깃발로 남아 루프 첫 바퀴가 정상 종료한다.
         {
             SW_MEMORY_SCOPE( EngineMisc );
-            _host.emplaceSubsystem<ShutdownSignalSubsystem>();
+            _launch.getHostScope().emplaceSubsystem<ShutdownSignalSubsystem>();
         }
-        // 개발 도구 — 엔진 기동 확장으로 걸어, 엔진이 기동 단계 범위를 채울 때 자기 서브시스템을 더한다(배포는 빈 구현).
-        if constexpr ( build::kShipping == false ) // 개발 계층 · 개발 조종은 개발 구성에만 있다 — 배포는 구현을 짓지 않는다
+        if constexpr ( build::kShipping == false ) // 개발 조종은 개발 구성에만 있다 — 배포는 구현을 짓지 않는다
         {
-            _pDevLayer = makeHostDevLayer();
-            _pDevLayer->addToHostScope( _host, _engine );
             _pDebugControl = makeServerDebugControl( SW_DELEGATE_LAMBDA( ServerTickCountDelegate, [this]()
             { return _tickCount; } ) );
         }
-        _pModuleImageHost = ModuleLoaderSubsystem::initializeHostScope( _host, SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibrarys, this ), "ServerApp" );
-        if ( _pModuleImageHost == nullptr )
+        if ( _launch.initializeHostScope( SW_DELEGATE_METHOD( ModuleTypeLoaderDelegate, &ServerApp::loadModuleLibraries, this ), "ServerApp" ) == false )
             return false;
-        if ( _engine.initialize( argc, pArgv, EngineHostRole::DedicatedServer, &_host ) == false )
-        {
-            SW_LOG_ERROR_ID( "Server.EngineInitializationFailedDedicated", "Engine initialization failed (dedicated server)" );
-            return false;
-        }
-        // 엔진이 섰다 — 개발 도구의 프레임 훅을 붙인다(씬 틱 뒤 HUD · 콘솔, 프레임 끝에 셰이더 재컴파일 · 단축키 · 설정 리로드).
-        if ( _pDevLayer != nullptr )
-            _pDevLayer->attachFrameHooks( _engine );
         // 헤드리스 작업(서버 팩의 씬 쿠킹)은 엔진 기동 안에서 끝났다. 실패는 종료 코드로 알린다. 빌드(CookAssets 타깃) · `Pack.py` 가 이 코드를 본다.
-        if ( _engine.isHeadless() )
-            return _engine.didHeadlessTaskFail() == false;
+        const HostEngineStart engineStart = _launch.initializeEngine( argc, pArgv, EngineHostRole::DedicatedServer );
+        if ( engineStart != HostEngineStart::Ready )
+            return engineStart == HostEngineStart::Headless;
 
         if ( loadServerConfig() == false )
             return false;
         _tickNanoseconds = constant::time::kNanosecondsPerSecond / static_cast<int64>( _pServerConfig->_tickRateHz );
         // 호스트 서비스(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 개발 콘솔 · 디버그 채널 · 표준 입력)을 의존 순서로 세운다. App 과 같은 표(`HostService`)이고,
         // 내리는 것은 `shutdown` 의 역순 한 줄이다.
-        const CommandLineManager* pCommandLine = _engine.getCommandLineManager();
-        if ( pCommandLine == nullptr ||
-             HostServiceUtil::startAll( _hostServices, kArrServerHostService, SW_DELEGATE_METHOD( HostServiceStartDelegate, &ServerApp::startHostService, this ),
-                                        SW_DELEGATE_METHOD( HostServiceStopDelegate, &ServerApp::stopHostService, this ), *pCommandLine ) == false )
+        if ( _launch.startHostServices( kArrServerHostService, SW_DELEGATE_METHOD( HostServiceStartDelegate, &ServerApp::startHostService, this ),
+                                        SW_DELEGATE_METHOD( HostServiceStopDelegate, &ServerApp::stopHostService, this ) ) == false )
             return false;
         // 서버 서비스는 호스트 서비스가 아니다 — 모듈 리로드마다 멈췄다 다시 서는 수명이다. 게임 뒤에 시작해 서비스가 게임이 정한 상태를 보게 하고,
         // `shutdown` 이 호스트 서비스보다 먼저 멈춘다.
@@ -202,27 +185,24 @@ namespace sw
         return true;
     }
 
-    bool ServerApp::loadModuleLibrarys()
+    bool ServerApp::loadModuleLibraries()
     {
         SW_MEMORY_SCOPE( EngineMisc );
         // 전용 서버는 Server 대상 모듈만 로드한다. Game 빌드에서도 에디터와 RHI 모듈을 로드하지 않는다. 리로드 구동기(App 과 같은 것)가 매니페스트를 해석하고
         // 매니저를 만들어 자신을 호스트 범위에 걸며, 매니저 종료를 "씬은 사라졌고 서비스는 아직 있는" 구간의 훅에 건다(배포는 정적 링크라 아무것도 하지 않는다).
-        if ( _pDevLayer != nullptr && _pDevLayer->initializeModuleReload( static_cast<uint8>( ModuleTarget::Server ), _host, *_pModuleImageHost, _moduleCatalog, _moduleResolution ) == false )
-            return false;
-        _gameModuleManager = make_unique<GameModuleManager>();
-        if ( _gameModuleManager->loadModuleLibrarys( getLiveReloadManager(), _moduleCatalog, _moduleResolution ) == false )
+        if ( _launch.loadModuleLibraries( static_cast<uint8>( ModuleTarget::Server ), make_unique<GameModuleManager>() ) == false )
             return false;
         // 서버 서비스 코드가 리로드될 모듈 안에 있으므로 서비스를 먼저 멈춘다. 모듈 호스트보다 나중에 더하므로 먼저 불린다(배치 콜백은 나중 것이 먼저). 배포는 빈 구독이다.
-        if ( _pDevLayer != nullptr )
-            _reloadStopsServices = _pDevLayer->addOnBeforeReloadBatch(
+        if ( _launch.getDevLayer() != nullptr )
+            _reloadStopsServices = _launch.getDevLayer()->addOnBeforeReloadBatch(
                 SW_DELEGATE_METHOD( BeforeReloadBatchDelegate, &ServerApp::onBeforeModuleReload, this ) );
         return true;
     }
 
     bool ServerApp::loadServerConfig()
     {
-        ConfigManager*            pConfigManager = _engine.getConfigManager();
-        const CommandLineManager* pCommandLine   = _engine.getCommandLineManager();
+        ConfigManager*            pConfigManager = _launch.getEngine().getConfigManager();
+        const CommandLineManager* pCommandLine   = _launch.getEngine().getCommandLineManager();
         string                    path           = GameSelection::getServerConfigPath();
         if ( pCommandLine != nullptr )
         {
@@ -272,16 +252,14 @@ namespace sw
                 // 게임 인스턴스를 만들기 전에 건다(의존 선언) — 게임과 키트가 기동하며 서버 지표 · 상태 레지스트리에 자기 것을 올리고 게임 포트를 연다.
                 _serverServiceContext._serverConfigPath = _serverConfigPath;
                 _serverServiceContext._pServerConfig    = _pServerConfig;
-                _serverServiceContext._pConfigManager   = _engine.getConfigManager();
+                _serverServiceContext._pConfigManager   = _launch.getEngine().getConfigManager();
                 _serverServiceContext._pMetricRegistry  = _observability.getMetricRegistry();
                 _serverServiceContext._pHealthRegistry  = _observability.getHealthRegistry();
-                return _host.bind( &_serverServiceContext ); // 게임 · 키트(네트워크 세션)가 `engine::findSubsystem<ServerServiceContext>()` 로 찾는다
+                return _launch.getHostScope().bind( &_serverServiceContext ); // 게임 · 키트(네트워크 세션)가 `engine::findSubsystem<ServerServiceContext>()` 로 찾는다
             }
             case HostServiceID::Game:
             {
-                if ( _gameModuleManager == nullptr )
-                    _gameModuleManager = make_unique<GameModuleManager>();
-                const bool bStarted = _gameModuleManager->initializeDedicatedServer( getLiveReloadManager() );
+                const bool bStarted = _launch.getModuleManager()->initializeDedicatedServer( _launch.getLiveReloadManager() );
                 if ( bStarted == false )
                     SW_LOG_ERROR_ID( "Server.GameModuleCouldNot", "The game module could not be started on the dedicated server" );
                 return bStarted;
@@ -334,13 +312,13 @@ namespace sw
             }
             case HostServiceID::ServiceContext:
             {
-                _host.unbind<ServerServiceContext>(); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
+                _launch.getHostScope().unbind<ServerServiceContext>(); // 게임과 모듈이 내려간 뒤 — 레지스트리를 지우기 전
                 return;
             }
             case HostServiceID::Game:
             {
-                _gameModuleManager->shutdown();
-                _gameModuleManager.reset();
+                _launch.getModuleManager()->shutdown();
+                _launch.releaseModuleManager();
                 return;
             }
             case HostServiceID::StandardInput:
@@ -477,7 +455,7 @@ namespace sw
             _adminChannel.pump();
 
             const ShutdownCause cause = ShutdownSignal::getRequestedCause();
-            if ( cause != ShutdownCause::None || _engine.isQuitRequested() )
+            if ( cause != ShutdownCause::None || _launch.getEngine().isQuitRequested() )
             {
                 const int64 nowMs = ServerAppInternal::nowMonotonicMs();
                 if ( _bDraining == SW_FALSE )
@@ -557,11 +535,11 @@ namespace sw
     void ServerApp::updateOnce( float32 deltaSeconds )
     {
         // App::run 의 한 프레임에서 창, 에디터, 사용자 설정, 백엔드 교체를 뺀 것이다. 한 틱은 고정 스텝 하나다.
-        _engine.beginFrame( deltaSeconds, deltaSeconds ); // 서버에는 시간 배율이 없다 — 틱 하나가 실제 경과다.
-        _gameModuleManager->beginFrame();
-        _gameModuleManager->updateGameFrame( deltaSeconds, 1, deltaSeconds ); // 한 틱은 고정 스텝 하나다
-        if ( _pDevLayer != nullptr )
-            _pDevLayer->updateModuleReload();
+        _launch.getEngine().beginFrame( deltaSeconds, deltaSeconds ); // 서버에는 시간 배율이 없다 — 틱 하나가 실제 경과다.
+        _launch.getModuleManager()->beginFrame();
+        _launch.getModuleManager()->updateGameFrame( deltaSeconds, 1, deltaSeconds ); // 한 틱은 고정 스텝 하나다
+        if ( _launch.getDevLayer() != nullptr )
+            _launch.getDevLayer()->updateModuleReload();
         if ( _bRestartServerServices == SW_TRUE )
         {
             // 리로드가 끝났다(취소됐어도 서비스는 멈춰 있다). 새 모듈의 팩토리로 다시 시작한다.
@@ -569,9 +547,9 @@ namespace sw
             if ( startServerServices() == false )
                 SW_LOG_ERROR_ID( "Server.ServerServicesCouldNot", "Server services could not be restarted after the module reload - fix the error and reload again" );
         }
-        const ModuleFrameState& frameState = _gameModuleManager->getFrameState();
-        _engine.update( deltaSeconds, FrameViewports{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
-        _engine.endFrame();
+        const ModuleFrameState& frameState = _launch.getModuleManager()->getFrameState();
+        _launch.getEngine().update( deltaSeconds, FrameViewports{}, ViewCameraProviderDelegate{}, frameState._bTickScene == SW_TRUE );
+        _launch.getEngine().endFrame();
     }
 
     void ServerApp::executeCommand( string_view command )
@@ -617,10 +595,8 @@ namespace sw
         }
         _reloadStopsServices.reset();
         // 호스트 서비스를 선 순서의 역순으로 내린다 — 표준 입력 · 디버그 채널 · 개발 콘솔, 게임(엔진보다 먼저), 서버 문맥, 크래시 묶음, 마지막에 관측.
-        // 순서는 `HostService` 의 의존 선언이 정한다(App 과 같은 표). 헤드리스 부팅 · 기동 실패면 선 것만 내린다.
-        _hostServices.destroyAll();
-        // 헤드리스 부팅은 이미지만 올리고 호스트 서비스(게임)을 세우지 않는다 — 이미지를 쥔 모듈 호스트는 엔진(모듈 라이브러리 종료 단계)보다 먼저 놓는다.
-        _gameModuleManager.reset();
+        // 순서는 `HostService` 의 의존 선언이 정한다(App 과 같은 표).
+        _launch.stopHostServices();
         // 호스트 서비스가 모두 내려갔다 — 기동 뒤에 잡은 호스트 값(설정 경로 · 서버 문맥)을 엔진 종료(누수 보고)보다 먼저 놓는다.
         _serverServiceContext = ServerServiceContext{};
         _serverServiceContext._serverConfigPath.shrink_to_fit(); // 이동 대입은 libstdc++ 에서 버퍼를 남긴다(짧은 글)
@@ -628,11 +604,8 @@ namespace sw
         _serverConfigPath.shrink_to_fit();
         // 로거는 엔진 종료와 함께 종료된다. 마지막 줄은 그 앞에 남긴다(테스트와 운영 도구가 이 줄로 정상 종료를 확인한다).
         SW_LOG_INFO_ID( "Server.DedicatedServerShutdownComplete", "Dedicated server shutdown complete" );
-        // 엔진이 엔진 범위를 내린 뒤 기동(종료 누수 보고)보다 먼저 호스트 범위를 비운다(모듈 라이브러리 창구 소멸, 종료 신호 처리기 떼기 — `Engine::shutdown`).
-        if ( _pDevLayer != nullptr )
-            _pDevLayer->detach(); // 개발 도구는 엔진 서비스를 빌려 쓴다 — 엔진보다 먼저 뗀다
-        _engine.shutdown( _host );
-        _pModuleImageHost = nullptr;
+        // 호스트 범위가 비며 모듈 라이브러리 창구가 사라지고 종료 신호 처리기가 떨어진다.
+        _launch.shutdownEngine();
         Logger::clearClockNumber();
         // Windows 창 닫기와 시스템 종료 처리기가 이것을 기다린다.
         ShutdownSignal::notifyShutdownComplete();

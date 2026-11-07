@@ -3,11 +3,11 @@
  * @brief SequenceAsset 프레임을 씬 오브젝트(활성 상태, 키 트랙 값, 게임 카메라)에 적용합니다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 
 namespace sw

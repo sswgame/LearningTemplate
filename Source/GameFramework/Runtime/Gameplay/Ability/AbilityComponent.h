@@ -3,7 +3,6 @@
  * @brief 어트리뷰트, 이펙트, 어빌리티, 태그를 한 오브젝트에서 함께 돌리는 컴포넌트입니다(언리얼의 `UAbilitySystemComponent` 에 해당).
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -14,6 +13,7 @@
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

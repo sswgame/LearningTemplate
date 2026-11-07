@@ -3,7 +3,6 @@
  * @brief 게임플레이 이펙트입니다. 정의(데이터), 스펙(적용 한 번의 인스턴스), 실행 계산을 담습니다(언리얼의 `UGameplayEffect`, `FGameplayEffectSpec` 에 해당).
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -12,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

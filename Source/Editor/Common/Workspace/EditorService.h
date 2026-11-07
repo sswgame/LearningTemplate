@@ -6,12 +6,13 @@
  *          `ScopedEditorScope` 로 잠시 등록한다. 게임 쪽에서 같은 일을 하는 파일은 `GameService.h` 다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Editor/Common/EditorExports.h"
+
+#include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 
 namespace sw
 {

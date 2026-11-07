@@ -6,12 +6,13 @@
  *          행 만들기는 `AbilityDebugModel` 이 맡는다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
+
+#include "Engine/Foundation/GameObjectHandle.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugModel.h"
 

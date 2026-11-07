@@ -219,7 +219,7 @@ namespace sw
 
     bool GameModuleManager::onBeforeCommitBatch( const vector<string>& listModuleName )
     {
-        // 리로드 매니저의 배치 콜백으로만 불린다(`loadModuleLibrarys` 가 건다 — 배포에는 매니저가 없어 불리지 않는다).
+        // 리로드 매니저의 배치 콜백으로만 불린다(`loadModuleLibraries` 가 건다 — 배포에는 매니저가 없어 불리지 않는다).
         for ( const string& name : listModuleName )
         {
             const bool bGameScope = name == sw::config::kTargetGameModule || VectorUtil::contains( _listGameScopeModule, name );
@@ -506,7 +506,7 @@ namespace sw
     // ----------------------------------------------------------------------------------------------------------------------
 #if SW_WITH_DYNAMIC_MODULES
 
-    bool GameModuleManager::loadModuleLibrarys( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
+    bool GameModuleManager::loadModuleLibraries( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
         _pLiveReloadManager = pLiveReloadManager;
         if ( _pLiveReloadManager == nullptr )
@@ -621,8 +621,8 @@ namespace sw
     }
 #else
 
-    bool GameModuleManager::loadModuleLibrarys( LiveReloadManager* pLiveReloadManager, [[maybe_unused]] const ModuleCatalog& catalog,
-                                                [[maybe_unused]] const ModuleResolution& resolution )
+    bool GameModuleManager::loadModuleLibraries( LiveReloadManager* pLiveReloadManager, [[maybe_unused]] const ModuleCatalog& catalog,
+                                                 [[maybe_unused]] const ModuleResolution& resolution )
     {
         // 그 타입은 리플렉션 단계가 이미 모았고, 무엇을 링크할지는 CMake 가 같은 매니페스트로 정했다.
         _pLiveReloadManager = pLiveReloadManager;

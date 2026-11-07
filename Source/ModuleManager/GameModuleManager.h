@@ -124,7 +124,7 @@ namespace sw
          * @param catalog 매니페스트 번들(`Bin/Modules/<모듈>.module.json`)
          * @param resolution `catalog.resolve` 결과
          */
-        [[nodiscard]] bool loadModuleLibrarys( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution );
+        [[nodiscard]] virtual bool loadModuleLibraries( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution );
         /**
          * @brief 전용 서버로 게임 인스턴스를 만듭니다. 창, RHI, 렌더 스레드, 에디터가 없고 게임은 `initialize( nullptr )`(창 없음)를 받습니다.
          * @details 모듈 콜백, 핫 리로드(Dev), 상태 보존은 App 과 같습니다.
@@ -224,7 +224,7 @@ namespace sw
 
     protected:
         /**
-         * @brief 콜백을 등록하고 게임 인스턴스를 만듭니다(게임 모듈 라이브러리는 `loadModuleLibrarys` 가 이미 로드했습니다). App 과 서버 기동의 공통 본체입니다.
+         * @brief 콜백을 등록하고 게임 인스턴스를 만듭니다(게임 모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했습니다). App 과 서버 기동의 공통 본체입니다.
          * @param pRHI 활성 RHI. 주면 게임은 디바이스가 있어야 만들어지고, nullptr 이면(전용 서버) 디바이스 없이 만듭니다.
          * @param pWindow 플랫폼 창(없으면 nullptr)
          * @param pRenderThread 렌더 스레드(워커 비우기용, 없으면 nullptr)
@@ -320,7 +320,7 @@ namespace sw
 
         // 핫 리로드 때 게임 상태를 보존하는 재사용 버퍼.
         vector<uint8> _listGameSavedState;
-        /** @brief 게임 인스턴스와 함께 내려야 하는 모듈 이름(GameFramework · 키트, SWGame 은 이름으로 따로 본다)입니다. `loadModuleLibrarys` 가 채웁니다. */
+        /** @brief 게임 인스턴스와 함께 내려야 하는 모듈 이름(GameFramework · 키트, SWGame 은 이름으로 따로 본다)입니다. `loadModuleLibraries` 가 채웁니다. */
         vector<string> _listGameScopeModule;
 
         /** @brief 이번 프레임에 고정한 모듈 상태입니다. */

@@ -8,7 +8,7 @@
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw

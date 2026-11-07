@@ -3,7 +3,6 @@
  * @brief 미리보기 씬(숨은 월드)을 가진 툴 창의 기반 클래스입니다. 머티리얼, 프리팹, 캐릭터 편집 창이 이것을 상속합니다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -11,6 +10,8 @@
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
+
+#include "Engine/Foundation/GameObjectHandle.h"
 
 namespace sw
 {

@@ -12,8 +12,6 @@
  *          `transferTo` 한 번으로 처리한다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -21,6 +19,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"
+#include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

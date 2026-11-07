@@ -3,7 +3,6 @@
  * @brief 애니메이션 유닛입니다. 스켈레톤, 포즈 버퍼, 스킨 팔레트, 스킨드 메시를 가지며, 평가는 자기 onTick 이 아니라 `AnimationSystem` 이 합니다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/SubscriptionList.h"
@@ -16,6 +15,7 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

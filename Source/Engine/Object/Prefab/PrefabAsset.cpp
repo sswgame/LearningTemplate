@@ -48,8 +48,8 @@ namespace sw
 
             /**
              * @brief 스폰 중인 프리팹 경로 스택(순환 참조 검사)이 힙 없이 담는 깊이입니다.
-             * @details 스레드 지역 스택이라 힙에 잡으면 처음 스폰한 자리의 태그(Scene)로 스레드가 끝날 때까지 남는다 — 종료 보고
-             *          (`AppSmokeTest.ShutdownReturnsEveryTagToTheBaseline`)는 스레드보다 먼저 온다. 더 깊게 중첩하면 그때만 힙을 쓴다.
+             * @details 스레드 지역 스택이라 힙에 잡으면 처음 스폰한 자리의 태그(Scene)로 스레드가 끝날 때까지 남는다 — 종료 보고는
+             *          스레드보다 먼저 온다. 더 깊게 중첩하면 그때만 힙을 쓴다.
              */
             static constexpr size_t kInlineSpawnDepth = 8;
             /** @brief 로드 검증에서 순환이 없다는 값입니다(`PrefabThreadChain::_cycleFloor`). */

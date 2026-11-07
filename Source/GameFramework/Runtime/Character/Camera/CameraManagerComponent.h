@@ -4,11 +4,11 @@
  *        Cinemachine Brain). 씬의 카메라는 용도(`CameraRole`: 플레이어 시점, 보조, 캡처)별로 레지스트리(`CameraRegistry`)에 있습니다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

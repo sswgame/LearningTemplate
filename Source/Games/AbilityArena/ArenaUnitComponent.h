@@ -3,11 +3,11 @@
  * @brief 아레나 유닛 하나의 폰 쪽 — 의도(`ControlIntent`)로 움직이고 어빌리티 입력 번호를 누르며, 쓰러지면 납작해집니다. 조종자(플레이어 · AI)는 따로 산다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

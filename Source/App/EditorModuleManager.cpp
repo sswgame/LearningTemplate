@@ -57,7 +57,7 @@ namespace sw
         shutdown();
     }
 
-    bool EditorModuleManager::loadModuleLibrarys( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
+    bool EditorModuleManager::loadModuleLibraries( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
         _bEditorModuleActive = resolution.isActive( config::kTargetEditorModule ) ? SW_TRUE : SW_FALSE;
         // 에디터 확장은 에디터를 켤 때만 로드한다(initialize 의 에디터 블록). 여기서는 이름과 의존만 적어 둔다. 카탈로그는 initialize 에 없다.
@@ -75,7 +75,7 @@ namespace sw
             }
             _listEditorExtension.push_back( std::move( extension ) );
         }
-        return GameModuleManager::loadModuleLibrarys( pLiveReloadManager, catalog, resolution );
+        return GameModuleManager::loadModuleLibraries( pLiveReloadManager, catalog, resolution );
     }
 
     bool EditorModuleManager::initialize( LiveReloadManager* pLiveReloadManager, RHI* pRHI, IWindow* pWindow, RenderThread* pRenderThread, bool bEnableEditor )
@@ -247,7 +247,7 @@ namespace sw
         }
     }
 
-    bool EditorModuleManager::isEditorImageUsable( void* pLibraryModule ) const
+    bool EditorModuleManager::isEditorLibraryUsable( void* pLibraryModule ) const
     {
         return ModuleInstanceUtil::isLibraryUsable<EditorAPI, PFN_ExportEditorAPI>( pLibraryModule, getModuleSymbols() );
     }
@@ -407,7 +407,7 @@ namespace sw
             holdReloadSubscription( pLiveReloadManager->setOnReloadFault(
                 config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnReloadFaultDelegate, &EditorModuleManager::onEditorReloadFault, this ) ) );
             holdReloadSubscription( pLiveReloadManager->setOnValidateLibrary(
-                config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateLibraryDelegate, &EditorModuleManager::isEditorImageUsable, this ) ) );
+                config::kTargetEditorModule, SW_DELEGATE_METHOD( LiveReloadManager::OnValidateLibraryDelegate, &EditorModuleManager::isEditorLibraryUsable, this ) ) );
             // 편집기 코드가 다른 스레드에서 돌고 있으면(열린 파일 대화상자) 닫힐 때까지 리로드를 기다린다 — 변경은 버리지 않는다.
             holdReloadSubscription( pLiveReloadManager->addReloadHold( SW_DELEGATE_METHOD( LiveReloadManager::ReloadHoldDelegate, &EditorModuleManager::isEditorReloadHeld, this ) ) );
             if ( pLiveReloadManager->registerModule( config::kTargetEditorModule ) == false )

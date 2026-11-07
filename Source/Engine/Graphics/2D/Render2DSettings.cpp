@@ -8,8 +8,8 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Content/Pack/AssetCookRoot.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"

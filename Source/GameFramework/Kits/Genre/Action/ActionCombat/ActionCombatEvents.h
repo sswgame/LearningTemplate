@@ -5,11 +5,12 @@
  *          `DamageAppliedEvent` 는 `UnitStatsComponent` 가 피해를 적용하는 시점에, 룸 이벤트 세 가지는 `ActionRoom` 의 상태가 바뀌는 시점에 낸다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Event/EventType.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+
+#include "Engine/Foundation/GameObjectHandle.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

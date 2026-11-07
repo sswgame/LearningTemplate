@@ -3,9 +3,9 @@
  * @brief 짓기 커서의 모습 — 디렉터가 고른 마우스 아래 칸에 고른 것의 크기만 한 반투명 상자를 둡니다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

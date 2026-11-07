@@ -3,8 +3,6 @@
 #include "Engine/Reflection/ReflectValue.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/ComponentHandle.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
@@ -14,7 +12,9 @@
 #include "Core/String/TagID.h"
 #include "Core/String/fixed_string.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectBuiltinClass.h"
 #include "Engine/Reflection/TypeRegistry.h"
 

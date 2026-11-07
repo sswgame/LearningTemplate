@@ -3,7 +3,6 @@
  * @brief 알림 디스패치입니다. 같은 오브젝트의 애니메이터(3D 스켈레탈, 2D 스프라이트)가 울린 알림을 알림 테이블(`*.notifies.xml`)의 처리기로 보냅니다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
@@ -16,6 +15,7 @@
 #include "Engine/Animation/Notify/AnimationNotifyListener.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

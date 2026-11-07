@@ -16,7 +16,6 @@
  *          @endcode
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -32,7 +31,8 @@
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Notify/AnimationFootContact.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 
 namespace sw
 {

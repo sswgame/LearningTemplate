@@ -2,8 +2,6 @@
 
 #include "Editor/Panels/Inspector/Model/InspectorBuiltinValue.h"
 
-#include "Core/Container/ComponentHandle.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/formatString.h"
 #include "Core/Math/MatrixMath.h"
@@ -11,6 +9,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/TagID.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 
 namespace sw::editor

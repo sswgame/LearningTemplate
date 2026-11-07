@@ -2,7 +2,6 @@
 
 #include "Editor/Viewport/EditorColliderHandleTool.h"
 
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Math/Ray.h"
 #include "Core/String/StringBuilder.h"
 
@@ -24,6 +23,7 @@
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 

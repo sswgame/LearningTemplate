@@ -3,9 +3,9 @@
  * @brief 평지 놀이기구(회전목마 · 찻잔)의 모습 — 탄 손님이 있을 때 돕니다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

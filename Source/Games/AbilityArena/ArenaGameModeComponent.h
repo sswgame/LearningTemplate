@@ -16,7 +16,6 @@
  *          투사체 자체를 예측하지 않는다(기억에 의존한 비교) — 복제가 생기면 시뮬레이션은 결정적이라 서버 권위 그대로 두고 짐(스펙)만 서버에 남기면 된다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -26,6 +25,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/HostServiceUtil.h"
+#include "ModuleManager/Host/HostServiceUtil.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"

@@ -18,7 +18,6 @@
  *          - 트랜스폼은 서버 권위다. 복원은 정렬(`snap` · `warp`)을 하지 않고 트랜스폼 복제가 맞춘다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -28,6 +27,7 @@
 
 #include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSnapshot.h"
+#include "Engine/Foundation/ComponentHandle.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"

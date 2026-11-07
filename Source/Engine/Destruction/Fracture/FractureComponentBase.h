@@ -23,7 +23,6 @@
 #pragma once
 #include "Core/Concurrency/LockedSwapQueue.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -40,6 +39,7 @@
 #include "Engine/Destruction/DestructionState.h"
 #include "Engine/Destruction/Fracture/FractureNetworkSync.h"
 #include "Engine/Destruction/Fracture/FractureRenderUnits.h"
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
 #include "Engine/Physics/PhysicsTypes.h"
 #include "Engine/Reflection/ReflectionMacros.h"

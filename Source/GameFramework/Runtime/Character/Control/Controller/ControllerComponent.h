@@ -4,11 +4,11 @@
  * @details 폰 하나를 쥐고 틱마다 그 폰의 의도(`ControlIntent`)를 낸다. 플레이어, AI, 네트워크, 기록 조종자가 이것을 상속한다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

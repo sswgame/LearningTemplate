@@ -13,7 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

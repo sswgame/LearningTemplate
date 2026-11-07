@@ -3,7 +3,7 @@
 #include "Engine/UI/Layout/UIResolutionPresetTable.h"
 
 #include "Engine/Content/AssetID.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
 namespace sw

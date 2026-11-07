@@ -22,7 +22,9 @@
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/CommandPalettePopup.h"
 #include "Editor/Common/Input/EditorInputActions.h"
+#include "Editor/Common/Input/QuickLauncherPopup.h"
 #include "Editor/Common/Localization/EditorDataText.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -34,8 +36,6 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
-#include "Editor/Popups/CommandPalettePopup.h"
-#include "Editor/Popups/QuickLauncherPopup.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Config/GameConfig.h"

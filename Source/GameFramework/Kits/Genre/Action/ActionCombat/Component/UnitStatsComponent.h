@@ -1,8 +1,8 @@
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"

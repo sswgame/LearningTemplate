@@ -3,10 +3,10 @@
  * @brief 렌더용 뷰/투영 행렬을 만드는 SceneComponent 입니다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/CameraDepthOfFieldValues.h"
 #include "Engine/Object/Component/CameraPostProcessValues.h"
 #include "Engine/Object/Component/SceneComponent.h"

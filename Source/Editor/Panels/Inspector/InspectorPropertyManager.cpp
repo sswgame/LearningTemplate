@@ -3,8 +3,6 @@
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/ComponentHandle.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogOnce.h"
@@ -35,6 +33,8 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Foundation/ComponentHandle.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"

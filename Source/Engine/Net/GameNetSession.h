@@ -65,6 +65,8 @@
 
 namespace sw
 {
+    struct EngineFrameContext;
+    struct EngineFrameHooks;
     struct NetStatsReport;
     struct ServerConfig;
 
@@ -266,6 +268,12 @@ namespace sw
         [[nodiscard]] bool tryGetShutdownNotice( GameShutdownNotice& outNotice ) const;
         /** @brief 클라이언트가 받은 가장 새 서버 틱 번호입니다. 아직 받지 못했거나 클라이언트가 아니면 false 입니다. */
         [[nodiscard]] bool tryGetServerTick( uint64& outTick ) const;
+        /**
+         * @brief 클라이언트 호스트(App)의 프레임 훅입니다. 엔진이 기동 끝에 붙인다 — 전용 서버는 자기 틱 루프가 같은 일을 하므로(`ServerApp::run`) 붙이지 않는다.
+         * @details 프레임 앞: 이 세션이 서버(리슨 호스트)이면 로그 줄마다 `[frame=N]` 을 붙이고(고정 틱이 없어 전용 서버의 `[tick=N]` 과 구분한다), 서버가 아니게 되면 뗀다.
+         *          프레임 끝: 클라이언트 쪽 상태 해시 이력(서버 디버깅 S7, `-gv_stateHashHistory=N`)을 서버가 알린 틱 번호로 남긴다 — 서버 이력과 같은 틱끼리 비교한다(같은 틱은 한 번만 남는다).
+         */
+        [[nodiscard]] EngineFrameHooks makeClientHostFrameHooks();
 
         /** @brief 이쪽에서 모든 연결을 끊습니다(회선 조절의 "끊기"). 클라이언트는 저절로 다시 붙지 않습니다 — `reconnect` 를 부릅니다. */
         void disconnectPeers();
@@ -332,6 +340,10 @@ namespace sw
             GameNetRole     _role;
         };
 
+        /** @brief 프레임 앞 훅입니다(`makeClientHostFrameHooks`). */
+        void onClientHostFrameBegin( const EngineFrameContext& context );
+        /** @brief 프레임 끝 훅입니다(`makeClientHostFrameHooks`). 종료 코드를 정하지 않습니다. */
+        int32 onClientHostFrameEnd( const EngineFrameContext& context );
         /** @brief 엔진 영역 메시지 하나를 처리합니다(`EngineMessageHandler::handleNetMessage`). */
         NetHandleResult handleEngineMessage( const NetMessageContext& context, BitReader& body );
         /** @brief 로드 축 조건 · 층에 기댄 합성 목록(`ResourceComposition::collectDigest`)을 한 줄씩 @p connectionID 에 보냅니다(클라이언트 → 서버). */
@@ -376,6 +388,8 @@ namespace sw
         GameShutdownNotice                _shutdownNotice;          ///< 클라이언트 — 받은 서버 종료 통지(`_bShutdownNoticeKnown` 일 때만 뜻이 있다)
         uint8                             _bShutdownNoticeKnown;    ///< 클라이언트 — 서버 종료 통지를 받았다
         uint8                             _bServerTickKnown;        ///< 클라이언트 — 서버 틱을 한 번이라도 받았다
+        uint64                            _clientHostFrameNumber;   ///< 클라이언트 호스트 — 프레임 앞 훅이 센 프레임 수(리슨 호스트의 `[frame=N]`)
+        uint8                             _bFrameClockShown;        ///< 클라이언트 호스트 — 로그 꼬리표를 붙여 두었다(서버가 아니게 되면 뗀다)
     };
 
     SW_SERVICE_SLOT( GameNetSession, Required );

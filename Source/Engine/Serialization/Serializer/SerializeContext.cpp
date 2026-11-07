@@ -3,9 +3,7 @@
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/DynamicBitset.h"
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -15,7 +13,9 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/AssetRefBase.h"

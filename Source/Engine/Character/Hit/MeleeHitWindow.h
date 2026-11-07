@@ -9,7 +9,6 @@
  *          역할에서 읽는 것은 `getProcessAuthority` 한 곳이다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -18,6 +17,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
 
 namespace sw

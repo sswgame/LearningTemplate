@@ -1,7 +1,7 @@
 /**
- * @file Engine/Foundation/EngineCoreServiceSubsystems.cpp
+ * @file Engine/CoreServices/EngineCoreServiceSubsystems.cpp
  * @brief Core 층 형식의 서브시스템(이벤트 · 압축 코덱 · 태스크 · 비동기 파일 IO) 등록입니다.
- * @details Core 는 엔진의 등록 틀(`EngineSubsystemRegistration.h`)을 볼 수 없으므로(층이 아래다) 그 형식의 등록은 엔진 바닥 층의 이 파일에 둔다.
+ * @details Core 는 엔진의 등록 틀(`EngineSubsystemRegistration.h`)을 볼 수 없으므로(층이 아래다) 그 형식의 등록은 Core 서비스의 서브시스템 곁(`Engine/CoreServices`)인 이 파일에 둔다.
  *          서비스 칸 선언(`SW_SERVICE_SLOT`)은 Core 헤더에 있고 칸 정의 · 등록이 여기 있다. 다른 서브시스템은 제 .cpp 에 등록한다.
  */
 #include "pch.h"

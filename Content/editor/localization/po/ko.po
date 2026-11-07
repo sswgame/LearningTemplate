@@ -599,12 +599,12 @@ msgctxt "EdCommon.AutoplayToggle"
 msgid "{game} autoplay: {description} ({variable}, console: autoplay on|off)"
 msgstr "{game} 자동 플레이: {description} ({variable}, 콘솔: autoplay on|off)"
 
-#: Source/Editor/Popups/BoneHierarchyPopup.cpp
+#: Source/Editor/Panels/Animation/BoneHierarchyPopup.cpp
 msgctxt "EdCommon.BoneNoSelection"
 msgid "No selection. Select an object in the Hierarchy."
 msgstr "선택한 것이 없습니다. Hierarchy 에서 오브젝트를 고르십시오."
 
-#: Source/Editor/Popups/BoneHierarchyPopup.cpp
+#: Source/Editor/Panels/Animation/BoneHierarchyPopup.cpp
 msgctxt "EdCommon.BoneObjectNotFound"
 msgid "Object not found in the active scene."
 msgstr "활성 씬에서 오브젝트를 찾지 못했습니다."
@@ -644,7 +644,7 @@ msgctxt "EdCommon.CameraSpeed"
 msgid "Camera fly speed (0.5 to 20). Turning the mouse wheel while holding the right mouse button also changes it."
 msgstr "카메라 비행 속도(0.5 ~ 20)입니다. 오른쪽 마우스 단추를 누른 채 휠을 돌려도 바뀝니다."
 
-#: Source/Editor/Popups/CommandPalettePopup.cpp
+#: Source/Editor/Common/Input/CommandPalettePopup.cpp
 msgctxt "EdCommon.CommandPaletteHint"
 msgid "Type a command or search objects... (Esc to close)"
 msgstr "명령을 입력하거나 오브젝트를 검색합니다... (Esc 로 닫기)"
@@ -910,7 +910,7 @@ msgctxt "EdCommon.NetPlayerCount"
 msgid "Number of players: the client count for a dedicated server, or the count including the host for a listen host."
 msgstr "플레이어 수 — 전용 서버면 클라이언트 수, 리슨 호스트면 호스트를 넣은 수"
 
-#: Source/Editor/Popups/BoneHierarchyPopup.cpp
+#: Source/Editor/Panels/Animation/BoneHierarchyPopup.cpp
 msgctxt "EdCommon.NoActiveScene"
 msgid "No active scene."
 msgstr "활성 씬이 없습니다."
@@ -1273,17 +1273,17 @@ msgctxt "EdCommon.PreviewStepTip"
 msgid "While paused, advance the preview by one frame"
 msgstr "멈춘 동안 미리보기를 한 프레임 나아가게 합니다"
 
-#: Source/Editor/Popups/QuickLauncherPopup.cpp
+#: Source/Editor/Common/Input/QuickLauncherPopup.cpp
 msgctxt "EdCommon.QuickOpenHint"
 msgid "Type to search assets, scenes, game objects (ESC to cancel)..."
 msgstr "에셋 · 씬 · 게임 오브젝트를 검색합니다(ESC 로 취소)..."
 
-#: Source/Editor/Popups/QuickLauncherPopup.cpp
+#: Source/Editor/Common/Input/QuickLauncherPopup.cpp
 msgctxt "EdCommon.QuickOpenIndexing"
 msgid "Indexing assets..."
 msgstr "에셋을 인덱싱하는 중..."
 
-#: Source/Editor/Popups/QuickLauncherPopup.cpp
+#: Source/Editor/Common/Input/QuickLauncherPopup.cpp
 msgctxt "EdCommon.QuickOpenNoMatches"
 msgid "No matching assets or game objects found."
 msgstr "일치하는 에셋이나 게임 오브젝트가 없습니다."
@@ -2088,7 +2088,7 @@ msgctxt "EdFormat.SameScopeHereX"
 msgid "same scope here: {sameCount} x, total {sameTotalUs} us, max {sameMaxUs} us"
 msgstr "여기 같은 구간: {sameCount}번, 합계 {sameTotalUs} us, 최대 {sameMaxUs} us"
 
-#: Source/Editor/Popups/BoneHierarchyPopup.cpp
+#: Source/Editor/Panels/Animation/BoneHierarchyPopup.cpp
 msgctxt "EdFormat.SelectedObject"
 msgid "Selected Object: {name}"
 msgstr "선택한 오브젝트: {name}"

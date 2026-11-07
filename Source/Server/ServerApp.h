@@ -2,7 +2,7 @@
  * @file ServerApp.h
  * @brief 전용 서버 실행 파일의 본체입니다. 창과 GPU 없이 엔진을 서버 역할로 시작하고, 게임 모듈을 고정 틱으로 돌리고, 종료 요청이 오면 정상 종료합니다.
  * @details App(플레이어 실행 파일)과 따로 둡니다(언리얼의 `<Game>Server` 와 유니티 Dedicated Server 빌드와 같은 구조입니다). 같이 쓰는 것은 `Source/GameModuleManager` 의 것 —
- *          모듈 호스트와 매니페스트 해석, 호스트 범위 세우기(`ModuleLoaderSubsystem::initializeHostScope`), 개발 계층(`IHostDevLayer` — 핫 리로드 · 개발 명령 `module.reload` 와
+ *          모듈 호스트와 매니페스트 해석, 부팅 열(`HostLaunch` — 호스트 범위 · 엔진 · 모듈 관리자 · 호스트 서비스의 순서), 개발 계층(`IHostDevLayer` — 핫 리로드 · 개발 명령 `module.reload` 와
  *          감시 값 `Module.*` 도 따라온다), 표준 입력 명령 채널(`StandardInputCommands` — 종료 낱말 `quit` · `stop`)입니다.
  *
  *          기동 순서는 다음과 같다. 호스트 범위(모듈 라이브러리 창구 · 종료 신호 처리기), 엔진(`EngineHostRole::DedicatedServer`, 기동 테이블의 Client 단계를 건너뛴다), 서버 설정,
@@ -25,15 +25,12 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Console/StandardInputCommands.h"
 #include "Engine/DedicatedServer/ServerServiceRegistry.h"
-#include "Engine/Engine.h"
 #include "Engine/HostServiceSet.h"
-#include "Engine/Module/ModuleCatalog.h"
 
-#include "ModuleManager/HostDevLayer.h"
+#include "ModuleManager/Host/HostLaunch.h"
 
 #include "Server/IServerDebugControl.h"
 #include "Server/ServerAdminChannel.h"
@@ -45,8 +42,6 @@ namespace sw
 
     struct ServerConfig;
 
-    class GameModuleManager;
-    class ModuleLoaderSubsystem;
     class ServerServiceManager;
 
     /**
@@ -73,11 +68,8 @@ namespace sw
         void shutdown();
 
     private:
-        /** @brief 개발 계층의 핫 리로드 매니저입니다. 배포(개발 계층 없음)는 nullptr 이다 — 모듈 관리자가 정적 링크로 받는다. */
-        LiveReloadManager* getLiveReloadManager() const { return _pDevLayer != nullptr ? _pDevLayer->getLiveReloadManager() : nullptr; }
-
-        /** @brief 기동 단계 `ModuleLoadStage` 의 호스트 로더입니다. 서버 대상 모듈의 이미지를 로드합니다(App::loadModuleLibrarys 에 해당합니다). */
-        [[nodiscard]] bool loadModuleLibrarys();
+        /** @brief 기동 단계 `ModuleLoadStage` 의 호스트 로더입니다. 서버 대상 모듈의 라이브러리를 로드하고 리로드 전 콜백을 겁니다(App::loadModuleLibraries 에 해당합니다). */
+        [[nodiscard]] bool loadModuleLibraries();
         [[nodiscard]] bool loadServerConfig();
         /** @brief 호스트 서비스 하나를 세웁니다(`kArrServerHostService` — 순서는 `HostService` 의 의존 선언이 정한다). */
         [[nodiscard]] bool startHostService( HostServiceID id );
@@ -109,25 +101,17 @@ namespace sw
 
     private:
         /**
-         * @brief 호스트 범위입니다 — 엔진 범위의 부모이고, 엔진보다 먼저 서서 나중에 사라집니다(그래서 `_engine` 보다 앞에 선언한다).
-         * @details 모듈 라이브러리 창구(`ModuleLoaderSubsystem`)와 리로드 구동기(빌려 건다), 종료 신호 처리기를 듭니다 — 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 창구를 찾아 부릅니다.
-         *          종료 신호 처리기는 엔진 종료가 끝날 때까지 걸려 있어야 한다(Windows 창 닫기 처리기가 `notifyShutdownComplete` 를 기다린다).
+         * @brief 부팅 열입니다 — 호스트 범위 · 개발 계층 · 엔진 · 모듈 관리자 · 호스트 서비스의 수명과 순서를 듭니다(App 과 같은 것, `HostLaunch`).
+         * @details 맨 앞 멤버라 맨 나중에 사라진다. 호스트 서비스의 몸통이 아래 멤버를 쓰므로 `shutdown` 이 그 멤버가 사라지기 전에 호스트 서비스를 내린다.
+         *          호스트 범위에는 종료 신호 처리기도 든다 — 엔진 종료가 끝날 때까지 걸려 있어야 한다(Windows 창 닫기 처리기가 `notifyShutdownComplete` 를 기다린다).
          *          게임이 서 있는 동안은 서버 문맥(`_serverServiceContext`)도 빌려 건다.
          *          서버 서비스 관리자(`_serverServices`)는 이 범위에 넣지 않습니다. 모듈 리로드마다 멈췄다 다시 시작하는 수명이라 범위의 초기화 · 종료 한 쌍과 맞지 않기 때문입니다.
          */
-        SubsystemScope _host;
-        /** @brief 호스트 범위의 모듈 라이브러리 창구입니다(`_host` 소유 — 빌려 쓴다). */
-        ModuleLoaderSubsystem* _pModuleImageHost;
-        /** @brief 개발 계층(개발 도구 연결 · 모듈 핫 리로드 — App 과 같은 것)입니다. 배포는 nullptr 이다(`build::kShipping`, `IHostDevLayer`). */
-        unique_ptr<IHostDevLayer>     _pDevLayer;
-        Engine                        _engine;
-        unique_ptr<GameModuleManager> _gameModuleManager;
+        HostLaunch _launch;
         /** @brief 개발 조종(개발 콘솔 · 디버그 채널 · 일시정지/한 걸음)입니다. 호스트 서비스 `DevConsole` · `DebugChannel` 이 세우고 내린다. 배포 서버는 nullptr 이다(`build::kShipping`). */
         unique_ptr<IServerDebugControl> _pDebugControl;
         /** @brief 관리 채널(서버 운영 O4 — 점검 모드 · 상태 · 정상 종료)입니다. 호스트 서비스 `DebugChannel` 이 세우고 내린다. 모든 구성(Shipping 포함)이다. */
         ServerAdminChannel    _adminChannel;
-        ModuleCatalog         _moduleCatalog;
-        ModuleResolution      _moduleResolution;
         StandardInputCommands _console; ///< 표준 입력 명령 채널(설정 `_bConsoleInput` 이 켤 때만 시작한다)
         /** @brief 운영 관측(지표 · 상태 · 운영 HTTP · 프레임 이력 · 틱 사용률)입니다. 호스트 서비스 `Observability` 가 세우고 내린다. */
         ServerObservability              _observability;
@@ -144,15 +128,9 @@ namespace sw
         int64                            _statusTickMaxNanoseconds; ///< 틱 본문 시간 최대
         uint32                           _statusTickSampleCount;
         uint32                           _droppedTickCount; ///< 밀려 버린 틱 수(누적)
-        /**
-         * @brief 엔진 뒤에 서고 엔진 앞에 내려가는 호스트 서비스(관측 · 크래시 묶음 · 서버 문맥 · 게임 · 표준 입력 · 개발 콘솔 · 디버그 채널)입니다.
-         * @details 순서는 `HostService` 의 의존 선언이 정한다(App 과 같은 표). 서비스의 몸통이 위 멤버를 쓰므로 맨 뒤에 둔다(소멸이 먼저다).
-         */
-        SubsystemCollection _hostServices;
-
-        uint8                  _bReady                 : 1;
-        uint8                  _bRestartServerServices : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
-        uint8                  _bDraining              : 1; ///< 종료 요청을 받아 드레인 중이다(`beginDrain`)
-        [[maybe_unused]] uint8 _reserved               : 5;
+        uint8                            _bReady                 : 1;
+        uint8                            _bRestartServerServices : 1; ///< 모듈 리로드로 서버 서비스를 멈췄다. 다음 틱에 다시 시작한다
+        uint8                            _bDraining              : 1; ///< 종료 요청을 받아 드레인 중이다(`beginDrain`)
+        [[maybe_unused]] uint8           _reserved               : 5;
     };
 } // namespace sw

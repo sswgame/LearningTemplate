@@ -7,7 +7,6 @@
  *          비율이 1 이 되어 정확히 목표에 닿습니다. 회전(요)도 같습니다. 창 밖에서는 아무것도 하지 않습니다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
@@ -16,6 +15,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Notify/AnimationNotifyListener.h"
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

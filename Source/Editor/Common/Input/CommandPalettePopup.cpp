@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Popups/CommandPalettePopup.h"
+#include "Editor/Common/Input/CommandPalettePopup.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"

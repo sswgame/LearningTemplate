@@ -3,13 +3,13 @@
  * @brief 개척 마을의 도시 디렉터 — 공유 상태(`SessionStateComponent`)를 여는 첫 디렉터. 도시 키트(`CitySimulation`)를 공유 땅 · 지갑 · 시계 위에 돌립니다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

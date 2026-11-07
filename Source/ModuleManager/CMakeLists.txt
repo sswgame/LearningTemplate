@@ -13,7 +13,7 @@ file(GLOB_RECURSE MODULE_HOST_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.h
 # 코드가 실행되지 않는 것만으로는 부족하고, 바이너리에서 아예 빠져야 한다.
 # 빼는 것은 소스 검사 게이트에도 적힌다(`sw_excludeUnbuiltSources`).
 #
-# 개발 전용은 두 폴더다 — 핫 리로드(`LiveReload/`)와 호스트의 개발 계층(`Dev/` — `IHostDevLayer` 의 구현: 개발 도구 연결 · 리로드 구동기).
+# 개발 전용은 세 폴더다 — 핫 리로드(`LiveReload/`), 모듈 리로드 구동기(`Dev/`), 호스트의 개발 계층(`Host/Dev/` — `IHostDevLayer` 의 구현: 개발 도구 연결). `Dev/` 패턴이 둘 다 받는다.
 # Shipping 은 폴더째 뺀다(파일 이름을 적은 목록이 없다). 호스트는 `build::kShipping` 이 아닐 때만 개발 계층을 만든다(빈 구현 파일 없음).
 if(SW_SHIPPING_BUILD)
 	sw_excludeUnbuiltSources(MODULE_HOST_SOURCES "/Source/ModuleManager/LiveReload/" ${SW_DEV_ONLY_SOURCE_PATTERNS})

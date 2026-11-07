@@ -2,12 +2,12 @@
  * @file App.h
  * @brief 런타임 클라이언트 앱(얇은 런처)입니다.
  *
- * 소유권: App 은 최상위 창 콜백 · EditorModuleManager · Engine 만 들고, 나머지 엔진 핵심 로직은 모두 Engine 에 맡깁니다.
+ * 소유권: App 은 최상위 창 콜백과 부팅 열(`HostLaunch` — Engine · 모듈 관리자 · 호스트 서비스)만 들고, 나머지 엔진 핵심 로직은 모두 Engine 에 맡깁니다.
  *
  * @details App 이 직접 아는 것은 네 가지로 제한합니다. 부팅 순서, 창, 프레임 순서, 그리고 호스트 ↔ 모듈 콜백 연결입니다.
  *          시간 정책은 FixedTimestep, 백엔드 교체는 RHIBackendSwitcher, 모듈 수명은 EditorModuleManager(공통 GameModuleManager 위의 App 전용 층),
  *          핫 리로드 · 개발 콘솔 · 표준 입력 명령은 개발 계층(`IHostDevLayer` — Server 와 같이 쓴다, 배포에는 없다), 헤드리스 작업은 AppHeadlessTasks 가 각자 맡습니다.
- *          자동화가 찾아야 하는 호스트 객체(교체기 · 리로드 구동기)는 정적 포인터가 아니라 호스트 범위(`_host`)에 걸고 `engine::findSubsystem<T>()` 로 찾게 합니다.
+ *          자동화가 찾아야 하는 호스트 객체(교체기 · 리로드 구동기)는 정적 포인터가 아니라 호스트 범위(`HostLaunch::getHostScope`)에 걸고 `engine::findSubsystem<T>()` 로 찾게 합니다.
  *          런타임 UI 에 끼우는 것(일시정지 메뉴의 "끝내기", 운영체제 클립보드, 스크린 리더)은 협력 객체 `RuntimeUIHost` 가 맡습니다.
  */
 #pragma once
@@ -18,27 +18,26 @@
 
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/FixedTimestep.h"
 
 #include "Engine/Engine.h"
 #include "Engine/HostServiceSet.h"
-#include "Engine/Module/ModuleCatalog.h"
 
-#include "ModuleManager/HostDevLayer.h"
+#include "ModuleManager/Host/HostLaunch.h"
 
 namespace sw
 {
     class IAutomationRuntime;
     struct EngineConfig;
+    struct FramePacingInputs;
     struct NativeWindowEvent;
     struct RenderFramePacket;
 
     class CommandLineManager;
     class EditorModuleManager;
+    class FramePacer;
     class IRHIDevice;
     class IWindow;
-    class ModuleLoaderSubsystem;
 } // namespace sw
 
 namespace sw
@@ -62,12 +61,19 @@ namespace sw
         int32 getExitCode() const;
 
     private:
-        /** @brief 개발 계층의 핫 리로드 매니저입니다. 배포(개발 계층 없음)는 nullptr 이다 — 모듈 관리자가 정적 링크로 받는다. */
-        LiveReloadManager* getLiveReloadManager() const { return _pDevLayer != nullptr ? _pDevLayer->getLiveReloadManager() : nullptr; }
+        /** @brief 시동 단계마다 끝난 시각입니다(마이크로초, `MonotonicClock`). 측정만 한다 — 시동 요약 로그의 재료입니다. */
+        struct StartupTimings
+        {
+            int64 _hostScopeEndMicro{ 0 };
+            int64 _engineEndMicro{ 0 };
+            int64 _windowEndMicro{ 0 };
+            int64 _modulesEndMicro{ 0 };
+        };
+
+        /** @brief 모듈 관리자를 이 App 이 만든 형식으로 읽습니다(`loadModuleLibraries` 가 `EditorModuleManager` 로 만든다). 호스트 로더가 돌기 전과 `shutdown` 뒤에는 nullptr 입니다. */
+        EditorModuleManager* getModuleManager() const;
 
         // 부팅 단계. initialize() 가 차례로 부른다.
-        /** @brief 호스트 범위를 세웁니다 — 모듈 라이브러리 창구를 걸고 초기화합니다. 엔진을 세우기 전에 부릅니다. */
-        [[nodiscard]] bool initializeHostScope();
         /**
          * @brief 엔진이 선 뒤 자동화 실행기(`IAutomationRuntime`)를 찾아 시작합니다.
          * @return 실행기가 없는 구성이 `-scenario` · `-scenario-record` 를 받았으면 false(기동 오류)입니다 — 시나리오 없이 돌면 결과를 낼 수 없다.
@@ -79,10 +85,10 @@ namespace sw
          * @brief 기동 단계 `ModuleLoadStage` 의 호스트 로더입니다. 타입 공급자 모듈(GameFramework, 키트, SWGame)의 이미지를 로드해 그 타입을 등록합니다.
          * @details 헤드리스 작업(씬 쿠킹)도 이 단계를 지나므로 쿠킹이 게임과 키트 컴포넌트를 제 타입으로 쿠킹합니다. 인스턴스는 `startModules` 가 만듭니다.
          */
-        [[nodiscard]] bool loadModuleLibrarys();
+        [[nodiscard]] bool loadModuleLibraries();
         /**
          * @brief 호스트 서비스 하나를 세웁니다(`kArrClientHostService` — 순서는 `HostService` 의 의존 선언이 정한다).
-         * @details `Game` 은 EditorModuleManager 로 게임과 에디터 인스턴스를 만든다(모듈 라이브러리는 `loadModuleLibrarys` 가 이미 로드했다).
+         * @details `Game` 은 EditorModuleManager 로 게임과 에디터 인스턴스를 만든다(모듈 라이브러리는 `loadModuleLibraries` 가 이미 로드했다).
          */
         [[nodiscard]] bool startHostService( HostServiceID id );
         /** @brief `startHostService` 가 세운 서비스 하나를 내립니다. 호스트 서비스 집합이 역순으로 부릅니다. */
@@ -91,6 +97,18 @@ namespace sw
         void bindHostCallbacks();
         /** @brief 에디터 렌더 훅 셋(준비 · 그리기 · Present 뒤)을 렌더 스레드에 걸거나(@p bBind) 뗍니다. 게임 호스트 서비스가 매니저를 세운 뒤 걸고 지우기 전에 뗀다. */
         void bindEditorRenderHooks( bool bBind );
+
+        /** @brief 메인 루프에 들어가는 줄(시작 시간 · 파일 연 횟수)을 남깁니다. */
+        void logMainLoopStart() const;
+        /** @brief 시동 요약 한 줄(단계별 ms · 오래 걸린 서브시스템)을 남깁니다. 창을 띄운 뒤에 부릅니다. */
+        void logStartupPhases( const StartupTimings& timings ) const;
+        /** @brief 이번 프레임의 페이싱 입력을 모읍니다. 에디터가 이번 프레임의 다시 그릴 까닭을 정한 뒤에 부릅니다. */
+        [[nodiscard]] FramePacingInputs makeFramePacingInputs() const;
+        /**
+         * @brief 메인 루프 한 바퀴입니다. 넷 세션의 일(리슨 호스트의 `[frame=N]` · 클라이언트 상태 해시)은 여기 없다 — 세션이 엔진 프레임 훅으로 한다(`GameNetSession::makeClientHostFrameHooks`).
+         * @return 종료 요청을 봐서 프레임을 돌지 않았으면 false 입니다.
+         */
+        [[nodiscard]] bool runFrame( FramePacer& framePacer );
 
         /** @brief 설정 파일을 다시 읽었습니다. EngineConfig 면 프레임 시간 정책(최대 델타 · 고정 스텝)을 다시 정합니다. */
         void onConfigReloaded( const hashed_string& configTypeName );
@@ -105,35 +123,21 @@ namespace sw
 
     private:
         /**
-         * @brief 호스트 범위입니다 — 엔진 범위의 부모이고, 엔진보다 먼저 서서 나중에 사라집니다(그래서 `_engine` 보다 앞에 선언한다).
-         * @details 모듈 라이브러리 창구(`ModuleLoaderSubsystem` — 엔진의 `ModuleLoadStage` · `ModuleUnloadStage` 단계가 찾아 부른다)를 듭니다.
-         *          개발 도구는 이 범위에 호스트가 직접 넣습니다(호스트 종류 비트를 두지 않는다).
+         * @brief 부팅 열입니다 — 호스트 범위 · 개발 계층 · 엔진 · 모듈 관리자 · 호스트 서비스의 수명과 순서를 듭니다(Server 와 같은 것, `HostLaunch`).
+         * @details 맨 앞 멤버라 맨 나중에 사라진다. 호스트 서비스의 몸통이 아래 멤버를 쓰므로 `shutdown` 이 그 멤버가 사라지기 전에 호스트 서비스를 내린다.
          */
-        SubsystemScope _host;
-        /** @brief 호스트 범위의 모듈 라이브러리 창구입니다(`_host` 소유 — 빌려 쓴다). */
-        ModuleLoaderSubsystem* _pModuleImageHost;
-        /**
-         * @brief 개발 계층(개발 도구 연결 · 개발 콘솔 · 모듈 핫 리로드 — Server 와 같은 것)입니다. 배포는 nullptr 이다(`build::kShipping`, `IHostDevLayer`).
-         * @details 엔진보다 앞에 선언해 나중에 사라진다 — 리로드 구동기가 호스트 범위에 건 것을 엔진 종료 뒤까지 쥔다.
-         */
-        unique_ptr<IHostDevLayer> _pDevLayer;
-        Engine                    _engine;
+        HostLaunch _launch;
         /**
          * @brief 자동화 실행기입니다(엔진 범위에 스스로 선 서브시스템 — 빌려 쓴다). 실행기를 짓지 않은 구성은 nullptr 입니다.
          * @details 엔진이 선 뒤 `startAutomation` 이 찾고, 엔진 종료 전에 놓는다(실행기는 엔진 범위와 함께 내려간다).
          */
         IAutomationRuntime* _pAutomation;
-        /** @brief 게임 창의 개발 콘솔(`~`)과 표준 입력 명령 채널입니다. Shipping 에서는 아무것도 하지 않습니다. */
-        unique_ptr<EditorModuleManager> _gameModuleManager;
-        /** @brief 모듈 매니페스트(`Bin/Modules`)와 그 해석입니다. 무엇을 어떤 순서로 로드할지 정합니다(Dev). */
-        ModuleCatalog    _moduleCatalog;
-        ModuleResolution _moduleResolution;
         /** @brief 주 창입니다(관찰 포인터). 소유자는 엔진 범위의 `MainWindowSubsystem` 이라 엔진 종료 때 창이 파괴된다. `acquireMainWindow` 가 채운다. */
         IWindow* _pWindow;
 
         FixedTimestep _fixedTimestep;
-        /** @brief 백엔드 교체기입니다. 호스트 서비스 `BackendSwitcher` 가 서며 `_host` 에 걸고 내려가며 풉니다(시나리오 단계 `SwapBackend` · 감시 값 `RHI.*` 가 찾는다). */
-        RHIBackendSwitcher _backendSwap;
+        /** @brief 백엔드 교체기입니다. 호스트 서비스 `BackendSwitcher` 가 서며 호스트 범위에 걸고 내려가며 풉니다(시나리오 단계 `SwapBackend` · 감시 값 `RHI.*` 가 찾는다). */
+        RHIBackendSwitcher _backendSwitcher;
         UserSettingsHost   _userSettingsHost;
         /** @brief 런타임 UI 의 호스트 훅(클립보드 · 스크린 리더 · 끝내기)입니다. 호스트 서비스 `RuntimeUIHooks` 가 세우고 내린다. */
         RuntimeUIHost _runtimeUIHost;
@@ -146,13 +150,7 @@ namespace sw
         /** @brief 주 창의 메시지 처리기 칸 구독입니다(`bindHostCallbacks`). 창이 엔진 종료 때 파괴되면 무효가 된다. 크기 칸은 엔진이 쥔다(스왑체인). */
         Subscription _windowMessageSubscription;
         /// @brief `initialize` 가 시작된 시각(마이크로초, `MonotonicClock`)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
-        int64 _initializeStartMicro;
-        /**
-         * @brief 엔진 뒤에 서고 엔진 앞에 내려가는 호스트 서비스(게임 · 교체기 · 사용자 설정 · 런타임 UI 훅 · 개발 콘솔)입니다. 순서는 `HostService` 의 의존 선언이 정한다.
-         * @details 서비스의 몸통이 위 멤버를 쓰므로 맨 뒤에 둔다(소멸이 먼저다). `shutdown` 이 엔진 종료 앞에서 내린다.
-         */
-        SubsystemCollection _hostServices;
-
+        int64                  _initializeStartMicro;
         uint8                  _bEnableEditor        : 1;
         uint8                  _bQuitAfterInitialize : 1; ///< 한 번 하고 끝나는 작업(`--render-portraits`)을 마쳤다. 루프에 들어가지 않는다.
         [[maybe_unused]] uint8 _reserved             : 5;

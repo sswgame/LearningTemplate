@@ -73,6 +73,7 @@
 #include "Engine/Module/ModuleRegistrationHost.h"
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Navigation/SceneNavigationCooker.h"
+#include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
@@ -315,6 +316,11 @@ namespace sw
         // 헤드리스 작업(셰이더 · 씬 쿠킹, 텍스처 임포트)은 RHI 이후 단계를 건너뛰고 여기서 끝난다. 누수 기준선은 그 작업 직전에 잡았다.
         if ( _headlessState.isHeadless() )
             return true;
+
+        // 클라이언트 호스트의 넷 세션 일(리슨 호스트의 로그 꼬리표, 서버 틱 번호로 남기는 상태 해시)은 세션이 프레임 훅으로 한다. 전용 서버는 자기 틱 루프가 같은 일을 한다(`ServerApp::run`).
+        // 언리얼도 넷 드라이버 틱은 런처가 아니라 월드 틱이 돌린다(기억).
+        if ( bDedicatedServer == false )
+            _netFrameSubscription = _frameHooks.add( engine::getSubsystem<GameNetSession>().makeClientHostFrameHooks() );
 
         _profileSession.begin();
 #if SW_PROFILER_TRACE_ENABLED
@@ -825,7 +831,7 @@ namespace sw
             return false;
         SW_LOG_INFO_ID( "Engine.BackendSwapTookMs", "Backend swap took %#ms (shut down %#ms, device %#ms, %#)", swapWatch.getElapsedMicroseconds() / 1000, shutdownMicroseconds / 1000,
                         ( recreateMicroseconds - shutdownMicroseconds ) / 1000, rebindTiming.c_str() );
-        // 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 한 줄로 남긴다(AppSmokeTest.BackendSwapFollowsTheNewDevice 가 읽는다).
+        // 교체 뒤 디바이스에 매인 설정이 새 디바이스를 따르는지 한 줄로 남긴다.
         SW_LOG_INFO_ID( "Engine.ActiveBackendNowMerge", "Active backend is now %# (merge batches across materials %#, native bindless sampling %#)", RHI::getBackendTypeName( _pRHI->getCommittedBackend() ),
                         _pPacketBuilder->isMergeBatchesAcrossMaterials() ? 1 : 0,
                         _pRHI->getDevice().supportsNativeBindlessSampling() ? 1 : 0 );

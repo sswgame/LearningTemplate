@@ -3,7 +3,6 @@
  * @brief 런타임 리타깃 — 다른 유닛(원본 스켈레톤)의 기본 포즈를 프로필로 이 유닛의 스켈레톤에 옮깁니다(기본 포즈 단계).
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
@@ -15,6 +14,7 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Asset/AssetRef.h"
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -26,7 +26,6 @@
  *          파편의 물리 자세는 기계마다 다르다. 장식이므로 롤백(상태 저장과 되돌리기)은 하지 않는다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -39,6 +38,7 @@
 
 #include "Engine/Destruction/DestructionDamage.h"
 #include "Engine/Destruction/Fracture/FractureComponentBase.h"
+#include "Engine/Foundation/ComponentHandle.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"

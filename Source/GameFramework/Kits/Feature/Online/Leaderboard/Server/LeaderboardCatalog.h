@@ -20,7 +20,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Runtime/LeaderboardTypes.h"

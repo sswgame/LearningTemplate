@@ -11,7 +11,6 @@
  *          - 역할 프리팹 경로는 이 창의 미리보기 설정이라 에셋에 저장하지 않는다.
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
@@ -21,6 +20,8 @@
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
+
+#include "Engine/Foundation/GameObjectHandle.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/PairedAnimationEditModel.h"
 

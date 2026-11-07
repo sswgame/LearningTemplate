@@ -14,7 +14,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"

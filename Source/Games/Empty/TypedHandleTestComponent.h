@@ -6,9 +6,9 @@
  *          새 게임을 시작할 때는 `StressTestScene.*` 와 함께 지우는 파일이며, 이 컴포넌트를 쓰는 시나리오도 함께 지웁니다.
  */
 #pragma once
-#include "Core/Container/ComponentHandle.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"

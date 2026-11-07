@@ -245,7 +245,7 @@ SW_TEST_CASE( RegistrationListTest, CancelledReplacementRestoresTheOldRegistrati
 
 /**
  * @brief [RegistrationListTest] 목록은 살아 있는 동안만 전역 열거(`RegistrationListBase::collect`)에 이름 · 항목 수와 함께 나오고, 사라지면 빠진다
- * @details 열거는 모듈 로드 · 언로드 뒤 항목이 빠졌는지, 같은 이름이 둘 올랐는지를 한곳에서 보는 길이다(SmokeTest 의 모듈 언로드 검사가 쓴다).
+ * @details 열거는 모듈 로드 · 언로드 뒤 항목이 빠졌는지, 같은 이름이 둘 올랐는지를 한곳에서 보는 길이다.
  */
 SW_TEST_CASE( RegistrationListTest, ListAppearsInTheGlobalEnumerationWhileAlive )
 {

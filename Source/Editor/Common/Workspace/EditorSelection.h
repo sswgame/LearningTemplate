@@ -3,7 +3,6 @@
  * @brief 에디터의 게임오브젝트 및 애셋 다중 선택 상태 관리자 (EditorContext 소유)
  */
 #pragma once
-#include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -11,6 +10,8 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
+
+#include "Engine/Foundation/GameObjectHandle.h"
 
 namespace sw
 {
