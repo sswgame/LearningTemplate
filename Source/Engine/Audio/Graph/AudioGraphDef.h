@@ -75,7 +75,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Value name the node type declares (frequencyHz, amplitude, grainSeconds ...)" )
+        PROPERTY( InheritKey, Tooltip = "Value name the node type declares (frequencyHz, amplitude, grainSeconds ...)" )
         hashed_string _name{};
         PROPERTY( Tooltip = "Game parameter (RTPC) that drives the value through the curve; empty keeps the constant value" )
         hashed_string _parameter{};
@@ -94,7 +94,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Node name other nodes and the graph output refer to" )
+        PROPERTY( InheritKey, Tooltip = "Node name other nodes and the graph output refer to" )
         hashed_string _name{};
         PROPERTY( Tooltip = "Earlier nodes whose signals are summed into this node (not for oscillators, noise and granular)" )
         vector<hashed_string> _listInput{};
@@ -142,6 +142,7 @@ namespace sw
         /** @brief 그래프 에디터의 주석 상자입니다(소리는 읽지 않는 배치 데이터 — `_editorPosition` 과 같다). */
         PROPERTY( Tooltip = "Comment boxes of the graph editor; the sound does not read them" )
         vector<GraphCommentBox> _listComment{};
+        string                  _baseID{}; ///< 읽은 글의 `_base`(PROPERTY 가 아니다 — 읽기 앞 단계가 지우는 표시다). `saveToAsset` 이 부모와 다른 칸만 쓴다
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
@@ -153,7 +154,8 @@ namespace sw
         string saveToXMLText() const;
         /**
          * @brief 검사를 통과한 그래프를 리소스 경로의 파일에 씁니다. 에디터의 소리 그래프 창이 저장하는 길이고, 저장한 파일은 핫 리로드가 클립 캐시에 다시 굳힌다.
-         * @return 검사 실패나 쓰기 실패면 오류를 남기고 false 입니다(읽을 수 없는 파일을 남기지 않는다).
+         * @details 부모(`_base`)를 가리키던 글에서 읽었으면 부모와 다른 칸만 쓴다(`ReflectedXMLFile::saveDescAsChild`) — 변형을 모든 칸을 적은 파일로 끊지 않는다.
+         * @return 검사 실패 · 부모를 읽지 못함 · 쓰기 실패면 오류를 남기고 false 입니다(읽을 수 없는 파일을 남기지 않는다).
          */
         [[nodiscard]] bool saveToAsset( const AbsolutePath& absPath ) const;
         /**

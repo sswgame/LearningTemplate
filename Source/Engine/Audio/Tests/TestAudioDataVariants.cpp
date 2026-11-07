@@ -1,10 +1,15 @@
 #include "pch.h"
 
 #include "Core/Container/string.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Audio/AudioMusic.h"
+#include "Engine/Audio/Graph/AudioGraphDef.h"
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
 using namespace sw;
@@ -186,4 +191,56 @@ SW_TEST_CASE( AudioDataVariantTest, PresetWithMissingParentIsNotSaved )
     library.findEvent( hashed_string( "Fire" ) )->_parentEvent = hashed_string( "Missing" );
     SW_EXPECT_FALSE( library.validate( "edited" ) );
     SW_EXPECT_TRUE( library.saveToXMLText().empty() );
+}
+
+/** @brief [AudioDataVariantTest] 음악 변형은 구간을 이름으로 합친다 — 적은 칸만 바뀌고 레이어는 물려받으며 새 구간은 더한다 */
+SW_TEST_CASE( AudioDataVariantTest, MusicVariantMergesSegmentsByName )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.music.xml" ), R"(<AudioMusicDesc _bus="music" _startSegment="Explore">
+        <_listSegment>
+            <AudioMusicSegmentDesc _name="Explore" _bars="8"><_listLayer><AudioMusicLayerDesc _path="explore.ogg" /></_listLayer></AudioMusicSegmentDesc>
+            <AudioMusicSegmentDesc _name="Combat" _bars="4"><_listLayer><AudioMusicLayerDesc _path="combat.ogg" /></_listLayer></AudioMusicSegmentDesc>
+        </_listSegment>
+    </AudioMusicDesc>)" ) );
+    const string   baseID = test::ScopedScratchDomain::makeID( "base.music.xml" ).str();
+    AudioMusicDesc music;
+    SW_REQUIRE_TRUE( music.loadFromXMLText( "<AudioMusicDesc _base=\"" + baseID + "\" _tempo=\"90\"><_listSegment><AudioMusicSegmentDesc _name=\"Combat\" _bars=\"2\" />"
+                                                                                  "<AudioMusicSegmentDesc _name=\"Boss\"><_listLayer><AudioMusicLayerDesc _path=\"boss.ogg\" /></_listLayer></AudioMusicSegmentDesc></_listSegment></AudioMusicDesc>",
+                                            "child.music.xml" ) );
+    SW_EXPECT_NEAR( 90.0f, music._tempo, 0.0f );
+    SW_EXPECT_TRUE( music._bus == hashed_string( "music" ) );
+    SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( music._listSegment.size() ) );
+    const AudioMusicSegmentDesc& combat = music._listSegment[static_cast<size_t>( music.findSegmentIndex( hashed_string( "Combat" ) ) )];
+    SW_EXPECT_EQUAL( 2u, combat._bars );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( combat._listLayer.size() ) ); // 물려받음
+    SW_EXPECT_TRUE( music.findSegmentIndex( hashed_string( "Boss" ) ) >= 0 );
+}
+
+/** @brief [AudioDataVariantTest] 소리 그래프 변형은 노드를 이름으로 합치고, 저장은 부모와 다른 칸만 쓴다 — 저장 → 다시 읽기가 같은 그래프다 */
+SW_TEST_CASE( AudioDataVariantTest, GraphVariantSavesOnlyItsDifference )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.audiograph.xml" ),
+                                              R"(<AudioGraphDef _output="Osc" _durationSeconds="1"><_listNode><AudioGraphNodeDesc _name="Osc" _type="Sine" /></_listNode></AudioGraphDef>)" ) );
+    const string  baseID = test::ScopedScratchDomain::makeID( "base.audiograph.xml" ).str();
+    AudioGraphDef graph;
+    SW_REQUIRE_TRUE( graph.loadFromXMLText( "<AudioGraphDef _base=\"" + baseID + "\" _durationSeconds=\"2\" />", "child.audiograph.xml" ) );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( graph._listNode.size() ) );
+    SW_EXPECT_EQUAL( baseID, graph._baseID );
+    graph._durationSeconds = 3.0f;
+
+    const std::optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.audiograph.xml" ) );
+    SW_REQUIRE_TRUE( childPath.has_value() );
+    SW_REQUIRE_TRUE( graph.saveToAsset( *childPath ) );
+    string saved;
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( childPath->str(), saved ) );
+    SW_EXPECT_TRUE( saved.find( baseID ) != string::npos );
+    SW_EXPECT_TRUE( saved.find( "Sine" ) == string::npos ); // 물려받은 노드는 적지 않는다
+
+    AudioGraphDef reloaded;
+    SW_REQUIRE_TRUE( reloaded.loadFromAsset( test::ScopedScratchDomain::makeID( "child.audiograph.xml" ) ) );
+    SW_EXPECT_NEAR( 3.0f, reloaded._durationSeconds, 0.0f );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( reloaded._listNode.size() ) );
+    SW_EXPECT_EQUAL( graph.saveToXMLText(), reloaded.saveToXMLText() );
 }

@@ -57,7 +57,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Segment name" )
+        PROPERTY( InheritKey, Tooltip = "Segment name" )
         hashed_string _name{};
         PROPERTY( Tooltip = "Segment the music moves to at the end when it does not loop" )
         hashed_string _next{};

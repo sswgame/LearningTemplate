@@ -9,7 +9,10 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 namespace sw
 {
@@ -111,11 +114,17 @@ namespace sw
     bool AudioGraphDef::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         *this = AudioGraphDef{};
-        if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
+        // 변형(`_base`)은 부모를 펼친 뒤 읽는다 — 노드 · 노드 값은 이름이 열쇠다(규칙은 문서 표 `listDocument`).
+        string flatText;
+        bool   bComposed = false;
+        if ( ResourceComposer::compose( xmlText, sourceName, ResourceContext::forType( *StaticType() ), flatText, bComposed ) == false )
+            return false;
+        if ( XMLSerializer::deserialize( this, *StaticType(), bComposed ? string_view{ flatText } : xmlText ) == false )
         {
             SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphCouldNot", "%#: audio graph could not be read or holds unknown keys / values", sourceName );
             return false;
         }
+        _baseID = DataInheritance::findBasePath( xmlText ); // 저장이 부모와의 차이로 쓰려고 든다
         return validate( sourceName );
     }
 
@@ -172,6 +181,8 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphNotSaved", "%#: audio graph not saved - it does not pass validation", absPath.str() );
             return false;
         }
+        if ( _baseID.empty() == false )
+            return ReflectedXMLFile::saveDescAsChild( absPath, *this, AssetID{ _baseID } ); // 부모와 다른 칸만 쓴다. 부모를 읽지 못하면 쓰지 않는다
         if ( FileUtil::writeTextFile( absPath.str(), saveToXMLText() ) == false )
         {
             SW_LOG_ERROR_ID( "AudioGraphDef.AudioGraphCouldNot2", "%#: audio graph could not be written to '%#'", absPath.str(), absPath.str() );

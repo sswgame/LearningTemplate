@@ -8,6 +8,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 namespace sw
 {
@@ -26,7 +27,12 @@ namespace sw
     bool AudioMusicDesc::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         *this = AudioMusicDesc{};
-        if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
+        // 변형(`_base`)은 부모를 펼친 뒤 읽는다 — 구간은 이름이 열쇠이고 전환 규칙 · 레이어 목록은 통째로 바뀐다(규칙은 문서 표 `listDocument`).
+        string flatText;
+        bool   bComposed = false;
+        if ( ResourceComposer::compose( xmlText, sourceName, ResourceContext::forType( *StaticType() ), flatText, bComposed ) == false )
+            return false;
+        if ( XMLSerializer::deserialize( this, *StaticType(), bComposed ? string_view{ flatText } : xmlText ) == false )
         {
             SW_LOG_ERROR_ID( "AudioMusic.MusicCouldNotRead", "%#: music could not be read or holds unknown keys / values", sourceName );
             return false;

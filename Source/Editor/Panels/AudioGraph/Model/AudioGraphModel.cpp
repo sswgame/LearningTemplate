@@ -51,7 +51,8 @@ namespace sw::editor
         AudioGraphDef restored;
         if ( restored.loadFromXMLText( xmlText, "<audio graph undo>" ) == false )
             SW_LOG_ERROR_ID( "AudioGraphModel.AudioGraphUndoSnapshot", "Audio graph undo snapshot could not be read - the graph is cleared" );
-        _editGraph = std::move( restored );
+        restored._baseID = _editGraph._baseID; // 되돌리기 글은 펼친 한 벌이다 — 문서의 부모는 그대로 둬야 저장이 차이로 쓴다
+        _editGraph       = std::move( restored );
     }
 
     bool AudioGraphModel::save( const AbsolutePath& diskPath ) const
