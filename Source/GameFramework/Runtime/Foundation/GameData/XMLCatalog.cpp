@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -11,11 +12,6 @@
 
 namespace sw
 {
-    void XMLCatalogReader::reportUnknownReference( string_view sourceName, const utf8* pOwnerLabel, const utf8* pOwnerID, const utf8* pTargetLabel, const utf8* pTargetID )
-    {
-        SW_LOG_ERROR_ID( "XMLCatalog.UnknownReference", "%#: %# '%#' names an unknown %# '%#'", sourceName, pOwnerLabel, pOwnerID, pTargetLabel, pTargetID );
-    }
-
     void XMLCatalogReader::reportNoEntries( string_view sourceName, const utf8* pRootName )
     {
         SW_LOG_WARNING_ID( "XMLCatalog.NoEntries", "%#: <%#> has no entries", sourceName, pRootName );
@@ -26,13 +22,25 @@ namespace sw
         XMLDocument doc;
         XMLNode     root;
         string      sourceName;
-        return XMLReadUtil::loadRootOrWarn( doc, assetID, pRootName, root, sourceName ) && pReadRoot( pCatalog, root, sourceName );
+        if ( XMLReadUtil::loadRootOrWarn( doc, assetID, pRootName, root, sourceName ) == false )
+            return false;
+        return readAndValidate( pCatalog, pReadRoot, root, sourceName );
+    }
+
+    bool XMLCatalogLoader::readAndValidate( void* pCatalog, ReadRootFunction pReadRoot, const XMLNode& root, string_view sourceName )
+    {
+        // 둘 다 돈다 — 형식 오류와 참조 오류를 한 번에 모두 알린다. 참조 규칙은 쿠커와 같은 데이터 표다(`DataCatalogReferenceRules`).
+        const bool bRead       = pReadRoot( pCatalog, root, sourceName );
+        const bool bReferenced = DataCatalogReferenceRules::validateWithTable( root, sourceName );
+        return bRead && bReferenced;
     }
 
     bool XMLCatalogLoader::loadFromXMLText( void* pCatalog, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName )
     {
         XMLDocument doc;
         XMLNode     root;
-        return XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, pRootName, root ) && pReadRoot( pCatalog, root, sourceName );
+        if ( XMLReadUtil::parseRootOrWarn( doc, xmlText, sourceName, pRootName, root ) == false )
+            return false;
+        return readAndValidate( pCatalog, pReadRoot, root, sourceName );
     }
 } // namespace sw

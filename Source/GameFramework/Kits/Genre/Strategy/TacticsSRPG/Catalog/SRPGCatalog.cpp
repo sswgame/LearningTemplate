@@ -146,13 +146,7 @@ namespace sw
         };
         const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
-        // 다른 정의를 가리키는 id 는 모두 읽은 뒤에 확인한다.
-        using Reference                            = XMLCatalogReference<SRPGCatalog>;
-        static constexpr Reference kArrReference[] = {
-            Reference::of<&SRPGCatalog::_weaponCatalog, &SRPGCatalog::_unitCatalog, &SRPGUnitDef::_listWeaponID>( "unit", "weapon" ),
-            Reference::of<&SRPGCatalog::_unitCatalog, &SRPGCatalog::_unitCatalog, &SRPGUnitDef::_listDevelop, &SRPGDevelopTarget::_unitID>( "unit", "develop target" ),
-        };
-        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
+        // 서로 가리키는 id 는 데이터 표(`engine/settings/datacatalogreferences.xml`)가 정하고 카탈로그 읽기가 이 뒤에 본다 — 쿠커도 같은 표로 본다.
         return result._loadedCount;
     }
 

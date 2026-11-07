@@ -393,13 +393,13 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogRefusesSelfLink )
 }
 
 /**
- * @brief [SurvivalHorrorTest] 자물쇠가 가리키는 열쇠는 뒤에 적혀도 되고, 끝까지 없으면 오류이다
+ * @brief [SurvivalHorrorTest] 자물쇠가 가리키는 열쇠는 뒤에 적혀도 되고, 끝까지 없으면 로드 실패다
  */
 SW_TEST_CASE( SurvivalHorrorTest, CatalogReportsLockWithUnknownKey )
 {
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SurvivalHorrorCatalog catalog;
-    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><KeyLock id="a" key="later" flag="f"/><KeyLock id="b" key="nothing" flag="g"/><Item id="later"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<SurvivalHorrorCatalog><KeyLock id="a" key="later" flag="f"/><KeyLock id="b" key="nothing" flag="g"/><Item id="later"/></SurvivalHorrorCatalog>)", "SurvivalHorrorTest" ) );
 }
 
 /**

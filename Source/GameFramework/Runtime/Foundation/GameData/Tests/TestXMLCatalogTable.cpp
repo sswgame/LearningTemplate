@@ -7,37 +7,16 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 
 using namespace sw;
 
 namespace
 {
-    struct XMLCatalogTableTestSlot
-    {
-        hashed_string _targetID{};
-    };
-
-    struct XMLCatalogTableTestOwner
-    {
-        hashed_string                   _id{};
-        hashed_string                   _single{};
-        vector<hashed_string>           _listTarget{};
-        vector<XMLCatalogTableTestSlot> _listSlot{};
-    };
-
-    struct XMLCatalogTableTestTarget
-    {
-        hashed_string _id{};
-    };
-
     /** @brief 손 읽기 줄만 가진 작은 카탈로그입니다. 읽은 차례를 남겨 순서를 봅니다. */
     struct XMLCatalogTableTestCatalog
     {
-        vector<hashed_string>                  _listOrder{};
-        GameCatalog<XMLCatalogTableTestOwner>  _ownerCatalog{};
-        GameCatalog<XMLCatalogTableTestTarget> _targetCatalog{};
+        vector<hashed_string> _listOrder{};
 
         bool readFirst( const XMLNode& node, string_view sourceName )
         {
@@ -171,39 +150,4 @@ SW_TEST_CASE( XMLCatalogTableTest, EmptyFileWarnsOnlyWhenRowsCount )
 
     const XMLCatalogReadResult uncounted = XMLCatalogReader::readInDocumentOrder( catalog, root, "test", XMLCatalogTableTestUtil::kArrUncounted );
     SW_EXPECT_TRUE( uncounted.isClean() );
-}
-
-/**
- * @brief [XMLCatalogTableTest] 참조 줄은 칸 · 목록 · 목록 안의 칸을 따라가 없는 id 만 알린다. 빈 id 는 적지 않은 것이다
- */
-SW_TEST_CASE( XMLCatalogTableTest, ReferencesWalkThePath )
-{
-    using Catalog   = XMLCatalogTableTestCatalog;
-    using Owner     = XMLCatalogTableTestOwner;
-    using Reference = XMLCatalogReference<Catalog>;
-
-    static constexpr Reference kArrClean[] = {
-        Reference::of<&Catalog::_targetCatalog, &Catalog::_ownerCatalog, &Owner::_single>( "owner", "target" ),
-        Reference::of<&Catalog::_targetCatalog, &Catalog::_ownerCatalog, &Owner::_listTarget>( "owner", "target" ),
-    };
-    static constexpr Reference kArrBroken[] = {
-        Reference::of<&Catalog::_targetCatalog, &Catalog::_ownerCatalog, &Owner::_listSlot, &XMLCatalogTableTestSlot::_targetID>( "owner", "target" ),
-    };
-
-    Catalog                   catalog;
-    XMLCatalogTableTestTarget target;
-    target._id = hashed_string( "known" );
-    SW_REQUIRE_TRUE( catalog._targetCatalog.add( target ) >= 0 );
-    Owner owner;
-    owner._id = hashed_string( "a" );
-    owner._listTarget.push_back( hashed_string( "known" ) );
-    XMLCatalogTableTestSlot slot;
-    slot._targetID = hashed_string( "nobody" );
-    owner._listSlot.push_back( slot );
-    SW_REQUIRE_TRUE( catalog._ownerCatalog.add( owner ) >= 0 );
-
-    XMLCatalogReader::checkReferences( catalog, "test", kArrClean );
-
-    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
-    XMLCatalogReader::checkReferences( catalog, "test", kArrBroken );
 }

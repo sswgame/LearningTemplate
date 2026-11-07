@@ -191,12 +191,6 @@ namespace sw
         const XMLCatalogReadResult result = XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement );
         rebuildHabitatOrder();
 
-        using Reference                            = XMLCatalogReference<CreatureLifeCatalog>;
-        static constexpr Reference kArrReference[] = {
-            Reference::of<&CreatureLifeCatalog::_habitatCatalog, &CreatureLifeCatalog::_speciesCatalog, &CreatureSpeciesDef::_listHabitat>( "species", "habitat" ),
-            Reference::of<&CreatureLifeCatalog::_abilityCatalog, &CreatureLifeCatalog::_speciesCatalog, &CreatureSpeciesDef::_listAbility>( "species", "ability" ),
-        };
-        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
         return result._loadedCount;
     }
 

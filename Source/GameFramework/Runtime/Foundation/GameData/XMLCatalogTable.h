@@ -1,8 +1,10 @@
 /**
  * @file XMLCatalogTable.h
- * @brief 카탈로그 루트의 "원소 이름 → 읽기" 와 "읽은 뒤 참조 확인" 을 표 한 벌로 적는 형식입니다. 카탈로그의 `.cpp` 만 include 합니다.
+ * @brief 카탈로그 루트의 "원소 이름 → 읽기" 를 표 한 벌로 적는 형식입니다. 카탈로그의 `.cpp` 만 include 합니다.
  * @details 언리얼 `UDataTable` 의 행 구조체 · Godot `Resource` 처럼 원소 분기를 손으로 적지 않는다(비교는 기억에 의존한다). 순회 · 모르는 원소 오류(`Xml.UnknownElement`) ·
- *          읽은 수 세기 · 빈 파일 경고(`XMLCatalog.NoEntries`) · 모르는 참조 오류(`XMLCatalog.UnknownReference`)는 여기 한 곳이다 — 파일마다 로그 id 와 대소문자 판정이 갈리던 것을 합쳤다.
+ *          읽은 수 세기 · 빈 파일 경고(`XMLCatalog.NoEntries`)는 여기 한 곳이다 — 파일마다 로그 id 와 대소문자 판정이 갈리던 것을 합쳤다.
+ *          id 참조("이 칸은 저 원소의 id")는 여기 없다 — 쿠커도 읽는 데이터 표(`engine/settings/datacatalogreferences.xml`, `DataCatalogReferenceRules`)에 적고,
+ *          카탈로그 읽기(`XMLCatalogLoader`)가 루트 읽기 뒤에 본다. 예전 멤버 포인터 표는 게임 모듈을 올리기 전에 도는 쿠킹이 볼 수 없었고 깨져도 로드가 성공했다.
  *          표는 `loadRoot` 안의 `static constexpr` 배열로 둔다. 멤버 함수 안이라 비공개 칸의 멤버 포인터를 적을 수 있고, 클래스 안의 정적 초기화는 완전한 클래스 문맥이 아니라 쓸 수 없다.
  *          코드 옆 표를 `_base` 합치기 규칙(`Content/engine/settings/datacataloginheritance.xml`)으로 대신하지 않는다 — 쿠킹이 게임 모듈을 올리기 전에 돌아 이 표를 볼 수 없다.
  * @code
@@ -16,11 +18,6 @@
  *             Element::of<&GhostCatalog::loadRoom>( "Room" ),             // 손 읽기
  *         };
  *         const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
- *         using Reference = XMLCatalogReference<GhostCatalog>;
- *         static constexpr Reference kArrReference[] = {
- *             Reference::of<&GhostCatalog::_ghostCatalog, &GhostCatalog::_roomCatalog, &GhostRoomDef::_listGhost>( "room", "ghost" ),
- *         };
- *         XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
  *         return result._loadedCount;
  *     }
  * @endcode
@@ -141,51 +138,6 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct XMLCatalogReference
-     * @brief "이 항목의 칸이 저 카탈로그의 id 를 가리킨다" 한 줄입니다. 모두 읽은 뒤에 보므로 적힌 순서와 상관없고, 빈 id 는 적지 않은 것이라 보지 않습니다(필수 칸은 `PROPERTY( Required )` 가 본다).
-     * @details 경로는 항목에서 id(`hashed_string`)까지 칸을 따라가고, 중간의 `vector` 는 저절로 펼친다.
-     */
-    template <typename TCatalog>
-    struct XMLCatalogReference
-    {
-        using CheckFunction = void ( * )( const TCatalog&, const XMLCatalogReference&, string_view );
-
-        const utf8*   _pOwnerLabel;  ///< 로그의 항목 이름(`room`)
-        const utf8*   _pTargetLabel; ///< 로그의 대상 이름(`ghost`)
-        CheckFunction _pCheck;
-
-        /** @brief @p pTarget 은 찾을 카탈로그 칸, @p pOwner 는 항목을 가진 카탈로그 칸, @p listPath 는 항목에서 id 까지의 칸들입니다. */
-        template <auto pTarget, auto pOwner, auto... listPath>
-        [[nodiscard]] static constexpr XMLCatalogReference of( const utf8* pOwnerLabel, const utf8* pTargetLabel )
-        {
-            return XMLCatalogReference{ pOwnerLabel, pTargetLabel, &check<pTarget, pOwner, listPath...> };
-        }
-
-    private:
-        template <auto pTarget, auto pOwner, auto... listPath>
-        static void check( const TCatalog& catalog, const XMLCatalogReference& reference, string_view sourceName );
-        template <auto... listPath, typename TValue, typename TVisitor>
-        static void visitIDs( const TValue& value, const TVisitor& visitor );
-        template <auto pFirst, auto... listRest, typename TValue, typename TVisitor>
-        static void visitMember( const TValue& value, const TVisitor& visitor )
-        {
-            visitIDs<listRest...>( value.*pFirst, visitor );
-        }
-
-        template <typename TValue>
-        struct IsList : std::false_type
-        {
-        };
-        template <typename TItem>
-        struct IsList<vector<TItem>> : std::true_type
-        {
-        };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
      * @struct XMLCatalogReader
      * @brief 표를 돌리는 쪽입니다.
      * @details 문서 순서는 원소끼리 서로 보지 않는 카탈로그, 표 순서는 뒤 줄이 앞 줄을 읽는 동안 찾아보는 카탈로그(줍는 것 → 능력)가 쓴다.
@@ -228,19 +180,6 @@ namespace sw
             reportIfEmpty( root, sourceName, result, arrElement );
             return result;
         }
-
-        /** @brief 참조 줄을 모두 봅니다. 없는 id 마다 오류를 남기고 항목은 그대로 둡니다. */
-        template <typename TCatalog, size_t Count>
-        static void checkReferences( const TCatalog& catalog, string_view sourceName, const XMLCatalogReference<TCatalog> ( &arrReference )[Count] )
-        {
-            for ( const XMLCatalogReference<TCatalog>& reference : arrReference )
-            {
-                reference._pCheck( catalog, reference, sourceName );
-            }
-        }
-
-        /** @brief 모르는 참조 한 줄을 남깁니다(`XMLCatalog.UnknownReference`). */
-        static void reportUnknownReference( string_view sourceName, const utf8* pOwnerLabel, const utf8* pOwnerID, const utf8* pTargetLabel, const utf8* pTargetID );
 
     private:
         /** @brief 표에 없는 이름의 원소를 모두 알리고 그 수만큼 실패로 세어 시작합니다. */
@@ -285,43 +224,4 @@ namespace sw
         /** @brief 세는 원소를 하나도 읽지 못한 파일을 경고합니다(`XMLCatalog.NoEntries`). 호출한 쪽은 0 을 실패로 받습니다. */
         static void reportNoEntries( string_view sourceName, const utf8* pRootName );
     };
-} // namespace sw
-
-namespace sw
-{
-    template <typename TCatalog>
-    template <auto pTarget, auto pOwner, auto... listPath>
-    void XMLCatalogReference<TCatalog>::check( const TCatalog& catalog, const XMLCatalogReference& reference, string_view sourceName )
-    {
-        const auto& target = catalog.*pTarget;
-        for ( const auto& owner : ( catalog.*pOwner ).getAll() )
-        {
-            visitIDs<listPath...>( owner, [&]( const hashed_string& id )
-            {
-                if ( id.empty() == false && target.find( id ) == nullptr )
-                    XMLCatalogReader::reportUnknownReference( sourceName, reference._pOwnerLabel, owner._id.c_str(), reference._pTargetLabel, id.c_str() );
-            } );
-        }
-    }
-
-    template <typename TCatalog>
-    template <auto... listPath, typename TValue, typename TVisitor>
-    void XMLCatalogReference<TCatalog>::visitIDs( const TValue& value, const TVisitor& visitor )
-    {
-        if constexpr ( std::is_same_v<TValue, hashed_string> )
-        {
-            visitor( value );
-        }
-        else if constexpr ( IsList<TValue>::value )
-        {
-            for ( const auto& item : value )
-            {
-                visitIDs<listPath...>( item, visitor );
-            }
-        }
-        else
-        {
-            visitMember<listPath...>( value, visitor );
-        }
-    }
 } // namespace sw

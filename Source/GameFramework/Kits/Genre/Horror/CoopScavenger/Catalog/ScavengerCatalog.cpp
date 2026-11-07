@@ -86,11 +86,6 @@ namespace sw
         { return lhs._daysLeft == rhs._daysLeft; } ),
                             _listBuyRate.end() );
 
-        using Reference                            = XMLCatalogReference<ScavengerCatalog>;
-        static constexpr Reference kArrReference[] = {
-            Reference::of<&ScavengerCatalog::_scrapCatalog, &ScavengerCatalog::_moonCatalog, &ScavengerMoonDef::_listScrap>( "moon", "scrap" ),
-        };
-        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
         if ( _moonCatalog.isEmpty() )
             SW_LOG_ERROR_ID( "ScavengerCatalog.NoMoonsNowhereLand", "%#: no moons - nowhere to land", sourceName );
         return result._loadedCount;

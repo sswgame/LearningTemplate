@@ -90,16 +90,7 @@ namespace sw
         };
         const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
-        // 전투는 모르는 주문을 위력 0 으로 터뜨린다 — 오타가 말없이 시전만 하는 적이 되지 않게 여기서 알린다.
-        using Reference                            = XMLCatalogReference<JRPGCatalog>;
-        static constexpr Reference kArrReference[] = {
-            Reference::of<&JRPGCatalog::_spellCatalog, &JRPGCatalog::_classCatalog, &JRPGClassDef::_listLearn, &JRPGLearnEntry::_spellID>( "class", "spell" ),
-            Reference::of<&JRPGCatalog::_manualCatalog, &JRPGCatalog::_spellCatalog, &JRPGSpellDef::_manualID>( "spell", "manual" ),
-            Reference::of<&JRPGCatalog::_spellCatalog, &JRPGCatalog::_enemyCatalog, &JRPGEnemyDef::_castSpellID>( "enemy", "spell" ),
-            Reference::of<&JRPGCatalog::_spellCatalog, &JRPGCatalog::_manualCatalog, &JRPGManualDef::_listStage, &JRPGManualStage::_techniqueID>( "manual", "technique" ),
-            Reference::of<&JRPGCatalog::_enemyCatalog, &JRPGCatalog::_areaCatalog, &JRPGAreaDef::_listGroup, &JRPGEncounterGroup::_listEnemyID>( "area", "enemy" ),
-        };
-        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
+        // 전투는 모르는 주문을 위력 0 으로 터뜨린다 — 오타가 말없이 시전만 하는 적이 되지 않게 참조 표(`engine/settings/datacatalogreferences.xml`)가 로드를 멈춘다.
         return result._loadedCount;
     }
 

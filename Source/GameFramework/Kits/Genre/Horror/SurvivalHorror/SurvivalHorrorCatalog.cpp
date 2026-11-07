@@ -114,12 +114,7 @@ namespace sw
             Element::of<&SurvivalHorrorCatalog::loadDocument>( "Document" ),
             Element::of<&SurvivalHorrorCatalog::loadDeduction>( "Deduction" ),
         };
-        const XMLCatalogReadResult result          = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
-        using Reference                            = XMLCatalogReference<SurvivalHorrorCatalog>;
-        static constexpr Reference kArrReference[] = {
-            Reference::of<&SurvivalHorrorCatalog::_itemCatalog, &SurvivalHorrorCatalog::_keyLockCatalog, &SurvivalHorrorKeyLockDef::_keyItem>( "key lock", "key item" ),
-        };
-        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
         return result._loadedCount;
     }
 

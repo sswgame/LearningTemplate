@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  카탈로그 안의 id 참조 규칙 표입니다(`DataCatalogReferenceRules`). 카탈로그 읽기(런타임 · 에디터)와 팩 쿠커가 같은 표로 같은 검사를 합니다 — 쿠킹은 게임 모듈을 올리기 전에 돌아
+  카탈로그 코드를 볼 수 없어 규칙이 데이터에 있습니다.
+  <Catalog root> 는 카탈로그 XML 루트, <Reference> 한 줄이 "owner 원소의 attribute 값은 루트의 자식 target 원소의 id 다" 입니다.
+  owner 는 루트의 자식(항목)부터 값을 적은 원소까지를 '/' 로 잇습니다(Class/Learn). 값은 쉼표 · 세미콜론 · 공백으로 나눈 목록이고, named="true" 면 `id:수` 꼴의 콜론 앞이 id 입니다.
+  targetKey 는 가리키는 원소의 id 속성(기본 id)입니다. 깨진 필수 참조는 로드 · 쿠킹 실패입니다. optional="true" 는 이 파일 밖에서 채워질 수 있는 연결에만 둡니다(경고만).
+-->
+<DataCatalogReferenceTable>
+	<Catalog root="GhostHunt">
+		<Reference owner="Room" attribute="ghosts" target="Ghost"/>
+		<Reference owner="Boo" attribute="furniture" target="Furniture"/>
+	</Catalog>
+	<Catalog root="ScavengerCatalog">
+		<Reference owner="Moon" attribute="scraps" target="Scrap"/>
+	</Catalog>
+	<Catalog root="SurvivalHorrorCatalog">
+		<Reference owner="KeyLock" attribute="key" target="Item"/>
+	</Catalog>
+	<Catalog root="JRPGCatalog">
+		<Reference owner="Class/Learn" attribute="spell" target="Spell"/>
+		<Reference owner="Spell" attribute="manual" target="Manual"/>
+		<Reference owner="Enemy" attribute="cast" target="Spell"/>
+		<Reference owner="Manual/Stage" attribute="technique" target="Spell"/>
+		<Reference owner="Area/Group" attribute="enemies" target="Enemy"/>
+	</Catalog>
+	<Catalog root="MonsterCollectorCatalog">
+		<Reference owner="Move" attribute="weather" target="Weather"/>
+		<Reference owner="Species/Learn" attribute="move" target="Move"/>
+		<Reference owner="Species/Evolve" attribute="to" target="Species"/>
+		<Reference owner="Encounter/Slot" attribute="species" target="Species"/>
+	</Catalog>
+	<Catalog root="CreatureLifeCatalog">
+		<Reference owner="Species" attribute="habitats" target="Habitat"/>
+		<Reference owner="Species" attribute="abilities" target="Ability"/>
+	</Catalog>
+	<Catalog root="CityCatalog">
+		<Reference owner="Building" attribute="goods" target="Good"/>
+	</Catalog>
+	<Catalog root="ConquestCatalog">
+		<Reference owner="Rules" attribute="waveUnit" target="Unit"/>
+		<Reference owner="Building" attribute="trains" target="Unit"/>
+		<Reference owner="Site" attribute="garrison" target="Unit" named="true"/>
+	</Catalog>
+	<Catalog root="SRPGCatalog">
+		<Reference owner="Unit" attribute="weapons" target="Weapon"/>
+		<Reference owner="Unit" attribute="developsTo" target="Unit" named="true"/>
+	</Catalog>
+</DataCatalogReferenceTable>

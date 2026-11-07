@@ -231,16 +231,7 @@ namespace sw
         };
         const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
-        // 다른 정의를 가리키는 id 는 모두 읽은 뒤에 확인한다(앞에 적힌 종이 뒤에 적힌 종으로 진화할 수 있다).
-        using Catalog                              = MonsterCollectorCatalog;
-        using Reference                            = XMLCatalogReference<Catalog>;
-        static constexpr Reference kArrReference[] = {
-            Reference::of<&Catalog::_weatherCatalog, &Catalog::_moveCatalog, &MonsterMoveDef::_weatherID>( "move", "weather" ),
-            Reference::of<&Catalog::_moveCatalog, &Catalog::_speciesCatalog, &MonsterSpeciesDef::_listLearn, &MonsterLearnEntry::_moveID>( "species", "move" ),
-            Reference::of<&Catalog::_speciesCatalog, &Catalog::_speciesCatalog, &MonsterSpeciesDef::_listEvolution, &MonsterEvolutionDef::_targetID>( "species", "evolution" ),
-            Reference::of<&Catalog::_speciesCatalog, &Catalog::_encounterCatalog, &MonsterEncounterDef::_listSlot, &MonsterEncounterSlot::_speciesID>( "encounter", "species" ),
-        };
-        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
+        // 서로 가리키는 id 는 데이터 표(`engine/settings/datacatalogreferences.xml`)가 정하고 카탈로그 읽기가 이 뒤에 본다 — 쿠커도 같은 표로 본다.
         return result._loadedCount;
     }
 

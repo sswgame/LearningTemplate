@@ -336,23 +336,25 @@ SW_TEST_CASE( GhostHuntTest, CatalogRefusesUnknownElement )
 }
 
 /**
- * @brief [GhostHuntTest] 방이 가리키는 유령은 뒤에 적혀도 되고, 끝까지 없으면 오류이다
+ * @brief [GhostHuntTest] 방이 가리키는 유령은 뒤에 적혀도 되고, 끝까지 없으면 로드 실패다(필수 참조 — `engine/settings/datacatalogreferences.xml`)
  */
 SW_TEST_CASE( GhostHuntTest, CatalogReportsRoomWithUnknownGhost )
 {
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     GhostCatalog catalog;
-    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<GhostHunt><Room id="a" ghosts="later,nobody" lightFlag="f"/><Ghost id="later"/></GhostHunt>)", "GhostHuntTest" ) );
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<GhostHunt><Room id="a" ghosts="later,nobody" lightFlag="f"/><Ghost id="later"/></GhostHunt>)", "GhostHuntTest" ) );
+    GhostCatalog clean;
+    SW_EXPECT_TRUE( clean.loadFromXMLText( R"(<GhostHunt><Room id="a" ghosts="later" lightFlag="f"/><Ghost id="later"/></GhostHunt>)", "GhostHuntTest" ) );
 }
 
 /**
- * @brief [GhostHuntTest] 결함: 없는 가구에 숨은 부를 말없이 받아 찾을 길이 없었다. 가구는 뒤에 적혀도 되고, 끝까지 없으면 오류이다
+ * @brief [GhostHuntTest] 결함: 없는 가구에 숨은 부를 말없이 받아 찾을 길이 없었다. 가구는 뒤에 적혀도 되고, 끝까지 없으면 로드 실패다
  */
 SW_TEST_CASE( GhostHuntTest, CatalogReportsBooInUnknownFurniture )
 {
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     GhostCatalog catalog;
-    SW_EXPECT_TRUE( catalog.loadFromXMLText( R"(<GhostHunt><Boo id="a" furniture="later"/><Boo id="b" furniture="nothing"/><Furniture id="later"/></GhostHunt>)", "GhostHuntTest" ) );
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<GhostHunt><Boo id="a" furniture="later"/><Boo id="b" furniture="nothing"/><Furniture id="later"/></GhostHunt>)", "GhostHuntTest" ) );
 }
 
 /**

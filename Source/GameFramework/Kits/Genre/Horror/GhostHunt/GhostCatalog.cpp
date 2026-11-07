@@ -40,13 +40,7 @@ namespace sw
             Element::of<&GhostCatalog::loadFurniture>( "Furniture" ),
             Element::of<&GhostCatalog::_booCatalog>( "Boo" ),
         };
-        const XMLCatalogReadResult result          = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
-        using Reference                            = XMLCatalogReference<GhostCatalog>;
-        static constexpr Reference kArrReference[] = {
-            Reference::of<&GhostCatalog::_ghostCatalog, &GhostCatalog::_roomCatalog, &GhostRoomDef::_listGhost>( "room", "ghost" ),
-            Reference::of<&GhostCatalog::_furnitureCatalog, &GhostCatalog::_booCatalog, &HidingGhostDef::_furniture>( "boo", "furniture" ),
-        };
-        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
+        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
         return result._loadedCount;
     }
 

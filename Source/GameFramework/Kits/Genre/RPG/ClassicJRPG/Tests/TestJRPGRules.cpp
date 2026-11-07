@@ -1251,7 +1251,7 @@ SW_TEST_CASE( JRPGTest, CatalogReportsUnknownReferences )
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<JRPGCatalog>
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<JRPGCatalog>
   <Class id="hero" name="Hero"><Learn spell="nope"/></Class>
   <Manual id="m" name="M"><Stage technique="nope"/></Manual>
   <Area id="a"><Group enemies="nope"/></Area>

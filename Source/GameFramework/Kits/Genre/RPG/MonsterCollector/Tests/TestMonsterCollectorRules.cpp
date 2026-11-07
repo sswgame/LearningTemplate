@@ -1490,7 +1490,7 @@ SW_TEST_CASE( MonsterCollectorTest, CatalogReportsUnknownReferences )
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
     SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MonsterCollectorCatalog>
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<MonsterCollectorCatalog>
   <Species id="s" name="S" types="A" stats="1 1 1 1 1 1"><Learn move="nope"/><Evolve to="nope"/></Species>
   <Encounter id="e" area="a"><Slot species="nope" min="1" max="1"/></Encounter>
   <Move id="m" name="M" category="Status" weather="nope"/>

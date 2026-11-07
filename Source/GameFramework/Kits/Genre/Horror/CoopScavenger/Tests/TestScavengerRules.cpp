@@ -546,7 +546,7 @@ SW_TEST_CASE( ScavengerFacilityUnknownScrapTest, UnknownMoonScrapIsNeverPicked )
   <Moon id="haunted" name="Haunted" scrap="4" scrapMax="4" scraps="ghost"/>
 </ScavengerCatalog>)";
     sw::ScavengerCatalog  catalog;
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnknownScrapXML, "ScavengerTest" ) );
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( kUnknownScrapXML, "ScavengerTest" ) ); // 필수 참조가 깨져 로드는 실패다 — 읽은 항목으로 판이 모르는 고철을 고르지 않는지만 본다
 
     sw::ScavengerFacility mixed;
     SW_REQUIRE_TRUE( mixed.createLayout( catalog, *catalog.findMoon( "mixed" ), 3u, 1.0f ) );

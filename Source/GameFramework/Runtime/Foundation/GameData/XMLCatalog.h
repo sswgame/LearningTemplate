@@ -19,6 +19,8 @@ namespace sw
      * @struct XMLCatalogLoader
      * @brief `XMLCatalog` 가 부르는 문서 열기와 루트 찾기의 몸통입니다. 템플릿 밖에 두어서 카탈로그 헤더가 XML 헤더를 끌어오지 않게 합니다.
      * @details 실패 경고는 `XMLReadUtil::loadRootOrWarn` · `parseRootOrWarn` 이 낸다. 루트 읽기가 0 개이거나 false 이면 실패이다.
+     *          루트 읽기 뒤에 카탈로그 참조 규칙(데이터 표 `engine/settings/datacatalogreferences.xml` — `DataCatalogReferenceRules`)을 보고 필수 참조가 깨졌으면 실패다.
+     *          쿠커가 팩에 담기 전에 같은 표로 같은 검사를 한다 — 에디터 · 쿠커 · 런타임이 같은 답을 낸다.
      *          `GameDataXML::loadFromAsset` · `loadFromXMLText`(다른 카탈로그를 함께 받는 문맥 버전 포함)도 이 몸통을 쓴다 — 문서 열기 · 루트 찾기는 여기 하나다.
      */
     struct SW_GF_API XMLCatalogLoader
@@ -29,6 +31,9 @@ namespace sw
         [[nodiscard]] static bool loadFromAsset( void* pCatalog, ReadRootFunction pReadRoot, const AssetID& assetID, const utf8* pRootName );
         /** @brief XML 문자열 버전입니다. 테스트와 에디터 미리보기가 씁니다. */
         [[nodiscard]] static bool loadFromXMLText( void* pCatalog, ReadRootFunction pReadRoot, string_view xmlText, string_view sourceName, const utf8* pRootName );
+
+        /** @brief 루트 읽기를 부르고 참조 규칙을 봅니다(둘 다 돈다 — 오류를 한 번에 알린다). 둘 다 통과해야 true 입니다. */
+        [[nodiscard]] static bool readAndValidate( void* pCatalog, ReadRootFunction pReadRoot, const XMLNode& root, string_view sourceName );
 
         /** @brief 루트 읽기가 읽은 항목 수를 성공 여부로 바꿉니다. 0 이면 실패입니다. */
         static constexpr bool isLoaded( uint32 loadedCount ) { return loadedCount > 0; }

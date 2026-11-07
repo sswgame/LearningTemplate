@@ -1592,7 +1592,7 @@ SW_TEST_CASE( SRPGCatalogTest, ReportsBrokenElements )
   <Mystery/>
 </SRPGCatalog>)";
     sw::SRPGCatalog       catalog;
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kBrokenXML, "SRPGTest" ) );
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( kBrokenXML, "SRPGTest" ) ); // 깨진 참조(ghost · phantom)로 로드는 실패다 — 읽은 항목의 형식 판정은 그대로 본다
     SW_EXPECT_TRUE( catalog.findTerrain( "short" ) == nullptr );
     SW_EXPECT_TRUE( catalog.findTerrain( "long" ) == nullptr );
     SW_REQUIRE_TRUE( catalog.findTerrain( "fine" ) != nullptr );

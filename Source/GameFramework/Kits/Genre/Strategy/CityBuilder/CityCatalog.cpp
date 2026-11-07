@@ -49,11 +49,6 @@ namespace sw
         };
         const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
-        using Reference                            = XMLCatalogReference<CityCatalog>;
-        static constexpr Reference kArrReference[] = {
-            Reference::of<&CityCatalog::_goodCatalog, &CityCatalog::_buildingCatalog, &CityBuildingDef::_listGood>( "building", "good" ),
-        };
-        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
         // 집 단계가 없으면 집이 자랄 곳이 없다 — 기본 단계를 지어내지 않고 로드 실패로 본다.
         if ( _listHouseLevel.empty() )
         {

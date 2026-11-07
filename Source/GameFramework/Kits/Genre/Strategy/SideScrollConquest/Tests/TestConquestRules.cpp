@@ -1005,10 +1005,8 @@ SW_TEST_CASE( ConquestTest, CatalogRefusesBrokenElements )
 SW_TEST_CASE( ConquestTest, CatalogReportsUnknownReferences )
 {
     sw::ConquestCatalog catalog;
-    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
-    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" );
-    SW_EXPECT_LOG( "ConquestCatalog.WaveUnitNotUnitNo" );
-    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<ConquestCatalog>
+    SW_EXPECT_LOG( "XMLCatalog.UnknownReference" ); // 반격 병종 · 훈련 병종 · 주둔 병종 셋 — 반격 병종도 같은 참조 표 한 줄이다
+    SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<ConquestCatalog>
   <Rules waveUnit="nope"/>
   <Building id="b" trains="nope"/>
   <Site id="s" owner="Enemy" garrison="nope:2"/>

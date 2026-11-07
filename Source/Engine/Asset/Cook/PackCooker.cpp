@@ -25,8 +25,10 @@
 #include "Engine/Content/Pack/PackWriter.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Inherit/DataCatalogReferences.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "sw/config/CookContract.gen.h"
 
@@ -336,9 +338,11 @@ namespace sw
             /**
              * @brief 소스 파일 하나를 팩에 담습니다. 부모를 가리키는 데이터(`_base`)는 펼친 한 벌을 담습니다 — 런타임은 펼친 결과만 읽어 비용이 없다(`DataInheritance`).
              * @details 부모도 디스크 입구로 읽으므로 이 작업의 입력이 되어, 부모가 바뀌면 팩을 다시 굽는다. 스스로 쿠킹본을 만드는 종류(프리팹 변형 — `cookAllPrefabs`)는 그 쿠커가 펼쳤다.
-             *          펼치지 못하면 쿠킹 실패다 — 부모 없이 자식 칸만 담지 않는다.
+             *          펼치지 못하면 쿠킹 실패다 — 부모 없이 자식 칸만 담지 않는다. 카탈로그 참조 규칙(@p references)이 있는 루트는 펼친 글로 참조를 보고, 필수 참조가 깨졌으면
+             *          쿠킹 실패다 — 런타임 카탈로그 읽기와 같은 표 · 같은 검사라 실행해야 드러나던 깨진 id 가 팩에 담기지 않는다.
              */
-            static bool addSourceFile( PackWriter& writer, string_view relativePath, const string& absPath, string_view contentRoot, PackCookTiming& ioTiming )
+            static bool addSourceFile( PackWriter& writer, string_view relativePath, const string& absPath, string_view contentRoot, const DataCatalogReferenceRules& references,
+                                       PackCookTiming& ioTiming )
             {
                 vector<uint8>   bytes;
                 const Stopwatch readWatch;
@@ -362,6 +366,16 @@ namespace sw
                 {
                     SW_LOG_ERROR_ID( "PackCooker.PackCookCouldNotFlatten", "Pack cook: could not flatten '%#'", absPath );
                     return false;
+                }
+                const string_view packedText = bComposed ? string_view{ flatText } : text;
+                if ( references.isRootMentioned( packedText ) )
+                {
+                    XMLDocument doc;
+                    if ( doc.parse( packedText, absPath ) && doc.getRoot().isValid() && references.validateDocument( doc.getRoot(), absPath ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "PackCooker.PackCookBrokenReference", "Pack cook: '%#' names ids that are not in the file (rules in %#)", absPath, DataCatalogReferenceRules::kTableAssetID );
+                        return false;
+                    }
                 }
                 if ( bComposed )
                     writer.addBytes( relativePath, vector<uint8>( flatText.begin(), flatText.end() ) );
@@ -402,6 +416,10 @@ namespace sw
                 writerDesc._mountDomain      = domain;
                 PackWriter writer( writerDesc );
 
+                // 카탈로그 참조 규칙 — 표도 이 작업의 입력이다(리소스 읽기). 못 읽으면 검사 없이 굽지 않는다.
+                DataCatalogReferenceRules references;
+                if ( references.loadFromAsset() == false )
+                    return CookStep::Failed;
                 // 목록도 입력이다 — 파일이 생기거나 사라지면 다시 베이크한다(`CookJob::collectFiles` 가 기록한다).
                 vector<string> listSourceFile;
                 if ( CookJob::collectFiles( domainDir, "", listSourceFile ) == false )
@@ -424,7 +442,7 @@ namespace sw
                     }
                     if ( selection._setIncluded.contains( makeAssetID( domain, relativePath ) ) == false )
                         continue; // 뿌리에서 참조로 닿지 않는다 - 이 빌드의 게임이 쓰지 않는다(`PackReachability`)
-                    if ( addSourceFile( writer, relativePath, absPath, params._resourceRoot, ioTiming ) == false )
+                    if ( addSourceFile( writer, relativePath, absPath, params._resourceRoot, references, ioTiming ) == false )
                         return CookStep::Failed;
                 }
                 if ( listStale.empty() == false )

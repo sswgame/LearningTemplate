@@ -91,15 +91,7 @@ namespace sw
         };
         const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
-        // 서로 가리키는 id 는 모두 읽은 뒤에 확인한다(건물 · 거점이 병종보다 앞에 적혀도 된다).
-        using Reference                            = XMLCatalogReference<ConquestCatalog>;
-        static constexpr Reference kArrReference[] = {
-            Reference::of<&ConquestCatalog::_unitCatalog, &ConquestCatalog::_buildingCatalog, &ConquestBuildingDef::_listTrainable>( "building", "unit" ),
-            Reference::of<&ConquestCatalog::_unitCatalog, &ConquestCatalog::_siteCatalog, &ConquestSiteDef::_listGarrison, &ConquestGarrisonDef::_unitID>( "site", "garrison unit" ),
-        };
-        XMLCatalogReader::checkReferences( *this, sourceName, kArrReference );
-        if ( _rules._waveUnit.empty() == false && _unitCatalog.find( _rules._waveUnit ) == nullptr )
-            SW_LOG_ERROR_ID( "ConquestCatalog.WaveUnitNotUnitNo", "%#: waveUnit '%#' is not a unit - no counter-attack waves", sourceName, _rules._waveUnit.c_str() );
+        // 서로 가리키는 id 는 데이터 표(`engine/settings/datacatalogreferences.xml`)가 정하고 카탈로그 읽기가 이 뒤에 본다(반격 병종 `waveUnit` 포함) — 쿠커도 같은 표로 본다.
         return result._loadedCount;
     }
 
