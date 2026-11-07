@@ -61,6 +61,10 @@ namespace sw::editor
         void drawContent() override;
         /** @brief 프로퍼티 그리드가 배치 묶음을 새로 지은 횟수입니다(프로브 `Editor.InspectorLayoutRebuildCount`). */
         uint32 getLayoutRebuildCount() const { return _propertyGrid.getLayoutRebuildCount(); }
+        /** @brief 그리드가 마지막 프레임에 그린 메서드 행 수입니다(`EditorPropertyGrid::getMethodRowCount`). */
+        uint32 getMethodRowCount() const { return _propertyGrid.getMethodRowCount(); }
+        /** @brief 그리드가 마지막 프레임에 숨긴(`CallInEditor` 없는) 메서드 수입니다. */
+        uint32 getHiddenMethodCount() const { return _propertyGrid.getHiddenMethodCount(); }
 
     private:
         // ------------------------------------------------------------------------------

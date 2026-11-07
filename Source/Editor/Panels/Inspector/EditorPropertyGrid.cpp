@@ -67,10 +67,6 @@ namespace sw::editor
         struct EditorPropertyGridInternal
         {
             static constexpr Color kNestedHeader{ 0.15f, 0.15f, 0.15f, 1.0f };
-            static constexpr Color kCallInEditorButton{ 0.18f, 0.42f, 0.65f, 1.0f };
-            static constexpr Color kCallInEditorButtonHovered{ 0.25f, 0.52f, 0.78f, 1.0f };
-            static constexpr Color kCallInEditorButtonActive{ 0.12f, 0.35f, 0.55f, 1.0f };
-            static constexpr Color kCallInEditorText{ 0.3f, 0.8f, 1.0f, 1.0f };
 
             /** @brief 컨테이너 구조 편집(추가, 삭제, 다시 넣기)입니다. 주인 오브젝트가 있으면 되돌리기에 남기고, 없으면 그냥 바꿉니다. */
             template <typename EditFunc>
@@ -225,10 +221,14 @@ namespace sw::editor
         , _pFavorites{ nullptr }
         , _openAllRequest{ 0 }
         , _bFavoritesOnly{ SW_FALSE }
+        , _bShowAllMethods{ SW_FALSE }
         , _bShowModifiedOnly{ false }
         , _layoutCache{}
         , _scratchDisplay{}
         , _layoutUseDepth{ 0 }
+        , _methodCountFrame{ -1 }
+        , _methodRowCount{ 0 }
+        , _hiddenMethodCount{ 0 }
     {
     }
 
@@ -255,6 +255,12 @@ namespace sw::editor
             if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CollapseAll" ) ) )
                 _openAllRequest = -1;
             EditorSelfTestMarks::record( "inspector.viewOptions.collapseAll" );
+            ImGui::Separator();
+            // 진단 보기 — CallInEditor 가 없는 FUNCTION 도 호출할 수 있게 한다. 실행 안전성을 선언하지 않은 함수라 기본 목록에서 뺀다.
+            if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "ShowAllFunctions" ), nullptr, _bShowAllMethods == SW_TRUE ) )
+                _bShowAllMethods = _bShowAllMethods == SW_TRUE ? SW_FALSE : SW_TRUE;
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ShowAllFunctionsTooltip" ) );
+            EditorSelfTestMarks::record( "inspector.viewOptions.allFunctions" );
             EditorCompactControls::endViewOptions();
         }
     }
@@ -943,10 +949,34 @@ namespace sw::editor
 
     void EditorPropertyGrid::drawTypeMethods( void* pInstance, const TypeInfo* pTypeInfo )
     {
-        const bool bNoMethodsToDraw = pInstance == nullptr || pTypeInfo == nullptr || pTypeInfo->_listMethod.empty();
-        if ( bNoMethodsToDraw )
+        const int32 frame = ImGui::GetFrameCount();
+        if ( frame != _methodCountFrame )
         {
-            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInspector", "NoFunctionMethods" ) );
+            _methodCountFrame  = frame;
+            _methodRowCount    = 0;
+            _hiddenMethodCount = 0;
+        }
+
+        // 그릴 메서드: 생성자는 빼고, 진단 보기가 아니면 CallInEditor 만. 숨긴 것이 있으면 빈 칸 글이 그렇다고 말한다("메서드 없음" 으로 읽히지 않게).
+        uint32 drawableCount = 0;
+        uint32 hiddenCount   = 0;
+        if ( pInstance != nullptr && pTypeInfo != nullptr )
+        {
+            for ( const FunctionInfo& method : pTypeInfo->_listMethod )
+            {
+                if ( method._metadata->_bConstructor != SW_FALSE )
+                    continue;
+                if ( isMethodListed( method ) )
+                    ++drawableCount;
+                else
+                    ++hiddenCount;
+            }
+        }
+        _hiddenMethodCount += hiddenCount;
+
+        if ( drawableCount == 0 )
+        {
+            EditorWidgets::drawEmptyHint( hiddenCount == 0 ? SW_LOCKEY( "EditorInspector", "NoFunctionMethods" ) : SW_LOCKEY( "EditorInspector", "NoCallInEditorMethods" ) );
             return;
         }
 
@@ -955,8 +985,16 @@ namespace sw::editor
 
         for ( const FunctionInfo& method : pTypeInfo->_listMethod )
         {
+            if ( method._metadata->_bConstructor != SW_FALSE || isMethodListed( method ) == false )
+                continue;
+            ++_methodRowCount;
             drawTypeMethod( pInstance, pTypeInfo, method );
         }
+    }
+
+    bool EditorPropertyGrid::isMethodListed( const FunctionInfo& method ) const
+    {
+        return method._metadata->_bCallInEditor != SW_FALSE || _bShowAllMethods == SW_TRUE;
     }
 
     void EditorPropertyGrid::drawTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method )
@@ -970,22 +1008,22 @@ namespace sw::editor
             pLabelName = method._metadata->_displayName.c_str();
 
         const uint32 paramCount = method.getParameterCount();
+        // 네트워크 메타데이터(Server · Client · Multicast)는 선언 기록일 뿐 RPC 로 보내지 않는다 — 여기서 부르면 이 프로세스에서 바로 돈다.
+        const bool bNetRole = method._metadata->_netRole != FunctionNetRole::Local;
 
         if ( method._metadata->_bCallInEditor != SW_FALSE && paramCount == 0 )
         {
+            // 강조색을 쓰지 않는다 — 앱 화면 규칙상 강조는 데이터 · 선택에만 둔다(전에는 패널 전용 파란 단추였다).
             ImGui::PushID( method._hashName.c_str() );
-            ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButton ) );
-            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButtonHovered ) );
-            ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButtonActive ) );
-
             fixed_string<constant::buffer::kMax128> buttonLabel;
             formatstring( buttonLabel.data(), buttonLabel.capacity(), "Run %#", pLabelName );
             if ( ImGui::Button( buttonLabel.c_str(), ImVec2{ -FLT_MIN, 0.0f } ) )
             {
                 invokeTypeMethod( pInstance, pTypeInfo, method, TaskArgs{} );
             }
-            ImGui::PopStyleColor( 3 );
-            EditorWidgets::drawTooltip( method._metadata->_tooltip.c_str() );
+            if ( EditorSelfTestMarks::isEnabled() )
+                EditorSelfTestMarks::record( ( string( "inspector.method.run." ) + method._name.c_str() ).c_str() );
+            EditorWidgets::drawTooltip( bNetRole ? SW_LOCKEY( "EditorInspector", "NetRoleMethodRunsLocally" ) : method._metadata->_tooltip.c_str() );
             ImGui::PopID();
             return;
         }
@@ -993,10 +1031,17 @@ namespace sw::editor
         ImGui::PushID( method._hashName.c_str() );
         ImGui::Text( "%s (%s)", pLabelName,
                      method._returnTypeName.empty() ? "?" : method._returnTypeName.c_str() );
-        if ( method._metadata->_bCallInEditor != SW_FALSE )
+        if ( method._metadata->_bCallInEditor == SW_FALSE )
+        {
+            // 진단 보기에서만 보이는 줄이다 — 실행 안전성을 선언하지 않은 함수라는 표시를 색이 아니라 글로 단다.
+            ImGui::SameLine();
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInspector", "DiagnosticMethodTag" ) );
+        }
+        if ( bNetRole )
         {
             ImGui::SameLine();
-            ImGui::TextColored( EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorText ), "[Editor]" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInspector", "NetRoleNotRoutedTag" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "NetRoleMethodRunsLocally" ) );
         }
         EditorWidgets::drawTooltip( method._metadata->_tooltip.c_str() );
         // 키는 타입 · 메서드 이름 원문이다(해시 조합은 부딪히면 다른 메서드의 인자 슬롯을 쓴다).
@@ -1085,7 +1130,14 @@ namespace sw::editor
     void EditorPropertyGrid::invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method,
                                                const TaskArgs& args )
     {
-        const TaskValue result = editor::getSubsystem<TypeRegistry>().invokeMethod( pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
+        TaskValue  result{};
+        const auto call = [&]()
+        { result = editor::getSubsystem<TypeRegistry>().invokeMethod( pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args ); };
+        GameObject* pOwner = getEditOwner();
+        if ( pOwner == nullptr )
+            call(); // 오브젝트 밖 대상(환경설정 구조체 등)은 되돌리기 대상이 없다
+        else
+            InspectorObjectEdit::applyObjectEdit( pOwner, formatToString( "Call %#", method._name.c_str() ), call );
         InspectorBuiltinValue::formatMethodResult( result, method._returnTypeName, _lastInvokeResult.data(),
                                                    _lastInvokeResult.capacity() );
     }

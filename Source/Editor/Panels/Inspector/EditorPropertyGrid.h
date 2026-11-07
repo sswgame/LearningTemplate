@@ -122,6 +122,10 @@ namespace sw::editor
         const utf8* getUnitNumberFormat( const PropertyInfo& prop, const utf8* pNumberFormat );
         /** @brief 배치 묶음을 새로 지은 횟수입니다(프로브 `Editor.InspectorLayoutRebuildCount` — 선택 · 검색 글이 그대로면 늘지 않는다). */
         uint32 getLayoutRebuildCount() const { return _layoutCache.getRebuildCount(); }
+        /** @brief 마지막으로 그린 프레임의 메서드 행 수입니다(프로브 `Editor.InspectorMethodRows`). */
+        uint32 getMethodRowCount() const { return _methodRowCount; }
+        /** @brief 마지막으로 그린 프레임에 `CallInEditor` 가 없어 숨긴 메서드 수입니다(프로브 `Editor.InspectorHiddenMethods`). 진단 보기를 켜면 0 입니다. */
+        uint32 getHiddenMethodCount() const { return _hiddenMethodCount; }
 
     private:
         void beginTarget( const EditorPropertyGridTarget& target );
@@ -166,13 +170,22 @@ namespace sw::editor
         void notifyPropertyEdited( const PropertyInfo& prop );
         /** @brief 타입의 메서드(FUNCTION) 목록을 그립니다. */
         void drawTypeMethods( void* pInstance, const TypeInfo* pTypeInfo );
-        /** @brief 메서드 하나를 그립니다. 인자 없는 CallInEditor 는 "Run" 단추 하나, 나머지는 머리 · 인자 입력란 · "Invoke" 단추입니다. 생성자는 건너뜁니다. */
+        /**
+         * @brief 메서드 하나를 그립니다. 인자 없는 CallInEditor 는 "Run" 단추 하나, 나머지는 머리 · 인자 입력란 · "Invoke" 단추입니다. 생성자는 건너뜁니다.
+         * @details 기본 목록은 `CallInEditor` 만이다(언리얼 Details 의 CallInEditor 단추와 같다). 나머지는 보기 옵션의 진단 보기(`_bShowAllMethods`)에서만 그린다.
+         */
         void drawTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method );
+        /** @brief 이 메서드를 목록에 그리면 true 입니다 — `CallInEditor` 이거나 진단 보기가 켜져 있을 때입니다. */
+        [[nodiscard]] bool isMethodListed( const FunctionInfo& method ) const;
         /** @brief 메서드의 인자 입력란을 인자 슬롯마다 그립니다. */
         void drawMethodArgInputs( const FunctionInfo& method, vector<InspectorMethodArgSlot>& inoutListSlot );
         /** @brief 타입의 이벤트(멀티캐스트 델리게이트 PROPERTY) 목록을 기반 클래스부터 그립니다. 인자 없는 이벤트는 즉시 호출할 수 있습니다. */
         void drawTypeEvents( void* pInstance, const TypeInfo* pTypeInfo );
-        /** @brief FUNCTION 을 호출하고 반환값을 "Last result" 행에 씁니다. 인자 없는 Run 버튼과 Invoke 버튼이 같은 경로를 씁니다. */
+        /**
+         * @brief FUNCTION 을 호출하고 반환값을 "Last result" 행에 씁니다. 인자 없는 Run 버튼과 Invoke 버튼이 같은 경로를 씁니다.
+         * @details 주인 오브젝트가 있으면 호출을 오브젝트 편집 하나로 감싼다 — 바뀐 것이 있으면 되돌리기 한 단계와 씬 dirty, 없으면 아무것도 남기지 않는다.
+         *          Play 중에는 기록 없이 호출한다(`InspectorObjectEdit::applyObjectEdit` 와 같은 규칙).
+         */
         void invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method, const TaskArgs& args );
 
     private:
@@ -187,10 +200,14 @@ namespace sw::editor
         uint32                                                         _propertyDrawDepth;    ///< 중첩과 컨테이너의 재귀 깊이. 알림은 가장 바깥에서 한 번만 보낸다
         InspectorFavorites*                                            _pFavorites;           ///< 즐겨찾기 집합. nullptr 이면 즐겨찾기를 쓰지 않는다
         int32                                                          _openAllRequest;       ///< 이번 프레임의 모두 펼치기(1) · 접기(-1) 요청. 0 이면 없다
-        uint8                                                          _bFavoritesOnly : 1;   ///< 다음 `drawTypeProperties` 한 번만 즐겨찾기 프로퍼티로 거른다
+        uint8                                                          _bFavoritesOnly  : 1;  ///< 다음 `drawTypeProperties` 한 번만 즐겨찾기 프로퍼티로 거른다
+        uint8                                                          _bShowAllMethods : 1;  ///< 진단 보기: `CallInEditor` 가 없는 메서드도 그린다(보기 옵션). 기본은 꺼져 있다
         bool                                                           _bShowModifiedOnly;    ///< 기본값과 다른 프로퍼티만 그린다(언리얼 Show Only Modified Properties) NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
         InspectorLayoutCache                                           _layoutCache;          ///< 타입 · 확장이 그린 이름 · 검색 글 · 레지스트리 세대마다 지은 묶음과 프로퍼티별 표시 정보
         InspectorPropertyDisplay                                       _scratchDisplay;       ///< 묶음 밖 임시 프로퍼티(컨테이너 원소)의 표시 정보 — 주소가 매번 달라 캐시하지 않고 부를 때마다 다시 채운다
         uint32                                                         _layoutUseDepth;       ///< 돌려받은 묶음을 도는 `drawTypeProperties` 의 겹 수. 0 일 때만 캐시가 묶음을 비울 수 있다
+        int32                                                          _methodCountFrame;     ///< 아래 두 수를 센 ImGui 프레임 번호. 프레임이 바뀌면 처음 그릴 때 다시 센다
+        uint32                                                         _methodRowCount;       ///< 그 프레임에 그린 메서드 행 수
+        uint32                                                         _hiddenMethodCount;    ///< 그 프레임에 숨긴(`CallInEditor` 없는) 메서드 수
     };
 } // namespace sw::editor

@@ -32,6 +32,10 @@ namespace sw
         FUNCTION( Category = "Probe", DisplayName = "Assign Target", CallInEditor )
         void assignTarget( const TComponentHandle<MeshComponent>& mesh ) { _target = mesh; }
 
+        /** @brief `CallInEditor` 가 없는 메서드입니다 — 인스펙터 기본 목록에 나오지 않고 진단 보기에서만 나오는지 시나리오(`editor.inspectormethods`)가 본다. */
+        FUNCTION( Category = "Probe", DisplayName = "Clear Target" )
+        void clearTarget() { _target = {}; }
+
     private:
         PROPERTY( Category = "Probe", DisplayName = "Target Mesh", Tooltip = "Mesh component picked in the inspector" )
         TComponentHandle<MeshComponent> _target;

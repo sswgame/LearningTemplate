@@ -2624,6 +2624,11 @@
 				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdLabel.ShowAllFunctions" source="Show All Functions">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdLabel.ShowDebugHUDCtrlF3" source="Show Debug HUD (Ctrl+F3)">
 			<origins>
 				<item>Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp</item>
@@ -6278,6 +6283,11 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorInspector.DiagnosticMethodTag" source="Diagnostic">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorInspector.FavoriteProperty" source="Favorite property">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
@@ -6304,6 +6314,16 @@
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorInspector.NetRoleMethodRunsLocally" source="The network role is a declaration only: calling it here runs it in this process, not over the network">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.NetRoleNotRoutedTag" source="RPC not routed">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorInspector.NewElementHint" source="new element (Enter)">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
@@ -6317,6 +6337,11 @@
 		<entry key="EditorInspector.NoActiveScene" source="No active scene.">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.NoCallInEditorMethods" source="No CallInEditor functions. Turn on Show All Functions in the view options to call the others.">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.NoFunctionMethods" source="No FUNCTION() methods.">
@@ -6404,6 +6429,11 @@
 		<entry key="EditorInspector.SelectionGone" source="Selected object no longer exists.">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.ShowAllFunctionsTooltip" source="Diagnostic view: also list FUNCTIONs without CallInEditor. They declare no editor safety, so the default list hides them">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorInspector.ShowInContentBrowser" source="Show in the Content Browser">
