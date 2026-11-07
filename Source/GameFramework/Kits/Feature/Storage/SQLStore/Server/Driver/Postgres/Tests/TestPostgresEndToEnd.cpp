@@ -153,7 +153,7 @@ namespace
             ScopedLock<mutex> lock{ _mutex };
             for ( const string& script : _listScript )
             {
-                if ( script.find( fragment ) != string::npos )
+                if ( string_view{ script }.find( fragment ) != string_view::npos )
                     return true;
             }
             return false;

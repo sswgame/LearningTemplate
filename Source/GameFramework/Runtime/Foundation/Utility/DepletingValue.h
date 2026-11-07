@@ -31,7 +31,7 @@ namespace sw
             static_assert( std::is_arithmetic_v<T>, "DepletingValue takes from an integer or floating-point field" );
             const T taken = MathUtil::max( T{ 0 }, MathUtil::min( amount, inoutValue ) );
             inoutValue -= taken;
-            return DepletingValueResult<T>{ taken, inoutValue <= T{ 0 } ? SW_TRUE : SW_FALSE };
+            return DepletingValueResult<T>{ taken, static_cast<uint8>( inoutValue <= T{ 0 } ? SW_TRUE : SW_FALSE ) };
         }
     };
 } // namespace sw

@@ -50,7 +50,6 @@ namespace sw
         /** @brief SQLSTATE 를 결과로 나눕니다. 고유 키 위반, 직렬화 실패 · 교착, 연결 · 서버 내려감, 락 시한이고 그 밖은 Error 입니다. */
         static SQLResult classifySQLState( string_view state );
 
-    private:
         // PostgreSQL 타입 OID(pg_type)이다. 이진 결과를 읽는 데 쓰는 것만 둔다.
         static constexpr uint32 kBoolOid    = 16;
         static constexpr uint32 kByteaOid   = 17;

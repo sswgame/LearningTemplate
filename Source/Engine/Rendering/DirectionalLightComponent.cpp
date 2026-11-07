@@ -12,42 +12,6 @@ namespace sw
 {
     namespace
     {
-        struct DirectionalLightComponentInternal
-        {
-            /**
-             * @brief 켜져 있는 첫 방향광(등록 순서)을 찾습니다. @p bRequireShadow 면 그림자를 드리우는 것만 봅니다.
-             * @details 활성 판정은 여기서 한다. 레지스트리는 "무엇이 있나"만 안다(PrimitiveRegistry 와 같은 규약). `Component::isActive` 가 소유 오브젝트의 계층 활성까지 본다.
-             */
-            static DirectionalLightComponent* findFirst( const GameObjectManager* pObjectManager, bool bRequireShadow )
-            {
-                if ( pObjectManager == nullptr )
-                    return nullptr;
-                for ( LightComponent* pLight : pObjectManager->getComponentRegistry().getAll<LightComponent>( shaderslot::kLightTypeDirectional ) )
-                {
-                    if ( pLight == nullptr || pLight->isActive() == false )
-                        continue;
-                    DirectionalLightComponent* pDirectional = static_cast<DirectionalLightComponent*>( pLight );
-                    if ( bRequireShadow && pDirectional->castsShadow() == false )
-                        continue;
-                    return pDirectional;
-                }
-                return nullptr;
-            }
-        };
-    } // namespace
-
-    DirectionalLightComponent* DirectionalLightComponent::findActive( const GameObjectManager* pObjectManager )
-    {
-        return DirectionalLightComponentInternal::findFirst( pObjectManager, false );
-    }
-
-    DirectionalLightComponent* DirectionalLightComponent::findShadowCasting( const GameObjectManager* pObjectManager )
-    {
-        return DirectionalLightComponentInternal::findFirst( pObjectManager, true );
-    }
-
-    namespace
-    {
         /**
          * @brief 이 TU 의 기본값 모음입니다. **익명 네임스페이스에 상수를 그냥 두면 안 됩니다.**
          *        유니티 빌드(CI-*)는 여러 .cpp 를 한 TU 로 합치고, 그러면 세 라이트 컴포넌트의
@@ -282,8 +246,38 @@ namespace sw
                 volume._farPlane  = maxBoxZ + kShadowFitDepthMargin;
                 return volume;
             }
+
+            /**
+             * @brief 켜져 있는 첫 방향광(등록 순서)을 찾습니다. @p bRequireShadow 면 그림자를 드리우는 것만 봅니다.
+             * @details 활성 판정은 여기서 한다. 레지스트리는 "무엇이 있나"만 안다(PrimitiveRegistry 와 같은 규약). `Component::isActive` 가 소유 오브젝트의 계층 활성까지 본다.
+             */
+            static DirectionalLightComponent* findFirst( const GameObjectManager* pObjectManager, bool bRequireShadow )
+            {
+                if ( pObjectManager == nullptr )
+                    return nullptr;
+                for ( LightComponent* pLight : pObjectManager->getComponentRegistry().getAll<LightComponent>( shaderslot::kLightTypeDirectional ) )
+                {
+                    if ( pLight == nullptr || pLight->isActive() == false )
+                        continue;
+                    DirectionalLightComponent* pDirectional = static_cast<DirectionalLightComponent*>( pLight );
+                    if ( bRequireShadow && pDirectional->castsShadow() == false )
+                        continue;
+                    return pDirectional;
+                }
+                return nullptr;
+            }
         };
     } // namespace
+
+    DirectionalLightComponent* DirectionalLightComponent::findActive( const GameObjectManager* pObjectManager )
+    {
+        return DirectionalLightComponentInternal::findFirst( pObjectManager, false );
+    }
+
+    DirectionalLightComponent* DirectionalLightComponent::findShadowCasting( const GameObjectManager* pObjectManager )
+    {
+        return DirectionalLightComponentInternal::findFirst( pObjectManager, true );
+    }
 
     float4 DirectionalShadowProjection::computeShaderParams() const
     {

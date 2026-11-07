@@ -11,10 +11,6 @@
             "_name": "GF_Chat"
         }
     ],
-    "_listPlatform": [
-        "Windows",
-        "Linux"
-    ],
     "_listConfiguration": [
         "Dev",
         "Shipping"

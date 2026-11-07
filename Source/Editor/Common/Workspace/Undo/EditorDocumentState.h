@@ -46,6 +46,7 @@ namespace sw::editor
         void               endCoalescing() { _history.endCoalescing(); }
         [[nodiscard]] bool undo( TSnapshot& inoutCurrent ) { return _history.undo( inoutCurrent ); }
         [[nodiscard]] bool redo( TSnapshot& inoutCurrent ) { return _history.redo( inoutCurrent ); }
+        void               discardLastRedo() { _history.discardLastRedo(); }
         bool               canUndo() const { return _history.canUndo(); }
         bool               canRedo() const { return _history.canRedo(); }
 

@@ -266,7 +266,7 @@ namespace sw::editor
             return true;
         const string reason = _inheritance.getError();
         undo();
-        _listRedo.pop_back();
+        _state.discardLastRedo();
         _error = reason;
         return false;
     }

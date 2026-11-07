@@ -74,7 +74,7 @@ namespace sw::editor
         bool               setBasePreset( const hashed_string& basePresetID );
         bool               setSeed( uint32 seed );
         /** @brief 연속 편집을 끝냅니다. 다음 편집은 새 되돌리기 단계를 만듭니다. */
-        void endContinuousEdit() { _history.endCoalescing(); }
+        void endContinuousEdit() { _state.endCoalescing(); }
 
         /** @brief 슬롯에 입힌 아이템을 반환합니다. 슬롯 요청이 없거나 비움이면 빈 이름입니다. */
         hashed_string findSlotItem( const hashed_string& slot ) const;
@@ -83,8 +83,8 @@ namespace sw::editor
 
         [[nodiscard]] bool undo();
         [[nodiscard]] bool redo();
-        bool               canUndo() const { return _history.canUndo(); }
-        bool               canRedo() const { return _history.canRedo(); }
+        bool               canUndo() const { return _state.canUndo(); }
+        bool               canRedo() const { return _state.canRedo(); }
 
         // --- 저장 ----------------------------------------------------------------------------------------------------
 

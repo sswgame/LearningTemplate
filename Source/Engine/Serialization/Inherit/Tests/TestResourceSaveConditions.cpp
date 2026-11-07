@@ -210,7 +210,7 @@ SW_TEST_CASE( ResourceSaveDeltaTest, WritesTheDeltaOnlyWhenItReadsBack )
     constexpr string_view       kParent = R"(<Doc a="1" b="2" />)";
     constexpr string_view       kFull   = R"(<Doc a="1" b="3" />)";
 
-    SW_REQUIRE_TRUE( ResourceComposer::saveDelta( path, kFull, kParent, schema, "parent.xml", []( const string& )
+    SW_REQUIRE_TRUE( ResourceComposer::saveDelta( path, kFull, kParent, schema, "parent.xml", [kFull]( const string& )
     { return string{ kFull }; } ) );
     string written;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( path, written ) );

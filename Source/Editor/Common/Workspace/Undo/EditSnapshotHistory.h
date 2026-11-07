@@ -73,6 +73,13 @@ namespace sw::editor
             return true;
         }
 
+        /** @brief 방금 되돌린 단계를 다시 하기에서 지웁니다. 편집을 거절해 되돌렸을 때 씁니다. */
+        void discardLastRedo()
+        {
+            if ( _listRedo.empty() == false )
+                _listRedo.pop_back();
+        }
+
         bool   canUndo() const { return _listUndo.empty() == false; }
         bool   canRedo() const { return _listRedo.empty() == false; }
         size_t getUndoCount() const { return _listUndo.size(); }

@@ -138,7 +138,7 @@ SW_TEST_CASE_F( ModulesModelTest, ToggleThatBreaksTheGraphDoesNotAsk )
 SW_TEST_CASE_F( ModulesModelTest, ApplyWritesOnlyNonDefaultOverrides )
 {
     const string path = test::makeScratchPath( "Project.module.json" );
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, makeManifestText( "Project", "Game", "\"Windows\"", "" ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, makeManifestText( "Project", "Game", "" ) ) );
 
     SW_REQUIRE_TRUE( _model.requestToggle( "GF_Child", false ) );
     _model.applyPendingTo( path );
