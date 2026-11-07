@@ -282,6 +282,7 @@ namespace sw
         , _bodyEyeHeight{ 0.0f }
         , _lookYaw{ 0.0f }
         , _lastTracerWidth{ 0.0f }
+        , _lastTracerStartAhead{ 0.0f }
         , _serverHealth{ 0.0f }
         , _hudViewModel{}
         , _meleeElapsed{ 0.0f }
@@ -668,15 +669,19 @@ namespace sw
             return;
 
         ++_shotCount;
-        _timeSinceShot      = 0.0f;
-        const float3 muzzle = findMuzzlePosition();
-        // 총구 섬광은 총구에 잠깐 빛나는 구다.
-        EffectRequest flash;
-        flash._position = muzzle;
-        flash._size     = _bFirstPerson == SW_TRUE ? 0.05f : 0.12f;
-        flash._color    = _muzzleFlashColor;
-        flash._lifetime = 0.05f;
-        _listPendingEffect.push_back( flash );
+        _timeSinceShot = 0.0f;
+        float3     muzzle;
+        const bool bHasMuzzle = findMuzzlePosition( muzzle );
+        // 총구 섬광은 총구에 잠깐 빛나는 구다. 총구가 없으면(오류를 남겼다) 섬광 · 탄도선 없이 판정만 한다.
+        if ( bHasMuzzle )
+        {
+            EffectRequest flash;
+            flash._position = muzzle;
+            flash._size     = _bFirstPerson == SW_TRUE ? 0.05f : 0.12f;
+            flash._color    = _muzzleFlashColor;
+            flash._lifetime = 0.05f;
+            _listPendingEffect.push_back( flash );
+        }
         // 판정은 눈에서 한다. 상자 · 바닥까지는 여기서 재고, 적(물리 히트박스)은 틱이 끝난 뒤 그 거리 안에서 묻는다(resolveShots).
         const ResolvedShot& loaded = weapon.getShot();
         for ( const Ray& ray : shot._listRay )
@@ -691,6 +696,7 @@ namespace sw
             pending._range         = loaded._range;
             pending._damage        = loaded._damage;
             pending._volley        = _shotCount;
+            pending._bHasMuzzle    = bHasMuzzle;
             _listPendingShot.push_back( pending );
         }
         // 반동은 위로 튀고 옆으로 살짝 흔든다.
@@ -771,9 +777,13 @@ namespace sw
                     }
                 }
                 const float3 end = shot._ray._origin + shot._ray._direction * distance;
-                // 탄도선은 총구에서 맞은 위치까지 이은 선이다. 색 · 두께는 탄의 궤적이다.
-                _listPendingTracer.push_back( TracerRequest{ shot._tracerColor, shot._muzzle, end, shot._tracerWidth } );
-                _lastTracerWidth = shot._tracerWidth;
+                // 탄도선은 총구에서 맞은 위치까지 이은 선이다. 색 · 두께는 탄의 궤적이다. 1인칭이면 시점 총의 총구라 총 앞에서 시작해 화면에 보인다.
+                if ( shot._bHasMuzzle )
+                {
+                    _listPendingTracer.push_back( TracerRequest{ shot._tracerColor, shot._muzzle, end, shot._tracerWidth } );
+                    _lastTracerWidth      = shot._tracerWidth;
+                    _lastTracerStartAhead = ( shot._muzzle - shot._ray._origin ).dot( shot._ray._direction );
+                }
                 // 탄착 효과는 탄과 표면의 조합이다(맞음 표). 표면 이름은 이 게임이 정한다: 적의 몸은 Body, 상자 · 바닥은 Cover.
                 const ProjectileImpactDef* pImpact =
                     pProjectile != nullptr ? pProjectiles->findImpact( hashed_string( bHitBody ? Internal::kSurfaceBody : Internal::kSurfaceCover ), pProjectile->_tags ) : nullptr;
@@ -849,34 +859,39 @@ namespace sw
             _bMeleeActive = SW_FALSE;
     }
 
-    float3 ShooterPlayerComponent::findMuzzlePosition()
+    bool ShooterPlayerComponent::findMuzzlePosition( float3& outMuzzle )
     {
-        using Internal             = ShooterPlayerComponentInternal;
-        const float3      fallback = getEyePosition() + float3{ 0.0f, -0.15f, 0.0f };
-        const GameObject* pOwner   = getOwner();
-        float3            result   = fallback;
-        float4x4          muzzle;
+        using Internal = ShooterPlayerComponentInternal;
+        float4x4 muzzle;
         if ( _bFirstPerson == SW_FALSE )
         {
             // 몸이 든 무기는 외형의 소켓 이름 공간(슬롯 이름과 무기 소켓)으로 찾는다.
             const GameObject*                   pBody       = findBodyObject();
             const CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
-            if ( pAppearance != nullptr && pAppearance->findSocketWorldTransform( hashed_string( Internal::kBodyMuzzleSocket ), muzzle ) )
+            if ( pAppearance == nullptr || pAppearance->findSocketWorldTransform( hashed_string( Internal::kBodyMuzzleSocket ), muzzle ) == false )
             {
-                result = muzzle.getTranslation();
-                return result;
+                SW_LOG_ERROR_ID( "ShooterPlayer.BodyMuzzleMissing", "[Shooter] the body has no '%#' socket for weapon '%#' - no tracer or muzzle flash", Internal::kBodyMuzzleSocket,
+                                 getWeaponItem( _weaponIndex ).c_str() );
+                return false;
             }
-            return result;
+            outMuzzle = muzzle.getTranslation();
+            return true;
         }
-        // 1인칭에서는 손에 든 총(카메라 자식)과 그 무기의 총구 소켓을 쓴다.
+        // 1인칭에서는 손에 든 총(카메라 자식)과 그 무기의 총구 소켓을 쓴다. 무기 외형(itemvisuals.xml)의 소켓 에셋이 Muzzle 을 가져야 한다.
+        const GameObject*         pOwner      = getOwner();
         const MeshComponent*      pViewWeapon = pOwner != nullptr ? Internal::findNamed<MeshComponent>( *pOwner, Internal::kViewWeaponName ) : nullptr;
         const AppearanceDatabase* pDatabase   = game::findSubsystem<AppearanceDatabase>();
         const hashed_string       socketPath  = pDatabase != nullptr ? Internal::findItemSocketSet( *pDatabase, getWeaponItem( _weaponIndex ) ) : hashed_string{};
         const SocketSet*          pSockets    = socketPath.empty() ? nullptr : _weaponSockets.findSocketSet( socketPath );
         const SocketDef*          pMuzzle     = pSockets != nullptr ? pSockets->findSocket( hashed_string( Internal::kMuzzleSocket ) ) : nullptr;
-        if ( pViewWeapon != nullptr && pMuzzle != nullptr )
-            result = ( pMuzzle->makeLocalTransform() * pViewWeapon->getWorldMatrix() ).getTranslation();
-        return result;
+        if ( pViewWeapon == nullptr || pMuzzle == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ShooterPlayer.ViewMuzzleMissing", "[Shooter] first-person weapon '%#' has no '%#' socket (view weapon %#, socket set '%#') - no tracer or muzzle flash",
+                             getWeaponItem( _weaponIndex ).c_str(), Internal::kMuzzleSocket, pViewWeapon != nullptr ? "found" : "missing", socketPath.c_str() );
+            return false;
+        }
+        outMuzzle = ( pMuzzle->makeLocalTransform() * pViewWeapon->getWorldMatrix() ).getTranslation();
+        return true;
     }
 
     void ShooterPlayerComponent::switchWeapon( int32 weaponIndex )
@@ -1118,6 +1133,9 @@ namespace sw
     SW_AUTOMATION_GETTER_WATCH( shooterShotCount, "Shooter3D.ShotCount", "Shots the first shooter player fired", ShooterPlayerComponent, &ShooterPlayerComponent::getShotCount );
     SW_AUTOMATION_COMPONENT_WATCH( shooterShotDamage, "Shooter3D.ShotDamage", "Damage of one pellet of the projectile loaded in the first shooter player's weapon", ShooterPlayerComponent, &ShooterPlayerComponentInternal::readShotDamage );
     SW_AUTOMATION_GETTER_WATCH( shooterTracerWidth, "Shooter3D.TracerWidth", "Width of the last tracer the first shooter player drew (the projectile's trail)", ShooterPlayerComponent, &ShooterPlayerComponent::getLastTracerWidth );
+    SW_AUTOMATION_GETTER_WATCH( shooterTracerStartAhead, "Shooter3D.TracerStartAhead",
+                                "How far ahead of the eye along the aim the last tracer started (m; in first person the muzzle of the view gun, in front of the gun)", ShooterPlayerComponent,
+                                &ShooterPlayerComponent::getLastTracerStartAhead );
     SW_DEV_COMMAND( ShooterProjectile, "cheat.shooter.projectile", "cheat.shooter.projectile [projectile id]",
                     "Load a projectile into the current weapon of every shooter player (no id: the weapon's own projectile)", &ShooterDevCommandsInternal::runProjectile );
     SW_AUTOMATION_GETTER_WATCH( shooterEnemyHitCount, "Shooter3D.EnemyHitCount", "Shots of the first shooter player that hit an enemy", ShooterPlayerComponent, &ShooterPlayerComponent::getHitCount );

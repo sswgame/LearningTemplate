@@ -2,8 +2,9 @@
 <!--
   Shooter3D 무기 · 탄 조합 — 같은 소총에 다른 탄(projectiles.xml)을 넣으면 한 발의 값과 그림이 탄을 따른다.
   기본 탄(rifle_round, 피해 14, 노란 탄도선)으로 한 발, 치트로 소이탄(incendiary_round — rifle_round 를 물려받아 피해 11, 붉고 굵은 탄도선)을 넣고 한 발 쏜다.
-  피해는 감시값(Shooter3D.ShotDamage)으로, 궤적은 그리게 넘긴 탄도선 두께(Shooter3D.TracerWidth)로 본다. 탄도선은 1 인칭 총에 가려 화면에 남지 않아
-  그림 대조는 탄약 숫자만 견주는 거짓 통과였다. 탄이 궤적을 바꾸지 않으면(궤적 칸을 읽지 않으면) 진다. 끝에 기본 탄으로 되돌린다.
+  피해는 감시값(Shooter3D.ShotDamage)으로, 궤적은 그리게 넘긴 탄도선 두께(Shooter3D.TracerWidth)로 본다. 탄이 궤적을 바꾸지 않으면(궤적 칸을 읽지 않으면) 진다.
+  탄도선 시작점은 시점 총의 총구(무기 소켓 에셋의 Muzzle)라 눈에서 총 길이만큼 앞이다(Shooter3D.TracerStartAhead, 총은 눈 앞 0.42 m · 총구는 그보다 앞).
+  총구를 못 찾던 때는 눈 아래(앞 0 m)에서 시작해 총에 가렸다 — 이제 총구가 없으면 오류로 남고 탄도선이 나가지 않아 이 단계가 진다. 끝에 기본 탄으로 되돌린다.
   실행: App -scenario=game/shooter3d/automation/projectilecombo.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
 -->
 <Scenario name="game.shooter3d.projectilecombo" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -15,6 +16,7 @@
 	<Tap slot="Mouse.Left" hold="1"/>
 	<WaitUntil watch="Shooter3D.ShotCount" equals="1" timeoutFrames="10"/>
 	<WaitUntil watch="Shooter3D.TracerWidth" equals="0.025" timeoutFrames="10"/>
+	<Expect watch="Shooter3D.TracerStartAhead" atLeast="0.4"/>
 	<!-- 탄도선이 사라지고(0.07 초) 연사 간격이 지난 뒤 탄을 바꾼다 -->
 	<Wait frames="30"/>
 	<DevCommand line="cheat.shooter.projectile incendiary_round"/>

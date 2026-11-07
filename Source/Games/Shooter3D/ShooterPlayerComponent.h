@@ -136,6 +136,8 @@ namespace sw
         uint32  getShotCount() const { return _shotCount; }
         /** @brief 마지막으로 그리게 넘긴 탄도선의 두께입니다(탄의 궤적 칸). 쏜 적이 없으면 0 입니다. */
         float32 getLastTracerWidth() const { return _lastTracerWidth; }
+        /** @brief 마지막 탄도선의 시작점이 눈에서 조준 방향으로 얼마나 앞인지(m)입니다. 1인칭이면 시점 총의 총구라 총 앞이고, 쏜 적이 없으면 0 입니다. */
+        float32 getLastTracerStartAhead() const { return _lastTracerStartAhead; }
         /** @brief 스폰해 둔 몸 오브젝트입니다. 없으면 nullptr 입니다. */
         GameObject* findBodyObject() const;
         uint32      getHitCount() const { return _hitCount; }
@@ -157,7 +159,7 @@ namespace sw
         struct PendingShot
         {
             Ray           _ray{};
-            float3        _muzzle{};
+            float3        _muzzle{};              ///< 탄도선 시작점(`_bHasMuzzle` 일 때만 뜻이 있다)
             hashed_string _projectileID{};        ///< 장전한 탄(맞음 표 · 맞음 동작을 찾는다)
             float4        _tracerColor{};         ///< 탄의 궤적 색
             float32       _tracerWidth{ 0.0f };   ///< 탄의 궤적 두께
@@ -165,6 +167,7 @@ namespace sw
             float32       _range{ 0.0f };         ///< 탄 사거리(m) — 이보다 짧으면 무언가에 닿았다
             float32       _damage{ 0.0f };
             uint32        _volley{ 0 };
+            bool          _bHasMuzzle{ false }; ///< 총구를 찾았다. 아니면 판정만 하고 탄도선을 내지 않는다(대신 쓸 자리는 없다)
         };
 
         /** @brief 낼 탄착 효과 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */
@@ -197,9 +200,12 @@ namespace sw
         void resolveShots( GameObjectManager& manager );
         /** @brief 근접 창의 이번 프레임 칼날을 쓸어 맞힙니다(틱 뒤 · 게임 스레드). 클라이언트는 맞음을 서버에 주장합니다. */
         void resolveMelee( GameObjectManager& manager );
-        /** @brief 총구의 월드 위치를 반환합니다. 1인칭이면 손에 든 총, 아니면 몸 외형의 `MainHand.Muzzle` 입니다. 찾지 못하면 눈 아래입니다. */
-        float3 findMuzzlePosition();
-        void   switchWeapon( int32 weaponIndex );
+        /**
+         * @brief 총구의 월드 위치를 찾습니다. 1인칭이면 손에 든 총(무기 외형 소켓 에셋의 `Muzzle`), 아니면 몸 외형의 `MainHand.Muzzle` 입니다.
+         * @return 소켓 · 외형 데이터가 없으면 무엇이 빠졌는지 오류를 남기고 false 입니다 — 다른 자리로 대신하지 않는다(탄도선 · 섬광을 내지 않는다).
+         */
+        [[nodiscard]] bool findMuzzlePosition( float3& outMuzzle );
+        void               switchWeapon( int32 weaponIndex );
         /** @brief 시점 카메라(대상이 이 오브젝트인 게임 카메라 디렉터)의 프리셋이 1인칭인지 확인합니다. */
         bool queryFirstPerson() const;
         /** @brief 같은 오브젝트의 HUD 뷰모델에 조준선과 맞음 표시의 가시성, 체력, 탄약, 무기 이름을 넣습니다(틱이 끝난 뒤 게임 스레드에서). HUD 가 없으면 아무것도 하지 않습니다. */
@@ -271,10 +277,11 @@ namespace sw
         float32                         _downTimer;     ///< 쓰러진 뒤 지난 시간(쓰러졌을 때만).
         float32                         _bodyEyeHeight; ///< 몸 소켓 Eyes 의 높이(0은 아직 모른다는 뜻).
         float32                         _lookYaw;
-        float32                         _lastTracerWidth; ///< 마지막 탄도선 두께(감시 값 `Shooter3D.TracerWidth`)
-        float32                         _serverHealth;    ///< 서버가 알려 준 체력(`_bServerHealth` 일 때 HUD 가 이 값을 보인다)
-        unique_ptr<ShooterHUDViewModel> _hudViewModel;    ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다). 처음 `updateHUD` 에 만든다
-        float32                         _meleeElapsed;    ///< 근접 창이 시작하고 지난 시간
+        float32                         _lastTracerWidth;      ///< 마지막 탄도선 두께(감시 값 `Shooter3D.TracerWidth`)
+        float32                         _lastTracerStartAhead; ///< 마지막 탄도선 시작점의 눈 앞 거리(감시 값 `Shooter3D.TracerStartAhead`)
+        float32                         _serverHealth;         ///< 서버가 알려 준 체력(`_bServerHealth` 일 때 HUD 가 이 값을 보인다)
+        unique_ptr<ShooterHUDViewModel> _hudViewModel;         ///< HUD 가 보는 값(이 컴포넌트가 소유하고 HUD 는 빌려 쓴다). 처음 `updateHUD` 에 만든다
+        float32                         _meleeElapsed;         ///< 근접 창이 시작하고 지난 시간
         int32                           _weaponIndex;
         uint32                          _shotCount;
         uint32                          _hitCount;
