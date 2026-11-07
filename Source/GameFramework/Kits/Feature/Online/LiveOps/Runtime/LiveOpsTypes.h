@@ -11,23 +11,26 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
 {
-    /** @brief 라이브 운영 요청의 결과입니다. 와이어 값이므로 순서를 바꾸지 않고 새 값은 끝에만 추가합니다. */
+    /**
+     * @brief 라이브 운영 요청의 업무 결과입니다. 와이어 값이므로 순서를 바꾸지 않고 새 값은 끝에만 추가합니다.
+     * @details 공통 범주(범위 밖 요청 · 일시 장애 · 버전)는 여기 두지 않고 `OnlineError` 로 온다(`OnlineResult::_errorCode`).
+     *          옛 `RateLimited` · `UnknownProvider` 는 내는 곳이 없어 지웠다(푸시 도배 제한은 보내기 쪽에서 세고, 모르는 제공자의 기기도 저장한다 — 다른 빌드의 서버가 보낸다).
+     */
     ENUM( Count = Count )
     enum class LiveOpsResult : uint8
     {
         Ok = 0,
-        NotFound,
-        Invalid,
-        Unavailable,
-        RateLimited,     ///< 푸시의 계정 도배 제한에 걸렸다
-        UnknownProvider, ///< 푸시에서 이 서버 빌드에 없는 제공자이다
-        UpdateRequired,  ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
+        NotFound, ///< 없는 이벤트 · 기기이다
         Count
     };
+
+    /** @brief 서버 로직의 결과입니다. 업무 결과(`LiveOpsResult`) 또는 공통 범주(`OnlineError` — 범위 밖 요청 · 일시 장애)입니다. */
+    using LiveOpsOutcome = OnlineOutcome<LiveOpsResult>;
 } // namespace sw
 
 namespace sw
@@ -101,7 +104,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 클라이언트가 받는 열린 이벤트입니다. 매개변수는 원격 설정까지 해석한 값입니다. 응답(`LiveOpsReply`)에 고정 배치형으로 실립니다. */
+    /** @brief 클라이언트가 받는 열린 이벤트입니다. 매개변수는 원격 설정까지 해석한 값입니다. 응답(`LiveOpsStateReply`)에 고정 배치형으로 실립니다. */
     REFLECT()
     struct LiveEventState
     {

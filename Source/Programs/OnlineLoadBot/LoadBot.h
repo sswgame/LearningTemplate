@@ -119,7 +119,6 @@ namespace sw
         void onChatReply( const ChatClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
         void onSocialReply( const SocialClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
         void onMatchmakingReply( const MatchmakingClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
-        void onLiveOpsReply( const LiveOpsClient::Reply& reply ) { finishWithResult( reply._errorCode, static_cast<uint8>( reply._reply._result ) ); }
         void onDirectoryStatus( const OnlineResult<ServerDirectoryStatus>& result );
         void onDirectoryAssignment( const OnlineResult<ServerAssignment>& result );
         void onFriendAccepted( const SocialClient::Reply& reply );

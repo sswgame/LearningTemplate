@@ -46,8 +46,8 @@ namespace sw
     /** @brief 변경 요청의 완료입니다. */
     struct LiveOpsCompletion
     {
-        uint64        _requestTag{ 0 };
-        LiveOpsResult _result{ LiveOpsResult::Ok };
+        uint64         _requestTag{ 0 };
+        LiveOpsOutcome _result{ LiveOpsResult::Ok };
     };
 } // namespace sw
 
@@ -137,7 +137,7 @@ namespace sw
 
         /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyReload( vector<LiveEventDef>&& listEvent, bool bReadOk, UnixMilliseconds nowMs );
-        void applyWrite( uint64 requestTag, LiveOpsResult result );
+        void applyWrite( uint64 requestTag, LiveOpsOutcome result );
 
     private:
         /** @brief 지난번에 열려 있던 이벤트 창 하나입니다. */

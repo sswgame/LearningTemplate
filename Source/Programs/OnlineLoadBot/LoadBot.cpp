@@ -485,7 +485,7 @@ namespace sw
             }
             case LoadBotAction::LiveOpsState:
             {
-                (void)_liveOpsClient.requestLiveState( region, LoadBotInternal::kLiveOpsBuild, LiveOpsClient::ReplyDelegate::create<&LoadBot::onLiveOpsReply>( this ) );
+                (void)_liveOpsClient.requestLiveState( region, LoadBotInternal::kLiveOpsBuild, OnlineReplyDelegate<LiveOpsMethod::GetLiveState>::create<&LoadBot::onKitReply<LiveOpsStateReply>>( this ) );
                 return true;
             }
             default:

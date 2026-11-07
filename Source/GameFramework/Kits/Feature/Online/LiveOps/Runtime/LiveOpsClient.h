@@ -24,13 +24,10 @@ namespace sw
     class SW_KIT_API LiveOpsClient final : public OnlineProtocolClient<LiveOpsClient, LiveOpsProtocol>
     {
     public:
-        using Reply         = OnlineResult<LiveOpsReply>;
-        using ReplyDelegate = Delegate<void( const Reply& )>;
-
         LiveOpsClient();
 
         /** @brief 열린 이벤트를 받습니다. 로그인한 뒤에 부릅니다. 지역과 빌드 버전은 보관했다가 변경 알림이 올 때 다시 씁니다. */
-        uint64 requestLiveState( string_view region, uint32 buildVersion, const ReplyDelegate& onReply );
+        uint64 requestLiveState( string_view region, uint32 buildVersion, const OnlineReplyDelegate<LiveOpsMethod::GetLiveState>& onReply );
 
         const vector<LiveEventState>& getActiveEvents() const { return _listEvent; }
         bool                          hasEventKind( string_view kind ) const;
@@ -39,7 +36,7 @@ namespace sw
 
         // OnlineProtocolClient 의 훅 - 이벤트 목록을 싣는 메서드만 캐시를 고친다
         using OnlineProtocolClient::onCallSucceeded;
-        void onCallSucceeded( LiveOpsMethod::GetLiveState, const LiveOpsStateRequest& request, const LiveOpsReply& reply );
+        void onCallSucceeded( LiveOpsMethod::GetLiveState, const LiveOpsStateRequest& request, const LiveOpsStateReply& reply );
         void onPush( LiveOpsMethod::LiveState, const OnlineNoBody& body );
 
     private:

@@ -53,19 +53,19 @@ namespace
             pump();
         }
 
-        LiveOpsResult put( const LiveEventDef& definition, int64 nowMs = kStartMs )
+        LiveOpsOutcome put( const LiveEventDef& definition, int64 nowMs = kStartMs )
         {
             _service.putEvent( definition, kGM, "memo", UnixMilliseconds{ nowMs }, 5 );
             pump();
             return takeResult();
         }
 
-        LiveOpsResult takeResult()
+        LiveOpsOutcome takeResult()
         {
             vector<LiveOpsCompletion> listCompletion;
             _service.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
-            return listCompletion.empty() ? LiveOpsResult::Unavailable : listCompletion[0]._result;
+            return listCompletion.empty() ? LiveOpsOutcome::fail( OnlineError::kUnavailable ) : listCompletion[0]._result;
         }
 
         vector<LiveEventState> active( string_view region, int64 nowMs, bool bClientOnly = true )
@@ -139,14 +139,14 @@ SW_TEST_CASE( LiveOpsServiceTest, PutReloadRemove )
     const uint64 hashBefore = rig._database.computeContentHash();
     LiveEventDef bad        = LiveOpsTestUtil::makeEvent();
     bad._endMs              = bad._startMs;
-    SW_EXPECT_TRUE( rig.put( bad ) == LiveOpsResult::Invalid );
+    SW_EXPECT_TRUE( rig.put( bad ).hasError( OnlineError::kInvalidRequest ) );
     SW_EXPECT_EQUAL( hashBefore, rig._database.computeContentHash() );
 
     rig._service.removeEvent( "none", kGM, "m", UnixMilliseconds{ kStartMs }, 6 );
     rig.pump();
     SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::NotFound );
     rig._service.removeEvent( "Bad Id", kGM, "m", UnixMilliseconds{ kStartMs }, 6 );
-    SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::Invalid );
+    SW_EXPECT_TRUE( rig.takeResult().hasError( OnlineError::kInvalidRequest ) );
     rig._service.removeEvent( "spring.sale", kGM, "m", UnixMilliseconds{ kStartMs }, 6 );
     rig.pump();
     SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::Ok );
@@ -159,7 +159,7 @@ SW_TEST_CASE( LiveOpsServiceTest, StoreFailuresKeepPreviousState )
 {
     LiveOpsFixture rig;
     rig._database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Unavailable );
+    SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ).hasError( OnlineError::kUnavailable ) );
     SW_EXPECT_TRUE( rig.put( LiveOpsTestUtil::makeEvent() ) == LiveOpsResult::Ok );
     rig.tick( kStartMs );
     SW_EXPECT_EQUAL( size_t( 1 ), rig.active( "kr", kStartMs ).size() );
@@ -296,20 +296,20 @@ SW_TEST_CASE( LiveOpsServiceTest, JsonRoundTrip )
     SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::Ok );
 
     rig._service.putEventJSON( "{ not json", kGM, "m", UnixMilliseconds{ kStartMs }, 7 );
-    SW_EXPECT_TRUE( rig.takeResult() == LiveOpsResult::Invalid );
+    SW_EXPECT_TRUE( rig.takeResult().hasError( OnlineError::kInvalidRequest ) );
 }
 
 /** @brief [LiveOpsServiceTest] 클라이언트의 이벤트 캐시는 열린 이벤트 응답만 고친다. 기기 등록 응답(빈 목록)이 캐시를 지우지 않는다 */
 SW_TEST_CASE( LiveOpsServiceTest, DeviceReplyKeepsTheEventCache )
 {
-    LiveOpsClient client;
-    LiveOpsReply  stateReply;
+    LiveOpsClient     client;
+    LiveOpsStateReply stateReply;
     stateReply._listEvent.emplace_back()._kind = "double_xp";
     client.onCallSucceeded( LiveOpsMethod::GetLiveState{}, LiveOpsStateRequest{}, stateReply );
     SW_EXPECT_TRUE( client.hasEventKind( "double_xp" ) );
     const uint64 revision = client.getRevision();
 
-    client.onCallSucceeded( LiveOpsMethod::RegisterDevice{}, PushDeviceRegistration{}, LiveOpsReply{} );
+    client.onCallSucceeded( LiveOpsMethod::RegisterDevice{}, PushDeviceRegistration{}, LiveOpsDeviceReply{} );
     SW_EXPECT_TRUE( client.hasEventKind( "double_xp" ) );
     SW_EXPECT_EQUAL( revision, client.getRevision() );
 }

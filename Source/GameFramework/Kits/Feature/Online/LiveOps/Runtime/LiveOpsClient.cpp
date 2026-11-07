@@ -17,7 +17,7 @@ namespace sw
     {
     }
 
-    uint64 LiveOpsClient::requestLiveState( string_view region, uint32 buildVersion, const ReplyDelegate& onReply )
+    uint64 LiveOpsClient::requestLiveState( string_view region, uint32 buildVersion, const OnlineReplyDelegate<LiveOpsMethod::GetLiveState>& onReply )
     {
         _region       = string( region );
         _buildVersion = buildVersion;
@@ -38,10 +38,10 @@ namespace sw
         (void)body;
         if ( _bRequested == SW_FALSE )
             return;
-        (void)requestLiveState( _region, _buildVersion, ReplyDelegate{} ); // 알림에는 내용이 없으므로 이 계정의 대상에 맞는 이벤트를 다시 받는다
+        (void)requestLiveState( _region, _buildVersion, OnlineReplyDelegate<LiveOpsMethod::GetLiveState>{} ); // 알림에는 내용이 없으므로 이 계정의 대상에 맞는 이벤트를 다시 받는다
     }
 
-    void LiveOpsClient::onCallSucceeded( LiveOpsMethod::GetLiveState, const LiveOpsStateRequest& request, const LiveOpsReply& reply )
+    void LiveOpsClient::onCallSucceeded( LiveOpsMethod::GetLiveState, const LiveOpsStateRequest& request, const LiveOpsStateReply& reply )
     {
         (void)request;
         _listEvent = reply._listEvent;

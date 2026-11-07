@@ -68,12 +68,12 @@ namespace
             pump();
         }
 
-        LiveOpsResult takeCompletion()
+        LiveOpsOutcome takeCompletion()
         {
             vector<PushDeviceCompletion> listCompletion;
             _dispatcher.takeCompletions( listCompletion );
             SW_EXPECT_EQUAL( size_t( 1 ), listCompletion.size() );
-            return listCompletion.empty() ? LiveOpsResult::Unavailable : listCompletion[0]._result;
+            return listCompletion.empty() ? LiveOpsOutcome::fail( OnlineError::kUnavailable ) : listCompletion[0]._result;
         }
     };
 } // namespace
@@ -223,13 +223,13 @@ SW_TEST_CASE( PushDispatcherTest, RegistrationCompletions )
     PushDeviceRegistration noToken = registration;
     noToken._token.clear();
     rig._dispatcher.registerDevice( kAccount, noToken, 2 );
-    SW_EXPECT_TRUE( rig.takeCompletion() == LiveOpsResult::Invalid );
+    SW_EXPECT_TRUE( rig.takeCompletion().hasError( OnlineError::kInvalidRequest ) );
     PushDeviceRegistration badProvider = registration;
     badProvider._providerID            = "Bad Name";
     rig._dispatcher.registerDevice( kAccount, badProvider, 3 );
-    SW_EXPECT_TRUE( rig.takeCompletion() == LiveOpsResult::Invalid );
+    SW_EXPECT_TRUE( rig.takeCompletion().hasError( OnlineError::kInvalidRequest ) );
     rig._dispatcher.registerDevice( kInvalidAccountID, registration, 4 );
-    SW_EXPECT_TRUE( rig.takeCompletion() == LiveOpsResult::Invalid );
+    SW_EXPECT_TRUE( rig.takeCompletion().hasError( OnlineError::kInvalidRequest ) );
 
     rig._dispatcher.unregisterDevice( kAccount, "fake", "none", 5 );
     rig.pump();

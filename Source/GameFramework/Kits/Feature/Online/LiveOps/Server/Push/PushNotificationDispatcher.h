@@ -18,6 +18,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsTypes.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationProvider.h"
 #include "GameFramework/Runtime/Online/Guard/TokenBucketMap.h"
 
@@ -56,8 +57,8 @@ namespace sw
     /** @brief 기기 등록과 해지 요청의 완료입니다. */
     struct PushDeviceCompletion
     {
-        uint64        _requestTag{ 0 };
-        LiveOpsResult _result{ LiveOpsResult::Ok };
+        uint64         _requestTag{ 0 };
+        LiveOpsOutcome _result{ LiveOpsResult::Ok };
     };
 } // namespace sw
 
@@ -112,7 +113,7 @@ namespace sw
 
         /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, UnixMilliseconds nowMs );
-        void applyWrite( uint64 requestTag, LiveOpsResult result );
+        void applyWrite( uint64 requestTag, LiveOpsOutcome result );
         void applyTopicClaim( const string& topic, const PushNotificationMessage& message, ServiceStoreResult result, UnixMilliseconds nowMs );
 
     private:

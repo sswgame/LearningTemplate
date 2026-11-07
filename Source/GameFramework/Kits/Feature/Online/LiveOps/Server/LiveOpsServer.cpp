@@ -50,7 +50,7 @@ namespace sw
 
     void LiveOpsServer::handleCall( OnlineServerCall<LiveOpsMethod::GetLiveState> call, const OnlineCallContext& context, const LiveOpsStateRequest& request )
     {
-        LiveOpsReply reply;
+        LiveOpsStateReply reply;
         _pService->computeActiveEvents( context._accountID, request._region, request._buildVersion, context._nowMs, true, reply._listEvent );
         (void)respond( call, reply );
     }
@@ -89,9 +89,9 @@ namespace sw
             _pDispatcher->takeCompletions( _listDeviceCompletionScratch );
             for ( const PushDeviceCompletion& completion : _listDeviceCompletionScratch )
             {
-                LiveOpsReply reply;
-                reply._result = completion._result;
-                (void)completeCall( completion._requestTag, reply );
+                LiveOpsDeviceReply reply;
+                reply._result = completion._result._result;
+                (void)finishCall( completion._requestTag, completion._result, reply );
             }
         }
         if ( _pService == nullptr )

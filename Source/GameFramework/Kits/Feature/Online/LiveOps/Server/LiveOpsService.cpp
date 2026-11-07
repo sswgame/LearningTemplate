@@ -93,7 +93,7 @@ namespace sw
         NetIdempotencyKey _auditUnique;
         LiveOpsService*   _pService;
         uint64            _requestTag;
-        LiveOpsResult     _result;
+        LiveOpsOutcome    _result;
 
         LiveOpsWriteJob()
             : _auditEntry{}
@@ -102,7 +102,7 @@ namespace sw
             , _auditUnique{ NetIdempotencyKey::makeRandom() }
             , _pService{ nullptr }
             , _requestTag{ 0 }
-            , _result{ LiveOpsResult::Unavailable }
+            , _result{ LiveOpsOutcome::fail( OnlineError::kUnavailable ) }
         {
         }
 
@@ -124,7 +124,7 @@ namespace sw
             else
                 transaction.put( table, _key, _bytes, current._version );
             ServiceAuditLog::stageEntry( transaction, _auditEntry, _auditUnique._high, _auditUnique._low );
-            _result = connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsResult::Ok : LiveOpsResult::Unavailable; // Conflict 도 "다시 하라" 는 뜻으로 Unavailable 로 처리한다
+            _result = connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsResult::Ok : LiveOpsOutcome::fail( OnlineError::kUnavailable ); // Conflict 도 "다시 하라" 는 뜻으로 Unavailable 로 처리한다
         }
 
         void complete() override { _pService->applyWrite( _requestTag, _result ); }
@@ -357,13 +357,13 @@ namespace sw
     {
         if ( LiveEventRules::isValid( definition ) == false )
         {
-            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsResult::Invalid } );
+            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
         unique_ptr<LiveOpsWriteJob> work = make_unique<LiveOpsWriteJob>();
         if ( LiveOpsProtocol::encodeEvent( definition, work->_bytes ) == false )
         {
-            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsResult::Invalid } ); // 쓰기가 오류 로그를 남겼다
+            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
         work->_key                 = definition._eventID;
@@ -381,7 +381,7 @@ namespace sw
         LiveEventDef definition;
         if ( LiveOpsProtocol::readEventJSON( definitionJSON, definition ) == false )
         {
-            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsResult::Invalid } ); // JSON 이 아니거나 모르는 필드가 있다
+            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } ); // JSON 이 아니거나 모르는 필드가 있다
             return;
         }
         putEvent( definition, actorID, memo, nowMs, requestTag ); // 규칙 검사는 같은 길(`LiveEventRules::isValid`)이다
@@ -406,7 +406,7 @@ namespace sw
             LiveEventControlResult result = LiveEventControlResult::Unavailable;
             if ( completion._result == LiveOpsResult::Ok )
                 result = LiveEventControlResult::Ok;
-            else if ( completion._result == LiveOpsResult::Invalid )
+            else if ( completion._result.hasError( OnlineError::kInvalidRequest ) )
                 result = LiveEventControlResult::Invalid;
             else if ( completion._result == LiveOpsResult::NotFound )
                 result = LiveEventControlResult::NotFound;
@@ -418,7 +418,7 @@ namespace sw
     {
         if ( LiveOpsLimit::isValidKey( eventID, LiveOpsLimit::kMaxIDSize ) == false )
         {
-            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsResult::Invalid } );
+            _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
         unique_ptr<LiveOpsWriteJob> work = make_unique<LiveOpsWriteJob>();
@@ -439,7 +439,7 @@ namespace sw
         _dependencies._pStore->submit( std::move( work ) );
     }
 
-    void LiveOpsService::applyWrite( uint64 requestTag, LiveOpsResult result )
+    void LiveOpsService::applyWrite( uint64 requestTag, LiveOpsOutcome result )
     {
         --_pendingCount;
         _completionBuffer.push( LiveOpsCompletion{ requestTag, result } );

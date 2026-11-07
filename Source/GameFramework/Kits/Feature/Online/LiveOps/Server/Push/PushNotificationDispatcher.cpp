@@ -130,7 +130,7 @@ namespace sw
         PushNotificationDispatcher* _pDispatcher;
         AccountID                   _accountID;
         uint64                      _requestTag;
-        LiveOpsResult               _result;
+        LiveOpsOutcome              _result;
         uint8                       _bErase;
 
         PushDeviceWriteJob()
@@ -139,7 +139,7 @@ namespace sw
             , _pDispatcher{ nullptr }
             , _accountID{ kInvalidAccountID }
             , _requestTag{ 0 }
-            , _result{ LiveOpsResult::Unavailable }
+            , _result{ LiveOpsOutcome::fail( OnlineError::kUnavailable ) }
             , _bErase{ SW_FALSE }
         {
         }
@@ -189,7 +189,7 @@ namespace sw
                     transaction.erase( table, *pOldestKey ); // 한도를 넘었으므로 가장 오래 등록된 기기를 밀어낸다
                 transaction.put( table, _key, _bytes );
             }
-            _result = connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsResult::Ok : LiveOpsResult::Unavailable;
+            _result = connection.commit( transaction ) == ServiceStoreResult::Ok ? LiveOpsResult::Ok : LiveOpsOutcome::fail( OnlineError::kUnavailable );
         }
 
         void complete() override { _pDispatcher->applyWrite( _requestTag, _result ); }
@@ -401,14 +401,14 @@ namespace sw
         if ( bValid == false || _pStore == nullptr )
         {
             if ( requestTag != 0 )
-                _completionBuffer.push( PushDeviceCompletion{ requestTag, bValid ? LiveOpsResult::Unavailable : LiveOpsResult::Invalid } );
+                _completionBuffer.push( PushDeviceCompletion{ requestTag, bValid ? LiveOpsOutcome::fail( OnlineError::kUnavailable ) : LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
         unique_ptr<PushDeviceWriteJob> work = make_unique<PushDeviceWriteJob>();
         if ( LiveOpsProtocol::encodeDevice( registration, work->_bytes ) == false )
         {
             if ( requestTag != 0 )
-                _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsResult::Invalid } ); // 쓰기가 오류 로그를 남겼다
+                _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
         work->_key         = makeDeviceKey( accountID, registration._providerID, registration._token );
@@ -425,7 +425,7 @@ namespace sw
         if ( bInvalidUnregister )
         {
             if ( requestTag != 0 )
-                _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsResult::Invalid } );
+                _completionBuffer.push( PushDeviceCompletion{ requestTag, LiveOpsOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
         unique_ptr<PushDeviceWriteJob> work = make_unique<PushDeviceWriteJob>();
@@ -438,7 +438,7 @@ namespace sw
         _pStore->submit( std::move( work ) );
     }
 
-    void PushNotificationDispatcher::applyWrite( uint64 requestTag, LiveOpsResult result )
+    void PushNotificationDispatcher::applyWrite( uint64 requestTag, LiveOpsOutcome result )
     {
         --_pendingWorkCount;
         if ( requestTag != 0 )
