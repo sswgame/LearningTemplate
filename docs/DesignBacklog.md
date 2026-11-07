@@ -362,6 +362,14 @@ Graphify로 호출 관계를 좁힌 뒤 앱 루프, 에디터 ABI, ImGui 플랫�
 
 순서: 1 은 AI 이동 연쇄의 비동기 경로 요청(위 절)과 같은 동작 어휘를 쓰므로 함께 설계한다. 2 · 3 · 4 는 서로 독립이라 하나씩 옮기고, 옮긴 자리의 C++ 표는 지운다(두 벌 금지).
 
+**판단(9 차, 옮긴 것 · 코드에 두는 것):**
+
+- 1 게임 AI — `AIControllerComponent` 가 트리 칸(`_behaviorTree`)과 실행기를 쥐고 `think` = 감각(`updateBlackboard`) → 트리 한 틱이다. 잎 어휘는 `ai.*`(`AIControllerActions.h`) · `blackboard.add` · `blackboard.copy`, 조건 `aiHasDestination`. 옮긴 것: ArenaEnemyAI(grunt · caster) · ArenaAutoBattleAI · HorseFollowAI · ShooterEnemyAIController · FarmAutoFarmerAI(`game/*/data/ai/*.bt.xml`). 언리얼 `AAIController` + `RunBehaviorTree`, 감각은 BT 서비스 · AIPerception 자리.
+  코드에 두는 것: `KartAI`(연속 조향 · 레이싱 라인 수학 — 언리얼도 차량 경로 추종은 코드), `SRPGCommanderAI`(효용 점수 탐색 — 가중치는 이미 설정 구조체, 갈래는 "칠 수 있으면 친다, 아니면 다가간다" 둘뿐이라 트리 이득이 없다), `ShooterEnemyComponent`(폰 몸의 행동 단계 · 복제되는 상태 — AI 판단이 아니다), `SkirmishUnitComponent` · `FarmVillagerComponent`(판의 상태를 따라 그리는 모습 — 마을 사람의 일과는 이미 스케줄 데이터). 같은 모양으로 남은 판단 `switch`: `VoxelAutoPlayControllerComponent` · `ShooterAutoAimControllerComponent`(이번 목록 밖 — 같은 감각 + 트리로 옮긴다).
+- 2 프리셋 · 규칙 표 — 네 곳 모두 이미 데이터이거나 명세 표다. `FractureSettings` 의 switch 는 원본 해시에 섞는 철자 표(바꾸면 모든 파쇄 모델을 다시 임포트 — 형식 표), `TextureImportConfig` 규칙은 이미 JSON(남은 표는 DXGI 번호 — 명세), `Autosave` 정책은 이미 `AutosaveSettings` 자산(남은 switch 는 까닭의 합치기 우선순위 — 종료 · 직접 부름이 이겨야 하는 의미 규칙), `InputMap` 기본 바인딩은 이미 `*.input.xml`.
+- 3 문화권 — 복수형 · 서수 규칙은 CLDR 규칙 글(`PluralRuleSet`, UTS #35 문법), 숫자 체계(`<numberingSystems>`)와 통화(`<currencies>`)는 문화권 표의 칸이다. C++ 규칙 함수 표 · `NumeralSystem` · 통화 표를 지웠다. 시간대는 이미 `timezones.xml`. 남은 것: 문화권별 통화 기호(CLDR 의 문화권별 currencies — 필요할 때 칸을 더한다), 날짜 패턴 기호는 형식이라 코드.
+- 4 에디터 표시 — 뷰포트 입력 오버레이 색(`InputOverlay.*`)과 강조색 스와치(`AccentSwatch.*`)를 테마 토큰으로. 뷰포트 오버레이 바 표는 바마다 내용 코드가 붙은 구조라 코드, UIPreview 기기 목록은 이미 `uiresolutions.xml`.
+
 ### 에디터 기능 · UX 고도화 후보 (코드 · Graphify · 공식 문서 대조 2026-11-07)
 
 코드와 최신 Graphify 그래프에서 실제 패널·서비스·탐색 경로를 확인하고, 상용 엔진 문서는 기능의 존재 여부가 아니라 반복 작업 UX의 비교 기준으로만 사용했다. 결론은 “기능이 거의 없다”가 아니다. `Source/Editor/Panels` 에는 씬·인스펙터·콘텐츠 브라우저 외에도 애니메이션·대화·오디오·머티리얼·UI·렌더·프로파일러·패키징·멀티플레이 도구가 있다. 사용자 단축키, 명령 팔레트, 에셋/오브젝트 Quick Launcher, 다중 선택 인스펙터, Undo/Redo 기록과 명명 레이아웃, Map Check, 에셋 참조 찾기와 파일 이동 시 경로 자동 수정, 비동기 임포트와 진행 상태, 자체 시나리오 테스트도 이미 구현되어 있다. 아래는 이 기반을 중복 구현하지 않고 작업 흐름의 완성도를 높일 후보만 남긴다.
