@@ -45,20 +45,20 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
         SubsystemHostMask   getSubsystemHost() const override;
 
-        void                        onStartupFinished() override;
-        void                        onShutdownBegin() override;
-        [[nodiscard]] RHI*          findRHI() const override;
-        [[nodiscard]] RHIInitResult getRHIInitResult() const override;
-        [[nodiscard]] RenderThread* findRenderThread() const override { return _pRenderThread; }
-        void                        flushSubmittedPackets() override;
-        void                        waitRenderThreadIdle( RHIWaitIdleReason reason ) override;
-        [[nodiscard]] bool          needsCaptureReadiness() const override;
-        void                        submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bReadyForCapture ) override;
-        [[nodiscard]] bool          findCaptureExitCode( int32& outExitCode ) const override;
-        [[nodiscard]] bool          applyPendingBackendChange() override;
-        void                        setScenarioCaptureEnabled( bool bEnabled ) override;
-        void                        setPresentSkipped( bool bSkipped ) override;
-        [[nodiscard]] uint32        countPendingCaptureWork( const GameObjectManager* pManager ) const override;
+        void                                         onStartupFinished() override;
+        void                                         onShutdownBegin() override;
+        [[nodiscard]] RHI*                           findRHI() const override;
+        [[nodiscard]] RHIInitResult                  getRHIInitResult() const override;
+        [[nodiscard]] RenderThread*                  findRenderThread() const override { return _pRenderThread; }
+        void                                         flushSubmittedPackets() override;
+        void                                         waitRenderThreadIdle( RHIWaitIdleReason reason ) override;
+        [[nodiscard]] bool                           needsCaptureReadiness() const override;
+        void                                         submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bReadyForCapture ) override;
+        [[nodiscard]] std::optional<ProcessExitCode> findCaptureExitCode() const override;
+        [[nodiscard]] bool                           applyPendingBackendChange() override;
+        void                                         setScenarioCaptureEnabled( bool bEnabled ) override;
+        void                                         setPresentSkipped( bool bSkipped ) override;
+        [[nodiscard]] uint32                         countPendingCaptureWork( const GameObjectManager* pManager ) const override;
 
     private:
         /**

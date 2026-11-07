@@ -676,7 +676,7 @@ namespace sw
         settings._startSeconds  = _run._wallStartSeconds;
         settings._limitSeconds  = _wallLimitSeconds;
         settings._graceSeconds  = AutomationTimeLimits::kHangGraceSeconds;
-        settings._exitCode      = getAutomationExitCode( AutomationResult::TimedOut );
+        settings._exitCode      = getAutomationExitStatus( AutomationResult::TimedOut );
         settings._pCrashHandler = &engine::getSubsystem<CrashHandler>();
         _hangWatchdog.start( settings );
     }
@@ -950,7 +950,7 @@ namespace sw
         AutomationReportParams report{};
         report._scenarioName       = _scenario.getName();
         report._pResultName        = getEnumName( _result );
-        report._exitCode           = getAutomationExitCode( _result );
+        report._exitCode           = getAutomationExitStatus( _result );
         report._frameCount         = _run._frameIndex;
         report._reason             = _finishReason;
         report._pListFailure       = &_judge.getFailures();

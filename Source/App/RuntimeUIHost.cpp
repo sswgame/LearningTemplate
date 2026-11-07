@@ -57,6 +57,6 @@ namespace sw
     void RuntimeUIHost::onQuitGameCommand( [[maybe_unused]] const hashed_string& command, [[maybe_unused]] Widget& source )
     {
         SW_LOG_INFO_ID( "App.QuitRequested", "Quit requested from the pause menu" );
-        _pEngine->requestQuit( 0 );
+        _pEngine->requestQuit( ProcessExitCode::Passed );
     }
 } // namespace sw

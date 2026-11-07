@@ -46,9 +46,9 @@ namespace sw
         /** @brief 씬 틱 뒤 훅(`_onAfterSceneTick`)을 모두 부릅니다. */
         void notifyAfterSceneTick( const EngineFrameContext& context );
         /** @brief 프레임 뒤 훅(`_onFrameEnd`)을 **모두** 부르고(멈추지 않는다) 처음으로 낸 종료 코드를 돌려줍니다. 아무도 내지 않았으면 `kEngineFrameRunning` 입니다. */
-        [[nodiscard]] int32 notifyFrameEnd( const EngineFrameContext& context );
+        [[nodiscard]] EngineFrameExit notifyFrameEnd( const EngineFrameContext& context );
         /** @brief 창 닫힘 훅(`_onWindowClosed`)을 붙인 순서대로 부르다 처음으로 코드를 낸 훅에서 멈추고 그 코드를 돌려줍니다. 아무도 내지 않았으면 `kEngineFrameRunning` 입니다. */
-        [[nodiscard]] int32 notifyWindowClosed( const EngineFrameContext& context );
+        [[nodiscard]] EngineFrameExit notifyWindowClosed( const EngineFrameContext& context );
 
     private:
         /** @brief 훅 묶음의 칸 하나(프레임 시점)입니다. 묶음 하나가 멀티캐스트 항목 하나라 구독 하나로 떨어진다. */
@@ -59,8 +59,8 @@ namespace sw
             FrameEnd,
             WindowClosed,
         };
-        using FrameHookDelegate = Delegate<int32( FramePoint, const EngineFrameContext& )>;
-        using FrameHookList     = MulticastDelegate<int32( FramePoint, const EngineFrameContext& )>;
+        using FrameHookDelegate = Delegate<EngineFrameExit( FramePoint, const EngineFrameContext& )>;
+        using FrameHookList     = MulticastDelegate<EngineFrameExit( FramePoint, const EngineFrameContext& )>;
 
         FrameHookList _listHook; ///< 붙인 훅 묶음(붙인 순서)
     };

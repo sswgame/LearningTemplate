@@ -677,7 +677,7 @@ namespace sw
         ++_clientHostFrameNumber;
     }
 
-    int32 GameNetSession::onClientHostFrameEnd( const EngineFrameContext& /*context*/ )
+    EngineFrameExit GameNetSession::onClientHostFrameEnd( const EngineFrameContext& /*context*/ )
     {
         StateHashHistory* pStateHashHistory = engine::areEngineServicesBound() ? engine::findSubsystem<StateHashHistory>() : nullptr;
         uint64            serverTick        = 0;

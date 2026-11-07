@@ -120,7 +120,7 @@ namespace sw
             _pConsole->update( pShellMap );
     }
 
-    int32 DevToolsHost::onFrameEnd( [[maybe_unused]] const EngineFrameContext& context )
+    EngineFrameExit DevToolsHost::onFrameEnd( [[maybe_unused]] const EngineFrameContext& context )
     {
         // 셰이더 재컴파일 · 강제 리로드 단축키(Debug 클라이언트) — 클라이언트 전용 부분이 한다.
         if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )
@@ -130,7 +130,7 @@ namespace sw
         _pContentFolderWatch->update(); // 기능 · 게임이 건 데이터 폴더 감시(외형 데이터 등)
         // 부모 프로세스(에디터의 멀티 프로세스 재생)가 표준 입력으로 보낸 종료 낱말 — 정상 종료다.
         if ( _pConsole != nullptr && _pConsole->pollStandardInputCommands() )
-            return 0;
+            return ProcessExitCode::Passed;
         return kEngineFrameRunning;
     }
 } // namespace sw

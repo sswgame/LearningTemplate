@@ -96,7 +96,7 @@ namespace sw
             _pRunner->forwardPendingScreenshot();
     }
 
-    int32 ScenarioPlayer::onFrameEnd( const EngineFrameContext& context )
+    EngineFrameExit ScenarioPlayer::onFrameEnd( const EngineFrameContext& context )
     {
         if ( context._pInput == nullptr || _pRunner == nullptr )
             return kEngineFrameRunning;
@@ -117,7 +117,7 @@ namespace sw
         return kEngineFrameRunning;
     }
 
-    int32 ScenarioPlayer::onWindowClosed( const EngineFrameContext& context )
+    EngineFrameExit ScenarioPlayer::onWindowClosed( const EngineFrameContext& context )
     {
         if ( isPlaying() )
             endPlayback( ScenarioPlayEnd::Stopped, context._pInput ); // 재생은 종료 코드를 정하지 않는다

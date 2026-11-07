@@ -9,18 +9,18 @@
 namespace sw
 {
     QuitRequest::QuitRequest()
-        : _exitCode{ 0 }
+        : _exitCode{ ProcessExitCode::Passed }
         , _bRequested{ SW_FALSE }
     {
     }
 
-    void QuitRequest::request( int32 exitCode )
+    void QuitRequest::request( ProcessExitCode exitCode )
     {
         if ( _bRequested )
             return;
         _bRequested = SW_TRUE;
         _exitCode   = exitCode;
-        SW_LOG_INFO_ID( "Engine.QuitRequestedExitCode", "Quit requested (exit code %#)", exitCode );
+        SW_LOG_INFO_ID( "Engine.QuitRequestedExitCode", "Quit requested (exit code %# %#)", static_cast<int32>( exitCode ), findProcessExitCodeLabel( static_cast<int32>( exitCode ) ) );
     }
 } // namespace sw
 

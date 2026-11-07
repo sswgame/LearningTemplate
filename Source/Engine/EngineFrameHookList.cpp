@@ -21,7 +21,7 @@ namespace sw
         }
         // 묶음 하나를 항목 하나로 올린다 — 시점마다 맞는 칸을 부르고, 빈 칸 · 종료 코드가 없는 시점은 `kEngineFrameRunning` 이다.
         // 묶음(델리게이트 넷)은 공유 포인터로 잡는다. broadcast 는 부를 때마다 델리게이트를 복사하는데, 묶음을 값으로 잡으면 람다가 인라인 칸을 넘어 그 복사가 힙 할당이었다(시점 셋 × 구독마다).
-        return _listHook.add( FrameHookDelegate::create( [pHooks = make_shared<const EngineFrameHooks>( hooks )]( FramePoint point, const EngineFrameContext& context ) -> int32
+        return _listHook.add( FrameHookDelegate::create( [pHooks = make_shared<const EngineFrameHooks>( hooks )]( FramePoint point, const EngineFrameContext& context ) -> EngineFrameExit
         {
             const EngineFrameHooks& hooks = *pHooks;
             switch ( point )
@@ -58,11 +58,11 @@ namespace sw
         _listHook.broadcast( FramePoint::AfterSceneTick, context );
     }
 
-    int32 EngineFrameHookList::notifyFrameEnd( const EngineFrameContext& context )
+    EngineFrameExit EngineFrameHookList::notifyFrameEnd( const EngineFrameContext& context )
     {
         // 모든 관찰자를 부른다(멈추지 않는다). 여럿이 코드를 내면 처음 것의 코드다.
-        int32 exitCode = kEngineFrameRunning;
-        (void)_listHook.broadcastUntil( [&exitCode]( int32 observerExitCode )
+        EngineFrameExit exitCode = kEngineFrameRunning;
+        (void)_listHook.broadcastUntil( [&exitCode]( const EngineFrameExit& observerExitCode )
         {
             if ( observerExitCode != kEngineFrameRunning && exitCode == kEngineFrameRunning )
                 exitCode = observerExitCode;
@@ -71,11 +71,11 @@ namespace sw
         return exitCode;
     }
 
-    int32 EngineFrameHookList::notifyWindowClosed( const EngineFrameContext& context )
+    EngineFrameExit EngineFrameHookList::notifyWindowClosed( const EngineFrameContext& context )
     {
         // 처음으로 코드를 낸 관찰자에서 멈춘다.
-        int32 exitCode = kEngineFrameRunning;
-        (void)_listHook.broadcastUntil( [&exitCode]( int32 observerExitCode )
+        EngineFrameExit exitCode = kEngineFrameRunning;
+        (void)_listHook.broadcastUntil( [&exitCode]( const EngineFrameExit& observerExitCode )
         {
             if ( observerExitCode == kEngineFrameRunning )
                 return false;

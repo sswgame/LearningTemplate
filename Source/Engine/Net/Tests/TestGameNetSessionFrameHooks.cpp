@@ -65,5 +65,5 @@ SW_TEST_CASE( GameNetSessionFrameHooksTest, FrameEndDoesNotAskToQuit )
     GameNetSession         session;
     const EngineFrameHooks hooks = session.makeClientHostFrameHooks();
     EngineFrameContext     context{};
-    SW_EXPECT_EQUAL( kEngineFrameRunning, hooks._onFrameEnd( context ) );
+    SW_EXPECT_FALSE( hooks._onFrameEnd( context ).has_value() ); // 종료 코드를 내지 않는다(kEngineFrameRunning)
 }

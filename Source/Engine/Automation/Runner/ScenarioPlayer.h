@@ -44,9 +44,9 @@ namespace sw
         /** @brief 씬 틱 뒤 — `<Screenshot>` 이 요청한 경로를 이번 프레임의 패킷에 맡깁니다. */
         void onAfterSceneTick( const EngineFrameContext& context );
         /** @brief 프레임 끝입니다 — 사람 입력 · 단계 결과를 보고 반복 · 끝을 정한다. 늘 `kEngineFrameRunning`(재생은 프로세스를 끝내지 않는다). */
-        int32 onFrameEnd( const EngineFrameContext& context );
+        EngineFrameExit onFrameEnd( const EngineFrameContext& context );
         /** @brief 창이 닫혔습니다 — 재생을 멈춤으로 끝맺는다. 종료 코드는 정하지 않는다. */
-        int32 onWindowClosed( const EngineFrameContext& context );
+        EngineFrameExit onWindowClosed( const EngineFrameContext& context );
         /** @brief 실행기를 새로 세웁니다(처음 · 반복). */
         void startRunner();
         /** @brief 재생을 끝맺고(돌고 있으면 멈추고) 고정 프레임 시간을 되돌린 뒤 알린다. */

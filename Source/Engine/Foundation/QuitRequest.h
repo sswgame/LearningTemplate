@@ -10,6 +10,8 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
+#include "sw/config/ProcessExitCodes.gen.h"
+
 namespace sw
 {
     /**
@@ -27,15 +29,15 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다. 이미 요청이 있으면 처음 것의 코드를 둔다. */
-        void request( int32 exitCode );
+        /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다. 이미 요청이 있으면 처음 것의 코드를 둔다. 코드는 표(`ProcessExitCode`)의 것만 받는다. */
+        void request( ProcessExitCode exitCode );
         bool isRequested() const { return _bRequested; }
-        /** @brief 요청한 종료 코드입니다(요청이 없었으면 0). */
-        int32 getExitCode() const { return _exitCode; }
+        /** @brief 요청한 종료 코드입니다(요청이 없었으면 `Passed`). */
+        ProcessExitCode getExitCode() const { return _exitCode; }
 
     private:
-        int32 _exitCode;
-        uint8 _bRequested : 1;
+        ProcessExitCode _exitCode;
+        uint8           _bRequested : 1;
     };
 
     SW_SERVICE_SLOT( QuitRequest, Required );

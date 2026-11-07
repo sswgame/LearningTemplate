@@ -162,7 +162,7 @@ namespace sw
         writer.beginObject();
         Internal::writeStringField( writer, "name", Internal::toView( payload._scenario ) );
         Internal::writeStringField( writer, "result", Internal::toView( payload._result ) );
-        Internal::writeNumberField( writer, "exitCode", static_cast<uint64>( getAutomationExitCode( AutomationResult::TimedOut ) ) );
+        Internal::writeNumberField( writer, "exitCode", static_cast<uint64>( getAutomationExitStatus( AutomationResult::TimedOut ) ) );
         Internal::writeNumberField( writer, "frames", payload._frame );
         Internal::writeStringField( writer, "reason", reason.view() );
         Internal::writeStringField( writer, "backend", Internal::toView( payload._backend ) );

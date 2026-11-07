@@ -87,14 +87,14 @@ namespace sw
          * @brief 프레임 끝(씬 틱과 렌더 제출 뒤, 입력 프레임을 닫기 전)입니다. 문맥의 스크린샷 수(프로세스 전체)에서 단계 기준선을 빼 실행기에 넘깁니다.
          * @return 체인이 끝났으면 프로세스 종료 코드, 아니면 `kEngineFrameRunning` 입니다(입력이 없어도 `kEngineFrameRunning`).
          */
-        [[nodiscard]] int32 onFrameEnd( const EngineFrameContext& context );
+        [[nodiscard]] EngineFrameExit onFrameEnd( const EngineFrameContext& context );
         /** @brief 씬 틱 뒤 — `<Screenshot>` 이 요청한 경로를 이번 프레임의 패킷에 맡깁니다(`ScreenshotRequestQueue::putForNextPacket`, 앞 것이 남았으면 다음 프레임). */
         void onAfterSceneTick( const EngineFrameContext& context );
         /**
          * @brief 창이 닫혀 루프가 끝났습니다. 지금 단계를 그 결과로 끝맺고, 돌릴 단계가 남았으면 실패로 봅니다(`CloseWindow` 는 마지막 단계에만 둔다).
          * @return 프로세스 종료 코드, 시작한 단계가 없으면 `kEngineFrameRunning` 입니다.
          */
-        [[nodiscard]] int32 onWindowClosed( const EngineFrameContext& context );
+        [[nodiscard]] EngineFrameExit onWindowClosed( const EngineFrameContext& context );
 
     private:
         /**
@@ -135,7 +135,7 @@ namespace sw
         /** @brief 찍어 둔 값 하나를 @p value 로 바꿉니다 — 첫 단계가 명령줄로 받은 `<Launch>` 값은 다음 단계로 넘기지 않고 기본값에서 시작한다. */
         void removeStartValue( string_view name, string_view value );
         /** @brief 단계 하나가 끝났을 때 부릅니다(`AutomationResult`). 통과했고 다음 단계가 있으면 그것을 시작하고 `kEngineFrameRunning`, 아니면 체인의 종료 코드(`getAutomationExitCode`)입니다. */
-        [[nodiscard]] int32 onStageEnded( AutomationResult result, uint32 completedScreenshotCount );
+        [[nodiscard]] EngineFrameExit onStageEnded( AutomationResult result, uint32 completedScreenshotCount );
         /** @brief 녹화를 시작할 프레임인지 보고(활성 씬이 플레이 중이고 시작 차단이 없다) 시작합니다. */
         void startRecordingWhenReady();
         /** @brief 녹화를 멈추고 검사점을 읽어 파일을 씁니다. 녹화 중이 아니면 아무것도 하지 않습니다. */

@@ -59,9 +59,9 @@ namespace sw
         EngineFrameHooks makeFrameHooks();
 
     private:
-        void  onFrameBegin( const EngineFrameContext& context );
-        void  onAfterSceneTick( const EngineFrameContext& context );
-        int32 onFrameEnd( const EngineFrameContext& context );
+        void            onFrameBegin( const EngineFrameContext& context );
+        void            onAfterSceneTick( const EngineFrameContext& context );
+        EngineFrameExit onFrameEnd( const EngineFrameContext& context );
 
     public:
     private:

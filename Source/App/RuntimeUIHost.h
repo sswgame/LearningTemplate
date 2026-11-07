@@ -36,7 +36,7 @@ namespace sw
         void remove();
 
     private:
-        /** @brief UI 전역 명령 `QuitGame` 의 처리 함수입니다. 이번 프레임 뒤 루프를 끝냅니다(`Engine::requestQuit( 0 )`). */
+        /** @brief UI 전역 명령 `QuitGame` 의 처리 함수입니다. 이번 프레임 뒤 루프를 끝냅니다(`Engine::requestQuit( ProcessExitCode::Passed )`). */
         void onQuitGameCommand( const hashed_string& command, Widget& source );
 
     private:

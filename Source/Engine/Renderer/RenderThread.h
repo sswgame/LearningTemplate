@@ -17,7 +17,10 @@
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 
+#include "sw/config/ProcessExitCodes.gen.h"
+
 #include <condition_variable>
+#include <optional>
 
 namespace sw
 {
@@ -146,19 +149,16 @@ namespace sw
             GameView = 1u << 0, ///< `-gv_screenshot` — 렌더 스레드가 찍는다.
             EditorUI = 1u << 1, ///< `-gv_screenshotEditor` — 에디터가 찍는다.
         };
-        /** @brief `-gv_screenshotQuit` 이 앱을 끝낼 때, 사진 파일을 쓰지 못한 경우의 종료 코드입니다(다 썼으면 0). 시나리오 종료 코드 표(10~15, `AutomationExitCode.h`)와 겹치지 않는 값이다 — 14 는 시나리오의 미확정이라 같이 쓰면 판정이 섞인다. */
-        static constexpr int32 kCaptureWriteFailedExitCode = 16;
-        /** @brief `getCaptureExitCode` 가 "아직 끝낼 때가 아니다" 로 돌려주는 값입니다. */
-        static constexpr int32 kNoCaptureExitCode = -1;
         /** @brief 이 종류의 사진을 찍겠다고 알립니다. 첫 사진이 끝나기 전(첫 프레임)에 부릅니다. 어느 스레드에서 불러도 됩니다. */
         static void expectCapture( CaptureKind kind );
         /** @brief 이 종류의 사진 요청을 모두 처리했음을 알립니다(@p bWritten 이 false 면 파일을 쓰지 못했다). 어느 스레드에서 불러도 됩니다. */
         static void reportCaptureFinished( CaptureKind kind, bool bWritten );
         /**
-         * @brief `-gv_screenshotQuit` 이 켜져 있고 요청한 사진을 모두 처리했으면 앱의 종료 코드(0 또는 `kCaptureWriteFailedExitCode`), 아니면 `kNoCaptureExitCode` 입니다.
-         * @details 게임 스레드가 프레임마다 물어 `Engine::requestQuit` 으로 잇습니다. 사진을 요청한 종류가 하나도 없으면 끝낼 근거가 없어 늘 `kNoCaptureExitCode` 입니다.
+         * @brief `-gv_screenshotQuit` 이 켜져 있고 요청한 사진을 모두 처리했으면 앱의 종료 코드(`Passed` 또는 파일을 쓰지 못한 `CaptureWriteFailed` — 표 `ProcessExitCodes.json`), 아니면 빈 값입니다.
+         * @details 게임 스레드가 프레임마다 물어 `Engine::requestQuit` 으로 잇습니다. 사진을 요청한 종류가 하나도 없으면 끝낼 근거가 없어 늘 빈 값입니다.
+         *          예전에는 표 밖의 숫자 16 을 이 헤더에 따로 두었다 — 표가 몰라 자동화 보고가 "crashed" 로 셌다.
          */
-        [[nodiscard]] static int32 getCaptureExitCode();
+        [[nodiscard]] static std::optional<ProcessExitCode> getCaptureExitCode();
         /**
          * @brief 시작 인자 캡처가 화면의 자리 잡음을 기다리는 중이면(`-gv_screenshot` 과 `-gv_screenshotSettledFrames`) true 입니다.
          * @details 게임 스레드가 패킷을 채울 때 이것이 참이면 `RenderFramePacket::_bReadyForCapture` 를 판정해 싣는다(그 판정은 텍스처 표를 훑으므로 필요할 때만 한다).

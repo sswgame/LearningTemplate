@@ -134,9 +134,9 @@ namespace sw
         /** @brief `-gv_profileFrames` · `-gv_profileSeconds` 계측이 시작됐으면 true 입니다(앱 루프의 프레임 페이싱이 읽는다). */
         bool isProfileRunActive() const { return _profileSession.isActive(); }
         /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다(호스트). 모듈은 서비스 `QuitRequest` 에 직접 건다 — 이것도 그리로 간다. 여럿이면 처음 것의 코드를 씁니다. */
-        void requestQuit( int32 exitCode );
-        /** @brief App 이 돌려줄 종료 코드입니다(요청이 없었으면 0). */
-        int32 getExitCode() const { return _bQuitRequested == false && _pQuitRequest != nullptr && _pQuitRequest->isRequested() ? _pQuitRequest->getExitCode() : _exitCode; }
+        void requestQuit( ProcessExitCode exitCode );
+        /** @brief App 이 돌려줄 종료 코드입니다(요청이 없었으면 `Passed`). */
+        ProcessExitCode getExitCode() const { return _bQuitRequested == false && _pQuitRequest != nullptr && _pQuitRequest->isRequested() ? _pQuitRequest->getExitCode() : _exitCode; }
         /**
          * @brief 창이 닫혀 루프가 끝났다고 알립니다(App 이 루프 뒤에 부른다). 프레임 관찰자가 종료 코드를 내면 그 코드로 정합니다
          *        (관찰자의 결과가 프로파일 세션의 종료보다 이긴다).
@@ -226,7 +226,7 @@ namespace sw
         /** @brief 이번 프레임 시간(초)입니다(`beginFrame` · `tick` 이 받은 값). 프레임 관찰자 문맥의 `_deltaSeconds` 입니다. */
         float32 _frameDeltaSeconds;
         /** @brief `requestQuit` 이 정한 종료 코드입니다. */
-        int32 _exitCode;
+        ProcessExitCode _exitCode;
         /** @brief 서비스 범위의 종료 요청입니다(`_services` 소유 — 빌려 쓴다). 서비스가 내려가기 전에 `shutdown` 이 코드를 위 칸으로 옮기고 비운다. */
         QuitRequest* _pQuitRequest;
 

@@ -320,7 +320,7 @@ namespace sw
             _pRunner->onFrameBegin( *context._pInput );
     }
 
-    int32 AutomationSession::onFrameEnd( const EngineFrameContext& context )
+    EngineFrameExit AutomationSession::onFrameEnd( const EngineFrameContext& context )
     {
         updateRunTitle();
         // 녹화는 시나리오보다 먼저 이 프레임을 적는다 — 시나리오가 이 프레임에 끝나도 마지막 프레임이 녹화에 포함된다.
@@ -340,8 +340,8 @@ namespace sw
         const AutomationResult result = _pRunner->onFrameEnd( *context._pInput );
         if ( result == AutomationResult::Running )
             return kEngineFrameRunning;
-        const int32 exitCode = onStageEnded( result, completedScreenshotCount );
-        if ( exitCode != kEngineFrameRunning )
+        const EngineFrameExit exitCode = onStageEnded( result, completedScreenshotCount );
+        if ( exitCode.has_value() )
             finishRecording();
         return exitCode;
     }
@@ -370,7 +370,7 @@ namespace sw
                               bRunning ? &status : nullptr );
     }
 
-    int32 AutomationSession::onStageEnded( AutomationResult result, uint32 completedScreenshotCount )
+    EngineFrameExit AutomationSession::onStageEnded( AutomationResult result, uint32 completedScreenshotCount )
     {
         const size_t stageIndex = _pChain->getStageIndex();
         const string stageName  = _pRunner->getScenario().getName().empty() ? _pChain->getCurrentPath() : _pRunner->getScenario().getName();
@@ -396,7 +396,7 @@ namespace sw
         return getAutomationExitCode( _pChain->getFinalResult() );
     }
 
-    int32 AutomationSession::onWindowClosed( const EngineFrameContext& context )
+    EngineFrameExit AutomationSession::onWindowClosed( const EngineFrameContext& context )
     {
         finishRecording();
         // 이미 끝난 세션은 정하지 않는다 — 종료 코드는 끝낸 프레임(`onStageEnded`)이 체인 전체의 결과로 정했다. 여기서 러너의 결과를 돌려주면
@@ -493,7 +493,7 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#", options._scenarioPath.empty() ? "-scenario-backends needs -scenario=<path>" : error.c_str() );
             inoutState._bFailed         = SW_TRUE;
-            inoutState._failureExitCode = getAutomationExitCode( AutomationResult::LoadError );
+            inoutState._failureExitCode = getAutomationExitStatus( AutomationResult::LoadError );
             return;
         }
         const int32 exitCode        = AutomationPerBackend::run( options );

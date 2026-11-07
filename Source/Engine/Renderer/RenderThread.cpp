@@ -957,15 +957,15 @@ namespace sw
         pMailbox->reportCaptureFinished( static_cast<uint32>( kind ), bWritten );
     }
 
-    int32 RenderThread::getCaptureExitCode()
+    std::optional<ProcessExitCode> RenderThread::getCaptureExitCode()
     {
         if ( gv_screenshotQuit == false )
-            return kNoCaptureExitCode;
+            return std::nullopt;
         const ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         bool                                bFailed  = false;
         if ( pMailbox == nullptr || pMailbox->findAllCapturesFinished( bFailed ) == false )
-            return kNoCaptureExitCode; // 우편함이 없으면 요청한 사진이 하나도 없다
-        return bFailed ? kCaptureWriteFailedExitCode : 0;
+            return std::nullopt; // 우편함이 없으면 요청한 사진이 하나도 없다
+        return bFailed ? ProcessExitCode::CaptureWriteFailed : ProcessExitCode::Passed;
     }
 
     string RenderThread::getLastScreenshotPath()

@@ -113,13 +113,9 @@ namespace sw
         return RenderThread::needsCaptureReadiness();
     }
 
-    bool EngineRenderDriver::findCaptureExitCode( int32& outExitCode ) const
+    std::optional<ProcessExitCode> EngineRenderDriver::findCaptureExitCode() const
     {
-        const int32 captureExitCode = RenderThread::getCaptureExitCode();
-        if ( captureExitCode == RenderThread::kNoCaptureExitCode )
-            return false;
-        outExitCode = captureExitCode;
-        return true;
+        return RenderThread::getCaptureExitCode();
     }
 
     void EngineRenderDriver::setScenarioCaptureEnabled( const bool bEnabled )

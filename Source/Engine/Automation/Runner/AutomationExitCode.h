@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Log/Logger.h"
 
 #include "Engine/Automation/Runner/AutomationResult.h"
 #include "Engine/EngineFrameHooks.h"
@@ -12,20 +13,17 @@
 
 namespace sw
 {
-    /** @brief `AutomationSession::onFrameEnd` 가 아직 끝나지 않았음을 알리는 값입니다(`kEngineFrameRunning` 그 자체 — 값을 따로 쓰지 않는다). */
-    inline constexpr int32 kAutomationExitCodeRunning = kEngineFrameRunning;
-
     /**
-     * @brief 결과의 프로세스 종료 코드입니다. 숫자는 종료 코드 표(`Config/Engine/ProcessExitCodes.json` → `ProcessExitCode`)에만 있다 —
+     * @brief 결과의 프로세스 종료 코드입니다(아직 도는 중이면 `kEngineFrameRunning` — 빈 값). 숫자는 종료 코드 표(`Config/Engine/ProcessExitCodes.json` → `ProcessExitCode`)에만 있다 —
      *        백엔드마다 실행(`AutomationPerBackend`)과 CTest(`SW_EXIT_CODE_Skipped`)도 같은 표를 읽는다.
      */
-    constexpr int32 getAutomationExitCode( AutomationResult result )
+    constexpr EngineFrameExit getAutomationExitCode( AutomationResult result )
     {
-        ProcessExitCode exitCode = ProcessExitCode::Failed; // 열거형에 없는 값은 실패로 센다
+        ProcessExitCode exitCode = ProcessExitCode::Failed;
         switch ( result )
         {
             case AutomationResult::Running:
-                return kAutomationExitCodeRunning;
+                return kEngineFrameRunning;
             case AutomationResult::Passed:
                 exitCode = ProcessExitCode::Passed;
                 break;
@@ -45,6 +43,15 @@ namespace sw
                 exitCode = ProcessExitCode::UnhandledLog;
                 break;
         }
-        return static_cast<int32>( exitCode );
+        return exitCode;
+    }
+
+    /** @brief 끝난 결과 @p result 의 종료 상태(프로세스가 내는 정수)입니다. 자식 프로세스의 종료 코드와 견주는 자리(`AutomationPerBackend`)와 보고가 쓴다. 도는 중(`Running`)은 끝난 결과가 아니라 멈춘다. */
+    inline int32 getAutomationExitStatus( AutomationResult result )
+    {
+        const EngineFrameExit exitCode = getAutomationExitCode( result );
+        if ( exitCode.has_value() == false )
+            SW_FATAL( "getAutomationExitStatus: a running scenario has no exit status" );
+        return static_cast<int32>( *exitCode );
     }
 } // namespace sw

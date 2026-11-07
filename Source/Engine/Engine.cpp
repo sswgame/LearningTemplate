@@ -129,7 +129,7 @@ namespace sw
         , _rhiInitResult{ RHIInitResult::NotStarted }
         , _sceneDeltaSeconds{ 0.0f }
         , _frameDeltaSeconds{ 0.0f }
-        , _exitCode{ 0 }
+        , _exitCode{ ProcessExitCode::Passed }
         , _pQuitRequest{ nullptr }
         , _profileSession{}
         , _pMemoryBudget{ nullptr }
@@ -403,7 +403,7 @@ namespace sw
             _pRHI->setPreferredVSync( engine::getSubsystem<EngineConfig>()._window._bVSync );
     }
 
-    void Engine::requestQuit( int32 exitCode )
+    void Engine::requestQuit( ProcessExitCode exitCode )
     {
         if ( _pQuitRequest != nullptr )
         {
@@ -433,10 +433,10 @@ namespace sw
         if ( _frameHooks.isBound() == false )
             return;
         // 처음으로 코드를 낸 관찰자에서 멈춘다. 관찰자의 결과가 앞선 종료 요청(프로파일 세션)의 코드보다 이긴다.
-        const int32 observerExitCode = _frameHooks.notifyWindowClosed( makeFrameContext() );
-        if ( observerExitCode == kEngineFrameRunning )
+        const EngineFrameExit observerExitCode = _frameHooks.notifyWindowClosed( makeFrameContext() );
+        if ( observerExitCode.has_value() == false )
             return;
-        _exitCode       = observerExitCode;
+        _exitCode       = *observerExitCode;
         _bQuitRequested = SW_TRUE;
     }
 
@@ -640,14 +640,14 @@ namespace sw
         // 모든 관찰자를 부른다(멈추지 않는다). 여럿이 코드를 내면 처음 것의 코드다(`requestQuit` 은 처음 요청만 받는다).
         if ( _frameHooks.isBound() )
         {
-            const int32 observerExitCode = _frameHooks.notifyFrameEnd( makeFrameContext() );
-            if ( observerExitCode != kEngineFrameRunning )
-                requestQuit( observerExitCode );
+            const EngineFrameExit observerExitCode = _frameHooks.notifyFrameEnd( makeFrameContext() );
+            if ( observerExitCode.has_value() )
+                requestQuit( *observerExitCode );
         }
-        // `-gv_screenshotQuit`: 요청한 사진을 모두 찍었으면 그 결과(0 또는 쓰기 실패)로 끝낸다. 관찰자(시나리오)의 코드가 먼저 요청됐으면 그것이 이긴다.
-        int32 captureExitCode = 0;
-        if ( _pRenderDriver != nullptr && _pRenderDriver->findCaptureExitCode( captureExitCode ) )
-            requestQuit( captureExitCode );
+        // `-gv_screenshotQuit`: 요청한 사진을 모두 찍었으면 그 결과(통과 또는 쓰기 실패)로 끝낸다. 관찰자(시나리오)의 코드가 먼저 요청됐으면 그것이 이긴다.
+        const std::optional<ProcessExitCode> captureExitCode = _pRenderDriver != nullptr ? _pRenderDriver->findCaptureExitCode() : std::nullopt;
+        if ( captureExitCode.has_value() )
+            requestQuit( *captureExitCode );
         if ( _pInputManager != nullptr )
             _pInputManager->endFrame();
         // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).

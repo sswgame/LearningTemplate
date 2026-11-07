@@ -318,7 +318,7 @@ namespace sw::editor
         }
 
         // 실패가 하나라도 있으면 프로세스가 실패 코드로 끝난다(CTest 가 읽는다) — 창만 닫으면 코드가 0 이었다.
-        editor::getSubsystem<QuitRequest>().request( static_cast<int32>( state._failedCount > 0 ? ProcessExitCode::Failed : ProcessExitCode::Passed ) );
+        editor::getSubsystem<QuitRequest>().request( state._failedCount > 0 ? ProcessExitCode::Failed : ProcessExitCode::Passed );
     }
 } // namespace sw::editor
 

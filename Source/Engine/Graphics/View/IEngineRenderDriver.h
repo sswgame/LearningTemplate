@@ -12,6 +12,10 @@
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 #include "Engine/Graphics/View/FrameViewports.h"
 
+#include "sw/config/ProcessExitCodes.gen.h"
+
+#include <optional>
+
 namespace sw
 {
     class GameObjectManager;
@@ -51,8 +55,8 @@ namespace sw
          * @param bReadyForCapture `needsCaptureReadiness` 가 참일 때 구한 판정입니다. 아니면 false 입니다.
          */
         virtual void submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bReadyForCapture ) = 0;
-        /** @brief `-gv_screenshotQuit` 의 사진을 모두 찍었으면 그 결과의 종료 코드를 @p outExitCode 에 담고 true 입니다. */
-        [[nodiscard]] virtual bool findCaptureExitCode( int32& outExitCode ) const = 0;
+        /** @brief `-gv_screenshotQuit` 의 사진을 모두 찍었으면 그 결과의 종료 코드(`Passed` · `CaptureWriteFailed`), 아직이면 빈 값입니다. */
+        [[nodiscard]] virtual std::optional<ProcessExitCode> findCaptureExitCode() const = 0;
 
         /** @brief 대기 중인 RHI 핫스왑을 수행합니다. 요청이 없으면 true, 교체에 실패하면(되돌렸어도) false 입니다. */
         [[nodiscard]] virtual bool applyPendingBackendChange() = 0;

@@ -2,12 +2,16 @@
  * @file EngineFrameHooks.h
  * @brief 엔진 루프의 프레임 경계에 붙는 훅(자동화 시나리오 · 텔레메트리 · 개발 도구 같은 외부 구동기)의 델리게이트 묶음과 그 문맥입니다.
  * @details 루프는 훅 목록만 알고 무엇이 붙었는지는 모릅니다(언리얼 `FCoreDelegates::OnBeginFrame` · 유니티 PlayerLoop 훅과 같은 자리).
- *          붙는 쪽은 인터페이스를 상속하지 않고 쓰는 시점의 칸만 채운다. Core 만 include 하므로 어느 Engine 티어에서 써도 됩니다.
+ *          붙는 쪽은 인터페이스를 상속하지 않고 쓰는 시점의 칸만 채운다. Core 와 생성된 종료 코드 표(의존 없는 헤더)만 include 하므로 어느 Engine 티어에서 써도 됩니다.
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
+
+#include "sw/config/ProcessExitCodes.gen.h"
+
+#include <optional>
 
 namespace sw
 {
@@ -30,13 +34,15 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 종료 코드 칸의 답입니다. 값이 있으면 그 코드(표 `ProcessExitCode` 만)로 끝내 달라는 것이고, 없으면 끝내지 않는다 — 숫자 표식(-1)이 아니라 형식이라 표 밖의 코드를 낼 수 없다. */
+    using EngineFrameExit = std::optional<ProcessExitCode>;
     /** @brief 종료 코드 칸이 "아직 끝나지 않았다(종료를 요청하지 않는다)" 를 알리는 값입니다. */
-    inline constexpr int32 kEngineFrameRunning = -1;
+    inline constexpr EngineFrameExit kEngineFrameRunning = std::nullopt;
 
     /** @brief 프레임 시점 하나에 붙는 훅입니다. */
     using EngineFrameDelegate = Delegate<void( const EngineFrameContext& )>;
     /** @brief 종료 코드를 정할 수 있는 시점의 훅입니다. 정할 것이 없으면 `kEngineFrameRunning` 을 돌려줍니다. */
-    using EngineFrameExitDelegate = Delegate<int32( const EngineFrameContext& )>;
+    using EngineFrameExitDelegate = Delegate<EngineFrameExit( const EngineFrameContext& )>;
 
     /**
      * @struct EngineFrameHooks

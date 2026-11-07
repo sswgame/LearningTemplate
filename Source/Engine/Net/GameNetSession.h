@@ -355,7 +355,7 @@ namespace sw
         /** @brief 프레임 앞 훅입니다(`makeClientHostFrameHooks`). */
         void onClientHostFrameBegin( const EngineFrameContext& context );
         /** @brief 프레임 끝 훅입니다(`makeClientHostFrameHooks`). 종료 코드를 정하지 않습니다. */
-        int32 onClientHostFrameEnd( const EngineFrameContext& context );
+        EngineFrameExit onClientHostFrameEnd( const EngineFrameContext& context );
         // 엔진 영역 메시지(`EngineMessageHandler::handleNetMessage` 가 표로 나눈다). 부하 메시지(`Traffic`)는 받는 처리기가 없다
         NetHandleResult receive( GameNetSessionMessage::ServerTick, const NetMessageContext& context, BitReader& body );
         NetHandleResult receive( GameNetSessionMessage::ShutdownNotice, const NetMessageContext& context, BitReader& body );
