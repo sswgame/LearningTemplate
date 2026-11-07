@@ -364,7 +364,7 @@ namespace sw
         // 비어 있으면 셰이더는 앰비언트만 더한다 — 라이트 컴포넌트가 없는 씬은 어둡다(키 라이트로 대신 비추지 않는다).
         _state._cookieAtlas.assignCells( pDevice, packet._listLightCookie, packet._listLight );
         _state._listFrameRealtimeProbe = packet._listRealtimeProbe;
-        _state._lightBuffer.populate( packet._listLight, _state._frameShadow._listTileElement, packet._listLightProbe, _state._listFrameRealtimeProbe.empty() == false );
+        _state._lightBuffer.populate( packet._listLight, _state._frameShadow._listTileElement, packet._pLightProbe, _state._listFrameRealtimeProbe.empty() == false );
 
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );

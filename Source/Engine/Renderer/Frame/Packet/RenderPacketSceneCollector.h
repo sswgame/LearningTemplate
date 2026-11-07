@@ -15,6 +15,7 @@
 #include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
+#include "Engine/Renderer/Lighting/GPULightBuffer.h"
 
 namespace sw
 {
@@ -118,6 +119,8 @@ namespace sw
         vector<LODView> _listLODView;
         /** @brief 그림자를 켠 점광과 스폿의 라이트 원소 번호입니다(`collectSceneLights` → `FrameShadowData::populateFrame`). 프레임마다 재사용합니다. */
         vector<uint32> _listShadowLightIndex;
+        /** @brief 프로브 버퍼 원소 묶음입니다(`collectSceneLights`). 내용이 그대로면 지난 묶음을 다시 주도록 프레임을 넘어 유지합니다. */
+        LightProbeElementBuilder _lightProbeElement;
         /** @brief 디바이스가 GPU 컬링 컴퓨트를 돌릴 수 있어 인스턴스 LOD 를 GPU 가 고를 수 있는지입니다(`initialize` 가 정한다). `fillSceneView` 는 쓰지 않는다. */
         uint8 _bGPUInstanceLODCapable : 1;
     };

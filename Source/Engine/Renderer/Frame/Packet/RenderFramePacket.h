@@ -39,8 +39,11 @@ namespace sw
          *          라이트 목록이 비어도 키라이트 하나로 그리는 폴백 경로이기도 합니다.
          */
         vector<GPULight> _listLight;
-        /** @brief 라이트 프로브 볼륨들의 SH9 원소입니다(`collectSceneLights`). 볼륨 원소는 `_listLight` 에 있고 이 목록의 첫 프로브를 가리킵니다. */
-        vector<float4> _listLightProbe;
+        /**
+         * @brief 라이트 프로브 볼륨들의 SH9 원소 · 반사 프로브 텍셀입니다(`LightProbeElementBuilder`). 볼륨 원소는 `_listLight` 에 있고 이 묶음의 첫 프로브를 가리킵니다.
+         * @details 불변 공유 값이다 — 내용이 그대로면 프레임마다 같은 포인터라 렌더 스레드가 다시 올리지 않는다. 없으면 nullptr 입니다.
+         */
+        shared_ptr<const vector<float4>> _pLightProbe;
         /** @brief 쿠키(빛 텍스처)를 쓰는 빛들입니다(`collectSceneLights`). 렌더러가 쿠키 아틀라스 칸을 나눠 `_listLight` 원소의 `_extra.w` 에 적습니다. */
         vector<GPULightCookie> _listLightCookie;
         /** @brief 실시간으로 갱신할 라이트 프로브 볼륨들의 요청입니다(`collectSceneLights`). 볼륨 원소는 `_listLight` 에 있고 복셀 격자는 공유 포인터로 실린다(렌더 스레드는 읽기만 한다). */
@@ -103,7 +106,7 @@ namespace sw
             , _lightDirIntensity{}
             , _lightColorAmbient{}
             , _listLight{}
-            , _listLightProbe{}
+            , _pLightProbe{}
             , _listLightCookie{}
             , _listRealtimeProbe{}
             , _sky{}
@@ -158,7 +161,7 @@ namespace sw
             _lightDirIntensity = float4{};
             _lightColorAmbient = float4{};
             _listLight.clear();
-            _listLightProbe.clear();
+            _pLightProbe.reset();
             _listLightCookie.clear();
             _listRealtimeProbe.clear();
             _sky = SkyGradient{};

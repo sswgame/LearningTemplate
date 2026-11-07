@@ -39,6 +39,7 @@ namespace sw
         : _gpuSceneBuilder{ nullptr }
         , _listLODView{}
         , _listShadowLightIndex{}
+        , _lightProbeElement{}
         , _bGPUInstanceLODCapable{ SW_FALSE }
     {
     }
@@ -97,7 +98,8 @@ namespace sw
 
         // 씬의 **모든** 라이트다. 방향광 · 점광 · 스폿이 한 목록으로 간다. 위의 키라이트는 앰비언트의 출처이고, 목록이 비면
         // 그 씬은 앰비언트만 받는다(키라이트로 대신 비추지 않는다). 그림자를 켠 점광 · 스폿은 번호를 따로 받아 아래에서 아틀라스 칸을 준다.
-        collectSceneLights( &activeScene, packet._listLight, &_listShadowLightIndex, &packet._listLightProbe, &packet._listLightCookie, &packet._listRealtimeProbe );
+        collectSceneLights( &activeScene, packet._listLight, &_listShadowLightIndex, &_lightProbeElement, &packet._listLightCookie, &packet._listRealtimeProbe );
+        packet._pLightProbe = _lightProbeElement.getElements();
         // 하늘도 씬이 갖는다. 없으면 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색).
         const GameObjectManager* pActiveObjects = activeScene.getObjectManager();
         packet._bHasSky                         = ( pActiveObjects != nullptr && pActiveObjects->findServiceSky( packet._sky ) ) ? SW_TRUE : SW_FALSE;

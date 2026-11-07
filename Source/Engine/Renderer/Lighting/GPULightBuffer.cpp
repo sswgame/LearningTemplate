@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
 #include "Engine/Rendering/DirectionalLightComponent.h"
 #include "Engine/Rendering/LightProbeVolumeComponent.h"
@@ -46,38 +47,29 @@ namespace sw
             }
 
             /**
-             * @brief 프로브 볼륨 하나를 라이트 원소(binding_slots.hlsli 8 절의 SW_LIGHT_TYPE_PROBE_VOLUME 배치)로 만들고, 그 프로브들의 SH9 원소를 붙입니다.
+             * @brief 프로브 볼륨 하나를 라이트 원소(binding_slots.hlsli 8 절의 SW_LIGHT_TYPE_PROBE_VOLUME 배치)로 만들고, 그 프로브들의 SH9 원소 자리를 잡습니다.
              * @details 경계 구는 상자의 외접구다 — 라이트 그리드가 점광과 같은 식으로 클러스터에 넣는다. 수와 번호는 실수로 싣는다(2^24 안이면 정확하다).
              */
-            static GPULight makeProbeVolumeElement( const LightProbeGrid& grid, vector<float4>& inoutListProbeElement )
+            static GPULight makeProbeVolumeElement( const LightProbeVolumeComponent& volume, const LightProbeGrid& grid, LightProbeElementBuilder& inoutProbeElement )
             {
-                const uint32   probeBase = static_cast<uint32>( inoutListProbeElement.size() ) / shaderslot::kLightProbeFloat4Count;
-                const GPULight element   = makeVolumeElementFor( grid._layout, probeBase );
-                for ( const SH9Color& probe : grid._listProbe )
-                {
-                    float4 arrElement[SH9Color::kGPUFloat4Count];
-                    probe.makeGPUElement( arrElement );
-                    inoutListProbeElement.insert( inoutListProbeElement.end(), arrElement, arrElement + SH9Color::kGPUFloat4Count );
-                }
-                return element;
+                const uint32 probeBase = inoutProbeElement.appendBakedVolume( volume.getComponentID(), volume.getProbeDataRevision(), grid );
+                return makeVolumeElementFor( grid._layout, probeBase );
             }
 
             /**
              * @brief 실시간 갱신 볼륨의 라이트 원소를 만들고, 프로브 버퍼에 자리(프로브마다 0 으로 채운 SH9 원소)를 잡습니다. 값은 GPU 의 프로브 갱신(`probe_update.hlsl`)이 프레임마다 덮어쓴다.
              * @details 소비 셰이더는 베이크 볼륨과 같은 원소를 읽는다 — 다른 길이 없다. 자리 번호(`_params.w`)가 갱신 컴퓨트의 쓰기 위치이기도 하다.
              */
-            static GPULight makeRealtimeProbeVolumeElement( const LightProbeGridLayout& layout, vector<float4>& inoutListProbeElement )
+            static GPULight makeRealtimeProbeVolumeElement( const LightProbeGridLayout& layout, LightProbeElementBuilder& inoutProbeElement )
             {
-                const uint32   probeBase = static_cast<uint32>( inoutListProbeElement.size() ) / shaderslot::kLightProbeFloat4Count;
-                const GPULight element   = makeVolumeElementFor( layout, probeBase );
-                inoutListProbeElement.resize( inoutListProbeElement.size() + static_cast<size_t>( layout.getProbeCount() ) * shaderslot::kLightProbeFloat4Count, float4{} );
-                return element;
+                const uint32 probeBase = inoutProbeElement.appendRealtimeVolume( layout.getProbeCount() );
+                return makeVolumeElementFor( layout, probeBase );
             }
 
             /**
              * @brief 실시간 볼륨 하나를 라이트 목록 · 프로브 자리 · 갱신 요청 목록에 넣습니다. 복셀 격자 캐시가 낡았으면(상자 · 칸 크기 · 프리미티브 집합이 바뀜) 여기서 다시 만든다.
              */
-            static void appendRealtimeVolume( const GameObjectManager& manager, const LightProbeVolumeComponent& volume, vector<GPULight>& inoutList, vector<float4>& inoutListProbeElement,
+            static void appendRealtimeVolume( const GameObjectManager& manager, const LightProbeVolumeComponent& volume, vector<GPULight>& inoutList, LightProbeElementBuilder& inoutProbeElement,
                                               vector<RealtimeProbeRequest>& inoutListRequest )
             {
                 const PrimitiveRegistry&         primitives = manager.getPrimitiveRegistry();
@@ -93,7 +85,7 @@ namespace sw
 
                 const LightProbeGridLayout layout = volume.computeLayout();
                 RealtimeProbeRequest       request{};
-                request._volumeElement = makeRealtimeProbeVolumeElement( layout, inoutListProbeElement );
+                request._volumeElement = makeRealtimeProbeVolumeElement( layout, inoutProbeElement );
                 request._volumeID      = volume.getComponentID();
                 request._probeCount    = layout.getProbeCount();
                 // 광선 수 · 주기는 스윕 스위치가 0 보다 크면 그 값이다(같은 씬으로 값만 바꿔 잰다).
@@ -125,28 +117,106 @@ namespace sw
              * @brief 반사 프로브 하나를 라이트 원소(binding_slots.hlsli 8 절의 SW_LIGHT_TYPE_REFLECTION_PROBE 배치)로 만들고, 그 옥타헤드럴 텍셀을 프로브 버퍼(t13)에 붙입니다.
              * @details 텍셀 하나가 float4 하나(rgb, a 는 0)다 — SH9 원소와 같은 버퍼라 텍스처 슬롯이 없는 에뮬 백엔드도 같은 길로 읽는다. 경계 구는 상자의 외접구다.
              */
-            static GPULight makeReflectionProbeElement( const ReflectionProbeComponent& probe, const ReflectionProbeAsset& data, vector<float4>& inoutListProbeElement )
+            static GPULight makeReflectionProbeElement( const ReflectionProbeComponent& probe, const ReflectionProbeAsset& data, LightProbeElementBuilder& inoutProbeElement )
             {
                 const float3 center     = probe.getWorldPosition();
                 const float3 halfExtent = probe.getExtent() * 0.5f;
-                const uint32 firstTexel = static_cast<uint32>( inoutListProbeElement.size() );
+                const uint32 firstTexel = inoutProbeElement.appendReflectionProbe( probe.getComponentID(), probe.getProbeDataRevision(), data );
                 GPULight     element{};
                 element._positionRadius = float4{ center._x, center._y, center._z, halfExtent.getLength() };
                 element._colorIntensity = float4{ halfExtent._x, halfExtent._y, halfExtent._z, probe.getBlendDistance() };
                 element._directionType  = float4{ data._capturePosition._x, data._capturePosition._y, data._capturePosition._z, static_cast<float32>( shaderslot::kLightTypeReflectionProbe ) };
                 element._params         = float4{ static_cast<float32>( data._resolution ), static_cast<float32>( data._levelCount ), static_cast<float32>( firstTexel ), 0.0f };
-                inoutListProbeElement.reserve( inoutListProbeElement.size() + data._listTexel.size() );
-                for ( const float3& texel : data._listTexel )
-                {
-                    inoutListProbeElement.push_back( float4{ texel._x, texel._y, texel._z, 0.0f } );
-                }
                 return element;
             }
         };
         static_assert( shaderslot::kLightProbeFloat4Count == SH9Color::kGPUFloat4Count, "셰이더의 프로브 원소 수와 SH9Color 의 GPU 원소 수가 같아야 한다" );
     } // namespace
 
-    void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex, vector<float4>* pOutListProbeElement,
+    void LightProbeElementBuilder::begin()
+    {
+        _listKeyScratch.clear();
+        _listSourceScratch.clear();
+        _elementCountScratch = 0;
+    }
+
+    uint32 LightProbeElementBuilder::appendBakedVolume( uint64 componentID, uint32 revision, const LightProbeGrid& grid )
+    {
+        const uint32 probeBase = _elementCountScratch / shaderslot::kLightProbeFloat4Count;
+        _listKeyScratch.push_back( componentID );
+        _listKeyScratch.push_back( revision );
+        _listSourceScratch.push_back( Source{ &grid, nullptr, 0 } );
+        _elementCountScratch += static_cast<uint32>( grid._listProbe.size() ) * SH9Color::kGPUFloat4Count;
+        return probeBase;
+    }
+
+    uint32 LightProbeElementBuilder::appendRealtimeVolume( uint32 probeCount )
+    {
+        const uint32 probeBase = _elementCountScratch / shaderslot::kLightProbeFloat4Count;
+        // 0 자리의 내용은 수만 정한다. 컴포넌트 번호 0 은 쓰이지 않는 번호라 베이크 원본과 섞이지 않는다.
+        _listKeyScratch.push_back( 0 );
+        _listKeyScratch.push_back( probeCount );
+        _listSourceScratch.push_back( Source{ nullptr, nullptr, probeCount } );
+        _elementCountScratch += probeCount * shaderslot::kLightProbeFloat4Count;
+        return probeBase;
+    }
+
+    uint32 LightProbeElementBuilder::appendReflectionProbe( uint64 componentID, uint32 revision, const ReflectionProbeAsset& data )
+    {
+        const uint32 firstTexel = _elementCountScratch;
+        _listKeyScratch.push_back( componentID );
+        _listKeyScratch.push_back( revision );
+        _listSourceScratch.push_back( Source{ nullptr, &data, 0 } );
+        _elementCountScratch += static_cast<uint32>( data._listTexel.size() );
+        return firstTexel;
+    }
+
+    void LightProbeElementBuilder::finish()
+    {
+        if ( _listSourceScratch.empty() )
+        {
+            _pElements.reset();
+            _listKey.clear();
+            return;
+        }
+        if ( _pElements != nullptr && _listKeyScratch == _listKey )
+            return;
+        rebuildElements();
+        _listKey.swap( _listKeyScratch );
+    }
+
+    void LightProbeElementBuilder::rebuildElements()
+    {
+        // 렌더 스레드가 지난 묶음을 아직 들고 있을 수 있어 새로 만든다(제자리에 쓰지 않는다). 열쇠가 바뀐 프레임에만 온다.
+        auto pElements = make_shared<vector<float4>>();
+        pElements->reserve( _elementCountScratch );
+        for ( const Source& source : _listSourceScratch )
+        {
+            if ( source._pGrid != nullptr )
+            {
+                for ( const SH9Color& probe : source._pGrid->_listProbe )
+                {
+                    float4 arrElement[SH9Color::kGPUFloat4Count];
+                    probe.makeGPUElement( arrElement );
+                    pElements->insert( pElements->end(), arrElement, arrElement + SH9Color::kGPUFloat4Count );
+                }
+            }
+            else if ( source._pReflection != nullptr )
+            {
+                for ( const float3& texel : source._pReflection->_listTexel )
+                {
+                    pElements->push_back( float4{ texel._x, texel._y, texel._z, 0.0f } );
+                }
+            }
+            else
+            {
+                pElements->resize( pElements->size() + static_cast<size_t>( source._realtimeProbeCount ) * shaderslot::kLightProbeFloat4Count, float4{} );
+            }
+        }
+        _pElements = std::move( pElements );
+    }
+
+    void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex, LightProbeElementBuilder* pOutProbeElement,
                              vector<GPULightCookie>* pOutListCookie, vector<RealtimeProbeRequest>* pOutListRealtimeProbe )
     {
         outList.clear();
@@ -154,12 +224,16 @@ namespace sw
             pOutListRealtimeProbe->clear();
         if ( pOutListCookie != nullptr )
             pOutListCookie->clear();
-        if ( pOutListProbeElement != nullptr )
-            pOutListProbeElement->clear();
+        if ( pOutProbeElement != nullptr )
+            pOutProbeElement->begin();
         if ( pOutListShadowLightIndex != nullptr )
             pOutListShadowLightIndex->clear();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
+        {
+            if ( pOutProbeElement != nullptr )
+                pOutProbeElement->finish();
             return;
+        }
 
         const ComponentRegistry& registry = pScene->getObjectManager()->getComponentRegistry();
         // 그림자 플래그는 그림자 행렬을 만드는 쪽(Engine, FrameRenderer)과 **같은 빛**에 붙어야 한다. 고르는 규칙은 씬의 한 함수다.
@@ -195,7 +269,7 @@ namespace sw
 
         // 라이트 프로브 볼륨은 3D 라이트 · 파티클 라이트 뒤에 붙는다. 쓸 수 있는 베이크가 없는 볼륨(베이크하지 않음 · 모양이 다름)은 넣지 않는다 —
         // 그곳은 볼륨이 없는 곳과 같다(이유는 볼륨이 읽을 때 남긴다).
-        if ( pOutListProbeElement != nullptr )
+        if ( pOutProbeElement != nullptr )
         {
             for ( const LightProbeVolumeComponent* pVolume : registry.getAll<LightProbeVolumeComponent>() )
             {
@@ -205,20 +279,21 @@ namespace sw
                 {
                     // 실시간 볼륨은 베이크를 보지 않는다. 요청 목록을 받지 않는 경로(미리보기)는 갱신을 돌리지 못하므로 넣지 않는다 — 그곳은 볼륨이 없는 곳과 같다.
                     if ( pOutListRealtimeProbe != nullptr )
-                        GPULightBufferInternal::appendRealtimeVolume( *pScene->getObjectManager(), *pVolume, outList, *pOutListProbeElement, *pOutListRealtimeProbe );
+                        GPULightBufferInternal::appendRealtimeVolume( *pScene->getObjectManager(), *pVolume, outList, *pOutProbeElement, *pOutListRealtimeProbe );
                     continue;
                 }
                 const LightProbeGrid* pGrid = pVolume->findProbeData();
                 if ( pGrid != nullptr )
-                    outList.push_back( GPULightBufferInternal::makeProbeVolumeElement( *pGrid, *pOutListProbeElement ) );
+                    outList.push_back( GPULightBufferInternal::makeProbeVolumeElement( *pVolume, *pGrid, *pOutProbeElement ) );
             }
             // 반사 프로브는 볼륨 뒤에 붙는다. 쓸 수 있는 베이크가 없는 프로브(베이크하지 않음 · 옮긴 뒤 다시 베이크하지 않음)는 넣지 않는다.
             for ( const ReflectionProbeComponent* pProbe : registry.getAll<ReflectionProbeComponent>() )
             {
                 const ReflectionProbeAsset* pData = ( pProbe != nullptr && pProbe->isActive() ) ? pProbe->findProbeData() : nullptr;
                 if ( pData != nullptr )
-                    outList.push_back( GPULightBufferInternal::makeReflectionProbeElement( *pProbe, *pData, *pOutListProbeElement ) );
+                    outList.push_back( GPULightBufferInternal::makeReflectionProbeElement( *pProbe, *pData, *pOutProbeElement ) );
             }
+            pOutProbeElement->finish();
         }
 
         // 2D 그림자 가림막 세그먼트는 빛 **뒤에** 붙는다. 상한을 넘으면 뒤에서부터 잘리므로 빛보다 가림막이 먼저 빠진다(lighting_2d.hlsli).
@@ -232,13 +307,13 @@ namespace sw
         return MathUtil::min( requestedSlotCount, kMaxGPULight );
     }
 
-    void GPULightBuffer::populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, vector<float4>& inoutListProbeElement, bool bProbeWritable )
+    void GPULightBuffer::populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, const shared_ptr<const vector<float4>>& pProbeElements, bool bProbeWritable )
     {
         _bProbeWritable = bProbeWritable ? SW_TRUE : SW_FALSE;
         // 상한(GPU 구간을 뺀 몫)은 GPU 구간 수를 아는 update 가 맞춘다.
         _listLightScratch.assign( listLight.begin(), listLight.end() );
         _listTileScratch.assign( listShadowTileElement.begin(), listShadowTileElement.end() );
-        _listProbeScratch.swap( inoutListProbeElement );
+        _pProbeElements = pProbeElements;
     }
 
     void GPULightBuffer::update( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj, LightGridProducer producer, uint32 requestedGPULightSlotCount )
@@ -345,20 +420,32 @@ namespace sw
     void GPULightBuffer::uploadProbeElements( IRHIDevice* pDevice )
     {
         // 라이트 프로브 SH9(t13). 볼륨 원소가 라이트 목록에 있으면 그 프로브들이 여기 있다 — 못 올리면 볼륨 원소가 빈 버퍼를 가리키므로 오류로 남긴다.
-        if ( _listProbeScratch.empty() )
+        if ( _pProbeElements == nullptr || _pProbeElements->empty() )
             return;
 
-        const uint32 probeElementCount = static_cast<uint32>( _listProbeScratch.size() );
-        const uint32 probeStride       = static_cast<uint32>( sizeof( float4 ) );
+        const vector<float4>& listProbeElement  = *_pProbeElements;
+        const uint32          probeElementCount = static_cast<uint32>( listProbeElement.size() );
+        const uint32          probeStride       = static_cast<uint32>( sizeof( float4 ) );
         // 실시간 볼륨이 있으면 프로브 갱신 컴퓨트가 이 버퍼를 쓴다 — UAV 가 있는 버퍼로 잡는다(UAV 없이 잡혀 있던 버퍼는 다시 잡는다. 백엔드가 거절한 버퍼는 한 번만 다시 해 본다).
-        const bool bWritable      = _bProbeWritable == SW_TRUE;
+        const bool bWritable = _bProbeWritable == SW_TRUE;
+        // 컴퓨트가 쓰지 않는 버퍼에 이미 같은 묶음이 들어 있으면 올리지 않는다(베이크 프로브만 있는 씬은 내용이 바뀔 때만 올린다).
+        // 컴퓨트가 쓰는 프레임은 예전처럼 올린다 — 0 자리를 다시 까는 흐름을 바꾸지 않는다.
+        if ( bWritable == false && _pUploadedProbeElements == _pProbeElements && _probeBuffer.isValid() )
+        {
+            _probeElementCount = probeElementCount;
+            return;
+        }
+        _pUploadedProbeElements.reset();
+        SW_PROFILE_COUNT( "RT.LightProbe.uploadBytes", probeElementCount * probeStride );
         const bool bLacksProbeUAV = bWritable && _probeBuffer.isValid() && _probeBuffer._uav == kInvalidDescriptorIndex;
         if ( bLacksProbeUAV && _bProbeUAVDenied == SW_FALSE )
             _probeBuffer.release( pDevice );
-        if ( _probeBuffer.ensureCapacity( pDevice, probeStride, probeElementCount, bWritable ? kLightBufferUsageWithUAV : kLightBufferUsage, true, bWritable, _listProbeScratch.data() ) )
+        if ( _probeBuffer.ensureCapacity( pDevice, probeStride, probeElementCount, bWritable ? kLightBufferUsageWithUAV : kLightBufferUsage, true, bWritable, listProbeElement.data() ) )
         {
-            _probeBuffer.upload( pDevice, _listProbeScratch.data(), probeElementCount * probeStride );
-            _probeElementCount      = probeElementCount;
+            _probeBuffer.upload( pDevice, listProbeElement.data(), probeElementCount * probeStride );
+            _probeElementCount = probeElementCount;
+            if ( bWritable == false )
+                _pUploadedProbeElements = _pProbeElements;
             const bool bNewlyDenied = bWritable && _probeBuffer._uav == kInvalidDescriptorIndex;
             if ( bNewlyDenied && _bProbeUAVDenied == SW_FALSE )
             {
@@ -498,6 +585,7 @@ namespace sw
         _gpuGridBuffer.release( pDevice );
         _gpuGridViewBuffer.release( pDevice );
         _probeBuffer.release( pDevice );
+        _pUploadedProbeElements.reset();
         _probeElementCount = 0;
         _count             = 0;
         _cpuCount          = 0;

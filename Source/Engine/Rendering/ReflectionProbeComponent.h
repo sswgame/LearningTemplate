@@ -57,6 +57,8 @@ namespace sw
          * @param path 그 데이터를 쓴 `.reflprobe` 리소스 경로
          */
         [[nodiscard]] bool applyProbeData( ReflectionProbeAsset&& data, string_view path );
+        /** @brief 베이크 데이터를 바꿀 때마다 오르는 번호입니다. 컴포넌트 번호와 함께 텍셀 내용을 가린다 — 같으면 프로브 버퍼 원소를 다시 펼치지 않는다(`LightProbeElementBuilder`). */
+        uint32 getProbeDataRevision() const { return _probeDataRevision; }
 
         /** @brief 씬에 붙을 때 레지스트리에 자기를 등록합니다. */
         void onRegister( GameObjectManager& manager ) override;
@@ -88,6 +90,7 @@ namespace sw
         PROPERTY( Category = "Reflection Probe Bake", DisplayName = "Samples Per Texel", Min = 1, Max = 4096, Tooltip = "GGX samples each prefiltered texel takes" )
         uint32 _bakeSampleCount;
 
-        ReflectionProbeAsset _probeData; ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
+        ReflectionProbeAsset _probeData;         ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
+        uint32               _probeDataRevision; ///< `_probeData` 를 바꿀 때마다 오른다(`getProbeDataRevision`)
     };
 } // namespace sw

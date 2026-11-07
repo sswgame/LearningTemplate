@@ -58,6 +58,7 @@ namespace sw
         , _realtimeUpdatePeriod{ LightProbeVolumeComponentInternal::kDefaultRealtimeUpdatePeriod }
         , _realtimeBlend{ LightProbeVolumeComponentInternal::kDefaultRealtimeBlend }
         , _probeData{}
+        , _probeDataRevision{ 0 }
         , _pRealtimeVoxelGrid{}
         , _realtimeVoxelSetGeneration{ 0 }
         , _realtimeVoxelBounds{}
@@ -141,6 +142,7 @@ namespace sw
         }
         _probeData     = std::move( grid );
         _probeDataPath = string( path );
+        ++_probeDataRevision;
         return true;
     }
 
@@ -171,6 +173,8 @@ namespace sw
 
     void LightProbeVolumeComponent::reloadProbeData()
     {
+        // 아래의 읽기 · 비우기가 모두 데이터를 바꾼다 — 갈래마다 올리지 않고 들어올 때 한 번 올린다.
+        ++_probeDataRevision;
         _probeData.clear();
         if ( _probeDataPath.empty() )
             return;

@@ -38,6 +38,7 @@ namespace sw
         , _captureResolution{ ReflectionProbeComponentInternal::kDefaultCaptureResolution }
         , _bakeSampleCount{ ReflectionProbeComponentInternal::kDefaultBakeSampleCount }
         , _probeData{}
+        , _probeDataRevision{ 0 }
     {
     }
 
@@ -74,6 +75,7 @@ namespace sw
         }
         _probeData     = std::move( data );
         _probeDataPath = string( path );
+        ++_probeDataRevision;
         return true;
     }
 
@@ -104,6 +106,8 @@ namespace sw
 
     void ReflectionProbeComponent::reloadProbeData()
     {
+        // 아래의 읽기 · 비우기가 모두 데이터를 바꾼다 — 갈래마다 올리지 않고 들어올 때 한 번 올린다.
+        ++_probeDataRevision;
         _probeData.clear();
         if ( _probeDataPath.empty() )
             return;

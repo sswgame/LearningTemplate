@@ -328,15 +328,17 @@ SW_TEST_CASE( RealtimeProbeTest, CollectsRealtimeVolumeWithPlaceholderAndRequest
     SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.0f, 0.0f, 0.0f }, sw::RHIBlendMode::Opaque, true ) );
 
     sw::vector<sw::GPULight>             listLight;
-    sw::vector<sw::float4>               listProbe;
+    sw::LightProbeElementBuilder         probeElement;
     sw::vector<sw::RealtimeProbeRequest> listRequest;
-    collectSceneLights( &scene, listLight, nullptr, &listProbe, nullptr, &listRequest );
+    collectSceneLights( &scene, listLight, nullptr, &probeElement, nullptr, &listRequest );
     SW_REQUIRE_EQUAL( size_t( 1 ), listLight.size() );
     SW_REQUIRE_EQUAL( size_t( 1 ), listRequest.size() );
     SW_EXPECT_EQUAL( static_cast<uint32>( listLight[0]._directionType._w ), sw::shaderslot::kLightTypeProbeVolume );
-    const size_t probeCount = static_cast<size_t>( pVolume->computeLayout().getProbeCount() );
-    SW_EXPECT_EQUAL( probeCount * sw::shaderslot::kLightProbeFloat4Count, listProbe.size() );
-    for ( const sw::float4& element : listProbe )
+    const size_t                                       probeCount = static_cast<size_t>( pVolume->computeLayout().getProbeCount() );
+    const sw::shared_ptr<const sw::vector<sw::float4>> pProbe     = probeElement.getElements();
+    SW_REQUIRE_NOT_NULL( pProbe.get() );
+    SW_EXPECT_EQUAL( probeCount * sw::shaderslot::kLightProbeFloat4Count, pProbe->size() );
+    for ( const sw::float4& element : *pProbe )
     {
         SW_EXPECT_NEAR( 0.0f, element._x + element._y + element._z + element._w, 0.0f ); // 자리는 0 - 값은 컴퓨트가 쓴다
     }
@@ -348,17 +350,19 @@ SW_TEST_CASE( RealtimeProbeTest, CollectsRealtimeVolumeWithPlaceholderAndRequest
     SW_EXPECT_EQUAL( listLight[0]._params._x, request._volumeElement._params._x );
 
     // 같은 집합이면 같은 격자(캐시), 메시가 하나 늘면 새 격자.
+    // 프로브 원소 묶음도 내용(자리 수)이 그대로면 같은 포인터다 - 렌더 스레드가 다시 올리지 않는다.
     sw::vector<sw::RealtimeProbeRequest> again;
-    collectSceneLights( &scene, listLight, nullptr, &listProbe, nullptr, &again );
+    collectSceneLights( &scene, listLight, nullptr, &probeElement, nullptr, &again );
     SW_REQUIRE_EQUAL( size_t( 1 ), again.size() );
     SW_EXPECT_TRUE( again[0]._pVoxelGrid == request._pVoxelGrid );
+    SW_EXPECT_TRUE( probeElement.getElements() == pProbe );
     SW_REQUIRE_NOT_NULL( addCube( pObjects, "Second", sw::float3{ 1.0f, 0.0f, 0.0f }, sw::RHIBlendMode::Opaque, true ) );
-    collectSceneLights( &scene, listLight, nullptr, &listProbe, nullptr, &again );
+    collectSceneLights( &scene, listLight, nullptr, &probeElement, nullptr, &again );
     SW_REQUIRE_EQUAL( size_t( 1 ), again.size() );
     SW_EXPECT_TRUE( again[0]._pVoxelGrid != request._pVoxelGrid );
 
     // 요청 목록을 받지 않는 수집은 실시간 볼륨을 넣지 않는다.
-    collectSceneLights( &scene, listLight, nullptr, &listProbe );
+    collectSceneLights( &scene, listLight, nullptr, &probeElement );
     SW_EXPECT_EQUAL( size_t( 0 ), listLight.size() );
-    SW_EXPECT_EQUAL( size_t( 0 ), listProbe.size() );
+    SW_EXPECT_TRUE( probeElement.getElements() == nullptr );
 }

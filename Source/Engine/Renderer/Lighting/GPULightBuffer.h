@@ -33,6 +33,8 @@ namespace sw
 {
     class IRHIDevice;
     class Scene;
+    struct LightProbeGrid;
+    struct ReflectionProbeAsset;
 
     /** @brief 쿠키(빛 텍스처)를 쓰는 빛 하나입니다 — 라이트 목록의 원소 번호와 텍스처 경로입니다. 렌더러가 칸을 나눠 그 원소의 `_extra.w` 에 적습니다(`Light2DCookieAtlas`). */
     struct GPULightCookie
@@ -65,6 +67,56 @@ namespace sw
 namespace sw
 {
     /**
+     * @class LightProbeElementBuilder
+     * @brief 프로브 버퍼(t13)에 올릴 원소(라이트 프로브 SH9 · 반사 프로브 텍셀 · 실시간 볼륨의 0 자리)를 모읍니다. 게임 스레드의 수집기가 프레임을 넘어 들고 있습니다.
+     * @details 원소는 불변 공유 값(`getElements`)으로 렌더 스레드에 간다. 원소의 내용은 (컴포넌트 번호, 데이터 번호)의 차례와 실시간 볼륨의 프로브 수로 정해지므로
+     *          그 열쇠가 지난 프레임과 같으면 펼치지 않고 지난 묶음을 그대로 준다 — 렌더 스레드는 같은 묶음이면 다시 올리지 않는다(`GPULightBuffer::uploadProbeElements`).
+     *          예전에는 바뀐 것이 없어도 프레임마다 펼치고(게임 스레드) · 베끼고(렌더 스레드) · 올렸다(상한이면 프로브 하나에 프레임당 8.4 MB).
+     *          자리 번호(볼륨의 첫 프로브 · 반사 프로브의 첫 텍셀)는 펼치기 전에 정해진다 — 라이트 원소는 프레임마다 만들고 원소 묶음만 다시 쓴다.
+     */
+    class SW_API LightProbeElementBuilder
+    {
+    public:
+        /** @brief 이번 수집을 시작합니다(열쇠와 원본 목록을 비운다. 지난 묶음은 남는다). */
+        void begin();
+        /**
+         * @brief 베이크 볼륨 하나의 SH9 원소 자리를 잡습니다.
+         * @param componentID · revision 데이터를 가리는 열쇠(`LightProbeVolumeComponent::getProbeDataRevision`)
+         * @return 그 볼륨의 첫 프로브 번호(프로브 단위)
+         */
+        [[nodiscard]] uint32 appendBakedVolume( uint64 componentID, uint32 revision, const LightProbeGrid& grid );
+        /** @brief 실시간 볼륨 하나의 자리(0 으로 채운 프로브 @p probeCount 개)를 잡고 첫 프로브 번호(프로브 단위)를 돌려줍니다. 값은 GPU 의 갱신 컴퓨트가 쓴다. */
+        [[nodiscard]] uint32 appendRealtimeVolume( uint32 probeCount );
+        /** @brief 반사 프로브 하나의 텍셀 자리를 잡고 첫 텍셀 번호(float4 단위)를 돌려줍니다. */
+        [[nodiscard]] uint32 appendReflectionProbe( uint64 componentID, uint32 revision, const ReflectionProbeAsset& data );
+        /** @brief 이번 수집을 끝냅니다. 열쇠가 지난번과 다를 때만 원소를 펼쳐 새 묶음을 만든다. 잡은 자리가 없으면 묶음은 nullptr 입니다. */
+        void finish();
+        /** @brief 마지막 `finish` 의 원소 묶음입니다(자리가 없었으면 nullptr). 같은 내용이면 같은 포인터다. */
+        const shared_ptr<const vector<float4>>& getElements() const { return _pElements; }
+
+    private:
+        /** @brief 펼칠 원본 하나입니다 — 셋 중 하나만 쓴다. 원본은 수집(게임 스레드) 안에서만 산다. */
+        struct Source
+        {
+            const LightProbeGrid*       _pGrid{ nullptr };
+            const ReflectionProbeAsset* _pReflection{ nullptr };
+            uint32                      _realtimeProbeCount{ 0 };
+        };
+        /** @brief 원본 목록을 펼쳐 새 묶음을 만듭니다. */
+        void rebuildElements();
+
+    private:
+        vector<uint64>                   _listKeyScratch;           ///< 이번 수집의 열쇠(원본마다 두 단어)
+        vector<uint64>                   _listKey;                  ///< `_pElements` 를 만든 열쇠
+        vector<Source>                   _listSourceScratch;        ///< 이번 수집의 원본(차례대로)
+        uint32                           _elementCountScratch{ 0 }; ///< 이번 수집에서 잡은 원소 수(float4)
+        shared_ptr<const vector<float4>> _pElements;                ///< 마지막으로 만든 묶음
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @brief 씬의 활성 라이트를 GPU 원소로 모읍니다(게임 스레드).
      * @details 레지스트리(`ComponentRegistry`)만 봅니다. 주의: 모든 GameObject 를 도는 경로를 만들지 않습니다
      *          (큐브 20,000 개에서 그 훑기 한 번이 2.9ms 입니다).
@@ -73,17 +125,17 @@ namespace sw
      *       나옵니다. 그림자를 켠 점광과 스폿은 번호만 @p pOutListShadowLightIndex 에 적고, 아틀라스 슬롯은 `FrameShadowData::populateFrame` 이 나눠 줍니다.
      * @param outList 기존 내용을 지우고 채웁니다. 부르는 쪽이 프레임마다 재사용하는 버퍼여야 합니다(할당 회피).
      * @param pOutListShadowLightIndex 비지 않으면 그림자를 켠 점광과 스폿 원소의 번호를 지우고 채웁니다.
-     * @param pOutListProbeElement 비지 않으면 쓸 수 있는 베이크를 가진 라이트 프로브 볼륨마다 볼륨 원소(`kLightTypeProbeVolume`, 3D 라이트 뒤)를 목록에 넣고
-     *                             그 프로브들의 SH9 원소(프로브 하나가 float4 `kLightProbeFloat4Count` 개)를 지우고 채웁니다. 반사 프로브도 같은 길이다 — 볼륨 뒤에
-     *                             반사 프로브 원소(`kLightTypeReflectionProbe`)를 넣고 그 옥타헤드럴 텍셀(텍셀 하나가 float4 하나)을 같은 목록에 붙입니다.
-     *                             nullptr 이면 볼륨도 반사 프로브도 모으지 않습니다.
+     * @param pOutProbeElement 비지 않으면 쓸 수 있는 베이크를 가진 라이트 프로브 볼륨마다 볼륨 원소(`kLightTypeProbeVolume`, 3D 라이트 뒤)를 목록에 넣고
+     *                         그 프로브들의 SH9 원소(프로브 하나가 float4 `kLightProbeFloat4Count` 개)를 모읍니다. 반사 프로브도 같은 길이다 — 볼륨 뒤에
+     *                         반사 프로브 원소(`kLightTypeReflectionProbe`)를 넣고 그 옥타헤드럴 텍셀(텍셀 하나가 float4 하나)을 같은 묶음에 붙입니다.
+     *                         결과는 `LightProbeElementBuilder::getElements` 다(내용이 같으면 지난 묶음). nullptr 이면 볼륨도 반사 프로브도 모으지 않습니다.
      * @param pOutListCookie 비지 않으면 쿠키 텍스처를 쓰는 빛(`LightComponent::getCookieTexturePath`)마다 원소 번호와 경로를 지우고 채웁니다. nullptr 이면
      *                       그 빛은 쿠키 없이 그려진다 — 아틀라스를 만들지 않는 경로(라이트 프로브 베이크)만 넘긴다.
      * @param pOutListRealtimeProbe 비지 않으면 실시간 갱신 볼륨(`LightProbeVolumeComponent::isRealtime`)마다 볼륨 원소(자리는 0 으로 채운 프로브 원소)를 넣고 갱신 요청을 지우고 채웁니다.
      *                              nullptr 이면 실시간 볼륨은 모으지 않습니다(갱신을 돌릴 수 없는 경로 — 미리보기와 베이크).
      */
     SW_API void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex = nullptr,
-                                    vector<float4>* pOutListProbeElement = nullptr, vector<GPULightCookie>* pOutListCookie = nullptr,
+                                    LightProbeElementBuilder* pOutProbeElement = nullptr, vector<GPULightCookie>* pOutListCookie = nullptr,
                                     vector<RealtimeProbeRequest>* pOutListRealtimeProbe = nullptr );
 
     /**
@@ -131,10 +183,11 @@ namespace sw
          * @brief 이번 프레임의 라이트와 그림자 타일 원소를 업로드 목록에 담습니다. 업로드는 뷰가 정해진 뒤 `update` 가 합니다.
          * @details 상한 처리(`shaderslot::kMaxFrameLight` 에서 GPU 구간을 뺀 몫)는 GPU 구간 수를 아는 `update` 가 합니다.
          *          @p listShadowTileElement(점광과 스폿 그림자 타일)는 라이트 뒤에 붙고 `getCount` 에 들지 않습니다.
-         *          @p inoutListProbeElement(라이트 프로브 SH9, `collectSceneLights`)는 따로 프로브 버퍼(t13)로 올라갑니다. 맞바꾸기라 지난 프레임의 저장소가 패킷으로 돌아간다(베이크 반사 프로브는 프로브 하나에 수 MB 까지 간다).
+         *          @p pProbeElements(라이트 프로브 SH9 · 반사 프로브 텍셀, `LightProbeElementBuilder`)는 따로 프로브 버퍼(t13)로 올라갑니다. 불변 공유 값이라 베끼지 않고,
+         *          지난번에 올린 묶음과 같은 포인터면 다시 올리지 않는다(실시간 볼륨이 있어 컴퓨트가 버퍼를 쓰는 프레임은 예전처럼 올린다 — 0 자리를 다시 깐다).
          * @param bProbeWritable 실시간 프로브 볼륨이 있어 컴퓨트(`probe_update.hlsl`)가 프로브 버퍼를 쓴다 — 프로브 버퍼가 UAV 가 있는 기본 힙 버퍼가 된다.
          */
-        void populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, vector<float4>& inoutListProbeElement, bool bProbeWritable );
+        void populate( const vector<GPULight>& listLight, const vector<GPULight>& listShadowTileElement, const shared_ptr<const vector<float4>>& pProbeElements, bool bProbeWritable );
 
         /**
          * @brief 라이트 버퍼를 올리고, 뷰마다 라이트 그리드를 준비합니다.
@@ -185,7 +238,7 @@ namespace sw
         uint32 limitCPULightCount();
         /** @brief 업로드 목록([CPU 라이트][GPU 구간][그림자 타일])을 만들고 라이트 버퍼를 갖춰 올립니다. 버퍼를 잡지 못하면 개수를 0 으로 돌리고 false 입니다. */
         bool uploadLightList( IRHIDevice* pDevice, uint32 cpuCount );
-        /** @brief 라이트 프로브 SH9 원소를 올립니다(없으면 아무것도 하지 않습니다). */
+        /** @brief 라이트 프로브 SH9 원소를 올립니다(없으면 아무것도 하지 않습니다). 쓰는 컴퓨트가 없고 지난번에 올린 묶음과 같으면 올리지 않습니다. */
         void uploadProbeElements( IRHIDevice* pDevice );
         /** @brief CPU 생산자 — 뷰마다 `LightGrid` 를 채워 단어를 이어 붙여 올립니다. */
         void updateCPUGrid( IRHIDevice* pDevice, const vector<float4x4>& listGridViewProj );
@@ -197,26 +250,27 @@ namespace sw
         void reportGPULightRefused( uint32 requestedSlotCount );
 
     private:
-        RHIStructuredBuffer _buffer;
-        RHIStructuredBuffer _cpuGridBuffer;                           ///< CPU 생산자의 그리드 단어(동적, t12)
-        RHIStructuredBuffer _gpuGridBuffer;                           ///< GPU 생산자의 그리드 단어(기본 힙 UAV, t12 · 컴퓨트 u0)
-        RHIStructuredBuffer _gpuGridViewBuffer;                       ///< GPU 생산자의 뷰 정보(float4 × SW_LIGHT_GRID_VIEW_FLOAT4_COUNT, 컴퓨트 t1)
-        RHIStructuredBuffer _probeBuffer;                             ///< 라이트 프로브 SH9 · 반사 프로브 텍셀(float4, t13)
-        vector<float4>      _listProbeScratch;                        ///< 이번 프레임의 프로브 원소(`populate` 가 담고 `update` 가 올린다)
-        uint32              _probeElementCount{ 0 };                  ///< 이번 프레임에 올린 프로브 원소 수(0 이면 프로브 버퍼를 걸지 않는다)
-        uint8               _bProbeWritable{ SW_FALSE };              ///< 이번 프레임에 컴퓨트가 프로브 버퍼를 쓴다(`populate`)
-        vector<GPULight>    _listLightScratch;                        ///< 이번 프레임의 CPU 라이트(`populate` 가 담고 `update` 가 상한을 맞춰 올린다)
-        vector<GPULight>    _listTileScratch;                         ///< 이번 프레임의 그림자 타일 원소(`populate` 가 담는다)
-        vector<GPULight>    _listUploadScratch;                       ///< CPU 라이트 · GPU 구간(죽은 라이트) · 그림자 타일을 이어 붙여 한 번에 업로드하는 임시 버퍼(프레임마다 다시 쓴다)
-        vector<LightGrid>   _listGrid;                                ///< 뷰마다의 라이트 그리드(CPU 생산자, 저장소를 프레임마다 다시 쓴다)
-        vector<uint32>      _listGridWordScratch;                     ///< 뷰마다의 그리드 단어를 이어 붙인 업로드 임시 버퍼(CPU 생산자)
-        vector<float4>      _listGridViewScratch;                     ///< 뷰마다의 뷰 정보(GPU 생산자)
-        vector<uint32>      _listGridBase;                            ///< 뷰마다 그리드의 첫 단어(없으면 constant::invalid_index::kUint32)
-        uint32              _count{ 0 };                              ///< 셰이더가 보는 라이트 수 = CPU 라이트 + GPU 구간
-        uint32              _cpuCount{ 0 };                           ///< 올라간 CPU 라이트 수(= GPU 구간의 첫 번호)
-        uint32              _gpuLightCount{ 0 };                      ///< 받은 GPU 구간의 슬롯 수
-        uint32              _gpuGridViewCount{ 0 };                   ///< GPU 생산자가 이번 프레임에 채울 뷰 수
-        LightGridProducer   _gridProducer{ LightGridProducer::None }; ///< 이번 프레임에 그리드 버퍼를 채운 쪽
+        RHIStructuredBuffer              _buffer;
+        RHIStructuredBuffer              _cpuGridBuffer;                           ///< CPU 생산자의 그리드 단어(동적, t12)
+        RHIStructuredBuffer              _gpuGridBuffer;                           ///< GPU 생산자의 그리드 단어(기본 힙 UAV, t12 · 컴퓨트 u0)
+        RHIStructuredBuffer              _gpuGridViewBuffer;                       ///< GPU 생산자의 뷰 정보(float4 × SW_LIGHT_GRID_VIEW_FLOAT4_COUNT, 컴퓨트 t1)
+        RHIStructuredBuffer              _probeBuffer;                             ///< 라이트 프로브 SH9 · 반사 프로브 텍셀(float4, t13)
+        shared_ptr<const vector<float4>> _pProbeElements;                          ///< 이번 프레임의 프로브 원소(`populate` 가 담고 `update` 가 올린다)
+        shared_ptr<const vector<float4>> _pUploadedProbeElements;                  ///< 프로브 버퍼에 들어 있는 묶음(컴퓨트가 쓰지 않은 것만. 쥐고 있어 같은 주소의 다른 묶음이 생기지 않는다)
+        uint32                           _probeElementCount{ 0 };                  ///< 이번 프레임에 올린 프로브 원소 수(0 이면 프로브 버퍼를 걸지 않는다)
+        uint8                            _bProbeWritable{ SW_FALSE };              ///< 이번 프레임에 컴퓨트가 프로브 버퍼를 쓴다(`populate`)
+        vector<GPULight>                 _listLightScratch;                        ///< 이번 프레임의 CPU 라이트(`populate` 가 담고 `update` 가 상한을 맞춰 올린다)
+        vector<GPULight>                 _listTileScratch;                         ///< 이번 프레임의 그림자 타일 원소(`populate` 가 담는다)
+        vector<GPULight>                 _listUploadScratch;                       ///< CPU 라이트 · GPU 구간(죽은 라이트) · 그림자 타일을 이어 붙여 한 번에 업로드하는 임시 버퍼(프레임마다 다시 쓴다)
+        vector<LightGrid>                _listGrid;                                ///< 뷰마다의 라이트 그리드(CPU 생산자, 저장소를 프레임마다 다시 쓴다)
+        vector<uint32>                   _listGridWordScratch;                     ///< 뷰마다의 그리드 단어를 이어 붙인 업로드 임시 버퍼(CPU 생산자)
+        vector<float4>                   _listGridViewScratch;                     ///< 뷰마다의 뷰 정보(GPU 생산자)
+        vector<uint32>                   _listGridBase;                            ///< 뷰마다 그리드의 첫 단어(없으면 constant::invalid_index::kUint32)
+        uint32                           _count{ 0 };                              ///< 셰이더가 보는 라이트 수 = CPU 라이트 + GPU 구간
+        uint32                           _cpuCount{ 0 };                           ///< 올라간 CPU 라이트 수(= GPU 구간의 첫 번호)
+        uint32                           _gpuLightCount{ 0 };                      ///< 받은 GPU 구간의 슬롯 수
+        uint32                           _gpuGridViewCount{ 0 };                   ///< GPU 생산자가 이번 프레임에 채울 뷰 수
+        LightGridProducer                _gridProducer{ LightGridProducer::None }; ///< 이번 프레임에 그리드 버퍼를 채운 쪽
         /// @brief 상한 초과 경고를 한 번만 남기기 위한 표시입니다.
         uint8 _bWarnedOverflow{ SW_FALSE };
         /// @brief 그리드를 만들지 못한 뷰의 오류를 한 번만 남기기 위한 표시입니다.
