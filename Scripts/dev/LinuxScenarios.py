@@ -33,8 +33,10 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common.HostPlatform import isWindowsHost  # noqa: E402
 
 DISTRO = 'Ubuntu-26.04'
-WINDOWS_REPO = pathlib.Path(__file__).resolve().parents[2]
-WSL_REPO = '/mnt/d/Projects/Personal/LearningTemplate'
+REPO = pathlib.Path(__file__).resolve().parents[2]
+# 저장소의 WSL 경로 — WSL 안에서는 이 파일의 자리가 곧 그 경로다(/mnt/<드라이브>/…, 체크아웃 위치를 고정하지 않는다).
+# Windows 쪽은 쓰지 않고 다시 띄울 때 `wslpath -a` 로 구해 넘긴다(run_in_wsl). 예전에는 /mnt/d/… 로 고정해 다른 드라이브 · 위치의 클론에서 다른 트리를 가리켰다.
+WSL_REPO = None if isWindowsHost() else REPO.as_posix()
 HOME = os.path.expanduser('~')
 CLONE = f'{HOME}/LT-linux'
 RELEASE = f'{CLONE}/build/Linux-Release'
@@ -55,10 +57,20 @@ PATH_LINUX = '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'  # W
 def run_in_wsl(argv):
     """Windows 쪽: HEAD 를 refs/linux-verify 에 적고 같은 명령을 WSL 에서 띄운다."""
     if argv and argv[0] in ('build', 'all'):
-        head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=WINDOWS_REPO, text=True).strip()
-        subprocess.check_call(['git', 'update-ref', 'refs/linux-verify', head], cwd=WINDOWS_REPO)
+        head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip()
+        subprocess.check_call(['git', 'update-ref', 'refs/linux-verify', head], cwd=REPO)
     env = dict(os.environ, MSYS_NO_PATHCONV='1', MSYS2_ARG_CONV_EXCL='*')
-    return subprocess.call(['wsl.exe', '-d', DISTRO, '--', 'python3', f'{WSL_REPO}/Scripts/dev/LinuxScenarios.py'] + argv, env=env)
+    wslRepo = to_wsl_path(REPO, env)
+    return subprocess.call(['wsl.exe', '-d', DISTRO, '--', 'python3', f'{wslRepo}/Scripts/dev/LinuxScenarios.py'] + argv, env=env)
+
+
+def to_wsl_path(windowsPath, env):
+    """Windows 경로를 이 배포판의 WSL 경로로 바꾼다(`wslpath -a`). 못 바꾸면 오류로 멈춘다 — 고정 경로로 대신하지 않는다."""
+    result = subprocess.run(['wsl.exe', '-d', DISTRO, '--', 'wslpath', '-a', windowsPath.as_posix()], env=env, capture_output=True, text=True)
+    converted = result.stdout.strip()
+    if result.returncode != 0 or not converted.startswith('/'):
+        sys.exit(f'LinuxScenarios: wslpath could not convert {windowsPath} ({result.stderr.strip()})')
+    return converted
 
 
 def shell(command, **kwargs):
