@@ -175,7 +175,7 @@ namespace sw
      * @brief 게임의 네트워크 호스트(포트 샤드마다 하나), 스레드, 메시지 라우터를 들고 있습니다. 엔진이 소유하고 게임 인스턴스가 열고 프레임마다 `update` 합니다.
      * @code
      *     GameNetSessionParams params;
-     *     if ( session.openFromLaunch() == false ) return false; // 게임 인스턴스 initialize(이미 열렸으면 그대로, 틀린 인자면 멈춤)
+     *     if ( session.openFromLaunch( contentConfigHash ) == false ) return false; // 게임 인스턴스 initialize(이미 열렸으면 그대로, 틀린 인자면 멈춤)
      *     _subscription = session.getRouter().registerHandler( &replicationServer ); // 키트 — 보내기는 session.getPeers(). 구독이 사라지면 뗀다
      *     session.update();                                     // 프레임마다(게임 스레드)
      *     session.shutdown();
@@ -195,8 +195,17 @@ namespace sw
          * @brief `makeLaunchParams` 가 정한 역할(실행 인자, 없으면 전용 서버 설정)로 세션을 엽니다. 이미 열려 있으면 그대로 둡니다(리로드로 다시 선 게임 인스턴스).
          * @details 둘 다 없으면 열지 않고 true 다(혼자 하는 게임). 인자 · 설정이 틀렸거나 고른 역할을 열지 못하면(포트 사용 중) false 다 —
          *          게임 인스턴스는 기동을 멈춘다. 서버 · 클라이언트로 띄운 프로세스가 혼자 하는 게임으로 서 있으면 멀티 프로세스 재생과 테스트가 접속 줄을 기다리다 시간 초과로 진다.
+         *          @p contentConfigHash 는 이 실행의 콘텐츠 구성(켠 모드 등, 없으면 0)이고 와이어 버전에 섞인다(`foldContentConfigHash`) — 구성이 다른 상대는 핸드셰이크에서
+         *          `VersionMismatch` 로 갈린다. 열린 세션을 이어받는 리로드가 다른 구성이면 오류로 false 다(붙은 상대와 다른 콘텐츠로 계속 돌지 않는다).
          */
-        [[nodiscard]] bool openFromLaunch();
+        [[nodiscard]] bool openFromLaunch( uint64 contentConfigHash );
+        /**
+         * @brief 와이어 버전 @p wireVersion 에 콘텐츠 구성 해시를 섞습니다. 해시가 0(구성 없음)이면 그대로입니다 — 모드 없는 실행의 와이어 버전은 바뀌지 않는다.
+         * @details 언리얼이 콘텐츠 해시를 넷 버전에 섞는 자리(`FNetworkVersion::GetLocalNetworkVersionOverride`)와 같다(기억에 의존). 섞는 규칙은 이 함수 하나다.
+         */
+        static uint32 foldContentConfigHash( uint32 wireVersion, uint64 contentConfigHash );
+        /** @brief 세션을 연 콘텐츠 구성 해시입니다(열지 않았으면 0). */
+        uint64 getContentConfigHash() const { return _contentConfigHash; }
 
         /** @brief 주소에 포트가 없을 때의 기본 게임 포트입니다. 언리얼 기본 포트와 같으며 `ServerConfig::_gamePort` 기본값도 같습니다. */
         static constexpr uint16 kDefaultPort = 7777;
@@ -411,8 +420,9 @@ namespace sw
         vector<NetEndpointEvent>          _listEventScratch;     ///< `update` 가 다시 쓴다
         vector<ReplicaStat>               _listReplicaStat;      ///< 복제 키트가 올린 셈(`setReplicaStats`)
         NetAddress                        _serverAddress;
-        NetConnectCredentials             _credentials;      ///< 클라이언트 — 내미는 접속 티켓. 거절되면 지운다(옛 비밀을 들고 있지 않는다)
-        uint64                            _latestServerTick; ///< 클라이언트 — 받은 가장 새 서버 틱(`_bServerTickKnown` 일 때만 뜻이 있다)
+        NetConnectCredentials             _credentials;       ///< 클라이언트 — 내미는 접속 티켓. 거절되면 지운다(옛 비밀을 들고 있지 않는다)
+        uint64                            _latestServerTick;  ///< 클라이언트 — 받은 가장 새 서버 틱(`_bServerTickKnown` 일 때만 뜻이 있다)
+        uint64                            _contentConfigHash; ///< 세션을 연 콘텐츠 구성 해시(`openFromLaunch`)
         uint16                            _listenPort;
         GameNetRole                       _role;
         uint8                             _bTicketBound;            ///< 클라이언트 — 티켓을 내미는 세션이다(티켓이 지워진 뒤에는 새 티켓 없이 다시 붙지 않는다)

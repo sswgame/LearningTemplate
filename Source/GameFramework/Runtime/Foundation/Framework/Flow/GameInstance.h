@@ -135,6 +135,12 @@ namespace sw
         virtual void configurePackConfig( GamePackConfig& outConfig ) { (void)outConfig; }
         /** @brief 팩의 gamesettings 를 `_packConfig` 으로 읽습니다. 실패하면 게임 초기화가 실패합니다(기본값으로 서지 않는다). 팩 없이 만드는 테스트만 XML 문자열(`loadFromXMLText`)로 오버라이드합니다. */
         [[nodiscard]] virtual bool loadGameSettings();
+        /**
+         * @brief 콘텐츠 구성(켠 모드 등)을 정하는 파생 훅입니다. 네트워크 세션을 열기 전 · 첫 씬과 리소스를 읽기 전에 한 번 부릅니다. 실패하면 게임을 띄우지 않는다.
+         * @details 구성을 정했으면 게임 범위에 `IContentConfiguration` 으로 건다 — 기동이 그 해시를 넷 와이어 버전에 섞고(구성이 다른 상대는 핸드셰이크에서 갈린다)
+         *          세이브 봉투 머리에 적는다(`GameStateSnapshot`). 걸지 않으면 구성 없음이다.
+         */
+        [[nodiscard]] virtual bool onPrepareContent() { return true; }
         /** @brief 팩 설정을 읽은 뒤 부르는 파생 초기화 훅입니다. */
         virtual bool onInitialize() { return true; }
         /** @brief 파생 종료 훅입니다. */

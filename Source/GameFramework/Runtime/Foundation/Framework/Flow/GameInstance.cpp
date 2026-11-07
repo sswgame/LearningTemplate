@@ -22,6 +22,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
@@ -199,10 +200,18 @@ namespace sw
         // 네트워크 세션은 엔진 수명이다 — 처음이면 실행 인자로 열고, 리로드로 다시 선 인스턴스는 열린 세션을 이어받는다(클라이언트가 끊기지 않는다).
         // 서버 · 클라이언트로 띄웠는데 열지 못하면(틀린 인자 · 포트 사용 중) 혼자 하는 게임으로 서지 않는다.
         // 티켓 게임 포트가 쓸 암호 제공자(OpenSSL)는 GameFramework 에 있어 Engine 이 모른다 — 세션을 열기 전에 넣는다.
-        GameNetSession& netSession = game::getSubsystem<GameNetSession>(); // `checkEngineServices` 가 있음을 확인했다
+        // 콘텐츠 구성(켠 모드)은 세션을 열기 전에 정한다 — 그 해시가 와이어 버전에 섞여 구성이 다른 상대가 핸드셰이크에서 갈린다.
+        if ( onPrepareContent() == false )
+        {
+            SW_LOG_ERROR_ID( "GameInstance.ContentNotPrepared", "Game instance cannot start - the content configuration (mods) could not be prepared (see the error above)" );
+            return false;
+        }
+        const IContentConfiguration* const pContent          = game::findSubsystem<IContentConfiguration>();
+        const uint64                       contentConfigHash = pContent != nullptr ? pContent->getContentConfigHash() : 0;
+        GameNetSession&                    netSession        = game::getSubsystem<GameNetSession>(); // `checkEngineServices` 가 있음을 확인했다
         netSession.getConnectSecurity().setProvider( &game::getSubsystem<INetSecurityProvider>() );
         _bSecuritySet = SW_TRUE;
-        if ( netSession.openFromLaunch() == false )
+        if ( netSession.openFromLaunch( contentConfigHash ) == false )
         {
             SW_LOG_ERROR_ID( "GameInstance.GameInstanceCannotStart5", "Game instance cannot start - the net session asked for by the launch arguments or the server config did not open" );
             return false;

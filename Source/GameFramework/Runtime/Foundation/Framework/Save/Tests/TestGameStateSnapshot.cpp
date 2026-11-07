@@ -1,8 +1,11 @@
-// GameStateSnapshotTest — 상태 스냅샷 봉투: 왕복, 머리(SWST) · 판이 다른 버퍼, 잘린 버퍼, 실패한 읽기가 실어 둔 상태를 남기지 않는 것(nogpu, 활성 씬 없음).
+// GameStateSnapshotTest — 상태 스냅샷 봉투: 왕복, 머리(SWST) · 판이 다른 버퍼, 잘린 버퍼, 실패한 읽기가 실어 둔 상태를 남기지 않는 것, 머리의 콘텐츠 구성(켠 모드)(nogpu, 활성 씬 없음).
 #include "pch.h"
 
+#include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
 
 namespace
@@ -16,6 +19,22 @@ namespace
             bytes.clear();
         return bytes;
     }
+
+    /** @brief 글 하나로 구성을 흉내 냅니다 — 같은 글의 세이브만 받는다(모드 키트의 판정은 TestModManifest 가 본다). */
+    struct FakeContentConfiguration final : public sw::IContentConfiguration
+    {
+        sw::string _text;
+
+        sw::uint64 getContentConfigHash() const override { return _text.empty() ? 0u : 1u; }
+        sw::string makeContentConfigText() const override { return _text; }
+        bool       checkSaveCompatible( sw::string_view savedText ) const override
+        {
+            if ( savedText == _text )
+                return true;
+            SW_LOG_ERROR_ID( "GameStateSnapshotTest.ContentMismatch", "saved content '%#' is not '%#'", sw::string( savedText ).c_str(), _text.c_str() );
+            return false;
+        }
+    };
 } // namespace
 
 using namespace sw;
@@ -62,5 +81,44 @@ SW_TEST_CASE( GameStateSnapshotTest, RejectsTruncatedBuffersAndKeepsTheStoreEmpt
     {
         SW_EXPECT_FALSE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, bytes.data(), size ) );
         SW_EXPECT_TRUE( snapshot.getComponentStateStore().isEmpty() );
+    }
+}
+
+/**
+ * @brief [GameStateSnapshotTest] 봉투 머리는 이 세이브를 만든 콘텐츠 구성(켠 모드)을 싣고, 읽을 때 구성이 맞지 않으면 씬을 건드리기 전에 거절한다
+ * @details 구성이 없는 실행은 모드를 켠 세이브를 받지 않는다(없는 리소스를 가리킨다). 모드 없는 세이브는 구성이 있는 실행에서도 구성의 판정을 지난다.
+ */
+SW_TEST_CASE( GameStateSnapshotTest, HeaderCarriesTheContentConfiguration )
+{
+    FakeContentConfiguration modded;
+    modded._text = "lantern@1.0.0#000000000000abcd";
+    SubsystemScope moddedScope;
+    SW_REQUIRE_TRUE( moddedScope.bind<IContentConfiguration>( &modded ) );
+    GameStateSnapshot snapshot;
+    vector<uint8>     moddedSave;
+    {
+        const game::ScopedGameScope scoped{ moddedScope };
+        moddedSave = captureEmptyEnvelope( snapshot );
+        SW_REQUIRE_TRUE( moddedSave.empty() == false );
+        SW_EXPECT_TRUE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, moddedSave.data(), static_cast<uint32>( moddedSave.size() ) ) ); // 같은 구성
+        snapshot.endRestore();
+    }
+
+    FakeContentConfiguration other;
+    other._text = "lantern@2.0.0#000000000000abcd";
+    SubsystemScope otherScope;
+    SW_REQUIRE_TRUE( otherScope.bind<IContentConfiguration>( &other ) );
+    {
+        const game::ScopedGameScope scoped{ otherScope };
+        SW_EXPECT_LOG( "GameStateSnapshotTest.ContentMismatch" );
+        SW_EXPECT_FALSE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, moddedSave.data(), static_cast<uint32>( moddedSave.size() ) ) );
+        SW_EXPECT_TRUE( snapshot.getComponentStateStore().isEmpty() );
+    }
+
+    SubsystemScope plainScope; // 구성 없음 — 모드를 켠 세이브를 받지 않는다
+    {
+        const game::ScopedGameScope scoped{ plainScope };
+        SW_EXPECT_LOG( "GameStateSnapshot.SaveNeedsContent" );
+        SW_EXPECT_FALSE( snapshot.readEnvelope( SerializePurpose::Snapshot, nullptr, nullptr, moddedSave.data(), static_cast<uint32>( moddedSave.size() ) ) );
     }
 }

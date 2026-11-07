@@ -18,6 +18,9 @@
 `--cook-all` 로 한다(엔진의 `PackCooker`, 팩 파일 이름 규칙 `PackCooker::makePackFileName`). 이름이 어긋나면 스테이징이 빠진 팩을 알리고 멈춘다.
 Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테스트 · 부하 봇)은 들이지 않는다. 서버는 `Config/Server/<게임>.json` 을 함께 둔다
 (서버는 Shipping 에서도 운영 설정을 디스크에서 읽는다).
+모드 설치 폴더 `Mods/`(실행 파일 옆 — `ModSession::getInstallFolder`)는 늘 만든다. `--mods a,b` 로 고른 모드는 묶은 배포 형태(`mod.xml` + `content.pack`)만 담는다 —
+배포 게임은 소스 모드(`content/`)를 읽지 않는다. 묶은 형태는 개발 빌드의 개발 명령 `mod.pack <id>` 가 `Saved/ModPacks/<id>/` 에 만든다(없으면 실패 — 짐작해 묶지 않는다).
+서버 패키지에도 같은 모드를 담는다 — 서버와 클라이언트의 구성 해시가 같아야 핸드셰이크가 통한다.
 
 사용법:
     py -3 Scripts/package/Pack.py --target Client --game Empty
@@ -28,6 +31,7 @@ Dev 산출물(`Modules/` · `Saved/` · `Symbols/`)과 다른 실행 파일(테�
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import sys
 from dataclasses import dataclass, field
@@ -55,6 +59,12 @@ kListCookOnlyLibraryStem: tuple[str, ...] = ("dxcompiler", "dxil", "dxildll")
 #: Bin 에서 베끼는 폴더 · 파일.
 kPackFolderName = "Packs"
 kNoticeFileName = "THIRD_PARTY_NOTICES.txt"
+#: 모드 설치 폴더(실행 파일 옆)와 배포 형태의 파일 — `ModSession` · `ModManifest::kFileName` · `ModPackBuilder::kPackFileName` 과 같은 이름.
+kModFolderName = "Mods"
+kModExportFolder = Path("Saved") / "ModPacks"
+kListModFileName: tuple[str, ...] = ("mod.xml", "content.pack")
+#: 모드 id 의 형식(`ModManifest::isValidID` — 소문자 · 숫자 · `_`, 64 자까지). 경로를 id 로만 만들므로 형식부터 본다.
+kModIDPattern = re.compile(r"^[a-z0-9_]{1,64}$")
 
 
 #: 런타임이 늘 올리는 공용 팩. 게임 팩은 `game_<팩 폴더>.pack` 이다(`PackCooker::makePackFileName` 과 같은 이름).
@@ -90,6 +100,7 @@ class PackageRequest:
     binDir: Path | None = None
     bSkipBuild: bool = False
     bSkipCook: bool = False
+    listModID: list[str] = field(default_factory=list)
     currentStep: str = kListStepName[0]
     listCopied: list[Path] = field(default_factory=list)
 
@@ -139,6 +150,21 @@ def selectStagedPacks(projectRoot: Path, packDir: Path, game: str) -> list[Path]
     if listMissing:
         raise PackageError(f"{packDir} has no {', '.join(listMissing)} for game {game} - cook first")
     return [packDir / name for name in listName]
+
+
+def selectStagedMods(projectRoot: Path, listModID: list[str]) -> list[tuple[str, list[Path]]]:
+    """패키지에 담는 모드입니다 — 모드마다 배포 형태(`mod.xml` + `content.pack`)의 파일. 형식이 틀린 id · 묶지 않은 모드는 실패다."""
+    listMod: list[tuple[str, list[Path]]] = []
+    for modID in listModID:
+        if kModIDPattern.match(modID) is None:
+            raise PackageError(f"'{modID}' is not a mod id (lowercase letters, digits and _)")
+        folder = projectRoot / kModExportFolder / modID
+        listFile = [folder / name for name in kListModFileName]
+        listMissing = [path.name for path in listFile if path.is_file() is False]
+        if listMissing:
+            raise PackageError(f"mod '{modID}' is not packed ({', '.join(listMissing)} missing in {folder}) - run the dev command `mod.pack {modID}` first")
+        listMod.append((modID, listFile))
+    return listMod
 
 
 def measureBytes(path: Path) -> int:
@@ -200,6 +226,14 @@ def stagePackage(request: PackageRequest, projectRoot: Path, binDir: Path, stagi
             request.listCopied.append(destination)
     else:
         print(f"[package] warning: no {kPackFolderName}/ in {binDir} - the package runs only with loose Content/ next to it", flush=True)
+    # 모드 설치 폴더는 늘 둔다(플레이어가 묶은 모드를 넣는 자리). 고른 모드는 배포 형태만 담는다.
+    (stagingDir / kModFolderName).mkdir()
+    for modID, listFile in selectStagedMods(projectRoot, request.listModID):
+        modDir = stagingDir / kModFolderName / modID
+        modDir.mkdir()
+        for path in listFile:
+            shutil.copy2(path, modDir / path.name)
+            request.listCopied.append(modDir / path.name)
     if request.target == "Server":
         serverConfig = projectRoot / "Config" / "Server" / f"{request.game}.json"
         if serverConfig.is_file():
@@ -216,6 +250,9 @@ def verifyPackage(request: PackageRequest, stagingDir: Path) -> None:
     listLeaked = [path.name for path in stagingDir.rglob("*") if path.is_file() and isCookOnlyLibrary(path)]
     if listLeaked:
         raise PackageError(f"cook-only libraries leaked into the package: {', '.join(listLeaked)}")
+    listSourceMod = [path.parent.name for path in (stagingDir / kModFolderName).glob("*/content") if path.is_dir()]
+    if listSourceMod:
+        raise PackageError(f"source mods leaked into the package (a shipping game reads only content.pack): {', '.join(listSourceMod)}")
     otherTarget = "Client" if request.target == "Server" else "Server"
     if (stagingDir / kMapTargetExecutable[otherTarget]).exists():
         raise PackageError(f"{kMapTargetExecutable[otherTarget]} leaked into the {request.target} package")
@@ -261,13 +298,15 @@ def parseArguments(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--bin-dir", default="", help="스테이징할 빌드의 Bin(기본: 타깃 프리셋의 build/<프리셋>/Bin)")
     parser.add_argument("--skip-build", action="store_true", help="구성 · 빌드를 건너뛴다(이미 빌드된 Bin 을 쓴다)")
     parser.add_argument("--skip-cook", action="store_true", help="쿠킹을 건너뛴다(Bin/Packs 를 그대로 쓴다). 빌드를 하면 빌드가 쿠킹한다")
+    parser.add_argument("--mods", default="", help="담을 모드 id(쉼표로 가른다). 개발 명령 `mod.pack <id>` 로 Saved/ModPacks/<id> 에 묶어 둔 것을 Mods/<id> 로 담는다")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parseArguments(argv)
     request = PackageRequest(target=args.target, game=args.game, rhi=args.rhi, outputRoot=Path(args.output),
-                             binDir=Path(args.bin_dir) if args.bin_dir else None, bSkipBuild=args.skip_build, bSkipCook=args.skip_cook)
+                             binDir=Path(args.bin_dir) if args.bin_dir else None, bSkipBuild=args.skip_build, bSkipCook=args.skip_cook,
+                             listModID=[part.strip() for part in args.mods.split(",") if part.strip()])
     projectRoot = getProjectRoot()
     try:
         stagingDir = makePackage(request, projectRoot)

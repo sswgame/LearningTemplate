@@ -245,6 +245,7 @@ namespace sw
         , _serverAddress{}
         , _credentials{}
         , _latestServerTick{ 0 }
+        , _contentConfigHash{ 0 }
         , _listenPort{ 0 }
         , _role{ GameNetRole::None }
         , _bTicketBound{ SW_FALSE }
@@ -498,17 +499,39 @@ namespace sw
         return true;
     }
 
-    bool GameNetSession::openFromLaunch()
+    uint32 GameNetSession::foldContentConfigHash( uint32 wireVersion, uint64 contentConfigHash )
+    {
+        if ( contentConfigHash == 0 )
+            return wireVersion;
+        return NetWireVersion::combine( { wireVersion, static_cast<uint32>( contentConfigHash ), static_cast<uint32>( contentConfigHash >> 32 ) } );
+    }
+
+    bool GameNetSession::openFromLaunch( uint64 contentConfigHash )
     {
         if ( isActive() )
-            return true; // 리로드로 다시 선 게임 인스턴스 — 열린 세션과 연결을 이어받는다
+        {
+            // 리로드로 다시 선 게임 인스턴스 — 열린 세션과 연결을 이어받는다. 콘텐츠 구성이 바뀌었으면 붙은 상대와 어긋나므로 잇지 않는다.
+            if ( contentConfigHash == _contentConfigHash )
+                return true;
+            SW_LOG_ERROR_ID( "GameNetSession.ContentConfigChanged", "The open net session was made with content config %# but the reloaded game has %# - restart the session to change mods",
+                             _contentConfigHash, contentConfigHash );
+            return false;
+        }
         GameNetSessionParams params;
         switch ( makeLaunchParams( params ) )
         {
             case GameNetLaunch::None:
                 return true;
             case GameNetLaunch::Open:
-                return initialize( params ); // 실패는 initialize 가 알린다
+            {
+                params._hostSettings._wireVersion = foldContentConfigHash( params._hostSettings._wireVersion, contentConfigHash );
+                if ( initialize( params ) == false )
+                    return false;                       // 실패는 initialize 가 알린다
+                _contentConfigHash = contentConfigHash; // initialize 가 앞 세션을 닫으며 지웠다 — 연 뒤에 적는다
+                if ( contentConfigHash != 0 )
+                    SW_LOG_INFO_ID( "GameNetSession.ContentConfigFolded", "Net session wire version carries content config %#", contentConfigHash );
+                return true;
+            }
             case GameNetLaunch::Invalid:
                 return false;
         }
@@ -517,6 +540,7 @@ namespace sw
 
     void GameNetSession::shutdown()
     {
+        _contentConfigHash = 0;
         if ( _role == GameNetRole::None && _listShard.empty() )
             return;
         // 스레드를 먼저 멈춘다 — 끊기 패킷은 disconnectAll 이 바로 보낸다(update 를 돌 스레드가 없어도).

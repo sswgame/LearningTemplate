@@ -19,6 +19,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSetDigest.h"
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSupportSettings.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 
 namespace sw
 {
@@ -38,14 +39,14 @@ namespace sw
      * @class ModSession
      * @brief 세션의 모드 마운트를 소유합니다. 소멸하면 뗀다.
      */
-    class SW_KIT_API ModSession
+    class SW_KIT_API ModSession final : public IContentConfiguration
     {
     public:
         /** @brief 모드 팩을 기본 팩 위에 올릴 때 모드 하나의 우선순위 칸입니다(`PackManager` 의 토큰 한 칸과 같은 폭). */
         static constexpr int32 kPriorityStep = 1000;
 
         explicit ModSession( AssetManager& assets );
-        ~ModSession();
+        ~ModSession() override;
 
         ModSession( const ModSession& )            = delete;
         ModSession& operator=( const ModSession& ) = delete;
@@ -69,8 +70,24 @@ namespace sw
         /** @brief 지금 켠 구성입니다(켜지 않았으면 빈 구성). */
         const ModSetDigest& getDigest() const { return _digest; }
 
+        // IContentConfiguration — 게임 인스턴스가 넷 와이어 버전 · 세이브 머리에 쓴다(게임이 `bind<IContentConfiguration>` 으로 건다).
+        /** @brief 켠 구성의 해시입니다(빈 구성은 0). */
+        uint64 getContentConfigHash() const override { return _digest._configHash; }
+        /** @brief 세이브 머리에 적는 구성 글(`ModSetDigest::toText`)입니다. */
+        string makeContentConfigText() const override { return _digest.toText(); }
+        /** @brief 세이브 머리의 구성 글을 읽어 지금 구성과 견줍니다(`ModSetDigest::checkSaveCompatible`). 글이 틀렸으면 거절한다. */
+        [[nodiscard]] bool checkSaveCompatible( string_view savedText ) const override;
+
         /** @brief 모드 설치 폴더(`<프로젝트>/Mods` — 패키지는 실행 파일 옆)입니다. */
         static string getInstallFolder();
+        /** @brief 배포할 묶은 모드를 두는 폴더(`<Saved>/ModPacks`)입니다. 배포 패키지 스크립트(`Scripts/package/Pack.py --mods`)가 여기서 베낀다. */
+        static string getExportFolder();
+        /**
+         * @brief 설치 폴더의 소스 모드 @p id(`<id>/content/`)를 배포 형태(`<내보내기 폴더>/<id>/mod.xml` + `content.pack`)로 묶습니다 — 배포 게임은 묶은 모드만 읽는다.
+         * @details @p id 는 바깥 입력이라 형식(`ModManifest::isValidID`)부터 본다(경로를 id 로만 만든다). 매니페스트를 읽어 id 가 폴더와 같은지 보고, 팩은 같은 한계 · 경로 검사
+         *          (`ModPackBuilder` · 마운트 전 검사와 같은 정책 데이터 @p packRoot 의 `modsupport`)를 지난다. 실패하면 이유를 오류로 남기고 false 이며, 쓴 것은 지운다.
+         */
+        [[nodiscard]] static bool exportPackedMod( string_view id, string_view packRoot, string& outFolder );
 
     private:
         /** @brief 켤 모드의 매니페스트를 읽습니다(id 형식 · 파일 크기 · id 와 폴더 이름의 일치). */

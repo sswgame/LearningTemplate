@@ -15,6 +15,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Config/GameConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
@@ -36,8 +37,9 @@ namespace sw
     {
         struct ModSessionInternal
         {
-            static constexpr const utf8* kInstallFolderName = "Mods"; ///< 프로젝트(패키지는 실행 파일 폴더) 아래 모드 설치 폴더
-            static constexpr size_t      kReplyLineLimit    = 200;    ///< `mod.read` 답의 글자 수 상한
+            static constexpr const utf8* kInstallFolderName = "Mods";     ///< 프로젝트(패키지는 실행 파일 폴더) 아래 모드 설치 폴더
+            static constexpr const utf8* kExportFolderName  = "ModPacks"; ///< Saved 아래 배포용 묶은 모드 폴더(`mod.pack`)
+            static constexpr size_t      kReplyLineLimit    = 200;        ///< `mod.read` 답의 글자 수 상한
 
             /** @brief 쉼표 목록을 id 로 가릅니다(앞뒤 공백을 떼고 빈 칸은 버린다). 형식 검사는 `loadManifests` 가 한다. */
             static vector<string> splitList( string_view text )
@@ -87,6 +89,22 @@ namespace sw
                 return true;
             }
 
+            /** @brief `mod.pack <id>` — 소스 모드를 배포 형태로 묶어 내보내기 폴더에 둔다(`ModSession::exportPackedMod`). */
+            static bool runPack( const vector<string>& listArgument, string& outReply )
+            {
+                const GameConfig* const pGameConfig = game::findSubsystem<const GameConfig>();
+                if ( listArgument.size() != 1 || pGameConfig == nullptr )
+                    return false;
+                string folder;
+                if ( ModSession::exportPackedMod( listArgument[0], pGameConfig->_packRoot.get(), folder ) == false )
+                {
+                    outReply = formatToString( "mod.pack %#: failed (see the error above)", listArgument[0] );
+                    return false;
+                }
+                outReply = formatToString( "mod.pack %#: %#", listArgument[0], folder );
+                return true;
+            }
+
             [[nodiscard]] static bool readActiveCount( const GameObjectManager* pManager, float64& outValue )
             {
                 (void)pManager;
@@ -121,6 +139,60 @@ namespace sw
     string ModSession::getInstallFolder()
     {
         return FileUtil::joinPath( ProcessRoots::get()._project.str(), ModSessionInternal::kInstallFolderName );
+    }
+
+    string ModSession::getExportFolder()
+    {
+        return FileUtil::joinPath( ProcessRoots::get()._saved.str(), ModSessionInternal::kExportFolderName );
+    }
+
+    bool ModSession::exportPackedMod( string_view id, string_view packRoot, string& outFolder )
+    {
+        outFolder.clear();
+        // id 는 바깥 입력이다 — 형식이 맞아야 경로로 쓴다(`..` · 구분자 · 대문자가 없다).
+        if ( ModManifest::isValidID( id ) == false )
+        {
+            SW_LOG_ERROR_ID( "ModSession.ExportBadID", "mod.pack: '%#' is not a mod id (lowercase letters, digits and _)", string( id ) );
+            return false;
+        }
+        string settingsPath;
+        string error;
+        if ( GamePackDataUtil::tryMakeKindPath( packRoot, ModSupportSettings::kDataKind, settingsPath, error ) == false )
+        {
+            SW_LOG_ERROR_ID( "ModSession.ExportNoSettings", "mod.pack: the game has no mod support settings path: %#", error );
+            return false;
+        }
+        ModSupportSettings settings;
+        if ( ModSupportSettings::loadFromAsset( AssetID{ settingsPath }, settings ) == false )
+            return false;
+        ModSessionRequest request;
+        request._installFolder = getInstallFolder();
+        request._listEnabledID = { string( id ) };
+        vector<ModManifest> listManifest;
+        if ( loadManifests( request, settings, listManifest ) == false ) // id 와 폴더 이름 · 매니페스트 크기 · 형식을 마운트와 같은 길로 본다
+            return false;
+        const string modFolder    = FileUtil::joinPath( request._installFolder, id );
+        const string sourceFolder = FileUtil::joinPath( modFolder, ModPackBuilder::kSourceFolderName );
+        if ( FileUtil::isDirectory( sourceFolder ) == false )
+        {
+            SW_LOG_ERROR_ID( "ModSession.ExportNoSource", "mod.pack: '%#' has no %#/ source folder to pack", string( id ), ModPackBuilder::kSourceFolderName );
+            return false;
+        }
+        const string exportFolder = FileUtil::joinPath( getExportFolder(), id );
+        const string packPath     = FileUtil::joinPath( exportFolder, ModPackBuilder::kPackFileName );
+        const string manifestPath = FileUtil::joinPath( exportFolder, ModManifest::kFileName );
+        const bool   bExported    = FileUtil::ensureDirectoryExists( exportFolder ) && ModPackBuilder::buildFromFolder( sourceFolder, packPath, settings ) &&
+                               FileUtil::copyFile( FileUtil::joinPath( modFolder, ModManifest::kFileName ), manifestPath );
+        if ( bExported == false )
+        {
+            (void)FileUtil::removeFile( packPath ); // 반쯤 쓴 배포 형태를 남기지 않는다(패키지가 베끼지 않게)
+            (void)FileUtil::removeFile( manifestPath );
+            SW_LOG_ERROR_ID( "ModSession.ExportFailed", "mod.pack: '%#' could not be packed into %#", string( id ), exportFolder );
+            return false;
+        }
+        outFolder = exportFolder;
+        SW_LOG_INFO_ID( "ModSession.Exported", "Mod '%#' packed for shipping: %#", string( id ), exportFolder );
+        return true;
     }
 
     bool ModSession::applyForGame( string_view packRoot )
@@ -420,5 +492,17 @@ namespace sw
     SW_DEV_COMMAND( ModRead, "mod.read", "mod.read <resource id>", "Read a text resource through the resource entrance (mod packs included) and reply its text on one line",
                     &ModSessionInternal::runRead );
 
+    SW_DEV_COMMAND( ModPack, "mod.pack", "mod.pack <mod id>", "Pack the source mod <id> from the Mods folder into Saved/ModPacks/<id> (mod.xml + content.pack) for a shipping package",
+                    &ModSessionInternal::runPack );
+
     SW_AUTOMATION_WATCH( modActiveCount, "Mods.ActiveCount", "Mods mounted for this game session", &ModSessionInternal::readActiveCount );
+
+    bool ModSession::checkSaveCompatible( string_view savedText ) const
+    {
+        // 세이브 머리는 신뢰하지 않는 파일의 글이다 — 읽지 못하면 거절한다(구성을 짐작하지 않는다).
+        ModSetDigest saved;
+        if ( ModSetDigest::parseText( savedText, saved ) == false )
+            return false;
+        return _digest.checkSaveCompatible( saved );
+    }
 } // namespace sw

@@ -5,8 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Network/NetTypes.h"
 #include "Core/String/StringBuilder.h"
+
+#include "Engine/Net/GameNetSession.h"
 
 namespace sw
 {
@@ -57,9 +58,8 @@ namespace sw
 
     uint32 ModSetDigest::foldWireVersion( uint32 wireVersion ) const
     {
-        if ( _listEntry.empty() )
-            return wireVersion;
-        return NetWireVersion::combine( { wireVersion, static_cast<uint32>( _configHash ), static_cast<uint32>( _configHash >> 32 ) } );
+        // 섞는 규칙은 넷 세션 한 곳이다 — 게임 인스턴스가 세션을 열 때 이 구성 해시(`IContentConfiguration`)를 같은 함수로 섞는다.
+        return GameNetSession::foldContentConfigHash( wireVersion, _listEntry.empty() ? uint64{ 0 } : _configHash );
     }
 
     string ModSetDigest::describeDifference( const ModSetDigest& other ) const

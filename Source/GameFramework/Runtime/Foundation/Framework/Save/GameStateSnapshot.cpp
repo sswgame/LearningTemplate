@@ -13,6 +13,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
@@ -29,7 +30,27 @@ namespace sw
              *          토큰이 지금 프로세스와 같으면(핫 리로드) id 를 복원하고, 다르면(다른 실행의 세이브 파일) id 를 읽고 버린다.
              *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
              */
-            static constexpr uint32 kVersion = 4; // 4: 오브젝트 id 묶음에 컴포넌트 안정 키가 실린다
+            static constexpr uint32 kVersion = 5; // 4: 오브젝트 id 묶음에 컴포넌트 안정 키가 실린다, 5: 머리에 콘텐츠 구성(켠 모드) 글이 실린다
+
+            /** @brief 지금 실행의 콘텐츠 구성(`IContentConfiguration`)입니다. 걸린 것이 없으면 nullptr(구성 없음)입니다. */
+            static const IContentConfiguration* findContent() { return game::findSubsystem<IContentConfiguration>(); }
+
+            /**
+             * @brief 세이브 머리의 콘텐츠 구성 글 @p savedText 를 지금 구성으로 읽어도 되는지 봅니다. 아니면 까닭을 오류로 남기고 false 입니다.
+             * @details 머리는 신뢰하지 않는 파일의 글이다. 구성이 없는 실행이 모드를 켠 세이브를 받으면 없는 리소스를 가리키게 되므로 거절한다(빈 글이면 늘 받는다 —
+             *          모드 없는 세이브는 모드를 켠 실행에서도 읽힌다, 새 모드는 내용을 더할 뿐이다).
+             */
+            static bool checkContent( const string& savedText )
+            {
+                const IContentConfiguration* const pContent = findContent();
+                if ( pContent != nullptr )
+                    return pContent->checkSaveCompatible( savedText );
+                if ( savedText.empty() )
+                    return true;
+                SW_LOG_ERROR_ID( "GameStateSnapshot.SaveNeedsContent", "This save was made with content '%#' (mods) but this run has no content configuration - start with the same mods to load it",
+                                 savedText.c_str() );
+                return false;
+            }
         };
 
         struct GameStateSnapshotInternal
@@ -90,6 +111,9 @@ namespace sw
         arch << StateEnvelopeInternal::kMagic;
         arch << StateEnvelopeInternal::kVersion;
         arch << ObjectStateSerializer::getProcessToken();
+        // 이 세이브를 만든 콘텐츠 구성(켠 모드) — 읽는 쪽이 같은 구성인지 봉투를 풀기 전에 본다(없으면 빈 글).
+        const IContentConfiguration* const pContent = StateEnvelopeInternal::findContent();
+        arch.writeString( pContent != nullptr ? pContent->makeContentConfigText() : string{} );
 
         // 1) 씬 오브젝트 바이너리 스냅샷
         //
@@ -160,6 +184,10 @@ namespace sw
 
         uint64 processToken = 0;
         arch >> processToken;
+        // 콘텐츠 구성: 씬을 건드리기 전에 본다 — 맞지 않는 세이브는 아무것도 바꾸지 않고 거절한다.
+        string contentText;
+        if ( arch.readString( contentText ) == false || StateEnvelopeInternal::checkContent( contentText ) == false )
+            return false;
         const bool              bSameProcess = ( processToken == ObjectStateSerializer::getProcessToken() );
         const SceneObjectFormat format       = bSameProcess ? SceneObjectFormat::RestoreIdentity : SceneObjectFormat::WithIdentity;
 

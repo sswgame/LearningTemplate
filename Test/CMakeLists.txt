@@ -146,6 +146,11 @@ add_test(NAME Scripts.AssetReferenceFieldList
 	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/Tests/TestAssetReferenceFieldList.py")
 set_tests_properties(Scripts.AssetReferenceFieldList PROPERTIES LABELS nogpu TIMEOUT 120)
 
+# 배포 패키지의 모드 스테이징 — 묶은 모드만 담고, 형식이 틀린 id · 묶지 않은 모드는 실패다(Scripts/package/Pack.py --mods).
+add_test(NAME Scripts.PackMods
+	COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/package/Tests/TestPackMods.py")
+set_tests_properties(Scripts.PackMods PROPERTIES LABELS nogpu TIMEOUT 60)
+
 # 온라인 부하 봇의 짧은 시나리오 — 같은 프로세스 서버(`--local-server=0`, OS 가 고른 포트라 나란히 돌아도 다투지 않는다)에 봇 여덟이 붙어
 # 로그인 · 채팅 · 순위를 한 번씩 돈다. 오류율 · 보고서 쓰기 실패가 종료 코드다(엔진 · 모듈이 서지 못하면 3). 봇 로그는 `-log-file` 로 같은 폴더에 남는다.
 if(TARGET OnlineLoadBot)
