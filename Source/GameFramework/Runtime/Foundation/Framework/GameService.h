@@ -26,7 +26,8 @@ namespace sw
         SW_GAMESERVICE_API SubsystemScope* findGameScope();
         /**
          * @brief 지금 게임 범위를 겁니다(nullptr 이면 풉니다). 게임 인스턴스가 기동 · 종료에서 부른다.
-         * @details 핫 리로드에서는 새 인스턴스가 먼저 설정할 수 있으므로, 해제하는 쪽은 자기 범위가 설정돼 있을 때만 해제한다.
+         * @details 지금 범위는 프로세스에 하나이고 게임 인스턴스도 프로세스당 하나다(`GameInstance` — 호스트는 옛 인스턴스를 내린 뒤 새 것을 세운다). 그 위에 테스트 범위
+         *          (`ScopedGameScope`)가 잠시 이어질 수 있으므로, 해제하는 쪽은 자기 범위가 설정돼 있을 때만 해제한다. 조회는 게임 스레드에서만 한다.
          */
         SW_GAMESERVICE_API void setGameScope( SubsystemScope* pScope );
 

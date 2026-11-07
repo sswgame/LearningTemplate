@@ -198,7 +198,10 @@ namespace sw
         }
 
         if ( arch.isError() )
+        {
+            _pComponentStateStore->clear(); // 끝이 깨진 봉투 — 실어 둔 상태를 남기지 않는다(읽기 훅을 부르지 않으니 비울 쪽이 없다)
             return false;
+        }
 
         // 읽기 훅(`onAfterStateDeserialize`)은 부르는 쪽이 이 뒤에 부르고 `endRestore` 로 저장소를 비운다.
         restoreStatefulComponents();

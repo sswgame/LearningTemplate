@@ -30,6 +30,7 @@ namespace sw
     class AppearanceDatabase;
     class AppearanceDataWatcher;
     class AutosaveManager;
+    class GameLocalStore;
     class GameObjectManager;
     class ItemCatalog;
 
@@ -37,11 +38,16 @@ namespace sw
     // 1) GameInstance — 수명주기는 여기, 파생은 훅만
     //    파생은 configurePackConfig 과 on* 훅을 오버라이드한다(예: EmptyGame)
     // ------------------------------------------------------------------------------
-    /** @brief IGame 수명주기를 고정하고 팩 설정 및 런타임 상태 스냅샷 직렬화를 지원합니다. */
+    /**
+     * @brief IGame 수명주기를 고정하고 팩 설정 및 런타임 상태 스냅샷 직렬화를 지원합니다.
+     * @details **프로세스당 하나만 돈다.** 게임 범위의 지금 범위(`game::findGameScope`)와 서비스 창구는 프로세스에 하나라, 인스턴스 둘이 함께 서면 뒤의 것이 앞의 조회를
+     *          덮는다. 호스트는 옛 인스턴스를 내린 뒤 새 것을 세우고(리로드 · 재시작), 이미 하나가 돌 때 `initialize` 는 아무것도 걸지 않고 거절한다(언리얼 `UGameInstance` 하나와 같은 자리).
+     *          여러 월드 · 병렬 게임 테스트가 실제로 필요해지면 그때 게임 컨텍스트를 호출 경계로 넘기도록 바꾼다.
+     */
     class SW_GF_API GameInstance : public IGame
     {
     public:
-        /** @brief 윈도우 · RHI · 팩 설정을 비운 채로 둡니다. */
+        /** @brief 윈도우 · RHI · 팩 설정을 비운 채로 둡니다. 세이브 슬롯은 사용자 데이터 폴더의 로컬 저장소입니다. */
         GameInstance();
         /** @brief 파생 인스턴스가 정리할 수 있게 합니다. */
         virtual ~GameInstance() override;
@@ -54,9 +60,15 @@ namespace sw
          *          커스텀 칸을 읽는 킷 코드는 이 서비스로 읽는다. 서비스로 등록하지 않으면 제품에서 늘 기본값을 쓴다.
          *          사운드 이벤트 라이브러리(`_audioEvents`)도 `onInitialize` 앞에 올리고 `shutdown` 이 내린다. 적었는데 못 읽거나 `onInitialize` 가 false 면 false 다
          *          (필수 데이터 — `loadRequiredData` — 를 못 읽은 게임은 뜨지 않는다).
+         *          **실패는 한 길로 되감는다**: 어느 단계에서 멈추든 그때까지 세운 것을 `shutdown` 이 거둔다(게임 범위 · 서브시스템 · 보안 제공자 · 사운드 이벤트 · 외형 · 자동 저장,
+         *          `onInitialize` 에 들어갔으면 `onShutdown`). 호스트의 모듈 절차는 실패한 인스턴스에 `shutdown` 을 부르지 않으므로(`ModuleInstanceUtil::createInstance`)
+         *          되감기는 인스턴스의 일이다. 이미 다른 인스턴스가 돌면(프로세스당 하나) 아무것도 걸지 않고 false 다.
          */
         [[nodiscard]] bool initialize( IWindow* pWindow ) final;
-        /** @brief onShutdown 뒤에 `GameSettings` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */
+        /**
+         * @brief onShutdown 뒤에 `GameSettings` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다.
+         * @details 세운 만큼만 내리고 두 번 불러도 된다 — 실패한 `initialize` 의 되감기와 호스트의 종료가 같은 함수다. 종료 저장은 다 선 인스턴스만 맡긴다.
+         */
         void shutdown() final;
         /**
          * @brief 씬 흐름(`GameSceneFlow::update` — 페이드 · 로딩 화면 · 끝난 씬 로드의 `SceneLoadCompletedEvent`) → 넷 세션 → onUpdate 순으로 한 프레임을 넘깁니다.
@@ -114,6 +126,11 @@ namespace sw
         }
 
     protected:
+        /**
+         * @brief 세이브 슬롯 저장소를 넘겨받아 만듭니다 — 이미 연 저장소(메모리 · 임시 폴더)는 기동이 다시 열지 않는다. 테스트가 사용자 데이터 폴더를 쓰지 않게 하는 자리다.
+         */
+        explicit GameInstance( unique_ptr<GameLocalStore> localStore );
+
         /** @brief 파생 클래스가 팩 루트 · 팩 설정을 설정합니다. */
         virtual void configurePackConfig( GamePackConfig& outConfig ) { (void)outConfig; }
         /** @brief 팩의 gamesettings 를 `_packConfig` 으로 읽습니다. 실패하면 게임 초기화가 실패합니다(기본값으로 서지 않는다). 팩 없이 만드는 테스트만 XML 문자열(`loadFromXMLText`)로 오버라이드합니다. */
@@ -158,12 +175,15 @@ namespace sw
          * @brief 이 인스턴스의 게임 범위에 객체(카탈로그 · 데이터베이스 — 보통 파생의 멤버)를 겁니다. `game::findSubsystem<T>()` 가 찾는다.
          * @details 범위는 이 인스턴스가 소유하므로 인스턴스가 내려가면 함께 풀린다 — 짝으로 풀 일이 없다. 같은 타입이 이미 걸려 있으면
          *          알리고 걸지 않는다(키트 둘이 같은 카탈로그 타입을 서비스로 쓰는 조립 — 나중 것이 앞 것을 소리 없이 덮지 않는다).
+         * @return 걸었으면 true 입니다. 충돌이면 false 이고 부르는 쪽(`onInitialize`)은 그것을 초기화 실패로 돌려준다 — 키트가 다른 객체를 보며 도는 게임을 띄우지 않는다.
          */
         template <class T>
-        void bindScopedService( T* pService )
+        [[nodiscard]] bool bindScopedService( T* pService )
         {
-            if ( _gameScope.bind( pService ) == false )
-                reportScopedServiceConflict( getSubsystemTypeHash<T>() );
+            if ( _gameScope.bind( pService ) )
+                return true;
+            reportScopedServiceConflict( getSubsystemTypeHash<T>() );
+            return false;
         }
         /** @brief 이 인스턴스의 게임 범위입니다(기동 뒤 `game::findGameScope()` 와 같다). */
         SubsystemScope& getGameScope() { return _gameScope; }
@@ -198,14 +218,18 @@ namespace sw
                 return outCatalog != nullptr;
             } ) == false )
                 return false;
-            bindScopedService( outCatalog.get() ); // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()` 로 찾는다
-            return true;
+            return bindScopedService( outCatalog.get() ); // const 칸이다 — 찾는 쪽은 `game::findSubsystem<const TCatalog>()` 로 찾는다
         }
 
         /** @brief `captureSnapshot` 이 같은 목적으로 쓴 봉투를 읽고(`GameStateSnapshot::readEnvelope`) 읽기 훅을 부릅니다. */
         [[nodiscard]] bool readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size );
 
     private:
+        /**
+         * @brief `initialize` 의 단계를 차례로 돌립니다(게임 범위 걸기 → 팩 설정 적용 → 인스턴스 서브시스템 → 넷 세션 → 사운드 · 필수 데이터 → 자동 저장 → `onInitialize`).
+         * @details 멈춘 단계에서 바로 false 를 돌려주고, 거두기는 부르는 쪽(`initialize`)이 `shutdown` 한 번으로 한다 — 단계마다 되감기를 따로 적지 않는다.
+         */
+        [[nodiscard]] bool startInstance();
         /** @brief 세이브 슬롯 이름(비면 기본 슬롯)을 정합니다. 없거나 슬롯 이름 규칙을 어기면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool resolveSaveSlot( string_view slot, string& outSlot ) const;
         /** @brief 세이브 쓰기 완료입니다 - `SaveGameSavedEvent` 를 냅니다. */
@@ -241,7 +265,7 @@ namespace sw
         [[nodiscard]] bool makeRequiredDataPath( string_view kindLabel, string& outPath ) const;
         /** @brief 필수 데이터 @p path 를 읽지 못했음을 파일과 이유로 알립니다. */
         void reportRequiredDataFailure( string_view kindLabel, const AssetID& assetID ) const;
-        /** @brief 이 인스턴스의 게임 범위를 지금 범위 사슬에서 뗍니다(지금 범위면 앞 범위로 되돌리고, 다른 범위가 이 범위를 상위로 이었으면 그 위를 잇게 한다). */
+        /** @brief 이 인스턴스의 게임 범위를 지금 범위 사슬에서 뗍니다(지금 범위면 앞 범위로 되돌리고, 테스트 범위(`ScopedGameScope`)가 이 범위를 상위로 이었으면 그 위를 잇게 한다). */
         void detachGameScope();
         /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedService`). */
         void reportScopedServiceConflict( uint64 typeHash ) const;
@@ -259,5 +283,11 @@ namespace sw
         unique_ptr<AutosaveManager>       _pAutosave;           ///< `<autosaveSettings>` 를 적은 게임의 자동 저장(게임 범위 서비스)
         string                            _loadedAudioEvents;   ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)
         vector<Subscription>              _listSlotRequest;     ///< 맡긴 세이브 쓰기 · 읽기의 완료 구독(끝난 것은 꺼져 다음 요청이 걷는다). 게임 범위보다 늦게 선언해 먼저 진다
+        uint8                             _bStarted        : 1; ///< `initialize` 가 끝까지 섰다 — 종료 저장 · 세션 명령은 이때만
+        uint8                             _bDerivedEntered : 1; ///< `onInitialize` 에 들어갔다 — `onShutdown` 은 이때만(파생은 자기 부분 실패를 스스로 거둔다)
+        uint8                             _bSecuritySet    : 1; ///< 넷 세션에 이 인스턴스의 보안 제공자를 넣었다 — 거둘 때 이 인스턴스가 넣은 것만 뺀다
+
+        /** @brief 지금 도는 인스턴스입니다(`initialize` 가 잡고 `shutdown` · 소멸이 놓는다). 게임 스레드에서만 읽고 쓴다 — 프로세스당 하나의 계약을 지키는 자리다. */
+        static GameInstance* _s_pRunningInstance;
     };
 } // namespace sw

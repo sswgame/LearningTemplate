@@ -47,7 +47,14 @@ namespace sw
         };
     } // namespace
 
+    GameInstance* GameInstance::_s_pRunningInstance = nullptr;
+
     GameInstance::GameInstance()
+        : GameInstance( make_unique<GameLocalStore>() )
+    {
+    }
+
+    GameInstance::GameInstance( unique_ptr<GameLocalStore> localStore )
         : _packConfig{}
         , _pWindow{ nullptr }
         , _stateSnapshot{}
@@ -58,6 +65,9 @@ namespace sw
         , _pAutosave{}
         , _loadedAudioEvents{}
         , _listSlotRequest{}
+        , _bStarted{ SW_FALSE }
+        , _bDerivedEntered{ SW_FALSE }
+        , _bSecuritySet{ SW_FALSE }
     {
         // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
         ScreenTransitionManager& screenTransition = _gameScope.emplaceSubsystem<ScreenTransitionManager>();
@@ -67,7 +77,7 @@ namespace sw
         // 씬 흐름은 이 인스턴스의 gamesettings(`_packConfig` — 범위보다 먼저 선 멤버)와 두 형제를 빌려 든다.
         _gameScope.emplaceSubsystem<GameSceneFlow>( _packConfig._data, screenTransition, pLoadingScreen );
         // 로컬 저장소(세이브 슬롯)는 게임 범위 하나다 - 게임 상태 세이브 · 자동 저장 · 계정 장치 비밀이 함께 쓴다.
-        _gameScope.emplaceSubsystem<GameLocalStore>();
+        (void)_gameScope.addSubsystem( std::move( localStore ) );
         // 온라인 세션은 키트 클라이언트를 묶을 뿐 연결은 게임이 연다 - 온라인을 쓰지 않는 게임에는 비용이 없다.
         _gameScope.emplaceSubsystem<OnlineSession>( _packConfig._data );
         // 텔레메트리 · 크래시 업로드는 gamesettings 에 끝점이 있을 때만 엔진 업로더에 HTTP 클라이언트를 끼운다 - 없으면 아무 일도 하지 않는다.
@@ -78,8 +88,10 @@ namespace sw
 
     GameInstance::~GameInstance()
     {
-        // shutdown 을 거치지 않고 지워져도 지금 범위가 지운 범위를 가리키지 않게 한다.
+        // shutdown 을 거치지 않고 지워져도 지금 범위가 지운 범위를 가리키지 않게 하고, 프로세스의 자리를 놓는다.
         detachGameScope();
+        if ( _s_pRunningInstance == this )
+            _s_pRunningInstance = nullptr;
     }
 
     void GameInstance::detachGameScope()
@@ -92,7 +104,7 @@ namespace sw
         }
         else if ( pCurrent != nullptr && pCurrent->getParentScope() == &_gameScope )
         {
-            // 리로드가 먼저 세운 새 인스턴스가 이 범위를 상위로 이었다 — 지워질 이 범위 대신 이 범위의 상위를 잇게 한다.
+            // 이 인스턴스 위에 테스트 범위(`ScopedGameScope`)가 이어졌다 — 지워질 이 범위 대신 이 범위의 상위를 잇게 한다. 인스턴스는 프로세스에 하나라 새 인스턴스가 잇는 일은 없다.
             pCurrent->setParentScope( _gameScope.getParentScope() );
         }
         _gameScope.setParentScope( nullptr );
@@ -122,10 +134,40 @@ namespace sw
 
     bool GameInstance::initialize( IWindow* pWindow )
     {
+        // 프로세스당 하나다 — 다른 인스턴스가 돌면 아무것도 걸지 않고 멈춘다(앞 인스턴스의 지금 범위 · 서비스를 덮지 않는다).
+        if ( _s_pRunningInstance != nullptr && _s_pRunningInstance != this )
+        {
+            SW_LOG_ERROR_ID( "GameInstance.SecondGameInstance", "Game instance cannot start - another game instance is running in this process (one per process; the host shuts the old one down first)" );
+            return false;
+        }
         // 필수 엔진 서비스가 없으면 아무것도 걸기 전에 멈춘다. 쓰는 곳(입력 맵 · 세션 명령 · 설정 재적용)은 그 자리에서 게임 창구로 찾는다.
         if ( checkEngineServices( pWindow ) == false )
             return false;
-        _pWindow = pWindow;
+        _s_pRunningInstance = this;
+        _pWindow            = pWindow;
+        if ( startInstance() == false )
+        {
+            // 되감기는 한 길이다 — 세운 만큼만 거두는 종료가 같은 일을 한다. 호스트는 이 인스턴스를 부순다(`ModuleInstanceUtil::createInstance`).
+            SW_LOG_ERROR_ID( "GameInstance.GameInstanceRolledBack", "Game instance did not start - everything it set up is rolled back (see the error above)" );
+            shutdown();
+            return false;
+        }
+        _bStarted = SW_TRUE;
+        // 창이 없는 호스트에는 UI 가 없다 — UI 전역 명령 표도 쓰지 않는다. 파생 초기화 뒤에 건다("타이틀로" 는 첫 씬을 요청한 뒤의 일이다).
+        if ( IGameInstanceClientHook* const pClientHook = IGameInstanceClientHook::find() )
+            pClientHook->bindSessionCommands( getSubsystem<GameSceneFlow>() );
+
+        // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
+        // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다. 창이 없는 호스트(전용 서버 · 테스트 하네스)는 플레이어 설정을
+        // 다시 넣을 대상이 없다 — 하네스가 개발자의 저장된 설정을 테스트 프로세스의 변수에 넣지 않게 창으로 가른다.
+        UserSettingsManager* const pUserSettings = game::findSubsystem<UserSettingsManager>();
+        if ( _pWindow != nullptr && pUserSettings != nullptr )
+            pUserSettings->reapplyAll();
+        return true;
+    }
+
+    bool GameInstance::startInstance()
+    {
         configurePackConfig( _packConfig );
         const GameConfig* const pGameConfig = game::findSubsystem<const GameConfig>();
         if ( pGameConfig == nullptr )
@@ -145,48 +187,50 @@ namespace sw
         if ( game::findGameScope() != &_gameScope )
             _gameScope.setParentScope( game::findGameScope() );
         game::setGameScope( &_gameScope );
-        bindScopedService( &_packConfig._data );
-        const bool bPackConfigApplied = applyPackConfig();
+        if ( bindScopedService( &_packConfig._data ) == false || applyPackConfig() == false )
+            return false;
         // 인스턴스 서브시스템을 onInitialize 앞에 세운다(의존 순서: 화면 전환 · 로딩 화면 → 씬 흐름) — 씬 흐름이 씬 로드 받아들임 알림을 걸어 첫 씬 요청(onInitialize 안)이
         // 로딩 화면을 띄우고, 파생이 네트워크 역할을 보고 키트 처리기를 단다. 하나라도 서지 않으면(로딩 팁 파일을 못 읽었다) 게임을 띄우지 않는다 — 파생 초기화도 부르지 않는다.
-        const bool bSubsystemsStarted = _gameScope.getCollection().initializeAll( SubsystemHostMask::All );
-        if ( bSubsystemsStarted == false )
+        if ( _gameScope.getCollection().initializeAll( SubsystemHostMask::All ) == false )
+        {
             SW_LOG_ERROR_ID( "GameInstance.GameInstanceSubsystemsDid", "Game instance subsystems did not all initialize: %#", _gameScope.getCollection().getError().c_str() );
+            return false;
+        }
         // 네트워크 세션은 엔진 수명이다 — 처음이면 실행 인자로 열고, 리로드로 다시 선 인스턴스는 열린 세션을 이어받는다(클라이언트가 끊기지 않는다).
         // 서버 · 클라이언트로 띄웠는데 열지 못하면(틀린 인자 · 포트 사용 중) 혼자 하는 게임으로 서지 않는다.
         // 티켓 게임 포트가 쓸 암호 제공자(OpenSSL)는 GameFramework 에 있어 Engine 이 모른다 — 세션을 열기 전에 넣는다.
         GameNetSession& netSession = game::getSubsystem<GameNetSession>(); // `checkEngineServices` 가 있음을 확인했다
         netSession.getConnectSecurity().setProvider( &game::getSubsystem<INetSecurityProvider>() );
-        const bool bNetSessionOpened = netSession.openFromLaunch();
-        if ( bNetSessionOpened == false )
+        _bSecuritySet = SW_TRUE;
+        if ( netSession.openFromLaunch() == false )
+        {
             SW_LOG_ERROR_ID( "GameInstance.GameInstanceCannotStart5", "Game instance cannot start - the net session asked for by the launch arguments or the server config did not open" );
+            return false;
+        }
         // 열린 세션의 창구 · 라우터 · 역할을 씬 매니저에 건다 — 이 뒤에 받아들이는 씬(월드)마다 넷 링크가 올라 컴포넌트가 자기 씬에서 찾는다. 세션이 없으면 걸지 않는다(혼자 하는 게임).
-        if ( bNetSessionOpened && netSession.isActive() )
+        if ( netSession.isActive() )
         {
             SceneManager* pLinkSceneManager = game::findSubsystem<SceneManager>();
             if ( pLinkSceneManager != nullptr )
                 pLinkSceneManager->setNetLink( netSession.makeNetLink() );
         }
         // 사운드 이벤트는 gamesettings 가 기준이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
-        const bool bInitialized = bSubsystemsStarted && bPackConfigApplied && bNetSessionOpened && loadAudioEvents() && loadDeclaredCharacterData() && startAutosave() && onInitialize();
-        // 창이 없는 호스트에는 UI 가 없다 — UI 전역 명령 표도 쓰지 않는다. 파생 초기화 뒤에 건다("타이틀로" 는 첫 씬을 요청한 뒤의 일이다).
-        if ( IGameInstanceClientHook* const pClientHook = IGameInstanceClientHook::find() )
-            pClientHook->bindSessionCommands( getSubsystem<GameSceneFlow>() );
-
-        // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
-        // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다. 창이 없는 호스트는 사용자 설정이 없다.
-        if ( UserSettingsManager* const pUserSettings = game::findSubsystem<UserSettingsManager>() )
-            pUserSettings->reapplyAll();
-        return bInitialized;
+        if ( loadAudioEvents() == false || loadDeclaredCharacterData() == false || startAutosave() == false )
+            return false;
+        _bDerivedEntered = SW_TRUE;
+        return onInitialize();
     }
 
     void GameInstance::shutdown()
     {
-        // 씬이 살아 있는 동안 종료 저장을 맡긴다 - 쓰기는 저장소가 끝낸다. 정책이 끄면(`quit`) 맡기지 않는다.
-        if ( _pAutosave != nullptr )
+        // 다 선 인스턴스만 종료 저장을 맡긴다 - 씬이 살아 있는 동안 맡기고 쓰기는 저장소가 끝낸다. 정책이 끄면(`quit`) 맡기지 않는다. 되감기(서다 멈춤)는 저장할 게임이 없다.
+        if ( _pAutosave != nullptr && _bStarted == SW_TRUE )
             (void)_pAutosave->notifyQuit();
-        getSubsystem<GameSceneFlow>().unregisterSessionCommands(); // 걸지 않았으면(창이 없는 호스트 · 타이틀 씬 없음) 빈 구독이다
-        onShutdown();
+        getSubsystem<GameSceneFlow>().unregisterSessionCommands(); // 걸지 않았으면(창이 없는 호스트 · 타이틀 씬 없음 · 되감기) 빈 구독이다
+        if ( _bDerivedEntered == SW_TRUE )
+            onShutdown();
+        _bDerivedEntered = SW_FALSE;
+        _bStarted        = SW_FALSE;
         if ( _loadedAudioEvents.empty() == false )
         {
             GameSound::unloadEvents( _loadedAudioEvents );
@@ -196,8 +240,10 @@ namespace sw
         // 네트워크 세션은 엔진 수명이라 닫지 않는다(리로드를 넘어 연결을 지킨다).
         _gameScope.getCollection().shutdownAll();
         // 제공자는 GameFramework 의 것이라 이 인스턴스가 내려가면 거둔다(다시 서는 인스턴스가 다시 넣는다). 열린 세션은 이미 받은 포인터로 계속 돈다.
-        if ( GameNetSession* pNetSession = game::findSubsystem<GameNetSession>() )
+        GameNetSession* const pNetSession = game::findSubsystem<GameNetSession>();
+        if ( _bSecuritySet == SW_TRUE && pNetSession != nullptr )
             pNetSession->getConnectSecurity().setProvider( nullptr );
+        _bSecuritySet = SW_FALSE;
         detachGameScope();
         // 범위를 뗀 뒤에 놓는다 — 걸어 둔 서비스(외형 · 아이템)를 찾는 쪽이 이제 없다.
         _pAppearanceWatcher.reset();
@@ -205,6 +251,8 @@ namespace sw
         _pItemCatalog.reset();
         _pAutosave.reset();
         _pWindow = nullptr;
+        if ( _s_pRunningInstance == this )
+            _s_pRunningInstance = nullptr;
     }
 
     bool GameInstance::loadGameSettings()
@@ -286,8 +334,7 @@ namespace sw
                                      AutosaveManager::LoadDelegate::create( [this]( const vector<uint8>& bytes )
         { return restoreSnapshot( SerializePurpose::SaveGame, bytes ); } ) ) == false )
             return false; // 까닭은 관리자가 남겼다
-        bindScopedService( _pAutosave.get() );
-        return true;
+        return bindScopedService( _pAutosave.get() );
     }
 
     bool GameInstance::loadDeclaredCharacterData()
@@ -315,8 +362,7 @@ namespace sw
         } );
         if ( bLoaded == false )
             return false;
-        bindScopedService( _pAppearanceDatabase.get() );
-        return true;
+        return bindScopedService( _pAppearanceDatabase.get() );
     }
 
     bool GameInstance::makeRequiredDataPath( string_view kindLabel, string& outPath ) const

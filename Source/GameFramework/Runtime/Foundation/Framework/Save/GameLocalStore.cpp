@@ -24,7 +24,9 @@ namespace sw
 
     SubsystemInitResult GameLocalStore::initializeSubsystem()
     {
-        SW_ASSERT( _channel.isOpen() == false ); // 이미 연 프런트(테스트)는 수명 함수를 거치지 않는다
+        // 이미 연 프런트(넘겨받은 저장소 — 테스트의 메모리 저장소)는 다시 열지 않는다. 게임 인스턴스가 그것을 넘겨받아 서면 사용자 데이터 폴더를 쓰지 않는다.
+        if ( _channel.isOpen() )
+            return SubsystemInitResult::Succeeded;
         INetSecurityProvider* const pSecurityProvider = game::findSubsystem<INetSecurityProvider>();
         if ( pSecurityProvider == nullptr )
         {

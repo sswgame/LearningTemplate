@@ -57,7 +57,8 @@ namespace sw
     {
         // 클래스는 코드라 데이터와 따로 건다 — 없는 클래스 이름은 만들 때(`AbilityClassRegistry::createAbility`) 경고한다.
         ArenaAbilities::registerClasses( _abilityClasses );
-        bindScopedService( &_abilityClasses );
+        if ( bindScopedService( &_abilityClasses ) == false )
+            return false;
         // 어빌리티 데이터는 필수다 — 못 읽으면 게임을 띄우지 않는다. 읽으면 어빌리티 시스템이 찾는 게임 범위에 걸린다.
         // 탄도 필수다 — 투사체 어빌리티의 탄속 · 사거리 · 피해가 그 탄 정의다.
         if ( loadRequiredCatalog( _pAbilityCatalog ) == false || loadRequiredCatalog( _pProjectileCatalog ) == false )

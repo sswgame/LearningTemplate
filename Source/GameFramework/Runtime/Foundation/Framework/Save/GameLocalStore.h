@@ -36,7 +36,7 @@ namespace sw
 
         /** @brief 게임 인스턴스가 쓴다 - `initializeSubsystem` 이 파일 백엔드를 `kSaveDirectory` 에 연다(장치 키 · 암호 제공자로 봉인한다). */
         GameLocalStore();
-        /** @brief 이미 연 프런트(테스트의 `MemoryLocalStore`)를 받습니다. 서브시스템 수명 함수를 거치지 않고 쓴다. */
+        /** @brief 이미 연 프런트(테스트의 `MemoryLocalStore`)를 받습니다. 수명 함수(`initializeSubsystem`)를 거쳐도 다시 열지 않는다 — 게임 인스턴스에 넘겨 세울 수 있다. */
         explicit GameLocalStore( unique_ptr<ILocalStore> store );
         ~GameLocalStore() override;
 
