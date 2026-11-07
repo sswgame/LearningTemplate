@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
@@ -162,6 +163,6 @@ namespace sw
 namespace sw
 {
 
-    /** @brief 얼굴 리그 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_ASSET_TYPE( FacialRig, FacialRig::kAssetType.withPathRule( AssetPathRule{ {}, {}, FacialRig::kExtension } ).withLoader( AssetTypeLoader::of<FacialRig>() ) );
+    /** @brief 얼굴 리그 데이터 파일 종류와 그 공유 캐시입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
+    SW_SHARED_ASSET_CACHE( FacialRig, FacialRig, FacialRig::kAssetType.withPathRule( AssetPathRule{ {}, {}, FacialRig::kExtension } ).withLoader( AssetTypeLoader::of<FacialRig>( MemoryTag::Animation ) ) );
 } // namespace sw

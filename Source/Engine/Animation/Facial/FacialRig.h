@@ -12,6 +12,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -101,6 +102,8 @@ namespace sw
     REFLECT()
     class SW_API FacialRig
     {
+        friend struct AssetTypeLoader;
+
     public:
         REFLECT_BODY();
 
@@ -110,11 +113,10 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `FacialRig.cpp` 의 `SW_ASSET_TYPE`). */
+        /** @brief 이 에셋 종류입니다(등록은 `FacialRig.cpp` 의 캐시 등록 줄 `SW_SHARED_ASSET_CACHE`). */
         static constexpr AssetTypeDef kAssetType{ "FacialRig", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 메시의 모프 타깃 이름에 없는 타깃, 스켈레톤에 없는 눈 본, 타깃과 같은 이름의 표정(커브가 둘 다 움직임)이 있으면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate( const vector<hashed_string>& listMorphTargetName, const Skeleton& skeleton, string_view sourceLabel ) const;
 
@@ -128,6 +130,8 @@ namespace sw
         int32 findVisemeIndex( const hashed_string& name ) const;
 
     private:
+        /** @brief 리소스 경로의 리그를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<FacialRig>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 파일만으로 알 수 있는 의미를 봅니다(포즈 이름 · 깜빡임과 사카드 간격 · 앞 축). 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validateFile( string_view sourceLabel ) const;
 
@@ -140,4 +144,10 @@ namespace sw
         PROPERTY( Tooltip = "Eye gaze and saccades" )
         FacialGazeDef _gaze;
     };
+
+    /**
+     * @brief 얼굴 리그를 경로마다 한 벌 나눠 줍니다("FacialRig", 인스턴스화는 `FacialRig.cpp`). 제자리에서 다시 읽습니다.
+     * @details 같은 얼굴을 쓰는 캐릭터가 파일을 다시 읽지 않는다. 쥔 쪽(`FacialAnimationComponent`)은 핫 리로드 알림(`onPropertyChanged`)에서 번호를 다시 짓는다.
+     */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<FacialRig>;
 } // namespace sw

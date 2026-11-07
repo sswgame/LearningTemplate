@@ -85,9 +85,10 @@ namespace sw
         /** @brief 얼굴 리그 경로를 바꾸고 읽습니다. */
         void          setFacialRigPath( string_view path );
         const string& getFacialRigPath() const { return _facialRigPath.path(); }
-        /** @brief 리그를 런타임에 정합니다(테스트 · 절차 생성). */
-        void             setFacialRig( const FacialRig& rig );
-        const FacialRig& getFacialRig() const { return _rig; }
+        /** @brief 리그를 런타임에 정합니다(테스트 · 절차 생성). nullptr 이면 리그 없음(움직이지 않는다)입니다. */
+        void setFacialRig( shared_ptr<const FacialRig> pRig );
+        /** @brief 쥔 리그입니다. 없으면 빈 리그(표정 · 비즘 · 깜빡임 · 시선 없음)입니다. */
+        const FacialRig& getFacialRig() const;
 
         /** @brief 표정 가중치를 정합니다(리그에 없는 이름이면 false). 애니메이터의 같은 이름 커브와 더해집니다. */
         bool setExpressionWeight( const hashed_string& expressionName, float32 weight );
@@ -114,8 +115,8 @@ namespace sw
         void stopSpeaking();
         /** @brief 말하는 중인지입니다(트랙 · 표본 끝까지). */
         bool isSpeaking() const;
-        /** @brief 립싱크 표를 정합니다(테스트). 정하지 않으면 `EngineDefaultAssets::_lipSyncSettings` 를 읽습니다. */
-        void setLipSyncSettings( const LipSyncSettings& settings );
+        /** @brief 립싱크 표를 정합니다(테스트). 정하지 않으면 첫 말하기가 `EngineDefaultAssets::_lipSyncSettings` 를 공유 캐시에서 받습니다. */
+        void setLipSyncSettings( shared_ptr<const LipSyncSettings> pSettings );
 
         /** @brief 저절로 깜빡일지입니다. */
         void setAutoBlink( bool bBlink ) { _bBlink = bBlink ? SW_TRUE : SW_FALSE; }
@@ -158,15 +159,15 @@ namespace sw
         PROPERTY( Category = "Facial", DisplayName = "Facial Rig", Tooltip = "Facial rig (.facial.xml): expressions, visemes, blink, gaze" )
         AssetRef<FacialRig> _facialRigPath;
 
-        FacialAnimationBinding   _binding;
-        Subscription             _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        FacialRig                _rig;
-        LipSyncSettings          _lipSync;
-        VisemeTrack              _speechTrack;
-        vector<float32>          _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
-        vector<float32>          _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
-        vector<float32>          _listLiveWeight;       ///< 리그 표정 순서의 실시간 입력 값(게임 스레드가 프레임마다 옮겨 둔다, 입력이 없으면 0)
-        const IFacialLiveSource* _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
+        FacialAnimationBinding            _binding;
+        Subscription                      _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        shared_ptr<const FacialRig>       _pRig;                ///< 쥔 얼굴 리그(경로로 받았으면 공유 캐시의 한 벌). 없으면 nullptr
+        shared_ptr<const LipSyncSettings> _pLipSync;            ///< 쥔 립싱크 표(공유 캐시의 한 벌). 받지 못했으면 nullptr — 진폭 립싱크를 하지 않는다
+        VisemeTrack                       _speechTrack;
+        vector<float32>                   _listSpeechSample;     ///< 트랙이 없을 때의 진폭 립싱크 표본(모노)
+        vector<float32>                   _listExpressionWeight; ///< 리그 표정 순서의 명시 가중치
+        vector<float32>                   _listLiveWeight;       ///< 리그 표정 순서의 실시간 입력 값(게임 스레드가 프레임마다 옮겨 둔다, 입력이 없으면 0)
+        const IFacialLiveSource*          _pLiveSource;          ///< 실시간 얼굴 입력(빌림, `registerLiveSource`)
 
         /** @brief 지금 입력이 @p pSource 이면 뗍니다(입력 구독이 풀릴 때 — 교체된 옛 구독이면 할 일이 없다). */
         void                                          detachLiveSource( const IFacialLiveSource* pSource );

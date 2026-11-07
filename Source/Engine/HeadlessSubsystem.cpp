@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Process/StandardOutput.h"
 #include "Core/String/string_splitter.h"
@@ -487,11 +488,12 @@ namespace sw
                     return false;
                 inoutState.enterHeadless();
                 SW_LOG_INFO_ID( "Headless.StartingHeadlessImportLipSync", "Starting Headless (ImportLipSync)..." );
-                LipSyncSettings         lipSyncSettings{};
-                uint32                  lipSyncFailedCount = 0;
-                [[maybe_unused]] uint32 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
-                if ( lipSyncSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get() } ) )
-                    lipSyncCount = LipSyncImport::importAll( engine::getSubsystem<AssetPaths>().getRootFolderPath(), lipSyncSettings, lipSyncFailedCount );
+                // 분석 표는 런타임 얼굴과 같은 공유 캐시의 한 벌이다.
+                const shared_ptr<const LipSyncSettings> pLipSyncSettings   = SharedAssetCache<LipSyncSettings>::acquire( engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get() );
+                uint32                                  lipSyncFailedCount = 0;
+                [[maybe_unused]] uint32                 lipSyncCount       = 0; // 로그로만 쓴다(Shipping 은 빠진다)
+                if ( pLipSyncSettings != nullptr )
+                    lipSyncCount = LipSyncImport::importAll( engine::getSubsystem<AssetPaths>().getRootFolderPath(), *pLipSyncSettings, lipSyncFailedCount );
                 else
                     ++lipSyncFailedCount;
                 SW_LOG_INFO_ID( "Headless.ImportedVisemeTracksFailures", "Imported %# viseme tracks (%# failures).", lipSyncCount, lipSyncFailedCount );

@@ -5,6 +5,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
@@ -59,7 +60,7 @@ namespace sw
 
     bool FacialAnimationBinding::isAnimationActive() const
     {
-        const FacialRig& rig = _owner._rig;
+        const FacialRig& rig = _owner.getFacialRig();
         return rig.getExpressions().empty() == false || rig.getVisemes().empty() == false || rig.getBlink()._listTarget.empty() == false ||
                rig.getGaze()._listEyeBone.empty() == false;
     }
@@ -74,7 +75,7 @@ namespace sw
         (void)unit;
         (void)context;
         // 실시간 입력은 게임 스레드에서 표정 순서대로 옮겨 둔다 — 워커의 얼굴 단계는 이 값만 읽는다.
-        const vector<FacialPose>& listExpression = _owner._rig.getExpressions();
+        const vector<FacialPose>& listExpression = _owner.getFacialRig().getExpressions();
         _owner._listLiveWeight.assign( listExpression.size(), 0.0f );
         if ( _owner._pLiveSource == nullptr )
             return;
@@ -117,8 +118,8 @@ namespace sw
     FacialAnimationComponent::FacialAnimationComponent()
         : _facialRigPath{}
         , _binding{ *this }
-        , _rig{}
-        , _lipSync{}
+        , _pRig{}
+        , _pLipSync{}
         , _speechTrack{}
         , _listSpeechSample{}
         , _listExpressionWeight{}
@@ -171,7 +172,7 @@ namespace sw
         if ( _binding.isAnimationActive() == false )
             loadRig();
         bindToUnit();
-        _blinkTimer = FacialAnimationInternal::pickBetween( _rig.getBlink()._minInterval, _rig.getBlink()._maxInterval, _random.nextFloat() );
+        _blinkTimer = FacialAnimationInternal::pickBetween( getFacialRig().getBlink()._minInterval, getFacialRig().getBlink()._maxInterval, _random.nextFloat() );
     }
 
     void FacialAnimationComponent::onEndPlay()
@@ -196,27 +197,35 @@ namespace sw
         loadRig();
     }
 
-    void FacialAnimationComponent::setFacialRig( const FacialRig& rig )
+    const FacialRig& FacialAnimationComponent::getFacialRig() const
     {
-        _rig = rig;
-        _listExpressionWeight.assign( _rig.getExpressions().size(), 0.0f );
+        // 리그가 없는 상태는 빈 리그로 읽는다 — 값을 지어내는 대체가 아니라 "움직일 것 없음" 이다(모든 목록이 빈다).
+        static const FacialRig s_noRig{};
+        return _pRig != nullptr ? *_pRig : s_noRig;
+    }
+
+    void FacialAnimationComponent::setFacialRig( shared_ptr<const FacialRig> pRig )
+    {
+        _pRig = std::move( pRig );
+        _listExpressionWeight.assign( getFacialRig().getExpressions().size(), 0.0f );
         _pBoundMesh     = nullptr;
         _pBoundSkeleton = nullptr;
         // 말하는 중인 트랙의 비즘 번호를 새 리그로 다시 잇는다.
         _listTrackToRigViseme.clear();
         for ( const hashed_string& visemeName : _speechTrack._listViseme )
         {
-            _listTrackToRigViseme.push_back( _rig.findVisemeIndex( visemeName ) );
+            _listTrackToRigViseme.push_back( getFacialRig().findVisemeIndex( visemeName ) );
         }
         bindToUnit();
     }
 
     void FacialAnimationComponent::loadRig()
     {
-        FacialRig rig;
-        if ( _facialRigPath.empty() == false && rig.loadFromAsset( AssetID{ _facialRigPath } ) == false )
+        // 리그는 공유 캐시의 한 벌이다 — 제자리 다시 읽기 뒤 핫 리로드가 이 칸을 알리면 같은 객체를 다시 받고 번호를 다시 짓는다.
+        shared_ptr<const FacialRig> pRig = _facialRigPath.acquire();
+        if ( _facialRigPath.empty() == false && pRig == nullptr )
             SW_LOG_ERROR_ID( "FacialAnimation.FacialRigCouldNot", "Facial rig '%#' could not be loaded", _facialRigPath.c_str() );
-        setFacialRig( rig );
+        setFacialRig( std::move( pRig ) );
     }
 
     void FacialAnimationComponent::bindToUnit()
@@ -239,7 +248,7 @@ namespace sw
 
     bool FacialAnimationComponent::setExpressionWeight( const hashed_string& expressionName, float32 weight )
     {
-        const int32 expressionIndex = _rig.findExpressionIndex( expressionName );
+        const int32 expressionIndex = getFacialRig().findExpressionIndex( expressionName );
         if ( expressionIndex < 0 )
             return false;
         _listExpressionWeight[static_cast<size_t>( expressionIndex )] = weight;
@@ -284,9 +293,9 @@ namespace sw
         _bLookAtModelReady = SW_FALSE;
     }
 
-    void FacialAnimationComponent::setLipSyncSettings( const LipSyncSettings& settings )
+    void FacialAnimationComponent::setLipSyncSettings( shared_ptr<const LipSyncSettings> pSettings )
     {
-        _lipSync               = settings;
+        _pLipSync              = std::move( pSettings );
         _bLipSyncSettingsReady = SW_TRUE;
         _listTrackToRigViseme.clear();
     }
@@ -297,7 +306,8 @@ namespace sw
         if ( _bLipSyncSettingsReady == SW_FALSE )
         {
             const string& lipSyncPath = engine::getSubsystem<EngineDefaultAssets>()._lipSyncSettings.get();
-            if ( _lipSync.loadFromAsset( AssetID{ lipSyncPath } ) == false )
+            _pLipSync                 = SharedAssetCache<LipSyncSettings>::acquire( lipSyncPath ); // 얼굴마다 다시 읽지 않는다 — 엔진 기본 표 한 벌
+            if ( _pLipSync == nullptr )
                 SW_LOG_ERROR_ID( "FacialAnimation.LipSyncSettingsCould", "Lip sync settings '%#' could not be loaded", lipSyncPath );
             _bLipSyncSettingsReady = SW_TRUE;
         }
@@ -350,7 +360,7 @@ namespace sw
         _listTrackToRigViseme.clear();
         for ( const hashed_string& visemeName : _speechTrack._listViseme )
         {
-            _listTrackToRigViseme.push_back( _rig.findVisemeIndex( visemeName ) );
+            _listTrackToRigViseme.push_back( getFacialRig().findVisemeIndex( visemeName ) );
         }
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
@@ -381,7 +391,7 @@ namespace sw
     void FacialAnimationComponent::advanceTime( float32 deltaSeconds )
     {
         // 깜빡임: 타이머가 다 되면 길이만큼 감았다 뜨고, 다음 간격을 뽑는다.
-        const FacialBlinkDef& blink = _rig.getBlink();
+        const FacialBlinkDef& blink = getFacialRig().getBlink();
         if ( _bBlink == SW_TRUE && blink._listTarget.empty() == false )
         {
             if ( _blinkElapsed >= 0.0f )
@@ -407,7 +417,7 @@ namespace sw
         }
 
         // 사카드: 간격마다 최대 크기 안의 작은 요 · 피치로 튄다(시선 목표가 있을 때만).
-        const FacialGazeDef& gaze           = _rig.getGaze();
+        const FacialGazeDef& gaze           = getFacialRig().getGaze();
         const bool           bSaccadeActive = _bSaccades == SW_TRUE && _bLookAt == SW_TRUE && gaze._listEyeBone.empty() == false;
         if ( bSaccadeActive )
         {
@@ -451,25 +461,25 @@ namespace sw
                 listMorphTargetName.push_back( target._name );
             }
         }
-        (void)_rig.validate( listMorphTargetName, *pSkeleton, _facialRigPath.empty() ? string_view( "(runtime rig)" ) : string_view( _facialRigPath ) );
+        (void)getFacialRig().validate( listMorphTargetName, *pSkeleton, _facialRigPath.empty() ? string_view( "(runtime rig)" ) : string_view( _facialRigPath ) );
 
-        _listExpressionTarget.resize( _rig.getExpressions().size() );
-        for ( size_t poseIndex = 0; poseIndex < _rig.getExpressions().size(); ++poseIndex )
+        _listExpressionTarget.resize( getFacialRig().getExpressions().size() );
+        for ( size_t poseIndex = 0; poseIndex < getFacialRig().getExpressions().size(); ++poseIndex )
         {
-            FacialAnimationInternal::mapTargets( unit, _rig.getExpressions()[poseIndex], _listExpressionTarget[poseIndex] );
+            FacialAnimationInternal::mapTargets( unit, getFacialRig().getExpressions()[poseIndex], _listExpressionTarget[poseIndex] );
         }
-        _listVisemeTarget.resize( _rig.getVisemes().size() );
-        for ( size_t poseIndex = 0; poseIndex < _rig.getVisemes().size(); ++poseIndex )
+        _listVisemeTarget.resize( getFacialRig().getVisemes().size() );
+        for ( size_t poseIndex = 0; poseIndex < getFacialRig().getVisemes().size(); ++poseIndex )
         {
-            FacialAnimationInternal::mapTargets( unit, _rig.getVisemes()[poseIndex], _listVisemeTarget[poseIndex] );
+            FacialAnimationInternal::mapTargets( unit, getFacialRig().getVisemes()[poseIndex], _listVisemeTarget[poseIndex] );
         }
         _listBlinkTarget.clear();
-        for ( const hashed_string& target : _rig.getBlink()._listTarget )
+        for ( const hashed_string& target : getFacialRig().getBlink()._listTarget )
         {
             _listBlinkTarget.push_back( unit.findMorphTargetIndex( target ) );
         }
         _listEyeBone.clear();
-        for ( const hashed_string& bone : _rig.getGaze()._listEyeBone )
+        for ( const hashed_string& bone : getFacialRig().getGaze()._listEyeBone )
         {
             _listEyeBone.push_back( pSkeleton->findBoneIndex( bone ) );
         }
@@ -499,21 +509,21 @@ namespace sw
         if ( poseIndex < _listLiveWeight.size() )
             weight += _listLiveWeight[poseIndex]; // 실시간 입력(게임 스레드가 옮겨 둔 값)
         if ( pAnimator != nullptr )
-            weight += pAnimator->getCurveValue( _rig.getExpressions()[poseIndex]._name );
+            weight += pAnimator->getCurveValue( getFacialRig().getExpressions()[poseIndex]._name );
         return weight;
     }
 
     bool FacialAnimationComponent::isDrivingFace() const
     {
         const SkeletalAnimatorComponent* pAnimator = findAnimator( _pUnit );
-        for ( size_t poseIndex = 0; poseIndex < _rig.getExpressions().size(); ++poseIndex )
+        for ( size_t poseIndex = 0; poseIndex < getFacialRig().getExpressions().size(); ++poseIndex )
         {
             if ( computeExpressionWeight( poseIndex, pAnimator ) != 0.0f )
                 return true;
         }
-        const bool bSpeakingVisemes = _bSpeaking == SW_TRUE && _rig.getVisemes().empty() == false;
-        const bool bBlinking        = _blinkAmount > 0.0f && _rig.getBlink()._listTarget.empty() == false;
-        const bool bGazing          = _bLookAt == SW_TRUE && _bLookAtModelReady == SW_TRUE && _rig.getGaze()._listEyeBone.empty() == false;
+        const bool bSpeakingVisemes = _bSpeaking == SW_TRUE && getFacialRig().getVisemes().empty() == false;
+        const bool bBlinking        = _blinkAmount > 0.0f && getFacialRig().getBlink()._listTarget.empty() == false;
+        const bool bGazing          = _bLookAt == SW_TRUE && _bLookAtModelReady == SW_TRUE && getFacialRig().getGaze()._listEyeBone.empty() == false;
         return bSpeakingVisemes || bBlinking || bGazing;
     }
 
@@ -525,7 +535,7 @@ namespace sw
 
         // 표정 — 명시 가중치 + 같은 오브젝트 애니메이터의 같은 이름 커브(애니메이터의 시간 단계가 이미 이번 프레임 커브를 냈다).
         const SkeletalAnimatorComponent* pAnimator      = findAnimator( &unit );
-        const vector<FacialPose>&        listExpression = _rig.getExpressions();
+        const vector<FacialPose>&        listExpression = getFacialRig().getExpressions();
         for ( size_t poseIndex = 0; poseIndex < listExpression.size(); ++poseIndex )
         {
             addPose( unit, _listExpressionTarget[poseIndex], listExpression[poseIndex], computeExpressionWeight( poseIndex, pAnimator ) );
@@ -534,13 +544,13 @@ namespace sw
         // 립싱크 — 트랙이면 그 프레임의 비즘 가중치, 아니면 진폭이 대체 비즘을 연다.
         if ( _bSpeaking == SW_TRUE )
         {
-            const vector<FacialPose>& listViseme = _rig.getVisemes();
-            if ( _speechSampleRate > 0 )
+            const vector<FacialPose>& listViseme = getFacialRig().getVisemes();
+            if ( _speechSampleRate > 0 && _pLipSync != nullptr ) // 표를 받지 못했으면 진폭으로 입을 열지 않는다(읽기가 오류를 남겼다)
             {
-                const float32 windowSeconds = 1.0f / MathUtil::max( _lipSync._frameRate, 1.0f );
-                const float32 openness      = LipSyncAnalyzer::computeOpenness( LipSyncAnalyzer::computeRms( _listSpeechSample, _speechSampleRate, _speechTime, windowSeconds ),
-                                                                                _lipSync );
-                const int32   visemeIndex   = _rig.findVisemeIndex( _lipSync._fallbackViseme );
+                const LipSyncSettings& lipSync       = *_pLipSync;
+                const float32          windowSeconds = 1.0f / MathUtil::max( lipSync._frameRate, 1.0f );
+                const float32          openness      = LipSyncAnalyzer::computeOpenness( LipSyncAnalyzer::computeRms( _listSpeechSample, _speechSampleRate, _speechTime, windowSeconds ), lipSync );
+                const int32            visemeIndex   = getFacialRig().findVisemeIndex( lipSync._fallbackViseme );
                 if ( visemeIndex >= 0 )
                     addPose( unit, _listVisemeTarget[static_cast<size_t>( visemeIndex )], listViseme[static_cast<size_t>( visemeIndex )], openness );
             }
@@ -572,7 +582,7 @@ namespace sw
         const bool bGazeUnavailable = _bLookAt == SW_FALSE || _bLookAtModelReady == SW_FALSE || _listEyeBone.empty();
         if ( bGazeUnavailable )
             return;
-        const FacialGazeDef&    gaze       = _rig.getGaze();
+        const FacialGazeDef&    gaze       = getFacialRig().getGaze();
         const vector<float4x4>& listModel  = unit.getModelSpaceTransforms();
         const vector<int32>&    listParent = unit.getSkeleton().getParentIndices();
         Pose&                   pose       = unit.getLocalPose();

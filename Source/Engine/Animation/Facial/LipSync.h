@@ -14,6 +14,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -66,6 +67,7 @@ namespace sw
     struct SW_API LipSyncSettings
     {
         REFLECT_BODY();
+        friend struct AssetTypeLoader;
 
         PROPERTY( Tooltip = "Visemes the analysis picks from (at least two; the first one is silence)" )
         vector<LipSyncViseme> _listViseme;
@@ -98,12 +100,21 @@ namespace sw
 
         /** @brief XML 을 읽고 검사합니다. 틀리면 오류를 남기고 false 이며, 내용은 기본값으로 돌아갑니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 프레임 속도 · RMS 순서 · 대역 순서 · 비즘 수 · 대체 비즘을 봅니다. 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
         /** @brief 비즘 번호입니다. 없으면 -1 입니다. */
         int32 findVisemeIndex( const hashed_string& name ) const;
+
+    private:
+        /** @brief 리소스 경로의 표를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<LipSyncSettings>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
     };
+
+    /**
+     * @brief 립싱크 분석 표를 경로마다 한 벌 나눠 줍니다("lipsync", 인스턴스화는 `LipSync.cpp`). 제자리에서 다시 읽습니다.
+     * @details 얼굴 컴포넌트마다 엔진 기본 표를 다시 읽지 않는다(첫 말하기에서 받는다). 오프라인 임포트(`--import-lipsync`)도 같은 한 벌을 읽는다.
+     */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<LipSyncSettings>;
 } // namespace sw
 
 namespace sw

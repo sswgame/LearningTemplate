@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
@@ -611,8 +612,9 @@ namespace sw
 namespace sw
 {
 
-    /** @brief 립싱크 분석 표 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_ASSET_TYPE( LipSync, AssetTypeDef::makeDataFile( "lipsync", AssetPathRule{ {}, {}, "/animation/lipsync.xml" }, AssetTypeLoader::of<LipSyncSettings>() ) );
+    /** @brief 립싱크 분석 표 데이터 파일 종류와 그 공유 캐시입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
+    SW_SHARED_ASSET_CACHE( LipSync, LipSyncSettings,
+                           AssetTypeDef::makeDataFile( "lipsync", AssetPathRule{ {}, {}, "/animation/lipsync.xml" }, AssetTypeLoader::of<LipSyncSettings>( MemoryTag::Animation ) ) );
 
     /** @brief 비즘 트랙 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
     SW_ASSET_TYPE( VisemeTrack, VisemeTrack::kAssetType.withPathRule( AssetPathRule{ {}, {}, VisemeTrack::kExtension } ).withLoader( AssetTypeLoader::of<VisemeTrack>() ) );
