@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
@@ -323,3 +324,6 @@ namespace sw
 {
     SW_DATA_INHERITANCE_SCHEMA( SkeletonBoneLOD, &SkeletonBoneLOD::makeInheritanceSchema );
 } // namespace sw
+
+// 스켈레톤 옆의 본 LOD(`SkeletalMeshComponent` 가 스켈레톤 경로에서 이 이름으로 찾는다) — 스켈레톤이 아니면 빈 글이다.
+SW_ASSET_COMPANION( SkeletonBoneLOD, &::sw::SkeletonBoneLOD::makePathForSkeleton );

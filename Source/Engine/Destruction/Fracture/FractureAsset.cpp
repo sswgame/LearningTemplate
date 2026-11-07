@@ -2,11 +2,14 @@
 
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Serialization/ByteStream.h"
 
+#include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 
 namespace sw
 {
@@ -324,4 +327,11 @@ namespace sw
         path += kExtension;
         return path;
     }
+
+    string FractureAsset::makeCompanionPath( string_view assetID )
+    {
+        return StringUtil::endsWith( assetID, MeshAssetFormat::kExtension, true ) ? makePathForMesh( assetID ) : string{};
+    }
 } // namespace sw
+
+SW_ASSET_COMPANION( MeshFracture, &::sw::FractureAsset::makeCompanionPath );

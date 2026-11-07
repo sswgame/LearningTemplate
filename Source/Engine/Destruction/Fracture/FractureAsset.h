@@ -94,6 +94,8 @@ namespace sw
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 메시 경로 옆의 파쇄 경로입니다(`a/b.mesh` → `a/b.fracture`). */
         static string makePathForMesh( string_view meshPath );
+        /** @brief 곁 파일 규칙(`SW_ASSET_COMPANION`)입니다. 메시(`.mesh`)면 `makePathForMesh`, 아니면 빈 글 — 팩 쿠킹이 담은 메시 옆의 파쇄를 함께 담는다(`FractureComponent` 가 칸이 비면 이 이름으로 찾는다). */
+        static string makeCompanionPath( string_view assetID );
 
     private:
         /** @brief 리소스 경로의 파일을 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<FractureAsset>::acquire` 로 한 벌을 쥔다. */

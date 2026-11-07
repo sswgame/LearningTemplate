@@ -9,6 +9,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Facial/LipSync.h"
+#include "Engine/Asset/Cook/AssetCompanion.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Content/AssetIO.h"
@@ -20,6 +21,11 @@ namespace sw
     {
         const bool bAudio = StringUtil::endsWith( relativePath, ".wav", true ) || StringUtil::endsWith( relativePath, ".ogg", true );
         return bAudio && ( relativePath.find( "/voice/" ) != string_view::npos || StringUtil::startsWith( relativePath, "voice/", true ) );
+    }
+
+    string LipSyncImport::makeCompanionTrackPath( string_view assetID )
+    {
+        return isVoiceAudio( assetID ) ? VisemeTrack::makePathForAudio( assetID ) : string{};
     }
 
     uint32 LipSyncImport::importAll( const string& resourceRoot, const LipSyncSettings& settings, uint32& outFailedCount )
@@ -68,3 +74,5 @@ namespace sw
         return writtenCount;
     }
 } // namespace sw
+
+SW_ASSET_COMPANION( VoiceVisemeTrack, &::sw::LipSyncImport::makeCompanionTrackPath );
