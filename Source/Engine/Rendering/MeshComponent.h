@@ -13,7 +13,7 @@
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
-#include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/Shader/Binding/GPUInstanceCustomData.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/GameObject/Registry/ScenePrimitive.h"

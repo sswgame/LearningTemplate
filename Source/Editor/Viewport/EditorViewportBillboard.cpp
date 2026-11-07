@@ -20,13 +20,13 @@
 #include "Engine/Environment/Foliage/WindComponent.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/Component/3D/LightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Rendering/LightComponent.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

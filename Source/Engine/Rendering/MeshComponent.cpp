@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
@@ -16,10 +16,10 @@
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
-#include "Engine/Object/Component/3D/MeshSectionComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
+#include "Engine/Rendering/MeshSectionComponent.h"
 
 namespace sw
 {

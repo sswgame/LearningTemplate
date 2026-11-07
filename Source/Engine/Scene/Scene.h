@@ -19,7 +19,6 @@ namespace sw
     class CameraComponent;
     class GameObject;
     class GameObjectManager;
-    class IRHIDevice;
     class Material;
 
     /**
@@ -40,10 +39,10 @@ namespace sw
         virtual ~Scene();
 
         /**
-         * @brief 기본 머티리얼을 얻고 기본 카메라 · 메시 기본값을 겁니다.
+         * @brief 기본 머티리얼을 얻고 기본 카메라를 겁니다. 메시 기본값은 렌더 쪽이 겁니다(`ISceneRenderBinding::bindSceneDefaults`).
          * @details 매니저가 받는 씬은 받아들이는 길(`SceneManager::applyScene`)이 부릅니다 — 매니저 밖에서 부르는 것은 단위 테스트뿐입니다.
          */
-        [[nodiscard]] bool initialize( IRHIDevice* pRHIDevice );
+        [[nodiscard]] bool initialize();
 
         /**
          * @brief 씬 문서(SceneDocument)의 엔티티 · 프리팹을 스폰하고 계층 구조를 만듭니다.
@@ -124,6 +123,29 @@ namespace sw
         [[nodiscard]] bool pumpHeldRegistration( uint32 maxCount );
         /** @brief 활성 게임 카메라를 직접 고릅니다. 그 카메라가 살아 있고 켜져 있는 동안 레지스트리의 선택보다 먼저입니다(nullptr 이면 해제). */
         void setActiveGameCamera( CameraComponent* pCamera );
+        /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 설정합니다. 비우면 연결을 끊습니다. */
+        void setEntityPrefabPath( uint64 objectID, string_view prefabPath );
+        /** @brief 엔티티의 데이터 레이어를 바꿉니다(에디터). 다음 저장에 적힙니다. 인스턴스 멤버는 바꾸지 않고 false 입니다 — 레이어는 파일의 엔티티에 붙는다. */
+        [[nodiscard]] bool setEntityDataLayers( uint64 objectID, vector<string> listLayer );
+
+        /** @brief 월드 설정을 바꿉니다(에디터). 다음 저장에 적힙니다 — 이미 지은 씬의 스트리밍은 바뀌지 않습니다(셀은 쿠킹이 나눈다). */
+        void setSceneSettings( const SceneSettings& settings ) { _sceneSettings = settings; }
+        /** @brief 씬 파일에서 읽은 월드 설정입니다. */
+        const SceneSettings& getSceneSettings() const { return _sceneSettings; }
+
+        /** @brief 씬 이름을 반환합니다. */
+        const string& getName() const { return _name; }
+        /** @brief 마지막 로드/저장 경로(리소스 상대 또는 절대)를 반환합니다. */
+        const string& getSourcePath() const { return _sourcePath; }
+        /** @brief 씬이 소유한 GameObjectManager 를 반환합니다. */
+        GameObjectManager* getObjectManager() const { return _objectManager.get(); }
+        /** @brief 만들 때 받은 엔진 서비스 묶음입니다. */
+        const SceneEngineServices& getEngineServices() const { return _services; }
+        /** @brief 씬 기본 머티리얼입니다(MaterialCache 에서 빌린 포인터, 소유하지 않음). */
+        Material* getMaterial() const { return _pMaterial; }
+        /** @brief 활성 게임 카메라를 반환합니다. */
+        CameraComponent* getActiveGameCamera() const;
+
         /** @brief 엔티티가 스폰된 프리팹 에셋 경로를 설정합니다. 비우면 연결을 끊습니다. */
         void setEntityPrefabPath( uint64 objectID, string_view prefabPath );
         /** @brief 엔티티의 데이터 레이어를 바꿉니다(에디터). 다음 저장에 적힙니다. 인스턴스 멤버는 바꾸지 않고 false 입니다 — 레이어는 파일의 엔티티에 붙는다. */

@@ -7,12 +7,12 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/PhysicsNameValidation.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
 {

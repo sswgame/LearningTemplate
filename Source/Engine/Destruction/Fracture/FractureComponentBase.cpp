@@ -14,7 +14,6 @@
 #include "Engine/Destruction/Fracture/FractureRenderUtil.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
@@ -26,6 +25,7 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
 {

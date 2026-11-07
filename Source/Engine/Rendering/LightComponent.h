@@ -55,7 +55,7 @@ namespace sw
 
         /**
          * @brief 이 빛 하나를 GPU 원소로 씁니다. 공통 칸(색 · 세기 · 종류)은 여기서, 종류마다 다른 칸은 파생의 `writeGPULightKindFields` 가 채웁니다.
-         * @details 그림자 플래그(`_params.x`)는 쓰지 않습니다 — 그림자 맵의 빛은 씬이 하나 고르므로(`Scene::findShadowCastingDirectionalLight`)
+         * @details 그림자 플래그(`_params.x`)는 쓰지 않습니다 — 그림자 맵의 빛은 씬이 하나 고르므로(`DirectionalLightComponent::findShadowCasting`)
          *          모으는 쪽이 켭니다. @p outLight 의 다른 칸은 모두 덮어씁니다.
          */
         void writeGPULight( GPULight& outLight ) const;

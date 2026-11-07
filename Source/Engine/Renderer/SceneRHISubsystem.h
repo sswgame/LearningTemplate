@@ -7,6 +7,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Scene/ISceneRenderBinding.h"
+
 namespace sw
 {
     class IRHIDevice;
@@ -16,7 +18,7 @@ namespace sw
      * @class SceneRHISubsystem
      * @brief 씬의 디바이스를 연결하는 서브시스템입니다.
      */
-    class SW_API SceneRHISubsystem final : public ISubsystem
+    class SW_API SceneRHISubsystem final : public ISubsystem, public ISceneRenderBinding
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 항목이 이 상수를 가리킨다). */
@@ -38,6 +40,9 @@ namespace sw
          *          텍스처를 요청하는데 이 단계는 그 뒤(`restartStopped`)에야 다시 선다. 붙지 않은 캐시는 요청을 실패시킨다(텍스처 머티리얼이 체커가 된다).
          */
         static void bindAssetCaches( IRHIDevice* pDevice );
+
+        void flushRenderThread() override;
+        void bindSceneDefaults( Scene& scene ) override;
 
     private:
         const RHISubsystem& _rhiSubsystem;

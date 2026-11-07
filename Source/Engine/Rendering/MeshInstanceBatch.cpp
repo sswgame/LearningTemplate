@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/3D/MeshInstanceBatch.h"
+#include "Engine/Rendering/MeshInstanceBatch.h"
 
 #include "Core/Log/Logger.h"
 

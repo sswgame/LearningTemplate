@@ -7,12 +7,12 @@
 
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
-#include "Engine/Object/Component/3D/PointLightComponent.h"
-#include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Rendering/DirectionalLightComponent.h"
+#include "Engine/Rendering/PointLightComponent.h"
+#include "Engine/Rendering/SpotLightComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"

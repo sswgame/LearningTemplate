@@ -6,13 +6,13 @@
 
 #include "Engine/2D/SortingLayerNameValidation.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
 {

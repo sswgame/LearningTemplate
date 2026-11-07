@@ -1,18 +1,18 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/3D/MeshLODSystem.h"
+#include "Engine/Rendering/MeshLODSystem.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/3D/MeshLODSettings.h"
-#include "Engine/Object/Component/3D/MeshSectionComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Rendering/MeshLODSettings.h"
+#include "Engine/Rendering/MeshSectionComponent.h"
 
 namespace sw
 {

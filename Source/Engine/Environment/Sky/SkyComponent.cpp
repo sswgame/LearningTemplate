@@ -6,9 +6,9 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Rendering/DirectionalLightComponent.h"
 
 namespace sw
 {
@@ -105,7 +105,7 @@ namespace sw
             if ( pSky->isPendingDestroy() || pSky->isActive() == false )
                 continue;
             outGradient = pSky->makeGradient();
-            // 대기 모드의 해는 씬의 첫 활성 방향광이다(Scene::findActiveDirectionalLight 와 같은 규칙). 없으면 해 색 0 — 하늘이 어둡다. 구름도 같은 해로 빛을 받는다.
+            // 대기 모드의 해는 씬의 첫 활성 방향광이다(DirectionalLightComponent::findActive 와 같은 규칙). 없으면 해 색 0 — 하늘이 어둡다. 구름도 같은 해로 빛을 받는다.
             for ( LightComponent* pLight : manager.getComponentRegistry().getAll<LightComponent>( shaderslot::kLightTypeDirectional ) )
             {
                 if ( pLight == nullptr || pLight->isActive() == false )

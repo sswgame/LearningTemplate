@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/3D/ReflectionProbeComponent.h"
+#include "Engine/Rendering/ReflectionProbeComponent.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"

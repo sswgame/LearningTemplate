@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Object/Component/3D/LightComponent.h"
+#include "Engine/Rendering/LightComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

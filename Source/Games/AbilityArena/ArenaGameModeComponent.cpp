@@ -11,9 +11,9 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"

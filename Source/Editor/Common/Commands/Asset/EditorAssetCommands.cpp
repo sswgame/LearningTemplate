@@ -19,11 +19,11 @@
 #include "Engine/2D/SpriteComponent.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw::editor
 {

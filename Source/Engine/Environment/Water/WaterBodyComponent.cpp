@@ -12,11 +12,11 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Physics/PhysicsSystem.h"
+#include "Engine/Rendering/MeshInstanceBatch.h"
 
 namespace sw
 {

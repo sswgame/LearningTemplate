@@ -10,14 +10,14 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Renderer/Lighting/RealtimeProbeUpdater.h"
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
+#include "Engine/Rendering/LightProbeVolumeComponent.h"
+#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
 
 // SceneVoxelGridTest · SceneVoxelizerTest · RealtimeProbeTest — 실시간 프로브 갱신의 CPU 쪽(결정 기록 5-5 R5 · R6). 디바이스 없음(nogpu).

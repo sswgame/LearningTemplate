@@ -10,7 +10,7 @@
 #include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 

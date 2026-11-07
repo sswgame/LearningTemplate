@@ -4,10 +4,10 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"

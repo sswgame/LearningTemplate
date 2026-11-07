@@ -24,7 +24,7 @@ namespace sw
 {
     class GameObject;
     class GameObjectManager;
-    class IRHIDevice;
+    class ISceneRenderBinding;
     class PreloadSet;
     class Scene;
 
@@ -160,7 +160,7 @@ namespace sw
          * @details 언리얼 `FPreviewScene` · 유니티 `PreviewRenderUtility` 자리입니다. 씬마다 오브젝트 매니저와 씬 범위
          *          (`GameObjectManager::getSceneScope`)가 따로라 서비스(물리 · 오디오 · 내비)도 월드마다 하나씩입니다.
          *          틱은 `tickPreviewScenes` 가 정책대로 하고, 월드 플레이 상태(`setWorldPlaying`)는 따르지 않습니다(`ScenePreviewPolicy::_bPlay` 가 따로 정한다).
-         *          디바이스가 걸려 있으면(`setRHIDevice`) 다른 씬과 같이 `applyScene` 이 기본 머티리얼 · 카메라를 겁니다 — 미리보기 창은 곧바로 그리기 때문입니다.
+         *          렌더 쪽이 걸려 있으면(`setRenderBinding`) 다른 씬과 같이 `applyScene` 이 기본 머티리얼 · 카메라를 겁니다 — 미리보기 창은 곧바로 그리기 때문입니다.
          *          그림은 호스트가 이 씬의 키로 뷰를 요청할 때만 나옵니다(`PreviewSceneView` · `RenderPacketBuilder::populateScenePreviews`).
          * @return 만든 씬. 매니저가 소유하며 `destroyPreviewScene` 이나 `shutdownSubsystem` 이 내립니다.
          */
@@ -193,7 +193,7 @@ namespace sw
         Scene* getFocusedScene() const { return _pFocusedScene != nullptr ? _pFocusedScene : _pActiveScene; }
 
         /** @brief 비동기 로드로 만든 씬 초기화에 쓸 디바이스를 설정합니다. */
-        void setRHIDevice( IRHIDevice* pRHIDevice ) { _pRHIDevice = pRHIDevice; }
+        void setRenderBinding( ISceneRenderBinding* pRenderBinding ) { _pRenderBinding = pRenderBinding; }
         /** @brief 현재 활성 씬을 반환합니다. */
         Scene* getActiveScene() const { return _pActiveScene; }
         /**
@@ -338,7 +338,7 @@ namespace sw
         uint8                     _bWorldPlaying : 1; ///< `setWorldPlaying`
         uint8                     _bInitialized  : 1;
         uint64                    _sceneGeneration;
-        IRHIDevice*               _pRHIDevice;
+        ISceneRenderBinding*      _pRenderBinding;
         SceneEngineServices       _services; ///< 생성자가 읽고 `initializeSubsystem` 이 다시 읽은 엔진 서비스 묶음(빌림)
 
         shared_ptr<AsyncLoadSlot> _asyncLoad;

@@ -17,11 +17,11 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierGPUProgram.h"

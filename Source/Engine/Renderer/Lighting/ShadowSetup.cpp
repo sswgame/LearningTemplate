@@ -5,7 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
+#include "Engine/Rendering/DirectionalLightComponent.h"
 
 namespace sw
 {

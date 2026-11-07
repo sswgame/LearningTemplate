@@ -11,7 +11,11 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/RHISubsystem.h"
+#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw
@@ -24,7 +28,7 @@ namespace sw
     SubsystemInitResult SceneRHISubsystem::initializeSubsystem()
     {
         IRHIDevice* const pDevice = &_rhiSubsystem.findRHI()->getDevice();
-        engine::getSubsystem<SceneManager>().setRHIDevice( pDevice );
+        engine::getSubsystem<SceneManager>().setRenderBinding( this );
         bindAssetCaches( pDevice );
         return SubsystemInitResult::Succeeded;
     }
@@ -40,8 +44,37 @@ namespace sw
 
     void SceneRHISubsystem::shutdownSubsystem()
     {
-        engine::getSubsystem<SceneManager>().setRHIDevice( nullptr );
+        engine::getSubsystem<SceneManager>().setRenderBinding( nullptr );
         bindAssetCaches( nullptr );
+    }
+
+    void SceneRHISubsystem::flushRenderThread()
+    {
+        _rhiSubsystem.findRHI()->getDevice().flushRenderThread();
+    }
+
+    void SceneRHISubsystem::bindSceneDefaults( Scene& scene )
+    {
+        GameObjectManager* const pObjectManager = scene.getObjectManager();
+        if ( pObjectManager == nullptr )
+            return;
+        Material* const pDefaultMaterial = scene.getMaterial();
+        pObjectManager->forEachGameObject( [&]( GameObject* pObj )
+        {
+            if ( pObj == nullptr )
+                return;
+            MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>();
+            if ( pMeshComp == nullptr )
+                return;
+            pMeshComp->resolveRenderAssets();
+            // 인스턴스가 붙은 메시는 건너뛴다. 그 메시의 머티리얼은 인스턴스의 부모이고, GPUSceneBuilder 가 그렇게 고른다.
+            // 여기서 씬 기본을 넣으면 배치가 기본 머티리얼(그룹, 텍스처)과 인스턴스(원소 바이트, 퍼뮤테이션)로 섞인다.
+            const bool bNeedsDefaultMaterial = pMeshComp->getMaterial() == nullptr && pMeshComp->getRawMaterialInstance() == nullptr && pDefaultMaterial != nullptr;
+            if ( bNeedsDefaultMaterial )
+                pMeshComp->setMaterial( pDefaultMaterial );
+        } );
+        engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().initializePending( &_rhiSubsystem.findRHI()->getDevice() );
+        pObjectManager->flushSceneTransforms();
     }
 
     span<const utf8* const> SceneRHISubsystem::getSubsystemDependencies() const

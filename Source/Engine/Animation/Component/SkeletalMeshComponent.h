@@ -16,8 +16,8 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/ComponentHandle.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
 {

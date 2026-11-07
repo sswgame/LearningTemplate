@@ -7,9 +7,9 @@
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Config/GameAutoplay.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"

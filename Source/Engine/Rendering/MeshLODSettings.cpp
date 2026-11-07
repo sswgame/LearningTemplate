@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/3D/MeshLODSettings.h"
+#include "Engine/Rendering/MeshLODSettings.h"
 
 #include "Core/Log/Logger.h"
 

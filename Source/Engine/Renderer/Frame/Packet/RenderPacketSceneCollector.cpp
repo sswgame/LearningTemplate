@@ -11,8 +11,6 @@
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
-#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
-#include "Engine/Object/Component/3D/MeshLODSystem.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -22,6 +20,8 @@
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
+#include "Engine/Rendering/DirectionalLightComponent.h"
+#include "Engine/Rendering/MeshLODSystem.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/World/UIWidgetComponentService.h"
@@ -76,10 +76,10 @@ namespace sw
 
     RenderPacketKeyLights RenderPacketSceneCollector::writeKeyLight( RenderFramePacket& packet, Scene& scene )
     {
-        // 그림자 행렬은 그림자 맵을 가져가는 빛(`findShadowCastingDirectionalLight`)에서 — 라이트 목록의 그림자 플래그와 같은 빛이다.
+        // 그림자 행렬은 그림자 맵을 가져가는 빛(`DirectionalLightComponent::findShadowCasting`)에서 — 라이트 목록의 그림자 플래그와 같은 빛이다.
         RenderPacketKeyLights lights;
-        lights._pLight       = scene.findActiveDirectionalLight();
-        lights._pShadowLight = scene.findShadowCastingDirectionalLight();
+        lights._pLight       = DirectionalLightComponent::findActive( scene.getObjectManager() );
+        lights._pShadowLight = DirectionalLightComponent::findShadowCasting( scene.getObjectManager() );
         if ( lights._pLight != nullptr )
         {
             const float3 dir          = lights._pLight->getLightDirection();

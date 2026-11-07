@@ -4,7 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Object/Component/3D/MeshLODSettings.h"
+#include "Engine/Rendering/MeshLODSettings.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 

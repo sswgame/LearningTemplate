@@ -39,7 +39,7 @@ namespace sw
         uint32             _height{ 0 };
     };
 
-    /** @brief 씬에서 고른 방향광 둘입니다 — 키라이트(방향 · 색 · 앰비언트의 출처)와 그림자 맵을 가져가는 빛(`Scene::findShadowCastingDirectionalLight`). */
+    /** @brief 씬에서 고른 방향광 둘입니다 — 키라이트(방향 · 색 · 앰비언트의 출처)와 그림자 맵을 가져가는 빛(`DirectionalLightComponent::findShadowCasting`). */
     struct RenderPacketKeyLights
     {
         DirectionalLightComponent* _pLight{ nullptr };

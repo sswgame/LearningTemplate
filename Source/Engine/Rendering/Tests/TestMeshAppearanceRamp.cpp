@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 // MeshAppearanceRampTest — 메시 디더 등장 램프: 시간 0 인 걸음은 램프를 끝내지 않고, 오르는 램프는 1 에서 · 내리는 램프는 0 에서만 끝난다(nogpu).
 

@@ -7,11 +7,13 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Object/Component/3D/LightComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Rendering/LightComponent.h"
 
 namespace sw
 {
+    class GameObjectManager;
+
     /**
      * @brief 방향광 그림자 캐스케이드 하나입니다 — 기준 볼륨의 NDC xy 를 이 캐스케이드의 NDC 로 옮기는 배율 · 이동과, 이 캐스케이드가 맡는 카메라 깊이의 끝입니다.
      * @details 캐스케이드는 모두 같은 빛 회전과 같은 깊이 구간을 쓰므로 기준 볼륨과는 xy 의 배율 · 이동만 다르다(`x_c = x_b · scale + offset`).
@@ -71,7 +73,7 @@ namespace sw
      * @brief 방향광 하나입니다. 빛 방향은 이 컴포넌트의 월드 트랜스폼에서 나옵니다.
      * @details 주광의 방향 · 색 · 세기와 그림자 직교 볼륨(`_shadowExtent`)을 씬이 정합니다. 카메라가 CameraComponent 로
      *          선언되듯 빛도 컴포넌트로 선언합니다. 볼륨을 카메라가 보는 곳에 맞추려면 `_shadowViewDistance` 를 줍니다(`computeShadowProjectionForView`).
-     *          그림자를 드리우는 방향광은 씬이 하나 고르고(`Scene::findShadowCastingDirectionalLight`) 그 빛이 그림자 아틀라스의 캐스케이드 칸을 받습니다.
+     *          그림자를 드리우는 방향광은 씬이 하나 고르고(`DirectionalLightComponent::findShadowCasting`) 그 빛이 그림자 아틀라스의 캐스케이드 칸을 받습니다.
      * @note 방향은 기본 방향(위에서 비스듬히)을 이 컴포넌트의 월드 회전으로 돌린 것입니다(`LightComponent` 의 방향 규약).
      *       회전이 없는 루트면 기본 방향 그대로이고, 부모가 돌면 따라 돕니다.
      */
@@ -80,6 +82,18 @@ namespace sw
     {
     public:
         REFLECT_BODY();
+
+        /**
+         * @brief 씬의 주광입니다 — 켜져 있는 첫 방향광(등록 순서). 없으면 nullptr 이고, 렌더러가 기본값으로 폴백합니다.
+         * @details 카메라와 달리 캐시하지 않고 그때그때 찾습니다(빛 레지스트리만 봅니다). 비용이 빛의 수에 비례하고 씬 크기와 무관합니다.
+         */
+        [[nodiscard]] static DirectionalLightComponent* findActive( const GameObjectManager* pObjectManager );
+        /**
+         * @brief 그림자 맵을 가져가는 방향광입니다 — 켜져 있고 그림자를 드리우는 첫 방향광(등록 순서). 없으면 nullptr 입니다.
+         * @details 그림자 행렬을 만드는 쪽과 그림자 플래그를 싣는 쪽(`collectSceneLights`)이 **둘 다 이것을 부릅니다.** 주의: 둘이 따로 고르면 첫 방향광이 그림자를 끄고
+         *          뒤의 빛이 켤 때 행렬은 비고 플래그는 뒤의 빛에 붙어, 그림자를 드리우는 빛에 그림자가 지지 않는다. 방향 · 색 · 앰비언트는 그대로 주광에서 옵니다.
+         */
+        [[nodiscard]] static DirectionalLightComponent* findShadowCasting( const GameObjectManager* pObjectManager );
 
         /** @brief 기본 주광 값으로 만듭니다. */
         DirectionalLightComponent();

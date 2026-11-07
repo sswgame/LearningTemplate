@@ -21,8 +21,8 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 #include <imgui.h>
 

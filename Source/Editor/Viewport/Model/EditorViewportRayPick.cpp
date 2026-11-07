@@ -11,7 +11,6 @@
 #include "Core/Math/Ray.h"
 
 #include "Engine/2D/SpriteComponent.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -19,6 +18,7 @@
 #include "Engine/Physics/Component/BoxCollider2DComponent.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw::editor
 {

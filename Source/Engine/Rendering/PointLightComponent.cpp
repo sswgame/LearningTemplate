@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/3D/PointLightComponent.h"
+#include "Engine/Rendering/PointLightComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

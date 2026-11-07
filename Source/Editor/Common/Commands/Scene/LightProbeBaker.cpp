@@ -6,11 +6,11 @@
 
 #include "Engine/Environment/Sky/SkyComponent.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
+#include "Engine/Rendering/LightProbeVolumeComponent.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw

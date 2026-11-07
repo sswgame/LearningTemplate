@@ -4,10 +4,10 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
+#include "Engine/Rendering/DirectionalLightComponent.h"
 #include "Engine/Scene/Scene.h"
 
 // 그림자 배치(아틀라스 칸 · 캐스케이드 · 점광 · 스폿 타일 · 뷰별 볼륨)를 GPU 없이 행렬과 칸으로 본다. 픽셀은 RenderPassGPUTest 의 그림자 케이스가 본다.

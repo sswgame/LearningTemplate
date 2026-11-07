@@ -9,8 +9,8 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Object/Component/3D/LightComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Rendering/LightComponent.h"
 
 namespace sw
 {

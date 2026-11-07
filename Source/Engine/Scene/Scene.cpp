@@ -16,9 +16,6 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -55,59 +52,6 @@ namespace sw
                 if ( gv_defaultMaterial.empty() == false )
                     return gv_defaultMaterial;
                 return pDefaultAssets != nullptr ? pDefaultAssets->_defaultMaterial.get() : string{};
-            }
-
-            /**
-             * @brief MeshComponent 의 프리미티브 메시와 머티리얼(저장된 참조, 없으면 씬 기본)을 채우고, 잡은 머티리얼을 @p pRHIDevice 로 업로드합니다.
-             * @param pAssetManager 머티리얼 캐시의 업로드 대기를 비울 곳입니다. nullptr 이면 업로드는 건너뜁니다.
-             */
-            static void bindSceneMeshDefaults( Scene* pScene, AssetManager* pAssetManager, IRHIDevice* pRHIDevice )
-            {
-                if ( pScene == nullptr )
-                    return;
-                GameObjectManager* pObjectManager = pScene->getObjectManager();
-                if ( pObjectManager == nullptr )
-                    return;
-
-                Material* pDefaultMaterial = pScene->getMaterial();
-                pObjectManager->forEachGameObject( [&]( GameObject* pObj )
-                {
-                    if ( pObj == nullptr )
-                        return;
-                    MeshComponent* pMeshComp = pObj->getComponent<MeshComponent>();
-                    if ( pMeshComp == nullptr )
-                        return;
-                    pMeshComp->resolveRenderAssets();
-                    // 인스턴스가 붙은 메시는 건너뛴다. 그 메시의 머티리얼은 인스턴스의 부모이고, GPUSceneBuilder 가 그렇게 고른다.
-                    // 여기서 씬 기본을 넣으면 배치가 기본 머티리얼(그룹, 텍스처)과 인스턴스(원소 바이트, 퍼뮤테이션)로 섞인다.
-                    const bool bNeedsDefaultMaterial = pMeshComp->getMaterial() == nullptr && pMeshComp->getRawMaterialInstance() == nullptr && pDefaultMaterial != nullptr;
-                    if ( bNeedsDefaultMaterial )
-                        pMeshComp->setMaterial( pDefaultMaterial );
-                } );
-                if ( pAssetManager != nullptr )
-                    pAssetManager->getAssetCache<MaterialCache>().initializePending( pRHIDevice );
-                pObjectManager->flushSceneTransforms();
-            }
-
-            /**
-             * @brief 켜져 있는 첫 방향광(등록 순서)을 찾습니다. @p bRequireShadow 면 그림자를 드리우는 것만 봅니다.
-             * @details 활성 판정은 여기서 한다. 레지스트리는 "무엇이 있나"만 안다(PrimitiveRegistry 와 같은 규약). `Component::isActive` 가
-             *          소유 오브젝트의 계층 활성까지 본다.
-             */
-            static DirectionalLightComponent* findDirectionalLight( const GameObjectManager* pObjectManager, bool bRequireShadow )
-            {
-                if ( pObjectManager == nullptr )
-                    return nullptr;
-                for ( LightComponent* pLight : pObjectManager->getComponentRegistry().getAll<LightComponent>( shaderslot::kLightTypeDirectional ) )
-                {
-                    if ( pLight == nullptr || pLight->isActive() == false )
-                        continue;
-                    DirectionalLightComponent* pDirectional = static_cast<DirectionalLightComponent*>( pLight );
-                    if ( bRequireShadow && pDirectional->castsShadow() == false )
-                        continue;
-                    return pDirectional;
-                }
-                return nullptr;
             }
 
             /**
@@ -586,7 +530,7 @@ namespace sw
     /**
      * @brief 씬을 초기화합니다. 기본 머티리얼을 얻고 기본 카메라를 설정합니다.
      */
-    bool Scene::initialize( IRHIDevice* pRHIDevice )
+    bool Scene::initialize()
     {
         // 에셋 매니저가 없으면 기본 머티리얼을 잡을 곳도 없다 — 카메라와 메시 기본값만 채운다.
         const string materialPath = _services._pAssetManager != nullptr ? SceneInternal::resolveDefaultMaterialPath( _services._pDefaultAssets ) : string{};
@@ -598,12 +542,11 @@ namespace sw
                 _defaultMaterialPath         = materialPath;
                 MaterialCache& materialCache = _services._pAssetManager->getAssetCache<MaterialCache>();
                 _pMaterial                   = materialCache.acquire( materialPath ); // 빈 경로가 아니면 실패하지 않는다 — 초기화 실패는 `initializePending` 이 알린다
-                materialCache.requestInitialize( materialPath );                      // 아래 `bindSceneMeshDefaults` 의 `initializePending` 이 초기화한다
+                materialCache.requestInitialize( materialPath );                      // 렌더 쪽의 `bindSceneDefaults` 가 초기화한다
             }
         }
         // 카메라는 프레임마다 다시 고른다 — 여기서 못 고르면(오브젝트 관리자 없음) 렌더 경로가 "카메라 없음" 으로 알린다.
         pickActiveGameCamera();
-        SceneInternal::bindSceneMeshDefaults( this, _services._pAssetManager, pRHIDevice );
         return true;
     }
 
@@ -1202,21 +1145,6 @@ namespace sw
 
         storeCameraHandle( pCamera, _activeGameCamera );
         return pCamera != nullptr;
-    }
-
-    /**
-     * @brief 지금 켜져 있는 방향광 하나를 반환합니다. 없으면 nullptr 입니다.
-     * @details 레지스트리만 본다. 비용이 빛의 수에 비례하고 씬 크기와 무관하다(Engine 이 매 프레임 부르므로 씬을 훑으면 안 된다.
-     *          `ComponentRegistry` 설명 참고).
-     */
-    DirectionalLightComponent* Scene::findActiveDirectionalLight() const
-    {
-        return SceneInternal::findDirectionalLight( _objectManager.get(), false );
-    }
-
-    DirectionalLightComponent* Scene::findShadowCastingDirectionalLight() const
-    {
-        return SceneInternal::findDirectionalLight( _objectManager.get(), true );
     }
 
     void Scene::setActiveGameCamera( CameraComponent* pCamera )

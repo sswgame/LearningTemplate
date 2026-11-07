@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/3D/TextureStreamingSystem.h"
+#include "Engine/Rendering/TextureStreamingSystem.h"
 
 #include "Core/Container/vector.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -8,10 +8,10 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/3D/MeshLODSystem.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Rendering/MeshLODSystem.h"
 
 namespace sw
 {

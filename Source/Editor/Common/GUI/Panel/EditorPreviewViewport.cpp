@@ -15,12 +15,12 @@
 #include "Editor/Viewport/EditorOrbitMath.h"
 
 #include "Engine/Environment/Sky/SkyComponent.h"
-#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/RenderThread.h"
+#include "Engine/Rendering/DirectionalLightComponent.h"
+#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
 
 #include <imgui.h>

@@ -11,10 +11,10 @@
 #include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
 {

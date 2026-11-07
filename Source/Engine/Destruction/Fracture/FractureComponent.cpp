@@ -8,10 +8,10 @@
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 // FractureAssetCache — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
 namespace sw

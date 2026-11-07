@@ -20,7 +20,6 @@
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -28,6 +27,7 @@
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
 {

@@ -14,11 +14,11 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/Map/CommonInputActions.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"

@@ -12,10 +12,10 @@
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
 
 #include "Games/Empty/StressTestSceneSettings.h"

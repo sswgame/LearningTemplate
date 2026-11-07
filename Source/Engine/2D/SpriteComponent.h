@@ -10,8 +10,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
 {

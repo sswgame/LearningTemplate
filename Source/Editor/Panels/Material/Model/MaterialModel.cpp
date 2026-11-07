@@ -11,9 +11,9 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw::editor

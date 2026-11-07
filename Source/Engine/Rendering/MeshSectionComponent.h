@@ -6,8 +6,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
 {

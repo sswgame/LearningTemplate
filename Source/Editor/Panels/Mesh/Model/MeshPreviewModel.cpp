@@ -7,10 +7,10 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/3D/MeshLODSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Rendering/MeshLODSystem.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw::editor

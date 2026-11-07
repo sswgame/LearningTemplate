@@ -139,7 +139,7 @@ namespace sw
 
         /**
          * @brief 한 프레임의 그림자 배치를 만듭니다. @p inoutListLight 에서 그림자를 드리우는 점광과 스폿의 원소에 그림자 슬롯(`_params.x`, `_params.w`)을 씁니다.
-         * @param pShadowLight          그림자 맵의 방향광(`Scene::findShadowCastingDirectionalLight`). 없으면 주 시점은 그림자 없는 뷰(`makeUnshadowedView`)입니다.
+         * @param pShadowLight          그림자 맵의 방향광(`DirectionalLightComponent::findShadowCasting`). 없으면 주 시점은 그림자 없는 뷰(`makeUnshadowedView`)입니다.
          * @param pMainViewProj         주 시점 카메라의 뷰-투영. 없으면 고정 볼륨입니다.
          * @param listShadowLightIndex  `collectSceneLights` 가 준 그림자를 드리우는 점광과 스폿의 원소 번호
          * @details 주 시점 그림자(`outFrame._mainView`)는 늘 유효합니다. 그림자 빛이 없을 때 키 라이트로 볼륨을 대신 만들지 않습니다.

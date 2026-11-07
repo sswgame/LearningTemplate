@@ -17,11 +17,11 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
-#include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Rendering/LightProbeVolumeComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 

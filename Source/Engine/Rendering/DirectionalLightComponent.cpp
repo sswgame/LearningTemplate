@@ -1,14 +1,51 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
+#include "Engine/Rendering/DirectionalLightComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw
 {
+    namespace
+    {
+        struct DirectionalLightComponentInternal
+        {
+            /**
+             * @brief 켜져 있는 첫 방향광(등록 순서)을 찾습니다. @p bRequireShadow 면 그림자를 드리우는 것만 봅니다.
+             * @details 활성 판정은 여기서 한다. 레지스트리는 "무엇이 있나"만 안다(PrimitiveRegistry 와 같은 규약). `Component::isActive` 가 소유 오브젝트의 계층 활성까지 본다.
+             */
+            static DirectionalLightComponent* findFirst( const GameObjectManager* pObjectManager, bool bRequireShadow )
+            {
+                if ( pObjectManager == nullptr )
+                    return nullptr;
+                for ( LightComponent* pLight : pObjectManager->getComponentRegistry().getAll<LightComponent>( shaderslot::kLightTypeDirectional ) )
+                {
+                    if ( pLight == nullptr || pLight->isActive() == false )
+                        continue;
+                    DirectionalLightComponent* pDirectional = static_cast<DirectionalLightComponent*>( pLight );
+                    if ( bRequireShadow && pDirectional->castsShadow() == false )
+                        continue;
+                    return pDirectional;
+                }
+                return nullptr;
+            }
+        };
+    } // namespace
+
+    DirectionalLightComponent* DirectionalLightComponent::findActive( const GameObjectManager* pObjectManager )
+    {
+        return DirectionalLightComponentInternal::findFirst( pObjectManager, false );
+    }
+
+    DirectionalLightComponent* DirectionalLightComponent::findShadowCasting( const GameObjectManager* pObjectManager )
+    {
+        return DirectionalLightComponentInternal::findFirst( pObjectManager, true );
+    }
+
     namespace
     {
         /**

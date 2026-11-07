@@ -7,9 +7,9 @@
 #include "Engine/Destruction/Fracture/FractureRenderUtil.h"
 #include "Engine/Destruction/Fracture/PolygonFracture.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
 {

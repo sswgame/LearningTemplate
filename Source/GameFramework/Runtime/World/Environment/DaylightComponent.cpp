@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Rendering/DirectionalLightComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 

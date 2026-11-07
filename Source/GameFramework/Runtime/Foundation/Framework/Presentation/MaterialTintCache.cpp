@@ -3,7 +3,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
 #include "Engine/Graphics/Material/MaterialInstance.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
 {

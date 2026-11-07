@@ -21,7 +21,6 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
-#include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -29,6 +28,7 @@
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Scene/ISceneRenderBinding.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/ScenePreloadList.h"
@@ -50,7 +50,7 @@ namespace sw
         , _bWorldPlaying{ SW_FALSE }
         , _bInitialized{ SW_FALSE }
         , _sceneGeneration{ 0 }
-        , _pRHIDevice{ nullptr }
+        , _pRenderBinding{ nullptr }
         , _services{ SceneEngineServices::makeFromBoundEngine() }
         , _asyncLoad{ sw::make_shared<AsyncLoadSlot>() }
         , _queuedPath{}
@@ -186,8 +186,12 @@ namespace sw
         Scene* const pScene = scene.get();
         pScene->finishHeldRegistration(); // 워커에서 지은 씬의 등록 · 로드 뒤 처리(게임 스레드) — 기본값 걸기 · 카메라 고르기가 레지스트리를 본다
         // 기본 머티리얼 · 기본 카메라 · 메시 기본값을 건다(디바이스가 없는 테스트는 건너뛴다). 머티리얼 없는 메시가 그려지려면 필요하다.
-        if ( _pRHIDevice != nullptr && pScene->initialize( _pRHIDevice ) == false )
-            SW_LOG_WARNING_ID( "SceneManager.SceneCouldNotAcquire", "Scene '%#' could not acquire its default material", pScene->getName() );
+        if ( _pRenderBinding != nullptr )
+        {
+            if ( pScene->initialize() == false )
+                SW_LOG_WARNING_ID( "SceneManager.SceneCouldNotAcquire", "Scene '%#' could not acquire its default material", pScene->getName() );
+            _pRenderBinding->bindSceneDefaults( *pScene );
+        }
         // 넷 링크는 플레이가 시작되기 전(활성화 · `beginPlay` 앞)에 올린다. 미리보기 씬은 만드는 쪽(가상 서버 하니스)이 자기 링크를 올린다.
         GameObjectManager* const pNewManager = pScene->getObjectManager();
         if ( role != SceneRole::Preview && _netLink.isComplete() && pNewManager != nullptr )
@@ -590,8 +594,8 @@ namespace sw
         }
 
         // 렌더 스레드만 비운다 — 새 씬이 기본 자원을 표에 올리는 동안 기록하지 않게 한다. 이전 씬의 자원은 `releaseHandle` 과 해제 큐가 GPU 뒤로 미루므로 GPU 를 기다리지 않는다.
-        if ( _pRHIDevice != nullptr )
-            _pRHIDevice->flushRenderThread();
+        if ( _pRenderBinding != nullptr )
+            _pRenderBinding->flushRenderThread();
 
         // 활성 교체 · 이전 씬 언로드 · 에셋 정리는 `applyScene` 이 한다. 약속은 교체가 끝난 뒤에 채운다.
         Scene* const pAdopted = applyScene( std::move( pendingScene ), SceneRole::Active );

@@ -3,8 +3,8 @@
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
 
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
 {

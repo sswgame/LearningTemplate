@@ -17,10 +17,10 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Navigation/Component/SceneNavigation.h"
-#include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Rendering/MeshInstanceBatch.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 namespace sw

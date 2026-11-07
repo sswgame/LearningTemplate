@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
+#include "Engine/Rendering/LightProbeVolumeComponent.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"

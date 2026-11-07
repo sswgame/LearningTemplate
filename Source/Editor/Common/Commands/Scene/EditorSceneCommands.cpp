@@ -19,13 +19,13 @@
 #include "Editor/Common/Workspace/ObjectCopyBuffer.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 

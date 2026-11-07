@@ -3,8 +3,8 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Object/Component/3D/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
+#include "Engine/Rendering/MeshInstanceBatch.h"
 
 using namespace sw;
 

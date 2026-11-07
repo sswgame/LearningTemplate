@@ -10,9 +10,9 @@
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Destruction/Fracture/FractureRenderUtil.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
 {

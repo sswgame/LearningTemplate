@@ -8,10 +8,10 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
-#include "Engine/Object/Component/3D/MeshSectionComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Rendering/MeshSectionComponent.h"
 
 namespace sw
 {

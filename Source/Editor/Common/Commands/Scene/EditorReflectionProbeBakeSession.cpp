@@ -17,12 +17,12 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Lighting/ReflectionProbeAsset.h"
-#include "Engine/Object/Component/3D/ReflectionProbeComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Renderer/RenderThreadSubsystem.h"
+#include "Engine/Rendering/ReflectionProbeComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 

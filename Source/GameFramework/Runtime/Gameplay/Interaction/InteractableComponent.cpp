@@ -7,11 +7,11 @@
 #include "Engine/Character/Socket/SocketSetComponent.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"

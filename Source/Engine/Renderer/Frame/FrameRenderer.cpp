@@ -31,7 +31,6 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"
@@ -41,6 +40,7 @@
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
+#include "Engine/Rendering/DirectionalLightComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 

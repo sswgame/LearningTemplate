@@ -8,15 +8,15 @@
 
 #include "Engine/2D/ShadowCaster2DComponent.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Object/Component/3D/DirectionalLightComponent.h"
-#include "Engine/Object/Component/3D/LightProbeVolumeComponent.h"
-#include "Engine/Object/Component/3D/PointLightComponent.h"
-#include "Engine/Object/Component/3D/ReflectionProbeComponent.h"
-#include "Engine/Object/Component/3D/SpotLightComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
+#include "Engine/Rendering/DirectionalLightComponent.h"
+#include "Engine/Rendering/LightProbeVolumeComponent.h"
+#include "Engine/Rendering/PointLightComponent.h"
+#include "Engine/Rendering/ReflectionProbeComponent.h"
+#include "Engine/Rendering/SpotLightComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/VFX/VFXComponent.h"
 
@@ -165,7 +165,7 @@ namespace sw
 
         const ComponentRegistry& registry = pScene->getObjectManager()->getComponentRegistry();
         // 그림자 플래그는 그림자 행렬을 만드는 쪽(Engine, FrameRenderer)과 **같은 빛**에 붙어야 한다. 고르는 규칙은 씬의 한 함수다.
-        const DirectionalLightComponent* pShadowLight = pScene->findShadowCastingDirectionalLight();
+        const DirectionalLightComponent* pShadowLight = DirectionalLightComponent::findShadowCasting( pScene->getObjectManager() );
 
         // 종류 순서로 돈다. 방향광이 0 이라 앞에 온다(상한을 넘으면 뒤에서부터 잘린다). 원소의 필드는 빛이 스스로 쓴다
         // (`LightComponent::writeGPULight`). 여기는 종류를 모른다. 그림자 플래그만 씬이 고른 빛에 켠다.

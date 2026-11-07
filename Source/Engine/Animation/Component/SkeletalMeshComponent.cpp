@@ -14,10 +14,10 @@
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
-#include "Engine/Object/Component/3D/MeshLODSettings.h"
-#include "Engine/Object/Component/3D/MeshSectionComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Rendering/MeshLODSettings.h"
+#include "Engine/Rendering/MeshSectionComponent.h"
 
 namespace sw
 {

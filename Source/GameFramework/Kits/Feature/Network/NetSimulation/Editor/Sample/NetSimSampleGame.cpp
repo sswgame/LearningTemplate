@@ -12,9 +12,9 @@
 #include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Rendering/MeshComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 

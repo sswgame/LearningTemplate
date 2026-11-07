@@ -69,7 +69,7 @@ namespace sw
      * @details 레지스트리(`ComponentRegistry`)만 봅니다. 주의: 모든 GameObject 를 도는 경로를 만들지 않습니다
      *          (큐브 20,000 개에서 그 훑기 한 번이 2.9ms 입니다).
      *          활성 판정은 여기서 합니다(레지스트리는 "무엇이 있나"만 압니다).
-     * @note 방향광의 그림자 플래그는 `Scene::findShadowCastingDirectionalLight` 가 고른 빛 하나만 받습니다. 그림자 행렬도 같은 함수에서
+     * @note 방향광의 그림자 플래그는 `DirectionalLightComponent::findShadowCasting` 가 고른 빛 하나만 받습니다. 그림자 행렬도 같은 함수에서
      *       나옵니다. 그림자를 켠 점광과 스폿은 번호만 @p pOutListShadowLightIndex 에 적고, 아틀라스 슬롯은 `FrameShadowData::populateFrame` 이 나눠 줍니다.
      * @param outList 기존 내용을 지우고 채웁니다. 부르는 쪽이 프레임마다 재사용하는 버퍼여야 합니다(할당 회피).
      * @param pOutListShadowLightIndex 비지 않으면 그림자를 켠 점광과 스폿 원소의 번호를 지우고 채웁니다.

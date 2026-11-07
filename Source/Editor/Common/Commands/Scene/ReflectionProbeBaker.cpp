@@ -11,11 +11,11 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Object/Component/3D/ReflectionProbeComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
+#include "Engine/Rendering/ReflectionProbeComponent.h"
 #include "Engine/Scene/Scene.h"
 
 namespace sw
