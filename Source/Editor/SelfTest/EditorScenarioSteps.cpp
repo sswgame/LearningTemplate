@@ -81,22 +81,24 @@ namespace sw::editor
                 EditorSelfTestMark found{};
                 if ( EditorSelfTestMarks::find( mark, found ) == false || found._bClipped == false )
                     return false;
-                runner.recordFailure( step, "editor widget '" + mark + "' is outside the visible area of its window (scroll it into view or collapse what is above it)" );
+                runner.recordFailure( step, "editor widget '" + mark + "' is still outside the visible area of its window after scrolling it into view (a collapsed header or a non-scrolling window hides it)" );
                 return true;
             }
 
             /** @brief 입력 단계가 대상이 자리 잡기를 기다리는 최대 프레임 수입니다. 넘기면 단계가 돌며 실패를 적는다. */
             static constexpr uint32 kSettleWaitFrames = 60;
 
-            /** @brief 레이블 @p pMark 가 그려졌는지 · 자리 잡았는지 봅니다. nullptr(적지 않은 칸)는 둘 다 참입니다. */
+            /** @brief 레이블 @p pMark 가 그려졌는지 · 자리 잡았는지 봅니다. 잘려 있으면 그 창을 스크롤해 보이게 하고 자리 잡지 않은 것으로 센다. nullptr(적지 않은 칸)는 둘 다 참입니다. */
             static void checkMark( const string* pMark, bool& inoutDrawn, bool& inoutSettled )
             {
                 if ( pMark == nullptr )
                     return;
                 EditorSelfTestMark found{};
                 const bool         bDrawn = EditorSelfTestMarks::find( *pMark, found );
-                inoutDrawn                = inoutDrawn && bDrawn;
-                inoutSettled              = inoutSettled && bDrawn && found.isSettled();
+                if ( bDrawn && found._bClipped )
+                    EditorSelfTestMarks::requestScrollIntoView( *pMark );
+                inoutDrawn   = inoutDrawn && bDrawn;
+                inoutSettled = inoutSettled && bDrawn && found.isSettled() && found._bClipped == false;
             }
 
             /** @brief 누른 채 둔 버튼 · 키를 놓는 단계(`state="Up"`)면 true 입니다 — 기다리면 누른 시간이 길어진다(뷰포트 비행이 더 간다). */

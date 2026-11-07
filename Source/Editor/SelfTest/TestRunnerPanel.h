@@ -31,7 +31,6 @@ namespace sw::editor
 
         const utf8* getPanelTitle() const override { return "Test Runner"; }
         void        drawContent() override;
-        bool        isToolPanel() const override { return true; }
 
     private:
         /** @brief 에디터 자체 테스트 탭 — 레지스트리 목록(영역별 그룹) · 체크 · 검색 · Run Selected · Run All · 결과 색. */

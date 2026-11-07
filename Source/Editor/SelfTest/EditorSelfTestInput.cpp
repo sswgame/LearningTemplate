@@ -83,6 +83,7 @@ namespace sw::editor
                 uint32               _openFrameTag{ 0 };              ///< 지금 열린 프레임에 찍은 기다림 번호
                 vector<WindowPlace>  _listWindowPlace;                ///< 바로 앞 표본의 창마다 자리 해시(`_layoutSignature` 의 재료) — 바뀐 창을 이름으로 알린다
                 string               _lastLayoutChange;               ///< 서명이 마지막으로 바뀐 까닭(창 이름 · 메인 뷰포트 · 팝업, `describeLastLayoutChange`)
+                string               _scrollIntoViewKey;              ///< 다음에 기록할 때 잘려 있으면 그린 창을 스크롤해 보이게 할 레이블(`requestScrollIntoView`)
                 float2               _heldMousePosition{};
                 uint32               _heldMouseViewportID{ 0 };
                 bool                 _bHoldMouse{ false };  ///< 누른 채 두는 동안 프레임마다 커서를 이 위치로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -115,6 +116,17 @@ namespace sw::editor
                 return pState != nullptr && pState->_bEnabled && pKey != nullptr ? pState : nullptr;
             }
 
+            /**
+             * @brief 클릭이 닿는 점(사각형 가운데)이 그린 창의 보이는 영역 밖이면 true 입니다.
+             * @details `IsItemVisible` 은 한 픽셀만 보여도 참이라, 아래 가장자리에 걸친 단추의 가운데가 잘린 곳에 놓여 클릭이 아무 데도 닿지 않았다.
+             */
+            static bool isClickPointClipped( const EditorSelfTestMark& mark )
+            {
+                const ImGuiWindow* pWindow = ImGui::GetCurrentWindow();
+                const ImVec2       center{ ( mark._min._x + mark._max._x ) * 0.5f, ( mark._min._y + mark._max._y ) * 0.5f };
+                return pWindow->InnerClipRect.Contains( center ) == false; // 표 칸의 ClipRect 가 아니라 창 안쪽 영역 — 모든 칸에 걸친 줄도 맞게 본다
+            }
+
             /** @brief 바로 앞에 그린 위젯(ImGui "last item")의 레이블입니다. */
             static EditorSelfTestMark makeLastItemMark()
             {
@@ -124,7 +136,7 @@ namespace sw::editor
                 mark._min        = float2{ ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y };
                 mark._max        = float2{ ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y };
                 mark._frame      = static_cast<uint32>( ImGui::GetFrameCount() );
-                mark._bClipped   = ImGui::IsItemVisible() == false;
+                mark._bClipped   = isClickPointClipped( mark );
                 return mark;
             }
 
@@ -139,6 +151,12 @@ namespace sw::editor
              */
             static void record( State& state, const utf8* pKey, EditorSelfTestMark mark )
             {
+                // 입력 단계가 기다리는 레이블이 잘려 있으면 그린 창(지금 창)을 스크롤한다 — 사람처럼 보이게 한 뒤 누른다. 다음 프레임에 자리가 바뀌어 자리 잡기를 다시 센다.
+                if ( mark._bClipped && state._scrollIntoViewKey == pKey )
+                {
+                    ImGui::ScrollToBringRectIntoView( ImGui::GetCurrentWindow(), ImRect( mark._min._x, mark._min._y, mark._max._x, mark._max._y ) );
+                    state._scrollIntoViewKey.clear();
+                }
                 mark._stableStartFrame = mark._frame;
                 for ( NamedMark& named : state._listMark )
                 {
@@ -249,6 +267,13 @@ namespace sw::editor
         mark._max        = max;
         mark._frame      = static_cast<uint32>( ImGui::GetFrameCount() );
         EditorSelfTestInputInternal::record( *pState, pKey, mark );
+    }
+
+    void EditorSelfTestMarks::requestScrollIntoView( string_view key )
+    {
+        EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
+        if ( pState != nullptr )
+            pState->_scrollIntoViewKey = string( key );
     }
 
     bool EditorSelfTestMarks::find( string_view key, EditorSelfTestMark& outMark )

@@ -24,7 +24,7 @@ namespace sw::editor
         uint32 _viewportID{ 0 };       ///< 위젯이 그려진 뷰포트. 떠 있는 창(자기 플랫폼 창)이면 마우스를 옮길 때 그 뷰포트를 "커서 아래" 로 알린다
         uint32 _frame{ 0 };            ///< 기록한 ImGui 프레임 번호. 지난 프레임에 그려지지 않은 위젯을 누르지 않게 한다
         uint32 _stableStartFrame{ 0 }; ///< 사각형 · 뷰포트 · 잘림이 지금 값으로 이어서 그려진 첫 프레임(그 사이 빠진 프레임이 있으면 다시 센다)
-        bool   _bClipped{ false };     ///< 사각형이 그린 창의 보이는 영역 밖이다(스크롤 아래). 누르면 다른 위젯이 받으므로 클릭 · 드래그 단계가 실패로 알린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bClipped{ false };     ///< 사각형 가운데(클릭이 닿는 점)가 그린 창의 보이는 영역 밖이다(스크롤 아래 · 가장자리에 걸침). 입력 단계가 그 창을 스크롤해 보이게 한 뒤 누른다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /**
          * @brief 두 프레임 연속 같은 자리에 그려졌으면 true 입니다 — 입력 단계가 이때까지 시계를 붙잡는다(창이 열리며 자리를 잡는 중이면 기다린다).
@@ -53,6 +53,11 @@ namespace sw::editor
         static void recordRect( const utf8* pKey, const float2& min, const float2& max );
         /** @brief 기록된 레이블을 찾습니다. 이번 프레임이나 지난 프레임에 기록된 것만 반환합니다. 없으면 false 입니다. */
         [[nodiscard]] static bool find( string_view key, EditorSelfTestMark& outMark );
+        /**
+         * @brief 레이블 @p key 가 다음에 기록될 때 그린 창의 보이는 영역 밖이면 그 창을 스크롤해 보이게 합니다(한 번).
+         * @details 입력 단계가 누르기 전에 부른다 — 언리얼 Automation Driver · Playwright 처럼 대상을 보이게 한 뒤 누른다. 배치가 바뀌어 버튼이 스크롤 아래로 밀려도 시나리오는 그대로다.
+         */
+        static void requestScrollIntoView( string_view key );
         /**
          * @brief 실행기가 테스트를 켜고 끌 때 호출합니다. 끄면 레이블과 남은 입력을 비웁니다.
          * @return 에디터 컨텍스트가 없어 기록할 곳이 없으면 false 입니다(켠 것으로 치지 않는다 — 부른 쪽이 오류로 알린다).
