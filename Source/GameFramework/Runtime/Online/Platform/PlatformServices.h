@@ -21,6 +21,7 @@ namespace sw
     struct PlatformStoreName
     {
         static constexpr const utf8* kSteam = "steam";
+        static constexpr const utf8* kLocal = "local"; ///< SDK 없는 로컬 구현(`LocalPlatformServices`). 서버에 이 이름의 영수증 검증기는 없다 - 결제를 보내면 모르는 스토어로 거절된다
     };
 
     /**

@@ -16,6 +16,7 @@
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+
 namespace sw
 {
     namespace
@@ -36,6 +37,7 @@ namespace sw
     StatCatalog::StatCatalog()
         : _listStat{}
         , _mapIndex{}
+        , _listAchievement{}
     {
     }
 
@@ -59,11 +61,22 @@ namespace sw
         return mapIter != _mapIndex.end() ? &_listStat[mapIter->second] : nullptr;
     }
 
+    const AchievementDef* StatCatalog::findAchievement( const hashed_string& id ) const
+    {
+        for ( const AchievementDef& def : _listAchievement )
+        {
+            if ( def._id == id )
+                return &def;
+        }
+        return nullptr;
+    }
+
     uint32 StatCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         using Element                          = XMLCatalogElement<StatCatalog>;
         static constexpr Element kArrElement[] = {
             Element::of<&StatCatalog::loadStat>( "Stat" ),
+            Element::of<&StatCatalog::loadAchievement>( "Achievement" ),
         };
         const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
         return result._loadedCount;
@@ -79,6 +92,26 @@ namespace sw
         if ( def._name.empty() )
             def._name = def._id.c_str();
         addStat( def );
+        return true;
+    }
+
+    bool StatCatalog::loadAchievement( const XMLNode& node, string_view sourceName )
+    {
+        // 칸 · 필수 · 문턱 >= 0 은 AchievementDef 의 PROPERTY 가 본다. 통계가 있는지는 쓰는 쪽(`AchievementTracker::initialize`)이 본다 - 원소 순서에 매이지 않는다.
+        AchievementDef def;
+        if ( XMLFields::readFields( node, def, sourceName ) == false )
+            return false;
+        if ( def._name.empty() )
+            def._name = def._id.c_str();
+        for ( AchievementDef& existing : _listAchievement )
+        {
+            if ( existing._id == def._id )
+            {
+                existing = def;
+                return true;
+            }
+        }
+        _listAchievement.push_back( def );
         return true;
     }
 

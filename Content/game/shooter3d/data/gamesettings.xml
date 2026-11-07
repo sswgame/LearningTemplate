@@ -12,6 +12,8 @@
   <!-- 온라인 세션(OnlineSession) — 연결은 게임이 connect 로 연다. 서버 설정은 Config/Server/Online/Shooter3D.json -->
   <onlineServerAddress>127.0.0.1:17793</onlineServerAddress>
   <onlineGameBuild>1.0.0</onlineGameBuild>
+  <!-- 플레이어 통계 · 업적(PlayerStatsSubsystem) — 업적은 로컬 플랫폼 서비스(SDK 없음)까지 간다 -->
+  <statCatalog>game/shooter3d/data/shooter3d.stats.xml</statCatalog>
   <inputMap path="common/input/base.input.xml"/>
   <inputMap path="common/input/move.input.xml"/>
   <inputMap path="common/input/traversal.input.xml"/>

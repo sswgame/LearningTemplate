@@ -1,6 +1,7 @@
 /**
  * @file PlayerStats.h
  * @brief 로컬 통계입니다. 통계 정의는 데이터(카운터, 최대, 최소, 시간)로 두고, 값은 프로필마다 저장하며, 바뀌면 알립니다. 업적의 바탕이 되며 Steam Stats 에 해당합니다.
+ * @details 업적 정의도 같은 파일에 둡니다(`<Achievement id stat threshold>`) — 스팀 앱 설정의 "Stats & Achievements" 가 한 표인 것과 같다. 푸는 일은 `AchievementTracker` 가 한다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -53,6 +54,28 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 업적 하나의 정의입니다. 통계 하나가 문턱에 닿으면 풀립니다(스팀의 "진행 통계" 업적과 같은 모양).
+     * @details 최소 통계(최단 기록)는 값이 문턱 이하가 되면, 그 밖은 문턱 이상이 되면 풀린다. 통계는 같은 카탈로그에 있어야 한다(`AchievementTracker::initialize` 가 본다).
+     */
+    REFLECT()
+    struct SW_GF_API AchievementDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
+        string _name{}; ///< 표시 이름(없으면 id)
+        PROPERTY( Required )
+        hashed_string _stat{}; ///< 문턱을 보는 통계 id
+        PROPERTY( Min = 0.0 )
+        float64 _threshold{ 0.0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 값이 바뀐 변화 하나입니다. `PlayerStats` 가 알립니다. */
     struct StatChange
     {
@@ -67,7 +90,8 @@ namespace sw
 {
     /**
      * @class StatCatalog
-     * @brief `<Stats><Stat id="enemies_killed" kind="Counter" name="Enemies" max="1000000"/>…</Stats>` 를 읽습니다. 알 수 없는 `kind` 는 오류이고 그 정의는 뺍니다.
+     * @brief `<StatCatalog><Stat id="enemies_killed" kind="Counter" name="Enemies" max="1000000"/><Achievement id="first_blood" stat="enemies_killed" threshold="1"/>…</StatCatalog>` 를 읽습니다.
+     * @details 알 수 없는 `kind` 는 오류이고 그 정의는 뺍니다. 같은 id 의 업적은 뒤의 것이 바꿉니다.
      */
     class SW_GF_API StatCatalog : public XMLCatalog<StatCatalog>
     {
@@ -89,14 +113,19 @@ namespace sw
         const StatDef*         findStat( const hashed_string& id ) const;
         const vector<StatDef>& getStats() const { return _listStat; }
 
+        const AchievementDef*         findAchievement( const hashed_string& id ) const;
+        const vector<AchievementDef>& getAchievements() const { return _listAchievement; }
+
     private:
         static constexpr const utf8* kXMLRootName = "StatCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         [[nodiscard]] bool           loadStat( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool           loadAchievement( const XMLNode& node, string_view sourceName );
 
     private:
         vector<StatDef>                      _listStat;
         unordered_map<hashed_string, uint32> _mapIndex;
+        vector<AchievementDef>               _listAchievement;
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<StatCatalog>::acquire` 로 한 벌을 받습니다. */

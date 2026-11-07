@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 플레이어 통계 → 업적 → 플랫폼 서비스(E15). 자동 플레이가 해골을 쓰러뜨리면 디렉터가 enemies_killed 를 올리고, 추적기가 first_blood 를 풀고,
+  로컬 플랫폼 서비스(SDK 없는 구현, 무인 실행마다 새 사용자 설정 폴더 옆)가 그 업적을 받는지 값으로 본다. 최대 통계는 개발 명령으로 기록을 내 문턱(3)을 넘긴다.
+  체인에서 앞 단계가 같은 프로세스로 통계를 올렸을 수 있어 수는 atLeast 로 본다. 그림 판정은 없다.
+  실행: App -game=Shooter3D -scenario=game/shooter3d/automation/achievements.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.achievements" fixedDelta="0.0166667" timeoutFrames="7200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Variable name="gv_shooterAutoPlay" value="1"/>
+	<WaitUntil watch="Stats.Value" key="enemies_killed" atLeast="1" timeoutSeconds="90"/>
+	<Expect watch="Stats.AchievementUnlocked" key="first_blood" equals="1"/>
+	<Wait frames="2"/>
+	<Expect watch="Stats.PlatformAchievementCount" atLeast="1"/>
+	<!-- 최대 통계: 기록이 좋아질 때만 바뀌고, 문턱 3 에 닿으면 third_wave 가 풀린다 -->
+	<DevCommand line="stats.add best_wave 3"/>
+	<Wait frames="2"/>
+	<Expect watch="Stats.Value" key="best_wave" atLeast="3"/>
+	<Expect watch="Stats.AchievementUnlocked" key="third_wave" equals="1"/>
+	<DevCommand line="stats.add best_wave 1"/>
+	<Wait frames="2"/>
+	<Expect watch="Stats.Value" key="best_wave" atLeast="3"/>
+	<Expect watch="Stats.PlatformAchievementCount" atLeast="2"/>
+	<Pass/>
+</Scenario>

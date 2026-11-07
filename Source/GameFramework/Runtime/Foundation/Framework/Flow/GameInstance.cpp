@@ -31,6 +31,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDataWatcher.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Progression/PlayerStatsSubsystem.h"
 #include "GameFramework/Runtime/Online/HTTP/TelemetryUploadLink.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
@@ -71,6 +72,8 @@ namespace sw
         _gameScope.emplaceSubsystem<OnlineSession>( _packConfig._data );
         // 텔레메트리 · 크래시 업로드는 gamesettings 에 끝점이 있을 때만 엔진 업로더에 HTTP 클라이언트를 끼운다 - 없으면 아무 일도 하지 않는다.
         _gameScope.emplaceSubsystem<TelemetryUploadLink>( _packConfig._data );
+        // 플레이어 통계 · 업적은 gamesettings 에 통계 카탈로그가 있을 때만 선다 - 플랫폼 서비스(지금은 로컬 구현)까지 잇는다.
+        _gameScope.emplaceSubsystem<PlayerStatsSubsystem>( _packConfig._data );
     }
 
     GameInstance::~GameInstance()
@@ -342,7 +345,8 @@ namespace sw
         getSubsystem<GameLocalStore>().update(); // 끝난 세이브 · 자동 저장 요청의 콜백(세이브 이벤트)
         // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션을 열지 않았으면 바로 돌아온다. 필수 서비스라 없으면 멈춘다.
         game::getSubsystem<GameNetSession>().update();
-        getSubsystem<OnlineSession>().update(); // 키트 응답 · 알림을 게임 프레임 앞에서 처리기에 넘긴다
+        getSubsystem<OnlineSession>().update();        // 키트 응답 · 알림을 게임 프레임 앞에서 처리기에 넘긴다
+        getSubsystem<PlayerStatsSubsystem>().update(); // 플랫폼에 모아 둔 업적 · 통계 쓰기를 내보낸다(통계가 없는 게임은 바로 돌아온다)
         if ( _pAppearanceWatcher != nullptr )
             _pAppearanceWatcher->update( *_pAppearanceDatabase, _pItemCatalog.get() );
         onUpdate( deltaTime );

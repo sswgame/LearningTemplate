@@ -32,6 +32,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
+#include "GameFramework/Runtime/Gameplay/Progression/PlayerStatsSubsystem.h"
 
 #include "Games/Shooter3D/ShooterAutoAimControllerComponent.h"
 #include "Games/Shooter3D/ShooterEffectComponent.h"
@@ -50,7 +51,10 @@ namespace sw
             /** @brief 이 게임이 아는 조우, 보상, 스폰 ID 입니다. 프로필이 다른 이름을 쓰면 시작할 때 알립니다. */
             static constexpr const utf8* kArrKnownEncounter[] = { "swarm", "elite", "ammo", "repair" };
             static constexpr const utf8* kArrKnownSpawn[]     = { "skeleton" };
-            static constexpr const utf8* kEventEnemyDown      = "EnemyDown"; ///< shooter3d.audioevents.xml
+            /** @brief 플레이어 통계 id 입니다(`game/shooter3d/data/shooter3d.stats.xml`). */
+            static constexpr const utf8* kStatEnemiesKilled = "enemies_killed";
+            static constexpr const utf8* kStatBestWave      = "best_wave";
+            static constexpr const utf8* kEventEnemyDown    = "EnemyDown"; ///< shooter3d.audioevents.xml
 
             /** @brief 원(XZ) 가운데에서 가장 가까운 상자 위 점입니다. */
             static float3 closestPointXz( const float3& point, const float3& boxMin, const float3& boxMax )
@@ -478,6 +482,9 @@ namespace sw
                         waveReached.setInt( "wave", getWave() ).setInt( "kills", _killCount ).setFloat( "seconds", static_cast<float64>( _director.getTime() ) );
                         (void)pTelemetry->record( waveReached );
                     }
+                    PlayerStatsSubsystem* pPlayerStats = game::findSubsystem<PlayerStatsSubsystem>();
+                    if ( pPlayerStats != nullptr && pPlayerStats->isActive() && bNewWave )
+                        (void)pPlayerStats->getStats().submit( hashed_string( ShooterGameModeComponentInternal::kStatBestWave ), static_cast<float64>( getWave() ) ); // 기록이 좋아질 때만 바뀐다
                     SW_LOG_INFO_ID( "ShooterGameMode.PacingWaveIntensity", "[Shooter] pacing '%#' -> '%#' (wave %#, intensity %.2f)", event._source.empty() ? "start" : event._source.c_str(), event._id.c_str(), getWave(),
                                     event._intensity );
                     break;
@@ -758,6 +765,9 @@ namespace sw
             {
                 record._bCounted = SW_TRUE;
                 ++_killCount;
+                PlayerStatsSubsystem* pPlayerStats = game::findSubsystem<PlayerStatsSubsystem>();
+                if ( pPlayerStats != nullptr && pPlayerStats->isActive() )
+                    (void)pPlayerStats->getStats().increment( hashed_string( ShooterGameModeComponentInternal::kStatEnemiesKilled ) ); // 업적(`shooter3d.stats.xml`)이 이 통계를 본다
                 if ( _bPacingReady == SW_TRUE )
                 {
                     (void)_director.getBuiltinIntensityModel().addSignal( hashed_string( "enemyKilled" ), 1.0f );

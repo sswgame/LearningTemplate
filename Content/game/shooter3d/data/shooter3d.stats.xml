@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shooter3D 플레이어 통계 · 업적(StatCatalog) — gamesettings 의 statCatalog 가 가리킨다. PlayerStatsSubsystem 이 통계 → 업적 → 플랫폼 서비스를 잇는다.
+     ShooterGameModeComponent 가 올린다: 적이 쓰러질 때 enemies_killed, 새 웨이브에 들어설 때 best_wave(기록). 업적은 통계 하나가 문턱에 닿으면 풀린다. -->
+<StatCatalog>
+	<Stat id="enemies_killed" kind="Counter" name="Enemies Killed" max="1000000"/>
+	<Stat id="best_wave" kind="Max" name="Best Wave"/>
+	<Achievement id="first_blood" name="First Blood" stat="enemies_killed" threshold="1"/>
+	<Achievement id="bone_collector" name="Bone Collector" stat="enemies_killed" threshold="25"/>
+	<Achievement id="third_wave" name="Holding the Line" stat="best_wave" threshold="3"/>
+</StatCatalog>

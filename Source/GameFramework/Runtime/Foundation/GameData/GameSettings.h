@@ -103,6 +103,9 @@ namespace sw
         string _telemetryUploadTrustFile; ///< `https://` 끝점의 인증서를 믿을 CA 번들 PEM(프로젝트 루트 기준). `https://` 끝점이면 필수다
 
         PROPERTY()
+        DataPath _statCatalog; ///< 플레이어 통계 · 업적 정의(`*.stats.xml`, `StatCatalog`). 적으면 `PlayerStatsSubsystem` 이 통계 → 업적 → 플랫폼 서비스를 잇는다. 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 통계 없음
+
+        PROPERTY()
         DataPath _autosaveSettings; ///< 자동 저장 정책(`<팩>/data/autosave.xml`). 적으면 `GameInstance` 가 `AutosaveManager` 를 세워 게임 범위에 건다. 적었는데 못 읽으면 게임 초기화가 실패한다. 적지 않으면 자동 저장 없음
 
         /**
