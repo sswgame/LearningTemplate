@@ -16,6 +16,12 @@ msgstr "자체 테스트과 시나리오가 쓰는 커맨드 — 로그 한 줄�
 
 #. Context: EditorPanelText._label
 #: editor/panels/editor.panels.xml
+msgctxt "Ability Catalog"
+msgid "Ability Catalog"
+msgstr "어빌리티 카탈로그"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
 msgctxt "Ability Debugger"
 msgid "Ability Debugger"
 msgstr "어빌리티 디버거"

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  어빌리티 카탈로그 편집 창 시나리오(editor/abilitycatalog)의 테스트 카탈로그 — 프레임워크 기본 클래스(ApplyEffects)만 쓰고 어트리뷰트 세트 클래스를 쓰지 않아 어느 게임에서도 런타임 로더가 읽는다.
+  세트 Healer 가 없는 어빌리티 GA_Missing 을 가리킨다(시나리오가 고쳐 저장한다). 사본(scratch/abilitycatalog)에만 쓴다.
+-->
+<AbilityCatalog>
+  <!-- 회복 -->
+  <AbilityEffect id="GE_Heal" duration="HasDuration" seconds="1">
+    <GrantedTag tag="State.Healed"/>
+    <Cue tag="AbilityPresentation.Heal.Small"/>
+  </AbilityEffect>
+  <AbilityEffect id="GE_Cost_Heal" duration="Instant"/>
+  <AbilityEffect id="GE_Cooldown_Heal" duration="HasDuration" seconds="2">
+    <GrantedTag tag="Cooldown.Skill.Heal"/>
+  </AbilityEffect>
+
+  <Ability id="GA_Heal" class="ApplyEffects" cost="GE_Cost_Heal" cooldown="GE_Cooldown_Heal">
+    <AbilityTag tag="Ability.Skill.Heal"/>
+    <Param name="selfEffect" text="GE_Heal"/>
+  </Ability>
+
+  <AbilitySet id="Healer">
+    <Ability id="GA_Heal" input="1"/>
+    <Ability id="GA_Missing" input="2"/>
+  </AbilitySet>
+
+  <AbilityPresentation tag="AbilityPresentation.Heal" positional="false"/>
+</AbilityCatalog>

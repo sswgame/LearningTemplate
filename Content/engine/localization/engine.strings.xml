@@ -43,6 +43,162 @@
 				<item>engine/ui/confirm_unsaved.ui.xml</item>
 			</origins>
 		</entry>
+		<entry key="EdAbilityCatalog.Abilities" source="Abilities">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.AbilitySets" source="Ability sets">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.AddAbility" source="Add ability">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.AddAbilitySet" source="Add set">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.AddAbilityToSet" source="Add ability">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.AddEffect" source="Add effect">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.AddEffectToSet" source="Add effect">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.Duplicate" source="Duplicate">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.Effects" source="Effects">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.File" source="File">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.FileTip"
+		       source="The catalog file the game reads. Edits keep its comments and layout.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.FilterHint" source="Filter by id">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.Go" source="Go">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.InheritedTip"
+		       source="Inherited from the base entry. Picking a value writes it on this entry.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.NoFileHint"
+		       source="Enter an ability catalog file (game/&lt;game&gt;/data/abilities.xml) to edit it.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.NoneChoice" source="(none)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.PickEntryHint"
+		       source="Pick an entry on the left to see what it uses and what uses it.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.Presentations" source="Cue presentations">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.Redo" source="Redo">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.Remove" source="Remove">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.RemoveTip"
+		       source="An entry other entries use is not removed. Change those references first.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.Revert" source="Revert">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.Save" source="Save">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.Undo" source="Undo">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.UsedBy" source="Used by">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.UsedByNothing" source="No entry uses this one.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.Uses" source="Uses">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.UsesNothing" source="Uses no other entry.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.ValidationFailed"
+		       source="The runtime loader could not read the saved file. See the log for the reason.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdAbilityCatalog.ValidationPassed" source="The runtime loader reads the saved file.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdAbilityDebug.ColumnActive" source="Active">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp</item>

@@ -3,6 +3,7 @@
 		<entry key="A command used by self-tests and scenarios - writes one log line"
 		       text="자체 테스트과 시나리오가 쓰는 커맨드 — 로그 한 줄을 남깁니다"
 		       sourceHash="acca55bb8d9d1ae2" />
+		<entry key="Ability Catalog" text="어빌리티 카탈로그" sourceHash="c1624bae5aa53bae" />
 		<entry key="Ability Debugger" text="어빌리티 디버거" sourceHash="68caba63f72aba0c" />
 		<entry key="Add Component" text="컴포넌트 추가" sourceHash="4ea9ecf3731289fb" />
 		<entry key="Add the copied component to the selected object"

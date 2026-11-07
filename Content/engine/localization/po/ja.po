@@ -59,6 +59,156 @@ msgctxt "Discard"
 msgid "Discard"
 msgstr "破棄"
 
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Abilities"
+msgid "Abilities"
+msgstr "アビリティ"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.AbilitySets"
+msgid "Ability sets"
+msgstr "アビリティセット"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.AddAbility"
+msgid "Add ability"
+msgstr "アビリティを追加"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.AddAbilitySet"
+msgid "Add set"
+msgstr "セットを追加"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.AddAbilityToSet"
+msgid "Add ability"
+msgstr "アビリティを追加"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.AddEffect"
+msgid "Add effect"
+msgstr "エフェクトを追加"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.AddEffectToSet"
+msgid "Add effect"
+msgstr "エフェクトを追加"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Duplicate"
+msgid "Duplicate"
+msgstr "複製"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Effects"
+msgid "Effects"
+msgstr "エフェクト"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.File"
+msgid "File"
+msgstr "ファイル"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.FileTip"
+msgid "The catalog file the game reads. Edits keep its comments and layout."
+msgstr "ゲームが読むカタログファイルです。編集してもコメントと配置は残ります。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.FilterHint"
+msgid "Filter by id"
+msgstr "id で絞り込み"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Go"
+msgid "Go"
+msgstr "移動"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.InheritedTip"
+msgid "Inherited from the base entry. Picking a value writes it on this entry."
+msgstr "親項目から継承した値です。選ぶとこの項目に書き込みます。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.NoFileHint"
+msgid "Enter an ability catalog file (game/<game>/data/abilities.xml) to edit it."
+msgstr "編集するアビリティカタログファイル(game/<ゲーム>/data/abilities.xml)を入力してください。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.NoneChoice"
+msgid "(none)"
+msgstr "(なし)"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.PickEntryHint"
+msgid "Pick an entry on the left to see what it uses and what uses it."
+msgstr "左で項目を選ぶと、その項目が使うものと使われている場所が見えます。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Presentations"
+msgid "Cue presentations"
+msgstr "キュー演出"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Redo"
+msgid "Redo"
+msgstr "やり直す"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Remove"
+msgid "Remove"
+msgstr "削除"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.RemoveTip"
+msgid "An entry other entries use is not removed. Change those references first."
+msgstr "他の項目が使う項目は削除しません。先にその参照を変えてください。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Revert"
+msgid "Revert"
+msgstr "元に戻す(保存時)"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Save"
+msgid "Save"
+msgstr "保存"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Undo"
+msgid "Undo"
+msgstr "元に戻す"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.UsedBy"
+msgid "Used by"
+msgstr "使われている場所"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.UsedByNothing"
+msgid "No entry uses this one."
+msgstr "この項目を使う項目はありません。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Uses"
+msgid "Uses"
+msgstr "使うもの"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.UsesNothing"
+msgid "Uses no other entry."
+msgstr "他の項目を使いません。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.ValidationFailed"
+msgid "The runtime loader could not read the saved file. See the log for the reason."
+msgstr "ランタイムローダーが保存したファイルを読み込めませんでした。理由はログを確認してください。"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.ValidationPassed"
+msgid "The runtime loader reads the saved file."
+msgstr "ランタイムローダーが保存したファイルを読み込みます。"
+
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnActive"
 msgid "Active"

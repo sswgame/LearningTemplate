@@ -8,6 +8,50 @@
 		<entry key="Debug HUD" text="デバッグ HUD" sourceHash="e7b16707c98cf071" />
 		<entry key="Defaults" text="初期設定" sourceHash="48022f6d5501d677" />
 		<entry key="Discard" text="破棄" sourceHash="c00a88b90cd60661" />
+		<entry key="EdAbilityCatalog.Abilities" text="アビリティ" sourceHash="9c5c6645f6238fcd" />
+		<entry key="EdAbilityCatalog.AbilitySets" text="アビリティセット" sourceHash="ff3820b1acda8056" />
+		<entry key="EdAbilityCatalog.AddAbility" text="アビリティを追加" sourceHash="a69e936d44d68d4a" />
+		<entry key="EdAbilityCatalog.AddAbilitySet" text="セットを追加" sourceHash="1f92efc5fb99ba74" />
+		<entry key="EdAbilityCatalog.AddAbilityToSet" text="アビリティを追加" sourceHash="a69e936d44d68d4a" />
+		<entry key="EdAbilityCatalog.AddEffect" text="エフェクトを追加" sourceHash="f9caa9d2834ca145" />
+		<entry key="EdAbilityCatalog.AddEffectToSet" text="エフェクトを追加" sourceHash="f9caa9d2834ca145" />
+		<entry key="EdAbilityCatalog.Duplicate" text="複製" sourceHash="fac15b89e0668996" />
+		<entry key="EdAbilityCatalog.Effects" text="エフェクト" sourceHash="d004bbafa47097e5" />
+		<entry key="EdAbilityCatalog.File" text="ファイル" sourceHash="d1f81284eeb7b503" />
+		<entry key="EdAbilityCatalog.FileTip"
+		       text="ゲームが読むカタログファイルです。編集してもコメントと配置は残ります。"
+		       sourceHash="85aaca40c7a44e38" />
+		<entry key="EdAbilityCatalog.FilterHint" text="id で絞り込み" sourceHash="c43f7e285bae95e1" />
+		<entry key="EdAbilityCatalog.Go" text="移動" sourceHash="09023907b59c38eb" />
+		<entry key="EdAbilityCatalog.InheritedTip"
+		       text="親項目から継承した値です。選ぶとこの項目に書き込みます。"
+		       sourceHash="258dfb955934f894" />
+		<entry key="EdAbilityCatalog.NoFileHint"
+		       text="編集するアビリティカタログファイル(game/&lt;ゲーム&gt;/data/abilities.xml)を入力してください。"
+		       sourceHash="40ad614f3e928f78" />
+		<entry key="EdAbilityCatalog.NoneChoice" text="(なし)" sourceHash="8c36545f724b9460" />
+		<entry key="EdAbilityCatalog.PickEntryHint"
+		       text="左で項目を選ぶと、その項目が使うものと使われている場所が見えます。"
+		       sourceHash="268dc0a1bf394d29" />
+		<entry key="EdAbilityCatalog.Presentations" text="キュー演出" sourceHash="e160bc2d29075769" />
+		<entry key="EdAbilityCatalog.Redo" text="やり直す" sourceHash="7417792bbe720149" />
+		<entry key="EdAbilityCatalog.Remove" text="削除" sourceHash="ea4f08110bb8f15d" />
+		<entry key="EdAbilityCatalog.RemoveTip"
+		       text="他の項目が使う項目は削除しません。先にその参照を変えてください。"
+		       sourceHash="dd165e99ffa137c9" />
+		<entry key="EdAbilityCatalog.Revert" text="元に戻す(保存時)" sourceHash="d89a2e529b31ef43" />
+		<entry key="EdAbilityCatalog.Save" text="保存" sourceHash="33f85f24c0f5f008" />
+		<entry key="EdAbilityCatalog.Undo" text="元に戻す" sourceHash="8f4be9f086eb530f" />
+		<entry key="EdAbilityCatalog.UsedBy" text="使われている場所" sourceHash="779c0036ee34fe7d" />
+		<entry key="EdAbilityCatalog.UsedByNothing" text="この項目を使う項目はありません。" sourceHash="ce418dbe01852ba4" />
+		<entry key="EdAbilityCatalog.Uses" text="使うもの" sourceHash="a48f82f001b89585" />
+		<entry key="EdAbilityCatalog.UsesNothing" text="他の項目を使いません。" sourceHash="44bec3c2ce8364f4" />
+		<entry key="EdAbilityCatalog.ValidationFailed"
+		       text="ランタイムローダーが保存したファイルを読み込めませんでした。理由はログを確認してください。"
+		       sourceHash="f82ad242c323c715" />
+		<entry key="EdAbilityCatalog.ValidationPassed"
+		       text="ランタイムローダーが保存したファイルを読み込みます。"
+		       sourceHash="7ccb4a0f7b3336fe" />
 		<entry key="EdAbilityDebug.ColumnActive" text="有効" sourceHash="a45a194b58837e4f" />
 		<entry key="EdAbilityDebug.ColumnBase" text="基本値" sourceHash="c1a4e2a7a8e20d58" />
 		<entry key="EdAbilityDebug.ColumnCooldown" text="クールダウン" sourceHash="8b59db90be866528" />

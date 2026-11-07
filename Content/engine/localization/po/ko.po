@@ -59,6 +59,156 @@ msgctxt "Discard"
 msgid "Discard"
 msgstr "버리기"
 
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Abilities"
+msgid "Abilities"
+msgstr "어빌리티"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.AbilitySets"
+msgid "Ability sets"
+msgstr "어빌리티 세트"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.AddAbility"
+msgid "Add ability"
+msgstr "어빌리티 더하기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.AddAbilitySet"
+msgid "Add set"
+msgstr "세트 더하기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.AddAbilityToSet"
+msgid "Add ability"
+msgstr "어빌리티 더하기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.AddEffect"
+msgid "Add effect"
+msgstr "이펙트 더하기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.AddEffectToSet"
+msgid "Add effect"
+msgstr "이펙트 더하기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Duplicate"
+msgid "Duplicate"
+msgstr "복제"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Effects"
+msgid "Effects"
+msgstr "이펙트"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.File"
+msgid "File"
+msgstr "파일"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.FileTip"
+msgid "The catalog file the game reads. Edits keep its comments and layout."
+msgstr "게임이 읽는 카탈로그 파일입니다. 편집해도 주석과 줄 배치가 남습니다."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.FilterHint"
+msgid "Filter by id"
+msgstr "id 로 거르기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Go"
+msgid "Go"
+msgstr "가기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.InheritedTip"
+msgid "Inherited from the base entry. Picking a value writes it on this entry."
+msgstr "부모 항목에서 물려받은 값입니다. 고르면 이 항목에 적습니다."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.NoFileHint"
+msgid "Enter an ability catalog file (game/<game>/data/abilities.xml) to edit it."
+msgstr "편집할 어빌리티 카탈로그 파일(game/<게임>/data/abilities.xml)을 적으세요."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.NoneChoice"
+msgid "(none)"
+msgstr "(없음)"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.PickEntryHint"
+msgid "Pick an entry on the left to see what it uses and what uses it."
+msgstr "왼쪽에서 항목을 고르면 그 항목이 쓰는 것과 그것을 쓰는 곳을 봅니다."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Presentations"
+msgid "Cue presentations"
+msgstr "큐 연출"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Redo"
+msgid "Redo"
+msgstr "다시 실행"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Remove"
+msgid "Remove"
+msgstr "지우기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.RemoveTip"
+msgid "An entry other entries use is not removed. Change those references first."
+msgstr "다른 항목이 쓰는 항목은 지우지 않습니다. 그 참조를 먼저 바꾸세요."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Revert"
+msgid "Revert"
+msgstr "되돌리기"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Save"
+msgid "Save"
+msgstr "저장"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Undo"
+msgid "Undo"
+msgstr "실행 취소"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.UsedBy"
+msgid "Used by"
+msgstr "쓰는 곳"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.UsedByNothing"
+msgid "No entry uses this one."
+msgstr "이 항목을 쓰는 곳이 없습니다."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.Uses"
+msgid "Uses"
+msgstr "쓰는 것"
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.UsesNothing"
+msgid "Uses no other entry."
+msgstr "다른 항목을 쓰지 않습니다."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.ValidationFailed"
+msgid "The runtime loader could not read the saved file. See the log for the reason."
+msgstr "런타임 로더가 저장한 파일을 읽지 못했습니다. 이유는 로그를 보세요."
+
+#: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.cpp
+msgctxt "EdAbilityCatalog.ValidationPassed"
+msgid "The runtime loader reads the saved file."
+msgstr "런타임 로더가 저장한 파일을 읽습니다."
+
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp
 msgctxt "EdAbilityDebug.ColumnActive"
 msgid "Active"

@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/Undo/EditorDocumentState.h"
 #include "Editor/Panels/Catalog/Model/CatalogChildSection.h"
 #include "Editor/Panels/Catalog/Model/CatalogInheritanceView.h"
@@ -21,9 +22,9 @@ namespace sw::editor
 {
     /**
      * @class CatalogDocument
-     * @brief 테이블 편집기가 고치는 카탈로그 파일 하나입니다.
+     * @brief 테이블 편집기가 고치는 카탈로그 파일 하나입니다. 도메인 편집기(어빌리티 카탈로그 창 — GameplayTools 확장)도 같은 원문 편집을 쓰려고 내보낸다(주석 · 들여쓰기를 지키는 편집은 한 벌).
      */
-    class CatalogDocument
+    class SW_EDITOR_API CatalogDocument
     {
     public:
         /** @brief 같은 이름의 원소(루트의 자식)를 한 테이블로 묶은 것입니다. */

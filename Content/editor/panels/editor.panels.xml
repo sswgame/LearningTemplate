@@ -1,6 +1,7 @@
 <!-- 패널 · 팝업 창의 보이는 이름(EditorPanelText.h) — _title 은 코드의 getPanelTitle(창 ID · 도킹 · 테스트가 찾는 이름), _label 은 탭에 보일 영어 원문(현지화 키). -->
 <EditorPanelTextTable>
 	<_listPanel>
+		<EditorPanelText _title="Ability Catalog" _label="Ability Catalog" />
 		<EditorPanelText _title="Ability Debugger" _label="Ability Debugger" />
 		<EditorPanelText _title="Animation Graph" _label="Animation Graph" />
 		<EditorPanelText _title="Animation Rewind" _label="Animation Rewind" />

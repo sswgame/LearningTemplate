@@ -7,6 +7,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Ability Catalog" source="Ability Catalog" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Ability Debugger" source="Ability Debugger" context="EditorPanelText._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>

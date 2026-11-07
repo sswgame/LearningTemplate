@@ -8,6 +8,50 @@
 		<entry key="Debug HUD" text="디버그 HUD" sourceHash="e7b16707c98cf071" />
 		<entry key="Defaults" text="기본값" sourceHash="48022f6d5501d677" />
 		<entry key="Discard" text="버리기" sourceHash="c00a88b90cd60661" />
+		<entry key="EdAbilityCatalog.Abilities" text="어빌리티" sourceHash="9c5c6645f6238fcd" />
+		<entry key="EdAbilityCatalog.AbilitySets" text="어빌리티 세트" sourceHash="ff3820b1acda8056" />
+		<entry key="EdAbilityCatalog.AddAbility" text="어빌리티 더하기" sourceHash="a69e936d44d68d4a" />
+		<entry key="EdAbilityCatalog.AddAbilitySet" text="세트 더하기" sourceHash="1f92efc5fb99ba74" />
+		<entry key="EdAbilityCatalog.AddAbilityToSet" text="어빌리티 더하기" sourceHash="a69e936d44d68d4a" />
+		<entry key="EdAbilityCatalog.AddEffect" text="이펙트 더하기" sourceHash="f9caa9d2834ca145" />
+		<entry key="EdAbilityCatalog.AddEffectToSet" text="이펙트 더하기" sourceHash="f9caa9d2834ca145" />
+		<entry key="EdAbilityCatalog.Duplicate" text="복제" sourceHash="fac15b89e0668996" />
+		<entry key="EdAbilityCatalog.Effects" text="이펙트" sourceHash="d004bbafa47097e5" />
+		<entry key="EdAbilityCatalog.File" text="파일" sourceHash="d1f81284eeb7b503" />
+		<entry key="EdAbilityCatalog.FileTip"
+		       text="게임이 읽는 카탈로그 파일입니다. 편집해도 주석과 줄 배치가 남습니다."
+		       sourceHash="85aaca40c7a44e38" />
+		<entry key="EdAbilityCatalog.FilterHint" text="id 로 거르기" sourceHash="c43f7e285bae95e1" />
+		<entry key="EdAbilityCatalog.Go" text="가기" sourceHash="09023907b59c38eb" />
+		<entry key="EdAbilityCatalog.InheritedTip"
+		       text="부모 항목에서 물려받은 값입니다. 고르면 이 항목에 적습니다."
+		       sourceHash="258dfb955934f894" />
+		<entry key="EdAbilityCatalog.NoFileHint"
+		       text="편집할 어빌리티 카탈로그 파일(game/&lt;게임&gt;/data/abilities.xml)을 적으세요."
+		       sourceHash="40ad614f3e928f78" />
+		<entry key="EdAbilityCatalog.NoneChoice" text="(없음)" sourceHash="8c36545f724b9460" />
+		<entry key="EdAbilityCatalog.PickEntryHint"
+		       text="왼쪽에서 항목을 고르면 그 항목이 쓰는 것과 그것을 쓰는 곳을 봅니다."
+		       sourceHash="268dc0a1bf394d29" />
+		<entry key="EdAbilityCatalog.Presentations" text="큐 연출" sourceHash="e160bc2d29075769" />
+		<entry key="EdAbilityCatalog.Redo" text="다시 실행" sourceHash="7417792bbe720149" />
+		<entry key="EdAbilityCatalog.Remove" text="지우기" sourceHash="ea4f08110bb8f15d" />
+		<entry key="EdAbilityCatalog.RemoveTip"
+		       text="다른 항목이 쓰는 항목은 지우지 않습니다. 그 참조를 먼저 바꾸세요."
+		       sourceHash="dd165e99ffa137c9" />
+		<entry key="EdAbilityCatalog.Revert" text="되돌리기" sourceHash="d89a2e529b31ef43" />
+		<entry key="EdAbilityCatalog.Save" text="저장" sourceHash="33f85f24c0f5f008" />
+		<entry key="EdAbilityCatalog.Undo" text="실행 취소" sourceHash="8f4be9f086eb530f" />
+		<entry key="EdAbilityCatalog.UsedBy" text="쓰는 곳" sourceHash="779c0036ee34fe7d" />
+		<entry key="EdAbilityCatalog.UsedByNothing" text="이 항목을 쓰는 곳이 없습니다." sourceHash="ce418dbe01852ba4" />
+		<entry key="EdAbilityCatalog.Uses" text="쓰는 것" sourceHash="a48f82f001b89585" />
+		<entry key="EdAbilityCatalog.UsesNothing" text="다른 항목을 쓰지 않습니다." sourceHash="44bec3c2ce8364f4" />
+		<entry key="EdAbilityCatalog.ValidationFailed"
+		       text="런타임 로더가 저장한 파일을 읽지 못했습니다. 이유는 로그를 보세요."
+		       sourceHash="f82ad242c323c715" />
+		<entry key="EdAbilityCatalog.ValidationPassed"
+		       text="런타임 로더가 저장한 파일을 읽습니다."
+		       sourceHash="7ccb4a0f7b3336fe" />
 		<entry key="EdAbilityDebug.ColumnActive" text="실행 중" sourceHash="a45a194b58837e4f" />
 		<entry key="EdAbilityDebug.ColumnBase" text="기본값" sourceHash="c1a4e2a7a8e20d58" />
 		<entry key="EdAbilityDebug.ColumnCooldown" text="쿨다운" sourceHash="8b59db90be866528" />

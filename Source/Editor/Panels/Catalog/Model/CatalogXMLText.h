@@ -11,6 +11,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Common/EditorExports.h"
+
 namespace sw::editor
 {
     /** @brief 속성 하나의 원문 위치와 푼 값입니다. 위치는 바이트 오프셋입니다. */
@@ -27,7 +29,7 @@ namespace sw::editor
 namespace sw::editor
 {
     /** @brief 원소 하나의 원문 위치입니다. */
-    struct CatalogXMLElement
+    struct SW_EDITOR_API CatalogXMLElement
     {
         string                      _name{};
         vector<CatalogXMLAttribute> _listAttribute{};

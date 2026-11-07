@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 어빌리티 카탈로그 편집 창(Ability Catalog): 테스트 카탈로그(abilitycatalog/abilities.xml — 이펙트 셋 · 어빌리티 하나 · 세트 하나 · 큐 연출 하나)의 사본
+  (scratch/abilitycatalog)을 경로 칸에 쳐서 연다. 항목 여섯이 서고(Editor.AbilityCatalogEntryCount = 6) 세트 Healer 의 GA_Missing 이 풀리지 않은 참조 하나로 보인다(IssueCount = 1).
+  세트(항목 4)를 골라 그 참조(참조 번호 5 — 이펙트 큐 0, 어빌리티 비용 · 쿨다운 · Param 1 ~ 3, 세트 구성 4 · 5)를 목록의 첫 어빌리티(GA_Heal)로 고르면 문제가 사라진다.
+  저장하면 런타임 로더(AbilityCatalog)가 그 글을 읽어 통과한다(Editor.AbilityCatalogValidation = 1). 원문의 주석은 남는다(파일을 눈으로 본다).
+  그림 abilitycatalog/*.png — 왼쪽 종류별 목록(문제 항목은 빨간 글), 오른쪽 쓰는 것 · 쓰이는 곳.
+  실행: App -EnableEditor -scenario=engine/automation/editor/abilitycatalog.scenario.xml -unattended
+-->
+<Scenario name="editor.abilitycatalog" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/abilitycatalog" as="scratch/abilitycatalog"/>
+	<EditorWaitSettled/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus ability_catalog"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="abilityCatalog.path"/>
+	<EditorWaitSettled/>
+	<EditorText value="scratch/abilitycatalog/abilities.xml"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Enter"/>
+	<WaitUntil watch="Editor.AbilityCatalogEntryCount" equals="6" timeoutFrames="120"/>
+	<Expect watch="Editor.AbilityCatalogIssueCount" equals="1"/>
+	<ExpectLog id="AbilityCatalogPanel.Opened" count="1"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="abilityCatalog.entry.4"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="abilitycatalog/issue.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="abilityCatalog.ref.5"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="abilityCatalog.ref.5.first"/>
+	<WaitUntil watch="Editor.AbilityCatalogIssueCount" equals="0" timeoutFrames="60"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" atLeast="1" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<!-- 쓰이는 곳: 이펙트 GE_Heal(항목 0)을 고르면 GA_Heal 의 Param 이 쓴다 -->
+	<EditorClick mark="abilityCatalog.entry.0"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="abilitycatalog/usedby.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="abilityCatalog.save"/>
+	<WaitUntil watch="Editor.AbilityCatalogValidation" equals="1" timeoutFrames="90"/>
+	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>
