@@ -65,7 +65,7 @@ namespace
         input._journalKey = LedgerJournalKey::makeFromIdempotency( LedgerJournalKey::makeAccountScope( kBuyer ), 7, idempotencyLow );
         input._accountID  = kBuyer;
         input._nowMs      = kNowMs;
-        EconomyReply reply;
+        EconomyPurchaseReply reply;
         return EconomyStoreLogic::purchase( database, currencies, offers, input, reply );
     }
 

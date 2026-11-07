@@ -22,6 +22,13 @@ namespace
     constexpr int64  kNowMs   = 1700000000000ll;
     constexpr uint64 kAccount = 0x0123456789ABCDEFull;
 
+    /** @brief 가짜 서버가 낼 답입니다. 메서드마다 그 응답 형식으로 옮겨 보낸다(`FakeEconomyService::respond`). */
+    struct EconomyTestReply
+    {
+        vector<LedgerBalance> _listBalance{};
+        EconomyResult         _result{ EconomyResult::Ok };
+    };
+
     /** @brief 서버 쪽 가짜 — 정해 둔 답으로 응답하고 받은 것을 기록합니다. */
     class FakeEconomyService final : public IOnlineServerService
     {
@@ -29,7 +36,7 @@ namespace
         vector<EconomyRedeemRequest> _listRedeem{};
         vector<NetIdempotencyKey>    _listKey{};
         vector<uint16>               _listMethod{};
-        EconomyReply                 _reply{};
+        EconomyTestReply             _reply{};
 
         const OnlineProtocolEntry& getProtocol() const override { return EconomyProtocol::kOnlineEntry; }
         bool                       isAnonymousMethod( uint16 method ) const override
@@ -48,7 +55,44 @@ namespace
                 SW_EXPECT_TRUE( EconomyProtocol::MessageTypes::read( body, request ) == FixedReadResult::Ok );
                 _listRedeem.push_back( request );
             }
-            (void)host.respondReply<EconomyProtocol::MessageTypes>( context._token, _reply ); // 진짜 서비스와 같은 규칙
+            respond( host, context );
+        }
+
+    private:
+        /** @brief 메서드의 응답 형식으로 답합니다. 진짜 서비스와 같은 규칙(`respondReply` — 스토어 대기는 기억하지 않는다)이다. */
+        void respond( OnlineServiceHost& host, const OnlineCallContext& context ) const
+        {
+            if ( context._method == EconomyMethod::GetWallet::kID )
+            {
+                EconomyWalletReply reply;
+                reply._listBalance = _reply._listBalance;
+                (void)host.respondReply<EconomyProtocol::MessageTypes>( context._token, reply );
+            }
+            else if ( context._method == EconomyMethod::Purchase::kID )
+            {
+                EconomyPurchaseReply reply;
+                reply._listBalance = _reply._listBalance;
+                reply._result      = _reply._result;
+                (void)host.respondReply<EconomyProtocol::MessageTypes>( context._token, reply );
+            }
+            else if ( context._method == EconomyMethod::RedeemReceipt::kID )
+            {
+                EconomyRedeemReply reply;
+                reply._listBalance = _reply._listBalance;
+                reply._result      = _reply._result;
+                (void)host.respondReply<EconomyProtocol::MessageTypes>( context._token, reply );
+            }
+            else if ( context._method == EconomyMethod::WithdrawPurchase::kID )
+            {
+                EconomyWithdrawReply reply;
+                reply._listBalance = _reply._listBalance;
+                reply._result      = _reply._result;
+                (void)host.respondReply<EconomyProtocol::MessageTypes>( context._token, reply );
+            }
+            else
+            {
+                (void)host.respondReply<EconomyProtocol::MessageTypes>( context._token, EconomyHistoryReply{} );
+            }
         }
     };
 
@@ -73,13 +117,36 @@ namespace
         void pump() { test::updateAll( { &_rig._server }, _rig._clients, kNowMs ); }
     };
 
+    /** @brief 받은 답 하나입니다. 메서드마다 응답 형식이 달라 공통 칸만 옮겨 적는다. */
+    struct EconomyRecordedReply
+    {
+        NetIdempotencyKey _idempotencyKey{};
+        uint64            _requestID{ 0 };
+        uint16            _errorCode{ OnlineError::kOk };
+        EconomyResult     _result{ EconomyResult::Ok }; ///< 결과 칸이 없는 응답(지갑 · 내역)은 Ok 이다
+    };
+
     /** @brief 경제 클라이언트의 답을 받습니다. */
     struct EconomyReplyRecorder
     {
-        vector<EconomyClient::Reply> _listReply{};
+        vector<EconomyRecordedReply> _listReply{};
 
-        void                         onReply( const EconomyClient::Reply& reply ) { _listReply.push_back( reply ); }
-        EconomyClient::ReplyDelegate makeDelegate() { return EconomyClient::ReplyDelegate::create<&EconomyReplyRecorder::onReply>( this ); }
+        template <typename TReply>
+        void onReply( const OnlineResult<TReply>& reply )
+        {
+            EconomyRecordedReply& recorded = _listReply.emplace_back();
+            recorded._idempotencyKey       = reply._idempotencyKey;
+            recorded._requestID            = reply._requestID;
+            recorded._errorCode            = reply._errorCode;
+            if constexpr ( OnlineReplyHasResult<TReply>::value )
+                recorded._result = reply._reply._result;
+        }
+
+        template <typename TMethod>
+        OnlineReplyDelegate<TMethod> makeDelegate()
+        {
+            return OnlineReplyDelegate<TMethod>::template create<&EconomyReplyRecorder::onReply<typename TMethod::Reply>>( this );
+        }
     };
 
     /** @brief 가짜 결제 다리입니다. 받은 요청과 마친 영수증을 기록하고, 낼 결과는 테스트가 넣습니다. */
@@ -152,7 +219,7 @@ SW_TEST_CASE( EconomyClientTest, RepliesUpdateTheCache )
         LedgerBalance{"cur.gold", 10},
         LedgerBalance{ "cur.gem",  5}
     };
-    (void)rig._economy.call<EconomyMethod::GetWallet>( recorder.makeDelegate() );
+    (void)rig._economy.call<EconomyMethod::GetWallet>( recorder.makeDelegate<EconomyMethod::GetWallet>() );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), recorder._listReply.size() );
     SW_EXPECT_EQUAL( int64( 10 ), rig._economy.getBalance( "cur.gold" ) );
@@ -164,7 +231,7 @@ SW_TEST_CASE( EconomyClientTest, RepliesUpdateTheCache )
     };
     EconomyPurchaseRequest purchase;
     purchase._offerID = "offer";
-    (void)rig._economy.call<EconomyMethod::Purchase>( purchase, recorder.makeDelegate(), NetIdempotencyKey{} );
+    (void)rig._economy.call<EconomyMethod::Purchase>( purchase, recorder.makeDelegate<EconomyMethod::Purchase>(), NetIdempotencyKey{} );
     rig.pump();
     SW_EXPECT_EQUAL( int64( 3 ), rig._economy.getBalance( "cur.gold" ) );
     SW_EXPECT_EQUAL( int64( 5 ), rig._economy.getBalance( "cur.gem" ) ); // 답에 없는 자산은 그대로다
@@ -173,7 +240,7 @@ SW_TEST_CASE( EconomyClientTest, RepliesUpdateTheCache )
     rig._service._reply._listBalance = {
         LedgerBalance{ "cur.gold", 1 }
     };
-    (void)rig._economy.call<EconomyMethod::GetWallet>( recorder.makeDelegate() );
+    (void)rig._economy.call<EconomyMethod::GetWallet>( recorder.makeDelegate<EconomyMethod::GetWallet>() );
     rig.pump();
     SW_EXPECT_EQUAL( int64( 0 ), rig._economy.getBalance( "cur.gem" ) ); // 스냅샷에 없으면 없다
 }
@@ -189,10 +256,10 @@ SW_TEST_CASE( EconomyClientTest, FailedReplyChangesNothing )
     };
     EconomyPurchaseRequest purchase;
     purchase._offerID = "offer";
-    (void)rig._economy.call<EconomyMethod::Purchase>( purchase, recorder.makeDelegate(), NetIdempotencyKey{} );
+    (void)rig._economy.call<EconomyMethod::Purchase>( purchase, recorder.makeDelegate<EconomyMethod::Purchase>(), NetIdempotencyKey{} );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), recorder._listReply.size() );
-    SW_EXPECT_TRUE( recorder._listReply[0]._reply._result == EconomyResult::InsufficientFunds );
+    SW_EXPECT_TRUE( recorder._listReply[0]._result == EconomyResult::InsufficientFunds );
     SW_EXPECT_EQUAL( int64( 0 ), rig._economy.getBalance( "cur.gold" ) );
 }
 
@@ -204,7 +271,7 @@ SW_TEST_CASE( EconomyClientTest, IdempotencyKeyIsKeptForRetries )
     EconomyRedeemRequest redeem;
     redeem._storeName = "google";
     redeem._payload   = "p|t";
-    (void)rig._economy.call<EconomyMethod::RedeemReceipt>( redeem, recorder.makeDelegate(), NetIdempotencyKey{} );
+    (void)rig._economy.call<EconomyMethod::RedeemReceipt>( redeem, recorder.makeDelegate<EconomyMethod::RedeemReceipt>(), NetIdempotencyKey{} );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), recorder._listReply.size() );
     const NetIdempotencyKey first = recorder._listReply[0]._idempotencyKey;
@@ -212,13 +279,13 @@ SW_TEST_CASE( EconomyClientTest, IdempotencyKeyIsKeptForRetries )
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._service._listKey.size() );
     SW_EXPECT_TRUE( rig._service._listKey[0] == first );
 
-    (void)rig._economy.call<EconomyMethod::RedeemReceipt>( redeem, recorder.makeDelegate(), first );
+    (void)rig._economy.call<EconomyMethod::RedeemReceipt>( redeem, recorder.makeDelegate<EconomyMethod::RedeemReceipt>(), first );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 2 ), recorder._listReply.size() );
     SW_EXPECT_TRUE( recorder._listReply[1]._idempotencyKey == first );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._service._listKey.size() ); // 다른 키를 보냈다면 서비스가 다시 불렸다
 
-    (void)rig._economy.call<EconomyMethod::RedeemReceipt>( redeem, recorder.makeDelegate(), NetIdempotencyKey{} );
+    (void)rig._economy.call<EconomyMethod::RedeemReceipt>( redeem, recorder.makeDelegate<EconomyMethod::RedeemReceipt>(), NetIdempotencyKey{} );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 2 ), rig._service._listKey.size() );
     SW_EXPECT_FALSE( rig._service._listKey[1] == first );
@@ -229,7 +296,7 @@ SW_TEST_CASE( EconomyClientTest, RequestBeforeInitializeFailsAtOnce )
 {
     EconomyClient        client;
     EconomyReplyRecorder recorder;
-    const uint64         requestID = client.call<EconomyMethod::GetWallet>( recorder.makeDelegate() );
+    const uint64         requestID = client.call<EconomyMethod::GetWallet>( recorder.makeDelegate<EconomyMethod::GetWallet>() );
     SW_REQUIRE_EQUAL( size_t( 1 ), recorder._listReply.size() );
     SW_EXPECT_EQUAL( requestID, recorder._listReply[0]._requestID );
     SW_EXPECT_EQUAL( OnlineError::kUnavailable, recorder._listReply[0]._errorCode );

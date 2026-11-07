@@ -111,6 +111,51 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 같은 프로세스의 호출(`EconomyService::submitCall` — 서버 코드 · 테스트)이 받는 답입니다. 와이어 형식이 아니다.
+     * @details 원격은 메서드마다 응답 형식이 따로이다(`EconomyMethod`). 같은 프로세스 호출은 델리게이트 하나로 받으므로 그 응답의 칸을 여기 옮겨 담는다(`assign`).
+     */
+    struct EconomyCallReply
+    {
+        vector<LedgerBalance>       _listBalance{};
+        vector<EconomyHistoryEntry> _listHistory{};
+        vector<LedgerBalance>       _listWithdrawn{};
+        string                      _productID{};
+        string                      _nextCursor{};
+        EconomyResult               _result{ EconomyResult::Ok };
+        uint8                       _bReplayed{ SW_FALSE };
+
+        void assign( const EconomyWalletReply& reply ) { _listBalance = reply._listBalance; }
+        void assign( const EconomyHistoryReply& reply )
+        {
+            _listHistory = reply._listHistory;
+            _nextCursor  = reply._nextCursor;
+        }
+        void assign( const EconomyPurchaseReply& reply )
+        {
+            _listBalance = reply._listBalance;
+            _result      = reply._result;
+            _bReplayed   = reply._bReplayed;
+        }
+        void assign( const EconomyRedeemReply& reply )
+        {
+            _listBalance = reply._listBalance;
+            _productID   = reply._productID;
+            _result      = reply._result;
+            _bReplayed   = reply._bReplayed;
+        }
+        void assign( const EconomyWithdrawReply& reply )
+        {
+            _listBalance   = reply._listBalance;
+            _listWithdrawn = reply._listWithdrawn;
+            _result        = reply._result;
+            _bReplayed     = reply._bReplayed;
+        }
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 영수증 검증을 기다리는 호출입니다. */
     struct EconomyReceiptCall
     {
@@ -125,7 +170,7 @@ namespace sw
     class SW_KIT_SERVER_API EconomyService final : public OnlineProtocolService<EconomyService, EconomyProtocol>
     {
     public:
-        using LocalCallTable = OnlineLocalCallTable<OnlineResult<EconomyReply>>; ///< 같은 프로세스의 호출도 원격과 같은 모양(공통 범주는 `_errorCode`)으로 받는다
+        using LocalCallTable = OnlineLocalCallTable<OnlineResult<EconomyCallReply>>; ///< 같은 프로세스의 호출도 원격과 같은 모양(공통 범주는 `_errorCode`)으로 받는다
         using ReplyDelegate  = LocalCallTable::ReplyDelegate;
 
         static constexpr const utf8* kFeatureFlag = "feature.shop_enabled";
@@ -170,7 +215,25 @@ namespace sw
         bool wasLastAuditBalanced() const { return _bLastAuditBalanced == SW_TRUE; }
 
         /** @brief 작업(work)의 `complete` 가 호출합니다. 응답과 지표를 처리합니다. */
-        void completeCall( uint64 callID, const EconomyOutcome& outcome, const EconomyReply& reply );
+        template <typename TReply>
+        void completeCall( uint64 callID, const EconomyOutcome& outcome, const TReply& reply )
+        {
+            if ( outcome.isFailed() )
+            {
+                failCallOf( callID, outcome._errorCode );
+                return;
+            }
+            if ( LocalCallTable::isLocal( callID ) )
+            {
+                OnlineResult<EconomyCallReply> local; // 원격 클라이언트가 받는 것과 같은 모양이다
+                local._reply.assign( reply );
+                (void)_localCalls.finish( callID, local );
+            }
+            else if ( finishCall( callID, outcome, reply ) == false ) // 스토어 대기는 `EconomyRedeemReply::isRetryable` 이 정한다
+                _calls.warnUnknownCall( callID );
+        }
+        /** @brief 호출을 공통 범주 @p errorCode 로 끝냅니다. 원격이면 공통 오류, 같은 프로세스면 `OnlineResult::_errorCode` 입니다. 공통 범주는 기억하지 않는다. */
+        void failCallOf( uint64 callID, uint16 errorCode );
         /** @brief 환불 회수 작업의 `complete` 가 호출합니다. 지표와 로그를 남기고 회수로 바뀐 잔액을 계정에 알립니다. 회수를 끝내지 못했으면 제공자가 그 환불을 잊어 겹친 조회가 다시 알립니다. */
         void  completeRefund( const ReceiptRefundNotification& notice, EconomyOutcome result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
         int32 getPendingCallCount() const { return _calls.getCount() + _localCalls.getCount(); }

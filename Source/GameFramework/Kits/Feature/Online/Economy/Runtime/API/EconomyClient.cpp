@@ -58,27 +58,27 @@ namespace sw
         return 0;
     }
 
-    void EconomyClient::onCallSucceeded( EconomyMethod::GetWallet, const OnlineNoBody& request, const EconomyReply& reply )
+    void EconomyClient::onCallSucceeded( EconomyMethod::GetWallet, const OnlineNoBody& request, const EconomyWalletReply& reply )
     {
         (void)request;
         applyBalances( reply._listBalance, true ); // 지갑 응답은 전체 스냅샷이다
     }
 
-    void EconomyClient::onCallSucceeded( EconomyMethod::Purchase, const EconomyPurchaseRequest& request, const EconomyReply& reply )
+    void EconomyClient::onCallSucceeded( EconomyMethod::Purchase, const EconomyPurchaseRequest& request, const EconomyPurchaseReply& reply )
     {
         (void)request;
         if ( reply._listBalance.empty() == false )
             applyBalances( reply._listBalance, false );
     }
 
-    void EconomyClient::onCallSucceeded( EconomyMethod::RedeemReceipt, const EconomyRedeemRequest& request, const EconomyReply& reply )
+    void EconomyClient::onCallSucceeded( EconomyMethod::RedeemReceipt, const EconomyRedeemRequest& request, const EconomyRedeemReply& reply )
     {
         (void)request;
         if ( reply._listBalance.empty() == false )
             applyBalances( reply._listBalance, false );
     }
 
-    void EconomyClient::onCallSucceeded( EconomyMethod::WithdrawPurchase, const EconomyWithdrawRequest& request, const EconomyReply& reply )
+    void EconomyClient::onCallSucceeded( EconomyMethod::WithdrawPurchase, const EconomyWithdrawRequest& request, const EconomyWithdrawReply& reply )
     {
         (void)request;
         if ( reply._listBalance.empty() == false )

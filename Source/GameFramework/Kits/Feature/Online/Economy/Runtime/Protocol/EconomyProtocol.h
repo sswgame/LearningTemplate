@@ -2,7 +2,7 @@
  * @file EconomyProtocol.h
  * @brief 경제 서비스의 와이어 형식입니다. 메서드 번호(영역 `OnlineMethodRange::kEconomy`), 결과, 요청과 응답 형식을 정의하며 클라이언트와 서버가 함께 씁니다.
  * @details 요청과 응답은 `REFLECT` 구조체 하나씩이고 본문은 고정 배치형(B)이다. 바이트 배치는 아래 `PROPERTY` 선언 순서와 키가 정하며 손 코덱과 손 버전 상수는 없다.
- *          업무 결과는 응답 본문(`EconomyReply::_result`)에 담으며 거래와 계정 키트도 같다.
+ *          응답은 메서드마다 따로이다(`EconomyWalletReply` · `EconomyHistoryReply` · `EconomyPurchaseReply` · `EconomyRedeemReply` · `EconomyWithdrawReply`). 업무 결과는 응답의 `_result` 이다.
  *          공통 범주(`OnlineError`)는 오류 코드로만 오며 로그인 없음, 손상된 본문, 충돌, 일시 장애, 시한 초과가 해당한다. 업무 결과(`EconomyResult`)는 도메인 값만이다.
  */
 #pragma once
@@ -152,31 +152,73 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 모든 메서드의 응답입니다. 메서드마다 쓰는 필드만 채웁니다. 실패하면 `_result` 만 의미가 있습니다. */
+    /** @brief 지갑(`GetWallet`)의 응답입니다. 이 계정의 잔액 전부(스냅샷)입니다. */
     REFLECT()
-    struct EconomyReply
+    struct EconomyWalletReply
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
-        vector<LedgerBalance> _listBalance{}; ///< GetWallet 은 전부(스냅샷)를, Purchase 와 Redeem 은 바뀐 것만 담는다. 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
+        vector<LedgerBalance> _listBalance{}; ///< 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
+    };
+
+    /** @brief 내역(`GetHistory`)의 응답입니다. */
+    REFLECT()
+    struct EconomyHistoryReply
+    {
+        REFLECT_BODY();
         PROPERTY( MaxCount = EconomyProtocol::kMaxHistoryCount )
         vector<EconomyHistoryEntry> _listHistory{};
-        PROPERTY( MaxCount = LedgerConstant::kMaxPostingCount )
-        vector<LedgerBalance> _listWithdrawn{}; ///< WithdrawPurchase 가 회수한 자산과 양이다. 스토어 환불 금액은 이것으로 정한다
-        PROPERTY( MaxCount = EconomyProtocol::kMaxProductIDSize )
-        string _productID{}; ///< Redeem 의 영수증에 포함된 스토어 상품이다
         PROPERTY( MaxCount = EconomyProtocol::kMaxCursorSize )
         string _nextCursor{};
+    };
+
+    /** @brief 구매(`Purchase`)의 응답입니다. */
+    REFLECT()
+    struct EconomyPurchaseReply
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
+        vector<LedgerBalance> _listBalance{}; ///< 바뀐 잔액만 담는다. 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
         PROPERTY()
         EconomyResult _result{ EconomyResult::Ok };
         PROPERTY( Min = 0, Max = 1 )
-        uint8 _bReplayed{ SW_FALSE }; ///< 같은 멱등 키나 같은 영수증의 지난 결과이다
+        uint8 _bReplayed{ SW_FALSE }; ///< 같은 멱등 키의 지난 결과이다
+    };
+
+    /** @brief 영수증 지급(`RedeemReceipt`)의 응답입니다. */
+    REFLECT()
+    struct EconomyRedeemReply
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
+        vector<LedgerBalance> _listBalance{}; ///< 바뀐 잔액만 담는다. 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
+        PROPERTY( MaxCount = EconomyProtocol::kMaxProductIDSize )
+        string _productID{}; ///< 영수증에 포함된 스토어 상품이다
+        PROPERTY()
+        EconomyResult _result{ EconomyResult::Ok };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bReplayed{ SW_FALSE }; ///< 같은 영수증의 지난 결과이다
 
         /**
          * @brief 같은 멱등 키로 다시 시도할 업무 결과(스토어 대기)인지입니다. 서버는 이 답을 기억하지 않고(`OnlineServiceHost::respondReply`) 클라이언트 흐름은 거래를 마치지 않는다.
-         * @details 충돌 · 일시 장애는 공통 범주(`kBusy` · `kUnavailable`)로 오고 보존은 그 범주가 정한다 — 이 판정은 공통 범주가 아닌 재시도 결과만 본다.
+         * @details 충돌 · 일시 장애는 공통 범주(`kBusy` · `kUnavailable`)로 오고 보존은 그 범주가 정한다 — 이 판정은 공통 범주가 아닌 재시도 결과만 본다. 스토어 대기는 지급에서만 난다.
          */
         [[nodiscard]] bool isRetryable() const { return _result == EconomyResult::ReceiptPending; }
+    };
+
+    /** @brief 청약철회(`WithdrawPurchase`)의 응답입니다. */
+    REFLECT()
+    struct EconomyWithdrawReply
+    {
+        REFLECT_BODY();
+        PROPERTY( MaxCount = OnlineLimit::kMaxBalanceCount )
+        vector<LedgerBalance> _listBalance{}; ///< 회수 뒤 바뀐 잔액이다. 상한은 `OnlineLimit::kMaxBalanceCount` 와 같다
+        PROPERTY( MaxCount = LedgerConstant::kMaxPostingCount )
+        vector<LedgerBalance> _listWithdrawn{}; ///< 회수한 자산과 양이다. 스토어 환불 금액은 이것으로 정한다
+        PROPERTY()
+        EconomyResult _result{ EconomyResult::Ok };
+        PROPERTY( Min = 0, Max = 1 )
+        uint8 _bReplayed{ SW_FALSE }; ///< 같은 거래의 지난 결과이다
     };
 } // namespace sw
 
@@ -198,12 +240,12 @@ namespace sw
     /** @brief Economy 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
     struct EconomyMethod : OnlineMethodTable<EconomyMethodName, OnlineMethodRange::kEconomy, EconomyPushName>
     {
-        using GetWallet        = Method<MethodName::GetWallet, OnlineNoBody, EconomyReply>;
-        using GetHistory       = Method<MethodName::GetHistory, EconomyHistoryRequest, EconomyReply>;
-        using Purchase         = Method<MethodName::Purchase, EconomyPurchaseRequest, EconomyReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using RedeemReceipt    = Method<MethodName::RedeemReceipt, EconomyRedeemRequest, EconomyReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using WithdrawPurchase = Method<MethodName::WithdrawPurchase, EconomyWithdrawRequest, EconomyReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 유상 구매 청약철회이다. 기한 안에 쓰지 않은 만큼 회수한다. 분개 키가 거래 id 라 다시 보내도 한 번만 적용된다
-        using BalanceChanged   = Push<PushName::BalanceChanged, EconomyBalanceChanged>;                                                                ///< 요청 없이 잔액이 바뀌었다(GM 지급 · 회수, 환불 회수). 클라이언트는 캐시를 그 값으로 덮는다
+        using GetWallet        = Method<MethodName::GetWallet, OnlineNoBody, EconomyWalletReply>;
+        using GetHistory       = Method<MethodName::GetHistory, EconomyHistoryRequest, EconomyHistoryReply>;
+        using Purchase         = Method<MethodName::Purchase, EconomyPurchaseRequest, EconomyPurchaseReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using RedeemReceipt    = Method<MethodName::RedeemReceipt, EconomyRedeemRequest, EconomyRedeemReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using WithdrawPurchase = Method<MethodName::WithdrawPurchase, EconomyWithdrawRequest, EconomyWithdrawReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 유상 구매 청약철회이다. 기한 안에 쓰지 않은 만큼 회수한다. 분개 키가 거래 id 라 다시 보내도 한 번만 적용된다
+        using BalanceChanged   = Push<PushName::BalanceChanged, EconomyBalanceChanged>;                                                                        ///< 요청 없이 잔액이 바뀌었다(GM 지급 · 회수, 환불 회수). 클라이언트는 캐시를 그 값으로 덮는다
     };
 } // namespace sw
 

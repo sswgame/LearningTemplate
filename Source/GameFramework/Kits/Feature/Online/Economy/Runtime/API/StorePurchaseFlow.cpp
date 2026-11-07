@@ -57,10 +57,10 @@ namespace sw
     void StorePurchaseFlow::redeem( const EconomyRedeemRequest& request, const NetIdempotencyKey& key )
     {
         _listPending.push_back( PendingRedeem{ request, key } ); // 응답이 요청 함수 안에서 올 수 있다(보내지 못한 요청) — 먼저 적어 둔다
-        (void)_client.call<EconomyMethod::RedeemReceipt>( request, EconomyClient::ReplyDelegate::create<&StorePurchaseFlow::onRedeemReply>( this ), key );
+        (void)_client.call<EconomyMethod::RedeemReceipt>( request, OnlineReplyDelegate<EconomyMethod::RedeemReceipt>::create<&StorePurchaseFlow::onRedeemReply>( this ), key );
     }
 
-    void StorePurchaseFlow::onRedeemReply( const EconomyClient::Reply& reply )
+    void StorePurchaseFlow::onRedeemReply( const OnlineResult<EconomyRedeemReply>& reply )
     {
         for ( size_t index = 0; index < _listPending.size(); ++index )
         {

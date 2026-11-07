@@ -144,9 +144,14 @@ namespace sw
                 return LedgerResult::Conflict;
             }
 
-            static EconomyOutcome finish( EconomyReply& outReply, EconomyOutcome result )
+            /** @brief 응답에 업무 결과를 적고 결과를 돌려줍니다. 결과 칸이 없는 응답(지갑 · 내역)은 결과만 돌려준다. */
+            template <typename TReply>
+            static EconomyOutcome finish( TReply& outReply, EconomyOutcome result )
             {
-                outReply._result = result._result;
+                if constexpr ( OnlineReplyHasResult<TReply>::value )
+                    outReply._result = result._result;
+                else
+                    (void)outReply;
                 return result;
             }
 
@@ -201,7 +206,8 @@ namespace sw
              * @brief 같은 분개 키의 분개가 이미 있으면 그 결과를 돌려주고(재생이면 Ok 이고 @p outReply 에 잔액을 넣는다, 다른 구매의 키이면 `kInvalidRequest`) 없으면 빈 값입니다.
              * @details 지금 잔액으로 분개 항목을 다시 짤 수 없다. 재원이 비었을 수 있기 때문이다. 그래서 저장된 분개의 항목으로 재생한다.
              */
-            [[nodiscard]] static std::optional<EconomyOutcome> findReplay( IServiceStoreConnection& connection, const LedgerTransferRequest& request, uint64 accountID, EconomyReply& outReply )
+            template <typename TReply>
+            [[nodiscard]] static std::optional<EconomyOutcome> findReplay( IServiceStoreConnection& connection, const LedgerTransferRequest& request, uint64 accountID, TReply& outReply )
             {
                 LedgerJournalEntry entry;
                 if ( Ledger::findJournal( connection, request._journalKey, entry ) != ServiceStoreResult::Ok )
@@ -224,7 +230,7 @@ namespace sw
              *          첫 구매로 잔액이 줄어든 뒤의 재시도가 "부족" 을 받으면 안 되기 때문입니다.
              */
             [[nodiscard]] static std::optional<EconomyOutcome> buildPurchaseRequest( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferDef& offer,
-                                                                                     const EconomyPurchaseInput& input, EconomyReply& outReply, LedgerTransferRequest& outRequest )
+                                                                                     const EconomyPurchaseInput& input, EconomyPurchaseReply& outReply, LedgerTransferRequest& outRequest )
             {
                 const LedgerHolder account = LedgerHolder::makeAccount( input._accountID );
                 const int64        count   = input._count;
@@ -328,9 +334,9 @@ namespace sw
     }
 
     EconomyOutcome EconomyStoreLogic::purchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers,
-                                                const EconomyPurchaseInput& input, EconomyReply& outReply )
+                                                const EconomyPurchaseInput& input, EconomyPurchaseReply& outReply )
     {
-        outReply               = EconomyReply{};
+        outReply               = EconomyPurchaseReply{};
         const OfferDef* pOffer = offers.findOffer( input._offerID );
         if ( pOffer == nullptr )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::UnknownOffer );
@@ -397,9 +403,9 @@ namespace sw
     }
 
     EconomyOutcome EconomyStoreLogic::redeemReceipt( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers,
-                                                     const EconomyRedeemInput& input, EconomyReply& outReply )
+                                                     const EconomyRedeemInput& input, EconomyRedeemReply& outReply )
     {
-        outReply                               = EconomyReply{};
+        outReply                               = EconomyRedeemReply{};
         const ReceiptValidationResult& receipt = input._receipt;
         outReply._productID                    = receipt._productID;
         switch ( receipt._status )
@@ -602,10 +608,10 @@ namespace sw
     }
 
     EconomyOutcome EconomyStoreLogic::withdrawPurchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const EconomyWithdrawInput& input,
-                                                        EconomyReply& outReply )
+                                                        EconomyWithdrawReply& outReply )
     {
         using Internal = EconomyStoreLogicInternal;
-        outReply       = EconomyReply{};
+        outReply       = EconomyWithdrawReply{};
         string redeemKey;
         if ( input._accountID == 0 || Internal::makeRedeemKey( input._storeName, input._transactionID, redeemKey ) == false )
             return Internal::finish( outReply, EconomyOutcome::fail( OnlineError::kInvalidRequest ) );
@@ -669,16 +675,16 @@ namespace sw
         return Internal::finish( outReply, EconomyOutcome::fail( OnlineError::kBusy ) );
     }
 
-    EconomyOutcome EconomyStoreLogic::readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyReply& outReply )
+    EconomyOutcome EconomyStoreLogic::readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyWalletReply& outReply )
     {
-        outReply                      = EconomyReply{};
+        outReply                      = EconomyWalletReply{};
         const ServiceStoreResult read = Ledger::listBalances( connection, LedgerHolder::makeAccount( accountID ), outReply._listBalance );
         return EconomyStoreLogicInternal::finish( outReply, read == ServiceStoreResult::Ok ? EconomyResult::Ok : EconomyOutcome::fail( OnlineError::kUnavailable ) );
     }
 
-    EconomyOutcome EconomyStoreLogic::readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyReply& outReply )
+    EconomyOutcome EconomyStoreLogic::readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyHistoryReply& outReply )
     {
-        outReply                           = EconomyReply{};
+        outReply                           = EconomyHistoryReply{};
         const LedgerHolder         account = LedgerHolder::makeAccount( accountID );
         vector<LedgerJournalEntry> listEntry;
         const ServiceStoreResult   read = Ledger::listHistory( connection, account, request._cursor, request._maxCount, listEntry, outReply._nextCursor );

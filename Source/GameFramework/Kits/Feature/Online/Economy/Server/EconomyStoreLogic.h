@@ -100,10 +100,10 @@ namespace sw
 
         /** @brief 구매를 처리합니다. @p outReply 의 `_listBalance` 는 이 계정의 바뀐 잔액입니다. */
         static EconomyOutcome purchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers, const EconomyPurchaseInput& input,
-                                        EconomyReply& outReply );
+                                        EconomyPurchaseReply& outReply );
         /** @brief 검증이 끝난 영수증으로 지급합니다. 구매자가 이 계정이 아니면 `NotPurchaser` 입니다. */
         static EconomyOutcome redeemReceipt( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers, const EconomyRedeemInput& input,
-                                             EconomyReply& outReply );
+                                             EconomyRedeemReply& outReply );
         /**
          * @brief 스토어 환불 알림으로 지급한 재화를 회수합니다. 빚을 허용하며(이미 쓴 재화도 회수한다) 사유는 "refund.revoke" 입니다.
          * @param outListChange 회수로 잔액이 바뀐 계정과 그 잔액입니다. 회수하지 않았으면(이미 환불했거나 지급 전이다) 비어 있습니다.
@@ -117,9 +117,9 @@ namespace sw
          * @details 사유는 "iap.withdraw" 이고 분개 키는 `withdraw.<스토어>` 범위의 거래 id 토큰이라 다시 와도 한 번만 적용된다. 실제 결제 환불은 스토어나 결제 대행이 회수한 양으로 한다.
          */
         static EconomyOutcome withdrawPurchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const EconomyWithdrawInput& input,
-                                                EconomyReply& outReply );
-        static EconomyOutcome readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyReply& outReply );
-        static EconomyOutcome readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyReply& outReply );
+                                                EconomyWithdrawReply& outReply );
+        static EconomyOutcome readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyWalletReply& outReply );
+        static EconomyOutcome readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyHistoryReply& outReply );
         /** @brief 이동 결과에서 @p accountID 의 잔액만 골라냅니다. */
         static void collectAccountBalances( const LedgerTransferResult& outcome, uint64 accountID, vector<LedgerBalance>& outListBalance );
     };

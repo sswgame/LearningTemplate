@@ -120,7 +120,7 @@ namespace sw
         };
 
         void redeem( const EconomyRedeemRequest& request, const NetIdempotencyKey& key );
-        void onRedeemReply( const EconomyClient::Reply& reply );
+        void onRedeemReply( const OnlineResult<EconomyRedeemReply>& reply );
         void notifyReport( const StorePurchaseReport& finished );
 
     private:

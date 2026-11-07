@@ -73,7 +73,7 @@ namespace
             SW_EXPECT_TRUE( _offers.loadFromXMLText( kOfferXML, "test" ) );
         }
 
-        EconomyReply redeem( AccountID accountID, string_view transactionID = "tx1", ReceiptStatus status = ReceiptStatus::Valid, string_view productID = "com.x.gem100", bool bSandbox = false, bool bAcceptSandbox = false )
+        EconomyRedeemReply redeem( AccountID accountID, string_view transactionID = "tx1", ReceiptStatus status = ReceiptStatus::Valid, string_view productID = "com.x.gem100", bool bSandbox = false, bool bAcceptSandbox = false )
         {
             EconomyRedeemInput input;
             input._receipt._storeName     = "fake";
@@ -84,7 +84,7 @@ namespace
             input._accountID              = accountID;
             input._nowMs                  = kNowMs;
             input._bAcceptSandbox         = bAcceptSandbox ? SW_TRUE : SW_FALSE;
-            EconomyReply reply;
+            EconomyRedeemReply reply;
             _lastOutcome = EconomyStoreLogic::redeemReceipt( _database, _currencies, _offers, input, reply );
             return reply;
         }
@@ -103,7 +103,7 @@ namespace
             input._pExternalLinks                    = pLinks;
             input._accountID                         = accountID;
             input._nowMs                             = kNowMs;
-            EconomyReply reply;
+            EconomyRedeemReply reply;
             return EconomyStoreLogic::redeemReceipt( _database, _currencies, _offers, input, reply );
         }
 
@@ -119,7 +119,7 @@ namespace
             return result;
         }
 
-        EconomyReply withdraw( AccountID accountID, int64 nowMs = kNowMs, string_view transactionID = "tx1" )
+        EconomyWithdrawReply withdraw( AccountID accountID, int64 nowMs = kNowMs, string_view transactionID = "tx1" )
         {
             EconomyWithdrawInput input;
             input._storeName     = "fake";
@@ -127,7 +127,7 @@ namespace
             input._accountID     = accountID;
             input._nowMs         = nowMs;
             input._windowMs      = kWindowMs;
-            EconomyReply reply;
+            EconomyWithdrawReply reply;
             _lastOutcome = EconomyStoreLogic::withdrawPurchase( _database, _currencies, input, reply );
             return reply;
         }
@@ -234,12 +234,12 @@ namespace
     /** @brief 서비스 답을 받습니다. 원격 클라이언트와 같은 모양이다(공통 범주는 `_errorCode`). */
     struct EconomyReplySink
     {
-        vector<OnlineResult<EconomyReply>> _listReply{};
+        vector<OnlineResult<EconomyCallReply>> _listReply{};
 
-        void onReply( const OnlineResult<EconomyReply>& reply ) { _listReply.push_back( reply ); }
+        void onReply( const OnlineResult<EconomyCallReply>& reply ) { _listReply.push_back( reply ); }
 
         /** @brief 받은 답의 결과입니다. 공통 범주면 그 오류입니다. */
-        static EconomyOutcome toOutcome( const OnlineResult<EconomyReply>& reply )
+        static EconomyOutcome toOutcome( const OnlineResult<EconomyCallReply>& reply )
         {
             return reply._errorCode != OnlineError::kOk ? EconomyOutcome::fail( reply._errorCode ) : EconomyOutcome{ reply._reply._result };
         }
@@ -292,7 +292,7 @@ namespace
         }
 
         /** @brief 같은 프로세스 호출 하나를 끝까지 돌립니다. 결과는 `_lastOutcome` 에 남는다(공통 범주면 응답은 빈 값이다). */
-        EconomyReply call( uint16 method, AccountID accountID, const EconomyCall* pCall = nullptr )
+        EconomyCallReply call( uint16 method, AccountID accountID, const EconomyCall* pCall = nullptr )
         {
             EconomyCall call = pCall != nullptr ? *pCall : EconomyCall{ UnixMilliseconds{ kNowMs } };
             call._method     = method;
@@ -300,13 +300,13 @@ namespace
             _service.submitCall( call, EconomyService::ReplyDelegate::create<&EconomyReplySink::onReply>( &_sink ) );
             pump();
             SW_EXPECT_EQUAL( size_t( 1 ), _sink._listReply.size() );
-            const OnlineResult<EconomyReply> result = _sink._listReply.empty() ? OnlineResult<EconomyReply>{} : _sink._listReply.back();
+            const OnlineResult<EconomyCallReply> result = _sink._listReply.empty() ? OnlineResult<EconomyCallReply>{} : _sink._listReply.back();
             _sink._listReply.clear();
             _lastOutcome = EconomyReplySink::toOutcome( result );
             return result._reply;
         }
 
-        EconomyReply redeem( AccountID accountID, string_view payload )
+        EconomyCallReply redeem( AccountID accountID, string_view payload )
         {
             EconomyCall call{ UnixMilliseconds{ kNowMs } };
             call._redeem._storeName = "fake";
@@ -390,8 +390,8 @@ namespace
 /** @brief [EconomyReceiptsTest] 지급: 카탈로그의 지급대로 받고, 같은 거래를 다시 내면 재생으로 한 번만 받으며, 다른 계정은 AlreadyRedeemed 다 */
 SW_TEST_CASE( EconomyReceiptsTest, RedeemGrantsOncePerTransaction )
 {
-    ReceiptFixture     rig;
-    const EconomyReply first = rig.redeem( kBuyer );
+    ReceiptFixture           rig;
+    const EconomyRedeemReply first = rig.redeem( kBuyer );
     SW_EXPECT_TRUE( first._result == EconomyResult::Ok );
     SW_EXPECT_TRUE( first._bReplayed == SW_FALSE );
     SW_EXPECT_EQUAL( string( "com.x.gem100" ), first._productID );
@@ -399,7 +399,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemGrantsOncePerTransaction )
     SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
     SW_EXPECT_EQUAL( int64( 10 ), rig.balanceOf( kBuyer, "cur.gold" ) );
 
-    const EconomyReply again = rig.redeem( kBuyer );
+    const EconomyRedeemReply again = rig.redeem( kBuyer );
     SW_EXPECT_TRUE( again._result == EconomyResult::Ok );
     SW_EXPECT_TRUE( again._bReplayed == SW_TRUE );
     SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
@@ -511,7 +511,7 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemSurvivesLostCommitReply )
     ReceiptFixture rig;
     rig._database.armFault( ServiceStoreFault::LoseCommitReply );
     (void)rig.redeem( kBuyer );
-    const EconomyReply retried = rig.redeem( kBuyer );
+    const EconomyRedeemReply retried = rig.redeem( kBuyer );
     SW_EXPECT_TRUE( retried._result == EconomyResult::Ok );
     SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
 }
@@ -566,7 +566,7 @@ SW_TEST_CASE( EconomyReceiptsTest, WithdrawTakesBackOnlyUnused )
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
     rig.spend( kBuyer, 70 );
 
-    const EconomyReply withdrawn = rig.withdraw( kBuyer );
+    const EconomyWithdrawReply withdrawn = rig.withdraw( kBuyer );
     SW_EXPECT_TRUE( withdrawn._result == EconomyResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 2 ), withdrawn._listWithdrawn.size() );
     SW_EXPECT_EQUAL( int64( 30 ), withdrawn._listWithdrawn[0]._amount + withdrawn._listWithdrawn[1]._amount - 10 );
@@ -602,13 +602,13 @@ SW_TEST_CASE( EconomyReceiptsTest, WalletAndHistoryReflectMoves )
     SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
     rig.spend( kBuyer, 30 );
 
-    EconomyReply wallet;
+    EconomyWalletReply wallet;
     SW_EXPECT_TRUE( EconomyStoreLogic::readWallet( rig._database, kBuyer, wallet ) == EconomyResult::Ok );
     SW_EXPECT_EQUAL( size_t( 2 ), wallet._listBalance.size() );
 
     EconomyHistoryRequest request;
     request._maxCount = 10;
-    EconomyReply history;
+    EconomyHistoryReply history;
     SW_EXPECT_TRUE( EconomyStoreLogic::readHistory( rig._database, kBuyer, request, history ) == EconomyResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 2 ), history._listHistory.size() );
     int64 total = 0;
@@ -626,8 +626,8 @@ SW_TEST_CASE( EconomyReceiptsTest, WalletAndHistoryReflectMoves )
 /** @brief [EconomyReceiptsTest] 서비스: 영수증은 스토어 검증 뒤에 지급한다. 등록 안 된 스토어 · 깨진 영수증 · 샌드박스는 거절, 멱등 키 없는 구매 · 로그인 전 요청도 거절한다 */
 SW_TEST_CASE( EconomyReceiptsTest, ServiceRedeemsThroughTheValidator )
 {
-    EconomyServiceFixture rig;
-    const EconomyReply    redeemed = rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" );
+    EconomyServiceFixture  rig;
+    const EconomyCallReply redeemed = rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" );
     SW_EXPECT_TRUE( redeemed._result == EconomyResult::Ok );
     SW_EXPECT_EQUAL( int64( 100 ), rig._data.balanceOf( kBuyer ) );
 

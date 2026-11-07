@@ -27,9 +27,6 @@ namespace sw
     class SW_KIT_API EconomyClient final : public OnlineProtocolClient<EconomyClient, EconomyProtocol>
     {
     public:
-        using Reply         = OnlineResult<EconomyReply>;
-        using ReplyDelegate = Delegate<void( const Reply& )>;
-
         EconomyClient();
 
         /** @brief 잔액을 캐시에 넣습니다. 다른 키트 응답의 잔액도 게임이 이 함수로 넘깁니다. @p bSnapshot 이 true 이면 캐시를 통째로 바꿉니다. */
@@ -43,10 +40,10 @@ namespace sw
 
         // OnlineProtocolClient 의 훅 - 잔액을 싣는 메서드만 캐시를 고친다
         using OnlineProtocolClient::onCallSucceeded;
-        void onCallSucceeded( EconomyMethod::GetWallet, const OnlineNoBody& request, const EconomyReply& reply );
-        void onCallSucceeded( EconomyMethod::Purchase, const EconomyPurchaseRequest& request, const EconomyReply& reply );
-        void onCallSucceeded( EconomyMethod::RedeemReceipt, const EconomyRedeemRequest& request, const EconomyReply& reply );
-        void onCallSucceeded( EconomyMethod::WithdrawPurchase, const EconomyWithdrawRequest& request, const EconomyReply& reply );
+        void onCallSucceeded( EconomyMethod::GetWallet, const OnlineNoBody& request, const EconomyWalletReply& reply );
+        void onCallSucceeded( EconomyMethod::Purchase, const EconomyPurchaseRequest& request, const EconomyPurchaseReply& reply );
+        void onCallSucceeded( EconomyMethod::RedeemReceipt, const EconomyRedeemRequest& request, const EconomyRedeemReply& reply );
+        void onCallSucceeded( EconomyMethod::WithdrawPurchase, const EconomyWithdrawRequest& request, const EconomyWithdrawReply& reply );
         /** @brief 잔액 변경 알림을 받으면 바뀐 잔액을 캐시에 넣습니다. */
         void onPush( EconomyMethod::BalanceChanged, const EconomyBalanceChanged& body );
 
