@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Hash/HashUtil.h"
 
 namespace sw
 {
@@ -35,11 +36,21 @@ namespace sw
         }
 
         /**
-         * @brief 확률 조건(`chance`)이 굴리는 값입니다. 같은 문맥이면 같은 답이 나온다.
+         * @brief 확률 조건(`chance`)이 굴리는 값입니다. 같은 문맥 · 같은 호출 자리면 같은 답이 나온다.
          * @details 씨앗을 만드는 규칙은 실행기가 정한다 — 스케줄은 "날과 키의 해시" 라서 저장 · 재생 · 화면 밖 시뮬레이션이 같은 답을 낸다.
+         *          식 안의 둘째 호출부터는 식이 호출 자리 번호를 섞은 문맥을 넘긴다(`mixCallSeed`) — 한 식의 `chance` 둘이 한 굴림을 나누지 않는다.
          */
         uint32 getSeed() const { return _seed; }
         void   setSeed( uint32 seed ) { _seed = seed; }
+        /**
+         * @brief 식 안의 호출 자리 번호(0 부터, 식의 글 순서)를 씨앗에 섞습니다. 0 은 씨앗을 그대로 둬 호출이 하나인 식의 답이 바뀌지 않습니다.
+         * @details 단락 평가가 없으므로(`ConditionExpr`) 자리 번호는 평가 경로와 무관하게 글에서 정해진다 — 결정성이 유지된다.
+         */
+        void mixCallSeed( uint32 callIndex )
+        {
+            if ( callIndex != 0 )
+                _seed = HashUtil::mix32( _seed ^ HashUtil::mix32( callIndex * 0x9e3779b1u ) );
+        }
 
     private:
         struct Slot

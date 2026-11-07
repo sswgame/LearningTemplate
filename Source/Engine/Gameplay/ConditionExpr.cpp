@@ -102,9 +102,10 @@ namespace sw
                 return;
             }
             ConditionInstruction instruction;
-            instruction._opCode   = ConditionOpCode::Call;
-            instruction._function = entry._function;
-            instruction._pArgs    = args.getInstance();
+            instruction._opCode    = ConditionOpCode::Call;
+            instruction._function  = entry._function;
+            instruction._pArgs     = args.getInstance();
+            instruction._callIndex = static_cast<uint32>( _pExpr->_listArgs.size() ); // 호출마다 인자 하나를 쥐므로 쥔 수가 곧 글 순서다
             _pExpr->_listArgs.push_back( args.share() );
             _pExpr->_listInstruction.push_back( instruction );
         }
@@ -467,7 +468,17 @@ namespace sw
                 }
                 case ConditionOpCode::Call:
                 {
-                    arrStack[top++] = instruction._function( context, instruction._pArgs );
+                    // 첫 호출은 문맥 그대로, 그다음은 자리 번호를 섞은 씨앗이다 — 한 식의 확률 호출이 한 굴림을 나누지 않는다.
+                    if ( instruction._callIndex == 0 )
+                    {
+                        arrStack[top++] = instruction._function( context, instruction._pArgs );
+                    }
+                    else
+                    {
+                        GameplayContext callContext = context;
+                        callContext.mixCallSeed( instruction._callIndex );
+                        arrStack[top++] = instruction._function( callContext, instruction._pArgs );
+                    }
                     break;
                 }
                 case ConditionOpCode::Not:

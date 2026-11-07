@@ -10,6 +10,7 @@
  *
  *          **읽을 때 컴파일한다.** 평가에 글이 없으므로 매 틱 불러도 파싱 비용이 없고, 틀린 식과 모르는 이름은 로드 오류가 된다. 언리얼 Gameplay Tag Query 가 쿼리를 바이트코드로 들고 평가하는 것과 같다.
  *          조건은 부수 효과가 없으므로 양쪽을 다 평가해도 된다(단락 평가를 하지 않아 식 모양이 곧 비용이다).
+ *          호출마다 글 순서의 자리 번호가 있고, 둘째 호출부터는 그 번호를 섞은 씨앗으로 부른다 — `chance(0.5) && chance(0.5)` 는 독립 굴림 둘이다.
  *          평가 함수는 게임 모듈의 코드일 수 있으므로 핫 리로드 뒤에는 식을 다시 컴파일한다(`BehaviorTree` 의 함수 포인터와 같은 규칙).
  */
 #pragma once
@@ -134,12 +135,13 @@ namespace sw
         GreaterEqual
     };
 
-    /** @brief 명령 하나입니다. 호출이면 함수와 인자, 수이면 값을 씁니다. */
+    /** @brief 명령 하나입니다. 호출이면 함수와 인자, 호출 자리 번호, 수이면 값을 씁니다. */
     struct ConditionInstruction
     {
         float64           _number{ 0.0 };
         ConditionFunction _function{ nullptr };
         const void*       _pArgs{ nullptr };
+        uint32            _callIndex{ 0 }; ///< 식 안 호출의 글 순서(0 부터). 평가가 씨앗에 섞는다(`GameplayContext::mixCallSeed`)
         ConditionOpCode   _opCode{ ConditionOpCode::PushNumber };
     };
 

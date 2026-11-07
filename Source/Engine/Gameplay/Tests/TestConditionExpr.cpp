@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Gameplay/ActionRegistry.h"
@@ -45,6 +46,11 @@ namespace
             return 7.0;
         }
 
+        static float64 readSeed( const GameplayContext& context, const VocabularyNoParams& /*args*/ )
+        {
+            return static_cast<float64>( context.getSeed() );
+        }
+
         static ActionResult runCount( ActionContext& context, const VocabularyNoParams& /*params*/ )
         {
             TestValues* pValues = context._world.find<TestValuesSlot>();
@@ -65,6 +71,7 @@ namespace
     SW_CONDITION( testName, ConditionNameArg, &XTestUtil::readName );
     SW_CONDITION( testAny, ConditionNameListArgs, &XTestUtil::readAny );
     SW_CONDITION( testFixed, VocabularyNoParams, &XTestUtil::readFixed );
+    SW_CONDITION( testSeed, VocabularyNoParams, &XTestUtil::readSeed );
     SW_GAME_ACTION( TestCount, "test.count", VocabularyNoParams, &XTestUtil::runCount );
 } // namespace
 
@@ -139,4 +146,24 @@ SW_TEST_CASE( ConditionExprTest, ActionCallsByName )
     string             error;
     SW_REQUIRE_TRUE( GameActionCall::tryReadFields( "test.count()", pEntry, fields, error ) );
     SW_EXPECT_EQUAL( string( "test.count" ), GameActionCall::formatText( *pEntry, fields ) );
+}
+
+/** @brief [ConditionExprTest] 식 안의 호출마다 굴림 씨앗이 다르다(첫 호출은 문맥 그대로). 같은 문맥이면 몇 번 평가해도 같은 답이다 */
+SW_TEST_CASE( ConditionExprTest, CallsInOneExpressionRollApart )
+{
+    GameplayContext context;
+    context.setSeed( 12345u );
+    // 호출이 하나면 씨앗은 그대로다 — 기존 데이터(스케줄 저장 · 재생)의 답이 바뀌지 않는다.
+    SW_EXPECT_TRUE( XTestUtil::run( "testSeed == 12345", context ) );
+    // 같은 이름을 두 번 불러도 두 자리는 다른 굴림이다. 예전에는 같은 씨앗이라 항상 같았다.
+    SW_EXPECT_FALSE( XTestUtil::run( "testSeed == testSeed", context ) );
+    // 둘째 자리(앞에 다른 호출이 있다)는 섞인 씨앗이다.
+    SW_EXPECT_FALSE( XTestUtil::run( "testFixed == 7 && testSeed == 12345", context ) );
+    // 결정적이다: 둘째 자리의 씨앗은 자리 번호 1 을 섞은 값이고, 몇 번 평가해도 같다.
+    GameplayContext expected = context;
+    expected.mixCallSeed( 1u );
+    SW_EXPECT_NOT_EQUAL( 12345u, expected.getSeed() );
+    const string text = formatToString( "testFixed == 7 && testSeed == %#", expected.getSeed() );
+    SW_EXPECT_TRUE( XTestUtil::run( text, context ) );
+    SW_EXPECT_TRUE( XTestUtil::run( text, context ) );
 }

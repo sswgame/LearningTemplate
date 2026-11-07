@@ -34,7 +34,7 @@ namespace sw
 
             static bool rollChance( const GameplayContext& context, const ConditionNumberArg& args )
             {
-                return GameHash::toUnitFloat( context.getSeed() ) < args._value; // shortcut: 한 식 안의 chance 는 한 굴림을 나눈다. 독립 굴림이 필요하면 호출 자리 번호를 씨앗에 섞는다
+                return GameHash::toUnitFloat( context.getSeed() ) < args._value; // 식이 호출 자리 번호를 섞은 씨앗을 넘긴다 — 한 식의 chance 둘은 독립 굴림이다
             }
 
             static bool hasBodyShape( const GameplayContext& context, const ConditionNameListArgs& args )
