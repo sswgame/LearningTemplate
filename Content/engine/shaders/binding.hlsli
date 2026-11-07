@@ -672,7 +672,9 @@ static float4x4 InstanceData::loadWorld( uint instanceSlot )
 //      깊이 프리패스 · 그림자 · 기본 패스가 **같은 픽셀**을 버린다 — 프리패스가 쓴 깊이와 기본 패스가 남긴 픽셀이 어긋나 구멍이 나지 않는다.
 //      TAA 가 꺼진 품질 단계에서도 그대로 디더다: 등장 시간이 짧고(MeshComponent `_appearSeconds`), 알파 페이드는 불투명 정렬 · 깊이 쓰기를 깨기 때문이다.
 //
-//      쓰는 셰이더: VS 출력 구조체에 `SW_APPEARANCE_VARYING`, VS 끝에 `SW_APPEARANCE_WRITE( output, instance )`, PS 처음에 `SW_APPEARANCE_CLIP( input )`.
+//      쓰는 셰이더: VS 출력 구조체에 `SW_APPEARANCE_VARYING`, VS 끝에 `SW_APPEARANCE_WRITE( output, instance )`, PS 의 출력을 다 만든 **뒤**(반환 직전)에
+//      `SW_APPEARANCE_CLIP( input )`. Vulkan 1.2 타깃의 `clip` 은 OpKill 이라 버린 픽셀이 쿼드 이웃의 미분(ddx · Sample 의 밉)에서 빠진다 — 텍스처 읽기 앞에서
+//      버리면 이웃의 밉이 틀린다. 1.3 의 demote(도움 호출로 남기기)를 요구하지 않으려고 순서로 막는다(constant::render::kVulkanRequiredMinor).
 //      변형이 아니면 셋 다 비어 바이트코드가 그대로다.
 // ------------------------------------------------------------------------------
 

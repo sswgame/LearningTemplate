@@ -106,7 +106,7 @@ namespace sw
     {
         DXBC_D3D11,   ///< Direct3D 11용 DXBC 바이트코드(d3dcompiler 사용)
         DXIL_D3D12,   ///< Direct3D 12용 DXIL 바이트코드(dxc 사용)
-        SPIRV_Vulkan, ///< Vulkan 1.3용 SPIR-V 바이트코드(dxc -spirv 사용)
+        SPIRV_Vulkan, ///< Vulkan 1.2용 SPIR-V 바이트코드(dxc -spirv 사용)
         SPIRV_OpenGL, ///< OpenGL용 SPIR-V 바이트코드(dxc -spirv 사용)
         Count
     };

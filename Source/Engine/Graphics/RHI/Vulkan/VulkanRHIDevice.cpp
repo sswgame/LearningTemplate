@@ -1156,12 +1156,9 @@ namespace sw
         _bFillModeNonSolid                                     = availableFeatures.fillModeNonSolid ? 1 : 0;
         _bDepthClamp                                           = availableFeatures.depthClamp ? 1 : 0;
 
-        // pickPhysicalDevice 가 요구 판(1.3) 미만 디바이스를 건너뛰므로 1.3 기능 구조체는 늘 체인에 넣을 수 있다.
-        VkPhysicalDeviceVulkan13Features available13{};
-        available13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+        // pickPhysicalDevice 가 요구 판(1.2) 미만 디바이스를 건너뛰므로 1.2 기능 구조체는 늘 체인에 넣을 수 있다.
         VkPhysicalDeviceVulkan12Features available12{};
         available12.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
-        available12.pNext = &available13;
         VkPhysicalDeviceFeatures2 features2{};
         features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
         features2.pNext = &available12;
@@ -1186,19 +1183,8 @@ namespace sw
         vulkan12Features.scalarBlockLayout = available12.scalarBlockLayout;
         _bDrawIndirectCount                = available12.drawIndirectCount ? 1 : 0;
 
-        // 셰이더는 -fspv-target-env=vulkan1.3 으로 쿠킹하고, 그 타깃에서 DXC 는 HLSL `discard` 를 OpKill 이 아니라
-        // OpDemoteToHelperInvocation 으로 낸다(deferred_lighting.hlsl · sprite_2d.hlsl 의 ALPHA_TEST). 이 기능을 켜지 않으면
-        // vkCreateShaderModule 이 검증 오류를 낸다(VUID-VkShaderModuleCreateInfo-pCode-08740). Vulkan 1.3 의 필수 기능이라
-        // 1.3 디바이스에는 늘 있다 — 없다고 답하는 드라이버는 스펙을 어긴 것이라 디바이스를 만들지 않는다.
-        if ( available13.shaderDemoteToHelperInvocation == VK_FALSE )
-        {
-            SW_LOG_ERROR_ID( "Vulkan.VulkanDeviceReportsNo", "Vulkan 1.3 device reports no shaderDemoteToHelperInvocation (a required 1.3 feature) - HLSL discard cannot run" );
-            return false;
-        }
-        VkPhysicalDeviceVulkan13Features vulkan13Features{};
-        vulkan13Features.sType                          = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-        vulkan13Features.shaderDemoteToHelperInvocation = VK_TRUE;
-        vulkan12Features.pNext                          = &vulkan13Features;
+        // 셰이더는 -fspv-target-env=vulkan1.2 로 쿠킹하고, 그 타깃에서 DXC 는 HLSL `discard` 를 OpKill 로 낸다 — 기능을 켤 것이 없다.
+        // 셰이더가 미분 읽기를 다 마친 뒤 버리므로(binding.hlsli 8-1 절) 1.3 의 shaderDemoteToHelperInvocation 없이 그림이 같다.
 
         VkDeviceCreateInfo createInfo{};
         createInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -1230,7 +1216,7 @@ namespace sw
             if ( faultFeatures.deviceFault == VK_TRUE )
             {
                 faultFeatures.deviceFaultVendorBinary = VK_FALSE; // 공급사 바이너리 덤프는 읽지 않는다
-                vulkan13Features.pNext                = &faultFeatures;
+                vulkan12Features.pNext                = &faultFeatures;
                 listDeviceExtension.push_back( VK_EXT_DEVICE_FAULT_EXTENSION_NAME );
                 _bDeviceFault = SW_TRUE;
             }

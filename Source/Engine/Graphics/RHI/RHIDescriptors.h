@@ -277,11 +277,13 @@ namespace sw
         /**
          * @brief Vulkan 백엔드가 요구하는 최소 API 버전(major.minor)입니다. Vulkan 셰이더 쿠킹 타깃(`-fspv-target-env=vulkan<major>.<minor>`)도 이 값입니다.
          * @details 셰이더 컴파일러(Graphics/Shader)와 Vulkan 물리 디바이스 선택(Graphics/RHI/Vulkan)이 함께 읽는 계약입니다. 쿠킹된 SPIR-V 버전은
-         *          이 타깃이 정하므로(vulkan1.3 → SPIR-V 1.6) 한쪽만 바꾸면 디바이스가 받지 못하는 모듈이 남습니다. API 버전 인코딩과 비교는
+         *          이 타깃이 정하므로(vulkan1.2 → SPIR-V 1.5) 한쪽만 바꾸면 디바이스가 받지 못하는 모듈이 남습니다. API 버전 인코딩과 비교는
          *          `VulkanRHIRequiredVersion` 에 있습니다.
+         *          1.2 인 까닭: Android 기기 다수와 dzn(D3D12 위의 Vulkan)이 1.2 다. 1.2 타깃의 HLSL `clip` · `discard` 는 OpKill 이라
+         *          셰이더가 미분 읽기를 다 마친 뒤 버린다(binding.hlsli 8-1 절) — 1.3 의 shaderDemoteToHelperInvocation 을 요구하지 않는다.
          */
         inline constexpr uint32 kVulkanRequiredMajor = 1;
-        inline constexpr uint32 kVulkanRequiredMinor = 3;
+        inline constexpr uint32 kVulkanRequiredMinor = 2;
     } // namespace constant::render
 
     /** @brief GPU 타임스탬프 슬롯마다 한 비트(기록됨 · 준비됨)입니다. 비트 폭이 `constant::render::kMaxGPUTimestampSlot` 이상이어야 한다. */

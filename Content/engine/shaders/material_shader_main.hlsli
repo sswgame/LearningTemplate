@@ -301,12 +301,16 @@ void MaterialSurface::applyAlphaCutoff()
 #if defined( SW_MATERIAL_DEPTH_PASS )
 
     #if defined( MATERIAL_ALPHA_CUTOFF )
-/** @brief 깊이 패스의 픽셀 — 등장 디더와 알파 컷오프를 오린다(본 패스와 같은 표면 훅이라 같은 자리를 버린다). */
+/**
+ * @brief 깊이 패스의 픽셀 — 등장 디더와 알파 컷오프를 오린다(본 패스와 같은 표면 훅이라 같은 자리를 버린다).
+ * @details 오리기는 표면 훅(텍스처 읽기) **뒤**다. Vulkan 1.2 타깃에서 `clip` 은 OpKill 이라 버린 픽셀이 쿼드 이웃의 미분에 끼지 않는다 —
+ *          미분을 쓰는 읽기가 모두 끝난 뒤 버려야 이웃의 밉 선택이 맞다(1.3 의 demote 없이 같은 그림, 언리얼 · 유니티도 clip 을 표면 계산 뒤에 둔다).
+ */
 void MaterialInterpolants::shadeDepthPixel( bool bFrontFace )
 {
-    SW_APPEARANCE_CLIP( this )
     const PixelContext    context = PixelContext::make( this, bFrontFace );
     const MaterialSurface surface = computeMaterialSurface( context );
+    SW_APPEARANCE_CLIP( this )
     surface.applyAlphaCutoff();
 }
     #else
@@ -348,14 +352,19 @@ SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 }
     #endif
 
-/** @brief 본 패스 · G버퍼 패스의 픽셀 — 표면 훅 → 알파 컷오프 → (G버퍼가 아니면) 조명 훅 → 출력. */
+/**
+ * @brief 본 패스 · G버퍼 패스의 픽셀 — 표면 훅 → (G버퍼가 아니면) 조명 훅 → 출력 → 등장 디더 · 알파 컷오프.
+ * @details 오리기는 출력을 다 만든 **뒤**다(깊이 패스와 같은 까닭). 표면 · 조명 훅의 미분 읽기가 모두 끝난 뒤 버리므로 `clip` 이 OpKill 이어도
+ *          이웃 픽셀의 미분이 맞다. 남는 픽셀의 값은 앞에서 버릴 때와 같다.
+ */
 SurfaceOutput MaterialInterpolants::shadePixel( bool bFrontFace )
 {
-    SW_APPEARANCE_CLIP( this )
     const PixelContext    context = PixelContext::make( this, bFrontFace );
     const MaterialSurface surface = computeMaterialSurface( context );
+    const SurfaceOutput   output  = context.storeSurface( surface );
+    SW_APPEARANCE_CLIP( this )
     surface.applyAlphaCutoff();
-    return context.storeSurface( surface );
+    return output;
 }
 
     #if defined( MATERIAL_TWO_SIDED )

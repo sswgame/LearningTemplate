@@ -311,8 +311,9 @@ SW_TEST_CASE( RHINativeHandlesTest, QueryRejectsAnotherLayoutAndFillsTheMatching
 
 /**
  * @brief [VulkanAPIVersionTest] 물리 디바이스 선택이 요구 판(셰이더 쿠킹 타깃) 미만의 디바이스를 거른다
- * @details 셰이더는 vulkan1.3 타깃(SPIR-V 1.6)으로 쿠킹한다. 1.2 디바이스는 SPIR-V 1.5 까지만 받으므로 그 디바이스를 고르면 셰이더 모듈 전부가 무효다.
- *          맨 위 변형 비트는 판 비교에 넣지 않는다.
+ * @details 셰이더는 vulkan1.2 타깃(SPIR-V 1.5)으로 쿠킹한다. 1.1 디바이스는 SPIR-V 1.3 까지만 받으므로 그 디바이스를 고르면 셰이더 모듈 전부가 무효다.
+ *          맨 위 변형 비트는 판 비교에 넣지 않는다. 요구 판이 1.2 인 것도 본다 — Android 기기 다수와 dzn 이 1.2 라 올리면 그 기기를 잃는다
+ *          (올리려면 이 줄과 RHIDescriptors.h 의 까닭을 함께 고친다).
  */
 SW_TEST_CASE( VulkanAPIVersionTest, DeviceBelowTheShaderTargetIsRejected )
 {
@@ -325,7 +326,9 @@ SW_TEST_CASE( VulkanAPIVersionTest, DeviceBelowTheShaderTargetIsRejected )
     SW_EXPECT_FALSE( VulkanRHIRequiredVersion::isAPIVersionSupported( belowWithPatch | ( 1u << 29u ) ) );
     SW_EXPECT_TRUE( VulkanRHIRequiredVersion::isAPIVersionSupported( VulkanRHIRequiredVersion::makeAPIVersion( kVulkanRequiredMajor, kVulkanRequiredMinor ) ) );
     SW_EXPECT_TRUE( VulkanRHIRequiredVersion::isAPIVersionSupported( VulkanRHIRequiredVersion::makeAPIVersion( kVulkanRequiredMajor, kVulkanRequiredMinor + 1u ) ) );
-    SW_EXPECT_EQUAL( ( 1u << 16u ) | ( 6u << 8u ), VulkanRHIRequiredVersion::computeSPIRVVersion( 3u ) ); // vulkan1.3 → SPIR-V 1.6
+    SW_EXPECT_EQUAL( 2u, kVulkanRequiredMinor );
+    SW_EXPECT_EQUAL( ( 1u << 16u ) | ( 5u << 8u ), VulkanRHIRequiredVersion::computeSPIRVVersion( kVulkanRequiredMinor ) ); // vulkan1.2 → SPIR-V 1.5
+    SW_EXPECT_EQUAL( ( 1u << 16u ) | ( 6u << 8u ), VulkanRHIRequiredVersion::computeSPIRVVersion( 3u ) );                   // vulkan1.3 → SPIR-V 1.6
 }
 
 /** @brief [RHIAvailabilityTest] 다른 백엔드: 지금 것이 아니고 이 플랫폼에서 되는 것이다. Windows 는 DX12 ↔ DX11, Linux 는 Vulkan ↔ OpenGL 이다 */

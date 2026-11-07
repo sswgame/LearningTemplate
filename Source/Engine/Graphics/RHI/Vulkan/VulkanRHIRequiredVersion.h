@@ -14,9 +14,9 @@ namespace sw
     /**
      * @struct VulkanRHIRequiredVersion
      * @brief 디바이스가 넘어야 하는 최소 API 버전(`constant::render::kVulkanRequiredMajor`.`kVulkanRequiredMinor`)을 API 버전 번호로 다룹니다.
-     * @details 쿠킹된 SPIR-V 버전은 같은 값의 쿠킹 타깃이 정합니다(vulkan1.3 → SPIR-V 1.6). 그보다 낮은 디바이스는 그 버전의 모듈을 받지 못하므로 셰이더 전부가
-     *          무효입니다. 그래서 물리 디바이스 선택이 이 버전에 못 미치는 디바이스를 건너뜁니다. 1.3 디바이스에서는 HLSL `discard` 가 내는
-     *          `OpDemoteToHelperInvocation` 의 기능(shaderDemoteToHelperInvocation)도 필수 기능이라 항상 있습니다.
+     * @details 쿠킹된 SPIR-V 버전은 같은 값의 쿠킹 타깃이 정합니다(vulkan1.2 → SPIR-V 1.5). 그보다 낮은 디바이스는 그 버전의 모듈을 받지 못하므로 셰이더 전부가
+     *          무효입니다. 그래서 물리 디바이스 선택이 이 버전에 못 미치는 디바이스를 건너뜁니다. 이 타깃의 HLSL `discard` 는 OpKill 이라
+     *          확장 기능을 요구하지 않습니다(셰이더가 미분 읽기 뒤에 버린다 — binding.hlsli 8-1 절).
      */
     struct VulkanRHIRequiredVersion
     {

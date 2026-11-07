@@ -63,6 +63,7 @@ PSInput VSMain( VertexInput input, SW_INSTANCE_SLOT_INPUT( instanceSlot ), uint 
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
-    SW_APPEARANCE_CLIP( input )
-    return float4( input._color, 1.0f );
+    const float4 color = float4( input._color, 1.0f );
+    SW_APPEARANCE_CLIP( input ) // 출력을 만든 뒤에 오린다(binding.hlsli 8-1 절)
+    return color;
 }

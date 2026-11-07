@@ -1,6 +1,6 @@
 /**
  * @file VulkanRHIDevice.h
- * @brief Vulkan 1.3 RHI 백엔드 디바이스입니다.
+ * @brief Vulkan 1.2 RHI 백엔드 디바이스입니다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
@@ -139,7 +139,7 @@ namespace sw
 
     /**
      * @class VulkanRHIDevice
-     * @brief Vulkan 1.3 그래픽스와 컴퓨트 디바이스 구현입니다(Descriptor Indexing, bindless).
+     * @brief Vulkan 1.2 그래픽스와 컴퓨트 디바이스 구현입니다(Descriptor Indexing, bindless).
      * @details 선택 능력(타임스탬프)은 상속하지 않는다. 디바이스가 가진 어댑터 멤버가 구현해 이 디바이스로 넘기고,
      *          `findTimestampProvider` 가 그 멤버를 준다(언리얼 RHI 도 선택 기능을 디바이스의 기반 클래스로 늘리지 않는다).
      */
@@ -252,7 +252,7 @@ namespace sw
         bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const override;
 
         /** @brief 백엔드 버전 문자열을 반환합니다. */
-        const utf8* getBackendName() const override { return "Vulkan 1.3"; }
+        const utf8* getBackendName() const override { return "Vulkan 1.2"; }
 
         /** @brief 독립 커맨드 리스트를 만듭니다. */
         unique_ptr<IRHICommandList> createCommandList() override;

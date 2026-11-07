@@ -389,8 +389,8 @@ namespace sw
             /** @brief Vulkan SPIR-V 인자입니다. */
             static void appendSpirvVulkanArguments( vector<LPCWSTR>& listArgument )
             {
-                // 타깃 버전은 디바이스가 요구하는 최소 버전과 같은 값이다(constant::render::kVulkanRequiredMajor · kVulkanRequiredMinor). 이 타깃에서 DXC 는 HLSL `discard` 를
-                // OpDemoteToHelperInvocation 으로 낸다 — 1.3 디바이스의 필수 기능이다.
+                // 타깃 버전은 디바이스가 요구하는 최소 버전과 같은 값이다(constant::render::kVulkanRequiredMajor · kVulkanRequiredMinor). 이 타깃(1.2)에서 DXC 는 HLSL `discard` 를
+                // OpKill 로 낸다 — 셰이더는 미분 읽기를 다 마친 뒤 버린다(binding.hlsli 8-1 절).
                 static const wstring s_targetEnv = StringUtil::utf8ToUTF16(
                     ( string( "-fspv-target-env=vulkan" ) + to_string( constant::render::kVulkanRequiredMajor ) + "." +
                       to_string( constant::render::kVulkanRequiredMinor ) )
