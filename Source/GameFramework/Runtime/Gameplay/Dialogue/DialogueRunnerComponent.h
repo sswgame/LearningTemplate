@@ -20,7 +20,7 @@ namespace sw
     struct DialogueStepInput;
 
     class GameFlags;
-    class UISystem;
+    class ISubtitleSink;
 
     ENUM()
     enum class DialogueRunnerState : uint8
@@ -105,8 +105,8 @@ namespace sw
         void setFlags( GameFlags* pFlags );
         /** @brief 조건 · 동작이 쓸 문맥의 바탕입니다(태그 · 달력 칸 등). 값을 복사합니다. 플래그는 `setFlags` 가 얹습니다. */
         void setGameplayContext( const GameplayContext& context );
-        /** @brief `_bPostSubtitles` 가 줄을 보낼 UI 입니다. 테스트가 정하며 nullptr 이면 엔진 서비스를 씁니다. 빌려 씁니다. */
-        void setUISystem( UISystem* pUISystem ) { _pUISystemOverride = pUISystem; }
+        /** @brief `_bPostSubtitles` 가 줄을 보낼 곳입니다. 테스트가 정하며 nullptr 이면 엔진 서비스(`ISubtitleSink`, 전용 서버는 없다)를 씁니다. 빌려 씁니다. */
+        void setSubtitleSink( ISubtitleSink* pSubtitleSink ) { _pSubtitleSinkOverride = pSubtitleSink; }
 
         DialogueRunnerState   getState() const;
         int32                 getCurrentNodeID() const;
@@ -156,7 +156,7 @@ namespace sw
         vector<DialogueCompiledNode>         _listCompiled;
         GameFlags*                           _pFlags;
         GameplayContext                      _world;
-        UISystem*                            _pUISystemOverride; ///< 자막을 보낼 UI(테스트), nullptr 이면 엔진 서비스
+        ISubtitleSink*                       _pSubtitleSinkOverride; ///< 자막을 보낼 곳(테스트), nullptr 이면 엔진 서비스
         string                               _currentSpeaker;
         string                               _currentText;
         vector<string>                       _listCurrentChoice;

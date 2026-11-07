@@ -20,7 +20,7 @@
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h"
-#include "GameFramework/Runtime/UI/Dialogue/DialogueRunnerComponent.h"
+#include "GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h"
 #include "GameFramework/Runtime/World/Query/GameConditions.h"
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
 

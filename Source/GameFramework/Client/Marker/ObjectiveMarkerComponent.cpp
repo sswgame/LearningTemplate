@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/UI/Marker/ObjectiveMarkerComponent.h"
+#include "GameFramework/Client/Marker/ObjectiveMarkerComponent.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"

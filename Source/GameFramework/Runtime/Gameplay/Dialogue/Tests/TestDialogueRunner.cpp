@@ -5,7 +5,7 @@
 
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 
-#include "GameFramework/Runtime/UI/Dialogue/DialogueRunnerComponent.h"
+#include "GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h"
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 using namespace sw;

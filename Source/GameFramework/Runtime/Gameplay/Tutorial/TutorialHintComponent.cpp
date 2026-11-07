@@ -1,10 +1,9 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/UI/HUD/TutorialHintComponent.h"
+#include "GameFramework/Runtime/Gameplay/Tutorial/TutorialHintComponent.h"
 
+#include "Engine/Localization/IPlayerNoticeSink.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/UI/Screen/UINotificationService.h"
-#include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -20,7 +19,7 @@ namespace sw
     } // namespace
 
     TutorialHintComponent::TutorialHintComponent()
-        : _pUISystem{ nullptr }
+        : _pNoticeSink{ nullptr }
         , _text{}
         , _durationSeconds{ 6.0f }
     {
@@ -46,15 +45,10 @@ namespace sw
             if ( showTutorialsKey.has_value() == false || pSettings->getBoolValue( *showTutorialsKey ) == false )
                 return false;
         }
-        UISystem* pUI = _pUISystem != nullptr ? _pUISystem : game::findSubsystem<UISystem>();
-        if ( pUI == nullptr )
-            return false; // 서버처럼 UI 가 없다
-        UINotificationDef desc{};
-        desc._text            = _text;
-        desc._durationSeconds = _durationSeconds;
-        desc._kind            = UINotificationKind::Hint;
-        desc._priority        = 1; // 힌트는 지금 할 일이라 쌓인 알림보다 먼저
-        game::getSubsystem<UINotificationService>().post( desc );
+        IPlayerNoticeSink* pNotices = _pNoticeSink != nullptr ? _pNoticeSink : game::findSubsystem<IPlayerNoticeSink>();
+        if ( pNotices == nullptr )
+            return false; // 서버처럼 알림 화면이 없다
+        pNotices->postNotice( _text, _durationSeconds, PlayerNoticeKind::Hint );
         return true;
     }
 } // namespace sw

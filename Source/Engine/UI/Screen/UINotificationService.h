@@ -82,8 +82,8 @@ namespace sw
 
         /** @brief 알림을 올립니다(보일 자리가 있으면 다음 `update` 에 보이고, 없으면 기다립니다). */
         void post( const UINotificationDef& desc );
-        /** @brief 기본 모양(`Info`)의 알림을 올립니다(`IPlayerNoticeSink`). */
-        void postNotice( const string& text, float32 durationSeconds ) override;
+        /** @brief 게임 코드의 알림을 올립니다(`IPlayerNoticeSink`). 힌트는 종류 Hint · 우선순위 1 로 쌓인 알림보다 먼저 보인다. */
+        void postNotice( const string& text, float32 durationSeconds, PlayerNoticeKind kind ) override;
         /** @brief 보이는 알림의 시간을 재고, 끝난 것을 내리고, 기다리는 것을 올립니다(UI 갱신의 화면 틱 뒤 칸이 부른다). */
         void update( float32 deltaSeconds );
         /** @brief 모두 버리고 화면을 닫습니다. */

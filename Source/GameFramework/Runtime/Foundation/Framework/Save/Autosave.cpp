@@ -415,7 +415,7 @@ namespace sw
         {
             string text;
             text = SW_LOCTEXT( "Notification", "GameSaved", "Game saved" );
-            pNotices->postNotice( text, 3.0f );
+            pNotices->postNotice( text, 3.0f, PlayerNoticeKind::Info );
         }
     }
 

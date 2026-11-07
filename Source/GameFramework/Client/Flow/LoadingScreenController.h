@@ -16,6 +16,7 @@
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameInstanceSubsystem.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 
@@ -56,7 +57,7 @@ namespace sw
      *            0 이 되면 닫는다.
      *          UI 시스템이 없으면(전용 서버, 헤드리스) 아무것도 하지 않는다. 게임 스레드에서만 써야 한다.
      */
-    class SW_GF_API LoadingScreenController final : public GameInstanceSubsystem
+    class SW_GF_API LoadingScreenController final : public GameInstanceSubsystem, public ILoadingScreen
     {
     public:
         static constexpr const utf8* kSubsystemName = "LoadingScreenController";
@@ -96,14 +97,16 @@ namespace sw
         const LoadingScreenSettings& getSettings() const { return _settings; }
 
         /** @brief 로딩을 시작합니다. 로딩 화면을 열고(이미 열려 있으면 그대로 둡니다) 표시 시간을 0 부터 셉니다. 연 화면이 없으면(문서 오류) false 입니다. */
-        bool beginLoading();
+        bool beginLoading() override;
+        /** @brief gamesettings 가 로딩 화면 문서를 적었으면 true 입니다(`ILoadingScreen`). */
+        [[nodiscard]] bool hasLoadingScreenDocument() const override { return _settings._documentPath.isSet(); }
         /**
          * @brief 한 프레임을 넘깁니다.
          * @param bLoading 아직 로드 중이면 true 이다. 씬 로드 요청이 남았거나 씬 매니저가 전환 중일 때이다.
          * @param loadProgress 로드 진행(0~1)입니다. 모르면 비웁니다 — 진행 슬라이더(`Progress`)를 접는다.
          * @param fade     그릴 화면 페이드이다. 로딩 화면을 닫을 때 페이드 인을 시작한다. 페이드를 진행시키는 것(`ScreenFade::update`)은 주인(전환 관리자)의 일이다.
          */
-        void update( float32 deltaSeconds, bool bLoading, std::optional<float32> loadProgress, ScreenFade& fade );
+        void update( float32 deltaSeconds, bool bLoading, std::optional<float32> loadProgress, ScreenFade& fade ) override;
 
         /** @brief 로딩 화면이 떠 있으면 true 입니다. */
         bool isShowing() const;

@@ -13,6 +13,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
+#include "Engine/Localization/ISubtitleSink.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/Widgets/UIBrush.h"
 
@@ -44,7 +45,7 @@ namespace sw
      *          `gv_subtitleSize`(0, 1, 2)는 문서에 적힌 글 크기에 0.85, 1, 1.3 을 곱하고, `gv_subtitleBackgroundOpacity` 는 줄 바탕의 알파다.
      *          텍스트는 이미 현지화한 것을 받는다(대화 러너와 음성 이벤트가 해석한다). 게임 스레드에서만 쓴다.
      */
-    class SW_API UISubtitleService final : public ISubsystem
+    class SW_API UISubtitleService final : public ISubsystem, public ISubtitleSink
     {
     public:
         /** @brief 동시에 보이는 줄 수입니다. */
@@ -74,6 +75,8 @@ namespace sw
          * @return 줄 번호(1 부터)입니다.
          */
         uint32 post( string_view speaker, string_view text, float32 durationSeconds = 0.0f );
+        /** @brief 읽기 시간으로 줄을 올립니다(`ISubtitleSink` — 게임 코드의 대화 진행이 부른다). */
+        void postSubtitle( string_view speaker, string_view text ) override { (void)post( speaker, text ); }
         /**
          * @brief 음성 이벤트의 자막 신호(`AudioEngine::takeSubtitleCues`)를 받은 순서대로 올립니다. 키를 지금 문화권으로 풀고 표시 시간은 읽기 시간입니다.
          * @details 엔진 프레임이 UI 갱신 직전에 부른다. 자막 데이터의 기준은 이벤트 라이브러리(`AudioClipEntry::_subtitleKey`, `AudioEventDef::_subtitleSpeakerKey`)다.

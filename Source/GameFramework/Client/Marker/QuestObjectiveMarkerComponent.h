@@ -8,8 +8,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
+#include "GameFramework/Client/Marker/ObjectiveMarkerComponent.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/UI/Marker/ObjectiveMarkerComponent.h"
 
 namespace sw
 {

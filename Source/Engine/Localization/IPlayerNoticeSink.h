@@ -10,14 +10,21 @@
 
 namespace sw
 {
+    /** @brief 알림의 종류입니다. 알림 화면이 모양 · 순서를 고른다(힌트는 지금 할 일이라 쌓인 알림보다 먼저 보인다). */
+    enum class PlayerNoticeKind : uint8
+    {
+        Info, ///< 일반 알림(저장됨 · 게임 흐름)
+        Hint  ///< 튜토리얼 힌트(리치 텍스트 행동 태그 `[action=이름]` 을 쓸 수 있다)
+    };
+
     /** @class IPlayerNoticeSink @brief 플레이어 알림을 받는 쪽입니다. 게임 스레드에서 부릅니다. */
     class IPlayerNoticeSink
     {
     public:
         virtual ~IPlayerNoticeSink() = default;
 
-        /** @brief @p text(현지화 키 또는 글 그대로)를 @p durationSeconds 동안 알립니다. 같은 글이 떠 있으면 센다. */
-        virtual void postNotice( const string& text, float32 durationSeconds ) = 0;
+        /** @brief @p text(현지화 키 또는 글 그대로)를 @p durationSeconds 동안 @p kind 모양으로 알립니다. 같은 글이 떠 있으면 센다. */
+        virtual void postNotice( const string& text, float32 durationSeconds, PlayerNoticeKind kind ) = 0;
     };
 
     SW_SERVICE_SLOT( IPlayerNoticeSink, Optional );

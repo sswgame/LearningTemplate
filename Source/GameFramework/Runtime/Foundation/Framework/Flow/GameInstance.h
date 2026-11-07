@@ -32,7 +32,6 @@ namespace sw
     class AutosaveManager;
     class GameObjectManager;
     class ItemCatalog;
-    class LoadingScreenController;
 
     // ------------------------------------------------------------------------------
     // 1) GameInstance — 수명주기는 여기, 파생은 훅만

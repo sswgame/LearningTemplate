@@ -91,11 +91,16 @@ namespace sw
         return kArrDependency;
     }
 
-    void UINotificationService::postNotice( const string& text, const float32 durationSeconds )
+    void UINotificationService::postNotice( const string& text, const float32 durationSeconds, const PlayerNoticeKind kind )
     {
         UINotificationDef notice{};
         notice._text            = text;
         notice._durationSeconds = durationSeconds;
+        if ( kind == PlayerNoticeKind::Hint )
+        {
+            notice._kind     = UINotificationKind::Hint;
+            notice._priority = 1; // 힌트는 지금 할 일이라 쌓인 알림보다 먼저
+        }
         post( notice );
     }
 

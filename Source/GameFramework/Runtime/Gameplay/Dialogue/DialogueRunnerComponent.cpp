@@ -1,14 +1,13 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/UI/Dialogue/DialogueRunnerComponent.h"
+#include "GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
-#include "Engine/UI/Screen/UISubtitleService.h"
-#include "Engine/UI/UISystem.h"
+#include "Engine/Localization/ISubtitleSink.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/World/Query/GameConditions.h"
@@ -23,7 +22,7 @@ namespace sw
         , _listCompiled{}
         , _pFlags{ nullptr }
         , _world{}
-        , _pUISystemOverride{ nullptr }
+        , _pSubtitleSinkOverride{ nullptr }
         , _currentSpeaker{}
         , _currentText{}
         , _listCurrentChoice{}
@@ -264,10 +263,10 @@ namespace sw
     {
         if ( _bPostSubtitles )
         {
-            UISystem*  pUISystem     = _pUISystemOverride != nullptr ? _pUISystemOverride : game::findSubsystem<UISystem>();
-            const bool bPostSubtitle = pUISystem != nullptr && pUISystem->isInitialized() && _currentText.empty() == false;
-            if ( bPostSubtitle )
-                (void)game::getSubsystem<UISubtitleService>().post( _currentSpeaker, _currentText ); // 자막은 화면 스택 위의 엔진 서비스다
+            // 자막은 화면 스택 위의 엔진 서비스다 — 게임 코드는 창구만 안다. 창구가 없으면(전용 서버) 보일 곳이 없다.
+            ISubtitleSink* pSubtitles = _pSubtitleSinkOverride != nullptr ? _pSubtitleSinkOverride : game::findSubsystem<ISubtitleSink>();
+            if ( pSubtitles != nullptr && _currentText.empty() == false )
+                pSubtitles->postSubtitle( _currentSpeaker, _currentText );
         }
         if ( _onLine.isBound() == false )
             return;

@@ -8,7 +8,7 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/UI/UISystem.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Flow/LoadingScreenController.h"
+#include "GameFramework/Client/Flow/LoadingScreenController.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw

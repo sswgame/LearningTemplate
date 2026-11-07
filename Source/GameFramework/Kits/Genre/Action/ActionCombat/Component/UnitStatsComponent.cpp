@@ -11,8 +11,9 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/Foundation/Framework/Presentation/IDamageNumberSink.h"
 #include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/UI/Marker/DamageNumberComponent.h"
 
 namespace sw
 {
@@ -202,6 +203,8 @@ namespace sw
         const SceneComponent* pRoot    = pOwner->getPrimarySceneComponent();
         const float3          position = ( pRoot != nullptr ? pRoot->getWorldPosition() : float3{} ) + _damageNumberOffset;
 
-        DamageNumberComponent::spawnNumber( *pManager, position, amount );
+        // 숫자는 창구가 낸다(클라이언트 전용 구현 — 전용 서버는 창구가 없다).
+        if ( IDamageNumberSink* pDamageNumbers = game::findSubsystem<IDamageNumberSink>() )
+            pDamageNumbers->spawnDamageNumber( *pManager, position, amount );
     }
 } // namespace sw

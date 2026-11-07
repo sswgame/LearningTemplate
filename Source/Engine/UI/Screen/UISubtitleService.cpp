@@ -238,5 +238,11 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( UISubtitleService, GameVisible, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UISubtitleService ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UISubtitleService, GameVisible, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        const bool bExposed = scope.expose<ISubtitleSink>( scope.emplaceSubsystem<UISubtitleService>() );
+        SW_ASSERT( bExposed );
+        (void)bExposed;
+    } );
 } // namespace sw

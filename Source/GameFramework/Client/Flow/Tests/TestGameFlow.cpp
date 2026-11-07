@@ -5,8 +5,9 @@
 
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 
+#include "GameFramework/Client/Flow/GameInstanceClient.h"
+#include "GameFramework/Client/Flow/LoadingScreenController.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
-#include "GameFramework/Runtime/Foundation/Framework/Flow/LoadingScreenController.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameSettings.h"
 
@@ -62,11 +63,11 @@ SW_TEST_CASE( GameFlowTest, GameWithoutTitleScene )
     GameSettings            settings;
     ScreenTransitionManager transition;
     LoadingScreenController loading;
-    GameSceneFlow           flow( settings, transition, loading );
+    GameSceneFlow           flow( settings, transition, &loading );
     SW_EXPECT_FALSE( flow.requestTitleScene() );
 
     UIGlobalCommandRegistry commands;
-    flow.registerSessionCommands( commands );
+    GameSessionCommands::bind( flow, commands );
     SW_EXPECT_FALSE( commands.hasCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ) ) );
     flow.unregisterSessionCommands();
 }

@@ -7,9 +7,8 @@
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Flow/LoadingScreenController.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/ScreenTransitionManager.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -24,10 +23,10 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_firstScene, "", "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)" );
 
-    GameSceneFlow::GameSceneFlow( const GameSettings& settings, ScreenTransitionManager& screenTransition, LoadingScreenController& loadingScreen )
+    GameSceneFlow::GameSceneFlow( const GameSettings& settings, ScreenTransitionManager& screenTransition, ILoadingScreen* pLoadingScreen )
         : _settings{ settings }
         , _screenTransition{ screenTransition }
-        , _loadingScreen{ loadingScreen }
+        , _pLoadingScreen{ pLoadingScreen }
         , _listPendingSceneLoad{}
         , _sceneLoadRequestedSubscription{}
         , _returnToTitleRegistration{}
@@ -39,7 +38,7 @@ namespace sw
 
     span<const utf8* const> GameSceneFlow::getSubsystemDependencies() const
     {
-        static constexpr const utf8* kArrDependency[] = { ScreenTransitionManager::kSubsystemName, LoadingScreenController::kSubsystemName };
+        static constexpr const utf8* kArrDependency[] = { ScreenTransitionManager::kSubsystemName }; // 로딩 화면(클라이언트 전용)은 생성자에서 받고 갱신 때만 부른다
         return kArrDependency;
     }
 
@@ -73,7 +72,8 @@ namespace sw
         // 페이드와 로딩 화면은 실제 시간으로 돌린다. 게임 시간으로 돌리면 정지 메뉴(게임 시간 0)가 뜬 동안 페이드가 반쯤 검은 채로 멈춘다.
         const float32 realDeltaTime = game::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
         _screenTransition.update( realDeltaTime );
-        _loadingScreen.update( realDeltaTime, bLoading, loadProgress, _screenTransition.fade() );
+        if ( _pLoadingScreen != nullptr )
+            _pLoadingScreen->update( realDeltaTime, bLoading, loadProgress, _screenTransition.fade() );
         if ( _listPendingSceneLoad.empty() == false )
             publishFinishedSceneLoads();
     }
@@ -114,13 +114,14 @@ namespace sw
         return requestLoadScene( titleScene.get(), "title" );
     }
 
-    void GameSceneFlow::registerSessionCommands( UIGlobalCommandRegistry& commands )
+    bool GameSceneFlow::hasTitleScene() const
     {
-        // 타이틀 씬이 없는 게임은 "타이틀로" 를 걸지 않는다(창이 없는 호스트는 게임 인스턴스가 이 함수를 부르지 않는다 — UI 가 없다).
-        if ( _settings._titleScene.isSet() == false )
-            return;
-        _returnToTitleRegistration = commands.registerCommand( hashed_string( UIGlobalCommandRegistry::kReturnToTitle ),
-                                                               SW_DELEGATE_METHOD( UICommandDelegate, &GameSceneFlow::onReturnToTitleCommand, this ) );
+        return _settings._titleScene.isSet();
+    }
+
+    void GameSceneFlow::holdSessionCommand( Subscription registration )
+    {
+        _returnToTitleRegistration = std::move( registration );
     }
 
     void GameSceneFlow::unregisterSessionCommands()
@@ -158,8 +159,8 @@ namespace sw
         if ( kind != SceneLoadKind::Travel )
             return; // 도구가 연 씬(편집기 · 진단)은 게임 흐름이 아니다
         _listPendingSceneLoad.push_back( PendingSceneLoad{ scenePath, future } );
-        if ( _loadingScreen.getSettings()._documentPath.isSet() )
-            (void)_loadingScreen.beginLoading();
+        if ( _pLoadingScreen != nullptr && _pLoadingScreen->hasLoadingScreenDocument() )
+            (void)_pLoadingScreen->beginLoading();
 
         SceneLoadRequestedEvent event{};
         event._levelName = scenePath;

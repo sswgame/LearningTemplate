@@ -66,7 +66,7 @@ namespace sw
      *
      *          **연결된 UI**: 이 컴포넌트는 체력 원천(`HealthSourceComponent`)이다. 체력이나 최대 체력이 바뀔 때마다 같은 오브젝트의
      *          `HealthListenerComponent`(HP 바)에 비율을 알리고, 체력이 0 이면 쓰러짐(`Died`)을 알린다. 이 컴포넌트는 HP 바의 존재를 알지 못한다.
-     *          `_bShowDamageNumbers` 가 켜져 있으면 체력이 깎일 때 `DamageNumberComponent` 로 숫자를 띄운다.
+     *          `_bShowDamageNumbers` 가 켜져 있으면 체력이 깎일 때 피해 숫자 창구(`IDamageNumberSink`, 클라이언트 전용 구현)로 숫자를 띄운다.
      *          체력 어트리뷰트의 이름은 `_healthAttribute` 와 `_maxHealthAttribute` 로 바꿀 수 있다.
      *
      *          **저장**: PROPERTY 만 저장한다(어빌리티 세트 id, 표시 설정). 런타임 상태(어트리뷰트 값, 이펙트, 어빌리티)는 저장하지 않고

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/SessionState/QuestObjectiveMarkerComponent.h"
+#include "GameFramework/Client/Marker/QuestObjectiveMarkerComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

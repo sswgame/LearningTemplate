@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Flow/LoadingScreenController.h"
+#include "GameFramework/Client/Flow/LoadingScreenController.h"
 
 #include "Core/Math/MathUtil.h"
 

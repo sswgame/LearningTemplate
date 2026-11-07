@@ -17,10 +17,9 @@ namespace sw
 {
     struct GameSettings;
 
-    class LoadingScreenController;
+    class ILoadingScreen;
     class Scene;
     class ScreenTransitionManager;
-    class UIGlobalCommandRegistry;
     class Widget;
     enum class SceneLoadKind : uint8; // Engine/Scene/SceneManager.h
 
@@ -36,8 +35,8 @@ namespace sw
     public:
         static constexpr const utf8* kSubsystemName = "GameSceneFlow";
 
-        /** @brief @p settings 는 게임 인스턴스의 gamesettings 이고 이 서브시스템보다 오래 산다. 화면 전환 · 로딩 화면은 같은 게임 범위의 형제다(먼저 선다). */
-        GameSceneFlow( const GameSettings& settings, ScreenTransitionManager& screenTransition, LoadingScreenController& loadingScreen );
+        /** @brief @p settings 는 게임 인스턴스의 gamesettings 이고 이 서브시스템보다 오래 산다. 화면 전환 · 로딩 화면은 같은 게임 범위의 형제다(먼저 선다). 로딩 화면은 없을 수 있다(전용 서버 — `IGameInstanceClientHook` 이 없다). */
+        GameSceneFlow( const GameSettings& settings, ScreenTransitionManager& screenTransition, ILoadingScreen* pLoadingScreen );
         ~GameSceneFlow() override;
 
         GameSceneFlow( const GameSceneFlow& )            = delete;
@@ -81,12 +80,16 @@ namespace sw
          */
         [[nodiscard]] bool requestTitleScene();
 
+        /** @brief 타이틀 씬이 있는 게임이면 true 입니다 — 세션 명령(타이틀로)을 걸지 정한다. */
+        bool hasTitleScene() const;
         /**
-         * @brief 타이틀 씬이 있으면 UI 전역 명령 표 @p commands 에 `ReturnToTitle` 을 등록합니다. `unregisterSessionCommands` 가 거둡니다.
-         * @details 게임 인스턴스가 `onInitialize` 뒤에(UI 가 있을 때) 부르고 종료의 맨 앞에서 거둔다. 표를 인자로 받는 까닭: 창 없이 세우는 테스트가 표를 직접 준다.
+         * @brief 세션 명령(UI 전역 명령 `ReturnToTitle`)의 등록 구독을 맡깁니다. `unregisterSessionCommands` 가 거둡니다.
+         * @details 거는 일은 클라이언트 전용 부분(`IGameInstanceClientHook::bindSessionCommands`)이 한다 — 씬 흐름은 UI 를 모른다. 게임 인스턴스가 종료의 맨 앞에서 거둔다.
          */
-        void registerSessionCommands( UIGlobalCommandRegistry& commands );
+        void holdSessionCommand( Subscription registration );
         void unregisterSessionCommands();
+        /** @brief UI 전역 명령 `ReturnToTitle` 의 처리 함수입니다(일시정지 메뉴의 "타이틀로"). 클라이언트 전용 부분이 이 함수를 명령에 건다. */
+        void onReturnToTitleCommand( const hashed_string& command, Widget& source );
 
     private:
         /** @brief 맡긴 씬 로드 하나입니다. 끝나면 `update` 가 `SceneLoadCompletedEvent` 를 내고 목록에서 뺍니다. */
@@ -105,16 +108,14 @@ namespace sw
         void onSceneLoadRequested( const string& scenePath, SceneLoadKind kind, const TaskFuture<Scene*>& future );
         /** @brief 끝난 씬 로드마다 `SceneLoadCompletedEvent` 를 냅니다(요청 순서). */
         void publishFinishedSceneLoads();
-        /** @brief UI 전역 명령 `ReturnToTitle` 의 처리 함수입니다(일시정지 메뉴의 "타이틀로"). */
-        void onReturnToTitleCommand( const hashed_string& command, Widget& source );
 
     private:
         const GameSettings&      _settings;                       ///< 게임 인스턴스의 gamesettings(빌림 — 인스턴스가 이 범위보다 오래 든다)
         ScreenTransitionManager& _screenTransition;               ///< 같은 게임 범위의 화면 전환(빌림)
-        LoadingScreenController& _loadingScreen;                  ///< 같은 게임 범위의 로딩 화면(빌림)
+        ILoadingScreen*          _pLoadingScreen;                 ///< 같은 게임 범위의 로딩 화면(빌림, 없으면 nullptr — 전용 서버)
         vector<PendingSceneLoad> _listPendingSceneLoad;           ///< 맡겼지만 아직 끝을 알리지 않은 씬 로드
         Subscription             _sceneLoadRequestedSubscription; ///< 씬 로드 받아들임 알림의 구독(초기화가 걸고 종료가 푼다)
-        Subscription             _returnToTitleRegistration;      ///< UI 전역 명령 ReturnToTitle 의 등록 구독(`registerSessionCommands` 가 받는다)
+        Subscription             _returnToTitleRegistration;      ///< UI 전역 명령 ReturnToTitle 의 등록 구독(`holdSessionCommand` 가 받는다)
         uint8                    _bResumingWorld;                 ///< 초기화 때 이미 활성 씬이 있었다(다시 선 인스턴스) — 첫 씬을 요청하지 않는다
     };
 } // namespace sw

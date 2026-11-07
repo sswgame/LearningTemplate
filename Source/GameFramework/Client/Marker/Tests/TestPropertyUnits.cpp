@@ -8,8 +8,8 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
+#include "GameFramework/Client/Marker/HealthBarComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/UI/Marker/HealthBarComponent.h"
 
 // PropertyUnitsTest — PROPERTY 의 `Units` 메타가 값이 저장된 단위와 맞는지 등록된 모든 타입에서 본다(GameFramework 에 둬 HP 바 비율도 늘 본다).
 

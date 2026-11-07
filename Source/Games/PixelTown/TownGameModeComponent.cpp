@@ -16,7 +16,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/UI/Dialogue/DialogueRunnerComponent.h"
+#include "GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h"
 
 namespace sw
 {

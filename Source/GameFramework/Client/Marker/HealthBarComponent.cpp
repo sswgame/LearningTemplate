@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/UI/Marker/HealthBarComponent.h"
+#include "GameFramework/Client/Marker/HealthBarComponent.h"
 
 #include "Core/Math/MathUtil.h"
 

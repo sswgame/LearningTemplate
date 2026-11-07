@@ -8,6 +8,7 @@
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Map/InputMapBundle.h"
@@ -17,12 +18,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/UI/Screen/UIGlobalCommandRegistry.h"
-#include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
+#include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
-#include "GameFramework/Runtime/Foundation/Framework/Flow/LoadingScreenController.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
@@ -60,9 +59,11 @@ namespace sw
     {
         // 인스턴스 서브시스템 — initialize 가 onInitialize 앞에 초기화하고 shutdown 이 onShutdown 뒤에 역순으로 종료한다.
         ScreenTransitionManager& screenTransition = _gameScope.emplaceSubsystem<ScreenTransitionManager>();
-        LoadingScreenController& loadingScreen    = _gameScope.emplaceSubsystem<LoadingScreenController>();
+        // 로딩 화면은 클라이언트 전용 부분이 세운다 — 그 소스를 짓지 않는 전용 서버에는 없다(`IGameInstanceClientHook`).
+        IGameInstanceClientHook* const pClientHook    = IGameInstanceClientHook::find();
+        ILoadingScreen* const          pLoadingScreen = pClientHook != nullptr ? pClientHook->emplaceLoadingScreen( _gameScope ) : nullptr;
         // 씬 흐름은 이 인스턴스의 gamesettings(`_packConfig` — 범위보다 먼저 선 멤버)와 두 형제를 빌려 든다.
-        _gameScope.emplaceSubsystem<GameSceneFlow>( _packConfig._data, screenTransition, loadingScreen );
+        _gameScope.emplaceSubsystem<GameSceneFlow>( _packConfig._data, screenTransition, pLoadingScreen );
         // 로컬 저장소(세이브 슬롯)는 게임 범위 하나다 - 게임 상태 세이브 · 자동 저장 · 계정 장치 비밀이 함께 쓴다.
         _gameScope.emplaceSubsystem<GameLocalStore>();
         // 온라인 세션은 키트 클라이언트를 묶을 뿐 연결은 게임이 연다 - 온라인을 쓰지 않는 게임에는 비용이 없다.
@@ -104,8 +105,8 @@ namespace sw
             SW_LOG_ERROR_ID( "GameInstance.GameInstanceCannotStart", "Game instance cannot start - the required engine service GameNetSession is not bound to the game services" );
             return false;
         }
-        // UI · 사용자 설정은 Client 호스트 서비스다. 창이 있는 호스트(클라이언트)에 없으면 호스트의 결함이라 멈춘다 — 타이틀 명령 · 설정 재적용을 조용히 건너뛰지 않는다.
-        if ( pWindow != nullptr && ( game::findSubsystem<UISystem>() == nullptr || game::findSubsystem<UserSettingsManager>() == nullptr ) )
+        // UI(입력 포획 창구로 본다) · 사용자 설정은 Client 호스트 서비스다. 창이 있는 호스트(클라이언트)에 없으면 호스트의 결함이라 멈춘다 — 타이틀 명령 · 설정 재적용을 조용히 건너뛰지 않는다.
+        if ( pWindow != nullptr && ( game::findSubsystem<IInputCaptureQuery>() == nullptr || game::findSubsystem<UserSettingsManager>() == nullptr ) )
         {
             SW_LOG_ERROR_ID( "GameInstance.GameInstanceCannotStart2", "Game instance cannot start - a windowed (client) host must bind the engine services UISystem and UserSettingsManager to the game services" );
             return false;
@@ -163,8 +164,8 @@ namespace sw
         // 사운드 이벤트는 gamesettings 가 기준이다. 적었는데 못 읽으면 게임을 띄우지 않는다(소리 없이 진행하지 않는다). 입력 맵을 적었는데 입력 서비스가 없어도 같다.
         const bool bInitialized = bSubsystemsStarted && bPackConfigApplied && bNetSessionOpened && loadAudioEvents() && loadDeclaredCharacterData() && startAutosave() && onInitialize();
         // 창이 없는 호스트에는 UI 가 없다 — UI 전역 명령 표도 쓰지 않는다. 파생 초기화 뒤에 건다("타이틀로" 는 첫 씬을 요청한 뒤의 일이다).
-        if ( game::findSubsystem<UISystem>() != nullptr )
-            getSubsystem<GameSceneFlow>().registerSessionCommands( game::getSubsystem<UIGlobalCommandRegistry>() );
+        if ( IGameInstanceClientHook* const pClientHook = IGameInstanceClientHook::find() )
+            pClientHook->bindSessionCommands( getSubsystem<GameSceneFlow>() );
 
         // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
         // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다. 창이 없는 호스트는 사용자 설정이 없다.

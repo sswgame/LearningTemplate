@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Character/Control/Intent/IntentReplayBar.h"
+#include "GameFramework/Client/Intent/IntentReplayBar.h"
 
 #include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
