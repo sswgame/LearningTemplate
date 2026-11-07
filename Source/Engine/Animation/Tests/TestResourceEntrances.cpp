@@ -49,7 +49,7 @@ namespace
         static ResourceTagSet makeTags()
         {
             ResourceTagSet tags;
-            tags.add( "quality.high" );
+            tags.add( "region.kr" );
             return tags;
         }
 
@@ -60,7 +60,7 @@ namespace
     struct XEntranceTestUtil
     {
         /** 거짓인 로드 축 조건입니다 — 값은 바꾸지 않고 "이 합성은 품질에 기댄다" 는 기록만 남긴다. */
-        static constexpr const utf8* kWhen = R"(<_when _if="quality.low" _neverRead="1" />)";
+        static constexpr const utf8* kWhen = R"(<_when _if="region.us" _neverRead="1" />)";
 
         static bool isRecorded( const AssetID& id )
         {
@@ -177,7 +177,7 @@ SW_TEST_CASE( ResourceEntranceTest, FormatSaveKeepsConditionsInTheFile )
     const XEntranceScope      scope;
     SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "quality", "low" ) );
     const string path = domain.makeDiskPath( "a.retarget.xml" );
-    const string text = R"(<RetargetProfile height_ratio="2"><_when _if="quality.low" height_ratio="3" /><root source="root" target="root" /><pelvis source="pelvis" target="hips" />)"
+    const string text = R"(<RetargetProfile height_ratio="2"><_when _if="region.us" height_ratio="3" /><root source="root" target="root" /><pelvis source="pelvis" target="hips" />)"
                         R"(<chains><item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item></chains></RetargetProfile>)";
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, text ) );
 

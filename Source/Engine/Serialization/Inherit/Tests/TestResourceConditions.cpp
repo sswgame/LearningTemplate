@@ -320,12 +320,12 @@ SW_TEST_CASE( ResourceLayerTest, LayerFileLiesOverTheResource )
 /** @brief [ResourceCompositionTest] 로드 축 태그에 기댄 합성은 그 태그가 바뀔 때 다시 읽을 목록에 오르고, 접속 대조 목록에 든다. 기대지 않은 합성은 들지 않는다 */
 SW_TEST_CASE( ResourceCompositionTest, LoadTagDependentsAreReloadedAndDigested )
 {
-    const XTestTagScope scope{ XTestUtil::makeTags( { "quality.low" } ) };
+    const XTestTagScope scope{ XTestUtil::makeTags( { "region.us" } ) };
     const AssetID       dependent{ "testproject/data/dependent.xml" };
     const AssetID       plain{ "testproject/data/plain.xml" };
     string              flatText;
     bool                bComposed = false;
-    SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)", dependent.view(), ResourceContext::forDocument().withAsset( dependent ), flatText, bComposed ) );
+    SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1"><_when _if="region.us" a="2" /></Doc>)", dependent.view(), ResourceContext::forDocument().withAsset( dependent ), flatText, bComposed ) );
     SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1" />)", plain.view(), ResourceContext::forDocument().withAsset( plain ), flatText, bComposed ) );
 
     vector<ResourceDigestEntry> listEntry;
@@ -339,7 +339,7 @@ SW_TEST_CASE( ResourceCompositionTest, LoadTagDependentsAreReloadedAndDigested )
 
     vector<string> listPending;
     ResourceComposition::takePendingReload( listPending );
-    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "quality", "high" ) );
+    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "region", "kr" ) );
     ResourceComposition::takePendingReload( listPending );
     SW_EXPECT_TRUE( VectorUtil::contains( listPending, dependent.str() ) );
     SW_EXPECT_FALSE( VectorUtil::contains( listPending, plain.str() ) );
@@ -417,9 +417,9 @@ SW_TEST_CASE( ResourceCompositionTest, PerClientAxesAreNotCompared )
 /** @brief [ResourceCompositionTest] 접속 대조는 이 프로세스가 로드 축 · 층에 기대 합성한 리소스만 본다 — 같은 해시는 통과, 다른 해시는 어긋남, 모르는 id 는 대조하지 않는다 */
 SW_TEST_CASE( ResourceCompositionTest, DigestMismatchComparesOnlyKnownCompositions )
 {
-    const XTestTagScope   scope{ XTestUtil::makeTags( { "feature.night" } ) };
+    const XTestTagScope   scope{ XTestUtil::makeTags( { "region.us" } ) };
     const AssetID         id{ "testproject/data/digest.xml" };
-    constexpr const utf8* kText = R"(<Doc a="1"><_when _if="feature.night" a="2" /></Doc>)";
+    constexpr const utf8* kText = R"(<Doc a="1"><_when _if="region.us" a="2" /></Doc>)";
     string                flatText;
     bool                  bComposed = false;
     SW_REQUIRE_TRUE( ResourceComposer::compose( kText, id.view(), ResourceContext::forDocument().withAsset( id ), flatText, bComposed ) );
@@ -427,7 +427,7 @@ SW_TEST_CASE( ResourceCompositionTest, DigestMismatchComparesOnlyKnownCompositio
 
     SW_EXPECT_FALSE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( flatText ) } ) );
     // 상대가 품질 high 로 합성했다 — 같은 파일이 다른 값이다.
-    const string highText = XTestUtil::resolve( kText, ResourceTagTiming::Load, XTestUtil::makeTags( { "quality.high" } ) );
+    const string highText = XTestUtil::resolve( kText, ResourceTagTiming::Load, XTestUtil::makeTags( { "region.kr" } ) );
     SW_EXPECT_TRUE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( highText ) } ) );
     SW_EXPECT_FALSE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ "testproject/data/never-composed.xml", 1 } ) );
 }
@@ -446,7 +446,7 @@ SW_TEST_CASE( ResourceCompositionTest, DigestComparesPlainCompositionsToo )
 /** @brief [ResourceCompositionTest] 번호 뒤의 합성만 나온다 — 접속 뒤에 새로 읽은 리소스와 태그로 바뀐 결과가 서버에 간다. 기대지 않은 합성은 보낼 줄이 아니다 */
 SW_TEST_CASE( ResourceCompositionTest, ChangesSinceARevisionAreCollected )
 {
-    const XTestTagScope         scope{ XTestUtil::makeTags( { "feature.night" } ) };
+    const XTestTagScope         scope{ XTestUtil::makeTags( { "region.us" } ) };
     uint64                      revision = 0;
     vector<ResourceDigestEntry> listEntry;
     ResourceComposition::collectTagDependentChanges( revision, listEntry );
@@ -455,7 +455,7 @@ SW_TEST_CASE( ResourceCompositionTest, ChangesSinceARevisionAreCollected )
 
     const AssetID         varying{ "testproject/data/since-varying.xml" };
     const AssetID         plain{ "testproject/data/since-plain.xml" };
-    constexpr const utf8* kText = R"(<Doc a="1"><_when _if="feature.night" a="2" /></Doc>)";
+    constexpr const utf8* kText = R"(<Doc a="1"><_when _if="region.us" a="2" /></Doc>)";
     string                flatText;
     bool                  bComposed = false;
     SW_REQUIRE_TRUE( ResourceComposer::compose( kText, varying.view(), ResourceContext::forDocument().withAsset( varying ), flatText, bComposed ) );
@@ -470,7 +470,7 @@ SW_TEST_CASE( ResourceCompositionTest, ChangesSinceARevisionAreCollected )
     SW_EXPECT_TRUE( listEntry.empty() );
 
     // 태그가 바뀌어 다시 읽으면 새 해시가 나간다.
-    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "quality", "high" ) );
+    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "region", "kr" ) );
     SW_REQUIRE_TRUE( ResourceComposer::compose( kText, varying.view(), ResourceContext::forDocument().withAsset( varying ), flatText, bComposed ) );
     ResourceComposition::collectTagDependentChanges( revision, listEntry );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listEntry.size() );
