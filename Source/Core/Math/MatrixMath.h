@@ -416,7 +416,29 @@ namespace sw
         return float4x4{ lhs._11 - rhs._11, lhs._12 - rhs._12, lhs._13 - rhs._13, lhs._14 - rhs._14, lhs._21 - rhs._21, lhs._22 - rhs._22, lhs._23 - rhs._23, lhs._24 - rhs._24, lhs._31 - rhs._31, lhs._32 - rhs._32, lhs._33 - rhs._33, lhs._34 - rhs._34, lhs._41 - rhs._41, lhs._42 - rhs._42, lhs._43 - rhs._43, lhs._44 - rhs._44 };
     }
     /** @brief 행렬 곱을 구합니다. 행벡터 규약이라 `v * ( A * B )` 는 A 를 먼저, B 를 나중에 적용합니다. */
-    SW_API float4x4 operator*( const float4x4& lhs, const float4x4& rhs ) noexcept;
+    inline float4x4 operator*( const float4x4& lhs, const float4x4& rhs ) noexcept
+    {
+        return float4x4{
+            ( lhs._11 * rhs._11 + lhs._12 * rhs._21 + lhs._13 * rhs._31 + lhs._14 * rhs._41 ),
+            ( lhs._11 * rhs._12 + lhs._12 * rhs._22 + lhs._13 * rhs._32 + lhs._14 * rhs._42 ),
+            ( lhs._11 * rhs._13 + lhs._12 * rhs._23 + lhs._13 * rhs._33 + lhs._14 * rhs._43 ),
+            ( lhs._11 * rhs._14 + lhs._12 * rhs._24 + lhs._13 * rhs._34 + lhs._14 * rhs._44 ),
+
+            ( lhs._21 * rhs._11 + lhs._22 * rhs._21 + lhs._23 * rhs._31 + lhs._24 * rhs._41 ),
+            ( lhs._21 * rhs._12 + lhs._22 * rhs._22 + lhs._23 * rhs._32 + lhs._24 * rhs._42 ),
+            ( lhs._21 * rhs._13 + lhs._22 * rhs._23 + lhs._23 * rhs._33 + lhs._24 * rhs._43 ),
+            ( lhs._21 * rhs._14 + lhs._22 * rhs._24 + lhs._23 * rhs._34 + lhs._24 * rhs._44 ),
+
+            ( lhs._31 * rhs._11 + lhs._32 * rhs._21 + lhs._33 * rhs._31 + lhs._34 * rhs._41 ),
+            ( lhs._31 * rhs._12 + lhs._32 * rhs._22 + lhs._33 * rhs._32 + lhs._34 * rhs._42 ),
+            ( lhs._31 * rhs._13 + lhs._32 * rhs._23 + lhs._33 * rhs._33 + lhs._34 * rhs._43 ),
+            ( lhs._31 * rhs._14 + lhs._32 * rhs._24 + lhs._33 * rhs._34 + lhs._34 * rhs._44 ),
+
+            ( lhs._41 * rhs._11 + lhs._42 * rhs._21 + lhs._43 * rhs._31 + lhs._44 * rhs._41 ),
+            ( lhs._41 * rhs._12 + lhs._42 * rhs._22 + lhs._43 * rhs._32 + lhs._44 * rhs._42 ),
+            ( lhs._41 * rhs._13 + lhs._42 * rhs._23 + lhs._43 * rhs._33 + lhs._44 * rhs._43 ),
+            ( lhs._41 * rhs._14 + lhs._42 * rhs._24 + lhs._43 * rhs._34 + lhs._44 * rhs._44 ) };
+    }
     /** @brief 스칼라를 곱합니다. */
     inline float4x4 operator*( const float4x4& matrix, float32 scale ) noexcept
     {
