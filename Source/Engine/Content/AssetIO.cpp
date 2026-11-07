@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/pair.h"
 #include "Core/File/AsyncFileIO.h"
+#include "Core/File/ContentFileSource.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
@@ -98,7 +99,7 @@ namespace sw
             {
                 const std::optional<AbsolutePath> looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
                 const string                      loosePath = looseFile.has_value() ? looseFile->str() : string{};
-                if ( loosePath.empty() == false && FileUtil::isRegularFile( loosePath ) )
+                if ( loosePath.empty() == false && ContentFileSource::getCurrent().isFile( loosePath ) )
                 {
                     if ( pOutAbsPath != nullptr )
                         *pOutAbsPath = loosePath;
@@ -141,7 +142,7 @@ namespace sw
         const bool        bRead        = readResourceCommon(
             relativePath, pOutAbsPath,
             [&outText]( string_view absPath )
-        { return FileUtil::readTextFile( absPath, outText ); },
+        { return ContentFileSource::getCurrent().readTextFile( absPath, outText ); },
             [&outText]( const PackManager& packManager, string_view key, string& outPackPath )
         { return packManager.readTextFile( key, outText, &outPackPath ); } );
         // 쿠킹 작업 안의 읽기는 그 작업의 입력이다. 쿠킹 세션 안인데 작업 밖이면 기록이 빠지므로 읽기가 실패한다(`CookJob`).
@@ -180,7 +181,7 @@ namespace sw
         const bool        bRead        = readResourceCommon(
             relativePath, nullptr,
             [&outBytes]( string_view absPath )
-        { return FileUtil::readFile( absPath, outBytes ); },
+        { return ContentFileSource::getCurrent().readFile( absPath, outBytes ); },
             [&outBytes]( const PackManager& packManager, string_view key, string& )
         { return packManager.readFile( key, outBytes ); } );
         if ( bRead == false )
@@ -204,7 +205,7 @@ namespace sw
             relativePath, nullptr,
             [&io, &handle, priority, &onComplete]( string_view absPath )
         {
-            handle = io.readFile( absPath, priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [onComplete]( AsyncReadResult& result )
+            handle = ContentFileSource::getCurrent().readFileAsync( io, absPath, priority, SW_DELEGATE_LAMBDA( AsyncReadCompleteDelegate, [onComplete]( AsyncReadResult& result )
             {
                 if ( onComplete.isBound() )
                     onComplete( result.isSucceeded(), result._bytes );
@@ -236,7 +237,7 @@ namespace sw
         {
             // 읽기와 같은 판정이다(R7) - 읽기는 파일만 읽으므로 폴더는 "있음" 이 아니다(예전에는 `exists` 라 폴더에도 true 였다).
             const std::optional<AbsolutePath> absPath = engine::getSubsystem<AssetPaths>().findLooseFile( relativePath );
-            if ( absPath.has_value() && FileUtil::isRegularFile( absPath->str() ) )
+            if ( absPath.has_value() && ContentFileSource::getCurrent().isFile( absPath->str() ) )
                 return true;
         }
         if ( bDiskDomain )
@@ -270,7 +271,7 @@ namespace sw
             for ( const string& diskFolder : listDiskFolder )
             {
                 vector<string> listDiskFile;
-                if ( FileUtil::collectFiles( diskFolder, {}, listDiskFile, false ) == false )
+                if ( ContentFileSource::getCurrent().collectFiles( diskFolder, listDiskFile ) == false )
                 {
                     SW_LOG_ERROR_ID( "AssetIO.CannotListResourceFolder2", "Cannot list the resource folder '%#' (%#)", folder, diskFolder );
                     return AssetFolderListing::Failed;

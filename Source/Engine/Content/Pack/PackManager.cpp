@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/AsyncFileIO.h"
+#include "Core/File/ContentFileSource.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Hash/HashUtil.h"
@@ -138,7 +139,7 @@ namespace sw
                     if ( StringUtil::endsWith( candidate, PackPatchManifest::kManifestExtension, true ) == false )
                         continue;
                     string text;
-                    if ( FileUtil::readTextFile( candidate, text ) == false )
+                    if ( ContentFileSource::getCurrent().readTextFile( candidate, text ) == false )
                     {
                         SW_LOG_ERROR_ID( "PackManager.PackPatchManifestCould", "Pack patch manifest could not be read: %#", candidate );
                         return false;
@@ -545,11 +546,12 @@ namespace sw
 
     bool PackManager::scanAndMountPacks( string_view packsDirectory )
     {
-        if ( packsDirectory.empty() || FileUtil::isDirectory( packsDirectory ) == false )
+        const IContentFileSource& source = ContentFileSource::getCurrent();
+        if ( packsDirectory.empty() || source.isFolder( packsDirectory ) == false )
             return false;
 
         vector<string> listCandidateFile;
-        if ( FileUtil::collectFiles( packsDirectory, "", listCandidateFile, false ) == false )
+        if ( source.collectFiles( packsDirectory, listCandidateFile ) == false )
         {
             // 일부 팩만 마운트하면 빠진 팩의 파일이 아래 팩 판으로 조용히 바뀐다 — 아무것도 마운트하지 않는다.
             SW_LOG_ERROR_ID( "PackManager.PackFolderCouldNot", "Pack folder '%#' could not be listed completely - no pack is mounted", packsDirectory );
@@ -612,7 +614,7 @@ namespace sw
             const PackPatchManifest& manifest = listManifest[manifestIndex];
             const string             packPath = FileUtil::joinPath( packsDirectory, manifest._packFileName );
             vector<uint8>            packBytes;
-            if ( FileUtil::readFile( packPath, packBytes ) == false )
+            if ( ContentFileSource::getCurrent().readFile( packPath, packBytes ) == false )
             {
                 SW_LOG_ERROR_ID( "PackManager.PackPatchPackCould", "Pack patch %# -> %# pack %# could not be read to check its signature", manifest._fromBuild, manifest._toBuild, packPath );
                 return false;
@@ -627,7 +629,7 @@ namespace sw
     {
         const string recordPath = FileUtil::joinPath( packsDirectory, PackBuildRecord::kFileName );
         string       recordText;
-        if ( FileUtil::readTextFile( recordPath, recordText ) == false )
+        if ( ContentFileSource::getCurrent().readTextFile( recordPath, recordText ) == false )
         {
             SW_LOG_ERROR_ID( "PackManager.PackPatchesExistBut", "Pack patches exist in %# but the installed build is unknown - %# is missing", packsDirectory, PackBuildRecord::kFileName );
             return false;
@@ -662,7 +664,7 @@ namespace sw
         {
             const PackPatchManifest& manifest = listManifest[manifestIndex];
             const string             packPath = FileUtil::joinPath( packsDirectory, manifest._packFileName );
-            if ( FileUtil::exists( packPath ) == false )
+            if ( ContentFileSource::getCurrent().isFile( packPath ) == false )
             {
                 SW_LOG_ERROR_ID( "PackManager.PackPatchNamesBut", "Pack patch %# -> %# names %# but the file is missing from %#", manifest._fromBuild, manifest._toBuild, manifest._packFileName, packsDirectory );
                 return false;

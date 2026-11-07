@@ -108,6 +108,9 @@ namespace sw
          */
         static AsyncFileHandle open( string_view filePath );
 
+        /** @brief 메모리에 든 바이트를 파일처럼 엽니다(`MemoryContentFileSource`). @p path 는 로그용 이름입니다. */
+        static AsyncFileHandle openMemory( shared_ptr<const vector<uint8>> pBytes, string_view path );
+
         /** @brief 열린 파일이면 true 입니다. */
         bool isValid() const;
         /** @brief 열 때 측정한 파일 크기(바이트)입니다. 열리지 않았으면 0 입니다. */

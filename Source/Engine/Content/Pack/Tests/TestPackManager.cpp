@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/ContentFileSource.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -99,6 +100,31 @@ SW_TEST_CASE( PackManagerTest, RejectsPackMountedAgainstItsDomain )
     PackManager packs;
     SW_EXPECT_FALSE( packs.mountPatchPack( domain, 100, {} ) );
     SW_EXPECT_FALSE( packs.mountPack( patch, 1 ) );
+}
+
+// 팩은 콘텐츠 소스로만 읽는다 — 디스크에 없는 메모리 팩(웹이 내려받은 팩)도 같은 길로 훑고 마운트하고 읽는다.
+SW_TEST_CASE( PackManagerTest, ScansAndReadsPacksThroughTheContentFileSource )
+{
+    using Internal        = TestPackManagerInternal;
+    const string diskRoot = test::makeScratchPath( "Packs" );
+    const string diskPack = FileUtil::joinPath( diskRoot, "engine.pack" );
+    SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( diskRoot ) );
+    SW_REQUIRE_TRUE( Internal::writePack( diskPack, "engine", {
+                                                                  { "data/a.txt", "from memory" }
+    } ) );
+    vector<uint8> packBytes;
+    SW_REQUIRE_TRUE( FileUtil::readFile( diskPack, packBytes ) );
+    SW_REQUIRE_TRUE( FileUtil::removeFile( diskPack ) );
+
+    MemoryContentFileSource memorySource;
+    memorySource.addFile( "/downloaded/engine.pack", std::move( packBytes ) );
+    const IContentFileSource* const pPrevious = ContentFileSource::bindCurrent( &memorySource );
+    {
+        PackManager packs;
+        SW_EXPECT_TRUE( packs.scanAndMountPacks( "/downloaded" ) );
+        SW_EXPECT_TRUE( Internal::read( packs, "engine/data/a.txt" ) == "from memory" );
+    }
+    (void)ContentFileSource::bindCurrent( pPrevious );
 }
 
 SW_TEST_CASE( PackManagerTest, PackOutsideTheSearchPriorityNeedsAnExplicitPriority )

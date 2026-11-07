@@ -35,8 +35,12 @@ namespace sw
          *        이 파일을 동기로 읽습니다. 묶다가 실패하면 `kUnbindablePort` 입니다.
          */
         atomic<void*> _pBoundPort;
+        /** @brief 메모리에 든 파일이면 그 바이트입니다(`_handle` 은 없다). 큐의 `prepare` 가 OS 에 넘기지 않고 옮겨 끝낸다 — 세 백엔드가 몰라도 된다. */
+        shared_ptr<const vector<uint8>> _pMemoryBytes;
         /** @brief 이미 연 핸들을 넘겨받습니다. */
         AsyncOpenFile( NativeFileHandle handle, uint64 size, string path );
+        /** @brief 메모리에 든 파일입니다. */
+        AsyncOpenFile( shared_ptr<const vector<uint8>> pMemoryBytes, string path );
         /** @brief 핸들을 닫습니다. */
         ~AsyncOpenFile();
 

@@ -6,6 +6,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/File/AsyncFileIOBackend.h"
 #include "Core/File/PlatformFileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
@@ -51,6 +52,16 @@ namespace sw
         , _size{ size }
         , _handle{ handle }
         , _pBoundPort{ nullptr }
+        , _pMemoryBytes{}
+    {
+    }
+
+    AsyncOpenFile::AsyncOpenFile( shared_ptr<const vector<uint8>> pMemoryBytes, string path )
+        : _path{ std::move( path ) }
+        , _size{ pMemoryBytes->size() }
+        , _handle{ kInvalidNativeFileHandle }
+        , _pBoundPort{ nullptr }
+        , _pMemoryBytes{ std::move( pMemoryBytes ) }
     {
     }
 
@@ -106,6 +117,14 @@ namespace sw
         return handle;
     }
 
+    AsyncFileHandle AsyncFileHandle::openMemory( shared_ptr<const vector<uint8>> pBytes, string_view path )
+    {
+        AsyncFileHandle handle;
+        if ( pBytes != nullptr )
+            handle._pOpenFile = sw::make_shared<AsyncOpenFile>( std::move( pBytes ), string( path ) );
+        return handle;
+    }
+
     bool AsyncFileHandle::isValid() const
     {
         return _pOpenFile != nullptr;
@@ -131,6 +150,14 @@ namespace sw
             return true;
         if ( pDst == nullptr )
             return false;
+        if ( _pOpenFile->_pMemoryBytes != nullptr )
+        {
+            const uint64 fileSize = _pOpenFile->_size;
+            if ( offset > fileSize || size > fileSize - offset )
+                return false;
+            std::memcpy( pDst, _pOpenFile->_pMemoryBytes->data() + offset, size );
+            return true;
+        }
         size_t     readBytes{ 0 };
         const bool bRead = PlatformFileUtil::readNativeFileAt( _pOpenFile->_handle, offset, pDst, size, readBytes );
         return bRead && readBytes == size;
@@ -348,6 +375,14 @@ namespace sw
         }
         request._result._offset = request._offset;
         request._bytesDone      = 0;
+        if ( request._pFile->_pMemoryBytes != nullptr )
+        {
+            // OS 에 넘길 것이 없다 — 여기서 옮겨 끝낸다(세 백엔드 모두 `Pending` 이 아니면 바로 `finish` 한다).
+            if ( request._size != 0 )
+                std::memcpy( request._result._bytes.data(), request._pFile->_pMemoryBytes->data() + request._offset, static_cast<size_t>( request._size ) );
+            request._bytesDone = request._size;
+            return AsyncIOStatus::Succeeded;
+        }
         return AsyncIOStatus::Pending;
     }
 
