@@ -31,6 +31,7 @@ namespace sw
     {
         static constexpr float32 kFloatingGravityScale = 0.05f; ///< 이보다 작은 중력 배율은 무중력으로 본다(이동 방식 Floating)
         static constexpr float32 kSwimmingImmersion    = 0.5f;  ///< 유체에 이만큼 잠기면 헤엄친다
+        static constexpr float32 kSwimmingFloatShare   = 0.75f; ///< 뜬 평형 잠김(몸 밀도 / 유체 밀도)의 이만큼이면 헤엄친다 — 진한 유체에서 떠 있는 몸
 
         float32 _gravityScale{ 1.0f }; ///< 장면 중력에 곱한다(0 = 무중력)
         float3  _acceleration{};       ///< 더하는 가속(m/s², 월드) — 당김 · 바람 · 소용돌이
@@ -68,10 +69,15 @@ namespace sw
             return gravityLength * _immersion * _fluidDensity / bodyDensity;
         }
 
-        /** @brief 이 표본에서 캐릭터가 고를 이동 방식입니다. */
-        CharacterMovementMode selectMovementMode( bool bGrounded ) const
+        /**
+         * @brief 이 표본에서 캐릭터(밀도 @p bodyDensity — 물 = 1)가 고를 이동 방식입니다.
+         * @details 헤엄 문턱은 `kSwimmingImmersion` 과 뜬 평형 잠김(몸 밀도 / 유체 밀도)의 `kSwimmingFloatShare` 중 작은 쪽이다 — 진한 유체(용암 3)에서는 몸이 1/3 만 잠겨 떠 있어
+         *          고정 문턱(절반)에 닿지 못하고 떨어짐으로 남았다.
+         */
+        CharacterMovementMode selectMovementMode( bool bGrounded, float32 bodyDensity ) const
         {
-            if ( _fluidDensity > 0.0f && _immersion >= kSwimmingImmersion )
+            const float32 swimImmersion = _fluidDensity > 0.0f ? MathUtil::min( kSwimmingImmersion, kSwimmingFloatShare * bodyDensity / _fluidDensity ) : kSwimmingImmersion;
+            if ( _fluidDensity > 0.0f && _immersion >= swimImmersion )
                 return CharacterMovementMode::Swimming;
             if ( _gravityScale < kFloatingGravityScale && bGrounded == false )
                 return CharacterMovementMode::Floating;

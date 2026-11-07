@@ -333,7 +333,7 @@ namespace sw
             };
             ++_stepHistoryCount;
         }
-        _movementMode = field.selectMovementMode( _state._bGrounded );
+        _movementMode = field.selectMovementMode( _state._bGrounded, kBodyDensity );
         // 결정: 바닥이 돌면 위치만이 아니라 방향(yaw)도 같이 돈다 — 이번 스텝에 바닥이 돈 각을 모아 두고 트랜스폼을 쓸 때 얹는다.
         _pendingGroundYaw += _state._groundYawRate * fixedDeltaTime;
         // 천장에 막혔으면 오르던 속도가 줄었다 — 실제로 난 수직 속도를 잇는다. 디디면 수직 속도는 0 이다.
