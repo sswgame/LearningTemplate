@@ -564,6 +564,21 @@ GameFramework의 모듈·수명주기·서비스·테스트 경계를 현재 코
 
 **측정과 성능 후보(S8).** 대기 호출 표, 반사 검증의 중첩 타입 조회, 파서 토큰화, 씬 저장 비동기(스냅숏 분리), 씬 쿠킹 병렬, GPU 업로드 대기 · 텍스처 업로드 계측(`AssetLoadScope`), 렌더 그래프 레벨 폭. 재고 결과에 따라 고치거나, 이득이 없으면 측정값을 이 절에 적고 닫는다. RHI 스레드 · 에디터 UI 스레드는 이 측정에서 병목이 나올 때만 시제품. 매직 리터럴 집계 도구(보고용, 게이트 아님)와 `-1` 의미 분류 첫 묶음. 장르 키트 시연(K1: ActionCombat · ActionPlatformer · TacticsSRPG)과 장르 완결 루프 시나리오.
 
+*S8 측정 표(7 차 — 계측 · 켤 코드는 커밋했고 값은 통합 실행이 채운다. "켤 코드" 커밋은 따로라 값이 흔들림 안이면 그 커밋만 되돌린다).*
+
+| 후보 | 재는 법(Release, 반복) | 볼 값 | 판정 | 켤 코드 | 값 |
+|---|---|---|---|---|---|
+| 대기 호출 표 | `App --test --test-filter=OnlineServerCallTableTest.CompletionCostByPending` 5 번, 이 커밋과 그 앞 | 로그 `OnlineServerCallTableTest.CompletionCost` P 16 · 256 · 4096 의 ns/완료, 부하 봇 서버 `/metrics` 의 `service_store_pending_peak` | 실제 P 에서 차이가 흔들림보다 크면 둔다 | 호출 번호 색인(`OnlineServerCallTable::_mapCall`) | |
+| 반사 검증 중첩 타입 | `--test-filter=ReflectionValidationTest.NestedElementCost` 5 번, 이 커밋과 그 앞 | 로그 `ReflectionValidationTest.NestedElementCost` ns/원소 | 차이가 흔들림보다 작으면 되돌린다 | 호출 한 번 동안의 기억(`ReflectionValidationInternal::NestedTypeCache`) | |
+| 파서 토큰화 | 스탬프를 지우고 변경 없음 · 헤더 하나 · 모듈 전체를 3 번씩 | 끝 줄 `ReflectionParser.TokenizeStats`(호출 · 토큰 · 워커 합 ms)와 `Done in` | 토큰화가 전체의 10% 를 넘으면 저장소 재사용 | 없음(값 뒤) | |
+| 씬 저장 비동기 | `-game=AbilityArena` 에디터 시나리오 `game/abilityarena/automation/editor/scenesave` 3 번 | `GameTimer.Ms` 의 `Scene.save.serialize` · `Scene.save.write` · `Scene.save.base` | write 가 16 ms 를 넘고 serialize 보다 크면 write 를 워커로 | 없음 — S3(자동 저장)가 같은 함수를 고쳐 값 뒤 한 번에 | |
+| 씬 쿠킹 병렬 | `--cook-all` 을 DDC 없이 · 있이 각 2 번 | `Headless.CookStageTimes` · `SceneCooker.SceneCookTime`(합 · 가장 느린 씬) | scenes 가 쿠킹 벽시계의 절반을 넘고 가장 느린 씬이 합의 1/4 아래면 씬 단위 병렬 설계 | 없음(캐시 격리가 먼저) | |
+| GPU 업로드 · 텍스처 | shooter3d · meadowvillage 첫 진입, DX12 · Vulkan · GL, `-gv_assetLoadReport=1` × `-gv_gpuUploadQueue=0/1` 3 번 | Asset 표의 `Texture` · `TextureUpload` 행, `RT.TextureUpload.pump` · `.submitted` · `.polled` · `.waiting`, `GT.GPUUpload.flush` | pump 가 RT 의 10% 를 넘거나 waiting 이 계속 0 이 아니면 RHI Thread 형 시제품 | 없음 | |
+| 렌더 그래프 레벨 폭 | `game/empty/automation/benchmark` · Shooter3D 플레이, `-gv_renderGraphParallelMinWidth=2 · 3 · 4 · 99`, DX12 · Vulkan 3 번 | RT 프레임 중앙값, `RT.Graph.parallelLevel` · `.parallelLevels` · `.parallelPasses` · `.serialPasses` · `.maxLevelWidth` | 3 · 4 가 2 보다 흔들림 밖으로 빠르면 기본값을 바꾼다. 그림은 같아야 한다 | 폭 문턱 gv(기본 2 = 지금 동작) | |
+
+매직 리터럴: `py -3 -m Scripts magic-literals`(보고용). 첫 집계 — 일반 코드의 `-1` 1,632 · 실수 19,051 · 두 자리 이상 정수 2,271 · 16진수 637. 검토 장소의 `-1` 뜻은 인덱스 표지 385 · 이름 없는 '없음' 381 · 찾지 못함 반환 362 · 미분류 261 · 이벤트 대상 없음 146 · 아직 모름 38 · 운영체제 계약 36 · 이름 붙은 표지 23 · 무제한 15 · 기본 인자 11 · 방향 11 · 기본값 사용 3. 첫 묶음으로 '없음' 표지의 이름 붙은 정의 열 곳이 값을 `constant::invalid_index` 에서 가져온다(값 그대로). 다음 묶음은 무제한 · 기본값 사용(`Shop` 가격 · 재고, `SpawnDirector` 상한, 루프 덮어쓰기)을 형식으로.
+K1 시연: Empty 의 `maps/kitdemo_actioncombat` · `kitdemo_actionplatformer` · `kitdemo_tactics` 와 같은 이름의 시나리오(입력 맵 액션 `KitDemo.*` · `Move` 로만 시작 → 결과). 몬스터 정의는 Empty 의 필수 데이터(`data/monsters.xml`, `MonsterCatalog` 경로 규칙).
+
 **새 키트(2 차 묶음).** `GF_Housing`(부지 · 부품 카탈로그 · 배치 검증 · 저장), `GF_ModSupport`(콘텐츠 전용, 시작 때 고정, 서버 허용 목록 · 구성 해시), 싱글 오픈월드 액션 어드벤처 조합과 액션 MMO 조합의 수직 슬라이스(장르 기능만 — 특정 게임의 이름 · 내용을 따르지 않는다).
 
 **하지 않기로 정한 것.** Meadow 밭 크기는 소유 타입 상수로 둔다(레벨별 크기 요구 없음). Shooter3D 탄착 표면 목록은 코드 상수로 둔다. 범용 스크립팅 VM · 네이티브 모드 DLL · 원격 명령 서버는 넣지 않는다.
