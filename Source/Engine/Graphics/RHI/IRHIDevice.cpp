@@ -164,12 +164,14 @@ namespace sw
     void IRHIDevice::releaseSurface()
     {
         waitIdle( RHIWaitIdleReason::WindowSwapChain );
+        ScopedThreadRoleBorrow borrow{ _renderThread }; // 스왑체인 생성 · 크기 변경 · 파괴와 같다 — 렌더 스레드가 쉬는 동안 이 스레드가 역할을 빌려 표면을 놓는다
         releaseSurfaceInternal();
     }
 
     bool IRHIDevice::restoreSurface()
     {
-        flushRenderThread();
+        waitIdle( RHIWaitIdleReason::WindowSwapChain );
+        ScopedThreadRoleBorrow borrow{ _renderThread };
         return restoreSurfaceInternal();
     }
 

@@ -192,6 +192,7 @@
         "facialRigPath",
         "foliageMaterial",
         "fontCatalog",
+        "footprintPrefab",
         "fracturePath",
         "from",
         "graphPath",
@@ -285,6 +286,7 @@
         "source_skeleton",
         "spriteLibraryPath",
         "spriteMaterial",
+        "surfaceKinds",
         "target_skeleton",
         "telemetrySchema",
         "terrainGeomorphMaterial",
@@ -393,6 +395,7 @@
         "_tablePath",
         "_titleScene",
         "_tree",
+        "_weatherDataPath",
         "aiControllerPrefab",
         "audioEvents",
         "autosaveSettings",
@@ -422,7 +425,8 @@
         "statCatalog",
         "tablePath",
         "titleScene",
-        "tree"
+        "tree",
+        "weatherDataPath"
       ]
     },
     {
@@ -447,6 +451,7 @@
     {
       "owner": "game:Empty",
       "listField": [
+        "_catalogPath",
         "_combatEnemyClips",
         "_combatEnemyMaterial",
         "_combatEnemyMesh",
@@ -477,6 +482,7 @@
         "_rigWeaponMesh",
         "_rigWeaponRig",
         "_rigWeaponSockets",
+        "catalogPath",
         "combatEnemyClips",
         "combatEnemyMaterial",
         "combatEnemyMesh",
