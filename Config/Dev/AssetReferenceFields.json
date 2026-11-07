@@ -9,5 +9,5 @@
     ],
     "listCMakeFile": [ "Test/CMakeLists.txt", "Test/Scenario/CMakeLists.txt" ],
     "listCMakeArgument": [ "--render-portraits", "-scenario" ],
-    "listField": [ "_albedo", "_texture" ]
+    "listField": [ "_albedo", "_texture", "file", "scene" ]
 }
