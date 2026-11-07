@@ -100,10 +100,9 @@ namespace sw
 
     void VoxelGameModeComponent::syncAutoPlayPossession( GameObjectManager& manager )
     {
-        const bool     bAutoPlay     = isAutoPlayOn();
-        GameObject*    pPlayerObject = manager.resolveGameObject( _player );
-        PawnComponent* pPawn         = pPlayerObject != nullptr ? pPlayerObject->getComponent<PawnComponent>() : nullptr;
-        _appliedAutoPlay             = bAutoPlay ? 1 : 0; // 폰이 없어도 적용한 것으로 봅니다. 그래야 매 틱 플러시를 예약하지 않습니다.
+        const bool     bAutoPlay = isAutoPlayOn();
+        PawnComponent* pPawn     = findOn<PawnComponent>( _player );
+        _appliedAutoPlay         = bAutoPlay ? 1 : 0; // 폰이 없어도 적용한 것으로 봅니다. 그래야 매 틱 플러시를 예약하지 않습니다.
         if ( pPawn == nullptr )
             return;
         GameObject* pAIObject = manager.resolveGameObject( _autoPlayController );
@@ -325,10 +324,8 @@ namespace sw
         _statusTimer += deltaTime;
         if ( _statusTimer < _statusLogInterval )
             return;
-        _statusTimer                         = 0.0f;
-        GameObjectManager*          pManager = getObjectManager();
-        const GameObject*           pObject  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
-        const VoxelPlayerComponent* pPlayer  = pObject != nullptr ? pObject->getComponent<VoxelPlayerComponent>() : nullptr;
+        _statusTimer                        = 0.0f;
+        const VoxelPlayerComponent* pPlayer = findOn<VoxelPlayerComponent>( _player );
         if ( pPlayer == nullptr )
             return;
         const VoxelBody&                      body     = pPlayer->getBody();

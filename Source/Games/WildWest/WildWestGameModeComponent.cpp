@@ -96,12 +96,8 @@ namespace sw
 
     bool WildWestGameModeComponent::startGame()
     {
-        _pWesternCatalog = _westernDataPath.empty() ? nullptr : SharedAssetCache<WesternCatalog>::acquire( _westernDataPath );
-        if ( _pWesternCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "WildWestGameMode.WesternCatalogCouldNot", "[WildWest] the western catalog '%#' could not be loaded - the prairie cannot open", _westernDataPath.c_str() );
+        if ( acquireRequired( _westernDataPath, _pWesternCatalog ) == false )
             return false;
-        }
         const PawnComponent* pPlayerPawn = findPlayerPawn();
         if ( pPlayerPawn == nullptr )
         {
@@ -118,23 +114,14 @@ namespace sw
             SW_LOG_ERROR_ID( "WildWestGameMode.RiderPawnNoUse", "[WildWest] the rider pawn has no use button '%#' - the prairie cannot open", _useButton.c_str() );
             return false;
         }
-        _pWeatherCatalog = _weatherDataPath.empty() ? nullptr : SharedAssetCache<WeatherCatalog>::acquire( _weatherDataPath );
-        if ( _pWeatherCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "WildWestGameMode.WeatherCatalogCouldNot", "[WildWest] the weather catalog '%#' could not be loaded - the prairie cannot open", _weatherDataPath.c_str() );
+        if ( acquireRequired( _weatherDataPath, _pWeatherCatalog ) == false )
             return false;
-        }
-        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        if ( pState == nullptr )
-        {
-            SW_LOG_ERROR_ID( "WildWestGameMode.NoSessionState", "[WildWest] no SessionStateComponent in front of the director on this object - the prairie cannot open" );
-            return false;
-        }
         SessionStateSettings settings{};
         settings._clock._secondsPerDay = _secondsPerDay;
         settings._pReputationCatalog   = &_pWesternCatalog->getHonorReputation();
         settings._pWeatherCatalog      = _pWeatherCatalog.get();
-        if ( pState->initialize( settings ) == SessionStateInitResult::Refused )
+        SessionStateComponent* pState  = SessionStateComponent::openOnOwner( *this, settings );
+        if ( pState == nullptr )
             return false; // 까닭은 판 상태가 남겼다
         AIPerceptionSettings sight{};
         sight._sightRange = _witnessSightRange;
@@ -190,17 +177,13 @@ namespace sw
 
     const PawnComponent* WildWestGameModeComponent::findPlayerPawn() const
     {
-        const GameObjectManager* pManager = getObjectManager();
-        const GameObject*        pPlayer  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
-        return pPlayer != nullptr ? pPlayer->getComponent<PawnComponent>() : nullptr;
+        return findOn<PawnComponent>( _player );
     }
 
     void WildWestGameModeComponent::updateCameraFocus( const PawnComponent& playerPawn )
     {
         // 카메라 디렉터는 PostPhysics 틱 뒤에 이 초점을 읽고, 카메라 오브젝트에는 다른 쓰기가 없다. 탔으면 기수 루트가 말 좌석에 붙어 있으므로 같은 자리를 따라간다.
-        const GameObjectManager* pManager    = getObjectManager();
-        const GameObject*        pRigObject  = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
-        CameraDirectorComponent* pRig        = pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
+        CameraDirectorComponent* pRig        = findOn<CameraDirectorComponent>( _cameraRig );
         const SceneComponent*    pPlayerRoot = playerPawn.getOwner() != nullptr ? playerPawn.getOwner()->getPrimarySceneComponent() : nullptr;
         if ( pRig == nullptr || pPlayerRoot == nullptr )
             return;
@@ -226,9 +209,7 @@ namespace sw
 
     void WildWestGameModeComponent::mountNearestHorse()
     {
-        GameObjectManager* pManager = getObjectManager();
-        GameObject*        pPlayer  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
-        PawnComponent*     pPawn    = pPlayer != nullptr ? pPlayer->getComponent<PawnComponent>() : nullptr;
+        PawnComponent* pPawn = findOn<PawnComponent>( _player );
         if ( pPawn == nullptr || VehicleSeatComponent::findSeatOf( *pPawn ) != nullptr )
             return;
         VehicleSeatComponent* pSeat = VehicleSeatComponent::findNearestFreeSeat( *pPawn );

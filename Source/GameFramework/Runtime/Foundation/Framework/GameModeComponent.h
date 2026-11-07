@@ -8,6 +8,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Memory/Memory.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"
@@ -23,6 +25,8 @@ namespace sw
     class GameObject;
     class GameObjectManager;
     class IBehaviorTreeDebugSource;
+    template <typename AssetType>
+    class SharedAssetCache;
 
     /**
      * @class GameModeComponent
@@ -157,6 +161,34 @@ namespace sw
         void trackSpawned( const GameObject& object );
         /** @brief 스폰한 오브젝트 하나를 지우고 @p inoutHandle 을 비웁니다. 이미 없으면 핸들만 비웁니다. */
         static void destroySpawned( GameObjectManager& manager, GameObjectHandle& inoutHandle );
+        /** @brief 스폰한 오브젝트 목록을 모두 지우고 비웁니다(모습을 통째로 다시 세울 때). */
+        static void destroySpawned( GameObjectManager& manager, vector<GameObjectHandle>& inoutListHandle );
+        /** @brief 씬 칸이 가리키는 오브젝트입니다. 매니저나 오브젝트가 없으면 nullptr 입니다. */
+        GameObject* findGameObject( GameObjectHandle handle ) const;
+        /** @brief 씬 칸이 가리키는 오브젝트의 @p TComponent 입니다. 없으면 nullptr 입니다. 오브젝트 형식을 의존 이름으로 받아 이 헤더가 오브젝트를 include 하지 않는다. */
+        template <typename TComponent, typename TObject = GameObject>
+        TComponent* findOn( GameObjectHandle handle ) const
+        {
+            TObject* pObject = findGameObject( handle );
+            return pObject != nullptr ? pObject->template getComponent<TComponent>() : nullptr;
+        }
+        /**
+         * @brief 판을 여는 데 꼭 필요한 에셋을 공유 캐시에서 받습니다. 경로가 비었거나 읽지 못하면 오류를 남기고 false 입니다.
+         * @details `GameInstance::loadRequiredCatalog` 의 디렉터판이다. 받는 쪽이 `SharedAssetCache` 헤더를 include 한다(이 헤더는 앞 선언만 한다).
+         */
+        template <typename TAsset>
+        [[nodiscard]] bool acquireRequired( string_view path, shared_ptr<const TAsset>& outAsset ) const
+        {
+            outAsset = path.empty() ? nullptr : SharedAssetCache<TAsset>::acquire( path );
+            if ( outAsset != nullptr )
+                return true;
+            reportMissingAsset( path );
+            return false;
+        }
+        /** @brief 입력 맵의 동작이 눌려 있으면 true 입니다. 위젯이 받은 입력은 게임으로 새지 않습니다(`UIInputMapView`). */
+        [[nodiscard]] bool isActionDown( const hashed_string& action ) const;
+        /** @brief 입력 맵의 동작이 이번 프레임에 발동했으면 true 입니다(`UIInputMapView`). */
+        [[nodiscard]] bool wasActionTriggered( const hashed_string& action ) const;
         /** @brief 틱 뒤에 낼 소리를 쌓는 큐입니다. */
         GameSoundQueue& getSoundQueue() { return _soundQueue; }
         /** @brief 지금 상태의 모습이 서 있으면 true 입니다(걷으면 다음 플러시까지 false). */
@@ -164,6 +196,8 @@ namespace sw
         GameObjectManager* getObjectManager() const;
 
     private:
+        /** @brief 필수 에셋을 받지 못했다는 오류를 남깁니다(`GameMode.RequiredAssetMissing`). 템플릿 밖에 두어 헤더가 로그를 끌어오지 않게 한다. */
+        static void reportMissingAsset( string_view path );
         /** @brief 걷혀 있으면 다시 세울 플러시를 잡고 `tickGame` 을 부릅니다. 끝에 쌓인 스폰이나 소리가 있으면 플러시를 잡습니다. */
         void runRules( float32 deltaTime );
         /** @brief `_tickAfter` 가 풀리면 규칙을 서브틱으로 옮기고, 그 디렉터의 규칙 틱을 선행 조건으로 겁니다. */

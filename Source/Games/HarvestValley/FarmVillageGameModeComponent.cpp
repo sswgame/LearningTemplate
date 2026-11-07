@@ -143,12 +143,8 @@ namespace sw
             SW_LOG_ERROR_ID( "FarmVillageGameMode.NoOpenSessionStateComponentObject", "[Village] no open SessionStateComponent on this object (put the village gameMode after the farm gameMode) - the villagers stay home" );
             return false;
         }
-        _pCatalog = SharedAssetCache<ScheduleCatalog>::acquire( _scheduleDataPath );
-        if ( _pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "FarmVillageGameMode.CouldNotLoadedVillagers", "[Village] %# could not be loaded - the villagers stay home", _scheduleDataPath.c_str() );
+        if ( acquireRequired( _scheduleDataPath, _pCatalog ) == false )
             return false;
-        }
         if ( _pCatalog->getNPCs().empty() )
         {
             SW_LOG_ERROR_ID( "FarmVillageGameMode.ReadButListsNo", "[Village] %# was read but lists no villager - the villagers stay home", _scheduleDataPath.c_str() );

@@ -255,12 +255,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool NileGameModeComponent::startGame()
     {
-        _pCatalog = SharedAssetCache<CityCatalog>::acquire( _cityDataPath );
-        if ( _pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "NileGameMode.CouldNotLoadedCity", "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
+        if ( acquireRequired( _cityDataPath, _pCatalog ) == false )
             return false;
-        }
         if ( _clock.initialize( makeClockSettings() ) == false )
             return false; // 범위 밖(달 길이 `_secondsPerMonth` 등)은 시계가 오류를 남겼다
         const CitySettings citySettings = makeCitySettings();
@@ -781,10 +777,8 @@ namespace sw
     void NileGameModeComponent::updateCursor( const InputManager& input )
     {
         // 카메라 디렉터가 지금 낸 포즈로 포인터 아래 땅 타일을 찾는다. 디렉터는 PostPhysics 틱 뒤에 쓰므로 여기서 읽는 것은 지난 프레임의 시점이다.
-        _bCursorValid                             = SW_FALSE;
-        GameObjectManager*             pManager   = getObjectManager();
-        const GameObject*              pRigObject = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
-        const CameraDirectorComponent* pRig       = pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
+        _bCursorValid                       = SW_FALSE;
+        const CameraDirectorComponent* pRig = findOn<CameraDirectorComponent>( _cameraRig );
         if ( pRig == nullptr )
             return;
         float3 point{};

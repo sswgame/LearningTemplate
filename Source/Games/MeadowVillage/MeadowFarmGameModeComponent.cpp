@@ -5,9 +5,6 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Config/GameAutoplay.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -84,17 +81,17 @@ namespace sw
 
     bool MeadowFarmGameModeComponent::startGame()
     {
-        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        const CropCatalog*     pCrops = game::findSubsystem<const CropCatalog>();
-        if ( pState == nullptr || pCrops == nullptr )
+        const CropCatalog* pCrops = game::findSubsystem<const CropCatalog>();
+        if ( pCrops == nullptr )
         {
-            SW_LOG_ERROR_ID( "MeadowFarm.FarmCannotStart", "[Meadow] the farm cannot start - %#", pState == nullptr ? "no SessionStateComponent in front of it on this object" : "the crop catalog is not loaded" );
+            SW_LOG_ERROR_ID( "MeadowFarm.FarmCannotStart", "[Meadow] the farm cannot start - the crop catalog is not loaded" );
             return false;
         }
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
-        const SessionStateInitResult initResult = pState->initialize( MeadowVillageData::makeStateSettings() );
-        if ( initResult == SessionStateInitResult::Refused )
-            return false; // 범위 밖 설정은 판 상태가 오류를 남겼다
+        SessionStateInitResult initResult = SessionStateInitResult::Refused;
+        SessionStateComponent* pState     = SessionStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings(), initResult );
+        if ( pState == nullptr )
+            return false;
         if ( initResult == SessionStateInitResult::Fresh )
             pState->getWallet().add( Wallet::getDefaultCurrency(), _startingGold );
         _field.initialize( kFieldWidth, kFieldHeight, pCrops );
@@ -122,10 +119,7 @@ namespace sw
         if ( pState == nullptr )
             return;
         // 키는 입력 맵(`data/gamesettings.xml` 의 입력 맵 묶음)이 정한다. 시계를 미는 것은 밭 디렉터 하나다(마을은 읽기만).
-        const InputManager* pInput = game::findSubsystem<InputManager>();
-        const bool          bFastForward =
-            isAutoPlayOn() ||
-            ( pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) ) );
+        const bool bFastForward = isAutoPlayOn() || isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) );
         if ( pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false )
             return;
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )
@@ -182,11 +176,7 @@ namespace sw
     {
         if ( bRespawnViews == false && _bViewsDirty == SW_FALSE )
             return;
-        for ( GameObjectHandle& handle : _listTileView )
-        {
-            destroySpawned( manager, handle );
-        }
-        _listTileView.clear();
+        destroySpawned( manager, _listTileView );
         spawnField( manager );
         _bViewsDirty = SW_FALSE;
     }

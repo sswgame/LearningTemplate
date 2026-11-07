@@ -182,9 +182,7 @@ namespace sw
             startPacing();
         _killCount = 0;
         // 자동 플레이로 시작하면 플레이어 조종자가 폰을 먼저 조종하지 않게 한다(마우스를 잠갔다 풀지 않게 하려는 것이다). 첫 플러시가 자동 조준 AI 에게 넘긴다.
-        GameObjectManager* pManager = getObjectManager();
-        const GameObject*  pPlayer  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
-        PawnComponent*     pPawn    = pPlayer != nullptr ? pPlayer->getComponent<PawnComponent>() : nullptr;
+        PawnComponent* pPawn = findOn<PawnComponent>( _player );
         if ( pPawn != nullptr && isAutoPlayOn() )
             pPawn->setAutoPossess( PawnAutoPossess::None );
         return true;
@@ -423,18 +421,10 @@ namespace sw
         if ( bPresetsKnown == false )
             return;
         _seenProfileReloadCount = SharedAssetCache<AIDirectorProfile>::getReloadCount();
-        _pProfile               = SharedAssetCache<AIDirectorProfile>::acquire( _pacingProfile );
-        if ( _pProfile == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ShooterGameMode.PacingProfileCouldNot", "[Shooter] pacing profile '%#' could not be loaded - no enemies will come", _pacingProfile.c_str() );
+        if ( acquireRequired( _pacingProfile, _pProfile ) == false )
             return;
-        }
-        _pTable = SharedAssetCache<SpawnTable>::acquire( _spawnTable );
-        if ( _pTable == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ShooterGameMode.SpawnTableCouldNot", "[Shooter] spawn table '%#' could not be loaded - no enemies will come", _spawnTable.c_str() );
+        if ( acquireRequired( _spawnTable, _pTable ) == false )
             return;
-        }
         // 감독은 ID 만 낸다. 이 게임이 모르는 ID 는 아무 일도 하지 않으므로 데이터 오타를 여기서 알린다.
         vector<hashed_string> listID;
         _pProfile->collectEncounterIDs( listID );
@@ -545,8 +535,7 @@ namespace sw
         const bool bPlayerPending = _bAmmoPending == SW_TRUE || _pendingHeal > 0.0f;
         if ( bPlayerPending )
         {
-            const GameObject*       pObject = manager.resolveGameObject( _player );
-            ShooterPlayerComponent* pPlayer = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
+            ShooterPlayerComponent* pPlayer = findOn<ShooterPlayerComponent>( _player );
             if ( pPlayer != nullptr && _bAmmoPending == SW_TRUE )
                 pPlayer->addWaveAmmo();
             if ( pPlayer != nullptr && _pendingHeal > 0.0f )
@@ -706,8 +695,7 @@ namespace sw
     void ShooterGameModeComponent::updateReplicaEnemies()
     {
         GameObjectManager*             pManager = getObjectManager();
-        const GameObject*              pPlayer  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
-        const ShooterNetPawnComponent* pNetPawn = pPlayer != nullptr ? pPlayer->getComponent<ShooterNetPawnComponent>() : nullptr;
+        const ShooterNetPawnComponent* pNetPawn = findOn<ShooterNetPawnComponent>( _player );
         _listEnemyView.clear();
         _listReplicaSample.clear();
         if ( pNetPawn == nullptr )
@@ -819,9 +807,7 @@ namespace sw
 
     void ShooterGameModeComponent::updatePlayerView()
     {
-        GameObjectManager*            pManager = getObjectManager();
-        const GameObject*             pObject  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
-        const ShooterPlayerComponent* pPlayer  = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
+        const ShooterPlayerComponent* pPlayer = findOn<ShooterPlayerComponent>( _player );
         if ( pPlayer == nullptr )
             return;
         _playerEye    = pPlayer->getEyePosition();
@@ -836,10 +822,8 @@ namespace sw
         _statusTimer += deltaTime;
         if ( _statusTimer < _statusLogInterval )
             return;
-        _statusTimer                           = 0.0f;
-        GameObjectManager*            pManager = getObjectManager();
-        const GameObject*             pObject  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
-        const ShooterPlayerComponent* pPlayer  = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
+        _statusTimer                          = 0.0f;
+        const ShooterPlayerComponent* pPlayer = findOn<ShooterPlayerComponent>( _player );
         if ( pPlayer == nullptr )
             return;
         [[maybe_unused]] const WeaponState& weapon  = pPlayer->getCurrentWeapon();
@@ -853,8 +837,7 @@ namespace sw
     {
         // 디렉터는 앞 그룹(PrePhysics)이라 여기서 읽는 월드 · 본은 지난 프레임에 그려진 그대로다.
         GameObjectManager*            pManager = getObjectManager();
-        const GameObject*             pObject  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
-        const ShooterPlayerComponent* pPlayer  = pObject != nullptr ? pObject->getComponent<ShooterPlayerComponent>() : nullptr;
+        const ShooterPlayerComponent* pPlayer  = findOn<ShooterPlayerComponent>( _player );
         if ( pPlayer == nullptr )
             return;
         if ( _motionTrace.empty() )

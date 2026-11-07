@@ -342,24 +342,12 @@ namespace sw
 
     bool SkirmishGameModeComponent::startGame()
     {
-        _pCatalog = SharedAssetCache<RTSCatalog>::acquire( _unitDataPath );
-        if ( _pCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "SkirmishGameMode.CouldNotLoadedMatch", "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
+        if ( acquireRequired( _unitDataPath, _pCatalog ) == false )
             return false;
-        }
-        _pUnitModelCatalog = SharedAssetCache<SkirmishUnitModelCatalog>::acquire( _unitModelPath );
-        if ( _pUnitModelCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "SkirmishGameMode.UnitModelTableCould", "[Skirmish] the unit model table '%#' could not be loaded - the match cannot start", _unitModelPath.c_str() );
+        if ( acquireRequired( _unitModelPath, _pUnitModelCatalog ) == false )
             return false;
-        }
-        _pCommanderTree = SharedAssetCache<BehaviorTreeAsset>::acquire( _commanderTreePath );
-        if ( _pCommanderTree == nullptr )
-        {
-            SW_LOG_ERROR_ID( "SkirmishGameMode.CommanderBehaviorTreeCould", "[Skirmish] the commander behavior tree '%#' could not be loaded - the match cannot start", _commanderTreePath.c_str() );
+        if ( acquireRequired( _commanderTreePath, _pCommanderTree ) == false )
             return false;
-        }
         if ( hasValidNames() == false )
         {
             SW_LOG_ERROR_ID( "SkirmishGameMode.DirectorInputActionsUnit", "[Skirmish] the director's input actions or unit ids do not match the data - the match cannot start" );
@@ -862,8 +850,6 @@ namespace sw
 
     CameraDirectorComponent* SkirmishGameModeComponent::findCameraRig() const
     {
-        GameObjectManager* pManager   = getObjectManager();
-        const GameObject*  pRigObject = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
-        return pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
+        return findOn<CameraDirectorComponent>( _cameraRig );
     }
 } // namespace sw

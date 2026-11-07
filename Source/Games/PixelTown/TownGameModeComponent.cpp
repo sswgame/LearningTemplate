@@ -249,9 +249,7 @@ namespace sw
 
     const PawnComponent* TownGameModeComponent::findHeroPawn() const
     {
-        GameObjectManager* pManager = getObjectManager();
-        const GameObject*  pObject  = pManager != nullptr ? pManager->resolveGameObject( _hero ) : nullptr;
-        return pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
+        return findOn<PawnComponent>( _hero );
     }
 
     // ------------------------------------------------------------------------------

@@ -292,6 +292,25 @@ namespace sw
         return refs;
     }
 
+    SessionStateComponent* SessionStateComponent::openOnOwner( const Component& component, const SessionStateSettings& settings, SessionStateInitResult& outResult )
+    {
+        outResult                     = SessionStateInitResult::Refused;
+        SessionStateComponent* pState = findOnOwner( component );
+        if ( pState == nullptr )
+        {
+            SW_LOG_ERROR_ID( "SessionState.MissingOnOwner", "no SessionStateComponent in front of the director on this object - the game cannot start" );
+            return nullptr;
+        }
+        outResult = pState->initialize( settings );
+        return outResult != SessionStateInitResult::Refused ? pState : nullptr; // 거절한 까닭은 `initialize` 가 남겼다
+    }
+
+    SessionStateComponent* SessionStateComponent::openOnOwner( const Component& component, const SessionStateSettings& settings )
+    {
+        SessionStateInitResult result = SessionStateInitResult::Refused;
+        return openOnOwner( component, settings, result );
+    }
+
     SessionStateComponent* SessionStateComponent::findOnOwner( const Component& component )
     {
         GameObject* pOwner = component.getOwner();

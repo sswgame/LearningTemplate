@@ -362,21 +362,11 @@ namespace sw
     bool FarmGameModeComponent::startGame()
     {
         // 작물이 적을 수 있는 계절은 작물 파일의 루트(`seasons`)가 정한다 — 공유 캐시가 읽으므로 읽기 전에 알려 줄 자리가 없다.
-        _pCropCatalog = SharedAssetCache<CropCatalog>::acquire( _cropDataPath );
-        if ( _pCropCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "FarmGameMode.CouldNotLoadedFarm", "[Farm] %# could not be loaded - the farm cannot start", _cropDataPath.c_str() );
+        if ( acquireRequired( _cropDataPath, _pCropCatalog ) == false )
             return false;
-        }
         if ( _pCropCatalog->getCrops().empty() )
         {
             SW_LOG_ERROR_ID( "FarmGameMode.ReadButListsNo", "[Farm] %# was read but lists no crop - the farm cannot start", _cropDataPath.c_str() );
-            return false;
-        }
-        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        if ( pState == nullptr )
-        {
-            SW_LOG_ERROR_ID( "FarmGameMode.NoSessionStateComponentBeforeDirector", "[Farm] no SessionStateComponent before the director on this object - the farm cannot start" );
             return false;
         }
         // 출하함과 가게는 씬에 놓인 오브젝트다(필수 참조). 에디터에서 옮기면 농부가 서는 위치가 따라온다.
@@ -402,14 +392,15 @@ namespace sw
         _itemCatalog = ItemCatalog{};
         _pCropCatalog->fillItemCatalog( _itemCatalog, _itemStackSize );
         SessionStateSettings settings;
-        settings._clock._listSeason             = FarmGameModeComponentInternal::makeSeasons();
-        settings._clock._secondsPerDay          = _secondsPerDay;
-        settings._clock._startHour              = _wakeHour;
-        settings._clock._daysPerSeason          = _daysPerSeason;
-        settings._pItemCatalog                  = &_itemCatalog;
-        settings._inventorySlotCount            = kBagSlotCount;
-        const SessionStateInitResult initResult = pState->initialize( settings );
-        if ( initResult == SessionStateInitResult::Refused )
+        settings._clock._listSeason       = FarmGameModeComponentInternal::makeSeasons();
+        settings._clock._secondsPerDay    = _secondsPerDay;
+        settings._clock._startHour        = _wakeHour;
+        settings._clock._daysPerSeason    = _daysPerSeason;
+        settings._pItemCatalog            = &_itemCatalog;
+        settings._inventorySlotCount      = kBagSlotCount;
+        SessionStateInitResult initResult = SessionStateInitResult::Refused;
+        SessionStateComponent* pState     = SessionStateComponent::openOnOwner( *this, settings, initResult );
+        if ( pState == nullptr )
             return false; // 범위 밖(하루 길이 · 계절 날 수 등)은 판 상태가 오류를 남겼다
         const bool bFresh = initResult == SessionStateInitResult::Fresh;
         _field.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
@@ -452,9 +443,7 @@ namespace sw
 
     PawnComponent* FarmGameModeComponent::findFarmerPawn() const
     {
-        GameObjectManager* pManager = getObjectManager();
-        GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( _farmer ) : nullptr;
-        return pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
+        return findOn<PawnComponent>( _farmer );
     }
 
     bool FarmGameModeComponent::isFarmerDrivenByAI() const
@@ -807,9 +796,7 @@ namespace sw
     void FarmGameModeComponent::updateCameraFocus()
     {
         // 비스듬히 내려다보는 직교 시점으로, 밭 중심과 농부 사이를 본다. 카메라 디렉터는 PostPhysics 틱 뒤에 이 초점을 읽고, 카메라 오브젝트에는 다른 쓰기가 없다.
-        GameObjectManager*       pManager   = getObjectManager();
-        const GameObject*        pRigObject = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
-        CameraDirectorComponent* pRig       = pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
+        CameraDirectorComponent* pRig = findOn<CameraDirectorComponent>( _cameraRig );
         if ( pRig == nullptr )
             return;
         const float3 fieldCenter{ static_cast<float32>( kFieldWidth ) * 0.5f, 0.0f, static_cast<float32>( kFieldHeight ) * 0.5f };

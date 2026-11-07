@@ -5,9 +5,6 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Config/GameAutoplay.h"
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -93,16 +90,11 @@ namespace sw
 
     bool FrontierCityGameModeComponent::startGame()
     {
-        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        if ( pState == nullptr )
-        {
-            SW_LOG_ERROR_ID( "FrontierCity.CityCannotStartNo", "[Frontier] the city cannot start - no SessionStateComponent in front of it on this object" );
-            return false;
-        }
         // 이 오브젝트의 첫 디렉터가 판을 연다. 시작 돈은 새 판일 때만(복원한 판 위에 덧쌓이지 않게).
-        const SessionStateInitResult initResult = pState->initialize( FrontierTownData::makeStateSettings() );
-        if ( initResult == SessionStateInitResult::Refused )
-            return false; // 범위 밖 설정은 판 상태가 오류를 남겼다
+        SessionStateInitResult initResult = SessionStateInitResult::Refused;
+        SessionStateComponent* pState     = SessionStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings(), initResult );
+        if ( pState == nullptr )
+            return false;
         if ( initResult == SessionStateInitResult::Fresh )
         {
             pState->getWallet().add( CitySettings{}._currency, _startingDeben );
@@ -145,9 +137,7 @@ namespace sw
         if ( _bLaidOut == SW_FALSE )
             layOutTown();
         // 키는 입력 맵(`data/gamesettings.xml` 의 입력 맵 묶음)이 정한다. 시계를 미는 것은 이 디렉터 하나다.
-        const InputManager* pInput       = game::findSubsystem<InputManager>();
-        const bool          bFastForward = isAutoPlayOn() || ( pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() )
-                                                                               .isActionDown( hashed_string( FrontierTownData::kFastForwardAction ) ) );
+        const bool bFastForward = isAutoPlayOn() || isActionDown( hashed_string( FrontierTownData::kFastForwardAction ) );
         if ( pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false )
             return;
         _city.update( deltaTime );
@@ -162,11 +152,7 @@ namespace sw
     {
         if ( bRespawnViews == false && _bViewsDirty == SW_FALSE )
             return;
-        for ( GameObjectHandle& handle : _listTileView )
-        {
-            destroySpawned( manager, handle );
-        }
-        _listTileView.clear();
+        destroySpawned( manager, _listTileView );
         spawnTiles( manager );
         _bViewsDirty = SW_FALSE;
     }

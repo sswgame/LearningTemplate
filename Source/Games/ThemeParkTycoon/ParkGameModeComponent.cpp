@@ -193,12 +193,9 @@ namespace sw
     bool ParkGameModeComponent::startGame()
     {
         // 배치는 공유 캐시의 한 벌이다. 코스터 레이아웃은 배치가 같은 팩에서 받아 쥔 그 한 벌을 쓴다 — 게임 모드가 코스터 경로를 따로 적지 않는다(기준 하나).
-        const shared_ptr<const ParkLayout> pLayout = SharedAssetCache<ParkLayout>::acquire( _parkDataPath );
-        if ( pLayout == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ParkGameMode.ParkLayoutCouldNot", "[Park] the park layout '%#' could not be loaded - the park cannot open", _parkDataPath.c_str() );
+        shared_ptr<const ParkLayout> pLayout;
+        if ( acquireRequired( _parkDataPath, pLayout ) == false )
             return false;
-        }
         const ParkLayout& layout = *pLayout;
         _pLayoutCatalog          = layout.getCoasterLayouts();
         _settings._gatePosition  = layout.getGatePosition();
@@ -650,10 +647,8 @@ namespace sw
         const bool bRiding = 0 <= _ridingCoaster && _ridingCoaster < static_cast<int32>( _listCoaster.size() );
         if ( bRiding == false && _bWasRiding == SW_FALSE )
             return;
-        GameObjectManager*       pManager   = getObjectManager();
-        const GameObject*        pRigObject = pManager != nullptr ? pManager->resolveGameObject( _cameraRig ) : nullptr;
-        CameraDirectorComponent* pRig       = pRigObject != nullptr ? pRigObject->getComponent<CameraDirectorComponent>() : nullptr;
-        _bWasRiding                         = bRiding ? SW_TRUE : SW_FALSE;
+        CameraDirectorComponent* pRig = findOn<CameraDirectorComponent>( _cameraRig );
+        _bWasRiding                   = bRiding ? SW_TRUE : SW_FALSE;
         if ( pRig == nullptr )
             return;
         if ( bRiding == false )

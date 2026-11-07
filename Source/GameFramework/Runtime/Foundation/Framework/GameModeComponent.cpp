@@ -6,10 +6,13 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/GameAutoplay.h"
+#include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/UI/Input/UIInputMapView.h"
+#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
@@ -208,6 +211,38 @@ namespace sw
         if ( pObject != nullptr )
             manager.destroyGameObject( pObject );
         inoutHandle = GameObjectHandle{};
+    }
+
+    void GameModeComponent::destroySpawned( GameObjectManager& manager, vector<GameObjectHandle>& inoutListHandle )
+    {
+        for ( GameObjectHandle& handle : inoutListHandle )
+        {
+            destroySpawned( manager, handle );
+        }
+        inoutListHandle.clear();
+    }
+
+    GameObject* GameModeComponent::findGameObject( GameObjectHandle handle ) const
+    {
+        GameObjectManager* pManager = getObjectManager();
+        return pManager != nullptr ? pManager->resolveGameObject( handle ) : nullptr;
+    }
+
+    void GameModeComponent::reportMissingAsset( string_view path )
+    {
+        SW_LOG_ERROR_ID( "GameMode.RequiredAssetMissing", "GameMode: the required asset '%#' could not be loaded - the game cannot start", path );
+    }
+
+    bool GameModeComponent::isActionDown( const hashed_string& action ) const
+    {
+        const InputManager* pInput = game::findSubsystem<InputManager>();
+        return pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() ).isActionDown( action );
+    }
+
+    bool GameModeComponent::wasActionTriggered( const hashed_string& action ) const
+    {
+        const InputManager* pInput = game::findSubsystem<InputManager>();
+        return pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() ).wasActionTriggered( action );
     }
 
     void GameModeComponent::compactSpawned( const GameObjectManager& manager )

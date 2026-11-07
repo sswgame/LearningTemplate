@@ -2,9 +2,6 @@
 
 #include "Games/MeadowVillage/MeadowTownGameModeComponent.h"
 
-#include "Engine/Input/IInputCaptureQuery.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -75,14 +72,9 @@ namespace sw
 
     bool MeadowTownGameModeComponent::startGame()
     {
-        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        if ( pState == nullptr )
-        {
-            SW_LOG_ERROR_ID( "MeadowTown.TownCannotStartNo", "[Meadow] the town cannot start - no SessionStateComponent in front of it on this object" );
-            return false;
-        }
         // 밭 디렉터가 이미 열었으면 아무것도 하지 않는다. 범위 밖 설정은 판 상태가 오류를 남겼다.
-        if ( pState->initialize( MeadowVillageData::makeStateSettings() ) == SessionStateInitResult::Refused )
+        SessionStateComponent* pState = SessionStateComponent::openOnOwner( *this, MeadowVillageData::makeStateSettings() );
+        if ( pState == nullptr )
             return false;
         if ( initializeTown( _town, *pState ) == false || validateViews( *game::findSubsystem<const CreatureLifeCatalog>() ) == false )
             return false;
@@ -136,8 +128,7 @@ namespace sw
         }
 
         // 키는 입력 맵(`data/gamesettings.xml` 의 입력 맵 묶음)이 정한다. 대화는 하루 한 번(키트가 막는다).
-        const InputManager* pInput = game::findSubsystem<InputManager>();
-        if ( pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).wasActionTriggered( hashed_string( MeadowVillageData::kTalkAction ) ) )
+        if ( wasActionTriggered( hashed_string( MeadowVillageData::kTalkAction ) ) )
         {
             const CreatureInteractResult result = _town.talkTo( sprout );
             SW_LOG_INFO_ID( "MeadowTown.TalkSproutFriendship", "[Meadow] talk to sprout: %# (friendship %#)", getEnumName( result ), _town.getFriendship( sprout ) );
@@ -148,11 +139,7 @@ namespace sw
     {
         if ( bRespawnViews == false && _bViewsDirty == SW_FALSE )
             return;
-        for ( GameObjectHandle& handle : _listView )
-        {
-            destroySpawned( manager, handle );
-        }
-        _listView.clear();
+        destroySpawned( manager, _listView );
         spawnTown( manager );
         _bViewsDirty = SW_FALSE;
     }

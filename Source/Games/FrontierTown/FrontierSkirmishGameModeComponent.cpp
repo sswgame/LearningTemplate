@@ -91,14 +91,9 @@ namespace sw
 
     bool FrontierSkirmishGameModeComponent::startGame()
     {
-        SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        if ( pState == nullptr )
-        {
-            SW_LOG_ERROR_ID( "FrontierSkirmish.SkirmishCannotStartNo", "[Frontier] the skirmish cannot start - no SessionStateComponent in front of it on this object" );
-            return false;
-        }
         // 도시 디렉터가 먼저 열었으면 아무것도 하지 않는다 — 같은 설정이라 어느 쪽이 먼저 열어도 같은 판이다.
-        if ( pState->initialize( FrontierTownData::makeStateSettings() ) == SessionStateInitResult::Refused )
+        SessionStateComponent* pState = SessionStateComponent::openOnOwner( *this, FrontierTownData::makeStateSettings() );
+        if ( pState == nullptr )
             return false;
         if ( initializeWorld( _world, *pState ) == false )
         {
@@ -179,11 +174,7 @@ namespace sw
         { listUnit.push_back( &unit ); } );
         if ( listUnit.size() != _listUnitView.size() )
         {
-            for ( GameObjectHandle& handle : _listUnitView )
-            {
-                destroySpawned( manager, handle );
-            }
-            _listUnitView.clear();
+            destroySpawned( manager, _listUnitView );
             for ( size_t unitIndex = 0; unitIndex < listUnit.size(); ++unitIndex )
             {
                 GameObject* pView = spawnPrefab( manager, _unitPrefab, "FrontierUnit" );

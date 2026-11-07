@@ -404,9 +404,7 @@ namespace sw
 
     PawnComponent* ArenaGameModeComponent::findPlayerPawn() const
     {
-        GameObjectManager* pManager = getObjectManager();
-        GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( _playerObject ) : nullptr;
-        return pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
+        return findOn<PawnComponent>( _playerObject );
     }
 
     AbilityComponent* ArenaGameModeComponent::findNearestHostile( const AbilityComponent& from, float32 maxRange ) const
