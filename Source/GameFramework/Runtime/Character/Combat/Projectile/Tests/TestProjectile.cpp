@@ -258,6 +258,34 @@ SW_TEST_CASE( ProjectileTest, PierceHitsTheNextTarget )
     SW_EXPECT_TRUE( simulation.getProjectiles().empty() );
 }
 
+/** @brief [ProjectileTest] 한 걸음에 여럿을 지나는 빠른 관통탄은 그 걸음에서 모두를 가까운 순서로 맞힌다(남은 선분을 다시 묻는다). 관통 수를 다 쓰면 그 대상에서 끝난다 */
+SW_TEST_CASE( ProjectileTest, FastPierceHitsEveryTargetInOneStep )
+{
+    LineWorld world;
+    world._listTarget = {
+        float3{4.0f, 0.0f, 0.0f},
+        float3{2.0f, 0.0f, 0.0f},
+        float3{6.0f, 0.0f, 0.0f},
+        float3{8.0f, 0.0f, 0.0f}
+    };
+    ProjectileSimulation simulation;
+    ProjectileState      bullet = Util::makeBullet( 600.0f ); // 한 걸음(1/60 초)에 10 m — 네 대상을 모두 지난다
+    bullet._pierceLeft          = 2;
+    (void)simulation.spawn( bullet );
+
+    const vector<ProjectileEvent>& listEvent = simulation.step( 1.0f / 60.0f, world );
+    SW_REQUIRE_EQUAL( size_t( 3 ), listEvent.size() );
+    SW_EXPECT_EQUAL( 1, listEvent[0]._hit._other ); // x = 2
+    SW_EXPECT_EQUAL( 0, listEvent[1]._hit._other ); // x = 4
+    SW_EXPECT_EQUAL( 2, listEvent[2]._hit._other ); // x = 6 — 관통 둘을 다 써 여기서 끝난다
+    SW_EXPECT_TRUE( listEvent[0]._projectile._bAlive == SW_TRUE );
+    SW_EXPECT_TRUE( listEvent[1]._projectile._bAlive == SW_TRUE );
+    SW_EXPECT_TRUE( listEvent[2]._projectile._bAlive == SW_FALSE );
+    SW_EXPECT_EQUAL( 0, listEvent[2]._projectile._pierceLeft );
+    SW_EXPECT_NEAR( 6.0f, listEvent[2]._projectile._travelled, kProjectileTolerance );
+    SW_EXPECT_TRUE( simulation.getProjectiles().empty() );
+}
+
 /** @brief [ProjectileTest] 튕김 수가 남으면 표면에서 반사되어 돌아오고, 다 쓰면 다음 표면에서 끝난다. 튕기지 않는 탄은 첫 표면에서 끝난다 */
 SW_TEST_CASE( ProjectileTest, BounceReflectsOffSurfaces )
 {

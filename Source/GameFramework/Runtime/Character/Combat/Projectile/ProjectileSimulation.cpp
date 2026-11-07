@@ -108,14 +108,14 @@ namespace sw
                         bRangeEnd = true;
                     }
                 }
-                const float3  from        = projectile._position;
-                const float3  to          = from + segment;
-                const float32 segmentSize = segment.getLength();
+                const float3 to = projectile._position + segment;
 
+                // 관통하면 같은 걸음의 남은 선분을 다시 묻는다 — 한 걸음에 여럿을 지나는 빠른 탄도 모두를 차례대로 맞힌다(언리얼 SweepMulti 와 같은 자리).
+                // 매번 관통 수가 줄어 끝난다. 튕김은 방향이 바뀌므로 그 걸음을 거기서 끝낸다(남은 길은 다음 걸음).
                 ProjectileHit hit;
-                if ( world.sweep( projectile, from, to, hit ) )
+                while ( world.sweep( projectile, projectile._position, to, hit ) )
                 {
-                    projectile._travelled += float3::getDistance( from, hit._position );
+                    projectile._travelled += float3::getDistance( projectile._position, hit._position );
                     projectile._position = hit._position;
                     if ( hit._kind == ProjectileHitKind::Surface && projectile._bounceLeft > 0 )
                     {
@@ -131,14 +131,14 @@ namespace sw
                         --projectile._pierceLeft;
                         projectile._lastHit = hit._other;
                         pushEvent( outListEvent, projectile, hit, ProjectileEvent::Kind::Hit );
-                        return; // shortcut: 남은 선분은 다음 걸음에 간다(클래스 설명)
+                        continue;
                     }
                     projectile._bAlive = SW_FALSE;
                     pushEvent( outListEvent, projectile, hit, ProjectileEvent::Kind::Hit );
                     return;
                 }
+                projectile._travelled = bRangeEnd ? projectile._range : projectile._travelled + float3::getDistance( projectile._position, to );
                 projectile._position  = to;
-                projectile._travelled = bRangeEnd ? projectile._range : projectile._travelled + segmentSize;
                 if ( bRangeEnd )
                 {
                     projectile._bAlive = SW_FALSE;
