@@ -108,7 +108,7 @@
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.UIPreviewTextureReady" equals="1" timeoutFrames="600"/>
 	<EditorWaitSettled/>
-	<EditorHover mark="uipreview.image" anchor="0.5,0.5"/>
+	<EditorHover mark="uipreview.image" anchor="0.04,0.04"/>
 	<WaitUntil watch="Editor.UIPreviewHoveredOrdinal" atLeast="0" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorHover release="true"/>
