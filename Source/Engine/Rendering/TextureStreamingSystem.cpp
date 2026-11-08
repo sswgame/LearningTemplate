@@ -3,7 +3,6 @@
 #include "Engine/Rendering/TextureStreamingSystem.h"
 
 #include "Core/Container/vector.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
@@ -15,14 +14,6 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Rendering/MeshLODSystem.h"
-
-namespace sw
-{
-    /**
-     * @brief `-gv_textureStreamByScreenSize=0` — 위쪽 밉을 읽힌 차례로만 올립니다(화면 크기로 정렬하지 않는다). 비교 측정 · 진단용입니다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_textureStreamByScreenSize, true, "Upload the top mips of textures used by large on-screen meshes first (false = in load order)" );
-} // namespace sw
 
 namespace sw
 {
@@ -39,8 +30,6 @@ namespace sw
     void TextureStreamingSystem::update( float32 deltaTime )
     {
         (void)deltaTime;
-        if ( gv_textureStreamByScreenSize == false )
-            return;
         AssetManager* pAssets = _manager.findAssetManager();
         if ( pAssets == nullptr )
             return;
