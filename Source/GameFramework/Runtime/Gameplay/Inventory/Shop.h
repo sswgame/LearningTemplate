@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -303,10 +304,10 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        ShopRuntime* findRuntime( const hashed_string& shopID );
-        int32        findStockIndex( const ShopDef& shop, const hashed_string& itemID ) const;
-        int32        computeBasePrice( const ShopStockDef& stock ) const;
-        bool         isRefused( const ShopDef& shop, const ShopRuntime& runtime, const hashed_string& itemID ) const;
+        ShopRuntime*                  findRuntime( const hashed_string& shopID );
+        [[nodiscard]] optional<int32> findStockIndex( const ShopDef& shop, const hashed_string& itemID ) const;
+        int32                         computeBasePrice( const ShopStockDef& stock ) const;
+        bool                          isRefused( const ShopDef& shop, const ShopRuntime& runtime, const hashed_string& itemID ) const;
 
     private:
         vector<ShopRuntime>    _listRuntime;

@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
@@ -98,15 +99,15 @@ namespace sw
         uint32 getRevision() const { return _revision; }
 
     private:
-        int32 findSlotIndex( const hashed_string& slot ) const;
-        bool  areConditionsMet( const ItemDef& def, const vector<EquipmentSlot>& listSlot, int32 slotIndex ) const;
+        [[nodiscard]] optional<int32> findSlotIndex( const hashed_string& slot ) const;
+        bool                          areConditionsMet( const ItemDef& def, const vector<EquipmentSlot>& listSlot, int32 slotIndex ) const;
         /**
          * @brief @p inoutListSlot 의 깨진 조건을 정책대로 정리합니다. @p bAllowRefuse 가 true 이면 거부 정책이 결과를 `RefusedByDependent` 로 만듭니다.
          * @details 조건이 다시 맞으면 숨김을 해제하는 것도 여기서 한다.
          */
         EquipResult settleConditions( vector<EquipmentSlot>& inoutListSlot, bool bAllowRefuse, vector<InventorySlot>& outListRemoved ) const;
         /** @brief 슬롯 @p slotIndex 에 @p item 을 둔 테스트용 상태를 만들고 판정합니다. */
-        EquipResult makeTrialEquip( int32 slotIndex, const InventorySlot& item, vector<EquipmentSlot>& outListSlot, vector<InventorySlot>& outListRemoved ) const;
+        EquipResult makeTrialEquip( const optional<int32>& foundSlot, const InventorySlot& item, vector<EquipmentSlot>& outListSlot, vector<InventorySlot>& outListRemoved ) const;
         /** @brief 테스트용 상태를 실제 상태로 반영하고, 실제로 바뀌었으면 버전을 올립니다. */
         void commitSlots( vector<EquipmentSlot>&& listSlot );
 

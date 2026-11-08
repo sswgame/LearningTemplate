@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -243,7 +244,7 @@ namespace sw
         /** @brief 피해 @p damage 의 단계 번호입니다. 첫 임계값 아래이면 -1 이고, 멀쩡한 상태입니다. */
         int32 computeDamageStageIndex( float32 damage ) const;
         /** @brief 단계 이름의 번호입니다. 없으면 -1 입니다. */
-        int32 findDamageStageIndex( const hashed_string& name ) const;
+        [[nodiscard]] optional<int32> findDamageStageIndex( const hashed_string& name ) const;
     };
 } // namespace sw
 

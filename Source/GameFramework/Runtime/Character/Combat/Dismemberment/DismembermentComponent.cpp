@@ -275,8 +275,8 @@ namespace sw
                 const DismembermentComponent* pFound = findTarget( query, outValue );
                 if ( pFound == nullptr )
                     return false;
-                const int32 regionIndex = pFound->findRegionIndex( hashed_string{ query._key } );
-                if ( regionIndex < 0 )
+                const optional<int32> regionIndex = pFound->findRegionIndex( hashed_string{ query._key } );
+                if ( regionIndex.has_value() == false )
                 {
                     outValue.setText( "no such body region" );
                     return false;
@@ -287,7 +287,7 @@ namespace sw
                     outValue.setText( "no appearance surface state" );
                     return false;
                 }
-                outValue.setNumber( static_cast<float64>( pSurface->getRegionValue( static_cast<uint32>( regionIndex ), pFound->getBloodChannel() ) ) );
+                outValue.setNumber( static_cast<float64>( pSurface->getRegionValue( static_cast<uint32>( *regionIndex ), pFound->getBloodChannel() ) ) );
                 return true;
             }
         };
@@ -365,7 +365,7 @@ namespace sw
         }
         for ( const hashed_string& region : _listSeverableRegion )
         {
-            if ( findRegionIndex( region ) < 0 )
+            if ( findRegionIndex( region ).has_value() == false )
                 SW_LOG_ERROR_ID( "Dismemberment.SeverableRegionNot", "'%#': severable region '%#' is not in '%#'", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", region.c_str(),
                                  _regionTablePath.c_str() );
         }
@@ -385,7 +385,7 @@ namespace sw
         return _pRegionTable != nullptr ? _pRegionTable->getRegions() : s_noRegion;
     }
 
-    int32 DismembermentComponent::findRegionIndex( const hashed_string& region ) const
+    optional<int32> DismembermentComponent::findRegionIndex( const hashed_string& region ) const
     {
         const vector<BodyRegionDef>& listRegion = getRegions();
         for ( size_t regionIndex = 0; regionIndex < listRegion.size(); ++regionIndex )
@@ -393,7 +393,7 @@ namespace sw
             if ( listRegion[regionIndex]._name == region )
                 return static_cast<int32>( regionIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     hashed_string DismembermentComponent::findRegionOfBone( const hashed_string& bone ) const
@@ -436,10 +436,11 @@ namespace sw
         GameObject*            pOwner       = getOwner();
         GameObjectManager*     pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
         SkeletalMeshComponent* pUnit        = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        const int32            regionIndex  = findRegionIndex( region );
-        const bool             bCannotSever = pManager == nullptr || pUnit == nullptr || pUnit->getMesh() == nullptr || pUnit->getMesh()->hasSkin() == false || regionIndex < 0;
+        const optional<int32>  foundRegion  = findRegionIndex( region );
+        const bool             bCannotSever = pManager == nullptr || pUnit == nullptr || pUnit->getMesh() == nullptr || pUnit->getMesh()->hasSkin() == false || foundRegion.has_value() == false;
         if ( bCannotSever )
             return false;
+        const int32 regionIndex = *foundRegion;
         if ( VectorUtil::contains( _listSeveredRegion, region ) )
             return false;
 
