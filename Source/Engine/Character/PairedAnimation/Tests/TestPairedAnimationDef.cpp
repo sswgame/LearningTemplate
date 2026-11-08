@@ -25,7 +25,9 @@ SW_TEST_CASE( PairedAnimationDefTest, DefLoadsRolesAlignmentAndNotifies )
     SW_EXPECT_NEAR( 1.5f, def.getDuration(), 1e-6f );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( def.getRoles().size() ) );
     SW_EXPECT_EQUAL( 0u, def.getAnchorRoleIndex() );
-    const PairedAnimationRoleDef& victim = def.getRoles()[def.findRoleIndex( hashed_string( "Victim" ) ).value()];
+    const optional<uint32> victimIndex = def.findRoleIndex( hashed_string( "Victim" ) );
+    SW_REQUIRE_TRUE( victimIndex.has_value() );
+    const PairedAnimationRoleDef& victim = def.getRoles()[*victimIndex];
     SW_EXPECT_TRUE( victim._align == PairedAnimationAlign::Warp );
     SW_EXPECT_NEAR( 1.2f, victim._offset._z, 1e-6f );
     SW_EXPECT_NEAR( MathUtil::kPi, victim._yawRadians, 1e-5f );

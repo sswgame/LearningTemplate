@@ -21,9 +21,9 @@ namespace sw::editor
         public:
             [[nodiscard]] virtual bool canPlaceInViewport() const override { return true; }
 
-            virtual void placeInViewport( GameObjectManager* pManager, const utf8* pPath, const float3& worldPos ) const override
+            virtual void placeInViewport( GameObjectManager* pManager, const utf8* pPath, const EditorPlacementPose& pose ) const override
             {
-                (void)EditorAssetCommands::spawnMesh( pManager, pPath, worldPos ); // 실패는 spawnMesh 가 알린다(편집 금지 · 리소스 밖 경로)
+                (void)EditorAssetCommands::spawnMesh( pManager, pPath, pose ); // 실패는 spawnMesh 가 알린다(편집 금지 · 리소스 밖 경로)
             }
         };
 

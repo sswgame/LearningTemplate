@@ -192,7 +192,7 @@ static float4 Bindless::gatherEngineChannel( uint index, [[maybe_unused]] uint e
 // 쓰므로 컴퓨트에서 둘을 함께 선언하면 DXC 가 RW 텍스처를 결합 샘플러와 합쳐 버린다(엔진도 컴퓨트에는 엔진 텍스처를 걸지 않는다).
 // 엔진 텍스처는 역할 하나가 한 장이다(칸 번호 = C++ 표 shaderslot::emulated::kEngineTextureNames 의 순서, 컴파일러가 SW_EMU_SLOT_<이름> 으로 넣는다).
 // 칸을 나눠 쓰지 않으므로 한 패스가 어떤 역할을 함께 읽어도 겹치지 않는다(언리얼 D3D11 RHI 가 셰이더 매개변수마다 레지스터를 따로 두는 것과 같다).
-// 레지스터는 DX11 t32.., GL 텍스처 유닛 0..(binding_slots.hlsli 2). DX11 은 샘플러 슬롯이 16 개뿐이라 짝이 없고 정적 세트의 엔진 텍스처 샘플러로 읽는다.
+// 레지스터는 DX11 t32.., GL 텍스처 유닛도 같은 번호(binding_slots.hlsli 2). DX11 은 샘플러 슬롯이 16 개뿐이라 짝이 없고 정적 세트의 엔진 텍스처 샘플러로 읽는다.
 SW_DECLARE_ENGINE_TEXTURE( 0 );
 SW_DECLARE_ENGINE_TEXTURE( 1 );
 SW_DECLARE_ENGINE_TEXTURE( 2 );
@@ -205,7 +205,13 @@ SW_DECLARE_ENGINE_TEXTURE( 8 );
 SW_DECLARE_ENGINE_TEXTURE( 9 );
 SW_DECLARE_ENGINE_TEXTURE( 10 );
 SW_DECLARE_ENGINE_TEXTURE( 11 );
-        #if SW_ENGINE_TEXTURE_COUNT != 12
+SW_DECLARE_ENGINE_TEXTURE( 12 );
+SW_DECLARE_ENGINE_TEXTURE( 13 );
+SW_DECLARE_ENGINE_TEXTURE( 14 );
+SW_DECLARE_ENGINE_TEXTURE( 15 );
+SW_DECLARE_ENGINE_TEXTURE( 16 );
+SW_DECLARE_ENGINE_TEXTURE( 17 );
+        #if SW_ENGINE_TEXTURE_COUNT != 18
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
@@ -321,6 +327,24 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
                 case 11u:                                                  \
                     OP( SW_ENGINE_TEXTURE( 11 ), SW_ENGINE_SAMPLER( 11 ) ) \
                     break;                                                 \
+                case 12u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 12 ), SW_ENGINE_SAMPLER( 12 ) ) \
+                    break;                                                 \
+                case 13u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 13 ), SW_ENGINE_SAMPLER( 13 ) ) \
+                    break;                                                 \
+                case 14u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 14 ), SW_ENGINE_SAMPLER( 14 ) ) \
+                    break;                                                 \
+                case 15u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 15 ), SW_ENGINE_SAMPLER( 15 ) ) \
+                    break;                                                 \
+                case 16u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 16 ), SW_ENGINE_SAMPLER( 16 ) ) \
+                    break;                                                 \
+                case 17u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 17 ), SW_ENGINE_SAMPLER( 17 ) ) \
+                    break;                                                 \
                 default:                                                   \
                     break;                                                 \
             }
@@ -365,6 +389,18 @@ static uint Bindless::emulatedSlot( uint index )
         return 10u;
     if ( index == SW_ENGINE_TEXTURE_INDEX_11 )
         return 11u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_12 )
+        return 12u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_13 )
+        return 13u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_14 )
+        return 14u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_15 )
+        return 15u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_16 )
+        return 16u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_17 )
+        return 17u;
     return kUnmappedEngineTextureSlot;
 }
 
@@ -914,13 +950,18 @@ static float4 PassTexture::sampleGbufferMaterial( float2 uv )
 {
     return Bindless::sampleIndex( g_GBufferMaterialIndex, uv );
 }
-/** @brief G버퍼 머티리얼 칸을 읽어 푼다 — 쓰는 쪽은 12 절 SurfaceOutput::encodeGbufferMaterial 하나다(r 금속도, g 거칠기, a "그려졌다" 표시: 클리어 0, 그려지면 1). */
-static void PassTexture::loadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic, out bool outDrawn )
+/** @brief G버퍼 머티리얼 칸을 읽어 푼다 — 쓰는 쪽은 12 절 SurfaceOutput::encodeGbufferMaterial 하나다(r 금속도, g 거칠기, b 반사율, a 머티리얼 가림). */
+static void PassTexture::loadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic, out float outSpecular, out float outOcclusion )
 {
     const float4 encoded = PassTexture::sampleGbufferMaterial( uv );
     outMetallic          = encoded.r;
     outRoughness         = encoded.g;
-    outDrawn             = encoded.a >= 0.5f;
+    outSpecular          = encoded.b;
+    outOcclusion         = encoded.a;
+}
+static float4 PassTexture::sampleGbufferCustomData( float2 uv )
+{
+    return Bindless::sampleIndex( g_GBufferCustomDataIndex, uv );
 }
 static float4 PassTexture::sampleDepth( float2 uv )
 {
@@ -962,12 +1003,36 @@ static void PassTexture::sampleDepthCross( float2 uv, float2 texel, out float ou
     outCenterDepth   = gatherHi.w;
     outNeighborDepth = float4( gatherHi.z, gatherHi.x, gatherLo.x, gatherLo.z );
 }
+/** @brief 접촉 그림자 마스크(채널 넷 = 접촉 그림자 빛 넷). 패스가 걸지 않았으면(파이프라인에 없음 · 켠 빛 없음 · 반투명) 가림 없음(1)이다. */
+static float4 PassTexture::sampleContactShadow( float2 uv )
+{
+    if ( g_ContactShadowIndex == kInvalidIndex )
+        return float4( 1, 1, 1, 1 );
+    return Bindless::sampleIndex( g_ContactShadowIndex, uv );
+}
 /** @brief SSAO 결과. 파이프라인에 SSAO 가 없으면(인덱스 무효) 가림 없음(1)이다 — 0 으로 폴백하면 화면이 검게 된다. */
 static float PassTexture::sampleAmbientOcclusion( float2 uv )
 {
     if ( g_AmbientOcclusionIndex == kInvalidIndex )
         return 1.0f;
     return Bindless::sampleIndex( g_AmbientOcclusionIndex, uv ).r;
+}
+/**
+ * @brief 화면 속도(이번 UV - 지난 UV, 역할 Velocity)를 가장 가까운 텍셀로 읽습니다. 속도는 섞으면 가장자리에서 두 물체의 평균이 되어 어느 쪽도 아니다(점 샘플).
+ * @details 패스가 속도를 걸지 않았으면(`g_VelocityIndex` 무효) 0 — 부르는 쪽(TAA · 모션 블러)은 속도를 필수 입력으로 선언하므로 로드 검증이 그 경우를 막는다.
+ */
+static float2 PassTexture::sampleVelocityPoint( float2 uv )
+{
+    if ( g_VelocityIndex == kInvalidIndex )
+        return float2( 0.0f, 0.0f );
+    return Bindless::sampleIndexWith( g_VelocityIndex, SW_SAMPLER_POINT_CLAMP, uv ).rg;
+}
+/** @brief 화면 왜곡 오프셋(화면 UV, 역할 Distortion)을 가장 가까운 텍셀로 읽습니다. 걸리지 않았으면 0(왜곡 없음)이다. */
+static float2 PassTexture::sampleDistortionPoint( float2 uv )
+{
+    if ( g_DistortionIndex == kInvalidIndex )
+        return float2( 0.0f, 0.0f );
+    return Bindless::sampleIndexWith( g_DistortionIndex, SW_SAMPLER_POINT_CLAMP, uv ).rg;
 }
 
 #endif // SW_NATIVE_BINDLESS || !SW_STAGE_COMPUTE

@@ -38,6 +38,12 @@ namespace sw::editor
         [[nodiscard]] bool findPreviewSpawnedParticleCount( uint64& outCount ) const;
         /** @brief 효과 파일이 바뀌어 스스로 다시 읽은 횟수입니다(감시 값 `Editor.VFXPreviewAutoReloadCount`). */
         uint32 getAutoReloadCount() const { return _autoReloadCount; }
+        /** @brief 격리한 방출기 번호입니다(`VFXPreviewModel::kNoSolo` 면 없음 — 감시 값 `Editor.VFXPreviewSoloEmitter`). */
+        int32 getSoloEmitter() const { return _model.getSoloEmitter(); }
+        /** @brief 미리보기 효과에서 켜진 방출기 수입니다. 미리보기 씬이 없으면 false 입니다(감시 값 `Editor.VFXPreviewEnabledEmitterCount`). */
+        [[nodiscard]] bool findEnabledEmitterCount( uint32& outCount ) const;
+        /** @brief 캐릭터 타깃 몸이 미리보기 씬에 있으면 true 입니다(감시 값 `Editor.VFXPreviewHasTarget`). */
+        [[nodiscard]] bool hasPreviewTarget() const { return _model.hasTarget( getPreviewScene() ); }
 
     private:
         bool                acceptsDocumentPath( string_view assetPath ) const override;

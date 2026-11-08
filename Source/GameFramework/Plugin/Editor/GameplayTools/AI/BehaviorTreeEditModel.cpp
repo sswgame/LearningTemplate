@@ -27,13 +27,10 @@ namespace sw::editor
                 return type == BehaviorNodeKind::Selector || type == BehaviorNodeKind::Sequence;
             }
 
-            static string makeNodeError( const XMLNode& node, string_view reason )
+            /** @brief 노드 하나를 읽지 못한 이유입니다. 대상은 노드의 요소 이름입니다. */
+            static Error makeNodeError( const XMLNode& node, const utf8* pReason )
             {
-                string text = "<";
-                text += node.getName();
-                text += "> ";
-                text.append( reason.data(), reason.size() );
-                return text;
+                return Error{ ErrorKind::InvalidArgument, pReason, node.getName() };
             }
         };
     } // namespace
@@ -307,40 +304,29 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    int32 BehaviorTreeEditModel::loadNodeFromXML( const XMLNode& node, int32 parentID, uint32 depth, string& outError )
+    expected<int32> BehaviorTreeEditModel::loadNodeFromXML( const XMLNode& node, int32 parentID, uint32 depth )
     {
         using Internal = BehaviorTreeEditModelInternal;
         BehaviorNodeKind type{};
         if ( BehaviorTreeNames::parse( node.getName(), type ) == false )
         {
-            outError = Internal::makeNodeError( node, "is not a behavior tree node (known: " + BehaviorTreeNames::joinNodeTypeNames() + ")" );
-            return -1;
+            Error error = Internal::makeNodeError( node, "Not a behavior tree node" );
+            error.appendDetail( " (known: " ).appendDetail( BehaviorTreeNames::joinNodeTypeNames() ).appendDetail( ")" );
+            return unexpected( error );
         }
         if ( depth > BehaviorTreeNames::kMaxDepth )
-        {
-            outError = Internal::makeNodeError( node, "is nested too deep" );
-            return -1;
-        }
+            return unexpected( Internal::makeNodeError( node, "The node is nested too deep" ) );
         const bool bLeaf = BehaviorTreeNames::isLeaf( type );
         if ( bLeaf && node.findChild().isValid() )
-        {
-            outError = Internal::makeNodeError( node, "is a leaf and cannot have child nodes" );
-            return -1;
-        }
+            return unexpected( Internal::makeNodeError( node, "A leaf node cannot have child nodes" ) );
 
         BehaviorTreeEditNode value{};
         if ( BehaviorTreeXML::readNodeFields( node, type, "BehaviorTreeEditModel", value ) == false )
-        {
-            outError = Internal::makeNodeError( node, "has a missing, unknown or invalid attribute - see the log" );
-            return -1;
-        }
+            return unexpected( Internal::makeNodeError( node, "The node has a missing, unknown or invalid attribute - see the log" ) );
 
         const int32 id = addNode( parentID, type );
         if ( id < 0 )
-        {
-            outError = Internal::makeNodeError( node, "cannot be placed here (a leaf or a decorator that already has a child is its parent)" );
-            return -1;
-        }
+            return unexpected( Internal::makeNodeError( node, "The node cannot be placed here (a leaf or a decorator that already has a child is its parent)" ) );
         {
             // 읽은 값을 새 노드에 옮긴다. 번호와 부모, 자식 목록은 addNode 가 정한 대로 둔다.
             BehaviorTreeEditNode* pNew = find( id );
@@ -350,88 +336,61 @@ namespace sw::editor
         }
         for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
         {
-            if ( loadNodeFromXML( child, id, depth + 1, outError ) < 0 )
-                return -1;
+            if ( const expected<int32> loaded = loadNodeFromXML( child, id, depth + 1 ); loaded.has_value() == false )
+                return loaded;
         }
         return id;
     }
 
-    bool BehaviorTreeEditModel::parse( string_view xmlText, string& outError )
+    expected<void> BehaviorTreeEditModel::parse( string_view xmlText )
     {
         // `_base` 를 펼쳐 연다. 부모 id 는 들고 있다가 저장이 부모와의 차이로 쓴다(`makeSaveText`).
         string flatText;
         bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
         if ( ResourceComposer::compose( xmlText, "BehaviorTreeEditModel", ResourceContext::forSchema( &BehaviorTreeSchema::make ), flatText, bComposed ) == false )
-        {
-            outError = "Its _base chain could not be flattened - see the log";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Its _base chain could not be flattened - see the log" } );
         XMLDocument document;
         if ( document.parse( bComposed ? string_view{ flatText } : xmlText, "BehaviorTreeEditModel" ) == false )
-        {
-            outError = document.getLastError();
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "The XML could not be read", document.getLastError() } );
         const XMLNode root = document.getRoot( "BehaviorTree" );
         if ( root.isValid() == false )
-        {
-            outError = "The file has no <BehaviorTree> root element";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "The file has no <BehaviorTree> root element" } );
         vector<const utf8*> listUnknown;
         if ( XMLNameCheck::collectUnknownAttributes( root, nullptr, 0, listUnknown ) > 0 )
-        {
-            outError = string{ "<BehaviorTree> has the unknown attribute '" } + listUnknown[0] + "'";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "<BehaviorTree> has an unknown attribute", listUnknown[0] } );
 
         BehaviorTreeEditModel next;
         const XMLNode         first = root.findChild();
         if ( first.isValid() )
         {
             if ( first.findNextSibling().isValid() )
-            {
-                outError = "The tree has more than one root node - wrap them in a <Selector> or <Sequence>";
-                return false;
-            }
-            if ( next.loadNodeFromXML( first, -1, 0, outError ) < 0 )
-                return false;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "The tree has more than one root node - wrap them in a <Selector> or <Sequence>" } );
+            if ( const expected<int32> loaded = next.loadNodeFromXML( first, -1, 0 ); loaded.has_value() == false )
+                return unexpected( loaded.error() );
         }
         next._baseID = DataInheritance::findBasePath( xmlText );
         *this        = std::move( next );
-        outError.clear();
-        return true;
+        return {};
     }
 
-    bool BehaviorTreeEditModel::makeSaveText( string& outText, string& outError ) const
+    expected<string> BehaviorTreeEditModel::makeSaveText() const
     {
         const string fullText = write();
         if ( _baseID.empty() )
-        {
-            outText = fullText;
-            return true;
-        }
+            return fullText;
         string                parentText;
         BehaviorTreeEditModel parent;
-        if ( AssetIO::readTextAsset( AssetID{ _baseID }, parentText ) == false || parent.parse( parentText, outError ) == false )
-        {
-            outError = "The base tree '" + _baseID + "' could not be read - not saved";
-            return false;
-        }
+        if ( AssetIO::readTextAsset( AssetID{ _baseID }, parentText ) == false || parent.parse( parentText ).has_value() == false )
+            return unexpected( Error{ ErrorKind::NotFound, "The base tree could not be read - not saved", _baseID } );
         string               deltaText;
         const expected<void> delta = ResourceComposer::makeCheckedDelta( fullText, parent.write(), BehaviorTreeSchema::make(), _baseID, []( const string& text )
         {
             BehaviorTreeEditModel reread;
-            string                rereadError;
-            return reread.parse( text, rereadError ) ? reread.write() : string{};
+            return reread.parse( text ).has_value() ? reread.write() : string{};
         }, deltaText );
         if ( delta.has_value() == false )
-        {
-            outError = "Not saved: " + string( delta.error().message().data(), delta.error().message().size() ) + " (or a node without an id changed)";
-            return false;
-        }
-        outText = std::move( deltaText );
-        return true;
+            return unexpected( Error{ ErrorKind::Unsupported, "Not saved: the edit cannot be written as a difference from the base (or a node without an id changed)", delta.error().detail() } );
+        return deltaText;
     }
 
     void BehaviorTreeEditModel::writeNode( int32 id, const XMLNode& parentXML ) const
@@ -473,61 +432,45 @@ namespace sw::editor
         return newID;
     }
 
-    int32 BehaviorTreeEditModel::pasteSubtree( int32 parentID, string_view xmlText, int32 insertIndex, string& outError )
+    expected<int32> BehaviorTreeEditModel::pasteSubtree( int32 parentID, string_view xmlText, int32 insertIndex )
     {
         BehaviorTreeEditModel pasted;
-        if ( pasted.parse( xmlText, outError ) == false )
-            return -1;
+        if ( const expected<void> parsed = pasted.parse( xmlText ); parsed.has_value() == false )
+            return unexpected( parsed.error() );
         if ( pasted._rootID < 0 )
-        {
-            outError = "There is no node to paste";
-            return -1;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "There is no node to paste" } );
         if ( parentID < 0 )
         {
             if ( _rootID >= 0 )
-            {
-                outError = "The tree already has a root - select the parent node to paste under";
-                return -1;
-            }
+                return unexpected( Error{ ErrorKind::AlreadyExists, "The tree already has a root - select the parent node to paste under" } );
             _rootID = graftSubtree( pasted, pasted._rootID, -1 );
             return _rootID;
         }
         const BehaviorTreeEditNode* pParent = find( parentID );
         if ( pParent == nullptr || canHoldChild( *pParent ) == false )
-        {
-            outError = "That node cannot take a child here (a leaf, or a decorator that already has one)";
-            return -1;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "That node cannot take a child here (a leaf, or a decorator that already has one)" } );
         if ( getDepth( parentID ) + 1 + pasted.getSubtreeHeight( pasted._rootID ) > BehaviorTreeNames::kMaxDepth )
-        {
-            outError = "Pasting there would pass the depth limit";
-            return -1;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Pasting there would pass the depth limit" } );
         const int32    newID     = graftSubtree( pasted, pasted._rootID, parentID );
         vector<int32>& listChild = find( parentID )->_listChild;
         const bool     bAppend   = insertIndex < 0 || static_cast<size_t>( insertIndex ) >= listChild.size();
         listChild.insert( bAppend ? listChild.end() : listChild.begin() + insertIndex, newID );
-        outError.clear();
         return newID;
     }
 
-    int32 BehaviorTreeEditModel::duplicateSubtree( int32 id, string& outError )
+    expected<int32> BehaviorTreeEditModel::duplicateSubtree( int32 id )
     {
         const BehaviorTreeEditNode* pNode   = find( id );
         const BehaviorTreeEditNode* pParent = pNode != nullptr ? find( pNode->_parent ) : nullptr;
         if ( pParent == nullptr )
-        {
-            outError = "The root cannot be duplicated - a tree has one root";
-            return -1;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "The root cannot be duplicated - a tree has one root" } );
         const int32 parentID = pParent->_id;
         int32       index    = 0;
         while ( pParent->_listChild[static_cast<size_t>( index )] != id )
         {
             ++index;
         }
-        return pasteSubtree( parentID, writeSubtree( id ), index + 1, outError );
+        return pasteSubtree( parentID, writeSubtree( id ), index + 1 );
     }
 
     string BehaviorTreeEditModel::write() const

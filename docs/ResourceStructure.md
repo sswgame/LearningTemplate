@@ -104,7 +104,7 @@
 - 쿠커는 쿠킹 축 조건만 풀고, 한 원소에서 로드 축 조건이 나온 뒤의 조건은 차례를 지키려 함께 남긴다(뒤의 쿠킹 축 조건을 먼저 얹으면 같은 칸의 값이 뒤집힌다). 쿠킹본을 런타임이 푼 결과가 소스를 바로 푼 결과와 같은지는 `ResourceConditionTest.CookedTextResolvesLikeTheSource` 가 본다.
 - 다시 읽기: 리소스 id 로 읽은 합성(`ResourceContext::withAsset` — `XMLDocument::loadResource` · `XMLSerializer::loadFromAsset` · `ReflectedXMLFile`)은 기댄 로드 축 태그를 기록에 남기고(`ResourceComposition`), 태그가 바뀌면 에셋 매니저가 프레임 단계에서 그 id 를 쥔 캐시를 다시 읽는다(`AssetManager::reloadComposedDependents` → `AssetCacheBase::reloadComposed`). 핫 리로드와 달리 배포 구성에도 있다 — 품질 · 언어를 바꾸는 것은 플레이어다. 공유 캐시는 종류의 다시 읽기 방식(제자리 · 떼어 내기)대로 바꾸고, GPU 캐시(텍스처 · 머티리얼 · 메시 · 프리팹)는 다음 읽기가 새 결과를 본다. 확인: 시나리오 `game.empty.resourcecondition`(품질 · 데이터 레이어를 바꾸면 표를 쥔 쪽의 값이 바뀐다).
 
-**한계:** 캐시 열쇠는 경로뿐이므로 한 프로세스의 문맥은 하나다. 서버가 플레이어마다 다른 지역 값을 고르려면 문맥이 아니라 데이터의 키로 나눈다. 에디터처럼 씬이 여럿이면 `layer` 축은 마지막에 넣은 씬의 집합이다.
+**한계:** 캐시 열쇠는 경로뿐이므로 한 프로세스의 문맥은 하나다. 서버가 플레이어마다 다른 지역 값을 고르려면 문맥이 아니라 데이터의 키로 나눈다. 에디터처럼 씬이 여럿이면 `layer` 축은 마지막에 넣은 씬의 집합이다. 예외 하나: 한 문맥이 엔진 값에서 몇 축만 바꿔 끼우는 합성(`ResourceContext::withTagOverride` — 에디터 UI 미리보기의 `screen` · `orientation`)은 그 캐시가 경로 + 태그 열쇠로 따로 들고(`UITextAssetCache`), 다시 읽기 · 접속 대조 기록에 적지 않는다.
 
 **품질 · 언어는 대조하지 않는다:** 축의 `ResourceTagScope::PerClient` 는 사용자 설정이라 달라도 된다. 판정 값은 이 축에 기대지 않는다(언리얼 Scalability 도 판정 값을 바꾸지 않는다, 기억에 의존).
 
@@ -149,14 +149,14 @@ shared_ptr<const BehaviorTreeAsset> tree = _tree.acquire();  // 또는 request()
 
 - 읽기: 접미사가 대상 종류와 다르면 오류다. 잘못 연결한 참조가 로드 때 잡힌다.
 - 파생: 의존성 수집 · 미리 읽기(`PreloadSet`) · 쿠킹 입력 · 참조 색인 · 에디터 선택기 필터가 모두 이 칸을 본다.
-- 쓰는 것만 담는 쿠킹: 팩 쿠커는 폴더째 담지 않고 뿌리에서 이 칸(생성 표 + 손 표, `_base` 부모 포함)과 곁 파일(`SW_ASSET_COMPANION` — 메시 옆 파쇄, 음성 옆 비즘, 스켈레톤 옆 본 LOD)을 따라 닿는 파일만 담는다(`PackReachability`, 언리얼의 "참조된 패키지만 쿠킹" · Primary Asset Rules 의 `AlwaysCook` 과 같은 모양 — 언리얼 쪽은 기억에 의존한 비교다). 뿌리는 `Config/Engine/PackConfig.json` 의 `_cookRules` 다 — 코드가 이름으로 읽어 참조로 닿지 않는 것(엔진 콘텐츠, 게임 데이터 · 맵 · 시나리오, 이름을 이어 붙여 읽는 유닛 모델)의 항상 담기 묶음과, 게임 설정 `<RequiredData kind pack>` 이 가리키는 다른 팩의 데이터(자리는 `_listRequiredData`, 등록 줄과 같은지는 `GameSettingsTest.CookRequiredDataPathsMatchTheKindRegistry` 가 본다). 닿는 참조가 어디에도 없는 파일을 가리키면 쿠킹 오류다(조용히 빼지 않는다). `common.pack` 은 굽는 게임들이 쓰는 것의 합이고, 쿠커가 도메인마다 담은 수 · 크기를 남긴다(`PackCooker.PackReachDomain`). 엔진 도메인도 같다 — 엔진 코드가 상수로 읽는 에셋은 상수 곁의 `SW_ASSET_COOK_ROOT` 가 뿌리이고(엔진 기본 에셋 표가 그 하나라 나머지는 그 칸으로 닿는다), 게임 코드의 리터럴만 항상 담기 데이터다. 자동화 없는 배포는 시나리오 묶음(`_bAutomationOnly`)을 쓰지 않는다. 큰 카탈로그는 항목 단위로 고른다(`_listEntryCatalog` · `_listEntryIDField`) — 필수 데이터나 `파일#id` 로 닿으면 id 칸이 부른 항목의 에셋만 담고, 폴더 참조(표 전체를 보여 주는 캐릭터 편집 화면)로 닿으면 전부 담는다. 스테이징 산출물은 원본(같은 줄기, 셰이더는 `.hlsl` 줄기)이 쓰일 때만 담고 원본을 가릴 수 없는 것은 담는다(`PackStagedSelection`). 칸 규칙(`AssetReferenceFields`)은 그래서 에디터 모듈이 아니라 엔진(`Engine/Asset/Reference`)에 있다.
-- 이름 표를 없앤다: 리플렉션 파서가 참조 칸 목록을 생성물로 내보내고, `AssetReferenceFields.json` 은 손으로 읽는 XML 칸이 남은 동안만 유지한다. 손으로 읽는 칸은 `XMLFields` 쪽 선언으로 옮겨 표를 지우는 것이 끝이다.
+- 쓰는 것만 담는 쿠킹: 팩 쿠커는 폴더째 담지 않고 뿌리에서 이 칸(생성 표, `_base` 부모 포함)과 곁 파일(`SW_ASSET_COMPANION` — 메시 옆 파쇄, 음성 옆 비즘, 스켈레톤 옆 본 LOD)을 따라 닿는 파일만 담는다(`PackReachability`, 언리얼의 "참조된 패키지만 쿠킹" · Primary Asset Rules 의 `AlwaysCook` 과 같은 모양 — 언리얼 쪽은 기억에 의존한 비교다). 뿌리는 `Config/Engine/PackConfig.json` 의 `_cookRules` 다 — 코드가 이름으로 읽어 참조로 닿지 않는 것(엔진 콘텐츠, 게임 데이터 · 맵 · 시나리오, 이름을 이어 붙여 읽는 유닛 모델)의 항상 담기 묶음과, 게임 설정 `<RequiredData kind pack>` 이 가리키는 다른 팩의 데이터(자리는 `_listRequiredData`, 등록 줄과 같은지는 `GameSettingsTest.CookRequiredDataPathsMatchTheKindRegistry` 가 본다). 닿는 참조가 어디에도 없는 파일을 가리키면 쿠킹 오류다(조용히 빼지 않는다). `common.pack` 은 굽는 게임들이 쓰는 것의 합이고, 쿠커가 도메인마다 담은 수 · 크기를 남긴다(`PackCooker.PackReachDomain`). 엔진 도메인도 같다 — 엔진 코드가 상수로 읽는 에셋은 상수 곁의 `SW_ASSET_COOK_ROOT` 가 뿌리이고(엔진 기본 에셋 표가 그 하나라 나머지는 그 칸으로 닿는다), 게임 코드의 리터럴만 항상 담기 데이터다. 자동화 없는 배포는 시나리오 묶음(`_bAutomationOnly`)을 쓰지 않는다. 큰 카탈로그는 항목 단위로 고른다(`_listEntryCatalog` · `_listEntryIDField`) — 필수 데이터나 `파일#id` 로 닿으면 id 칸이 부른 항목의 에셋만 담고, 폴더 참조(표 전체를 보여 주는 캐릭터 편집 화면)로 닿으면 전부 담는다. 스테이징 산출물은 원본(같은 줄기, 셰이더는 `.hlsl` 줄기)이 쓰일 때만 담고 원본을 가릴 수 없는 것은 담는다(`PackStagedSelection`). 칸 규칙(`AssetReferenceFields`)은 그래서 에디터 모듈이 아니라 엔진(`Engine/Asset/Reference`)에 있다.
+- 이름 표는 없다: 경로 칸 이름은 리플렉션 선언에서만 온다(생성 목록). 손으로 읽던 XML 칸은 `XMLFields` 로 읽는 스키마 구조체로 옮겼다(타일맵 머리 `TileMapHeaderParams` — 자식 원소 글에서 루트 속성으로, 본 마스크 `file`). `Config/Dev/AssetReferenceFields.json` 에는 칸 이름이 아니라 도메인 · 글 확장자 · 임포트 폴더 · CMake 인자 규칙만 남는다(언리얼이 `FSoftObjectPath` 칸만 참조로 보는 것과 같다).
 - 값 모양: `AssetRefBase`(직렬화 층, 경로 + `const AssetTypeDef*`)와 `AssetRef<T>`(에셋 층, 칸을 더하지 않는다). 글 처리기는 값 주소만 받으므로 대상 종류를 프로퍼티 메타가 아니라 값이 품는다. 그래서 `vector<AssetRef<T>>` · 중첩 구조체 · 덮어쓰기 패치가 같은 검사를 지난다. 파서는 `TComponentHandle<T>` 처럼 칸 형식을 내장 이름 `AssetRef` 하나로 모으고 `AssetPath` 메타를 켠다.
 - `T` 는 칸이 만들어지는 곳에서 완전해야 한다(`unique_ptr<T>` 소멸자와 같은 규칙). 생성자를 .cpp 에 둔 컴포넌트는 헤더에 앞선 선언만 둔다. `acquire` · `request` 가 멤버 템플릿인 까닭도 같다 — 칸 선언이 `AssetRefCache<T>` 를 인스턴스화하면 뒤에 오는 캐시 헤더의 특수화가 컴파일 오류다.
 - 생성 목록: 파서가 대상마다 `AssetReferenceFields.list` 를 쓰고 빌드가 저장소의 표 `Config/Dev/AssetReferenceFields.generated.json` 으로 모은다(주인별, 이 구성이 짓는 주인의 줄만 갈아 끼운다). 커밋 전 린트와 `move-asset` 이 빌드 없이 돌기 때문에 표를 저장소에 둔다. 낡음은 `--check-asset-refs` 가 잡는다.
 - 종류를 가르는 셋: 접미사(`.sockets.xml`), 카탈로그의 경로 규칙(`/data/crops.xml` — 헤더의 `kAssetType = AssetTypeDef::makeDataFile( … )` 에 두고 등록 줄은 로더만 더한다), 내장 이름(`withBuiltinNames` — 메시의 `Cube` 처럼 파일이 없는 에셋). 셋 다 없는 종류(`makeCacheOnly` — 지금은 캐시 테스트의 형식뿐이다)는 경로로 가를 수 없어 `AssetRef<T>` 가 컴파일에서 막는다(`AssetTypeDef::canTellPath`) — 접미사나 규칙을 먼저 준다. 내장 이름은 철자 그대로만 맞고 모르는 이름은 폴백 없이 오류다. 머티리얼 칸의 `None` 은 내장 이름이 아니라 `hashed_string` 이 빈 이름을 쓴 철자였다 — 데이터를 빈 글로 옮겼고 이제 로드 오류다.
 - 칸이 만들어지는 곳에서 `T` 가 완전해야 하므로, 대상 헤더를 읽을 수 없는 구조체(`SpriteClipAsset` · `SpriteLibrary` · `BehaviorSubTreeParams`)는 생성자를 .cpp 로 옮기고 헤더는 앞선 선언만 둔다. 재생 입구처럼 종류 둘을 받는 칸은 표에 올리지 않는 검사용 종류(`AudioPlayableAsset`)를 대상으로 삼는다.
-- 생성 목록은 칸마다 C++ 이름과 XML 속성 이름(`XMLFields::getAttributeName` — `_shaderPath` → `shaderPath`, `Name = "mesh"` 는 그대로)을 함께 낸다. 그래서 속성으로 읽는 문서의 경로 칸도 손 표 없이 참조 검사 · 옮기기가 안다. 손 표 `listField` 에는 리플렉션 테스트 형식의 두 칸(`_albedo` · `_texture`)만 남았다.
+- 생성 목록은 칸마다 C++ 이름과 XML 속성 이름(`XMLFields::getAttributeName` — `_shaderPath` → `shaderPath`, `Name = "mesh"` 는 그대로)을 함께 낸다. 그래서 속성으로 읽는 문서의 경로 칸도 손 표 없이 참조 검사 · 옮기기가 안다.
 - 전환하지 않는 칸은 `PROPERTY( AssetPath )` 로 두면 생성 목록에 든다: 인턴 열쇠(`hashed_string`)로 쓰는 칸(외형 데이터 · 오디오 이벤트 · 음악 층), 종류가 여럿인 칸(머티리얼 그래프 노드 에셋, 셰이더 소스), 종류 정의가 없는 파일(글꼴, 나일 자동 계획), 편집 사본이 치는 중인 글(`SequenceTrackItem::_prefab`).
 
 ### 5. 행동 어휘
@@ -241,7 +241,8 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 - **2 차 물리 LOD:** 흔들림 본 · 망토 · 머리 가닥은 리그 `SpringChain` 이라 위 `max_lod` 로 끈다(다 꺼지면 상태를 버리고, 켜지면 애니메이션 포즈에서 섞여 들어온다). 물리 천(`ClothComponent`, Jolt 소프트 바디)은 조상 스켈레탈 메시의 같은 등급을 읽어 반복 수를 낮추고(`_listLODIterationCount` — 등급 g 는 g − 1 번째, 끝을 넘으면 마지막, 등급 0 은 `_iterationCount`. 다시 만들지 않고 `IPhysicsSoftBodyScene::setSoftBodyIterationCount`) `_maxLOD` 를 넘으면 내린다. 내린 동안은 고정 자세에 건 쉬는 격자를 그린다(언리얼 Chaos Cloth 가 시뮬레이션을 끈 LOD 에서 스킨 메시를 그리는 자리 — 그쪽은 LOD 마다 시뮬레이션 메시를 따로 두지만 여기 격자는 하나다, 기억에 의존한 비교). 다시 켜면 지금 고정 자세에서 새로 만든다(스킨이면 그 프레임에 스킨 위치로) — 옛 정점에서 이으면 내린 동안 옮겨 간 고정점이 천을 잡아채 튄다. 스켈레탈 메시 조상이 없는 천(커튼 · 깃발)은 등급 0 이다. 확인은 단위 테스트 `ClothLODTest` 와 값 시나리오 `game.empty.clothlod`(기사 등의 천 `maps/clothlod.scene.xml` — 카메라를 `object.place` 로 멀리 옮기면 감시 값 `Cloth.LODGrade` · `Cloth.IterationCount` · `Cloth.LODSuspended` 가 6 → 4 → 2 → 내림 → 6 으로 바뀐다)다.
 - **스프라이트 라이브러리:** 아틀라스는 파일에 하나다. 라벨마다 텍스처가 다르면 프레임을 넘길 때 머티리얼 인스턴스가 바뀌어 배치가 깨진다.
 - **소켓 · 알림 표:** 원소 종류가 섞이고 열쇠 칸이 달라 `datacataloginheritance.xml` 규칙 한 줄이다. 리그 · 리타겟은 `SW_DATA_INHERITANCE_SCHEMA`, 물리 에셋은 `PROPERTY( InheritKey )` 다.
-- **뺀 것:** 물리 셰이프(이름이 없다) · 충돌 쌍(열쇠가 뼈 둘이다), 리그 · 리타겟 안의 뼈 목록(순서가 뜻이다)은 통째로 바뀐다. 입력 레이어는 이번에 하지 않았다.
+- **입력 맵:** 손 형식이고 읽기가 범용 문서 읽기(`XMLDocument::loadResource`)라 카탈로그 표 한 줄이다(`<Catalog root="InputMap">`). 레이어 정의(`<layers><layer name>`)는 래퍼 안의 목록이라 항목이 아닌 루트 칸(카탈로그 줄 바로 아래 `<Field>`)이고, 액션을 담는 `<layer name>` · 루트 `<action name>` 은 이름이 열쇠인 항목이다. 바인딩 원소는 열쇠가 없어 종류째 바뀐다. 묶음(`<override>` · `<remove>`)은 실행 중 쌓기이고 상속은 파일 쪽이다(언리얼 Enhanced Input 매핑 컨텍스트 우선순위와 같은 자리).
+- **뺀 것:** 물리 셰이프(이름이 없다) · 충돌 쌍(열쇠가 뼈 둘이다), 리그 · 리타겟 안의 뼈 목록(순서가 뜻이다)은 통째로 바뀐다.
 
 ### 7. 무기와 발사체 조합
 
@@ -278,11 +279,6 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 - **키트 탄 표:** 몬스터 사격(`MonsterShotDef` — `angle` · `projectile`) · 기체 특수기(Special 슬롯의 `projectile`) · 카트 아이템(날거나 놓이는 아이템의 `projectile`)은 쏘는 법과 맞은 뒤의 반응만 갖고 탄 수치는 탄 정의다. 키트가 카탈로그를 받는 길은 그 키트가 자기 카탈로그를 받는 길과 같다 — 액션 룸은 게임 서비스(몬스터 카탈로그처럼 `game::findSubsystem`, 종을 처음 세울 때 탄을 풀어 둔다), 기체 대전 · 카트 경기는 생성 인자(`initialize` — 판이 서비스를 찾지 않아 테스트 · 리플레이 · 서버가 같은 판을 연다). 카트 탄의 정의 id 는 반응을 찾는 아이템 id 로 둔다(상태 바이트가 그대로다). 벽이 없는 판(액션 룸 · 아레나)은 수명이나 사거리가 없는 탄을, 기체 특수기는 사거리 없는 탄을 받지 않는다.
 - **어빌리티 탄(AbilityArena):** 탄은 디렉터의 시뮬레이션 하나가 바닥 평면에서 돌리고(`ArenaGameModeComponent`, PrePhysics 스냅샷으로 맞음), 실은 어빌리티 이펙트 스펙은 탄 id 로 찾는 짐(`ProjectileCargo`)이다. 스펙은 쏜 쪽 어빌리티 시스템을 가리키는 런타임 값이라 탄 상태 바이트에 넣지 않고 상태 저장 전에 모습과 함께 걷는다. 맞으면 틱 뒤 게임 스레드에서 맞은 쪽 어빌리티 시스템에 건다 — 적용 · 차단은 그 시스템의 규칙이고 탄은 나르기만 한다. 이 엔진의 어빌리티는 복제 · 예측이 없고, 언리얼 GAS 도 투사체는 서버 액터가 스펙을 들고 날아 서버에서 거는 길이라(기억에 의존한 비교) 복제가 생기면 결정적 시뮬레이션은 서버 권위로 두고 짐만 서버에 남긴다. `ArenaProjectileComponent` 는 탄을 읽기만 하는 모습이다. 탄 수치는 어빌리티의 `<Param name="projectile">` 이 가리키는 탄(`game/abilityarena/data/projectiles.xml`)이고 피해는 피해 이펙트의 SetByCaller 로 간다.
 - 확인: 단위 테스트 `ProjectileTest`(조합 · 받음 · 순서 · 맞음 표 · 맞음 동작 · 관통 · 튕김 · 유도 · 사거리 · 수명 · 상태 왕복), `ActionRoomTest.ShotsResolveFromTheProjectileCatalog` · `KartRaceTest.ItemsFlyByTheirProjectile` · `MechArenaRulesTest`(특수기의 탄), 시나리오 `game.shooter3d.projectilecombo`(같은 소총에 소이탄을 넣으면 피해 감시값과 탄도선 그림이 바뀐다), `game.abilityarena.control`(화염구가 날아 처치 수가 오른다).
-
-## 남은 것
-
-- 참조 칸: 손으로 읽는 XML 칸을 `XMLFields` 쪽 선언으로 옮겨 `Config/Dev/AssetReferenceFields.json` 을 지운다(4 절 "이름 표를 없앤다").
-- 종류별 변형: 입력 레이어의 `InheritKey`(6 절 "뺀 것").
 
 ## 새 형식 체크리스트
 

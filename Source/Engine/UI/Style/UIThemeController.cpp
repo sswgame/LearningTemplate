@@ -49,12 +49,12 @@ namespace sw
 {
     namespace
     {
-        /** @brief 시트를 캐시에서 읽습니다(읽지 못한 것은 오류를 남기고 제외합니다). */
-        void appendStyleSheets( UIStyleSheetCache& styleSheetCache, const vector<string>& listPath, vector<shared_ptr<const UIStyleSheetAsset>>& inoutListSheet )
+        /** @brief 시트를 캐시에서 읽습니다(변형 @p tagOverride — 빈 집합이면 엔진 판. 읽지 못한 것은 오류를 남기고 제외합니다). */
+        void appendStyleSheets( UIStyleSheetCache& styleSheetCache, const vector<string>& listPath, const ResourceTagSet& tagOverride, vector<shared_ptr<const UIStyleSheetAsset>>& inoutListSheet )
         {
             for ( const string& path : listPath )
             {
-                const expected<shared_ptr<const UIStyleSheetAsset>> sheet = styleSheetCache.findOrLoad( path );
+                const expected<shared_ptr<const UIStyleSheetAsset>> sheet = styleSheetCache.findOrLoad( path, tagOverride );
                 if ( sheet.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "UIThemeController.StyleSheetNotLoaded", "[UI] Style sheet is not loaded: %# (%#)", sheet.error().message(), sheet.error().detail() );
@@ -165,8 +165,8 @@ namespace sw
         vector<shared_ptr<const UIStyleSheetAsset>> listSheet;
         const UIThemeDef*                           pTheme = findTheme( themeName );
         if ( pTheme != nullptr )
-            appendStyleSheets( styleSheetCache, pTheme->_listStyleSheet, listSheet );
-        appendStyleSheets( styleSheetCache, screen._listStyleSheet, listSheet );
+            appendStyleSheets( styleSheetCache, pTheme->_listStyleSheet, screen._resourceTagOverride, listSheet );
+        appendStyleSheets( styleSheetCache, screen._listStyleSheet, screen._resourceTagOverride, listSheet );
         if ( screen._styleSet == nullptr )
             screen._styleSet = make_unique<UIStyleSet>();
         screen._styleSet->setSheets( std::move( listSheet ) );

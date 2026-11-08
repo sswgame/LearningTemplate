@@ -87,7 +87,7 @@ namespace
                 return pEffect;
             for ( const std::pair<const utf8*, float32>& parameter : listParameter )
             {
-                const optional<uint32> parameterIndex = pEffect->findParameterIndex( sw::hashed_string( parameter.first ) );
+                const sw::optional<uint32> parameterIndex = pEffect->findParameterIndex( sw::hashed_string( parameter.first ) );
                 if ( parameterIndex.has_value() == false )
                 {
                     pEffect.reset();
@@ -221,7 +221,7 @@ SW_TEST_CASE( AudioDSPTest, CompressorGainReduction )
     SW_EXPECT_NEAR( -40.0f, sw::AudioMath::linearToDb( AudioDSPTestInternal::computePeak( listQuiet, 0, 43200, 4800 ) ), 0.1f );
 
     // 메이크업 게인은 그대로 더해진다.
-    const optional<uint32> makeupIndex = pCompressor->findParameterIndex( sw::hashed_string( "makeupDb" ) );
+    const sw::optional<uint32> makeupIndex = pCompressor->findParameterIndex( sw::hashed_string( "makeupDb" ) );
     SW_REQUIRE_TRUE( makeupIndex.has_value() );
     pCompressor->setParameter( *makeupIndex, 6.0f );
     pCompressor->reset();

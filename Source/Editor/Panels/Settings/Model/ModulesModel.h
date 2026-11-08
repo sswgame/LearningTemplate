@@ -69,6 +69,8 @@ namespace sw::editor
         void          selectModule( const string& name ) { _selectedModule = name; }
         /** @brief 고른 모듈의 상세를 @p outDetail 에 채웁니다. 고른 것이 없거나 새로 고침으로 사라졌으면(고름을 비운다) false 입니다. */
         [[nodiscard]] bool makeSelectedDetail( EditorModuleDetail& outDetail );
+        /** @brief 모든 모듈을 빌드하는 명령(`build.compileAll`)을 부릅니다. 막혀 있으면 false 이고 빌드 상태 표시가 알린다. 빌드는 문서를 바꾸지 않아 되돌리기에 남지 않는다. */
+        static bool requestBuildAll();
 
         // ------------------------------------------------------------------------------
         // 3) 켜고 끄기 — 미리보기를 물은 뒤 적용한다

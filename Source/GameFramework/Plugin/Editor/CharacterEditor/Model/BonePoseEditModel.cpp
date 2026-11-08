@@ -83,12 +83,12 @@ namespace sw::editor
         return true;
     }
 
-    bool BonePoseEditModel::findCurrent( const hashed_string& bone, BoneTransform& outCurrent, string& outError ) const
+    expected<BoneTransform> BonePoseEditModel::findCurrent( const hashed_string& bone ) const
     {
-        if ( getEffectiveTransform( bone, outCurrent ) )
-            return true;
-        outError = string( "Bone '" ) + bone.c_str() + "' is not in the skeleton";
-        return false;
+        BoneTransform current;
+        if ( getEffectiveTransform( bone, current ) )
+            return current;
+        return unexpected( Error{ ErrorKind::NotFound, "Bone is not in the skeleton", bone.view() } );
     }
 
     void BonePoseEditModel::recordUndo( const hashed_string& bone, string_view fieldName )
@@ -103,10 +103,12 @@ namespace sw::editor
         _state.record( _override, key );
     }
 
-    bool BonePoseEditModel::setTranslation( const hashed_string& bone, const float3& translation, bool bContinuous, string& outError )
+    expected<bool> BonePoseEditModel::setTranslation( const hashed_string& bone, const float3& translation, bool bContinuous )
     {
-        BoneTransform current;
-        if ( findCurrent( bone, current, outError ) == false || current._translation == translation )
+        const expected<BoneTransform> current = findCurrent( bone );
+        if ( current.has_value() == false )
+            return unexpected( current.error() );
+        if ( current->_translation == translation )
             return false;
         recordUndo( bone, bContinuous ? string_view( "translation" ) : string_view{} );
         BoneOverride edit;
@@ -117,13 +119,13 @@ namespace sw::editor
         return true;
     }
 
-    bool BonePoseEditModel::setRotationDegrees( const hashed_string& bone, const float3& degrees, bool bContinuous, string& outError )
+    expected<bool> BonePoseEditModel::setRotationDegrees( const hashed_string& bone, const float3& degrees, bool bContinuous )
     {
-        BoneTransform current;
-        if ( findCurrent( bone, current, outError ) == false )
-            return false;
+        const expected<BoneTransform> current = findCurrent( bone );
+        if ( current.has_value() == false )
+            return unexpected( current.error() );
         const quaternion rotation = quaternion::makeFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
-        if ( BonePoseEditModelInternal::isSameRotation( current._rotation, rotation ) )
+        if ( BonePoseEditModelInternal::isSameRotation( current->_rotation, rotation ) )
             return false;
         recordUndo( bone, bContinuous ? string_view( "rotation" ) : string_view{} );
         BoneOverride edit;
@@ -134,10 +136,12 @@ namespace sw::editor
         return true;
     }
 
-    bool BonePoseEditModel::setScale( const hashed_string& bone, const float3& scale, bool bContinuous, string& outError )
+    expected<bool> BonePoseEditModel::setScale( const hashed_string& bone, const float3& scale, bool bContinuous )
     {
-        BoneTransform current;
-        if ( findCurrent( bone, current, outError ) == false || current._scale == scale )
+        const expected<BoneTransform> current = findCurrent( bone );
+        if ( current.has_value() == false )
+            return unexpected( current.error() );
+        if ( current->_scale == scale )
             return false;
         recordUndo( bone, bContinuous ? string_view( "scale" ) : string_view{} );
         BoneOverride edit;
@@ -148,43 +152,33 @@ namespace sw::editor
         return true;
     }
 
-    bool BonePoseEditModel::clearBone( const hashed_string& bone, string& outError )
+    expected<void> BonePoseEditModel::clearBone( const hashed_string& bone )
     {
         if ( hasOverride( bone ) == false )
-        {
-            outError = string( "Bone '" ) + bone.c_str() + "' has no override";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "Bone has no override", bone.view() } );
         recordUndo( bone, {} );
-        return _override.removeOverride( bone );
+        const bool bRemoved = _override.removeOverride( bone );
+        SW_ASSERT( bRemoved );
+        (void)bRemoved;
+        return {};
     }
 
-    bool BonePoseEditModel::mirrorBone( const hashed_string& bone, const MirrorNameRules& rules, hashed_string& outMirrorBone, string& outError )
+    expected<hashed_string> BonePoseEditModel::mirrorBone( const hashed_string& bone, const MirrorNameRules& rules )
     {
         string mirrorName;
         if ( rules.findMirrorName( bone.view(), mirrorName ) == false )
-        {
-            outError = string( "Bone '" ) + bone.c_str() + "' has no left/right token";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Bone has no left/right token", bone.view() } );
         const hashed_string counterpart{ string_view( mirrorName ) };
         if ( _skeleton.findBoneIndex( counterpart ).has_value() == false )
-        {
-            outError = string( "Mirror bone '" ) + mirrorName + "' is not in the skeleton";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "Mirror bone is not in the skeleton", counterpart.view() } );
         if ( hasOverride( bone ) == false )
-        {
-            outError = string( "Bone '" ) + bone.c_str() + "' has no override to mirror";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "Bone has no override to mirror", bone.view() } );
         recordUndo( bone, {} );
         _override.addMirrorPair( bone, counterpart );
         const bool bMirrored = _override.mirrorOverride( bone );
         SW_ASSERT( bMirrored );
         (void)bMirrored;
-        outMirrorBone = counterpart;
-        return true;
+        return counterpart;
     }
 
     bool BonePoseEditModel::loadFromXMLText( string_view xmlText, string_view sourceName )

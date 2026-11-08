@@ -25,14 +25,17 @@ if(swArchitectureCount GREATER 1)
 		"Configure one build directory per architecture.")
 endif()
 
-# 엔진은 64 비트만 짓는다 — 32 비트(x86 · armv7)와 ARM64EC 는 판정하지 않는다.
-if(swArchitectureID MATCHES "^(x64|x86_64|AMD64|amd64)$")
+# 엔진은 64 비트 네이티브(x64 · arm64)와 웹(wasm32)을 짓는다 — 32 비트 네이티브(x86 · armv7)와 ARM64EC 는 판정하지 않는다.
+# 웹은 wasm32 다(유니티 · Godot 웹과 같다): memory64 는 Safari 가 받지 않고 경계 검사 비용이 있어 고르지 않았다. Emscripten 툴체인은 프로세서를 x86 으로 적어 EMSCRIPTEN 으로 가른다.
+if(EMSCRIPTEN)
+	set(sw_target_architecture "wasm32")
+elseif(swArchitectureID MATCHES "^(x64|x86_64|AMD64|amd64)$")
 	set(sw_target_architecture "x64")
 elseif(swArchitectureID MATCHES "^(ARM64|arm64|aarch64|AArch64)$")
 	set(sw_target_architecture "arm64")
 else()
 	message(FATAL_ERROR "[Architecture] Unsupported target architecture '${swArchitectureID}'. "
-		"The engine builds x64 and arm64 only.")
+		"The engine builds x64, arm64 and wasm32 (web) only.")
 endif()
 
 message(STATUS "[Architecture] ${sw_target_architecture} (compiler architecture id: '${swArchitectureID}')")

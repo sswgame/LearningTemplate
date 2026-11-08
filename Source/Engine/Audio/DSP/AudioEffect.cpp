@@ -850,7 +850,7 @@ namespace sw
         for ( uint32 parameterIndex = 0; parameterIndex < _pTypeInfo->_parameterCount; ++parameterIndex )
         {
             if ( name == hashed_string( _pTypeInfo->_pParameter[parameterIndex]._pName ) )
-                return static_cast<uint32>( parameterIndex );
+                return parameterIndex;
         }
         return nullopt;
     }

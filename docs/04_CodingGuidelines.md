@@ -106,7 +106,7 @@ GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때
 
 데이터 주도 규칙: 필수 값이 없으면 기본값으로 돌지 않고 오류로 멈춘다(폴백 없음).
 
-## 5. 헬퍼 · 이름공간 — [규칙](agents/Helpers.md#helpers-util-vs-internal)
+## 5. 헬퍼 · 이름공간 — [규칙](agents/Helpers.md#where-a-helper-goes)
 
 ```cpp
 // D3D11RHIDevice.cpp — Internal 이름은 클래스가 아니라 번역 단위를 따른다(유니티 빌드에서 겹치지 않게)

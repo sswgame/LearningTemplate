@@ -3,10 +3,19 @@
 		<RenderPassAttachment _name="GBufferAlbedo" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _loadOp="Clear" />
 		<!-- G버퍼 노멀 칸 — 옥타헤드럴 좌표 snorm16 둘(binding.hlsli Octahedral::encode). 클리어 (0, 0) 은 +z 로 풀린다. -->
 		<RenderPassAttachment _name="GBufferNormal" _format="R16G16_SNORM" _clearColor="0,0,0,0" _loadOp="Clear" />
-		<!-- G버퍼 머티리얼 칸 — r 금속도, g 거칠기, a "그려졌다" 표시(binding.hlsli SurfaceOutput::encodeGbufferMaterial). 디퍼드 조명이 PBR 식에 넘긴다. -->
+		<!-- G버퍼 머티리얼 칸 — r 금속도, g 거칠기, b 반사율(Specular), a 머티리얼 가림(binding_output.hlsli SurfaceOutput::encodeGbufferMaterial). 그려짐은 알베도 알파의 셰이딩 모델 번호(0 = 클리어)다. -->
 		<RenderPassAttachment _name="GBufferMaterial" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _loadOp="Clear" />
+		<!-- G버퍼 속도 칸 — 이번 UV - 지난 UV(R16G16 실수, 명세 판 2 의 넷째 MRT — binding_output.hlsli SurfaceOutput). 포워드 전용 불투명도 같은 첨부에 쓴다. TAA · 모션 블러가 읽는다.
+		     클리어 0 은 "움직임 없음" 이고 하늘(깊이 1)은 읽는 쪽이 카메라 재투영으로 대신한다. -->
+		<RenderPassAttachment _name="SceneVelocity" _format="R16G16_FLOAT" _clearColor="0,0,0,0" _loadOp="Clear" />
+		<!-- G버퍼 사용자 칸 — 셰이딩 모델 번호마다의 값(shading_model_ids.hlsli 표: 피부 감쌈 · 천 시엔 · 코트 · 눈 · 투과 · 비등방). RGBA8 한 장(픽셀당 4 바이트)을 더한 까닭:
+		     머티리얼 칸의 b · a 는 반사율 · 가림이 쓰고, 노멀 칸에 접어 넣으면 snorm16 두 칸을 8 비트로 쪼개는 부호 · 정밀도 문제가 생긴다 — 언리얼 GBufferD(CustomData)와 같은 선택. -->
+		<RenderPassAttachment _name="GBufferCustomData" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _loadOp="Clear" />
+		<!-- 장면 색 — G버퍼 패스가 처음 열어(배경색으로 지우고) 자체 발광을 적고, 디퍼드 조명(Shading)이 그 위에 더한다. -->
 		<RenderPassAttachment _name="LitColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
 		<RenderPassAttachment _name="AOColor" _format="R8G8B8A8_UNORM" _clearColor="1,1,1,1" _loadOp="Clear" />
+		<!-- 접촉 그림자 마스크 — 채널 넷이 접촉 그림자를 켠 빛 넷이다(1 빛 받음 · 0 가림). 켠 빛이 없으면 패스가 돌지 않아 만들지도 않는다. -->
+		<RenderPassAttachment _name="ContactShadowMask" _format="R8G8B8A8_UNORM" _clearColor="1,1,1,1" _loadOp="Clear" />
 		<!-- 블룸의 밝은 부분은 반해상도로 구한다(BloomDownsample) — PostBloom 이 업샘플해 더한다. -->
 		<RenderPassAttachment _name="BloomBright"
 		                      _format="R16G16B16A16_FLOAT"
@@ -52,7 +61,26 @@
 				<item>GBufferAlbedo</item>
 				<item>GBufferNormal</item>
 				<item>GBufferMaterial</item>
+				<item>SceneVelocity</item>
+				<item>GBufferCustomData</item>
+				<item>LitColor</item>
 				<item>SceneDepth</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<!-- 접촉 그림자(contact_shadow.hlsl) — 장면 깊이를 다 쓴 G버퍼 뒤, 조명 앞. 접촉 그림자를 켠 빛(LightShadowSettings::_contactShadowLength)이 없거나 후처리를 끈 뷰는 돌지 않는다. -->
+		<RenderGraphPassDesc _name="ContactShadow"
+		                     _type="ContactShadow"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false">
+			<_listInput>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>ContactShadowMask</item>
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
@@ -62,13 +90,16 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false">
+		                     _bEnableDepthWrite="false"
+		                     _blendPreset="Additive">
 			<_listInput>
 				<item>GBufferAlbedo</item>
 				<item>GBufferNormal</item>
 				<item>GBufferMaterial</item>
+				<item>GBufferCustomData</item>
 				<item>SceneDepth</item>
 				<item>ShadowMap</item>
+				<item>ContactShadowMask</item>
 			</_listInput>
 			<_listOutput>
 				<item>LitColor</item>
@@ -92,6 +123,7 @@
 			</_listInput>
 			<_listOutput>
 				<item>LitColor</item>
+				<item>SceneVelocity</item>
 				<item>SceneDepth</item>
 			</_listOutput>
 			<_listPermutation />
@@ -204,6 +236,63 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 화면 왜곡 — 반투명 앞(장면 색 사본 뒤)에서 누적하고 바로 적용한다. 언리얼은 반투명 뒤에 적용하지만 반투명은 깊이를 쓰지 않아 앞의 반투명이 끌려 들어오므로
+		     반투명 · TAA 앞에 둔다(왜곡 면 뒤의 불투명 · 하늘만 비껴 보인다). 씬에 왜곡 머티리얼(MATERIAL_DISTORTION)이 없으면 두 패스 모두 기록하지 않는다. -->
+		<RenderGraphPassDesc _name="Distortion"
+		                     _type="Distortion"
+		                     _depthAttachment="SceneDepth"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="true"
+		                     _bEnableDepthWrite="false"
+		                     _blendPreset="Additive">
+			<_listInput>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>SceneDistortion</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="DistortionApply"
+		                     _type="DistortionApply"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false">
+			<_listInput>
+				<item>SceneColorCopy</item>
+				<item>SceneDistortion</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>LitColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<!-- 화면 공간 반사(screen_space_reflection.hlsl) — 하늘까지 칠한 장면 색 사본 · 깊이 · G버퍼 노멀로 반사를 구해 장면 색(LitColor) 위에 프리멀티플라이 블렌드한다.
+		     반투명 앞이라 반투명은 반사 위에 그린다. 뷰의 후처리 값 _screenSpaceReflectionIntensity 가 0(기본)이면 그리지 않는다(장면 색 그대로). -->
+		<RenderGraphPassDesc _name="ScreenSpaceReflection"
+		                     _type="ScreenSpaceReflection"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _blendPreset="Premultiplied">
+			<_listInput>
+				<item>SceneColorCopy</item>
+				<item>SceneDepth</item>
+				<item>GBufferNormal</item>
+				<item>GBufferMaterial</item>
+			</_listInput>
+			<_listOutput>
+				<item>LitColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Transparent"
 		                     _type="Transparent"
 		                     _depthAttachment="SceneDepth"
@@ -260,6 +349,23 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 빛마다의 렌즈 플레어(LightComponent::_lensFlarePath · lens_flare.hlsl) — 플레어를 단 빛이 없으면 그리지 않는다. 톤맵 · 블룸 앞의 HDR 색에 더한다. 블룸 고스트와 별개다. -->
+		<RenderGraphPassDesc _name="LensFlare"
+		                     _type="LensFlare"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _blendPreset="Additive">
+			<_listInput>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>LitColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="BloomDownsample"
 		                     _type="BloomDownsample"
 		                     _vertexEntryPoint="VSMain"
@@ -275,7 +381,8 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 후처리 품질 medium 부터 돈다 — low 면 원본(LitColor)을 그대로 넘긴다(블룸 · AO 적용 없음). -->
+		<!-- 후처리 품질 medium 부터 돈다 — low 면 원본(LitColor)을 그대로 넘긴다(블룸 · AO 적용 없음).
+		     블룸 · 외곽선 · 톤맵을 후처리 체인(post_chain.hlsl, 포워드의 Present) 한 패스로 합치지 않는 까닭은 RenderPipelineXml.md "후처리 체인과 디퍼드" 절 — 그림이 같지 않다. -->
 		<RenderGraphPassDesc _name="PostBloom"
 		                     _type="Bloom"
 		                     _vertexEntryPoint="VSMain"
@@ -310,7 +417,8 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 시간 누적 — 기록을 깊이로 지난 프레임 자리에 재투영하고 이번 원본의 3x3 이웃 범위로 잘라 섞는다(taa.hlsl). 화면 밖에서 온 픽셀은 이번 원본이다. -->
+		<!-- 시간 누적 — 기록을 화면 속도(3x3 에서 가장 가까운 깊이의 것)로 지난 프레임 자리에서 읽고 이번 원본의 3x3 이웃 범위로 잘라 섞는다(taa.hlsl).
+		     하늘(깊이 1)은 깊이 · 지난 뷰-투영으로 카메라 재투영만 한다. 화면 밖에서 온 픽셀은 이번 원본이다. -->
 		<RenderGraphPassDesc _name="TAA"
 		                     _type="TAA"
 		                     _vertexEntryPoint="VSMain"
@@ -321,6 +429,7 @@
 			<_listInput>
 				<item>OutlineColor</item>
 				<item>SceneDepth</item>
+				<item>SceneVelocity</item>
 			</_listInput>
 			<_listOutput>
 				<item>TAAColor</item>
@@ -344,7 +453,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 카메라 모션 블러 — 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 DepthOfFieldColor 를 그대로 복사한다(같은 포맷). -->
+		<!-- 모션 블러 — 화면 속도(카메라 + 물체)로 흐린다. 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 DepthOfFieldColor 를 그대로 넘긴다(같은 포맷). -->
 		<RenderGraphPassDesc _name="MotionBlur"
 		                     _type="MotionBlur"
 		                     _vertexEntryPoint="VSMain"
@@ -356,6 +465,7 @@
 			<_listInput>
 				<item>DepthOfFieldColor</item>
 				<item>SceneDepth</item>
+				<item>SceneVelocity</item>
 			</_listInput>
 			<_listOutput>
 				<item>MotionBlurColor</item>
@@ -411,5 +521,6 @@
 	<_listRenderPassRef>
 		<item>engine/renderpass/defaultrenderpass.xml</item>
 		<item>engine/renderpass/scenecopyrenderpass.xml</item>
+		<item>engine/renderpass/framecomputerenderpass.xml</item>
 	</_listRenderPassRef>
 </RenderPipelineDesc>

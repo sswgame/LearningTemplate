@@ -1,6 +1,6 @@
 /**
  * @file CameraPose.h
- * @brief 카메라 한 장면의 값입니다. 위치, 회전, 렌즈, 카메라별 후처리 값(엔진의 `CameraPostProcessValues`)을 담습니다.
+ * @brief 카메라 한 장면의 값입니다. 위치, 회전, 렌즈, 카메라별 후처리 값(엔진의 `PostProcessValues`)을 담습니다.
  * @details 렌즈는 시야각, 직교 높이, 투영, 근평면과 원평면, 초점, 조리개, 시프트입니다.
  */
 #pragma once
@@ -9,7 +9,7 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Graphics/View/CameraDepthOfFieldValues.h"
-#include "Engine/Graphics/View/CameraPostProcessValues.h"
+#include "Engine/Graphics/View/PostProcessValues.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -33,7 +33,7 @@ namespace sw
     {
         quaternion               _rotation{};
         float3                   _position{};
-        CameraPostProcessValues  _postProcess{};
+        PostProcessValues        _postProcess{};
         CameraDepthOfFieldValues _depthOfField{};        ///< 초점 거리(m), 조리개 f 값(0 = 없음), 센서 높이(mm)
         float2                   _lensShift{};           ///< 투영 중심을 화면 크기 비율만큼 옮긴다(건축 사진의 시프트 렌즈). +x 오른쪽, +y 위
         float32                  _fieldOfViewY{ 0.70f }; ///< 수직 시야각(rad) — 원근일 때

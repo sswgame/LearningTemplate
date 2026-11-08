@@ -5,6 +5,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -73,6 +75,34 @@ namespace sw::editor
                 return true;
             }
 
+            [[nodiscard]] static bool readSoloEmitter( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const VFXPreviewPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getSoloEmitter() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readEnabledEmitterCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const VFXPreviewPanel* pPanel = findOpenPanel();
+                uint32                 count{ 0 };
+                if ( pPanel == nullptr || pPanel->findEnabledEmitterCount( count ) == false )
+                    return false;
+                outValue = static_cast<float64>( count );
+                return true;
+            }
+
+            [[nodiscard]] static bool readHasTarget( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const VFXPreviewPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = pPanel->hasPreviewTarget() ? 1.0 : 0.0;
+                return true;
+            }
+
             [[nodiscard]] static bool readPreviewSceneFrames( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const VFXPreviewPanel* pPanel = findOpenPanel();
@@ -97,6 +127,10 @@ namespace sw::editor
                          &VFXPreviewPanelInternal::readAutoReloadCount );
     SW_AUTOMATION_WATCH( editorVFXPreviewSceneFrames, "Editor.VFXPreviewSceneFrames", "Frames the VFX Preview panel asked the renderer to draw its preview scene",
                          &VFXPreviewPanelInternal::readPreviewSceneFrames );
+    SW_AUTOMATION_WATCH( editorVFXPreviewSoloEmitter, "Editor.VFXPreviewSoloEmitter", "Emitter the VFX Preview panel isolates (-1: none)", &VFXPreviewPanelInternal::readSoloEmitter );
+    SW_AUTOMATION_WATCH( editorVFXPreviewEnabledEmitterCount, "Editor.VFXPreviewEnabledEmitterCount", "Emitters of the VFX Preview effect that are enabled (isolation turns the others off)",
+                         &VFXPreviewPanelInternal::readEnabledEmitterCount );
+    SW_AUTOMATION_WATCH( editorVFXPreviewHasTarget, "Editor.VFXPreviewHasTarget", "1 when the VFX Preview scene has a character target the effect rides on", &VFXPreviewPanelInternal::readHasTarget );
 
     VFXPreviewPanel::VFXPreviewPanel()
         : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
@@ -151,13 +185,47 @@ namespace sw::editor
         const uint32 spawnedCount = pSubject != nullptr ? static_cast<uint32>( pSubject->getSpawnedParticleCount() ) : 0u; // 표시용 — 한 재생에 40 억을 넘지 않는다
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "SpawnedCPUAlive", TextArgumentList().addInteger( "spawnedCount", static_cast<int64>( spawnedCount ) ).addInteger( "subject", static_cast<int64>( pSubject != nullptr ? pSubject->getCPUAliveParticleCount() : 0u ) ) ).c_str() );
 
-        for ( const VFXPreviewEmitterRow& row : _model.getEmitterRows() )
+        // 방출기 줄마다 격리(Solo) 토글 — 켜면 그 방출기만 돈다(언리얼 Niagara 의 Isolate). 저장되는 효과는 바뀌지 않는다.
+        const vector<VFXPreviewEmitterRow>& listRow = _model.getEmitterRows();
+        for ( size_t rowIndex = 0; rowIndex < listRow.size(); ++rowIndex )
         {
-            ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "Max", TextArgumentList().addText( "name", row._name.c_str() ).addText( "blend", row._bAdditive ? "additive" : "alpha" ).addText( "looping", row._bLooping ? "yes" : "no" ).addInteger( "maxParticles", static_cast<int64>( row._maxParticles ) ).addText( "texturePath", row._texturePath.c_str() ) ).c_str() );
+            const VFXPreviewEmitterRow& row = listRow[rowIndex];
+            ImGui::PushID( static_cast<int32>( rowIndex ) );
+            const bool bSolo = _model.getSoloEmitter() == static_cast<int32>( rowIndex );
+            if ( EditorWidgets::drawToggleButton( SW_LOCKEY( "EdVFX", "Solo" ), bSolo ) )
+                _model.toggleSolo( static_cast<int32>( rowIndex ) ); // 보기 상태 — 되돌리기에 남기지 않는다
+            fixed_string<constant::buffer::kMax64> mark;
+            formatstring( mark.data(), mark.capacity(), "vfx.solo.%#", rowIndex );
+            EditorSelfTestMarks::record( mark.c_str() );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdVFX", "SoloTip" ) );
+            ImGui::SameLine();
+            const string text = SW_LOCKEYFORMAT( "EdFormat", "Max", TextArgumentList().addText( "name", row._name.c_str() ).addText( "blend", row._bAdditive ? "additive" : "alpha" ).addText( "looping", row._bLooping ? "yes" : "no" ).addInteger( "maxParticles", static_cast<int64>( row._maxParticles ) ).addText( "texturePath", row._texturePath.c_str() ) );
+            if ( _model.getSoloEmitter() != VFXPreviewModel::kNoSolo && bSolo == false )
+                ImGui::TextDisabled( "%s", text.c_str() ); // 격리로 꺼진 방출기는 흐리게
+            else
+                ImGui::TextUnformatted( text.c_str() );
+            ImGui::PopID();
         }
 
+        // 캐릭터 타깃: 애니메이션이 도는 몸에 효과를 붙여 원을 돌린다(트레일 · 잔상 · 손 효과 — 언리얼 Niagara 미리보기의 Preview Mesh). 멈춤 · 한 프레임은 뷰포트 위 재생 막대.
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdVFX", "TargetLabel" ), SW_LOCKEY( "EdVFX", "TargetTip" ) );
+        const utf8* const pSpawn = SW_LOCKEY( "EdText", "Spawn" );
+        (void)EditorWidgets::drawTextField( "##vfxPreview.target", _model.editTargetPrefabPath(), ImGui::GetContentRegionAvail().x - EditorChrome::measureSmallButton( pSpawn ) - ImGui::GetStyle().ItemSpacing.x );
+        string droppedTarget;
+        if ( EditorWidgets::acceptAssetDrop( droppedTarget, ".prefab.xml" ) )
+            _model.editTargetPrefabPath() = droppedTarget;
+        EditorSelfTestMarks::record( "vfx.targetField" );
+        ImGui::SameLine();
+        if ( ImGui::Button( pSpawn ) )
+            _model.spawnTargetFromField(); // 빈 칸이면 타깃을 치운다
+        EditorSelfTestMarks::record( "vfx.targetSpawn" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EdVFX", "TargetSpawnTip" ) );
+
         if ( isDocumentLoadFailed() == false ) // 읽지 못한 효과는 걸지 않는다
+        {
             _model.syncEffect( getPreviewScene(), getLoadedAssetPath() );
+            _model.syncPlayback( getPreviewScene(), ImGui::GetIO().DeltaTime );
+        }
         const float2 viewSize = computeViewportFillSize( VFXPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
         EditorSelfTestMarks::record( "vfx.previewScene" );
@@ -170,6 +238,20 @@ namespace sw::editor
         if ( pSubject == nullptr )
             return false;
         outCount = pSubject->getSpawnedParticleCount();
+        return true;
+    }
+
+    bool VFXPreviewPanel::findEnabledEmitterCount( uint32& outCount ) const
+    {
+        const VFXComponent* pSubject = VFXPreviewModel::findSubject( getPreviewScene() );
+        if ( pSubject == nullptr )
+            return false;
+        outCount = 0;
+        for ( uint32 emitterIndex = 0; emitterIndex < pSubject->getEmitterCount(); ++emitterIndex )
+        {
+            if ( pSubject->isEmitterEnabled( emitterIndex ) )
+                ++outCount;
+        }
         return true;
     }
 

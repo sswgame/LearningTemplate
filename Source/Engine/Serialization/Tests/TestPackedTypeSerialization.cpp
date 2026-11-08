@@ -381,7 +381,7 @@ SW_TEST_CASE( PackedValueSerializationTest, FloatArgumentConversionRejectsNonFin
 SW_TEST_CASE( PackedValueSerializationTest, BuiltinClassFollowsTheTable )
 {
     const auto classOf = []( const utf8* pName )
-    { return ReflectedValueUtil::getBuiltinClass( ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) ) ); };
+    { return ReflectedValueUtil::getBuiltinClass( hashed_string( pName ) ); };
     for ( const utf8* pName : { "int8", "uint64", "float32", "float64", "half", "unorm8", "unorm16", "snorm8", "snorm16" } )
     {
         SW_EXPECT_TRUE_MSG( classOf( pName ) == ReflectBuiltinClass::Number, pName );
@@ -404,7 +404,7 @@ SW_TEST_CASE( PackedValueSerializationTest, BuiltinClassFollowsTheTable )
 SW_TEST_CASE( PackedValueSerializationTest, ReadNumberFollowsTheBuiltinTable )
 {
     const auto indexOf = []( const utf8* pName )
-    { return ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) ); };
+    { return ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) ).value(); };
     float64 number{ 0.0 };
     int64   integer{ 0 };
 
@@ -457,7 +457,7 @@ SW_TEST_CASE( PackedValueSerializationTest, ReadNumberFollowsTheBuiltinTable )
 SW_TEST_CASE( PackedValueSerializationTest, WriteNumberRoundsAndRejectsWhatTheTypeCannotHold )
 {
     const auto indexOf = []( const utf8* pName )
-    { return ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) ); };
+    { return ReflectedValueUtil::findBuiltinIndex( hashed_string( pName ) ).value(); };
 
     // 정수는 가장 가까운 정수로, 범위 밖은 거절하고 값을 그대로 둔다.
     int16 smallValue = 0;

@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
 
@@ -45,13 +46,13 @@ namespace sw::editor
         // 프로필을 두 스켈레톤에 묶어 보는 점검입니다 — 런타임 리타기터와 같은 검사 하나(에디터 쪽 사본 규칙을 두지 않는다). */
         /**
          * @brief 프로필이 적은 두 스켈레톤을 디스크에서 읽어 점검합니다. 저장 직전처럼 지금 파일로 판정할 때 씁니다.
-         * @return 스켈레톤을 읽지 못하거나 묶이지 않으면 false 이고 까닭을 @p outError 에 영어 한 문장으로 담습니다.
+         * @return 스켈레톤을 읽지 못하거나 묶이지 않으면 까닭(`Error`)입니다.
          */
-        [[nodiscard]] static bool inspect( const RetargetProfile& profile, RetargetProfileInspection& outInspection, string& outError );
+        [[nodiscard]] static expected<void> inspect( const RetargetProfile& profile, RetargetProfileInspection& outInspection );
         /**
          * @brief 이미 읽어 둔 스켈레톤으로 점검합니다. 편집마다 디스크를 읽지 않게 창이 씁니다. 못 읽은 쪽은 nullptr 입니다.
-         * @return 위와 같습니다. 없는 본은 줄마다 `_listProblem` 에 담고 @p outError 에는 첫 줄을 담습니다.
+         * @return 위와 같습니다. 없는 본은 줄마다 `_listProblem` 에 담고 오류의 대상(`detail`)에는 첫 줄을 담습니다.
          */
-        [[nodiscard]] static bool inspect( const RetargetProfile& profile, const Skeleton* pSourceSkeleton, const Skeleton* pTargetSkeleton, RetargetProfileInspection& outInspection, string& outError );
+        [[nodiscard]] static expected<void> inspect( const RetargetProfile& profile, const Skeleton* pSourceSkeleton, const Skeleton* pTargetSkeleton, RetargetProfileInspection& outInspection );
     };
 } // namespace sw::editor

@@ -163,6 +163,26 @@ def sync_clone():
     print('클론:', shell(f'git -C {CLONE} log -1 --format=%h', capture_output=True, text=True).stdout.strip())
 
 
+def ensure_vcpkg_manifest(installedDir):
+    """
+    공유 설치본(Linux-Debug 의 vcpkg_installed)이 지금 매니페스트로 깔렸는지 본다. 매니페스트(vcpkg.json)가 바뀌었으면 Linux-Debug 를
+    -DSW_VCPKG_FORCE_INSTALL=ON 으로 한 번 다시 구성해 새 포트를 깐다(클론은 혼자 쓰므로 공유 설치본 보호 장치를 넘는다 — linux-verify 스킬 "클론 환경").
+    표시는 설치본 안의 매니페스트 해시 파일이다. 깔지 못하면 False(구성 로그 경로를 남긴다).
+    """
+    stamp = f'{installedDir}/.sw-manifest.sha256'
+    current = shell(f'sha256sum {CLONE}/vcpkg.json | cut -d" " -f1', capture_output=True, text=True).stdout.strip()
+    previous = shell(f'cat {stamp} 2>/dev/null', capture_output=True, text=True).stdout.strip()
+    if current == previous:
+        return True
+    debugDir = f'{CLONE}/build/Linux-Debug'
+    print(f'vcpkg 매니페스트가 바뀌었다 - {debugDir} 를 강제 설치로 다시 구성한다(오래 걸릴 수 있다)')
+    if shell(f'cmake -S {CLONE} -B {debugDir} -DSW_VCPKG_FORCE_INSTALL=ON > {debugDir}.vcpkg.log 2>&1').returncode != 0:
+        print(f'vcpkg 설치 실패 - {debugDir}.vcpkg.log')
+        return False
+    shell(f'echo {current} > {stamp}')
+    return True
+
+
 def build():
     sync_clone()
     cache = pathlib.Path(f'{CLONE}/build/Linux-Debug/CMakeCache.txt').read_text(errors='replace')
@@ -170,6 +190,8 @@ def build():
     def cached(key):
         return re.search(rf'^{key}:[^=]*=(.*)$', cache, re.M).group(1)
 
+    if ensure_vcpkg_manifest(cached('VCPKG_INSTALLED_DIR')) is False:
+        return 1
     configure = (f'cmake -S {CLONE} -B {RELEASE} -G Ninja -DCMAKE_BUILD_TYPE=Release -DSW_GAMES=ALL -DSW_BUILD_UNUSED_KITS=ON '
                  f'-DCMAKE_C_COMPILER="{cached("CMAKE_C_COMPILER")}" -DCMAKE_CXX_COMPILER="{cached("CMAKE_CXX_COMPILER")}" '
                  f'-DCMAKE_TOOLCHAIN_FILE="{cached("CMAKE_TOOLCHAIN_FILE")}" -DVCPKG_INSTALLED_DIR="{cached("VCPKG_INSTALLED_DIR")}"')

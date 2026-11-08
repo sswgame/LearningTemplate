@@ -390,14 +390,14 @@ namespace sw
         return true;
     }
 
-    expected<void> UIStyleSheetAsset::parse( string_view text, string_view path, UIStyleSheetAsset& outSheet )
+    expected<void> UIStyleSheetAsset::parse( string_view text, string_view path, const ResourceContext& composeContext, UIStyleSheetAsset& outSheet )
     {
         using Internal = UIStyleSheetInternal;
         UIStyleSheetAsset sheet{};
         sheet._path = FileUtil::normalizePath( path );
         XMLDocument document;
         // 부모(`_base`)는 데이터 읽기가 펼친다 — 규칙은 `Content/engine/settings/datacataloginheritance.xml` 한 줄이고 합치기 코드는 여기 없다.
-        if ( document.parseData( text, path ) == false )
+        if ( document.parseComposed( text, path, composeContext ) == false )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the UI style sheet is not well-formed XML", document.getLastError() } );
         Internal::ParseContext context{ text, path, {}, &sheet, text.find( DataInheritance::kBaseAttribute ) != string_view::npos };
         const XMLNode          root = document.getRoot();

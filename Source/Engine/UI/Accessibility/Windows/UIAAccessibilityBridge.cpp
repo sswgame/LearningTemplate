@@ -3,19 +3,17 @@
 #include "Engine/UI/Accessibility/Windows/UIAAccessibilityBridge.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Memory/Memory.h"
 
-#if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
-    #include "Core/Memory/Memory.h"
+#include "Engine/UI/Accessibility/UIAccessibilityActions.h"
+#include "Engine/UI/Accessibility/UIAccessibilityService.h"
+#include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
+#include "Engine/UI/UISystem.h"
+#include "Engine/Window/IWindow.h"
 
-    #include "Engine/UI/Accessibility/UIAccessibilityActions.h"
-    #include "Engine/UI/Accessibility/UIAccessibilityService.h"
-    #include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
-    #include "Engine/UI/UISystem.h"
-    #include "Engine/Window/IWindow.h"
-
-    #include <objbase.h> // WIN32_LEAN_AND_MEAN 이면 `interface` 매크로가 없다 — UIAutomation.h 가 쓴다
-    #include <oleauto.h>
-    #include <UIAutomation.h>
+#include <objbase.h> // WIN32_LEAN_AND_MEAN 이면 `interface` 매크로가 없다 — UIAutomation.h 가 쓴다
+#include <oleauto.h>
+#include <UIAutomation.h>
 
 namespace sw
 {
@@ -696,4 +694,3 @@ namespace sw
 
     SW_REGISTER_UI_ACCESSIBILITY_BRIDGE( "UIAutomation", &UIAAccessibility::createBridge ); // Windows 클라이언트의 브리지(`UIAccessibilityBridgeFactory` 가 등록표에서 고른다)
 } // namespace sw
-#endif

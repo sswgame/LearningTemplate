@@ -141,16 +141,19 @@ namespace sw
 
             /**
              * @brief 이 뷰에서 이번 프레임에 그 효과(`kSkipsWithoutPostProcess`)가 꺼졌으면 true 입니다. 꺼진 효과는 돌려도 원본(SSAO 는 가림 없음)과 같은 그림이다.
-             * @param bCameraStill 이번 뷰-투영이 지난번 것과 같거나 기록을 버리는 프레임이다. 모션 블러는 카메라 움직임만 흐리므로(motion_blur.hlsl — 물체 속도 버퍼가 없다) 속도가 모두 0 이다.
+             * @param bMotionStill 기록을 버리는 프레임(컷 — 언리얼도 컷에서 모션 블러를 끈다)이거나, 이번 뷰-투영이 지난번 것과 같고 물체도 움직이지 않았다 — 화면 속도가 모두 0 이다.
+             * @param bContactShadows 이번 프레임에 접촉 그림자를 받는 빛이 있다(`FrameShadowData::hasContactShadows`) — 없으면 접촉 그림자 패스는 꺼진 효과다.
              */
-            static bool isEffectOff( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, bool bCameraStill )
+            static bool isEffectOff( const RenderGraphPassDesc& pass, const RenderViewSettings& settings, bool bMotionStill, bool bContactShadows )
             {
                 if ( settings.usesPostProcess() == false || pass._minPostQuality > static_cast<int32>( gv_postQuality ) )
                     return true;
                 if ( pass._type == RenderPassType::DepthOfField )
                     return settings._depthOfField.hasDepthOfField() == false || settings._projectionScaleY <= 0.0f; // 핀홀(조리개 0) · 직교
                 if ( pass._type == RenderPassType::MotionBlur )
-                    return static_cast<bool>( gv_motionBlur ) == false || bCameraStill;
+                    return static_cast<bool>( gv_motionBlur ) == false || bMotionStill;
+                if ( pass._type == RenderPassType::ContactShadow )
+                    return bContactShadows == false; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다
                 return false;
             }
         };
@@ -172,17 +175,19 @@ namespace sw
         return static_cast<uint32>( MathUtil::clamp( static_cast<int32>( gv_shadowMapResolution ), 1, kMaxResolution ) );
     }
 
-    bool FrameViewResources::updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height )
+    bool FrameViewResources::updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height, const RenderGraphAliasPlan& aliasPlan, uint32 aliasGeneration )
     {
         TransientAttachmentPool& pool             = view._transientPool;
         const uint32             shadowResolution = getShadowMapResolution();
-        const bool               bPoolUnchanged   = width == pool.getWidth() && height == pool.getHeight() && pool.isEmpty() == false && view._shadowMapResolution == shadowResolution;
+        const bool               bPoolUnchanged   = width == pool.getWidth() && height == pool.getHeight() && pool.isEmpty() == false && view._shadowMapResolution == shadowResolution &&
+                                    view._transientAliasGeneration == aliasGeneration;
         if ( bPoolUnchanged )
             return false;
 
         releaseViewTransients( view );
         pool.setSize( width, height );
-        view._shadowMapResolution = shadowResolution;
+        view._shadowMapResolution      = shadowResolution;
+        view._transientAliasGeneration = aliasGeneration;
 
         // 그림자 맵은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
         // 일반 풀스크린 패스만 쓰는 첨부(후처리 효과 · 톤맵의 출력)는 여기서 만들지 않는다 — 그 패스가 이 뷰에서 처음 돌 때 만든다(`applyViewPassSelection`).
@@ -192,6 +197,11 @@ namespace sw
                 continue;
             const RHIFormat format = attachment._format;
             const bool      bDepth = FrameRendererUtil::isDepthFormat( format );
+            // 앨리어싱 계획의 별칭은 주인의 텍스처를 함께 쓴다(레벨 수명이 겹치지 않고 서술이 같다). 주인을 아직 만들지 않았으면(처음 쓸 때 만드는 첨부) 자기 텍스처로 만든다.
+            const hashed_string attachmentName( attachment._name.c_str() );
+            const hashed_string aliasOwner = aliasPlan.findOwner( attachmentName );
+            if ( aliasOwner.empty() == false && pool.allocateAlias( attachmentName, aliasOwner, attachment.getOps() ) )
+                continue;
             if ( resolveRenderPassInputRole( attachment._name, bDepth, attachment._role ) == RenderPassInputRole::ShadowMap )
                 (void)pool.allocateSized( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), shadowResolution, shadowResolution );
             else
@@ -226,6 +236,7 @@ namespace sw
         historyDesc._bIsShaderResource  = SW_TRUE;
         historyDesc._bIsUnorderedAccess = SW_TRUE;
         view._depthHistory              = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
+        _pDevice->getResourceFactory()->setTextureDebugName( view._depthHistory, "DepthHistory" );
         if ( view._depthHistory != 0 )
             view._depthHistoryUAV = _pDevice->getResourceFactory()->registerBindlessTextureUAV( view._depthHistory );
         if ( view._depthHistoryUAV == kInvalidDescriptorIndex )
@@ -274,6 +285,7 @@ namespace sw
         historyDesc._bIsShaderResource = SW_TRUE;
 
         view._taaHistory = _pDevice->getResourceFactory()->createTexture2D( historyDesc );
+        _pDevice->getResourceFactory()->setTextureDebugName( view._taaHistory, "TAAHistory" );
         if ( view._taaHistory != 0 )
             view._taaHistorySRV = _pDevice->getResourceFactory()->registerBindlessTexture( view._taaHistory );
     }
@@ -341,11 +353,12 @@ namespace sw
         view._transientPool.release( _pDevice );
     }
 
-    FrameViewResources::PassSelectionResult FrameViewResources::applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj )
+    FrameViewResources::PassSelectionResult FrameViewResources::applyViewPassSelection( FrameViewTarget& view, const float4x4& viewProj, bool bObjectMotion, bool bContactShadows )
     {
         using Internal = FrameViewResourcesInternal;
-        // 카메라 모션 블러의 속도는 지난 뷰-투영과의 차이뿐이다. 같거나 기록을 버리는 프레임(지난 것 = 이번 것)이면 모든 픽셀이 원본이다(motion_blur.hlsl).
-        const bool                          bCameraStill   = view._bHistoryReset == SW_TRUE || Memory::compare( &view._prevViewProj, &viewProj, sizeof( float4x4 ) ) == 0;
+        // 모션 블러의 속도는 카메라(지난 뷰-투영과의 차이)와 물체(화면 속도)다. 컷이거나 둘 다 서 있으면 모든 픽셀이 원본이다(motion_blur.hlsl).
+        const bool                          bCameraStill   = Memory::compare( &view._prevViewProj, &viewProj, sizeof( float4x4 ) ) == 0;
+        const bool                          bMotionStill   = view._bHistoryReset == SW_TRUE || ( bCameraStill && bObjectMotion == false );
         const vector<RenderGraphPassDesc>&  listPass       = _pipeline.getGraphPass();
         const vector<RenderPassAttachment>& listAttachment = _pipeline.getDesc()._listAttachment;
         TransientAttachmentPool&            pool           = view._transientPool;
@@ -393,7 +406,7 @@ namespace sw
                 continue;
             }
             const RenderPassTypeInfo& info          = getRenderPassTypeInfo( pass._type );
-            const bool                bOff          = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && Internal::isEffectOff( pass, view._settings, bCameraStill );
+            const bool                bOff          = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && Internal::isEffectOff( pass, view._settings, bMotionStill, bContactShadows );
             const bool                bOutputNeeded = VectorUtil::containsIf( pass._listResolvedColorOutput, [&]( const RenderGraphPassDesc::ResolvedAttachment& output )
                            { return Internal::isNeeded( listAttachment, output._attachment, listNeeded ); } );
             const hashed_string*      pSource       = Internal::findSource( pass );

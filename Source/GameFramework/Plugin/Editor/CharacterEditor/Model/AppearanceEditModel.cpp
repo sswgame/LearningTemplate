@@ -2,6 +2,8 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/AppearanceEditModel.h"
 
+#include "Core/String/StringBuilder.h"
+
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
@@ -19,7 +21,7 @@ namespace sw::editor
                 const bool bSameName = lhs._slot == rhs._slot && lhs._itemID == rhs._itemID && lhs._visibleVisual == rhs._visibleVisual && lhs._state == rhs._state;
                 if ( bSameName == false )
                     return false;
-                const bool bSameState = lhs._damage == rhs._damage && lhs._bSuppressed == rhs._bSuppressed;
+                const bool bSameState = lhs._damage == rhs._damage && lhs._bSuppressed == rhs._bSuppressed && lhs._bHiddenByPlayer == rhs._bHiddenByPlayer;
                 if ( bSameState == false || lhs._customization.isEquivalent( rhs._customization ) == false )
                     return false;
                 return isSameNameList( lhs._listDetachedPart, rhs._listDetachedPart );
@@ -42,7 +44,7 @@ namespace sw::editor
                 const bool bSameHeader = lhs._basePresetID == rhs._basePresetID && lhs._schema == rhs._schema && lhs._bodyType == rhs._bodyType &&
                                          lhs._bodyShape == rhs._bodyShape && lhs._face == rhs._face && lhs._seed == rhs._seed;
                 const bool bSameBody  = bSameHeader && lhs._customization.isEquivalent( rhs._customization );
-                const bool bSameLists = isSameNameList( lhs._listCategory, rhs._listCategory ) && lhs._listSlot.size() == rhs._listSlot.size();
+                const bool bSameLists = isSameNameList( lhs._listCategory, rhs._listCategory ) && lhs._listSlot.size() == rhs._listSlot.size() && lhs._listSkinLayer == rhs._listSkinLayer;
                 if ( bSameBody == false || bSameLists == false )
                     return false;
                 for ( size_t index = 0; index < lhs._listSlot.size(); ++index )
@@ -119,6 +121,58 @@ namespace sw::editor
             }
         }
         return false;
+    }
+
+    bool AppearanceEditModel::setSlotHidden( const hashed_string& slot, bool bHidden )
+    {
+        AppearanceSlotRequest* pExisting = AppearanceEditModelInternal::findSlot( _selection, slot );
+        const uint8            flag      = bHidden ? SW_TRUE : SW_FALSE;
+        if ( pExisting == nullptr || pExisting->_bHiddenByPlayer == flag )
+            return false;
+        recordUndo( {} );
+        pExisting->_bHiddenByPlayer = flag;
+        return true;
+    }
+
+    bool AppearanceEditModel::addSkinLayer( const hashed_string& layer, const float4& color, float32 opacity )
+    {
+        if ( layer.empty() )
+            return false;
+        recordUndo( {} );
+        SkinLayerValue value;
+        value._layer   = layer;
+        value._color   = color;
+        value._opacity = opacity;
+        _selection._listSkinLayer.push_back( value );
+        return true;
+    }
+
+    bool AppearanceEditModel::removeSkinLayer( uint32 index )
+    {
+        if ( index >= _selection._listSkinLayer.size() )
+            return false;
+        recordUndo( {} );
+        _selection._listSkinLayer.erase( _selection._listSkinLayer.begin() + static_cast<ptrdiff_t>( index ) );
+        return true;
+    }
+
+    bool AppearanceEditModel::moveSkinLayer( uint32 index, int32 delta )
+    {
+        const int64 target = static_cast<int64>( index ) + delta;
+        if ( index >= _selection._listSkinLayer.size() || target < 0 || target >= static_cast<int64>( _selection._listSkinLayer.size() ) || delta == 0 )
+            return false;
+        recordUndo( {} );
+        std::swap( _selection._listSkinLayer[index], _selection._listSkinLayer[static_cast<size_t>( target )] );
+        return true;
+    }
+
+    bool AppearanceEditModel::setSkinLayer( uint32 index, const SkinLayerValue& value, bool bContinuous )
+    {
+        if ( index >= _selection._listSkinLayer.size() || _selection._listSkinLayer[index] == value )
+            return false;
+        recordUndo( bContinuous ? makeKey( "skinlayer", hashed_string{} ) + to_string( index ) : string{} );
+        _selection._listSkinLayer[index] = value;
+        return true;
     }
 
     bool AppearanceEditModel::setNumber( const hashed_string& parameter, float32 value, bool bContinuous )

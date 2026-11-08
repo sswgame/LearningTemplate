@@ -84,7 +84,8 @@ if(MSVC)
 		/GR- # RTTI 비활성화로 바이너리 크기 및 vtable 오버헤드 축소
 		/Gw # 전체 프로그램 데이터/가상함수 최적화 지원
 		/Zc:inline # 미사용 인라인 함수 제거로 컴파일 및 링크 가속
-		# 템플릿 지연 파싱(-fdelayed-template-parsing)은 켜지 않는다 — 정의 시점에 보이지 않는 이름을 부르는 템플릿이 Windows 에서는 지나가고 Linux clang 에서야 섰다(ReflectValue.h 의 typeFqn).
+		# 템플릿 지연 파싱을 끈다 — clang-cl 은 MSVC 호환으로 기본이 켜짐이라, 정의 시점에 보이지 않는 이름 · 불완전 형식을 부르는 템플릿이 Windows 에서는 지나가고 Linux clang 에서야 섰다(ReflectValue.h 의 typeFqn, 2026-11-09 ComponentStateStore · OnlineServerKit).
+		-clang:-fno-delayed-template-parsing
 		-clang:-fmerge-all-constants # 중복된 상수 문자열 및 데이터 병합
 		-clang:-fno-spell-checking # 오타 교정 기능 비활성화로 컴파일 속도 향상
 		-Wno-language-extension-token # Windows SDK 및 MSVC 전용 키워드(__declspec, __FUNCSIG__ 등) 허용

@@ -106,6 +106,19 @@ namespace sw
         virtual void setComputePipelineState( RHIPipelineStateHandle pso )                                           = 0;
         virtual void dispatchCompute( uint32 threadGroupCountX, uint32 threadGroupCountY, uint32 threadGroupCountZ ) = 0;
         /**
+         * @brief 일의 크기(스레드 수)로 디스패치합니다 — 그룹 수는 축마다 올림( 스레드 / 그룹 크기 )이고, 일이 없는 축(0)이 있으면 디스패치하지 않습니다.
+         * @details 디스패치마다 손으로 적던 `( n + g - 1 ) / g` 와 "0 그룹이면 건너뛰기" 를 한 곳에 둔다(언리얼 `FComputeShaderUtils::GetGroupCount` 자리).
+         *          그룹 크기는 셰이더의 `[numthreads]` 와 같아야 하고 0 이 아니어야 한다(0 이면 assert 뒤 건너뛴다).
+         */
+        void dispatchThreads( uint32 threadCountX, uint32 threadCountY, uint32 threadCountZ, uint32 groupSizeX, uint32 groupSizeY, uint32 groupSizeZ )
+        {
+            const bool bInvalidGroupSize = groupSizeX == 0 || groupSizeY == 0 || groupSizeZ == 0;
+            SW_ASSERT( bInvalidGroupSize == false );
+            if ( bInvalidGroupSize || threadCountX == 0 || threadCountY == 0 || threadCountZ == 0 )
+                return;
+            dispatchCompute( ( threadCountX + groupSizeX - 1u ) / groupSizeX, ( threadCountY + groupSizeY - 1u ) / groupSizeY, ( threadCountZ + groupSizeZ - 1u ) / groupSizeZ );
+        }
+        /**
          * @brief 컴퓨트 루트 상수(푸시 상수)를 씁니다.
          * @details 백엔드마다 실제 용량(dword)이 다르다. DX11 은 64, OpenGL 은 64, DX12 와 Vulkan 은 16이다(루트 상수와 푸시 상수,
          *          binding_slots.hlsli 의 SW_ROOT_DWORD_COUNT). 네 백엔드 모두에서 안전한
@@ -122,7 +135,14 @@ namespace sw
          */
         virtual void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
         virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot )                                                                             = 0;
-        virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot )                                                                         = 0;
+        /**
+         * @brief 그래픽스(픽셀) 단계에 쓰기 버퍼 u# 를 겁니다(UAV 레지스트리의 인덱스). 렌더 패스를 연 **뒤** 드로우 앞에서 부릅니다 — 셰이더 메시지 채널(`GPUMessageChannel::bindGraphics`)이 쓴다.
+         * @details DX12 는 슬롯 테이블의 u 범위(모든 단계에 보인다), Vulkan 은 슬롯 세트의 u 바인딩, GL 은 SSBO `kUAVBinding0 + slot`, DX11 은 `OMSetRenderTargetsAndUnorderedAccessViews` 의
+         *          렌더 타깃 유지 형식이다. DX11 픽셀 셰이더의 u 번호는 렌더 타깃 칸과 같은 자리라 @p slot 이 지금 건 렌더 타깃 수보다 작으면 걸지 않는다(오류를 한 번 남긴다 — 셰이더의 쓰기는 버려진다).
+         *          `RHICapabilities::_bGraphicsShaderWrites` 가 거짓인 백엔드는 아무것도 하지 않는다.
+         */
+        virtual void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )    = 0;
+        virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) = 0;
 
         // ------------------------------------------------------------------------------
         // 4-1) 리플렉션 기반 바인딩: 셰이더가 선언한 레지스터로 CB/SRV 버퍼를 바인딩한다.
@@ -242,6 +262,12 @@ namespace sw
          */
         virtual void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) = 0;
         /**
+         * @brief 여러 버퍼의 전이를 한 번에 냅니다(`transitionBuffer` 와 같은 상태 표). 이미 그 상태인 버퍼 · 핸들 0 은 건너뛴다.
+         * @details DX12 는 `ResourceBarrier` 한 번, Vulkan 은 `vkCmdPipelineBarrier` 한 번으로 낸다(단계는 모든 전이의 합). DX11 · GL · WebGPU 는 버퍼마다 같은 일을 한다 —
+         *          DX11 은 할 일이 없고 GL 은 전역 배리어라 묶어도 같다. 같은 버퍼가 둘 들면 안 된다(모으는 `RHIBufferTransitionBatch` 가 하나로 합친다).
+         */
+        virtual void transitionBuffers( const RHIBufferTransition* pTransition, uint32 count ) = 0;
+        /**
          * @brief 버퍼 앞쪽 @p sizeBytes 를 읽기 버퍼(`IRHIResourceFactory::createReadbackBuffer`)로 복사합니다. GPU 가 끝낸 뒤 CPU 가 읽는 비동기 되읽기의 기록 쪽입니다.
          * @param source    복사할 버퍼. 부르기 전에 `transitionBuffer( source, RHIBufferState::CopySource )` 로 옮겨 둔다(DX12 · Vulkan 은 상태가 맞아야 한다).
          * @param readback  `createReadbackBuffer` 가 만든 버퍼. 원본보다 작지 않아야 한다.
@@ -274,9 +300,9 @@ namespace sw
         virtual void beginEventMarker( const utf8* pName ) = 0;
         virtual void endEventMarker()                      = 0;
         /**
-         * @brief GPU 브레드크럼 — 이 지점에 GPU 가 닿으면 @p markerID 를 디바이스 소실 뒤에도 읽을 수 있는 자리에 남깁니다(`GPUBreadcrumbs::mark` 가 패스 이름 표의 id 로 부른다).
-         * @details 백엔드마다 방법이 다르다: DX12 는 `WriteBufferImmediate`(MARKER_IN), Vulkan 은 `vkCmdSetCheckpointNV`(`VK_NV_device_diagnostic_checkpoints`). DX11 · OpenGL 은 GPU 쪽 표지 수단이 없어
-         *          아무것도 하지 않는다(`RHICapabilities::_bGPUBreadcrumbs` 가 거짓). 소실 뒤 읽는 쪽은 `IRHIDevice::readLastBreadcrumbs` 다. 0 은 표지가 아니다.
+         * @brief GPU 브레드크럼 — 이 지점에 GPU 가 닿으면 @p markerID 를 디바이스 소실 뒤에도 읽을 수 있는 자리에 남깁니다(`GPUBreadcrumbs::beginPass` · `endPass` 가 패스 이름 표의 id 로 부른다).
+         * @details 백엔드마다 방법이 다르다: DX12 는 `WriteBufferImmediate`(MARKER_IN), Vulkan 은 `vkCmdSetCheckpointNV`(`VK_NV_device_diagnostic_checkpoints`), 없으면 `vkCmdWriteBufferMarkerAMD`(`VK_AMD_buffer_marker`). DX11 · OpenGL 은 GPU 쪽 표지 수단이 없어
+         *          아무것도 하지 않는다(`RHICapabilities::_bGPUBreadcrumbs` 가 거짓). 소실 뒤 읽는 쪽은 `IRHIDevice::readLastBreadcrumbs` 다. 0 은 표지가 아니다. 최상위 비트가 선 값은 패스의 끝 표지다(`GPUBreadcrumbs::kEndMarkerBit` — DX12 는 끝 칸에 MARKER_OUT 으로 쓴다).
          */
         virtual void writeBreadcrumb( uint32 markerID ) = 0;
     };

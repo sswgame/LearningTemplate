@@ -533,10 +533,10 @@ namespace sw
             {
                 for ( const ScheduleBlockDef& block : routine._listBlock )
                 {
-                    const int32 appointmentIndex = _appointmentCatalog.findIndex( block._appointment );
-                    if ( block._appointment.empty() || appointmentIndex < 0 )
+                    const optional<int32> appointmentIndex = _appointmentCatalog.findIndex( block._appointment );
+                    if ( block._appointment.empty() || appointmentIndex.has_value() == false )
                         continue;
-                    vector<hashed_string>& listAttendee = listAttendeePerAppointment[static_cast<size_t>( appointmentIndex )];
+                    vector<hashed_string>& listAttendee = listAttendeePerAppointment[static_cast<size_t>( *appointmentIndex )];
                     if ( VectorUtil::contains( listAttendee, npc._id ) == false )
                         listAttendee.push_back( npc._id );
                 }

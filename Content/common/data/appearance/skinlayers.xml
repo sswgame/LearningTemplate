@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 피부 층 종류(SkinLayerCatalog) — 화장 · 문신 · 흉터 · 바디 페인트. 플레이어가 고른 층 목록(순서 · 색 · 불투명도 · 배치)은 외형 선택 · 공유 코드(판 2)에 실린다.
+     mask 는 R 채널 덮임 텍스처(배치 없는 층은 피부 UV, placeable 층은 층 UV). palette 는 customization.xml 의 <Palette> — 염색과 같은 견본이다.
+     roughness/metallic + Weight 는 머티리얼 덮어쓰기(립스틱 광 · 펄), smearResistance 는 번짐 저항(1 = 방수 · 문신). regionMin/Max 는 피부 UV 경계(이음새를 넘지 않게).
+     마스크는 아직 전용 그림이 없어 엔진 시험 마스크를 쓴다 — 굽기 패스가 붙으면 CC0 마스크로 바꾼다. -->
+<SkinLayerCatalog>
+  <SkinLayer id="mascara" category="Makeup" mask="engine/textures/test/mask_r8.dds" blend="Multiply" palette="MakeupDark" defaultColor="0.08 0.06 0.06 1" smearResistance="0.1" regionMin="0.3 0.3" regionMax="0.7 0.45"/>
+  <SkinLayer id="mascara_waterproof" category="Makeup" mask="engine/textures/test/mask_r8.dds" blend="Multiply" palette="MakeupDark" defaultColor="0.08 0.06 0.06 1" smearResistance="0.95" regionMin="0.3 0.3" regionMax="0.7 0.45"/>
+  <SkinLayer id="blush" category="Makeup" mask="engine/textures/test/mask_r8.dds" blend="Overlay" palette="MakeupWarm" defaultColor="0.9 0.45 0.45 1" defaultOpacity="0.5" smearResistance="0.4"/>
+  <SkinLayer id="lipstick" category="Makeup" mask="engine/textures/test/mask_r8.dds" palette="MakeupWarm" defaultColor="0.75 0.1 0.15 1" roughness="0.15" roughnessWeight="1" smearResistance="0.2" regionMin="0.4 0.65" regionMax="0.6 0.8"/>
+  <SkinLayer id="freckles" category="Makeup" mask="engine/textures/test/mask_r8.dds" blend="Multiply" defaultColor="0.6 0.4 0.3 1" defaultOpacity="0.6" smearResistance="1"/>
+  <SkinLayer id="scar_cheek" category="Scar" mask="engine/textures/test/mask_r8.dds" placeable="true" defaultColor="0.85 0.6 0.55 1" roughness="0.3" roughnessWeight="0.5" smearResistance="1"/>
+  <SkinLayer id="tattoo_rose" category="Tattoo" mask="engine/textures/test/mask_r8.dds" placeable="true" blend="Multiply" palette="InkTattoo" defaultColor="0.1 0.1 0.15 1" smearResistance="1" regionMin="0.5 0" regionMax="1 0.5"/>
+  <SkinLayer id="paint_war" category="Paint" mask="engine/textures/test/mask_r8.dds" placeable="true" palette="InkTattoo" defaultColor="0.1 0.2 0.6 1" metallic="0.2" metallicWeight="0.3" smearResistance="0.3"/>
+</SkinLayerCatalog>

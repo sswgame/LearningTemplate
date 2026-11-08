@@ -76,7 +76,17 @@ namespace sw
 
     uint32 GPUMeshMorphPool::skinResultStartOf( uint32 skinSlot ) const
     {
-        return ( skinSlot < _listSkinResultOffset.size() && isSkinDispatchable() ) ? _listSkinResultOffset[skinSlot]._resultStart : kInvalidBase;
+        const bool bResult = skinSlot < _listSkinResultOffset.size() && isSkinDispatchable() && _listSkinResultOffset[skinSlot]._resultStart != kInvalidBase;
+        return bResult ? _listSkinResultOffset[skinSlot]._resultStart + getSkinCurrentShift() : kInvalidBase;
+    }
+
+    void GPUMeshMorphPool::advanceSkinHistory()
+    {
+        // 바꾸기 전 이번 벌이 다음 프레임의 지난 벌이다 — 배치가 그대로이고 그 벌에 디스패치했을 때만 지난 위치로 믿는다.
+        _bSkinHistoryValid           = ( _bSkinLayoutChanged == SW_FALSE && _bSkinDispatchedSinceAdvance != SW_FALSE ) ? SW_TRUE : SW_FALSE;
+        _skinParity                  = 1u - _skinParity;
+        _bSkinLayoutChanged          = SW_FALSE;
+        _bSkinDispatchedSinceAdvance = SW_FALSE;
     }
 
     bool GPUMeshMorphPool::isSkinDispatchable() const
@@ -416,8 +426,9 @@ namespace sw
             return;
 
         _listBuiltSkin.assign( listSkinMesh.begin(), listSkinMesh.end() );
-        _listBuiltSkinSlot = listSkinSlot;
-        _listBuiltSkinLOD  = listSkinLOD;
+        _listBuiltSkinSlot  = listSkinSlot;
+        _listBuiltSkinLOD   = listSkinLOD;
+        _bSkinLayoutChanged = SW_TRUE; // 결과 자리가 바뀐다 — 지난 벌은 이 배치의 지난 프레임이 아니다
         _listBuiltSkinContentID.clear();
         for ( const Mesh* pMesh : listSkinMesh )
         {
@@ -519,8 +530,8 @@ namespace sw
 
     void GPUMeshMorphPool::ensureDeformBuffers( IRHIDevice* pDevice )
     {
-        // 결과는 컴퓨트가 채우므로 초기값이 필요 없다 — 구간이 바뀌어도 올릴 것이 없다(용량만 맞춘다).
-        const bool bMorphBuffer = _morph.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), _vertexCount * shaderslot::kMorphResultWordsPerVertex,
+        // 결과는 컴퓨트가 채우므로 초기값이 필요 없다 — 구간이 바뀌어도 올릴 것이 없다(용량만 맞춘다). 스킨 구간은 두 벌이다(지난 프레임 결과 — 머리말).
+        const bool bMorphBuffer = _morph.ensureCapacity( pDevice, static_cast<uint32>( sizeof( uint32 ) ), getResultVertexCapacity() * shaderslot::kMorphResultWordsPerVertex,
                                                          GPUMeshMorphPoolInternal::kWriteUsage, true, true, nullptr );
         GPUMeshMorphPoolInternal::uploadAll( pDevice, _skinInstance, _listSkinRow.data(), static_cast<uint32>( _listSkinRow.size() ) * shaderslot::kSkinUint4PerInstance );
         // 칸 표 — 원소가 uint2 라 셰이더 선언(StructuredBuffer<uint2>)과 같은 stride 로 만든다. 못 만들면 표가 걸리지 않아 스킨 메시는 그리지 않는다(셰이더가 NaN 위치로 버린다).
@@ -894,5 +905,7 @@ namespace sw
         _skinBoneCount         = 0;
         _skinSourceVertexCount = 0;
         _skinFrameValueCount   = 0;
+        _bSkinLayoutChanged    = SW_TRUE;
+        _bSkinHistoryValid     = SW_FALSE;
     }
 } // namespace sw

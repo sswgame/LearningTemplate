@@ -74,22 +74,22 @@ namespace sw
         _startPhaseIndex = nullopt;
     }
 
-    optional<uint32> AIDirectorProfile::findPhaseIndex( const hashed_string& phaseID ) const
+    optional<int32> AIDirectorProfile::findPhaseIndex( const hashed_string& phaseID ) const
     {
         for ( size_t index = 0; index < _listPhase.size(); ++index )
         {
             if ( _listPhase[index]._id == phaseID )
-                return static_cast<uint32>( index );
+                return static_cast<int32>( index );
         }
         return nullopt;
     }
 
-    optional<uint32> AIDirectorProfile::findSignalIndex( const hashed_string& signalID ) const
+    optional<int32> AIDirectorProfile::findSignalIndex( const hashed_string& signalID ) const
     {
         for ( size_t index = 0; index < _intensity._listSignal.size(); ++index )
         {
             if ( _intensity._listSignal[index]._id == signalID )
-                return static_cast<uint32>( index );
+                return static_cast<int32>( index );
         }
         return nullopt;
     }
@@ -263,7 +263,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AI.DirectorNoPhase", "%#: no <Phase>", sourceName );
             return false;
         }
-        _startPhaseIndex = _startPhase.empty() ? optional<uint32>{ 0u } : findPhaseIndex( _startPhase );
+        _startPhaseIndex = _startPhase.empty() ? optional<int32>{ 0 } : findPhaseIndex( _startPhase );
         if ( _startPhaseIndex.has_value() == false )
         {
             SW_LOG_ERROR_ID( "AI.DirectorStartPhaseUnknown", "%#: start phase '%#' is not a <Phase>", sourceName, _startPhase.c_str() );

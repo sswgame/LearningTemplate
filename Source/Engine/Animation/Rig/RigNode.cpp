@@ -282,7 +282,7 @@ namespace sw
 
     bool RigBindContext::findBone( const hashed_string& name, uint32& outBone ) const
     {
-        const optional<uint32> boneIndex = ( _pSkeleton != nullptr ) ? _pSkeleton->findBoneIndex( name ) : nullopt;
+        const optional<uint32> boneIndex = ( _pSkeleton != nullptr ) ? _pSkeleton->findBoneIndex( name ) : optional<uint32>{};
         if ( boneIndex.has_value() == false )
         {
             SW_LOG_ERROR_ID( "Rig.RigUnknownBone", "Rig '%#': unknown bone '%#'", _label, name.c_str() );
@@ -294,7 +294,7 @@ namespace sw
 
     bool RigBindContext::findTarget( const hashed_string& name, uint32& outTarget ) const
     {
-        const optional<uint32> targetIndex = ( _pInstance != nullptr ) ? _pInstance->findTargetIndex( name ) : nullopt;
+        const optional<uint32> targetIndex = ( _pInstance != nullptr ) ? _pInstance->findTargetIndex( name ) : optional<uint32>{};
         if ( targetIndex.has_value() == false )
         {
             SW_LOG_ERROR_ID( "Rig.RigUnknownTarget", "Rig '%#': unknown target '%#'", _label, name.c_str() );

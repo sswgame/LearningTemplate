@@ -52,6 +52,13 @@
       "swizzle": "BGRA"
     },
     {
+      "name": "Color_Grading_Luts",
+      "inherits": "Base_Uncompressed",
+      "filter": { "includePatterns": ["*/textures_raw/postprocess/lut_*"] },
+      "generateMips": false,
+      "sRGB": false
+    },
+    {
       "name": "Normal_Maps",
       "inherits": "Base_NormalMap",
       "filter": { "includePatterns": ["*_n.*", "*_normal.*", "*_norm.*", "*_nor_gl_*"], "excludePaths": ["ui/", "gui/", "icons/"] }

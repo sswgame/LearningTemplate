@@ -35,3 +35,32 @@ target_link_libraries(DevTools
 target_compile_definitions(DevTools PRIVATE "SW_LOG_TAG=\"DevTools\"" "SW_REGISTRAR_MODULE=\"DevTools\"" SW_TOOL_INTERNAL) # 호스트 쪽 도구라 엔진 서비스 표를 직접 찾는다
 sw_configureDLLExports(DevTools SHARED DEVTOOLS)
 sw_configurePCH(DevTools "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
+
+# Tracy — 엔진 프로파일러의 외부 출력(`Profiling/Tracy/TracyProfilerBackend`, 엔진은 `IProfilerBackend` 만 안다). 헤더는 Profiling/Tracy 에서만 include 한다.
+# 클라이언트는 프로세스에 하나 — DevTools 만 링크하고, 엔진 · RHI 백엔드 · 모듈은 엔진 인터페이스만 본다. GPU 구간은 엔진이 이미 모으는 타임스탬프를 넘긴다.
+# 임포트 타깃의 정의(TRACY_ENABLE · TRACY_IMPORTS …) · include 경로는 Tracy 구현 소스에만 붙인다(엔진의 Jolt 와 같은 방식). 배포 호스트는 DevTools 를 짓지 않는다.
+# Windows 는 링크하지 않는다 — `-gv_tracy` 로 켤 때 TracyClient.dll 을 올려 C API 함수 표를 채운다(`TracyProfilerBackend::loadClient`). 리눅스는 링크한다.
+if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
+	if(sw_platform_name STREQUAL "Windows")
+		# 링크하지 않는다(위 — 지연 로드).
+	elseif(sw_platform_name STREQUAL "Linux")
+		target_link_libraries(DevTools PRIVATE $<LINK_ONLY:tracy>)
+	else()
+		message(FATAL_ERROR "[DevTools] Tracy link mode for platform '${sw_platform_name}' is not decided - name it here (SW_ENABLE_TRACY=OFF meanwhile)")
+	endif()
+	target_compile_definitions(DevTools PRIVATE SW_PROFILER_TRACY)
+	file(GLOB swTracyBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Tracy/*.cpp")
+	# include 경로는 시스템 경로로 준다 — Tracy C API 의 `___tracy_*` 이름이 -Wreserved-identifier 경고를 낸다.
+	get_target_property(swTracyIncludeDir Tracy::TracyClient INTERFACE_INCLUDE_DIRECTORIES)
+	if(MSVC)
+		set(swTracyIncludeOption "/external:I${swTracyIncludeDir}")
+	else()
+		set(swTracyIncludeOption "-isystem${swTracyIncludeDir}")
+	endif()
+	set_source_files_properties(${swTracyBackendSources} PROPERTIES
+		COMPILE_DEFINITIONS "$<TARGET_PROPERTY:Tracy::TracyClient,INTERFACE_COMPILE_DEFINITIONS>"
+		COMPILE_OPTIONS "${swTracyIncludeOption}"
+		SKIP_PRECOMPILE_HEADERS ON
+	)
+	message(STATUS "[DevTools] Tracy profiler client enabled (loaded on demand on Windows)")
+endif()

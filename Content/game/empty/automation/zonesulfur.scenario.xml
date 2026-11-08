@@ -3,6 +3,7 @@
   지역 효과 — 유황 분출구와 독가스 살포(maps/zoneshowcase 의 SulfurVent, 프로필 zones/sulfurvent.zone.xml = sulfur.zone.xml + 살포 모듈).
   ① 캐릭터(태그 Character)가 들어오면 중독(GE_SulfurPoison — 4 초, 2 초마다 다시)과 그 자리에 독가스 구름(런타임 영역 프리팹 ZoneGas — 프로필 poisonspread, 수명 6 초 · 초당 0.5 m 퍼짐).
   ② 걷는 사람은 분출구와 구름 두 지역에 함께 든다. ③ 나와도 중독은 묻어 나간다(지역은 지우지 않는다 — 이펙트의 지속 시간대로 끝난다). ④ 구름은 수명이 끝나면 오브젝트째 사라진다.
+  ⑤ 시야 — 중독된 동안 걷는 사람의 화면 반응(ScreenReactionComponent, 태그 State.Poisoned)이 0.25 초에 가중치 1 로 오르고, 중독이 끝나면 0.5 초에 0 으로 내린다.
   값으로 판정한다(골든 없음). 실행: App -scenario=game/empty/automation/zonesulfur.scenario.xml -unattended
 -->
 <Scenario name="game.empty.zonesulfur" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -15,6 +16,7 @@
 	<Expect watch="Ability.HasTag" target="Walker" key="State.Poisoned" equals="1"/>
 	<Expect watch="Object.Exists" target="ZoneGas" equals="1"/>
 	<Expect watch="Zone.Sources" target="Walker" is="volume:SulfurVent,volume:ZoneGas"/>
+	<Expect watch="Zone.ScreenWeight" target="Walker" atLeast="0.99"/>
 
 	<Wait frames="1"/>
 	<DevCommand line="object.place Walker 36 0.05 -6"/>
@@ -22,6 +24,7 @@
 	<Expect watch="Zone.Sources" target="Walker" is="None"/>
 	<Expect watch="Ability.HasTag" target="Walker" key="State.Poisoned" equals="1"/>
 	<WaitUntil watch="Ability.HasTag" target="Walker" key="State.Poisoned" equals="0" timeoutSeconds="5"/>
+	<WaitUntil watch="Zone.ScreenWeight" target="Walker" equals="0" timeoutSeconds="1"/>
 	<WaitUntil watch="Object.Exists" target="ZoneGas" equals="0" timeoutSeconds="6"/>
 	<Pass/>
 </Scenario>

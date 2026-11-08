@@ -58,8 +58,8 @@ namespace sw
             uint64                 _lastUse{ 0 }; ///< `_useClock` 의 값 — 작을수록 오래 안 썼다
         };
 
-        /** @brief 경로의 항목 번호입니다. 없으면 `_listEntry.size()` 입니다. */
-        [[nodiscard]] optional<uint32> findIndex( string_view path ) const;
+        /** @brief 경로의 항목 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<size_t> findIndex( string_view path ) const;
         /** @brief 합이 예산 안에 들 때까지 가장 오래 안 쓴 것부터 놓습니다. @p keepIndex 는 놓지 않습니다(방금 넣은 것). */
         void evictOverBudget( size_t keepIndex );
 

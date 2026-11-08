@@ -51,7 +51,7 @@ namespace sw
         if ( index.has_value() == false )
             return nullptr;
         unique_ptr<Widget> child = std::move( _listChild[*index] );
-        _listChild.erase( _listChild.begin() + static_cast<ptrdiff_t>( *index ) );
+        _listChild.erase( _listChild.begin() + *index );
         child->detachFromTree();
         child->_pParent = nullptr;
         invalidate( WidgetDirty::kLayout );

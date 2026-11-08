@@ -162,12 +162,9 @@ namespace sw
         {
             for ( const AudioSnapshotBusDef& busVolume : snapshot._pDesc->_listBusVolume )
             {
-                const optional<uint32> busIndex = mixer.findBusIndex( busVolume._bus );
+                const optional<uint32> busIndex = mixer.findBusIndex( busVolume._bus ); // 그래프 validate 가 모르는 버스를 거른다
                 if ( busIndex.has_value() )
-                {
-                    const uint32 index = *busIndex;
-                    mixer.setBusVolumeOffsetDb( index, mixer.getBusVolumeOffsetDb( index ) + busVolume._volumeDb * snapshot._intensity );
-                }
+                    mixer.setBusVolumeOffsetDb( *busIndex, mixer.getBusVolumeOffsetDb( *busIndex ) + busVolume._volumeDb * snapshot._intensity );
             }
         }
 
@@ -200,7 +197,7 @@ namespace sw
                 const AudioEffectDef* pEffectDesc = desc.findEffect( *busIndex, effectItem._effect );
                 if ( pEffect == nullptr || pEffectDesc == nullptr )
                     continue;
-                const optional<uint32> parameterIndex = pEffect->findParameterIndex( effectItem._parameter );
+                const optional<uint32> parameterIndex = pEffect->findParameterIndex( effectItem._parameter ); // 그래프 validate 가 모르는 값 이름을 거른다
                 if ( parameterIndex.has_value() == false )
                     continue;
                 const AudioEffectTypeInfo&      typeInfo = pEffect->getTypeInfo();
@@ -258,6 +255,7 @@ namespace sw
 
     void AudioSnapshotMixer::applyBusUserState( AudioMixer& mixer, const BusUserState& state )
     {
+        // 사용자 상태는 그래프를 바꾸기 전 버스에 남은 것일 수 있다 — 지금 그래프에 없는 버스는 적용하지 않고 기억만 한다.
         const optional<uint32> busIndex = mixer.findBusIndex( state._bus );
         if ( busIndex.has_value() == false )
             return;

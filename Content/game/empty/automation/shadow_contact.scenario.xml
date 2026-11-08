@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  접촉 그림자 — 같은 무대를 접촉 그림자 없이(maps/shadowtest — 패스가 돌지 않는다)와 해 · 점광의 접촉 그림자를 켜고(maps/shadowtest_contact) 찍어 둘이 다른지 보고, 두 장을 골든으로 지킨다.
+  디퍼드(G버퍼 뒤 ContactShadow 패스)를 찍는다 — 포워드 깊이 프리패스 파이프라인(forwardprepasspipeline.xml)도 같은 패스 · 같은 마스크를 읽는다. 그림자 필터는 PCF 다.
+  실행: ctest -R Scenario.game.empty.shadow_contact
+-->
+<Scenario name="game.empty.shadow_contact" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/shadowtest.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="1"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Launch variable="gv_shadowMapResolution" value="2048"/>
+	<Launch variable="gv_shadowFilter" value="0"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="contact_off.ppm"/>
+	<LoadScene path="game/empty/maps/shadowtest_contact.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="20"/>
+	<Screenshot file="contact_on.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="contact_off.ppm" second="contact_on.ppm" region="0.05,0.3,0.95,0.95" minDiffering="0.002"/>
+	<ExpectImage file="contact_off.ppm" golden="contact_off"/>
+	<ExpectImage file="contact_on.ppm" golden="contact_on"/>
+	<Pass/>
+</Scenario>

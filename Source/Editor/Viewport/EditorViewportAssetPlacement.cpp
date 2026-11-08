@@ -15,6 +15,7 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/Asset/EditorPlacementPose.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -83,6 +84,7 @@ namespace sw::editor
             _pDragPhysics.reset();
             _pDragManager  = nullptr;
             _bDragPrepared = SW_FALSE;
+            _stats._yaw    = 0.0f; // 다음 끌기는 회전 없이 시작한다
             return;
         }
 
@@ -101,6 +103,8 @@ namespace sw::editor
         const bool b2DMode    = settings._bIs2DMode;
         const bool bPlaceable = EditorAssetCommands::canPlaceInViewport( assetPath );
         prepareDragPhysics( pManager, b2DMode );
+        if ( bPlaceable )
+            updateDragYaw();
 
         EditorPlacementHit hit{};
         bool               bFound = false;
@@ -143,8 +147,23 @@ namespace sw::editor
         }
         ++_stats._placedCount;
         _stats._lastPosition = hit._position;
-        SW_LOG_TRACE_ID( "EditorViewportAssetPlacement.Placed", "Placed '%#' on the %# at (%#, %#, %#)", assetPath.c_str(), EditorAssetPlacement::getSurfaceName( hit._surface ), hit._position._x, hit._position._y, hit._position._z );
-        EditorAssetCommands::placeInViewport( pManager, assetPath.c_str(), hit._position );
+        _stats._lastYaw      = _stats._yaw;
+        SW_LOG_TRACE_ID( "EditorViewportAssetPlacement.Placed", "Placed '%#' on the %# at (%#, %#, %#), turned %# deg", assetPath.c_str(), EditorAssetPlacement::getSurfaceName( hit._surface ), hit._position._x,
+                         hit._position._y, hit._position._z, MathUtil::toDegree( _stats._yaw ) );
+        EditorPlacementPose pose{};
+        pose._position = hit._position;
+        pose._yaw      = _stats._yaw;
+        pose._b2DMode  = b2DMode;
+        EditorAssetCommands::placeInViewport( pManager, assetPath.c_str(), pose );
+    }
+
+    void EditorViewportAssetPlacement::updateDragYaw()
+    {
+        const float32 step = getPreferences<EditorViewportPreferences>()._placementRotateStep;
+        if ( EditorInputGUI::wasActionTriggered( "viewport.placementRotate" ) )
+            _stats._yaw = EditorAssetPlacement::stepYaw( _stats._yaw, step, 1 );
+        if ( EditorInputGUI::wasActionTriggered( "viewport.placementRotateBack" ) )
+            _stats._yaw = EditorAssetPlacement::stepYaw( _stats._yaw, step, -1 );
     }
 
     void EditorViewportAssetPlacement::drawGhost( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float4x4& viewProj, const string& assetPath,
@@ -194,8 +213,17 @@ namespace sw::editor
             pDrawList->AddCircleFilled( base, 3.0f * EditorThemeUtil::getDPIScale(), markerColor );
         }
 
-        const string text = SW_LOCKEYFORMAT( "EdFormat", "PlacementOnSurface",
-                                             TextArgumentList().addText( "asset", fileName.c_str() ).addText( "surface", EditorAssetPlacement::getSurfaceName( hit._surface ) ) );
-        pDrawList->AddText( labelPos, EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "Label" ) ), text.c_str() );
+        // 앞쪽 화살표: 놓기 전에 고른 회전(요)이 어디를 보게 하는지 — 고리 면 위에서 회전만큼 돈 접선 방향이다.
+        const float3 facing = tangent * MathUtil::cos( _stats._yaw ) + bitangent * MathUtil::sin( _stats._yaw );
+        ImVec2       facingTip{};
+        if ( EditorViewportProjectionUtil::projectSegment( viewProj, hit._position, hit._position + facing * Internal::kGhostRingRadius, canvasPos, canvasSize, base, facingTip ) )
+            pDrawList->AddLine( base, facingTip, markerColor, 2.0f );
+
+        const string text       = SW_LOCKEYFORMAT( "EdFormat", "PlacementOnSurface",
+                                                   TextArgumentList().addText( "asset", fileName.c_str() ).addText( "surface", EditorAssetPlacement::getSurfaceName( hit._surface ) ) );
+        const ImU32  labelColor = EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "Label" ) );
+        pDrawList->AddText( labelPos, labelColor, text.c_str() );
+        const string rotation = SW_LOCKEYFORMAT( "EdFormat", "PlacementRotation", TextArgumentList().addInteger( "degrees", static_cast<int64>( MathUtil::round( MathUtil::toDegree( _stats._yaw ) ) ) ) );
+        pDrawList->AddText( ImVec2{ labelPos.x, labelPos.y + ImGui::GetTextLineHeightWithSpacing() }, labelColor, rotation.c_str() );
     }
 } // namespace sw::editor

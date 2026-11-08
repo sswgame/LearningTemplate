@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 지형(TerrainComponent). 레이어 색 · 디테일 · 3 축 투영 · 스플랫 · 디테일 맵은 컴포넌트가 인스턴스에 싣는다 — 여기 값은 기본값이다.
+<!-- 지형(TerrainComponent). 레이어 색 · 규칙 · 디테일 · 3 축 투영 · 거칠기 · 다공성 · 늘 젖음 · 스플랫 · 디테일 맵은 컴포넌트가 인스턴스에 싣는다 — 여기 값은 기본값이다.
+     _weather 는 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather 에 묶는다 — 날씨가 값을 바꾸면 모든 지형 · 환경 머티리얼이 함께 젖고 눈이 쌓인다.
      프로퍼티 이름 · 타입은 terrain.hlsl 의 SW_MATERIAL 구조체와 같다. -->
 <MaterialDef formatVersion="0" name="Terrain" shaderPath="engine/shaders/terrain.hlsl" alphaMode="Opaque">
 	<_properties>
@@ -11,11 +12,35 @@
 		<item name="_layer5Color" type="Vector4" defaultValue="0.30 0.22 0.15 1.0" displayName="Layer 5 Color" group="Layers"/>
 		<item name="_layer6Color" type="Vector4" defaultValue="0.85 0.88 0.92 1.0" displayName="Layer 6 Color" group="Layers"/>
 		<item name="_layer7Color" type="Vector4" defaultValue="0.20 0.30 0.14 1.0" displayName="Layer 7 Color" group="Layers"/>
+		<item name="_layer0Rule" type="Vector4" defaultValue="0 90 -100000 100000" displayName="Layer 0 Rule (slope min, slope max, height min, height max)" group="Rules"/>
+		<item name="_layer1Rule" type="Vector4" defaultValue="0 90 -100000 100000" displayName="Layer 1 Rule (slope min, slope max, height min, height max)" group="Rules"/>
+		<item name="_layer2Rule" type="Vector4" defaultValue="0 90 -100000 100000" displayName="Layer 2 Rule (slope min, slope max, height min, height max)" group="Rules"/>
+		<item name="_layer3Rule" type="Vector4" defaultValue="0 90 -100000 100000" displayName="Layer 3 Rule (slope min, slope max, height min, height max)" group="Rules"/>
+		<item name="_layer4Rule" type="Vector4" defaultValue="0 90 -100000 100000" displayName="Layer 4 Rule (slope min, slope max, height min, height max)" group="Rules"/>
+		<item name="_layer5Rule" type="Vector4" defaultValue="0 90 -100000 100000" displayName="Layer 5 Rule (slope min, slope max, height min, height max)" group="Rules"/>
+		<item name="_layer6Rule" type="Vector4" defaultValue="0 90 -100000 100000" displayName="Layer 6 Rule (slope min, slope max, height min, height max)" group="Rules"/>
+		<item name="_layer7Rule" type="Vector4" defaultValue="0 90 -100000 100000" displayName="Layer 7 Rule (slope min, slope max, height min, height max)" group="Rules"/>
+		<item name="_layer0Params" type="Vector4" defaultValue="6 2 0 0" displayName="Layer 0 Slope Fade, Height Fade, Rule Strength, Sparkle" group="Rules"/>
+		<item name="_layer1Params" type="Vector4" defaultValue="6 2 0 0" displayName="Layer 1 Slope Fade, Height Fade, Rule Strength, Sparkle" group="Rules"/>
+		<item name="_layer2Params" type="Vector4" defaultValue="6 2 0 0" displayName="Layer 2 Slope Fade, Height Fade, Rule Strength, Sparkle" group="Rules"/>
+		<item name="_layer3Params" type="Vector4" defaultValue="6 2 0 0" displayName="Layer 3 Slope Fade, Height Fade, Rule Strength, Sparkle" group="Rules"/>
+		<item name="_layer4Params" type="Vector4" defaultValue="6 2 0 0" displayName="Layer 4 Slope Fade, Height Fade, Rule Strength, Sparkle" group="Rules"/>
+		<item name="_layer5Params" type="Vector4" defaultValue="6 2 0 0" displayName="Layer 5 Slope Fade, Height Fade, Rule Strength, Sparkle" group="Rules"/>
+		<item name="_layer6Params" type="Vector4" defaultValue="6 2 0 0" displayName="Layer 6 Slope Fade, Height Fade, Rule Strength, Sparkle" group="Rules"/>
+		<item name="_layer7Params" type="Vector4" defaultValue="6 2 0 0" displayName="Layer 7 Slope Fade, Height Fade, Rule Strength, Sparkle" group="Rules"/>
 		<item name="_layerDetail" type="Vector4" defaultValue="0.5 0.5 0.5 0.5" displayName="Layer Detail Strength" group="Layers"/>
 		<item name="_layerTriplanar" type="Vector4" defaultValue="0.0 0.0 1.0 0.0" displayName="Layer Triplanar" group="Layers"/>
 		<item name="_layerDetail1" type="Vector4" defaultValue="0.5 0.5 0.5 0.5" displayName="Layer 4-7 Detail Strength" group="Layers"/>
 		<item name="_layerTriplanar1" type="Vector4" defaultValue="0.0 0.0 0.0 0.0" displayName="Layer 4-7 Triplanar" group="Layers"/>
-		<item name="_terrainParams" type="Vector4" defaultValue="0.0 0.25 0.7 -1.0" displayName="Splat Width, Detail Tiling, Cliff Start, Cliff Layer" group="Terrain"/>
+		<item name="_layerRoughness" type="Vector4" defaultValue="1 1 1 1" displayName="Layer 0-3 Roughness" group="Layers"/>
+		<item name="_layerRoughness1" type="Vector4" defaultValue="1 1 1 1" displayName="Layer 4-7 Roughness" group="Layers"/>
+		<item name="_layerPorosity" type="Vector4" defaultValue="1 1 1 1" displayName="Layer 0-3 Porosity" group="Layers"/>
+		<item name="_layerPorosity1" type="Vector4" defaultValue="1 1 1 1" displayName="Layer 4-7 Porosity" group="Layers"/>
+		<item name="_layerWetness" type="Vector4" defaultValue="0 0 0 0" displayName="Layer 0-3 Always Wet" group="Layers"/>
+		<item name="_layerWetness1" type="Vector4" defaultValue="0 0 0 0" displayName="Layer 4-7 Always Wet" group="Layers"/>
+		<item name="_terrainParams" type="Vector4" defaultValue="0.0 0.25 0.0 0.0" displayName="Splat Width, Detail Tiling, Height Blend Depth, Reserved" group="Terrain"/>
+		<item name="_terrainSurface" type="Vector4" defaultValue="6.0 40.0 0.04 0.0" displayName="Puddle Scale (m), Sparkle Density (cells/m), Snow Sparkle, Reserved" group="Terrain"/>
+		<item name="_weather" collection="engine/materials/weather.matparams.xml" collectionParameter="Weather" type="Vector4" defaultValue="0 0 0 0" displayName="Weather (wet, puddle, snow, snow line)" group="Weather"/>
 		<item name="_splatMap" type="Texture2D" displayName="Splat Map (layers 0-3)" group="Terrain" bSrgb="0"/>
 		<item name="_splatMap1" type="Texture2D" displayName="Splat Map (layers 4-7)" group="Terrain" bSrgb="0"/>
 		<item name="_detailMap" type="Texture2D" displayName="Detail Map" group="Terrain" bSrgb="0"/>

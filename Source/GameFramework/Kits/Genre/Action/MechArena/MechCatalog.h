@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -240,11 +241,11 @@ namespace sw
 
         MechCatalog();
 
-        const MechDef*              findMech( const hashed_string& id ) const { return _catalogMech.find( id ); }
-        int32                       findMechIndex( const hashed_string& id ) const { return _catalogMech.findIndex( id ); }
-        const vector<MechDef>&      getMechs() const { return _catalogMech.getAll(); }
-        const MechSkillDef*         findSkill( const hashed_string& id ) const { return _catalogSkill.find( id ); }
-        const vector<MechSkillDef>& getSkills() const { return _catalogSkill.getAll(); }
+        const MechDef*                findMech( const hashed_string& id ) const { return _catalogMech.find( id ); }
+        [[nodiscard]] optional<int32> findMechIndex( const hashed_string& id ) const { return _catalogMech.findIndex( id ); }
+        const vector<MechDef>&        getMechs() const { return _catalogMech.getAll(); }
+        const MechSkillDef*           findSkill( const hashed_string& id ) const { return _catalogSkill.find( id ); }
+        const vector<MechSkillDef>&   getSkills() const { return _catalogSkill.getAll(); }
         /** @brief 분류 보정을 반환합니다(없는 이름은 1로 읽습니다). */
         const StatBlock& getClassModifier( MechRangeClass rangeClass ) const;
         /** @brief 한 조종사가 들고 나오는 기체들의 코스트 합 상한입니다(0이면 제한 없음). */

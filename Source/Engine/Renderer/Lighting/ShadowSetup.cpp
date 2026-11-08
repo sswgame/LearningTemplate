@@ -5,6 +5,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 
 namespace sw
@@ -233,6 +234,8 @@ namespace sw
                                                ( static_cast<float32>( cell._y + cell._size ) - 0.5f ) * inverseResolution };
                 info._colorIntensity = float4{ texelAngle * Internal::kLocalNormalOffsetTexels, texelAngle * Internal::kLocalDepthBiasTexels, inverseResolution,
                                                Internal::kLocalShadowStrength };
+                // PCSS 가 가리개 깊이를 시선 깊이로 되돌리고(가까운 면 · 먼 면) 반그림자를 텍셀로 잰다(원천 반지름 = 빛 원소의 `_extra.x`, `LightShadowSettings`).
+                info._directionType = float4{ nearPlane, radius, texelAngle, MathUtil::max( light._extra._x, 0.0f ) };
                 outFrame._listTileElement.push_back( info );
             }
             outFrame._listLocalBound.push_back( float4{ position._x, position._y, position._z, radius } );
@@ -243,13 +246,14 @@ namespace sw
     ViewShadowData FrameShadowData::makeViewShadow( const DirectionalShadowProjection& projection, const ShadowAtlasLayout& layout, const vector<float4>& listLocalBound )
     {
         ViewShadowData data{};
-        data._lightViewProj = projection._viewProj;
-        data._cullViewProj  = listLocalBound.empty()
-                                ? projection._viewProj
-                                : ShadowSetupInternal::makeUnionCullViewProj( projection._lightView, projection._lightSpaceMin, projection._lightSpaceMax, listLocalBound );
-        data._shadowParams  = projection.computeShaderParams();
-        data._cascadeCount  = MathUtil::clamp( MathUtil::min( projection._cascadeCount, layout.getCascadeCount() ), 1u, shaderslot::kShadowCascadeMax );
-        data._cascadeLayout = float4{ static_cast<float32>( data._cascadeCount ), layout.getCascadeTileScale(), kCascadeBlendFraction, 0.0f };
+        data._lightViewProj            = projection._viewProj;
+        data._cullViewProj             = listLocalBound.empty()
+                                           ? projection._viewProj
+                                           : ShadowSetupInternal::makeUnionCullViewProj( projection._lightView, projection._lightSpaceMin, projection._lightSpaceMax, listLocalBound );
+        data._shadowParams             = projection.computeShaderParams();
+        data._directionalPenumbraScale = ShadowFilter::computeDirectionalPenumbraScale( projection._depthRange, projection._sourceAngle, projection._texelWorldSize );
+        data._cascadeCount             = MathUtil::clamp( MathUtil::min( projection._cascadeCount, layout.getCascadeCount() ), 1u, shaderslot::kShadowCascadeMax );
+        data._cascadeLayout            = float4{ static_cast<float32>( data._cascadeCount ), layout.getCascadeTileScale(), kCascadeBlendFraction, projection._fadeStartDepth };
         for ( uint32 cascadeIndex = 0; cascadeIndex < shaderslot::kShadowCascadeMax; ++cascadeIndex )
         {
             const bool bUsed                   = cascadeIndex < data._cascadeCount;
@@ -265,17 +269,45 @@ namespace sw
         // 행렬은 기본값으로 둔다 — 그림자를 받는 방향광(`params.x`)이 없으므로 셰이더는 이 볼륨을 읽지 않는다. 캐스케이드 하나 · 깊이 끝 무한이라 고르기만 성립한다.
         ViewShadowData data           = ViewShadowData{};
         data._cascadeCount            = 1;
-        data._cascadeLayout           = float4{ 1.0f, layout.getCascadeTileScale(), kCascadeBlendFraction, 0.0f };
+        data._cascadeLayout           = float4{ 1.0f, layout.getCascadeTileScale(), kCascadeBlendFraction, DirectionalShadowCascade::kUnboundedDepth };
         data._arrCascade[0]           = float4{ 1.0f, 0.0f, 0.0f, DirectionalShadowCascade::kUnboundedDepth };
         data._arrCascadeTile[0]._cell = layout.getCascadeCell( 0 );
         data._bValid                  = SW_TRUE;
         return data;
     }
 
+    void FrameShadowData::populateContactShadows( vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
+    {
+        using Internal                               = ShadowSetupInternal;
+        outFrame._contactShadowLights                = kNoContactShadowLights;
+        float32 arrLight[kContactShadowChannelCount] = { -1.0f, -1.0f, -1.0f, -1.0f };
+        uint32  channelCount                         = 0;
+        // 두 바퀴 — 방향광(대개 해, 화면 전체에 닿는다)이 먼저 채널을 받는다.
+        for ( uint32 pass = 0; pass < 2; ++pass )
+        {
+            for ( uint32 lightIndex = 0; lightIndex < static_cast<uint32>( inoutListLight.size() ); ++lightIndex )
+            {
+                GPULight&    light        = inoutListLight[lightIndex];
+                const uint32 lightType    = Internal::getLightType( light );
+                const bool   bDirectional = lightType == shaderslot::kLightTypeDirectional;
+                const bool   b3DLight     = bDirectional || lightType == shaderslot::kLightTypePoint || lightType == shaderslot::kLightTypeSpot;
+                if ( b3DLight == false || bDirectional != ( pass == 0 ) )
+                    continue;
+                light._extra._z = 0.0f;
+                if ( light._extra._y <= 0.0f || channelCount >= kContactShadowChannelCount )
+                    continue;
+                light._extra._z          = static_cast<float32>( channelCount + 1 );
+                arrLight[channelCount++] = static_cast<float32>( lightIndex );
+            }
+        }
+        outFrame._contactShadowLights = float4{ arrLight[0], arrLight[1], arrLight[2], arrLight[3] };
+    }
+
     void FrameShadowData::populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, uint32 atlasResolution,
                                          const vector<uint32>& listShadowLightIndex, vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
     {
         outFrame.clear();
+        populateContactShadows( inoutListLight, outFrame );
         const uint32 cascadeCount = pShadowLight != nullptr ? pShadowLight->getShadowCascadeCount() : 1u;
         outFrame._layout          = ShadowAtlasLayout::make( atlasResolution, cascadeCount, countLocalTiles( inoutListLight, listShadowLightIndex ) );
         populateLocalShadows( outFrame._layout, pMainViewProj, listShadowLightIndex, inoutListLight, outFrame );

@@ -25,11 +25,11 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
+#include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 
 namespace sw
 {
     struct OnlineServerConfig;
-    struct OnlineServerKitEntry;
 
     class EphemeralStoreRouter;
     class IClock;

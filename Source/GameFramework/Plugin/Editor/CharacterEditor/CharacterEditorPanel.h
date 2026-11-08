@@ -21,6 +21,7 @@
 
 #include "Engine/Foundation/GameObjectHandle.h"
 
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/BodyCustomizationViewModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorModel.h"
 
 namespace sw
@@ -58,6 +59,8 @@ namespace sw::editor
             uint32  _socketGizmoPlaced{ 0 };    ///< 고른 소켓에 기즈모 표식을 놓았으면 1
             float32 _selectedSocketX{ 0.0f };   ///< 고른 소켓의 로컬 위치 x(m) — 시나리오가 기즈모 끌기 · 되돌리기를 본다
             uint32  _statusSet{ 0 };            ///< 상태 줄에 글(오류 · 진행)이 있으면 1 — 시나리오가 편집 오류가 남지 않았는지 본다
+            uint32  _bodyLayerCount{ 0 };       ///< 외형 선택의 피부 층 수(몸 탭을 그릴 때 게시)
+            uint32  _bodyHiddenSlotCount{ 0 };  ///< 플레이어가 숨긴 슬롯 수(몸 탭을 그릴 때 게시)
         };
 
         CharacterEditorPanel();
@@ -143,10 +146,14 @@ namespace sw::editor
         void               drawBoneNode( uint32 boneIndex );
         void               drawBoneDetail();
         void               drawAppearanceTab();
-        void               drawAppearanceDataRow();
-        void               drawSelectionHeader( const AppearanceSelection& selection );
-        void               drawSlotRows( const AppearanceSelection& selection );
-        void               drawCustomizationRows( const AppearanceSelection& selection );
+        /** @brief 몸 탭(슬롯 숨김 · 몸 채널과 매핑 · 염색 구간 · 피부 층 · 몸 동작 미리보기)을 그립니다 — ViewModel(`BodyCustomizationViewModel`)이 모은 상태만 읽는다. */
+        void drawBodyTab();
+        void drawSkinLayerRows( const BodyCustomizationViewState& state );
+        void drawBodyDynamicsPreview( const BodyCustomizationViewState& state, GameObject* pBody );
+        void drawAppearanceDataRow();
+        void drawSelectionHeader( const AppearanceSelection& selection );
+        void drawSlotRows( const AppearanceSelection& selection );
+        void drawCustomizationRows( const AppearanceSelection& selection );
         /**
          * @brief 꾸미기 스키마(`CustomizationSchema`)의 매개변수마다 슬라이더 · 색 · 고르기를 그립니다 — 카테고리(체형 · 얼굴 · 염색 …)로 가르고, 조건이 맞지 않는 매개변수는 숨깁니다.
          * @details 끄는 동안(`_bCustomizationActive`)은 미리보기 몸을 다시 입히지 않는다 — 피팅은 무거워서 놓을 때 한 번 푼다(설계 문서 단계 5). 스키마는 모델이 고른다
@@ -186,6 +193,7 @@ namespace sw::editor
         CharacterGizmoTarget                    _placedGizmoTarget;        ///< 그 자리를 놓은 주인 — 바뀌면 지난 자리와 견주지 않는다
         bool                                    _bRigPreview;              ///< 제약 리그를 미리보기 몸에 켠다(`syncRigPreview`) NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
         Published                               _published;                ///< 감시 값이 읽는 게시 값
+        BodyCustomizationViewState              _bodyState;                ///< 몸 탭의 상태(그리기마다 `gather` — 벡터 저장소를 다시 쓴다)
         string                                  _socketResolveError;       ///< 미리보기가 지난 프레임에 상태 줄에 올린 소켓 풀기 오류(풀리면 지운다)
         string                                  _thumbnailCapturePath;     ///< 요청한 썸네일 캡처의 임시 파일(비면 요청 없음)
         string                                  _thumbnailCapturePreset;   ///< 그 캡처를 붙일 프리셋 이름

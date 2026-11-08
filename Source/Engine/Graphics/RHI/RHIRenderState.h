@@ -15,8 +15,12 @@
 
 namespace sw
 {
-    /** @brief beginRenderPass 와 PSO 가 동시에 바인딩할 수 있는 컬러 RT 의 최대 개수입니다(MRT). */
-    inline constexpr uint32 kMaxColorAttachments = 4;
+    /**
+     * @brief beginRenderPass 와 PSO 가 동시에 바인딩할 수 있는 컬러 RT 의 최대 개수입니다(MRT).
+     * @details G버퍼 판 3 이 여섯 장(알베도 · 노멀 · 머티리얼 · 속도 · 사용자 칸 · 장면 색)이라 8 이다 — DX11 · DX12 · GL(최소 8) · WebGPU(기본 한도 8)가 보장하고,
+     *          Vulkan 은 장치 한도(`maxColorAttachments`, 최소 4)를 기동 때 확인한다.
+     */
+    inline constexpr uint32 kMaxColorAttachments = 8;
 
     /**
      * @struct RHIBlendTargetState

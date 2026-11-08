@@ -206,12 +206,13 @@ namespace sw::editor
                 {
                     listMergePart.push_back( MeshMergePart{ spec._listPart[partIndex]._name, hashed_string{}, listMesh[partIndex].get() } );
                 }
-                string error;
-                if ( CharacterMeshUtil::mergeMeshes( listMergePart, &hooks, outMerged, &error ) == false )
+                expected<MeshMergeResult> merged = CharacterMeshUtil::mergeMeshes( listMergePart, &hooks );
+                if ( merged.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMerge", "Outfit atlas merge: %#", error.c_str() );
+                    SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMerge", "Outfit atlas merge: %# '%#'", merged.error().message(), merged.error().detail() );
                     return false;
                 }
+                outMerged = std::move( *merged );
                 if ( hooks.getClampedUVCount() > 0 )
                 {
                     SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasUVsLie", "Outfit atlas: %# UVs lie outside 0..1 - tiled textures cannot be put into an atlas, nothing was written", hooks.getClampedUVCount() );

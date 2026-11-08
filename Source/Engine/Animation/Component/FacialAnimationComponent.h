@@ -16,6 +16,7 @@
 
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
+#include "Engine/Animation/Facial/WrinkleMap.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
@@ -128,6 +129,13 @@ namespace sw
         float32 getBlinkAmount() const { return _blinkAmount; }
         /** @brief 지금 사카드 오프셋(요 · 피치 라디안)입니다(진단 · 테스트). */
         const float2& getSaccadeOffset() const { return _saccadeOffset; }
+        /**
+         * @brief 주름 맵 매핑을 겁니다(캐릭터 몸 프로필이 준다). nullptr 이면 주름이 없다. 표정 이름이 리그에 없으면 오류를 남기고 그 출처는 0 이다.
+         * @details 후처리 단계(워커)가 표정 가중치로 마스크 가중치를 구하고, 프레임 끝(게임 스레드)에 유닛의 머티리얼 인스턴스 매개변수(`WrinkleMap::kMaskAParameter` · `kMaskBParameter`)로 넣는다.
+         */
+        void setWrinkleMap( shared_ptr<const WrinkleMap> pMap );
+        /** @brief 지난 프레임의 주름 마스크 가중치입니다(진단 · 테스트 · 시나리오 감시). */
+        const WrinkleWeights& getWrinkleWeights() const { return _wrinkleWeights; }
         /** @brief 얼굴이 유닛에 보이는 얼굴입니다. */
         FacialAnimationBinding& getBinding() { return _binding; }
 
@@ -136,6 +144,8 @@ namespace sw
         void bindToUnit();
         /** @brief 리그를 경로에서 다시 읽습니다. */
         void loadRig();
+        /** @brief 말하는 트랙의 비즘 순서를 지금 리그의 비즘 번호로 잇습니다(`_listTrackToRigViseme`). 리그에 없는 비즘은 경고를 남깁니다. */
+        void remapTrackVisemes();
         /** @brief 유닛의 메시 · 스켈레톤에 맞춰 타깃 번호 · 눈 본 번호를 다시 짓습니다(바뀌었을 때만). */
         void refreshBindings( const SkeletalMeshComponent& skeletalMesh );
         /** @brief 시간 단계 — 깜빡임 · 사카드 · 말하기 시각을 흘립니다. */
@@ -156,6 +166,10 @@ namespace sw
         void addPose( SkeletalMeshComponent& skeletalMesh, const vector<optional<uint32>>& listTargetIndex, const FacialPose& pose, float32 weight ) const;
         /** @brief 눈 본을 목표 쪽으로 돌립니다. */
         void applyGaze( SkeletalMeshComponent& skeletalMesh );
+        /** @brief 후처리 단계 — 표정 가중치로 주름 마스크 가중치를 구합니다(얼굴을 움직이지 않는 프레임은 0). */
+        void computeWrinkles( const SkeletalAnimatorComponent* pAnimator, bool bDriving );
+        /** @brief 프레임 끝(게임 스레드) — 주름 가중치를 유닛의 머티리얼 인스턴스에 넣습니다. */
+        void pushWrinkles( SkeletalMeshComponent& skeletalMesh );
 
         PROPERTY( Category = "Facial", DisplayName = "Facial Rig", Tooltip = "Facial rig (.facial.xml): expressions, visemes, blink, gaze" )
         AssetRef<FacialRig> _facialRigPath;
@@ -173,13 +187,18 @@ namespace sw
         /** @brief 지금 입력이 @p pSource 이면 뗍니다(입력 구독이 풀릴 때 — 교체된 옛 구독이면 할 일이 없다). */
         void                                          detachLiveSource( const IFacialLiveSource* pSource );
         ItemSubscriptionList<const IFacialLiveSource> _liveSourceSubscriptions; ///< `_pLiveSource` 의 등록 구독을 내준다(풀리면 `detachLiveSource`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
-        vector<vector<optional<uint32>>>              _listExpressionTarget;    ///< 표정마다 타깃 → 메시 타깃 번호
-        vector<vector<optional<uint32>>>              _listVisemeTarget;        ///< 비즘마다 타깃 → 메시 타깃 번호
-        vector<optional<uint32>>                      _listBlinkTarget;         ///< 깜빡임 타깃 → 메시 타깃 번호
-        vector<int32>                                 _listEyeBone;             ///< 눈 본 번호
-        vector<optional<uint32>>                      _listTrackToRigViseme;    ///< 립싱크 비즘 순서 → 리그 비즘 번호
+        vector<vector<optional<uint32>>>              _listExpressionTarget;    ///< 표정마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        vector<vector<optional<uint32>>>              _listVisemeTarget;        ///< 비즘마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        vector<optional<uint32>>                      _listBlinkTarget;         ///< 깜빡임 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        vector<uint32>                                _listEyeBone;             ///< 눈 본 번호(스켈레톤에 있는 것만)
+        vector<optional<uint32>>                      _listTrackToRigViseme;    ///< 립싱크 비즘 순서 → 리그 비즘 번호(리그에 없으면 없음)
         vector<float32>                               _listScratchVisemeWeight;
-        TComponentHandle<SkeletalAnimatorComponent>   _animator; ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)
+        shared_ptr<const WrinkleMap>                  _pWrinkleMap;                 ///< 주름 매핑(몸 프로필이 준다). 없으면 nullptr
+        vector<hashed_string>                         _listScratchExpressionName;   ///< 주름 계산의 표정 이름(리그 표정 순서)
+        vector<float32>                               _listScratchExpressionWeight; ///< 주름 계산의 표정 가중치
+        WrinkleWeights                                _wrinkleWeights;              ///< 이번 프레임 주름 마스크 가중치(워커가 쓰고 프레임 끝에 게임 스레드가 넣는다)
+        WrinkleWeights                                _pushedWrinkleWeights;        ///< 마지막으로 머티리얼에 넣은 값(같으면 다시 넣지 않는다)
+        TComponentHandle<SkeletalAnimatorComponent>   _animator;                    ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)
         SkeletalMeshComponent*                        _pSkeletalMesh;
         const Mesh*                                   _pBoundMesh;     ///< 번호를 지은 메시(정체성만)
         const Skeleton*                               _pBoundSkeleton; ///< 번호를 지은 스켈레톤(정체성만)

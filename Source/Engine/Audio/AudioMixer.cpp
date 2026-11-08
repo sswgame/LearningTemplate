@@ -52,8 +52,8 @@ namespace sw
             const AudioBusDef& busDesc         = desc._listBus[busIndex];
             Bus&               bus             = _listBusState[busIndex];
             bus._name                          = busDesc._name;
-            const optional<uint32> parentIndex = desc.findBusIndex( busDesc._parent );
-            bus._parentIndex                   = parentIndex.has_value() ? static_cast<int32>( *parentIndex ) : constant::invalid_index::kInt32; // 부모 사슬을 걷는 칸이라 -1 이 뿌리(master)다
+            const optional<uint32> parentIndex = desc.findBusIndex( busDesc._parent ); // 부모 없는 버스는 master 하나다(위 validate)
+            bus._parentIndex                   = parentIndex.has_value() ? static_cast<int32>( *parentIndex ) : constant::invalid_index::kInt32;
             bus._volumeDb                      = busDesc._volumeDb;
             bus._bMuted                        = busDesc._bMuted ? SW_TRUE : SW_FALSE;
             bus._bSolo                         = busDesc._bSolo ? SW_TRUE : SW_FALSE;
@@ -71,7 +71,7 @@ namespace sw
             for ( const AudioSendDef& sendDesc : busDesc._listSend )
             {
                 Send send;
-                send._targetIndex = desc.findBusIndex( sendDesc._bus ).value();
+                send._targetIndex = desc.findBusIndex( sendDesc._bus ).value(); // 위 validate 가 모르는 센드 대상을 거른다
                 send._levelDb     = sendDesc._levelDb;
                 send._gain        = AudioMath::dbToLinear( sendDesc._levelDb );
                 send._bPreFader   = sendDesc._bPreFader;
@@ -80,7 +80,7 @@ namespace sw
             for ( const AudioDuckDef& duckDesc : busDesc._listDuck )
             {
                 Duck duck;
-                duck._sourceIndex    = desc.findBusIndex( duckDesc._sourceBus ).value();
+                duck._sourceIndex    = desc.findBusIndex( duckDesc._sourceBus ).value(); // 위 validate 가 모르는 덕킹 버스를 거른다
                 duck._thresholdDb    = duckDesc._thresholdDb;
                 duck._depthDb        = duckDesc._depthDb;
                 duck._attackSeconds  = duckDesc._attackSeconds;

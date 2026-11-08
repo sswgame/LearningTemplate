@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  블룸 먼지 마스크 · 렌즈 플레어(post_bloom.hlsli 의 Bloom::applyDirt · computeLensFlare) — 강한 점광(레이어 BloomLamp)으로 밝은 부분을 만든 뒤
+  먼지 마스크(BloomDirt) · 렌즈 플레어(LensFlare)를 하나씩 켠다. 켠 그림마다 점광만 켠 그림과 달라야 한다(그 효과가 돌지 않으면 같다).
+  포워드(후처리 체인 Present 의 SW_POST_BLOOM)를 본다 — 디퍼드(반해상도 밝은 부분 BloomBright)의 플레어는 postprocess_ssr 이 디퍼드로 띄운 김에 함께 본다.
+  먼지 마스크는 비동기로 읽힌다 — 레이어를 켠 뒤 에셋 대기가 끝나야 걸린다.
+  실행: ctest -R Scenario.game.empty.postprocess_bloomlens
+-->
+<Scenario name="game.empty.postprocess_bloomlens" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/postprocessvolume.scene.xml"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="40"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<DevCommand line="scene.layer BloomLamp on"/>
+	<Wait frames="10"/>
+	<Screenshot file="ppbloom_lamp.ppm"/>
+
+	<DevCommand line="scene.layer BloomDirt on"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="5"/>
+	<Screenshot file="ppbloom_dirt.ppm"/>
+	<DevCommand line="scene.layer BloomDirt off"/>
+
+	<DevCommand line="scene.layer LensFlare on"/>
+	<Wait frames="10"/>
+	<Screenshot file="ppbloom_flare.ppm"/>
+	<DevCommand line="scene.layer LensFlare off"/>
+
+	<Wait frames="5"/>
+	<ExpectImagesDiffer first="ppbloom_lamp.ppm" second="ppbloom_dirt.ppm" region="0,0,1,1" minDiffering="0.02"/>
+	<ExpectImagesDiffer first="ppbloom_lamp.ppm" second="ppbloom_flare.ppm" region="0,0,1,1" minDiffering="0.02"/>
+	<ExpectImage file="ppbloom_dirt.ppm" golden="ppbloom_dirt"/>
+	<ExpectImage file="ppbloom_flare.ppm" golden="ppbloom_flare"/>
+	<Pass/>
+</Scenario>

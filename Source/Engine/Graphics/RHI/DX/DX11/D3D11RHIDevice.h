@@ -74,6 +74,8 @@ namespace sw
          *          어떤 버퍼가 바인딩되어 있는지 기록해 두고, transitionBuffer 가 읽기 상태로 돌릴 때 해제한다.
          */
         RHIBufferHandle _arrComputeUAVBuffer[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
+        /// @brief 지금 건 렌더 타깃 수입니다(`beginRenderPass`). 픽셀 셰이더 UAV 는 렌더 타깃 칸 뒤에만 걸린다(`bindGraphicsUAV` — UAVStartSlot >= 렌더 타깃 수).
+        uint32 _boundRenderTargetCount{ 0 };
         /**
          * @brief PS SRV 슬롯마다 지금 바인딩되어 있는 텍스처입니다(0이면 없음이거나 버퍼).
          * @details 같은 리소스를 입력(SRV)과 출력(RTV, DSV)에 동시에 바인딩하면 `OMSetRenderTargets` 가 **SRV 를 NULL 로 강제하고** 경고만 낸다.
@@ -389,7 +391,7 @@ namespace sw
         {
             Microsoft::WRL::ComPtr<ID3D11Query> _disjoint;
             Microsoft::WRL::ComPtr<ID3D11Query> _arrQuery[constant::render::kMaxGPUTimestampSlot];
-            GPUTimestampSlotMask                _writtenMask{ 0 };
+            GPUTimestampSlotMask                _writtenMask{};
             uint8                               _bPending{ SW_FALSE };
         };
 
@@ -575,7 +577,7 @@ namespace sw
         D3D11TimestampFrame _arrTimestampFrame[constant::render::kMaxFrameCountInFlight];
         uint32              _timestampFrameIndex;
         /// @brief 이번 프레임에 기록된 슬롯 비트입니다. 패스가 병렬로 기록하므로 atomic 입니다.
-        atomic<GPUTimestampSlotMask> _timestampWrittenMask;
+        GPUTimestampSlotAtomicMask _timestampWrittenMask;
         /// @brief 엔진이 켜기 전에는 쿼리도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있고 기록 워커가 읽으므로 atomic 이다.
         atomic<uint8> _bTimestampEnabled;
         /// @brief 쿼리 묶음을 다 만들었다. 렌더 스레드가 만들고(release) 기록 워커의 `writeTimestampSlot` 이 읽는다(acquire).

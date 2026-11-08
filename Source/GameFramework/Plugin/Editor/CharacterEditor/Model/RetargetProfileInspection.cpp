@@ -24,16 +24,17 @@ namespace sw::editor
                 vector<float4x4> listModel;
                 reference.setToReference( skeleton );
                 reference.computeModelSpace( skeleton.getParentIndices(), listModel );
-                float32 length   = 0.0f;
-                int32   previous = -1;
+                float32          length = 0.0f;
+                optional<uint32> previous{};
                 for ( const hashed_string& name : listBone )
                 {
+                    // 없는 본은 `checkBone` 이 문제 줄로 알린다 — 길이는 있는 본만 잇는다.
                     const optional<uint32> bone = skeleton.findBoneIndex( name );
                     if ( bone.has_value() == false )
                         continue;
-                    if ( previous >= 0 )
-                        length += ( listModel[*bone].getTranslation() - listModel[static_cast<size_t>( previous )].getTranslation() ).getLength();
-                    previous = static_cast<int32>( *bone );
+                    if ( previous.has_value() )
+                        length += ( listModel[*bone].getTranslation() - listModel[*previous].getTranslation() ).getLength();
+                    previous = bone;
                 }
                 return length;
             }
@@ -103,14 +104,12 @@ namespace sw::editor
             }
 
             /** @brief @p ancestor 가 @p bone 의 조상이면 true 입니다. */
-            static bool isAncestor( const Skeleton& skeleton, const optional<uint32>& ancestor, const optional<uint32>& bone )
+            static bool isAncestor( const Skeleton& skeleton, uint32 ancestor, uint32 bone )
             {
-                if ( ancestor.has_value() == false || bone.has_value() == false )
-                    return false; // 없는 본은 사슬을 이루지 않는다(checkBone 이 따로 알린다)
                 const vector<int32>& listParent = skeleton.getParentIndices();
-                for ( int32 current = listParent[*bone]; current >= 0; current = listParent[static_cast<size_t>( current )] )
+                for ( int32 current = listParent[bone]; current >= 0; current = listParent[static_cast<size_t>( current )] )
                 {
-                    if ( ancestor == static_cast<uint32>( current ) )
+                    if ( static_cast<uint32>( current ) == ancestor )
                         return true;
                 }
                 return false;
@@ -121,7 +120,10 @@ namespace sw::editor
             {
                 for ( size_t index = 1; index < listBone.size(); ++index )
                 {
-                    if ( isAncestor( skeleton, skeleton.findBoneIndex( listBone[index - 1] ), skeleton.findBoneIndex( listBone[index] ) ) == false )
+                    // 없는 본은 `checkBone` 이 따로 알린다 — 그 사슬은 뿌리 → 끝 순서를 말할 수 없다.
+                    const optional<uint32> ancestor = skeleton.findBoneIndex( listBone[index - 1] );
+                    const optional<uint32> bone     = skeleton.findBoneIndex( listBone[index] );
+                    if ( ancestor.has_value() == false || bone.has_value() == false || isAncestor( skeleton, *ancestor, *bone ) == false )
                         return false;
                 }
                 return true;
@@ -169,42 +171,29 @@ namespace sw::editor
         };
     } // namespace
 
-    bool RetargetProfileInspection::inspect( const RetargetProfile& profile, RetargetProfileInspection& outInspection, string& outError )
+    expected<void> RetargetProfileInspection::inspect( const RetargetProfile& profile, RetargetProfileInspection& outInspection )
     {
         // 스켈레톤은 런타임과 같은 공유 캐시의 한 벌을 읽는다(빈 경로는 읽지 않는다 — nullptr).
         const shared_ptr<const Skeleton> pSourceSkeleton = SharedAssetCache<Skeleton>::acquire( profile.getSourceSkeletonPath() );
         const shared_ptr<const Skeleton> pTargetSkeleton = SharedAssetCache<Skeleton>::acquire( profile.getTargetSkeletonPath() );
-        return inspect( profile, pSourceSkeleton.get(), pTargetSkeleton.get(), outInspection, outError );
+        return inspect( profile, pSourceSkeleton.get(), pTargetSkeleton.get(), outInspection );
     }
 
-    bool RetargetProfileInspection::inspect( const RetargetProfile& profile, const Skeleton* pSourceSkeleton, const Skeleton* pTargetSkeleton, RetargetProfileInspection& outInspection, string& outError )
+    expected<void> RetargetProfileInspection::inspect( const RetargetProfile& profile, const Skeleton* pSourceSkeleton, const Skeleton* pTargetSkeleton, RetargetProfileInspection& outInspection )
     {
         using Internal = RetargetProfileInspectionInternal;
         outInspection  = RetargetProfileInspection{};
-        outError.clear();
         if ( pSourceSkeleton == nullptr )
-        {
-            outError = "The source skeleton could not be read";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "The source skeleton could not be read", profile.getSourceSkeletonPath() } );
         if ( pTargetSkeleton == nullptr )
-        {
-            outError = "The target skeleton could not be read";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "The target skeleton could not be read", profile.getTargetSkeletonPath() } );
         Internal::collectProblems( profile, *pSourceSkeleton, *pTargetSkeleton, outInspection._listProblem );
         if ( outInspection._listProblem.empty() == false )
-        {
-            outError = outInspection._listProblem.front();
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "The profile names a bone or field the skeletons do not have", outInspection._listProblem.front() } );
         // 런타임과 같은 검사 하나 — 묶이지 않으면 저장해도 쓸 수 없다. 이름은 위에서 다 봤으니 여기 오면 까닭은 리타기터의 로그에 있다.
         PoseRetargeter retargeter;
         if ( retargeter.initialize( profile, *pSourceSkeleton, *pTargetSkeleton, nullptr ) == false )
-        {
-            outError = "The profile does not bind to the two skeletons - see the log";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "The profile does not bind to the two skeletons - see the log" } );
         outInspection._heightRatio           = retargeter.getHeightRatio();
         outInspection._mappedTargetBoneCount = retargeter.getMappedBoneCount();
         outInspection._targetBoneCount       = pTargetSkeleton->getBoneCount();
@@ -217,6 +206,6 @@ namespace sw::editor
             outInspection._listChain.push_back( inspection );
         }
         Internal::collectWarnings( profile, *pSourceSkeleton, *pTargetSkeleton, outInspection._listWarning );
-        return true;
+        return {};
     }
 } // namespace sw::editor

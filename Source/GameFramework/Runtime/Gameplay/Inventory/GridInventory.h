@@ -101,11 +101,11 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
     private:
-        [[nodiscard]] bool             findShape( const hashed_string& itemID, GridItemShape& outShape ) const;
-        [[nodiscard]] optional<uint32> findItemIndex( int32 instanceID ) const;
-        void                           computeFootprint( const GridItemShape& shape, bool bRotated, int32& outWidth, int32& outHeight ) const;
-        void                           stampItem( const GridItem& item, int32 value );
-        void                           eraseItemAt( size_t itemIndex );
+        [[nodiscard]] bool            findShape( const hashed_string& itemID, GridItemShape& outShape ) const;
+        [[nodiscard]] optional<int32> findItemIndex( int32 instanceID ) const;
+        void                          computeFootprint( const GridItemShape& shape, bool bRotated, int32& outWidth, int32& outHeight ) const;
+        void                          stampItem( const GridItem& item, int32 value );
+        void                          eraseItemAt( size_t itemIndex );
 
     private:
         vector<int32>    _listCell; ///< 셀마다 차지한 번호(-1 이면 빔), 줄 단위로 나열

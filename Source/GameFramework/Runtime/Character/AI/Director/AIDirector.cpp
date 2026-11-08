@@ -112,7 +112,7 @@ namespace sw
             state._listEncounter.resize( pool._listEncounter.size() );
             _listPoolState.push_back( state );
         }
-        enterPhase( static_cast<int32>( _pProfile->getStartPhaseIndex().value() ), -1 ); // 읽은 프로필은 시작 단계가 늘 있다
+        enterPhase( _pProfile->getStartPhaseIndex().value(), -1 ); // 읽은 프로필은 시작 단계가 늘 있다
     }
 
     IAIDirectorIntensityModel& AIDirector::getModel()
@@ -139,17 +139,17 @@ namespace sw
         return 0 <= poolIndex && poolIndex < static_cast<int32>( _listPoolState.size() ) ? _listPoolState[static_cast<size_t>( poolIndex )]._budget : 0.0f;
     }
 
-    int32 AIDirector::findPoolIndex( const hashed_string& poolID ) const
+    optional<int32> AIDirector::findPoolIndex( const hashed_string& poolID ) const
     {
         if ( _pProfile == nullptr )
-            return -1;
+            return nullopt;
         const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
         for ( size_t index = 0; index < listPool.size(); ++index )
         {
             if ( listPool[index]._id == poolID )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return nullopt;
     }
 
     void AIDirector::update( float32 deltaTime )
@@ -169,7 +169,7 @@ namespace sw
             if ( exitIndex < 0 )
                 break;
             const AIDirectorPhaseDef& phase = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
-            enterPhase( static_cast<int32>( *phase._listExit[static_cast<size_t>( exitIndex )]._toIndex ), exitIndex ); // 만족한 길은 대상이 있다(`bTarget`)
+            enterPhase( *phase._listExit[static_cast<size_t>( exitIndex )]._toIndex, exitIndex ); // 만족한 길은 대상이 있다(`bTarget`)
         }
         updateSpawns( deltaTime );
         updatePools( deltaTime );
@@ -197,10 +197,10 @@ namespace sw
 
     bool AIDirector::forcePhase( const hashed_string& phaseID )
     {
-        const optional<uint32> phaseIndex = _pProfile != nullptr ? _pProfile->findPhaseIndex( phaseID ) : nullopt;
+        const optional<int32> phaseIndex = _pProfile != nullptr ? _pProfile->findPhaseIndex( phaseID ) : optional<int32>{};
         if ( phaseIndex.has_value() == false )
             return false;
-        enterPhase( static_cast<int32>( *phaseIndex ), -1 );
+        enterPhase( *phaseIndex, -1 );
         return true;
     }
 
@@ -208,7 +208,7 @@ namespace sw
     {
         const vector<AIDirectorPhaseDef>& listPhase     = _pProfile->getPhases();
         const hashed_string               previousPhase = _phaseIndex >= 0 ? listPhase[static_cast<size_t>( _phaseIndex )]._id : hashed_string{};
-        const bool                        bLoopedBack   = _phaseIndex >= 0 && _pProfile->getStartPhaseIndex() == static_cast<uint32>( phaseIndex );
+        const bool                        bLoopedBack   = _phaseIndex >= 0 && _pProfile->getStartPhaseIndex() == phaseIndex;
         _phaseIndex                                     = phaseIndex;
         _phaseTime                                      = 0.0f;
         _cycle += bLoopedBack ? 1 : 0;
@@ -230,7 +230,7 @@ namespace sw
         for ( size_t poolIndex = 0; poolIndex < listPool.size(); ++poolIndex )
         {
             const AIDirectorPoolDef& pool               = listPool[poolIndex];
-            const bool               bNotPhaseEnterPool = pool._trigger != AIDirectorPoolTrigger::PhaseEnter || pool._phaseIndex != static_cast<uint32>( phaseIndex ) || isPoolActive( pool ) == false;
+            const bool               bNotPhaseEnterPool = pool._trigger != AIDirectorPoolTrigger::PhaseEnter || pool._phaseIndex != phaseIndex || isPoolActive( pool ) == false;
             if ( bNotPhaseEnterPool )
                 continue;
             for ( int32 pick = 0; pick < pool._picks; ++pick )

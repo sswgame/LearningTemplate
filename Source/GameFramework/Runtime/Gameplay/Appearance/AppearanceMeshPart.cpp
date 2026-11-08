@@ -294,13 +294,12 @@ namespace sw
     expected<shared_ptr<Mesh>> AppearanceMeshPart::mergeParts( vector_reference<const MeshMergePart> listMergePart, const CharacterLODSettings& lodSettings,
                                                                const vector<CharacterLODSectionRule>& listLODRule )
     {
-        MeshMergeResult result;
-        string          error;
-        if ( CharacterMeshUtil::mergeMeshes( listMergePart, nullptr, result, &error ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "parts could not be merged", std::string_view( error.c_str(), error.size() ) } );
+        expected<MeshMergeResult> result = CharacterMeshUtil::mergeMeshes( listMergePart, nullptr );
+        if ( result.has_value() == false )
+            return unexpected( result.error() );
         // 합친 메시의 LOD 는 여기서 한 번 만든다(조립한 메시라 임포트 LOD 가 없다). 만들지 못하면 buildLODs 가 오류를 남기고 LOD 0 만 그린다.
-        (void)CharacterLODSettings::buildLODs( *result._mesh, lodSettings, listLODRule );
-        return result._mesh;
+        (void)CharacterLODSettings::buildLODs( *result->_mesh, lodSettings, listLODRule );
+        return std::move( result->_mesh );
     }
 } // namespace sw
 

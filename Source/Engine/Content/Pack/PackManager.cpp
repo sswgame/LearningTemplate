@@ -7,6 +7,7 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/ContentFileSource.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
@@ -166,10 +167,10 @@ namespace sw
             }
 
             /**
-             * @brief 전체 경로 해시 @p pathHash 를 지운 패치 팩 중 가장 우선순위가 높은 것의 인덱스입니다. 없으면 목록 크기입니다.
+             * @brief 전체 경로 해시 @p pathHash 를 지운 패치 팩 중 가장 우선순위가 높은 것의 인덱스입니다. 지운 팩이 없으면 비어 있습니다.
              * @details 그 인덱스보다 앞(우선순위가 높은) 팩만 그 경로를 줄 수 있다 — 패치보다 아래 팩의 같은 경로는 없는 것이다.
              */
-            static size_t findRemovingPackIndex( const vector<MountedPack>& listMountedPack, uint64 pathHash )
+            [[nodiscard]] static optional<size_t> findRemovingPackIndex( const vector<MountedPack>& listMountedPack, uint64 pathHash )
             {
                 for ( size_t packIndex = 0; packIndex < listMountedPack.size(); ++packIndex )
                 {
@@ -177,7 +178,20 @@ namespace sw
                     if ( std::binary_search( listRemoved.begin(), listRemoved.end(), pathHash ) )
                         return packIndex;
                 }
-                return listMountedPack.size();
+                return nullopt;
+            }
+
+            /** @brief @p pathHash 를 줄 수 있는 팩의 끝(그 앞 팩만 줄 수 있다)입니다. 지운 패치가 없으면 모든 팩이 줄 수 있다. */
+            static size_t findProvidingPackLimit( const vector<MountedPack>& listMountedPack, uint64 pathHash )
+            {
+                const optional<size_t> removingIndex = findRemovingPackIndex( listMountedPack, pathHash );
+                return removingIndex.has_value() ? *removingIndex : listMountedPack.size();
+            }
+
+            /** @brief @p packIndex 번째 팩의 @p pathHash 를 더 높은 패치가 지우지 않았으면 true 입니다. */
+            static bool isPathVisibleInPack( const vector<MountedPack>& listMountedPack, uint64 pathHash, size_t packIndex )
+            {
+                return packIndex < findProvidingPackLimit( listMountedPack, pathHash );
             }
 
             /**
@@ -190,7 +204,7 @@ namespace sw
             static bool visitPacksWithFullKey( const vector<MountedPack>& listMountedPack, string_view relativePath, VisitFn&& visit )
             {
                 const uint64 pathHash  = HashUtil::computeStringHash64( relativePath );
-                const size_t packLimit = findRemovingPackIndex( listMountedPack, pathHash );
+                const size_t packLimit = findProvidingPackLimit( listMountedPack, pathHash );
                 for ( size_t packIndex = 0; packIndex < packLimit; ++packIndex )
                 {
                     const MountedPack& mounted      = listMountedPack[packIndex];
@@ -235,7 +249,7 @@ namespace sw
             static bool visitPatchPacksWithFullKey( const vector<MountedPack>& listMountedPack, string_view relativePath, VisitFn&& visit )
             {
                 const uint64 pathHash  = HashUtil::computeStringHash64( relativePath );
-                const size_t packLimit = findRemovingPackIndex( listMountedPack, pathHash );
+                const size_t packLimit = findProvidingPackLimit( listMountedPack, pathHash );
                 for ( size_t packIndex = 0; packIndex < packLimit; ++packIndex )
                 {
                     const MountedPack& mounted = listMountedPack[packIndex];
@@ -483,7 +497,7 @@ namespace sw
             mounted._pReader->collectFolderEntries( relativeFolder, listPackEntry );
             for ( string& entryPath : listPackEntry )
             {
-                if ( PackManagerInternal::findRemovingPackIndex( _listMountedPack, HashUtil::computeStringHash64( entryPath ) ) > packIndex )
+                if ( PackManagerInternal::isPathVisibleInPack( _listMountedPack, HashUtil::computeStringHash64( entryPath ), packIndex ) )
                     outListPath.push_back( std::move( entryPath ) );
             }
         }
@@ -504,7 +518,7 @@ namespace sw
             for ( const string& pathInPack : listPathInPack )
             {
                 string fullPath = FileUtil::joinPath( queryDomain, pathInPack );
-                if ( PackManagerInternal::findRemovingPackIndex( _listMountedPack, HashUtil::computeStringHash64( fullPath ) ) > packIndex )
+                if ( PackManagerInternal::isPathVisibleInPack( _listMountedPack, HashUtil::computeStringHash64( fullPath ), packIndex ) )
                     outListPath.push_back( std::move( fullPath ) );
             }
         }

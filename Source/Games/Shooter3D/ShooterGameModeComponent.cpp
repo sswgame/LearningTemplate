@@ -453,7 +453,7 @@ namespace sw
                 {
                     // 쌓기로 돌아왔다 = 새 웨이브. 진행 사건(동의가 없으면 텔레메트리가 버린다).
                     TelemetryService* pTelemetry = game::findSubsystem<TelemetryService>();
-                    const bool        bNewWave   = event._source.empty() == false && event._id == _pProfile->getPhases()[_pProfile->getStartPhaseIndex().value()]._id;
+                    const bool        bNewWave   = event._source.empty() == false && event._id == _pProfile->getPhases()[static_cast<size_t>( _pProfile->getStartPhaseIndex().value() )]._id;
                     if ( pTelemetry != nullptr && bNewWave )
                     {
                         TelemetryEvent waveReached( "progression.waveReached" );

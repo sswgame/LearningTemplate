@@ -107,4 +107,18 @@ namespace sw::editor
         }
         return "none";
     }
+
+    float32 EditorAssetPlacement::stepYaw( float32 yaw, float32 step, int32 direction )
+    {
+        if ( step <= 0.0f )
+            return yaw;
+        // 걸음의 배수로 센 뒤 감는다 — 실수 덧셈을 쌓으면 네 번 돌린 값이 2π 언저리(6.2831 · 1e-7)에 남는다.
+        const float32 stepIndex = MathUtil::round( yaw / step ) + static_cast<float32>( direction );
+        float32       wrapped   = MathUtil::fmod( stepIndex * step, MathUtil::kTwoPi );
+        if ( wrapped < 0.0f )
+            wrapped += MathUtil::kTwoPi;
+        if ( MathUtil::kTwoPi - wrapped < step * 0.5f )
+            wrapped = 0.0f; // 한 바퀴를 다 돌았다
+        return wrapped;
+    }
 } // namespace sw::editor

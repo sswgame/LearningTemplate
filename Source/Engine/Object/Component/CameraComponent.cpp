@@ -31,16 +31,6 @@ namespace sw
         return values;
     }
 
-    CameraPostProcessValues CameraPostProcessValues::blend( const CameraPostProcessValues& from, const CameraPostProcessValues& to, float32 weight )
-    {
-        CameraPostProcessValues values = PropertyRoleUtil::blendValues( from, to, weight );
-        // 레터박스는 양쪽에 있을 때만 비율을 섞는다. 한쪽에만 있으면 0(없음)과 섞을 비율이 없으므로 투영처럼 절반에서 바꾼다.
-        const bool bBoth = from._letterboxAspectRatio > 0.0f && to._letterboxAspectRatio > 0.0f;
-        if ( bBoth == false )
-            values._letterboxAspectRatio = weight < 0.5f ? from._letterboxAspectRatio : to._letterboxAspectRatio;
-        return values;
-    }
-
     CameraComponent::CameraComponent()
         : _fovY{ kDefaultFOVY }
         , _nearZ{ kDefaultNearZ }

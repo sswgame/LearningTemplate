@@ -1,5 +1,5 @@
 #include "common.hlsli"
-#include "gpu_assert.hlsli"
+#include "gpu_message.hlsli"
 #include "octahedral.hlsli"
 
 /**
@@ -49,7 +49,7 @@ uint getRestVertexElementCount()
 SW_NUMTHREADS( 64, 1, 1 )
 void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
-    SW_GPU_ASSERT_THREAD( dispatchThreadID.x );
+    SW_GPU_MESSAGE_THREAD( dispatchThreadID.x );
     const uint vertexIndex = dispatchThreadID.x;
     if ( vertexIndex >= g_MorphVertexCount )
         return;

@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Rig/RigBuiltinNodes.h"
+#include "Engine/Animation/Rig/RigJiggleNode.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -38,6 +39,7 @@ namespace sw
         RigIKNodes::registerNodes( registry );
         RigConstraintNodes::registerNodes( registry );
         RigSecondaryNodes::registerNodes( registry );
+        RigJiggleNode::registerNodes( registry );
         return true;
     }
 } // namespace sw
@@ -233,18 +235,39 @@ namespace sw
         target._offset._translation = params._translation;
         target._offset._rotation    = quaternion::makeFromYawPitchRoll( params._rotation * MathUtil::kDegreeToRadian );
 
-        const uint32 sourceCount = ( target._bone.empty() ? 0u : 1u ) + ( target._socket.empty() ? 0u : 1u ) + ( target._object.empty() ? 0u : 1u );
+        const bool   bTrace      = params._traceFrom.empty() == false;
+        const uint32 sourceCount = ( target._bone.empty() ? 0u : 1u ) + ( target._socket.empty() ? 0u : 1u ) + ( target._object.empty() ? 0u : 1u ) + ( bTrace ? 1u : 0u );
         if ( sourceCount != 1 )
         {
-            SW_LOG_ERROR_ID( "RigAsset.RigTargetMustName", "Rig '%#': target '%#' must name exactly one of 'bone', 'socket', 'object'", sourceLabel, target._name.c_str() );
+            SW_LOG_ERROR_ID( "RigAsset.RigTargetMustName", "Rig '%#': target '%#' must name exactly one of 'bone', 'socket', 'object', 'trace_from'", sourceLabel, target._name.c_str() );
             return false;
+        }
+        // 접촉 대상은 자기 유닛 본에서 쏜다 — 광선 길이 · 방향은 필수다(기본값으로 조용히 0 길이 광선이 되지 않게).
+        const bool bTraceFieldsWithoutTrace = bTrace == false && ( params._traceDistance > 0.0f || params._traceDirection.getLengthSquared() > 0.0f );
+        const bool bTraceInvalid            = bTrace && ( params._traceDistance <= 0.0f || params._traceDirection.getLengthSquared() < MathUtil::kEpsilon || target._skeletalMesh.empty() == false ||
+                                               target._space.empty() == false );
+        if ( bTraceFieldsWithoutTrace || bTraceInvalid )
+        {
+            SW_LOG_ERROR_ID( "RigAsset.RigTraceTargetInvalid",
+                             "Rig '%#': target '%#' - a trace target needs 'trace_from', 'trace_direction' (non-zero) and 'trace_distance' (> 0) and cannot name 'skeletalMesh' or 'space'",
+                             sourceLabel, target._name.c_str() );
+            return false;
+        }
+        if ( bTrace )
+        {
+            target._bone                 = params._traceFrom;
+            target._trace._direction     = params._traceDirection.normalize();
+            target._trace._distance      = params._traceDistance;
+            target._trace._surfaceOffset = params._surfaceOffset;
+            target._trace._blendSpeed    = params._blendSpeed;
         }
         if ( target._object.empty() == false && target._skeletalMesh.empty() == false )
         {
             SW_LOG_ERROR_ID( "RigAsset.RigTargetObjectCannot", "Rig '%#': target '%#' is an object and cannot name a 'skeletalMesh'", sourceLabel, target._name.c_str() );
             return false;
         }
-        target._kind = target._bone.empty() == false ? RigTargetKind::Bone : ( target._socket.empty() == false ? RigTargetKind::Socket : RigTargetKind::Object );
+        target._kind = bTrace ? RigTargetKind::Trace
+                              : ( target._bone.empty() == false ? RigTargetKind::Bone : ( target._socket.empty() == false ? RigTargetKind::Socket : RigTargetKind::Object ) );
         if ( findTargetIndex( target._name ).has_value() )
         {
             SW_LOG_ERROR_ID( "RigAsset.RigDuplicateTargetName", "Rig '%#': duplicate target name '%#'", sourceLabel, target._name.c_str() );

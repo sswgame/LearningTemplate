@@ -116,7 +116,7 @@ namespace sw
             /** @brief 핸들이 지금 이 슬롯의 살아 있는 연결을 가리키는지입니다(잠금 안). */
             bool isLiveLocked( StreamConnectionHandle handle ) const { return _generation == handle.generation() && _state != EpollConnectionState::Free; }
             /** @brief 사건 @p eventHandle 이 지금 이 슬롯(같은 세대 · 같은 루프)의 것인지입니다 — 같은 배치의 앞에서 닫혀 슬롯이 다른 연결로 다시 쓰였으면 옛 fd 의 사건이다. */
-            bool isEventCurrentLocked( StreamConnectionHandle eventHandle, int32 loopIndex ) const { return _generation == eventHandle._generation && _loopIndex == loopIndex; }
+            bool isEventCurrentLocked( StreamConnectionHandle eventHandle, int32 loopIndex ) const { return _generation == eventHandle.generation() && _loopIndex == loopIndex; }
 
             /** @brief 빈 슬롯을 fd @p fd 의 연결로 엽니다(잠금 안). */
             void openLocked( int32 fd, const NetAddress& remote, bool bAccepted, EpollConnectionState state, int32 loopIndex, const StreamTransportConfig& settings )
@@ -493,7 +493,7 @@ namespace sw
             EpollConnection&  connection = *_listConnection[index];
             ScopedLock<mutex> connectionLock{ connection.getMutex() };
             const int32       loopIndex = static_cast<int32>( _nextLoop.fetch_add( 1, std::memory_order_relaxed ) % static_cast<uint32>( _loopCount ) );
-            connection.openLocked( fd, remote, bAccepted, state, loopIndex, *_settings );
+            connection.openLocked( fd, remote, bAccepted, state, loopIndex, _settings.get() );
             _openCount.fetch_add( 1, std::memory_order_relaxed );
             pOutConnection = &connection;
             return connection.makeHandleLocked( index );
@@ -617,7 +617,7 @@ namespace sw
 
         void handleConnectionEvent( StreamConnectionHandle eventHandle, uint32 events, int32 loopIndex )
         {
-            const uint32     index       = eventHandle._index;
+            const uint32     index       = eventHandle.index();
             EpollConnection& connection  = getConnection( index );
             bool             bConnecting = false;
             {

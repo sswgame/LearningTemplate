@@ -10,6 +10,7 @@
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Renderer/Graph/RenderGraph.h"
 
 namespace sw
 {
@@ -68,10 +69,11 @@ namespace sw
          */
         DepthOfField,
         /**
-         * @brief 카메라 모션 블러입니다. 깊이로 복원한 월드 위치를 지난 프레임 뷰-투영(`g_PrevViewProj`)으로 다시 투영해 화면 속도를 구하고, 그 방향으로 원본을 섞습니다(motion_blur.hlsl).
-         *        사용자 설정 `graphics.motionBlur`(`gv_motionBlur`)를 끄거나 후처리를 끈 뷰, 카메라가 서 있거나 컷인 프레임(속도가 모두 0)은
+         * @brief 모션 블러입니다. 불투명 지오메트리 패스가 쓴 화면 속도(Velocity 역할 입력 — 물체마다 지난 월드 행렬 · 스킨 위치)를 따라 원본을 섞습니다(motion_blur.hlsl).
+         *        그리지 않은 픽셀(하늘)은 깊이로 복원한 월드 위치를 지난 프레임 뷰-투영(`g_PrevViewProj`)으로 다시 투영한 카메라 속도다.
+         *        사용자 설정 `graphics.motionBlur`(`gv_motionBlur`)를 끄거나 후처리를 끈 뷰, 컷, 카메라와 물체가 모두 서 있는 프레임(속도가 모두 0)은
          *        피사계 심도와 같이 패스를 기록하지 않고 출력 이름이 원본을 가리킵니다(`kBypassesToSource`).
-         *        움직이는 물체의 속도 버퍼는 아직 없다(카메라 움직임만 흐린다). 디퍼드는 피사계 심도와 Tonemap 사이에, 포워드는 피사계 심도와 후처리 체인(Present) 사이에 둡니다.
+         *        디퍼드는 피사계 심도와 Tonemap 사이에, 포워드는 피사계 심도와 후처리 체인(Present) 사이에 둡니다.
          */
         MotionBlur,
         /**
@@ -101,12 +103,51 @@ namespace sw
          */
         SceneDepthCopy,
         /**
+         * @brief 화면 왜곡 누적입니다. 반투명 배치 중 머티리얼에 `MATERIAL_DISTORTION` 이 있는 것만 머티리얼 셰이더의 왜곡 훅(`computeMaterialDistortion`)으로 그려
+         *        화면 UV 오프셋을 선언한 R16G16 실수 출력(`Distortion` 역할, 클리어 0)에 더한다(가산 블렌드 — 겹친 왜곡이 합쳐진다). 장면 깊이로 테스트만 한다(가려진 왜곡은 없다).
+         *        씬에 왜곡 배치가 없으면 기록하지 않는다(`GPUScene::hasDistortionBatches` — 쓰지 않을 때 비용이 없다). 언리얼 Distortion 패스 · 유니티 왜곡과 같은 자리다.
+         */
+        Distortion,
+        /**
+         * @brief 화면 왜곡 적용입니다. 장면 색 사본(`SceneColorCopy` 역할)을 왜곡 오프셋(`Distortion` 역할)만큼 비껴 읽어 선언한 컬러 출력(장면 색)에 쓴다(distortion_apply.hlsl).
+         *        비껴 읽은 자리의 깊이가 이 픽셀보다 가까우면(앞의 물체) 끌어오지 않는다. 왜곡 누적과 같은 조건으로 돌지 않는다 — 출력이 곧 왜곡 없는 장면 색이라 그대로 둔다(안개와 같은 전용 실행).
+         */
+        DistortionApply,
+        /**
+         * @brief 화면 공간 반사입니다(screen_space_reflection.hlsl). G버퍼 노멀로 반사한 광선을 장면 깊이에 대고 나아가 맞은 자리의 장면 색 사본(`SceneColorCopy`)을 읽어
+         *        선언한 컬러 출력(장면 색) **위에 프리멀티플라이 블렌드**합니다 — 안개와 같은 모양이라 출력이 장면 색 그대로이고 반투명이 그 위에 그린다. 디퍼드에서 하늘 · 사본 뒤, 반투명 앞에 둡니다.
+         *        뷰의 후처리 값 `_screenSpaceReflectionIntensity` 가 0 이거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FramePassExecutor::executeScreenSpaceReflectionPass`).
+         *        끄는 길이 "원본을 가리킴"(`kBypassesToSource`)이 아닌 까닭: 그 길은 출력을 그 패스만 써야 하는데(로드 검증 3-6), 반투명이 같은 장면 색에 그려야 한다.
+         */
+        ScreenSpaceReflection,
+        /**
+         * @brief 접촉 그림자입니다(contact_shadow.hlsl). 장면 깊이에서 복원한 점마다 접촉 그림자를 켠 빛(`LightShadowSettings::_contactShadowLength`, 넷까지) 쪽으로 화면 공간에서 짧게 걸어
+         *        깊이 버퍼에 가리는 것이 있으면 그 빛의 채널을 0 으로 쓴다(언리얼 Contact Shadows · 유니티 HDRP Contact Shadows 와 같은 자리). 그림자 맵 텍셀보다 작은 가림(발치 · 틈)을 잡는다.
+         *        출력은 RGBA 첨부 하나(채널 = 빛, `FrameShadowData::populateContactShadows`)이고 조명(Lighting) · 포워드 불투명이 선택 입력(`ContactShadow` 역할)으로 읽는다.
+         *        켠 빛이 없거나 후처리를 끈 뷰는 패스를 기록하지 않고 출력이 없다(`kOmittedWhenOff` — 읽는 쪽은 1). 장면 깊이를 다 쓴 뒤(디퍼드 G버퍼 · 포워드 깊이 프리패스) 조명 앞에 둔다.
+         */
+        ContactShadow,
+        /**
+         * @brief 화면 공간 간접 확산광(SSGI)입니다(ssgi.hlsl). 반투명 앞에 떠 둔 장면 색(`SceneColorCopy`)을 깊이 · G버퍼 노멀로 반구에서 걸어 가까운 면이 튕긴 빛을 모으고,
+         *        G버퍼 알베도를 곱해 선언한 컬러 출력(조명 첨부)에 **더한다**(XML `_blendPreset="Additive"`). 프로브 GI(먼 빛)는 조명 패스가 이미 그렸고 이 패스는 가까운 튐만 더한다
+         *        (언리얼 UE4 의 화면 공간 GI 가 라이트맵 · 스카이 위에 더하는 것과 같은 자리). 세기 · 반경 · 걸음 수는 XML 퍼뮤테이션 값이다(셰이더에 기본값이 없다 — `kRequiresPassDesc`).
+         *        출력(조명 첨부)을 여러 패스가 쓰므로 뷰마다 건너뛰는 효과가 아니다 — 켜고 끄는 것은 파이프라인 XML 이다(engine/pipeline/deferredpipeline_gi.xml). SceneColorCopy 뒤 · 반투명 앞에 둔다.
+         */
+        ScreenSpaceGI,
+        /**
+         * @brief 빛마다의 렌즈 플레어 스프라이트입니다(lens_flare.hlsl). 플레어를 단 빛(`LightComponent::_lensFlarePath`)을 주 시점에 투영해 데이터(`LensFlareAsset`)의 원소를
+         *        빛 → 화면 가운데 축 위에 그리고, 빛 자리 둘레의 장면 깊이로 가림을, 화면 가장자리로 감쇠를 곱한다(`LensFlareSpriteBuffer`). 선언한 HDR 컬러 출력에 가산 블렌드로 더한다
+         *        (XML `_blendPreset="Additive"`) — 톤맵 · 블룸 앞에 둔다. 블룸에서 고스트를 뽑는 화면 효과와 별개다. 플레어를 단 빛이 없으면 그리지 않는다(출력 그대로). 주 시점만 그린다.
+         */
+        LensFlare,
+        /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
          */
         Compute,
 
-        // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
+        // --- 아래는 뷰 패스(`_listPass`)로 쓸 수 없다. 프레임 패스(`isFramePassType` — 깊이 히스토리 · 가림 타일 · 입자 · 애니메이션 · 모프 · 스킨 · 컬링 · 라이트 그리드 ·
+        //     볼륨 안개 · 프로브 · 마커)는 `_listFramePass` 에 선언하고, 나머지는 엔진 내부 PSO 슬롯이라 XML 에 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
         GPUCull,
         /// @brief GPUScene 인스턴스 애니메이션 컴퓨트(instance_animation.hlsl)입니다. 인스턴스마다 다른 각속도로 회전시킵니다.
@@ -123,7 +164,7 @@ namespace sw
         VFXSimulation,
         /// @brief GPU 메시 입자를 메시 인스턴스 배치의 인스턴스 칸에 쓰는 컴퓨트(vfx_mesh_instance.hlsl)입니다. 인스턴스 애니메이션 · 컬링 앞에 돈다.
         VFXMeshInstance,
-        /// @brief 뷰의 지난 프레임 장면 깊이를 R32 실수 RT(깊이 히스토리)로 옮기는 풀스크린(depth_history.hlsl)입니다. 컴퓨트 프리패스 리스트에서 그린다.
+        /// @brief 뷰의 지난 프레임 장면 깊이를 R32 실수 RT(깊이 히스토리)로 옮기는 풀스크린(depth_history.hlsl)입니다. 프레임 그래프 리스트에서 그린다.
         DepthHistory,
         /**
          * @brief 자동 노출의 측정 · 적응 풀스크린(auto_exposure.hlsl)입니다. HDR 원본의 평균 로그 휘도를 재어 지난 EV 에서 목표 EV 로 다가간 값을 뷰의 1x1 R32 실수 RT 에 씁니다.
@@ -151,14 +192,38 @@ namespace sw
         ProbeUpdate,
         /**
          * @brief 화면 마커 투영 컴퓨트(canvas_marker.hlsl)입니다. 마커마다 월드 점을 게임 카메라로 투영해 가시 판정과 함께 캔버스 사각형 버퍼의 앵커 원소(x, y, 배율)에 씁니다(`CanvasRenderer::recordMarkerProjection`).
-         *        캔버스 업로드 뒤 · 캔버스 그리기 앞의 컴퓨트 프리패스에서 `gv_uiMarkerGpuProjection` 로 올린 마커가 있는 프레임에만 돈다.
+         *        캔버스 업로드 뒤 · 캔버스 그리기 앞의 프레임 그래프에서 `gv_uiMarkerGpuProjection` 로 올린 마커가 있는 프레임에만 돈다.
          */
         CanvasMarker,
+        /**
+         * @brief 그림자 캐시 복원 풀스크린(shadow_cache_restore.hlsl)입니다. 점광 · 스폿 타일 칸을 뷰포트로 잡고 캐시 층(정적 메시의 깊이, `ShadowCache`)의 텍셀을
+         *        픽셀 깊이(SV_Depth)로 그림자 아틀라스에 옮긴다 — 그 위에 움직이는 메시만 그린다(`FramePassExecutor::drawShadowTiles`). 컬러 출력이 없고 픽셀 스테이지가 있다(`kWritesPixelDepth`).
+         */
+        ShadowCacheRestore,
         /**
          * @brief 패스 출력의 NaN · Inf 감시 컴퓨트(gpu_nan_check.hlsl)입니다. 부동소수 컬러 출력 텍스처를 텍셀마다 훑어 NaN · Inf 가 든 텍셀 수를 슬롯별 카운터에 더합니다(`GPUNanCheck`, 언리얼 r.CheckNaN 선).
          *        `-gv_nanCheck=1` 일 때만 PSO 가 만들어지고, 그래프가 끝난 뒤 주 시점의 패스 출력마다 한 번 돈다(`FramePassExecutor::scanPassOutputsForNan`). 네이티브 bindless(DX12 · Vulkan)만 쓴다.
          */
         NanCheck,
+        /**
+         * @brief 간접 인자의 인스턴스 개수를 GPU 에서 되돌리는 컴퓨트(gpu_cull.hlsl 의 `SW_CULL_RESET_ARGS`)입니다. 컬링 슬롯마다 컬링 앞에서 배치마다 스레드 하나가
+         *        개수를 0(압축을 포기한 배치는 CPU 개수)으로 쓴다 — CPU 가 프레임마다 인자 전체를 다시 올리던 일을 대신한다(`FrameGraphExecutor::dispatchCullView`).
+         *        컬링과 같은 조건(간접 인자 능력)이고 GPUCull 패스 안의 첫 디스패치라 따로 선언하지 않는다.
+         */
+        IndirectArgsReset,
+    };
+
+    /**
+     * @enum RenderPassExecutionMode
+     * @brief 일반 풀스크린 패스의 실행 방식입니다. 파이프라인 XML 의 `_implementation` 이 적는다(블룸 다운샘플 · 피사계 심도 — 표의 `kComputeImplementation`).
+     * @details Pixel 은 풀스크린 삼각형, Compute 는 같은 셰이더 파일의 `CSMain`(그룹 공유 타일)을 출력 크기로 디스패치한다. 어느 쪽이 나은지는 측정이 정하고 XML 한 줄로 바꾼다.
+     *          Compute 는 네이티브 bindless(DX12 · Vulkan)에서만 돌고, 에뮬 백엔드는 Pixel 이 돈다(능력이 정한 길).
+     */
+    ENUM()
+    enum class RenderPassExecutionMode : uint8
+    {
+        Pixel,   ///< 풀스크린 삼각형(기본)
+        Compute, ///< 컴퓨트 디스패치
     };
 
     /**
@@ -167,10 +232,42 @@ namespace sw
      */
     inline constexpr const utf8* kSwapchainOutputName = "Swapchain";
 
-    /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(내부 슬롯과 Invalid 는 제외합니다). */
-    constexpr bool isPipelinePassType( RenderPassType type )
+    /** @brief 뷰 그래프(`_listPass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 뷰마다 다시 도는 패스입니다(내부 슬롯 · 프레임 패스 · Invalid 는 제외합니다). */
+    constexpr bool isViewPassType( RenderPassType type )
     {
         return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::Compute );
+    }
+
+    /**
+     * @brief 프레임 그래프(`_listFramePass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 프레임에 한 번 모든 뷰의 몫을 기록하는 패스입니다(`FrameGraphExecutor`).
+     * @details 이 목록이 곧 "그래프 앞에 C++ 가 박아 두던 일" 의 전부다. 파이프라인이 선언하지 않은 종류는 PSO 도 없고 돌지 않는다(`FramePSOManager::createPassPSOs`).
+     *          InstanceSort · IndirectArgsReset · VFXMeshInstance 는 GPUCull · VFXSimulation 패스 안의 다른 디스패치라 따로 선언하지 않는다.
+     */
+    constexpr bool isFramePassType( RenderPassType type )
+    {
+        switch ( type )
+        {
+            case RenderPassType::DepthHistory:
+            case RenderPassType::OcclusionTiles:
+            case RenderPassType::VFXSimulation:
+            case RenderPassType::InstanceAnimation:
+            case RenderPassType::MeshMorph:
+            case RenderPassType::MeshSkin:
+            case RenderPassType::GPUCull:
+            case RenderPassType::LightGrid:
+            case RenderPassType::VolumetricFog:
+            case RenderPassType::ProbeUpdate:
+            case RenderPassType::CanvasMarker:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(뷰 패스 또는 프레임 패스 — 내부 슬롯과 Invalid 는 제외합니다). */
+    constexpr bool isPipelinePassType( RenderPassType type )
+    {
+        return isViewPassType( type ) || isFramePassType( type );
     }
 
     /// @brief 렌더 패스 어태치먼트 하나(이름, 포맷, 첫 사용의 로드 · 저장 동작, 초기값)입니다.
@@ -231,6 +328,23 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 프레임 그래프의 자원 하나(이름, 수명 종류)입니다. 파이프라인 XML 의 `_listResource` 원소입니다.
+     * @details 첨부가 아닌 자원 — 서브시스템이 가진 버퍼(인스턴스 · 라이트 · 컬링 결과)와 프레임을 넘는 히스토리(깊이 히스토리 · 가림 타일 · 입자 상태 · 프로브) — 의 이름이다.
+     *          프레임 패스가 이 이름으로 읽기 · 쓰기를 선언하면 그래프가 순서를 정한다. 그래프는 버퍼를 만들지 않는다(주인은 서브시스템이다 — 언리얼 RDG 의 외부 버퍼 등록과 같다).
+     *          `_kind` 는 Persistent 또는 External 이다(Transient 는 첨부의 몫이라 검증이 막는다).
+     */
+    REFLECT()
+    struct RenderGraphResourceDesc
+    {
+        REFLECT_BODY();
+        PROPERTY( InheritKey )
+        string _name;
+
+        PROPERTY()
+        RenderGraphResourceKind _kind{ RenderGraphResourceKind::External };
+    };
+
     /** @brief 첨부 나눗수(`RenderPassAttachment::_resolutionDivisor`)가 받는 값인지 반환합니다(1, 2, 4). */
     constexpr bool isSupportedResolutionDivisor( uint32 divisor )
     {
@@ -367,5 +481,17 @@ namespace sw
          */
         PROPERTY()
         int32 _minPostQuality{ 0 };
+
+        /**
+         * @brief 이 패스가 도는 큐입니다. `AsyncCompute` 는 프레임 패스 중 컴퓨트 종류만 받는다(검증) — 뷰 패스 · 그래픽스 드로우(깊이 히스토리)는 그래픽스 큐다.
+         * @details 능력 `RHICapabilities::_bAsyncCompute` 가 있는 백엔드(DX12 · 큐가 둘인 Vulkan 장치)는 컴퓨트 큐에서 그래픽스와 겹쳐 돈다. 없으면(DX11 · GL · WebGPU)
+         *          그래픽스 큐에서 같은 순서로 돈다 — 능력 표가 정한 길이다. 포크 · 조인은 그래프 간선이 정한다(`RenderGraph::getQueueSteps`). 언리얼 `ERDGPassFlags::AsyncCompute` 자리.
+         */
+        PROPERTY()
+        RHIQueueType _queue{ RHIQueueType::Graphics };
+
+        /** @brief 일반 풀스크린 패스의 실행 방식입니다(`RenderPassExecutionMode`). Compute 는 표가 컴퓨트 구현을 가진 종류만 받는다(검증). */
+        PROPERTY()
+        RenderPassExecutionMode _implementation{ RenderPassExecutionMode::Pixel };
     };
 } // namespace sw

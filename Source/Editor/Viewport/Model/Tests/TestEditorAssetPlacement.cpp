@@ -1,8 +1,10 @@
 // 씬 뷰 배치의 표면 찾기 — 콜라이더 면 · 바닥 평면 · 카메라 뒤 거절 · 먼 표면 거절 · 격자 스냅(높이는 그대로).
 #include "pch.h"
 
+#include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Workspace/Asset/EditorPlacementPose.h"
 #include "Editor/Viewport/Model/EditorAssetPlacement.h"
 
 #include "Engine/Physics/Collision/PhysicsQuery.h"
@@ -147,4 +149,30 @@ SW_TEST_CASE( EditorAssetPlacementTest, TwoDimensionalUsesZPlane )
     SW_EXPECT_TRUE( hit._surface == sw::editor::EditorPlacementSurface::GroundPlane );
     SW_EXPECT_NEAR( 0.0f, hit._position._z, 1e-6f );
     SW_EXPECT_NEAR( 3.0f, hit._position._x, 1e-6f );
+}
+
+// 놓기 전 회전: 걸음의 배수로 돌고 0 ~ 2π 로 감는다(직각 걸음 네 번이면 처음 자세), 반대쪽은 2π 아래로 감는다. 자세는 3D 요 · 2D 롤에 더한다.
+SW_TEST_CASE( EditorAssetPlacementTest, RotateStepsWrapAndMapToTheUpAxis )
+{
+    using sw::editor::EditorAssetPlacement;
+    const float32 step = sw::MathUtil::kHalfPi;
+    float32       yaw  = 0.0f;
+    yaw                = EditorAssetPlacement::stepYaw( yaw, step, 1 );
+    SW_EXPECT_NEAR( step, yaw, 1e-5f );
+    for ( int32 index = 0; index < 3; ++index )
+        yaw = EditorAssetPlacement::stepYaw( yaw, step, 1 );
+    SW_EXPECT_NEAR( 0.0f, yaw, 1e-6f ); // 네 번 — 한 바퀴
+    yaw = EditorAssetPlacement::stepYaw( 0.0f, step, -1 );
+    SW_EXPECT_NEAR( 3.0f * step, yaw, 1e-5f );
+    SW_EXPECT_NEAR( 0.7f, EditorAssetPlacement::stepYaw( 0.7f, 0.0f, 1 ), 1e-6f ); // 걸음이 없으면 그대로
+
+    sw::editor::EditorPlacementPose pose{};
+    pose._yaw                   = step;
+    const sw::float3 rotation3D = pose.makeRotationOffset();
+    SW_EXPECT_NEAR( step, rotation3D._y, 1e-6f );
+    SW_EXPECT_NEAR( 0.0f, rotation3D._z, 1e-6f );
+    pose._b2DMode               = true;
+    const sw::float3 rotation2D = pose.makeRotationOffset();
+    SW_EXPECT_NEAR( 0.0f, rotation2D._y, 1e-6f );
+    SW_EXPECT_NEAR( step, rotation2D._z, 1e-6f );
 }

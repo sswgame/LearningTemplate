@@ -102,7 +102,7 @@ namespace sw::editor
             const optional<uint32> sourceIndex = inoutDef.findNodeIndex( name );
             uint32                 newIndex    = 0;
             if ( sourceIndex.has_value() == false )
-                continue;
+                continue;                                                      // 고른 뒤 지운 노드
             const AudioGraphNodeDef source = inoutDef._listNode[*sourceIndex]; // addNode 가 목록을 늘리기 전에 값으로 둔다
             if ( addNode( inoutDef, source._type, source._editorPosition + offset, newIndex ) == false )
                 break; // 노드 수 상한
@@ -114,6 +114,7 @@ namespace sw::editor
         }
         for ( size_t index = 0; index < listSource.size(); ++index )
         {
+            // 위 반복이 둘 다 찾았거나 만든 이름이다.
             const AudioGraphNodeDef source = inoutDef._listNode[inoutDef.findNodeIndex( listSource[index] ).value()];
             AudioGraphNodeDef&      copy   = inoutDef._listNode[inoutDef.findNodeIndex( listNew[index] ).value()];
             for ( const hashed_string& input : source._listInput )
@@ -181,7 +182,7 @@ namespace sw::editor
             uint32             depth = 0;
             for ( const hashed_string& input : node._listInput )
             {
-                depth = MathUtil::max( depth, listDepth[inoutDef.findNodeIndex( input ).value()] + 1u );
+                depth = MathUtil::max( depth, listDepth[inoutDef.findNodeIndex( input ).value()] + 1u ); // 처리 순서를 만든 그래프라 입력은 모두 있다
             }
             listDepth[nodeIndex] = depth;
             const uint32 row     = listRowCount[depth]++;

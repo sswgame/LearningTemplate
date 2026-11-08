@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(cloth): 면(평직). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="Cotton" _base="engine/materials/library/cloth/base.material">
+	<_properties>
+		<item name="_color" defaultValue="0.8 0.78 0.74 1" />
+		<item name="_secondaryColor" defaultValue="0.74 0.72 0.68 1" />
+		<item name="_patternAmount" defaultValue="0" />
+	</_properties>
+</MaterialDef>

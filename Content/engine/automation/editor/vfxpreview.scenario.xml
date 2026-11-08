@@ -6,7 +6,7 @@
   눈 확인: -gv_editorPreviewScreenshot=<경로>.ppm 를 주면 미리보기 타깃을 찍는다(바닥 위 원점에서 주황 불꽃이 솟고 회색 연기가 오른다).
   실행: App -EnableEditor -scenario=engine/automation/editor/vfxpreview.scenario.xml -unattended (백엔드 vk · dx11 · opengl 도 같다)
 -->
-<Scenario name="editor.vfxpreview" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
+<Scenario name="editor.vfxpreview" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="Immediately" input="exclusive">
 	<ResizeWindow width="1920" height="1080"/>
 	<Variable name="gv_editorUiScale" value="1"/>
 	<Variable name="gv_editorWatchAsset" value="engine/vfx/sparks.vfx.xml"/>
@@ -30,6 +30,30 @@
 	<Expect watch="Editor.VFXPreviewParticleCount" atLeast="20"/>
 	<EditorWaitSettled/>
 	<CaptureEditorUI file="vfxpreview/panel.png"/>
+	<!-- 방출기 격리: 첫 방출기의 Solo 를 켜면 켜진 방출기가 하나, 다시 누르면 둘(모델 테스트 SoloTogglesOneEmitter). 효과 파일은 바뀌지 않는다 -->
+	<Expect watch="Editor.VFXPreviewEnabledEmitterCount" equals="2"/>
+	<EditorClick mark="vfx.solo.0"/>
+	<WaitUntil watch="Editor.VFXPreviewEnabledEmitterCount" equals="1" timeoutFrames="60"/>
+	<Expect watch="Editor.VFXPreviewSoloEmitter" equals="0"/>
+	<EditorClick mark="vfx.solo.0"/>
+	<WaitUntil watch="Editor.VFXPreviewEnabledEmitterCount" equals="2" timeoutFrames="60"/>
+	<Expect watch="Editor.VFXPreviewSoloEmitter" equals="-1"/>
+	<!-- 한 프레임 걸음: 공통 재생 막대(Data.preview)의 멈춤 · 한 프레임이 씬 시간 배율로 효과에 걸린다 -->
+	<EditorClick mark="Data.preview.pause"/>
+	<WaitUntil watch="Editor.PreviewTimeScale" equals="0" timeoutFrames="30"/>
+	<EditorClick mark="Data.preview.step"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="Data.preview.pause"/>
+	<WaitUntil watch="Editor.PreviewTimeScale" equals="1" timeoutFrames="30"/>
+	<!-- 캐릭터 타깃: 기사 프리팹을 놓으면 효과가 몸에 붙어 원을 돈다 -->
+	<EditorClick mark="vfx.targetField"/>
+	<EditorText value="common/prefabs/kaykit/knight_merged.prefab.xml"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="vfx.targetSpawn"/>
+	<WaitUntil watch="Editor.VFXPreviewHasTarget" equals="1" timeoutFrames="600"/>
+	<ExpectLog id="VFXPreview.TargetAttached" contains="knight_merged" count="1"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="vfxpreview/target.png"/>
 	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>

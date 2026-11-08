@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Workspace/EditorContext.h"
 
+#include "Core/Diagnostics/SubsystemTimingReport.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -22,7 +23,6 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/Profiling/SubsystemTimingReport.h"
 
 namespace sw::editor
 {

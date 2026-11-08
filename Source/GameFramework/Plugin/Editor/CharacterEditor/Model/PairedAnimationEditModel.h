@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
@@ -60,8 +61,8 @@ namespace sw::editor
         [[nodiscard]] bool loadFromFile( string_view absolutePath );
         /** @brief 현재 내용을 파일 형식으로 씁니다. */
         string saveToXMLText() const { return PairedAnimationDef::makeXMLText( _content ); }
-        /** @brief 규칙을 본 뒤 파일에 씁니다. 규칙에 어긋나거나 쓰지 못하면 쓰지 않고 false 이고 이유를 @p outError 에 담습니다. 성공하면 "저장된 상태" 로 맞춥니다. */
-        [[nodiscard]] bool saveDocument( const AbsolutePath& absPath, string& outError );
+        /** @brief 규칙을 본 뒤 파일에 씁니다. 규칙에 어긋나거나 쓰지 못하면 쓰지 않고 이유(`Error`)를 돌려줍니다. 성공하면 "저장된 상태" 로 맞춥니다. */
+        [[nodiscard]] expected<void> saveDocument( const AbsolutePath& absPath );
 
         // --- 조회 ----------------------------------------------------------------------------------------------------
 
@@ -72,28 +73,27 @@ namespace sw::editor
         bool isValid() const;
 
         // --- 편집 ----------------------------------------------------------------------------------------------------
-        // 실패하면 내용을 바꾸지 않고 되돌리기 기록도 남기지 않습니다. 이유는 @p outError 에 영어 한 문장으로 담습니다.
+        // 실패하면 내용을 바꾸지 않고 되돌리기 기록도 남기지 않은 채 이유(`Error`)를 돌려줍니다.
         // bContinuous 가 true 이면 같은 대상 · 같은 필드의 연속 편집(끌기)을 되돌리기 한 단계로 합칩니다. 끌기가 끝나면 `endContinuousEdit` 를 부릅니다.
 
-        [[nodiscard]] bool setDuration( float32 seconds, bool bContinuous, string& outError );
+        [[nodiscard]] expected<void> setDuration( float32 seconds, bool bContinuous );
         /** @brief 역할이 공유 타임라인에 들어오는 시각입니다. 앵커는 0 이어야 하므로 고칠 수 없습니다. */
-        [[nodiscard]] bool setRoleStart( uint32 roleIndex, float32 seconds, bool bContinuous, string& outError );
-        [[nodiscard]] bool setRoleBlend( uint32 roleIndex, float32 enterSeconds, float32 exitSeconds, bool bContinuous, string& outError );
+        [[nodiscard]] expected<void> setRoleStart( uint32 roleIndex, float32 seconds, bool bContinuous );
+        [[nodiscard]] expected<void> setRoleBlend( uint32 roleIndex, float32 enterSeconds, float32 exitSeconds, bool bContinuous );
         /** @brief 정렬(`snap` · `warp`) 역할의 앵커 기준 자리(m)와 요(도)입니다. 정렬하지 않는 역할은 실패합니다. */
-        [[nodiscard]] bool setRoleOffset( uint32 roleIndex, const float3& offset, float32 yawDegrees, bool bContinuous, string& outError );
+        [[nodiscard]] expected<void> setRoleOffset( uint32 roleIndex, const float3& offset, float32 yawDegrees, bool bContinuous );
         /**
          * @brief 미리보기에서 옮긴 역할 루트(@p rolePosition · @p roleYaw 라디안)를 앵커 루트(@p anchorPosition · @p anchorYaw) 기준 오프셋 · 요로 바꿔 넣습니다(오프셋 기즈모).
          * @details `computeRoleTarget` 의 역이다 — 넣은 뒤 같은 앵커로 목표를 구하면 그 자리가 나온다.
          */
-        [[nodiscard]] bool setRoleOffsetFromWorld( uint32 roleIndex, const float3& anchorPosition, float32 anchorYaw, const float3& rolePosition, float32 roleYaw, bool bContinuous,
-                                                   string& outError );
+        [[nodiscard]] expected<void> setRoleOffsetFromWorld( uint32 roleIndex, const float3& anchorPosition, float32 anchorYaw, const float3& rolePosition, float32 roleYaw, bool bContinuous );
         /** @brief `warp` 역할의 워프 창 끝(역할 클립 시각)입니다. */
-        [[nodiscard]] bool setRoleWarpEnd( uint32 roleIndex, float32 seconds, bool bContinuous, string& outError );
+        [[nodiscard]] expected<void> setRoleWarpEnd( uint32 roleIndex, float32 seconds, bool bContinuous );
         /** @brief 공유 알림을 끝에 더합니다. 시각은 0 이상 · 길이 이하, 역할은 있는 역할이어야 합니다. */
-        [[nodiscard]] bool addNotify( const hashed_string& name, const hashed_string& role, float32 time, string& outError );
-        [[nodiscard]] bool removeNotify( uint32 notifyIndex, string& outError );
-        [[nodiscard]] bool setNotifyTime( uint32 notifyIndex, float32 time, bool bContinuous, string& outError );
-        [[nodiscard]] bool setNotifyRole( uint32 notifyIndex, const hashed_string& role, string& outError );
+        [[nodiscard]] expected<void> addNotify( const hashed_string& name, const hashed_string& role, float32 time );
+        [[nodiscard]] expected<void> removeNotify( uint32 notifyIndex );
+        [[nodiscard]] expected<void> setNotifyTime( uint32 notifyIndex, float32 time, bool bContinuous );
+        [[nodiscard]] expected<void> setNotifyRole( uint32 notifyIndex, const hashed_string& role );
         /** @brief 연속 편집을 끝냅니다. 다음 편집은 새 되돌리기 단계를 만듭니다. */
         void endContinuousEdit() { _state.endCoalescing(); }
 
@@ -122,9 +122,9 @@ namespace sw::editor
     private:
         /** @brief 편집 직전에 부릅니다. */
         void recordUndo( string_view coalesceKey );
-        /** @brief 역할 인덱스가 범위 안이면 true, 아니면 오류를 쓰고 false 입니다. */
-        bool isRoleIndexValid( uint32 roleIndex, string& outError ) const;
-        bool isNotifyIndexValid( uint32 notifyIndex, string& outError ) const;
+        /** @brief 역할 인덱스가 범위 밖이면 오류입니다. */
+        [[nodiscard]] expected<void> checkRoleIndex( uint32 roleIndex ) const;
+        [[nodiscard]] expected<void> checkNotifyIndex( uint32 notifyIndex ) const;
 
     private:
         PairedAnimationContentDef                      _content;

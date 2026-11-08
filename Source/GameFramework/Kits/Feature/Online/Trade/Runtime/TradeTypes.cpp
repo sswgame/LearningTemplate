@@ -6,14 +6,14 @@
 
 namespace sw
 {
-    int32 TradeSnapshot::findSideIndex( AccountID accountID ) const
+    optional<int32> TradeSnapshot::findSideIndex( AccountID accountID ) const
     {
         if ( accountID == kInvalidAccountID )
-            return constant::invalid_index::kInt32;
+            return nullopt;
         if ( _arrSide[0]._accountID == accountID )
             return 0;
         if ( _arrSide[1]._accountID == accountID )
             return 1;
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 } // namespace sw

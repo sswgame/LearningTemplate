@@ -45,9 +45,10 @@ namespace sw
 
     TradeOutcome TradeStateMachine::apply( TradeSnapshot& inoutTrade, const TradeCommand& command, const ITradePolicy& policy, int64 nowMs )
     {
-        const int32 sideIndex = inoutTrade.findSideIndex( command._actorID );
-        if ( sideIndex < 0 )
+        const optional<int32> foundSide = inoutTrade.findSideIndex( command._actorID );
+        if ( foundSide.has_value() == false )
             return TradeResult::NotParty;
+        const int32 sideIndex = *foundSide;
         if ( inoutTrade.isClosed() )
             return TradeResult::WrongState;
         TradeSide& own  = inoutTrade._arrSide[sideIndex];

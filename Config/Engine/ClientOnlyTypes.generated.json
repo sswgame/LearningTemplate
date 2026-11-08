@@ -50,6 +50,7 @@
         "ProgressBarWidget",
         "QuestObjectiveMarkerComponent",
         "RenderGraphPassDesc",
+        "RenderGraphResourceDesc",
         "RenderPassAttachment",
         "RenderPassDesc",
         "RenderPipelineDesc",

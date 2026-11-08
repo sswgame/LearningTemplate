@@ -186,13 +186,13 @@ namespace sw
             if ( AudioMixerDescInternal::validateBus( *this, busIndex, sourceName, rootCount ) == false )
                 bValid = false;
         }
-        if ( rootCount != 1 || findBusIndex( hashed_string( AudioBusNames::kMaster ) ).has_value() == false )
+        const optional<uint32> masterIndex = findBusIndex( hashed_string( AudioBusNames::kMaster ) );
+        if ( rootCount != 1 || masterIndex.has_value() == false )
         {
             SW_LOG_ERROR_ID( "AudioMixerDef.MixerNeedsExactlyOne", "%#: the mixer needs exactly one root bus named '%#'", sourceName, AudioBusNames::kMaster );
             bValid = false;
         }
         // master 는 장치로 나간다 — 출력 레이아웃이 아니면 장치 버퍼와 채널 수가 어긋난다.
-        const optional<uint32> masterIndex = findBusIndex( hashed_string( AudioBusNames::kMaster ) );
         if ( masterIndex.has_value() && _listBus[*masterIndex]._channels != AudioBusChannels::Output )
         {
             SW_LOG_ERROR_ID( "AudioMixerDef.BusFeedsDeviceMust", "%#: the '%#' bus feeds the device and must use the output channels (_channels=\"Output\")", sourceName, AudioBusNames::kMaster );

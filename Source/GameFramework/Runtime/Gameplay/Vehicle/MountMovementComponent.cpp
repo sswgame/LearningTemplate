@@ -159,8 +159,9 @@ namespace sw
         const float32                 slopeSin    = bGrounded ? -pController->getGroundNormal().dot( facing ) : 0.0f;
         _forwardSpeed += _inertia.computeAlongAcceleration( _forwardSpeed, slopeSin, 0.0f, deltaTime ) * deltaTime;
         const float32 targetSpeed = computeGaitSpeed( gait );
-        const float32 rate        = targetSpeed > _forwardSpeed ? _acceleration : _deceleration;
-        _forwardSpeed             = MathUtil::moveToward( _forwardSpeed, targetSpeed, rate * deltaTime );
+        // 다리가 미는 가속은 출력 한계(일률)로 자른다 — 출력이 모자라면 가파른 오르막에서 걸음새 속도를 잃는다.
+        const float32 rate = targetSpeed > _forwardSpeed ? _inertia.limitDriveAcceleration( _acceleration, _forwardSpeed ) : _deceleration;
+        _forwardSpeed      = MathUtil::moveToward( _forwardSpeed, targetSpeed, rate * deltaTime );
 
         // 자기 요 방향으로 간다. 요가 0 이면 +Z 쪽이고 +X 쪽으로 돈다. 루트 모션이면 애니메이션이 옮긴다.
         const float3    velocity          = facing * _forwardSpeed;

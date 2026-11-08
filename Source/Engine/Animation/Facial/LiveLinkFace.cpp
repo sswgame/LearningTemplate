@@ -310,7 +310,15 @@ namespace sw
             input._expression = expression._expression;
             for ( const LiveLinkFaceChannelWeight& channel : expression._listChannel )
             {
-                input._listChannelIndex.push_back( layout.findChannelIndex( channel._channel ).value() ); // 대응표 검증이 배치에 없는 채널을 거절했다
+                // 읽기(`LiveLinkFaceMapping::loadFromXMLText`)가 같은 배치로 이미 걸렀다 — 다른 배치와 짝지어 넘기면 그 채널은 알리고 뺀다.
+                const optional<uint32> channelIndex = layout.findChannelIndex( channel._channel );
+                if ( channelIndex.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "LiveLinkFace.SourceChannelNotInLayout", "Live Link Face source: expression '%#' names channel '%#' that the packet layout does not have - it is skipped",
+                                     expression._expression.c_str(), channel._channel.c_str() );
+                    continue;
+                }
+                input._listChannelIndex.push_back( *channelIndex );
                 input._listScale.push_back( channel._scale );
             }
             _listExpression.push_back( std::move( input ) );

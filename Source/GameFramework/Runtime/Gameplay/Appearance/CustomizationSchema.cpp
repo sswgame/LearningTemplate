@@ -23,7 +23,9 @@ namespace sw
         {
             // 매개변수 종류마다 받는 칸이다(그 밖의 칸은 오류 — 칸 구조체 하나를 함께 쓰므로 종류마다 막는다).
             static constexpr const utf8* kArrSliderField[]     = { "name", "category", "symmetry", "min", "max", "default" };
-            static constexpr const utf8* kArrColorField[]      = { "name", "category", "symmetry", "default" };
+            static constexpr const utf8* kArrColorField[]      = { "name", "category", "symmetry", "default", "palette" };
+            static constexpr const utf8* kArrChoiceField[]     = { "name", "category", "symmetry", "default" };
+            static constexpr const utf8* kArrSwatchAttribute[] = { "name", "color" };
             static constexpr const utf8* kArrAttachmentField[] = { "name", "category", "symmetry", "default", "socket" };
 
             static bool isSliderDrive( CustomizationDriveKind kind )
@@ -39,8 +41,10 @@ namespace sw
                         (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrSliderField, report, sourceName );
                         return;
                     case CustomizationKind::Color:
-                    case CustomizationKind::Choice:
                         (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrColorField, report, sourceName );
+                        return;
+                    case CustomizationKind::Choice:
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrChoiceField, report, sourceName );
                         return;
                     case CustomizationKind::Attachment:
                         (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrAttachmentField, report, sourceName );
@@ -54,8 +58,22 @@ namespace sw
                 CustomizationDriveDef drive;
                 drive._from = inoutParam._min;
                 drive._to   = inoutParam._max;
-                if ( AppearanceXMLUtil::readFields( node, drive, report, sourceName ) == false )
+                if ( AppearanceXMLUtil::readFields( node, drive, report, sourceName, { "include", "exclude" } ) == false )
                     return;
+                AppearanceXMLUtil::readNameList( node, "include", drive._listInclude );
+                AppearanceXMLUtil::readNameList( node, "exclude", drive._listExclude );
+                if ( drive.isSectionTargeted() && drive.isMaterialDrive() == false )
+                {
+                    report.addErrorWithID( "Appearance.DriveSectionTargetInvalid", "%#: schema '%#' parameter '%#' drive %# cannot name sections (include/exclude is for material drives)", sourceName, schemaID.c_str(),
+                                           inoutParam._name.c_str(), getEnumName( drive._kind ) );
+                    return;
+                }
+                if ( drive._owner.empty() == false && drive.isMaterialDrive() == false )
+                {
+                    report.addErrorWithID( "Appearance.DriveOwnerInvalid", "%#: schema '%#' parameter '%#' drive %# cannot name an owner (owner is for material drives)", sourceName, schemaID.c_str(),
+                                           inoutParam._name.c_str(), getEnumName( drive._kind ) );
+                    return;
+                }
                 const bool bSliderDrive = isSliderDrive( drive._kind );
                 const bool bFits        = ( inoutParam._kind == CustomizationKind::Slider && bSliderDrive ) || ( inoutParam._kind == CustomizationKind::Color && bSliderDrive == false );
                 if ( bFits == false || drive._target.empty() )
@@ -139,7 +157,8 @@ namespace sw
                 param._name     = params._name;
                 param._category = params._category;
                 param._symmetry = params._symmetry;
-                param._socket   = params._socket; // 부착 매개변수만 필수 — 아래에서 확인한다
+                param._socket   = params._socket;  // 부착 매개변수만 필수 — 아래에서 확인한다
+                param._palette  = params._palette; // 견본은 카탈로그가 스키마를 다 읽은 뒤 채운다(`loadFromXML`)
                 param._min      = params._min;
                 param._max      = params._max;
                 if ( param._name.empty() || inoutSchema.findParameter( param._name ) != nullptr )
@@ -183,6 +202,44 @@ namespace sw
                 }
                 inoutSchema._listParameter.push_back( param );
             }
+
+            /** @brief 견본 묶음(`<Palette id><Swatch name color/></Palette>`)을 읽습니다. 견본이 없거나 이름이 겹치면 오류입니다. */
+            static void readPalette( const XMLNode& node, vector<CustomizationSchemaCatalog::Palette>& inoutListPalette, AppearanceLoadReport& report, string_view sourceName )
+            {
+                CustomizationSchemaCatalog::Palette palette;
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrIDAttribute, report, sourceName );
+                palette._id = AppearanceXMLUtil::readRequiredName( node, "id", report, sourceName );
+                for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
+                {
+                    if ( StringUtil::equals( child.getName(), "Swatch" ) == false )
+                    {
+                        AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
+                        continue;
+                    }
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrSwatchAttribute, report, sourceName );
+                    const hashed_string name = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
+                    float4              color{};
+                    AppearanceXMLUtil::readRequiredFloat4( child, "color", color, report, sourceName );
+                    if ( VectorUtil::contains( palette._listSwatchName, name ) )
+                    {
+                        report.addErrorWithID( "Appearance.IDDuplicate", "%#: palette '%#' repeats swatch '%#'", sourceName, palette._id.c_str(), name.c_str() );
+                        continue;
+                    }
+                    palette._listSwatchName.push_back( name );
+                    palette._listSwatch.push_back( color );
+                }
+                if ( palette._id.empty() )
+                    return;
+                const bool bRepeated = VectorUtil::containsBy<&CustomizationSchemaCatalog::Palette::_id>( inoutListPalette, palette._id );
+                if ( bRepeated || palette._listSwatch.empty() )
+                {
+                    report.addErrorWithID( "Appearance.PaletteInvalid", "%#: palette '%#' needs a unique id and at least one <Swatch>", sourceName, palette._id.c_str() );
+                    return;
+                }
+                inoutListPalette.push_back( std::move( palette ) );
+            }
+
+            static constexpr const utf8* kArrIDAttribute[] = { "id" };
         };
     } // namespace
 } // namespace sw
@@ -232,6 +289,11 @@ namespace sw
         (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
         for ( XMLNode schemaNode = root.findChild(); schemaNode; schemaNode = schemaNode.findNextSibling() )
         {
+            if ( StringUtil::equals( schemaNode.getName(), "Palette" ) )
+            {
+                CustomizationSchemaInternal::readPalette( schemaNode, _listPalette, report, sourceName );
+                continue;
+            }
             if ( StringUtil::equals( schemaNode.getName(), "Schema" ) == false )
             {
                 AppearanceXMLUtil::reportUnknownChild( root, schemaNode, report, sourceName );
@@ -267,7 +329,57 @@ namespace sw
             }
             _listSchema.push_back( schema );
         }
+        // 견본 묶음은 파일 어디에 적어도 된다 — 스키마를 다 읽은 뒤 이름으로 잇는다. 모르는 묶음은 오류다(자유 색으로 조용히 풀지 않는다).
+        for ( CustomizationSchemaDef& schema : _listSchema )
+        {
+            for ( CustomizationParamDef& param : schema._listParameter )
+            {
+                // 드라이브의 주인은 같은 스키마의 고르기여야 한다 — 그 고르기가 낸 부품만 그 이름을 주인으로 가진다.
+                for ( const CustomizationDriveDef& drive : param._listDrive )
+                {
+                    if ( drive._owner.empty() )
+                        continue;
+                    const CustomizationParamDef* pOwner = schema.findParameter( drive._owner );
+                    if ( pOwner == nullptr || pOwner->_kind != CustomizationKind::Choice )
+                        report.addErrorWithID( "Appearance.DriveOwnerInvalid", "%#: schema '%#' parameter '%#' drive owner '%#' is not a <Choice> of the schema", sourceName, schema._id.c_str(),
+                                               param._name.c_str(), drive._owner.c_str() );
+                }
+                if ( param._palette.empty() )
+                    continue;
+                const Palette* pPalette = findPalette( param._palette );
+                if ( pPalette == nullptr )
+                {
+                    report.addErrorWithID( "Appearance.PaletteUnknown", "%#: schema '%#' color '%#' names unknown palette '%#'", sourceName, schema._id.c_str(), param._name.c_str(), param._palette.c_str() );
+                    continue;
+                }
+                param._listSwatch = pPalette->_listSwatch;
+            }
+        }
         return report.getErrors().size() == errorCountBefore;
+    }
+
+    const CustomizationSchemaCatalog::Palette* CustomizationSchemaCatalog::findPalette( const hashed_string& id ) const
+    {
+        return VectorUtil::findBy<&Palette::_id>( _listPalette, id );
+    }
+
+    float4 CustomizationParamDef::snapToSwatch( const float4& color ) const
+    {
+        if ( _listSwatch.empty() )
+            return color;
+        const float4* pBest    = &_listSwatch.front();
+        float32       bestDist = MathUtil::kMaxFloat;
+        for ( const float4& swatch : _listSwatch )
+        {
+            const float4  delta = swatch - color;
+            const float32 dist  = delta._x * delta._x + delta._y * delta._y + delta._z * delta._z + delta._w * delta._w;
+            if ( dist < bestDist )
+            {
+                bestDist = dist;
+                pBest    = &swatch;
+            }
+        }
+        return *pBest;
     }
 
     const CustomizationSchemaDef* CustomizationSchemaCatalog::findSchema( const hashed_string& id ) const
@@ -321,6 +433,7 @@ namespace sw
             }
             else if ( param._kind == CustomizationKind::Color )
             {
+                value._number = param.snapToSwatch( value._number ); // 견본 묶음이 있으면 가장 가까운 견본(공유 코드로 온 임의 색도 팔레트로 돌아온다)
                 value._number = float4( CustomizationParamDef::dequantizeColorChannel( CustomizationParamDef::quantizeColorChannel( value._number._x ) ), CustomizationParamDef::dequantizeColorChannel( CustomizationParamDef::quantizeColorChannel( value._number._y ) ),
                                         CustomizationParamDef::dequantizeColorChannel( CustomizationParamDef::quantizeColorChannel( value._number._z ) ), CustomizationParamDef::dequantizeColorChannel( CustomizationParamDef::quantizeColorChannel( value._number._w ) ) );
             }

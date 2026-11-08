@@ -32,8 +32,8 @@ namespace sw
         };
     } // namespace
 
-    // 디버그 드로우 겹치기 위(순서 1).
-    SW_CANVAS_OVERLAY( CanvasTestPattern, "CanvasTestPattern", 1, &CanvasTestPatternInternal::paintOverlay );
+    // 주 출력 층 — 이 그림은 Canvas 패스 자체를 보는 확인 대상이라 사진 캡처 · 골든에 들어야 한다(개발 그림의 기본 층은 개발 겹치기다).
+    SW_CANVAS_OVERLAY( CanvasTestPattern, "CanvasTestPattern", 1, CanvasOverlayLayer::MainOutput, &CanvasTestPatternInternal::paintOverlay );
 
     void CanvasTestPattern::paint( CanvasDrawList& outCanvas, const float2& targetSize, FontService* pFontService, uint64 frameIndex )
     {

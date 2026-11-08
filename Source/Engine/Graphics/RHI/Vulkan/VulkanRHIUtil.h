@@ -62,6 +62,7 @@ namespace sw
             {     RHIFormat::EAC_R11_UNORM,       VK_FORMAT_EAC_R11_UNORM_BLOCK},
             {    RHIFormat::EAC_RG11_UNORM,    VK_FORMAT_EAC_R11G11_UNORM_BLOCK},
             {RHIFormat::R32G32B32A32_FLOAT,       VK_FORMAT_R32G32B32A32_SFLOAT},
+            {      RHIFormat::R16G16_FLOAT,             VK_FORMAT_R16G16_SFLOAT},
         };
 
         static inline VkFormat toVulkanTextureFormat( RHIFormat format )

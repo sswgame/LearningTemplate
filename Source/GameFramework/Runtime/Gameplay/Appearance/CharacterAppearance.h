@@ -16,6 +16,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/CustomizationValueSet.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/SkinLayer.h"
 
 namespace sw
 {
@@ -62,6 +63,7 @@ namespace sw
         vector<CharacterAppearanceValueDef> _listValue{};
         vector<CharacterAppearanceSlotDef>  _listSlot{};
         vector<AppearanceSocketOverride>    _listSocketOverride{};
+        vector<SkinLayerValue>              _listSkinLayer{}; ///< 피부 층(`<SkinLayer>` — NPC 화장 · 문신). 적으면 부모의 층 목록을 통째로 바꾼다(쌓는 순서가 뜻이다)
         vector<hashed_string>               _listSet{};
         PROPERTY( Name = "bodyType" )
         vector<hashed_string> _listBodyType{}; ///< 후보
@@ -77,6 +79,8 @@ namespace sw
         hashed_string _parent{};
         PROPERTY()
         hashed_string _schema{};
+        PROPERTY()
+        hashed_string _bodyProfile{}; ///< 몸 프로필 id(`bodyprofiles.xml` — 지글 · 주름 · 동공 · 체액 · 기본 몸 채널). 비어 있으면 부모의 것
     };
 } // namespace sw
 
@@ -91,6 +95,7 @@ namespace sw
         CustomizationValueSet            _customization{};
         vector<AppearanceSlotRequest>    _listSlot{};
         vector<AppearanceSocketOverride> _listSocketOverride{};
+        vector<SkinLayerValue>           _listSkinLayer{}; ///< 피부 층(화장 · 문신) — 선택이 준다. 프리셋 데이터에는 아직 없다
         TagContainer                     _tags{};
         hashed_string                    _presetID{};
         hashed_string                    _schema{};
@@ -98,6 +103,7 @@ namespace sw
         hashed_string                    _bodyShape{};
         hashed_string                    _face{};
         hashed_string                    _bodyVisual{};
+        hashed_string                    _bodyProfile{}; ///< 몸 프로필 id(비어 있으면 없음 — 지글 · 주름 · 동공 · 체액이 쉰다)
         uint32                           _seed{ 0 };
 
         AppearanceSlotRequest*       findSlot( const hashed_string& slot );

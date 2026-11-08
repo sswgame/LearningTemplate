@@ -63,6 +63,7 @@ namespace sw
             _pContext->setComputeRootConstants( rootParameterIndex, num32BitValues, pData, destOffsetIn32BitValues );
         }
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindComputeUAV( index, slot ); }
+        void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindGraphicsUAV( index, slot ); }
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override { _pContext->bindShaderResource( index, slot ); }
         void bindConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot ) override { _pContext->bindConstantBuffer( constantBufferIndex, slot ); }
         void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) override { _pContext->updateConstantBuffer( buffer, pData, size ); }
@@ -86,6 +87,7 @@ namespace sw
             _pContext->dispatchIndirect( argumentBuffer, argumentBufferOffset );
         }
         void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) override { _pContext->transitionBuffer( buffer, newState ); }
+        void transitionBuffers( const RHIBufferTransition* pTransition, uint32 count ) override { _pContext->transitionBuffers( pTransition, count ); }
         void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override { _pContext->copyBufferToReadback( source, readback, sizeBytes ); }
         void drawIndexedIndirect( RHIBufferHandle argumentBuffer, uint32 argumentBufferOffset = 0, uint32 drawCount = 1, RHIBufferHandle countBuffer = 0,
                                   uint32 countBufferOffset = 0 ) override

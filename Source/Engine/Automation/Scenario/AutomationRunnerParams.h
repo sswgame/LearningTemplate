@@ -291,4 +291,20 @@ namespace sw
         PROPERTY()
         string _reason{};
     };
+
+    /**
+     * @brief `SkipUnless` 의 인자입니다. 감시 값(`watch`)이 0 이면 시나리오를 건너뛰고(Skipped), 0 이 아니면 다음 단계로 간다.
+     * @details 장치 능력이 없어 그 그림을 그리지 않는다고 **선언된** 백엔드(예: `RHI.MaterialTessellation` — 변위 머티리얼)에서 시나리오가 그 능력을 요구할 때 쓴다.
+     *          조용히 통과시키지 않고 보고에 건너뛴 까닭이 남는다. 감시 값을 못 읽으면 실패다.
+     */
+    REFLECT()
+    struct SW_API AutomationSkipUnlessParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _watch{};
+        PROPERTY( Required )
+        string _reason{};
+    };
 } // namespace sw

@@ -5,7 +5,8 @@
  *          ORM 맵은 glTF 배치다 — R 가림(AO) · G 거칠기 · B 금속도. 거칠기 · 금속도는 맵 × 머티리얼 값(glTF 의 factor)이다.
  *          `_worldTileSize` 가 0 보다 크면 메시 UV 대신 월드 좌표를 축 정렬로 투영한다(그 길이 m 마다 한 번 반복) — 늘린 큐브 · 평면(바닥 · 벽)이 늘어나지 않고 타일링된다
  *          (언리얼 WorldAlignedTexture 와 같은 생각, 축 하나만 골라 섞지는 않는다).
- *          머티리얼 define: `MATERIAL_ALPHA_CUTOFF`(glTF alphaMode MASK — 잎 · 꽃) · `MATERIAL_TWO_SIDED`(glTF doubleSided — 컬링은 PSO 변형이 끄고 뒷면 노멀은 뼈대가 뒤집는다).
+ *          머티리얼 define: `MATERIAL_ALPHA_CUTOFF`(glTF alphaMode MASK — 잎 · 꽃) · `MATERIAL_TWO_SIDED`(glTF doubleSided — 컬링은 PSO 변형이 끄고 뒷면 노멀은 뼈대가 뒤집는다) ·
+ *          `MATERIAL_DISPLACEMENT`(높이 맵 변위 — 헐 · 도메인이 붙은 변형으로 윤곽까지 바뀐다, material_displacement.hlsli).
  *          shortcut: 가림은 알베도에 곱한다 — 직접광도 조금 어두워진다. G버퍼에 가림 칸이 생기면 간접광(앰비언트 · 프로브)에만 곱한다.
  */
 #include "lighting.hlsli"
@@ -23,10 +24,15 @@ SW_MATERIAL_BEGIN
     uint   _albedoMap;
     uint   _normalMap;
     uint   _ormMap;
+    // 변위(MATERIAL_DISPLACEMENT 일 때만 읽는다 — material_displacement.hlsli 머리말). 높이 맵 R 이 _displacementMidLevel 이면 제자리, 위는 노멀 방향으로 _displacementScale m 까지
+    uint  _displacementMap;
+    float _displacementScale;
+    float _displacementMidLevel;
+    float _tessellationDensity;   // 각 1 rad 당 분할 수 — 1 m 변을 10 m 에서 보면 0.1 rad × 밀도
+    float _tessellationMaxFactor; // 변 계수 상한(64 이하)
     // 원소 크기를 16 의 배수로 — DX 의 촘촘한 간격과 GL std430 배열 간격이 같아야 한다(ShaderBindingValidator::checkStructuredElementLayouts). 머티리얼 속성이 아니다
     uint _swPad0;
     uint _swPad1;
-    uint _swPad2;
 }
 SW_MATERIAL_END
 

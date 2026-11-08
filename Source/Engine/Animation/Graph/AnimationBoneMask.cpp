@@ -148,8 +148,8 @@ namespace sw
         const uint32 boneCount = skeleton.getBoneCount();
         outListWeight.assign( boneCount, 0.0f );
         // 본마다 그 본에서 시작하는 root 의 가중치다(-1 은 root 가 아님).
-        vector<float32> listRootWeight( boneCount, -1.0f );
-        vector<int32>   listSingleBone( _listEntry.size(), constant::invalid_index::kInt32 );
+        vector<float32>          listRootWeight( boneCount, -1.0f );
+        vector<optional<uint32>> listSingleBone( _listEntry.size() ); // 퍼뜨리지 않는 항목의 본(퍼뜨리는 항목은 없음)
         for ( size_t entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
         {
             const AnimationBoneMaskEntry& entry     = _listEntry[entryIndex];
@@ -163,7 +163,7 @@ namespace sw
             if ( entry._bPropagate == SW_TRUE )
                 listRootWeight[*boneIndex] = entry._weight;
             else
-                listSingleBone[entryIndex] = static_cast<int32>( *boneIndex );
+                listSingleBone[entryIndex] = boneIndex;
         }
         // 부모가 자식보다 앞이므로 한 번 훑으면 root 의 값이 자손에 퍼진다(가까운 root 가 이긴다).
         for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
@@ -176,8 +176,8 @@ namespace sw
         }
         for ( size_t entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
         {
-            if ( listSingleBone[entryIndex] >= 0 )
-                outListWeight[static_cast<uint32>( listSingleBone[entryIndex] )] = _listEntry[entryIndex]._weight;
+            if ( listSingleBone[entryIndex].has_value() )
+                outListWeight[*listSingleBone[entryIndex]] = _listEntry[entryIndex]._weight;
         }
         return true;
     }

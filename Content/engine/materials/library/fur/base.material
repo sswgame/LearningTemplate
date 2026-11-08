@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 털 껍질 — 같은 메시를 껍질마다 인스턴스 값(_customData0.y 비율 · .z 거리)으로 밀어 낸다. 반사는 Kajiya · Kay 머리결 엽. -->
+<MaterialDef formatVersion="0" name="AppearanceFur" _base="engine/materials/library/appearance.material" alphaMode="Mask">
+	<_properties>
+		<item name="_color" defaultValue="0.45 0.3 0.18 1" />
+		<item name="_sheenColor" defaultValue="0.35 0.3 0.25 1" />
+		<item name="_roughness" defaultValue="0.55" />
+		<item name="_strandShift" defaultValue="0.15" />
+		<item name="_patternScale" defaultValue="220" />
+		<item name="_patternWidth" defaultValue="0.32" />
+		<item name="_specular" defaultValue="0.4" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_LOBE_STRAND</item>
+			<item>MATERIAL_FUR_SHELL</item>
+			<item>MATERIAL_VERTEX_DEFORM</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

@@ -39,6 +39,7 @@ namespace sw
         , _listTargetValue{}
         , _listTargetBone{}
         , _listTargetOffset{}
+        , _listContact{}
         , _listNode{}
         , _listNodeWrittenBone{}
         , _listNodeLODFade{}
@@ -47,6 +48,7 @@ namespace sw
         , _listSharedCollider{}
         , _listBlendScratch{}
         , _pose{}
+        , _bodyInput{}
         , _space{}
         , _pCurveSource{ nullptr }
         , _worldGravity{ 0.0f, -constant::physics::kDefaultGravity, 0.0f }
@@ -67,6 +69,13 @@ namespace sw
         _listTargetValue.assign( _listTargetDef.size(), RigTargetValue{} );
         _listTargetBone.assign( _listTargetDef.size(), kExternalBone );
         _listTargetOffset.assign( _listTargetDef.size(), BoneTransform{} );
+        _listContact.assign( _listTargetDef.size(), ContactState{} );
+        vector<float4x4> listReferenceModel;
+        {
+            Pose reference;
+            reference.setToReference( skeleton );
+            reference.computeModelSpace( skeleton.getParentIndices(), listReferenceModel );
+        }
         bool bOk = true;
         for ( size_t targetIndex = 0; targetIndex < _listTargetDef.size(); ++targetIndex )
         {
@@ -112,6 +121,8 @@ namespace sw
             }
             _listTargetBone[targetIndex]   = static_cast<int32>( *boneIndex );
             _listTargetOffset[targetIndex] = offset;
+            // 첫 평가 전의 광선 원점은 레퍼런스 포즈다.
+            _listContact[targetIndex]._originModel = listReferenceModel[*boneIndex].getTranslation();
         }
 
         _space._bPlanar = asset->isPlanar() ? SW_TRUE : SW_FALSE;
@@ -150,6 +161,7 @@ namespace sw
         _listTargetValue.clear();
         _listTargetBone.clear();
         _listTargetOffset.clear();
+        _listContact.clear();
         _listNode.clear();
         _listNodeWrittenBone.clear();
         _listNodeLODFade.clear();
@@ -209,6 +221,15 @@ namespace sw
             outRotation = _listTargetOffset[targetIndex]._rotation;
             return true;
         }
+        if ( _listTargetDef[targetIndex]._kind == RigTargetKind::Trace )
+        {
+            const ContactState& contact = _listContact[targetIndex];
+            if ( contact._weight <= 0.0f )
+                return false;
+            outPosition = contact._hitModel + contact._normalModel * _listTargetDef[targetIndex]._trace._surfaceOffset;
+            outRotation = ( RigIKSolver::makeFromToRotation( float3::UnitY, contact._normalModel ) * _listTargetOffset[targetIndex]._rotation ).normalize();
+            return true;
+        }
         if ( bone >= 0 )
         {
             const BoneTransform& offset = _listTargetOffset[targetIndex];
@@ -226,6 +247,39 @@ namespace sw
         outPosition = value._position;
         outRotation = value._rotation;
         return true;
+    }
+
+    float32 RigInstance::getTargetWeight( uint32 targetIndex ) const
+    {
+        if ( targetIndex >= _listTargetDef.size() || _listTargetDef[targetIndex]._kind != RigTargetKind::Trace )
+            return 1.0f;
+        return _listContact[targetIndex]._weight;
+    }
+
+    void RigInstance::traceContacts( const RigPrepareContext& context )
+    {
+        const float3   up             = float3::transformVector( float3::UnitY, context._worldFromModel ).normalize();
+        const float4x4 modelFromWorld = context._worldFromModel.invert();
+        for ( size_t targetIndex = 0; targetIndex < _listTargetDef.size(); ++targetIndex )
+        {
+            const RigTargetDef& def = _listTargetDef[targetIndex];
+            if ( def._kind != RigTargetKind::Trace )
+                continue;
+            ContactState& contact = _listContact[targetIndex];
+            RigGroundHit  hit{};
+            const float3  origin    = float3::transform( contact._originModel, context._worldFromModel );
+            const float3  direction = float3::transformVector( def._trace._direction, context._worldFromModel ).normalize();
+            const bool    bHit      = context._pGroundQuery != nullptr && context._pGroundQuery->raycastGround( origin, direction, def._trace._distance, hit );
+            if ( bHit )
+            {
+                contact._hitModel    = float3::transform( hit._position, modelFromWorld );
+                contact._normalModel = float3::transformVector( hit._normal, modelFromWorld ).normalize();
+                if ( contact._normalModel.getLengthSquared() < 0.5f )
+                    contact._normalModel = float3::transformVector( up, modelFromWorld ).normalize();
+            }
+            const float32 goal = bHit ? 1.0f : 0.0f;
+            contact._weight    = def._trace._blendSpeed > 0.0f ? MathUtil::moveToward( contact._weight, goal, def._trace._blendSpeed * MathUtil::max( context._deltaSeconds, 0.0f ) ) : goal;
+        }
     }
 
     void RigInstance::setSlotWeight( const hashed_string& slotName, float32 weight )
@@ -317,6 +371,12 @@ namespace sw
         return pNode != nullptr && pNode->setControl( control, value );
     }
 
+    bool RigInstance::getNodeOutputValue( const hashed_string& nodeName, const hashed_string& output, float32& outValue ) const
+    {
+        const RigNode* pNode = findNode( nodeName );
+        return pNode != nullptr && pNode->getOutputValue( output, outValue );
+    }
+
     void RigInstance::addMorphWeight( const hashed_string& name, float32 weight )
     {
         for ( RigMorphWeight& morph : _listMorphWeight )
@@ -334,6 +394,8 @@ namespace sw
     {
         _pendingDeltaSeconds += MathUtil::max( context._deltaSeconds, 0.0f );
         _worldGravity = context._worldGravity;
+        _bodyInput.beginFrame();
+        traceContacts( context );
         for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( _listNode.size() ); ++nodeIndex )
         {
             RigNode&          node    = *_listNode[nodeIndex];
@@ -365,6 +427,12 @@ namespace sw
             return;
         }
         _pose.initialize( inoutLocalPose, listParent );
+        // 접촉 광선은 다음 준비 단계에서 이 애니메이션 포즈(노드 앞)의 본 자리에서 쏜다.
+        for ( size_t targetIndex = 0; targetIndex < _listTargetDef.size(); ++targetIndex )
+        {
+            if ( _listTargetDef[targetIndex]._kind == RigTargetKind::Trace )
+                _listContact[targetIndex]._originModel = _pose.getModelPosition( static_cast<uint32>( _listTargetBone[targetIndex] ) );
+        }
 
         RigEvaluateContext context{};
         context._pPose          = &_pose;

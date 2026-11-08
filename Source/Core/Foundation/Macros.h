@@ -460,6 +460,9 @@ namespace sw
     #else
         #error "Unsupported platform"
     #endif
+#elif defined( SW_WASM32 )
+    /** @brief wasm 에는 스핀 힌트 명령이 없다 — 빈 문장이다(브라우저 메인 스레드는 스핀하지 않고, 워커 스핀은 짧다). */
+    #define SW_CPU_PAUSE() ( (void)0 )
 #endif
 
 namespace sw

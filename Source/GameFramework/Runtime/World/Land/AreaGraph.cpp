@@ -91,7 +91,7 @@ namespace sw
 
     bool AreaGraph::addArea( const AreaDef& area )
     {
-        if ( area._id.empty() || _catalog.findIndex( area._id ) >= 0 )
+        if ( area._id.empty() || _catalog.findIndex( area._id ).has_value() )
             return false;
         AreaDef added = area;
         if ( added._name.empty() )
@@ -106,19 +106,19 @@ namespace sw
     bool AreaGraph::addLink( const hashed_string& from, const hashed_string& to, const hashed_string& kind, string_view condition, bool bOneWay,
                              bool& outbInvalidCondition )
     {
-        outbInvalidCondition = false;
-        AreaLink link;
-        link._from               = from;
-        link._to                 = to;
-        link._kind               = kind;
-        link._bOneWay            = bOneWay ? SW_TRUE : SW_FALSE;
-        const int32 fromIndex    = _catalog.findIndex( from );
-        const int32 toIndex      = _catalog.findIndex( to );
-        const bool  bInvalidLink = fromIndex < 0 || toIndex < 0 || fromIndex == toIndex;
+        outbInvalidCondition               = false;
+        const optional<int32> fromIndex    = _catalog.findIndex( from );
+        const optional<int32> toIndex      = _catalog.findIndex( to );
+        const bool            bInvalidLink = fromIndex.has_value() == false || toIndex.has_value() == false || *fromIndex == *toIndex;
         if ( bInvalidLink )
             return false;
-        link._fromIndex = static_cast<uint32>( fromIndex );
-        link._toIndex   = static_cast<uint32>( toIndex );
+        AreaLink link;
+        link._from      = from;
+        link._to        = to;
+        link._kind      = kind;
+        link._fromIndex = *fromIndex;
+        link._toIndex   = *toIndex;
+        link._bOneWay   = bOneWay ? SW_TRUE : SW_FALSE;
         // 틀린 조건은 부르는 쪽이 어느 연결인지 함께 경고한다
         if ( ConditionExpr::tryCompile( condition, link._requires ).has_value() == false )
         {
@@ -126,8 +126,8 @@ namespace sw
             outbInvalidCondition    = true;
         }
         const int32 linkIndex = static_cast<int32>( _listLink.size() );
-        _listAdjacency[link._fromIndex].push_back( linkIndex );
-        _listAdjacency[link._toIndex].push_back( linkIndex );
+        _listAdjacency[static_cast<size_t>( link._fromIndex )].push_back( linkIndex );
+        _listAdjacency[static_cast<size_t>( link._toIndex )].push_back( linkIndex );
         _listLink.push_back( link );
         return true;
     }
@@ -139,7 +139,7 @@ namespace sw
         _visitedCount = 0;
     }
 
-    optional<uint32> AreaGraph::findOtherSide( const AreaLink& link, uint32 fromIndex ) const
+    optional<int32> AreaGraph::findOtherSide( const AreaLink& link, int32 fromIndex ) const
     {
         if ( link._fromIndex == fromIndex )
             return link._toIndex;
@@ -168,26 +168,27 @@ namespace sw
 
     bool AreaGraph::enterArea( const hashed_string& areaID )
     {
-        const int32 areaIndex = _catalog.findIndex( areaID );
-        if ( areaIndex < 0 )
+        const optional<int32> foundIndex = _catalog.findIndex( areaID );
+        if ( foundIndex.has_value() == false )
             return false;
-        const bool bFirstVisit = _listVisited[static_cast<size_t>( areaIndex )] == SW_FALSE;
+        const int32 areaIndex   = *foundIndex;
+        const bool  bFirstVisit = _listVisited[static_cast<size_t>( areaIndex )] == SW_FALSE;
         markVisited( areaIndex );
         for ( const int32 linkIndex : _listAdjacency[static_cast<size_t>( areaIndex )] )
         {
-            const optional<uint32> otherIndex = findOtherSide( _listLink[static_cast<size_t>( linkIndex )], static_cast<uint32>( areaIndex ) );
+            const optional<int32> otherIndex = findOtherSide( _listLink[static_cast<size_t>( linkIndex )], areaIndex );
             if ( otherIndex.has_value() )
-                _listDiscovered[*otherIndex] = SW_TRUE;
+                _listDiscovered[static_cast<size_t>( *otherIndex )] = SW_TRUE;
         }
         return bFirstVisit;
     }
 
     bool AreaGraph::discoverArea( const hashed_string& areaID )
     {
-        const int32 areaIndex = _catalog.findIndex( areaID );
-        if ( areaIndex < 0 || _listDiscovered[static_cast<size_t>( areaIndex )] == SW_TRUE )
+        const optional<int32> areaIndex = _catalog.findIndex( areaID );
+        if ( areaIndex.has_value() == false || _listDiscovered[static_cast<size_t>( *areaIndex )] == SW_TRUE )
             return false;
-        _listDiscovered[static_cast<size_t>( areaIndex )] = SW_TRUE;
+        _listDiscovered[static_cast<size_t>( *areaIndex )] = SW_TRUE;
         return true;
     }
 
@@ -207,14 +208,16 @@ namespace sw
 
     bool AreaGraph::canTraverse( const hashed_string& fromID, const hashed_string& toID, const GameFlags& flags ) const
     {
-        const int32 fromIndex = _catalog.findIndex( fromID );
-        const int32 toIndex   = _catalog.findIndex( toID );
-        if ( fromIndex < 0 || toIndex < 0 )
+        const optional<int32> foundFrom = _catalog.findIndex( fromID );
+        const optional<int32> foundTo   = _catalog.findIndex( toID );
+        if ( foundFrom.has_value() == false || foundTo.has_value() == false )
             return false;
+        const int32 fromIndex = *foundFrom;
+        const int32 toIndex   = *foundTo;
         for ( const int32 linkIndex : _listAdjacency[static_cast<size_t>( fromIndex )] )
         {
             const AreaLink& link = _listLink[static_cast<size_t>( linkIndex )];
-            if ( findOtherSide( link, static_cast<uint32>( fromIndex ) ) == static_cast<uint32>( toIndex ) && isUnlocked( link, flags ) )
+            if ( findOtherSide( link, fromIndex ) == toIndex && isUnlocked( link, flags ) )
                 return true;
         }
         return false;
@@ -223,10 +226,12 @@ namespace sw
     bool AreaGraph::findPath( const hashed_string& fromID, const hashed_string& toID, const GameFlags& flags, vector<hashed_string>& outListArea ) const
     {
         outListArea.clear();
-        const int32 fromIndex = _catalog.findIndex( fromID );
-        const int32 toIndex   = _catalog.findIndex( toID );
-        if ( fromIndex < 0 || toIndex < 0 )
+        const optional<int32> foundFrom = _catalog.findIndex( fromID );
+        const optional<int32> foundTo   = _catalog.findIndex( toID );
+        if ( foundFrom.has_value() == false || foundTo.has_value() == false )
             return false;
+        const int32 fromIndex = *foundFrom;
+        const int32 toIndex   = *foundTo;
 
         // 연결마다 잠금을 한 번만 평가한다(조건식은 문자열 해석이라 방문마다 다시 읽지 않게).
         vector<uint8> listUnlocked;
@@ -251,11 +256,11 @@ namespace sw
             {
                 if ( listUnlocked[static_cast<size_t>( linkIndex )] == SW_FALSE )
                     continue;
-                const optional<uint32> otherIndex = findOtherSide( _listLink[static_cast<size_t>( linkIndex )], static_cast<uint32>( areaIndex ) );
-                if ( otherIndex.has_value() == false || listParent[*otherIndex] != -2 )
+                const optional<int32> otherIndex = findOtherSide( _listLink[static_cast<size_t>( linkIndex )], areaIndex );
+                if ( otherIndex.has_value() == false || listParent[static_cast<size_t>( *otherIndex )] != -2 )
                     continue;
-                listParent[*otherIndex] = areaIndex;
-                listQueue.push_back( static_cast<int32>( *otherIndex ) );
+                listParent[static_cast<size_t>( *otherIndex )] = areaIndex;
+                listQueue.push_back( *otherIndex );
             }
         }
         if ( listParent[static_cast<size_t>( toIndex )] == -2 )
@@ -358,22 +363,21 @@ namespace sw
         }
         for ( const hashed_string& areaID : listVisited )
         {
-            const int32 areaIndex = _catalog.findIndex( areaID );
-            if ( areaIndex >= 0 )
-                markVisited( areaIndex );
+            if ( const optional<int32> areaIndex = _catalog.findIndex( areaID ); areaIndex.has_value() )
+                markVisited( *areaIndex );
         }
     }
 
     bool AreaGraph::isVisited( const hashed_string& areaID ) const
     {
-        const int32 areaIndex = _catalog.findIndex( areaID );
-        return areaIndex >= 0 && _listVisited[static_cast<size_t>( areaIndex )] == SW_TRUE;
+        const optional<int32> areaIndex = _catalog.findIndex( areaID );
+        return areaIndex.has_value() && _listVisited[static_cast<size_t>( *areaIndex )] == SW_TRUE;
     }
 
     bool AreaGraph::isDiscovered( const hashed_string& areaID ) const
     {
-        const int32 areaIndex = _catalog.findIndex( areaID );
-        return areaIndex >= 0 && _listDiscovered[static_cast<size_t>( areaIndex )] == SW_TRUE;
+        const optional<int32> areaIndex = _catalog.findIndex( areaID );
+        return areaIndex.has_value() && _listDiscovered[static_cast<size_t>( *areaIndex )] == SW_TRUE;
     }
 } // namespace sw
 

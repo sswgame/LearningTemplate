@@ -51,8 +51,29 @@ namespace sw
      */
     inline constexpr const utf8* kPassBloomDownsampleDefine = "SW_PASS_BLOOM_DOWNSAMPLE=1";
 
+    /**
+     * @brief 화면 속도 출력(Velocity 역할 컬러 출력)을 선언한 불투명 지오메트리 패스가 셰이더에 추가하는 define 입니다. 포워드는 픽셀 출력 서명에 `SV_TARGET1` 속도를 더합니다(binding_output.hlsli).
+     * @details 출력 선언(데이터)이 정하므로 속도를 읽는 패스(TAA · 모션 블러)가 없는 파이프라인은 첨부도 쓰기도 없다(유니티 URP 가 모션 벡터를 요청한 기능이 있을 때만 그리는 것과 같다).
+     *          G버퍼는 명세(`GBufferLayout`)가 속도를 늘 넷째 MRT 로 가지므로 출력 서명이 이 define 과 무관하다. 쿠커와 런타임은 같은 함수(`selectRenderPassShader`)로 붙인다.
+     */
+    inline constexpr const utf8* kPassVelocityDefine = "SW_PASS_VELOCITY=1";
+
+    /** @brief 왜곡 누적 패스가 머티리얼 셰이더에 추가하는 define 입니다. 픽셀 출력을 왜곡 오프셋 하나로 바꾸고 왜곡 훅(`computeMaterialDistortion`)을 부른다(material_shader_main.hlsli). */
+    inline constexpr const utf8* kPassDistortionDefine = "SW_PASS_DISTORTION=1";
+
+    /**
+     * @brief 화면 왜곡을 그리는 머티리얼의 define 입니다(`.material` 의 `_alwaysDefines`). 왜곡 누적 패스는 이것이 있는 배치만 그린다(`_pRequiredMaterialDefine`).
+     * @details 이 define 을 적는 머티리얼의 셰이더는 왜곡 훅을 정의한다(`SW_MATERIAL_CUSTOM_DISTORTION` — 없으면 material_shader.hlsli 의 `#error`). 본보기는 engine/shaders/distortion.hlsl 이다.
+     *          VFX 메시 입자는 방출기의 메시 머티리얼이 이 머티리얼이면 같은 길로 왜곡을 그린다.
+     */
+    inline constexpr const utf8* kMaterialDistortionDefine = "MATERIAL_DISTORTION";
+    /** @brief 컴퓨트 구현(`RenderPassExecutionMode::Compute`)이 패스 셰이더에 추가하는 define 입니다. 같은 파일의 `CSMain` 이 이 define 아래에 있다. */
+    inline constexpr const utf8* kPassComputeImplementationDefine = "SW_PASS_COMPUTE=1";
+
     /** @brief FSR 1 의 RCAS 단계가 fsr1.hlsl 에 추가하는 define 입니다. 없으면 같은 파일이 EASU 단계입니다. */
     inline constexpr const utf8* kPassFSRRcasDefine = "SW_PASS_FSR_RCAS=1";
+    /// @brief 컬링 셰이더(gpu_cull.hlsl)를 간접 인자 개수 되돌리기 커널로 만든다(`RenderPassType::IndirectArgsReset`).
+    inline constexpr const utf8* kPassIndirectArgsResetDefine = "SW_CULL_RESET_ARGS=1";
 
     /**
      * @brief 메시 외곽선 패스가 그리는 배치의 머티리얼 define 입니다. 퍼뮤테이션에 이것이 없는 배치는 그 패스에서 빠집니다.
@@ -75,6 +96,13 @@ namespace sw
     inline constexpr const utf8* kMaterialVertexDeformDefine = "MATERIAL_VERTEX_DEFORM";
 
     /**
+     * @brief 높이 맵으로 표면을 노멀 방향으로 옮기는 머티리얼(`material_displacement.hlsli`)의 define 입니다. 그 배치는 헐 · 도메인 스테이지가 붙은 변형 PSO 로 그린다.
+     * @details 깊이 패스(그림자 · 깊이 프리패스)도 머티리얼 셰이더로 같은 변위를 그린다(`FrameRendererUtil::drawsDepthWithMaterialShader`) — 패스 셰이더로 그리면 윤곽이 평면으로 남는다.
+     *          테셀레이션이 없는 백엔드(`RHICapabilities::_bMaterialTessellation`)에서는 변형을 만들지 않고 오류를 남긴다 — 평면으로 대신 그리지 않는다.
+     */
+    inline constexpr const utf8* kMaterialDisplacementDefine = "MATERIAL_DISPLACEMENT";
+
+    /**
      * @brief G버퍼로 나타낼 수 없는 셰이딩의 머티리얼 define 입니다. G버퍼 패스가 그 배치를 빼고 `ForwardOnlyOpaque` 패스가 포워드로 그립니다.
      * @details 툰(toon.hlsl)은 빛마다 계단 · 그림자색 · 림 · 맷캡을 섞어 알베도 · 노멀 두 칸에 담을 수 없다. G버퍼에 칸을 더하는 대신 포워드로 그린다 —
      *          유니티 URP 디퍼드가 `UniversalForwardOnly` 머티리얼을 포워드 패스로 그리는 것과 같다(기억에 의존한 비교).
@@ -91,11 +119,11 @@ namespace sw
      */
     inline constexpr const utf8* kPostTonemapDefine = "SW_POST_TONEMAP";
 
-    /** @brief 셰이더 assert 를 켠 컴퓨트 변형의 define 입니다(`gpu_assert.hlsli`). `-gv_gpuAssert` 가 켜진 개발 빌드에서 `kGPUAssertTarget` 패스에만 붙는다. */
-    inline constexpr const utf8* kGPUAssertDefine = "SW_GPU_ASSERT_ENABLED";
+    /** @brief 셰이더 메시지를 켠 변형의 define 입니다(`gpu_message.hlsli`). `-gv_gpuMessages` 가 켜진 개발 빌드에서 `kGPUMessageTarget` 패스에만 붙는다. */
+    inline constexpr const utf8* kGPUMessagesDefine = "SW_GPU_MESSAGES_ENABLED";
 
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
-    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::NanCheck ) + 1;
+    inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::IndirectArgsReset ) + 1;
 
     /**
      * @struct RenderPassTraitFlag
@@ -155,10 +183,10 @@ namespace sw
          */
         static constexpr uint32 kOutputPass = SW_BIT( 19 );
         /**
-         * @brief 셰이더가 `SW_GPU_ASSERT` 를 가진 컴퓨트 패스다(gpu_cull · mesh_morph · canvas_marker). `-gv_gpuAssert` 가 켜지면 PSO 가 `kGPUAssertDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 assert 버퍼를 u4 에 건다.
-         * @details define 은 `selectRenderPassShader` 가 붙인다 — 쿠커와 런타임이 같은 함수를 부르므로 어긋나지 않고, Shipping 은 `GPUAssertMonitor::isRequested` 가 거짓이라 변형이 생기지 않는다.
+         * @brief 셰이더가 메시지(`SW_GPU_ASSERT` · `SW_GPU_PRINT` · `SW_GPU_LOG`)를 가진 패스다 — 컴퓨트(gpu_cull · mesh_morph · canvas_marker)와 그래픽스(Present 의 fullscreen_blit). `-gv_gpuMessages` 가 켜지면 PSO 가 `kGPUMessagesDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 메시지 버퍼를 u4 에 건다(컴퓨트 `bindCompute`, 그래픽스 `bindGraphics`).
+         * @details define 은 `selectRenderPassShader` 가 붙인다 — 쿠커와 런타임이 같은 함수를 부르므로 어긋나지 않고, Shipping 은 `GPUMessageChannel::isRequested` 가 거짓이라 변형이 생기지 않는다.
          */
-        static constexpr uint32 kGPUAssertTarget = SW_BIT( 20 );
+        static constexpr uint32 kGPUMessageTarget = SW_BIT( 20 );
         /**
          * @brief 진단 패스다 — 요청한 실행에서만 PSO 를 만든다(`isDiagnosticPassRequested`). 요청하지 않은 실행(Shipping 은 늘)에서는 PSO 도 디스패치도 없다.
          */
@@ -176,6 +204,23 @@ namespace sw
         static constexpr uint32 kMaterialFixedState = SW_BIT( 24 );
         /** @brief 머티리얼이 블렌드까지 덮을 수 있는 색 패스다(한 첨부에 그리는 포워드 · 반투명). G버퍼는 첨부 셋의 의미가 정해져 있어 받지 않는다. */
         static constexpr uint32 kMaterialBlend = SW_BIT( 25 );
+        /**
+         * @brief 깊이를 쓰는 불투명 지오메트리 패스라 화면 속도(Velocity 역할 출력)를 쓸 수 있다(G버퍼 · 포워드 불투명 · 포워드 전용 불투명). 이 비트가 없는 패스가 속도 출력을 선언하면 읽기 오류다.
+         * @details 속도는 깊이와 같은 픽셀의 것이어야 TAA · 모션 블러가 깊이와 짝지어 읽는다 — 깊이를 쓰지 않는 반투명 · 외곽선은 쓰지 않는다(언리얼 기본값도 반투명은 속도를 쓰지 않는다).
+         *          G버퍼는 명세가 속도를 넷째 MRT 로 늘 가지고, 포워드는 출력 선언이 있을 때만 `kPassVelocityDefine` 으로 둘째 타깃에 쓴다.
+         */
+        static constexpr uint32 kWritesVelocity = SW_BIT( 26 );
+        /**
+         * @brief 컬러 출력 없이 픽셀 스테이지가 깊이(SV_Depth)를 쓰는 내부 패스다(그림자 캐시 복원). 컬러가 없는 패스는 픽셀 스테이지를 떼는데(`FramePSOManager::makePassPSODesc`)
+         *        이 패스만 남긴다. 쿠커는 내부 슬롯의 VS · PS 를 늘 굽는다.
+         */
+        static constexpr uint32 kWritesPixelDepth = SW_BIT( 27 );
+        /**
+         * @brief 일반 풀스크린 패스지만 컴퓨트 구현(같은 셰이더 파일의 `CSMain`, define `SW_PASS_COMPUTE`)도 있어 XML 의 `_implementation="Compute"` 로 고를 수 있다(블룸 다운샘플 · 피사계 심도).
+         * @details 컴퓨트 구현은 입력을 bindless 번호로 직접 읽어 네이티브 bindless(DX12 · Vulkan)에서만 돈다 — 에뮬 백엔드(DX11 · GL · WebGPU)는 픽셀 구현이 돈다(능력이 정한 길).
+         *          어느 쪽이 나은지는 측정으로 정한다(언리얼 블룸 · DOF 의 r.*.Compute 스위치 자리). 비트 27 — W10 이 더한 kWritesVelocity 와 겹치지 않게 26 을 비워 둔다.
+         */
+        static constexpr uint32 kComputeImplementation = SW_BIT( 28 );
     };
 } // namespace sw
 
@@ -240,9 +285,24 @@ namespace sw
      * @details 경로는 패스 서술의 `_shaderPath` 가 우선이고, 비어 있으면 테이블의 기본 셰이더를 씁니다. define 은 패스 서술의
      *          `_listPermutation` 뒤에 테이블의 패스 define 을 (겹치지 않게) 붙인 것입니다. 둘이 어긋나면 런타임이 찾는 해시를
      *          아무도 쿠킹하지 않아 Shipping 에서 그 패스의 드로우가 사라집니다.
+     *          화면 속도를 쓰는 패스(`passWritesVelocity`)는 `kPassVelocityDefine` 을 붙입니다.
      * @param pPassDesc 파이프라인의 패스 서술입니다. nullptr 이면 테이블의 기본값만 씁니다.
+     * @param pTargetDesc 컬러 출력을 정하는 서술입니다(`passWritesVelocity`). 파이프라인 패스는 @p pPassDesc 와 같고, 내부 슬롯은 대신 그리는 파이프라인 패스의 서술입니다.
      */
-    SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const EngineDefaultAssets& engineDefaultAssets );
+    SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const RenderGraphPassDesc* pTargetDesc,
+                                                             const EngineDefaultAssets& engineDefaultAssets );
+
+    /**
+     * @brief 패스가 화면 속도를 쓰는지 반환합니다 — 패스 종류가 `kWritesVelocity` 이고 @p pTargetDesc 의 컬러 출력에 Velocity 역할이 있습니다.
+     * @param pTargetDesc 컬러 타깃을 정하는 서술입니다. 파이프라인 패스는 자기 서술, 내부 슬롯(`ForwardOpaqueNoDepthWrite`)은 대신 그리는 패스(`_targetSourceType`)의 서술입니다. nullptr 이면 false 입니다.
+     */
+    SW_API bool passWritesVelocity( RenderPassType type, const RenderGraphPassDesc* pTargetDesc );
+
+    /**
+     * @brief 패스 @p passDesc 의 컴퓨트 구현(`_implementation="Compute"`)이 컴파일할 셰이더 경로와 define 입니다 — 픽셀 구현과 같은 파일 · define 에 `kPassComputeImplementationDefine` 을 더한다.
+     * @details 런타임 PSO(`FramePSOManager`)와 쿠커가 함께 부른다. 진입점은 컴퓨트 스테이지 기본값(`CSMain`)이다.
+     */
+    SW_API RenderPassShaderSelection selectRenderPassComputeShader( const RenderGraphPassDesc& passDesc, const EngineDefaultAssets& engineDefaultAssets );
 
     /** @brief `kDiagnostic` 패스가 이 실행에서 요청됐는지 반환합니다(NanCheck 는 `-gv_nanCheck`). 진단 패스가 아니면 false 입니다. */
     SW_API bool isDiagnosticPassRequested( RenderPassType type );

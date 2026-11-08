@@ -1241,14 +1241,14 @@ namespace sw
         else
         {
             layer._listBoneWeight.assign( boneCount, layer._desc._maskRootBone.empty() ? 1.0f : 0.0f );
-            const optional<uint32> maskRoot = layer._desc._maskRootBone.empty() ? nullopt : skeleton.findBoneIndex( layer._desc._maskRootBone );
+            const optional<uint32> maskRoot = layer._desc._maskRootBone.empty() ? optional<uint32>{} : skeleton.findBoneIndex( layer._desc._maskRootBone );
             if ( layer._desc._maskRootBone.empty() == false && maskRoot.has_value() == false )
                 SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationLayerMaskBone", "Animation layer mask bone '%#' is not in the skeleton", layer._desc._maskRootBone.c_str() );
             // 부모가 앞에 있으므로 한 번 훑으면 마스크 본의 자손이 모두 1 이 된다.
             for ( uint32 boneIndex = 0; maskRoot.has_value() && boneIndex < boneCount; ++boneIndex )
             {
                 const int32 parentIndex          = skeleton.getBone( boneIndex )._parentIndex;
-                const bool  bInMask              = maskRoot == boneIndex || ( parentIndex >= 0 && layer._listBoneWeight[static_cast<uint32>( parentIndex )] > 0.0f );
+                const bool  bInMask              = boneIndex == *maskRoot || ( parentIndex >= 0 && layer._listBoneWeight[static_cast<uint32>( parentIndex )] > 0.0f );
                 layer._listBoneWeight[boneIndex] = bInMask ? 1.0f : 0.0f;
             }
         }
@@ -1484,6 +1484,7 @@ namespace sw
         const vector<float32>&       listCurveValue = _curves.getValues();
         for ( size_t curveIndex = 0; curveIndex < listCurveName.size(); ++curveIndex )
         {
+            // 모프 타깃이 아닌 커브(일반 애니메이션 커브)는 없음이 정상이다.
             const optional<uint32> targetIndex = skeletalMesh.findMorphTargetIndex( listCurveName[curveIndex] );
             if ( targetIndex.has_value() )
                 skeletalMesh.addMorphWeight( *targetIndex, listCurveValue[curveIndex] );

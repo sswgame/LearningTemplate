@@ -130,6 +130,7 @@ namespace sw
         , _listEmitterTexturePath{}
         , _listMeshEmitter{}
         , _listMeshLoad{}
+        , _listEmitterEnabled{}
         , _pEffect{}
         , _listUserParameter{}
         , _pPrimitiveRegistry{ nullptr }
@@ -193,10 +194,13 @@ namespace sw
             pCollision = sw::make_unique<VFXPhysicsCollisionScene>( *pPhysicsScene, getWorldMatrix() );
 
         bool bAllFinished = true;
-        for ( EmitterSimulation& simulation : _listSimulation )
+        for ( uint32 emitterIndex = 0; emitterIndex < static_cast<uint32>( _listSimulation.size() ); ++emitterIndex )
         {
-            VFXCPUSimulation* pCPUSimulation = std::get_if<VFXCPUSimulation>( &simulation );
-            VFXGPUEmitter*    pGPUEmitter    = std::get_if<VFXGPUEmitter>( &simulation );
+            if ( isEmitterEnabled( emitterIndex ) == false )
+                continue; // 꺼진 방출기는 시간이 흐르지 않고, 재생이 끝났는지 셈에 들지 않는다
+            EmitterSimulation& simulation     = _listSimulation[emitterIndex];
+            VFXCPUSimulation*  pCPUSimulation = std::get_if<VFXCPUSimulation>( &simulation );
+            VFXGPUEmitter*     pGPUEmitter    = std::get_if<VFXGPUEmitter>( &simulation );
             if ( pCPUSimulation != nullptr )
             {
                 pCPUSimulation->update( deltaTime, pCollision.get() );
@@ -210,6 +214,20 @@ namespace sw
         }
         _bPlaying = bAllFinished == false;
         publishParticles();
+    }
+
+    bool VFXComponent::setEmitterEnabled( uint32 emitterIndex, bool bEnabled )
+    {
+        if ( emitterIndex >= _listEmitterEnabled.size() )
+            return false;
+        _listEmitterEnabled[emitterIndex] = bEnabled ? 1 : 0;
+        publishParticles(); // 끈 방출기의 입자를 이번 프레임부터 내리지 않는다(멈춘 미리보기 씬에서도)
+        return true;
+    }
+
+    bool VFXComponent::isEmitterEnabled( uint32 emitterIndex ) const
+    {
+        return emitterIndex < _listEmitterEnabled.size() && _listEmitterEnabled[emitterIndex] != 0;
     }
 
     void VFXComponent::onPostLoad()
@@ -409,6 +427,7 @@ namespace sw
         _listParticlePool.clear();
         _listEmitterTexturePath.clear();
         _listGPURequest.clear();
+        _listEmitterEnabled.clear();
         _pEffect.reset();
         _bPlaying = SW_FALSE;
         if ( _effectPath.empty() )
@@ -439,6 +458,7 @@ namespace sw
             _listEmitterTexturePath.push_back( hashed_string( emitter._texturePath.c_str() ) );
         }
         _listGPURequest.resize( _listSimulation.size() );
+        _listEmitterEnabled.assign( _listSimulation.size(), 1 ); // 새 효과는 모든 방출기가 켜진다
         applyUserParameters();
         rebuildMeshEmitters();
     }
@@ -575,15 +595,16 @@ namespace sw
     {
         for ( uint32 emitterIndex = 0; emitterIndex < static_cast<uint32>( _listSimulation.size() ); ++emitterIndex )
         {
+            const bool           bEnabled    = isEmitterEnabled( emitterIndex );
             const VFXGPUEmitter* pGPUEmitter = std::get_if<VFXGPUEmitter>( &_listSimulation[emitterIndex] );
             if ( pGPUEmitter != nullptr )
             {
-                // 입자는 렌더 스레드의 GPU 버퍼에 있다 — 재생 중일 때만 누적 단계 수를 싣는다(멈추면 렌더 스레드가 그 상태를 놓는다).
-                _listGPURequest[emitterIndex] = _bPlaying ? pGPUEmitter->makeRequest() : VFXGPUEmitterRequest{};
+                // 입자는 렌더 스레드의 GPU 버퍼에 있다 — 재생 중일 때만 누적 단계 수를 싣는다(멈추면 렌더 스레드가 그 상태를 놓는다). 꺼진 방출기도 싣지 않는다.
+                _listGPURequest[emitterIndex] = _bPlaying && bEnabled ? pGPUEmitter->makeRequest() : VFXGPUEmitterRequest{};
                 continue;
             }
             const VFXCPUSimulation& simulation = std::get<VFXCPUSimulation>( _listSimulation[emitterIndex] );
-            if ( simulation.getAliveCount() == 0 )
+            if ( simulation.getAliveCount() == 0 || bEnabled == false )
             {
                 _listPublished[emitterIndex].reset();
                 writeMeshEntries( emitterIndex, nullptr );

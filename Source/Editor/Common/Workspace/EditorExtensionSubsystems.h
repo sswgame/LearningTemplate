@@ -13,8 +13,8 @@
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw::editor
 {

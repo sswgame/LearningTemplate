@@ -21,7 +21,9 @@
                 "-DSW_GF_IMPORTS",
                 "-DSW_KIT_IMPORTS"
             ],
-            "linux": []
+            "linux": [],
+            "android": [],
+            "web": []
         },
         "extra": [
             "-fno-spell-checking"

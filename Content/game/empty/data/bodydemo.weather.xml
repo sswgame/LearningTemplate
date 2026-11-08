@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 몸 동작 무대(maps/bodycustomization)의 날씨 — skyLight 는 직사광에 곱하는 하늘 투과(CharacterBodyDynamicsComponent::_skyLightValue — 맑음 1, 흐림 · 비 · 안개는 낮다),
+     wetness 는 비의 세기다. 시나리오(bodydynamics)가 cheat.weather 로 바꾸므로 맑음만 고를 무게를 갖는다. -->
+<WeatherCatalog transition="0.5">
+	<Weather id="clear" weight="1" minDuration="100000" maxDuration="100000">
+		<Values skyLight="1" wetness="0"/>
+	</Weather>
+	<Weather id="overcast" weight="0" minDuration="100000" maxDuration="100000">
+		<Values skyLight="0.2" wetness="0"/>
+	</Weather>
+	<Weather id="rain" weight="0" minDuration="100000" maxDuration="100000">
+		<Values skyLight="0.15" wetness="1"/>
+	</Weather>
+	<Weather id="fog" weight="0" minDuration="100000" maxDuration="100000">
+		<Values skyLight="0.35" wetness="0"/>
+	</Weather>
+</WeatherCatalog>

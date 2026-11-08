@@ -188,8 +188,7 @@ namespace sw
         , _textLayout{}
         , _scaleSettings{}
         , _viewport{}
-        , _pScreenTag{ nullptr }
-        , _pOrientationTag{ nullptr }
+        , _screenTags{}
         , _paintState{}
         , _activeScreen{ kInvalidUIScreenHandle }
         , _listTickScratch{}
@@ -424,18 +423,18 @@ namespace sw
         }
     }
 
-    unique_ptr<Widget> UISystem::instantiateDocument( string_view documentPath, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding,
+    unique_ptr<Widget> UISystem::instantiateDocument( string_view documentPath, const ResourceTagSet& tagOverride, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding,
                                                       vector<string>& outListStyleSheet )
     {
         unique_ptr<Widget>                                root;
-        const expected<shared_ptr<const UIDocumentAsset>> loaded = _pDocumentCache->findOrLoad( documentPath );
+        const expected<shared_ptr<const UIDocumentAsset>> loaded = _pDocumentCache->findOrLoad( documentPath, tagOverride );
         if ( loaded.has_value() == false )
         {
             SW_LOG_ERROR_ID( "UISystem.ScreenDocumentNotLoaded", "[UI] Screen document is not loaded: %# (%#)", loaded.error().message(), loaded.error().detail() );
             return root;
         }
         const shared_ptr<const UIDocumentAsset>& document = *loaded;
-        expected<unique_ptr<Widget>>             built    = UIDocumentLoader::instantiate( *document, *_pDocumentCache, outListBinding );
+        expected<unique_ptr<Widget>>             built    = UIDocumentLoader::instantiate( *document, *_pDocumentCache, tagOverride, outListBinding );
         if ( built.has_value() == false )
         {
             SW_LOG_ERROR_ID( "UISystem.ScreenDocumentCannotBuilt", "[UI] Screen document cannot be built: %# (%#)", built.error().message(), built.error().detail() );
@@ -447,7 +446,7 @@ namespace sw
         vector<string> listDocument{ document->_path };
         for ( size_t index = 0; index < listDocument.size(); ++index )
         {
-            const expected<shared_ptr<const UIDocumentAsset>> current = _pDocumentCache->findOrLoad( listDocument[index] );
+            const expected<shared_ptr<const UIDocumentAsset>> current = _pDocumentCache->findOrLoad( listDocument[index], tagOverride );
             if ( current.has_value() == false )
                 continue;
             for ( const string& sheet : ( *current )->_listStyleSheet )
@@ -477,7 +476,7 @@ namespace sw
     {
         // 애니메이션은 문서의 것을 쓴다(방금 만들었으므로 캐시에 이미 있다).
         screen._animationPlayer.stopAll();
-        const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->findOrLoad( screen._documentPath );
+        const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->findOrLoad( screen._documentPath, screen._resourceTagOverride );
         screen._animationPlayer.setAnimations( document.has_value() ? ( *document )->_listAnimation : vector<UIAnimation>{} );
     }
 
@@ -486,7 +485,7 @@ namespace sw
         uint32 rebuiltCount = 0;
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
-            if ( screen->_documentPath.empty() || isDocumentUsing( screen->_documentPath, documentPath ) == false )
+            if ( screen->_documentPath.empty() || isDocumentUsing( *screen, documentPath ) == false )
                 continue;
             if ( rebuildScreenFromDocument( *screen ) )
                 ++rebuiltCount;
@@ -517,7 +516,7 @@ namespace sw
         UIScreenDef          desc{};
         vector<UIBindingDef> listBinding{};
         vector<string>       listStyleSheet{};
-        unique_ptr<Widget>   root = instantiateDocument( documentPath, desc, listBinding, listStyleSheet );
+        unique_ptr<Widget>   root = instantiateDocument( documentPath, ResourceTagSet{}, desc, listBinding, listStyleSheet );
         if ( root == nullptr )
             return nullptr;
         unique_ptr<UIScreen> screen = sw::make_unique<UIScreen>( desc, std::move( root ) );
@@ -530,14 +529,14 @@ namespace sw
         return screen;
     }
 
-    bool UISystem::isDocumentUsing( const string& documentPath, string_view usedPath )
+    bool UISystem::isDocumentUsing( const UIScreen& screen, string_view usedPath )
     {
-        vector<string> listDocument{ documentPath };
+        vector<string> listDocument{ screen._documentPath };
         for ( size_t index = 0; index < listDocument.size(); ++index )
         {
             if ( listDocument[index] == usedPath )
                 return true;
-            const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->findOrLoad( listDocument[index] );
+            const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->findOrLoad( listDocument[index], screen._resourceTagOverride );
             if ( document.has_value() == false )
                 continue;
             for ( const string& fragment : ( *document )->_listFragment )
@@ -549,12 +548,21 @@ namespace sw
         return false;
     }
 
+    bool UISystem::setResourceTagOverride( UIScreen& screen, const ResourceTagSet& tagOverride )
+    {
+        if ( screen._resourceTagOverride == tagOverride )
+            return false;
+        screen._resourceTagOverride = tagOverride;
+        // 문서가 없는 화면(코드로 만든 것)은 다시 지을 것이 없다 — 태그만 든다.
+        return screen._documentPath.empty() == false && rebuildScreenFromDocument( screen );
+    }
+
     bool UISystem::rebuildScreenFromDocument( UIScreen& screen )
     {
         UIScreenDef          desc{};
         vector<UIBindingDef> listBinding{};
         vector<string>       listStyleSheet{};
-        unique_ptr<Widget>   root = instantiateDocument( screen._documentPath, desc, listBinding, listStyleSheet );
+        unique_ptr<Widget>   root = instantiateDocument( screen._documentPath, screen._resourceTagOverride, desc, listBinding, listStyleSheet );
         if ( root == nullptr )
             return false; // 기존 트리를 유지한다. 오류는 instantiateDocument 가 남겼다
 
@@ -1100,16 +1108,11 @@ namespace sw
 
     void UISystem::syncScreenTags( const UIViewport& viewport )
     {
-        if ( viewport._size._x <= 0.0f || viewport._size._y <= 0.0f )
-            return; // 최소화 — 등급을 바꾸지 않는다(돌아오면 같은 등급이라 다시 읽지 않는다)
-        const float32     widthDp      = viewport._physicalSize._x / ( viewport._contentScale > 0.0f ? viewport._contentScale : 1.0f );
-        const utf8* const pScreen      = widthDp < _scaleSettings._compactMaxWidth ? "compact" : "regular";
-        const utf8* const pOrientation = viewport._size._y > viewport._size._x ? "portrait" : "landscape";
-        // 값은 축 표의 상수 글이라 주소로 견준다(같은 글 상수 — 위 두 줄이 유일한 출처다).
-        if ( pScreen != _pScreenTag && engine::getSubsystem<ResourceTags>().setAxisValue( "screen", pScreen ) )
-            _pScreenTag = pScreen;
-        if ( pOrientation != _pOrientationTag && engine::getSubsystem<ResourceTags>().setAxisValue( "orientation", pOrientation ) )
-            _pOrientationTag = pOrientation;
+        const optional<ResourceTagSet> tags = _scaleSettings.makeScreenTags( viewport );
+        if ( tags.has_value() == false || *tags == _screenTags )
+            return; // 최소화는 등급을 바꾸지 않는다(돌아오면 같은 등급이라 다시 읽지 않는다)
+        if ( engine::getSubsystem<ResourceTags>().setAxisTags( *tags ) )
+            _screenTags = *tags;
     }
 
     UIViewport UISystem::computeViewport( const float2& physicalSize, float32 contentScale, const float4& platformSafeInsets ) const

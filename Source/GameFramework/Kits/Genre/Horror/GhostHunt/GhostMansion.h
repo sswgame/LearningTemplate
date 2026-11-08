@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -152,7 +153,7 @@ namespace sw
         bool                      isSearched( const hashed_string& furnitureID ) const;
 
     private:
-        int32 findFurnitureIndex( const hashed_string& furnitureID ) const;
+        [[nodiscard]] optional<int32> findFurnitureIndex( const hashed_string& furnitureID ) const;
         /** @brief 카탈로그나 그래프에 있는 방이면 true 입니다. 비어 있으면(아직 방에 들어가지 않았다) 맞습니다. */
         bool isKnownRoom( const hashed_string& roomID ) const;
         /** @brief 싸움의 이벤트를 꺼내 게임에 넘길 목록에 붙이고, 잡은 유령의 동전과 불 켜기를 처리합니다. */

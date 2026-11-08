@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(eye): 사람 — 갈색 홍채. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="EyeHumanBrown" _base="engine/materials/library/eye/base.material">
+	<_properties>
+		<item name="_layerColor" defaultValue="0.35 0.2 0.1 1" />
+	</_properties>
+</MaterialDef>

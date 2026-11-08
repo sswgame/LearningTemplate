@@ -62,7 +62,7 @@ SW_MATERIAL_GRAPH_PARAMETER_NODE( ScalarParameter, "Parameter", "", "Out:float=%
 | `any` | 이어진 입력의 벡터 크기를 따른다. `float` 만 넓어지고 다른 크기가 섞이면 오류다 |
 | 머티리얼 칸 형식 | `float` · `float4` · `uint`(텍스처 번호). 원소 채움이 이 셋을 전제한다 |
 
-식에서 쓸 수 있는 문맥은 `PixelContext` 칸(`context._uv` · `context._normal` · `context._worldPosition` · `context._color`)과 `g_SwMaterialTime` · `View::computeToView` · `MaterialTexture::sampleIndex` · `applyNormalMap` 이다. 식 안에 `|` 를 쓰지 않는다(`abs`, 비트 연산은 함수로 감싼 `.hlsli` 를 include 뼈대에 더한다).
+식에서 쓸 수 있는 문맥은 `PixelContext` 칸(`context._uv` · `context._normal` · `context._worldPosition` · `context._color`)과 `g_SwMaterialTime` · `View::computeToView` · `MaterialTexture::sampleIndex` · `applyNormalMap`, 함수 묶음 `SurfaceFunction::*`(`material_functions.hlsli` — 노이즈 · 3 축 · 높이 섞기 · 경사/고도 띠 · 마모/녹/때/변색 · 웅덩이/눈 마스크 · 미분 범프, 메뉴 묶음 "Surface Function")이다. 같은 함수를 손으로 쓴 지형 · 환경 · 기믹 셰이더가 쓰고, CPU 짝(`MaterialProjection` · `SurfaceLayerWeights` · `TerrainLayerRule`)이 테스트로 값을 박는다. 식 안에 `|` 를 쓰지 않는다(`abs`, 비트 연산은 함수로 감싼 `.hlsli` 를 include 뼈대에 더한다).
 
 **등록은 엔진 안에만 둔다.** 팩 쿠킹은 게임 모듈을 올리기 전에 돌아 키트 · 게임의 등록을 보지 못한다. 게임 전용 재사용은 하위 그래프로 한다. 단위 테스트 `EveryRegisteredKindParses` · `EverySnippetExpands` 가 새 줄의 오타를 잡는다.
 
@@ -97,7 +97,7 @@ layered_stone.matgraph.xml     Output + Layer 노드 목록(노드 차례가 층
 
 ## 출력과 조명
 
-`Output` 의 핀은 `material_graph.hlsli` 의 `MaterialGraphOutput` 칸과 이름이 같다. 조명은 `pbr_lit` 과 같은 뼈대의 기본 PBR 이다. 자체 발광을 잇거나 값을 적으면 `SW_MATERIAL_EMISSIVE` 훅을 쓰고, G버퍼에 칸이 없어 생성된 머티리얼이 `MATERIAL_FORWARD_ONLY` 를 함께 적는다(툰과 같은 길). 빛을 다르게 받는 셰이딩 모델은 아직 없다 — 더하려면 `Output` 설정과 뼈대의 조명 훅 선택을 잇는다.
+`Output` 의 핀은 `material_graph.hlsli` 의 `MaterialGraphOutput` 칸과 이름이 같다. 조명은 `pbr_lit` 과 같은 뼈대의 기본 PBR 이다. 자체 발광을 잇거나 값을 적으면 `SW_MATERIAL_EMISSIVE` 훅을 쓴다. 디퍼드에서는 G버퍼 패스가 발광을 장면 색에 미리 적어 디퍼드로 그린다(G버퍼 명세 판 3). 빛을 다르게 받는 셰이딩 모델(피부 · 천 · 코트 · 비등방 · 박막 · 털 · 눈)은 손으로 쓴 외형 셰이더 `appearance_lit.hlsl` 과 라이브러리 `engine/materials/library/` 에 있고, 디퍼드 번호 표는 `shading_model_ids.hlsli` 다. 그래프 `Output` 의 셰이딩 모델 설정은 W13 의 Hair 설정과 합칠 때 그 번호 표로 넓힌다.
 
 ## 오류
 

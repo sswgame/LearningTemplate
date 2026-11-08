@@ -77,7 +77,11 @@ sw_resolveModuleManifests()
 
 # 순서: Core → ReflectionParser(Core 를 링크한다) → Engine(파서가 있어야 리플렉션 단계가 선다) → ModuleAPI → Editor → ModuleManager → App · Server → GameFramework/Games.
 add_subdirectory(Source/Core)
-add_subdirectory(Source/Programs/ReflectionParser)
+if(CMAKE_CROSSCOMPILING)
+	include(cmake/Engine/HostTools.cmake) # 교차 빌드는 호스트 빌드의 도구를 쓴다
+else()
+	add_subdirectory(Source/Programs/ReflectionParser)
+endif()
 add_subdirectory(Source/Engine)
 add_subdirectory(Source/DevTools)
 add_subdirectory(Source/ModuleAPI)

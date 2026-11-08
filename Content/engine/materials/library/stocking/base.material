@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 피부 위 그물(망사 스타킹) — 불투명 한 장: 덮임(픽셀 발자국으로 거른 선)으로 실(시엔)과 아래 피부(감싼 확산)를 섞는다. 알파 · 정렬이 없고 멀리서 밀도의 평균색이 된다. -->
+<MaterialDef formatVersion="0" name="AppearanceStocking" _base="engine/materials/library/appearance.material">
+	<_properties>
+		<item name="_color" defaultValue="0.03 0.03 0.03 1" />
+		<item name="_layerColor" defaultValue="0.85 0.62 0.5 1" />
+		<item name="_layerRoughness" defaultValue="0.55" />
+		<item name="_subsurfaceColor" defaultValue="1 0.35 0.2 1" />
+		<item name="_subsurfaceRadius" defaultValue="0.55" />
+		<item name="_sheenWeight" defaultValue="1" />
+		<item name="_sheenColor" defaultValue="0.2 0.2 0.2 1" />
+		<item name="_sheenRoughness" defaultValue="0.5" />
+		<item name="_roughness" defaultValue="0.7" />
+		<item name="_patternScale" defaultValue="40" />
+		<item name="_patternWidth" defaultValue="0.06" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_LOBE_SHEEN</item>
+			<item>MATERIAL_LOBE_SUBSURFACE</item>
+			<item>MATERIAL_PATTERN_NET</item>
+			<item>MATERIAL_NET_UNDERLAYER</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

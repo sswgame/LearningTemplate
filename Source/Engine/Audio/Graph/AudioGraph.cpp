@@ -166,7 +166,7 @@ namespace sw
         for ( uint32 parameterIndex = 0; parameterIndex < typeInfo._parameterCount; ++parameterIndex )
         {
             if ( name == hashed_string( typeInfo._pParameter[parameterIndex]._pName ) )
-                return static_cast<uint32>( parameterIndex );
+                return parameterIndex;
         }
         return nullopt;
     }
@@ -193,7 +193,7 @@ namespace sw
 
         shared_ptr<AudioGraph> pGraph = make_shared<AudioGraph>();
         pGraph->_frameCount           = static_cast<uint32>( def._durationSeconds * static_cast<float32>( audio::kSampleRate ) );
-        pGraph->_outputIndex          = listDataToOrder[def.findNodeIndex( def._output ).value()];
+        pGraph->_outputIndex          = listDataToOrder[def.findNodeIndex( def._output ).value()]; // validate 가 출력 노드를 확인했다
         pGraph->_listNode.resize( listOrder.size() );
         for ( uint32 orderIndex = 0; orderIndex < listOrder.size(); ++orderIndex )
         {
@@ -208,11 +208,11 @@ namespace sw
             }
             for ( const hashed_string& input : desc._listInput )
             {
-                node._listInput.push_back( listDataToOrder[def.findNodeIndex( input ).value()] );
+                node._listInput.push_back( listDataToOrder[def.findNodeIndex( input ).value()] ); // makeProcessingOrder 가 없는 입력을 거절했다
             }
             for ( const AudioGraphParameterDef& parameterDesc : desc._listParameter )
             {
-                const uint32                   parameterIndex = AudioGraphRegistry::findParameterIndex( typeInfo, parameterDesc._name ).value(); // 모르는 매개변수는 읽을 때 거절했다
+                const uint32                   parameterIndex = AudioGraphRegistry::findParameterIndex( typeInfo, parameterDesc._name ).value(); // AudioGraphDef::validate 가 모르는 값 이름을 거른다
                 const AudioGraphParameterInfo& info           = typeInfo._pParameter[parameterIndex];
                 node._arrParameter[parameterIndex]            = MathUtil::clamp( parameterDesc._value, info._minValue, info._maxValue );
                 if ( parameterDesc._parameter.empty() )

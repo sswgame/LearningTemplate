@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 오려 내는 그물(레이스 · 망사 천) — 덮임이 알파(Mask, 양면). 알파 투 커버리지가 RHI 에 없어 선을 한 픽셀 아래로 가늘게 하지 않는 최소 폭으로 깜박임을 막는다. 아래 피부는 다른 메시(겹친 몸)가 비친다. -->
+<MaterialDef formatVersion="0" name="AppearanceLace" _base="engine/materials/library/appearance.material" alphaMode="Mask" cullMode="None" twoSidedLighting="true">
+	<_properties>
+		<item name="_color" defaultValue="0.92 0.9 0.86 1" />
+		<item name="_sheenWeight" defaultValue="1" />
+		<item name="_sheenColor" defaultValue="0.3 0.3 0.3 1" />
+		<item name="_roughness" defaultValue="0.7" />
+		<item name="_patternScale" defaultValue="24" />
+		<item name="_patternWidth" defaultValue="0.05" />
+		<item name="_patternAmount" defaultValue="1" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_LOBE_SHEEN</item>
+			<item>MATERIAL_PATTERN_NET</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

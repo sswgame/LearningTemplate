@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Log/LogOnce.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringUtil.h"
 
@@ -17,6 +18,7 @@
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
+#include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"
@@ -91,6 +93,24 @@ namespace sw
     RHICapabilities IRHIDevice::getCapabilities() const
     {
         return RHIAvailability::query( getBackendType() ); // 정적 테이블 — 런타임에 갈리는 능력은 백엔드가 override 한다
+    }
+
+    // 비동기 컴퓨트 큐가 없는 백엔드(능력 `_bAsyncCompute` 가 거짓)의 길이다. 부르는 쪽이 능력을 먼저 물으므로 여기 오면 호출 쪽 결함이다 — 그래픽스 큐로 대신 내지 않는다.
+    unique_ptr<IRHICommandList> IRHIDevice::createAsyncComputeCommandList()
+    {
+        SW_LOG_ERROR_ONCE_ID( "RHI.AsyncComputeUnsupported", "%# has no async compute queue (_bAsyncCompute is false) - the caller must check the capability", getBackendName() );
+        return nullptr;
+    }
+
+    RHIQueueSyncPoint IRHIDevice::submitAsyncCompute( [[maybe_unused]] IRHICommandList* pCmdList )
+    {
+        SW_LOG_ERROR_ONCE_ID( "RHI.AsyncComputeUnsupported", "%# has no async compute queue (_bAsyncCompute is false) - the caller must check the capability", getBackendName() );
+        return RHIQueueSyncPoint{};
+    }
+
+    void IRHIDevice::waitForAsyncCompute( [[maybe_unused]] RHIQueueSyncPoint point )
+    {
+        SW_LOG_ERROR_ONCE_ID( "RHI.AsyncComputeUnsupported", "%# has no async compute queue (_bAsyncCompute is false) - the caller must check the capability", getBackendName() );
     }
 
     void IRHIDevice::reportBarrierDuringRecording( [[maybe_unused]] const utf8* pWhat ) const

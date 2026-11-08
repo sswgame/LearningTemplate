@@ -164,8 +164,13 @@ namespace sw
         {
             const optional<uint32> bodyA = asset.findBodyIndex( pair._boneA );
             const optional<uint32> bodyB = asset.findBodyIndex( pair._boneB );
-            if ( bodyA.has_value() && bodyB.has_value() )
-                scene.setPairCollision( outRagdoll._listBody[*bodyA], outRagdoll._listBody[*bodyB], false );
+            if ( bodyA.has_value() == false || bodyB.has_value() == false )
+            {
+                // 검증(`PhysicsAsset::validate`)을 거치지 않은 에셋이다 — 그 쌍만 알리고 건너뛴다(나머지 래그돌은 맞다).
+                SW_LOG_ERROR_ID( "PhysicsRagdoll.DisabledPairNamesBone", "Ragdoll: disabled pair '%#' - '%#' names a bone without a body - the pair is skipped", pair._boneA.c_str(), pair._boneB.c_str() );
+                continue;
+            }
+            scene.setPairCollision( outRagdoll._listBody[*bodyA], outRagdoll._listBody[*bodyB], false );
         }
         return true;
     }

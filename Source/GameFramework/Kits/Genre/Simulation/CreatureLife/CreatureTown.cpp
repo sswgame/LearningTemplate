@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -178,13 +179,13 @@ namespace sw
             for ( int32 speciesIndex = 0; speciesIndex < static_cast<int32>( listSpecies.size() ) && hasRoom( instance ); ++speciesIndex )
             {
                 const CreatureSpeciesDef& species      = listSpecies[static_cast<size_t>( speciesIndex )];
-                const bool                bSkipSpecies = findCreatureIndex( species._id ) >= 0 || species.likesHabitat( instance._habitatID ) == false || species.comesIn( phase, weatherID ) == false;
+                const bool                bSkipSpecies = findCreatureIndex( species._id ).has_value() || species.likesHabitat( instance._habitatID ) == false || species.comesIn( phase, weatherID ) == false;
                 if ( bSkipSpecies )
                     continue;
                 // 서식지 번호가 아니라 위치로 섞는다. 같은 배치면 지어 온 순서와 상관없이 같은 답이 나온다.
                 const uint32  placeKey = static_cast<uint32>( _topology.toIndex( instance._origin ) ) * 4u + static_cast<uint32>( instance._rotation );
                 const uint32  salt     = static_cast<uint32>( speciesIndex ) * 977u + placeKey * 31u;
-                const float32 roll     = GameHash::toUnitFloat( GameHash::hashCoord( attractKey, static_cast<int32>( salt ), _settings._randomSeed ) );
+                const float32 roll     = HashUtil::toUnitFloat( HashUtil::hashCoord( attractKey, static_cast<int32>( salt ), _settings._randomSeed ) );
                 if ( roll >= species._chance && species._chance < 1.0f )
                     continue;
                 TownCreature creature;
@@ -206,10 +207,11 @@ namespace sw
 
     CreatureInteractResult CreatureTown::talkTo( const hashed_string& speciesID )
     {
-        const int32 creatureIndex = findCreatureIndex( speciesID );
-        if ( creatureIndex < 0 )
+        const optional<int32> foundCreature = findCreatureIndex( speciesID );
+        if ( foundCreature.has_value() == false )
             return CreatureInteractResult::UnknownCreature;
-        TownCreature& creature = _listCreature[static_cast<size_t>( creatureIndex )];
+        const int32   creatureIndex = *foundCreature;
+        TownCreature& creature      = _listCreature[static_cast<size_t>( creatureIndex )];
         if ( creature._lastTalkDay == getDay() )
             return CreatureInteractResult::AlreadyToday;
         creature._lastTalkDay = getDay();
@@ -219,10 +221,11 @@ namespace sw
 
     CreatureInteractResult CreatureTown::giveGift( const hashed_string& speciesID, const hashed_string& itemID, Inventory& inventory )
     {
-        const int32 creatureIndex = findCreatureIndex( speciesID );
-        if ( creatureIndex < 0 )
+        const optional<int32> foundCreature = findCreatureIndex( speciesID );
+        if ( foundCreature.has_value() == false )
             return CreatureInteractResult::UnknownCreature;
-        TownCreature& creature = _listCreature[static_cast<size_t>( creatureIndex )];
+        const int32   creatureIndex = *foundCreature;
+        TownCreature& creature      = _listCreature[static_cast<size_t>( creatureIndex )];
         if ( creature._lastGiftDay == getDay() )
             return CreatureInteractResult::AlreadyToday;
         if ( inventory.removeItem( itemID, 1 ) == false )
@@ -240,7 +243,7 @@ namespace sw
 
     CreatureRequestResult CreatureTown::startRequest( const hashed_string& speciesID, const hashed_string& questID )
     {
-        if ( findCreatureIndex( speciesID ) < 0 )
+        if ( findCreatureIndex( speciesID ).has_value() == false )
             return CreatureRequestResult::UnknownCreature;
         const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( speciesID );
         if ( pSpecies == nullptr || pSpecies->offersRequest( questID ) == false )
@@ -275,11 +278,12 @@ namespace sw
 
     CreatureAbilityResult CreatureTown::useAbility( const hashed_string& speciesID, const hashed_string& abilityID, int32 x, int32 y, Inventory* pYieldInventory )
     {
-        const int32 creatureIndex = findCreatureIndex( speciesID );
-        if ( creatureIndex < 0 )
+        const optional<int32> foundCreature = findCreatureIndex( speciesID );
+        if ( foundCreature.has_value() == false )
             return CreatureAbilityResult::UnknownCreature;
-        const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( speciesID );
-        const CreatureAbilityDef* pAbility = _pCatalog->findAbility( abilityID );
+        const int32               creatureIndex = *foundCreature;
+        const CreatureSpeciesDef* pSpecies      = _pCatalog->findSpecies( speciesID );
+        const CreatureAbilityDef* pAbility      = _pCatalog->findAbility( abilityID );
         if ( pSpecies == nullptr || pAbility == nullptr )
             return CreatureAbilityResult::NotKnown;
         int32 abilitySlot = constant::invalid_index::kInt32;
@@ -330,9 +334,10 @@ namespace sw
 
     CreatureHouseResult CreatureTown::assignHouse( const hashed_string& speciesID, int32 houseIndex )
     {
-        const int32 creatureIndex = findCreatureIndex( speciesID );
-        if ( creatureIndex < 0 )
+        const optional<int32> foundCreature = findCreatureIndex( speciesID );
+        if ( foundCreature.has_value() == false )
             return CreatureHouseResult::UnknownCreature;
+        const int32 creatureIndex = *foundCreature;
         if ( houseIndex < 0 || houseIndex >= static_cast<int32>( _listHouse.size() ) )
             return CreatureHouseResult::UnknownHouse;
         TownCreature&  creature = _listCreature[static_cast<size_t>( creatureIndex )];
@@ -402,8 +407,8 @@ namespace sw
 
     const TownCreature* CreatureTown::findCreature( const hashed_string& speciesID ) const
     {
-        const int32 creatureIndex = findCreatureIndex( speciesID );
-        return creatureIndex >= 0 ? &_listCreature[static_cast<size_t>( creatureIndex )] : nullptr;
+        const optional<int32> creatureIndex = findCreatureIndex( speciesID );
+        return creatureIndex.has_value() ? &_listCreature[static_cast<size_t>( *creatureIndex )] : nullptr;
     }
 
     const HabitatInstance* CreatureTown::findHabitat( int32 habitatInstanceID ) const
@@ -603,14 +608,14 @@ namespace sw
         return outListTile.empty() == false;
     }
 
-    int32 CreatureTown::findCreatureIndex( const hashed_string& speciesID ) const
+    optional<int32> CreatureTown::findCreatureIndex( const hashed_string& speciesID ) const
     {
         for ( int32 creatureIndex = 0; creatureIndex < static_cast<int32>( _listCreature.size() ); ++creatureIndex )
         {
             if ( _listCreature[static_cast<size_t>( creatureIndex )]._speciesID == speciesID )
                 return creatureIndex;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool CreatureTown::hasRoom( const HabitatInstance& instance ) const

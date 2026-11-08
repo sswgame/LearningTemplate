@@ -96,13 +96,14 @@ namespace sw::editor
                 int32 lastBone = -1;
                 for ( const VrmSpringJoint& joint : spring._listJoint )
                 {
-                    const optional<uint32> bone = skeleton.findBoneIndex( hashed_string( joint._bone ) );
-                    if ( bone.has_value() == false )
+                    const optional<uint32> foundBone = skeleton.findBoneIndex( hashed_string( joint._bone ) );
+                    if ( foundBone.has_value() == false )
                     {
                         addIgnored( pOutListIgnored, "springBone joint '" + joint._bone + "' (not a skeleton bone)" );
                         continue;
                     }
-                    const int32 parent = skeleton.getBone( *bone )._parentIndex;
+                    const int32 bone   = static_cast<int32>( *foundBone ); // 부모 번호(int32, 루트 -1)와 견준다
+                    const int32 parent = skeleton.getBone( *foundBone )._parentIndex;
                     if ( current._listBone.empty() == false && parent != lastBone )
                     {
                         // 가지 — 앞 사슬을 끝내고 이 관절의 부모(고정된 루트)에서 새 사슬을 시작한다.
@@ -111,7 +112,7 @@ namespace sw::editor
                             current._listBone.push_back( string( skeleton.getBone( static_cast<uint32>( parent ) )._name.c_str() ) );
                     }
                     current._listBone.push_back( joint._bone );
-                    lastBone = static_cast<int32>( *bone );
+                    lastBone = bone;
                 }
                 flush();
             }

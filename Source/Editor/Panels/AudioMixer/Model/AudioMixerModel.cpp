@@ -6,9 +6,11 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Audio/AudioEngine.h"
+#include "Engine/Audio/IAudioService.h"
 
 namespace sw::editor
 {
@@ -105,5 +107,10 @@ namespace sw::editor
     const AudioMixerProbe& AudioMixerModel::getProbe()
     {
         return AudioMixerModelInternal::editProbe();
+    }
+
+    IAudioService& AudioMixerModel::getAudioService()
+    {
+        return editor::getSubsystem<IAudioService>();
     }
 } // namespace sw::editor

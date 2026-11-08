@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Settings/ModulesPanel.h"
 
-#include "Editor/Common/Commands/Diagnostics/EditorModuleOverrides.h"
+#include "Editor/Common/Commands/Diagnostics/EditorModuleDetail.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -10,8 +10,6 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -46,10 +44,7 @@ namespace sw::editor
             EditorThemeUtil::textWarning( SW_LOCKEY( "EditorSettings", "ModuleSetChanged" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Build" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Build" ) ) )
-            {
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorCommandRegistry>().execute( "build.compileAll", EditorCommandTarget::none() ); // 막혀 있으면 빌드 상태 표시가 알린다
-            }
+                (void)ModulesModel::requestBuildAll(); // 막혀 있으면 빌드 상태 표시가 알린다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "BuildModules" ) );
         }
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
@@ -274,7 +269,7 @@ namespace sw::editor
 
     uint32 ModulesPanel::getPreviewNewlyInactiveCount()
     {
-        const ModulesPanel* pPanel = editor::getSubsystem<EditorPanelManager>().findPanel<ModulesPanel>(); // 필수 서비스: 없으면 버그(getSubsystem 이 멈춘다)
+        const ModulesPanel* pPanel = EditorPanelManager::getInEditorContext().findPanel<ModulesPanel>(); // 필수 서비스: 없으면 버그(getInEditorContext 가 멈춘다)
         if ( pPanel == nullptr || pPanel->_model.hasPending() == false )
             return 0u; // 패널이 없거나 미리보기를 묻고 있지 않다
         return static_cast<uint32>( pPanel->_model.getNewlyInactive().size() );

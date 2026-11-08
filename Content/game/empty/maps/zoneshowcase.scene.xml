@@ -405,6 +405,9 @@
 					<ZoneContactComponent _probeLength="0.6" _bodyHeight="1.8" _touchDistance="0.15" />
 					<VisualSinkReactionComponent _attribute="SinkDepth" _scale="1" />
 					<JumpEscapeReactionComponent _effect="GE_Sink" _stacksPerJump="3" _blockedTag="State.Engulfed" />
+					<ScreenReactionComponent _tag="State.Poisoned" _fadeInTime="0.25" _fadeOutTime="0.5">
+						<_postProcess _exposureCompensation="-0.5" _vignetteIntensity="0.6" _saturation="0.4" _contrast="0.8" />
+					</ScreenReactionComponent>
 					<TagComponent>
 						<_tags>
 							<_listTag>

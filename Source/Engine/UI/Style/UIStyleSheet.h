@@ -16,6 +16,7 @@
 namespace sw
 {
     struct PropertyInfo;
+    struct ResourceContext;
 
     class Widget;
 
@@ -118,7 +119,8 @@ namespace sw
 
         // 스타일 시트 텍스트를 읽고, 규칙 필드를 계산된 스타일에 씁니다. */
         /** @brief 스타일 시트 텍스트를 읽습니다. 실패하면 false 를 반환하고 오류는 `<경로>:<줄>: <이유>` 형식입니다. */
-        [[nodiscard]] static expected<void> parse( string_view text, string_view path, UIStyleSheetAsset& outSheet );
+        /** @param context 합성 문맥입니다(부모 `_base` · 조건 `_when` — 캐시는 리소스 id 와 변형의 태그를 싣는다, 글만 읽는 쪽은 `ResourceContext::forDocument()`). */
+        [[nodiscard]] static expected<void> parse( string_view text, string_view path, const ResourceContext& context, UIStyleSheetAsset& outSheet );
         /** @brief 필드 하나를 @p inoutStyle 에 씁니다(읽을 때 이미 확인한 텍스트라 실패하지 않습니다). */
         static void applyAssignment( const UIStyleAssignment& assignment, WidgetStyle& inoutStyle );
     };

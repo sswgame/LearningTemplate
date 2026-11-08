@@ -151,6 +151,7 @@ namespace sw
                     vector<uint16> listHiddenIndex;
                     for ( const hashed_string& region : listHiddenRegion )
                     {
+                        // 표에 없는 영역은 부품 검증(`FitPartDef::validate`)이 이미 알렸다 — 숨길 것이 없다.
                         const optional<uint32> regionIndex = tables.findRegionIndex( region );
                         if ( regionIndex.has_value() )
                             listHiddenIndex.push_back( static_cast<uint16>( *regionIndex ) );

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 비늘 — 엇갈린 원판 + 박막(물고기 무지갯빛, _filmWeight 0 이면 파충류). -->
+<MaterialDef formatVersion="0" name="AppearanceScales" _base="engine/materials/library/appearance.material">
+	<_properties>
+		<item name="_color" defaultValue="0.32 0.4 0.2 1" />
+		<item name="_secondaryColor" defaultValue="0.12 0.15 0.07 1" />
+		<item name="_roughness" defaultValue="0.4" />
+		<item name="_patternScale" defaultValue="30" />
+		<item name="_patternAmount" defaultValue="0.8" />
+		<item name="_filmIor" defaultValue="1.56" />
+		<item name="_ior" defaultValue="1.6" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_PATTERN_SCALES</item>
+			<item>MATERIAL_LOBE_THIN_FILM</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

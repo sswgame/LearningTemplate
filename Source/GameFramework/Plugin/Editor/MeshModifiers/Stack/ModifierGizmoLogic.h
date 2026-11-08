@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -62,8 +63,8 @@ namespace sw::editor
         [[nodiscard]] static bool tryMakeLimitQuad( const MeshModifierBounds& bounds, uint32 axisIndex, float32 fraction, vector<float3>& outListCorner );
         /** @brief 주축 @p axisIndex 에 수직인 평면에서 각도 @p angleDegree 의 단위 방향입니다. 0 도는 다음 축(X → Y → Z → X) 방향입니다. */
         static float3 computeDirectionVector( uint32 axisIndex, float32 angleDegree );
-        /** @brief 2 차원 격자(점 번호 = x + countX · y)에서 @p axisIndex 축으로 마주 보는 점 번호입니다. Z 축이나 범위 밖이면 -1 입니다. */
-        static int32 findMirrorIndex2D( int32 index, int32 countX, int32 countY, uint32 axisIndex );
+        /** @brief 2 차원 격자(점 번호 = x + countX · y)에서 @p axisIndex 축으로 마주 보는 점 번호입니다. Z 축이나 범위 밖이면 비어 있습니다. */
+        [[nodiscard]] static optional<int32> findMirrorIndex2D( int32 index, int32 countX, int32 countY, uint32 axisIndex );
         /**
          * @brief 매개변수 정의가 뷰포트에서 무엇으로 그려지는지 정합니다.
          * @details 정의의 `_pHint` 에 낱말(radius · lower limit · upper limit · center · direction, 대소문자 무시)이 있으면 그것이 먼저고,

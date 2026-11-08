@@ -3,6 +3,8 @@
  * @brief 구조 버퍼 하나와 그 뷰(SRV/UAV), 용량을 함께 보관합니다(언리얼 `FRWBufferStructured` 자리).
  */
 #pragma once
+#include "Core/Container/vector.h"
+
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -48,6 +50,20 @@ namespace sw
 
         /** @brief `byteOffset` 부터 byteSize 만큼 업로드합니다(버퍼가 없으면 아무것도 하지 않습니다). */
         void upload( IRHIDevice* pDevice, const void* pData, uint32 byteSize, uint32 byteOffset = 0 ) const;
+        /**
+         * @brief 여러 조각을 한 번의 호출로 업로드합니다(`IRHIResourceFactory::updateStructuredBufferRegions`). 조각의 `_srcOffset` 은 @p pBaseSource 기준입니다.
+         * @return 올린 바이트 수입니다(버퍼 · 조각이 없으면 0).
+         */
+        uint32 uploadRegions( IRHIDevice* pDevice, const void* pBaseSource, const vector<RHIBufferCopyRegion>& listRegion ) const;
+
+        /**
+         * @brief 지난번에 올린 원소 배열과 이번 배열을 원소 단위로 견주어 바뀐 구간만 조각으로 냅니다(인스턴스 버퍼의 바뀐 구간 업로드와 같은 일을 라이트 · 프로브도 한다).
+         * @details 두 배열은 같은 원소 크기 @p stride 이고 같은 자리가 같은 버퍼 칸이다. 이번이 더 길면 늘어난 꼬리는 모두 바뀐 것이다. 사이가 @p mergeGapElements 원소 이하인
+         *          두 구간은 하나로 붙인다(조각마다 백엔드가 복사 명령을 하나 더 낸다). 원본과 목적 오프셋은 같다(이번 배열이 원본 블롭이다).
+         * @param outListRegion 앞 내용은 지운다. 바뀐 것이 없으면 빈다.
+         */
+        static void collectChangedRegions( const void* pPrevious, uint32 previousCount, const void* pCurrent, uint32 currentCount, uint32 stride, uint32 mergeGapElements,
+                                           vector<RHIBufferCopyRegion>& outListRegion );
 
         /** @brief 뷰를 등록 해제하고 버퍼를 지웁니다. 여러 번 불러도 안전합니다. */
         void release( IRHIDevice* pDevice );

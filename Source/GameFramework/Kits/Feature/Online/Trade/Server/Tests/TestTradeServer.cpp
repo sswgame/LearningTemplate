@@ -328,7 +328,7 @@ namespace
 
         TradeReply confirm( int32 slot, const TradeSnapshot& snapshot, AccountID accountID )
         {
-            const int32         sideIndex = snapshot.findSideIndex( accountID );
+            const int32         sideIndex = snapshot.findSideIndex( accountID ).value();
             TradeConfirmRequest request;
             request._tradeID          = snapshot._tradeID;
             request._seenOwnRevision  = snapshot._arrSide[sideIndex]._offerRevision;

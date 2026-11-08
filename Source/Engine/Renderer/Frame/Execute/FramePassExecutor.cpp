@@ -2,7 +2,7 @@
  * @file FramePassExecutor.cpp
  * @brief 렌더 그래프 패스의 실행입니다 — 커맨드 리스트 준비 · 제출, 뷰별 그래프, 패스 종류마다의 기록(풀스크린 · 포워드 · G버퍼 · 투명 · 하늘 · 안개 · TAA · 출력 · 캔버스),
  *        씬 메시 드로우(GPU 배치 · 멀티 드로우), 모듈 확장 패스, 그래프 뒤 NaN 감시.
- * @details 그래프 앞의 프리패스는 `FramePrepass`, 가림 판정은 `OcclusionTiles` 가 맡는다.
+ * @details 프레임 패스의 실행은 `FrameGraphExecutor`, 가림 판정은 `OcclusionTiles` 가 맡는다.
  */
 #include "pch.h"
 
@@ -23,6 +23,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
+#include "Engine/Graphics/Debug/GPUPixelInspector.h"
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -49,10 +50,13 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
+#include "Engine/Renderer/Frame/PostProcess/FramePostGrade.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
+#include "Engine/Renderer/Lighting/ShadowFilter.h"
+#include "Engine/Renderer/Pipeline/GBufferLayout.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -64,6 +68,18 @@ namespace sw
      * @details 묶은 이미지와 묶지 않은 이미지가 같아야 한다. 다르면 배치 테이블(g_SwBatches)이나 드로우 ID 가 틀린 것이다. 기본은 묶는 것이다.
      */
     SW_GLOBAL_VARIABLE( bool, gv_drawMerge, true, "씬 배치 멀티 드로우 묶기 (false=배치마다 호출, 진단용)" );
+
+    /**
+     * @brief `-gv_asyncCompute=0` 이면 `_queue="AsyncCompute"` 프레임 패스도 그래픽스 큐에서 돕니다(시작 인자 — 파이프라인을 묶을 때 계획한다).
+     * @details 비동기 큐가 이득인지는 측정으로 정한다(같은 장면에서 켜고 끈 GPU 프레임 시간). 능력이 없는 백엔드는 이 값과 상관없이 그래픽스 큐다.
+     */
+    SW_GLOBAL_VARIABLE( bool, gv_asyncCompute, true, "프레임 패스의 비동기 컴퓨트 큐 (false=모두 그래픽스 큐, 측정용)" );
+
+    /**
+     * @brief `-gv_transientAliasing=0` 이면 뷰 그래프의 트랜지언트 첨부가 텍스처를 나누지 않습니다(시작 인자 — 콜백을 묶을 때 계획한다).
+     * @details 나눈 그림과 나누지 않은 그림이 같아야 한다 — 다르면 계획이 겹치는 수명을 놓쳤다(같은 실행에서 끄고 켠 두 장을 견준다). 메모리는 `RT.Frame.transientAliases` 가 센다.
+     */
+    SW_GLOBAL_VARIABLE( bool, gv_transientAliasing, true, "뷰 그래프 트랜지언트 첨부의 텍스처 나눔 (false=첨부마다 텍스처, 진단용)" );
 
     namespace
     {
@@ -172,10 +188,13 @@ namespace sw
         , _fog{ fog }
         , _extensionHost{ extensionHost }
         , _capture{ capture }
-        , _prepass{ pDevice, state, psoManager, fog }
+        , _frameGraphExecutor{ pDevice, state, psoManager, fog }
+        , _mapFramePassNameToIndex{}
+        , _frameGraphContext{}
         , _pActiveView{ &state._mainView }
         , _pCmdOwnerDevice{ nullptr }
         , _frameCmd{}
+        , _asyncComputeCmd{}
         , _pCmd{ nullptr }
         , _listPassContext{}
         , _mapPassNameToIndex{}
@@ -197,14 +216,14 @@ namespace sw
 
     void FramePassExecutor::ensureResources()
     {
-        _prepass.ensureResources();
+        _frameGraphExecutor.ensureResources();
         if ( _nanCheck.initialize( _pDevice ) == false )
             SW_FATAL( "The NaN check is on but its counters could not be created - see the log above" );
     }
 
     void FramePassExecutor::releaseResources()
     {
-        _prepass.releaseResources();
+        _frameGraphExecutor.releaseResources();
         _nanCheckCommandList.reset();
         _nanCheck.shutdown();
     }
@@ -214,7 +233,9 @@ namespace sw
         // 리소스 상태 추적은 이름에서 상태를 찾는 구조라 디바이스가 바뀌어도 살아남는다. 새 디바이스의 텍스처는 다시 Undefined 다.
         // 지우지 않으면 첫 프레임이 "이미 렌더 타깃 상태" 로 믿고 배리어를 건너뛴다.
         _graphContext.reset();
+        _frameGraphContext.reset();
         _frameCmd.reset();
+        _asyncComputeCmd.reset();
         _pCmdOwnerDevice = nullptr;
         _pCmd            = nullptr;
     }
@@ -231,6 +252,7 @@ namespace sw
         {
             // 리스트는 만든 디바이스의 것이다. 뷰마다의 리스트도 함께 버린다.
             _frameCmd.reset();
+            _asyncComputeCmd.reset();
             _state._mainView._commandList.reset();
             for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
             {
@@ -285,12 +307,10 @@ namespace sw
         }
 #endif
 
-        // GPU 드리븐 프리패스다. **애니메이션이 먼저고 컬링이 나중이다.** 순서가 뒤집히면 컬링이
-        // 이번 프레임에 회전하기 전의 바운드로 판정한다. 컬링은 이번 프레임에 그리는 **모든 뷰**의 슬롯을 돈다.
-        // 깊이 히스토리(뷰마다 지난 장면 깊이의 사본)가 먼저다 — GPU 입자의 깊이 충돌이 읽는다. 이번 프레임 패스가 장면 깊이를 쓰기 전이라 지난 깊이가 남아 있다.
-        // 앞 프레임들의 셰이더 assert 기록이 도착했으면 로그로 낸다(몇 프레임 늦다).
+        // 프레임 그래프(파이프라인 XML 의 `_listFramePass`) — 깊이 히스토리 · 입자 · 변형 · 컬링 · 라이트 그리드 등, 이번 프레임에 그리는 **모든 뷰**의 몫이다.
+        // 순서는 XML 의 자원 읽기 · 쓰기가 정한다. 앞 프레임들의 셰이더 assert · NaN 기록이 도착했으면 로그로 낸다(몇 프레임 늦다).
         _nanCheck.poll();
-        _prepass.record( *_pCmd );
+        recordFrameGraph( pDevice );
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
         _state._canvasRenderer.drawTargets( *_pCmd, *pDevice, _state._canvasFrame, _psoManager.getCache() );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
@@ -333,7 +353,7 @@ namespace sw
         _state._frameContext        = _state._mainSeedScratch;
         _lastRenderedExtraViewCount = renderedExtraCount;
         // 다음 프레임의 깊이 히스토리가 이번 프레임의 장면 깊이와 짝이 되도록 뷰-투영을 적는다.
-        _prepass.rememberDepthHistoryViews();
+        _frameGraphExecutor.rememberDepthHistoryViews();
         return bOk;
     }
 
@@ -420,6 +440,12 @@ namespace sw
         return FrameRendererUtil::drawsMaterialInPass( passType, pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
     }
 
+    bool FramePassExecutor::drawsCasterBatch( ShadowCasterFilter filter, const GPUMeshBatch& batch )
+    {
+        const bool bStatic = batch._bStaticShadowCaster != SW_FALSE;
+        return filter == ShadowCasterFilter::All || ( filter == ShadowCasterFilter::StaticOnly ) == bStatic;
+    }
+
     void FramePassExecutor::applyViewShadowConstants( FramePassContext& context, const ViewShadowData& shadow )
     {
         const PassConstantNames& names = passConstantNames();
@@ -430,6 +456,9 @@ namespace sw
         {
             context._passValues.setFloat4( names._arrShadowCascade[cascadeIndex], shadow._arrCascade[cascadeIndex] );
         }
+        context._passValues.setFloat4( names._shadowFilter, ShadowFilter::makeShaderParams( ShadowFilter::getActiveMode(), shadow._directionalPenumbraScale ) );
+        // 접촉 그림자 채널은 프레임 공통이다(빛 목록이 프레임 공통이다) — 추가 뷰도 같은 값이다.
+        context._passValues.setFloat4( names._contactShadowLights, _state._frameShadow._contactShadowLights );
     }
 
     void FramePassExecutor::applyViewPassConstants( FramePassContext& context, FrameViewTarget& view )
@@ -442,9 +471,9 @@ namespace sw
         // 원본 텍셀의 기본값은 프레임 텍셀이다. 원본 역할 입력을 바인딩하는 패스가 그 첨부의 실제 크기로 덮는다(registerPassTexture).
         context._passValues.setFloat4( passConstantNames()._sourceTexel,
                                        float4{ outlineY, outlineZ, static_cast<float32>( pool.getWidth() ), static_cast<float32>( pool.getHeight() ) } );
-        // 카메라별 후처리 값(CameraPostProcessValues)도 뷰마다다. 중립 값(노출 0, 배율 1, 비네트 · 레터박스 0)이면 셰이더 결과가 전역 값과 같다.
-        const CameraPostProcessValues& post = view._settings._postProcess;
-        float4                         bloomParams{ kDefaultBloomParams };
+        // 카메라별 후처리 값(PostProcessValues)도 뷰마다다. 중립 값(노출 0, 배율 1, 비네트 · 레터박스 0)이면 셰이더 결과가 전역 값과 같다.
+        const PostProcessValues& post = view._settings._postProcess;
+        float4                   bloomParams{ kDefaultBloomParams };
         bloomParams._y *= MathUtil::max( 0.0f, post._bloomScale );
         context._passValues.setFloat4( passConstantNames()._bloomParams, bloomParams );
         // 노출 배율 = 보정 2^EV × (자동 노출을 재지 않는 카메라의 고정 노출 2^-EV). 측정하는 카메라는 셰이더가 이번 EV(`g_AutoExposureIndex`)를 더 곱한다.
@@ -458,6 +487,42 @@ namespace sw
         const bool    bScreenOutput   = view._pOutputTexture == nullptr;
         const float32 colorVisionMode = bScreenOutput ? static_cast<float32>( _state._canvasFrame._colorVisionMode ) : 0.0f;
         context._passValues.setFloat4( passConstantNames()._cameraFrame, float4{ MathUtil::max( 0.0f, post._letterboxAspectRatio ), viewAspect, colorVisionMode, 0.0f } );
+        // 컬러 그레이딩(post_grade.hlsli) — 화이트 밸런스 · 범위 보정 · LUT. LUT 는 세기가 있는 후처리 뷰만 묻는다(안 쓰는 경로를 읽지 않는다). 띠 모양이 아니면 데이터 오류라 걸지 않는다.
+        const bool       bWantsLUT = view._settings.usesPostProcess() && post._colorGradingLUTIntensity > 0.0f;
+        const Texture2D* pLUT      = bWantsLUT ? _state._postProcessTextures.findReady( post._colorGradingLUT, "colour grading LUT" ) : nullptr;
+        if ( pLUT != nullptr && PostGradeConstants::isLUTStrip( pLUT->getWidth(), pLUT->getHeight() ) == false )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ColorGradingLUTShape", "Colour grading LUT '%#' is %#x%# - it must be an N*N wide, N tall strip (e.g. 256x16); the LUT is left out",
+                                  post._colorGradingLUT.c_str(), pLUT->getWidth(), pLUT->getHeight() );
+            pLUT = nullptr;
+        }
+        view._pColorGradingLUT         = pLUT;
+        const PostGradeConstants grade = PostGradeConstants::make( post, pLUT != nullptr ? pLUT->getHeight() : 0u );
+        for ( uint32 row = 0; row < 3; ++row )
+        {
+            context._passValues.setFloat4( passConstantNames()._arrGradeWhiteBalance[row], grade._arrWhiteBalance[row] );
+        }
+        static_assert( PassConstantNames::kGradeRangeConstantCount == PostGradeConstants::kRangeCount * PostGradeConstants::kRangeFieldCount, "그레이딩 범위 상수 이름 수가 상수 배치와 다르다" );
+        for ( uint32 index = 0; index < PassConstantNames::kGradeRangeConstantCount; ++index )
+        {
+            context._passValues.setFloat4( passConstantNames()._arrGradeRange[index], grade._arrRange[index] );
+        }
+        context._passValues.setFloat4( passConstantNames()._gradeParams, grade._params );
+        context._passValues.setFloat4( passConstantNames()._gradeLUT, grade._lut );
+        // 렌즈 · 필름(post_grade.hlsli) — 모두 0 이면 셰이더가 원본을 다시 읽지 않는다. 범위는 칸의 Min · Max 와 같게 자른다(데이터 오류가 화면 밖을 읽지 않게).
+        context._passValues.setFloat4( passConstantNames()._lensParams, float4{ MathUtil::max( 0.0f, post._chromaticAberrationIntensity ), MathUtil::saturate( post._chromaticAberrationStart ),
+                                                                                MathUtil::clamp( post._lensDistortion, -1.0f, 1.0f ), MathUtil::max( 0.0f, post._sharpen ) } );
+        context._passValues.setFloat4( passConstantNames()._grainParams, float4{ MathUtil::saturate( post._filmGrainIntensity ), MathUtil::max( 1.0f, post._filmGrainSize ), 0.0f, 0.0f } );
+        // 블룸 렌즈(post_bloom.hlsli) — 먼지 마스크는 LUT 와 같이 세기가 있는 후처리 뷰만 묻고, 읽힌 마스크가 없으면 세기를 0 으로 보낸다(셰이더가 읽지 않는다).
+        const bool       bWantsDirt = view._settings.usesPostProcess() && post._bloomDirtMaskIntensity > 0.0f;
+        const Texture2D* pDirt      = bWantsDirt ? _state._postProcessTextures.findReady( post._bloomDirtMask, "bloom dirt mask" ) : nullptr;
+        view._pBloomDirtMask        = pDirt;
+        context._passValues.setFloat4( passConstantNames()._bloomLens, float4{ pDirt != nullptr ? post._bloomDirtMaskIntensity : 0.0f, MathUtil::max( 0.0f, post._lensFlareIntensity ),
+                                                                               MathUtil::saturate( post._lensFlareGhostSpacing ), MathUtil::saturate( post._lensFlareHaloWidth ) } );
+        context._passValues.setFloat4( passConstantNames()._flareTint, float4{ post._lensFlareTint._x, post._lensFlareTint._y, post._lensFlareTint._z, 0.0f } );
+        context._passValues.setFloat4( passConstantNames()._ssrParams, float4{ MathUtil::saturate( post._screenSpaceReflectionIntensity ), MathUtil::max( 0.0f, post._screenSpaceReflectionMaxDistance ),
+                                                                               MathUtil::max( 0.0f, post._screenSpaceReflectionThickness ),
+                                                                               MathUtil::saturate( post._screenSpaceReflectionMaxRoughness ) } );
         // 피사계 심도(depth_of_field.hlsl) — 얇은 렌즈의 착란원. 지름 / 센서 높이 = 센서 높이 · s² / ( 4 · N · 초점 거리 ) · |1 - 초점 거리 / 깊이|
         // (s = 1 / tan( fovY / 2 ) 라 초점 길이 = 센서 높이 · s / 2, 구경 = 초점 길이 / N, 초점 길이가 초점 거리보다 훨씬 짧다고 본다). y 는 그 반지름을 화면 높이 px 로 바꾼 배율이다.
         // 조리개 0(핀홀) · 직교 · 후처리를 끈 뷰는 패스를 기록하지 않는다(applyViewPassSelection). 그때는 배율을 0 으로 두고 w 도 0 이다(셰이더는 w 를 읽지 않는다).
@@ -555,6 +620,22 @@ namespace sw
             }
         }
         return hashed_string{};
+    }
+
+    void FramePassExecutor::registerVisualizedAttachment( FramePassContext& context )
+    {
+        // 주 시점만 바꾼다 — 추가 뷰(CCTV · 렌더 텍스처)는 제 원본을 그대로 낸다. 없는 이름이면 원본을 그대로 둔다(개발 명령이 이미 이름을 알렸다).
+        const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
+        string                         attachment;
+        if ( isRenderingExtraView() || pInspector == nullptr || pInspector->findVisualizedAttachment( attachment ) == false )
+            return;
+        const hashed_string name = hashed_string::findInterned( attachment );
+        if ( name.empty() || findTransient( name ) == 0 )
+        {
+            SW_LOG_WARNING_ONCE_ID( "FramePassExecutor.VisualizedAttachmentMissing", "gpu.show: attachment '%#' is not allocated in this view - showing the normal output", attachment.c_str() );
+            return;
+        }
+        registerPassTexture( context, attachmentNames()._sourceColor, name );
     }
 
     void FramePassExecutor::scanPassOutputsForNan( IRHIDevice* pDevice )
@@ -707,7 +788,186 @@ namespace sw
             SW_LOG_ERROR_ID( "FramePassExecutor.CallbackBindCompileFailed", "Callback bind compile failed" );
             return false;
         }
+        buildTransientAliasPlan();
+        return bindFramePassCallbacks();
+    }
+
+    void FramePassExecutor::buildTransientAliasPlan()
+    {
+        ++_state._transientAliasGeneration; // 뷰 풀이 다음 셋업에서 새 계획으로 다시 만든다
+        _state._transientAliasPlan = RenderGraphAliasPlan{};
+        // NaN 감시는 그래프가 끝난 뒤 모든 패스 출력을 다시 읽는다 — 나눠 쓴 텍스처는 앞 첨부의 내용이 이미 덮였다. 감시를 켠 실행은 나누지 않는다.
+        if ( gv_transientAliasing == false || GPUNanCheck::isRequested() )
+            return;
+
+        // 실행 순서 번호 → 레벨. 실행 순서는 레벨을 차례로 이은 것이다(`RenderGraph::compile`).
+        const RenderGraph&                   graph = _state._graph;
+        vector<uint32>                       listLevelOfOrder;
+        const vector<vector<hashed_string>>& listLevel = graph.getExecutionLevels();
+        for ( uint32 levelIndex = 0; levelIndex < static_cast<uint32>( listLevel.size() ); ++levelIndex )
+        {
+            listLevelOfOrder.insert( listLevelOfOrder.end(), listLevel[levelIndex].size(), levelIndex );
+        }
+
+        const vector<RenderGraphPassDesc>&   listPass = _pipelineResource.getGraphPass();
+        unordered_map<hashed_string, size_t> mapCandidateIndex;
+        vector<RenderGraphAliasCandidate>    listCandidate;
+        for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
+        {
+            // 나누지 않는 것: 깊이(장면 깊이는 다음 프레임의 깊이 히스토리가 읽는다 · 그림자 맵), 프레임을 넘어 내용을 잇는 첨부(`Load`), 그래프가 모르는 첨부.
+            const bool bDepth = FrameRendererUtil::isDepthFormat( attachment._format );
+            if ( bDepth || attachment._loadOp == RHIRenderPassLoadOp::Load )
+                continue;
+            const hashed_string                name( attachment._name.c_str() );
+            const RenderGraphResourceLifetime* pLife = graph.findResourceLifetime( name );
+            if ( pLife == nullptr || pLife->_lastPassIndex >= listLevelOfOrder.size() )
+                continue;
+            // 서술 키 — 같은 텍스처로 넘길 수 있는 조건(형식 · 나눗수 · RW 용도 · 클리어 값, D3D12 의 최적 클리어 값이 서술에 든다).
+            // 칸마다 32 비트로 옮겨 해시한다(구조체째 해시하면 정렬 채움 바이트가 섞인다).
+            uint32 arrDescWord[7]{ static_cast<uint32>( attachment._format ), attachment._resolutionDivisor,
+                                   FrameRendererUtil::isComputeOutputOrInput( listPass, attachment._name ) ? 1u : 0u, 0u, 0u, 0u, 0u };
+            Memory::copy( &arrDescWord[3], &attachment._clearColor._x, sizeof( float32 ) );
+            Memory::copy( &arrDescWord[4], &attachment._clearColor._y, sizeof( float32 ) );
+            Memory::copy( &arrDescWord[5], &attachment._clearColor._z, sizeof( float32 ) );
+            Memory::copy( &arrDescWord[6], &attachment._clearColor._w, sizeof( float32 ) );
+            const uint64 descKey    = HashUtil::appendBytes64( HashUtil::kFNVOffset64, arrDescWord, sizeof( arrDescWord ) );
+            mapCandidateIndex[name] = listCandidate.size();
+            listCandidate.push_back( RenderGraphAliasCandidate{ name, descKey, listLevelOfOrder[pLife->_firstPassIndex], listLevelOfOrder[pLife->_lastPassIndex] } );
+        }
+
+        // 꺼진 효과는 출력 이름이 원본을 가리킨다(`kBypassesToSource`) — 그 출력을 읽는 패스가 원본을 읽으므로 원본의 수명이 출력의 끝까지 늘어난다. 둘을 한 구간으로 묶는다.
+        // TAA 출력은 셋업이 기록 형식으로 읽어 프레임 밖에서도 쓴다 — 나누지 않는다.
+        vector<uint8> listExcluded( listCandidate.size(), 0 );
+        for ( const RenderGraphPassDesc& pass : listPass )
+        {
+            const RenderPassTypeInfo& info = getRenderPassTypeInfo( pass._type );
+            for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+            {
+                const auto outputIt = mapCandidateIndex.find( output._attachment );
+                if ( outputIt == mapCandidateIndex.end() )
+                    continue;
+                if ( pass._type == RenderPassType::TAA )
+                    listExcluded[outputIt->second] = 1;
+                if ( info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) == false )
+                    continue;
+                for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+                {
+                    const auto inputIt = mapCandidateIndex.find( input._attachment );
+                    if ( static_cast<RenderPassInputRole>( input._role ) != RenderPassInputRole::SourceColor )
+                        continue;
+                    if ( inputIt == mapCandidateIndex.end() )
+                    {
+                        listExcluded[outputIt->second] = 1; // 원본이 후보가 아니면(깊이 · Load) 출력도 나누지 않는다
+                        continue;
+                    }
+                    RenderGraphAliasCandidate& source = listCandidate[inputIt->second];
+                    RenderGraphAliasCandidate& target = listCandidate[outputIt->second];
+                    source._firstLevel                = MathUtil::min( source._firstLevel, target._firstLevel );
+                    source._lastLevel                 = MathUtil::max( source._lastLevel, target._lastLevel );
+                    target._firstLevel                = source._firstLevel;
+                    target._lastLevel                 = source._lastLevel;
+                }
+            }
+        }
+        vector<RenderGraphAliasCandidate> listAliasable;
+        for ( size_t candidateIndex = 0; candidateIndex < listCandidate.size(); ++candidateIndex )
+        {
+            if ( listExcluded[candidateIndex] == 0 )
+                listAliasable.push_back( listCandidate[candidateIndex] );
+        }
+        _state._transientAliasPlan = RenderGraphAliasPlan::build( listAliasable );
+        SW_PROFILE_COUNT( "RT.Frame.transientAliases", _state._transientAliasPlan._mapAliasToOwner.size() );
+    }
+
+    bool FramePassExecutor::bindFramePassCallbacks()
+    {
+        RenderGraph& frameGraph = _state._frameGraph;
+        frameGraph.clear();
+        _mapFramePassNameToIndex.clear();
+        _frameGraphContext.reset();
+        for ( const RenderGraphResourceDesc& resource : _pipelineResource.getResources() )
+        {
+            frameGraph.declareResource( hashed_string( resource._name.c_str() ), resource._kind );
+        }
+        const vector<RenderGraphPassDesc>& listFramePass = _pipelineResource.getFramePass();
+        for ( uint32 index = 0; index < static_cast<uint32>( listFramePass.size() ); ++index )
+        {
+            const RenderGraphPassDesc& pass = listFramePass[index];
+            const hashed_string        nameHash( pass._name.c_str() );
+            vector<hashed_string>      listInput;
+            vector<hashed_string>      listOutput;
+            for ( const string& in : pass._listInput )
+            {
+                listInput.emplace_back( in.c_str() );
+            }
+            for ( const string& out : pass._listOutput )
+            {
+                listOutput.emplace_back( out.c_str() );
+            }
+            _mapFramePassNameToIndex[nameHash] = index;
+            frameGraph.addPass( nameHash, std::move( listInput ), std::move( listOutput ),
+                                SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onFrameGraphPassExecute, this ), pass._queue );
+        }
+        // 비동기 컴퓨트 큐가 없는 백엔드(DX11 · GL · WebGPU · 큐가 하나인 Vulkan 장치)는 AsyncCompute 패스를 그래픽스 큐로 계획한다(능력 표가 정한 길).
+        const bool bAsyncCompute = gv_asyncCompute && _pDevice != nullptr && _pDevice->getCapabilities()._bAsyncCompute != SW_FALSE;
+        frameGraph.setAsyncComputeSupported( bAsyncCompute );
+        // 프레임 패스가 없는 파이프라인(미리보기 · 시험 파이프라인)은 빈 그래프다 — 컬링 · 그리드 등은 PSO 도 없다(`FramePSOManager::getEnginePSO`).
+        if ( listFramePass.empty() )
+            return true;
+        // 배리어는 패스가 자기 버퍼에 스스로 건다 — 프레임 그래프 자원은 순서만 정하므로 레벨 프롤로그를 걸지 않는다.
+        if ( frameGraph.compile() == false )
+        {
+            SW_LOG_ERROR_ID( "FramePassExecutor.FrameGraphCompileFailed", "Frame graph (_listFramePass) could not be compiled - see the cycle report above" );
+            return false;
+        }
         return true;
+    }
+
+    void FramePassExecutor::recordFrameGraph( IRHIDevice* pDevice )
+    {
+        _frameGraphExecutor.beginFrame();
+        RenderGraph& frameGraph = _state._frameGraph;
+        bool         bOk        = true;
+        if ( frameGraph.getNodeCount() > 0 && frameGraph.getAsyncBatchCount() > 0 )
+        {
+            // 비동기 묶음이 있다 — 컴퓨트 큐 리스트를 그래프가 포크마다 열고 닫는다. 프리패스 리스트는 포크 · 조인에서 잘려 큐에 나가고 다시 열린다.
+            if ( _asyncComputeCmd == nullptr )
+                _asyncComputeCmd = pDevice->createAsyncComputeCommandList();
+            bOk = _asyncComputeCmd != nullptr && frameGraph.executeOnQueues( _frameGraphContext, *pDevice, *_pCmd, _asyncComputeCmd.get() );
+        }
+        else if ( frameGraph.getNodeCount() > 0 )
+        {
+            bOk = frameGraph.execute( _frameGraphContext, _pCmd );
+        }
+        if ( bOk == false )
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.FrameGraphExecuteFailed", "Frame graph could not run - culling, light grid and skinning results are stale this frame" );
+        _frameGraphExecutor.endFrame( *_pCmd );
+    }
+
+    void FramePassExecutor::onFrameGraphPassExecute( const RenderGraphPassContext& graphContext )
+    {
+        const vector<RenderGraphPassDesc>& listFramePass = _pipelineResource.getFramePass();
+        const auto                         iter          = _mapFramePassNameToIndex.find( graphContext._passName );
+        const bool                         bPassListed   = iter != _mapFramePassNameToIndex.end() && iter->second < listFramePass.size();
+        SW_ASSERT( bPassListed );
+        IRHICommandList* const pCmd = graphContext._pCmdList != nullptr ? graphContext._pCmdList : _pCmd;
+        if ( bPassListed == false || pCmd == nullptr )
+            return;
+        const RenderGraphPassDesc& passDesc = listFramePass[iter->second];
+        // 프레임 패스마다 GPU 시간(`GPU.<프레임 패스>` — gpu.timings · 감시 값 GPU.PassMs)을 고정 칸 쌍에 쓴다. 게이트는 뷰 패스와 같다(계측 스위치 · 칸 수).
+        // shortcut: 비동기 컴퓨트 큐 리스트(pCmd != _pCmd)는 재지 않는다 — 큐 사이의 쿼리 해석 순서 · 시계를 아직 대조하지 않았다. 컴퓨트 큐 패스를 재야 할 때 백엔드별로 확인하고 연다.
+        uint32 timestampBeginSlot = GPUPassScope::kNoTimestamp;
+#if SW_PROFILE_COMPILED
+        const IRHITimestampProvider* pTimestamps   = _pDevice != nullptr ? _pDevice->findTimestampProvider() : nullptr;
+        const uint32                 frameSlot     = FrameRendererUtil::findFramePassTimestampSlot( iter->second );
+        const bool                   bWriteGPUTime = pTimestamps != nullptr && pCmd == _pCmd && _state._gpuPassTimeline.isRecording() && frameSlot != constant::invalid_index::kUint32 &&
+                                   ( frameSlot + 1u ) < pTimestamps->getTimestampSlotCount();
+        if ( bWriteGPUTime )
+            timestampBeginSlot = frameSlot;
+#endif
+        // 이벤트 표시 + 브레드크럼(시작 · 끝) + GPU 시간 한 벌 — 캡처 · 장치 손실 보고 · 프레임 프로파일러에 프레임 패스 이름(XML 의 `_name`)이 남는다.
+        const GPUPassScope scope{ *pCmd, passDesc._name, timestampBeginSlot };
+        _frameGraphExecutor.executePass( passDesc._type, *pCmd );
     }
 
     void FramePassExecutor::onGraphLevelPrologue( const RenderGraphLevelContext& levelContext )
@@ -854,6 +1114,14 @@ namespace sw
                 return names._sceneColorCopy;
             case RenderPassInputRole::SceneDepthCopy:
                 return names._sceneDepthCopy;
+            case RenderPassInputRole::Velocity:
+                return names._velocity;
+            case RenderPassInputRole::Distortion:
+                return names._distortion;
+            case RenderPassInputRole::ContactShadow:
+                return names._contactShadow;
+            case RenderPassInputRole::GBufferCustomData:
+                return names._gbufferCustomData;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -890,21 +1158,15 @@ namespace sw
             return;
         }
 
-        if ( passName.empty() == false )
-        {
-            utf8         arrPassName[constant::buffer::kMax64];
-            const size_t copyLen = ( passName.size() < sizeof( arrPassName ) - 1 ) ? passName.size() : ( sizeof( arrPassName ) - 1 );
-            Memory::copy( arrPassName, passName.data(), copyLen );
-            arrPassName[copyLen] = '\0';
-            // GPU 브레드크럼 - 디바이스 소실 때 마지막으로 닿은 패스 이름을 싣는다(꺼져 있으면 아무것도 하지 않는다).
-            GPUBreadcrumbs::mark( *context._pCmd, string_view( arrPassName, copyLen ) );
-            context._pCmd->beginEventMarker( arrPassName );
-        }
+        // 이벤트 표지(캡처의 구간 이름) + GPU 브레드크럼 시작 · 끝 표지 — 디바이스 소실 때 끝난 패스와 돌던 패스를 이름으로 싣는다. 어느 길로 돌아가도 짝이 맞는다.
+        const GPUPassScope passScope{ *context._pCmd, passName };
         context._resourceRegistry.reset();
         context._passType = passType;
         // 라이트는 **패스 종류를 가리지 않는다.** 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
         // 그래서 인스턴스 버퍼(지오메트리 패스 전용)와 달리 여기서 모든 패스에 바인딩한다.
         registerLightBuffer( context );
+        // 후처리 텍스처(LUT · 먼지 마스크)도 패스를 가리지 않는다 — 톤맵이 Tonemap 패스에도 후처리 체인(Present)에도 있고, 파이프라인 XML 이 자리를 정한다.
+        registerPostProcessTextures( context );
 
         // 이 패스가 바인딩할 뎁스다. 파이프라인 XML 의 `_depthAttachment` 가 기준이고, 비어 있으면
         // 뎁스 없이 연다. "이 패스는 일부러 뎁스를 쓰지 않는다" 를 선언으로 표현할 수 있어야 한다.
@@ -923,10 +1185,7 @@ namespace sw
         const bool bMissingDeclaredColor = info.hasFlag( RenderPassTraitFlag::kDrawsDeclaredColor ) && declaredColor.empty();
         SW_ASSERT( bMissingDeclaredColor == false );
         if ( bMissingDeclaredColor )
-        {
-            context._pCmd->endEventMarker(); // 함수 끝과 같은 짝
             return;
-        }
         const PassExecuteInput input{ context, passType, passDesc, declaredColor, passDepth, info.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) };
         if ( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) )
         {
@@ -939,10 +1198,13 @@ namespace sw
                 case RenderPassType::Shadow:
                 {
                     // 클리어 값은 실제로 바인딩하는 뎁스 첨부의 선언에서 읽는다(이름 ShadowMap 으로 찾지 않는다).
+                    // 그림자 캐시 층은 아틀라스 패스 앞에 다시 그리고(다른 깊이 대상이다) 셰이더 읽기로 돌린다 — 렌더 패스 안에서는 상태를 바꿀 수 없다.
+                    const bool bShadows    = _pActiveView->_settings._bShadows == SW_TRUE;
+                    const bool bCacheLayer = bShadows && prepareShadowCacheLayer( context, passDepth, input._bTransparentBatch );
                     beginDepthOnlyPass( context, passDepth, colorLoadFor( passDepth ) );
                     // 그림자를 끈 뷰는 지우기만 한다. 깊이 1(가장 멀다)이면 모두 빛을 받는다.
-                    if ( _pActiveView->_settings._bShadows == SW_TRUE )
-                        drawShadowTiles( context, input._bTransparentBatch );
+                    if ( bShadows )
+                        drawShadowTiles( context, input._bTransparentBatch, bCacheLayer );
                     context._pCmd->endRenderPass();
                     break;
                 }
@@ -1001,9 +1263,29 @@ namespace sw
                     executeFogPass( input );
                     break;
                 }
+                case RenderPassType::ScreenSpaceReflection:
+                {
+                    executeScreenSpaceReflectionPass( input );
+                    break;
+                }
+                case RenderPassType::LensFlare:
+                {
+                    executeLensFlarePass( input );
+                    break;
+                }
                 case RenderPassType::TAA:
                 {
                     executeTAAPass( input );
+                    break;
+                }
+                case RenderPassType::Distortion:
+                {
+                    executeDistortionPass( input );
+                    break;
+                }
+                case RenderPassType::DistortionApply:
+                {
+                    executeDistortionApplyPass( input );
                     break;
                 }
                 case RenderPassType::Present:
@@ -1020,6 +1302,8 @@ namespace sw
                 case RenderPassType::Invalid:
                 case RenderPassType::Lighting:
                 case RenderPassType::SSAO:
+                case RenderPassType::ScreenSpaceGI:
+                case RenderPassType::ContactShadow:
                 case RenderPassType::Bloom:
                 case RenderPassType::BloomDownsample:
                 case RenderPassType::Outline:
@@ -1043,7 +1327,9 @@ namespace sw
                 case RenderPassType::OcclusionTiles:
                 case RenderPassType::VolumetricFog:
                 case RenderPassType::CanvasMarker:
+                case RenderPassType::ShadowCacheRestore:
                 case RenderPassType::NanCheck:
+                case RenderPassType::IndirectArgsReset:
                 case RenderPassType::ProbeUpdate:
                 {
                     SW_LOG_WARNING_ID( "FramePassExecutor.UnknownPassType", "Unknown pass type '%#' in '%#'", passType, passName );
@@ -1051,8 +1337,6 @@ namespace sw
                 }
             }
         }
-
-        context._pCmd->endEventMarker();
     }
 
     RHIRenderPassLoadOp FramePassExecutor::colorLoadFor( const hashed_string& name )
@@ -1083,6 +1367,12 @@ namespace sw
         // 후처리를 끈 뷰 · 품질로 꺼지는 효과(kSkipsWithoutPostProcess)도 모두 이 길이다 — 원본을 복사하거나 셰이더가 원본을 고르던 길은 지웠다.
         if ( activePool().isForwarded( *pTarget ) )
             return;
+        // 컴퓨트 구현(`_implementation="Compute"`)은 네이티브 bindless 에서만 돈다. 에뮬 백엔드는 아래 픽셀 구현이다 — 능력이 정한 길이고 PSO 도 그 백엔드에는 만들지 않는다.
+        if ( passDesc._implementation == RenderPassExecutionMode::Compute && _pDevice->supportsNativeBindlessSampling() )
+        {
+            executeComputeImplementation( input );
+            return;
+        }
         registerDeclaredInputs( context, passDesc );
         _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
 
@@ -1092,6 +1382,89 @@ namespace sw
         // 클리어 색은 타깃 첨부의 선언이다(SSAO 의 흰색 = 가림 없음도 AOColor 선언에 있다).
         const float4 targetClear = getTargetClearColor( *pTarget );
         executeFullscreenInto( context, pso, *pTarget, targetClear );
+    }
+
+    void FramePassExecutor::executeComputeImplementation( const PassExecuteInput& input )
+    {
+        // 셰이더의 SwRootConstants(post_bloom.hlsl · depth_of_field.hlsl 의 SW_PASS_COMPUTE 절)와 같은 배치 — 16 dword 안이다(`shaderslot::kRootConstantDwords`).
+        struct RootConstants
+        {
+            uint32  _outputIndex{ 0 };                       ///< 출력 RW 번호
+            uint32  _sourceIndex{ kInvalidDescriptorIndex }; ///< SourceColor 의 bindless 번호
+            uint32  _depthIndex{ kInvalidDescriptorIndex };  ///< SceneDepth 의 bindless 번호(읽지 않는 패스는 kInvalidIndex)
+            uint32  _width{ 0 };                             ///< 출력 크기
+            uint32  _height{ 0 };
+            float32 _arrSourceTexel[2]{ 0.0f, 0.0f };                    ///< 원본 텍셀 크기(1 / 원본 크기)
+            float32 _arrParam[3]{ 0.0f, 0.0f, 0.0f };                    ///< 블룸 g_BloomParams.xyz · 피사계 심도 g_CameraLens.xyz
+            float32 _arrInvViewProjColumn3[4]{ 0.0f, 0.0f, 0.0f, 0.0f }; ///< g_InvViewProj 의 4 열(뷰 깊이 복원 — 동차 w 만 쓴다)
+        };
+        static_assert( sizeof( RootConstants ) / sizeof( uint32 ) <= shaderslot::kRootConstantDwords, "compute implementation root constants exceed the root block" );
+
+        FramePassContext&                         context  = input._context;
+        const RenderGraphPassDesc&                passDesc = input._passDesc;
+        const hashed_string&                      target   = input._declaredColor[0]._attachment;
+        const RHIPipelineStateHandle              pso      = _psoManager.findPipelineComputePSO( hashed_string( passDesc._name.c_str() ) );
+        const TransientAttachmentPool::Attachment output   = activePool().find( target );
+        if ( pso == 0 || output._uav == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputeImplementationNotReady", "Pass '%#' compute implementation has no PSO or no RW output - it does not run", passDesc._name );
+            return;
+        }
+        RootConstants constants{};
+        constants._outputIndex = static_cast<uint32>( output._uav );
+        constants._width       = output._width;
+        constants._height      = output._height;
+        // 입력은 역할로 고른다(로드가 계약을 검사했다). 원본 · 깊이는 SRV 로 읽는다 — 깊이 형식은 RW 로 묶을 수 없다.
+        vector<RHITextureHandle> listInputTexture;
+        for ( const RenderGraphPassDesc::ResolvedAttachment& resolved : passDesc._listResolvedInput )
+        {
+            const TransientAttachmentPool::Attachment source = activePool().find( resolved._attachment );
+            const RenderPassInputRole                 role   = static_cast<RenderPassInputRole>( resolved._role );
+            if ( source._srv == kInvalidDescriptorIndex )
+                continue;
+            if ( role == RenderPassInputRole::SourceColor )
+            {
+                constants._sourceIndex       = static_cast<uint32>( source._srv );
+                constants._arrSourceTexel[0] = 1.0f / static_cast<float32>( MathUtil::max( source._width, 1u ) );
+                constants._arrSourceTexel[1] = 1.0f / static_cast<float32>( MathUtil::max( source._height, 1u ) );
+            }
+            else if ( role == RenderPassInputRole::SceneDepth )
+            {
+                constants._depthIndex = static_cast<uint32>( source._srv );
+            }
+            context._pCmd->prepareTextureForShaderRead( source._texture );
+            listInputTexture.push_back( source._texture );
+        }
+        // 패스 상수(시드가 이미 채운 값)에서 효과의 값을 옮긴다 — 컴퓨트 PSO 에는 PassCB 가 묶이지 않는다.
+        uint32       valueSize     = 0;
+        const bool   bDepthOfField = passDesc._type == RenderPassType::DepthOfField;
+        const uint8* pParam        = context._passValues.find( bDepthOfField ? passConstantNames()._cameraLens : passConstantNames()._bloomParams, valueSize );
+        if ( pParam != nullptr && valueSize >= sizeof( constants._arrParam ) )
+            Memory::copy( constants._arrParam, pParam, sizeof( constants._arrParam ) );
+        const uint8* pInvViewProj = context._passValues.find( passConstantNames()._invViewProj, valueSize );
+        if ( pInvViewProj != nullptr && valueSize == sizeof( float4x4 ) )
+        {
+            // 셰이더는 mul( 행벡터, M ) 이다 — 동차 w 는 M 의 4 열(_14, _24, _34, _44)과의 내적이다(C++ float4x4 는 행 우선 _ij 그대로 올라간다).
+            float4x4 invViewProj{};
+            Memory::copy( &invViewProj, pInvViewProj, sizeof( float4x4 ) );
+            constants._arrInvViewProjColumn3[0] = invViewProj._14;
+            constants._arrInvViewProjColumn3[1] = invViewProj._24;
+            constants._arrInvViewProjColumn3[2] = invViewProj._34;
+            constants._arrInvViewProjColumn3[3] = invViewProj._44;
+        }
+        if ( constants._sourceIndex == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputeImplementationNoSource", "Pass '%#' compute implementation has no SourceColor view - it does not run", passDesc._name );
+            return;
+        }
+        // 그룹은 8x8 출력 텍셀이다(셰이더의 SW_NUMTHREADS 와 같다 — 그룹 공유 타일의 크기).
+        constexpr uint32 kGroupSize = 8;
+        context._pCmd->prepareTextureForUnorderedAccess( output._texture );
+        context._pCmd->setComputePipelineState( pso );
+        context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( output._width, kGroupSize ), FrameRendererUtil::divideRoundUp( output._height, kGroupSize ), 1 );
+        context._pCmd->prepareTextureForShaderRead( output._texture );
+        (void)markAttachmentCleared( target );
     }
 
     void FramePassExecutor::executeComputePass( const PassExecuteInput& input )
@@ -1160,9 +1533,23 @@ namespace sw
         const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ShadowMap );
         if ( pShadowInput != nullptr )
             registerPassTexture( context, attachmentNames()._shadowMap, pShadowInput->_attachment );
-        const hashed_string& colorTarget = input._declaredColor[0]._attachment;
-        const float4         sceneClear  = getTargetClearColor( colorTarget );
-        if ( beginColorPass( context, colorTarget, passDepth, sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
+        // 접촉 그림자 마스크는 그 패스가 이 뷰에서 돌았을 때만 건다(꺼지면 출력이 없다 — 셰이더는 1). 나머지 선언 입력(원본 색 · 깊이)은 이 패스가 그리는 첨부라 걸지 않는다.
+        const RenderGraphPassDesc::ResolvedAttachment* pContactInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ContactShadow );
+        if ( pContactInput != nullptr && activePool().resolveName( pContactInput->_attachment ).empty() == false )
+            registerPassTexture( context, attachmentNames()._contactShadow, pContactInput->_attachment );
+        // 선언한 컬러 출력을 모두 연다 — 화면 속도를 선언했으면 [색, 속도] 두 타깃이다(검증 3-3, 셰이더 SV_TARGET0 · 1).
+        const vector<RenderGraphPassDesc::ResolvedAttachment>& declaredColor = input._declaredColor;
+        const uint32                                           colorCount    = static_cast<uint32>( declaredColor.size() ) < kMaxColorAttachments ? static_cast<uint32>( declaredColor.size() ) : kMaxColorAttachments;
+        hashed_string                                          arrNames[kMaxColorAttachments]{};
+        float4                                                 arrClears[kMaxColorAttachments]{};
+        RHIRenderPassLoadOp                                    arrLoads[kMaxColorAttachments]{};
+        for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
+        {
+            arrNames[colorIndex]  = declaredColor[colorIndex]._attachment;
+            arrClears[colorIndex] = getTargetClearColor( arrNames[colorIndex] );
+            arrLoads[colorIndex]  = colorLoadFor( arrNames[colorIndex] );
+        }
+        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, colorCount, passDepth, colorLoadFor( passDepth ) ) == false )
             return;
         const bool bDepthAlreadyWritten = input._passType == RenderPassType::ForwardOpaque && _bHasExecutedDepthPrepass.load() != 0 &&
                                           _psoManager.getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0;
@@ -1173,24 +1560,31 @@ namespace sw
 
     void FramePassExecutor::executeGBufferPass( const PassExecuteInput& input )
     {
-        // 알베도 · 노멀 · 머티리얼은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼)를 따른다.
-        // 한 MRT 패스로 셋 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 컬러 출력 수가 표의 값이 아닌 G버퍼는 검증(3-2)이 거부한다.
+        // 알베도 · 노멀 · 머티리얼 · 속도 · 사용자 칸 · 장면 색은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서(GBufferLayout 의 MRT 순서)다.
+        // 한 MRT 패스로 여섯 다 쓴다(네 백엔드 모두 MRT 8 장을 보장한다). 컬러 출력 수가 표의 값이 아닌 G버퍼는 검증(3-2)이 거부한다. 장면 색에는 자체 발광을 미리 적는다.
         using Internal                       = FramePassExecutorInternal;
         FramePassContext&    context         = input._context;
         const hashed_string& passDepth       = input._passDepth;
         const hashed_string* pAlbedoTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferAlbedo, 0, nullptr );
         const hashed_string* pNormalTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget );
         const hashed_string* pMaterialTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferMaterial, 2, pNormalTarget );
+        // 화면 속도는 명세의 넷째 슬롯이다(GBufferLayout::kVelocitySlot — 셰이더 SV_TARGET3). 사용자 칸 · 장면 색(자체 발광)이 뒤를 잇는다(SV_TARGET4 · 5).
+        const hashed_string* pVelocityTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::Velocity, GBufferLayout::kVelocitySlot, pMaterialTarget );
+        const hashed_string* pCustomTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferCustomData, GBufferLayout::kVelocitySlot + 1, pVelocityTarget );
+        const hashed_string* pSceneTarget    = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::SourceColor, GBufferLayout::kVelocitySlot + 2, pCustomTarget );
         const bool           bHasTargets     = pAlbedoTarget != nullptr && pNormalTarget != nullptr && findTransient( *pNormalTarget ) != 0 &&
-                                 pMaterialTarget != nullptr && findTransient( *pMaterialTarget ) != 0;
+                                 pMaterialTarget != nullptr && findTransient( *pMaterialTarget ) != 0 && pVelocityTarget != nullptr && findTransient( *pVelocityTarget ) != 0 &&
+                                 pCustomTarget != nullptr && findTransient( *pCustomTarget ) != 0 && pSceneTarget != nullptr && findTransient( *pSceneTarget ) != 0;
         if ( bHasTargets == false || _psoManager.getEnginePSO( RenderPassType::GBuffer ) == 0 )
             return;
         const hashed_string&      albedoTarget = *pAlbedoTarget;
-        const hashed_string       arrNames[]   = { albedoTarget, *pNormalTarget, *pMaterialTarget };
-        const float4              arrClears[]  = { getTargetClearColor( albedoTarget ), getTargetClearColor( *pNormalTarget ),
-                                                   getTargetClearColor( *pMaterialTarget ) };
-        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ), colorLoadFor( *pMaterialTarget ) };
-        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 3, passDepth, colorLoadFor( passDepth ) ) == false )
+        const hashed_string       arrNames[]   = { albedoTarget, *pNormalTarget, *pMaterialTarget, *pVelocityTarget, *pCustomTarget, *pSceneTarget };
+        const float4              arrClears[]  = { getTargetClearColor( albedoTarget ), getTargetClearColor( *pNormalTarget ), getTargetClearColor( *pMaterialTarget ),
+                                                   getTargetClearColor( *pVelocityTarget ), getTargetClearColor( *pCustomTarget ), getTargetClearColor( *pSceneTarget ) };
+        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ), colorLoadFor( *pMaterialTarget ),
+                                                   colorLoadFor( *pVelocityTarget ), colorLoadFor( *pCustomTarget ), colorLoadFor( *pSceneTarget ) };
+        static_assert( sizeof( arrNames ) / sizeof( arrNames[0] ) == GBufferLayout::kAttachmentCount, "G버퍼 패스의 MRT 는 GBufferLayout 의 첨부 수다" );
+        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, GBufferLayout::kAttachmentCount, passDepth, colorLoadFor( passDepth ) ) == false )
             return;
         drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
@@ -1324,6 +1718,45 @@ namespace sw
         context._pCmd->endRenderPass();
     }
 
+    bool FramePassExecutor::drawsDistortionThisView() const
+    {
+        // 값 보기(노멀 · 깊이 · 오버드로)와 와이어프레임은 장면 색을 덮지 않는다 — 왜곡도 없다(안개와 같은 판정).
+        const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const bool                bShowsScene  = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
+        return bShowsScene && _state._gpuScene.hasDistortionBatches();
+    }
+
+    void FramePassExecutor::executeDistortionPass( const PassExecuteInput& input )
+    {
+        // 화면 왜곡 누적 — 왜곡 머티리얼(MATERIAL_DISTORTION)의 반투명 배치가 화면 UV 오프셋을 선언한 출력에 더한다(가산 블렌드, 깊이는 테스트만).
+        // 왜곡 배치가 없으면 기록하지 않는다 — 출력은 지워지지도 않지만 읽는 적용 패스도 같은 판정으로 돌지 않는다(쓰지 않을 때 비용이 없다).
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::Distortion );
+        if ( drawsDistortionThisView() == false || pso == 0 )
+            return;
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
+        if ( beginColorPass( context, target, input._passDepth, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+            return;
+        drawSceneMeshes( context, pso, input._bTransparentBatch );
+        context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executeDistortionApplyPass( const PassExecuteInput& input )
+    {
+        // 화면 왜곡 적용 — 장면 색 사본을 왜곡 오프셋만큼 비껴 읽어 장면 색에 쓴다(distortion_apply.hlsl). 왜곡이 없으면 출력(장면 색)이 이미 맞아 아무것도 하지 않는다
+        // — 일반 풀스크린 패스의 복사 길을 타면 왜곡 없는 프레임에도 전 화면을 한 번 읽고 쓴다.
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::DistortionApply );
+        if ( drawsDistortionThisView() == false || pso == 0 )
+            return;
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
+        registerDeclaredInputs( context, input._passDesc );
+        if ( beginColorPass( context, target, hashed_string{}, _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
+            return;
+        drawFullscreen( context, pso );
+        context._pCmd->endRenderPass();
+    }
+
     void FramePassExecutor::executeFogPass( const PassExecuteInput& input )
     {
         // 안개다. 장면 깊이로 광학 두께를 구해 선언한 컬러 출력(앞 패스가 칠한 색) 위에 프리멀티플라이 블렌드한다(fog.hlsl).
@@ -1357,6 +1790,55 @@ namespace sw
         if ( bVolume )
             context._pCmd->bindStructuredBuffer( _fog.getFogVolumeBuffer()._srv, shaderslot::kPassBuffer );
         context._pCmd->draw( 3, 0 );
+        context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executeScreenSpaceReflectionPass( const PassExecuteInput& input )
+    {
+        // 화면 공간 반사다. 맞은 자리의 장면 색 사본을 선언한 컬러 출력(장면 색) 위에 프리멀티플라이 블렌드한다(screen_space_reflection.hlsl).
+        // 세기 0 · 후처리를 끈 뷰(CCTV) · 표면 값 보기(usesPostProcess 가 거른다)에서는 그리지 않는다 — 출력이 입력의 위(블렌드)라 "그리지 않음" 은 아무것도 하지 않는 것이다(안개와 같다).
+        const RenderViewSettings&    settings = _pActiveView->_settings;
+        const RHIPipelineStateHandle pso      = _psoManager.getEnginePSO( RenderPassType::ScreenSpaceReflection );
+        const bool                   bDraws   = settings.usesPostProcess() && settings._postProcess._screenSpaceReflectionIntensity > 0.0f && pso != 0;
+        if ( bDraws == false )
+            return;
+
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
+        registerDeclaredInputs( context, input._passDesc );
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+            return;
+        setIdentityWorld( context );
+        commitBindlessTextureBindings( context );
+        context._pCmd->setPipelineState( pso );
+        bindForDraw( context, pso, kInvalidDescriptorIndex );
+        context._pCmd->draw( 3, 0 );
+        context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executeLensFlarePass( const PassExecuteInput& input )
+    {
+        // 스프라이트는 주 시점의 투영으로 펼쳤다 — 추가 뷰 · 표면 값 보기에서는 그리지 않는다(값 위를 덮는다). 출력 위에 더하므로 "그리지 않음" 은 아무것도 하지 않는 것이다.
+        const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassType::LensFlare );
+        const LensFlareSpriteBuffer& sprites      = _state._lensFlare;
+        const bool                   bDraws       = pso != 0 && sprites.getSpriteCount() > 0 && _pActiveView == &_state._mainView && viewModeInfo._bShowsBuffer == false && viewModeInfo._bWireframe == false;
+        if ( bDraws == false )
+            return;
+
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
+        registerDeclaredInputs( context, input._passDesc );
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+            return;
+        // drawFullscreen 과 같은 순서다. 스프라이트 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다(안개 패스와 같다).
+        setIdentityWorld( context );
+        commitBindlessTextureBindings( context );
+        context._pCmd->setPipelineState( pso );
+        bindForDraw( context, pso, kInvalidDescriptorIndex );
+        context._pCmd->bindStructuredBuffer( sprites.getBuffer()._srv, shaderslot::kPassBuffer );
+        // 스프라이트 하나 = 모서리 여섯(정점 버퍼 없이 SV_VertexID 로 만든다 — lens_flare.hlsl).
+        context._pCmd->draw( sprites.getSpriteCount() * 6u, 0 );
         context._pCmd->endRenderPass();
     }
 
@@ -1432,6 +1914,8 @@ namespace sw
             // 선언한 입력을 **모두** 바인딩한다. Present 가 후처리 체인을 겸하면 깊이(외곽선)와 AO 가 필요하고,
             // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
             registerDeclaredInputs( context, passDesc );
+            // 개발 보기 `gpu.show <첨부>` — 주 시점이 화면에 낼 원본을 그 첨부로 바꾼다(언리얼 Buffer Visualization). 선언한 입력 등록 뒤라 그것을 덮는다.
+            registerVisualizedAttachment( context );
             // 후처리 체인이 톤맵까지 하면 자동 노출을 이 그리기 앞에서 측정한다(Tonemap 패스와 같은 자리).
             _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
             // FSR 1 로 키우는 뷰는 렌더 패스를 열기 전에 EASU 를 중간 RT 에 그리고, 아래에서 블릿 대신 RCAS 로 그린다(prepareUpscale 이 셋업에서 정했다).
@@ -1623,7 +2107,66 @@ namespace sw
         return _state._frameShadow._layout.getCascadeCount() + static_cast<uint32>( _state._frameShadow._listLocalTile.size() );
     }
 
-    void FramePassExecutor::drawShadowTiles( FramePassContext& context, bool bTransparentBatch )
+    bool FramePassExecutor::prepareShadowCacheLayer( FramePassContext& context, const hashed_string& atlasName, bool bTransparentBatch )
+    {
+        ShadowCache& cache = _state._shadowCache;
+        if ( cache.usesCacheLayer() == false || context._pCmd == nullptr )
+            return false;
+        // 복원 PSO 가 없으면(셋업이 알렸다) 캐시한 타일의 정적 메시가 빠진다 — 이 프레임은 캐시 없이 다 그린다.
+        if ( _psoManager.getEnginePSO( RenderPassType::ShadowCacheRestore ) == 0 )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ShadowCacheNoRestorePSO", "Shadow cache restore PSO is missing - cached point/spot shadows are drawn without the cache" );
+            return false;
+        }
+        const TransientAttachmentPool::Attachment atlas = findTransientAttachment( atlasName );
+        if ( atlas._texture == 0 || cache.ensureLayer( _pDevice, atlas._format, atlas._width ) == false )
+            return false;
+        const TransientAttachmentPool::Attachment layer = cache.getLayer();
+        if ( cache.needsRebuild() )
+        {
+            // 캐시 층을 지우고 캐시하는 타일마다 정적 배치만 그린다(그림자 컬링 칸 — 모든 그림자 볼륨을 덮는다). 타일은 모든 뷰가 같아 프레임에 한 번이다.
+            RHIRenderPassBeginInfo beginInfo{};
+            beginInfo._bBindColor       = SW_FALSE;
+            beginInfo._colorTargetCount = 0;
+            beginInfo._depthTarget      = layer._texture;
+            beginInfo._depthLoadOp      = RHIRenderPassLoadOp::Clear;
+            beginInfo._depthStoreOp     = RHIRenderPassStoreOp::Store;
+            beginInfo._clearDepth       = layer._ops._clearDepth;
+            beginInfo._clearStencil     = layer._ops._clearStencil;
+            beginInfo._width            = layer._width;
+            beginInfo._height           = layer._height;
+            context._pCmd->beginRenderPass( beginInfo );
+            const PassConstantNames&     names     = passConstantNames();
+            const RHIPipelineStateHandle pso       = _psoManager.getEnginePSO( RenderPassType::Shadow );
+            const uint32                 viewCull  = context._cullViewIndex;
+            context._cullViewIndex                 = _pActiveView->_shadowCullSlot;
+            context._shadowCasterFilter            = ShadowCasterFilter::StaticOnly;
+            const vector<ShadowTileDraw>& listTile = _state._frameShadow._listLocalTile;
+            for ( uint32 tileIndex = 0; tileIndex < static_cast<uint32>( listTile.size() ); ++tileIndex )
+            {
+                if ( cache.getAction( tileIndex ) == ShadowCacheTileAction::DrawAll || acquirePassCb( context ) == false )
+                    continue;
+                const ShadowTileDraw& tile = listTile[tileIndex];
+                RHIViewport           viewport{};
+                viewport._x      = static_cast<float32>( tile._cell._x );
+                viewport._y      = static_cast<float32>( tile._cell._y );
+                viewport._width  = static_cast<float32>( tile._cell._size );
+                viewport._height = static_cast<float32>( tile._cell._size );
+                context._pCmd->setViewport( viewport );
+                context._passValues.setMatrix( names._lightViewProj, tile._viewProj );
+                drawSceneMeshes( context, pso, bTransparentBatch );
+            }
+            context._shadowCasterFilter = ShadowCasterFilter::All;
+            context._cullViewIndex      = viewCull;
+            context._passValues.setMatrix( names._lightViewProj, _pActiveView->_shadow._lightViewProj );
+            context._pCmd->endRenderPass();
+            cache.markRebuilt();
+        }
+        context._pCmd->prepareTextureForShaderRead( layer._texture );
+        return true;
+    }
+
+    void FramePassExecutor::drawShadowTiles( FramePassContext& context, bool bTransparentBatch, bool bCacheLayer )
     {
         // 그림자는 모든 타일을 덮는 상자로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링에 해당한다). 끝나면 지금 뷰의 슬롯으로 돌아간다.
         const ViewShadowData&        shadow   = _pActiveView->_shadow;
@@ -1641,8 +2184,15 @@ namespace sw
         else
         {
             // 타일마다 그 칸을 뷰포트로 잡고(가위도 같이 잡힌다) 그 타일의 행렬로 씬을 그린다. 상수가 바뀌므로 드로우는 새 상수 버퍼 슬롯을 받는다.
-            const PassConstantNames& names     = passConstantNames();
-            const uint32             tileCount = shadow._cascadeCount + static_cast<uint32>( _state._frameShadow._listLocalTile.size() );
+            // 캐시한 점광 · 스폿 타일은 캐시 층의 깊이를 픽셀 깊이로 옮긴 뒤(ShadowCacheRestore — 층을 ShadowMap 역할 이름으로 건다) 움직이는 배치만 그린다.
+            const PassConstantNames& names = passConstantNames();
+            if ( bCacheLayer )
+            {
+                const TransientAttachmentPool::Attachment layer = _state._shadowCache.getLayer();
+                context._resourceRegistry.registerTexture( attachmentNames()._shadowMap, layer._texture, layer._srv );
+            }
+            const RHIPipelineStateHandle restorePSO = _psoManager.getEnginePSO( RenderPassType::ShadowCacheRestore );
+            const uint32                 tileCount  = shadow._cascadeCount + static_cast<uint32>( _state._frameShadow._listLocalTile.size() );
             for ( uint32 tileIndex = 0; tileIndex < tileCount; ++tileIndex )
             {
                 const ShadowTileDraw& tile = tileIndex < shadow._cascadeCount ? shadow._arrCascadeTile[tileIndex] : _state._frameShadow._listLocalTile[tileIndex - shadow._cascadeCount];
@@ -1660,7 +2210,15 @@ namespace sw
                 // 주 시점의 캐스케이드 타일은 자기 컬링 슬롯의 목록을 그린다(그 캐스케이드 절두체로만 거른 것). 점광 · 스폿 타일과 추가 뷰는 합친 칸이다.
                 const bool bCascadeSlot = _pActiveView == &_state._mainView && tileIndex < _state._cascadeCullCount;
                 context._cullViewIndex  = bCascadeSlot ? _state._cascadeCullSlotBase + tileIndex : _pActiveView->_shadowCullSlot;
+                const bool bCachedTile  = bCacheLayer && tileIndex >= shadow._cascadeCount &&
+                                         _state._shadowCache.getAction( tileIndex - shadow._cascadeCount ) != ShadowCacheTileAction::DrawAll;
+                if ( bCachedTile )
+                {
+                    drawFullscreen( context, restorePSO );
+                    context._shadowCasterFilter = ShadowCasterFilter::MovableOnly;
+                }
                 drawSceneMeshes( context, pso, bTransparentBatch );
+                context._shadowCasterFilter = ShadowCasterFilter::All;
             }
             // 이 패스 컨텍스트는 패스마다 시드의 사본이지만, 기준 행렬로 되돌려 두면 뒤에 무엇이 붙어도 셰이딩과 같은 행렬을 본다.
             context._passValues.setMatrix( names._lightViewProj, shadow._lightViewProj );
@@ -1790,7 +2348,7 @@ namespace sw
         if ( morphBuffer._buffer != 0 && morphBuffer._srv != kInvalidDescriptorIndex )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );
-            context._passValues.setUint( passConstantNames()._swMorphVertexCount, _state._deform._meshMorphPool.getVertexCount() );
+            context._passValues.setUint( passConstantNames()._swMorphVertexCount, _state._deform._meshMorphPool.getResultVertexCapacity() );
         }
         // 스킨 칸 표 — 패스당 한 번. 스키닝을 디스패치할 수 없으면 걸지 않는다 — 칸이 있는 인스턴스는 그리지 않는다(레스트 포즈로 대신 그리지 않는다, 풀이 오류를 남겼다).
         // 진단(SkipDispatch)이면 스킨 결과가 없어 걸지 않는다 — 칸 있는 인스턴스는 그 진단에서 그려지지 않는다.
@@ -1801,6 +2359,17 @@ namespace sw
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swSkinResultOffsets, skinResultOffsetBuffer._buffer, skinResultOffsetBuffer._srv );
             context._passValues.setUint( passConstantNames()._swSkinResultOffsetCount, _state._deform._meshMorphPool.getSkinResultOffsetCount() );
+            // 스킨 결과는 두 벌이다 — 이번 벌의 이동과 지난 프레임 결과가 든 벌의 이동(없으면 무효 — 셰이더가 이번 위치를 지난 위치로 쓴다).
+            context._passValues.setUint( passConstantNames()._swSkinResultShift, _state._deform._meshMorphPool.getSkinCurrentShift() );
+            context._passValues.setUint( passConstantNames()._swSkinPreviousShift, _state._deform._meshMorphPool.getSkinPreviousShift() );
+        }
+
+        // 지난 월드 행렬 — 패스당 한 번. 화면 속도를 쓰는 패스의 정점 셰이더만 읽는다. 안 걸리면 셰이더가 이번 행렬을 쓴다(속도는 카메라 움직임뿐).
+        const RHIStructuredBuffer& prevWorldBuffer = _state._gpuScene.getPrevInstanceWorldBuffer();
+        if ( prevWorldBuffer._buffer != 0 && prevWorldBuffer._srv != kInvalidDescriptorIndex )
+        {
+            context._resourceRegistry.registerBuffer( passConstantNames()._swPrevInstanceWorlds, prevWorldBuffer._buffer, prevWorldBuffer._srv );
+            context._passValues.setUint( passConstantNames()._swPrevInstanceWorldCount, _state._gpuScene.getPrevInstanceWorldCount() );
         }
 
         // 정점 애니메이션(VAT) 표 — 패스당 한 번. 시계는 게임 스레드의 군중 시계(스냅샷)라 인스턴스 시각 오프셋과 더하면 CPU 의 클립 시각이다.
@@ -1818,7 +2387,7 @@ namespace sw
         // 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
         // 목록**을 읽어 모두 0 번 인스턴스를 그린다. 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
         const GPUCullViewResources& cullView                  = _state._gpuScene.getCullView( context._cullViewIndex );
-        const bool                  bVisibleInstanceListReady = _prepass.isGPUCullingActive() != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
+        const bool                  bVisibleInstanceListReady = _frameGraphExecutor.isGPUCullingActive() != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
                                                cullView._visibleInstances._srv != kInvalidDescriptorIndex;
         if ( bVisibleInstanceListReady )
         {
@@ -1826,6 +2395,16 @@ namespace sw
                                                       cullView._visibleInstances._buffer, cullView._visibleInstances._srv );
             context._passValues.setUint( passConstantNames()._swVisibleSlotCount, _state._gpuScene.getVisibleSlotCount() );
         }
+    }
+
+    void FramePassExecutor::registerPostProcessTextures( FramePassContext& context )
+    {
+        // 뷰의 후처리 텍스처는 셋업이 이번 프레임에 읽힌 것만 골라 두었다(`applyViewPassConstants`). 걸린 것이 없으면 셰이더는 그 효과를 끈 상수를 받았다.
+        const FrameViewTarget& view = *_pActiveView;
+        if ( view._pColorGradingLUT != nullptr )
+            context._resourceRegistry.registerTexture( attachmentNames()._colorGradingLUT, view._pColorGradingLUT->getHandle(), view._pColorGradingLUT->getSRV() );
+        if ( view._pBloomDirtMask != nullptr )
+            context._resourceRegistry.registerTexture( attachmentNames()._bloomDirtMask, view._pBloomDirtMask->getHandle(), view._pBloomDirtMask->getSRV() );
     }
 
     void FramePassExecutor::registerLightBuffer( FramePassContext& context )
@@ -1932,6 +2511,10 @@ namespace sw
         context._lastCbBuffer          = engineCb._buffer;
         context._lastCbValuesVersion   = valuesVersion;
         context._lastCbRegistryVersion = registryVersion;
+
+        // 셰이더 메시지 변형 패스(표의 kGPUMessageTarget — Present 의 fullscreen_blit)는 드로우마다 링을 u4 에 건다. 링이 없으면(-gv_gpuMessages 꺼짐) 아무것도 하지 않는다.
+        if ( getRenderPassTypeInfo( context._passType ).hasFlag( RenderPassTraitFlag::kGPUMessageTarget ) )
+            _state._gpuMessages.bindGraphics( *context._pCmd );
     }
 
     void FramePassExecutor::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )
@@ -1995,7 +2578,8 @@ namespace sw
             const bool bParticleInside = bDrawsParticles && state._particleSlotCursor < state._listParticleSlot.size() &&
                                          state._listParticleSlot[state._particleSlotCursor]._drawPosition <= orderIndex + groupCount;
             const bool bGroupEnds = nextBatchIndex != batchIndex + groupCount || bParticleInside;
-            if ( bGroupEnds || isSameDrawGroup( state._pso, state._passType, drawMode, head, headBinding, state._batches[nextBatchIndex], state._bindings[nextBatchIndex] ) == false )
+            if ( bGroupEnds || drawsCasterBatch( state._casterFilter, state._batches[nextBatchIndex] ) == false ||
+                 isSameDrawGroup( state._pso, state._passType, drawMode, head, headBinding, state._batches[nextBatchIndex], state._bindings[nextBatchIndex] ) == false )
                 break;
             ++groupCount;
         }
@@ -2016,7 +2600,8 @@ namespace sw
             const uint32               batchIndex       = ( inoutState._pOrder != nullptr ) ? ( *inoutState._pOrder )[orderIndex] : orderIndex;
             const GPUMeshBatch&        head             = inoutState._batches[batchIndex];
             const GPUMeshBatchBinding& headBinding      = inoutState._bindings[batchIndex];
-            const bool                 bHeadNotDrawable = headBinding.hasGeometry() == false || head.hasDrawSlots() == false || drawsBatchInPass( inoutState._passType, head, headBinding ) == false;
+            const bool                 bHeadNotDrawable = headBinding.hasGeometry() == false || head.hasDrawSlots() == false || drawsBatchInPass( inoutState._passType, head, headBinding ) == false ||
+                                          drawsCasterBatch( inoutState._casterFilter, head ) == false;
             if ( bHeadNotDrawable )
             {
                 ++orderIndex;
@@ -2052,10 +2637,11 @@ namespace sw
             registerInstanceBuffer( context );
 
         BatchDrawState state{};
-        state._pso      = pso;
-        state._boundPSO = pso;
-        state._batches  = bTransparentPass ? _state._gpuScene.getTransparentBatches() : _state._gpuScene.getOpaqueBatches();
-        state._bindings = bTransparentPass ? _state._gpuScene.getTransparentBatchBindings() : _state._gpuScene.getOpaqueBatchBindings();
+        state._pso          = pso;
+        state._boundPSO     = pso;
+        state._casterFilter = context._shadowCasterFilter;
+        state._batches      = bTransparentPass ? _state._gpuScene.getTransparentBatches() : _state._gpuScene.getOpaqueBatches();
+        state._bindings     = bTransparentPass ? _state._gpuScene.getTransparentBatchBindings() : _state._gpuScene.getOpaqueBatchBindings();
         SW_ASSERT( state._bindings.size() == state._batches.size() );
         // 시간만 보면 무엇이 비싼지 알 수 없다. 배치가 몇 개로 묶였는지가 해석의 전제다.
         SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", state._batches.size() );
@@ -2295,8 +2881,7 @@ namespace sw
     {
         if ( context._pCmd == nullptr )
             return;
-        GPUBreadcrumbs::mark( *context._pCmd, pass._graphName.view() );
-        context._pCmd->beginEventMarker( pass._graphName.c_str() );
+        const GPUPassScope passScope{ *context._pCmd, pass._graphName.view() };
         context._resourceRegistry.reset();
         context._passType = RenderPassType::Invalid;
         registerLightBuffer( context );
@@ -2306,7 +2891,6 @@ namespace sw
         view._height    = activePool().getHeight();
         ExtensionPassContext moduleContext( *this, &context, &pass, view );
         pass._execute( moduleContext );
-        context._pCmd->endEventMarker();
     }
 
     bool FramePassExecutor::drawModuleFullscreen( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant )

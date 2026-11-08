@@ -52,10 +52,10 @@ namespace sw
         ParserConfig() noexcept;
 
         /**
-         * @brief 커밋된 기본 설정(`--config`, 절대 경로)과 그 옆의 로컬 설정 · 툴체인 설정을 읽습니다.
+         * @brief 커밋된 기본 설정(`--config`, 절대 경로)과 그 옆의 로컬 설정 · 툴체인 설정을 읽고 대상 인자(`--target-arg`)를 붙입니다. 플랫폼별 인자는 대상 매크로의 플랫폼으로 고른다.
          * @return 절대 경로가 아니거나, 기본 설정이 없거나 깨졌거나, 필수 값이 빠졌거나, clang 인자가 없으면 이유를 알리고 false. 코드에 기본값을 두지 않는다.
          */
-        [[nodiscard]] bool load( const string& defaultsPath );
+        [[nodiscard]] bool load( const string& defaultsPath, const vector<string>& listTargetArg );
 
         /**
          * @brief 기본 인자에 포함 경로와 강제 include 를 붙여 최종 clang 인자를 만듭니다.

@@ -45,9 +45,7 @@ namespace sw::editor
                 const int32       plate = model.addNode( hashed_string( "Signal" ) );
                 const int32       door  = model.addNode( hashed_string( "Door" ) );
                 context.expect( plate != GimmickGraphModel::kNoGraphID && door != GimmickGraphModel::kNoGraphID, "the default node registry has no Signal or Door" );
-                int32  wireID = 0;
-                string error;
-                context.expect( model.addWire( plate, "Active", door, "Open", wireID, error ), "a Signal -> Door wire was rejected" );
+                context.expect( model.addWire( plate, "Active", door, "Open" ).has_value(), "a Signal -> Door wire was rejected" );
                 vector<GimmickGraphIssue> listIssue;
                 model.collectIssues( listIssue );
                 context.expect( listIssue.empty(), "a valid two-node circuit reported problems" );

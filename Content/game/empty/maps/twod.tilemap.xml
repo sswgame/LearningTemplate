@@ -1,7 +1,4 @@
-<TileMap>
-	<name>TwoD Demo</name>
-	<width>30</width>
-	<height>12</height>
+<TileMap name="TwoD Demo" width="30" height="12">
 	<spawn x="7" y="7" />
 	<tiles />
 	<warps />

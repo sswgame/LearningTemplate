@@ -49,8 +49,8 @@ namespace sw
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 합친 글을 읽고 검사합니다(`ConfigManager::readComposedXMLDocument`). 리소스 id 로 읽으면 @p context 에 `withAsset` 이 실린다. */
         [[nodiscard]] bool loadComposed( string_view xml, string_view sourceLabel, const ResourceContext& context );
-        /** @brief 채널 번호입니다. 없으면 비어 있습니다. */
-        [[nodiscard]] optional<uint32> findChannelIndex( const hashed_string& channel ) const;
+        /** @brief 채널 번호입니다. 없으면 -1 입니다. */
+        optional<uint32> findChannelIndex( const hashed_string& channel ) const;
     };
 } // namespace sw
 
@@ -162,7 +162,7 @@ namespace sw
         struct ExpressionInput
         {
             hashed_string   _expression{};
-            vector<uint32>  _listChannelIndex{}; ///< 채널마다 배치의 번호(대응표는 읽을 때 배치와 대조했다 — 없는 채널이 없다)
+            vector<uint32>  _listChannelIndex{};
             vector<float32> _listScale{};
             float32         _value{ 0.0f };
         };

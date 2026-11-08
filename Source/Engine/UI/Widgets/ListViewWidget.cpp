@@ -80,7 +80,7 @@ namespace sw
     optional<uint32> ListViewWidget::findItemIndex( const Widget& row ) const
     {
         const optional<uint32> rowIndex = findChildIndex( &row );
-        if ( rowIndex.has_value() == false || *rowIndex >= _listRowItem.size() )
+        if ( rowIndex.has_value() == false || *rowIndex >= _listRowItem.size() || _listRowItem[*rowIndex] == constant::invalid_index::kUint32 )
             return nullopt;
         return _listRowItem[*rowIndex];
     }
@@ -97,7 +97,7 @@ namespace sw
             return false;
         const optional<uint32> itemIndex = findItemIndex( *pRow );
         if ( itemIndex.has_value() == false )
-            return false; // 항목을 맡지 않은 줄
+            return false; // 접힌 줄은 맡은 항목이 없다
         const float32 before = _scrollOffset;
         scrollToItem( *itemIndex );
         return before != _scrollOffset;

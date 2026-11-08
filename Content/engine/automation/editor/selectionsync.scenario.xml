@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 선택 동기화 채널(EditorSelectionSync): 문맥(메인 씬 · 미리보기 창 · 콘텐츠 브라우저)마다 칸을 따로 두고, 프리뷰 선택이 메인 씬 선택을 오염시키지 않는다.
+  ① 메시를 씬 뷰에 놓으면 메인 씬 선택이 그 오브젝트가 되고, 채널의 메인 씬 칸에 그 메시가 들어가 콘텐츠 브라우저 타일에 테두리가 선다(contentBrowser.synced).
+     "Find selected" 는 그 애셋의 폴더로 가서 고른다.
+  ② 프리팹을 더블클릭해 프리팹 창(미리보기 씬)을 열고, 그 창의 부품을 고르면 미리보기 칸만 바뀐다 — 메인 씬 칸의 번호 · 메인 선택 수는 그대로다(모델 테스트 PreviewNeverOverwritesTheMainScene).
+  실행: App -EnableEditor -scenario=engine/automation/editor/selectionsync.scenario.xml -unattended
+-->
+<Scenario name="editor.selectionsync" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.resetOptional"/>
+	<EditorWaitSettled/>
+	<DevCommand line="scene.open game/empty/maps/editortest.scene.xml"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.close prefab_editor"/>
+	<Variable name="gv_editorWatchPanel" value="prefab_window"/>
+	<!-- ① 메인 씬: 메시를 놓아 고른다 -->
+	<DevCommand line="panel.focus content_browser"/>
+	<EditorWaitSettled/>
+	<DevCommand line="content.open game/empty/models"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.search"/>
+	<EditorWaitSettled/>
+	<EditorText value="crate_medium.mesh"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" state="Down"/>
+	<Wait frames="3"/>
+	<EditorHover mark="sceneView.canvas" anchor="0.45,0.5"/>
+	<Wait frames="3"/>
+	<EditorHover mark="sceneView.canvas"/>
+	<WaitUntil watch="Editor.PlacementGhostShown" equals="1" timeoutFrames="60"/>
+	<EditorClick mark="sceneView.canvas" state="Up"/>
+	<WaitUntil watch="Editor.PlacedCount" equals="1" timeoutFrames="90"/>
+	<Expect watch="Editor.SelectionCount" equals="1"/>
+	<WaitUntil watch="Editor.SelectionSyncMainHasAsset" equals="1" timeoutFrames="30"/>
+	<EditorWaitSettled/>
+	<EditorHover mark="contentBrowser.synced"/>
+	<CaptureEditorUI file="selectionsync/main.png" maxMagentaFraction="0"/>
+	<EditorClick mark="contentBrowser.findSelected"/>
+	<EditorWaitSettled/>
+	<Remember watch="Editor.SelectionSyncMainSequence" as="mainSequence"/>
+	<!-- ② 미리보기 창: 프리팹 창의 부품을 골라도 메인 씬 칸 · 메인 선택은 그대로다 -->
+	<DevCommand line="content.open game/empty/prefabs"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.search"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorText value="testprop"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="contentBrowser.asset.testprop.prefab.xml"/>
+	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="300"/>
+	<EditorWaitSettled/>
+	<Remember watch="Editor.SelectionSyncPreviewSequence" as="previewSequence"/>
+	<EditorClick mark="prefabwindow.child.TestProp"/>
+	<WaitUntil watch="Editor.SelectionSyncPreviewSequence" differsFrom="previewSequence" timeoutFrames="60"/>
+	<Expect watch="Editor.SelectionSyncMainSequence" sameAs="mainSequence"/>
+	<Expect watch="Editor.SelectionCount" equals="1"/>
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="selectionsync/preview.png" maxMagentaFraction="0"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

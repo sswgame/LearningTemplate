@@ -1,0 +1,343 @@
+<Scene formatVersion="2" name="PostProcessVolume">
+	<!-- 후처리 시나리오(automation/postprocess_*)의 무대 — rendertest3d 와 같은 정적 장면(애니메이션 · 비동기 메시 없음)에 레이어마다 후처리 볼륨을 둔다.
+	     시나리오가 레이어를 켜고 끈 두 장을 같은 실행에서 견준다(scene.layer <이름> on). 카메라는 순간이동으로만 옮긴다(teleport GameCamera …).
+	     Volume: 카메라를 감싼 상자(채도 0, 우선순위 1) 위에 무한 볼륨(채도 2 · 비네트, 우선순위 0) — 상자 안은 회색, 블렌드 반경 밖은 짙은 색.
+	     Grading: 무한 볼륨 하나 — 화이트 밸런스 4000 K, 그림자 게인 파랑 · 밝은 부분 게인 주황, LUT(textures/postprocess/lut_sepia, 세기 0.5).
+	     LensDistortion · ChromaticAberration · Sharpen · FilmGrain: 효과 하나씩 켜는 무한 볼륨(postprocess_lens 가 하나씩 켜고 끈다).
+	     BloomLamp: 가운데 큐브 앞의 강한 점광(블룸의 밝은 부분). BloomDirt · LensFlare: 먼지 마스크(textures/postprocess/bloomdirt) · 렌즈 플레어를 켜는 무한 볼륨.
+	     SSR: 화면 공간 반사를 켜는 무한 볼륨(디퍼드 파이프라인에만 패스가 있다 — 최대 거칠기 1 이라 격자 바닥도 받는다). -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+		<_listDataLayer>
+			<SceneDataLayerDef _name="Volume" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="Grading" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="LensDistortion" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="ChromaticAberration" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="Sharpen" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="FilmGrain" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="BloomLamp" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="BloomDirt" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="LensFlare" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="SSR" _bInitiallyActive="false" />
+		</_listDataLayer>
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.6,-6"
+					                 _localRotation="0.15,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.6,3.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.2"
+					                           _ambient="0.3"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,2"
+					               _localRotation="0,0,0"
+					               _localScale="16,1,16"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="12"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="LeftCube">
+			<GameObject _schemaVersion="0" _name="LeftCube" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-2.6,0.75,1.5"
+					               _localRotation="0,0.5,0"
+					               _localScale="1.5,1.5,1.5"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _boundsRadius="1.3"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="RightCube">
+			<GameObject _schemaVersion="0" _name="RightCube" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.6,1,3"
+					               _localRotation="0,-0.4,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _boundsRadius="1.8"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="DitherCube">
+			<GameObject _schemaVersion="0" _name="DitherCube" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,1,0"
+					               _localRotation="0,0,0"
+					               _localScale="2,2,2"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _boundsRadius="1.8"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="GrayBox" layers="Volume">
+			<GameObject _schemaVersion="0" _name="GrayBox" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,1.6,-6"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="2"
+					                            _blendWeight="1"
+					                            _priority="1"
+					                            _shape="Box">
+						<_values _saturation="0" />
+						<_overrides _bSaturation="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="VividWorld" layers="Volume">
+			<GameObject _schemaVersion="0" _name="VividWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _saturation="2" _vignetteIntensity="0.6" />
+						<_overrides _bSaturation="true" _bVignetteIntensity="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="GradingWorld" layers="Grading">
+			<GameObject _schemaVersion="0" _name="GradingWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _whiteTemperature="4000"
+						         _shadowsGain="0.8,0.9,1.3,1"
+						         _highlightsGain="1.3,1.05,0.8,1"
+						         _colorGradingLUT="game/empty/textures/postprocess/lut_sepia.dds"
+						         _colorGradingLUTIntensity="0.5" />
+						<_overrides _bWhiteTemperature="true"
+						            _bShadowsGain="true"
+						            _bHighlightsGain="true"
+						            _bColorGradingLUT="true"
+						            _bColorGradingLUTIntensity="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="LensDistortionWorld" layers="LensDistortion">
+			<GameObject _schemaVersion="0" _name="LensDistortionWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _lensDistortion="0.4" />
+						<_overrides _bLensDistortion="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="ChromaticAberrationWorld" layers="ChromaticAberration">
+			<GameObject _schemaVersion="0" _name="ChromaticAberrationWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _chromaticAberrationIntensity="4" _chromaticAberrationStart="0.2" />
+						<_overrides _bChromaticAberrationIntensity="true" _bChromaticAberrationStart="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="SharpenWorld" layers="Sharpen">
+			<GameObject _schemaVersion="0" _name="SharpenWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _sharpen="1.5" />
+						<_overrides _bSharpen="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="FilmGrainWorld" layers="FilmGrain">
+			<GameObject _schemaVersion="0" _name="FilmGrainWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _filmGrainIntensity="0.6" _filmGrainSize="2" />
+						<_overrides _bFilmGrainIntensity="true" _bFilmGrainSize="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="BloomLamp" layers="BloomLamp">
+			<GameObject _schemaVersion="0" _name="BloomLamp" _bActive="true">
+				<_listComponent>
+					<PointLightComponent _localPosition="0.6,2.4,-1.2"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachComponent="None"
+					                     _color="1,0.9,0.7"
+					                     _intensity="60"
+					                     _radius="6" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="BloomDirtWorld" layers="BloomDirt">
+			<GameObject _schemaVersion="0" _name="BloomDirtWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _bloomScale="2" _bloomDirtMask="game/empty/textures/postprocess/bloomdirt.dds" _bloomDirtMaskIntensity="6" />
+						<_overrides _bBloomScale="true" _bBloomDirtMask="true" _bBloomDirtMaskIntensity="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="LensFlareWorld" layers="LensFlare">
+			<GameObject _schemaVersion="0" _name="LensFlareWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _bloomScale="2" _lensFlareIntensity="2" _lensFlareTint="1,0.8,0.6,1" />
+						<_overrides _bBloomScale="true" _bLensFlareIntensity="true" _bLensFlareTint="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="17" name="ReflectionWorld" layers="SSR">
+			<GameObject _schemaVersion="0" _name="ReflectionWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _screenSpaceReflectionIntensity="1" _screenSpaceReflectionMaxDistance="15" _screenSpaceReflectionMaxRoughness="1" />
+						<_overrides _bScreenSpaceReflectionIntensity="true" _bScreenSpaceReflectionMaxDistance="true" _bScreenSpaceReflectionMaxRoughness="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

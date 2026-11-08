@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 기믹 표면의 알파 컷오프 부모(녹아 사라짐 · 나타남) — _dissolve 를 0 → 1 로 올리면 노이즈 문턱 아래부터 오려지고 경계가 탄다. 그림자도 같은 컷오프로 오린다. -->
+<MaterialDef formatVersion="0" name="GimmickSurfaceDissolve" _base="engine/materials/gimmicksurface.material" alphaMode="Mask">
+</MaterialDef>

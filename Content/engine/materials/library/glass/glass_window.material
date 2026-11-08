@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(glass): 창유리(얇다 — 비낌 없음, 먼지). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="GlassWindow" _base="engine/materials/library/glass/base.material">
+	<_properties>
+		<item name="_thickness" defaultValue="0" />
+		<item name="_patternAmount" defaultValue="0.35" />
+		<item name="_patternScale" defaultValue="3" />
+	</_properties>
+</MaterialDef>

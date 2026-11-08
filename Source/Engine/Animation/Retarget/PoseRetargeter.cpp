@@ -178,6 +178,7 @@ namespace sw
         {
             for ( uint32 targetBone = 0; targetBone < targetSkeleton.getBoneCount(); ++targetBone )
             {
+                // 같은 이름 짝짓기다 — 원본에 없는 대상 본은 짝이 없는 것이 정상이다.
                 const optional<uint32> sourceBone = sourceSkeleton.findBoneIndex( targetSkeleton.getBone( targetBone )._name );
                 if ( sourceBone.has_value() == false )
                     continue;

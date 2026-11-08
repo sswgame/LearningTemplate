@@ -106,20 +106,20 @@ namespace sw
 
     bool WaylandTextPainter::rasterizeGlyph( uint32 codepoint, Glyph& outGlyph )
     {
-        FontFaceID face       = _latinFace;
-        uint32     glyphIndex = _pRasterizer->findGlyphIndex( face, codepoint );
-        if ( glyphIndex == 0 && _fallbackFace != kInvalidFontFaceID )
+        FontFaceID       face       = _latinFace;
+        optional<uint32> glyphIndex = _pRasterizer->findGlyphIndex( face, codepoint );
+        if ( glyphIndex.has_value() == false && _fallbackFace != kInvalidFontFaceID )
         {
             face       = _fallbackFace;
             glyphIndex = _pRasterizer->findGlyphIndex( face, codepoint );
         }
-        if ( glyphIndex == 0 )
+        if ( glyphIndex.has_value() == false )
             return false; // 두 글꼴 어디에도 없다
         SDFRasterParams params{};
         params._pixelSize = _pixelSize;
         params._spreadPx  = WaylandTextPainterInternal::kSpreadPx;
         SDFGlyphBitmap bitmap{};
-        if ( _pRasterizer->rasterizeSDF( face, glyphIndex, params, bitmap ) == false )
+        if ( _pRasterizer->rasterizeSDF( face, *glyphIndex, params, bitmap ) == false )
             return false;
         outGlyph._advance = static_cast<int32>( bitmap._advancePx + 0.5f );
         outGlyph._width   = bitmap._width;

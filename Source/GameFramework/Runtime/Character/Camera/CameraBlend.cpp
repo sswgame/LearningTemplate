@@ -17,7 +17,7 @@ namespace sw
         pose._farPlane      = MathUtil::lerp( from._farPlane, to._farPlane, weight );
         pose._depthOfField  = CameraDepthOfFieldValues::blend( from._depthOfField, to._depthOfField, weight );
         pose._lensShift     = float2::lerp( from._lensShift, to._lensShift, weight );
-        pose._postProcess   = CameraPostProcessValues::blend( from._postProcess, to._postProcess, weight );
+        pose._postProcess   = PostProcessValues::blend( from._postProcess, to._postProcess, weight );
         pose._bOrthographic = weight < 0.5f ? from._bOrthographic : to._bOrthographic;
         return pose;
     }

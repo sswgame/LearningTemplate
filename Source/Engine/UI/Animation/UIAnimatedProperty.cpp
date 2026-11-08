@@ -117,12 +117,12 @@ namespace sw
             outProperty = UIAnimatedProperty{};
             return unexpected( Error{ ErrorKind::Unsupported, "an animated property cannot be a container", path } );
         }
-        const PropertyInfo& leaf         = outProperty._path.getLeafProperty();
-        const int32         builtinIndex = ReflectedValueUtil::findBuiltinIndex( leaf._typeName );
-        const uint8         count        = leaf._bIsBitField == SW_TRUE ? 0 : UIAnimatedPropertyInternal::findComponentCount( builtinIndex );
-        outProperty._kind                = count > 0 ? UIAnimatedValueKind::Float : UIAnimatedValueKind::Discrete;
-        outProperty._componentCount      = count;
-        outProperty._builtinIndex        = count > 0 ? static_cast<uint8>( builtinIndex ) : 0;
+        const PropertyInfo&   leaf         = outProperty._path.getLeafProperty();
+        const optional<int32> builtinIndex = ReflectedValueUtil::findBuiltinIndex( leaf._typeName );
+        const uint8           count        = leaf._bIsBitField == SW_TRUE || builtinIndex.has_value() == false ? 0 : UIAnimatedPropertyInternal::findComponentCount( *builtinIndex );
+        outProperty._kind                  = count > 0 ? UIAnimatedValueKind::Float : UIAnimatedValueKind::Discrete;
+        outProperty._componentCount        = count;
+        outProperty._builtinIndex          = count > 0 ? static_cast<uint8>( *builtinIndex ) : 0;
         return {};
     }
 

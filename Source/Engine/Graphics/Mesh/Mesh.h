@@ -396,8 +396,8 @@ namespace sw
         const vector<MeshMorphTarget>& getMorphTargets() const { return _listMorphTarget; }
         /** @brief 모프 타깃 수입니다. */
         uint32 getMorphTargetCount() const { return static_cast<uint32>( _listMorphTarget.size() ); }
-        /** @brief 이름으로 모프 타깃 번호를 찾습니다. 없으면 비어 있습니다. */
-        [[nodiscard]] optional<uint32> findMorphTargetIndex( const hashed_string& name ) const;
+        /** @brief 이름으로 모프 타깃 번호를 찾습니다. 없으면 없음입니다. */
+        optional<uint32> findMorphTargetIndex( const hashed_string& name ) const;
         /**
          * @brief 스킨 데이터(레스트 정점과 가중치)의 식별자입니다 — 내용 번호입니다.
          * @details 모프 풀이 같은 번호의 스킨 인스턴스(칸)들을 한 원본 구간으로 묶는다(언리얼 스킨 캐시가 같은 스켈레탈 메시의 정점 팩토리를 공유하는 것과 같은 방식이다).

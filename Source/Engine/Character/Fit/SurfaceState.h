@@ -71,8 +71,8 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 채널을 더합니다(같은 이름은 바꿈). */
         void addChannel( const SurfaceChannelDef& channel );
-        /** @brief 이름의 채널 번호입니다. 없으면 비어 있습니다. */
-        [[nodiscard]] optional<uint32> findChannelIndex( const hashed_string& name ) const;
+        /** @brief 이름의 채널 번호입니다. 없으면 없음입니다. */
+        optional<uint32> findChannelIndex( const hashed_string& name ) const;
         /** @brief 채널들입니다. */
         const vector<SurfaceChannelDef>& getChannels() const { return _listChannel; }
 

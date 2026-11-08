@@ -10,8 +10,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Registry/RegistrationList.h"
 
+#include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw
 {

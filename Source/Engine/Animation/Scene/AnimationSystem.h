@@ -187,7 +187,7 @@ namespace sw
         /** @brief 본 LOD 테이블을 반환합니다(없으면 nullptr). */
         virtual const SkeletonBoneLOD* findBoneLOD() const { return nullptr; }
         /**
-         * @brief 지금 그리는 메시 LOD 단계입니다(`MeshComponent::getLODIndex`). 메시가 LOD 를 가지지 않으면 비어 있습니다. 값이 있으면 본 LOD 단계는 화면 크기 임계값이 아니라 이 단계를 따릅니다 —
+         * @brief 지금 그리는 메시 LOD 단계입니다(`MeshComponent::getLODIndex`). 메시가 LOD 를 가지지 않으면 없음입니다. 값이 있으면 본 LOD 단계는 화면 크기 임계값이 아니라 이 단계를 따릅니다 —
          *        임계값의 정본은 메시 단계 하나이고 본 LOD 표(`SkeletonBoneLOD`)는 단계마다 어느 본을 쓰는지만 정합니다(메시 단계 수가 더 많으면 마지막 본 단계).
          */
         virtual optional<uint32> findMeshLODIndex() const { return nullopt; }

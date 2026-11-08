@@ -20,10 +20,13 @@ SW_TEST_CASE( RHITimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegative
 {
     constexpr uint32 kLastSlot = constant::render::kMaxGPUTimestampSlot - 1u;
     uint64           arrTick[constant::render::kMaxGPUTimestampSlot]{};
-    arrTick[0]                           = 1000; // 낮은 번호지만 늦은 시각 — 이것을 기준으로 삼으면 슬롯 5 가 음수(→ 0)가 된다
-    arrTick[5]                           = 400;
-    arrTick[kLastSlot]                   = 1600;
-    const GPUTimestampSlotMask readyMask = makeGPUTimestampSlotBit( 0 ) | makeGPUTimestampSlotBit( 5 ) | makeGPUTimestampSlotBit( kLastSlot );
+    arrTick[0]         = 1000; // 낮은 번호지만 늦은 시각 — 이것을 기준으로 삼으면 슬롯 5 가 음수(→ 0)가 된다
+    arrTick[5]         = 400;
+    arrTick[kLastSlot] = 1600;
+    GPUTimestampSlotMask readyMask;
+    readyMask.set( 0 );
+    readyMask.set( 5 );
+    readyMask.set( kLastSlot ); // 64 를 넘는 칸 — 둘째 단어의 비트다
 
     RHITimestampFrame frame;
     SW_REQUIRE_TRUE( RHITimestampFrame::resolve( arrTick, readyMask, 500.0, frame ) ); // 틱 하나 = 500 ns = 0.5 us
@@ -37,6 +40,6 @@ SW_TEST_CASE( RHITimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegative
     SW_EXPECT_TRUE( listMicro[1] < 0.0f && listMicro[kLastSlot - 1u] < 0.0f );
 
     // 준비된 칸이 없으면 비운다 — 호출자는 빈 목록을 "이번 프레임 없음" 으로 읽는다.
-    SW_EXPECT_FALSE( RHITimestampFrame::resolve( arrTick, 0, 500.0, frame ) );
+    SW_EXPECT_FALSE( RHITimestampFrame::resolve( arrTick, GPUTimestampSlotMask{}, 500.0, frame ) );
     SW_EXPECT_TRUE( frame._listMicro.empty() );
 }

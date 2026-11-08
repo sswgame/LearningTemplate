@@ -4,6 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
@@ -216,13 +217,16 @@ namespace sw
                 commandListForRecord()->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kSRVTableParam, table );
             state._bSRVDirty = SW_FALSE;
         }
-        // u 테이블은 컴퓨트만 쓴다. 그래픽스 스테이지에는 UAV 선언이 없다(binding.hlsli 가 RW 텍스처를 컴퓨트에서만 선언한다).
-        if ( bCompute && state._bUAVDirty != SW_FALSE )
+        // u 테이블 — 컴퓨트는 셰이더 소유 버퍼 · 메시지 링, 그래픽스는 셰이더 메시지 링(u4, bindGraphicsUAV)만 건다. 그래픽스 상태는 걸린 것이 없으면 더럽지 않아 테이블을 세우지 않는다.
+        if ( state._bUAVDirty != SW_FALSE )
         {
             D3D12_GPU_DESCRIPTOR_HANDLE table{};
             if ( writeSlotTable( state._arrUAV, shaderslot::kComputeUAVSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullUAVIndex ), table ) == false )
                 return false;
-            commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kUAVTableParam, table );
+            if ( bCompute )
+                commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kUAVTableParam, table );
+            else
+                commandListForRecord()->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kUAVTableParam, table );
             state._bUAVDirty = SW_FALSE;
         }
         return true;
@@ -264,9 +268,17 @@ namespace sw
         } );
     }
 
-    void D3D12RHICommandContext::transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState )
+    D3D12_RESOURCE_STATES D3D12RHICommandContext::toQueueState( D3D12_RESOURCE_STATES state ) const
     {
-        ID3D12Resource* pResource = _pDevice->resolveTexture( texture );
+        if ( _bComputeQueueList == SW_FALSE || ( state & D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) == 0 )
+            return state;
+        return static_cast<D3D12_RESOURCE_STATES>( ( state & ~D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE ) | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE );
+    }
+
+    void D3D12RHICommandContext::transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES requestedState )
+    {
+        const D3D12_RESOURCE_STATES newState  = toQueueState( requestedState );
+        ID3D12Resource*             pResource = _pDevice->resolveTexture( texture );
         if ( pResource == nullptr )
             return;
 
@@ -490,6 +502,22 @@ namespace sw
         if ( view.ptr == 0 )
             return;
         D3D12SlotTableState& state = _pState->_arrSlotState[1];
+        if ( state._arrUAV[slot].ptr == view.ptr )
+            return;
+        state._arrUAV[slot] = view;
+        state._bUAVDirty    = SW_TRUE;
+    }
+
+    void D3D12RHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    {
+        // 그래픽스 u# → 그래픽스 슬롯 테이블 상태. 루트 시그니처의 u 테이블은 모든 단계에 보인다(SHADER_VISIBILITY_ALL). 드로우 직전 flushSlotTables( false ) 가 굳힌다.
+        const bool bCannotBindUnorderedAccess = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kComputeUAVSlotCount;
+        if ( bCannotBindUnorderedAccess )
+            return;
+        const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, true );
+        if ( view.ptr == 0 )
+            return;
+        D3D12SlotTableState& state = _pState->_arrSlotState[0];
         if ( state._arrUAV[slot].ptr == view.ptr )
             return;
         state._arrUAV[slot] = view;
@@ -768,9 +796,12 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList2> list2;
         if ( FAILED( commandListForRecord()->QueryInterface( IID_PPV_ARGS( list2.GetAddressOf() ) ) ) )
             return;
-        const D3D12_WRITEBUFFERIMMEDIATE_PARAMETER param{ _pDevice->_breadcrumbAddress, markerID };
-        // MARKER_IN: 앞선 명령이 **시작**하는 시점에 쓴다 - 소실 뒤 값은 GPU 가 시작한 마지막 패스다.
-        const D3D12_WRITEBUFFERIMMEDIATE_MODE mode = D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_IN;
+        // 시작 표지는 [0] 칸에 MARKER_IN(앞선 명령이 모두 **시작**한 뒤), 끝 표지(GPUBreadcrumbs::kEndMarkerBit)는 [1] 칸에 MARKER_OUT(앞선 명령이 모두 **끝난** 뒤)으로 쓴다.
+        // 소실 뒤 [0] 은 GPU 가 시작한 마지막 패스, [1] 은 끝낸 마지막 패스다.
+        // https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_writebufferimmediate_mode
+        const bool                                 bEnd = ( markerID & GPUBreadcrumbs::kEndMarkerBit ) != 0;
+        const D3D12_WRITEBUFFERIMMEDIATE_PARAMETER param{ _pDevice->_breadcrumbAddress + ( bEnd ? sizeof( uint32 ) : 0u ), markerID };
+        const D3D12_WRITEBUFFERIMMEDIATE_MODE      mode = bEnd ? D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_OUT : D3D12_WRITEBUFFERIMMEDIATE_MODE_MARKER_IN;
         list2->WriteBufferImmediate( 1, &param, &mode );
     }
 
@@ -999,33 +1030,56 @@ namespace sw
 
     void D3D12RHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )
     {
-        if ( _pCmdList == nullptr || buffer == 0 )
-            return;
+        const RHIBufferTransition transition{ buffer, newState };
+        transitionBuffersNative( &transition, 1 );
+    }
 
-        ID3D12Resource* pResource = _pDevice->resolveBuffer( buffer );
-        if ( pResource == nullptr )
+    void D3D12RHICommandContext::transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count )
+    {
+        if ( _pCmdList == nullptr )
             return;
-
-        const D3D12_RESOURCE_STATES stateAfter = toD3D12BufferState( newState );
-        D3D12_RESOURCE_STATES       stateBefore;
+        // 모은 전이를 ResourceBarrier 한 번에 낸다 — 배리어마다 부르면 드라이버가 그때마다 캐시 플러시 · 대기를 따로 푼다.
+        // https://learn.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12 (배리어는 묶어 내라)
+        constexpr uint32       kMaxBarrierPerCall = 16;
+        D3D12_RESOURCE_BARRIER arrBarrier[kMaxBarrierPerCall]{};
+        uint32                 barrierCount = 0;
+        for ( uint32 index = 0; index < count; ++index )
         {
-            ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
-            auto              stateIt = _pDevice->_mapStructuredBufferState.find( buffer );
-            if ( stateIt == _pDevice->_mapStructuredBufferState.end() )
-                return;
-            if ( stateIt->second == stateAfter )
-                return;
-            stateBefore     = stateIt->second;
-            stateIt->second = stateAfter;
+            const RHIBufferHandle buffer    = pTransition[index]._buffer;
+            ID3D12Resource*       pResource = buffer != 0 ? _pDevice->resolveBuffer( buffer ) : nullptr;
+            if ( pResource == nullptr )
+                continue;
+            const D3D12_RESOURCE_STATES stateAfter = toQueueState( toD3D12BufferState( pTransition[index]._state ) );
+            D3D12_RESOURCE_STATES       stateBefore;
+            {
+                ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
+                auto              stateIt = _pDevice->_mapStructuredBufferState.find( buffer );
+                if ( stateIt == _pDevice->_mapStructuredBufferState.end() || stateIt->second == stateAfter )
+                    continue;
+                stateBefore     = stateIt->second;
+                stateIt->second = stateAfter;
+            }
+            // 컴퓨트 큐 리스트는 따로 낸 ExecuteCommandLists 라 버퍼가 COMMON 으로 감쇠해 들어온다. 기록한 상태에 그래픽스 전용 비트가 있으면 COMMON 을 앞 상태로 쓴다
+            // (COMMON 또는 승격 가능한 상태를 앞 상태로 쓰는 것이 문서의 허용 범위다 — 그래픽스 전용 비트는 COMPUTE 리스트의 배리어에 적을 수 없다).
+            if ( _bComputeQueueList != SW_FALSE && toQueueState( stateBefore ) != stateBefore )
+                stateBefore = D3D12_RESOURCE_STATE_COMMON;
+            if ( stateBefore == stateAfter )
+                continue;
+            D3D12_RESOURCE_BARRIER& barrier = arrBarrier[barrierCount++];
+            barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Flags                   = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            barrier.Transition.pResource    = pResource;
+            barrier.Transition.StateBefore  = stateBefore;
+            barrier.Transition.StateAfter   = stateAfter;
+            barrier.Transition.Subresource  = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            if ( barrierCount == kMaxBarrierPerCall )
+            {
+                commandListForRecord()->ResourceBarrier( barrierCount, arrBarrier );
+                barrierCount = 0;
+            }
         }
-
-        D3D12_RESOURCE_BARRIER barrier{};
-        barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource   = pResource;
-        barrier.Transition.StateBefore = stateBefore;
-        barrier.Transition.StateAfter  = stateAfter;
-        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        commandListForRecord()->ResourceBarrier( 1, &barrier );
+        if ( barrierCount > 0 )
+            commandListForRecord()->ResourceBarrier( barrierCount, arrBarrier );
     }
 
     void D3D12RHICommandContext::copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )

@@ -53,7 +53,7 @@ namespace sw
             static constexpr string_view kValueListSeparators = " \n\r\t"; ///< 레이어 값 정수 목록의 구분 글자(공백 · 줄바꿈 · 탭)
 
             // 읽기가 보는 이름 전부다. 철자가 틀린 이름(`atlass` · `tx` 대신 `targetX`)이 조용히 기본값이 되지 않게 모르는 이름은 읽기 오류다(MaterialXML 과 같은 규칙).
-            static constexpr const utf8* kArrKnownRootChild[]      = { "name", "width", "height", "scene", "role", "spawn", "tiles", "warps", "tileLayer", "dataLayers" };
+            static constexpr const utf8* kArrKnownRootChild[]      = { "spawn", "tiles", "warps", "tileLayer", "dataLayers" };
             static constexpr const utf8* kArrKnownTileAttribute[]  = { "h", "atlas", "tr", "tg", "tb" }; ///< 레이어 속성(`enc` · `pt`)은 `isFlagLayerAttribute` 가 받는다
             static constexpr const utf8* kArrKnownTileLayerChild[] = { "palette", "cells" };
 
@@ -93,25 +93,26 @@ namespace sw
             // ------------------------------------------------------------------------------
 
             /**
-             * @brief 이름 · 크기 · 장면 · 역할 · 시작 위치를 읽습니다.
+             * @brief 이름 · 크기 · 장면 · 역할(루트 속성 — `TileMapHeaderParams`) · 시작 위치를 읽습니다.
              * @details 크기는 필수이고 1 이상이다 — 빠지거나 깨진 크기를 다른 크기(옛 8x8)로 바꿔 읽지 않는다. 크기는 지원 범위(`isSizeSupported`) 안이어야 한다:
              *          파일이 말한 크기를 그대로 잡지 않는다 — 바로 뒤에서 `_width x _height` 셀짜리 배열 넷을 잡으므로, 손상되거나 손으로 잘못 적은 맵 하나가 수십억 셀 요청이 된다.
              */
             [[nodiscard]] static bool readHeader( const XMLNode& root, TileMapXMLData& data, bool& inoutValid )
             {
-                root.takeChildText( "name", data._name );
-                const optional<int32> width      = root.readRequiredChild<int32>( "width" );
-                const optional<int32> height     = root.readRequiredChild<int32>( "height" );
-                const bool            bValidSize = width.has_value() && height.has_value() && *width > 0 && *height > 0;
-                if ( bValidSize == false )
+                TileMapHeaderParams header;
+                const bool          bHeaderRead = XMLFields::readFields( root, header, "TileMap" );
+                if ( header._width <= 0 || header._height <= 0 )
                 {
-                    SW_LOG_ERROR_ID( "TileMap.InvalidSize", "<TileMap> needs <width> and <height> of at least 1" );
+                    SW_LOG_ERROR_ID( "TileMap.InvalidSize", "<TileMap> needs width and height of at least 1" );
                     return false;
                 }
-                data._width  = *width;
-                data._height = *height;
-                root.takeChildText( "scene", data._scenePath );
-                root.takeChildText( "role", data._role );
+                if ( bHeaderRead == false )
+                    return false;
+                data._name          = std::move( header._name );
+                data._width         = header._width;
+                data._height        = header._height;
+                data._scenePath     = std::move( header._scene );
+                data._role          = std::move( header._role );
                 const XMLNode spawn = root.findChild( "spawn" );
                 if ( spawn.isValid() )
                 {
@@ -675,15 +676,15 @@ namespace sw
 
     string TileMapXMLData::toXML() const
     {
-        XMLDocument   doc;
-        const XMLNode root = doc.appendRoot( "TileMap" );
-        root.appendChild( "name", _name.empty() ? string_view{ "Untitled" } : string_view{ _name } );
-        root.appendChild( "width", _width );
-        root.appendChild( "height", _height );
-        if ( _scenePath.empty() == false )
-            root.appendChild( "scene", _scenePath );
-        if ( _role.empty() == false )
-            root.appendChild( "role", _role );
+        XMLDocument         doc;
+        const XMLNode       root = doc.appendRoot( "TileMap" );
+        TileMapHeaderParams header;
+        header._name   = _name.empty() ? string( "Untitled" ) : _name;
+        header._width  = _width;
+        header._height = _height;
+        header._scene  = _scenePath;
+        header._role   = _role;
+        XMLFields::writeFields( root, header );
 
         XMLFields::writeEveryField( root.appendChild( "spawn" ), TileSpawnParams{ _spawnX, _spawnY } );
 

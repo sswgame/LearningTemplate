@@ -175,7 +175,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReservedTableHoldsSlotContract )
     SW_EXPECT_EQUAL( shaderslot::vk::kTShift + shaderslot::kMaterialBuffer, pMaterials->_vulkan._bind );
 
     SW_EXPECT_EQUAL( shaderslot::kEngineTexture0, pEngineTexture0->_dx11._bind );
-    SW_EXPECT_EQUAL( 0u, pEngineTexture0->_opengl._bind ); // GL 유닛은 칸 번호다
+    SW_EXPECT_EQUAL( shaderslot::kEngineTexture0, pEngineTexture0->_opengl._bind ); // GL 유닛은 레지스터 번호 그대로다(머티리얼 칸과 같다)
     SW_EXPECT_FALSE( pEngineTexture0->_dx12._bDeclared );
     SW_EXPECT_FALSE( pEngineTexture0->_vulkan._bDeclared );
 
@@ -268,8 +268,8 @@ SW_TEST_CASE( ShaderBindingValidatorTest, Dx12SlotLimitBoundaries )
     SW_EXPECT_EQUAL( 0u, Util::validateOne( format, "g_TestTex", "Texture", 0, shaderslot::kSRVSlotCount - 1 ) );
     SW_EXPECT_EQUAL( 1u, Util::validateOne( format, "g_TestTex", "Texture", 0, shaderslot::kSRVSlotCount ) );
 
-    // u 의 마지막 칸은 assert 링 자리다
-    SW_EXPECT_EQUAL( 0u, Util::validateOne( format, shaderslot::resname::kGPUAssertRing, "UAV", 0, shaderslot::kComputeUAVSlotCount - 1 ) );
+    // u 의 마지막 칸은 메시지 링 자리다
+    SW_EXPECT_EQUAL( 0u, Util::validateOne( format, shaderslot::resname::kGPUMessageRing, "UAV", 0, shaderslot::kComputeUAVSlotCount - 1 ) );
     SW_EXPECT_EQUAL( 1u, Util::validateOne( format, "g_TestRw", "UAV", 0, shaderslot::kComputeUAVSlotCount ) );
 
     SW_EXPECT_EQUAL( 0u, Util::validateOne( format, "g_TestSampler", "Sampler", 0, shaderslot::kStaticSamplerCount - 1 ) );
@@ -371,39 +371,39 @@ SW_TEST_CASE( ShaderBindingValidatorTest, OpenGlRejectsNonZeroSet )
 }
 
 /**
- * @brief [ShaderBindingValidatorTest] 쓰기 슬롯 u4 는 assert 링 전용이고 링은 u4 에만 놓인다 — DX 백엔드
+ * @brief [ShaderBindingValidatorTest] 쓰기 슬롯 u4 는 메시지 링 전용이고 링은 u4 에만 놓인다 — DX 백엔드
  */
-SW_TEST_CASE( ShaderBindingValidatorTest, AssertSlotOnDirectX )
+SW_TEST_CASE( ShaderBindingValidatorTest, MessageSlotOnDirectX )
 {
     using Util = ShaderBindingValidatorTestUtil;
     SW_EXPECT_LOG( Util::kViolationLogID );
-    const uint32 assertSlot = shaderslot::kComputeAssertUAV;
+    const uint32 messageSlot = shaderslot::kGPUMessageUAV;
     for ( const ShaderTargetFormat format : { ShaderTargetFormat::DXBC_D3D11, ShaderTargetFormat::DXIL_D3D12 } )
     {
-        SW_EXPECT_EQUAL( 0u, Util::validateOne( format, shaderslot::resname::kGPUAssertRing, "UAV", 0, assertSlot ) );
-        SW_EXPECT_EQUAL( 1u, Util::validateOne( format, shaderslot::resname::kGPUAssertRing, "UAV", 0, 0 ) );
-        SW_EXPECT_EQUAL( 1u, Util::validateOne( format, "g_TestRw", "UAV", 0, assertSlot ) );
-        SW_EXPECT_EQUAL( 0u, Util::validateOne( format, "g_TestRw", "UAV", 0, assertSlot - 1 ) );
-        SW_EXPECT_EQUAL( 0u, Util::validateOne( format, "g_TestBuf", "StructuredBuffer", 0, assertSlot ) ); // t4 는 다른 이름공간이다
+        SW_EXPECT_EQUAL( 0u, Util::validateOne( format, shaderslot::resname::kGPUMessageRing, "UAV", 0, messageSlot ) );
+        SW_EXPECT_EQUAL( 1u, Util::validateOne( format, shaderslot::resname::kGPUMessageRing, "UAV", 0, 0 ) );
+        SW_EXPECT_EQUAL( 1u, Util::validateOne( format, "g_TestRw", "UAV", 0, messageSlot ) );
+        SW_EXPECT_EQUAL( 0u, Util::validateOne( format, "g_TestRw", "UAV", 0, messageSlot - 1 ) );
+        SW_EXPECT_EQUAL( 0u, Util::validateOne( format, "g_TestBuf", "StructuredBuffer", 0, messageSlot ) ); // t4 는 다른 이름공간이다
     }
 }
 
 /**
  * @brief [ShaderBindingValidatorTest] SPIR-V 도 같은 규칙이다 — RW 구조버퍼가 StorageBuffer 로 보고되어도(결함: 종류로 걸러 Vulkan · GL 에서 이 검사가 돌지 않았다)
  */
-SW_TEST_CASE( ShaderBindingValidatorTest, AssertSlotOnSpirv )
+SW_TEST_CASE( ShaderBindingValidatorTest, MessageSlotOnSpirv )
 {
     using Util = ShaderBindingValidatorTestUtil;
     SW_EXPECT_LOG( Util::kViolationLogID );
 
-    const uint32 vulkanSlot = shaderslot::vk::kUShift + shaderslot::kComputeAssertUAV;
-    SW_EXPECT_EQUAL( 0u, Util::validateOne( ShaderTargetFormat::SPIRV_Vulkan, shaderslot::resname::kGPUAssertRing, "StorageBuffer", 0, vulkanSlot ) );
-    SW_EXPECT_EQUAL( 1u, Util::validateOne( ShaderTargetFormat::SPIRV_Vulkan, shaderslot::resname::kGPUAssertRing, "StorageBuffer", 0, vulkanSlot - 1 ) );
+    const uint32 vulkanSlot = shaderslot::vk::kUShift + shaderslot::kGPUMessageUAV;
+    SW_EXPECT_EQUAL( 0u, Util::validateOne( ShaderTargetFormat::SPIRV_Vulkan, shaderslot::resname::kGPUMessageRing, "StorageBuffer", 0, vulkanSlot ) );
+    SW_EXPECT_EQUAL( 1u, Util::validateOne( ShaderTargetFormat::SPIRV_Vulkan, shaderslot::resname::kGPUMessageRing, "StorageBuffer", 0, vulkanSlot - 1 ) );
     SW_EXPECT_EQUAL( 1u, Util::validateOne( ShaderTargetFormat::SPIRV_Vulkan, "g_TestBuf", "StorageBuffer", 0, vulkanSlot ) );
 
-    const uint32 openGlSlot = shaderslot::gl::kUAVBinding0 + shaderslot::kComputeAssertUAV;
-    SW_EXPECT_EQUAL( 0u, Util::validateOne( ShaderTargetFormat::SPIRV_OpenGL, shaderslot::resname::kGPUAssertRing, "StorageBuffer", 0, openGlSlot ) );
-    SW_EXPECT_EQUAL( 1u, Util::validateOne( ShaderTargetFormat::SPIRV_OpenGL, shaderslot::resname::kGPUAssertRing, "StorageBuffer", 0, shaderslot::gl::kUAVBinding0 ) );
+    const uint32 openGlSlot = shaderslot::gl::kUAVBinding0 + shaderslot::kGPUMessageUAV;
+    SW_EXPECT_EQUAL( 0u, Util::validateOne( ShaderTargetFormat::SPIRV_OpenGL, shaderslot::resname::kGPUMessageRing, "StorageBuffer", 0, openGlSlot ) );
+    SW_EXPECT_EQUAL( 1u, Util::validateOne( ShaderTargetFormat::SPIRV_OpenGL, shaderslot::resname::kGPUMessageRing, "StorageBuffer", 0, shaderslot::gl::kUAVBinding0 ) );
     SW_EXPECT_EQUAL( 1u, Util::validateOne( ShaderTargetFormat::SPIRV_OpenGL, "g_TestBuf", "StorageBuffer", 0, openGlSlot ) );
     SW_EXPECT_EQUAL( 0u, Util::validateOne( ShaderTargetFormat::SPIRV_OpenGL, "g_TestTex", "Texture", 0, openGlSlot ) ); // 머티리얼 텍스처 유닛과 번호만 같다
 }

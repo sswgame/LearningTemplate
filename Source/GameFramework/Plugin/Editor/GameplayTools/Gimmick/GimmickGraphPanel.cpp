@@ -289,12 +289,9 @@ namespace sw::editor
         }
         for ( const GimmickGraphWire& wire : _model.getWires() )
         {
-            const optional<uint32> fromIndex = _model.findNodeIndex( wire._fromNode );
-            const optional<uint32> toIndex   = _model.findNodeIndex( wire._toNode );
-            if ( fromIndex.has_value() == false || toIndex.has_value() == false )
-                continue;
-            const GimmickNodeKind* pFromKind = _model.findKind( _model.getNodes()[*fromIndex] );
-            const GimmickNodeKind* pToKind   = _model.findKind( _model.getNodes()[*toIndex] );
+            // 모델이 노드를 지울 때 배선도 지우므로 두 끝은 늘 있다.
+            const GimmickNodeKind* pFromKind = _model.findKind( _model.getNodes()[_model.findNodeIndex( wire._fromNode ).value()] );
+            const GimmickNodeKind* pToKind   = _model.findKind( _model.getNodes()[_model.findNodeIndex( wire._toNode ).value()] );
             if ( pFromKind == nullptr || pToKind == nullptr )
                 continue;
             const int32 outPort = pFromKind->findOutput( hashed_string( wire._fromPort ) );
@@ -632,13 +629,11 @@ namespace sw::editor
         int32 removeWireID = 0;
         for ( const GimmickGraphWire& wire : _model.getWires() )
         {
-            const optional<uint32> fromIndex = _model.findNodeIndex( wire._fromNode );
-            const optional<uint32> toIndex   = _model.findNodeIndex( wire._toNode );
-            if ( fromIndex.has_value() == false || toIndex.has_value() == false )
-                continue;
+            // 모델이 노드를 지울 때 배선도 지우므로 두 끝은 늘 있다.
+            const uint32 fromIndex = _model.findNodeIndex( wire._fromNode ).value();
+            const uint32 toIndex   = _model.findNodeIndex( wire._toNode ).value();
             ImGui::PushID( wire._graphID );
-            ImGui::Text( "%s.%s -> %s.%s", _model.getNodes()[*fromIndex]._id.c_str(), wire._fromPort.c_str(),
-                         _model.getNodes()[*toIndex]._id.c_str(), wire._toPort.c_str() );
+            ImGui::Text( "%s.%s -> %s.%s", _model.getNodes()[fromIndex]._id.c_str(), wire._fromPort.c_str(), _model.getNodes()[toIndex]._id.c_str(), wire._toPort.c_str() );
             bool bInvert = wire._bInvert;
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdPlugin", "Invert" ) ) );
             if ( ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "Invert" ), &bInvert ) )
@@ -727,7 +722,7 @@ namespace sw::editor
             {
                 const optional<uint32> index = _model.findNodeIndex( graphID );
                 if ( index.has_value() == false )
-                    continue;
+                    continue; // 복사한 뒤 지운 노드
                 const float2& position = _model.getNodes()[*index]._position;
                 corner                 = bCorner ? float2{ MathUtil::min( corner._x, position._x ), MathUtil::min( corner._y, position._y ) } : position;
                 bCorner                = true;
@@ -816,11 +811,9 @@ namespace sw::editor
     void GimmickGraphPanel::editConnect( GimmickCircuitComponent& circuit, int32 fromNode, string_view fromPort, int32 toNode, string_view toPort )
     {
         const ObjectSnapshot before = beginEdit( circuit );
-        int32                wireID = 0;
-        string               error;
-        if ( _model.addWire( fromNode, fromPort, toNode, toPort, wireID, error ) == false )
+        if ( const expected<int32> wireID = _model.addWire( fromNode, fromPort, toNode, toPort ); wireID.has_value() == false )
         {
-            _statusText = error;
+            _statusText = EditorWidgets::makeStatusText( wireID.error() );
             return;
         }
         commitEdit( circuit, before, "Add Gimmick Wire" );
@@ -829,10 +822,9 @@ namespace sw::editor
     void GimmickGraphPanel::editRename( GimmickCircuitComponent& circuit, int32 nodeID, const string& newID )
     {
         const ObjectSnapshot before = beginEdit( circuit );
-        string               error;
-        if ( _model.renameNode( nodeID, hashed_string( newID ), error ) == false )
+        if ( const expected<void> renamed = _model.renameNode( nodeID, hashed_string( newID ) ); renamed.has_value() == false )
         {
-            _statusText = error;
+            _statusText = EditorWidgets::makeStatusText( renamed.error() );
             return;
         }
         commitEdit( circuit, before, "Rename Gimmick Node" );

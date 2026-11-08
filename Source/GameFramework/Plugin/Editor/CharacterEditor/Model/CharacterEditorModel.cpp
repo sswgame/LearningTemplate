@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Animation/AnimationAssetCache.h"
@@ -254,43 +255,47 @@ namespace sw::editor
 
     void CharacterEditorModel::addSocket( const hashed_string& name )
     {
-        const bool bAdded = _sockets.addSocket( name, hashed_string{}, hashed_string{}, _status );
-        reportEdit( bAdded );
-        if ( bAdded )
+        const expected<void> added = _sockets.addSocket( name, hashed_string{}, hashed_string{} );
+        reportEdit( added );
+        if ( added.has_value() )
             _selectedSocket = name;
     }
 
     void CharacterEditorModel::renameSocket( const hashed_string& name, const hashed_string& newName )
     {
-        const bool bDone = _sockets.renameSocket( name, newName, _status );
-        reportEdit( bDone );
-        if ( bDone )
+        const expected<void> renamed = _sockets.renameSocket( name, newName );
+        reportEdit( renamed );
+        if ( renamed.has_value() )
             _selectedSocket = newName;
     }
 
     void CharacterEditorModel::mirrorSocket( const hashed_string& name )
     {
-        hashed_string mirrorName;
-        const bool    bDone = _sockets.mirrorSocket( name, mirrorName, _status );
-        reportEdit( bDone );
-        if ( bDone )
-            _selectedSocket = mirrorName;
+        const expected<hashed_string> mirrored = _sockets.mirrorSocket( name );
+        if ( mirrored.has_value() == false )
+        {
+            reportEdit( expected<void>{ unexpected( mirrored.error() ) } );
+            return;
+        }
+        reportEdit( expected<void>{} );
+        _selectedSocket = *mirrored;
     }
 
     void CharacterEditorModel::removeSocket( const hashed_string& name )
     {
-        reportEdit( _sockets.removeSocket( name, _status ) );
+        reportEdit( _sockets.removeSocket( name ) );
         _selectedSocket = hashed_string{};
     }
 
     void CharacterEditorModel::mirrorSelectedBone()
     {
-        string        error;
-        hashed_string mirrored;
-        if ( _pose.mirrorBone( _selectedBone, _sockets.getMirrorRules(), mirrored, error ) )
-            _selectedBone = mirrored;
-        if ( error.empty() == false )
-            _status = error;
+        const expected<hashed_string> mirrored = _pose.mirrorBone( _selectedBone, _sockets.getMirrorRules() );
+        if ( mirrored.has_value() == false )
+        {
+            _status = EditorWidgets::makeStatusText( mirrored.error() );
+            return;
+        }
+        _selectedBone = *mirrored;
     }
 
     void CharacterEditorModel::loadAppearanceData()
@@ -594,9 +599,13 @@ namespace sw::editor
         return _gizmoTarget;
     }
 
-    void CharacterEditorModel::reportEdit( bool bSucceeded )
+    void CharacterEditorModel::reportEdit( const expected<void>& result )
     {
-        if ( bSucceeded )
-            _status.clear();
+        _status = result.has_value() ? string{} : EditorWidgets::makeStatusText( result.error() );
+    }
+
+    void CharacterEditorModel::reportEdit( const expected<bool>& result )
+    {
+        _status = result.has_value() ? string{} : EditorWidgets::makeStatusText( result.error() );
     }
 } // namespace sw::editor

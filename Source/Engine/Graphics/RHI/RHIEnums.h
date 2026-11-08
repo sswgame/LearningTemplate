@@ -47,6 +47,8 @@ namespace sw
         EAC_RG11_UNORM   = 20, ///< 16 B/블록, 2채널(노멀맵)
         /// @brief 32비트 부동소수점 RGBA(16 B). `R32G32B32_FLOAT` 텍스처를 그 형식이 없는 장치(모바일 Vulkan · WebGPU)에 올릴 때 펴는 형식이다(`Texture2D::expandToFourChannels`).
         R32G32B32A32_FLOAT = 21,
+        /// @brief 16비트 부동소수점 RG(4 B) — 화면 속도(SceneVelocity) · 화면 왜곡 오프셋(SceneDistortion). 셰이더는 `.rg` 가 실수다.
+        R16G16_FLOAT = 22,
     };
 
     /**
@@ -61,6 +63,18 @@ namespace sw
     {
         RGBA8, ///< R8G8B8A8_UNORM — 계약 기본값(`constant::render::kBackBufferFormat`)
         BGRA8, ///< B8G8R8A8_UNORM — 백버퍼를 타깃으로 하는 PSO 가 이 포맷으로도 만들어지는지 돌려 보는 스위치
+    };
+
+    /**
+     * @enum RHIQueueType
+     * @brief 패스가 도는 GPU 큐입니다. 파이프라인 XML 의 `_queue` 가 이 이름을 적습니다(언리얼 `ERDGPassFlags::AsyncCompute` 자리).
+     * @details AsyncCompute 는 능력 `RHICapabilities::_bAsyncCompute` 가 있는 백엔드에서만 따로 돈다. 없으면 그래픽스 큐에서 같은 순서로 돈다(능력 표가 정한 길).
+     */
+    ENUM()
+    enum class RHIQueueType : uint8
+    {
+        Graphics,     ///< 그래픽스(DIRECT) 큐입니다. 기본값입니다.
+        AsyncCompute, ///< 비동기 컴퓨트 큐입니다. 컴퓨트만 기록할 수 있습니다(드로우 · 렌더 타깃 상태 없음).
     };
 
     /**

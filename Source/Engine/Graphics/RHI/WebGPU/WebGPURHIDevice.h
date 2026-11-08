@@ -156,7 +156,7 @@ namespace sw
             Failed,   ///< 매핑이 실패했다 — 읽지 않고 비운다
         };
         WGPUBuffer           _buffer{ nullptr };
-        GPUTimestampSlotMask _writtenMask{ 0 }; ///< 그 프레임에 적은 칸
+        GPUTimestampSlotMask _writtenMask{}; ///< 그 프레임에 적은 칸
         atomic<uint8>        _state{ Free };
     };
 

@@ -70,6 +70,13 @@ namespace sw::editor
          * @return 더했으면 true 입니다. 아니면 문서의 `getError` 에 이유가 있습니다.
          */
         [[nodiscard]] static bool addKey( CatalogDocument& inoutDocument, int32 curveElementIndex );
+        /**
+         * @brief 그래프에서 고친 곡선 @p edited 를 문서의 곡선 원소 @p curveElementIndex 에 적습니다(키를 끌기 · 메뉴로 더하기 · 지우기 — 언리얼 Curve Editor 처럼 그래프에서 바로 고친다).
+         * @details 읽은 키(값을 못 읽은 키는 그대로 둔다)를 시각 순으로 @p edited 의 키와 짝지어 `_time` · `_value` · `_interpolation` 을 고치고, 남는 키는 지우고 모자란 키는 더한다.
+         *          사본에서 고쳐 한 번에 넣는다 — 끌기 하나가 되돌리기 한 단계다. 접선은 적지 않는다(카탈로그 곡선은 자동 접선만 읽는다 — `makeFloatCurve`).
+         * @return 문서가 바뀌었으면 true 입니다. 같은 자리에 놓았으면 false(오류 없음), 실패하면 문서는 그대로이고 `getError` 에 이유가 있습니다.
+         */
+        [[nodiscard]] static bool applyEditedCurve( CatalogDocument& inoutDocument, int32 curveElementIndex, const FloatCurve& edited );
     };
 } // namespace sw::editor
 

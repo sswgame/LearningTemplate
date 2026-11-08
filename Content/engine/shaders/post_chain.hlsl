@@ -52,15 +52,26 @@ float3 applyOutline( float2 uv, float2 depthTexel, float3 color )
 #endif
 
 #if defined( SW_POST_TONEMAP )
-float3 applyTonemap( float2 uv, float3 color )
+// 렌즈(왜곡 · 색수차 · 선명화)는 원본을 다시 읽어야 해서 원본을 읽는 자리에 둔다 — 톤맵과 함께 켜진다(톤맵 없는 체인은 뒤의 Tonemap 패스가 한다).
+float3 applyLensSource( float2 uv, float2 sourceTexel, float3 source )
 {
-    // 카메라별 후처리 값은 톤맵과 함께 간다 — 노출은 톤맵 앞, 색 보정 · 비네트 · 레터박스는 뒤(post_grade.hlsli). 후처리를 끈 뷰는 PSMain 에서 원본을 고른다.
-    color = CameraGrade::applyExposure( color );
+    return CameraGrade::applyLens( uv, sourceTexel, source );
+}
+
+float3 applyTonemap( float2 uv, float2 pixelPosition, float3 color )
+{
+    // 뷰의 후처리 값은 톤맵과 함께 간다 — 노출 · 컬러 그레이딩은 톤맵 앞, LUT · 색 보정 · 비네트 · 레터박스는 뒤(post_grade.hlsli). 후처리를 끈 뷰는 PSMain 에서 원본을 고른다.
+    color = CameraGrade::applyColorGrading( CameraGrade::applyExposure( color ) );
     color = color / ( color + 1.0f );
-    return CameraGrade::apply( uv, color );
+    return CameraGrade::apply( uv, CameraGrade::applyFilmGrain( pixelPosition, CameraGrade::applyLut( color ) ) );
 }
 #else
-float3 applyTonemap( float2 uv, float3 color )
+float3 applyLensSource( float2 uv, float2 sourceTexel, float3 source )
+{
+    return source;
+}
+
+float3 applyTonemap( float2 uv, float2 pixelPosition, float3 color )
 {
     return color;
 }
@@ -72,11 +83,11 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const float2 depthTexel  = g_OutlineParams.yz; // 깊이를 비켜 읽는 외곽선 — 깊이는 나누지 않으므로 프레임 텍셀
     // 화면과 1:1 이라 UV 가 텍셀 중심에 정확히 떨어진다 — 섞을 것이 없으니 점 샘플러로 읽는다.
     float3 source = PassTexture::sampleSourcePoint( input._uv ).rgb;
-    float3 color  = source;
+    float3 color  = applyLensSource( input._uv, sourceTexel, source );
 
     color = applyBloom( input._uv, sourceTexel, color );
     color = applyOutline( input._uv, depthTexel, color );
-    color = applyTonemap( input._uv, color );
+    color = applyTonemap( input._uv, input._position.xy, color );
     // 후처리를 끈 뷰(CCTV · 미니맵)는 원본을 낸다 — 뷰마다 달라서 퍼뮤테이션이 아니라 패스 플래그다. 고르기는 early-return 이 아니라
     // 값 선택이다(GL 드라이버가 early-return 모양을 잘못 컴파일한 적이 있다 — binding.hlsli MorphPool::computeElement).
     const bool bSkipPost = ( g_Flags & SW_PASS_FLAG_SKIP_POST ) != 0u;

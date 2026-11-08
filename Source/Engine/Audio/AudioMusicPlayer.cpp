@@ -17,8 +17,16 @@ namespace sw
         _playback._pDesc     = std::move( pMusic );
         _playback._playingID = playingID;
 
-        // 시작 구간을 적지 않으면 첫 구간이다(적은 이름은 읽을 때 검증했다). 재생 상태의 구간 번호는 스팅어 칸을 함께 쓰는 int32 다.
-        const int32 startSegment  = static_cast<int32>( _playback._pDesc->findSegmentIndex( _playback._pDesc->_startSegment ).value_or( 0u ) );
+        // 시작 구간을 적지 않으면 첫 구간이다(설계 기본값). 적은 이름이 없으면 validate 가 이미 거른 데이터라 오류로 멈춘다.
+        const hashed_string&   startName  = _playback._pDesc->_startSegment;
+        const optional<uint32> startFound = startName.empty() ? optional<uint32>{ 0u } : _playback._pDesc->findSegmentIndex( startName );
+        if ( startFound.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "AudioMusicPlayer.UnknownStartSegment", "Unknown music start segment '%#' - the music does not start", startName.c_str() );
+            reset();
+            return;
+        }
+        const int32 startSegment  = static_cast<int32>( *startFound );
         _playback._segment        = startSegment;
         _playback._segmentStart   = voices.getMusicClock();
         _playback._pendingSegment = constant::invalid_index::kInt32;
@@ -70,13 +78,13 @@ namespace sw
     {
         if ( _playback._pDesc == nullptr )
             return;
-        const optional<uint32> foundSegment = _playback._pDesc->findSegmentIndex( segment );
-        if ( foundSegment.has_value() == false )
+        const optional<uint32> targetFound = _playback._pDesc->findSegmentIndex( segment );
+        if ( targetFound.has_value() == false )
         {
             SW_LOG_ERROR_ID( "AudioMusicPlayer.UnknownMusicSegment", "Unknown music segment '%#'", segment.c_str() );
             return;
         }
-        const int32 targetSegment = static_cast<int32>( *foundSegment );
+        const int32 targetSegment = static_cast<int32>( *targetFound );
 
         const hashed_string            currentName = _playback._segment >= 0 ? _playback._pDesc->_listSegment[static_cast<size_t>( _playback._segment )]._name : hashed_string{};
         const AudioMusicTransitionDef* pRule       = _playback._pDesc->findTransition( currentName, segment );

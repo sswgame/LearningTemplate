@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 얇은 불투명 면(잎 · 종이 등) — 뒤에서 오는 빛의 투과(언리얼 Two Sided Foliage). -->
+<MaterialDef formatVersion="0" name="AppearanceThin" _base="engine/materials/library/appearance.material" cullMode="None" twoSidedLighting="true">
+	<_properties>
+		<item name="_subsurfaceColor" defaultValue="0.6 0.8 0.2 1" />
+		<item name="_transmission" defaultValue="0.8" />
+		<item name="_subsurfaceRadius" defaultValue="0.4" />
+		<item name="_roughness" defaultValue="0.6" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_LOBE_TRANSMISSION</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

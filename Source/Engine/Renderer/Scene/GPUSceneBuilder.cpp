@@ -3,6 +3,7 @@
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/DualQuaternion.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
@@ -151,7 +152,7 @@ namespace sw
                        Memory::compare( &instance._boundsCenter, &raw._boundsCenter, sizeof( instance._boundsCenter ) ) != 0 ||
                        Memory::compare( &instance._boundsRadius, &raw._boundsRadius, sizeof( instance._boundsRadius ) ) != 0 ||
                        instance._blendMode != raw._blendMode || instance._spinSeed != raw._spinSeed || instance._sprite != raw._sprite || instance._customData != raw._customData ||
-                       instance._highlight != raw._highlight || instance._skinSlot != raw._skinSlot ||
+                       instance._highlight != raw._highlight || instance._skinSlot != raw._skinSlot || instance._motionKey != raw._motionKey ||
                        Memory::compare( &instance._vertexAnimationPhase, &raw._vertexAnimationPhase, sizeof( instance._vertexAnimationPhase ) ) != 0 ||
                        Memory::compare( &instance._appearance, &raw._appearance, sizeof( instance._appearance ) ) != 0;
             }
@@ -168,6 +169,7 @@ namespace sw
                 outInstance._customData           = raw._customData;
                 outInstance._highlight            = raw._highlight;
                 outInstance._skinSlot             = raw._skinSlot;
+                outInstance._motionKey            = raw._motionKey;
                 outInstance._vertexAnimationPhase = raw._vertexAnimationPhase;
                 outInstance._appearance           = raw._appearance;
             }
@@ -276,7 +278,7 @@ namespace sw
             SortKey key{ candidate._mesh.get(), candidate._sectionFirstIndex, candidate._sectionIndexCount,
                          batchKeyMaterial( candidate._material.get(), candidate._permutationHash ),
                          _bMergeAcrossMaterials != SW_FALSE ? nullptr : candidate._instance.get(), candidate._permutationHash,
-                         candidate._bReverseCulling, getCandidateRenderQueue( candidate ) };
+                         candidate._bReverseCulling, candidate._bStaticShadowCaster, getCandidateRenderQueue( candidate ) };
             _listScratchOpaqueEntry.push_back( SortEntry{ key, instanceIndex } );
         }
 
@@ -295,6 +297,8 @@ namespace sw
                     return entryA._key._permutationHash < entryB._key._permutationHash;
                 if ( entryA._key._bReverseCulling != entryB._key._bReverseCulling )
                     return entryA._key._bReverseCulling < entryB._key._bReverseCulling;
+                if ( entryA._key._bStaticShadowCaster != entryB._key._bStaticShadowCaster )
+                    return entryA._key._bStaticShadowCaster < entryB._key._bStaticShadowCaster;
                 if ( entryA._key._pMaterial != entryB._key._pMaterial )
                     return entryA._key._pMaterial < entryB._key._pMaterial;
                 if ( entryA._key._pMesh != entryB._key._pMesh )
@@ -386,11 +390,13 @@ namespace sw
         candidate._localBoundsRadius    = pMeshComp->getBoundsRadius();
         candidate._boundsRadius         = candidate._localBoundsRadius * world.getMaximumAxisScale();
         candidate._bReverseCulling      = GPUSceneBuilderInternal::computeReverseCulling( world );
+        candidate._bStaticShadowCaster  = pMeshComp->isStatic() ? SW_TRUE : SW_FALSE;
         candidate._spinSeed             = pMeshComp->getGPUSpinSeed();
         candidate._sprite               = GPUSpriteInstanceData::make( pMeshComp->getSpriteFrame() ); // 담는 법은 렌더러가 안다
         candidate._customData           = pMeshComp->getInstanceCustomData();
         candidate._highlight            = GPUInstanceHighlight::pack( pMeshComp->getHighlight() ); // 담는 법은 렌더러가 안다
         candidate._skinSlot             = pMeshComp->getSkinSlot();
+        candidate._motionKey            = pMeshComp->getMotionHistoryKey();
         candidate._vertexAnimationPhase = pMeshComp->getVertexAnimationPhase();
         candidate._appearance           = pMeshComp->getAppearance();
         candidate._sortKey              = pMeshComp->getSortKey();
@@ -449,11 +455,13 @@ namespace sw
         candidate._localBoundsRadius         = item._boundsRadius;
         candidate._boundsRadius              = item._boundsRadius * item._world.getMaximumAxisScale();
         candidate._bReverseCulling           = GPUSceneBuilderInternal::computeReverseCulling( item._world );
+        candidate._bStaticShadowCaster       = SW_FALSE; // 인스턴스 배치 항목(식생 · UI)은 움직이는 것으로 본다 — 그림자 캐시에 들지 않는다
         candidate._spinSeed                  = item._spinSeed;
         candidate._sprite                    = GPUSpriteInstanceData::make( item._sprite );
         candidate._customData                = item._customData;
         candidate._highlight                 = 0;                                // 인스턴스 배치 항목(데미지 숫자 · HP 바)은 강조하지 않는다
         candidate._skinSlot                  = constant::invalid_index::kUint32; // 인스턴스 배치 항목은 스키닝하지 않는다
+        candidate._motionKey                 = 0;                                // 항목은 기록이 없다 — 정지 식생 · UI 라 속도는 카메라 움직임뿐(GPU 가 쓰는 메시 입자도 같다)
         candidate._vertexAnimationPhase      = 0.0f;
         candidate._appearance                = 1.0f; // 인스턴스 배치(식생 · UI)는 등장하지 않는다
         candidate._sortKey                   = pBatch->getSortKey();
@@ -549,6 +557,7 @@ namespace sw
         outInstance._customData           = candidate._customData;
         outInstance._highlight            = candidate._highlight;
         outInstance._skinSlot             = candidate._skinSlot;
+        outInstance._motionKey            = candidate._motionKey;
         outInstance._vertexAnimationPhase = candidate._vertexAnimationPhase;
         outInstance._appearance           = candidate._appearance;
     }
@@ -689,6 +698,7 @@ namespace sw
 
         // 렌더 상태가 바뀐 것과 월드 행렬만 바뀐 것을 따로 받는다. 뒤쪽은 다시 모으지 않는다(`copyCandidateTransforms`).
         pObjects->getPrimitiveRegistry().consumeDirty( _listDirtyPrimitive, _listTransformDirtyPrimitive );
+        updateStaticShadowGeneration( primitives, setGeneration != _lastPrimitiveSetGeneration );
 
         input._pPrimitives        = &primitives;
         input._pListPrimitive     = &primitives.getAll();
@@ -1078,6 +1088,41 @@ namespace sw
                 continue;
             queue.requestMesh( batch._mesh );
         }
+    }
+
+    void GPUSceneBuilder::updateStaticShadowGeneration( const PrimitiveRegistry& primitives, bool bSetChanged )
+    {
+        // 정적 메시는 대개 움직이지 않으므로 이 길은 거의 일하지 않는다 — 더티 슬롯 중 정적인 것 하나면 세대를 올린다.
+        constexpr uint64               kStaticSignatureSeed = 0x9E3779B97F4A7C15ull;
+        const vector<ScenePrimitive*>& listPrimitive        = primitives.getAll();
+        bool                           bStaticDirty         = false;
+        for ( const vector<uint32>* pListSlot : { &_listDirtyPrimitive, &_listTransformDirtyPrimitive } )
+        {
+            for ( const uint32 slot : *pListSlot )
+            {
+                const bool bStaticSlot = slot < listPrimitive.size() && listPrimitive[slot] != nullptr && static_cast<const MeshComponent*>( listPrimitive[slot] )->isStatic();
+                bStaticDirty           = bStaticDirty || bStaticSlot;
+            }
+        }
+        // 더하기 · 빼기 · 정적 바꾸기는 집합 세대만 올린다 — 정적 집합의 지문(수와 포인터 합)이 달라졌을 때만 세대를 올린다(움직이는 투사체가 생기고 사라져도 캐시를 버리지 않는다).
+        if ( bSetChanged )
+        {
+            uint64 signature   = 0;
+            uint32 staticCount = 0;
+            for ( const ScenePrimitive* pPrimitive : listPrimitive )
+            {
+                if ( pPrimitive == nullptr || static_cast<const MeshComponent*>( pPrimitive )->isStatic() == false )
+                    continue;
+                // 합이라 슬롯 순서(빼기가 끝 슬롯을 당겨 온다)와 무관하다.
+                signature += HashUtil::combine( kStaticSignatureSeed, static_cast<uint64>( reinterpret_cast<uintptr_t>( pPrimitive ) ) );
+                ++staticCount;
+            }
+            bStaticDirty           = bStaticDirty || signature != _staticShadowSignature || staticCount != _staticShadowCount;
+            _staticShadowSignature = signature;
+            _staticShadowCount     = staticCount;
+        }
+        if ( bStaticDirty )
+            ++_snapshot._staticShadowGeneration;
     }
 
     void GPUSceneBuilder::exportCPUSnapshot( GPUSceneSnapshot& outSnapshot )
@@ -1732,10 +1777,11 @@ namespace sw
         batch._instanceBase       = static_cast<uint32>( work.size() );
         batch._instanceCount      = end - begin;
         // LOD 그룹이 없는 배치의 가시 구간은 인스턴스 구간과 같은 길이다(구간 시작만 앞 배치들의 가시 구간 끝에서 이어진다).
-        batch._visibleBase     = _snapshot.getNextVisibleBase();
-        batch._visibleCapacity = batch._instanceCount;
-        batch._blendMode       = blendMode;
-        batch._bReverseCulling = headCandidate._bReverseCulling;
+        batch._visibleBase         = _snapshot.getNextVisibleBase();
+        batch._visibleCapacity     = batch._instanceCount;
+        batch._blendMode           = blendMode;
+        batch._bReverseCulling     = headCandidate._bReverseCulling;
+        batch._bStaticShadowCaster = headCandidate._bStaticShadowCaster;
         // 상수 버퍼(`_materialCb`)와 텍스처 슬롯은 렌더 스레드가 머리 원소(`_materialIndex`)의 프록시 · 사본으로 채운다(`GPUScene::upload`).
         batch._materialGroup = _materialRegistry.materialGroupFor( pGroupMaterial, _snapshot );
         // 퍼뮤테이션은 **배치에 실제로 들어 있는 후보**에서 뽑는다. 합치기가 켜지면 키의 인스턴스는 nullptr 이라,

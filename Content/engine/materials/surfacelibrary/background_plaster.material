@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 회벽 — 흙손 자국(넓은 잔무늬 범프), 옅은 얼룩. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="Plaster" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.86 0.83 0.77 1"/>
+		<item name="_roughness" defaultValue="0.95"/>
+		<item name="_noiseStrength" defaultValue="0.15"/>
+		<item name="_noiseScale" defaultValue="0.08"/>
+		<item name="_macroVariation" defaultValue="0.25"/>
+		<item name="_macroScale" defaultValue="2"/>
+		<item name="_patternShape" defaultValue="0 0 0.003 1"/>
+		<item name="_porosity" defaultValue="0.9"/>
+	</_properties>
+</MaterialDef>

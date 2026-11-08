@@ -24,6 +24,14 @@ namespace sw
      *          상수 버퍼도 패스마다 따로 있어야 한다. 하나를 공유하면 기록은 지연되고
      *          버퍼 쓰기는 즉시 일어나므로, replay 시점에는 마지막으로 쓴 값만 남는다.
      */
+    /** @brief 그림자 패스가 그릴 배치를 정적 여부(`GPUMeshBatch::_bStaticShadowCaster`)로 거르는 방식입니다. 그림자 캐시가 쓴다(`FramePassExecutor::drawShadowTiles`). */
+    enum class ShadowCasterFilter : uint8
+    {
+        All,         ///< 거르지 않는다(그림자 캐시가 아닌 모든 그리기)
+        StaticOnly,  ///< 정적 배치만 — 캐시 층을 다시 그릴 때
+        MovableOnly, ///< 움직이는 배치만 — 캐시 층을 옮긴 칸 위에
+    };
+
     struct FramePassContext
     {
         IRHICommandList* _pCmd{ nullptr };
@@ -58,6 +66,8 @@ namespace sw
         uint32 _cullViewIndex{ 0 };
         /// @brief 지금 기록하는 패스의 종류입니다. `executePass` 가 정하며, 드로우 루프가 이 패스에서 그리지 않는 머티리얼의 배치를 거를 때 봅니다.
         RenderPassType _passType{ RenderPassType::Invalid };
+        /// @brief 그림자 캐시가 정한 배치 거르기입니다. 그림자 패스의 타일 그리기만 바꾸고 바로 되돌린다 — 병렬 기록에서 패스마다 사본이라 다른 패스로 새지 않는다.
+        ShadowCasterFilter _shadowCasterFilter{ ShadowCasterFilter::All };
         /// @brief 지금 기록하는 패스의 파이프라인 이름입니다(진단 로그용 — bindless 인덱스 검사가 어느 패스인지 적는다). 패스 밖이면 비어 있습니다.
         hashed_string _passName;
         /// @brief 이 드로우 그룹의 루트 상수 값(머티리얼 원소 수)입니다. 배치마다 다른 값(인스턴스 시작, 모프 풀, 정점 풀)은

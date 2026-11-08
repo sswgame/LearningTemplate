@@ -9,6 +9,7 @@
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Panels/Settings/Model/ShortcutCaptureModel.h"
+#include "Editor/Panels/Settings/Model/ShortcutsViewModel.h"
 
 namespace sw::editor
 {
@@ -54,5 +55,6 @@ namespace sw::editor
     private:
         fixed_string<constant::buffer::kMax64> _filter;
         ShortcutCaptureModel                   _capture;
+        ShortcutsViewModel                     _viewModel; ///< 입력 맵 · 명령 표를 찾고 조합 받기의 바꾸기를 입력 맵으로 잇는다(MVVM 계약)
     };
 } // namespace sw::editor

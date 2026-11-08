@@ -111,6 +111,7 @@ namespace sw
             desc._bIsShaderResource       = SW_TRUE;
             IRHIResourceFactory* pFactory = _pDevice->getResourceFactory();
             view._upscaleIntermediate     = pFactory->createTexture2D( desc );
+            pFactory->setTextureDebugName( view._upscaleIntermediate, "UpscaleIntermediate" );
             if ( view._upscaleIntermediate != 0 )
                 view._upscaleIntermediateSRV = pFactory->registerBindlessTexture( view._upscaleIntermediate );
             if ( view._upscaleIntermediateSRV == kInvalidDescriptorIndex )

@@ -248,15 +248,15 @@ namespace sw
             pose.computeModelSpace( base.getParentIndices(), listBaseModel );
             pose.setToReference( *this );
             pose.computeModelSpace( getParentIndices(), listModel );
-            const float32 baseHeight = pelvisBone.has_value() ? listBaseModel[*pelvisBone].getTranslation()._y : 0.0f;
-            if ( MathUtil::abs( baseHeight ) <= MathUtil::kEpsilon )
+            const bool bPelvisValid = pelvisBone.has_value() && MathUtil::abs( listBaseModel[*pelvisBone].getTranslation()._y ) > MathUtil::kEpsilon;
+            if ( bPelvisValid == false )
             {
                 SW_LOG_ERROR_ID( "Skeleton.VariantPelvisInvalid", "Skeleton variant '%#': ScaleByPelvisHeight needs _pelvisBone, a bone above the origin in the base (got '%#')", sourceLabel, variant._pelvisBone.c_str() );
                 bValid = false;
             }
             else
             {
-                _translationRatio = base._translationRatio * listModel[*pelvisBone].getTranslation()._y / baseHeight;
+                _translationRatio = base._translationRatio * listModel[*pelvisBone].getTranslation()._y / listBaseModel[*pelvisBone].getTranslation()._y;
             }
         }
         for ( const SkeletonAddedBone& added : variant._listAddedBone )

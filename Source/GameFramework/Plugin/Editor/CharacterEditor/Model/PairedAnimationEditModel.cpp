@@ -13,13 +13,12 @@ namespace sw::editor
     {
         struct PairedAnimationEditModelInternal
         {
-            /** @brief 값이 유한하고 0 이상이면 true, 아니면 오류를 쓰고 false 입니다. */
-            static bool isNonNegative( float32 value, const utf8* pField, string& outError )
+            /** @brief 값이 유한하고 0 이상이 아니면 오류입니다(대상은 칸 이름). */
+            static expected<void> checkNonNegative( float32 value, const utf8* pField )
             {
                 if ( MathUtil::isFinite( value ) && value >= 0.0f )
-                    return true;
-                outError = string( pField ) + " must be a finite value of 0 or more";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "Value must be finite and 0 or more", pField } );
             }
 
             /** @brief 연속 편집을 합칠 키입니다(필드 + 인덱스). */
@@ -64,21 +63,15 @@ namespace sw::editor
         return loadFromXMLText( text, absolutePath );
     }
 
-    bool PairedAnimationEditModel::saveDocument( const AbsolutePath& absPath, string& outError )
+    expected<void> PairedAnimationEditModel::saveDocument( const AbsolutePath& absPath )
     {
         if ( isValid() == false )
-        {
-            outError = "The paired animation breaks a rule (see the log) - fix it before saving";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "The paired animation breaks a rule (see the log) - fix it before saving" } );
         const string text = saveToXMLText();
         if ( ResourceComposer::saveText( absPath.str(), text ) == false )
-        {
-            outError = "The file could not be written";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::ExternalFailure, "The file could not be written", absPath.str() } );
         _state.markSaved( text );
-        return true;
+        return {};
     }
 
     bool PairedAnimationEditModel::isValid() const
@@ -87,164 +80,141 @@ namespace sw::editor
         return check.loadFromXMLText( saveToXMLText(), "paired animation editor" );
     }
 
-    bool PairedAnimationEditModel::setDuration( float32 seconds, bool bContinuous, string& outError )
+    expected<void> PairedAnimationEditModel::setDuration( float32 seconds, bool bContinuous )
     {
-        if ( PairedAnimationEditModelInternal::isNonNegative( seconds, "Duration", outError ) == false )
-            return false;
+        if ( expected<void> check = PairedAnimationEditModelInternal::checkNonNegative( seconds, "Duration" ); check.has_value() == false )
+            return check;
         if ( seconds <= 0.0f )
-        {
-            outError = "Duration must be positive";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Duration must be positive" } );
         recordUndo( bContinuous ? string_view( "duration" ) : string_view{} );
         _content._duration = seconds;
         setScrubTime( _scrubTime ); // 줄었으면 스크럽 시각도 자른다
-        return true;
+        return {};
     }
 
-    bool PairedAnimationEditModel::setRoleStart( uint32 roleIndex, float32 seconds, bool bContinuous, string& outError )
+    expected<void> PairedAnimationEditModel::setRoleStart( uint32 roleIndex, float32 seconds, bool bContinuous )
     {
-        if ( isRoleIndexValid( roleIndex, outError ) == false || PairedAnimationEditModelInternal::isNonNegative( seconds, "Start", outError ) == false )
-            return false;
+        if ( expected<void> check = checkRoleIndex( roleIndex ).and_then( [seconds]()
+        { return PairedAnimationEditModelInternal::checkNonNegative( seconds, "Start" ); } );
+             check.has_value() == false )
+            return check;
         if ( _content._listRole[roleIndex]._bAnchor )
-        {
-            outError = "The anchor role starts at 0";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "The anchor role starts at 0", _content._listRole[roleIndex]._name.view() } );
         recordUndo( bContinuous ? PairedAnimationEditModelInternal::makeCoalesceKey( "start", roleIndex ) : string{} );
         _content._listRole[roleIndex]._startSeconds = seconds;
-        return true;
+        return {};
     }
 
-    bool PairedAnimationEditModel::setRoleBlend( uint32 roleIndex, float32 enterSeconds, float32 exitSeconds, bool bContinuous, string& outError )
+    expected<void> PairedAnimationEditModel::setRoleBlend( uint32 roleIndex, float32 enterSeconds, float32 exitSeconds, bool bContinuous )
     {
-        const bool bValid = isRoleIndexValid( roleIndex, outError ) && PairedAnimationEditModelInternal::isNonNegative( enterSeconds, "Enter blend", outError ) &&
-                            PairedAnimationEditModelInternal::isNonNegative( exitSeconds, "Exit blend", outError );
-        if ( bValid == false )
-            return false;
+        const expected<void> check = checkRoleIndex( roleIndex )
+                                         .and_then( [enterSeconds]()
+        { return PairedAnimationEditModelInternal::checkNonNegative( enterSeconds, "Enter blend" ); } )
+                                         .and_then( [exitSeconds]()
+        { return PairedAnimationEditModelInternal::checkNonNegative( exitSeconds, "Exit blend" ); } );
+        if ( check.has_value() == false )
+            return check;
         recordUndo( bContinuous ? PairedAnimationEditModelInternal::makeCoalesceKey( "blend", roleIndex ) : string{} );
         _content._listRole[roleIndex]._enterBlendSeconds = enterSeconds;
         _content._listRole[roleIndex]._exitBlendSeconds  = exitSeconds;
-        return true;
+        return {};
     }
 
-    bool PairedAnimationEditModel::setRoleOffset( uint32 roleIndex, const float3& offset, float32 yawDegrees, bool bContinuous, string& outError )
+    expected<void> PairedAnimationEditModel::setRoleOffset( uint32 roleIndex, const float3& offset, float32 yawDegrees, bool bContinuous )
     {
-        if ( isRoleIndexValid( roleIndex, outError ) == false )
-            return false;
+        if ( expected<void> check = checkRoleIndex( roleIndex ); check.has_value() == false )
+            return check;
         PairedAnimationRoleDef& role     = _content._listRole[roleIndex];
         const bool              bAligned = role._bAnchor == false && role._align != PairedAnimationAlign::None;
         if ( bAligned == false )
-        {
-            outError = string( "Role '" ) + role._name.c_str() + "' does not align (align is none or it is the anchor)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Role does not align (align is none or it is the anchor)", role._name.view() } );
         const bool bFinite = MathUtil::isFinite( offset._x ) && MathUtil::isFinite( offset._y ) && MathUtil::isFinite( offset._z ) && MathUtil::isFinite( yawDegrees );
         if ( bFinite == false )
-        {
-            outError = "Offset and yaw must be finite";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Offset and yaw must be finite" } );
         recordUndo( bContinuous ? PairedAnimationEditModelInternal::makeCoalesceKey( "offset", roleIndex ) : string{} );
         role._offset     = offset;
         role._yawRadians = MathUtil::wrapAngle( yawDegrees * MathUtil::kDegreeToRadian );
-        return true;
+        return {};
     }
 
-    bool PairedAnimationEditModel::setRoleOffsetFromWorld( uint32 roleIndex, const float3& anchorPosition, float32 anchorYaw, const float3& rolePosition, float32 roleYaw,
-                                                           bool bContinuous, string& outError )
+    expected<void> PairedAnimationEditModel::setRoleOffsetFromWorld( uint32 roleIndex, const float3& anchorPosition, float32 anchorYaw, const float3& rolePosition, float32 roleYaw,
+                                                                     bool bContinuous )
     {
         // `PairedAnimationDef::computeAlignTarget` 의 역 — 앵커 요를 되돌려 앵커 기준 자리로 만든다.
         const quaternion unturn = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, -anchorYaw );
         const float3     offset = float3::transform( rolePosition - anchorPosition, unturn );
         const float32    yaw    = MathUtil::wrapAngle( roleYaw - anchorYaw );
-        return setRoleOffset( roleIndex, offset, yaw * MathUtil::kRadianToDegree, bContinuous, outError );
+        return setRoleOffset( roleIndex, offset, yaw * MathUtil::kRadianToDegree, bContinuous );
     }
 
-    bool PairedAnimationEditModel::setRoleWarpEnd( uint32 roleIndex, float32 seconds, bool bContinuous, string& outError )
+    expected<void> PairedAnimationEditModel::setRoleWarpEnd( uint32 roleIndex, float32 seconds, bool bContinuous )
     {
-        if ( isRoleIndexValid( roleIndex, outError ) == false || PairedAnimationEditModelInternal::isNonNegative( seconds, "Warp end", outError ) == false )
-            return false;
+        if ( expected<void> check = checkRoleIndex( roleIndex ).and_then( [seconds]()
+        { return PairedAnimationEditModelInternal::checkNonNegative( seconds, "Warp end" ); } );
+             check.has_value() == false )
+            return check;
         PairedAnimationRoleDef& role = _content._listRole[roleIndex];
         if ( role._bAnchor || role._align != PairedAnimationAlign::Warp )
-        {
-            outError = string( "Role '" ) + role._name.c_str() + "' does not warp";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Role does not warp", role._name.view() } );
         recordUndo( bContinuous ? PairedAnimationEditModelInternal::makeCoalesceKey( "warpEnd", roleIndex ) : string{} );
         role._warpEndSeconds = seconds;
-        return true;
+        return {};
     }
 
-    bool PairedAnimationEditModel::addNotify( const hashed_string& name, const hashed_string& role, float32 time, string& outError )
+    expected<void> PairedAnimationEditModel::addNotify( const hashed_string& name, const hashed_string& role, float32 time )
     {
         if ( name.empty() )
-        {
-            outError = "Notify name is empty";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Notify name is empty" } );
         const bool bTimeInRange = MathUtil::isFinite( time ) && 0.0f <= time && time <= _content._duration;
         if ( bTimeInRange == false )
-        {
-            outError = "Notify time must be within the timeline";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Notify time must be within the timeline" } );
         bool bRoleKnown = false;
         for ( const PairedAnimationRoleDef& roleDef : _content._listRole )
         {
             bRoleKnown = bRoleKnown || roleDef._name == role;
         }
         if ( bRoleKnown == false )
-        {
-            outError = string( "Role '" ) + role.c_str() + "' is not in this paired animation";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "Role is not in this paired animation", role.view() } );
         recordUndo( string_view{} );
         _content._listNotify.push_back( PairedAnimationNotifyDef{ name, role, time } );
-        return true;
+        return {};
     }
 
-    bool PairedAnimationEditModel::removeNotify( uint32 notifyIndex, string& outError )
+    expected<void> PairedAnimationEditModel::removeNotify( uint32 notifyIndex )
     {
-        if ( isNotifyIndexValid( notifyIndex, outError ) == false )
-            return false;
+        if ( expected<void> check = checkNotifyIndex( notifyIndex ); check.has_value() == false )
+            return check;
         recordUndo( string_view{} );
         _content._listNotify.erase( _content._listNotify.begin() + static_cast<ptrdiff_t>( notifyIndex ) );
-        return true;
+        return {};
     }
 
-    bool PairedAnimationEditModel::setNotifyTime( uint32 notifyIndex, float32 time, bool bContinuous, string& outError )
+    expected<void> PairedAnimationEditModel::setNotifyTime( uint32 notifyIndex, float32 time, bool bContinuous )
     {
-        if ( isNotifyIndexValid( notifyIndex, outError ) == false )
-            return false;
+        if ( expected<void> check = checkNotifyIndex( notifyIndex ); check.has_value() == false )
+            return check;
         const bool bTimeInRange = MathUtil::isFinite( time ) && 0.0f <= time && time <= _content._duration;
         if ( bTimeInRange == false )
-        {
-            outError = "Notify time must be within the timeline";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Notify time must be within the timeline" } );
         recordUndo( bContinuous ? PairedAnimationEditModelInternal::makeCoalesceKey( "notifyTime", notifyIndex ) : string{} );
         _content._listNotify[notifyIndex]._time = time;
-        return true;
+        return {};
     }
 
-    bool PairedAnimationEditModel::setNotifyRole( uint32 notifyIndex, const hashed_string& role, string& outError )
+    expected<void> PairedAnimationEditModel::setNotifyRole( uint32 notifyIndex, const hashed_string& role )
     {
-        if ( isNotifyIndexValid( notifyIndex, outError ) == false )
-            return false;
+        if ( expected<void> check = checkNotifyIndex( notifyIndex ); check.has_value() == false )
+            return check;
         bool bRoleKnown = false;
         for ( const PairedAnimationRoleDef& roleDef : _content._listRole )
         {
             bRoleKnown = bRoleKnown || roleDef._name == role;
         }
         if ( bRoleKnown == false )
-        {
-            outError = string( "Role '" ) + role.c_str() + "' is not in this paired animation";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "Role is not in this paired animation", role.view() } );
         recordUndo( string_view{} );
         _content._listNotify[notifyIndex]._role = role;
-        return true;
+        return {};
     }
 
     bool PairedAnimationEditModel::undo()
@@ -312,19 +282,17 @@ namespace sw::editor
         _state.record( _content, coalesceKey );
     }
 
-    bool PairedAnimationEditModel::isRoleIndexValid( uint32 roleIndex, string& outError ) const
+    expected<void> PairedAnimationEditModel::checkRoleIndex( uint32 roleIndex ) const
     {
         if ( roleIndex < _content._listRole.size() )
-            return true;
-        outError = "Role index is out of range";
-        return false;
+            return {};
+        return unexpected( Error{ ErrorKind::InvalidArgument, "Role index is out of range" } );
     }
 
-    bool PairedAnimationEditModel::isNotifyIndexValid( uint32 notifyIndex, string& outError ) const
+    expected<void> PairedAnimationEditModel::checkNotifyIndex( uint32 notifyIndex ) const
     {
         if ( notifyIndex < _content._listNotify.size() )
-            return true;
-        outError = "Notify index is out of range";
-        return false;
+            return {};
+        return unexpected( Error{ ErrorKind::InvalidArgument, "Notify index is out of range" } );
     }
 } // namespace sw::editor

@@ -170,8 +170,9 @@ SW_TEST_CASE( FogTest, PassTypeRowDeclaresDepthOnlyBlendedDraw )
     SW_EXPECT_FALSE( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) ); // 전용 실행 — 일반 길의 복사 · 지우기를 타면 장면이 지워진다
     SW_EXPECT_TRUE( info._inputContract.reads( RenderPassInputRole::SceneDepth ) );
     SW_EXPECT_FALSE( info._inputContract.reads( RenderPassInputRole::SourceColor ) ); // 색을 읽지 않는다 — 읽으면서 쓰는 첨부가 없다
-    // 컴퓨트 둘은 파이프라인 XML 에 나올 수 없는 엔진 내부 PSO 슬롯이다.
-    SW_EXPECT_FALSE( isPipelinePassType( RenderPassType::VolumetricFog ) );
+    // 볼륨 안개 컴퓨트는 뷰 패스가 아니라 프레임 패스다(`_listFramePass` — 프레임에 한 번, 뷰 그래프 앞).
+    SW_EXPECT_FALSE( isViewPassType( RenderPassType::VolumetricFog ) );
+    SW_EXPECT_TRUE( isFramePassType( RenderPassType::VolumetricFog ) );
     SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::VolumetricFog ).hasFlag( RenderPassTraitFlag::kCompute ) );
 }
 

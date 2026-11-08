@@ -37,6 +37,7 @@ namespace sw
 
             static void markBone( const Skeleton& skeleton, const hashed_string& name, vector<uint8>& inoutMask )
             {
+                // 부르는 쪽이 본 이름을 이미 검사했거나(핵심 본), 스켈레톤 자기 데이터(소켓 · 어태치먼트 — 읽기가 검사)다. 사용처 본은 없으면 지킬 것이 없다.
                 const optional<uint32> boneIndex = skeleton.findBoneIndex( name );
                 if ( boneIndex.has_value() )
                     inoutMask[*boneIndex] = SW_TRUE;

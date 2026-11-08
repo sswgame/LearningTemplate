@@ -389,8 +389,7 @@ namespace sw::editor
         pContainer = pTarget != nullptr ? pTarget->getParent() : nullptr;
         if ( pContainer != nullptr )
         {
-            const optional<uint32> targetIndex = pContainer->findChildIndex( pTarget );
-            outIndex                           = targetIndex.has_value() == false ? pContainer->getChildCount() : *targetIndex + 1; // 패널이 아닌 위젯에 놓으면 그 바로 뒤에 끼운다
+            outIndex = pContainer->findChildIndex( pTarget ).value() + 1; // 패널이 아닌 위젯에 놓으면 그 바로 뒤에 끼운다(부모의 자식이라 늘 있다)
             return pContainer;
         }
         Widget* pRoot = tree.getRoot();
@@ -573,10 +572,7 @@ namespace sw::editor
         const PanelWidget* pParent = widget.getParent();
         if ( pParent == nullptr || delta == 0 )
             return false;
-        const optional<uint32> fromIndex = pParent->findChildIndex( &widget );
-        if ( fromIndex.has_value() == false )
-            return false;
-        outFromIndex       = *fromIndex;
+        outFromIndex       = pParent->findChildIndex( &widget ).value(); // 부모의 자식이라 늘 있다
         const int64 target = static_cast<int64>( outFromIndex ) + delta;
         if ( target < 0 || target >= static_cast<int64>( pParent->getChildCount() ) )
             return false;
@@ -596,7 +592,7 @@ namespace sw::editor
         const Widget* pRoot = screen.getTree().getRoot();
         if ( pRoot == nullptr )
             return unexpected( Error{ ErrorKind::NotFound, "the preview has no widget tree" } );
-        const expected<shared_ptr<const UIDocumentAsset>> document = documents.findOrLoad( documentPath );
+        const expected<shared_ptr<const UIDocumentAsset>> document = documents.findOrLoad( documentPath, screen.getResourceTagOverride() );
         if ( document.has_value() == false )
             return unexpected( Error{ ErrorKind::NotFound, "the document could not be loaded", document.error().message() }.appendDetail( document.error().detail() ) );
         return UIDocumentWriter::write( screen.getDesc(), ( *document )->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );

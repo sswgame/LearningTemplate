@@ -94,8 +94,9 @@ namespace sw
                                      const hashed_string& partName )
             {
                 AppearanceSectionDef section;
-                if ( AppearanceXMLUtil::readFields( node, section, report, sourceName ) == false )
+                if ( AppearanceXMLUtil::readFields( node, section, report, sourceName, { "groups" } ) == false )
                     return; // 빠진 이름 · 머티리얼은 위 읽기가 보고서에 남겼다
+                AppearanceXMLUtil::readNameList( node, "groups", section._listGroup );
                 if ( VectorUtil::containsBy<&AppearanceSectionDef::_name>( inoutListSection, section._name ) )
                     report.addErrorWithID( "Appearance.SectionInvalid", "%#: visual '%#' part '%#' has a duplicate section '%#'", sourceName, visualID.c_str(), partName.c_str(), section._name.c_str() );
                 else
@@ -193,6 +194,17 @@ namespace sw
                 else if ( StringUtil::equals( pName, "Material" ) && bModification )
                 {
                     inoutPart._listMaterialValue.push_back( readMaterialValue( child, report, sourceName ) );
+                }
+                else if ( StringUtil::equals( pName, "ChannelMaterial" ) && bModification == false )
+                {
+                    AppearanceChannelMaterialDef channelMaterial;
+                    if ( AppearanceXMLUtil::readFields( child, channelMaterial, report, sourceName, {} ) == false )
+                        return; // 빠진 칸은 위 읽기가 보고서에 남겼다
+                    if ( channelMaterial._channelMax <= channelMaterial._channelMin )
+                        report.addErrorWithID( "Appearance.ChannelMaterialRange", "%#: visual '%#' part '%#' <ChannelMaterial channel='%#'> needs channelMax > channelMin", sourceName, visualID.c_str(),
+                                               inoutPart._name.c_str(), channelMaterial._channel.c_str() );
+                    else
+                        inoutPart._listChannelMaterial.push_back( channelMaterial );
                 }
                 else if ( StringUtil::equals( pName, "HideRegion" ) && bModification )
                 {
@@ -371,6 +383,18 @@ namespace sw
                 inoutVisual._listDamageStage.push_back( stage );
             }
 
+            /** @brief 몸 채널 층(`<BodyChannel name value priority blend/>`)을 읽습니다. 같은 채널을 두 번 적으면 오류입니다(어느 층이 이기는지 모호하다). */
+            static void readBodyChannel( const XMLNode& node, ItemVisualDef& inoutVisual, AppearanceLoadReport& report, string_view sourceName )
+            {
+                BodyChannelLayerDef layer;
+                if ( AppearanceXMLUtil::readFields( node, layer, report, sourceName ) == false )
+                    return;
+                if ( VectorUtil::containsBy<&BodyChannelLayerDef::_name>( inoutVisual._listBodyChannel, layer._name ) )
+                    report.addErrorWithID( "Appearance.BodyChannelRepeated", "%#: visual '%#' repeats body channel '%#'", sourceName, inoutVisual._id.c_str(), layer._name.c_str() );
+                else
+                    inoutVisual._listBodyChannel.push_back( layer );
+            }
+
             static void readVisual( const XMLNode& node, ItemVisualDef& outVisual, AppearanceLoadReport& report, string_view sourceName )
             {
                 (void)AppearanceXMLUtil::readFields( node, outVisual, report, sourceName, { "id", "tags" } );
@@ -387,6 +411,8 @@ namespace sw
                         continue;
                     if ( StringUtil::equals( pName, "State" ) )
                         readState( child, outVisual, report, sourceName );
+                    else if ( StringUtil::equals( pName, "BodyChannel" ) )
+                        readBodyChannel( child, outVisual, report, sourceName );
                     else if ( StringUtil::equals( pName, "DamageStage" ) )
                         readDamageStage( child, outVisual, report, sourceName );
                     else
@@ -428,6 +454,30 @@ namespace sw
         return VectorUtil::findBy<&AppearancePartDef::_name>( _listPart, name );
     }
 
+    bool AppearanceSectionDef::matchesTag( const hashed_string& tag ) const
+    {
+        return _name == tag || ( _alias.empty() == false && _alias == tag ) || VectorUtil::contains( _listGroup, tag );
+    }
+
+    float32 AppearanceChannelMaterialDef::computeValue( float32 channelValue ) const
+    {
+        const float32 t = MathUtil::saturate( ( channelValue - _channelMin ) / ( _channelMax - _channelMin ) ); // 읽기가 channelMax > channelMin 을 지켰다
+        return MathUtil::lerp( _valueMin, _valueMax, t );
+    }
+
+    bool ItemVisualDef::hasSectionTag( const hashed_string& tag ) const
+    {
+        for ( const AppearancePartDef& part : _listPart )
+        {
+            for ( const AppearanceSectionDef& section : part._listSection )
+            {
+                if ( section.matchesTag( tag ) )
+                    return true;
+            }
+        }
+        return false;
+    }
+
     const AppearanceStateDef* ItemVisualDef::findState( const hashed_string& name ) const
     {
         return VectorUtil::findBy<&AppearanceStateDef::_name>( _listState, name );
@@ -435,18 +485,18 @@ namespace sw
 
     const AppearanceDamageStageDef* ItemVisualDef::findDamageStage( const hashed_string& name ) const
     {
-        const int32 index = findDamageStageIndex( name );
-        return index >= 0 ? &_listDamageStage[static_cast<size_t>( index )] : nullptr;
+        const optional<int32> index = findDamageStageIndex( name );
+        return index.has_value() ? &_listDamageStage[static_cast<size_t>( *index )] : nullptr;
     }
 
-    int32 ItemVisualDef::findDamageStageIndex( const hashed_string& name ) const
+    optional<int32> ItemVisualDef::findDamageStageIndex( const hashed_string& name ) const
     {
         for ( size_t index = 0; index < _listDamageStage.size(); ++index )
         {
             if ( _listDamageStage[index]._name == name )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     int32 ItemVisualDef::computeDamageStageIndex( float32 damage ) const

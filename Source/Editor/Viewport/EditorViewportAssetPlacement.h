@@ -31,6 +31,8 @@ namespace sw::editor
         int32                  _ghostFrame{ -1 };                        ///< 고스트를 마지막으로 그린 ImGui 프레임. -1 이면 그린 적 없다
         EditorPlacementSurface _surface{ EditorPlacementSurface::None }; ///< 마지막 고스트 · 놓기가 찾은 표면
         float3                 _lastPosition{};                          ///< 마지막으로 놓은 자리
+        float32                _yaw{ 0.0f };                             ///< 끄는 동안 고른 회전(라디안). 끌기가 끝나면 0 으로 돌아간다
+        float32                _lastYaw{ 0.0f };                         ///< 마지막으로 놓은 회전(라디안)
         uint32                 _placedCount{ 0 };                        ///< 표면 위에 만든 수
         uint32                 _refusedCount{ 0 };                       ///< 표면이 없어 놓지 않은 수
         uint32                 _openedCount{ 0 };                        ///< 놓을 수 없는 종류라 연 수
@@ -42,6 +44,7 @@ namespace sw::editor
      * @details 편집 중에는 플레이 물리 씬이 없다 — 사본은 끌기가 시작될 때 한 번 만든다(라이트 프로브 베이크와 같은 길). 표면 찾기 · 스냅은 `EditorAssetPlacement`.
      *          표면이 없으면 놓지 않고 이유를 로그에 남긴다(예전에는 원점에 놓았다). 놓을 수 없는 종류(씬 · 머티리얼 …)는 고스트가 "놓으면 연다" 고 알리고 놓을 때 연다.
      *          Play 중에는 배치를 거절한다(`EditorPlaySession::refuseSceneEdit`). 놓을 자리 강조는 이 캔버스 하나뿐이고 미리보기 씬 선택을 건드리지 않는다.
+     *          끄는 동안 회전 키로 위 축 둘레를 돌려 놓을 수 있다(하우징 · 건설 게임의 놓기 전 회전 — 언리얼 · 유니티는 놓은 뒤 기즈모로 돌린다). 고스트가 앞쪽 화살표와 각도를 보인다.
      */
     class EditorViewportAssetPlacement
     {
@@ -65,6 +68,8 @@ namespace sw::editor
         /** @brief 놓일 자리 고리 · 법선 · 글을 그립니다. */
         void drawGhost( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float4x4& viewProj, const string& assetPath, bool bPlaceable,
                         bool bFound, const EditorPlacementHit& hit ) const;
+        /** @brief 회전 키(입력 맵 `viewport.placementRotate` · `viewport.placementRotateBack`)를 읽어 끄는 동안의 회전(`_stats._yaw`)을 돌립니다. */
+        void updateDragYaw();
 
     private:
         unique_ptr<IPhysicsScene3D> _pDragPhysics; ///< 끄는 동안만 사는 정적 물리 사본(3D). 끌기가 끝나면 비운다

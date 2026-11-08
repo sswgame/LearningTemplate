@@ -148,36 +148,64 @@ void MaterialInterpolants::storeVaryings( VertexContext context, float4 vertexWo
 }
 #endif // SW_MATERIAL_DEPTH_ONLY
 
-#if defined( SW_MATERIAL_POSITION_ONLY )
-typedef VertexPositionInput MaterialVertexInput; // 위치 스트림만 — material_shader.hlsli 1 절
+/** @brief 입력 · 인스턴스 · 변형 정점으로 문맥을 채우고 월드 위치(오프셋 전)를 낸다 — 보간 칸 VSMain 과 변위 제어점 VSMain(material_displacement.hlsli)이 같은 함수로 만든다. */
+void VertexContext::load( MaterialVertexInput input, uint instanceSlot, uint vertexID, out float4 outWorldPosition )
+{
+    _input    = toVertexInput( input );
+    _vertexID = vertexID;
+    // 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작 · 정점 풀 시작이 배치 표에 있다.
+    _instance = InstanceData::load( instanceSlot );
+    // GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
+    _instance.loadAnimatedVertex( vertexID, _input._position, _input._normal, _localPosition, _localNormal );
+    // 위치는 깊이 프리패스 · 그림자와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 본 패스의 LessEqual 을 통과한다(binding.hlsli 7 절).
+    outWorldPosition = Transform::computeWorldPosition( _localPosition, _instance._world );
+    _worldPosition   = outWorldPosition.xyz;
+    // 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli Transform::computeWorldNormal) — 비균등 스케일에서도 조명이 맞는다.
+    _worldNormal  = Transform::computeWorldNormal( _localNormal, _instance._world );
+    _clipPosition = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    readMaterial();
+}
+
+#if SW_WRITES_VELOCITY
+/**
+ * @brief 화면 속도의 이번 · 지난 클립 위치를 넘긴다. 지난 위치는 지난 월드 행렬(렌더 쪽 기록 — binding.hlsli 8-2)과 스킨 결과의 지난 벌(MorphPool::loadPreviousPosition)로
+ *        만들고 지난 뷰-투영으로 옮긴다. 정점을 옮기는 훅(바람 · 외곽선)의 월드 오프셋은 이번 것을 그대로 더한다 — 지난 시각의 오프셋은 모른다(유니티 모션 벡터의 정점 변형 기본값과 같다).
+ */
+void MaterialInterpolants::storeVelocity( VertexContext context, uint instanceSlot, float4 restWorldPosition, float4 vertexWorldPosition, float4 vertexClipPosition )
+{
+    const float4x4 previousWorld         = InstanceData::loadPreviousWorld( instanceSlot, context._instance._world );
+    const float3   previousLocalPosition = MorphPool::loadPreviousPosition( context._instance._meshBatchIndex, context._instance._skinSlot, context._vertexID, context._localPosition );
+    float4         previousWorldPosition = Transform::computeWorldPosition( previousLocalPosition, previousWorld );
+    previousWorldPosition.xyz += vertexWorldPosition.xyz - restWorldPosition.xyz;
+    _velocityClip     = vertexClipPosition;
+    _velocityPrevClip = Transform::computeClipPosition( previousWorldPosition, g_PrevViewProj );
+}
 #else
-typedef VertexInput MaterialVertexInput;
+void MaterialInterpolants::storeVelocity( VertexContext context, uint instanceSlot, float4 restWorldPosition, float4 vertexWorldPosition, float4 vertexClipPosition )
+{
+    // 화면 속도를 쓰지 않는 패스다.
+}
 #endif
 
+#if defined( MATERIAL_DISPLACEMENT )
+    #include "material_displacement.hlsli" // 정점 출력이 제어점이고 헐 · 도메인이 보간 칸을 만든다
+#else
 MaterialInterpolants VSMain( MaterialVertexInput input, SW_INSTANCE_SLOT_INPUT( instanceSlot ), uint vertexID : SV_VertexID )
 {
     MaterialInterpolants output;
     VertexContext        context;
-    context._input    = toVertexInput( input );
-    context._vertexID = vertexID;
-    // 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작 · 정점 풀 시작이 배치 표에 있다.
-    context._instance = InstanceData::load( instanceSlot );
-    // GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
-    context._instance.loadAnimatedVertex( vertexID, context._input._position, context._input._normal, context._localPosition, context._localNormal );
-    // 위치는 깊이 프리패스 · 그림자와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 본 패스의 LessEqual 을 통과한다(binding.hlsli 7 절).
-    float4 worldPosition   = Transform::computeWorldPosition( context._localPosition, context._instance._world );
-    context._worldPosition = worldPosition.xyz;
-    // 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli Transform::computeWorldNormal) — 비균등 스케일에서도 조명이 맞는다.
-    context._worldNormal  = Transform::computeWorldNormal( context._localNormal, context._instance._world );
-    context._clipPosition = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-    context.readMaterial();
-    const float4 clipPosition = VertexContext::excludeFromDepthPass( context.computeClipPosition( worldPosition ) );
-    output._position          = clipPosition;
+    float4               worldPosition;
+    context.load( input, instanceSlot, vertexID, worldPosition );
+    const float4 restWorldPosition = worldPosition; // 훅의 오프셋 전 — 화면 속도의 지난 위치가 같은 오프셋을 더한다
+    const float4 clipPosition      = VertexContext::excludeFromDepthPass( context.computeClipPosition( worldPosition ) );
+    output._position               = clipPosition;
     output.storeVaryings( context, worldPosition, clipPosition );
+    output.storeVelocity( context, instanceSlot, restWorldPosition, worldPosition, clipPosition );
     SW_APPEARANCE_WRITE( output, context._instance )
     SW_LODDEBUG_WRITE( output, instanceSlot )
     return output;
 }
+#endif // MATERIAL_DISPLACEMENT
 
 // ------------------------------------------------------------------------------
 // 2) 픽셀 단계
@@ -220,11 +248,30 @@ void PixelContext::readMaterial( MaterialInterpolants input )
 }
     #endif
 
+    #if SW_WRITES_VELOCITY
+/**
+ * @brief 보간한 이번 · 지난 클립 위치로 화면 속도(이번 UV - 지난 UV)를 정한다 — 나누기는 픽셀마다 한다(정점에서 나누면 큰 삼각형에서 틀린다).
+ * @details 지난 위치가 카메라 뒤(w ≤ 0)면 속도를 0 으로 둔다 — 재투영할 자리가 없다(읽는 쪽은 이번 자리의 기록을 쓴다). UV 의 y 는 NDC 와 반대다(motion_blur.hlsl 과 같은 식).
+ */
+void MaterialInterpolants::storeSurfaceVelocity()
+{
+    const float2 currentNdc  = _velocityClip.xy / _velocityClip.w;
+    const float2 previousNdc = _velocityPrevClip.xy / max( _velocityPrevClip.w, 1e-5f );
+    g_SurfaceVelocity        = ( _velocityPrevClip.w > 0.0f ) ? ( currentNdc - previousNdc ) * float2( 0.5f, -0.5f ) : float2( 0.0f, 0.0f );
+}
+    #else
+void MaterialInterpolants::storeSurfaceVelocity()
+{
+    // 화면 속도를 쓰지 않는 패스다.
+}
+    #endif
+
 /** @brief 보간된 값(과 픽셀에서 읽는 셰이더의 머티리얼)으로 픽셀 문맥을 만든다. */
 static PixelContext PixelContext::make( MaterialInterpolants input, bool bFrontFace )
 {
     PixelContext context;
     SW_LODDEBUG_READ( input )
+    input.storeSurfaceVelocity();
     context._position      = input._position;
     context._color         = input._color;
     context._uv            = input._uv;
@@ -235,6 +282,31 @@ static PixelContext PixelContext::make( MaterialInterpolants input, bool bFrontF
     context.readMaterial( input );
     return context;
 }
+
+    // 자체 발광 — 포워드 조명은 빛에 더하고, G버퍼는 셰이딩 값에 싣는다(장면 색에 미리 적힌다). G버퍼에 발광 칸이 있어 발광 머티리얼도 디퍼드로 그린다.
+    #if defined( SW_MATERIAL_EMISSIVE )
+void PixelContext::addEmissive( inout float3 inoutLit )
+{
+    inoutLit += computeMaterialEmissive( this );
+}
+    #else
+void PixelContext::addEmissive( inout float3 inoutLit )
+{
+}
+    #endif
+
+    // G버퍼에 적을 셰이딩 모델 번호 — 조명 없는 머티리얼은 Unlit, 나머지는 기본 PBR(디퍼드 조명이 그 번호로 푼다).
+    #if defined( SW_MATERIAL_UNLIT )
+static uint PixelContext::getShadingModel()
+{
+    return SW_SHADING_MODEL_ID_UNLIT;
+}
+    #else
+static uint PixelContext::getShadingModel()
+{
+    return SW_SHADING_MODEL_ID_DEFAULT_LIT;
+}
+    #endif
 
     // 조명 훅의 선택을 풀어 색을 낸다 — 훅 정의 · 기본 PBR · 조명 없음 중 셰이더가 고른 하나다.
     #if defined( SW_MATERIAL_CUSTOM_LIGHTING )
@@ -261,16 +333,6 @@ static void PixelContext::addRimLight( float3 normal, inout float3 inoutLit )
 }
         #else
 static void PixelContext::addRimLight( float3 normal, inout float3 inoutLit )
-{
-}
-        #endif
-        #if defined( SW_MATERIAL_EMISSIVE )
-void PixelContext::addEmissive( inout float3 inoutLit )
-{
-    inoutLit += computeMaterialEmissive( this );
-}
-        #else
-void PixelContext::addEmissive( inout float3 inoutLit )
 {
 }
         #endif
@@ -334,21 +396,32 @@ void PSMain( MaterialInterpolants input )
      * 알파를 쓰는지는 퍼뮤테이션이 정한다: 반투명 머티리얼만 MATERIAL_BLEND_TRANSLUCENT 를 가져 불투명 변형에서 머티리얼 알파가 새지 않는다.
      */
     #if defined( SW_PASS_GBUFFER )
+/** @brief G버퍼 — 조명 없이 표면과 셰이딩 값(번호 · 발광)을 적는다. 발광은 장면 색에 미리 적혀 디퍼드 조명이 더한다(발광 머티리얼도 디퍼드다). */
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
-    return SurfaceOutput::store( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic );
+    SurfaceShading shading = SurfaceShading::make( PixelContext::getShadingModel() );
+    addEmissive( shading._emissive );
+    return SurfaceOutput::store( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic, shading );
+}
+    #elif defined( SW_PASS_DISTORTION )
+/** @brief 왜곡 누적 패스 — 조명 없이 왜곡 훅의 화면 UV 오프셋만 낸다. 보기 모드는 받지 않는다(패스가 값 보기에서 돌지 않는다). */
+SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
+{
+    g_SurfaceDistortion = computeMaterialDistortion( this, surface );
+    return SurfaceOutput::pack( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, surface._roughness, surface._metallic );
 }
     #elif defined( MATERIAL_BLEND_TRANSLUCENT )
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
-    return SurfaceOutput::store( computeSelectedLighting( surface ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic );
+    return SurfaceOutput::store( computeSelectedLighting( surface ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic,
+                                 SurfaceShading::make( PixelContext::getShadingModel() ) );
 }
     #else
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
     float4 lit = computeSelectedLighting( surface );
     lit.a      = 1.0f;
-    return SurfaceOutput::store( lit, surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic );
+    return SurfaceOutput::store( lit, surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic, SurfaceShading::make( PixelContext::getShadingModel() ) );
 }
     #endif
 

@@ -1,0 +1,66 @@
+<Scene formatVersion="2" name="TerrainLayers">
+	<!-- 지형 레이어 규칙 쇼케이스(시나리오 automation/surfacelibrary) — envshowcase 의 골짜기에 레이어 여덟: 칠한 풀 · 흙 위에 경사 규칙(바위 36 도 위 · 자갈 27..36 도), 고도 규칙(모래 8.5 m 아래(호수 물가) · 진흙 8.5..10.5 m · 이끼 12..24 m · 눈 28 m 위), 높이 섞기 깊이 0.15. 진흙은 늘 젖어 웅덩이가 진다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="85,18.5,-28" _localRotation="0.16,-0.76,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.9" _nearZ="0.1" _farZ="600" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.25,0.6,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.88" _intensity="1.5" _ambient="0.32" _shadowExtent="150" _shadowDistance="220" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Terrain">
+			<GameObject _schemaVersion="0" _name="Terrain" _bActive="true">
+				<_listComponent>
+					<TerrainComponent _localPosition="-128,0,-128" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None"
+					                  _heightfieldPath="game/empty/heightfields/valley.heightfield"
+					                  _materialPath="engine/materials/terrain.material"
+					                  _layerWeightsPath="game/empty/heightfields/valley.layerweights"
+					                  _detailTexturePath="engine/textures/terrain/terrain_detail.dds"
+					                  _size="256,256"
+					                  _heightMin="0"
+					                  _heightMax="40"
+					                  _detailTiling="0.25"
+					                  _heightBlendDepth="0.15"
+					                  _puddleScale="6"
+					                  _sparkleDensity="40"
+					                  _snowSparkle="0.04"
+					                  _chunkCells="32"
+					                  _lodDistance="48">
+						<_listLayer>
+							<TerrainLayer _name="Grass" _color="0.2,0.36,0.1,1" _detailStrength="0.45" _bTriplanar="false" _roughness="0.9" _porosity="1.0" _wetness="0.0" _sparkle="0.0" />
+							<TerrainLayer _name="Dirt" _color="0.33,0.24,0.15,1" _detailStrength="0.5" _bTriplanar="false" _roughness="1.0" _porosity="1.0" _wetness="0.0" _sparkle="0.0" />
+							<TerrainLayer _name="Rock" _color="0.4,0.39,0.37,1" _detailStrength="0.7" _bTriplanar="true" _roughness="0.8" _porosity="0.3" _wetness="0.0" _sparkle="0.0">
+								<_rule _strength="1" _slopeRange="0.628319,1.570796" _slopeFade="0.10472" _altitudeRange="-100000,100000" _altitudeFade="2" />
+							</TerrainLayer>
+							<TerrainLayer _name="Sand" _color="0.66,0.58,0.4,1" _detailStrength="0.4" _bTriplanar="false" _roughness="0.95" _porosity="0.9" _wetness="0.0" _sparkle="0.02">
+								<_rule _strength="1" _slopeRange="0,0.349066" _slopeFade="0.10472" _altitudeRange="-100000,8.5" _altitudeFade="1.5" />
+							</TerrainLayer>
+							<TerrainLayer _name="Mud" _color="0.22,0.16,0.1,1" _detailStrength="0.5" _bTriplanar="false" _roughness="0.55" _porosity="1.0" _wetness="0.8" _sparkle="0.0">
+								<_rule _strength="0.9" _slopeRange="0,0.20944" _slopeFade="0.069813" _altitudeRange="8.5,10.5" _altitudeFade="1" />
+							</TerrainLayer>
+							<TerrainLayer _name="Gravel" _color="0.45,0.43,0.4,1" _detailStrength="0.8" _bTriplanar="false" _roughness="0.95" _porosity="0.6" _wetness="0.0" _sparkle="0.0">
+								<_rule _strength="0.8" _slopeRange="0.471239,0.628319" _slopeFade="0.069813" _altitudeRange="-100000,100000" _altitudeFade="2" />
+							</TerrainLayer>
+							<TerrainLayer _name="Moss" _color="0.16,0.26,0.08,1" _detailStrength="0.6" _bTriplanar="true" _roughness="0.85" _porosity="1.0" _wetness="0.2" _sparkle="0.0">
+								<_rule _strength="0.45" _slopeRange="0.314159,0.785398" _slopeFade="0.10472" _altitudeRange="12,24" _altitudeFade="3" />
+							</TerrainLayer>
+							<TerrainLayer _name="Snow" _color="0.88,0.9,0.94,1" _detailStrength="0.2" _bTriplanar="false" _roughness="0.65" _porosity="0.0" _wetness="0.0" _sparkle="0.08">
+								<_rule _strength="1" _slopeRange="0,0.785398" _slopeFade="0.139626" _altitudeRange="28,100000" _altitudeFade="3" />
+							</TerrainLayer>
+						</_listLayer>
+					</TerrainComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

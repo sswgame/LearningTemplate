@@ -133,8 +133,10 @@ namespace sw
         const hashed_string* pFirstMissing = nullptr;
         for ( size_t trackIndex = 0; trackIndex < _listTrackName.size(); ++trackIndex )
         {
-            outListBone[trackIndex] = Skeleton::toBoneSlot( skeleton.findBoneIndex( _listTrackName[trackIndex] ) );
-            if ( outListBone[trackIndex] >= 0 )
+            // 표는 샘플링 안쪽 고리가 읽는 int32 칸이다(-1 = 이 스켈레톤에 없는 트랙, 아래에서 알린다).
+            const optional<uint32> boneIndex = skeleton.findBoneIndex( _listTrackName[trackIndex] );
+            outListBone[trackIndex]          = boneIndex.has_value() ? static_cast<int32>( *boneIndex ) : constant::invalid_index::kInt32;
+            if ( boneIndex.has_value() )
                 continue;
             ++missingCount;
             pFirstMissing = pFirstMissing != nullptr ? pFirstMissing : &_listTrackName[trackIndex];

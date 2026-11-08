@@ -30,7 +30,7 @@ description: "이 저장소의 Linux 검증 절차: WSL 클론 빌드, Xvfb 에�
 
 ## 클론 환경 (WSL `~/LT-linux`)
 
-- vcpkg: 매니페스트에서 포트가 빠지면 공유 설치본 보호 장치가 설치를 건너뛰어 오버레이 패치(imgui-node-editor 의 `NavigateToRect` · `GetGroupSize`)가 들어가지 않는다 — 혼자 쓰는 클론이라 한 번 `-DSW_VCPKG_FORCE_INSTALL=ON` 으로 구성한다.
+- vcpkg: `build` 는 vcpkg.json 해시가 설치본 표시(`.sw-manifest.sha256`)와 다르면 Linux-Debug 를 `-DSW_VCPKG_FORCE_INSTALL=ON` 으로 다시 구성해 새 포트(예: dawn)를 깐다. 매니페스트에서 포트가 빠지면 공유 설치본 보호 장치가 설치를 건너뛰어 오버레이 패치(imgui-node-editor 의 `NavigateToRect` · `GetGroupSize`)가 들어가지 않는다 — 혼자 쓰는 클론이라 한 번 `-DSW_VCPKG_FORCE_INSTALL=ON` 으로 구성한다.
 - Xvfb: `apt-get download` + `dpkg -x` 로 받고 창 관리자 없이 `-screen 0 2560x1440x24` 로 띄운다(사용자 화면을 건드리지 않는다). `xkbcomp` 경로는 실행 파일에 박혀 있다. 창 관리자가 없어 `engine/automation/windowpresent` 의 최소화 단계는 건너뛴다.
 - 드라이버: Vulkan 은 `VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json`(lavapipe), GL 은 `LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe`(Mesa 26 은 4.5 문맥에 `ARB_gl_spirv`). 소프트웨어라 느리니 `-gv_scenarioWallScale=4`. `Scenario.<팩>` 명령에서 `-scenario-backend-split` 을 빼고 `-scenario-backends=vk`.
 - 콘텐츠: 임포트 결과는 Windows 에서 복사한다(Debug 임포트가 너무 느리다). 메시 원본은 Git LFS 라 `git-lfs` 와 `.git/lfs/objects` 복사가 있어야 임포트된다. 고정 화면 글꼴은 카탈로그가 찾는 파일을 `~/.local/share/fonts` 에(Noto CJK · LiberationSans). 골든은 `<시나리오>.<이름>.<백엔드>.linux.ppm`.

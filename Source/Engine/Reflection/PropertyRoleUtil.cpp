@@ -52,7 +52,10 @@ namespace sw
             {
                 if ( prop._bIsContainer == SW_TRUE || prop._bIsBitField == SW_TRUE )
                     return nullptr;
-                switch ( ReflectedValueUtil::findBuiltinIndex( prop._typeName ) )
+                const optional<int32> builtinIndex = ReflectedValueUtil::findBuiltinIndex( prop._typeName );
+                if ( builtinIndex.has_value() == false )
+                    return nullptr;
+                switch ( *builtinIndex )
                 {
                     case ReflectBuiltinIndex::kint8:
                         return &blend<int8>;

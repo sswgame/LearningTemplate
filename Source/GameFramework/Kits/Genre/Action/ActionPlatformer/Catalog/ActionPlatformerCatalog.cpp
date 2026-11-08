@@ -24,12 +24,12 @@ namespace sw
         };
     } // namespace
 
-    optional<uint32> ActionPatternDef::findStateIndex( const hashed_string& stateID ) const
+    optional<int32> ActionPatternDef::findStateIndex( const hashed_string& stateID ) const
     {
         for ( size_t index = 0; index < _listState.size(); ++index )
         {
             if ( _listState[index]._id == stateID )
-                return static_cast<uint32>( index );
+                return static_cast<int32>( index );
         }
         return nullopt;
     }

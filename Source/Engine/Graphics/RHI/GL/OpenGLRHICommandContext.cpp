@@ -385,10 +385,10 @@ namespace sw
         if ( glad_glClipControl != nullptr )
             glClipControl( fbo == 0 ? GL_LOWER_LEFT : GL_UPPER_LEFT, GL_ZERO_TO_ONE );
         // bindShaderResource 가 실제로 바인딩한 유닛만 언바인드한다.
-        const uint32 unbindMask = _pDevice->_recordingState._boundTextureUnitMask;
-        for ( uint32 unit = 0; unit < 32 && unbindMask != 0; ++unit )
+        const uint64 unbindMask = _pDevice->_recordingState._boundTextureUnitMask;
+        for ( uint32 unit = 0; unit < shaderslot::gl::kTextureUnitLimit && unbindMask != 0; ++unit )
         {
-            if ( ( unbindMask & ( 1u << unit ) ) == 0 )
+            if ( ( unbindMask & ( uint64{ 1 } << unit ) ) == 0 )
                 continue;
             if ( glad_glBindTextureUnit != nullptr )
                 glBindTextureUnit( unit, 0 );
@@ -596,6 +596,12 @@ namespace sw
         glBindBufferBase( GL_SHADER_STORAGE_BUFFER, shaderslot::gl::kUAVBinding0 + slot, ssbo );
     }
 
+    void OpenGLRHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    {
+        // GL 의 SSBO · 이미지 유닛 번호는 단계를 가리지 않는다 — 컴퓨트와 같은 자리(SSBO kUAVBinding0 + slot)에 건다.
+        bindComputeUAV( index, slot );
+    }
+
     void OpenGLRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
         // **텍스처 전용이다.** 버퍼는 `bindStructuredBuffer` 가 건다.
@@ -620,12 +626,13 @@ namespace sw
         if ( tex == 0 )
             return;
 
-        // 엔진 텍스처 칸은 HLSL 레지스터(t32..)와 GL 유닛(칸 번호)이 다르다 — GL 프래그먼트 유닛은 32 개라 레지스터 번호를 유닛으로 쓸 수 없다(binding_slots.hlsli 2).
-        const uint32 unit = shaderslot::emulated::getGlTextureUnit( slot );
+        // GL 텍스처 유닛은 레지스터 번호 그대로다(머티리얼 t16..t31 · 엔진 t32..). 유닛 번호는 결합 유닛 수(GL 4.5 최소 80) 안이면 되고,
+        // 스테이지 한도(프래그먼트 32)는 한 셰이더가 실제로 쓰는 유닛 수에 걸린다 — 초기화가 결합 유닛 수를 확인한다.
+        const uint32 unit = slot;
         glBindTextureUnit( unit, tex );
-        static_assert( shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount <= 32, "텍스처 유닛 마스크(uint32)가 머티리얼 텍스처 유닛을 다 담지 못한다" );
-        if ( unit < 32 )
-            _pDevice->_recordingState._boundTextureUnitMask |= ( 1u << unit );
+        static_assert( shaderslot::gl::kTextureUnitLimit <= 64 && shaderslot::kEngineTexture0 + shaderslot::kEngineTextureCount <= shaderslot::gl::kTextureUnitLimit, "텍스처 유닛 마스크(uint64)가 엔진 텍스처 유닛을 다 담지 못한다" );
+        if ( unit < shaderslot::gl::kTextureUnitLimit )
+            _pDevice->_recordingState._boundTextureUnitMask |= ( uint64{ 1 } << unit );
     }
 
     void OpenGLRHICommandContext::bindComputeConstantBuffer( RHIDescriptorIndex constantBufferIndex, uint32 slot )

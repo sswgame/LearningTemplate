@@ -210,6 +210,8 @@ SW_TEST_CASE( SkeletonBoneLODTest, VariantInheritsParentCoreBones )
     SW_REQUIRE_TRUE( skeleton.applyVariant( variant, base, "test" ) );
     vector<uint8> requiredMask;
     SW_REQUIRE_TRUE( SkeletonBoneLOD::computeRequiredMask( skeleton, &boneLOD, {}, requiredMask, "test" ) );
-    SW_EXPECT_TRUE( requiredMask[skeleton.findBoneIndex( hashed_string( "cape" ) ).value()] == SW_TRUE );
+    const optional<uint32> capeBone = skeleton.findBoneIndex( hashed_string( "cape" ) );
+    SW_REQUIRE_TRUE( capeBone.has_value() );
+    SW_EXPECT_TRUE( requiredMask[*capeBone] == SW_TRUE );
     SW_EXPECT_TRUE( requiredMask[SkeletonBoneLODTestUtil::kHead] == SW_FALSE );
 }
