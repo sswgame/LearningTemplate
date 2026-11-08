@@ -104,7 +104,7 @@
 - 쿠커는 쿠킹 축 조건만 풀고, 한 원소에서 로드 축 조건이 나온 뒤의 조건은 차례를 지키려 함께 남긴다(뒤의 쿠킹 축 조건을 먼저 얹으면 같은 칸의 값이 뒤집힌다). 쿠킹본을 런타임이 푼 결과가 소스를 바로 푼 결과와 같은지는 `ResourceConditionTest.CookedTextResolvesLikeTheSource` 가 본다.
 - 다시 읽기: 리소스 id 로 읽은 합성(`ResourceContext::withAsset` — `XMLDocument::loadResource` · `XMLSerializer::loadFromAsset` · `ReflectedXMLFile`)은 기댄 로드 축 태그를 기록에 남기고(`ResourceComposition`), 태그가 바뀌면 에셋 매니저가 프레임 단계에서 그 id 를 쥔 캐시를 다시 읽는다(`AssetManager::reloadComposedDependents` → `AssetCacheBase::reloadComposed`). 핫 리로드와 달리 배포 구성에도 있다 — 품질 · 언어를 바꾸는 것은 플레이어다. 공유 캐시는 종류의 다시 읽기 방식(제자리 · 떼어 내기)대로 바꾸고, GPU 캐시(텍스처 · 머티리얼 · 메시 · 프리팹)는 다음 읽기가 새 결과를 본다. 확인: 시나리오 `game.empty.resourcecondition`(품질 · 데이터 레이어를 바꾸면 표를 쥔 쪽의 값이 바뀐다).
 
-**한계:** 캐시 열쇠는 경로뿐이므로 한 프로세스의 문맥은 하나다. 서버가 플레이어마다 다른 지역 값을 고르려면 문맥이 아니라 데이터의 키로 나눈다. 에디터처럼 씬이 여럿이면 `layer` 축은 마지막에 넣은 씬의 집합이다.
+**한계:** 캐시 열쇠는 경로뿐이므로 한 프로세스의 문맥은 하나다. 서버가 플레이어마다 다른 지역 값을 고르려면 문맥이 아니라 데이터의 키로 나눈다. 에디터처럼 씬이 여럿이면 `layer` 축은 마지막에 넣은 씬의 집합이다. 예외 하나: 한 문맥이 엔진 값에서 몇 축만 바꿔 끼우는 합성(`ResourceContext::withTagOverride` — 에디터 UI 미리보기의 `screen` · `orientation`)은 그 캐시가 경로 + 태그 열쇠로 따로 들고(`UITextAssetCache`), 다시 읽기 · 접속 대조 기록에 적지 않는다.
 
 **품질 · 언어는 대조하지 않는다:** 축의 `ResourceTagScope::PerClient` 는 사용자 설정이라 달라도 된다. 판정 값은 이 축에 기대지 않는다(언리얼 Scalability 도 판정 값을 바꾸지 않는다, 기억에 의존).
 
