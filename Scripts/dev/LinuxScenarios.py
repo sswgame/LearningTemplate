@@ -23,6 +23,7 @@ import io
 import os
 import pathlib
 import re
+import shlex
 import shutil
 import signal
 import subprocess
@@ -31,6 +32,7 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common.HostPlatform import isWindowsHost  # noqa: E402
+from dev import ScenarioCulprit  # noqa: E402
 
 DISTRO = 'Ubuntu-26.04'
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -275,36 +277,39 @@ def stages(arguments):
 
 
 def culprit(arguments):
+    """이분 탐색은 ScenarioCulprit.findCulprit(Windows 와 같은 함수) — 여기는 Xvfb · lavapipe 실행기와 ctest 목록만 댄다."""
     target = arguments[0]
     pack = arguments[1] if len(arguments) > 1 else 'editor'
-    text = open(f'{LOGS}/Scenario.{pack}.vk.log', errors='replace').read()
-    names = [m.group(1) for m in re.finditer(r'chain stage \d+/\d+ \w+ \(editor\.(\w+)\)', text)]
-    if target not in names:
-        sys.exit(f'{target} 이 체인 로그에 없다 - 먼저 chain {pack}')
-    before = names[:names.index(target)]
+    names = ScenarioCulprit.readStageNames(open(f'{LOGS}/Scenario.{pack}.vk.log', errors='replace').read())
+    if not names:
+        sys.exit(f'체인 로그에 단계가 없다 - 먼저 chain {pack}')
+    target_index, target_name = ScenarioCulprit.resolveTarget(names, target)
     with Xvfb():
         env = scenario_env(99)
+        listing = subprocess.run(['ctest', '-V', '-N', '-R', rf'^Scenario\.{pack}$'], cwd=RELEASE, env=env, capture_output=True, text=True).stdout
+        found = [l for l in listing.splitlines() if 'Test command:' in l and '-scenario=' in l]
+        if not found:
+            sys.exit(f'Scenario.{pack} 이 없다')
+        command = shlex.split(re.sub(r'.*Test command: ', '', found[0]))
+        paths = ScenarioCulprit.readChainStages(command)
+        base = [a for a in command if a not in ('-scenario-backend-split', '-scenario-keep-going') and not a.startswith(('-scenario-backends=', '-log-file=', '-scenario='))]
 
         def fails(prefix):
-            run_stage_set(prefix + [target], env, 'x_culprit')
-            log = open(f'{RELEASE}/Bin/x_culprit.vk.log', errors='replace').read()
-            bad = re.search(rf'chain stage \d+/\d+ Failed \(editor\.{target}\)', log) is not None
+            listed = ','.join(prefix + [paths[target_index]])
+            subprocess.run(['timeout', '1200', *base, f'-scenario={listed}', '-scenario-keep-going', '-scenario-backends=vk', '-WinX=0', '-WinY=0',
+                            f'-gv_scenarioWallScale={WALL_SCALE}', '-log-file=x_culprit.log'], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            bad = ScenarioCulprit.stageFailed(open(f'{RELEASE}/Bin/x_culprit.vk.log', errors='replace').read(), target_name)
             print(len(prefix), prefix[0] if prefix else '-', '짐' if bad else '통과', flush=True)
             return bad
 
-        if not fails(before):
+        before = paths[:target_index]
+        found_index = ScenarioCulprit.findCulprit(before, fails)
+        if found_index is None:
             print('재현 안 됨 - 체인의 다른 인자(--record) · 앞 체인 상태를 본다')
             return 1
-        low, high = 0, len(before)  # before[low:] 는 지고 before[high:] 는 통과한다
-        while high - low > 1:
-            middle = (low + high) // 2
-            if fails(before[middle:]):
-                low = middle
-            else:
-                high = middle
-        print('시작 단계:', before[low])
+        print('시작 단계:', before[found_index])
         print('단독으로 지는가(아니면 뒤 단계와 함께 만드는 상태다):')
-        fails([before[low]])
+        fails([before[found_index]])
     return 0
 
 

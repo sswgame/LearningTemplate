@@ -7,6 +7,7 @@
  */
 #include "pch.h"
 
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
@@ -31,6 +32,12 @@
 
 namespace sw::editor
 {
+    /**
+     * @brief `-gv_editorSelfTestPattern=<패턴>`: 시나리오의 `<EditorSelfTest pattern>` 대신 이 패턴의 자체 테스트만 돈다(비면 시나리오 값).
+     * @details 진 케이스 하나를 다시 볼 때 시나리오 사본을 만들지 않는다(언리얼 `-ExecCmds="Automation RunTests <필터>"`, 유니티 `-testFilter` 자리).
+     */
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorSelfTestPattern, "", "Run only editor self tests matching this pattern instead of the scenario's <EditorSelfTest pattern> (empty = scenario value)" );
+
     namespace
     {
         struct EditorScenarioStepsInternal
@@ -589,11 +596,17 @@ namespace sw::editor
              * @brief 첫 차례에 실행을 청하고, 실행이 끝날 때까지 시나리오 시계를 붙잡습니다. 청할 수 없으면 돌려 실패를 적게 합니다.
              * @details 실행의 길이는 테스트 수 · Debug 에 달려 시한이 없다(`UINT32_MAX`) — 끝나지 않으면 벽시계 상한이 지금 테스트 · 단계와 함께 잡는다.
              */
+            /** @brief 이 단계가 돌릴 패턴 — 명령줄(`gv_editorSelfTestPattern`)이 있으면 그것, 없으면 시나리오 값. */
+            static string readSelfTestPattern( const AutomationStep& step )
+            {
+                return gv_editorSelfTestPattern.empty() ? step.readValidatedFields<EditorSelfTestParams>()._pattern : gv_editorSelfTestPattern;
+            }
+
             static AutomationStepHold holdUntilSelfTestsEnd( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
                 if ( s_pRequestedSelfTestStep != &step )
                 {
-                    if ( EditorSelfTestRunner::requestRun( step.readValidatedFields<EditorSelfTestParams>()._pattern, false ) == false )
+                    if ( EditorSelfTestRunner::requestRun( readSelfTestPattern( step ), false ) == false )
                         return AutomationStepHold::Run; // 에디터가 없거나 다른 실행(Test Runner 창)이 돈다 - 단계가 결과 없음으로 진다
                     s_pRequestedSelfTestStep = &step;
                 }
@@ -608,7 +621,7 @@ namespace sw::editor
                 const vector_reference<const EditorSelfTestResult> listResult = EditorSelfTestRunner::getResults();
                 if ( bRequested == false || listResult.empty() )
                 {
-                    runner.recordFailure( step, "no editor self test ran for pattern '" + step.readValidatedFields<EditorSelfTestParams>()._pattern + "' (no editor, a run already active, or no match)" );
+                    runner.recordFailure( step, "no editor self test ran for pattern '" + readSelfTestPattern( step ) + "' (no editor, a run already active, or no match)" );
                     return true;
                 }
                 for ( const EditorSelfTestResult& result : listResult )
