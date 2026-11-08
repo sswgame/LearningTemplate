@@ -172,17 +172,19 @@ namespace sw
         return static_cast<uint32>( MathUtil::clamp( static_cast<int32>( gv_shadowMapResolution ), 1, kMaxResolution ) );
     }
 
-    bool FrameViewResources::updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height )
+    bool FrameViewResources::updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height, const RenderGraphAliasPlan& aliasPlan, uint32 aliasGeneration )
     {
         TransientAttachmentPool& pool             = view._transientPool;
         const uint32             shadowResolution = getShadowMapResolution();
-        const bool               bPoolUnchanged   = width == pool.getWidth() && height == pool.getHeight() && pool.isEmpty() == false && view._shadowMapResolution == shadowResolution;
+        const bool               bPoolUnchanged   = width == pool.getWidth() && height == pool.getHeight() && pool.isEmpty() == false && view._shadowMapResolution == shadowResolution &&
+                                    view._transientAliasGeneration == aliasGeneration;
         if ( bPoolUnchanged )
             return false;
 
         releaseViewTransients( view );
         pool.setSize( width, height );
-        view._shadowMapResolution = shadowResolution;
+        view._shadowMapResolution      = shadowResolution;
+        view._transientAliasGeneration = aliasGeneration;
 
         // 그림자 맵은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
         // 일반 풀스크린 패스만 쓰는 첨부(후처리 효과 · 톤맵의 출력)는 여기서 만들지 않는다 — 그 패스가 이 뷰에서 처음 돌 때 만든다(`applyViewPassSelection`).
@@ -192,6 +194,11 @@ namespace sw
                 continue;
             const RHIFormat format = attachment._format;
             const bool      bDepth = FrameRendererUtil::isDepthFormat( format );
+            // 앨리어싱 계획의 별칭은 주인의 텍스처를 함께 쓴다(레벨 수명이 겹치지 않고 서술이 같다). 주인을 아직 만들지 않았으면(처음 쓸 때 만드는 첨부) 자기 텍스처로 만든다.
+            const hashed_string attachmentName( attachment._name.c_str() );
+            const hashed_string aliasOwner = aliasPlan.findOwner( attachmentName );
+            if ( aliasOwner.empty() == false && pool.allocateAlias( attachmentName, aliasOwner, attachment.getOps() ) )
+                continue;
             if ( resolveRenderPassInputRole( attachment._name, bDepth, attachment._role ) == RenderPassInputRole::ShadowMap )
                 (void)pool.allocateSized( _pDevice, hashed_string( attachment._name.c_str() ), format, bDepth, attachment.getOps(), shadowResolution, shadowResolution );
             else

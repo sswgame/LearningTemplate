@@ -71,6 +71,12 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE( bool, gv_asyncCompute, true, "프레임 패스의 비동기 컴퓨트 큐 (false=모두 그래픽스 큐, 측정용)" );
 
+    /**
+     * @brief `-gv_transientAliasing=0` 이면 뷰 그래프의 트랜지언트 첨부가 텍스처를 나누지 않습니다(시작 인자 — 콜백을 묶을 때 계획한다).
+     * @details 나눈 그림과 나누지 않은 그림이 같아야 한다 — 다르면 계획이 겹치는 수명을 놓쳤다(같은 실행에서 끄고 켠 두 장을 견준다). 메모리는 `RT.Frame.transientAliases` 가 센다.
+     */
+    SW_GLOBAL_VARIABLE( bool, gv_transientAliasing, true, "뷰 그래프 트랜지언트 첨부의 텍스처 나눔 (false=첨부마다 텍스처, 진단용)" );
+
     namespace
     {
         constexpr float4 kDefaultBloomParams{ 0.55f, 0.65f, 0.25f, 0.0f };
@@ -717,7 +723,95 @@ namespace sw
             SW_LOG_ERROR_ID( "FramePassExecutor.CallbackBindCompileFailed", "Callback bind compile failed" );
             return false;
         }
+        buildTransientAliasPlan();
         return bindFramePassCallbacks();
+    }
+
+    void FramePassExecutor::buildTransientAliasPlan()
+    {
+        ++_state._transientAliasGeneration; // 뷰 풀이 다음 셋업에서 새 계획으로 다시 만든다
+        _state._transientAliasPlan = RenderGraphAliasPlan{};
+        // NaN 감시는 그래프가 끝난 뒤 모든 패스 출력을 다시 읽는다 — 나눠 쓴 텍스처는 앞 첨부의 내용이 이미 덮였다. 감시를 켠 실행은 나누지 않는다.
+        if ( gv_transientAliasing == false || GPUNanCheck::isRequested() )
+            return;
+
+        // 실행 순서 번호 → 레벨. 실행 순서는 레벨을 차례로 이은 것이다(`RenderGraph::compile`).
+        const RenderGraph&                   graph = _state._graph;
+        vector<uint32>                       listLevelOfOrder;
+        const vector<vector<hashed_string>>& listLevel = graph.getExecutionLevels();
+        for ( uint32 levelIndex = 0; levelIndex < static_cast<uint32>( listLevel.size() ); ++levelIndex )
+        {
+            listLevelOfOrder.insert( listLevelOfOrder.end(), listLevel[levelIndex].size(), levelIndex );
+        }
+
+        const vector<RenderGraphPassDesc>&   listPass = _pipelineResource.getGraphPass();
+        unordered_map<hashed_string, size_t> mapCandidateIndex;
+        vector<RenderGraphAliasCandidate>    listCandidate;
+        for ( const RenderPassAttachment& attachment : _pipelineResource.getDesc()._listAttachment )
+        {
+            // 나누지 않는 것: 깊이(장면 깊이는 다음 프레임의 깊이 히스토리가 읽는다 · 그림자 맵), 프레임을 넘어 내용을 잇는 첨부(`Load`), 그래프가 모르는 첨부.
+            const bool bDepth = FrameRendererUtil::isDepthFormat( attachment._format );
+            if ( bDepth || attachment._loadOp == RHIRenderPassLoadOp::Load )
+                continue;
+            const hashed_string                name( attachment._name.c_str() );
+            const RenderGraphResourceLifetime* pLife = graph.findResourceLifetime( name );
+            if ( pLife == nullptr || pLife->_lastPassIndex >= listLevelOfOrder.size() )
+                continue;
+            // 서술 키 — 같은 텍스처로 넘길 수 있는 조건(형식 · 나눗수 · RW 용도 · 클리어 값, D3D12 의 최적 클리어 값이 서술에 든다).
+            // 칸마다 32 비트로 옮겨 해시한다(구조체째 해시하면 정렬 채움 바이트가 섞인다).
+            uint32 arrDescWord[7]{ static_cast<uint32>( attachment._format ), attachment._resolutionDivisor,
+                                   FrameRendererUtil::isComputeOutputOrInput( listPass, attachment._name ) ? 1u : 0u, 0u, 0u, 0u, 0u };
+            Memory::copy( &arrDescWord[3], &attachment._clearColor._x, sizeof( float32 ) );
+            Memory::copy( &arrDescWord[4], &attachment._clearColor._y, sizeof( float32 ) );
+            Memory::copy( &arrDescWord[5], &attachment._clearColor._z, sizeof( float32 ) );
+            Memory::copy( &arrDescWord[6], &attachment._clearColor._w, sizeof( float32 ) );
+            const uint64 descKey    = HashUtil::appendBytes64( HashUtil::kFNVOffset64, arrDescWord, sizeof( arrDescWord ) );
+            mapCandidateIndex[name] = listCandidate.size();
+            listCandidate.push_back( RenderGraphAliasCandidate{ name, descKey, listLevelOfOrder[pLife->_firstPassIndex], listLevelOfOrder[pLife->_lastPassIndex] } );
+        }
+
+        // 꺼진 효과는 출력 이름이 원본을 가리킨다(`kBypassesToSource`) — 그 출력을 읽는 패스가 원본을 읽으므로 원본의 수명이 출력의 끝까지 늘어난다. 둘을 한 구간으로 묶는다.
+        // TAA 출력은 셋업이 기록 형식으로 읽어 프레임 밖에서도 쓴다 — 나누지 않는다.
+        vector<uint8> listExcluded( listCandidate.size(), 0 );
+        for ( const RenderGraphPassDesc& pass : listPass )
+        {
+            const RenderPassTypeInfo& info = getRenderPassTypeInfo( pass._type );
+            for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
+            {
+                const auto outputIt = mapCandidateIndex.find( output._attachment );
+                if ( outputIt == mapCandidateIndex.end() )
+                    continue;
+                if ( pass._type == RenderPassType::TAA )
+                    listExcluded[outputIt->second] = 1;
+                if ( info.hasFlag( RenderPassTraitFlag::kBypassesToSource ) == false )
+                    continue;
+                for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
+                {
+                    const auto inputIt = mapCandidateIndex.find( input._attachment );
+                    if ( static_cast<RenderPassInputRole>( input._role ) != RenderPassInputRole::SourceColor )
+                        continue;
+                    if ( inputIt == mapCandidateIndex.end() )
+                    {
+                        listExcluded[outputIt->second] = 1; // 원본이 후보가 아니면(깊이 · Load) 출력도 나누지 않는다
+                        continue;
+                    }
+                    RenderGraphAliasCandidate& source = listCandidate[inputIt->second];
+                    RenderGraphAliasCandidate& target = listCandidate[outputIt->second];
+                    source._firstLevel                = MathUtil::min( source._firstLevel, target._firstLevel );
+                    source._lastLevel                 = MathUtil::max( source._lastLevel, target._lastLevel );
+                    target._firstLevel                = source._firstLevel;
+                    target._lastLevel                 = source._lastLevel;
+                }
+            }
+        }
+        vector<RenderGraphAliasCandidate> listAliasable;
+        for ( size_t candidateIndex = 0; candidateIndex < listCandidate.size(); ++candidateIndex )
+        {
+            if ( listExcluded[candidateIndex] == 0 )
+                listAliasable.push_back( listCandidate[candidateIndex] );
+        }
+        _state._transientAliasPlan = RenderGraphAliasPlan::build( listAliasable );
+        SW_PROFILE_COUNT( "RT.Frame.transientAliases", _state._transientAliasPlan._mapAliasToOwner.size() );
     }
 
     bool FramePassExecutor::bindFramePassCallbacks()

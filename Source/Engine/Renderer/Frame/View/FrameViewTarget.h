@@ -79,6 +79,7 @@ namespace sw
         uint32     _outputWidth{ 0 };                                                ///< 출력 크기(렌더 텍스처, 화면 사각형)
         uint32     _outputHeight{ 0 };
         uint32     _shadowMapResolution{ 0 };                           ///< 풀이 가진 그림자 맵 한 변(0이면 아직 없음). 품질이 바뀌면 풀을 다시 만든다.
+        uint32     _transientAliasGeneration{ 0 };                      ///< 풀을 만들 때 따른 앨리어싱 계획의 세대(`FrameRenderState::_transientAliasGeneration`). 다르면 풀을 다시 만든다.
         uint32     _lightGridIndex{ constant::invalid_index::kUint32 }; ///< 이번 프레임 이 뷰의 라이트 그리드 번호(`GPULightBuffer::getGridBase`). 없으면 셰이더는 목록 전체를 돈다
         /// @brief 지난번 이 뷰를 그린 뷰-투영입니다(모션 블러의 `g_PrevViewProj`). 기록을 버리는 프레임(`_bHistoryReset`)은 이번 것으로 둔다(속도 0).
         float4x4 _prevViewProj{};

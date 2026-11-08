@@ -124,6 +124,14 @@
 - 효과의 값(블룸 문턱 · 렌즈 · 역뷰-투영 4 열)은 루트 상수로 간다(`post_compute.hlsli`) — 컴퓨트 PSO 에는 PassCB 가 묶이지 않는다.
 - 어느 쪽을 낼지는 측정이 정한다. 바꾸는 법은 한 줄이다: `deferredpipeline.xml` 의 `BloomDownsample` 패스, `deferredpipeline.xml` · `forwardpipeline.xml` 의 `DepthOfField` 패스에 `_implementation="Compute"` 를 적는다(자식 파이프라인은 물려받는다).
 
+## 트랜지언트 앨리어싱
+
+뷰 그래프의 첨부 중 레벨 수명이 겹치지 않고 서술(형식 · 나눗수 · RW 용도 · 클리어 값)이 같은 것은 텍스처 하나를 나눠 쓴다(`RenderGraphAliasPlan::build`, 계획은 `FramePassExecutor::buildTransientAliasPlan`). XML 에 적을 칸은 없다 — 수명은 패스의 입출력 선언이 정한다.
+
+- 나누지 않는 것: 깊이 형식(장면 깊이는 다음 프레임의 깊이 히스토리가 읽는다 · 그림자 맵), `_loadOp="Load"`(프레임을 넘어 잇는다), TAA 출력, 처음 쓸 때 만드는 효과 출력(그 주인 · 별칭은 자기 텍스처다).
+- 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시(`-gv_nanCheck`)를 켠 실행은 나누지 않는다. 비교는 `-gv_transientAliasing=0`.
+- 서술이 다른 첨부를 한 힙에 겹치는 앨리어싱(DX12 placed resource · Vulkan 메모리 공유)은 아직 없다 — 이 계획의 주인 · 별칭 묶음을 받아 쓰는 다음 층이다.
+
 ## 선택 스테이지를 쓰는 셰이더
 
 - 소스는 패스 셰이더 한 파일이다. 머티리얼 변형은 머티리얼 셰이더의 정점 출력으로 만들어져 신호가 맞지 않아 머티리얼 셰이더 패스에는 쓸 수 없다.

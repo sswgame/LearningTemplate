@@ -193,6 +193,11 @@ namespace sw
         void onGraphPassExecute( const RenderGraphPassContext& context );
         /** @brief 프레임 그래프가 프레임 패스를 실행할 때 부르는 콜백입니다. 서술의 종류로 `FrameGraphExecutor::executePass` 를 부릅니다. */
         void onFrameGraphPassExecute( const RenderGraphPassContext& context );
+        /**
+         * @brief 컴파일한 뷰 그래프의 수명(레벨)으로 트랜지언트 앨리어싱 계획을 세워 `FrameRenderState::_transientAliasPlan` 에 두고 세대를 올립니다.
+         * @details 깊이 · `Load` 첨부 · TAA 출력은 나누지 않고, 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시를 켠 실행은 나누지 않는다.
+         */
+        void buildTransientAliasPlan();
         /** @brief 프레임 패스를 프레임 그래프 노드로 묶고 컴파일합니다(`bindPassCallbacks` 의 뒷부분). 프레임 패스가 없으면 빈 그래프이고 true 입니다. */
         [[nodiscard]] bool bindFramePassCallbacks();
         /** @brief 프레임 그래프를 프리패스 리스트(`_pCmd`)에 기록합니다. 뷰 그래프보다 먼저 큐에 내는 리스트다. */

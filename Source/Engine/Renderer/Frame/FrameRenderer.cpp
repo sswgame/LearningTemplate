@@ -244,6 +244,9 @@ namespace sw
         _bCallbacksBound                  = SW_FALSE;
         _state._graph.clear();
         _state._frameGraph.clear();
+        // 새 파이프라인의 첨부 이름은 옛 계획과 짝이 맞지 않는다 — 비우고 세대를 올려 뷰 풀이 앨리어싱 없이 다시 만든다(묶은 뒤 새 계획으로 한 번 더 만든다).
+        _state._transientAliasPlan = RenderGraphAliasPlan{};
+        ++_state._transientAliasGeneration;
         releaseTransientResources();
 
         if ( _pipelineResource.loadFromXMLFile( assetID ) == false )
@@ -810,7 +813,7 @@ namespace sw
                                                                                          settings._resolutionScale, settings._upscaleZoom );
         const uint32              poolHeight = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( height ) * settings._screenRect._w,
                                                                                          settings._resolutionScale, settings._upscaleZoom );
-        if ( _viewResources.updateViewTransients( _state._mainView, poolWidth, poolHeight ) )
+        if ( _viewResources.updateViewTransients( _state._mainView, poolWidth, poolHeight, _state._transientAliasPlan, _state._transientAliasGeneration ) )
         {
             publishRenderTargets();
             reportRenderTargetMemory();
@@ -1113,7 +1116,7 @@ namespace sw
         const uint32  zoom   = view._outputKind == RenderViewOutputKind::ScreenRect ? view._settings._upscaleZoom : 0u;
         const uint32  width  = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputWidth ), scale, zoom );
         const uint32  height = FrameRendererUtil::computeViewPoolExtent( static_cast<float32>( view._outputHeight ), scale, zoom );
-        (void)_viewResources.updateViewTransients( view, width, height );
+        (void)_viewResources.updateViewTransients( view, width, height, _state._transientAliasPlan, _state._transientAliasGeneration );
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
         beginViewHistory( view );
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.

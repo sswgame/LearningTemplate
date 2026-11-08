@@ -23,6 +23,7 @@
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
+#include "Engine/Renderer/Graph/RenderGraphAliasPlan.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Renderer/Lighting/Light2DCookieAtlas.h"
 #include "Engine/Renderer/Lighting/RealtimeProbeUpdater.h"
@@ -75,6 +76,13 @@ namespace sw
         RenderGraph _graph{};
         /** @brief 파이프라인 XML 의 `_listFramePass` 로 만든 프레임 그래프입니다. 프레임에 한 번, 뷰 그래프보다 먼저 돈다(`FramePassExecutor::recordFrameGraph`). */
         RenderGraph _frameGraph{};
+        /**
+         * @brief 뷰 그래프의 트랜지언트 앨리어싱 계획입니다(레벨 수명이 겹치지 않고 서술이 같은 첨부가 텍스처 하나를 나눈다 — `RenderGraphAliasPlan::build`).
+         * @details 콜백을 묶을 때(`FramePassExecutor::bindPassCallbacks`) 세우고 세대를 올린다. 뷰 풀은 세대가 다르면 다시 만든다(`FrameViewResources::updateViewTransients`).
+         *          파이프라인을 다시 읽으면 비우고 세대를 올린다 — 새 파이프라인의 첫 프레임은 앨리어싱 없이 만든다.
+         */
+        RenderGraphAliasPlan _transientAliasPlan{};
+        uint32               _transientAliasGeneration{ 0 };
         /// @brief 주 시점입니다. 파이프라인이 선언한 첨부(창 크기로 만들고 구성이 바뀔 때만 다시 만든다), TAA 히스토리, 직렬 리스트, 출력 사각형을 가집니다.
         FrameViewTarget _mainView{};
         /// @brief 추가 뷰들입니다. 카메라 id 순서가 아니라 처음 본 순서로 쌓습니다. 뷰마다 자기 풀과 컬링 슬롯을 가집니다.
