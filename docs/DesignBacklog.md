@@ -46,15 +46,15 @@
 |---|---|---|
 | 검증 필요 | **엔진 프레임 API에는 뷰 입력이 남아 있지만 렌더 구현 경계는 이미 분리돼 있다.** [`Engine::update`](../Source/Engine/Engine.h)는 `FrameViewports`와 카메라 공급자를 받지만, 제출은 [`IEngineRenderDriver`](../Source/Engine/Graphics/View/IEngineRenderDriver.h)로 전달한다. 따라서 “Engine이 Renderer 구현을 직접 안다”는 이전 주장은 틀렸다. | 서버·쿠커 타깃에서 이 프레임 입력 형식이 실제로 불필요한 의존을 끌어오는지 빌드 타깃·include 그래프로 확인한다. 컴파일 경계 위반이 재현될 때만 뷰 데이터 계약을 분리한다. |
 | 점검 보류 | **렌더 확장 두 경로는 확인했으나 중복 결함은 입증되지 않았다.** 기본 씬 수집은 엔진 컴포넌트를 구체적으로 처리하고, 모듈 확장은 [`RenderExtensionRegistry`](../Source/Engine/Renderer/Extension/RenderExtensionRegistry.h)와 프록시 수명 계약을 쓴다. 둘의 입력·수명·스레드 계약은 다르다. | 일괄 통합하지 않는다. 실제 플러그인 기능이 기본 수집 경로에 의존하거나 같은 기능을 두 번 구현하는 사례가 확인될 때만 공통 기여 API를 설계한다. |
-| 점검 보류 | **온라인 서비스는 공통 프로토콜 기반을 이미 갖췄다.** [`OnlineProtocolService`](../Source/GameFramework/Runtime/Online/Service/OnlineProtocolService.h)는 타입 있는 메서드 호출·응답과 공통 결과 지표·재시도 처리를 제공한다. “키트마다 손 디스패치·지표·오류 처리가 제각각”이라는 이전 요약은 현재 코드에 맞지 않는다. | 새 `OnlineSession`이나 두 번째 서버 추상화를 먼저 만들지 않는다. 게임의 실제 클라이언트 조립·수명 소유를 확인하고, 여러 게임에서 같은 통합 결함이 확인될 때만 세션 경계를 정한다. |
+| 점검 보류 | **온라인 서비스는 공통 프로토콜 기반을 이미 갖췄다.** [`OnlineProtocolService`](../Source/GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h)는 타입 있는 메서드 호출·응답과 공통 결과 지표·재시도 처리를 제공한다. “키트마다 손 디스패치·지표·오류 처리가 제각각”이라는 이전 요약은 현재 코드에 맞지 않는다. | 새 `OnlineSession`이나 두 번째 서버 추상화를 먼저 만들지 않는다. 게임의 실제 클라이언트 조립·수명 소유를 확인하고, 여러 게임에서 같은 통합 결함이 확인될 때만 세션 경계를 정한다. |
 
-**아직 코드·측정으로 확인하지 않은 후보:** 헤더 전파와 번역 단위 비용, 시작 시간의 단계별 비중, UI/VFX 배열 복사, 프레임 경로 intern은 조사 문서의 기록만으로 결함이라 판정하지 않는다. 다음 점검에서는 Editor, 오디오·애니메이션·물리, 쿠킹·셰이더, 플랫폼별 빌드 경계를 소유 코드와 실제 호출 경로에서 확인하고, 성능 주장은 프로파일링·벤치마크로 검증한다. 기존 조사 자료는 후보의 출처로만 참고한다: [성능 조사](../.claude/handoff/surveys/refactor_performance.md), [층·모듈 조사](../.claude/handoff/surveys/refactor_layers.md), [공통화 조사](../.claude/handoff/surveys/refactor_common.md), [폴더 위치 조사](../.claude/handoff/surveys/structure_survey.md), [서버·온라인 조사](../.claude/handoff/surveys/server_online_survey.md), [미완성 기능 조사](../.claude/handoff/surveys/unfinished_survey.md).
+**아직 코드·측정으로 확인하지 않은 후보:** 헤더 전파와 번역 단위 비용, 시작 시간의 단계별 비중, UI/VFX 배열 복사, 프레임 경로 intern은 조사 문서의 기록만으로 결함이라 판정하지 않는다. 다음 점검에서는 Editor, 오디오·애니메이션·물리, 쿠킹·셰이더, 플랫폼별 빌드 경계를 소유 코드와 실제 호출 경로에서 확인하고, 성능 주장은 프로파일링·벤치마크로 검증한다.
 
 **유지할 건강한 구조:** 타입 기반 온라인 프로토콜·InterestReplicationPolicy의 증분 가시 목록·프로브 revision 캐시·머티리얼 변경 감지·`IEngineRenderDriver` 경계는 현재 코드에서 이미 작동하는 구조다. 재작성 후보로 올리기 전에 실제 회귀나 측정된 병목이 있는지 먼저 확인한다.
 
 ### 데이터 기반 값 · 매직 리터럴 전수 점검 (요청 2026-11-07)
 
-**남은 일(9 차 W5 뒤):** 늘지 않게 하는 구조(파일 단위 래칫 `Scripts/lint/MagicLiterals.py`, 기준선 `Config/Dev/MagicLiteralBaseline.json`, 규칙은 [Constants.md](agents/Constants.md) "The ratchet" · "Sentinels")는 섰다. 기준선이 큰 파일(데모 UI 화면 · 게임 모드 컴포넌트)의 튜닝 실수를 PROPERTY · 카탈로그로, 다른 작업자가 맡은 AI · 내비 · 에디터 패널의 `-1`, 반환형을 `optional` 로 바꿀 `find*Index` 무리(빌드와 함께).
+**남은 일(9 차 W5 뒤):** 늘지 않게 하는 구조(파일 단위 래칫 `Scripts/lint/MagicLiterals.py`, 기준선 `Config/Dev/MagicLiteralBaseline.json`, 규칙은 [Constants.md](agents/Constants.md) "The ratchet" · "Sentinels")는 섰다. 기준선이 큰 파일(데모 UI 화면 · 게임 모드 컴포넌트)의 튜닝 실수를 PROPERTY · 카탈로그로, 다른 작업자가 맡은 AI · 내비 · 에디터 패널의 `-1`, 반환형을 `sw::optional` 로 바꿀 `find*Index` 무리(약 92 곳 — `sw::expected` Core 밖 이전과 함께, [Errors](agents/Errors.md)).
 
 | 우선순위 | 코드에서 확인한 내용 | 다음 작업과 완료 조건 |
 |---|---|---|
@@ -234,8 +234,8 @@ Graphify로 호출 관계를 좁힌 뒤 앱 루프, 에디터 ABI, ImGui 플랫�
 
 **판단(9 차, 옮긴 것 · 코드에 두는 것):**
 
-- 1 게임 AI — `AIControllerComponent` 가 트리 칸(`_behaviorTree`)과 실행기를 쥐고 `think` = 감각(`updateBlackboard`) → 트리 한 틱이다. 잎 어휘는 `ai.*`(`AIControllerActions.h`) · `blackboard.add` · `blackboard.copy`, 조건 `aiHasDestination`. 옮긴 것: ArenaEnemyAI(grunt · caster) · ArenaAutoBattleAI · HorseFollowAI · ShooterEnemyAIController · FarmAutoFarmerAI(`game/*/data/ai/*.bt.xml`). 언리얼 `AAIController` + `RunBehaviorTree`, 감각은 BT 서비스 · AIPerception 자리.
-  코드에 두는 것: `KartAI`(연속 조향 · 레이싱 라인 수학 — 언리얼도 차량 경로 추종은 코드), `SRPGCommanderAI`(효용 점수 탐색 — 가중치는 이미 설정 구조체, 갈래는 "칠 수 있으면 친다, 아니면 다가간다" 둘뿐이라 트리 이득이 없다), `ShooterEnemyComponent`(폰 몸의 행동 단계 · 복제되는 상태 — AI 판단이 아니다), `SkirmishUnitComponent` · `FarmVillagerComponent`(판의 상태를 따라 그리는 모습 — 마을 사람의 일과는 이미 스케줄 데이터). 같은 모양으로 남은 판단 `switch`: `VoxelAutoPlayControllerComponent` · `ShooterAutoAimControllerComponent`(이번 목록 밖 — 같은 감각 + 트리로 옮긴다).
+- 1 게임 AI — `AIControllerComponent` 가 트리 칸(`_behaviorTree`)과 실행기를 쥐고 `think` = 감각(`updateBlackboard`) → 트리 한 틱이다. 잎 어휘는 `ai.*`(`AIControllerActions.h`) · `blackboard.add` · `blackboard.copy`, 조건 `aiHasDestination`. 옮긴 것: ArenaEnemyAI(grunt · caster) · ArenaAutoBattleAI · HorseFollowAI · ShooterEnemyAIController · FarmAutoFarmerAI · VoxelAutoPlayControllerComponent · ShooterAutoAimControllerComponent(`game/*/data/ai/*.bt.xml`, 자동 플레이 조종자는 `prefabs/autoplay_ai.prefab.xml`). `think` 는 덮어쓸 수 없다 — 파생은 감각(`updateBlackboard`)만 내고 판단은 트리 데이터다. 언리얼 `AAIController` + `RunBehaviorTree`, 감각은 BT 서비스 · AIPerception 자리.
+  코드에 두는 것: `KartAI`(연속 조향 · 레이싱 라인 수학 — 언리얼도 차량 경로 추종은 코드), `SRPGCommanderAI`(효용 점수 탐색 — 가중치는 이미 설정 구조체, 갈래는 "칠 수 있으면 친다, 아니면 다가간다" 둘뿐이라 트리 이득이 없다), `ShooterEnemyComponent`(폰 몸의 행동 단계 · 복제되는 상태 — AI 판단이 아니다), `SkirmishUnitComponent` · `FarmVillagerComponent`(판의 상태를 따라 그리는 모습 — 마을 사람의 일과는 이미 스케줄 데이터).
 - 2 프리셋 · 규칙 표 — 네 곳 모두 이미 데이터이거나 명세 표다. `FractureSettings` 의 switch 는 원본 해시에 섞는 철자 표(바꾸면 모든 파쇄 모델을 다시 임포트 — 형식 표), `TextureImportConfig` 규칙은 이미 JSON(남은 표는 DXGI 번호 — 명세), `Autosave` 정책은 이미 `AutosaveSettings` 자산(남은 switch 는 까닭의 합치기 우선순위 — 종료 · 직접 부름이 이겨야 하는 의미 규칙), `InputMap` 기본 바인딩은 이미 `*.input.xml`.
 - 3 문화권 — 복수형 · 서수 규칙은 CLDR 규칙 글(`PluralRuleSet`, UTS #35 문법), 숫자 체계(`<numberingSystems>`)와 통화(`<currencies>`)는 문화권 표의 칸이다. C++ 규칙 함수 표 · `NumeralSystem` · 통화 표를 지웠다. 시간대는 이미 `timezones.xml`. 남은 것: 문화권별 통화 기호(CLDR 의 문화권별 currencies — 필요할 때 칸을 더한다), 날짜 패턴 기호는 형식이라 코드.
 - 4 에디터 표시 — 뷰포트 입력 오버레이 색(`InputOverlay.*`)과 강조색 스와치(`AccentSwatch.*`)를 테마 토큰으로. 뷰포트 오버레이 바 표는 바마다 내용 코드가 붙은 구조라 코드, UIPreview 기기 목록은 이미 `uiresolutions.xml`.

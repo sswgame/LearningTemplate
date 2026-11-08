@@ -70,10 +70,12 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Absolute disk path as a value | `Core/Path/AbsolutePath.h` `AbsolutePath::tryMake` (rejects `C:foo`, `\foo`, relative) | `FileUtil::isAbsolutePath` for validation |
 | Read stdin commands | `Core/Process/StandardInputReader.h` | a blocking `std::cin` loop |
 | Containers | `Core/Container/` `vector` · `unordered_map` · `map` · `set` · `deque` · `string` · `span` | `std::` containers |
-| Stable handle to pooled data | `Core/Container/SlotHandleTable.h` · `SlotHandle.h` · `IndexFreeList.h`; objects: `Engine/Foundation/GameObjectHandle.h` · `ComponentHandle.h` | raw pointers or indices into pooled storage |
+| Stable handle to pooled data | `Core/Container/SlotHandleTable.h` · `SlotHandle.h` · `IndexFreeList.h` — `SlotTableSync::Internal` (own mutex + atomics) or `External` (the caller's lock or one thread; vector + free list), generation bump only in `SlotHandle::nextGeneration`, handle types are `SlotHandle` aliases; objects: `Engine/Foundation/GameObjectHandle.h` · `ComponentHandle.h` | raw pointers or indices into pooled storage, a hand-written slot + generation + free-index table |
+| Identity of a content version or object ("did it change", cache key) | `Core/Memory/IdentityToken.h` `IdentityToken::make` — hold the token and compare it (no ABA); object · component ids: `Engine/Object/GameObject/ObjectIDAllocator.h` (engine-scope subsystem) | a process-wide `atomic<uint64>` id counter |
 | Own a byte block or object | `Core/Memory/MemoryBlock.h` `MemoryBlock`; `make_unique<T>`; `vector<T>` | `malloc` · `Memory::allocate` · raw `new` |
 | Many short-lived allocations | `Core/Memory/LinearAllocator.h` (per frame too: two and `reset`, see `EventDispatcher`) · `PoolAllocator.h`; small inline: `InlineAllocator.h` | a private free list |
-| Reach a service | `getSubsystem<T>()` · `findSubsystem<T>()` in the owning scope | singletons, `getInstance()` |
+| Reach a service | `getSubsystem<T>()` · `findSubsystem<T>()` in the owning scope | singletons, `getInstance()`, function-local or file-scope mutable state ([CppStyle](CppStyle.md) "No mutable statics") |
+| Static registration (registered before any scope exists, removed at module unload) | `Core/Registry/RegistrationList.h` `SW_DEFINE_REGISTRATION_LIST` · `StaticRegistrar` (`SW_DEFINE_STATIC_REGISTRAR` · `SW_STATIC_REGISTRATION`); one registration: `Core/Registry/RegistrationSlot.h` | a hand-written registrar struct, a static `vector` of registrations |
 | Well-known constants | `Core/Math/MathUtil.h` `kPi` …; units: `Core/Foundation/Constants.h` `constant::time` · `constant::memory` | retyped literals |
 
 A new row names the header and the API.

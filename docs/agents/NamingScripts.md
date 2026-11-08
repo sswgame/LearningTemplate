@@ -74,6 +74,8 @@ Shaders follow the C++ rules wherever HLSL can express them.
 
 C++ binds globals and cbuffer members **by name** (`shaderslot::resname` / `cbname`, `PassConstantNames`, the `g_<Name>Index` registry convention). They are not renamed for style, and the container, plural and abbreviation rules do not apply. The same holds for every other string-bound name: cbuffer names, semantics, externally supplied defines (`DX11`, `SW_PASS_*`, `MATERIAL_*`), macros in `binding_slots.hlsli`, shader file names, material field names.
 
+**Engine texture indices come from one C++ table.** A `g_<Name>Index` engine texture is added only to `shaderslot::emulated::kEngineTextureNames` (`ShaderBindingSlots.h`): the shader compiler injects `SW_ENGINE_TEXTURE_INDEX_<n>` from it and `binding.hlsli` expands the PassCB fields and the emulated backends' `Bindless::emulatedSlot` from those macros (`#error` when one is missing or the count changes). Never hand-write a new PassCB index field — a second hand list let DX11 · GL draw the magenta "unmapped" colour silently (Unreal shader parameter structs: one definition, both sides).
+
 **Renaming a string-bound name changes C++ in the same commit**: `ShaderBindingValidator::validate` skips an unknown reflected name, so a name C++ binds that is missing from the cooked reflection goes unnoticed.
 
 ### Resource Assets
