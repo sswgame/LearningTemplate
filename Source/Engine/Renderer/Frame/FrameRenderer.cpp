@@ -52,6 +52,7 @@ namespace sw
      *          디퍼드는 레벨이 나뉘어(레벨 0은 Shadow 와 GBuffer) 병렬 기록이 실제로 도는 유일한 경로이기도 하다.
      */
     SW_GLOBAL_VARIABLE( bool, gv_deferredShading, false, "기본 파이프라인을 디퍼드로 (기본 포워드)" );
+    SW_GLOBAL_VARIABLE( bool, gv_shadowCache, false, "서 있는 점광 · 스폿 그림자의 정적 메시를 캐시 층에 한 번 그려 다시 쓴다 (정적 메시 MeshComponent::_bStatic 만, 그림은 같다)" );
     /**
      * @brief `-gv_renderPipeline=<파이프라인 XML>` 이면 그 파이프라인으로 그립니다(디퍼드 선택 · 팩 설정 · 기본보다 우선합니다).
      * @details 게임은 데이터로 고른다 — 팩 설정의 `PackEngineSettings::_renderPipeline`(2D 게임은 그림자 맵과 톤맵이 없는
@@ -566,6 +567,8 @@ namespace sw
         if ( _state._frameShadow._mainView._bValid == SW_FALSE )
             _state._frameShadow._mainView = FrameShadowData::makeUnshadowedView( _state._frameShadow._layout );
         _state._mainView._shadow = _state._frameShadow._mainView;
+        // 그림자 캐시 — 타일마다 다시 그릴지 정한다(프레임에 한 번, 모든 뷰가 같은 타일). 정적 그림자 세대는 이 프레임의 스냅샷 값이다(applyCPUSnapshot 이 먼저 돈다).
+        _state._shadowCache.update( _state._frameShadow._listLocalTile, atlasResolution, _state._gpuScene.getStaticShadowGeneration(), static_cast<bool>( gv_shadowCache ) );
     }
 
     void FrameRenderer::updatePassConstants( FramePassContext& context, const float4x4& mainViewProj )
@@ -722,6 +725,7 @@ namespace sw
         _fog.release();
         _state._probeUpdater.release( _pDevice );
         _state._cookieAtlas.release( _pDevice );
+        _state._shadowCache.releaseLayer( _pDevice );
         // HDRI 텍스처의 참조를 놓는다 — 다음 프레임의 하늘이 새 디바이스에 다시 청한다(경로를 비워 다르게 본다).
         _state._skyHdriLoad  = TextureHandle{};
         _state._skyHdriPath  = hashed_string{};

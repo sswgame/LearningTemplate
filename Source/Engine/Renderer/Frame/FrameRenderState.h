@@ -26,6 +26,7 @@
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Renderer/Lighting/Light2DCookieAtlas.h"
 #include "Engine/Renderer/Lighting/RealtimeProbeUpdater.h"
+#include "Engine/Renderer/Lighting/ShadowCache.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUScene.h"
 #include "Engine/Renderer/VFX/VFXParticleRenderer.h"
@@ -108,6 +109,8 @@ namespace sw
          * @details 패킷 경로는 패킷과 맞바꾸기로 받고, 씬 직접 경로는 여기에 바로 채운다. 기록 중에는 읽기만 한다.
          */
         FrameShadowData _frameShadow{};
+        /// @brief 서 있는 점광 · 스폿의 그림자 캐시(규칙 · 캐시 층)입니다. `FrameRenderer::applyFrameShadow` 가 프레임마다 정하고 그림자 패스가 그린다(`gv_shadowCache`).
+        ShadowCache _shadowCache{};
         /// @brief 이번 프레임 실시간 프로브 갱신 요청입니다(패킷 경로도 여기에 받는다). 기록은 읽기만 합니다.
         vector<RealtimeProbeRequest> _listFrameRealtimeProbe{};
         RealtimeProbeUpdater         _probeUpdater{};   ///< 실시간 프로브 갱신의 버퍼와 컴퓨트 기록(`FrameRenderer::prepareRealtimeProbes` · `FramePassExecutor::dispatchRealtimeProbes`)

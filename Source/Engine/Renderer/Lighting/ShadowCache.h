@@ -63,7 +63,7 @@ namespace sw
         /** @brief 캐시를 버립니다(다음 `update` 가 모두 다시 그린다). 장치 교체 · 텍스처를 놓을 때 부른다. */
         void invalidate();
 
-        /** @brief 캐시 층 텍스처를 아틀라스 형식 · 크기로 둡니다(아틀라스 첨부의 값). 다르면 다시 만들고 캐시를 버린다. 실패하면 false 이고 그 프레임은 캐시를 쓰지 않는다. */
+        /** @brief 캐시 층 텍스처를 아틀라스 형식 · 크기로 둡니다(아틀라스 첨부의 값). 다르면 다시 만들고 이번 프레임의 Reuse 를 Rebuild 로 바꾼다. 실패하면 false 이고 그 프레임은 캐시를 쓰지 않는다. */
         [[nodiscard]] bool ensureLayer( IRHIDevice* pDevice, RHIFormat atlasFormat, uint32 atlasResolution );
         /** @brief 캐시 층 텍스처를 놓습니다. */
         void releaseLayer( IRHIDevice* pDevice );

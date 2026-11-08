@@ -162,6 +162,11 @@ namespace sw
          */
         CanvasMarker,
         /**
+         * @brief 그림자 캐시 복원 풀스크린(shadow_cache_restore.hlsl)입니다. 점광 · 스폿 타일 칸을 뷰포트로 잡고 캐시 층(정적 메시의 깊이, `ShadowCache`)의 텍셀을
+         *        픽셀 깊이(SV_Depth)로 그림자 아틀라스에 옮긴다 — 그 위에 움직이는 메시만 그린다(`FramePassExecutor::drawShadowTiles`). 컬러 출력이 없고 픽셀 스테이지가 있다(`kWritesPixelDepth`).
+         */
+        ShadowCacheRestore,
+        /**
          * @brief 패스 출력의 NaN · Inf 감시 컴퓨트(gpu_nan_check.hlsl)입니다. 부동소수 컬러 출력 텍스처를 텍셀마다 훑어 NaN · Inf 가 든 텍셀 수를 슬롯별 카운터에 더합니다(`GPUNanCheck`, 언리얼 r.CheckNaN 선).
          *        `-gv_nanCheck=1` 일 때만 PSO 가 만들어지고, 그래프가 끝난 뒤 주 시점의 패스 출력마다 한 번 돈다(`FramePassExecutor::scanPassOutputsForNan`). 네이티브 bindless(DX12 · Vulkan)만 쓴다.
          */

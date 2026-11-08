@@ -392,6 +392,14 @@ namespace sw
                         info._flags          = Flag::kCompute | Flag::kGPUAssertTarget;
                         break;
                     }
+                    case RenderPassType::ShadowCacheRestore:
+                    {
+                        // 그림자 아틀라스(깊이만)에 그리는 풀스크린 — 깊이 테스트(지운 1 위라 늘 통과) · 쓰기를 하고 컬러 RT 는 없다. 입력(캐시 층)은 C++ 가 ShadowMap 역할 이름으로 직접 건다.
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderShadowCacheRestore;
+                        info._colorTargetCount = 0;
+                        info._flags            = Flag::kDepthTest | Flag::kDepthWrite | Flag::kWritesPixelDepth;
+                        break;
+                    }
                     case RenderPassType::NanCheck:
                     {
                         // 부동소수 출력 텍스처를 엔진 텍스처(bindless)로 읽는 컴퓨트 — 샘플 텍스처를 컴퓨트에서 읽을 수 없는 에뮬 백엔드(DX11 · GL)에는 만들지 않는다.

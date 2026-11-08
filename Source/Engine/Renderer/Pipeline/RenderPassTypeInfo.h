@@ -176,6 +176,11 @@ namespace sw
         static constexpr uint32 kMaterialFixedState = SW_BIT( 24 );
         /** @brief 머티리얼이 블렌드까지 덮을 수 있는 색 패스다(한 첨부에 그리는 포워드 · 반투명). G버퍼는 첨부 셋의 의미가 정해져 있어 받지 않는다. */
         static constexpr uint32 kMaterialBlend = SW_BIT( 25 );
+        /**
+         * @brief 컬러 출력 없이 픽셀 스테이지가 깊이(SV_Depth)를 쓰는 내부 패스다(그림자 캐시 복원). 컬러가 없는 패스는 픽셀 스테이지를 떼는데(`FramePSOManager::makePassPSODesc`)
+         *        이 패스만 남긴다. 쿠커는 내부 슬롯의 VS · PS 를 늘 굽는다.
+         */
+        static constexpr uint32 kWritesPixelDepth = SW_BIT( 26 );
     };
 } // namespace sw
 

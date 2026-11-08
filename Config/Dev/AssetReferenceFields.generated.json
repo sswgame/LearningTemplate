@@ -108,6 +108,7 @@
         "_shaderProbeWaterWave",
         "_shaderSSAO",
         "_shaderSceneDepthCopy",
+        "_shaderShadowCacheRestore",
         "_shaderShadowDepth",
         "_shaderSky",
         "_shaderSprite2D",

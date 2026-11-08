@@ -88,11 +88,18 @@ namespace sw
     {
         if ( pDevice == nullptr || atlasResolution == 0 || atlasFormat == RHIFormat::Unknown )
             return false;
-        if ( _layerResolution != atlasResolution || _layerFormat != atlasFormat )
+        const bool bRecreate = _layerResolution != atlasResolution || _layerFormat != atlasFormat;
+        if ( bRecreate )
         {
             _layerPool.release( pDevice );
             _layerResolution = 0;
-            invalidate();
+            // 새 층은 비어 있다 — 이번 프레임의 Reuse 를 Rebuild 로 바꾼다(규칙은 텍스처를 모른다).
+            for ( ShadowCacheTileAction& action : _listAction )
+            {
+                if ( action == ShadowCacheTileAction::Reuse )
+                    action = ShadowCacheTileAction::Rebuild;
+            }
+            _bNeedsRebuild = _bUsesLayer;
         }
         // 그림자 아틀라스와 같은 형식 · 크기(부르는 쪽이 아틀라스 첨부의 값을 준다) — 깊이를 텍셀 그대로 옮긴다. 다시 그릴 때마다 1 로 지운다.
         RHIAttachmentOps ops{};
