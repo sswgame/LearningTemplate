@@ -86,6 +86,13 @@ namespace sw
 
     AutomationSession::~AutomationSession() = default;
 
+    AutomationSession::Runtime::Runtime( AutomationSession& owner )
+        : _owner{ owner }
+    {
+    }
+
+    AutomationSession::Runtime::~Runtime() = default;
+
     void AutomationSession::shutdownSubsystem()
     {
         // 실행기가 로그 리스너 · 입력을 빌려 쓴다 — 엔진 서비스가 사라지기 전에 떼고 비운다.

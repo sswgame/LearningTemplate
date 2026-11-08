@@ -111,10 +111,8 @@ namespace sw
         class Runtime final : public IAutomationRuntime
         {
         public:
-            explicit Runtime( AutomationSession& owner )
-                : _owner{ owner }
-            {
-            }
+            explicit Runtime( AutomationSession& owner );
+            ~Runtime() override; // 재생기(`ScenarioPlayer`)는 앞 선언뿐이다 — 만들기 · 소멸은 .cpp 에서(예외 정리 길도 완전한 형식을 요구한다)
 
             [[nodiscard]] bool         start( Engine& engine, SubsystemScope& host, const CommandLineManager& commandLine ) override;
             bool                       isBusy() const override;
