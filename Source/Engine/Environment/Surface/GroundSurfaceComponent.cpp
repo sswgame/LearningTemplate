@@ -11,6 +11,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -111,17 +112,36 @@ namespace sw
         : _probeLength{ 0.6f }
         , _lastSample{}
         , _groundKind{}
+        , _bSampledThisFrame{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
-    void GroundSurfaceComponent::onTick( float32 deltaTime )
+    void GroundSurfaceComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onTick( deltaTime );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager != nullptr )
-            pManager->executeOrDeferPostTickOnComponent( *this, []( GroundSurfaceComponent& self, GameObjectManager& manager )
-            { self.sampleGround( manager ); } );
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<GroundSurfaceComponent>( this );
+    }
+
+    void GroundSurfaceComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<GroundSurfaceComponent>( this );
+        Component::onUnregister( manager );
+    }
+
+    void GroundSurfaceComponent::sampleGroundOnce( GameObjectManager& manager )
+    {
+        if ( _bSampledThisFrame == SW_TRUE )
+            return;
+        sampleGround( manager );
+        _bSampledThisFrame = SW_TRUE;
+    }
+
+    void GroundSurfaceComponent::finishFrameSample( GameObjectManager& manager )
+    {
+        if ( _bSampledThisFrame == SW_FALSE )
+            sampleGround( manager );
+        _bSampledThisFrame = SW_FALSE;
     }
 
     void GroundSurfaceComponent::sampleGround( GameObjectManager& manager )

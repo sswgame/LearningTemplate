@@ -4,7 +4,8 @@
  * @details 도장 데이터(`SurfaceStampDef`)를 칸으로 들고 표면 변형 층(`SurfaceDeformSystem`)에 찍는 반응 컴포넌트다. 지역 효과의 반응 · 탈것 바퀴 · 끌리는 물체가 같은 길을 쓴다.
  *          - `Hold`: 켜져 있는 동안 오브젝트 자리에 도장 하나를 붙잡아 따라다니고, 꺼지거나 떨어지면 놓는다(자국은 메워진다).
  *          - `Trail`: 오브젝트가 `_trailStep` 이상 움직일 때마다 지난 자리 → 이번 자리를 띠로 찍는다. `_trailBreak` 보다 먼 한 번의 이동(순간 이동)은 잇지 않는다.
- *          찍기는 틱 뒤 게임 스레드에서 한다(씬 서비스는 병렬 틱에서 부르지 않는다). 높이장 · 충돌은 고치지 않는다.
+ *          찍기는 표면 서비스(`SurfaceComponentSystem`)가 틱 뒤 게임 스레드에서 한 번에 한다(씬 서비스는 병렬 틱에서 부르지 않는다) — 컴포넌트는 칸과 등록만 든다.
+ *          높이장 · 충돌은 고치지 않는다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -41,17 +42,18 @@ namespace sw
 
         /** @brief 칸이 바뀌면 붙잡은 도장을 놓고 다음 찍기 전에 도장을 다시 검사합니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
-        void onTick( float32 deltaTime ) override;
+        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다(표면 서비스가 돈다). */
+        void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 오브젝트가 꺼지면 붙잡은 도장을 놓고 지나온 길을 끊습니다. */
         void onOwnerActiveInHierarchyChanged() override;
 
         /** @brief 지금 붙잡은 도장이 있는지입니다. */
         bool isHolding() const { return _held.isValid(); }
+        /** @brief 오브젝트 자리로 도장을 찍거나 옮깁니다(표면 서비스가 부른다, 틱 뒤 게임 스레드). */
+        void applyStamp( GameObjectManager& manager );
 
     private:
-        /** @brief 오브젝트 자리로 도장을 찍거나 옮깁니다(틱 뒤 게임 스레드). */
-        void applyStamp( GameObjectManager& manager );
         /** @brief 붙잡은 도장을 놓고 지나온 길을 끊습니다. */
         void removePersistentStamp( GameObjectManager& manager );
 
