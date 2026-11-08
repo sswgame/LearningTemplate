@@ -27,6 +27,7 @@ namespace sw
         Force,
         Torque,
         Impulse,
+        Temperature, ///< 색온도 · 온도(K) — 화이트 밸런스(`PostProcessValues::_whiteTemperature`)
     };
 
     /** @brief 단위 하나 — 철자 · 차원 · 기준 단위로의 배율(값 × 배율 = 기준 단위 값). */
@@ -59,7 +60,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `Units = …` 가 받는 철자 전부입니다. 기준 단위는 m · rad · s · ratio · m/s · rad/s · m/s2 · Hz · kg · N · N*m · N*s 입니다. */
+    /** @brief `Units = …` 가 받는 철자 전부입니다. 기준 단위는 m · rad · s · ratio · m/s · rad/s · m/s2 · Hz · kg · N · N*m · N*s · K 입니다. */
     inline constexpr ReflectUnit kArrReflectUnit[] = {
         {     "mm",       ReflectUnitDimension::Length,                   0.001},
         {     "cm",       ReflectUnitDimension::Length,                    0.01},
@@ -85,6 +86,7 @@ namespace sw
         {      "N",        ReflectUnitDimension::Force,                     1.0},
         {    "N*m",       ReflectUnitDimension::Torque,                     1.0},
         {    "N*s",      ReflectUnitDimension::Impulse,                     1.0},
+        {      "K",  ReflectUnitDimension::Temperature,                     1.0},
     };
 
     inline const ReflectUnit* ReflectUnit::findUnit( const string_view name ) noexcept

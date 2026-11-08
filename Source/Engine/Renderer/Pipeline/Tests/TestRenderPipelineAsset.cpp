@@ -621,6 +621,10 @@ SW_TEST_CASE( RenderPipelineAssetTest, DistortionApplyNeedsItsInputs )
                               "</_listPass></RenderPipelineDesc>";
     RenderPipelineAsset asset;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, xml ) );
+}
+
+namespace
+{
     struct FrameGraphTestUtil
     {
         /** @brief 메시 패스 하나에 프레임 자원 · 프레임 패스를 더한 파이프라인 XML 입니다. @p resources · @p framePasses 는 목록 안에 그대로 넣습니다. */
@@ -749,7 +753,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputeImplementationIsATableChoice )
     downsample._type                        = RenderPassType::BloomDownsample;
     downsample._implementation              = RenderPassExecutionMode::Compute;
     const EngineDefaultAssets&      assets  = engine::getSubsystem<EngineDefaultAssets>();
-    const RenderPassShaderSelection pixel   = selectRenderPassShader( RenderPassType::BloomDownsample, &downsample, assets );
+    const RenderPassShaderSelection pixel   = selectRenderPassShader( RenderPassType::BloomDownsample, &downsample, &downsample, assets );
     const RenderPassShaderSelection compute = selectRenderPassComputeShader( downsample, assets );
     SW_EXPECT_EQUAL( pixel._shaderPath, compute._shaderPath );
     SW_EXPECT_TRUE( VectorUtil::contains( compute._listDefine, string( kPassComputeImplementationDefine ) ) );

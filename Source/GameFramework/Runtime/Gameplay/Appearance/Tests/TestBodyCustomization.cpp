@@ -224,7 +224,7 @@ SW_TEST_CASE_F( BodyCustomizationTest, PaletteSnapsToNearestSwatch )
  */
 SW_TEST_CASE( BodyProfileTest, InheritsAndOverridesByKey )
 {
-    DataInheritanceSchema schema;
+    DataInheritanceSchema schema{ "BodyProfileCatalog" };
     bool                  bListed = false;
     SW_REQUIRE_TRUE( DataCatalogInheritance::loadSchema( "BodyProfileCatalog", schema, bListed ) );
     SW_REQUIRE_TRUE( bListed );

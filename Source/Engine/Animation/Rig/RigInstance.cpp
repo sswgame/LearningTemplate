@@ -122,7 +122,7 @@ namespace sw
             _listTargetBone[targetIndex]   = static_cast<int32>( *boneIndex );
             _listTargetOffset[targetIndex] = offset;
             // 첫 평가 전의 광선 원점은 레퍼런스 포즈다.
-            _listContact[targetIndex]._originModel = listReferenceModel[static_cast<size_t>( boneIndex )].getTranslation();
+            _listContact[targetIndex]._originModel = listReferenceModel[*boneIndex].getTranslation();
         }
 
         _space._bPlanar = asset->isPlanar() ? SW_TRUE : SW_FALSE;

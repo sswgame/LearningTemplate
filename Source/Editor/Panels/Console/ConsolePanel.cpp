@@ -12,7 +12,6 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationLogPolicy.h"
-#include "DevTools/Client/Automation/Runner/AutomationSession.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -251,8 +250,7 @@ namespace sw::editor
         , _reservedFlags{ 0 }
     {
         // 세션이 없는 실행(자동화 실행기를 짓지 않은 구성 · 에디터 서비스 없이 세운 테스트)은 시나리오 선언이 없다 — 단위 테스트 선언만 본다.
-        if ( const AutomationSession* const pSession = findSubsystem<AutomationSession>() )
-            _pScenarioLogPolicy = pSession->getLogPolicy();
+        _pScenarioLogPolicy      = ConsoleViewModel::findScenarioLogPolicy();
         _logListenerSubscription = Logger::registerGlobalListener(
             SW_DELEGATE_METHOD( LogWrittenDelegate, &ConsolePanel::onLogWritten, this ) );
     }

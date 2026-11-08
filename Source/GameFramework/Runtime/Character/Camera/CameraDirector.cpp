@@ -252,11 +252,11 @@ namespace sw
             _outputPose = _fieldOfViewKickListener.applyToPose( _outputPose );
         // 후처리 덧칠도 섞인 포즈 위에 — 프리셋 블렌드가 덧칠을 출발점에 싣지 않게.
         for ( const PostProcessOverlay& overlay : _listPostProcessOverlay )
-            _outputPose._postProcess = blendPostProcess( _outputPose._postProcess, overlay._values, overlay._weight );
+            _outputPose._postProcess = PostProcessValues::blend( _outputPose._postProcess, overlay._values, overlay._weight ); // 포즈 블렌드와 같은 규칙(리플렉션 섞기)
         return _outputPose;
     }
 
-    void CameraDirector::setPostProcessOverlay( const GameObjectHandle& source, const CameraPostProcessValues& values, float32 weight )
+    void CameraDirector::setPostProcessOverlay( const GameObjectHandle& source, const PostProcessValues& values, float32 weight )
     {
         for ( size_t index = 0; index < _listPostProcessOverlay.size(); ++index )
         {

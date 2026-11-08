@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"

@@ -350,7 +350,7 @@ namespace sw
         };
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역폭입니다. 필드 크기의 합을 정렬 단위로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 빌드를 멈춥니다.
         static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) * 2 + sizeof( float32 ) * 2 + sizeof( uint32 ) * 7 +
-                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( InstanceCustomData ) + sizeof( uint64 ) * 2 +
+                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( InstanceCustomData ) + sizeof( uint64 ) * 2 + sizeof( IdentityToken ) +
                                                     sizeof( uint8 ) * 3 + sizeof( float32 ) * 2 + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),
                        "DrawCandidate has padding between fields (or a field was added without adding its size here)" );

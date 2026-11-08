@@ -608,7 +608,7 @@ namespace sw
         float32      clipYaw    = 0.0f;
         float32      ragdollYaw = 0.0f;
         const bool   bClipDirection =
-            RagdollComponentInternal::computePlanarYaw( listStartModel[static_cast<size_t>( upperBone )].getTranslation() - clipPelvis, clipYaw );
+            RagdollComponentInternal::computePlanarYaw( listStartModel[*upperBone].getTranslation() - clipPelvis, clipYaw );
         const bool       bRagdollDirection = RagdollComponentInternal::computePlanarYaw( upperWorld.getTranslation() - pelvisWorld.getTranslation(), ragdollYaw );
         const float32    yaw               = ( bClipDirection && bRagdollDirection ) ? ragdollYaw - clipYaw : 0.0f;
         const quaternion rotation          = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, yaw );

@@ -17,7 +17,7 @@ SW_TEST_CASE( CameraDirectorTest, PostProcessOverlayBlendsByWeight )
     const CameraTarget target{};
     SW_EXPECT_NEAR( 0.0f, director.step( 1.0f / 60.0f, target )._postProcess._vignetteIntensity, 1.0e-6f ); // 프리셋은 중립
 
-    CameraPostProcessValues look;
+    PostProcessValues look;
     look._vignetteIntensity    = 0.8f;
     look._saturation           = 0.2f;
     const GameObjectHandle gas = GameObjectHandle::make( 7 );

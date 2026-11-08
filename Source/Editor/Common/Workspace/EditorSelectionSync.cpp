@@ -6,9 +6,9 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Engine/2D/SpriteComponent.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Visual/2D/SpriteComponent.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw::editor

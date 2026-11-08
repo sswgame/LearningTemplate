@@ -4,6 +4,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/AssetID.h"
@@ -114,7 +115,7 @@ SW_TEST_CASE( MaterialLibraryTest, FeatureCombinationsMatchTheirRenderState )
         // 무늬 define 은 하나만 — 둘이면 셰이더의 #elif 가 첫째만 고른다.
         int32 patternCount = 0;
         for ( const string& define : material.getPermutations()._listAlwaysDefine )
-            patternCount += define.starts_with( "MATERIAL_PATTERN_" ) ? 1 : 0;
+            patternCount += StringUtil::startsWith( define, "MATERIAL_PATTERN_" ) ? 1 : 0;
         SW_EXPECT_TRUE_MSG( patternCount <= 1, loaded._id.c_str() );
     }
 }

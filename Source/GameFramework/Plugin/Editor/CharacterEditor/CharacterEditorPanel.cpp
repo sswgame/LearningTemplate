@@ -1200,7 +1200,7 @@ namespace sw::editor
         const AppearanceDatabase& database   = _document.getDatabase();
         AppearanceEditModel&      appearance = _document.getAppearanceModel();
         GameObjectManager*        pManager   = findPreviewManager();
-        GameObject*               pBody      = pManager != nullptr ? pManager->findGameObject( _previewBody ) : nullptr;
+        GameObject*               pBody      = pManager != nullptr ? pManager->resolveGameObject( _previewBody ) : nullptr;
         BodyCustomizationViewModel::gather( appearance, database, pBody, _bodyState );
         const BodyCustomizationViewState& state = _bodyState;
         _published._bodyLayerCount              = static_cast<uint32>( state._listLayer.size() );

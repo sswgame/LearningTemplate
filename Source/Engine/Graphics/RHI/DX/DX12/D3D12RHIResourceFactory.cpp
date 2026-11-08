@@ -4,8 +4,8 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"

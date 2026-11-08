@@ -954,14 +954,9 @@ namespace sw
         if ( bPassListed == false || pCmd == nullptr )
             return;
         const RenderGraphPassDesc& passDesc = listFramePass[iter->second];
-        utf8                       arrPassName[constant::buffer::kMax64];
-        const size_t               copyLen = MathUtil::min( passDesc._name.size(), sizeof( arrPassName ) - 1 );
-        Memory::copy( arrPassName, passDesc._name.data(), copyLen );
-        arrPassName[copyLen] = '\0';
-        GPUBreadcrumbs::mark( *pCmd, string_view( arrPassName, copyLen ) );
-        pCmd->beginEventMarker( arrPassName );
+        // 이벤트 표시 + 브레드크럼(시작 · 끝) 한 벌 — 캡처와 장치 손실 보고에 프레임 패스 이름(XML 의 `_name`)이 남는다.
+        const GPUPassScope scope{ *pCmd, passDesc._name };
         _frameGraphExecutor.executePass( passDesc._type, *pCmd );
-        pCmd->endEventMarker();
     }
 
     void FramePassExecutor::onGraphLevelPrologue( const RenderGraphLevelContext& levelContext )

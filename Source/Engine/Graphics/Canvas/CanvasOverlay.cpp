@@ -20,7 +20,7 @@ namespace sw
         , _pDevOverlay{}
         , _targetSize{ targetSize }
         , _layer{ CanvasOverlayLayer::MainOutput }
-        , _bHostRenderTarget{ bHostRenderTarget ? SW_TRUE : SW_FALSE }
+        , _bHostRenderTarget{ static_cast<uint8>( bHostRenderTarget ? SW_TRUE : SW_FALSE ) }
         , _reservedFlags{ 0 }
     {
     }

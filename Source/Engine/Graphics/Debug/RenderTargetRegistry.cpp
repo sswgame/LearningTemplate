@@ -49,6 +49,7 @@ namespace sw
             case RHIFormat::R16G16_SNORM: // 옥타헤드럴 법선을 방향 색(xyz * 0.5 + 0.5)으로 풀어 보이므로 보이는 채널은 RGB 셋이다
             case RHIFormat::R32G32B32_FLOAT:
                 return 3;
+            case RHIFormat::R16G16_FLOAT:
             case RHIFormat::R32G32_FLOAT:
                 return 2;
             case RHIFormat::R32_FLOAT:
@@ -116,6 +117,14 @@ namespace sw
             {
                 outValue = float4{ RenderTargetReadbackInternal::readFloat( pPixel, 0 ), RenderTargetReadbackInternal::readFloat( pPixel, 1 ),
                                    RenderTargetReadbackInternal::readFloat( pPixel, 2 ), RenderTargetReadbackInternal::readFloat( pPixel, 3 ) };
+                break;
+            }
+            case RHIFormat::R16G16_FLOAT:
+            {
+                uint16 arrHalf[2]{};
+                Memory::copy( arrHalf, pPixel, sizeof( arrHalf ) );
+                outValue._x = half::fromBits( arrHalf[0] ).toFloat();
+                outValue._y = half::fromBits( arrHalf[1] ).toFloat();
                 break;
             }
             case RHIFormat::R32G32_FLOAT:

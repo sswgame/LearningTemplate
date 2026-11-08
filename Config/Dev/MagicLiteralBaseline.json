@@ -512,7 +512,7 @@
     "Source/Engine/Graphics/RHI/IRHIDevice.cpp": {"integer": 4},
     "Source/Engine/Graphics/RHI/IRHIResourceFactory.h": {"integer": 1},
     "Source/Engine/Graphics/RHI/RHIDescriptors.h": {"integer": 2},
-    "Source/Engine/Graphics/RHI/RHIEnums.h": {"integer": 18},
+    "Source/Engine/Graphics/RHI/RHIEnums.h": {"integer": 19},
     "Source/Engine/Graphics/RHI/RHIMeshVertexStreams.cpp": {"float": 1, "integer": 2},
     "Source/Engine/Graphics/RHI/RHIModuleABI.h": {"integer": 1},
     "Source/Engine/Graphics/RHI/RHIRenderState.h": {"integer": 1},

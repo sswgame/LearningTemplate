@@ -70,7 +70,7 @@ namespace sw
      */
     struct SW_API RenderPassInputSignature
     {
-        static constexpr uint32 kMaxRole = 4;
+        static constexpr uint32 kMaxRole = 6; ///< 디퍼드 조명이 G버퍼 넷(알베도 · 노멀 · 머티리얼 · 사용자 칸) + 깊이를 필수로 읽는다(G버퍼 판 3)
 
         RenderPassInputRole _arrRequired[kMaxRole]{};
         uint32              _requiredCount{ 0 };

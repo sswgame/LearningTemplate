@@ -442,7 +442,6 @@ namespace sw
         const bool   bCannotSever = pManager == nullptr || pUnit == nullptr || pUnit->getMesh() == nullptr || pUnit->getMesh()->hasSkin() == false;
         if ( bCannotSever )
             return false;
-        const int32 regionIndex = *foundRegion;
         if ( VectorUtil::contains( _listSeveredRegion, region ) )
             return false;
 

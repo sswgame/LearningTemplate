@@ -2,10 +2,10 @@
 
 #include "Engine/Renderer/Frame/Timeline/GPUTimingRow.h"
 
-#include "Core/Container/CompareUtil.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Profiling/FrameProfiler.h"
 

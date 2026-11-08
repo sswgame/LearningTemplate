@@ -77,7 +77,7 @@ namespace sw
          * @details 지역의 화면 반응(독가스 · 유황 · 늪 — `ScreenReactionComponent`)이 쓴다. 가중치를 올리고 내리는 것(페이드)은 출처가 하고, 디렉터는 프레임마다 받은 값만 섞는다.
          *          스택(저장 상태)에 넣지 않는다 — 출처가 프레임마다 다시 정한다. 언리얼 PostProcessVolume 의 BlendWeight · 유니티 Volume weight 와 같은 자리다.
          */
-        void setPostProcessOverlay( const GameObjectHandle& source, const CameraPostProcessValues& values, float32 weight );
+        void setPostProcessOverlay( const GameObjectHandle& source, const PostProcessValues& values, float32 weight );
         /** @brief 지금 섞는 후처리 덧칠 수입니다(진단 · 테스트). */
         uint32 getPostProcessOverlayCount() const { return static_cast<uint32>( _listPostProcessOverlay.size() ); }
         /**
@@ -143,9 +143,9 @@ namespace sw
         /** @brief 출처 하나의 후처리 덧칠입니다. */
         struct PostProcessOverlay
         {
-            GameObjectHandle        _source{};
-            CameraPostProcessValues _values{};
-            float32                 _weight{ 0.0f };
+            GameObjectHandle  _source{};
+            PostProcessValues _values{};
+            float32           _weight{ 0.0f };
         };
 
         /** @brief 층 하나를 이번 프레임 포즈로 계산합니다. 모드, 감쇠(새로 켰으면 그 위치 그대로), 손떨림 순으로 처리합니다. 고정 층는 그대로입니다. */

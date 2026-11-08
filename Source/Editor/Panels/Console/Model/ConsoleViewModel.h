@@ -7,6 +7,12 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
+
+namespace sw
+{
+    class AutomationLogPolicy;
+} // namespace sw
 
 namespace sw::editor
 {
@@ -21,5 +27,7 @@ namespace sw::editor
         static void pausePlay();
         /** @brief @p absolutePath(로그 파일 또는 폴더)를 탐색기로 보입니다. 못 띄우면 경고가 남고 false 입니다. */
         static bool showInFileExplorer( string_view absolutePath );
+        /** @brief 지금 도는 시나리오 세션의 로그 정책입니다(선언한 로그를 기대한 줄로 표시). 세션이 없는 실행(자동화 실행기를 짓지 않은 구성)이면 nullptr 입니다. */
+        static shared_ptr<const AutomationLogPolicy> findScenarioLogPolicy();
     };
 } // namespace sw::editor

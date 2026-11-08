@@ -239,7 +239,7 @@ namespace sw
             caps._bWireframeFill        = _bFillModeNonSolid;
             caps._bMaterialTessellation = _bTessellationShader != 0 ? SW_TRUE : SW_FALSE;
             caps._bGPUBreadcrumbs       = _bCheckpoints != SW_FALSE ? SW_TRUE : SW_FALSE;
-            caps._bAsyncCompute         = _asyncComputeQueue != VK_NULL_HANDLE ? SW_TRUE : SW_FALSE;
+            caps._bAsyncCompute         = _asyncComputeQueue != nullptr ? SW_TRUE : SW_FALSE;
             caps._bGraphicsShaderWrites = _bFragmentStores;
             return caps;
         }

@@ -97,8 +97,6 @@ namespace sw
     void FrameGraphExecutor::executePass( RenderPassType type, IRHICommandList& cmd )
     {
         _pCmd = &cmd;
-        // 패스마다 이벤트 표시 + 브레드크럼(시작 · 끝) — 캡처와 장치 손실 보고에 프레임 패스 이름이 남는다.
-        const GPUPassScope scope{ cmd, getEnumName( type ) };
         switch ( type )
         {
             case RenderPassType::DepthHistory:

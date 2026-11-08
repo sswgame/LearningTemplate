@@ -155,11 +155,11 @@ SW_TEST_CASE( EditorAssetPlacementTest, TwoDimensionalUsesZPlane )
 SW_TEST_CASE( EditorAssetPlacementTest, RotateStepsWrapAndMapToTheUpAxis )
 {
     using sw::editor::EditorAssetPlacement;
-    const sw::float32 step = sw::MathUtil::kHalfPi;
-    sw::float32       yaw  = 0.0f;
-    yaw                    = EditorAssetPlacement::stepYaw( yaw, step, 1 );
+    const float32 step = sw::MathUtil::kHalfPi;
+    float32       yaw  = 0.0f;
+    yaw                = EditorAssetPlacement::stepYaw( yaw, step, 1 );
     SW_EXPECT_NEAR( step, yaw, 1e-5f );
-    for ( sw::int32 index = 0; index < 3; ++index )
+    for ( int32 index = 0; index < 3; ++index )
         yaw = EditorAssetPlacement::stepYaw( yaw, step, 1 );
     SW_EXPECT_NEAR( 0.0f, yaw, 1e-6f ); // 네 번 — 한 바퀴
     yaw = EditorAssetPlacement::stepYaw( 0.0f, step, -1 );

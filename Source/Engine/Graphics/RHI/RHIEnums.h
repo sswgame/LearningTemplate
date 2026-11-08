@@ -47,6 +47,8 @@ namespace sw
         EAC_RG11_UNORM   = 20, ///< 16 B/블록, 2채널(노멀맵)
         /// @brief 32비트 부동소수점 RGBA(16 B). `R32G32B32_FLOAT` 텍스처를 그 형식이 없는 장치(모바일 Vulkan · WebGPU)에 올릴 때 펴는 형식이다(`Texture2D::expandToFourChannels`).
         R32G32B32A32_FLOAT = 21,
+        /// @brief 16비트 부동소수점 RG(4 B) — 화면 속도(SceneVelocity) · 화면 왜곡 오프셋(SceneDistortion). 셰이더는 `.rg` 가 실수다.
+        R16G16_FLOAT = 22,
     };
 
     /**

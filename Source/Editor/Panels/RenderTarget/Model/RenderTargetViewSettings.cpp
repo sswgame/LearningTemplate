@@ -67,7 +67,7 @@ namespace sw::editor
         outImage._byte.clear();
         outImage._width              = 0;
         outImage._height             = 0;
-        const bool bImageUndecodable = isDecodableFormat( format, bDepth ) == false || layout._width == 0 || layout._height == 0;
+        const bool bImageUndecodable = RenderTargetReadback::isDecodableFormat( format, bDepth ) == false || layout._width == 0 || layout._height == 0;
         if ( bImageUndecodable )
             return false;
         if ( static_cast<size_t>( layout._rowBytes ) * layout._height > byte.size() )
@@ -89,7 +89,7 @@ namespace sw::editor
                 for ( uint32 x = 0; x < layout._width; ++x )
                 {
                     float4 value{};
-                    if ( readPixel( byte, layout, format, bDepth, x, y, value ) == false ||
+                    if ( RenderTargetReadback::readPixel( byte, layout, format, bDepth, x, y, value ) == false ||
                          RenderTargetViewSettingsInternal::isClearedDepth( value._x ) )
                         continue;
                     const float32 view = toDepthView( value._x );
@@ -116,7 +116,7 @@ namespace sw::editor
             for ( uint32 x = 0; x < layout._width; ++x )
             {
                 float4 value{};
-                (void)readPixel( byte, layout, format, bDepth, x, y, value ); // 크기는 위에서 확인했다
+                (void)RenderTargetReadback::readPixel( byte, layout, format, bDepth, x, y, value ); // 크기는 위에서 확인했다
                 float4 shown = value;
                 if ( bDepth )
                 {

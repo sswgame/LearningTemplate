@@ -209,7 +209,7 @@ namespace sw
 
                 const PropertyInfo& prop = *pTargetProp;
                 if ( numProps <= kFastPropBitmaskThreshold )
-                    state._matchedBitmask |= ( 1ULL << matchedIndex );
+                    state._matchedBitmask |= ( 1ULL << *matchedIndex );
                 else
                     state._uniqueMatchedPropHashes.insert( prop.getNameHash() );
 

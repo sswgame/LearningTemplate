@@ -221,4 +221,5 @@ namespace sw
         vector<BodyShapeAxis> _listAxis;
         vector<hashed_string> _listUnsupported; ///< 이 스켈레톤이 받지 않는다고 선언한 채널
         BodyShapeSetParams    _params;
-    } // namespace sw
+    };
+} // namespace sw

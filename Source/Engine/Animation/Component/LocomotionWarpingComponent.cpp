@@ -191,7 +191,7 @@ namespace sw
             if ( rotation.decompose( scale, turned, translation ) == false )
                 continue;
             local._rotation = turned.normalize();
-            pose.setBoneTransform( static_cast<uint32>( boneIndex ), local );
+            pose.setBoneTransform( *boneIndex, local );
         }
     }
 } // namespace sw

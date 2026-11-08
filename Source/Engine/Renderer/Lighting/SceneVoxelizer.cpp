@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringUtil.h"
 

@@ -584,7 +584,7 @@ namespace sw
 
     RenderPassShaderSelection selectRenderPassComputeShader( const RenderGraphPassDesc& passDesc, const EngineDefaultAssets& engineDefaultAssets )
     {
-        RenderPassShaderSelection selection = selectRenderPassShader( passDesc._type, &passDesc, engineDefaultAssets );
+        RenderPassShaderSelection selection = selectRenderPassShader( passDesc._type, &passDesc, &passDesc, engineDefaultAssets );
         const string              computeDefine{ kPassComputeImplementationDefine };
         if ( VectorUtil::contains( selection._listDefine, computeDefine ) == false )
             selection._listDefine.push_back( computeDefine );

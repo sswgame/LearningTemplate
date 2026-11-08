@@ -10,9 +10,9 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
 
-#include "Engine/Graphics/View/CameraPostProcessValues.h"
+#include "Engine/Graphics/View/PostProcessValues.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -53,7 +53,7 @@ namespace sw
         PROPERTY( Category = "Reaction", DisplayName = "Tag", Tooltip = "While the object has this tag the screen look blends in" )
         TagID _tag;
         PROPERTY( Category = "Reaction", DisplayName = "Post Process", Tooltip = "Look at full weight (vignette, saturation, contrast, exposure); neutral fields change nothing" )
-        CameraPostProcessValues _postProcess;
+        PostProcessValues _postProcess;
         PROPERTY( Category = "Reaction", DisplayName = "Fade In Time", Min = 0.0, Units = s, Tooltip = "Seconds from no look to full look after the tag appears (0 = at once)" )
         float32 _fadeInTime;
         PROPERTY( Category = "Reaction", DisplayName = "Fade Out Time", Min = 0.0, Units = s, Tooltip = "Seconds from full look to none after the tag goes (0 = at once)" )

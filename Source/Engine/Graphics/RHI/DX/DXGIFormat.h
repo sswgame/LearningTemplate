@@ -43,6 +43,7 @@ namespace sw
         {     RHIFormat::EAC_R11_UNORM,            DXGI_FORMAT_UNKNOWN},
         {    RHIFormat::EAC_RG11_UNORM,            DXGI_FORMAT_UNKNOWN},
         {RHIFormat::R32G32B32A32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT},
+        {      RHIFormat::R16G16_FLOAT,       DXGI_FORMAT_R16G16_FLOAT},
     };
     static_assert( isRHIFormatTableInOrder( kArrDXGIFormatRow ), "kArrRHIDxgiFormatRow needs one row per RHIFormat, in enumerator order" );
 

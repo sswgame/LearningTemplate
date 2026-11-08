@@ -2,9 +2,9 @@
 // 공유 코드 판 3 왕복(층 · 플레이어 숨김)과 판 1 코드 읽기(nogpu).
 #include "pch.h"
 
+#include "Core/Encoding/Base64Util.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/String/Base64Util.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
