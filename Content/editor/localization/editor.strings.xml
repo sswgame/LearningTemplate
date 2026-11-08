@@ -5851,6 +5851,16 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorContentBrowser.FindSelected" source="Find selected">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorContentBrowser.FindSelectedTip" source="Go to the asset of the object selected in the main scene and select it here. Selections in preview windows are not followed.">
+			<origins>
+				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorContentBrowser.Import"
 		       source="Import external files (textures, shaders, sounds, ...) into the current folder">
 			<origins>

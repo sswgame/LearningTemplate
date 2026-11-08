@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelectionSync.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -292,6 +293,10 @@ namespace sw::editor
     {
         // 바뀐 선택이 겨누는 선택이 된다 — 미리보기 창에서 고르면 그 창의 것, 메인에서 고르면 메인으로 돌아온다.
         editor::setFocusedSelection( isPreviewScope() ? this : nullptr );
+        // 동기화 채널에 자기 문맥으로 알린다 — 선택은 옮기지 않고, 받는 쪽이 따를 문맥을 고른다(`EditorSelectionSync`).
+        EditorSelectionSync* pSync = editor::findSubsystem<EditorSelectionSync>();
+        if ( pSync != nullptr )
+            pSync->onSelectionChanged( *this );
         if ( _onSelectionChanged.isBound() )
             _onSelectionChanged();
     }
