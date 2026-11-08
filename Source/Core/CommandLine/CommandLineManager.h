@@ -56,6 +56,7 @@ namespace sw
 /** @brief 줄의 철자 목록(`...`)에서 첫 철자만 고릅니다. 철자가 하나뿐인 줄에서도 가변 인자가 비지 않게 뒤에 nullptr 를 붙여 부릅니다. */
 #define SW_ARGUMENT_FIRST_SPELLING( first, ... )                         first
 #define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... ) SW_ARGUMENT_FIRST_SPELLING( __VA_ARGS__, nullptr ),
+#include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
 #undef SW_ARGUMENT_FIRST_SPELLING

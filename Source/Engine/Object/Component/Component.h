@@ -551,7 +551,7 @@ namespace sw
          */
         bool isSceneComponent() const { return _bIsSceneComponent == SW_TRUE; }
 
-        /** @brief 컴포넌트 고유 ID 를 반환합니다. 붙을 때(`GameObject::attachCreatedComponent`) 매니저의 번호 공간(`ObjectIDSpace` — 엔진 범위)이 준다 — 붙기 전에는 0 입니다. */
+        /** @brief 컴포넌트 고유 ID 를 반환합니다. 붙을 때(`GameObject::attachCreatedComponent`) 매니저의 번호 공간(`ObjectIDAllocator` — 엔진 범위)이 준다 — 붙기 전에는 0 입니다. */
         uint64 getComponentID() const { return _componentID; }
 
         /** @brief 삭제 예정(묘비) 표시를 합니다. */

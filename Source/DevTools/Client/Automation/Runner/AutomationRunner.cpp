@@ -671,7 +671,11 @@ namespace sw
         const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         if ( pWindowHost == nullptr || pWindowHost->getWindow() == nullptr )
             return string{};
-        return string{ RHI::getBackendTypeName( gv_rhiBackend ) };
+        // 엔진 전역 칸은 Engine 이미지 밖에서 링크할 수 없다 — 이름으로 찾아 읽는다(RHIBackendSwitcher 와 같은 길).
+        const GlobalVariableInfo* const pBackend = engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_rhiBackend" );
+        if ( pBackend == nullptr )
+            return string{};
+        return string{ RHI::getBackendTypeName( *static_cast<const RHIBackend*>( pBackend->_pData ) ) };
     }
 
     string AutomationRunner::describeRunPosition() const

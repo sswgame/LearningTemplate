@@ -6,5 +6,7 @@
 sw_addGameFrameworkKit(GF_RealTimeStrategy)
 
 # 락스텝 판 걸음(FrontierTown · StarSkirmish)은 입력만 보내고 받는 쪽이 같은 계산을 한다 — 구성 · 묶음 경계와 상관없이 같은 비트여야 한다
-# (`sw_markDeterministicSources` — Release 의 FMA 축약이 인라인 · 유니티 묶음에 따라 달라져 고정 다이제스트가 묶음 구성만 바뀌어도 갈렸다).
-sw_markDeterministicSources(GF_RealTimeStrategy RTSWorld.cpp RTSCommand.cpp RTSCommanderAI.cpp RTSVision.cpp)
+# (`sw_markDeterministicSources` — Release 의 FMA 축약이 인라인 · 유니티 묶음에 따라 달라질 수 있다). 키트를 짓지 않는 구성(Debug)에는 타깃이 없다.
+if(TARGET GF_RealTimeStrategy)
+	sw_markDeterministicSources(GF_RealTimeStrategy RTSWorld.cpp RTSCommand.cpp RTSCommanderAI.cpp RTSVision.cpp)
+endif()

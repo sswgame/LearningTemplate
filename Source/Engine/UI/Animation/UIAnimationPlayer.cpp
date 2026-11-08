@@ -241,7 +241,7 @@ namespace sw
         Widget* pWidget = _pTree->findWidgetByID( widget );
         if ( pWidget == nullptr )
         {
-            SW_LOG_WARNING_ID( "UIAnimationPlayer.TweenWidgetNotTree", "[UI] Tween of '%#': widget %# is not in this tree", string( propertyPath ).c_str(), widget );
+            SW_LOG_WARNING_ID( "UIAnimationPlayer.TweenWidgetNotTree", "[UI] Tween of '%#': widget %# is not in this tree", string( propertyPath ).c_str(), widget.getKey() );
             return false;
         }
         ActiveTween tween{};

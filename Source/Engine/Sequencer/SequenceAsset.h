@@ -19,7 +19,6 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Sequencer/SequenceTimelineUtil.h"
 
 namespace sw
 {

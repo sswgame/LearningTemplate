@@ -14,6 +14,8 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Name/hashed_string.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 #include "Engine/Animation/Scene/AnimationDebugState.h"
 #include "Engine/Foundation/ComponentHandle.h"
 
@@ -55,7 +57,7 @@ namespace sw
      * @struct AnimationRewindTrack
      * @brief 기록 대상 하나의 고리 버퍼입니다. 대상이 사라져도 창을 벗어날 때까지 남습니다(죽기 직전을 되감아 볼 수 있다).
      */
-    struct SW_API AnimationRewindTrack
+    struct SW_DEVTOOLS_API AnimationRewindTrack
     {
         ComponentHandle              _target;
         string                       _label; ///< 오브젝트 이름(기록을 시작할 때)
@@ -78,7 +80,7 @@ namespace sw
      * @class AnimationRewindRecorder
      * @brief `AnimationSystem` 하나에 하나입니다. 게임 스레드에서만 씁니다.
      */
-    class SW_API AnimationRewindRecorder
+    class SW_DEVTOOLS_API AnimationRewindRecorder
     {
     public:
         AnimationRewindRecorder();

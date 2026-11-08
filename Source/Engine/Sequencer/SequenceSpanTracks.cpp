@@ -16,6 +16,7 @@
 #include "Engine/Presentation/ISoundPlayer.h"
 #include "Engine/Presentation/ISubtitleSink.h"
 #include "Engine/Sequencer/SequenceAsset.h"
+#include "Engine/Sequencer/SequenceTimelineUtil.h"
 
 namespace sw
 {

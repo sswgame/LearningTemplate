@@ -486,7 +486,7 @@ namespace sw
                     box->setOrientation( UIOrientation::Vertical );
                     box->setSpacing( 2.0f );
                     (void)box->addChild( DebugHUDInternal::makeText( pRegistration->_pTitle, DebugHUDInternal::kTitleFontSize, DebugHUDInternal::kTitleColor ) );
-                    _listView.push_back( SectionView{ string( pRegistration->_pName ), box->getID(), 0, 0, static_cast<uint8>( pRegistration->isUserSection() ? SW_TRUE : SW_FALSE ) } );
+                    _listView.push_back( SectionView{ string( pRegistration->_pName ), box->getID(), WidgetID{}, 0, static_cast<uint8>( pRegistration->isUserSection() ? SW_TRUE : SW_FALSE ) } );
                     (void)pColumn->addChild( std::move( box ) );
                 }
             }
@@ -498,12 +498,12 @@ namespace sw
                 if ( pBox == nullptr )
                     return;
                 const bool bHasGraph = _writer.hasGraph();
-                const bool bReshaped = view._lineCount != _writer.getLineCount() || ( view._graph != 0 ) != bHasGraph;
+                const bool bReshaped = view._lineCount != _writer.getLineCount() || view._graph.isValid() != bHasGraph;
                 if ( bReshaped )
                 {
                     pBox->clearChildren();
                     (void)pBox->addChild( DebugHUDInternal::makeText( registration._pTitle, DebugHUDInternal::kTitleFontSize, DebugHUDInternal::kTitleColor ) );
-                    view._graph = 0;
+                    view._graph = WidgetID{};
                     if ( bHasGraph )
                     {
                         unique_ptr<DebugHUDGraphWidget> graph = make_unique<DebugHUDGraphWidget>();

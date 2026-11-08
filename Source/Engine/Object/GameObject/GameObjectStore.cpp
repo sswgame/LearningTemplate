@@ -15,7 +15,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/ObjectIDSpace.h"
+#include "Engine/Object/GameObject/ObjectIDAllocator.h"
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
@@ -35,7 +35,7 @@ namespace sw
 
 namespace sw
 {
-    GameObjectStore::GameObjectStore( GameObjectManager& manager, SceneTickScheduler& tickScheduler, const StructuralChangeBuffer& structuralChangeBuffer, ObjectIDSpace& idSpace )
+    GameObjectStore::GameObjectStore( GameObjectManager& manager, SceneTickScheduler& tickScheduler, const StructuralChangeBuffer& structuralChangeBuffer, ObjectIDAllocator& idSpace )
         : _pManager{ &manager }
         , _pIDSpace{ &idSpace }
         , _pTickRegistry{ &tickScheduler.getTickRegistry() }

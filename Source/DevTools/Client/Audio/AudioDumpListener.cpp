@@ -6,6 +6,8 @@
  */
 #include "pch.h"
 
+#include "DevTools/Client/Audio/AudioDumpListener.h"
+
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -17,30 +19,11 @@
 #include "Engine/Audio/AudioRenderListener.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
     /** @brief `-gv_audioDumpPath=<파일>.wav`: 장치 없는 오프라인 렌더를 스트림이 끝날 때 이 WAV(채널 마스크 포함, 최대 60 초)로 남깁니다. 비면 쌓지 않습니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_audioDumpPath, "", "오프라인 오디오 렌더를 내릴 때 이 WAV 로 남김(비면 끄기)" );
-
-    /**
-     * @struct AudioDumpBuffer
-     * @brief 쌓은 오프라인 렌더(채널 교차)입니다. 엔진 범위 서비스라 엔진 범위와 함께 생기고 사라진다 — 리스너(정적 등록 항목)는 칸을 들지 않는다.
-     */
-    class AudioDumpBuffer final : public ISubsystem
-    {
-    public:
-        vector<float32> _listSample;
-
-        static constexpr const utf8* kSubsystemName = "AudioDumpBuffer";
-        SubsystemInitResult          initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                         shutdownSubsystem() override {}
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
-    };
-
-    SW_SERVICE_SLOT( AudioDumpBuffer, Optional );
-    SW_ENGINE_SERVICE_SUBSYSTEM( AudioDumpBuffer, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( AudioDumpBuffer ) ); // 엔진 범위 서비스(아래 층이라 모듈 부분 `SW_MODULE_PART` 를 쓸 수 없다)
 
     namespace
     {

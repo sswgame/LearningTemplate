@@ -1015,6 +1015,7 @@ namespace sw::editor
     {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) registerType( #Canon, createBuiltinProperty<InspectorBuiltinCppTypeT<CppType>>() );
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
+#include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
         registerType( AssetRefBase::kTypeName, make_unique<AssetRefProperty>() );

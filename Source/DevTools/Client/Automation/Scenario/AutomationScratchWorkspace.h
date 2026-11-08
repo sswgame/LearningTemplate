@@ -5,14 +5,33 @@
  *          실행기만 하므로 개발 도구에 둔다 — 배포 구성에는 없다(언리얼 Automation 의 테스트 픽스처 준비도 Developer 모듈 쪽이다).
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "DevTools/DevToolsAPI.h"
 
 namespace sw
 {
+    // 개발 도구 클라이언트가 기동 범위에 세운다(`DevToolsClient::addStartupSubsystems`) — 엔진 서비스 칸(SW_SERVICE_SLOT)은 Engine 이미지의 정적 멤버라 DevTools 가 정의할 수 없다.
+    /**
+     * @struct AutomationScratchCounter
+     * @brief 사본 폴더를 끝까지 만든 횟수입니다(`AutomationScratchWorkspace::getPrepareCount` — 세대 번호). 엔진 범위 서비스라 엔진 범위와 함께 생기고 사라진다.
+     * @details 시나리오 실행기는 단계마다 새로 서므로 실행기 멤버로 두면 번호가 되돌아가 에디터 울타리가 새 사본을 놓친다 — 엔진 범위가 든다(예전에는 프로세스 원자 칸).
+     */
+    class AutomationScratchCounter final : public ISubsystem
+    {
+    public:
+        atomic<uint64> _prepareCount{ 0 };
+
+        static constexpr const utf8* kSubsystemName = "AutomationScratchCounter";
+        SubsystemInitResult          initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                         shutdownSubsystem() override {}
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+    };
+
     struct AutomationScratchFolder;
 
     /** @brief 시나리오 사본 폴더를 만들고 쓰기 문을 세웁니다. 상태는 엔진 범위 서비스(사본 횟수)뿐입니다. */

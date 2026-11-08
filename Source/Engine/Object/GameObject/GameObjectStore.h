@@ -33,7 +33,7 @@ namespace sw
 {
     class Component;
     class GameObjectManager;
-    class ObjectIDSpace;
+    class ObjectIDAllocator;
     class SceneTickScheduler;
     class StructuralChangeBuffer;
     class TickRegistry;
@@ -101,7 +101,7 @@ namespace sw
          * @param tickScheduler 지운 컴포넌트와 오브젝트를 알릴 틱 레지스트리의 주인(이미 만들어져 있어야 한다)
          * @param idSpace 오브젝트 id 를 내는 번호 공간(엔진 범위 또는 엔진 없는 매니저의 것 — 매니저가 이 저장소보다 먼저 만든다)
          */
-        GameObjectStore( GameObjectManager& manager, SceneTickScheduler& tickScheduler, const StructuralChangeBuffer& structuralChangeBuffer, ObjectIDSpace& idSpace );
+        GameObjectStore( GameObjectManager& manager, SceneTickScheduler& tickScheduler, const StructuralChangeBuffer& structuralChangeBuffer, ObjectIDAllocator& idSpace );
         /** @brief 남은 오브젝트는 매니저의 `clear` 가 이미 지웠으므로 여기서는 아무것도 하지 않습니다. */
         ~GameObjectStore() = default;
 
@@ -133,7 +133,7 @@ namespace sw
 
         /**
          * @brief 구조 세대입니다(`GameObjectManager::getStructureGeneration`). 읽기는 잠금이 없습니다.
-         * @details 시작 값은 저장소마다 한 번 받는 오브젝트 id 를 위 비트(`kStructureGenerationShift`)에 둔 값이다. id 는 번호 공간(`ObjectIDSpace` — 엔진 범위)에서 한 번만 나오므로
+         * @details 시작 값은 저장소마다 한 번 받는 오브젝트 id 를 위 비트(`kStructureGenerationShift`)에 둔 값이다. id 는 번호 공간(`ObjectIDAllocator` — 엔진 범위)에서 한 번만 나오므로
          *          같은 엔진의 저장소끼리 세대가 겹치지 않는다(카운터를 새로 두지 않는다). 한 저장소가 2^24 번 넘게 올려야 다른 저장소의 범위에 닿고,
          *          그래도 캐시가 틀리려면 그 저장소가 같은 주소에 있어야 한다.
          */
@@ -322,7 +322,7 @@ namespace sw
         /** @brief 구조 세대의 시작 값에서 오브젝트 id 를 올려 둘 비트 수입니다(`getStructureGeneration`). */
         static constexpr uint32 kStructureGenerationShift = 24;
 
-        /** @brief 새 ObjectID 를 발급합니다(번호 공간 `ObjectIDSpace` — 씬을 넘어 옮긴 오브젝트가 같은 id 를 유지하도록 엔진의 매니저들이 한 공간을 나눈다). */
+        /** @brief 새 ObjectID 를 발급합니다(번호 공간 `ObjectIDAllocator` — 씬을 넘어 옮긴 오브젝트가 같은 id 를 유지하도록 엔진의 매니저들이 한 공간을 나눈다). */
         uint64 allocateID();
         /** @brief `_mutex` 를 쥔 채 @p objectID 로 오브젝트를 만들어 이름 맵, id 테이블, 병합 대기 목록에 올립니다. */
         GameObject* createGameObjectUnlocked( hashed_string name, uint64 objectID );
@@ -349,7 +349,7 @@ namespace sw
 
     private:
         GameObjectManager*                             _pManager;                ///< 만든 오브젝트의 소유 매니저(`GameObject::_pOwnerManager`)
-        ObjectIDSpace*                                 _pIDSpace;                ///< 오브젝트 id 를 내는 번호 공간(매니저가 든다 — 엔진 범위 또는 자기 것)
+        ObjectIDAllocator*                             _pIDSpace;                ///< 오브젝트 id 를 내는 번호 공간(매니저가 든다 — 엔진 범위 또는 자기 것)
         TickRegistry*                                  _pTickRegistry;           ///< 지운 컴포넌트와 오브젝트를 틱 레지스트리에 알린다
         [[maybe_unused]] const StructuralChangeBuffer* _pStructuralChangeBuffer; ///< 틱 중인지만 읽는다. 해체 단언에 쓰며, 단언이 빠지는 Release 와 Shipping 에서는 읽는 곳이 없다
 

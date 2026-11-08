@@ -172,8 +172,8 @@ namespace sw
     }
 
     GameObjectManager::GameObjectManager( const SceneEngineServices& services )
-        : _pOwnedObjectIDSpace{ services._pObjectIDSpace == nullptr ? make_unique<ObjectIDSpace>() : nullptr } // 엔진 범위가 없으면 이 매니저가 번호 공간의 주인이다
-        , _pObjectIDSpace{ services._pObjectIDSpace != nullptr ? services._pObjectIDSpace : _pOwnedObjectIDSpace.get() }
+        : _pOwnedObjectIDAllocator{ services._pObjectIDAllocator == nullptr ? make_unique<ObjectIDAllocator>() : nullptr } // 엔진 범위가 없으면 이 매니저가 번호 공간의 주인이다
+        , _pObjectIDAllocator{ services._pObjectIDAllocator != nullptr ? services._pObjectIDAllocator : _pOwnedObjectIDAllocator.get() }
         , _structuralChangeBuffer{}
         , _transformHierarchy{}
         , _primitiveRegistry{}
@@ -181,7 +181,7 @@ namespace sw
         , _cameraRegistry{}
         , _tagIndex{}
         , _tickScheduler{ *this, _transformHierarchy, _primitiveRegistry, _structuralChangeBuffer }
-        , _store{ *this, _tickScheduler, _structuralChangeBuffer, *_pObjectIDSpace }
+        , _store{ *this, _tickScheduler, _structuralChangeBuffer, *_pObjectIDAllocator }
         , _sceneScope{ services._pEngineSubsystems }
         , _listSceneService{}
         , _pFrameCamera{ nullptr }
@@ -670,6 +670,7 @@ namespace sw
     {
         static constexpr const utf8* kArrName[] = {
 #define SW_SCENE_FRAME_STEP( Name ) #Name,
+#include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
 #undef SW_SCENE_FRAME_STEP
         };
         const uint32 index = static_cast<uint32>( step );

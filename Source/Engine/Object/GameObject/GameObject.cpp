@@ -586,11 +586,11 @@ namespace sw
 
     void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick )
     {
-        // id 는 매니저의 번호 공간(`ObjectIDSpace` — 엔진의 씬들이 나눠 쓴다)이 준다. 상태를 되돌리는 로드 중이면 원래 ID 를 복원하고 공간을 그 뒤로 민다.
+        // id 는 매니저의 번호 공간(`ObjectIDAllocator` — 엔진의 씬들이 나눠 쓴다)이 준다. 상태를 되돌리는 로드 중이면 원래 ID 를 복원하고 공간을 그 뒤로 민다.
         // 다른 일(이름 · 기본값 · 등록)보다 먼저여야 그 안에서 잡는 핸들(서브틱 등)도 이 ID 로 잡힌다.
         uint64              restoredComponentID = 0;
         const hashed_string typeFqn             = pTypeInfo != nullptr ? pTypeInfo->_fullyQualifiedName : hashed_string{};
-        ObjectIDSpace&      idSpace             = _pOwnerManager->getObjectIDSpace();
+        ObjectIDAllocator&  idSpace             = _pOwnerManager->getObjectIDAllocator();
         pComp->_componentID                     = takeRestoredComponentID( this, typeFqn, restoredComponentID ) ? idSpace.reserveComponentID( restoredComponentID ) : idSpace.allocateComponentID();
 
         // 주 틱의 기본은 "onTick 을 오버라이드했는가"다(유니티의 Update). 오버라이드한 타입은 생성자의 값(기본은 켜짐, 끄면 꺼짐)을 그대로 둔다.

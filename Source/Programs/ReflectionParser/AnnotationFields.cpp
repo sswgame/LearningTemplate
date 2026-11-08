@@ -412,21 +412,27 @@ namespace sw
         // ── ENUM ──
 #define SW_ANNOTATION_IN_Reflect( Row )
 #define SW_ANNOTATION_IN_Enum( Row ) Row
-        constexpr AnnotationField<ParsedEnumInfo> kArrEnumField[] = {};
+        constexpr AnnotationField<ParsedEnumInfo> kArrEnumField[] = {
+#include "PredefinedAnnotationField.xxx"
+        };
 #undef SW_ANNOTATION_IN_Enum
 #undef SW_ANNOTATION_IN_Property
 
         // ── PROPERTY ──
 #define SW_ANNOTATION_IN_Enum( Row )
 #define SW_ANNOTATION_IN_Property( Row ) Row
-        constexpr AnnotationField<ParsedPropertyInfo> kArrPropertyField[] = {};
+        constexpr AnnotationField<ParsedPropertyInfo> kArrPropertyField[] = {
+#include "PredefinedAnnotationField.xxx"
+        };
 #undef SW_ANNOTATION_IN_Property
 #undef SW_ANNOTATION_IN_Function
 
         // ── FUNCTION ──
 #define SW_ANNOTATION_IN_Property( Row )
 #define SW_ANNOTATION_IN_Function( Row ) Row
-        constexpr AnnotationField<ParsedFunctionInfo> kArrFunctionField[] = {};
+        constexpr AnnotationField<ParsedFunctionInfo> kArrFunctionField[] = {
+#include "PredefinedAnnotationField.xxx"
+        };
 
 #undef SW_ANNOTATION_IN_Reflect
 #undef SW_ANNOTATION_IN_Enum

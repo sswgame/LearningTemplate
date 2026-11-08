@@ -10,6 +10,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 #include "Engine/EngineMinimal.h"
 #include "Engine/Renderer/Capture/ScreenshotLocalTime.h"
 
@@ -26,7 +28,7 @@ namespace sw
      * @brief bugreport 한 번에 남길 값과 그 파일을 읽고 쓰는 함수입니다. 파일 쓰기와 읽기는 ImGui 나 렌더러 없이 테스트할 수 있습니다(`BugReportTest`).
      * @details `info.txt` 는 `키 = 값` 한 줄씩입니다. 읽을 때 모르는 키는 건너뜁니다(필드가 늘어도 이전 폴더를 읽을 수 있습니다).
      */
-    struct SW_API BugReport
+    struct SW_DEVTOOLS_API BugReport
     {
         /** @brief 저장 폴더(`constant::path::kSavedFolder`) 아래 BugReport 폴더 이름입니다. */
         static constexpr const utf8* kFolderName = "BugReports";

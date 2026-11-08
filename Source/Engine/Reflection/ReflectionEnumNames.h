@@ -35,6 +35,7 @@ namespace sw
 #define REGISTER_CONTAINER_KIND( Name ) \
     case ContainerKind::Name:           \
         return #Name;
+#include "Core/Predefined/PredefinedContainerKind.xxx"
 
 #undef REGISTER_CONTAINER_KIND
         }
@@ -49,6 +50,7 @@ namespace sw
 #define REGISTER_CONTAINER_KIND( Name ) \
     case ContainerKind::Name:           \
         return "sw::ContainerKind::" #Name;
+#include "Core/Predefined/PredefinedContainerKind.xxx"
 
 #undef REGISTER_CONTAINER_KIND
         }
@@ -99,6 +101,7 @@ namespace sw
 #define REGISTER_FUNCTION_NET_ROLE( Name ) \
     case FunctionNetRole::Name:            \
         return #Name;
+#include "Core/Predefined/PredefinedFunctionNetRole.xxx"
 
 #undef REGISTER_FUNCTION_NET_ROLE
         }
@@ -113,6 +116,7 @@ namespace sw
 #define REGISTER_FUNCTION_NET_ROLE( Name ) \
     case FunctionNetRole::Name:            \
         return "sw::FunctionNetRole::" #Name;
+#include "Core/Predefined/PredefinedFunctionNetRole.xxx"
 
 #undef REGISTER_FUNCTION_NET_ROLE
         }
