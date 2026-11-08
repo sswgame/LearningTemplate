@@ -89,15 +89,6 @@ namespace sw
          */
         struct IntentDevCommandsInternal
         {
-            /** @brief `%#` 서식으로 답 글을 만듭니다. */
-            template <typename... Args>
-            static string makeReply( string_view format, Args&&... args )
-            {
-                StringBuilder<constant::buffer::kMax1024> text;
-                text.appendFormat( format, std::forward<Args>( args )... );
-                return string( text.view() );
-            }
-
             static GameObjectManager* findActiveManager()
             {
                 SceneManager* pSceneManager = game::findSubsystem<SceneManager>();
@@ -125,7 +116,9 @@ namespace sw
                     return true;
                 }
                 ControlSystem::ensureFor( *pManager ).setRecording( true, capacityTicks );
-                outReply = makeReply( "intent: recording every pawn (%# ticks per pawn)", capacityTicks );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "intent: recording every pawn (%# ticks per pawn)", capacityTicks );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -147,10 +140,14 @@ namespace sw
                 const optional<AbsolutePath> historyFile = FileUtil::requireAbsolutePath( path ); // readDiskPathArgument 가 절대만 받았다
                 if ( historyFile.has_value() == false || pControl->getHistory().saveToFile( *historyFile ) == false )
                 {
-                    outReply = makeReply( "intent: could not write '%#'", path.c_str() );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "intent: could not write '%#'", path.c_str() );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
-                outReply = makeReply( "intent: recording stopped, %# track(s) written to '%#'", pControl->getHistory().getTrackCount(), path.c_str() );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "intent: recording stopped, %# track(s) written to '%#'", pControl->getHistory().getTrackCount(), path.c_str() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -171,10 +168,14 @@ namespace sw
                 uint32 startedCount = 0;
                 if ( IntentPlayback::startFromFile( *pManager, string_view( path.c_str(), path.size() ), true, error, &startedCount ) == false )
                 {
-                    outReply = makeReply( "intent: could not read '%#': %#", path.c_str(), error.c_str() );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "intent: could not read '%#': %#", path.c_str(), error.c_str() );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
-                outReply = makeReply( "intent: playing %# track(s) from '%#'", startedCount, path.c_str() );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "intent: playing %# track(s) from '%#'", startedCount, path.c_str() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

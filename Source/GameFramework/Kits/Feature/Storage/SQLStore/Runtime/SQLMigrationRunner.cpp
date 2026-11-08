@@ -84,15 +84,6 @@ namespace sw
                 return string( text.view() );
             }
 
-            /** @brief `%#` 서식으로 글을 만듭니다(오류 문구). */
-            template <typename... Args>
-            static string formatText( string_view format, Args&&... args )
-            {
-                StringBuilder<constant::buffer::kMax1024> text;
-                text.appendFormat( format, std::forward<Args>( args )... );
-                return string( text.view() );
-            }
-
             /** @brief 목록 파일(`<SQLMigrationList><Migration _name="NNNN_이름" />…</SQLMigrationList>`)을 읽습니다. 다른 요소 · 속성 · 빈 이름 · 빈 목록은 오류입니다. */
             [[nodiscard]] static bool readList( string_view folder, vector<string>& outListStem, string& outError )
             {
@@ -100,19 +91,25 @@ namespace sw
                 string       text;
                 if ( AssetIO::readTextAsset( AssetID{ listPath }, text ) == false )
                 {
-                    outError = formatText( "cannot read the migration list '%#'", listPath );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "cannot read the migration list '%#'", listPath );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 XMLDocument document;
                 if ( document.parse( text, listPath ) == false )
                 {
-                    outError = formatText( "migration list '%#' is not XML: %#", listPath, document.getLastError() );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "migration list '%#' is not XML: %#", listPath, document.getLastError() );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 const XMLNode root = document.getRoot( "SQLMigrationList" );
                 if ( root.isValid() == false || root.getFirstAttribute().isValid() )
                 {
-                    outError = formatText( "migration list '%#' must be a <SQLMigrationList> element without attributes", listPath );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "migration list '%#' must be a <SQLMigrationList> element without attributes", listPath );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 outListStem.clear();
@@ -123,14 +120,18 @@ namespace sw
                                              string_view{ nameAttribute.getName() } == "_name" && string_view{ nameAttribute.getValue() }.empty() == false;
                     if ( bValidEntry == false )
                     {
-                        outError = formatText( "migration list '%#' must hold only <Migration _name=\"NNNN_name\" /> elements", listPath );
+                        StringBuilder<constant::buffer::kMax256> errorBuilder;
+                        errorBuilder.appendFormat( "migration list '%#' must hold only <Migration _name=\"NNNN_name\" /> elements", listPath );
+                        outError = string( errorBuilder.view() );
                         return false;
                     }
                     outListStem.push_back( nameAttribute.getValue() );
                 }
                 if ( outListStem.empty() )
                 {
-                    outError = formatText( "migration list '%#' must hold at least one <Migration>", listPath );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "migration list '%#' must hold at least one <Migration>", listPath );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 return true;
@@ -144,7 +145,9 @@ namespace sw
             {
                 if ( AssetIO::collectAssets( AssetID{ folder }, ".sql", outListFile ) == AssetFolderListing::Failed )
                 {
-                    outError = formatText( "cannot read the migration folder '%#'", folder );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "cannot read the migration folder '%#'", folder );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 return true;
@@ -162,14 +165,20 @@ namespace sw
                     MigrationFile file;
                     if ( parseFileName( fileName, file ) == false )
                     {
-                        outError = formatText( "migration file '%#' is not named NNNN_name.sql or NNNN_name.<driver>.sql", fileName );
+                        StringBuilder<constant::buffer::kMax256> errorBuilder;
+                        errorBuilder.appendFormat( "migration file '%#' is not named NNNN_name.sql or NNNN_name.<driver>.sql", fileName );
+                        outError = string( errorBuilder.view() );
                         return false;
                     }
-                    const string stem    = formatText( "%#%#", string_view( fileName ).substr( 0, static_cast<size_t>( kVersionDigitCount + 1 ) ), file._name );
+                    StringBuilder<constant::buffer::kMax256> stemBuilder;
+                    stemBuilder.appendFormat( "%#%#", string_view( fileName ).substr( 0, static_cast<size_t>( kVersionDigitCount + 1 ) ), file._name );
+                    const string stem{ stemBuilder.view() };
                     const bool   bListed = VectorUtil::contains( listStem, stem );
                     if ( bListed == false )
                     {
-                        outError = formatText( "migration file '%#' is not listed in %# of '%#'", fileName, SQLMigrationRunner::kListFileName, folder );
+                        StringBuilder<constant::buffer::kMax256> errorBuilder;
+                        errorBuilder.appendFormat( "migration file '%#' is not listed in %# of '%#'", fileName, SQLMigrationRunner::kListFileName, folder );
+                        outError = string( errorBuilder.view() );
                         return false;
                     }
                 }
@@ -192,10 +201,14 @@ namespace sw
         {
             const string&                             stem = listStem[stemIndex];
             SQLMigrationRunnerInternal::MigrationFile file;
-            const bool                                bNamed = SQLMigrationRunnerInternal::parseFileName( SQLMigrationRunnerInternal::formatText( "%#.sql", stem ), file ) && file._driverName.empty();
+            StringBuilder<constant::buffer::kMax256>  textBuilder3;
+            textBuilder3.appendFormat( "%#.sql", stem );
+            const bool bNamed = SQLMigrationRunnerInternal::parseFileName( string( textBuilder3.view() ), file ) && file._driverName.empty();
             if ( bNamed == false )
             {
-                outError = SQLMigrationRunnerInternal::formatText( "migration '%#' in %# is not named NNNN_name", stem, SQLMigrationRunner::kListFileName );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "migration '%#' in %# is not named NNNN_name", stem, SQLMigrationRunner::kListFileName );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             const int32 expectedVersion = static_cast<int32>( stemIndex ) + 1;
@@ -205,8 +218,12 @@ namespace sw
                 return false;
             }
             // 방언 분기 파일이 있으면 공통 파일 대신 쓴다. 다른 드라이버의 방언 파일은 읽지 않는다.
-            const string driverPath = FileUtil::joinPath( folder, SQLMigrationRunnerInternal::formatText( "%#.%#.sql", stem, driverName ) );
-            const string commonPath = FileUtil::joinPath( folder, SQLMigrationRunnerInternal::formatText( "%#.sql", stem ) );
+            StringBuilder<constant::buffer::kMax256> textBuilder2;
+            textBuilder2.appendFormat( "%#.%#.sql", stem, driverName );
+            const string                             driverPath = FileUtil::joinPath( folder, textBuilder2.view() );
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%#.sql", stem );
+            const string commonPath = FileUtil::joinPath( folder, textBuilder.view() );
             const bool   bHasDriver = AssetIO::hasAsset( AssetID{ driverPath } );
             if ( bHasDriver == false && AssetIO::hasAsset( AssetID{ commonPath } ) == false )
             {
@@ -219,7 +236,9 @@ namespace sw
             migration._name         = file._name;
             if ( AssetIO::readTextAsset( AssetID{ path }, migration._sql ) == false )
             {
-                outError = SQLMigrationRunnerInternal::formatText( "cannot read migration file '%#'", path );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "cannot read migration file '%#'", path );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             SQLMigrationRunnerInternal::removeCarriageReturns( migration._sql );

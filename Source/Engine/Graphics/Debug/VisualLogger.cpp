@@ -84,15 +84,6 @@ namespace sw
             return bObjectMismatch == false && bCategoryMismatch == false;
         }
 
-        /** @brief `%#` 서식으로 답 글을 만듭니다. */
-        template <typename... Args>
-        string makeReply( string_view format, Args&&... args )
-        {
-            StringBuilder<constant::buffer::kMax512> text;
-            text.appendFormat( format, std::forward<Args>( args )... );
-            return string( text.view() );
-        }
-
         /** @brief 개발 명령 `visuallog.*` 가 쓰는 로거입니다. 엔진 서비스가 묶이지 않았으면 답을 적고 nullptr 입니다. */
         VisualLogger* findLogger( string& outReply )
         {
@@ -148,11 +139,13 @@ namespace sw
             VisualLogger* pLogger = findLogger( outReply );
             if ( pLogger == nullptr )
                 return true;
-            uint64     firstFrame = 0;
-            uint64     lastFrame  = 0;
-            const bool bHasRange  = pLogger->findFrameRange( firstFrame, lastFrame );
-            outReply              = makeReply( "vlog: %#, %# entries, frames %#..%#, now frame %#", pLogger->isEnabled() ? "recording" : "stopped",
-                                               static_cast<uint64>( pLogger->getEntryCount() ), bHasRange ? firstFrame : uint64{ 0 }, bHasRange ? lastFrame : uint64{ 0 }, pLogger->getFrame() );
+            uint64                                   firstFrame = 0;
+            uint64                                   lastFrame  = 0;
+            const bool                               bHasRange  = pLogger->findFrameRange( firstFrame, lastFrame );
+            StringBuilder<constant::buffer::kMax256> replyBuilder;
+            replyBuilder.appendFormat( "vlog: %#, %# entries, frames %#..%#, now frame %#", pLogger->isEnabled() ? "recording" : "stopped",
+                                       static_cast<uint64>( pLogger->getEntryCount() ), bHasRange ? firstFrame : uint64{ 0 }, bHasRange ? lastFrame : uint64{ 0 }, pLogger->getFrame() );
+            outReply = string( replyBuilder.view() );
             return true;
         }
 
@@ -187,8 +180,10 @@ namespace sw
                 outReply = "vlog: no debug draw queue";
                 return true;
             }
-            const uint32 count = pLogger->replayFrame( *pQueue, static_cast<uint64>( frame ), 0, hashed_string{} );
-            outReply           = makeReply( "vlog: replayed %# entries of frame %#", count, static_cast<uint64>( frame ) );
+            const uint32                             count = pLogger->replayFrame( *pQueue, static_cast<uint64>( frame ), 0, hashed_string{} );
+            StringBuilder<constant::buffer::kMax256> replyBuilder;
+            replyBuilder.appendFormat( "vlog: replayed %# entries of frame %#", count, static_cast<uint64>( frame ) );
+            outReply = string( replyBuilder.view() );
             return true;
         }
     } // namespace
