@@ -4,38 +4,7 @@
 > 독자: 이 저장소에서 일하는 에이전트와 사용자.
 > 결론: 결함은 바로 고치고, 측정 후보는 재서 정하며, 기능 후보는 수직 슬라이스로 만든다. 판단과 작업 배정은 맨 아래 "통합 담당 판단" 절이 정본이다.
 
-## 동작이 틀린 곳
-
-**1인칭 탄도선이 화면에 안 남을 수 있다.** `ShooterPlayerComponent::findMuzzlePosition`은 1인칭에서 시점 총의 `Muzzle` 소켓을 쓰고, 소켓이나 외형 데이터베이스가 없으면 오류 없이 눈 아래 15cm를 씁니다. 탄도선은 그 점에서 맞은 곳까지 이어집니다. 감시 값 `Shooter3D.TracerWidth`는 두께만 봐서, 선이 총에 가려도 시나리오 `projectilecombo`는 통과합니다.
-
-```852:879:Source/Games/Shooter3D/ShooterPlayerComponent.cpp
-float3 ShooterPlayerComponent::findMuzzlePosition()
-{
-    // ...
-    const float3 fallback = getEyePosition() + float3{ 0.0f, -0.15f, 0.0f };
-    // 소켓을 못 찾으면 fallback 을 그대로 반환
-}
-```
-
-**조건식의 `chance`는 식 안에서 굴림을 나누지 않는다.** `GameConditions.cpp`의 `rollChance`는 시드 하나만 봅니다. 한 식에 `chance`가 둘이면 항상 같이 성공하거나 같이 실패합니다.
-
-**빠른 관통탄은 한 걸음에 하나만 맞는다.** `ProjectileSimulation`은 한 스텝에 히트 한 번만 처리하고, 남은 선분은 다음 걸음으로 넘깁니다. 한 프레임에 두 대상을 지나는 탄은 뒤쪽을 놓칩니다.
-
-**슈터 포탑은 쏜 뒤에 생긴 벽을 뚫는다.** `ShooterGimmicks.cpp`는 발사 순간에만 시야를 보고, 비행 중 장애물은 다시 보지 않습니다.
-
-**머티리얼 파라미터 묶음은 핫 리로드가 없다.** `MaterialParameterCollection.h`에 적혀 있습니다. `*.matparams.xml`을 고쳐도 프로세스를 다시 띄우기 전에는 반영되지 않습니다.
-
-## 입력이 조용히 틀어지는 곳
-
-**셰이더 쿠킹 스탬프는 가려진 헤더를 못 본다.** `ShaderCookStamp`는 컴파일러가 먼저 찾은 헤더 하나만 기록합니다. 소스는 그대로인데 더 앞선 루트에 같은 이름 헤더가 생기면 스탬프가 낡았다고 보지 않습니다.
-
-**X11 조합 글자는 UTF-8 로캘이 아니면 깨진다.** `X11InputMethod.cpp`는 조합 중 글을 UTF-8로만 읽습니다. 확정 글은 `Xutf8LookupString`이라 괜찮고, EUC-KR 같은 로캘의 조합 중 글만 깨집니다.
-
-**대기 카메라 화면비는 16:9로 고정이다.** `CameraManagerComponent.cpp`는 대기 카메라가 그릴 뷰의 비를 모르면 이 카메라와 같은 16:9라고 둡니다. 분할 화면·세로 화면에서는 프레이밍이 어긋납니다.
-
 ## 테스트가 비어 있는 길
-
-`AccountTicketConnect`(로그인 서비스에서 게임 티켓을 받아 암호화 세션을 여는 경로)는 구현은 `AccountTicketConnect.cpp`에 있고, 단위 테스트 파일은 없습니다. 로그인 암호(`NetSecurityLoginCrypto`)와 PKCE 루프백 클라이언트는 테스트가 있습니다.
 
 인계(`docs/NEXT.md`)에 적힌 Linux 에디터 체인 실패는 이번엔 재현하지 않았습니다. 초점 없는 창에서 `audiomixer`, `graphaddnode`, `viewportselect`, `assetmanage` 등이 입력을 못 받는다는 기록입니다. lavapipe의 `R16G16_SNORM` 블렌드 거부는 코드가 이미 블렌드 비트가 없으면 덮어쓰기로 바꾸므로, 그 기록은 옛 증상일 수 있습니다.
 
