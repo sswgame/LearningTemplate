@@ -11,14 +11,8 @@ namespace sw
     {
         struct OnlineServerKitInternal
         {
-            static constexpr const utf8* kListName = "Online server kit";
-
-            /** @brief 정적 초기화 순서와 상관없이 처음 쓸 때 만들어지도록 함수 안의 정적 객체로 둡니다. */
-            static ServiceFactoryList& getList()
-            {
-                static ServiceFactoryList s_list{ kListName };
-                return s_list;
-            }
+            /** @brief 등록 목록입니다(함수 정적 — 정적 초기화 순서와 상관없이 처음 쓸 때 선다). */
+            static SW_DEFINE_SERVICE_FACTORY_LIST( getList, "Online server kit" )
         };
     } // namespace
 } // namespace sw
@@ -42,17 +36,17 @@ namespace sw
     {
         if ( pFactory == nullptr || pFactory->_pCreate == nullptr )
             return;
-        (void)OnlineServerKitInternal::getList().add( pFactory );
+        (void)ServiceFactoryNode::addTo( OnlineServerKitInternal::getList(), pFactory );
     }
 
     void OnlineServerKitRegistry::unregisterFactory( OnlineServerKitFactory* pFactory )
     {
-        OnlineServerKitInternal::getList().remove( pFactory );
+        (void)OnlineServerKitInternal::getList().remove( pFactory ); // 올라 있지 않은 것을 빼는 것은 할 일이 없다
     }
 
     void OnlineServerKitRegistry::collectFactories( vector<OnlineServerKitFactory*>& outListFactory )
     {
-        OnlineServerKitInternal::getList().collectAs( outListFactory );
+        ServiceFactoryNode::collectAs( OnlineServerKitInternal::getList(), outListFactory );
     }
 
     OnlineServerKitFactory* OnlineServerKitRegistry::findFactory( string_view name )
