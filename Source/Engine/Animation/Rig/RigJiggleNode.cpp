@@ -110,6 +110,6 @@ namespace sw
 
     void RigJiggleNode::registerNodes( RigNodeRegistry& registry )
     {
-        registry.registerNode( kTypeName, &RigJiggleNodeFactory::create );
+        registry.registerNode( hashed_string( kTypeName ), &RigJiggleNodeFactory::create );
     }
 } // namespace sw

@@ -66,7 +66,7 @@ namespace sw
         float32 _smearResistance{ 0.0f }; ///< 번짐 저항(1 = 방수 마스카라 · 문신, 0 = 바로 번지는 립스틱)
         float2  _regionMin{ 0.0f, 0.0f }; ///< 피부 UV 경계(`regionMin="u v"`) — 밖은 자른다
         float2  _regionMax{ 1.0f, 1.0f };
-        PROPERTY()
+        PROPERTY( Name = "placeable" )
         bool _bPlaceable{ false }; ///< 배치(이동 · 회전 · 크기 · 대칭)를 받는지(문신 · 데칼)
 
         /** @brief 피부 UV 가 영역 경계 안이면 true 입니다. */
