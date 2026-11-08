@@ -672,14 +672,16 @@ namespace sw
 
     const UserSettingDef* UserSettingsSchema::findSetting( const hashed_string& id ) const
     {
-        const uint32 settingIndex = findSettingIndex( id );
-        return settingIndex != constant::invalid_index::kUint32 ? &_listSetting[settingIndex] : nullptr;
+        const optional<uint32> settingIndex = findSettingIndex( id );
+        return settingIndex.has_value() ? &_listSetting[*settingIndex] : nullptr;
     }
 
-    uint32 UserSettingsSchema::findSettingIndex( const hashed_string& id ) const
+    optional<uint32> UserSettingsSchema::findSettingIndex( const hashed_string& id ) const
     {
         const auto iter = _mapSettingIndex.find( id );
-        return iter != _mapSettingIndex.end() ? iter->second : constant::invalid_index::kUint32;
+        if ( iter == _mapSettingIndex.end() )
+            return nullopt;
+        return iter->second;
     }
 
     const UserSettingCategoryDef* UserSettingsSchema::findCategory( const hashed_string& id ) const
