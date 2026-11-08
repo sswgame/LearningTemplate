@@ -21,7 +21,7 @@
 		<item name="_subsurfaceRadius" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Wrap (light bleed into shade)" group="Subsurface"/>
 		<item name="_transmission" type="Range" defaultValue="0" min="0.0" max="2.0" displayName="Back Light Transmission" group="Subsurface"/>
 		<item name="_anisotropy" type="Range" defaultValue="0" min="-1.0" max="1.0" group="Surface"/>
-		<item name="_strandShift" type="Range" defaultValue="0" min="-1.0" max="1.0" displayName="Fur Highlight Shift" group="Fur"/>
+		<item name="_strandShift" type="Range" defaultValue="0" min="-0.2" max="0.2" displayName="Fur Cuticle Shift (rad)" group="Fur"/>
 		<item name="_filmThickness" type="Range" defaultValue="0" min="0.0" max="1200.0" displayName="Thin Film Thickness (nm)" group="Thin Film"/>
 		<item name="_filmIor" type="Range" defaultValue="1.33" min="1.0" max="2.5" displayName="Thin Film IOR" group="Thin Film"/>
 		<item name="_filmWeight" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Thin Film Weight" group="Thin Film"/>
@@ -53,7 +53,6 @@
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>
 			<item>MATERIAL_DOMAIN_SURFACE</item>
-			<item>MATERIAL_FORWARD_ONLY</item>
 		</_alwaysDefines>
 	</_permutations>
 </MaterialDef>

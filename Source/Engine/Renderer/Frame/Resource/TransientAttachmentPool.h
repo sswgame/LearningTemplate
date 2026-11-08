@@ -43,6 +43,7 @@ namespace sw
             RHIAttachmentOps   _ops{};                        ///< 초기값 · 로드 · 저장 동작 — 파이프라인 XML 의 선언
             uint32             _idleFrames{ 0 };              ///< 쓰는 패스가 이어서 돌지 않은 프레임 수(`releaseIfIdle`)
             hashed_string      _aliasOwner{};                 ///< 텍스처를 빌린 별칭이면 주인 첨부 이름(`allocateAlias`). 비면 자기 텍스처다
+            uint8              _bPlaced{ 0 };                 ///< 텍스처가 풀의 힙에 겹쳐 놓였다(`allocatePlaced`) — 쓰기 전이 앞에 앨리어싱 배리어가 든다
         };
 
         /**
@@ -76,6 +77,9 @@ namespace sw
         TransientAttachmentPool( const TransientAttachmentPool& )            = delete;
         TransientAttachmentPool& operator=( const TransientAttachmentPool& ) = delete;
 
+        /** @brief 첨부 하나의 텍스처 서술입니다(`allocateSized` · `allocatePlaced` · 힙 계획의 크기 묻기가 같은 서술을 쓴다). */
+        static RHITextureDesc makeTextureDesc( RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width, uint32 height, bool bUnorderedAccess );
+
         /** @brief 앞으로 만들 첨부의 크기입니다. 이미 있는 첨부는 바꾸지 않습니다. 크기를 바꾸려면 먼저 놓습니다. */
         void   setSize( uint32 width, uint32 height );
         uint32 getWidth() const { return _width; }
@@ -100,6 +104,17 @@ namespace sw
          * @return 주인이 없으면 false 이고 아무것도 하지 않는다(부르는 쪽이 자기 텍스처로 만든다). 이미 있으면 true 다.
          */
         bool allocateAlias( const hashed_string& name, const hashed_string& owner, const RHIAttachmentOps& ops );
+        /**
+         * @brief 풀의 힙(@p heapBytes — 처음 부를 때 만든다)의 @p offsetBytes 에 첨부를 놓습니다(서술이 다른 첨부와 바이트를 나눈다 — `RenderGraphMemoryPlan`). 능력 `_bPlacedTextures` 가 있는 백엔드만 부른다.
+         * @return 힙이나 텍스처를 만들지 못하면 false 이고 아무것도 남기지 않는다(부르는 쪽이 `allocate` 로 자기 텍스처를 만든다 — 힙은 메모리 절약이지 그림이 다르지 않다).
+         */
+        bool allocatePlaced( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, const RHIAttachmentOps& ops, uint32 resolutionDivisor, uint64 heapBytes, uint64 offsetBytes );
+        /** @brief 그 이름으로 만든 첨부가 힙에 겹쳐 놓였으면 true 입니다(별칭은 주인을 따른다). */
+        bool isPlaced( const hashed_string& name ) const
+        {
+            const auto it = _mapAttachment.find( name );
+            return it != _mapAttachment.end() && it->second._bPlaced != 0;
+        }
         /** @brief 이름의 첨부(텍스처 + SRV)입니다. 원본을 가리키는 이름(`forward`)은 원본의 첨부입니다. 없으면 빈 값입니다. */
         Attachment find( const hashed_string& name ) const;
         /** @brief 이름의 텍스처 핸들입니다. 원본을 가리키는 이름은 원본의 핸들입니다. 없으면 0 입니다. */
@@ -161,5 +176,7 @@ namespace sw
         vector<hashed_string> _listClearedThisFrame SW_GUARDED_BY( _clearedMutex );
         uint32                                      _width;
         uint32                                      _height;
+        /// @brief 서술이 다른 첨부를 겹쳐 놓는 힙입니다(`allocatePlaced`). 없으면 0 — 놓인 텍스처가 각자 힙을 붙들어 `release` 가 핸들을 먼저 놓아도 된다.
+        RHITransientHeapHandle _heap;
     };
 } // namespace sw

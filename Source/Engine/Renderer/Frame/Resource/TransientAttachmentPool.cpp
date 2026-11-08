@@ -17,7 +17,48 @@ namespace sw
         , _listClearedThisFrame{}
         , _width{ 0 }
         , _height{ 0 }
+        , _heap{ 0 }
     {
+    }
+
+    RHITextureDesc TransientAttachmentPool::makeTextureDesc( RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width, uint32 height, bool bUnorderedAccess )
+    {
+        RHITextureDesc desc{};
+        desc._width              = width;
+        desc._height             = height;
+        desc._format             = format;
+        desc._bIsRenderTarget    = bDepth ? SW_FALSE : SW_TRUE;
+        desc._bIsDepthStencil    = bDepth ? SW_TRUE : SW_FALSE;
+        desc._bIsShaderResource  = SW_TRUE;
+        desc._bIsUnorderedAccess = bUnorderedAccess ? SW_TRUE : SW_FALSE;
+        desc._bIsTransient       = SW_TRUE;
+        desc._clearDepth         = ops._clearDepth;
+        desc._clearStencil       = ops._clearStencil;
+        desc._clearColor         = ops._clearColor;
+        return desc;
+    }
+
+    bool TransientAttachmentPool::allocatePlaced( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, const RHIAttachmentOps& ops, uint32 resolutionDivisor, uint64 heapBytes,
+                                                  uint64 offsetBytes )
+    {
+        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr || _mapAttachment.find( name ) != _mapAttachment.end() )
+            return false;
+        IRHIResourceFactory& factory = *pDevice->getResourceFactory();
+        if ( _heap == 0 )
+            _heap = factory.createTransientHeap( heapBytes );
+        if ( _heap == 0 )
+            return false;
+        const RHITextureDesc   desc   = makeTextureDesc( format, false, ops, computeScaledExtent( _width, resolutionDivisor ), computeScaledExtent( _height, resolutionDivisor ), false );
+        const RHITextureHandle handle = factory.createPlacedTexture2D( desc, _heap, offsetBytes );
+        if ( handle == 0 )
+            return false;
+        factory.setTextureDebugName( handle, name.c_str() );
+        const RHIDescriptorIndex srv = factory.registerBindlessTexture( handle );
+        Attachment               attachment{ handle, srv, kInvalidDescriptorIndex, desc._width, desc._height, format, ops };
+        attachment._bPlaced = 1;
+        _mapAttachment.emplace( name, attachment );
+        SW_PROFILE_COUNT( "RT.Frame.transientPlacements", 1 ); // 힙에 겹쳐 놓은 첨부 — 서술이 다른 첨부와 바이트를 나눈다
+        return true;
     }
 
     void TransientAttachmentPool::setSize( uint32 width, uint32 height )
@@ -41,18 +82,7 @@ namespace sw
         if ( _mapAttachment.find( name ) != _mapAttachment.end() )
             return true;
 
-        RHITextureDesc desc{};
-        desc._width                   = width;
-        desc._height                  = height;
-        desc._format                  = format;
-        desc._bIsRenderTarget         = bDepth ? SW_FALSE : SW_TRUE;
-        desc._bIsDepthStencil         = bDepth ? SW_TRUE : SW_FALSE;
-        desc._bIsShaderResource       = SW_TRUE;
-        desc._bIsUnorderedAccess      = bUnorderedAccess ? SW_TRUE : SW_FALSE;
-        desc._bIsTransient            = SW_TRUE;
-        desc._clearDepth              = ops._clearDepth;
-        desc._clearStencil            = ops._clearStencil;
-        desc._clearColor              = ops._clearColor;
+        const RHITextureDesc   desc   = makeTextureDesc( format, bDepth, ops, width, height, bUnorderedAccess );
         const RHITextureHandle handle = pDevice->getResourceFactory()->createTexture2D( desc );
         if ( handle == 0 )
         {
@@ -185,6 +215,9 @@ namespace sw
                 if ( attachment._texture != 0 )
                     pDevice->getResourceFactory()->destroyTexture( attachment._texture );
             }
+            // 놓인 텍스처가 각자 힙을 붙든다(미룬 파괴가 끝날 때까지) — 핸들은 텍스처 뒤에 바로 놓아도 된다.
+            if ( _heap != 0 )
+                pDevice->getResourceFactory()->destroyTransientHeap( _heap );
         }
         clear();
     }
@@ -195,6 +228,7 @@ namespace sw
         _mapForward.clear();
         _width  = 0;
         _height = 0;
+        _heap   = 0;
     }
 
     bool TransientAttachmentPool::markCleared( const hashed_string& key )

@@ -47,7 +47,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
         {
             const int2   texel     = int2( ( float2( gridX, gridY ) + 0.5f ) * size / kAutoExposureGrid );
             const float3 color     = loadSource( texel );
-            const float  luminance = dot( color, float3( 0.2126f, 0.7152f, 0.0722f ) );
+            const float  luminance = CommonMath::computeLuminance( color );
             sumLog += log2( max( luminance, kMinLuminance ) );
         }
     }

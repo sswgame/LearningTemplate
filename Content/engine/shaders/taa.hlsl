@@ -10,17 +10,6 @@
 static const float kHistoryWeight = 0.9f; // 기록 비율 — 화면이 그대로인 곳의 누적 정도
 static const float kSkyDepth      = 1.0f; // 깊이 클리어 값 — 아무것도 그리지 않은 픽셀(속도 출력이 없다)
 
-/** @brief 깊이로 복원한 월드 위치를 지난 뷰-투영으로 옮긴 화면 자리입니다(카메라 움직임만). @p outPrevW 는 지난 클립 w(0 이하면 카메라 뒤)입니다. */
-float2 computeCameraPreviousUv( float2 uv, float depth, out float outPrevW )
-{
-    const float2 ndcXy    = uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
-    const float4 world    = mul( float4( ndcXy, depth, 1.0f ), g_InvViewProj );
-    const float4 prevClip = mul( float4( world.xyz / world.w, 1.0f ), g_PrevViewProj );
-    const float2 prevNdc  = prevClip.xy / max( abs( prevClip.w ), 1e-5f ) * sign( prevClip.w );
-    outPrevW              = prevClip.w;
-    return prevNdc * float2( 0.5f, -0.5f ) + 0.5f;
-}
-
 float4 PSMain( PSInput input ) : SV_TARGET
 {
     const float3 current = PassTexture::sampleSourcePoint( input._uv ).rgb;
@@ -48,7 +37,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
     // 재투영 — 이 픽셀이 지난 프레임에 있던 화면 자리. 그린 픽셀은 화면 속도, 하늘은 카메라 재투영이다(고르기는 값 선택 — early-return 없음).
     float        prevW;
     const float  centerDepth = PassTexture::sampleDepthPoint( input._uv ).r;
-    const float2 cameraUv    = computeCameraPreviousUv( input._uv, centerDepth, prevW );
+    const float2 cameraUv    = Transform::computeCameraPreviousUv( input._uv, centerDepth, prevW );
     const float2 velocity    = PassTexture::sampleVelocityPoint( input._uv + closestOffset );
     const bool   bSky        = closestDepth >= kSkyDepth;
     const float2 prevUv      = bSky ? cameraUv : input._uv - velocity;

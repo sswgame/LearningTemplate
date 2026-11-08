@@ -17,12 +17,6 @@
     #error "ssgi.hlsl needs SW_SSGI_RADIUS, SW_SSGI_DIRECTIONS, SW_SSGI_STEPS and SW_SSGI_INTENSITY in the pass _listPermutation"
 #endif
 
-/** @brief 픽셀마다 방향 회전(0 ~ 1) — 인터리브 그래디언트 노이즈(gtao.hlsl 과 같은 무늬, 프레임마다 같다). */
-float computeDirectionJitter( float2 pixel )
-{
-    return frac( 52.9829189f * frac( dot( floor( pixel ), float2( 0.06711056f, 0.00583715f ) ) ) );
-}
-
 float4 PSMain( PSInput input ) : SV_TARGET
 {
     // 분기 없이 모두 계산하고 끝에서 하늘(깊이 1)만 바꾼다 — 기울기 읽기(Sample)를 갈라진 흐름 안에 두면 FXC(DX11)가 거절한다(X4121). 루프는 퍼뮤테이션 상수라 펼친다.
@@ -36,7 +30,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
         const float4 sideClip     = mul( float4( position + side * SW_SSGI_RADIUS, 1.0f ), g_ViewProj );
         const float  screenRadius = length( sideClip.xy / max( sideClip.w, 1e-4f ) - centerClip.xy / max( centerClip.w, 1e-4f ) ) * 0.5f;
         const float  stepUv       = max( screenRadius / (float)SW_SSGI_STEPS, g_SourceTexel.y );
-        const float  jitter       = computeDirectionJitter( input._uv * g_SourceTexel.zw );
+        const float  jitter       = CommonMath::computeInterleavedGradientNoise( input._uv * g_SourceTexel.zw );
 
         float3 gathered    = float3( 0.0f, 0.0f, 0.0f );
         float  sampleCount = 0.0f;

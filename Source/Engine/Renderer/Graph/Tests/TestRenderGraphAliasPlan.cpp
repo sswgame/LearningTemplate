@@ -32,6 +32,31 @@ SW_TEST_CASE( RenderGraphAliasPlanTest, NonOverlappingLevelsShareOneTexture )
 }
 
 /**
+ * @brief [RenderGraphAliasPlanTest] 힙에 겹쳐 놓을 수 있는 칸은 그 칸의 모든 이름이 놓을 수 있을 때만 들고, 레벨 구간은 칸을 쓴 이름들을 합친 것이다
+ * @details 첫 쓰기가 지우기가 아닌 이름(Load · RW)이 한 칸에 끼면 그 텍스처의 바이트를 다른 서술과 나눌 수 없다 — 앞 텍스처가 남긴 바이트가 내용이 된다.
+ */
+SW_TEST_CASE( RenderGraphAliasPlanTest, PlaceableSlotsCarryTheMergedLifetime )
+{
+    const vector<RenderGraphAliasCandidate> listCandidate = {
+        {    hashed_string( "Lit" ), 7, 0, 2, 1},
+        {  hashed_string( "Bloom" ), 7, 3, 4, 1}, // Lit 의 칸 — 칸 구간이 0 ~ 4 가 된다
+        {hashed_string( "Compute" ), 9, 1, 2, 0}, // RW — 놓을 수 없다
+        {hashed_string( "Tonemap" ), 5, 5, 6, 1},
+    };
+    const RenderGraphAliasPlan plan = RenderGraphAliasPlan::build( listCandidate );
+    SW_REQUIRE_EQUAL( size_t( 2 ), plan._listPlaceable.size() );
+    for ( const RenderGraphAliasCandidate& placeable : plan._listPlaceable )
+    {
+        SW_EXPECT_FALSE( placeable._name == hashed_string( "Compute" ) );
+        if ( placeable._name == hashed_string( "Lit" ) )
+        {
+            SW_EXPECT_EQUAL( uint32( 0 ), placeable._firstLevel );
+            SW_EXPECT_EQUAL( uint32( 4 ), placeable._lastLevel );
+        }
+    }
+}
+
+/**
  * @brief [RenderGraphAliasPlanTest] 서술(형식 · 나눗수 · 용도 · 클리어 값)이 다르면 수명이 떨어져 있어도 나누지 않는다 — 텍스처 핸들을 그대로 넘기는 나눔이다
  */
 SW_TEST_CASE( RenderGraphAliasPlanTest, DifferentDescriptionsNeverShare )

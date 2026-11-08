@@ -67,6 +67,13 @@ namespace sw
          *          (메시지 변형 PSO 를 버퍼 없이 돌리지 않는다).
          */
         uint8 _bGraphicsShaderWrites{ SW_FALSE };
+        /**
+         * @brief 서술이 다른 렌더 타깃 텍스처를 힙 하나에 겹쳐 놓을 수 있는지입니다(`IRHIResourceFactory::createTransientHeap` · `createPlacedTexture2D`, 첫 쓰기 앞 `IRHICommandList::beginTextureAlias`).
+         * @details DX12 는 placed resource(D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES 힙 — 모든 리소스 힙 등급이 받는다)와 앨리어싱 배리어로 참이다. Vulkan 은 아직 거짓이다 — 메모리 하나에 여러 이미지를
+         *          묶는 것은 되지만, 미뤄 지우는 이미지들이 다 사라진 뒤에 메모리를 놓으려면 해제 큐에 참조 세기가 들어야 한다. DX11 · GL · WebGPU 는 API 에 없어 거짓이다.
+         *          거짓이면 트랜지언트 풀은 같은 서술끼리만 텍스처를 나눈다(`RenderGraphAliasPlan`) — 능력 표가 정한 길이다(언리얼 `GRHISupportsPlacedResources` 와 같은 자리).
+         */
+        uint8 _bPlacedTextures{ SW_FALSE };
 
         /** @brief 기본값(컴퓨트만 켠 보수적 기본)으로 만듭니다. */
         RHICapabilities() noexcept = default;

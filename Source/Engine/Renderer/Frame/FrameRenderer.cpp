@@ -84,6 +84,7 @@ namespace sw
         , _autoExposure{ _pDevice, _pipelineResource, _psoManager }
         , _upscale{ _pDevice, _pipelineResource, _psoManager }
         , _fog{ _pDevice, _psoManager }
+        , _postProcessMaterials{ _pDevice, _pipelineResource, _psoManager }
         , _extensionHost{ _pDevice, _pipelineResource, _psoManager }
         , _viewResources{ _pDevice, _pipelineResource, _autoExposure, _upscale }
         , _pipelinePath{}
@@ -370,6 +371,7 @@ namespace sw
         _state._cookieAtlas.assignCells( pDevice, packet._listLightCookie, packet._listLight );
         _state._listFrameRealtimeProbe = packet._listRealtimeProbe;
         _state._listFrameLensFlare     = packet._listLensFlare;
+        std::swap( _state._listFrameDecal, packet._listDecal ); // 맞바꾸기 — 지난 프레임의 저장소가 패킷으로 돌아간다
         _state._lightBuffer.populate( packet._listLight, _state._frameShadow._listTileElement, packet._pLightProbe, _state._listFrameRealtimeProbe.empty() == false );
 
         ensurePassResources();
@@ -379,6 +381,7 @@ namespace sw
         // 시드는 씬 경로와 같은 updatePassConstants 로 채운다. 따로 채우면 라이트, 블룸, 아웃라인 색 상수가
         // 빠지기 쉽다. 뷰-투영은 패킷의 주 시점이다(역행렬과 절두체도 함께 갱신된다).
         updatePassConstants( _state._frameContext, packet._viewProj );
+        prepareFrameDecals(); // 후처리 텍스처 묶음의 정리(updatePassConstants) 뒤 — 이번 프레임에 묻는 경로가 남는다
         _state.view( RenderViewType::Main )._position = packet._cameraPos;
         // 렌즈 플레어 스프라이트는 주 시점(패킷의 뷰-투영 · 화면비)으로 펼쳐 기록 전에 올린다. 추가 뷰는 플레어를 그리지 않는다. 빈 화면(높이 0)은 그릴 것이 없다.
         if ( packet._viewportHeight > 0 )
@@ -391,6 +394,46 @@ namespace sw
         _passExecutor.resetViewRecordState();
 
         return uploadSceneAndSubmit( pDevice, "executePacket" );
+    }
+
+    void FrameRenderer::prepareFrameDecals()
+    {
+        _state._listFrameDecalDraw.clear();
+        if ( _state._listFrameDecal.empty() )
+            return;
+        if ( VectorUtil::containsIf( _pipelineResource.getGraphPass(), []( const RenderGraphPassDesc& pass )
+        { return pass._type == RenderPassType::Decal; } ) == false )
+        {
+            SW_LOG_WARNING_ONCE_ID( "FrameRenderer.DecalsWithoutDecalPass", "The scene has %# decals but pipeline '%#' has no Decal pass - decals need the G-buffer (deferred pipeline) and are not drawn",
+                                    static_cast<uint32>( _state._listFrameDecal.size() ), _pipelinePath );
+            return;
+        }
+        const bool bNativeBindless = _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling();
+        for ( const DecalDrawData& decal : _state._listFrameDecal )
+        {
+            // 텍스처를 적었는데 아직 읽는 중이면 이 프레임은 그 데칼을 빼고 그린다(흰색 · 평평한 노멀로 대신 그리지 않는다).
+            const Texture2D* pAlbedo = decal._albedoTexture.isSet() ? _state._postProcessTextures.findReady( decal._albedoTexture, "decal albedo" ) : nullptr;
+            const Texture2D* pNormal = decal._normalTexture.isSet() ? _state._postProcessTextures.findReady( decal._normalTexture, "decal normal" ) : nullptr;
+            if ( ( decal._albedoTexture.isSet() && pAlbedo == nullptr ) || ( decal._normalTexture.isSet() && pNormal == nullptr ) )
+                continue;
+            FrameRenderState::FrameDecalDraw draw;
+            draw._world        = decal._world;
+            draw._worldToLocal = decal._worldToLocal;
+            draw._color        = decal._color;
+            draw._surface      = decal._surface;
+            draw._channels     = decal._channels;
+            if ( pAlbedo != nullptr )
+            {
+                draw._arrTextureSRV[0] = pAlbedo->getSRV();
+                draw._albedoTexture    = bNativeBindless ? pAlbedo->getSRV() : 0u;
+            }
+            if ( pNormal != nullptr )
+            {
+                draw._arrTextureSRV[1] = pNormal->getSRV();
+                draw._normalTexture    = bNativeBindless ? pNormal->getSRV() : 1u;
+            }
+            _state._listFrameDecalDraw.push_back( draw );
+        }
     }
 
     void FrameRenderer::updateLightBuffer( IRHIDevice* pDevice )
@@ -625,6 +668,7 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         // 지난 프레임 어느 뷰도 묻지 않은 후처리 텍스처를 놓는다 — 이번 프레임의 뷰들이 묻기 전에 한 번.
         _state._postProcessTextures.pruneUnused();
+        _postProcessMaterials.pruneUnused();
         _passExecutor.applyViewPassConstants( context, _state._mainView );
     }
 
@@ -745,6 +789,7 @@ namespace sw
         _state._lensFlare.release( _pDevice );
         _state._cookieAtlas.release( _pDevice );
         _state._postProcessTextures.release();
+        _postProcessMaterials.release();
         _state._shadowCache.releaseLayer( _pDevice );
         // HDRI 텍스처의 참조를 놓는다 — 다음 프레임의 하늘이 새 디바이스에 다시 청한다(경로를 비워 다르게 본다).
         _state._skyHdriLoad  = TextureHandle{};
@@ -839,6 +884,7 @@ namespace sw
         const uint32 viewportWidth  = static_cast<uint32>( static_cast<float32>( width ) * settings._screenRect._z + 0.5f );
         const uint32 viewportHeight = static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w + 0.5f );
         _upscale.prepareUpscale( _state._mainView, viewportWidth, viewportHeight );
+        _postProcessMaterials.prepareView( _state._mainView );
         _capture.ensurePresent( _state._outputWidth, _state._outputHeight );
     }
 
@@ -1139,6 +1185,7 @@ namespace sw
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.
         (void)_viewResources.applyViewPassSelection( view, request._viewProj, _state._gpuScene.hasObjectMotion(), _state._frameShadow.hasContactShadows() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
         _upscale.prepareUpscale( view, view._outputWidth, view._outputHeight );
+        _postProcessMaterials.prepareView( view );
     }
 
     void FrameRenderer::releaseExtraView( FrameViewTarget& view )

@@ -17,20 +17,12 @@
     #error "gtao.hlsl needs SW_GTAO_RADIUS, SW_GTAO_SLICES, SW_GTAO_STEPS and SW_GTAO_INTENSITY in the pass _listPermutation"
 #endif
 
-static const float kGtaoHalfPi = 1.57079632679f;
-
-/** @brief 픽셀마다 조각 회전(0 ~ 1) — 4×4 반복 무늬(인터리브 그래디언트 노이즈). 프레임마다 바뀌지 않아 골든이 정해진다. */
-float computeSliceJitter( float2 pixel )
-{
-    return frac( 52.9829189f * frac( dot( floor( pixel ), float2( 0.06711056f, 0.00583715f ) ) ) );
-}
-
 /** @brief 조각 하나의 보이는 몫(코사인 가중, 0 ~ 1)과 굽은 방향입니다. @p cosHorizon0 · @p cosHorizon1 은 음 · 양 방향 지평선의 cos(시선과의 각)입니다. */
 float integrateSlice( float cosHorizon0, float cosHorizon1, float normalAngle, out float outBentAngle )
 {
     // 지평선 각(시선에서 잰 부호 있는 각)을 노멀이 보는 반구 안으로 자른다.
-    const float horizon0 = normalAngle + max( -acos( cosHorizon0 ) - normalAngle, -kGtaoHalfPi );
-    const float horizon1 = normalAngle + min( acos( cosHorizon1 ) - normalAngle, kGtaoHalfPi );
+    const float horizon0 = normalAngle + max( -acos( cosHorizon0 ) - normalAngle, -kHalfPi );
+    const float horizon1 = normalAngle + min( acos( cosHorizon1 ) - normalAngle, kHalfPi );
     outBentAngle         = ( horizon0 + horizon1 ) * 0.5f;
     const float sinN     = sin( normalAngle );
     const float cosN     = cos( normalAngle );
@@ -48,7 +40,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
         const float3 normal   = PassTexture::sampleNormal( input._uv );
         const float3 toView   = View::computeToView( position );
         const float2 texel    = g_SourceTexel.xy;
-        const float  jitter   = computeSliceJitter( input._uv * g_SourceTexel.zw );
+        const float  jitter   = CommonMath::computeInterleavedGradientNoise( input._uv * g_SourceTexel.zw );
         // 반경을 화면 길이로 — 시선에 수직으로 반경만큼 떨어진 점을 투영해 그 화면 거리(uv)를 걸음 수로 나눈다(멀수록 짧다).
         const float3 side         = normalize( cross( toView, abs( toView.y ) < 0.99f ? float3( 0.0f, 1.0f, 0.0f ) : float3( 1.0f, 0.0f, 0.0f ) ) );
         const float4 centerClip   = mul( float4( position, 1.0f ), g_ViewProj );

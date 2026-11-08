@@ -324,18 +324,6 @@ float LightData::computeShadow( float3 worldPosition, float3 worldNormal, float 
 }
 
 /**
- * @brief 화면 UV와 깊이에서 월드 위치를 복원합니다 (디퍼드 전용).
- * @details G버퍼에 위치를 저장하지 않는다 — 첨부 하나를 통째로 아끼고, 복원은 역행렬 곱 하나다.
- *          이 엔진은 행벡터 규약이라 `mul( 벡터, 행렬 )` 이다(`mul( worldPosition, g_ViewProj )` 와 같은 순서).
- */
-static float3 Transform::computeWorldPositionFromDepth( float2 uv, float deviceDepth )
-{
-    const float2 ndcXy = uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
-    const float4 world = mul( float4( ndcXy, deviceDepth, 1.0f ), g_InvViewProj );
-    return world.xyz / world.w;
-}
-
-/**
  * @brief 3D 빛 하나가 이 위치에 닿는 방향과 감쇠를 구합니다. 2D 빛 · 2D 그림자 토막이면 false 입니다.
  * @param outToLight 표면에서 빛으로 가는 단위 방향
  * @param outAttenuation 거리 · 원뿔 감쇠(방향광은 1). 세기와 색은 곱하지 않는다
@@ -456,15 +444,11 @@ float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal, out fl
 
 /**
  * @brief 길이 1 의 방향을 옥타헤드럴 사각형의 UV([0, 1]²)로 접습니다(+Y 가 가운데). C++ `ReflectionProbeAsset::encodeOctahedral` 과 같은 식이다.
- * @details 부호는 0 을 양수로 친다 — HLSL `sign` 은 0 에서 0 이라 쓰지 않는다(C++ 와 갈린다).
+ * @details G버퍼 노멀과 같은 접기(Octahedral::encode — +Z 가 가운데)에 축을 xzy 로 바꿔 넣은 것이다(0 은 양수 부호도 같다). 식을 두 벌 두지 않는다.
  */
 static float2 ReflectionProbe::encodeOctahedral( float3 direction )
 {
-    const float3 folded     = direction / max( abs( direction.x ) + abs( direction.y ) + abs( direction.z ), 1e-8f );
-    const float2 signXz     = float2( folded.x >= 0.0f ? 1.0f : -1.0f, folded.z >= 0.0f ? 1.0f : -1.0f );
-    const float2 lower      = ( 1.0f - abs( folded.zx ) ) * signXz;
-    const float2 octahedral = ( folded.y >= 0.0f ) ? folded.xz : lower;
-    return octahedral * 0.5f + 0.5f;
+    return Octahedral::encode( direction.xzy ) * 0.5f + 0.5f;
 }
 
 /** @brief 반사 프로브의 한 거칠기 단계를 방향 @p direction 으로 쌍선형 샘플합니다. 사각형 가장자리는 자른다(C++ `ReflectionProbeAsset::sampleLevel` 과 같다). */

@@ -9,6 +9,7 @@
 
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Graphics/View/PostProcessValues.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 
@@ -140,6 +141,19 @@ namespace sw
          *        (XML `_blendPreset="Additive"`) — 톤맵 · 블룸 앞에 둔다. 블룸에서 고스트를 뽑는 화면 효과와 별개다. 플레어를 단 빛이 없으면 그리지 않는다(출력 그대로). 주 시점만 그린다.
          */
         LensFlare,
+        /**
+         * @brief 후처리 머티리얼입니다(언리얼 Post Process Material · 유니티 Full Screen Pass). 뷰의 블렌더블(`PostProcessValues::_listBlendable`) 가운데 이 패스의 자리(`_blendableLocation`)의 것을
+         *        목록 차례로 원본 위에 그린다 — 머티리얼마다 풀스크린 삼각형 하나, 머티리얼 셰이더(PostProcess 영역 — post_process_material.hlsli)와 원소 버퍼 하나(`FramePostProcessMaterials`).
+         *        톤맵 앞 · 뒤 자리는 원본(SourceColor)을 출력에 복사한 뒤 무게만큼 프리멀티플라이 블렌드하고, 그릴 머티리얼이 없는 뷰는 출력이 원본을 가리킨다(`kBypassesToSource`).
+         *        톤맵 대신 자리는 HDR 원본을 읽어 톤맵 출력(다른 패스와 함께 쓰는 출력) 위에 무게만큼 덮는다 — 복사도 고르기도 없다(전용 실행 `FramePassExecutor::executePostProcessMaterialPass`).
+         */
+        PostProcessMaterial,
+        /**
+         * @brief 디퍼드 데칼입니다(decal.hlsl — 언리얼 Deferred Decal · 유니티 HDRP Decal Projector). 씬의 데칼(`DecalComponent`)마다 풀스크린 하나로 장면 깊이에서 위치를 복원해
+         *        데칼 상자 안의 픽셀만 G버퍼 알베도 · 노멀 · 머티리얼 칸(선언한 컬러 출력 셋, 이 차례)에 곧은 알파로 섞는다 — 칸마다의 마스크는 셰이더의 출력 알파, 채널 쓰기 마스크는 XML 의
+         *        `_listBlendTarget` 이다(알베도 알파의 셰이딩 모델 번호 · 반사율 · 가림은 덮지 않는다). G버퍼 뒤 · 조명 앞에 둔다. 데칼이 없으면 기록하지 않는다(전용 실행 `executeDecalPass`).
+         */
+        Decal,
         /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
@@ -493,5 +507,12 @@ namespace sw
         /** @brief 일반 풀스크린 패스의 실행 방식입니다(`RenderPassExecutionMode`). Compute 는 표가 컴퓨트 구현을 가진 종류만 받는다(검증). */
         PROPERTY()
         RenderPassExecutionMode _implementation{ RenderPassExecutionMode::Pixel };
+
+        /**
+         * @brief `PostProcessMaterial` 패스가 맡는 블렌더블 자리입니다. 그 패스는 None 이 아니어야 하고 다른 패스는 None 이어야 한다(검증). 자리마다 패스는 하나다.
+         * @details 톤맵 앞은 HDR 사이(모션 블러와 톤맵 사이), 톤맵 뒤는 LDR 사이(톤맵과 Present 사이), 톤맵 대신은 톤맵 바로 뒤에 HDR 원본을 읽어 톤맵 출력에 쓴다(언리얼 Blendable Location).
+         */
+        PROPERTY()
+        PostProcessBlendableLocation _blendableLocation{ PostProcessBlendableLocation::None };
     };
 } // namespace sw

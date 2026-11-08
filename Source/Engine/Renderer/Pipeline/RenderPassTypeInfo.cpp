@@ -317,6 +317,22 @@ namespace sw
                         info._flags          = Flag::kBlend | Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kRequiresPassDesc;
                         break;
                     }
+                    case RenderPassType::Decal:
+                    {
+                        // 출력은 G버퍼 셋(알베도 · 노멀 · 머티리얼) — 깊이 붙임 없이 장면 깊이를 입력으로 읽는다(G버퍼 패스가 다 쓴 깊이). 블렌드 · 쓰기 마스크는 XML 이 적는다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderDecal;
+                        info._inputContract  = makeContract( { Role::SceneDepth }, {} );
+                        info._flags          = Flag::kBlend | Flag::kHasInputContract | Flag::kDrawsDeclaredColor;
+                        break;
+                    }
+                    case RenderPassType::PostProcessMaterial:
+                    {
+                        // 셰이더는 블렌더블의 머티리얼 것이라 표의 기본값이 없다 — 전용 실행(`executePostProcessMaterialPass`)이 머티리얼마다 확장 프로그램 PSO 로 그린다.
+                        // 톤맵 앞 · 뒤 자리는 그릴 머티리얼이 없는 뷰에서 출력이 원본을 가리킨다(kBypassesToSource). 입력은 원본 말고 모두 선택이다(머티리얼 그래프 "Post Process" 노드가 읽는 것).
+                        info._inputContract = makeContract( { Role::SourceColor }, { Role::SceneDepth, Role::GBufferAlbedo, Role::GBufferNormal, Role::GBufferMaterial, Role::GBufferCustomData } );
+                        info._flags         = Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
+                        break;
+                    }
                     case RenderPassType::Compute:
                     {
                         // 셰이더는 XML 이 고른다 — 표의 기본값이 없고, 첨부를 RW 텍스처로 묶는 전용 실행이다(`FramePassExecutor::executeComputePass`).
@@ -514,8 +530,9 @@ namespace sw
                         return false;
                     // 꺼진 패스를 기록하지 않는 것은 실행이 출력 이름의 연결(`isForwarded`)을 볼 때만 된다 — 일반 풀스크린 실행과 TAA 실행(executeTAAPass)이 본다.
                     // TAA 는 출력이 원본을 가리키는 길만 있다(출력이 없으면 셋업이 읽는 기록 형식이 사라진다).
-                    const bool bExecutorHonorsSelection =
-                        row.hasFlag( Flag::kGenericFullscreen ) || ( row._type == RenderPassType::TAA && row.hasFlag( Flag::kBypassesToSource ) );
+                    // 후처리 머티리얼 실행(executePostProcessMaterialPass)도 출력 이름의 연결을 본다.
+                    const bool bExecutorHonorsSelection = row.hasFlag( Flag::kGenericFullscreen ) || ( row._type == RenderPassType::TAA && row.hasFlag( Flag::kBypassesToSource ) ) ||
+                                                          row._type == RenderPassType::PostProcessMaterial;
                     if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) && bExecutorHonorsSelection == false )
                         return false;
                     // 건너뛸 수 있는 효과는 빠지는 방법(원본을 가리킴 · 출력 없음)이 정확히 하나다. 그 방법이 있는 패스는 건너뛸 수 있는 효과다(`_minPostQuality` 를 받는다).

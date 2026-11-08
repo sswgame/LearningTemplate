@@ -24,9 +24,6 @@ struct CameraGrade
     static float3 apply( float2 uv, float3 color );
 };
 
-/// @brief 휘도 가중치(Rec.709 선형)입니다. 그레이딩의 범위 무게와 채도가 쓴다.
-static const float3 kGradeLumaWeights = float3( 0.2126f, 0.7152f, 0.0722f );
-
 /**
  * @brief 톤맵 앞의 HDR 색에 카메라 노출 배율과 자동 노출을 곱합니다.
  * @details 자동 노출은 이번 EV(auto_exposure.hlsl 이 쓴 1x1)의 2^-EV 다. 재지 않는 뷰는 g_AutoExposureIndex 가 무효라 EV 0(배율 1)이다 —
@@ -45,7 +42,7 @@ static float3 CameraGrade::applyExposure( float3 hdrColor )
  */
 static float3 CameraGrade::correctRange( float3 color, float4 saturation, float4 contrast, float4 gamma, float4 gain, float4 offset )
 {
-    const float luminance = dot( color, kGradeLumaWeights );
+    const float luminance = CommonMath::computeLuminance( color );
     color                 = max( 0.0f, lerp( luminance.xxx, color, saturation.rgb ) );
     color                 = pow( color * ( 1.0f / 0.18f ), contrast.rgb ) * 0.18f;
     color                 = pow( color, 1.0f / max( gamma.rgb, 1e-4f ) );
@@ -63,7 +60,7 @@ static float3 CameraGrade::applyColorGrading( float3 hdrColor )
     SW_BRANCH if ( g_GradeParams.z > 0.5f )
     {
         const float3 balanced         = max( 0.0f, float3( dot( g_GradeWhiteBalance0.xyz, hdrColor ), dot( g_GradeWhiteBalance1.xyz, hdrColor ), dot( g_GradeWhiteBalance2.xyz, hdrColor ) ) );
-        const float  luminance        = dot( balanced, kGradeLumaWeights );
+        const float  luminance        = CommonMath::computeLuminance( balanced );
         const float  shadowsWeight    = 1.0f - smoothstep( 0.0f, max( g_GradeParams.x, 1e-4f ), luminance );
         const float  highlightsWeight = smoothstep( min( g_GradeParams.y, 0.9999f ), 1.0f, luminance );
         const float  midtonesWeight   = 1.0f - shadowsWeight - highlightsWeight;
@@ -164,7 +161,7 @@ static float3 CameraGrade::applyFilmGrain( float2 pixelPosition, float3 color )
         hash *= 0x27d4eb2du;
         hash ^= hash >> 15;
         const float noise     = float( hash & 0xFFFFu ) / 65535.0f - 0.5f;
-        const float luminance = dot( saturate( color ), kGradeLumaWeights );
+        const float luminance = CommonMath::computeLuminance( saturate( color ) );
         const float response  = 4.0f * luminance * ( 1.0f - luminance );
         result                = saturate( color + noise * g_GrainParams.x * response );
     }
@@ -175,7 +172,7 @@ static float3 CameraGrade::applyFilmGrain( float2 pixelPosition, float3 color )
 static float3 CameraGrade::apply( float2 uv, float3 color )
 {
     // 채도: 휘도(Rec.709)에서 멀어지는 정도를 곱한다. 대비: 화면 중간 회색(0.5)을 축으로 늘린다.
-    const float luminance = dot( color, float3( 0.2126f, 0.7152f, 0.0722f ) );
+    const float luminance = CommonMath::computeLuminance( color );
     color                 = lerp( luminance.xxx, color, g_CameraGrade.y );
     color                 = saturate( ( color - 0.5f ) * g_CameraGrade.z + 0.5f );
 

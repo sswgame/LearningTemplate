@@ -586,6 +586,13 @@ namespace sw
         hashed_string _fogVolumeParams{ "g_FogVolumeParams" };
         /// @brief 안개 패스의 진단 보기입니다(`FrameFog::makeDebugParams`, fog.hlsl).
         hashed_string _fogDebugParams{ "g_FogDebugParams" };
+        hashed_string _postProcessMaterial{ "g_PostProcessMaterial" }; ///< 후처리 머티리얼 그리기마다의 무게(x)
+        hashed_string _decalWorldToLocal{ "g_DecalWorldToLocal" };     ///< 데칼 그리기마다 — 월드 → 상자 공간
+        hashed_string _decalColor{ "g_DecalColor" };                   ///< 데칼 알베도 곱 · 불투명도
+        hashed_string _decalSurface{ "g_DecalSurface" };               ///< 데칼 거칠기 · 금속도 · 노멀 세기 · 각도 페이드 시작
+        hashed_string _decalChannels{ "g_DecalChannels" };             ///< 데칼이 덮는 칸(DecalChannels 비트)
+        hashed_string _decalAlbedoTexture{ "g_DecalAlbedoTexture" };   ///< 데칼 알베도 텍스처 번호(MaterialTexture::sampleIndex 의 뜻)
+        hashed_string _decalNormalTexture{ "g_DecalNormalTexture" };   ///< 데칼 노멀 텍스처 번호
         hashed_string _shadowParams{ "g_ShadowParams" };
         /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭, w 거리 끝에서 옅어지기 시작하는 깊이. `ViewShadowData::_cascadeLayout`.
         hashed_string _shadowCascadeLayout{ "g_ShadowCascadeLayout" };

@@ -29,7 +29,9 @@ namespace sw
         {
             hashed_string _owner;
             uint64        _descKey;
+            uint32        _firstLevel;
             uint32        _lastLevel;
+            uint8         _bPlaceable;
         };
         vector<Slot> listSlot;
         for ( size_t orderIndex : listOrder )
@@ -47,13 +49,19 @@ namespace sw
             }
             if ( pReuse == nullptr )
             {
-                listSlot.push_back( Slot{ candidate._name, candidate._descKey, candidate._lastLevel } );
+                listSlot.push_back( Slot{ candidate._name, candidate._descKey, candidate._firstLevel, candidate._lastLevel, candidate._bPlaceable } );
                 continue;
             }
             result._mapAliasToOwner[candidate._name] = pReuse->_owner;
             pReuse->_lastLevel                       = candidate._lastLevel;
+            pReuse->_bPlaceable                      = pReuse->_bPlaceable != 0 && candidate._bPlaceable != 0 ? 1 : 0;
         }
         result._ownerCount = static_cast<uint32>( listSlot.size() );
+        for ( const Slot& slot : listSlot )
+        {
+            if ( slot._bPlaceable != 0 )
+                result._listPlaceable.push_back( RenderGraphAliasCandidate{ slot._owner, slot._descKey, slot._firstLevel, slot._lastLevel, 1 } );
+        }
         return result;
     }
 } // namespace sw

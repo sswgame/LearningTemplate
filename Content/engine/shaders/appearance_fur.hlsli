@@ -3,9 +3,9 @@
  *
  * 껍질 렌더링: 같은 메시를 껍질 수만큼 겹쳐 그리고(씬의 메시 컴포넌트 여럿 — 같은 머티리얼이라 배치 하나), 껍질마다 노멀 방향으로 밀어 낸 뒤 가닥 자리만 남기고 오린다
  * (alphaMode Mask — 깊이 · 그림자도 같은 자리를 오린다). 지느러미(fin)는 두지 않았다 — 실루엣이 가늘게 비지만 기하 셰이더나 메시 가공 없이 데이터만으로 된다.
- * 가장 값싼 길을 고른 까닭: 털 카드는 아티스트 메시가, 가닥(언리얼 Groom)은 시뮬레이션 · 전용 렌더가 든다. 반사는 머리결 엽(Kajiya · Kay, shading_model.hlsli)이다.
+ * 가장 값싼 길을 고른 까닭: 털 카드는 아티스트 메시가, 가닥(언리얼 Groom)은 시뮬레이션 · 전용 렌더가 든다. 반사는 머리결 엽 — 머리카락과 같은 Marschner R · TT · TRT(hair_shading.hlsli, shading_model.hlsli 가 부른다)다.
  * 인스턴스 값(MeshComponent `_customData0`): `.y` 껍질 비율(0 바탕 피부 · 1 털 끝), `.z` 밀어 낼 거리(m). 바탕 껍질(.y = 0)은 오리지 않는다.
- * 머티리얼 칸(털에서의 뜻): `_patternScale` 가닥 수 / UV 1, `_patternWidth` 가닥 뿌리 반지름(칸 비), `_sheenColor` 털 반사 색, `_strandShift` 반사를 뿌리 쪽으로 옮기는 정도.
+ * 머티리얼 칸(털에서의 뜻): `_patternScale` 가닥 수 / UV 1, `_patternWidth` 가닥 뿌리 반지름(칸 비), `_sheenColor` 털 흡수 색(TT · TRT 를 물들이고 밝기가 R 의 세기), `_strandShift` 큐티클 기울기(라디안 — 머리카락 `_shift` 와 같은 뜻), `_roughness` 세로 거칠기.
  */
 
 #ifndef SW_ENGINE_APPEARANCEFUR_HLSLI

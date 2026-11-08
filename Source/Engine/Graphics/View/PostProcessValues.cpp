@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/View/PostProcessValues.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/PropertyInfo.h"
@@ -63,6 +64,7 @@ namespace sw
         , _bScreenSpaceReflectionMaxDistance{ SW_FALSE }
         , _bScreenSpaceReflectionThickness{ SW_FALSE }
         , _bScreenSpaceReflectionMaxRoughness{ SW_FALSE }
+        , _bListBlendable{ SW_FALSE }
     {
     }
 
@@ -76,10 +78,67 @@ namespace sw
         return overrides;
     }
 
+    bool PostProcessBlendable::isSameSlot( const PostProcessBlendable& other ) const
+    {
+        // 읽지 않은 경로끼리는 같지 않다 — 빈 항목은 섞지 않는다.
+        return _location == other._location && _materialPath.isSet() && other._materialPath.isSet() && _materialPath == string_view( other._materialPath.get() );
+    }
+
+    bool PostProcessBlendable::hasActive( const vector<PostProcessBlendable>& listBlendable, PostProcessBlendableLocation location )
+    {
+        return VectorUtil::containsIf( listBlendable, [location]( const PostProcessBlendable& blendable )
+        { return blendable._location == location && blendable.isActive(); } );
+    }
+
+    void PostProcessBlendable::blendList( vector<PostProcessBlendable>& inoutList, const vector<PostProcessBlendable>& target, float32 alpha, bool bFadeMissing )
+    {
+        const float32 clamped = MathUtil::saturate( alpha );
+        // 아래 목록에만 있는 항목 — 볼륨은 그대로 두고(더하기만), 포즈 블렌드는 넘어가는 만큼 줄인다.
+        if ( bFadeMissing )
+        {
+            for ( PostProcessBlendable& entry : inoutList )
+            {
+                const bool bInTarget = VectorUtil::containsIf( target, [&entry]( const PostProcessBlendable& other )
+                { return entry.isSameSlot( other ); } );
+                if ( bInTarget == false )
+                    entry._weight *= 1.0f - clamped;
+            }
+        }
+        // 위 목록의 항목 — 같은 (경로, 자리) 는 무게를 섞고, 없으면 무게 0 에서 섞여 들어온다.
+        for ( const PostProcessBlendable& other : target )
+        {
+            if ( other._materialPath.isSet() == false )
+                continue;
+            PostProcessBlendable* pExisting = nullptr;
+            for ( PostProcessBlendable& entry : inoutList )
+            {
+                if ( entry.isSameSlot( other ) )
+                {
+                    pExisting = &entry;
+                    break;
+                }
+            }
+            if ( pExisting != nullptr )
+            {
+                pExisting->_weight = MathUtil::lerp( pExisting->_weight, other._weight, clamped );
+                continue;
+            }
+            PostProcessBlendable added = other;
+            added._weight              = other._weight * clamped;
+            inoutList.push_back( std::move( added ) );
+        }
+        // 무게가 없는 항목은 지운다 — 그리지 않는 항목이 프레임마다 쌓이지 않게.
+        VectorUtil::removeIf( inoutList, []( const PostProcessBlendable& entry )
+        { return entry._weight <= 0.0f; } );
+    }
+
     PostProcessValues PostProcessValues::blend( const PostProcessValues& from, const PostProcessValues& to, float32 weight )
     {
         PostProcessValues values = from;
         blendOverrides( values, to, PostProcessOverrides::makeAll(), weight );
+        // 포즈 블렌드는 다른 카메라로 넘어간다 — 앞 카메라에만 있던 머티리얼도 넘어가는 만큼 사라진다(볼륨 섞기는 더하기만 한다).
+        values._listBlendable = from._listBlendable;
+        PostProcessBlendable::blendList( values._listBlendable, to._listBlendable, weight, true );
         return values;
     }
 
@@ -103,6 +162,12 @@ namespace sw
                 const bool bBoth                  = inoutValues._letterboxAspectRatio > 0.0f && target._letterboxAspectRatio > 0.0f;
                 inoutValues._letterboxAspectRatio = bBoth ? MathUtil::lerp( inoutValues._letterboxAspectRatio, target._letterboxAspectRatio, alpha )
                                                           : ( alpha < 0.5f ? inoutValues._letterboxAspectRatio : target._letterboxAspectRatio );
+                continue;
+            }
+            // 후처리 머티리얼 목록은 항목마다 무게를 섞는다(볼륨은 더하기만 — 아래 목록의 항목은 그대로 남는다).
+            if ( pValue == &inoutValues._listBlendable )
+            {
+                PostProcessBlendable::blendList( inoutValues._listBlendable, target._listBlendable, alpha, false );
                 continue;
             }
             // 경로는 섞을 수 없다 — 절반에서 바꾼다(언리얼은 LUT 둘을 무게로 섞은 LUT 를 굽지만, 여기서는 한 장만 건다).

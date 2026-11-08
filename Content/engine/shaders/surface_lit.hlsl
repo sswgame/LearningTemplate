@@ -35,11 +35,9 @@ SW_MATERIAL_END
 #define SW_MATERIAL_RIM_LIGHT
 #define SW_MATERIAL_DEFAULT_VARYINGS
 #include "material_shader.hlsli"
+// 젖음 · 흙의 값은 환경 · 지형 셰이더와 한 벌이다(SurfaceFunction::applyWetness · kDirtColor · kDirtRoughness) — 같은 비에 젖은 몸과 땅이 같은 정도로 어두워진다.
+#include "material_functions.hlsli"
 
-static const float  kWetAlbedoScale     = 0.55f; // 젖음이 가득 찼을 때 알베도에 곱하는 값(젖으면 어두워진다)
-static const float  kWetRoughness       = 0.15f; // 젖음이 가득 찼을 때의 거칠기(젖으면 번들거린다)
-static const float3 kDirtColor          = float3( 0.28f, 0.20f, 0.12f );
-static const float  kDirtRoughness      = 1.0f;
 static const float3 kBloodColor         = float3( 0.30f, 0.01f, 0.01f );
 static const float  kBloodRoughness     = 0.25f;
 static const float3 kWoundColor         = float3( 0.18f, 0.02f, 0.04f );
@@ -61,10 +59,10 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     float4       albedo         = context._color * material._color * surfaceTexture;
     float        roughness      = material._roughness;
 
-    // 젖음 — 몸 전체. 어둡게 하고 거칠기를 낮춘다.
-    const float wet = saturate( material._surfaceWet );
-    albedo.rgb *= lerp( 1.0f, kWetAlbedoScale, wet );
-    roughness = lerp( roughness, kWetRoughness, wet );
+    // 젖음 — 몸 전체. 어둡게 하고 거칠기를 낮춘다(피부 · 옷은 다공성 1 — 물을 머금는다).
+    float3 wetAlbedo = albedo.rgb;
+    SurfaceFunction::applyWetness( wetAlbedo, roughness, 1.0f, material._surfaceWet );
+    albedo.rgb = wetAlbedo;
 
     // 흙 · 피 · 상처 — 마스크가 자리를 정하는 덮개. 나중 것이 위에 덮인다.
     const float dirt = computeMaskedCoverage( context, material._surfaceDirt, material._surfaceDirtMask );

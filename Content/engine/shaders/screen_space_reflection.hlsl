@@ -17,14 +17,6 @@
 static const int kSsrStepCount   = 32;
 static const int kSsrRefineCount = 4;
 
-/** @brief 화면 @p uv 와 장치 깊이 @p deviceDepth 의 월드 위치입니다(lighting.hlsli 의 Transform::computeWorldPositionFromDepth 와 같은 식). */
-float3 reconstructWorldPosition( float2 uv, float deviceDepth )
-{
-    const float2 ndcXy = uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
-    const float4 world = mul( float4( ndcXy, deviceDepth, 1.0f ), g_InvViewProj );
-    return world.xyz / world.w;
-}
-
 /** @brief 장면 깊이의 @p uv 텍셀 값입니다(점, Load). */
 float loadSceneDepth( float2 uv, float2 depthSize )
 {
@@ -44,9 +36,9 @@ int classifyRayPoint( float3 position, float2 depthSize, out float2 outUv )
     outUv                    = clip.xy / w * float2( 0.5f, -0.5f ) + 0.5f;
     const bool   bOnScreen   = clip.w > 1e-5f && all( outUv >= 0.0f ) && all( outUv <= 1.0f );
     const float  sceneDepth  = loadSceneDepth( outUv, depthSize );
-    const float3 nearPoint   = reconstructWorldPosition( outUv, 0.0f );
+    const float3 nearPoint   = Transform::computeWorldPositionFromDepth( outUv, 0.0f );
     const float  rayDistance = distance( position, nearPoint );
-    const float  sceneDist   = distance( reconstructWorldPosition( outUv, sceneDepth ), nearPoint );
+    const float  sceneDist   = distance( Transform::computeWorldPositionFromDepth( outUv, sceneDepth ), nearPoint );
     const float  behind      = rayDistance - sceneDist;
     const int    result      = behind < 0.0f ? 0 : ( behind <= g_SSRParams.z && sceneDepth < 1.0f ? 1 : -1 );
     return bOnScreen ? result : -1;
@@ -65,8 +57,8 @@ float4 PSMain( PSInput input ) : SV_TARGET
     float4 result = float4( 0.0f, 0.0f, 0.0f, 0.0f );
     SW_BRANCH if ( bDrawn && depth < 1.0f && roughness < g_SSRParams.w )
     {
-        const float3 position  = reconstructWorldPosition( uv, depth );
-        const float3 viewDir   = normalize( reconstructWorldPosition( uv, 1.0f ) - reconstructWorldPosition( uv, 0.0f ) );
+        const float3 position  = Transform::computeWorldPositionFromDepth( uv, depth );
+        const float3 viewDir   = normalize( Transform::computeWorldPositionFromDepth( uv, 1.0f ) - Transform::computeWorldPositionFromDepth( uv, 0.0f ) );
         const float3 normal    = PassTexture::sampleNormal( uv );
         const float3 reflected = reflect( viewDir, normal );
         const float  stepSize  = g_SSRParams.y / float( kSsrStepCount );

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  후처리 머티리얼(RenderPassType::PostProcessMaterial, PostProcessValues::_listBlendable) — 디퍼드 파이프라인의 세 자리(톤맵 앞 · 뒤 · 대신)에 같은 머티리얼(colortint — 채도를 낮추고 따뜻하게)을
+  볼륨 레이어로 하나씩 더한다. 켠 그림은 끈 그림과 달라야 하고(머티리얼이 그려지지 않으면 같다), 톤맵 뒤 무게 0.5 는 톤맵 앞 무게 1 과 달라야 하며(무게 · 자리가 읽히지 않으면 같다),
+  모두 끄면 처음 그림으로 돌아와야 한다(그릴 것이 없는 자리는 출력이 원본을 가리킨다 — 그림이 1 비트도 바뀌지 않는다).
+  결정적: 애니메이션 없는 무대(maps/postprocessvolume), 고정 프레임 시간.
+  실행: ctest -R Scenario.game.empty.postprocess_material
+-->
+<Scenario name="game.empty.postprocess_material" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/postprocessvolume.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="1"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="40"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Screenshot file="ppmat_off.ppm"/>
+
+	<DevCommand line="scene.layer PostMaterialBefore on"/>
+	<Wait frames="10"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="5"/>
+	<Screenshot file="ppmat_before.ppm"/>
+	<DevCommand line="scene.layer PostMaterialBefore off"/>
+
+	<DevCommand line="scene.layer PostMaterialAfter on"/>
+	<Wait frames="10"/>
+	<Screenshot file="ppmat_after.ppm"/>
+	<DevCommand line="scene.layer PostMaterialAfter off"/>
+
+	<DevCommand line="scene.layer PostMaterialReplace on"/>
+	<Wait frames="10"/>
+	<Screenshot file="ppmat_replace.ppm"/>
+	<DevCommand line="scene.layer PostMaterialReplace off"/>
+	<Wait frames="10"/>
+	<Screenshot file="ppmat_back.ppm"/>
+
+	<Wait frames="5"/>
+	<ExpectImagesDiffer first="ppmat_off.ppm" second="ppmat_before.ppm" region="0.1,0.1,0.9,0.9" minDiffering="0.3"/>
+	<ExpectImagesDiffer first="ppmat_off.ppm" second="ppmat_after.ppm" region="0.1,0.1,0.9,0.9" minDiffering="0.3"/>
+	<ExpectImagesDiffer first="ppmat_before.ppm" second="ppmat_after.ppm" region="0.1,0.1,0.9,0.9" minDiffering="0.1"/>
+	<ExpectImagesDiffer first="ppmat_off.ppm" second="ppmat_replace.ppm" region="0.1,0.1,0.9,0.9" minDiffering="0.3"/>
+	<ExpectImagesDiffer first="ppmat_off.ppm" second="ppmat_back.ppm" region="0,0,1,1" minDiffering="0" maxDiffering="0.001"/>
+	<ExpectImage file="ppmat_before.ppm" golden="ppmat_before"/>
+	<ExpectImage file="ppmat_after.ppm" golden="ppmat_after"/>
+	<ExpectImage file="ppmat_replace.ppm" golden="ppmat_replace"/>
+	<Pass/>
+</Scenario>

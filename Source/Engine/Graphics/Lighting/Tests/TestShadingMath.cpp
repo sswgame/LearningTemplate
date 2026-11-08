@@ -144,14 +144,9 @@ SW_TEST_CASE( ShadingMathTest, LineCoverageIsStableAcrossFootprints )
         SW_EXPECT_NEAR( 2.0f * halfWidth, ShadingMathTestUtil::computeAverageCoverage( halfWidth, footprint ), 2e-3 );
 }
 
-/** @brief [ShadingMathTest] 머리결 반사 — 탄젠트에 수직인 반각에서 가장 밝고, 거칠수록 퍼진다 */
-SW_TEST_CASE( ShadingMathTest, StrandSpecularPeaksPerpendicular )
+/** @brief [ShadingMathTest] 시엔 가시성은 양수이고 유한하다(털의 머리결 엽은 Marschner — TestHairShading 이 본다) */
+SW_TEST_CASE( ShadingMathTest, SheenVisibilityIsPositive )
 {
-    const float32 exponent = ShadingMath::computeStrandExponent( 0.3f );
-    SW_EXPECT_NEAR( 1.0, ShadingMath::computeStrandSpecular( 0.0f, exponent ), 1e-6 );
-    SW_EXPECT_TRUE( ShadingMath::computeStrandSpecular( 0.5f, exponent ) < 1.0f );
-    SW_EXPECT_TRUE( ShadingMath::computeStrandExponent( 0.8f ) < exponent );
-    // 시엔 가시성은 양수이고 유한하다.
     SW_EXPECT_TRUE( ShadingMath::computeVisibilityNeubelt( 0.0f, 0.0f ) > 0.0f );
 }
 

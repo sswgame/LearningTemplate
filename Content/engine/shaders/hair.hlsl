@@ -57,12 +57,6 @@ SW_MATERIAL_END
 #include "material_shader.hlsli"
 #include "hair_shading.hlsli"
 
-/** @brief 화면 픽셀의 디더 문턱(0..1, interleaved gradient noise — Jimenez 2014)입니다. 등장 디더(4x4 Bayer)와 무늬가 겹치지 않는다. */
-float computeHairDitherThreshold( float2 pixelPosition )
-{
-    return frac( 52.9829189f * frac( dot( pixelPosition, float2( 0.06711056f, 0.00583715f ) ) ) );
-}
-
 /** @brief 가닥 좌표 s(뿌리 0 → 끝 1)입니다. */
 float computeStrandCoordinate( MaterialData material, float2 uv )
 {
@@ -87,7 +81,7 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     surface._normal    = context._normal;
     surface._roughness = material._roughness;
     surface._metallic  = 0.0f;
-    surface.setAlphaCutoff( material._coverageDither > 0.5f ? computeHairDitherThreshold( context._position.xy ) : material._alphaCutoff );
+    surface.setAlphaCutoff( material._coverageDither > 0.5f ? CommonMath::computeInterleavedGradientNoise( context._position.xy ) : material._alphaCutoff );
     return surface;
 }
 
@@ -126,25 +120,8 @@ float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
     hair._shift     = material._shift;
     hair._specular  = material._specular;
     hair._scatter   = material._scatter;
-    hair._tangent   = computeStrandTangent( context, dot( texel.rgb, float3( 0.299f, 0.587f, 0.114f ) ) );
-
-    const float3 toView = View::computeToView( context._worldPosition );
-    const float  shadow = Shadow::sampleAtWorld( context._worldPosition, surface._normal );
-    // 앰비언트는 빛 목록과 무관하게 한 번만 더한다(Lighting::shadeLights 와 같은 규칙).
-    float3      color  = albedo * g_KeyLightColor.rgb * g_KeyLightColor.a;
-    LightCursor cursor = LightCursor::begin( context._worldPosition );
-    LightData   light;
-    while ( cursor.next( light ) )
-    {
-        float3 toLight;
-        float  attenuation;
-        if ( light.computeIncidence( context._worldPosition, toLight, attenuation ) == false )
-            continue;
-        const float  shadowTerm = light.computeShadow( context._worldPosition, surface._normal, shadow );
-        const float3 radiance   = light._colorIntensity.rgb * light._colorIntensity.a * attenuation * shadowTerm;
-        color += ( HairShading::evaluateLobes( hair, toView, toLight ) + HairShading::evaluateScatter( hair, surface._normal, toView, toLight ) ) * radiance;
-    }
-    return float4( color, surface._albedo.a );
+    hair._tangent   = computeStrandTangent( context, CommonMath::computeLuminance( texel.rgb ) );
+    return float4( HairShading::shadeLights( hair, context._worldPosition, surface._normal ), surface._albedo.a );
 }
 #endif
 

@@ -247,6 +247,7 @@ namespace sw
             caps._bNativeBindless = _bBindlessRootSignature != SW_FALSE ? 1u : 0u;
             caps._bGPUBreadcrumbs = _breadcrumbAddress != 0 ? SW_TRUE : SW_FALSE;
             caps._bAsyncCompute   = _computeQueue != nullptr ? SW_TRUE : SW_FALSE;
+            caps._bPlacedTextures = SW_TRUE; // RT · DS 전용 힙은 모든 리소스 힙 등급이 받는다
             return caps;
         }
 

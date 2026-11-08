@@ -110,6 +110,13 @@ namespace sw
      */
     inline constexpr const utf8* kMaterialForwardOnlyDefine = "MATERIAL_FORWARD_ONLY";
 
+    /**
+     * @brief 후처리 머티리얼(PostProcess 영역)의 define 입니다(`.material` 의 `_alwaysDefines`). 메시에 붙이지 않고 블렌더블 목록에 넣는 머티리얼이다.
+     * @details 게임 스레드가 블렌더블을 풀 때 이 define 이 없는 머티리얼은 오류로 거절하고(`PostProcessMaterialSet`), 쿠커는 메시 패스 변형을 굽지 않는다(풀스크린 VS · PS 한 벌만).
+     *          언리얼 Material Domain = Post Process 와 같다.
+     */
+    inline constexpr const utf8* kMaterialDomainPostProcessDefine = "MATERIAL_DOMAIN_POST_PROCESS";
+
     /** @brief 그림자를 드리우지 않는 머티리얼의 define 입니다. 그림자 패스 셰이더가 정점을 클립 공간 밖으로 모아 그리지 않습니다. */
     inline constexpr const utf8* kMaterialShadowCastOffDefine = "MATERIAL_SHADOW_CAST_OFF";
 

@@ -13,6 +13,7 @@
 #include "Engine/Renderer/Lighting/LensFlareSpriteBuffer.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
+#include "Engine/Visual/Component/DecalComponent.h"
 
 namespace sw
 {
@@ -51,6 +52,8 @@ namespace sw
         vector<RealtimeProbeRequest> _listRealtimeProbe;
         /** @brief 렌즈 플레어를 단 빛들입니다(`RenderPacketSceneCollector::collectLensFlares`). 렌더 스레드가 주 시점에 투영해 스프라이트로 펼친다. */
         vector<LensFlareRequest> _listLensFlare;
+        /** @brief 씬의 데칼(`DecalComponent`)입니다 — 그리는 차례(`_sortOrder`, 같으면 등록 순서)로 정렬해 싣는다(`RenderPacketSceneCollector::collectDecals`). */
+        vector<DecalDrawData> _listDecal;
         /** @brief 씬의 하늘(`SkyComponent`)입니다. `_bHasSky` 가 0 이면 값이 없고 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색). */
         SkyGradient _sky;
         /** @brief 씬의 안개(`FogComponent`, 카메라가 물속이면 물속 안개로 덮은 값)입니다. `_bHasFog` 가 0 이면 값이 없고 안개 패스가 그리지 않는다. */
@@ -108,6 +111,7 @@ namespace sw
             , _listLightCookie{}
             , _listRealtimeProbe{}
             , _listLensFlare{}
+            , _listDecal{}
             , _sky{}
             , _fog{}
             , _listView{}
@@ -163,6 +167,7 @@ namespace sw
             _listLightCookie.clear();
             _listRealtimeProbe.clear();
             _listLensFlare.clear();
+            _listDecal.clear();
             _sky = SkyGradient{};
             _fog = FogSettings{};
             _listView.clear();

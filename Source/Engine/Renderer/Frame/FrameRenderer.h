@@ -26,6 +26,7 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
+#include "Engine/Renderer/Frame/PostProcess/FramePostProcessMaterials.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/FrameResourceRegistry.h"
@@ -383,6 +384,11 @@ namespace sw
          */
         void updateLightBuffer( IRHIDevice* pDevice );
         /**
+         * @brief (셋업) 이번 프레임 데칼의 텍스처를 풀어(`_postProcessTextures` — 읽는 중이면 그 데칼은 빠진다) 그리기 목록(`_listFrameDecalDraw`)을 만듭니다.
+         * @details 데칼이 있는데 파이프라인에 Decal 패스가 없으면(포워드) 한 번 경고한다 — 덮을 G버퍼가 없다.
+         */
+        void prepareFrameDecals();
+        /**
          * @brief 이번 프레임의 라이트 그리드 생산자입니다. 진단 정책(`RenderDiagnosticsPolicy::_lightGridProducer`, 기본 GPU)이 고르고, Shipping 은 GPU 로 고정입니다.
          * @details GPU 를 골랐는데 컴퓨트 PSO 가 없으면 오류를 한 번 남기고 그리드 없이 그린다 — 채우지 않은 그리드 버퍼를 셰이더가 읽게 두지 않는다.
          */
@@ -416,9 +422,10 @@ namespace sw
          * @brief 후처리 효과 셋(자동 노출 · FSR 1 업스케일 · 안개와 볼륨 안개)의 셋업과 기록입니다. 지금 그리는 뷰는 인자로 넘긴다.
          * @details `_psoManager` 를 참조로 읽으므로 그 뒤에 선언한다. 언리얼의 효과별 `AddXxxPass` 처럼 장면 렌더러 밖에 둔다.
          */
-        FrameAutoExposure _autoExposure;
-        FrameUpscale      _upscale;
-        FrameFog          _fog;
+        FrameAutoExposure         _autoExposure;
+        FrameUpscale              _upscale;
+        FrameFog                  _fog;
+        FramePostProcessMaterials _postProcessMaterials; ///< 후처리 머티리얼의 원소 버퍼 · PSO(뷰마다 셋업에서 `prepareView`)
         /**
          * @brief 모듈 렌더 확장의 프레임 받아들이기(확장 훅 · 프록시 요소 · 패스 선언 검사 · 프로그램 PSO · 임시 텍스처 · 요소 메시)입니다. 그래프에 묶고 기록하는 일은 패스 실행(`_passExecutor`)이 한다.
          * @details `_psoManager` 를 참조로 쓰므로 그 뒤에 선언한다. 언리얼 `FSceneViewExtensions` 가 확장을 모으고 장면 렌더러가 훅 자리마다 부르는 나눔과 같다.

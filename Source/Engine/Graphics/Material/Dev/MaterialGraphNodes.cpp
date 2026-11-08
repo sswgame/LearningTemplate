@@ -70,8 +70,18 @@ namespace sw
     SW_MATERIAL_GRAPH_NODE( SnowMask,         "Surface Function", "Amount:float=0.5|SnowLine:float=-100000", "Out:float=SurfaceFunction::computeSnowMask( context._worldPosition, context._normal, $Amount, $SnowLine )", "" );
     SW_MATERIAL_GRAPH_NODE( Scanlines,        "Surface Function", "Density:float=40|Speed:float=1", "Out:float=SurfaceFunction::computeScanlines( context._worldPosition, $Density, $Speed, g_SwMaterialTime )", "" );
 
+    // 화면 입력 — PostProcessOutput 그래프만 읽는다(다른 그래프는 컴파일러가 DomainMismatch 로 거절한다). post_process_material.hlsli 의 PostProcessInput, 걸린 역할만 값이 있다.
+    SW_MATERIAL_GRAPH_NODE( SceneColor,       "Post Process", "UV:float2=context._uv", "Out:float3=PostProcessInput::sampleSceneColor( $UV )", "" );
+    SW_MATERIAL_GRAPH_NODE( SceneDepth,       "Post Process", "UV:float2=context._uv", "Out:float=PostProcessInput::computeLinearDepth( $UV )", "" );
+    SW_MATERIAL_GRAPH_NODE( GBufferAlbedo,    "Post Process", "UV:float2=context._uv", "Out:float3=PostProcessInput::sampleGbufferAlbedo( $UV )", "" );
+    SW_MATERIAL_GRAPH_NODE( GBufferNormal,    "Post Process", "UV:float2=context._uv", "Out:float3=PostProcessInput::sampleGbufferNormal( $UV )", "" );
+    SW_MATERIAL_GRAPH_NODE( GBufferRoughness, "Post Process", "UV:float2=context._uv", "Out:float=PostProcessInput::sampleGbufferRoughness( $UV )", "" );
+    SW_MATERIAL_GRAPH_NODE( GBufferMetallic,  "Post Process", "UV:float2=context._uv", "Out:float=PostProcessInput::sampleGbufferMetallic( $UV )", "" );
+
     // 출력 · 하위 그래프 — 역할이 컴파일을 정한다. 출력 핀 이름은 `material_graph.hlsli` 의 `MaterialGraphOutput` 칸과 같다.
     static const MaterialGraphNodeKind sw_materialGraphNode_Output{ "Output", "Output", "BaseColor:float3!|Metallic:float=0|Roughness:float=0.5|Normal:float3=context._normal|Emissive:float3=0 0 0|Alpha:float=1", "", "ShadingModel:string=DefaultLit", "", MaterialGraphNodeRole::Output };
+    // 후처리 출력 — 화면 색(Color)과 덮임(Opacity, 블렌더블 무게에 곱한다). 핀 이름은 post_process_material_graph.hlsli 의 PostProcessGraphOutput 칸과 같다(언리얼 Post Process 영역의 Emissive Color).
+    static const MaterialGraphNodeKind sw_materialGraphNode_PostProcessOutput{ "PostProcessOutput", "Output", "Color:float3!|Opacity:float=1", "", "", "", MaterialGraphNodeRole::Output };
     static const MaterialGraphNodeKind sw_materialGraphNode_Subgraph{ "Subgraph", "Subgraph", "", "", "", "", MaterialGraphNodeRole::Subgraph };
     static const MaterialGraphNodeKind sw_materialGraphNode_GraphInput{ "GraphInput", "Subgraph", "", "Out:any=", "Name:string=In|Type:string=float", "", MaterialGraphNodeRole::GraphInput };
     static const MaterialGraphNodeKind sw_materialGraphNode_GraphOutput{ "GraphOutput", "Subgraph", "Value:any!", "", "Name:string=Out", "", MaterialGraphNodeRole::GraphOutput };

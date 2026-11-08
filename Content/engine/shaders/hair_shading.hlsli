@@ -1,6 +1,7 @@
 /**
- * hair_shading.hlsli — 머리카락 셰이딩 모델(Marschner 근사: R · TT · TRT 세 갈래 + 다중 산란 확산)입니다. 머티리얼 셰이더 hair.hlsl 과 머티리얼 그래프의
- * 셰이딩 모델 Hair(material_graph.hlsli 의 SW_MATERIAL_GRAPH_HAIR)가 함께 쓴다.
+ * hair_shading.hlsli — 머리카락 셰이딩 모델(Marschner 근사: R · TT · TRT 세 갈래 + 다중 산란 확산)입니다. 머티리얼 셰이더 hair.hlsl, 머티리얼 그래프의
+ * 셰이딩 모델 Hair(material_graph.hlsli 의 SW_MATERIAL_GRAPH_HAIR), 겹 셰이딩의 털 엽(shading_model.hlsli 의 MATERIAL_LOBE_STRAND)이 함께 쓴다.
+ * lighting.hlsli 의 빛 커서 · 그림자 뒤에 include 한다(빛 고리 HairShading::shadeLights 가 쓴다 — shading_model.hlsli 도 그 뒤에 들어온다).
  *
  * 고른 까닭: Kajiya-Kay(이동 탄젠트 이중 스펙큘러)는 싸지만 빛이 뒤에서 올 때의 투과(TT — 역광 머리카락이 빛나는 테두리)와 색 있는 2 차 하이라이트(TRT)를
  * 손으로 흉내 내야 한다. 언리얼 Hair 셰이딩 모델(Karis 2016 "Physically Based Hair Shading in Unreal")의 근사는 빛 하나에 exp 넷 · pow 둘 정도라 포워드 빛
@@ -39,6 +40,7 @@ struct HairShading
     static float3 shiftTangent( float3 tangent, float3 normal, float shift );
     static float3 evaluateLobes( HairSurface surface, float3 toView, float3 toLight );
     static float3 evaluateScatter( HairSurface surface, float3 normal, float3 toView, float3 toLight );
+    static float3 shadeLights( HairSurface surface, float3 worldPosition, float3 normal ); // 앰비언트 한 번 + 빛마다 갈래 · 산란(hair.hlsl · 그래프 Hair 가 함께)
 };
 
 /** @brief 세로 갈래(가우스)입니다 — 폭 @p width, 중심에서 떨어진 정도 @p offset(sin θi + sin θr − α). 넓이가 1 이다. */
@@ -111,6 +113,29 @@ static float3 HairShading::evaluateScatter( HairSurface surface, float3 normal, 
     const float  wrapped    = saturate( ( dot( fakeNormal, toLight ) + 1.0f ) * 0.25f );
     const float  kajiya     = 1.0f - abs( dot( surface._tangent, toLight ) );
     return sqrt( max( surface._baseColor, 0.0f ) ) * ( 0.31830989f * lerp( wrapped, kajiya, 0.33f ) * surface._scatter );
+}
+
+/**
+ * @brief 머리카락 표면의 모든 빛 — 앰비언트는 빛 목록과 무관하게 한 번(흡수 색 × 키 라이트 앰비언트, Lighting::shadeLights 와 같은 규칙), 빛마다 R · TT · TRT + 다중 산란.
+ * @details 그림자는 빛마다 `LightData::computeShadow` 가 고른다(방향광은 캐스케이드 한 번 잰 값). 노멀은 그림자 바이어스와 산란의 가짜 노멀에만 쓴다.
+ */
+static float3 HairShading::shadeLights( HairSurface surface, float3 worldPosition, float3 normal )
+{
+    const float3 toView = View::computeToView( worldPosition );
+    const float  shadow = Shadow::sampleAtWorld( worldPosition, normal );
+    float3       color  = surface._baseColor * g_KeyLightColor.rgb * g_KeyLightColor.a;
+    LightCursor  cursor = LightCursor::begin( worldPosition );
+    LightData    light;
+    while ( cursor.next( light ) )
+    {
+        float3 toLight;
+        float  attenuation;
+        if ( light.computeIncidence( worldPosition, toLight, attenuation ) == false )
+            continue;
+        const float3 radiance = light._colorIntensity.rgb * light._colorIntensity.a * attenuation * light.computeShadow( worldPosition, normal, shadow );
+        color += ( HairShading::evaluateLobes( surface, toView, toLight ) + HairShading::evaluateScatter( surface, normal, toView, toLight ) ) * radiance;
+    }
+    return color;
 }
 
 #endif // SW_ENGINE_HAIRSHADING_HLSLI

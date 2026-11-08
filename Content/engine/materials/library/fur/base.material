@@ -5,7 +5,7 @@
 		<item name="_color" defaultValue="0.45 0.3 0.18 1" />
 		<item name="_sheenColor" defaultValue="0.35 0.3 0.25 1" />
 		<item name="_roughness" defaultValue="0.55" />
-		<item name="_strandShift" defaultValue="0.15" />
+		<item name="_strandShift" defaultValue="0.05" />
 		<item name="_patternScale" defaultValue="220" />
 		<item name="_patternWidth" defaultValue="0.32" />
 		<item name="_specular" defaultValue="0.4" />

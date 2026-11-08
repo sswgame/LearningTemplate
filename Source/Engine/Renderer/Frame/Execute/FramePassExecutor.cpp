@@ -835,9 +835,11 @@ namespace sw
             Memory::copy( &arrDescWord[4], &attachment._clearColor._y, sizeof( float32 ) );
             Memory::copy( &arrDescWord[5], &attachment._clearColor._z, sizeof( float32 ) );
             Memory::copy( &arrDescWord[6], &attachment._clearColor._w, sizeof( float32 ) );
-            const uint64 descKey    = HashUtil::appendBytes64( HashUtil::kFNVOffset64, arrDescWord, sizeof( arrDescWord ) );
+            const uint64 descKey = HashUtil::appendBytes64( HashUtil::kFNVOffset64, arrDescWord, sizeof( arrDescWord ) );
+            // 힙에 겹쳐 놓으려면 프레임의 첫 쓰기가 지우기여야 한다(앞 텍스처가 남긴 바이트가 내용이 된다) — RW(컴퓨트가 처음 쓴다)는 빼고 Clear 만 받는다.
+            const uint8 bPlaceable  = attachment._loadOp == RHIRenderPassLoadOp::Clear && arrDescWord[2] == 0u ? 1 : 0;
             mapCandidateIndex[name] = listCandidate.size();
-            listCandidate.push_back( RenderGraphAliasCandidate{ name, descKey, listLevelOfOrder[pLife->_firstPassIndex], listLevelOfOrder[pLife->_lastPassIndex] } );
+            listCandidate.push_back( RenderGraphAliasCandidate{ name, descKey, listLevelOfOrder[pLife->_firstPassIndex], listLevelOfOrder[pLife->_lastPassIndex], bPlaceable } );
         }
 
         // 꺼진 효과는 출력 이름이 원본을 가리킨다(`kBypassesToSource`) — 그 출력을 읽는 패스가 원본을 읽으므로 원본의 수명이 출력의 끝까지 늘어난다. 둘을 한 구간으로 묶는다.
@@ -998,6 +1000,9 @@ namespace sw
                     continue;
                 }
                 const RHITextureHandle texture = activePool().findOwnTexture( barrier._resource );
+                // 힙에 겹쳐 놓은 텍스처는 같은 바이트의 앞 텍스처 일이 끝난 뒤에 쓴다(앨리어싱 배리어). 쓰기 전이마다 내도 맞다 — 첫 쓰기만 골라내는 표를 두지 않는다.
+                if ( texture != 0 && activePool().isPlaced( barrier._resource ) )
+                    levelContext._pCmdList->beginTextureAlias( texture );
                 if ( texture != 0 )
                     levelContext._pCmdList->prepareTextureForRenderTarget( texture );
             }
@@ -1276,6 +1281,16 @@ namespace sw
                 case RenderPassType::LensFlare:
                 {
                     executeLensFlarePass( input );
+                    break;
+                }
+                case RenderPassType::PostProcessMaterial:
+                {
+                    executePostProcessMaterialPass( input );
+                    break;
+                }
+                case RenderPassType::Decal:
+                {
+                    executeDecalPass( input );
                     break;
                 }
                 case RenderPassType::TAA:
@@ -1819,6 +1834,99 @@ namespace sw
         bindForDraw( context, pso, kInvalidDescriptorIndex );
         context._pCmd->draw( 3, 0 );
         context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executePostProcessMaterialPass( const PassExecuteInput& input )
+    {
+        // 후처리 머티리얼이다(언리얼 Post Process Material). 셋업(`FramePostProcessMaterials::prepareView`)이 뷰마다 PSO · 원소 버퍼를 정해 두었다 — 여기서는 그리기만 한다.
+        const PostProcessBlendableLocation location  = input._passDesc._blendableLocation;
+        const bool                         bReplaces = location == PostProcessBlendableLocation::ReplacingTonemap;
+        const hashed_string&               target    = input._declaredColor[0]._attachment;
+        // 톤맵 앞 · 뒤 자리에 그릴 것이 없는 뷰는 셋업이 출력 이름을 원본에 이었다(`applyViewPassSelection`) — 기록하지 않는다.
+        if ( bReplaces == false && activePool().isForwarded( target ) )
+            return;
+        const vector<FrameViewTarget::PostProcessMaterialPass>& listDraw = _pActiveView->_listPostProcessMaterialPass;
+        const bool                                              bHasDraw = VectorUtil::containsIf( listDraw, [location]( const FrameViewTarget::PostProcessMaterialPass& draw )
+                                                     { return draw._location == location && draw._pso != 0; } );
+        if ( bReplaces && ( bHasDraw == false || _pActiveView->_settings.usesPostProcess() == false ) )
+            return; // 톤맵 출력이 이미 맞다
+        FramePassContext&                              context      = input._context;
+        const RenderGraphPassDesc::ResolvedAttachment* pSourceInput = FramePassExecutorInternal::findInputByRole( input._passDesc, RenderPassInputRole::SourceColor );
+        SW_ASSERT( pSourceInput != nullptr ); // 입력 계약의 필수 역할이다(로드가 검사했다)
+        if ( pSourceInput == nullptr )
+            return;
+        if ( bReplaces == false )
+        {
+            // 출력을 원본으로 채운다 — 머티리얼은 그 위에 무게만큼 섞는다(무게 0.5 면 반만 바뀐다). 둘은 형식 · 크기가 같다(검증 3-6).
+            const RHITextureHandle src = findTransient( pSourceInput->_attachment );
+            const RHITextureHandle dst = findTransient( target );
+            if ( src == 0 || dst == 0 )
+                return;
+            context._pCmd->blitTexture( src, dst );
+            (void)markAttachmentCleared( target );
+        }
+        registerDeclaredInputs( context, input._passDesc );
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
+            return;
+        setIdentityWorld( context );
+        for ( const FrameViewTarget::PostProcessMaterialPass& draw : listDraw )
+        {
+            if ( draw._location != location || draw._pso == 0 || draw._buffer == 0 || draw._srv == kInvalidDescriptorIndex )
+                continue;
+            // 무게는 그리기마다의 패스 상수다(post_process_material_main.hlsli 의 g_PostProcessMaterial.x). 머티리얼은 원소 하나짜리 버퍼의 0 번이다.
+            context._passValues.setFloat4( passConstantNames()._postProcessMaterial, float4{ draw._weight, 0.0f, 0.0f, 0.0f } );
+            context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, draw._buffer, draw._srv );
+            context._drawMaterialCount = 1u;
+            commitBindlessTextureBindings( context );
+            context._pCmd->setPipelineState( draw._pso );
+            bindForDraw( context, draw._pso, kInvalidDescriptorIndex, draw._pTextureSRV );
+            context._pCmd->draw( 3, 0 );
+        }
+        context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executeDecalPass( const PassExecuteInput& input )
+    {
+        // 디퍼드 데칼이다. G버퍼 패스가 쓴 칸 셋(알베도 · 노멀 · 머티리얼) 위에 데칼마다 곧은 알파로 섞는다 — 칸마다의 덮임은 셰이더의 출력 알파, 채널 쓰기 마스크는 XML 의 블렌드다.
+        // 표면 값 보기 · 와이어프레임에서는 그리지 않는다(값 위를 덮는다). 데칼이 없으면 "그리지 않음" 은 아무것도 하지 않는 것이다(G버퍼가 이미 맞다).
+        const RenderViewModeInfo&                       viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const RHIPipelineStateHandle                    pso          = _psoManager.getEnginePSO( RenderPassType::Decal );
+        const vector<FrameRenderState::FrameDecalDraw>& listDecal    = _state._listFrameDecalDraw;
+        const bool                                      bDraws       = pso != 0 && listDecal.empty() == false && viewModeInfo._bShowsBuffer == false && viewModeInfo._bWireframe == false;
+        if ( bDraws == false )
+            return;
+        FramePassContext& context = input._context;
+        registerDeclaredInputs( context, input._passDesc );
+        // 선언한 컬러 출력 셋이 MRT 다(검증: G버퍼 역할 셋 — 이 차례). 깊이 붙임은 없다(장면 깊이를 입력으로 읽는다).
+        hashed_string       arrColor[3];
+        float4              arrClear[3];
+        RHIRenderPassLoadOp arrLoad[3];
+        const uint32        colorCount = static_cast<uint32>( MathUtil::min( input._declaredColor.size(), static_cast<size_t>( 3 ) ) );
+        for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
+        {
+            arrColor[colorIndex] = input._declaredColor[colorIndex]._attachment;
+            arrClear[colorIndex] = getTargetClearColor( arrColor[colorIndex] );
+            arrLoad[colorIndex]  = RHIRenderPassLoadOp::Load;
+        }
+        if ( beginColorPassMrt( context, arrColor, arrClear, arrLoad, colorCount, hashed_string{}, RHIRenderPassLoadOp::Load ) == false )
+            return;
+        for ( const FrameRenderState::FrameDecalDraw& decal : listDecal )
+        {
+            // 상자 월드 행렬은 g_World(bindForDraw 가 context._world 로 건다), 나머지는 그리기마다의 패스 상수다.
+            context._world = decal._world;
+            context._passValues.setMatrix( passConstantNames()._decalWorldToLocal, decal._worldToLocal );
+            context._passValues.setFloat4( passConstantNames()._decalColor, decal._color );
+            context._passValues.setFloat4( passConstantNames()._decalSurface, decal._surface );
+            context._passValues.setUint( passConstantNames()._decalChannels, decal._channels );
+            context._passValues.setUint( passConstantNames()._decalAlbedoTexture, decal._albedoTexture );
+            context._passValues.setUint( passConstantNames()._decalNormalTexture, decal._normalTexture );
+            commitBindlessTextureBindings( context );
+            context._pCmd->setPipelineState( pso );
+            bindForDraw( context, pso, kInvalidDescriptorIndex, decal._arrTextureSRV );
+            context._pCmd->draw( 3, 0 );
+        }
+        context._pCmd->endRenderPass();
+        setIdentityWorld( context );
     }
 
     void FramePassExecutor::executeLensFlarePass( const PassExecuteInput& input )

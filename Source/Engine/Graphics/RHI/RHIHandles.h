@@ -15,6 +15,16 @@ namespace sw
     /** @brief GPU 텍스처 리소스의 64비트 핸들입니다. */
     using RHITextureHandle = uint64;
 
+    /** @brief 텍스처를 겹쳐 놓는 힙의 64비트 핸들입니다(`IRHIResourceFactory::createTransientHeap`). 0 은 없음이다. */
+    using RHITransientHeapHandle = uint64;
+
+    /** @brief 텍스처를 힙에 놓을 때의 크기 · 정렬입니다(`IRHIResourceFactory::getTextureAllocationInfo`). 능력이 없으면 둘 다 0 이다. */
+    struct RHITextureAllocationInfo
+    {
+        uint64 _sizeBytes{ 0 };
+        uint64 _alignment{ 0 };
+    };
+
     /** @brief bindless 리소스 인덱스입니다. 디스크립터 힙이나 세트 안의 바인딩 인덱스를 가리킵니다. */
     using RHIDescriptorIndex = uint32;
 

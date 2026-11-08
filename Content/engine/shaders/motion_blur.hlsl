@@ -16,12 +16,9 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const float3 source = PassTexture::sampleSource( input._uv ).rgb;
     const float  depth  = PassTexture::sampleDepth( input._uv ).r;
 
-    // 하늘의 카메라 재투영(lighting.hlsli Transform::computeWorldPositionFromDepth 와 같은 행벡터 규약).
-    const float2 ndcXy          = input._uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
-    const float4 world          = mul( float4( ndcXy, depth, 1.0f ), g_InvViewProj );
-    const float4 prevClip       = mul( float4( world.xyz / world.w, 1.0f ), g_PrevViewProj );
-    const float2 prevNdc        = prevClip.xy / max( abs( prevClip.w ), 1e-5f ) * sign( prevClip.w );
-    const float2 prevUv         = prevNdc * float2( 0.5f, -0.5f ) + 0.5f;
+    // 하늘의 카메라 재투영(TAA 와 같은 함수).
+    float        previousClipW;
+    const float2 prevUv         = Transform::computeCameraPreviousUv( input._uv, depth, previousClipW );
     const float2 cameraVelocity = input._uv - prevUv;
     const bool   bSky           = depth >= kSkyDepth;
     float2       velocity       = bSky ? cameraVelocity : PassTexture::sampleVelocityPoint( input._uv );

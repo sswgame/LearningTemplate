@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
@@ -34,6 +35,10 @@ namespace sw
         RHIBufferHandle                 createReadbackBuffer( uint32 elementSize, uint32 elementCount ) override;
         [[nodiscard]] bool              readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
         RHITextureHandle                createTexture2D( const RHITextureDesc& desc ) override;
+        RHITextureAllocationInfo        getTextureAllocationInfo( const RHITextureDesc& desc ) override;
+        RHITransientHeapHandle          createTransientHeap( uint64 sizeBytes ) override;
+        void                            destroyTransientHeap( RHITransientHeapHandle heap ) override;
+        RHITextureHandle                createPlacedTexture2D( const RHITextureDesc& desc, RHITransientHeapHandle heap, uint64 offsetBytes ) override;
         void                            setTextureDebugName( RHITextureHandle texture, const utf8* pName ) override;
         void                            destroyTexture( RHITextureHandle texture ) override;
         [[nodiscard]] RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;
@@ -53,6 +58,11 @@ namespace sw
         void                            unregisterBindlessUAV( RHIDescriptorIndex index ) override;
 
     private:
+        /**
+         * @brief 텍스처 리소스와 뷰 · 레코드를 만듭니다. @p pHeap 이 있으면 그 힙의 @p offsetBytes 에 놓고(placed — 리소스가 힙을 붙든다), 없으면 커밋 리소스다.
+         * @details `createTexture2D` 와 `createPlacedTexture2D` 가 같은 몸을 쓴다 — 서술 · 뷰 · 상태 규칙이 두 벌로 갈리지 않게.
+         */
+        RHITextureHandle createTextureResource( const RHITextureDesc& desc, ID3D12Heap* pHeap, uint64 offsetBytes );
         /** @brief 내용을 채워 업로드 힙 버퍼(GENERIC_READ)를 만듭니다. 정점 버퍼와 인덱스 버퍼가 같은 경로를 씁니다. */
         RHIBufferHandle createUploadBuffer( const void* pData, uint32 sizeBytes );
         /**
@@ -126,6 +136,9 @@ namespace sw
     public:
     private:
         D3D12RHIDevice* _pDevice;
+        /// @brief 트랜지언트 힙(`createTransientHeap`)입니다. 핸들을 놓아도 그 위의 placed 텍스처가 각자 힙을 붙든다(`SetPrivateDataInterface`). 생성 · 파괴는 셋업 스레드다.
+        unordered_map<RHITransientHeapHandle, Microsoft::WRL::ComPtr<ID3D12Heap>> _mapTransientHeap;
+        RHITransientHeapHandle                                                    _nextTransientHeap{ 1 };
     };
 } // namespace sw
 #endif

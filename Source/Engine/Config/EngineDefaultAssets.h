@@ -197,6 +197,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderLensFlare; ///< 빛마다의 렌즈 플레어 스프라이트(가림 · 가장자리 감쇠)
         PROPERTY( Required )
+        DataPath _shaderDecal; ///< 디퍼드 데칼(풀스크린 — 장면 깊이로 상자 안 픽셀의 G버퍼 칸을 덮는다)
+        PROPERTY( Required )
         DataPath _shaderTAA; ///< TAA
         PROPERTY( Required )
         DataPath _shaderSceneDepthCopy; ///< 반투명 앞의 장면 깊이 사본(풀스크린) — 물의 화면 공간 두께가 읽는다

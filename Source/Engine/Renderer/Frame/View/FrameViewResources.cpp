@@ -15,6 +15,7 @@
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
+#include "Engine/Renderer/Graph/RenderGraphMemoryPlan.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -154,6 +155,8 @@ namespace sw
                     return static_cast<bool>( gv_motionBlur ) == false || bMotionStill;
                 if ( pass._type == RenderPassType::ContactShadow )
                     return bContactShadows == false; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다
+                if ( pass._type == RenderPassType::PostProcessMaterial )
+                    return settings.drawsPostProcessMaterial( pass._blendableLocation ) == false; // 이 자리에 읽기를 마친 블렌더블이 없다 — 출력이 원본을 가리킨다
                 return false;
             }
         };
@@ -188,6 +191,7 @@ namespace sw
         pool.setSize( width, height );
         view._shadowMapResolution      = shadowResolution;
         view._transientAliasGeneration = aliasGeneration;
+        placeTransients( pool, aliasPlan );
 
         // 그림자 맵은 화면이 아니라 빛의 볼륨을 담는다 — 프레임 크기 대신 정사각 고정 크기로 만든다. 이름이 아니라 역할로 가린다(이름을 바꾼 그림자 첨부도 같다).
         // 일반 풀스크린 패스만 쓰는 첨부(후처리 효과 · 톤맵의 출력)는 여기서 만들지 않는다 — 그 패스가 이 뷰에서 처음 돌 때 만든다(`applyViewPassSelection`).
@@ -218,6 +222,47 @@ namespace sw
         view._bLastFrameDepthValid = SW_FALSE;
         view._bHasHistory          = SW_FALSE;
         return true;
+    }
+
+    void FrameViewResources::placeTransients( TransientAttachmentPool& pool, const RenderGraphAliasPlan& aliasPlan )
+    {
+        // 능력이 있는 백엔드(DX12)만 — 없으면 같은 서술끼리만 나눈다(아래 allocateAlias, 능력 표가 정한 길).
+        if ( _pDevice == nullptr || _pDevice->getResourceFactory() == nullptr || _pDevice->getCapabilities()._bPlacedTextures == SW_FALSE || aliasPlan._listPlaceable.size() < 2 )
+            return;
+        IRHIResourceFactory&                factory = *_pDevice->getResourceFactory();
+        vector<RenderGraphMemoryItem>       listItem;
+        vector<const RenderPassAttachment*> listAttachment;
+        for ( const RenderGraphAliasCandidate& candidate : aliasPlan._listPlaceable )
+        {
+            // 처음 쓸 때 만드는 첨부(꺼질 수 있는 효과의 출력)는 그 패스가 처음 돌 때 자기 텍스처로 만든다 — 힙 계획에 넣지 않는다.
+            if ( FrameViewResourcesInternal::isMadeOnFirstUse( _pipeline.getGraphPass(), candidate._name ) )
+                continue;
+            const RenderPassAttachment* pAttachment = nullptr;
+            for ( const RenderPassAttachment& attachment : _pipeline.getDesc()._listAttachment )
+            {
+                if ( string_view( attachment._name ) == candidate._name.view() )
+                    pAttachment = &attachment;
+            }
+            if ( pAttachment == nullptr || FrameRendererUtil::isDepthFormat( pAttachment->_format ) )
+                continue;
+            const RHITextureDesc           desc = TransientAttachmentPool::makeTextureDesc( pAttachment->_format, false, pAttachment->getOps(), TransientAttachmentPool::computeScaledExtent( pool.getWidth(), pAttachment->_resolutionDivisor ),
+                                                                                            TransientAttachmentPool::computeScaledExtent( pool.getHeight(), pAttachment->_resolutionDivisor ), false );
+            const RHITextureAllocationInfo info = factory.getTextureAllocationInfo( desc );
+            if ( info._sizeBytes == 0 )
+                continue;
+            listItem.push_back( RenderGraphMemoryItem{ candidate._name, info._sizeBytes, info._alignment, candidate._firstLevel, candidate._lastLevel } );
+            listAttachment.push_back( pAttachment );
+        }
+        const RenderGraphMemoryPlan plan = RenderGraphMemoryPlan::build( listItem );
+        // 겹친 바이트가 없으면(모두 수명이 겹친다) 힙이 메모리를 아끼지 않는다 — 커밋 텍스처 그대로 둔다.
+        if ( plan._heapBytes == 0 || plan._heapBytes >= plan._sumBytes )
+            return;
+        for ( size_t index = 0; index < listItem.size(); ++index )
+        {
+            const RenderPassAttachment& attachment = *listAttachment[index];
+            (void)pool.allocatePlaced( _pDevice, listItem[index]._name, attachment._format, attachment.getOps(), attachment._resolutionDivisor, plan._heapBytes, plan._listOffset[index] );
+        }
+        SW_PROFILE_COUNT( "RT.Frame.transientHeapBytes", plan._heapBytes );
     }
 
     void FrameViewResources::ensureDepthHistory( FrameViewTarget& view )

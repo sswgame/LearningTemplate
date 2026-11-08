@@ -49,6 +49,8 @@ namespace sw
         void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) override;
         void prepareTextureForShaderReadNative( RHITextureHandle texture ) override;
         void prepareTextureForRenderTargetNative( RHITextureHandle texture ) override;
+        /** @brief 앨리어싱 배리어(앞 리소스를 특정하지 않는다)를 기록합니다 — 힙에 겹쳐 놓은 텍스처의 프레임 첫 쓰기 앞. */
+        void beginTextureAlias( RHITextureHandle texture ) override;
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override;
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override;

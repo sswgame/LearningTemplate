@@ -428,6 +428,9 @@ namespace sw
                         // 패스가 그리지 않는 머티리얼(외곽선 패스 · 외곽선을 켜지 않은 머티리얼)은 런타임도 변형을 만들지 않는다.
                         if ( FrameRendererUtil::drawsMaterialInPass( passInfo._passType, &variant._listDefine ) == false )
                             continue;
+                        // 후처리 머티리얼은 메시에 붙지 않는다 — 풀스크린 VS · PS(정의 없는 변형, 4 단계)만 쓴다(`FramePostProcessMaterials` 의 확장 프로그램 PSO).
+                        if ( VectorUtil::contains( variant._listDefine, string( kMaterialDomainPostProcessDefine ) ) )
+                            continue;
                         // 머티리얼 셰이더를 쓰는 패스만 .hlsl 을 갈아탄다. 그림자 · 뎁스는 자기 셰이더에 define 만 얹고, 모양을 머티리얼이 정하는
                         // 배치(알파 컷오프 · 정점 변형)만 머티리얼 셰이더로 그린다(createMaterialPSOVariant 와 같은 판정).
                         const bool    bMaterialDepthShader = FrameRendererUtil::drawsDepthWithMaterialShader( passInfo._passType, &variant._listDefine );

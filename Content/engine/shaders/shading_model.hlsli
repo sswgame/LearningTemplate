@@ -12,15 +12,18 @@
  * | 투과 MATERIAL_LOBE_TRANSMISSION | 뒤에서 오는 빛의 감싼 확산 × 투과색                                  | Two Sided Foliage · Thin Translucent    |
  * | 비등방 MATERIAL_LOBE_ANISOTROPY | Burley 비등방 GGX · Heitz 가시성                                     | Anisotropy 핀                           |
  * | 박막 MATERIAL_LOBE_THIN_FILM    | 시선 각에서 잰 에어리 반사율로 F0 를 바꾼다(파장 셋)                 | Substrate Thin Film                     |
- * | 머리결 MATERIAL_LOBE_STRAND     | Kajiya · Kay(옮긴 탄젠트) — 털                                       | Hair(Marschner)의 값싼 판               |
+ * | 머리결 MATERIAL_LOBE_STRAND     | Marschner R · TT · TRT(hair_shading.hlsli — 머리카락과 한 식) — 털   | Hair(Marschner)                         |
  *
  * 형식 · 멤버 이름은 lighting.hlsli 의 기본 SurfaceBRDF 와 같다(빛 고리가 부르는 다섯 + makePBR). 엽을 더하면 칸 · 설정 함수 · 엽 함수 하나를 더하고
- * evaluateLight 에서 부른다. W13(머리카락 셰이딩 모델)이 Marschner 엽을 들이면 머리결 엽(털)은 그 식을 부르게 바꾼다 — 같은 식을 두 벌 두지 않는다.
- * 겹 셰이딩은 G버퍼에 칸이 없어 포워드 전용이다(머티리얼이 MATERIAL_FORWARD_ONLY — 툰과 같은 길, 언리얼은 G버퍼에 셰이딩 모델 번호를 싣는다).
+ * evaluateLight 에서 부른다. 머리결 엽(털)은 머리카락 셰이딩 모델의 Marschner 식(hair_shading.hlsli)을 부른다 — 같은 식을 두 벌 두지 않는다.
+ * 디퍼드는 셰이딩 모델 번호 하나와 사용자 칸 네 채널로 엽 하나를 싣는다(shading_model_ids.hlsli 표, deferred_lighting.hlsl). 엽이 둘 이상 겹치거나 칸이 넷을 넘는
+ * 머티리얼만 포워드 전용이다(MATERIAL_FORWARD_ONLY — 어느 것이 왜인지는 appearance_lit.hlsl 머리말).
  */
 
 #ifndef SW_ENGINE_SHADINGMODEL_HLSLI
 #define SW_ENGINE_SHADINGMODEL_HLSLI
+
+#include "hair_shading.hlsli"
 
 static const float kCoatF0 = 0.04f; // 코트(기름 · 니스 · 물) 층의 수직 반사율 — 굴절률 1.5 근처
 // 박막 간섭을 재는 파장(nm) — R · G · B 를 대표하는 셋(스펙트럼 적분 대신 값싼 판).
@@ -36,21 +39,19 @@ struct SurfaceBRDF
     float      _occlusion;       ///< 머티리얼 가림(앰비언트 · 프로브에만, 기본 1)
     float      _lightAcceptance; ///< N·L 이 -이 값보다 크면 빛을 받는다(기본 0 — 감싼 확산 · 투과가 넓힌다)
 
-    float  _coatWeight;
-    float  _coatAlpha;
-    float3 _sheenColor;
-    float  _sheenAlpha;
-    float  _sheenWeight;
-    float3 _subsurfaceWrap; ///< 채널마다 감쌈(0 이면 램버트)
-    float3 _transmissionColor;
-    float  _transmissionWrap;
-    float3 _tangent;
-    float3 _bitangent;
-    float  _alphaTangent;
-    float  _alphaBitangent;
-    float3 _strandTangent;
-    float3 _strandColor;
-    float  _strandExponent;
+    float       _coatWeight;
+    float       _coatAlpha;
+    float3      _sheenColor;
+    float       _sheenAlpha;
+    float       _sheenWeight;
+    float3      _subsurfaceWrap; ///< 채널마다 감쌈(0 이면 램버트)
+    float3      _transmissionColor;
+    float       _transmissionWrap;
+    float3      _tangent;
+    float3      _bitangent;
+    float       _alphaTangent;
+    float       _alphaBitangent;
+    HairSurface _strand; ///< 머리결 엽(털)의 Marschner 값 — 반사 배율 0 이면 꺼진다
 
     static SurfaceBRDF makePBR( float3 albedo, float3 worldPosition, float3 normal, float roughness, float metallic );
     // 엽 설정 — 표면 훅의 값으로 부른다. 부르지 않은 엽은 무게 0 이다.
@@ -75,7 +76,7 @@ struct SurfaceBRDF
     float3 computeBaseSpecular( float3 toLight, float3 halfway, float normalDotLight, float normalDotHalf, float viewDotHalf );
     float3 computeSheenSpecular( float normalDotLight, float normalDotHalf );
     float3 computeTransmission( float normalDotLight );
-    float3 computeStrandSpecular( float3 halfway, float normalDotLight );
+    float3 computeStrandSpecular( float3 toLight, float normalDotLight );
     float3 applyCoat( float3 under, float normalDotLight, float normalDotHalf, float viewDotHalf );
     float computeCoatAttenuation();
 };
@@ -98,14 +99,17 @@ static SurfaceBRDF SurfaceBRDF::makePBR( float3 albedo, float3 worldPosition, fl
     brdf._transmissionColor = float3( 0.0f, 0.0f, 0.0f );
     brdf._transmissionWrap  = 0.0f;
     // 비등방이 꺼진 값 — 노멀에 수직인 아무 탄젠트, 두 α 가 같으면 등방 GGX 와 같다(ShadingMathTest).
-    const float3 helper  = abs( normal.y ) < 0.99f ? float3( 0.0f, 1.0f, 0.0f ) : float3( 1.0f, 0.0f, 0.0f );
-    brdf._tangent        = normalize( cross( helper, normal ) );
-    brdf._bitangent      = cross( normal, brdf._tangent );
-    brdf._alphaTangent   = brdf._pbr._alpha;
-    brdf._alphaBitangent = brdf._pbr._alpha;
-    brdf._strandTangent  = brdf._tangent;
-    brdf._strandColor    = float3( 0.0f, 0.0f, 0.0f );
-    brdf._strandExponent = 1.0f;
+    const float3 helper     = abs( normal.y ) < 0.99f ? float3( 0.0f, 1.0f, 0.0f ) : float3( 1.0f, 0.0f, 0.0f );
+    brdf._tangent           = normalize( cross( helper, normal ) );
+    brdf._bitangent         = cross( normal, brdf._tangent );
+    brdf._alphaTangent      = brdf._pbr._alpha;
+    brdf._alphaBitangent    = brdf._pbr._alpha;
+    brdf._strand._baseColor = float3( 0.0f, 0.0f, 0.0f );
+    brdf._strand._roughness = 1.0f;
+    brdf._strand._shift     = 0.0f;
+    brdf._strand._specular  = 0.0f;
+    brdf._strand._scatter   = 0.0f;
+    brdf._strand._tangent   = brdf._tangent;
     return brdf;
 }
 
@@ -159,12 +163,20 @@ void SurfaceBRDF::setThinFilm( float thicknessNm, float filmIor, float baseIor, 
     _pbr._specularColor = lerp( _pbr._specularColor, film, saturate( weight ) );
 }
 
+/**
+ * @brief 털 — 가닥 방향 @p tangent(누운 털: 표면 탄젠트), 큐티클 기울기 @p shift(라디안), 세로 거칠기, 흡수 색 @p color 의 Marschner 값을 싣는다.
+ * @details 반사 배율은 색의 가장 밝은 채널이다 — 털 색이 0 인 바탕 껍질은 R 갈래도 꺼진다. 다중 산란 확산은 바탕 PBR 확산이 맡으므로 0 이다.
+ */
 void SurfaceBRDF::setStrand( float3 tangent, float shift, float roughness, float3 color )
 {
-    // 비늘 모양 털 끝이 뿌리 쪽으로 기울어 하이라이트가 옮겨 간다(Scheuermann 2004 의 탄젠트 옮기기).
-    _strandTangent  = normalize( tangent + _normal * shift );
-    _strandExponent = ShadingMath::computeStrandExponent( roughness );
-    _strandColor    = color;
+    const float3 orthogonal = tangent - _normal * dot( _normal, tangent );
+    const float  lengthSq   = dot( orthogonal, orthogonal );
+    _strand._tangent        = lengthSq > 1e-8f ? orthogonal * rsqrt( lengthSq ) : _tangent;
+    _strand._shift          = shift;
+    _strand._roughness      = saturate( roughness );
+    _strand._baseColor      = max( color, float3( 0.0f, 0.0f, 0.0f ) );
+    _strand._specular       = max( _strand._baseColor.r, max( _strand._baseColor.g, _strand._baseColor.b ) );
+    _strand._scatter        = 0.0f;
 }
 
 bool SurfaceBRDF::receivesLight( float normalDotLight )
@@ -235,13 +247,13 @@ float3 SurfaceBRDF::computeTransmission( float normalDotLight )
 #endif
 
 #if defined( MATERIAL_LOBE_STRAND )
-/** @brief 털 — Kajiya · Kay 반사. 빛을 받는 쪽만(N·L). */
-float3 SurfaceBRDF::computeStrandSpecular( float3 halfway, float normalDotLight )
+/** @brief 털 — 머리카락과 같은 Marschner R · TT · TRT(hair_shading.hlsli). 털은 몸에 붙어 있어 빛을 받는 쪽만(N·L) — 몸이 뒤의 빛을 가린다. */
+float3 SurfaceBRDF::computeStrandSpecular( float3 toLight, float normalDotLight )
 {
-    return _strandColor * ShadingMath::computeStrandSpecular( dot( _strandTangent, halfway ), _strandExponent ) * normalDotLight;
+    return HairShading::evaluateLobes( _strand, _toView, toLight ) * normalDotLight;
 }
 #else
-float3 SurfaceBRDF::computeStrandSpecular( float3 halfway, float normalDotLight )
+float3 SurfaceBRDF::computeStrandSpecular( float3 toLight, float normalDotLight )
 {
     return float3( 0.0f, 0.0f, 0.0f );
 }
@@ -282,7 +294,7 @@ float3 SurfaceBRDF::evaluateLight( float3 toLight, float normalDotLight )
     const float  viewDotHalf           = saturate( dot( _toView, halfway ) );
     const float3 specular              = lerp( computeBaseSpecular( toLight, halfway, clampedNormalDotLight, normalDotHalf, viewDotHalf ),
                                                computeSheenSpecular( clampedNormalDotLight, normalDotHalf ), _sheenWeight );
-    const float3 under                 = computeDiffuse( normalDotLight ) + specular + computeStrandSpecular( halfway, clampedNormalDotLight );
+    const float3 under                 = computeDiffuse( normalDotLight ) + specular + computeStrandSpecular( toLight, clampedNormalDotLight );
     return applyCoat( under, clampedNormalDotLight, normalDotHalf, viewDotHalf ) + computeTransmission( normalDotLight );
 }
 

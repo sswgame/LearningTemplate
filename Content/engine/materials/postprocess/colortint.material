@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 후처리 머티리얼 본보기(post_process_color_tint.hlsl) — 장면 색의 채도를 낮추고 색을 입히며 멀수록 _farColor 로 민다. PostProcess 영역이다(MATERIAL_DOMAIN_POST_PROCESS):
+     메시에 붙이지 않고 카메라 · 후처리 볼륨의 블렌더블 목록(_listBlendable — 경로 · 무게 · 자리)에 넣는다. 자리마다의 파이프라인 PostProcessMaterial 패스가 그린다. -->
+<MaterialDef formatVersion="0" name="PostProcessColorTint" shaderPath="engine/shaders/post_process_color_tint.hlsl" alphaMode="Opaque">
+	<_properties>
+		<item name="_tint" type="Color" defaultValue="1 0.85 0.7 1" displayName="Tint (alpha = coverage)" group="Post Process" bHdr="0" bSrgb="1"/>
+		<item name="_farColor" type="Color" defaultValue="0.55 0.6 0.7 0" displayName="Far Color (alpha = strength)" group="Post Process" bHdr="0" bSrgb="1"/>
+		<item name="_desaturation" type="Range" defaultValue="0.6" min="0.0" max="1.0" displayName="Desaturation" group="Post Process"/>
+		<item name="_farDistance" type="Range" defaultValue="0" min="0.0" max="1000.0" displayName="Far Distance (m, 0 = off)" group="Post Process"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_POST_PROCESS</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

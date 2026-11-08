@@ -253,6 +253,7 @@ namespace sw
                 uint32                     _nextVariable{ 1 };
                 bool                       _bEmissive{ false };         ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다)
                 bool                       _bHair{ false };             ///< NOLINT(sw-bool-flag): 집합체다. 출력의 셰이딩 모델이 Hair 다
+                bool                       _bPostProcess{ false };      ///< NOLINT(sw-bool-flag): 집합체다. 출력이 PostProcessOutput 이다 — "Post Process" 묶음 노드는 이때만 받는다
                 bool                       _bLayerPhase{ false };       ///< NOLINT(sw-bool-flag): 집합체다. 출력 노드를 펼친 뒤다 — 조각을 `_outputLines` 에 쓴다
                 bool                       _bLayerMaskSampled{ false }; ///< NOLINT(sw-bool-flag): 집합체다. `_layerMask` 를 이미 읽었다(층마다 다시 읽지 않는다)
 
@@ -587,6 +588,9 @@ namespace sw
                         field[0] = static_cast<utf8>( field[0] - 'A' + 'a' );
                         _outputLines.append( "    output._" ).append( field ).append( " = " ).append( expression ).append( ";\n" );
                     }
+                    // 후처리 출력(Color · Opacity)은 빛을 받지 않는다 — 발광 · 셰이딩 모델이 없다.
+                    if ( _bPostProcess )
+                        return;
                     _bEmissive = node.findLink( "Emissive" ) != nullptr || node.findValue( "Emissive" ) != nullptr;
                     // 셰이딩 모델 — 빛을 받는 식을 고른다(언리얼 머티리얼의 Shading Model). Hair 는 hair_shading.hlsli 이고 G버퍼 칸이 없어 포워드 전용이다.
                     const string shadingModel = readSettingText( kind, node, "ShadingModel" );
@@ -927,6 +931,9 @@ namespace sw
                         switch ( kind.getRole() )
                         {
                             case MaterialGraphNodeRole::Snippet:
+                                // 화면 입력(장면 색 · 깊이 · G버퍼)은 후처리 그래프만 읽는다 — 표면 셰이더에는 그 입력이 없어 컴파일이 멈춘다. 펼침은 그대로 해 등록 오타도 잡는다.
+                                if ( _bPostProcess == false && string_view( kind.getCategory() ) == "Post Process" )
+                                    report( scope, node._name, "DomainMismatch", "a Post Process input node needs a PostProcessOutput graph" );
                                 emitSnippet( graph, listResult, node, kind, scope, listResult[nodeIndex] );
                                 break;
                             case MaterialGraphNodeRole::Output:
@@ -934,6 +941,12 @@ namespace sw
                                 _bLayerPhase = true; // 뒤에 오는 노드는 층과 그 마스크뿐이다(뿌리 차례)
                                 break;
                             case MaterialGraphNodeRole::Layer:
+                                // 층은 표면 칸(BaseColor · Roughness …) 위에 쌓는다 — 후처리 출력에는 그 칸이 없다.
+                                if ( _bPostProcess )
+                                {
+                                    report( scope, node._name, "DomainMismatch", "a Layer stacks surface fields - a PostProcessOutput graph has none" );
+                                    break;
+                                }
                                 emitLayer( graph, listResult, node, kind, scope );
                                 break;
                             case MaterialGraphNodeRole::Subgraph:
@@ -1002,6 +1015,7 @@ namespace sw
         cutoff._defaultValue = "0.5";
         session._listField.push_back( std::move( cutoff ) );
 
+        session._bPostProcess = isPostProcessGraph( graph );
         vector<MaterialGraphCompilerInternal::NamedValue> listUnused;
         const bool                                        bEmitted = session.emitGraph( graph, {}, {}, true, listUnused );
         outResult._listIssue                                       = std::move( session._listIssue );
@@ -1021,14 +1035,28 @@ namespace sw
             hlsl.append( "#define SW_MATERIAL_GRAPH_EMISSIVE\n" );
         if ( session._bHair )
             hlsl.append( "#define SW_MATERIAL_GRAPH_HAIR\n" );
-        hlsl.append( "#include \"material_graph.hlsli\"\n\nMaterialGraphOutput evaluateMaterialGraph( PixelContext context )\n{\n" );
-        hlsl.append( session._body ).append( "    MaterialGraphOutput output;\n" ).append( session._outputLines );
-        hlsl.append( "    return output;\n}\n\n#include \"material_graph_main.hlsli\"\n" );
+        // 후처리 그래프는 풀스크린 뼈대(post_process_material_graph.hlsli)로 낸다 — 표면 뼈대(정점 · 패스 · 깊이)를 거치지 않는다(언리얼 Material Domain).
+        const utf8* const pSkeleton = session._bPostProcess ? "post_process_material_graph" : "material_graph";
+        const utf8* const pOutput   = session._bPostProcess ? "PostProcessGraphOutput" : "MaterialGraphOutput";
+        hlsl.append( "#include \"" ).append( pSkeleton ).append( ".hlsli\"\n\n" ).append( pOutput ).append( " evaluateMaterialGraph( PixelContext context )\n{\n" );
+        hlsl.append( session._body ).append( "    " ).append( pOutput ).append( " output;\n" ).append( session._outputLines );
+        hlsl.append( "    return output;\n}\n\n#include \"" ).append( pSkeleton ).append( "_main.hlsli\"\n" );
 
-        outResult._bEmissive   = session._bEmissive;
-        outResult._bHair       = session._bHair;
-        outResult._contentHash = static_cast<uint32>( HashUtil::computeStringHash64( hlsl, false ) & 0xFFFFFFFFu );
+        outResult._bEmissive    = session._bEmissive;
+        outResult._bHair        = session._bHair;
+        outResult._bPostProcess = session._bPostProcess;
+        outResult._contentHash  = static_cast<uint32>( HashUtil::computeStringHash64( hlsl, false ) & 0xFFFFFFFFu );
         return true;
+    }
+
+    bool MaterialGraphCompileResult::isPostProcessGraph( const MaterialGraphDef& graph )
+    {
+        for ( const MaterialGraphNodeDef& node : graph._listNode )
+        {
+            if ( node._kind == "PostProcessOutput" )
+                return true;
+        }
+        return false;
     }
 
     bool MaterialGraphCompileResult::isSubgraph( const MaterialGraphDef& graph )
@@ -1065,6 +1093,13 @@ namespace sw
             if ( field._propertyType == "Texture2D" )
                 text.append( field._bSRGB ? " bSrgb=\"1\"" : " bSrgb=\"0\"" );
             text.append( " group=\"Graph\"/>\n" );
+        }
+        // 후처리 머티리얼은 영역 define 하나뿐이다 — 메시 패스 변형도 안개 모드도 없다(풀스크린 VS · PS 한 벌).
+        if ( result._bPostProcess )
+        {
+            text.append( "\t</_properties>\n\t<_permutations quality=\"High\" shaderLOD=\"300\" usage=\"StaticMesh\">\n\t\t<_alwaysDefines>\n\t\t\t<item>MATERIAL_DOMAIN_POST_PROCESS</item>\n" );
+            text.append( "\t\t</_alwaysDefines>\n\t</_permutations>\n</MaterialDef>\n" );
+            return text;
         }
         text.append( "\t</_properties>\n\t<_permutations quality=\"High\" shaderLOD=\"300\" usage=\"StaticMesh\">\n\t\t<_alwaysDefines>\n\t\t\t<item>MATERIAL_DOMAIN_SURFACE</item>\n" );
         // 자체 발광은 디퍼드로도 그린다 — G버퍼 패스가 장면 색에 미리 적는다(G버퍼 명세 판 3). 포워드 전용을 적지 않는다.

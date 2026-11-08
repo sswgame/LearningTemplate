@@ -13,7 +13,6 @@
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>
 			<item>MATERIAL_DOMAIN_SURFACE</item>
-			<item>MATERIAL_FORWARD_ONLY</item>
 			<item>MATERIAL_LOBE_SUBSURFACE</item>
 		</_alwaysDefines>
 	</_permutations>

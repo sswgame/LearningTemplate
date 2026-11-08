@@ -308,6 +308,19 @@ static uint PixelContext::getShadingModel()
 }
     #endif
 
+    // G버퍼에 적을 셰이딩 값 — 셰이더가 SW_MATERIAL_CUSTOM_SHADING 으로 훅을 정의하면 그 번호 · 사용자 칸 · 반사율 · 발광, 아니면 위 번호의 기본값이다.
+    #if defined( SW_MATERIAL_CUSTOM_SHADING )
+SurfaceShading PixelContext::makeShading( MaterialSurface surface )
+{
+    return computeMaterialShading( this, surface );
+}
+    #else
+SurfaceShading PixelContext::makeShading( MaterialSurface surface )
+{
+    return SurfaceShading::make( PixelContext::getShadingModel() );
+}
+    #endif
+
     // 조명 훅의 선택을 풀어 색을 낸다 — 훅 정의 · 기본 PBR · 조명 없음 중 셰이더가 고른 하나다.
     #if defined( SW_MATERIAL_CUSTOM_LIGHTING )
 float4 PixelContext::computeSelectedLighting( MaterialSurface surface )
@@ -399,7 +412,7 @@ void PSMain( MaterialInterpolants input )
 /** @brief G버퍼 — 조명 없이 표면과 셰이딩 값(번호 · 발광)을 적는다. 발광은 장면 색에 미리 적혀 디퍼드 조명이 더한다(발광 머티리얼도 디퍼드다). */
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
-    SurfaceShading shading = SurfaceShading::make( PixelContext::getShadingModel() );
+    SurfaceShading shading = makeShading( surface );
     addEmissive( shading._emissive );
     return SurfaceOutput::store( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic, shading );
 }

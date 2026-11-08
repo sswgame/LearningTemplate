@@ -193,6 +193,33 @@ SW_TEST_CASE( MaterialGraphCompilerTest, ParameterBecomesMaterialField )
     SW_EXPECT_NEAR( 0.25f, rough, 1e-5f );
 }
 
+/** @brief [MaterialGraphCompilerTest] PostProcessOutput 그래프는 풀스크린 뼈대 · 후처리 영역 define 으로 나고, 화면 입력 노드는 그 그래프만 받는다 */
+SW_TEST_CASE( MaterialGraphCompilerTest, PostProcessGraphUsesTheFullscreenSkeleton )
+{
+    string nodes = MaterialGraphTestUtil::makeNode( "Scene", "SceneColor" );
+    nodes.append( MaterialGraphTestUtil::makeNode( "Tint", "ColorParameter", {}, "Parameter=_tint,Default=1 0.5 0.5 1" ) );
+    nodes.append( MaterialGraphTestUtil::makeNode( "Mul", "Multiply", "A=Scene.Out,B=Tint.RGB" ) );
+    nodes.append( MaterialGraphTestUtil::makeNode( "Out", "PostProcessOutput", "Color=Mul.Out", "Opacity=0.5" ) );
+    MaterialGraphCompileResult result;
+    SW_REQUIRE_TRUE( MaterialGraphTestUtil::compileNodes( nodes, result ) );
+    SW_EXPECT_TRUE( result._bPostProcess );
+    SW_EXPECT_TRUE( StringUtil::contains( result._hlsl, "#include \"post_process_material_graph.hlsli\"" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( result._hlsl, "#include \"post_process_material_graph_main.hlsli\"" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( result._hlsl, "PostProcessInput::sampleSceneColor( context._uv )" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( result._hlsl, "output._opacity = " ) );
+    SW_EXPECT_FALSE( StringUtil::contains( result._hlsl, "#include \"material_graph_main.hlsli\"" ) ); // 표면 뼈대를 거치지 않는다
+    const string text = MaterialGraphCompileResult::makeMaterialText( result, "test", "x", "y" );
+    SW_EXPECT_TRUE( StringUtil::contains( text, "MATERIAL_DOMAIN_POST_PROCESS" ) );
+    SW_EXPECT_FALSE( StringUtil::contains( text, "MATERIAL_DOMAIN_SURFACE" ) || StringUtil::contains( text, "FogMode" ) );
+
+    // 화면 입력을 표면 그래프에 쓰면 노드 이름과 함께 거절한다.
+    string surface = MaterialGraphTestUtil::makeNode( "Scene", "SceneColor" );
+    surface.append( MaterialGraphTestUtil::makeNode( "Out", "Output", "BaseColor=Scene.Out" ) );
+    MaterialGraphCompileResult rejected;
+    SW_EXPECT_FALSE( MaterialGraphTestUtil::compileNodes( surface, rejected ) );
+    SW_EXPECT_TRUE( MaterialGraphTestUtil::hasIssue( rejected, "DomainMismatch", "Scene" ) );
+}
+
 /** @brief [MaterialGraphCompilerTest] 자체 발광을 써도 디퍼드로 그린다 — G버퍼 패스가 장면 색에 발광을 적는다(G버퍼 명세 판 3) */
 SW_TEST_CASE( MaterialGraphCompilerTest, EmissiveStaysDeferred )
 {

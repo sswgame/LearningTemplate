@@ -99,6 +99,14 @@ layered_stone.matgraph.xml     Output + Layer 노드 목록(노드 차례가 층
 
 `Output` 의 핀은 `material_graph.hlsli` 의 `MaterialGraphOutput` 칸과 이름이 같다. 조명은 `pbr_lit` 과 같은 뼈대의 기본 PBR 이다. 자체 발광을 잇거나 값을 적으면 `SW_MATERIAL_EMISSIVE` 훅을 쓴다. 디퍼드에서는 G버퍼 패스가 발광을 장면 색에 미리 적어 디퍼드로 그린다(G버퍼 명세 판 3). 빛을 다르게 받는 셰이딩 모델(피부 · 천 · 코트 · 비등방 · 박막 · 털 · 눈)은 손으로 쓴 외형 셰이더 `appearance_lit.hlsl` 과 라이브러리 `engine/materials/library/` 에 있고, 디퍼드 번호 표는 `shading_model_ids.hlsli` 다. 그래프 `Output` 의 셰이딩 모델 설정은 W13 의 Hair 설정과 합칠 때 그 번호 표로 넓힌다.
 
+## 후처리 영역
+
+출력 노드가 `PostProcessOutput`(핀 `Color` · `Opacity`)이면 후처리 머티리얼이다(언리얼 Material Domain = Post Process). 생성물은 풀스크린 뼈대(`post_process_material_graph.hlsli` → `post_process_material.hlsli`)로 나고 `.gen.material` 은 `MATERIAL_DOMAIN_POST_PROCESS` 만 적는다 — 메시 패스 변형을 굽지 않는다. 카메라 · 볼륨의 블렌더블 목록에 넣어 쓴다(RenderPipelineXml 의 후처리 머티리얼 절).
+
+- 문맥: `context._uv` 화면 UV, `context._color` 원본 색, `context._worldPosition` 깊이에서 복원한 위치, `context._normal` G버퍼 노멀(디퍼드).
+- 화면 입력 노드(메뉴 묶음 "Post Process"): `SceneColor` · `SceneDepth`(뷰 깊이 m) · `GBufferAlbedo` · `GBufferNormal` · `GBufferRoughness` · `GBufferMetallic`. 패스가 선언한 역할만 값이 있다. 표면 그래프에 쓰면 `DomainMismatch` 다.
+- 층(`Layer`)은 받지 않는다 — 표면 칸이 없다.
+
 ## 오류
 
 컴파일 문제는 값(`MaterialGraphIssue`)으로 돌아오고 늘 노드 이름을 적는다. 편집기는 노드에 붙이고, 쿠킹은 `MaterialGraph.CompileFailed` 로 남기고 실패한다.
@@ -114,6 +122,7 @@ layered_stone.matgraph.xml     Output + Layer 노드 목록(노드 차례가 층
 | `ParameterConflict` | 같은 칸 이름에 다른 형식 |
 | `MissingSubgraph` · `SubgraphUnreadable` · `NotSubgraph` · `SubgraphCycle` | 하위 그래프 문제(층 파일도 같다) |
 | `LayerOutsideMaterial` · `TooManyLayers` · `LayerLimitsUnreadable` · `BadLayerPin` | 층 문제: 하위 그래프 · 층 안의 층, 상한 초과, 상한 파일, 표면 칸이 아닌 층 핀 |
+| `DomainMismatch` | 화면 입력 노드를 표면 그래프에, 층을 후처리 그래프에 썼다 |
 
 ## 편집기
 

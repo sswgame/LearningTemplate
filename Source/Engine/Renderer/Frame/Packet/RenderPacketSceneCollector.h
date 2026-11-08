@@ -91,6 +91,8 @@ namespace sw
          * @details 못 읽은 파일은 오류를 한 번 남기고 그 빛은 플레어가 없다 — 다른 플레어로 대신하지 않는다. shortcut: 파일을 고쳐도 다시 읽지 않는다 — 핫 리로드가 필요해지면 경로의 수정 세대를 열쇠에 더한다.
          */
         void collectLensFlares( RenderFramePacket& packet, const Scene& activeScene );
+        /** @brief 켜진 데칼(`DecalComponent`)의 그리기 값을 그리는 차례(`_sortOrder`)로 패킷에 싣습니다. */
+        static void collectDecals( RenderFramePacket& packet, const Scene& activeScene );
         /**
          * @brief 그림자 배치(아틀라스 칸 · 캐스케이드 · 점광 · 스폿 타일)를 만듭니다. 카메라가 정해진 **뒤에** 부릅니다 — `_shadowViewDistance` 를 준 빛은 볼륨을 카메라가 보는 곳에 맞춘다.
          * @details 텍셀 스냅 · 바이어스는 렌더 스레드가 그릴 캐스케이드 칸과 같은 해상도로 측정한다.

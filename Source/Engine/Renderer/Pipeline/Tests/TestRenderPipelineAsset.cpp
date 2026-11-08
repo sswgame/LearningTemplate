@@ -625,6 +625,103 @@ SW_TEST_CASE( RenderPipelineAssetTest, DistortionApplyNeedsItsInputs )
 
 namespace
 {
+    struct PostMaterialTestUtil
+    {
+        /** @brief HDR 원본 → 톤맵 → 후처리 머티리얼 패스 @p passes 를 가진 파이프라인 XML 입니다(패스는 목록 안에 그대로 넣는다). */
+        static string makeXML( string_view passes )
+        {
+            string xml = "<RenderPipelineDesc _name=\"PostMaterial\"><_listAttachment>"
+                         "<RenderPassAttachment _name=\"HDR\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                         "<RenderPassAttachment _name=\"HDRPost\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                         "<RenderPassAttachment _name=\"HDRAgain\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                         "<RenderPassAttachment _name=\"LDR\" _format=\"R8G8B8A8_UNORM\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                         "</_listAttachment><_listPass>";
+            xml.append( passes );
+            xml.append( "</_listPass></RenderPipelineDesc>" );
+            return xml;
+        }
+
+        /** @brief 패스 하나입니다. @p extra 는 패스 칸(자리 · 셰이더)이다. */
+        static string makePass( string_view name, string_view type, string_view extra, string_view input, string_view output )
+        {
+            string pass = "<RenderGraphPassDesc _name=\"";
+            pass.append( name ).append( "\" _type=\"" ).append( type ).append( "\" " ).append( extra );
+            pass.append( " _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\"><_listInput><item>" ).append( input );
+            pass.append( "</item></_listInput><_listOutput><item>" ).append( output ).append( "</item></_listOutput></RenderGraphPassDesc>" );
+            return pass;
+        }
+    };
+} // namespace
+
+/** @brief [RenderPipelineAssetTest] 후처리 머티리얼 패스는 자리를 하나 적고, 자리마다 하나이며, 톤맵 대신 자리는 앞의 패스가 쓴 출력 위에 그린다 — 엔진 디퍼드는 세 자리를 모두 둔다 */
+SW_TEST_CASE( RenderPipelineAssetTest, PostProcessMaterialPassesNameOneLocation )
+{
+    using Util = PostMaterialTestUtil;
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassBlendableLocation" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassPostMaterialLocationTwice" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassPostMaterialReplacingBase" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    const string        tonemap = Util::makePass( "Tonemap", "Tonemap", "", "HDRPost", "LDR" );
+    RenderPipelineAsset asset;
+    // 톤맵 앞 자리 하나 — 읽힌다.
+    SW_EXPECT_TRUE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::makePass( "Before", "PostProcessMaterial", "_blendableLocation=\"BeforeTonemap\"", "HDR", "HDRPost" ) + tonemap ) ) );
+    // 자리를 적지 않았다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::makePass( "Before", "PostProcessMaterial", "", "HDR", "HDRPost" ) + tonemap ) ) );
+    // 같은 자리 둘.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::makePass( "Before", "PostProcessMaterial", "_blendableLocation=\"BeforeTonemap\"", "HDR", "HDRPost" ) + tonemap +
+                                                                         Util::makePass( "Again", "PostProcessMaterial", "_blendableLocation=\"BeforeTonemap\"", "HDR", "HDRAgain" ) ) ) );
+    // 톤맵 대신 자리가 톤맵보다 앞이다 — 덮을 출력이 아직 없다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::makePass( "Replace", "PostProcessMaterial", "_blendableLocation=\"ReplacingTonemap\"", "HDRPost", "LDR" ) +
+                                                                         Util::makePass( "Tone", "Tonemap", "", "HDR", "HDRPost" ) ) ) );
+
+    RenderPipelineAsset deferred;
+    SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ string_view( "engine/pipeline/deferredpipeline.xml" ) } ) );
+    uint32 locationMask = 0;
+    for ( const RenderGraphPassDesc& pass : deferred.getGraphPass() )
+    {
+        if ( pass._type == RenderPassType::PostProcessMaterial )
+            locationMask |= 1u << static_cast<uint32>( pass._blendableLocation );
+    }
+    const uint32 expected = ( 1u << static_cast<uint32>( PostProcessBlendableLocation::BeforeTonemap ) ) | ( 1u << static_cast<uint32>( PostProcessBlendableLocation::AfterTonemap ) ) |
+                            ( 1u << static_cast<uint32>( PostProcessBlendableLocation::ReplacingTonemap ) );
+    SW_EXPECT_EQUAL( expected, locationMask );
+}
+
+/** @brief [RenderPipelineAssetTest] 데칼 패스는 G버퍼 알베도 · 노멀 · 머티리얼에만 쓴다(차례 그대로) — 엔진 디퍼드는 G버퍼 뒤 · 조명 앞에 둔다 */
+SW_TEST_CASE( RenderPipelineAssetTest, DecalPassWritesTheGBuffer )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassDecalOutputs" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    const string        xml = "<RenderPipelineDesc _name=\"Decal\"><_listAttachment>"
+                              "<RenderPassAttachment _name=\"SceneColor\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                              "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
+                              "</_listAttachment><_listPass>"
+                              "<RenderGraphPassDesc _name=\"Decal\" _type=\"Decal\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\">"
+                              "<_listInput><item>SceneDepth</item></_listInput><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>"
+                              "</_listPass></RenderPipelineDesc>";
+    RenderPipelineAsset asset;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, xml ) );
+
+    RenderPipelineAsset deferred;
+    SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ string_view( "engine/pipeline/deferredpipeline.xml" ) } ) );
+    const vector<RenderGraphPassDesc>& listPass      = deferred.getGraphPass();
+    size_t                             gbufferIndex  = listPass.size();
+    size_t                             decalIndex    = listPass.size();
+    size_t                             lightingIndex = listPass.size();
+    for ( size_t index = 0; index < listPass.size(); ++index )
+    {
+        gbufferIndex  = listPass[index]._type == RenderPassType::GBuffer ? index : gbufferIndex;
+        decalIndex    = listPass[index]._type == RenderPassType::Decal ? index : decalIndex;
+        lightingIndex = listPass[index]._type == RenderPassType::Lighting ? index : lightingIndex;
+    }
+    SW_REQUIRE_TRUE( gbufferIndex < decalIndex && decalIndex < lightingIndex );
+    SW_EXPECT_TRUE( listPass[decalIndex]._resolvedRenderState.isAnyBlendEnabled() );
+}
+
+namespace
+{
     struct FrameGraphTestUtil
     {
         /** @brief 메시 패스 하나에 프레임 자원 · 프레임 패스를 더한 파이프라인 XML 입니다. @p resources · @p framePasses 는 목록 안에 그대로 넣습니다. */

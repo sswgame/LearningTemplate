@@ -25,6 +25,7 @@ namespace sw
         uint64        _descKey{ 0 };    ///< 형식 · 나눗수 · RW 용도 · 클리어 값의 해시 — 같아야 같은 텍스처를 쓸 수 있다
         uint32        _firstLevel{ 0 }; ///< 처음 쓰는(쓰기 또는 읽기) 패스의 레벨
         uint32        _lastLevel{ 0 };  ///< 마지막으로 쓰는 패스의 레벨
+        uint8         _bPlaceable{ 0 }; ///< 서술이 다른 첨부와 힙 바이트를 나눌 수 있다 — 프레임의 첫 쓰기가 지우기(`_loadOp` Clear)이고 RW 가 아니다
     };
 
     /**
@@ -42,6 +43,11 @@ namespace sw
 
         unordered_map<hashed_string, hashed_string> _mapAliasToOwner;
         uint32                                      _ownerCount{ 0 }; ///< 실제로 만들 텍스처 수(후보 수 - 별칭 수)
+        /**
+         * @brief 힙에 겹쳐 놓을 수 있는 텍스처(주인)와 그 텍스처를 쓰는 모든 이름을 합친 레벨 구간입니다 — 칸의 모든 이름이 `_bPlaceable` 일 때만 든다.
+         * @details 능력 `_bPlacedTextures` 가 있는 백엔드에서 뷰 풀이 크기 · 정렬로 힙 오프셋을 정한다(`RenderGraphMemoryPlan`, `FrameViewResources::updateViewTransients`).
+         */
+        vector<RenderGraphAliasCandidate> _listPlaceable;
 
         /** @brief @p name 이 텍스처를 빌리는 별칭이면 주인 이름, 아니면 빈 이름입니다. */
         hashed_string findOwner( const hashed_string& name ) const
