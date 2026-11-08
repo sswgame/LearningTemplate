@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/RegistrationList.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -99,15 +100,8 @@ namespace sw
         static RenderDiagnosticsPolicy fetch();
     };
 
-    /** @brief `SW_RENDER_DIAGNOSTICS_PROVIDER` 가 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 떼지 않습니다(앞 등록을 지우지 않게). */
-    struct SW_API RenderDiagnosticsRegistrar
-    {
-        RenderDiagnosticsProvider _provider;
-        explicit RenderDiagnosticsRegistrar( RenderDiagnosticsProvider provider );
-        ~RenderDiagnosticsRegistrar();
-        RenderDiagnosticsRegistrar( const RenderDiagnosticsRegistrar& )            = delete;
-        RenderDiagnosticsRegistrar& operator=( const RenderDiagnosticsRegistrar& ) = delete;
-    };
+    /** @brief `SW_RENDER_DIAGNOSTICS_PROVIDER` 가 두는 정적 등록자입니다(공통 틀 `StaticRegistrar` — 거절된 등록은 떼지 않는다). */
+    SW_DEFINE_STATIC_REGISTRAR( RenderDiagnosticsRegistrar, RenderDiagnosticsProvider, &RenderDiagnostics::registerProvider, &RenderDiagnostics::unregisterProvider );
 } // namespace sw
 
 /** @brief 진단 정책을 채우는 함수를 붙입니다(.cpp 의 파일 범위, `namespace sw` 안). @p id 는 정적 이름을 만드는 식별자입니다. */

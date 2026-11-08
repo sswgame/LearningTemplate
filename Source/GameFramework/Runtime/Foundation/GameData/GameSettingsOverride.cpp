@@ -2,29 +2,31 @@
 
 #include "GameFramework/Runtime/Foundation/GameData/GameSettingsOverride.h"
 
+#include "Core/String/RegistrationSlot.h"
+
 namespace sw
 {
     namespace
     {
         struct GameSettingsOverrideInternal
         {
-            /** @brief 등록된 창구입니다. 함수 안 정적 변수라 등록자의 정적 초기화 순서와 무관하다. */
-            static IGameSettingsOverride*& slot()
-            {
-                static IGameSettingsOverride* s_pOverride = nullptr;
-                return s_pOverride;
-            }
+            /** @brief 걸린 창구입니다(이미지에 하나 — 둘째는 거절). 함수 정적이라 등록자의 정적 초기화 순서와 무관하다. */
+            static SW_DEFINE_REGISTRATION_SLOT( getSlot, IGameSettingsOverride, "GameSettingsOverride" )
         };
     } // namespace
 
     IGameSettingsOverride* IGameSettingsOverride::find()
     {
-        return GameSettingsOverrideInternal::slot();
+        return GameSettingsOverrideInternal::getSlot().get();
     }
 
-    IGameSettingsOverride::Registration::Registration( IGameSettingsOverride& settingsOverride )
+    bool IGameSettingsOverride::attach( IGameSettingsOverride* pSettingsOverride )
     {
-        SW_ASSERT( GameSettingsOverrideInternal::slot() == nullptr ); // 이미지에 하나다 — 둘이면 등록의 잘못이다
-        GameSettingsOverrideInternal::slot() = &settingsOverride;
+        return GameSettingsOverrideInternal::getSlot().setLogged( pSettingsOverride, "Game settings override", "GameSettingsOverride" ) == RegistrationResult::Added;
+    }
+
+    void IGameSettingsOverride::detach( IGameSettingsOverride* pSettingsOverride )
+    {
+        (void)GameSettingsOverrideInternal::getSlot().reset( pSettingsOverride );
     }
 } // namespace sw
