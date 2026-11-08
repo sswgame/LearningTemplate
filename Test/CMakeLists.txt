@@ -233,6 +233,24 @@ if(TARGET ReflectionParser)
 				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserFixture.cmake")
 		set_tests_properties(ReflectionParser.${swParserFixtureName} PROPERTIES LABELS nogpu TIMEOUT 120)
 	endforeach()
+	# 도구 입력 — 같은 입력 두 번이면 같은 바이트 · 시각 그대로, 설정 · 템플릿 · 철자 표가 깨지면 0 이 아닌 종료(`ReflectionParser/RunParserToolInputs.cmake`).
+	foreach(swParserToolMode IN ITEMS determinism broken-config broken-templates broken-spelling)
+		add_test(NAME ReflectionParser.ToolInputs.${swParserToolMode}
+			COMMAND ${CMAKE_COMMAND}
+				"-DMODE=${swParserToolMode}"
+				"-DPARSER=$<TARGET_FILE:ReflectionParser>"
+				"-DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/ValidTypes.h"
+				"-DWORK_DIR=${CMAKE_BINARY_DIR}/Testing/ReflectionParser/ToolInputs.${swParserToolMode}"
+				"-DSOURCE_ROOT=${CMAKE_SOURCE_DIR}"
+				"-DGENERATED_DIR=${CMAKE_BINARY_DIR}/generated"
+				"-DBUILTINS=${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}"
+				"-DANNOTATION_META=${CMAKE_SOURCE_DIR}/${SW_FILE_ANNOTATION_META}"
+				"-DTEMPLATES=${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}"
+				"-DCONFIG=${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}"
+				"-DGEN_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_CPP}"
+				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserToolInputs.cmake")
+		set_tests_properties(ReflectionParser.ToolInputs.${swParserToolMode} PROPERTIES LABELS nogpu TIMEOUT 120)
+	endforeach()
 	# 틀린 명령줄은 파서를 멈춘다 — 모르는 인자 · 필수 인자 빠짐. 입력을 읽기 전이라 사례 헤더가 필요 없다.
 	add_test(NAME ReflectionParser.RejectsUnknownArgument COMMAND $<TARGET_FILE:ReflectionParser> --no-such-argument)
 	add_test(NAME ReflectionParser.RejectsMissingOutput COMMAND $<TARGET_FILE:ReflectionParser> --input nothing.h)
