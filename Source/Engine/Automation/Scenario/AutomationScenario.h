@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -191,10 +192,10 @@ namespace sw
 
         AutomationScenario();
 
-        /** @brief 리소스 경로 또는 절대 경로에서 읽습니다. 형식 오류면 false 이고 @p outError 에 `경로: 이유` 를 씁니다. */
-        [[nodiscard]] bool loadFromPath( const AssetID& assetID, string& outError );
-        /** @brief XML 글에서 읽습니다. */
-        [[nodiscard]] bool parse( string_view xmlText, string_view sourceName, string& outError );
+        /** @brief 리소스 경로 또는 절대 경로에서 읽습니다. 못 읽거나 형식이 틀리면 그 이유(문장 머리 `[read]` · `[xml]` 이 막힌 단계)입니다. */
+        [[nodiscard]] expected<void> loadFromPath( const AssetID& assetID );
+        /** @brief XML 글에서 읽습니다. 형식이 틀리면 그 이유입니다. */
+        [[nodiscard]] expected<void> parse( string_view xmlText, string_view sourceName );
 
         const string& getName() const { return _name; }
         const string& getSourcePath() const { return _sourcePath; }
@@ -222,14 +223,14 @@ namespace sw
         void bindOutputDirectory( string_view outputDirectory );
 
     private:
-        /** @brief `<Load>` 요소를 읽습니다. 모르는 속성 · 틀린 값이면 false 와 이유입니다. */
-        [[nodiscard]] bool parseLoad( const XMLNode& node, string& outReason );
-        /** @brief `<Scenario>` 의 속성 하나를 읽습니다. 모르는 속성 · 틀린 값이면 false 와 이유입니다(오타가 기본값으로 조용히 바뀌지 않게 한다). */
-        [[nodiscard]] bool parseRootAttribute( string_view name, const utf8* pText, string& outReason );
-        /** @brief `<Scenario>` 의 자식(`<Load>` `<Scratch>` `<Launch>` `<Wait>` 와 단계)을 차례로 읽습니다. 틀리면 false 와 이유(원본 이름 포함)입니다. */
-        [[nodiscard]] bool parseChildren( const XMLNode& root, string& outError );
+        /** @brief `<Load>` 요소를 읽습니다. 모르는 속성 · 틀린 값이면 그 이유입니다. */
+        [[nodiscard]] expected<void> parseLoad( const XMLNode& node );
+        /** @brief `<Scenario>` 의 속성 하나를 읽습니다. 모르는 속성 · 틀린 값이면 그 이유입니다(오타가 기본값으로 조용히 바뀌지 않게 한다). */
+        [[nodiscard]] expected<void> parseRootAttribute( string_view name, const utf8* pText );
+        /** @brief `<Scenario>` 의 자식(`<Load>` `<Scratch>` `<Launch>` `<Wait>` 와 단계)을 차례로 읽습니다. 틀리면 그 이유입니다. */
+        [[nodiscard]] expected<void> parseChildren( const XMLNode& root );
         /** @brief 단계 하나를 지금 프레임(앞의 `<Wait>` 들이 흘린 합)으로 `_listStep` 에 더합니다. 단계 번호를 이어 갱신합니다. */
-        [[nodiscard]] bool parseStepNode( const XMLNode& stepNode, uint32 frameIndex, uint32& inoutOrderInFile, string& outError );
+        [[nodiscard]] expected<void> parseStepNode( const XMLNode& stepNode, uint32 frameIndex, uint32& inoutOrderInFile );
 
     private:
         vector<AutomationStep>   _listStep;

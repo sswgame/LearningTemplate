@@ -25,8 +25,7 @@ namespace
         static void prepare( AutomationLogPolicy& policy, string_view xmlText )
         {
             AutomationScenario scenario;
-            string             error;
-            SW_REQUIRE_TRUE( scenario.parse( xmlText, "test.scenario.xml", error ) );
+            SW_REQUIRE_TRUE( scenario.parse( xmlText, "test.scenario.xml" ).has_value() );
             policy.prepare( scenario );
         }
     };

@@ -33,31 +33,19 @@ namespace sw
         };
     } // namespace
 
-    bool AutomationScratch::isValidFolder( const AutomationScratchFolder& folder, string& outReason )
+    expected<void> AutomationScratch::isValidFolder( const AutomationScratchFolder& folder )
     {
         const string scratchPrefix = string( kScratchDomain ) + "/";
         if ( folder._sourceID.empty() || folder._scratchID.empty() )
-        {
-            outReason = "<Scratch> needs from=\"<resource id>\" and as=\"scratch/<name>\"";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch> needs from=\"<resource id>\" and as=\"scratch/<name>\"" } );
         const bool bLeavesTree = AssetPaths::hasParentDirectoryComponent( folder._sourceID ) || AssetPaths::hasParentDirectoryComponent( folder._scratchID );
         if ( bLeavesTree )
-        {
-            outReason = "<Scratch> ids may not use '..'";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch> ids may not use '..'" } );
         if ( StringUtil::startsWith( folder._scratchID, scratchPrefix ) == false )
-        {
-            outReason = "<Scratch as=\"" + folder._scratchID + "\"> must sit under " + scratchPrefix;
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch as> must sit under scratch/", folder._scratchID } );
         if ( StringUtil::startsWith( folder._sourceID, scratchPrefix ) )
-        {
-            outReason = "<Scratch from=\"" + folder._sourceID + "\"> must be a tracked folder, not another scratch copy";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch from> must be a tracked folder, not another scratch copy", folder._sourceID } );
+        return {};
     }
 
     string AutomationScratch::rebaseText( string_view text, string_view fromID, string_view toID )

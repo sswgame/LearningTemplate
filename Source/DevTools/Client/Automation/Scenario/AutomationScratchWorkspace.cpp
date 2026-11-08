@@ -128,9 +128,8 @@ namespace sw
 
     expected<void> AutomationScratchWorkspace::prepare( const AutomationScratchFolder& folder )
     {
-        string reason;
-        if ( AutomationScratch::isValidFolder( folder, reason ) == false )
-            return unexpected( Error{ ErrorKind::InvalidArgument, "the <Scratch> declaration is invalid", reason } );
+        if ( expected<void> valid = AutomationScratch::isValidFolder( folder ); valid.has_value() == false )
+            return valid;
         const string& resourceRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
         const string  sourceDir    = FileUtil::joinPath( resourceRoot, folder._sourceID );
         const string  scratchDir   = FileUtil::joinPath( resourceRoot, folder._scratchID );

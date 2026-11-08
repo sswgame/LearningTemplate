@@ -204,9 +204,9 @@ namespace sw
         const string_view scenarioPath = assetID.view();
         markWallStart();
         _reportWriter.setReportPath( reportPath );
-        string error;
-        if ( _scenario.loadFromPath( assetID, error ) == false )
+        if ( const expected<void> loaded = _scenario.loadFromPath( assetID ); loaded.has_value() == false )
         {
+            const string error = string( loaded.error().message().data(), loaded.error().message().size() ) + ": " + string( loaded.error().detail().data(), loaded.error().detail().size() );
             SW_LOG_ERROR_ID( "Automation.CouldNotLoad", "[Scenario] could not load '%#': %#", string( scenarioPath ).c_str(), error.c_str() );
             finish( AutomationResult::LoadError, error );
             return;
@@ -270,10 +270,9 @@ namespace sw
     {
         markWallStart();
         _reportWriter.setReportPath( reportPath );
-        string error;
-        if ( _scenario.parse( xmlText, "<text>", error ) == false )
+        if ( const expected<void> parsed = _scenario.parse( xmlText, "<text>" ); parsed.has_value() == false )
         {
-            finish( AutomationResult::LoadError, error );
+            finish( AutomationResult::LoadError, string( parsed.error().message().data(), parsed.error().message().size() ) + ": " + string( parsed.error().detail().data(), parsed.error().detail().size() ) );
             return false;
         }
         _outputDirectory  = AutomationRunnerInternal::makeOutputDirectory( _scenario.getName() );

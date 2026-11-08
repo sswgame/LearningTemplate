@@ -289,8 +289,7 @@ namespace sw
         for ( const string& path : AutomationScenarioChain::splitList( options._scenarioPath ) )
         {
             AutomationScenario scenario;
-            string             error;
-            const bool         bLoaded     = scenario.loadFromPath( AssetID{ path }, error );
+            const bool         bLoaded     = scenario.loadFromPath( AssetID{ path } ).has_value();
             const bool         bPerBackend = std::any_of( scenario.getSteps().begin(), scenario.getSteps().end(), &Internal::judgesPerBackend );
             for ( size_t i = 0; i < listScenarioList.size(); ++i )
             {

@@ -54,10 +54,11 @@ namespace sw::test
             const string path( scenarioID.view() );
             string       text;
             SW_EXPECT_TRUE( AssetIO::readTextAsset( scenarioID, text ) );
-            AutomationScenario scenario;
-            string             error;
-            const bool         bParsed = scenario.parse( text, path, error );
-            SW_EXPECT_EQUAL( string(), makeScenarioFailureText( bParsed, path, error ) );
+            AutomationScenario   scenario;
+            string               error;
+            const expected<void> parsed  = scenario.parse( text, path );
+            const bool           bParsed = parsed.has_value();
+            SW_EXPECT_EQUAL( string(), makeScenarioFailureText( bParsed, path, bParsed ? string() : string( parsed.error().message().data(), parsed.error().message().size() ) + ": " + string( parsed.error().detail().data(), parsed.error().detail().size() ) ) );
             if ( bParsed == false )
                 continue;
             SW_EXPECT_EQUAL( string(), makeScenarioFailureText( AutomationStepValidation::validateDesktopSteps( scenario, error ), path, error ) );
