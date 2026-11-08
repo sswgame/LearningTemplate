@@ -373,6 +373,7 @@
 		<entry key="EdPluginFormat.CutVertsMovedMax"
 		       text="{name}: 자름 {cutTriangleCount}/{triangleCount}({cutRatio}%), 정점 {movedVertexCount}개 옮김, 최대 밀기 {maxDelta}"
 		       sourceHash="123a644d3007c563" />
+		<entry key="EdPluginFormat.Clamped" text="범위로 자름: {clamped}" sourceHash="cc1c67ea126eb653" />
 		<entry key="EdPluginFormat.Dropped" text="빠짐: {dropped}" sourceHash="ce2449119803e99d" />
 		<entry key="EdPluginFormat.GMConnection" text="GM 연결: {stateText}" sourceHash="ba6187deff08f6db" />
 		<entry key="EdPluginFormat.Id"

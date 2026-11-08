@@ -1,6 +1,8 @@
 // AppearanceSelectionTest — 외형 선택: 담기 · 부분 선택 · 펼치기(지워진 값 · 잠긴 아이템의 되돌림), 프리셋으로 바꾸기, 비트 코덱과 공유 코드(nogpu).
 #include "pch.h"
 
+#include "Core/Encoding/Base64Util.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -29,6 +31,8 @@ namespace
 
     struct AppearanceSelectionTest
     {
+        static constexpr const utf8* kHeightSlider = R"(<Slider name="Height" min="0" max="2" default="1" category="Body"/>)";
+
         ItemCatalog             _catalog;
         AppearanceDatabase      _database;
         CharacterAppearanceSpec _current;
@@ -43,31 +47,38 @@ namespace
                 <Item id="gold_helm" category="Armor" slot="Head" maxStack="1" weight="1" visual="gold_visual"/>
             </ItemCatalog>)",
                                                        "test" ) );
-            load( R"(<SlotCatalog><Slot name="Head"/><Slot name="Torso"/></SlotCatalog>)" );
-            load( R"(<ItemVisualCatalog>
+            loadInto( _database, kHeightSlider );
+            SW_REQUIRE_TRUE( expandBase( _current ) );
+        }
+
+        /** @brief 콘텐츠 판 하나를 읽습니다. 판마다 다른 것은 키 슬라이더(`Height`) 줄뿐이다(범위 · 기본값이 바뀐 뒤 판). */
+        void loadInto( AppearanceDatabase& database, const utf8* pHeightSlider ) const
+        {
+            loadSection( database, R"(<SlotCatalog><Slot name="Head"/><Slot name="Torso"/></SlotCatalog>)" );
+            loadSection( database, R"(<ItemVisualCatalog>
                 <ItemVisual id="body_visual"><Part name="Body" kind="Skinned" mesh="body.mesh" material="body.material"/></ItemVisual>
                 <ItemVisual id="helm_visual" customization="Metal"><Part name="Shell" kind="SocketPrefab" prefab="helm.prefab" socket="Head"/><State name="Up"/><State name="Down"/></ItemVisual>
                 <ItemVisual id="gold_visual" customization="Metal"><Part name="Shell" kind="SocketPrefab" prefab="gold.prefab" socket="Head" breakable="true"/></ItemVisual>
             </ItemVisualCatalog>)" );
-            load( R"(<CustomizationSchemaCatalog>
+            loadSection( database, string( R"(<CustomizationSchemaCatalog>
                 <Schema id="Metal"><Slider name="Wear" min="0" max="1" default="0"/></Schema>
                 <Schema id="Human">
-                  <Slider name="Height" min="0" max="2" default="1" category="Body"/>
+                  )" ) + pHeightSlider +
+                                       R"(
                   <Color name="Dye" default="1 0 0 1" category="Hair"/>
                   <Choice name="Style" default="Short" category="Hair"><Option name="Short"/><Option name="Long"/></Choice>
                 </Schema>
             </CustomizationSchemaCatalog>)" );
-            load( R"(<CharacterAppearanceCatalog>
+            loadSection( database, R"(<CharacterAppearanceCatalog>
                 <CharacterAppearance id="Base" schema="Human" bodyType="Male" bodyShape="Average" body="body_visual">
                   <Equip slot="Head" item="iron_helm"/>
                 </CharacterAppearance>
                 <CharacterAppearance id="Other" schema="Human" bodyType="Female" bodyShape="Slim" body="body_visual"/>
             </CharacterAppearanceCatalog>)" );
-            SW_REQUIRE_TRUE( _database.finishLoad( &_catalog ) );
-            SW_REQUIRE_TRUE( expandBase( _current ) );
+            SW_REQUIRE_TRUE( database.finishLoad( &_catalog ) );
         }
 
-        void load( const utf8* pXML ) { SW_REQUIRE_TRUE( _database.loadSectionFromXMLText( pXML, "test" ) ); }
+        static void loadSection( AppearanceDatabase& database, const string& xml ) { SW_REQUIRE_TRUE( database.loadSectionFromXMLText( xml.c_str(), "test" ) ); }
 
         [[nodiscard]] bool expandBase( CharacterAppearanceSpec& outSpec ) const
         {
@@ -402,4 +413,95 @@ SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeRoundTripAndRejects )
     tampered[tampered.size() / 2] = tampered[tampered.size() / 2] == 'A' ? 'B' : 'A';
     SW_EXPECT_FALSE( AppearanceSelection::decode( tampered, _database, decoded, &reason ) );
     SW_EXPECT_EQUAL( string( "checksum mismatch" ), reason );
+}
+
+/** @brief [AppearanceSelectionTest] 공유 코드의 슬라이더는 실제 값이다 — 뒤 판이 범위를 넓혀도 같은 키로 읽고, 범위를 좁히면 끝에 붙이고 보고한다 */
+SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeSliderSurvivesARangeChange )
+{
+    AppearanceSelection selection = capture();
+    selection._customization.setNumber( hashed_string( "Height" ), 1.5f );
+    const string code = AppearanceSelection::encode( selection, _database );
+
+    AppearanceDatabase wider;
+    loadInto( wider, R"(<Slider name="Height" min="0" max="4" default="1" category="Body"/>)" );
+    AppearanceSelection decoded;
+    SW_REQUIRE_TRUE( AppearanceSelection::decode( code, wider, decoded ) );
+    SW_REQUIRE_TRUE( decoded._customization.findValue( hashed_string( "Height" ) ) != nullptr );
+    SW_EXPECT_NEAR( 1.5f, decoded._customization.findValue( hashed_string( "Height" ) )->_number._x, 1.0e-6f ); // 판 1 은 범위의 비율로 읽어 3.0 이 됐다
+
+    AppearanceDatabase narrower;
+    loadInto( narrower, R"(<Slider name="Height" min="0" max="1" default="0.5" category="Body"/>)" );
+    SW_REQUIRE_TRUE( AppearanceSelection::decode( code, narrower, decoded ) );
+    CharacterAppearanceSpec   applied;
+    AppearanceSelectionReport report;
+    AppearanceSelection::applySelection( narrower, decoded, CharacterAppearanceSpec{}, nullptr, applied, report );
+    SW_REQUIRE_EQUAL( size_t( 1 ), report._listClampedParameter.size() );
+    SW_EXPECT_TRUE( report._listClampedParameter[0] == hashed_string( "Height" ) );
+    SW_EXPECT_FALSE( report.isClean() );
+    SW_REQUIRE_TRUE( applied._customization.findValue( hashed_string( "Height" ) ) != nullptr );
+    SW_EXPECT_NEAR( 1.0f, applied._customization.findValue( hashed_string( "Height" ) )->_number._x, 1.0e-6f );
+}
+
+/** @brief [AppearanceSelectionTest] 정하지 않은 값도 저장할 때의 기본값으로 적는다 — 뒤 판이 기본값을 바꿔도 저장된 캐릭터는 그대로다 */
+SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeKeepsTheLookWhenADefaultChanges )
+{
+    AppearanceSelection selection = capture();
+    selection._customization.clear(); // 플레이어가 아무것도 건드리지 않았다
+    const string code = AppearanceSelection::encode( selection, _database );
+
+    AppearanceDatabase newerDefault;
+    loadInto( newerDefault, R"(<Slider name="Height" min="0" max="2" default="1.5" category="Body"/>)" );
+    AppearanceSelection decoded;
+    SW_REQUIRE_TRUE( AppearanceSelection::decode( code, newerDefault, decoded ) );
+    SW_EXPECT_EQUAL( size_t( 3 ), decoded._customization.getValues().size() );
+    SW_REQUIRE_TRUE( decoded._customization.findValue( hashed_string( "Height" ) ) != nullptr );
+    SW_EXPECT_NEAR( 1.0f, decoded._customization.findValue( hashed_string( "Height" ) )->_number._x, 1.0e-6f );
+    SW_REQUIRE_TRUE( decoded._customization.findValue( hashed_string( "Style" ) ) != nullptr );
+    SW_EXPECT_TRUE( decoded._customization.findValue( hashed_string( "Style" ) )->_option == hashed_string( "Short" ) );
+
+    // 부분 선택은 담은 카테고리의 매개변수만 적는다
+    AppearanceSelection hairOnly;
+    AppearanceSelection::makePartial( selection, _database, { hashed_string( "Hair" ) }, hairOnly );
+    SW_REQUIRE_TRUE( AppearanceSelection::decode( AppearanceSelection::encode( hairOnly, _database ), _database, decoded ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), decoded._customization.getValues().size() );
+    SW_EXPECT_TRUE( decoded._customization.findValue( hashed_string( "Height" ) ) == nullptr );
+}
+
+/** @brief [AppearanceSelectionTest] 옛 판(1) 공유 코드도 읽는다 — 플레이어 프리셋 저장소가 이 문자열로 저장한다. 이 빌드보다 새 판은 거절한다 */
+SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeReadsTheOlderVersion )
+{
+    // 판 1 의 바이트를 손으로 쓴다: 판 · 기준 프리셋 · 시드 · 스키마 · 몸 셋 · 카테고리 0 · 값(Height 를 범위 0~2 의 16 비트 단계로) · 슬롯 0
+    const auto makeCode = []( uint32 version )
+    {
+        BitWriter writer;
+        writer.writeBits( version, 8 );
+        writer.writeUint32( static_cast<uint32>( hashed_string( "Base" ).getHash() ) );
+        writer.writeVarUint( 1 );
+        writer.writeUint32( static_cast<uint32>( hashed_string( "Human" ).getHash() ) );
+        writer.writeUint32( static_cast<uint32>( hashed_string( "Male" ).getHash() ) );
+        writer.writeUint32( static_cast<uint32>( hashed_string( "Average" ).getHash() ) );
+        writer.writeUint32( 0 );
+        writer.writeVarUint( 0 );
+        writer.writeVarUint( 1 );
+        writer.writeUint32( static_cast<uint32>( hashed_string( "Height" ).getHash() ) );
+        writer.writeBits( static_cast<uint32>( CustomizationKind::Slider ), 2 );
+        writer.writeBits( 49151u, 16 ); // 0~2 의 3/4 지점 = 1.5
+        writer.writeVarUint( 0 );
+        vector<uint8> bytes = writer.releaseBytes();
+        const uint32  crc   = HashUtil::computeCRC32( bytes.data(), bytes.size() );
+        for ( uint32 byteIndex = 0; byteIndex < 4; ++byteIndex )
+        {
+            bytes.push_back( static_cast<uint8>( ( crc >> ( byteIndex * 8 ) ) & 0xffu ) );
+        }
+        return Base64Util::encodeURL( bytes.data(), bytes.size() );
+    };
+    AppearanceSelection decoded;
+    string              reason;
+    SW_REQUIRE_TRUE_MSG( AppearanceSelection::decode( makeCode( 1 ), _database, decoded, &reason ), reason.c_str() );
+    SW_EXPECT_TRUE( decoded._basePresetID == hashed_string( "Base" ) );
+    SW_REQUIRE_TRUE( decoded._customization.findValue( hashed_string( "Height" ) ) != nullptr );
+    SW_EXPECT_NEAR( 1.5f, decoded._customization.findValue( hashed_string( "Height" ) )->_number._x, 1.0e-3f );
+
+    SW_EXPECT_FALSE( AppearanceSelection::decode( makeCode( AppearanceSelection::kShareCodeVersion + 1 ), _database, decoded, &reason ) );
+    SW_EXPECT_EQUAL( string( "unsupported share code version" ), reason );
 }

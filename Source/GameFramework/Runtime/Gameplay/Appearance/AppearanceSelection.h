@@ -75,14 +75,18 @@ namespace sw
         static void previewSelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
                                       const IAppearanceUnlockQuery* pUnlockQuery, ResolvedAppearance& outResolved, AppearanceSelectionReport& outReport );
 
-        // 선택을 비트로 씁니다. 네트워크 외형 동기화에 쓰며, 받는 쪽이 펼쳐서 해석하면 같은 해시가 나옵니다. 공유 코드와 세이브도 이것을 씁니다.
-        // 슬라이더는 스키마 범위의 16 비트, 색은 성분마다 8 비트, 피해는 8 비트로 쓴다. 해석기가 쓰는 정밀도와 같으므로 손실이 없다. 값마다 종류를 2 비트로
+        // 선택을 비트로 씁니다(지금 판 `kShareCodeVersion`). 네트워크 외형 동기화에 쓰며, 받는 쪽이 펼쳐서 해석하면 같은 해시가 나옵니다. 공유 코드와 세이브도 이것을 씁니다.
+        // 판을 넘어 뜻이 남게 쓴다 — 슬라이더는 실제 값(32 비트, 스키마 범위가 바뀌어도 그대로), 선택이 담은 카테고리의 모든 매개변수를 적는다(정하지 않은 값은 지금 기본값 —
+        // 뒤 판이 기본값을 바꿔도 저장된 캐릭터는 그대로다). 색은 성분마다 8 비트, 피해는 8 비트(해석기의 정밀도와 같다). 값마다 종류를 2 비트로
         static void writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database );
         /** @brief 읽습니다. 비트가 모자라거나 개수가 비정상이면 false 입니다. */
-        [[nodiscard]] static bool readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection );
+        [[nodiscard]] static bool readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection, uint32 formatVersion = kShareCodeVersion );
 
-        // 공유 코드입니다. 버전 1 바이트, 선택 비트, CRC32 를 base64url(패딩 없음)로 쓴 짧은 문자열입니다. 버전이 다르거나 체크섬이 틀리면 거절합니다(정확히 같은 판만 읽습니다).
-        static constexpr uint32 kShareCodeVersion = 1;
+        // 공유 코드입니다. 판 1 바이트, 선택 비트, CRC32 를 base64url(패딩 없음)로 쓴 짧은 문자열입니다. 체크섬이 틀리거나 이 빌드보다 새 판이면 거절하고, 옛 판은 읽습니다
+        // (플레이어 프리셋 저장소가 이 문자열로 저장한다 — 판을 올리면 옛 판 읽기를 남기고 옛 판 코드 테스트를 더한다).
+        // 판 1: 슬라이더가 그때 스키마 범위의 16 비트 단계, 정한 값만. 판 2: 슬라이더 실제 값, 담은 카테고리의 모든 매개변수.
+        static constexpr uint32 kShareCodeVersion       = 2;
+        static constexpr uint32 kOldestShareCodeVersion = 1;
 
         static string encode( const AppearanceSelection& selection, const AppearanceDatabase& database );
         /** @brief 공유 코드를 해석합니다. 코드가 망가졌거나(base64 오류, 체크섬 불일치) 이 빌드가 모르는 버전이면 false 를 반환하고, @p pOutReason 에 이유를 씁니다. */
@@ -114,10 +118,11 @@ namespace sw
         };
 
         vector<hashed_string> _listDroppedParameter{}; ///< 지워진 매개변수와 항목(이름 또는 `#해시`)
+        vector<hashed_string> _listClampedParameter{}; ///< 지금 범위 밖이라 끝에 붙인 슬라이더(저장한 판보다 범위가 좁아졌다)
         vector<SlotFallback>  _listSlotFallback{};
         uint8                 _bUnknownBasePreset{ SW_FALSE };
 
-        bool isClean() const { return _listDroppedParameter.empty() && _listSlotFallback.empty() && _bUnknownBasePreset == SW_FALSE; }
+        bool isClean() const { return _listDroppedParameter.empty() && _listClampedParameter.empty() && _listSlotFallback.empty() && _bUnknownBasePreset == SW_FALSE; }
     };
 } // namespace sw
 

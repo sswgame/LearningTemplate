@@ -912,7 +912,7 @@ namespace sw::editor
         {
             for ( const string& issue : listIssue )
             {
-                ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "%s", issue.c_str() );
+                EditorThemeUtil::textWarning( issue.c_str() );
             }
         }
     }
@@ -1441,14 +1441,18 @@ namespace sw::editor
         const AppearanceSelectionReport& report   = _document.getResolvedReport();
 
         if ( report._bUnknownBasePreset == SW_TRUE )
-            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "Base preset is not in the data" );
+            EditorThemeUtil::textWarning( "Base preset is not in the data" );
         for ( const hashed_string& dropped : report._listDroppedParameter )
         {
-            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "Dropped", TextArgumentList().addText( "dropped", dropped.c_str() ) ).c_str() );
+            EditorThemeUtil::textWarning( SW_LOCKEYFORMAT( "EdPluginFormat", "Dropped", TextArgumentList().addText( "dropped", dropped.c_str() ) ).c_str() );
+        }
+        for ( const hashed_string& clamped : report._listClampedParameter )
+        {
+            EditorThemeUtil::textWarning( SW_LOCKEYFORMAT( "EdPluginFormat", "Clamped", TextArgumentList().addText( "clamped", clamped.c_str() ) ).c_str() );
         }
         for ( const AppearanceSelectionReport::SlotFallback& fallback : report._listSlotFallback )
         {
-            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.3f, 1.0f ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "Slot", TextArgumentList().addText( "slot", fallback._slot.c_str() ).addText( "requestedItem", fallback._requestedItem.c_str() ).addText( "fallbackItem", fallback._fallbackItem.c_str() ).addText( "reason", getEnumName( fallback._reason ) ) ).c_str() );
+            EditorThemeUtil::textWarning( SW_LOCKEYFORMAT( "EdPluginFormat", "Slot", TextArgumentList().addText( "slot", fallback._slot.c_str() ).addText( "requestedItem", fallback._requestedItem.c_str() ).addText( "fallbackItem", fallback._fallbackItem.c_str() ).addText( "reason", getEnumName( fallback._reason ) ) ).c_str() );
         }
         if ( ImGui::BeginChild( "##RuleTrace", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, CharacterEditorPanelInternal::kExplanationListLines ) ), ImGuiChildFlags_Borders ) )
         {

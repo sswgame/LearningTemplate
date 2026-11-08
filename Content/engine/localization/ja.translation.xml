@@ -381,6 +381,7 @@
 		<entry key="EdPluginFormat.CutVertsMovedMax"
 		       text="{name}: カット {cutTriangleCount}/{triangleCount}({cutRatio}%)、頂点 {movedVertexCount} 個移動、最大押し出し {maxDelta}"
 		       sourceHash="123a644d3007c563" />
+		<entry key="EdPluginFormat.Clamped" text="範囲に収めた: {clamped}" sourceHash="cc1c67ea126eb653" />
 		<entry key="EdPluginFormat.Dropped" text="除外: {dropped}" sourceHash="ce2449119803e99d" />
 		<entry key="EdPluginFormat.GMConnection" text="GM 接続: {stateText}" sourceHash="ba6187deff08f6db" />
 		<entry key="EdPluginFormat.Id"

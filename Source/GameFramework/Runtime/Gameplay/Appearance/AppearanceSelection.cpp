@@ -22,13 +22,13 @@ namespace sw
     {
         struct AppearanceSelectionInternal
         {
-            static constexpr uint32 kMaxCount      = 1024; ///< 읽을 때의 개수 상한. 망가진 입력이나 악의적인 입력이 큰 할당을 일으키지 않게 한다
-            static constexpr int32  kKindBits      = 2;
-            static constexpr int32  kSliderBits    = 16;
-            static constexpr int32  kColorBits     = 8;
-            static constexpr int32  kDamageBits    = 8;
-            static constexpr int32  kVersionBits   = 8;
-            static constexpr uint32 kChecksumBytes = 4;
+            static constexpr uint32 kMaxCount         = 1024; ///< 읽을 때의 개수 상한. 망가진 입력이나 악의적인 입력이 큰 할당을 일으키지 않게 한다
+            static constexpr int32  kKindBits         = 2;
+            static constexpr int32  kLegacySliderBits = 16; ///< 판 1 의 슬라이더 — 그때 스키마 범위 안의 단계. 범위가 바뀐 뒤에는 뜻이 달라져 판 2 는 실제 값을 쓴다
+            static constexpr int32  kColorBits        = 8;
+            static constexpr int32  kDamageBits       = 8;
+            static constexpr int32  kVersionBits      = 8;
+            static constexpr uint32 kChecksumBytes    = 4;
 
             static uint32 toHash32( const hashed_string& name ) { return name.empty() ? 0u : static_cast<uint32>( name.getHash() ); }
 
@@ -118,6 +118,36 @@ namespace sw
                 return true;
             }
 
+            /** @brief 값 하나를 씁니다(이름 해시 · 종류 · 값). 슬라이더는 실제 값이라 스키마 범위가 바뀌어도 뜻이 그대로다. */
+            static void writeValue( BitWriter& writer, const CustomizationParamDef& param, const CustomizationValue& value )
+            {
+                writer.writeUint32( toHash32( param._name ) );
+                writer.writeBits( static_cast<uint32>( param._kind ), kKindBits );
+                switch ( param._kind )
+                {
+                    case CustomizationKind::Slider:
+                    {
+                        writer.writeFloat( value._number._x );
+                        break;
+                    }
+                    case CustomizationKind::Color:
+                    {
+                        writer.writeBits( CustomizationParamDef::quantizeColorChannel( value._number._x ), kColorBits );
+                        writer.writeBits( CustomizationParamDef::quantizeColorChannel( value._number._y ), kColorBits );
+                        writer.writeBits( CustomizationParamDef::quantizeColorChannel( value._number._z ), kColorBits );
+                        writer.writeBits( CustomizationParamDef::quantizeColorChannel( value._number._w ), kColorBits );
+                        break;
+                    }
+                    case CustomizationKind::Choice:
+                    case CustomizationKind::Attachment:
+                    {
+                        writer.writeUint32( toHash32( value._option ) );
+                        break;
+                    }
+                }
+            }
+
+            /** @brief 스키마가 아는 값만 씁니다(아이템 인스턴스 값 — 정한 값만 싣는다). */
             static void writeValues( BitWriter& writer, const CustomizationValueSet& values, const CustomizationSchemaDef* pSchema )
             {
                 vector<const CustomizationValue*> listKnown;
@@ -129,35 +159,34 @@ namespace sw
                 writeVarCount( writer, listKnown.size() );
                 for ( const CustomizationValue* pValue : listKnown )
                 {
-                    const CustomizationParamDef& param = *pSchema->findParameter( pValue->_parameter );
-                    writer.writeUint32( toHash32( param._name ) );
-                    writer.writeBits( static_cast<uint32>( param._kind ), kKindBits );
-                    switch ( param._kind )
-                    {
-                        case CustomizationKind::Slider:
-                        {
-                            writer.writeBits( param.quantizeSlider( pValue->_number._x ), kSliderBits );
-                            break;
-                        }
-                        case CustomizationKind::Color:
-                        {
-                            writer.writeBits( CustomizationParamDef::quantizeColorChannel( pValue->_number._x ), kColorBits );
-                            writer.writeBits( CustomizationParamDef::quantizeColorChannel( pValue->_number._y ), kColorBits );
-                            writer.writeBits( CustomizationParamDef::quantizeColorChannel( pValue->_number._z ), kColorBits );
-                            writer.writeBits( CustomizationParamDef::quantizeColorChannel( pValue->_number._w ), kColorBits );
-                            break;
-                        }
-                        case CustomizationKind::Choice:
-                        case CustomizationKind::Attachment:
-                        {
-                            writer.writeUint32( toHash32( pValue->_option ) );
-                            break;
-                        }
-                    }
+                    writeValue( writer, *pSchema->findParameter( pValue->_parameter ), *pValue );
                 }
             }
 
-            [[nodiscard]] static bool readValues( BitReader& reader, const CustomizationSchemaDef* pSchema, CustomizationValueSet& outValues )
+            /**
+             * @brief 선택이 담은 카테고리의 **모든** 매개변수를 씁니다. 정하지 않은 값은 지금 기본값으로 적는다 — 쓴 모습이 그대로 남고, 뒤 판이 기본값을 바꿔도 저장된 캐릭터는
+             *        바뀌지 않는다(뒤 판에 새로 생긴 매개변수만 그 판의 기본값을 따른다). 스키마가 모르는 값은 쓰지 않는다.
+             */
+            static void writeAllValues( BitWriter& writer, const AppearanceSelection& selection, const CustomizationSchemaDef* pSchema )
+            {
+                vector<const CustomizationParamDef*> listParam;
+                if ( pSchema != nullptr )
+                {
+                    for ( const CustomizationParamDef& param : pSchema->_listParameter )
+                    {
+                        if ( selection.includesCategory( param._category ) )
+                            listParam.push_back( &param );
+                    }
+                }
+                writeVarCount( writer, listParam.size() );
+                for ( const CustomizationParamDef* pParam : listParam )
+                {
+                    const CustomizationValue* pGiven = selection._customization.findValue( pParam->_name );
+                    writeValue( writer, *pParam, pGiven != nullptr ? *pGiven : pParam->makeDefaultValue() );
+                }
+            }
+
+            [[nodiscard]] static bool readValues( BitReader& reader, const CustomizationSchemaDef* pSchema, uint32 formatVersion, CustomizationValueSet& outValues )
             {
                 uint32 count = 0;
                 if ( readVarCount( reader, count ) == false )
@@ -181,8 +210,14 @@ namespace sw
                     {
                         case CustomizationKind::Slider:
                         {
-                            const uint32 step = reader.readBits( kSliderBits );
-                            value._number._x  = pParam != nullptr ? pParam->dequantizeSlider( step ) : 0.0f;
+                            if ( formatVersion == 1 )
+                            {
+                                // 판 1 은 그때 범위 안의 단계다. 그때 범위는 남지 않아 지금 범위로 푼다 — 범위를 바꾼 매개변수는 정확하지 않다(판 2 가 고친 까닭)
+                                const uint32 step = reader.readBits( kLegacySliderBits );
+                                value._number._x  = pParam != nullptr ? pParam->dequantizeSlider( step ) : 0.0f;
+                            }
+                            else if ( reader.readFiniteFloat( value._number._x ) == false )
+                                return false;
                             break;
                         }
                         case CustomizationKind::Color:
@@ -230,6 +265,12 @@ namespace sw
             {
                 outReport._listDroppedParameter.push_back( name );
                 SW_LOG_WARNING_ID( "AppearanceSelection.AppearanceValueNoLonger", "Appearance value '%#' no longer exists - dropped", name.c_str() );
+            }
+
+            static void addClamped( AppearanceSelectionReport& outReport, const hashed_string& name )
+            {
+                outReport._listClampedParameter.push_back( name );
+                SW_LOG_WARNING_ID( "AppearanceSelection.AppearanceValueOutOfRange", "Appearance value '%#' is outside the current range - clamped", name.c_str() );
             }
 
             /** @brief 아이템 인스턴스 값을 보이는 외형의 스키마로 걸러 냅니다. */
@@ -333,6 +374,15 @@ namespace sw
             if ( bOptionKind && pParam->findOption( value._option ) == nullptr )
             {
                 Internal::addDropped( outReport, value._option );
+                continue;
+            }
+            if ( pParam->_kind == CustomizationKind::Slider && ( value._number._x < pParam->_min || value._number._x > pParam->_max ) )
+            {
+                // 저장한 판보다 범위가 좁아졌다 — 끝에 붙이고 알린다(해석기도 범위로 자르지만 플레이어가 모르게 바뀌지 않게)
+                CustomizationValue clamped = value;
+                clamped._number._x         = MathUtil::clamp( value._number._x, pParam->_min, pParam->_max );
+                Internal::addClamped( outReport, value._parameter );
+                outSpec._customization.setValue( clamped );
                 continue;
             }
             outSpec._customization.setValue( value );
@@ -476,7 +526,7 @@ namespace sw
         {
             writer.writeUint32( Internal::toHash32( category ) );
         }
-        Internal::writeValues( writer, selection._customization, database.getSchemas().findSchema( selection._schema ) );
+        Internal::writeAllValues( writer, selection, database.getSchemas().findSchema( selection._schema ) );
         Internal::writeVarCount( writer, selection._listSlot.size() );
         for ( const AppearanceSlotRequest& request : selection._listSlot )
         {
@@ -496,7 +546,7 @@ namespace sw
         }
     }
 
-    bool AppearanceSelection::readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection )
+    bool AppearanceSelection::readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection, uint32 formatVersion )
     {
         using Internal = AppearanceSelectionInternal;
         outSelection   = AppearanceSelection{};
@@ -533,7 +583,7 @@ namespace sw
         {
             outSelection._listCategory.push_back( Internal::findByHash( reader.readUint32(), listCategory ) );
         }
-        if ( Internal::readValues( reader, database.getSchemas().findSchema( outSelection._schema ), outSelection._customization ) == false )
+        if ( Internal::readValues( reader, database.getSchemas().findSchema( outSelection._schema ), formatVersion, outSelection._customization ) == false )
             return false;
 
         vector<hashed_string> listSlotName;
@@ -588,7 +638,7 @@ namespace sw
             {
                 request._listDetachedPart.push_back( Internal::findByHash( reader.readUint32(), listPartName ) );
             }
-            if ( Internal::readValues( reader, Internal::findVisualSchema( database, pShown ), request._customization ) == false )
+            if ( Internal::readValues( reader, Internal::findVisualSchema( database, pShown ), formatVersion, request._customization ) == false )
                 return false;
             outSelection._listSlot.push_back( request );
         }
@@ -633,13 +683,13 @@ namespace sw
         }
         BitReader    reader( bytes.data(), static_cast<int32>( payloadSize ) );
         const uint32 version = reader.readBits( Internal::kVersionBits );
-        if ( version != kShareCodeVersion )
+        if ( version < kOldestShareCodeVersion || version > kShareCodeVersion ) // 옛 판은 읽는다(저장된 프리셋이 공유 코드다) — 판을 올리는 커밋은 옛 판 읽기를 남긴다
         {
             if ( pOutReason != nullptr )
                 *pOutReason = "unsupported share code version";
             return false;
         }
-        if ( AppearanceSelection::readSelection( reader, database, outSelection ) == false )
+        if ( AppearanceSelection::readSelection( reader, database, outSelection, version ) == false )
         {
             if ( pOutReason != nullptr )
                 *pOutReason = "truncated share code";
