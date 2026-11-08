@@ -27,12 +27,6 @@ namespace sw
 {
     namespace
     {
-        /** @brief 병렬 기록 중 배리어 진단을 몇 번 남겼는지입니다(프로세스에 앞 8 번만 — 로그 양 상한이지 엔진 상태가 아니다). 상수 초기화라 정적 초기화 순서와 무관하다. */
-        atomic<uint32> s_rhiParallelBarrierReported{ 0 };
-    } // namespace
-
-    namespace
-    {
         /** @brief 핸들 하나를 그 종류의 팩터리 함수로 내립니다. */
         void releaseNow( IRHIResourceFactory& factory, RHIHandleKind kind, uint64 handle )
         {
@@ -108,7 +102,7 @@ namespace sw
         // 파이프라인 XML 이 선언하지 않은 첨부(패스 콜백이 직접 거는 텍스처)는 프롤로그가 알 수 없다. 그런 것이
         // 남아 있어도 배리어 자체는 락이 보호하므로 안전하다. 여기 뜨는 이름이 곧 "선언이 비어
         // 있는 자원" 이므로, 파이프라인 선언을 채우면 이 줄이 사라진다.
-        if ( s_rhiParallelBarrierReported.fetch_add( 1, std::memory_order_relaxed ) >= 8 )
+        if ( _parallelBarrierReportCount.fetch_add( 1, std::memory_order_relaxed ) >= 8 )
             return;
         SW_LOG_TRACE_ID( "RHI.IssuedBarrierDuringParallel", "%# issued a barrier during parallel recording - the level prologue did not "
                                                             "transition this resource beforehand (a pipeline declaration may be missing). "
@@ -379,6 +373,7 @@ namespace sw
         , _bSoftwareAdapter{ SW_FALSE }
         , _bShutDown{ SW_FALSE }
         , _bParallelRecording{ false }
+        , _parallelBarrierReportCount{ 0 }
         , _initResult{ RHIInitResult::NotStarted }
         , _memoryTracker{ make_unique<RHIMemoryTracker>() }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }

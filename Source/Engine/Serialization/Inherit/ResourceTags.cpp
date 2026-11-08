@@ -7,11 +7,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Log/Logger.h"
-#include "Core/Subsystem/ISubsystem.h"
-#include "Core/Subsystem/ServiceSlot.h"
 
-#include "Engine/Foundation/EngineServices.h"
-#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 namespace sw
@@ -45,8 +41,11 @@ namespace sw
                 ResourceTagSet _tags{};
             };
 
-            /** @brief 상태입니다 — 엔진 범위의 `ResourceTagState` 가 든다. */
-            static State& getState();
+            static State& getState()
+            {
+                static State s_state;
+                return s_state;
+            }
 
             /** @brief 태그 조건입니다. 문맥의 태그 칸이 없으면 "모름" 이라 거짓입니다. */
             static bool hasTag( const GameplayContext& context, const ConditionNameArg& args )
@@ -126,38 +125,6 @@ namespace sw
             }
         };
     } // namespace
-
-    /**
-     * @class ResourceTagState
-     * @brief 지금 켜진 리소스 태그 집합 — 예전 함수 정적(감춘 싱글턴)을 엔진 범위 서브시스템이 든다. 엔진을 다시 세우면 새로 선다.
-     */
-    class ResourceTagState final : public ISubsystem
-    {
-    public:
-        static constexpr const utf8* kSubsystemName = "ResourceTagState";
-
-        ResourceTagState()
-            : _state{}
-        {
-        }
-
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-
-        /** @brief 든 상태입니다. */
-        ResourceTagsInternal::State& getState() { return _state; }
-
-    private:
-        ResourceTagsInternal::State _state;
-    };
-
-    SW_SERVICE_SLOT( ResourceTagState, Required );
-
-    ResourceTagsInternal::State& ResourceTagsInternal::getState()
-    {
-        return engine::getSubsystem<ResourceTagState>().getState();
-    }
 
     SW_CONDITION( resourceTag, ConditionNameArg, &ResourceTagsInternal::hasTag );
 } // namespace sw
@@ -361,9 +328,4 @@ namespace sw
         outTest = std::move( compiled );
         return true;
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_ENGINE_SERVICE_SUBSYSTEM( ResourceTagState, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( ResourceTagState ) );
 } // namespace sw

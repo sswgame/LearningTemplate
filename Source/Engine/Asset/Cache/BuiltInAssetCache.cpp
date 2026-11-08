@@ -30,9 +30,4 @@ namespace sw
     {
         return getBuiltInAssetCacheRegistrations().getItems();
     }
-
-    BuiltInAssetCacheRegistrar::BuiltInAssetCacheRegistrar( const BuiltInAssetCacheRegistration* pRegistration )
-    {
-        BuiltInAssetCacheRegistry::add( pRegistration );
-    }
 } // namespace sw

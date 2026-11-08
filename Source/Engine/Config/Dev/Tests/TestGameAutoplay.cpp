@@ -77,14 +77,14 @@ SW_TEST_CASE( GameAutoplayTest, ReloadImageReplacesTheSameNameAndSurvivesTheOldI
     const GameAutoplayRegistration  newImage{ "FakeGame", "new image", "gv_fakeGameAutoPlay", &s_fakeGameAutoPlay };
     const GameAutoplayRegistration  stranger{ "FakeGame", "stranger", "gv_fakeGameAutoPlay", &s_fakeGameAutoPlay };
 
-    GameAutoplay::registerAutoplay( &oldImage );
+    SW_EXPECT_TRUE( GameAutoplay::registerAutoplay( &oldImage ) );
     SW_EXPECT_LOG( "Registration.DuplicateName" );
-    GameAutoplay::registerAutoplay( &stranger ); // 리로드 밖의 같은 이름은 거절한다(오류 로그)
+    SW_EXPECT_FALSE( GameAutoplay::registerAutoplay( &stranger ) ); // 리로드 밖의 같은 이름은 거절한다(오류 로그)
     SW_EXPECT_TRUE( GameAutoplay::findActive() == &oldImage );
 #if SW_WITH_DYNAMIC_MODULES
     {
         RegistrationReloadScope scope;
-        GameAutoplay::registerAutoplay( &newImage );
+        SW_EXPECT_TRUE( GameAutoplay::registerAutoplay( &newImage ) );
     }
     SW_EXPECT_TRUE( GameAutoplay::findActive() == &newImage );
 

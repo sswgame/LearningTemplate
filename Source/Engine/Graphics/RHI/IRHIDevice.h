@@ -642,7 +642,8 @@ namespace sw
         /// @brief `shutdown` 을 끝냈다. 그 뒤에 쌓인 해제는 다음 `shutdown`(백엔드 소멸자)이 단언한다. `initialize` 가 지운다.
         uint8 _bShutDown : 1;
         /// @brief 지금이 병렬 패스 기록 구간인지 나타냅니다(setParallelRecording 참고). 렌더 스레드가 쓰고 등록 · 해제를 감시하는 다른 스레드가 읽으므로 atomic 입니다.
-        atomic<bool> _bParallelRecording;
+        atomic<bool>           _bParallelRecording;
+        mutable atomic<uint32> _parallelBarrierReportCount; ///< 병렬 기록 중 배리어 진단을 남긴 횟수(장치마다 앞 8 번만 — `reportBarrierDuringRecording`)
         /// @brief 마지막 `initialize` 의 결과입니다(getInitResult 참고).
         RHIInitResult _initResult;
         /// @brief GPU 자원 추적기입니다(getMemoryTracker 참고). 기반 클래스 멤버이므로 해제 큐를 비우는 백엔드 소멸자보다 오래 삽니다.

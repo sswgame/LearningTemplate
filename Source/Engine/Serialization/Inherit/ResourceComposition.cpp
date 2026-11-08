@@ -8,13 +8,9 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Subsystem/ISubsystem.h"
-#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
-#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 
 namespace sw
@@ -65,8 +61,11 @@ namespace sw
                 uint64                                _revision{ 0 }; ///< 기록의 결과가 바뀔 때마다 는다
             };
 
-            /** @brief 상태입니다 — 엔진 범위의 `ResourceCompositionState` 가 든다. */
-            static State& getState();
+            static State& getState()
+            {
+                static State s_state;
+                return s_state;
+            }
 
             /** @brief @p assetID 를 다시 읽을 목록에 올립니다(잠금 안에서 부른다). */
             static void addPending( State& state, const string& assetID )
@@ -96,38 +95,6 @@ namespace sw
             }
         };
     } // namespace
-
-    /**
-     * @class ResourceCompositionState
-     * @brief 층 합성 · 로드 축 조건에 기댄 리소스 기록 — 예전 함수 정적(감춘 싱글턴)을 엔진 범위 서브시스템이 든다. 엔진을 다시 세우면 새로 선다.
-     */
-    class ResourceCompositionState final : public ISubsystem
-    {
-    public:
-        static constexpr const utf8* kSubsystemName = "ResourceCompositionState";
-
-        ResourceCompositionState()
-            : _state{}
-        {
-        }
-
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-
-        /** @brief 든 상태입니다. */
-        ResourceCompositionInternal::State& getState() { return _state; }
-
-    private:
-        ResourceCompositionInternal::State _state;
-    };
-
-    SW_SERVICE_SLOT( ResourceCompositionState, Required );
-
-    ResourceCompositionInternal::State& ResourceCompositionInternal::getState()
-    {
-        return engine::getSubsystem<ResourceCompositionState>().getState();
-    }
 } // namespace sw
 
 namespace sw
@@ -403,9 +370,4 @@ namespace sw
     {
         _listLine.clear();
     }
-} // namespace sw
-
-namespace sw
-{
-    SW_ENGINE_SERVICE_SUBSYSTEM( ResourceCompositionState, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( ResourceCompositionState ) );
 } // namespace sw

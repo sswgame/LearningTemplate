@@ -169,10 +169,10 @@ namespace sw
         ResourceRemapTable* const pTable = engine::findSubsystem<ResourceRemapTable>();
         if ( pTable == nullptr || pTable->getState()._entryCount.load() == 0 )
             return false;
-        ResourceRemapTable&  state = *pTable;
-        const ResourceTagSet tags  = ResourceTags::capture();
-        vector<string>       listLoadTag;
-        bool                 bRemapped = false;
+        ResourceRemapInternal::State& state = pTable->getState();
+        const ResourceTagSet          tags  = ResourceTags::capture();
+        vector<string>                listLoadTag;
+        bool                          bRemapped = false;
         {
             ScopedLock<mutex> lock{ state._mutex };
             for ( const ResourceRemapInternal::Entry& entry : state._listEntry )
