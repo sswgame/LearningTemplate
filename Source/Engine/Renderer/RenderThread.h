@@ -17,10 +17,7 @@
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
 
-#include "sw/config/ProcessExitCodes.gen.h"
-
 #include <condition_variable>
-#include <optional>
 
 namespace sw
 {
@@ -144,28 +141,6 @@ namespace sw
         /** @brief 마지막으로 처리한 `requestScreenshot` 이 쓴 파일 경로입니다. 실패했으면 빈 문자열입니다. */
         static string getLastScreenshotPath();
 
-        /** @brief 시작 인자(`-gv_screenshot` · `-gv_screenshotEditor`)가 찍는 사진의 종류입니다. `-gv_screenshotQuit` 은 요청한 종류가 모두 끝나야 앱을 끝냅니다. */
-        enum class CaptureKind : uint32
-        {
-            GameView = 1u << 0, ///< `-gv_screenshot` — 렌더 스레드가 찍는다.
-            EditorUI = 1u << 1, ///< `-gv_screenshotEditor` — 에디터가 찍는다.
-        };
-        /** @brief 이 종류의 사진을 찍겠다고 알립니다. 첫 사진이 끝나기 전(첫 프레임)에 부릅니다. 어느 스레드에서 불러도 됩니다. */
-        static void expectCapture( CaptureKind kind );
-        /** @brief 이 종류의 사진 요청을 모두 처리했음을 알립니다(@p bWritten 이 false 면 파일을 쓰지 못했다). 어느 스레드에서 불러도 됩니다. */
-        static void reportCaptureFinished( CaptureKind kind, bool bWritten );
-        /**
-         * @brief `-gv_screenshotQuit` 이 켜져 있고 요청한 사진을 모두 처리했으면 앱의 종료 코드(`Passed` 또는 파일을 쓰지 못한 `CaptureWriteFailed` — 표 `ProcessExitCodes.json`), 아니면 빈 값입니다.
-         * @details 게임 스레드가 프레임마다 물어 `Engine::requestQuit` 으로 잇습니다. 사진을 요청한 종류가 하나도 없으면 끝낼 근거가 없어 늘 빈 값입니다.
-         *          예전에는 표 밖의 숫자 16 을 이 헤더에 따로 두었다 — 표가 몰라 자동화 보고가 "crashed" 로 셌다.
-         */
-        [[nodiscard]] static std::optional<ProcessExitCode> getCaptureExitCode();
-        /**
-         * @brief 시작 인자 캡처가 화면의 자리 잡음을 기다리는 중이면(`-gv_screenshot` 과 `-gv_screenshotSettledFrames`) true 입니다.
-         * @details 게임 스레드가 패킷을 채울 때 이것이 참이면 `RenderFramePacket::_bReadyForCapture` 를 판정해 싣는다(그 판정은 텍스처 표를 훑으므로 필요할 때만 한다).
-         */
-        [[nodiscard]] static bool needsCaptureReadiness();
-
     private:
         /** @brief 렌더 스레드 루프입니다. 패킷을 꺼내 executePacket 합니다. */
         void threadMain();
@@ -186,8 +161,6 @@ namespace sw
          * @details 그린 뒤 씬마다(주 화면 = 키 0, @p bMainDrew 면) 빠뜨린 배치 수를 표에 다시 쓴다(`findPendingMaterialPSOBatchCount`).
          */
         void drawScenePreviews( RenderFramePacket& packet, IRHICommandContext* pFrameStream, bool bMainDrew );
-        /** @brief `-gv_screenshot` 촬영 차례(대기 프레임 · 자리 잡음 · 간격 · 장 수)면 화면이나 지정 첨부를 읽어 파일 쓰기를 워커에 맡깁니다. `endFrame` 뒤에 부릅니다. */
-        void takeCommandLineScreenshotIfDue( const RenderFramePacket& packet );
         /**
          * @brief 화면에 나간 이미지(Present 캡처)를 GPU 에서 읽은 그대로(포맷 `constant::render::kBackBufferFormat`) 받습니다. 캡처가 없으면 @p path 와 함께 오류를 남기고 false 입니다.
          * @details `endFrame` 뒤에 부릅니다. RGBA 로 풀고 쓰는 일은 워커가 한다(`ScreenshotFileWrite`).
@@ -227,14 +200,10 @@ namespace sw
         atomic<bool>                           _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타냅니다.
         /// @brief 직전 프레임에 디바이스로 전달한 제출 정책입니다. 바뀔 때만 로그를 남기려고 둡니다.
         uint8          _bLastImmediateSubmit : 1;
-        uint8          _bScreenshotTaken;                ///< -gv_screenshot 은 한 장만 찍는다.
-        uint32         _screenshotFrameCounter;          ///< 씬이 채워질 때까지 몇 프레임을 기다린다(`-gv_screenshotSettledFrames` 면 자리 잡은 패킷부터 이어 센다).
-        uint32         _screenshotShotCount;             ///< 지금까지 찍은 장 수(`-gv_screenshotCount` 연속 촬영)
-        int64          _screenshotWaitStartMicroseconds; ///< `-gv_screenshot` 을 처음 본 단조 시각(0 = 아직). 자리 잡음 기다림의 시한을 측정한다.
-        uint32         _budgetFrameCounter;              ///< 드라이버 GPU 메모리 값을 몇 프레임마다 물을지 센다(`_s_kBudgetRefreshFrames`).
-        atomic<bool>   _bScenarioCaptureEnabled;         ///< 자동화 시나리오 동안 Present 캡처를 켜 둔다(스크린샷 패킷이 언제 올지 모른다).
-        atomic<uint32> _presentInterval;                 ///< 그린 프레임 몇 개마다 하나를 내보내는가(`setPresentInterval` — 0 = 내보내지 않음)
-        uint32         _presentFrameCounter;             ///< 내보내기 간격을 세는 렌더 스레드의 그린 프레임 수
+        uint32         _budgetFrameCounter;      ///< 드라이버 GPU 메모리 값을 몇 프레임마다 물을지 센다(`_s_kBudgetRefreshFrames`).
+        atomic<bool>   _bScenarioCaptureEnabled; ///< 자동화 시나리오 동안 Present 캡처를 켜 둔다(스크린샷 패킷이 언제 올지 모른다).
+        atomic<uint32> _presentInterval;         ///< 그린 프레임 몇 개마다 하나를 내보내는가(`setPresentInterval` — 0 = 내보내지 않음)
+        uint32         _presentFrameCounter;     ///< 내보내기 간격을 세는 렌더 스레드의 그린 프레임 수
         /** @brief 지난 프레임에 그린 씬 하나의 빠뜨린 배치 수입니다(`findPendingMaterialPSOBatchCount`). */
         struct ScenePendingJob
         {
@@ -249,7 +218,6 @@ namespace sw
         RHIFormat                                        _requestedScreenshotFormat;          ///< `_requestedScreenshotTexture` 의 포맷
         uint32                                           _requestedScreenshotWaitFrames;      ///< 쓰기 전에 더 그릴 프레임 수(캡처를 켠 프레임은 비어 있을 수 있다)
         shared_ptr<atomic<uint32>>                       _pRequestedScreenshotWritesInFlight; ///< 워커가 쓰는 중인 실행 중 요청 수(잡이 같이 들어 이 객체보다 오래 살 수 있다). 0 이 아니면 다음 요청을 꺼내지 않는다
-        shared_ptr<atomic<uint32>>                       _pCommandLineShotsLeft;              ///< `-gv_screenshot` 의 아직 끝나지 않은 장 수(첫 프레임에 장 수로 채운다). 0 으로 만드는 워커가 끝을 알린다
         struct PendingRenderTargetRead;
         unique_ptr<PendingRenderTargetRead> _pPendingTargetRead; ///< 요청을 받았고 읽기가 끝나지 않은 렌더 타깃 읽기(렌더 스레드만 쓴다). 없으면 비어 있다
 

@@ -169,9 +169,13 @@ namespace sw
             exitCode = pProfileSession->onFrameEnd( context._activeSceneID );
         if ( ProfilerLaunchSwitches* const pProfilerSwitches = engine::findSubsystem<ProfilerLaunchSwitches>() )
             pProfilerSwitches->onFrameEnd(); // 느린 프레임 자동 캡처(`-gv_traceSlowTickMs`)
-        // 셰이더 재컴파일 · 강제 리로드 단축키(Debug 클라이언트) — 클라이언트 전용 부분이 한다.
+        // 셰이더 재컴파일 · 강제 리로드 단축키(Debug 클라이언트) · 시작 인자 사진 — 클라이언트 전용 부분이 한다. 먼저 끝난 쪽의 종료 코드를 돌려준다.
         if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )
-            pClientPart->onFrameEnd();
+        {
+            const EngineFrameExit clientExit = pClientPart->onFrameEnd();
+            if ( exitCode == kEngineFrameRunning )
+                exitCode = clientExit;
+        }
         if ( ConfigReloadSubsystem* const pConfigReload = engine::findSubsystem<ConfigReloadSubsystem>() )
             pConfigReload->update();
         _pContentFolderWatch->update(); // 기능 · 게임이 건 데이터 폴더 감시(외형 데이터 등)

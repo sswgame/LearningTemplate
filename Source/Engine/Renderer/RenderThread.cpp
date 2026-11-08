@@ -10,9 +10,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
@@ -37,9 +35,6 @@ namespace sw
         {
             /** @brief Present 캡처를 켠 뒤 쓰기 전에 더 그릴 프레임 수입니다. 켠 프레임의 캡처 텍스처는 아직 비어 있을 수 있습니다. */
             static constexpr uint32 kPresentCaptureWaitFrames = 1;
-            /** @brief `-gv_screenshotSettledFrames` 가 화면이 자리 잡기를 기다리는 벽시계 시한(초)입니다. Debug 빌드가 큰 씬을 읽고 셰이더를 처음 만드는 시간보다 넉넉하다. */
-            static constexpr float64 kSettleTimeoutSeconds = 120.0;
-
             /**
              * @brief 스크린샷 우편함 서비스입니다. 렌더러를 짓지 않는 호스트(전용 서버)와 서비스 범위가 서지 않은 곳에는 없어 nullptr 입니다.
              * @details 없으면 요청을 받을 곳이 없다 — 정적 창구는 요청을 오류로 알리고 버리며, 읽는 창구는 "아직 아무것도 처리하지 않았다" 로 답한다.
@@ -49,14 +44,13 @@ namespace sw
             /** @brief 사진 쓰기를 맡긴 쪽입니다. 끝 알림 · 로그가 다르다. */
             enum class ScreenshotWriteKind : uint8
             {
-                Packet,      ///< 패킷 사진(`<Screenshot>` · 사진 모드) — 처리 수 `reportPacketCaptureCompleted`
-                Requested,   ///< 실행 중 요청(개발 명령 · 편집기 버튼) — `reportCompleted`
-                CommandLine, ///< 시작 인자 `-gv_screenshot` — 마지막 장이 `reportCaptureFinished( GameView )`
+                Packet,    ///< 패킷 사진(`<Screenshot>` · 사진 모드) — 처리 수 `reportPacketCaptureCompleted`
+                Requested, ///< 실행 중 요청(개발 명령 · 편집기 버튼 · 시작 인자 사진) — `reportCompleted`
             };
 
             /**
              * @brief 사진 한 장의 파일 쓰기입니다. 렌더 스레드가 GPU 에서 읽어 만들고, 워커가 RGBA 로 풀어 쓴 뒤 우편함에 알린다.
-             * @details 셋이 같은 모양이다(`ScreenshotWriteKind`) — 렌더 스레드는 파일을 쓰지 않는다(언리얼 `FScreenshotRequest` 도 읽은 픽셀을 파일로 쓰는 일은 게임 쪽 비동기 작업이다).
+             * @details 둘이 같은 모양이다(`ScreenshotWriteKind`) — 렌더 스레드는 파일을 쓰지 않는다(언리얼 `FScreenshotRequest` 도 읽은 픽셀을 파일로 쓰는 일은 게임 쪽 비동기 작업이다).
              */
             struct ScreenshotFileWrite
             {
@@ -65,24 +59,9 @@ namespace sw
                 RHITextureMipSpan          _layout{}; ///< `_pData` 는 비운다 - 워커는 `_bytes` 로 읽는다
                 RHIFormat                  _format{ RHIFormat::R8G8B8A8_UNORM };
                 ScreenshotRequestQueue*    _pMailbox{ nullptr }; ///< 다 쓰면 알린다 - 엔진 종료는 모듈을 내리기 전에 엔진 태스크를 모두 기다린다
-                shared_ptr<atomic<uint32>> _pInFlight;           ///< 실행 중 요청: 쓰는 중인 수(0 이 될 때까지 다음 요청을 꺼내지 않는다). 시작 인자: 아직 끝나지 않은 장 수(0 이 되는 장이 끝을 알린다)
+                shared_ptr<atomic<uint32>> _pInFlight;           ///< 실행 중 요청: 쓰는 중인 수(0 이 될 때까지 다음 요청을 꺼내지 않는다)
                 ScreenshotWriteKind        _kind{ ScreenshotWriteKind::Requested };
             };
-
-            /** @brief 시작 인자 사진 한 장을 끝냈습니다(@p bWritten 이 false 면 쓰지 못했다 - 종료 코드 16). 마지막 장이면 종류의 끝을 알린다 — 장마다 다른 워커가 쓰므로 남은 수로 안다. */
-            static void finishCommandLineShot( const ScreenshotFileWrite& write, bool bWritten )
-            {
-                constexpr uint32 kGameViewBit = static_cast<uint32>( RenderThread::CaptureKind::GameView );
-                if ( bWritten == false )
-                {
-                    SW_LOG_ERROR_ID( "Screenshot.NotWritten", "Screenshot was not written: %#", write._path.c_str() ); // 요청한 촬영이 빠졌다 - 실패다
-                    if ( write._pMailbox != nullptr )
-                        write._pMailbox->reportCaptureFailed( kGameViewBit );
-                }
-                const bool bLastShot = write._pInFlight->fetch_sub( 1 ) == 1u;
-                if ( bLastShot && write._pMailbox != nullptr )
-                    write._pMailbox->reportCaptureFinished( kGameViewBit, true ); // 쓰지 못한 장은 위에서 실패로 적었다
-            }
 
             /** @brief 워커 잡 본문입니다. 풀어 쓰고(실패는 쓰는 쪽이 경로와 함께 Error 로 남긴다) 처리했음을 알린다 - 기다리는 쪽은 처리 수로 끝을 알고, 그때 파일은 다 써졌다. */
             static void runScreenshotFileWrite( const TaskArgs& args )
@@ -91,11 +70,6 @@ namespace sw
                 const ScreenshotFileWrite&            write  = *pWrite;
                 (void)FileUtil::ensureParentDirectoryExists( write._path ); // 실패하면 아래 쓰기가 경로와 함께 알린다
                 const bool bWritten = RenderTargetImageFile::writeImageFile( write._bytes, write._layout, write._format, write._path );
-                if ( write._kind == ScreenshotWriteKind::CommandLine )
-                {
-                    finishCommandLineShot( write, bWritten );
-                    return;
-                }
                 if ( write._kind == ScreenshotWriteKind::Packet )
                 {
                     if ( bWritten == false )
@@ -122,49 +96,6 @@ namespace sw
             }
         };
     } // namespace
-
-    /**
-     * @brief `-gv_screenshot=<파일경로>` 입니다. 화면에 나간 이미지(Present 결과)를 PPM 으로 한 장 덤프합니다(백엔드별 시각 검증용).
-     * @details Win32 PrintWindow 캡처는 DX11, GL, Vulkan 에서 빈 화면이 자주 나온다. 스왑체인이 GDI 로
-     *          합성되지 않기 때문이다. 그래서 GPU 에서 직접 읽는다(readbackTexture2DAndWait).
-     *          PPM 은 인코더가 필요 없어 의존성이 늘지 않는다. `-gv_profileFrames` 와 같이 쓰면 찍고 종료한다.
-     * @note 세 변수 모두 이 파일이 유일한 소비자라 여기서 정의한다. 다른 파일에서 `extern` 으로 가져다 쓰면 타입이 어긋나도 링커까지 가야 걸린다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_screenshot, "", "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
-
-    /** @brief `-gv_screenshotAttachment=<이름>` 입니다. 덤프할 트랜지언트 첨부 이름이며, 비면 Present 캡처(없으면 Present 가 읽는 첨부)를 저장합니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_screenshotAttachment, "", "Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과)" );
-
-    /**
-     * @brief `-gv_screenshotFrame=<N>` 입니다. 몇 번째 프레임에서 찍을지 정합니다(기본 10이고, 10보다 작으면 10으로 봅니다).
-     * @details 시간에 따라 움직이는 것(GPU 인스턴스 회전 등)을 검증하려면 **서로 다른 시각**의 장면이
-     *          필요하다. 주의: `-gv_profileFrames` 는 찍는 시각을 바꾸지 않는다. 같은 프레임 번호끼리 비교하면
-     *          "움직이지 않는다" 는 잘못된 결론이 나온다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotFrame, 10, "스크린샷을 찍을 프레임 번호 (기본 10)" );
-
-    /**
-     * @brief `-gv_screenshotSettledFrames=<N>` 입니다. 1 이상이면 `-gv_screenshotFrame` 대신, 화면이 자리 잡은 패킷부터 N 프레임을 이어 센 뒤 찍습니다.
-     * @details 자리 잡음은 활성 씬이 플레이를 시작했고 로딩 화면 · 화면 페이드 · 에셋 읽기가 끝난 것이다(`RenderFramePacket::_bReadyForCapture`).
-     *          로딩 화면의 최소 표시 시간과 페이드는 실제 시간이라, 프레임이 빠른 기계에서는 고정 프레임 번호가 로딩 화면을 찍는다(골든 이미지).
-     *          N 프레임을 다 세기 전에 자리 잡음이 풀리면(새 에셋이 디더로 나타나는 중) 처음부터 다시 센다. `kSettleTimeoutSeconds` 안에 다 세지 못하면 오류로 적고 찍지 않는다
-     *          (`-gv_screenshotQuit` 은 14 로 끝난다). 언리얼 자동화 스크린샷이 로드 · 스트리밍이 끝나기를 기다린 뒤 지연을 두고 찍는 것과 같다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotSettledFrames, 0, "1 이상이면 화면이 자리 잡은(로딩 화면 · 페이드 · 에셋 읽기 끝) 뒤 이 프레임 수만큼 지나 찍는다 (0=gv_screenshotFrame)" );
-
-    /**
-     * @brief `-gv_screenshotCount=<N>` 과 `-gv_screenshotInterval=<K>` 입니다. 첫 장(`-gv_screenshotFrame`)부터 K 프레임마다 N 장을 찍습니다(움직임과 튐 확인용).
-     * @details 두 장 이상이면 파일 이름의 확장자 앞에 `_000`, `_001` 등이 붙는다. 장마다 GPU 되읽기라 그 프레임은 느려진다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotCount, 1, "연속으로 찍을 스크린샷 수 (기본 1)" );
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotInterval, 1, "연속 스크린샷 사이 프레임 수 (기본 1)" );
-
-    /**
-     * @brief `-gv_screenshotQuit` 입니다. `-gv_screenshot` · `-gv_screenshotEditor` 로 요청한 사진을 모두 찍으면 앱이 스스로 끝납니다(종료 코드 0, 파일을 쓰지 못했으면 14).
-     * @details 기본은 끄기입니다. `-gv_profileFrames` 와 함께 쓰는 실행(사진을 찍으며 프로파일을 측정한다)이 사진 뒤에 일찍 끝나지 않게 하려는 것이고,
-     *          표준 입력의 quit 으로 끝내던 호출자도 그대로 돕니다. 사진 인자를 주지 않으면 끝낼 근거가 없어 아무 일도 하지 않습니다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_screenshotQuit, false, "요청한 스크린샷을 모두 찍으면 앱이 스스로 끝난다 (0, 파일을 쓰지 못했으면 14)" );
 
     // 커맨드 리스트를 프레임 끝에 모아 한 번에 제출할지(기본), 잘릴 때마다 바로 제출할지 정한다. 이 파일이 프레임마다 디바이스로 전달한다.
     // 두 모드 모두 기록 순서가 곧 실행 순서다. 즉시 모드도 [세그먼트][리스트] 순서를 지켜 제출하고
@@ -223,10 +154,6 @@ namespace sw
         , _stop{}
         , _bContextBound{ false }
         , _bLastImmediateSubmit{ SW_FALSE }
-        , _bScreenshotTaken{ SW_FALSE }
-        , _screenshotFrameCounter{ 0 }
-        , _screenshotShotCount{ 0 }
-        , _screenshotWaitStartMicroseconds{ 0 }
         , _budgetFrameCounter{ 0 }
         , _bScenarioCaptureEnabled{ false }
         , _presentInterval{ 1u }
@@ -239,7 +166,6 @@ namespace sw
         , _requestedScreenshotFormat{ RHIFormat::R8G8B8A8_UNORM }
         , _requestedScreenshotWaitFrames{ 0 }
         , _pRequestedScreenshotWritesInFlight{ make_shared<atomic<uint32>>( 0u ) }
-        , _pCommandLineShotsLeft{ make_shared<atomic<uint32>>( 0u ) }
         , _pPendingTargetRead{}
         , _arrRingBuffer{}
         , _head{ 0 }
@@ -610,13 +536,12 @@ namespace sw
         if ( packet._bValid == 0 )
             return false;
 
-        // 스크린샷 실행에서만 Present 결과를 텍스처로 받아 둔다. 전체 화면 복사가 한 번 더 들어간다.
-        // **프레임마다 맞춘다.** bind() 시점에는 커맨드라인이 아직 전역 변수에 반영되기 전일 수 있다.
+        // 사진을 찍을 때만(시나리오 실행 · Present 요청) Present 결과를 텍스처로 받아 둔다. 전체 화면 복사가 한 번 더 들어간다. 프레임마다 맞춘다.
         takeScreenshotRequest();
         if ( _pFrameRenderer != nullptr )
         {
             const bool bRequestedPresent = _requestedScreenshotPath.empty() == false && _requestedScreenshotTexture == 0;
-            _pFrameRenderer->getCapture().setPresentEnabled( gv_screenshot.empty() == false || _bScenarioCaptureEnabled.load( std::memory_order_acquire ) || bRequestedPresent );
+            _pFrameRenderer->getCapture().setPresentEnabled( _bScenarioCaptureEnabled.load( std::memory_order_acquire ) || bRequestedPresent );
         }
 
         // 렌더 스레드 전체다. `GT.Packet.submit` 이 크면 GT 가 여기를 기다린다는 뜻이다.
@@ -751,10 +676,8 @@ namespace sw
             }
         }
 
-        takeCommandLineScreenshotIfDue( packet );
-
         // 패킷이 실은 사진(`ScreenshotRequestQueue::putForNextPacket` — 자동화 `<Screenshot>` 등)이다. 이 패킷(그 게임 프레임)이 그린 이미지를 찍는다.
-        // gv_screenshot 의 대기 프레임 규칙은 적용하지 않는다(맡긴 쪽이 시점을 정했다).
+        // 대기 프레임 규칙은 적용하지 않는다(맡긴 쪽이 시점을 정했다).
         // 그 프레임의 화면은 지금만 있어 읽기는 여기서 하고, 파일 쓰기는 워커가 한다 - 기다리는 쪽(시나리오 `<Pass/>`)은 처리 수로 끝을 안다.
         // 예전에는 장마다 이 스레드(인라인 제출이면 게임 스레드)에서 써 다음 프레임이 그만큼 늦었다.
         if ( packet._screenshotPath.empty() == false )
@@ -834,95 +757,11 @@ namespace sw
         return false;
     }
 
-    bool RenderThread::needsCaptureReadiness()
-    {
-        return gv_screenshot.empty() == false && gv_screenshotSettledFrames > 0;
-    }
-
-    void RenderThread::takeCommandLineScreenshotIfDue( const RenderFramePacket& packet )
-    {
-        // -gv_screenshot=<path>: 한 장(또는 -gv_screenshotCount 장)을 찍는다.
-        //  - **endFrame 뒤여야 한다.** 그 전에는 커맨드 리스트가 기록만 되었고 아직 큐에 나가지 않아,
-        //    읽어 보면 클리어 색만 나온다.
-        //  - **몇 프레임 기다려야 한다.** 첫 프레임에는 GPUScene 업로드가 아직이라 그릴 게 없다.
-        const bool bScreenshotPending = gv_screenshot.empty() == false && _bScreenshotTaken == SW_FALSE && _pFrameRenderer != nullptr;
-        if ( bScreenshotPending )
-        {
-            // 최소 몇 프레임은 기다려야 한다. 첫 프레임에는 GPUScene 업로드가 아직이라 그릴 것이 없다.
-            // 그 위로는 -gv_screenshotFrame 이 정한다(시간에 따라 움직이는 장면을 비교할 때 필요하다). -gv_screenshotSettledFrames 면 자리 잡은 패킷부터 센다.
-            constexpr uint32 kScreenshotMinWarmupFrames = 10;
-            const bool       bCountFromSettled          = gv_screenshotSettledFrames > 0;
-            const uint32     targetFrame                = bCountFromSettled                                                         ? static_cast<uint32>( gv_screenshotSettledFrames )
-                                                        : ( gv_screenshotFrame > static_cast<int32>( kScreenshotMinWarmupFrames ) ) ? static_cast<uint32>( gv_screenshotFrame )
-                                                                                                                                    : kScreenshotMinWarmupFrames;
-            const uint32     shotCount                  = gv_screenshotCount > 1 ? static_cast<uint32>( gv_screenshotCount ) : 1u;
-            const uint32     interval                   = gv_screenshotInterval > 1 ? static_cast<uint32>( gv_screenshotInterval ) : 1u;
-            if ( _screenshotWaitStartMicroseconds == 0 )
-            {
-                _screenshotWaitStartMicroseconds = MonotonicClock::nowMicroseconds();
-                _pCommandLineShotsLeft->store( shotCount ); // 마지막 장을 다 쓴 워커가 끝을 알린다(`finishCommandLineShot`)
-                expectCapture( CaptureKind::GameView );     // 에디터 사진의 알림(첫 UI 프레임)과 어느 쪽이 먼저든, 첫 사진(10 프레임 뒤)보다 앞선다
-            }
-            // 첫 장 전에 자리 잡음이 풀리면 처음부터 다시 센다 — N 프레임 내내 자리 잡은 그림을 찍는다. 시한을 넘기면 찍지 않고 오류로 끝낸다.
-            const bool bWaitingForSettle = bCountFromSettled && _screenshotShotCount == 0u && _screenshotFrameCounter < targetFrame;
-            if ( bWaitingForSettle && packet._bReadyForCapture == SW_FALSE )
-            {
-                _screenshotFrameCounter     = 0;
-                const float64 waitedSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() - _screenshotWaitStartMicroseconds ) * 1.0e-6;
-                if ( waitedSeconds > RenderThreadInternal::kSettleTimeoutSeconds )
-                {
-                    SW_LOG_ERROR_ID( "RenderThread.ScreenshotNotTakenScreen", "Screenshot was not taken: the screen did not settle within %# s (loading screen, screen fade or asset loads never finished) - %#",
-                                     static_cast<uint32>( RenderThreadInternal::kSettleTimeoutSeconds ), gv_screenshot.c_str() );
-                    _bScreenshotTaken = SW_TRUE;
-                    reportCaptureFinished( CaptureKind::GameView, false ); // 한 장도 맡기지 않았다 - 쓰는 중인 장이 없다
-                }
-                return;
-            }
-            const uint32 frame    = ++_screenshotFrameCounter;
-            const bool   bShotDue = frame >= targetFrame && ( frame - targetFrame ) % interval == 0u;
-            if ( bShotDue )
-            {
-                // 연속 촬영이면 장 번호를 확장자 앞에 붙인다.
-                string path{ gv_screenshot };
-                if ( shotCount > 1u )
-                {
-                    StringBuilder<constant::buffer::kMax16> suffix;
-                    suffix.appendFormat( "_%03u", _screenshotShotCount );
-                    path = FileUtil::removeExtension( path ) + suffix.c_str() + FileUtil::getExtension( path );
-                }
-                ++_screenshotShotCount;
-                _bScreenshotTaken = _screenshotShotCount >= shotCount ? SW_TRUE : SW_FALSE;
-                // 중간 단계를 보고 싶다고 첨부 이름을 지정했으면 그 첨부를, 아니면 화면에 나간 이미지를 읽는다. 그 프레임의 그림은 지금만 있어 GPU 읽기는 여기서 하고,
-                // 풀기 · 인코딩 · 쓰기는 워커가 한다(실행 중 요청 · 패킷 사진과 같은 잡). 실패는 경로와 함께 알린다 — 읽기와 쓰기 실패 로그만으로는 어느 촬영이 빠졌는지 알 수 없다.
-                auto pWrite        = make_shared<RenderThreadInternal::ScreenshotFileWrite>();
-                pWrite->_path      = std::move( path );
-                pWrite->_pMailbox  = RenderThreadInternal::findMailbox();
-                pWrite->_pInFlight = _pCommandLineShotsLeft;
-                pWrite->_format    = constant::render::kBackBufferFormat;
-                pWrite->_kind      = RenderThreadInternal::ScreenshotWriteKind::CommandLine;
-                const string_view attachment{ gv_screenshotAttachment };
-                const bool        bRead = attachment.empty() == false ? _pFrameRenderer->getCapture().readbackTransient( attachment, pWrite->_bytes, pWrite->_layout, pWrite->_format )
-                                                                      : readPresentedBytes( pWrite->_path, pWrite->_bytes, pWrite->_layout );
-                pWrite->_layout._pData  = nullptr;
-                if ( bRead )
-                {
-                    engine::getSubsystem<TaskManager>()
-                        .emplaceTask( "CommandLineScreenshotWrite", SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderThreadInternal::runScreenshotFileWrite ), MakeTaskArgs( pWrite ) )
-                        .submit();
-                }
-                else
-                {
-                    RenderThreadInternal::finishCommandLineShot( *pWrite, false );
-                }
-            }
-        }
-    }
-
     bool RenderThread::readPresentedBytes( const string& path, vector<uint8>& outBytes, RHITextureMipSpan& outLayout )
     {
         if ( _pFrameRenderer->getCapture().readbackPresent( outBytes, outLayout ) )
             return true;
-        SW_LOG_ERROR_ID( "Screenshot.NoPresentCapture", "Screenshot '%#': this frame has no Present capture to read (name an attachment with -gv_screenshotAttachment)", path );
+        SW_LOG_ERROR_ID( "Screenshot.NoPresentCapture", "Screenshot '%#': this frame has no Present capture to read", path );
         return false;
     }
 
@@ -941,39 +780,6 @@ namespace sw
     {
         const ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
         return pMailbox != nullptr ? pMailbox->getCompletedSerial() : 0u; // 우편함이 없으면 처리한 요청이 없다
-    }
-
-    void RenderThread::expectCapture( CaptureKind kind )
-    {
-        ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
-        if ( pMailbox == nullptr )
-        {
-            SW_LOG_ERROR_ID( "RenderThread.CaptureAnnouncedButHost", "A capture was announced but this host has no screenshot mailbox (no renderer)" );
-            return;
-        }
-        pMailbox->expectCapture( static_cast<uint32>( kind ) );
-    }
-
-    void RenderThread::reportCaptureFinished( CaptureKind kind, bool bWritten )
-    {
-        ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
-        if ( pMailbox == nullptr )
-        {
-            SW_LOG_ERROR_ID( "RenderThread.CaptureFinishedButHost", "A capture finished but this host has no screenshot mailbox (no renderer)" );
-            return;
-        }
-        pMailbox->reportCaptureFinished( static_cast<uint32>( kind ), bWritten );
-    }
-
-    std::optional<ProcessExitCode> RenderThread::getCaptureExitCode()
-    {
-        if ( gv_screenshotQuit == false )
-            return std::nullopt;
-        const ScreenshotRequestQueue* const pMailbox = RenderThreadInternal::findMailbox();
-        bool                                bFailed  = false;
-        if ( pMailbox == nullptr || pMailbox->findAllCapturesFinished( bFailed ) == false )
-            return std::nullopt; // 우편함이 없으면 요청한 사진이 하나도 없다
-        return bFailed ? ProcessExitCode::CaptureWriteFailed : ProcessExitCode::Passed;
     }
 
     string RenderThread::getLastScreenshotPath()

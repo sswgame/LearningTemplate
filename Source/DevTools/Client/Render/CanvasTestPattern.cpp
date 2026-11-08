@@ -1,13 +1,40 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Canvas/CanvasTestPattern.h"
+#include "DevTools/Client/Render/CanvasTestPattern.h"
+
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/Canvas/CanvasOverlay.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Text/FontService.h"
 
 namespace sw
 {
+    /**
+     * @brief `-gv_canvasTestPattern=1`: 주 출력에 캔버스 테스트 그림(둥근 · 테두리 · 반투명 겹침 · 가위 · 둥근 자르기 · 그림자 · 글자)을 그립니다.
+     * @details 위젯(UI 단계)이 생기기 전에 Canvas 패스 · canvas.hlsl · 글리프 아틀라스를 네 백엔드에서 눈으로 보는 길이다(스크린샷에도 들어간다).
+     */
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_canvasTestPattern, false, "주 출력에 캔버스(화면 2D) 테스트 그림을 그린다 — 사각형 · 자르기 · 그림자 · 글자" );
+
+    namespace
+    {
+        struct CanvasTestPatternInternal
+        {
+            /** @brief 캔버스 겹치기: 켜져 있으면 테스트 그림을 칠한다. 내용 번호가 없어 늘 올린다. */
+            static void paintOverlay( const CanvasOverlayContext& context, CanvasOverlayTarget& target )
+            {
+                if ( gv_canvasTestPattern == false )
+                    return;
+                target.markContentChanged();
+                CanvasTestPattern::paint( target.acquire(), context._targetSize, context._pFontService, context._glyphFrameIndex );
+            }
+        };
+    } // namespace
+
+    // 디버그 드로우 겹치기 위(순서 1).
+    SW_CANVAS_OVERLAY( CanvasTestPattern, "CanvasTestPattern", 1, &CanvasTestPatternInternal::paintOverlay );
+
     void CanvasTestPattern::paint( CanvasDrawList& outCanvas, const float2& targetSize, FontService* pFontService, uint64 frameIndex )
     {
         outCanvas._targetSize = targetSize;

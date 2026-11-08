@@ -6,13 +6,10 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/UI/Screen/UIScreen.h"
-
-SW_EXTERN_TEST_GLOBAL_VARIABLE( bool, gv_uiOptionsMenu );
 
 namespace sw
 {

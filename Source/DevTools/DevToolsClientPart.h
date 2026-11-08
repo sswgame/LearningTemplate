@@ -10,6 +10,8 @@
 
 #include "DevTools/DevToolsAPI.h"
 
+#include "Engine/EngineFrameHooks.h"
+
 namespace sw
 {
     class IDevConsoleView;
@@ -31,8 +33,8 @@ namespace sw
         virtual void addStartupSubsystems( SubsystemScope& startup, const engine::StartupParts& parts ) = 0;
         /** @brief 씬 틱 뒤 · 런타임 UI 앞입니다(디버그 HUD). */
         virtual void onAfterSceneTick( InputMap* pShellMap ) = 0;
-        /** @brief 프레임 끝입니다(셰이더 재컴파일 · 강제 리로드 단축키). */
-        virtual void onFrameEnd() = 0;
+        /** @brief 프레임 끝입니다(셰이더 재컴파일 · 강제 리로드 단축키 · 시작 인자 사진). 프로세스를 끝낼 종료 코드(`-gv_screenshotQuit`)를 돌려줍니다. */
+        [[nodiscard]] virtual EngineFrameExit onFrameEnd() = 0;
         /** @brief 콘솔의 그리는 쪽(런타임 UI 오버레이)입니다. UI 가 없으면 nullptr 입니다. */
         [[nodiscard]] virtual unique_ptr<IDevConsoleView> createConsoleView() = 0;
 

@@ -3,7 +3,6 @@
  * @brief 스크린샷 요청의 우편함입니다 — 게임 스레드 · 개발 명령 · 에디터가 요청을 넣고 렌더 스레드가 꺼내 쓴 뒤 결과를 알립니다.
  * @details 엔진 범위의 서비스(선택 행)입니다. 렌더 스레드(`RenderThread`)의 정적 창구(`requestScreenshot` · `getCompletedScreenshotSerial` …)가 `engine::findSubsystem<ScreenshotRequestQueue>()`
  *          로 찾아 부릅니다. 우편함은 엔진 범위와 함께 서고 사라지므로 엔진을 다시 세우면 마지막 경로 · 장부가 비어 시작하고, 우편함이 없는 호스트(전용 서버)에서는 요청을 오류로 알리고 버립니다.
- *          `-gv_screenshotQuit` 의 장부(요청한 종류 · 끝낸 종류 · 쓰지 못한 종류)도 여기 둡니다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -34,7 +33,7 @@ namespace sw
 {
     /**
      * @class ScreenshotRequestQueue
-     * @brief 스크린샷 요청 한 칸과 처리 결과(마지막 경로 · 처리한 수)와 `-gv_screenshotQuit` 장부를 든 서비스입니다.
+     * @brief 스크린샷 요청 한 칸과 처리 결과(마지막 경로 · 처리한 수)를 든 서비스입니다.
      * @details 요청은 한 칸이라 앞 요청이 아직 남아 있으면 덮어씁니다. 모든 함수는 어느 스레드에서 불러도 됩니다.
      */
     class SW_API ScreenshotRequestQueue final : public ISubsystem
@@ -83,18 +82,6 @@ namespace sw
         /** @brief 처리한 패킷 사진 수입니다(이 우편함이 선 뒤 누적). */
         uint32 getCompletedPacketSerial() const { return _completedPacketSerial.load( std::memory_order_acquire ); }
 
-        /** @brief 이 종류(`RenderThread::CaptureKind` 비트)의 사진을 찍겠다고 알립니다. */
-        void expectCapture( uint32 kindBit ) { (void)_expectedCaptureMask.fetch_or( kindBit ); }
-        /** @brief 이 종류의 사진 요청을 모두 처리했음을 알립니다(@p bWritten 이 false 면 파일을 쓰지 못했다). 실패를 먼저 적는다 — 끝났다고 보인 순간 실패도 보여야 한다. */
-        void reportCaptureFinished( uint32 kindBit, bool bWritten );
-        /** @brief 이 종류의 사진 한 장을 쓰지 못했음을 적습니다(끝은 마지막 장이 `reportCaptureFinished` 로 알린다 — 장마다 다른 워커가 쓴다). */
-        void reportCaptureFailed( uint32 kindBit ) { (void)_failedCaptureMask.fetch_or( kindBit ); }
-        /**
-         * @brief 요청한 종류가 모두 끝났는지 봅니다. 요청한 종류가 하나도 없거나 아직 끝나지 않았으면 false 입니다.
-         * @param outBFailed 끝났을 때 쓰지 못한 종류가 하나라도 있으면 true 입니다.
-         */
-        [[nodiscard]] bool findAllCapturesFinished( bool& outBFailed ) const;
-
     private:
         mutable mutex                    _mutex;
         string _pendingPath              SW_GUARDED_BY( _mutex );
@@ -105,9 +92,6 @@ namespace sw
         atomic<uint32>                   _requestedSerial{ 0 }; ///< 받은 요청 수(꺼내기 전에 덮어쓴 요청은 세지 않는다 — 처리 수와 견준다)
         atomic<uint32>                   _completedSerial{ 0 };
         atomic<uint32>                   _completedPacketSerial{ 0 };
-        atomic<uint32>                   _expectedCaptureMask{ 0 };
-        atomic<uint32>                   _finishedCaptureMask{ 0 };
-        atomic<uint32>                   _failedCaptureMask{ 0 };
     };
 
     SW_SERVICE_SLOT( ScreenshotRequestQueue, Optional );

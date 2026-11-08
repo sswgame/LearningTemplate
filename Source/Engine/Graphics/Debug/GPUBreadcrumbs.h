@@ -9,7 +9,7 @@
  *          - **Vulkan** — `VK_NV_device_diagnostic_checkpoints`(`vkCmdSetCheckpointNV`). 확장이 없으면(AMD · 인텔 — `VK_AMD_buffer_marker` 는 이 엔진이 쓰지 않는다) 능력을 끈다.
  *          - **DX11 · OpenGL** — GPU 쪽 표지 수단이 없다(DX11 은 소실 뒤 읽을 수 있는 디바이스측 쓰기가 없고, GL 은 컨텍스트 소실 시 상태를 읽을 길이 없다). 능력을 끄고 CPU 가 마지막으로 기록한 패스만 보고한다.
  *
- *          켜는 스위치는 `-gv_gpuBreadcrumbs`(개발 빌드 기본 켬 — 표지 한 번이 패스당 GPU 쓰기 하나뿐이라 값싸다)이고 Shipping 은 등록되지 않아 늘 꺼진다.
+ *          켜는 스위치는 `-gv_gpuBreadcrumbs`(개발 구성 기본 켬 — 표지 한 번이 패스당 GPU 쓰기 하나뿐이라 값싸다)이고, 배포 구성은 기본 끔이며 실행 인자로 켠다(언리얼 `-gpucrashdebugging`).
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -41,7 +41,7 @@ namespace sw
         /// @brief 소실 때 한 번에 보고할 표지의 수입니다(Vulkan 은 파이프라인 단계마다 하나씩 돌려준다).
         static constexpr uint32 kMaxReported = 8;
 
-        /** @brief 이 실행이 브레드크럼을 쓰는지입니다 — 개발 빌드이고 `-gv_gpuBreadcrumbs` 가 켜졌을 때만 참입니다. Shipping 은 늘 거짓입니다. 백엔드가 DRED · 체크포인트를 켤 때도 이 값을 봅니다. */
+        /** @brief 이 실행이 브레드크럼을 쓰는지입니다(`-gv_gpuBreadcrumbs`, 배포 구성은 기본 끔). 백엔드가 DRED · 체크포인트를 켤 때도 이 값을 봅니다. */
         [[nodiscard]] static bool isEnabled();
 
         /**

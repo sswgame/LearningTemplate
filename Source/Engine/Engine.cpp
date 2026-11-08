@@ -24,7 +24,6 @@
 #include "Engine/Animation/Scene/VertexAnimationCooker.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
-#include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -557,17 +556,7 @@ namespace sw
         // 해상도 규칙과 사용자 배율(gv_uiScale)로 정한다.
         updateRuntimeUI( mainOutput, vpWidth, vpHeight );
         if ( _pRenderDriver != nullptr )
-        {
-            // 시작 인자 캡처(`-gv_screenshotSettledFrames`)가 기다리는 동안만 판정한다 — 첫 씬이 플레이를 시작하기 전(로딩 화면을 열기 전)은 자리 잡지 않았다. 판정이 자동화 층의 것이라 렌더러가 아니라 여기서 구한다.
-            bool bReadyForCapture = false;
-            if ( _pRenderDriver->needsCaptureReadiness() )
-            {
-                const Scene* const             pActiveScene = _pSceneManager != nullptr ? _pSceneManager->getActiveScene() : nullptr;
-                const GameObjectManager* const pManager     = pActiveScene != nullptr ? pActiveScene->getObjectManager() : nullptr;
-                bReadyForCapture                            = pManager != nullptr && pManager->hasBegunPlay() && AutomationCaptureUtil::isReadyForCapture( pManager );
-            }
-            _pRenderDriver->submitFrame( deltaTime, views, sceneViewCameraProvider, bReadyForCapture );
-        }
+            _pRenderDriver->submitFrame( deltaTime, views, sceneViewCameraProvider );
     }
 
     void Engine::endFrame()
@@ -592,10 +581,6 @@ namespace sw
             if ( observerExitCode.has_value() )
                 requestQuit( *observerExitCode );
         }
-        // `-gv_screenshotQuit`: 요청한 사진을 모두 찍었으면 그 결과(통과 또는 쓰기 실패)로 끝낸다. 관찰자(시나리오)의 코드가 먼저 요청됐으면 그것이 이긴다.
-        const std::optional<ProcessExitCode> captureExitCode = _pRenderDriver != nullptr ? _pRenderDriver->findCaptureExitCode() : std::nullopt;
-        if ( captureExitCode.has_value() )
-            requestQuit( *captureExitCode );
         if ( _pInputManager != nullptr )
             _pInputManager->endFrame();
         // 이번 프레임에 넣은 디버그 도형을 보이는 목록으로 확정하고, 씬이 흘린 시간만큼 지속 시간을 줄인다(일시정지면 그대로 남는다).

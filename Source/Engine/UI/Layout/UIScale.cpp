@@ -9,7 +9,7 @@
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
-SW_TEST_GLOBAL_VARIABLE( float32, gv_uiDebugSafeZone, 0.0f, "UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다" );
+SW_GLOBAL_VARIABLE( float32, gv_uiSafeZone, 0.0f, "UI 안전 영역 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다(TV 오버스캔 · 노치 흉내)" );
 
 namespace sw
 {
@@ -96,13 +96,13 @@ namespace sw
     }
 
     UIViewport UIScaleSettings::makeViewport( const UIScaleSettings& settings, const float2& physicalSize, float32 userScale, float32 contentScale, const float4& platformSafeInsets,
-                                              float32 debugSafeZoneRatio )
+                                              float32 safeZoneRatio )
     {
         float32 scale = settings.computeResolutionScale( physicalSize ) * ( userScale > 0.0f ? userScale : 1.0f );
         if ( settings._bApplyContentScale && contentScale > 0.0f )
             scale *= contentScale;
 
-        const float32 ratio = MathUtil::clamp( debugSafeZoneRatio, 0.0f, UIScaleInternal::kMaxSafeZoneRatio );
+        const float32 ratio = MathUtil::clamp( safeZoneRatio, 0.0f, UIScaleInternal::kMaxSafeZoneRatio );
         UIViewport    viewport{};
         viewport._physicalSize    = physicalSize;
         viewport._uiScale         = scale;

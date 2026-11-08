@@ -5,9 +5,11 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "DevTools/Client/Capture/StartupCaptureSubsystem.h"
 #include "DevTools/Client/Console/DevConsoleOverlay.h"
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
 #include "DevTools/Client/Diagnostics/CrashInjectionSubsystem.h"
+#include "DevTools/Client/Render/MeshLODForce.h"
 #include "DevTools/Client/Shader/LiveShaderSubsystem.h"
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
 #include "DevTools/DevToolsClientPart.h"
@@ -23,7 +25,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 개발 도구의 클라이언트 전용 부분입니다 — 셰이더 라이브 리로드(렌더러) · 디버그 HUD(런타임 UI) · 콘솔 오버레이(런타임 UI).
+         * @brief 개발 도구의 클라이언트 전용 부분입니다 — 셰이더 라이브 리로드(렌더러) · 시작 인자 사진(렌더러) · 디버그 HUD(런타임 UI) · 콘솔 오버레이(런타임 UI).
          * @details 상태가 없다 — 세운 것은 기동 범위가 든다. 전용 서버는 이 소스를 짓지 않는다(`IDevToolsClientPart`).
          */
         class DevToolsClient final : public IDevToolsClientPart
@@ -36,6 +38,7 @@ namespace sw
                 {
                     (void)startup.emplaceSubsystem<LiveShaderSubsystem>( *parts._pFrameRendererSubsystem, *parts._pRenderThread );
                     (void)startup.emplaceSubsystem<CrashInjectionSubsystem>(); // `-gv_crashTest` — 렌더러 뒤에 죽어 백엔드 이름까지 보고에 든다
+                    (void)startup.emplaceSubsystem<StartupCaptureSubsystem>(); // `-gv_screenshot` · `-gv_screenshotQuit` — 렌더 스레드의 실행 중 요청 창구로 찍는다
                 }
                 // 디버그 HUD 는 런타임 UI 위에 그린다 — UI 가 있는 실행만.
                 if ( parts._pUISystem != nullptr )
@@ -44,11 +47,12 @@ namespace sw
 
             void onAfterSceneTick( InputMap* pShellMap ) override
             {
+                MeshLODForce::apply(); // `-gv_meshLodForce` — 다음 프레임의 LOD 선택부터 든다
                 if ( DebugHUD* const pDebugHUD = engine::findSubsystem<DebugHUD>() )
                     pDebugHUD->update( pShellMap );
             }
 
-            void onFrameEnd() override
+            EngineFrameExit onFrameEnd() override
             {
 #if defined( SW_DEBUG )
                 {
@@ -65,6 +69,9 @@ namespace sw
                     }
                 }
 #endif
+                // 시작 인자 사진(`-gv_screenshot`)의 차례 · 결과와 `-gv_screenshotQuit` 의 종료 — 렌더러가 있는 실행만 섰다.
+                StartupCaptureSubsystem* const pStartupCapture = engine::findSubsystem<StartupCaptureSubsystem>();
+                return pStartupCapture != nullptr ? pStartupCapture->update() : kEngineFrameRunning;
             }
 
             unique_ptr<IDevConsoleView> createConsoleView() override

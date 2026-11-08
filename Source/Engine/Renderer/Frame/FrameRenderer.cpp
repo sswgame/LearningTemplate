@@ -970,9 +970,9 @@ namespace sw
     /**
      * @brief `-gv_shadowCascadeCulling=1`: 주 시점의 방향광 그림자를 캐스케이드마다 따로 컬링합니다(캐스케이드마다 컬링 슬롯 하나) — 같은 바이너리로 전/후를 비교합니다.
      * @details 0(기본)이면 모든 타일을 덮는 합친 상자 하나로 거른다. 캐스케이드가 둘 이상일 때만 뜻이 있다. 이득은 `perf-compare --cases shadowCascadeCulling` 이 정한다.
-     *          기동 때 정한다(슬롯 수가 바뀌면 컬링 버퍼를 다시 만든다).
+     *          기동 때 정한다(슬롯 수가 바뀌면 컬링 버퍼를 다시 만든다). 그림은 같고 비용만 다른 성능 설정이라 배포본에도 둔다(언리얼 `r.Shadow.*` cvar 와 같은 자리).
      */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_shadowCascadeCulling, false, "방향광 그림자를 캐스케이드마다 따로 컬링한다(0 이면 모든 타일을 덮는 상자 하나 — 전/후 비교용)" );
+    SW_GLOBAL_VARIABLE( bool, gv_shadowCascadeCulling, false, "방향광 그림자를 캐스케이드마다 따로 컬링한다(0 이면 모든 타일을 덮는 상자 하나 — 전/후 비교용)" );
 
     void FrameRenderer::prepareExtraViews( const vector<RenderViewRequest>& listRequest )
     {

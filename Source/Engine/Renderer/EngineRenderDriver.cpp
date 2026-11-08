@@ -119,16 +119,6 @@ namespace sw
             _pRenderThread->waitIdle( reason );
     }
 
-    bool EngineRenderDriver::needsCaptureReadiness() const
-    {
-        return RenderThread::needsCaptureReadiness();
-    }
-
-    std::optional<ProcessExitCode> EngineRenderDriver::findCaptureExitCode() const
-    {
-        return RenderThread::getCaptureExitCode();
-    }
-
     void EngineRenderDriver::setScenarioCaptureEnabled( const bool bEnabled )
     {
         if ( _pRenderThread != nullptr )
@@ -200,7 +190,7 @@ namespace sw
         _pRHI->getDevice().resize( width, height );
     }
 
-    void EngineRenderDriver::submitFrame( const float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, const bool bReadyForCapture )
+    void EngineRenderDriver::submitFrame( const float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider )
     {
         if ( _pRHI != nullptr && _pRHI->hasDevice() )
         {
@@ -228,10 +218,6 @@ namespace sw
             // 이 프레임을 찍어 달라고 맡긴 것(`ScreenshotRequestQueue::putForNextPacket`)은 다음에 그리는 이 패킷에 싣는다.
             if ( ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>() )
                 (void)pMailbox->takeForPacket( packet._screenshotPath );
-
-            // 시작 인자 캡처(`-gv_screenshotSettledFrames`)가 기다리는 동안만 판정한다(엔진 루프가 구해 넘긴다).
-            if ( RenderThread::needsCaptureReadiness() )
-                packet._bReadyForCapture = bReadyForCapture;
 
             _pPacketBuilder->populateScene( packet, views, sceneViewCameraProvider, pActiveScene, deltaTime, *_pRHI, _pFrameRenderer );
             // 미리보기 씬(에디터 툴 창)은 씬마다 자기 스냅샷 · 렌더 타깃으로 — 활성 씬과 섞이지 않는다.

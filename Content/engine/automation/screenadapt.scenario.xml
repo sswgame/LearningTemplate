@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  엔진 시나리오 — 화면 대응: 데스크톱 창을 휴대 기기처럼 세로 · 가로로 바꿔 UI 뷰포트가 따라오는지, 안전 영역 흉내(gv_uiDebugSafeZone)가 위 · 아래 여백으로 들어가는지,
+  엔진 시나리오 — 화면 대응: 데스크톱 창을 휴대 기기처럼 세로 · 가로로 바꿔 UI 뷰포트가 따라오는지, 안전 영역 흉내(gv_uiSafeZone)가 위 · 아래 여백으로 들어가는지,
   손가락 탭(Touch — 터치 장치 포인터 0)이 UI 로 가도 오류 없이 지나가는지 본다. 실제 노치 값은 Android 창(getSafeAreaInsets)이 대고, 에디터 UI 미리보기가 같은 견본(uiresolutions.xml)으로 보인다.
   세로 창 540x1170 은 배율 규칙(짧은 변 / 1080 = 0.5)에서 UI 1080x2340 이고, 안전 영역 0.05 는 위 · 아래 각 58.5 물리 픽셀 = 117 UI 단위다(UIScaleSettings::makeViewport).
   실행: App -scenario=engine/automation/screenadapt.scenario.xml -unattended
 -->
 <Scenario name="engine.screenadapt" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Variable name="gv_uiDebugSafeZone" value="0.05"/>
+	<Variable name="gv_uiSafeZone" value="0.05"/>
 	<ResizeWindow width="540" height="1170"/>
 	<Wait frames="5"/>
 	<Expect watch="UI.ViewportWidth" near="1080" tolerance="1"/>
@@ -22,7 +22,7 @@
 	<Wait frames="5"/>
 	<Expect watch="UI.ViewportWidth" near="2340" tolerance="1"/>
 	<Expect watch="UI.ViewportHeight" near="1080" tolerance="1"/>
-	<Variable name="gv_uiDebugSafeZone" value="0"/>
+	<Variable name="gv_uiSafeZone" value="0"/>
 	<Wait frames="2"/>
 	<Expect watch="UI.SafeInsetTop" equals="0"/>
 	<ExpectLog id="App.QuitRequested" count="0"/>

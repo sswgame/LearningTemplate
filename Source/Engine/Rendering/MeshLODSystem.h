@@ -32,7 +32,9 @@ namespace sw
         static const SceneServiceRegistration& getSceneServiceRegistration();
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "MeshLODSystem";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 고정 단계가 없음(화면 크기로 고른다)을 뜻하는 `setForcedLOD` 값입니다. */
+        static constexpr int32 kPickByScreenSize = -1;
+        const utf8*            getSubsystemName() const override { return kSubsystemName; }
 
         explicit MeshLODSystem( GameObjectManager& manager );
         ~MeshLODSystem() override                        = default;
@@ -51,7 +53,7 @@ namespace sw
         void clearPendingView();
         bool hasPendingView() const { return _bHasPendingView == SW_TRUE; }
         /**
-         * @brief 이번 프레임의 단계를 GPU 컬링이 아니라 CPU(`update`)가 골라야 하면 true 입니다 — 단계를 고정했거나(`setForcedLOD` · `gv_meshLodForce`), 대기 뷰(컷 준비)가 있거나, 뷰를 아직 받지 못했다.
+         * @brief 이번 프레임의 단계를 GPU 컬링이 아니라 CPU(`update`)가 골라야 하면 true 입니다 — 단계를 고정했거나(`setForcedLOD`), 대기 뷰(컷 준비)가 있거나, 뷰를 아직 받지 못했다.
          * @details GPU 인스턴스 LOD(`GPUSceneBuilder` 의 LOD 그룹)는 렌더가 그린 뷰의 화면 크기로만 고른다. 고정 단계 · 대기 뷰 · 뷰 없음은 그 뷰들이 모르는 입력이라 CPU 선택이 맡는다.
          */
         bool needsCPUSelection() const;
@@ -71,8 +73,8 @@ namespace sw
         /** @brief 컴포넌트의 경계 구를 모든 뷰(대기 뷰 포함)에서 본 가장 큰 화면 크기입니다. 어느 뷰에도 없으면 0 입니다(텍스처 밉 요청 우선순위도 이것을 쓴다). */
         float32 computeScreenSize( const MeshComponent& component ) const;
         /**
-         * @brief 이 씬의 모든 메시를 화면 크기와 상관없이 단계 @p lodIndex 로 그립니다(-1 이면 화면 크기로 고른다). 메시 미리보기 창이 단계를 고정해 비교한다.
-         * @details 전역 변수 `gv_meshLodForce` 가 켜져 있으면 그 값이 먼저다. 메시의 단계 수를 넘는 값은 가장 낮은 단계로 그려진다(`MeshComponent::setLODIndex`).
+         * @brief 이 씬의 모든 메시를 화면 크기와 상관없이 단계 @p lodIndex 로 그립니다(`kPickByScreenSize` 면 화면 크기로 고른다). 메시 미리보기 창 · 개발 도구(`-gv_meshLodForce`)가 단계를 고정해 비교한다.
+         * @details 메시의 단계 수를 넘는 값은 가장 낮은 단계로 그려진다(`MeshComponent::setLODIndex`).
          */
         void  setForcedLOD( int32 lodIndex ) { _forcedLOD = lodIndex; }
         int32 getForcedLOD() const { return _forcedLOD; }
@@ -102,7 +104,7 @@ namespace sw
         vector<LODView>    _listView;
         vector<uint32>     _listPickedLOD; ///< LOD 목록과 같은 순서로 이번 프레임에 고른 단계(재사용). 워커는 자기 칸에만 쓰고 적용은 게임 스레드가 차례로 한다
         LODView            _pendingView;
-        int32              _forcedLOD;           ///< 씬 단위로 고정한 단계(-1 = 화면 크기로 고른다)
+        int32              _forcedLOD;           ///< 씬 단위로 고정한 단계(`kPickByScreenSize` = 화면 크기로 고른다)
         uint8              _bViewsSet;           ///< 뷰를 한 번이라도 받았다(받지 않으면 고르지 않는다)
         uint8              _bHasPendingView;     ///< 대기 뷰가 있다
         uint8              _bGPUSelectionActive; ///< GPU 컬링이 단계를 고르는 중이다(`setGPUSelectionActive`)

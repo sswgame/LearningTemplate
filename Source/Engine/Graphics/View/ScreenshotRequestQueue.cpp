@@ -67,23 +67,6 @@ namespace sw
         const ScopedLock<mutex> lock{ _mutex };
         return _lastPath;
     }
-
-    void ScreenshotRequestQueue::reportCaptureFinished( uint32 kindBit, bool bWritten )
-    {
-        if ( bWritten == false )
-            (void)_failedCaptureMask.fetch_or( kindBit );
-        (void)_finishedCaptureMask.fetch_or( kindBit ); // 실패를 먼저 적는다 — 끝났다고 보인 순간 실패도 보여야 한다
-    }
-
-    bool ScreenshotRequestQueue::findAllCapturesFinished( bool& outBFailed ) const
-    {
-        const uint32 expected = _expectedCaptureMask.load();
-        const bool   bAllDone = expected != 0u && ( _finishedCaptureMask.load() & expected ) == expected;
-        if ( bAllDone == false )
-            return false;
-        outBFailed = _failedCaptureMask.load() != 0u;
-        return true;
-    }
 } // namespace sw
 
 namespace sw

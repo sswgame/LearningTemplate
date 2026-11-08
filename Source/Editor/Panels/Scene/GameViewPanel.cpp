@@ -5,6 +5,8 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
+#include "DevTools/Client/DebugDraw/DebugDrawCanvas.h"
+
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
@@ -23,7 +25,6 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
-#include "Engine/Graphics/Canvas/DebugDrawCanvas.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
