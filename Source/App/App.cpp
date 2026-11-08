@@ -125,6 +125,8 @@ namespace sw
         , _windowMessageSubscription{}
         , _pFramePacer{ nullptr }
         , _initializeStartMicro{ 0 }
+        , _mainLoopStartMicro{ 0 }
+        , _startupFrameCount{ 0 }
         , _bEnableEditor{ SW_FALSE }
         , _bQuitAfterInitialize{ SW_FALSE }
         , _bRenderPaused{ SW_FALSE }
@@ -479,6 +481,17 @@ namespace sw
                         _launch.getEngine().describeSubsystemInitTimings().c_str() );
     }
 
+    void App::logStartupFrame()
+    {
+        // 창이 뜬 뒤 첫 프레임들이 끝난 시각 — 첫 프레임이 씬 받기(등록 · 로드 뒤 처리)로 길면 그동안 창은 빈 채로 보인다. 렌더 스레드가 한 프레임 늦게 내므로 셋을 찍는다.
+        constexpr uint32 kStartupFramesLogged = 3;
+        if ( _startupFrameCount >= kStartupFramesLogged )
+            return;
+        ++_startupFrameCount;
+        SW_LOG_INFO_ID( "App.StartupFrameEndMs", "Startup frame %# ended %# ms after the window was shown", _startupFrameCount,
+                        ( MonotonicClock::nowMicroseconds() - _mainLoopStartMicro ) / constant::time::kMicrosecondsPerMillisecond );
+    }
+
     FramePacingInputs App::makeFramePacingInputs() const
     {
         const GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
@@ -545,6 +558,7 @@ namespace sw
         _backendSwitcher.applyIfPending();
 
         _launch.getEngine().endFrame();
+        logStartupFrame();
         // 배경이면 상한 주기까지, 최소화면 창 메시지가 올 때까지 잔다. 다른 상태는 바로 다음 프레임이다.
         framePacer.endFrame( *_pWindow );
         return true;
@@ -558,6 +572,7 @@ namespace sw
             return false;
 
         logMainLoopStart();
+        _mainLoopStartMicro = MonotonicClock::nowMicroseconds();
         _fixedTimestep.start();
 
         // 페이서는 주 창 서비스가 든다 — 창(`_pWindow`)을 그 서비스에서 받았으므로 여기서 없으면 결함이다.
