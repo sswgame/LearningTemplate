@@ -55,7 +55,7 @@ namespace sw
         };
     } // namespace
 
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_wildWestAutoPlay, 0, "WildWest: 기수를 가장 가까운 말에 태운다 (1=켜기)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_wildWestAutoPlay, 0, "WildWest: 기수를 가장 가까운 말에 태운다 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_wildWestAutoPlay, "WildWest", "The rider mounts the nearest horse" );
 
 } // namespace sw

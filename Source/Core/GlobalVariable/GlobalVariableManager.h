@@ -134,7 +134,7 @@ namespace sw
         string                                     _moduleName;
         uint32                                     _typeSize{ 4 };
         /**
-         * @brief 테스트용(`SW_TEST_GLOBAL_VARIABLE` · `SW_TEST_GLOBAL_VARIABLE_SHIPPED`)이면 true 입니다.
+         * @brief 테스트용(`SW_TEST_GLOBAL_VARIABLE`)이면 true 입니다.
          * @details 에디터 목록과 프리셋에서 빠집니다. 실행 인자(`-gv_*`)와 `findVariable` 은 그대로 됩니다.
          */
         bool _bTestOnly{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -384,21 +384,22 @@ namespace sw
 // `SW_GLOBAL_VARIABLE`              일반: 에디터 목록 · 프리셋 · 실행 인자 모두에 나온다. 런타임에 바꿔 볼 설정(`gv_viewMode` …).
 // `SW_TEST_GLOBAL_VARIABLE`         테스트용: 벤치 · 자동화 · 진단 스위치. 에디터 목록 · 프리셋에서 빠지고(`_bTestOnly`), **Shipping 에서는
 //                                   등록되지 않아** 기본값으로만 읽힌다(실행 인자로도 에디터로도 못 바꾼다).
-// `SW_TEST_GLOBAL_VARIABLE_SHIPPED` 테스트용인데 Shipping 에도 등록된다. 배포 실행 파일을 스크립트가 조종하는 스위치(`gv_profileFrames` ·
-//                                   `gv_screenshot*` · `gv_crashTest` …)만 이것으로 둔다.
 // `SW_EXTERN_GLOBAL_VARIABLE`       다른 TU 에서 참조한다. 종류와 상관없이 같다. 타입이 정의와 어긋나면 안 된다.
 //
 //     SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "…" );
 //     SW_GLOBAL_VARIABLE( RHIBackend, gv_rhiBackend, RHIBackend::DirectX12, "…" );   // enum — `#type` 이 리플렉션 enum 이름이다
 //     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshes, 0, "…" );
-//     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_profileFrames, 0, "…" );
 //     SW_EXTERN_GLOBAL_VARIABLE( int32, gv_viewMode );
 //
 // 타입은 `bool`, `int32`, `float32`, `sw::string`, enum 이다(`GlobalVariableTraits`). enum 은 리플렉션에 등록된 이름 그대로 적는다
 // (`#type` 이 그 문자열이 된다. `sw::RHIBackend` 처럼 한정하면 찾지 못한다). 기본값은 변수 초기화에만 쓰고, 등록자는 그 변수에서 읽는다.
 // 종류 · 모드를 고르는 설정은 숫자 코드(`int32` 0 · 1 · 2)로 두지 않고 enum 으로 둔다: 명령줄은 열거자 이름(`-gv_rhiBackend=Vulkan`)만 받고 숫자는 오류다.
-// Shipping 에서 빠진 테스트용 변수를 `const` 로 만들지 않는다: 같은 TU 에서 컴파일 시간 상수가 되면 그 값을 루프 상한으로 쓰는 벤치
-// 코드가 Shipping 에서만 `-Wtautological-unsigned-zero-compare` 경고를 낸다. 등록만 빼고 보통 변수로 둔다.
+// 테스트용 변수는 바꿀 길이 없는 구성에서 `const` 상수다 — 등록만 빼고 보통 변수로 두면 그 변수를 읽는 개발 분기(프로파일 · 디버그 보기 · 흉내 · 스트레스 장면)가
+// 배포 바이너리에 그대로 실려 나갔다(Release 와 Shipping 은 다른 구성이다 — 테스트 장치는 Shipping 에 없어야 한다). 상수면 컴파일러 · 링크 시간 최적화가 분기를 접어 지운다.
+// 테스트 장치(스크린샷 · 프로파일 프레임 · 자동 플레이 · 결정적 실행)는 Release(개발 구성)까지만 있다 — 배포 실행 파일을 스크립트가 조종하는 길을 두지 않는다
+// (예전 `SW_TEST_GLOBAL_VARIABLE_SHIPPED` 는 Shipping 에서도 등록됐다). 배포본에서도 바꿔야 하는 값은 테스트용이 아니라 일반 변수(`SW_GLOBAL_VARIABLE`)다.
+// 다른 TU 에서 읽는 테스트용 변수는 `SW_EXTERN_TEST_GLOBAL_VARIABLE` 로 참조한다 — 정의와 `const` 여부가 같아야 링크된다(일반 참조로 적으면 Shipping 링크가 멈춘다).
+// 상수가 된 변수에 값을 쓰는 코드는 Shipping 에서 컴파일 오류다 — 개발 분기에서만 쓰게 한다.
 //
 // 정의 매크로는 대상의 `SW_REGISTRAR_MODULE`(CMake 가 준다)을 등록자에 찍는다 — 정의가 없는 대상에서 쓰면 컴파일 오류다.
 // `name` 은 **선언자 이름**이면서 `#name`(문자열화)과 `sw_reg_##name`(토큰 붙이기)으로도 쓰이고, `type` 은 선언 타입이면서 `#type` 이다.
@@ -411,22 +412,21 @@ namespace sw
     type                                 name = ( defaultValue ); \
     static ::sw::GlobalVariableRegistrar sw_reg_##name( #name, name, #type, desc, SW_REGISTRAR_MODULE, false )
 
-/** @brief 테스트용 전역 변수인데 Shipping 에도 등록합니다: `( type, name, defaultValue, desc )`. */
-#define SW_TEST_GLOBAL_VARIABLE_SHIPPED( type, name, defaultValue, desc ) \
-    extern type                          name;                            \
-    type                                 name = ( defaultValue );         \
-    static ::sw::GlobalVariableRegistrar sw_reg_##name( #name, name, #type, desc, SW_REGISTRAR_MODULE, true )
-
-/** @brief 테스트용 전역 변수입니다. Shipping 에서는 등록하지 않고 기본값으로 초기화한 변수만 남깁니다: `( type, name, defaultValue, desc )`. */
+/** @brief 테스트용 전역 변수입니다. 개발 구성(Debug · Release)에서 등록되고, Shipping 에서는 상수입니다(등록도 없고 바꿀 길도 없다): `( type, name, defaultValue, desc )`. */
 #if defined( SW_SHIPPING )
     #define SW_TEST_GLOBAL_VARIABLE( type, name, defaultValue, desc ) \
-        extern type name;                                             \
-        type        name = ( defaultValue )
+        extern const type name;                                       \
+        const type        name = ( defaultValue )
+    #define SW_EXTERN_TEST_GLOBAL_VARIABLE( type, name ) extern const type name
 #else
-    #define SW_TEST_GLOBAL_VARIABLE( type, name, defaultValue, desc ) SW_TEST_GLOBAL_VARIABLE_SHIPPED( type, name, defaultValue, desc )
+    #define SW_TEST_GLOBAL_VARIABLE( type, name, defaultValue, desc ) \
+        extern type                          name;                    \
+        type                                 name = ( defaultValue ); \
+        static ::sw::GlobalVariableRegistrar sw_reg_##name( #name, name, #type, desc, SW_REGISTRAR_MODULE, true )
+    #define SW_EXTERN_TEST_GLOBAL_VARIABLE( type, name ) extern type name
 #endif
 
 // NOLINTEND(bugprone-macro-parentheses)
 
-/** @brief 다른 TU 에서 전역 변수를 참조합니다: `( type, name )`. 정의의 종류(일반 · 테스트용)와 상관없이 같습니다. */
+/** @brief 다른 TU 에서 일반 전역 변수(`SW_GLOBAL_VARIABLE`)를 참조합니다: `( type, name )`. 테스트용 변수는 `SW_EXTERN_TEST_GLOBAL_VARIABLE` 로 참조합니다. */
 #define SW_EXTERN_GLOBAL_VARIABLE( type, name ) extern type name

@@ -1,4 +1,4 @@
-// 정의 매크로(`SW_TEST_GLOBAL_VARIABLE` · `SW_TEST_GLOBAL_VARIABLE_SHIPPED` · `SW_GLOBAL_VARIABLE`)는 정적 등록자를 전역 리스트에 매달고, 엔진 기동이
+// 정의 매크로(`SW_TEST_GLOBAL_VARIABLE` · `SW_GLOBAL_VARIABLE`)는 정적 등록자를 전역 리스트에 매달고, 엔진 기동이
 // 그 리스트를 프로세스 매니저(`engine::getSubsystem<GlobalVariableManager>()`)에 등록한다. 매니저 자체의 동작은 `GlobalVariableTest` 가 지역 매니저로 본다(nogpu).
 // 이 파일의 변수는 Engine 이미지에 오르므로 테스트용 매크로로만 정의한다 — 일반 매크로로 두면 에디터 전역 변수 목록에 테스트 변수가 섞인다.
 // 일반 매크로의 "표시 없음" 은 엔진의 `gv_rhiBackend` 로 본다.
@@ -17,14 +17,14 @@ enum class TestGlobalVariableMode : uint8
 };
 
 SW_TEST_GLOBAL_VARIABLE( bool, gv_testMacroBool, true, "Unit Test Bool Global Variable" );
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_testMacroInt, 60, "Unit Test Int32 Global Variable" );
+SW_TEST_GLOBAL_VARIABLE( int32, gv_testMacroInt, 60, "Unit Test Int32 Global Variable" );
 SW_TEST_GLOBAL_VARIABLE( float32, gv_testMacroFloat, 45.0f, "Unit Test Float Global Variable" );
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_testMacroString, "InitialValue", "Unit Test String Global Variable" );
+SW_TEST_GLOBAL_VARIABLE( sw::string, gv_testMacroString, "InitialValue", "Unit Test String Global Variable" );
 SW_TEST_GLOBAL_VARIABLE( TestGlobalVariableMode, gv_testMacroEnum, TestGlobalVariableMode::Second, "Unit Test Enum Global Variable" );
 
 // 참조 매크로는 정의의 종류와 상관없이 같은 `extern` 이다.
-SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_testMacroString );
-SW_EXTERN_GLOBAL_VARIABLE( TestGlobalVariableMode, gv_testMacroEnum );
+SW_EXTERN_TEST_GLOBAL_VARIABLE( sw::string, gv_testMacroString );
+SW_EXTERN_TEST_GLOBAL_VARIABLE( TestGlobalVariableMode, gv_testMacroEnum );
 
 /**
  * @brief [GlobalVariableMacroTest] 정의 매크로로 만든 변수는 기동 때 프로세스 매니저에 등록되고, 테스트용 표시가 남는다

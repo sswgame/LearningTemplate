@@ -69,7 +69,7 @@ namespace sw
      * @brief `-gv_nileAutoPlay=1`: 디렉터의 자동 계획을 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도 켭니다). 입력 없이 도시가 커지는지 확인합니다.
      * @details 배포본으로도 돌릴 수 있게 남긴다: `App -gv_nileAutoPlay=1`. 달마다 `[Nile] month N pop P money M` 이 로그에 남는다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_nileAutoPlay, 0, "NileCity: 자동 계획으로 도시를 짓고 돌리기 (1=켜기)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_nileAutoPlay, 0, "NileCity: 자동 계획으로 도시를 짓고 돌리기 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_nileAutoPlay, "NileCity", "Build and run the city from the auto plan" );
 
     SW_AUTOMATION_GETTER_WATCH( nilePopulation, "Nile.Population", "Population of the city", NileGameModeComponent, &NileGameModeComponent::getPopulation );

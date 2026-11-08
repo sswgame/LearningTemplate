@@ -8,7 +8,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 
-SW_EXTERN_GLOBAL_VARIABLE( bool, gv_uiDemo );
+SW_EXTERN_TEST_GLOBAL_VARIABLE( bool, gv_uiDemo );
 
 namespace sw
 {

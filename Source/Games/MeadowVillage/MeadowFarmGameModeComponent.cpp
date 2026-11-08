@@ -33,7 +33,7 @@ namespace sw
         }
     } // namespace
 
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_meadowAutoPlay, 0, "MeadowVillage: 시계를 8 배로 흘려 날을 넘긴다 (1=켜기)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_meadowAutoPlay, 0, "MeadowVillage: 시계를 8 배로 흘려 날을 넘긴다 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_meadowAutoPlay, "MeadowVillage", "The village runs at 8x speed" );
 } // namespace sw
 

@@ -130,7 +130,7 @@ namespace sw
      *          PPM 은 인코더가 필요 없어 의존성이 늘지 않는다. `-gv_profileFrames` 와 같이 쓰면 찍고 종료한다.
      * @note 세 변수 모두 이 파일이 유일한 소비자라 여기서 정의한다. 다른 파일에서 `extern` 으로 가져다 쓰면 타입이 어긋나도 링커까지 가야 걸린다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::GlobalDiskPath, gv_screenshot, "", "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_screenshot, "", "화면에 나간 그림(Present 결과)을 PPM 으로 덤프할 경로 (비면 사용 안 함)" );
 
     /** @brief `-gv_screenshotAttachment=<이름>` 입니다. 덤프할 트랜지언트 첨부 이름이며, 비면 Present 캡처(없으면 Present 가 읽는 첨부)를 저장합니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_screenshotAttachment, "", "Present 결과 대신 덤프할 트랜지언트 이름 (비면 Present 결과)" );
@@ -150,7 +150,7 @@ namespace sw
      *          N 프레임을 다 세기 전에 자리 잡음이 풀리면(새 에셋이 디더로 나타나는 중) 처음부터 다시 센다. `kSettleTimeoutSeconds` 안에 다 세지 못하면 오류로 적고 찍지 않는다
      *          (`-gv_screenshotQuit` 은 14 로 끝난다). 언리얼 자동화 스크린샷이 로드 · 스트리밍이 끝나기를 기다린 뒤 지연을 두고 찍는 것과 같다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_screenshotSettledFrames, 0, "1 이상이면 화면이 자리 잡은(로딩 화면 · 페이드 · 에셋 읽기 끝) 뒤 이 프레임 수만큼 지나 찍는다 (0=gv_screenshotFrame)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_screenshotSettledFrames, 0, "1 이상이면 화면이 자리 잡은(로딩 화면 · 페이드 · 에셋 읽기 끝) 뒤 이 프레임 수만큼 지나 찍는다 (0=gv_screenshotFrame)" );
 
     /**
      * @brief `-gv_screenshotCount=<N>` 과 `-gv_screenshotInterval=<K>` 입니다. 첫 장(`-gv_screenshotFrame`)부터 K 프레임마다 N 장을 찍습니다(움직임과 튐 확인용).
@@ -164,7 +164,7 @@ namespace sw
      * @details 기본은 끄기입니다. `-gv_profileFrames` 와 함께 쓰는 실행(사진을 찍으며 프로파일을 측정한다)이 사진 뒤에 일찍 끝나지 않게 하려는 것이고,
      *          표준 입력의 quit 으로 끝내던 호출자도 그대로 돕니다. 사진 인자를 주지 않으면 끝낼 근거가 없어 아무 일도 하지 않습니다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_screenshotQuit, false, "요청한 스크린샷을 모두 찍으면 앱이 스스로 끝난다 (0, 파일을 쓰지 못했으면 14)" );
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_screenshotQuit, false, "요청한 스크린샷을 모두 찍으면 앱이 스스로 끝난다 (0, 파일을 쓰지 못했으면 14)" );
 
     // 커맨드 리스트를 프레임 끝에 모아 한 번에 제출할지(기본), 잘릴 때마다 바로 제출할지 정한다. 이 파일이 프레임마다 디바이스로 전달한다.
     // 두 모드 모두 기록 순서가 곧 실행 순서다. 즉시 모드도 [세그먼트][리스트] 순서를 지켜 제출하고

@@ -140,11 +140,13 @@ namespace sw
             return;
 
         (void)pProfiler->reportExceededBudgets();
+#if !defined( SW_SHIPPING ) // 한 번 남기고 되돌리는 요청 스위치 — Shipping 에서 테스트용 변수는 상수다(`SW_TEST_GLOBAL_VARIABLE`)
         if ( gv_memoryReport != 0 )
         {
             gv_memoryReport = 0; // 한 번만
             logMemoryReport( *pProfiler, "gv_memoryReport" );
         }
+#endif
         addFrameProfilerCounters( *pProfiler );
     }
 

@@ -19,15 +19,15 @@ namespace sw::editor
     class EditorPanelManager;
 
     /** @brief 감시 값 `Editor.VisualizerOn` 이 볼 뷰포트 시각화 id 입니다. */
-    SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorWatchVisualizer );
+    SW_EXTERN_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchVisualizer );
     /** @brief 감시 값 `Editor.PanelOpen` · `Editor.PanelDirty` 가 볼 패널 id 입니다. */
-    SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorWatchPanel );
+    SW_EXTERN_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchPanel );
     /** @brief 오브젝트 이름을 받는 감시 값(`Editor.HierarchyRowIcon` · `Editor.BillboardIcon` · `Editor.ObjectActive` …)이 볼 오브젝트 이름입니다. */
-    SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorWatchObject );
+    SW_EXTERN_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchObject );
     /** @brief 감시 값 `Editor.Overlay*` 가 볼 씬 뷰 오버레이 바 id 입니다(view · transform · display · tools). */
-    SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorWatchOverlay );
+    SW_EXTERN_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchOverlay );
     /** @brief 감시 값 `Editor.SelectedProperty` 계열이 볼 `<컴포넌트 타입>.<프로퍼티>` 입니다. */
-    SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_editorWatchProperty );
+    SW_EXTERN_TEST_GLOBAL_VARIABLE( sw::string, gv_editorWatchProperty );
 
     /**
      * @brief 프로브가 읽을 에디터 컨텍스트입니다. 프로브는 에디터가 도는 동안만 불리므로 없으면 버그입니다(필수 서비스).

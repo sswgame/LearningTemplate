@@ -12,7 +12,7 @@
 
 #include "Engine/UI/Screen/UIScreen.h"
 
-SW_EXTERN_GLOBAL_VARIABLE( bool, gv_uiOptionsMenu );
+SW_EXTERN_TEST_GLOBAL_VARIABLE( bool, gv_uiOptionsMenu );
 
 namespace sw
 {

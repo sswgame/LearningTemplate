@@ -458,6 +458,7 @@ namespace sw
         if ( _pUIDriver != nullptr )
             _pUIDriver->processFrameInput( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 정지 메뉴의 탐색 반복은 실제 시간
 
+#if !defined( SW_SHIPPING ) // 개발 기능이다 — Shipping 에서 테스트용 변수는 상수다(DevTools 로 옮길 대상)
         if ( gv_dumpReflection.empty() == false )
         {
             const TypeRegistry&   registry = engine::getSubsystem<TypeRegistry>();
@@ -474,6 +475,7 @@ namespace sw
             }
             gv_dumpReflection = string{}; // 한 번만
         }
+#endif
     }
 
     void Engine::updateFrameServices()

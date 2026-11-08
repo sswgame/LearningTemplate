@@ -12,9 +12,9 @@
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
-SW_EXTERN_GLOBAL_VARIABLE( int32, gv_stressTestUiWidgets );
-SW_EXTERN_GLOBAL_VARIABLE( int32, gv_stressTestUiChurn );
-SW_EXTERN_GLOBAL_VARIABLE( bool, gv_stressTestUiOpacityPulse );
+SW_EXTERN_TEST_GLOBAL_VARIABLE( int32, gv_stressTestUiWidgets );
+SW_EXTERN_TEST_GLOBAL_VARIABLE( int32, gv_stressTestUiChurn );
+SW_EXTERN_TEST_GLOBAL_VARIABLE( bool, gv_stressTestUiOpacityPulse );
 
 namespace sw
 {

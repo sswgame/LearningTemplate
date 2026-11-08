@@ -3,14 +3,18 @@
 """
 Scripts/dev/ShippingCheck.py
 
-배포 구성 확인 — 배포 프리셋 셋(클라이언트 · 전용 서버 · 자동화를 뺀 클라이언트)을 구성 · 빌드하고, 산출물을 잠깐 띄워 기동 · 종료를 본다.
+배포 구성 확인 — 배포 프리셋 둘(클라이언트 · 전용 서버)을 구성 · 빌드하고, 산출물을 잠깐 띄워 기동 · 종료를 본다.
+배포 구성에는 테스트 장치(자동화 실행기 · 테스트용 전역 변수)가 없다 — 그래서 실행 인자로 조종하지 않고 운영과 같은 길(창 닫기 · 종료 신호)로 끝낸다.
 통합 단계에서 한 번 돌린다(일상 개발 빌드는 Dev 프리셋이라 배포 구성의 컴파일 · 링크 · 쿠킹 결함이 여기서만 드러난다).
 
 | 프리셋 | 띄우는 것 | 통과 |
 | --- | --- | --- |
 | `Ninja-Shipping` | `App -unattended` 를 `kAppRunSeconds` 동안 돌린 뒤 창을 닫는다(WM_CLOSE) | 그동안 살아 있고 0 으로 끝난다 |
-| `Ninja-Shipping-Server` | `Server -gv_serverExitAfterTicks=<틱>` | 0 으로 끝난다 |
-| `Ninja-Shipping-NoAutomation` | `App -unattended -scenario=<아무 경로>` | 0 이 아닌 코드로 곧 끝나고, 로그에 자동화 없음 오류가 있다 |
+| `Ninja-Shipping` | `App -unattended -scenario=<아무 경로>` | 0 이 아닌 코드로 곧 끝나고, 로그에 자동화 없음 오류가 있다(배포 구성은 실행기를 짓지 않는다) |
+| `Ninja-Shipping-Server` | `Server` 를 `kServerRunSeconds` 동안 돌린 뒤 종료 신호(Windows Ctrl+Break · POSIX SIGTERM) | 그동안 살아 있고 0 으로 끝난다 |
+
+배포 실행 파일에 테스트용 전역 변수 이름(`SW_TEST_GLOBAL_VARIABLE` 의 `gv_…`)이 하나라도 남아 있으면 실패다 — 배포 구성에서 그 변수는 상수라
+등록(이름 글)도 읽는 분기도 접혀 사라져야 한다. 남았다면 상수 접기가 안 되는 자리(주소를 넘기는 곳 · 쓰는 곳)이니 그 자리를 배포 구성에서 뺀다.
 
 로그는 `build/<프리셋>/Testing/Logs/ShippingCheck.<이름>.log` 이다. 끝에 로그마다 [Error] · [Warning] 줄을 모아 찍는다 — 기대한 줄이 아닌 [Error] 가 있으면 실패다.
 
@@ -22,7 +26,9 @@ Scripts/dev/ShippingCheck.py
 from __future__ import annotations
 
 import argparse
+import os
 import re
+import signal
 import subprocess
 import sys
 import time
@@ -41,11 +47,13 @@ from common.RunProcess import runProcess  # noqa: E402
 kAppRunSeconds = 8.0
 #: 창을 닫은 뒤 · 서버 · 기동 오류 실행이 끝나기를 기다리는 시간(초).
 kExitTimeoutSeconds = 60.0
-#: 전용 서버가 스스로 끝날 틱 수.
-kServerExitTicks = 120
-#: 자동화를 뺀 구성이 `-scenario` 를 받았을 때 남기는 오류(`App::startAutomation` — 실행기의 자기 등록 `IAutomationRuntime` 이 없을 때).
+#: 배포 서버를 살려 두는 시간(초) — 기동 · 몇 틱이 지나기에 넉넉하다. 그 뒤 종료 신호를 보낸다.
+kServerRunSeconds = 6.0
+#: 배포 구성이 `-scenario` 를 받았을 때 남기는 오류(`App::startAutomation` — 실행기의 자기 등록 `IAutomationRuntime` 이 없을 때).
 kNoAutomationError = "need a build with SW_ENABLE_AUTOMATION=ON"
 kLogLinePattern = re.compile(r"\[(Error|Warning)\]")
+#: 테스트용 전역 변수 정의(`SW_TEST_GLOBAL_VARIABLE( 형, gv_이름, …)`) — 배포 실행 파일에 이 이름이 남으면 안 된다.
+kTestVariablePattern = re.compile(r"SW_TEST_GLOBAL_VARIABLE\(\s*[^,]+?,\s*(gv_\w+)")
 kExecutableSuffix = kHost.executableSuffix
 
 
@@ -113,21 +121,40 @@ def runApp(projectRoot: Path) -> SmokeResult:
     return SmokeResult("App", logPath, exitCode == 0, f"exit code {exitCode}")
 
 
+def sendShutdownSignal(process: subprocess.Popen) -> None:
+    """운영과 같은 종료 신호를 보낸다 — Windows 는 새 프로세스 그룹에 Ctrl+Break(콘솔 그룹 전체로 가지 않게), POSIX 는 SIGTERM."""
+    if isWindowsHost():
+        os.kill(process.pid, signal.CTRL_BREAK_EVENT)
+    else:
+        process.send_signal(signal.SIGTERM)
+
+
 def runServer(projectRoot: Path) -> SmokeResult:
-    """배포 서버를 정해진 틱만 돌린다."""
+    """배포 서버를 띄우고, 살아 있는지 본 뒤 종료 신호를 보내 정상 종료를 본다."""
     preset = "Ninja-Shipping-Server"
     logPath = makeLogPath(projectRoot, preset, "Server")
     executable = findBinDir(projectRoot, preset) / f"Server{kExecutableSuffix}"
     if executable.is_file() is False:
         return SmokeResult("Server", logPath, False, f"{executable} is missing")
-    result = runProcess([executable, AppArguments.variable("gv_serverExitAfterTicks", kServerExitTicks), AppArguments.option("log-file", logPath)], cwd=projectRoot,
-                        timeoutSeconds=kExitTimeoutSeconds)
-    return SmokeResult("Server", logPath, result.bSucceeded, f"exit code {result.returnCode}{' (timed out)' if result.bTimedOut else ''}")
+    creationFlags = subprocess.CREATE_NEW_PROCESS_GROUP if isWindowsHost() else 0
+    process = subprocess.Popen([str(executable), AppArguments.option("log-file", logPath)], cwd=projectRoot, creationflags=creationFlags)
+    try:
+        process.wait(timeout=kServerRunSeconds)
+        return SmokeResult("Server", logPath, False, f"exited early with {process.returncode}")
+    except subprocess.TimeoutExpired:
+        pass
+    sendShutdownSignal(process)
+    try:
+        exitCode = process.wait(timeout=kExitTimeoutSeconds)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        return SmokeResult("Server", logPath, False, f"did not exit within {kExitTimeoutSeconds}s after the shutdown signal")
+    return SmokeResult("Server", logPath, exitCode == 0, f"exit code {exitCode}")
 
 
 def runNoAutomationScenario(projectRoot: Path) -> SmokeResult:
-    """자동화를 뺀 배포 App 이 `-scenario` 를 기동 오류로 거절하는지 본다."""
-    preset = "Ninja-Shipping-NoAutomation"
+    """배포 App 이 `-scenario` 를 기동 오류로 거절하는지 본다 — 배포 구성은 자동화 실행기를 짓지 않는다."""
+    preset = "Ninja-Shipping"
     logPath = makeLogPath(projectRoot, preset, "Scenario")
     executable = findBinDir(projectRoot, preset) / f"App{kExecutableSuffix}"
     if executable.is_file() is False:
@@ -137,6 +164,30 @@ def runNoAutomationScenario(projectRoot: Path) -> SmokeResult:
     bLogged = logPath.is_file() and kNoAutomationError in logPath.read_text(encoding="utf-8", errors="replace")
     bPassed = result.bLaunched and not result.bTimedOut and result.returnCode != 0 and bLogged
     return SmokeResult("NoAutomation", logPath, bPassed, f"exit code {result.returnCode}, startup error logged: {bLogged}", [kNoAutomationError])
+
+
+def collectTestVariableNames(projectRoot: Path) -> list[str]:
+    """`Source/` 의 테스트용 전역 변수 이름(테스트 폴더 밖 — 테스트 폴더는 배포 구성이 짓지 않는다)."""
+    setName: set[str] = set()
+    for path in (projectRoot / "Source").rglob("*.cpp"):
+        if "Tests" in path.parts:
+            continue
+        setName.update(kTestVariablePattern.findall(path.read_text(encoding="utf-8", errors="replace")))
+    return sorted(setName)
+
+
+def checkNoTestVariables(projectRoot: Path) -> SmokeResult:
+    """배포 실행 파일(App · Server)에 테스트용 전역 변수 이름이 남지 않았는지 본다."""
+    listName = collectTestVariableNames(projectRoot)
+    listLeft: list[str] = []
+    for preset, stem in (("Ninja-Shipping", "App"), ("Ninja-Shipping-Server", "Server")):
+        executable = findBinDir(projectRoot, preset) / f"{stem}{kExecutableSuffix}"
+        if executable.is_file() is False:
+            return SmokeResult("NoTestVariables", executable, False, f"{executable} is missing")
+        data = executable.read_bytes()
+        listLeft += [f"{stem}:{name}" for name in listName if name.encode("ascii") in data]
+    reason = f"{len(listName)} test variable names checked" if not listLeft else f"left in the shipping binaries: {', '.join(listLeft[:20])}"
+    return SmokeResult("NoTestVariables", findBinDir(projectRoot, "Ninja-Shipping"), not listLeft, reason)
 
 
 def reportLogLines(result: SmokeResult) -> int:
@@ -164,9 +215,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     projectRoot = getProjectRoot()
 
-    listRun = ((runApp, "Ninja-Shipping"), (runServer, "Ninja-Shipping-Server"), (runNoAutomationScenario, "Ninja-Shipping-NoAutomation"))
+    listRun = ((runApp, "Ninja-Shipping"), (runServer, "Ninja-Shipping-Server"), (runNoAutomationScenario, "Ninja-Shipping"))
     if args.skip_build is False:
-        listFailedBuild = [preset for _, preset in listRun if buildPreset(projectRoot, preset) is False]
+        listFailedBuild = [preset for preset in dict.fromkeys(preset for _, preset in listRun) if buildPreset(projectRoot, preset) is False]
         if listFailedBuild:
             print(f"[shipping-check] FAILED build: {', '.join(listFailedBuild)}", flush=True)
             return ExitCode.Violation

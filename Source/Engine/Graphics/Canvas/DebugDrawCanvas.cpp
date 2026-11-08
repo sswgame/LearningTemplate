@@ -63,9 +63,11 @@ namespace sw
         return gv_debugDrawGameView;
     }
 
-    void DebugDrawCanvasUtil::setGameViewOverlayEnabled( bool bEnabled )
+    void DebugDrawCanvasUtil::setGameViewOverlayEnabled( [[maybe_unused]] bool bEnabled )
     {
+#if !defined( SW_SHIPPING ) // 개발 기능이다 — Shipping 에서 테스트용 변수는 상수다(DevTools 로 옮길 대상)
         gv_debugDrawGameView = bEnabled;
+#endif
     }
 
     bool DebugDrawCanvasUtil::projectSegment( const float4x4& viewProj, const float3& from, const float3& to, const float2& targetSize, float2& outFrom, float2& outTo )

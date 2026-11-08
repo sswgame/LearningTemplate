@@ -28,7 +28,7 @@
 namespace sw
 {
     /** @brief `-gv_finishAssetWorkEachFrame=1`: 에셋 도착을 프레임에 묶는다(`AssetManager::isFinishingAssetWorkEachFrame`). 시나리오 세션이 켠다. */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_finishAssetWorkEachFrame, false, "프레임 경계마다 걸린 에셋 로드 · IO · 업로드를 끝낸다(결정적 실행)" );
+    SW_TEST_GLOBAL_VARIABLE( bool, gv_finishAssetWorkEachFrame, false, "프레임 경계마다 걸린 에셋 로드 · IO · 업로드를 끝낸다(결정적 실행)" );
 
     namespace
     {

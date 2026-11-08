@@ -21,7 +21,7 @@
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( bool, gv_uiOptionsMenu, false, "옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 만든 탭 · 행(개발 확인 · 스크린샷)" );
+SW_TEST_GLOBAL_VARIABLE( bool, gv_uiOptionsMenu, false, "옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 만든 탭 · 행(개발 확인 · 스크린샷)" );
 
 namespace sw
 {
@@ -98,7 +98,9 @@ namespace sw
                 const UIScreenHandle screen = OptionsMenuScreen::open( uiSystem );
                 if ( screen == kInvalidUIScreenHandle )
                 {
+#if !defined( SW_SHIPPING )                   // 개발 스위치다 — Shipping 에서 테스트용 변수는 상수다(DevTools 로 옮길 대상)
                     gv_uiOptionsMenu = false; // 열 수 없다(설정 서비스 없음). 프레임마다 다시 시도하지 않는다
+#endif
                     return kInvalidUIScreenHandle;
                 }
                 uiSystem.setInputMode( UIInputMode::Navigation );

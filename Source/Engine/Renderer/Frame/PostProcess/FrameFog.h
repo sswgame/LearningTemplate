@@ -134,7 +134,7 @@ namespace sw
     };
 
     /** @brief 안개 패스의 진단 보기입니다(`FogDebugView`). 에디터의 볼륨 안개 창이 고른다. */
-    SW_EXTERN_GLOBAL_VARIABLE( FogDebugView, gv_fogDebugView );
+    SW_EXTERN_TEST_GLOBAL_VARIABLE( FogDebugView, gv_fogDebugView );
     /** @brief 진단 단면의 거리 조각 번호(0 .. `SW_FOG_VOLUME_DIM_Z` - 1)입니다. 큰 번호가 먼 조각이고 그 조각까지 누적한 값이다. */
-    SW_EXTERN_GLOBAL_VARIABLE( int32, gv_fogDebugSlice );
+    SW_EXTERN_TEST_GLOBAL_VARIABLE( int32, gv_fogDebugSlice );
 } // namespace sw

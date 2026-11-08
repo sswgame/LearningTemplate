@@ -99,15 +99,6 @@
       ]
     },
     {
-      "name": "Ninja-Shipping-NoAutomation",
-      "displayName": "Windows Ninja Shipping - No Automation (Clang-cl)",
-      "description": "자동화 런타임을 뺀 배포본(SW_ENABLE_AUTOMATION=OFF) — -scenario 가 기동 오류로 멈추는지 보는 구성(Scripts/dev/ShippingCheck.py)",
-      "inherits": "Ninja-Shipping",
-      "cacheVariables": {
-        "SW_ENABLE_AUTOMATION": "OFF"
-      }
-    },
-    {
       "name": "Ninja-Debug-NoAutomation",
       "displayName": "Windows Ninja Debug - No Automation (Clang-cl)",
       "description": "자동화 런타임을 뺀 개발 구성(SW_ENABLE_AUTOMATION=OFF) — 에디터 · 개발 도구는 있고 실행기(Automation/Runner)만 없다. 실행기 없이 지어지는지 보는 구성",
@@ -185,10 +176,6 @@
     {
       "name": "Ninja-Shipping",
       "configurePreset": "Ninja-Shipping"
-    },
-    {
-      "name": "Ninja-Shipping-NoAutomation",
-      "configurePreset": "Ninja-Shipping-NoAutomation"
     },
     {
       "name": "Ninja-Debug-NoAutomation",

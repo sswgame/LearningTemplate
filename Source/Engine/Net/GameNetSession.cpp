@@ -192,7 +192,7 @@ namespace sw
      * @brief 합성 대조가 어긋난 뒤 끊기 전에 기다리는 시간(초)입니다.
      * @details 복제되는 태그(서버가 켠 데이터 레이어)는 양쪽이 다른 프레임에 바뀌어 잠깐 어긋나는 것이 정상이다. 회선이 나쁜 게임은 늘린다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( float32, gv_netResourceDigestGraceSeconds, 5.0f, "합성 해시가 어긋난 클라이언트를 끊기 전에 기다리는 시간(초)" );
+    SW_GLOBAL_VARIABLE( float32, gv_netResourceDigestGraceSeconds, 5.0f, "합성 해시가 어긋난 클라이언트를 끊기 전에 기다리는 시간(초)" );
     /**
      * @brief `-gv_netListenPort=<포트>`: 게임 인스턴스가 이 UDP 포트를 열고 클라이언트를 받습니다(0=끄기). 전용 서버 · 리슨 호스트 모두.
      * @details 언리얼 `?listen` · `-port=` 의 자리. 리슨 호스트(App)는 이것으로만 연다. 전용 서버는 이것이 없으면 서버 설정(`ServerConfig::_gamePort`)을
@@ -204,7 +204,7 @@ namespace sw
      * @details 배포 클라이언트도 이것으로 서버에 붙으므로 Shipping 에도 등록한다(언리얼 실행 인자 URL 의 자리).
      * @note PowerShell 은 점이 든 인자를 쪼갠다 — 따옴표로 감쌀 것.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_netConnectAddress, "", "클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기)" );
+    SW_GLOBAL_VARIABLE( sw::string, gv_netConnectAddress, "", "클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기)" );
     /**
      * @brief `-gv_netLoopbackOnly=0`: `-gv_netListenPort` 로 연 서버의 UDP 소켓을 모든 인터페이스에 묶는다(기본 1 = 127.0.0.1 만).
      * @details 모든 인터페이스에 묶으면 Windows 방화벽이 실행 파일 경로마다 "허용" 창을 띄운다 — 워크트리 · 테스트 실행 파일이 많은 개발 환경에서는 매번 뜬다.

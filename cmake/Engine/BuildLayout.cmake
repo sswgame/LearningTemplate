@@ -66,9 +66,8 @@ endif()
 # 생성기 식이라 다중 구성 생성기에서도 그 구성의 이름이 된다.
 target_compile_definitions(sw_global_options INTERFACE "SW_BUILD_CONFIG_NAME=\"$<IF:$<BOOL:${SW_SHIPPING_BUILD}>,Shipping,$<CONFIG>>\"")
 
-# 자동화 런타임 유무(`SW_ENABLE_AUTOMATION`) — 실행기 자체는 Engine 이 `Automation/Runner/` 를 빼서 사라지고(찾는 쪽이 없음을 다룬다), 이 매크로는 기능 폴더에 흩어진
-# 자동화 등록(감시 값 · 단계 · 막는 조건 · 단계 되돌리기)만 끈다(`Engine/Automation/Watch/AutomationHooksEnabled.h`). 예전에는 내리지 않아 자동화를 뺀 배포본에도 등록 수백 개가 실려 나갔다 —
-# 테스트 장치가 배포 바이너리에 남는 역전이다. 개발 명령(`SW_DEV_COMMANDS_ENABLED`)과 같은 방식이다.
+# 자동화 런타임 유무(`SW_ENABLE_AUTOMATION`) — 실행기 자체는 Engine 이 `Automation/Runner/` 를 빼서 사라지고(찾는 쪽이 없음을 다룬다), 이 매크로는 실행기가 있는 개발 구성을 알린다.
+# Shipping 은 늘 끈다(`cmake/Config/BuildOptions.cmake`) — 기능 폴더의 자동화 등록은 `Engine/Automation/Watch/AutomationHooksEnabled.h` 가 `SW_SHIPPING` 으로 끈다.
 if(SW_ENABLE_AUTOMATION)
 	target_compile_definitions(sw_global_options INTERFACE SW_WITH_AUTOMATION)
 endif()

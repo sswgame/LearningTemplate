@@ -26,7 +26,7 @@ namespace sw
      * @brief `-gv_profileFrames=N`: 워밍업 뒤 N 프레임을 재고 보고한 다음 종료합니다.
      * @details 선언이 여기 있는 이유: 이 스위치를 해석하고 판정하는 코드가 모두 이 파일에 있습니다.
      */
-    SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_profileFrames, 0, "프레임 프로파일 측정 프레임 수 (0=사용 안 함)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_profileFrames, 0, "프레임 프로파일 측정 프레임 수 (0=사용 안 함)" );
     /**
      * @brief `-gv_profileSeconds=S`: 워밍업 뒤 S 초를 재고 보고한 다음 종료합니다. `-gv_profileFrames` 와 함께 주면 먼저 닿는 쪽이 끝냅니다.
      * @details 장시간 실행(soak)이 쓴다. 프레임 상한이 없으면 같은 프레임 수가 장면마다 몇 초인지 모른다.

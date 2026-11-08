@@ -65,14 +65,18 @@ namespace sw
 } // namespace sw
 
 /**
- * @brief 게임의 자동 플레이를 그 전역 변수 바로 아래에서 등록합니다(`SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_x, 0, … )` 다음 줄).
+ * @brief 게임의 자동 플레이를 그 전역 변수 바로 아래에서 등록합니다(`SW_TEST_GLOBAL_VARIABLE( int32, gv_x, 0, … )` 다음 줄).
  * @param gvName       켜짐을 든 int32 전역 변수
  * @param pGameName    게임 이름(리터럴)
  * @param pDescription 무엇을 자동으로 하는가(리터럴)
  */
-#define SW_GAME_AUTOPLAY( gvName, pGameName, pDescription )                                                            \
-    static const ::sw::GameAutoplayRegistration sw_gameAutoplay_##gvName{ pGameName, pDescription, #gvName, &gvName }; \
-    static const ::sw::GameAutoplayRegistrar    sw_gameAutoplayRegistrar_##gvName                                      \
-    {                                                                                                                  \
-        &sw_gameAutoplay_##gvName                                                                                      \
-    }
+#if defined( SW_SHIPPING ) // 자동 플레이는 개발 기능이다 — 켜는 변수가 Shipping 에서는 상수라(`SW_TEST_GLOBAL_VARIABLE`) 등록하지 않는다
+    #define SW_GAME_AUTOPLAY( gvName, pGameName, pDescription ) static_assert( true, "" )
+#else
+    #define SW_GAME_AUTOPLAY( gvName, pGameName, pDescription )                                                            \
+        static const ::sw::GameAutoplayRegistration sw_gameAutoplay_##gvName{ pGameName, pDescription, #gvName, &gvName }; \
+        static const ::sw::GameAutoplayRegistrar    sw_gameAutoplayRegistrar_##gvName                                      \
+        {                                                                                                                  \
+            &sw_gameAutoplay_##gvName                                                                                      \
+        }
+#endif

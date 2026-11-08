@@ -1739,7 +1739,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestRigView, 0, "리그 데모 카메라 (0 왼쪽 앞 · 1 정면 · 2 오른쪽 옆 · 3 오른쪽 뒤)" );
 
     /** @brief 벤치 공통 스위치 — 0 이면 시간 구동 변화를 멈춘다(StressTestScene.cpp 가 정의). */
-    SW_EXTERN_GLOBAL_VARIABLE( int32, gv_stressTestAnimate );
+    SW_EXTERN_TEST_GLOBAL_VARIABLE( int32, gv_stressTestAnimate );
 
     uint32 StressTestScene::getRigCharacterCount()
     {
