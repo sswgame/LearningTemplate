@@ -250,7 +250,8 @@ namespace sw
         friend class WebGPURHIResourceFactory;
 
     public:
-        WebGPURHIDevice();
+        /** @brief @p deviceGeneration 은 등록표가 붙인 이 장치의 세대입니다(전송 티켓에 싣는다). */
+        explicit WebGPURHIDevice( uint32 deviceGeneration );
         ~WebGPURHIDevice() override;
 
         [[nodiscard]] bool initializeInternal( const RHISwapChainDesc& desc ) override;

@@ -31,7 +31,7 @@
 
 namespace sw
 {
-    D3D12RHIDevice::D3D12RHIDevice()
+    D3D12RHIDevice::D3D12RHIDevice( uint32 deviceGeneration )
         : _device{ nullptr }
         , _memoryAdapter{ nullptr }
         , _commandQueue{ nullptr }
@@ -90,7 +90,7 @@ namespace sw
         , _cmdListEntryCreated{ 0 }
         , _fence{ nullptr }
         , _fenceValue{ 0 }
-        , _transferSerials{}
+        , _transferSerials{ deviceGeneration }
         , _transferFence{ nullptr }
         , _transferFenceValue{ 0 }
         , _transferSubmitMutex{}

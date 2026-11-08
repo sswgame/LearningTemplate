@@ -21,29 +21,29 @@
  */
 
 #if SW_WITH_DYNAMIC_MODULES
-    #define SW_IMPLEMENT_RHI_MODULE( DeviceClass, Backend )               \
-        extern "C" SW_MODULE_API uint32      getRHIModuleABIVersion();    \
-        extern "C" SW_MODULE_API const utf8* getRHIModuleABIStamp();      \
-        extern "C" SW_MODULE_API sw::IRHIDevice* createRHIDevice();       \
-        extern "C" SW_MODULE_API uint32          getRHIModuleABIVersion() \
-        {                                                                 \
-            return sw::kRHIModuleABIVersion;                              \
-        }                                                                 \
-        extern "C" SW_MODULE_API const utf8* getRHIModuleABIStamp()       \
-        {                                                                 \
-            return sw::kRHIModuleABIStamp;                                \
-        }                                                                 \
-        extern "C" SW_MODULE_API sw::IRHIDevice* createRHIDevice()        \
-        {                                                                 \
-            return sw::make_unique<DeviceClass>().release();              \
+    #define SW_IMPLEMENT_RHI_MODULE( DeviceClass, Backend )                                  \
+        extern "C" SW_MODULE_API uint32      getRHIModuleABIVersion();                       \
+        extern "C" SW_MODULE_API const utf8* getRHIModuleABIStamp();                         \
+        extern "C" SW_MODULE_API sw::IRHIDevice* createRHIDevice( uint32 deviceGeneration ); \
+        extern "C" SW_MODULE_API uint32          getRHIModuleABIVersion()                    \
+        {                                                                                    \
+            return sw::kRHIModuleABIVersion;                                                 \
+        }                                                                                    \
+        extern "C" SW_MODULE_API const utf8* getRHIModuleABIStamp()                          \
+        {                                                                                    \
+            return sw::kRHIModuleABIStamp;                                                   \
+        }                                                                                    \
+        extern "C" SW_MODULE_API sw::IRHIDevice* createRHIDevice( uint32 deviceGeneration )  \
+        {                                                                                    \
+            return sw::make_unique<DeviceClass>( deviceGeneration ).release();               \
         }
 #else
-    #define SW_IMPLEMENT_RHI_MODULE( DeviceClass, Backend )                       \
-        static const ::sw::RHIStaticBackendRegistrar sw_rhiStaticBackendRegistrar \
-        {                                                                         \
-            Backend, []() -> ::sw::IRHIDevice*                                    \
-            {                                                                     \
-                return ::sw::make_unique<DeviceClass>().release();                \
-            }                                                                     \
+    #define SW_IMPLEMENT_RHI_MODULE( DeviceClass, Backend )                          \
+        static const ::sw::RHIStaticBackendRegistrar sw_rhiStaticBackendRegistrar    \
+        {                                                                            \
+            Backend, []( uint32 deviceGeneration ) -> ::sw::IRHIDevice*              \
+            {                                                                        \
+                return ::sw::make_unique<DeviceClass>( deviceGeneration ).release(); \
+            }                                                                        \
         }
 #endif

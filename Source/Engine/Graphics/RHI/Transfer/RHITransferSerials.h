@@ -56,8 +56,8 @@ namespace sw
     class SW_API RHITransferSerials
     {
     public:
-        /** @brief 장치 세대를 새로 받습니다(`allocateRHIDeviceGeneration`). */
-        RHITransferSerials();
+        /** @brief @p deviceGeneration 은 이 장치의 세대입니다(`RHIBackendRegistry::createDevice` 가 붙인다, 0 이 아니다). */
+        explicit RHITransferSerials( uint32 deviceGeneration );
 
         RHITransferSerials( const RHITransferSerials& )            = delete;
         RHITransferSerials& operator=( const RHITransferSerials& ) = delete;

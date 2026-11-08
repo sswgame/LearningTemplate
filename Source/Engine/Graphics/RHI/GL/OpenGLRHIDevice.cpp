@@ -21,7 +21,7 @@
 
 namespace sw
 {
-    OpenGLRHIDevice::OpenGLRHIDevice()
+    OpenGLRHIDevice::OpenGLRHIDevice( uint32 deviceGeneration )
         : _pHDC{ nullptr }
         , _pHRC{ nullptr }
         , _width{ 1280 }
@@ -54,7 +54,7 @@ namespace sw
         , _arrFrameDoneSync{}
         , _frameSerial{ 0 }
         , _completedFrameSerial{ 0 }
-        , _transferSerials{}
+        , _transferSerials{ deviceGeneration }
         , _transferQueue{ _transferSerials }
         , _readbackTable{}
         , _stagingRing{}

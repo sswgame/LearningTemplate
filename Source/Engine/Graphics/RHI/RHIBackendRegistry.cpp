@@ -75,14 +75,17 @@ namespace sw
     }
 
     RHIBackendRegistry::RHIBackendRegistry()
+        : _listEntry{}
+        , _listLoadedModule{}
+        , _lastDeviceGeneration{ 0 }
     {
         // 정적으로 링크한 백엔드(배포)는 스스로 올랐다 — 동적 모듈 구성은 비어 있고 `createDevice` 가 필요할 때 모듈을 올린다.
         for ( const RHIStaticBackendRegistrar* pRegistrar = RHIStaticBackendRegistrar::getHead(); pRegistrar != nullptr; pRegistrar = pRegistrar->_pNext )
         {
             const RHIStaticBackendRegistrar::CreateFunction pCreate = pRegistrar->_pCreate;
-            registerBackend( pRegistrar->_backend, SW_DELEGATE_LAMBDA( RHIDeviceFactoryDelegate, [pCreate]() -> sw::unique_ptr<IRHIDevice>
+            registerBackend( pRegistrar->_backend, SW_DELEGATE_LAMBDA( RHIDeviceFactoryDelegate, [pCreate]( uint32 deviceGeneration ) -> sw::unique_ptr<IRHIDevice>
             {
-                return sw::unique_ptr<IRHIDevice>{ pCreate() };
+                return sw::unique_ptr<IRHIDevice>{ pCreate( deviceGeneration ) };
             } ),
                              RHIAvailability::query( pRegistrar->_backend ) );
         }
@@ -124,7 +127,7 @@ namespace sw
         return result;
     }
 
-    unique_ptr<IRHIDevice> RHIBackendRegistry::createDevice( RHIBackend backend ) const
+    unique_ptr<IRHIDevice> RHIBackendRegistry::createDevice( RHIBackend backend )
     {
 #if SW_WITH_DYNAMIC_MODULES
         // 못 올렸으면 바로 아래 조회가 등록되지 않은 백엔드로 보고 무엇이 있는지와 함께 알린다.
@@ -146,7 +149,9 @@ namespace sw
             SW_LOG_ERROR_ID( "RHIBackendRegistry.BackendNotAvailablePlatform", "Backend %# is not available on this platform", static_cast<int32>( backend ) );
             return nullptr;
         }
-        return pEntry->_factory();
+        ++_lastDeviceGeneration;
+        SW_ASSERT( _lastDeviceGeneration != 0 && "device generation wrapped" );
+        return pEntry->_factory( _lastDeviceGeneration );
     }
 
 #if SW_WITH_DYNAMIC_MODULES
@@ -180,9 +185,9 @@ namespace sw
             return false;
         }
 
-        RHIDeviceFactoryDelegate factory = SW_DELEGATE_LAMBDA( RHIDeviceFactoryDelegate, [pfnCreate]() -> sw::unique_ptr<IRHIDevice>
+        RHIDeviceFactoryDelegate factory = SW_DELEGATE_LAMBDA( RHIDeviceFactoryDelegate, [pfnCreate]( uint32 deviceGeneration ) -> sw::unique_ptr<IRHIDevice>
         {
-            return sw::unique_ptr<IRHIDevice>{ pfnCreate() };
+            return sw::unique_ptr<IRHIDevice>{ pfnCreate( deviceGeneration ) };
         } );
 
         registerBackend( backend, factory, RHIAvailability::query( backend ) );

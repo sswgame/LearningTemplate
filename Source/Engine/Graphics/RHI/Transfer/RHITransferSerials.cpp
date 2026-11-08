@@ -8,12 +8,13 @@
 
 namespace sw
 {
-    RHITransferSerials::RHITransferSerials()
+    RHITransferSerials::RHITransferSerials( uint32 deviceGeneration )
         : _lastIssued{ 0 }
         , _watermark{ 0 }
-        , _generation{ allocateRHIDeviceGeneration() }
+        , _generation{ deviceGeneration }
         , _bLost{ SW_FALSE }
     {
+        SW_ASSERT( deviceGeneration != 0 && "0 is 'no generation' - the registry numbers devices from 1" );
     }
 
     uint64 RHITransferSerials::issue()

@@ -162,7 +162,8 @@ namespace sw
         // 1) 수명: 디바이스, 큐, 스왑체인, 프레임
         // ------------------------------------------------------------------------------
         /** @brief 빈 D3D12 디바이스를 만듭니다. */
-        D3D12RHIDevice();
+        /** @brief @p deviceGeneration 은 등록표가 붙인 이 장치의 세대입니다(전송 티켓에 싣는다). */
+        explicit D3D12RHIDevice( uint32 deviceGeneration );
         /** @brief D3D12 자원과 펜스를 해제합니다. */
         virtual ~D3D12RHIDevice() override;
 

@@ -84,7 +84,7 @@ namespace sw
         };
     } // namespace
 
-    D3D11RHIDevice::D3D11RHIDevice()
+    D3D11RHIDevice::D3D11RHIDevice( uint32 deviceGeneration )
         : _device{ nullptr }
         , _memoryAdapter{ nullptr }
         , _immediateContext{}
@@ -117,7 +117,7 @@ namespace sw
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
         , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
-        , _transferSerials{}
+        , _transferSerials{ deviceGeneration }
         , _transferQueue{ _transferSerials }
         , _listFreeTransferQuery{}
         , _readbackTable{}

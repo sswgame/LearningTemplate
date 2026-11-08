@@ -683,13 +683,6 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 장치(백엔드 인스턴스) 하나에 붙이는 세대 번호를 새로 발급합니다. 0 이 아니고 호출마다 커집니다.
-     * @details 백엔드가 만들어질 때 한 번 받아 자기가 발급하는 모든 티켓에 싣는다(`RHITransferTicket::_deviceGeneration`). 백엔드를 바꾸면 새 장치의 세대가 달라서
-     *          옛 장치의 티켓이 새 장치에서 `Complete` 로 보이지 않는다. 어느 스레드에서나 부를 수 있다.
-     */
-    [[nodiscard]] SW_API uint32 allocateRHIDeviceGeneration();
-
-    /**
      * @struct RHITransferTicket
      * @brief 제출한 전송 하나를 가리키는 단조 증가 시리얼과, 그것을 발급한 장치의 세대입니다. 시리얼 0 은 무효입니다.
      * @details 정수 별칭이 아니라 구조체라서 `uint64` 를 티켓 자리에 실수로 넘기는 일은 컴파일에서 막힌다. 멤버가 공개라 값을 직접 짓는 코드까지 막지는 못한다 — 그 틈은
@@ -699,7 +692,7 @@ namespace sw
     struct RHITransferTicket
     {
         uint64 _serial{ 0 };           ///< 0 이면 무효
-        uint32 _deviceGeneration{ 0 }; ///< 발급한 장치의 세대(`allocateRHIDeviceGeneration`). 장치가 바뀐 뒤의 옛 티켓을 가려낸다.
+        uint32 _deviceGeneration{ 0 }; ///< 발급한 장치의 세대(`RHIBackendRegistry::createDevice` 가 붙인다). 장치가 바뀐 뒤의 옛 티켓을 가려낸다.
 
         /** @brief 제출이 받아들여져 발급된 티켓이면 true 입니다. */
         [[nodiscard]] constexpr bool isValid() const noexcept { return _serial != 0; }
@@ -725,7 +718,7 @@ namespace sw
 
         /**
          * @brief 받아들인 제출을 만듭니다. 시리얼 0 은 무효 티켓이라 받아들였다고 할 수 없다 — 백엔드가 0 을 넘기면 Debug 에서 단언이 걸린다.
-         * @param deviceGeneration 발급한 장치의 세대입니다(`allocateRHIDeviceGeneration` 이 준 값, 0 이 아니다).
+         * @param deviceGeneration 발급한 장치의 세대입니다(`RHIBackendRegistry::createDevice` 가 붙인 값, 0 이 아니다).
          */
         [[nodiscard]] static RHITransferSubmit accepted( uint64 serial, uint32 deviceGeneration ) noexcept
         {
