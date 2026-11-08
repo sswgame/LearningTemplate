@@ -219,6 +219,11 @@ namespace sw
         void executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor );
         /** @brief 일반 풀스크린 패스(테이블의 kGenericFullscreen)입니다. 선언한 입력을 모두 바인딩하고 선언한 첫 컬러 출력에 그립니다. 이 뷰에서 빠진 패스(`FrameViewResources::applyViewPassSelection`)는 기록하지 않습니다. */
         void executeGenericFullscreenPass( const PassExecuteInput& input );
+        /**
+         * @brief 일반 풀스크린 패스의 컴퓨트 구현(`_implementation="Compute"` — 블룸 다운샘플 · 피사계 심도)입니다. 원본 · 깊이를 bindless SRV 로, 출력을 RW 로 묶고 8x8 그룹으로 디스패치합니다.
+         * @details 효과의 값(블룸 문턱 · 렌즈 · 역뷰-투영 4 열)은 패스 상수에서 루트 상수로 옮긴다 — 컴퓨트 PSO 에는 PassCB 가 묶이지 않는다. 네이티브 bindless 에서만 부른다.
+         */
+        void executeComputeImplementation( const PassExecuteInput& input );
         /** @brief 파이프라인 컴퓨트 패스입니다. 첨부를 RW 텍스처로 묶고 출력 크기만큼 디스패치합니다(`compute_pass.hlsli` 의 루트 상수). */
         void executeComputePass( const PassExecuteInput& input );
         /** @brief ForwardOpaque · ForwardOnlyOpaque 입니다. 그림자 맵 입력을 바인딩하고 선언한 첫 컬러 출력에 그립니다. */

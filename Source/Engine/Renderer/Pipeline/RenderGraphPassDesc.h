@@ -164,6 +164,19 @@ namespace sw
     };
 
     /**
+     * @enum RenderPassExecutionMode
+     * @brief 일반 풀스크린 패스의 실행 방식입니다. 파이프라인 XML 의 `_implementation` 이 적는다(블룸 다운샘플 · 피사계 심도 — 표의 `kComputeImplementation`).
+     * @details Pixel 은 풀스크린 삼각형, Compute 는 같은 셰이더 파일의 `CSMain`(그룹 공유 타일)을 출력 크기로 디스패치한다. 어느 쪽이 나은지는 측정이 정하고 XML 한 줄로 바꾼다.
+     *          Compute 는 네이티브 bindless(DX12 · Vulkan)에서만 돌고, 에뮬 백엔드는 Pixel 이 돈다(능력이 정한 길).
+     */
+    ENUM()
+    enum class RenderPassExecutionMode : uint8
+    {
+        Pixel,   ///< 풀스크린 삼각형(기본)
+        Compute, ///< 컴퓨트 디스패치
+    };
+
+    /**
      * @brief 파이프라인 출력에 쓰는 예약어입니다. 디바이스가 주는 백버퍼를 가리킵니다.
      * @details `_attachments` 에 선언되지 않는 유일한 출력이라 검증에서 예외로 다룬다.
      */
@@ -426,5 +439,9 @@ namespace sw
          */
         PROPERTY()
         RHIQueueType _queue{ RHIQueueType::Graphics };
+
+        /** @brief 일반 풀스크린 패스의 실행 방식입니다(`RenderPassExecutionMode`). Compute 는 표가 컴퓨트 구현을 가진 종류만 받는다(검증). */
+        PROPERTY()
+        RenderPassExecutionMode _implementation{ RenderPassExecutionMode::Pixel };
     };
 } // namespace sw

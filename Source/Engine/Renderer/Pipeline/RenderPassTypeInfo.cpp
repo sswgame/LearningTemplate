@@ -132,7 +132,7 @@ namespace sw
                         info._pDefaultShader = &EngineDefaultAssets::_shaderPostBloom;
                         info._pPassDefine    = kPassBloomDownsampleDefine;
                         info._inputContract  = makeContract( { Role::SourceColor }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kComputeImplementation;
                         break;
                     }
                     case RenderPassType::Outline:
@@ -210,7 +210,8 @@ namespace sw
                         // 효과 패스다 — 렌즈가 핀홀(조리개 0) · 직교 · 후처리를 끈 뷰는 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDepthOfField;
                         info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource |
+                                      Flag::kComputeImplementation;
                         break;
                     }
                     case RenderPassType::HighlightOutline:
@@ -458,6 +459,9 @@ namespace sw
                         return false;
                     if ( row.hasFlag( Flag::kRequiresGPUCulling ) && row.hasFlag( Flag::kCompute ) == false )
                         return false;
+                    // 컴퓨트 구현은 일반 풀스크린 패스의 다른 실행이다 — 같은 입력 계약 · 같은 셰이더 파일을 쓴다.
+                    if ( row.hasFlag( Flag::kComputeImplementation ) && ( row.hasFlag( Flag::kGenericFullscreen ) == false || row._pDefaultShader == nullptr ) )
+                        return false;
                 }
                 return true;
             }
@@ -494,6 +498,15 @@ namespace sw
         // 셰이더 assert 변형 — 요구되지 않으면(Shipping 은 늘) define 도 PSO 변형도 없다.
         if ( info.hasFlag( RenderPassTraitFlag::kGPUAssertTarget ) && GPUAssertMonitor::isRequested() )
             selection._listDefine.push_back( kGPUAssertDefine );
+        return selection;
+    }
+
+    RenderPassShaderSelection selectRenderPassComputeShader( const RenderGraphPassDesc& passDesc, const EngineDefaultAssets& engineDefaultAssets )
+    {
+        RenderPassShaderSelection selection = selectRenderPassShader( passDesc._type, &passDesc, engineDefaultAssets );
+        const string              computeDefine{ kPassComputeImplementationDefine };
+        if ( VectorUtil::contains( selection._listDefine, computeDefine ) == false )
+            selection._listDefine.push_back( computeDefine );
         return selection;
     }
 

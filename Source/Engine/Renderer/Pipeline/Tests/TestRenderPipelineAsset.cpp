@@ -568,3 +568,33 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesDeclareFramePasses )
         }
     }
 }
+
+/**
+ * @brief [RenderPipelineAssetTest] 컴퓨트 구현 — 표가 가진 종류(블룸 다운샘플 · 피사계 심도)만 고를 수 있고, 셰이더는 같은 파일에 컴퓨트 define 을 더한 것이며, 없는 종류에 적으면 읽기 오류다
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, ComputeImplementationIsATableChoice )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassNoComputeImplementation" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::BloomDownsample ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::DepthOfField ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
+    SW_EXPECT_FALSE( getRenderPassTypeInfo( RenderPassType::Bloom ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
+
+    // 셰이더는 픽셀 구현과 같은 파일 · define 에 컴퓨트 define 하나를 더한다 — 쿠커와 런타임이 같은 함수를 부른다.
+    RenderGraphPassDesc downsample{};
+    downsample._type                        = RenderPassType::BloomDownsample;
+    downsample._implementation              = RenderPassExecutionMode::Compute;
+    const EngineDefaultAssets&      assets  = engine::getSubsystem<EngineDefaultAssets>();
+    const RenderPassShaderSelection pixel   = selectRenderPassShader( RenderPassType::BloomDownsample, &downsample, assets );
+    const RenderPassShaderSelection compute = selectRenderPassComputeShader( downsample, assets );
+    SW_EXPECT_EQUAL( pixel._shaderPath, compute._shaderPath );
+    SW_EXPECT_TRUE( VectorUtil::contains( compute._listDefine, string( kPassComputeImplementationDefine ) ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( compute._listDefine, string( kPassBloomDownsampleDefine ) ) );
+    SW_EXPECT_FALSE( VectorUtil::contains( pixel._listDefine, string( kPassComputeImplementationDefine ) ) );
+
+    // 컴퓨트 구현이 없는 종류에 적으면 실행이 읽지 않는 칸이다.
+    RenderPipelineAsset asset;
+    const string        opaqueCompute = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _implementation=\"Compute\" " ) + RenderPipelineTestUtil::kOpaqueState;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( opaqueCompute ) ) );
+}

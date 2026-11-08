@@ -314,6 +314,17 @@ namespace sw
         // 파이프라인 컴퓨트 패스는 셰이더가 패스마다 달라 표가 아니라 그래프를 돈다. 컴퓨트 능력이 없는 백엔드는 이 패스를 돌리지 못한다.
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
         {
+            // 일반 풀스크린 패스의 컴퓨트 구현 — 네이티브 bindless 에서만 만든다(에뮬 백엔드는 픽셀 구현이 돈다 — 그 PSO 는 위의 표 단계가 늘 만든다). 키는 패스 이름이다.
+            if ( pass._implementation == RenderPassExecutionMode::Compute && _pDevice->supportsNativeBindlessSampling() )
+            {
+                RenderPassShaderSelection computeShader = selectRenderPassComputeShader( pass, engineDefaultAssets );
+                ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
+                computeJob._shaderPath                  = std::move( computeShader._shaderPath );
+                computeJob._listDefine                  = std::move( computeShader._listDefine );
+                computeJob._pipelinePassName            = hashed_string( pass._name.c_str() );
+                computeJob._passType                    = pass._type;
+                continue;
+            }
             if ( pass._type != RenderPassType::Compute )
                 continue;
             RenderPassShaderSelection computeShader = selectRenderPassShader( RenderPassType::Compute, &pass, engineDefaultAssets );

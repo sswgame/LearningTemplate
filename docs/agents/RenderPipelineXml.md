@@ -114,6 +114,16 @@
 - 큐 사이 자원: 버퍼는 D3D12 에서 큐 경계마다 COMMON 으로 감쇠해 이전이 따로 없고, Vulkan 은 같은 패밀리라 소유권 이전이 없다. 텍스처는 생산자가 컴퓨트가 아는 상태로 넘겨 둔다(깊이 히스토리 → RW). 컴퓨트 큐 리스트의 배리어는 픽셀 셰이더 상태를 쓰지 않는다(`D3D12RHICommandContext::toQueueState`).
 - 후보: 가림 타일 · 입자 · 라이트 그리드 · 프로브(`framecomputerenderpass.xml`). 이득이 없으면 그 패스의 `_queue` 한 줄을 지운다.
 
+## 컴퓨트 구현(`_implementation`)
+
+| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
+|---|---|---|
+| `_implementation` | `Pixel`(기본, 풀스크린 삼각형) · `Compute`(같은 셰이더 파일의 `CSMain` — define `SW_PASS_COMPUTE`, 8x8 그룹 공유 타일) | 표에 컴퓨트 구현이 없는 종류(`kComputeImplementation` — 지금은 BloomDownsample · DepthOfField 만) |
+
+- 규칙: 컴퓨트 구현은 입력을 bindless SRV 번호로 읽어 네이티브 bindless(DX12 · Vulkan)에서만 돈다. DX11 · GL · WebGPU 는 픽셀 구현이 돈다(능력이 정한 길 — 쿠커는 두 구현을 다 굽는다).
+- 효과의 값(블룸 문턱 · 렌즈 · 역뷰-투영 4 열)은 루트 상수로 간다(`post_compute.hlsli`) — 컴퓨트 PSO 에는 PassCB 가 묶이지 않는다.
+- 어느 쪽을 낼지는 측정이 정한다. 바꾸는 법은 한 줄이다: `deferredpipeline.xml` 의 `BloomDownsample` 패스, `deferredpipeline.xml` · `forwardpipeline.xml` 의 `DepthOfField` 패스에 `_implementation="Compute"` 를 적는다(자식 파이프라인은 물려받는다).
+
 ## 선택 스테이지를 쓰는 셰이더
 
 - 소스는 패스 셰이더 한 파일이다. 머티리얼 변형은 머티리얼 셰이더의 정점 출력으로 만들어져 신호가 맞지 않아 머티리얼 셰이더 패스에는 쓸 수 없다.

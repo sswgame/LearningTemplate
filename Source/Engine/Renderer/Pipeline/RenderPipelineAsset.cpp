@@ -493,6 +493,13 @@ namespace sw
                                      sourcePath, pass._name, getEnumName( pass._type ) );
                     ++issueCount;
                 }
+                // 컴퓨트 구현은 표가 가진 종류만 고를 수 있다 — 없는 구현을 적으면 실행이 읽지 않는 칸이다.
+                if ( pass._implementation == RenderPassExecutionMode::Compute && getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) == false )
+                {
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassNoComputeImplementation", "[%#] pass '%#': type '%#' has no compute implementation - _implementation must be Pixel", sourcePath, pass._name,
+                                     getEnumName( pass._type ) );
+                    ++issueCount;
+                }
                 // 뷰 그래프는 뷰마다 다시 돌고 병렬로 기록한다 — 비동기 큐는 프레임 패스만 받는다(포크 · 조인을 뷰마다 되풀이할 자리가 없다).
                 if ( pass._queue != RHIQueueType::Graphics )
                 {

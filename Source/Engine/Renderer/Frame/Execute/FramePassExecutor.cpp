@@ -1178,6 +1178,12 @@ namespace sw
         // 후처리를 끈 뷰 · 품질로 꺼지는 효과(kSkipsWithoutPostProcess)도 모두 이 길이다 — 원본을 복사하거나 셰이더가 원본을 고르던 길은 지웠다.
         if ( activePool().isForwarded( *pTarget ) )
             return;
+        // 컴퓨트 구현(`_implementation="Compute"`)은 네이티브 bindless 에서만 돈다. 에뮬 백엔드는 아래 픽셀 구현이다 — 능력이 정한 길이고 PSO 도 그 백엔드에는 만들지 않는다.
+        if ( passDesc._implementation == RenderPassExecutionMode::Compute && _pDevice->supportsNativeBindlessSampling() )
+        {
+            executeComputeImplementation( input );
+            return;
+        }
         registerDeclaredInputs( context, passDesc );
         _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
 
@@ -1187,6 +1193,89 @@ namespace sw
         // 클리어 색은 타깃 첨부의 선언이다(SSAO 의 흰색 = 가림 없음도 AOColor 선언에 있다).
         const float4 targetClear = getTargetClearColor( *pTarget );
         executeFullscreenInto( context, pso, *pTarget, targetClear );
+    }
+
+    void FramePassExecutor::executeComputeImplementation( const PassExecuteInput& input )
+    {
+        // 셰이더의 SwRootConstants(post_bloom.hlsl · depth_of_field.hlsl 의 SW_PASS_COMPUTE 절)와 같은 배치 — 16 dword 안이다(`shaderslot::kRootConstantDwords`).
+        struct RootConstants
+        {
+            uint32  _outputIndex{ 0 };                       ///< 출력 RW 번호
+            uint32  _sourceIndex{ kInvalidDescriptorIndex }; ///< SourceColor 의 bindless 번호
+            uint32  _depthIndex{ kInvalidDescriptorIndex };  ///< SceneDepth 의 bindless 번호(읽지 않는 패스는 kInvalidIndex)
+            uint32  _width{ 0 };                             ///< 출력 크기
+            uint32  _height{ 0 };
+            float32 _arrSourceTexel[2]{ 0.0f, 0.0f };                    ///< 원본 텍셀 크기(1 / 원본 크기)
+            float32 _arrParam[3]{ 0.0f, 0.0f, 0.0f };                    ///< 블룸 g_BloomParams.xyz · 피사계 심도 g_CameraLens.xyz
+            float32 _arrInvViewProjColumn3[4]{ 0.0f, 0.0f, 0.0f, 0.0f }; ///< g_InvViewProj 의 4 열(뷰 깊이 복원 — 동차 w 만 쓴다)
+        };
+        static_assert( sizeof( RootConstants ) / sizeof( uint32 ) <= shaderslot::kRootConstantDwords, "compute implementation root constants exceed the root block" );
+
+        FramePassContext&                         context  = input._context;
+        const RenderGraphPassDesc&                passDesc = input._passDesc;
+        const hashed_string&                      target   = input._declaredColor[0]._attachment;
+        const RHIPipelineStateHandle              pso      = _psoManager.findPipelineComputePSO( hashed_string( passDesc._name.c_str() ) );
+        const TransientAttachmentPool::Attachment output   = activePool().find( target );
+        if ( pso == 0 || output._uav == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputeImplementationNotReady", "Pass '%#' compute implementation has no PSO or no RW output - it does not run", passDesc._name );
+            return;
+        }
+        RootConstants constants{};
+        constants._outputIndex = static_cast<uint32>( output._uav );
+        constants._width       = output._width;
+        constants._height      = output._height;
+        // 입력은 역할로 고른다(로드가 계약을 검사했다). 원본 · 깊이는 SRV 로 읽는다 — 깊이 형식은 RW 로 묶을 수 없다.
+        vector<RHITextureHandle> listInputTexture;
+        for ( const RenderGraphPassDesc::ResolvedAttachment& resolved : passDesc._listResolvedInput )
+        {
+            const TransientAttachmentPool::Attachment source = activePool().find( resolved._attachment );
+            const RenderPassInputRole                 role   = static_cast<RenderPassInputRole>( resolved._role );
+            if ( source._srv == kInvalidDescriptorIndex )
+                continue;
+            if ( role == RenderPassInputRole::SourceColor )
+            {
+                constants._sourceIndex       = static_cast<uint32>( source._srv );
+                constants._arrSourceTexel[0] = 1.0f / static_cast<float32>( MathUtil::max( source._width, 1u ) );
+                constants._arrSourceTexel[1] = 1.0f / static_cast<float32>( MathUtil::max( source._height, 1u ) );
+            }
+            else if ( role == RenderPassInputRole::SceneDepth )
+            {
+                constants._depthIndex = static_cast<uint32>( source._srv );
+            }
+            context._pCmd->prepareTextureForShaderRead( source._texture );
+            listInputTexture.push_back( source._texture );
+        }
+        // 패스 상수(시드가 이미 채운 값)에서 효과의 값을 옮긴다 — 컴퓨트 PSO 에는 PassCB 가 묶이지 않는다.
+        uint32       valueSize     = 0;
+        const bool   bDepthOfField = passDesc._type == RenderPassType::DepthOfField;
+        const uint8* pParam        = context._passValues.find( bDepthOfField ? passConstantNames()._cameraLens : passConstantNames()._bloomParams, valueSize );
+        if ( pParam != nullptr && valueSize >= sizeof( constants._arrParam ) )
+            Memory::copy( constants._arrParam, pParam, sizeof( constants._arrParam ) );
+        const uint8* pInvViewProj = context._passValues.find( passConstantNames()._invViewProj, valueSize );
+        if ( pInvViewProj != nullptr && valueSize == sizeof( float4x4 ) )
+        {
+            // 셰이더는 mul( 행벡터, M ) 이다 — 동차 w 는 M 의 4 열(_14, _24, _34, _44)과의 내적이다(C++ float4x4 는 행 우선 _ij 그대로 올라간다).
+            float4x4 invViewProj{};
+            Memory::copy( &invViewProj, pInvViewProj, sizeof( float4x4 ) );
+            constants._arrInvViewProjColumn3[0] = invViewProj._14;
+            constants._arrInvViewProjColumn3[1] = invViewProj._24;
+            constants._arrInvViewProjColumn3[2] = invViewProj._34;
+            constants._arrInvViewProjColumn3[3] = invViewProj._44;
+        }
+        if ( constants._sourceIndex == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputeImplementationNoSource", "Pass '%#' compute implementation has no SourceColor view - it does not run", passDesc._name );
+            return;
+        }
+        // 그룹은 8x8 출력 텍셀이다(셰이더의 SW_NUMTHREADS 와 같다 — 그룹 공유 타일의 크기).
+        constexpr uint32 kGroupSize = 8;
+        context._pCmd->prepareTextureForUnorderedAccess( output._texture );
+        context._pCmd->setComputePipelineState( pso );
+        context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( output._width, kGroupSize ), FrameRendererUtil::divideRoundUp( output._height, kGroupSize ), 1 );
+        context._pCmd->prepareTextureForShaderRead( output._texture );
+        (void)markAttachmentCleared( target );
     }
 
     void FramePassExecutor::executeComputePass( const PassExecuteInput& input )
