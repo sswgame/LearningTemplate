@@ -13,6 +13,8 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<WaitUntil watch="Nav.AgentCount" atLeast="1000" timeoutFrames="120"/>
 	<WaitUntil watch="EmptyNav.WanderArrivals" atLeast="1000" timeoutSeconds="12"/>
+	<!-- 질의는 에이전트마다 네 번째 목적지 변경에서야 나간다(probeInterval 4) — 도착 1000(에이전트당 약 1 번)에서 판정하면 질의가 거의 나가지 않았다. 판정하는 값을 기다린다. -->
+	<WaitUntil watch="EmptyNav.WanderProbeResults" atLeast="200" timeoutSeconds="12"/>
 	<Expect watch="EmptyNav.WanderProbeResults" atLeast="200"/>
 	<Expect watch="Nav.CompletedPathRequests" atLeast="200"/>
 	<Expect watch="EmptyNav.WanderCancelLeaks" equals="0"/>
