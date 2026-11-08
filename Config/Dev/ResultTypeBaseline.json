@@ -3,10 +3,6 @@
   "_files": {
     "Source/Editor/Common/Asset/Model/MeshFracture.cpp": {"out-error": 1},
     "Source/Editor/Common/Asset/Model/MeshFracture.h": {"out-error": 1},
-    "Source/Editor/Common/Asset/Model/ToonMaterialDef.cpp": {"out-error": 12},
-    "Source/Editor/Common/Asset/Model/ToonMaterialDef.h": {"out-error": 2},
-    "Source/Editor/Common/Asset/Model/VrmAvatarDef.cpp": {"out-error": 17},
-    "Source/Editor/Common/Asset/Model/VrmAvatarDef.h": {"out-error": 2},
     "Source/Editor/Common/Commands/Diagnostics/EditorModuleOverrides.cpp": {"out-error": 1},
     "Source/Editor/Common/Commands/Diagnostics/EditorModuleOverrides.h": {"out-error": 1},
     "Source/Editor/Common/Config/EditorThemeTokens.cpp": {"out-error": 4},

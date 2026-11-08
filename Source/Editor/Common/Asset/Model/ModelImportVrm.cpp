@@ -113,22 +113,14 @@ namespace sw::editor
 
         VrmGltfNames names;
         populateVrmGltfNames( data, names );
-        string error;
-        bool   bRead = false;
-        if ( vrm1.isObject() )
+        expected<VrmAvatarDef> avatar = vrm1.isObject() ? VrmAvatarDef::readVrm1Avatar( vrm1, extensions.get( "VRMC_springBone" ), names, &inoutResult._listIgnoredAvatarKey )
+                                                        : VrmAvatarDef::readVrm0Avatar( vrm0, names, &inoutResult._listIgnoredAvatarKey );
+        if ( avatar.has_value() == false )
         {
-            const JSONValue springBone = extensions.get( "VRMC_springBone" );
-            bRead                      = VrmAvatarDef::readVrm1Avatar( vrm1, springBone, names, inoutResult._avatar, &inoutResult._listIgnoredAvatarKey, error );
-        }
-        else
-        {
-            bRead = VrmAvatarDef::readVrm0Avatar( vrm0, names, inoutResult._avatar, &inoutResult._listIgnoredAvatarKey, error );
-        }
-        if ( bRead == false )
-        {
-            SW_LOG_ERROR_ID( "ModelImporter.VRM", "VRM '%#': %#", sourcePath, error.c_str() );
+            SW_LOG_ERROR_ID( "ModelImporter.VRM", "VRM '%#': %# (%#)", sourcePath, avatar.error().message(), avatar.error().detail() );
             return false;
         }
+        inoutResult._avatar = std::move( *avatar );
         return true;
     }
 

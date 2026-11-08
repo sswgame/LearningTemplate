@@ -132,6 +132,22 @@ namespace sw
             return *this;
         }
 
+        /**
+         * @brief 대상 앞에 @p text 를 붙입니다(바깥 함수가 어느 원소 · 파일인지를 더할 때 — 문장은 안쪽 리터럴 그대로). 용량을 넘으면 뒤쪽(원래 대상의 끝)을 버립니다.
+         * @details 언리얼은 바깥에서 `FText::Format` 으로 새 글을 짓는다(할당). 여기는 같은 고정 칸 안에서 옮긴다.
+         */
+        Error& prependDetail( std::string_view text ) noexcept
+        {
+            const size_t count = text.size() < kDetailCapacity ? text.size() : kDetailCapacity;
+            const size_t kept  = _detailSize + count <= kDetailCapacity ? _detailSize : kDetailCapacity - count;
+            if ( kept > 0 )
+                std::memmove( _arrDetail + count, _arrDetail, kept );
+            if ( count > 0 )
+                std::memcpy( _arrDetail, text.data(), count );
+            _detailSize = static_cast<uint8>( count + kept );
+            return *this;
+        }
+
         [[nodiscard]] ErrorKind        kind() const noexcept { return _kind; }
         [[nodiscard]] std::string_view message() const noexcept { return _pMessage; }
         [[nodiscard]] std::string_view detail() const noexcept { return std::string_view{ _arrDetail, _detailSize }; }

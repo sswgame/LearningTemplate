@@ -204,9 +204,9 @@ namespace sw
         expected<LoadBotScenario> scenario = loadFromXMLText( text );
         if ( scenario.has_value() )
             return scenario;
-        // 어느 파일인지를 앞에 붙인다 — 문장은 안쪽 오류의 리터럴 그대로다.
-        const Error& inner = scenario.error();
-        return unexpected( Error{ inner.kind(), inner.message().data(), path }.appendDetail( ": " ).appendDetail( inner.detail() ) );
+        Error error = scenario.error();
+        error.prependDetail( ": " ).prependDetail( path ); // 어느 파일인지 — 문장은 안쪽 리터럴 그대로다
+        return unexpected( error );
     }
 
     expected<LoadBotScenario> LoadBotScenario::loadFromXMLText( string_view jsonText )

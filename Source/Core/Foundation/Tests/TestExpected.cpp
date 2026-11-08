@@ -65,6 +65,24 @@ SW_TEST_CASE( ExpectedTest, ErrorDetailIsCopiedAndTruncated )
     SW_EXPECT_EQUAL( error.detail().size(), sw::Error::kDetailCapacity );
 }
 
+SW_TEST_CASE( ExpectedTest, ErrorPrependDetailKeepsTheFrontAndDropsTheTail )
+{
+    sw::Error error{ sw::ErrorKind::InvalidArgument, "not a number", "x" };
+    error.prependDetail( "material 3: " );
+    SW_EXPECT_TRUE( error.detail() == "material 3: x" );
+    SW_EXPECT_TRUE( error.message() == "not a number" ); // 문장은 안쪽 리터럴 그대로
+
+    sw::Error full{ sw::ErrorKind::NotFound, "missing", sw::string( sw::Error::kDetailCapacity, 'b' ) };
+    full.prependDetail( "ctx:" ); // 넘치면 원래 대상의 끝을 버린다
+    SW_EXPECT_EQUAL( full.detail().size(), sw::Error::kDetailCapacity );
+    SW_EXPECT_TRUE( full.detail().substr( 0, 4 ) == "ctx:" && full.detail().back() == 'b' );
+
+    sw::Error huge{ sw::ErrorKind::NotFound, "missing", "tail" };
+    huge.prependDetail( sw::string( sw::Error::kDetailCapacity + 5, 'c' ) ); // 앞 글이 칸보다 길면 앞 글만 남는다
+    SW_EXPECT_EQUAL( huge.detail().size(), sw::Error::kDetailCapacity );
+    SW_EXPECT_TRUE( huge.detail().back() == 'c' );
+}
+
 SW_TEST_CASE( ExpectedTest, OptionalAlias )
 {
     sw::optional<int32> empty;
