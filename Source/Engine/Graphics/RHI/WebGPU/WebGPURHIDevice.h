@@ -15,6 +15,7 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/deque.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
@@ -98,7 +99,7 @@ namespace sw
     struct WebGPUBindlessTable
     {
         vector<WebGPUBindlessEntry> _listEntry{};
-        vector<RHIDescriptorIndex>  _listFree{};
+        IndexFreeList               _freeEntry{};
 
         [[nodiscard]] RHIDescriptorIndex add( uint64 handle, bool bTexture );
         /** @brief 칸을 비웁니다. 이미 빈 칸(이중 해제 · 다른 공간의 번호)은 빈 목록에 다시 넣지 않는다 — 넣으면 한 번호가 두 자원에 나간다. */

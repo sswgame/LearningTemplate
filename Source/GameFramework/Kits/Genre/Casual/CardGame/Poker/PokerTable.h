@@ -5,8 +5,8 @@
  *          받은 쪽에서 `applyAction` 으로 같은 순서대로 적용하면 모두 같은 판이 된다(덱은 같은 시드로 섞는다).
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

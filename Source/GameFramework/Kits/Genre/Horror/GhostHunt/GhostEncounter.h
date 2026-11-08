@@ -6,8 +6,8 @@
  *          (높이를 무시하는 XZ 원뿔)을 쓴다. 흡입 중 도망 방향은 시드를 고정한 `GameRandom` 이 정하므로, 같은 시드와 같은 입력이면 같은 싸움이 된다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"

@@ -109,6 +109,7 @@ namespace sw
                     if ( PlatformFileUtil::replaceFile( tempPath.c_str(), filePath.c_str() ) )
                     {
                         FileUtil::recordFileCreated();
+                        PlatformFileUtil::recordFileWritten( filePath );
                         return true;
                     }
                     ThreadUtil::sleepForMilliseconds( 20 );
@@ -781,6 +782,7 @@ namespace sw
             return false;
         const size_t written = text.empty() ? 0 : std::fwrite( text.data(), 1, text.size(), pFile );
         const bool   bClosed = std::fclose( pFile ) == 0;
+        PlatformFileUtil::recordFileWritten( filePath ); // 끊긴 덧붙이기도 내용을 바꿨다
         if ( written != text.size() || bClosed == false )
             return false;
         recordFileCreated();
@@ -796,6 +798,10 @@ namespace sw
         }
         const bool bMoved = PlatformFileUtil::moveToRecycleBin( listPath );
         recordFileRemoved(); // 일부만 옮겼어도 옮긴 항목의 옛 경로는 낡았다
+        for ( const string& path : listPath )
+        {
+            PlatformFileUtil::recordFileWritten( path );
+        }
         return bMoved;
     }
 
@@ -1025,6 +1031,7 @@ namespace sw
             {
                 std::fclose( pFile );
                 recordFileCreated();
+                PlatformFileUtil::recordFileWritten( path );
                 return path;
             }
             if ( exists( path ) == false )
@@ -1124,6 +1131,7 @@ namespace sw
             SW_LOG_WARNING_ID( "FileUtil.CouldNotSetWrite", "Could not set the write time of '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
             return false;
         }
+        PlatformFileUtil::recordFileWritten( path ); // 내용은 그대로지만 도장이 바뀌었다 — 옛 시각으로 되돌리면 다른 내용의 옛 도장과 겹칠 수 있다
         return true;
     }
 
@@ -1151,7 +1159,8 @@ namespace sw
             SW_LOG_ERROR_ID( "FileUtil.CopyFileFailed", "copyFile '%#' -> '%#' failed: %#", source, destination, PlatformFileSystem::describeLastError().c_str() );
             return false;
         }
-        recordFileCreated(); // 복사는 대상 파일을 만든다(없는 파일을 기억한 캐시가 버린다)
+        recordFileCreated();                                // 복사는 대상 파일을 만든다(없는 파일을 기억한 캐시가 버린다)
+        PlatformFileUtil::recordFileWritten( destination ); // 복사는 원본의 쓰기 시각을 옮길 수 있다 — 도장만으로는 대상이 바뀐 것을 모른다
         return true;
     }
 
@@ -1162,7 +1171,10 @@ namespace sw
         if ( exists( path ) && isWriteAllowed( path ) == false ) // 없는 파일을 지우는 정리는 바꾸는 것이 아니다
             return false;
         if ( PlatformFileSystem::removeEntry( path ) )
+        {
             recordFileRemoved(); // 지웠다(있는 파일을 기억한 캐시가 버린다)
+            PlatformFileUtil::recordFileWritten( path );
+        }
         if ( exists( path ) == false )
             return true;
         SW_LOG_WARNING_ID( "FileUtil.CouldNotRemove", "Could not remove '%#': %#", path, PlatformFileSystem::describeLastError().c_str() );
@@ -1176,7 +1188,10 @@ namespace sw
         if ( exists( path ) && isWriteAllowed( path ) == false )
             return false;
         if ( PlatformFileSystem::removeEntry( path ) )
+        {
             recordFileRemoved();
+            PlatformFileUtil::recordFileWritten( path );
+        }
         return exists( path ) == false;
     }
 
@@ -1187,6 +1202,8 @@ namespace sw
         if ( PlatformFileUtil::replaceFile( string( from ).c_str(), string( to ).c_str() ) == false ) // 폴더는 대상이 없을 때 옮겨진다(MoveFileExW · rename)
             return false;
         recordFileRemoved(); // 옛 경로는 낡았다
+        PlatformFileUtil::recordFileWritten( from );
+        PlatformFileUtil::recordFileWritten( to ); // 이름 바꾸기는 쓰기 시각을 그대로 옮긴다 — 도장만으로는 대상이 바뀐 것을 모른다
         return true;
     }
 
@@ -1204,7 +1221,10 @@ namespace sw
             const bool   bRealDirectory = status._kind == PlatformFileSystem::FileKind::Directory && status._bLink == false;
             const size_t removedCount   = bRealDirectory ? FileUtilInternal::removeTree( directory ) : ( PlatformFileSystem::removeEntry( directory ) ? 1 : 0 );
             if ( removedCount > 0 )
+            {
                 recordFileRemoved(); // 일부만 지웠어도 지운 항목의 옛 경로는 낡았다
+                PlatformFileUtil::recordFileWritten( directory );
+            }
         }
         if ( isDirectory( path ) == false )
             return true;

@@ -8,10 +8,10 @@
  *          언리얼 Online Services 의 비동기 호출과 완료 델리게이트에 해당한다.
  */
 #pragma once
-#include "Core/Container/ConsumerGate.h"
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/ConsumerGate.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"

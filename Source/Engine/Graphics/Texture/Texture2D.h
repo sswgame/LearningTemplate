@@ -151,6 +151,12 @@ namespace sw
          */
         [[nodiscard]] bool createRenderTarget( IRHIDevice* pDevice, string_view name, uint32 width, uint32 height, RHIFormat format );
         /**
+         * @brief `createRenderTarget` 의 1단계입니다 — 렌더 타깃을 만들고 0 채우기를 제출합니다(`beginUploadFromImage` 와 같은 규칙). SRV 는 `finishUpload` 가 완료를 본 뒤에 등록한다.
+         * @details 0 채우기는 그려지기 전에 샘플링될 수 있는 타깃을 셰이더 읽기 상태로 둔다(Vulkan 은 UNDEFINED 레이아웃 샘플링이 검증 Error 다). 그 전송은 진행 중인 프레임 뒤에 실행되므로(전송 계약 3)
+         *          기다리면 앞 프레임의 GPU 일을 기다리는 셈이다 — 비동기 로드(`TextureLoadOperation`)는 기다리지 않고 이후 프레임의 펌프가 끝낸다.
+         */
+        [[nodiscard]] Texture2DUploadStep beginRenderTarget( IRHIDevice* pDevice, string_view name, uint32 width, uint32 height, RHIFormat format, bool bBlocking );
+        /**
          * @brief CPU 픽셀(RGBA8, 밉 하나)을 원본으로 둡니다(CPU 텍스처: 지형마다의 스플랫). GPU 자원은 만들지 않습니다(`loadFromCPUBytes`).
          * @details 원본은 이 객체가 보관해 디바이스가 바뀌어도 칠한 내용이 남습니다. 공개 전(게임 스레드, `TextureCache::createCPUTexture`)에만 부릅니다.
          */

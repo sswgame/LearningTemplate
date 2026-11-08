@@ -531,8 +531,9 @@ namespace sw
         [[nodiscard]] static bool startExitDeadline( AutomationRunner& runner, const AutomationStep& step, bool bClose )
         {
             string        error;
-            const float32 seconds            = bClose ? step.readValidatedFields<AutomationCloseWindowParams>()._withinSeconds : step.readValidatedFields<AutomationExpectExitWithinParams>()._seconds;
-            runner._run._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + static_cast<float64>( seconds );
+            const float32 seconds = bClose ? step.readValidatedFields<AutomationCloseWindowParams>()._withinSeconds : step.readValidatedFields<AutomationExpectExitWithinParams>()._seconds;
+            // 종료 시한도 멈춘 루프를 잡는 그물이다(통과는 창이 닫힌 사건) — 다른 벽시계 시한처럼 기계 배율로 늘린다.
+            runner._run._exitDeadlineSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 + AutomationRunner::scaleWallSeconds( seconds );
             if ( bClose == false )
                 return true;
             MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();

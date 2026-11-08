@@ -6,8 +6,8 @@
  *          전리품은 기반 `LootCatalog` 를 시드가 있는 `GameRandom` 으로 굴린다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"

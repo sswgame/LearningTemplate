@@ -14,23 +14,28 @@ using namespace sw;
  */
 SW_TEST_CASE( IndexFreeListTest, ReusesLastReleasedSlotFirst )
 {
-    vector<uint32> listFree;
-    uint32         popped{ 77u };
-    SW_EXPECT_FALSE( tryPopFreeListIndex( listFree, popped ) );
+    IndexFreeList freeList;
+    uint32        popped{ 77u };
+    SW_EXPECT_FALSE( freeList.tryPop( popped ) );
     SW_EXPECT_EQUAL( 77u, popped );
 
     deque<int32> listRegistered;
     listRegistered.push_back( 0 );
     listRegistered.push_back( 0 );
     listRegistered.push_back( 0 );
-    SW_EXPECT_EQUAL( 3u, reserveFreeListIndex( listRegistered, listFree ) );
+    SW_EXPECT_EQUAL( 3u, freeList.reserve( listRegistered ) );
 
-    listFree.push_back( 0u );
-    listFree.push_back( 2u );
-    SW_EXPECT_EQUAL( 2u, reserveFreeListIndex( listRegistered, listFree ) );
-    SW_EXPECT_TRUE( tryPopFreeListIndex( listFree, popped ) );
+    freeList.push( 0u );
+    freeList.push( 2u );
+    SW_EXPECT_EQUAL( 2u, freeList.reserve( listRegistered ) );
+    SW_EXPECT_TRUE( freeList.tryPop( popped ) );
     SW_EXPECT_EQUAL( 0u, popped );
-    SW_EXPECT_TRUE( listFree.empty() );
+    SW_EXPECT_TRUE( freeList.empty() );
+
+    // 저장본 되돌리기: 스택 순서(끝이 다음에 나간다)가 그대로다.
+    freeList.restore( vector<uint32>{ 5u, 1u } );
+    SW_EXPECT_EQUAL( size_t( 2 ), freeList.getIndices().size() );
+    SW_EXPECT_EQUAL( 1u, freeList.reserve( listRegistered ) );
 }
 
 /**
@@ -41,29 +46,29 @@ SW_TEST_CASE( IndexFreeListTest, ReusesLastReleasedSlotFirst )
 SW_TEST_CASE( IndexFreeListTest, DoubleReleaseIsRejected )
 {
     vector<uint32> listRegistered;
-    vector<uint32> listFree;
+    IndexFreeList  freeList;
 
-    const uint32 indexA = allocateFreeListIndex( listRegistered, listFree, 100u );
-    const uint32 indexB = allocateFreeListIndex( listRegistered, listFree, 200u );
+    const uint32 indexA = freeList.allocate( listRegistered, 100u );
+    const uint32 indexB = freeList.allocate( listRegistered, 200u );
     SW_REQUIRE_TRUE( indexA != indexB );
 
-    SW_EXPECT_EQUAL( 100u, releaseFreeListIndex( listRegistered, listFree, indexA, 0u ) );
-    SW_REQUIRE_EQUAL( size_t( 1 ), listFree.size() );
+    SW_EXPECT_EQUAL( 100u, freeList.release( listRegistered, indexA, 0u ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), freeList.size() );
 
     {
         test::ScopedAssertCapture assertCapture;
-        SW_EXPECT_EQUAL( 0u, releaseFreeListIndex( listRegistered, listFree, indexA, 0u ) );
+        SW_EXPECT_EQUAL( 0u, freeList.release( listRegistered, indexA, 0u ) );
         if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
             SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
     }
-    SW_EXPECT_TRUE_MSG( listFree.size() == 1, "double release pushed the same index twice" );
+    SW_EXPECT_TRUE_MSG( freeList.size() == 1, "double release pushed the same index twice" );
 
-    const uint32 reused = allocateFreeListIndex( listRegistered, listFree, 300u );
-    const uint32 fresh  = allocateFreeListIndex( listRegistered, listFree, 400u );
+    const uint32 reused = freeList.allocate( listRegistered, 300u );
+    const uint32 fresh  = freeList.allocate( listRegistered, 400u );
     SW_EXPECT_EQUAL( indexA, reused );
     SW_EXPECT_TRUE_MSG( fresh != reused, "the same index was issued twice" );
     SW_EXPECT_TRUE( fresh != indexB );
 
     // 범위 밖은 조용히 무시한다(단언도 없다).
-    SW_EXPECT_EQUAL( 0u, releaseFreeListIndex( listRegistered, listFree, 9999u, 0u ) );
+    SW_EXPECT_EQUAL( 0u, freeList.release( listRegistered, 9999u, 0u ) );
 }

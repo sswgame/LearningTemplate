@@ -11,7 +11,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
-#include "Core/Time/MonotonicClock.h"
+#include "Core/Testing/TestWait.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSlotEnvelope.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSlotStorage.h"
@@ -19,9 +19,7 @@
 #include "GameFramework/Runtime/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
 
 #include <algorithm>
-#include <chrono>
 #include <cstring>
-#include <thread>
 
 namespace sw::test
 {
@@ -67,16 +65,11 @@ namespace sw::test
         /** @brief 요청 id 의 완료를 기다립니다(10 초 상한). 받았으면 true. */
         static bool waitCompletion( ILocalStore& store, uint64 requestID, LocalStoreCompletion& outCompletion )
         {
-            const Deadline               deadline = Deadline::afterMilliseconds( 10000 );
             vector<LocalStoreCompletion> listCompletion;
-            while ( deadline.isExpired() == false )
+            return waitUntil( [&]()
             {
                 listCompletion.clear();
-                if ( store.pollCompletions( listCompletion ) == 0 )
-                {
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-                    continue;
-                }
+                (void)store.pollCompletions( listCompletion );
                 for ( LocalStoreCompletion& completion : listCompletion )
                 {
                     if ( completion._requestID != requestID )
@@ -84,8 +77,8 @@ namespace sw::test
                     outCompletion = std::move( completion );
                     return true;
                 }
-            }
-            return false;
+                return false;
+            } );
         }
 
         static LocalStoreResult write( ILocalStore& store, const utf8* pSlot, const vector<uint8>& bytes, const LocalStoreWriteOptions& options = LocalStoreWriteOptions{} )
@@ -257,12 +250,11 @@ namespace sw::test
                 listRequestID.push_back( index % 2 == 0 ? store.submitWrite( "order", vector<uint8>{ value }, LocalStoreWriteOptions{} ) : store.submitRead( "order" ) );
             }
             vector<LocalStoreCompletion> listCompletion;
-            const Deadline               deadline = Deadline::afterMilliseconds( 10000 );
-            while ( listCompletion.size() < listRequestID.size() && deadline.isExpired() == false )
+            (void)waitUntil( [&]()
             {
-                if ( store.pollCompletions( listCompletion ) == 0 )
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-            }
+                (void)store.pollCompletions( listCompletion );
+                return listCompletion.size() >= listRequestID.size();
+            } ); // 수는 아래에서 단언한다
             SW_REQUIRE_EQUAL( listRequestID.size(), listCompletion.size() );
             for ( size_t index = 0; index < listCompletion.size(); ++index )
             {

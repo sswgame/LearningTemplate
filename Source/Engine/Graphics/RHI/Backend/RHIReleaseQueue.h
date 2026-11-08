@@ -4,13 +4,13 @@
  */
 #pragma once
 #include "Core/Concurrency/SpinLock.h"
-#include "Core/Container/KeyedPendingList.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -105,8 +105,8 @@ namespace sw
         void releaseReady( ReleaseList which, uint64 threshold );
 
     private:
-        KeyedPendingList<RHIResourceReleaseDelegate> _listFrameEntry SW_GUARDED_BY( _spinLock ); ///< 키 = 해제할 CPU 프레임 번호
-        KeyedPendingList<RHIResourceReleaseDelegate> _listGPUEntry   SW_GUARDED_BY( _spinLock ); ///< 키 = 지나야 할 GPU 펜스 값
+        RHIRetireList<RHIResourceReleaseDelegate> _listFrameEntry SW_GUARDED_BY( _spinLock ); ///< 키 = 해제할 CPU 프레임 번호
+        RHIRetireList<RHIResourceReleaseDelegate> _listGPUEntry   SW_GUARDED_BY( _spinLock ); ///< 키 = 지나야 할 GPU 펜스 값
         /// @brief tick 이 완료된 콜백을 옮겨 담는 임시 버퍼입니다. 잠금 밖에서 부르려고 옮깁니다. 프레임마다 다시 채워 용량이 남습니다.
         ///        `_spinLock` 안에서만 꺼내고 돌려놓습니다. tick 은 여러 스레드에서 올 수 있습니다(DX12 업로드 펜스 대기).
         vector<RHIResourceReleaseDelegate> _listReadyScratch SW_GUARDED_BY( _spinLock );

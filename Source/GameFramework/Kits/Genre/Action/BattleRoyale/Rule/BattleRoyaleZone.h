@@ -3,8 +3,8 @@
  * @brief 자기장입니다. 단계마다 다음 원을 지금 원 안에서 시드 난수로 고르고(맵 경계와 금지 지형 콜백을 확인), 기다렸다가 줄이며, 위치마다 안과 밖 여부와 피해를 답합니다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"

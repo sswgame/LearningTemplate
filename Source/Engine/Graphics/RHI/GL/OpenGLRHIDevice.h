@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
+#include "Core/Container/IndexFreeList.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -266,7 +267,7 @@ namespace sw
             RHIBufferHandle  _buffer{ 0 };
             RHITextureHandle _texture{ 0 }; ///< UAV 레지스트리에서 RW 텍스처(이미지 유닛)면 0이 아니다.
 
-            /** @brief `releaseFreeListIndex` 가 "이 슬롯이 비었는가" 를 묻는 데 씁니다. */
+            /** @brief `IndexFreeList::release` 가 "이 슬롯이 비었는가" 를 묻는 데 씁니다. */
             bool operator==( const BindlessResourceRecord& other ) const
             {
                 return _buffer == other._buffer && _texture == other._texture;
@@ -340,7 +341,7 @@ namespace sw
         {
             RHITextureHandle _texture{ 0 };
 
-            /** @brief `releaseFreeListIndex` 가 "이 슬롯이 비었는가" 를 묻는 데 씁니다. */
+            /** @brief `IndexFreeList::release` 가 "이 슬롯이 비었는가" 를 묻는 데 씁니다. */
             bool operator==( const BindlessTextureRecord& other ) const { return _texture == other._texture; }
             bool operator!=( const BindlessTextureRecord& other ) const { return ( *this == other ) == false; }
         };
@@ -508,15 +509,15 @@ namespace sw
         OpenGLRecordingState _recordingState;
 
         vector<BindlessResourceRecord> _listRegisteredBindless;
-        vector<uint32>                 _listBindlessFree;
+        IndexFreeList                  _freeBindless;
         vector<BindlessResourceRecord> _listRegisteredUAV;
-        vector<uint32>                 _listUAVFree;
+        IndexFreeList                  _freeUAV;
 
         RHIHandleTable<OpenGLTextureRecord>                         _gpuTextures;
         unordered_map<CompositeFboKey, uint32, CompositeFboKeyHash> _mapCompositeFbo;
 
         vector<BindlessTextureRecord> _listRegisteredTexture;
-        vector<uint32>                _listTextureFree;
+        IndexFreeList                 _freeTexture;
 
         /**
          * @brief GPU 타임스탬프입니다. 프레임 링만큼 쿼리 묶음을 돌려 씁니다.

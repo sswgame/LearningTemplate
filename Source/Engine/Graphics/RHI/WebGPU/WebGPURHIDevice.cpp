@@ -9,6 +9,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
@@ -96,15 +97,7 @@ namespace sw
     {
         // 등록마다 새 번호다(다섯 백엔드 같은 계약) — 같은 자원을 여러 쪽이 등록해도 각자의 번호를 각자 놓는다.
         const WebGPUBindlessEntry entry{ handle, static_cast<uint8>( bTexture ? SW_TRUE : SW_FALSE ) };
-        if ( _listFree.empty() == false )
-        {
-            const RHIDescriptorIndex index = _listFree.back();
-            _listFree.pop_back();
-            _listEntry[index] = entry;
-            return index;
-        }
-        _listEntry.push_back( entry );
-        return static_cast<RHIDescriptorIndex>( _listEntry.size() - 1 );
+        return _freeEntry.allocate( _listEntry, entry );
     }
 
     void WebGPUBindlessTable::remove( RHIDescriptorIndex index )
@@ -112,7 +105,7 @@ namespace sw
         if ( index >= _listEntry.size() || _listEntry[index]._handle == 0 )
             return;
         _listEntry[index] = WebGPUBindlessEntry{};
-        _listFree.push_back( index );
+        _freeEntry.push( index );
     }
 
     const WebGPUBindlessEntry* WebGPUBindlessTable::find( RHIDescriptorIndex index ) const
@@ -1360,14 +1353,21 @@ namespace sw
         // 되읽기는 기다리지 않는다: 끝나면 프레임 완료가 부른다(`readReadbackBuffer` 의 계약은 콜백 안이다). 시나리오의 "기다린 직후 읽기" 길은 웹에 없다.
 #elif defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
         // Dawn: 마지막 프레임이 끝날 때까지 이벤트를 돌린다. 잃은 장치는 끝나지 않을 일을 기다리지 않는다.
-        uint64 waitedMs = 0;
-        while ( _bDeviceLost == SW_FALSE && _completedFrameSerial.load( std::memory_order_acquire ) < _lastSubmittedSerial && waitedMs < WebGPURHIDeviceInternal::kIdleWaitTimeoutMs )
+        // 상한은 벽시계 마감이다 — 돈 횟수로 세면 1 ms 잠이 타이머 해상도(Windows 약 15.6 ms)로 늘어 상한이 열 배 넘게 길어진다(GL 문맥 대기와 같은 `Deadline`).
+        // 폴링으로 둔다: 이 길은 waitIdle(기동 · 종료 · 백엔드 교체 · 창 크기)만 지나고 프레임 경로가 아니다.
+        const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( WebGPURHIDeviceInternal::kIdleWaitTimeoutMs ) );
+        bool           bTimedOut{ false };
+        while ( _bDeviceLost == SW_FALSE && _completedFrameSerial.load( std::memory_order_acquire ) < _lastSubmittedSerial )
         {
             processCompletions();
+            if ( deadline.isExpired() )
+            {
+                bTimedOut = true;
+                break;
+            }
             ThreadUtil::sleepForMilliseconds( 1 );
-            ++waitedMs;
         }
-        if ( waitedMs >= WebGPURHIDeviceInternal::kIdleWaitTimeoutMs )
+        if ( bTimedOut )
             SW_LOG_ERROR_ID( "WebGPU.WaitIdleTimeout", "WebGPU: waitIdle - the GPU did not finish within %# ms", WebGPURHIDeviceInternal::kIdleWaitTimeoutMs );
 #else
     #error "Unsupported platform"

@@ -17,7 +17,7 @@ namespace sw
 {
     SceneTransformStorage::SceneTransformStorage()
         : _arrPage{}
-        , _listFreeSlot{}
+        , _freeSlot{}
         , _nextSlot{ 0 }
         , _liveSlotCount{ 0 }
         , _mutex{}
@@ -42,7 +42,7 @@ namespace sw
         SceneTransformPage* pPage = nullptr;
         {
             ScopedLock<mutex> lock{ _mutex };
-            if ( tryPopFreeListIndex( _listFreeSlot, slot ) == false )
+            if ( _freeSlot.tryPop( slot ) == false )
             {
                 // 닿지 않는 한계다(`kMaxPageCount` 설명). 닿았다면 칸 없이 컴포넌트를 만들 방법이 없다 — 알리고 멈춘다.
                 if ( _nextSlot >= kMaxPageCount * SceneTransformPage::kSlotCount )
@@ -83,7 +83,7 @@ namespace sw
         pPage->_arrFlag[pageIndex]           = 0;
 
         ScopedLock<mutex> lock{ _mutex };
-        _listFreeSlot.push_back( slot );
+        _freeSlot.push( slot );
         --_liveSlotCount;
     }
 

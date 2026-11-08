@@ -628,6 +628,14 @@ namespace sw
         return runFrame( *_pFramePacer );
     }
 
+    int32 App::finishMainLoop()
+    {
+        endMainLoop();
+        const int32 exitCode = getExitCode();
+        shutdown();
+        return exitCode;
+    }
+
     void App::endMainLoop()
     {
         _pFramePacer = nullptr;

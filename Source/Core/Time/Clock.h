@@ -43,6 +43,16 @@ namespace sw
     {
     public:
         int64 nowNanoseconds() const noexcept override { return MonotonicClock::nowNanoseconds(); }
+
+        /**
+         * @brief 상태 없는 운영 시계 하나입니다 — 시계를 받지 않고 만드는 타이머(`GameTimer()`)가 빌린다.
+         * @details 상수 객체라 가변 전역(감춘 싱글턴)이 아니다. 함수 정적이라 다른 정적 객체의 생성자가 먼저 불러도 이미 만들어져 있다.
+         */
+        static const SystemMonotonicClock& get() noexcept
+        {
+            static const SystemMonotonicClock s_clock{};
+            return s_clock;
+        }
     };
 } // namespace sw
 

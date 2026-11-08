@@ -96,7 +96,7 @@ namespace sw
         , _listSharedModule{}
         , _fileWatcher{ IFileWatcher::createNative() }
         , _buildStampPath{}
-        , _seenBuildStamp{}
+        , _seenBuildToken{}
         , _buildMutex{}
         , _buildNotice{}
         , _onBeforeCommitBatch{}
@@ -147,8 +147,9 @@ namespace sw
 
         if ( _bReloadGraphBroken == SW_TRUE )
         {
-            for ( auto& [moduleName, moduleRecord] : _mapModule )
+            for ( auto& [moduleName, pModuleRecord] : _mapModule )
             {
+                ModuleRecord& moduleRecord = *pModuleRecord;
                 unloadModule( moduleRecord );
             }
             clearRecords();
@@ -163,8 +164,9 @@ namespace sw
         if ( _dependencyGraph.sortByDependency( listName, listOrder ) == false )
         {
             SW_LOG_ERROR_ID( "LiveReloadManager.TopologicalSortFailedDuring", "Topological sort failed during shutdown — unloading in arbitrary order" );
-            for ( auto& [name, context] : _mapModule )
+            for ( auto& [name, pContext] : _mapModule )
             {
+                ModuleRecord& context = *pContext;
                 unloadModule( context );
             }
             clearRecords();
@@ -177,7 +179,7 @@ namespace sw
         {
             auto mapIt = _mapModule.find( *it );
             if ( mapIt != _mapModule.end() )
-                unloadModule( mapIt->second );
+                unloadModule( *mapIt->second );
         }
         clearRecords();
         unloadSharedModules();
@@ -185,9 +187,9 @@ namespace sw
 
     bool LiveReloadManager::loadSharedModule( string_view moduleName )
     {
-        for ( const auto& [registeredName, registeredRecord] : _mapModule )
+        for ( const auto& [registeredName, pRegisteredRecord] : _mapModule )
         {
-            (void)registeredRecord;
+            (void)pRegisteredRecord;
             if ( LiveReloadManagerInternal::isSameModuleName( registeredName, moduleName ) )
             {
                 SW_LOG_ERROR_ID( "LiveReloadManager.ModuleAlreadyRegisteredReload", "Module %# is already registered for reload - it cannot also be a shared module that never unloads", moduleName );
@@ -264,7 +266,7 @@ namespace sw
         if ( bWatchModuleFolder )
         {
             _buildStampPath = FileUtil::joinPath( moduleDir, config::kFileModuleBuildStamp );
-            if ( FileUtil::getFileStamp( _buildStampPath, _seenBuildStamp ) == false )
+            if ( readBuildToken( _buildStampPath, _seenBuildToken ) == false )
                 SW_LOG_WARNING_ID( "LiveReloadManager.MissingOutsideBuildsNot", "%# is missing - outside builds are not reloaded until the build tree is configured (sw_addModuleBuildStamp)", _buildStampPath );
             if ( _fileWatcher->startWatching( moduleDir, false ) == false )
                 SW_LOG_ERROR_ID( "LiveReloadManager.FailedWatchModuleDirectory", "Failed to watch the module directory %# - outside builds are not reloaded", moduleDir );
@@ -304,11 +306,11 @@ namespace sw
         if ( iter == _mapModule.end() )
             return;
 
-        ModuleRecord& context = iter->second;
+        ModuleRecord& context = *iter->second;
         SW_LOG_INFO_ID( "LiveReload.ManualQueued", "Manual Live Reload queued for %# (debounce %#ms)...",
                         moduleName, kMtimeDebounceMs );
-        context._debounceMtime = 0;
-        (void)FileUtil::tryGetFileTimestamp( context._originalModulePath, context._debounceMtime ); // 빌드 도중이라 없으면 0 - 다음 확인에서 시각이 달라 다시 기다린다
+        context._debounceStamp = FileStamp{};
+        (void)FileUtil::getFileStamp( context._originalModulePath, context._debounceStamp ); // 빌드 도중이라 없으면 빈 도장 - 다음 확인에서 도장이 달라 다시 기다린다
         context._debounceTimer.resetTimer();
         context._debounceTimer.startTimer();
         context._bMtimeDebouncing = true;
@@ -343,8 +345,9 @@ namespace sw
             if ( notice._bSucceeded == false )
             {
                 // 실패한 빌드가 다시 쓴 모듈은 반쯤 완성된 집합일 수 있으므로 로드하지 않는다. 파일은 그대로라 다음에 성공한 빌드의 변경과 함께 로드된다.
-                for ( auto& [name, context] : _mapModule )
+                for ( auto& [name, pContext] : _mapModule )
                 {
+                    ModuleRecord& context = *pContext;
                     if ( context._bMtimeDebouncing || context._bForceReload )
                         SW_LOG_WARNING_ID( "LiveReloadManager.BuildFailedNotReloaded", "Build failed - %# is not reloaded from its partial output", context._moduleName );
                     context._bMtimeDebouncing = false;
@@ -374,14 +377,15 @@ namespace sw
         }
 
         // 바깥 빌드는 모듈 DLL 의 쓰기가 아니라 성공 스탬프로 본다 — 연쇄 빌드가 모듈을 하나씩 다시 쓰는 도중의 반쯤 링크된 집합을 올리지 않는다.
-        // 이벤트는 깨우는 데만 쓰고 스탬프 자체를 비교한다(넘쳐서 합성 리스캔이 와도, 이름이 바뀌며 써도 같다).
+        // 이벤트는 깨우는 데만 쓰고 스탬프의 내용을 비교한다(넘쳐서 합성 리스캔이 와도, 이름이 바뀌며 써도 같다). 스탬프는 빌드마다 새 시각 글을 쓰므로(`WriteModuleBuildStamp.cmake`)
+        // 내용이 다르면 새 빌드다 — 쓰기 시각 비교는 같은 틱 · 같은 크기의 두 쓰기를 같다고 봤다.
         if ( listEvent.empty() == false )
         {
-            FileStamp  currentStamp;
-            const bool bStampChanged = FileUtil::getFileStamp( _buildStampPath, currentStamp ) && currentStamp != _seenBuildStamp;
+            string     currentToken;
+            const bool bStampChanged = readBuildToken( _buildStampPath, currentToken ) && currentToken != _seenBuildToken;
             if ( bStampChanged )
             {
-                _seenBuildStamp     = currentStamp;
+                _seenBuildToken     = std::move( currentToken );
                 _bBuildStampPending = SW_TRUE;
             }
         }
@@ -391,17 +395,19 @@ namespace sw
         if ( _bBuildStampPending == SW_TRUE && bBuildInProgress == false )
         {
             _bBuildStampPending = SW_FALSE;
-            for ( auto& [name, context] : _mapModule )
+            for ( auto& [name, pContext] : _mapModule )
             {
-                uint64 sourceMtime = 0;
-                if ( FileUtil::tryGetFileTimestamp( context._originalModulePath, sourceMtime ) == false || sourceMtime <= context._loadedSourceMtime )
+                ModuleRecord& context = *pContext;
+                FileStamp     sourceStamp{};
+                if ( FileUtil::getFileStamp( context._originalModulePath, sourceStamp ) == false || sourceStamp == context._loadedSourceStamp )
                     continue; // 없으면(빌드가 아직 쓰는 중) 바뀐 것으로 보지 않는다
                 SW_LOG_TRACE_ID( "LiveReloadManager.ModuleBuildStampChanged", "Module build stamp changed — queuing reload for %#", context._moduleName );
                 context._bPendingReload = true;
             }
         }
-        for ( auto& [name, context] : _mapModule )
+        for ( auto& [name, pContext] : _mapModule )
         {
+            ModuleRecord& context = *pContext;
             if ( context._bMtimeDebouncing == false || bBuildInProgress )
                 continue;
 
@@ -410,11 +416,12 @@ namespace sw
             if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / constant::time::kMillisecondsPerSecond )
                 continue;
 
-            uint64     sourceMtime = 0;
-            const bool bReadable   = FileUtil::tryGetFileTimestamp( context._originalModulePath, sourceMtime );
-            if ( bReadable == false || sourceMtime != context._debounceMtime ) // 없으면(빌드가 쓰는 중) 더 기다린다
+            FileStamp  sourceStamp{};
+            const bool bReadable = FileUtil::getFileStamp( context._originalModulePath, sourceStamp );
+            // 바깥 링커가 쓰는 중인지는 알릴 길이 없어 조용해지기를 시간 창(`kMtimeDebounceMs`)으로 기다린다 — 바깥 도구의 쓰기만 시간으로 거르는 자리.
+            if ( bReadable == false || sourceStamp != context._debounceStamp ) // 없으면(빌드가 쓰는 중) 더 기다린다
             {
-                context._debounceMtime = sourceMtime;
+                context._debounceStamp = sourceStamp;
                 context._debounceTimer.resetTimer();
                 context._debounceTimer.startTimer();
                 continue;
@@ -422,7 +429,7 @@ namespace sw
 
             context._bMtimeDebouncing = false;
             const bool bForce         = context._bForceReload.exchange( false );
-            if ( bForce || sourceMtime > context._loadedSourceMtime )
+            if ( bForce || sourceStamp != context._loadedSourceStamp )
             {
                 SW_LOG_TRACE_ID( "LiveReloadManager.FileWatcherSettledQueuingReload", "FileWatcher settled — queuing reload for %#", context._moduleName );
                 context._bPendingReload = true;
@@ -439,8 +446,9 @@ namespace sw
         vector<string> listPendingRoot;
         BLOCK( "Collect Pending Reloads" )
         {
-            for ( auto& [name, context] : _mapModule )
+            for ( auto& [name, pContext] : _mapModule )
             {
+                ModuleRecord& context = *pContext;
                 if ( context._bPendingReload )
                 {
                     context._bPendingReload = false;
@@ -545,7 +553,7 @@ namespace sw
         const auto recordIt = _mapModule.find( registration._moduleName );
         if ( recordIt == _mapModule.end() )
             return;
-        ModuleRecord& record = recordIt->second;
+        ModuleRecord& record = *recordIt->second;
         switch ( registration._slot )
         {
             case CallbackSlot::BeforeReload:
@@ -586,22 +594,23 @@ namespace sw
     bool LiveReloadManager::verifyModuleBindings() const
     {
         bool bAllBound = true;
-        for ( const auto& [moduleName, moduleRecord] : _mapModule )
+        for ( const auto& [moduleName, pModuleRecord] : _mapModule )
         {
+            const ModuleRecord& moduleRecord = *pModuleRecord;
             if ( moduleRecord._pLibraryModule == nullptr )
                 continue;
             for ( const string& dependencyName : _dependencyGraph.getDependsOn( moduleName ) )
             {
                 // 이 매니저가 로드하지 않은 의존(Engine 처럼 처음부터 링크된 것)은 교체되지 않으므로 검사할 것이 없다.
                 const auto dependencyIt = _mapModule.find( dependencyName );
-                if ( dependencyIt == _mapModule.end() || dependencyIt->second._pLibraryModule == nullptr )
+                if ( dependencyIt == _mapModule.end() || dependencyIt->second->_pLibraryModule == nullptr )
                     continue;
 
                 const void*                   pActual{ nullptr };
                 const void*                   pExpected{ nullptr };
-                const ShadowLibraryNameState& dependencyLibraryName = dependencyIt->second._libraryName;
+                const ShadowLibraryNameState& dependencyLibraryName = dependencyIt->second->_libraryName;
                 const string                  dependencyFileName    = dependencyLibraryName._loaded.empty() ? ModuleLibraryUtil::formatSharedLibraryName( dependencyName ) : dependencyLibraryName._loaded;
-                if ( LiveReloadManagerInternal::isBoundTo( moduleRecord._pLibraryModule, dependencyName, dependencyFileName, dependencyIt->second._pLibraryModule, pActual,
+                if ( LiveReloadManagerInternal::isBoundTo( moduleRecord._pLibraryModule, dependencyName, dependencyFileName, dependencyIt->second->_pLibraryModule, pActual,
                                                            pExpected ) )
                     continue;
 
@@ -615,13 +624,16 @@ namespace sw
     void* LiveReloadManager::getModuleHandle( string_view moduleName ) const
     {
         auto it = _mapModule.find( string( moduleName ) );
-        return it != _mapModule.end() ? it->second._pLibraryModule : nullptr;
+        return it != _mapModule.end() ? it->second->_pLibraryModule : nullptr;
     }
 
     LiveReloadManager::ModuleRecord& LiveReloadManager::getOrCreateRecord( string_view moduleName )
     {
         _dependencyGraph.ensureModule( moduleName );
-        return _mapModule[string( moduleName )];
+        unique_ptr<ModuleRecord>& pRecord = _mapModule[string( moduleName )];
+        if ( pRecord == nullptr )
+            pRecord = make_unique<ModuleRecord>();
+        return *pRecord;
     }
 
     void LiveReloadManager::clearRecords()
@@ -643,12 +655,13 @@ namespace sw
         {
             const auto dependencyIt = _mapModule.find( dependencyName );
             if ( dependencyIt != _mapModule.end() )
-                outParams._listDependencyLibrary.push_back( ShadowCopyModuleLibrary{ dependencyIt->first, &dependencyIt->second._libraryName } );
+                outParams._listDependencyLibrary.push_back( ShadowCopyModuleLibrary{ dependencyIt->first, &dependencyIt->second->_libraryName } );
         }
 
         outParams._listRegisteredLibrary.reserve( _mapModule.size() );
-        for ( const auto& [registeredName, registeredRecord] : _mapModule )
+        for ( const auto& [registeredName, pRegisteredRecord] : _mapModule )
         {
+            const ModuleRecord& registeredRecord = *pRegisteredRecord;
             outParams._listRegisteredLibrary.push_back( ShadowCopyModuleLibrary{ registeredName, &registeredRecord._libraryName } );
         }
     }
@@ -664,6 +677,12 @@ namespace sw
         return false;
     }
 
+    bool LiveReloadManager::readBuildToken( string_view stampPath, string& outToken )
+    {
+        outToken.clear();
+        return stampPath.empty() == false && FileUtil::readOptionalTextFile( stampPath, outToken ) == OptionalFileRead::Read && outToken.empty() == false;
+    }
+
     bool LiveReloadManager::prepareShadowCopy( ModuleRecord& context, PreparedShadow& outShadow )
     {
         outShadow = {};
@@ -677,7 +696,10 @@ namespace sw
         }
 
         outShadow._sourceMtime = 0;
-        if ( FileUtil::tryGetFileTimestamp( context._originalModulePath, outShadow._sourceMtime ) == false )
+        outShadow._sourceStamp = FileStamp{};
+        if ( FileUtil::getFileStamp( context._originalModulePath, outShadow._sourceStamp ) )
+            outShadow._sourceMtime = outShadow._sourceStamp._writeTime / static_cast<uint64>( FileUtil::kFileTimeTicksPerSecond );
+        else
             SW_LOG_WARNING_ID( "LiveReloadManager.CannotReadTimeNext", "Cannot read the time of %# - the next build stamp check reloads it again", context._originalModulePath );
 
         BLOCK( "Create Shadow Copy" )
@@ -796,7 +818,7 @@ namespace sw
 
             context._pLibraryModule      = prepared._pHandle;
             context._tempModulePath      = prepared._tempPath;
-            context._loadedSourceMtime   = prepared._sourceMtime;
+            context._loadedSourceStamp   = prepared._sourceStamp;
             context._libraryName._loaded = context._libraryName._current;
             prepared._pHandle            = nullptr;
             prepared._tempPath.clear();
@@ -847,12 +869,12 @@ namespace sw
     bool LiveReloadManager::runAfterReload( string_view moduleName )
     {
         const auto it = _mapModule.find( string( moduleName ) );
-        if ( it == _mapModule.end() || it->second._pLibraryModule == nullptr )
+        if ( it == _mapModule.end() || it->second->_pLibraryModule == nullptr )
         {
             SW_LOG_ERROR_ID( "LiveReloadManager.ModuleNotLoadedNothing", "Module %# is not loaded - nothing to start", moduleName );
             return false;
         }
-        invokeAfterReload( it->second );
+        invokeAfterReload( *it->second );
         return _bReloadGraphBroken == SW_FALSE;
     }
 
@@ -871,6 +893,7 @@ namespace sw
         ModuleShadowCopy::removeArtifacts( prepared._tempPath );
         prepared._tempPath.clear();
         prepared._sourceMtime = 0;
+        prepared._sourceStamp = FileStamp{};
     }
 
     void LiveReloadManager::unloadModule( ModuleRecord& context )
@@ -962,7 +985,7 @@ namespace sw
             if ( found == _mapModule.end() )
                 continue;
             PreparedEntry entry;
-            entry._pRecord = &found->second;
+            entry._pRecord = found->second.get();
             if ( prepareShadowCopy( *entry._pRecord, entry._shadow ) == false )
             {
                 SW_LOG_ERROR_ID( "LiveReloadManager.CascadePrepareFailedAborting", "Cascade prepare failed for %# — aborting, previous modules kept", name );
@@ -1066,8 +1089,8 @@ namespace sw
         , _tempModulePath{}
         , _libraryName{}
         , _pLibraryModule{ nullptr }
-        , _loadedSourceMtime{ 0 }
-        , _debounceMtime{ 0 }
+        , _loadedSourceStamp{}
+        , _debounceStamp{}
         , _debounceTimer{}
         , _bPendingReload{ false }
         , _bMtimeDebouncing{ false }

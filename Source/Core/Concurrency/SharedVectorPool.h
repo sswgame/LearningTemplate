@@ -1,6 +1,8 @@
 /**
  * @file SharedVectorPool.h
  * @brief 다른 스레드에 `shared_ptr` 로 발행하는 배열을 프레임마다 새로 잡지 않고, 아무도 쥐지 않은 것을 다시 쓰는 풀입니다.
+ * @details 일반 컨테이너가 아니라 스레드 사이 넘기기(게임 → 렌더 발행) 정책이라 `LockedSwapQueue` · `SpscQueue` 옆 Concurrency 에 둡니다.
+ *          쓰는 곳이 VFX(층 6)와 렌더러(층 7) 둘이라 렌더러 폴더에 두면 VFX 가 위층을 보게 됩니다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"

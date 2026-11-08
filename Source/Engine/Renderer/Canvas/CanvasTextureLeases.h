@@ -25,7 +25,8 @@ namespace sw
     struct CanvasTargetLease
     {
         hashed_string    _path{};
-        Texture2D*       _pTexture{ nullptr }; ///< 캐시가 소유하며, 돌려줄 때까지 빌려 쓴다.
+        TextureHandle    _load{};              ///< 렌더 타깃 요청(참조를 쥔다 — 놓으면 캐시에 돌려준다). 실패해도 쥔다(캐시가 이유를 남겼으므로 다시 묻지 않는다)
+        Texture2D*       _pTexture{ nullptr }; ///< 준비된 렌더 타깃(`_load` 가 쥐는 동안 유효). 만드는 중이면 nullptr — 그 대상은 그리지 않는다
         uint64           _drawnRevision{ 0 };  ///< 마지막으로 그린 내용 번호(0이면 그린 적 없음)
         RHITextureHandle _drawnTexture{ 0 };   ///< 그때의 텍스처(다시 만들어졌으면 내용이 없으므로 다시 그린다)
         uint8            _bSeen{ SW_FALSE };   ///< 이번 프레임 목록에 있다.

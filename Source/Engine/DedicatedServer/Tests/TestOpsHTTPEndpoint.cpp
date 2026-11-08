@@ -6,6 +6,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/TestWait.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/DedicatedServer/OpsHTTPEndpoint.h"
@@ -203,19 +204,12 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ServesHealthOverARealSocketOnThisMachine )
     SW_REQUIRE_TRUE( endpoint.initialize( serverTransport.get(), transportSettings, opsSettings, &metrics, &health ) );
     SW_REQUIRE_TRUE( clientTransport->initialize( &probe, transportSettings ) );
     SW_REQUIRE_TRUE( clientTransport->connect( NetAddress::makeLoopback( endpoint.getListenPort() ) ).isValid() );
-    const Deadline openDeadline = Deadline::afterMilliseconds( 5000 );
-    while ( probe._bOpened.load( std::memory_order_acquire ) == false && openDeadline.isExpired() == false )
-    {
-        ThreadUtil::sleepForMilliseconds( 1 );
-    }
-    SW_REQUIRE_TRUE( probe._bOpened.load( std::memory_order_acquire ) );
+    SW_REQUIRE_TRUE( test::waitUntil( [&probe]()
+    { return probe._bOpened.load( std::memory_order_acquire ); } ) );
     const string request = "GET /healthz HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n";
     (void)clientTransport->send( probe.getHandle(), reinterpret_cast<const uint8*>( request.data() ), static_cast<int32>( request.size() ) );
-    const Deadline closeDeadline = Deadline::afterMilliseconds( 5000 );
-    while ( probe._bClosed.load( std::memory_order_acquire ) == false && closeDeadline.isExpired() == false )
-    {
-        ThreadUtil::sleepForMilliseconds( 1 );
-    }
+    (void)test::waitUntil( [&probe]()
+    { return probe._bClosed.load( std::memory_order_acquire ); } ); // 닫힘은 아래에서 단언한다 — 받은 글을 먼저 보인다
     const string received = probe.getReceived();
     SW_EXPECT_TRUE_MSG( StringUtil::startsWith( received, "HTTP/1.1 200 OK\r\n" ), received.c_str() );
     SW_EXPECT_TRUE( received.find( "\r\n\r\nok\n" ) != string::npos );

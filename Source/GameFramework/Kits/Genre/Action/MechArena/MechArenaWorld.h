@@ -12,8 +12,8 @@
  *            그래서 기체를 바꾸면 다음 격추 때 바뀐 기체의 코스트가 게이지에서 빠진다(통계는 조종사 단위로 모아서 읽는다).
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

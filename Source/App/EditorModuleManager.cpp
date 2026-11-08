@@ -20,6 +20,8 @@
     #include "Core/Path/AbsolutePath.h"
     #include "Core/Subsystem/SubsystemScope.h"
     #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
+    #include "DevTools/AssetReload/ReloadTracker.h"
+    #include "DevTools/Client/Capture/StartupCaptureSubsystem.h"
     #include "DevTools/Client/DebugHUD/DebugHUD.h"
     #include "ModuleManager/LiveReload/LiveReloadManager.h"
 #endif
@@ -443,6 +445,9 @@ namespace sw
         // 개발 도구는 엔진의 기동 확장(`DevToolsHost`)이 세워 서비스 목록의 행이 아니다 — 에디터가 찾는 것(HUD 조작 · 설정 리로드 창)을 빌려 건다(없는 호스트면 걸지 않는다).
         (void)editorServices.bind( engine::findSubsystem<DebugHUD>() );
         (void)editorServices.bind( engine::findSubsystem<ConfigReloadSubsystem>() );
+        // 에디터 에셋 리로드가 결과를 적는 집계(`reload.status`)와 에디터 UI 사진이 알리는 시작 인자 사진 장부. 빠져 있어 에디터 리로드가 집계되지 않았다(assetcascade).
+        (void)editorServices.bind( engine::findSubsystem<ReloadTracker>() );
+        (void)editorServices.bind( engine::findSubsystem<StartupCaptureSubsystem>() );
     }
 
     namespace

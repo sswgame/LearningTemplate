@@ -49,7 +49,7 @@ namespace sw
         , _cmdListPoolMutex{}
         , _listFreeCmdListEntry{}
         , _onlineBlockMutex{}
-        , _listFreeOnlineBlock{}
+        , _freeOnlineBlock{}
         , _frameRing{}
         , _timestampFrequency{ 0 }
         , _timestampWrittenMask{ 0 }
@@ -61,8 +61,8 @@ namespace sw
         , _mapOffscreenTexture{}
         , _nextOffscreenRTVIndex{ 0 }
         , _nextOffscreenDSVIndex{ 0 }
-        , _listFreeOffscreenRTVIndex{}
-        , _listFreeOffscreenDSVIndex{}
+        , _freeOffscreenRTV{}
+        , _freeOffscreenDSV{}
         , _mapCbAlignedSize{}
         , _mapCbMapped{}
         , _constantBufferMirror{}
@@ -82,7 +82,7 @@ namespace sw
         , _validationCallbackCookie{ 0 }
         , _frameStreamState{}
         , _listRegisteredBindless{}
-        , _listFreeBindless{}
+        , _freeBindless{}
         , _listRegisteredUAV{}
         , _rtvDescriptorSize{ 0 }
         , _cbvDescriptorSize{ 0 }
@@ -230,9 +230,9 @@ namespace sw
     {
         ScopedLock<mutex> lock{ _onlineBlockMutex };
         // 프레임 끝까지 기다리지 않고 펜스가 지난 묶음을 먼저 거둔다 — 한 프레임에 리스트가 많으면(미리보기 씬 · 컴퓨트) 블록 수보다 리스트가 많다.
-        if ( _listFreeOnlineBlock.empty() )
+        if ( _freeOnlineBlock.empty() )
             recycleCompletedOnlineBlocksLocked( _fence->GetCompletedValue() );
-        if ( _listFreeOnlineBlock.empty() )
+        if ( _freeOnlineBlock.empty() )
         {
             if ( _bOnlineHeapExhaustedLogged == SW_FALSE )
             {
@@ -243,8 +243,8 @@ namespace sw
             }
             return UINT32_MAX;
         }
-        const uint32 block = _listFreeOnlineBlock.back();
-        _listFreeOnlineBlock.pop_back();
+        uint32 block{ 0 };
+        (void)_freeOnlineBlock.tryPop( block ); // 위에서 비지 않았음을 봤다
         return block;
     }
 
@@ -287,7 +287,7 @@ namespace sw
             }
             for ( const uint32 block : batch._listBlock )
             {
-                _listFreeOnlineBlock.push_back( block );
+                _freeOnlineBlock.push( block );
             }
             batch._listBlock.clear();
             _listOnlineRecyclePool.push_back( std::move( batch._listBlock ) );
@@ -711,10 +711,10 @@ namespace sw
         }
         {
             ScopedLock<mutex> lock{ _onlineBlockMutex };
-            _listFreeOnlineBlock.clear();
+            _freeOnlineBlock.clear();
             for ( uint32 block = kOnlineBlockCount; block > 0; --block )
             {
-                _listFreeOnlineBlock.push_back( block - 1 );
+                _freeOnlineBlock.push( block - 1 );
             }
             _bOnlineHeapExhaustedLogged = SW_FALSE;
         }
@@ -814,7 +814,7 @@ namespace sw
         _pipelineStates.clear();
         _renderPassRegistry.clear();
         _listRegisteredBindless.clear();
-        _listFreeBindless.clear();
+        _freeBindless.clear();
         _listRegisteredUAV.clear();
         _mapStructuredBufferState.clear();
         _gpuBuffers.clear();
@@ -840,7 +840,7 @@ namespace sw
         _offlineViewHeap.Reset();
         {
             ScopedLock<mutex> lock{ _onlineBlockMutex };
-            _listFreeOnlineBlock.clear();
+            _freeOnlineBlock.clear();
         }
         _dsvHeap.Reset();
         _rtvHeap.Reset();

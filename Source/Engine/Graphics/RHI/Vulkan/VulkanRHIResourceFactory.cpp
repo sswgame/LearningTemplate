@@ -1134,7 +1134,7 @@ namespace sw
             return kInvalidDescriptorIndex;
 
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex descriptorIndex = reserveFreeListIndex( _pDevice->_listTextureUsed, _pDevice->_listTextureFree );
+        const RHIDescriptorIndex descriptorIndex = _pDevice->_freeTexture.reserve( _pDevice->_listTextureUsed );
         if ( descriptorIndex >= _pDevice->kBindlessTextureCount )
         {
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.BindlessTextureTableFull", "Bindless texture table full." );
@@ -1158,7 +1158,7 @@ namespace sw
         // 버퍼는 인덱스 → 핸들 표에만 올린다. 실제 VkBuffer · 오프셋은 슬롯 세트를 쓰는 순간(flushSlotSet)에 푼다.
         // 링 상수버퍼의 프레임 오프셋도 그때 더한다.
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        return allocateFreeListIndex( _pDevice->_listBindlessSourceBuffer, _pDevice->_listBindlessFree, buffer );
+        return _pDevice->_freeBindless.allocate( _pDevice->_listBindlessSourceBuffer, buffer );
     }
 
     void VulkanRHIResourceFactory::unregisterBindlessResource( RHIDescriptorIndex index )
@@ -1185,7 +1185,7 @@ namespace sw
         _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index, bUAV]()
         {
             UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
-            ( bUAV ? pDevice->_listUAVFree : pDevice->_listBindlessFree ).push_back( index );
+            ( bUAV ? pDevice->_freeUAV : pDevice->_freeBindless ).push( index );
         } ),
                                                    _pDevice->_frameFenceCounter + 1 );
     }
@@ -1237,7 +1237,7 @@ namespace sw
             {
                 UniqueLock<shared_mutex> lock{ pDevice->_bindlessMutex };
                 pDevice->writeBindlessTextureSlot( index, pDevice->_bindlessDummyView, static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );
-                releaseFreeListIndex( pDevice->_listTextureUsed, pDevice->_listTextureFree, index, uint8{ 0 } );
+                pDevice->_freeTexture.release( pDevice->_listTextureUsed, index, uint8{ 0 } );
             } ),
                                                        _pDevice->_frameFenceCounter + 1 );
         }
@@ -1249,7 +1249,7 @@ namespace sw
         if ( _pDevice->resolveAllocatedBuffer( buffer ) == nullptr )
             return kInvalidDescriptorIndex;
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex index = allocateFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree, buffer );
+        const RHIDescriptorIndex index = _pDevice->_freeUAV.allocate( _pDevice->_listUAVSourceBuffer, buffer );
         if ( index >= _pDevice->_listUAVSourceTexture.size() )
             _pDevice->_listUAVSourceTexture.resize( index + 1, RHITextureHandle{ 0 } );
         _pDevice->_listUAVSourceTexture[index] = RHITextureHandle{ 0 };
@@ -1268,11 +1268,11 @@ namespace sw
 
         // 버퍼 UAV 와 같은 인덱스 공간이다. 인덱스가 곧 RW 텍스처 배열(set 1 binding 3)의 원소다.
         UniqueLock<shared_mutex> registryLock{ _pDevice->_bindlessMutex };
-        const RHIDescriptorIndex index = allocateFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree, RHIBufferHandle{ 0 } );
+        const RHIDescriptorIndex index = _pDevice->_freeUAV.allocate( _pDevice->_listUAVSourceBuffer, RHIBufferHandle{ 0 } );
         if ( index >= _pDevice->kBindlessStorageImageCount )
         {
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.RWTextureArrayFull", "The RW texture array (%#) is full.", _pDevice->kBindlessStorageImageCount );
-            releaseFreeListIndex( _pDevice->_listUAVSourceBuffer, _pDevice->_listUAVFree, index, RHIBufferHandle{ 0 } );
+            _pDevice->_freeUAV.release( _pDevice->_listUAVSourceBuffer, index, RHIBufferHandle{ 0 } );
             return kInvalidDescriptorIndex;
         }
         if ( index >= _pDevice->_listUAVSourceTexture.size() )

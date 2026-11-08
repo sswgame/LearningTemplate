@@ -11,8 +11,8 @@
  *          위치는 XZ 평면(y = 0)이고 이동은 `moveSurvivor` 와 `moveKiller` 로 한다. 키트가 상태에 맞는 속도를 곱한다(벽 충돌은 게임이 처리한다).
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

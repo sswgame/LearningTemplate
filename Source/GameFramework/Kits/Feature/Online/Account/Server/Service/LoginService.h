@@ -15,10 +15,10 @@
  *          - 종료 순서는 저장소 `shutdown`, 저장소 `pollCompletions`(남은 완료가 이 서비스를 호출한다), 서비스 `shutdown` 이다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"

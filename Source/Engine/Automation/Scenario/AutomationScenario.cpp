@@ -277,7 +277,8 @@ namespace sw
                     attribute._value = AutomationScratch::rebaseText( attribute._value, folder._scratchID, instanceID );
                 }
             }
-            folder._scratchID = instanceID;
+            folder._declaredID = folder._scratchID;
+            folder._scratchID  = instanceID;
         }
     }
 

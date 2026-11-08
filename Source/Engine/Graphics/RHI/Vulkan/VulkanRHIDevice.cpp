@@ -119,19 +119,19 @@ namespace sw
         , _pipelineLayout{ nullptr }
         , _descriptorPool{ nullptr }
         , _arrStaticSampler{}
-        , _listBindlessFree{}
+        , _freeBindless{}
         , _gpuBuffers{}
         , _mapCbSlotSize{}
         , _constantBufferMirror{}
         , _listBindlessSourceBuffer{}
         , _listUAVSourceBuffer{}
         , _listUAVSourceTexture{}
-        , _listUAVFree{}
+        , _freeUAV{}
         , _gpuTextures{}
         , _releaseQueue{ constant::render::kGPUReleaseFrameLatency }
         , _renderPassCache{}
         , _listTextureUsed{}
-        , _listTextureFree{}
+        , _freeTexture{}
         , _slotSetLayout{ nullptr }
         , _textureSetLayout{ nullptr }
         , _textureSet{ nullptr }
@@ -423,7 +423,7 @@ namespace sw
             // 합성 프레임버퍼 · PSO 호환 RP · desc RP 는 캐시가 한 번에 놓는다. 스왑체인 RP(_renderPass)는 아래에서 따로.
             _renderPassCache.destroyAll( _device, _renderPass );
             _listTextureUsed.clear();
-            _listTextureFree.clear();
+            _freeTexture.clear();
 
             _textureSet = VK_NULL_HANDLE; // 디스크립터 풀이 소유한다
             if ( _textureSetLayout )

@@ -68,7 +68,7 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Load a shared library | `Core/Module/ModuleLibraryUtil.h` `loadLibraryAt( AbsolutePath )` (one try, no search) · `loadSystemLibrary( "xinput1_4.dll" )` (Windows System32 / Linux loader path) · `findLoadedLibrary` (pin an injected one) · `getDynamicSymbol` | `LoadLibrary*` · `dlopen` · `GetProcAddress` · `dlsym` · `SetDllDirectory`, candidate chains that try one place after another |
 | Absolute disk path as a value | `Core/Path/AbsolutePath.h` `AbsolutePath::tryMake` (rejects `C:foo`, `\foo`, relative) | `FileUtil::isAbsolutePath` for validation |
 | Read stdin commands | `Core/Process/StandardInputReader.h` | a blocking `std::cin` loop |
-| Containers | `Core/Container/` `vector` · `unordered_map` · `map` · `set` · `deque` · `string` · `span` · `sparse_set` | `std::` containers |
+| Containers | `Core/Container/` `vector` · `unordered_map` · `map` · `set` · `deque` · `string` · `span` | `std::` containers |
 | Stable handle to pooled data | `Core/Container/SlotHandleTable.h` · `SlotHandle.h` · `IndexFreeList.h`; objects: `Engine/Foundation/GameObjectHandle.h` · `ComponentHandle.h` | raw pointers or indices into pooled storage |
 | Own a byte block or object | `Core/Memory/MemoryBlock.h` `MemoryBlock`; `make_unique<T>`; `vector<T>` | `malloc` · `Memory::allocate` · raw `new` |
 | Many short-lived allocations | `Core/Memory/LinearAllocator.h` (per frame too: two and `reset`, see `EventDispatcher`) · `PoolAllocator.h`; small inline: `InlineAllocator.h` | a private free list |

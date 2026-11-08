@@ -12,6 +12,7 @@
 
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/Frame/Resource/TransientAttachmentPool.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
@@ -34,7 +35,8 @@ namespace sw
         unique_ptr<IRHICommandList> _commandList; ///< 이 뷰를 직렬로 기록하는 리스트(주 시점은 병렬 경로가 아닐 때만 쓴다)
         RenderViewSettings          _settings;
         hashed_string               _outputPath;                ///< 렌더 텍스처 경로
-        Texture2D*                  _pOutputTexture{ nullptr }; ///< 빌려 쓰는 렌더 텍스처(`TextureCache`)
+        TextureHandle               _outputLoad{};              ///< 렌더 텍스처 요청(`TextureCache` — 참조를 쥐고, 놓으면 캐시에 돌려준다)
+        Texture2D*                  _pOutputTexture{ nullptr }; ///< 준비된 렌더 텍스처(`_outputLoad` 가 쥐는 동안 유효). 만드는 중이면 nullptr — 그 뷰는 그리지 않는다
         RHITextureHandle            _viewportTarget{ 0 };       ///< 호스트 타깃 뷰의 출력(호스트가 소유한다)
         uint64                      _viewID{ 0 };
         RHITextureHandle            _taaHistory{ 0 }; ///< TAA resolve 히스토리(지난 TAAColor 의 복사본)

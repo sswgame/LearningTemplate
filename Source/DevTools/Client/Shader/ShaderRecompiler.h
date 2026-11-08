@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/DelegateSlot.h"
 #include "Core/Foundation/StdHeaders.h"
 
@@ -15,7 +17,8 @@
 
 namespace sw
 {
-    using ShaderRecompiledDelegate = Delegate<void( string_view, const ShaderCompileResult& )>;
+    /** @brief 재컴파일 묶음 하나에서 바이트코드가 바뀐 셰이더 경로들입니다. 컴파일 · 리플렉션 캐시를 비운 뒤에 한 번 불린다. */
+    using ShaderRecompiledDelegate = Delegate<void( const vector<string>& listShaderPath )>;
 
     /**
      * @class ShaderRecompiler

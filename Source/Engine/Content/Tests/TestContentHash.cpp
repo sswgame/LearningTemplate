@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Container/vector.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -70,4 +71,24 @@ SW_TEST_CASE( ContentHashTest, MatchesTheCopyingReferenceOnLargeBuffers )
     const uint64 reference = computeReferenceHash( bytes );
     SW_EXPECT_EQUAL( ContentHash::computeBytes( bytes ), reference );
     SW_EXPECT_EQUAL( ContentHash::computeBytes( bytes.data(), bytes.size() ), reference );
+}
+
+/**
+ * @brief [ContentHashTest] 이 프로세스가 같은 크기로 곧바로 다시 쓴 파일도 새 해시다 — 쓰기 경로가 캐시에 알리므로 시간 창 · 캐시 비우기를 기다리지 않는다.
+ * @details 같은 틱 안의 같은 크기 다시 쓰기는 (크기, 쓰기 시각) 도장이 같다. 예전에는 시간 창이 막 쓴 파일을 캐시하지 않아 가렸고, 그 전에는 옛 해시가 돌아왔다.
+ *          지운 파일은 0(읽지 못함)이다.
+ */
+SW_TEST_CASE( ContentHashTest, OwnRewriteOfTheSameSizeIsSeenAtOnce )
+{
+    const string path = test::makeScratchPath( "rewrite.txt" );
+    for ( const utf8* pText : { "aaaa", "bbbb", "cccc", "aaaa" } )
+    {
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( path, pText ) );
+        const uint64 expected = ContentHash::computeBytes( makeBytes( pText ) );
+        SW_EXPECT_EQUAL( ContentHash::computeFile( path ), expected );
+        SW_EXPECT_EQUAL( ContentHash::computeFile( path ), expected ); // 두 번째는 캐시에서 — 같은 값이어야 한다
+    }
+    SW_REQUIRE_TRUE( FileUtil::removeFile( path ) );
+    SW_EXPECT_LOG( "File.NotFound" ); // 지운 파일은 못 읽음(0)이고, 파일 계층이 그 사실을 알린다
+    SW_EXPECT_EQUAL( ContentHash::computeFile( path ), uint64( 0 ) );
 }

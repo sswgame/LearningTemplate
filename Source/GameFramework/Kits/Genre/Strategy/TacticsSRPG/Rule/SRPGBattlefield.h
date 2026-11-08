@@ -4,8 +4,8 @@
  *        MAP 병기 범위, HP, EN, 탄수, 기력, 이동 회피, 경험치, 개발을 다룹니다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

@@ -11,6 +11,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/TestWait.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace
@@ -184,26 +185,27 @@ SW_TEST_CASE( TaskManagerTest, PrecedeAfterSubmitDoesNotRunTheTaskTwice )
 
     sw::atomic<int32> lateRunCount{ 0 };
     sw::atomic<bool>  bLateStarted{ false };
+    sw::atomic<bool>  bLateReleased{ false };
 
-    sw::TaskHandle late = manager.emplaceTask( "Late", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&lateRunCount, &bLateStarted]()
+    // 본문은 문이 열릴 때까지 붙든다 — 선행을 거는 동안 본문이 돌고 있음을 잠의 길이가 아니라 문으로 보장한다
+    // (예전에는 20 ms 를 잤다 — 메인이 그보다 늦게 깨면 본문이 이미 끝나 `runBefore` 가 졌다).
+    sw::TaskHandle late = manager.emplaceTask( "Late", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&lateRunCount, &bLateStarted, &bLateReleased]()
     {
         lateRunCount.fetch_add( 1, std::memory_order_relaxed );
         bLateStarted.store( true, std::memory_order_release );
-        sw::ThreadUtil::sleepForMilliseconds( 20 );
+        (void)sw::test::waitUntil( [&bLateReleased]()
+        { return bLateReleased.load( std::memory_order_acquire ); } );
     } ) );
     late.submit();
 
-    const sw::Deadline waitDeadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );
-    while ( bLateStarted.load( std::memory_order_acquire ) == false )
-    {
-        const bool bTimedOut = waitDeadline.isExpired();
-        SW_REQUIRE_FALSE( bTimedOut );
-        sw::ThreadUtil::yield();
-    }
+    SW_REQUIRE_TRUE( sw::test::waitUntil( [&bLateStarted]()
+    { return bLateStarted.load( std::memory_order_acquire ); } ) );
 
-    sw::TaskHandle early = manager.emplaceTask( "Early", SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() {} ) );
-    SW_REQUIRE_TRUE( early.runBefore( late ) );
+    sw::TaskHandle early   = manager.emplaceTask( "Early", SW_DELEGATE_LAMBDA( sw::TaskDelegate, []() {} ) );
+    const bool     bLinked = early.runBefore( late );
     early.submit();
+    bLateReleased.store( true, std::memory_order_release ); // 실패해도 본문을 풀어 waitAll 이 돌아오게 한 뒤 단언한다
+    SW_REQUIRE_TRUE( bLinked );
 
     manager.waitAll( "TaskManagerTest" );
     SW_EXPECT_EQUAL( 0u, manager.getActiveTaskCount() );

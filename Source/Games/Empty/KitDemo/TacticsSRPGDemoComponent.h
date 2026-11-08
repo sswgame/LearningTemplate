@@ -7,8 +7,8 @@
  *          장르 완결 루프 시나리오: `game/empty/automation/kitdemo_tactics.scenario.xml`.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"

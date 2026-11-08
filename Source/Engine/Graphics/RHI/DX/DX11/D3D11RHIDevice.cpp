@@ -106,12 +106,12 @@ namespace sw
         , _completedFrameSerial{ 0 }
         , _lastTimestampFrequency{ 0 }
         , _listRegisteredBindless{}
-        , _listBindlessFree{}
+        , _freeBindless{}
         , _listRegisteredTexture{}
-        , _listTextureFree{}
+        , _freeTexture{}
         , _listRegisteredUAV{}
         , _listUAVSourceBuffer{}
-        , _listUAVFree{}
+        , _freeUAV{}
         , _pipelineStates{}
         , _renderPassRegistry{}
         , _arrStaticSampler{}
@@ -691,12 +691,12 @@ namespace sw
         _gpuBuffers.clear();
         _recordingState._activeGraphicsPSO = 0;
         _listRegisteredBindless.clear();
-        _listBindlessFree.clear();
+        _freeBindless.clear();
         _listRegisteredTexture.clear();
-        _listTextureFree.clear();
+        _freeTexture.clear();
         _listRegisteredUAV.clear();
         _listUAVSourceBuffer.clear();
-        _listUAVFree.clear();
+        _freeUAV.clear();
         _recordingState = D3D11RecordingState{};
         _idleQuery.Reset();
         for ( Microsoft::WRL::ComPtr<ID3D11Query>& frameDoneQuery : _arrFrameDoneQuery )

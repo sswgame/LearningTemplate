@@ -431,54 +431,59 @@ namespace sw
 
     bool Texture2D::createRenderTarget( IRHIDevice* pDevice, string_view name, uint32 width, uint32 height, RHIFormat format )
     {
+        // 블로킹 헬퍼: 제출 → 대기 → 끝내기(`loadFromImage` 와 같다). 비동기 로드는 같은 두 단계를 프레임에 나눠 한다(`TextureLoadOperation`).
+        if ( beginRenderTarget( pDevice, name, width, height, format, true ) != Texture2DUploadStep::Submitted )
+            return false;
+        return finishUpload( pDevice, true ) == Texture2DUploadStatus::Ready;
+    }
+
+    Texture2DUploadStep Texture2D::beginRenderTarget( IRHIDevice* pDevice, string_view name, uint32 width, uint32 height, RHIFormat format, bool bBlocking )
+    {
         const bool bInvalidRenderTargetArguments = pDevice == nullptr || name.empty() || width == 0 || height == 0;
         if ( bInvalidRenderTargetArguments )
-            return false;
+            return Texture2DUploadStep::Failed;
         if ( getHandle() != 0 )
             releaseRHI( pDevice );
 
         RHITextureDesc desc{};
-        desc._width                    = width;
-        desc._height                   = height;
-        desc._mipLevels                = 1;
-        desc._format                   = format;
-        desc._bIsRenderTarget          = SW_TRUE;
-        desc._bIsShaderResource        = SW_TRUE;
-        IRHIResourceFactory* pResource = pDevice->getResourceFactory();
-        _handle                        = pResource->createTexture2D( desc );
-        if ( getHandle() == 0 )
+        desc._width                      = width;
+        desc._height                     = height;
+        desc._mipLevels                  = 1;
+        desc._format                     = format;
+        desc._bIsRenderTarget            = SW_TRUE;
+        desc._bIsShaderResource          = SW_TRUE;
+        IRHIResourceFactory*   pResource = pDevice->getResourceFactory();
+        const RHITextureHandle handle    = pResource->createTexture2D( desc );
+        if ( handle == 0 )
         {
             SW_LOG_ERROR_ID( "Texture.CreateFailed", "Texture2D: createTexture2D failed for render target '%#' (%#×%#)", name, width, height );
-            return false;
+            return Texture2DUploadStep::Failed;
         }
         // 그려지기 전에 샘플링될 수 있다(그 타깃을 그릴 패킷보다 먼저 줄 선 프레임 · 에디터 그리기). 0 으로 채워 셰이더 읽기 상태로 둔다 — Vulkan 은 UNDEFINED 레이아웃
         // 샘플링이 검증 Error 다. 렌더 텍스처를 쓰는 모든 쪽(카메라 · 에디터 뷰)이 이 한 곳의 보호를 받는다(예전에는 에디터가 제 타깃만 따로 채웠다).
-        {
-            const vector<uint8>  listZero( static_cast<size_t>( width ) * height * getRHIFormatBytesPerPixel( format ), 0u );
-            RHITextureUploadDesc upload{};
-            upload._pData     = listZero.data();
-            upload._sizeBytes = static_cast<uint32>( listZero.size() );
-            upload._mipLevels = 1;
-            if ( RHITransferUtil::uploadTexture2DAndWait( *pResource, _handle, upload ) == false )
-                SW_LOG_WARNING_ID( "Texture.RenderTargetClearFailed", "Texture2D: render target '%#' (%#×%#) could not be cleared before its first frame", name, width, height );
-        }
-        _srv = pResource->registerBindlessTexture( _handle );
-        if ( _srv == kInvalidDescriptorIndex )
-        {
-            SW_LOG_ERROR_ID( "Texture.BindlessRegisterFailed", "Texture2D: registerBindlessTexture failed for render target '%#'", name );
-            pResource->destroyTexture( _handle );
-            _handle = 0;
-            return false;
-        }
-        _pDevice       = pDevice;
-        _path          = string{ name };
-        _width         = width;
-        _height        = height;
-        _mipCount      = 1;
-        _format        = format;
-        _bRenderTarget = SW_TRUE;
-        SW_LOG_INFO_ID( "Texture2D.Texture2DRenderTargetReady", "Texture2D render target '%#' ready: %#×%#, srv %#", _path.c_str(), _width, _height, getSRV() );
-        return true;
+        const vector<uint8>  listZero( static_cast<size_t>( width ) * height * getRHIFormatBytesPerPixel( format ), 0u );
+        RHITextureUploadDesc upload{};
+        upload._pData     = listZero.data();
+        upload._sizeBytes = static_cast<uint32>( listZero.size() );
+        upload._mipLevels = 1;
+        RHITransferTicket         ticket{};
+        const Texture2DUploadStep step = submitCreatedTexture( *pResource, handle, upload, bBlocking, name, ticket );
+        if ( step != Texture2DUploadStep::Submitted )
+            return step; // `submitCreatedTexture` 가 텍스처를 지웠다
+
+        // `_pDevice` 는 제출한 뒤에만 적는다(`beginUploadFromImage` 와 같은 이유). SRV 는 `finishUpload` 가 완료를 본 뒤에 등록한다.
+        _handle.store( handle, std::memory_order_release );
+        _srv.store( kInvalidDescriptorIndex, std::memory_order_release );
+        _uploadTicket     = ticket;
+        _pDevice          = pDevice;
+        _path             = string{ name };
+        _width            = width;
+        _height           = height;
+        _mipCount         = 1;
+        _streamedMipCount = 0;
+        _format           = format;
+        _bRenderTarget    = SW_TRUE;
+        return Texture2DUploadStep::Submitted;
     }
 
     bool Texture2D::initRHI( IRHIDevice* pDevice )
@@ -601,7 +606,7 @@ namespace sw
 
     void Texture2D::detachRHI( Texture2DRetiredResource& outRetired )
     {
-        // 렌더 타깃은 올리는 중인 업로드가 없다(`createRenderTarget` 은 제출하지 않는다) — 위쪽 밉 교체의 새 텍스처가 있으면 이 함수의 대상이 아니다.
+        // 렌더 타깃은 위쪽 밉 교체가 없다 — 그 새 텍스처가 있으면 이 함수의 대상이 아니다. 0 채우기가 아직 안 끝났으면 그 티켓은 버린다(옛 텍스처는 해제 줄로 간다 · 전송 중 파괴는 계약 6).
         SW_ASSERT( _upgrade._handle == 0 );
         outRetired._handle = _handle.exchange( 0, std::memory_order_acq_rel );
         outRetired._srv    = _srv.exchange( kInvalidDescriptorIndex, std::memory_order_acq_rel );
