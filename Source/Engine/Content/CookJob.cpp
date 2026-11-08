@@ -2,12 +2,12 @@
 
 #include "Engine/Content/CookJob.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"

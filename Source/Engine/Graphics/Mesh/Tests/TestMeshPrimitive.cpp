@@ -1,8 +1,8 @@
 // MeshPrimitiveTest — MeshUtil 이 만드는 기본 도형의 공유 · 경계 반지름 · 위상 · 노멀 · UV · 탄젠트 · 정점 색. 디바이스 없음(nogpu).
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/AssetRef.h"
@@ -175,7 +175,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
 
         uint32 badLengthCount = 0;
         uint32 inwardCount    = 0;
-        uint32 badUvCount     = 0;
+        uint32 badUVCount     = 0;
         for ( const sw::RHIVertex& vertex : listVertex )
         {
             const sw::float3 normal{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] };
@@ -188,15 +188,15 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
             // 안쪽을 향하는 노멀은 빛을 반대로 받는다 — 그림에서는 "저 면만 어둡다" 로만 보인다.
             if ( normal.dot( position ) < -0.001f )
                 ++inwardCount;
-            const bool bBadUv = vertex._arrUv[0] < -0.001f || vertex._arrUv[0] > 1.001f || vertex._arrUv[1] < -0.001f ||
-                                vertex._arrUv[1] > 1.001f;
-            if ( bBadUv )
-                ++badUvCount;
+            const bool bBadUV = vertex._arrUV[0] < -0.001f || vertex._arrUV[0] > 1.001f || vertex._arrUV[1] < -0.001f ||
+                                vertex._arrUV[1] > 1.001f;
+            if ( bBadUV )
+                ++badUVCount;
         }
 
         SW_EXPECT_TRUE_MSG( badLengthCount == 0, "vertex normals are not normalized" );
         SW_EXPECT_TRUE_MSG( inwardCount == 0, "vertex normals point inward" );
-        SW_EXPECT_TRUE_MSG( badUvCount == 0, "UVs are outside 0..1" );
+        SW_EXPECT_TRUE_MSG( badUVCount == 0, "UVs are outside 0..1" );
 
         // 곡면은 **면마다 노멀이 달라야** 한다 — 전부 같으면 평면 음영으로 되돌아간 것이다.
         if ( sw::StringUtil::equals( pID, "Sphere", true ) )
@@ -266,10 +266,10 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveTangentsAreOrthonormalToNormals )
     const sw::RHIVertex& vertex2 = listVertex[2];
     const sw::float3     edge1{ vertex1._arrPosition[0] - vertex0._arrPosition[0], vertex1._arrPosition[1] - vertex0._arrPosition[1], vertex1._arrPosition[2] - vertex0._arrPosition[2] };
     const sw::float3     edge2{ vertex2._arrPosition[0] - vertex0._arrPosition[0], vertex2._arrPosition[1] - vertex0._arrPosition[1], vertex2._arrPosition[2] - vertex0._arrPosition[2] };
-    const float32        du1         = vertex1._arrUv[0] - vertex0._arrUv[0];
-    const float32        dv1         = vertex1._arrUv[1] - vertex0._arrUv[1];
-    const float32        du2         = vertex2._arrUv[0] - vertex0._arrUv[0];
-    const float32        dv2         = vertex2._arrUv[1] - vertex0._arrUv[1];
+    const float32        du1         = vertex1._arrUV[0] - vertex0._arrUV[0];
+    const float32        dv1         = vertex1._arrUV[1] - vertex0._arrUV[1];
+    const float32        du2         = vertex2._arrUV[0] - vertex0._arrUV[0];
+    const float32        dv2         = vertex2._arrUV[1] - vertex0._arrUV[1];
     const float32        determinant = du1 * dv2 - du2 * dv1;
     SW_REQUIRE_TRUE( determinant != 0.0f );
     const sw::float3 expectedTangent   = ( ( edge1 * dv2 - edge2 * dv1 ) / determinant ).normalize();
@@ -322,8 +322,8 @@ SW_TEST_CASE( MeshPrimitiveTest, SpriteQuadReadsTheSameFromBothSides )
         {
             // 화면 오른쪽: 노멀 -Z 면(+Z 를 보는 카메라)은 +X, 노멀 +Z 면(-Z 를 보는 카메라)은 -X.
             const float32 screenRight = bFront ? pVertex->_arrPosition[0] : -pVertex->_arrPosition[0];
-            SW_EXPECT_NEAR( screenRight + 0.5f, pVertex->_arrUv[0], 1e-6f );
-            SW_EXPECT_NEAR( 0.5f - pVertex->_arrPosition[1], pVertex->_arrUv[1], 1e-6f );
+            SW_EXPECT_NEAR( screenRight + 0.5f, pVertex->_arrUV[0], 1e-6f );
+            SW_EXPECT_NEAR( 0.5f - pVertex->_arrPosition[1], pVertex->_arrUV[1], 1e-6f );
         }
     }
     SW_EXPECT_EQUAL( 2u, frontCount );

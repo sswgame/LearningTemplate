@@ -6,11 +6,11 @@
 
 #include "Editor/Common/Asset/Model/ModelImportMaterial.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/Model/ModelImportGeometry.h"
@@ -118,9 +118,9 @@ namespace sw::editor
         return false;
     }
 
-    bool ModelImportMaterial::readSectionPbrMaterials( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+    bool ModelImportMaterial::readSectionPBRMaterials( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
     {
-        inoutResult._listPbrMaterial.clear();
+        inoutResult._listPBRMaterial.clear();
         bool bAnyTextured = false;
         for ( cgltf_size materialIndex = 0; materialIndex < data.materials_count; ++materialIndex )
         {
@@ -129,12 +129,12 @@ namespace sw::editor
         }
         if ( data.materials_count < 2 || bAnyTextured == false )
             return true;
-        inoutResult._listPbrMaterial.resize( data.materials_count );
+        inoutResult._listPBRMaterial.resize( data.materials_count );
         for ( cgltf_size materialIndex = 0; materialIndex < data.materials_count; ++materialIndex )
         {
             const cgltf_material& material = data.materials[materialIndex];
             const string          rawName  = material.name != nullptr && material.name[0] != '\0' ? string( material.name ) : formatToString( "material%#", static_cast<uint64>( materialIndex ) );
-            if ( readPbrMaterialValues( material, rawName, sourcePath, inoutResult._listPbrMaterial[materialIndex] ) == false )
+            if ( readPBRMaterialValues( material, rawName, sourcePath, inoutResult._listPBRMaterial[materialIndex] ) == false )
                 return false;
         }
         return true;
@@ -282,7 +282,7 @@ namespace sw::editor
     {
         if ( result._listSection.empty() )
             return true;
-        if ( result._listPbrMaterial.empty() == false )
+        if ( result._listPBRMaterial.empty() == false )
         {
             vector<string> listWrittenStem;
             for ( const ModelImportSection& section : result._listSection )
@@ -290,7 +290,7 @@ namespace sw::editor
                 if ( VectorUtil::contains( listWrittenStem, section._fileStem ) )
                     continue;
                 listWrittenStem.push_back( section._fileStem );
-                if ( writePbrMaterialFile( assetPaths, result._listPbrMaterial[section._materialIndex], section._fileStem, sourcePath, sideFolder ) == false )
+                if ( writePBRMaterialFile( assetPaths, result._listPBRMaterial[section._materialIndex], section._fileStem, sourcePath, sideFolder ) == false )
                     return false;
             }
             SW_LOG_INFO_ID( "ModelImporter.GlTFPbrMaterialSections", "glTF '%#': %# material sections, %# PBR materials", sourcePath, result._listSection.size(), listWrittenStem.size() );
@@ -376,7 +376,7 @@ namespace sw::editor
         return true;
     }
 
-    const cgltf_material* ModelImportMaterial::findTexturedPbrMaterial( const cgltf_data& data )
+    const cgltf_material* ModelImportMaterial::findTexturedPBRMaterial( const cgltf_data& data )
     {
         for ( cgltf_size materialIndex = 0; materialIndex < data.materials_count; ++materialIndex )
         {
@@ -387,57 +387,57 @@ namespace sw::editor
         return nullptr;
     }
 
-    bool ModelImportMaterial::readPbrMaterial( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
+    bool ModelImportMaterial::readPBRMaterial( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )
     {
-        const cgltf_material* pMaterial = findTexturedPbrMaterial( data );
+        const cgltf_material* pMaterial = findTexturedPBRMaterial( data );
         if ( pMaterial == nullptr )
             return true;
         const string rawName = pMaterial->name != nullptr && pMaterial->name[0] != '\0' ? string( pMaterial->name ) : string( "material" );
-        return readPbrMaterialValues( *pMaterial, rawName, sourcePath, inoutResult._pbrMaterial );
+        return readPBRMaterialValues( *pMaterial, rawName, sourcePath, inoutResult._pbrMaterial );
     }
 
-    bool ModelImportMaterial::readPbrMaterialValues( const cgltf_material& material, const string& rawName, string_view sourcePath, ModelImportPbrMaterial& outPbr )
+    bool ModelImportMaterial::readPBRMaterialValues( const cgltf_material& material, const string& rawName, string_view sourcePath, ModelImportPBRMaterial& outPBR )
     {
         const cgltf_pbr_metallic_roughness& pbr = material.pbr_metallic_roughness;
-        outPbr._name                            = ModelImportUtil::makeFileStem( rawName.c_str() );
-        outPbr._baseColor                       = float4{ pbr.base_color_factor[0], pbr.base_color_factor[1], pbr.base_color_factor[2], pbr.base_color_factor[3] };
-        outPbr._metallic                        = pbr.metallic_factor;
-        outPbr._roughness                       = pbr.roughness_factor;
+        outPBR._name                            = ModelImportUtil::makeFileStem( rawName.c_str() );
+        outPBR._baseColor                       = float4{ pbr.base_color_factor[0], pbr.base_color_factor[1], pbr.base_color_factor[2], pbr.base_color_factor[3] };
+        outPBR._metallic                        = pbr.metallic_factor;
+        outPBR._roughness                       = pbr.roughness_factor;
         auto readTexture                        = [&]( const cgltf_texture* pTexture, ModelImportTexture& outTexture, const utf8* pSuffix )
         {
             if ( pTexture == nullptr || pTexture->image == nullptr )
                 return true;
-            outTexture._fileStem = outPbr._name + pSuffix;
+            outTexture._fileStem = outPBR._name + pSuffix;
             return readImageBytes( *pTexture->image, sourcePath, outTexture );
         };
         const cgltf_texture* pORM = pbr.metallic_roughness_texture.texture;
-        if ( readTexture( pbr.base_color_texture.texture, outPbr._albedo, "_albedo" ) == false || readTexture( material.normal_texture.texture, outPbr._normal, "_normal" ) == false ||
-             readTexture( pORM, outPbr._orm, "_orm" ) == false )
+        if ( readTexture( pbr.base_color_texture.texture, outPBR._albedo, "_albedo" ) == false || readTexture( material.normal_texture.texture, outPBR._normal, "_normal" ) == false ||
+             readTexture( pORM, outPBR._orm, "_orm" ) == false )
             return false;
-        outPbr._normalScale           = material.normal_texture.texture != nullptr ? material.normal_texture.scale : 1.0f;
+        outPBR._normalScale           = material.normal_texture.texture != nullptr ? material.normal_texture.scale : 1.0f;
         const cgltf_texture* pAO      = material.occlusion_texture.texture;
         const bool           bSameORM = pAO != nullptr && pORM != nullptr && pAO->image == pORM->image;
-        outPbr._occlusionStrength     = bSameORM ? material.occlusion_texture.scale : 0.0f;
+        outPBR._occlusionStrength     = bSameORM ? material.occlusion_texture.scale : 0.0f;
         if ( pAO != nullptr && bSameORM == false )
             SW_LOG_WARNING_ID( "ModelImporter.GlTFOcclusionTextureNot", "glTF '%#': the occlusion texture is not packed with metallic-roughness (ORM) - occlusion is not imported", sourcePath );
-        outPbr._bAlphaCutoff = material.alpha_mode == cgltf_alpha_mode_mask ? SW_TRUE : SW_FALSE;
-        outPbr._alphaCutoff  = material.alpha_cutoff;
-        outPbr._bTwoSided    = material.double_sided != 0 ? SW_TRUE : SW_FALSE;
+        outPBR._bAlphaCutoff = material.alpha_mode == cgltf_alpha_mode_mask ? SW_TRUE : SW_FALSE;
+        outPBR._alphaCutoff  = material.alpha_cutoff;
+        outPBR._bTwoSided    = material.double_sided != 0 ? SW_TRUE : SW_FALSE;
         if ( material.alpha_mode == cgltf_alpha_mode_blend )
-            SW_LOG_WARNING_ID( "ModelImporter.GlTFBlendAlphaOpaque", "glTF '%#': material '%#' is alphaMode BLEND - the PBR material is opaque (no translucent PBR permutation)", sourcePath, outPbr._name.c_str() );
-        outPbr._bPresent = SW_TRUE;
+            SW_LOG_WARNING_ID( "ModelImporter.GlTFBlendAlphaOpaque", "glTF '%#': material '%#' is alphaMode BLEND - the PBR material is opaque (no translucent PBR permutation)", sourcePath, outPBR._name.c_str() );
+        outPBR._bPresent = SW_TRUE;
         return true;
     }
 
-    bool ModelImportMaterial::writePbrMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder )
+    bool ModelImportMaterial::writePBRMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder )
     {
-        const ModelImportPbrMaterial& pbr = result._pbrMaterial;
+        const ModelImportPBRMaterial& pbr = result._pbrMaterial;
         if ( pbr._bPresent == SW_FALSE )
             return true;
-        return writePbrMaterialFile( assetPaths, pbr, pbr._name, sourcePath, sideFolder );
+        return writePBRMaterialFile( assetPaths, pbr, pbr._name, sourcePath, sideFolder );
     }
 
-    bool ModelImportMaterial::writePbrMaterialFile( const AssetPaths& assetPaths, const ModelImportPbrMaterial& pbr, string_view fileStem, string_view sourcePath, string_view sideFolder )
+    bool ModelImportMaterial::writePBRMaterialFile( const AssetPaths& assetPaths, const ModelImportPBRMaterial& pbr, string_view fileStem, string_view sourcePath, string_view sideFolder )
     {
         const string rawTextureFolder = makeRawTextureFolder( sourcePath );
         if ( rawTextureFolder.empty() )

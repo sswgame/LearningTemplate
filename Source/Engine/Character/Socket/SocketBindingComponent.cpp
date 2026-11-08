@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
-#include "Engine/Physics/Component/SocketPhysicsBody.h"
+#include "Engine/Physics/Scene/SocketPhysicsBody.h"
 
 namespace sw
 {

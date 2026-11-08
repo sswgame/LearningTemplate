@@ -2,8 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Tutorial/TutorialHintComponent.h"
 
-#include "Engine/Localization/IPlayerNoticeSink.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Presentation/IPlayerNoticeSink.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"

@@ -8,17 +8,17 @@
 
 #include "Engine/Renderer/Frame/Execute/FramePassExecutor.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/array.h"
-#include "Core/Container/formatString.h"
 #include "Core/Container/string.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
-#include "Core/String/FourCcUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -55,7 +55,7 @@
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw
 {

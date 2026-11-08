@@ -3,10 +3,10 @@
 #include "Core/Diagnostics/DataRaceReporter.h"
 
 #include "Core/Concurrency/DataRaceDetector.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {

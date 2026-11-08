@@ -109,7 +109,7 @@ namespace
 } // namespace
 
 /** @brief [OnlinePresenceTest] 서버 A 에 접속한 계정을 서버 B 가 계정 id 와 표시 이름(대소문자 무시)으로 찾고, 접속한 서버를 받는다 */
-SW_TEST_CASE( OnlinePresenceTest, OtherServerFindsTheAccountByIdAndName )
+SW_TEST_CASE( OnlinePresenceTest, OtherServerFindsTheAccountByIDAndName )
 {
     PresenceFixture rig;
     SW_REQUIRE_TRUE( rig._presenceA.isEnabled() && rig._presenceB.isEnabled() );

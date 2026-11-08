@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -12,8 +12,8 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerFacility.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerQuota.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 #include <limits>
 

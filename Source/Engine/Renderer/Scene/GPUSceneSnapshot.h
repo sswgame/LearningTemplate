@@ -11,7 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"

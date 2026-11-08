@@ -32,9 +32,9 @@ namespace sw
              * @param length      그 축의 월드 길이
              * @param borderStart 시작 쪽 테두리(프레임 비율이며 자연 크기의 월드 길이와 같습니다)
              * @param borderEnd   끝 쪽 테두리
-             * @param bFlipUv     좌표가 축과 반대로 자라는가(세로: v 는 위가 0)
+             * @param bFlipUV     좌표가 축과 반대로 자라는가(세로: v 는 위가 0)
              */
-            static void makeSpans( float32 length, float32 borderStart, float32 borderEnd, bool bTiled, bool bFlipUv, vector<Span>& outListSpan )
+            static void makeSpans( float32 length, float32 borderStart, float32 borderEnd, bool bTiled, bool bFlipUV, vector<Span>& outListSpan )
             {
                 outListSpan.clear();
                 const float32 half = length * 0.5f;
@@ -52,7 +52,7 @@ namespace sw
                 float32 cursor = -half;
                 if ( worldStart > 0.0f )
                 {
-                    outListSpan.push_back( Span{ cursor, cursor + worldStart, toUv( bFlipUv, 0.0f ), toUv( bFlipUv, borderStart ) } );
+                    outListSpan.push_back( Span{ cursor, cursor + worldStart, toUV( bFlipUV, 0.0f ), toUV( bFlipUV, borderStart ) } );
                     cursor += worldStart;
                 }
                 const float32 centerEnd    = half - worldEnd;
@@ -62,7 +62,7 @@ namespace sw
                 {
                     if ( bTiled == false || naturalTile <= 1e-4f )
                     {
-                        outListSpan.push_back( Span{ cursor, centerEnd, toUv( bFlipUv, borderStart ), toUv( bFlipUv, 1.0f - borderEnd ) } );
+                        outListSpan.push_back( Span{ cursor, centerEnd, toUV( bFlipUV, borderStart ), toUV( bFlipUV, 1.0f - borderEnd ) } );
                     }
                     else
                     {
@@ -75,18 +75,18 @@ namespace sw
                         {
                             const float32 step     = MathUtil::min( tileLength, centerEnd - cursor );
                             const float32 fraction = step / tileLength;
-                            outListSpan.push_back( Span{ cursor, cursor + step, toUv( bFlipUv, borderStart ), toUv( bFlipUv, borderStart + naturalTile * fraction ) } );
+                            outListSpan.push_back( Span{ cursor, cursor + step, toUV( bFlipUV, borderStart ), toUV( bFlipUV, borderStart + naturalTile * fraction ) } );
                             cursor += step;
                         }
                     }
                 }
                 cursor = centerEnd;
                 if ( worldEnd > 0.0f )
-                    outListSpan.push_back( Span{ cursor, half, toUv( bFlipUv, 1.0f - borderEnd ), toUv( bFlipUv, 1.0f ) } );
+                    outListSpan.push_back( Span{ cursor, half, toUV( bFlipUV, 1.0f - borderEnd ), toUV( bFlipUV, 1.0f ) } );
             }
 
             /** @brief 프레임 좌표(축 방향으로 자람)를 UV 로 옮깁니다. 세로는 v 가 위에서 0 이라 뒤집습니다. */
-            static float32 toUv( bool bFlipUv, float32 frameCoord ) { return bFlipUv ? ( 1.0f - frameCoord ) : frameCoord; }
+            static float32 toUV( bool bFlipUV, float32 frameCoord ) { return bFlipUV ? ( 1.0f - frameCoord ) : frameCoord; }
 
             static RHIVertex makeVertex( float32 x, float32 y, float32 normalZ, float32 u, float32 v )
             {

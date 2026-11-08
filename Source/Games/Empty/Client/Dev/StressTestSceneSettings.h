@@ -14,11 +14,11 @@
 
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Animation/Facial/FacialRig.h"
+#include "Engine/Animation/Notify/AnimationNotifyTable.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Audio/AudioClip.h"
-#include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"

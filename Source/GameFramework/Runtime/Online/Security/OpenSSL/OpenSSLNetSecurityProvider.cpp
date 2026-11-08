@@ -3,8 +3,8 @@
 #include "GameFramework/Runtime/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/HexUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
@@ -295,10 +295,10 @@ namespace sw
         };
 
         /** @brief AEAD 하나 — 키를 박은 암호 · 복호 문맥 둘을 들고, 호출마다 nonce 만 바꾼다. */
-        class OpenSSLAead final : public INetAead
+        class OpenSSLSealer final : public INetAEAD
         {
         public:
-            OpenSSLAead( const EVP_CIPHER* pCipher, const uint8* pKey )
+            OpenSSLSealer( const EVP_CIPHER* pCipher, const uint8* pKey )
                 : _pEncrypt{ EVP_CIPHER_CTX_new() }
                 , _pDecrypt{ EVP_CIPHER_CTX_new() }
                 , _bValid{ SW_FALSE }
@@ -307,14 +307,14 @@ namespace sw
                                     EVP_DecryptInit_ex( _pDecrypt, pCipher, nullptr, pKey, nullptr ) == 1;
                 _bValid = bReady ? SW_TRUE : SW_FALSE;
             }
-            ~OpenSSLAead() override
+            ~OpenSSLSealer() override
             {
                 EVP_CIPHER_CTX_free( _pEncrypt );
                 EVP_CIPHER_CTX_free( _pDecrypt );
             }
 
-            OpenSSLAead( const OpenSSLAead& )            = delete;
-            OpenSSLAead& operator=( const OpenSSLAead& ) = delete;
+            OpenSSLSealer( const OpenSSLSealer& )            = delete;
+            OpenSSLSealer& operator=( const OpenSSLSealer& ) = delete;
 
             bool isValid() const { return _bValid == SW_TRUE; }
 
@@ -326,13 +326,13 @@ namespace sw
                                      ( aadSize == 0 || EVP_EncryptUpdate( _pEncrypt, nullptr, &length, pAad, aadSize ) == 1 ) &&
                                      ( plainSize == 0 || EVP_EncryptUpdate( _pEncrypt, pOut, &length, pPlain, plainSize ) == 1 ) &&
                                      EVP_EncryptFinal_ex( _pEncrypt, pOut + ( plainSize == 0 ? 0 : length ), &finalLength ) == 1 &&
-                                     EVP_CIPHER_CTX_ctrl( _pEncrypt, EVP_CTRL_AEAD_GET_TAG, NetSecurityConstant::kAeadTagSize, pOut + plainSize ) == 1;
+                                     EVP_CIPHER_CTX_ctrl( _pEncrypt, EVP_CTRL_AEAD_GET_TAG, NetSecurityConstant::kAEADTagSize, pOut + plainSize ) == 1;
                 return bSealed;
             }
 
             [[nodiscard]] bool open( const uint8* pNonce, const uint8* pAad, int32 aadSize, const uint8* pCipher, int32 cipherSize, uint8* pOut ) override
             {
-                const int32 plainSize = cipherSize - NetSecurityConstant::kAeadTagSize;
+                const int32 plainSize = cipherSize - NetSecurityConstant::kAEADTagSize;
                 if ( plainSize < 0 )
                     return false;
                 int32 length      = 0;
@@ -341,7 +341,7 @@ namespace sw
                 const bool bOpened = EVP_DecryptInit_ex( _pDecrypt, nullptr, nullptr, nullptr, pNonce ) == 1 &&
                                      ( aadSize == 0 || EVP_DecryptUpdate( _pDecrypt, nullptr, &length, pAad, aadSize ) == 1 ) &&
                                      ( plainSize == 0 || EVP_DecryptUpdate( _pDecrypt, pOut, &length, pCipher, plainSize ) == 1 ) &&
-                                     EVP_CIPHER_CTX_ctrl( _pDecrypt, EVP_CTRL_AEAD_SET_TAG, NetSecurityConstant::kAeadTagSize, const_cast<uint8*>( pCipher + plainSize ) ) == 1 &&
+                                     EVP_CIPHER_CTX_ctrl( _pDecrypt, EVP_CTRL_AEAD_SET_TAG, NetSecurityConstant::kAEADTagSize, const_cast<uint8*>( pCipher + plainSize ) ) == 1 &&
                                      EVP_DecryptFinal_ex( _pDecrypt, pOut + ( plainSize == 0 ? 0 : length ), &finalLength ) == 1;
                 if ( bOpened == false )
                     ERR_clear_error();
@@ -654,7 +654,7 @@ namespace sw
         return bDerived;
     }
 
-    bool OpenSSLNetSecurityProvider::computeHkdfSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize,
+    bool OpenSSLNetSecurityProvider::computeHKDFSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize,
                                                         uint8* pOut, int32 outSize )
     {
         EVP_KDF*     pKdf     = EVP_KDF_fetch( nullptr, OSSL_KDF_NAME_HKDF, nullptr );
@@ -711,10 +711,10 @@ namespace sw
         return bDerived;
     }
 
-    unique_ptr<INetAead> OpenSSLNetSecurityProvider::createAead( NetAeadAlgorithm algorithm, const uint8* pKey )
+    unique_ptr<INetAEAD> OpenSSLNetSecurityProvider::createAEAD( NetAEADAlgorithm algorithm, const uint8* pKey )
     {
-        const EVP_CIPHER*       pCipher = algorithm == NetAeadAlgorithm::AES256Gcm ? EVP_aes_256_gcm() : EVP_chacha20_poly1305();
-        unique_ptr<OpenSSLAead> aead    = sw::make_unique<OpenSSLAead>( pCipher, pKey );
+        const EVP_CIPHER*         pCipher = algorithm == NetAEADAlgorithm::AES256Gcm ? EVP_aes_256_gcm() : EVP_chacha20_poly1305();
+        unique_ptr<OpenSSLSealer> aead    = sw::make_unique<OpenSSLSealer>( pCipher, pKey );
         if ( aead->isValid() == false )
         {
             SW_LOG_ERROR_ID( "OpenSSLNetSecurity.CouldNotCreateAEAD", "Could not create an AEAD context: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
@@ -1082,7 +1082,7 @@ namespace sw
      * @class OpenSSLNetSecuritySubsystem
      * @brief OpenSSL 제공자를 멤버로 들고 `INetSecurityProvider` 로 공개하는 모듈 서브시스템입니다. 제공자는 상태가 없어 초기화 · 종료가 할 일이 없다.
      * @details 제공자가 `ISubsystem` 을 함께 상속하지 않게 수명 짝만 여기 둔다 — 제공자는 서브시스템 없이도 쓰인다(테스트). 이름 해시가 함수 서명 글이라
-     *          익명 이름공간이 아닌 `sw` 에 둔다(`RespEphemeralStoreDriver` 와 같다).
+     *          익명 이름공간이 아닌 `sw` 에 둔다(`RESPEphemeralStoreDriver` 와 같다).
      */
     class OpenSSLNetSecuritySubsystem final : public ISubsystem
     {

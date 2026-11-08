@@ -4,17 +4,17 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Progression/LevelProgress.h"
 
 namespace sw
@@ -59,7 +59,7 @@ namespace sw
     class SW_KIT_API WesternHorse
     {
     public:
-        static constexpr uint32  kStateTag      = FourCcUtil::make( "WHRS" );
+        static constexpr uint32  kStateTag      = FourCCUtil::make( "WHRS" );
         static constexpr uint32  kStateVersion  = 1;
         static constexpr float32 kCoreMax       = 100.0f;
         static constexpr float32 kFearThreshold = 1.0f;

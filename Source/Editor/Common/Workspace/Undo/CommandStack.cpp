@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 

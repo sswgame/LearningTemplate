@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/Material/Model/MaterialPreviewInputs.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/Material/MaterialTypes.h"
 

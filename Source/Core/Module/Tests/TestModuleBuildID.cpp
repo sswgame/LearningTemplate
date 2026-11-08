@@ -1,9 +1,9 @@
 // ModuleBuildID — 실행 파일 · 이 코드가 든 모듈 · OS 라이브러리의 빌드 id 를 올라온 이미지에서 읽고, 심볼 서버 열쇠의 모양(16진)을 지키는지.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleBuildID.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #if defined( SW_PLATFORM_WINDOWS )

@@ -2,8 +2,8 @@
 
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/LogOnce.h"
@@ -24,9 +24,9 @@
     #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
     #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineDefaultAssets.h"
-    #include "Engine/Graphics/RHI/DX/RHIDxgiAdapter.h"
-    #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
-    #include "Engine/Graphics/RHI/DX/RHIDxgiMemoryBudget.h"
+    #include "Engine/Graphics/RHI/DX/DXGIAdapter.h"
+    #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
+    #include "Engine/Graphics/RHI/DX/DXGIMemoryBudget.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -505,7 +505,7 @@ namespace sw
 
     bool D3D12RHIDevice::queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )
     {
-        return queryDxgiMemoryBudget( _memoryAdapter.Get(), outBudget );
+        return queryDXGIMemoryBudget( _memoryAdapter.Get(), outBudget );
     }
 
     IRHIResourceFactory* D3D12RHIDevice::getResourceFactory()
@@ -556,7 +556,7 @@ namespace sw
         }
 
         // 하드웨어는 고성능 순서의 첫 어댑터다 — nullptr(기본 어댑터)은 하이브리드 노트북에서 내장 GPU 다(RHIDxgiAdapter.h).
-        const Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter != nullptr ? softwareAdapter : findDxgiPreferredAdapter( factory.Get(), desc._bPreferMinimumPower );
+        const Microsoft::WRL::ComPtr<IDXGIAdapter1> adapter = softwareAdapter != nullptr ? softwareAdapter : findDXGIPreferredAdapter( factory.Get(), desc._bPreferMinimumPower );
         if ( adapter == nullptr )
         {
             SW_LOG_ERROR_ID( "D3D12.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );
@@ -579,7 +579,7 @@ namespace sw
             return false;
         createBreadcrumbBuffer();
         // 메모리 질의는 디바이스가 실제로 쓰는 어댑터에 한다(기본 어댑터를 가정하지 않는다). 못 찾으면 드라이버 값은 "모름" 이다.
-        _memoryAdapter = findDxgiAdapterByLuid( _device->GetAdapterLuid() );
+        _memoryAdapter = findDXGIAdapterByLuid( _device->GetAdapterLuid() );
         // 실제로 선 어댑터가 소프트웨어인지 — 요청이 아니라 결과를 적는다.
         if ( softwareAdapter != nullptr )
         {

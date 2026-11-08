@@ -2,11 +2,11 @@
 
 #include "Core/Network/Message/NetStatsReport.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include <algorithm>
 #include <limits>

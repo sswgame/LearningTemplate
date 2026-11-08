@@ -6,13 +6,13 @@
 #include "pch.h"
 
 #include "Core/Container/string.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 namespace sw
 {

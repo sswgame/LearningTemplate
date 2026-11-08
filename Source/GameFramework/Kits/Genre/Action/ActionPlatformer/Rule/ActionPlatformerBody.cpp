@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionPlatformerBody.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"

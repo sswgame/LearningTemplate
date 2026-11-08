@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 

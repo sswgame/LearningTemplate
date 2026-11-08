@@ -29,7 +29,7 @@ set(listEditorModelLayer Common/Asset Common/Commands Common/Config Common/Local
 # 없어지면 구성이 멈춘다. `Render/` 는 RHI 디바이스가 필요해 뺀다.
 file(GLOB listEditorUITestSource CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Common/Backend/Platform/*.cpp")
 list(APPEND listEditorUITestSource
-	"${CMAKE_CURRENT_SOURCE_DIR}/Common/Backend/ImGuiOsInputFilter.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/Common/Backend/ImGuiOSInputFilter.cpp"
 	"${CMAKE_CURRENT_SOURCE_DIR}/Common/Backend/ImGuiKeyForward.cpp")
 foreach(source IN LISTS listEditorUITestSource)
 	if(NOT source IN_LIST listEditorAllSource)

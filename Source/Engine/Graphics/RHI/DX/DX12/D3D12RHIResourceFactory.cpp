@@ -12,8 +12,8 @@
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
+#include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxRenderState.h"
-#include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
@@ -335,7 +335,7 @@ namespace sw
         // 서브리소스 번호 = 밉 + 면 × 밉 수(D3D12CalcSubresource 와 같은 순서).
         const UINT        firstSubresource = desc._arraySlice * resourceDesc.MipLevels;
         RHITextureMipSpan arrMip[constant::render::kMaxTextureMipCount]{};
-        const uint32      mipCount = resolveTextureUploadMips( desc, fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ),
+        const uint32      mipCount = resolveTextureUploadMips( desc, fromDXGIFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ),
                                                                resourceDesc.Height, resourceDesc.MipLevels, arrMip, constant::render::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
@@ -439,7 +439,7 @@ namespace sw
 
         const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
         uint32                    rowBytes{ 0 };
-        if ( validateTextureRegionUpload( fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height,
+        if ( validateTextureRegionUpload( fromDXGIFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height,
                                           resourceDesc.MipLevels, resourceDesc.DepthOrArraySize, desc, rowBytes ) == false )
             return RHITransferSubmit::rejected();
 
@@ -584,12 +584,12 @@ namespace sw
         {
             if ( view._bHasDSV != SW_FALSE )
                 return RHIFormat::D24_UNORM_S8_UINT;
-            return fromDxgiFormat( view._format );
+            return fromDXGIFormat( view._format );
         }
         ID3D12Resource* pTexture = _pDevice->resolveTexture( texture );
         if ( pTexture == nullptr )
             return RHIFormat::Unknown;
-        return fromDxgiFormat( pTexture->GetDesc().Format );
+        return fromDXGIFormat( pTexture->GetDesc().Format );
     }
 
     RHITransferSubmit D3D12RHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
@@ -612,7 +612,7 @@ namespace sw
         }
         // 깊이는 typeless(R24G8)로 만들어져 있다. 깊이 평면(평면 0)만 복사하고 가져갈 때 0..1 float32 로 바꾼다(kRHIDepthReadbackFormat).
         const bool      bDepth       = resourceDesc.Format == DXGI_FORMAT_R24G8_TYPELESS || resourceDesc.Format == DXGI_FORMAT_D24_UNORM_S8_UINT;
-        const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : fromDxgiFormat( resourceDesc.Format );
+        const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : fromDXGIFormat( resourceDesc.Format );
         if ( computeRHITextureMipLayout( layoutFormat, static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip, outLayout ) == false )
         {
             SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.SubmitTextureReadbackUnsupportedFormatX", "submitTextureReadback: unsupported format for %#x%# mip %#", static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip );
@@ -864,9 +864,9 @@ namespace sw
         heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 
         const bool        bDepth      = desc._bIsDepthStencil != SW_FALSE;
-        const DXGI_FORMAT typelessFmt = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDxgiFormat( desc._format );
-        const DXGI_FORMAT dsvFmt      = toDxgiFormat( constant::render::kDepthStencilFormat );
-        const DXGI_FORMAT colorFmt    = toDxgiFormat( desc._format );
+        const DXGI_FORMAT typelessFmt = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDXGIFormat( desc._format );
+        const DXGI_FORMAT dsvFmt      = toDXGIFormat( constant::render::kDepthStencilFormat );
+        const DXGI_FORMAT colorFmt    = toDXGIFormat( desc._format );
 
         D3D12_RESOURCE_DESC resourceDesc{};
         resourceDesc.Dimension          = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -1410,11 +1410,11 @@ namespace sw
         ShaderCompileResult            psResult{};
         if ( RHIShaderRequest::compileGraphics( request, vsResult, psResult ) )
         {
-            // 입력 레이아웃은 메시 정점 형식의 공용 테이블에서 셰이더가 읽는 속성만 골라 만든다(`fillDxgiInputElements` — DX11 과 같은 함수, Vulkan · GL 도 같은 규칙).
+            // 입력 레이아웃은 메시 정점 형식의 공용 테이블에서 셰이더가 읽는 속성만 골라 만든다(`fillDXGIInputElements` — DX11 과 같은 함수, Vulkan · GL 도 같은 규칙).
             // 정점 입력이 없는 셰이더(SV_VertexID 로 정점을 만든다)는 빈 레이아웃이라 정점 버퍼 없이 그린다.
             const uint32             consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::DXIL_D3D12 );
             D3D12_INPUT_ELEMENT_DESC arrInputElement[constant::render::kVertexAttributeCount]{};
-            const uint32             elementCount = fillDxgiInputElements<D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA>( desc._meshVertexFormat, consumedMask, arrInputElement );
+            const uint32             elementCount = fillDXGIInputElements<D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA>( desc._meshVertexFormat, consumedMask, arrInputElement );
             vertexSlotMask                        = RHIShaderRequest::toVertexSlotMask( consumedMask );
 
             D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc{};
@@ -1476,7 +1476,7 @@ namespace sw
                 auto&                      rtBlend = psoDesc.BlendState.RenderTarget[rtvIndex];
                 const RHIBlendTargetState& source  = renderState._arrBlendTarget[rtvIndex < kMaxColorAttachments ? rtvIndex : 0u];
                 rtBlend.RenderTargetWriteMask      = static_cast<UINT8>( source._colorWriteMask ); // 비트가 같다(RHIColorWriteMask)
-                psoDesc.RTVFormats[rtvIndex]       = toDxgiFormat( desc._arrRTVFormat[rtvIndex] );
+                psoDesc.RTVFormats[rtvIndex]       = toDXGIFormat( desc._arrRTVFormat[rtvIndex] );
                 rtBlend.BlendEnable                = source._bEnableBlend != SW_FALSE ? TRUE : FALSE;
                 rtBlend.SrcBlend                   = RHIDxRenderState::toBlend<D3D12_BLEND>( source._srcColor );
                 rtBlend.DestBlend                  = RHIDxRenderState::toBlend<D3D12_BLEND>( source._dstColor );
@@ -1492,7 +1492,7 @@ namespace sw
                                                              ? D3D12_DEPTH_WRITE_MASK_ALL
                                                              : D3D12_DEPTH_WRITE_MASK_ZERO;
                 psoDesc.DepthStencilState.DepthFunc      = RHIDxRenderState::toCompare<D3D12_COMPARISON_FUNC>( renderState._depthCompare );
-                psoDesc.DSVFormat                        = toDxgiFormat( desc._depthStencilFormat );
+                psoDesc.DSVFormat                        = toDXGIFormat( desc._depthStencilFormat );
                 // 스텐실 참조 값은 PSO 밖의 상태다 — 레코드에 두고 PSO 를 걸 때 함께 건다.
                 psoDesc.DepthStencilState.StencilEnable                = renderState._bEnableStencil != SW_FALSE ? TRUE : FALSE;
                 psoDesc.DepthStencilState.StencilReadMask              = renderState._stencilReadMask;

@@ -66,7 +66,7 @@ SW_TEST_CASE( ProcessEnvironmentTest, DistinguishesUnsetEmptyAndSet )
 /**
  * @brief 다시 정하면 새 값이 읽히고 지우면 없어지며, 한글 값도 UTF-8 로 돌아온다(Windows 에서 CRT `getenv`(ANSI)로 읽으면 깨진다).
  */
-SW_TEST_CASE( ProcessEnvironmentTest, SetOverwritesUnsetRemovesAndKeepsUtf8 )
+SW_TEST_CASE( ProcessEnvironmentTest, SetOverwritesUnsetRemovesAndKeepsUTF8 )
 {
     ScopedEnvironmentVariable restore{ kProcessEnvironmentTestVariable };
     string                    value;

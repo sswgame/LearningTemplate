@@ -15,7 +15,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Commands/Scene/EditorBakeRunState.h"
+#include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 #include "Editor/Common/EditorSubsystem.h"
 
 namespace sw

@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatService.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"

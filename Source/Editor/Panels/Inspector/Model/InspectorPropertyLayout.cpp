@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"

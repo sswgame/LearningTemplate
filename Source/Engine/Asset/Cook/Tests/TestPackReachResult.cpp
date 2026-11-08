@@ -365,7 +365,7 @@ SW_TEST_CASE( PackReachabilityTest, EntryCatalogReachedByFolderIsWhole )
 }
 
 /** @brief [PackReachabilityTest] `파일#id` 참조는 그 항목만 부른다 */
-SW_TEST_CASE( PackReachabilityTest, EntryCatalogFileHashIdNamesOneEntry )
+SW_TEST_CASE( PackReachabilityTest, EntryCatalogFileHashIDNamesOneEntry )
 {
     AssetReferenceFields params;
     SW_REQUIRE_TRUE( Util::loadRepositoryFields( params ) );

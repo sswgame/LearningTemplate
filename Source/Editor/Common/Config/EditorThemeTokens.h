@@ -35,7 +35,7 @@ namespace sw::editor
     {
         REFLECT_BODY();
         PROPERTY()
-        string _name{}; ///< 파일 이름과 같다(`dark`). 설정(`EditorConfig::_themeName`)이 이 이름을 저장한다
+        string _name{}; ///< 파일 이름과 같다(`dark`). 설정(`EditorAppearanceConfig::_themeName`)이 이 이름을 저장한다
         PROPERTY()
         string _displayName{}; ///< 테마 대화상자에 보이는 이름
         PROPERTY()

@@ -2,9 +2,9 @@
 
 #include "Engine/Sequencer/SequencePlayerComponent.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/ScenarioPlayback.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"

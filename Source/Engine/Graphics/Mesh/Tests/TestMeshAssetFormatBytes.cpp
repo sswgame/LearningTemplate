@@ -20,7 +20,7 @@ namespace
         static constexpr size_t kOffsetVertexCount = 8;
         static constexpr size_t kOffsetIndexCount  = 12;
         static constexpr size_t kOffsetRadius      = 20;
-        static constexpr size_t kOffsetUvBounds    = 28;
+        static constexpr size_t kOffsetUVBounds    = 28;
         static constexpr uint32 kVertexCount       = 4;
         static constexpr uint32 kIndexCount        = 6;
         /** @brief 스킨 없는 메시에서 첫 덩어리가 시작하는 자리입니다. */
@@ -43,7 +43,7 @@ namespace
                 data._listVertex[index]._arrPosition[0] = arrPosition[index][0];
                 data._listVertex[index]._arrPosition[1] = arrPosition[index][1];
                 data._listVertex[index]._arrNormal[2]   = 1.0f;
-                data._listVertex[index]._arrUv[0]       = arrPosition[index][0];
+                data._listVertex[index]._arrUV[0]       = arrPosition[index][0];
                 data._listVertex[index]._arrColor[3]    = 1.0f;
             }
             data._listIndex = vector<uint32>{ 0, 1, 2, 0, 2, 3 };
@@ -116,7 +116,7 @@ SW_TEST_CASE( MeshAssetFormatBytesTest, EveryChunkRoundTrips )
     SW_EXPECT_NEAR( MathUtil::sqrt( 2.0f ), boundingRadius, 1.0e-5f );
     SW_REQUIRE_EQUAL( size_t{ XTestUtil::kVertexCount }, read._listVertex.size() );
     SW_EXPECT_NEAR( 1.0f, read._listVertex[2]._arrPosition[1], 0.0f );
-    SW_EXPECT_NEAR( 1.0f, read._listVertex[2]._arrUv[0], 1.0e-4f );
+    SW_EXPECT_NEAR( 1.0f, read._listVertex[2]._arrUV[0], 1.0e-4f );
     SW_EXPECT_TRUE( read._listIndex == data._listIndex );
     SW_REQUIRE_EQUAL( size_t{ XTestUtil::kVertexCount }, read._listSkinVertex.size() );
     SW_EXPECT_EQUAL( uint16{ 1 }, read._listSkinVertex[3]._arrJoint[0] );
@@ -233,7 +233,7 @@ SW_TEST_CASE( MeshAssetFormatBytesTest, NonFiniteValuesAreRefused )
     SW_EXPECT_LOG( "MeshAssetFormat.MeshAssetInvalidUV" );
     const float32       kNaN  = std::numeric_limits<float32>::quiet_NaN();
     const vector<uint8> plain = XTestUtil::makeBytes( XTestUtil::makeQuad() );
-    for ( const size_t offset : { size_t{ XTestUtil::kOffsetRadius }, size_t{ XTestUtil::kOffsetUvBounds }, size_t{ MeshAssetFormat::kHeaderSize } } )
+    for ( const size_t offset : { size_t{ XTestUtil::kOffsetRadius }, size_t{ XTestUtil::kOffsetUVBounds }, size_t{ MeshAssetFormat::kHeaderSize } } )
     {
         vector<uint8> forged = plain;
         XTestUtil::patch( forged, offset, kNaN );

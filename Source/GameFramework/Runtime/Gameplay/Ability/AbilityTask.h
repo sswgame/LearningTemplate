@@ -6,7 +6,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
 #include "Core/Time/Countdown.h"
 
 #include "GameFramework/GameFrameworkExports.h"

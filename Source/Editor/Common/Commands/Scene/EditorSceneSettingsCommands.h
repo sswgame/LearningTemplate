@@ -31,13 +31,13 @@ namespace sw::editor
          */
         [[nodiscard]] static bool apply( Scene& scene, const SceneSettings& settings, string_view undoLabel );
         /** @brief 설정을 단계에 담을 XML 로 씁니다(씬 파일의 `<SceneSettings>` 와 같은 직렬화기). */
-        [[nodiscard]] static string writeSettingsXml( const SceneSettings& settings );
+        [[nodiscard]] static string writeSettingsXML( const SceneSettings& settings );
         /**
-         * @brief @p settingsXml 을 읽어 @p scene 의 설정으로 둡니다. 되돌리기 단계의 몸이다.
+         * @brief @p settingsXML 을 읽어 @p scene 의 설정으로 둡니다. 되돌리기 단계의 몸이다.
          * @return 읽지 못하거나 쓸 수 없는 설정이면 오류를 남기고 바꾸지 않은 채 false 입니다.
          */
-        [[nodiscard]] static bool restoreSettingsXml( Scene& scene, string_view settingsXml );
-        /** @brief 되돌리기 · 다시 하기 단계의 처리기입니다(`SW_UNDO_STEP`). 활성 씬에 @p settingsXml 을 두고 씬을 dirty 로 표시합니다. */
-        static void restoreActiveSceneSettings( string settingsXml );
+        [[nodiscard]] static bool restoreSettingsXML( Scene& scene, string_view settingsXML );
+        /** @brief 되돌리기 · 다시 하기 단계의 처리기입니다(`SW_UNDO_STEP`). 활성 씬에 @p settingsXML 을 두고 씬을 dirty 로 표시합니다. */
+        static void restoreActiveSceneSettings( string settingsXML );
     };
 } // namespace sw::editor

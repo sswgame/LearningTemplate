@@ -3,7 +3,6 @@
 #include "Core/File/FileUtil.h"
 
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/File/PlatformFileSystem.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -11,6 +10,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
 namespace sw

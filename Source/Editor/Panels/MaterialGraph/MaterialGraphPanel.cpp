@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/MaterialGraph/MaterialGraphPanel.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"

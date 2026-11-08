@@ -87,10 +87,10 @@ SW_TEST_CASE( WindowMonitorTest, ModeIdsBecomeSortedUniqueResolutions )
         {13,   int2{ 640, 480 }},
         {14, int2{ 3840, 2160 }}
     };
-    const vector<uint64> listModeId{ 11, 10, 12, 13, 99 }; // 14 는 이 출력이 내지 않고, 99 는 표에 없다
+    const vector<uint64> listModeID{ 11, 10, 12, 13, 99 }; // 14 는 이 출력이 내지 않고, 99 는 표에 없다
 
     WindowMonitor monitor;
-    monitor.appendModeResolutions( listMode, listModeId, false );
+    monitor.appendModeResolutions( listMode, listModeID, false );
     monitor.normalizeResolutions();
     SW_REQUIRE_EQUAL( size_t{ 2 }, monitor._listResolution.size() );
     SW_EXPECT_EQUAL( 1280, monitor._listResolution[0]._x );

@@ -2,10 +2,10 @@
 
 #include "Editor/Common/Asset/Model/VrmRuntimeAssets.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Asset/Model/VrmAvatarDef.h"
 

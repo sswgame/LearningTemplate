@@ -88,7 +88,7 @@ namespace
         ScopedActiveRegistry& operator=( const ScopedActiveRegistry& ) = delete;
     };
 
-    NetCompressionConfig makeRleSettings()
+    NetCompressionConfig makeRLESettings()
     {
         NetCompressionConfig settings;
         settings._codec = CompressionCodecType::RLE;
@@ -101,7 +101,7 @@ SW_TEST_CASE( NetCompressionTest, EnvelopeRoundTripsAndKeepsRawWhenNotSmaller )
     CompressionCodecRegistry registry;
     const vector<uint8>      repeatedBytes( 4000, 0x41 );
     vector<uint8>            envelopeBytes;
-    SW_REQUIRE_TRUE( NetCompressionConfig::compressEnvelope( makeRleSettings(), repeatedBytes.data(), 4000, envelopeBytes, &registry ) );
+    SW_REQUIRE_TRUE( NetCompressionConfig::compressEnvelope( makeRLESettings(), repeatedBytes.data(), 4000, envelopeBytes, &registry ) );
     SW_EXPECT_TRUE( envelopeBytes.size() < 200 );
     SW_EXPECT_EQUAL( static_cast<int32>( CompressionCodecType::RLE ), static_cast<int32>( envelopeBytes[0] ) );
     vector<uint8> restoredBytes;
@@ -116,10 +116,10 @@ SW_TEST_CASE( NetCompressionTest, EnvelopeRoundTripsAndKeepsRawWhenNotSmaller )
         seed  = seed * 1664525u + 1013904223u;
         value = static_cast<uint8>( seed >> 24 );
     }
-    SW_EXPECT_FALSE( NetCompressionConfig::compressEnvelope( makeRleSettings(), noiseBytes.data(), 200, envelopeBytes, &registry ) );
+    SW_EXPECT_FALSE( NetCompressionConfig::compressEnvelope( makeRLESettings(), noiseBytes.data(), 200, envelopeBytes, &registry ) );
     SW_EXPECT_TRUE( envelopeBytes.empty() );
     // 상한보다 작은 몸 · 꺼진 설정도 봉투를 쓰지 않는다.
-    SW_EXPECT_FALSE( NetCompressionConfig::compressEnvelope( makeRleSettings(), repeatedBytes.data(), 64, envelopeBytes, &registry ) );
+    SW_EXPECT_FALSE( NetCompressionConfig::compressEnvelope( makeRLESettings(), repeatedBytes.data(), 64, envelopeBytes, &registry ) );
     SW_EXPECT_FALSE( NetCompressionConfig::compressEnvelope( NetCompressionConfig{}, repeatedBytes.data(), 4000, envelopeBytes, &registry ) );
 }
 
@@ -168,7 +168,7 @@ SW_TEST_CASE( NetCompressionTest, StreamEndpointInflatesCompressedFrames )
     const vector<uint8>      messageBytes( 4000, 0x5A );
 
     StreamEndpointConfig clientSettings;
-    clientSettings._compression = makeRleSettings();
+    clientSettings._compression = makeRLESettings();
     {
         EndpointRecord           serverRecord;
         EndpointRecord           clientRecord;

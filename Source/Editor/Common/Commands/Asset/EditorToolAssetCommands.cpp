@@ -2,12 +2,12 @@
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Scene/EditorInspectorCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"

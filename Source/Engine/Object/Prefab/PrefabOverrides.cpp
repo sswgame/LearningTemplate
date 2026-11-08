@@ -2,12 +2,12 @@
 
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"

@@ -2,12 +2,12 @@
 
 #include "ModuleManager/ModuleCatalogLoader.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Config/GameSelection.h"
 

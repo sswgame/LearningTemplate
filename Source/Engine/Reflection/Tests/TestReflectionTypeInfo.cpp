@@ -1253,11 +1253,11 @@ SW_TEST_CASE( ReflectionTypeInfoTest, OneSidedRangeOnlyBoundsThatSide )
 
     const sw::TypeInfo* pSequence = registry.findType( sw::hashed_string( "sw::SequencePlayerComponent" ) );
     SW_REQUIRE_NOT_NULL( pSequence );
-    const sw::PropertyInfo* pFps = pSequence->findProperty( sw::hashed_string( "_framesPerSecond" ) );
-    SW_REQUIRE_NOT_NULL( pFps );
-    SW_EXPECT_TRUE( pFps->_metadata->hasFullRange() );
-    SW_EXPECT_NEAR( 1.0f, pFps->_metadata->_minRange, 1e-4f );
-    SW_EXPECT_NEAR( 120.0f, pFps->_metadata->_maxRange, 1e-4f );
+    const sw::PropertyInfo* pFPS = pSequence->findProperty( sw::hashed_string( "_framesPerSecond" ) );
+    SW_REQUIRE_NOT_NULL( pFPS );
+    SW_EXPECT_TRUE( pFPS->_metadata->hasFullRange() );
+    SW_EXPECT_NEAR( 1.0f, pFPS->_metadata->_minRange, 1e-4f );
+    SW_EXPECT_NEAR( 120.0f, pFPS->_metadata->_maxRange, 1e-4f );
 }
 
 /**

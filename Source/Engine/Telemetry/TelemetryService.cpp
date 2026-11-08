@@ -2,8 +2,7 @@
 
 #include "Engine/Telemetry/TelemetryService.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -12,6 +11,7 @@
 #include "Core/Module/ModuleBuildID.h"
 #include "Core/Process/ProcessSession.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
 #include "Engine/Config/EngineDefaultAssets.h"

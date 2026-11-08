@@ -2,9 +2,9 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -19,8 +19,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Gameplay/ActionRegistry.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"

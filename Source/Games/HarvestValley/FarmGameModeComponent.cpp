@@ -2,8 +2,8 @@
 
 #include "Games/HarvestValley/FarmGameModeComponent.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -16,16 +16,16 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
@@ -41,7 +41,7 @@ namespace sw
     {
         struct FarmGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "FARM" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "FARM" );
             static constexpr uint32 kStateVersion = 4; ///< 4: 비 · 날씨 난수를 판 상태 날씨로 옮겼다(이 칸에서 빠졌다)
 
             /** @brief 비를 정하는 날씨 값 이름입니다(날씨 카탈로그 `<Values wetness>` — 표면 젖음과 같은 값). 이 값이 반 이상이면 비다. */

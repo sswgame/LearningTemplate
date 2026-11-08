@@ -2,14 +2,14 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 #include "Engine/Config/Server/ServerSecret.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
-#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Apns/ApnsPushProvider.h"
-#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fcm/FcmPushProvider.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/APNS/APNSPushProvider.h"
+#include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/FCM/FCMPushProvider.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/OwnedHTTP2Client.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/HTTP/OwnedHTTPClient.h"
@@ -21,12 +21,12 @@ namespace sw
     {
         struct PushProviderSetInternal
         {
-            static constexpr const utf8* kKindFcm  = "fcm";
-            static constexpr const utf8* kKindApns = "apns";
+            static constexpr const utf8* kKindFCM  = "fcm";
+            static constexpr const utf8* kKindAPNS = "apns";
 
             /** @brief 종류마다 쓸 수 있는 키입니다 — 다른 종류의 키는 철자 오류와 같이 거절한다. */
-            static constexpr const utf8* kKeysFcm[]  = { "kind", "serviceAccountEnvironment", "tokenUrl", "sendUrl" };
-            static constexpr const utf8* kKeysApns[] = { "kind", "keyEnvironment", "keyId", "teamId", "topic", "sendUrl" };
+            static constexpr const utf8* kKeysFCM[]  = { "kind", "serviceAccountEnvironment", "tokenUrl", "sendUrl" };
+            static constexpr const utf8* kKeysAPNS[] = { "kind", "keyEnvironment", "keyId", "teamId", "topic", "sendUrl" };
 
             static string readText( const JSONValue& object, const utf8* pKey )
             {
@@ -35,7 +35,7 @@ namespace sw
             }
 
             /** @brief 환경 변수의 서비스 계정으로 FCM 제공자를 만들고 HTTP 클라이언트의 TLS 를 준비합니다. */
-            [[nodiscard]] static unique_ptr<IPushNotificationProvider> createFcm( const PushProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient,
+            [[nodiscard]] static unique_ptr<IPushNotificationProvider> createFCM( const PushProviderConfig& config, string_view trustFile, OwnedHTTPClient& httpClient,
                                                                                   string& outError )
             {
                 string     serviceAccountJSON;
@@ -46,7 +46,7 @@ namespace sw
                     outError = "the FCM service account environment variable '" + config._serviceAccountEnvironment + "' is not set";
                     return nullptr;
                 }
-                FcmPushSettings settings;
+                FCMPushSettings settings;
                 const bool      bRead = ServiceAccountCredentials::read( serviceAccountJSON, settings._credentials, outError );
                 Memory::set( serviceAccountJSON.data(), 0, serviceAccountJSON.size() ); // 키가 든 글을 남기지 않는다
                 if ( bRead == false )
@@ -58,14 +58,14 @@ namespace sw
                 if ( httpClient.registerHostTLS( settings._credentials._tokenURL, trustFile, "pushTrustFile", outError ) == false ||
                      httpClient.registerHostTLS( settings._sendBaseURL, trustFile, "pushTrustFile", outError ) == false )
                     return nullptr;
-                return make_unique<FcmPushProvider>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
+                return make_unique<FCMPushProvider>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
             }
 
             /** @brief 환경 변수의 인증 키로 APNs 제공자를 만들고 HTTP/2 클라이언트의 TLS(ALPN h2)를 준비합니다. 키가 ES256 서명에 못 쓰이면 기동을 멈춘다. */
-            [[nodiscard]] static unique_ptr<IPushNotificationProvider> createApns( const PushProviderConfig& config, string_view trustFile, OwnedHTTP2Client& httpClient,
+            [[nodiscard]] static unique_ptr<IPushNotificationProvider> createAPNS( const PushProviderConfig& config, string_view trustFile, OwnedHTTP2Client& httpClient,
                                                                                    string& outError )
             {
-                ApnsPushSettings settings;
+                APNSPushSettings settings;
                 const bool       bNamed      = config._keyEnvironment.empty() == false;
                 const bool       bSecretRead = bNamed && ServerSecret::read( config._keyEnvironment, settings._privateKeyPem ) && settings._privateKeyPem.empty() == false;
                 if ( bSecretRead == false )
@@ -91,7 +91,7 @@ namespace sw
                     Memory::set( settings._privateKeyPem.data(), 0, settings._privateKeyPem.size() ); // 키가 든 글을 남기지 않는다
                     return nullptr;
                 }
-                return make_unique<ApnsPushProvider>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
+                return make_unique<APNSPushProvider>( std::move( settings ), &game::getSubsystem<INetSecurityProvider>(), &httpClient.get() );
             }
         };
     } // namespace
@@ -113,15 +113,15 @@ namespace sw
     {
         using Internal  = PushProviderSetInternal;
         outConfig._kind = Internal::readText( entry, "kind" );
-        const bool bFcm = outConfig._kind == Internal::kKindFcm;
-        if ( bFcm == false && outConfig._kind != Internal::kKindApns )
+        const bool bFCM = outConfig._kind == Internal::kKindFCM;
+        if ( bFCM == false && outConfig._kind != Internal::kKindAPNS )
         {
             outError = "push provider kind '" + outConfig._kind + "' is unknown (fcm, apns)";
             return false;
         }
         for ( const string& key : entry.getMemberNames() )
         {
-            const bool bKnown = bFcm ? VectorUtil::contains( Internal::kKeysFcm, key ) : VectorUtil::contains( Internal::kKeysApns, key );
+            const bool bKnown = bFCM ? VectorUtil::contains( Internal::kKeysFCM, key ) : VectorUtil::contains( Internal::kKeysAPNS, key );
             if ( bKnown == false )
             {
                 outError = "unknown " + outConfig._kind + " push provider setting '" + key + "'";
@@ -129,7 +129,7 @@ namespace sw
             }
         }
         outConfig._sendBaseURL = Internal::readText( entry, "sendUrl" );
-        if ( bFcm )
+        if ( bFCM )
         {
             outConfig._serviceAccountEnvironment = Internal::readText( entry, "serviceAccountEnvironment" );
             outConfig._tokenURL                  = Internal::readText( entry, "tokenUrl" );
@@ -161,9 +161,9 @@ namespace sw
         for ( const PushProviderConfig& config : listSettings )
         {
             Entry&     entry        = _listEntry.emplace_back();
-            const bool bFcm         = config._kind == Internal::kKindFcm;
+            const bool bFCM         = config._kind == Internal::kKindFCM;
             bool       bHTTPStarted = false;
-            if ( bFcm )
+            if ( bFCM )
             {
                 entry._httpClient = make_unique<OwnedHTTPClient>( clock );
                 bHTTPStarted      = entry._httpClient->initialize();
@@ -179,7 +179,7 @@ namespace sw
                 shutdown();
                 return false;
             }
-            entry._provider = bFcm ? Internal::createFcm( config, trustFile, *entry._httpClient, outError ) : Internal::createApns( config, trustFile, *entry._http2Client, outError );
+            entry._provider = bFCM ? Internal::createFCM( config, trustFile, *entry._httpClient, outError ) : Internal::createAPNS( config, trustFile, *entry._http2Client, outError );
             if ( entry._provider == nullptr )
             {
                 outError = "push provider '" + config._kind + "': " + outError;

@@ -15,7 +15,7 @@
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorSnapshot.h"
 #include "GameFramework/Runtime/Character/AI/AIPerception.h"
-#include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 
 namespace sw
 {

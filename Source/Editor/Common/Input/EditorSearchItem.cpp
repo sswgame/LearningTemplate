@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Input/EditorSearchItem.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/Asset/EditorAssetIndex.h"

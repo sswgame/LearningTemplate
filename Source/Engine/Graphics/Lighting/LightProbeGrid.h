@@ -11,12 +11,12 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/SphericalHarmonics.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -51,7 +51,7 @@ namespace sw
     /** @brief `.probes` 하나의 내용입니다. 파일 머리말을 참고하세요. */
     struct SW_API LightProbeGrid
     {
-        static constexpr uint32      kMagic     = FourCcUtil::make( "SWLP" );
+        static constexpr uint32      kMagic     = FourCCUtil::make( "SWLP" );
         static constexpr uint32      kVersion   = 1;
         static constexpr string_view kExtension = ".probes";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */

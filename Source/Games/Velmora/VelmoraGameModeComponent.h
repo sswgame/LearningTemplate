@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -56,7 +56,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "VLDR" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "VLDR" );
         static constexpr uint32 kStateVersion = 1;
 
         VelmoraGameModeComponent();

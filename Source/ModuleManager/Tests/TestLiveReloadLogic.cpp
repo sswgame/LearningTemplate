@@ -6,10 +6,10 @@
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "ModuleManager/LiveReload/DeferredLibraryUnloadQueue.h"
-#include "ModuleManager/LiveReload/ModuleDependencyGraph.h"
-#include "ModuleManager/LiveReload/ModuleShadowCopy.h"
-#include "ModuleManager/LiveReload/ShadowCopyName.h"
+#include "ModuleManager/Dev/LiveReload/DeferredLibraryUnloadQueue.h"
+#include "ModuleManager/Dev/LiveReload/ModuleDependencyGraph.h"
+#include "ModuleManager/Dev/LiveReload/ModuleShadowCopy.h"
+#include "ModuleManager/Dev/LiveReload/ShadowCopyName.h"
 
 using namespace sw;
 

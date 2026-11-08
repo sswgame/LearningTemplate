@@ -2,9 +2,9 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickNodeRegistry.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"

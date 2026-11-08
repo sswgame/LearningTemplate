@@ -4,11 +4,11 @@
 #include "pch.h"
 
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 

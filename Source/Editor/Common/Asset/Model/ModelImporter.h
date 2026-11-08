@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Editor/Common/Asset/Model/ToonMaterialDef.h"
 #include "Editor/Common/Asset/Model/VrmAvatarDef.h"
@@ -74,7 +74,7 @@ namespace sw::editor
         string               _sectionName;     ///< 본 메시의 구간 이름(`MeshSection::_name`)
         uint32               _firstIndex{ 0 }; ///< 구간의 첫 인덱스(삼각형 단위)
         uint32               _indexCount{ 0 };
-        uint32               _materialIndex{ 0 }; ///< glTF 머티리얼 번호(`ModelImportResult::_listToonMaterial` · `_listPbrMaterial` 의 칸)
+        uint32               _materialIndex{ 0 }; ///< glTF 머티리얼 번호(`ModelImportResult::_listToonMaterial` · `_listPBRMaterial` 의 칸)
         MeshPersonVisibility _personVisibility{ MeshPersonVisibility::Both };
     };
 } // namespace sw::editor
@@ -97,11 +97,11 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @struct ModelImportPbrMaterial
+     * @struct ModelImportPBRMaterial
      * @brief 일반 glTF(VRM 아님)의 금속도 · 거칠기 머티리얼 하나입니다. 텍스처는 원본 이미지 바이트를 그대로 담는다(없으면 비어 있다).
      * @details ORM 은 glTF 배치(R 가림 · G 거칠기 · B 금속도)다 — 가림 텍스처가 금속도 · 거칠기 텍스처와 다른 이미지면 가림은 쓰지 않는다(`_occlusionStrength` 0, 경고).
      */
-    struct ModelImportPbrMaterial
+    struct ModelImportPBRMaterial
     {
         string             _name;
         float4             _baseColor{ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -139,11 +139,11 @@ namespace sw::editor
         /** @brief VRM 이면 glTF 머티리얼마다의 툰 머티리얼입니다(glTF 순서). VRM 이 아니면 비어 있습니다. */
         vector<ToonMaterialDef> _listToonMaterial;
         /** @brief 구간으로 나누는 일반 glTF 이면 glTF 머티리얼마다의 PBR 머티리얼입니다(glTF 순서). 아니면 비어 있습니다. */
-        vector<ModelImportPbrMaterial> _listPbrMaterial;
+        vector<ModelImportPBRMaterial> _listPBRMaterial;
         /** @brief glTF 텍스처 번호에서 원본 이미지로의 대응입니다. 툰 구간 머티리얼이 쓰는 텍스처만 채워지고 나머지는 비어 있습니다. */
         vector<ModelImportTexture> _listTexture;
         /** @brief 구간 없는 일반 glTF 의 PBR 머티리얼입니다(텍스처가 있을 때). 임포트가 모델 옆 `materials/` 에 PBR 머티리얼로 쓴다. */
-        ModelImportPbrMaterial _pbrMaterial;
+        ModelImportPBRMaterial _pbrMaterial;
         /** @brief 머티리얼이 지원하지 않는 VRM 키의 이름입니다. 값이 효과 없는 기본값이면 빠집니다. 임포트가 경고로 알립니다. */
         vector<string> _listIgnoredMaterialKey;
         /** @brief VRM 이면 humanoid 본 테이블 · 표정 · 스프링 본 · 1인칭 정보입니다(`VrmAvatarDef`). VRM 이 아니면 비어 있습니다. */
@@ -180,7 +180,7 @@ namespace sw::editor
      *          캐릭터 프리팹 `<y>.prefab.xml`(스켈레탈 메시 + 구간마다 `MeshSectionComponent` + 얼굴 리그 · 후처리 리그 컴포넌트)을 옆 폴더에 쓴다.
      *
      *          일반 glTF 도 머티리얼이 여럿이고 그중 기본색 텍스처가 있는 것이 있으면 머티리얼마다 구간이 되고 PBR 머티리얼 `materials/<머티리얼>.material` 과
-     *          구간 프리팹 `<y>.prefab.xml`(주 메시 컴포넌트 + 구간마다 `MeshSectionComponent`)을 옆 폴더에 쓴다(`ModelImportMaterial::readSectionPbrMaterials`).
+     *          구간 프리팹 `<y>.prefab.xml`(주 메시 컴포넌트 + 구간마다 `MeshSectionComponent`)을 옆 폴더에 쓴다(`ModelImportMaterial::readSectionPBRMaterials`).
      */
     struct ModelImporter
     {

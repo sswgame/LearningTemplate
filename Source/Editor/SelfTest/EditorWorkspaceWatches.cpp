@@ -6,11 +6,11 @@
  */
 #include "pch.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/pair.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "DevTools/Client/DebugHUD/DebugHUD.h"

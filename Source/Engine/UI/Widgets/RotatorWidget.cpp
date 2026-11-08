@@ -3,7 +3,7 @@
 #include "Engine/UI/Widgets/RotatorWidget.h"
 
 #include "Core/Foundation/Constants.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionTypes.h"

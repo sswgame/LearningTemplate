@@ -7,10 +7,10 @@
  *          코어 열거 값(`Data`)을 빌려 써야 해 종류를 더할 수 없었다.
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Config/EditorIconName.h"

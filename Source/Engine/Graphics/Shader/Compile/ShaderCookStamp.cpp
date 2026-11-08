@@ -13,13 +13,13 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetPaths.h"

@@ -3,14 +3,14 @@
  * @brief FrameRenderer 의 번역 단위들이 함께 쓰는 상수와 헬퍼를 정의합니다.
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/NormalizedInt.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIRenderState.h"

@@ -2,21 +2,21 @@
 
 #include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
 
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 namespace sw
 {
@@ -98,7 +98,7 @@ namespace sw
             struct AppearanceEntriesSlot
             {
                 using Type                      = const vector<Entry>;
-                static constexpr uint32 kSlotID = FourCcUtil::make( "APRE" );
+                static constexpr uint32 kSlotID = FourCCUtil::make( "APRE" );
             };
 
             /** @brief FNV-1a 64 로 값을 누적합니다. 이름은 내용 해시(대소문자 무시)이므로 프로세스나 기계가 달라도 같은 값이 나옵니다. */

@@ -11,7 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 namespace sw
 {
@@ -62,7 +62,7 @@ namespace sw
     {
         vector<float3>              _listPosition{};
         vector<float3>              _listNormal{};
-        vector<float2>              _listUv{};
+        vector<float2>              _listUV{};
         vector<uint32>              _listIndex{};
         vector<SkinInfluence>       _listSkin{};
         vector<uint16>              _listVertexGroup{};

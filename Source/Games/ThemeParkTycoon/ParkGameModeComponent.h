@@ -25,8 +25,8 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 namespace sw

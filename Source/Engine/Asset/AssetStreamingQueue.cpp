@@ -2,7 +2,7 @@
 
 #include "Engine/Asset/AssetStreamingQueue.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"

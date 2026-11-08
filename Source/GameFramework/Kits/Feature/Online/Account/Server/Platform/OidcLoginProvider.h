@@ -37,8 +37,8 @@ namespace sw
         int32       pollVerifications( vector<PlatformLoginVerification>& outListVerification ) override;
         void        update( UnixMilliseconds nowMs ) override;
 
-        const JwksKeyCache& getKeyCache() const { return _keyCache; }
-        int32               getJwksFetchCount() const { return _jwksFetchCount; }
+        const JWKSKeyCache& getKeyCache() const { return _keyCache; }
+        int32               getJWKSFetchCount() const { return _jwksFetchCount; }
 
     private:
         struct PendingTicket
@@ -55,13 +55,13 @@ namespace sw
             NeedKey
         };
 
-        void startJwksFetch( UnixMilliseconds nowMs );
+        void startJWKSFetch( UnixMilliseconds nowMs );
         /** @brief 토큰 하나를 확인합니다. @p now 는 `exp` · `iat` 와 견주는 유닉스 시각입니다(형식이 단조 시각을 막는다). */
         Decision evaluate( const PendingTicket& pending, UnixMilliseconds now, PlatformLoginVerification& outVerification );
 
     private:
         PlatformLoginProviderConfig       _settings;
-        JwksKeyCache                      _keyCache;
+        JWKSKeyCache                      _keyCache;
         vector<PendingTicket>             _listPending;
         vector<PlatformLoginVerification> _listDone;
         INetSecurityProvider*             _pProvider;

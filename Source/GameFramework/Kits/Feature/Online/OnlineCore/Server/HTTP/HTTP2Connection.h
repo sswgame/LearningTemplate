@@ -16,8 +16,8 @@
 #include "Core/Foundation/Types.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HPACK.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HTTP2Frame.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/Hpack.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
 
 namespace sw
@@ -130,7 +130,7 @@ namespace sw
         [[nodiscard]] bool failConnection( const utf8* pReason, string& outError );
 
     private:
-        HpackDecoder                  _decoder;
+        HPACKDecoder                  _decoder;
         HTTP2ConnectionConfig         _settings;
         unordered_map<uint32, Stream> _mapStream;
         vector<Queued>                _listQueued;

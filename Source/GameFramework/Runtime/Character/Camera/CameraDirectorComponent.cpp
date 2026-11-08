@@ -28,7 +28,6 @@
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
 
 namespace sw
 {
@@ -298,7 +297,7 @@ namespace sw
         const CameraPose&      pose        = _director.getPose();
         const Ray              ray         = computeCameraScreenRay( pose, aspectRatio, mouseNormalized );
         float32                distance    = 0.0f;
-        if ( RayMath::intersectHorizontalPlane( ray, groundHeight, pose._farPlane * CameraDirectorComponentInternal::kGroundRayFarPlaneScale, distance ) == false )
+        if ( Ray::intersectHorizontalPlane( ray, groundHeight, pose._farPlane * CameraDirectorComponentInternal::kGroundRayFarPlaneScale, distance ) == false )
             return false;
         outPoint = ray._origin + ray._direction * distance;
         return true;

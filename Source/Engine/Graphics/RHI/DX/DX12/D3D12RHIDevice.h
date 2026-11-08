@@ -18,8 +18,8 @@
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHISwapChain.h"
+#include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
-#include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
@@ -236,7 +236,7 @@ namespace sw
         bool isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const override;
 
         /** @brief DXGI 에 대응이 있는 형식은 FL11 이 샘플링을 보장합니다(ASTC · ETC2 는 대응이 없다). */
-        bool supportsTextureFormat( RHIFormat format ) const override { return toDxgiFormat( format ) != DXGI_FORMAT_UNKNOWN; }
+        bool supportsTextureFormat( RHIFormat format ) const override { return toDXGIFormat( format ) != DXGI_FORMAT_UNKNOWN; }
 
         /** @brief 정적 테이블에 런타임 값(네이티브 bindless)을 반영해 반환합니다. */
         RHICapabilities getCapabilities() const override

@@ -2,7 +2,8 @@
 
 #include "Engine/Content/Pack/AssetCookRoot.h"
 
-#include "Core/String/RegistrationList.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Registry/RegistrationList.h"
 
 namespace sw
 {

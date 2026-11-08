@@ -7,11 +7,11 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -19,7 +19,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostEncounter.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
 {
@@ -109,7 +109,7 @@ namespace sw
     class SW_KIT_API GhostMansion
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "GHMN" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "GHMN" );
         static constexpr uint32 kStateVersion = 1;
 
         GhostMansion();

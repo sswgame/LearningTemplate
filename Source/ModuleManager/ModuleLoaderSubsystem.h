@@ -5,6 +5,9 @@
  *          로더(타입 공급자 라이브러리 로드)는 만들 때 받고, 씬 뒤 훅(모듈 DLL 내리기)은 모듈 매니저가 선 뒤에 걸 수 있다(Dev 전용이라 Shipping 은 걸지 않는다).
  */
 #pragma once
+#include "Core/Container/map.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
 #include "Core/Foundation/Macros.h"
@@ -14,7 +17,24 @@
 #include "Engine/Module/HostInterfaces.h"
 #include "Engine/Module/ModuleCatalog.h"
 
-#include "ModuleManager/ModuleStateStore.h"
+#include "ModuleAPI/Service/IModuleStateStore.h"
+
+/*
+ * `IModuleStateStore` 의 호스트 구현입니다 — 프로세스 동안 이름 붙은 바이트 묶음을 든다.
+ */
+namespace sw
+{
+    /** @brief 맡김 칸입니다. 호스트가 소유하고 호스트 범위에 `IModuleStateStore` 로 건다. */
+    class ModuleStateStore final : public IModuleStateStore
+    {
+    public:
+        void               store( string_view key, vector<uint8>&& bytes ) override;
+        [[nodiscard]] bool take( string_view key, vector<uint8>& outBytes ) override;
+
+    private:
+        map<string, vector<uint8>> _mapStored;
+    };
+} // namespace sw
 
 namespace sw
 {

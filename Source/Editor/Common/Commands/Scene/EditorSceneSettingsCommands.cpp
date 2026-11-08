@@ -17,30 +17,30 @@ namespace sw::editor
 {
     bool EditorSceneSettingsCommands::apply( Scene& scene, const SceneSettings& settings, const string_view undoLabel )
     {
-        const string beforeXml = writeSettingsXml( scene.getSceneSettings() );
-        const string afterXml  = writeSettingsXml( settings );
-        if ( beforeXml == afterXml )
+        const string beforeXML = writeSettingsXML( scene.getSceneSettings() );
+        const string afterXML  = writeSettingsXML( settings );
+        if ( beforeXML == afterXML )
             return false;
         if ( EditorPlaySession::refuseSceneEdit( "Scene settings" ) )
             return false;
         if ( settings.validate( scene.getName() ) == false )
             return false;
         scene.setSceneSettings( settings );
-        EditorTransaction::push( SW_UNDO_STEP( EditorSceneSettingsCommands::restoreActiveSceneSettings, beforeXml ),
-                                 SW_UNDO_STEP( EditorSceneSettingsCommands::restoreActiveSceneSettings, afterXml ), undoLabel );
+        EditorTransaction::push( SW_UNDO_STEP( EditorSceneSettingsCommands::restoreActiveSceneSettings, beforeXML ),
+                                 SW_UNDO_STEP( EditorSceneSettingsCommands::restoreActiveSceneSettings, afterXML ), undoLabel );
         EditorTransaction::markActiveSceneDirty();
         return true;
     }
 
-    string EditorSceneSettingsCommands::writeSettingsXml( const SceneSettings& settings )
+    string EditorSceneSettingsCommands::writeSettingsXML( const SceneSettings& settings )
     {
         return XMLSerializer::serialize( &settings, *SceneSettings::StaticType() );
     }
 
-    bool EditorSceneSettingsCommands::restoreSettingsXml( Scene& scene, const string_view settingsXml )
+    bool EditorSceneSettingsCommands::restoreSettingsXML( Scene& scene, const string_view settingsXML )
     {
         SceneSettings settings{};
-        if ( XMLSerializer::deserialize( &settings, *SceneSettings::StaticType(), settingsXml ) == false || settings.validate( scene.getName() ) == false )
+        if ( XMLSerializer::deserialize( &settings, *SceneSettings::StaticType(), settingsXML ) == false || settings.validate( scene.getName() ) == false )
         {
             SW_LOG_ERROR_ID( "EditorSceneSettingsCommands.CouldNotRestore", "Scene settings of '%#' could not be read back from the undo record - the settings are left as they are", scene.getName().c_str() );
             return false;
@@ -49,7 +49,7 @@ namespace sw::editor
         return true;
     }
 
-    void EditorSceneSettingsCommands::restoreActiveSceneSettings( string settingsXml )
+    void EditorSceneSettingsCommands::restoreActiveSceneSettings( string settingsXML )
     {
         Scene* const pScene = editor::getActiveScene();
         if ( pScene == nullptr )
@@ -58,7 +58,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "EditorSceneSettingsCommands.NoActiveScene", "No active scene - the scene settings undo step is skipped" );
             return;
         }
-        if ( restoreSettingsXml( *pScene, settingsXml ) )
+        if ( restoreSettingsXML( *pScene, settingsXML ) )
             EditorTransaction::markActiveSceneDirty();
     }
 } // namespace sw::editor

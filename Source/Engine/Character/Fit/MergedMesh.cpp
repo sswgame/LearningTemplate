@@ -2,7 +2,7 @@
 
 #include "Engine/Character/Fit/MergedMesh.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitSolver.h"
@@ -54,9 +54,9 @@ namespace sw
                 }
                 if ( pHooks != nullptr )
                 {
-                    for ( float2& uv : transformed._listUv )
+                    for ( float2& uv : transformed._listUV )
                     {
-                        uv = pHooks->remapUv( source, uv );
+                        uv = pHooks->remapUV( source, uv );
                     }
                 }
                 vector<uint8> listVisible( transformed.getTriangleCount(), SW_TRUE );

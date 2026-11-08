@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "Engine/Module/ModuleUnloadStageSubsystem.h"
-
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/Task/TaskManager.h"
@@ -10,6 +8,7 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Module/HostInterfaces.h"
+#include "Engine/Module/ModuleLoadStageSubsystem.h"
 #include "Engine/Presentation/IEngineAudioDriver.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 #include "Engine/Scene/SceneManager.h"

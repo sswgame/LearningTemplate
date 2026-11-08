@@ -5,10 +5,10 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -19,7 +19,7 @@
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
 {
@@ -113,7 +113,7 @@ namespace sw
     class SW_GF_API WeatherSystem
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "WTHR" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "WTHR" );
         static constexpr uint32 kStateVersion = 1;
 
         WeatherSystem();

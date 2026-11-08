@@ -5,10 +5,10 @@
  *          제품 이름은 이 파일에 쓰지 않는다. 헤더만 있어 내보내는 기호가 없다.
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/JSON/JSONWriter.h"
 

@@ -2,8 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickStateBundle.h"
 
-#include "Core/Container/CompareUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
 

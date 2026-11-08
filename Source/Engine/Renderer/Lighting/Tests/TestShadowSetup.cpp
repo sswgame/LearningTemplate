@@ -7,8 +7,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
-#include "Engine/Rendering/DirectionalLightComponent.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Visual/Component/DirectionalLightComponent.h"
 
 // 그림자 배치(아틀라스 칸 · 캐스케이드 · 점광 · 스폿 타일 · 뷰별 볼륨)를 GPU 없이 행렬과 칸으로 본다. 픽셀은 RenderPassGPUTest 의 그림자 케이스가 본다.
 
@@ -28,7 +28,7 @@ namespace sw
             }
 
             /** @brief NDC xy 를 텍스처 uv 로(셰이더의 `ndc.xy * ( 0.5, -0.5 ) + 0.5`). */
-            static float2 computeUv( const float3& ndc ) { return float2{ ndc._x * 0.5f + 0.5f, ndc._y * -0.5f + 0.5f }; }
+            static float2 computeUV( const float3& ndc ) { return float2{ ndc._x * 0.5f + 0.5f, ndc._y * -0.5f + 0.5f }; }
 
             /** @brief 라이트 버퍼 원소 하나(행 넷)를 행렬로 되돌립니다(셰이더의 `float4x4( 행 넷 )`). */
             static float4x4 makeMatrixFromElement( const GPULight& element )
@@ -272,21 +272,21 @@ SW_TEST_CASE( ShadowSetupTest, PointFacesProjectIntoTheirOwnCells )
         const sw::GPULight& matrixElement = frame._listTileElement[faceIndex * sw::shaderslot::kShadowTileElementCount];
         const sw::GPULight& info          = frame._listTileElement[faceIndex * sw::shaderslot::kShadowTileElementCount + 1];
         const sw::float3    atlasNdc      = Internal::projectToNdc( worldPoint, Internal::makeMatrixFromElement( matrixElement ) );
-        const sw::float2    atlasUv       = Internal::computeUv( atlasNdc );
+        const sw::float2    atlasUV       = Internal::computeUV( atlasNdc );
         const sw::string    label         = "face " + sw::to_string( faceIndex );
-        SW_EXPECT_TRUE_MSG( info._positionRadius._x <= atlasUv._x && atlasUv._x <= info._positionRadius._z, ( label + " u " + sw::to_string( atlasUv._x ) ).c_str() );
-        SW_EXPECT_TRUE_MSG( info._positionRadius._y <= atlasUv._y && atlasUv._y <= info._positionRadius._w, ( label + " v " + sw::to_string( atlasUv._y ) ).c_str() );
+        SW_EXPECT_TRUE_MSG( info._positionRadius._x <= atlasUV._x && atlasUV._x <= info._positionRadius._z, ( label + " u " + sw::to_string( atlasUV._x ) ).c_str() );
+        SW_EXPECT_TRUE_MSG( info._positionRadius._y <= atlasUV._y && atlasUV._y <= info._positionRadius._w, ( label + " v " + sw::to_string( atlasUV._y ) ).c_str() );
         SW_EXPECT_TRUE_MSG( 0.0f < atlasNdc._z && atlasNdc._z < 1.0f, ( label + " depth " + sw::to_string( atlasNdc._z ) ).c_str() );
 
         // 그리는 행렬로는 칸 NDC — 칸 원점 + 칸 uv · 칸 크기가 셰이딩 uv 와 같다.
         const sw::ShadowTileDraw& tile    = frame._listLocalTile[faceIndex];
         const sw::float3          tileNdc = Internal::projectToNdc( worldPoint, tile._viewProj );
-        const sw::float2          tileUv  = Internal::computeUv( tileNdc );
+        const sw::float2          tileUV  = Internal::computeUV( tileNdc );
         const float32             inverse = 1.0f / static_cast<float32>( Internal::kAtlasResolution );
-        const float32             expectU = ( static_cast<float32>( tile._cell._x ) + tileUv._x * static_cast<float32>( tile._cell._size ) ) * inverse;
-        const float32             expectV = ( static_cast<float32>( tile._cell._y ) + tileUv._y * static_cast<float32>( tile._cell._size ) ) * inverse;
-        SW_EXPECT_NEAR( atlasUv._x, expectU, 1e-4f );
-        SW_EXPECT_NEAR( atlasUv._y, expectV, 1e-4f );
+        const float32             expectU = ( static_cast<float32>( tile._cell._x ) + tileUV._x * static_cast<float32>( tile._cell._size ) ) * inverse;
+        const float32             expectV = ( static_cast<float32>( tile._cell._y ) + tileUV._y * static_cast<float32>( tile._cell._size ) ) * inverse;
+        SW_EXPECT_NEAR( atlasUV._x, expectU, 1e-4f );
+        SW_EXPECT_NEAR( atlasUV._y, expectV, 1e-4f );
         SW_EXPECT_NEAR( atlasNdc._z, tileNdc._z, 1e-5f );
     }
 }
@@ -312,7 +312,7 @@ SW_TEST_CASE( ShadowSetupTest, SpotCellCoversTheOuterCone )
         const float32    tilt = kOuterHalf * 0.98f;
         const sw::float3 direction{ sw::MathUtil::sin( tilt ) * sw::MathUtil::cos( azimuth ), -sw::MathUtil::cos( tilt ), sw::MathUtil::sin( tilt ) * sw::MathUtil::sin( azimuth ) };
         const sw::float3 ndc = Internal::projectToNdc( lightPosition + direction * 8.0f, shading );
-        const sw::float2 uv  = Internal::computeUv( ndc );
+        const sw::float2 uv  = Internal::computeUV( ndc );
         SW_EXPECT_TRUE( info._positionRadius._x <= uv._x && uv._x <= info._positionRadius._z );
         SW_EXPECT_TRUE( info._positionRadius._y <= uv._y && uv._y <= info._positionRadius._w );
         SW_EXPECT_TRUE( 0.0f < ndc._z && ndc._z < 1.0f );

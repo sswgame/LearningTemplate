@@ -3,13 +3,13 @@
 #include "Engine/Automation/Runner/AutomationHangWatch.h"
 
 #include "Core/Concurrency/ThreadName.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Runner/AutomationExitCode.h"

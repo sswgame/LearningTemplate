@@ -2,7 +2,7 @@
 
 #include "Engine/Character/Hit/RagdollComponent.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -13,7 +13,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 
 namespace sw
 {

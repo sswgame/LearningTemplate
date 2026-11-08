@@ -2,7 +2,7 @@
 
 #include "Games/Empty/KitDemo/TacticsSRPGDemoComponent.h"
 
-#include "Core/String/FourCcUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -22,7 +22,7 @@ namespace sw
     {
         struct TacticsSRPGDemoComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "KDTS" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "KDTS" );
             static constexpr uint32 kStateVersion = 1;
 
             static constexpr const utf8* kConfirmAction = "KitDemo.Confirm";

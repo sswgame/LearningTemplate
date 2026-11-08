@@ -13,13 +13,13 @@
  *          예전 Engine `BinaryStreamWriter/Reader`(호스트 순서 memcpy · 가변 정수)를 이 둘로 합쳤다 — 한 층에 바이트 스트림 모델이 둘이었다.
  */
 #pragma once
-#include "Core/Container/LittleEndianUtil.h"
-#include "Core/Container/VarIntUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/Serialization/VarIntUtil.h"
 
 #include <initializer_list>
 #include <type_traits>

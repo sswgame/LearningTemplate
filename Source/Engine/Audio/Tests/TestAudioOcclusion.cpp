@@ -4,7 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Audio/AudioRoomGraph.h"
-#include "Engine/Audio/Component/Physics2DAudioOcclusionQuery.h"
+#include "Engine/Audio/Scene/Physics2DAudioOcclusionQuery.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
 
 // ------------------------------------------------------------------------------

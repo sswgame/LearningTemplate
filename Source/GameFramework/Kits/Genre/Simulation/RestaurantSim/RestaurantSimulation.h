@@ -6,12 +6,12 @@
 #pragma once
 #include "Core/Container/deque.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
@@ -20,7 +20,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Simulation/RestaurantSim/IngredientStock.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Progression/LevelProgress.h"
@@ -202,7 +202,7 @@ namespace sw
     {
     public:
         static constexpr float32 kStepMinutes  = 1.0f;
-        static constexpr uint32  kStateTag     = FourCcUtil::make( "RSIM" );
+        static constexpr uint32  kStateTag     = FourCCUtil::make( "RSIM" );
         static constexpr uint32  kStateVersion = 1;
 
         RestaurantSimulation();

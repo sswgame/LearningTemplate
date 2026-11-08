@@ -2,7 +2,7 @@
 
 #include "Core/Network/Message/StreamFrame.h"
 
-#include "Core/Container/LittleEndianUtil.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 
 namespace sw
 {

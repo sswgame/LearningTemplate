@@ -2,7 +2,7 @@
 
 #include "Engine/Environment/Surface/SurfaceKind.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Config/EngineDefaultAssets.h"

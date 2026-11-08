@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Foundation/EngineServices.h"

@@ -2,10 +2,10 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
@@ -16,14 +16,14 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
-#include "Engine/2D/SpriteComponent.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/2D/SpriteComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw::editor
 {

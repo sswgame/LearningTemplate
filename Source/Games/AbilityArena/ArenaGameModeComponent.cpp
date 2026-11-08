@@ -2,18 +2,18 @@
 
 #include "Games/AbilityArena/ArenaGameModeComponent.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
@@ -33,7 +33,7 @@ namespace sw
     {
         struct ArenaGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag       = FourCcUtil::make( "ARNA" );
+            static constexpr uint32 kStateTag       = FourCCUtil::make( "ARNA" );
             static constexpr uint32 kStateVersion   = 1;
             static constexpr int32  kProjectileTint = 3; ///< `applyTint` 의 투사체 번호(앞의 셋은 `ArenaUnitKind` 순서다).
 

@@ -5,8 +5,8 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -48,7 +48,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "MVTN" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "MVTN" );
         static constexpr uint32 kStateVersion = 1;
         static constexpr int32  kTownSize     = 6;
 

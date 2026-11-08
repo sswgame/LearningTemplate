@@ -2,15 +2,16 @@
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostEncounter.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OrientationUtil.h"
+#include "Core/Math/Ray.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Horror/GhostHunt/GhostCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
+#include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 
 namespace sw
 {
@@ -97,8 +98,8 @@ namespace sw
         if ( _pCatalog == nullptr )
             return false;
         const GhostFlashlightDef& flashlight = _pCatalog->getFlashlight();
-        return bStrobe ? RayMath::isInFlatCone( eye, forward, MathUtil::toDegree( flashlight._strobeHalfAngle ), flashlight._strobeRange, position )
-                       : RayMath::isInFlatCone( eye, forward, MathUtil::toDegree( flashlight._halfAngle ), flashlight._range, position );
+        return bStrobe ? OrientationUtil::isInFlatCone( eye, forward, MathUtil::toDegree( flashlight._strobeHalfAngle ), flashlight._strobeRange, position )
+                       : OrientationUtil::isInFlatCone( eye, forward, MathUtil::toDegree( flashlight._halfAngle ), flashlight._range, position );
     }
 
     int32 GhostEncounter::shineBeam( const float3& eye, const float3& forward )

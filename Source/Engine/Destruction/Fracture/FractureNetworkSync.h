@@ -8,12 +8,12 @@
 #pragma once
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Network/Replication/TickRingBuffer.h"
-#include "Core/String/FourCcUtil.h"
 
 namespace sw
 {
@@ -43,7 +43,7 @@ namespace sw
     {
     public:
         static constexpr uint32 kRecentHashCount = 64; ///< 받는 쪽이 사건마다 기록해 두는 최근 상태 해시 수다.
-        static constexpr uint32 kMagic           = FourCcUtil::make( "SWFS" );
+        static constexpr uint32 kMagic           = FourCCUtil::make( "SWFS" );
 
         /** @brief 스냅샷 바이트를 읽은 결과입니다. 앞의 것부터 확인하며, 하나라도 실패면 상태를 바꾸지 않습니다. */
         enum class SnapshotReadResult : uint8

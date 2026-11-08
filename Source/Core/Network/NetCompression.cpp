@@ -3,7 +3,7 @@
 #include "Core/Network/NetCompression.h"
 
 #include "Core/Compression/CompressionCodecRegistry.h"
-#include "Core/Container/VarIntUtil.h"
+#include "Core/Serialization/VarIntUtil.h"
 
 namespace sw
 {

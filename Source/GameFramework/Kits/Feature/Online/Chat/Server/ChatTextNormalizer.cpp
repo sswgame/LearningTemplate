@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Feature/Online/Chat/Server/ChatTextNormalizer.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include <algorithm>
 

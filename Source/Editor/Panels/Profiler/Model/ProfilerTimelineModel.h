@@ -11,10 +11,10 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 
+#include "DevTools/Profiling/ProfilerTraceExport.h"
+
 #include "Editor/Panels/Profiler/Model/ProfilerCallNode.h"
 #include "Editor/Panels/Profiler/Model/ProfilerTimelineLayout.h"
-
-#include "Engine/Profiling/ProfilerTraceExport.h"
 
 namespace sw
 {

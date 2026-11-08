@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Online/HTTP/OwnedHTTPClient.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 

@@ -18,11 +18,11 @@
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
-#include "Engine/Rendering/DirectionalLightComponent.h"
-#include "Engine/Rendering/MeshLODSystem.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/World/UIWidgetComponentService.h"
+#include "Engine/Visual/Component/DirectionalLightComponent.h"
+#include "Engine/Visual/MeshLODSystem.h"
 
 namespace sw
 {

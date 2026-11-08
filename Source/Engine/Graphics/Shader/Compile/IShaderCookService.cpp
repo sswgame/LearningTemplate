@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/Shader/Compile/IShaderCookService.h"
 
-#include "Core/String/RegistrationSlot.h"
+#include "Core/Registry/RegistrationSlot.h"
 
 namespace sw
 {

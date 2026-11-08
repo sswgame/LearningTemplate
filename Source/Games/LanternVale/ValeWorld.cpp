@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
+#include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 
 namespace sw
 {

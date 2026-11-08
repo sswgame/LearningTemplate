@@ -1,8 +1,8 @@
 // vector · small_vector — 인라인 ↔ 힙 전환, 원소 수명, 바이트 복사 빠른 경로, 끼워 넣기(개수 · 자기 원소 · 이동), 빈 pop_back, 뒤집힌 범위 · 거대한 개수, 인라인 이동, 복사 대입 재사용, removeAtSwap, 자기 원소 resize, 빈 shrink_to_fit, 소멸 · 값 초기화.
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/InlineAllocator.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Testing/ScopedAssertCapture.h"

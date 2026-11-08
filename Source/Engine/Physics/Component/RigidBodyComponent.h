@@ -8,16 +8,16 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Collision/PhysicsShape.h"
 #include "Engine/Physics/Component/PhysicsComponent.h"
-#include "Engine/Physics/Component/SocketPhysicsBody.h"
 #include "Engine/Physics/IPhysicsBodyScene.h"
 #include "Engine/Physics/PhysicsDesc.h"
 #include "Engine/Physics/PhysicsField.h"
 #include "Engine/Physics/PhysicsTypes.h"
+#include "Engine/Physics/Scene/SocketPhysicsBody.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

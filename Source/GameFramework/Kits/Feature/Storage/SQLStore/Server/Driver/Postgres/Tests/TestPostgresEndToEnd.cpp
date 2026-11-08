@@ -1,11 +1,11 @@
 #include "pch.h"
 
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/map.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/PostgresCodec.h"

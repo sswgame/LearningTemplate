@@ -2,8 +2,8 @@
 
 #include "Engine/Serialization/Serializer/StringPool.h"
 
-#include "Core/Container/VarIntUtil.h"
 #include "Core/Serialization/ByteStream.h"
+#include "Core/Serialization/VarIntUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 

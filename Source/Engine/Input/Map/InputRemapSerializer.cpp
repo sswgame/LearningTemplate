@@ -2,7 +2,7 @@
 
 #include "Engine/Input/Map/InputRemapSerializer.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Map/InputMapXML.h"

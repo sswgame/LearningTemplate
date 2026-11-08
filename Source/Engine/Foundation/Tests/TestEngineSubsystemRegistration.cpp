@@ -38,26 +38,26 @@ namespace sw::engine_registration_test
                                            : nullptr;
     }
 
-    /** @brief 만드는 순서를 보는 서브시스템입니다(인자 없이 만든다). 이름은 형식의 상수이고, @p TDependencyId 가 0 이상이면 그 번호의 서브시스템에 수명으로 기댄다. */
-    template <int32 TId, int32 TDependencyId = -1>
+    /** @brief 만드는 순서를 보는 서브시스템입니다(인자 없이 만든다). 이름은 형식의 상수이고, @p TDependencyID 가 0 이상이면 그 번호의 서브시스템에 수명으로 기댄다. */
+    template <int32 TID, int32 TDependencyID = -1>
     class OrderedSubsystem final : public ISubsystem
     {
     public:
         static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc;
-        static constexpr const utf8* kSubsystemName      = findOrderedName( TId );
+        static constexpr const utf8* kSubsystemName      = findOrderedName( TID );
 
         SubsystemInitResult     initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                    shutdownSubsystem() override {}
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override
         {
-            if constexpr ( TDependencyId < 0 )
+            if constexpr ( TDependencyID < 0 )
             {
                 return {};
             }
             else
             {
-                static constexpr const utf8* kArrDependency[] = { findOrderedName( TDependencyId ) };
+                static constexpr const utf8* kArrDependency[] = { findOrderedName( TDependencyID ) };
                 return kArrDependency;
             }
         }

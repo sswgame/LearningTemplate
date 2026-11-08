@@ -2,7 +2,7 @@
 
 #include "Engine/UserSettings/UserSettingsFileEntry.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"

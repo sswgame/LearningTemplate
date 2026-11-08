@@ -34,18 +34,18 @@ namespace sw
     {
         if ( _pSecurity == nullptr )
             return false;
-        unique_ptr<INetAead> aead = _pSecurity->createAead( NetAeadAlgorithm::AES256Gcm, _arrKey );
+        unique_ptr<INetAEAD> aead = _pSecurity->createAEAD( NetAEADAlgorithm::AES256Gcm, _arrKey );
         if ( aead == nullptr )
             return false;
-        uint8 arrNonce[NetSecurityConstant::kAeadNonceSize];
-        if ( _pSecurity->fillRandomBytes( arrNonce, NetSecurityConstant::kAeadNonceSize ) == false )
+        uint8 arrNonce[NetSecurityConstant::kAEADNonceSize];
+        if ( _pSecurity->fillRandomBytes( arrNonce, NetSecurityConstant::kAEADNonceSize ) == false )
             return false;
         const int32 plainSize = static_cast<int32>( plain.size() );
-        outListSealed.assign( 1 + NetSecurityConstant::kAeadNonceSize + static_cast<size_t>( plainSize ) + NetSecurityConstant::kAeadTagSize, 0 );
+        outListSealed.assign( 1 + NetSecurityConstant::kAEADNonceSize + static_cast<size_t>( plainSize ) + NetSecurityConstant::kAEADTagSize, 0 );
         outListSealed[0] = kFormatVersion;
-        Memory::copy( outListSealed.data() + 1, arrNonce, NetSecurityConstant::kAeadNonceSize );
+        Memory::copy( outListSealed.data() + 1, arrNonce, NetSecurityConstant::kAEADNonceSize );
         const bool bSealed = aead->seal( arrNonce, reinterpret_cast<const uint8*>( context.data() ), static_cast<int32>( context.size() ),
-                                         reinterpret_cast<const uint8*>( plain.data() ), plainSize, outListSealed.data() + 1 + NetSecurityConstant::kAeadNonceSize );
+                                         reinterpret_cast<const uint8*>( plain.data() ), plainSize, outListSealed.data() + 1 + NetSecurityConstant::kAEADNonceSize );
         if ( bSealed == false )
             outListSealed.clear();
         return bSealed;
@@ -53,15 +53,15 @@ namespace sw
 
     bool LoginSecretVault::open( const vector<uint8>& listSealed, string_view context, string& outPlain ) const
     {
-        constexpr size_t kHeaderSize = 1 + NetSecurityConstant::kAeadNonceSize;
-        const bool       bShapeOk    = _pSecurity != nullptr && listSealed.size() >= kHeaderSize + NetSecurityConstant::kAeadTagSize;
+        constexpr size_t kHeaderSize = 1 + NetSecurityConstant::kAEADNonceSize;
+        const bool       bShapeOk    = _pSecurity != nullptr && listSealed.size() >= kHeaderSize + NetSecurityConstant::kAEADTagSize;
         if ( bShapeOk == false || listSealed[0] != kFormatVersion )
             return false;
-        unique_ptr<INetAead> aead = _pSecurity->createAead( NetAeadAlgorithm::AES256Gcm, _arrKey );
+        unique_ptr<INetAEAD> aead = _pSecurity->createAEAD( NetAEADAlgorithm::AES256Gcm, _arrKey );
         if ( aead == nullptr )
             return false;
         const int32   cipherSize = static_cast<int32>( listSealed.size() - kHeaderSize );
-        vector<uint8> listPlain( static_cast<size_t>( cipherSize - NetSecurityConstant::kAeadTagSize ), 0 );
+        vector<uint8> listPlain( static_cast<size_t>( cipherSize - NetSecurityConstant::kAEADTagSize ), 0 );
         const bool    bOpened = aead->open( listSealed.data() + 1, reinterpret_cast<const uint8*>( context.data() ), static_cast<int32>( context.size() ), listSealed.data() + kHeaderSize,
                                             cipherSize, listPlain.data() );
         if ( bOpened == false )

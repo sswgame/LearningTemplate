@@ -6,9 +6,10 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/OrientationUtil.h"
+#include "Core/Math/Ray.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
 
 namespace sw
 {
@@ -34,9 +35,9 @@ namespace sw
 
         float32 getYaw() const { return _yaw; }
         float32 getPitch() const { return _pitch; }
-        float3  getForward() const { return RayMath::computeLookDirection( _yaw, _pitch ); }
+        float3  getForward() const { return OrientationUtil::computeLookDirection( _yaw, _pitch ); }
         /** @brief 수평 앞(이동용, 피치 없음)입니다. */
-        float3 getFlatForward() const { return RayMath::computeLookDirection( _yaw, 0.0f ); }
+        float3 getFlatForward() const { return OrientationUtil::computeLookDirection( _yaw, 0.0f ); }
         /** @brief 수평 오른쪽입니다. */
         float3 getFlatRight() const;
         /** @brief 카메라와 무기에 넣을 엔진 오일러(피치, 요, 롤 0)입니다. */

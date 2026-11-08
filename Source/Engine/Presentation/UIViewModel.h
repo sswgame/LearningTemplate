@@ -5,13 +5,13 @@
  *          언리얼도 필드 통지(`INotifyFieldValueChanged`)는 UMG 가 아니라 CoreUObject 에 있다(기억). 관찰자(UI 의 바인딩 집합)는 `IUIViewModelObserver` 로 단다.
  */
 #pragma once
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

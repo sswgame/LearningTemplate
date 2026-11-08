@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMail.h"

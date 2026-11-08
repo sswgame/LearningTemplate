@@ -55,8 +55,8 @@ namespace sw
          * @details `_NET_WORKAREA` 는 모니터가 여럿이어도 데스크톱에 하나라 모니터 몫은 겹침뿐이다(GLFW 와 같다). 겹치지 않으면 모니터 전체다 - 그 모니터에 창 관리자가 뺀 것이 없다.
          */
         void clipWorkArea( const WindowMonitorRect& desktopWorkArea );
-        /** @brief 출력이 내는 모드 번호 @p listModeId 를 표 @p listMode 에서 찾아 해상도 목록에 더합니다. @p bSwapAxes 는 90 도 돌린 출력이다(모드 크기는 돌리기 전 값이다). 표에 없는 번호는 건너뛴다. */
-        void appendModeResolutions( const vector<WindowMonitorMode>& listMode, const vector<uint64>& listModeId, bool bSwapAxes );
+        /** @brief 출력이 내는 모드 번호 @p listModeID 를 표 @p listMode 에서 찾아 해상도 목록에 더합니다. @p bSwapAxes 는 90 도 돌린 출력이다(모드 크기는 돌리기 전 값이다). 표에 없는 번호는 건너뛴다. */
+        void appendModeResolutions( const vector<WindowMonitorMode>& listMode, const vector<uint64>& listModeID, bool bSwapAxes );
         /** @brief 해상도 목록에서 `kMinResolutionSide` 보다 작은 것을 빼고 작은 것부터 중복 없이 정렬합니다. */
         void normalizeResolutions();
 

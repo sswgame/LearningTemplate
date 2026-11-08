@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
 
-#include "Core/Container/VectorUtil.h"
-#include "Core/String/TagID.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Name/TagID.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"

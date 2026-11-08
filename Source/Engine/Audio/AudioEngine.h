@@ -12,7 +12,7 @@
  *          장치 없이 버퍼에 렌더해 측정값을 확인하는 테스트가 이 성질에 의존한다.
  */
 #pragma once
-#include "Core/Concurrency/LockedSwapQueue.h"
+#include "Core/Concurrency/Queue/LockedSwapQueue.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_map.h"
@@ -22,7 +22,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Audio/AudioBlock.h"
 #include "Engine/Audio/AudioChannelLayout.h"

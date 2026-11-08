@@ -53,7 +53,7 @@ namespace sw::editor
 
         size_t getVertexCount() const { return _listPosition.size(); }
         bool   hasNormal() const { return _listNormal.size() == _listPosition.size(); }
-        bool   hasUv() const { return _listUV.size() == _listPosition.size(); }
+        bool   hasUV() const { return _listUV.size() == _listPosition.size(); }
         bool   hasColor() const { return _listColor.size() == _listPosition.size(); }
         bool   hasWeight() const { return _listWeight.size() == _listPosition.size(); }
         /** @brief 정점의 선택 가중치입니다. 가중치 채널이 없으면 1 입니다. */

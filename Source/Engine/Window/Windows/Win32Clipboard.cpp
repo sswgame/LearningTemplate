@@ -5,7 +5,7 @@
 #include "Engine/Window/PlatformClipboard.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Container/StringUtil.h"
+    #include "Core/String/StringUtil.h"
     #include "Core/Memory/Memory.h"
 
     #include "Engine/Foundation/EnginePlatformHeaders.h"

@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Play/EditorNetConditions.h"

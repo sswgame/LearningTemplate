@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/AssetIO.h"

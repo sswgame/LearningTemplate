@@ -163,7 +163,7 @@ shared_ptr<const BehaviorTreeAsset> tree = _tree.acquire();  // 또는 request()
 
 **실행기는 합치지 않는다.** 행동 트리(틱 반응), 스케줄(게임 시간표), 대화(사람의 선택 대기), 어빌리티(수명 · 복제), 기믹 회로(고정 스텝 상태)는 모델이 다르다. 언리얼도 Behavior Tree · StateTree · GAS 를 나누고 Gameplay Tag 로 어휘를 공유한다.
 
-**조건 `ConditionExpr`** (`Engine/Gameplay/ConditionExpr.h`)
+**조건 `ConditionExpr`** (`Engine/Behavior/ConditionExpr.h`)
 
 - 문법은 `GameFlags` 식을 넓힌다: `flag && !other`, `tag(Quest.Done)`, `weather(rain, storm)`, `affinity >= 4`.
 - 이름은 `SW_CONDITION( 이름, 칸 스키마, 함수 )` 로 등록한다.
@@ -180,7 +180,7 @@ shared_ptr<const BehaviorTreeAsset> tree = _tree.acquire();  // 또는 request()
 
 합치지 않는 곳: `AnimationConditionOp`(매 프레임 캐릭터마다 도는 값 비교), `UserSettingConditionOperator`(게임 문맥이 없는 설정 화면).
 
-**동작 `ActionRegistry`** (`Engine/Gameplay/ActionRegistry.h`)
+**동작 `ActionRegistry`** (`Engine/Behavior/ActionRegistry.h`)
 
 ```cpp
 REFLECT()

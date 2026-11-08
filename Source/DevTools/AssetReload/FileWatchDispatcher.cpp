@@ -2,10 +2,10 @@
 
 #include "DevTools/AssetReload/FileWatchDispatcher.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"

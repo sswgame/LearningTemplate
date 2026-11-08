@@ -2,10 +2,10 @@
 
 #include "Editor/Common/Asset/OutfitAtlasSpec.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/OutfitAtlas.h"
 #include "Editor/Common/Asset/Texture/RawImageData.h"
@@ -212,9 +212,9 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMerge", "Outfit atlas merge: %#", error.c_str() );
                     return false;
                 }
-                if ( hooks.getClampedUvCount() > 0 )
+                if ( hooks.getClampedUVCount() > 0 )
                 {
-                    SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasUVsLie", "Outfit atlas: %# UVs lie outside 0..1 - tiled textures cannot be put into an atlas, nothing was written", hooks.getClampedUvCount() );
+                    SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasUVsLie", "Outfit atlas: %# UVs lie outside 0..1 - tiled textures cannot be put into an atlas, nothing was written", hooks.getClampedUVCount() );
                     return false;
                 }
                 return true;

@@ -4,7 +4,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Renderer/Extension/RenderExtensionRegistry.h"

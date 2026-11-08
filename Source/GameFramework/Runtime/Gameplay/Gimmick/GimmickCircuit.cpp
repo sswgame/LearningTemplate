@@ -3,11 +3,11 @@
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.h"
 
 #include "Core/Container/DependencyGraph.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Serialization/Fixed/FixedLayout.h"

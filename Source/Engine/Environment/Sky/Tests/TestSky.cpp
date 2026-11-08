@@ -7,7 +7,7 @@
 #include "Engine/Environment/Sky/SkyGradient.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Rendering/DirectionalLightComponent.h"
+#include "Engine/Visual/Component/DirectionalLightComponent.h"
 
 // 하늘 — 그러데이션 식(천정 · 지평선 · 땅, 지수, 세기)과 씬의 하늘 찾기. 같은 식의 셰이더(sky.hlsl evaluateSky)는 GPU 캡처로 본다.
 

@@ -2,7 +2,7 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/AABB.h"
 
 #include "Engine/Foundation/EngineServices.h"

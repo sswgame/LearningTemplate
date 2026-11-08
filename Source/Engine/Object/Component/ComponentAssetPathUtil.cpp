@@ -2,7 +2,7 @@
 
 #include "Engine/Object/Component/ComponentAssetPathUtil.h"
 
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectedValue.h"

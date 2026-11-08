@@ -88,7 +88,7 @@ namespace sw
         enum class Format : uint8
         {
             Vorbis = 0,
-            WAVPcm16,
+            WAVPCM16,
             WAVFloat32
         };
 

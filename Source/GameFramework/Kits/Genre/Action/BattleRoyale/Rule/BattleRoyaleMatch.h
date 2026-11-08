@@ -5,12 +5,12 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/String/FourCcUtil.h"
 #include "Core/Time/FixedStepTimer.h"
 
 #include "Engine/Serialization/Format/StateIO.h"
@@ -20,7 +20,7 @@
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleLoot.h"
 #include "GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BattleRoyaleZone.h"
 #include "GameFramework/Runtime/Character/Combat/Health/HealthStateMachine.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionProgress.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Match/MatchState.h"
@@ -106,7 +106,7 @@ namespace sw
     class SW_KIT_API BattleRoyaleMatch
     {
     public:
-        static constexpr uint32  kStateTag     = FourCcUtil::make( "BRMT" );
+        static constexpr uint32  kStateTag     = FourCCUtil::make( "BRMT" );
         static constexpr uint32  kStateVersion = 1;
         static constexpr float32 kFixedStep    = 0.1f;
 

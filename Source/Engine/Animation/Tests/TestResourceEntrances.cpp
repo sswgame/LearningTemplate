@@ -3,7 +3,7 @@
 
 #define SW_TEST_INTERNAL
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
@@ -18,7 +18,7 @@
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
-#include "Engine/Rendering/MeshLODSettings.h"
+#include "Engine/Visual/MeshLODSettings.h"
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"

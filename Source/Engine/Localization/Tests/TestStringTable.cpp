@@ -2,7 +2,7 @@
 // 해제하지 않아 그대로 읽힌다(nogpu).
 #include "pch.h"
 
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Localization/StringTable.h"

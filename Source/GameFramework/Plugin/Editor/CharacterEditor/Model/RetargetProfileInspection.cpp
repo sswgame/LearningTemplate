@@ -2,7 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileInspection.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/AnimationAssetCache.h"

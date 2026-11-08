@@ -2,10 +2,10 @@
 
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -32,7 +32,7 @@ namespace sw::editor
              */
             [[nodiscard]] static bool readTypography( float32& outFontSize, float32& outIconScale )
             {
-                const string&     themeName = getPreferences<EditorConfig>()._themeName;
+                const string&     themeName = getPreferences<EditorAppearanceConfig>()._themeName;
                 EditorThemeConfig theme{};
                 string            error;
                 if ( EditorThemeTokens::loadTheme( themeName, theme, error ) == false )

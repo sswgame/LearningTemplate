@@ -3,7 +3,7 @@
  * @brief 스켈레탈 애니메이터입니다. 그래프(상태 기계) 인스턴스, 파라미터, 레이어, 동기 그룹, 루트 모션, 시퀀서 덮어쓰기 슬롯을 가집니다.
  */
 #pragma once
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"

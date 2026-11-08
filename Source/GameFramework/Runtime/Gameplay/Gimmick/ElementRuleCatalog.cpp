@@ -2,9 +2,9 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/ElementRuleCatalog.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"

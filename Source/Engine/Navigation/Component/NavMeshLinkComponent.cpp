@@ -5,10 +5,10 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Navigation/Component/NavAreaNameValidation.h"
-#include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
+#include "Engine/Navigation/Scene/NavAreaNameValidation.h"
+#include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

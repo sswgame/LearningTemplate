@@ -13,10 +13,10 @@ namespace sw::test
      * @brief 키 · nonce · AAD · 암호문을 FNV-1a 로 섞은 값을 태그로 쓰는 가짜 AEAD 입니다. 평문은 키 첫 바이트와 XOR 합니다.
      * @details 암호가 아니다 — 봉인 형식 · 문맥(AAD) · 변조 거절 규칙을 키 없이 보는 용도이다. 키나 AAD 나 nonce 나 암호문이 하나라도 다르면 열리지 않는다.
      */
-    class FakeAead final : public INetAead
+    class FakeAEAD final : public INetAEAD
     {
     public:
-        explicit FakeAead( const uint8* pKey ) { Memory::copy( _arrKey, pKey, sizeof( _arrKey ) ); }
+        explicit FakeAEAD( const uint8* pKey ) { Memory::copy( _arrKey, pKey, sizeof( _arrKey ) ); }
 
         [[nodiscard]] bool seal( const uint8* pNonce, const uint8* pAad, int32 aadSize, const uint8* pPlain, int32 plainSize, uint8* pOut ) override
         {
@@ -30,12 +30,12 @@ namespace sw::test
 
         [[nodiscard]] bool open( const uint8* pNonce, const uint8* pAad, int32 aadSize, const uint8* pCipher, int32 cipherSize, uint8* pOut ) override
         {
-            const int32 plainSize = cipherSize - NetSecurityConstant::kAeadTagSize;
+            const int32 plainSize = cipherSize - NetSecurityConstant::kAEADTagSize;
             if ( plainSize < 0 )
                 return false;
-            uint8 arrTag[NetSecurityConstant::kAeadTagSize];
+            uint8 arrTag[NetSecurityConstant::kAEADTagSize];
             computeTag( pNonce, pAad, aadSize, pCipher, plainSize, arrTag );
-            for ( int32 index = 0; index < NetSecurityConstant::kAeadTagSize; ++index )
+            for ( int32 index = 0; index < NetSecurityConstant::kAEADTagSize; ++index )
             {
                 if ( arrTag[index] != pCipher[plainSize + index] )
                     return false;
@@ -60,10 +60,10 @@ namespace sw::test
         {
             uint64 hash = HashUtil::kFNVOffset64;
             mix( hash, _arrKey, static_cast<int32>( sizeof( _arrKey ) ) );
-            mix( hash, pNonce, NetSecurityConstant::kAeadNonceSize );
+            mix( hash, pNonce, NetSecurityConstant::kAEADNonceSize );
             mix( hash, pAad, aadSize );
             mix( hash, pCipher, cipherSize );
-            for ( int32 index = 0; index < NetSecurityConstant::kAeadTagSize; ++index )
+            for ( int32 index = 0; index < NetSecurityConstant::kAEADTagSize; ++index )
             {
                 hash           = HashUtil::fnvStep64( hash, static_cast<uint64>( index ) );
                 pOutTag[index] = static_cast<uint8>( hash >> 56 );
@@ -71,7 +71,7 @@ namespace sw::test
         }
 
     private:
-        uint8 _arrKey[NetSecurityConstant::kAeadKeySize]{};
+        uint8 _arrKey[NetSecurityConstant::kAEADKeySize]{};
     };
 } // namespace sw::test
 
@@ -79,7 +79,7 @@ namespace sw::test
 {
     /**
      * @brief 서명 쪽을 답하는 가짜 제공자입니다. 사슬 확인은 `_bChainOk`, 서명 만들기는 `_bSignOk` 를 따르고 서명 확인은 늘 맞다.
-     * @details 난수(`_bRandomOk`, 셈 값으로 채운다), AEAD(`_bAeadOk`, `FakeAead`), SHA-256(`_bHashOk`, `computeFakeDigest`)은 켠 테스트만 쓴다 — 기본은 실패라 쓰지 않는 테스트의 길이 바뀌지 않는다. 나머지 연산은 쓰이지 않는다.
+     * @details 난수(`_bRandomOk`, 셈 값으로 채운다), AEAD(`_bAEADOk`, `FakeAEAD`), SHA-256(`_bHashOk`, `computeFakeDigest`)은 켠 테스트만 쓴다 — 기본은 실패라 쓰지 않는 테스트의 길이 바뀌지 않는다. 나머지 연산은 쓰이지 않는다.
      */
     class FakeNetSecurityProvider final : public INetSecurityProvider
     {
@@ -87,7 +87,7 @@ namespace sw::test
         uint8 _bChainOk{ SW_TRUE };
         uint8 _bSignOk{ SW_TRUE };
         uint8 _bRandomOk{ SW_FALSE };
-        uint8 _bAeadOk{ SW_FALSE };
+        uint8 _bAEADOk{ SW_FALSE };
         uint8 _bHashOk{ SW_FALSE }; ///< 참이면 computeSHA256 이 가짜 요약(`computeFakeDigest`)을 준다
         uint8 _nextRandomByte{ 1 }; ///< 난수 대신 채우는 셈 값이다. 부를 때마다 이어지므로 nonce 가 겹치지 않는다
 
@@ -114,7 +114,7 @@ namespace sw::test
             (void)pOutSecret;
             return false;
         }
-        bool computeHkdfSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize, uint8* pOut, int32 outSize ) override
+        bool computeHKDFSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize, uint8* pOut, int32 outSize ) override
         {
             (void)pSecret;
             (void)secretSize;
@@ -137,12 +137,12 @@ namespace sw::test
             (void)outSize;
             return false;
         }
-        unique_ptr<INetAead> createAead( NetAeadAlgorithm algorithm, const uint8* pKey ) override
+        unique_ptr<INetAEAD> createAEAD( NetAEADAlgorithm algorithm, const uint8* pKey ) override
         {
             (void)algorithm;
-            if ( _bAeadOk == SW_FALSE )
+            if ( _bAEADOk == SW_FALSE )
                 return nullptr;
-            return make_unique<FakeAead>( pKey );
+            return make_unique<FakeAEAD>( pKey );
         }
         expected<unique_ptr<ITLSContext>> createTLSContext( const TLSContextConfig& settings ) override
         {

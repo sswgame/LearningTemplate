@@ -2,10 +2,10 @@
 
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"

@@ -3,13 +3,13 @@
 #include "Engine/Graphics/Material/Dev/MaterialGraphCompileResult.h"
 
 #include "Core/Container/DependencyGraph.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"

@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroidvaniaTrinketLoadout.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"

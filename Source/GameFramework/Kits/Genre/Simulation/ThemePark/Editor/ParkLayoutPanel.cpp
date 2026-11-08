@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"

@@ -13,7 +13,7 @@
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryBlock.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 

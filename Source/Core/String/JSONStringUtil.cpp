@@ -2,8 +2,8 @@
 
 #include "Core/String/JSONStringUtil.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/HexDigitUtil.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {

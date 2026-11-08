@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Navigation/GridReachability.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw

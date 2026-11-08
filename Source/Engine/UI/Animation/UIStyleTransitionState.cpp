@@ -2,9 +2,9 @@
 
 #include "Engine/UI/Animation/UIStyleTransitionState.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"

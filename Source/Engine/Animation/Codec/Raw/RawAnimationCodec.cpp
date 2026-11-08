@@ -2,9 +2,9 @@
 
 #include "Engine/Animation/Codec/Raw/RawAnimationCodec.h"
 
-#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/ByteStream.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 
 namespace sw
 {

@@ -2,12 +2,12 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/LoopbackPkceLoginClient.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/Base64Util.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
-#include "Core/String/Base64Util.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 

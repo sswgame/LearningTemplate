@@ -2,14 +2,14 @@
 
 #include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Math/DualQuaternion.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
-#include "Engine/Animation/Skeletal/DualQuaternion.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -31,11 +31,11 @@
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
-#include "Engine/Rendering/MeshComponent.h"
-#include "Engine/Rendering/MeshInstanceBatch.h"
-#include "Engine/Rendering/MeshLODSystem.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/VFX/SceneVFXProvider.h"
+#include "Engine/Visual/Component/MeshComponent.h"
+#include "Engine/Visual/MeshInstanceBatch.h"
+#include "Engine/Visual/MeshLODSystem.h"
 
 // GPUSkinPaletteCollector
 namespace sw

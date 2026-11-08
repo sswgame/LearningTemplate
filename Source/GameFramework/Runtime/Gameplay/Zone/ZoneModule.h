@@ -10,19 +10,19 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
-#include "Engine/Gameplay/ActionRegistry.h"
-#include "Engine/Gameplay/ConditionExpr.h"
-#include "Engine/Gameplay/GameplayContext.h"
+#include "Engine/Behavior/ActionRegistry.h"
+#include "Engine/Behavior/ConditionExpr.h"
+#include "Engine/Behavior/GameplayContext.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneProfile.h"
-#include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 namespace sw
 {
@@ -50,7 +50,7 @@ namespace sw
     struct ZoneSampleSlot
     {
         using Type                      = const ZoneSample;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "ZSMP" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "ZSMP" );
     };
 
     /** @brief 매개변수 값의 형식입니다. */

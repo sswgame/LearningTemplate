@@ -44,7 +44,6 @@ sw_markDeterministicSources(GameFramework
 	Runtime/Character/Combat/Projectile/ProjectileDef.cpp
 	Runtime/Character/Combat/Projectile/ProjectileSimulation.cpp
 	Runtime/Character/Combat/Weapon/Weapon.cpp
-	Runtime/Foundation/Utility/Math/RayMath.cpp
 	# 락스텝 RTS(`GF_RealTimeStrategy`)가 판 걸음 안에서 부르는 격자 길찾기 · 흐름장
 	Runtime/Character/Navigation/FlowField.cpp
 	Runtime/Character/Navigation/FlowFieldCache.cpp

@@ -28,7 +28,6 @@
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/2D/SpriteComponent.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Localization/LocText.h"
@@ -40,9 +39,10 @@
 #include "Engine/Physics/Component/BoxCollider2DComponent.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Visual/2D/SpriteComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include <imgui.h>
 

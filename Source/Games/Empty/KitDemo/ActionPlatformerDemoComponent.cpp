@@ -2,7 +2,7 @@
 
 #include "Games/Empty/KitDemo/ActionPlatformerDemoComponent.h"
 
-#include "Core/String/FourCcUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
@@ -19,7 +19,7 @@ namespace sw
     {
         struct ActionPlatformerDemoComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "KDAP" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "KDAP" );
             static constexpr uint32 kStateVersion = 1;
 
             static constexpr const utf8* kJumpAction = "KitDemo.Jump";

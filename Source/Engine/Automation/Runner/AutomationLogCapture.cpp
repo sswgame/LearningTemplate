@@ -2,9 +2,9 @@
 
 #include "Engine/Automation/Runner/AutomationLogCapture.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Automation/Runner/AutomationLogPolicy.h"

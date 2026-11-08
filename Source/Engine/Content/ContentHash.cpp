@@ -2,8 +2,8 @@
 
 #include "Engine/Content/ContentHash.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/WallClock.h"
 
 #include "Engine/Foundation/EngineServices.h"

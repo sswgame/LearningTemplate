@@ -26,7 +26,7 @@
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 #include "GameFramework/Runtime/World/Lifetime/PrefabPool.h"
 
 #include "Games/Shooter3D/ShooterBlockerComponent.h"

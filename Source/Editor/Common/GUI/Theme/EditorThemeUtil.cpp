@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -29,9 +29,9 @@ namespace sw::editor
         {
             /**
              * @brief 환경설정 섹션 Appearance 의 값을 고칠 수 있게 돌려줍니다. 값은 등록 줄(`SW_EDITOR_SETTINGS`)이 가리키는 그 인스턴스 하나다 —
-             *        테마를 저장할 때(`saveToConfig`)만 쓴다. 읽기는 `getPreferences<EditorConfig>()` 다.
+             *        테마를 저장할 때(`saveToConfig`)만 쓴다. 읽기는 `getPreferences<EditorAppearanceConfig>()` 다.
              */
-            static EditorConfig& editAppearance() { return editPreferences<EditorConfig>(); }
+            static EditorAppearanceConfig& editAppearance() { return editPreferences<EditorAppearanceConfig>(); }
 
             /**
              * @brief 환경설정 섹션 Appearance 의 값이 바뀌었을 때(창에서 고침 · 파일을 다시 읽음 · 섹션 되돌림) 테마를 다시 적용합니다.
@@ -324,9 +324,9 @@ namespace sw::editor
 
     bool EditorThemeUtil::loadFromConfig()
     {
-        // 테마 이름의 원본은 설정(`EditorConfig::_themeName`)이다. 그 벌이 없으면 다른 벌로 바꿔 끼우지 않는다 — 고친 이름이 무시된 것을 아무도 모른다.
-        const EditorConfig& editorConfig = getPreferences<EditorConfig>();
-        EditorThemeConfig   themeConfig{};
+        // 테마 이름의 원본은 설정(`EditorAppearanceConfig::_themeName`)이다. 그 벌이 없으면 다른 벌로 바꿔 끼우지 않는다 — 고친 이름이 무시된 것을 아무도 모른다.
+        const EditorAppearanceConfig& editorConfig = getPreferences<EditorAppearanceConfig>();
+        EditorThemeConfig             themeConfig{};
         if ( EditorThemeConfig::buildFromSaved( EditorThemeInternal::availableThemes(), editorConfig, themeConfig ) == false )
         {
             SW_LOG_ERROR_ID( "EditorThemeUtil.EditorThemeEditorAppearance", "Editor theme '%#' (Editor/Appearance) has no token file under %#", editorConfig._themeName.c_str(), EditorThemeTokens::getFolderPath().c_str() );
@@ -340,7 +340,7 @@ namespace sw::editor
     void EditorThemeUtil::saveToConfig()
     {
         EditorThemeConfig::writeSaved( EditorThemeInternal::activeTheme(), EditorThemeInternal::editAppearance() );
-        EditorConfig::saveToPreferences();
+        EditorAppearanceConfig::saveToPreferences();
     }
 
     void EditorThemeUtil::setAccentColor( const Color& accentColor )
@@ -637,5 +637,5 @@ namespace sw::editor
 namespace sw::editor
 {
     // 테마는 환경설정 섹션 "Editor/Appearance" 다. 저장은 EditorPreferences.json 하나에 하고, 값을 고치면(창에서 편집하거나 파일을 다시 읽으면) 테마를 다시 적용한다.
-    SW_EDITOR_SETTINGS( EditorConfig, "appearance", "Editor/Appearance", 200, &EditorThemeInternal::onAppearanceChanged );
+    SW_EDITOR_SETTINGS( EditorAppearanceConfig, "appearance", "Editor/Appearance", 200, &EditorThemeInternal::onAppearanceChanged );
 } // namespace sw::editor

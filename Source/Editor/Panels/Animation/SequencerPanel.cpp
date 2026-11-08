@@ -2,11 +2,11 @@
 
 #include "Editor/Panels/Animation/SequencerPanel.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"

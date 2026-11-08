@@ -3,9 +3,9 @@
 // 애플 주소 · 폼 이름은 애플 문서(Sign in with Apple REST API — Generate and validate tokens, Revoke tokens, 2026-11-07 대조)와 같게 비교한다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamTypes.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 
@@ -56,7 +56,7 @@ namespace
             SW_EXPECT_TRUE( _client.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             SW_EXPECT_TRUE( _appleClient.initialize( _network.createTransport(), transportSettings, HTTPClientConfig{} ) );
             _baseURL  = "http://127.0.0.1:" + to_string( static_cast<int32>( _server.getListenPort() ) );
-            _jwksBody = makeJwks( "kid-1" );
+            _jwksBody = makeJWKS( "kid-1" );
         }
 
         void onRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse )
@@ -130,13 +130,13 @@ namespace
             return nullptr;
         }
 
-        static string makeJwks( string_view keyID )
+        static string makeJWKS( string_view keyID )
         {
             NetPublicKey key;
             key._algorithm = NetSignatureAlgorithm::RsaPkcs1SHA256;
             key._modulus   = { 0xC1, 0x02, 0x03, 0x04 };
             key._exponent  = { 0x01, 0x00, 0x01 };
-            return "{\"keys\":[" + JwksKeyCache::writeJwk( key, keyID ) + "]}";
+            return "{\"keys\":[" + JWKSKeyCache::writeJwk( key, keyID ) + "]}";
         }
     };
 
@@ -237,7 +237,7 @@ SW_TEST_CASE( OidcLoginProviderTest, VerifiesWithFetchedKeysAndCachesThem )
     SW_EXPECT_TRUE( rig.verify( provider, TestUtil::makeIDToken( rig._security, TokenClaims{} ) ).isVerified() );
 
     SW_EXPECT_EQUAL( 1, rig.countRequests( "/jwks" ) );
-    SW_EXPECT_EQUAL( 1, provider.getJwksFetchCount() );
+    SW_EXPECT_EQUAL( 1, provider.getJWKSFetchCount() );
     const HTTPServerRequest* pFetch = rig.findLastRequest( "/jwks" );
     SW_REQUIRE_TRUE( pFetch != nullptr );
     SW_EXPECT_TRUE( pFetch->_method == HTTPMethod::Get );
@@ -274,7 +274,7 @@ SW_TEST_CASE( OidcLoginProviderTest, RejectsClaimsThatDoNotMatch )
 }
 
 /** @brief [OidcLoginProviderTest] 받은 JWKS 에도 없는 kid 는 거절이고, JWKS 를 받지 못했으면 쓸 수 없음(다시 시도)이다 */
-SW_TEST_CASE( OidcLoginProviderTest, UnknownKeyIsRejectedAndUnreachableJwksIsUnavailable )
+SW_TEST_CASE( OidcLoginProviderTest, UnknownKeyIsRejectedAndUnreachableJWKSIsUnavailable )
 {
     {
         ProviderHTTPFixture             rig;

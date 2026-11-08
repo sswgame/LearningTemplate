@@ -9,12 +9,12 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
-#include "Engine/Gameplay/ConditionExpr.h"
+#include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -72,7 +72,7 @@ namespace sw
     struct ScheduleConditionSlot
     {
         using Type                      = const ScheduleConditionContext;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "SCHD" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "SCHD" );
     };
 } // namespace sw
 

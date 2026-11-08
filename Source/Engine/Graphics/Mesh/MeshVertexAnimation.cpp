@@ -2,7 +2,6 @@
 
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -10,6 +9,7 @@
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Serialization/ByteStream.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"

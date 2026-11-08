@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Animation/Model/SequenceModel.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 

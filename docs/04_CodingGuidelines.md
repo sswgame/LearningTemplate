@@ -96,7 +96,7 @@ GameObject* pTarget = pManager->resolveGameObject( _targetHandle );   // 쓸 때
 | 상수를 여러 곳에 복사 | `.cpp` 하나는 `WeaponInternal::kMaxSpread`, 모듈 하나는 `MeshAssetFormat::kExtension`, 모듈 사이는 `RHIDescriptors.h` `constant` · `shaderslot::k*` |
 | `kFrameCount = constant::kMaxFrameCountInFlight`(별칭) | `constant::kMaxFrameCountInFlight` 를 그대로 |
 | `nanoseconds / 1000000000` | `nanoseconds / constant::kNanosecondsPerSecond` |
-| `0x53574846`(4 글자 표식) | `FourCcUtil::make( "SWHF" )` |
+| `0x53574846`(4 글자 표식) | `FourCCUtil::make( "SWHF" )` |
 | `char buf[64]` · `fixed_string<256>` | `constant::buffer::kMax64` · `constant::file::kMaxPathSize` |
 | 게임플레이 튜닝 `kWalkSpeed` | 컴포넌트 `PROPERTY` `_walkSpeed` |
 | 코드에 박은 에셋 경로 `"engine/shaders/forward_lit.hlsl"` | 그 경로를 읽는 데이터 파일의 칸(엔진 기본 에셋 표 · 게임 설정 · 카탈로그) |

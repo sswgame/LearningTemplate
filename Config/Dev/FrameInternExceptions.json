@@ -6,6 +6,6 @@
         "Source/Games/Shooter3D/ShooterEnemyComponent.cpp::updateAnimator": "공격을 시작하는 순간에만 지난다",
         "Source/Games/Shooter3D/ShooterGameModeComponent.cpp::updateEnemies": "적이 죽는 순간에만 지난다",
         "Source/Games/ThemeParkTycoon/ParkGameModeComponent.cpp::updateInput": "게임 스레드 입력, 프레임당 키 수가 상수이고 워커 경합이 없다",
-        "Source/Engine/Navigation/Component/NavDebugView.cpp::updateSolidView": "디버그 보기를 처음 켤 때 한 번 오브젝트를 만든다"
+        "Source/Engine/Navigation/Scene/NavDebugView.cpp::updateSolidView": "디버그 보기를 처음 켤 때 한 번 오브젝트를 만든다"
     }
 }

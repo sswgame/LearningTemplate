@@ -14,7 +14,7 @@
  *   - 엔진 컴포넌트: REFLECT_BODY() (Component 를 상속하면 팩토리가 자동 등록됩니다)
  */
 #pragma once
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/TypeLookupCache.h"
 

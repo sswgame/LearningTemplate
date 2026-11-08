@@ -2,9 +2,9 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -17,6 +17,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
+#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
@@ -25,7 +26,6 @@
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
-#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Content/AssetPaths.h"

@@ -12,8 +12,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Network/Message/NetRequest.h"
-#include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -2,16 +2,16 @@
 
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Content/AssetPaths.h"

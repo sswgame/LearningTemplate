@@ -1,8 +1,8 @@
 // FileUtil 의 UTF-8 BOM — 뷰 · 바이트 포인터에서 떼기와 텍스트 파일 읽기가 BOM 을 뗀다.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

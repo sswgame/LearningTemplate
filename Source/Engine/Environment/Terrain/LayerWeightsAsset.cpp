@@ -2,9 +2,9 @@
 
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 
-#include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Serialization/ByteStream.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 
 #include "Engine/Content/AssetIO.h"
 

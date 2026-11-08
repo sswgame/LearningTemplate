@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/Frame/View/RenderViewScheduler.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 

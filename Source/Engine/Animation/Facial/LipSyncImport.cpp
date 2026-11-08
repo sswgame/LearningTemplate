@@ -2,11 +2,11 @@
 
 #include "Engine/Animation/Facial/LipSyncImport.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Animation/Facial/IVoiceDecoder.h"
 #include "Engine/Animation/Facial/LipSync.h"

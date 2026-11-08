@@ -2,13 +2,13 @@
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
 
-#include "Core/Container/LittleEndianUtil.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Image/DDSFormat.h"
-#include "Engine/Compression/ZlibCompressionCodec.h"
+#include "Engine/Compression/EngineCompressionCodecs.h"
 
 namespace sw
 {
@@ -18,7 +18,7 @@ namespace sw
         {
             static constexpr uint32 kDDSFlags           = 0x1u | 0x2u | 0x4u | 0x8u | 0x1000u; // CAPS · HEIGHT · WIDTH · PITCH · PIXELFORMAT
             static constexpr uint32 kDDSCapsTexture     = 0x1000u;
-            static constexpr uint32 kDxgiR8G8B8A8Unorm  = 28;
+            static constexpr uint32 kDXGIR8G8B8A8Unorm  = 28;
             static constexpr uint32 kDimensionTexture2D = 3;
             /** @brief PNG 의 deflate 레벨입니다 - 캡처는 자주 쓰고 크기보다 시간이 중요하다(zlib `Z_BEST_SPEED`). */
             static constexpr int32 kPNGDeflateLevel = 1;
@@ -57,7 +57,7 @@ namespace sw
         if ( Internal::isSizeValid( rgbaBytes, width, height ) == false )
             return false;
         const vector<uint8> payload( rgbaBytes.begin(), rgbaBytes.begin() + static_cast<ptrdiff_t>( static_cast<size_t>( width ) * height * 4u ) );
-        return writeDDS( path, payload, width, height, 1, Internal::kDxgiR8G8B8A8Unorm, width * 4u );
+        return writeDDS( path, payload, width, height, 1, Internal::kDXGIR8G8B8A8Unorm, width * 4u );
     }
 
     bool ImageFileWriter::writeDDS( string_view path, const vector<uint8>& payload, uint32 width, uint32 height, uint32 mipCount, uint32 dxgiFormat, uint32 rowBytes )
@@ -78,8 +78,8 @@ namespace sw
             LittleEndianUtil::appendUint32( bytes, 0 ); // 예약
         }
         LittleEndianUtil::appendUint32( bytes, DDSFormat::kPixelFormatSize );
-        LittleEndianUtil::appendUint32( bytes, DDSFormat::kPixelFormatFourCcFlag );
-        LittleEndianUtil::appendUint32( bytes, DDSFormat::kDx10FourCc );
+        LittleEndianUtil::appendUint32( bytes, DDSFormat::kPixelFormatFourCCFlag );
+        LittleEndianUtil::appendUint32( bytes, DDSFormat::kDx10FourCC );
         for ( uint32 index = 0; index < 5; ++index )
         {
             LittleEndianUtil::appendUint32( bytes, 0 ); // 비트 수 · 마스크(DX10 머리말이 포맷을 말한다)

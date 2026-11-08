@@ -28,6 +28,7 @@ namespace sw
             Subscription       addOnBeforeReloadBatch( BeforeReloadBatchDelegate onBeforeBatch ) override { return _moduleReload.addOnBeforeReloadBatch( onBeforeBatch ); }
             void               requestReload( const utf8* pModuleName ) override { _moduleReload.requestReload( pModuleName ); }
             void               updateModuleReload() override { _moduleReload.update(); }
+            void               pollShellActions( float32 deltaTime, bool bEnableEditor ) override { _moduleReload.pollShellActions( deltaTime, bEnableEditor ); }
 
             void attachFrameHooks( Engine& engine ) override { _devTools.attachFrameHooks( engine ); }
             void startConsole( bool bEnableEditor ) override { _devTools.startConsole( bEnableEditor ); }

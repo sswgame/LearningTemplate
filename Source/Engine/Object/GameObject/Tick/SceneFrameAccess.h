@@ -27,7 +27,6 @@ namespace sw
     {
         constexpr const utf8* kArrName[] = {
 #define SW_SCENE_DATA_KIND( Name ) #Name,
-#include "Engine/Object/GameObject/Tick/SceneDataKindList.xxx"
 #undef SW_SCENE_DATA_KIND
         };
         static_assert( sizeof( kArrName ) / sizeof( kArrName[0] ) == static_cast<size_t>( SceneDataKind::Count ), "kind name table must cover every SceneDataKind" );

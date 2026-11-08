@@ -11,7 +11,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/RegistrationSlot.h"
+#include "Core/Registry/RegistrationSlot.h"
 
 namespace sw
 {

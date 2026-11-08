@@ -3,7 +3,7 @@
  * @brief 타입 안전 델리게이트 · 멀티캐스트 델리게이트 · 핸들입니다.
  */
 #pragma once
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/array.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"

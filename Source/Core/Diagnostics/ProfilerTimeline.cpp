@@ -2,16 +2,16 @@
 
 #include "Core/Diagnostics/ProfilerTimeline.h"
 
+#include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/CompareUtil.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Connection/NetFlowLog.h"
+#include "Core/String/StringUtil.h"
 
 #include <thread>
 

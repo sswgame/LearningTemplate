@@ -2,11 +2,10 @@
 
 #include "Core/Testing/TestRunner.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
@@ -19,9 +18,10 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/StandardOutput.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/String/JSONStringUtil.h"
-#include "Core/String/RegistrationList.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/MonotonicClock.h"
 

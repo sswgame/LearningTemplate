@@ -9,8 +9,8 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
-#include "Core/String/TagID.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/TagID.h"
+#include "Core/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

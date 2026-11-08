@@ -9,7 +9,7 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include <Psapi.h>
 #elif defined( SW_PLATFORM_LINUX )
-    #include "Core/Container/StringUtil.h"
+    #include "Core/String/StringUtil.h"
     #include "Core/File/FileUtil.h"
 
     #include <sys/resource.h>

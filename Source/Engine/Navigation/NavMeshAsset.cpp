@@ -2,13 +2,13 @@
 
 #include "Engine/Navigation/NavMeshAsset.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Serialization/ByteStream.h"
-#include "Core/String/FourCcUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Content/AssetIO.h"
@@ -23,7 +23,7 @@ namespace sw
     {
         struct NavMeshAssetInternal
         {
-            static constexpr uint32 kMagic = FourCcUtil::make( "SWNV" );
+            static constexpr uint32 kMagic = FourCCUtil::make( "SWNV" );
             /** @brief 씬 저작본(`.scene.xml`)과 쿠킹본(`.scene.bin`) 접미사입니다. 파일이 하나도 없던 맨 `.scene` 은 별칭이라 두지 않습니다. */
             static constexpr string_view kArrSceneSuffix[] = { ".scene.xml", ".scene.bin" };
             /** @brief 타일 하나의 가장 작은 바이트 수입니다(x · z · 바이트 길이). 깨진 타일 수를 할당 전에 남은 바이트로 거른다. */

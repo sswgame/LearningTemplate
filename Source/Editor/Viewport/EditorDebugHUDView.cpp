@@ -2,10 +2,10 @@
 
 #include "Editor/Viewport/EditorDebugHUDView.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
 

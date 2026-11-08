@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/VarIntUtil.h"
+#include "Core/Serialization/VarIntUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"

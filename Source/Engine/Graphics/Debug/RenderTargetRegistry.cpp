@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 

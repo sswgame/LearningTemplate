@@ -6,10 +6,10 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 #include "Games/Velmora/VelmoraCampaign.h"
 #include "Games/Velmora/VelmoraRegionCatalog.h"

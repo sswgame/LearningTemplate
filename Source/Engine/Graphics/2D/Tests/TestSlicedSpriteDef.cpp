@@ -29,7 +29,7 @@ namespace
         const sw::RHIVertex& bottomLeft = listVertex[quadIndex * 6 + 0];
         const sw::RHIVertex& topRight   = listVertex[quadIndex * 6 + 1];
         return QuadBounds{ bottomLeft._arrPosition[0], bottomLeft._arrPosition[1], topRight._arrPosition[0], topRight._arrPosition[1],
-                           bottomLeft._arrUv[0], topRight._arrUv[1], topRight._arrUv[0], bottomLeft._arrUv[1] };
+                           bottomLeft._arrUV[0], topRight._arrUV[1], topRight._arrUV[0], bottomLeft._arrUV[1] };
     }
 
     bool isNear( float32 expected, float32 actual )
@@ -75,7 +75,7 @@ SW_TEST_CASE( SpriteMeshBuilderTest, SlicedCornersKeepTheirSizeAndTheCenterStret
     const sw::RHIVertex& backFirst = listVertex[9 * 6];
     SW_EXPECT_TRUE( isNear( 1.0f, backFirst._arrNormal[2] ) );
     SW_EXPECT_TRUE( isNear( -listVertex[0]._arrPosition[0], backFirst._arrPosition[0] ) );
-    SW_EXPECT_TRUE( isNear( listVertex[0]._arrUv[0], backFirst._arrUv[0] ) );
+    SW_EXPECT_TRUE( isNear( listVertex[0]._arrUV[0], backFirst._arrUV[0] ) );
 }
 
 /**

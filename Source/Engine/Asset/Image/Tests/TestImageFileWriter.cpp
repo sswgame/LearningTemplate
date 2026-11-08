@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
-#include "Engine/Compression/ZlibCompressionCodec.h"
+#include "Engine/Compression/EngineCompressionCodecs.h"
 
 using namespace sw;
 

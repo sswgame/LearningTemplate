@@ -2,8 +2,8 @@
 
 #include "Games/Shooter3D/ShooterOnlineFlow.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/WallClock.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"

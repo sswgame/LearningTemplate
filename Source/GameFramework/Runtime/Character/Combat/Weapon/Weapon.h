@@ -11,11 +11,11 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Ray.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Gameplay/ConditionExpr.h"
+#include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 

@@ -8,13 +8,13 @@
 
 #include "Engine/Profiling/Tracy/TracyProfilerBackend.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringUtil.h"
 
 #if defined( SW_PROFILER_TRACY )
     #include "Core/Foundation/PlatformOSHeaders.h"

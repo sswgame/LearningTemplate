@@ -8,8 +8,8 @@
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioDownmix.h"
+#include "Engine/Audio/AudioPCM.h"
 #include "Engine/Audio/AudioPanDirection.h"
-#include "Engine/Audio/AudioPcm.h"
 #include "Engine/Audio/IAudioService.h"
 
 namespace
@@ -177,11 +177,11 @@ SW_TEST_CASE( AudioSurroundTest, MultichannelClipKeepsTheCenterChannel )
     sw::vector<uint8> bytes;
     sw::AudioWAVEncoder::encodeFloat32( listSample.data(), kFrameCount, 6, sw::AudioChannelLayoutUtil::getChannelMask( sw::AudioChannelLayout::Surround51 ),
                                         sw::audio::kSampleRate, bytes );
-    sw::AudioPcm pcm;
-    SW_REQUIRE_TRUE( sw::AudioPcm::decodeWAV( bytes.data(), bytes.size(), pcm ) );
+    sw::AudioPCM pcm;
+    SW_REQUIRE_TRUE( sw::AudioPCM::decodeWAV( bytes.data(), bytes.size(), pcm ) );
     SW_EXPECT_EQUAL( 6u, static_cast<uint32>( pcm._channelCount ) );
     sw::AudioClipData clip;
-    SW_REQUIRE_TRUE( sw::AudioClipData::convertPcm( pcm, clip ) );
+    SW_REQUIRE_TRUE( sw::AudioClipData::convertPCM( pcm, clip ) );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( clip._channelCount ) );
     SW_EXPECT_NEAR( 0.5f * sw::MathUtil::kInvSqrt2, clip._listSample[0], 1e-6f );
     SW_EXPECT_NEAR( 0.5f * sw::MathUtil::kInvSqrt2, clip._listSample[1], 1e-6f );

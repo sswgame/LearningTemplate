@@ -42,7 +42,7 @@ namespace sw
          * @details 노멀과 **같은 함정**이 있다. 위치로 만들어 내면(`xy * 0.5 + 0.5`) 원점 중심 단위 도형이 아닐 때 알베도가
          *          엉뚱하게 붙고 옆면과 뚜껑이 같은 위치를 읽는다. 도형 생성기가 면마다 UV 를 펼쳐 준다.
          */
-        float32 _arrUv[2];
+        float32 _arrUV[2];
         float32 _arrColor[4]; ///< 정점 색상 (R, G, B, A)
         /**
          * @brief 탄젠트 (X, Y, Z)와 바이탄젠트 부호(W, ±1)입니다. 노멀 맵이 탄젠트 공간을 세울 때 씁니다(glTF · MikkTSpace 규약 — 바이탄젠트 = cross( N, T ) × W).
@@ -68,7 +68,7 @@ namespace sw
     {
         int8    _arrNormal[4];  ///< snorm8 — w 는 0
         int8    _arrTangent[4]; ///< snorm8 — w 는 바이탄젠트 부호(±127 = ±1)
-        float32 _arrUv[2];      ///< 물이 월드 좌표를 싣는다 — half 로 줄이지 않는다
+        float32 _arrUV[2];      ///< 물이 월드 좌표를 싣는다 — half 로 줄이지 않는다
         float32 _arrColor[4];
     };
     static_assert( sizeof( RHIPackedMeshAttributes ) == 32, "packed mesh attributes are 32 bytes (imported by four backends' layouts)" );
@@ -77,7 +77,7 @@ namespace sw
     struct RHIHighPrecisionMeshAttributes
     {
         float32 _arrNormal[3];
-        float32 _arrUv[2];
+        float32 _arrUV[2];
         float32 _arrColor[4];
         float32 _arrTangent[4];
     };
@@ -190,7 +190,7 @@ namespace sw
         inline constexpr RHIVertexAttribute arrPackedMeshVertexAttribute[] = {
             { "POSITION", 0, RHIVertexAttributeFormat::Float3, 0, kMeshPositionSlot, SW_FALSE },
             { "NORMAL", 1, RHIVertexAttributeFormat::Snorm8x4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrNormal ), kMeshAttributeSlot, SW_FALSE },
-            { "TEXCOORD", 2, RHIVertexAttributeFormat::Float2, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrUv ), kMeshAttributeSlot, SW_FALSE },
+            { "TEXCOORD", 2, RHIVertexAttributeFormat::Float2, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrUV ), kMeshAttributeSlot, SW_FALSE },
             { "COLOR", 3, RHIVertexAttributeFormat::Float4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrColor ), kMeshAttributeSlot, SW_FALSE },
             { "TANGENT", 4, RHIVertexAttributeFormat::Snorm8x4, SW_OFFSET_OF( RHIPackedMeshAttributes, _arrTangent ), kMeshAttributeSlot, SW_FALSE },
             { "SW_INSTANCESLOT", 5, RHIVertexAttributeFormat::Uint1, 0, kInstanceSlotStreamSlot, SW_TRUE },
@@ -198,7 +198,7 @@ namespace sw
         inline constexpr RHIVertexAttribute arrHighPrecisionMeshVertexAttribute[] = {
             { "POSITION", 0, RHIVertexAttributeFormat::Float3, 0, kMeshPositionSlot, SW_FALSE },
             { "NORMAL", 1, RHIVertexAttributeFormat::Float3, SW_OFFSET_OF( RHIHighPrecisionMeshAttributes, _arrNormal ), kMeshAttributeSlot, SW_FALSE },
-            { "TEXCOORD", 2, RHIVertexAttributeFormat::Float2, SW_OFFSET_OF( RHIHighPrecisionMeshAttributes, _arrUv ), kMeshAttributeSlot, SW_FALSE },
+            { "TEXCOORD", 2, RHIVertexAttributeFormat::Float2, SW_OFFSET_OF( RHIHighPrecisionMeshAttributes, _arrUV ), kMeshAttributeSlot, SW_FALSE },
             { "COLOR", 3, RHIVertexAttributeFormat::Float4, SW_OFFSET_OF( RHIHighPrecisionMeshAttributes, _arrColor ), kMeshAttributeSlot, SW_FALSE },
             { "TANGENT", 4, RHIVertexAttributeFormat::Float4, SW_OFFSET_OF( RHIHighPrecisionMeshAttributes, _arrTangent ), kMeshAttributeSlot, SW_FALSE },
             { "SW_INSTANCESLOT", 5, RHIVertexAttributeFormat::Uint1, 0, kInstanceSlotStreamSlot, SW_TRUE },

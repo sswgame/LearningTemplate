@@ -15,9 +15,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/HeadlessSubsystem.h"
-#include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Reflection/ReflectionSubsystem.h"
 
 namespace sw

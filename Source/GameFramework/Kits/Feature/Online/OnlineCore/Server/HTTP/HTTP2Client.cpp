@@ -2,10 +2,10 @@
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HTTP2Client.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {

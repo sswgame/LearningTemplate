@@ -9,7 +9,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Character/Navigation/GridReachability.h"
-#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
+#include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 
 namespace sw
 {

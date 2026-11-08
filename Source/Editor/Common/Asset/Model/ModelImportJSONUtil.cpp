@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Asset/Model/ModelImportJSONUtil.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"

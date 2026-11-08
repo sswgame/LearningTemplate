@@ -2,7 +2,7 @@
 
 #include "Engine/Object/Component/TagSystem.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
 namespace sw

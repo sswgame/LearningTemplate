@@ -21,7 +21,7 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Config/Dev/GameAutoplay.h"
+#include "Engine/Config/GameAutoplay.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"

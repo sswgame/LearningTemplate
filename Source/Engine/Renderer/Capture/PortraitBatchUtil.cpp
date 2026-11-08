@@ -2,10 +2,10 @@
 
 #include "Engine/Renderer/Capture/PortraitBatchUtil.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/string_splitter.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"

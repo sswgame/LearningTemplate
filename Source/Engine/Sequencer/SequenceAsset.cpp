@@ -2,14 +2,13 @@
 
 #include "Engine/Sequencer/SequenceAsset.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Sequencer/SequenceSpanTracks.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 

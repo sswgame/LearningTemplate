@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -10,7 +11,6 @@
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
 
 namespace sw
 {

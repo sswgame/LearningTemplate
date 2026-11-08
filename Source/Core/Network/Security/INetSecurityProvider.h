@@ -16,22 +16,22 @@
 namespace sw
 {
     /**
-     * @class INetAead
+     * @class INetAEAD
      * @brief AEAD 하나(키 고정)입니다. `seal` 은 암호문 뒤에 태그 16 바이트를 붙이고, `open` 은 태그가 틀리면 false 입니다.
      * @details 한 스레드가 씁니다(연결마다 하나). nonce 는 키마다 한 번만 — 부르는 쪽이 패킷 번호로 만든다(`NetSessionKeys::makeNonce`).
      */
-    class SW_API INetAead
+    class SW_API INetAEAD
     {
     public:
-        INetAead()          = default;
-        virtual ~INetAead() = default;
+        INetAEAD()          = default;
+        virtual ~INetAEAD() = default;
 
-        INetAead( const INetAead& )            = delete;
-        INetAead& operator=( const INetAead& ) = delete;
+        INetAEAD( const INetAEAD& )            = delete;
+        INetAEAD& operator=( const INetAEAD& ) = delete;
 
-        /** @brief @p pOut 은 plainSize + kAeadTagSize 바이트입니다. */
+        /** @brief @p pOut 은 plainSize + kAEADTagSize 바이트입니다. */
         [[nodiscard]] virtual bool seal( const uint8* pNonce, const uint8* pAad, int32 aadSize, const uint8* pPlain, int32 plainSize, uint8* pOut ) = 0;
-        /** @brief @p cipherSize 는 태그 포함입니다. @p pOut 은 cipherSize - kAeadTagSize 바이트. 태그가 틀리면 false 이고 @p pOut 은 믿지 않는다. */
+        /** @brief @p cipherSize 는 태그 포함입니다. @p pOut 은 cipherSize - kAEADTagSize 바이트. 태그가 틀리면 false 이고 @p pOut 은 믿지 않는다. */
         [[nodiscard]] virtual bool open( const uint8* pNonce, const uint8* pAad, int32 aadSize, const uint8* pCipher, int32 cipherSize, uint8* pOut ) = 0;
     };
 } // namespace sw
@@ -112,7 +112,7 @@ namespace sw
         /** @brief X25519 공유 비밀 32 바이트입니다. 작은 차수 점(공유 비밀이 0)이면 false. */
         [[nodiscard]] virtual bool computeX25519SharedSecret( const uint8* pPrivateKey, const uint8* pPeerPublicKey, uint8* pOutSecret ) = 0;
         /** @brief HKDF-SHA256(RFC 5869) — 소금 · 정보는 비워도 된다(크기 0). */
-        [[nodiscard]] virtual bool computeHkdfSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize,
+        [[nodiscard]] virtual bool computeHKDFSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize,
                                                       uint8* pOut, int32 outSize ) = 0;
         /**
          * @brief 느린 비밀번호 해시 Argon2id(RFC 9106) → @p outSize 바이트입니다.
@@ -120,8 +120,8 @@ namespace sw
          */
         [[nodiscard]] virtual bool computePasswordHash( const uint8* pPassword, int32 passwordSize, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params,
                                                         uint8* pOut, int32 outSize ) = 0;
-        /** @brief 키를 박은 AEAD 를 만듭니다(@p pKey 는 kAeadKeySize 바이트). 실패하면 nullptr. */
-        virtual unique_ptr<INetAead> createAead( NetAeadAlgorithm algorithm, const uint8* pKey ) = 0;
+        /** @brief 키를 박은 AEAD 를 만듭니다(@p pKey 는 kAEADKeySize 바이트). 실패하면 nullptr. */
+        virtual unique_ptr<INetAEAD> createAEAD( NetAEADAlgorithm algorithm, const uint8* pKey ) = 0;
 
         /** @brief TLS 컨텍스트를 만듭니다. 실패하면 오류(바깥 라이브러리 실패는 `ErrorKind::ExternalFailure`, 대상은 그 쪽 오류 글)입니다. */
         virtual expected<unique_ptr<ITLSContext>> createTLSContext( const TLSContextConfig& settings ) = 0;

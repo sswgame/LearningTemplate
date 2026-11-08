@@ -14,9 +14,8 @@
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaSnapshot.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
-#include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Match/TeamAttitude.h"
 
 namespace sw
@@ -236,7 +235,7 @@ namespace sw
                     float32          distance  = 0.0f;
                     if ( other == projectile._lastHit || _world.isEnemyTarget( ownerTeam, other ) == false )
                         continue;
-                    if ( RayMath::intersectSphere( ray, _world.computeCenter( candidate ), candidate.getMech()->_radius, hitDistance, distance ) && distance <= hitDistance )
+                    if ( Ray::intersectSphere( ray, _world.computeCenter( candidate ), candidate.getMech()->_radius, hitDistance, distance ) && distance <= hitDistance )
                     {
                         hitDistance = distance;
                         hitPilot    = other;
@@ -824,7 +823,7 @@ namespace sw
                 float32          distance  = 0.0f;
                 if ( isEnemyTarget( pilot._team, other ) == false )
                     continue;
-                if ( RayMath::intersectSphere( ray, computeCenter( candidate ), candidate.getMech()->_radius, hitDistance, distance ) && distance <= hitDistance )
+                if ( Ray::intersectSphere( ray, computeCenter( candidate ), candidate.getMech()->_radius, hitDistance, distance ) && distance <= hitDistance )
                 {
                     hitDistance = distance;
                     hitPilot    = other;

@@ -15,7 +15,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -28,7 +28,7 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmShippingBin.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 

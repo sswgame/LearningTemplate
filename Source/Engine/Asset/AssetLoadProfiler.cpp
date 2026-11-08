@@ -2,8 +2,8 @@
 
 #include "Engine/Asset/AssetLoadProfiler.h"
 
-#include "Core/Container/CompareUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"

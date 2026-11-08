@@ -42,7 +42,7 @@ namespace
             (void)pOutSecret;
             return false;
         }
-        bool computeHkdfSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize, uint8* pOut,
+        bool computeHKDFSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize, uint8* pOut,
                                 int32 outSize ) override
         {
             _secret.assign( pSecret, pSecret + secretSize );
@@ -66,7 +66,7 @@ namespace
             (void)outSize;
             return false;
         }
-        unique_ptr<INetAead> createAead( NetAeadAlgorithm algorithm, const uint8* pKey ) override
+        unique_ptr<INetAEAD> createAEAD( NetAEADAlgorithm algorithm, const uint8* pKey ) override
         {
             (void)algorithm;
             (void)pKey;
@@ -170,18 +170,18 @@ SW_TEST_CASE( NetReplayWindowTest, AdvancingClearsSlotsOfOldNumbers )
 
 SW_TEST_CASE( NetReplayWindowTest, NonceIsIvXorBigEndianPacketNumber )
 {
-    uint8 arrIv[NetSecurityConstant::kAeadNonceSize];
-    for ( int32 index = 0; index < NetSecurityConstant::kAeadNonceSize; ++index )
+    uint8 arrIv[NetSecurityConstant::kAEADNonceSize];
+    for ( int32 index = 0; index < NetSecurityConstant::kAEADNonceSize; ++index )
     {
         arrIv[index] = static_cast<uint8>( 0xA0 + index );
     }
-    uint8 arrNonce[NetSecurityConstant::kAeadNonceSize];
+    uint8 arrNonce[NetSecurityConstant::kAEADNonceSize];
     NetSessionKeys::makeNonce( arrIv, 0x0102ull, arrNonce );
     SW_EXPECT_EQUAL( arrIv[0], arrNonce[0] );
     SW_EXPECT_EQUAL( arrIv[9], arrNonce[9] );
     SW_EXPECT_EQUAL( static_cast<uint8>( arrIv[10] ^ 0x01 ), arrNonce[10] );
     SW_EXPECT_EQUAL( static_cast<uint8>( arrIv[11] ^ 0x02 ), arrNonce[11] );
-    uint8 arrOther[NetSecurityConstant::kAeadNonceSize];
+    uint8 arrOther[NetSecurityConstant::kAEADNonceSize];
     NetSessionKeys::makeNonce( arrIv, 0x0103ull, arrOther );
     SW_EXPECT_TRUE( arrOther[11] != arrNonce[11] ); // 번호마다 nonce 가 다르다
 }
@@ -210,7 +210,7 @@ SW_TEST_CASE( NetReplayWindowTest, SessionKeysBindSaltsProtocolAndSessionSecret 
     SW_EXPECT_EQUAL( 32, static_cast<int32>( keys._clientToServer._arrIv[0] ) );
     SW_EXPECT_EQUAL( 44, static_cast<int32>( keys._serverToClient._arrKey[0] ) );
     SW_EXPECT_EQUAL( 76, static_cast<int32>( keys._serverToClient._arrIv[0] ) );
-    SW_EXPECT_EQUAL( 87, static_cast<int32>( keys._serverToClient._arrIv[NetSecurityConstant::kAeadNonceSize - 1] ) );
+    SW_EXPECT_EQUAL( 87, static_cast<int32>( keys._serverToClient._arrIv[NetSecurityConstant::kAEADNonceSize - 1] ) );
 
     // 세션 비밀이 있으면 그것이 소금이다 — 비밀을 모르는 중간자는 같은 키를 못 만든다.
     NetSessionSecret secret;
@@ -222,9 +222,9 @@ SW_TEST_CASE( NetReplayWindowTest, SessionKeysBindSaltsProtocolAndSessionSecret 
     SW_EXPECT_TRUE( std::memcmp( provider._salt.data(), secret._arrByte, sizeof( secret._arrByte ) ) == 0 );
 
     keys.wipe();
-    SW_EXPECT_EQUAL( 0, static_cast<int32>( keys._serverToClient._arrIv[NetSecurityConstant::kAeadNonceSize - 1] ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( keys._serverToClient._arrIv[NetSecurityConstant::kAEADNonceSize - 1] ) );
 
-    uint8 arrProofKey[NetSecurityConstant::kAeadKeySize];
+    uint8 arrProofKey[NetSecurityConstant::kAEADKeySize];
     SW_REQUIRE_TRUE( NetSessionKeys::computeProofKey( provider, secret, arrProofKey ) );
     SW_EXPECT_TRUE( provider._salt.empty() );
     SW_EXPECT_TRUE( provider._info == vector<uint8>( { 's', 'w', '-', 'n', 'e', 't', '-', 'p', 'r', 'o', 'o', 'f', '-', 'v', '1' } ) );

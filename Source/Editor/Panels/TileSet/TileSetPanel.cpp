@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/TileSet/TileSetPanel.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -423,8 +423,8 @@ namespace sw::editor
             ImGui::Button( label.c_str(), ImVec2{ side, side } );
             return;
         }
-        // 런타임과 같은 셀 해석(`TileSetAsset::computeCellUvRect`)으로 자른다.
-        const float4 uv = TileSetAsset::computeCellUvRect( content, cell );
+        // 런타임과 같은 셀 해석(`TileSetAsset::computeCellUVRect`)으로 자른다.
+        const float4 uv = TileSetAsset::computeCellUVRect( content, cell );
         ImGui::Image( reinterpret_cast<ImTextureID>( pTexture ), ImVec2{ side, side }, ImVec2{ uv._x, uv._y }, ImVec2{ uv._x + uv._z, uv._y + uv._w } );
     }
 

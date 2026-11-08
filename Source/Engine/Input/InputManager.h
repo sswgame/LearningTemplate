@@ -3,8 +3,8 @@
  * @brief App 과 Game 이 쓰는 입력 장치 레지스트리, 락프리 비동기 이벤트 큐, 이벤트 디스패치를 한데 모은 허브입니다.
  */
 #pragma once
+#include "Core/Concurrency/Queue/ConcurrentQueue.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"

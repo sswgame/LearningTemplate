@@ -52,10 +52,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct DDSLegacyFourCc
+     * @struct DDSLegacyFourCC
      * @brief 옛 머리 DDS 의 FourCC(네 글자 코드 또는 D3DFMT 정수)와 그것이 가리키는 DXGI 형식 번호 한 쌍입니다.
      */
-    struct DDSLegacyFourCc
+    struct DDSLegacyFourCC
     {
         uint32 _fourCC;
         uint32 _dxgiFormat;
@@ -117,8 +117,8 @@ namespace sw
          * @details 형식 이름의 정본은 데이터 파일 `Config/Editor/DdsFormats.json` 이고 파이썬 에셋 검증이 그것을 읽는다. 이 표가 그 파일과 같은지
          *          `DDSFormatFileTest.MatchesTheLoaderTables` 가 본다.
          */
-        [[nodiscard]] static vector<DDSLegacyFourCc> getLegacyFourCcTable();
-        /** @brief 로더가 아는 옛 머리 RGB 마스크 표입니다(읽기가 쓰는 표 그대로). 파일과 같은지는 `getLegacyFourCcTable` 과 같은 테스트가 본다. */
+        [[nodiscard]] static vector<DDSLegacyFourCC> getLegacyFourCCTable();
+        /** @brief 로더가 아는 옛 머리 RGB 마스크 표입니다(읽기가 쓰는 표 그대로). 파일과 같은지는 `getLegacyFourCCTable` 과 같은 테스트가 본다. */
         [[nodiscard]] static vector<DDSLegacyRGBMask> getLegacyRGBMaskTable();
         /**
          * @brief 로더가 읽는 DXGI 형식과 그 블록 크기의 표입니다(읽기가 쓰는 표 그대로). 이 표에 없는 형식은 읽기가 거절한다.

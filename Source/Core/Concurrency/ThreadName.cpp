@@ -7,7 +7,6 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
 #elif defined( SW_PLATFORM_LINUX )
-    #include "Core/Foundation/PlatformOSHeaders.h"
 #else
     #error "Unsupported platform"
 #endif

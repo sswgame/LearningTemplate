@@ -3,9 +3,9 @@
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 

@@ -3,10 +3,10 @@
 // 지역화의 gather-text 검사(코드의 `SW_LOCKEY` ↔ `*.strings.xml`)와 같은 자리다. 키가 문자열이라 컴파일러가 보지 못하는 오타 · 빠진 줄 · 남은 줄을 여기서 잡는다.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"

@@ -4,9 +4,9 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {

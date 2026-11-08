@@ -2,8 +2,8 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirector.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -14,7 +14,7 @@ namespace sw
     {
         struct CameraDirectorInternal
         {
-            static constexpr uint32 kStateTag      = FourCcUtil::make( "CDIR" );
+            static constexpr uint32 kStateTag      = FourCCUtil::make( "CDIR" );
             static constexpr uint32 kStateVersion  = 3;  ///< 3: 포즈의 후처리에 자동 노출 범위 · 속도가 붙었다
             static constexpr uint32 kLayerMinBytes = 64; ///< 층 하나의 최소 바이트(이름 · 블렌드 · 진행 · 포즈 둘 · 상태)
 

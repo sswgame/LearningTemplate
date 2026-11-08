@@ -2,9 +2,9 @@
 
 #include "Engine/Scene/SceneObjectReference.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"

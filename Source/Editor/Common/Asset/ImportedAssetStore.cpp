@@ -2,14 +2,15 @@
 
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"

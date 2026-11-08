@@ -1,7 +1,7 @@
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/IDAllocator.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"

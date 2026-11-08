@@ -1,0 +1,958 @@
+/**
+ * @file RegistrationList.h
+ * @brief 레지스트리의 공통 구조 둘입니다. `RegistrationList` 는 소유하지 않는 포인터 목록(중복 거절 · 정렬 · 이름 찾기 · 훑기 · 이름 사본),
+ *        `NameRegistry` 는 이름 → 값을 소유하는 테이블(중복 거절 또는 덮어쓰기 · 이름 찾기 · 등록 순서 훑기 · 조건 제거)입니다.
+ */
+#pragma once
+#include "Core/Concurrency/mutex.h"
+#include "Core/Container/IDAllocator.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
+#include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/DynamicModules.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Name/hashed_string.h"
+#include "Core/String/StringUtil.h"
+
+namespace sw
+{
+    /**
+     * @struct RegistrationReloadScope
+     * @brief 핫 리로드가 **교체 이미지**를 올리는 동안 켜 두는 플래그입니다(`LiveReloadManager` 가 새 이미지를 올리는 동안 잡는다). 켜진 동안 `RegistrationList::add` 는
+     *        같은 이름의 등록을 거절하지 않고 **대체**합니다.
+     * @details 새 이미지의 정적 등록자는 옛 이미지가 아직 도는 동안 돈다. 옛 등록이 이름을 쥐고 있어 새 등록이 거절되면, 옛 이미지가 내려간 뒤 그 이름이 아무것도 가리키지 않는다
+     *          (리로드한 개발 명령 · 감시 값 · 시나리오 단계가 사라진다). 대체된 옛 등록은 목록이 그림자로 보관한다 — 옛 이미지가 내려가며 빼면 버리고, 새 이미지가 취소되면 복원한다.
+     *          플래그는 프로세스에 하나이고 게임 스레드에서만 쓴다(정적 초기화가 로드하는 스레드에서 돈다). 중첩할 수 있다.
+     */
+    struct SW_API RegistrationReloadScope
+    {
+#if SW_WITH_DYNAMIC_MODULES
+        RegistrationReloadScope();
+        ~RegistrationReloadScope();
+        RegistrationReloadScope( const RegistrationReloadScope& )            = delete;
+        RegistrationReloadScope& operator=( const RegistrationReloadScope& ) = delete;
+
+        /** @brief 교체 이미지를 올리는 중이면 true 입니다. */
+        static bool isActive();
+#else
+        /** @brief 배포 빌드는 모듈을 바꿔 올리지 않는다 — 늘 false 라 목록의 대체 · 그림자 분기가 컴파일에서 빠진다. */
+        static constexpr bool isActive() { return false; }
+#endif
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class RegistrationListBase
+     * @brief 살아 있는 `RegistrationList` 를 한곳에서 열거하는 연결 고리입니다(진단 · 테스트용 — 소유 관리자가 아닙니다).
+     * @details 목록은 만들어질 때 자기 이름(`getListName`)과 함께 전역 연결 목록에 오르고, 사라질 때 빠집니다. 노드는 목록 자신이라 할당이 없고
+     *          연결 목록의 머리와 잠금이 상수 초기화라, 다른 번역 단위의 정적 초기화 · 모듈 언로드 중에도 안전합니다.
+     *          열거(`collect`)는 잠금 안에서 포인터만 모읍니다. 항목 수와 이름은 각 목록의 소유자 잠금 밖에서 읽으므로, 등록이 멈춘 때(테스트 · 진단)에만 읽습니다.
+     */
+    class SW_API RegistrationListBase
+    {
+    public:
+        RegistrationListBase( const RegistrationListBase& )            = delete;
+        RegistrationListBase& operator=( const RegistrationListBase& ) = delete;
+
+        /** @brief 목록의 이름입니다(만든 곳이 정한 영문 식별자 — 정적 테이블은 소유 레지스트리 이름, 인스턴스 테이블은 멤버 역할). */
+        const utf8* getListName() const { return _pListName; }
+
+        /** @brief 올라 있는 항목 수입니다. */
+        virtual uint32 getCount() const = 0;
+        /** @brief 순서대로 index 번째 항목을 올릴 때 복사한 이름입니다(이름 없는 등록은 빈 글). */
+        virtual const string& getNameAt( uint32 index ) const = 0;
+
+        /** @brief 지금 살아 있는 목록을 @p outListRegistration 에 담습니다(비운 뒤 채웁니다). 나중에 만든 것이 먼저입니다. */
+        static void collect( vector<const RegistrationListBase*>& outListRegistration );
+        /** @brief 지금 살아 있는 목록 수입니다. */
+        static uint32 getListCount();
+
+        /**
+         * @brief 이 뒤로 목록이 저장소를 키울 때 처음 저장소를 보관할지 정합니다(`RegistrationList::keepStorageBeforeGrowth`). 앞의 값을 돌려줍니다.
+         * @details 종료 누수 창을 여는 곳(`MemoryProfiler::captureMemoryLeakBaseline`)이 켭니다. 기준선 전의 키우기(정적 초기화 · 엔진 기동)는 보관하지 않는다 —
+         *          보관하는 블록이 기준선 때의 블록이어야, 기준선 뒤에 오른 항목이 다 빠졌을 때 돌아갈 곳이 된다. 끄는 것은 테스트가 원래 값으로 되돌릴 때뿐이다.
+         */
+        static bool setStorageKeptOnGrowth( bool bKeep );
+        /** @brief 목록이 저장소를 키울 때 기준선 때 저장소를 보관하는지입니다. */
+        static bool isStorageKeptOnGrowth();
+
+    protected:
+        /** @brief 전역 연결 목록에 오릅니다. */
+        explicit RegistrationListBase( const utf8* pListName );
+        ~RegistrationListBase();
+
+        /** @brief 연결 목록에서 빠집니다. 파생이 소멸자 첫머리에서 부릅니다(파생 부분이 부서진 뒤에 열거가 가상 함수를 부르지 않게). 두 번 불러도 됩니다. */
+        void unlink();
+
+    private:
+        const utf8*           _pListName;
+        RegistrationListBase* _pPrev;
+        RegistrationListBase* _pNext;
+        uint8                 _bLinked : 1;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 목록이 항목을 늘어놓는 순서입니다. */
+    enum class RegistrationOrder : uint8
+    {
+        Insertion,       ///< 등록한 순서(빼도 남은 것의 순서는 그대로)
+        ByOrderThenName, ///< (순서 값, 이름) 사전순 — 정적 초기화 순서가 번역 단위마다 다른 등록자(에디터 확장)를 위해
+    };
+
+    /** @brief `RegistrationList::add` 의 결과입니다. */
+    enum class RegistrationResult : uint8
+    {
+        Added,          ///< 새로 올렸습니다
+        AlreadyPresent, ///< 같은 객체가 이미 올라 있습니다(멱등 — 할 일이 없습니다)
+        NullItem,       ///< nullptr 은 올리지 않습니다
+        EmptyName,      ///< 이름을 요구하는 목록(`bRequireName`)에 이름이 비었습니다
+        DuplicateName,  ///< 같은 이름의 다른 객체가 이미 올라 있습니다 — 먼저 것을 둡니다
+    };
+
+    /**
+     * @brief 거절된 등록(`DuplicateName` · `EmptyName` · `NullItem`)을 오류 로그로 남깁니다. `Added` · `AlreadyPresent` 는 아무것도 하지 않습니다.
+     * @param pWhat 등록 대상의 영문 이름입니다("Debug HUD section"). 문자열 리터럴이어야 합니다.
+     * @param name 거절된 항목의 이름입니다.
+     * @details 로그 id 는 `Registration.DuplicateName` · `Registration.EmptyName` · `Registration.NullItem` 입니다. 레지스트리가 손으로 문구를 쓰지 않도록 `addLogged` 가 부릅니다.
+     */
+    SW_API void reportRegistrationRejected( RegistrationResult result, const utf8* pWhat, string_view name );
+
+    /**
+     * @class RegistrationList
+     * @brief 엔진 · 에디터 레지스트리가 같은 구조로 보관하는 목록입니다. 항목은 소유하지 않습니다(수명은 등록한 쪽).
+     * @details 레지스트리마다 다시 짜기 쉬운 다섯 가지를 한 곳에 둡니다:
+     *          - **중복 거절**: 같은 객체는 한 번만 오르고(`AlreadyPresent`), 이름을 주면 같은 이름의 다른 객체를 거절합니다(`DuplicateName`).
+     *          - **정렬**: 등록 순서 또는 (순서 값, 이름). 빼기는 순서를 지킵니다.
+     *          - **찾기**: 이름으로(`findByName`) · 객체로(`contains`).
+     *          - **훑기**: `getItems()` 는 포인터만 든 연속 배열이라 훑는 쪽에 비용이 없습니다.
+     *          - **이름 사본**: 이름은 **올릴 때** 복사합니다. 모듈이 내려간 뒤에도 그 이름으로 알리거나 찾을 수 있고, 죽은 객체의 가상 함수를 묻지 않습니다.
+     *
+     *          **저장소는 늘 `EngineMisc` 태그로 셉니다.** 프로세스 정적 레지스트리는 기동 뒤에 오른 모듈(에디터 · 게임)이 등록하며 용량을 키우는데, 넣는 쪽 태그로
+     *          세면 그 모듈이 내려간 뒤에도 커진 용량이 그 태그에 남습니다.
+     *
+     *          **저장소는 기준선 때 블록으로 돌아갑니다.** 종료 누수 보고는 창 안에서 태어나 살아 있는 블록을 셉니다. 기준선 뒤 넣기가 키울 때는 처음
+     *          저장소를 보관하고(`keepStorageBeforeGrowth`), 빼기는 제자리에서 지우며 키운 뒤 오른 항목이 다 빠지면 보관한 저장소로 돌아가고(`returnToKeptStorage`) 비면
+     *          놓습니다. 줄이려고 다시 잡지 않습니다 — 다시 잡으면 남은 항목이 창 안에서 태어난 새 블록으로 옮겨 갑니다(종료 때만 부르는 반납 함수도 없습니다).
+     *
+     *          **만들어질 때 전역 열거에 오릅니다.** 목록마다 이름을 하나 받고(`RegistrationListBase::getListName`), `RegistrationListBase::collect` 가 살아 있는
+     *          목록의 이름 · 항목 수 · 항목 이름을 한곳에서 보여 줍니다. 복사 · 이동은 막혀 있으니 목록은 멤버나 함수 지역 정적으로 둡니다.
+     *
+     *          **잠금은 들지 않습니다.** 여러 스레드가 만지는 레지스트리(카메라 · 빛 · 모듈 언로드 리스너)는 자기 잠금 안에서 부릅니다 — 그 잠금이
+     *          "가장 안쪽" 이라는 각자의 규칙을 그대로 지키게 하려는 것입니다.
+     *
+     *          **구독으로 올리기(`addSubscribed`)**: 등록을 소유하는 구독을 목록이 낸다(안에 든 `ItemSubscriptionList`). 구독이 풀리면 생성자로 받은 해제 함수가
+     *          그 항목으로 불린다 — 목록은 잠금이 없으므로 빼기(`remove`)와 뒷정리(카메라 일련번호 · 컷 카메라, 리로드 함수 표)는 주인이 자기 잠금 안에서 한다.
+     *          주인마다 두던 "구독 id → 주소" 되돌리기 · 목록 여럿의 id 를 한 해제 함수로 가르기를 대신한다(언리얼 `FDelegateHandle` 짝 대신 소유 구독 하나).
+     *          목록이 사라지거나 비워지면(`clear`) 남은 구독은 무효가 된다. 항목 수가 많고 슬롯 인덱스로 O(1) 빼기를 하는 레지스트리(프리미티브 ·
+     *          틱 · 콜라이더)는 이 구조가 아닙니다 — 그 주인은 `ItemSubscriptionList` 를 직접 든다.
+     */
+    template <typename T>
+    class RegistrationList final : public RegistrationListBase
+    {
+    public:
+        /** @brief `addSubscribed` 의 구독이 풀렸을 때 부르는 주인의 함수입니다. 주인이 자기 잠금 안에서 `remove` 하고 뒷정리한다. */
+        using ReleaseFunction = typename ItemSubscriptionList<T>::ReleaseFunction;
+
+        /**
+         * @brief 등록 순서 · 이름 선택인 빈 목록입니다.
+         * @param pListName 전역 열거(`RegistrationListBase::collect`)에 나오는 목록 이름입니다. 문자열 리터럴이어야 합니다.
+         */
+        explicit RegistrationList( const utf8* pListName )
+            : RegistrationList( pListName, RegistrationOrder::Insertion, false )
+        {
+        }
+
+        /**
+         * @param pListName 전역 열거에 나오는 목록 이름입니다. 문자열 리터럴이어야 합니다.
+         * @param order 늘어놓는 순서입니다.
+         * @param bRequireName true 면 이름 없는 등록을 거절합니다(이름이 곧 id 인 목록).
+         */
+        RegistrationList( const utf8* pListName, RegistrationOrder order, bool bRequireName )
+            : RegistrationList( pListName, order, bRequireName, NameCase::CaseSensitive )
+        {
+        }
+
+        /**
+         * @param pListName 전역 열거에 나오는 목록 이름입니다. 문자열 리터럴이어야 합니다.
+         * @param order 늘어놓는 순서입니다.
+         * @param bRequireName true 면 이름 없는 등록을 거절합니다(이름이 곧 id 인 목록).
+         * @param nameCase 이름 찾기 · 중복 판정이 대소문자를 보는지입니다(콘솔 명령처럼 사람이 치는 이름은 `IgnoreCase`).
+         */
+        RegistrationList( const utf8* pListName, RegistrationOrder order, bool bRequireName, NameCase nameCase )
+            : RegistrationList( pListName, order, bRequireName, nameCase, ReleaseFunction{} )
+        {
+        }
+
+        /**
+         * @brief 구독으로 올리는(`addSubscribed`) 등록 순서 · 이름 선택인 빈 목록입니다.
+         * @param pListName 전역 열거에 나오는 목록 이름입니다. 문자열 리터럴이어야 합니다.
+         * @param onRelease 구독이 풀리면 그 항목으로 부르는 주인의 함수입니다(주인이 `remove` 하고 뒷정리한다).
+         */
+        RegistrationList( const utf8* pListName, const ReleaseFunction& onRelease )
+            : RegistrationList( pListName, RegistrationOrder::Insertion, false, NameCase::CaseSensitive, onRelease )
+        {
+        }
+
+        ~RegistrationList() { unlink(); }
+
+    private:
+        RegistrationList( const utf8* pListName, RegistrationOrder order, bool bRequireName, NameCase nameCase, const ReleaseFunction& onRelease )
+            : RegistrationListBase( pListName )
+            , _listItem{}
+            , _listName{}
+            , _listOrder{}
+            , _listKeptItem{}
+            , _listKeptName{}
+            , _listKeptOrder{}
+            , _listShadowItem{}
+            , _listShadowName{}
+            , _listShadowOrder{}
+            , _order{ order }
+            , _nameCase{ nameCase }
+            , _generation{ 0 }
+            , _bRequireName{ bRequireName }
+            , _ownerMutex{}
+            , _subscriptions{ onRelease }
+        {
+        }
+
+    public:
+        /**
+         * @brief 항목을 올립니다. 이름은 지금 복사합니다. 결과를 버릴 수 없습니다(`[[nodiscard]]`) — 거절을 로그로 남기기만 하려면 `addLogged` 를 씁니다.
+         * @param name 찾기 · 중복 판정 · 정렬에 쓰는 이름입니다. 비어 있으면 이름으로 찾을 수 없고 이름 중복도 보지 않습니다.
+         * @param order `ByOrderThenName` 목록에서 앞뒤를 정하는 값입니다(작을수록 앞).
+         */
+        [[nodiscard]] RegistrationResult add( T* pItem, string_view name = {}, int32 order = 0 )
+        {
+            SW_MEMORY_SCOPE( EngineMisc );
+            if ( pItem == nullptr )
+                return RegistrationResult::NullItem;
+            if ( contains( pItem ) )
+                return RegistrationResult::AlreadyPresent;
+            if ( name.empty() )
+            {
+                if ( _bRequireName )
+                    return RegistrationResult::EmptyName;
+            }
+            else if ( findByName( name ) != nullptr )
+            {
+                if ( RegistrationReloadScope::isActive() == false )
+                    return RegistrationResult::DuplicateName;
+                replaceByName( pItem, name, order );
+                ++_generation;
+                return RegistrationResult::Added;
+            }
+
+            size_t insertIndex = _listItem.size();
+            if ( _order == RegistrationOrder::ByOrderThenName )
+            {
+                insertIndex = 0;
+                while ( insertIndex < _listItem.size() && isBefore( _listOrder[insertIndex], _listName[insertIndex], order, name ) )
+                {
+                    ++insertIndex;
+                }
+            }
+            keepStorageBeforeGrowth();
+            _listItem.insert( _listItem.begin() + static_cast<ptrdiff_t>( insertIndex ), pItem );
+            _listName.insert( _listName.begin() + static_cast<ptrdiff_t>( insertIndex ), string( name ) );
+            _listOrder.insert( _listOrder.begin() + static_cast<ptrdiff_t>( insertIndex ), order );
+            ++_generation;
+            return RegistrationResult::Added;
+        }
+
+        /**
+         * @brief `add` 하고 거절되면(`DuplicateName` · `EmptyName` · `NullItem`) 공용 오류 로그를 남깁니다. 레지스트리는 거절 문구를 따로 쓰지 않습니다.
+         * @param pWhat 로그에 나오는 등록 대상의 영문 이름입니다. 문자열 리터럴이어야 합니다.
+         */
+        RegistrationResult addLogged( T* pItem, const utf8* pWhat, string_view name = {}, int32 order = 0 )
+        {
+            const RegistrationResult result = add( pItem, name, order );
+            reportRegistrationRejected( result, pWhat, name );
+            return result;
+        }
+
+        /**
+         * @brief 그 객체가 올라 있으면 뺍니다(남은 것의 순서는 그대로). 뺐으면 true 입니다. 같은 이름의 다른 객체는 건드리지 않습니다.
+         * @details 제자리에서 지우고 새로 할당하지 않습니다. 키우기 전 저장소를 보관 중이고 남은 항목이 모두 그 안에 있으면 그리로 돌아가고(`returnToKeptStorage`),
+         *          비면 저장소를 놓습니다(`releaseEmptyStorage`). 빼기는 모듈 언로드 · 컴포넌트 소멸에서 오는데, 남은 항목을 새 저장소로 옮기면 그 저장소가 누수 창
+         *          안에서 태어나 종료 보고에 남습니다(누수는 창 안에서 태어난 블록으로 잰다).
+         */
+        [[nodiscard]] bool remove( const T* pItem )
+        {
+            const size_t index = findIndex( pItem );
+            if ( index == kNotFound )
+            {
+                const bool bDroppedShadow = dropShadow( pItem );
+                if ( bDroppedShadow )
+                    releaseEmptyStorage();
+                return bDroppedShadow;
+            }
+            const string name = _listName[index];
+            _listItem.erase( _listItem.begin() + static_cast<ptrdiff_t>( index ) );
+            _listName.erase( _listName.begin() + static_cast<ptrdiff_t>( index ) );
+            _listOrder.erase( _listOrder.begin() + static_cast<ptrdiff_t>( index ) );
+            restoreShadow( name );
+            returnToKeptStorage();
+            releaseEmptyStorage();
+            ++_generation;
+            return true;
+        }
+
+        /**
+         * @brief `addLogged` 하고, 올렸으면 그 등록을 소유하는 구독을 돌려줍니다. 거절(`AlreadyPresent` 포함 — 먼저 받은 구독이 쥔다)이면 빈 구독입니다.
+         * @details 구독이 풀리면 생성자로 받은 해제 함수가 그 항목으로 불린다(해제 함수를 받은 생성자로 만든 목록만 쓴다). 올린 뒤의 뒷일(일련번호 · 리로드 함수)은
+         *          구독이 살아 있는지(`isActive`)로 갈라 주인이 한다.
+         * @param pWhat 로그에 나오는 등록 대상의 영문 이름입니다. 문자열 리터럴이어야 합니다.
+         */
+        [[nodiscard]] Subscription addSubscribed( T* pItem, const utf8* pWhat, string_view name = {}, int32 order = 0 )
+        {
+            if ( addLogged( pItem, pWhat, name, order ) != RegistrationResult::Added )
+                return {};
+            return _subscriptions.issue( pItem );
+        }
+
+        /** @brief 모두 제거합니다(그림자도). 저장소도 해제합니다. `addSubscribed` 의 구독은 무효가 됩니다(해제 함수는 부르지 않는다). */
+        void clear()
+        {
+            _subscriptions.detachAll();
+            _listItem        = vector<T*>{};
+            _listName        = vector<string>{};
+            _listOrder       = vector<int32>{};
+            _listKeptItem    = vector<T*>{};
+            _listKeptName    = vector<string>{};
+            _listKeptOrder   = vector<int32>{};
+            _listShadowItem  = vector<T*>{};
+            _listShadowName  = vector<string>{};
+            _listShadowOrder = vector<int32>{};
+            ++_generation;
+        }
+
+        /** @brief 그 객체가 올라 있는지 봅니다. */
+        bool contains( const T* pItem ) const { return findIndex( pItem ) != kNotFound; }
+
+    private:
+        /**
+         * @brief 다음 넣기가 저장소를 다시 잡을 참이면, 지금 저장소를 놓지 않고 보관한 채 두 배 크기의 사본으로 옮깁니다. 이미 보관 중이면 보통대로 키웁니다.
+         * @details 프로세스 정적 레지스트리는 기동 뒤에 오르는 모듈(에디터 · 게임)의 정적 등록과 실행 중에 생기는 인스턴스(Undo 스택)가 키웁니다. 키운 저장소는
+         *          누수 창 안에서 태어나 프로세스 끝까지 살아 종료 보고에 남습니다. 처음 저장소를 들고 있다가 키운 뒤 오른 항목이 다 빠지면 그리로 돌아갑니다
+         *          (`returnToKeptStorage`). 이름은 옮기지 않고 복사합니다 — 보관한 이름 · Debug STL 프록시가 처음 블록 그대로 남아야 합니다. 보관하는 동안 처음
+         *          저장소만큼 더 씁니다. 기준선을 잡은 뒤(`RegistrationListBase::isStorageKeptOnGrowth`)에만 보관합니다 — 그 전에 보관하면 정적 초기화의 첫 키우기
+         *          (항목 하나 → 둘) 블록을 들고 있게 되어 돌아갈 일이 없다.
+         */
+        void keepStorageBeforeGrowth()
+        {
+            const bool bGrowsNext   = _listItem.empty() == false && _listItem.size() == _listItem.capacity();
+            const bool bKeepsBefore = isStorageKeptOnGrowth() && _listKeptItem.capacity() == 0; // 기준선 뒤이고 아직 보관한 것이 없다
+            if ( bGrowsNext == false || bKeepsBefore == false )
+                return;
+            _listKeptItem.swap( _listItem );
+            _listKeptName.swap( _listName );
+            _listKeptOrder.swap( _listOrder );
+            const size_t grownCapacity = _listKeptItem.size() * 2;
+            _listItem.reserve( grownCapacity );
+            _listName.reserve( grownCapacity );
+            _listOrder.reserve( grownCapacity );
+            _listItem.assign( _listKeptItem.begin(), _listKeptItem.end() );
+            _listName.assign( _listKeptName.begin(), _listKeptName.end() );
+            _listOrder.assign( _listKeptOrder.begin(), _listKeptOrder.end() );
+        }
+
+        /**
+         * @brief 보관한 처음 저장소가 있고 남은 항목이 모두 그 안에 같은 순서로 있으면, 처음 저장소에서 빠진 것만 제자리에서 지우고 그리로 돌아갑니다. 키운 사본은 놓습니다.
+         * @details 보관한 뒤 오른 항목이 하나라도 남았으면 그대로 둡니다(다음 빼기에서 다시 봅니다). 빼기 · 정렬 넣기는 남은 항목의 앞뒤를 바꾸지 않으므로
+         *          두 목록을 한 번 나란히 훑어 봅니다. 같은 항목은 객체 · 이름 · 정렬 값이 모두 같아야 합니다(지워진 객체 자리에 새 객체가 다른 이름으로 오를 수 있다).
+         */
+        void returnToKeptStorage()
+        {
+            if ( _listKeptItem.capacity() == 0 )
+                return;
+            size_t keptIndex = 0;
+            for ( size_t index = 0; index < _listItem.size(); ++index )
+            {
+                while ( keptIndex < _listKeptItem.size() && isSameEntry( keptIndex, index ) == false )
+                {
+                    ++keptIndex;
+                }
+                if ( keptIndex == _listKeptItem.size() )
+                    return; // 보관한 뒤에 오른 항목이 남았다
+                ++keptIndex;
+            }
+
+            size_t writeIndex = 0;
+            keptIndex         = 0;
+            for ( size_t index = 0; index < _listItem.size(); ++index )
+            {
+                while ( isSameEntry( keptIndex, index ) == false )
+                {
+                    ++keptIndex;
+                }
+                if ( writeIndex != keptIndex )
+                {
+                    _listKeptItem[writeIndex]  = _listKeptItem[keptIndex];
+                    _listKeptName[writeIndex]  = std::move( _listKeptName[keptIndex] );
+                    _listKeptOrder[writeIndex] = _listKeptOrder[keptIndex];
+                }
+                ++writeIndex;
+                ++keptIndex;
+            }
+            _listKeptItem.erase( _listKeptItem.begin() + static_cast<ptrdiff_t>( writeIndex ), _listKeptItem.end() );
+            _listKeptName.erase( _listKeptName.begin() + static_cast<ptrdiff_t>( writeIndex ), _listKeptName.end() );
+            _listKeptOrder.erase( _listKeptOrder.begin() + static_cast<ptrdiff_t>( writeIndex ), _listKeptOrder.end() );
+            _listItem.swap( _listKeptItem );
+            _listName.swap( _listKeptName );
+            _listOrder.swap( _listKeptOrder );
+            _listKeptItem  = vector<T*>{};
+            _listKeptName  = vector<string>{};
+            _listKeptOrder = vector<int32>{};
+        }
+
+        /** @brief 보관한 저장소의 @p keptIndex 번째와 지금 목록의 @p index 번째가 같은 등록인지 봅니다(객체 · 이름 · 정렬 값). */
+        bool isSameEntry( size_t keptIndex, size_t index ) const
+        {
+            return _listKeptItem[keptIndex] == _listItem[index] && _listKeptOrder[keptIndex] == _listOrder[index] && _listKeptName[keptIndex] == _listName[index];
+        }
+
+        /**
+         * @brief 빈 목록 · 빈 그림자의 저장소를 놓습니다. 남은 항목이 있으면 아무것도 하지 않습니다 — 줄이려고 다시 잡지 않습니다.
+         * @details 줄이는 재할당은 남은 항목(대개 기동 전에 오른 등록)을 창 안에서 태어난 새 블록으로 옮겨 종료 누수 보고에 "늘었다" 고 남깁니다.
+         *          Debug STL 은 옮긴 문자열마다 프록시도 새로 잡습니다. 놓기만 하면 새 블록이 생기지 않습니다.
+         */
+        void releaseEmptyStorage()
+        {
+            if ( _listItem.empty() )
+            {
+                _listItem.shrink_to_fit();
+                _listName.shrink_to_fit();
+                _listOrder.shrink_to_fit();
+            }
+            if ( _listShadowItem.empty() )
+            {
+                _listShadowItem.shrink_to_fit();
+                _listShadowName.shrink_to_fit();
+                _listShadowOrder.shrink_to_fit();
+            }
+        }
+
+    public:
+        /** @brief 올릴 때 복사한 이름으로 찾습니다. 없거나 이름이 비었으면 nullptr 입니다. */
+        T* findByName( string_view name ) const
+        {
+            if ( name.empty() )
+                return nullptr;
+            for ( size_t index = 0; index < _listName.size(); ++index )
+            {
+                if ( StringUtil::equals( string_view{ _listName[index] }, name, _nameCase == NameCase::IgnoreCase ) )
+                    return _listItem[index];
+            }
+            return nullptr;
+        }
+
+        /** @brief 올라 있는 항목 수입니다. */
+        uint32 getCount() const override { return static_cast<uint32>( _listItem.size() ); }
+        /** @brief 순서대로 index 번째 항목입니다. */
+        T* getAt( uint32 index ) const { return _listItem[index]; }
+        /** @brief index 번째 항목을 올릴 때 복사한 이름입니다(없으면 빈 글). */
+        const string& getNameAt( uint32 index ) const override { return _listName[index]; }
+        /** @brief 항목 전부(순서대로)입니다. 소유하지 않습니다. */
+        const vector<T*>& getItems() const { return _listItem; }
+        /**
+         * @brief 목록이 바뀔 때마다(올리기 · 리로드 대체 · 빼기 · 비우기) 오르는 번호입니다. 목록에서 만든 값을 들고 있는 쪽이 앞에 본 번호와 비교해 다시 만들 때를 안다.
+         * @details 바뀜을 전역 신호로 알리지 않는다 — 알림은 등록자의 정적 초기화 · 모듈 언로드 중에 불려 받는 쪽이 아직(또는 이미) 없을 수 있다. 번호는 받는 쪽이 자기 때에 본다
+         *          (언리얼은 모듈 변경 델리게이트를 방송하지만, 여기서는 정적 등록 중의 방송을 받을 쪽이 없을 수 있어 읽는 쪽이 비교한다).
+         */
+        uint32 getGeneration() const { return _generation; }
+        /**
+         * @brief 여러 스레드가 만지는 주인이 목록을 고치고 읽을 때 잡는 잠금입니다. 목록은 이 잠금을 스스로 잡지 않는다(잎 잠금 규칙은 주인이 정한다).
+         * @details 함수 정적 목록(`SW_DEFINE_REGISTRATION_LIST`)의 주인은 잠금을 둘 다른 칸이 없다 — 따로 함수 정적 잠금을 두지 않게 목록이 같이 든다.
+         */
+        mutex& getOwnerMutex() const { return _ownerMutex; }
+
+    private:
+        static constexpr size_t kNotFound = static_cast<size_t>( -1 );
+
+        size_t findIndex( const T* pItem ) const
+        {
+            for ( size_t index = 0; index < _listItem.size(); ++index )
+            {
+                if ( _listItem[index] == pItem )
+                    return index;
+            }
+            return kNotFound;
+        }
+
+        /** @brief 같은 이름의 올라 있는 항목을 @p pItem 으로 바꿉니다(제자리). 바뀐 옛 항목은 그림자로 보관합니다(`RegistrationReloadScope`). */
+        void replaceByName( T* pItem, string_view name, int32 order )
+        {
+            for ( size_t index = 0; index < _listItem.size(); ++index )
+            {
+                if ( StringUtil::equals( string_view{ _listName[index] }, name, _nameCase == NameCase::IgnoreCase ) == false )
+                    continue;
+                _listShadowItem.push_back( _listItem[index] );
+                _listShadowName.push_back( _listName[index] );
+                _listShadowOrder.push_back( _listOrder[index] );
+                _listItem[index]  = pItem;
+                _listOrder[index] = order;
+                return;
+            }
+        }
+
+        /** @brief 그림자에 있던 항목을 버립니다(옛 이미지가 내려가며 뺐다). 있었으면 true 입니다. */
+        bool dropShadow( const T* pItem )
+        {
+            for ( size_t index = _listShadowItem.size(); index > 0; --index )
+            {
+                if ( _listShadowItem[index - 1] != pItem )
+                    continue;
+                eraseShadow( index - 1 );
+                return true;
+            }
+            return false;
+        }
+
+        /** @brief 올라 있던 항목이 제거됐고 그 이름의 그림자가 있으면 가장 나중 것을 복원합니다(새 이미지가 취소돼 옛 등록이 돌아온다). */
+        void restoreShadow( const string& name )
+        {
+            for ( size_t index = _listShadowItem.size(); index > 0; --index )
+            {
+                if ( StringUtil::equals( string_view{ _listShadowName[index - 1] }, string_view{ name }, _nameCase == NameCase::IgnoreCase ) == false )
+                    continue;
+                T*           pItem       = _listShadowItem[index - 1];
+                const int32  shadowOrder = _listShadowOrder[index - 1];
+                const string shadowName  = _listShadowName[index - 1];
+                eraseShadow( index - 1 );
+                keepStorageBeforeGrowth();
+                size_t insertIndex = _listItem.size();
+                if ( _order == RegistrationOrder::ByOrderThenName )
+                {
+                    insertIndex = 0;
+                    while ( insertIndex < _listItem.size() && isBefore( _listOrder[insertIndex], _listName[insertIndex], shadowOrder, shadowName ) )
+                    {
+                        ++insertIndex;
+                    }
+                }
+                _listItem.insert( _listItem.begin() + static_cast<ptrdiff_t>( insertIndex ), pItem );
+                _listName.insert( _listName.begin() + static_cast<ptrdiff_t>( insertIndex ), shadowName );
+                _listOrder.insert( _listOrder.begin() + static_cast<ptrdiff_t>( insertIndex ), shadowOrder );
+                return;
+            }
+        }
+
+        void eraseShadow( size_t index )
+        {
+            _listShadowItem.erase( _listShadowItem.begin() + static_cast<ptrdiff_t>( index ) );
+            _listShadowName.erase( _listShadowName.begin() + static_cast<ptrdiff_t>( index ) );
+            _listShadowOrder.erase( _listShadowOrder.begin() + static_cast<ptrdiff_t>( index ) );
+        }
+
+        /** @brief (lhsOrder, lhsName) 가 (rhsOrder, rhsName) 보다 앞이면 true 입니다. */
+        static bool isBefore( int32 lhsOrder, const string& lhsName, int32 rhsOrder, string_view rhsName )
+        {
+            if ( lhsOrder != rhsOrder )
+                return lhsOrder < rhsOrder;
+            return string_view{ lhsName } < rhsName;
+        }
+
+    private:
+        vector<T*>        _listItem;         ///< 항목(순서대로). 훑기가 이것만 읽는다
+        vector<string>    _listName;         ///< 항목마다 올릴 때 복사한 이름(같은 인덱스)
+        vector<int32>     _listOrder;        ///< 항목마다 정렬 값(같은 인덱스)
+        vector<T*>        _listKeptItem;     ///< 키우기 전 저장소(`keepStorageBeforeGrowth`). 보관 중이 아니면 비고 용량도 없다
+        vector<string>    _listKeptName;     ///< 키우기 전 저장소의 이름
+        vector<int32>     _listKeptOrder;    ///< 키우기 전 저장소의 정렬 값
+        vector<T*>        _listShadowItem;   ///< 리로드의 교체 등록에 이름을 내준 옛 항목(옛 이미지가 내려갈 때까지 보관)
+        vector<string>    _listShadowName;   ///< 그림자 항목의 이름
+        vector<int32>     _listShadowOrder;  ///< 그림자 항목의 정렬 값
+        RegistrationOrder _order;            ///< 늘어놓는 순서
+        NameCase          _nameCase;         ///< 이름 비교가 대소문자를 보는지
+        uint32            _generation;       ///< `getGeneration`
+        uint8             _bRequireName : 1; ///< 이름 없는 등록을 거절하는지
+        mutable mutex     _ownerMutex;       ///< `getOwnerMutex`
+        /** @brief `addSubscribed` 가 낸 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
+        ItemSubscriptionList<T> _subscriptions;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class NameRegistry
+     * @brief 이름(`hashed_string`, 대소문자 무시) → 값을 **소유하는** 레지스트리입니다. 값은 등록 순서로 연속 배열에 둡니다.
+     * @details 값을 보관해야 하는 테이블(변환기 · 활동 종류 · 연산 · 패널 그리기 함수)가 같은 구조로 씁니다. 빈 이름은 받지 않습니다.
+     *          `find` 가 돌려준 포인터는 다음 `add` · `addOrReplace`(새 이름) · `addOwned` · `removeIf` · `clear` · 구독 해제까지만 유효합니다.
+     *          잠금은 들지 않습니다 — 여러 스레드가 만지면 쓰는 쪽이 자기 잠금 안에서 부릅니다(`addOwned` 의 구독도 같은 스레드에서 놓는다).
+     *          **주인 있는 등록(`addOwned`)**: 모듈 · 게임이 건 값을 구독이 소유한다. 같은 이름을 덮으면 앞 값을 그림자로 두고, 구독이 풀리면 그림자로 돌아간다
+     *          (언리얼 모듈 등록의 Register/Unregister 짝을 소유 구독 하나로). 레지스트리마다 손으로 두던 "이름 → 주인 번호" 표와 번호 카운터를 대신한다.
+     */
+    template <typename T>
+    class NameRegistry : public SubscriptionSource
+    {
+    public:
+        NameRegistry()
+            : SubscriptionSource{}
+            , _listName{}
+            , _listValue{}
+            , _listOwnerID{}
+            , _listShadowName{}
+            , _listShadowValue{}
+            , _listShadowOwnerID{}
+            , _ownerIDAllocator{}
+            , _revision{ 0 }
+        {
+        }
+
+        /** @brief 값을 올립니다. 이름이 비었거나 같은 이름이 이미 있으면 올리지 않고 false 입니다(먼저 것을 둡니다). */
+        [[nodiscard]] bool add( const hashed_string& name, T value )
+        {
+            if ( name.empty() || findIndex( name ) != kNotFound )
+                return false;
+            pushEntry( name, std::move( value ), 0 );
+            return true;
+        }
+
+        /** @brief `add` 하고 거절되면 공용 오류 로그(`Registration.EmptyName` · `Registration.DuplicateName`)를 남깁니다. @param pWhat 로그에 나오는 등록 대상의 영문 이름(문자열 리터럴)입니다. */
+        bool addLogged( const hashed_string& name, T value, const utf8* pWhat )
+        {
+            if ( add( name, std::move( value ) ) )
+                return true;
+            reportRegistrationRejected( name.empty() ? RegistrationResult::EmptyName : RegistrationResult::DuplicateName, pWhat, name.c_str() );
+            return false;
+        }
+
+        /** @brief 값을 올립니다. 같은 이름이 있으면 그 위치(순서)에서 값을 바꿉니다. 빈 이름은 공용 오류 로그(`Registration.EmptyName`)를 남기고 올리지 않습니다. @param pWhat 로그에 나오는 등록 대상의 영문 이름(문자열 리터럴)입니다. */
+        void addOrReplace( const hashed_string& name, T value, const utf8* pWhat )
+        {
+            if ( name.empty() )
+            {
+                reportRegistrationRejected( RegistrationResult::EmptyName, pWhat, string_view{} );
+                return;
+            }
+            const size_t index = findIndex( name );
+            if ( index != kNotFound )
+            {
+                _listName[index]    = name;
+                _listValue[index]   = std::move( value );
+                _listOwnerID[index] = 0; // 주인 없는 값이 덮었다 — 앞 주인의 구독은 이제 아무것도 거두지 않는다
+                ++_revision;
+                return;
+            }
+            pushEntry( name, std::move( value ), 0 );
+        }
+
+        /**
+         * @brief 값을 올리고 그 등록을 소유하는 구독을 돌려줍니다. 같은 이름이 있으면 앞 값을 그림자로 두고 바꿉니다(나중 것이 이긴다 — 핫 리로드의 새 인스턴스가 먼저 건다).
+         * @details 구독이 풀리면 그 이름의 지금 값이 이 구독의 것일 때만 거두고, 그 이름의 그림자가 있으면 가장 나중 것으로 돌아갑니다(엔진 기본을 덮은 게임 값이 풀리면 기본으로).
+         *          그림자 쪽 주인이 먼저 풀리면 그 그림자만 버립니다. 빈 이름은 공용 거절 로그를 남기고 빈 구독입니다.
+         * @param pWhat 로그에 나오는 등록 대상의 영문 이름(문자열 리터럴)입니다.
+         */
+        [[nodiscard]] Subscription addOwned( const hashed_string& name, T value, const utf8* pWhat )
+        {
+            if ( name.empty() )
+            {
+                reportRegistrationRejected( RegistrationResult::EmptyName, pWhat, string_view{} );
+                return {};
+            }
+            const uint64 ownerID = _ownerIDAllocator.allocate();
+            const size_t index   = findIndex( name );
+            if ( index == kNotFound )
+            {
+                pushEntry( name, std::move( value ), ownerID );
+                return issueSubscription( ownerID );
+            }
+            _listShadowName.push_back( _listName[index] );
+            _listShadowValue.push_back( std::move( _listValue[index] ) );
+            _listShadowOwnerID.push_back( _listOwnerID[index] );
+            _listValue[index]   = std::move( value );
+            _listOwnerID[index] = ownerID;
+            ++_revision;
+            return issueSubscription( ownerID );
+        }
+
+        /** @brief 이름의 값입니다. 없으면 nullptr 입니다. */
+        T* find( const hashed_string& name )
+        {
+            const size_t index = findIndex( name );
+            return index == kNotFound ? nullptr : &_listValue[index];
+        }
+
+        /** @brief 이름의 값입니다. 없으면 nullptr 입니다. */
+        const T* find( const hashed_string& name ) const
+        {
+            const size_t index = findIndex( name );
+            return index == kNotFound ? nullptr : &_listValue[index];
+        }
+
+        /** @brief @p predicate( const T& ) 가 true 인 값을 모두 제거합니다(남은 것의 순서는 그대로). 뺀 수입니다. */
+        template <typename Predicate>
+        uint32 removeIf( Predicate predicate )
+        {
+            uint32 removedCount = 0;
+            for ( size_t index = _listValue.size(); index > 0; --index )
+            {
+                if ( predicate( static_cast<const T&>( _listValue[index - 1] ) ) == false )
+                    continue;
+                eraseEntry( index - 1 );
+                ++removedCount;
+            }
+            return removedCount;
+        }
+
+        /** @brief 이름의 값을 뺍니다(남은 것의 순서는 그대로). 뺐으면 true 입니다. 없는 이름이면 false 입니다. */
+        [[nodiscard]] bool remove( const hashed_string& name )
+        {
+            const size_t index = findIndex( name );
+            if ( index == kNotFound )
+                return false;
+            eraseEntry( index );
+            return true;
+        }
+
+        /** @brief 모두 제거합니다(그림자도). 주인 있는 등록의 구독은 무효가 됩니다. */
+        void clear()
+        {
+            detachAllSubscriptions();
+            _listName.clear();
+            _listValue.clear();
+            _listOwnerID.clear();
+            _listShadowName.clear();
+            _listShadowValue.clear();
+            _listShadowOwnerID.clear();
+            ++_revision;
+        }
+
+        /** @brief 표가 바뀔 때마다(올리기 · 바꾸기 · 빼기 · 구독 해제) 오르는 번호입니다. 값을 복사해 간 쪽이 다시 읽을 때를 안다. */
+        uint32 getRevision() const { return _revision; }
+
+        /** @brief 올라 있는 값 수입니다. */
+        uint32 getCount() const { return static_cast<uint32>( _listValue.size() ); }
+        /** @brief index 번째 값을 올린 이름입니다. */
+        const hashed_string& getNameAt( uint32 index ) const { return _listName[index]; }
+        /** @brief 값 전부(등록 순서)입니다. */
+        const vector<T>& getItems() const { return _listValue; }
+
+    protected:
+        /** @brief 주인 있는 등록의 구독 @p ownerID 가 풀렸습니다. 지금 값의 주인이면 거두고 그림자로 돌아가며, 그림자의 주인이면 그 그림자만 버립니다. */
+        void releaseSubscription( uint64 ownerID ) override
+        {
+            for ( size_t index = 0; index < _listOwnerID.size(); ++index )
+            {
+                if ( _listOwnerID[index] != ownerID )
+                    continue;
+                const size_t shadowIndex = findLastShadow( _listName[index] );
+                if ( shadowIndex == kNotFound )
+                {
+                    eraseEntry( index );
+                    return;
+                }
+                _listValue[index]   = std::move( _listShadowValue[shadowIndex] );
+                _listOwnerID[index] = _listShadowOwnerID[shadowIndex];
+                eraseShadow( shadowIndex );
+                ++_revision;
+                return;
+            }
+            for ( size_t shadowIndex = 0; shadowIndex < _listShadowOwnerID.size(); ++shadowIndex )
+            {
+                if ( _listShadowOwnerID[shadowIndex] != ownerID )
+                    continue;
+                eraseShadow( shadowIndex );
+                return;
+            }
+        }
+
+    private:
+        static constexpr size_t kNotFound = static_cast<size_t>( -1 );
+
+        size_t findIndex( const hashed_string& name ) const
+        {
+            if ( name.empty() )
+                return kNotFound;
+            for ( size_t index = 0; index < _listName.size(); ++index )
+            {
+                if ( _listName[index] == name )
+                    return index;
+            }
+            return kNotFound;
+        }
+
+        size_t findLastShadow( const hashed_string& name ) const
+        {
+            for ( size_t index = _listShadowName.size(); index > 0; --index )
+            {
+                if ( _listShadowName[index - 1] == name )
+                    return index - 1;
+            }
+            return kNotFound;
+        }
+
+        void pushEntry( const hashed_string& name, T&& value, uint64 ownerID )
+        {
+            _listName.push_back( name );
+            _listValue.push_back( std::move( value ) );
+            _listOwnerID.push_back( ownerID );
+            ++_revision;
+        }
+
+        void eraseEntry( size_t index )
+        {
+            _listName.erase( _listName.begin() + static_cast<ptrdiff_t>( index ) );
+            _listValue.erase( _listValue.begin() + static_cast<ptrdiff_t>( index ) );
+            _listOwnerID.erase( _listOwnerID.begin() + static_cast<ptrdiff_t>( index ) );
+            ++_revision;
+        }
+
+        void eraseShadow( size_t index )
+        {
+            _listShadowName.erase( _listShadowName.begin() + static_cast<ptrdiff_t>( index ) );
+            _listShadowValue.erase( _listShadowValue.begin() + static_cast<ptrdiff_t>( index ) );
+            _listShadowOwnerID.erase( _listShadowOwnerID.begin() + static_cast<ptrdiff_t>( index ) );
+        }
+
+    private:
+        vector<hashed_string> _listName;          ///< 값마다 올린 이름(같은 인덱스)
+        vector<T>             _listValue;         ///< 값(등록 순서)
+        vector<uint64>        _listOwnerID;       ///< 값마다 주인 구독 번호(`addOwned`). 주인 없는 값은 0
+        vector<hashed_string> _listShadowName;    ///< `addOwned` 가 덮은 앞 값의 이름(덮은 순서)
+        vector<T>             _listShadowValue;   ///< 덮인 앞 값 — 덮은 주인이 풀리면 돌아온다
+        vector<uint64>        _listShadowOwnerID; ///< 덮인 앞 값의 주인 구독 번호(주인 없으면 0)
+        IDAllocator<uint64>   _ownerIDAllocator;  ///< 주인 구독 번호(0 은 주인 없음)
+        uint32                _revision;          ///< `getRevision`
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class LockedRegistrationList
+     * @brief 자기 잠금을 든 `RegistrationList` 입니다. 모듈 로더 스레드의 정적 등록자와 런타임 조회가 겹치는 정적 등록 표(로컬 저장 바닥 · SQL 드라이버)가 쓴다.
+     * @details 표마다 "잠금 + 목록 + 함수 정적 홀더" 를 손으로 짜던 것을 한 벌로 둔다 — 잠금이 목록 옆에 있어야 둘이 함께 정적 초기화 순서를 타지 않는다.
+     *          목록은 `withLock` 안에서만 만진다(잠금이 "가장 안쪽" — 람다 안에서 다른 잠금을 잡지 않는다). 함수 정적으로 둘 때는 `SW_DEFINE_LOCKED_REGISTRATION_LIST`.
+     */
+    template <typename T>
+    class LockedRegistrationList final
+    {
+    public:
+        /** @brief 인자는 `RegistrationList` 생성자 인자(목록 이름 · 순서 · 이름 필수 · 대소문자)입니다. */
+        template <typename... TArgs>
+        explicit LockedRegistrationList( TArgs&&... args )
+            : _mutex{}
+            , _list{ std::forward<TArgs>( args )... }
+        {
+        }
+
+        LockedRegistrationList( const LockedRegistrationList& )            = delete;
+        LockedRegistrationList& operator=( const LockedRegistrationList& ) = delete;
+
+        /** @brief 잠금을 잡고 @p function( RegistrationList<T>& ) 을 부릅니다. 그 반환값을 돌려줍니다. */
+        template <typename TFunction>
+        decltype( auto ) withLock( TFunction&& function )
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            return function( _list );
+        }
+
+        /** @brief 잠금을 잡고 @p function( const RegistrationList<T>& ) 을 부릅니다. */
+        template <typename TFunction>
+        decltype( auto ) withLock( TFunction&& function ) const
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            return function( static_cast<const RegistrationList<T>&>( _list ) );
+        }
+
+    private:
+        mutable mutex       _mutex;
+        RegistrationList<T> _list;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class StaticRegistrar
+     * @brief 정적 등록자의 공통 틀입니다. 만들 때 등록 함수로 올리고, 사라질 때(모듈 언로드 · 프로세스 끝) 올렸던 것만 내리기 함수로 내립니다.
+     * @details 기능마다 손으로 쓰던 "등록자 구조체 + 생성자에서 올리기 + 소멸자에서 거절되지 않았으면 내리기" 를 한 벌로 둔다 — 거절된 등록을 내리면 같은 이름의
+     *          앞 등록을 지우므로 그 규칙을 한곳에서 지킨다. 기능은 `SW_DEFINE_STATIC_REGISTRAR` 한 줄로 등록자 형식을 만들고, 등록 매크로는 `SW_STATIC_REGISTRATION` 을 쓴다.
+     *          함수는 템플릿 인자가 아니라 생성자 인자로 받는다 — 다른 DLL 이 내보낸 함수의 주소는 MSVC 에서 컴파일 때 상수가 아니다.
+     *          언리얼의 콘솔 변수 자동 등록 객체(생성자 등록 · 소멸자 해제)와 같은 자리다.
+     * @tparam TItem 등록 함수가 받는 항목입니다(대개 `const XRegistration*`, 함수 포인터도 된다).
+     */
+    template <typename TItem>
+    class StaticRegistrar
+    {
+    public:
+        using RegisterFunction   = bool ( * )( TItem item );
+        using UnregisterFunction = void ( * )( TItem item );
+
+        StaticRegistrar( TItem item, RegisterFunction pRegister, UnregisterFunction pUnregister )
+            : _item{ pRegister( item ) ? item : TItem{} }
+            , _pUnregister{ pUnregister }
+        {
+        }
+
+        ~StaticRegistrar()
+        {
+            if ( _item != TItem{} )
+                _pUnregister( _item );
+        }
+
+        StaticRegistrar( const StaticRegistrar& )            = delete;
+        StaticRegistrar& operator=( const StaticRegistrar& ) = delete;
+
+    private:
+        TItem              _item;        ///< 올린 항목. 거절됐으면 빈 값이라 내리지 않는다
+        UnregisterFunction _pUnregister; ///< 내리기 함수
+    };
+} // namespace sw
+
+/**
+ * @brief 정적 등록 목록을 함수 지역 정적으로 돌려주는 함수 @p getName 을 정의합니다(.cpp 에서 — 이미지마다 하나라 헤더에 두지 않는다).
+ * @details 함수 정적이라 다른 TU · DLL 의 정적 등록자가 먼저 와도 비어 있는 채로 서고, 등록자보다 늦게 사라진다. 함수 정적 가변 변수는 이 매크로와
+ *          `SW_DEFINE_LOCKED_REGISTRATION_LIST` · `SW_DEFINE_REGISTRATION_SLOT` 으로만 둔다(린트 `mutable-statics`) — 나머지 런타임 상태 · 정책 · 신호는 엔진 · 에디터 서브시스템이 든다.
+ *          클래스 안에서는 앞에 `static` 을 붙인다(`static SW_DEFINE_REGISTRATION_LIST( getList, ... )`).
+ * @param T 항목 형식입니다. 나머지 인자는 `RegistrationList` 생성자 인자(목록 이름 · 순서 · 이름 필수 · 대소문자 · 해제 함수)입니다.
+ */
+#define SW_DEFINE_REGISTRATION_LIST( getName, T, ... )          \
+    ::sw::RegistrationList<T>& getName()                        \
+    {                                                           \
+        static ::sw::RegistrationList<T> s_list{ __VA_ARGS__ }; \
+        return s_list;                                          \
+    }
+
+/**
+ * @brief 자기 잠금을 든 정적 등록 목록(`LockedRegistrationList`)을 함수 지역 정적으로 돌려주는 함수 @p getName 을 정의합니다(.cpp 에서). 나머지 인자는 목록 생성자 인자입니다.
+ * @details 모듈 로더 스레드의 등록자와 런타임 조회가 겹치는 표가 쓴다 — 잠금이 없는 표는 `SW_DEFINE_REGISTRATION_LIST`.
+ */
+#define SW_DEFINE_LOCKED_REGISTRATION_LIST( getName, T, ... )         \
+    ::sw::LockedRegistrationList<T>& getName()                        \
+    {                                                                 \
+        static ::sw::LockedRegistrationList<T> s_list{ __VA_ARGS__ }; \
+        return s_list;                                                \
+    }
+
+/**
+ * @brief 기능의 정적 등록자 형식 @p RegistrarType 을 정의합니다(헤더, `namespace sw` 안). @p TItem 을 받아 @p pRegister 로 올리고 @p pUnregister 로 내린다(`StaticRegistrar`).
+ */
+#define SW_DEFINE_STATIC_REGISTRAR( RegistrarType, TItem, pRegister, pUnregister )                          \
+    struct RegistrarType final : ::sw::StaticRegistrar<TItem>                                               \
+    {                                                                                                       \
+        explicit RegistrarType( TItem item ) : ::sw::StaticRegistrar<TItem>{ item, pRegister, pUnregister } \
+        {                                                                                                   \
+        }                                                                                                   \
+    }
+
+/**
+ * @brief 등록 항목 하나와 그 정적 등록자(`StaticRegistrar`)를 .cpp 의 파일 범위에 둡니다. 기능의 등록 매크로가 이것 한 줄로 끝난다.
+ * @param tag 정적 이름의 앞머리입니다(기능마다 달라 한 TU 에 여러 기능을 등록해도 이름이 부딪히지 않는다). @param id 등록마다 다른 식별자입니다.
+ * @param RegistrationType 항목 형식, @param RegistrarType 그 등록자 형식이고, 나머지 인자는 항목의 중괄호 초기화 값입니다.
+ */
+#define SW_STATIC_REGISTRATION( tag, RegistrationType, RegistrarType, id, ... ) \
+    static const RegistrationType sw_##tag##_##id{ __VA_ARGS__ };               \
+    static const RegistrarType    sw_##tag##Registrar_##id                      \
+    {                                                                           \
+        &sw_##tag##_##id                                                        \
+    }

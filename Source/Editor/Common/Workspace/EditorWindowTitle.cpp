@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Workspace/EditorWindowTitle.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw::editor
 {

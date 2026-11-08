@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDataWatcher.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/ContentFolderWatch.h"
 

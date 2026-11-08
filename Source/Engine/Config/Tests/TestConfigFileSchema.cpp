@@ -2,10 +2,10 @@
 // 바탕 층의 빠진 키). 기동은 틀린 설정에서 멈추는데(`ConfigManager::loadHostConfig`), 이 테스트는 그것을 모든 게임 프리셋에 대해 실행 없이 본다(nogpu).
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Config/ConfigManager.h"

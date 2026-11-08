@@ -5,10 +5,8 @@
  *       `CoreMinimal.h` 와의 차이는 티어 표에서 Log 이상인 폴더의 헤더뿐이어야 합니다.
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/array.h"
 #include "Core/Container/deque.h"
-#include "Core/Container/formatString.h"
 #include "Core/Container/list.h"
 #include "Core/Container/map.h"
 #include "Core/Container/pair.h"
@@ -25,3 +23,5 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"

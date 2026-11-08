@@ -21,11 +21,11 @@ namespace sw
         [[nodiscard]] bool                fillRandomBytes( uint8* pOut, int32 size ) override;
         [[nodiscard]] bool                makeX25519KeyPair( NetX25519KeyPair& outKeyPair ) override;
         [[nodiscard]] bool                computeX25519SharedSecret( const uint8* pPrivateKey, const uint8* pPeerPublicKey, uint8* pOutSecret ) override;
-        [[nodiscard]] bool                computeHkdfSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize, uint8* pOut,
+        [[nodiscard]] bool                computeHKDFSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize, uint8* pOut,
                                                              int32 outSize ) override;
         [[nodiscard]] bool                computePasswordHash( const uint8* pPassword, int32 passwordSize, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params,
                                                                uint8* pOut, int32 outSize ) override;
-        unique_ptr<INetAead>              createAead( NetAeadAlgorithm algorithm, const uint8* pKey ) override;
+        unique_ptr<INetAEAD>              createAEAD( NetAEADAlgorithm algorithm, const uint8* pKey ) override;
         expected<unique_ptr<ITLSContext>> createTLSContext( const TLSContextConfig& settings ) override;
         [[nodiscard]] bool                createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) override;
         [[nodiscard]] bool                computeCertificateSHA256( const string& certificatePem, string& outHex ) override;

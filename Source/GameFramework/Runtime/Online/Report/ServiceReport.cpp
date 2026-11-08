@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Online/Report/ServiceReport.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUtil.h"

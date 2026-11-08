@@ -13,7 +13,7 @@
 #include "Core/Event/EventType.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/TagSystem.h"

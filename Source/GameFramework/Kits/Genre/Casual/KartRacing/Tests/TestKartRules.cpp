@@ -1,8 +1,8 @@
 #include "pch.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/String/FourCcUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -730,13 +730,13 @@ SW_TEST_CASE( KartGhostTest, SerializeRoundTripAndRejection )
     SW_EXPECT_FALSE( restored.deserialize( buffer.data(), 0 ) );
     SW_EXPECT_FALSE( restored.deserialize( buffer.data(), 12 ) ); // 머리 중간에서 잘렸다
 
-    const uint32 kMagic = sw::FourCcUtil::make( "KGHT" );
+    const uint32 kMagic = sw::FourCCUtil::make( "KGHT" );
     const auto   read   = [&restored]( const sw::vector<uint8>& bytes )
     { return restored.deserialize( bytes.data(), static_cast<int32>( bytes.size() ) ); };
     SW_EXPECT_TRUE( read( KartTestUtil::writeGhostHead( kMagic, 0.1f, 0.0f, 0 ) ) ); // 형식은 맞다
     SW_REQUIRE_TRUE( restored.deserialize( buffer.data(), static_cast<int32>( buffer.size() ) ) );
 
-    SW_EXPECT_FALSE( read( KartTestUtil::writeGhostHead( sw::FourCcUtil::make( "NOPE" ), 0.1f, 0.0f, 0 ) ) );
+    SW_EXPECT_FALSE( read( KartTestUtil::writeGhostHead( sw::FourCCUtil::make( "NOPE" ), 0.1f, 0.0f, 0 ) ) );
     SW_EXPECT_FALSE( read( KartTestUtil::writeGhostHead( kMagic, 0.0f, 0.0f, 0 ) ) );
     SW_EXPECT_FALSE( read( KartTestUtil::writeGhostHead( kMagic, -0.1f, 0.0f, 0 ) ) );
     SW_EXPECT_FALSE( read( KartTestUtil::writeGhostHead( kMagic, std::numeric_limits<float32>::quiet_NaN(), 0.0f, 0 ) ) );

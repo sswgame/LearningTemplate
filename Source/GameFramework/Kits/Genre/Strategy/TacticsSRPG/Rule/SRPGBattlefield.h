@@ -5,21 +5,21 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/TurnOrder.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Progression/LevelProgress.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
 
@@ -158,7 +158,7 @@ namespace sw
     class SW_KIT_API SRPGBattlefield
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "SRBF" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "SRBF" );
         static constexpr uint32 kStateVersion = 1;
 
         SRPGBattlefield();

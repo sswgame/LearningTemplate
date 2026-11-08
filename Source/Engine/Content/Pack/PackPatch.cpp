@@ -2,16 +2,16 @@
 
 #include "Engine/Content/Pack/PackPatch.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
-#include "Core/String/HexUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"

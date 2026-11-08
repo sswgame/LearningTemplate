@@ -2,11 +2,11 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Rule/LoginStoreLogic.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/String/HexUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"

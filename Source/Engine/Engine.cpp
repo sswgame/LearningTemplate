@@ -5,7 +5,6 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Concurrency/ThreadName.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Event/EventDispatcher.h"
@@ -15,7 +14,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -74,7 +74,6 @@
 #include "Engine/Presentation/IEngineUIDriver.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
-#include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Profiling/SubsystemTimingReport.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Scene/Scene.h"
@@ -565,9 +564,6 @@ namespace sw
     void Engine::endFrame()
     {
         engine::getSubsystem<FrameProfiler>().endFrame();
-#if !defined( SW_SHIPPING )
-        ProfilerTraceExport::updateRecording( engine::getSubsystem<FrameProfiler>() ); // `profile.trace record` 의 끝 시각 확인(진행 중이 아니면 atomic 하나)
-#endif
         // 외부 프로파일러(Tracy)의 주 프레임 경계 — 게임 스레드 프레임이다.
         IProfilerBackend* pProfilerBackend = ProfilerBackend::getActiveBackend();
         if ( pProfilerBackend != nullptr )

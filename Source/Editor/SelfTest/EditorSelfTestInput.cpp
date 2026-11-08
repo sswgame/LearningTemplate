@@ -2,7 +2,7 @@
 
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Hash/HashUtil.h"
 

@@ -9,8 +9,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Skeletal/Pose.h"

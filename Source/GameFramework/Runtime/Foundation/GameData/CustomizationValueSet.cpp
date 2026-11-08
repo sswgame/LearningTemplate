@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Foundation/GameData/CustomizationValueSet.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 namespace sw
 {

@@ -2,14 +2,14 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/Autosave.h"
 
-#include "Core/Container/CompareUtil.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
+#include "Core/String/StringUtil.h"
 
-#include "Engine/Localization/IPlayerNoticeSink.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Presentation/IPlayerNoticeSink.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
@@ -30,7 +30,7 @@ namespace sw
     {
         struct AutosaveInternal
         {
-            static constexpr uint32      kInfoTag           = FourCcUtil::make( "ASAV" );
+            static constexpr uint32      kInfoTag           = FourCCUtil::make( "ASAV" );
             static constexpr uint32      kInfoVersion       = 1;
             static constexpr uint32      kSlotFormatVersion = 1; ///< 상태 슬롯의 봉투 형식 버전 - 게임 상태 바이트(스냅샷 봉투)를 바꾸면 올린다
             static constexpr const utf8* kInfoExtension     = ".info";

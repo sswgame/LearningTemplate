@@ -2,10 +2,10 @@
 
 #include "Editor/Common/Commands/Scene/EditorLightProbeBakeSession.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Commands/Scene/EditorBakeOutputPath.h"
+#include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"
@@ -21,9 +21,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Rendering/LightProbeVolumeComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Visual/Component/LightProbeVolumeComponent.h"
 
 namespace sw::editor
 {

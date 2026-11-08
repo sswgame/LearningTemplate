@@ -8,7 +8,7 @@
 #pragma once
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 namespace sw
 {

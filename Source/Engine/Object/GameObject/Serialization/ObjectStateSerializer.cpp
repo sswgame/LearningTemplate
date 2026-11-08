@@ -17,7 +17,6 @@
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Object/GameObject/Serialization/ClientOnlyTypeTable.h"
 #include "Engine/Object/GameObject/Serialization/ObjectValidation.h"
 #include "Engine/Reflection/ReflectedValueWalk.h"
 #include "Engine/Reflection/Reflection.h"

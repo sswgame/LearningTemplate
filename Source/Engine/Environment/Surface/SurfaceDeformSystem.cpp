@@ -3,10 +3,10 @@
 #include "Engine/Environment/Surface/SurfaceDeformSystem.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -191,7 +191,7 @@ namespace sw
         }
         if ( ensureGrid( def, to ) == false )
             return;
-        // 띠의 앞은 from → to 다(요 규칙 YawUtil: atan2( x, z )).
+        // 띠의 앞은 from → to 다(요 규칙 OrientationUtil: atan2( x, z )).
         _grid.applyStamp( def, ( from._x + to._x ) * 0.5f, ( from._z + to._z ) * 0.5f, MathUtil::atan2( deltaX, deltaZ ), length, 0.0f );
         ++_stampCount;
     }

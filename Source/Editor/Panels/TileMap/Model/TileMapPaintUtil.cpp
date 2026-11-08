@@ -139,7 +139,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    float4 AtlasGridUtil::computeCellUvRect( int32 cell, int32 columnCount, int32 rowCount )
+    float4 AtlasGridUtil::computeCellUVRect( int32 cell, int32 columnCount, int32 rowCount )
     {
         const int32   columns = MathUtil::max( 1, columnCount );
         const int32   rows    = MathUtil::max( 1, rowCount );
@@ -150,10 +150,10 @@ namespace sw::editor
         return float4{ static_cast<float32>( column ) * width, static_cast<float32>( row ) * height, width, height };
     }
 
-    int32 AtlasGridUtil::findCellAtUv( float32 u, float32 v, int32 columnCount, int32 rowCount )
+    int32 AtlasGridUtil::findCellAtUV( float32 u, float32 v, int32 columnCount, int32 rowCount )
     {
-        const bool bUvOutsideAtlas = u < 0.0f || v < 0.0f || u >= 1.0f || v >= 1.0f;
-        if ( bUvOutsideAtlas )
+        const bool bUVOutsideAtlas = u < 0.0f || v < 0.0f || u >= 1.0f || v >= 1.0f;
+        if ( bUVOutsideAtlas )
             return -1;
         const int32 columns = MathUtil::max( 1, columnCount );
         const int32 rows    = MathUtil::max( 1, rowCount );
