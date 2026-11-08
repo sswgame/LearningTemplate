@@ -507,16 +507,6 @@
             "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
         },
         {
-            "_path": "Source/Engine/Object/Component/Component.h",
-            "_name": "_s_nextComponentID",
-            "_why": "번호 공간(설계 남김) — 엔진 밖(도구 · 테스트 · 워커)에서도 만들어지는 객체의 프로세스 고유 번호다. 소비자(GPU 풀 · 캐시)가 번호로 키를 잡아 다른 주인 사이에서도 겹치면 안 된다. 소비자가 정체성 토큰을 들고 키를 잡는 설계(VFXGPURunToken 과 같은 길)로 옮길 때까지 남긴다."
-        },
-        {
-            "_path": "Source/Engine/Object/GameObject/GameObjectStore.h",
-            "_name": "_s_nextObjectID",
-            "_why": "번호 공간(설계 남김) — 엔진 밖(도구 · 테스트 · 워커)에서도 만들어지는 객체의 프로세스 고유 번호다. 소비자(GPU 풀 · 캐시)가 번호로 키를 잡아 다른 주인 사이에서도 겹치면 안 된다. 소비자가 정체성 토큰을 들고 키를 잡는 설계(VFXGPURunToken 과 같은 길)로 옮길 때까지 남긴다."
-        },
-        {
             "_path": "Source/Engine/Physics/Jolt/JoltPhysicsBackend.cpp",
             "_name": "s_arrFactoryStorage",
             "_why": "Jolt 는 형식 공장(JPH::Factory::sInstance) · 할당기 훅을 프로세스 전역으로 요구한다 — 그 한 번 초기화의 저장소다."

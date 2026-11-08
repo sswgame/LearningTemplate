@@ -586,6 +586,13 @@ namespace sw
 
     void GameObject::attachCreatedComponent( Component* pComp, const TypeInfo* pTypeInfo, ComponentPoolEntry* pPoolEntry, bool bOverridesTick )
     {
+        // id 는 매니저의 번호 공간(`ObjectIDSpace` — 엔진의 씬들이 나눠 쓴다)이 준다. 상태를 되돌리는 로드 중이면 원래 ID 를 복원하고 공간을 그 뒤로 민다.
+        // 다른 일(이름 · 기본값 · 등록)보다 먼저여야 그 안에서 잡는 핸들(서브틱 등)도 이 ID 로 잡힌다.
+        uint64              restoredComponentID = 0;
+        const hashed_string typeFqn             = pTypeInfo != nullptr ? pTypeInfo->_fullyQualifiedName : hashed_string{};
+        ObjectIDSpace&      idSpace             = _pOwnerManager->getObjectIDSpace();
+        pComp->_componentID                     = takeRestoredComponentID( this, typeFqn, restoredComponentID ) ? idSpace.reserveComponentID( restoredComponentID ) : idSpace.allocateComponentID();
+
         // 주 틱의 기본은 "onTick 을 오버라이드했는가"다(유니티의 Update). 오버라이드한 타입은 생성자의 값(기본은 켜짐, 끄면 꺼짐)을 그대로 둔다.
         if ( bOverridesTick == false )
             pComp->_bCanEverTick = SW_FALSE;
@@ -596,16 +603,6 @@ namespace sw
         const hashed_string typeKey = pTypeInfo != nullptr ? pTypeInfo->_name : hashed_string{};
         pComp->setComponentName( typeKey );
         pComp->applyTypeDefaults( pTypeInfo );
-
-        // 상태를 되돌리는 로드 중이면 원래 ID 를 복원한다. 등록보다 먼저여야 서브틱 핸들도 원래 ID 로 잡힌다.
-        // 같은 프로세스에서 발급된 ID 라 카운터는 보통 이미 그 뒤지만, 아니면 뒤로 밀어 앞으로의 발급과 겹치지 않게 한다.
-        uint64              restoredComponentID = 0;
-        const hashed_string typeFqn             = pTypeInfo != nullptr ? pTypeInfo->_fullyQualifiedName : hashed_string{};
-        if ( takeRestoredComponentID( this, typeFqn, restoredComponentID ) )
-        {
-            pComp->_componentID = restoredComponentID;
-            Component::_s_nextComponentID.fetch_max( restoredComponentID + 1, std::memory_order_relaxed );
-        }
 
         // 삭제 예정 오브젝트에 붙으면 삭제 예정으로 시작한다(목록 · 버킷에 넣기 전에). "삭제 예정 오브젝트의 컴포넌트는 삭제 예정" 이라
         // 순회가 컴포넌트만 본다(`isPendingDestroy` 설명). 오브젝트를 파괴할 때 함께 해체되므로 지연 파괴 목록에는 넣지 않는다.

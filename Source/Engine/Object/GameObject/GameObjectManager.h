@@ -21,6 +21,7 @@
 #include "Engine/Object/Component/SceneTransformHierarchy.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectStore.h"
+#include "Engine/Object/GameObject/ObjectIDSpace.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
@@ -207,7 +208,7 @@ namespace sw
         /**
          * @brief 오브젝트 구조 세대입니다. 오브젝트 생성 · 파괴 표시 · 이름 · 부모 · 형제 순서 · 컴포넌트 붙이기와 떼기가 바뀔 때마다 오릅니다.
          * @details 계층 창의 행 모델 · HUD 의 오브젝트 수처럼 구조를 매 프레임 다시 모으던 쪽이 마지막 값과 비교해 바뀔 때만 다시 짓습니다.
-         *          값은 매니저끼리 겹치지 않는다(`GameObjectStore::getStructureGeneration`). 그래서 지운 매니저와 같은 주소에 새 매니저가 생겨도 캐시가 틀리지 않는다.
+         *          값은 같은 엔진(번호 공간 `ObjectIDSpace`)의 매니저끼리 겹치지 않는다(`GameObjectStore::getStructureGeneration`). 그래서 지운 매니저와 같은 주소에 새 매니저가 생겨도 캐시가 틀리지 않는다.
          *          읽기는 잠금이 없고 어느 스레드에서나 됩니다. 트랜스폼 · 활성 · 태그는 넣지 않습니다(트랜스폼은 `getTransformGeneration`, 태그는 `TagIndex::getGeneration`).
          */
         uint64 getStructureGeneration() const { return _store.getStructureGeneration(); }
@@ -515,6 +516,8 @@ namespace sw
 
         /** @brief 생성자로 받은 엔진 서비스 묶음입니다(빌린 포인터들). 씬 서비스가 만들어질 때 자기 칸을 읽습니다. */
         const SceneEngineServices& getSceneEngineServices() const { return _services; }
+        /** @brief 오브젝트 · 컴포넌트 id 를 내는 번호 공간입니다(엔진 범위 — 엔진 없는 매니저는 자기 것). 워커에서도 부른다(원자값). */
+        ObjectIDSpace& getObjectIDSpace() const { return *_pObjectIDSpace; }
         /**
          * @brief 생성자로 받은 에셋 매니저입니다(빌림). 없으면 nullptr 입니다.
          * @details 씬 안의 엔진 코드(스프라이트 배치 · 애니메이션 알림)가 전역 조회 대신 씁니다. 게임 모듈은 `game::findSubsystem<AssetManager>()` 를 씁니다.
@@ -692,7 +695,12 @@ namespace sw
 
     private:
         // 단위들은 소유만 한다. 선언 순서가 생성 순서다 — 뒤 단위가 앞 단위를 참조로 받는다(틱 디스패치 → 계층 · 레지스트리 · 틱 중 규칙,
-        // 저장소 → 틱 레지스트리 · 틱 중 규칙). 오브젝트는 소멸자의 `clear` 가 먼저 지우므로 단위가 사라지는 순서에 기대지 않는다.
+        // 저장소 → 틱 레지스트리 · 틱 중 규칙 · 번호 공간). 오브젝트는 소멸자의 `clear` 가 먼저 지우므로 단위가 사라지는 순서에 기대지 않는다.
+
+        /** @brief 엔진 없이 만든 매니저(서비스 묶음에 번호 공간이 없다 — 테스트)만 드는 자기 번호 공간입니다. 엔진 아래면 비어 있다. */
+        unique_ptr<ObjectIDSpace> _pOwnedObjectIDSpace;
+        /** @brief 오브젝트 · 컴포넌트 id 를 내는 번호 공간입니다(`getObjectIDSpace` — 엔진 범위 `SceneEngineServices::_pObjectIDSpace` 또는 위의 자기 것). */
+        ObjectIDSpace* _pObjectIDSpace;
 
         /** @brief 틱 중 규칙(동결 플래그 · 구조 변경 큐 · 틱 뒤 큐 · 비우는 순서)입니다. 게임이 부르는 API 는 위의 전달 함수입니다. */
         StructuralChangeBuffer _structuralChangeBuffer;

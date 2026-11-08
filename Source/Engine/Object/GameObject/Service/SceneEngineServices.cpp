@@ -7,6 +7,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/GameObject/ObjectIDSpace.h"
 #include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
@@ -21,6 +22,7 @@ namespace sw
         sceneServices._pTypeRegistry      = engine::findSubsystem<TypeRegistry>();
         sceneServices._pTickBatchRegistry = engine::findSubsystem<TickBatchRegistry>();
         sceneServices._pEngineSubsystems  = engine::getEngineSubsystems();
+        sceneServices._pObjectIDSpace     = engine::findSubsystem<ObjectIDSpace>();
         return sceneServices;
     }
 } // namespace sw
