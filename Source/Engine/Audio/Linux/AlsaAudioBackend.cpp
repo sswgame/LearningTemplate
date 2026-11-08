@@ -1,14 +1,13 @@
 #include "pch.h"
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
-    #include "Engine/Audio/Linux/AlsaAudioBackend.h"
+#include "Engine/Audio/Linux/AlsaAudioBackend.h"
 
-    #include "Core/Concurrency/atomic.h"
-    #include "Core/Concurrency/thread.h"
-    #include "Core/Container/vector.h"
-    #include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Concurrency/atomic.h"
+#include "Core/Concurrency/thread.h"
+#include "Core/Container/vector.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 
-    #include "Engine/Audio/AudioEngine.h"
+#include "Engine/Audio/AudioEngine.h"
 
 namespace sw
 {
@@ -257,4 +256,3 @@ namespace sw
 
     SW_REGISTER_AUDIO_BACKEND( AlsaAudioBackend ); // 리눅스 클라이언트의 장치 백엔드(`IAudioService::create` 가 등록표에서 고른다)
 } // namespace sw
-#endif

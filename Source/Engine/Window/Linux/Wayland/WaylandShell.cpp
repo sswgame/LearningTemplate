@@ -2,7 +2,7 @@
 
 #include "Engine/Window/Linux/Wayland/WaylandShell.h"
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
+#if defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
     #include <poll.h>
     #include <wayland-client.h>
 

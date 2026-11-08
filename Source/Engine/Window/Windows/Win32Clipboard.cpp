@@ -1,15 +1,13 @@
 #include "pch.h"
 
+#include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
+
+#include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/PlatformClipboard.h"
-
-#if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/String/StringUtil.h"
-    #include "Core/Memory/Memory.h"
-
-    #include "Engine/Foundation/EnginePlatformHeaders.h"
-    #include "Engine/Window/IWindow.h"
 
 namespace sw
 {
@@ -116,4 +114,3 @@ namespace sw
         return true;
     }
 } // namespace sw
-#endif

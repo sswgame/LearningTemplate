@@ -401,8 +401,8 @@ namespace sw::editor
         if ( outPlan._listUnfixedReferrer.empty() == false )
         {
             StringBuilder<constant::buffer::kMax256> failureBuilder;
-            failureBuilder.appendFormat( "%# file(s) name a moved asset outside a path field of %# (first: '%#') - fix them or add the field, nothing was moved",
-                                         outPlan._listUnfixedReferrer.size(), AssetReferenceFields::kConfigFile, outPlan._listUnfixedReferrer.front() );
+            failureBuilder.appendFormat( "%# file(s) name a moved asset outside a path field of %# (first: '%#') - fix them or declare the field as an AssetPath PROPERTY, nothing was moved",
+                                         outPlan._listUnfixedReferrer.size(), AssetReferenceFields::kGeneratedFile, outPlan._listUnfixedReferrer.front() );
             outPlan._failure = string( failureBuilder.view() );
             return false;
         }
@@ -521,55 +521,30 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorAssetFileCommands::collectFolderMoves( string_view sourceFolderAbs, string_view destinationParentAbs, vector<EditorAssetMove>& outListMove, string& outFailure )
+    expected<vector<EditorAssetMove>> EditorAssetFileCommands::collectFolderMoves( string_view sourceFolderAbs, string_view destinationParentAbs )
     {
-        outListMove.clear();
         const string source      = FileUtil::normalizeSeparators( sourceFolderAbs );
         const string destination = FileUtil::joinPath( destinationParentAbs, FileUtil::getFileNamePart( source ) );
         if ( FileUtil::isDirectory( source ) == false )
-        {
-            StringBuilder<constant::buffer::kMax256> failureBuilder;
-            failureBuilder.appendFormat( "'%#' is not a folder", source );
-            outFailure = string( failureBuilder.view() );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "not a folder", source } );
         // 폴더를 자기 안으로 옮기면 끝없이 깊어진다
         const string sourcePrefix = source + "/";
         if ( FileUtil::pathsEqualNormalized( destination, source ) || StringUtil::startsWith( FileUtil::normalizeSeparators( destination ), sourcePrefix ) )
-        {
-            StringBuilder<constant::buffer::kMax256> failureBuilder;
-            failureBuilder.appendFormat( "'%#' cannot move into itself", FileUtil::getFileNamePart( source ) );
-            outFailure = string( failureBuilder.view() );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a folder cannot move into itself", FileUtil::getFileNamePart( source ) } );
         if ( FileUtil::exists( destination ) )
-        {
-            StringBuilder<constant::buffer::kMax256> failureBuilder;
-            failureBuilder.appendFormat( "'%#' already exists - nothing was moved", destination );
-            outFailure = string( failureBuilder.view() );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::AlreadyExists, "the destination already exists - nothing was moved", destination } );
         vector<string> listFile;
         if ( FileUtil::collectFiles( source, "", listFile, true ) == false )
-        {
-            StringBuilder<constant::buffer::kMax256> failureBuilder;
-            failureBuilder.appendFormat( "could not list '%#'", source );
-            outFailure = string( failureBuilder.view() );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::ExternalFailure, "could not list the folder", source } );
+        vector<EditorAssetMove> listMove;
         for ( const string& fileAbs : listFile )
         {
             const string normalized = FileUtil::normalizeSeparators( fileAbs );
-            outListMove.push_back( EditorAssetMove{ normalized, destination + normalized.substr( source.size() ) } );
+            listMove.push_back( EditorAssetMove{ normalized, destination + normalized.substr( source.size() ) } );
         }
-        if ( outListMove.empty() )
-        {
-            StringBuilder<constant::buffer::kMax256> failureBuilder;
-            failureBuilder.appendFormat( "'%#' is empty - nothing to move", FileUtil::getFileNamePart( source ) );
-            outFailure = string( failureBuilder.view() );
-            return false;
-        }
-        return true;
+        if ( listMove.empty() )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the folder is empty - nothing to move", FileUtil::getFileNamePart( source ) } );
+        return listMove;
     }
 
     bool EditorAssetFileCommands::moveAsset( string_view sourceAbs, string_view destinationAbs, EditorReferenceIndex& inoutIndex, uint32& outFixedFileCount )

@@ -4,7 +4,7 @@
 #include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/PlatformClipboard.h"
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Window/IWindow.h"
 
 namespace sw
@@ -49,7 +49,7 @@ namespace sw
         return bWritten;
     }
 } // namespace sw
-#elif defined( SW_PLATFORM_LINUX )
+#else
 namespace sw
 {
     // 창이 없는 서버 빌드다. 클립보드를 이을 창이 없으므로 호스트는 `isAvailable` 을 보고 끼우지 않는다.

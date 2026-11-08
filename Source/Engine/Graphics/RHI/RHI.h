@@ -106,7 +106,7 @@ namespace sw
         /** @brief 현재 OS 의 기본 RHI 백엔드를 반환합니다(Windows 는 DX12, Linux 는 Vulkan, 그 밖에는 OpenGL). */
         static RHIBackend getDefaultPlatformBackend();
 
-        /** @brief 해당 RHI 백엔드의 셰이더 타깃 포맷(DXIL, SPIR-V, DXBC 등)을 반환합니다. */
+        /** @brief 해당 RHI 백엔드의 셰이더 타깃 포맷(DXIL, SPIR-V, DXBC 등)을 반환합니다. 열거 범위 밖 값이면 `SW_FATAL` 로 멈춥니다(기본 타깃을 지어내지 않는다). */
         static ShaderTargetFormat getShaderTargetFormat( RHIBackend backend );
 
         // ------------------------------------------------------------------------------

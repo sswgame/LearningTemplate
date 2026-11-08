@@ -2,13 +2,11 @@
 
 #include "Engine/Input/Windows/XInputGamepadDevice.h"
 
+#include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Input/GamepadButtonUtil.h"
-
-#if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Foundation/PlatformOSHeaders.h"
 
 namespace sw
 {
@@ -276,4 +274,3 @@ namespace sw
         return info;
     }
 } // namespace sw
-#endif

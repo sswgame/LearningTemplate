@@ -555,7 +555,7 @@ namespace sw::editor
     {
         if ( error.detail().empty() )
             return string( error.message() );
-        StringBuilder text;
+        StringBuilder<constant::buffer::kMax256> text;
         text.appendFormat( "%#: %#", error.message(), error.detail() );
         return string( text.view() );
     }

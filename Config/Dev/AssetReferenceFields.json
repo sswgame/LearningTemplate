@@ -8,6 +8,5 @@
         { "folder": "heightfields", "sourceFolder": "heightfields_raw", "listSourceExtension": [ ".png", ".r16" ], "generatedReferrers": false }
     ],
     "listCMakeFile": [ "Test/CMakeLists.txt", "Test/Scenario/CMakeLists.txt" ],
-    "listCMakeArgument": [ "--render-portraits", "-scenario" ],
-    "listField": [ "_albedo", "_texture", "file", "scene" ]
+    "listCMakeArgument": [ "--render-portraits", "-scenario" ]
 }

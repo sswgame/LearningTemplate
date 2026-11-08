@@ -1,7 +1,8 @@
 /**
  * @file AssetReferenceFields.h
- * @brief 에셋 참조 칸 목록(`Config/Dev/AssetReferenceFields.json`)과 그 규칙입니다 — 글 에셋에서 경로를 뽑고, 없는지 가리고, 옮긴 경로로 고칩니다.
- * @details 칸 이름은 두 표의 합이다 — 리플렉션 칸은 파서가 낸 표(`kGeneratedFile`), 손으로 읽는 XML 칸은 `kConfigFile` 의 `listField`.
+ * @brief 에셋 참조 규칙(`Config/Dev/AssetReferenceFields.json` — 도메인 · 글 확장자 · 임포트 폴더 · CMake)과 칸 목록입니다 — 글 에셋에서 경로를 뽑고, 없는지 가리고, 옮긴 경로로 고칩니다.
+ * @details 칸 이름은 파서가 낸 표(`kGeneratedFile`) 하나다 — 경로 칸은 모두 리플렉션 선언(`PROPERTY( AssetPath )` · `AssetRef<T>` · `DataPath`)이고 손으로 적는 이름 표는 없다
+ *          (손으로 읽던 XML 칸은 `XMLFields` 로 읽는 스키마 구조체로 옮겼다 — 언리얼이 `FSoftObjectPath` 칸만 참조로 보는 것과 같다).
  *          에셋은 경로 하나로 가리킨다(식별자 표 · `.meta` 는 없다 — 언리얼 소프트 경로와 같다). 그래서 끊어진 경로를 잡는 규칙이 참조의 정본이고, 같은 데이터 파일을
  *          다섯 곳이 읽는다: 커밋 전 검사(`Scripts/lint/AssetReferences.py`), `py -3 -m Scripts move-asset`, 헤드리스 검사(`App --check-asset-refs` — ctest
  *          `ToolCheckAssetRefs`), 에디터 이름 바꾸기 · 옮기기(`EditorAssetFileCommands::moveAsset`), 팩 쿠킹의 참조 따라가기(`PackReachResult` — 쓰는 것만 담는다).
@@ -93,8 +94,6 @@ namespace sw
         vector<string> _listCMakeFile;
         PROPERTY( Required )
         vector<string> _listCMakeArgument;
-        PROPERTY( Required )
-        vector<string> _listField;
     };
 
     /**
@@ -106,7 +105,7 @@ namespace sw
     public:
         /** @brief 칸 목록 파일(프로젝트 루트 기준)입니다. 개발 정책이라 `Config/Dev` 에 둔다. */
         static constexpr const utf8* kConfigFile = "Config/Dev/AssetReferenceFields.json";
-        /** @brief 리플렉션 파서가 낸 경로 칸 표(프로젝트 루트 기준)입니다. 손으로 고치지 않는다(`Scripts/generate/AssetReferenceFieldList.py`). `kConfigFile` 의 `listField` 는 손으로 읽는 XML 칸만 적는다. */
+        /** @brief 리플렉션 파서가 낸 경로 칸 표(프로젝트 루트 기준)입니다. 손으로 고치지 않는다(`Scripts/generate/AssetReferenceFieldList.py`). 칸 이름은 이 표뿐이다(`kConfigFile` 에는 칸 이름이 없다). */
         static constexpr const utf8* kGeneratedFile = "Config/Dev/AssetReferenceFields.generated.json";
 
         /** @brief 프로젝트 루트의 칸 목록을 읽습니다. 없거나 칸이 빠지면 오류를 남기고 false 입니다(기본 목록으로 대신하지 않는다). */
