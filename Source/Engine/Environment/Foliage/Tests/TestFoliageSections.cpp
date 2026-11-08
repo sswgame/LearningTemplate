@@ -73,30 +73,31 @@ SW_TEST_CASE( FoliageSectionTest, SectionlessMeshUsesTheLayerMaterial )
 {
     using Internal              = FoliageSectionTestInternal;
     const shared_ptr<Mesh> mesh = Internal::makeMesh( {} );
-    string                 error;
-    SW_EXPECT_TRUE( FoliageComponent::validateMeshSections( Internal::makeFoliageMesh( {} ), *mesh, error ) );
+    SW_EXPECT_TRUE( FoliageComponent::validateMeshSections( Internal::makeFoliageMesh( {} ), *mesh ).has_value() );
     // 구간 없는 메시에 구간 머티리얼을 적으면 어느 쪽으로 그릴지 모호하다.
-    SW_EXPECT_FALSE( FoliageComponent::validateMeshSections( Internal::makeFoliageMesh( { Internal::makeSection( "bark", "bark.material" ) } ), *mesh, error ) );
+    SW_EXPECT_FALSE( FoliageComponent::validateMeshSections( Internal::makeFoliageMesh( { Internal::makeSection( "bark", "bark.material" ) } ), *mesh ).has_value() );
 }
 
 SW_TEST_CASE( FoliageSectionTest, EverySectionNeedsItsMaterialOnce )
 {
     using Internal              = FoliageSectionTestInternal;
     const shared_ptr<Mesh> tree = Internal::makeMesh( { "bark", "leaves" } );
-    string                 error;
     // 모두 적으면 순서는 상관없다.
     SW_EXPECT_TRUE( FoliageComponent::validateMeshSections(
-        Internal::makeFoliageMesh( { Internal::makeSection( "leaves", "leaves.material" ), Internal::makeSection( "bark", "bark.material" ) } ), *tree, error ) );
+                        Internal::makeFoliageMesh( { Internal::makeSection( "leaves", "leaves.material" ), Internal::makeSection( "bark", "bark.material" ) } ), *tree )
+                        .has_value() );
     // 구간 있는 메시를 레이어 머티리얼 하나로 그리지 않는다(줄기 그림이 잎에 덮인다).
-    SW_EXPECT_FALSE( FoliageComponent::validateMeshSections( Internal::makeFoliageMesh( {} ), *tree, error ) );
+    SW_EXPECT_FALSE( FoliageComponent::validateMeshSections( Internal::makeFoliageMesh( {} ), *tree ).has_value() );
     // 빠뜨린 구간 — 잎 없는 나무가 조용히 남지 않게 거절한다.
-    SW_EXPECT_FALSE( FoliageComponent::validateMeshSections( Internal::makeFoliageMesh( { Internal::makeSection( "bark", "bark.material" ) } ), *tree, error ) );
+    SW_EXPECT_FALSE( FoliageComponent::validateMeshSections( Internal::makeFoliageMesh( { Internal::makeSection( "bark", "bark.material" ) } ), *tree ).has_value() );
     // 메시에 없는 구간 · 겹친 구간 · 머티리얼 없는 구간.
     SW_EXPECT_FALSE( FoliageComponent::validateMeshSections(
-        Internal::makeFoliageMesh( { Internal::makeSection( "bark", "bark.material" ), Internal::makeSection( "flowers", "flowers.material" ) } ), *tree, error ) );
+                         Internal::makeFoliageMesh( { Internal::makeSection( "bark", "bark.material" ), Internal::makeSection( "flowers", "flowers.material" ) } ), *tree )
+                         .has_value() );
     SW_EXPECT_FALSE( FoliageComponent::validateMeshSections(
-        Internal::makeFoliageMesh( { Internal::makeSection( "bark", "bark.material" ), Internal::makeSection( "bark", "leaves.material" ) } ), *tree, error ) );
+                         Internal::makeFoliageMesh( { Internal::makeSection( "bark", "bark.material" ), Internal::makeSection( "bark", "leaves.material" ) } ), *tree )
+                         .has_value() );
     SW_EXPECT_FALSE( FoliageComponent::validateMeshSections(
-        Internal::makeFoliageMesh( { Internal::makeSection( "bark", "bark.material" ), Internal::makeSection( "leaves", "" ) } ), *tree, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+                         Internal::makeFoliageMesh( { Internal::makeSection( "bark", "bark.material" ), Internal::makeSection( "leaves", "" ) } ), *tree )
+                         .has_value() );
 }

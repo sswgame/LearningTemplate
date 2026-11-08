@@ -72,21 +72,20 @@ namespace sw
                     *pOutError = reason;
                 return false;
             }
+            /** @brief 병합을 못 하는 까닭 @p error 를 `문장 '대상'` 글로 남기고 false 를 돌려줍니다. */
+            [[nodiscard]] static bool failMerge( string* pOutError, const Error& error )
+            {
+                return failMerge( pOutError, string( error.message().data(), error.message().size() ) + " '" + string( error.detail().data(), error.detail().size() ) + "'" );
+            }
 
-            /** @brief 부품 하나가 병합에 들어갈 수 있는지 봅니다. 못 들어가면 까닭을 @p outReason 에 적고 false 입니다. */
-            [[nodiscard]] static bool checkMergePart( const MeshMergePart& part, string& outReason )
+            /** @brief 부품 하나가 병합에 들어갈 수 있는지 봅니다. 못 들어가면 그 까닭(대상은 부품 이름)입니다. */
+            [[nodiscard]] static expected<void> checkMergePart( const MeshMergePart& part )
             {
                 if ( part._pMesh == nullptr )
-                {
-                    outReason = string( "merge part '" ) + part._name.c_str() + "' has no mesh";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a merge part has no mesh", part._name.c_str() } );
                 if ( part._pMesh->findVertexAnimation() != nullptr )
-                {
-                    outReason = string( "merge part '" ) + part._name.c_str() + "' has a vertex animation table - merge needs skinned or static meshes";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::Unsupported, "a merge part has a vertex animation table - merge needs skinned or static meshes", part._name.c_str() } );
+                return {};
             }
 
             /** @brief 피팅 형상 · 결과가 원본 메시와 같은 크기인지 봅니다. 아니면 까닭을 남기고 false 입니다. */
@@ -225,13 +224,13 @@ namespace sw
                 return listMorphTarget;
             }
 
-            /** @brief 부품을 검사하고 스킨 유무 · 본 배치 · 역 바인드가 같은지 봅니다 — 합친 메시는 팔레트가 한 벌이라 바인드가 다른 부품을 함께 그릴 수 없다. 아니면 까닭을 @p outReason 에 적고 false 입니다. */
-            [[nodiscard]] static bool validateMergeParts( vector_reference<const MeshMergePart> listPart, string& outReason )
+            /** @brief 부품을 검사하고 스킨 유무 · 본 배치 · 역 바인드가 같은지 봅니다 — 합친 메시는 팔레트가 한 벌이라 바인드가 다른 부품을 함께 그릴 수 없다. 아니면 그 까닭입니다. */
+            [[nodiscard]] static expected<void> validateMergeParts( vector_reference<const MeshMergePart> listPart )
             {
                 for ( const MeshMergePart& part : listPart )
                 {
-                    if ( checkMergePart( part, outReason ) == false )
-                        return false;
+                    if ( expected<void> checked = checkMergePart( part ); checked.has_value() == false )
+                        return checked;
                 }
                 const Mesh& first    = *listPart[0]._pMesh;
                 const bool  bSkinned = first.hasSkin();
@@ -239,12 +238,9 @@ namespace sw
                 {
                     const bool bMixedSkin = part._pMesh->hasSkin() != bSkinned || ( bSkinned && part._pMesh->getSkinBinding().hasSameLayout( first.getSkinBinding() ) == false );
                     if ( bMixedSkin )
-                    {
-                        outReason = string( "merge part '" ) + part._name.c_str() + "' differs from the first part in skin or bone layout - parts merge within one skeleton only";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a merge part differs from the first part in skin or bone layout - parts merge within one skeleton only", part._name.c_str() } );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 병합의 조각 하나입니다 — 부품의 메시 전체(LOD 0)이거나 고른 구간 하나의 인덱스 범위이고, 그 조각이 들어갈 머티리얼 그룹입니다. */
@@ -260,10 +256,10 @@ namespace sw
 
             /**
              * @brief 부품을 조각으로 펴고 조각마다 머티리얼 그룹을 정합니다. 그룹(구간)은 처음 나온 순서이고 @p outListGroup 은 그룹마다 처음 나온 조각입니다.
-             * @return 고른 구간이 메시에 없거나, 그룹이 비거나, 한 그룹에 시점 가시성이 섞이면 까닭을 @p outReason 에 적고 false 입니다.
+             * @return 고른 구간이 메시에 없거나, 그룹이 비거나, 한 그룹에 시점 가시성이 섞이면 그 까닭입니다.
              */
-            [[nodiscard]] static bool collectMergePieces( vector_reference<const MeshMergePart> listPart, const IMeshMergeHooks* pHooks, vector<MergePiece>& outListPiece,
-                                                          vector<MergePiece>& outListGroup, string& outReason )
+            [[nodiscard]] static expected<void> collectMergePieces( vector_reference<const MeshMergePart> listPart, const IMeshMergeHooks* pHooks, vector<MergePiece>& outListPiece,
+                                                                    vector<MergePiece>& outListGroup )
             {
                 outListPiece.clear();
                 outListGroup.clear();
@@ -283,10 +279,7 @@ namespace sw
                     {
                         const int32 sectionIndex = part._pMesh->findSectionIndex( pick._source );
                         if ( sectionIndex < 0 )
-                        {
-                            outReason = string( "merge part '" ) + part._name.c_str() + "' has no section '" + pick._source.c_str() + "'";
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::NotFound, "a merge part has no section of that name", part._name.c_str() }.appendDetail( "." ).appendDetail( pick._source.c_str() ) );
                         const MeshSection& section = part._pMesh->getSections()[static_cast<size_t>( sectionIndex )];
                         piece._source._name        = pick._name;
                         piece._source._material    = pick._material;
@@ -300,10 +293,7 @@ namespace sw
                 {
                     piece._group = pHooks != nullptr ? pHooks->getMaterialGroup( piece._source ) : piece._source._name;
                     if ( piece._group.empty() )
-                    {
-                        outReason = string( "merge piece '" ) + piece._source._name.c_str() + "' got an empty material group";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a merge piece got an empty material group", piece._source._name.c_str() } );
                     const MergePiece* pKnown = nullptr;
                     for ( const MergePiece& known : outListGroup )
                     {
@@ -314,17 +304,15 @@ namespace sw
                     else if ( pHooks == nullptr )
                     {
                         // 훅이 없으면 조각 이름이 구간 이름이다 — 겹치면 다른 머티리얼의 조각이 한 구간에 섞인다.
-                        outReason = string( "merge piece name '" ) + piece._group.c_str() + "' is used twice";
-                        return false;
+                        return unexpected( Error{ ErrorKind::AlreadyExists, "a merge piece name is used twice", piece._group.c_str() } );
                     }
                     else if ( pKnown->_visibility != piece._visibility )
                     {
                         // 구간 하나는 가시성 하나다 — 1 인칭에서 숨는 조각과 아닌 조각을 한 구간에 넣으면 어느 쪽인지 모른다.
-                        outReason = string( "merge group '" ) + piece._group.c_str() + "' mixes person visibility";
-                        return false;
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a merge group mixes person visibility", piece._group.c_str() } );
                     }
                 }
-                return true;
+                return {};
             }
 
             /**
@@ -566,17 +554,16 @@ namespace sw
             return Internal::failMerge( pOutError, "nothing to merge" );
 
         // 부품을 검사하고 스킨 유무 · 본 배치 · 역 바인드가 같은지 본다 — 섞이면 한 메시로 스키닝할 수 없다.
-        string reason;
-        if ( Internal::validateMergeParts( listPart, reason ) == false )
-            return Internal::failMerge( pOutError, reason );
+        if ( const expected<void> valid = Internal::validateMergeParts( listPart ); valid.has_value() == false )
+            return Internal::failMerge( pOutError, valid.error() );
         const Mesh& first    = *listPart[0]._pMesh;
         const bool  bSkinned = first.hasSkin();
 
         // 그룹(구간)은 처음 나온 순서이고, 같은 그룹의 조각은 입력 순서로 이어 붙는다.
         vector<Internal::MergePiece> listPiece;
         vector<Internal::MergePiece> listGroup;
-        if ( Internal::collectMergePieces( listPart, pHooks, listPiece, listGroup, reason ) == false )
-            return Internal::failMerge( pOutError, reason );
+        if ( const expected<void> collected = Internal::collectMergePieces( listPart, pHooks, listPiece, listGroup ); collected.has_value() == false )
+            return Internal::failMerge( pOutError, collected.error() );
 
         vector<RHIVertex>       listVertex;
         vector<uint32>          listIndex;

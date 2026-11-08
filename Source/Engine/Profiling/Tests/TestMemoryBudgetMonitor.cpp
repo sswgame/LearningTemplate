@@ -20,10 +20,8 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, AppliesBudgetsFromJSON )
     MemoryProfiler profiler;
     profiler.setBudget( MemoryTag::Physics, 123 ); // 표에 없으니 지워진다
 
-    string error;
-    SW_REQUIRE_TRUE_MSG( MemoryBudgetMonitor::applyBudgetJSON( R"({ "_listBudget": [ { "_tag": "Texture", "_megabytes": 2 }, { "_tag": "UI", "_megabytes": 0.5 } ] })",
-                                                               profiler, error ),
-                         error );
+    SW_REQUIRE_TRUE( MemoryBudgetMonitor::applyBudgetJSON( R"({ "_listBudget": [ { "_tag": "Texture", "_megabytes": 2 }, { "_tag": "UI", "_megabytes": 0.5 } ] })", profiler )
+                         .has_value() );
     SW_EXPECT_EQUAL( uint64{ 2 * 1024 * 1024 }, profiler.getBudget( MemoryTag::Texture ) );
     SW_EXPECT_EQUAL( uint64{ 512 * 1024 }, profiler.getBudget( MemoryTag::UI ) );
     SW_EXPECT_EQUAL( uint64{ 0 }, profiler.getBudget( MemoryTag::Physics ) );
@@ -44,9 +42,8 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, RejectsMalformedBudgetsWithoutApplyingAny
     };
     for ( const utf8* pJSON : arrBadJSON )
     {
-        string error;
-        SW_EXPECT_FALSE_MSG( MemoryBudgetMonitor::applyBudgetJSON( pJSON, profiler, error ), pJSON );
-        SW_EXPECT_FALSE_MSG( error.empty(), pJSON );
+        const expected<void> applied = MemoryBudgetMonitor::applyBudgetJSON( pJSON, profiler );
+        SW_EXPECT_FALSE_MSG( applied.has_value(), pJSON );
         SW_EXPECT_EQUAL( uint64{ 777 }, profiler.getBudget( MemoryTag::Mesh ) );
     }
 }
@@ -59,9 +56,7 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, RejectsUnknownKey )
     SW_EXPECT_LOG( "Config.KeyUnknown" );
     MemoryProfiler profiler;
     profiler.setBudget( MemoryTag::Mesh, 777 );
-    string error;
-    SW_EXPECT_FALSE( MemoryBudgetMonitor::applyBudgetJSON( R"({ "_listBudget": [ { "_tag": "Texture", "_megabytes": 1, "_limit": 2 } ] })", profiler, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( MemoryBudgetMonitor::applyBudgetJSON( R"({ "_listBudget": [ { "_tag": "Texture", "_megabytes": 1, "_limit": 2 } ] })", profiler ).has_value() );
     SW_EXPECT_EQUAL( uint64{ 777 }, profiler.getBudget( MemoryTag::Mesh ) );
 }
 
@@ -75,7 +70,6 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, RepositoryBudgetFileIsValid )
     SW_REQUIRE_TRUE_MSG( FileUtil::readTextFile( path, text ), path );
 
     MemoryProfiler profiler;
-    string         error;
-    SW_EXPECT_TRUE_MSG( MemoryBudgetMonitor::applyBudgetJSON( text, profiler, error ), error );
+    SW_EXPECT_TRUE( MemoryBudgetMonitor::applyBudgetJSON( text, profiler ).has_value() );
     SW_EXPECT_TRUE( profiler.getBudget( MemoryTag::Texture ) > 0 );
 }

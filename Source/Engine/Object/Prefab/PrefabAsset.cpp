@@ -481,16 +481,18 @@ namespace sw
                     string                              sourceState;
                     string                              baseNodeState;
                     string                              nodeState;
-                    string                              error;
+                    expected<void>                      overrides{};
                     PrefabPartOverride                  part{ to_string( static_cast<uint64>( index ) ), {} };
                     vector<PrefabPartOverride>          listDeepPart;
                     const bool                          bMade = pSource != nullptr && PrefabOverrides::makeBaseState( *pSource, sourceState ) &&
                                        PrefabOverrides::makeInstanceState( sourceState, baseNode._overrideXML, node._name, baseNodeState ) &&
                                        PrefabOverrides::makeInstanceState( sourceState, node._overrideXML, node._name, nodeState ) &&
-                                       PrefabOverrides::computeOverrides( nodeState, baseNodeState, part._overrideXML, error ) && PrefabOverrides::collectPartOverrides( node._overrideXML, listDeepPart );
+                                       ( overrides = PrefabOverrides::computeOverrides( nodeState, baseNodeState, part._overrideXML ) ).has_value() &&
+                                       PrefabOverrides::collectPartOverrides( node._overrideXML, listDeepPart );
                     if ( bMade == false )
                     {
-                        SW_LOG_ERROR_ID( "PrefabAsset.VariantNodeDeltaFailed", "Variant '%#': the difference of nested instance '%#' could not be made (%#)", prefabName, node._name, error );
+                        SW_LOG_ERROR_ID( "PrefabAsset.VariantNodeDeltaFailed", "Variant '%#': the difference of nested instance '%#' could not be made (%#)", prefabName, node._name,
+                                         overrides.has_value() ? string_view{} : overrides.error().detail() );
                         return false;
                     }
                     if ( part._overrideXML.empty() == false )
@@ -606,14 +608,13 @@ namespace sw
                     options._bOmitExternalParent = SW_TRUE; // 부모는 노드의 자리(부모 노드 · attach)가 적는다
                     // 부품 아래 부품(원본이 스폰하는 것)을 고친 것은 노드의 `<Part>` 로 싣는다 — 노드로 담지 않으므로 싣지 않으면 Apply 가 버린다.
                     vector<PrefabPartOverride> listDeepPart;
-                    string                     overridesError;
+                    const expected<void>       overrides = PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseState, node._overrideXML );
                     const bool                 bOverridesMade =
-                        PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseState, node._overrideXML, overridesError ) &&
-                        pPrefabs->collectPartOverrides( *pPart, *pSource, listDeepPart ) && PrefabOverrides::appendPartOverrides( node._overrideXML, listDeepPart );
+                        overrides.has_value() && pPrefabs->collectPartOverrides( *pPart, *pSource, listDeepPart ) && PrefabOverrides::appendPartOverrides( node._overrideXML, listDeepPart );
                     if ( bOverridesMade == false )
                     {
                         SW_LOG_WARNING_ID( "PrefabAsset.OverridesNestedPrefabInstance", "Overrides of nested prefab instance '%#' could not be computed (%#) - it is not written to the prefab", node._name,
-                                           overridesError.empty() ? "its nested part overrides could not be collected" : overridesError.c_str() );
+                                           overrides.has_value() ? string_view{ "its nested part overrides could not be collected" } : overrides.error().message() );
                         continue;
                     }
                     listCaptured.push_back( NestedPartEntry{ pPart, static_cast<int32>( outListNode.size() ) } );
@@ -895,13 +896,14 @@ namespace sw
             return false;
         }
         // 두 쪽 모두 같은 직렬화기로 쓴 글을 맞댄다 — 손으로 쓴 원문과 맞대면 같은 값도 글자가 달라 다른 칸으로 남는다.
-        string selfState;
-        string baseState;
-        string error;
+        string         selfState;
+        string         baseState;
+        expected<void> overrides{};
         if ( PrefabOverrides::makeBaseState( *this, selfState ) == false || PrefabOverrides::makeBaseState( base, baseState ) == false ||
-             PrefabOverrides::computeOverrides( selfState, baseState, outOverrideXML, error ) == false )
+             ( overrides = PrefabOverrides::computeOverrides( selfState, baseState, outOverrideXML ) ).has_value() == false )
         {
-            SW_LOG_ERROR_ID( "PrefabAsset.VariantDeltaFailed", "Prefab variant '%#': its differences from '%#' could not be made (%#)", _name, _basePath, error );
+            SW_LOG_ERROR_ID( "PrefabAsset.VariantDeltaFailed", "Prefab variant '%#': its differences from '%#' could not be made (%#)", _name, _basePath,
+                             overrides.has_value() ? string_view{} : overrides.error().message() );
             return false;
         }
         vector<PrefabPartOverride> listPart;
@@ -1768,10 +1770,10 @@ namespace sw
             if ( baseIt == mapBaseState.end() )
                 continue; // 프리팹이 더는 스폰하지 않는 부품 — 다음 로드에 다시 생기지 않는다
             PrefabPartOverride part{ partPath, {} };
-            string             overridesError;
-            if ( PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseIt->second, part._overrideXML, overridesError ) == false )
+            if ( const expected<void> overrides = PrefabOverrides::computeOverrides( ObjectStateSerializer::saveToXMLString( pPart, options ), baseIt->second, part._overrideXML );
+                 overrides.has_value() == false )
             {
-                SW_LOG_WARNING_ID( "PrefabAsset.NestedPartOverridesCould", "Nested part '%#' overrides could not be computed: %#", partPath.c_str(), overridesError.c_str() );
+                SW_LOG_WARNING_ID( "PrefabAsset.NestedPartOverridesCould", "Nested part '%#' overrides could not be computed: %# (%#)", partPath.c_str(), overrides.error().message(), overrides.error().detail() );
                 return false;
             }
             if ( part._overrideXML.empty() == false )

@@ -110,9 +110,8 @@ namespace
             if ( sw::FileUtil::readTextFile( absolutePath, text ) == false )
                 return false;
             sw::MemoryProfiler profiler;
-            sw::string         error;
-            const bool         bApplied = sw::MemoryBudgetMonitor::applyBudgetJSON( text, profiler, error );
-            SW_EXPECT_TRUE_MSG( bApplied, error.c_str() );
+            const bool         bApplied = sw::MemoryBudgetMonitor::applyBudgetJSON( text, profiler ).has_value();
+            SW_EXPECT_TRUE_MSG( bApplied, absolutePath );
             return bApplied;
         }
 

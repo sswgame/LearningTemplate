@@ -97,10 +97,11 @@ namespace sw
                     shared_ptr<Mesh>   mesh        = bHasLoad ? listLoad[meshIndex].get() : MeshUtil::acquirePrimitive( foliageMesh._meshID );
                     if ( mesh == nullptr )
                         SW_LOG_WARNING_ID( "FoliageComponent.FoliageLayerMeshCould", "Foliage layer '%#': mesh '%#' could not be acquired - its instances are skipped", layer._name.c_str(), foliageMesh._meshID.c_str() );
-                    string sectionError;
-                    if ( mesh != nullptr && FoliageComponent::validateMeshSections( foliageMesh, *mesh, sectionError ) == false )
+                    const expected<void> sections = mesh != nullptr ? FoliageComponent::validateMeshSections( foliageMesh, *mesh ) : expected<void>{};
+                    if ( sections.has_value() == false )
                     {
-                        SW_LOG_ERROR_ID( "FoliageComponent.FoliageMeshSections", "Foliage layer '%#': mesh '%#' is not drawn - %#", layer._name.c_str(), foliageMesh._meshID.c_str(), sectionError.c_str() );
+                        SW_LOG_ERROR_ID( "FoliageComponent.FoliageMeshSections", "Foliage layer '%#': mesh '%#' is not drawn - %# (%#)", layer._name.c_str(), foliageMesh._meshID.c_str(),
+                                         sections.error().message(), sections.error().detail() );
                         mesh = nullptr;
                     }
                     outListRadius.push_back( mesh != nullptr ? computeOriginRadius( *mesh ) : 0.0f );
@@ -275,61 +276,42 @@ namespace sw
         }
     }
 
-    bool FoliageComponent::validateMeshSections( const FoliageMesh& foliageMesh, const Mesh& mesh, string& outError )
+    expected<void> FoliageComponent::validateMeshSections( const FoliageMesh& foliageMesh, const Mesh& mesh )
     {
         const vector<MeshSection>& listMeshSection = mesh.getSections();
+        utf8                       arrCount[constant::buffer::kMax64]{};
         if ( foliageMesh._listSection.empty() )
         {
             if ( listMeshSection.empty() )
-                return true;
-            StringBuilder<constant::buffer::kMax256> errorBuilder;
-            errorBuilder.appendFormat( "the mesh has %# sections - list each one with its material (_listSection)", static_cast<uint32>( listMeshSection.size() ) );
-            outError = string( errorBuilder.view() );
-            return false;
+                return {};
+            formatstring( arrCount, constant::buffer::kMax64, "%# sections", static_cast<uint32>( listMeshSection.size() ) );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the mesh has sections - list each one with its material (_listSection)", arrCount } );
         }
         if ( listMeshSection.empty() )
-        {
-            outError = "section materials are listed but the mesh has no sections - use the layer material";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "section materials are listed but the mesh has no sections - use the layer material" } );
         for ( size_t index = 0; index < foliageMesh._listSection.size(); ++index )
         {
             const FoliageSection& section = foliageMesh._listSection[index];
             if ( section._sectionName.empty() || section._materialPath.empty() )
             {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "section %# needs both a name and a material", static_cast<uint32>( index ) );
-                outError = string( errorBuilder.view() );
-                return false;
+                formatstring( arrCount, constant::buffer::kMax64, "section %#", static_cast<uint32>( index ) );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a section needs both a name and a material", arrCount } );
             }
             for ( size_t earlier = 0; earlier < index; ++earlier )
             {
                 if ( foliageMesh._listSection[earlier]._sectionName == section._sectionName )
-                {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "section '%#' is listed twice", section._sectionName.c_str() );
-                    outError = string( errorBuilder.view() );
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::AlreadyExists, "a section is listed twice", section._sectionName.c_str() } );
             }
             if ( mesh.findSectionIndex( hashed_string( section._sectionName.c_str() ) ) < 0 )
-            {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "the mesh has no section '%#'", section._sectionName.c_str() );
-                outError = string( errorBuilder.view() );
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::NotFound, "the mesh has no section of that name", section._sectionName.c_str() } );
         }
         // 이름이 모두 메시에 있고 겹치지 않으니 수가 같으면 모든 구간을 적은 것이다.
         if ( foliageMesh._listSection.size() != listMeshSection.size() )
         {
-            StringBuilder<constant::buffer::kMax256> errorBuilder;
-            errorBuilder.appendFormat( "%# of the mesh's %# sections are listed - list every section", static_cast<uint32>( foliageMesh._listSection.size() ),
-                                       static_cast<uint32>( listMeshSection.size() ) );
-            outError = string( errorBuilder.view() );
-            return false;
+            formatstring( arrCount, constant::buffer::kMax64, "%# of %# sections", static_cast<uint32>( foliageMesh._listSection.size() ), static_cast<uint32>( listMeshSection.size() ) );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not every mesh section is listed - list every section", arrCount } );
         }
-        return true;
+        return {};
     }
 
     uint32 FoliageComponent::getBatchCount() const

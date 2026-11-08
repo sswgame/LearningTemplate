@@ -53,10 +53,10 @@ namespace sw
         settings._pattern               = _pattern;
         settings._listLevelCount        = _listLevelCount;
         shared_ptr<FractureAsset> asset = make_shared<FractureAsset>();
-        string                    error;
-        if ( PolygonFractureUtil::fracture( listBorder, settings, *asset, error ) == false )
+        if ( const expected<void> fractured = PolygonFractureUtil::fracture( listBorder, settings, *asset ); fractured.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "Fracture2DComponent.DFractureFailed", "'%#': 2D fracture failed: %#", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", error.c_str() );
+            SW_LOG_ERROR_ID( "Fracture2DComponent.DFractureFailed", "'%#': 2D fracture failed: %# (%#)", getOwner() != nullptr ? getOwner()->getName().c_str() : "?", fractured.error().message(),
+                             fractured.error().detail() );
             return;
         }
         _asset2D = std::move( asset );

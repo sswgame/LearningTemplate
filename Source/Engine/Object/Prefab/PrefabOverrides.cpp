@@ -358,34 +358,21 @@ namespace sw
         return outStateXML.empty() == false;
     }
 
-    bool PrefabOverrides::computeOverrides( string_view instanceStateXML, string_view baseStateXML, string& outOverrideXML, string& outError )
+    expected<void> PrefabOverrides::computeOverrides( string_view instanceStateXML, string_view baseStateXML, string& outOverrideXML )
     {
         outOverrideXML.clear();
-        outError.clear();
         XMLDocument instanceDoc;
         XMLDocument baseDoc;
         if ( instanceDoc.parse( instanceStateXML ) == false )
-        {
-            outError = "the instance state is not XML: " + string( instanceDoc.getLastError() );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the instance state is not XML", instanceDoc.getLastError() } );
         if ( baseDoc.parse( baseStateXML ) == false )
-        {
-            outError = "the prefab base state is not XML: " + string( baseDoc.getLastError() );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the prefab base state is not XML", baseDoc.getLastError() } );
         const XMLNode instanceRoot = instanceDoc.getRoot();
         const XMLNode baseRoot     = baseDoc.getRoot();
         if ( instanceRoot.isValid() == false )
-        {
-            outError = "the instance state has no root element";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the instance state has no root element" } );
         if ( baseRoot.isValid() == false )
-        {
-            outError = "the prefab base state has no root element";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the prefab base state has no root element" } );
 
         XMLDocument outDoc;
         XMLNode     outRoot = outDoc.appendRoot( kRootName );
@@ -455,7 +442,7 @@ namespace sw
 
         if ( bAny )
             outOverrideXML = outRoot.toString();
-        return true;
+        return {};
     }
 
     bool PrefabOverrides::makeInstanceState( string_view baseStateXML, string_view overrideXML, string_view instanceName, string& outStateXML )
