@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Process/ShutdownSignal.h"
 
 #include "DevTools/Console/DevConsole.h"
 
@@ -62,6 +63,8 @@ namespace sw
      *          재생을 걸고 `step` 으로 한 틱씩 진행할 수 있다(언리얼 `-pause` · 유니티 Play Mode 의 Pause On Start 와 같은 쓰임). Shipping 에는 없다.
      */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_serverStartPaused, false, "첫 틱 전에 멈춘 채 기동 (재생 서버를 틱 0 에서 잡는다)" );
+    /** @brief `-gv_serverExitAfterTicks=N`: N 틱을 돈 뒤 스스로 정상 종료합니다(기동과 종료 테스트 · 스크립트의 서버 짝 실행). 배포 서버는 운영과 같은 종료 신호로 끝낸다. */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_serverExitAfterTicks, 0, "이 틱 수를 돈 뒤 정상 종료 (0=끄기)" );
 } // namespace sw
 
 namespace sw
@@ -190,8 +193,11 @@ namespace sw
 
     void ServerDebugControl::onTickFinished()
     {
+        const uint64 tickCount = _tickCount();
         if ( _bPaused && _pendingStepCount > 0 && --_pendingStepCount == 0 )
-            SW_LOG_INFO_ID( "Server.ServerSteppedTickPaused", "Server stepped to tick %# (paused)", _tickCount() );
+            SW_LOG_INFO_ID( "Server.ServerSteppedTickPaused", "Server stepped to tick %# (paused)", tickCount );
+        if ( gv_serverExitAfterTicks > 0 && tickCount >= static_cast<uint64>( gv_serverExitAfterTicks ) )
+            ShutdownSignal::request( ShutdownCause::TickLimit );
     }
 
     bool ServerDebugControl::executePauseCommand( string_view command )

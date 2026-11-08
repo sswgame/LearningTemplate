@@ -6,7 +6,6 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Log/Sink/ConsoleLogOutput.h"
 #include "Core/Memory/Memory.h"
@@ -45,12 +44,6 @@
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
-
-namespace sw
-{
-    /** @brief `-gv_serverExitAfterTicks=N`: N 틱을 돈 뒤 스스로 정상 종료합니다(기동과 종료 테스트용). Shipping 에도 등록하며, 배포 서버 산출물을 같은 테스트가 실행합니다. */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_serverExitAfterTicks, 0, "이 틱 수를 돈 뒤 정상 종료 (0=끄기)" );
-} // namespace sw
 
 namespace sw
 {
@@ -508,9 +501,7 @@ namespace sw
                     pNetSession->sendServerTick( _tickCount );
             }
             if ( _pDebugControl != nullptr )
-                _pDebugControl->onTickFinished();
-            if ( gv_serverExitAfterTicks > 0 && _tickCount >= static_cast<uint64>( gv_serverExitAfterTicks ) )
-                ShutdownSignal::request( ShutdownCause::TickLimit );
+                _pDebugControl->onTickFinished(); // 틱 상한 종료(`-gv_serverExitAfterTicks`)도 개발 조종이 건다
 
             deadline += _tickNanoseconds;
             const int64 now = MonotonicClock::nowNanoseconds();

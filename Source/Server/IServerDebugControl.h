@@ -1,6 +1,6 @@
 /**
  * @file IServerDebugControl.h
- * @brief 전용 서버의 개발 조종 — 개발 콘솔(표준 입력의 개발 명령 · gv_*), 디버그 채널(루프백 · 토큰, 개발 명령 원격 실행 S3), 일시정지 · 한 걸음(`pause` · `resume` · `step [N]`).
+ * @brief 전용 서버의 개발 조종 — 개발 콘솔(표준 입력의 개발 명령 · gv_*), 디버그 채널(루프백 · 토큰, 개발 명령 원격 실행 S3), 일시정지 · 한 걸음(`pause` · `resume` · `step [N]`), 틱 상한 종료.
  * @details `ServerApp` 이 호스트 서비스 `DevConsole` · `DebugChannel` 로 세우고 내리는 협력 객체다(관리 채널 `ServerAdminChannel` 과 같은 자리 — 언리얼 전용 서버의
  *          `-pause` · 원격 콘솔과 같은 쓰임). 지금 틱 번호는 세울 때 받은 델리게이트로 묻는다 — 서버 루프를 모른다.
  *          개발 구성에만 있다 — 구현(`Dev/ServerDebugControl.cpp`, 개발 콘솔 DevTools 를 쓴다)은 배포가 짓지 않고, `ServerApp` 은 `makeServerDebugControl` 로
@@ -42,7 +42,7 @@ namespace sw
         /** @brief 게임 틱을 돌지 않고 기다려야 하면 true 입니다(멈췄고 남은 `step` 이 없다). */
         virtual bool isHoldingTick() const = 0;
         virtual bool isPaused() const      = 0;
-        /** @brief 틱 하나를 끝냈습니다. 멈춘 채 `step` 으로 돈 틱이면 남은 수를 줄이고, 다 돌았으면 알립니다. */
+        /** @brief 틱 하나를 끝냈습니다. 멈춘 채 `step` 으로 돈 틱이면 남은 수를 줄이고, 다 돌았으면 알립니다. 틱 상한(`-gv_serverExitAfterTicks`)에 닿았으면 종료를 요청합니다. */
         virtual void onTickFinished() = 0;
     };
 
