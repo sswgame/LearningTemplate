@@ -455,9 +455,10 @@ namespace sw
             for ( const TComponentHandle<SkeletalMeshComponent> handle : listSkeletalMesh[skeletalMeshIndex]->getAnimationDependencies() )
             {
                 const SkeletalMeshComponent* pUpstream     = ( _pManager != nullptr ) ? _pManager->resolveComponent( handle ) : nullptr;
-                const uint32                 upstreamIndex = _skeletalMeshList.findIndex( pUpstream );
-                if ( upstreamIndex == constant::invalid_index::kUint32 )
+                const optional<uint32>       foundUpstream = _skeletalMeshList.findIndex( pUpstream );
+                if ( foundUpstream.has_value() == false )
                     continue; // 사라졌거나 다른 씬의 유닛 — 순서를 강제하지 않는다
+                const uint32 upstreamIndex = *foundUpstream;
                 _listScratchEdge.push_back( AnimationDependencyEdge{ upstreamIndex, static_cast<uint32>( skeletalMeshIndex ) } );
                 ++_listScratchPendingCount[skeletalMeshIndex];
                 ++_listScratchDependentStart[upstreamIndex + 1];
