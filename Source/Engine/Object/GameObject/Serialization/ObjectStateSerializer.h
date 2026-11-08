@@ -241,6 +241,15 @@ namespace sw
          *         두 번째 호출은 첫 호출의 결과를 그대로 돌려줍니다.
          */
         [[nodiscard]] bool finish();
+        /**
+         * @brief 기록한 오브젝트를 연결하지 않고 버립니다. 부르는 쪽이 그 오브젝트들을 지울 때(중간에 멈춘 비동기 씬 로드 — `Scene::instantiateNodes`) 부릅니다.
+         * @details 소멸자의 "finish 를 빠뜨렸다" 단언은 이것을 부르지 않고 놓친 길만 잡는다 — 멈춤은 의도한 길이라 단언이 아니다.
+         */
+        void abandon()
+        {
+            _bFinished           = SW_TRUE;
+            _bReferencesResolved = SW_FALSE;
+        }
 
         /** @brief 저장된 id 로 이 배치의 오브젝트를 찾습니다. 없으면 nullptr 입니다. */
         GameObject* findBySavedID( uint64 savedID ) const;

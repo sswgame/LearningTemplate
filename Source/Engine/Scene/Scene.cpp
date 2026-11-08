@@ -685,7 +685,10 @@ namespace sw
         {
             // 종료 신호(`SceneManager::requestAsyncLoadStop`) — 중간에 멈추면 false 다. 이미 지은 오브젝트는 부른 쪽이 씬을 버리며 정리한다(비동기 로드 잡이 신호를 다시 읽고 씬을 소멸시킨다).
             if ( stopToken.isStopRequested() )
+            {
+                batch.abandon();
                 return false;
+            }
             SW_LOG_TRACE_ID( "Scene.SpawningEntityPrefab", "Spawning entity '%#' prefab '%#'", entity._name, entity._prefab );
             string      prefabInstanceState; // 프리팹 원형에 덮어쓴 값을 얹어 만든 상태(프리팹 엔티티만)
             GameObject* pGo = SceneInternal::createEntityObject( *_objectManager, _services._pAssetManager, mapPrefabBaseState, entity, build != NodeBuild::Cell, _listUnresolvedEntity, prefabInstanceState );
