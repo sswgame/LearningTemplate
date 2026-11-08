@@ -46,13 +46,13 @@ namespace sw
          * @details **몇 프레임 늦은 값입니다.** 기다려서 최신 값을 받으면 측정하려던 파이프라인을 멈춰 세워 측정값이 거짓이 됩니다.
          *          타임스탬프 능력이 없는 디바이스(테스트 목)는 아무것도 하지 않습니다. Shipping 에서는 본문이 없습니다.
          */
-        void readAndReport( IRHIDevice* pDevice, const vector<RenderGraphPassDesc>& listPass );
+        void readAndReport( IRHIDevice* pDevice, const vector<RenderGraphPassDesc>& listPass, const vector<RenderGraphPassDesc>& listFramePass );
         /**
-         * @brief 이미 읽은 타임스탬프 한 프레임을 프로파일러의 `GPU.<패스>`, `GPU.Compute`, `GPU.Frame` 구간으로 넣습니다. GPU 없이 부를 수 있습니다.
+         * @brief 이미 읽은 타임스탬프 한 프레임을 프로파일러의 `GPU.<패스>` · `GPU.<프레임 패스>`, `GPU.Compute`, `GPU.Frame` 구간으로 넣습니다. GPU 없이 부를 수 있습니다.
          * @details 음수 슬롯은 그 프레임에 기록되지 않았다는 표시입니다(패스를 건너뛰었거나 첫 사이클). 한쪽만 음수여도 구간이 성립하지 않습니다.
          *          `GPU.Frame` 은 프레임의 첫 명령부터 마지막 패스 끝까지이고, 패스 합과의 차이가 프레임 그래프, 업로드, 배리어입니다.
          */
-        void reportFrame( const RHITimestampFrame& frame, const vector<RenderGraphPassDesc>& listPass );
+        void reportFrame( const RHITimestampFrame& frame, const vector<RenderGraphPassDesc>& listPass, const vector<RenderGraphPassDesc>& listFramePass );
         /** @brief 디바이스를 잊습니다. 다음 디바이스(백엔드 교체)는 새 GPU 컨텍스트를 엽니다. 같은 주소에 새 디바이스가 생겨도 옛 시계 기준을 쓰지 않습니다. */
         void clearDevice();
 
@@ -67,6 +67,8 @@ namespace sw
          * @details 파이프라인을 다시 읽어 패스 구성이 바뀌어도 이름 비교로 알아챈다(슬롯마다 문자열 비교 한 번).
          */
         uint32 getOrCreateScopeSlot( size_t passIndex, const string& passName );
+        /** @brief 프레임 패스 @p framePassIndex 의 `GPU.<프레임 패스>` 프로파일러 슬롯입니다(`getOrCreateScopeSlot` 과 같은 규칙, 따로 둔 목록). Tracy 지점은 만들지 않는다. */
+        uint32 getOrCreateFrameScopeSlot( size_t framePassIndex, const string& passName );
 
     private:
         /** @brief 패스 하나의 GPU 스코프입니다. 그 슬롯을 만든 패스 이름, 프로파일러 슬롯, 외부 프로파일러 지점을 담습니다. */
@@ -88,6 +90,8 @@ namespace sw
          *          들어가는 것)의 포인터가 옮겨진 뒤의 빈 공간을 가리킵니다.
          */
         vector<PassScope> _listPassScope;
+        /// @brief 프레임 패스 번호에서 GPU 스코프 슬롯을 찾는 목록입니다(`_listPassScope` 와 같은 규칙). 뷰 패스와 이름이 겹치지 않는다(로드 검증).
+        vector<PassScope> _listFramePassScope;
         /// @brief 외부 프로파일러(Tracy)의 GPU 타임라인입니다. 엔진 테이블과 같은 타임스탬프를 쓰므로 쿼리는 한 벌만 있습니다.
         GPUTimelineExporter _exporter;
         /// @brief 패스 번호에서 Tracy 지점을 찾는 목록입니다. `_listPassScope` 에서 프레임마다 채우며, 할당을 반복하지 않도록 보관합니다.

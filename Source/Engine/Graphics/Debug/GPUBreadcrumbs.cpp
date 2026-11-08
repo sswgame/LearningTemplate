@@ -196,8 +196,14 @@ namespace sw
     }
 
     GPUPassScope::GPUPassScope( IRHICommandList& commands, string_view passName )
+        : GPUPassScope( commands, passName, kNoTimestamp )
+    {
+    }
+
+    GPUPassScope::GPUPassScope( IRHICommandList& commands, string_view passName, uint32 timestampBeginSlot )
         : _commands{ commands }
         , _breadcrumbID{ 0 }
+        , _timestampBeginSlot{ kNoTimestamp }
         , _bEventOpen{ SW_FALSE }
     {
         if ( passName.empty() )
@@ -209,11 +215,16 @@ namespace sw
         Memory::copy( arrName, passName.data(), copyLength );
         arrName[copyLength] = '\0';
         _commands.beginEventMarker( arrName );
-        _bEventOpen = SW_TRUE;
+        _bEventOpen         = SW_TRUE;
+        _timestampBeginSlot = timestampBeginSlot;
+        if ( _timestampBeginSlot != kNoTimestamp )
+            _commands.writeTimestamp( _timestampBeginSlot );
     }
 
     GPUPassScope::~GPUPassScope()
     {
+        if ( _timestampBeginSlot != kNoTimestamp )
+            _commands.writeTimestamp( _timestampBeginSlot + 1u );
         if ( _bEventOpen == SW_TRUE )
             _commands.endEventMarker();
         GPUBreadcrumbs::endPass( _commands, _breadcrumbID );

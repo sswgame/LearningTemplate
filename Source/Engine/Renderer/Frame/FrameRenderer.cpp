@@ -520,7 +520,7 @@ namespace sw
         _lastPendingPSOBatchCount  = _passExecutor.getPendingPSOBatchCount();
         // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
         if ( _host._pProfiler != nullptr )
-            _state._gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass() );
+            _state._gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass(), _pipelineResource.getFramePass() );
         return bOk;
     }
 

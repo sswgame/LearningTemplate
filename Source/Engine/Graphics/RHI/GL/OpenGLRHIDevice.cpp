@@ -968,7 +968,7 @@ namespace sw
 
         // glQueryCounter 는 Begin/End 쌍이 아니다. 한 번 부르면 "여기까지 GPU 가 끝낸 시각" 이 찍힌다.
         glQueryCounter( _arrTimestampQuery[_timestampFrameIndex * constant::render::kMaxGPUTimestampSlot + slotIndex], GL_TIMESTAMP );
-        _arrTimestampMask[_timestampFrameIndex] |= makeGPUTimestampSlotBit( slotIndex );
+        _arrTimestampMask[_timestampFrameIndex].set( slotIndex );
     }
 
     void OpenGLRHIDevice::ensureTimestampQueries()
@@ -992,16 +992,16 @@ namespace sw
     {
         _timestampFrame._listMicro.clear();
         const GPUTimestampSlotMask writtenMask         = _arrTimestampMask[_timestampFrameIndex];
-        const bool                 bNoTimestampsToRead = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || writtenMask == 0;
+        const bool                 bNoTimestampsToRead = _bTimestampEnabled.load( std::memory_order_relaxed ) == SW_FALSE || _bTimestampReady.load( std::memory_order_acquire ) == SW_FALSE || writtenMask.any() == false;
         if ( bNoTimestampsToRead )
             return;
 
         const uint32         base = _timestampFrameIndex * constant::render::kMaxGPUTimestampSlot;
         uint64               arrTick[constant::render::kMaxGPUTimestampSlot]{};
-        GPUTimestampSlotMask readyMask{ 0 };
+        GPUTimestampSlotMask readyMask{};
         for ( uint32 slotIndex = 0; slotIndex < constant::render::kMaxGPUTimestampSlot; ++slotIndex )
         {
-            if ( ( writtenMask & makeGPUTimestampSlotBit( slotIndex ) ) == 0 )
+            if ( writtenMask.test( slotIndex ) == false )
                 continue;
 
             // **가용 여부부터 묻는다.** 바로 결과를 읽으면 GL 이 그 자리에서 GPU 를 기다려,
@@ -1014,7 +1014,7 @@ namespace sw
             GLuint64 tick{ 0 };
             glGetQueryObjectui64v( _arrTimestampQuery[base + slotIndex], GL_QUERY_RESULT, &tick );
             arrTick[slotIndex] = tick;
-            readyMask |= makeGPUTimestampSlotBit( slotIndex );
+            readyMask.set( slotIndex );
         }
         // GL 타임스탬프는 나노초다.
         RHITimestampFrame::resolve( arrTick, readyMask, 1.0, _timestampFrame );
@@ -1074,7 +1074,7 @@ namespace sw
         // 이 슬롯은 곧 다시 쓴다. 덮어쓰기 전에 지난 바퀴의 결과를 한 번만 묻는다.
         ensureTimestampQueries();
         collectTimestampsForSlot();
-        _arrTimestampMask[_timestampFrameIndex] = 0;
+        _arrTimestampMask[_timestampFrameIndex] = GPUTimestampSlotMask{};
     }
 
     void OpenGLRHIDevice::endFrameInternal( bool vsync, bool bPresent )

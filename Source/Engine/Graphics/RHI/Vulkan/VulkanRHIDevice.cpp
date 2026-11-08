@@ -2110,13 +2110,13 @@ namespace sw
 
         // 가용 비트가 선 칸만 준비된 것이다. 값과 비트를 갈라 공통 규칙에 넘긴다.
         uint64               arrTick[constant::render::kMaxGPUTimestampSlot]{};
-        GPUTimestampSlotMask readyMask{ 0 };
+        GPUTimestampSlotMask readyMask{};
         for ( uint32 index = 0; index < constant::render::kMaxGPUTimestampSlot; ++index )
         {
             if ( arrResult[index * 2 + 1] == 0 )
                 continue;
             arrTick[index] = arrResult[index * 2];
-            readyMask |= makeGPUTimestampSlotBit( index );
+            readyMask.set( index );
         }
         RHITimestampFrame::resolve( arrTick, readyMask, static_cast<float64>( _timestampPeriod ), _timestampFrame );
     }

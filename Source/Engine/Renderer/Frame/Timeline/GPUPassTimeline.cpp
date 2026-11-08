@@ -16,6 +16,7 @@ namespace sw
     GPUPassTimeline::GPUPassTimeline()
         : _frame{}
         , _listPassScope{}
+        , _listFramePassScope{}
         , _exporter{}
         , _listPassSite{}
         , _pProfiler{ nullptr }
@@ -34,6 +35,10 @@ namespace sw
         _computeScopeSlot = FrameProfiler::kInvalidSlot;
         _frameScopeSlot   = FrameProfiler::kInvalidSlot;
         for ( PassScope& scope : _listPassScope )
+        {
+            scope._profilerSlot = FrameProfiler::kInvalidSlot;
+        }
+        for ( PassScope& scope : _listFramePassScope )
         {
             scope._profilerSlot = FrameProfiler::kInvalidSlot;
         }
@@ -65,7 +70,23 @@ namespace sw
         return scope._profilerSlot;
     }
 
-    void GPUPassTimeline::readAndReport( [[maybe_unused]] IRHIDevice* pDevice, [[maybe_unused]] const vector<RenderGraphPassDesc>& listPass )
+    uint32 GPUPassTimeline::getOrCreateFrameScopeSlot( size_t framePassIndex, const string& passName )
+    {
+        if ( framePassIndex >= _listFramePassScope.size() )
+            _listFramePassScope.resize( framePassIndex + 1 );
+        PassScope& scope = _listFramePassScope[framePassIndex];
+        if ( scope._profilerSlot != FrameProfiler::kInvalidSlot && scope._passName == passName )
+            return scope._profilerSlot;
+        // 이름 포인터를 프로파일러가 쥐므로 intern 아레나에 둔다(getOrCreateScopeSlot 과 같다).
+        const string        scopeText = string( "GPU." ) + passName;
+        const hashed_string scopeName{ string_view( scopeText ) };
+        scope._passName     = passName;
+        scope._profilerSlot = _pProfiler->registerScope( scopeName.c_str() );
+        return scope._profilerSlot;
+    }
+
+    void GPUPassTimeline::readAndReport( [[maybe_unused]] IRHIDevice* pDevice, [[maybe_unused]] const vector<RenderGraphPassDesc>& listPass,
+                                         [[maybe_unused]] const vector<RenderGraphPassDesc>& listFramePass )
     {
 #if SW_PROFILE_COMPILED
         // 타임스탬프 능력이 없는 디바이스(테스트 목)는 측정할 것이 없다.
@@ -81,14 +102,14 @@ namespace sw
         if ( pTimestamps->readTimestamps( _frame ) == false )
             return;
 
-        reportFrame( _frame, listPass );
+        reportFrame( _frame, listPass, listFramePass );
 
         // 같은 값을 Tracy GPU 타임라인으로도 내보낸다. 쿼리를 따로 만들지 않는다.
         exportToExternalTimeline( pDevice );
 #endif
     }
 
-    void GPUPassTimeline::reportFrame( const RHITimestampFrame& frame, const vector<RenderGraphPassDesc>& listPass )
+    void GPUPassTimeline::reportFrame( const RHITimestampFrame& frame, const vector<RenderGraphPassDesc>& listPass, const vector<RenderGraphPassDesc>& listFramePass )
     {
         if ( _pProfiler == nullptr )
             return;
@@ -120,6 +141,14 @@ namespace sw
             const float32 endMicro  = reportSpan( getOrCreateScopeSlot( passIndex, listPass[passIndex]._name ), beginSlot, beginSlot + 1 );
             if ( endMicro > lastEndMicro )
                 lastEndMicro = endMicro;
+        }
+        // 프레임 패스(컬링 · 그리드 · 스킨 …)는 프레임 그래프 안이라 `GPU.Compute` 구간의 안쪽 조각이다 — 마지막 패스 끝(GPU.Frame)에는 넣지 않는다.
+        for ( size_t framePassIndex = 0; framePassIndex < listFramePass.size(); ++framePassIndex )
+        {
+            const uint32 beginSlot = FrameRendererUtil::findFramePassTimestampSlot( framePassIndex );
+            if ( beginSlot == constant::invalid_index::kUint32 )
+                break;
+            std::ignore = reportSpan( getOrCreateFrameScopeSlot( framePassIndex, listFramePass[framePassIndex]._name ), beginSlot, beginSlot + 1u );
         }
 
         // 패스 밖의 GPU 시간. `GPU.Frame` 은 프레임의 첫 명령부터 마지막 패스 끝까지다. 패스 합과의
