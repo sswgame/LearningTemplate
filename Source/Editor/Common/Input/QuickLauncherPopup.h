@@ -50,6 +50,8 @@ namespace sw::editor
         bool drawResults( const vector<const EditorSearchItem*>& listFiltered, bool bIndexOutstanding );
         /** @brief 목록이 오기 전에 누른 Enter 를 기억했다가 목록이 오면 실행으로 바꿉니다. @p bExecute 에 이번 프레임의 실행 요청을 받아 최종 값을 반환합니다. */
         [[nodiscard]] bool resolvePendingExecute( int32 filteredCount, bool bIndexOutstanding, bool bExecute );
+        /** @brief 후보 전체의 가장 넓은 종류 표시 폭입니다. 목록이나 글꼴 크기가 바뀔 때만 다시 잰다. */
+        float32 getWidestBadgeWidth();
 
     private:
         vector<EditorSearchItem>                _listItem;     ///< 씬 오브젝트(열 때) · 에셋(색인이 오면 붙는다)
@@ -57,6 +59,8 @@ namespace sw::editor
         EditorAssetIndexJob                     _fileIndexJob;
         fixed_string<constant::buffer::kMax128> _searchBuffer;
         int32                                   _selectedIndex;
+        float32                                 _widestBadgeWidth;        ///< 후보 전체(`_listItem` · `_listTailItem`)의 가장 넓은 배지 폭
+        float32                                 _badgeFontSize;           ///< `_widestBadgeWidth` 를 잰 글꼴 크기 — 0 이면 다시 잰다
         bool                                    _bJustOpened;             ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
         uint8                                   _bExecuteWhenIndexed : 1; ///< 파일 목록이 오기 전에 Enter 를 눌렀다 — 목록이 오면 첫 줄을 연다
     };
