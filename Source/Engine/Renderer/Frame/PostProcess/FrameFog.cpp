@@ -13,8 +13,12 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Environment/Fog/FogSettings.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -34,11 +38,8 @@ namespace sw
             /// 비교 보기의 경계(화면 uv.x)입니다 — 화면 반이다(언리얼 분할 비교와 같이 가운데).
             static constexpr float32 kCompareSplit = 0.5f;
             /// 주 렌더러의 마지막 볼륨 상태입니다. 렌더 스레드 하나가 쓰고(`publishMainVolumeState`) 게임 스레드가 읽는다 — 값 하나라 원자 변수로 둔다.
-            static std::atomic<uint8>& lastMainVolumeState()
-            {
-                static std::atomic<uint8> s_state{ static_cast<uint8>( FogVolumeState::NoFog ) };
-                return s_state;
-            }
+            /** @brief 상태입니다 — 엔진 범위의 `FrameFogVolumeStatus` 가 든다. */
+            static std::atomic<uint8>& lastMainVolumeState();
 
             /// 볼륨 안개 컴퓨트 입력의 행 번호입니다(volumetric_fog.hlsl 의 kRow* 와 같은 순서).
             static constexpr uint32 kRowInverseViewProj = 0;
@@ -71,6 +72,38 @@ namespace sw
             }
         };
     } // namespace
+
+    /**
+     * @class FrameFogVolumeStatus
+     * @brief 주 렌더러의 마지막 볼륨 안개 상태(렌더 스레드가 쓰고 게임 스레드가 읽는다) — 예전 함수 정적(감춘 싱글턴)을 엔진 범위 서브시스템이 든다. 엔진을 다시 세우면 새로 선다.
+     */
+    class FrameFogVolumeStatus final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "FrameFogVolumeStatus";
+
+        FrameFogVolumeStatus()
+            : _state{ static_cast<uint8>( FogVolumeState::NoFog ) }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+        /** @brief 든 상태입니다. */
+        std::atomic<uint8>& getState() { return _state; }
+
+    private:
+        std::atomic<uint8> _state;
+    };
+
+    SW_SERVICE_SLOT( FrameFogVolumeStatus, Required );
+
+    std::atomic<uint8>& FrameFogInternal::lastMainVolumeState()
+    {
+        return engine::getSubsystem<FrameFogVolumeStatus>().getState();
+    }
 
     FrameFog::FrameFog( IRHIDevice* const& pDevice, const FramePSOManager& psoManager )
         : _pDevice{ pDevice }
@@ -231,4 +264,9 @@ namespace sw
         // 안개 패스(그래프)가 t11 로 읽는다. 쓰기가 끝났음을 알린다.
         cmd.transitionBuffer( _fogVolumeBuffer._buffer, RHIBufferState::ShaderResource );
     }
+} // namespace sw
+
+namespace sw
+{
+    SW_ENGINE_SERVICE_SUBSYSTEM( FrameFogVolumeStatus, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( FrameFogVolumeStatus ) );
 } // namespace sw

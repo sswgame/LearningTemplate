@@ -5,8 +5,12 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Physics/Component/PhysicsNameValidation.h"
@@ -89,12 +93,8 @@ namespace sw
     {
         struct CharacterControllerHistoryInternal
         {
-            /** @brief 모든 캐릭터의 스텝 기록 스위치입니다(물리 워커가 읽는다). */
-            static atomic<bool>& getEnabled()
-            {
-                static atomic<bool> s_bEnabled{ false };
-                return s_bEnabled;
-            }
+            /** @brief 상태입니다 — 엔진 범위의 `CharacterStepHistorySwitch` 가 든다. */
+            static atomic<bool>& getEnabled();
 
             /** @brief `movement.history on|off` — 캐릭터 이동 디버거(HUD 섹션 `movement`)의 스텝 기록. */
             static bool runHistory( const vector<string>& listArgument, string& outReply )
@@ -108,6 +108,38 @@ namespace sw
             }
         };
     } // namespace
+
+    /**
+     * @class CharacterStepHistorySwitch
+     * @brief 모든 캐릭터의 스텝 기록 스위치(물리 워커가 읽는다) — 예전 함수 정적(감춘 싱글턴)을 엔진 범위 서브시스템이 든다. 엔진을 다시 세우면 새로 선다.
+     */
+    class CharacterStepHistorySwitch final : public ISubsystem
+    {
+    public:
+        static constexpr const utf8* kSubsystemName = "CharacterStepHistorySwitch";
+
+        CharacterStepHistorySwitch()
+            : _state{ false }
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+        /** @brief 든 상태입니다. */
+        atomic<bool>& getState() { return _state; }
+
+    private:
+        atomic<bool> _state;
+    };
+
+    SW_SERVICE_SLOT( CharacterStepHistorySwitch, Required );
+
+    atomic<bool>& CharacterControllerHistoryInternal::getEnabled()
+    {
+        return engine::getSubsystem<CharacterStepHistorySwitch>().getState();
+    }
 
     void CharacterControllerComponent::setStepHistoryEnabled( bool bEnabled )
     {
@@ -402,4 +434,9 @@ namespace sw
     }
     SW_DEV_COMMAND( MovementHistory, "movement.history", "movement.history on|off",
                     "Record the last character controller steps (request, result) for the movement debugger (hud.print movement)", &CharacterControllerHistoryInternal::runHistory );
+} // namespace sw
+
+namespace sw
+{
+    SW_ENGINE_SERVICE_SUBSYSTEM( CharacterStepHistorySwitch, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( CharacterStepHistorySwitch ) );
 } // namespace sw

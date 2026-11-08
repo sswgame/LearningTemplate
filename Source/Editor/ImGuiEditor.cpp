@@ -464,6 +464,7 @@ namespace sw::editor
         , _renderer{ nullptr }
         , _editorToolDefaults{ nullptr }
         , _pIconGlyphTable{ nullptr }
+        , _fontSetup{}
         , _pComponentIconTable{ nullptr }
         , _editorContext{ nullptr }
         , _dockLayout{}
@@ -572,7 +573,7 @@ namespace sw::editor
         _dockLayout.applyINIFilename();
 
         // 글꼴은 데이터(editortooldefaults.json 후보 · 테마 글자 크기)에서 온다. 못 찾으면 이유를 남겼고 기동을 멈춘다.
-        if ( EditorFontSetup::apply( *_editorToolDefaults, *_pIconGlyphTable ) == false )
+        if ( _fontSetup.apply( *_editorToolDefaults, *_pIconGlyphTable ) == false )
         {
             shutdownImGuiContext();
             return SubsystemInitResult::Failed;
