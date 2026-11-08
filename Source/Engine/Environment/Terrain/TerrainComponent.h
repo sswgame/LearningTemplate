@@ -14,6 +14,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
+#include "Engine/Environment/Terrain/TerrainLayerRule.h"
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -30,7 +31,11 @@ namespace sw
     class PrimitiveRegistry;
     class ValidationContext;
 
-    /** @brief 지형 레이어 하나(풀, 흙, 바위, 모래 등)입니다. 스플랫 맵의 한 채널이며 최대 넷입니다. */
+    /**
+     * @brief 지형 레이어 하나(풀, 흙, 진흙, 바위, 모래, 눈 등)입니다. 스플랫 맵의 한 채널이며 최대 여덟입니다.
+     * @details 언리얼 랜드스케이프 레이어(Layer Info + 레이어 블렌드 노드의 한 줄)와 같은 자리다. 표면 값(색 · 거칠기 · 다공성 · 늘 젖음 · 반짝이)과 자동 규칙(`_rule`)을
+     *          데이터로 두고 셰이더(`terrain.hlsl`)는 하나다 — 레이어를 더해도 셰이더 · 순열이 늘지 않는다.
+     */
     REFLECT()
     struct SW_API TerrainLayer
     {
@@ -44,6 +49,16 @@ namespace sw
         float32 _detailStrength{ 0.5f };
         PROPERTY( Tooltip = "Project the detail texture from three axes (cliffs do not stretch)" )
         bool _bTriplanar{ false };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Surface roughness of this layer (wet mud 0.5, grass 0.9, dry dirt 1)" )
+        float32 _roughness{ 1.0f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "How much rain darkens this layer (soil 1, rock 0.3, ice 0)" )
+        float32 _porosity{ 1.0f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Wetness this layer always has regardless of weather; puddles form on flat wet ground (mud 0.8)" )
+        float32 _wetness{ 0.0f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Fraction of tiny mirror cells that glint in the sun (snow, ice, mica sand)" )
+        float32 _sparkle{ 0.0f };
+        PROPERTY( Tooltip = "Auto rule: slope and height band that override the painted weights toward this layer (strength 0 = off)" )
+        TerrainLayerRule _rule{};
         /**
          * @brief 이 레이어가 뜻하는 물리 재질 이름입니다(언리얼 랜드스케이프 레이어의 Physical Material). 표면 질의(`SurfaceSample`)가 가장 무거운 레이어의 이 이름으로
          *        표면 종류(발소리 · 이동 계수 · 발자국)를 고른다. 비면 지형 콜라이더의 재질이 그대로 표면이다 — 레이어가 뜻을 적지 않았다는 선언이다.
@@ -268,6 +283,8 @@ namespace sw
         void fillNeighborLODs( uint32 chunkX, uint32 chunkZ, const vector<uint32>& listLOD, uint32 ( &outArrLOD )[4] ) const;
         /** @brief 머티리얼을 만들고 인스턴스에 레이어와 텍스처 값을 싣습니다. 엔진 서비스가 없으면(CPU 테스트) 건너뜁니다. */
         void acquireMaterial();
+        /** @brief 레이어 자동 규칙(`TerrainLayer::_rule`)을 레이어 순서로 높이장에 넘깁니다 — CPU 질의가 셰이더와 같은 규칙을 본다. */
+        void applyLayerRules();
         /**
          * @brief 가중치 에셋(`.layerweights`)을 읽어 높이장에 주고, 엔진 서비스가 있으면 그 바이트로 자기 스플랫 텍스처를 만듭니다.
          * @return 경로가 비었거나 읽었으면 true 입니다. 정한 가중치를 읽지 못하면 오류를 남기고 false 입니다 — 레이어 0 으로 두지 않는다.
@@ -298,10 +315,15 @@ namespace sw
         float32 _heightMax;
         PROPERTY( Category = "Terrain", DisplayName = "Detail Tiling", Min = 0.0, Tooltip = "Detail texture repeats per meter" )
         float32 _detailTiling;
-        PROPERTY( Category = "Terrain", DisplayName = "Cliff Start", Min = 0.0, Max = 1.0, Tooltip = "Normal Y below which the cliff layer takes over" )
-        float32 _cliffStart;
-        PROPERTY( Category = "Terrain", DisplayName = "Cliff Layer", Min = -1, Max = 7, Tooltip = "Layer forced on steep slopes (-1 = off)" )
-        int32 _cliffLayer;
+        PROPERTY( Category = "Terrain", DisplayName = "Height Blend Depth", Min = 0.0, Max = 1.0,
+                  Tooltip = "Layers with a higher detail channel show first at borders (0 = plain blend, small = sharp, large = soft)" )
+        float32 _heightBlendDepth;
+        PROPERTY( Category = "Terrain", DisplayName = "Puddle Scale", Min = 0.1, Units = m, Tooltip = "Size of the noise that decides where puddles form first" )
+        float32 _puddleScale;
+        PROPERTY( Category = "Terrain", DisplayName = "Sparkle Density", Min = 1.0, Tooltip = "Glint cells per metre (layer sparkle and weather snow)" )
+        float32 _sparkleDensity;
+        PROPERTY( Category = "Terrain", DisplayName = "Snow Sparkle", Min = 0.0, Max = 1.0, Tooltip = "Fraction of glint cells in weather snow" )
+        float32 _snowSparkle;
         PROPERTY( Category = "LOD", DisplayName = "Chunk Cells", Min = 2, Tooltip = "Cells per chunk side (power of two dividing resolution - 1)" )
         uint32 _chunkCells;
         PROPERTY( Category = "LOD", DisplayName = "LOD Distance", Min = 0.0, Units = m, Tooltip = "Distance of the first LOD step; each next step doubles it" )

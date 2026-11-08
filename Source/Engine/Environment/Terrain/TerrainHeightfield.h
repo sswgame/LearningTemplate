@@ -8,6 +8,7 @@
 #include "Core/Math/Math.h"
 
 #include "Engine/Environment/Placement/PlacementRule.h"
+#include "Engine/Environment/Terrain/TerrainLayerRule.h"
 
 namespace sw
 {
@@ -38,6 +39,8 @@ namespace sw
      * @details 셀 하나는 대각선 (x, z)-(x+1, z+1) 로 나눈 삼각형 둘이고, 높이 질의는 **렌더 메시(LOD 0)와 같은 삼각형**으로 보간한다.
      *          그래서 물리와 배치가 보는 땅과 그려진 땅이 같다. 노멀은 샘플마다 중앙 차분이고 질의는 그것을 쌍선형으로 섞는다(메시 정점 노멀과 같은 값이다).
      *          레이어 가중치는 스플랫 맵(텍셀마다 레이어 여덟, RGBA8 두 장으로 GPU 에 올라간다)을 쌍선형으로 읽어 합이 1 이 되게 나눈다. 셰이더(`terrain.hlsl`)와 같은 규칙이다.
+     *          월드 질의(`computeLayerWeightsAt`)는 그 위에 레이어 자동 규칙(`setLayerRules` — 경사 · 고도 띠)을 레이어 순서대로 덮는다(셰이더와 같다). 높이 섞기는 디테일 맵(텍스처)을
+     *          읽어야 해서 그림에만 있다 — 경계 몇 뼘의 차이라 표면 질의 · 배치 필터가 보는 가장 무거운 레이어는 거의 같다.
      *          스레드: 질의는 읽기만 한다(병렬 틱과 배치 계산이 동시에 읽는다). 쓰기(`write*`, `replaceSamples`, `setSplat`, `initialize`)는 읽는 쪽이 없는 때(틱 밖)에만 부른다 — 락이 없다.
      */
     class SW_API TerrainHeightfield
@@ -57,6 +60,11 @@ namespace sw
          * @details 텍셀 중심이 지형 가장자리에 맞는다. 지형 u ∈ [0, 1] 이 텍셀 좌표 u × (너비 - 1) 이다.
          */
         void setSplat( uint32 width, uint32 height, const vector<uint8>& layerBytes );
+        /**
+         * @brief 레이어 자동 규칙(레이어 번호 순서, `SurfaceLayerWeights::kLayerCount` 를 넘는 것은 버린다)을 정합니다. 모자란 레이어는 규칙이 없다(끔).
+         * @details 지형 컴포넌트가 레이어 데이터(`TerrainLayer::_rule`)를 읽을 때마다 넘긴다. 월드 질의만 규칙을 덮고 정규 좌표 질의(`computeLayerWeightsAtUv` — 칠한 값)는 그대로다.
+         */
+        void setLayerRules( const vector<TerrainLayerRule>& listRule );
 
         /**
          * @brief 높이 샘플 전부(N × N, `getHeightSamples` 와 같은 배치)에서 @p rect 의 샘플만 복사합니다. 에디터 브러시가 사본을 고쳐 바뀐 범위만 넘기는 길입니다.
@@ -137,25 +145,32 @@ namespace sw
         [[nodiscard]] bool findNormalAt( float32 worldX, float32 worldZ, float3& outNormal ) const;
         /** @brief 월드 (x, z) 가 구멍 셀이면 true 를 반환합니다(지형 밖은 false 입니다). */
         bool isHoleAt( float32 worldX, float32 worldZ ) const;
-        /** @brief 월드 (x, z) 의 레이어 가중치(합 1)를 반환합니다. 스플랫이 없거나 지형 밖이면 레이어 0 이 1 입니다. */
+        /**
+         * @brief 월드 (x, z) 의 레이어 가중치(합 1)를 반환합니다 — 칠한 가중치에 레이어 자동 규칙을 덮은 값(그려진 땅과 같다). 스플랫이 없거나 지형 밖이면 레이어 0 이 1 입니다.
+         * @details 구멍 자리는 규칙이 볼 땅(높이)이 없어 칠한 값 그대로다.
+         */
         SurfaceLayerWeights computeLayerWeightsAt( float32 worldX, float32 worldZ ) const;
-        /** @brief 지형의 정규 좌표 (u, v) ∈ [0, 1]² 의 가중치(합 1)입니다. */
+        /** @brief 지형의 정규 좌표 (u, v) ∈ [0, 1]² 의 칠한 가중치(합 1, 자동 규칙 없음 — 브러시가 고치는 값)입니다. */
         SurfaceLayerWeights computeLayerWeightsAtUv( float32 terrainU, float32 terrainV ) const;
 
     private:
         /** @brief 월드 (x, z) 를 샘플 공간 연속 좌표로 옮깁니다. 지형 밖이면 false 입니다. */
         bool toSampleSpace( float32 worldX, float32 worldZ, float32& outSampleX, float32& outSampleZ ) const;
+        /** @brief 칠한 가중치 @p painted 에 월드 (x, z) 의 경사 · 높이로 레이어 자동 규칙을 레이어 순서대로 덮습니다. 켠 규칙이 없거나 구멍이면 그대로입니다. */
+        SurfaceLayerWeights applyLayerRules( const SurfaceLayerWeights& painted, float32 worldX, float32 worldZ ) const;
 
     private:
-        vector<float32> _listHeight;
-        vector<uint8>   _listHoleCell;
-        vector<uint8>   _splatBytes;
-        float3          _origin;
-        float2          _size;
-        float2          _cellSize;
-        uint32          _resolution;
-        uint32          _splatWidth;
-        uint32          _splatHeight;
+        vector<float32>  _listHeight;
+        vector<uint8>    _listHoleCell;
+        vector<uint8>    _splatBytes;
+        float3           _origin;
+        float2           _size;
+        float2           _cellSize;
+        uint32           _resolution;
+        uint32           _splatWidth;
+        uint32           _splatHeight;
+        TerrainLayerRule _arrLayerRule[SurfaceLayerWeights::kLayerCount]; ///< 레이어마다의 자동 규칙(`setLayerRules`, 기본은 끔)
+        uint8            _bAnyLayerRule : 1;                              ///< 켠 규칙이 하나라도 있다 — 없으면 월드 질의가 높이 · 노멀을 읽지 않는다
     };
 } // namespace sw
 

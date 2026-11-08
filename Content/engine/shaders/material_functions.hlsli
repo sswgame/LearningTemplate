@@ -327,11 +327,11 @@ static void SurfaceFunction::blendByHeight8( inout float4 inoutLow, inout float4
     inoutHigh              = bBlend ? shareHigh / total : inoutHigh;
 }
 
-/** @brief 띠 [low, high] 의 사다리꼴(끝값에서 0.5, 페이드 반 폭 밖에서 0) — C++ `TerrainLayerRule::computeBand` 와 같은 식. */
+/** @brief 띠 [low, high] 의 사다리꼴(안이 1, 바깥으로 페이드 폭만큼 0 까지) — C++ `TerrainLayerRule::computeBand` 와 같은 식. */
 static float SurfaceFunction::computeBand( float value, float low, float high, float fade )
 {
     const float width = max( fade, kMinRuleFade );
-    return saturate( ( value - low ) / width + 0.5f ) * saturate( ( high - value ) / width + 0.5f );
+    return saturate( ( value - low ) / width + 1.0f ) * saturate( ( high - value ) / width + 1.0f );
 }
 
 /** @brief 노멀 y 로 수평에서 잰 경사(도) — C++ `TerrainLayerRule::computeSlopeDegrees` 와 같은 식. */

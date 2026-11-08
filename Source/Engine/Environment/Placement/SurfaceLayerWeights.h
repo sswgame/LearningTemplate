@@ -54,7 +54,7 @@ namespace sw
         }
         /**
          * @brief 합 1 인 가중치에서 레이어 @p layer 쪽으로 @p coverage(0..1)만큼 옮긴 값입니다 — 다른 레이어는 (1 − coverage) 배, 그 레이어는 coverage 를 더 받는다.
-         * @details 자동 규칙(`TerrainLayerRule`)이 레이어 순서대로 부른다. 합 1 은 그대로 남는다. 셰이더 `TerrainLayerRule::applyCoverage`(terrain.hlsl)와 같은 식이다.
+         * @details 자동 규칙(`TerrainLayerRule`)이 레이어 순서대로 부른다. 합 1 은 그대로 남는다. 셰이더 `applyLayerRule`(terrain.hlsl)과 같은 식이다.
          */
         SurfaceLayerWeights computeCovered( uint32 layer, float32 coverage ) const
         {

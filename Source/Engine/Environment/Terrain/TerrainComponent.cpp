@@ -51,6 +51,22 @@ namespace sw
                                                                                            hashed_string( "_layer6Color" ), hashed_string( "_layer7Color" ) };
                 return s_arrName[layerIndex];
             }
+            /** @brief 레이어 @p layerIndex 의 규칙 띠 칸(terrain.hlsl `_layerNRule` — 경사 아래 · 위, 높이 아래 · 위)입니다. */
+            static const hashed_string& getLayerRuleName( uint32 layerIndex )
+            {
+                static const hashed_string s_arrName[TerrainComponent::kMaxLayerCount] = { hashed_string( "_layer0Rule" ), hashed_string( "_layer1Rule" ), hashed_string( "_layer2Rule" ),
+                                                                                           hashed_string( "_layer3Rule" ), hashed_string( "_layer4Rule" ), hashed_string( "_layer5Rule" ),
+                                                                                           hashed_string( "_layer6Rule" ), hashed_string( "_layer7Rule" ) };
+                return s_arrName[layerIndex];
+            }
+            /** @brief 레이어 @p layerIndex 의 규칙 페이드 · 세기 · 반짝이 칸(terrain.hlsl `_layerNParams`)입니다. */
+            static const hashed_string& getLayerParamsName( uint32 layerIndex )
+            {
+                static const hashed_string s_arrName[TerrainComponent::kMaxLayerCount] = { hashed_string( "_layer0Params" ), hashed_string( "_layer1Params" ), hashed_string( "_layer2Params" ),
+                                                                                           hashed_string( "_layer3Params" ), hashed_string( "_layer4Params" ), hashed_string( "_layer5Params" ),
+                                                                                           hashed_string( "_layer6Params" ), hashed_string( "_layer7Params" ) };
+                return s_arrName[layerIndex];
+            }
 
             /**
              * @brief 샘플 사각형 @p rect 의 샘플을 하나라도 쓰는 청크의 사각형(청크 좌표)입니다.
@@ -139,8 +155,10 @@ namespace sw
         , _heightMin{ 0.0f }
         , _heightMax{ 32.0f }
         , _detailTiling{ 0.25f }
-        , _cliffStart{ 0.7f }
-        , _cliffLayer{ -1 }
+        , _heightBlendDepth{ 0.0f }
+        , _puddleScale{ 6.0f }
+        , _sparkleDensity{ 40.0f }
+        , _snowSparkle{ 0.04f }
         , _chunkCells{ 32 }
         , _lodDistance{ 40.0f }
         , _bGeomorph{ SW_FALSE }
@@ -316,6 +334,7 @@ namespace sw
             return false;
         if ( _heightfield.initialize( data, getWorldPosition(), _size, _heightMin, _heightMax ) == false )
             return false;
+        applyLayerRules();
         if ( TerrainMeshBuilder::makeLayout( data._resolution, _chunkCells, _layout ) == false )
         {
             SW_LOG_ERROR_ID( "TerrainComponent.TerrainChunkSizeMust", "Terrain '%#': chunk size %# must be a power of two dividing resolution - 1 (%#)", _heightfieldPath.c_str(), _chunkCells, data._resolution - 1 );
@@ -727,6 +746,17 @@ namespace sw
         return true;
     }
 
+    void TerrainComponent::applyLayerRules()
+    {
+        vector<TerrainLayerRule> listRule;
+        listRule.reserve( _listLayer.size() );
+        for ( const TerrainLayer& layer : _listLayer )
+        {
+            listRule.push_back( layer._rule );
+        }
+        _heightfield.setLayerRules( listRule );
+    }
+
     void TerrainComponent::acquireMaterial()
     {
         using Internal = TerrainComponentInternal;
@@ -736,26 +766,42 @@ namespace sw
         const string&              materialPath = _materialPath.empty() ? defaultPath : _materialPath.path();
         if ( _material.acquire( materialPath ) == false )
             return;
+        // 없는 레이어(목록보다 뒤)는 색 흰색 · 디테일 0 · 나머지 기본 레이어 값이다 — 가중치가 0 이라 그림에 닿지 않지만 칸은 정의된 값으로 채운다.
+        const TerrainLayer defaultLayer{};
+        float32            arrDetail[kMaxLayerCount]{};
+        float32            arrTriplanar[kMaxLayerCount]{};
+        float32            arrRoughness[kMaxLayerCount]{};
+        float32            arrPorosity[kMaxLayerCount]{};
+        float32            arrWetness[kMaxLayerCount]{};
         for ( uint32 layerIndex = 0; layerIndex < kMaxLayerCount; ++layerIndex )
         {
-            const float4 color = layerIndex < _listLayer.size() ? _listLayer[layerIndex]._color : float4{ 1.0f, 1.0f, 1.0f, 1.0f };
-            _material.setVector( Internal::getLayerColorName( layerIndex ), color );
+            const bool              bListed = layerIndex < _listLayer.size();
+            const TerrainLayer&     layer   = bListed ? _listLayer[layerIndex] : defaultLayer;
+            const TerrainLayerRule& rule    = layer._rule;
+            _material.setVector( Internal::getLayerColorName( layerIndex ), layer._color );
+            _material.setVector( Internal::getLayerRuleName( layerIndex ), float4{ rule._slopeRange._x, rule._slopeRange._y, rule._altitudeRange._x, rule._altitudeRange._y } );
+            _material.setVector( Internal::getLayerParamsName( layerIndex ), float4{ rule._slopeFade, rule._altitudeFade, rule._strength, layer._sparkle } );
+            arrDetail[layerIndex]    = bListed ? layer._detailStrength : 0.0f;
+            arrTriplanar[layerIndex] = layer._bTriplanar ? 1.0f : 0.0f;
+            arrRoughness[layerIndex] = layer._roughness;
+            arrPorosity[layerIndex]  = layer._porosity;
+            arrWetness[layerIndex]   = layer._wetness;
         }
-        float32 arrDetail[kMaxLayerCount]{};
-        float32 arrTriplanar[kMaxLayerCount]{};
-        for ( uint32 layerIndex = 0; layerIndex < kMaxLayerCount && layerIndex < _listLayer.size(); ++layerIndex )
-        {
-            arrDetail[layerIndex]    = _listLayer[layerIndex]._detailStrength;
-            arrTriplanar[layerIndex] = _listLayer[layerIndex]._bTriplanar ? 1.0f : 0.0f;
-        }
-        // 레이어 넷마다 벡터 하나 - 평면 0 은 레이어 0..3 (layerDetail · layerTriplanar), 평면 1 은 레이어 4..7 (layerDetail1 · layerTriplanar1).
+        // 레이어 넷마다 벡터 하나 - 평면 0 은 레이어 0..3 (이름 끝 숫자 없음), 평면 1 은 레이어 4..7 (이름 끝 1).
         _material.setVector( hashed_string( "_layerDetail" ), float4{ arrDetail[0], arrDetail[1], arrDetail[2], arrDetail[3] } );
         _material.setVector( hashed_string( "_layerTriplanar" ), float4{ arrTriplanar[0], arrTriplanar[1], arrTriplanar[2], arrTriplanar[3] } );
         _material.setVector( hashed_string( "_layerDetail1" ), float4{ arrDetail[4], arrDetail[5], arrDetail[6], arrDetail[7] } );
         _material.setVector( hashed_string( "_layerTriplanar1" ), float4{ arrTriplanar[4], arrTriplanar[5], arrTriplanar[6], arrTriplanar[7] } );
-        // x 는 스플랫 너비(텍셀 중심 맞추기), y 는 디테일 반복(1/m), z 는 절벽 임계값(노멀 y), w 는 절벽 레이어(-1 이면 끔)다.
+        _material.setVector( hashed_string( "_layerRoughness" ), float4{ arrRoughness[0], arrRoughness[1], arrRoughness[2], arrRoughness[3] } );
+        _material.setVector( hashed_string( "_layerRoughness1" ), float4{ arrRoughness[4], arrRoughness[5], arrRoughness[6], arrRoughness[7] } );
+        _material.setVector( hashed_string( "_layerPorosity" ), float4{ arrPorosity[0], arrPorosity[1], arrPorosity[2], arrPorosity[3] } );
+        _material.setVector( hashed_string( "_layerPorosity1" ), float4{ arrPorosity[4], arrPorosity[5], arrPorosity[6], arrPorosity[7] } );
+        _material.setVector( hashed_string( "_layerWetness" ), float4{ arrWetness[0], arrWetness[1], arrWetness[2], arrWetness[3] } );
+        _material.setVector( hashed_string( "_layerWetness1" ), float4{ arrWetness[4], arrWetness[5], arrWetness[6], arrWetness[7] } );
+        // x 는 스플랫 너비(텍셀 중심 맞추기), y 는 디테일 반복(1/m), z 는 높이 섞기 깊이(0 = 끔)다. 날씨(_weather)는 파라미터 묶음이 싣는다.
         const float32 splatWidth = static_cast<float32>( _heightfield.getSplatWidth() );
-        _material.setVector( hashed_string( "_terrainParams" ), float4{ splatWidth, _detailTiling, _cliffStart, static_cast<float32>( _cliffLayer ) } );
+        _material.setVector( hashed_string( "_terrainParams" ), float4{ splatWidth, _detailTiling, _heightBlendDepth, 0.0f } );
+        _material.setVector( hashed_string( "_terrainSurface" ), float4{ _puddleScale, _sparkleDensity, _snowSparkle, 0.0f } );
         _material.setTexture( hashed_string( "_splatMap" ), _arrCPUSplatPath[0] );
         _material.setTexture( hashed_string( "_splatMap1" ), _arrCPUSplatPath[1] );
         _material.setTexture( hashed_string( "_detailMap" ), _detailTexturePath );

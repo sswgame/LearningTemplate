@@ -16,8 +16,8 @@ namespace sw
     float32 TerrainLayerRule::computeBand( float32 value, float32 low, float32 high, float32 fade )
     {
         const float32 width = MathUtil::max( fade, kMinFade );
-        const float32 rise  = MathUtil::saturate( ( value - low ) / width + 0.5f );
-        const float32 fall  = MathUtil::saturate( ( high - value ) / width + 0.5f );
+        const float32 rise  = MathUtil::saturate( ( value - low ) / width + 1.0f );
+        const float32 fall  = MathUtil::saturate( ( high - value ) / width + 1.0f );
         return rise * fall;
     }
 

@@ -4,7 +4,7 @@
  * @details 언리얼 랜드스케이프 오토 머티리얼(Slope · Height 마스크로 레이어를 고르는 머티리얼 그래프)과 같은 자리지만, 규칙을 머티리얼 그래프가 아니라
  *          레이어 데이터(씬의 `TerrainLayer::_rule`)에 둔다 — CPU 질의(`TerrainHeightfield::computeLayerWeightsAt` → 발소리 · 배치 필터)가 같은 규칙을 읽어
  *          그린 땅과 게임플레이가 보는 땅이 같다(언리얼은 오토 머티리얼이 셰이더 안이라 물리 재질이 칠한 가중치만 본다).
- *          셰이더(`terrain.hlsl` 의 `TerrainLayerRule::computeCoverage`)와 같은 식이다 — 바꾸면 둘을 함께 바꾼다(단위 테스트 `TerrainLayerRuleTest` 가 값을 박는다).
+ *          셰이더(`terrain.hlsl` 의 `applyLayerRule`)와 같은 식이다 — 바꾸면 둘을 함께 바꾼다(단위 테스트 `TerrainLayerRuleTest` 가 값을 박는다).
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -17,8 +17,8 @@ namespace sw
 {
     /**
      * @struct TerrainLayerRule
-     * @brief 레이어 하나의 경사 · 고도 띠입니다. 덮는 정도 = 세기 × 경사 띠 × 고도 띠(각 띠는 양 끝에 페이드 폭을 둔 사다리꼴)입니다.
-     * @details 레이어 순서대로 덮는다(`SurfaceLayerWeights::applyCoverage`) — 뒤 레이어의 규칙이 앞 레이어의 규칙을 덮으므로 눈처럼 마지막에 이겨야 하는 레이어를 뒤에 둔다.
+     * @brief 레이어 하나의 경사 · 고도 띠입니다. 덮는 정도 = 세기 × 경사 띠 × 고도 띠(각 띠는 범위 안이 1 이고 바깥으로 페이드 폭만큼 0 까지 내려가는 사다리꼴)입니다.
+     * @details 레이어 순서대로 덮는다(`SurfaceLayerWeights::computeCovered`) — 뒤 레이어의 규칙이 앞 레이어의 규칙을 덮으므로 눈처럼 마지막에 이겨야 하는 레이어를 뒤에 둔다.
      *          세기 0 이면 규칙이 꺼져 칠한 가중치 그대로다(기본값).
      */
     REFLECT()
@@ -47,7 +47,8 @@ namespace sw
          */
         float32 computeCoverage( float32 slopeDegrees, float32 altitude ) const;
         /**
-         * @brief 값 @p value 가 띠 [@p low, @p high] 안이면 1, 양 끝에서 폭 @p fade 로 0 까지 선형으로 내려가는 사다리꼴입니다(끝값에서 0.5).
+         * @brief 값 @p value 가 띠 [@p low, @p high] 안(끝값 포함)이면 1, 바깥으로 폭 @p fade 만큼 0 까지 선형으로 내려가는 사다리꼴입니다.
+         * @details 페이드를 띠 바깥에 둔다 — 경사 [0, 40] 은 평지(0 도)가 가득이다(가운데 페이드면 평지가 반만 덮인다).
          */
         static float32 computeBand( float32 value, float32 low, float32 high, float32 fade );
         /** @brief 단위 노멀의 y 로 수평에서 잰 경사(도, 0..90)입니다. */
