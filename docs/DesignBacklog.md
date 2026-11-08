@@ -210,46 +210,10 @@ Graphify로 호출 관계를 좁힌 뒤 앱 루프, 에디터 ABI, ImGui 플랫�
 
 **기준(사용자 2026-11-08):** 지금 게임은 완성된 내용이 적어 측정 숫자로 순서를 정하지 않는다. 기능의 연쇄를 보고 ① 대상 수 N 에 비례하고 대상끼리 독립인 일 ② 앞단이 뒤를 막는 사슬 ③ N² 모양을 미리 병렬 · 비동기 설계로 바꾼다. 확인은 목표 규모 부하 시나리오(`ctest -L load` — 에이전트 1 천 · 지역 수백)로 정확성 · 확장성을 보고, 숫자는 회귀 감시로 남긴다(언리얼 Mass 프로세서 · 유니티 DOTS 잡 + 의존과 같은 방향).
 
-**조사 결과(코드 집계):** `onTick` 114 곳에 서브틱 `registerSubTick` 5 · 선행 조건 3, 타입별 일괄 틱 1, 틱 뒤 지연 큐(`executeOrDeferPostTick`) 32 곳, `onTick` 안에서 씬 전체를 도는 컴포넌트 14 개. 태스크 스테이지 4 곳 · `whenAll` 0 곳. 씬 서비스 20 개 중 안에서 병렬인 것은 `AnimationSystem` 하나, 프레임 시스템 4 개는 모두 직렬. TaskManager 밖 자체 스레드 7 곳(`Box2DWorkerPool` · `MaterialCache` · `EditorService` · `ServerPoseOverlay` · `SQLConnectionPool` · `ModuleCompiler` …), 잠자기 · 폴링 대기 38 곳.
-
 | 연쇄 | 지금 | 바꿀 모양 |
 |---|---|---|
-| AI 이동: 의도 → 경로 → 군중 → 컨트롤러 → 물리 | (9 차) 비동기 경로 요청 줄 `PathRequestQueue<TSolver>`(칸 + 세대 핸들, 다음 수확에서 Ready, 취소) — 내비메시 `SceneNavigation::requestPath` 는 Navigation 단계에서 넘기고 다음 Navigation 단계에서 수확, 타일 교체 · 장애물 캐시 · 링크는 수확이 낸 증표(`NavMeshWriteAccess`)를 받아야 컴파일된다. 군중 진행은 씬 서비스 프레임 일(`SW_SCENE_SERVICE_WITH_FRAME_JOB`)로 워커에 가 Animation 단계와 겹치고 FlushPostAnimation 앞에서 결과를 쓴다. RTS 유닛 A* 는 같은 줄(`GridPathSolver`)로 걸음 끝에 모아 푼다. 동기로 남긴 곳(감시 값 · 일정 구간 경로 · 방 그래프 · `NavGridMover`)은 까닭을 주석에 | 남은 것: 한 종류의 군중 안을 나누기(Detour 군중은 한 덩어리 — 종류 하나에 에이전트 수천이면 언리얼 Mass 처럼 군중을 지역으로 쪼갠다), 측정은 `load/navcrowd` |
-| 틱 안 씬 순회(14 컴포넌트) | 한 컴포넌트가 다른 오브젝트 일을 대신 해 오브젝트 단위 병렬을 버리고 N² 가 된다 | 각 오브젝트 자기 틱 · 공간 색인 질의 · 같은 타입이 많으면 일괄 틱, 순서가 필요하면 서브틱 선행 조건 |
-| 틱 뒤 지연 큐 32 곳 | 구조 변경 지연(맞다)과 순서 맞추기(서브틱 자리)가 섞여 있다 | 순서 맞추기는 서브틱 선행 조건으로 |
-| 씬 서비스(메시 LOD · 텍스처 스트리밍 · 씬 오디오 · VFX · 폴리지 지형 따라가기 · 넷 오브젝트 표) | 대상마다 독립인데 직렬 | 안에서 `runParallelByCost`, 앞뒤가 이어지면(LOD → 스트리밍 우선순위) 스테이지 · `whenAll` |
-| 자체 스레드 7 곳 | 워커 수가 TaskManager 와 따로 논다(코어 과포화) | TaskManager 태스크 · 스테이지로. 막는 외부 IO(DB · 프로세스 기다림)는 IO 친화 태스크로 |
-| 잠자기 · 폴링 38 곳 | 결과를 주기적으로 묻는다 | 완료 연쇄(`whenAll` · 스테이지 완료)로 |
-| 에디터 UI | 게임 스레드 | 위 MVVM → 입력 큐 → 출력 계약 |
-
-재발 막기: 자체 스레드는 허용 목록(데이터) 밖이면 린트가 멈추고, 틱 안 씬 전체 순회는 린트가 알린다. `Box2DWorkerPool` 은 허용 목록에 까닭과 함께 둔다 — Box2D 솔버는 워커 수만큼 태스크를 한꺼번에 넣고 0 번이 아닌 태스크가 바쁘게 기다려 공유 풀에서는 교착한다(파일 머리말).
-
-**틱 구조 판정(9 차 W3a, 2026-11-08):** 규칙은 [TickPlacement](agents/TickPlacement.md), 재발은 린트 `tick-scene-walk`(틱에서 호출을 따라가 씬 순회에 닿으면 멈춘다 — 예외는 `Config/Dev/TickSceneWalkExceptions.json`).
-
-틱 안 씬 순회 14 개 — 집계가 컴포넌트 파일 안의 `forEachComponentOfType` 를 받는 쪽 없이 셌다. 틱에서 실제로 닿는 것은 7 곳이었다.
-
-| 컴포넌트 | 판정 | 처리 |
-|---|---|---|
-| SessionState(날씨 파도 · 표면 노출 · 지역이 틱에서 `findFirstOpen`) | 씬 전체 + `getComponent`, 틱마다 벡터 | `ComponentRegistry` 등록 목록 |
-| Killcam(사격 판정이 `findInScene`) | 순서 없는 타입 버킷의 "첫 것" | 등록 목록(등록 순서) |
-| PairedAnimation(시작이 역할 보유자를 찾음) | `getAllGameObjects` | 등록 목록 |
-| TickedPathMover ← ShooterNetPawn | 넷 폰이 틱에서 바닥 전부에 써 넣음(경합) | 씬 값 하나(`ControlSystem::publishServerTick`) + 서브틱 선행 조건 |
-| ZoneVolume | 볼륨마다 컨트롤러 · 강체 전부(Z × N) | 프레임에 한 번 짓는 격자(`ZoneOccupantIndex`) |
-| ExplosiveBarrel(`ShooterGimmicks`) | 틱(워커)에서 남의 파괴 조각에 씀 | 남의 것은 틱 뒤로. 씬 순회는 폭발 순간 한 번이라 예외(까닭: 대상이 "반경 안 무엇이든") |
-| ShooterPlayer → Killcam | 위 Killcam 과 같다 | 같다 |
-| FirstPersonCamera · CharacterAppearance · Interactable · VisualSinkReaction · FadeOut · VoxelChunk | 자기 오브젝트 순회(`pOwner->forEachComponentOfType`) | 문제 아님 |
-| ValeWorld · SkirmishUnit · ShooterPlayer(개발 명령) | 개발 명령 · 감시 값(틱 밖) | 문제 아님 |
-
-틱 뒤 지연 큐(`executeOrDeferPostTickOnComponent` · `deferPostTickOnComponent` 45 곳 · 34 파일, `executeOrDeferPostTick` · `deferPostTick` 29 곳 — 조사 집계 32 곳은 일반 판의 정의 · 래퍼를 함께 셌다) — 순서 맞추기로 미룬 것은 1 곳이었다.
-
-| 분류 | 곳 | 판정 |
-|---|---|---|
-| 순서 맞추기(같은 큐 안 다른 미룬 일 뒤를 바람 — 큐 순서는 워커 순서) | VisualSinkReaction | 고침: PostPhysics 틱에서 바로(지역 처리 = ApplyPrePhysics 뒤) |
-| 구조 변경 · 등록부 바꿈(만들기 · 지우기 · 붙이기 · 떼기 · 프리미티브 다시 짓기) | Terrain · WaterBody ×3 · Foliage ×2 · TileMapRenderer · PropScatter · CharacterAppearance ×5 · VoxelChunk · Grabber · MountInteraction · VehicleExit · RiderDownWatcher · WesternHorseMount · WildWest(말 타기 · 증서 · 휘파람) · ShooterNetPawn(원격 빙의) · ControllerComponent · GimmickCircuit(스폰) · DamageNumber · HealthBar · AbilityCueSink · Arena(스폰) | 그대로 |
-| 남의 오브젝트 쓰기(피해 · 애니메이터 · 태그 · 빛 · 몸 켜기) | GimmickDamageUtil · UnitStats ×2 · Ability ×2 · ShooterEnemy ×2 · Interactor ×3 · GenreGimmickUtil ×2 · Platformer · HorrorStealth · GimmickCircuit(빛 · 켜기) · PairedAnimation · PairedAnimationNet ×2 · ExplosiveBarrel · StressTestCombat · Sequence(바인딩) | 그대로 |
-| 게임 스레드 전용(물리 질의 · 카메라 등록부 · 렌더 상태 · 능력 이벤트 · 공유 씬 서비스 쓰기) | GroundSurface · SurfaceStamp · SurfaceDeformMesh · SurfaceExposure · ZoneVolume · ZoneContact · JumpEscape · CameraDirector · CameraManager · PixelPerfectCamera · ActivatorVolume · GameMode · ShooterPlayer · VoxelPlayer · VoxelHighlight · ShooterNetPawn(주장) · MeleeHitbox · VehicleSeat · AnimationNotify · WildWest(HUD · 법 시야) | 그대로. 다음 단계: 틱마다 통째로 미루는 타입(표면 셋 · 지역 둘 · 반응)은 등록 목록을 한 곳에서 도는 씬 서비스 · 프레임 시스템으로 — 지금은 N 개가 게임 스레드에서 직렬이다 |
-
-`setTickGroup` 59 곳 — 물리 앞 생산 · 물리 뒤 소비(디렉터 PrePhysics → 뷰 PostUpdate 22 곳, 이동 · 탈것 PrePhysics, 물리 결과를 읽는 PostPhysics)는 그룹의 원래 뜻이라 그대로. 같은 물리 단계 안 오브젝트 사이 순서를 그룹으로 낸 것은 2D 카메라 사슬(따라가기 → `PixelPerfectCamera` PostPhysics → `ParallaxLayer` PostUpdate)과 3D 카메라 사슬(`CameraDirector` PostPhysics → `CameraManager` PostUpdate)이다 — 사슬이 그룹 수를 넘으면 서브틱 선행 조건으로 옮긴다(지금은 두 칸에 맞는다).
+| AI 이동: 의도 → 경로 → 군중 → 컨트롤러 → 물리 | 비동기 경로 요청 줄(`PathRequestQueue<TSolver>`)과 군중 프레임 일(`SW_SCENE_SERVICE_WITH_FRAME_JOB`)은 들어갔다(9 차). 동기로 남긴 곳은 까닭을 주석에 | 남은 것: 한 종류의 군중 안을 나누기(Detour 군중은 한 덩어리 — 종류 하나에 에이전트 수천이면 언리얼 Mass 처럼 군중을 지역으로 쪼갠다), 측정은 `load/navcrowd` |
+| 에디터 UI | 게임 스레드 | MVVM([EditorUI.md](agents/EditorUI.md)) → 입력 큐 → 출력 계약(위 "에디터 UI 스레드 분리 검토") |
 
 **씬 서비스 · 자체 스레드 · 폴링 판정(2026-11-08).** 도구 고르는 기준은 [CppStyle](agents/CppStyle.md) "Parallel and async — which tool where" 다.
 
@@ -259,8 +223,6 @@ Graphify로 호출 관계를 좁힌 뒤 앱 루프, 에디터 ABI, ImGui 플랫�
 | `FoliageComponent` 레이어 · `FoliageTerrainFollower` | 레이어는 스테이지 + 태스크 대신 병렬 for. 따라가기는 바뀐 폴리지만 다시 짓고 그 안이 이미 병렬(레이어 · 후보 판정)이라 바깥은 그대로 |
 | `SceneVFXProvider` | 그대로 — 렌더러 싱크에 모아 넣는 일이고 입자 진행은 컴포넌트 틱이다 |
 | `NetObjectTable` · `SceneNetLink` | 프레임 일이 없다(찾기 표 · 연결 고리) |
-| 자체 스레드 | `ServerPoseOverlay` 만 태스크로 옮겼다(때가 된 읽기 하나를 게임 스레드가 낸다). 조사표의 `MaterialCache` · `EditorService` 는 스레드 번호만 쓴다. 나머지 27 곳은 OS 를 막고 기다리는 곳이라 `Config/Dev/ThreadOwners.json` 에 까닭과 함께 두고 린트가 지킨다 |
-| 태스크 결과를 잠들며 묻던 곳 | `ServerPoseOverlay`(4 Hz 잠자기) · `AssetHotReload::shutdown`(임포트 취소 대기) · `EditorNetPlaySession::stopAndWait`(합치기 대기) → 태스크 · 스테이지 완료 대기(`EditorBackgroundTask::waitAndTake`) |
 | 시간을 재야 하는 잠자기(그대로) | 프레임 · 틱 맞춤(`FramePacer` · `App` 멈춤 틱 · `ServerApp` 둘 · `LoadBotMain`), GPU 펜스 · 장치(`RHITransferUtil` · `OpenGLRHIDevice` · `WebGPURHIDevice` · `RHIBackendSwitcher` TDR 흉내), 소켓 · 망(`DebugChannel` 둘 · `NetTransport` 둘 · `NetEndpoint` · `IocpStreamTransport` · `BlockingHTTPClient` · `RespEphemeralStore` · `AccountTicketConnect` · `DelayedStreamTransport`), 프로세스 · 파이프(`EditorNetPlaySession` 끝남 기다리기 · `updateUntil` · `TestRunner` 둘 · `AutomationPerBackend`), 감시 · 크래시(`AutomationHangWatch` 둘 · `CrashHandler` · `PosixCrashHandler` · `WindowsCrashHandler` · `FrameStall`), 재시도 · 물러서기(`FileUtil` · `ModuleShadowCopy` · `LockFreeObjectPool` · `PlatformFileUtil` 느린 IO 흉내 · `WindowsStandardInputReader`), 종료 한 번의 완료 거두기(`ServiceStoreUtil` · `LocalStoreChannel` — 완료를 부르는 쪽이 펌프해 넘기는 계약이다) |
 | 스테이지 · 연쇄 자리 | `RenderGraph` 레벨 스테이지는 High 줄이 필요해 그대로(파일 주석). `AudioClip` 디코드는 에셋 로드 스테이지, `RenderThread` 스크린샷 쓰기는 완료를 우편함 콜백으로 알려 이미 연쇄다. `AsyncFileIO` 전달은 자기 스테이지 |
 
@@ -270,13 +232,7 @@ Graphify로 호출 관계를 좁힌 뒤 앱 루프, 에디터 ABI, ImGui 플랫�
 
 | 우선 | 연쇄 · 자리 | 지금 | 데이터로 옮길 모양 |
 |---|---|---|---|
-| 1 | **게임 AI 행동** — `FarmAutoFarmerAIComponent`(case 16) · `ShooterEnemyComponent` · `ShooterEnemyAIControllerComponent` · `KartAI` · `ArenaAutoBattleAI` · `ArenaEnemyAI` · `HorseFollowAIController` · `SRPGCommanderAI` · `SkirmishUnitComponent` · `FarmVillagerComponent` | 행동 트리 런타임 · 에셋 · 에디터 패널이 있는데 데이터는 2 개(`guard.bt.xml` · `commander.bt.xml`)이고 게임 AI 는 컴포넌트 안 `switch` 상태 기계다 | 행동 트리 자산 + 코드가 내는 동작 어휘(이동 · 공격 · 능력 · 따라가기 · 일과)와 판단(블랙보드 · 지각). 언리얼 BT · StateTree 자리 — 새 적 · NPC 는 데이터만 더한다 |
-| 2 | **프리셋 · 가져오기 규칙 표** — `FractureSettings`(프리셋 switch) · `TextureImportConfig`(가져오기 규칙 표) · `Autosave`(정책 switch) · `InputMap`(기본 바인딩 표) | C++ 표 · switch | 프리셋 · 규칙 자산(`Config` 또는 `Content/engine/settings`), 읽지 못하면 오류 |
-| 3 | **문화권 정의** — `CultureInfo`(숫자 · 날짜 · 복수형 표가 코드) | 언어를 더할 때 C++ 를 고친다 | 문화권 데이터 파일(CLDR 모양) — 언어 추가가 데이터 한 장 |
-| 4 | **에디터 표시 표** — `EditorThemeUtil` 표 · `EditorViewportOverlays` · `ViewportInputOverlay` · `UIPreviewLogic` 기기 표 | 색 · 크기 · 기기 목록이 코드 | 테마 토큰(`Content/editor/theme/*.tokens.json`) · `uiresolutions.xml` 로 — 두 벌이면 하나로 |
 | 5 | **게임 규칙 수치** — 게임 모드 컴포넌트의 상태 `switch`(`WildWestGameModeComponent` 등)와 키트의 `-1` 613 · 실수 상수 | 일부는 PROPERTY 로 이미 편집된다 | 규칙 카탈로그 · PROPERTY 로(위 "데이터 기반 값" 절의 순서) |
-
-순서: 1 은 AI 이동 연쇄의 비동기 경로 요청(위 절)과 같은 동작 어휘를 쓰므로 함께 설계한다. 2 · 3 · 4 는 서로 독립이라 하나씩 옮기고, 옮긴 자리의 C++ 표는 지운다(두 벌 금지).
 
 **판단(9 차, 옮긴 것 · 코드에 두는 것):**
 
