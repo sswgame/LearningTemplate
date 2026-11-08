@@ -61,16 +61,15 @@ namespace sw::editor
                 EditorThemeTokens::listThemeNames( listName );
                 for ( const string& name : listName )
                 {
-                    EditorThemeConfig config{};
-                    string            error;
-                    string            mismatchKey;
-                    if ( EditorThemeTokens::loadTheme( name, config, error ) == false )
-                        SW_LOG_ERROR_ID( "EditorThemeUtil.ThemeTokensNotLoaded", "Theme tokens '%#' were not loaded: %#", name.c_str(), error.c_str() );
-                    else if ( outListTheme.empty() == false && EditorThemeTokens::findKeyMismatch( outListTheme.front(), config, mismatchKey ) )
+                    expected<EditorThemeConfig> loaded = EditorThemeTokens::loadTheme( name );
+                    string                      mismatchKey;
+                    if ( loaded.has_value() == false )
+                        SW_LOG_ERROR_ID( "EditorThemeUtil.ThemeTokensNotLoaded", "Theme tokens '%#' were not loaded: %# (%#)", name.c_str(), loaded.error().message(), loaded.error().detail() );
+                    else if ( outListTheme.empty() == false && EditorThemeTokens::findKeyMismatch( outListTheme.front(), *loaded, mismatchKey ) )
                         SW_LOG_ERROR_ID( "EditorThemeUtil.ThemeTokensNotLoaded2", "Theme tokens '%#' were not loaded: key '%#' is in only one of '%#' and '%#' - every theme needs the same keys", name.c_str(),
                                          mismatchKey.c_str(), outListTheme.front()._name.c_str(), name.c_str() );
                     else
-                        outListTheme.push_back( std::move( config ) );
+                        outListTheme.push_back( std::move( *loaded ) );
                 }
                 if ( outListTheme.empty() )
                     SW_LOG_ERROR_ID( "EditorThemeUtil.NoEditorThemeToken", "No editor theme token file under %# - no theme can be applied", EditorThemeTokens::getFolderPath().c_str() );

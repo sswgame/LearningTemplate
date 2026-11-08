@@ -52,23 +52,21 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorModuleOverrideUtil::previewToggle( const ModuleCatalog& catalog, const ModuleResolveContext& context, string_view moduleName, bool bEnabled,
-                                                  vector<ModuleInactiveEntry>& outListNewlyInactive, vector<string>& outListNewlyActive, string& outError )
+    expected<void> EditorModuleOverrideUtil::previewToggle( const ModuleCatalog& catalog, const ModuleResolveContext& context, string_view moduleName, bool bEnabled,
+                                                            vector<ModuleInactiveEntry>& outListNewlyInactive, vector<string>& outListNewlyActive )
     {
         outListNewlyInactive.clear();
         outListNewlyActive.clear();
+        string           resolveError; // 모듈 풀기(엔진 ModuleCatalog::resolve)의 글 — 그 쪽이 결과 형식으로 옮기면 이 줄도 따라간다
         ModuleResolution before;
-        if ( catalog.resolve( context, before, outError ) == false )
-            return false;
+        if ( catalog.resolve( context, before, resolveError ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the module graph does not resolve", resolveError } );
         ModuleCatalog changed = catalog;
         if ( changed.setProjectOverride( context._projectModule, moduleName, bEnabled ) == false )
-        {
-            outError = "the project module " + context._projectModule + " has no manifest";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "the project module has no manifest", context._projectModule } );
         ModuleResolution after;
-        if ( changed.resolve( context, after, outError ) == false )
-            return false;
+        if ( changed.resolve( context, after, resolveError ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the toggle breaks the module graph", resolveError } );
         for ( const ModuleInactiveEntry& entry : after._listInactive )
         {
             if ( before.isActive( entry._name ) )
@@ -79,7 +77,7 @@ namespace sw::editor
             if ( before.isActive( name ) == false )
                 outListNewlyActive.push_back( name );
         }
-        return true;
+        return {};
     }
 
     bool EditorModuleOverrideUtil::makeDetail( const ModuleCatalog& catalog, string_view projectModule, string_view moduleName, EditorModuleDetail& outDetail )

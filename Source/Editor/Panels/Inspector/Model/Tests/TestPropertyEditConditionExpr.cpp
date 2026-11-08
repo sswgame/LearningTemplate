@@ -53,14 +53,13 @@ SW_TEST_CASE( PropertyEditConditionTest, EditConditionFollowsTheOtherProperty )
     SW_EXPECT_TRUE( getState( type, actor, "_blend" ) == sw::PropertyEditState::Enabled );
 
     // 풀지 못하는 식은 막지 않고 이유를 말한다
-    sw::PropertyInfo broken          = *type.findPropertyInHierarchy( "_speed" );
-    broken._metadata->_editCondition = "_mode == Sideways";
-    sw::PropertyEditConditionExpr expr;
-    sw::string                    error;
-    SW_EXPECT_FALSE( sw::PropertyEditConditionExpr::parse( type, broken, expr, error ) );
-    SW_EXPECT_TRUE_MSG( error.find( "Sideways" ) != sw::string::npos, error.c_str() );
+    sw::PropertyInfo broken                                    = *type.findPropertyInHierarchy( "_speed" );
+    broken._metadata->_editCondition                           = "_mode == Sideways";
+    const sw::expected<sw::PropertyEditConditionExpr> sideways = sw::PropertyEditConditionExpr::parse( type, broken );
+    SW_REQUIRE_FALSE( sideways.has_value() );
+    SW_EXPECT_TRUE( sideways.error().detail().find( "Sideways" ) != sw::string_view::npos );
     broken._metadata->_editCondition = "_noSuchProperty";
-    SW_EXPECT_FALSE( sw::PropertyEditConditionExpr::parse( type, broken, expr, error ) );
+    SW_EXPECT_FALSE( sw::PropertyEditConditionExpr::parse( type, broken ).has_value() );
     SW_EXPECT_TRUE( sw::PropertyEditConditionExpr::getEditState( type, broken, sw::ObjectAddress{ &actor } ) == sw::PropertyEditState::Enabled );
 }
 
@@ -78,10 +77,12 @@ SW_TEST_CASE( PropertyEditConditionTest, EveryEditConditionResolves )
             if ( prop._metadata->_editCondition.empty() )
                 continue;
             ++checkedCount;
-            sw::PropertyEditConditionExpr expr;
-            sw::string                    error;
-            if ( sw::PropertyEditConditionExpr::parse( type, prop, expr, error ) == false )
-                failures += sw::string( type._fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + ": " + error + "\n";
+            const sw::expected<sw::PropertyEditConditionExpr> expr = sw::PropertyEditConditionExpr::parse( type, prop );
+            if ( expr.has_value() == false )
+            {
+                failures += sw::string( type._fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + ": " + sw::string( expr.error().message() ) + " (" + sw::string( expr.error().detail() ) +
+                            ")\n";
+            }
         }
     } );
     SW_EXPECT_TRUE( checkedCount >= 4 );

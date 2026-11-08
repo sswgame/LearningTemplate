@@ -111,10 +111,10 @@ namespace
         vector<EditorThemeConfig> listTheme;
         for ( const string& name : listName )
         {
-            EditorThemeConfig config{};
-            string            error;
-            SW_EXPECT_TRUE_MSG( EditorThemeTokens::loadTheme( name, config, error ), error.c_str() );
-            listTheme.push_back( std::move( config ) );
+            expected<EditorThemeConfig> config = EditorThemeTokens::loadTheme( name );
+            SW_EXPECT_TRUE_MSG( config.has_value(), config.has_value() ? string_view{} : config.error().message() );
+            if ( config.has_value() )
+                listTheme.push_back( std::move( *config ) );
         }
         return listTheme;
     }

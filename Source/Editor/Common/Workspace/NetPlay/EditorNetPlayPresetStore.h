@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/Config/EditorUserFile.h"
@@ -54,8 +55,8 @@ namespace sw::editor
         static string getDefaultFilePath();
 
     private:
-        /** @brief 이름이 비지 않고 겹치지 않으며 고른 이름이 목록에 있으면 true 입니다. 아니면 @p outReason 에 첫 이유를 적습니다. */
-        [[nodiscard]] static bool isConsistent( const EditorNetPlayPresetFile& file, string& outReason );
+        /** @brief 이름이 비지 않고 겹치지 않으며 고른 이름이 목록에 있는지 봅니다. 아니면 첫 이유입니다. */
+        [[nodiscard]] static expected<void> checkConsistent( const EditorNetPlayPresetFile& file );
         /** @brief 이름의 인덱스입니다. 없으면 `constant::invalid_index::kUint32` 입니다. */
         uint32 findPresetIndex( string_view name ) const;
         /** @brief @p file 을 `_filePath` 에 쓰고, 썼을 때만 지금 목록으로 들입니다 — 쓰지 못한 변경이 메모리에만 남아 파일과 어긋나지 않게 합니다. */

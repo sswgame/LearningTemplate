@@ -27,16 +27,15 @@ namespace sw::editor
 
         // 따로 읽고 맞을 때만 들인다 — 깨진 파일의 앞부분 값이 섞이면 어느 것이 사용자가 저장한 값인지 아무도 모른다.
         string                  jsonText;
-        string                  reason;
         EditorNetPlayPresetFile loaded{};
-        const bool              bRead = FileUtil::readTextFile( filePath, jsonText ) && ConfigManager::readConfigJSON( loaded, jsonText, _filePath.c_str() );
-        if ( bRead && isConsistent( loaded, reason ) )
+        const bool              bRead      = FileUtil::readTextFile( filePath, jsonText ) && ConfigManager::readConfigJSON( loaded, jsonText, _filePath.c_str() );
+        const expected<void>    consistent = bRead ? checkConsistent( loaded ) : expected<void>( unexpected( Error{ ErrorKind::InvalidArgument, "not a preset file - see the errors above" } ) );
+        if ( consistent.has_value() )
         {
             _file = std::move( loaded );
             return EditorUserFileResult::Loaded;
         }
-        if ( reason.empty() )
-            reason = "not a preset file - see the errors above";
+        const string reason = string( consistent.error().message() ) + ( consistent.error().detail().empty() ? string() : ": " + string( consistent.error().detail() ) );
         // 깨진 사용자 파일은 치우고 새로 쓴다 — 그대로 두면 다음 저장이 사용자가 고친 파일을 말없이 덮는다.
         if ( EditorUserFile::quarantineCorruptFile( filePath, reason ) )
             (void)commitFile( EditorNetPlayPresetFile{} ); // 실패는 commitFile 이 오류로 남긴다
@@ -98,25 +97,17 @@ namespace sw::editor
         return EditorPaths::resolveEditorStateFile( kFileName );
     }
 
-    bool EditorNetPlayPresetStore::isConsistent( const EditorNetPlayPresetFile& file, string& outReason )
+    expected<void> EditorNetPlayPresetStore::checkConsistent( const EditorNetPlayPresetFile& file )
     {
         for ( size_t presetIndex = 0; presetIndex < file._listPreset.size(); ++presetIndex )
         {
             const string& name = file._listPreset[presetIndex]._name;
             if ( name.empty() )
-            {
-                StringBuilder<constant::buffer::kMax256> reasonBuilder;
-                reasonBuilder.appendFormat( "preset %# has no name", presetIndex );
-                outReason = string( reasonBuilder.view() );
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a preset has no name", to_string( presetIndex ) } );
             for ( size_t laterIndex = presetIndex + 1; laterIndex < file._listPreset.size(); ++laterIndex )
             {
                 if ( file._listPreset[laterIndex]._name == name )
-                {
-                    outReason = "preset name '" + name + "' appears twice";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::AlreadyExists, "a preset name appears twice", name } );
             }
         }
         bool bSelectedFound = file._selectedPresetName.empty();
@@ -125,11 +116,8 @@ namespace sw::editor
             bSelectedFound = bSelectedFound || preset._name == file._selectedPresetName;
         }
         if ( bSelectedFound == false )
-        {
-            outReason = "selected preset '" + file._selectedPresetName + "' is not in the list";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::NotFound, "the selected preset is not in the list", file._selectedPresetName } );
+        return {};
     }
 
     uint32 EditorNetPlayPresetStore::findPresetIndex( string_view name ) const

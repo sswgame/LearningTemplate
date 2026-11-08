@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -48,10 +49,10 @@ namespace sw::editor
         [[nodiscard]] static bool setOverride( string_view manifestJSON, string_view moduleName, bool bEnabled, bool bEnabledByDefault, string& outManifestJSON );
         /**
          * @brief @p catalog 사본의 프로젝트 테이블에 @p moduleName = @p bEnabled 를 더해 다시 풀고, 켜짐이 바뀌는 모듈(그 모듈과 의존 때문에 함께 바뀌는 것)을 모읍니다.
-         * @return 풀기에 실패하면(순환 · 없는 의존) false 이고 @p outError 에 이유가 있습니다.
+         * @return 풀기에 실패하면(순환 · 없는 의존) 그 이유입니다.
          */
-        [[nodiscard]] static bool previewToggle( const ModuleCatalog& catalog, const ModuleResolveContext& context, string_view moduleName, bool bEnabled,
-                                                 vector<ModuleInactiveEntry>& outListNewlyInactive, vector<string>& outListNewlyActive, string& outError );
+        [[nodiscard]] static expected<void> previewToggle( const ModuleCatalog& catalog, const ModuleResolveContext& context, string_view moduleName, bool bEnabled,
+                                                           vector<ModuleInactiveEntry>& outListNewlyInactive, vector<string>& outListNewlyActive );
         /**
          * @brief 모듈 창 상세 영역(언리얼 Plugins 상세 · 유니티 Package Manager 상세)에 보일 @p moduleName 의 정보를 @p catalog 에서 모읍니다.
          * @details 역의존(이 모듈에 직접 의존하는 모듈)은 이름 순입니다. 현재 덮어쓰기는 @p projectModule 매니페스트의 `_listModuleOverride` 에서 찾습니다.

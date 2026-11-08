@@ -44,8 +44,8 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 벌 하나를 `_base` 사슬 끝까지 읽어 합칩니다(자식의 키가 이긴다). 없는 부모 · 순환 · 깊이 초과 · 틀린 파일이면 false 와 이유입니다. */
-            [[nodiscard]] static bool readThemeChain( string_view absolutePath, EditorThemeDef& outDef, string& outError )
+            /** @brief 벌 하나를 `_base` 사슬 끝까지 읽어 합칩니다(자식의 키가 이긴다). 없는 부모 · 순환 · 깊이 초과 · 틀린 파일이면 그 파일이 대상인 오류입니다. */
+            [[nodiscard]] static expected<EditorThemeDef> readThemeChain( string_view absolutePath )
             {
                 vector<string>         listPath;
                 vector<EditorThemeDef> listLayer; // 자식부터
@@ -53,18 +53,14 @@ namespace sw::editor
                 while ( path.empty() == false )
                 {
                     if ( VectorUtil::contains( listPath, path ) || listPath.size() >= DataInheritance::getMaxDepth() )
-                    {
-                        outError = path + ": its _base chain is a cycle or too deep";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::Cycle, "the _base chain is a cycle or too deep", path } );
                     listPath.push_back( path );
                     EditorThemeDef&        layer  = listLayer.emplace_back();
                     const ConfigReadResult result = ConfigManager::readConfigFile( layer, path );
+                    if ( result == ConfigReadResult::Missing )
+                        return unexpected( Error{ ErrorKind::NotFound, "theme token file not found", path } );
                     if ( result != ConfigReadResult::Loaded )
-                    {
-                        outError = path + ( result == ConfigReadResult::Missing ? ": file not found" : ": not a valid theme token file" );
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "not a valid theme token file", path } );
                     if ( layer._base.empty() )
                         break;
                     string_view folder;
@@ -90,8 +86,7 @@ namespace sw::editor
                     }
                     listLayer.pop_back();
                 }
-                outDef = std::move( merged );
-                return true;
+                return merged;
             }
         };
     } // namespace
@@ -115,88 +110,79 @@ namespace sw::editor
         VectorUtil::sort( outListName );
     }
 
-    bool EditorThemeTokens::loadTheme( string_view name, EditorThemeConfig& outConfig, string& outError )
+    expected<EditorThemeConfig> EditorThemeTokens::loadTheme( string_view name )
     {
         const string folder = getFolderPath();
         if ( folder.empty() )
-        {
-            outError = "the content root is not mounted";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "the content root is not mounted" } );
         string fileName{ name };
         fileName.append( kExtension );
-        return loadThemeFile( FileUtil::joinPath( folder, fileName ), outConfig, outError );
+        return loadThemeFile( FileUtil::joinPath( folder, fileName ) );
     }
 
     bool EditorThemeTokens::loadThemeResource( const AssetID& id, EditorThemeConfig& outConfig )
     {
-        const string&                assetID = id.str();
-        string                       error;
+        const string&                assetID   = id.str();
         const optional<AbsolutePath> themeFile = editor::getSubsystem<AssetPaths>().findLooseFile( assetID );
-        if ( themeFile.has_value() && loadThemeFile( themeFile->str(), outConfig, error ) )
-            return true;
-        SW_LOG_ERROR_ID( "EditorThemeTokens.ThemeTokensNotLoaded", "Theme tokens were not loaded: %#", error.c_str() );
-        return false;
-    }
-
-    bool EditorThemeTokens::loadThemeFile( string_view absolutePath, EditorThemeConfig& outConfig, string& outError )
-    {
-        EditorThemeDef def{};
-        if ( EditorThemeTokensInternal::readThemeChain( absolutePath, def, outError ) == false )
-            return false;
-        if ( resolve( def, outConfig, outError ) == false )
+        if ( themeFile.has_value() == false )
         {
-            outError = string{ absolutePath } + ": " + outError;
+            SW_LOG_ERROR_ID( "EditorThemeTokens.ThemeTokensNotLoaded", "Theme tokens were not loaded: %# is not a loose file", assetID.c_str() );
             return false;
         }
+        expected<EditorThemeConfig> config = loadThemeFile( themeFile->str() );
+        if ( config.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "EditorThemeTokens.ThemeTokensNotLoaded", "Theme tokens were not loaded: %# (%#)", config.error().message(), config.error().detail() );
+            return false;
+        }
+        outConfig = std::move( *config );
         return true;
     }
 
-    bool EditorThemeTokens::resolve( const EditorThemeDef& def, EditorThemeConfig& outConfig, string& outError )
+    expected<EditorThemeConfig> EditorThemeTokens::loadThemeFile( string_view absolutePath )
+    {
+        const expected<EditorThemeDef> def = EditorThemeTokensInternal::readThemeChain( absolutePath );
+        if ( def.has_value() == false )
+            return unexpected( def.error() );
+        expected<EditorThemeConfig> config = resolve( *def );
+        if ( config.has_value() == false )
+        {
+            Error error = config.error();
+            error.prependDetail( ": " ).prependDetail( absolutePath ); // 어느 파일인지
+            return unexpected( error );
+        }
+        return config;
+    }
+
+    expected<EditorThemeConfig> EditorThemeTokens::resolve( const EditorThemeDef& def )
     {
         if ( def._name.empty() )
-        {
-            outError = "_name is empty";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "_name is empty" } );
         if ( def._color.empty() || def._metric.empty() )
-        {
-            outError = "_color and _metric must not be empty";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "_color and _metric must not be empty" } );
         EditorThemeConfig resolved{};
         for ( const auto& [key, text] : def._color )
         {
             Color color{};
             if ( EditorThemeTokensInternal::isValidKey( key ) == false || Color::fromHex( text, color ) == false )
-            {
-                outError = "_color." + key + " needs a Namespace.Key name and #RRGGBB or #RRGGBBAA, got '" + text + "'";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a _color key needs a Namespace.Key name and #RRGGBB or #RRGGBBAA", key }.appendDetail( " = " ).appendDetail( text ) );
             resolved._mapColor[hashed_string( string_view( key ) )] = color;
         }
         for ( const auto& [key, value] : def._metric )
         {
             if ( EditorThemeTokensInternal::isValidKey( key ) == false || value < 0.0f )
-            {
-                outError = "_metric." + key + " needs a Namespace.Key name and a value of 0 or more";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a _metric key needs a Namespace.Key name and a value of 0 or more", key } );
             resolved._mapMetric[hashed_string( string_view( key ) )] = value;
         }
         for ( const utf8* pKey : EditorThemeTokensInternal::kArrPositiveMetric )
         {
             const float32* pValue = resolved.findMetric( hashed_string( pKey ) );
             if ( pValue == nullptr || *pValue <= 0.0f )
-            {
-                outError = string( "_metric." ) + pKey + " must be present and positive";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the _metric must be present and positive", pKey } );
         }
         resolved._name        = def._name;
         resolved._displayName = def._displayName.empty() ? def._name : def._displayName;
-        outConfig             = std::move( resolved );
-        return true;
+        return resolved;
     }
 
     bool EditorThemeTokens::findKeyMismatch( const EditorThemeConfig& reference, const EditorThemeConfig& other, string& outKey )

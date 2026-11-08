@@ -51,23 +51,23 @@ namespace sw::editor
             /** @brief 그리기 · 폴링 경로의 세션입니다. 탭은 에디터 안에서만 그려지므로 에디터 문맥이 없으면 버그다(감시 값 · 개발 명령은 `findSession`). */
             static EditorNetPlaySession& getSession() { return editor::getSubsystem<EditorContext>().getSubsystem<EditorNetPlaySession>(); }
 
-            /** @brief 세션이 띄운 전용 서버의 이력을 칸에 담습니다. 채널이 없으면 false 이고 이유는 `getLastError` 가 아니라 @p outReason 에 씁니다. */
-            [[nodiscard]] static bool loadSessionServer( int32 sourceIndex, string& outReason )
+            /** @brief 세션이 띄운 전용 서버의 이력을 칸에 담습니다. 서버나 채널이 없으면 그 이유입니다(채널 읽기 실패는 비교기의 글이 대상). */
+            [[nodiscard]] static expected<void> loadSessionServer( int32 sourceIndex )
             {
                 EditorNetPlaySession* pSession   = findSession();
                 const bool            bHasServer = pSession != nullptr && pSession->isRunning() && pSession->getDebugChannelPort() != 0;
                 if ( bHasServer == false )
-                {
-                    outReason = "no dedicated server session with a debug channel is running";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "no dedicated server session with a debug channel is running" } );
                 EditorStateHashCompare& compare = getCompare();
                 if ( compare.loadFromChannel( sourceIndex, NetAddress::makeLoopback( pSession->getDebugChannelPort() ), pSession->getDebugChannelToken() ) == false )
-                {
-                    outReason = compare.getLastError();
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "the session server's history could not be read", compare.getLastError() } );
+                return {};
+            }
+
+            /** @brief 개발 명령 답 글로 씁니다(`<문장>: <대상>`). */
+            static string makeReply( const Error& error )
+            {
+                return error.detail().empty() ? string( error.message() ) : string( error.message() ) + ": " + string( error.detail() );
             }
 
             /** @brief 비교 결과 한 줄입니다(탭 · 명령 답). */
@@ -127,11 +127,17 @@ namespace sw::editor
                     return false;
                 EditorStateHashCompare& compare = getCompare();
                 bool                    bDone   = false;
-                if ( loadSessionServer( 0, outReply ) == false )
+                if ( const expected<void> loaded = loadSessionServer( 0 ); loaded.has_value() == false )
+                {
+                    outReply = makeReply( loaded.error() );
                     return true;
+                }
                 if ( bServer )
                 {
-                    bDone = loadSessionServer( 1, outReply ) && compare.compareObjectsFromChannels();
+                    const expected<void> loaded = loadSessionServer( 1 );
+                    if ( loaded.has_value() == false )
+                        outReply = makeReply( loaded.error() );
+                    bDone = loaded.has_value() && compare.compareObjectsFromChannels();
                 }
                 else
                 {
@@ -201,8 +207,11 @@ namespace sw::editor
                 if ( DevCommandRegistry::readDiskPathArgument( listArgument[1], filePath, outReply ) == false )
                     return true;
                 EditorStateHashCompare& compare = getCompare();
-                if ( loadSessionServer( 0, outReply ) == false )
+                if ( const expected<void> loaded = loadSessionServer( 0 ); loaded.has_value() == false )
+                {
+                    outReply = makeReply( loaded.error() );
                     return true;
+                }
                 if ( bSave )
                 {
                     const bool bSaved = compare.saveToFile( 0, filePath );
@@ -322,9 +331,11 @@ namespace sw::editor
 
         if ( ImGui::Button( SW_LOCKEY( "EdText", "SessionServer" ) ) )
         {
-            string reason;
-            if ( MultiplayerSyncTabInternal::loadSessionServer( sourceIndex, reason ) == false )
-                SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotRead", "Sync could not read the session server's history: %#", reason );
+            const expected<void> loaded = MultiplayerSyncTabInternal::loadSessionServer( sourceIndex );
+            if ( loaded.has_value() == false )
+            {
+                SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotRead", "Sync could not read the session server's history: %#: %#", loaded.error().message(), loaded.error().detail() );
+            }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncSessionServer" ) );
         ImGui::SameLine();

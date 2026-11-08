@@ -589,13 +589,13 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "ModelImporter.FractureRuleMatchedSkinned", "Fracture rule '%#' matched skinned model %# - only static meshes fracture", rule._name.c_str(), sourcePath );
                     return false;
                 }
-                FractureAsset fracture;
-                string        error;
-                if ( MeshFractureUtil::fracture( result._mesh._listVertex, result._mesh._listIndex, rule._fracture, fracture, error ) == false )
+                const expected<FractureAsset> fractured = MeshFractureUtil::fracture( result._mesh._listVertex, result._mesh._listIndex, rule._fracture );
+                if ( fractured.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.FractureFailed", "Fracture of %# failed: %#", sourcePath, error.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.FractureFailed", "Fracture of %# failed: %# (%#)", sourcePath, fractured.error().message(), fractured.error().detail() );
                     return false;
                 }
+                const FractureAsset&         fracture     = *fractured;
                 const optional<AbsolutePath> fractureFile = FileUtil::requireAbsolutePath( fracturePath );
                 if ( fractureFile.has_value() == false || fracture.saveToFile( *fractureFile ) == false )
                 {

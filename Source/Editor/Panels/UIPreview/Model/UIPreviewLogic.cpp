@@ -589,19 +589,16 @@ namespace sw::editor
         return string( resultBuilder.view() );
     }
 
-    bool UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath, string& outText, string& outError )
+    expected<string> UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath )
     {
         const Widget* pRoot = screen.getTree().getRoot();
         if ( pRoot == nullptr )
-        {
-            outError = "the preview has no widget tree";
-            return false;
-        }
-        const shared_ptr<const UIDocumentAsset> document = documents.findOrLoad( documentPath, outError );
+            return unexpected( Error{ ErrorKind::NotFound, "the preview has no widget tree" } );
+        string                                  loadError; // 문서 캐시(엔진 UIDocumentCache)의 글 — 그 쪽이 결과 형식으로 옮기면 이 줄도 따라간다
+        const shared_ptr<const UIDocumentAsset> document = documents.findOrLoad( documentPath, loadError );
         if ( document == nullptr )
-            return false;
-        outText = UIDocumentWriter::write( screen.getDesc(), document->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );
-        return true;
+            return unexpected( Error{ ErrorKind::NotFound, "the document could not be loaded", loadError } );
+        return UIDocumentWriter::write( screen.getDesc(), document->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );
     }
 
     UIPreviewAnchorValues UIPreviewLogic::getAnchorPreset( UIPreviewAnchorPreset preset )

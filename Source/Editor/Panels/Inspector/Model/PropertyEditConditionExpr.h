@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -43,10 +44,9 @@ namespace sw
         // EditCondition 식을 풀고 판정합니다. */
         /**
          * @brief @p prop 의 EditCondition 식을 @p type(기반 포함)에 대해 풉니다.
-         * @param outError 풀지 못한 이유(로그 · 테스트용). 식이 없으면 비어 있고 true 입니다.
-         * @return 식이 없거나 풀었으면 true. 이름이 없거나 · 열거자가 없거나 · 꼴이 틀리면 false
+         * @return 푼 식(식이 없으면 보는 프로퍼티가 없는 빈 식). 이름이 없거나 · 열거자가 없거나 · 꼴이 틀리면 그 이유(대상은 그 이름 · 값)입니다.
          */
-        [[nodiscard]] static bool parse( const TypeInfo& type, const PropertyInfo& prop, PropertyEditConditionExpr& outExpr, string& outError );
+        [[nodiscard]] static expected<PropertyEditConditionExpr> parse( const TypeInfo& type, const PropertyInfo& prop );
         /** @brief 풀어 둔 식을 인스턴스 값으로 판정합니다. 보는 프로퍼티가 없으면(식 없음) 참입니다. */
         static bool evaluate( const PropertyEditConditionExpr& expr, ObjectAddress instance );
         /** @brief 인스펙터가 쓰는 한 번에 — 풀고 판정해 보일 상태를 돌려줍니다. 풀지 못하면 `Enabled`(막지 않는다)입니다. */

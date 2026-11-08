@@ -385,15 +385,14 @@ namespace sw::editor
         const UIScreen*     pScreen    = pOffscreen != nullptr ? pOffscreen->findScreen( _screen ) : nullptr;
         if ( pScreen == nullptr || pDocuments == nullptr )
             return false;
-        string text;
-        string error;
-        if ( UIPreviewLogic::makeDocumentText( *pDocuments, *pScreen, _openedDocument, text, error ) == false )
+        const expected<string> text = UIPreviewLogic::makeDocumentText( *pDocuments, *pScreen, _openedDocument );
+        if ( text.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "UIPreviewModel.UIPreviewCannotSaved", "UI Preview: '%#' cannot be saved - %#", _openedDocument.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "UIPreviewModel.UIPreviewCannotSaved", "UI Preview: '%#' cannot be saved - %#: %#", _openedDocument.c_str(), text.error().message(), text.error().detail() );
             return false;
         }
         const optional<AbsolutePath> path = editor::getSubsystem<AssetPaths>().toDiskPath( _openedDocument );
-        if ( path.has_value() == false || FileUtil::writeTextFile( path->str(), text ) == false )
+        if ( path.has_value() == false || FileUtil::writeTextFile( path->str(), *text ) == false )
         {
             SW_LOG_ERROR_ID( "UIPreviewModel.UIPreviewCouldNot", "UI Preview: '%#' could not be written", _openedDocument.c_str() );
             return false;
