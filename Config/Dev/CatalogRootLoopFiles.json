@@ -5,6 +5,10 @@
             "_reason": "외형 데이터의 오류는 로그가 아니라 AppearanceLoadReport 에 모아 카탈로그 창이 보인다 — 표 읽기는 로그로 알린다"
         },
         {
+            "_path": "Source/GameFramework/Runtime/Gameplay/Appearance/BodyProfile.cpp",
+            "_reason": "외형 데이터의 오류는 로그가 아니라 AppearanceLoadReport 에 모아 카탈로그 창이 보인다 — 표 읽기는 로그로 알린다"
+        },
+        {
             "_path": "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.cpp",
             "_reason": "외형 데이터의 오류는 로그가 아니라 AppearanceLoadReport 에 모아 카탈로그 창이 보인다 — 표 읽기는 로그로 알린다"
         },

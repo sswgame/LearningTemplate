@@ -497,6 +497,7 @@ namespace sw
         outNode.appendAttribute( "id", def._id.c_str() );
         Internal::appendName( outNode, "parent", def._parent );
         Internal::appendName( outNode, "schema", def._schema );
+        Internal::appendName( outNode, "bodyProfile", def._bodyProfile );
         Internal::appendNameList( outNode, "bodyType", def._listBodyType );
         Internal::appendNameList( outNode, "bodyShape", def._listBodyShape );
         Internal::appendNameList( outNode, "face", def._listFace );
@@ -565,6 +566,8 @@ namespace sw
             const CharacterAppearanceDef& level = *pLevel;
             if ( level._schema.empty() == false )
                 outMerged._schema = level._schema;
+            if ( level._bodyProfile.empty() == false )
+                outMerged._bodyProfile = level._bodyProfile;
             CharacterAppearanceInternal::replaceIfGiven( outMerged._listBodyType, level._listBodyType );
             CharacterAppearanceInternal::replaceIfGiven( outMerged._listBodyShape, level._listBodyShape );
             CharacterAppearanceInternal::replaceIfGiven( outMerged._listFace, level._listFace );
@@ -645,6 +648,7 @@ namespace sw
         outSpec._presetID           = id;
         outSpec._seed               = seed;
         outSpec._schema             = merged._schema;
+        outSpec._bodyProfile        = merged._bodyProfile;
         outSpec._tags               = merged._tags;
         outSpec._bodyType           = Internal::pickName( merged._listBodyType, seed, Internal::kKeyBodyType );
         outSpec._bodyShape          = Internal::pickName( merged._listBodyShape, seed, Internal::kKeyBodyShape );

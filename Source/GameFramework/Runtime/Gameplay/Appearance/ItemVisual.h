@@ -14,6 +14,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/BodyChannel.h"
 
 namespace sw
 {
@@ -34,7 +35,7 @@ namespace sw
      * @details 언리얼 Material Slot(슬롯 이름으로 덮기) · 유니티 `Renderer.materials`(서브메시 번호)의 자리다. 번호가 아니라 이름으로 짚어 메시를 다시 임포트해 구간 순서가 바뀌어도 데이터가 그대로 맞다.
      */
     REFLECT()
-    struct AppearanceSectionDef
+    struct SW_GF_API AppearanceSectionDef
     {
         REFLECT_BODY();
 
@@ -48,6 +49,19 @@ namespace sw
         /** @brief 이 LOD 단계(1 부터)부터 이 구간을 그리지 않습니다(`CharacterLODSectionRule::_dropLevel`). 0 이면 부품의 값입니다. */
         PROPERTY()
         uint32 _lodDropLevel{ 0 };
+        /**
+         * @brief 구간의 안정된 별칭입니다(`cloth_main`, `trim`, `buckle`, `lining`). 꾸미기 드라이브의 `include` · `exclude` 가 이 이름(또는 묶음 · 구간 이름)으로 구간을 고른다.
+         * @details 임포트가 붙인 날 이름(`_name`)은 원본 파일마다 다르다 — 염색 · 화장 · 머티리얼 덮어쓰기는 별칭으로 짚어 같은 스키마를 여러 메시에 쓴다.
+         */
+        PROPERTY()
+        hashed_string         _alias{};
+        vector<hashed_string> _listGroup{}; ///< 별칭 묶음(`groups="cloth,metal"` — 손으로 읽는다)
+        /** @brief 염색(`DyeChannel` 드라이브)이 이 구간을 건너뛰는지입니다(`dyeable="false"` — 버클 · 금속 장식). */
+        PROPERTY( Name = "dyeable" )
+        bool _bDyeable{ true };
+
+        /** @brief 이름 @p tag 가 이 구간의 날 이름 · 별칭 · 묶음 중 하나면 true 입니다. */
+        bool matchesTag( const hashed_string& tag ) const;
     };
 } // namespace sw
 
@@ -228,6 +242,7 @@ namespace sw
         vector<AppearancePartDef>        _listPart{};
         vector<AppearanceStateDef>       _listState{};
         vector<AppearanceDamageStageDef> _listDamageStage{}; ///< 임계값 오름차순
+        vector<BodyChannelLayerDef>      _listBodyChannel{}; ///< 입고 있는 동안 몸 채널에 얹는 층(`<BodyChannel>` — 가슴 조임 · 어깨 폭 · 굽 높이). 뼈 이름은 모른다
         TagContainer                     _tags{};            ///< 외형 규칙이 참조하는 태그(`Helmet.FullFace`, `Sleeve.Long`). 형상 변경이면 보이는 외형의 태그를 쓴다
         hashed_string                    _id{};
         PROPERTY()
@@ -237,7 +252,9 @@ namespace sw
         PROPERTY()
         hashed_string _defaultState{}; ///< 비어 있으면 첫 상태. 상태가 없으면 기본 배치
 
-        const AppearancePartDef*        findPart( const hashed_string& name ) const;
+        const AppearancePartDef* findPart( const hashed_string& name ) const;
+        /** @brief 어느 부품의 구간이 이름 @p tag(날 이름 · 별칭 · 묶음)와 맞으면 true 입니다. 드라이브의 `include` · `exclude` 검사가 쓴다. */
+        bool                            hasSectionTag( const hashed_string& tag ) const;
         const AppearanceStateDef*       findState( const hashed_string& name ) const;
         const AppearanceDamageStageDef* findDamageStage( const hashed_string& name ) const;
         /** @brief 피해 @p damage 의 단계 번호입니다. 첫 임계값 아래이면 -1 이고, 멀쩡한 상태입니다. */

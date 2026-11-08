@@ -15,6 +15,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceRule.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/BodyProfile.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/EquipmentSetCatalog.h"
@@ -30,7 +31,8 @@ namespace sw
      * @class AppearanceDatabase
      * @brief 외형 데이터 폴더 하나(`<게임>/data/appearance/`)를 읽습니다. 파일 하나가 한 종류이고, 루트 원소 이름으로 종류를 구분합니다.
      * @details 파일은 다음과 같다. `slots.xml`(`SlotCatalog`, 반드시 필요), `sets.xml`(`EquipmentSetCatalog`), `itemvisuals.xml`(`ItemVisualCatalog`),
-     *          `customization.xml`(`CustomizationSchemaCatalog`), `rules.xml`(`AppearanceRuleCatalog`), `presets.xml`(`CharacterAppearanceCatalog`).
+     *          `customization.xml`(`CustomizationSchemaCatalog`), `rules.xml`(`AppearanceRuleCatalog`), `presets.xml`(`CharacterAppearanceCatalog`),
+     *          `bodyprofiles.xml`(`CharacterBodyProfileCatalog` — 지글 · 주름 · 동공 · 체액 · 기본 몸 채널).
      *          프리셋은 에셋 파일 하나에 하나씩도 둘 수 있다. `presets/` 아래의 `*.appearance.xml`(루트 `<CharacterAppearance>`)을 `presets.xml` 뒤에 읽는다.
      *          캐릭터 편집 창이 내보내는 곳이고(언리얼과 유니티의 프리셋 에셋에 해당), 씬의 `CharacterAppearanceComponent` 는 그 id 를 가리킨다.
      *          모두 읽은 뒤 `finishLoad` 가 알 수 없는 이름(슬롯, 세트, 아이템, 외형, 스키마, 매개변수, 항목, 변형, 부품, 부모)과 장착 조건 순환, 프리셋 부모 순환을 오류로 모은다.
@@ -77,15 +79,16 @@ namespace sw
         /** @brief 다시 읽은 뒤(`reloadFromFolder` 성공) 부를 델리게이트를 겁니다. 외형 컴포넌트가 다시 조립합니다. 돌려준 구독이 사라지면 뗍니다. */
         [[nodiscard]] Subscription registerReloaded( const Delegate<void()>& delegate );
 
-        const SlotCatalog&                getSlotCatalog() const { return _slotCatalog; }
-        const EquipmentSetCatalog&        getSets() const { return _sets; }
-        const ItemVisualCatalog&          getVisuals() const { return _visuals; }
-        const CustomizationSchemaCatalog& getSchemas() const { return _schemas; }
-        const AppearanceRuleCatalog&      getRules() const { return _rules; }
-        const CharacterAppearanceCatalog& getPresets() const { return _presets; }
-        const ItemCatalog*                getItemCatalog() const { return _pItemCatalog; }
-        const AppearanceLoadReport&       getReport() const { return _report; }
-        uint32                            getRevision() const { return _revision; }
+        const SlotCatalog&                 getSlotCatalog() const { return _slotCatalog; }
+        const EquipmentSetCatalog&         getSets() const { return _sets; }
+        const ItemVisualCatalog&           getVisuals() const { return _visuals; }
+        const CustomizationSchemaCatalog&  getSchemas() const { return _schemas; }
+        const AppearanceRuleCatalog&       getRules() const { return _rules; }
+        const CharacterAppearanceCatalog&  getPresets() const { return _presets; }
+        const CharacterBodyProfileCatalog& getBodyProfiles() const { return _bodyProfiles; }
+        const ItemCatalog*                 getItemCatalog() const { return _pItemCatalog; }
+        const AppearanceLoadReport&        getReport() const { return _report; }
+        uint32                             getRevision() const { return _revision; }
         /**
          * @brief 이 객체의 번호입니다(만들 때마다 새 번호 — 주소가 재사용돼도 겹치지 않는다).
          * @details 외형 상태(`CharacterAppearanceState`)는 데이터베이스를 포인터로 들지 않고 이 번호만 기억해 "같은 데이터인가" 를 알아본다. 서비스가 먼저 내려가도 허공을 가리키는 포인터가 남지 않는다.
@@ -112,22 +115,25 @@ namespace sw
         void               validateSchemas();
         void               validateRules( const vector<hashed_string>* pListKnownBodyRegion );
         void               validatePresets();
-        void               validateItemValues( const CustomizationValueSet& values, const hashed_string& schemaID, const utf8* pWhere );
-        bool               isVariantDeclared( const hashed_string& variant ) const;
-        bool               isPartDeclared( const hashed_string& part ) const;
-        bool               isSectionDeclared( const hashed_string& section ) const;
+        /** @brief 머티리얼 드라이브의 `include` · `exclude` 가 외형 @p visual 의 구간 이름 · 별칭 · 묶음인지 봅니다(없는 별칭은 오류 — 조용히 아무 구간도 칠하지 않게). */
+        void validateSectionTags( const CustomizationSchemaDef& schema, const ItemVisualDef& visual, string_view where );
+        void validateItemValues( const CustomizationValueSet& values, const hashed_string& schemaID, const utf8* pWhere );
+        bool isVariantDeclared( const hashed_string& variant ) const;
+        bool isPartDeclared( const hashed_string& part ) const;
+        bool isSectionDeclared( const hashed_string& section ) const;
 
     private:
-        SlotCatalog                _slotCatalog;
-        EquipmentSetCatalog        _sets;
-        ItemVisualCatalog          _visuals;
-        CustomizationSchemaCatalog _schemas;
-        AppearanceRuleCatalog      _rules;
-        CharacterAppearanceCatalog _presets;
-        AppearanceLoadReport       _report;
-        const ItemCatalog*         _pItemCatalog;
-        MulticastDelegate<void()>  _reloadedMulticast;
-        uint32                     _revision;
-        uint64                     _instanceID;
+        SlotCatalog                 _slotCatalog;
+        EquipmentSetCatalog         _sets;
+        ItemVisualCatalog           _visuals;
+        CustomizationSchemaCatalog  _schemas;
+        AppearanceRuleCatalog       _rules;
+        CharacterAppearanceCatalog  _presets;
+        CharacterBodyProfileCatalog _bodyProfiles;
+        AppearanceLoadReport        _report;
+        const ItemCatalog*          _pItemCatalog;
+        MulticastDelegate<void()>   _reloadedMulticast;
+        uint32                      _revision;
+        uint64                      _instanceID;
     };
 } // namespace sw

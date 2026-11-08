@@ -53,11 +53,12 @@ namespace sw
         CustomizationValueSet _customization{};    ///< 아이템 인스턴스의 꾸미기 값
         vector<hashed_string> _listDetachedPart{}; ///< 떨어져 나간 부품
         hashed_string         _slot{};
-        hashed_string         _itemID{};                ///< 비어 있으면 빈 슬롯
-        hashed_string         _visibleVisual{};         ///< 형상 변경. 비어 있으면 아이템 자신의 외형
-        hashed_string         _state{};                 ///< 외형 상태(뽑음, 꽂음, 켬, 끔). 비어 있으면 외형의 기본 상태
-        float32               _damage{ 0.0f };          ///< 외형 피해 0..1
-        uint8                 _bSuppressed{ SW_FALSE }; ///< 장착 조건이 깨져 숨겨진 상태
+        hashed_string         _itemID{};                    ///< 비어 있으면 빈 슬롯
+        hashed_string         _visibleVisual{};             ///< 형상 변경. 비어 있으면 아이템 자신의 외형
+        hashed_string         _state{};                     ///< 외형 상태(뽑음, 꽂음, 켬, 끔). 비어 있으면 외형의 기본 상태
+        float32               _damage{ 0.0f };              ///< 외형 피해 0..1
+        uint8                 _bSuppressed{ SW_FALSE };     ///< 장착 조건이 깨져 숨겨진 상태
+        uint8                 _bHiddenByPlayer{ SW_FALSE }; ///< 플레이어가 숨긴 슬롯(투구 숨기기). 장비 효과는 그대로이고 외형 · 몸 채널만 빠진다. 선택 · 공유 코드(판 2)에 실린다
     };
 } // namespace sw
 

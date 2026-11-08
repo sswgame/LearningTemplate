@@ -198,6 +198,7 @@ namespace sw
         hashed_string                    _bodyType{};
         hashed_string                    _bodyShape{};
         hashed_string                    _face{};
+        hashed_string                    _bodyProfile{}; ///< 몸 프로필 id(지글 · 주름 · 동공 · 체액 — 외형 컴포넌트가 리그 · 얼굴 · 표면에 건다)
         uint64                           _hash{ 0 };
         uint64                           _meshHash{ 0 };
 

@@ -77,6 +77,8 @@ namespace sw
         hashed_string _parent{};
         PROPERTY()
         hashed_string _schema{};
+        PROPERTY()
+        hashed_string _bodyProfile{}; ///< 몸 프로필 id(`bodyprofiles.xml` — 지글 · 주름 · 동공 · 체액 · 기본 몸 채널). 비어 있으면 부모의 것
     };
 } // namespace sw
 
@@ -98,6 +100,7 @@ namespace sw
         hashed_string                    _bodyShape{};
         hashed_string                    _face{};
         hashed_string                    _bodyVisual{};
+        hashed_string                    _bodyProfile{}; ///< 몸 프로필 id(비어 있으면 없음 — 지글 · 주름 · 동공 · 체액이 쉰다)
         uint32                           _seed{ 0 };
 
         AppearanceSlotRequest*       findSlot( const hashed_string& slot );

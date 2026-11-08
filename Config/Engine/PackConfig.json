@@ -75,7 +75,8 @@
       { "_kind": "visual", "_path": "data/appearance/itemvisuals.xml", "_entryElement": "ItemVisual", "_idAttribute": "id" },
       { "_kind": "set", "_path": "data/appearance/sets.xml", "_entryElement": "Set", "_idAttribute": "id" },
       { "_kind": "schema", "_path": "data/appearance/customization.xml", "_entryElement": "Schema", "_idAttribute": "id" },
-      { "_kind": "preset", "_path": "data/appearance/presets.xml", "_entryElement": "CharacterAppearance", "_idAttribute": "id" }
+      { "_kind": "preset", "_path": "data/appearance/presets.xml", "_entryElement": "CharacterAppearance", "_idAttribute": "id" },
+      { "_kind": "bodyprofile", "_path": "data/appearance/bodyprofiles.xml", "_entryElement": "BodyProfile", "_idAttribute": "id" }
     ],
     "_listEntryIDField": [
       { "_field": "item", "_kind": "item" },
@@ -87,6 +88,7 @@
       { "_field": "schema", "_kind": "schema" },
       { "_field": "customization", "_kind": "schema" },
       { "_field": "parent", "_kind": "preset" },
+      { "_field": "bodyProfile", "_kind": "bodyprofile" },
       { "_field": "_presetID", "_kind": "preset" },
       { "_field": "_preset", "_kind": "preset" },
       { "_field": "previewPreset", "_kind": "preset" },
