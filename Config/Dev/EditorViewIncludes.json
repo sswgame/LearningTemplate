@@ -49,6 +49,7 @@
         "Source/Editor/Panels/Packaging/PackagingPanel",
         "Source/Editor/Panels/Scene/HierarchyWatches",
         "Source/Editor/Panels/Animation/AnimationWatches",
-        "Source/Editor/Panels/Scene/HistoryPanel"
+        "Source/Editor/Panels/Scene/HistoryPanel",
+        "Source/Editor/Panels/Animation/AnimationGraphPanel"
     ]
 }

@@ -7,7 +7,6 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -16,8 +15,8 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+#include "Editor/Panels/Animation/Model/AnimationGraphEdit.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -415,7 +414,7 @@ namespace sw::editor
     ToolAssetLoadResult AnimationGraphPanel::loadDocument()
     {
         AnimationGraphAsset       data;
-        const ToolAssetLoadResult result = EditorToolAssetCommands::loadAnimationGraph( data, getLoadedAssetPath() );
+        const ToolAssetLoadResult result = AnimationGraphEdit::loadGraph( data, getLoadedAssetPath() );
         applyLoadedGraph( std::move( data ), result );
         _preview.resetForDocument();
         _layerEditor.clearSelection();
@@ -445,7 +444,7 @@ namespace sw::editor
         }
         // **저장이 실패하면 아무것도 지우지 않는다.** 실패를 "저장됨" 으로 표시하면 문서를 바꾸거나 에디터를 닫을 때
         // 종료 확인이 뜨지 않고 편집이 조용히 사라진다.
-        if ( EditorToolAssetCommands::saveAnimationGraph( data, getLoadedAssetPath() ) == false )
+        if ( AnimationGraphEdit::saveGraph( data, getLoadedAssetPath() ) == false )
             return false;
 
         clearDocumentDirty();
