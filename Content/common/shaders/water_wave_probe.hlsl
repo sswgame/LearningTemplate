@@ -31,10 +31,14 @@ void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
     if ( sampleIndex >= SW_ROOT( g_SampleCount ) )
         return;
     // 표본 자리 — 시험의 CPU 쪽과 같은 식이다.
-    const float2 origin                          = float2( -20.0f + (float)( sampleIndex % 8u ) * 5.25f, -15.0f + (float)( sampleIndex / 8u ) * 4.125f );
-    float4       arrWave[SW_GERSTNER_WAVE_COUNT] = { SW_ROOT( g_Wave0 ), SW_ROOT( g_Wave1 ), SW_ROOT( g_Wave2 ), float4( 0.0f, 1.0f, 0.0f, 0.0f ) };
-    const float3 displacement                    = Gerstner::computeDisplacement( origin, SW_ROOT( g_Time ), SW_ROOT( g_Gravity ), arrWave );
-    const uint3  bits                            = asuint( displacement );
+    const float2  origin = float2( -20.0f + (float)( sampleIndex % 8u ) * 5.25f, -15.0f + (float)( sampleIndex / 8u ) * 4.125f );
+    GerstnerWaves waves;
+    waves._wave0              = SW_ROOT( g_Wave0 );
+    waves._wave1              = SW_ROOT( g_Wave1 );
+    waves._wave2              = SW_ROOT( g_Wave2 );
+    waves._wave3              = float4( 0.0f, 1.0f, 0.0f, 0.0f );
+    const float3 displacement = Gerstner::computeDisplacement( origin, SW_ROOT( g_Time ), SW_ROOT( g_Gravity ), waves );
+    const uint3  bits         = asuint( displacement );
     Bindless::storeRwTexture2D( SW_ROOT( g_TargetIndex ), uint2( 0u, sampleIndex ), encodeHalfWord( bits.x & 0xFFFFu ) );
     Bindless::storeRwTexture2D( SW_ROOT( g_TargetIndex ), uint2( 1u, sampleIndex ), encodeHalfWord( bits.x >> 16 ) );
     Bindless::storeRwTexture2D( SW_ROOT( g_TargetIndex ), uint2( 2u, sampleIndex ), encodeHalfWord( bits.y & 0xFFFFu ) );

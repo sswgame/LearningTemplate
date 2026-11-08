@@ -12,87 +12,116 @@
 
 #include "common.hlsli"
 
-struct Gerstner
+#if SW_GERSTNER_WAVE_COUNT != 4
+    #error "GerstnerWaves holds four named waves - update the struct and the four calls in Gerstner when SW_GERSTNER_WAVE_COUNT changes"
+#endif
+
+/**
+ * @brief 파도 넷. 배열(`float4 [4]`)이 아니라 이름 있는 칸 넷이다 — 배열을 함수 인자로 값 복사하면 NVIDIA OpenGL(ARB_gl_spirv) 이 칸 1..3 을 NaN 으로 읽어
+ *        정점이 사라졌다(DX12 · Vulkan 은 같은 소스로 바르게 그렸다). 같은 모양을 쓰지 못하게 API 에서 배열을 뺀다.
+ */
+struct GerstnerWaves
 {
-    static uint countWaves( float4 arrWave[SW_GERSTNER_WAVE_COUNT] );
-    static bool computeTerm( float4 wave, uint activeCount, float2 origin, float time, float gravity, out float2 outDirection, out float outWaveNumber, out float outSharpness,
-                             out float outPhase );
-    static float3 computeDisplacement( float2 origin, float time, float gravity, float4 arrWave[SW_GERSTNER_WAVE_COUNT] );
-    static float3 computeNormal( float2 origin, float time, float gravity, float4 arrWave[SW_GERSTNER_WAVE_COUNT] );
+    float4 _wave0;
+    float4 _wave1;
+    float4 _wave2;
+    float4 _wave3;
 };
 
-/** @brief 진폭 · 파장이 0 보다 큰 파도 수 — Q 를 나누는 수다. */
-static uint Gerstner::countWaves( float4 arrWave[SW_GERSTNER_WAVE_COUNT] )
+struct GerstnerTerm
 {
-    uint count = 0u;
-    for ( uint waveIndex = 0u; waveIndex < SW_GERSTNER_WAVE_COUNT; ++waveIndex )
-        count += ( arrWave[waveIndex].z > 0.0f && arrWave[waveIndex].y > 0.0f ) ? 1u : 0u;
-    return count;
+    float2 _direction;
+    float  _waveNumber;
+    float  _sharpness;
+    float  _phase;
+    float  _amplitude;
+};
+
+struct Gerstner
+{
+    static uint countWave( float4 wave );
+    static uint countWaves( GerstnerWaves waves );
+    static GerstnerTerm computeTerm( float4 wave, uint activeCount, float2 origin, float time, float gravity );
+    static float3 computeDisplacementTerm( float4 wave, uint activeCount, float2 origin, float time, float gravity );
+    static void addNormalTerm( float4 wave, uint activeCount, float2 origin, float time, float gravity, inout float3 ioTangentX, inout float3 ioTangentZ );
+    static float3 computeDisplacement( float2 origin, float time, float gravity, GerstnerWaves waves );
+    static float3 computeNormal( float2 origin, float time, float gravity, GerstnerWaves waves );
+};
+
+/** @brief 진폭 · 파장이 0 보다 크면 1 — 빈 칸은 0. */
+static uint Gerstner::countWave( float4 wave )
+{
+    return ( wave.z > 0.0f && wave.y > 0.0f ) ? 1u : 0u;
+}
+
+/** @brief 진폭 · 파장이 0 보다 큰 파도 수 — Q 를 나누는 수다. */
+static uint Gerstner::countWaves( GerstnerWaves waves )
+{
+    return Gerstner::countWave( waves._wave0 ) + Gerstner::countWave( waves._wave1 ) + Gerstner::countWave( waves._wave2 ) + Gerstner::countWave( waves._wave3 );
 }
 
 /**
- * @brief 파도 하나의 항 — 방향 · 파수 · Q · 위상. 빈 칸이면 false.
+ * @brief 파도 하나의 항 — 방향 · 파수 · Q · 위상 · 진폭. 빈 칸이면 진폭 · 파수 · Q 가 0 이라 항이 0 이다.
+ * @details 분기 · 조기 반환 · 0 나누기를 두지 않는다. 빈 칸(진폭 0 · 파장 1)에서 Q = 가파름 / (k × 0 × n) 가 0/0 이 되는 식을 분기로 가리면 NVIDIA OpenGL(ARB_gl_spirv)
+ *          이 두 갈래를 섞어 NaN 을 냈다(수면 정점이 사라지고 노멀이 NaN — DX12 · Vulkan 은 같은 소스로 바르게 그렸다). 나누는 수를 늘 양수로 두고 빈 칸은 0 을 곱해 끈다 —
+ *          켠 칸의 값은 CPU `WaterWaveMath` 와 같고(max 가 그대로 둔다), 빈 칸이 더하는 +0 은 합을 바꾸지 않는다.
  */
-static bool Gerstner::computeTerm( float4 wave, uint activeCount, float2 origin, float time, float gravity, out float2 outDirection, out float outWaveNumber, out float outSharpness,
-                                   out float outPhase )
+static GerstnerTerm Gerstner::computeTerm( float4 wave, uint activeCount, float2 origin, float time, float gravity )
 {
-    outDirection  = float2( 0.0f, 0.0f );
-    outWaveNumber = 0.0f;
-    outSharpness  = 0.0f;
-    outPhase      = 0.0f;
-    if ( wave.z <= 0.0f || wave.y <= 0.0f || activeCount == 0u )
-        return false;
-    outDirection      = float2( cos( wave.x ), sin( wave.x ) );
-    outWaveNumber     = kTwoPi / wave.y;
-    outSharpness      = wave.w / ( outWaveNumber * wave.z * (float)activeCount );
-    const float speed = sqrt( gravity * outWaveNumber );
-    outPhase          = outWaveNumber * ( outDirection.x * origin.x + outDirection.y * origin.y ) - speed * time;
-    return true;
+    const float  active     = ( wave.z > 0.0f && wave.y > 0.0f && activeCount != 0u ) ? 1.0f : 0.0f;
+    const float  waveNumber = kTwoPi / max( wave.y, 1e-6f );
+    const float2 direction  = float2( cos( wave.x ), sin( wave.x ) );
+    GerstnerTerm term;
+    term._direction  = direction;
+    term._waveNumber = active * waveNumber;
+    term._amplitude  = active * wave.z;
+    term._sharpness  = active * wave.w / ( waveNumber * max( wave.z, 1e-6f ) * (float)max( activeCount, 1u ) );
+    term._phase      = active * ( waveNumber * ( direction.x * origin.x + direction.y * origin.y ) - sqrt( max( gravity * waveNumber, 0.0f ) ) * time );
+    return term;
 }
 
-/** @brief 수평 원점 (x, z) 의 점이 시간 @p time 에 옮겨 가는 변위(x, y, z). */
-static float3 Gerstner::computeDisplacement( float2 origin, float time, float gravity, float4 arrWave[SW_GERSTNER_WAVE_COUNT] )
+/** @brief 파도 하나가 더하는 변위(x, y, z). 빈 칸이면 0. */
+static float3 Gerstner::computeDisplacementTerm( float4 wave, uint activeCount, float2 origin, float time, float gravity )
 {
-    const uint activeCount  = Gerstner::countWaves( arrWave );
-    float3     displacement = float3( 0.0f, 0.0f, 0.0f );
-    for ( uint waveIndex = 0u; waveIndex < SW_GERSTNER_WAVE_COUNT; ++waveIndex )
-    {
-        float2 direction;
-        float  waveNumber;
-        float  sharpness;
-        float  phase;
-        if ( Gerstner::computeTerm( arrWave[waveIndex], activeCount, origin, time, gravity, direction, waveNumber, sharpness, phase ) == false )
-            continue;
-        const float amplitude = arrWave[waveIndex].z;
-        const float cosine    = cos( phase );
-        const float sine      = sin( phase );
-        displacement.x += sharpness * amplitude * direction.x * cosine;
-        displacement.y += amplitude * sine;
-        displacement.z += sharpness * amplitude * direction.y * cosine;
-    }
+    const GerstnerTerm term   = Gerstner::computeTerm( wave, activeCount, origin, time, gravity );
+    const float        cosine = cos( term._phase );
+    return float3( term._sharpness * term._amplitude * term._direction.x * cosine, term._amplitude * sin( term._phase ),
+                   term._sharpness * term._amplitude * term._direction.y * cosine );
+}
+
+/** @brief 수평 원점 (x, z) 의 점이 시간 @p time 에 옮겨 간 변위(x, y, z). 파도 0..3 순서로 더한다(CPU `WaterWaveMath` 와 같은 순서). */
+static float3 Gerstner::computeDisplacement( float2 origin, float time, float gravity, GerstnerWaves waves )
+{
+    const uint activeCount  = Gerstner::countWaves( waves );
+    float3     displacement = Gerstner::computeDisplacementTerm( waves._wave0, activeCount, origin, time, gravity );
+    displacement += Gerstner::computeDisplacementTerm( waves._wave1, activeCount, origin, time, gravity );
+    displacement += Gerstner::computeDisplacementTerm( waves._wave2, activeCount, origin, time, gravity );
+    displacement += Gerstner::computeDisplacementTerm( waves._wave3, activeCount, origin, time, gravity );
     return displacement;
 }
 
-/** @brief 수평 원점 (x, z) 의 옮겨 간 점의 수면 노멀(정규화) — 옮겨 간 면의 두 접선(원점 x · z 편미분)의 외적이다. */
-static float3 Gerstner::computeNormal( float2 origin, float time, float gravity, float4 arrWave[SW_GERSTNER_WAVE_COUNT] )
+/** @brief 파도 하나가 두 접선(원점 x · z 편미분)에 더하는 몫. 빈 칸이면 0 을 더한다. */
+static void Gerstner::addNormalTerm( float4 wave, uint activeCount, float2 origin, float time, float gravity, inout float3 ioTangentX, inout float3 ioTangentZ )
 {
-    const uint activeCount = Gerstner::countWaves( arrWave );
+    const GerstnerTerm term      = Gerstner::computeTerm( wave, activeCount, origin, time, gravity );
+    const float2       direction = term._direction;
+    const float        slope     = term._waveNumber * term._amplitude;
+    const float        crest     = term._sharpness * slope * sin( term._phase );
+    const float        cosine    = cos( term._phase );
+    ioTangentX += float3( -crest * direction.x * direction.x, slope * direction.x * cosine, -crest * direction.x * direction.y );
+    ioTangentZ += float3( -crest * direction.x * direction.y, slope * direction.y * cosine, -crest * direction.y * direction.y );
+}
+
+/** @brief 수평 원점 (x, z) 의 옮겨 간 점의 수면 노멀(정규화) — 옮겨 간 면의 두 접선(원점 x · z 편미분)의 외적이다. */
+static float3 Gerstner::computeNormal( float2 origin, float time, float gravity, GerstnerWaves waves )
+{
+    const uint activeCount = Gerstner::countWaves( waves );
     float3     tangentX    = float3( 1.0f, 0.0f, 0.0f );
     float3     tangentZ    = float3( 0.0f, 0.0f, 1.0f );
-    for ( uint waveIndex = 0u; waveIndex < SW_GERSTNER_WAVE_COUNT; ++waveIndex )
-    {
-        float2 direction;
-        float  waveNumber;
-        float  sharpness;
-        float  phase;
-        if ( Gerstner::computeTerm( arrWave[waveIndex], activeCount, origin, time, gravity, direction, waveNumber, sharpness, phase ) == false )
-            continue;
-        const float slope  = waveNumber * arrWave[waveIndex].z;
-        const float crest  = sharpness * slope * sin( phase );
-        const float cosine = cos( phase );
-        tangentX += float3( -crest * direction.x * direction.x, slope * direction.x * cosine, -crest * direction.x * direction.y );
-        tangentZ += float3( -crest * direction.x * direction.y, slope * direction.y * cosine, -crest * direction.y * direction.y );
-    }
+    Gerstner::addNormalTerm( waves._wave0, activeCount, origin, time, gravity, tangentX, tangentZ );
+    Gerstner::addNormalTerm( waves._wave1, activeCount, origin, time, gravity, tangentX, tangentZ );
+    Gerstner::addNormalTerm( waves._wave2, activeCount, origin, time, gravity, tangentX, tangentZ );
+    Gerstner::addNormalTerm( waves._wave3, activeCount, origin, time, gravity, tangentX, tangentZ );
     return normalize( cross( tangentZ, tangentX ) );
 }
 

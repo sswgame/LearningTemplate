@@ -60,32 +60,31 @@ struct MaterialVaryings
 #include "material_shader.hlsli"
 
 /** @brief 거스트너 파도 넷(머티리얼 프로퍼티)입니다. */
-void loadWaves( MaterialData material, out float4 outArrWave[SW_GERSTNER_WAVE_COUNT] )
+GerstnerWaves loadWaves( MaterialData material )
 {
-    outArrWave[0] = material._wave0;
-    outArrWave[1] = material._wave1;
-    outArrWave[2] = material._wave2;
-    outArrWave[3] = material._wave3;
+    GerstnerWaves waves;
+    waves._wave0 = material._wave0;
+    waves._wave1 = material._wave1;
+    waves._wave2 = material._wave2;
+    waves._wave3 = material._wave3;
+    return waves;
 }
 
 /** @brief 월드 위치 오프셋 — 파도 변위. 파도는 월드 (x, z) 의 함수다(CPU 질의 WaterWaveMath 가 같은 원점으로 같은 값을 낸다). */
 float3 computeWorldPositionOffset( VertexContext context )
 {
-    float4 arrWave[SW_GERSTNER_WAVE_COUNT];
-    loadWaves( context._material, arrWave );
-    return Gerstner::computeDisplacement( context._worldPosition.xz, context._material._waterParams.x, context._material._waveParams.x, arrWave );
+    return Gerstner::computeDisplacement( context._worldPosition.xz, context._material._waterParams.x, context._material._waveParams.x, loadWaves( context._material ) );
 }
 
 MaterialVaryings computeMaterialVaryings( VertexContext context )
 {
-    const MaterialData material = context._material;
-    float4             arrWave[SW_GERSTNER_WAVE_COUNT];
-    loadWaves( material, arrWave );
-    const float time = material._waterParams.x;
+    const MaterialData  material = context._material;
+    const GerstnerWaves waves    = loadWaves( material );
+    const float         time     = material._waterParams.x;
 
     MaterialVaryings varyings;
     // 파도는 월드 (x, z) 의 함수다 — 변위를 더하기 전의 원점으로 노멀을 구한다.
-    varyings._waveNormal = Gerstner::computeNormal( context._worldPosition.xz, time, material._waveParams.x, arrWave );
+    varyings._waveNormal = Gerstner::computeNormal( context._worldPosition.xz, time, material._waveParams.x, waves );
 
     const float depth       = max( context._input._color.a, 0.0f );
     const float depthFactor = saturate( depth / max( material._waterParams.y, 1e-3f ) );
