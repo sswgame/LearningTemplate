@@ -5,7 +5,7 @@
  * @note **볼륨과 음소거는 이 서비스가 관리합니다.** 값 범위(0~1 클램프)와 "음소거는 master 버스에만 건다"는 규칙은 여기에만 적습니다.
  *       값은 같은 이름의 믹서 버스 사용자 볼륨으로 엔진에 전달됩니다.
  * @note **장치가 없으면**(Null 백엔드, 장치를 열지 못한 Windows, 테스트) `update` 가 흐른 시간만큼 엔진을 버퍼에 렌더합니다.
- *       재생 상태(끝남, 음악 박자, 가상 보이스)는 장치가 있을 때와 같이 진행합니다. `-gv_audioDumpPath=<파일>.wav` 면 이 오프라인 렌더를 내릴 때 WAV(채널 마스크 포함)로 남깁니다.
+ *       재생 상태(끝남, 음악 박자, 가상 보이스)는 장치가 있을 때와 같이 진행합니다. 렌더한 블록은 리스너 등록(`AudioRenderListener.h` — 개발 덤프 `Audio/Dev/AudioDumpListener.cpp` 가 붙는다)에 넘깁니다.
  * @note **출력 형식은 협상합니다.** 백엔드가 장치를 열어 채널 수와 마스크를 알려 주면(`openDevice`), 스피커 모드(`audio.speakerMode` → `setSpeakerMode`)로 레이아웃을
  *       정하고(`resolveLayout`) 엔진을 그 레이아웃으로 만든 뒤 장치가 엔진을 당기기 시작합니다(`startOutput`). 장치가 그만큼의 채널을 갖지 않는 명시 모드는 오류로 멈춥니다.
  */
@@ -234,8 +234,6 @@ namespace sw
         virtual void closeDevice() {}
 
     private:
-        /** @brief 오프라인 렌더 덤프를 WAV 로 씁니다(`gv_audioDumpPath`). 쌓인 것이 없으면 아무것도 하지 않습니다. */
-        void writeOfflineDump();
         /** @brief 소리 그래프 파일이고 클립 캐시가 이미 읽어 둔 것이면 캐시의 경로를 @p outGraphPath 에 돌려줍니다(핫 리로드 대상). */
         [[nodiscard]] bool findLoadedGraphPath( string_view assetPath, hashed_string& outGraphPath ) const;
 
@@ -261,7 +259,6 @@ namespace sw
         EngineAudioDriver       _engineAudioDriver; /**< 프레임 창구입니다(`IEngineAudioDriver`). */
         vector<AudioBusVolume>  _listBusVolume;     /**< 세 기본 버스 밖의 버스 볼륨입니다. */
         vector<float32>         _listOfflineBlock;  /**< 장치가 없을 때 렌더하는 버퍼입니다. */
-        vector<float32>         _listDumpSample;    /**< 덤프할 오프라인 렌더(채널 교차)입니다. `gv_audioDumpPath` 가 있을 때만 쌓습니다. */
         string                  _musicPath;         /**< 마지막으로 요청된 배경음악 경로입니다. */
         string                  _mixerPath;         /**< 마지막으로 읽은 믹서 그래프 경로입니다. */
         AudioPlayingID          _musicPlayingID;    /**< 배경음악 재생 id 입니다. */

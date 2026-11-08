@@ -29,6 +29,9 @@ namespace sw
         ShooterAutoAimControllerComponent();
         ~ShooterAutoAimControllerComponent() override = default;
 
+        /** @brief 닿는 거리의 적을 근접으로도 칠지 정합니다(데이터 칸 `Melee` — 개발 스위치 `-gv_shooterAutoMelee` 도 이것을 부른다, `Dev/ShooterDevPart.cpp`). 게임 스레드, 틱 밖. */
+        void setMelee( bool bMelee ) { _bMelee = bMelee ? SW_TRUE : SW_FALSE; }
+
     protected:
         void think( const ControlFrameContext& context, const PawnComponent& pawn ) override;
 
@@ -45,5 +48,7 @@ namespace sw
         float32 _circleTangent;
         PROPERTY( Category = "Auto Play", DisplayName = "Circle Inward", Tooltip = "Part of the circling move that pulls toward the centre, multiplied by the position", Min = 0.0 )
         float32 _circleInward;
+        PROPERTY( Category = "Auto Play", DisplayName = "Melee", Tooltip = "Also presses Melee when a visible enemy is inside the player's melee reach" )
+        uint8 _bMelee : 1;
     };
 } // namespace sw

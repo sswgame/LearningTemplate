@@ -17,8 +17,8 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
-#include "Engine/Animation/Scene/AnimationRewind.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Animation/Scene/Dev/AnimationRewind.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
@@ -78,7 +78,7 @@ namespace sw::editor
             [[nodiscard]] static const AnimationRewindRecorder* findActiveRewind()
             {
                 Scene* pScene = editor::getActiveScene();
-                return pScene != nullptr && pScene->getObjectManager() != nullptr ? &pScene->getObjectManager()->getSubsystem<AnimationSystem>().getRewind() : nullptr;
+                return pScene != nullptr && pScene->getObjectManager() != nullptr ? AnimationRewindRecorder::find( pScene->getObjectManager()->getSubsystem<AnimationSystem>() ) : nullptr;
             }
 
             [[nodiscard]] static bool readTrackCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -135,7 +135,10 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAnimationRewind", "NoActiveScene" ) );
             return;
         }
-        AnimationRewindRecorder& rewind = pScene->getObjectManager()->getSubsystem<AnimationSystem>().getRewind();
+        // 기록기는 애니메이션 시스템의 프레임 관찰자다(개발 구성은 늘 등록한다 — 에디터는 개발 구성에만 있다).
+        AnimationRewindRecorder* const pRewind = AnimationRewindRecorder::find( pScene->getObjectManager()->getSubsystem<AnimationSystem>() );
+        SW_ASSERT( pRewind != nullptr );
+        AnimationRewindRecorder& rewind = *pRewind;
         drawRecordingControls( rewind );
         if ( rewind.getTracks().empty() )
         {

@@ -19,8 +19,8 @@
 
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/AnimationDebugState.h"
+#include "Engine/Animation/Scene/AnimationFrameObserver.h"
 #include "Engine/Animation/Scene/AnimationLOD.h"
-#include "Engine/Animation/Scene/AnimationRewind.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 
@@ -544,12 +544,18 @@ namespace sw
         uint64 getFrameIndex() const { return _frameIndex; }
         /** @brief 지난 프레임에 일한(쉬지 않은) 유닛 수를 반환합니다. */
         uint32 getActiveMeshCount() const { return _activeMeshCount; }
-#if !defined( SW_SHIPPING )
-        // --- 되감기 (AnimationRewind.h, Shipping 에는 없다) ---
-        /** @brief 되감기 기록기입니다. 켜져 있으면 평가 뒤 일한 유닛을 기록하고, 되감는 동안에는 평가 대신 기록된 포즈를 적용합니다. */
-        AnimationRewindRecorder&       getRewind() { return _rewind; }
-        const AnimationRewindRecorder& getRewind() const { return _rewind; }
-#endif
+        // --- 프레임 관찰자(AnimationFrameObserver.h — 개발 도구가 스스로 등록하고, 배포본에는 없다) ---
+        /** @brief 이름이 @p name 인 관찰자입니다. 없으면(배포본 · 등록 없음) nullptr 입니다. */
+        [[nodiscard]] IAnimationFrameObserver* findFrameObserver( string_view name ) const;
+        /** @brief 관찰자가 평가를 대신하는 중이면 true 입니다(되감기 — 스스로 시간을 흘리는 컴포넌트가 멈춘다). */
+        [[nodiscard]] bool isEvaluationReplaced() const;
+        /** @brief LOD 클라이언트를 등록 순서로 돌며 @p fn( IAnimationLODClient& ) 을 부릅니다. 안에서 등록 · 해제해도 된다(해제된 클라이언트는 건너뛴다). */
+        template <typename Fn>
+        void forEachLODClient( Fn&& fn )
+        {
+            _lodClientList.forEach( [&fn]( uint32, IAnimationLODClient* pClient )
+            { fn( *pClient ); } );
+        }
         /**
          * @brief 주 시점 위치(보통 카메라 월드 위치)를 정합니다. `setLODViews` 가 첫 뷰로 채우고, 뷰를 넣지 않는 벤치는 직접 넣습니다.
          * @details 리그 · 그래프 노드의 LOD 는 이 위치가 아니라 유닛의 LOD 등급(`AnimationLODState::_lodGrade` — 화면 크기와 예산)으로 판정한다(노드 키 `max_lod`).
@@ -609,12 +615,6 @@ namespace sw
         };
         /** @brief 군중 공유를 켠 유닛의 묶음, 사본, VAT 를 정하고 묶음을 평가합니다(시간 단계 뒤). */
         void updateCrowd();
-#if !defined( SW_SHIPPING )
-        /** @brief 되감는 동안 기록된 포즈를 유닛마다, 기록된 상태를 스프라이트 애니메이터마다 적용합니다(평가하지 않습니다). */
-        void applyRewindScrub();
-        /** @brief 이번 프레임을 기록합니다. 일한 유닛(포즈와 상태)과, 상태만 남기는 LOD 클라이언트를 기록합니다. */
-        void recordRewindFrame();
-#endif
         /** @brief LOD 클라이언트 구독이 풀렸습니다. 목록에서 뺍니다(주소로만 찾는다). */
         void releaseLODClient( IAnimationLODClient* pClient );
 
@@ -640,30 +640,26 @@ namespace sw
         GroupSyncScratch                            _groupSyncScratch;           ///< `synchronizeGroups` 의 배열과 맵(재사용)
         AnimationLODSettings                        _lodSettings;
         AnimationCrowd                              _crowd;
-#if !defined( SW_SHIPPING )
-        AnimationRewindRecorder _rewind;
-        Pose                    _rewindScratchPose; ///< 되감기 포즈를 해석할 임시 포즈다(재사용)
-        uint8                   _bRewindApplied;    ///< 지난 프레임에 되감기 포즈를 적용했다는 표시다. 되감기가 끝나면 다시 평가하게 한다
-#endif
-        GameObjectManager* _pManager; ///< 의존 핸들을 해석할 매니저다(이 서비스를 소유한다)
-        float3             _lodViewPosition;
-        uint64             _frameIndex;
-        float32            _deltaSeconds;
-        float32            _averageEvaluationMicroseconds;
-        float32            _expectedEvaluationMicroseconds;
-        uint32             _activeMeshCount;
-        uint32             _poseEvaluatedMeshCount;
-        uint32             _poseEvaluatedBoneCount; ///< 지난 평가에서 포즈를 만든 유닛이 풀어 낸 본 수의 합(본 LOD 마스크를 뺀 것)
-        uint32             _arrCrowdModeCount[4];   ///< 지난 프레임에 일한 유닛의 군중 방식(`AnimationCrowdMode`)별 수
-        uint8              _bOrderDirty;
-        uint8              _bLODViewsSet;         ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
-        uint8              _bLODSettingsReady;    ///< 테이블을 정했거나 읽었다
-        uint8              _bLODSettingsFailed;   ///< 테이블 파일을 못 읽었다 — LOD 를 판정하지 않는다(기본 표로 대신하지 않는다)
-        uint8              _bLODApplied;          ///< 지난 프레임에 판정을 적용했다. 꺼질 때 한 번 되돌린다
-        uint8              _bCrowdSettingsReady;  ///< 군중 테이블을 정했거나 읽었다
-        uint8              _bCrowdSettingsFailed; ///< 군중 테이블 파일을 못 읽었다 — 군중을 묶지 않는다
-        uint8              _bHasLODViewPosition;  ///< 거리 LOD 기준점을 정했다
-        uint8              _bHasPendingLODView;   ///< 대기 뷰가 있다
+        vector<unique_ptr<IAnimationFrameObserver>> _listFrameObserver; ///< 등록된 프레임 관찰자마다 하나(만들 때 `AnimationFrameObserverRegistry::createAll`, 이름 순)
+        GameObjectManager*                          _pManager;          ///< 의존 핸들을 해석할 매니저다(이 서비스를 소유한다)
+        float3                                      _lodViewPosition;
+        uint64                                      _frameIndex;
+        float32                                     _deltaSeconds;
+        float32                                     _averageEvaluationMicroseconds;
+        float32                                     _expectedEvaluationMicroseconds;
+        uint32                                      _activeMeshCount;
+        uint32                                      _poseEvaluatedMeshCount;
+        uint32                                      _poseEvaluatedBoneCount; ///< 지난 평가에서 포즈를 만든 유닛이 풀어 낸 본 수의 합(본 LOD 마스크를 뺀 것)
+        uint32                                      _arrCrowdModeCount[4];   ///< 지난 프레임에 일한 유닛의 군중 방식(`AnimationCrowdMode`)별 수
+        uint8                                       _bOrderDirty;
+        uint8                                       _bLODViewsSet;         ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
+        uint8                                       _bLODSettingsReady;    ///< 테이블을 정했거나 읽었다
+        uint8                                       _bLODSettingsFailed;   ///< 테이블 파일을 못 읽었다 — LOD 를 판정하지 않는다(기본 표로 대신하지 않는다)
+        uint8                                       _bLODApplied;          ///< 지난 프레임에 판정을 적용했다. 꺼질 때 한 번 되돌린다
+        uint8                                       _bCrowdSettingsReady;  ///< 군중 테이블을 정했거나 읽었다
+        uint8                                       _bCrowdSettingsFailed; ///< 군중 테이블 파일을 못 읽었다 — 군중을 묶지 않는다
+        uint8                                       _bHasLODViewPosition;  ///< 거리 LOD 기준점을 정했다
+        uint8                                       _bHasPendingLODView;   ///< 대기 뷰가 있다
 
     private:
         /** @brief LOD 클라이언트 등록의 구독입니다(목록이 O(1) 순서 보존 목록이라 `RegistrationList::addSubscribed` 가 아니다). 풀리면 `releaseLODClient` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */

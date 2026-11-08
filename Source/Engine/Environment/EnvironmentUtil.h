@@ -28,11 +28,6 @@ namespace sw
         [[nodiscard]] static bool findViewPosition( GameObjectManager& manager, float3& outPosition );
         /** @brief `findViewPosition` 과 같은 카메라의 위치와 앞 방향(단위 벡터)입니다. 카메라가 없으면 false 를 반환합니다. */
         [[nodiscard]] static bool findView( GameObjectManager& manager, float3& outPosition, float3& outForward );
-        /**
-         * @brief 환경 시간(바람, 파도)이 흐르면 true 를 반환합니다. `-gv_environmentAnimate=0` 이면 시간이 0 에서 멈춥니다. 백엔드끼리 스크린샷을 비교할 때 씁니다
-         *        (벽시계 시간은 실행마다 달라서 같은 프레임도 다른 이미지가 됩니다).
-         */
-        static bool isAnimationEnabled();
     };
 } // namespace sw
 

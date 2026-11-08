@@ -387,7 +387,7 @@
     "Source/Engine/Animation/Rig/RigSpringChain.cpp": {"float": 5},
     "Source/Engine/Animation/Scene/AnimationCrowd.h": {"integer": 1},
     "Source/Engine/Animation/Scene/AnimationLOD.cpp": {"integer": 1},
-    "Source/Engine/Animation/Scene/AnimationRewind.cpp": {"float": 6, "integer": 6},
+    "Source/Engine/Animation/Scene/Dev/AnimationRewind.cpp": {"float": 6, "integer": 6},
     "Source/Engine/Animation/Scene/AnimationSystem.cpp": {"minus-one": 1, "float": 3, "integer": 1},
     "Source/Engine/Animation/Scene/MeshVertexAnimationBaker.cpp": {"float": 1},
     "Source/Engine/Animation/Scene/MotionWarpingComponent.cpp": {"float": 1},

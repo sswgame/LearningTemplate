@@ -3,17 +3,12 @@
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/File/FileUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
-#include "Core/String/StringBuilder.h"
 
-#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
-#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -25,7 +20,6 @@
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
 
-#include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -74,8 +68,6 @@ namespace sw
         };
     } // namespace
 
-    /** @brief `-gv_shooterMotionTrace=<경로>`: 프레임마다 플레이어 몸, 본, 카메라, 적의 그려진 위치를 CSV 로 남깁니다(튐 진단용이며 끝날 때 씁니다). */
-    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_shooterMotionTrace, "", "Shooter3D: 프레임마다 몸 · 본 · 카메라 · 적 자리를 CSV 로 (경로, 비면 끔)" );
 } // namespace sw
 
 namespace sw
@@ -151,7 +143,6 @@ namespace sw
         , _listReplicaSample{}
         , _listPendingReplica{}
         , _tintCache{}
-        , _motionTrace{}
         , _autoPlayController{}
         , _playerEye{ 0.0f, 1.6f, -16.0f }
         , _playerFeet{ 0.0f, 0.0f, -16.0f }
@@ -159,7 +150,6 @@ namespace sw
         , _pendingHeal{ 0.0f }
         , _spawnCursor{ 0 }
         , _killCount{ 0 }
-        , _traceFrame{ 0 }
         , _profileReload{}
         , _nextEnemyNetID{ ShooterNetPawnComponent::kPawnEntityID + 1u }
         , _appliedAutoPlay{ -1 }
@@ -230,13 +220,6 @@ namespace sw
         }
     }
 
-    void ShooterGameModeComponent::onEndPlay()
-    {
-        if ( _motionTrace.empty() == false && FileUtil::writeTextFile( gv_shooterMotionTrace, _motionTrace ) == false )
-            SW_LOG_WARNING_ID( "ShooterGameMode.MotionTraceCouldNot", "[Shooter] motion trace '%#' could not be written", gv_shooterMotionTrace.c_str() );
-        GameModeComponent::onEndPlay();
-    }
-
     void ShooterGameModeComponent::applyReloadedProfile()
     {
         if ( _profileReload.takeChanged() == false )
@@ -258,8 +241,6 @@ namespace sw
     void ShooterGameModeComponent::updateGame( float32 deltaTime )
     {
         const float32 step = MathUtil::min( deltaTime, 0.1f );
-        if ( gv_shooterMotionTrace.empty() == false )
-            appendMotionTrace( deltaTime );
         updatePlayerView();
         if ( step > 0.0f && _bReplica == SW_TRUE )
         {
@@ -838,82 +819,6 @@ namespace sw
         SW_LOG_INFO_ID( "ShooterGameMode.WaveIntensityKillsHP", "[Shooter] wave %# (%#, intensity %.2f) · kills %# · HP %# · %# %#/%# · skeletons %# · accuracy %#%%", getWave(), _director.getPhase().c_str(),
                         _director.getIntensity(), _killCount, static_cast<int32>( pPlayer->getHealth() ), weapon.getDef()._name.c_str(), weapon.getMagazineAmmo(),
                         weapon.getReserveAmmo(), static_cast<uint32>( _listEnemyView.size() ), percent );
-    }
-
-    void ShooterGameModeComponent::appendMotionTrace( float32 deltaTime )
-    {
-        // 디렉터는 앞 그룹(PrePhysics)이라 여기서 읽는 월드 · 본은 지난 프레임에 그려진 그대로다.
-        GameObjectManager*            pManager = getObjectManager();
-        const ShooterPlayerComponent* pPlayer  = findOn<ShooterPlayerComponent>( _player );
-        if ( pPlayer == nullptr )
-            return;
-        if ( _motionTrace.empty() )
-            _motionTrace = "frame,dt,feetX,feetZ,lookYaw,bodyX,bodyY,bodyZ,bodyYaw,rootX,rootY,rootZ,hipsX,hipsY,hipsZ,headX,headY,headZ,handX,handY,handZ,"
-                           "camX,camY,camZ,camYaw,enemyX,enemyZ,enemyHipsY,state\n";
-        static constexpr const utf8* kArrBone[4] = { "root", "hips", "head", "hand.r" };
-        float3                       arrBone[4]{};
-        float3                       body{};
-        float32                      bodyYaw = 0.0f;
-        hashed_string                state;
-        const GameObject*            pBody = pPlayer->findBodyObject();
-        if ( pBody != nullptr )
-        {
-            const SkeletalMeshComponent* pUnit = pBody->getComponent<SkeletalMeshComponent>();
-            if ( pUnit != nullptr )
-            {
-                const float4x4 world = pUnit->getWorldMatrix();
-                body                 = world.getTranslation();
-                const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );
-                bodyYaw              = MathUtil::atan2( forward._x, forward._z );
-                for ( uint32 boneIndex = 0; boneIndex < 4; ++boneIndex )
-                {
-                    float4x4 bone;
-                    if ( pUnit->findBoneModelTransform( hashed_string( kArrBone[boneIndex] ), bone ) )
-                        arrBone[boneIndex] = bone.getTranslation();
-                }
-            }
-            const SkeletalAnimatorComponent* pAnimator = pBody->getComponent<SkeletalAnimatorComponent>();
-            if ( pAnimator != nullptr )
-                state = pAnimator->getCurrentStateName();
-        }
-        float3                 camera{};
-        float32                cameraYaw = 0.0f;
-        const GameObjectHandle player    = _player;
-        for ( const CameraDirectorComponent* pCameraDirector : pManager->getComponentRegistry().getAll<CameraDirectorComponent>() )
-        {
-            const bool             bFollows = pCameraDirector->isPendingDestroy() == false && pCameraDirector->getTarget() == player;
-            const CameraComponent* pCamera  = bFollows ? pCameraDirector->getOwner()->getComponent<CameraComponent>() : nullptr;
-            if ( pCamera == nullptr )
-                continue;
-            const float4x4 world = pCamera->getWorldMatrix();
-            camera               = world.getTranslation();
-            const float3 forward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, world );
-            cameraYaw            = MathUtil::atan2( forward._x, forward._z );
-        }
-        float3  enemy{};
-        float32 enemyHipsY = 0.0f;
-        for ( const EnemyRecord& record : _listEnemy )
-        {
-            const GameObject*            pEnemy = pManager->resolveGameObject( record._object );
-            const SkeletalMeshComponent* pUnit  = pEnemy != nullptr ? pEnemy->getComponent<SkeletalMeshComponent>() : nullptr;
-            if ( pUnit == nullptr )
-                continue;
-            enemy = pUnit->getWorldPosition();
-            float4x4 hips;
-            if ( pUnit->findBoneModelTransform( hashed_string( "hips" ), hips ) )
-                enemyHipsY = hips.getTranslation()._y;
-            break;
-        }
-        const float3                              feet = pPlayer->getFeetPosition();
-        StringBuilder<constant::buffer::kMax1024> row;
-        row.appendFormat( "%#,%.5f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f", _traceFrame, deltaTime, feet._x, feet._z, pPlayer->getLookYaw(), body._x, body._y, body._z, bodyYaw );
-        for ( const float3& bone : arrBone )
-        {
-            row.appendFormat( ",%.4f,%.4f,%.4f", bone._x, bone._y, bone._z );
-        }
-        row.appendFormat( ",%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%#\n", camera._x, camera._y, camera._z, cameraYaw, enemy._x, enemy._z, enemyHipsY, state.c_str() );
-        _motionTrace += row.c_str();
-        ++_traceFrame;
     }
 
 } // namespace sw

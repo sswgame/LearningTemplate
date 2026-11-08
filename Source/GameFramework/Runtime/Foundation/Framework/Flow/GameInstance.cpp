@@ -26,6 +26,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstanceClientHook.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameSceneFlow.h"
 #include "GameFramework/Runtime/Foundation/Framework/Flow/IContentConfiguration.h"
+#include "GameFramework/Runtime/Foundation/Framework/Flow/IGameDevPart.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
@@ -99,6 +100,7 @@ namespace sw
         , _pAppearanceDatabase{}
         , _pAppearanceWatcher{}
         , _pAutosave{}
+        , _pDevPart{}
         , _loadedAudioEvents{}
         , _listSlotRequest{}
         , _saveSlotCounts{}
@@ -263,7 +265,12 @@ namespace sw
         if ( loadAudioEvents() == false || loadDeclaredCharacterData() == false || startAutosave() == false )
             return false;
         _bDerivedEntered = SW_TRUE;
-        return onInitialize();
+        if ( onInitialize() == false )
+            return false;
+        // 개발 전용 부분은 게임이 다 선 뒤에 붙는다(게임 `Dev/` 의 공장 — 배포 구성에는 없다).
+        if ( IGameDevPartFactory* const pDevFactory = game::findSubsystem<IGameDevPartFactory>() )
+            _pDevPart = pDevFactory->createDevPart();
+        return true;
     }
 
     void GameInstance::shutdown()
@@ -272,6 +279,7 @@ namespace sw
         if ( _pAutosave != nullptr && _bStarted == SW_TRUE )
             (void)_pAutosave->notifyQuit();
         getSubsystem<GameSceneFlow>().unregisterSessionCommands(); // 걸지 않았으면(창이 없는 호스트 · 타이틀 씬 없음 · 되감기) 빈 구독이다
+        _pDevPart.reset();                                         // 게임이 세운 것을 보던 부분이라 파생보다 먼저 진다(남길 기록은 소멸자가 쓴다)
         if ( _bDerivedEntered == SW_TRUE )
             onShutdown();
         _bDerivedEntered = SW_FALSE;
@@ -446,6 +454,8 @@ namespace sw
         if ( _pAppearanceWatcher != nullptr )
             _pAppearanceWatcher->update( *_pAppearanceDatabase, _pItemCatalog.get() );
         onUpdate( deltaTime );
+        if ( _pDevPart != nullptr )
+            _pDevPart->update( deltaTime );
         if ( _pAutosave != nullptr )
             _pAutosave->update( deltaTime );
     }

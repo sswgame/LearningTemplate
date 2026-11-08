@@ -8,6 +8,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
@@ -198,7 +199,7 @@ namespace sw
             // 객체이고 GPU 자원(상수 버퍼)은 렌더 스레드의 프록시가 만든다(언리얼 `UMaterial` / `FMaterialRenderProxy`) — 그래서 렌더 스레드를 기다리지 않는다.
             // 줄이 비어도 부른다 — 초기화를 마친 고정 머티리얼을 PSO 미리 만들기 값으로 옮기는 일도 여기서 한다.
             engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().initializePending(
-                &_pRHI->getDevice(), AssetManager::isFinishingAssetWorkEachFrame() ? UINT32_MAX : MaterialCache::kMaxInitsPerFrame );
+                &_pRHI->getDevice(), DeterministicRun::getPolicy()._bFinishAssetWorkEachFrame == SW_TRUE ? UINT32_MAX : MaterialCache::kMaxInitsPerFrame );
             // 밉 스트리밍이 바꿔 끼운 옛 텍스처를 게임 스레드에서 해제한다 — 이미 만든 패킷이 옛 SRV 번호를 쓰는 동안은 `releaseHandle` 이 미룬다.
             engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().releaseRetiredTextures( &_pRHI->getDevice() );
         }

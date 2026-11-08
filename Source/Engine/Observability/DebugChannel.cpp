@@ -41,7 +41,7 @@ namespace sw
             return false;
         if ( settings._token.empty() )
         {
-            SW_LOG_ERROR_ID( "DebugChannel.DebugChannelNeedsToken", "Debug channel needs a token (-gv_debugChannelToken) - not started" );
+            SW_LOG_ERROR_ID( "DebugChannel.DebugChannelNeedsToken", "Debug channel needs a token (the caller passes it in DebugChannelConfig::_token) - not started" );
             return false;
         }
         if ( settings._bindAddress._ipv4 != NetAddress::makeLoopback( 0 )._ipv4 )
@@ -65,7 +65,7 @@ namespace sw
             shutdown();
             return false;
         }
-        SW_LOG_INFO_ID( "DebugChannel.DebugChannelListeningDevelopment", "Debug channel listening on 127.0.0.1:%# (development builds only, token required)", static_cast<uint32>( _pTransport->getListenPort() ) );
+        SW_LOG_INFO_ID( "DebugChannel.DebugChannelListening", "Debug channel listening on 127.0.0.1:%# (loopback only, token required)", static_cast<uint32>( _pTransport->getListenPort() ) );
         return true;
     }
 

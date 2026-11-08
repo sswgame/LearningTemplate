@@ -152,11 +152,7 @@ namespace sw
         , _groupSyncScratch{}
         , _lodSettings{}
         , _crowd{}
-#if !defined( SW_SHIPPING )
-        , _rewind{}
-        , _rewindScratchPose{}
-        , _bRewindApplied{ SW_FALSE }
-#endif
+        , _listFrameObserver{}
         , _pManager{ &manager }
         , _lodViewPosition{}
         , _frameIndex{ 0 }
@@ -177,6 +173,7 @@ namespace sw
         , _bHasLODViewPosition{ SW_FALSE }
         , _bHasPendingLODView{ SW_FALSE }
     {
+        AnimationFrameObserverRegistry::createAll( _listFrameObserver );
     }
 
     void AnimationSystem::setLODViewPosition( const float3& position )
@@ -655,36 +652,44 @@ namespace sw
     void AnimationSystem::endEvaluationFrame( float32 deltaSeconds )
     {
         _crowd.endFrame();
-#if !defined( SW_SHIPPING )
-        recordRewindFrame();
-        _rewind.endFrame( deltaSeconds );
-#else
-        (void)deltaSeconds;
-#endif
+        for ( const unique_ptr<IAnimationFrameObserver>& pObserver : _listFrameObserver )
+        {
+            pObserver->onEvaluated( *this, deltaSeconds );
+        }
+    }
+
+    IAnimationFrameObserver* AnimationSystem::findFrameObserver( string_view name ) const
+    {
+        for ( const unique_ptr<IAnimationFrameObserver>& pObserver : _listFrameObserver )
+        {
+            if ( name == pObserver->getObserverName() )
+                return pObserver.get();
+        }
+        return nullptr;
+    }
+
+    bool AnimationSystem::isEvaluationReplaced() const
+    {
+        for ( const unique_ptr<IAnimationFrameObserver>& pObserver : _listFrameObserver )
+        {
+            if ( pObserver->isReplacingEvaluation() )
+                return true;
+        }
+        return false;
     }
 
     void AnimationSystem::evaluate( float32 deltaSeconds )
     {
         SW_PROFILE_SCOPE( "GT.Animation.evaluate" );
         flushSingletonRemoval();
-#if !defined( SW_SHIPPING )
-        // 되감기: 요청(콘솔 · 패널 · -gv_animationRewind)을 따르고, 되감는 동안에는 평가 대신 기록된 포즈를 건다.
-        _rewind.syncWithRequest();
-        if ( _rewind.isScrubbing() )
+        // 관찰자(개발 도구 — 되감기)가 이번 프레임을 대신했으면 평가하지 않는다. 관찰자마다 한 번씩 묻는다(앞의 것이 대신해도 뒤의 것이 자기 프레임 일을 한다).
+        bool bReplaced = false;
+        for ( const unique_ptr<IAnimationFrameObserver>& pObserver : _listFrameObserver )
         {
-            applyRewindScrub();
+            bReplaced = pObserver->replaceEvaluation( *this ) || bReplaced;
+        }
+        if ( bReplaced )
             return;
-        }
-        if ( _bRewindApplied == SW_TRUE )
-        {
-            // 되감기가 끝났다 — 걸어 둔 포즈를 지금 상태로 다시 만든다(쉬던 유닛도).
-            _bRewindApplied = SW_FALSE;
-            for ( SkeletalMeshComponent* pSkeletalMesh : _skeletalMeshList.getItems() )
-            {
-                pSkeletalMesh->markPoseDirty();
-            }
-        }
-#endif
         updateLOD();
         if ( _bOrderDirty == SW_TRUE || ( _componentAll.getSkeletalMeshCount() == 0 && _skeletalMeshList.getCount() > 0 ) )
             rebuildComponents();
@@ -718,54 +723,6 @@ namespace sw
         }
         endEvaluationFrame( deltaSeconds );
     }
-
-#if !defined( SW_SHIPPING )
-    void AnimationSystem::recordRewindFrame()
-    {
-        if ( _rewind.isEnabled() == false )
-            return;
-        SW_PROFILE_SCOPE( "GT.Animation.rewindRecord" );
-        for ( const SkeletalMeshComponent* pSkeletalMesh : _componentActive.getSkeletalMeshes() )
-        {
-            _rewind.recordMesh( *pSkeletalMesh, _frameIndex );
-        }
-        // 진단 훅(`collectDebugState`)이 등록 · 해제를 불러도 안전하도록 `forEach` 로 돈다(해제된 클라이언트는 건너뛴다).
-        AnimationDebugState state;
-        _lodClientList.forEach( [this, &state]( uint32, IAnimationLODClient* pClient )
-        {
-            const Component* pTarget = pClient->findRewindTarget();
-            if ( pTarget == nullptr )
-                return;
-            state.reset();
-            pClient->collectDebugState( state );
-            _rewind.recordState( *pTarget, AnimationRewindKind::Sprite, state, _frameIndex );
-        } );
-    }
-
-    void AnimationSystem::applyRewindScrub()
-    {
-        const float64 scrubTime = _rewind.getScrubTime();
-        for ( SkeletalMeshComponent* pSkeletalMesh : _skeletalMeshList.getItems() )
-        {
-            const AnimationRewindTrack* pTrack = _rewind.findTrack( pSkeletalMesh->getHandle() );
-            const AnimationRewindFrame* pFrame = ( pTrack != nullptr ) ? pTrack->findFrame( scrubTime ) : nullptr;
-            if ( pFrame == nullptr || pFrame->_boneCount == 0 )
-                continue;
-            AnimationRewindRecorder::decodePose( *pFrame, _rewindScratchPose );
-            if ( pSkeletalMesh->applyRewindPose( _rewindScratchPose ) )
-                _bRewindApplied = SW_TRUE;
-        }
-        // 적용 훅(`applyRewindState`)이 등록 · 해제를 불러도 안전하도록 `forEach` 로 돈다(해제된 클라이언트는 건너뛴다).
-        _lodClientList.forEach( [this, scrubTime]( uint32, IAnimationLODClient* pClient )
-        {
-            const Component*            pTarget = pClient->findRewindTarget();
-            const AnimationRewindTrack* pTrack  = ( pTarget != nullptr ) ? _rewind.findTrack( pTarget->getHandle() ) : nullptr;
-            const AnimationRewindFrame* pFrame  = ( pTrack != nullptr ) ? pTrack->findFrame( scrubTime ) : nullptr;
-            if ( pFrame != nullptr )
-                pClient->applyRewindState( pFrame->_state );
-        } );
-    }
-#endif
 
     void AnimationSystem::synchronizeGroups()
     {

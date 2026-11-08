@@ -1,27 +1,24 @@
 #include "pch.h"
 
-#include "Engine/Animation/Scene/AnimationRewind.h"
+#include "Engine/Animation/Scene/Dev/AnimationRewind.h"
 
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Scene/AnimationFrameObserver.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/SceneManager.h"
-
-#if !defined( SW_SHIPPING )
-
-    #include "Core/GlobalVariable/GlobalVariableManager.h"
-    #include "Core/Math/MathUtil.h"
-
-    #include "Engine/Animation/Skeletal/Pose.h"
-    #include "Engine/Animation/Skeletal/Skeleton.h"
-    #include "Engine/Animation/Component/SkeletalMeshComponent.h"
-    #include "Engine/Object/GameObject/GameObject.h"
 
 namespace sw
 {
@@ -55,6 +52,117 @@ namespace sw
             static float32 dequantize( int16 value, float32 range ) { return static_cast<float32>( value ) / 32767.0f * range; }
         };
 
+        /**
+         * @class AnimationRewindObserver
+         * @brief 애니메이션 시스템 하나에 붙는 되감기 관찰자입니다(`SW_ANIMATION_FRAME_OBSERVER`). 평가 앞에서 요청을 따르고 되감는 동안에는 평가 대신 기록된 포즈 · 상태를 걸며,
+         *        평가 뒤에 이번 프레임을 기록합니다.
+         */
+        class AnimationRewindObserver final : public IAnimationFrameObserver
+        {
+        public:
+            static constexpr const utf8* kObserverName = "AnimationRewind";
+
+            AnimationRewindObserver()
+                : _recorder{}
+                , _scratchPose{}
+                , _bApplied{ SW_FALSE }
+            {
+            }
+
+            const utf8* getObserverName() const override { return kObserverName; }
+
+            bool replaceEvaluation( AnimationSystem& system ) override
+            {
+                // 요청(콘솔 · 패널 · -gv_animationRewind)을 따르고, 되감는 동안에는 평가 대신 기록된 포즈를 건다.
+                _recorder.syncWithRequest();
+                if ( _recorder.isScrubbing() )
+                {
+                    applyScrub( system );
+                    return true;
+                }
+                if ( _bApplied == SW_TRUE )
+                {
+                    // 되감기가 끝났다 — 걸어 둔 포즈를 지금 상태로 다시 만든다(쉬던 유닛도).
+                    _bApplied = SW_FALSE;
+                    for ( SkeletalMeshComponent* pSkeletalMesh : system.getSkeletalMeshes() )
+                    {
+                        pSkeletalMesh->markPoseDirty();
+                    }
+                }
+                return false;
+            }
+
+            void onEvaluated( AnimationSystem& system, float32 deltaSeconds ) override
+            {
+                record( system );
+                _recorder.endFrame( deltaSeconds );
+            }
+
+            bool isReplacingEvaluation() const override { return _recorder.isScrubbing(); }
+
+            AnimationRewindRecorder& getRecorder() { return _recorder; }
+
+        private:
+            /** @brief 이번 프레임을 기록합니다. 일한 유닛(포즈와 상태)과, 상태만 남기는 LOD 클라이언트를 기록합니다. */
+            void record( AnimationSystem& system )
+            {
+                if ( _recorder.isEnabled() == false )
+                    return;
+                SW_PROFILE_SCOPE( "GT.Animation.rewindRecord" );
+                const uint64 frameIndex = system.getFrameIndex();
+                for ( const SkeletalMeshComponent* pSkeletalMesh : system.getActiveComponents().getSkeletalMeshes() )
+                {
+                    _recorder.recordMesh( *pSkeletalMesh, frameIndex );
+                }
+                // 진단 훅(`collectDebugState`)이 등록 · 해제를 불러도 안전한 순회다(해제된 클라이언트는 건너뛴다).
+                AnimationDebugState state;
+                system.forEachLODClient( [this, &state, frameIndex]( IAnimationLODClient& client )
+                {
+                    const Component* pTarget = client.findRewindTarget();
+                    if ( pTarget == nullptr )
+                        return;
+                    state.reset();
+                    client.collectDebugState( state );
+                    _recorder.recordState( *pTarget, AnimationRewindKind::Sprite, state, frameIndex );
+                } );
+            }
+
+            /** @brief 되감는 동안 기록된 포즈를 유닛마다, 기록된 상태를 스프라이트 애니메이터마다 적용합니다(평가하지 않습니다). */
+            void applyScrub( AnimationSystem& system )
+            {
+                const float64 scrubTime = _recorder.getScrubTime();
+                for ( SkeletalMeshComponent* pSkeletalMesh : system.getSkeletalMeshes() )
+                {
+                    const AnimationRewindTrack* pTrack = _recorder.findTrack( pSkeletalMesh->getHandle() );
+                    const AnimationRewindFrame* pFrame = ( pTrack != nullptr ) ? pTrack->findFrame( scrubTime ) : nullptr;
+                    if ( pFrame == nullptr || pFrame->_boneCount == 0 )
+                        continue;
+                    AnimationRewindRecorder::decodePose( *pFrame, _scratchPose );
+                    if ( pSkeletalMesh->applyRewindPose( _scratchPose ) )
+                        _bApplied = SW_TRUE;
+                }
+                // 적용 훅(`applyRewindState`)이 등록 · 해제를 불러도 안전한 순회다(해제된 클라이언트는 건너뛴다).
+                system.forEachLODClient( [this, scrubTime]( IAnimationLODClient& client )
+                {
+                    const Component*            pTarget = client.findRewindTarget();
+                    const AnimationRewindTrack* pTrack  = ( pTarget != nullptr ) ? _recorder.findTrack( pTarget->getHandle() ) : nullptr;
+                    const AnimationRewindFrame* pFrame  = ( pTrack != nullptr ) ? pTrack->findFrame( scrubTime ) : nullptr;
+                    if ( pFrame != nullptr )
+                        client.applyRewindState( pFrame->_state );
+                } );
+            }
+
+        private:
+            AnimationRewindRecorder _recorder;
+            Pose                    _scratchPose;  ///< 되감기 포즈를 해석할 임시 포즈다(재사용)
+            uint8                   _bApplied : 1; ///< 지난 프레임에 되감기 포즈를 적용했다는 표시다. 되감기가 끝나면 다시 평가하게 한다
+        };
+
+        unique_ptr<IAnimationFrameObserver> createRewindObserver()
+        {
+            return make_unique<AnimationRewindObserver>();
+        }
+
         struct AnimationDevCommandsInternal
         {
             /** @brief 활성 씬의 애니메이션 시스템입니다(없으면 nullptr). */
@@ -87,9 +195,10 @@ namespace sw
                         return false;
                     AnimationRewindRecorder::setRecordingRequested( bOn );
                 }
-                const AnimationSystem* pSystem = findActiveAnimationSystem();
-                outReply                       = pSystem != nullptr ? describeRewind( pSystem->getRewind() )
-                                                                    : string( "rewind " ) + ( AnimationRewindRecorder::isRecordingRequested() ? "on" : "off" ) + " (no active scene)";
+                const AnimationSystem*         pSystem = findActiveAnimationSystem();
+                const AnimationRewindRecorder* pRewind = pSystem != nullptr ? AnimationRewindRecorder::find( *pSystem ) : nullptr;
+                outReply                               = pRewind != nullptr ? describeRewind( *pRewind )
+                                                                            : string( "rewind " ) + ( AnimationRewindRecorder::isRecordingRequested() ? "on" : "off" ) + " (no active scene)";
                 return true;
             }
 
@@ -112,7 +221,13 @@ namespace sw
                     outReply = "no active scene";
                     return false;
                 }
-                AnimationRewindRecorder& rewind = pSystem->getRewind();
+                AnimationRewindRecorder* const pRewind = AnimationRewindRecorder::find( *pSystem );
+                if ( pRewind == nullptr )
+                {
+                    outReply = "the active scene's animation system has no rewind observer";
+                    return false;
+                }
+                AnimationRewindRecorder& rewind = *pRewind;
                 if ( listArgument.size() == 1 && StringUtil::equals( listArgument[0], "resume", true ) )
                 {
                     rewind.clearScrub();
@@ -151,6 +266,20 @@ namespace sw
                 high = middle;
         }
         return &getFrame( low > 0 ? low - 1 : 0 );
+    }
+
+    SW_ANIMATION_FRAME_OBSERVER( AnimationRewind, AnimationRewindObserver::kObserverName, &createRewindObserver );
+
+    AnimationRewindRecorder* AnimationRewindRecorder::find( AnimationSystem& system )
+    {
+        IAnimationFrameObserver* const pObserver = system.findFrameObserver( AnimationRewindObserver::kObserverName );
+        return pObserver != nullptr ? &static_cast<AnimationRewindObserver*>( pObserver )->getRecorder() : nullptr; // 이 이름은 이 파일의 등록만 쓴다
+    }
+
+    const AnimationRewindRecorder* AnimationRewindRecorder::find( const AnimationSystem& system )
+    {
+        IAnimationFrameObserver* const pObserver = system.findFrameObserver( AnimationRewindObserver::kObserverName );
+        return pObserver != nullptr ? &static_cast<AnimationRewindObserver*>( pObserver )->getRecorder() : nullptr;
     }
 
     AnimationRewindRecorder::AnimationRewindRecorder()
@@ -445,5 +574,3 @@ namespace sw
                     "Freeze animation and show the recorded poses of the active scene that many seconds ago, or resume",
                     &AnimationDevCommandsInternal::runAnimationRewindScrub );
 } // namespace sw
-
-#endif

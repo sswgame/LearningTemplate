@@ -1,26 +1,25 @@
 /**
- * @file AnimationRewind.h
+ * @file Engine/Animation/Scene/Dev/AnimationRewind.h
  * @brief 애니메이션 되감기 기록기 — 유닛 · 스프라이트 애니메이터마다 최근 몇 초의 포즈(압축) · 그래프 상태 · 알림 · 커브 · 루트 모션을 고리 버퍼에 둡니다.
  * @details 언리얼 Rewind Debugger(Animation Insights)의 자리입니다. 기본은 꺼져 있고(`-gv_animationRewind=1` · 콘솔 `anim.rewind on` · 에디터 패널),
- *          Shipping 에서는 통째로 빠집니다(`#if !defined( SW_SHIPPING )`). 기록은 평가가 끝난 뒤 게임 스레드에서 하고, 되감기(`setScrubTime`)
- *          동안 `AnimationSystem` 은 평가를 멈추고 기록된 포즈를 유닛에 겁니다.
+ *          개발 전용 소스라(Dev/) 배포 구성은 짓지 않습니다. 기록기는 애니메이션 시스템의 프레임 관찰자(`SW_ANIMATION_FRAME_OBSERVER` —
+ *          `AnimationFrameObserver.h`)로 스스로 붙습니다: 기록은 평가가 끝난 뒤 게임 스레드에서 하고, 되감기(`setScrubTime`) 동안에는 평가를 대신해
+ *          기록된 포즈를 유닛에 겁니다. 시스템의 기록기는 `AnimationRewindRecorder::find` 로 찾습니다.
  */
 #pragma once
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MatrixMath.h"
+#include "Core/String/hashed_string.h"
 
-#if !defined( SW_SHIPPING )
-
-    #include "Engine/Foundation/ComponentHandle.h"
-    #include "Core/Container/string.h"
-    #include "Core/Container/vector.h"
-    #include "Core/Math/MatrixMath.h"
-    #include "Core/String/hashed_string.h"
-
-    #include "Engine/Animation/Scene/AnimationDebugState.h"
+#include "Engine/Animation/Scene/AnimationDebugState.h"
+#include "Engine/Foundation/ComponentHandle.h"
 
 namespace sw
 {
+    class AnimationSystem;
     class Component;
     class Pose;
     class SkeletalMeshComponent;
@@ -83,6 +82,10 @@ namespace sw
     {
     public:
         AnimationRewindRecorder();
+
+        /** @brief @p system 에 붙은 기록기입니다. 관찰자 등록이 없으면 nullptr 입니다. */
+        [[nodiscard]] static AnimationRewindRecorder*       find( AnimationSystem& system );
+        [[nodiscard]] static const AnimationRewindRecorder* find( const AnimationSystem& system );
 
         /** @brief 기록을 켜고 끕니다. 끄면 기록을 비웁니다. */
         void setEnabled( bool bEnabled );
@@ -152,5 +155,3 @@ namespace sw
         [[maybe_unused]] uint8       _reserved   : 6;
     };
 } // namespace sw
-
-#endif

@@ -124,6 +124,12 @@ namespace sw
             SW_LOG_ERROR_ID( "Server.DebugChannelRequestedGv", "The debug channel was requested (-gv_debugChannelPort=%#) before the dev console started", gv_debugChannelPort );
             return false;
         }
+        // 토큰 변수 이름은 이 개발 파일만 안다 — 채널(관리 채널과 함께 쓰는 배포 코드)은 이름 없이 거절만 한다.
+        if ( gv_debugChannelToken.empty() )
+        {
+            SW_LOG_ERROR_ID( "Server.DebugChannelNeedsTokenGv", "The debug channel was requested (-gv_debugChannelPort=%#) without -gv_debugChannelToken - not started", gv_debugChannelPort );
+            return false;
+        }
         const uint16 port = static_cast<uint16>( gv_debugChannelPort );
         _pDev->_transport = StreamTransportFactory::createPlatformTransport();
         _pDev->_channel   = make_unique<DebugChannel>();
