@@ -172,8 +172,8 @@ namespace sw
         , _tail{ 0 }
         , _pPendingCommand{ nullptr }
         , _bCommandSucceeded{ false }
-        , _recompiledShaderMutex{}
-        , _listRecompiledShader{}
+        , _queuedCommandMutex{}
+        , _listQueuedCommand{}
     {
     }
 
@@ -533,25 +533,27 @@ namespace sw
         return _bCommandSucceeded;
     }
 
-    void RenderThread::queueShaderRecompiled( string_view shaderPath )
+    void RenderThread::enqueueCommand( RenderCommandDelegate command )
     {
-        ScopedLock<mutex> lock{ _recompiledShaderMutex };
-        _listRecompiledShader.emplace_back( shaderPath );
+        if ( command.isBound() == false )
+            return;
+        ScopedLock<mutex> lock{ _queuedCommandMutex };
+        _listQueuedCommand.push_back( std::move( command ) );
     }
 
-    void RenderThread::applyRecompiledShaders()
+    void RenderThread::runQueuedCommands()
     {
-        vector<string> listShaderPath;
+        vector<RenderCommandDelegate> listCommand;
         {
-            ScopedLock<mutex> lock{ _recompiledShaderMutex };
-            if ( _listRecompiledShader.empty() )
+            ScopedLock<mutex> lock{ _queuedCommandMutex };
+            if ( _listQueuedCommand.empty() )
                 return;
-            listShaderPath.swap( _listRecompiledShader );
+            listCommand.swap( _listQueuedCommand );
         }
-        if ( _pFrameRenderer != nullptr )
-            _pFrameRenderer->onShaderRecompiled( listShaderPath );
-        if ( _pOffscreenRenderers != nullptr )
-            _pOffscreenRenderers->onShaderRecompiled( listShaderPath ); // 주 렌더러가 함께 쓰는 PSO 캐시를 다시 채운 뒤다
+        for ( const RenderCommandDelegate& command : listCommand )
+        {
+            command( *_pDevice );
+        }
     }
 
     bool RenderThread::executeFrameBody( RenderFramePacket& packet )
@@ -580,7 +582,7 @@ namespace sw
         // 컨텍스트를 잡지 못한 프레임은 기록하지 않는다(GL 호출이 버려진다). postPresent 통지는 executePacket 이 그래도 보낸다.
         if ( ensureContextOnCurrentThread() == false )
             return false;
-        applyRecompiledShaders();
+        runQueuedCommands();
 
         const bool          bOffscreen   = packet._outputRenderTarget != 0;
         IRHICommandContext* pFrameStream = _pDevice->getFrameStreamContext();

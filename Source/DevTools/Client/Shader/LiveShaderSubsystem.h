@@ -4,10 +4,11 @@
  *        재시작 목록이 구성마다 같습니다).
  * @details 재컴파일은 셰이더 바인딩 레이아웃 캐시 항목을 **파괴**하는데, 렌더러의 PSO 레이아웃 테이블과 패스 컨텍스트의 1-entry 캐시가 그 실체를
  *          가리키는 날 포인터를 보관하고 있습니다. 콜백은 게임 스레드(틱의 핫 리로드 블록)에서 불리고 렌더 스레드는 직전 패킷을 그리는 중이라, 렌더 스레드에
- *          맡겨 다음 프레임 기록 전에 반영합니다(`RenderThread::queueShaderRecompiled`) — 렌더 스레드와 GPU 를 세우지 않습니다.
+ *          맡겨 다음 프레임 기록 전에 반영합니다(`RenderThread::enqueueCommand`) — 렌더 스레드와 GPU 를 세우지 않습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
@@ -17,8 +18,6 @@
 
 namespace sw
 {
-    struct ShaderCompileResult;
-
     class FrameRendererSubsystem;
     class RenderThreadSubsystem;
     class ShaderRecompiler;
@@ -52,7 +51,7 @@ namespace sw
         ShaderRecompiler* findShaderRecompiler() const { return _bReady ? _shaderRecompiler.get() : nullptr; }
 
     private:
-        void onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result );
+        void onShaderRecompiled( const vector<string>& listShaderPath );
 
     private:
         unique_ptr<ShaderRecompiler>  _shaderRecompiler;

@@ -10,7 +10,6 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
 
@@ -90,11 +89,12 @@ namespace sw
          */
         [[nodiscard]] bool executeAndWait( const RenderCommandDelegate& command );
         /**
-         * @brief 셰이더 @p shaderPath 가 다시 컴파일됐음을 맡깁니다(어느 스레드에서나). 렌더 스레드가 다음 프레임을 기록하기 전에 렌더러들에 반영합니다(`applyRecompiledShaders`).
-         * @details 기다리지 않는다 — 예전에는 게임 스레드가 렌더 스레드와 GPU 를 세우고(`waitIdle`) 렌더 쪽 객체를 직접 고쳤다. 옛 PSO · 트랜지언트는 디바이스가 GPU 완료 뒤로
-         *          미뤄 놓으므로(백엔드 해제 큐) 렌더 스레드가 프레임 사이에 바꾸면 된다 — 언리얼의 셰이더 맵 교체가 렌더 명령으로 도는 것과 같은 자리다.
+         * @brief @p command 를 맡기고 기다리지 않습니다(어느 스레드에서나 — 언리얼 `ENQUEUE_RENDER_COMMAND` 를 flush 없이 쓰는 자리). 패킷을 실행하는 스레드가 다음 프레임을 기록하기 전에 맡긴 순서대로 실행합니다.
+         * @details 렌더 쪽 객체(렌더러 · PSO 캐시 · 패스 자원)를 고치는 일을 게임 스레드가 렌더 스레드와 GPU 를 세우고(`waitIdle`) 직접 하지 않게 하는 길이다 — 옛 PSO · 트랜지언트는
+         *          디바이스가 그것을 쓴 프레임의 GPU 완료 뒤로 미뤄 놓으므로(백엔드 해제 큐) 프레임 사이에 바꾸면 된다(셰이더 핫 리로드 · 파이프라인 바꾸기).
+         *          명령이 잡은 객체는 다음 프레임까지 살아 있어야 한다 — 렌더러를 가진 서브시스템이 렌더 스레드보다 오래 산다.
          */
-        void queueShaderRecompiled( string_view shaderPath );
+        void enqueueCommand( RenderCommandDelegate command );
 
         // 훅 세터 넷은 렌더 스레드가 받은 패킷을 모두 끝내기를 기다린 뒤(`pollPackets`) 패킷 실행 역할을 빌려 바꾼다. 패킷을 내는 쪽(게임 스레드)이 부르므로
         // 그동안 새 패킷이 들어오지 않는다 — 렌더 스레드가 훅을 부르는 중에 델리게이트를 덮는 일이 없다(언리얼도 렌더 스레드가 읽는 값은
@@ -164,8 +164,8 @@ namespace sw
          * @return 프레임을 실제로 그렸으면 true 이고, 유효하지 않은 패킷이나 리소스라 건너뛰었으면 false 입니다.
          */
         [[nodiscard]] bool executeFrameBody( RenderFramePacket& packet ) SW_REQUIRES_LOCK( _packetThread );
-        /** @brief (패킷을 실행하는 스레드, 기록 전) 맡긴 셰이더 재컴파일을 주 렌더러 → 화면 밖 렌더러 순서로 반영합니다(화면 밖 렌더러는 주 렌더러의 PSO 캐시를 빌린다). */
-        void applyRecompiledShaders() SW_REQUIRES_LOCK( _packetThread );
+        /** @brief (패킷을 실행하는 스레드, 기록 전) `enqueueCommand` 로 맡긴 명령을 맡긴 순서대로 실행합니다. */
+        void runQueuedCommands() SW_REQUIRES_LOCK( _packetThread );
         /**
          * @brief 에디터 미리보기 씬마다 자기 타깃을 열고 그린 뒤 읽기 상태로 둡니다. 렌더러가 준비 전이거나 프레임 스트림이 없으면 건너뜁니다.
          * @details 그린 뒤 씬마다(주 화면 = 키 0, @p bMainDrew 면) 빠뜨린 배치 수를 표에 다시 쓴다(`findPendingMaterialPSOBatchCount`).
@@ -245,9 +245,9 @@ namespace sw
         std::condition_variable_any _cvConsume;
         std::condition_variable_any _cvIdle;
         /// @brief `executeAndWait` 가 맡긴 명령입니다(받은 패킷을 끝낸 뒤 실행한다). 실행이 끝나면 비우고 `_cvIdle` 로 알린다. 맡기는 쪽은 게임 스레드 하나다.
-        const RenderCommandDelegate* _pPendingCommand SW_GUARDED_BY( _mutex );
-        bool _bCommandSucceeded                       SW_GUARDED_BY( _mutex );
-        mutex                                         _recompiledShaderMutex;
-        vector<string> _listRecompiledShader          SW_GUARDED_BY( _recompiledShaderMutex ); ///< `queueShaderRecompiled` 가 맡긴 셰이더 경로(다음 프레임 기록 전에 비운다)
+        const RenderCommandDelegate* _pPendingCommand    SW_GUARDED_BY( _mutex );
+        bool _bCommandSucceeded                          SW_GUARDED_BY( _mutex );
+        mutex                                            _queuedCommandMutex;
+        vector<RenderCommandDelegate> _listQueuedCommand SW_GUARDED_BY( _queuedCommandMutex ); ///< `enqueueCommand` 가 맡긴 명령(다음 프레임 기록 전에 비운다)
     };
 } // namespace sw
