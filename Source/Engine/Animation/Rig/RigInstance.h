@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -79,8 +80,8 @@ namespace sw
         // --- 대상 ---
         uint32              getTargetCount() const { return static_cast<uint32>( _listTargetDef.size() ); }
         const RigTargetDef& getTargetDef( uint32 targetIndex ) const { return _listTargetDef[targetIndex]; }
-        /** @brief 이름의 대상 번호입니다. 없으면 -1 입니다. */
-        int32 findTargetIndex( const hashed_string& name ) const;
+        /** @brief 이름의 대상 번호입니다. 없으면 없음입니다. */
+        optional<uint32> findTargetIndex( const hashed_string& name ) const;
         /** @brief 호스트가 값을 넣어야 하는 대상인지 반환합니다(다른 유닛, 오브젝트, 다른 유닛의 해석된 소켓). */
         bool isTargetExternal( uint32 targetIndex ) const { return _listTargetBone[targetIndex] == kExternalBone; }
         /** @brief 바깥 대상의 이번 프레임 값을 넣습니다(평가 전). */

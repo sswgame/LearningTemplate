@@ -70,10 +70,9 @@ SW_TEST_CASE( MeshMergeTest, SectionedPartsMergeOnlyThePickedSections )
     listPart[1]._name  = hashed_string( "Outfit.Body" );
     listPart[1]._pMesh = outfit.get();
 
-    MeshMergeResult result;
-    string          error;
-    SW_REQUIRE_TRUE( CharacterMeshUtil::mergeMeshes( listPart, nullptr, result, &error ) );
-    const Mesh& merged = *result._mesh;
+    const expected<MeshMergeResult> result = CharacterMeshUtil::mergeMeshes( listPart, nullptr );
+    SW_REQUIRE_TRUE( result.has_value() );
+    const Mesh& merged = *result->_mesh;
     // 구간은 고른 순서(s2 · s0) 뒤에 옷이고, 고르지 않은 s1 의 정점 넷은 빠졌다.
     SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( merged.getSections().size() ) );
     SW_EXPECT_TRUE( merged.getSections()[0]._name == hashed_string( "s2" ) );
@@ -88,13 +87,15 @@ SW_TEST_CASE( MeshMergeTest, SectionedPartsMergeOnlyThePickedSections )
     SW_EXPECT_EQUAL( 4u, merged.getSkinBoneCount() );
 
     // 고른 구간이 메시에 없으면 · 훅 없이 조각 이름이 겹치면 까닭과 함께 거절한다.
-    listPart[0]._listSection[1]._source = hashed_string( "missing" );
-    SW_EXPECT_FALSE( CharacterMeshUtil::mergeMeshes( listPart, nullptr, result, &error ) );
-    SW_EXPECT_TRUE( error.find( "missing" ) != string::npos );
-    listPart[0]._listSection[1]._source = hashed_string( "s0" );
-    listPart[0]._listSection[1]._name   = hashed_string( "s2" );
-    SW_EXPECT_FALSE( CharacterMeshUtil::mergeMeshes( listPart, nullptr, result, &error ) );
-    SW_EXPECT_TRUE( error.find( "used twice" ) != string::npos );
+    listPart[0]._listSection[1]._source     = hashed_string( "missing" );
+    const expected<MeshMergeResult> missing = CharacterMeshUtil::mergeMeshes( listPart, nullptr );
+    SW_REQUIRE_FALSE( missing.has_value() );
+    SW_EXPECT_TRUE( missing.error().detail().find( "missing" ) != std::string_view::npos || missing.error().message().find( "missing" ) != std::string_view::npos );
+    listPart[0]._listSection[1]._source   = hashed_string( "s0" );
+    listPart[0]._listSection[1]._name     = hashed_string( "s2" );
+    const expected<MeshMergeResult> twice = CharacterMeshUtil::mergeMeshes( listPart, nullptr );
+    SW_REQUIRE_FALSE( twice.has_value() );
+    SW_EXPECT_TRUE( twice.error().message().find( "used twice" ) != std::string_view::npos || twice.error().detail().find( "used twice" ) != std::string_view::npos );
 }
 
 /**
@@ -116,11 +117,10 @@ SW_TEST_CASE( MeshMergeTest, PartsWithAnotherBindPoseMoveToTheFirstPose )
     listPart[1]._name  = hashed_string( "Outfit.Body" );
     listPart[1]._pMesh = outfit.get();
 
-    MeshMergeResult result;
-    string          error;
-    SW_REQUIRE_TRUE( CharacterMeshUtil::mergeMeshes( listPart, nullptr, result, &error ) );
-    SW_EXPECT_TRUE( result._mesh->getSkinBinding().matches( body->getSkinBinding() ) );
-    const vector<RHIVertex>& listVertex = result._mesh->getVertices();
+    const expected<MeshMergeResult> result = CharacterMeshUtil::mergeMeshes( listPart, nullptr );
+    SW_REQUIRE_TRUE( result.has_value() );
+    SW_EXPECT_TRUE( result->_mesh->getSkinBinding().matches( body->getSkinBinding() ) );
+    const vector<RHIVertex>& listVertex = result->_mesh->getVertices();
     SW_REQUIRE_TRUE( listVertex.size() == 8u );
     SW_EXPECT_NEAR( 0.0f, listVertex[1]._arrPosition[2], 1e-4f ); // 몸은 그대로다
     SW_EXPECT_NEAR( 5.0f, listVertex[5]._arrPosition[2], 1e-4f ); // 옷의 본 1 정점은 옮겼다

@@ -523,12 +523,12 @@ namespace sw::editor
     {
         const BonePoseEditModel& pose      = _document.getPoseModel();
         const Skeleton&          skeleton  = pose.getSkeleton();
-        const int32              boneIndex = skeleton.findBoneIndex( _document.getSelectedBone() );
-        if ( boneIndex < 0 )
-            return false;
+        const optional<uint32>   boneIndex = skeleton.findBoneIndex( _document.getSelectedBone() );
+        if ( boneIndex.has_value() == false )
+            return false; // 고른 본이 없다(고르지 않았거나 다른 스켈레톤) — 기즈모를 그리지 않는다
         // 덮어쓴 값을 얹은 모델 변환 — 부모까지 줄을 올라가 루트부터 곱한다(행벡터: 자식 × 부모).
         vector<int32> listChain;
-        for ( int32 index = boneIndex; index >= 0; index = skeleton.getBone( static_cast<uint32>( index ) )._parentIndex )
+        for ( int32 index = static_cast<int32>( *boneIndex ); index >= 0; index = skeleton.getBone( static_cast<uint32>( index ) )._parentIndex )
         {
             listChain.push_back( index );
         }

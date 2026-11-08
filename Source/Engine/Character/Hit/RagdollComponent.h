@@ -16,6 +16,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -129,8 +130,12 @@ namespace sw
          *        잘려 나간 영역에서 보이지 않는 바디가 부딪히거나, 빠진 바디를 잇는 관절이 남지 않게 하려는 것입니다. 되돌리지 않으며, 다시 만들려면 물리 에셋을 다시 읽어야 합니다.
          */
         void detachBoneBodies( const vector<hashed_string>& listBone );
-        /** @brief 바디의 히트 존입니다. 이 래그돌의 바디가 아니거나 히트 존 이름이 비면 nullptr 입니다. @p outBodyIndex 는 바디 번호(아니면 -1). */
-        const PhysicsHitZoneDef* findHitZone( PhysicsBodyHandle body, int32& outBodyIndex ) const;
+        /** @brief 맞은 에셋 바디 번호입니다 — 히트가 실어 온 번호(`HitInfo::_bodyIndex`)가 먼저, 없으면 바디 핸들로 찾습니다. 이 래그돌의 바디가 아니면 없음입니다. */
+        optional<uint32> findHitBodyIndex( const HitInfo& hit ) const;
+        /** @brief 바디 핸들의 에셋 바디 번호입니다. 이 래그돌의 바디가 아니면 없음입니다. */
+        optional<uint32> findBodyIndex( PhysicsBodyHandle body ) const { return _ragdoll.findBodyIndex( body ); }
+        /** @brief 에셋 바디의 히트 존입니다. 번호가 에셋 밖이거나 히트 존 이름이 비면 nullptr 입니다. */
+        const PhysicsHitZoneDef* findHitZone( uint32 bodyIndex ) const;
 
     protected:
         void beginPhysicsFrame( ScenePhysics& physics ) override;

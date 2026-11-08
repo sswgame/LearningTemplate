@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
@@ -135,6 +136,8 @@ namespace sw
         void bindToUnit();
         /** @brief 리그를 경로에서 다시 읽습니다. */
         void loadRig();
+        /** @brief 말하는 트랙의 비즘 순서를 지금 리그의 비즘 번호로 잇습니다(`_listTrackToRigViseme`). 리그에 없는 비즘은 경고를 남깁니다. */
+        void remapTrackVisemes();
         /** @brief 유닛의 메시 · 스켈레톤에 맞춰 타깃 번호 · 눈 본 번호를 다시 짓습니다(바뀌었을 때만). */
         void refreshBindings( const SkeletalMeshComponent& skeletalMesh );
         /** @brief 시간 단계 — 깜빡임 · 사카드 · 말하기 시각을 흘립니다. */
@@ -152,7 +155,7 @@ namespace sw
         /** @brief 후처리 단계 — 모프 가중치 · 눈 본을 겁니다. */
         void applyFace( SkeletalMeshComponent& skeletalMesh );
         /** @brief 포즈 하나(표정 · 비즘)를 가중치만큼 유닛에 더합니다. */
-        void addPose( SkeletalMeshComponent& skeletalMesh, const vector<int32>& listTargetIndex, const FacialPose& pose, float32 weight ) const;
+        void addPose( SkeletalMeshComponent& skeletalMesh, const vector<optional<uint32>>& listTargetIndex, const FacialPose& pose, float32 weight ) const;
         /** @brief 눈 본을 목표 쪽으로 돌립니다. */
         void applyGaze( SkeletalMeshComponent& skeletalMesh );
 
@@ -172,11 +175,11 @@ namespace sw
         /** @brief 지금 입력이 @p pSource 이면 뗍니다(입력 구독이 풀릴 때 — 교체된 옛 구독이면 할 일이 없다). */
         void                                          detachLiveSource( const IFacialLiveSource* pSource );
         ItemSubscriptionList<const IFacialLiveSource> _liveSourceSubscriptions; ///< `_pLiveSource` 의 등록 구독을 내준다(풀리면 `detachLiveSource`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
-        vector<vector<int32>>                         _listExpressionTarget;    ///< 표정마다 타깃 → 메시 타깃 번호
-        vector<vector<int32>>                         _listVisemeTarget;        ///< 비즘마다 타깃 → 메시 타깃 번호
-        vector<int32>                                 _listBlinkTarget;         ///< 깜빡임 타깃 → 메시 타깃 번호
-        vector<int32>                                 _listEyeBone;             ///< 눈 본 번호
-        vector<int32>                                 _listTrackToRigViseme;    ///< 립싱크 비즘 순서 → 리그 비즘 번호
+        vector<vector<optional<uint32>>>              _listExpressionTarget;    ///< 표정마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        vector<vector<optional<uint32>>>              _listVisemeTarget;        ///< 비즘마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        vector<optional<uint32>>                      _listBlinkTarget;         ///< 깜빡임 타깃 → 메시 타깃 번호(메시에 없으면 없음)
+        vector<uint32>                                _listEyeBone;             ///< 눈 본 번호(스켈레톤에 있는 것만)
+        vector<optional<uint32>>                      _listTrackToRigViseme;    ///< 립싱크 비즘 순서 → 리그 비즘 번호(리그에 없으면 없음)
         vector<float32>                               _listScratchVisemeWeight;
         TComponentHandle<SkeletalAnimatorComponent>   _animator; ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)
         SkeletalMeshComponent*                        _pSkeletalMesh;

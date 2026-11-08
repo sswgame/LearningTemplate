@@ -28,8 +28,8 @@ namespace sw
     {
         struct FacialAnimationInternal
         {
-            /** @brief 이름들을 그리는 메시의 타깃 번호로 바꿉니다(없으면 -1 — 검증이 이미 알렸다). */
-            static void mapTargets( const SkeletalMeshComponent& skeletalMesh, const FacialPose& pose, vector<int32>& outListIndex )
+            /** @brief 이름들을 그리는 메시의 타깃 번호로 바꿉니다(없으면 없음 — 검증 `FacialRig::validate` 가 이미 알렸고 적용이 건너뛴다). */
+            static void mapTargets( const SkeletalMeshComponent& skeletalMesh, const FacialPose& pose, vector<optional<uint32>>& outListIndex )
             {
                 outListIndex.clear();
                 for ( const FacialTargetWeight& target : pose._listTarget )
@@ -210,11 +210,7 @@ namespace sw
         _pBoundMesh     = nullptr;
         _pBoundSkeleton = nullptr;
         // 말하는 중인 트랙의 비즘 번호를 새 리그로 다시 잇는다.
-        _listTrackToRigViseme.clear();
-        for ( const hashed_string& visemeName : _speechTrack._listViseme )
-        {
-            _listTrackToRigViseme.push_back( getFacialRig().findVisemeIndex( visemeName ) );
-        }
+        remapTrackVisemes();
         bindToUnit();
     }
 
@@ -223,7 +219,7 @@ namespace sw
         // 리그는 공유 캐시의 한 벌이다 — 제자리 다시 읽기 뒤 핫 리로드가 이 칸을 알리면 같은 객체를 다시 받고 번호를 다시 짓는다.
         shared_ptr<const FacialRig> pRig = _facialRigPath.acquire();
         if ( _facialRigPath.empty() == false && pRig == nullptr )
-            SW_LOG_ERROR_ID( "FacialAnimation.FacialRigCouldNot", "Facial rig '%#' could not be loaded", _facialRigPath.c_str() );
+            SW_LOG_ERROR_ID( "FacialAnimation.FacialRigCouldNot", "Facial rig '%#' could not be loaded", getFacialRigPath().c_str() );
         setFacialRig( std::move( pRig ) );
     }
 
@@ -352,14 +348,24 @@ namespace sw
         _speechSampleRate = 0;
         _speechTime       = 0.0f;
         _bSpeaking        = SW_TRUE;
-        // 트랙의 비즘 순서 → 리그 비즘 번호(리그에 없는 비즘은 버린다). 리그가 바뀌면 `setFacialRig` 가 다시 잇는다.
+        // 리그가 바뀌면 `setFacialRig` 가 다시 잇는다.
+        remapTrackVisemes();
+        if ( _pSkeletalMesh != nullptr )
+            _pSkeletalMesh->markPoseDirty();
+    }
+
+    void FacialAnimationComponent::remapTrackVisemes()
+    {
+        // 트랙의 비즘 순서 → 리그 비즘 번호. 리그에 없는 비즘은 알리고 적용에서 건너뛴다(리그가 없으면 움직일 것이 없으니 알리지 않는다).
         _listTrackToRigViseme.clear();
         for ( const hashed_string& visemeName : _speechTrack._listViseme )
         {
-            _listTrackToRigViseme.push_back( getFacialRig().findVisemeIndex( visemeName ) );
+            const optional<uint32> visemeIndex = getFacialRig().findVisemeIndex( visemeName );
+            if ( visemeIndex.has_value() == false && _pRig != nullptr )
+                SW_LOG_WARNING_ID( "FacialAnimation.TrackVisemeNotInRig", "'%#': viseme track names viseme '%#' the facial rig does not have - it is skipped", getFacialRigPath().c_str(),
+                                   visemeName.c_str() );
+            _listTrackToRigViseme.push_back( visemeIndex );
         }
-        if ( _pSkeletalMesh != nullptr )
-            _pSkeletalMesh->markPoseDirty();
     }
 
     void FacialAnimationComponent::speakSamples( vector<float32> listSample, uint32 sampleRate )
@@ -370,6 +376,11 @@ namespace sw
         _speechTime       = 0.0f;
         _bSpeaking        = ( _speechSampleRate > 0 && _listSpeechSample.empty() == false ) ? SW_TRUE : SW_FALSE;
         _listTrackToRigViseme.clear();
+        // 진폭 립싱크는 표의 대체 비즘 하나를 연다 — 리그에 없으면 여기서 한 번 알리고 적용(`applyFace`)이 건너뛴다.
+        const bool bFallbackMissing = _bSpeaking == SW_TRUE && _pLipSync != nullptr && _pRig != nullptr && getFacialRig().findVisemeIndex( _pLipSync->_fallbackViseme ).has_value() == false;
+        if ( bFallbackMissing )
+            SW_LOG_WARNING_ID( "FacialAnimation.FallbackVisemeNotInRig", "'%#': lip sync fallback viseme '%#' is not in the facial rig - amplitude lip sync does not open the mouth", getFacialRigPath().c_str(),
+                               _pLipSync->_fallbackViseme.c_str() );
     }
 
     void FacialAnimationComponent::stopSpeaking()
@@ -477,18 +488,21 @@ namespace sw
         _listEyeBone.clear();
         for ( const hashed_string& bone : getFacialRig().getGaze()._listEyeBone )
         {
-            _listEyeBone.push_back( pSkeleton->findBoneIndex( bone ) );
+            // 스켈레톤에 없는 눈 본은 위 검증(`FacialRig::validate`)이 알렸다 — 시선에서 뺀다.
+            const optional<uint32> boneIndex = pSkeleton->findBoneIndex( bone );
+            if ( boneIndex.has_value() )
+                _listEyeBone.push_back( *boneIndex );
         }
     }
 
-    void FacialAnimationComponent::addPose( SkeletalMeshComponent& skeletalMesh, const vector<int32>& listTargetIndex, const FacialPose& pose, float32 weight ) const
+    void FacialAnimationComponent::addPose( SkeletalMeshComponent& skeletalMesh, const vector<optional<uint32>>& listTargetIndex, const FacialPose& pose, float32 weight ) const
     {
         if ( weight == 0.0f )
             return;
         for ( size_t targetIndex = 0; targetIndex < listTargetIndex.size() && targetIndex < pose._listTarget.size(); ++targetIndex )
         {
-            if ( listTargetIndex[targetIndex] >= 0 )
-                skeletalMesh.addMorphWeight( static_cast<uint32>( listTargetIndex[targetIndex] ), pose._listTarget[targetIndex]._weight * weight );
+            if ( listTargetIndex[targetIndex].has_value() )
+                skeletalMesh.addMorphWeight( *listTargetIndex[targetIndex], pose._listTarget[targetIndex]._weight * weight );
         }
     }
 
@@ -546,28 +560,27 @@ namespace sw
                 const LipSyncSettings& lipSync       = *_pLipSync;
                 const float32          windowSeconds = 1.0f / MathUtil::max( lipSync._frameRate, 1.0f );
                 const float32          openness      = VisemeTrack::computeOpenness( VisemeTrack::computeRms( _listSpeechSample, _speechSampleRate, _speechTime, windowSeconds ), lipSync );
-                const int32            visemeIndex   = getFacialRig().findVisemeIndex( lipSync._fallbackViseme );
-                if ( visemeIndex >= 0 )
-                    addPose( skeletalMesh, _listVisemeTarget[static_cast<size_t>( visemeIndex )], listViseme[static_cast<size_t>( visemeIndex )], openness );
+                const optional<uint32> visemeIndex   = getFacialRig().findVisemeIndex( lipSync._fallbackViseme ); // 없음은 `speakSamples` 가 알렸다
+                if ( visemeIndex.has_value() )
+                    addPose( skeletalMesh, _listVisemeTarget[*visemeIndex], listViseme[*visemeIndex], openness );
             }
             else
             {
                 _speechTrack.sample( _speechTime, _listScratchVisemeWeight );
                 for ( size_t trackViseme = 0; trackViseme < _listScratchVisemeWeight.size() && trackViseme < _listTrackToRigViseme.size(); ++trackViseme )
                 {
-                    const int32 visemeIndex = _listTrackToRigViseme[trackViseme];
-                    if ( visemeIndex >= 0 )
-                        addPose( skeletalMesh, _listVisemeTarget[static_cast<size_t>( visemeIndex )], listViseme[static_cast<size_t>( visemeIndex )],
-                                 _listScratchVisemeWeight[trackViseme] );
+                    const optional<uint32>& visemeIndex = _listTrackToRigViseme[trackViseme]; // 없음은 `remapTrackVisemes` 가 알렸다
+                    if ( visemeIndex.has_value() )
+                        addPose( skeletalMesh, _listVisemeTarget[*visemeIndex], listViseme[*visemeIndex], _listScratchVisemeWeight[trackViseme] );
                 }
             }
         }
 
         // 깜빡임
-        for ( const int32 targetIndex : _listBlinkTarget )
+        for ( const optional<uint32>& targetIndex : _listBlinkTarget )
         {
-            if ( targetIndex >= 0 && _blinkAmount > 0.0f )
-                skeletalMesh.addMorphWeight( static_cast<uint32>( targetIndex ), _blinkAmount );
+            if ( targetIndex.has_value() && _blinkAmount > 0.0f )
+                skeletalMesh.addMorphWeight( *targetIndex, _blinkAmount );
         }
 
         applyGaze( skeletalMesh );
@@ -585,15 +598,15 @@ namespace sw
         quaternion*             pRotation  = pose.getRotationData();
         const float32           maxAngle   = gaze._maxAngle;
         const quaternion        saccade    = quaternion::makeFromYawPitchRoll( _saccadeOffset._x, _saccadeOffset._y, 0.0f );
-        for ( const int32 boneIndex : _listEyeBone )
+        for ( const uint32 boneIndex : _listEyeBone )
         {
-            const bool bInvalidEyeBone = boneIndex < 0 || static_cast<size_t>( boneIndex ) >= listModel.size() || static_cast<uint32>( boneIndex ) >= pose.getBoneCount();
+            const bool bInvalidEyeBone = boneIndex >= listModel.size() || boneIndex >= pose.getBoneCount();
             if ( bInvalidEyeBone )
                 continue;
             // 부모 공간에서 돌린다 — 지금 로컬 회전의 앞 방향을 목표 방향으로 돌리는 가장 작은 회전을 최대 각으로 자르고 로컬 회전 뒤에 붙인다.
-            const int32    parentIndex = listParent[static_cast<size_t>( boneIndex )];
+            const int32    parentIndex = listParent[boneIndex];
             const float4x4 toParent    = parentIndex >= 0 ? listModel[static_cast<size_t>( parentIndex )].invert() : float4x4::Identity;
-            const float3   eyePosition = listModel[static_cast<size_t>( boneIndex )].getTranslation();
+            const float3   eyePosition = listModel[boneIndex].getTranslation();
             float3         desired     = float3::transformVector( _lookAtModel - eyePosition, toParent );
             if ( desired.getLengthSquared() <= MathUtil::kEpsilon )
                 continue;

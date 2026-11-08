@@ -100,7 +100,7 @@ namespace sw
              *        삼각형마다 잘렸는지와 두 캡을 냅니다. 삼각형 i 는 메시의 삼각형 i 이고, 남은 메시는 원래 정점을 쓴다.
              * @details 영역 매기기는 스켈레톤의 레퍼런스 포즈로 한다.
              */
-            [[nodiscard]] static bool computeSeveredTriangles( const Mesh& mesh, const Skeleton& skeleton, const FitTables& regionTable, int32 regionIndex,
+            [[nodiscard]] static bool computeSeveredTriangles( const Mesh& mesh, const Skeleton& skeleton, const FitTables& regionTable, uint32 regionIndex,
                                                                DismembermentResult& outResult )
             {
                 AppearanceGeometry welded;
@@ -170,7 +170,7 @@ namespace sw
              * @brief 원본의 낮은 단계마다 같은 영역을 잘라 남은 몸의 단계로 만듭니다. LOD 가 바뀌는 순간 잘린 팔이 되살아나지 않게 한다(언리얼 스켈레탈 메시의 LOD 마다 같은 섹션 숨김).
              * @details 한 단계라도 자르지 못하면(그 단계 형상에서 영역을 못 찾음) 거기서 멈춘다 — 그 아래 단계를 두면 잘린 모습이 다시 붙어 보이므로, 대신 위 단계를 더 멀리까지 그린다.
              */
-            static vector<MeshLODLevel> severLODLevels( const Mesh& mesh, const Skeleton& skeleton, const FitTables& regionTable, int32 regionIndex )
+            static vector<MeshLODLevel> severLODLevels( const Mesh& mesh, const Skeleton& skeleton, const FitTables& regionTable, uint32 regionIndex )
             {
                 vector<MeshLODLevel> listLevel;
                 for ( size_t lodIndex = 0; lodIndex < mesh.getLODs().size(); ++lodIndex )
@@ -275,8 +275,8 @@ namespace sw
                 const DismembermentComponent* pFound = findTarget( query, outValue );
                 if ( pFound == nullptr )
                     return false;
-                const int32 regionIndex = pFound->findRegionIndex( hashed_string{ query._key } );
-                if ( regionIndex < 0 )
+                const optional<uint32> regionIndex = pFound->findRegionIndex( hashed_string{ query._key } );
+                if ( regionIndex.has_value() == false )
                 {
                     outValue.setText( "no such body region" );
                     return false;
@@ -287,7 +287,7 @@ namespace sw
                     outValue.setText( "no appearance surface state" );
                     return false;
                 }
-                outValue.setNumber( static_cast<float64>( pSurface->getRegionValue( static_cast<uint32>( regionIndex ), pFound->getBloodChannel() ) ) );
+                outValue.setNumber( static_cast<float64>( pSurface->getRegionValue( *regionIndex, pFound->getBloodChannel() ) ) );
                 return true;
             }
         };
@@ -365,7 +365,7 @@ namespace sw
         }
         for ( const hashed_string& region : _listSeverableRegion )
         {
-            if ( findRegionIndex( region ) < 0 )
+            if ( findRegionIndex( region ).has_value() == false )
                 SW_LOG_ERROR_ID( "Dismemberment.SeverableRegionNot", "'%#': severable region '%#' is not in '%#'", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", region.c_str(),
                                  _regionTablePath.c_str() );
         }
@@ -385,15 +385,11 @@ namespace sw
         return _pRegionTable != nullptr ? _pRegionTable->getRegions() : s_noRegion;
     }
 
-    int32 DismembermentComponent::findRegionIndex( const hashed_string& region ) const
+    optional<uint32> DismembermentComponent::findRegionIndex( const hashed_string& region ) const
     {
-        const vector<BodyRegionDef>& listRegion = getRegions();
-        for ( size_t regionIndex = 0; regionIndex < listRegion.size(); ++regionIndex )
-        {
-            if ( listRegion[regionIndex]._name == region )
-                return static_cast<int32>( regionIndex );
-        }
-        return constant::invalid_index::kInt32;
+        if ( _pRegionTable == nullptr )
+            return nullopt; // 표를 받기 전 · 못 받았을 때는 영역이 없다(`getRegions` 와 같다)
+        return _pRegionTable->findRegionIndex( region );
     }
 
     hashed_string DismembermentComponent::findRegionOfBone( const hashed_string& bone ) const
@@ -418,13 +414,12 @@ namespace sw
         const GameObject*       pOwner    = getOwner();
         const RagdollComponent* pRagdoll  = pOwner != nullptr ? pOwner->getComponent<RagdollComponent>() : nullptr;
         const PhysicsAsset*     pAsset    = pRagdoll != nullptr ? pRagdoll->getPhysicsAsset() : nullptr;
-        int32                   bodyIndex = hit._bodyIndex;
-        if ( bodyIndex < 0 && pRagdoll != nullptr )
-            (void)pRagdoll->findHitZone( hit._body, bodyIndex ); // 못 찾으면 bodyIndex 가 -1 로 남는다
-        const bool bInvalidBodyRegion = pAsset == nullptr || bodyIndex < 0 || static_cast<size_t>( bodyIndex ) >= pAsset->_listBody.size();
+        const optional<uint32>  bodyIndex = pRagdoll != nullptr ? pRagdoll->findHitBodyIndex( hit ) : optional<uint32>{};
+        // 래그돌 바디가 아닌 곳(다른 충돌체)에 맞은 치명타는 자를 영역이 없다 — 묻는 자리라 없음이 답이다.
+        const bool bInvalidBodyRegion = pAsset == nullptr || bodyIndex.has_value() == false || *bodyIndex >= pAsset->_listBody.size();
         if ( bInvalidBodyRegion )
             return;
-        const hashed_string region = findRegionOfBone( pAsset->_listBody[static_cast<size_t>( bodyIndex )]._bone );
+        const hashed_string region = findRegionOfBone( pAsset->_listBody[*bodyIndex]._bone );
         if ( region.empty() || VectorUtil::contains( _listSeverableRegion, region ) == false )
             return;
         (void)severRegion( region, hit._direction * hit._impulse );
@@ -432,12 +427,19 @@ namespace sw
 
     bool DismembermentComponent::severRegion( const hashed_string& region, const float3& impulse )
     {
-        using Internal                      = DismembermentComponentInternal;
-        GameObject*            pOwner       = getOwner();
-        GameObjectManager*     pManager     = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        SkeletalMeshComponent* pUnit        = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        const int32            regionIndex  = findRegionIndex( region );
-        const bool             bCannotSever = pManager == nullptr || pUnit == nullptr || pUnit->getMesh() == nullptr || pUnit->getMesh()->hasSkin() == false || regionIndex < 0;
+        using Internal                     = DismembermentComponentInternal;
+        GameObject*            pOwner      = getOwner();
+        GameObjectManager*     pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        SkeletalMeshComponent* pUnit       = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+        const optional<uint32> foundRegion = findRegionIndex( region );
+        if ( foundRegion.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "Dismemberment.SeverUnknownRegion", "'%#': cannot sever region '%#' - it is not in '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)", region.c_str(),
+                             _regionTablePath.c_str() );
+            return false;
+        }
+        const uint32 regionIndex  = *foundRegion;
+        const bool   bCannotSever = pManager == nullptr || pUnit == nullptr || pUnit->getMesh() == nullptr || pUnit->getMesh()->hasSkin() == false;
         if ( bCannotSever )
             return false;
         if ( VectorUtil::contains( _listSeveredRegion, region ) )
@@ -492,7 +494,7 @@ namespace sw
         // 4) 그 영역 뼈의 래그돌 바디를 끈다. 보이지 않는 바디가 남아 부딪히지 않게 하려는 것이다.
         RagdollComponent* pRagdoll = pOwner->getComponent<RagdollComponent>();
         if ( pRagdoll != nullptr )
-            pRagdoll->detachBoneBodies( getRegions()[static_cast<size_t>( regionIndex )]._listBone );
+            pRagdoll->detachBoneBodies( getRegions()[regionIndex]._listBone );
 
         // 5) 표면 상태: 잘린 영역에 피를 올린다 — 외형의 한 벌에(그래야 머티리얼로 올라간다). 외형 영역은 몸 피팅 표 순서라 절단 표와 같은 표여야 한다.
         CharacterAppearanceComponent* pAppearance = pOwner->getComponent<CharacterAppearanceComponent>();
@@ -502,7 +504,7 @@ namespace sw
                              "'%#': no appearance surface state with the %# regions of '%#' - give the appearance _surfaceChannelsPath and the body the same fitTables (the blood of '%#' is not shown)",
                              pOwner->getName().c_str(), static_cast<uint32>( getRegions().size() ), _regionTablePath.c_str(), region.c_str() );
         else
-            (void)pSurface->setRegionValue( static_cast<uint32>( regionIndex ), _bloodChannel, 1.0f );
+            (void)pSurface->setRegionValue( regionIndex, _bloodChannel, 1.0f );
         _listSeveredRegion.push_back( region );
         return true;
     }

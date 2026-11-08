@@ -105,8 +105,8 @@ namespace
 SW_TEST_CASE( LipSyncTest, SettingsValidateAcceptsAWellFormedTable )
 {
     SW_EXPECT_TRUE( LipSyncTestUtil::makeSettings().validate( "test" ) );
-    SW_EXPECT_EQUAL( LipSyncTestUtil::makeSettings().findVisemeIndex( hashed_string( "pp" ) ), 2 );
-    SW_EXPECT_EQUAL( LipSyncTestUtil::makeSettings().findVisemeIndex( hashed_string( "nope" ) ), -1 );
+    SW_EXPECT_TRUE( LipSyncTestUtil::makeSettings().findVisemeIndex( hashed_string( "pp" ) ) == 2u );
+    SW_EXPECT_FALSE( LipSyncTestUtil::makeSettings().findVisemeIndex( hashed_string( "nope" ) ).has_value() );
 }
 
 SW_TEST_CASE( LipSyncTest, SettingsValidateRefusesEachBrokenField )

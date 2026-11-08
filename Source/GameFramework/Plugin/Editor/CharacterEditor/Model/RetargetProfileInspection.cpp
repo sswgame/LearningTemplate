@@ -24,15 +24,16 @@ namespace sw::editor
                 vector<float4x4> listModel;
                 reference.setToReference( skeleton );
                 reference.computeModelSpace( skeleton.getParentIndices(), listModel );
-                float32 length   = 0.0f;
-                int32   previous = -1;
+                float32          length = 0.0f;
+                optional<uint32> previous{};
                 for ( const hashed_string& name : listBone )
                 {
-                    const int32 bone = skeleton.findBoneIndex( name );
-                    if ( bone < 0 )
+                    // 없는 본은 `checkBone` 이 문제 줄로 알린다 — 길이는 있는 본만 잇는다.
+                    const optional<uint32> bone = skeleton.findBoneIndex( name );
+                    if ( bone.has_value() == false )
                         continue;
-                    if ( previous >= 0 )
-                        length += ( listModel[static_cast<size_t>( bone )].getTranslation() - listModel[static_cast<size_t>( previous )].getTranslation() ).getLength();
+                    if ( previous.has_value() )
+                        length += ( listModel[*bone].getTranslation() - listModel[*previous].getTranslation() ).getLength();
                     previous = bone;
                 }
                 return length;
@@ -50,7 +51,7 @@ namespace sw::editor
                     outListProblem.push_back( std::move( line ) );
                     return;
                 }
-                if ( skeleton.findBoneIndex( name ) >= 0 )
+                if ( skeleton.findBoneIndex( name ).has_value() )
                     return;
                 line += ": the ";
                 line += pSide;
@@ -103,12 +104,12 @@ namespace sw::editor
             }
 
             /** @brief @p ancestor 가 @p bone 의 조상이면 true 입니다. */
-            static bool isAncestor( const Skeleton& skeleton, int32 ancestor, int32 bone )
+            static bool isAncestor( const Skeleton& skeleton, uint32 ancestor, uint32 bone )
             {
                 const vector<int32>& listParent = skeleton.getParentIndices();
-                for ( int32 current = listParent[static_cast<size_t>( bone )]; current >= 0; current = listParent[static_cast<size_t>( current )] )
+                for ( int32 current = listParent[bone]; current >= 0; current = listParent[static_cast<size_t>( current )] )
                 {
-                    if ( current == ancestor )
+                    if ( static_cast<uint32>( current ) == ancestor )
                         return true;
                 }
                 return false;
@@ -119,7 +120,10 @@ namespace sw::editor
             {
                 for ( size_t index = 1; index < listBone.size(); ++index )
                 {
-                    if ( isAncestor( skeleton, skeleton.findBoneIndex( listBone[index - 1] ), skeleton.findBoneIndex( listBone[index] ) ) == false )
+                    // 없는 본은 `checkBone` 이 따로 알린다 — 그 사슬은 뿌리 → 끝 순서를 말할 수 없다.
+                    const optional<uint32> ancestor = skeleton.findBoneIndex( listBone[index - 1] );
+                    const optional<uint32> bone     = skeleton.findBoneIndex( listBone[index] );
+                    if ( ancestor.has_value() == false || bone.has_value() == false || isAncestor( skeleton, *ancestor, *bone ) == false )
                         return false;
                 }
                 return true;

@@ -103,14 +103,14 @@ namespace sw
                 _listTargetOffset[targetIndex] = offset;
                 continue;
             }
-            const int32 boneIndex = skeleton.findBoneIndex( boneName );
-            if ( boneIndex < 0 )
+            const optional<uint32> boneIndex = skeleton.findBoneIndex( boneName );
+            if ( boneIndex.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "RigInstance.RigTargetNamesUnknown2", "Rig '%#': target '%#' names unknown bone '%#'", label, target._name.c_str(), boneName.c_str() );
                 bOk = false;
                 continue;
             }
-            _listTargetBone[targetIndex]   = boneIndex;
+            _listTargetBone[targetIndex]   = static_cast<int32>( *boneIndex );
             _listTargetOffset[targetIndex] = offset;
         }
 
@@ -170,14 +170,14 @@ namespace sw
         }
     }
 
-    int32 RigInstance::findTargetIndex( const hashed_string& name ) const
+    optional<uint32> RigInstance::findTargetIndex( const hashed_string& name ) const
     {
         for ( size_t index = 0; index < _listTargetDef.size(); ++index )
         {
             if ( _listTargetDef[index]._name == name )
-                return static_cast<int32>( index );
+                return static_cast<uint32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void RigInstance::setExternalTarget( uint32 targetIndex, const RigTargetValue& value )

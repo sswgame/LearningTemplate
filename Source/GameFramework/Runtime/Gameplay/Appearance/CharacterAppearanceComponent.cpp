@@ -1617,15 +1617,14 @@ namespace sw
         }
         if ( _merged != nullptr || _listMergePart.empty() )
             return;
-        MeshMergeResult result;
-        string          error;
-        if ( CharacterMeshUtil::mergeMeshes( _listMergePart, nullptr, result, &error ) == false )
+        const expected<MeshMergeResult> result = CharacterMeshUtil::mergeMeshes( _listMergePart, nullptr );
+        if ( result.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartsDrawnUnmerged", "Appearance '%#' parts are drawn unmerged: %#", _presetID.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartsDrawnUnmerged", "Appearance '%#' parts are drawn unmerged: %# '%#'", _presetID.c_str(), result.error().message(), result.error().detail() );
             _listMergePart.clear();
             return;
         }
-        _merged = result._mesh;
+        _merged = result->_mesh;
         // 합친 메시의 LOD 는 여기서 한 번 만든다(조립한 메시라 임포트 LOD 가 없다) — 같은 차림은 캐시로 나눈다. 만들지 못하면 오류를 남기고 LOD 0 만 그린다.
         (void)CharacterLODSettings::buildLODs( *_merged, *_pLODSettings, listLODRule );
         _bMergeBuilt = true;

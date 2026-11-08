@@ -134,14 +134,14 @@ namespace sw
         _bPlanar = SW_FALSE;
     }
 
-    int32 RigAsset::findTargetIndex( const hashed_string& name ) const
+    optional<uint32> RigAsset::findTargetIndex( const hashed_string& name ) const
     {
         for ( size_t index = 0; index < _listTarget.size(); ++index )
         {
             if ( _listTarget[index]._name == name )
-                return static_cast<int32>( index );
+                return static_cast<uint32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool RigAsset::loadFromXMLText( string_view xml, string_view sourceLabel )
@@ -245,7 +245,7 @@ namespace sw
             return false;
         }
         target._kind = target._bone.empty() == false ? RigTargetKind::Bone : ( target._socket.empty() == false ? RigTargetKind::Socket : RigTargetKind::Object );
-        if ( findTargetIndex( target._name ) >= 0 )
+        if ( findTargetIndex( target._name ).has_value() )
         {
             SW_LOG_ERROR_ID( "RigAsset.RigDuplicateTargetName", "Rig '%#': duplicate target name '%#'", sourceLabel, target._name.c_str() );
             return false;
