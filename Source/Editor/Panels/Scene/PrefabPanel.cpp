@@ -9,8 +9,6 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Panels/Prefab/PrefabEditorPanel.h"
 
 #include "Engine/Localization/LocText.h"
@@ -84,7 +82,7 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
+        const bool bEditsAllowed = IEditorPanel::areSceneEditsAllowed();
         if ( bEditsAllowed == false )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorScene", "SceneEditsLocked" ) );

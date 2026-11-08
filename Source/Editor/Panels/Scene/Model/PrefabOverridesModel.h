@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
+#include "Editor/Common/Commands/Asset/EditorPrefabOverrideItem.h"
 
 namespace sw::editor
 {

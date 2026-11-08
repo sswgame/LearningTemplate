@@ -22,7 +22,8 @@
         "Editor/Common/Workspace/Undo/EditorDocumentState.h": "문서 한 벌의 저장한 값과 창 안 되돌리기 기록 — Core 와 EditSnapshotHistory 만 include 하는 값 템플릿(문서 Model 이 값으로 든다)",
         "Editor/Common/Workspace/Undo/EditSnapshotHistory.h": "창 안 되돌리기 스냅숏 기록 — Core 만 include 하는 값 템플릿",
         "Editor/Common/Commands/Diagnostics/EditorModuleDetail.h": "모듈 창 상세 값",
-        "Editor/Common/Workspace/EditorViewTargetUtil.h": "뷰 종류 · 게임 뷰 비율 값과 렌더 타깃 크기 · 이미지 사각형 판정 — Core 만 include 하는 값 · 순수 계산"
+        "Editor/Common/Workspace/EditorViewTargetUtil.h": "뷰 종류 · 게임 뷰 비율 값과 렌더 타깃 크기 · 이미지 사각형 판정 — Core 만 include 하는 값 · 순수 계산",
+        "Editor/Common/Commands/Asset/EditorPrefabOverrideItem.h": "프리팹 오버라이드 항목 값"
     },
     "_migratedViews": [
         "Source/Editor/Panels/Animation/AnimationClipPreviewPanel",
@@ -64,6 +65,7 @@
         "Source/Editor/Panels/Scene/EditorSceneViewUtil",
         "Source/Editor/Panels/Scene/GameViewPanel",
         "Source/Editor/Panels/Scene/HistoryPanel",
+        "Source/Editor/Panels/Scene/PrefabPanel",
         "Source/Editor/Panels/Scene/SceneViewPanel",
         "Source/Editor/Panels/Settings/GlobalVariablesPanel",
         "Source/Editor/Panels/Settings/GlobalVariablesPanelWatches",
