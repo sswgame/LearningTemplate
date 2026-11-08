@@ -38,6 +38,27 @@ namespace sw
         string _pair{};
     };
 
+    /**
+     * @brief 맵 머리(`<TileMap name width height scene role>` 루트 속성)의 칸입니다. 크기가 1 이상이고 지원 범위 안인지는 읽기가 본다(빠지면 0 이라 같은 오류다).
+     * @details 예전에는 자식 원소 글(`<width>3</width>`)을 손으로 읽어 장면 칸(`scene`)을 참조 칸 손 표가 따로 적었다 — 속성 칸이라 이제 이 선언이 정본이다(Tiled TMX `<map width height>` 와 같은 모양).
+     */
+    REFLECT()
+    struct SW_API TileMapHeaderParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _name{};
+        PROPERTY( Required )
+        int32 _width{ 0 };
+        PROPERTY( Required )
+        int32 _height{ 0 };
+        PROPERTY( AssetPath )
+        string _scene{};
+        PROPERTY()
+        string _role{};
+    };
+
     /** @brief 스폰(`<spawn x y/>`)의 칸입니다. 맵 안의 자리인지는 크기를 아는 읽기가 본다. */
     REFLECT()
     struct SW_API TileSpawnParams

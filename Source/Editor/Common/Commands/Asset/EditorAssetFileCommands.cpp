@@ -388,8 +388,8 @@ namespace sw::editor
             return false;
         if ( outPlan._listUnfixedReferrer.empty() == false )
         {
-            outPlan._failure = formatToString( "%# file(s) name a moved asset outside a path field of %# (first: '%#') - fix them or add the field, nothing was moved",
-                                               outPlan._listUnfixedReferrer.size(), AssetReferenceFields::kConfigFile, outPlan._listUnfixedReferrer.front() );
+            outPlan._failure = formatToString( "%# file(s) name a moved asset outside a path field of %# (first: '%#') - fix them or declare the field (PROPERTY( AssetPath )), nothing was moved",
+                                               outPlan._listUnfixedReferrer.size(), AssetReferenceFields::kGeneratedFile, outPlan._listUnfixedReferrer.front() );
             return false;
         }
         return true;

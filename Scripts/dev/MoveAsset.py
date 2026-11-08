@@ -150,6 +150,6 @@ def main(argv: list[str]) -> int:
     for problem in listProblem:
         print(f"  - {problem}")
     if listProblem:
-        print(f"[move-asset] 끊어진 참조 {len(listProblem)}건이 남았습니다 — 목록에 없는 칸이면 Config/Dev/AssetReferenceFields.json 에 더한다")
+        print(f"[move-asset] 끊어진 참조 {len(listProblem)}건이 남았습니다 — 목록에 없는 칸이면 그 칸을 읽는 구조체에 PROPERTY( AssetPath ) 로 선언한다(Config/Dev/AssetReferenceFields.generated.json)")
         return ExitCode.Violation
     return ExitCode.Passed

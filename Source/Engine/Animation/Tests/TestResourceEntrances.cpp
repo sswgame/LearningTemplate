@@ -165,7 +165,7 @@ SW_TEST_CASE( ResourceEntranceTest, TileMapLoadRecordsTheComposition )
 {
     const ScopedScratchDomain domain;
     const XEntranceScope      scope;
-    Util::write( domain, "a.tilemap.xml", string( "<TileMap><width>2</width><height>1</height>" ) + Util::kWhen + "</TileMap>" );
+    Util::write( domain, "a.tilemap.xml", string( R"(<TileMap width="2" height="1">)" ) + Util::kWhen + "</TileMap>" );
     const AssetID  tileMapID = ScopedScratchDomain::makeID( "a.tilemap.xml" );
     TileMapXMLData tileMap;
     SW_REQUIRE_TRUE( tileMap.load( tileMapID ) );

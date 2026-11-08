@@ -199,7 +199,7 @@
     "Source/Engine/Serialization/XML/XMLFields.h": {"std-optional": 1},
     "Source/Engine/Serialization/XML/XMLReadUtil.cpp": {"std-optional": 1},
     "Source/Engine/Telemetry/CrashReportService.cpp": {"std-optional": 5},
-    "Source/Engine/TileMap/TileMapXML.cpp": {"std-optional": 3},
+    "Source/Engine/TileMap/TileMapXML.cpp": {"std-optional": 1},
     "Source/Engine/TileMap/TileSetAsset.cpp": {"std-optional": 1},
     "Source/Engine/UI/Animation/UIAnimatedProperty.cpp": {"out-error": 1},
     "Source/Engine/UI/Animation/UIAnimatedProperty.h": {"out-error": 1},

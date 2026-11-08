@@ -172,7 +172,7 @@ namespace sw
 
         PROPERTY( Required )
         hashed_string _name{};
-        PROPERTY()
+        PROPERTY( AssetPath )
         string _file{};
     };
 

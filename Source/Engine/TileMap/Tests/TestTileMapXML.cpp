@@ -180,13 +180,13 @@ SW_TEST_CASE( TileMapXMLTest, SavingWithShortTileArraysStaysInsideTheArrays )
 SW_TEST_CASE( TileMapXMLTest, MissingOrNegativeSizeIsALoadError )
 {
     sw::TileMapXMLData loaded;
-    SW_EXPECT_LOG( "Xml.MissingRequired" );
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
     SW_EXPECT_LOG( "TileMap.InvalidSize" );
-    SW_EXPECT_FALSE( loaded.loadFromXML( "<TileMap><name>NoSize</name></TileMap>" ) );
+    SW_EXPECT_FALSE( loaded.loadFromXML( "<TileMap name=\"NoSize\" />" ) );
     SW_EXPECT_EQUAL( 0, loaded._width );
     SW_EXPECT_TRUE( loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).empty() );
 
-    SW_EXPECT_FALSE( loaded.loadFromXML( "<TileMap><width>-3</width><height>0</height></TileMap>" ) );
+    SW_EXPECT_FALSE( loaded.loadFromXML( "<TileMap width=\"-3\" height=\"0\" />" ) );
     SW_EXPECT_EQUAL( 0, loaded._width );
     SW_EXPECT_TRUE( loaded.getFlagLayer( sw::TileFlagLayer::PassThrough ).empty() );
 }
@@ -197,7 +197,7 @@ SW_TEST_CASE( TileMapXMLTest, MissingOrNegativeSizeIsALoadError )
  */
 SW_TEST_CASE( TileMapXMLTest, ExtraTilesBeyondTheDeclaredCountAreIgnored )
 {
-    sw::string xml = "<TileMap><width>2</width><height>1</height><tiles>";
+    sw::string xml = "<TileMap width=\"2\" height=\"1\"><tiles>";
     for ( uint32 tileIndex = 0; tileIndex < 10; ++tileIndex )
     {
         xml += "<t h=\"3\">0</t>";
@@ -239,7 +239,7 @@ SW_TEST_CASE( TileMapXMLTest, MalformedDocumentFailsAndLeavesAnEmptyMap )
 
 /**
  * @brief [TileMapXMLTest] 감당할 수 없는 크기는 거절한다 — 그만큼을 잡으려다 죽지 않는다
- * @details `<width>` 와 `<height>` 는 파일이 주는 int32 이고, 바로 그 곱만큼의 칸을 배열 넷에
+ * @details `width` 와 `height` 속성은 파일이 주는 int32 이고, 바로 그 곱만큼의 칸을 배열 넷에
  *          잡는다. 상한이 없으면 `100000 x 100000` 한 줄이 10^10 칸 요청이 되어 그 자리에서
  *          죽는다. 에디터의 Width/Height 칸도 같은 경로라 `TileMapPanel::resize` 가 같은
  *          `isSizeSupported` 를 본다.
@@ -254,12 +254,12 @@ SW_TEST_CASE( TileMapXMLTest, SizeBeyondTheTileLimitIsRejected )
 
     sw::TileMapXMLData loaded;
     SW_EXPECT_LOG( "TileMap.InvalidSize" );
-    SW_EXPECT_FALSE( loaded.loadFromXML( "<TileMap><width>100000</width><height>100000</height></TileMap>" ) );
+    SW_EXPECT_FALSE( loaded.loadFromXML( "<TileMap width=\"100000\" height=\"100000\" />" ) );
     SW_EXPECT_TRUE( loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).empty() );
     SW_EXPECT_EQUAL( 0, loaded._width );
 
     // 상한 안쪽은 그대로 열린다.
-    SW_REQUIRE_TRUE( loaded.loadFromXML( "<TileMap><width>64</width><height>64</height></TileMap>" ) );
+    SW_REQUIRE_TRUE( loaded.loadFromXML( "<TileMap width=\"64\" height=\"64\" />" ) );
     SW_EXPECT_EQUAL( size_t( 4096 ), loaded.getFlagLayer( sw::TileFlagLayer::Walkable ).size() );
 }
 
@@ -273,9 +273,9 @@ SW_TEST_CASE( TileMapXMLTest, OutOfRangeByteAttributesAreALoadError )
     sw::TileMapXMLData loaded;
     SW_EXPECT_LOG( "Xml.AttributeOutOfRange" );
     SW_EXPECT_LOG( "TileMap.InvalidAttributes" );
-    SW_EXPECT_FALSE( loaded.loadFromXML( "<TileMap><width>1</width><height>1</height><tiles>"
+    SW_EXPECT_FALSE( loaded.loadFromXML( "<TileMap width=\"1\" height=\"1\"><tiles>"
                                          "<t h=\"999\" tr=\"300\" tg=\"-1\" tb=\"128\">1</t></tiles></TileMap>" ) );
-    SW_REQUIRE_TRUE( loaded.loadFromXML( "<TileMap><width>1</width><height>1</height><tiles>"
+    SW_REQUIRE_TRUE( loaded.loadFromXML( "<TileMap width=\"1\" height=\"1\"><tiles>"
                                          "<t h=\"255\" tr=\"255\" tg=\"0\" tb=\"128\">1</t></tiles></TileMap>" ) );
     SW_REQUIRE_EQUAL( size_t( 1 ), loaded._listVisual.size() );
     const sw::TileMapXMLData::Visual& visual = loaded._listVisual[0];
@@ -344,12 +344,7 @@ SW_TEST_CASE( TileMapXMLTest, EveryFlagLayerRoundTripsAlone )
  */
 SW_TEST_CASE( TileMapXMLTest, SavedBytesMatchTheExistingFormat )
 {
-    const sw::string_view kSampleXML = R"(<TileMap>
-	<name>SampleTown</name>
-	<width>3</width>
-	<height>2</height>
-	<scene>game/empty/maps/sample.scene.xml</scene>
-	<role>town</role>
+    const sw::string_view kSampleXML = R"(<TileMap name="SampleTown" width="3" height="2" scene="game/empty/maps/sample.scene.xml" role="town">
 	<spawn x="2" y="1" />
 	<tiles>
 		<t h="0" enc="1" tr="10" tg="20" tb="30">1</t>
@@ -370,13 +365,10 @@ SW_TEST_CASE( TileMapXMLTest, SavedBytesMatchTheExistingFormat )
     SW_REQUIRE_TRUE( sample.loadFromXML( kSampleXML ) );
     SW_EXPECT_TRUE_MSG( sample.toXML() == kSampleXML, "기존 형식 파일을 읽고 다시 쓰면 바이트가 달라진다" );
 
-    const sw::string_view kLegacyInput = "<TileMap><name>Legacy</name><width>3</width><height>2</height><spawn x=\"1\" y=\"0\"/><tiles>"
+    const sw::string_view kLegacyInput = "<TileMap name=\"Legacy\" width=\"3\" height=\"2\"><spawn x=\"1\" y=\"0\"/><tiles>"
                                          "<t>1</t><t enc=\"1\">1</t><t>0</t><t pt=\"1\">1</t><t enc=\"1\" pt=\"1\">0</t><t atlas=\"3\">1</t>"
                                          "</tiles></TileMap>";
-    const sw::string_view kLegacyXML   = R"(<TileMap>
-	<name>Legacy</name>
-	<width>3</width>
-	<height>2</height>
+    const sw::string_view kLegacyXML   = R"(<TileMap name="Legacy" width="3" height="2">
 	<spawn x="1" y="0" />
 	<tiles>
 		<t h="1" tr="180" tg="200" tb="160">1</t>
@@ -424,7 +416,7 @@ SW_TEST_CASE( TileMapXMLTest, DataLayersRoundTripAndRejectBrokenLayers )
     SW_REQUIRE_TRUE( restored.resetTiles( 4, 4 ) );
     SW_EXPECT_TRUE( restored.getCellData( restored.findDataLayer( "cost" ), 3, 3, value ) && value == 1 );
 
-    const sw::string_view kHead       = "<TileMap><name>Bad</name><width>2</width><height>1</height><tiles><t>1</t><t>1</t></tiles><dataLayers>";
+    const sw::string_view kHead       = "<TileMap name=\"Bad\" width=\"2\" height=\"1\"><tiles><t>1</t><t>1</t></tiles><dataLayers>";
     const sw::string_view arrBroken[] = {
         "<layer default=\"0\">1 2</layer>",                                                             // 이름 없음
         "<layer name=\"cost\">1 2</layer>",                                                             // 기본값 없음

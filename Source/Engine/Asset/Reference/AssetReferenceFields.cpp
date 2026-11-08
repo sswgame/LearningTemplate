@@ -180,7 +180,6 @@ namespace sw
         bValid = Internal::hasNoEmptyText( config._listTextExtension, "listTextExtension", path ) && bValid;
         bValid = Internal::hasNoEmptyText( config._listCMakeFile, "listCMakeFile", path ) && bValid;
         bValid = Internal::hasNoEmptyText( config._listCMakeArgument, "listCMakeArgument", path ) && bValid;
-        bValid = Internal::hasNoEmptyText( config._listField, "listField", path ) && bValid;
         for ( const AssetImportedFolder& folder : listImported )
         {
             bValid = Internal::hasNoEmptyText( folder._listSourceExtension, "listSourceExtension", path ) && bValid;
@@ -194,10 +193,6 @@ namespace sw
         _listCMakeArgument   = std::move( config._listCMakeArgument );
         _listImported        = std::move( listImported );
         _setField.clear();
-        for ( const string& field : config._listField )
-        {
-            _setField.insert( field );
-        }
         return loadGeneratedFields( projectRoot );
     }
 
