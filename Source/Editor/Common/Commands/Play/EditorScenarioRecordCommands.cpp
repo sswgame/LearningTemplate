@@ -10,6 +10,8 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/String/StringBuilder.h"
 
+#include "DevTools/Client/Automation/Scenario/ScenarioRecorder.h"
+
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -18,7 +20,6 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
-#include "Engine/Automation/Scenario/ScenarioRecorder.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Input/InputManager.h"

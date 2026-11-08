@@ -11,6 +11,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/AssetReload/ReloadTracker.h"
+#include "DevTools/Client/Automation/Scenario/AutomationScratchWorkspace.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetImportJob.h"
@@ -188,7 +189,7 @@ namespace sw::editor
         , _contentWatch{}
         , _contentChangeSerial{ 0 }
         , _listChangedPath{}
-        , _fencePrepareCount{ AutomationScratch::getPrepareCount() }
+        , _fencePrepareCount{ AutomationScratchWorkspace::getPrepareCount() }
         , _fenceArmedCount{ 0 }
         , _fenceDeadlineNanoseconds{ 0 }
     {
@@ -347,7 +348,7 @@ namespace sw::editor
         const string markerPath = Internal::makeFenceMarkerPath();
         if ( _bFenceWaiting == false )
         {
-            const uint64 prepareCount = AutomationScratch::getPrepareCount();
+            const uint64 prepareCount = AutomationScratchWorkspace::getPrepareCount();
             if ( prepareCount == _fencePrepareCount )
                 return false;
             // 사본을 새로 만들었다 — 감시 트리에 표지를 쓰고 그 사건이 오기를 기다린다.

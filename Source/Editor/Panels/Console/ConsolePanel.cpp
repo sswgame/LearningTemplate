@@ -11,6 +11,9 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "DevTools/Client/Automation/Runner/AutomationLogPolicy.h"
+#include "DevTools/Client/Automation/Runner/AutomationSession.h"
+
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -25,8 +28,6 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Automation/Runner/AutomationLogPolicy.h"
-#include "Engine/Automation/Runner/AutomationSession.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Input/RawInputEvent.h"

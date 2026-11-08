@@ -9,7 +9,8 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Automation/Scenario/AutomationBackendSteps.h"
+#include "DevTools/Client/Automation/Scenario/AutomationBackendSteps.h"
+
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"

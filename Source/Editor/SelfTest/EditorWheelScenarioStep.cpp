@@ -9,12 +9,13 @@
 
 #include "Core/String/StringUtil.h"
 
+#include "DevTools/Client/Automation/Scenario/AutomationStepValidation.h"
+
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
-#include "Engine/Automation/Scenario/AutomationStepValidation.h"
 
 namespace sw::editor
 {

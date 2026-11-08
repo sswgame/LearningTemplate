@@ -62,13 +62,13 @@ namespace sw
 
         /**
          * @brief 평소 창 제목(실행 정보를 붙이기 전의 제목)을 정합니다. 에디터가 프레임마다 씬 · 미저장 표시를 넣어 만든 제목을 여기에 건다.
-         * @details 창에 직접 `setTitle` 하지 않는다 — 엔진이 프레임 끝에 이 제목 뒤에 시나리오 실행 정보를 붙여(`AutomationRunTitleTracker`) 창에 걸기 때문에,
+         * @details 창에 직접 `setTitle` 하지 않는다 — 개발 도구의 자동화 세션이 프레임 끝에 이 제목 뒤에 시나리오 실행 정보를 붙여(`AutomationRunTitleTracker`) 창에 걸기 때문에,
          *          제목 주인이 하나다. 한 번도 정하지 않으면(빈 글) 엔진은 창이 처음 가진 제목을 평소 제목으로 쓴다.
          */
         void setBaseTitle( string_view title ) { _baseTitle = title; }
         /** @brief 정한 평소 창 제목입니다. 정한 적이 없으면 빈 글입니다. */
         const string& getBaseTitle() const { return _baseTitle; }
-        /** @brief 제목을 거는 이음매입니다(엔진의 `AutomationRunTitleTracker` 전용). 창이 없으면 nullptr 입니다. `IWindow::setTitle` 은 이 서브시스템만 부를 수 있다. */
+        /** @brief 제목을 거는 이음매입니다(개발 도구 `AutomationRunTitleTracker` 전용). 창이 없으면 nullptr 입니다. `IWindow::setTitle` 은 이 서브시스템만 부를 수 있다. */
         IWindowTitleTarget* getTitleTarget() { return _window != nullptr ? &_titleTarget : nullptr; }
 
         /** @brief 주 창을 도는 앱 루프의 프레임 페이싱입니다. App 루프가 프레임마다 갱신하고 감시 값 `Engine.FramePacingState` 가 읽는다. */
