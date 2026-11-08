@@ -18,6 +18,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -116,11 +117,11 @@ namespace sw
         /**
          * @brief 부모와의 차이 글 @p deltaText 를 다시 읽어 펼친 글 @p fullText 와 같은지 봅니다. @p reread 가 비었으면 보지 않습니다.
          * @details 칸을 형식 기본값으로 되돌린 편집은 차이로 적을 수 없다. 그때 부모 없는 한 벌로 쓰면 변형이 끊기므로 쓰지 않고 알린다(언리얼 Blueprint 의 CDO 차이 저장, Godot 씬 상속의 프로퍼티 복원과 같은 자리 — 기억에 의존).
-         * @return 다르면 false 이고 @p outError 에 까닭입니다(로그는 부르는 쪽이 남깁니다).
+         * @return 다르면 그 까닭입니다(로그는 부르는 쪽이 남깁니다).
          */
-        [[nodiscard]] static bool checkDeltaReadsBack( const string& deltaText, string_view fullText, string_view baseID, const ResourceRereadFunction& reread, string& outError );
+        [[nodiscard]] static expected<void> checkDeltaReadsBack( const string& deltaText, string_view fullText, string_view baseID, const ResourceRereadFunction& reread );
         /** @brief 차이를 만들어(`DataInheritance::makeDelta`) 다시 읽어 봅니다(`checkDeltaReadsBack`). 편집 창처럼 까닭을 화면에 적는 쪽이 부릅니다. */
-        [[nodiscard]] static bool makeCheckedDelta( string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, const ResourceRereadFunction& reread, string& outDeltaText, string& outError );
+        [[nodiscard]] static expected<void> makeCheckedDelta( string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, const ResourceRereadFunction& reread, string& outDeltaText );
         /**
          * @brief `_base` 문서 저장의 한 벌입니다. 부모와의 차이를 만들고, 다시 읽어 대조하고, 씁니다. 실패는 오류 로그(`ResourceSave.DeltaNotSaved` · `ResourceSave.WriteFailed`)를 남기고 false 입니다.
          * @param reread 다시 읽어 펼친 글을 돌려주는 함수입니다(읽지 못하면 빈 글). 비면 대조하지 않습니다.

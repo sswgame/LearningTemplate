@@ -42,10 +42,9 @@ namespace sw
         template <typename T>
         [[nodiscard]] bool registerMessage( uint8 kind )
         {
-            string reason;
-            if ( FixedLayout::findCodec<T>( reason ) == nullptr )
+            if ( const expected<const FixedCodec*> codec = FixedLayout::findCodec<T>(); codec.has_value() == false )
             {
-                logMissingCodec( typeFqn<T>(), reason );
+                logMissingCodec( typeFqn<T>(), codec.error() );
                 return false;
             }
             return addMessage( kind, FixedLayout::getSchemaHash<T>() );
@@ -89,7 +88,7 @@ namespace sw
         [[nodiscard]] bool addMessage( uint8 kind, uint64 schemaHash );
         /** @brief 봉인했고 @p kind 에 @p schemaHash 를 등록했으면 true 입니다. 아니면 오류 로그를 남깁니다(호출부 결함이다). */
         bool        isRegisteredForUse( uint8 kind, uint64 schemaHash ) const;
-        static void logMissingCodec( const hashed_string& typeFqn, const string& reason );
+        static void logMissingCodec( const hashed_string& typeFqn, const Error& reason );
 
     private:
         vector<Entry> _listEntry; ///< 종류 순(봉인이 정렬한다)

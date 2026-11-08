@@ -33,12 +33,12 @@ namespace sw
                 stopAll();
                 return false;
             }
-            string     error;
-            const bool bStarted = running._service->initialize( context, error );
+            const expected<void> started = running._service->initialize( context );
             _listRunning.push_back( std::move( running ) );
-            if ( bStarted == false )
+            if ( started.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "ServerServiceManager.ServerServiceFailedStart", "Server service '%#' failed to start: %#", _listRunning.back()._name.c_str(), error.empty() ? "no reason given" : error.c_str() );
+                SW_LOG_ERROR_ID( "ServerServiceManager.ServerServiceFailedStart", "Server service '%#' failed to start: %# (%#)", _listRunning.back()._name.c_str(), started.error().message(),
+                                 started.error().detail() );
                 stopAll();
                 return false;
             }

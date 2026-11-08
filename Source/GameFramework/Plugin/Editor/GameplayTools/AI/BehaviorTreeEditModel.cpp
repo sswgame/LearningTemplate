@@ -418,16 +418,16 @@ namespace sw::editor
             outError = "The base tree '" + _baseID + "' could not be read - not saved";
             return false;
         }
-        string deltaText;
-        string deltaError;
-        if ( ResourceComposer::makeCheckedDelta( fullText, parent.write(), BehaviorTreeSchema::make(), _baseID, []( const string& text )
+        string               deltaText;
+        const expected<void> delta = ResourceComposer::makeCheckedDelta( fullText, parent.write(), BehaviorTreeSchema::make(), _baseID, []( const string& text )
         {
             BehaviorTreeEditModel reread;
             string                rereadError;
             return reread.parse( text, rereadError ) ? reread.write() : string{};
-        }, deltaText, deltaError ) == false )
+        }, deltaText );
+        if ( delta.has_value() == false )
         {
-            outError = "Not saved: " + deltaError + " (or a node without an id changed)";
+            outError = "Not saved: " + string( delta.error().message().data(), delta.error().message().size() ) + " (or a node without an id changed)";
             return false;
         }
         outText = std::move( deltaText );

@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -73,9 +74,9 @@ namespace sw
 
         /**
          * @brief 서비스를 시작합니다. 설정상 할 일이 없으면 아무것도 하지 않고 true 를 반환합니다.
-         * @return 시작해야 하는데 실패하면 false 와 @p outError 입니다. 서버는 기동을 멈춥니다.
+         * @return 시작해야 하는데 실패하면 그 이유입니다. 서버는 기동을 멈춥니다.
          */
-        [[nodiscard]] virtual bool initialize( const ServerServiceContext& context, string& outError ) = 0;
+        [[nodiscard]] virtual expected<void> initialize( const ServerServiceContext& context ) = 0;
         /** @brief 빌린 것을 모두 돌려주고 멈춥니다. `initialize` 가 실패했어도 불립니다. */
         virtual void shutdown() = 0;
         /** @brief 서버 루프가 돌 때마다 불립니다. 게임 틱이 멈춰 있어도(Dev `pause`) 불립니다. @p nowMs 는 UTC 밀리초입니다. */
