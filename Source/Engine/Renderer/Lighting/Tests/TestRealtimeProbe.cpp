@@ -310,6 +310,92 @@ SW_TEST_CASE( RealtimeProbeTest, BuildParamRowsFollowShaderLayout )
 }
 
 /**
+ * @brief [SceneVoxelGridTest] 발광 복사휘도는 공유 지수(R9G9B9E5)로 접혀 상대 오차 안에서 되돌아오고, 0 · 음수는 0 이다
+ */
+SW_TEST_CASE( SceneVoxelGridTest, EmissionPackRoundTrips )
+{
+    const sw::float3 radiance{ 3.5f, 0.25f, 12.0f };
+    const sw::float3 back = sw::SceneVoxelGrid::unpackEmission( sw::SceneVoxelGrid::packEmission( radiance ) );
+    SW_EXPECT_NEAR( 3.5f, back._x, 3.5f * 0.01f + 0.02f );
+    SW_EXPECT_NEAR( 0.25f, back._y, 0.03f ); // 가장 큰 채널의 지수를 나눠 쓰므로 작은 채널은 그 단위(12 / 512)로 둥글린다
+    SW_EXPECT_NEAR( 12.0f, back._z, 12.0f * 0.01f );
+    SW_EXPECT_EQUAL( 0u, sw::SceneVoxelGrid::packEmission( sw::float3{} ) );
+    SW_EXPECT_EQUAL( 0u, sw::SceneVoxelGrid::packEmission( sw::float3{ -1.0f, -2.0f, -3.0f } ) );
+}
+
+/**
+ * @brief [SceneVoxelGridTest] 발광 삼각형은 칸을 켜고 칸의 발광을 둔다. 발광 없는 격자는 발광 배열이 비어 있다(칸 수만큼 0 을 두지 않는다)
+ */
+SW_TEST_CASE( SceneVoxelGridTest, EmissiveTriangleWritesCellEmission )
+{
+    sw::SceneVoxelGrid grid = makeFourMeterGrid();
+    grid.voxelizeTriangle( sw::float3{ 0.1f, 0.5f, 0.1f }, sw::float3{ 3.9f, 0.5f, 0.1f }, sw::float3{ 0.1f, 0.5f, 3.9f } );
+    SW_EXPECT_TRUE( grid._listEmission.empty() );
+    grid.voxelizeEmissiveTriangle( sw::float3{ 0.1f, 2.5f, 0.1f }, sw::float3{ 3.9f, 2.5f, 0.1f }, sw::float3{ 0.1f, 2.5f, 3.9f }, sw::float3{ 4.0f, 2.0f, 1.0f } );
+    SW_REQUIRE_EQUAL( size_t( grid.getCellCount() ), grid._listEmission.size() );
+    SW_EXPECT_TRUE( grid.isOccupied( 0, 2, 0 ) );
+    SW_EXPECT_NEAR( 4.0f, grid.findEmission( 0, 2, 0 )._x, 0.05f );
+    SW_EXPECT_NEAR( 0.0f, grid.findEmission( 0, 0, 0 )._x, 0.0f ); // 발광하지 않는 면의 칸
+}
+
+/**
+ * @brief [RealtimeProbeTest] 발광 칸은 그 볼륨의 점유 단어 바로 뒤에 놓이고, 갱신 행에 발광 단어 번호 · 배율이 실린다. 발광 없는 볼륨은 kNoEmission 이다
+ */
+SW_TEST_CASE( RealtimeProbeTest, EmissionWordsFollowOccupancy )
+{
+    sw::SceneVoxelGrid emissive = makeFourMeterGrid(); // 64 칸 → 점유 단어 2 + 발광 단어 64
+    emissive.voxelizeEmissiveTriangle( sw::float3{ 0.1f, 2.5f, 0.1f }, sw::float3{ 3.9f, 2.5f, 0.1f }, sw::float3{ 0.1f, 2.5f, 3.9f }, sw::float3{ 1.0f, 1.0f, 1.0f } );
+    sw::vector<sw::RealtimeProbeRequest> listRequest( 2 );
+    listRequest[0]._probeCount        = 1;
+    listRequest[0]._emissiveIntensity = 2.5f;
+    listRequest[0]._pVoxelGrid        = sw::make_shared<sw::SceneVoxelGrid>( std::move( emissive ) );
+    listRequest[1]._probeCount        = 1;
+    listRequest[1]._pVoxelGrid        = sw::make_shared<sw::SceneVoxelGrid>( makeFourMeterGrid() );
+
+    const sw::RealtimeProbeLayout layout = sw::RealtimeProbeUpdater::planLayout( listRequest );
+    SW_REQUIRE_EQUAL( size_t( 2 ), layout._listEmissionWordOffset.size() );
+    SW_EXPECT_EQUAL( 2u, layout._listEmissionWordOffset[0] );
+    SW_EXPECT_EQUAL( 66u, layout._listVoxelWordOffset[1] );
+    SW_EXPECT_EQUAL( sw::RealtimeProbeUpdater::kNoEmission, layout._listEmissionWordOffset[1] );
+    SW_EXPECT_EQUAL( 68u, layout._totalVoxelWords );
+
+    const sw::vector<sw::float4> rows     = sw::RealtimeProbeUpdater::makeParamRows( listRequest, layout, {}, sw::SH9Color{}, 0u, 0u );
+    const uint32                 schedule = sw::RealtimeProbeUpdater::kHeaderRowCount + 6u;
+    SW_EXPECT_EQUAL( 2u, sw::BitUtil::floatToBits( rows[schedule]._z ) );
+    SW_EXPECT_NEAR( 2.5f, rows[schedule]._w, 0.0f );
+    SW_EXPECT_EQUAL( sw::RealtimeProbeUpdater::kNoEmission, sw::BitUtil::floatToBits( rows[schedule + sw::RealtimeProbeUpdater::kVolumeRowCount]._z ) );
+}
+
+/**
+ * @brief [RealtimeProbeTest] 하늘 가림 · 발광 배율의 기본값은 0 이다 — 설정을 적지 않은 씬은 이전 그림 그대로다. 볼륨 원소의 colorIntensity.w 가 하늘 가림 세기를 싣는다
+ */
+SW_TEST_CASE( RealtimeProbeTest, GIExtrasDefaultToOff )
+{
+    sw::Scene              scene( "RealtimeProbeGIExtras" );
+    sw::GameObjectManager* pObjects = scene.getObjectManager();
+    SW_REQUIRE_NOT_NULL( pObjects );
+    sw::GameObject* pVolumeObject = pObjects->createGameObject( sw::hashed_string( "Volume" ) );
+    SW_REQUIRE_NOT_NULL( pVolumeObject );
+    sw::LightProbeVolumeComponent* pVolume = pVolumeObject->addComponent<sw::LightProbeVolumeComponent>();
+    SW_REQUIRE_NOT_NULL( pVolume );
+    SW_EXPECT_NEAR( 0.0f, pVolume->getRealtimeSkyOcclusion(), 0.0f );
+    SW_EXPECT_NEAR( 0.0f, pVolume->getRealtimeEmissiveIntensity(), 0.0f );
+    pVolume->setExtent( sw::float3{ 4.0f, 2.0f, 4.0f } );
+    pVolume->setSpacing( 2.0f );
+    pVolume->setRealtime( true );
+    SW_REQUIRE_NOT_NULL( addCube( pObjects, "Wall", sw::float3{ 0.0f, 0.0f, 0.0f }, sw::RHIBlendMode::Opaque, true ) );
+
+    sw::vector<sw::GPULight>             listLight;
+    sw::LightProbeElementBuilder         probeElement;
+    sw::vector<sw::RealtimeProbeRequest> listRequest;
+    collectSceneLights( &scene, listLight, nullptr, &probeElement, nullptr, &listRequest );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listRequest.size() );
+    SW_EXPECT_NEAR( 0.0f, listRequest[0]._volumeElement._colorIntensity._w, 0.0f );
+    SW_EXPECT_NEAR( 0.0f, listRequest[0]._emissiveIntensity, 0.0f );
+    SW_EXPECT_TRUE( listRequest[0]._pVoxelGrid->_listEmission.empty() ); // 발광 머티리얼이 없다
+}
+
+/**
  * @brief [RealtimeProbeTest] 실시간 볼륨은 0 으로 채운 프로브 자리와 볼륨 원소 · 갱신 요청으로 모이고, 복셀 격자는 프리미티브 집합이 그대로면 캐시를 돌려준다
  * @details 요청 목록을 받지 않는 수집(미리보기 · 베이크)은 실시간 볼륨을 넣지 않는다 - 볼륨 원소가 빈 프로브 버퍼를 가리키지 않게.
  */

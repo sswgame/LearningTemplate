@@ -20,7 +20,7 @@ struct LightData
     bool computeIncidence( float3 worldPosition, out float3 outToLight, out float outAttenuation );
     float sampleLocalShadow( float3 worldPosition, float3 worldNormal );
     float computeShadow( float3 worldPosition, float3 worldNormal, float directionalShadow );
-    float4 sampleProbeVolume( float3 worldPosition, float3 normal );
+    float4 sampleProbeVolume( float3 worldPosition, float3 normal, out float outSkyVisibility );
     float4 sampleReflectionProbe( float3 worldPosition, float3 reflectDirection, float roughness );
     float computeLight2dAttenuation( float2 pixel );
     float computeFreeformLight2dAttenuation( uint lightIndex, uint lightCount, float2 pixel );

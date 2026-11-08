@@ -72,6 +72,13 @@ namespace sw
         /** @brief 갱신한 값이 기록에 섞이는 비율입니다(1 이면 새 값으로 바로 바뀐다). 낮을수록 잡음이 시간에 걸쳐 평균된다. */
         float32 getRealtimeBlend() const { return _realtimeBlend; }
         /**
+         * @brief 실시간 볼륨이 덮는 곳의 반사 앰비언트(하늘 색)를 프로브의 하늘 보임으로 가리는 세기입니다(0 이면 가리지 않는다 — 이전 그림).
+         * @details 하늘 보임은 갱신 광선 중 복셀에 닿지 않고 하늘로 나간 몫이다. 확산은 프로브 SH 가 이미 가려 그 몫만 반사에 건다(언리얼 Lumen 의 스카이 가림 · 거리장 스카이 가림 자리).
+         */
+        float32 getRealtimeSkyOcclusion() const { return _realtimeSkyOcclusion; }
+        /** @brief 갱신 광선이 닿은 발광 메시(머티리얼 `_emissiveColor`)의 빛에 곱하는 배율입니다(0 이면 발광을 보지 않는다 — 이전 그림). */
+        float32 getRealtimeEmissiveIntensity() const { return _realtimeEmissiveIntensity; }
+        /**
          * @brief 실시간 갱신이 광선을 쏘는 복셀 상자입니다 — 볼륨 상자에 광선이 닿을 바깥 여유(간격 + 고정 여유)를 더한 것입니다. 이 밖의 면은 보지 않는다(광선은 하늘로 나간다).
          */
         AABB computeRealtimeVoxelBounds() const;
@@ -135,6 +142,10 @@ namespace sw
         uint32 _realtimeUpdatePeriod;
         PROPERTY( Category = "Light Probe Realtime", DisplayName = "Blend", Min = 0.01, Max = 1.0, Tooltip = "Share of a fresh result mixed into the stored probe (1 replaces it)" )
         float32 _realtimeBlend;
+        PROPERTY( Category = "Light Probe Realtime", DisplayName = "Sky Occlusion", Min = 0.0, Max = 1.0, Tooltip = "How strongly the probes' sky visibility darkens the specular sky ambient inside the volume (0 keeps it)" )
+        float32 _realtimeSkyOcclusion;
+        PROPERTY( Category = "Light Probe Realtime", DisplayName = "Emissive Intensity", Min = 0.0, Tooltip = "Scale on emissive meshes (material _emissiveColor) a probe ray hits (0 ignores emission)" )
+        float32 _realtimeEmissiveIntensity;
 
         LightProbeGrid _probeData;         ///< 읽은 베이크 데이터(비었으면 베이크하지 않았거나 읽지 못했다)
         uint32         _probeDataRevision; ///< `_probeData` 를 바꿀 때마다 오른다(`getProbeDataRevision`)

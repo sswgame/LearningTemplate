@@ -57,6 +57,8 @@ namespace sw
         , _realtimeRayCount{ LightProbeVolumeComponentInternal::kDefaultRealtimeRayCount }
         , _realtimeUpdatePeriod{ LightProbeVolumeComponentInternal::kDefaultRealtimeUpdatePeriod }
         , _realtimeBlend{ LightProbeVolumeComponentInternal::kDefaultRealtimeBlend }
+        , _realtimeSkyOcclusion{ 0.0f }
+        , _realtimeEmissiveIntensity{ 0.0f }
         , _probeData{}
         , _probeDataRevision{ 0 }
         , _pRealtimeVoxelGrid{}

@@ -29,10 +29,11 @@ namespace sw
     /** @brief 요청 목록을 컴퓨트 버퍼에 놓는 자리입니다(볼륨마다 복셀 단어 · 기록 · 스레드 범위의 시작). 순수 계산이라 테스트가 직접 본다. */
     struct RealtimeProbeLayout
     {
-        vector<uint32> _listVoxelWordOffset; ///< 볼륨마다 복셀 단어 버퍼 안의 첫 단어
-        vector<uint32> _listHistoryOffset;   ///< 볼륨마다 기록 버퍼 안의 첫 float4
-        vector<uint32> _listFirstThread;     ///< 볼륨마다 첫 스레드 번호(= 앞 볼륨들의 프로브 수의 합)
-        uint32         _totalVoxelWords{ 0 };
+        vector<uint32> _listVoxelWordOffset;    ///< 볼륨마다 복셀 단어 버퍼 안의 첫 단어
+        vector<uint32> _listEmissionWordOffset; ///< 볼륨마다 발광 칸(RGB9E5) 단어의 첫 단어 — 점유 단어 바로 뒤. 발광 칸이 없으면 `kNoEmission`
+        vector<uint32> _listHistoryOffset;      ///< 볼륨마다 기록 버퍼 안의 첫 float4
+        vector<uint32> _listFirstThread;        ///< 볼륨마다 첫 스레드 번호(= 앞 볼륨들의 프로브 수의 합)
+        uint32         _totalVoxelWords{ 0 };   ///< 점유 단어와 발광 단어의 합
         uint32         _totalHistoryElements{ 0 };
         uint32         _totalProbes{ 0 };
     };
@@ -44,11 +45,12 @@ namespace sw
     class SW_API RealtimeProbeUpdater
     {
     public:
-        static constexpr uint32 kThreadGroupSize = 64; ///< probe_update.hlsl SW_NUMTHREADS 와 같다
-        static constexpr uint32 kHeaderRowCount  = 8;  ///< 머리 행 1 + 하늘 SH 행 7 (probe_update.hlsl kRowFirstVolume)
-        static constexpr uint32 kVolumeRowCount  = 7;  ///< 볼륨마다 행 수 (probe_update.hlsl kVolumeRowCount)
-        static constexpr uint32 kSkySampleCount  = 64; ///< 하늘 SH 투영의 방향 수
-        static constexpr uint32 kSkyRowCount     = 7;  ///< 하늘 SH 원시 계수 27 개가 float4 일곱(28 칸)에 들어간다
+        static constexpr uint32 kThreadGroupSize = 64;          ///< probe_update.hlsl SW_NUMTHREADS 와 같다
+        static constexpr uint32 kHeaderRowCount  = 8;           ///< 머리 행 1 + 하늘 SH 행 7 (probe_update.hlsl kRowFirstVolume)
+        static constexpr uint32 kVolumeRowCount  = 7;           ///< 볼륨마다 행 수 (probe_update.hlsl kVolumeRowCount)
+        static constexpr uint32 kSkySampleCount  = 64;          ///< 하늘 SH 투영의 방향 수
+        static constexpr uint32 kSkyRowCount     = 7;           ///< 하늘 SH 원시 계수 27 개가 float4 일곱(28 칸)에 들어간다
+        static constexpr uint32 kNoEmission      = 0xFFFFFFFFu; ///< 발광 칸이 없는 볼륨의 발광 단어 번호(probe_update.hlsl kNoEmission)
 
         /** @brief 요청들의 버퍼 배치를 계산합니다. */
         [[nodiscard]] static RealtimeProbeLayout planLayout( const vector<RealtimeProbeRequest>& listRequest );

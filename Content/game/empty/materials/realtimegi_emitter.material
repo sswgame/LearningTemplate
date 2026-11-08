@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 시나리오 automation/realtimegi_extras 의 발광 큐브 — 툰 머티리얼의 발광 칸(_emissiveColor × _emissiveStrength)을 실시간 프로브의 복셀화가 같은 값으로 읽어 발광 칸이 된다(SceneVoxelizer). -->
+<MaterialDef formatVersion="0" name="realtimegi_emitter" _base="engine/materials/toon.material">
+	<_properties>
+		<item name="_emissiveColor" defaultValue="1 0.45 0.15 1" />
+		<item name="_emissiveStrength" defaultValue="6" />
+	</_properties>
+</MaterialDef>

@@ -38,6 +38,11 @@ namespace sw
         uint32         _dimY{ 0 };
         uint32         _dimZ{ 0 };
         vector<uint32> _listWord; ///< 점유 비트(칸 번호 / 32 번째 단어의 칸 번호 % 32 번째 비트)
+        /**
+         * @brief 칸마다 자체 발광 복사휘도(RGB9E5 — `packEmission`). 발광 면이 하나도 없으면 비어 있다(칸 수만큼 0 을 두지 않는다).
+         * @details 실시간 프로브 갱신이 광선이 닿은 칸의 빛으로 더한다(볼륨의 `_emissiveIntensity` 배). 칸 번호는 점유 비트와 같다.
+         */
+        vector<uint32> _listEmission;
 
         /**
          * @brief 상자 @p bounds 를 덮는 빈 격자를 만듭니다. 칸 크기는 @p targetCellSize 이되, 축 하나라도 칸 수가 `kMaxCellsPerAxis` 를 넘으면 가장 긴 축이 맞도록 키웁니다.
@@ -65,6 +70,15 @@ namespace sw
 
         /** @brief 삼각형 (@p a, @p b, @p c)(월드 좌표)와 겹치는 모든 칸을 켭니다. 격자 밖의 부분은 무시합니다. */
         void voxelizeTriangle( const float3& a, const float3& b, const float3& c );
+        /** @brief 발광 삼각형 — 칸을 켜고 칸의 발광을 @p radiance 로 둡니다(이미 더 밝은 칸이면 그대로). 처음 부르면 발광 칸 배열을 만듭니다. */
+        void voxelizeEmissiveTriangle( const float3& a, const float3& b, const float3& c, const float3& radiance );
+        /** @brief 칸의 발광 복사휘도입니다. 발광 칸이 없거나 범위 밖이면 0 입니다. */
+        float3 findEmission( uint32 cellX, uint32 cellY, uint32 cellZ ) const;
+
+        /** @brief 복사휘도를 공유 지수 32 비트(DXGI R9G9B9E5_SHAREDEXP 배치)로 접습니다. 음수는 0, 상한(65408) 위는 상한입니다. */
+        [[nodiscard]] static uint32 packEmission( const float3& radiance );
+        /** @brief `packEmission` 의 역입니다(셰이더 `unpackEmission` 과 같은 식). */
+        [[nodiscard]] static float3 unpackEmission( uint32 packed );
 
         /**
          * @brief 광선이 처음 만나는 켜진 칸을 찾습니다.
@@ -73,5 +87,9 @@ namespace sw
          * @return 만나면 true 이고 @p outHit 에 거리와 면 노멀을 적습니다. 광선이 켜진 칸 안에서 시작하면 거리 0 으로 닿는다.
          */
         [[nodiscard]] bool traceRay( const float3& origin, const float3& direction, float32 maxDistance, SceneVoxelHit& outHit ) const;
+
+    private:
+        /** @brief 겹치는 칸을 켜고, @p packedEmission 이 0 이 아니면 칸의 발광도 둡니다(두 공개 함수의 한 몸). */
+        void voxelizeTriangleCells( const float3& a, const float3& b, const float3& c, uint32 packedEmission );
     };
 } // namespace sw
