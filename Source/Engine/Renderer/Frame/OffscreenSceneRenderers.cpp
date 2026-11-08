@@ -82,11 +82,11 @@ namespace sw
         _count.store( static_cast<uint32>( _listEntry.size() ) );
     }
 
-    void OffscreenSceneRenderers::onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result )
+    void OffscreenSceneRenderers::onShaderRecompiled( const vector<string>& listShaderPath )
     {
         for ( Entry& entry : _listEntry )
         {
-            entry._renderer->onShaderRecompiled( shaderPath, result );
+            entry._renderer->onShaderRecompiled( listShaderPath );
         }
     }
 

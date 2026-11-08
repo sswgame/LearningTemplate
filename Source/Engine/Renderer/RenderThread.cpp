@@ -172,6 +172,8 @@ namespace sw
         , _tail{ 0 }
         , _pPendingCommand{ nullptr }
         , _bCommandSucceeded{ false }
+        , _recompiledShaderMutex{}
+        , _listRecompiledShader{}
     {
     }
 
@@ -531,6 +533,27 @@ namespace sw
         return _bCommandSucceeded;
     }
 
+    void RenderThread::queueShaderRecompiled( string_view shaderPath )
+    {
+        ScopedLock<mutex> lock{ _recompiledShaderMutex };
+        _listRecompiledShader.emplace_back( shaderPath );
+    }
+
+    void RenderThread::applyRecompiledShaders()
+    {
+        vector<string> listShaderPath;
+        {
+            ScopedLock<mutex> lock{ _recompiledShaderMutex };
+            if ( _listRecompiledShader.empty() )
+                return;
+            listShaderPath.swap( _listRecompiledShader );
+        }
+        if ( _pFrameRenderer != nullptr )
+            _pFrameRenderer->onShaderRecompiled( listShaderPath );
+        if ( _pOffscreenRenderers != nullptr )
+            _pOffscreenRenderers->onShaderRecompiled( listShaderPath ); // 주 렌더러가 함께 쓰는 PSO 캐시를 다시 채운 뒤다
+    }
+
     bool RenderThread::executeFrameBody( RenderFramePacket& packet )
     {
         if ( packet._bValid == 0 )
@@ -557,6 +580,7 @@ namespace sw
         // 컨텍스트를 잡지 못한 프레임은 기록하지 않는다(GL 호출이 버려진다). postPresent 통지는 executePacket 이 그래도 보낸다.
         if ( ensureContextOnCurrentThread() == false )
             return false;
+        applyRecompiledShaders();
 
         const bool          bOffscreen   = packet._outputRenderTarget != 0;
         IRHICommandContext* pFrameStream = _pDevice->getFrameStreamContext();

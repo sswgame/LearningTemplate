@@ -10,6 +10,8 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
 
 #include "Engine/EngineMinimal.h"
@@ -87,6 +89,12 @@ namespace sw
          * @return 실행했으면 true, 디바이스가 없거나 컨텍스트를 잡지 못했거나 멈추는 중이라 실행하지 못했으면 false 입니다(컨텍스트 실패 로그는 디바이스가 남긴다).
          */
         [[nodiscard]] bool executeAndWait( const RenderCommandDelegate& command );
+        /**
+         * @brief 셰이더 @p shaderPath 가 다시 컴파일됐음을 맡깁니다(어느 스레드에서나). 렌더 스레드가 다음 프레임을 기록하기 전에 렌더러들에 반영합니다(`applyRecompiledShaders`).
+         * @details 기다리지 않는다 — 예전에는 게임 스레드가 렌더 스레드와 GPU 를 세우고(`waitIdle`) 렌더 쪽 객체를 직접 고쳤다. 옛 PSO · 트랜지언트는 디바이스가 GPU 완료 뒤로
+         *          미뤄 놓으므로(백엔드 해제 큐) 렌더 스레드가 프레임 사이에 바꾸면 된다 — 언리얼의 셰이더 맵 교체가 렌더 명령으로 도는 것과 같은 자리다.
+         */
+        void queueShaderRecompiled( string_view shaderPath );
 
         // 훅 세터 넷은 렌더 스레드가 받은 패킷을 모두 끝내기를 기다린 뒤(`pollPackets`) 패킷 실행 역할을 빌려 바꾼다. 패킷을 내는 쪽(게임 스레드)이 부르므로
         // 그동안 새 패킷이 들어오지 않는다 — 렌더 스레드가 훅을 부르는 중에 델리게이트를 덮는 일이 없다(언리얼도 렌더 스레드가 읽는 값은
@@ -156,6 +164,8 @@ namespace sw
          * @return 프레임을 실제로 그렸으면 true 이고, 유효하지 않은 패킷이나 리소스라 건너뛰었으면 false 입니다.
          */
         [[nodiscard]] bool executeFrameBody( RenderFramePacket& packet ) SW_REQUIRES_LOCK( _packetThread );
+        /** @brief (패킷을 실행하는 스레드, 기록 전) 맡긴 셰이더 재컴파일을 주 렌더러 → 화면 밖 렌더러 순서로 반영합니다(화면 밖 렌더러는 주 렌더러의 PSO 캐시를 빌린다). */
+        void applyRecompiledShaders() SW_REQUIRES_LOCK( _packetThread );
         /**
          * @brief 에디터 미리보기 씬마다 자기 타깃을 열고 그린 뒤 읽기 상태로 둡니다. 렌더러가 준비 전이거나 프레임 스트림이 없으면 건너뜁니다.
          * @details 그린 뒤 씬마다(주 화면 = 키 0, @p bMainDrew 면) 빠뜨린 배치 수를 표에 다시 쓴다(`findPendingMaterialPSOBatchCount`).
@@ -237,5 +247,7 @@ namespace sw
         /// @brief `executeAndWait` 가 맡긴 명령입니다(받은 패킷을 끝낸 뒤 실행한다). 실행이 끝나면 비우고 `_cvIdle` 로 알린다. 맡기는 쪽은 게임 스레드 하나다.
         const RenderCommandDelegate* _pPendingCommand SW_GUARDED_BY( _mutex );
         bool _bCommandSucceeded                       SW_GUARDED_BY( _mutex );
+        mutex                                         _recompiledShaderMutex;
+        vector<string> _listRecompiledShader          SW_GUARDED_BY( _recompiledShaderMutex ); ///< `queueShaderRecompiled` 가 맡긴 셰이더 경로(다음 프레임 기록 전에 비운다)
     };
 } // namespace sw
