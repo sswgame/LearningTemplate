@@ -630,7 +630,7 @@ namespace sw
             [[nodiscard]] static bool composeLayers( const ResourceContext& context, const ResourceTagSet& tags, string& inoutText, bool& outbLayered, vector<string>& inoutListLoadTag )
             {
                 const string_view assetID = context._assetID.view();
-                for ( const string& root : ResourceLayers::getLayers() )
+                for ( const string& root : engine::getSubsystem<ResourceComposition>().getLayers() )
                 {
                     const AssetID layerID{ ResourceLayers::makeLayerAssetID( root, assetID ) };
                     if ( AssetIO::hasAsset( layerID ) == false )
@@ -722,7 +722,7 @@ namespace sw
 
         // 2. 조건 — 팩 쿠킹은 쿠킹 축만 풀고, 읽기는 모두 푼다(쿠킹 축 값은 런타임도 같다).
         const bool           bCook = context._parentRule == ResourceContext::ParentRule::RootName;
-        const ResourceTagSet tags  = ResourceTags::capture();
+        const ResourceTagSet tags  = engine::getSubsystem<ResourceTags>().capture();
         vector<string>       listLoadTag;
         string               conditionText;
         bool                 bConditions = false;
@@ -743,7 +743,7 @@ namespace sw
             if ( ResourceComposerInternal::composeLayers( context, tags, current, bLayered, listLoadTag ) == false )
                 return false;
             bText = bText || bLayered;
-            ResourceComposition::record( context._assetID.view(), listLoadTag, bLayered, bText ? string_view( current ) : text );
+            engine::getSubsystem<ResourceComposition>().record( context._assetID.view(), listLoadTag, bLayered, bText ? string_view( current ) : text );
         }
         if ( bText )
         {
@@ -816,11 +816,11 @@ namespace sw
     bool ResourceComposer::saveText( string_view absPath, string_view text )
     {
         // 덮어쓰기 층을 얹어 읽은 사본을 원본 자리에 쓰면 층 값이 원본에 박힌다 - 고칠 자리는 층 파일이다.
-        if ( ResourceLayers::getLayers().empty() == false )
+        if ( engine::getSubsystem<ResourceComposition>().getLayers().empty() == false )
         {
             const AssetPaths* pPaths = engine::findSubsystem<AssetPaths>();
             const string      id     = pPaths != nullptr ? pPaths->toAssetID( absPath ) : string{};
-            if ( id.empty() == false && ResourceComposition::isLayered( id ) )
+            if ( id.empty() == false && engine::getSubsystem<ResourceComposition>().isLayered( id ) )
             {
                 SW_LOG_ERROR_ID( "ResourceLayer.SaveWouldBake", "'%#' was read with a resource layer over it - not saved, the layer's values would be written into the original (edit the layer file instead)", id );
                 return false;
@@ -832,7 +832,7 @@ namespace sw
         if ( FileUtil::isRegularFile( absPath ) == false || FileUtil::readTextFile( absPath, sourceText ) == false )
             return FileUtil::writeTextFile( absPath, text );
         string restoredText;
-        if ( restoreConditions( text, sourceText, absPath, ResourceTags::capture(), restoredText ) == false )
+        if ( restoreConditions( text, sourceText, absPath, engine::getSubsystem<ResourceTags>().capture(), restoredText ) == false )
             return false;
         return FileUtil::writeTextFile( absPath, restoredText );
     }

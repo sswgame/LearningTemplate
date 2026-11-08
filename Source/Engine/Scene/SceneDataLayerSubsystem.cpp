@@ -5,6 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Serialization/Inherit/ResourceTags.h"
@@ -64,7 +65,7 @@ namespace sw
     {
         vector<string> listActive;
         collectActiveLayers( listActive );
-        (void)ResourceTags::setAxisValues( "layer", listActive ); // '.' 이 든 레이어 이름은 태그가 될 수 없다 — `ResourceTags` 가 오류로 남긴다
+        (void)engine::getSubsystem<ResourceTags>().setAxisValues( "layer", listActive ); // '.' 이 든 레이어 이름은 태그가 될 수 없다 — `ResourceTags` 가 오류로 남긴다
     }
 
     void SceneDataLayerSubsystem::update( float32 deltaTime )

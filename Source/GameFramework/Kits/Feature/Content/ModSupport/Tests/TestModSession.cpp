@@ -238,7 +238,7 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
     const string            modDir        = FileUtil::joinPath( request._installFolder, "tide" );
     const string            content       = FileUtil::joinPath( modDir, ModPackBuilder::kSourceFolderName );
     const string            layerFile     = FileUtil::joinPath( content, ModManifest::makeLayerRoot( "tide" ) + "/" + basePath );
-    const vector<string>    listLayerBase = ResourceLayers::getLayers();
+    const vector<string>    listLayerBase = engine::getSubsystem<ResourceComposition>().getLayers();
     SW_REQUIRE_TRUE( Internal::writeText( FileUtil::joinPath( modDir, ModManifest::kFileName ),
                                           R"(<Mod id="tide" version="1.0.0" minContentVersion="1" maxContentVersion="1" priority="0"><Layer path=")" + basePath + R"("/></Mod>)" ) );
     SW_REQUIRE_TRUE( Internal::writeText( layerFile, R"(<QuestCatalog><Quest id="tide_quest"><Stage id="done" complete="true"/></Quest></QuestCatalog>)" ) );
@@ -249,13 +249,13 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
         SW_REQUIRE_TRUE( session.apply( request, Internal::makeSettings() ) );
         vector<string> listExpected = listLayerBase;
         listExpected.push_back( "mods/tide/layer" );
-        SW_EXPECT_TRUE( ResourceLayers::getLayers() == listExpected );
+        SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().getLayers() == listExpected );
         const shared_ptr<const QuestCatalog> pQuests = SharedAssetCache<QuestCatalog>::acquire( basePath );
         SW_REQUIRE_TRUE( pQuests != nullptr );
         SW_EXPECT_TRUE( pQuests->find( hashed_string( "base_quest" ) ) != nullptr ); // 원본 항목은 그대로
         SW_EXPECT_TRUE( pQuests->find( hashed_string( "tide_quest" ) ) != nullptr ); // 층이 더한 항목
     }
-    SW_EXPECT_TRUE( ResourceLayers::getLayers() == listLayerBase );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().getLayers() == listLayerBase );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
 
     // 밝히지 않은 층 파일.
@@ -264,7 +264,7 @@ SW_TEST_CASE( ModSessionTest, LayerModAddsEntriesAndReleases )
     ModSession sneaky( assets );
     SW_EXPECT_LOG( "ModSession.UndeclaredLayer" );
     SW_EXPECT_FALSE( sneaky.apply( request, Internal::makeSettings() ) );
-    SW_EXPECT_TRUE( ResourceLayers::getLayers() == listLayerBase );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().getLayers() == listLayerBase );
     SW_EXPECT_FALSE( assets.getPackManager().hasPatchPacks() );
 }
 

@@ -35,18 +35,6 @@ namespace sw
                 {"orientation", ResourceTagTiming::Load, ResourceTagArity::Single, kArrOrientationValue, static_cast<uint32>( SW_COUNT_OF( kArrOrientationValue ) ), ResourceTagScope::PerClient}, ///< 가로 · 세로 배치
             };
 
-            struct State
-            {
-                mutex          _mutex{};
-                ResourceTagSet _tags{};
-            };
-
-            static State& getState()
-            {
-                static State s_state;
-                return s_state;
-            }
-
             /** @brief 태그 조건입니다. 문맥의 태그 칸이 없으면 "모름" 이라 거짓입니다. */
             static bool hasTag( const GameplayContext& context, const ConditionNameArg& args )
             {
@@ -97,31 +85,6 @@ namespace sw
                     return nullptr;
                 }
                 return pAxis;
-            }
-
-            /** @brief 태그 집합을 바꾸고 바뀐 태그를 다시 읽기 기록에 알립니다. 잠금 밖에서 알린다(기록은 자기 잠금이 있다). */
-            static void replace( const ResourceTagSet& next, ResourceTagSet* pOutPrevious )
-            {
-                vector<string> listChanged;
-                {
-                    State&            state = getState();
-                    ScopedLock<mutex> lock{ state._mutex };
-                    for ( const string& tag : state._tags.getTags() )
-                    {
-                        if ( next.contains( tag ) == false )
-                            listChanged.push_back( tag );
-                    }
-                    for ( const string& tag : next.getTags() )
-                    {
-                        if ( state._tags.contains( tag ) == false )
-                            listChanged.push_back( tag );
-                    }
-                    if ( pOutPrevious != nullptr )
-                        *pOutPrevious = state._tags;
-                    state._tags = next;
-                }
-                if ( listChanged.empty() == false )
-                    ResourceComposition::notifyTagsChanged( listChanged );
             }
         };
     } // namespace
@@ -210,7 +173,7 @@ namespace sw
         next.removeAxis( axisName );
         if ( value.empty() == false )
             next.add( ResourceTagsInternal::makeTag( axisName, value ) );
-        ResourceTagsInternal::replace( next, nullptr );
+        replace( next, nullptr );
         return true;
     }
 
@@ -231,7 +194,7 @@ namespace sw
             }
             next.add( ResourceTagsInternal::makeTag( axisName, value ) );
         }
-        ResourceTagsInternal::replace( next, nullptr );
+        replace( next, nullptr );
         return true;
     }
 
@@ -252,22 +215,51 @@ namespace sw
             next.add( tag );
         else
             next.remove( tag );
-        ResourceTagsInternal::replace( next, nullptr );
+        replace( next, nullptr );
         return true;
     }
 
-    ResourceTagSet ResourceTags::capture()
+    ResourceTags::ResourceTags( ResourceComposition& composition )
+        : _composition{ composition }
+        , _mutex{}
+        , _tags{}
     {
-        ResourceTagsInternal::State& state = ResourceTagsInternal::getState();
-        ScopedLock<mutex>            lock{ state._mutex };
-        return state._tags;
+    }
+
+    ResourceTagSet ResourceTags::capture() const
+    {
+        ScopedLock<mutex> lock{ _mutex };
+        return _tags;
     }
 
     ResourceTagSet ResourceTags::exchange( const ResourceTagSet& tags )
     {
         ResourceTagSet previous;
-        ResourceTagsInternal::replace( tags, &previous );
+        replace( tags, &previous );
         return previous;
+    }
+
+    void ResourceTags::replace( const ResourceTagSet& next, ResourceTagSet* pOutPrevious )
+    {
+        vector<string> listChanged;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            for ( const string& tag : _tags.getTags() )
+            {
+                if ( next.contains( tag ) == false )
+                    listChanged.push_back( tag );
+            }
+            for ( const string& tag : next.getTags() )
+            {
+                if ( _tags.contains( tag ) == false )
+                    listChanged.push_back( tag );
+            }
+            if ( pOutPrevious != nullptr )
+                *pOutPrevious = _tags;
+            _tags = next;
+        }
+        if ( listChanged.empty() == false )
+            _composition.notifyTagsChanged( listChanged );
     }
 
     bool ResourceTags::compileTest( string_view text, string_view sourceName, ResourceTagTest& outTest )

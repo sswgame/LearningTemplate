@@ -183,7 +183,7 @@ namespace sw
     uint32 AssetManager::reloadComposedDependents()
     {
         vector<string> listAssetID;
-        ResourceComposition::takePendingReload( listAssetID );
+        engine::getSubsystem<ResourceComposition>().takePendingReload( listAssetID );
         if ( listAssetID.empty() )
             return 0;
         const vector<AssetCacheBase*> listCache     = getAllAssetCache();

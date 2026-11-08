@@ -9,6 +9,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
@@ -47,16 +48,16 @@ namespace
     {
     public:
         explicit XTestTagScope( const ResourceTagSet& tags )
-            : _previous{ ResourceTags::exchange( tags ) }
-            , _listPreviousLayer{ ResourceLayers::getLayers() }
+            : _previous{ engine::getSubsystem<ResourceTags>().exchange( tags ) }
+            , _listPreviousLayer{ engine::getSubsystem<ResourceComposition>().getLayers() }
         {
         }
         ~XTestTagScope()
         {
-            (void)ResourceTags::exchange( _previous );
-            (void)ResourceLayers::setLayers( _listPreviousLayer );
+            (void)engine::getSubsystem<ResourceTags>().exchange( _previous );
+            (void)engine::getSubsystem<ResourceComposition>().setLayers( _listPreviousLayer );
             vector<string> listPending;
-            ResourceComposition::takePendingReload( listPending ); // 케이스가 만든 다시 읽기 목록을 다음 케이스에 남기지 않는다
+            engine::getSubsystem<ResourceComposition>().takePendingReload( listPending ); // 케이스가 만든 다시 읽기 목록을 다음 케이스에 남기지 않는다
         }
         XTestTagScope( const XTestTagScope& )            = delete;
         XTestTagScope& operator=( const XTestTagScope& ) = delete;
@@ -156,24 +157,24 @@ SW_TEST_CASE( ResourceTagsTest, InvalidTestsAreLoadErrors )
 SW_TEST_CASE( ResourceTagsTest, SettersKeepAxisArity )
 {
     const XTestTagScope scope{ ResourceTagSet{} };
-    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "quality", "low" ) );
-    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "quality", "high" ) );
-    SW_EXPECT_FALSE( ResourceTags::capture().contains( "quality.low" ) );
-    SW_EXPECT_TRUE( ResourceTags::capture().contains( "quality.high" ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setAxisValue( "quality", "low" ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setAxisValue( "quality", "high" ) );
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceTags>().capture().contains( "quality.low" ) );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceTags>().capture().contains( "quality.high" ) );
 
-    SW_REQUIRE_TRUE( ResourceTags::setTagActive( "layer", "Winter", true ) );
-    SW_REQUIRE_TRUE( ResourceTags::setTagActive( "layer", "Night", true ) );
-    SW_REQUIRE_TRUE( ResourceTags::setTagActive( "layer", "Winter", false ) );
-    SW_EXPECT_TRUE( ResourceTags::capture().contains( "layer.Night" ) );
-    SW_EXPECT_FALSE( ResourceTags::capture().contains( "layer.Winter" ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setTagActive( "layer", "Winter", true ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setTagActive( "layer", "Night", true ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setTagActive( "layer", "Winter", false ) );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceTags>().capture().contains( "layer.Night" ) );
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceTags>().capture().contains( "layer.Winter" ) );
 
     SW_EXPECT_LOG( "ResourceTags.WrongArity" );
-    SW_EXPECT_FALSE( ResourceTags::setAxisValue( "layer", "Winter" ) );
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceTags>().setAxisValue( "layer", "Winter" ) );
     SW_EXPECT_LOG( "ResourceTags.InvalidValue" );
-    SW_EXPECT_FALSE( ResourceTags::setAxisValue( "platform", "amiga" ) );
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceTags>().setAxisValue( "platform", "amiga" ) );
     SW_EXPECT_LOG( "ResourceTags.UnknownAxis" );
-    SW_EXPECT_FALSE( ResourceTags::setAxisValue( "colour", "red" ) );
-    SW_EXPECT_TRUE( ResourceTags::capture().contains( "quality.high" ) );
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceTags>().setAxisValue( "colour", "red" ) );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceTags>().capture().contains( "quality.high" ) );
 }
 
 /** @brief [ResourceConditionTest] 참인 조건은 자기를 품은 원소의 속성을 적힌 차례로 바꾸고(나중이 이긴다), `_op="Remove"` 는 그 원소를 뺀다. 조건 원소는 결과에 남지 않는다 */
@@ -289,7 +290,7 @@ SW_TEST_CASE( ResourceLayerTest, LayerFileLiesOverTheResource )
                                               R"(<Doc a="layer"><_when _if="quality.low" b="low" /><Items><Item name="added" v="9" /></Items></Doc>)" ) );
     constexpr const utf8* kText = R"(<Doc a="base" b="base"><Items><Item name="x" v="1" /></Items></Doc>)";
 
-    SW_REQUIRE_TRUE( ResourceLayers::setLayers( { root } ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceComposition>().setLayers( { root } ) );
     string flatText;
     bool   bComposed = false;
     SW_REQUIRE_TRUE( ResourceComposer::compose( kText, id.view(), ResourceContext::forSchema( &XTestUtil::makeListSchema ).withAsset( id ), flatText, bComposed ) );
@@ -311,9 +312,9 @@ SW_TEST_CASE( ResourceLayerTest, LayerFileLiesOverTheResource )
 
     // 층을 떼면 층을 얹었던 리소스를 다시 읽는다. 층이 기댄 로드 축 태그가 바뀌어도 다시 읽는다.
     vector<string> listPending;
-    ResourceComposition::takePendingReload( listPending );
-    SW_REQUIRE_TRUE( ResourceLayers::setLayers( {} ) );
-    ResourceComposition::takePendingReload( listPending );
+    engine::getSubsystem<ResourceComposition>().takePendingReload( listPending );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceComposition>().setLayers( {} ) );
+    engine::getSubsystem<ResourceComposition>().takePendingReload( listPending );
     SW_EXPECT_TRUE( VectorUtil::contains( listPending, id.str() ) );
 }
 
@@ -329,7 +330,7 @@ SW_TEST_CASE( ResourceCompositionTest, LoadTagDependentsAreReloadedAndDigested )
     SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1" />)", plain.view(), ResourceContext::forDocument().withAsset( plain ), flatText, bComposed ) );
 
     vector<ResourceDigestEntry> listEntry;
-    ResourceComposition::collectDigest( listEntry );
+    engine::getSubsystem<ResourceComposition>().collectDigest( listEntry );
     const bool bDependentListed = VectorUtil::containsIf( listEntry, [&dependent]( const ResourceDigestEntry& entry )
     { return entry._assetID == dependent.str(); } );
     const bool bPlainListed     = VectorUtil::containsIf( listEntry, [&plain]( const ResourceDigestEntry& entry )
@@ -338,9 +339,9 @@ SW_TEST_CASE( ResourceCompositionTest, LoadTagDependentsAreReloadedAndDigested )
     SW_EXPECT_FALSE( bPlainListed );
 
     vector<string> listPending;
-    ResourceComposition::takePendingReload( listPending );
-    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "region", "kr" ) );
-    ResourceComposition::takePendingReload( listPending );
+    engine::getSubsystem<ResourceComposition>().takePendingReload( listPending );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setAxisValue( "region", "kr" ) );
+    engine::getSubsystem<ResourceComposition>().takePendingReload( listPending );
     SW_EXPECT_TRUE( VectorUtil::contains( listPending, dependent.str() ) );
     SW_EXPECT_FALSE( VectorUtil::contains( listPending, plain.str() ) );
 }
@@ -369,9 +370,9 @@ SW_TEST_CASE( ResourceRemapTest, ReadsTheFirstMatchingTarget )
     SW_EXPECT_TRUE( AssetIO::hasAsset( logo ) );
 
     vector<string> listPending;
-    ResourceComposition::takePendingReload( listPending );
-    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "locale", "en" ) );
-    ResourceComposition::takePendingReload( listPending );
+    engine::getSubsystem<ResourceComposition>().takePendingReload( listPending );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setAxisValue( "locale", "en" ) );
+    engine::getSubsystem<ResourceComposition>().takePendingReload( listPending );
     SW_EXPECT_TRUE( VectorUtil::contains( listPending, logo.str() ) );
     SW_REQUIRE_TRUE( AssetIO::readTextAsset( logo, text ) );
     SW_EXPECT_EQUAL( string( "base" ), text );
@@ -404,7 +405,7 @@ SW_TEST_CASE( ResourceCompositionTest, PerClientAxesAreNotCompared )
     SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1"><_when _if="quality.low" a="2" /></Doc>)", localOnly.view(), ResourceContext::forDocument().withAsset( localOnly ), flatText, bComposed ) );
     SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1"><_when _if="feature.night" a="2" /></Doc>)", shared.view(), ResourceContext::forDocument().withAsset( shared ), flatText, bComposed ) );
     vector<ResourceDigestEntry> listEntry;
-    ResourceComposition::collectDigest( listEntry );
+    engine::getSubsystem<ResourceComposition>().collectDigest( listEntry );
     const auto hasEntry = [&listEntry]( const AssetID& assetID )
     {
         return VectorUtil::containsIf( listEntry, [&assetID]( const ResourceDigestEntry& entry )
@@ -425,11 +426,11 @@ SW_TEST_CASE( ResourceCompositionTest, DigestMismatchComparesOnlyKnownCompositio
     SW_REQUIRE_TRUE( ResourceComposer::compose( kText, id.view(), ResourceContext::forDocument().withAsset( id ), flatText, bComposed ) );
     SW_REQUIRE_TRUE( bComposed );
 
-    SW_EXPECT_FALSE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( flatText ) } ) );
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceComposition>().isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( flatText ) } ) );
     // 상대가 품질 high 로 합성했다 — 같은 파일이 다른 값이다.
     const string highText = XTestUtil::resolve( kText, ResourceTagTiming::Load, XTestUtil::makeTags( { "region.kr" } ) );
-    SW_EXPECT_TRUE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( highText ) } ) );
-    SW_EXPECT_FALSE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ "testproject/data/never-composed.xml", 1 } ) );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( highText ) } ) );
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceComposition>().isDigestMismatch( ResourceDigestEntry{ "testproject/data/never-composed.xml", 1 } ) );
 }
 
 /** @brief [ResourceCompositionTest] 서버가 층 · 조건 없이 읽은 표도 대조한다 — 클라이언트만 층을 얹으면 서버 쪽에 기댄 것이 없어도 어긋남이다 */
@@ -439,8 +440,8 @@ SW_TEST_CASE( ResourceCompositionTest, DigestComparesPlainCompositionsToo )
     string        flatText;
     bool          bComposed = false;
     SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1" />)", id.view(), ResourceContext::forDocument().withAsset( id ), flatText, bComposed ) );
-    SW_EXPECT_FALSE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( R"(<Doc a="1" />)" ) } ) );
-    SW_EXPECT_TRUE( ResourceComposition::isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( R"(<Doc a="layer" />)" ) } ) );
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceComposition>().isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( R"(<Doc a="1" />)" ) } ) );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().isDigestMismatch( ResourceDigestEntry{ id.str(), ResourceComposition::hashText( R"(<Doc a="layer" />)" ) } ) );
 }
 
 /** @brief [ResourceCompositionTest] 번호 뒤의 합성만 나온다 — 접속 뒤에 새로 읽은 리소스와 태그로 바뀐 결과가 서버에 간다. 기대지 않은 합성은 보낼 줄이 아니다 */
@@ -449,8 +450,8 @@ SW_TEST_CASE( ResourceCompositionTest, ChangesSinceARevisionAreCollected )
     const XTestTagScope         scope{ XTestUtil::makeTags( { "region.us" } ) };
     uint64                      revision = 0;
     vector<ResourceDigestEntry> listEntry;
-    ResourceComposition::collectTagDependentChanges( revision, listEntry );
-    ResourceComposition::collectTagDependentChanges( revision, listEntry );
+    engine::getSubsystem<ResourceComposition>().collectTagDependentChanges( revision, listEntry );
+    engine::getSubsystem<ResourceComposition>().collectTagDependentChanges( revision, listEntry );
     SW_EXPECT_TRUE( listEntry.empty() );
 
     const AssetID         varying{ "testproject/data/since-varying.xml" };
@@ -460,19 +461,19 @@ SW_TEST_CASE( ResourceCompositionTest, ChangesSinceARevisionAreCollected )
     bool                  bComposed = false;
     SW_REQUIRE_TRUE( ResourceComposer::compose( kText, varying.view(), ResourceContext::forDocument().withAsset( varying ), flatText, bComposed ) );
     SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<Doc a="1" />)", plain.view(), ResourceContext::forDocument().withAsset( plain ), flatText, bComposed ) );
-    ResourceComposition::collectTagDependentChanges( revision, listEntry );
+    engine::getSubsystem<ResourceComposition>().collectTagDependentChanges( revision, listEntry );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listEntry.size() );
     SW_EXPECT_EQUAL( varying.str(), listEntry[0]._assetID );
 
     // 같은 결과로 다시 읽으면 보낼 것이 없다.
     SW_REQUIRE_TRUE( ResourceComposer::compose( kText, varying.view(), ResourceContext::forDocument().withAsset( varying ), flatText, bComposed ) );
-    ResourceComposition::collectTagDependentChanges( revision, listEntry );
+    engine::getSubsystem<ResourceComposition>().collectTagDependentChanges( revision, listEntry );
     SW_EXPECT_TRUE( listEntry.empty() );
 
     // 태그가 바뀌어 다시 읽으면 새 해시가 나간다.
-    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "region", "kr" ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setAxisValue( "region", "kr" ) );
     SW_REQUIRE_TRUE( ResourceComposer::compose( kText, varying.view(), ResourceContext::forDocument().withAsset( varying ), flatText, bComposed ) );
-    ResourceComposition::collectTagDependentChanges( revision, listEntry );
+    engine::getSubsystem<ResourceComposition>().collectTagDependentChanges( revision, listEntry );
     SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), listEntry.size() );
     SW_EXPECT_EQUAL( ResourceComposition::hashText( flatText ), listEntry[0]._hash );
 }
@@ -482,7 +483,7 @@ SW_TEST_CASE( ResourceDigestComparerTest, ServerReadingLaterStillCompares )
 {
     const XTestTagScope    scope{ XTestUtil::makeTags( { "quality.low" } ) };
     const AssetID          id{ "testproject/data/compare-later.xml" };
-    ResourceDigestComparer comparer;
+    ResourceDigestComparer comparer{ engine::getSubsystem<ResourceComposition>() };
     SW_REQUIRE_TRUE( comparer.addPeerLine( 7, ResourceDigestEntry{ id.str(), 12345u }, 0 ) ); // 서버는 아직 이 리소스를 읽지 않았다
 
     vector<ResourceDigestMismatch> listMismatch;
@@ -511,7 +512,7 @@ SW_TEST_CASE( ResourceDigestComparerTest, GraceHealsAndClosedPeersAreForgotten )
     SW_REQUIRE_TRUE( ResourceComposer::compose( kText, id.view(), ResourceContext::forDocument().withAsset( id ), flatText, bComposed ) );
     const uint64 lowHash = ResourceComposition::hashText( flatText );
 
-    ResourceDigestComparer comparer;
+    ResourceDigestComparer comparer{ engine::getSubsystem<ResourceComposition>() };
     SW_REQUIRE_TRUE( comparer.addPeerLine( 1, ResourceDigestEntry{ id.str(), lowHash }, 0 ) );
     SW_REQUIRE_TRUE( comparer.addPeerLine( 2, ResourceDigestEntry{ id.str(), lowHash }, 0 ) );
     vector<ResourceDigestMismatch> listMismatch;
@@ -519,7 +520,7 @@ SW_TEST_CASE( ResourceDigestComparerTest, GraceHealsAndClosedPeersAreForgotten )
     SW_EXPECT_TRUE( listMismatch.empty() );
 
     // 서버의 태그가 먼저 바뀌었다 — 두 연결 모두 잠깐 어긋난다.
-    SW_REQUIRE_TRUE( ResourceTags::setAxisValue( "quality", "high" ) );
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setAxisValue( "quality", "high" ) );
     SW_REQUIRE_TRUE( ResourceComposer::compose( kText, id.view(), ResourceContext::forDocument().withAsset( id ), flatText, bComposed ) );
     comparer.update( 10, 100, listMismatch );
     SW_EXPECT_TRUE( listMismatch.empty() );
@@ -534,7 +535,7 @@ SW_TEST_CASE( ResourceDigestComparerTest, GraceHealsAndClosedPeersAreForgotten )
 /** @brief [ResourceDigestComparerTest] 상대 하나가 드는 줄 수에는 상한이 있다 — 신뢰 경계다. 같은 id 는 줄을 늘리지 않는다 */
 SW_TEST_CASE( ResourceDigestComparerTest, LinesPerPeerAreBounded )
 {
-    ResourceDigestComparer comparer;
+    ResourceDigestComparer comparer{ engine::getSubsystem<ResourceComposition>() };
     for ( uint32 index = 0; index < ResourceDigestComparer::kMaxLinesPerPeer; ++index )
     {
         SW_REQUIRE_TRUE( comparer.addPeerLine( 1, ResourceDigestEntry{ "testproject/flood/" + sw::to_string( index ), 1u }, 0 ) );

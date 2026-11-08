@@ -170,7 +170,7 @@ namespace sw
         if ( pTable == nullptr || pTable->getState()._entryCount.load() == 0 )
             return false;
         ResourceRemapInternal::State& state = pTable->getState();
-        const ResourceTagSet          tags  = ResourceTags::capture();
+        const ResourceTagSet          tags  = engine::getSubsystem<ResourceTags>().capture();
         vector<string>                listLoadTag;
         bool                          bRemapped = false;
         {
@@ -189,7 +189,7 @@ namespace sw
             }
         }
         if ( listLoadTag.empty() == false )
-            ResourceComposition::recordRemap( assetID, listLoadTag );
+            engine::getSubsystem<ResourceComposition>().recordRemap( assetID, listLoadTag );
         return bRemapped;
     }
 } // namespace sw
