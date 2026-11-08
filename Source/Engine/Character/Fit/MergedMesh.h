@@ -14,7 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
 
@@ -99,6 +99,6 @@ namespace sw
         /** @brief 부품이 들어갈 머티리얼 그룹을 반환합니다(아틀라스 하나가 그룹 하나입니다). */
         virtual hashed_string getMaterialGroup( const MeshMergeSource& source ) const = 0;
         /** @brief 부품의 UV 를 그룹(아틀라스) 안의 위치로 옮깁니다. */
-        virtual float2 remapUv( const MeshMergeSource& source, const float2& uv ) const = 0;
+        virtual float2 remapUV( const MeshMergeSource& source, const float2& uv ) const = 0;
     };
 } // namespace sw

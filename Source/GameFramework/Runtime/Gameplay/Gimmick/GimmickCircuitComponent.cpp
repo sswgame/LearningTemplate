@@ -2,8 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuitComponent.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Console/DebugHUDRegistry.h"
@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Rendering/LightComponent.h"
+#include "Engine/Visual/Component/LightComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"

@@ -7,8 +7,8 @@
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/SweepHit.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/PhysicsSettings.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 
 namespace sw
 {

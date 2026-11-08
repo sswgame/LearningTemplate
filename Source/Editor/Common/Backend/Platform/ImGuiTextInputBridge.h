@@ -36,7 +36,7 @@ namespace sw::editor
         void drawComposition() const;
 
         /** @brief ImGui 가 글 커서를 옮기거나 글 칸을 켜고 끌 때 부릅니다(.cpp 의 콜백만 부른다). */
-        void onImeData( const ImGuiViewport& viewport, const ImGuiPlatformImeData& data );
+        void onIMEData( const ImGuiViewport& viewport, const ImGuiPlatformImeData& data );
 
     private:
         IWindow* _pWindow;

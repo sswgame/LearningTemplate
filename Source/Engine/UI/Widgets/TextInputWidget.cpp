@@ -2,10 +2,10 @@
 
 #include "Engine/UI/Widgets/TextInputWidget.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
@@ -14,8 +14,8 @@
 #include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Accessibility/UIAccessibilityTypes.h"
 #include "Engine/UI/Input/UIClipboardService.h"
-#include "Engine/UI/Screen/UINotificationService.h"
 #include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/Service/UINotificationService.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"

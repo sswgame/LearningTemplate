@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -11,7 +11,7 @@
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
 {

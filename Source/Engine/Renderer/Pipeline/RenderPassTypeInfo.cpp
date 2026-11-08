@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Graphics/Debug/GPUAssert.h"
 #include "Engine/Graphics/Debug/GPUNanCheck.h"

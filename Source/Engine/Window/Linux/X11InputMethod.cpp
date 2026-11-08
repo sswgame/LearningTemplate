@@ -2,9 +2,9 @@
 
 #include "Engine/Window/Linux/X11InputMethod.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Foundation/X11Headers.h"

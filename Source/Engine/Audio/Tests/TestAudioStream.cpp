@@ -53,7 +53,7 @@ namespace
 
     struct AudioStreamTestUtil
     {
-        static constexpr uint16 kTagPcm   = 1;
+        static constexpr uint16 kTagPCM   = 1;
         static constexpr uint16 kTagFloat = 3;
         static constexpr uint16 kTagAdpcm = 2;
         static constexpr uint16 kTagExt   = 0xFFFE;
@@ -61,7 +61,7 @@ namespace
         static void writeTag( ByteWriter& writer, const utf8* pTag ) { writer.writeBytes( reinterpret_cast<const uint8*>( pTag ), 4 ); }
 
         /** @brief fmt(16 바이트) · data 청크만 있는 WAV 입니다. */
-        static vector<uint8> makeWav( uint16 tag, uint16 channelCount, uint32 sampleRate, uint16 bitsPerSample, const vector<uint8>& listData )
+        static vector<uint8> makeWAV( uint16 tag, uint16 channelCount, uint32 sampleRate, uint16 bitsPerSample, const vector<uint8>& listData )
         {
             vector<uint8> listByte;
             ByteWriter    writer{ listByte };
@@ -83,7 +83,7 @@ namespace
         }
 
         /** @brief 확장형 fmt(40 바이트, 하위 형식 PCM) 의 16 비트 WAV 입니다. 채널 마스크를 적습니다. */
-        static vector<uint8> makeExtensibleWav( uint16 channelCount, uint32 channelMask, const vector<uint8>& listData )
+        static vector<uint8> makeExtensibleWAV( uint16 channelCount, uint32 channelMask, const vector<uint8>& listData )
         {
             static constexpr uint8 kArrSubFormatTail[12] = { 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71 };
             vector<uint8>          listByte;
@@ -102,7 +102,7 @@ namespace
             writer.writeUint16( 22 );
             writer.writeUint16( 16 );
             writer.writeUint32( channelMask );
-            writer.writeUint32( kTagPcm );
+            writer.writeUint32( kTagPCM );
             writer.writeBytes( kArrSubFormatTail, sizeof( kArrSubFormatTail ) );
             writeTag( writer, "data" );
             writer.writeUint32( static_cast<uint32>( listData.size() ) );
@@ -110,7 +110,7 @@ namespace
             return listByte;
         }
 
-        static vector<uint8> makePcm16Data( const vector<int16>& listSample )
+        static vector<uint8> makePCM16Data( const vector<int16>& listSample )
         {
             vector<uint8> listByte;
             ByteWriter    writer{ listByte };
@@ -133,7 +133,7 @@ namespace
         }
 
         /** @brief 무음 16 비트 모노 @p frameCount 프레임 WAV 입니다. */
-        static vector<uint8> makeSilentMonoWav( uint32 frameCount, uint32 sampleRate ) { return makeWav( kTagPcm, 1, sampleRate, 16, vector<uint8>( static_cast<size_t>( frameCount ) * 2u, 0 ) ); }
+        static vector<uint8> makeSilentMonoWAV( uint32 frameCount, uint32 sampleRate ) { return makeWAV( kTagPCM, 1, sampleRate, 16, vector<uint8>( static_cast<size_t>( frameCount ) * 2u, 0 ) ); }
 
         static void patchUint32( vector<uint8>& inoutBytes, size_t offset, uint32 value ) { Memory::copy( inoutBytes.data() + offset, &value, sizeof( value ) ); }
     };
@@ -141,9 +141,9 @@ namespace
 } // namespace
 
 /** @brief [AudioStreamTest] WAV 는 신뢰 경계다 — 어느 길이로 잘려도 소스를 만들지 않고 호출자의 바이트를 남긴다 */
-SW_TEST_CASE( AudioStreamTest, WavRejectsEveryTruncatedLength )
+SW_TEST_CASE( AudioStreamTest, WAVRejectsEveryTruncatedLength )
 {
-    const vector<uint8> listFull = Util::makeSilentMonoWav( 8, 1000 );
+    const vector<uint8> listFull = Util::makeSilentMonoWAV( 8, 1000 );
     for ( size_t length = 0; length < listFull.size(); ++length )
     {
         vector<uint8> listPrefix( listFull.begin(), listFull.begin() + static_cast<ptrdiff_t>( length ) );
@@ -159,7 +159,7 @@ SW_TEST_CASE( AudioStreamTest, ChunkSizePastTheEndIsRejected )
 {
     static constexpr size_t kFmtSizeOffset  = 16;
     static constexpr size_t kDataSizeOffset = 40;
-    const vector<uint8>     listFull        = Util::makeSilentMonoWav( 8, 1000 );
+    const vector<uint8>     listFull        = Util::makeSilentMonoWAV( 8, 1000 );
     vector<uint8>           listData        = listFull;
     Util::patchUint32( listData, kDataSizeOffset, 0xFFFFFFFFu );
     SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listData, 0.0f ) );
@@ -172,22 +172,22 @@ SW_TEST_CASE( AudioStreamTest, ChunkSizePastTheEndIsRejected )
 SW_TEST_CASE( AudioStreamTest, UnsupportedFormatsAreRejected )
 {
     const vector<uint8> listData( 72, 0 );
-    vector<uint8>       listAdpcm = Util::makeWav( Util::kTagAdpcm, 1, 1000, 16, listData );
+    vector<uint8>       listAdpcm = Util::makeWAV( Util::kTagAdpcm, 1, 1000, 16, listData );
     SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listAdpcm, 0.0f ) );
-    vector<uint8> listPcm8 = Util::makeWav( Util::kTagPcm, 1, 1000, 8, listData );
-    SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listPcm8, 0.0f ) );
-    vector<uint8> listPcm24 = Util::makeWav( Util::kTagPcm, 1, 1000, 24, listData );
-    SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listPcm24, 0.0f ) );
-    vector<uint8> listFloat16 = Util::makeWav( Util::kTagFloat, 1, 1000, 16, listData );
+    vector<uint8> listPCM8 = Util::makeWAV( Util::kTagPCM, 1, 1000, 8, listData );
+    SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listPCM8, 0.0f ) );
+    vector<uint8> listPCM24 = Util::makeWAV( Util::kTagPCM, 1, 1000, 24, listData );
+    SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listPCM24, 0.0f ) );
+    vector<uint8> listFloat16 = Util::makeWAV( Util::kTagFloat, 1, 1000, 16, listData );
     SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listFloat16, 0.0f ) );
-    vector<uint8> listNoChannel = Util::makeWav( Util::kTagPcm, 0, 1000, 16, listData );
+    vector<uint8> listNoChannel = Util::makeWAV( Util::kTagPCM, 0, 1000, 16, listData );
     SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listNoChannel, 0.0f ) );
-    vector<uint8> listNineChannel = Util::makeWav( Util::kTagPcm, 9, 1000, 16, listData );
+    vector<uint8> listNineChannel = Util::makeWAV( Util::kTagPCM, 9, 1000, 16, listData );
     SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listNineChannel, 0.0f ) );
-    vector<uint8> listNoRate = Util::makeWav( Util::kTagPcm, 1, 0, 16, listData );
+    vector<uint8> listNoRate = Util::makeWAV( Util::kTagPCM, 1, 0, 16, listData );
     SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listNoRate, 0.0f ) );
 
-    vector<uint8> listWave = Util::makeSilentMonoWav( 8, 1000 );
+    vector<uint8> listWave = Util::makeSilentMonoWAV( 8, 1000 );
     SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.mp3", listWave, 0.0f ) );
     listWave[0] = 'X';
     SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listWave, 0.0f ) );
@@ -196,7 +196,7 @@ SW_TEST_CASE( AudioStreamTest, UnsupportedFormatsAreRejected )
 /** @brief [AudioStreamTest] 한 프레임도 못 되는 data 청크는 길이 0 의 소리라 만들지 않는다 */
 SW_TEST_CASE( AudioStreamTest, DataShorterThanOneFrameIsRejected )
 {
-    vector<uint8> listByte = Util::makeWav( Util::kTagPcm, 2, 1000, 16, vector<uint8>( 3, 0 ) );
+    vector<uint8> listByte = Util::makeWAV( Util::kTagPCM, 2, 1000, 16, vector<uint8>( 3, 0 ) );
     SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listByte, 0.0f ) );
     SW_EXPECT_FALSE( listByte.empty() );
 }
@@ -214,8 +214,8 @@ SW_TEST_CASE( AudioStreamTest, BrokenOggIsRejected )
 /** @brief [AudioStreamTest] 만들면 바이트를 가져가고 형식을 머리말대로 적는다. 스테레오는 재생도 2 채널이고 다운믹스가 없다 */
 SW_TEST_CASE( AudioStreamTest, CreateTakesTheBytesAndReadsTheFormat )
 {
-    const vector<uint8> listData = Util::makePcm16Data( { 1, 2, 3, 4, 5, 6 } );
-    vector<uint8>       listByte = Util::makeWav( Util::kTagPcm, 2, 44100, 16, listData );
+    const vector<uint8> listData = Util::makePCM16Data( { 1, 2, 3, 4, 5, 6 } );
+    vector<uint8>       listByte = Util::makeWAV( Util::kTagPCM, 2, 44100, 16, listData );
     const size_t        byteSize = listByte.size();
 
     const shared_ptr<const AudioStreamSource> pSource = AudioStreamSource::tryCreate( "Music.wav", listByte, 0.0f );
@@ -232,9 +232,9 @@ SW_TEST_CASE( AudioStreamTest, CreateTakesTheBytesAndReadsTheFormat )
 /** @brief [AudioStreamTest] 길이 기준은 경계값을 받는다 — 정확히 그 길이는 만들고, 한 프레임 모자라면 만들지 않는다. 0 은 길이를 보지 않는다 */
 SW_TEST_CASE( AudioStreamTest, MinSecondsBoundary )
 {
-    vector<uint8> listExact = Util::makeSilentMonoWav( 500, 1000 );
+    vector<uint8> listExact = Util::makeSilentMonoWAV( 500, 1000 );
     SW_EXPECT_NOT_NULL( AudioStreamSource::tryCreate( "a.wav", listExact, 0.5f ) );
-    vector<uint8> listShort = Util::makeSilentMonoWav( 499, 1000 );
+    vector<uint8> listShort = Util::makeSilentMonoWAV( 499, 1000 );
     SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listShort, 0.5f ) );
     SW_EXPECT_FALSE( listShort.empty() );
     SW_EXPECT_NOT_NULL( AudioStreamSource::tryCreate( "a.wav", listShort, 0.0f ) );
@@ -244,7 +244,7 @@ SW_TEST_CASE( AudioStreamTest, MinSecondsBoundary )
 SW_TEST_CASE( AudioStreamTest, ThreeChannelsAreDownmixedWhenRead )
 {
     const vector<uint8> listData = Util::makeFloatData( { 1.0f, 0.5f, 0.25f } );
-    vector<uint8>       listByte = Util::makeWav( Util::kTagFloat, 3, 1000, 32, listData );
+    vector<uint8>       listByte = Util::makeWAV( Util::kTagFloat, 3, 1000, 32, listData );
 
     const shared_ptr<const AudioStreamSource> pSource = AudioStreamSource::tryCreate( "a.wav", listByte, 0.0f );
     SW_REQUIRE_NOT_NULL( pSource );
@@ -265,14 +265,14 @@ SW_TEST_CASE( AudioStreamTest, ThreeChannelsAreDownmixedWhenRead )
 SW_TEST_CASE( AudioStreamTest, ChannelMaskMustPlaceEveryChannel )
 {
     SW_EXPECT_LOG( "Audio.DownmixMaskShort" );
-    const vector<uint8> listData  = Util::makePcm16Data( { 16384, 0, 0 } );
-    vector<uint8>       listShort = Util::makeExtensibleWav( 3, 0x3u, listData );
+    const vector<uint8> listData  = Util::makePCM16Data( { 16384, 0, 0 } );
+    vector<uint8>       listShort = Util::makeExtensibleWAV( 3, 0x3u, listData );
     SW_EXPECT_NULL( AudioStreamSource::tryCreate( "a.wav", listShort, 0.0f ) );
     SW_EXPECT_FALSE( listShort.empty() );
 
     // BC(0x100) 는 양쪽 0.5 다 — 마스크 값이 실제로 쓰였는지 FC(마스크 없을 때의 셋째)와 가른다.
-    const vector<uint8> listBackCenter = Util::makePcm16Data( { 0, 0, 16384 } );
-    vector<uint8>       listByte       = Util::makeExtensibleWav( 3, 0x103u, listBackCenter );
+    const vector<uint8> listBackCenter = Util::makePCM16Data( { 0, 0, 16384 } );
+    vector<uint8>       listByte       = Util::makeExtensibleWAV( 3, 0x103u, listBackCenter );
 
     const shared_ptr<const AudioStreamSource> pSource = AudioStreamSource::tryCreate( "a.wav", listByte, 0.0f );
     SW_REQUIRE_NOT_NULL( pSource );
@@ -286,10 +286,10 @@ SW_TEST_CASE( AudioStreamTest, ChannelMaskMustPlaceEveryChannel )
 }
 
 /** @brief [AudioStreamTest] 16 비트 정수는 32768 로 나눈다(-32768 이 정확히 -1). 끝에서 요청보다 적게 주고, 더 없으면 0 이다 */
-SW_TEST_CASE( AudioStreamTest, Pcm16DecoderScalesAndStopsAtTheEnd )
+SW_TEST_CASE( AudioStreamTest, PCM16DecoderScalesAndStopsAtTheEnd )
 {
-    const vector<uint8> listData = Util::makePcm16Data( { -32768, 16384, 0 } );
-    vector<uint8>       listByte = Util::makeWav( Util::kTagPcm, 1, 1000, 16, listData );
+    const vector<uint8> listData = Util::makePCM16Data( { -32768, 16384, 0 } );
+    vector<uint8>       listByte = Util::makeWAV( Util::kTagPCM, 1, 1000, 16, listData );
 
     const shared_ptr<const AudioStreamSource> pSource = AudioStreamSource::tryCreate( "a.wav", listByte, 0.0f );
     SW_REQUIRE_NOT_NULL( pSource );
@@ -308,7 +308,7 @@ SW_TEST_CASE( AudioStreamTest, Pcm16DecoderScalesAndStopsAtTheEnd )
 SW_TEST_CASE( AudioStreamTest, DecoderSeekBoundary )
 {
     const vector<uint8> listData = Util::makeFloatData( { 0.1f, 0.2f, 0.3f } );
-    vector<uint8>       listByte = Util::makeWav( Util::kTagFloat, 1, 1000, 32, listData );
+    vector<uint8>       listByte = Util::makeWAV( Util::kTagFloat, 1, 1000, 32, listData );
 
     const shared_ptr<const AudioStreamSource> pSource = AudioStreamSource::tryCreate( "a.wav", listByte, 0.0f );
     SW_REQUIRE_NOT_NULL( pSource );
@@ -368,7 +368,7 @@ SW_TEST_CASE( AudioStreamTest, OddChunkBeforeDataIsPaddedOver )
 SW_TEST_CASE( AudioStreamTest, DecoderKeepsTheBytesAliveAfterTheSource )
 {
     const vector<uint8> listData = Util::makeFloatData( { 0.25f, -0.25f } );
-    vector<uint8>       listByte = Util::makeWav( Util::kTagFloat, 1, 1000, 32, listData );
+    vector<uint8>       listByte = Util::makeWAV( Util::kTagFloat, 1, 1000, 32, listData );
 
     shared_ptr<const AudioStreamSource> pSource = AudioStreamSource::tryCreate( "a.wav", listByte, 0.0f );
     SW_REQUIRE_NOT_NULL( pSource );
@@ -507,7 +507,7 @@ SW_TEST_CASE( AudioStreamTest, OpenDecoderRejectsBadArguments )
 SW_TEST_CASE( AudioStreamTest, ReopenDropsTheDownmixAndTheWindow )
 {
     const vector<uint8> listData = Util::makeFloatData( { 1.0f, 0.5f, 0.25f } );
-    vector<uint8>       listByte = Util::makeWav( Util::kTagFloat, 3, 1000, 32, listData );
+    vector<uint8>       listByte = Util::makeWAV( Util::kTagFloat, 3, 1000, 32, listData );
 
     const shared_ptr<const AudioStreamSource> pSource = AudioStreamSource::tryCreate( "a.wav", listByte, 0.0f );
     SW_REQUIRE_NOT_NULL( pSource );

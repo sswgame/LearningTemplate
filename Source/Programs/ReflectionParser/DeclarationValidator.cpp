@@ -2,8 +2,8 @@
 
 #include "Programs/ReflectionParser/DeclarationValidator.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectionUnits.h"
 

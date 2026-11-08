@@ -24,8 +24,8 @@
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 

@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderConfig.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 

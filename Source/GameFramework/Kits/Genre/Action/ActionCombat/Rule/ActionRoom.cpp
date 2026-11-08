@@ -14,7 +14,7 @@
 #include "GameFramework/Runtime/Character/Combat/Damage/DamageMath.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
+#include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 
 namespace sw
 {

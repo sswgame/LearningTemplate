@@ -2,13 +2,13 @@
 
 #include "Engine/Object/Prefab/PrefabAsset.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Diagnostics/CacheStats.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetLoadProfiler.h"
@@ -88,7 +88,7 @@ namespace sw
             static constexpr const utf8* kNestedOverrides   = "overrides";
             static constexpr const utf8* kNestedList        = "_listPrefabInstance";
             static constexpr const utf8* kVariantOverrides  = "overrides"; ///< JSON 변형의 다른 점(글 하나 — 중첩 노드의 `overrides` 와 같다)
-            static constexpr uint32      kBinMagic          = FourCcUtil::make( "PFB2" );
+            static constexpr uint32      kBinMagic          = FourCCUtil::make( "PFB2" );
             /**
              * @brief 버전 1 부터 상태 뒤에 중첩 인스턴스 노드가 붙고, 2 부터 노드에 부품 경로(`_partPath`)가 붙고, 3 에서 노드의 GUID 칸을 지웠다(경로 하나로 가리킨다).
              *        다른 버전은 읽지 않는다(쿠킹본은 다시 쿠킹한다).

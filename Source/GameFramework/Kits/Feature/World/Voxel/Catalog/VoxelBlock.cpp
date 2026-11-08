@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
@@ -105,7 +105,7 @@ namespace sw
         return pBlock != nullptr && pBlock->_bOpaque != SW_FALSE;
     }
 
-    void VoxelBlockCatalog::computeTileUv( int32 tile, float2& outMin, float2& outMax ) const
+    void VoxelBlockCatalog::computeTileUV( int32 tile, float2& outMin, float2& outMax ) const
     {
         const int32   tileCount = _atlasColumns * _atlasRows;
         const int32   safeTile  = ( tile >= 0 && tile < tileCount ) ? tile : 0;

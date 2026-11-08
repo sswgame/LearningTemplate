@@ -56,14 +56,14 @@ SW_TEST_CASE( ModelImportSectionsTest, TexturedMultiMaterialGltfSplitsIntoSectio
 
     ModelImportResult result;
     SW_REQUIRE_TRUE( ModelImporter::readModelAsset( sourcePath, ModelImportRule{}, result ) );
-    SW_REQUIRE_EQUAL( size_t{ 2 }, result._listPbrMaterial.size() );
-    SW_EXPECT_EQUAL( string( "wood" ), result._listPbrMaterial[0]._name );
-    SW_EXPECT_EQUAL( string( "wood_albedo" ), result._listPbrMaterial[0]._albedo._fileStem );
-    SW_EXPECT_TRUE( result._listPbrMaterial[0]._bAlphaCutoff == SW_TRUE ); // alphaMode MASK — 잎 · 꽃이 네모로 그려지지 않는다
-    SW_EXPECT_NEAR( 0.3f, result._listPbrMaterial[0]._alphaCutoff, 1e-6f );
-    SW_EXPECT_TRUE( result._listPbrMaterial[0]._bTwoSided == SW_TRUE );
-    SW_EXPECT_TRUE( result._listPbrMaterial[1]._bAlphaCutoff == SW_FALSE );
-    SW_EXPECT_NEAR( 0.5f, result._listPbrMaterial[1]._baseColor._x, 1e-6f );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, result._listPBRMaterial.size() );
+    SW_EXPECT_EQUAL( string( "wood" ), result._listPBRMaterial[0]._name );
+    SW_EXPECT_EQUAL( string( "wood_albedo" ), result._listPBRMaterial[0]._albedo._fileStem );
+    SW_EXPECT_TRUE( result._listPBRMaterial[0]._bAlphaCutoff == SW_TRUE ); // alphaMode MASK — 잎 · 꽃이 네모로 그려지지 않는다
+    SW_EXPECT_NEAR( 0.3f, result._listPBRMaterial[0]._alphaCutoff, 1e-6f );
+    SW_EXPECT_TRUE( result._listPBRMaterial[0]._bTwoSided == SW_TRUE );
+    SW_EXPECT_TRUE( result._listPBRMaterial[1]._bAlphaCutoff == SW_FALSE );
+    SW_EXPECT_NEAR( 0.5f, result._listPBRMaterial[1]._baseColor._x, 1e-6f );
     SW_EXPECT_TRUE( result._pbrMaterial._bPresent == SW_FALSE ); // 구간 없는 메시의 머티리얼은 쓰지 않는다
     SW_REQUIRE_EQUAL( size_t{ 2 }, result._listSection.size() );
     SW_EXPECT_EQUAL( string( "wood" ), result._listSection[0]._fileStem );
@@ -86,7 +86,7 @@ SW_TEST_CASE( ModelImportSectionsTest, UntexturedMultiMaterialGltfStaysOneMesh )
 
     ModelImportResult result;
     SW_REQUIRE_TRUE( ModelImporter::readModelAsset( sourcePath, ModelImportRule{}, result ) );
-    SW_EXPECT_TRUE( result._listPbrMaterial.empty() );
+    SW_EXPECT_TRUE( result._listPBRMaterial.empty() );
     SW_EXPECT_TRUE( result._listSection.empty() );
     SW_EXPECT_TRUE( result._mesh._listSection.empty() );
     SW_EXPECT_EQUAL( size_t{ 6 }, result._mesh._listVertex.size() );

@@ -3,7 +3,7 @@
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.h"
 
 #include "Core/Foundation/BuildInfo.h"
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringBuilder.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"

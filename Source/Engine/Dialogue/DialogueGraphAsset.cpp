@@ -2,9 +2,9 @@
 
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"

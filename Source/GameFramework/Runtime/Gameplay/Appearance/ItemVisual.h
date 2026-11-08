@@ -7,7 +7,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -30,7 +30,7 @@ namespace sw
     };
 
     /**
-     * @brief 메시 구간 하나의 머티리얼입니다(`<Section name material>`). `_name` 은 메시의 구간 이름이다 — 임포터가 머티리얼마다 나눈 구간(`ModelImportMaterial::readSectionPbrMaterials`).
+     * @brief 메시 구간 하나의 머티리얼입니다(`<Section name material>`). `_name` 은 메시의 구간 이름이다 — 임포터가 머티리얼마다 나눈 구간(`ModelImportMaterial::readSectionPBRMaterials`).
      * @details 언리얼 Material Slot(슬롯 이름으로 덮기) · 유니티 `Renderer.materials`(서브메시 번호)의 자리다. 번호가 아니라 이름으로 짚어 메시를 다시 임포트해 구간 순서가 바뀌어도 데이터가 그대로 맞다.
      */
     REFLECT()
@@ -124,7 +124,7 @@ namespace sw
         vector<AppearancePartVariantDef> _listMaterialVariant{}; ///< 머티리얼 변형(위장, 사막)
         /**
          * @brief 스킨드 부품의 메시 구간마다 머티리얼입니다(`<Section name material>` — `_name` 은 구간 이름). 적으면 이 구간들만 그린다.
-         * @details 머티리얼이 여럿인 모델(몸 · 머리카락 · 눈)을 임포터가 구간으로 나눈 메시다(`ModelImportMaterial::readSectionPbrMaterials`). 주 메시가 첫 구간을,
+         * @details 머티리얼이 여럿인 모델(몸 · 머리카락 · 눈)을 임포터가 구간으로 나눈 메시다(`ModelImportMaterial::readSectionPBRMaterials`). 주 메시가 첫 구간을,
          *          `MeshSectionComponent` 가 나머지를 그린다(임포터의 구간 프리팹과 같은 모양). 부품의 `material` 과 함께 쓸 수 없다(어느 구간의 것인지 모른다).
          *          변형(`<Variant>` · `<MaterialVariant>` 의 `<Section>`)과 규칙(`<SwapMaterial section>`)이 구간 이름으로 머티리얼을 바꾸고, 머티리얼 값(`section`)이 구간 하나에만 걸린다.
          */

@@ -2,11 +2,11 @@
 
 #include "GameFramework/Runtime/Character/Navigation/GridPathfinder.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 
 namespace sw
 {

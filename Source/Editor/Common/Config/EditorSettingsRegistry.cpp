@@ -6,7 +6,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 
-#include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Config/EditorUserFile.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -306,7 +306,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void EditorConfig::saveToPreferences()
+    void EditorAppearanceConfig::saveToPreferences()
     {
         (void)EditorPreferencesStore::saveOpened(); // 실패는 saveAll 이 경고로 알린다
     }

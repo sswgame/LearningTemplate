@@ -9,9 +9,9 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -33,7 +33,7 @@ namespace sw
     class VelmoraCampaign
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "VLCP" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "VLCP" );
         static constexpr uint32 kStateVersion = 1;
 
         static constexpr const utf8* kRewardGold  = "gold";  ///< 퀘스트 보상 값 이름 — 지갑의 기본 통화

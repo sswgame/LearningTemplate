@@ -2,12 +2,12 @@
 
 #include "Editor/Panels/Settings/GlobalVariablesPanel.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorGlobalVariableCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"

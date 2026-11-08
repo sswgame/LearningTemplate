@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/Catalog/Model/CatalogCurve.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 

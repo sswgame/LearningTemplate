@@ -2,8 +2,8 @@
 
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Time/MonotonicClock.h"
 

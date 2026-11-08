@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Commands/Scene/EditorTransformCommands.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/AABB.h"

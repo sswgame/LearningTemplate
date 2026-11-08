@@ -3,9 +3,9 @@
  * @brief `DebugHUDSectionWriter::addLineFormat` 의 정의입니다. 서식 줄을 쓰는 섹션 .cpp 만 include 합니다.
  */
 #pragma once
-#include "Core/Container/formatString.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
 

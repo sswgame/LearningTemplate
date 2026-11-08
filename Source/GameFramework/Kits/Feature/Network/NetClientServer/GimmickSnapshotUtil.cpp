@@ -2,10 +2,10 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/GimmickSnapshotUtil.h"
 
-#include "Core/Container/LittleEndianUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 
 #include "Engine/Serialization/Fixed/FixedLayout.h"
 

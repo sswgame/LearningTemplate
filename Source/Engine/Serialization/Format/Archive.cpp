@@ -3,8 +3,6 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "Core/Compression/CompressionStream.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VarIntUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -12,6 +10,8 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Serialization/ByteStream.h"
+#include "Core/Serialization/VarIntUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Reflection/ReflectionTypes.h"

@@ -2,7 +2,7 @@
 
 #include "Engine/UI/Input/UIActionGlyphSource.h"
 
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"

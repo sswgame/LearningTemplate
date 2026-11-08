@@ -17,9 +17,9 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -33,7 +33,7 @@ namespace sw
      */
     struct SW_API LayerWeightsAsset
     {
-        static constexpr uint32      kMagic     = FourCcUtil::make( "SWLW" );
+        static constexpr uint32      kMagic     = FourCCUtil::make( "SWLW" );
         static constexpr string_view kExtension = ".layerweights";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

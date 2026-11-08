@@ -3,8 +3,8 @@
  * @brief 전투 게임이 흔히 쓰는 어트리뷰트 세트와 그 규칙입니다. 체력, 마나, 공격력, 방어, 이동 속도가 들어 있습니다.
  */
 #pragma once
-#include "Core/String/TagID.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/TagID.h"
+#include "Core/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"

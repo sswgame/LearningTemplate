@@ -396,7 +396,7 @@ namespace sw
         return isHoleCell( MathUtil::min( static_cast<uint32>( sampleX ), _resolution - 2 ), MathUtil::min( static_cast<uint32>( sampleZ ), _resolution - 2 ) );
     }
 
-    SurfaceLayerWeights TerrainHeightfield::computeLayerWeightsAtUv( float32 terrainU, float32 terrainV ) const
+    SurfaceLayerWeights TerrainHeightfield::computeLayerWeightsAtUV( float32 terrainU, float32 terrainV ) const
     {
         if ( _splatWidth == 0 || _splatHeight == 0 )
             return SurfaceLayerWeights{};
@@ -427,7 +427,7 @@ namespace sw
     {
         if ( isValid() == false )
             return SurfaceLayerWeights{};
-        return computeLayerWeightsAtUv( ( worldX - _origin._x ) / _size._x, ( worldZ - _origin._z ) / _size._y );
+        return computeLayerWeightsAtUV( ( worldX - _origin._x ) / _size._x, ( worldZ - _origin._z ) / _size._y );
     }
 } // namespace sw
 

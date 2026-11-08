@@ -2,11 +2,11 @@
 
 #include "GameFramework/Runtime/Online/Service/OnlineServiceClient.h"
 
-#include "Core/Container/LittleEndianUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 
 #include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 

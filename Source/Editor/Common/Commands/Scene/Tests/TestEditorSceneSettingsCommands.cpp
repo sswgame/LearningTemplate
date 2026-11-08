@@ -29,7 +29,7 @@ namespace
 /**
  * @brief [EditorSceneSettingsCommandsTest] 단계에 담은 XML 을 다시 읽으면 같은 설정이다 — 데이터 레이어의 처음 상태까지
  */
-SW_TEST_CASE( EditorSceneSettingsCommandsTest, SettingsXmlRoundTrips )
+SW_TEST_CASE( EditorSceneSettingsCommandsTest, SettingsXMLRoundTrips )
 {
     using Commands = sw::editor::EditorSceneSettingsCommands;
     using Internal = EditorSceneSettingsCommandsTestInternal;
@@ -38,16 +38,16 @@ SW_TEST_CASE( EditorSceneSettingsCommandsTest, SettingsXmlRoundTrips )
     sw::SceneSettings settings{};
     settings._listDataLayer.push_back( Internal::makeLayer( "Winter", true ) );
     settings._listDataLayer.push_back( Internal::makeLayer( "Night", false ) );
-    const sw::string xml = Commands::writeSettingsXml( settings );
+    const sw::string xml = Commands::writeSettingsXML( settings );
 
-    SW_REQUIRE_TRUE( Commands::restoreSettingsXml( scene, xml ) );
+    SW_REQUIRE_TRUE( Commands::restoreSettingsXML( scene, xml ) );
     const sw::SceneDataLayerDef* pWinter = scene.getSceneSettings().findDataLayer( "Winter" );
     const sw::SceneDataLayerDef* pNight  = scene.getSceneSettings().findDataLayer( "Night" );
     SW_REQUIRE_NOT_NULL( pWinter );
     SW_REQUIRE_NOT_NULL( pNight );
     SW_EXPECT_TRUE( pWinter->_bInitiallyActive );
     SW_EXPECT_FALSE( pNight->_bInitiallyActive );
-    SW_EXPECT_TRUE( Commands::writeSettingsXml( scene.getSceneSettings() ) == xml );
+    SW_EXPECT_TRUE( Commands::writeSettingsXML( scene.getSceneSettings() ) == xml );
 }
 
 /**

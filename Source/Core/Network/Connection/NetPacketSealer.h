@@ -20,23 +20,23 @@
 namespace sw
 {
     class BitWriter;
-    class INetAead;
+    class INetAEAD;
     class INetSecurityProvider;
 
     /**
      * @brief 연결 하나의 암호 상태입니다. 암호화 방식일 때만 만듭니다.
-     * @details 소멸시키는 번역 단위는 `INetSecurityProvider.h`(`INetAead` 정의)를 include 해야 한다.
+     * @details 소멸시키는 번역 단위는 `INetSecurityProvider.h`(`INetAEAD` 정의)를 include 해야 한다.
      */
     struct NetSlotSecurity
     {
         NetX25519KeyPair     _keyPair{};      ///< 이쪽의 일회용 키. 클라이언트는 키를 만든 뒤 지우고, 서버는 수락을 다시 보낼 때 쓰도록 공개 키만 남긴다.
         NetSessionKeys       _keys{};         ///< 방향별 키와 IV.
-        unique_ptr<INetAead> _sendAead{};     ///< 보내는 방향 키로 초기화한 AEAD.
-        unique_ptr<INetAead> _receiveAead{};  ///< 받는 방향 키로 초기화한 AEAD.
+        unique_ptr<INetAEAD> _sendAEAD{};     ///< 보내는 방향 키로 초기화한 AEAD.
+        unique_ptr<INetAEAD> _receiveAEAD{};  ///< 받는 방향 키로 초기화한 AEAD.
         NetReplayWindow      _replayWindow{}; ///< 받은 패킷 번호의 재전송 방지 윈도우.
         uint64               _sendPacketNumber{ 0 };
         uint64               _principalID{ 0 };                                      ///< 서버 전용. 인증기가 지정한 주체.
-        uint8                _arrKeyConfirmTag[NetSecurityConstant::kAeadTagSize]{}; ///< 서버 전용. 수락을 다시 보낼 때 같은 태그를 쓰기 위해 보관한다.
+        uint8                _arrKeyConfirmTag[NetSecurityConstant::kAEADTagSize]{}; ///< 서버 전용. 수락을 다시 보낼 때 같은 태그를 쓰기 위해 보관한다.
         uint8                _bKeysReady{ SW_FALSE };
     };
 } // namespace sw
@@ -86,10 +86,10 @@ namespace sw
          * @brief 서버 쪽 키를 만듭니다. 일회용 키 쌍을 만들고 공유 비밀, 세션 키(@p pSecret 이 있으면 그것이 솔트), 방향별 AEAD 를 만든 뒤 개인 키를 지웁니다.
          * @return 하나라도 실패하면 false 입니다(작은 차수 공개 키 같은 경우).
          */
-        [[nodiscard]] static bool deriveServerKeys( INetSecurityProvider& provider, NetAeadAlgorithm algorithm, const uint8* pClientPublicKey, const NetSessionSecret* pSecret,
+        [[nodiscard]] static bool deriveServerKeys( INetSecurityProvider& provider, NetAEADAlgorithm algorithm, const uint8* pClientPublicKey, const NetSessionSecret* pSecret,
                                                     uint64 clientSalt, uint64 serverSalt, uint32 protocolID, NetSlotSecurity& outSecurity );
         /** @brief 클라이언트 쪽 키를 만듭니다. 이미 만든 일회용 키와 서버 공개 키로 공유 비밀, 세션 키, 방향별 AEAD 를 만듭니다. 개인 키는 지우지 않습니다. */
-        [[nodiscard]] static bool deriveClientKeys( INetSecurityProvider& provider, NetAeadAlgorithm algorithm, const uint8* pServerPublicKey, const NetSessionSecret* pSecret,
+        [[nodiscard]] static bool deriveClientKeys( INetSecurityProvider& provider, NetAEADAlgorithm algorithm, const uint8* pServerPublicKey, const NetSessionSecret* pSecret,
                                                     uint64 clientSalt, uint64 serverSalt, uint32 protocolID, NetSlotSecurity& inoutSecurity );
 
         /** @brief 서버가 키 확인 태그(서버에서 클라이언트로 가는 키로 빈 데이터를 봉인한 값)를 `_arrKeyConfirmTag` 에 만듭니다. */
@@ -101,10 +101,10 @@ namespace sw
          * @brief 토큰 결속의 증명 태그를 @p pOutTag 에 만듭니다. 세션 비밀로 유도한 키로 빈 데이터를 봉인한 태그이고,
          *        AAD가 두 솔트, 클라이언트 공개 키, 토큰이라 다른 응답에 옮겨 붙일 수 없습니다. 실패하면 @p pOutTag 를 건드리지 않습니다.
          */
-        [[nodiscard]] static bool computeProofTag( INetSecurityProvider& provider, NetAeadAlgorithm algorithm, const NetSessionSecret& secret, uint64 clientSalt, uint64 serverSalt,
+        [[nodiscard]] static bool computeProofTag( INetSecurityProvider& provider, NetAEADAlgorithm algorithm, const NetSessionSecret& secret, uint64 clientSalt, uint64 serverSalt,
                                                    const uint8* pPublicKey, const uint8* pToken, int32 tokenSize, uint8* pOutTag );
         /** @brief 증명 태그를 검사합니다. */
-        static bool isProofTagValid( INetSecurityProvider& provider, NetAeadAlgorithm algorithm, const NetSessionSecret& secret, uint64 clientSalt, uint64 serverSalt,
+        static bool isProofTagValid( INetSecurityProvider& provider, NetAEADAlgorithm algorithm, const NetSessionSecret& secret, uint64 clientSalt, uint64 serverSalt,
                                      const uint8* pPublicKey, const uint8* pToken, int32 tokenSize, const uint8* pTag );
 
     private:

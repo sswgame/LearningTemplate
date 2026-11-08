@@ -15,13 +15,13 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
@@ -32,7 +32,7 @@
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Match/MatchPhase.h"
 
 namespace sw
@@ -168,7 +168,7 @@ namespace sw
         friend class KartProjectileQuery;
 
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "KRAC" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "KRAC" );
         static constexpr uint32 kStateVersion = 2;
 
         KartRace();

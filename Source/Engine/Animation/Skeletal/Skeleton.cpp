@@ -2,7 +2,7 @@
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"

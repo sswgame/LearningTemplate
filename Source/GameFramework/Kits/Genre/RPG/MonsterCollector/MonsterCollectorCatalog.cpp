@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterCollectorCatalog.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
@@ -12,7 +12,7 @@
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 #include <algorithm>
 

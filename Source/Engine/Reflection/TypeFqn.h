@@ -5,9 +5,9 @@
  *          (Linux clang 의 2단계 이름 찾기, Windows 는 같은 규칙을 컴파일러 플래그로 지킨다).
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Macros.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectionConstants.h"
 

@@ -2,9 +2,8 @@
 
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Spatial/PolygonTriangulation.h"
 #include "Core/Testing/TestFramework.h"
-
-#include "Engine/Destruction/Fracture/PolygonTriangulation.h"
 
 using namespace sw;
 

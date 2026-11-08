@@ -4,13 +4,13 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/SlotHandle.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/PackedTypes.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -271,7 +271,6 @@ namespace sw
                 static const array<hashed_string, kBuiltinTypeCount> s_arrName{ {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, ... ) hashed_string( #Canon ),
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
                 } };
@@ -441,7 +440,6 @@ namespace sw
       &readIntegerAs<ReflectBuiltinCppTypeT<CppType>>, &writeNumberAs<ReflectBuiltinCppTypeT<CppType>>,                                          \
       getReflectBuiltinClass<ReflectBuiltinCppTypeT<CppType>>() },
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
             };

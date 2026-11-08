@@ -15,8 +15,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
-#include "Engine/Rendering/ReflectionProbeComponent.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Visual/Component/ReflectionProbeComponent.h"
 
 namespace sw
 {

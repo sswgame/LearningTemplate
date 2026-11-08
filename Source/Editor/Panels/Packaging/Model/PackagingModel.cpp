@@ -2,12 +2,11 @@
 
 #include "Editor/Panels/Packaging/Model/PackagingModel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Task/EditorExternalToolJob.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -116,7 +115,7 @@ namespace sw::editor
     ProcessCommand PackagingModel::makeCommand() const
     {
         const string    projectRoot  = ProcessRoots::get()._project.str();
-        ProcessCommand  command      = EditorUtil::makePythonScriptCommand( FileUtil::joinPath( projectRoot, kScriptRelativePath ) );
+        ProcessCommand  command      = EditorExternalToolJob::makePythonScriptCommand( FileUtil::joinPath( projectRoot, kScriptRelativePath ) );
         vector<string>& listArgument = command._listArgument;
         listArgument.insert( listArgument.end(), { "--target", kArrTarget[_targetIndex] } );
         if ( _gameIndex < _listGame.size() )

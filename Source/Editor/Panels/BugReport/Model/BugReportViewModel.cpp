@@ -2,11 +2,13 @@
 
 #include "Editor/Panels/BugReport/Model/BugReportViewModel.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
+
+#include "DevTools/Client/Capture/BugReport.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -14,7 +16,6 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Localization/LocText.h"
-#include "Engine/Renderer/Capture/BugReport.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include <algorithm>

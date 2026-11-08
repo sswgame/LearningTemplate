@@ -235,7 +235,7 @@ namespace sw
             }
 
             /** @brief D3D11 리플렉션 타입 묶음입니다. SM5.0 에는 레지스터 공간이 없어 늘 0 입니다. */
-            struct D3D11ReflectionApi
+            struct D3D11ReflectionAPI
             {
                 using Reflection     = ID3D11ShaderReflection;
                 using ShaderDesc     = D3D11_SHADER_DESC;
@@ -257,7 +257,7 @@ namespace sw
             };
 
             /** @brief D3D12(DXIL) 리플렉션 타입 묶음입니다. */
-            struct D3D12ReflectionApi
+            struct D3D12ReflectionAPI
             {
                 using Reflection     = ID3D12ShaderReflection;
                 using ShaderDesc     = D3D12_SHADER_DESC;
@@ -346,7 +346,7 @@ namespace sw
                     return ShaderReflectionData{};
                 }
 
-                ShaderReflectionData data = fillFromReflection<D3D11ReflectionApi>( reflection.Get() );
+                ShaderReflectionData data = fillFromReflection<D3D11ReflectionAPI>( reflection.Get() );
                 SW_LOG_TRACE_ID( "ShaderReflection.ConstantBuffersBoundResources", "ConstantBuffers: %# BoundResources: %#",
                                  data._listConstantBuffer.size(), data._listResource.size() );
                 return data;
@@ -381,7 +381,7 @@ namespace sw
                 HRESULT                                        hr = utils->CreateReflection( &buffer, IID_PPV_ARGS( reflection12.GetAddressOf() ) );
                 if ( SUCCEEDED( hr ) && reflection12 != nullptr )
                 {
-                    data = fillFromReflection<D3D12ReflectionApi>( reflection12.Get() );
+                    data = fillFromReflection<D3D12ReflectionAPI>( reflection12.Get() );
                     SW_LOG_TRACE_ID( "ShaderReflection.ConstantBuffersBoundResources", "ConstantBuffers: %# BoundResources: %#",
                                      data._listConstantBuffer.size(), data._listResource.size() );
                 }
@@ -392,7 +392,7 @@ namespace sw
                     hr = utils->CreateReflection( &buffer, IID_PPV_ARGS( reflection11.GetAddressOf() ) );
                     if ( SUCCEEDED( hr ) && reflection11 != nullptr )
                     {
-                        data = fillFromReflection<D3D11ReflectionApi>( reflection11.Get() );
+                        data = fillFromReflection<D3D11ReflectionAPI>( reflection11.Get() );
                         SW_LOG_TRACE_ID( "ShaderReflection.ConstantBuffersBoundResources", "ConstantBuffers: %# BoundResources: %#",
                                          data._listConstantBuffer.size(), data._listResource.size() );
                     }

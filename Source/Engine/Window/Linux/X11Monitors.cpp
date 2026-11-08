@@ -19,7 +19,7 @@ namespace sw
     namespace
     {
         /** @brief 올려 쓰는 libXrandr 함수들입니다. `decltype` 은 호출하지 않으므로 링크가 필요 없다. */
-        struct X11RandrApi
+        struct X11RandrAPI
         {
             bool                                      _bLoaded{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             decltype( &XRRQueryExtension )            _pfnQueryExtension{ nullptr };
@@ -54,9 +54,9 @@ namespace sw
             /**
              * @brief 라이브러리를 프로세스에 한 번 올립니다. 내리지 않는다 - libXrandr 은 연결마다 닫기 훅(`XESetCloseDisplay`)을 걸어 먼저 내리면 `XCloseDisplay` 가 없는 코드로 뛴다.
              */
-            static X11RandrApi loadApi()
+            static X11RandrAPI loadAPI()
             {
-                X11RandrApi api;
+                X11RandrAPI api;
                 void* const pLibrary = ModuleLibraryUtil::loadSystemLibrary( "libXrandr.so.2" );
                 if ( pLibrary == nullptr )
                     return api;
@@ -69,9 +69,9 @@ namespace sw
                 return api;
             }
 
-            static const X11RandrApi& getApi()
+            static const X11RandrAPI& getAPI()
             {
-                static const X11RandrApi s_api = loadApi();
+                static const X11RandrAPI s_api = loadAPI();
                 return s_api;
             }
 
@@ -125,7 +125,7 @@ namespace sw
             }
 
             /** @brief 모니터의 첫 출력이 내는 해상도를 적습니다. 지금 크기는 모드에 없어도(가상 출력 · `--scale`) 늘 선택지다. */
-            static void readResolutions( Display* pDisplay, const X11RandrApi& api, XRRScreenResources* pResources, const vector<WindowMonitorMode>& listMode, const XRRMonitorInfo& source, WindowMonitor& outMonitor )
+            static void readResolutions( Display* pDisplay, const X11RandrAPI& api, XRRScreenResources* pResources, const vector<WindowMonitorMode>& listMode, const XRRMonitorInfo& source, WindowMonitor& outMonitor )
             {
                 outMonitor._listResolution.push_back( outMonitor._area._size );
                 if ( pResources == nullptr || source.noutput <= 0 )
@@ -133,10 +133,10 @@ namespace sw
                 XRROutputInfo* const pOutput = api._pfnGetOutputInfo( pDisplay, pResources, source.outputs[0] );
                 if ( pOutput == nullptr )
                     return;
-                vector<uint64> listModeId;
+                vector<uint64> listModeID;
                 for ( int32 index = 0; index < pOutput->nmode; ++index )
                 {
-                    listModeId.push_back( static_cast<uint64>( pOutput->modes[index] ) );
+                    listModeID.push_back( static_cast<uint64>( pOutput->modes[index] ) );
                 }
                 bool bSwapAxes = false;
                 if ( pOutput->crtc != 0 )
@@ -149,7 +149,7 @@ namespace sw
                     }
                 }
                 api._pfnFreeOutputInfo( pOutput );
-                outMonitor.appendModeResolutions( listMode, listModeId, bSwapAxes );
+                outMonitor.appendModeResolutions( listMode, listModeID, bSwapAxes );
             }
         };
     } // namespace
@@ -175,7 +175,7 @@ namespace sw
         _workAreaAtom            = XInternAtom( pXDisplay, "_NET_WORKAREA", 0 );
         _bRandrAvailable         = SW_FALSE;
 
-        const X11RandrApi& api = Internal::getApi();
+        const X11RandrAPI& api = Internal::getAPI();
         if ( api._bLoaded == false )
         {
             SW_LOG_INFO_ID( "X11Monitors.NoRandrLibrary", "libXrandr.so.2 is not available - the X screen is the only monitor" );
@@ -204,7 +204,7 @@ namespace sw
         // 뿌리 창의 속성 알림은 이 연결의 것이다 - 다른 프로그램의 선택과 겹치지 않는다. 창 관리자가 패널을 옮기면 `_NET_WORKAREA` 가 바뀐다.
         XSelectInput( pXDisplay, static_cast<Window>( _root ), PropertyChangeMask );
         if ( _bRandrAvailable )
-            X11MonitorsInternal::getApi()._pfnSelectInput( pXDisplay, static_cast<Window>( _root ), RRScreenChangeNotifyMask | RRCrtcChangeNotifyMask | RROutputChangeNotifyMask );
+            X11MonitorsInternal::getAPI()._pfnSelectInput( pXDisplay, static_cast<Window>( _root ), RRScreenChangeNotifyMask | RRCrtcChangeNotifyMask | RROutputChangeNotifyMask );
     }
 
     void X11Monitors::shutdown()
@@ -221,7 +221,7 @@ namespace sw
         const bool bRandrEvent = _bRandrAvailable && ( event.type == _randrEventBase + RRScreenChangeNotify || event.type == _randrEventBase + RRNotify );
         if ( bRandrEvent )
         {
-            X11MonitorsInternal::getApi()._pfnUpdateConfiguration( &event ); // Xlib 이 든 screen 크기(`DisplayWidth`)도 맞춘다
+            X11MonitorsInternal::getAPI()._pfnUpdateConfiguration( &event ); // Xlib 이 든 screen 크기(`DisplayWidth`)도 맞춘다
             outbChanged = true;
             return true;
         }
@@ -242,7 +242,7 @@ namespace sw
 
         if ( _bRandrAvailable )
         {
-            const X11RandrApi&        api          = Internal::getApi();
+            const X11RandrAPI&        api          = Internal::getAPI();
             int32                     monitorCount = 0;
             XRRMonitorInfo* const     pMonitors    = api._pfnGetMonitors( pXDisplay, root, 1, &monitorCount ); // 1 == True(활성 모니터만). X11MacroUndef.h 가 True 매크로를 지운다.
             XRRScreenResources* const pResources   = api._pfnGetScreenResourcesCurrent( pXDisplay, root );

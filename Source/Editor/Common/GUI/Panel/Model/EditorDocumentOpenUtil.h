@@ -3,7 +3,7 @@
  * @brief 문서 패널이 어떤 문서를 열지 정합니다 — "Open..." 후보 · 최근 목록 · 포커스 교체 판정(ImGui 없음).
  */
 #pragma once
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"

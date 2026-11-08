@@ -17,8 +17,7 @@
 
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
@@ -27,6 +26,7 @@
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Content/AssetPaths.h"

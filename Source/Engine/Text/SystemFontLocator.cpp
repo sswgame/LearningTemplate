@@ -2,9 +2,9 @@
 
 #include "Engine/Text/SystemFontLocator.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"

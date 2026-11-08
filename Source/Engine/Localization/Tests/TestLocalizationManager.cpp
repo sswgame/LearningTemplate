@@ -2,9 +2,9 @@
 // 프로젝트는 케이스 폴더에 쓰고 `ScopedScratchDomain` 이 붙인 도메인의 id 로 올린다.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/Tests/ScopedScratchDomain.h"

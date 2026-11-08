@@ -3,8 +3,8 @@
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
@@ -13,8 +13,8 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Physics/Component/PhysicsNameValidation.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
+#include "Engine/Physics/Scene/PhysicsNameValidation.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Scene/SceneManager.h"
 

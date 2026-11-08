@@ -2,11 +2,11 @@
 
 #include "Editor/Panels/Mesh/MeshPreviewPanel.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -22,7 +22,7 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include <imgui.h>
 

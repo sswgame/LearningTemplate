@@ -2,8 +2,7 @@
 
 #include "Editor/Common/Localization/LocalizationTools.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
@@ -11,6 +10,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/MarkupToken.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Localization/PortableObjectFile.h"

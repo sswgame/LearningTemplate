@@ -4,7 +4,7 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
-    #include "Core/Container/StringUtil.h"
+    #include "Core/String/StringUtil.h"
 
 namespace sw
 {

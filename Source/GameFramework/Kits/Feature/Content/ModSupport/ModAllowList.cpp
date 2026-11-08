@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModAllowList.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 

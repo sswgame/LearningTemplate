@@ -2,9 +2,9 @@
 
 #include "Engine/Serialization/XML/XMLFields.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"

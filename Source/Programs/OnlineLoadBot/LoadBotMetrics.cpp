@@ -2,10 +2,10 @@
 
 #include "Programs/OnlineLoadBot/LoadBotMetrics.h"
 
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 

@@ -1,0 +1,411 @@
+#include "pch.h"
+
+#include "Engine/Animation/Notify/AnimationNotifyComponent.h"
+
+#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
+#include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Component/SpriteAnimatorComponent.h"
+#include "Engine/Character/CharacterDataCache.h"
+#include "Engine/Character/Hit/CharacterHit.h"
+#include "Engine/Character/Socket/SocketSetComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
+#include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+
+namespace sw
+{
+    AnimationNotifyListenerBinding::AnimationNotifyListenerBinding( AnimationNotifyComponent& owner )
+        : _owner{ owner }
+    {
+    }
+
+    void AnimationNotifyListenerBinding::onAnimationNotifiesFired( const AnimationNotifyFrame& frame )
+    {
+        if ( frame._bFromTick == SW_TRUE )
+            _owner.deferFrame( frame );
+        else
+            _owner.processFrame( frame );
+    }
+
+    AnimationNotifyComponent::AnimationNotifyComponent()
+        : _notifyTablePath{}
+        , _binding{ *this }
+        , _table{}
+        , _listActiveState{}
+        , _listAction{}
+        , _listPendingFired{}
+        , _listPendingActive{}
+        , _listFootContact{}
+        , _pFootContactTable{ nullptr }
+        , _animator{}
+        , _pendingDeltaSeconds{ 0.0f }
+        , _tableReload{}
+        , _boneRequirement{}
+        , _bPendingFrame{ SW_FALSE }
+        , _bPendingRestarted{ SW_FALSE }
+    {
+        // 애니메이터가 호출한다. 자기 틱은 없다.
+        setCanEverTick( false );
+    }
+
+    AnimationNotifyComponent::~AnimationNotifyComponent()
+    {
+        unbindFromAnimator();
+    }
+
+    void AnimationNotifyComponent::onBeginPlay()
+    {
+        Component::onBeginPlay();
+        loadNotifyTable();
+        bindToAnimator();
+    }
+
+    void AnimationNotifyComponent::onEndPlay()
+    {
+        closeAllStates();
+        unbindFromAnimator();
+        Component::onEndPlay();
+    }
+
+    void AnimationNotifyComponent::onPropertyChanged( hashed_string propertyName )
+    {
+        Component::onPropertyChanged( propertyName );
+        static const hashed_string s_pathName( "_notifyTablePath" );
+        if ( propertyName == s_pathName )
+            loadNotifyTable();
+    }
+
+    void AnimationNotifyComponent::setNotifyTablePath( string_view path )
+    {
+        _notifyTablePath = path;
+        loadNotifyTable();
+    }
+
+    void AnimationNotifyComponent::setNotifyTable( shared_ptr<const AnimationNotifyTable> table )
+    {
+        closeAllStates();
+        _table = std::move( table );
+        requireFootBones();
+    }
+
+    void AnimationNotifyComponent::requireFootBones()
+    {
+        _boneRequirement.reset();
+        SkeletalMeshComponent* pUnit = getOwner() != nullptr ? getOwner()->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( pUnit == nullptr || _table == nullptr )
+            return;
+        vector<hashed_string> listBone;
+        for ( const AnimationFootContactDef& def : _table->getFootContacts() )
+        {
+            listBone.push_back( def._bone ); // 소켓 이름이면 스켈레톤에 없어 건너뛴다 — 그 소켓의 부모 본은 소켓 세트가 지킨다
+        }
+        _boneRequirement = pUnit->requireBones( std::move( listBone ) );
+    }
+
+    void AnimationNotifyComponent::loadNotifyTable()
+    {
+        // 경로가 비면 코드가 넣은 표(`setNotifyTable`)를 그대로 둔다.
+        _tableReload.markSeen();
+        if ( _notifyTablePath.empty() )
+            return;
+        closeAllStates();
+        _table = SharedAssetCache<AnimationNotifyTable>::acquire( _notifyTablePath );
+        if ( _table == nullptr )
+            SW_LOG_ERROR_ID( "AnimationNotify.NotifyTableCouldNot", "'%#': notify table '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _notifyTablePath.c_str() );
+        requireFootBones();
+    }
+
+    void AnimationNotifyComponent::bindToAnimator()
+    {
+        GameObject*                pOwner    = getOwner();
+        SkeletalAnimatorComponent* pAnimator = pOwner != nullptr ? pOwner->getComponent<SkeletalAnimatorComponent>() : nullptr;
+        if ( pAnimator != nullptr )
+        {
+            pAnimator->setNotifyListener( &_binding );
+            _animator = pAnimator->getHandle();
+            return;
+        }
+        SpriteAnimatorComponent* pSprite = pOwner != nullptr ? pOwner->getComponent<SpriteAnimatorComponent>() : nullptr;
+        if ( pSprite != nullptr )
+        {
+            pSprite->setNotifyListener( &_binding );
+            _animator = pSprite->getHandle();
+            return;
+        }
+        SW_LOG_WARNING_ID( "AnimationNotify.AnimationNotifyNoAnimator", "'%#': animation notify has no animator on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+    }
+
+    void AnimationNotifyComponent::unbindFromAnimator()
+    {
+        const GameObject*  pOwner            = getOwner();
+        GameObjectManager* pManager          = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        Component*         pTarget           = ( pManager != nullptr && _animator.isValid() ) ? pManager->resolveComponent( _animator ) : nullptr;
+        _animator                            = ComponentHandle{};
+        SkeletalAnimatorComponent* pSkeletal = castTo<SkeletalAnimatorComponent>( pTarget );
+        if ( pSkeletal != nullptr && pSkeletal->getNotifyListener() == &_binding )
+            pSkeletal->setNotifyListener( nullptr );
+        SpriteAnimatorComponent* pSprite = castTo<SpriteAnimatorComponent>( pTarget );
+        if ( pSprite != nullptr && pSprite->getNotifyListener() == &_binding )
+            pSprite->setNotifyListener( nullptr );
+    }
+
+    const AnimationNotifyEntry* AnimationNotifyComponent::findEntry( const hashed_string& notify ) const
+    {
+        return _table != nullptr ? _table->findEntry( notify ) : nullptr;
+    }
+
+    void AnimationNotifyComponent::deferFrame( const AnimationNotifyFrame& frame )
+    {
+        // 워커(스프라이트 틱)에서는 복사해 두고 틱 뒤 게임 스레드에서 처리한다. 같은 오브젝트의 틱은 한 워커가 돌므로 이 슬롯을 다른 워커가 만지지 않는다.
+        _listPendingFired.assign( frame._listFired.begin(), frame._listFired.end() );
+        _listPendingActive.assign( frame._listActivePlayable.begin(), frame._listActivePlayable.end() );
+        _pendingDeltaSeconds        = frame._deltaSeconds;
+        _bPendingRestarted          = ( _bPendingRestarted == SW_TRUE || frame._bRestarted == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+        const bool bScheduled       = _bPendingFrame == SW_TRUE;
+        _bPendingFrame              = SW_TRUE;
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr || bScheduled )
+            return;
+        pManager->executeOrDeferPostTickOnComponent( *this, []( AnimationNotifyComponent& component )
+        { component.processPendingFrame(); } );
+    }
+
+    void AnimationNotifyComponent::processPendingFrame()
+    {
+        if ( _bPendingFrame == SW_FALSE )
+            return;
+        _bPendingFrame = SW_FALSE;
+        AnimationNotifyFrame frame{};
+        frame._listFired          = vector_reference<const AnimationFiredNotify>{ _listPendingFired.data(), _listPendingFired.size() };
+        frame._listActivePlayable = vector_reference<const IAnimationPlayable* const>{ _listPendingActive.data(), _listPendingActive.size() };
+        frame._deltaSeconds       = _pendingDeltaSeconds;
+        frame._bRestarted         = _bPendingRestarted;
+        _bPendingRestarted        = SW_FALSE;
+        processFrame( frame );
+    }
+
+    void AnimationNotifyComponent::callHandler( const AnimationNotifyEntry& entry, const AnimationFiredNotify& fired, AnimationNotifyStateData* pState, AnimationNotifyPhase phase, bool bTick,
+                                                float32 deltaSeconds )
+    {
+        GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr || entry._pHandler == nullptr )
+            return;
+        AnimationNotifyContext context{ *this, *pOwner, entry, fired, pState, deltaSeconds };
+        if ( bTick )
+        {
+            entry._pHandler->onNotifyTick( context );
+            return;
+        }
+        switch ( phase )
+        {
+            case AnimationNotifyPhase::Instant:
+            {
+                entry._pHandler->onNotify( context );
+                break;
+            }
+            case AnimationNotifyPhase::Begin:
+            {
+                entry._pHandler->onNotifyBegin( context );
+                break;
+            }
+            case AnimationNotifyPhase::End:
+            {
+                entry._pHandler->onNotifyEnd( context );
+                break;
+            }
+        }
+    }
+
+    void AnimationNotifyComponent::endState( size_t stateIndex, const AnimationFiredNotify* pEndFired, float32 deltaSeconds )
+    {
+        // 처리기가 컴포넌트를 바꿀 수 있으므로 꺼내 놓고 부른다.
+        ActiveState state = std::move( _listActiveState[stateIndex] );
+        _listActiveState.erase( _listActiveState.begin() + static_cast<ptrdiff_t>( stateIndex ) );
+        AnimationFiredNotify fired = pEndFired != nullptr ? *pEndFired : state._fired;
+        fired._phase               = AnimationNotifyPhase::End;
+        callHandler( state._entry, fired, &state._data, AnimationNotifyPhase::End, false, deltaSeconds );
+    }
+
+    void AnimationNotifyComponent::closeAllStates()
+    {
+        while ( _listActiveState.empty() == false )
+        {
+            endState( _listActiveState.size() - 1, nullptr, 0.0f );
+        }
+    }
+
+    bool AnimationNotifyComponent::processExternalNotify( const AnimationFiredNotify& fired )
+    {
+        SW_ASSERT( fired._phase == AnimationNotifyPhase::Instant );
+        const AnimationNotifyEntry* pEntry = findEntry( fired._name );
+        if ( pEntry == nullptr || pEntry->_pHandler == nullptr )
+            return false;
+        callHandler( *pEntry, fired, nullptr, AnimationNotifyPhase::Instant, false, 0.0f );
+        return true;
+    }
+
+    void AnimationNotifyComponent::processFrame( const AnimationNotifyFrame& frame )
+    {
+        _listAction.clear();
+        // 테이블 파일을 고쳤으면 열린 구간을 이전 항목(복사해 둔 것)으로 닫고 새 테이블로 이어 간다.
+        if ( _notifyTablePath.empty() == false && _tableReload.isStale() )
+            loadNotifyTable();
+
+        // 0) 재생할 것이 바뀌었다(스프라이트가 같은 객체를 다른 구간으로 재생한다). 이전 구간의 열린 알림은 모두 끊긴 것이다.
+        if ( frame._bRestarted == SW_TRUE )
+            closeAllStates();
+        // 1) 클립이 재생에서 빠진 구간은 끊긴 것이다. 끝을 대신 낸다.
+        for ( size_t stateIndex = _listActiveState.size(); stateIndex > 0; --stateIndex )
+        {
+            const ActiveState& state   = _listActiveState[stateIndex - 1];
+            bool               bActive = false;
+            for ( const IAnimationPlayable* pPlayable : frame._listActivePlayable )
+            {
+                bActive = bActive || pPlayable == state._pSource;
+            }
+            if ( bActive == false )
+                endState( stateIndex - 1, nullptr, frame._deltaSeconds );
+        }
+
+        // 2) 지난 프레임부터 열린 구간의 틱이다. 이번 프레임의 움직임(칼 궤적)을 끝보다 먼저 측정한다.
+        for ( size_t stateIndex = 0; stateIndex < _listActiveState.size(); ++stateIndex )
+        {
+            ActiveState& state = _listActiveState[stateIndex];
+            state._data._elapsed += frame._deltaSeconds;
+            callHandler( state._entry, state._fired, &state._data, AnimationNotifyPhase::Begin, true, frame._deltaSeconds );
+        }
+
+        // 3) 이번 프레임의 알림을 시각 순서로.
+        for ( const AnimationFiredNotify& fired : frame._listFired )
+        {
+            const AnimationNotifyEntry* pEntry = findEntry( fired._name );
+            if ( pEntry == nullptr || pEntry->_pHandler == nullptr )
+                continue;
+            // 발 닿음 감지가 내는 알림이면 클립의 같은 이름 알림은 처리하지 않는다(한 걸음에 소리가 두 번 나지 않게, 출처는 하나).
+            if ( _table->isFootContactNotify( fired._name ) )
+                continue;
+            const bool bState = pEntry->_pHandler->supportsState();
+            if ( fired._phase == AnimationNotifyPhase::End )
+            {
+                for ( size_t stateIndex = 0; stateIndex < _listActiveState.size(); ++stateIndex )
+                {
+                    const ActiveState& state = _listActiveState[stateIndex];
+                    if ( state._pSource == fired._pSource && state._eventIndex == fired._eventIndex )
+                    {
+                        endState( stateIndex, &fired, frame._deltaSeconds );
+                        break;
+                    }
+                }
+                continue;
+            }
+            if ( bState == false || fired._phase == AnimationNotifyPhase::Instant )
+            {
+                // 길이 없는 알림이거나, 구간을 받지 않는 처리기에 온 구간 알림의 시작이다. 한 번 호출한다.
+                callHandler( *pEntry, fired, nullptr, AnimationNotifyPhase::Instant, false, frame._deltaSeconds );
+                continue;
+            }
+            // 같은 구간이 이미 열려 있으면(끝을 못 보고 다시 시작한 경우, 즉 시각이 점프한 경우) 먼저 닫는다.
+            for ( size_t stateIndex = 0; stateIndex < _listActiveState.size(); ++stateIndex )
+            {
+                if ( _listActiveState[stateIndex]._pSource == fired._pSource && _listActiveState[stateIndex]._eventIndex == fired._eventIndex )
+                {
+                    endState( stateIndex, nullptr, frame._deltaSeconds );
+                    break;
+                }
+            }
+            ActiveState state{};
+            state._entry      = *pEntry;
+            state._fired      = fired;
+            state._pSource    = fired._pSource;
+            state._eventIndex = fired._eventIndex;
+            _listActiveState.push_back( std::move( state ) );
+            ActiveState& opened = _listActiveState.back();
+            callHandler( opened._entry, opened._fired, &opened._data, AnimationNotifyPhase::Begin, false, frame._deltaSeconds );
+        }
+
+        // 4) 발 닿음 — 클립 알림이 아니라 지금 포즈의 발 높이에서 낸다.
+        processFootContacts( frame._deltaSeconds );
+    }
+
+    void AnimationNotifyComponent::processFootContacts( float32 deltaSeconds )
+    {
+        const bool bNoFootContact = _table == nullptr || _table->getFootContacts().empty() || is2D();
+        if ( bNoFootContact )
+            return;
+        const vector<AnimationFootContactDef>& listDef = _table->getFootContacts();
+        if ( _pFootContactTable != _table.get() || _listFootContact.size() != listDef.size() )
+        {
+            _listFootContact.assign( listDef.size(), AnimationFootContactTracker{} );
+            _pFootContactTable = _table.get();
+        }
+        // 발 높이는 모델 공간(오브젝트 루트 기준)이다. 빈 이름은 계약상 오브젝트 루트 변환을 준다(그래서 false 를 버린다).
+        float4x4 rootWorld;
+        (void)findSocketWorldTransform( hashed_string{}, rootWorld ); // 빈 이름은 오브젝트 루트 변환을 준다(위 설명)
+        const float4x4 modelFromWorld = rootWorld.invert();
+        for ( size_t footIndex = 0; footIndex < listDef.size(); ++footIndex )
+        {
+            const AnimationFootContactDef& def     = listDef[footIndex];
+            AnimationFootContactTracker&   tracker = _listFootContact[footIndex];
+            float4x4                       boneWorld;
+            if ( findSocketWorldTransform( def._bone, boneWorld ) == false )
+            {
+                if ( tracker.isMissingBoneReported() == false )
+                    SW_LOG_ERROR_ID( "AnimationNotify.FootContactBoneNot", "'%#': foot contact bone '%#' was not found", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", def._bone.c_str() );
+                tracker.setMissingBoneReported();
+                continue;
+            }
+            const float32 footHeight = float3::transform( boneWorld.getTranslation(), modelFromWorld )._y;
+            if ( tracker.update( def, footHeight, deltaSeconds ) == false )
+                continue;
+            const AnimationNotifyEntry* pEntry = findEntry( def._notify ); // 테이블이 읽을 때 이름을 맞췄다
+            if ( pEntry == nullptr )
+                continue;
+            AnimationFiredNotify fired{};
+            fired._name  = def._notify;
+            fired._phase = AnimationNotifyPhase::Instant;
+            callHandler( *pEntry, fired, nullptr, AnimationNotifyPhase::Instant, false, deltaSeconds );
+        }
+    }
+
+    bool AnimationNotifyComponent::is2D() const
+    {
+        const GameObject* pOwner = getOwner();
+        return pOwner != nullptr && pOwner->getComponent<SkeletalMeshComponent>() == nullptr;
+    }
+
+    bool AnimationNotifyComponent::findSocketWorldTransform( const hashed_string& socketName, float4x4& outWorldTransform ) const
+    {
+        const GameObject* pOwner = getOwner();
+        if ( pOwner == nullptr )
+            return false;
+        if ( SocketSetComponent::findSocketWorldTransform( *pOwner, socketName, outWorldTransform ) )
+            return true;
+        const SceneComponent* pRoot = pOwner->getPrimarySceneComponent();
+        outWorldTransform           = pRoot != nullptr ? pRoot->getWorldMatrix() : float4x4::Identity;
+        return false;
+    }
+
+    float3 AnimationNotifyComponent::findSocketWorldPosition( const hashed_string& socketName ) const
+    {
+        float4x4 world;
+        (void)findSocketWorldTransform( socketName, world ); // 빈 이름은 오브젝트 루트 변환을 준다(위 설명)
+        return world.getTranslation();
+    }
+
+    bool AnimationNotifyComponent::castFromTo( const float3& from, const float3& to, float32 radius, uint32 layerMask, CharacterRayHit& outHit ) const
+    {
+        GameObject*        pOwner   = getOwner();
+        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pManager == nullptr )
+            return false;
+        const float3  delta    = to - from;
+        const float32 distance = delta.getLength();
+        if ( distance <= 1.0e-5f )
+            return false;
+        const uint64 ignoreID = pOwner->getObjectID();
+        if ( is2D() )
+            return CharacterRayHit::circleCast2D( *pManager, from, delta, distance, radius, layerMask, ignoreID, outHit );
+        return CharacterRayHit::sphereCast3D( *pManager, from, delta, distance, radius, layerMask, ignoreID, outHit );
+    }
+} // namespace sw

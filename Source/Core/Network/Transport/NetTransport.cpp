@@ -2,8 +2,8 @@
 
 #include "Core/Network/Transport/NetTransport.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <chrono>

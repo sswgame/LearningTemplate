@@ -19,9 +19,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/RenderThread.h"
-#include "Engine/Rendering/DirectionalLightComponent.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Visual/Component/DirectionalLightComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include <imgui.h>
 

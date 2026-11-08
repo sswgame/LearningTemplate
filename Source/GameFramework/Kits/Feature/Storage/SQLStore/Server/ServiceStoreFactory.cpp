@@ -8,9 +8,9 @@
  */
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Time/TimePoint.h"
 

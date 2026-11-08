@@ -2,10 +2,10 @@
 
 #include "Engine/TileMap/TileSetAsset.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetIO.h"
@@ -390,7 +390,7 @@ namespace sw
         return true;
     }
 
-    float4 TileSetAsset::computeCellUvRect( const TileSetContent& content, int32 cell )
+    float4 TileSetAsset::computeCellUVRect( const TileSetContent& content, int32 cell )
     {
         const int32   column = ( content._columnCount > 0 ) ? cell % content._columnCount : 0;
         const int32   row    = ( content._columnCount > 0 ) ? cell / content._columnCount : 0;

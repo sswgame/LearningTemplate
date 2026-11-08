@@ -14,7 +14,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
-#include "Editor/Common/Commands/Scene/EditorBakeRunState.h"
+#include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 #include "Editor/Common/Commands/Scene/LightProbeBakeInput.h"
 #include "Editor/Common/EditorSubsystem.h"
 

@@ -2,9 +2,9 @@
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/LogOnce.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"
 #include "Editor/Common/Workspace/EditorService.h"

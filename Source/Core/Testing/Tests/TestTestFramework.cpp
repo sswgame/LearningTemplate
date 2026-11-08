@@ -3,9 +3,9 @@
 // 거르개 · 몫 · 스냅숏 · 로그 선언 · 픽스처 · 매개변수 케이스는 `TestTestRunner.cpp` 가 본다.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/StandardOutput.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestRunner.h"

@@ -12,7 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
@@ -30,7 +30,7 @@
 #include "GameFramework/Runtime/Character/Navigation/GridPathfinder.h"
 #include "GameFramework/Runtime/Character/Navigation/NavAgent.h"
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
 
 namespace sw

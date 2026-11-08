@@ -2,7 +2,7 @@
 
 #include "Engine/Animation/Sprite/SpriteLibrary.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"

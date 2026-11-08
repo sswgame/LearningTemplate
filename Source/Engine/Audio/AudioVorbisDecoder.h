@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Audio/AudioPcm.h"
+#include "Engine/Audio/AudioPCM.h"
 
 namespace sw
 {
@@ -15,7 +15,7 @@ namespace sw
 
     class IAudioStreamDecoder;
 
-    /** @brief OGG Vorbis 를 PCM 으로 풀거나 순차로 읽는 디코더를 엽니다. 확장자로 고르는 일은 `AudioPcm::decode` 가 한다. */
+    /** @brief OGG Vorbis 를 PCM 으로 풀거나 순차로 읽는 디코더를 엽니다. 확장자로 고르는 일은 `AudioPCM::decode` 가 한다. */
     struct SW_API AudioVorbisDecoder
     {
         /**
@@ -24,6 +24,6 @@ namespace sw
          */
         static unique_ptr<IAudioStreamDecoder> openStream( const uint8* pBytes, size_t byteCount, AudioStreamInfo& outInfo );
         /** @brief OGG Vorbis 를 16 비트 정수 PCM 으로 풉니다(stb_vorbis). 3 채널 이상은 WAV 채널 순서로 옮기고 `_channelMask` 를 적습니다(PCM 의 약속). */
-        [[nodiscard]] static bool decode( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm );
+        [[nodiscard]] static bool decode( const uint8* pBytes, size_t byteCount, AudioPCM& outPCM );
     };
 } // namespace sw

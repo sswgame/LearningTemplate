@@ -2,9 +2,9 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphModel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/Format/XMLSerializer.h"
 

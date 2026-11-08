@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Runtime/LiveOpsClient.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 

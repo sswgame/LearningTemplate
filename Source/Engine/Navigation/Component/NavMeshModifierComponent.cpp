@@ -2,8 +2,8 @@
 
 #include "Engine/Navigation/Component/NavMeshModifierComponent.h"
 
-#include "Engine/Navigation/Component/NavAreaNameValidation.h"
-#include "Engine/Navigation/Component/SceneNavigation.h"
+#include "Engine/Navigation/Scene/NavAreaNameValidation.h"
+#include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionValidation.h"

@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Online/Ledger/LedgerItemInstance.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"

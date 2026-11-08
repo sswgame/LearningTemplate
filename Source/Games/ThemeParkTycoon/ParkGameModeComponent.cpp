@@ -2,8 +2,9 @@
 
 #include "Games/ThemeParkTycoon/ParkGameModeComponent.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
+#include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -16,14 +17,13 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 #include "Games/ThemeParkTycoon/CoasterCarComponent.h"
 #include "Games/ThemeParkTycoon/FlatRideComponent.h"
@@ -35,7 +35,7 @@ namespace sw
     {
         struct ParkGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "PARK" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "PARK" );
             static constexpr uint32 kStateVersion = 2;
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 themepark.audioevents.xml 이 정한다.

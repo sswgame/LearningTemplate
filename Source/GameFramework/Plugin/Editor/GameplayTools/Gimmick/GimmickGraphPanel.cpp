@@ -2,12 +2,12 @@
 
 #include "GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"

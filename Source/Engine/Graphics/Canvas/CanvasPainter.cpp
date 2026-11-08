@@ -2,8 +2,8 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Text/FontService.h"

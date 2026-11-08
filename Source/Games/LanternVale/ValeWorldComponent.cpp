@@ -2,10 +2,10 @@
 
 #include "Games/LanternVale/ValeWorldComponent.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/UserDataPath.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"

@@ -8,7 +8,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 

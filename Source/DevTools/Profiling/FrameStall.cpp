@@ -2,8 +2,9 @@
 
 #include "DevTools/Profiling/FrameStall.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/Concurrency/atomic.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "DevTools/DevToolsHost.h"

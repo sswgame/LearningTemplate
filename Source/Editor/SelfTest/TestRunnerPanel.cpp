@@ -7,6 +7,8 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Testing/TestRunner.h"
 
+#include "DevTools/Client/Capture/BugReport.h"
+
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Task/EditorExternalToolJob.h"
@@ -21,7 +23,6 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Renderer/Capture/BugReport.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 
 #include <imgui.h>

@@ -2,11 +2,11 @@
 
 #include "Editor/Common/Input/QuickLauncherPopup.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"

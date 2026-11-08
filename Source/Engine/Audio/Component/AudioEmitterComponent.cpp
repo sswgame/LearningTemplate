@@ -3,7 +3,7 @@
 #include "Engine/Audio/Component/AudioEmitterComponent.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/Component/SceneAudio.h"
+#include "Engine/Audio/Scene/SceneAudio.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 

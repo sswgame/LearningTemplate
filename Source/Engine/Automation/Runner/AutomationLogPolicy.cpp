@@ -2,8 +2,8 @@
 
 #include "Engine/Automation/Runner/AutomationLogPolicy.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Runner/AutomationRunnerParams.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"

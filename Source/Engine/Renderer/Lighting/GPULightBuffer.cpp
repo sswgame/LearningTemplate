@@ -12,12 +12,12 @@
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
-#include "Engine/Rendering/DirectionalLightComponent.h"
-#include "Engine/Rendering/LightProbeVolumeComponent.h"
-#include "Engine/Rendering/PointLightComponent.h"
-#include "Engine/Rendering/ReflectionProbeComponent.h"
-#include "Engine/Rendering/SpotLightComponent.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Visual/Component/DirectionalLightComponent.h"
+#include "Engine/Visual/Component/LightProbeVolumeComponent.h"
+#include "Engine/Visual/Component/PointLightComponent.h"
+#include "Engine/Visual/Component/ReflectionProbeComponent.h"
+#include "Engine/Visual/Component/SpotLightComponent.h"
 
 namespace sw
 {

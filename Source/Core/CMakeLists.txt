@@ -146,12 +146,14 @@ target_include_directories(Core_low_objects BEFORE PRIVATE "${swCoreLowStubRoot}
 # 벡터 거리 · 길이(`float3::getDistance` 등)는 파괴 · 파쇄가 쓰는 줄 밖 함수다 — 구성마다 같은 비트여야 한다(`sw_markDeterministicSources`).
 # 여기서 축약을 끄는 비용은 이 함수들의 FMA 하나씩이다(인라인이 아니라 호출 비용이 이미 더 크다). Math 는 낮은 티어라 낮은 쪽에 건다.
 # 결정적 삼각함수(`DeterministicMathUtil`)는 롤백 시뮬레이션이 libm 대신 부르는 줄 밖 함수라 같은 표시를 건다.
-foreach(swDeterministicSource IN ITEMS Math/VectorMath.cpp Math/DeterministicMathUtil.cpp)
+# 파쇄 다각형 삼각 분할(`Spatial/PolygonTriangulation` — Engine 파괴에서 옮겨 왔다)도 파괴 사건 해시가 구성마다 같아야 해 같은 표시를 건다.
+# 광선 ↔ 도형 판정 · 방향 판정(`Math/Ray` · `Math/OrientationUtil` — GameFramework RayMath 에서 옮겨 왔다)은 결정적 시뮬레이션 키트(MechArena)가 부르는 줄 밖 실수 함수라 같은 표시를 건다.
+foreach(swDeterministicSource IN ITEMS Math/VectorMath.cpp Math/DeterministicMathUtil.cpp Math/Ray.cpp Math/OrientationUtil.cpp Spatial/PolygonTriangulation.cpp)
 	if(NOT "${CMAKE_CURRENT_SOURCE_DIR}/${swDeterministicSource}" IN_LIST listCoreLowSource)
 		message(FATAL_ERROR "[Core] ${swDeterministicSource} 가 낮은 티어 소스에 없다 — 결정성 표시(sw_markDeterministicSources)가 걸릴 타깃을 다시 정한다")
 	endif()
 endforeach()
-sw_markDeterministicSources(Core_low_objects Math/VectorMath.cpp Math/DeterministicMathUtil.cpp)
+sw_markDeterministicSources(Core_low_objects Math/VectorMath.cpp Math/DeterministicMathUtil.cpp Math/Ray.cpp Math/OrientationUtil.cpp Spatial/PolygonTriangulation.cpp)
 
 # ------------------------------------------------------------------------------
 # 4) Core STATIC — 파서가 링크하는 껍데기. Engine 은 OBJECT 들을 직접 가져간다

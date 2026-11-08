@@ -2,7 +2,7 @@
 
 #include "Core/Diagnostics/DeadlockDetector.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/String/StringBuilder.h"
 

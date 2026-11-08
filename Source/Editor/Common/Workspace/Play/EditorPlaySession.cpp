@@ -3,7 +3,7 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Core/Log/Logger.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"

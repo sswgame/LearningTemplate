@@ -2,12 +2,12 @@
 // TLV · 문자열 풀 · 압축 · JSON/XML 임베딩 · 세이브 · 씬 문서 케이스는 손으로 만든 TypeInfo · GameFramework 타입 · 옛 임시 리소스 id 에 기대 아직 옮기지 않았다.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VarIntUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Serialization/VarIntUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -262,8 +262,8 @@ SW_TEST_CASE( ArchiveTest, ArchiveChecksumAndCorruptionDetection )
 
     // 2) 바이트 변조 시뮬레이션
     buffer[4] ^= 0xFF; // 페이로드 내부 1바이트 반전
-    const uint32 tamperedCrc = sw::HashUtil::computeCRC32( buffer.data(), buffer.size() - sizeof( uint32 ) );
-    SW_EXPECT_TRUE( crc != tamperedCrc );
+    const uint32 tamperedCRC = sw::HashUtil::computeCRC32( buffer.data(), buffer.size() - sizeof( uint32 ) );
+    SW_EXPECT_TRUE( crc != tamperedCRC );
 }
 
 /**

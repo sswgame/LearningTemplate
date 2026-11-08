@@ -2,9 +2,9 @@
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -60,7 +60,7 @@ namespace sw
              */
             static constexpr size_t kWeldKeyBytes = SW_OFFSET_OF( RHIVertex, _arrColor );
             static_assert( SW_OFFSET_OF( RHIVertex, _arrPosition ) == 0 && SW_OFFSET_OF( RHIVertex, _arrNormal ) == sizeof( float32 ) * 3 &&
-                               SW_OFFSET_OF( RHIVertex, _arrUv ) == sizeof( float32 ) * 6 && kWeldKeyBytes == sizeof( float32 ) * 8,
+                               SW_OFFSET_OF( RHIVertex, _arrUV ) == sizeof( float32 ) * 6 && kWeldKeyBytes == sizeof( float32 ) * 8,
                            "탄젠트 묶기 키는 RHIVertex 앞쪽의 위치 · 노멀 · UV 다 — 멤버 순서를 바꾸면 키를 다시 정한다" );
 
             static bool isSameWeldKey( const RHIVertex& lhs, const RHIVertex& rhs ) { return Memory::compare( &lhs, &rhs, kWeldKeyBytes ) == 0; }
@@ -191,8 +191,8 @@ namespace sw
             vertex._arrNormal[0]   = source._normal._x;
             vertex._arrNormal[1]   = source._normal._y;
             vertex._arrNormal[2]   = source._normal._z;
-            vertex._arrUv[0]       = source._uv._x;
-            vertex._arrUv[1]       = source._uv._y;
+            vertex._arrUV[0]       = source._uv._x;
+            vertex._arrUV[1]       = source._uv._y;
             vertex._arrColor[0]    = source._color._x;
             vertex._arrColor[1]    = source._color._y;
             vertex._arrColor[2]    = source._color._z;
@@ -422,19 +422,19 @@ namespace sw
             if ( arrCorner[0] >= vertexCount || arrCorner[1] >= vertexCount || arrCorner[2] >= vertexCount )
                 continue; // 범위 밖 번호는 `setGeometry` 가 거절한다 — 여기서는 읽지 않기만 한다
             float3 arrPosition[3];
-            float2 arrUv[3];
+            float2 arrUV[3];
             for ( uint32 corner = 0; corner < 3; ++corner )
             {
                 const RHIVertex& vertex = inoutListVertex[arrCorner[corner]];
                 arrPosition[corner]     = float3{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2] };
-                arrUv[corner]           = float2{ vertex._arrUv[0], vertex._arrUv[1] };
+                arrUV[corner]           = float2{ vertex._arrUV[0], vertex._arrUV[1] };
             }
             const float3  edge1       = arrPosition[1] - arrPosition[0];
             const float3  edge2       = arrPosition[2] - arrPosition[0];
-            const float32 du1         = arrUv[1]._x - arrUv[0]._x;
-            const float32 dv1         = arrUv[1]._y - arrUv[0]._y;
-            const float32 du2         = arrUv[2]._x - arrUv[0]._x;
-            const float32 dv2         = arrUv[2]._y - arrUv[0]._y;
+            const float32 du1         = arrUV[1]._x - arrUV[0]._x;
+            const float32 dv1         = arrUV[1]._y - arrUV[0]._y;
+            const float32 du2         = arrUV[2]._x - arrUV[0]._x;
+            const float32 dv2         = arrUV[2]._y - arrUV[0]._y;
             const float32 determinant = du1 * dv2 - du2 * dv1;
             if ( determinant == 0.0f )
                 continue; // UV 가 퇴화한 면은 방향을 주지 않는다

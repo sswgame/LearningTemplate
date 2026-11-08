@@ -8,12 +8,12 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Task/TaskManager.h"
 

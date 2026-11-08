@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/InputMap/Model/InputMapConflict.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Input/Map/InputMap.h"
 

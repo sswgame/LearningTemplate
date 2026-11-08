@@ -5,7 +5,6 @@
  *          (컴포넌트는 "Add Component" 메뉴에 오르고, 이 층(1)은 컴포넌트 모델(5)을 include 하지 못한다).
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/array.h"
 #include "Core/Container/map.h"
 #include "Core/Container/set.h"
@@ -17,6 +16,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/EngineMinimal.h"
 #include "Engine/Reflection/ReflectedAny.h"

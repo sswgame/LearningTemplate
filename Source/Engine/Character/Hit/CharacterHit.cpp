@@ -2,8 +2,8 @@
 
 #include "Engine/Character/Hit/CharacterHit.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Console/DevCommandRegistry.h"
@@ -13,8 +13,8 @@
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw

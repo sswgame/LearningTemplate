@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -10,7 +10,7 @@
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterCollectorCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterInstance.h"
 #include "GameFramework/Runtime/Character/Combat/Damage/ElementChart.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 #include <algorithm>
 

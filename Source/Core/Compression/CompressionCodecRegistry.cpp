@@ -6,8 +6,7 @@
 
 #include "Core/Compression/CompressionCodecRegistry.h"
 
-#include "Core/Compression/NullCompressionCodec.h"
-#include "Core/Compression/RleCompressionCodec.h"
+#include "Core/Compression/BuiltinCompressionCodecs.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Log/Logger.h"
 
@@ -139,7 +138,7 @@ namespace sw
     void CompressionCodecRegistry::registerBuiltinCodecs()
     {
         _mapCodec[CompressionCodecType::None] = make_unique<NullCompressionCodec>();
-        _mapCodec[CompressionCodecType::RLE]  = make_unique<RleCompressionCodec>();
+        _mapCodec[CompressionCodecType::RLE]  = make_unique<RLECompressionCodec>();
     }
 
 } // namespace sw

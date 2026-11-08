@@ -5,13 +5,14 @@
  */
 #include "pch.h"
 
+#include "DevTools/Client/Capture/BugReport.h"
+
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 
 #include "Engine/Localization/LocText.h"
-#include "Engine/Renderer/Capture/BugReport.h"
 
 namespace sw::editor
 {

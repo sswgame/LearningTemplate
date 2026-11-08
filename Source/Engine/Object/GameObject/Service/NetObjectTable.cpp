@@ -2,7 +2,7 @@
 
 #include "Engine/Object/GameObject/Service/NetObjectTable.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 
 #include "Engine/Object/GameObject/GameObject.h"

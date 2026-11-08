@@ -2,8 +2,8 @@
 
 #include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorComponentIconTable.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"

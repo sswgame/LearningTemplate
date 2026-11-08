@@ -15,12 +15,12 @@ namespace sw::editor
     namespace
     {
         /** @brief `Platform_SetImeDataFn` 입니다. 사용자 값은 `Platform_ImeUserData` 의 다리입니다. */
-        void onSetImeData( ImGuiContext* pContext, ImGuiViewport* pViewport, ImGuiPlatformImeData* pData )
+        void onSetIMEData( ImGuiContext* pContext, ImGuiViewport* pViewport, ImGuiPlatformImeData* pData )
         {
             (void)pContext;
             ImGuiTextInputBridge* const pBridge = static_cast<ImGuiTextInputBridge*>( ImGui::GetPlatformIO().Platform_ImeUserData );
             if ( pBridge != nullptr && pViewport != nullptr && pData != nullptr )
-                pBridge->onImeData( *pViewport, *pData );
+                pBridge->onIMEData( *pViewport, *pData );
         }
     } // namespace
 
@@ -38,7 +38,7 @@ namespace sw::editor
     {
         _pWindow                       = &window;
         ImGuiPlatformIO& platform      = ImGui::GetPlatformIO();
-        platform.Platform_SetImeDataFn = &onSetImeData;
+        platform.Platform_SetImeDataFn = &onSetIMEData;
         platform.Platform_ImeUserData  = this;
     }
 
@@ -68,7 +68,7 @@ namespace sw::editor
         return true;
     }
 
-    void ImGuiTextInputBridge::onImeData( const ImGuiViewport& viewport, const ImGuiPlatformImeData& data )
+    void ImGuiTextInputBridge::onIMEData( const ImGuiViewport& viewport, const ImGuiPlatformImeData& data )
     {
         _pWindow->requestTextInput( WindowTextInputClient::Editor, data.WantVisible );
         if ( data.WantVisible == false )

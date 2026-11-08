@@ -4,7 +4,7 @@
 
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw
 {

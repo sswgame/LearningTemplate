@@ -15,12 +15,12 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
-#include "Engine/Gameplay/ConditionExpr.h"
+#include "Engine/Behavior/ConditionExpr.h"
 
 namespace sw
 {
@@ -84,7 +84,7 @@ namespace sw
     struct ResourceTagSlot
     {
         using Type                      = const ResourceTagSet;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "RTAG" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "RTAG" );
     };
 
     /** @brief 컴파일한 리소스 조건 하나입니다(`ResourceTags::compileTest`). */

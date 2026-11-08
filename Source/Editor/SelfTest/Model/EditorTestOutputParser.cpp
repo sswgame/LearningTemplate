@@ -3,8 +3,8 @@
 #include "Editor/SelfTest/Model/EditorTestOutputParser.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/ParsedLogLine.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 namespace sw::editor

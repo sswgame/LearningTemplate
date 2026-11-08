@@ -10,8 +10,8 @@
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Network/Connection/NetEndpointSecurity.h"
-#include "Core/String/hashed_string.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"

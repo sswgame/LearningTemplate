@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/AudioMixer/Model/AudioMixerModel.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 

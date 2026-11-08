@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Combat/Dismemberment/DismembermentComponent.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -18,10 +18,10 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
-#include "Engine/Physics/Component/PhysicsNameValidation.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Reflection/ReflectionValidation.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Combat/Dismemberment/Dismemberment.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -58,8 +58,8 @@ namespace sw
                     vertex._arrNormal[0]   = geometry._listNormal[index]._x;
                     vertex._arrNormal[1]   = geometry._listNormal[index]._y;
                     vertex._arrNormal[2]   = geometry._listNormal[index]._z;
-                    vertex._arrUv[0]       = geometry._listUv[index]._x;
-                    vertex._arrUv[1]       = geometry._listUv[index]._y;
+                    vertex._arrUV[0]       = geometry._listUV[index]._x;
+                    vertex._arrUV[1]       = geometry._listUV[index]._y;
                     for ( float32& channel : vertex._arrColor )
                     {
                         channel = 1.0f;

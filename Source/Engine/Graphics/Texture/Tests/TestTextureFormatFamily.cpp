@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Testing/TestFramework.h"
@@ -146,7 +146,7 @@ SW_TEST_CASE( TextureFormatSelectionTest, CookedVariantDDSRoundTrips )
     const string        root = test::makeScratchPath( "TextureVariantDDS" );
     const string        path = FileUtil::joinPath( root, "a.astc.dds" );
     SW_REQUIRE_TRUE( FileUtil::ensureParentDirectoryExists( path ) );
-    SW_REQUIRE_TRUE( ImageFileWriter::writeDDS( path, payload, kWidth, kHeight, 4, DDSFormat::kDxgiASTC4x4Unorm, 32 ) );
+    SW_REQUIRE_TRUE( ImageFileWriter::writeDDS( path, payload, kWidth, kHeight, 4, DDSFormat::kDXGIASTC4x4Unorm, 32 ) );
     vector<uint8> bytes;
     SW_REQUIRE_TRUE( FileUtil::readFile( path, bytes ) );
 
@@ -154,10 +154,10 @@ SW_TEST_CASE( TextureFormatSelectionTest, CookedVariantDDSRoundTrips )
     SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
     SW_EXPECT_EQUAL( 4u, image._mipCount );
     SW_EXPECT_TRUE( image._bCompressed != SW_FALSE );
-    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( image._dxgiFormat ) == RHIFormat::ASTC_4x4_UNORM );
-    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( DDSFormat::kEngineDxgiETC2RGBA8 ) == RHIFormat::ETC2_RGBA8_UNORM );
-    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( DDSFormat::kEngineDxgiEACR11 ) == RHIFormat::EAC_R11_UNORM );
-    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( DDSFormat::kEngineDxgiEACRG11 ) == RHIFormat::EAC_RG11_UNORM );
+    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDXGI( image._dxgiFormat ) == RHIFormat::ASTC_4x4_UNORM );
+    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDXGI( DDSFormat::kEngineDXGIETC2RGBA8 ) == RHIFormat::ETC2_RGBA8_UNORM );
+    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDXGI( DDSFormat::kEngineDXGIEACR11 ) == RHIFormat::EAC_R11_UNORM );
+    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDXGI( DDSFormat::kEngineDXGIEACRG11 ) == RHIFormat::EAC_RG11_UNORM );
     SW_EXPECT_TRUE( FileUtil::removeDirectory( root ) );
 }
 
@@ -166,18 +166,18 @@ SW_TEST_CASE( TextureFormatSelectionTest, CookedVariantDDSRoundTrips )
  */
 SW_TEST_CASE( TextureFormatSelectionTest, ExpandsThreeChannelFloatToFour )
 {
-    constexpr uint32 kDxgiR32G32B32 = 6;
+    constexpr uint32 kDXGIR32G32B32 = 6;
     const float32    arrSource[]    = { 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f };
     DDSImageData     image;
     image._width      = 2;
     image._height     = 1;
-    image._dxgiFormat = kDxgiR32G32B32;
+    image._dxgiFormat = kDXGIR32G32B32;
     image._bytes.resize( sizeof( arrSource ) );
     Memory::copy( image._bytes.data(), arrSource, sizeof( arrSource ) );
 
     DDSImageData expanded;
     SW_REQUIRE_TRUE( Texture2D::expandToFourChannels( image, expanded ) );
-    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( expanded._dxgiFormat ) == RHIFormat::R32G32B32A32_FLOAT );
+    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDXGI( expanded._dxgiFormat ) == RHIFormat::R32G32B32A32_FLOAT );
     SW_REQUIRE_EQUAL( size_t{ 32 }, expanded._bytes.size() );
     float32 arrResult[8]{};
     Memory::copy( arrResult, expanded._bytes.data(), sizeof( arrResult ) );

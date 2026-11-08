@@ -4,7 +4,7 @@
 
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Foundation/X11Headers.h"
-    #include "Core/Container/StringUtil.h"
+    #include "Core/String/StringUtil.h"
     #include "Core/Container/string.h"
     #include "Core/Container/vector.h"
     #include "Core/Time/GameTimer.h"

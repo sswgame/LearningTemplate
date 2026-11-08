@@ -23,6 +23,7 @@
 #include "DevTools/Profiling/FrameProfileSession.h"
 #include "DevTools/Profiling/LeakBaselineDetailSwitch.h"
 #include "DevTools/Profiling/ProfilerLaunchSwitches.h"
+#include "DevTools/Profiling/ProfilerTraceExport.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 #include "DevTools/ServerPose/ServerPoseOverlay.h"
 
@@ -33,6 +34,7 @@
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/DebugKeyActions.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
@@ -163,6 +165,9 @@ namespace sw
 
     EngineFrameExit DevToolsHost::onFrameEnd( const EngineFrameContext& context )
     {
+        // 긴 캡처(`profile.trace record`)의 끝 시각 확인(진행 중이 아니면 atomic 하나) — 루프가 `FrameProfiler` 프레임을 마감한 뒤다. 내보내기는 개발 도구라
+        // 엔진 루프가 이름으로 부르지 않고 이 훅이 부른다(언리얼 Insights 내보내기도 Developer 쪽).
+        ProfilerTraceExport::updateRecording( engine::getSubsystem<FrameProfiler>() );
         // 프레임 프로파일 측정 — 루프가 `FrameProfiler` 프레임을 마감한 뒤다. 목표를 채우면 보고하고 통과 코드로 끝낸다(창 닫힘의 관찰자 코드가 이긴다).
         EngineFrameExit exitCode = kEngineFrameRunning;
         if ( FrameProfileSession* const pProfileSession = engine::findSubsystem<FrameProfileSession>() )

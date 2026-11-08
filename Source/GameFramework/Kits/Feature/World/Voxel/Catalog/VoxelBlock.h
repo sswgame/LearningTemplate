@@ -8,7 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -140,7 +140,7 @@ namespace sw
         /** @brief 이웃 면을 가리는 블록이면 true 입니다. */
         bool isOpaque( VoxelBlockIndex index ) const;
         /** @brief 면의 아틀라스 타일 UV 사각형(왼쪽 위와 오른쪽 아래)입니다. 타일 가장자리에서 반 텍셀 안쪽으로 들여 이웃 타일의 색이 번지지 않게 합니다. */
-        void computeTileUv( int32 tile, float2& outMin, float2& outMax ) const;
+        void computeTileUV( int32 tile, float2& outMin, float2& outMax ) const;
 
         const vector<VoxelBlockDef>& getBlocks() const { return _catalog.getAll(); }
         int32                        getAtlasColumns() const { return _atlasColumns; }

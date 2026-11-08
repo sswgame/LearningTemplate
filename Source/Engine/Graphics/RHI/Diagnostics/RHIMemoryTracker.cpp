@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 

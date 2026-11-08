@@ -2,7 +2,7 @@
 
 #include "Engine/Animation/Facial/LiveLinkFace.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/BitUtil.h"

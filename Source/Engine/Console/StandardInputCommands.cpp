@@ -2,9 +2,9 @@
 
 #include "Engine/Console/StandardInputCommands.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/StandardInputReader.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {

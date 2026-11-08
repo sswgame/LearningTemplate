@@ -16,7 +16,7 @@
  *          칸이 생겨, 게임 모듈이 인스턴스화한 세터가 엔진이 채운 칸을 보지 못합니다.
  */
 #pragma once
-#include "Core/Concurrency/LockedSwapQueue.h"
+#include "Core/Concurrency/Queue/LockedSwapQueue.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"

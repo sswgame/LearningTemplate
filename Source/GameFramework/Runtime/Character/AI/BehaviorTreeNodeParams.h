@@ -9,10 +9,10 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Gameplay/InstancedStruct.h"
+#include "Engine/Reflection/InstancedStruct.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"

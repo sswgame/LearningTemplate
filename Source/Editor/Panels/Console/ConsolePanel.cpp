@@ -2,13 +2,13 @@
 
 #include "Editor/Panels/Console/ConsolePanel.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"

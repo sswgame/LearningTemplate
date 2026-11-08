@@ -2,8 +2,9 @@
 
 #include "Engine/Asset/Cook/AssetCompanion.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/String/RegistrationList.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Registry/RegistrationList.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {

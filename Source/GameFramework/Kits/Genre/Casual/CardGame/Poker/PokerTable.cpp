@@ -2,14 +2,14 @@
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/Poker/PokerTable.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 
 #include <algorithm>
 #include <limits>

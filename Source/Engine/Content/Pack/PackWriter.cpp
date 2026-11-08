@@ -2,9 +2,8 @@
 
 #include "Engine/Content/Pack/PackWriter.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Compression/ICompressionCodec.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
@@ -12,6 +11,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskTypes.h"
 #include "Core/Time/MonotonicClock.h"
 

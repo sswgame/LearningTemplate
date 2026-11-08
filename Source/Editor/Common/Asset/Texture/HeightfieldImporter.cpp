@@ -2,13 +2,13 @@
 
 #include "Editor/Common/Asset/Texture/HeightfieldImporter.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"

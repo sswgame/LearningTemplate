@@ -2,7 +2,7 @@
 
 #include "Games/StarSkirmish/SkirmishUnitComponent.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -12,9 +12,9 @@
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 

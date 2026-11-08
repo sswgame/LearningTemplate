@@ -2,14 +2,14 @@
 
 #include "Games/VoxelCraft/VoxelGameModeComponent.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelTerrain.h"
@@ -27,7 +27,7 @@ namespace sw
     {
         struct VoxelGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "VOXL" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "VOXL" );
             static constexpr uint32 kStateVersion = 1;
 
             static uint32 hashCoord( int32 x, int32 y, int32 z )

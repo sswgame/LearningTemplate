@@ -3,8 +3,8 @@
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
 #include "Core/Container/vector.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/String/HexUtil.h"
 
 namespace sw
 {

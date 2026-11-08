@@ -140,7 +140,7 @@ namespace sw
         /** @brief 월드 (x, z) 의 레이어 가중치(합 1)를 반환합니다. 스플랫이 없거나 지형 밖이면 레이어 0 이 1 입니다. */
         SurfaceLayerWeights computeLayerWeightsAt( float32 worldX, float32 worldZ ) const;
         /** @brief 지형의 정규 좌표 (u, v) ∈ [0, 1]² 의 가중치(합 1)입니다. */
-        SurfaceLayerWeights computeLayerWeightsAtUv( float32 terrainU, float32 terrainV ) const;
+        SurfaceLayerWeights computeLayerWeightsAtUV( float32 terrainU, float32 terrainV ) const;
 
     private:
         /** @brief 월드 (x, z) 를 샘플 공간 연속 좌표로 옮깁니다. 지형 밖이면 false 입니다. */

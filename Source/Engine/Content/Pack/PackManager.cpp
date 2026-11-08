@@ -2,9 +2,8 @@
 
 #include "Engine/Content/Pack/PackManager.h"
 
-#include "Core/Container/CompareUtil.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/ContentFileSource.h"
 #include "Core/File/FileUtil.h"
@@ -13,6 +12,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetIO.h"

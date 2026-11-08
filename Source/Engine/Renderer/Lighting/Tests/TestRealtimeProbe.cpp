@@ -2,7 +2,7 @@
 
 #include "Core/Math/BitUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Environment/Sky/SkyGradient.h"
@@ -16,9 +16,9 @@
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
 #include "Engine/Renderer/Lighting/RealtimeProbeUpdater.h"
 #include "Engine/Renderer/Lighting/SceneVoxelizer.h"
-#include "Engine/Rendering/LightProbeVolumeComponent.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Visual/Component/LightProbeVolumeComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 // SceneVoxelGridTest · SceneVoxelizerTest · RealtimeProbeTest — 실시간 프로브 갱신의 CPU 쪽(결정 기록 5-5 R5 · R6). 디바이스 없음(nogpu).
 //

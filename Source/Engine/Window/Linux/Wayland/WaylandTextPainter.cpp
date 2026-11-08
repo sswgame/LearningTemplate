@@ -2,8 +2,8 @@
 
 #include "Engine/Window/Linux/Wayland/WaylandTextPainter.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Text/IFontRasterizer.h"
 #include "Engine/Text/SystemFontLocator.h"

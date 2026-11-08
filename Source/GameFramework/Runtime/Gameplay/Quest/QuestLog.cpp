@@ -2,11 +2,11 @@
 
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Reflection/EnumName.h"

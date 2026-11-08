@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/AudioEvents/AudioEventBrowserPanel.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"

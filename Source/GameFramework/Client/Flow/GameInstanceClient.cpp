@@ -2,7 +2,7 @@
 
 #include "GameFramework/Client/Flow/GameInstanceClient.h"
 
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/UI/Screen/UIGlobalCommandRegistry.h"

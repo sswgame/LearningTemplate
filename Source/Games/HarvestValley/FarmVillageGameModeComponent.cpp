@@ -2,10 +2,10 @@
 
 #include "Games/HarvestValley/FarmVillageGameModeComponent.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -26,7 +26,7 @@ namespace sw
     {
         struct FarmVillageGameModeComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "FVIL" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "FVIL" );
             static constexpr uint32 kStateVersion = 2; ///< 2 판: 머리 뒤에 `ScheduleSaveState`(리플렉션 바이너리)
 
             /** @brief 시계의 지금 시각을 0 일 0:00 부터 센 분으로 바꿉니다(일정 시스템의 시간 축). */

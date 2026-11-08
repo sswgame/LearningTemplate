@@ -10,7 +10,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
 
 namespace sw
 {

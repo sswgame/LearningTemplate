@@ -2,8 +2,8 @@
 
 #include "Engine/DedicatedServer/ServerFrameHistory.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 namespace sw
 {

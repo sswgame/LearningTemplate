@@ -2,7 +2,7 @@
 
 #include "Engine/Physics/Component/BoxCollider2DComponent.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
@@ -12,8 +12,8 @@
 #include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Collision/SweepHit.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 
 namespace sw
 {

@@ -7,7 +7,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/MemoryBlock.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 namespace sw
 {

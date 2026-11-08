@@ -11,7 +11,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Component/SocketPhysicsBody.h"
+#include "Engine/Physics/Scene/SocketPhysicsBody.h"
 
 using namespace sw;
 

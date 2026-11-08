@@ -61,6 +61,19 @@ namespace sw::editor
         /** @brief 도는 자식이 있으면 끝내고 스레드를 기다립니다. */
         void cancelAndWait();
 
+        /**
+         * @brief 저장소 파이썬 스크립트 @p scriptPath 를 띄우는 명령입니다. 스크립트 인자는 돌려받은 `_listArgument` 뒤에 덧붙인다(예전 EditorUtil).
+         * @details 실행기는 저장소 스크립트가 쓰는 것과 같다(Windows 는 런처 `py -3`, 그 밖은 `python3`).
+         */
+        static ProcessCommand makePythonScriptCommand( string scriptPath )
+        {
+#if defined( SW_PLATFORM_WINDOWS )
+            return ProcessCommand::fromSearchPath( "py", { "-3", std::move( scriptPath ) } );
+#else
+            return ProcessCommand::fromSearchPath( "python3", { std::move( scriptPath ) } );
+#endif
+        }
+
     private:
         static void runJob( shared_ptr<State> pState, shared_ptr<Process> pProcess, uint32 generation );
 

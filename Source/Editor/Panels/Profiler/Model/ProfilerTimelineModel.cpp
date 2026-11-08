@@ -2,10 +2,10 @@
 
 #include "Editor/Panels/Profiler/Model/ProfilerTimelineModel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Panels/Profiler/Model/ProfilerCaptureModel.h"
 

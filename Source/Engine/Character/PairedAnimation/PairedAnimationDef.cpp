@@ -2,9 +2,9 @@
 
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

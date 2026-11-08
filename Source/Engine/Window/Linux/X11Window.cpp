@@ -2,10 +2,10 @@
 
 #include "Engine/Window/Linux/X11Window.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/WindowMonitor.h"

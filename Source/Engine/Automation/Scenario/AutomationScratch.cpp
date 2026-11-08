@@ -2,15 +2,15 @@
 
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Process/Process.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"

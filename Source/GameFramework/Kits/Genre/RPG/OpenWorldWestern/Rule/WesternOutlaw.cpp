@@ -8,11 +8,11 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 namespace sw
 {

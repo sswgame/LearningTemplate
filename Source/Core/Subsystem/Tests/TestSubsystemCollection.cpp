@@ -1,8 +1,8 @@
 // SubsystemCollection — 의존 순서(동점은 이름 순) · 역순 종료(멈춤 패스 먼저) · 실패와 SkipDependents · 소멸 순서 · 그래프 오류 · 호스트 대상 · 의존하는 것만 다시 세우기 · 초기화의 메모리 태그.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemCollection.h"
 #include "Core/Testing/TestFramework.h"
 

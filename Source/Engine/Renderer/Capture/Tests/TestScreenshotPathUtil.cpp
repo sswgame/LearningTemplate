@@ -9,7 +9,7 @@
 /**
  * @brief [ScreenshotPathUtilTest] 기본 경로는 `<작업 폴더>/Saved/Screenshots/<yyyyMMdd-HHmmss>.png`(절대 경로)다 — 자리마다 0 을 채운다
  */
-SW_TEST_CASE( ScreenshotPathUtilTest, DefaultPathIsTimestampPngUnderSaved )
+SW_TEST_CASE( ScreenshotPathUtilTest, DefaultPathIsTimestampPNGUnderSaved )
 {
     sw::ScreenshotLocalTime localTime{};
     localTime._year   = 2026;

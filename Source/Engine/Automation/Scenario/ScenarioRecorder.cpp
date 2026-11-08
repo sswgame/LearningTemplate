@@ -2,10 +2,10 @@
 
 #include "Engine/Automation/Scenario/ScenarioRecorder.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"

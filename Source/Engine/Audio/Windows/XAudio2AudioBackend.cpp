@@ -6,7 +6,7 @@
 #include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Engine/Audio/AudioEngine.h"
-#include "Engine/Audio/AudioPcm.h"
+#include "Engine/Audio/AudioPCM.h"
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Foundation/EnginePlatformHeaders.h"
@@ -140,7 +140,7 @@ namespace sw
              * @brief 공통 디코더가 다루지 않는 형식(MP3, ADPCM WAV 등)을 Media Foundation 으로 16 비트 PCM 으로 디코드합니다. 클립 캐시의 대체 디코더입니다.
              * @details 바이트는 `AssetIO` 로 읽어 메모리 스트림으로 넘긴다 — 디스크 경로(URL)로 열면 팩으로 쿠킹한 빌드에서 열 파일이 없다.
              */
-            static bool decodeWithMediaFoundation( const AssetID& assetID, AudioPcm& outPcm )
+            static bool decodeWithMediaFoundation( const AssetID& assetID, AudioPCM& outPCM )
             {
                 const string_view     path = assetID.view();
                 const SystemAudioAPI& api  = getSystemAudioAPI();
@@ -191,7 +191,7 @@ namespace sw
                     pReader->Release();
                     return false;
                 }
-                AudioPcm pcm;
+                AudioPCM pcm;
                 pcm._channelCount  = static_cast<uint16>( MFGetAttributeUINT32( pNative, MF_MT_AUDIO_NUM_CHANNELS, 2 ) );
                 pcm._sampleRate    = MFGetAttributeUINT32( pNative, MF_MT_AUDIO_SAMPLES_PER_SECOND, 44100 );
                 pcm._bitsPerSample = static_cast<uint16>( MFGetAttributeUINT32( pNative, MF_MT_AUDIO_BITS_PER_SAMPLE, 16 ) );
@@ -223,7 +223,7 @@ namespace sw
                 pReader->Release();
                 if ( pcm._listData.empty() )
                     return false;
-                outPcm = std::move( pcm );
+                outPCM = std::move( pcm );
                 return true;
             }
 

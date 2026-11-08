@@ -3,12 +3,12 @@
  * @brief AI 조종자입니다. 감각(`updateBlackboard`)이 블랙보드를 채우고 행동 트리가 판단해 의도를 만들고, 플레이어와 같은 폰 이동으로 움직입니다.
  */
 #pragma once
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Navigation/INavMover.h"
@@ -30,7 +30,7 @@ namespace sw
     struct AIControllerSlot
     {
         using Type                      = AIControllerComponent;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "AICT" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "AICT" );
     };
 
     /**

@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Object/Component/Component.h"

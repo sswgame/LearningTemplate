@@ -6,18 +6,18 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/RPG/MonsterCollector/MonsterInstance.h"
 #include "GameFramework/Runtime/Character/Combat/TurnOrder.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
 {
@@ -146,7 +146,7 @@ namespace sw
     class SW_KIT_API MonsterBattle
     {
     public:
-        static constexpr uint32 kStateTag        = FourCcUtil::make( "MCBT" );
+        static constexpr uint32 kStateTag        = FourCCUtil::make( "MCBT" );
         static constexpr uint32 kStateVersion    = 1;
         static constexpr int32  kPlayerSide      = 0;
         static constexpr int32  kFoeSide         = 1;

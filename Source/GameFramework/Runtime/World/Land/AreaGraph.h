@@ -11,11 +11,11 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"

@@ -41,10 +41,10 @@ namespace sw
                 return s_pApp->activity->vm->AttachCurrentThread( &pEnv, nullptr ) == JNI_OK ? pEnv : nullptr;
             }
 
-            /** @brief 지금 붙은 패드 · 조이스틱 입력 장치 번호를 @p outListId 에 담습니다(`InputDevice.getDeviceIds` · `getSources`). 못 읽으면 false 입니다. */
-            static bool readGamepadDeviceIds( vector<int32>& outListId )
+            /** @brief 지금 붙은 패드 · 조이스틱 입력 장치 번호를 @p outListID 에 담습니다(`InputDevice.getDeviceIds` · `getSources`). 못 읽으면 false 입니다. */
+            static bool readGamepadDeviceIds( vector<int32>& outListID )
             {
-                outListId.clear();
+                outListID.clear();
                 JNIEnv* const pEnv = attachThread();
                 if ( pEnv == nullptr )
                     return false;
@@ -52,20 +52,20 @@ namespace sw
                 const jmethodID getIds     = deviceC != nullptr ? pEnv->GetStaticMethodID( deviceC, "getDeviceIds", "()[I" ) : nullptr;
                 const jmethodID getDevice  = deviceC != nullptr ? pEnv->GetStaticMethodID( deviceC, "getDevice", "(I)Landroid/view/InputDevice;" ) : nullptr;
                 const jmethodID getSources = deviceC != nullptr ? pEnv->GetMethodID( deviceC, "getSources", "()I" ) : nullptr;
-                const jintArray arrId      = getIds != nullptr ? static_cast<jintArray>( pEnv->CallStaticObjectMethod( deviceC, getIds ) ) : nullptr;
-                const jsize     count      = arrId != nullptr ? pEnv->GetArrayLength( arrId ) : 0;
-                jint* const     pId        = arrId != nullptr ? pEnv->GetIntArrayElements( arrId, nullptr ) : nullptr;
+                const jintArray arrID      = getIds != nullptr ? static_cast<jintArray>( pEnv->CallStaticObjectMethod( deviceC, getIds ) ) : nullptr;
+                const jsize     count      = arrID != nullptr ? pEnv->GetArrayLength( arrID ) : 0;
+                jint* const     pId        = arrID != nullptr ? pEnv->GetIntArrayElements( arrID, nullptr ) : nullptr;
                 for ( jsize index = 0; pId != nullptr && getDevice != nullptr && getSources != nullptr && index < count; ++index )
                 {
                     const jobject device = pEnv->CallStaticObjectMethod( deviceC, getDevice, pId[index] );
                     if ( device == nullptr )
                         continue;
                     if ( isGamepadSource( pEnv->CallIntMethod( device, getSources ) ) )
-                        outListId.push_back( static_cast<int32>( pId[index] ) );
+                        outListID.push_back( static_cast<int32>( pId[index] ) );
                     pEnv->DeleteLocalRef( device );
                 }
                 if ( pId != nullptr )
-                    pEnv->ReleaseIntArrayElements( arrId, pId, JNI_ABORT );
+                    pEnv->ReleaseIntArrayElements( arrID, pId, JNI_ABORT );
                 const bool bFailed = pEnv->ExceptionCheck() || getIds == nullptr;
                 if ( pEnv->ExceptionCheck() )
                     pEnv->ExceptionClear();
@@ -112,10 +112,10 @@ namespace sw
 
     AndroidWindow::AndroidWindow()
         : CallbackInputWindow{}
-        , _arrGamepadDeviceId{}
+        , _arrGamepadDeviceID{}
         , _gamepadScanCountdown{ 0 }
     {
-        for ( int32& deviceId : _arrGamepadDeviceId )
+        for ( int32& deviceId : _arrGamepadDeviceID )
         {
             deviceId = AndroidWindowInternal::kEmptyGamepadSlot;
         }
@@ -230,9 +230,9 @@ namespace sw
         int32 emptySlot = AndroidWindowInternal::kEmptyGamepadSlot;
         for ( uint32 slot = 0; slot < kPlatformGamepadSlotCount; ++slot )
         {
-            if ( _arrGamepadDeviceId[slot] == deviceId )
+            if ( _arrGamepadDeviceID[slot] == deviceId )
                 return static_cast<int32>( slot );
-            if ( emptySlot == AndroidWindowInternal::kEmptyGamepadSlot && _arrGamepadDeviceId[slot] == AndroidWindowInternal::kEmptyGamepadSlot )
+            if ( emptySlot == AndroidWindowInternal::kEmptyGamepadSlot && _arrGamepadDeviceID[slot] == AndroidWindowInternal::kEmptyGamepadSlot )
                 emptySlot = static_cast<int32>( slot );
         }
         if ( emptySlot == AndroidWindowInternal::kEmptyGamepadSlot )
@@ -240,7 +240,7 @@ namespace sw
             SW_LOG_WARNING_ID( "AndroidWindow.GamepadSlotsFull", "Android: gamepad device %# has no free slot (%# slots) - its input is ignored", deviceId, kPlatformGamepadSlotCount );
             return emptySlot;
         }
-        _arrGamepadDeviceId[emptySlot] = deviceId;
+        _arrGamepadDeviceID[emptySlot] = deviceId;
         PlatformInputEvent connected{};
         connected._kind         = PlatformInputKind::GamepadConnected;
         connected._pointerIndex = static_cast<uint16>( emptySlot );
@@ -250,21 +250,21 @@ namespace sw
 
     void AndroidWindow::syncGamepadDevices()
     {
-        vector<int32> listPresentId;
-        if ( AndroidWindowInternal::readGamepadDeviceIds( listPresentId ) == false )
+        vector<int32> listPresentID;
+        if ( AndroidWindowInternal::readGamepadDeviceIds( listPresentID ) == false )
             return; // 못 읽은 차례는 칸을 건드리지 않는다 — 없다고 보고 끊으면 붙은 패드가 끊긴다
         for ( uint32 slot = 0; slot < kPlatformGamepadSlotCount; ++slot )
         {
-            const int32 deviceId = _arrGamepadDeviceId[slot];
-            if ( deviceId == AndroidWindowInternal::kEmptyGamepadSlot || std::find( listPresentId.begin(), listPresentId.end(), deviceId ) != listPresentId.end() )
+            const int32 deviceId = _arrGamepadDeviceID[slot];
+            if ( deviceId == AndroidWindowInternal::kEmptyGamepadSlot || std::find( listPresentID.begin(), listPresentID.end(), deviceId ) != listPresentID.end() )
                 continue;
-            _arrGamepadDeviceId[slot] = AndroidWindowInternal::kEmptyGamepadSlot;
+            _arrGamepadDeviceID[slot] = AndroidWindowInternal::kEmptyGamepadSlot;
             PlatformInputEvent disconnected{};
             disconnected._kind         = PlatformInputKind::GamepadDisconnected;
             disconnected._pointerIndex = static_cast<uint16>( slot );
             queueInput( disconnected );
         }
-        for ( const int32 deviceId : listPresentId )
+        for ( const int32 deviceId : listPresentID )
         {
             (void)findOrAssignGamepadSlot( deviceId ); // 입력 전에 붙은 패드도 칸을 받는다(연결 알림)
         }

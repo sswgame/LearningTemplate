@@ -14,7 +14,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
-#include "Engine/Rendering/MeshLODSystem.h"
+#include "Engine/Visual/MeshLODSystem.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 #include "GameFramework/Runtime/Character/Camera/CameraUserSettings.h"

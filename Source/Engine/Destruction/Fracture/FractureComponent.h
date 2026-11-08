@@ -13,7 +13,7 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetReloadWatch.h"
 #include "Engine/Destruction/Fracture/FractureComponentBase.h"
-#include "Engine/Navigation/Component/SceneNavigation.h"
+#include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

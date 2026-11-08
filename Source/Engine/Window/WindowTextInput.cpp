@@ -2,7 +2,7 @@
 
 #include "Engine/Window/WindowTextInput.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {

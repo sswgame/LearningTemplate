@@ -52,6 +52,6 @@ namespace sw
                    "kRHIModuleABIVersion and the v<N> in kRHIModuleABIStamp must be bumped together" );
 
     using PFN_CreateRHIDevice        = IRHIDevice* (*)( uint32 deviceGeneration ); ///< v45: 장치 세대를 등록표가 넘긴다
-    using PFN_GetRHIModuleAbiVersion = uint32 ( * )();
+    using PFN_GetRHIModuleABIVersion = uint32 ( * )();
     using PFN_GetRHIModuleABIStamp   = const utf8* (*)();
 } // namespace sw

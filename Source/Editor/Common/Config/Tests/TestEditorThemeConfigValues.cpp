@@ -3,7 +3,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorThemeConfig.h"
 
 using namespace sw;
@@ -56,7 +56,7 @@ SW_TEST_CASE( EditorThemeConfigTest, FindsByNameIgnoringCase )
 SW_TEST_CASE( EditorThemeConfigTest, MissingSavedNameLeavesTheOutputAlone )
 {
     const vector<EditorThemeConfig> listTheme{ EditorThemeConfigTestUtil::makeTheme( "dark" ) };
-    EditorConfig                    saved{};
+    EditorAppearanceConfig          saved{};
     saved._themeName           = "gone";
     EditorThemeConfig outTheme = EditorThemeConfigTestUtil::makeTheme( "current" );
     SW_EXPECT_FALSE( EditorThemeConfig::buildFromSaved( listTheme, saved, outTheme ) );
@@ -66,7 +66,7 @@ SW_TEST_CASE( EditorThemeConfigTest, MissingSavedNameLeavesTheOutputAlone )
 SW_TEST_CASE( EditorThemeConfigTest, SavedDefaultsKeepTheTokens )
 {
     const vector<EditorThemeConfig> listTheme{ EditorThemeConfigTestUtil::makeTheme( "dark" ) };
-    EditorConfig                    saved{};
+    EditorAppearanceConfig          saved{};
     saved._themeName = "DARK";
     EditorThemeConfig theme{};
     SW_REQUIRE_TRUE( EditorThemeConfig::buildFromSaved( listTheme, saved, theme ) );
@@ -81,7 +81,7 @@ SW_TEST_CASE( EditorThemeConfigTest, SavedDefaultsKeepTheTokens )
 SW_TEST_CASE( EditorThemeConfigTest, AccentNeedsAllThreeChannels )
 {
     const vector<EditorThemeConfig> listTheme{ EditorThemeConfigTestUtil::makeTheme( "dark" ) };
-    EditorConfig                    saved{};
+    EditorAppearanceConfig          saved{};
     saved._themeAccentR = 0.9f;
     saved._themeAccentG = 0.8f;
     saved._themeName    = "dark";
@@ -101,7 +101,7 @@ SW_TEST_CASE( EditorThemeConfigTest, AccentNeedsAllThreeChannels )
 SW_TEST_CASE( EditorThemeConfigTest, EachSavedRadiusOverridesOnlyItsOwnTokens )
 {
     const vector<EditorThemeConfig> listTheme{ EditorThemeConfigTestUtil::makeTheme( "dark" ) };
-    EditorConfig                    saved{};
+    EditorAppearanceConfig          saved{};
     saved._themeName           = "dark";
     saved._themeWindowRounding = 3.0f;
     EditorThemeConfig theme{};
@@ -113,7 +113,7 @@ SW_TEST_CASE( EditorThemeConfigTest, EachSavedRadiusOverridesOnlyItsOwnTokens )
     SW_EXPECT_NEAR( 14.0f, EditorThemeConfigTestUtil::metric( theme, "Radius.Scrollbar" ), EditorThemeConfigTestUtil::kTolerance );
     SW_EXPECT_NEAR( 16.0f, EditorThemeConfigTestUtil::metric( theme, "Radius.Tab" ), EditorThemeConfigTestUtil::kTolerance );
 
-    saved._themeWindowRounding = EditorConfig::kNotOverridden;
+    saved._themeWindowRounding = EditorAppearanceConfig::kNotOverridden;
     saved._themeFrameRounding  = 4.0f;
     SW_REQUIRE_TRUE( EditorThemeConfig::buildFromSaved( listTheme, saved, theme ) );
     SW_EXPECT_NEAR( 11.0f, EditorThemeConfigTestUtil::metric( theme, "Radius.Window" ), EditorThemeConfigTestUtil::kTolerance );
@@ -121,7 +121,7 @@ SW_TEST_CASE( EditorThemeConfigTest, EachSavedRadiusOverridesOnlyItsOwnTokens )
     SW_EXPECT_NEAR( 8.0f, EditorThemeConfigTestUtil::metric( theme, "Radius.Scrollbar" ), EditorThemeConfigTestUtil::kTolerance );
     SW_EXPECT_NEAR( 4.0f, EditorThemeConfigTestUtil::metric( theme, "Radius.Grab" ), EditorThemeConfigTestUtil::kTolerance );
 
-    saved._themeFrameRounding = EditorConfig::kNotOverridden;
+    saved._themeFrameRounding = EditorAppearanceConfig::kNotOverridden;
     saved._themeTabRounding   = 0.0f;
     SW_REQUIRE_TRUE( EditorThemeConfig::buildFromSaved( listTheme, saved, theme ) );
     SW_EXPECT_TRUE( theme._bRadiusOverridden == SW_TRUE );
@@ -149,7 +149,7 @@ SW_TEST_CASE( EditorThemeConfigTest, TypedNegativeRadiusStaysAnOverrideOfZero )
     SW_EXPECT_NEAR( 0.0f, EditorThemeConfigTestUtil::metric( theme, "Radius.Window" ), EditorThemeConfigTestUtil::kTolerance );
     SW_EXPECT_NEAR( 0.0f, EditorThemeConfigTestUtil::metric( theme, "Radius.Scrollbar" ), EditorThemeConfigTestUtil::kTolerance );
 
-    EditorConfig saved{};
+    EditorAppearanceConfig saved{};
     EditorThemeConfig::writeSaved( theme, saved );
     SW_EXPECT_NEAR( 0.0f, saved._themeWindowRounding, EditorThemeConfigTestUtil::kTolerance );
     SW_EXPECT_NEAR( 0.0f, saved._themeFrameRounding, EditorThemeConfigTestUtil::kTolerance );
@@ -159,17 +159,17 @@ SW_TEST_CASE( EditorThemeConfigTest, TypedNegativeRadiusStaysAnOverrideOfZero )
 // 덮어쓰지 않은 값은 저장하지 않는다 — 토큰 파일이 바뀌면 그 값을 따른다.
 SW_TEST_CASE( EditorThemeConfigTest, UntouchedThemeSavesOnlyItsName )
 {
-    EditorConfig saved{};
+    EditorAppearanceConfig saved{};
     saved._themeAccentR        = 0.5f;
     saved._themeWindowRounding = 5.0f;
     EditorThemeConfig::writeSaved( EditorThemeConfigTestUtil::makeTheme( "light" ), saved );
     SW_EXPECT_EQUAL( string( "light" ), saved._themeName );
-    SW_EXPECT_NEAR( EditorConfig::kNotOverridden, saved._themeAccentR, EditorThemeConfigTestUtil::kTolerance );
-    SW_EXPECT_NEAR( EditorConfig::kNotOverridden, saved._themeAccentG, EditorThemeConfigTestUtil::kTolerance );
-    SW_EXPECT_NEAR( EditorConfig::kNotOverridden, saved._themeAccentB, EditorThemeConfigTestUtil::kTolerance );
-    SW_EXPECT_NEAR( EditorConfig::kNotOverridden, saved._themeWindowRounding, EditorThemeConfigTestUtil::kTolerance );
-    SW_EXPECT_NEAR( EditorConfig::kNotOverridden, saved._themeFrameRounding, EditorThemeConfigTestUtil::kTolerance );
-    SW_EXPECT_NEAR( EditorConfig::kNotOverridden, saved._themeTabRounding, EditorThemeConfigTestUtil::kTolerance );
+    SW_EXPECT_NEAR( EditorAppearanceConfig::kNotOverridden, saved._themeAccentR, EditorThemeConfigTestUtil::kTolerance );
+    SW_EXPECT_NEAR( EditorAppearanceConfig::kNotOverridden, saved._themeAccentG, EditorThemeConfigTestUtil::kTolerance );
+    SW_EXPECT_NEAR( EditorAppearanceConfig::kNotOverridden, saved._themeAccentB, EditorThemeConfigTestUtil::kTolerance );
+    SW_EXPECT_NEAR( EditorAppearanceConfig::kNotOverridden, saved._themeWindowRounding, EditorThemeConfigTestUtil::kTolerance );
+    SW_EXPECT_NEAR( EditorAppearanceConfig::kNotOverridden, saved._themeFrameRounding, EditorThemeConfigTestUtil::kTolerance );
+    SW_EXPECT_NEAR( EditorAppearanceConfig::kNotOverridden, saved._themeTabRounding, EditorThemeConfigTestUtil::kTolerance );
 }
 
 SW_TEST_CASE( EditorThemeConfigTest, OverridesSurviveASaveAndLoad )
@@ -179,7 +179,7 @@ SW_TEST_CASE( EditorThemeConfigTest, OverridesSurviveASaveAndLoad )
     EditorThemeConfig::overrideAccent( Color{ 0.7f, 0.6f, 0.5f, 1.0f }, edited );
     EditorThemeConfig::overrideRadius( 2.0f, 3.0f, 4.0f, edited );
 
-    EditorConfig saved{};
+    EditorAppearanceConfig saved{};
     EditorThemeConfig::writeSaved( edited, saved );
 
     EditorThemeConfig loaded{};

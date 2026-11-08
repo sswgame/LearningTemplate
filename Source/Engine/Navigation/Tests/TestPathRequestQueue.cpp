@@ -4,9 +4,9 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Navigation/Component/NavMeshRuntime.h"
-#include "Engine/Navigation/Component/NavPathSolver.h"
 #include "Engine/Navigation/PathRequestQueue.h"
+#include "Engine/Navigation/Scene/NavMeshRuntime.h"
+#include "Engine/Navigation/Scene/NavPathSolver.h"
 
 #include <type_traits>
 

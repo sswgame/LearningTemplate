@@ -251,7 +251,7 @@ SW_TEST_CASE( TextureBlockEncoderTest, CookedVariantLoadsWithTheFamilyFormat )
     SW_REQUIRE_TRUE( FileUtil::readFile( outputPath, output ) );
     DDSImageData image;
     SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( output.data(), output.size(), image ) );
-    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( image._dxgiFormat ) == RHIFormat::ASTC_4x4_UNORM );
+    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDXGI( image._dxgiFormat ) == RHIFormat::ASTC_4x4_UNORM );
     SW_EXPECT_EQUAL( 8u, image._width );
     SW_EXPECT_EQUAL( 8u, image._height );
     SW_EXPECT_EQUAL( 4u, image._mipCount );
@@ -262,7 +262,7 @@ SW_TEST_CASE( TextureBlockEncoderTest, CookedVariantLoadsWithTheFamilyFormat )
     output.clear();
     SW_REQUIRE_TRUE( FileUtil::readFile( outputPath, output ) );
     SW_REQUIRE_TRUE( DDSLoader::loadFromMemory( output.data(), output.size(), image ) );
-    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( image._dxgiFormat ) == RHIFormat::R8G8B8A8_UNORM );
+    SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDXGI( image._dxgiFormat ) == RHIFormat::R8G8B8A8_UNORM );
 
     SW_EXPECT_TRUE( TextureImportFormatUtil::getUsage( TextureImportFormat::BC5 ) == TextureFormatUsage::Normal );
     SW_EXPECT_TRUE( TextureImportFormatUtil::getUsage( TextureImportFormat::BC6H ) == TextureFormatUsage::HDR );

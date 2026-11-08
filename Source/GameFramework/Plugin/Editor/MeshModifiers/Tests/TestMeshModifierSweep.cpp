@@ -1,7 +1,7 @@
 #include "pch.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"

@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Inspector/Model/InspectorComponentPicker.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"

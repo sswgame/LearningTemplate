@@ -2,11 +2,11 @@
 
 #include "Engine/Automation/AutomationRunTitle.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/EngineFrameHooks.h"

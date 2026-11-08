@@ -24,7 +24,7 @@
 #include "GameFramework/Kits/Feature/World/Overworld/OverworldTileMover.h"
 #include "GameFramework/Kits/Feature/World/Overworld/TileMap.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/FacingDir.h"
+#include "GameFramework/Runtime/Foundation/Grid/FacingDir.h"
 
 namespace sw
 {

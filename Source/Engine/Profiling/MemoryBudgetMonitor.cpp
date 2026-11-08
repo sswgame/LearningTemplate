@@ -6,12 +6,12 @@
 
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Console/DevCommandRegistry.h"

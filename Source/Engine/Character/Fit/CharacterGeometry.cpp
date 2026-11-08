@@ -2,7 +2,7 @@
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Fit/BodyShape.h"
@@ -33,11 +33,11 @@ namespace sw
         if ( _listIndex.size() % 3 != 0 )
             return false;
         const bool bNormalMismatch             = _listNormal.empty() == false && _listNormal.size() != vertexCount;
-        const bool bUvMismatch                 = _listUv.empty() == false && _listUv.size() != vertexCount;
+        const bool bUVMismatch                 = _listUV.empty() == false && _listUV.size() != vertexCount;
         const bool bSkinMismatch               = _listSkin.empty() == false && _listSkin.size() != vertexCount;
         const bool bGroupMismatch              = _listVertexGroup.empty() == false && _listVertexGroup.size() != vertexCount;
         const bool bPartMismatch               = _listTrianglePart.empty() == false && _listTrianglePart.size() != getTriangleCount();
-        const bool bInconsistentGeometryArrays = bNormalMismatch || bUvMismatch || bSkinMismatch || bGroupMismatch || bPartMismatch;
+        const bool bInconsistentGeometryArrays = bNormalMismatch || bUVMismatch || bSkinMismatch || bGroupMismatch || bPartMismatch;
         if ( bInconsistentGeometryArrays )
             return false;
         for ( const uint32 index : _listIndex )
@@ -78,7 +78,7 @@ namespace sw
     {
         _listPosition.clear();
         _listNormal.clear();
-        _listUv.clear();
+        _listUV.clear();
         _listIndex.clear();
         _listSkin.clear();
         _listVertexGroup.clear();

@@ -49,6 +49,8 @@ namespace sw
         [[nodiscard]] virtual Subscription addOnBeforeReloadBatch( BeforeReloadBatchDelegate onBeforeBatch ) = 0;
         /** @brief 모듈 @p pModuleName 을 다음 `updateModuleReload` 에서 다시 올리게 합니다(단축키 · 개발 명령). */
         virtual void requestReload( const utf8* pModuleName ) = 0;
+        /** @brief 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신하고 리로드 단축키를 요청으로 바꿉니다(App 이 프레임마다 — Ctrl+F6 에디터는 @p bEnableEditor 일 때만). */
+        virtual void pollShellActions( float32 deltaTime, bool bEnableEditor ) = 0;
         /** @brief 바뀐 모듈 라이브러리를 보고 리로드를 돌립니다. 틱 직전에 부릅니다. */
         virtual void updateModuleReload() = 0;
 

@@ -6,7 +6,7 @@
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
-#include "Engine/Character/AnimationNotify/AnimationNotifyComponent.h"
+#include "Engine/Animation/Notify/AnimationNotifyComponent.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
@@ -15,8 +15,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "Games/Empty/Client/Dev/StressTestSceneSettings.h"
 

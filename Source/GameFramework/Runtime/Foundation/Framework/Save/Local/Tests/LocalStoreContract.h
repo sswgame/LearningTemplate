@@ -208,7 +208,7 @@ namespace sw::test
         }
 
         template <typename FixtureType>
-        static void runNoneSealCatchesATamperedByteByCrc( FixtureType& fixture )
+        static void runNoneSealCatchesATamperedByteByCRC( FixtureType& fixture )
         {
             SW_EXPECT_TRUE( write( fixture.getStore(), "plain", makeText( "readable save" ) ) == LocalStoreResult::Ok );
             vector<uint8> envelopeBytes;
@@ -301,7 +301,7 @@ namespace sw::test
     SW_LOCAL_STORE_CONTRACT_CASE( SuiteName, FixtureType, CompressionRoundTrips, runCompressionRoundTrips )                             \
     SW_LOCAL_STORE_CONTRACT_CASE( SuiteName, FixtureType, AuthenticatedRejectsATamperedByte, runAuthenticatedRejectsATamperedByte )     \
     SW_LOCAL_STORE_CONTRACT_CASE( SuiteName, FixtureType, EncryptedHidesTheBodyAndNeedsTheKey, runEncryptedHidesTheBodyAndNeedsTheKey ) \
-    SW_LOCAL_STORE_CONTRACT_CASE( SuiteName, FixtureType, NoneSealCatchesATamperedByteByCrc, runNoneSealCatchesATamperedByteByCrc )     \
+    SW_LOCAL_STORE_CONTRACT_CASE( SuiteName, FixtureType, NoneSealCatchesATamperedByteByCRC, runNoneSealCatchesATamperedByteByCRC )     \
     SW_LOCAL_STORE_CONTRACT_CASE( SuiteName, FixtureType, RejectsBadNamesAndOversizedSlots, runRejectsBadNamesAndOversizedSlots )       \
     SW_LOCAL_STORE_CONTRACT_CASE( SuiteName, FixtureType, CompletionsComeInSubmitOrder, runCompletionsComeInSubmitOrder )               \
     SW_LOCAL_STORE_CONTRACT_CASE( SuiteName, FixtureType, ShutdownFinishesQueuedWrites, runShutdownFinishesQueuedWrites )

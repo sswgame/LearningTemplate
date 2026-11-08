@@ -2,9 +2,9 @@
 
 #include "Editor/Common/Workspace/EditorTransaction.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"

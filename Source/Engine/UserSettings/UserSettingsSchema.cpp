@@ -2,11 +2,11 @@
 
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/EnumNameTable.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

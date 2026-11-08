@@ -19,12 +19,12 @@
  *          `SW_REQUIRE_*` 는 실패하면 케이스 함수에서 `return` 한다 — 케이스 본문에서만 쓴다.
  */
 #pragma once
-#include "Core/Container/formatString.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/formatString.h"
 
 #include <iterator>
 #include <type_traits>

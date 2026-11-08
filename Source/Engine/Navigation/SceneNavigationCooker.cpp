@@ -2,10 +2,10 @@
 
 #include "Engine/Navigation/SceneNavigationCooker.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cook/CookStore.h"
@@ -15,8 +15,8 @@
 #include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Navigation/Component/NavMeshSurfaceComponent.h"
-#include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Navigation/NavMeshAsset.h"
+#include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"

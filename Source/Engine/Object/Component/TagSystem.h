@@ -1,17 +1,17 @@
 /**
  * @file TagSystem.h
- * @brief 태그 집합 · 질의 API 입니다(`TagID` 자체는 `Core/String/TagID.h`).
+ * @brief 태그 집합 · 질의 API 입니다(`TagID` 자체는 `Core/Name/TagID.h`).
  *
  * @details 여기 남은 것은 **리플렉션이 필요한 것들**입니다. `PROPERTY` 로 직렬화되는 태그 집합
  *          (`TagContainer`)과 질의(`TagQuery`)입니다. `TagID` 는 Core 기능만 쓰는 값 타입이라
- *          `Core/String/TagID.h` 로 내렸습니다(이유는 그 파일의 @note 참고).
+ *          `Core/Name/TagID.h` 로 내렸습니다(이유는 그 파일의 @note 참고).
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

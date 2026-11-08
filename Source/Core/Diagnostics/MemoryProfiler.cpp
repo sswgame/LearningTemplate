@@ -2,16 +2,16 @@
 
 #include "Core/Diagnostics/MemoryProfiler.h"
 
+#include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/CompareUtil.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 // ASan 빌드에서는 CRT 누수 검사를 쓰지 않는다. ASan 이 힙을 자기 것으로 바꾸므로 `_CrtSetDbgFlag` 류가 모두 효과가 없고,
 // 검사가 **도는 척만 하고 아무것도 잡지 못한다**(증상은 "set but not used" 경고 정도로 조용하다). Linux 쪽은 아래에서

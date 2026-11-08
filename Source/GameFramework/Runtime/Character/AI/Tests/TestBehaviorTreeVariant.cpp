@@ -6,8 +6,8 @@
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
-#include "GameFramework/Runtime/World/Query/GameConditions.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 
 using namespace sw;
 
@@ -78,7 +78,7 @@ SW_TEST_CASE( BehaviorTreeVariantTest, LeavesUseSharedVocabulary )
 }
 
 /** @brief [BehaviorTreeVariantTest] `_base` 트리에서 `id` 가 같은 노드만 바꾸고 새 가지를 앞에 끼운다. 모르는 동작은 로드 오류다 */
-SW_TEST_CASE( BehaviorTreeVariantTest, BaseTreeReplacesBranchById )
+SW_TEST_CASE( BehaviorTreeVariantTest, BaseTreeReplacesBranchByID )
 {
     XTestSource source;
     source._listFile.push_back( { "base.bt.xml", XTestUtil::kBaseTree } );

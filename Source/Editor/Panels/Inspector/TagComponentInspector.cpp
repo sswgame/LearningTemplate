@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"

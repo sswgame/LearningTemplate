@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 // 파일 도우미 — 경로 문자열(이름 · 폴더 · 확장자 · 절대 판정), 읽기 · 쓰기(대소문자 · 한글 경로 · 원자적 바꿔 끼우기 · 실패 · 범위),
@@ -362,7 +362,7 @@ SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
  * @details Windows 에서 좁은 문자 경로는 실행 파일 매니페스트(activeCodePage=UTF-8)가 없으면 ANSI 코드 페이지(CP949)로 해석된다. 경로 API 마다
  *          해석이 다르면 사용자 폴더 이름이 한글일 때 `exists` 는 있다고 하는데 읽기는 "File not found" 가 된다.
  */
-SW_TEST_CASE( FileTest, NonAsciiPathRoundTrips )
+SW_TEST_CASE( FileTest, NonASCIIPathRoundTrips )
 {
     const sw::string dir = sw::test::makeScratchPath( "SwUnicodePath_한글폴더" );
     SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( dir ) );

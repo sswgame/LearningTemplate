@@ -2,8 +2,8 @@
 
 #include "Core/Network/Security/NetSessionKeys.h"
 
-#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 
 #include <cstring>
 
@@ -15,7 +15,7 @@ namespace sw
         {
             static constexpr utf8  kSessionLabel[] = "sw-net-v1";
             static constexpr utf8  kProofLabel[]   = "sw-net-proof-v1";
-            static constexpr int32 kKeyBlockSize   = 2 * ( NetSecurityConstant::kAeadKeySize + NetSecurityConstant::kAeadNonceSize );
+            static constexpr int32 kKeyBlockSize   = 2 * ( NetSecurityConstant::kAEADKeySize + NetSecurityConstant::kAEADNonceSize );
 
             static void wipeBytes( void* pData, size_t size )
             {
@@ -49,18 +49,18 @@ namespace sw
         const uint8  arrZeroSalt[NetSecurityConstant::kSHA256Size] = {};
         const uint8* pSalt                                         = pSessionSecret != nullptr ? pSessionSecret->_arrByte : arrZeroSalt;
         uint8        arrBlock[Internal::kKeyBlockSize];
-        const bool   bDerived = provider.computeHkdfSHA256( pSharedSecret, NetSecurityConstant::kX25519KeySize, pSalt, NetSecurityConstant::kSHA256Size, arrInfo,
+        const bool   bDerived = provider.computeHKDFSHA256( pSharedSecret, NetSecurityConstant::kX25519KeySize, pSalt, NetSecurityConstant::kSHA256Size, arrInfo,
                                                             static_cast<int32>( sizeof( arrInfo ) ), arrBlock, Internal::kKeyBlockSize );
         if ( bDerived == false )
             return false;
         const uint8* pCursor = arrBlock;
-        std::memcpy( outKeys._clientToServer._arrKey, pCursor, NetSecurityConstant::kAeadKeySize );
-        pCursor += NetSecurityConstant::kAeadKeySize;
-        std::memcpy( outKeys._clientToServer._arrIv, pCursor, NetSecurityConstant::kAeadNonceSize );
-        pCursor += NetSecurityConstant::kAeadNonceSize;
-        std::memcpy( outKeys._serverToClient._arrKey, pCursor, NetSecurityConstant::kAeadKeySize );
-        pCursor += NetSecurityConstant::kAeadKeySize;
-        std::memcpy( outKeys._serverToClient._arrIv, pCursor, NetSecurityConstant::kAeadNonceSize );
+        std::memcpy( outKeys._clientToServer._arrKey, pCursor, NetSecurityConstant::kAEADKeySize );
+        pCursor += NetSecurityConstant::kAEADKeySize;
+        std::memcpy( outKeys._clientToServer._arrIv, pCursor, NetSecurityConstant::kAEADNonceSize );
+        pCursor += NetSecurityConstant::kAEADNonceSize;
+        std::memcpy( outKeys._serverToClient._arrKey, pCursor, NetSecurityConstant::kAEADKeySize );
+        pCursor += NetSecurityConstant::kAEADKeySize;
+        std::memcpy( outKeys._serverToClient._arrIv, pCursor, NetSecurityConstant::kAEADNonceSize );
         Internal::wipeBytes( arrBlock, sizeof( arrBlock ) );
         return true;
     }
@@ -68,16 +68,16 @@ namespace sw
     bool NetSessionKeys::computeProofKey( INetSecurityProvider& provider, const NetSessionSecret& secret, uint8* pOutKey )
     {
         using Internal = NetSessionKeysInternal;
-        return provider.computeHkdfSHA256( secret._arrByte, NetSecurityConstant::kSHA256Size, nullptr, 0, reinterpret_cast<const uint8*>( Internal::kProofLabel ),
-                                           static_cast<int32>( sizeof( Internal::kProofLabel ) - 1 ), pOutKey, NetSecurityConstant::kAeadKeySize );
+        return provider.computeHKDFSHA256( secret._arrByte, NetSecurityConstant::kSHA256Size, nullptr, 0, reinterpret_cast<const uint8*>( Internal::kProofLabel ),
+                                           static_cast<int32>( sizeof( Internal::kProofLabel ) - 1 ), pOutKey, NetSecurityConstant::kAEADKeySize );
     }
 
     void NetSessionKeys::makeNonce( const uint8* pIv, uint64 packetNumber, uint8* pOutNonce )
     {
-        std::memcpy( pOutNonce, pIv, NetSecurityConstant::kAeadNonceSize );
+        std::memcpy( pOutNonce, pIv, NetSecurityConstant::kAEADNonceSize );
         for ( int32 index = 0; index < 8; ++index )
         {
-            pOutNonce[NetSecurityConstant::kAeadNonceSize - 1 - index] ^= static_cast<uint8>( packetNumber >> ( index * 8 ) );
+            pOutNonce[NetSecurityConstant::kAEADNonceSize - 1 - index] ^= static_cast<uint8>( packetNumber >> ( index * 8 ) );
         }
     }
 } // namespace sw

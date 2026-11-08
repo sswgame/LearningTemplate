@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorSelection.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
 

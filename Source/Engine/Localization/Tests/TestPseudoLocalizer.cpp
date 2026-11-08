@@ -2,8 +2,8 @@
 // 그리고 문화권 데이터의 글꼴 대체 목록(nogpu).
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/String/MarkupToken.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/AssetID.h"
@@ -46,8 +46,8 @@ SW_TEST_CASE( PseudoLocalizerTest, AccentsLengthensAndBrackets )
         for ( size_t index = 1; index + 1 < pseudo.size(); ++index )
         {
             const utf8 character    = pseudo[index];
-            const bool bAsciiLetter = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' );
-            SW_EXPECT_FALSE_MSG( bAsciiLetter, pseudo.c_str() );
+            const bool bASCIILetter = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' );
+            SW_EXPECT_FALSE_MSG( bASCIILetter, pseudo.c_str() );
         }
     }
     SW_EXPECT_FALSE( sw::PseudoLocalizer::isPseudoText( "Settings" ) );

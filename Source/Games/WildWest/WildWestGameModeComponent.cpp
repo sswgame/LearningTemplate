@@ -2,8 +2,8 @@
 
 #include "Games/WildWest/WildWestGameModeComponent.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/Component/SceneComponent.h"

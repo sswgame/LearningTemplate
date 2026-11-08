@@ -49,7 +49,7 @@ SW_TEST_CASE( JSONWriterTest, EscapesQuotesBackslashesAndControlCharacters )
 /**
  * @brief [JSONWriterTest] 잘못된 UTF-8 바이트는 U+FFFD 로 바꿔 출력이 늘 올바른 JSON 이다
  */
-SW_TEST_CASE( JSONWriterTest, ReplacesInvalidUtf8 )
+SW_TEST_CASE( JSONWriterTest, ReplacesInvalidUTF8 )
 {
     SW_EXPECT_EQUAL( sw::string( R"("a\ufffdb")" ), writeStringValue( "a\xFF"
                                                                       "b" ) );

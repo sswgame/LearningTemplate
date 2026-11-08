@@ -1964,7 +1964,7 @@
 		</entry>
 		<entry key="Notification.RestartRequired" source="Some changes take effect after a restart.">
 			<origins>
-				<item>Source/Engine/UI/Screen/OptionsMenuScreen.cpp</item>
+				<item>Source/Engine/UI/Menu/OptionsMenuScreen.cpp</item>
 			</origins>
 		</entry>
 		<entry key="Opacity" source="Opacity" context="TextWidget._text">

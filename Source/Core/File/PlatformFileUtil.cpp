@@ -5,11 +5,11 @@
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
@@ -17,7 +17,6 @@
     #include <share.h>
     #include <shellapi.h>
 #elif defined( SW_PLATFORM_LINUX )
-    #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <cerrno>
     #include <ctime>

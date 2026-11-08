@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/NetSnapshot.h"
 
-#include "Core/Container/CompareUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Network/Message/NetSendBudget.h"
 #include "Core/Serialization/BitStream.h"
 

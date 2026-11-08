@@ -14,7 +14,7 @@
 #include "Engine/UI/World/WidgetComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/IDamageNumberSink.h"
-#include "GameFramework/Runtime/Foundation/Utility/Time/LifeSpanUtil.h"
+#include "GameFramework/Runtime/World/Lifetime/LifeSpanUtil.h"
 
 namespace sw
 {

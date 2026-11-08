@@ -72,7 +72,7 @@ namespace sw
         vector<float32>                                                  _listDevice;          /**< 장치에 쓰는 블록(ALSA 채널 순서)입니다. */
         thread                                                           _streamThread;        /**< 스트림 스레드입니다. */
         void*                                                            _pLibrary;            /**< `libasound.so.2` 핸들입니다. */
-        void*                                                            _pPcm;                /**< 열린 재생 장치입니다. */
+        void*                                                            _pPCM;                /**< 열린 재생 장치입니다. */
         uint32                                                           _channelCount;        /**< 스트림의 채널 수입니다. */
 
         AlsaAudioBackendImpl()
@@ -91,7 +91,7 @@ namespace sw
             , _listDevice{}
             , _streamThread{}
             , _pLibrary{ nullptr }
-            , _pPcm{ nullptr }
+            , _pPCM{ nullptr }
             , _channelCount{ 0 }
         {
         }
@@ -144,11 +144,11 @@ namespace sw
             closeDevice();
             return false;
         }
-        const int32 openResult = _impl->_pfnOpen( &_impl->_pPcm, "default", Internal::kStreamPlayback, 0 );
-        if ( openResult < 0 || _impl->_pPcm == nullptr )
+        const int32 openResult = _impl->_pfnOpen( &_impl->_pPCM, "default", Internal::kStreamPlayback, 0 );
+        if ( openResult < 0 || _impl->_pPCM == nullptr )
         {
             SW_LOG_INFO_ID( "AlsaAudioBackend.NoALSAPlaybackDevice", "No ALSA playback device (error %#). Rendering offline.", openResult );
-            _impl->_pPcm = nullptr;
+            _impl->_pPCM = nullptr;
             closeDevice();
             return false;
         }
@@ -157,7 +157,7 @@ namespace sw
         void*  pHwParams   = nullptr;
         if ( _impl->_pfnHwParamsMalloc( &pHwParams ) == 0 && pHwParams != nullptr )
         {
-            if ( _impl->_pfnHwParamsAny( _impl->_pPcm, pHwParams ) == 0 )
+            if ( _impl->_pfnHwParamsAny( _impl->_pPCM, pHwParams ) == 0 )
                 (void)_impl->_pfnHwParamsGetChannelsMax( pHwParams, &maxChannels ); // 실패하면 스테레오로 둔 값을 쓴다 — ALSA 가 재생 장치에 2 채널은 늘 받는다
             _impl->_pfnHwParamsFree( pHwParams );
         }
@@ -170,10 +170,10 @@ namespace sw
     bool AlsaAudioBackend::startOutput( AudioChannelLayout layout )
     {
         using Internal = AlsaAudioBackendInternal;
-        if ( _impl->_pPcm == nullptr )
+        if ( _impl->_pPCM == nullptr )
             return false;
         const uint32 channelCount = AudioChannelLayoutUtil::getChannelCount( layout );
-        const int32  setResult    = _impl->_pfnSetParams( _impl->_pPcm, Internal::kFormatFloatLe, Internal::kAccessRwInterleaved, channelCount, audio::kSampleRate, 1,
+        const int32  setResult    = _impl->_pfnSetParams( _impl->_pPCM, Internal::kFormatFloatLe, Internal::kAccessRwInterleaved, channelCount, audio::kSampleRate, 1,
                                                           Internal::kLatencyMicroseconds );
         if ( setResult < 0 )
         {
@@ -206,11 +206,11 @@ namespace sw
             uint32 written = 0;
             while ( written < Internal::kWriteFrameCount && stopToken.isStopRequested() == false )
             {
-                const int64 result = _impl->_pfnWritei( _impl->_pPcm, pWrite + static_cast<size_t>( written ) * channelCount, Internal::kWriteFrameCount - written );
+                const int64 result = _impl->_pfnWritei( _impl->_pPCM, pWrite + static_cast<size_t>( written ) * channelCount, Internal::kWriteFrameCount - written );
                 if ( result < 0 )
                 {
                     // 언더런 · 일시정지 복귀는 복원하고 이어 쓴다. 복원하지 못하면 이 블록을 버린다.
-                    if ( _impl->_pfnRecover( _impl->_pPcm, static_cast<int32>( result ), 1 ) < 0 )
+                    if ( _impl->_pfnRecover( _impl->_pPCM, static_cast<int32>( result ), 1 ) < 0 )
                         break;
                     continue;
                 }
@@ -225,8 +225,8 @@ namespace sw
             return;
         _impl->_streamThread.request_stop(); // 스레드 토큰으로 알린다(`runStream`)
         // 막혀 있는 writei 를 바로 풀기 위해 버퍼를 버린다.
-        if ( _impl->_pPcm != nullptr && _impl->_pfnDrop != nullptr )
-            (void)_impl->_pfnDrop( _impl->_pPcm ); // 스레드를 멈추려는 것이라 결과는 보지 않는다
+        if ( _impl->_pPCM != nullptr && _impl->_pfnDrop != nullptr )
+            (void)_impl->_pfnDrop( _impl->_pPCM ); // 스레드를 멈추려는 것이라 결과는 보지 않는다
         if ( _impl->_streamThread.joinable() )
             _impl->_streamThread.join();
     }
@@ -236,10 +236,10 @@ namespace sw
         if ( _impl == nullptr )
             return;
         stopOutput();
-        if ( _impl->_pPcm != nullptr )
+        if ( _impl->_pPCM != nullptr )
         {
-            (void)_impl->_pfnClose( _impl->_pPcm ); // 닫는 길이라 실패해도 할 일이 없다
-            _impl->_pPcm = nullptr;
+            (void)_impl->_pfnClose( _impl->_pPCM ); // 닫는 길이라 실패해도 할 일이 없다
+            _impl->_pPCM = nullptr;
         }
         // snd_pcm_open 은 열기에 실패해도 alsa.conf 트리를 라이브러리 전역 캐시에 남긴다(CI ASan 의 LeakSanitizer 누수가 이것이었다).
         // 장치를 닫은 뒤 · 라이브러리를 내리기 전에 놓는다. 이 프로세스에서 libasound 를 쓰는 곳은 이 백엔드 하나다.

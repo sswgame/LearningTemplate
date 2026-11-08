@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/LagCompensation.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 namespace sw

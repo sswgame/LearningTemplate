@@ -6,7 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
 {

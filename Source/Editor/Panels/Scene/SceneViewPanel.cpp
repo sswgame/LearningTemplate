@@ -2,9 +2,9 @@
 
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"

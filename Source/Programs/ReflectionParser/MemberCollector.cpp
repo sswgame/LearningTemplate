@@ -2,8 +2,8 @@
 
 #include "Programs/ReflectionParser/MemberCollector.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Programs/ReflectionParser/AnnotationApply.h"
 #include "Programs/ReflectionParser/AnnotationFields.h"

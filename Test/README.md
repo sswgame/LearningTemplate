@@ -18,7 +18,7 @@
 ```cpp
 #include "pch.h"
 
-#include "Core/String/Base64Util.h"
+#include "Core/Encoding/Base64Util.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

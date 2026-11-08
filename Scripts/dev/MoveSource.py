@@ -148,6 +148,8 @@ def mainMove(argv: list[str]) -> int:
     root = getProjectRoot()
     source = root / "Source"
     mapFile = expandMoves(source, args.pair)
+    # 폴더 접두어는 옮기기 전에 잰다 — 옮긴 뒤에는 옛 폴더가 없어 규칙이 비고, 폴더 이동의 설정 · 문서 경로(`Source/X/Old/`)가 그대로 남았다.
+    listFolderPrefix = folderPrefixes(args.pair, source)
     if args.dry_run:
         for old, new in mapFile.items():
             print(f"{old} -> {new}")
@@ -192,7 +194,7 @@ def mainMove(argv: list[str]) -> int:
 
     # 전체 경로는 낱말 경계로 — `Engine/A/B.h` 가 `MyEngine/A/B.h` 안에서 바뀌지 않게(`Source/Engine/A/B.h` 처럼 앞에 `/` 가 오는 것은 바꾼다).
     listRule = [(re.compile(r"(?<![\w.-])" + re.escape(old) + r"(?![\w.])"), lambda _, new=new: new) for old, new in sorted(mapFile.items(), key=lambda item: -len(item[0]))]
-    listRule += [(re.compile(r"(?<![\w.-])" + re.escape(old)), lambda _, new=new: new) for old, new in folderPrefixes(args.pair, source)]
+    listRule += [(re.compile(r"(?<![\w.-])" + re.escape(old)), lambda _, new=new: new) for old, new in listFolderPrefix]
     # `@file` 은 최상위 폴더 없이 적은 곳도 있다(`@file Utility/X.h`).
     listRule += [(re.compile(r"(@file\s+)" + re.escape(old.partition("/")[2]) + r"\b"), lambda match, new=new: match.group(1) + new) for old, new in mapFile.items() if "/" in old]
     changedCppSet = {source / new for new in mapMovedText} | set(listNeighbourText)

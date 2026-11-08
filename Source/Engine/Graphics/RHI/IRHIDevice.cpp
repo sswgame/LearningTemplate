@@ -5,11 +5,11 @@
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"

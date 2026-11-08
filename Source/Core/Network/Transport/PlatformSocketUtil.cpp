@@ -2,8 +2,8 @@
 
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Network/Transport/NativeSocketAddress.h"
+#include "Core/String/StringUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include <WinSock2.h>

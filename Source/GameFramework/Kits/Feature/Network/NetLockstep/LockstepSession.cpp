@@ -8,7 +8,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Serialization/BitStream.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 
 namespace sw
 {

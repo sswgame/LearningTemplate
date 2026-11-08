@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Genre/Casual/PartyArena/PartyRoundSeries.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

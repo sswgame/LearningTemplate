@@ -1,10 +1,9 @@
 #include "pch.h"
 
+#include "Core/Compression/BuiltinCompressionCodecs.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/ICompressionCodec.h"
-#include "Core/Compression/NullCompressionCodec.h"
-#include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
@@ -97,9 +96,9 @@ SW_TEST_CASE( CompressionTest, NullCodecPassthrough )
 // ------------------------------------------------------------------------------
 // 2) Core_Compression — RLE 코덱 반복 패턴 및 리터럴 압축/복원
 // ------------------------------------------------------------------------------
-SW_TEST_CASE( CompressionTest, RleCodecRepetitionAndLiterals )
+SW_TEST_CASE( CompressionTest, RLECodecRepetitionAndLiterals )
 {
-    sw::RleCompressionCodec codec;
+    sw::RLECompressionCodec codec;
     SW_EXPECT_EQUAL( static_cast<uint32>( sw::CompressionCodecType::RLE ), static_cast<uint32>( codec.getCodecType() ) );
 
     // 1) 고반복 데이터 (압축률이 높은 경우)
@@ -140,9 +139,9 @@ SW_TEST_CASE( CompressionTest, CodecRegistryAndDynamicLookup )
     sw::CompressionCodecRegistry registry;
     registry.initialize();
 
-    sw::ICompressionCodec* pRle = registry.getCodec( sw::CompressionCodecType::RLE );
-    SW_EXPECT_TRUE( pRle != nullptr );
-    SW_EXPECT_EQUAL( sw::string( "RLE" ), sw::string( pRle->getCodecName() ) );
+    sw::ICompressionCodec* pRLE = registry.getCodec( sw::CompressionCodecType::RLE );
+    SW_EXPECT_TRUE( pRLE != nullptr );
+    SW_EXPECT_EQUAL( sw::string( "RLE" ), sw::string( pRLE->getCodecName() ) );
 
     sw::ICompressionCodec* pNull = registry.getCodec( "Null" );
     SW_EXPECT_TRUE( pNull != nullptr );
@@ -368,7 +367,7 @@ SW_TEST_CASE( CompressionTest, AbsurdUncompressedSizeIsRejectedBeforeAllocating 
 /**
  * @brief [CompressionTest] 압축 스트림의 앞 네 바이트는 표식 글자 순서 그대로("SWCS")다
  * @details 4 글자 표식을 16 진으로 손으로 적으면 바이트 순서가 둘로 갈린다('SWHF' 는 파일 순서, 'SWCS' 는 거꾸로 "SCWS" 로 써졌다).
- *          표식은 FourCcUtil 하나로 만들어 리틀 엔디언으로 쓰면 파일에 글자 순서대로 남는다(DDS · glTF 와 같은 규약).
+ *          표식은 FourCCUtil 하나로 만들어 리틀 엔디언으로 쓰면 파일에 글자 순서대로 남는다(DDS · glTF 와 같은 규약).
  */
 SW_TEST_CASE( CompressionTest, StreamStartsWithMagicInFileOrder )
 {
@@ -494,7 +493,7 @@ SW_TEST_CASE( CompressionTest, FuzzTimeoutInputIsRejectedBeforeAllocating )
  */
 SW_TEST_CASE( CompressionTest, CodecDecompressBoundCoversWorstCaseAndStreamRejectsAbove )
 {
-    sw::RleCompressionCodec  rle;
+    sw::RLECompressionCodec  rle;
     sw::NullCompressionCodec none;
     SW_EXPECT_EQUAL( size_t{ 130 }, rle.decompressBound( 2 ) );
     SW_EXPECT_EQUAL( size_t{ 0 }, rle.decompressBound( 0 ) );

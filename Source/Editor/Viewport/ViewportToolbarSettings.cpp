@@ -2,9 +2,9 @@
 
 #include "Editor/Viewport/ViewportToolbarSettings.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"

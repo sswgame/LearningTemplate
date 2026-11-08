@@ -16,14 +16,14 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Navigation/Component/SceneNavigation.h"
+#include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/ReflectionValidation.h"
-#include "Engine/Rendering/MeshInstanceBatch.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Visual/MeshInstanceBatch.h"
 
 namespace sw
 {

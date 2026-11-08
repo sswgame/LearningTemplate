@@ -8,7 +8,7 @@
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
-#include "Engine/Config/Dev/GameAutoplay.h"
+#include "Engine/Config/GameAutoplay.h"
 
 namespace sw
 {

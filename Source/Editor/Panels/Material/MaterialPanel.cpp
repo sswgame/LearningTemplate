@@ -2,11 +2,11 @@
 
 #include "Editor/Panels/Material/MaterialPanel.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorCompactControls.h"
@@ -440,12 +440,12 @@ namespace sw::editor
             return EditorColorUtil::toImU32( Color{ color._x, color._y, color._z, 1.0f } );
         };
 
-        const ImVec2 whiteUv  = ImGui::GetFontTexUvWhitePixel();
+        const ImVec2 whiteUV  = ImGui::GetFontTexUvWhitePixel();
         const int32  vtxCount = 1 + kRingCount * kSegmentCount;
         const int32  idxCount = 3 * kSegmentCount + 6 * kSegmentCount * ( kRingCount - 1 );
         pDrawList->PrimReserve( idxCount, vtxCount );
         const ImDrawIdx baseIndex = static_cast<ImDrawIdx>( pDrawList->_VtxCurrentIdx );
-        pDrawList->PrimWriteVtx( center, whiteUv, toColor( 0.0f, 0.0f ) );
+        pDrawList->PrimWriteVtx( center, whiteUV, toColor( 0.0f, 0.0f ) );
         for ( int32 ring = 1; ring <= kRingCount; ++ring )
         {
             // 가장자리일수록 촘촘하게 — 빛이 꺾이는 테두리가 매끈하다.
@@ -455,7 +455,7 @@ namespace sw::editor
                 const float32 angle = static_cast<float32>( segment ) / static_cast<float32>( kSegmentCount ) * MathUtil::kTwoPi;
                 const float32 nx    = MathUtil::cos( angle ) * ringRatio;
                 const float32 ny    = MathUtil::sin( angle ) * ringRatio;
-                pDrawList->PrimWriteVtx( ImVec2( center.x + nx * radius, center.y + ny * radius ), whiteUv, toColor( nx, ny ) );
+                pDrawList->PrimWriteVtx( ImVec2( center.x + nx * radius, center.y + ny * radius ), whiteUV, toColor( nx, ny ) );
             }
         }
         for ( int32 segment = 0; segment < kSegmentCount; ++segment )

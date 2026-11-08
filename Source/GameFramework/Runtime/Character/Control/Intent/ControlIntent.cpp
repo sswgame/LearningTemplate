@@ -3,9 +3,8 @@
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OrientationUtil.h"
 #include "Core/Serialization/BitStream.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
 
 namespace sw
 {

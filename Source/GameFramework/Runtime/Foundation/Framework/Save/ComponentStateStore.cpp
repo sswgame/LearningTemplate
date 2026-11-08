@@ -2,9 +2,9 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentStableKey.h"

@@ -2,7 +2,7 @@
 
 #include "Engine/Destruction/DestructionDamage.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Destruction/DestructionProfile.h"

@@ -11,7 +11,7 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/Task/TaskManager.h"
 
-#include "Engine/Compression/EngineCompressionCodecUtil.h"
+#include "Engine/Compression/EngineCompressionCodecs.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw

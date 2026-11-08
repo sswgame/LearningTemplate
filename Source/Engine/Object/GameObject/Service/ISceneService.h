@@ -25,7 +25,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/SubsystemScope.h"
 

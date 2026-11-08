@@ -2,7 +2,8 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreBackend.h"
 
-#include "Core/String/RegistrationList.h"
+#include "Core/Concurrency/mutex.h"
+#include "Core/Registry/RegistrationList.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/FileLocalSlotStorage.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"

@@ -2,11 +2,11 @@
 
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserModel.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Backend/FileDialog.h"
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"

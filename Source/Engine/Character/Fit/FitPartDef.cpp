@@ -2,8 +2,8 @@
 
 #include "Engine/Character/Fit/FitPartDef.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"

@@ -13,9 +13,9 @@
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 namespace sw
 {

@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
@@ -12,7 +12,7 @@
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 
 #include <algorithm>
 

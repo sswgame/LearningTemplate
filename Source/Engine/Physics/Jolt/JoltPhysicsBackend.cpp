@@ -5,8 +5,8 @@
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Jolt/JoltJobSystem.h"

@@ -6,7 +6,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
-#include "Engine/Audio/AudioPcm.h"
+#include "Engine/Audio/AudioPCM.h"
 #include "Engine/Audio/AudioVorbisDecoder.h"
 
 namespace sw
@@ -214,15 +214,15 @@ namespace sw
         }
         else if ( FileUtil::hasExtension( path, ".wav" ) )
         {
-            AudioPcm format;
+            AudioPCM format;
             size_t   dataOffset{ 0 };
             uint32   dataBytes{ 0 };
-            if ( AudioPcm::parseWAVLayout( inoutBytes.data(), inoutBytes.size(), format, dataOffset, dataBytes ) == false )
+            if ( AudioPCM::parseWAVLayout( inoutBytes.data(), inoutBytes.size(), format, dataOffset, dataBytes ) == false )
                 return nullptr;
             const bool bChannelsOk              = 1 <= format._channelCount && format._channelCount <= AudioDownmix::kMaxSourceChannelCount;
-            const bool bPcm16                   = format._bFloat == SW_FALSE && format._bitsPerSample == 16;
+            const bool bPCM16                   = format._bFloat == SW_FALSE && format._bitsPerSample == 16;
             const bool bFloat32                 = format._bFloat == SW_TRUE && format._bitsPerSample == 32;
-            const bool bUnsupportedStreamFormat = bChannelsOk == false || ( bPcm16 == false && bFloat32 == false ) || format._sampleRate == 0;
+            const bool bUnsupportedStreamFormat = bChannelsOk == false || ( bPCM16 == false && bFloat32 == false ) || format._sampleRate == 0;
             if ( bUnsupportedStreamFormat )
                 return nullptr;
             const bool bNeedsDownmix = format._channelCount > 2;
@@ -233,7 +233,7 @@ namespace sw
             pSource->_info._frameCount   = dataBytes / format.getBlockAlign();
             pSource->_dataOffset         = dataOffset;
             pSource->_dataBytes          = dataBytes;
-            pSource->_format             = bFloat32 ? Format::WAVFloat32 : Format::WAVPcm16;
+            pSource->_format             = bFloat32 ? Format::WAVFloat32 : Format::WAVPCM16;
         }
         else
         {
