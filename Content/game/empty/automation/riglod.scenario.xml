@@ -2,7 +2,7 @@
 <!--
   2 차 물리 LOD — KayKit 리그 벤치(-gv_stressTestRig=1)의 기사 망토는 스프링 체인(knight_cape.rig.xml, max_lod="2")이다.
   ① 망토가 흔들린 뒤 시간을 멈추고(gv_timeScale=0) 찍는다. ② 등급 3 을 고정하면(gv_animationLODGrade) 스프링 노드가 꺼져 망토가 애니메이션 포즈(뼈를 따라 굳은 망토)로
-  돌아가야 한다 — 다르지 않으면 리그가 등급을 읽지 않은 것이다. 고정한 등급은 페이드 없이 바로 끝 상태다. 대기는 갱신 주기의 배수(240)다.
+  돌아가야 한다 — 다르지 않으면 리그가 등급을 읽지 않은 것이다. 고정한 등급은 페이드 없이 바로 끝 상태다. 대기는 갱신 주기(최대 16)의 배수(48 — 세 바퀴)다. 시간이 멈춰 있어 배수이기만 하면 길이가 그림을 바꾸지 않는다(예전 240 과 같은 위상).
   실행: ctest -R Scenario.game.empty.riglod (Shipping 은 벤치 변수가 없어 건너뛴다)
 -->
 <Scenario name="game.empty.riglod" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -10,10 +10,10 @@
 	<Launch variable="gv_stressTestRigView" value="2"/>
 	<Wait frames="90"/>
 	<Variable name="gv_timeScale" value="0"/>
-	<Wait frames="240"/>
+	<Wait frames="48"/>
 	<Screenshot file="empty/riglod_spring.ppm"/>
 	<Variable name="gv_animationLODGrade" value="3"/>
-	<Wait frames="240"/>
+	<Wait frames="48"/>
 	<Screenshot file="empty/riglod_off.ppm"/>
 	<Variable name="gv_animationLODGrade" value="-1"/>
 	<Wait frames="5"/>
