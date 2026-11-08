@@ -365,22 +365,40 @@ namespace sw
 
         struct SceneDevCommandsInternal
         {
-            static bool runTeleport( const vector<string>& listArgument, string& outReply )
+            /** @brief `<object> <x> <y> <z>` 인자를 활성 씬 오브젝트의 루트 트랜스폼과 위치로 풉니다. 못 풀면 nullptr 이고 @p outReply 에 까닭을 적습니다. */
+            static SceneComponent* resolveMoveTarget( const vector<string>& listArgument, float3& outPosition, string& outReply )
             {
-                float3     position{};
-                const bool bInvalidMoveArguments = listArgument.size() != 4 || StringUtil::parseFloat( listArgument[1], position._x ) == false ||
-                                                   StringUtil::parseFloat( listArgument[2], position._y ) == false || StringUtil::parseFloat( listArgument[3], position._z ) == false;
+                const bool bInvalidMoveArguments = listArgument.size() != 4 || StringUtil::parseFloat( listArgument[1], outPosition._x ) == false ||
+                                                   StringUtil::parseFloat( listArgument[2], outPosition._y ) == false || StringUtil::parseFloat( listArgument[3], outPosition._z ) == false;
                 if ( bInvalidMoveArguments )
-                    return false;
+                    return nullptr;
                 GameObject*     pObject   = engine::findActiveObject( hashed_string( listArgument[0] ) );
                 SceneComponent* pRootNode = pObject != nullptr ? pObject->getComponent<SceneComponent>() : nullptr;
                 if ( pRootNode == nullptr )
-                {
                     outReply = "no object named '" + listArgument[0] + "' with a transform in the active scene";
+                return pRootNode;
+            }
+
+            static bool runTeleport( const vector<string>& listArgument, string& outReply )
+            {
+                float3          position{};
+                SceneComponent* pRootNode = resolveMoveTarget( listArgument, position, outReply );
+                if ( pRootNode == nullptr )
                     return false;
-                }
                 pRootNode->teleportTo( position );
                 outReply = "teleported " + listArgument[0];
+                return true;
+            }
+
+            /** @brief `move <object> <x> <y> <z>` — 순간이동이 아니라 이어진 움직임으로 옮깁니다. 화면 속도 · 물리의 이동 경로 기록이 남는다(시나리오가 이어진 카메라 움직임을 만든다). */
+            static bool runMove( const vector<string>& listArgument, string& outReply )
+            {
+                float3          position{};
+                SceneComponent* pRootNode = resolveMoveTarget( listArgument, position, outReply );
+                if ( pRootNode == nullptr )
+                    return false;
+                pRootNode->setWorldPosition( position );
+                outReply = "moved " + listArgument[0];
                 return true;
             }
 
@@ -1272,6 +1290,7 @@ namespace sw
                     "Load a scene again and again (1 warmup + N measured, default 8) and judge whether leftover memory grows (leak detection L3)",
                     &SceneDevCommandsInternal::runSceneLeakCurve );
     SW_DEV_COMMAND( Teleport, "teleport", "teleport <object> <x> <y> <z>", "Teleport a named object of the active scene", &SceneDevCommandsInternal::runTeleport );
+    SW_DEV_COMMAND( Move, "move", "move <object> <x> <y> <z>", "Move a named object of the active scene without teleporting (keeps motion history)", &SceneDevCommandsInternal::runMove );
     SW_DEV_COMMAND( StreamingCells, "world.cells", "world.cells", "Show loaded streaming cells, or split the active scene into cells as the cooker would",
                     &SceneDevCommandsInternal::runStreamingCells );
     SW_DEV_COMMAND( DataLayer, "scene.layer", "scene.layer [<name> <on|off>]", "Turn a data layer of the active scene on or off, or list the active layers", &SceneDevCommandsInternal::runDataLayer );
