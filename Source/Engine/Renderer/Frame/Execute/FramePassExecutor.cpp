@@ -1020,6 +1020,7 @@ namespace sw
                 case RenderPassType::Invalid:
                 case RenderPassType::Lighting:
                 case RenderPassType::SSAO:
+                case RenderPassType::ScreenSpaceGI:
                 case RenderPassType::Bloom:
                 case RenderPassType::BloomDownsample:
                 case RenderPassType::Outline:

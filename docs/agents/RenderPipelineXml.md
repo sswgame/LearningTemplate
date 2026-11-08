@@ -105,6 +105,12 @@
 - 받지 않는 조합(셰이더 `#error`): 머티리얼 없는 셰이더, 사용자 보간 칸(`SW_MATERIAL_CUSTOM_VARYINGS`), 외곽선 패스.
 - 언리얼 Nanite 변위 · 옛 테셀레이션과 같은 자리다 — 머티리얼이 높이 · 기준 높이를 주고 렌더러가 분할을 정한다(기억에 의존한 비교). 언리얼은 화면 크기 기준 분할이고 여기는 각 크기 × 밀도다.
 
+## 화면 공간 GI · GTAO
+
+- GTAO 는 SSAO 패스의 `_shaderPath="engine/shaders/gtao.hlsl"` 로 고른다(같은 AOColor — r 가림, gba 굽은 노멀). 값은 퍼뮤테이션 `SW_GTAO_RADIUS` · `SW_GTAO_SLICES` · `SW_GTAO_STEPS` · `SW_GTAO_INTENSITY` 이고 셰이더에 기본값이 없다.
+- `_type="ScreenSpaceGI"`(ssgi.hlsl)는 입력 넷(SceneColorCopy · SceneDepth · GBufferNormal · GBufferAlbedo)을 읽어 조명 첨부에 `_blendPreset="Additive"` 로 더한다. 출력을 여러 패스가 쓰므로 뷰마다 건너뛰지 않는다(`_minPostQuality="0"`) — 켜고 끄는 것은 파이프라인이다. 값은 `SW_SSGI_RADIUS` · `SW_SSGI_DIRECTIONS` · `SW_SSGI_STEPS` · `SW_SSGI_INTENSITY`.
+- 예: `engine/pipeline/deferredpipeline_gi.xml`(기본 디퍼드는 그대로).
+
 ## 고칠 때
 
 렌더 상태 칸을 더할 곳은 `RHIRenderState.h` 하나와 네 백엔드의 읽기다 — XML 읽기 · 쓰기는 리플렉션이, 패스 · 머티리얼 합치기와 해시 · 비교는 바이트가 따라온다(패딩이 생기면 `static_assert` 가 멈춘다). 조합 규칙은 `findInvalidReason`, 머티리얼에게 내주지 않을 칸은 `RHIRenderStateOverride::applyTo` 에 적는다. RHI ABI 번호를 올린다.

@@ -261,6 +261,15 @@ namespace sw
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
+                    case RenderPassType::ScreenSpaceGI:
+                    {
+                        // 조명 첨부에 더하는 효과다 — 그 첨부를 읽을 수 없어 장면 색 사본을 읽는다. 알베도는 계약상 필수다(튄 빛을 받는 면의 색).
+                        // 건너뛸 수 있는 효과(kSkipsWithoutPostProcess)가 아니다 — 출력(조명 첨부)을 여러 패스가 써서 출력을 원본에 잇거나 뺄 수 없다. 켜고 끄는 것은 파이프라인 XML 이다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderScreenSpaceGI;
+                        info._inputContract  = makeContract( { Role::SceneColorCopy, Role::SceneDepth, Role::GBufferNormal, Role::GBufferAlbedo }, {} );
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kRequiresPassDesc;
+                        break;
+                    }
                     case RenderPassType::Compute:
                     {
                         // 셰이더는 XML 이 고른다 — 표의 기본값이 없고, 첨부를 RW 텍스처로 묶는 전용 실행이다(`FramePassExecutor::executeComputePass`).
