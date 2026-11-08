@@ -47,7 +47,7 @@
 ### Vectors
 
 - No erasing one element at a time inside a loop (O(T²)). Mark finished elements, then erase once with `VectorUtil::removeIf` (order kept) or `removeAtSwap` (order free).
-- Dedupe with a set, not `contains` before `push_back`. A pointer list that must stay unique is `IndexedPtrList`. When order is free, collect first and `VectorUtil::sortUnique` once.
+- Dedupe with a set, not `contains` before `push_back`. A pointer list that must stay unique is `unordered_set<T*>` (dense array: O(1) insert/erase, contiguous iteration; erase moves the last element). When order is free, collect first and `VectorUtil::sortUnique` once.
 
 ## Parallel-safe code
 

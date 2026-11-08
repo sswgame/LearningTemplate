@@ -12,7 +12,7 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
-#include "Core/Container/IndexedPtrList.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Delegate/SubscriptionList.h"
@@ -137,8 +137,8 @@ namespace sw
 
     private:
         RegistrationList<AudioListenerComponent> _listener SW_GUARDED_BY( _mutex );     /**< 리스너 컴포넌트입니다(구독으로 올린다). 화면 분할 칸마다 하나라 많아야 한 자릿수이므로 선형 등록 목록으로 충분하다. */
-        IndexedPtrList<AudioEmitterComponent> _emitter     SW_GUARDED_BY( _mutex );     /**< 에미터 컴포넌트입니다. 수가 많고 씬 중에 자주 오르내려 넣기 · 빼기가 O(1) 이다(순회 순서는 보존되지 않는다 — 가림 측정이 도는 순서만 달라진다). */
-        RegistrationList<AudioReverbZoneComponent> _zone   SW_GUARDED_BY( _mutex );     /**< 리버브 존입니다(구독으로 올린다). 레벨 디자이너가 방 · 구역마다 손으로 놓아 많아야 수십 개이고 씬 중에 오르내리지 않으므로 선형 등록 목록으로 충분하다(수천 개로 자라면 `IndexedPtrList`). */
+        unordered_set<AudioEmitterComponent*> _emitter     SW_GUARDED_BY( _mutex );     /**< 에미터 컴포넌트입니다. 수가 많고 씬 중에 자주 오르내려 넣기 · 빼기가 O(1) 이다(순회 순서는 보존되지 않는다 — 가림 측정이 도는 순서만 달라진다). */
+        RegistrationList<AudioReverbZoneComponent> _zone   SW_GUARDED_BY( _mutex );     /**< 리버브 존입니다(구독으로 올린다). 레벨 디자이너가 방 · 구역마다 손으로 놓아 많아야 수십 개이고 씬 중에 오르내리지 않으므로 선형 등록 목록으로 충분하다(수천 개로 자라면 `unordered_set`). */
         vector<AudioEmitterComponent*>                     _listEmitterSnapshot;        /**< 프레임마다 잠금 밖에서 도는 에미터 사본입니다. */
         vector<EmitterMotion>                              _listEmitterMotion;          /**< 사본과 같은 순서의 이번 프레임 자리 · 속도(재사용)입니다. 워커는 자기 칸에만 쓴다. */
         vector<ZoneValue> _listZoneValue                   SW_GUARDED_BY( _mutex );     /**< 지난 프레임의 스냅샷 세기입니다. */

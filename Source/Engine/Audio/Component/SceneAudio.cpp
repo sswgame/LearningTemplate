@@ -150,7 +150,7 @@ namespace sw
             reportRegistrationRejected( RegistrationResult::NullItem, "Audio emitter", string_view{} );
             return {};
         }
-        if ( _emitter.add( pEmitter ) == false )
+        if ( _emitter.insert( pEmitter ).second == false )
             return {}; // 이미 올라 있다 — 먼저 받은 구독이 쥔다
         return _emitterSubscriptions.issue( pEmitter );
     }
@@ -177,7 +177,7 @@ namespace sw
     {
         {
             ScopedLock<mutex> lock{ _mutex };
-            if ( _emitter.remove( pEmitter ) == false )
+            if ( _emitter.erase( pEmitter ) == 0 )
                 return;
         }
         AudioEngine* pEngine = findAudioEngine();
@@ -288,7 +288,7 @@ namespace sw
     void SceneAudio::collectEmitters()
     {
         _listEmitterSnapshot.clear();
-        for ( AudioEmitterComponent* pEmitter : _emitter.items() )
+        for ( AudioEmitterComponent* pEmitter : _emitter )
         {
             if ( SceneAudioInternal::isUsable( pEmitter ) )
                 _listEmitterSnapshot.push_back( pEmitter );
