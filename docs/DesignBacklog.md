@@ -44,17 +44,9 @@
 
 | 우선순위 | 현재 코드에서 확인한 내용 | 개선 방향과 완료 조건 |
 |---|---|---|
-| 조건부 | **대기 중인 온라인 서버 호출의 조회·회수가 선형이다.** [`OnlineServerCallTable`](../Source/GameFramework/Runtime/Online/Service/OnlineProtocolService.h)의 `isOpen`·`take`가 `_listCall`을 훑고, `take`는 벡터 중간 원소를 지운다. 대기 호출 수를 P라 하면 완료 확인과 제거가 O(P)이고 이동도 생긴다. | 우선 `service_store_pending`의 실제 최대치와 높은 동시 대기 부하에서 완료 처리량·지연을 측정한다. P가 커져 병목이 확인되면 호출 ID 기반 인덱스로 바꾸고, 완료·취소·종료 시 한 번만 제거되는지 테스트한다. 작은 P라면 벡터를 유지한다. |
 | 검증 필요 | **엔진 프레임 API에는 뷰 입력이 남아 있지만 렌더 구현 경계는 이미 분리돼 있다.** [`Engine::update`](../Source/Engine/Engine.h)는 `FrameViewports`와 카메라 공급자를 받지만, 제출은 [`IEngineRenderDriver`](../Source/Engine/Graphics/View/IEngineRenderDriver.h)로 전달한다. 따라서 “Engine이 Renderer 구현을 직접 안다”는 이전 주장은 틀렸다. | 서버·쿠커 타깃에서 이 프레임 입력 형식이 실제로 불필요한 의존을 끌어오는지 빌드 타깃·include 그래프로 확인한다. 컴파일 경계 위반이 재현될 때만 뷰 데이터 계약을 분리한다. |
 | 점검 보류 | **렌더 확장 두 경로는 확인했으나 중복 결함은 입증되지 않았다.** 기본 씬 수집은 엔진 컴포넌트를 구체적으로 처리하고, 모듈 확장은 [`RenderExtensionRegistry`](../Source/Engine/Renderer/Extension/RenderExtensionRegistry.h)와 프록시 수명 계약을 쓴다. 둘의 입력·수명·스레드 계약은 다르다. | 일괄 통합하지 않는다. 실제 플러그인 기능이 기본 수집 경로에 의존하거나 같은 기능을 두 번 구현하는 사례가 확인될 때만 공통 기여 API를 설계한다. |
 | 점검 보류 | **온라인 서비스는 공통 프로토콜 기반을 이미 갖췄다.** [`OnlineProtocolService`](../Source/GameFramework/Runtime/Online/Service/OnlineProtocolService.h)는 타입 있는 메서드 호출·응답과 공통 결과 지표·재시도 처리를 제공한다. “키트마다 손 디스패치·지표·오류 처리가 제각각”이라는 이전 요약은 현재 코드에 맞지 않는다. | 새 `OnlineSession`이나 두 번째 서버 추상화를 먼저 만들지 않는다. 게임의 실제 클라이언트 조립·수명 소유를 확인하고, 여러 게임에서 같은 통합 결함이 확인될 때만 세션 경계를 정한다. |
-
-| 이전 후보 | 현재 코드 대조 결과 |
-|---|---|
-| 머티리얼 수치 매개변수의 매 프레임 문자열 왕복 | 숫자 덮어쓰기는 `ValueOverride`의 float 배열로 보관되고 동일 값은 [`assignFloats`](../Source/Engine/Graphics/Material/MaterialInstance.cpp)에서 빠져나간다. 문자열 경로를 일반화된 프레임 비용으로 기록하지 않는다. |
-| 프로브·머티리얼 스냅샷의 무조건 재생성·업로드 | 프로브 요소는 컴포넌트 ID와 revision 키가 같으면 공유 스냅샷을 재사용하고, 베이크 전용 데이터는 같은 공유 버퍼가 올라가 있으면 업로드를 건너뛴다([`GPULightBuffer.cpp`](../Source/Engine/Renderer/Lighting/GPULightBuffer.cpp)). 머티리얼 결합도 입력 세대와 요소 변경 여부를 확인한다([`GPUMaterialRegistry.cpp`](../Source/Engine/Renderer/Scene/GPUMaterialRegistry.cpp)). |
-| 복제 관련성은 항상 전체 엔티티 × 연결 순회 | 기본 정책은 전체 검사할 수 있지만 [`InterestReplicationPolicy`](../Source/GameFramework/Kits/Feature/Network/NetClientServer/InterestReplicationPolicy.cpp)는 진입·이탈 목록과 정렬된 가시 목록을 유지하고 스냅샷에서 병합한다. 이 최적화가 모든 사용자 정의 정책에 있다고 가정하지도, 현재 경로가 전부 O(E×C)라고 단정하지도 않는다. |
-| GameFramework Runtime의 `Engine/UI` 의존 | 현재 `Runtime` 트리 검색에서 해당 include는 확인되지 않았다. UI 결합 문제로 등록하지 않는다. |
 
 **아직 코드·측정으로 확인하지 않은 후보:** 헤더 전파와 번역 단위 비용, 시작 시간의 단계별 비중, UI/VFX 배열 복사, 프레임 경로 intern은 조사 문서의 기록만으로 결함이라 판정하지 않는다. 다음 점검에서는 Editor, 오디오·애니메이션·물리, 쿠킹·셰이더, 플랫폼별 빌드 경계를 소유 코드와 실제 호출 경로에서 확인하고, 성능 주장은 프로파일링·벤치마크로 검증한다. 기존 조사 자료는 후보의 출처로만 참고한다: [성능 조사](../.claude/handoff/surveys/refactor_performance.md), [층·모듈 조사](../.claude/handoff/surveys/refactor_layers.md), [공통화 조사](../.claude/handoff/surveys/refactor_common.md), [폴더 위치 조사](../.claude/handoff/surveys/structure_survey.md), [서버·온라인 조사](../.claude/handoff/surveys/server_online_survey.md), [미완성 기능 조사](../.claude/handoff/surveys/unfinished_survey.md).
 
