@@ -119,11 +119,10 @@ namespace sw
                     outReply = "online: no game instance";
                     return true;
                 }
-                string error;
-                if ( pSession->startLocalServer( listArgument[0], error ) == false )
+                if ( const expected<void> started = pSession->startLocalServer( listArgument[0] ); started.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "OnlineSession.LocalServerFailed", "The local online server did not start: %#", error.c_str() );
-                    outReply = "online: " + error;
+                    SW_LOG_ERROR_ID( "OnlineSession.LocalServerFailed", "The local online server did not start: %# (%#)", started.error().message(), started.error().detail() );
+                    outReply = "online: " + string( started.error().message() ) + " (" + string( started.error().detail() ) + ")";
                     return true;
                 }
                 outReply = "online: local server up";
@@ -198,93 +197,73 @@ namespace sw
         _listClient.clear();
     }
 
-    bool OnlineSession::connect( string& outError )
+    expected<void> OnlineSession::connect()
     {
         const string& address = _settings._onlineServerAddress; // 개발 구성의 실행 인자 덮어쓰기는 게임 인스턴스가 이미 넣었다(`IGameSettingsOverride`)
         if ( address.empty() )
-        {
-            outError = "no server address (onlineServerAddress in gamesettings)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no server address (onlineServerAddress in gamesettings)" } );
         if ( _settings._onlineGameBuild.empty() )
-        {
-            outError = "no game build text (onlineGameBuild in gamesettings)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no game build text (onlineGameBuild in gamesettings)" } );
         NetAddress serverAddress;
         if ( PlatformSocketUtil::resolveAddress( address, OnlineServiceHostConfig::kDefaultPort, serverAddress ) == false )
-        {
-            outError = "server address '" + address + "' did not resolve";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "the server address did not resolve", address } );
         disconnect();
         _transport = StreamTransportFactory::createPlatformTransport();
         if ( _transport == nullptr )
-        {
-            outError = "this platform has no stream transport";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::Unsupported, "this platform has no stream transport" } );
         // 서버의 서비스 스트림은 늘 TLS 1.3 이다. 믿을 인증서가 비면 개발 구성만 개발 인증서를 못 박아 믿고, 배포 구성은 여기서 오류다.
-        _tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), _settings._onlineTrustFile, "", outError );
-        if ( _tlsContext == nullptr )
-            return false;
-        return connectTo( _transport.get(), OnlineClientSecurity::tls( *_tlsContext ), serverAddress, outError );
+        expected<unique_ptr<ITLSContext>> tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), _settings._onlineTrustFile, "" );
+        if ( tlsContext.has_value() == false )
+            return unexpected( tlsContext.error() );
+        _tlsContext = std::move( *tlsContext );
+        return connectTo( _transport.get(), OnlineClientSecurity::tls( *_tlsContext ), serverAddress );
     }
 
-    bool OnlineSession::connectTo( IStreamTransport* pTransport, const OnlineClientSecurity& security, const NetAddress& address, string& outError )
+    expected<void> OnlineSession::connectTo( IStreamTransport* pTransport, const OnlineClientSecurity& security, const NetAddress& address )
     {
         _client.shutdown();
         OnlineServiceClientConfig settings{ security };
         settings._transportSettings._ioThreadCount = 0; // `update` 가 전송을 돌린다
         settings._serverAddress                    = address;
         settings._gameBuild                        = _settings._onlineGameBuild;
-        _bConnected                                = _client.initialize( pTransport, settings, outError ) ? SW_TRUE : SW_FALSE;
-        return _bConnected == SW_TRUE;
+        expected<void> result                      = _client.initialize( pTransport, settings );
+        _bConnected                                = result.has_value() ? SW_TRUE : SW_FALSE;
+        return result;
     }
 
-    bool OnlineSession::startLocalServer( string_view serverConfigPath, string& outError )
+    expected<void> OnlineSession::startLocalServer( string_view serverConfigPath )
     {
         if ( build::kShipping )
-        {
-            outError = "the in-process online server is a development tool";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::Unsupported, "the in-process online server is a development tool" } );
         const ConfigManager* const pConfigManager = game::findSubsystem<ConfigManager>();
         if ( pConfigManager == nullptr )
-        {
-            outError = "no config manager in this host";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "no config manager in this host" } );
         const string              serverPath{ serverConfigPath };
         const string              onlinePath = OnlineServerConfig::makeConfigPath( serverConfigPath );
         ServerConfig              serverConfig;
         OnlineServerRuntimeConfig settings;
         if ( pConfigManager->readConfigFileInto( serverPath, serverConfig ) != ConfigReadResult::Loaded || pConfigManager->readConfigFileInto( onlinePath, settings._config ) != ConfigReadResult::Loaded )
-        {
-            outError = "server config '" + serverPath + "' or its online config '" + onlinePath + "' could not be read";
-            return false;
-        }
-        if ( OnlineServerRuntime::resolveStores( serverConfig, settings._config, settings, outError ) == false )
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the server config or its online config could not be read", serverPath } );
+        if ( expected<void> stores = OnlineServerRuntime::resolveStores( serverConfig, settings._config, settings ); stores.has_value() == false )
+            return stores;
         disconnect();
         settings._config._ioThreadCount = 0; // `update` 가 전송을 돌린다
         settings._bTLS                  = SW_FALSE;
         settings._pClock                = &_clock;
         settings._listenAddress         = NetAddress::makeLoopback( 0 );
         _localServer                    = make_unique<OnlineServerRuntime>();
-        if ( _localServer->initialize( std::move( settings ), WallClock::nowUnixMilliseconds(), outError ) == false ) // 예외 - 서비스 시각의 뿌리다(`OnlineServerService` 와 같은 자리)
+        if ( expected<void> started = _localServer->initialize( std::move( settings ), WallClock::nowUnixMilliseconds() ); started.has_value() == false ) // 예외 - 서비스 시각의 뿌리다(`OnlineServerService` 와 같은 자리)
         {
             disconnect();
-            return false;
+            return started;
         }
         _transport = StreamTransportFactory::createPlatformTransport();
         if ( _transport == nullptr )
         {
-            outError = "this platform has no stream transport";
             disconnect();
-            return false;
+            return unexpected( Error{ ErrorKind::Unsupported, "this platform has no stream transport" } );
         }
-        return connectTo( _transport.get(), OnlineClientSecurity::plaintextLoopback(), NetAddress::makeLoopback( _localServer->getListenPort() ), outError );
+        return connectTo( _transport.get(), OnlineClientSecurity::plaintextLoopback(), NetAddress::makeLoopback( _localServer->getListenPort() ) );
     }
 
     void OnlineSession::disconnect()

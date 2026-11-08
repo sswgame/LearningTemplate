@@ -44,16 +44,23 @@ namespace sw
         // 개발 구성의 실행 인자 덮어쓰기(로컬 수신기)는 게임 인스턴스가 이미 넣었다(`IGameSettingsOverride`).
         const string& telemetryAddress = _settings._telemetryUploadEndpoint;
         const string& crashAddress     = _settings._crashUploadEndpoint;
-        string        error;
-        if ( telemetryAddress.empty() == false && linkTelemetry( telemetryAddress, error ) == false )
+        if ( telemetryAddress.empty() == false )
         {
-            SW_LOG_ERROR_ID( "TelemetryUploadLink.TelemetryNotLinked", "[TelemetryUpload] telemetry uploads to '%#' could not be set up - %#", telemetryAddress.c_str(), error.c_str() );
-            return SubsystemInitResult::Failed;
+            if ( const expected<void> linked = linkTelemetry( telemetryAddress ); linked.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "TelemetryUploadLink.TelemetryNotLinked", "[TelemetryUpload] telemetry uploads to '%#' could not be set up - %# (%#)", telemetryAddress.c_str(), linked.error().message(),
+                                 linked.error().detail() );
+                return SubsystemInitResult::Failed;
+            }
         }
-        if ( crashAddress.empty() == false && linkCrashReports( crashAddress, error ) == false )
+        if ( crashAddress.empty() == false )
         {
-            SW_LOG_ERROR_ID( "TelemetryUploadLink.CrashNotLinked", "[TelemetryUpload] crash report uploads to '%#' could not be set up - %#", crashAddress.c_str(), error.c_str() );
-            return SubsystemInitResult::Failed;
+            if ( const expected<void> linked = linkCrashReports( crashAddress ); linked.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "TelemetryUploadLink.CrashNotLinked", "[TelemetryUpload] crash report uploads to '%#' could not be set up - %# (%#)", crashAddress.c_str(), linked.error().message(),
+                                 linked.error().detail() );
+                return SubsystemInitResult::Failed;
+            }
         }
         return SubsystemInitResult::Succeeded;
     }
@@ -72,36 +79,30 @@ namespace sw
         _crashClient.shutdown();
     }
 
-    bool TelemetryUploadLink::linkTelemetry( const string& endpoint, string& outError )
+    expected<void> TelemetryUploadLink::linkTelemetry( const string& endpoint )
     {
         TelemetryService* const pTelemetry = game::findSubsystem<TelemetryService>();
         if ( pTelemetry == nullptr )
         {
             // 텔레메트리는 클라이언트 호스트 서비스다(`TelemetryService::getSubsystemHost`). 전용 서버는 운영 지표를 따로 낸다(`ServerObservability`).
             SW_LOG_INFO_ID( "TelemetryUploadLink.NoTelemetryHost", "[TelemetryUpload] this host has no telemetry service - '%#' is not used", endpoint.c_str() );
-            return true;
+            return {};
         }
         string apiKey;
         if ( _settings._telemetryUploadKeyEnvironment.empty() == false && ProcessEnvironment::tryReadNonEmpty( _settings._telemetryUploadKeyEnvironment, apiKey ) == false )
-        {
-            outError = "the API key environment variable '" + _settings._telemetryUploadKeyEnvironment + "' (telemetryUploadKeyEnvironment) is empty";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "the API key environment variable (telemetryUploadKeyEnvironment) is empty", _settings._telemetryUploadKeyEnvironment } );
         if ( _telemetryClient.initialize() == false )
-        {
-            outError = "the HTTP client could not start";
-            return false;
-        }
-        if ( _telemetryClient.registerHostTLS( endpoint, _settings._telemetryUploadTrustFile, TelemetryUploadLinkInternal::kTrustOption, outError ) == false )
-            return false;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the HTTP client could not start" } );
+        if ( expected<void> tls = _telemetryClient.registerHostTLS( endpoint, _settings._telemetryUploadTrustFile, TelemetryUploadLinkInternal::kTrustOption ); tls.has_value() == false )
+            return tls;
         _pTelemetryUploader = make_unique<HTTPTelemetryUploader>( _telemetryClient, endpoint, apiKey );
         pTelemetry->setUploader( *_pTelemetryUploader );
         _pTelemetry = pTelemetry;
         SW_LOG_INFO_ID( "TelemetryUploadLink.TelemetryLinked", "[TelemetryUpload] telemetry uploads go to '%#' (sent only with consent)", endpoint.c_str() );
-        return true;
+        return {};
     }
 
-    bool TelemetryUploadLink::linkCrashReports( const string& endpoint, string& outError )
+    expected<void> TelemetryUploadLink::linkCrashReports( const string& endpoint )
     {
         const CrashReportService* const pCrashReports = game::findSubsystem<CrashReportService>();
         const string                    reportsFolder = pCrashReports != nullptr ? pCrashReports->getReportsFolder() : string{};
@@ -109,25 +110,19 @@ namespace sw
         {
             // 묶음 폴더는 텔레메트리 기동이 정한다(크래시 처리기가 있는 클라이언트). 없으면 보낼 묶음도 없다.
             SW_LOG_INFO_ID( "TelemetryUploadLink.NoCrashReports", "[TelemetryUpload] this host bundles no crash reports - '%#' is not used", endpoint.c_str() );
-            return true;
+            return {};
         }
         if ( _crashClient.initialize() == false )
-        {
-            outError = "the HTTP client could not start";
-            return false;
-        }
-        if ( _crashClient.registerHostTLS( endpoint, _settings._telemetryUploadTrustFile, TelemetryUploadLinkInternal::kTrustOption, outError ) == false )
-            return false;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the HTTP client could not start" } );
+        if ( expected<void> tls = _crashClient.registerHostTLS( endpoint, _settings._telemetryUploadTrustFile, TelemetryUploadLinkInternal::kTrustOption ); tls.has_value() == false )
+            return tls;
         _pCrashUploader = make_unique<HTTPCrashReportUploader>( _crashClient, endpoint );
         _crashWorker.start( "CrashUpload", DedicatedWorker<CrashUploadJob>::ProcessDelegate::create<&TelemetryUploadLink::uploadCrashReports>( this ) );
         CrashUploadJob job;
         job._reportsFolder = reportsFolder;
         if ( _crashWorker.submit( std::move( job ) ) == false )
-        {
-            outError = "the crash upload thread did not take the job";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the crash upload thread did not take the job" } );
+        return {};
     }
 
     void TelemetryUploadLink::uploadCrashReports( CrashUploadJob& job, bool bStopping )

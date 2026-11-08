@@ -183,8 +183,8 @@ namespace sw
         OnlineServiceHost& operator=( const OnlineServiceHost& ) = delete;
 
         /** @brief 전송(빌려 쓴다)을 띄우고 받기 시작합니다. `_pAdminTransport` 가 있으면 GM 리슨도 엽니다. 서비스는 그 전에 등록해야 합니다. */
-        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const OnlineServiceHostConfig& settings, string& outError );
-        void               shutdown();
+        [[nodiscard]] expected<void> initialize( IStreamTransport* pTransport, const OnlineServiceHostConfig& settings );
+        void                         shutdown();
 
         /** @brief 서비스를 등록합니다. 빌려 쓰며, 영역이 이미 있거나 메서드 번호가 겹치면 오류 로그를 남기고 false 를 반환하고 아무것도 등록하지 않습니다. */
         [[nodiscard]] bool registerServerService( IOnlineServerService* pService );

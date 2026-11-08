@@ -88,12 +88,12 @@ namespace sw
 
         /**
          * @brief 온라인 설정이 고른 저장소 · 캐시 항목을 서버 설정에서 찾아 @p outSettings 의 `_store` · `_cache` 를 채우고 비밀을 환경 변수에서 읽습니다.
-         * @details 전용 서버와 설정 파일로 서는 테스트(`OnlineRuntimeFixture`)가 같은 규칙을 지납니다. 이름이 비었거나 목록에 없으면 false 와 @p outError 입니다 - 다른 항목이나 메모리로 대신하지 않습니다.
+         * @details 전용 서버와 설정 파일로 서는 테스트(`OnlineRuntimeFixture`)가 같은 규칙을 지납니다. 이름이 비었거나 목록에 없으면 오류입니다 - 다른 항목이나 메모리로 대신하지 않습니다.
          */
-        [[nodiscard]] static bool resolveStores( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeConfig& outSettings, string& outError );
+        [[nodiscard]] static expected<void> resolveStores( const ServerConfig& serverConfig, const OnlineServerConfig& onlineConfig, OnlineServerRuntimeConfig& outSettings );
 
-        /** @brief 조립하고 받기 시작합니다. 실패하면 false 와 @p outError 이며, 만든 것은 `shutdown` 이 정리합니다. @p nowMs 는 서비스 시각입니다. */
-        [[nodiscard]] bool initialize( OnlineServerRuntimeConfig settings, UnixMilliseconds nowMs, string& outError );
+        /** @brief 조립하고 받기 시작합니다. 실패하면 오류이며, 만든 것은 `shutdown` 이 정리합니다. @p nowMs 는 서비스 시각입니다. */
+        [[nodiscard]] expected<void> initialize( OnlineServerRuntimeConfig settings, UnixMilliseconds nowMs );
         /** @brief 만든 역순으로 종료합니다. 두 번 불러도 됩니다. */
         void shutdown();
         /** @brief 호스트, 예약 작업, 키트, 서버 등록 하트비트를 돌립니다. */
@@ -117,11 +117,11 @@ namespace sw
 
         class BaseNode;
 
-        [[nodiscard]] bool createStores( OnlineServerRuntimeConfig& settings, UnixMilliseconds nowMs, string& outError );
+        [[nodiscard]] expected<void> createStores( OnlineServerRuntimeConfig& settings, UnixMilliseconds nowMs );
         /** @brief 설정의 키트를 만들어 노드로 더합니다(모르는 키트 · 두 번 적은 키트 · 설정에 없는 필수 키트는 오류). */
-        [[nodiscard]] bool addKits( bool bReverseIndependentOrder, string& outError );
-        [[nodiscard]] bool startHost( OnlineServerRuntimeConfig& settings, string& outError );
-        [[nodiscard]] bool registerServer( string& outError );
+        [[nodiscard]] expected<void> addKits( bool bReverseIndependentOrder );
+        [[nodiscard]] expected<void> startHost( OnlineServerRuntimeConfig& settings );
+        [[nodiscard]] expected<void> registerServer();
 
     private:
         unique_ptr<Parts> _parts;

@@ -30,15 +30,15 @@ namespace sw
         ISteamAPIBridge( const ISteamAPIBridge& )            = delete;
         ISteamAPIBridge& operator=( const ISteamAPIBridge& ) = delete;
 
-        /** @brief SDK 를 초기화합니다(`SteamAPI_Init`). 스팀 클라이언트가 없거나 앱 id 가 틀리면 false 이고 이유를 @p outError 에 씁니다. */
-        [[nodiscard]] virtual bool initialize( string& outError )                                     = 0;
-        virtual void               shutdown()                                                         = 0;
-        virtual void               runCallbacks()                                                     = 0; ///< `SteamAPI_RunCallbacks`
-        [[nodiscard]] virtual bool unlockAchievement( string_view achievementID )                     = 0;
-        [[nodiscard]] virtual bool setStat( string_view statID, int64 value )                         = 0;
-        [[nodiscard]] virtual bool writeCloudFile( string_view fileName, const vector<uint8>& bytes ) = 0;
-        [[nodiscard]] virtual bool readCloudFile( string_view fileName, vector<uint8>& outBytes )     = 0;
-        [[nodiscard]] virtual bool setRichPresence( string_view key, string_view value )              = 0;
+        /** @brief SDK 를 초기화합니다(`SteamAPI_Init`). 스팀 클라이언트가 없거나 앱 id 가 틀리면 그 이유(대상에 SDK 글)입니다. */
+        [[nodiscard]] virtual expected<void> initialize()                                                       = 0;
+        virtual void                         shutdown()                                                         = 0;
+        virtual void                         runCallbacks()                                                     = 0; ///< `SteamAPI_RunCallbacks`
+        [[nodiscard]] virtual bool           unlockAchievement( string_view achievementID )                     = 0;
+        [[nodiscard]] virtual bool           setStat( string_view statID, int64 value )                         = 0;
+        [[nodiscard]] virtual bool           writeCloudFile( string_view fileName, const vector<uint8>& bytes ) = 0;
+        [[nodiscard]] virtual bool           readCloudFile( string_view fileName, vector<uint8>& outBytes )     = 0;
+        [[nodiscard]] virtual bool           setRichPresence( string_view key, string_view value )              = 0;
         /** @brief `ISteamUser::GetAuthTicketForWebApi( identity )` 로 웹 API 티켓을 받아 16 진 글(바이트)로 씁니다. 서버는 같은 @p identity 로 확인한다(`TicketQueryLoginProvider`). */
         [[nodiscard]] virtual bool requestAuthTicket( string_view identity, vector<uint8>& outTicket ) = 0;
     };
@@ -51,10 +51,10 @@ namespace sw
     {
     public:
         /**
-         * @brief 다리로 서비스를 만듭니다. @p pBridge 가 비었거나 SDK 초기화가 실패하면 이유를 @p outError 에 쓰고 nullptr 입니다(오류 로그도 남긴다).
+         * @brief 다리로 서비스를 만듭니다. @p pBridge 가 비었거나 SDK 초기화가 실패하면 그 이유입니다(오류 로그도 남긴다).
          * @details 만든 서비스가 다리를 소유한다 - 소멸하면 SDK 를 내린다(`shutdown`).
          */
-        [[nodiscard]] static unique_ptr<SteamPlatformServices> create( unique_ptr<ISteamAPIBridge> pBridge, string& outError );
+        [[nodiscard]] static expected<unique_ptr<SteamPlatformServices>> create( unique_ptr<ISteamAPIBridge> pBridge );
 
         ~SteamPlatformServices() override;
 

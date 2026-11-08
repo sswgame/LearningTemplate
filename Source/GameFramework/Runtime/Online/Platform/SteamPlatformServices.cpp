@@ -6,18 +6,17 @@
 
 namespace sw
 {
-    unique_ptr<SteamPlatformServices> SteamPlatformServices::create( unique_ptr<ISteamAPIBridge> pBridge, string& outError )
+    expected<unique_ptr<SteamPlatformServices>> SteamPlatformServices::create( unique_ptr<ISteamAPIBridge> pBridge )
     {
         if ( pBridge == nullptr )
         {
-            outError = "no Steam API bridge was given (the plugin that links the Steam SDK provides it)";
             SW_LOG_ERROR_ID( "SteamPlatformServices.SteamPlatformServicesNeed", "Steam platform services need an ISteamAPIBridge - none was given" );
-            return nullptr;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no Steam API bridge was given (the plugin that links the Steam SDK provides it)" } );
         }
-        if ( pBridge->initialize( outError ) == false )
+        if ( expected<void> initialized = pBridge->initialize(); initialized.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "SteamPlatformServices.SteamSDKInitializationFailed", "Steam SDK initialization failed: %#", outError.c_str() );
-            return nullptr;
+            SW_LOG_ERROR_ID( "SteamPlatformServices.SteamSDKInitializationFailed", "Steam SDK initialization failed: %# (%#)", initialized.error().message(), initialized.error().detail() );
+            return unexpected( initialized.error() );
         }
         return unique_ptr<SteamPlatformServices>( new SteamPlatformServices( std::move( pBridge ) ) );
     }

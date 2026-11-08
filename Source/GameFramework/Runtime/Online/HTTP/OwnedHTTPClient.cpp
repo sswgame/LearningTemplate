@@ -36,29 +36,27 @@ namespace sw
         _listHost.clear();
     }
 
-    bool OwnedHTTPClient::registerHostTLS( string_view url, string_view trustFile, string_view trustOption, string& outError )
+    expected<void> OwnedHTTPClient::registerHostTLS( string_view url, string_view trustFile, string_view trustOption )
     {
         if ( url.empty() )
-            return true;
+            return {};
         HTTPAddress address;
         if ( HTTPAddress::parse( url, address ) == false )
-        {
-            outError = "malformed URL '" + string( url ) + "'";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "malformed URL", url } );
         if ( address._bSecure == SW_FALSE || VectorUtil::contains( _listHost, address._host ) )
-            return true;
+            return {};
         if ( trustFile.empty() )
         {
-            outError = "https URL '" + string( url ) + "' needs " + string( trustOption ) + " (a CA bundle PEM that verifies the provider)";
-            return false;
+            Error error{ ErrorKind::InvalidArgument, "an https URL needs a CA bundle PEM that verifies the provider", trustOption };
+            error.appendDetail( " for " ).appendDetail( url );
+            return unexpected( error );
         }
-        unique_ptr<ITLSContext> context = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), trustFile, address._host, outError );
-        if ( context == nullptr )
-            return false;
-        _client.registerTLSContext( address._host, context.get() );
-        _listTLSContext.push_back( std::move( context ) );
+        expected<unique_ptr<ITLSContext>> context = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), trustFile, address._host );
+        if ( context.has_value() == false )
+            return unexpected( context.error() );
+        _client.registerTLSContext( address._host, context->get() );
+        _listTLSContext.push_back( std::move( *context ) );
         _listHost.push_back( address._host );
-        return true;
+        return {};
     }
 } // namespace sw

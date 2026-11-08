@@ -19,16 +19,15 @@ namespace sw::test
         class TestLoginServerKit final : public IOnlineServerKit
         {
         public:
-            [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
+            [[nodiscard]] expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) override
             {
-                return registerServerService( context, entry, &_service, outError );
+                return registerServerService( context, entry, &_service );
             }
 
-            [[nodiscard]] bool start( OnlineServerKitContext& context, string& outError ) override
+            [[nodiscard]] expected<void> start( OnlineServerKitContext& context ) override
             {
                 (void)context;
-                (void)outError;
-                return true;
+                return {};
             }
 
             void stop() override {}
@@ -43,24 +42,21 @@ namespace sw::test
         return kTestLoginProtocol;
     }
 
-    bool OnlineRuntimeFixture::fromConfig( string_view serverJSON, string_view onlineJSON, int64 nowMs, string& outError )
+    expected<void> OnlineRuntimeFixture::fromConfig( string_view serverJSON, string_view onlineJSON, int64 nowMs )
     {
         ConfigManager manager;
         if ( manager.loadConfigFromJSON<ServerConfig>( string( serverJSON ), "OnlineRuntimeFixture.server" ) == false || manager.loadConfigFromJSON<OnlineServerConfig>( string( onlineJSON ), "OnlineRuntimeFixture.online" ) == false )
-        {
-            outError = "the server or online config text could not be read";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the server or online config text could not be read" } );
         OnlineServerRuntimeConfig settings;
         settings._config = *manager.getConfig<OnlineServerConfig>();
-        if ( OnlineServerRuntime::resolveStores( *manager.getConfig<ServerConfig>(), settings._config, settings, outError ) == false )
-            return false;
+        if ( expected<void> stores = OnlineServerRuntime::resolveStores( *manager.getConfig<ServerConfig>(), settings._config, settings ); stores.has_value() == false )
+            return stores;
         settings._config._ioThreadCount = 0;
         settings._bTLS                  = SW_FALSE;
         settings._pClock                = &_clock;
         settings._pTransport            = _serverTransport.get();
         settings._listenAddress         = NetAddress::makeLoopback( kPort );
-        return _runtime.initialize( std::move( settings ), UnixMilliseconds{ nowMs }, outError );
+        return _runtime.initialize( std::move( settings ), UnixMilliseconds{ nowMs } );
     }
 
     SW_REGISTER_ONLINE_SERVER_KIT( TestLoginServerKit, "testLogin" );

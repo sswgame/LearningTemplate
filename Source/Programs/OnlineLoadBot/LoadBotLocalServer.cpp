@@ -82,7 +82,11 @@ namespace sw
         runtimeSettings._cache._driver = kMemoryStoreDriverName;
         runtimeSettings._pClock        = settings._pClock;
         const UnixMilliseconds startMs = settings._startMs != UnixMilliseconds{ 0 } ? settings._startMs : WallClock::nowUnixMilliseconds();
-        return _runtime->initialize( std::move( runtimeSettings ), startMs, outError );
+        const expected<void>   started = _runtime->initialize( std::move( runtimeSettings ), startMs );
+        if ( started.has_value() )
+            return true;
+        outError = string( started.error().message() ) + ": " + string( started.error().detail() );
+        return false;
     }
 
     void LoadBotLocalServer::shutdown()

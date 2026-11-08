@@ -56,16 +56,16 @@ namespace sw
 
         /**
          * @brief gamesettings 의 서버(개발 구성은 `-gv_onlineServerAddress` 가 덮어쓴 값 — `IGameSettingsOverride`)에 TLS 로 연결을 겁니다. 결과는 `getState` 입니다.
-         * @return 주소 · 빌드 글이 없거나 TLS 문맥을 만들지 못하면 false 와 @p outError 입니다. 평문이나 다른 서버로 대신하지 않습니다.
+         * @return 주소 · 빌드 글이 없거나 TLS 문맥을 만들지 못하면 오류입니다. 평문이나 다른 서버로 대신하지 않습니다.
          */
-        [[nodiscard]] bool connect( string& outError );
+        [[nodiscard]] expected<void> connect();
         /** @brief 전송과 보안을 직접 골라 연결합니다(테스트 · `startLocalServer`). @p pTransport 는 빌려 쓰고 세션보다 오래 삽니다. */
-        [[nodiscard]] bool connectTo( IStreamTransport* pTransport, const OnlineClientSecurity& security, const NetAddress& address, string& outError );
+        [[nodiscard]] expected<void> connectTo( IStreamTransport* pTransport, const OnlineClientSecurity& security, const NetAddress& address );
         /**
          * @brief 이 프로세스 안에 서버 조립을 세우고 평문 루프백으로 붙습니다(개발 구성만). @p serverConfigPath 는 전용 서버의 `-server-config` 와 같은 파일이고 옆의 온라인 설정을 함께 읽습니다.
-         * @return 배포 구성이거나, 설정을 읽지 못하거나, 키트가 서지 못하면 false 와 @p outError 입니다.
+         * @return 배포 구성이거나, 설정을 읽지 못하거나, 키트가 서지 못하면 오류입니다.
          */
-        [[nodiscard]] bool startLocalServer( string_view serverConfigPath, string& outError );
+        [[nodiscard]] expected<void> startLocalServer( string_view serverConfigPath );
         /** @brief 연결을 닫고 안에 세운 서버가 있으면 내립니다. 두 번 불러도 됩니다. */
         void disconnect();
 

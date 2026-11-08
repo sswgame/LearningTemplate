@@ -11,6 +11,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/TimePoint.h"
@@ -32,9 +33,9 @@ namespace sw
     public:
         virtual ~IServiceStoreDriver() = default;
 
-        /** @brief 저장소를 만들고 초기화합니다. 실패하면 nullptr 과 까닭입니다. @p secret 은 쓰고 나면 부른 쪽이 비웁니다. */
-        virtual unique_ptr<IServiceStore> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount, UnixMilliseconds nowMs,
-                                                              string& outError ) = 0;
+        /** @brief 저장소를 만들고 초기화합니다. 실패하면 까닭입니다(대상에 비밀을 담지 않는다). @p secret 은 쓰고 나면 부른 쪽이 비웁니다. */
+        virtual expected<unique_ptr<IServiceStore>> createServiceStore( string_view driverName, string_view connection, string_view secret, int32 workerCount,
+                                                                        UnixMilliseconds nowMs ) = 0;
     };
 
     /**
@@ -46,7 +47,7 @@ namespace sw
     public:
         virtual ~IEphemeralStoreDriver() = default;
 
-        /** @brief 캐시를 만들고 초기화합니다. 실패하면 nullptr 과 까닭입니다. */
-        virtual unique_ptr<IEphemeralStore> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError ) = 0;
+        /** @brief 캐시를 만들고 초기화합니다. 실패하면 까닭입니다(대상에 비밀을 담지 않는다). */
+        virtual expected<unique_ptr<IEphemeralStore>> createEphemeralStore( string_view driverName, string_view endpoint, string_view secret ) = 0;
     };
 } // namespace sw

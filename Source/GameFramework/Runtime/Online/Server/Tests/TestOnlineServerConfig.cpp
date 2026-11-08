@@ -42,8 +42,10 @@ SW_TEST_CASE( OnlineServerConfigTest, SettingsObjectFillsTheKitConfig )
     const sw::OnlineServerConfig* pConfig = manager.getConfig<sw::OnlineServerConfig>();
     SW_REQUIRE_EQUAL( size_t( 1 ), pConfig->_listKit.size() );
     sw::OnlineConfigTestKitConfig kitConfig;
-    sw::string                    error;
-    SW_REQUIRE_TRUE_MSG( pConfig->_listKit[0].readSettings( kitConfig, error ), error.c_str() );
+    {
+        const auto result = pConfig->_listKit[0].readSettings( kitConfig );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+    }
     SW_EXPECT_EQUAL( 7777, kitConfig._port );
     SW_EXPECT_TRUE( kitConfig._bDebug );
     SW_REQUIRE_EQUAL( size_t( 2 ), kitConfig._listMode.size() );
@@ -57,14 +59,14 @@ SW_TEST_CASE( OnlineServerConfigTest, SettingsObjectFillsTheKitConfig )
 SW_TEST_CASE( OnlineServerConfigTest, MissingSettingsReadAsEmptyObject )
 {
     sw::OnlineConfigTestKitConfig kitConfig;
-    sw::string                    error;
-    SW_EXPECT_TRUE( makeEntry( "" ).readSettings( kitConfig, error ) );
+    SW_EXPECT_TRUE( makeEntry( "" ).readSettings( kitConfig ) );
     SW_EXPECT_EQUAL( 1, kitConfig._port );
 
     SW_EXPECT_LOG( "Config.KeyMissing" );
     sw::OnlineConfigTestRequiredConfig required;
-    SW_EXPECT_FALSE( makeEntry( "" ).readSettings( required, error ) );
-    SW_EXPECT_TRUE( error.find( "'testkit'" ) != sw::string::npos );
+    const sw::expected<void>           result = makeEntry( "" ).readSettings( required );
+    SW_REQUIRE_FALSE( result.has_value() );
+    SW_EXPECT_TRUE( result.error().detail() == "testkit" );
 }
 
 /**
@@ -74,10 +76,10 @@ SW_TEST_CASE( OnlineServerConfigTest, SettingsRejectUnknownKeyAndMalformedValue 
 {
     SW_EXPECT_LOG( "Config.KeyUnknown" );
     sw::OnlineConfigTestKitConfig kitConfig;
-    sw::string                    error;
-    SW_EXPECT_FALSE( makeEntry( R"({ "_prot": 9001 })" ).readSettings( kitConfig, error ) );
-    SW_EXPECT_TRUE( error.find( "'testkit'" ) != sw::string::npos );
-    SW_EXPECT_FALSE( makeEntry( R"({ "_port": "77x" })" ).readSettings( kitConfig, error ) );
+    const sw::expected<void>      unknownKey = makeEntry( R"({ "_prot": 9001 })" ).readSettings( kitConfig );
+    SW_REQUIRE_FALSE( unknownKey.has_value() );
+    SW_EXPECT_TRUE( unknownKey.error().detail() == "testkit" );
+    SW_EXPECT_FALSE( makeEntry( R"({ "_port": "77x" })" ).readSettings( kitConfig ) );
 }
 
 /**
@@ -85,14 +87,14 @@ SW_TEST_CASE( OnlineServerConfigTest, SettingsRejectUnknownKeyAndMalformedValue 
  */
 SW_TEST_CASE( OnlineServerConfigTest, ResolveFileHandlesEmptyAndRelativePaths )
 {
-    const sw::OnlineServerKitEntry entry = makeEntry( "" );
-    sw::optional<sw::AbsolutePath> path;
-    sw::string                     error;
-    SW_REQUIRE_TRUE( entry.resolveFile( "", "_file", path, error ) );
-    SW_EXPECT_FALSE( path.has_value() );
-    SW_REQUIRE_TRUE( entry.resolveFile( "Config/Server/a.txt", "_file", path, error ) );
-    SW_REQUIRE_TRUE( path.has_value() );
-    SW_EXPECT_TRUE( path->str().find( "a.txt" ) != sw::string::npos );
+    const sw::OnlineServerKitEntry                     entry = makeEntry( "" );
+    const sw::expected<sw::optional<sw::AbsolutePath>> empty = entry.resolveFile( "", "_file" );
+    SW_REQUIRE_TRUE( empty.has_value() );
+    SW_EXPECT_FALSE( empty->has_value() );
+    const sw::expected<sw::optional<sw::AbsolutePath>> relative = entry.resolveFile( "Config/Server/a.txt", "_file" );
+    SW_REQUIRE_TRUE( relative.has_value() );
+    SW_REQUIRE_TRUE( relative->has_value() );
+    SW_EXPECT_TRUE( ( *relative )->str().find( "a.txt" ) != sw::string::npos );
 }
 
 /**
@@ -199,8 +201,10 @@ SW_TEST_CASE( OnlineServerConfigTest, RepositoryOnlineConfigsResolve )
             addSecret( cache._secretEnvironment );
         }
         sw::OnlineServerRuntimeConfig settings;
-        sw::string                    error;
-        SW_EXPECT_TRUE_MSG( sw::OnlineServerRuntime::resolveStores( *manager.getConfig<sw::ServerConfig>(), *manager.getConfig<sw::OnlineServerConfig>(), settings, error ), error.c_str() );
+        {
+            const auto result = sw::OnlineServerRuntime::resolveStores( *manager.getConfig<sw::ServerConfig>(), *manager.getConfig<sw::OnlineServerConfig>(), settings );
+            SW_EXPECT_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() );
+        }
         for ( const sw::string& name : listSecretName )
         {
             (void)sw::ProcessEnvironment::tryUnset( name );

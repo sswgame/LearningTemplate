@@ -150,11 +150,13 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedWhileFailingQueuedCallsGet
     kit->_pOwner                                          = &kit;
     kit->_pResponseCount                                  = &responseCount;
     SW_REQUIRE_TRUE( client.registerClientService( kit.get() ) );
-    string                    error;
     OnlineServiceClientConfig settings{ OnlineClientSecurity::plaintextLoopback() };
-    settings._serverAddress                    = NetAddress::makeLoopback( 1 );                  // 평문은 루프백에만 맺는다 — 서버는 없다
-    settings._transportSettings._ioThreadCount = 0;                                              // 루프백 전송은 IO 스레드를 두지 않는다
-    SW_REQUIRE_TRUE_MSG( client.initialize( transport.get(), settings, error ), error.c_str() ); // 서버가 없다 — 요청은 모인다
+    settings._serverAddress                    = NetAddress::makeLoopback( 1 ); // 평문은 루프백에만 맺는다 — 서버는 없다
+    settings._transportSettings._ioThreadCount = 0;                             // 루프백 전송은 IO 스레드를 두지 않는다
+    {
+        const auto result = client.initialize( transport.get(), settings );
+        SW_REQUIRE_TRUE_MSG( result.has_value(), result.has_value() ? std::string_view{} : result.error().message() ); // 서버가 없다 — 요청은 모인다
+    }
 
     const OnlineResponseDelegate onResponse = OnlineResponseDelegate::create<&SelfDestroyingClientService::onResponse>( kit.get() );
     (void)client.sendRequest( OnlineMethodRange::kGame + 1, BitWriter{}, NetRequestOptions{}, onResponse );
@@ -324,7 +326,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, PlaintextToANonLoopbackAddressIsRefuse
     OnlineServiceClientConfig    settings{ OnlineClientSecurity::plaintextLoopback() };
     SW_REQUIRE_TRUE( NetAddress::parse( "203.0.113.7", 7780, settings._serverAddress ) ); // 문서용 주소(TEST-NET-3)
     settings._transportSettings._ioThreadCount = 0;
-    string error;
-    SW_EXPECT_FALSE( client.initialize( transport.get(), settings, error ) );
-    SW_EXPECT_TRUE( error.find( "loopback" ) != string::npos );
+    const auto failed1                         = client.initialize( transport.get(), settings );
+    SW_REQUIRE_FALSE( failed1.has_value() );
+    const sw::string error1 = sw::string( failed1.error().message() ) + " " + sw::string( failed1.error().detail() );
+    SW_EXPECT_TRUE( error1.find( "loopback" ) != string::npos );
 }

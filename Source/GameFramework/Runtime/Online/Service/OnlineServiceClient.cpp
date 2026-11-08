@@ -114,20 +114,14 @@ namespace sw
         }
     }
 
-    bool OnlineServiceClient::initialize( IStreamTransport* pTransport, const OnlineServiceClientConfig& settings, string& outError )
+    expected<void> OnlineServiceClient::initialize( IStreamTransport* pTransport, const OnlineServiceClientConfig& settings )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         if ( settings._security._kind == OnlineClientSecurity::Kind::SharedEndpoint )
-        {
-            outError = "online service client owns its endpoint - choose OnlineClientSecurity::tls (or plaintextLoopback), not sharedEndpoint";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "online service client owns its endpoint - choose OnlineClientSecurity::tls (or plaintextLoopback), not sharedEndpoint" } );
         // 평문은 같은 기계에만 — 다른 주소로 가는 평문 연결은 맺지 않는다(조용히 TLS 로 바꾸지도 않는다).
         if ( settings._security._kind == OnlineClientSecurity::Kind::PlaintextLoopback && settings._serverAddress.isLoopback() == false )
-        {
-            outError = "plaintext is only allowed to a loopback address - use OnlineClientSecurity::tls for " + settings._serverAddress.toString();
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "plaintext is only allowed to a loopback address - use OnlineClientSecurity::tls", settings._serverAddress.toString() } );
         _settings                               = settings;
         StreamEndpointConfig endpointSettings   = settings._endpointSettings;
         endpointSettings._security._pTLSContext = settings._security._pTLSContext; // 보안 선택이 컨텍스트의 유일한 길이다
@@ -138,16 +132,13 @@ namespace sw
         const bool bTransportStartFailed        = pTransport == nullptr || _ownedEndpoint->initialize( pTransport, endpointSettings ) == false ||
                                            pTransport->initialize( _ownedEndpoint.get(), settings._transportSettings ) == false;
         if ( bTransportStartFailed )
-        {
-            outError = "online service client could not start its stream transport";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::ExternalFailure, "online service client could not start its stream transport" } );
         _ownedRequestClient->initialize( _ownedEndpoint.get() );
         _pEndpoint      = _ownedEndpoint.get();
         _pRequestClient = _ownedRequestClient.get();
         _bInitialized   = SW_TRUE;
         beginConnect();
-        return true;
+        return {};
     }
 
     bool OnlineServiceClient::initializeOnSharedEndpoint( StreamMessageEndpoint* pEndpoint, NetRequestClient* pRequestClient, StreamConnectionHandle handle,

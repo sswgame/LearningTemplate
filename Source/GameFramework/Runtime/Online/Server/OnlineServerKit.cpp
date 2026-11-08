@@ -19,17 +19,11 @@ namespace sw
 
 namespace sw
 {
-    bool IOnlineServerKit::registerServerService( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, IOnlineServerService* pService, string& outError )
+    expected<void> IOnlineServerKit::registerServerService( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, IOnlineServerService* pService )
     {
         if ( context._pHost->registerServerService( pService ) )
-            return true;
-        outError = "the method range of kit '" + entry._name + "' is already taken";
-        return false;
-    }
-
-    void IOnlineServerKit::reportInterfaceTaken( const OnlineServerKitEntry& entry, string& outError )
-    {
-        outError = "kit '" + entry._name + "' exposes an interface another kit already exposed";
+            return {};
+        return unexpected( Error{ ErrorKind::AlreadyExists, "the method range of the kit is already taken", entry._name } );
     }
 
     void OnlineServerKitRegistry::registerFactory( OnlineServerKitFactory* pFactory )

@@ -63,8 +63,8 @@ namespace sw
             string _reportsFolder{};
         };
 
-        [[nodiscard]] bool linkTelemetry( const string& endpoint, string& outError );
-        [[nodiscard]] bool linkCrashReports( const string& endpoint, string& outError );
+        [[nodiscard]] expected<void> linkTelemetry( const string& endpoint );
+        [[nodiscard]] expected<void> linkCrashReports( const string& endpoint );
         /** @brief 전용 스레드에서 묶음을 올립니다. 정지 중에 꺼낸 일도 끝까지 보낸다(이미 받은 묶음이라 다음 기동까지 미룰 까닭이 없다). */
         void uploadCrashReports( CrashUploadJob& job, bool bStopping );
 

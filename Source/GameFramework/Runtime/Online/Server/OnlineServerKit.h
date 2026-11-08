@@ -112,9 +112,9 @@ namespace sw
         IOnlineServerKit& operator=( const IOnlineServerKit& ) = delete;
 
         /** @brief 호스트를 띄우기 전입니다. 로직과 바인딩을 만들고 `registerServerService` 로 올리며, 다른 키트가 쓸 인터페이스를 `exposeInterface` 로 겁니다. */
-        [[nodiscard]] virtual bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) = 0;
+        [[nodiscard]] virtual expected<void> initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry ) = 0;
         /** @brief 모든 키트의 `initialize` 와 호스트 기동 뒤입니다. 라우터와 다른 키트의 인터페이스로 로직을 시작합니다. */
-        [[nodiscard]] virtual bool start( OnlineServerKitContext& context, string& outError ) = 0;
+        [[nodiscard]] virtual expected<void> start( OnlineServerKitContext& context ) = 0;
         /** @brief 서버 루프마다 호스트 틱 뒤에 불립니다. 바인딩의 `onServiceTick` 이 하지 않는 일(서버 등록 하트비트 등)만 둡니다. */
         virtual void update( UnixMilliseconds nowMs ) { (void)nowMs; }
         /** @brief 호스트를 내리기 전입니다. 맡긴 캐시 요청을 취소하고, 구독을 풀고, 저장 일을 회수합니다. */
@@ -136,35 +136,33 @@ namespace sw
         virtual span<const utf8* const> getOptionalKits() const { return {}; }
 
         /** @brief 런타임이 `start` 단계에 부릅니다. 성공하면 `isStarted()` 가 true 가 됩니다. */
-        [[nodiscard]] bool startKit( OnlineServerKitContext& context, string& outError )
+        [[nodiscard]] expected<void> startKit( OnlineServerKitContext& context )
         {
-            _bStarted = start( context, outError );
-            return _bStarted;
+            expected<void> result = start( context );
+            _bStarted             = result.has_value();
+            return result;
         }
 
     protected:
         /** @brief `start` 에 성공했는지입니다. `stop` · `shutdown` 에서 `start` 가 세운 것을 되돌릴 때 봅니다. */
         bool isStarted() const { return _bStarted; }
 
-        /** @brief @p pService 를 문맥의 호스트에 등록합니다. 메서드 영역이 겹치면 false 와 키트 이름이 포함된 @p outError 입니다(겹친 번호는 호스트가 로그에 남긴다). */
-        [[nodiscard]] static bool registerServerService( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, IOnlineServerService* pService, string& outError );
+        /** @brief @p pService 를 문맥의 호스트에 등록합니다. 메서드 영역이 겹치면 대상이 키트 이름인 오류입니다(겹친 번호는 호스트가 로그에 남긴다). */
+        [[nodiscard]] static expected<void> registerServerService( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, IOnlineServerService* pService );
 
         /**
-         * @brief @p object 를 인터페이스 @p TInterface 로 문맥의 지역 범위에 겁니다. 다른 키트가 이미 같은 인터페이스를 걸었으면 false 와 까닭입니다.
+         * @brief @p object 를 인터페이스 @p TInterface 로 문맥의 지역 범위에 겁니다. 다른 키트가 이미 같은 인터페이스를 걸었으면 대상이 키트 이름인 오류입니다.
          * @details 건 칸은 범위와 함께 사라집니다 — 범위는 키트를 소유한 런타임 부품이라 키트보다 먼저 사라지지 않고, 찾는 쪽은 `start` 에서만 찾습니다.
          */
         template <class TInterface>
-        [[nodiscard]] static bool exposeInterface( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, TInterface& object, string& outError )
+        [[nodiscard]] static expected<void> exposeInterface( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, TInterface& object )
         {
             if ( context._kits.bind<TInterface>( &object ) )
-                return true;
-            reportInterfaceTaken( entry, outError );
-            return false;
+                return {};
+            return unexpected( Error{ ErrorKind::AlreadyExists, "the kit exposes an interface another kit already exposed", entry._name } );
         }
 
     private:
-        static void reportInterfaceTaken( const OnlineServerKitEntry& entry, string& outError );
-
         uint8 _bStarted : 1;
     };
 } // namespace sw

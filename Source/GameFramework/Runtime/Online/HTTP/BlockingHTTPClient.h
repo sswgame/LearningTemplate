@@ -41,8 +41,8 @@ namespace sw
         [[nodiscard]] bool initialize();
         void               shutdown();
 
-        /** @brief @p url 이 `https://` 면 그 호스트의 TLS 컨텍스트를 @p trustFile(CA 번들 PEM)로 만들어 등록합니다(`OwnedHTTPClient::registerHostTLS`). 실패하면 false 와 @p outError 입니다. */
-        [[nodiscard]] bool registerHostTLS( string_view url, string_view trustFile, string_view trustOption, string& outError );
+        /** @brief @p url 이 `https://` 면 그 호스트의 TLS 컨텍스트를 @p trustFile(CA 번들 PEM)로 만들어 등록합니다(`OwnedHTTPClient::registerHostTLS`). 실패하면 오류입니다. */
+        [[nodiscard]] expected<void> registerHostTLS( string_view url, string_view trustFile, string_view trustOption );
 
         /** @brief 요청 하나를 보내고 응답까지 막습니다. 보내지 못하면 `_status` 0 과 `_error` 입니다. */
         HTTPResponse send( const HTTPRequest& request ) override;
