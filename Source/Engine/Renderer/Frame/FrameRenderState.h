@@ -25,6 +25,7 @@
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
+#include "Engine/Renderer/Lighting/LensFlareSpriteBuffer.h"
 #include "Engine/Renderer/Lighting/Light2DCookieAtlas.h"
 #include "Engine/Renderer/Lighting/RealtimeProbeUpdater.h"
 #include "Engine/Renderer/Lighting/ShadowCache.h"
@@ -114,10 +115,13 @@ namespace sw
         ShadowCache _shadowCache{};
         /// @brief 이번 프레임 실시간 프로브 갱신 요청입니다(패킷 경로도 여기에 받는다). 기록은 읽기만 합니다.
         vector<RealtimeProbeRequest> _listFrameRealtimeProbe{};
-        RealtimeProbeUpdater         _probeUpdater{};   ///< 실시간 프로브 갱신의 버퍼와 컴퓨트 기록(`FrameRenderer::prepareRealtimeProbes` · `FramePassExecutor::dispatchRealtimeProbes`)
-        SkyGradient                  _frameSkySource{}; ///< 이번 프레임 하늘의 원본 값입니다(실시간 프로브 갱신이 하늘 SH 를 투영한다). `_bHasFrameSky` 가 0 이면 기본값
-        hashed_string                _skyHdriPath{};    ///< 지금 쥔 HDRI 하늘 텍스처의 경로입니다(`FrameRenderer::applyFrameSky`). 비었으면 쥔 것이 없다
-        TextureHandle                _skyHdriLoad{};    ///< HDRI 하늘 텍스처의 로드 핸들입니다(참조를 쥔다). 스카이 패스가 준비된 것만 읽는다
+        RealtimeProbeUpdater         _probeUpdater{}; ///< 실시간 프로브 갱신의 버퍼와 컴퓨트 기록(`FrameRenderer::prepareRealtimeProbes` · `FramePassExecutor::dispatchRealtimeProbes`)
+        /// @brief 이번 프레임 렌즈 플레어를 단 빛들입니다(패킷 경로가 받는다). 기록은 읽기만 합니다.
+        vector<LensFlareRequest> _listFrameLensFlare{};
+        LensFlareSpriteBuffer    _lensFlare{};      ///< 주 시점 렌즈 플레어 스프라이트의 버퍼(`FrameRenderer` 가 기록 전에 채우고 `FramePassExecutor::executeLensFlarePass` 가 그린다)
+        SkyGradient              _frameSkySource{}; ///< 이번 프레임 하늘의 원본 값입니다(실시간 프로브 갱신이 하늘 SH 를 투영한다). `_bHasFrameSky` 가 0 이면 기본값
+        hashed_string            _skyHdriPath{};    ///< 지금 쥔 HDRI 하늘 텍스처의 경로입니다(`FrameRenderer::applyFrameSky`). 비었으면 쥔 것이 없다
+        TextureHandle            _skyHdriLoad{};    ///< HDRI 하늘 텍스처의 로드 핸들입니다(참조를 쥔다). 스카이 패스가 준비된 것만 읽는다
         /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
         Light2DCookieAtlas _cookieAtlas{};
         /** @brief 뷰의 후처리 값이 가리키는 텍스처(컬러 그레이딩 LUT · 블룸 먼지 마스크)의 로드 핸들입니다. 셋업이 뷰마다 묻고 프레임 시작에 안 쓰인 것을 놓는다. */

@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Frame/Packet/RenderPacketSceneCollector.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Animation/Scene/AnimationSystem.h"
@@ -11,6 +12,7 @@
 #include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"
@@ -22,6 +24,7 @@
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/World/UIWidgetComponentService.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
+#include "Engine/Visual/Component/LightComponent.h"
 #include "Engine/Visual/MeshLODSystem.h"
 
 namespace sw
@@ -40,6 +43,7 @@ namespace sw
         , _listLODView{}
         , _listShadowLightIndex{}
         , _lightProbeElement{}
+        , _listLensFlareAsset{}
         , _bGPUInstanceLODCapable{ SW_FALSE }
     {
     }
@@ -100,10 +104,56 @@ namespace sw
         // 그 씬은 앰비언트만 받는다(키라이트로 대신 비추지 않는다). 그림자를 켠 점광 · 스폿은 번호를 따로 받아 아래에서 아틀라스 칸을 준다.
         collectSceneLights( &activeScene, packet._listLight, &_listShadowLightIndex, &_lightProbeElement, &packet._listLightCookie, &packet._listRealtimeProbe );
         packet._pLightProbe = _lightProbeElement.getElements();
+        collectLensFlares( packet, activeScene );
         // 하늘도 씬이 갖는다. 없으면 스카이 패스가 그리지 않는다(배경은 SceneColor 클리어 색).
         const GameObjectManager* pActiveObjects = activeScene.getObjectManager();
         packet._bHasSky                         = ( pActiveObjects != nullptr && pActiveObjects->findServiceSky( packet._sky ) ) ? SW_TRUE : SW_FALSE;
         return lights;
+    }
+
+    void RenderPacketSceneCollector::collectLensFlares( RenderFramePacket& packet, const Scene& activeScene )
+    {
+        packet._listLensFlare.clear();
+        const GameObjectManager* pObjects = activeScene.getObjectManager();
+        if ( pObjects == nullptr )
+            return;
+        const ComponentRegistry& registry = pObjects->getComponentRegistry();
+        // 3D 빛 셋만 본다(2D 빛은 화면 평면에 있어 렌즈를 지나지 않는다).
+        const LightKind arrKind[] = { LightKind::Directional, LightKind::Point, LightKind::Spot };
+        for ( const LightKind kind : arrKind )
+        {
+            for ( const LightComponent* pLight : registry.getAll<LightComponent>( LightComponent::getRegistryIndex( kind ) ) )
+            {
+                if ( pLight == nullptr || pLight->isActive() == false || pLight->getLensFlarePath().empty() )
+                    continue;
+                const string& path    = pLight->getLensFlarePath();
+                auto*         pCached = VectorUtil::findIf( _listLensFlareAsset, [&path]( const pair<string, shared_ptr<const LensFlareAsset>>& entry )
+                        { return entry.first == path; } );
+                if ( pCached == nullptr )
+                {
+                    shared_ptr<LensFlareAsset> pAsset = make_shared<LensFlareAsset>();
+                    if ( const expected<void> loaded = pAsset->loadFromAsset( AssetID{ string_view( path ) } ); loaded.has_value() == false )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPacketSceneCollector.LensFlareUnreadable", "Lens flare '%#' could not be loaded (%#) - lights using it draw no flare", path, loaded.error().message() );
+                        pAsset.reset();
+                    }
+                    _listLensFlareAsset.emplace_back( path, std::move( pAsset ) );
+                    pCached = &_listLensFlareAsset.back();
+                }
+                if ( pCached->second == nullptr )
+                    continue;
+                GPULight element{};
+                pLight->writeGPULight( element );
+                const float3     color = pLight->getColor() * pLight->getIntensity();
+                LensFlareRequest request;
+                request._position     = pLight->getLightPosition();
+                request._direction    = float3{ element._directionType._x, element._directionType._y, element._directionType._z };
+                request._color        = color;
+                request._bDirectional = kind == LightKind::Directional ? SW_TRUE : SW_FALSE;
+                request._pAsset       = pCached->second;
+                packet._listLensFlare.push_back( std::move( request ) );
+            }
+        }
     }
 
     void RenderPacketSceneCollector::applyMainCamera( RenderFramePacket& packet, Scene& activeScene, CameraComponent& camera )

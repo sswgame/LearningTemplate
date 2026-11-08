@@ -131,6 +131,19 @@ namespace sw
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
          */
         Compute,
+        /**
+         * @brief 화면 공간 간접 확산광(SSGI)입니다(ssgi.hlsl). 반투명 앞에 떠 둔 장면 색(`SceneColorCopy`)을 깊이 · G버퍼 노멀로 반구에서 걸어 가까운 면이 튕긴 빛을 모으고,
+         *        G버퍼 알베도를 곱해 선언한 컬러 출력(조명 첨부)에 **더한다**(XML `_blendPreset="Additive"`). 프로브 GI(먼 빛)는 조명 패스가 이미 그렸고 이 패스는 가까운 튐만 더한다
+         *        (언리얼 UE4 의 화면 공간 GI 가 라이트맵 · 스카이 위에 더하는 것과 같은 자리). 세기 · 반경 · 걸음 수는 XML 퍼뮤테이션 값이다(셰이더에 기본값이 없다 — `kRequiresPassDesc`).
+         *        출력(조명 첨부)을 여러 패스가 쓰므로 뷰마다 건너뛰는 효과가 아니다 — 켜고 끄는 것은 파이프라인 XML 이다(engine/pipeline/deferredpipeline_gi.xml). SceneColorCopy 뒤 · 반투명 앞에 둔다.
+         */
+        ScreenSpaceGI,
+        /**
+         * @brief 빛마다의 렌즈 플레어 스프라이트입니다(lens_flare.hlsl). 플레어를 단 빛(`LightComponent::_lensFlarePath`)을 주 시점에 투영해 데이터(`LensFlareAsset`)의 원소를
+         *        빛 → 화면 가운데 축 위에 그리고, 빛 자리 둘레의 장면 깊이로 가림을, 화면 가장자리로 감쇠를 곱한다(`LensFlareSpriteBuffer`). 선언한 HDR 컬러 출력에 가산 블렌드로 더한다
+         *        (XML `_blendPreset="Additive"`) — 톤맵 · 블룸 앞에 둔다. 블룸에서 고스트를 뽑는 화면 효과와 별개다. 플레어를 단 빛이 없으면 그리지 않는다(출력 그대로). 주 시점만 그린다.
+         */
+        LensFlare,
 
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,

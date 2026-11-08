@@ -528,6 +528,11 @@ namespace sw
         inoutListShader.push_back( std::move( request._vertex ) );
         if ( request._bHasPixelShader != SW_FALSE )
             inoutListShader.push_back( std::move( request._pixel ) );
+        if ( request._bHasTessellation != SW_FALSE )
+        {
+            inoutListShader.push_back( std::move( request._hull ) );
+            inoutListShader.push_back( std::move( request._domain ) );
+        }
     }
 
     void FramePSOManager::warmShaders( const vector<ShaderCompileDesc>& listShader ) const
@@ -781,6 +786,21 @@ namespace sw
                 if ( bMaterialDepthShader && FrameRendererUtil::hasMaterialDepthPixelStage( passType, &pPermutation->_listDefine ) == false )
                     desc._pixelShaderPath.clear();
                 bChanged = true;
+            }
+            // 변위 머티리얼은 머티리얼 셰이더의 헐 · 도메인을 붙인다(쿠커와 같은 판정). 테셀레이션이 없는 백엔드에서는 평면으로 대신 그리지 않고 이 조합을 그리지 않는다.
+            if ( FrameRendererUtil::tessellatesMaterial( passType, &pPermutation->_listDefine ) )
+            {
+                if ( _pDevice->getCapabilities()._bMaterialTessellation == SW_FALSE )
+                {
+                    SW_LOG_ERROR_ID( "FramePSOManager.DisplacementUnsupported",
+                                     "Material '%#' uses MATERIAL_DISPLACEMENT but backend %# has no material tessellation (RHICapabilities::_bMaterialTessellation) - these batches are not drawn",
+                                     pPermutation->_shaderPath, static_cast<uint32>( _pDevice->getBackendType() ) );
+                    return RenderPSOCache::MaterialPSOEntry::failed();
+                }
+                desc._hullEntryPoint   = string( getShaderStageInfo( ShaderStage::Hull )._pEntryPoint );
+                desc._domainEntryPoint = string( getShaderStageInfo( ShaderStage::Domain )._pEntryPoint );
+                desc._topology         = RHIPrimitiveTopology::PatchList3;
+                bChanged               = true;
             }
             // 등장 디더 변형은 패스 셰이더의 깊이 패스에도 픽셀 스테이지가 있어야 한다 — 기본 패스와 같은 픽셀을 버린다(쿠커와 같은 판정).
             if ( FrameRendererUtil::addsAppearanceDitherPixelStage( passType, &pPermutation->_listDefine ) && desc._pixelShaderPath.empty() )

@@ -242,6 +242,8 @@ namespace sw
         void executeDistortionApplyPass( const PassExecuteInput& input );
         /** @brief 화면 공간 반사 패스입니다 — 세기가 있는 후처리 뷰에서만 장면 색 위에 반사를 블렌드합니다. */
         void executeScreenSpaceReflectionPass( const PassExecuteInput& input );
+        /** @brief 렌즈 플레어 패스(`RenderPassType::LensFlare`)를 실행합니다. 주 시점이 아니거나 스프라이트가 없으면 그리지 않습니다. 스프라이트는 `LensFlareSpriteBuffer` 가 기록 전에 올렸다. */
+        void executeLensFlarePass( const PassExecuteInput& input );
         /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */
         void executeTAAPass( const PassExecuteInput& input );
         /** @brief 최종 출력(백버퍼 · 캡처 · 렌더 텍스처)으로의 블릿입니다. 화면 사각형 · 정수 업스케일 뷰포트를 적용합니다. */

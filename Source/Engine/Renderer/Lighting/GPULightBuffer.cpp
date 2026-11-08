@@ -87,14 +87,17 @@ namespace sw
                 const LightProbeGridLayout layout = volume.computeLayout();
                 RealtimeProbeRequest       request{};
                 request._volumeElement = makeRealtimeProbeVolumeElement( layout, inoutProbeElement );
-                request._volumeID      = volume.getComponentID();
-                request._probeCount    = layout.getProbeCount();
+                // 하늘 가림 세기 — 소비 셰이더가 프로브의 하늘 보임(probe_update.hlsl 이 원소 6 의 w 에 쓴다)으로 반사 앰비언트를 가린다(binding_slots.hlsli 8 절 원소 배치).
+                request._volumeElement._colorIntensity._w = volume.getRealtimeSkyOcclusion();
+                request._volumeID                         = volume.getComponentID();
+                request._probeCount                       = layout.getProbeCount();
                 // 광선 수 · 주기는 스윕 스위치가 0 보다 크면 그 값이다(같은 씬으로 값만 바꿔 잰다).
-                request._rayCount     = gv_realtimeProbeRayCount > 0 ? static_cast<uint32>( gv_realtimeProbeRayCount ) : volume.getRealtimeRayCount();
-                request._updatePeriod = gv_realtimeProbeUpdatePeriod > 0 ? static_cast<uint32>( gv_realtimeProbeUpdatePeriod ) : volume.getRealtimeUpdatePeriod();
-                request._blend        = volume.getRealtimeBlend();
-                request._bounceAlbedo = volume.getBounceAlbedo();
-                request._pVoxelGrid   = std::move( pGrid );
+                request._rayCount          = gv_realtimeProbeRayCount > 0 ? static_cast<uint32>( gv_realtimeProbeRayCount ) : volume.getRealtimeRayCount();
+                request._updatePeriod      = gv_realtimeProbeUpdatePeriod > 0 ? static_cast<uint32>( gv_realtimeProbeUpdatePeriod ) : volume.getRealtimeUpdatePeriod();
+                request._blend             = volume.getRealtimeBlend();
+                request._bounceAlbedo      = volume.getBounceAlbedo();
+                request._emissiveIntensity = volume.getRealtimeEmissiveIntensity();
+                request._pVoxelGrid        = std::move( pGrid );
                 inoutList.push_back( request._volumeElement );
                 inoutListRequest.push_back( std::move( request ) );
             }

@@ -387,9 +387,22 @@ namespace sw
             const bool bShadowPass = passType == RenderPassType::Shadow;
             if ( bShadowPass && hasMaterialDefine( pListMaterialDefine, kMaterialShadowCastOffDefine ) )
                 return false;
-            if ( hasMaterialDefine( pListMaterialDefine, kMaterialAlphaCutoffDefine ) )
+            // 변위는 두 깊이 패스 모두 갈아탄다 — 윤곽이 바뀌므로 깊이 프리패스도 같은 자리를 써야 본 패스의 깊이 비교를 통과한다.
+            if ( hasMaterialDefine( pListMaterialDefine, kMaterialAlphaCutoffDefine ) || hasMaterialDefine( pListMaterialDefine, kMaterialDisplacementDefine ) )
                 return true;
             return bShadowPass && hasMaterialDefine( pListMaterialDefine, kMaterialVertexDeformDefine );
+        }
+
+        /**
+         * @brief 이 패스가 이 머티리얼의 배치를 헐 · 도메인 스테이지(머티리얼 셰이더의 `HSMain` · `DSMain`)를 붙여 그리는지 반환합니다.
+         * @details 머티리얼 셰이더로 그리는 패스(본 · G버퍼 · 외곽선)와 머티리얼 셰이더로 갈아탄 깊이 패스가 변위 머티리얼(`MATERIAL_DISPLACEMENT`)을 그릴 때다.
+         *          패스 셰이더로 그리는 배치는 머티리얼의 헐 · 도메인을 모른다. 런타임 PSO 변형(`FramePSOManager::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
+         */
+        static bool tessellatesMaterial( RenderPassType passType, const vector<string>* pListMaterialDefine )
+        {
+            if ( hasMaterialDefine( pListMaterialDefine, kMaterialDisplacementDefine ) == false )
+                return false;
+            return usesMaterialShader( passType ) || drawsDepthWithMaterialShader( passType, pListMaterialDefine );
         }
 
         /**

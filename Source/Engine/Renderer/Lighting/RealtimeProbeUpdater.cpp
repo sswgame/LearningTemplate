@@ -39,6 +39,10 @@ namespace sw
             layout._listHistoryOffset.push_back( layout._totalHistoryElements );
             layout._listFirstThread.push_back( layout._totalProbes );
             layout._totalVoxelWords += request._pVoxelGrid != nullptr ? static_cast<uint32>( request._pVoxelGrid->_listWord.size() ) : 0u;
+            // 발광 칸은 그 볼륨의 점유 단어 바로 뒤에 붙인다(같은 버퍼 t2). 없으면 셰이더가 읽지 않는다.
+            const bool bHasEmission = request._pVoxelGrid != nullptr && request._pVoxelGrid->_listEmission.empty() == false;
+            layout._listEmissionWordOffset.push_back( bHasEmission ? layout._totalVoxelWords : kNoEmission );
+            layout._totalVoxelWords += bHasEmission ? static_cast<uint32>( request._pVoxelGrid->_listEmission.size() ) : 0u;
             layout._totalHistoryElements += request._probeCount * SH9Color::kGPUFloat4Count;
             layout._totalProbes += request._probeCount;
         }
@@ -96,7 +100,7 @@ namespace sw
             rows.push_back( float4{ grid._origin._x, grid._origin._y, grid._origin._z, grid._cellSize } );
             rows.push_back( Internal::packBits( grid._dimX, grid._dimY, grid._dimZ, layout._listVoxelWordOffset[index] ) );
             rows.push_back( Internal::packBits( layout._listHistoryOffset[index], layout._listFirstThread[index], request._probeCount, request._rayCount ) );
-            rows.push_back( Internal::packBits( MathUtil::max( request._updatePeriod, 1u ), warmup, 0u, 0u ) );
+            rows.push_back( Internal::packBits( MathUtil::max( request._updatePeriod, 1u ), warmup, layout._listEmissionWordOffset[index], BitUtil::floatToBits( request._emissiveIntensity ) ) );
         }
         return rows;
     }
@@ -139,6 +143,7 @@ namespace sw
             for ( const RealtimeProbeRequest& request : listRequest )
             {
                 words.insert( words.end(), request._pVoxelGrid->_listWord.begin(), request._pVoxelGrid->_listWord.end() );
+                words.insert( words.end(), request._pVoxelGrid->_listEmission.begin(), request._pVoxelGrid->_listEmission.end() ); // planLayout 과 같은 차례
                 _listHeldGrid.push_back( request._pVoxelGrid );
             }
             if ( _voxelBuffer.ensureCapacity( pDevice, wordStride, layout._totalVoxelWords, kReadUsage, true, false, words.data() ) == false )

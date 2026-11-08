@@ -13,6 +13,7 @@
 		<RenderGraphPassDesc _name="MotionBlur" _op="Remove" />
 		<RenderGraphPassDesc _name="DepthOfField" _op="Remove" />
 		<RenderGraphPassDesc _name="Fog" _op="Remove" />
+		<RenderGraphPassDesc _name="LensFlare" _op="Remove" />
 		<RenderGraphPassDesc _name="HighlightSense" _op="Remove" />
 		<RenderGraphPassDesc _name="DistortionApply" _op="Remove" />
 		<RenderGraphPassDesc _name="Distortion" _op="Remove" />

@@ -63,6 +63,10 @@ namespace sw
         combined += desc._pixelShaderPath;
         combined += "|cs:";
         combined += desc._computeShaderPath;
+        combined += "|hs:";
+        combined += desc._hullEntryPoint;
+        combined += "|ds:";
+        combined += desc._domainEntryPoint;
         combined += "|fmt:";
         combined += to_string( static_cast<uint32>( targetFormat ) );
 
@@ -95,6 +99,8 @@ namespace sw
         ShaderReflectionData                                   vsReflection{};
         ShaderReflectionData                                   psReflection{};
         ShaderReflectionData                                   csReflection{};
+        ShaderReflectionData                                   hsReflection{};
+        ShaderReflectionData                                   dsReflection{};
         vector<string>                                         listSourcePath;
 
         const bool bCompute = desc._computeShaderPath.empty() == false;
@@ -124,6 +130,14 @@ namespace sw
                 if ( desc._pixelShaderPath != desc._vertexShaderPath )
                     listSourcePath.push_back( desc._pixelShaderPath );
             }
+            // 헐 · 도메인만 읽는 자원(변위 머티리얼의 높이 맵 · 머티리얼 버퍼 — 깊이 패스에는 픽셀 스테이지가 없다)도 묶이게 두 스테이지를 함께 본다. 소스는 정점과 같은 파일이다.
+            const bool bTessellation = desc._hullEntryPoint.empty() == false && desc._domainEntryPoint.empty() == false;
+            if ( bTessellation &&
+                 LayoutCacheInternal::reflectStage( desc._vertexShaderPath, desc._hullEntryPoint, ShaderStage::Hull, targetFormat, listDefine, hsReflection ) )
+                listStage.push_back( { ShaderStage::Hull, &hsReflection } );
+            if ( bTessellation &&
+                 LayoutCacheInternal::reflectStage( desc._vertexShaderPath, desc._domainEntryPoint, ShaderStage::Domain, targetFormat, listDefine, dsReflection ) )
+                listStage.push_back( { ShaderStage::Domain, &dsReflection } );
         }
 
         unique_ptr<CacheEntry> entry = make_unique<CacheEntry>();

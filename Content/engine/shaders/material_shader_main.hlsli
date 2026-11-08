@@ -148,11 +148,23 @@ void MaterialInterpolants::storeVaryings( VertexContext context, float4 vertexWo
 }
 #endif // SW_MATERIAL_DEPTH_ONLY
 
-#if defined( SW_MATERIAL_POSITION_ONLY )
-typedef VertexPositionInput MaterialVertexInput; // 위치 스트림만 — material_shader.hlsli 1 절
-#else
-typedef VertexInput MaterialVertexInput;
-#endif
+/** @brief 입력 · 인스턴스 · 변형 정점으로 문맥을 채우고 월드 위치(오프셋 전)를 낸다 — 보간 칸 VSMain 과 변위 제어점 VSMain(material_displacement.hlsli)이 같은 함수로 만든다. */
+void VertexContext::load( MaterialVertexInput input, uint instanceSlot, uint vertexID, out float4 outWorldPosition )
+{
+    _input    = toVertexInput( input );
+    _vertexID = vertexID;
+    // 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작 · 정점 풀 시작이 배치 표에 있다.
+    _instance = InstanceData::load( instanceSlot );
+    // GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
+    _instance.loadAnimatedVertex( vertexID, _input._position, _input._normal, _localPosition, _localNormal );
+    // 위치는 깊이 프리패스 · 그림자와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 본 패스의 LessEqual 을 통과한다(binding.hlsli 7 절).
+    outWorldPosition = Transform::computeWorldPosition( _localPosition, _instance._world );
+    _worldPosition   = outWorldPosition.xyz;
+    // 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli Transform::computeWorldNormal) — 비균등 스케일에서도 조명이 맞는다.
+    _worldNormal  = Transform::computeWorldNormal( _localNormal, _instance._world );
+    _clipPosition = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    readMaterial();
+}
 
 #if SW_WRITES_VELOCITY
 /**
@@ -175,23 +187,15 @@ void MaterialInterpolants::storeVelocity( VertexContext context, uint instanceSl
 }
 #endif
 
+#if defined( MATERIAL_DISPLACEMENT )
+    #include "material_displacement.hlsli" // 정점 출력이 제어점이고 헐 · 도메인이 보간 칸을 만든다
+#else
 MaterialInterpolants VSMain( MaterialVertexInput input, SW_INSTANCE_SLOT_INPUT( instanceSlot ), uint vertexID : SV_VertexID )
 {
     MaterialInterpolants output;
     VertexContext        context;
-    context._input    = toVertexInput( input );
-    context._vertexID = vertexID;
-    // 인스턴스는 슬롯 스트림이 준 자리에서, 배치는 인스턴스에서 — 모프 풀 시작 · 정점 풀 시작이 배치 표에 있다.
-    context._instance = InstanceData::load( instanceSlot );
-    // GPU 가 변형한 정점(VAT · 모프 · 스킨)이 있으면 그걸 쓴다(아니면 입력 스트림 그대로). 위치와 노멀이 같이 온다.
-    context._instance.loadAnimatedVertex( vertexID, context._input._position, context._input._normal, context._localPosition, context._localNormal );
-    // 위치는 깊이 프리패스 · 그림자와 **같은 함수**로 만든다 — 프리패스가 쓴 깊이와 비트까지 같아야 본 패스의 LessEqual 을 통과한다(binding.hlsli 7 절).
-    float4 worldPosition   = Transform::computeWorldPosition( context._localPosition, context._instance._world );
-    context._worldPosition = worldPosition.xyz;
-    // 월드 노멀은 월드 행렬이 아니라 그 3x3 의 여인수 행렬로 옮긴다(binding.hlsli Transform::computeWorldNormal) — 비균등 스케일에서도 조명이 맞는다.
-    context._worldNormal  = Transform::computeWorldNormal( context._localNormal, context._instance._world );
-    context._clipPosition = float4( 0.0f, 0.0f, 0.0f, 0.0f );
-    context.readMaterial();
+    float4               worldPosition;
+    context.load( input, instanceSlot, vertexID, worldPosition );
     const float4 restWorldPosition = worldPosition; // 훅의 오프셋 전 — 화면 속도의 지난 위치가 같은 오프셋을 더한다
     const float4 clipPosition      = VertexContext::excludeFromDepthPass( context.computeClipPosition( worldPosition ) );
     output._position               = clipPosition;
@@ -201,6 +205,7 @@ MaterialInterpolants VSMain( MaterialVertexInput input, SW_INSTANCE_SLOT_INPUT( 
     SW_LODDEBUG_WRITE( output, instanceSlot )
     return output;
 }
+#endif // MATERIAL_DISPLACEMENT
 
 // ------------------------------------------------------------------------------
 // 2) 픽셀 단계

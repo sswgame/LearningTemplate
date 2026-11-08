@@ -413,8 +413,9 @@ static float3 LightProbe::evaluateSphericalHarmonics( uint probeIndex, float3 no
  * @brief 프로브 볼륨 원소 하나(binding_slots.hlsli 8 절의 SW_LIGHT_TYPE_PROBE_VOLUME 배치)에서 이 위치의 간접광을 구합니다.
  * @return rgb = 조도 / π(이웃 프로브 여덟의 삼선형 보간), a = 가중치 — 상자 안이면 1, 밖이면 0 이다. 상자 밖을 가장 가까운 프로브로 자르지 않는다
  *         (IndirectLighting.md P3 계약 — 볼륨이 없는 곳은 볼륨의 빛을 받지 않는다). 프로브 버퍼가 안 걸렸으면 0 이다.
+ * @param outSkyVisibility 반사 앰비언트에 곱할 하늘 보임 — lerp( 1, 프로브 하늘 보임(원소 6 의 w), 볼륨의 하늘 가림 세기 colorIntensity.w ). 세기가 0(베이크 · 기본)이거나 상자 밖이면 1 이다.
  */
-float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal )
+float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal, out float outSkyVisibility )
 {
     const float3 origin    = _colorIntensity.xyz;
     const float3 spacing   = max( _directionType.xyz, 1e-4f );
@@ -423,26 +424,31 @@ float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal )
     const float3 lastCell  = float3( max( count, 1u ) - 1u );
     const float3 local     = ( worldPosition - origin ) / spacing;
     // 프로브가 하나뿐인 축은 그 축의 두께가 0 이다 — 간격 반 안을 안으로 본다.
-    const float3 multiAxis  = float3( count > 1u ); // 1 이면 그 축에 프로브가 둘 이상
-    const float3 lowBound   = multiAxis * 0.5f - 0.5f;
-    const float3 highBound  = lerp( float3( 0.5f, 0.5f, 0.5f ), lastCell, multiAxis );
-    const bool   bInside    = all( local >= lowBound ) && all( local <= highBound ) && g_SwLightProbesIndex != kInvalidIndex;
-    const float3 clamped    = clamp( local, 0.0f, lastCell );
-    const uint3  cell       = min( uint3( clamped ), uint3( max( lastCell - 1.0f, 0.0f ) ) );
-    const float3 blend      = saturate( clamped - float3( cell ) ) * multiAxis;
-    const uint3  nextOffset = uint3( count > 1u );
-    float3       result     = float3( 0.0f, 0.0f, 0.0f );
+    const float3 multiAxis     = float3( count > 1u ); // 1 이면 그 축에 프로브가 둘 이상
+    const float3 lowBound      = multiAxis * 0.5f - 0.5f;
+    const float3 highBound     = lerp( float3( 0.5f, 0.5f, 0.5f ), lastCell, multiAxis );
+    const bool   bInside       = all( local >= lowBound ) && all( local <= highBound ) && g_SwLightProbesIndex != kInvalidIndex;
+    const float3 clamped       = clamp( local, 0.0f, lastCell );
+    const uint3  cell          = min( uint3( clamped ), uint3( max( lastCell - 1.0f, 0.0f ) ) );
+    const float3 blend         = saturate( clamped - float3( cell ) ) * multiAxis;
+    const uint3  nextOffset    = uint3( count > 1u );
+    const float  skyOcclusion  = saturate( _colorIntensity.w );
+    float3       result        = float3( 0.0f, 0.0f, 0.0f );
+    float        skyVisibility = 0.0f;
     if ( bInside )
     {
         SW_UNROLL for ( uint corner = 0u; corner < 8u; ++corner )
         {
-            const uint3  pick       = uint3( corner & 1u, ( corner >> 1u ) & 1u, ( corner >> 2u ) & 1u );
-            const uint3  probeCell  = cell + pick * nextOffset;
-            const float3 axisWeight = lerp( 1.0f - blend, blend, float3( pick ) );
-            const uint   probeIndex = probeBase + ( probeCell.z * count.y + probeCell.y ) * count.x + probeCell.x;
-            result += LightProbe::evaluateSphericalHarmonics( probeIndex, normal ) * ( axisWeight.x * axisWeight.y * axisWeight.z );
+            const uint3  pick         = uint3( corner & 1u, ( corner >> 1u ) & 1u, ( corner >> 2u ) & 1u );
+            const uint3  probeCell    = cell + pick * nextOffset;
+            const float3 axisWeight   = lerp( 1.0f - blend, blend, float3( pick ) );
+            const uint   probeIndex   = probeBase + ( probeCell.z * count.y + probeCell.y ) * count.x + probeCell.x;
+            const float  cornerWeight = axisWeight.x * axisWeight.y * axisWeight.z;
+            result += LightProbe::evaluateSphericalHarmonics( probeIndex, normal ) * cornerWeight;
+            skyVisibility += LightProbe::load( probeIndex, 6u ).w * cornerWeight;
         }
     }
+    outSkyVisibility = bInside ? lerp( 1.0f, saturate( skyVisibility ), skyOcclusion ) : 1.0f;
     return float4( result, bInside ? 1.0f : 0.0f );
 }
 
@@ -704,6 +710,7 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
     float3       lit                 = ( surface._diffuseColor + environmentSpecular ) * ambient;
     float3       probeSum            = float3( 0.0f, 0.0f, 0.0f );
     float        probeWeight         = 0.0f;
+    float        skyVisibilitySum    = 0.0f;
     float3       reflectionSum       = float3( 0.0f, 0.0f, 0.0f );
     float        reflectionWeight    = 0.0f;
 
@@ -714,9 +721,11 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
         const uint lightType = (uint)( light._directionType.w + 0.5f );
         if ( lightType == SW_LIGHT_TYPE_PROBE_VOLUME )
         {
-            const float4 probe = light.sampleProbeVolume( worldPosition, normal );
+            float        probeSkyVisibility;
+            const float4 probe = light.sampleProbeVolume( worldPosition, normal, probeSkyVisibility );
             probeSum += probe.rgb * probe.a;
             probeWeight += probe.a;
+            skyVisibilitySum += probeSkyVisibility * probe.a;
             continue;
         }
         if ( lightType == SW_LIGHT_TYPE_REFLECTION_PROBE )
@@ -740,14 +749,20 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
         lit += response * attenuation * light._colorIntensity.a * light._colorIntensity.rgb * shadowTerm;
     }
     // 볼륨이 덮는 곳은 확산 앰비언트를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.
+    // 하늘 가림(실시간 볼륨의 세기)은 반사 앰비언트만 가린다 — 확산은 프로브 SH 가 이미 복셀로 가렸다. 세기 0 이면 하늘 보임 1 이라 이전 그림과 같다.
+    const float skyVisibility = probeWeight > 0.0f ? skyVisibilitySum / probeWeight : 1.0f;
     if ( probeWeight > 0.0f )
+    {
         lit += surface._diffuseColor * ( probeSum / probeWeight - ambient );
+        lit -= environmentSpecular * ambient * ( 1.0f - skyVisibility );
+    }
     // 반사 프로브가 덮는 곳은 반사 앰비언트를 프로브의 빛으로 바꾼다(IndirectLighting.md P4). 겹친 프로브는 가중 평균이고, 가중치 합이 1 보다 작은 경계는
     // 모자란 몫을 앰비언트로 채워 상자 밖과 이어진다. 덮지 않으면 아무 연산도 더하지 않는다.
     if ( reflectionWeight > 0.0f )
     {
-        const float3 environment = ( reflectionSum + ambient * max( 1.0f - reflectionWeight, 0.0f ) ) / max( reflectionWeight, 1.0f );
-        lit += environmentSpecular * ( environment - ambient );
+        const float3 occludedAmbient = ambient * skyVisibility;
+        const float3 environment     = ( reflectionSum + occludedAmbient * max( 1.0f - reflectionWeight, 0.0f ) ) / max( reflectionWeight, 1.0f );
+        lit += environmentSpecular * ( environment - occludedAmbient );
     }
     return lit;
 }
