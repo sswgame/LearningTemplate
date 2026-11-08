@@ -22,6 +22,7 @@
 #include "Engine/Rendering/DirectionalLightComponent.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 
 #include <imgui.h>
 

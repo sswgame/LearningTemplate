@@ -13,7 +13,7 @@
 
 #include "Editor/Common/EditorExports.h"
 
-#include "Engine/Scene/SceneManager.h"
+#include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
 
 namespace sw
 {

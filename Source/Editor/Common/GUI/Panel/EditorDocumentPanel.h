@@ -14,10 +14,11 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/Undo/UndoStep.h"
 
 namespace sw::editor
 {
+    class UndoStepOwner;
+
     /**
      * @class EditorDocumentPanel
      * @brief 워크스페이스 포커스 경로가 지정한 애셋 종류와 맞으면 문서를 바꿉니다.
@@ -159,7 +160,7 @@ namespace sw::editor
         string                                  _documentUndoBaseline;
         string                                  _lastSavedDocumentText;
         shared_ptr<EditorDocumentPanel*>        _pUndoTarget; ///< 되돌리기 항목이 이 패널을 찾는 표지 — 패널이 사라지면 nullptr 이다
-        UndoStepOwner                           _undoOwner;   ///< 이 패널이 남긴 문서 되돌리기 단계의 주인(패널이 사라지면 그 명령이 빠진다)
+        unique_ptr<UndoStepOwner>               _pUndoOwner;  ///< 이 패널이 남긴 문서 되돌리기 단계의 주인(패널이 사라지면 그 명령이 빠진다). 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다
         vector<string>                          _listRecentPath;
         vector<string>                          _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
         fixed_string<constant::buffer::kMax128> _openFilter;

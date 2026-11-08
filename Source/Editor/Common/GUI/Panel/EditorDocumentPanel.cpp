@@ -18,6 +18,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+#include "Editor/Common/Workspace/Undo/UndoStep.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Content/AssetPaths.h"
@@ -171,6 +172,7 @@ namespace sw::editor
         , _documentUndoBaseline{}
         , _lastSavedDocumentText{}
         , _pUndoTarget{ make_shared<EditorDocumentPanel*>( this ) }
+        , _pUndoOwner{ make_unique<UndoStepOwner>() }
         , _listRecentPath{}
         , _listOpenCandidate{}
         , _openFilter{}
@@ -306,7 +308,7 @@ namespace sw::editor
         const string                           documentPath = _loadedAssetPath;
         const shared_ptr<EditorDocumentPanel*> pTarget      = _pUndoTarget;
         EditorTransaction::recordDocumentText(
-            _documentUndoBaseline, after, label, _undoOwner,
+            _documentUndoBaseline, after, label, *_pUndoOwner,
             SW_DELEGATE_LAMBDA( EditorDocumentRestoreDelegate, [pTarget, documentPath]( string_view snapshot )
         {
             EditorDocumentPanel* pPanel = *pTarget;
