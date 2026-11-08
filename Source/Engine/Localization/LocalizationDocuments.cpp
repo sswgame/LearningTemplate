@@ -70,56 +70,44 @@ namespace sw
                 }
             }
 
-            /** @brief 문서 머리(루트의 `culture` 속성, `entries` 자식)를 읽습니다. */
-            [[nodiscard]] static bool readHeader( XMLDocument& document, string_view xmlText, string_view sourceName, const utf8* pRootName, string& outCulture, XMLNode& outEntries,
-                                                  string& outError )
+            /** @brief 문서 @p sourceName 의 읽기 오류 @p error 를 `원본: 문장 '대상'` 글로 짓습니다(문서 읽기의 `pOutError` 글). */
+            [[nodiscard]] static string describe( string_view sourceName, const Error& error )
+            {
+                return string( sourceName ) + ": " + string( error.message().data(), error.message().size() ) + " '" + string( error.detail().data(), error.detail().size() ) + "'";
+            }
+
+            /** @brief 문서 머리(루트의 `culture` 속성, `entries` 자식)를 읽습니다. 틀리면 그 까닭입니다. */
+            [[nodiscard]] static expected<void> readHeader( XMLDocument& document, string_view xmlText, string_view sourceName, const utf8* pRootName, string& outCulture, XMLNode& outEntries )
             {
                 XMLNode root;
                 if ( XMLReadUtil::parseRoot( document, FileUtil::skipUTF8Bom( xmlText ), sourceName, pRootName, root ) != XMLRootStatus::Found )
                 {
-                    outError = document.getLastError();
-                    if ( outError.empty() )
-                        outError = string( sourceName ) + ": root must be <" + pRootName + ">";
-                    return false;
+                    if ( document.getLastError().empty() == false )
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "the document is not well-formed XML", document.getLastError() } );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the root element is wrong", pRootName } );
                 }
                 string unknown;
                 if ( hasOnlyKnownNames( root, { "culture" }, { kEntriesTag }, unknown ) == false )
-                {
-                    outError = string( sourceName ) + ": unknown field '" + unknown + "'";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown field", unknown } );
                 outCulture = CultureTable::normalizeCode( root.getAttributeText( "culture" ) );
                 outEntries = root.findChild( "entries" );
                 if ( outCulture.empty() )
-                {
-                    outError = string( sourceName ) + ": needs a \"culture\" attribute";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs a \"culture\" attribute", pRootName } );
+                return {};
             }
 
-            /** @brief 항목 요소 하나의 이름 · 키를 확인합니다. 키는 비지 않아야 한다. 틀리면 오류 글을 채우고 false 입니다. */
-            [[nodiscard]] static bool readEntryKey( const XMLNode& entryNode, std::initializer_list<string_view> listAttribute, std::initializer_list<string_view> listChild,
-                                                    string_view sourceName, string& outKey, string& outError )
+            /** @brief 항목 요소 하나의 이름 · 키를 확인합니다. 키는 비지 않아야 한다. 틀리면 그 까닭입니다. */
+            [[nodiscard]] static expected<void> readEntryKey( const XMLNode& entryNode, std::initializer_list<string_view> listAttribute, std::initializer_list<string_view> listChild, string& outKey )
             {
                 string unknown;
                 if ( string_view{ entryNode.getName() } != kEntryTag )
-                {
-                    outError = string( sourceName ) + ": <entries> holds only <entry> elements";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "<entries> holds only <entry> elements", entryNode.getName() } );
                 if ( hasOnlyKnownNames( entryNode, listAttribute, listChild, unknown ) == false )
-                {
-                    outError = string( sourceName ) + ": entry has unknown field '" + unknown + "'";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "entry has an unknown field", unknown } );
                 outKey = string{ entryNode.getAttributeText( "key" ) };
                 if ( outKey.empty() )
-                {
-                    outError = string( sourceName ) + ": entry needs a \"key\" attribute";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "entry needs a \"key\" attribute" } );
+                return {};
             }
 
             [[nodiscard]] static bool readTextFile( string_view absolutePath, string& outText, string* pOutError )
@@ -189,18 +177,21 @@ namespace sw
         XMLDocument document;
         string      culture;
         XMLNode     entries;
-        if ( Internal::readHeader( document, xmlText, sourceName, "SourceStringTable", culture, entries, error ) == false )
+        if ( const expected<void> header = Internal::readHeader( document, xmlText, sourceName, "SourceStringTable", culture, entries ); header.has_value() == false )
         {
             if ( pOutError != nullptr )
-                *pOutError = error;
+                *pOutError = Internal::describe( sourceName, header.error() );
             return false;
         }
         map<string, SourceTextEntry> mapEntry;
         for ( XMLNode entryNode = entries.findChild(); entryNode.isValid(); entryNode = entryNode.findNextSibling() )
         {
             string key;
-            if ( Internal::readEntryKey( entryNode, { "key", "source", "context", "comment", "maxLength" }, { "origins" }, sourceName, key, error ) == false )
+            if ( const expected<void> keyRead = Internal::readEntryKey( entryNode, { "key", "source", "context", "comment", "maxLength" }, { "origins" }, key ); keyRead.has_value() == false )
+            {
+                error = Internal::describe( sourceName, keyRead.error() );
                 break;
+            }
             if ( mapEntry.find( key ) != mapEntry.end() )
             {
                 error = string( sourceName ) + ": entry '" + key + "' is written twice";
@@ -307,18 +298,21 @@ namespace sw
         XMLDocument document;
         string      culture;
         XMLNode     entries;
-        if ( Internal::readHeader( document, xmlText, sourceName, "TranslationTable", culture, entries, error ) == false )
+        if ( const expected<void> header = Internal::readHeader( document, xmlText, sourceName, "TranslationTable", culture, entries ); header.has_value() == false )
         {
             if ( pOutError != nullptr )
-                *pOutError = error;
+                *pOutError = Internal::describe( sourceName, header.error() );
             return false;
         }
         map<string, TranslationEntry> mapEntry;
         for ( XMLNode entryNode = entries.findChild(); entryNode.isValid(); entryNode = entryNode.findNextSibling() )
         {
             string key;
-            if ( Internal::readEntryKey( entryNode, { "key", "text", "sourceHash", "review", "translatorComment" }, {}, sourceName, key, error ) == false )
+            if ( const expected<void> keyRead = Internal::readEntryKey( entryNode, { "key", "text", "sourceHash", "review", "translatorComment" }, {}, key ); keyRead.has_value() == false )
+            {
+                error = Internal::describe( sourceName, keyRead.error() );
                 break;
+            }
             if ( mapEntry.find( key ) != mapEntry.end() )
             {
                 error = string( sourceName ) + ": entry '" + key + "' is written twice";
@@ -516,7 +510,7 @@ namespace sw
         return VectorUtil::contains( _listStagedCulture, normalized );
     }
 
-    bool LocalizationProject::collectUnstagedTranslationTables( string_view folder, vector<string>& outListAbsPath, string& outError )
+    expected<void> LocalizationProject::collectUnstagedTranslationTables( string_view folder, vector<string>& outListAbsPath )
     {
         vector<string> listXML;
         (void)FileUtil::collectFiles( folder, ".xml", listXML, true ); // 폴더가 없으면 프로젝트도 없다
@@ -526,8 +520,9 @@ namespace sw
             if ( StringUtil::endsWith( projectPath, kExtension, true ) == false )
                 continue;
             LocalizationProject project;
-            if ( project.loadFromFile( projectPath, &outError ) == false )
-                return false;
+            string              reason;
+            if ( project.loadFromFile( projectPath, &reason ) == false )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a localization project could not be read", reason } );
             const string projectFolder = FileUtil::getDirectoryPart( projectPath );
             for ( const string& tablePath : listXML )
             {
@@ -539,7 +534,7 @@ namespace sw
                     outListAbsPath.push_back( FileUtil::normalizePath( tablePath ) );
             }
         }
-        return true;
+        return {};
     }
 
     string LocalizationProject::makeTranslationPath( string_view projectPath, string_view culture )

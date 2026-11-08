@@ -84,33 +84,24 @@ namespace sw
                     return StringUtil::parseDouble( _text.substr( start, _position - start ), outValue );
                 }
 
-                [[nodiscard]] bool readRangeList( vector<PluralRuleSet::Clause::Range>& outListRange, string& outError )
+                [[nodiscard]] expected<void> readRangeList( vector<PluralRuleSet::Clause::Range>& outListRange )
                 {
                     do
                     {
                         PluralRuleSet::Clause::Range range;
                         if ( readNumber( range._min ) == false )
-                        {
-                            outError = "expected a number";
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::InvalidArgument, "expected a number" } );
                         range._max = range._min;
                         if ( accept( ".." ) && readNumber( range._max ) == false )
-                        {
-                            outError = "expected a number after '..'";
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::InvalidArgument, "expected a number after '..'" } );
                         if ( range._max < range._min )
-                        {
-                            outError = "range end is below its start";
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::InvalidArgument, "range end is below its start" } );
                         outListRange.push_back( range );
                     } while ( accept( "," ) );
-                    return true;
+                    return {};
                 }
 
-                [[nodiscard]] bool readClause( PluralRuleSet::Clause& outClause, string& outError )
+                [[nodiscard]] expected<void> readClause( PluralRuleSet::Clause& outClause )
                 {
                     skipSpace();
                     const utf8 operand  = _position < _text.size() ? _text[_position] : '\0';
@@ -118,59 +109,44 @@ namespace sw
                     const bool bOperand = bKnown && ( _position + 1 >= _text.size() || _text[_position + 1] == ' ' || _text[_position + 1] == '%' ||
                                                       _text[_position + 1] == '=' || _text[_position + 1] == '!' );
                     if ( bOperand == false )
-                    {
-                        outError = "expected an operand n, i, v, f, t, e or c";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "expected an operand n, i, v, f, t, e or c" } );
                     ++_position;
                     outClause._operand = operand;
                     if ( accept( "%" ) || accept( "mod" ) )
                     {
                         if ( readNumber( outClause._modulus ) == false || outClause._modulus <= 0.0 )
-                        {
-                            outError = "expected a positive modulus";
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::InvalidArgument, "expected a positive modulus" } );
                     }
                     if ( accept( "!=" ) )
                         outClause._bNegated = true;
                     else if ( accept( "=" ) == false )
-                    {
-                        outError = "expected '=' or '!='";
-                        return false;
-                    }
-                    return readRangeList( outClause._listRange, outError );
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "expected '=' or '!='" } );
+                    return readRangeList( outClause._listRange );
                 }
             };
 
             /** @brief 규칙 글 하나(보기 `@integer` · `@decimal` 앞까지)를 읽습니다. */
-            [[nodiscard]] static bool readRule( string_view text, PluralRuleSet::Rule& outRule, string& outError )
+            [[nodiscard]] static expected<void> readRule( string_view text, PluralRuleSet::Rule& outRule )
             {
                 const size_t sampleStart = text.find( '@' );
                 Cursor       cursor{ StringUtil::trim( text.substr( 0, sampleStart ) ), 0 };
                 if ( cursor.isAtEnd() )
-                {
-                    outError = "rule is empty";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "rule is empty" } );
                 do
                 {
                     PluralRuleSet::AndCondition condition;
                     do
                     {
                         PluralRuleSet::Clause clause;
-                        if ( cursor.readClause( clause, outError ) == false )
-                            return false;
+                        if ( expected<void> read = cursor.readClause( clause ); read.has_value() == false )
+                            return read;
                         condition.push_back( std::move( clause ) );
                     } while ( cursor.accept( "and" ) );
                     outRule.push_back( std::move( condition ) );
                 } while ( cursor.accept( "or" ) );
                 if ( cursor.isAtEnd() == false )
-                {
-                    outError = "unexpected '" + string( cursor._text.substr( cursor._position ) ) + "'";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "unexpected text after the rule", cursor._text.substr( cursor._position ) } );
+                return {};
             }
 
             /** @brief 피연산자 값입니다(UTS #35: n 절댓값, i 정수부, v 보이는 소수 자리 수, f 보이는 소수 자리, t 뒤의 0 을 뗀 f, e · c 압축 표기의 지수). */
@@ -368,7 +344,7 @@ namespace sw
 
 namespace sw
 {
-    bool PluralRuleSet::compileRule( string_view keyword, string_view ruleText, string& outError )
+    expected<void> PluralRuleSet::compileRule( string_view keyword, string_view ruleText )
     {
         using Internal = PluralRulesInternal;
         for ( size_t index = 0; index < std::size( Internal::kArrKeyword ); ++index )
@@ -380,34 +356,28 @@ namespace sw
             const string_view      samples     = sampleStart == string_view::npos ? string_view{} : ruleText.substr( sampleStart );
             Rule                   rule;
             vector<PluralOperands> listSample;
-            bool                   bRead = true;
+            expected<void>         read{};
             if ( bOther && StringUtil::trim( ruleText.substr( 0, sampleStart ) ).empty() == false )
+                read = unexpected( Error{ ErrorKind::InvalidArgument, "other is the rest and takes samples only" } );
+            else if ( bOther == false )
+                read = Internal::readRule( ruleText, rule );
+            if ( read.has_value() )
+                read = Internal::readSamples( samples, listSample );
+            if ( read.has_value() == false )
             {
-                outError = "other is the rest and takes samples only";
-                bRead    = false;
-            }
-            bRead = bRead && ( bOther || Internal::readRule( ruleText, rule, outError ) );
-            if ( bRead )
-            {
-                const expected<void> samplesRead = Internal::readSamples( samples, listSample );
-                if ( samplesRead.has_value() == false )
-                {
-                    outError = string( samplesRead.error().message().data(), samplesRead.error().message().size() ) + " '" + string( samplesRead.error().detail().data(), samplesRead.error().detail().size() ) + "'";
-                    bRead    = false;
-                }
-            }
-            if ( bRead == false )
-            {
-                outError = string( keyword ) + " rule '" + string( ruleText ) + "': " + outError;
-                return false;
+                // 문장은 리터럴(정적 수명)이라 그대로 옮기고, 대상 앞에 어느 범주의 글인지 붙인다.
+                return unexpected( Error{ read.error().kind(), read.error().message().data(), keyword }
+                                       .appendDetail( " rule '" )
+                                       .appendDetail( ruleText )
+                                       .appendDetail( "': " )
+                                       .appendDetail( read.error().detail() ) );
             }
             if ( bOther == false )
                 _arrRule[index] = std::move( rule );
             _arrSample[index] = std::move( listSample );
-            return true;
+            return {};
         }
-        outError = "unknown plural category '" + string( keyword ) + "' (zero, one, two, few, many, other)";
-        return false;
+        return unexpected( Error{ ErrorKind::NotFound, "unknown plural category (zero, one, two, few, many, other)", keyword } );
     }
 
     size_t PluralRuleSet::countSamples( PluralCategory category ) const

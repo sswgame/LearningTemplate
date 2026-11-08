@@ -172,10 +172,10 @@ namespace sw
                 // 실행기가 없는 구성(Shipping · 전용 서버)은 실행기가 스스로 등록하지 않는다 — 그 구성이 굽는 팩에는 시나리오를 담지 않는다.
                 params._automationContent = engine::findSubsystem<IAutomationRuntime>() != nullptr ? PackAutomationContent::Included : PackAutomationContent::Excluded;
                 // 출시 문화권(`stagedCultures`) 밖의 번역 테이블은 팩에 넣지 않는다 — 규칙은 로컬라이제이션 층이 갖고 쿠커는 목록만 받는다.
-                string localizationError;
-                if ( LocalizationProject::collectUnstagedTranslationTables( params._resourceRoot, params._listExcludedSourceFile, localizationError ) == false )
+                if ( const expected<void> staged = LocalizationProject::collectUnstagedTranslationTables( params._resourceRoot, params._listExcludedSourceFile ); staged.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "Headless.PackCookLocalizationProject", "Pack cook: a localization project could not be read for culture staging - %#", localizationError );
+                    SW_LOG_ERROR_ID( "Headless.PackCookLocalizationProject", "Pack cook: a localization project could not be read for culture staging - %# (%#)", staged.error().message(),
+                                     staged.error().detail() );
                     return false;
                 }
                 if ( commandLine.isArgumentProvided( CommandLineArgument::GAME ) )

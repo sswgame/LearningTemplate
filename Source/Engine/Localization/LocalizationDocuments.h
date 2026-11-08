@@ -9,6 +9,7 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
@@ -212,6 +213,6 @@ namespace sw
          * @details 팩 쿠킹이 담지 않는다(언리얼 Cultures to Stage — `PackCookParams::_listExcludedSourceFile`).
          * @return 프로젝트를 읽지 못하면 false 이고 이유는 @p outError 입니다 — 어느 테이블이 출시 문화권인지 모른 채 팩을 베이크하지 않는다.
          */
-        [[nodiscard]] static bool collectUnstagedTranslationTables( string_view folder, vector<string>& outListAbsPath, string& outError );
+        [[nodiscard]] static expected<void> collectUnstagedTranslationTables( string_view folder, vector<string>& outListAbsPath );
     };
 } // namespace sw

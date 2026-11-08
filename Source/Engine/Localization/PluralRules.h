@@ -77,10 +77,10 @@ namespace sw
 
         /**
          * @brief 범주 키워드 @p keyword(`one` … `other`)의 규칙 글을 읽어 넣습니다. `other` 는 조건 없이 보기만 받는다(나머지 범주다).
-         *        모르는 키워드, 틀린 글 · 보기면 까닭을 @p outError 에 적고 false 입니다.
+         *        모르는 키워드, 틀린 글 · 보기면 그 까닭(대상은 `범주 rule '글': 깊은 쪽 대상`)입니다.
          * @details 실패해도 다른 범주는 그대로다 — 읽는 쪽(문화권 표)이 표 전체를 거절한다.
          */
-        [[nodiscard]] bool compileRule( string_view keyword, string_view ruleText, string& outError );
+        [[nodiscard]] expected<void> compileRule( string_view keyword, string_view ruleText );
         /** @brief 범주 @p category 의 규칙 글에 적힌 보기 수입니다. */
         size_t countSamples( PluralCategory category ) const;
         /** @brief 보기마다 그 범주를 고르는지 대조합니다. 어긋난 첫 보기를 오류의 대상으로 돌려줍니다. 범주를 모두 읽은 뒤 부른다. */
