@@ -28,7 +28,6 @@
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorProfile.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/GUI/EditorPlayToolbar.h"
 #include "Editor/Common/GUI/EditorUIContextState.h"

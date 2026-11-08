@@ -4,10 +4,10 @@
 #include "Core/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/EditorPanelText.h"
