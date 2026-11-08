@@ -583,6 +583,10 @@ namespace sw
         hashed_string _swSkinResultOffsets{ "SwSkinResultOffsets" };
         /// @brief 그 표의 칸 수입니다. PassCB g_SwSkinResultOffsetCount 에 대응합니다.
         hashed_string _swSkinResultOffsetCount{ "g_SwSkinResultOffsetCount" };
+        /// @brief 스킨 결과의 이번 벌 이동(정점)입니다. PassCB g_SwSkinResultShift 에 대응합니다(`GPUMeshMorphPool::getSkinCurrentShift`).
+        hashed_string _swSkinResultShift{ "g_SwSkinResultShift" };
+        /// @brief 지난 프레임 스킨 결과가 든 벌의 이동(정점, 없으면 무효)입니다. PassCB g_SwSkinPreviousShift 에 대응합니다.
+        hashed_string _swSkinPreviousShift{ "g_SwSkinPreviousShift" };
         /// @brief 인스턴스마다의 지난 월드 행렬입니다. binding.hlsli 의 g_SwPrevInstanceWorlds(t15)와 PassCB g_SwPrevInstanceWorldsIndex 에 대응합니다.
         hashed_string _swPrevInstanceWorlds{ "SwPrevInstanceWorlds" };
         /// @brief 그 버퍼의 원소 수입니다. PassCB g_SwPrevInstanceWorldCount 에 대응합니다.

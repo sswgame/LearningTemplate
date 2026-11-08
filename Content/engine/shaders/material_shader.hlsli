@@ -164,6 +164,10 @@ struct MaterialInterpolants
     nointerpolation uint _materialIndex : TEXCOORD4; // GPUScene 인스턴스가 준 머티리얼 원소
     #endif
     MaterialVaryings _user; // 사용자 보간 칸(시맨틱은 사용자 구조체가 정한다)
+    #if SW_WRITES_VELOCITY
+    float4 _velocityClip : TEXCOORD5;     // 이번 클립 위치(화면 속도의 이번 자리 — SV_POSITION 은 픽셀 단계에서 화면 좌표라 따로 넘긴다)
+    float4 _velocityPrevClip : TEXCOORD6; // 지난 클립 위치(지난 월드 행렬 · 스킨 결과의 지난 벌 · g_PrevViewProj)
+    #endif
 #endif
     SW_APPEARANCE_VARYING   // 등장 디더 변형만 등장 비율을 넘긴다(binding.hlsli 8-1)
         SW_LODDEBUG_VARYING // 보기 모드 LODLevel · LODFade 만 가시 항목을 넘긴다(binding.hlsli 보기 모드 절)
@@ -174,8 +178,10 @@ struct MaterialInterpolants
     void storeTangent( VertexContext context );
     void storeMaterialIndex( VertexContext context );
     void storeUserVaryings( VertexContext context, float4 vertexClipPosition );
-    SurfaceOutput shadePixel( bool bFrontFace ); // 본 패스 · G버퍼
-    void shadeDepthPixel( bool bFrontFace );     // 깊이 패스
+    void storeVelocity( VertexContext context, uint instanceSlot, float4 restWorldPosition, float4 vertexWorldPosition, float4 vertexClipPosition ); // 화면 속도의 이번 · 지난 클립 위치
+    void storeSurfaceVelocity();                                                                                                                     // 픽셀 단계 — 보간한 두 위치로 g_SurfaceVelocity 를 정한다
+    SurfaceOutput shadePixel( bool bFrontFace );                                                                                                     // 본 패스 · G버퍼
+    void shadeDepthPixel( bool bFrontFace );                                                                                                         // 깊이 패스
 };
 
 /**

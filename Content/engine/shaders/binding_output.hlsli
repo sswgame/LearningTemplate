@@ -13,6 +13,16 @@
 //     언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 것에 해당한다. 여기서는 패스가 define 을
 //     추가하고(SW_PASS_GBUFFER), 출력 서명이 그 define 을 따라간다.
 // ------------------------------------------------------------------------------
+// 화면 속도(이번 UV - 지난 UV) — 깊이를 쓰는 불투명 지오메트리 패스가 함께 쓴다. G버퍼는 명세(C++ GBufferLayout 판 2)의 넷째 MRT, 포워드는 출력을 선언한 패스만
+// SW_PASS_VELOCITY 로 둘째 타깃이다(C++ kPassVelocityDefine). 값은 픽셀 단계가 보간한 이번 · 지난 클립 위치로 구해 여기 둔다(PixelContext::make → MaterialInterpolants::storeSurfaceVelocity).
+// 언리얼 베이스 패스의 속도 출력(r.VelocityOutputPass=1)과 같은 자리다 — 속도만 따로 그리는 패스를 두지 않는다.
+#if defined( SW_PASS_GBUFFER ) || defined( SW_PASS_VELOCITY )
+    #define SW_WRITES_VELOCITY 1
+#else
+    #define SW_WRITES_VELOCITY 0
+#endif
+static float2 g_SurfaceVelocity = float2( 0.0f, 0.0f );
+
 // 양쪽 다 **구조체**다. 포워드 쪽을 `float4` 로 두면 `SurfaceOutput PSMain(...)` 에 반환
 // 시맨틱이 사라져 DXC 가 "Semantic must be defined for all outputs" 로 거절한다 — 그러면 머티리얼
 // 셰이더가 통째로 컴파일되지 않아 화면이 빈다(실제로 한 번 그랬다).
@@ -22,6 +32,10 @@ struct SurfaceOutput
     float4 _albedo : SV_TARGET0;
     float2 _normal : SV_TARGET1;   // R16G16_SNORM — Octahedral::encode(월드 노멀)
     float4 _material : SV_TARGET2; // SurfaceOutput::encodeGbufferMaterial
+    float2 _velocity : SV_TARGET3; // R16G16 실수 — 이번 UV - 지난 UV(g_SurfaceVelocity)
+#elif defined( SW_PASS_VELOCITY )
+    float4 _color : SV_TARGET0;
+    float2 _velocity : SV_TARGET1; // R16G16 실수 — 이번 UV - 지난 UV(g_SurfaceVelocity)
 #else
     float4 _color : SV_TARGET0;
 #endif
@@ -324,6 +338,15 @@ static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3
     output._albedo   = float4( albedo.rgb, SW_GBUFFER_SHADING );
     output._normal   = Octahedral::encode( normalize( worldNormal ) );
     output._material = SurfaceOutput::encodeGbufferMaterial( roughness, metallic );
+    output._velocity = g_SurfaceVelocity;
+    return output;
+}
+#elif defined( SW_PASS_VELOCITY )
+static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic )
+{
+    SurfaceOutput output;
+    output._color    = litColor;
+    output._velocity = g_SurfaceVelocity;
     return output;
 }
 #else

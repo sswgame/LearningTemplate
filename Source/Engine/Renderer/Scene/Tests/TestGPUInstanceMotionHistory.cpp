@@ -1,9 +1,10 @@
-// GPUInstanceMotionHistoryTest — 화면 속도의 지난 월드 행렬 기록(렌더 쪽): 처음 · 순간이동 · 기록 없는 인스턴스는 "기록 없음", 멈추면 지난 것 = 이번 것(nogpu).
+// GPUInstanceMotionHistoryTest — 화면 속도의 지난 위치 기록(렌더 쪽): 인스턴스 월드 행렬(처음 · 순간이동 · 기록 없음, 멈추면 지난 것 = 이번 것)과 스킨 결과의 두 벌(nogpu).
 #include "pch.h"
 
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Renderer/Scene/GPUInstanceMotionHistory.h"
+#include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
 
 using namespace sw;
 
@@ -99,4 +100,26 @@ SW_TEST_CASE( GPUInstanceMotionHistoryTest, HistoryFollowsKeysNotSlots )
     SW_EXPECT_TRUE( history.update( listSwapped, listPrev ) );
     SW_EXPECT_NEAR( 20.0f, listPrev[0]._41, 1.0e-6f );
     SW_EXPECT_NEAR( 10.0f, listPrev[1]._41, 1.0e-6f );
+}
+
+/**
+ * @brief [GPUInstanceMotionHistoryTest] 스킨 결과의 지난 벌은 배치가 그대로이고 지난 프레임에 디스패치했을 때만 믿는다 — 첫 프레임 · 디스패치 없는 프레임 뒤는 기록 없음이고 벌은 프레임마다 바뀐다
+ */
+SW_TEST_CASE( GPUInstanceMotionHistoryTest, SkinResultHistorySwapsHalves )
+{
+    GPUMeshMorphPool pool; // 디바이스 없이 장부만 본다(스킨 정점이 없어 벌의 이동은 0 이고 유효 여부만 갈린다)
+    pool.advanceSkinHistory();
+    SW_EXPECT_EQUAL( GPUMeshMorphPool::kInvalidBase, pool.getSkinPreviousShift() ); // 처음 — 배치가 막 생겼다
+    pool.markSkinDispatched();
+    pool.advanceSkinHistory();
+    SW_EXPECT_TRUE( pool.getSkinPreviousShift() != GPUMeshMorphPool::kInvalidBase ); // 지난 프레임에 쓴 벌이 지난 위치다
+    pool.advanceSkinHistory();                                                       // 이번 프레임은 디스패치하지 않았다
+    SW_EXPECT_EQUAL( GPUMeshMorphPool::kInvalidBase, pool.getSkinPreviousShift() );
+    pool.markSkinDispatched();
+    pool.advanceSkinHistory();
+    SW_EXPECT_TRUE( pool.getSkinPreviousShift() != GPUMeshMorphPool::kInvalidBase );
+    pool.release( nullptr ); // 비우면 배치가 바뀐 것이다
+    pool.markSkinDispatched();
+    pool.advanceSkinHistory();
+    SW_EXPECT_EQUAL( GPUMeshMorphPool::kInvalidBase, pool.getSkinPreviousShift() );
 }

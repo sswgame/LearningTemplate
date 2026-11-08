@@ -1806,7 +1806,7 @@ namespace sw
         if ( morphBuffer._buffer != 0 && morphBuffer._srv != kInvalidDescriptorIndex )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );
-            context._passValues.setUint( passConstantNames()._swMorphVertexCount, _state._deform._meshMorphPool.getVertexCount() );
+            context._passValues.setUint( passConstantNames()._swMorphVertexCount, _state._deform._meshMorphPool.getResultVertexCapacity() );
         }
         // 스킨 칸 표 — 패스당 한 번. 스키닝을 디스패치할 수 없으면 걸지 않는다 — 칸이 있는 인스턴스는 그리지 않는다(레스트 포즈로 대신 그리지 않는다, 풀이 오류를 남겼다).
         // 진단(SkipDispatch)이면 스킨 결과가 없어 걸지 않는다 — 칸 있는 인스턴스는 그 진단에서 그려지지 않는다.
@@ -1817,6 +1817,9 @@ namespace sw
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swSkinResultOffsets, skinResultOffsetBuffer._buffer, skinResultOffsetBuffer._srv );
             context._passValues.setUint( passConstantNames()._swSkinResultOffsetCount, _state._deform._meshMorphPool.getSkinResultOffsetCount() );
+            // 스킨 결과는 두 벌이다 — 이번 벌의 이동과 지난 프레임 결과가 든 벌의 이동(없으면 무효 — 셰이더가 이번 위치를 지난 위치로 쓴다).
+            context._passValues.setUint( passConstantNames()._swSkinResultShift, _state._deform._meshMorphPool.getSkinCurrentShift() );
+            context._passValues.setUint( passConstantNames()._swSkinPreviousShift, _state._deform._meshMorphPool.getSkinPreviousShift() );
         }
 
         // 지난 월드 행렬 — 패스당 한 번. 화면 속도를 쓰는 패스의 정점 셰이더만 읽는다. 안 걸리면 셰이더가 이번 행렬을 쓴다(속도는 카메라 움직임뿐).

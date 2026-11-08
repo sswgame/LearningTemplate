@@ -230,6 +230,8 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "RT.Deform.uploadSkinPalettes" );
             _state._deform._meshMorphPool.uploadSkinPalettes( _pDevice, _state._gpuScene.getSkinPalettes(), _state._gpuScene.findSkinPaletteRows(), _state._gpuScene.findMorphWeights() );
+            // 스킨 결과의 쓰는 벌을 바꾼다 — 다른 벌에 지난 프레임 결과가 남아 화면 속도의 지난 위치가 된다(디스패치가 이번 벌에 쓴다).
+            _state._deform._meshMorphPool.advanceSkinHistory();
         }
 
         // 배치에 구간을 기록해 둔다. upload() 가 배치 테이블(g_SwBatches)에 싣는다. 풀에 들어가지 못한 메시(상한 초과 · 버퍼 실패)는
@@ -351,7 +353,8 @@ namespace sw
             return;
 
         FrameRendererUtil::GPUSkinParams skinParams{};
-        skinParams._skinVertexBase    = _state._deform._meshMorphPool.getSkinVertexBase();
+        skinParams._skinVertexBase = _state._deform._meshMorphPool.getSkinVertexBase() + _state._deform._meshMorphPool.getSkinCurrentShift(); // 이번 벌
+
         skinParams._skinVertexCount   = _state._deform._meshMorphPool.getSkinVertexCount();
         skinParams._skinBoneCount     = _state._deform._meshMorphPool.getSkinBoneCount();
         skinParams._skinInstanceCount = _state._deform._meshMorphPool.getSkinInstanceCount();
@@ -372,6 +375,7 @@ namespace sw
         if ( skinGroups > 0 )
             _pCmd->dispatchCompute( skinGroups, 1, 1 );
         _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
+        _state._deform._meshMorphPool.markSkinDispatched();
     }
 
     void FramePrepass::computeLODFadeStep()

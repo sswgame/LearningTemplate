@@ -36,6 +36,11 @@
  * 메시가 풀에 있는 동안 바뀌지 않는다. 모프 구간의 길이는 **용량**이라 빈 자리가 섞인다 — 컴퓨트는 빈 자리도 돌지만 아무도 그 결과를 읽지 않는다.
  * 스킨 구간은 모프 용량 뒤에서 시작하므로 모프 메시가 들고 나도 용량이 그대로면 스킨 인스턴스의 시작이 바뀌지 않는다.
  *
+ * [스킨 결과의 지난 프레임 — 화면 속도]
+ * 스킨 구간은 두 벌이다(앞 벌 · 뒤 벌, 각각 스킨 정점 수). 프레임마다 쓰는 벌을 바꾸고(`advanceSkinHistory`) 스키닝 컴퓨트는 이번 벌에 쓴다 — 다른 벌에는 지난 프레임의 결과가
+ * 그대로 남아 정점 셰이더가 지난 위치로 읽는다(화면 속도). 언리얼 GPU Skin Cache 가 지난 위치 버퍼를 따로 두는 것과 같은 자리이고, 지난 팔레트로 한 번 더 스키닝하지 않는다.
+ * 배치가 바뀐 프레임(스킨 인스턴스 · 모프 용량이 바뀜)이나 지난 프레임에 디스패치하지 않았으면 지난 벌이 그 자리의 결과가 아니라 기록 없음이다(`getSkinPreviousShift`).
+ *
  * [스킨 원본의 구간 갱신]
  * 스킨 원본도 같은 구조다. 원본(스킨 데이터 번호)마다 레스트 구간 · 차이 구간(둘 다 레스트 버퍼 `_skinRest` 안, 원소 하나 = float4 셋)과 가중치 구간(`_skinWeight`)을
  * `SpanAllocator` 로 따로 받고, 새로 들어온 원본의 구간만 올린다. 나간 원본의 구간은 `kMaxFrameCountInFlight` 프레임 뒤에 돌려받고, 다 차면 1.5 배로 다시 만들어 전부 올린다.
@@ -190,8 +195,19 @@ namespace sw
         const RHIStructuredBuffer& getSkinResultOffsetBuffer() const { return _skinResultOffsets; }
         /** @brief 칸 표의 칸 수(가장 큰 칸 + 1)입니다. */
         uint32 getSkinResultOffsetCount() const { return static_cast<uint32>( _listSkinResultOffset.size() ); }
-        /** @brief 칸의 결과 시작입니다(진단 · 테스트). 없는 칸이거나 디스패치할 수 없으면 `kInvalidBase` 입니다. */
+        /** @brief 칸의 결과 시작입니다(진단 · 테스트 — 이번 프레임에 쓰는 벌). 없는 칸이거나 디스패치할 수 없으면 `kInvalidBase` 입니다. */
         uint32 skinResultStartOf( uint32 skinSlot ) const;
+        /**
+         * @brief 스킨 결과의 쓰는 벌을 바꿉니다. 프레임마다 **한 번**, `update` · `uploadSkinPalettes` 뒤 · 스키닝 디스패치 앞에 부릅니다.
+         * @details 바꾸기 전 벌에 지난 프레임의 결과가 있는지(배치가 그대로이고 지난 프레임에 디스패치했는지)를 정한다(`getSkinPreviousShift`).
+         */
+        void advanceSkinHistory();
+        /** @brief 이번 프레임에 스키닝 컴퓨트를 기록했다고 표시합니다(다음 `advanceSkinHistory` 가 지난 벌을 믿는 근거). */
+        void markSkinDispatched() { _bSkinDispatchedSinceAdvance = SW_TRUE; }
+        /** @brief 이번 프레임에 쓰는 벌의 이동(정점) — 칸 표의 결과 시작(앞 벌 기준)에 더한다. 스키닝 컴퓨트의 시작도 이만큼 옮긴다. */
+        uint32 getSkinCurrentShift() const { return _skinParity * getSkinVertexCount(); }
+        /** @brief 지난 프레임 결과가 든 벌의 이동(정점)입니다. 기록이 없으면(배치가 바뀜 · 디스패치 없었음) `kInvalidBase` 이고 셰이더는 이번 위치를 지난 위치로 쓴다. */
+        uint32 getSkinPreviousShift() const { return _bSkinHistoryValid != SW_FALSE ? ( 1u - _skinParity ) * getSkinVertexCount() : kInvalidBase; }
 
         /** @brief 결과 버퍼입니다. 정점 셰이더가 SRV 로 읽습니다. */
         const RHIStructuredBuffer& getMorphBuffer() const { return _morph; }
@@ -199,8 +215,10 @@ namespace sw
         const RHIStructuredBuffer& getRestBuffer() const { return _rest; }
         /** @brief 변형 프로그램 버퍼입니다(`updateDeformPrograms`). 모프 컴퓨트가 t1 로 읽습니다. 모프 메시가 없으면 비어 있습니다. */
         const RHIStructuredBuffer& getDeformProgramBuffer() const { return _deformProgram; }
-        /** @brief 풀에 든 결과 정점 수(모프와 스킨 인스턴스)입니다. 정점 셰이더의 범위 검사 값입니다. */
+        /** @brief 풀에 든 결과 정점 수(모프와 스킨 인스턴스 — 스킨은 한 벌)입니다. */
         uint32 getVertexCount() const { return _vertexCount; }
+        /** @brief 결과 버퍼의 정점 용량(모프 + 스킨 두 벌)입니다. 정점 셰이더의 범위 검사 값입니다(g_SwMorphVertexCount). */
+        uint32 getResultVertexCapacity() const { return _vertexCount + getSkinVertexCount(); }
         /** @brief 모프 구간(앞)의 길이(용량, 빈 자리 포함)입니다. 모프 컴퓨트가 이만큼 돕니다. */
         uint32 getMorphVertexCount() const { return _skinVertexBase; }
         /** @brief 모프 구간에 든(구간을 받은) 모프 메시의 정점 수 합입니다. */
@@ -371,5 +389,9 @@ namespace sw
         uint32         _morphLiveVertexCount{ 0 };
         uint32         _morphRepackCount{ 0 };
         uint32         _lastMorphUploadBytes{ 0 };
+        uint32         _skinParity{ 0 };                         ///< 이번 프레임에 스키닝이 쓰는 벌(0 앞 · 1 뒤, `advanceSkinHistory` 가 바꾼다)
+        uint8          _bSkinLayoutChanged{ SW_TRUE };           ///< 지난 `advanceSkinHistory` 뒤에 스킨 결과 배치가 바뀌었다
+        uint8          _bSkinDispatchedSinceAdvance{ SW_FALSE }; ///< 지난 `advanceSkinHistory` 뒤에 스키닝을 디스패치했다
+        uint8          _bSkinHistoryValid{ SW_FALSE };           ///< 지난 벌이 이번 배치의 지난 프레임 결과다
     };
 } // namespace sw

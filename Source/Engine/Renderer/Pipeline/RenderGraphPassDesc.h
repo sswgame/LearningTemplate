@@ -68,10 +68,11 @@ namespace sw
          */
         DepthOfField,
         /**
-         * @brief 카메라 모션 블러입니다. 깊이로 복원한 월드 위치를 지난 프레임 뷰-투영(`g_PrevViewProj`)으로 다시 투영해 화면 속도를 구하고, 그 방향으로 원본을 섞습니다(motion_blur.hlsl).
-         *        사용자 설정 `graphics.motionBlur`(`gv_motionBlur`)를 끄거나 후처리를 끈 뷰, 카메라가 서 있거나 컷인 프레임(속도가 모두 0)은
+         * @brief 모션 블러입니다. 불투명 지오메트리 패스가 쓴 화면 속도(Velocity 역할 입력 — 물체마다 지난 월드 행렬 · 스킨 위치)를 따라 원본을 섞습니다(motion_blur.hlsl).
+         *        그리지 않은 픽셀(하늘)은 깊이로 복원한 월드 위치를 지난 프레임 뷰-투영(`g_PrevViewProj`)으로 다시 투영한 카메라 속도다.
+         *        사용자 설정 `graphics.motionBlur`(`gv_motionBlur`)를 끄거나 후처리를 끈 뷰, 컷, 카메라와 물체가 모두 서 있는 프레임(속도가 모두 0)은
          *        피사계 심도와 같이 패스를 기록하지 않고 출력 이름이 원본을 가리킵니다(`kBypassesToSource`).
-         *        움직이는 물체의 속도 버퍼는 아직 없다(카메라 움직임만 흐린다). 디퍼드는 피사계 심도와 Tonemap 사이에, 포워드는 피사계 심도와 후처리 체인(Present) 사이에 둡니다.
+         *        디퍼드는 피사계 심도와 Tonemap 사이에, 포워드는 피사계 심도와 후처리 체인(Present) 사이에 둡니다.
          */
         MotionBlur,
         /**
