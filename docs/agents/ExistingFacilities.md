@@ -93,6 +93,4 @@ A new row names the header and the API.
 
 ## 에디터 패널: 그리기와 로직
 
-로직은 `Model/`(ImGui 를 쓰면 빌드가 막는다, `EditorModelForbidsImGui.h`)에 두고 패널에는 위젯과 호출만 남긴다. 고침 → 되돌리기 기록 → 저장하지 않은 표시처럼 함께 해야 하는 단계는 Model 함수 하나로 묶어 패널이 빠뜨릴 수 없게 한다(`InputMapModel` · `MeshModifierSession::applyEdit`). 단위 테스트는 `Model/Tests/` 에 두고 `App -EnableEditor -scenario=engine/automation/editor/selftests.scenario.xml` 이 돌린다(`App --test` 는 돌리지 않는다).
-
-패널에 남기는 것: 위젯이 돌려준 값을 칸에 넣는 한 줄, 콤보 · 툴팁 · 팝업 열기 · 스크롤처럼 ImGui 프레임에만 뜻이 있는 것, 에디터 서비스(선택 · 플레이 세션 · 자식 프로세스)를 부르는 얇은 연결. 위젯 추상화 층이나 패널마다의 뷰모델은 만들지 않는다. 레이아웃 · 입력 전달 · 실제 클릭 경로는 시나리오가 본다.
+[EditorUI](EditorUI.md) 의 MVVM 절이 정본이다 — 로직은 `Model/` 의 ViewModel(ImGui include 는 빌드가 막는다), 패널에는 ImGui 호출과 명령 호출만.
