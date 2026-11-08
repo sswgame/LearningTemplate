@@ -291,6 +291,17 @@ namespace sw
             (void)value;
             return false;
         }
+        /**
+         * @brief 이름 붙은 출력 값을 읽습니다(마지막 평가의 상태 — 발 디딤의 골반 · 발 높이 등). 모르는 출력이면 false 입니다.
+         * @details 시나리오 감시 · 진단이 게임 스레드에서 읽는다. 평가는 워커에서 돌므로 노드는 출력 값을 게임 스레드 준비 단계(`prepare`)에서 지난 평가의 상태로부터
+         *          옮겨 두고 그 사본만 돌려준다 — 워커가 쓰는 칸을 게임 스레드가 직접 읽지 않는다.
+         */
+        [[nodiscard]] virtual bool getOutputValue( const hashed_string& output, float32& outValue ) const
+        {
+            (void)output;
+            (void)outValue;
+            return false;
+        }
 
         const hashed_string& getName() const { return _common._name; }
         float32              getWeight() const { return _common._weight; }

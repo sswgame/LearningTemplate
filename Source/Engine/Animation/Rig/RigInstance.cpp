@@ -317,6 +317,12 @@ namespace sw
         return pNode != nullptr && pNode->setControl( control, value );
     }
 
+    bool RigInstance::getNodeOutputValue( const hashed_string& nodeName, const hashed_string& output, float32& outValue ) const
+    {
+        const RigNode* pNode = findNode( nodeName );
+        return pNode != nullptr && pNode->getOutputValue( output, outValue );
+    }
+
     void RigInstance::addMorphWeight( const hashed_string& name, float32 weight )
     {
         for ( RigMorphWeight& morph : _listMorphWeight )

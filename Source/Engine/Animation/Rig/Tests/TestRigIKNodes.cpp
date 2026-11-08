@@ -371,6 +371,43 @@ SW_TEST_CASE_F( RigIKTest, AimChainSharesTheTurn )
     SW_EXPECT_TRUE( angleToDirection( rotation( kHand ), float3{ 0.0f, 0.0f, 1.0f }, toGoal ) < 5.0f );
 }
 
+// 사슬 본마다 상한: 팔은 자기 상한(10 도)까지만 돌고, 남은 회전은 끝 본이 받아 여전히 목표를 향한다.
+SW_TEST_CASE_F( RigIKTest, AimChainBoneStopsAtItsOwnLimit )
+{
+    SW_REQUIRE_TRUE( load( R"(<item type="Aim" name="Aim" bone="hand" target="Goal" aim_axis="0,0,1"><chain><item bone="arm" weight="1" max_degrees="10" /></chain></item>)" ) );
+    const float3 goal = position( kHand ) + float3{ 2.0f, 0.0f, 0.0f };
+    setBone( kGoal, goal );
+    run();
+
+    SW_EXPECT_NEAR( angleToDirection( rotation( kArm ), float3{ 0.0f, 0.0f, 1.0f }, float3{ 0.0f, 0.0f, 1.0f } ), 10.0f, 0.5f );
+    const float3 toGoal = goal - position( kHand );
+    SW_EXPECT_TRUE( angleToDirection( rotation( kHand ), float3{ 0.0f, 0.0f, 1.0f }, toGoal ) < 1.0f );
+}
+
+// 발 디딤의 출력: 준비 단계가 지난 평가의 골반 · 발 높이를 옮겨 둔다(첫 준비 전에는 0, 다음 준비부터 값). 모르는 출력 · 범위 밖 발은 false 다.
+SW_TEST_CASE_F( RigIKTest, FootPlacementPublishesOffsetsAfterThePrepare )
+{
+    SW_REQUIRE_TRUE( load( makeFootPlacement( R"(interp_speed="0")" ) ) );
+    FakeRigGround ground;
+    ground._leftY  = -0.1f;
+    ground._rightY = 0.05f;
+    run( &ground );
+    run( &ground );
+
+    float32 value = 1.0f;
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "pelvis_offset" ), value ) );
+    SW_EXPECT_NEAR( value, -0.1f, 1.0e-4f );
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "foot_offset_0" ), value ) );
+    SW_EXPECT_NEAR( value, -0.1f, 1.0e-4f );
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "foot_offset_1" ), value ) );
+    SW_EXPECT_NEAR( value, 0.05f, 1.0e-4f );
+    SW_REQUIRE_TRUE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "ground_hits" ), value ) );
+    SW_EXPECT_NEAR( value, 2.0f, 1.0e-4f );
+    SW_EXPECT_FALSE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "foot_offset_2" ), value ) );
+    SW_EXPECT_FALSE( _instance.getNodeOutputValue( hashed_string( "Feet" ), hashed_string( "knee_offset" ), value ) );
+    SW_EXPECT_FALSE( _instance.getNodeOutputValue( hashed_string( "Nobody" ), hashed_string( "pelvis_offset" ), value ) );
+}
+
 // 발 디딤: 낮은 쪽만큼 골반이 내려가고 양발이 땅 높이를 따른다. 광선은 발 위에서 아래로 쏜다.
 SW_TEST_CASE_F( RigIKTest, FootPlacementFollowsTheGround )
 {
@@ -601,5 +638,6 @@ SW_TEST_CASE( RigIKChainTest, ParseRefusesBadShapes )
     SW_EXPECT_FALSE( parses( string( R"(<item type="StrideWarping" name="A" pelvis="pelvis" min_scale="2" max_scale="1" max_pelvis_drop="0">)" ) + kLegs + "</item>" ) );
     SW_EXPECT_FALSE( parses( string( R"(<item type="StrideWarping" name="A" pelvis="pelvis" min_scale="0" max_scale="1" max_pelvis_drop="0">)" ) + kLegs + "</item>" ) );
     SW_EXPECT_FALSE( parses( R"(<item type="Aim" name="A" bone="hand" target="Goal" aim_axis="0,0,0" />)" ) );
+    SW_EXPECT_FALSE( parses( R"(<item type="Aim" name="A" bone="hand" target="Goal"><chain><item bone="arm" weight="2" /></chain></item>)" ) );
     SW_EXPECT_FALSE( parses( R"(<item type="FullBodyIK" name="A" pelvis="pelvis" max_pelvis_offset="1"><chains /></item>)" ) );
 }

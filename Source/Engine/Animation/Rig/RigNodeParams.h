@@ -159,7 +159,7 @@ namespace sw
         float3 _axis{ 0.0f, 1.0f, 0.0f };
     };
 
-    /** @brief 본과 몫 한 쌍(`<item bone weight>`)입니다 — 트위스트 분배 · 조준 사슬이 함께 쓴다. */
+    /** @brief 본과 몫 한 쌍(`<item bone weight>`)입니다 — 트위스트 분배가 쓴다. */
     REFLECT()
     struct SW_API RigBoneWeightParams
     {
@@ -258,7 +258,24 @@ namespace sw
         float32 _maxDegrees{ 180.0f };
     };
 
-    /** @brief 조준(`Aim`)의 칸입니다. 조준 사슬(`chain`)은 `RigBoneWeightParams` 목록이다. */
+    /**
+     * @brief 조준 사슬의 본 하나(`<chain><item bone weight max_degrees/>`)입니다. 본은 남은 회전의 `weight` 몫을 받되, 애니메이션 방향에서 `max_degrees` 를 넘게 돌지 않습니다.
+     * @details 머리 · 목 · 등뼈에 시선을 나눌 때 본마다 상한을 따로 둔다(언리얼 Control Rig 의 Aim 체인 · Look At 의 본별 제한과 같은 자리).
+     */
+    REFLECT()
+    struct SW_API RigAimChainParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "bone", Required )
+        hashed_string _bone{};
+        PROPERTY( Name = "weight", Required, Min = 0.0, Max = 1.0 )
+        float32 _weight{ 0.0f };
+        PROPERTY( Name = "max_degrees", Min = 0.0, Max = 180.0, Units = deg )
+        float32 _maxDegrees{ 180.0f };
+    };
+
+    /** @brief 조준(`Aim`)의 칸입니다. 조준 사슬(`chain`)은 `RigAimChainParams` 목록이다. */
     REFLECT()
     struct SW_API RigAimParams
     {

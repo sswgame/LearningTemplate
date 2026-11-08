@@ -120,6 +120,8 @@ namespace sw
         RigNode* findNode( const hashed_string& name ) const;
         /** @brief 노드의 조절 값을 정합니다(부모 바꾸기의 활성 부모 등). 노드나 조절이 없으면 false 를 반환합니다. */
         bool setNodeControl( const hashed_string& nodeName, const hashed_string& control, float32 value );
+        /** @brief 노드의 출력 값을 읽습니다(`RigNode::getOutputValue`). 노드나 출력이 없으면 false 입니다. */
+        [[nodiscard]] bool getNodeOutputValue( const hashed_string& nodeName, const hashed_string& output, float32& outValue ) const;
 
         // --- 출력 ---
         /** @brief 포즈 구동이 낸 모프 가중치입니다(평가마다 다시 씁니다). */

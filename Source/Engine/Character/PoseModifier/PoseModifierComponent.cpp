@@ -35,19 +35,25 @@ namespace sw
                 (void)matrix.decompose( scale, outRotation, outPosition );
             }
 
-            /** @brief 씬 물리의 광선 질의를 리그의 땅 질의로 보입니다. 3D 씬, 평면 리그면 2D 씬을 씁니다(만들지 않고 있을 때만). */
+            /**
+             * @brief 씬 물리의 광선 질의를 리그의 땅 질의로 보입니다. 3D 씬, 평면 리그면 2D 씬을 씁니다(만들지 않고 있을 때만).
+             * @details 리그를 가진 오브젝트 자신의 바디(히트 박스 · 래그돌 뼈 · 든 무기 — 사용자 값이 오브젝트 id)는 보지 않는다. 발 · 손 광선이 제 몸에 걸리면
+             *          발이 허벅지 위로, 손이 제 가슴으로 간다(언리얼 발 IK 트레이스의 Ignore Self 와 같다).
+             */
             class SceneGroundQuery final : public IRigGroundQuery
             {
             public:
-                SceneGroundQuery( GameObjectManager& manager, bool bPlanar )
+                SceneGroundQuery( GameObjectManager& manager, bool bPlanar, uint64 ownerObjectID )
                     : _manager{ manager }
+                    , _ownerObjectID{ ownerObjectID }
                     , _bPlanar{ bPlanar }
                 {
                 }
 
                 bool raycastGround( const float3& origin, const float3& direction, float32 maxDistance, RigGroundHit& outHit ) const override
                 {
-                    PhysicsQueryFilter  filter{};
+                    PhysicsQueryFilter filter{};
+                    filter._ignoreUserData      = _ownerObjectID;
                     const ScenePhysics& physics = _manager.getSubsystem<sw::ScenePhysics>();
                     if ( _bPlanar )
                     {
@@ -70,6 +76,7 @@ namespace sw
 
             private:
                 GameObjectManager& _manager;
+                uint64             _ownerObjectID; ///< 이 사용자 값의 바디는 보지 않는다(리그를 가진 오브젝트)
                 uint8              _bPlanar : 1;
             };
         };
@@ -418,7 +425,7 @@ namespace sw
         _boundContentID = _asset->getContentID();
         _groundQuery.reset();
         if ( pOwner->getManager() != nullptr )
-            _groundQuery = make_unique<PoseModifierComponentInternal::SceneGroundQuery>( *pOwner->getManager(), _instance.getSolveSpace()._bPlanar == SW_TRUE );
+            _groundQuery = make_unique<PoseModifierComponentInternal::SceneGroundQuery>( *pOwner->getManager(), _instance.getSolveSpace()._bPlanar == SW_TRUE, pOwner->getObjectID() );
         loadSharedColliders();
         bindExternalTargets();
         // 리그가 읽고 쓰는 본(대상 · 노드 사슬 · 바깥 대상의 공간 본)은 본 LOD 가 빼지 않는다 — 빠지면 IK 대상이 레퍼런스 포즈로 굳는다.
