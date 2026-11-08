@@ -207,7 +207,7 @@ namespace sw
             if ( read != TradeResult::Ok )
                 return read;
             outSnapshot = session._snapshot;
-            if ( session._snapshot.findSideIndex( command._actorID ) < 0 )
+            if ( session._snapshot.findSideIndex( command._actorID ).has_value() == false )
                 return TradeResult::NotParty;
             if ( session._snapshot.isClosed() )
                 return command._kind == TradeCommandKind::Confirm ? Internal::toClosedResult( session._snapshot ) : TradeResult::WrongState; // 재시도이거나 다른 서버가 먼저 처리한 경우이다
@@ -230,7 +230,11 @@ namespace sw
                 return result;
             if ( command._kind == TradeCommandKind::Lock )
             {
-                const TradeOutcome funds = evaluateFunds( next._arrSide[next.findSideIndex( command._actorID )] );
+                // 위에서 당사자를 확인했다 — 그래도 클라이언트 명령 경로라 멈추지 않고 거절한다.
+                const optional<int32> sideIndex = next.findSideIndex( command._actorID );
+                if ( sideIndex.has_value() == false )
+                    return TradeResult::NotParty;
+                const TradeOutcome funds = evaluateFunds( next._arrSide[*sideIndex] );
                 if ( funds != TradeResult::Ok )
                     return funds;
             }
