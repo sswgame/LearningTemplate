@@ -50,7 +50,7 @@ namespace sw
     SW_MATERIAL_GRAPH_NODE( Fresnel, "Surface", "Normal:float3=context._normal|Power:float=5", "Out:float=pow( saturate( 1.0f - dot( normalize( $Normal ), View::computeToView( context._worldPosition ) ) ), $Power )", "" );
 
     // 출력 · 하위 그래프 — 역할이 컴파일을 정한다. 출력 핀 이름은 `material_graph.hlsli` 의 `MaterialGraphOutput` 칸과 같다.
-    static const MaterialGraphNodeKind sw_materialGraphNode_Output{ "Output", "Output", "BaseColor:float3!|Metallic:float=0|Roughness:float=0.5|Normal:float3=context._normal|Emissive:float3=0 0 0|Alpha:float=1", "", "", "", MaterialGraphNodeRole::Output };
+    static const MaterialGraphNodeKind sw_materialGraphNode_Output{ "Output", "Output", "BaseColor:float3!|Metallic:float=0|Roughness:float=0.5|Normal:float3=context._normal|Emissive:float3=0 0 0|Alpha:float=1", "", "ShadingModel:string=DefaultLit", "", MaterialGraphNodeRole::Output };
     static const MaterialGraphNodeKind sw_materialGraphNode_Subgraph{ "Subgraph", "Subgraph", "", "", "", "", MaterialGraphNodeRole::Subgraph };
     static const MaterialGraphNodeKind sw_materialGraphNode_GraphInput{ "GraphInput", "Subgraph", "", "Out:any=", "Name:string=In|Type:string=float", "", MaterialGraphNodeRole::GraphInput };
     static const MaterialGraphNodeKind sw_materialGraphNode_GraphOutput{ "GraphOutput", "Subgraph", "Value:any!", "", "Name:string=Out", "", MaterialGraphNodeRole::GraphOutput };

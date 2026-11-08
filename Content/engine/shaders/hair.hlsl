@@ -92,7 +92,13 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     return surface;
 }
 
-#if SW_VIEWMODE_SKIPS_LIGHTING
+// 깊이 패스에는 탄젠트 칸이 없고 조명 훅도 부르지 않는다 — 가닥 방향을 읽는 몸통은 색 패스에만 둔다.
+#if !defined( SW_MATERIAL_USES_TANGENT )
+float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
+{
+    return surface._albedo;
+}
+#elif SW_VIEWMODE_SKIPS_LIGHTING
 float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
 {
     return surface._albedo;

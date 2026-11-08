@@ -204,6 +204,28 @@ SW_TEST_CASE( MaterialGraphCompilerTest, EmissiveIsForwardOnly )
     SW_EXPECT_TRUE( StringUtil::contains( MaterialGraphCompileResult::makeMaterialText( result, "test", "x", "y" ), "MATERIAL_FORWARD_ONLY" ) );
 }
 
+/** @brief [MaterialGraphCompilerTest] 셰이딩 모델 Hair 는 머리카락 조명 스위치 · 칸 셋 · 포워드 전용을 낸다. 기본(DefaultLit)은 생성물이 그대로다 */
+SW_TEST_CASE( MaterialGraphCompilerTest, HairShadingModelIsForwardOnlyWithHairFields )
+{
+    MaterialGraphCompileResult hair;
+    SW_REQUIRE_TRUE( MaterialGraphTestUtil::compileNodes( MaterialGraphTestUtil::makeNode( "Out", "Output", {}, "BaseColor=0.3 0.2 0.1,ShadingModel=Hair" ), hair ) );
+    SW_EXPECT_TRUE( hair._bHair );
+    SW_EXPECT_TRUE( StringUtil::contains( hair._hlsl, "#define SW_MATERIAL_GRAPH_HAIR" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( hair._hlsl, "_hairShift" ) && StringUtil::contains( hair._hlsl, "_hairScatter" ) && StringUtil::contains( hair._hlsl, "_hairStrandAxis" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( MaterialGraphCompileResult::makeMaterialText( hair, "test", "x", "y" ), "MATERIAL_FORWARD_ONLY" ) );
+
+    MaterialGraphCompileResult lit;
+    SW_REQUIRE_TRUE( MaterialGraphTestUtil::compileNodes( MaterialGraphTestUtil::makeNode( "Out", "Output", {}, "BaseColor=0.3 0.2 0.1" ), lit ) );
+    SW_EXPECT_FALSE( lit._bHair );
+    SW_EXPECT_FALSE( StringUtil::contains( lit._hlsl, "SW_MATERIAL_GRAPH_HAIR" ) || StringUtil::contains( lit._hlsl, "_hairShift" ) );
+    SW_EXPECT_FALSE( StringUtil::contains( MaterialGraphCompileResult::makeMaterialText( lit, "test", "x", "y" ), "MATERIAL_FORWARD_ONLY" ) );
+
+    MaterialGraphCompileResult unknown;
+    SW_EXPECT_FALSE( MaterialGraphTestUtil::compileNodes( MaterialGraphTestUtil::makeNode( "Out", "Output", {}, "BaseColor=1 1 1,ShadingModel=Toon" ), unknown ) );
+    SW_REQUIRE_TRUE( unknown._listIssue.size() == 1 );
+    SW_EXPECT_EQUAL( string( "BadValue" ), unknown._listIssue[0]._id );
+}
+
 /** @brief [MaterialGraphCompilerTest] 순환은 그 길의 노드 이름과 함께 오류다 */
 SW_TEST_CASE( MaterialGraphCompilerTest, CycleIsReportedWithNames )
 {
