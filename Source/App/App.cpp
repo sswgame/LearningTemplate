@@ -490,7 +490,7 @@ namespace sw
     {
         const GameNetSession* pNetSession = engine::areEngineServicesBound() ? engine::findSubsystem<GameNetSession>() : nullptr;
         FramePacingInputs     inputs;
-        inputs._bAutomationRun = ( _pAutomation != nullptr && _pAutomation->isBusy() ) || _launch.getEngine().isProfileRunActive();
+        inputs._bAutomationRun = _pAutomation != nullptr && _pAutomation->isBusy();
         inputs._bListenHost    = pNetSession != nullptr && pNetSession->getRole() == GameNetRole::Server;
         inputs._bMinimized     = _pWindow->isMinimized();
         inputs._bFocused       = _pWindow->hasFocus();
@@ -502,7 +502,7 @@ namespace sw
     {
         framePacer.markFrameStart();
 
-        // 프로파일 실행(-gv_profileFrames=N)과 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`). 부모 프로세스는 표준 입력의 quit 으로 끝낸다(개발 도구 관찰자).
+        // 프로파일 실행(-gv_profileFrames=N, 개발 도구의 프레임 관찰자)과 자동화 시나리오(-scenario)는 스스로 끝난다(종료 코드는 `getExitCode`). 부모 프로세스는 표준 입력의 quit 으로 끝낸다(개발 도구 관찰자).
         if ( _launch.getEngine().isQuitRequested() )
         {
             _pWindow->requestClose();

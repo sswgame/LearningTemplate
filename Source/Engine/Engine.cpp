@@ -25,7 +25,6 @@
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
-#include "Engine/Asset/Cache/CacheStatsUtil.h"
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -50,7 +49,6 @@
 #include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
@@ -115,7 +113,6 @@ namespace sw
         , _frameDeltaSeconds{ 0.0f }
         , _exitCode{ ProcessExitCode::Passed }
         , _pQuitRequest{ nullptr }
-        , _profileSession{}
         , _pMemoryBudget{ nullptr }
         , _startup{}
         , _pRenderDriver{ nullptr }
@@ -304,7 +301,6 @@ namespace sw
         if ( bDedicatedServer == false )
             _netFrameSubscription = _frameHooks.add( engine::getSubsystem<GameNetSession>().makeClientHostFrameHooks() );
 
-        _profileSession.begin();
 #if !defined( SW_SHIPPING )
         ProfilerTraceExport::startExitCapture( engine::getSubsystem<FrameProfiler>() ); // `-gv_traceSaveOnExit` — 없으면 아무것도 하지 않는다
 #endif
@@ -596,19 +592,6 @@ namespace sw
         IProfilerBackend* pProfilerBackend = ProfilerBackend::getActiveBackend();
         if ( pProfilerBackend != nullptr )
             pProfilerBackend->markFrame( nullptr );
-        const bool bReportedBefore = _profileSession.hasReported();
-        _profileSession.onFrameEnd();
-        // CPU 메모리 태그 표 옆에 GPU 메모리 표를 둔다. 보고 세션은 Utility 층이라 Graphics 의 추적기를 볼 수 없어 여기서 잇는다.
-        const bool bReportedNow = bReportedBefore == false && _profileSession.hasReported();
-        const bool bHasDevice   = _pRHI != nullptr && _pRHI->hasDevice();
-        if ( bReportedNow && bHasDevice )
-            _pRHI->getDevice().getMemoryTracker().report( _pRHI->getDevice().getBackendName() );
-        // 기계 판독 보고(`-gv_profileReportPath`) — RHI · 씬은 보고 세션의 층이 볼 수 없어 여기서 채운다. 실패는 세션이 오류로 남겼다.
-        if ( bReportedNow )
-            (void)_profileSession.saveReport( bHasDevice ? string_view( _pRHI->getDevice().getBackendName() ) : string_view{}, makeFrameContext()._activeSceneID );
-        // 캐시 적중 · 실패 표도 같은 자리에서 잇는다. 보고 세션은 Profiling 층이라 에셋 매니저(Resource)를 볼 수 없다.
-        if ( bReportedNow )
-            CacheStatsUtil::logReport( "profile window" );
 
         if ( _pMemoryBudget != nullptr )
             _pMemoryBudget->onFrameEnd();

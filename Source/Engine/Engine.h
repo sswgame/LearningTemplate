@@ -18,7 +18,6 @@
 #include "Engine/Graphics/RHI/RHIInitResult.h"
 #include "Engine/Graphics/View/FrameViewports.h"
 #include "Engine/HeadlessSubsystem.h"
-#include "Engine/Profiling/FrameProfileSession.h"
 
 namespace sw
 {
@@ -127,12 +126,10 @@ namespace sw
         void setStartupExtension( const EngineStartupExtensionDelegate& extension ) { _startupExtension = extension; }
 
         /**
-         * @brief 엔진이 스스로 종료를 원하면 true 입니다(`-gv_profileFrames=N` 을 다 채웠거나 `requestQuit` 이 불렸다).
+         * @brief 엔진이 스스로 종료를 원하면 true 입니다(`requestQuit` 이 불렸거나 프레임 관찰자가 종료 코드를 냈다).
          * @details 창 수명은 App 이 쥐고 있으므로 여기서는 의사만 알립니다.
          */
-        bool isQuitRequested() const { return _bQuitRequested || _profileSession.isQuitRequested() || ( _pQuitRequest != nullptr && _pQuitRequest->isRequested() ); }
-        /** @brief `-gv_profileFrames` · `-gv_profileSeconds` 계측이 시작됐으면 true 입니다(앱 루프의 프레임 페이싱이 읽는다). */
-        bool isProfileRunActive() const { return _profileSession.isActive(); }
+        bool isQuitRequested() const { return _bQuitRequested || ( _pQuitRequest != nullptr && _pQuitRequest->isRequested() ); }
         /** @brief 이번 프레임이 끝나면 루프를 끝내라고 요청합니다(호스트). 모듈은 서비스 `QuitRequest` 에 직접 건다 — 이것도 그리로 간다. 여럿이면 처음 것의 코드를 씁니다. */
         void requestQuit( ProcessExitCode exitCode );
         /** @brief App 이 돌려줄 종료 코드입니다(요청이 없었으면 `Passed`). */
@@ -230,8 +227,6 @@ namespace sw
         /** @brief 서비스 범위의 종료 요청입니다(`_services` 소유 — 빌려 쓴다). 서비스가 내려가기 전에 `shutdown` 이 코드를 위 칸으로 옮기고 비운다. */
         QuitRequest* _pQuitRequest;
 
-        /** @brief `-gv_profileFrames` 계측 한 회분입니다. 판정은 모두 이 안에 있고 루프는 두 줄만 부릅니다. */
-        FrameProfileSession _profileSession;
         /** @brief 코어 범위의 메모리 태그 예산 감시입니다(`_coreScope` 소유 — 프레임 끝마다 부른다. 배포본에서는 아무 일도 하지 않는다). */
         MemoryBudgetSubsystem* _pMemoryBudget;
         /** @brief 엔진 범위(기동 단계)입니다 — 선언된 의존으로 위상 정렬해 초기화하고 역순으로 종료 · 소멸합니다. 부모는 `_services`. 서브시스템 객체를 소유합니다. */

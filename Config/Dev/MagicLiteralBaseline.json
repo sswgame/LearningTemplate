@@ -604,8 +604,6 @@
     "Source/Engine/Physics/Jolt/JoltPhysicsScene.cpp": {"float": 3},
     "Source/Engine/Physics/Jolt/JoltSoftBodySet.cpp": {"float": 4},
     "Source/Engine/Physics/PhysicsDebugDraw.cpp": {"float": 9},
-    "Source/Engine/Profiling/FrameProfileSession.cpp": {"integer": 7},
-    "Source/Engine/Profiling/FrameProfileSession.h": {"integer": 3},
     "Source/Engine/Profiling/FrameProfiler.cpp": {"integer": 7},
     "Source/Engine/Profiling/MemoryBudgetMonitor.cpp": {"integer": 26},
     "Source/Engine/Profiling/ProfilerBackend.cpp": {"minus-one": 2},
