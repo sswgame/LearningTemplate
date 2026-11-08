@@ -228,17 +228,6 @@ namespace sw
                 return ownerIndex >= 0 && static_cast<size_t>( ownerIndex ) < listEntry.size() ? listEntry[static_cast<size_t>( ownerIndex )]._pVisual : nullptr;
             }
 
-            /** @brief 구간 @p section 이 드라이브 @p drive 의 대상인지 판정합니다 — `include`(비면 모두) 안이고 `exclude` 밖이며, 염색이면 `dyeable` 구간이다. */
-            static bool isDriveSection( const CustomizationDriveDef& drive, const AppearanceSectionDef& section )
-            {
-                if ( drive._kind == CustomizationDriveKind::DyeChannel && section._bDyeable == false )
-                    return false;
-                const auto matches = [&section]( const hashed_string& tag )
-                { return section.matchesTag( tag ); };
-                const bool bIncluded = drive._listInclude.empty() || std::any_of( drive._listInclude.begin(), drive._listInclude.end(), matches );
-                return bIncluded && std::none_of( drive._listExclude.begin(), drive._listExclude.end(), matches );
-            }
-
             /** @brief 외형에 염색하지 않는 구간이 있으면 true 입니다 — 그런 외형의 염색은 구간마다 나눠 건다. */
             static bool hasUndyeableSection( const ItemVisualDef& visual )
             {
@@ -276,7 +265,7 @@ namespace sw
                 {
                     for ( const AppearanceSectionDef& section : part._listSection )
                     {
-                        if ( isDriveSection( drive, section ) )
+                        if ( drive.isDrivenSection( section ) )
                             addMaterialValue( out, owner, part._name, section._name, drive._target, value, target, channel, shape );
                     }
                 }

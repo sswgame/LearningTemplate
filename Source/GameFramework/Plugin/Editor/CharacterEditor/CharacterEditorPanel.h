@@ -61,6 +61,7 @@ namespace sw::editor
             uint32  _statusSet{ 0 };            ///< 상태 줄에 글(오류 · 진행)이 있으면 1 — 시나리오가 편집 오류가 남지 않았는지 본다
             uint32  _bodyLayerCount{ 0 };       ///< 외형 선택의 피부 층 수(몸 탭을 그릴 때 게시)
             uint32  _bodyHiddenSlotCount{ 0 };  ///< 플레이어가 숨긴 슬롯 수(몸 탭을 그릴 때 게시)
+            uint32  _bodyDataDirty{ 0 };        ///< 몸 데이터 파일(채널 매핑 · 프로필 · 구간)에 저장하지 않은 편집이 있으면 1
         };
 
         CharacterEditorPanel();
@@ -150,6 +151,19 @@ namespace sw::editor
         void drawBodyTab();
         void drawSkinLayerRows( const BodyCustomizationViewState& state );
         void drawBodyDynamicsPreview( const BodyCustomizationViewState& state, GameObject* pBody );
+        /** @brief 몸 데이터 파일의 저장 · 되돌리기 줄입니다(채널 매핑 · 프로필 · 구간 세 파일). */
+        void drawBodyDataRow();
+        /** @brief 채널 표 — 값 · 매핑과, 매핑된 채널의 축 범위 편집 · 매핑이 없는 채널의 축 더하기 · 받지 않음 선언(`*.bodyshape.xml`). */
+        void drawBodyChannelRows( const BodyCustomizationViewState& state );
+        /** @brief 구간 표 — 별칭 · 묶음 · 염색 여부 편집, 뷰포트에서 집기, 드라이브 강조(`itemvisuals.xml`). */
+        void drawBodySectionRows( const BodyCustomizationViewState& state );
+        /** @brief 몸 프로필 편집 — 지글 물성 · 주름 · 체액 경로(`bodyprofiles.xml`). */
+        void drawBodyProfileRows( const BodyCustomizationViewState& state );
+        /**
+         * @brief 미리보기 탭의 뷰포트에서 몸 표면 집기를 받습니다 — 구간 고르기(별칭 대응)와 배치 층 옮기기(끄는 동안 한 되돌리기 단계), 강조 구간 · 집은 자리 표시.
+         * @details 몸 탭에서 집기를 켜고 미리보기 탭에서 누른다(뷰포트는 한 탭이다). 기즈모가 마우스를 쥐었으면 받지 않는다. Esc 가 끈다.
+         */
+        void drawBodyPickOverlay( GameObject* pBody );
         void drawAppearanceDataRow();
         void drawSelectionHeader( const AppearanceSelection& selection );
         void drawSlotRows( const AppearanceSelection& selection );
@@ -186,6 +200,9 @@ namespace sw::editor
         uint8                                   _bCustomizationOpen   : 1; ///< 꾸미기 머리글이 펼쳐져 있다 — 뷰포트가 슬라이더 몇 줄 자리를 남긴다
         uint8                                   _bCustomizationActive : 1; ///< 꾸미기 슬라이더를 끄는 중이다(`drawCustomizationSliders`) — 미리보기 몸 다시 입히기를 놓을 때까지 미룬다
         uint8                                   _bGizmoPlaced         : 1; ///< `_placedGizmoWorld` 가 유효하다
+        uint8                                   _bBodyPicking         : 1; ///< 뷰포트 몸 표면 집기가 켜져 있다(몸 탭이 켜고 미리보기 탭이 받는다)
+        uint8                                   _bBodyPickDrag        : 1; ///< 배치 층을 끄는 중이다(놓으면 되돌리기 단계를 끊는다)
+        uint8                                   _bBodyPickShown       : 1; ///< `_bodyPickMarker` 가 유효하다
         uint32                                  _seenFitRevision;          ///< 확인 표시에 올린 피팅 결과의 세대(`CharacterAppearanceComponent::getFitResultRevision`)
         EditorPreviewGizmo                      _gizmo;                    ///< 고른 본 · 소켓의 기즈모(`syncPreviewGizmo`)
         GameObjectHandle                        _gizmoProxy;               ///< 기즈모가 잡는 미리보기 씬의 표시 오브젝트 — 주인의 월드 자리에 놓는다
@@ -194,6 +211,11 @@ namespace sw::editor
         bool                                    _bRigPreview;              ///< 제약 리그를 미리보기 몸에 켠다(`syncRigPreview`) NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
         Published                               _published;                ///< 감시 값이 읽는 게시 값
         BodyCustomizationViewState              _bodyState;                ///< 몸 탭의 상태(그리기마다 `gather` — 벡터 저장소를 다시 쓴다)
+        uint32                                  _bodyHighlightDrive;       ///< 강조할 드라이브의 `_listDrive` 번호(무효면 강조 없음)
+        uint32                                  _bodySelectedSection;      ///< 고른 구간 줄(뷰포트에서 집었거나 표에서 눌렀다 — 무효면 없음)
+        uint32                                  _bodyPickLayer;            ///< 배치 집기 중인 층 번호(무효면 구간 고르기)
+        float3                                  _bodyPickMarker;           ///< 마지막으로 집은 월드 자리
+        float32                                 _bodyStepTimer;            ///< 동작 태그 시험의 다음 걸음까지 남은 시간(초)
         string                                  _socketResolveError;       ///< 미리보기가 지난 프레임에 상태 줄에 올린 소켓 풀기 오류(풀리면 지운다)
         string                                  _thumbnailCapturePath;     ///< 요청한 썸네일 캡처의 임시 파일(비면 요청 없음)
         string                                  _thumbnailCapturePreset;   ///< 그 캡처를 붙일 프리셋 이름

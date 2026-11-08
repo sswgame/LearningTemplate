@@ -596,6 +596,11 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.ActionTagTest" source="Test tags:">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.AddBoneTurn" source="Add bone turn">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
@@ -671,6 +676,26 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.BodyDataRedo" source="Redo body edit">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyDataSave" source="Save body data">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyDataUndo" source="Undo body edit">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.BodyDataUnsaved" source="Body data has unsaved edits">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.BodyDynamics" source="Body dynamics preview">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
@@ -687,6 +712,16 @@
 			</origins>
 		</entry>
 		<entry key="EdPlugin.BodyTab" source="Body">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ChannelMap" source="Map">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.ChannelUnsupported" source="Unsupported">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
@@ -827,6 +862,21 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.FluidAddPoint" source="Add point">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.FluidPaths" source="Fluid paths">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.FluidRemovePoint" source="Remove point">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.FluidWetness" source="Tears and saliva">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
@@ -842,6 +892,16 @@
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.HighlightDrive" source="Highlight drive">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.HighlightNone" source="(none)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.IKGoal" source="IK goal">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
@@ -853,6 +913,11 @@
 			</origins>
 		</entry>
 		<entry key="EdPlugin.JiggleDisplacement" source="Jiggle (m)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.JiggleGroups" source="Jiggle">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
@@ -1088,6 +1153,26 @@
 		</entry>
 		<entry key="EdPlugin.PickABasePresetToSeeWhichRules"
 		       source="Pick a base preset to see which rules hid or changed what.">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PickActiveHint" source="Click the body in the viewport (Esc cancels)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PickCancel" source="Stop picking">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PickPlaceLayer" source="Place in Preview">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.PickSection" source="Pick section in Preview">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
@@ -1367,6 +1452,16 @@
 			</origins>
 		</entry>
 		<entry key="EdPlugin.WhyDoesItLookLikeThisRules" source="Why does it look like this? (rules)">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.WrinkleIntensity" source="Wrinkle intensity">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPlugin.Wrinkles" source="Wrinkles">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>

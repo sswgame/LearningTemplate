@@ -317,6 +317,11 @@ namespace sw
          */
         [[nodiscard]] bool parse( string_view xmlText, string_view sourceName = {} );
         /**
+         * @brief `parse` 와 같되 주석을 노드로 남깁니다 — 도구가 데이터 파일을 고쳐 다시 쓸 때(`saveToString`) 파일의 설명 주석이 사라지지 않게 합니다.
+         * @details 읽기 길(`parse` · `parseData`)은 주석을 버린다(런타임은 볼 일이 없다). 주석 노드는 원소가 아니라 `findChild( 이름 )` · 원소 순회에 걸리지 않는다.
+         */
+        [[nodiscard]] bool parseKeepingComments( string_view xmlText, string_view sourceName = {} );
+        /**
          * @brief 데이터 문서로 파싱합니다. 합칠 것이 있으면 합친 결과를 파싱합니다(`ResourceComposer`). `loadResource` 와 같은 읽기의 글 판입니다.
          * @return 펼치지 못하면 false 입니다. 부모 없이 자식 칸만으로 읽지 않습니다.
          */
@@ -371,6 +376,8 @@ namespace sw
         static string unescapeString( string_view text );
 
     private:
+        /** @brief `parse` · `parseKeepingComments` 의 본문입니다. */
+        [[nodiscard]] bool parseText( string_view xmlText, string_view sourceName, bool bKeepComments );
         /** @brief @p context 로 합친 글을 파싱합니다(`parseData` · `loadResource` 의 본문). */
         [[nodiscard]] bool parseComposed( string_view xmlText, string_view sourceName, const ResourceContext& context );
 

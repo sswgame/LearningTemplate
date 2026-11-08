@@ -79,7 +79,7 @@ SW_TEST_CASE_F( BodyCustomizationEditTest, ReorderHideRemoveAndHideSlot )
     SW_REQUIRE_EQUAL( size_t{ 1 }, _model.getSelection()._listSkinLayer.size() );
 
     BodyCustomizationViewState state;
-    BodyCustomizationViewModel::gather( _model, _database, nullptr, state );
+    BodyCustomizationViewModel::gather( _model, _database, nullptr, constant::invalid_index::kUint32, state );
     SW_REQUIRE_EQUAL( size_t{ 1 }, state._listLayer.size() );
     SW_EXPECT_TRUE( state._listLayer[0]._category == hashed_string( "Makeup" ) );
     SW_EXPECT_EQUAL( size_t{ 2 }, state._listAvailableLayer.size() );

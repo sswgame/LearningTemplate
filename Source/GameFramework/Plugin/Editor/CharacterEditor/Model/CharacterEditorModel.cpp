@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -46,6 +47,9 @@ namespace sw::editor
         : _sockets{}
         , _pose{}
         , _appearance{}
+        , _bodyShapes{}
+        , _bodyProfiles{}
+        , _visuals{}
         , _reloadGuard{}
         , _fit{}
         , _pItems{}
@@ -176,6 +180,56 @@ namespace sw::editor
         const bool bCanAutoReload = _bExternalChange && _sockets.isDirty() == false;
         if ( bCanAutoReload && loadSocketFile() )
             _bExternalChange = SW_FALSE;
+    }
+
+    void CharacterEditorModel::openBodyDataFile( BodyDataEditModel& model, string_view assetPath )
+    {
+        if ( assetPath.empty() )
+        {
+            if ( model.isDirty() == false )
+                model.close();
+            return;
+        }
+        const auto diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
+        if ( diskPath.has_value() == false )
+        {
+            _status = string( "Body data file '" ) + string( assetPath ) + "' has no disk path";
+            return;
+        }
+        if ( model.isDirty() || ( model.isOpen() && StringUtil::equals( model.getDiskPath(), diskPath->c_str() ) ) )
+            return; // 고친 파일은 다시 읽지 않는다 — 같은 파일은 이미 열렸다
+        if ( model.openFile( diskPath->c_str() ) == false )
+            _status = model.getError();
+    }
+
+    void CharacterEditorModel::openBodyData( string_view bodyShapesAsset )
+    {
+        const string folder( _paths._appearanceFolder.c_str() );
+        openBodyDataFile( _bodyShapes, bodyShapesAsset );
+        openBodyDataFile( _bodyProfiles, folder.empty() ? string_view{} : string_view( FileUtil::joinPath( folder, "bodyprofiles.xml" ) ) );
+        openBodyDataFile( _visuals, folder.empty() ? string_view{} : string_view( FileUtil::joinPath( folder, "itemvisuals.xml" ) ) );
+    }
+
+    bool CharacterEditorModel::saveBodyData()
+    {
+        bool       bSaved          = true;
+        const bool bProfileChanged = _bodyProfiles.isDirty() || _visuals.isDirty();
+        for ( BodyDataEditModel* pModel : { &_bodyShapes, &_bodyProfiles, &_visuals } )
+        {
+            if ( pModel->isDirty() == false )
+                continue;
+            if ( pModel->save() == false )
+            {
+                _status = pModel->getError();
+                bSaved  = false;
+                continue;
+            }
+            SW_LOG_INFO_ID( "CharacterEditorModel.BodyDataSaved", "Body data file saved to %#", pModel->getDiskPath().c_str() );
+        }
+        // 몸 프로필 · 구간은 이 창의 외형 데이터가 읽은 것이다 — 다시 읽어야 미리보기 몸이 새 값을 입는다(채널 매핑은 공유 캐시의 파일 감시가 다시 읽는다).
+        if ( bSaved && bProfileChanged )
+            loadAppearanceData();
+        return bSaved;
     }
 
     bool CharacterEditorModel::saveFiles( float64 nowSeconds )

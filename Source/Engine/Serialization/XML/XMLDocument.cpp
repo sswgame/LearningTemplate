@@ -559,6 +559,16 @@ namespace sw
 
     bool XMLDocument::parse( string_view xmlText, string_view sourceName )
     {
+        return parseText( xmlText, sourceName, false );
+    }
+
+    bool XMLDocument::parseKeepingComments( string_view xmlText, string_view sourceName )
+    {
+        return parseText( xmlText, sourceName, true );
+    }
+
+    bool XMLDocument::parseText( string_view xmlText, string_view sourceName, bool bKeepComments )
+    {
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
         _impl->doc.reset();
@@ -574,7 +584,7 @@ namespace sw
         const pugi::xml_parse_result result = _impl->doc.load_buffer(
             xmlText.data(),
             xmlText.size(),
-            pugi::parse_default | pugi::parse_trim_pcdata );
+            pugi::parse_default | pugi::parse_trim_pcdata | ( bKeepComments ? pugi::parse_comments : 0u ) );
 
         if ( result.status != pugi::status_ok )
         {
