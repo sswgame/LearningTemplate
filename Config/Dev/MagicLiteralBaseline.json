@@ -608,7 +608,6 @@
     "Source/Engine/Profiling/ProfilerBackend.cpp": {"minus-one": 2},
     "Source/Engine/Profiling/ProfilerTraceExport.cpp": {"minus-one": 2, "integer": 3},
     "Source/Engine/Reflection/EnumInfo.h": {"integer": 1},
-    "Source/Engine/Reflection/ReflectedValue.cpp": {"minus-one": 3},
     "Source/Engine/Reflection/TypeRegistry.cpp": {"integer": 1},
     "Source/Engine/Renderer/Capture/PortraitBatchUtil.cpp": {"integer": 2},
     "Source/Engine/Renderer/Capture/PortraitStudio.cpp": {"float": 6},

@@ -6,6 +6,7 @@
  *          (`ReflectTypeOps::_pConvert`). 같은 타입이면 그대로, 숫자끼리는 형 변환, 글이면 그 타입으로 읽습니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Math/PackedTypesFwd.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -109,10 +110,15 @@ namespace sw
     {
         /** @brief 내장 타입 자리의 갈래입니다(`ReflectBuiltinClass`). 범위 밖 자리는 Other 입니다. */
         static ReflectBuiltinClass getBuiltinClass( int32 builtinIndex );
+        /** @brief 타입 이름의 갈래입니다. 내장 타입이 아니면(열거형 · 구조체) Other 입니다 — Other 는 "그 밖" 갈래라 폴백이 아니다. */
+        static ReflectBuiltinClass getBuiltinClass( const hashed_string& typeName );
         /** @brief 내장 타입 자리의 정규 이름(`int32` · `string` · `float3` …)입니다. */
         static const hashed_string& getBuiltinTypeName( int32 builtinIndex );
-        /** @brief 정규 이름의 내장 타입 자리입니다. 내장 타입이 아니면 -1 입니다(별칭은 `TypeRegistry` 로 정규 이름으로 바꿔 찾습니다). */
-        static int32 findBuiltinIndex( const hashed_string& typeName );
+        /**
+         * @brief 정규 이름의 내장 타입 자리입니다. 내장 타입이 아니면 비어 있습니다(별칭은 `TypeRegistry` 로 정규 이름으로 바꿔 찾습니다).
+         * @details 자리 형식은 `ReflectBuiltinIndex` · `ReflectBuiltinOf<T>::kIndex` 와 같은 int32 라 `findBuiltinIndex( name ) == ReflectBuiltinOf<string>::kIndex` 로 바로 견준다(비어 있으면 false).
+         */
+        [[nodiscard]] static optional<int32> findBuiltinIndex( const hashed_string& typeName );
         /**
          * @brief 갈래가 Number 인 내장 타입 값 하나(@p pValue)를 float64 로 읽습니다 — 정수 · 실수 · 성분이 하나인 압축 타입.
          * @details 타입 이름 목록을 따로 두지 않는다 — 읽는 길은 `ReflectBuiltins.xxx` 줄마다 하나씩 만들어지고, 표에 줄을 더하면 따라온다.

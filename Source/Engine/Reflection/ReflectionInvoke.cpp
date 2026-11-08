@@ -46,11 +46,13 @@ namespace sw
                 const hashed_string toName   = to._pType->_pGetTypeName();
                 if ( fromName == toName )
                     return true;
-                const int32 fromBuiltin = ReflectedValueUtil::findBuiltinIndex( fromName );
-                const int32 toBuiltin   = ReflectedValueUtil::findBuiltinIndex( toName );
-                if ( toBuiltin == ReflectBuiltinIndex::kstring && 0 <= fromBuiltin )
+                const optional<int32> fromBuiltin = ReflectedValueUtil::findBuiltinIndex( fromName );
+                const optional<int32> toBuiltin   = ReflectedValueUtil::findBuiltinIndex( toName );
+                if ( fromBuiltin.has_value() == false || toBuiltin.has_value() == false )
+                    return false; // 이름이 다른 열거형 · 구조체끼리는 넘기지 않는다
+                if ( *toBuiltin == ReflectBuiltinIndex::kstring )
                     return true;
-                return isNumericBuiltin( fromBuiltin ) && isNumericBuiltin( toBuiltin );
+                return isNumericBuiltin( *fromBuiltin ) && isNumericBuiltin( *toBuiltin );
             }
 
             /** @brief 빠진 인자를 기본 인자로 채웁니다. 기본 인자가 없거나 읽지 못하면 false 입니다. */
