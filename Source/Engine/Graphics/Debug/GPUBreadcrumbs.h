@@ -9,7 +9,7 @@
  *          백엔드별 표지:
  *          - **DX12** — `ID3D12GraphicsCommandList2::WriteBufferImmediate` 로 기록 가능한 버퍼에 쓴다: 시작 표지는 MARKER_IN(앞 명령이 시작한 뒤)으로 [0] 칸, 끝 표지는 MARKER_OUT(앞 명령이 끝난 뒤)으로 [1] 칸.
  *            소실 뒤 그 버퍼는 CPU 가 읽는다. DRED 자동 브레드크럼(명령 종류별 진행) · 페이지 폴트도 켠다.
- *          - **Vulkan** — `VK_NV_device_diagnostic_checkpoints`(`vkCmdSetCheckpointNV`). 확장이 없으면(AMD · 인텔 — `VK_AMD_buffer_marker` 는 이 엔진이 쓰지 않는다) 능력을 끈다.
+ *          - **Vulkan** — `VK_NV_device_diagnostic_checkpoints`(`vkCmdSetCheckpointNV`). 없으면 `VK_AMD_buffer_marker`(AMD · 인텔 Mesa — 호스트 보임 버퍼 두 칸에 DX12 와 같은 모양으로 쓴다: 시작 TOP_OF_PIPE [0] · 끝 BOTTOM_OF_PIPE [1]). 둘 다 없으면 능력을 끈다(`VulkanBreadcrumbMode`).
  *          - **DX11 · OpenGL** — GPU 쪽 표지 수단이 없다(DX11 은 소실 뒤 읽을 수 있는 디바이스측 쓰기가 없고, GL 은 컨텍스트 소실 시 상태를 읽을 길이 없다). 능력을 끄고 CPU 가 마지막으로 기록한 패스만 보고한다.
  *
  *          켜는 스위치는 `-gv_gpuBreadcrumbs`(개발 구성 기본 켬 — 표지 한 번이 패스당 GPU 쓰기 하나뿐이라 값싸다)이고, 배포 구성은 기본 끔이며 실행 인자로 켠다(언리얼 `-gpucrashdebugging`).

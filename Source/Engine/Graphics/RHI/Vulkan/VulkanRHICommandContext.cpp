@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
@@ -1060,10 +1061,30 @@ namespace sw
     void VulkanRHICommandContext::writeBreadcrumb( uint32 markerID )
     {
         VkCommandBuffer cmd = commandBuffer();
-        if ( _pDevice->_bCheckpoints == SW_FALSE || cmd == VK_NULL_HANDLE )
+        if ( cmd == VK_NULL_HANDLE )
             return;
-        // 체크포인트의 값은 포인터 크기 자리다 - 패스 id 를 그대로 싣는다(소실 뒤 vkGetQueueCheckpointDataNV 가 같은 값을 돌려준다).
-        reinterpret_cast<PFN_vkCmdSetCheckpointNV>( _pDevice->_pCmdSetCheckpoint )( cmd, reinterpret_cast<const void*>( static_cast<uintptr_t>( markerID ) ) );
+        switch ( _pDevice->_breadcrumbMode )
+        {
+            case VulkanBreadcrumbMode::None:
+            {
+                return;
+            }
+            case VulkanBreadcrumbMode::NVCheckpoints:
+            {
+                // 체크포인트의 값은 포인터 크기 자리다 - 패스 id 를 그대로 싣는다(소실 뒤 vkGetQueueCheckpointDataNV 가 같은 값을 돌려준다).
+                reinterpret_cast<PFN_vkCmdSetCheckpointNV>( _pDevice->_pCmdSetCheckpoint )( cmd, reinterpret_cast<const void*>( static_cast<uintptr_t>( markerID ) ) );
+                return;
+            }
+            case VulkanBreadcrumbMode::AMDBufferMarker:
+            {
+                // 시작 표지는 [0] 칸에 TOP_OF_PIPE(앞 명령이 파이프라인에 들어간 뒤), 끝 표지는 [1] 칸에 BOTTOM_OF_PIPE(앞 명령이 모두 끝난 뒤) — DX12 MARKER_IN · MARKER_OUT 과 같은 뜻.
+                // 렌더 패스 안팎 어디서나 기록할 수 있다(명세의 Render Pass Scope: Both).
+                const bool                    bEnd  = ( markerID & GPUBreadcrumbs::kEndMarkerBit ) != 0;
+                const VkPipelineStageFlagBits stage = bEnd ? VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT : VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                reinterpret_cast<PFN_vkCmdWriteBufferMarkerAMD>( _pDevice->_pCmdWriteBufferMarker )( cmd, stage, _pDevice->_breadcrumbBuffer, bEnd ? sizeof( uint32 ) : 0u, markerID );
+                return;
+            }
+        }
     }
 
     void VulkanRHICommandContext::beginEventMarker( const utf8* pName )

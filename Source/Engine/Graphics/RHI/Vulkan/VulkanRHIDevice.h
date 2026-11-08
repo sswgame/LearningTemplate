@@ -47,6 +47,20 @@ namespace sw
         vector<VkDescriptorPool> _listPool;
         uint32                   _cursor{ 0 }; ///< 지금 할당 중인 풀
     };
+
+    /**
+     * @enum VulkanBreadcrumbMode
+     * @brief GPU 브레드크럼을 남기는 확장입니다. 장치를 만들 때 확장 목록(능력)이 한 번 정하고 그 뒤로 바뀌지 않는다.
+     * @details NV 체크포인트가 있으면 그것을(단계마다 마지막 값을 드라이버가 돌려준다), 없고 `VK_AMD_buffer_marker` 가 있으면 호스트 보임 버퍼 두 칸에 표지를 쓴다
+     *          (DX12 `WriteBufferImmediate` 와 같은 모양 — [0] 시작 표지 TOP_OF_PIPE, [1] 끝 표지 BOTTOM_OF_PIPE). 둘 다 없으면 None 이고 CPU 가 마지막으로 기록한 패스만 보고한다.
+     *          언리얼 Vulkan RHI 도 같은 순서로 고른다(NV 체크포인트 → AMD 버퍼 마커, 기억에 의존한 비교).
+     */
+    enum class VulkanBreadcrumbMode : uint8
+    {
+        None,
+        NVCheckpoints,   ///< VK_NV_device_diagnostic_checkpoints
+        AMDBufferMarker, ///< VK_AMD_buffer_marker — AMD · 인텔 Mesa 드라이버가 낸다
+    };
 } // namespace sw
 
 namespace sw
@@ -238,7 +252,7 @@ namespace sw
             caps._bNativeBindless       = _textureSet != nullptr ? 1u : 0u;
             caps._bWireframeFill        = _bFillModeNonSolid;
             caps._bMaterialTessellation = _bTessellationShader != 0 ? SW_TRUE : SW_FALSE;
-            caps._bGPUBreadcrumbs       = _bCheckpoints != SW_FALSE ? SW_TRUE : SW_FALSE;
+            caps._bGPUBreadcrumbs       = _breadcrumbMode != VulkanBreadcrumbMode::None ? SW_TRUE : SW_FALSE;
             caps._bAsyncCompute         = _asyncComputeQueue != nullptr ? SW_TRUE : SW_FALSE;
             caps._bGraphicsShaderWrites = _bFragmentStores;
             return caps;
@@ -512,6 +526,14 @@ namespace sw
          * @brief 논리 디바이스와 큐를 만듭니다.
          */
         [[nodiscard]] bool createLogicalDevice();
+        /** @brief 장치를 만든 뒤 고른 브레드크럼 확장(`_breadcrumbMode`)의 함수와 표지 버퍼를 준비합니다. 하나라도 없으면 None 으로 내리고 경고를 남깁니다. */
+        void initBreadcrumbs();
+        /** @brief AMD 표지 버퍼(uint32 두 칸, 호스트 일관 메모리)를 만들고 영속 매핑합니다. 실패하면 false — 부르는 쪽이 `destroyBreadcrumbBuffer` 로 치운다. */
+        [[nodiscard]] bool createBreadcrumbBuffer();
+        /** @brief AMD 표지 버퍼를 풀고 지웁니다. 여러 번 불러도 된다. */
+        void destroyBreadcrumbBuffer();
+        /** @brief 브레드크럼 칸 수입니다 — [0] 시작 표지 · [1] 끝 표지(DX12 와 같다). */
+        static constexpr uint32 kBreadcrumbSlotCount = 2;
         /**
          * @brief 그래픽스 커맨드 풀을 만듭니다.
          */
@@ -853,13 +875,16 @@ namespace sw
         uint16                  _bFragmentStores         : 1; ///< 프래그먼트 셰이더가 스토리지 버퍼에 쓸 수 있는가(fragmentStoresAndAtomics — 셰이더 메시지 채널의 그래픽스 단계)
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
-        /// @brief 디바이스에 VK_NV_device_diagnostic_checkpoints 를 켰는가(GPU 브레드크럼 - `vkCmdSetCheckpointNV` 로 패스 id 를 남기고 소실 뒤 `vkGetQueueCheckpointDataNV` 로 읽는다).
-        ///        없으면(AMD · 인텔 드라이버) 켜지 않는다 - 대체 확장 VK_AMD_buffer_marker 는 쓰지 않는다(그 표지는 호스트 보임 버퍼를 따로 관리해야 하고 이 엔진에는 그 자리가 없다).
-        uint8         _bCheckpoints;
-        void*         _pCmdSetCheckpoint;                                                                              ///< `vkCmdSetCheckpointNV` 입니다(이 헤더는 vulkan.h 를 include 하지 않아 void* 로 쥔다). `_bCheckpoints` 일 때만 읽는다
-        void*         _pGetCheckpointData;                                                                             ///< `vkGetQueueCheckpointDataNV` 입니다. 위와 같다
-        atomic<uint8> _bTimestampEnabled;                                                                              ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
-        uint8         _arrTimestampSubmitted[constant::render::kMaxFrameCountInFlight] SW_GUARDED_BY( _renderThread ); ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
+        /// @brief GPU 브레드크럼을 남기는 확장입니다(`VulkanBreadcrumbMode`). 장치를 만들 때 정하고, 함수나 표지 버퍼를 얻지 못하면 None 으로 내린다.
+        VulkanBreadcrumbMode   _breadcrumbMode;
+        void*                  _pCmdSetCheckpoint;     ///< `vkCmdSetCheckpointNV` 입니다(확장 함수라 void* 로 쥐고 cpp 가 형식을 정한다). NVCheckpoints 일 때만 읽는다
+        void*                  _pGetCheckpointData;    ///< `vkGetQueueCheckpointDataNV` 입니다. 위와 같다
+        void*                  _pCmdWriteBufferMarker; ///< `vkCmdWriteBufferMarkerAMD` 입니다. AMDBufferMarker 일 때만 읽는다
+        VkBuffer               _breadcrumbBuffer;      ///< AMD 표지 버퍼 — uint32 두 칸([0] 시작 · [1] 끝), 호스트 보임 · 일관 메모리를 영속 매핑해 소실 뒤 CPU 가 읽는다
+        VkDeviceMemory         _breadcrumbMemory;
+        const volatile uint32* _pBreadcrumbMapped;                                                                              ///< `_breadcrumbBuffer` 의 매핑. GPU 가 쓰므로 volatile 로 읽는다
+        atomic<uint8>          _bTimestampEnabled;                                                                              ///< 엔진이 켜기 전에는 풀도 만들지 않는다. `setTimestampEnabled` 는 어느 스레드에서나 부를 수 있어 atomic 이다.
+        uint8                  _arrTimestampSubmitted[constant::render::kMaxFrameCountInFlight] SW_GUARDED_BY( _renderThread ); ///< 링 슬롯마다 타임스탬프 쿼리를 제출했는가
 
         VkSampler _defaultSampler;
 

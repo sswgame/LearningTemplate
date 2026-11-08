@@ -117,9 +117,13 @@ namespace sw
         , _bDeviceFault{ SW_FALSE }
         , _bFragmentStores{ SW_FALSE }
         , _bSwapChainRecreateFailing{ SW_FALSE }
-        , _bCheckpoints{ SW_FALSE }
+        , _breadcrumbMode{ VulkanBreadcrumbMode::None }
         , _pCmdSetCheckpoint{ nullptr }
         , _pGetCheckpointData{ nullptr }
+        , _pCmdWriteBufferMarker{ nullptr }
+        , _breadcrumbBuffer{ VK_NULL_HANDLE }
+        , _breadcrumbMemory{ VK_NULL_HANDLE }
+        , _pBreadcrumbMapped{ nullptr }
         , _bTimestampEnabled{ SW_FALSE }
         , _arrTimestampSubmitted{}
         , _defaultSampler{ nullptr }
@@ -563,6 +567,7 @@ namespace sw
                 _offscreenRenderPass = nullptr;
             }
             savePipelineCache();
+            destroyBreadcrumbBuffer();
             vkDestroyDevice( _device, nullptr );
             _device = nullptr;
         }
@@ -1333,8 +1338,15 @@ namespace sw
             if ( bFamilySupports )
             {
                 listDeviceExtension.push_back( VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME );
-                _bCheckpoints = SW_TRUE;
+                _breadcrumbMode = VulkanBreadcrumbMode::NVCheckpoints;
             }
+        }
+        // VK_AMD_buffer_marker(진단 전용): NV 체크포인트가 없는 드라이버(AMD · 인텔 Mesa)의 GPU 브레드크럼 — 패스 id 를 호스트 보임 버퍼에 쓰고 소실 뒤 매핑으로 읽는다.
+        // https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdWriteBufferMarkerAMD.html (dstOffset 은 4 의 배수, 버퍼는 TRANSFER_DST 용도)
+        if ( GPUBreadcrumbs::isEnabled() && _breadcrumbMode == VulkanBreadcrumbMode::None && VulkanRHIUtil::hasExtension( listAvailableExt, VK_AMD_BUFFER_MARKER_EXTENSION_NAME ) )
+        {
+            listDeviceExtension.push_back( VK_AMD_BUFFER_MARKER_EXTENSION_NAME );
+            _breadcrumbMode = VulkanBreadcrumbMode::AMDBufferMarker;
         }
         createInfo.enabledExtensionCount   = static_cast<uint32>( listDeviceExtension.size() );
         createInfo.ppEnabledExtensionNames = listDeviceExtension.data();
@@ -1351,19 +1363,96 @@ namespace sw
         else
             SW_LOG_INFO_ID( "Vulkan.AsyncComputeQueueUnavailable", "The graphics queue family has one queue - AsyncCompute passes run on the graphics queue" );
         _listAsyncSemaphorePool.assign( constant::render::kMaxFrameCountInFlight, vector<VkSemaphore>{} );
-        if ( _bCheckpoints != SW_FALSE )
-        {
-            _pCmdSetCheckpoint  = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkCmdSetCheckpointNV" ) );
-            _pGetCheckpointData = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkGetQueueCheckpointDataNV" ) );
-            if ( _pCmdSetCheckpoint == nullptr || _pGetCheckpointData == nullptr )
-            {
-                SW_LOG_WARNING_ID( "Vulkan.VKNVDeviceDiagnostic", "VK_NV_device_diagnostic_checkpoints is enabled but its functions did not load - GPU breadcrumbs are off" );
-                _bCheckpoints = SW_FALSE;
-            }
-            else
-                SW_LOG_INFO_ID( "Vulkan.VulkanGPUBreadcrumbsEnabled", "Vulkan GPU breadcrumbs enabled (VK_NV_device_diagnostic_checkpoints)" );
-        }
+        initBreadcrumbs();
         return true;
+    }
+
+    void VulkanRHIDevice::initBreadcrumbs()
+    {
+        switch ( _breadcrumbMode )
+        {
+            case VulkanBreadcrumbMode::None:
+            {
+                return;
+            }
+            case VulkanBreadcrumbMode::NVCheckpoints:
+            {
+                _pCmdSetCheckpoint  = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkCmdSetCheckpointNV" ) );
+                _pGetCheckpointData = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkGetQueueCheckpointDataNV" ) );
+                if ( _pCmdSetCheckpoint == nullptr || _pGetCheckpointData == nullptr )
+                {
+                    SW_LOG_WARNING_ID( "Vulkan.VKNVDeviceDiagnostic", "VK_NV_device_diagnostic_checkpoints is enabled but its functions did not load - GPU breadcrumbs are off" );
+                    _breadcrumbMode = VulkanBreadcrumbMode::None;
+                    return;
+                }
+                SW_LOG_INFO_ID( "Vulkan.VulkanGPUBreadcrumbsEnabled", "Vulkan GPU breadcrumbs enabled (VK_NV_device_diagnostic_checkpoints)" );
+                return;
+            }
+            case VulkanBreadcrumbMode::AMDBufferMarker:
+            {
+                _pCmdWriteBufferMarker = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkCmdWriteBufferMarkerAMD" ) );
+                if ( _pCmdWriteBufferMarker == nullptr || createBreadcrumbBuffer() == false )
+                {
+                    SW_LOG_WARNING_ID( "Vulkan.AMDBufferMarkerUnavailable", "VK_AMD_buffer_marker is enabled but its function or marker buffer is missing - GPU breadcrumbs are off" );
+                    destroyBreadcrumbBuffer();
+                    _breadcrumbMode = VulkanBreadcrumbMode::None;
+                    return;
+                }
+                SW_LOG_INFO_ID( "Vulkan.VulkanGPUBreadcrumbsAMD", "Vulkan GPU breadcrumbs enabled (VK_AMD_buffer_marker)" );
+                return;
+            }
+        }
+    }
+
+    bool VulkanRHIDevice::createBreadcrumbBuffer()
+    {
+        constexpr VkDeviceSize kSize = kBreadcrumbSlotCount * sizeof( uint32 );
+        VkBufferCreateInfo     bufferInfo{};
+        bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufferInfo.size        = kSize;
+        bufferInfo.usage       = VK_BUFFER_USAGE_TRANSFER_DST_BIT; // vkCmdWriteBufferMarkerAMD 의 도착지 조건
+        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        if ( vkCreateBuffer( _device, &bufferInfo, nullptr, &_breadcrumbBuffer ) != VK_SUCCESS )
+            return false;
+        VkMemoryRequirements requirements{};
+        vkGetBufferMemoryRequirements( _device, _breadcrumbBuffer, &requirements );
+        uint32 memoryTypeIndex{ 0 };
+        // 소실 뒤에도 CPU 가 매핑으로 읽어야 하므로 호스트 일관 메모리다(flush · invalidate 없이 GPU 의 마지막 쓰기가 보인다).
+        if ( findMemoryType( requirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memoryTypeIndex ) == false )
+            return false;
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize  = requirements.size;
+        allocInfo.memoryTypeIndex = memoryTypeIndex;
+        if ( vkAllocateMemory( _device, &allocInfo, nullptr, &_breadcrumbMemory ) != VK_SUCCESS )
+            return false;
+        if ( isVkSuccess( vkBindBufferMemory( _device, _breadcrumbBuffer, _breadcrumbMemory, 0 ), "vkBindBufferMemory (breadcrumbs)" ) == false )
+            return false;
+        void*      pMapped{ nullptr };
+        const bool bMapped = isVkSuccess( vkMapMemory( _device, _breadcrumbMemory, 0, kSize, 0, &pMapped ), "vkMapMemory (breadcrumbs)" ) && pMapped != nullptr;
+        if ( bMapped == false )
+            return false;
+        // 0 은 표지가 아니다 — 아직 쓰지 않은 칸을 소실 보고에 싣지 않는다.
+        uint32* const pSlot = static_cast<uint32*>( pMapped );
+        for ( uint32 slot = 0; slot < kBreadcrumbSlotCount; ++slot )
+        {
+            pSlot[slot] = 0;
+        }
+        _pBreadcrumbMapped = pSlot;
+        return true;
+    }
+
+    void VulkanRHIDevice::destroyBreadcrumbBuffer()
+    {
+        if ( _pBreadcrumbMapped != nullptr )
+            vkUnmapMemory( _device, _breadcrumbMemory );
+        _pBreadcrumbMapped = nullptr;
+        if ( _breadcrumbBuffer != VK_NULL_HANDLE )
+            vkDestroyBuffer( _device, _breadcrumbBuffer, nullptr );
+        if ( _breadcrumbMemory != VK_NULL_HANDLE )
+            vkFreeMemory( _device, _breadcrumbMemory, nullptr );
+        _breadcrumbBuffer = VK_NULL_HANDLE;
+        _breadcrumbMemory = VK_NULL_HANDLE;
     }
 
     bool VulkanRHIDevice::createCommandPool()
@@ -1775,7 +1864,21 @@ namespace sw
 
     uint32 VulkanRHIDevice::readLastBreadcrumbs( uint32* pOutID, uint32 capacity )
     {
-        if ( _bCheckpoints == SW_FALSE || _graphicsQueue == VK_NULL_HANDLE || pOutID == nullptr || capacity == 0 )
+        if ( pOutID == nullptr || capacity == 0 )
+            return 0;
+        if ( _breadcrumbMode == VulkanBreadcrumbMode::AMDBufferMarker )
+        {
+            // [0] 시작 표지 · [1] 끝 표지 — 0 인 칸(아직 쓰지 않음)은 싣지 않는다(DX12 와 같은 모양, 푸는 일은 GPUBreadcrumbs::parse).
+            uint32 filledMarker = 0;
+            for ( uint32 slot = 0; slot < kBreadcrumbSlotCount && filledMarker < capacity && _pBreadcrumbMapped != nullptr; ++slot )
+            {
+                const uint32 marker = _pBreadcrumbMapped[slot];
+                if ( marker != 0 )
+                    pOutID[filledMarker++] = marker;
+            }
+            return filledMarker;
+        }
+        if ( _breadcrumbMode != VulkanBreadcrumbMode::NVCheckpoints || _graphicsQueue == VK_NULL_HANDLE )
             return 0;
         uint32                               dataCount            = 0;
         const PFN_vkGetQueueCheckpointDataNV pfnGetCheckpointData = reinterpret_cast<PFN_vkGetQueueCheckpointDataNV>( _pGetCheckpointData );
