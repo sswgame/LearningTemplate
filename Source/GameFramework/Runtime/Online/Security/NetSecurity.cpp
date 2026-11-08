@@ -5,12 +5,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
+#include "Core/Network/DevOnlineExtension.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 #include "Engine/Content/AssetPaths.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Online/Config/DevOnlineExtension.h"
 
 namespace sw
 {

@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Network/DevOnlineExtension.h"
+
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/AccountKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
@@ -12,7 +14,6 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketKey.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Online/Config/DevOnlineExtension.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"

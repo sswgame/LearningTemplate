@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "Core/Network/DevOnlineExtension.h"
+
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsDevOptions.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsKitConfig.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/LiveOpsServer.h"
@@ -8,7 +10,6 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
-#include "GameFramework/Runtime/Online/Config/DevOnlineExtension.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"

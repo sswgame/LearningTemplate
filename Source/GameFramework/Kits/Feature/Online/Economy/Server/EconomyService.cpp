@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
 
+#include "Core/Network/DevOnlineExtension.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Time/TimePoint.h"
 
@@ -16,7 +17,6 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/OnlinePushRelay.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
-#include "GameFramework/Runtime/Online/Config/DevOnlineExtension.h"
 #include "GameFramework/Runtime/Online/Config/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 

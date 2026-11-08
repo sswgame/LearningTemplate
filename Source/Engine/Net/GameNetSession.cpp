@@ -4,12 +4,12 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
-#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetEndpointThread.h"
+#include "Core/Network/DevOnlineExtension.h"
 #include "Core/Network/Message/NetStatsReport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
@@ -193,7 +193,22 @@ namespace sw
                 return true;
             }
         };
+
+        /**
+         * @struct GameNetDevOptions
+         * @brief 게임 포트의 개발 대체물 — 평문(`LanUnsecured`) 게임 포트를 루프백 밖에 여는 허용입니다(`DevOnlineExtension.h`).
+         * @details 값이 걸려 있지 않은 구성(배포)은 평문 공개 포트를 거절한다(`makeServerParams`). 구성 이름으로 묻지 않고 등록으로 묻는다 — 다른 개발 대체물과 같은 길이다.
+         */
+        struct GameNetDevOptions
+        {
+            static RegistrationSlot<const GameNetDevOptions>& getDevOnline();
+        };
+
+        constexpr GameNetDevOptions kGameNetDevOptions{};
     } // namespace
+
+    SW_DEFINE_DEV_ONLINE_EXTENSION( GameNetDevOptions, "a plaintext game port outside loopback (_bGameConnectTicket off)" )
+    SW_REGISTER_DEV_ONLINE_EXTENSION( GameNetDevOptions, kGameNetDevOptions );
 
     /**
      * @brief 합성 대조가 어긋난 뒤 끊기 전에 기다리는 시간(초)입니다.
@@ -345,9 +360,9 @@ namespace sw
             outParams._hostSettings._security._pProvider      = pProvider;
             outParams._hostSettings._security._pAuthenticator = &_connectSecurity;
         }
-        // U4: Shipping 서버는 평문(`LanUnsecured`) 게임 포트를 루프백 밖에 열지 않는다. 공개 포트는 접속 티켓(암호화 + 세션 비밀 결속)이 있어야 한다.
+        // U4: 개발 허용(`GameNetDevOptions`)이 없는 서버(배포)는 평문(`LanUnsecured`) 게임 포트를 루프백 밖에 열지 않는다. 공개 포트는 접속 티켓(암호화 + 세션 비밀 결속)이 있어야 한다.
         // 언리얼 · 유니티 NGO 는 평문이 기본이고 암호화가 선택이다 — 여기서는 기본을 닫고 LAN 파티 같은 평문 운영은 루프백 · 개발 빌드로만 남긴다.
-        const bool bPlainPublicPort = build::kShipping && outParams._hostSettings._security._mode == NetSecurityMode::LanUnsecured && outParams._bLoopbackOnly == false;
+        const bool bPlainPublicPort = DevOnlineExtension<GameNetDevOptions>::isRegistered() == false && outParams._hostSettings._security._mode == NetSecurityMode::LanUnsecured && outParams._bLoopbackOnly == false;
         if ( bPlainPublicPort )
         {
             SW_LOG_ERROR_ID( "GameNetSession.ShippingServerOpensNon", "A shipping server opens a non-loopback game port only with _bGameConnectTicket (encrypted, session-bound) - the game port stays closed" );
