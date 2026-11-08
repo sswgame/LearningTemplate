@@ -135,13 +135,13 @@ namespace sw::editor
         SW_LOG_INFO_ID( "TextureImportConfig.LoadedTextureImportConfigPresetsRules", "Loaded TextureImportConfig: %# presets, %# rules.", _mapPreset.size(), _listRule.size() );
 
         // 조건 없는 규칙은 나머지를 받는 규칙이라 맨 끝에 하나만 둔다. 중간에 있으면 순서가 뜻을 갖는 설정으로 읽히므로 오류로 멈춘다 — 그 위치를 이름으로 짚어 준다.
-        const size_t misplacedIndex = findShadowingRuleIndex();
-        if ( misplacedIndex < _listRule.size() )
+        const optional<uint32> misplacedIndex = findShadowingRuleIndex();
+        if ( misplacedIndex.has_value() )
         {
-            const TextureImportRule& misplacedRule = _listRule[misplacedIndex];
+            const TextureImportRule& misplacedRule = _listRule[*misplacedIndex];
             SW_LOG_ERROR_ID( "TextureImportConfig.TextureImportConfigRuleNoCondition", "TextureImportConfig: rule #%# ('%#') has no condition, so it takes every path no other rule matches. "
                                                                                        "Put the unconditional rule at the very end of the list, once.",
-                             misplacedIndex, misplacedRule._name.empty() ? "(unnamed)" : misplacedRule._name.c_str() );
+                             *misplacedIndex, misplacedRule._name.empty() ? "(unnamed)" : misplacedRule._name.c_str() );
             return clearAndFail();
         }
 
@@ -213,7 +213,7 @@ namespace sw::editor
         return rule._filter.isCatchAll();
     }
 
-    size_t TextureImportConfig::findShadowingRuleIndex() const
+    optional<uint32> TextureImportConfig::findShadowingRuleIndex() const
     {
         // 마지막 규칙은 캐치올이어도 정상이다. 그래서 하나 앞까지만 본다.
         return AssetImportRuleUtil::findMisplacedCatchAllIndex( _listRule );

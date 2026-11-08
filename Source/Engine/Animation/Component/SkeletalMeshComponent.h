@@ -40,7 +40,7 @@ namespace sw
         [[nodiscard]] bool     findAnimationLODBounds( float3& outCenter, float32& outRadius ) const override;
         bool                   isRendered() const override;
         const SkeletonBoneLOD* findBoneLOD() const override;
-        int32                  findMeshLODIndex() const override;
+        optional<uint32>       findMeshLODIndex() const override;
         uint32                 getBoneLODMaskCount() const override;
         void                   applyAnimationLOD( const AnimationLODState& state ) override;
 

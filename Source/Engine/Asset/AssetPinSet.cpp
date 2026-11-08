@@ -21,10 +21,10 @@ namespace sw
     {
         if ( pin == nullptr )
             return false;
-        const size_t existing = findIndex( path );
-        if ( existing < _listEntry.size() )
+        const optional<uint32> existing = findIndex( path );
+        if ( existing.has_value() )
         {
-            _listEntry[existing]._lastUse = ++_useClock;
+            _listEntry[*existing]._lastUse = ++_useClock;
             return true;
         }
         if ( costBytes > _budgetBytes )
@@ -45,18 +45,18 @@ namespace sw
 
     void AssetPinSet::touch( string_view path )
     {
-        const size_t index = findIndex( path );
-        if ( index < _listEntry.size() )
-            _listEntry[index]._lastUse = ++_useClock;
+        const optional<uint32> index = findIndex( path );
+        if ( index.has_value() )
+            _listEntry[*index]._lastUse = ++_useClock;
     }
 
     bool AssetPinSet::remove( string_view path )
     {
-        const size_t index = findIndex( path );
-        if ( index >= _listEntry.size() )
+        const optional<uint32> index = findIndex( path );
+        if ( index.has_value() == false )
             return false;
-        _pinnedBytes -= _listEntry[index]._costBytes;
-        _listEntry.erase( _listEntry.begin() + static_cast<ptrdiff_t>( index ) );
+        _pinnedBytes -= _listEntry[*index]._costBytes;
+        _listEntry.erase( _listEntry.begin() + static_cast<ptrdiff_t>( *index ) );
         return true;
     }
 
@@ -68,18 +68,18 @@ namespace sw
 
     bool AssetPinSet::contains( string_view path ) const
     {
-        return findIndex( path ) < _listEntry.size();
+        return findIndex( path ).has_value();
     }
 
-    size_t AssetPinSet::findIndex( string_view path ) const
+    optional<uint32> AssetPinSet::findIndex( string_view path ) const
     {
         const string key = FileUtil::normalizePath( path );
         for ( size_t index = 0; index < _listEntry.size(); ++index )
         {
             if ( _listEntry[index]._path == key )
-                return index;
+                return static_cast<uint32>( index );
         }
-        return _listEntry.size();
+        return nullopt;
     }
 
     void AssetPinSet::evictOverBudget( size_t keepIndex )

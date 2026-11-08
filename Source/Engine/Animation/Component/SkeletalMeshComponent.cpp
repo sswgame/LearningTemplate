@@ -95,12 +95,12 @@ namespace sw
         return _owner.findBoneLOD();
     }
 
-    int32 SkeletalMeshLODClient::findMeshLODIndex() const
+    optional<uint32> SkeletalMeshLODClient::findMeshLODIndex() const
     {
         const shared_ptr<Mesh>& mesh = _owner.getMesh();
         if ( mesh == nullptr || mesh->getLODCount() <= 1 )
-            return constant::invalid_index::kInt32;
-        return static_cast<int32>( _owner.getLODIndex() );
+            return nullopt;
+        return static_cast<uint32>( _owner.getLODIndex() );
     }
 
     uint32 SkeletalMeshLODClient::getBoneLODMaskCount() const

@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -58,7 +59,7 @@ namespace sw
         };
 
         /** @brief 경로의 항목 번호입니다. 없으면 `_listEntry.size()` 입니다. */
-        size_t findIndex( string_view path ) const;
+        [[nodiscard]] optional<uint32> findIndex( string_view path ) const;
         /** @brief 합이 예산 안에 들 때까지 가장 오래 안 쓴 것부터 놓습니다. @p keepIndex 는 놓지 않습니다(방금 넣은 것). */
         void evictOverBudget( size_t keepIndex );
 
