@@ -4,9 +4,11 @@
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneSystem.h"
 
 namespace sw
 {
@@ -18,18 +20,20 @@ namespace sw
         , _bWasGrounded{ SW_FALSE }
         , _reserved{ 0 }
     {
-        setCanEverTick( true );
     }
 
-    void JumpEscapeReactionComponent::onTick( float32 deltaTime )
+    void JumpEscapeReactionComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onTick( deltaTime );
-        GameObject* const        pOwner   = getOwner();
-        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr )
-            return;
-        pManager->executeOrDeferPostTickOnComponent( *this, []( JumpEscapeReactionComponent& self, GameObjectManager& /*manager*/ )
-        { self.updateJumpEscape(); } );
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<JumpEscapeReactionComponent>( this );
+        (void)ZoneSystem::ensureFor( manager );
+    }
+
+    void JumpEscapeReactionComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<JumpEscapeReactionComponent>( this );
+        ZoneSystem::releaseIfUnused( manager );
+        Component::onUnregister( manager );
     }
 
     void JumpEscapeReactionComponent::updateJumpEscape()

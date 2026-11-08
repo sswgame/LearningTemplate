@@ -584,12 +584,14 @@
     {
       "owner": "game:Shooter3D",
       "listField": [
+        "_autoPlayPrefab",
         "_bodyPrefab",
         "_effectPrefab",
         "_pacingProfile",
         "_prefab",
         "_spawnTable",
         "_tracerPrefab",
+        "autoPlayPrefab",
         "bodyPrefab",
         "effectPrefab",
         "pacingProfile",
@@ -641,7 +643,9 @@
     {
       "owner": "game:VoxelCraft",
       "listField": [
+        "_autoPlayPrefab",
         "_chunkPrefab",
+        "autoPlayPrefab",
         "chunkPrefab"
       ]
     },

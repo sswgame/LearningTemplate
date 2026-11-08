@@ -6,6 +6,7 @@
  *          출처는 `surface:<종류>` 이다. 위치 값: `zoneDepth01` 는 1(표면에 가장자리가 없다), `immersion` 은 물 깊이 ÷ 키, `impactSpeed` 는 부딪힌 속도, `contactNormal` 은 접촉 법선의 위쪽 성분.
  *          캐릭터는 발 아래 질의(같은 오브젝트의 `GroundSurfaceComponent` 가 있으면 그 표본)와 허리 높이 수평 네 방향 광선으로, 강체는 발 아래 질의와 접촉 사건(`onCollisionBegin/Stay`)으로 안다.
  *          이펙트의 이동 제약(`MovementConstraint` — 감속 · 속박)을 같은 오브젝트의 캐릭터 컨트롤러 이동 계수로 넘긴다 — 폰 이동기가 없는 캐릭터(시연의 걷는 해골 · 스크립트 NPC)도 같은 계약이다.
+ *          갱신은 지역 프레임 시스템(`ZoneSystem`)이 틱 뒤 게임 스레드에서 한 번에 한다 — 컴포넌트는 칸 · 접촉 기록과 등록만 든다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -51,12 +52,15 @@ namespace sw
         ZoneContactComponent();
         ~ZoneContactComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        /** @brief 씬의 컴포넌트 레지스트리에 오르고 지역 프레임 시스템(`ZoneSystem`)을 붙입니다. */
+        void onRegister( GameObjectManager& manager ) override;
+        /** @brief 레지스트리에서 내리고, 마지막 지역 컴포넌트면 시스템을 뗍니다. */
+        void onUnregister( GameObjectManager& manager ) override;
         void onEndPlay() override;
         void onCollisionBegin( const CollisionInfo& collision ) override;
         void onCollisionStay( const CollisionInfo& collision ) override;
 
-        /** @brief 이번 프레임을 처리합니다(틱 뒤 게임 스레드, 테스트도 부른다). */
+        /** @brief 이번 프레임을 처리합니다(`ZoneSystem` 이 틱 뒤 게임 스레드에서 부른다, 테스트도 부른다). */
         void updateContacts( GameObjectManager& manager, float32 deltaTime );
         /** @brief 지금까지 만든 표면 지역입니다(감시 값 · 진단). */
         const vector<unique_ptr<SurfaceZone>>& getSurfaceZones() const { return _listSurfaceZone; }
@@ -91,6 +95,5 @@ namespace sw
 
         vector<unique_ptr<SurfaceZone>> _listSurfaceZone; ///< 종류마다(처음 닿을 때 만든다). 기록이 처리기 기억을 가리키므로 자리가 움직이지 않게 힙에 둔다
         vector<ContactRecord>           _listCollision;   ///< 지난 갱신 뒤 강체 접촉 사건이 적은 것
-        float32                         _pendingSeconds;  ///< 틱이 쌓고 틱 뒤 갱신이 쓰는 게임 초
     };
 } // namespace sw

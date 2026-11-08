@@ -1,6 +1,6 @@
 /**
  * @file AIControllerComponent.h
- * @brief AI 조종자입니다. 판단(`think`)으로 의도를 만들고, 플레이어와 같은 폰 이동으로 움직입니다.
+ * @brief AI 조종자입니다. 감각(`updateBlackboard`)이 블랙보드를 채우고 행동 트리가 판단해 의도를 만들고, 플레이어와 같은 폰 이동으로 움직입니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -38,12 +38,12 @@ namespace sw
      * @brief AI 조종자입니다. 판단은 행동 트리 데이터(`_behaviorTree`, `*.bt.xml`)가 정하고, 파생은 감각(`updateBlackboard` — 블랙보드에 대상 · 거리 · 상태를 적는다)만 냅니다.
      *        트리의 잎은 공통 동작 어휘(`ai.moveTo` · `ai.stop` · `ai.focus` · `ai.press` · `ai.hold` · `ai.state` …, `AIControllerActions.h`)로 목표(이동 목적지, 바라볼 곳, 누를 버튼)를 정하고, 이 클래스가 의도로 옮깁니다.
      * @details 언리얼 `AAIController` + `RunBehaviorTree` 에 해당합니다(감각은 BT 서비스 · AIPerception 자리). 새 적 · NPC 는 트리 데이터 한 장과 감각 하나로 더한다 — 판단 `switch` 를 코드에 두지 않는다.
-     *          트리 없이 판단을 코드로 짜는 조종자(자동 조준 · 자동 플레이)는 `think` 를 덮어쓴다. 트리도 `think` 도 없는 조종자는 밖에서 건 목적지 · 초점만 따른다.
+     *          판단을 코드로 짜는 길은 없다 — 판단(`think`)은 덮어쓸 수 없고 파생은 감각만 낸다(자동 조준 · 자동 플레이도 감각 + 트리다). 트리가 없는 조종자는 밖에서 건 목적지 · 초점만 따른다.
      *          움직이는 것은 플레이어와 같은 폰 이동 컴포넌트이고, 이 조종자는 이동 축만 냅니다.
      *          폰 오브젝트에 내비 에이전트(`NavMeshAgentComponent`, 방식 `SteerOnly`)가 있으면 경로 · 군중 회피로 정한 속도를 이동 축으로 넣고,
      *          없으면 목적지로 곧장(장애물 무시) 갑니다. 바라보기는 초점이 있으면 그쪽, 없으면 움직이는 쪽으로 `_turnRate` 만큼 조종 요를 돌립니다.
      */
-    REFLECT( Category = "Control", DisplayName = "AI Controller", Tooltip = "AI: decides goals in think(); moves through the pawn's own movement like a player" )
+    REFLECT( Category = "Control", DisplayName = "AI Controller", Tooltip = "AI: its behavior tree decides goals from the blackboard the controller senses; moves through the pawn's own movement like a player" )
     class SW_GF_API AIControllerComponent : public ControllerComponent
     {
     public:
@@ -90,11 +90,6 @@ namespace sw
         const BehaviorTreeRunner* getBehaviorTreeRunner() const { return _pBehaviorTree != nullptr ? &_runner : nullptr; }
 
     protected:
-        /**
-         * @brief 판단입니다. 기본은 감각(`updateBlackboard`)을 부른 뒤 행동 트리를 한 틱 돌립니다. 트리가 없으면 이미 정한 목적지와 초점을 그대로 따릅니다.
-         * @details 트리 없이 판단을 코드로 짜는 조종자만 덮어쓴다. 트리를 쓰는 조종자는 `updateBlackboard` 만 덮어쓴다.
-         */
-        virtual void think( const ControlFrameContext& context, const PawnComponent& pawn );
         /** @brief 감각입니다. 트리가 읽을 값을 블랙보드에 적습니다(없는 값은 지운다 — 트리가 `hasBlackboard` 로 묻는다). 기본은 아무것도 하지 않습니다. */
         virtual void updateBlackboard( const ControlFrameContext& context, const PawnComponent& pawn )
         {
@@ -105,6 +100,11 @@ namespace sw
         void requireBehaviorTree() { _bTreeRequired = SW_TRUE; }
 
     private:
+        /**
+         * @brief 판단입니다. 감각(`updateBlackboard`)을 부른 뒤 행동 트리를 한 틱 돌립니다. 트리가 없으면 이미 정한 목적지와 초점을 그대로 따릅니다.
+         * @details 가상이 아니다 — 판단은 트리 데이터의 일이고 파생은 감각만 덮어쓴다(언리얼 `AAIController` + BT 서비스 · 트리의 나눔).
+         */
+        void think( const ControlFrameContext& context, const PawnComponent& pawn );
         /** @brief 이번 틱에 갈 월드 방향(XZ, 길이 0..1)을 정합니다. 닿았으면 목적지를 지웁니다. */
         float3 computeMoveDirection( const PawnComponent& pawn, const float3& pawnPosition );
         /** @brief 내비 에이전트(SteerOnly)가 낸 속도를 이동 방향으로 씁니다. 목적지를 한 번 요청하고, 닿거나 경로가 없으면 목적지를 지웁니다. */

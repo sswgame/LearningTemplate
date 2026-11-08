@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Rendering/MeshComponent.h"
 
 namespace sw
@@ -41,14 +42,16 @@ namespace sw
     {
     }
 
-    void SurfaceDeformMeshComponent::onTick( float32 deltaTime )
+    void SurfaceDeformMeshComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onTick( deltaTime );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager != nullptr )
-            pManager->executeOrDeferPostTickOnComponent( *this, []( SurfaceDeformMeshComponent& self, GameObjectManager& manager )
-            { self.bindMaterial( manager ); } );
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<SurfaceDeformMeshComponent>( this );
+    }
+
+    void SurfaceDeformMeshComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<SurfaceDeformMeshComponent>( this );
+        Component::onUnregister( manager );
     }
 
     void SurfaceDeformMeshComponent::bindMaterial( GameObjectManager& manager )

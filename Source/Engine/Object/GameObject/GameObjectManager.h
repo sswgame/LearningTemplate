@@ -444,6 +444,30 @@ namespace sw
         Component* resolveComponent( ComponentHandle handle ) const { return _store.resolveComponent( handle ); }
 
         /**
+         * @brief 컴포넌트 레지스트리에 타입 T 로 오른 것 중 켜진 것(`Component::isActive`, 삭제 대기 아님)마다 @p func( T& ) 를 등록 순서로 부릅니다.
+         * @details 틱 대신 씬 서비스 · 프레임 시스템이 자기 타입을 한 곳에서 한 번에 도는 길이다(언리얼 WorldSubsystem 이 등록받은 목록을 돌고 Mass 처리기가 한 종류를 한 번에 도는 자리 —
+         *          매 틱 자기 일을 통째로 틱 뒤 큐로 미루던 컴포넌트가 여기로 온다, `TickPlacement.md`). 핸들 사본(@p inoutScratch, 부르는 쪽의 재사용 버퍼)을 돌고 하나씩 다시 찾으므로
+         *          @p func 가 구조를 바꿔도(만들기 · 지우기 · 등록) 된다. 게임 스레드, 틱 밖에서 부른다.
+         */
+        template <typename T, typename TFunc>
+        void forEachActiveRegistered( vector<ComponentHandle>& inoutScratch, TFunc&& func )
+        {
+            inoutScratch.clear();
+            const ComponentRegistry::View<T> view = _componentRegistry.getAll<T>();
+            for ( size_t index = 0; index < view.size(); ++index )
+            {
+                inoutScratch.push_back( view.getHandle( index ) );
+            }
+            for ( const ComponentHandle handle : inoutScratch )
+            {
+                Component* pComponent = resolveComponent( handle );
+                if ( pComponent == nullptr || pComponent->isPendingDestroy() || pComponent->isActive() == false )
+                    continue;
+                func( *static_cast<T*>( pComponent ) ); // 레지스트리는 정확히 T 로 오른 것만 담는다(`ComponentRegistry::add<T>`)
+            }
+        }
+
+        /**
          * @brief 타입 핸들이 가리키는 컴포넌트를 `T*` 로 찾습니다. 삭제 예정이면 nullptr 입니다.
          * @details 타입 없는 찾기 뒤에 `static_cast` 합니다(REFLECT 타입은 가상이 아닌 단일 상속뿐이라 보정이 맞습니다).
          *          **Shipping 이 아닌 모든 구성에서 대상의 타입을 확인합니다.** 핸들은 id 만 담으므로, id 를 다른 타입이 받으면(핫 리로드, 되돌리기의 id 복원)

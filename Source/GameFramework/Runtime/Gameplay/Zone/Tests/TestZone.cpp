@@ -10,9 +10,11 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
+#include "GameFramework/Runtime/Gameplay/Zone/JumpEscapeReactionComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneOccupantIndex.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneProfile.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneSystem.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneTracker.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneVolumeComponent.h"
 
@@ -349,4 +351,19 @@ SW_TEST_CASE( ZoneTest, OccupantIndexBuildsOncePerFrame )
     pIndex->runBeforeTick( manager, 1.0f / 60.0f );
     pIndex->queryCandidates( manager, -2.0f, -3.0f, 2.0f, 3.0f, listCandidate );
     SW_EXPECT_EQUAL( 2u, pIndex->getBuildCount() );
+}
+
+/** @brief [ZoneTest] 지역 컴포넌트는 틱하지 않는다 — 첫 지역 컴포넌트가 지역 프레임 시스템을 붙이고, 시스템이 켜진 것을 등록 순서로 한 번에 돈다 */
+SW_TEST_CASE( ZoneTest, ZoneSystemRunsRegisteredZoneComponents )
+{
+    GameObjectManager manager;
+    SW_EXPECT_TRUE( ZoneSystem::find( manager ) == nullptr );
+    GameObject*                  pWalker = manager.createGameObject( hashed_string( "Walker" ) );
+    JumpEscapeReactionComponent* pEscape = pWalker->addComponent<JumpEscapeReactionComponent>();
+    SW_REQUIRE_TRUE( pEscape != nullptr );
+    SW_EXPECT_FALSE( pEscape->canEverTick() ); // 프레임 일은 시스템이 한다
+    ZoneSystem* pSystem = ZoneSystem::find( manager );
+    SW_REQUIRE_TRUE( pSystem != nullptr );          // 첫 지역 컴포넌트가 등록될 때 붙는다
+    pSystem->runFramePass( manager, 1.0f / 60.0f ); // 컨트롤러 · 어빌리티가 없는 몸 — 할 일 없이 지난다
+    SW_EXPECT_EQUAL( 0u, pEscape->getEscapeCount() );
 }

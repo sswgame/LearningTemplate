@@ -43,26 +43,6 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct PluralOperands
-     * @brief CLDR 복수형 피연산자(n, i, v, f)입니다. t 는 쓰는 규칙이 없어 두지 않습니다.
-     */
-    struct SW_API PluralOperands
-    {
-        float64 _absoluteValue{ 0.0 };      ///< n 이며 절댓값입니다.
-        int64   _integerDigits{ 0 };        ///< i 이며 정수 부분입니다.
-        int64   _fractionDigits{ 0 };       ///< f 이며 보이는 소수 자리(뒤의 0 포함)를 정수로 만든 값입니다.
-        uint32  _visibleFractionCount{ 0 }; ///< v 이며 보이는 소수 자리 수입니다.
-
-        /** @brief 정수의 피연산자입니다(v = 0). */
-        static PluralOperands makeInteger( int64 value );
-        /** @brief 소수 @p visibleFractionCount 자리로 보일 실수의 피연산자를 만듭니다. */
-        static PluralOperands makeDecimal( float64 value, uint32 visibleFractionCount );
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
      * @brief 날짜와 시각 값입니다(달력은 그레고리력입니다).
      * @details 값은 받은 그대로 쓰고 시간대 변환은 하지 않습니다. 시간대가 필요하면 `TimeZoneInfo::convertUnixMilliseconds` 가 UTC 시각을 그 시간대의 값으로 바꾸고
      *          `_bZoned` 와 `_utcOffsetMinutes` 를 채웁니다(패턴의 `z` 가 그 오프셋을 씁니다).

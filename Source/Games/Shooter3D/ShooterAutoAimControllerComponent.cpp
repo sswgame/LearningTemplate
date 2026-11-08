@@ -21,10 +21,6 @@ namespace sw
     {
         struct ShooterAutoAimControllerComponentInternal
         {
-            static constexpr const utf8* kFire         = "Fire";
-            static constexpr const utf8* kMelee        = "Melee";
-            static constexpr const utf8* kArrWeapon[2] = { "Weapon1", "Weapon2" }; ///< 소총 · 산탄총
-
             /**
              * @brief 눈에서 점까지 막는 상자가 없으면 true 입니다(시야). 상자는 디렉터가 모은 막는 상자 — 그 상자로 정적 강체를 만들므로 물리 질의와 같은 벽이다.
              * @details 생각은 틱(워커)에서 돌아 물리 씬을 묻지 않는다(물리 씬은 게임 스레드만). 같은 상자 목록을 기하로 본다.
@@ -63,12 +59,14 @@ namespace sw
     {
         // 사람처럼 돈다 — 표적이 바뀔 때 한 프레임에 수십 도 돌면 3인칭 몸 · 카메라가 튄다.
         setTurnRate( 3.0f );
+        requireBehaviorTree();
     }
 
-    void ShooterAutoAimControllerComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
+    void ShooterAutoAimControllerComponent::updateBlackboard( const ControlFrameContext& context, const PawnComponent& pawn )
     {
         using Internal = ShooterAutoAimControllerComponentInternal;
         (void)context;
+        Blackboard&                     blackboard = getBlackboard();
         const GameObject*               pPawnOwner = pawn.getOwner();
         const GameObjectManager*        pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
         const ShooterPlayerComponent*   pPlayer    = pPawnOwner != nullptr ? pPawnOwner->getComponent<ShooterPlayerComponent>() : nullptr;
@@ -76,18 +74,16 @@ namespace sw
             pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getGameMode() ) : nullptr;
         if ( pGameMode == nullptr || pPlayer->isAlive() == false )
         {
-            stopMoving();
-            clearFocus();
+            blackboard.clearValue( "CirclePoint" ); // 트리가 서고 초점을 지운다
             return;
         }
 
         // 아레나 가운데를 도는 나선 — 접선으로 돌고 안쪽으로 조금 끈다. 가운데 가까이에서는 그 점이 도착 거리 안이라 선다.
-        const float3 feet = pPlayer->getFeetPosition();
-        const float3 circle =
-            float3{ -feet._z * _circleTangent - feet._x * _circleInward, 0.0f, feet._x * _circleTangent - feet._z * _circleInward };
-        moveTo( float3{ feet._x + circle._x, 0.0f, feet._z + circle._z } );
+        const float3 feet   = pPlayer->getFeetPosition();
+        const float3 circle = float3{ -feet._z * _circleTangent - feet._x * _circleInward, 0.0f, feet._x * _circleTangent - feet._z * _circleInward };
+        blackboard.setVector( "CirclePoint", float3{ feet._x + circle._x, 0.0f, feet._z + circle._z } );
 
-        // 보이는 적 가운데 가장 가까운 가슴. 보이는 적이 없으면 가장 가까운 적을 겨누되 쏘지 않는다(엄폐물에 탄을 버리지 않는다).
+        // 보이는 적 가운데 가장 가까운 가슴. 보이는 적이 없으면 가장 가까운 적을 겨누되 쏘지 않는다(엄폐물에 탄을 버리지 않는다 — 트리가 TargetVisible 을 본다).
         const float3                    eye          = pPlayer->getEyePosition();
         float32                         bestDistance = MathUtil::kMaxFloat;
         float3                          aimPoint{ 0.0f, 0.0f, 0.0f };
@@ -108,31 +104,25 @@ namespace sw
                 bVisible     = bChestVisible;
             }
         }
-        // 상태(감시 값 `AI.State`): 적이 없으면 Patrol, 겨누는 중이면 Aim, 이번 틱에 쏘면 Fire.
+        blackboard.setBool( "HasEnemy", listView.empty() == false );
         if ( listView.empty() )
-        {
-            setStateName( "Patrol" );
-            clearFocus();
             return;
-        }
-        setStateName( "Aim" );
-        setFocus( aimPoint );
         const float3  toTarget  = aimPoint - eye;
         const float32 targetYaw = MathUtil::atan2( toTarget._x, toTarget._z );
-        const float32 yawError  = MathUtil::wrapAngle( targetYaw - getControlYaw() );
-        const bool    bOnTarget = bVisible && MathUtil::abs( yawError ) < _aimTolerance && bestDistance < _engageDistance;
-        getBlackboard().setFloat( "TargetDistance", bestDistance );
-        if ( bOnTarget )
-        {
-            setStateName( "Fire" );
-            pressButton( hashed_string( Internal::kFire ) );
-        }
-        if ( _bMelee == SW_TRUE && bVisible && MathUtil::abs( yawError ) < _aimTolerance && bestDistance < pPlayer->getMeleeReach() )
-            pressButton( hashed_string( Internal::kMelee ) );
-        // 가까우면 산탄총, 멀면 소총 — 탄이 남은 쪽만.
-        const int32        wantedWeapon = bestDistance < _closeRangeDistance ? 1 : 0;
-        const WeaponState& wanted       = pPlayer->getWeapon( wantedWeapon );
-        if ( wantedWeapon != pPlayer->getWeaponIndex() && wanted.getMagazineAmmo() + wanted.getReserveAmmo() > 0 )
-            pressButton( hashed_string( Internal::kArrWeapon[wantedWeapon] ) );
+        blackboard.setVector( "AimPoint", aimPoint );
+        blackboard.setBool( "TargetVisible", bVisible );
+        blackboard.setFloat( "TargetDistance", bestDistance );
+        blackboard.setFloat( "AimError", MathUtil::abs( MathUtil::wrapAngle( targetYaw - getControlYaw() ) ) );
+        blackboard.setFloat( "AimTolerance", _aimTolerance );
+        blackboard.setFloat( "EngageDistance", _engageDistance );
+        blackboard.setFloat( "CloseRangeDistance", _closeRangeDistance );
+        blackboard.setFloat( "MeleeReach", pPlayer->getMeleeReach() );
+        blackboard.setBool( "Melee", _bMelee == SW_TRUE );
+        // 무기: 0 소총 · 1 산탄총. 탄은 탄창 + 예비 — 트리가 남은 쪽만 고른다.
+        const WeaponState& rifle   = pPlayer->getWeapon( 0 );
+        const WeaponState& shotgun = pPlayer->getWeapon( 1 );
+        blackboard.setInt( "WeaponIndex", pPlayer->getWeaponIndex() );
+        blackboard.setInt( "RifleAmmo", rifle.getMagazineAmmo() + rifle.getReserveAmmo() );
+        blackboard.setInt( "ShotgunAmmo", shotgun.getMagazineAmmo() + shotgun.getReserveAmmo() );
     }
 } // namespace sw

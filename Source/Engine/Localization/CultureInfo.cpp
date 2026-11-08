@@ -147,7 +147,8 @@ namespace sw
 
             /**
              * @brief 규칙 묶음 요소(`<pluralRules one="…" few="…"/>`, 적힌 것만)로 @p outRules 를 통째로 바꿉니다. 부모의 규칙은 섞지 않는다 — 범주 하나만 물려받으면 규칙이 겹친다.
-             * @details 속성 이름이 범주 키워드이고 값이 CLDR 규칙 글이다. 빈 요소는 "모든 수가 other" 다(일본어 · 한국어 · 중국어). 모르는 범주 · 틀린 글이면 false 입니다.
+             * @details 속성 이름이 범주 키워드이고 값이 CLDR 규칙 글(보기 `@integer` · `@decimal` 까지, other 는 보기만)이다. 빈 요소는 "모든 수가 other" 다.
+             *          모르는 범주 · 틀린 글 · 보기 없는 규칙 · other 가 빠진 묶음 · 보기와 어긋난 규칙(CLDR 과 다르게 고친 글)이면 false 입니다.
              */
             [[nodiscard]] static bool applyRuleSet( const XMLNode& entry, const utf8* pElementName, PluralRuleSet& outRules, string& outError )
             {
@@ -160,6 +161,8 @@ namespace sw
                     return false;
                 }
                 PluralRuleSet ruleSet;
+                bool          bAnyRule  = false;
+                bool          bHasOther = false;
                 for ( XMLAttribute attribute = rules.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
                     if ( ruleSet.compileRule( attribute.getName(), attribute.getValue(), outError ) == false )
@@ -167,6 +170,29 @@ namespace sw
                         outError = string( pElementName ) + ": " + outError;
                         return false;
                     }
+                    // 규칙 글은 CLDR 글을 보기째 붙여 넣은 것이어야 한다 — 보기가 규칙과 CLDR plurals.xml 의 대조다(`PluralRuleSet::verifySamples`).
+                    PluralCategory category = PluralCategory::Other;
+                    const bool     bKnown   = CultureInfo::tryParsePluralKeyword( attribute.getName(), category );
+                    SW_ASSERT( bKnown ); // `compileRule` 이 모르는 범주를 거절했다
+                    (void)bKnown;
+                    if ( ruleSet.countSamples( category ) == 0 )
+                    {
+                        outError = string( pElementName ) + ": " + attribute.getName() + " has no @integer / @decimal samples - paste the whole CLDR rule text";
+                        return false;
+                    }
+                    bAnyRule  = true;
+                    bHasOther = bHasOther || category == PluralCategory::Other;
+                }
+                if ( bAnyRule && bHasOther == false )
+                {
+                    outError = string( pElementName ) + ": other samples are missing - paste every category of the CLDR rules, other included";
+                    return false;
+                }
+                const expected<void> samplesMatch = ruleSet.verifySamples();
+                if ( samplesMatch.has_value() == false )
+                {
+                    outError = string( pElementName ) + ": " + samplesMatch.error().message() + " (" + string( samplesMatch.error().detail() ) + ")";
+                    return false;
                 }
                 outRules = std::move( ruleSet );
                 return true;
@@ -472,32 +498,6 @@ namespace sw
 
 namespace sw
 {
-    PluralOperands PluralOperands::makeInteger( int64 value )
-    {
-        PluralOperands operands;
-        const int64    absoluteValue = value < 0 ? -value : value;
-        operands._absoluteValue      = static_cast<float64>( absoluteValue );
-        operands._integerDigits      = absoluteValue;
-        return operands;
-    }
-
-    PluralOperands PluralOperands::makeDecimal( float64 value, uint32 visibleFractionCount )
-    {
-        PluralOperands operands;
-        const float64  absoluteValue   = value < 0.0 ? -value : value;
-        operands._absoluteValue        = absoluteValue;
-        operands._integerDigits        = static_cast<int64>( absoluteValue );
-        operands._visibleFractionCount = visibleFractionCount;
-        float64 scale                  = 1.0;
-        for ( uint32 digit = 0; digit < visibleFractionCount; ++digit )
-        {
-            scale *= 10.0;
-        }
-        const float64 fraction   = ( absoluteValue - static_cast<float64>( operands._integerDigits ) ) * scale;
-        operands._fractionDigits = static_cast<int64>( fraction + 0.5 );
-        return operands;
-    }
-
     const utf8* CultureInfo::getPluralKeyword( PluralCategory category )
     {
         const size_t index = static_cast<size_t>( category );

@@ -9,6 +9,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 namespace sw
 {
@@ -37,18 +38,15 @@ namespace sw
             removePersistentStamp( *pManager );
     }
 
-    void SurfaceStampComponent::onTick( float32 deltaTime )
+    void SurfaceStampComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onTick( deltaTime );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager != nullptr )
-            pManager->executeOrDeferPostTickOnComponent( *this, []( SurfaceStampComponent& self, GameObjectManager& manager )
-            { self.applyStamp( manager ); } );
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<SurfaceStampComponent>( this );
     }
 
     void SurfaceStampComponent::onUnregister( GameObjectManager& manager )
     {
+        manager.getComponentRegistry().remove<SurfaceStampComponent>( this );
         removePersistentStamp( manager );
         Component::onUnregister( manager );
     }

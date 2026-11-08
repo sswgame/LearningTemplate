@@ -5,6 +5,7 @@
  *          `_deformTexel` 을 다시 쓴다. 인스턴스가 없으면 메시 머티리얼에서 하나 만든다(`CharacterSurfaceBinding` 과 같은 길). 지면 메시는 정점이 촘촘해야
  *          자국이 보인다(내장 도형 `PlaneDense`). 메시가 없거나 머티리얼에 변형 칸이 없으면 오류를 한 번 남긴다 — 다른 머티리얼로 대신하지 않는다.
  *          언리얼에서 랜드스케이프 머티리얼이 런타임 가상 텍스처를 읽는 자리, 유니티에서 지면 머티리얼에 렌더 텍스처를 거는 자리다.
+ *          싣기는 표면 서비스(`SurfaceComponentSystem`)가 틱 뒤 게임 스레드에서 한 번에 한다 — 컴포넌트는 칸과 등록만 든다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
@@ -29,13 +30,13 @@ namespace sw
         SurfaceDeformMeshComponent();
         virtual ~SurfaceDeformMeshComponent() override = default;
 
-        void onTick( float32 deltaTime ) override;
+        /** @brief 씬의 컴포넌트 레지스트리에 오릅니다(표면 서비스가 돈다). */
+        void onRegister( GameObjectManager& manager ) override;
+        void onUnregister( GameObjectManager& manager ) override;
 
         /** @brief 마지막으로 머티리얼에 실은 변형 층 바인딩 번호입니다(0 = 아직 싣지 않았다). */
         uint32 getBoundRevision() const { return _boundRevision; }
-
-    private:
-        /** @brief 변형 층의 바인딩이 바뀌었으면 메시 머티리얼 인스턴스에 값을 싣습니다(틱 뒤 게임 스레드). */
+        /** @brief 변형 층의 바인딩이 바뀌었으면 메시 머티리얼 인스턴스에 값을 싣습니다(표면 서비스가 부른다, 틱 뒤 게임 스레드). */
         void bindMaterial( GameObjectManager& manager );
 
     private:

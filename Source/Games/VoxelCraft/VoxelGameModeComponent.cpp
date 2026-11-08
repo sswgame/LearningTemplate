@@ -46,6 +46,7 @@ namespace sw
 {
     VoxelGameModeComponent::VoxelGameModeComponent()
         : _chunkPrefab{}
+        , _autoPlayPrefab{}
         , _player{}
         , _terrainSeed{ 20261003 }
         , _chunkBuildsPerFrame{ 4 }
@@ -104,10 +105,13 @@ namespace sw
         {
             if ( pAIObject == nullptr )
             {
-                pAIObject = manager.createGameObject( hashed_string( "VoxelAutoPlay" ) );
-                if ( pAIObject == nullptr || pAIObject->addComponent<VoxelAutoPlayControllerComponent>() == nullptr )
+                // 조종자와 그 행동 트리는 프리팹 데이터다. 오브젝트 이름(`VoxelAutoPlay`)은 시나리오가 본다. 스폰한 것은 정리 목록에 든다.
+                pAIObject = spawnPrefab( manager, _autoPlayPrefab.path(), "VoxelAutoPlay" );
+                if ( pAIObject == nullptr || pAIObject->getComponent<VoxelAutoPlayControllerComponent>() == nullptr )
+                {
+                    SW_LOG_ERROR_ID( "VoxelGameMode.AutoPlayPrefabInvalid", "Auto play controller prefab '%#' did not spawn a VoxelAutoPlayControllerComponent", _autoPlayPrefab.path() );
                     return;
-                trackSpawned( *pAIObject );
+                }
                 _autoPlayController = pAIObject->getHandle();
             }
             VoxelAutoPlayControllerComponent* pAI = pAIObject->getComponent<VoxelAutoPlayControllerComponent>();
