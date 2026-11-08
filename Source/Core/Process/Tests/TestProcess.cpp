@@ -9,6 +9,7 @@
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/TestWait.h"
 #include "Core/Time/MonotonicClock.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -179,16 +180,8 @@ SW_TEST_CASE( ProcessTest, IsRunningTurnsFalseWithoutEatingTheExitCode )
     SW_REQUIRE_TRUE( proc.launch( cmd ) );
 
     // 끝날 때까지 묻는다 — 자식이 끝났는데도 영원히 true 면 여기서 걸린다.
-    bool bSawStopped = false;
-    for ( int32 attemptIndex = 0; attemptIndex < 200; ++attemptIndex )
-    {
-        if ( proc.isRunning() == false )
-        {
-            bSawStopped = true;
-            break;
-        }
-        sw::ThreadUtil::sleepForMilliseconds( 10 );
-    }
+    const bool bSawStopped = sw::test::waitUntil( [&proc]()
+    { return proc.isRunning() == false; } );
     SW_EXPECT_TRUE_MSG( bSawStopped, "자식이 끝났는데도 isRunning 이 계속 true 다" );
 
     // 묻는 것이 자식을 거두지는 않았어야 한다.
@@ -275,16 +268,14 @@ SW_TEST_CASE( ProcessTest, DetachedLaunchReturnsWithoutWaiting )
     SW_EXPECT_TRUE_MSG( launchMilli < 700, "분리 실행이 명령이 끝나기를 기다렸다" );
 
     // 명령이 끝에 남기는 표식 — 다 쓸 때까지 기다린다(케이스 폴더는 케이스가 끝나면 지워지므로 쓰는 중이면 안 된다).
-    bool bFinished = false;
-    for ( uint32 attempt = 0; attempt < 200 && bFinished == false; ++attempt )
+    const bool bFinished = sw::test::waitUntil( [&markerPath]()
     {
         sw::string text;
         // 표식이 생기기 전에는 읽지 않는다 — 없는 파일을 읽으면 읽는 쪽이 Error 를 남기고, 기다리는 동안 그 줄이 쌓인다.
-        bFinished = sw::FileUtil::exists( markerPath ) && sw::FileUtil::readTextFile( markerPath, text ) && text.find( "done" ) != sw::string::npos;
-        if ( bFinished == false )
-            sw::ThreadUtil::sleepForMilliseconds( 50 );
-    }
+        return sw::FileUtil::exists( markerPath ) && sw::FileUtil::readTextFile( markerPath, text ) && text.find( "done" ) != sw::string::npos;
+    } );
     SW_EXPECT_TRUE_MSG( bFinished, "분리 실행한 명령이 10 초 안에 표식을 남기지 않았다 — 띄우지 못했거나 돌지 않았다" );
+    // shortcut: 분리 실행은 기다릴 핸들이 없어 셸이 작업 폴더(케이스 폴더)를 놓기를 사건으로 볼 수 없다 — 표식 뒤의 짧은 유예로 둔다. 분리 실행이 pid 를 돌려주게 되면 그 종료를 기다린다.
     sw::ThreadUtil::sleepForMilliseconds( 200 );
 }
 

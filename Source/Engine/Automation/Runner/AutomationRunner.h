@@ -173,6 +173,12 @@ namespace sw
          *          빨리 돌면 20 초가 0.8 초가 되어 넷플레이 종료 대기가 졌다(editor.netsyncobjects).
          */
         AutomationStepHold holdUntilReadyWithin( const AutomationStep& step, InputManager& input, bool bReady, float32 wallSeconds, string_view waitingFor );
+        /**
+         * @brief 시나리오에 적은 벽시계 초를 이 기계의 배율(`gv_scenarioWallScale`)로 늘린 값입니다. 벽시계 시한(전체 그물 · `WaitUntil timeoutWallSeconds` · 종료 시한)은 모두 이 값을 쓴다.
+         * @details 벽시계 시한은 멈춘 실행을 잡는 안전 그물이고 통과는 조건이 정한다. 전체 그물만 늘리고 단계 시한을 그대로 두면 느린 기계(소프트웨어 렌더러)에서 옳게 늦은 실행이
+         *          단계 시한에서 졌다 — 시간이 정답을 가른 자리다.
+         */
+        [[nodiscard]] static float64 scaleWallSeconds( float32 seconds );
         /** @brief 붙잡은 단계 @p step 이 맡긴 상태입니다(다른 단계의 것이면 nullptr). */
         IAutomationStepState* findHeldStepState( const AutomationStep& step ) const override;
         /** @brief 붙잡은 단계 @p step 의 상태를 맡깁니다 — `holdUntilReady` 가 Run 을 돌려줄 때 · `endRun` 이 지운다. */

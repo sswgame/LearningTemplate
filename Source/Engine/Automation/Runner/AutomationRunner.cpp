@@ -616,7 +616,12 @@ namespace sw
                               : timeout._bSeconds     ? timeout._timeoutSeconds
                                                       : static_cast<float32>( timeout._timeoutFrames ) * _scenario.getFixedDelta();
         }
-        return limitSeconds * gv_scenarioWallScale; // 기계가 느린 만큼(소프트웨어 렌더러) 데이터로 늘린다 — 시나리오마다 시한을 고치지 않는다
+        return static_cast<float32>( scaleWallSeconds( limitSeconds ) ); // 기계가 느린 만큼(소프트웨어 렌더러) 데이터로 늘린다 — 시나리오마다 시한을 고치지 않는다
+    }
+
+    float64 AutomationRunner::scaleWallSeconds( float32 seconds )
+    {
+        return static_cast<float64>( seconds ) * static_cast<float64>( gv_scenarioWallScale );
     }
 
     void AutomationRunner::finishIfWallClockExceeded()
@@ -856,7 +861,7 @@ namespace sw
         const float64 nowSeconds = AutomationRunnerInternal::readNowSeconds();
         if ( _run._holdFrameCount == 0 )
             _run._holdStartSeconds = nowSeconds;
-        const bool bExpired = _run._holdFrameCount > 0 && nowSeconds - _run._holdStartSeconds >= static_cast<float64>( wallSeconds );
+        const bool bExpired = _run._holdFrameCount > 0 && nowSeconds - _run._holdStartSeconds >= scaleWallSeconds( wallSeconds );
         // 프레임 판(`holdUntilReady`)이 붙잡기 · 놓기 · 입력 밀기를 한 곳에서 한다 — 시한만 벽시계로 정해 넘긴다.
         return holdUntilReady( step, input, bReady, bExpired ? _run._holdFrameCount : UINT32_MAX, waitingFor );
     }

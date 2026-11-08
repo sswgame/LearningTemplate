@@ -7,9 +7,15 @@
 namespace sw::editor
 {
     ProfilerPerformanceModel::ProfilerPerformanceModel()
+        : ProfilerPerformanceModel{ SystemMonotonicClock::get() }
+    {
+    }
+
+    ProfilerPerformanceModel::ProfilerPerformanceModel( const IClock& clock )
         : _arrFrameTimeHistory{}
         , _historyOffset{ 0 }
-        , _drawStopwatch{}
+        , _pClock{ &clock }
+        , _lastSampleNanoseconds{ clock.nowNanoseconds() }
         , _catalogJob{}
         , _catalogCounts{}
         , _bCatalogDirty{ SW_TRUE }
@@ -18,8 +24,9 @@ namespace sw::editor
 
     ProfilerFrameTimeStats ProfilerPerformanceModel::sampleFrame()
     {
-        const float32 dt = static_cast<float32>( _drawStopwatch.getElapsedNanoseconds() ) / static_cast<float32>( constant::time::kNanosecondsPerSecond );
-        _drawStopwatch.restart();
+        const int64   nowNanoseconds = _pClock->nowNanoseconds();
+        const float32 dt             = static_cast<float32>( nowNanoseconds - _lastSampleNanoseconds ) / static_cast<float32>( constant::time::kNanosecondsPerSecond );
+        _lastSampleNanoseconds       = nowNanoseconds;
 
         ProfilerFrameTimeStats stats;
         stats._currentMs  = dt * constant::time::kMillisecondsPerSecond;

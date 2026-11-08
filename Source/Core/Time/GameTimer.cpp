@@ -3,12 +3,28 @@
 #include "Core/Time/GameTimer.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Time/MonotonicClock.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct GameTimerInternal
+        {
+            /** @brief 나노초 하나의 초입니다(시계는 나노초를 준다). */
+            static constexpr float64 kSecondsPerNanosecond = 1.0 / static_cast<float64>( constant::time::kNanosecondsPerSecond );
+        };
+    } // namespace
+} // namespace sw
 
 namespace sw
 {
     GameTimer::GameTimer() noexcept
-        : _secondsPerCount{ 1.0 / static_cast<float64>( MonotonicClock::getCountsPerSecond() ) }
+        : GameTimer{ SystemMonotonicClock::get() }
+    {
+    }
+
+    GameTimer::GameTimer( const IClock& clock ) noexcept
+        : _pClock{ &clock }
         , _deltaTime{ -1.0 }
         , _baseTime{ 0 }
         , _pausedTime{ 0 }
@@ -16,7 +32,7 @@ namespace sw
         , _prevTime{ 0 }
         , _currentTime{ 0 }
         // **중지 상태로 둔다.** 돌고 있는 상태로 만들면 `startTimer()` 가 `if ( _bStopped )` 에 걸려 아무 일도 하지 않고,
-        // `_prevTime` 이 0 인 채로 첫 `updateTimer()` 가 돌아 델타가 **QPC 기준점 이후의 전체 시간**(부팅 이후 몇 시간)이 된다
+        // `_prevTime` 이 0 인 채로 첫 `updateTimer()` 가 돌아 델타가 **시계 기준점 이후의 전체 시간**(부팅 이후 몇 시간)이 된다
         // (`resetTimer()` 를 먼저 부르면 가려진다).
         //
         // 중지 상태로 두면 `startTimer()` 가 제 역할을 한다. `_pausedTime += ( 시작 시각 - _stopTime(0) )` 이 기준을
@@ -26,18 +42,12 @@ namespace sw
     }
 
     /**
-     * @brief 기준 시각(_baseTime) 이후 일시정지 시간을 뺀 총 경과 시간(초)을 반환합니다.
+     * @brief 기준 시각(_baseTime) 이후 일시정지 시간을 뺀 총 경과 시간(초)을 반환합니다. 돌고 있으면 직전 갱신(reset · start · update) 시각까지입니다.
      */
     float32 GameTimer::getTotalTime() const noexcept
     {
-        if ( _bStopped )
-        {
-            const float64 total = static_cast<float64>( ( _stopTime - _pausedTime ) - _baseTime ) * _secondsPerCount;
-            return static_cast<float32>( MathUtil::max( 0.0, total ) );
-        }
-
-        const int64   currTime = ( _currentTime != 0 ) ? _currentTime : MonotonicClock::readCounter();
-        const float64 total    = static_cast<float64>( ( currTime - _pausedTime ) - _baseTime ) * _secondsPerCount;
+        const int64   endTime = _bStopped ? _stopTime : _currentTime;
+        const float64 total   = static_cast<float64>( ( endTime - _pausedTime ) - _baseTime ) * GameTimerInternal::kSecondsPerNanosecond;
         return static_cast<float32>( MathUtil::max( 0.0, total ) );
     }
 
@@ -54,7 +64,7 @@ namespace sw
      */
     void GameTimer::resetTimer() noexcept
     {
-        const int64 currTime = MonotonicClock::readCounter();
+        const int64 currTime = _pClock->nowNanoseconds();
         _baseTime            = currTime;
         _prevTime            = currTime;
         _currentTime         = currTime;
@@ -65,7 +75,7 @@ namespace sw
 
     void GameTimer::startTimer() noexcept
     {
-        const int64 startTime = MonotonicClock::readCounter();
+        const int64 startTime = _pClock->nowNanoseconds();
         if ( _bStopped )
         {
             _pausedTime += ( startTime - _stopTime );
@@ -80,7 +90,7 @@ namespace sw
     {
         if ( _bStopped == false )
         {
-            _stopTime = MonotonicClock::readCounter();
+            _stopTime = _pClock->nowNanoseconds();
             _bStopped = SW_TRUE;
         }
     }
@@ -93,8 +103,8 @@ namespace sw
             return;
         }
 
-        _currentTime = MonotonicClock::readCounter();
-        _deltaTime   = static_cast<float64>( _currentTime - _prevTime ) * _secondsPerCount;
+        _currentTime = _pClock->nowNanoseconds();
+        _deltaTime   = static_cast<float64>( _currentTime - _prevTime ) * GameTimerInternal::kSecondsPerNanosecond;
         _prevTime    = _currentTime;
 
         if ( _deltaTime < 0.0 )

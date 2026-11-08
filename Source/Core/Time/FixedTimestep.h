@@ -62,6 +62,8 @@ namespace sw
         FixedTimestep();
         /** @brief @p params 를 정책으로 두고 만듭니다. 값은 모두 0 보다 커야 합니다. */
         explicit FixedTimestep( const FixedTimestepParams& params );
+        /** @brief @p params 를 정책으로 두고 @p clock 으로 경과를 잽니다(테스트는 `ManualClock` 을 밀어 잠들지 않는다). 시계는 빌려 쓰므로 이 객체보다 오래 살아야 합니다. */
+        FixedTimestep( const FixedTimestepParams& params, const IClock& clock );
 
         /** @brief 시간 정책을 설정합니다. 값은 모두 0 보다 커야 합니다(설정 로드가 `Min` 으로 이미 본다 — 여기서 다른 값으로 바꾸지 않는다). */
         void configure( const FixedTimestepParams& params );

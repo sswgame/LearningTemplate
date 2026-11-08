@@ -27,6 +27,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -125,15 +126,16 @@ namespace sw::editor
                     entry._projectRoot     = readMetaValue( metaText, "project" );
                     entry._generationCount = static_cast<uint32>( listGeneration.size() );
                     (void)StringUtil::parseInt64( readMetaValue( metaText, "saved" ), entry._savedTicks );
-                    (void)StringUtil::parseInt64( readMetaValue( metaText, "sourceWrite" ), entry._sourceWriteTicks );
-                    // 다른 프로젝트 · 바뀐 원본에는 적용하지 않는다 — 사본이 오래된 원본 위에 덮여 남의 일을 지우지 않게
-                    const std::optional<AbsolutePath> sourcePath   = editor::getSubsystem<AssetPaths>().toDiskPath( entry._sourceID );
-                    int64                             currentWrite = 0;
+                    (void)StringUtil::parseUint64( readMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면(옛 메타) 0 — 아래에서 바뀐 원본으로 거절한다
+                    // 다른 프로젝트 · 바뀐 원본에는 적용하지 않는다 — 사본이 오래된 원본 위에 덮여 남의 일을 지우지 않게.
+                    // 바뀜은 내용 해시로 본다 — 쓰기 시각은 체크아웃 · 복사가 내용과 따로 바꾸고, 같은 틱의 다시 쓰기는 시각이 같다.
+                    const std::optional<AbsolutePath> sourcePath  = editor::getSubsystem<AssetPaths>().toDiskPath( entry._sourceID );
+                    const uint64                      currentHash = sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
                     if ( FileUtil::pathsEqualNormalized( entry._projectRoot, projectRoot ) == false )
                         entry._refusal = "it was written for another project";
-                    else if ( sourcePath.has_value() == false || FileUtil::getFileWriteTime( sourcePath->str(), currentWrite ) == false )
+                    else if ( currentHash == 0 )
                         entry._refusal = "the original scene is gone";
-                    else if ( currentWrite != entry._sourceWriteTicks )
+                    else if ( currentHash != entry._sourceContentHash )
                         entry._refusal = "the original scene changed after this copy";
                     outListEntry.push_back( std::move( entry ) );
                 }
@@ -187,10 +189,10 @@ namespace sw::editor
                 const string sourceID = pScene->getSourcePath();
                 if ( StringUtil::startsWith( sourceID, string( EditorAutosaveCommands::kDomain ) + "/" ) )
                     return false; // 복원 중인 사본 자신이다
-                const string                      slotFolder  = FileUtil::joinPath( getFolder(), EditorAutosaveCommands::makeSlotName( sourceID ) );
-                const std::optional<AbsolutePath> sourcePath  = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
-                int64                             sourceWrite = 0;
-                if ( sourcePath.has_value() == false || FileUtil::getFileWriteTime( sourcePath->str(), sourceWrite ) == false || FileUtil::ensureDirectoryExists( slotFolder ) == false )
+                const string                      slotFolder = FileUtil::joinPath( getFolder(), EditorAutosaveCommands::makeSlotName( sourceID ) );
+                const std::optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
+                const uint64                      sourceHash = sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
+                if ( sourceHash == 0 || FileUtil::ensureDirectoryExists( slotFolder ) == false )
                     return false;
                 vector<uint32> listGeneration;
                 collectGenerations( slotFolder, listGeneration );
@@ -201,7 +203,7 @@ namespace sw::editor
                     SW_LOG_WARNING_ID( "EditorAutosaveCommands.CopyFailed", "Autosave: could not write a copy of '%#'", sourceID );
                     return false;
                 }
-                const string meta = formatToString( "source=%#\nproject=%#\nsaved=%#\nsourceWrite=%#\n", sourceID, ProcessRoots::get()._project.str(), FileUtil::getCurrentFileWriteTime(), sourceWrite );
+                const string meta = formatToString( "source=%#\nproject=%#\nsaved=%#\nsourceHash=%#\n", sourceID, ProcessRoots::get()._project.str(), FileUtil::getCurrentFileWriteTime(), sourceHash );
                 if ( FileUtil::writeTextFile( makeMetaPath( slotFolder, generation ), meta ) == false )
                 {
                     (void)FileUtil::tryRemoveFile( snapshotPath->str() ); // 메타 없는 사본은 복구할 수 없다

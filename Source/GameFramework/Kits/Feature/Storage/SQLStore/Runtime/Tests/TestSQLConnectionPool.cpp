@@ -4,13 +4,10 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/deque.h"
 #include "Core/Testing/TestFramework.h"
-#include "Core/Time/MonotonicClock.h"
+#include "Core/Testing/TestWait.h"
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/Tests/FakeSQLDriver.h"
-
-#include <chrono>
-#include <thread>
 
 // SQLConnectionPoolTest — 연결 풀: 기동 오류, 워커 실행과 완료 회수, 끊긴 연결 다시 열기와 백오프, 종료가 남은 일을 취소로 끝내기, 완료 안에서 새 일 맡기기(가짜 드라이버, nogpu).
 
@@ -61,11 +58,8 @@ namespace
         {
             (void)connection;
             _bEntered.store( true );
-            const Deadline deadline = Deadline::afterMilliseconds( 20000 );
-            while ( _bRelease.load() == false && deadline.isExpired() == false )
-            {
-                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-            }
+            (void)test::waitUntil( [this]()
+            { return _bRelease.load(); }, 20.0 ); // 못 풀려도 돌아온다 — 케이스가 단언한다
         }
         void complete() override {}
 
@@ -105,15 +99,11 @@ namespace
         /** @brief 맡은 일이 모두 끝날 때까지 완료를 거둡니다(10 초 상한). 다 끝나면 true 입니다. */
         [[nodiscard]] static bool pollAll( SQLConnectionPool& pool )
         {
-            const Deadline deadline = Deadline::afterMilliseconds( 10000 );
-            while ( deadline.isExpired() == false )
+            return test::waitUntil( [&pool]()
             {
                 (void)pool.pollCompletions(); // 거둔 수는 아래 맡은 수로 본다
-                if ( pool.getPendingCount() == 0 )
-                    return true;
-                std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-            }
-            return false;
+                return pool.getPendingCount() == 0;
+            } );
         }
 
         /** @brief 일 하나를 맡기고 끝날 때까지 기다린 결과입니다. */
@@ -246,14 +236,9 @@ SW_TEST_CASE( SQLConnectionPoolTest, FailedReconnectBacksOffAndRecovers )
     SW_EXPECT_TRUE( driver.getOpenCount() - attemptsBefore < kJobCount / 2 );
 
     driver.setAllowedOpenCount( -1 );
-    const Deadline deadline   = Deadline::afterMilliseconds( 15000 ); // 상한(5 초)을 넘겨 기다린다
-    bool           bRecovered = false;
-    while ( bRecovered == false && deadline.isExpired() == false )
-    {
-        bRecovered = SQLConnectionPoolTestUtil::runOne( pool )._result == SQLResult::Ok;
-        if ( bRecovered == false )
-            std::this_thread::sleep_for( std::chrono::milliseconds( 5 ) );
-    }
+    // 다시 붙는 것은 풀의 백오프(실제 시계 — 재시도 간격이라 판정이 아니다)가 정한다. 붙을 때까지 일을 맡겨 본다 — 상한(5 초)을 넘겨 기다린다.
+    const bool bRecovered = test::waitUntil( [&pool]()
+    { return SQLConnectionPoolTestUtil::runOne( pool )._result == SQLResult::Ok; }, 15.0 );
     SW_EXPECT_TRUE( bRecovered );
 }
 
@@ -283,12 +268,8 @@ SW_TEST_CASE( SQLConnectionPoolTest, ShutdownCancelsQueuedJobsAndCanRestart )
     atomic<bool> bEntered{ false };
     atomic<bool> bRelease{ false };
     pool.submit( sw::make_unique<PoolGateJob>( bEntered, bRelease ) );
-    const Deadline enterDeadline = Deadline::afterMilliseconds( 10000 );
-    while ( bEntered.load() == false && enterDeadline.isExpired() == false )
-    {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-    }
-    SW_REQUIRE_TRUE( bEntered.load() );
+    SW_REQUIRE_TRUE( test::waitUntil( [&bEntered]()
+    { return bEntered.load(); } ) );
 
     PoolJobResult queued;
     pool.submit( sw::make_unique<PoolTestJob>( queued ) );
@@ -297,16 +278,12 @@ SW_TEST_CASE( SQLConnectionPoolTest, ShutdownCancelsQueuedJobsAndCanRestart )
 
     // 종료가 깃발을 세웠는지는 새 일이 그 자리에서 취소되는 것으로 본다. 그 전의 일은 줄에 서고 워커는 문에 잡혀 있어 칸을 만지지 않는다.
     deque<PoolJobResult> listProbe;
-    const Deadline       stopDeadline = Deadline::afterMilliseconds( 10000 );
-    bool                 bStopping    = false;
-    while ( bStopping == false && stopDeadline.isExpired() == false )
+    const bool           bStopping = test::waitUntil( [&]()
     {
         PoolJobResult& probe = listProbe.emplace_back();
         pool.submit( sw::make_unique<PoolTestJob>( probe ) );
-        bStopping = probe._cancelCount == 1;
-        if ( bStopping == false )
-            std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-    }
+        return probe._cancelCount == 1;
+    } );
     bRelease.store( true );
     stopper.join();
     SW_REQUIRE_TRUE( bStopping );

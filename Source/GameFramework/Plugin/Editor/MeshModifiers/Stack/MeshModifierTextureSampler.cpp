@@ -19,6 +19,7 @@
 #include "Editor/Common/Asset/Texture/RawImageData.h"
 
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 
 namespace sw::editor
 {
@@ -28,11 +29,11 @@ namespace sw::editor
         struct DecodedTexture
         {
             string         _resolvedPath;               ///< 실제로 읽은 파일 경로(못 찾았으면 빈 문자열)
-            int64          _writeTicks = 0;             ///< 읽을 때의 파일 쓰기 시각(FileUtil 눈금)
-            int32          _width      = 0;             ///< 가로 텍셀 수
-            int32          _height     = 0;             ///< 세로 텍셀 수
+            uint64         _contentHash = 0;            ///< 디코드한 바이트의 내용 해시(`ContentHash`) — 다시 읽기는 쓰기 시각이 아니라 내용으로 판정한다
+            int32          _width       = 0;            ///< 가로 텍셀 수
+            int32          _height      = 0;            ///< 세로 텍셀 수
             vector<float4> _listTexel;                  ///< 행 우선, 첫 행이 v = 0 쪽입니다
-            atomic<int64>  _lastCheckMilliseconds{ 0 }; ///< 마지막으로 파일 시각을 본 단조 시계(ms)
+            atomic<int64>  _lastCheckMilliseconds{ 0 }; ///< 마지막으로 파일 내용을 본 단조 시계(ms)
             atomic<int64>  _lastUseMilliseconds{ 0 };   ///< 마지막으로 표본한 단조 시계(ms) - 캐시 상한을 넘으면 오래된 것부터 내린다
 
             bool   isValid() const { return _width > 0 && _height > 0 && _listTexel.empty() == false; }
@@ -41,7 +42,7 @@ namespace sw::editor
 
         struct MeshModifierTextureSamplerInternal
         {
-            /** @brief 파일 시각을 다시 보는 최소 간격입니다. 정점마다 파일 시스템을 묻지 않으려는 것입니다. */
+            /** @brief 파일 내용을 다시 보는 최소 간격입니다. 정점마다 파일 시스템을 묻지 않으려는 것입니다(판정이 아니라 묻는 빈도 — 바뀐 파일은 다음 확인에서 잡힌다). */
             static constexpr int64 kRecheckIntervalMilliseconds = 1000;
             /** @brief 디코드한 텍셀 캐시의 상한(바이트)입니다. 넘으면 가장 오래 안 쓴 이미지부터 내린다(방금 읽은 것은 남긴다). 4096² 두 장이 들어간다. */
             static constexpr size_t kMaxCacheBytes = constant::memory::kBytesPerGigabyte / 2;
@@ -52,7 +53,7 @@ namespace sw::editor
             static int64 getNowMilliseconds() { return MonotonicClock::nowMicroseconds() / constant::time::kMicrosecondsPerMillisecond; }
 
             /**
-             * @brief 텍스처 리소스 id 를 디스크의 낱개 파일로 풉니다(다시 읽기가 파일 시각을 본다 - 원본 트리에서 도는 에디터 도구다). 못 찾으면 빈 문자열입니다.
+             * @brief 텍스처 리소스 id 를 디스크의 낱개 파일로 풉니다(다시 읽기가 파일 내용을 본다 - 원본 트리에서 도는 에디터 도구다). 못 찾으면 빈 문자열입니다.
              * @details 예전에는 작업 폴더에 그 이름이 있는지 먼저 봤다(같은 글이 작업 폴더에 따라 다른 파일).
              */
             static string resolvePath( const AssetPaths& assetPaths, string_view assetPath )
@@ -69,7 +70,10 @@ namespace sw::editor
                 pTexture->_lastCheckMilliseconds.store( getNowMilliseconds(), std::memory_order_relaxed );
 
                 vector<uint8> bytes;
-                const bool    bRead = pTexture->_resolvedPath.empty() == false && FileUtil::getFileWriteTime( pTexture->_resolvedPath, pTexture->_writeTicks ) && FileUtil::readFile( pTexture->_resolvedPath, bytes ) && bytes.empty() == false && bytes.size() <= static_cast<size_t>( MathUtil::kMaxInt32 );
+                const bool    bLoaded = pTexture->_resolvedPath.empty() == false && FileUtil::readFile( pTexture->_resolvedPath, bytes );
+                // 읽은 바이트 자체의 해시다 — 시각을 먼저 보고 읽으면 그 사이의 저장이 옛 시각에 새 내용으로 붙어 다시 읽기를 놓쳤다. 빈 파일도 해시를 두어 같은 실패를 되풀이하지 않는다.
+                pTexture->_contentHash = bLoaded ? ContentHash::computeBytes( bytes ) : 0;
+                const bool bRead       = bLoaded && bytes.empty() == false && bytes.size() <= static_cast<size_t>( MathUtil::kMaxInt32 );
                 if ( bRead == false )
                 {
                     SW_LOG_WARNING_ID( "MeshModifierTextureSampler.MeshModifierTextureCould", "Mesh modifier texture '%#' could not be read", string( assetPath ).c_str() );
@@ -82,7 +86,10 @@ namespace sw::editor
                 return pTexture;
             }
 
-            /** @brief 간격이 지났으면 파일 시각을 다시 보고, 바뀌었으면 true(다시 읽어야 함)입니다. 한 스레드만 검사를 맡습니다. */
+            /**
+             * @brief 간격이 지났으면 파일 내용 해시를 다시 보고, 바뀌었으면 true(다시 읽어야 함)입니다. 한 스레드만 검사를 맡습니다.
+             * @details 쓰기 시각 같음으로 보면 같은 틱 안의 다시 쓰기를 놓쳤다. 해시 캐시(`ContentHash::computeFile`)는 도장이 그대로인 동안 파일을 열지 않는다.
+             */
             static bool isStale( DecodedTexture& texture )
             {
                 bool        bStale    = false;
@@ -90,13 +97,10 @@ namespace sw::editor
                 int64       lastCheck = texture._lastCheckMilliseconds.load( std::memory_order_relaxed );
                 if ( now - lastCheck >= kRecheckIntervalMilliseconds && texture._lastCheckMilliseconds.compare_exchange_strong( lastCheck, now, std::memory_order_relaxed ) )
                 {
-                    int64 writeTicks = 0;
                     if ( texture._resolvedPath.empty() )
                         bStale = true; // 못 찾았던 파일이 생겼을 수 있다
-                    else if ( FileUtil::getFileWriteTime( texture._resolvedPath, writeTicks ) == false )
-                        bStale = true;
                     else
-                        bStale = writeTicks != texture._writeTicks;
+                        bStale = ContentHash::computeFile( texture._resolvedPath ) != texture._contentHash; // 읽지 못하면 0 — 다시 읽어 실패를 알린다
                 }
                 return bStale;
             }

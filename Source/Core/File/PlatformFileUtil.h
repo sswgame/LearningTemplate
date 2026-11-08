@@ -52,6 +52,32 @@ namespace sw
     };
 
     /**
+     * @brief 이 프로세스가 파일 내용 · 도장을 바꾼 것을 듣는 쪽입니다 — 파일 내용에서 뽑은 값을 (크기, 쓰기 시각) 도장으로 캐시하는 쪽(`ContentHashCache`)이 붙는다
+     *        (`PlatformFileUtil::registerWriteObserver`). 파일 계층은 이 인터페이스만 안다.
+     * @details 쓰기 시각은 시계 틱(Windows 약 16 ms) 단위라 같은 틱 안에 같은 크기로 다시 쓰면 도장이 같다. 자기 쓰기는 쓰기 경로가 이 알림으로 캐시를 그 자리에서 고치고,
+     *          시간 창(막 쓴 파일은 캐시하지 않는다)은 바깥 도구(git · 외부 편집기 · 자식 프로세스)의 쓰기에만 남는다 — 언리얼 `FFileManagerGeneric` 위의 DDC 해시 캐시가
+     *          자기 저장을 무효화 사건으로 받는 것과 같은 자리. 부르는 스레드에서 불리므로 구현은 스레드 안전해야 합니다. 관찰자가 없으면 쓰기 길은 원자 읽기 하나다.
+     */
+    class SW_API IFileWriteObserver
+    {
+    public:
+        IFileWriteObserver() = default;
+        /** @brief 가상 소멸자입니다. */
+        virtual ~IFileWriteObserver() = default;
+
+        /** @brief 복사를 금지합니다. */
+        IFileWriteObserver( const IFileWriteObserver& ) = delete;
+        /** @brief 복사 대입을 금지합니다. */
+        IFileWriteObserver& operator=( const IFileWriteObserver& ) = delete;
+
+        /**
+         * @brief @p filePath 의 내용이나 도장을 이 프로세스가 바꾼 **뒤에** 불립니다(쓰기 · 덧붙이기 · 복사 대상 · 이름 바꾸기 대상 · 시각 바꾸기 · 지우기).
+         * @details 경로는 쓰기 입구가 받은 그대로(구분자만 정규화)다. 폴더 지우기 · 옮기기는 폴더 경로 하나로 온다.
+         */
+        virtual void recordFileWritten( string_view filePath ) = 0;
+    };
+
+    /**
      * @struct PlatformFileUtil
      * @brief stdio 기반 플랫폼 파일 원시 연산 모음입니다.
      */
@@ -154,6 +180,16 @@ namespace sw
         [[nodiscard]] static bool registerReadObserver( IFileReadObserver* pObserver );
         /** @brief @p pObserver 가 걸린 관찰자이면 뗍니다. */
         static void unregisterReadObserver( IFileReadObserver* pObserver );
+
+        /** @brief 이 프로세스가 @p filePath 를 바꾼 뒤 부릅니다 — 걸린 쓰기 관찰자(`IFileWriteObserver::recordFileWritten`)에 알린다. `FileUtil` 의 쓰기 입구가 부릅니다. */
+        static void recordFileWritten( string_view filePath );
+        /**
+         * @brief 쓰기 관찰자를 겁니다. 이미 다른 관찰자가 걸려 있으면 거절하고 false 입니다(관찰자는 하나다 — 읽기 관찰자와 같은 모양).
+         * @param pObserver 뗄 때까지 살아 있어야 합니다.
+         */
+        [[nodiscard]] static bool registerWriteObserver( IFileWriteObserver* pObserver );
+        /** @brief @p pObserver 가 걸린 관찰자이면 뗍니다. */
+        static void unregisterWriteObserver( IFileWriteObserver* pObserver );
 
         /**
          * @brief OS 경계에 들어온 경로가 엄격한 절대 경로인지 봅니다(R2 - 디스크 I/O 는 절대 경로만). 아니면 오류(`File.RelativePath`)를 남기고 false - 부르는 OS 호출은 실패한다.

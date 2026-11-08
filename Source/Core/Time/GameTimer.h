@@ -6,6 +6,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
+#include "Core/Time/Clock.h"
 
 namespace sw
 {
@@ -14,12 +15,18 @@ namespace sw
     // 1) GameTimer — resetTimer → startTimer → updateTimer(매 프레임) → stopTimer
     //    getDeltaTime 은 직전 updateTimer 와의 간격, getTotalTime 은 일시정지를 뺀 누적 시간
     // ------------------------------------------------------------------------------
-    /** @brief QPC 같은 고해상도 카운터로 누적 · 델타 시간을 측정합니다. */
+    /**
+     * @brief 단조 시계(`IClock`)로 누적 · 델타 시간을 측정합니다.
+     * @details 시계는 받는다 — 운영은 실제 단조 시계(`SystemMonotonicClock`), 테스트는 손으로 미는 시계(`ManualClock`)를 줘 잠들지 않고 경과를 정한다
+     *          (언리얼 자동화의 고정 시각 · 유니티 테스트의 시간 고정과 같은 갈래).
+     */
     class SW_API GameTimer
     {
     public:
-        /** @brief 초당 카운트를 읽고 중지 상태로 시작합니다. */
+        /** @brief 실제 단조 시계로 재며 중지 상태로 시작합니다. */
         GameTimer() noexcept;
+        /** @brief @p clock 으로 재며 중지 상태로 시작합니다. 시계는 빌려 쓰므로 이 객체보다 오래 살아야 합니다. */
+        explicit GameTimer( const IClock& clock ) noexcept;
 
         /**
          * @brief 일시정지를 뺀 누적 시간(초)입니다.
@@ -51,10 +58,10 @@ namespace sw
         bool isStopped() const noexcept { return _bStopped; }
 
     private:
-        float64 _secondsPerCount;
-        float64 _deltaTime;
+        const IClock* _pClock; ///< 시각(나노초)을 주는 시계. 빌려 쓴다
+        float64       _deltaTime;
 
-        int64 _baseTime;
+        int64 _baseTime; ///< 아래 시각은 모두 `_pClock` 의 나노초다
         int64 _pausedTime;
         int64 _stopTime;
         int64 _prevTime;

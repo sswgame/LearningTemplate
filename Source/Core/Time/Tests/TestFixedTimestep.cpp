@@ -1,12 +1,8 @@
 #include "pch.h"
 
-#include "Core/Concurrency/thread.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/FixedTimestep.h"
-#include "Core/Time/MonotonicClock.h"
-
-#include <chrono>
-#include <thread>
 
 using namespace sw;
 
@@ -17,17 +13,19 @@ using namespace sw;
 // 고정 스텝을 더 부르고 그래서 더 길어지는 되먹임이라, 한 번 빠지면 스스로 빠져나오지 못한다.
 // 그런데 그 되먹임은 **느린 프레임에서만** 나타나므로 실행해 봐서는 좀처럼 걸리지 않는다.
 //
-// 시간을 진짜로 측정한다(주입할 시계가 없다). 그래서 단언은 **한 방향으로만** 건다 — "충분히 오래
-// 잤으니 상한에서 잘렸다" 는 잠이 더 길어져도 참이다. 반대로 짧은 쪽을 봐야 할 때는 재우지 않고
-// 곧바로 부른다(잠의 정밀도에 기대지 않는다).
+// 시계는 손으로 민다(`ManualClock`) — 잠들지 않고 경과를 정확히 정하므로 단언은 정확한 값이다.
+// 예전에는 실제로 잠들어 "충분히 오래 잤으니 상한에서 잘렸다" 는 한 방향 단언만 걸 수 있었다.
 // ------------------------------------------------------------------------------
 
 namespace
 {
-    /** @brief 최대 델타보다 확실히 긴 시간. 잠이 길어져도 결과는 같다(상한에서 잘리므로). */
-    void sleepLongerThanAnyClamp()
+    /** @brief 최대 델타보다 긴 시간(밀리초)입니다 — 상한에서 잘린다. */
+    constexpr int64 kLongerThanAnyClampMs = 300;
+
+    /** @brief 시험용 시계입니다. 0 이 아닌 시각에서 시작한다(타이머의 기준점 0 과 섞이지 않게). */
+    ManualClock makeClock()
     {
-        ThreadUtil::sleepForMilliseconds( 300 );
+        return ManualClock{ MonotonicMilliseconds{ 1000 } };
     }
 
     /** @brief 만들 때 넘기는 정책(엔진에서는 `EngineConfig.json` 의 값)이다. 몫이 6 이 되게 둔다. */
@@ -42,12 +40,13 @@ namespace
  */
 SW_TEST_CASE( FixedTimestepTest, VariableDeltaIsClampedAndSplitIntoFixedSteps )
 {
-    FixedTimestep timeline{ makeTimestepDefaults() };
+    ManualClock   clock = makeClock();
+    FixedTimestep timeline{ makeTimestepDefaults(), clock };
     // 2의 거듭제곱 분수로 준다 — 몫이 부동소수 오차 없이 딱 떨어진다(0.25 / 0.0625 = 4).
     timeline.configure( FixedTimestepParams{ 0.25f, 0.0625f, 8 } );
     timeline.start();
 
-    sleepLongerThanAnyClamp();
+    clock.advanceMilliseconds( kLongerThanAnyClampMs );
     const FrameTime frame = timeline.advance();
 
     SW_EXPECT_NEAR( 0.25f, frame._deltaTime, 0.0001f );
@@ -59,16 +58,17 @@ SW_TEST_CASE( FixedTimestepTest, VariableDeltaIsClampedAndSplitIntoFixedSteps )
  * @brief [FixedTimestepTest] 스텝 수는 상한에서 잘리고, **넘친 잔액은 버린다**
  * @details 상한만 두고 잔액을 남기면 다음 프레임이 더 많은 스텝을 요구한다 — 상한이 있어도
  *          빚이 쌓여 영영 못 따라잡는다. 시뮬레이션이 실시간보다 느려지는 쪽을 택한 자리다.
- *          두 번째 호출은 **재우지 않는다** — 잔액을 남겼다면 잘 시간 없이도 스텝이 나온다.
+ *          두 번째 호출 전에는 **시계를 밀지 않는다** — 잔액을 남겼다면 경과 없이도 스텝이 나온다.
  */
 SW_TEST_CASE( FixedTimestepTest, StepCountIsCappedAndTheOverflowIsDropped )
 {
-    FixedTimestep timeline{ makeTimestepDefaults() };
+    ManualClock   clock = makeClock();
+    FixedTimestep timeline{ makeTimestepDefaults(), clock };
     // 0.25초가 쌓이면 4스텝이 필요하지만 상한은 2 — 0.125초가 남는다.
     timeline.configure( FixedTimestepParams{ 0.25f, 0.0625f, 2 } );
     timeline.start();
 
-    sleepLongerThanAnyClamp();
+    clock.advanceMilliseconds( kLongerThanAnyClampMs );
     const FrameTime capped = timeline.advance();
     SW_EXPECT_EQUAL( 2u, capped._fixedStepCount );
 
@@ -82,21 +82,22 @@ SW_TEST_CASE( FixedTimestepTest, StepCountIsCappedAndTheOverflowIsDropped )
  */
 SW_TEST_CASE( FixedTimestepTest, TimeScaleMultipliesTheClampedDelta )
 {
-    FixedTimestep timeline{ makeTimestepDefaults() };
+    ManualClock   clock = makeClock();
+    FixedTimestep timeline{ makeTimestepDefaults(), clock };
     timeline.configure( FixedTimestepParams{ 0.25f, 0.0625f, 16 } );
     timeline.start();
 
-    sleepLongerThanAnyClamp();
+    clock.advanceMilliseconds( kLongerThanAnyClampMs );
     const FrameTime slow = timeline.advance( 0.5f );
     SW_EXPECT_NEAR( 0.125f, slow._deltaTime, 0.0001f );
     SW_EXPECT_EQUAL( 2u, slow._fixedStepCount );
 
-    sleepLongerThanAnyClamp();
+    clock.advanceMilliseconds( kLongerThanAnyClampMs );
     const FrameTime fast = timeline.advance( 2.0f );
     SW_EXPECT_NEAR( 0.5f, fast._deltaTime, 0.0001f );
     SW_EXPECT_EQUAL( 8u, fast._fixedStepCount );
 
-    sleepLongerThanAnyClamp();
+    clock.advanceMilliseconds( kLongerThanAnyClampMs );
     const FrameTime frozen = timeline.advance( 0.0f );
     SW_EXPECT_NEAR( 0.0f, frozen._deltaTime, 0.0001f );
     SW_EXPECT_EQUAL( 0u, frozen._fixedStepCount );
@@ -114,8 +115,8 @@ SW_TEST_CASE( FixedTimestepTest, UnconfiguredTimelineWaitsForTheConfiguredPolicy
     SW_EXPECT_TRUE( timeline.isConfigured() );
     timeline.start();
 
-    sleepLongerThanAnyClamp();
-    const FrameTime frame = timeline.advance();
+    // 정책만 본다 — 경과는 덮어쓴 프레임 시간으로 준다(벽시계를 재우지 않는다).
+    const FrameTime frame = timeline.advance( 1.0f, static_cast<float32>( kLongerThanAnyClampMs ) * 0.001f );
 
     const FixedTimestepParams policy = makeTimestepDefaults();
     SW_EXPECT_NEAR( policy._maxFrameDeltaTime, frame._deltaTime, 0.0001f );
@@ -134,23 +135,18 @@ SW_TEST_CASE( FixedTimestepTest, UnconfiguredTimelineWaitsForTheConfiguredPolicy
  */
 SW_TEST_CASE( FixedTimestepTest, StartRewindsTheTimerBeforeTheFirstFrame )
 {
-    FixedTimestep timeline{ makeTimestepDefaults() };
+    ManualClock   clock = makeClock();
+    FixedTimestep timeline{ makeTimestepDefaults(), clock };
     timeline.configure( FixedTimestepParams{ 0.25f, 0.0625f, 8 } );
 
     // 만든 시점과 루프 진입 사이에 시간이 흐른다.
-    sleepLongerThanAnyClamp();
-    const int64 beforeStartNanoseconds = MonotonicClock::nowNanoseconds();
+    clock.advanceMilliseconds( kLongerThanAnyClampMs );
     timeline.start();
 
-    // 루프에 들어가 한 프레임을 보낸다. 타이머가 아예 돌지 않았다면 0 이다.
-    ThreadUtil::sleepForMilliseconds( 100 );
-    const FrameTime firstFrame              = timeline.advance();
-    const int64     afterAdvanceNanoseconds = MonotonicClock::nowNanoseconds();
-    SW_EXPECT_TRUE_MSG( firstFrame._deltaTime > 0.05f, "start 뒤에 타이머가 돌지 않았다" );
-
-    // 상한은 고정 값이 아니라 실제로 잰 start ~ advance 구간이다 — 병렬 테스트 부하로 잠이 길어져도 참이고, 앞의 300ms 가 섞이면 이 구간을 넘는다.
-    const float32 measuredSeconds = static_cast<float32>( afterAdvanceNanoseconds - beforeStartNanoseconds ) * 1e-9f;
-    SW_EXPECT_TRUE_MSG( firstFrame._deltaTime <= measuredSeconds + 0.001f, "start 이전의 시간이 첫 델타에 섞였다" );
+    // 루프에 들어가 한 프레임(0.1 초)을 보낸다. 타이머가 아예 돌지 않았다면 0 이고, start 이전의 시간이 섞이면 상한(0.25)이다.
+    clock.advanceMilliseconds( 100 );
+    const FrameTime firstFrame = timeline.advance();
+    SW_EXPECT_NEAR( 0.1f, firstFrame._deltaTime, 1e-5f );
 }
 
 /**
@@ -160,7 +156,8 @@ SW_TEST_CASE( FixedTimestepTest, StartRewindsTheTimerBeforeTheFirstFrame )
  */
 SW_TEST_CASE( FixedTimestepTest, OverrideFrameSecondsIgnoresTheWallClock )
 {
-    FixedTimestep timeline{ makeTimestepDefaults() };
+    ManualClock   clock = makeClock();
+    FixedTimestep timeline{ makeTimestepDefaults(), clock };
     timeline.configure( FixedTimestepParams{ 0.1f, 1.0f / 60.0f, 6 } );
     timeline.start();
 
@@ -170,7 +167,7 @@ SW_TEST_CASE( FixedTimestepTest, OverrideFrameSecondsIgnoresTheWallClock )
         {
             // 벽시계를 한 번 크게 흔든다 — 덮어쓴 시간이면 결과가 같아야 한다.
             if ( frameIndex == 3 )
-                sleepLongerThanAnyClamp();
+                clock.advanceMilliseconds( kLongerThanAnyClampMs );
             const FrameTime frame = timeline.advance( 1.0f, overrideSeconds );
             SW_EXPECT_NEAR( overrideSeconds, frame._deltaTime, 1e-6f );
             SW_EXPECT_EQUAL( 1u, frame._fixedStepCount );

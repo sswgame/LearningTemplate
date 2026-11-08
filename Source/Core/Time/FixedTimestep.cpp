@@ -14,7 +14,12 @@ namespace sw
     }
 
     FixedTimestep::FixedTimestep( const FixedTimestepParams& params )
-        : _timer{}
+        : FixedTimestep{ params, SystemMonotonicClock::get() }
+    {
+    }
+
+    FixedTimestep::FixedTimestep( const FixedTimestepParams& params, const IClock& clock )
+        : _timer{ clock }
         , _params{}
         , _stepTimer{}
     {

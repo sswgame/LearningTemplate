@@ -19,14 +19,14 @@ namespace sw::editor
     /** @brief 복구 후보 하나(씬 하나의 가장 새 사본)입니다. */
     struct EditorAutosaveEntry
     {
-        string _snapshotAbs;           ///< 가장 새 사본의 디스크 경로
-        string _snapshotID;            ///< 그 사본의 리소스 id(`autosave/…` — 붙인 도메인)
-        string _sourceID;              ///< 원래 씬의 리소스 id
-        string _projectRoot;           ///< 사본을 쓴 프로젝트 루트
-        int64  _savedTicks{ 0 };       ///< 사본을 쓴 시각(`FileUtil::getCurrentFileWriteTime` 눈금)
-        int64  _sourceWriteTicks{ 0 }; ///< 그때 원본 파일의 수정 시각
-        uint32 _generationCount{ 0 };  ///< 남은 세대 수
-        string _refusal;               ///< 복원할 수 없는 이유(비면 복원할 수 있다)
+        string _snapshotAbs;            ///< 가장 새 사본의 디스크 경로
+        string _snapshotID;             ///< 그 사본의 리소스 id(`autosave/…` — 붙인 도메인)
+        string _sourceID;               ///< 원래 씬의 리소스 id
+        string _projectRoot;            ///< 사본을 쓴 프로젝트 루트
+        int64  _savedTicks{ 0 };        ///< 사본을 쓴 시각(`FileUtil::getCurrentFileWriteTime` 눈금)
+        uint64 _sourceContentHash{ 0 }; ///< 그때 원본 파일의 내용 해시(`ContentHash`). 0 은 메타에 없음 — 바뀐 원본으로 거절한다
+        uint32 _generationCount{ 0 };   ///< 남은 세대 수
+        string _refusal;                ///< 복원할 수 없는 이유(비면 복원할 수 있다)
     };
 
     /**

@@ -5,6 +5,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/SecureRandom.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include <mutex>
@@ -76,7 +77,13 @@ namespace sw
 namespace sw
 {
     NetRequestClient::NetRequestClient()
-        : _mutex{}
+        : NetRequestClient{ SystemMonotonicClock::get() }
+    {
+    }
+
+    NetRequestClient::NetRequestClient( const IClock& clock )
+        : _pClock{ &clock }
+        , _mutex{}
         , _mapPending{}
         , _writer{}
         , _pEndpoint{ nullptr }
@@ -127,7 +134,7 @@ namespace sw
         pending._onResponse          = std::move( onResponse );
         pending._handle              = handle;
         pending._method              = method;
-        pending._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( options._timeoutSeconds );
+        pending._deadlineNanoseconds = _pClock->nowNanoseconds() + MonotonicClock::secondsToNanoseconds( options._timeoutSeconds );
         NetRequestStatus failure     = NetRequestStatus::Ok;
         uint64           requestID   = 0;
         {
@@ -251,7 +258,7 @@ namespace sw
 
     void NetRequestClient::update()
     {
-        const int64                   now = MonotonicClock::nowNanoseconds();
+        const int64                   now = _pClock->nowNanoseconds();
         vector<pair<uint64, Pending>> listExpired;
         {
             ScopedLock<mutex> lock{ _mutex };

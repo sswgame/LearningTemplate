@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "Core/Concurrency/thread.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Testing/TestWait.h"
 
 #include "Editor/Panels/Settings/Model/GlobalVariablesModel.h"
 
@@ -33,13 +33,8 @@ namespace
         /** @brief 훑기가 끝날 때까지 폴링합니다(작업 시스템이 있으면 워커가 돈다). 시한 안에 끝나면 true 입니다. */
         bool waitForPresetScan( string_view folder )
         {
-            for ( int32 attempt = 0; attempt < 5000; ++attempt )
-            {
-                if ( _model.pollPresetFilesIn( folder ) == false )
-                    return true;
-                ThreadUtil::sleepForMilliseconds( 1 );
-            }
-            return false;
+            return test::waitUntil( [this, folder]()
+            { return _model.pollPresetFilesIn( folder ) == false; } );
         }
     };
 } // namespace
