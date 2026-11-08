@@ -72,7 +72,16 @@ namespace sw
     void* SubsystemScope::findHostModuleVisibleInScope( uint64 typeHash ) const
     {
         const Entry* pEntry = findOwnEntry( typeHash );
-        return pEntry != nullptr && pEntry->_moduleVisibility == SubsystemModuleVisibility::HostModules ? pEntry->_pObject : nullptr;
+        if ( pEntry != nullptr )
+            return pEntry->_moduleVisibility == SubsystemModuleVisibility::HostModules ? pEntry->_pObject : nullptr;
+        // 매단 자식(모듈 서브시스템)의 선언한 칸 — 공개(`publish`)와 따로 선언 하나로 보인다
+        for ( const MountedScope& mounted : _listMounted )
+        {
+            void* const pVisible = mounted._scope->findHostModuleVisibleInScope( typeHash );
+            if ( pVisible != nullptr )
+                return pVisible;
+        }
+        return nullptr;
     }
 
     const SubsystemScope::Entry* SubsystemScope::findOwnEntry( uint64 typeHash ) const

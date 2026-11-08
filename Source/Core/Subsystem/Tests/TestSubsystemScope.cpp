@@ -248,3 +248,21 @@ SW_TEST_CASE( SubsystemScopeTest, HostModuleVisibilityFollowsTheDeclaration )
     scope.destroyAll();
     SW_EXPECT_TRUE( scope.findHostModuleVisibleInScope( getSubsystemTypeHash<HostModuleProbeSubsystem>() ) == nullptr ); // 지운 서브시스템을 가리키지 않는다
 }
+
+/**
+ * @brief [SubsystemScopeTest] 매단 자식 범위(모듈 서브시스템)가 선언한 호스트 모듈 노출도 부모의 호스트 모듈 조회에 보이고, 떼면 사라진다
+ */
+SW_TEST_CASE( SubsystemScopeTest, HostModuleVisibilityReachesMountedChildren )
+{
+    SubsystemScope                  parent;
+    SubsystemScope&                 child   = parent.mountChildScope( "ModuleA" );
+    const HostModuleProbeSubsystem& visible = child.emplaceSubsystem<HostModuleProbeSubsystem>();
+    (void)child.emplaceSubsystem<ScopeProbeSubsystem>( nullptr );
+
+    SW_EXPECT_TRUE( parent.findHostModuleVisibleInScope( getSubsystemTypeHash<HostModuleProbeSubsystem>() ) == &visible );
+    SW_EXPECT_TRUE( parent.findHostModuleVisibleInScope( getSubsystemTypeHash<ScopeProbeSubsystem>() ) == nullptr ); // 선언하지 않은 서브시스템
+    SW_EXPECT_TRUE( parent.findInScope( getSubsystemTypeHash<HostModuleProbeSubsystem>() ) == nullptr );             // 공개하지 않았으니 일반 조회에는 없다
+
+    parent.unmountChildScope( "ModuleA" );
+    SW_EXPECT_TRUE( parent.findHostModuleVisibleInScope( getSubsystemTypeHash<HostModuleProbeSubsystem>() ) == nullptr );
+}
