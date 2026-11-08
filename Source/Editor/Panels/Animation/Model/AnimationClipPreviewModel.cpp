@@ -4,6 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -119,5 +120,36 @@ namespace sw::editor
         _clipSeconds = pClip->getDuration();
         _status      = "Playing";
         SW_LOG_INFO_ID( "AnimationClipPreviewPanel.ClipPreviewPlaying", "Clip Preview playing '%#' on '%#'", _playedClipPath, _activePrefabPath );
+    }
+
+    bool AnimationClipPreviewModel::gatherClipInfo( Scene* pScene, string_view clipPath, AnimationClipPreviewInfo& outInfo ) const
+    {
+        const SkeletalAnimatorComponent* const pAnimator = findAnimator( pScene );
+        const AnimationClip* const             pClip     = pAnimator != nullptr ? findOpenClip( *pAnimator, clipPath ) : nullptr;
+        if ( pClip == nullptr )
+            return false;
+        outInfo._durationSeconds   = pClip->getDuration();
+        outInfo._trackCount        = static_cast<uint32>( pClip->getTrackCount() );
+        outInfo._curveCount        = static_cast<uint32>( pClip->getCurves().size() );
+        outInfo._bLoopingByDefault = pClip->isLoopingByDefault() ? SW_TRUE : SW_FALSE;
+        outInfo._bHasRootMotion    = pClip->getRootMotionTrack() >= 0 ? SW_TRUE : SW_FALSE;
+        outInfo._bHasNotifyTrack   = pClip->findNotifyTrack() != nullptr ? SW_TRUE : SW_FALSE;
+        return true;
+    }
+
+    bool AnimationClipPreviewModel::readPlayTime( Scene* pScene, float32& outSeconds ) const
+    {
+        const SkeletalAnimatorComponent* const pAnimator = findAnimator( pScene );
+        if ( pAnimator == nullptr || _clipSeconds <= 0.0f )
+            return false;
+        outSeconds = MathUtil::fmod( pAnimator->getStateTime(), _clipSeconds ); // 반복 재생은 상태 시간이 길이를 넘는다
+        return true;
+    }
+
+    void AnimationClipPreviewModel::seek( Scene* pScene, float32 seconds ) const
+    {
+        SkeletalAnimatorComponent* const pAnimator = findAnimator( pScene );
+        if ( pAnimator != nullptr )
+            (void)pAnimator->seekCurrentTime( MathUtil::clamp( seconds, 0.0f, _clipSeconds ) ); // 범위 밖이면 애니메이터가 알린다
     }
 } // namespace sw::editor

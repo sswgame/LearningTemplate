@@ -302,7 +302,7 @@
     "Source/Editor/Panels/Packaging/PackagingPanel.h": {"float": 2},
     "Source/Editor/Panels/Physics/Model/RagdollPreviewModel.cpp": {"minus-one": 2},
     "Source/Editor/Panels/Physics/Model/RagdollPreviewModel.h": {"minus-one": 1},
-    "Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp": {"minus-one": 2, "integer": 1},
+    "Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp": {"integer": 1},
     "Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp": {"float": 1, "integer": 1},
     "Source/Editor/Panels/Prefab/PrefabEditorPanel.h": {"float": 2},
     "Source/Editor/Panels/Profiler/Model/ProfilerScopeHistory.cpp": {"integer": 2},

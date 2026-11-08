@@ -74,6 +74,11 @@ namespace sw::editor
         [[nodiscard]] bool pollFileChanged();
         /** @brief @p diskPath 의 내용 해시가 @p inoutHash 와 다르면 true 이고 @p inoutHash 를 새 해시로 바꿉니다. 파일이 없으면 false 입니다(지운 파일은 다시 읽을 것이 없다). */
         [[nodiscard]] static bool updateContentHash( string_view diskPath, uint64& inoutHash );
+        /**
+         * @brief 바뀐 효과 파일 @p assetPath 를 공유 캐시에서 먼저 새 글로 다시 읽습니다(`AssetHotReload::applySavedAsset` — 감시 사건이 뒤늦게 와도 같은 저장을 두 번 읽지 않게 도장을 남긴다).
+         * @details 그래야 다시 연 문서와 다시 건 효과가 새 정의다. View 가 작업 공간 헤더를 보지 않게 여기를 지난다.
+         */
+        static void applySavedAsset( string_view assetPath );
 
         const vector<VFXPreviewEmitterRow>& getEmitterRows() const { return _listEmitterRow; }
         const string&                       getStatus() const { return _status; }

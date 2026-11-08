@@ -9,9 +9,13 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Common/Workspace/Undo/UndoStep.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -26,6 +30,7 @@
 #include "Engine/UI/Layout/GridPanel.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/Screen/UIOffscreenScreens.h"
+#include "Engine/UI/Style/UIThemeController.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
@@ -78,7 +83,7 @@ namespace sw::editor
     };
 
     UIPreviewModel::UIPreviewModel( const DataPath& initialDocument )
-        : _undoOwner{}
+        : _pUndoOwner{ make_unique<UndoStepOwner>() }
         , _onDirtyChanged{}
         , _onTargetReleasing{}
         , _listRow{}
@@ -507,12 +512,12 @@ namespace sw::editor
         {
             pSession->apply( generation, ordinal, propertyName, oldText );
         } ),
-                                                          _undoOwner ),
+                                                          *_pUndoOwner ),
                                  UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, ordinal, propertyName, newText]()
         {
             pSession->apply( generation, ordinal, propertyName, newText );
         } ),
-                                                          _undoOwner ),
+                                                          *_pUndoOwner ),
                                  "Edit UI Widget", coalesceKey );
     }
 
@@ -563,12 +568,12 @@ namespace sw::editor
         {
             pSession->detach( generation, parentOrdinal, index, shared_ptr<RemovedWidget>{} );
         } ),
-                                                          _undoOwner ),
+                                                          *_pUndoOwner ),
                                  UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, typeName, parentOrdinal, index]()
         {
             pSession->insert( generation, typeName, parentOrdinal, index );
         } ),
-                                                          _undoOwner ),
+                                                          *_pUndoOwner ),
                                  "Add UI Widget" );
         return true;
     }
@@ -600,12 +605,12 @@ namespace sw::editor
         {
             pSession->reattach( generation, parentOrdinal, index, pHolder );
         } ),
-                                                          _undoOwner ),
+                                                          *_pUndoOwner ),
                                  UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, index, pHolder]()
         {
             pSession->detach( generation, parentOrdinal, index, pHolder );
         } ),
-                                                          _undoOwner ),
+                                                          *_pUndoOwner ),
                                  "Delete UI Widget" );
         return true;
     }
@@ -621,12 +626,12 @@ namespace sw::editor
         {
             pSession->move( generation, parentOrdinal, toIndex, fromIndex );
         } ),
-                                                          _undoOwner ),
+                                                          *_pUndoOwner ),
                                  UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [pSession, generation, parentOrdinal, fromIndex, toIndex]()
         {
             pSession->move( generation, parentOrdinal, fromIndex, toIndex );
         } ),
-                                                          _undoOwner ),
+                                                          *_pUndoOwner ),
                                  "Reorder UI Widget" );
     }
 
@@ -954,5 +959,27 @@ namespace sw::editor
             _probe._animationTime     = time;
             _probe._bAnimationPlaying = _bAnimationPaused == false;
         }
+    }
+
+    uint64 UIPreviewModel::findTargetTexture() const
+    {
+        AssetManager* const    pAssets  = editor::findSubsystem<AssetManager>();
+        const Texture2D* const pTexture = pAssets != nullptr && _targetPath.empty() == false ? pAssets->getAssetCache<TextureCache>().find( _targetPath ) : nullptr;
+        return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
+    }
+
+    UISystem* UIPreviewModel::findUISystem()
+    {
+        return editor::findSubsystem<UISystem>();
+    }
+
+    UIThemeController& UIPreviewModel::getThemeController()
+    {
+        return editor::getSubsystem<UIThemeController>();
+    }
+
+    UIOffscreenScreens& UIPreviewModel::getOffscreenScreens()
+    {
+        return editor::getSubsystem<UIOffscreenScreens>();
     }
 } // namespace sw::editor

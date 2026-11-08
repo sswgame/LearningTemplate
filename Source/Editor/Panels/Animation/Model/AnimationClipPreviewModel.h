@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -19,6 +20,17 @@ namespace sw
 
 namespace sw::editor
 {
+    /** @brief 몸이 읽은 클립의 요약입니다(값만 — 창은 이 값만 그린다, MVVM 계약). */
+    struct AnimationClipPreviewInfo
+    {
+        float32 _durationSeconds{ 0.0f };
+        uint32  _trackCount{ 0 };
+        uint32  _curveCount{ 0 };
+        uint8   _bLoopingByDefault{ SW_FALSE };
+        uint8   _bHasRootMotion{ SW_FALSE };
+        uint8   _bHasNotifyTrack{ SW_FALSE };
+    };
+
     /**
      * @class AnimationClipPreviewModel
      * @brief 클립 미리보기 창의 상태와 명령입니다. 파일 머리말 참고.
@@ -45,6 +57,14 @@ namespace sw::editor
         [[nodiscard]] SkeletalAnimatorComponent* findAnimator( Scene* pScene ) const;
         /** @brief @p animator 가 읽은 클립 @p clipPath 입니다. 아직 읽지 않았거나 읽지 못했으면 nullptr 입니다. */
         [[nodiscard]] static const AnimationClip* findOpenClip( const SkeletalAnimatorComponent& animator, string_view clipPath );
+        /** @brief @p pScene 에 몸(애니메이터)이 있으면 true 입니다. */
+        [[nodiscard]] bool hasBody( Scene* pScene ) const { return findAnimator( pScene ) != nullptr; }
+        /** @brief 몸이 읽은 클립 @p clipPath 의 요약을 채웁니다. 몸이 없거나 클립을 아직(또는 끝내) 읽지 못했으면 false 입니다. */
+        [[nodiscard]] bool gatherClipInfo( Scene* pScene, string_view clipPath, AnimationClipPreviewInfo& outInfo ) const;
+        /** @brief 몸의 재생 시각(초, 반복 재생은 길이로 접는다)입니다. 몸이 없거나 재생을 걸지 못했으면 false 입니다. */
+        [[nodiscard]] bool readPlayTime( Scene* pScene, float32& outSeconds ) const;
+        /** @brief 몸의 재생 시각을 @p seconds 로 옮깁니다(0 ~ 길이로 자른다). 몸이 없으면 아무것도 하지 않습니다. 미리보기 씬이라 되돌리기에 남지 않는다. */
+        void seek( Scene* pScene, float32 seconds ) const;
 
         /** @brief 몸이 재생하는 클립의 길이(초)입니다. 재생을 걸지 못했으면 0 입니다. */
         float32       getClipSeconds() const { return _clipSeconds; }

@@ -9,6 +9,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include <imgui.h>
 
@@ -68,5 +69,10 @@ namespace sw::editor
     void IEditorPanel::requestAnimationFrame()
     {
         editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().requestAnimationFrame();
+    }
+
+    bool IEditorPanel::areSceneEditsAllowed()
+    {
+        return EditorPlaySession::areSceneEditsAllowed();
     }
 } // namespace sw::editor

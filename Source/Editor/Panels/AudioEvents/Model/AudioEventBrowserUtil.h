@@ -15,6 +15,8 @@ namespace sw
     struct AudioAttenuationDef;
     struct AudioEventDef;
     struct AudioEventLibrary;
+
+    class IAudioService;
 } // namespace sw
 
 namespace sw::editor
@@ -58,6 +60,12 @@ namespace sw::editor
     {
         /** @brief @p listName 에서 @p filter 를 (대소문자 무시) 품은 이름만 사전순으로 @p outListName 에 담습니다. 필터가 비면 전부입니다. */
         static void filterEventNames( const vector<hashed_string>& listName, string_view filter, vector<hashed_string>& outListName );
+        /** @brief 에디터의 오디오 서비스입니다. 없으면(에디터 밖) nullptr 입니다. View 가 서비스 창구(`EditorService.h`)를 보지 않게 여기서 찾는다. */
+        static IAudioService* findAudioService();
+        /** @brief 에디터의 오디오 서비스입니다(에디터는 오디오를 짓는 구성이라 늘 있다 — 전용 서버 구성만 오디오를 짓지 않는다). 없으면 멈춘다. */
+        static IAudioService& getAudioService();
+        /** @brief 데이터 파일 @p path 를 연결된 도구로 엽니다(`EditorAssetCommands::openPath`). 여는 도구가 없으면 false 입니다. */
+        [[nodiscard]] static bool openDataFile( string_view path );
         /** @brief 이벤트 설명자와 감쇠 프리셋에서 속성 테이블 행을 만듭니다(비우고 채웁니다). 감쇠 이름이 비면 반경 줄은 "2D" 입니다. */
         static void makeEventFieldRows( const AudioEventDef& eventDesc, const AudioAttenuationDef& attenuation, vector<AudioEventFieldRow>& outListRow );
         /**

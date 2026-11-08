@@ -16,16 +16,12 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorDisplayNameUtil.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Material/Model/MaterialPreviewInputs.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 
@@ -210,10 +206,10 @@ namespace sw::editor
 
             [[nodiscard]] static bool readPreviewRedMinusBlue( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return false;
-                const MaterialPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<MaterialPanel>();
+                const MaterialPanel* pPanel = pPanels->findPanel<MaterialPanel>();
                 float32              value{ 0.0f };
                 const bool           bPreviewValueUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->findPreviewRedMinusBlue( value ) == false;
                 if ( bPreviewValueUnavailable )
@@ -225,10 +221,10 @@ namespace sw::editor
             /** @brief 열린 Material 패널입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const MaterialPanel* findOpenPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return nullptr;
-                const MaterialPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<MaterialPanel>();
+                const MaterialPanel* pPanel = pPanels->findPanel<MaterialPanel>();
                 return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
             }
 

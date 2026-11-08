@@ -6,23 +6,19 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorViewSurface.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Panels/Scene/Model/SceneViewModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportClient.h"
 #include "Editor/Viewport/EditorViewportOverlays.h"
 
-#include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevCommandRegistry.h"
-#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>
@@ -39,21 +35,19 @@ namespace sw::editor
 
     void SceneViewPanel::drawContent()
     {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-
         const bool bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
         const bool bHovered = ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
         // 엔진 프레임의 실제 경과(시간 배율 · 정지와 무관) — 고정 프레임 시간(`-gv_fixedFrameDelta`)으로 도는 시나리오에서 카메라 비행이 결정적이다.
-        const float32 dt = editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
+        const float32 dt = SceneViewModel::getUnscaledDeltaTime();
         _viewportClient.update( dt, bFocused, bHovered );
 
         if ( bFocused )
-            EditorScreenshotCommands::recordFocusedView( EditorViewKind::Scene );
+            EditorViewSurface::recordFocusedView( EditorViewKind::Scene );
 
         if ( EditorChrome::beginToolbar( "##SceneViewToolbar" ) )
         {
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Camera" ), "##SceneViewScreenshot" ) ) )
-                EditorScreenshotCommands::captureSceneView();
+                EditorViewSurface::captureScreenshot( EditorViewKind::Scene );
             EditorSelfTestMarks::record( "sceneView.screenshot" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "SceneViewScreenshot" ) );
             EditorWidgets::drawToolbarSeparator();
@@ -72,18 +66,12 @@ namespace sw::editor
         const EditorViewRect rect      = EditorViewTargetUtil::fitViewImage( float2{ available.x, available.y }, EditorGameViewAspect::Free );
         const ImVec2         size{ rect._size._x, rect._size._y };
         if ( size.x > 1.0f && size.y > 1.0f )
-        {
-            const uint32            targetWidth  = static_cast<uint32>( size.x );
-            const uint32            targetHeight = static_cast<uint32>( size.y );
-            const EditorViewTarget& view         = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene );
-            if ( EditorViewTargetUtil::needsResize( view.getRequestedWidth(), view.getRequestedHeight(), targetWidth, targetHeight ) )
-                editorContext.getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Scene, targetWidth, targetHeight );
-        }
+            EditorViewSurface::fitTargetSize( EditorViewKind::Scene, static_cast<uint32>( size.x ), static_cast<uint32>( size.y ) );
         // 이 패널이 보이는 프레임만 씬 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다).
         const ImVec2 imagePos = ImGui::GetCursorScreenPos();
-        editorContext.getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Scene, float2{ imagePos.x - ImGui::GetMainViewport()->Pos.x, imagePos.y - ImGui::GetMainViewport()->Pos.y } );
+        EditorViewSurface::markDrawn( EditorViewKind::Scene, float2{ imagePos.x - ImGui::GetMainViewport()->Pos.x, imagePos.y - ImGui::GetMainViewport()->Pos.y } );
 
-        _viewportClient.draw( editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Scene )._pTextureID, float2{ size.x, size.y } );
+        _viewportClient.draw( EditorViewSurface::getTextureID( EditorViewKind::Scene ), float2{ size.x, size.y } );
 
         _viewportClient.drawOverlays( float2{ imagePos.x, imagePos.y }, float2{ size.x, size.y } );
     }
@@ -92,16 +80,14 @@ namespace sw::editor
     {
         if ( ImGui::BeginPopup( "##DebugDrawCategories" ) == false )
             return;
-        DebugDrawQueue& queue = editor::getSubsystem<DebugDrawQueue>();
-        _listDebugCategory.clear();
-        queue.collectCategories( _listDebugCategory );
+        SceneViewModel::gatherDebugCategories( _listDebugCategory );
         if ( _listDebugCategory.empty() )
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoDebugDrawYet" ) );
-        for ( const hashed_string& category : _listDebugCategory )
+        for ( const SceneViewDebugCategoryRow& row : _listDebugCategory )
         {
-            bool bEnabled = queue.isCategoryEnabled( category );
-            if ( ImGui::Checkbox( category.c_str(), &bEnabled ) )
-                queue.setCategoryEnabled( category, bEnabled );
+            bool bEnabled = row._bEnabled;
+            if ( ImGui::Checkbox( row._name.c_str(), &bEnabled ) )
+                SceneViewModel::setDebugCategoryEnabled( row._name, bEnabled );
         }
         ImGui::EndPopup();
     }
@@ -113,8 +99,8 @@ namespace sw::editor
             /** @brief 씬 뷰 패널입니다(없으면 nullptr). */
             static SceneViewPanel* findSceneViewPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>() : nullptr;
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                return pPanels != nullptr ? pPanels->findPanel<SceneViewPanel>() : nullptr;
             }
 
             /** @brief 씬 뷰 오버레이입니다(씬 뷰 패널이 없으면 nullptr). */

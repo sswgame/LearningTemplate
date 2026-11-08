@@ -55,6 +55,11 @@ namespace sw::editor
         /** @brief 레이어 목록에서 플래그 레이어보다 앞에 오는 항목 수입니다. Visual, Warp, Tile 이 해당합니다. */
         static constexpr int32 kFixedPaintLayerCount = 3;
 
+        /** @brief 작업 공간에서 초점이 간 에셋 경로입니다(콘텐츠 브라우저가 고른 것). 없으면 빈 글입니다. View 가 작업 공간 헤더를 보지 않게 여기서 읽는다. */
+        static string getFocusedAssetPath();
+        /** @brief @p path(리소스 경로 또는 디스크 경로)에 도구 문서 파일이 있으면 true 입니다(`EditorToolAssetCommands::hasToolDocument` — 읽기와 같은 해석). */
+        [[nodiscard]] static bool hasDocumentFile( string_view path );
+
         /** @brief 캔버스를 눌렀을 때 하는 일입니다. 유니티의 Tile Palette 도구에 해당합니다. */
         enum class PaintTool : uint8
         {

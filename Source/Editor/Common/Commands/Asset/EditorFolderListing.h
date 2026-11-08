@@ -9,24 +9,12 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Common/Commands/Asset/EditorFolderListingEntry.h"
+
 namespace sw
 {
     class AssetPaths;
 } // namespace sw
-
-namespace sw::editor
-{
-    /** @brief Content Browser 폴더의 항목 하나입니다. */
-    struct EditorFolderListingEntry
-    {
-        string _name;
-        string _relativePath;
-        string _absolutePath;
-        string _extension;
-        bool   _bIsDirectory{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool   _bReadOnly{ false };    ///< 파일이 읽기 전용이다. 버전 관리가 잠그기 전이거나 사람이 막은 경우다. 목록을 만들 때 워커가 확인한다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-    };
-} // namespace sw::editor
 
 namespace sw::editor
 {

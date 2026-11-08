@@ -4,16 +4,14 @@
  */
 #include "pch.h"
 
-#include "Core/Math/MathUtil.h"
-
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/Component/SceneComponent.h"
 
 #include <imgui.h>
 
@@ -27,27 +25,23 @@ namespace sw::editor
         public:
             void drawSection( Component* pComponent ) override
             {
-                SceneComponent* pSceneComp = static_cast<SceneComponent*>( pComponent );
-                if ( pSceneComp == nullptr )
+                if ( pComponent == nullptr )
                     return;
 
                 ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Transform" ) );
 
                 EditorWidgets::drawGizmoOperationControls( "inspector.gizmo" );
 
-                float3 pos = pSceneComp->getLocalPosition();
-                // 회전은 라디안으로 저장하고 도로 보이고 고친다(언리얼 FRotator · 유니티 localEulerAngles).
-                float3 rotDegree = pSceneComp->getLocalRotation() * MathUtil::kRadianToDegree;
-                float3 scl       = pSceneComp->getLocalScale();
+                TransformSectionValues values;
+                InspectorComponentEdit::gatherTransform( *pComponent, values );
+                if ( EditorWidgets::drawVec3Control( "Position", values._localPosition, 0.0f, 80.0f, 0.1f ) )
+                    InspectorComponentEdit::setLocalPosition( *pComponent, values._localPosition );
+                if ( EditorWidgets::drawVec3Control( "Rotation", values._localRotationDegrees, 0.0f, 80.0f, InspectorPropertyLayout::kAngleDragSpeed ) )
+                    InspectorComponentEdit::setLocalRotationDegrees( *pComponent, values._localRotationDegrees );
+                if ( EditorWidgets::drawVec3Control( "Scale", values._localScale, 1.0f, 80.0f, 0.01f ) )
+                    InspectorComponentEdit::setLocalScale( *pComponent, values._localScale );
 
-                if ( EditorWidgets::drawVec3Control( "Position", pos, 0.0f, 80.0f, 0.1f ) )
-                    pSceneComp->setLocalPosition( pos );
-                if ( EditorWidgets::drawVec3Control( "Rotation", rotDegree, 0.0f, 80.0f, InspectorPropertyLayout::kAngleDragSpeed ) )
-                    pSceneComp->setLocalRotation( rotDegree * MathUtil::kDegreeToRadian );
-                if ( EditorWidgets::drawVec3Control( "Scale", scl, 1.0f, 80.0f, 0.01f ) )
-                    pSceneComp->setLocalScale( scl );
-
-                const float3 world = pSceneComp->getWorldPosition();
+                const float3& world = values._worldPosition;
                 ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "World", TextArgumentList().addDecimal( "worldX", static_cast<float64>( world._x ), 2 ).addDecimal( "worldY", static_cast<float64>( world._y ), 2 ).addDecimal( "worldZ", static_cast<float64>( world._z ), 2 ) ).c_str() );
             }
 
@@ -60,5 +54,5 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_INSPECTOR( SceneComponent, SceneComponentInspector );
+    SW_EDITOR_INSPECTOR_FOR_TYPE( SceneComponent, &InspectorComponentEdit::getSceneComponentType, SceneComponentInspector );
 } // namespace sw::editor

@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/Commands/Asset/EditorPrefabOverrideItem.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 #include "Engine/Content/AssetID.h"
@@ -23,21 +24,6 @@ namespace sw
     class SequenceAsset;
     class SpriteClipAsset;
 } // namespace sw
-
-namespace sw::editor
-{
-    /** @brief 프리팹 인스턴스 컴포넌트 프로퍼티 오버라이드 항목입니다. */
-    struct PrefabOverrideItem
-    {
-        string _componentName; ///< 화면에 보이는 이름(타입의 표시 이름)이다
-        string _componentKey;  ///< 어느 컴포넌트인지 나타내는 키(`ComponentStableKey`). 같은 타입이 둘이어도 구분된다
-        string _propertyName;  ///< 프로퍼티 이름. 되돌리기가 찾는 키다
-        string _propertyLabel; ///< 화면에 보이는 이름이다. `DisplayName` 메타를 쓰고, 없으면 프로퍼티 이름을 다듬어 쓴다(`EditorDisplayNameUtil`). 인스펙터와 같다
-        string _defaultValue;
-        string _overriddenValue;
-        bool   _bModified{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-    };
-} // namespace sw::editor
 
 namespace sw::editor
 {

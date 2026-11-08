@@ -56,6 +56,8 @@ namespace sw::editor
         static const utf8* getBackendName( uint32 index );
         /** @brief 오류처럼 보이는 로그 줄이면 true 입니다(빨강). */
         static bool isErrorLine( string_view line );
+        /** @brief 결과 폴더 @p folder 를 파일 탐색기로 엽니다(`EditorAssetFileCommands::showInFileExplorer` — 못 띄우면 경고가 남는다). View 가 커맨드 헤더를 보지 않게 여기를 지난다. */
+        static void showInFileExplorer( const string& folder );
 
         const vector<string>& getGames() const { return _listGame; }
         uint32&               editGameIndex() { return _gameIndex; }

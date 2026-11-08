@@ -4,14 +4,11 @@
  */
 #include "pch.h"
 
-#include "Core/String/StringUtil.h"
-
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
-
-#include "Engine/Object/Component/TagComponent.h"
 
 #include <imgui.h>
 
@@ -25,22 +22,20 @@ namespace sw::editor
         public:
             void drawFooter( Component* pComponent ) override
             {
-                auto* pTagComp = static_cast<TagComponent*>( pComponent );
-                if ( pTagComp == nullptr )
+                if ( pComponent == nullptr )
                     return;
-
-                const vector<TagID>& listTag = pTagComp->getTags().getTags();
-                for ( const TagID& tag : listTag )
+                InspectorComponentEdit::collectTags( *pComponent, _listTag );
+                for ( const string& tag : _listTag )
                 {
-                    if ( StringUtil::isNullOrEmpty( tag._pString ) == false )
-                    {
-                        ImGui::SameLine();
-                        EditorWidgets::drawChip( tag._pString, SW_THEME_COLOR( "Signal", "Success" ) );
-                    }
+                    ImGui::SameLine();
+                    EditorWidgets::drawChip( tag.c_str(), SW_THEME_COLOR( "Signal", "Success" ) );
                 }
             }
+
+        private:
+            vector<string> _listTag{}; ///< 프레임마다 다시 채운다(버퍼를 다시 쓴다)
         };
     } // namespace
 
-    SW_EDITOR_INSPECTOR( TagComponent, TagComponentInspector );
+    SW_EDITOR_INSPECTOR_FOR_TYPE( TagComponent, &InspectorComponentEdit::getTagComponentType, TagComponentInspector );
 } // namespace sw::editor

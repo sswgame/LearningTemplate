@@ -10,22 +10,13 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorProjectedLineRenderer.h"
 
-#include "Engine/Animation/Component/SkeletalMeshComponent.h"
-#include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
 
@@ -50,16 +41,13 @@ namespace sw::editor
             /// @brief 물리의 고정 스텝(초)입니다 — 엔진 기본보다 촘촘해 관절 한계가 덜 뚫린다(정책 `_fixedStepOverride`).
             static constexpr float32 kFixedStepSeconds = 1.0f / 120.0f;
             /// @brief 겹침 선 색입니다.
-            /// @brief 관절 표식(십자)의 한 변 절반(미터)입니다.
-            static constexpr float32 kJointMarkRadius = 0.03f;
-
             /** @brief 열린 래그돌 미리보기 창입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const RagdollPreviewPanel* findOpenPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return nullptr;
-                const RagdollPreviewPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<RagdollPreviewPanel>();
+                const RagdollPreviewPanel* pPanel = pPanels->findPanel<RagdollPreviewPanel>();
                 return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
             }
 
@@ -122,6 +110,7 @@ namespace sw::editor
     RagdollPreviewPanel::RagdollPreviewPanel()
         : EditorPreviewPanel{ EditorAssetType{ EditorAssetTypeIDs::kData }, false }
         , _model{}
+        , _ragdollState{}
     {
     }
 
@@ -174,27 +163,27 @@ namespace sw::editor
 
         if ( isDocumentLoadFailed() == false ) // 에셋을 읽지 못했으면 몸을 놓지 않는다
             _model.syncBody( getPreviewScene(), getLoadedAssetPath() );
-        RagdollComponent* pRagdoll = _model.findRagdoll( getPreviewScene() );
-        if ( pRagdoll != nullptr )
+        _model.gatherRagdoll( getPreviewScene(), _ragdollState );
+        if ( _ragdollState._bHasRagdoll != SW_FALSE )
         {
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Ragdoll" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Ragdoll" ) ) )
-                pRagdoll->startRagdoll( float3{}, -1 );
+                _model.startRagdoll( getPreviewScene() );
             EditorSelfTestMarks::record( "ragdoll.drop" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "TurnEveryBodyDynamicTheBodyFalls" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Impulse" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Impulse" ) ) )
-                _model.applyImpulse( *pRagdoll );
+                _model.applyImpulse( getPreviewScene() );
             EditorSelfTestMarks::record( "ragdoll.impulse" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "GoRagdollAndPushThePickedBody" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Partial" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Partial" ) ) )
-                pRagdoll->startPartialRagdoll( 1.0f );
+                _model.startPartialRagdoll( getPreviewScene() );
             EditorSelfTestMarks::record( "ragdoll.partial" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "OnlyTheBodiesUnderTheRagdollS" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Release" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Release" ) ) )
-                pRagdoll->stopPartialRagdoll();
+                _model.stopPartialRagdoll( getPreviewScene() );
             EditorSelfTestMarks::record( "ragdoll.release" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "EndThePartialRagdollAndBlendBack" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Reset" ) ) );
@@ -205,7 +194,7 @@ namespace sw::editor
             EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "ImpulseNS" ) );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x * 0.5f );
             (void)ImGui::SliderFloat( "##ImpulseNs", &_model.editImpulse(), 0.0f, RagdollPreviewPanelInternal::kMaxImpulse );
-            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateBuiltBodiesSettled", TextArgumentList().addText( "state", getEnumName( pRagdoll->getState() ) ).addInteger( "bodyCount", static_cast<int64>( pRagdoll->getRagdoll()._listBody.size() ) ).addText( "settled", pRagdoll->isSettled() ? "yes" : "no" ) ).c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateBuiltBodiesSettled", TextArgumentList().addText( "state", _ragdollState._pStateName ).addInteger( "bodyCount", static_cast<int64>( _ragdollState._listBuiltBody.size() ) ).addText( "settled", _ragdollState._bSettled != SW_FALSE ? "yes" : "no" ) ).c_str() );
         }
         else
         {
@@ -217,16 +206,16 @@ namespace sw::editor
         (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Bodies" ), &_model.editDrawBodies() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "Joints" ) ) );
         (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Joints" ), &_model.editDrawJoints() );
-        drawBodyTable( pRagdoll );
+        drawBodyTable();
 
         const float2 viewSize = computeViewportFillSize( RagdollPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
         drawPreviewViewport( viewSize, false ); // 기즈모가 없다
-        drawOverlay( pRagdoll );
+        drawOverlay();
         EditorSelfTestMarks::record( "ragdoll.previewScene" );
         EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 
-    void RagdollPreviewPanel::drawBodyTable( const RagdollComponent* pRagdoll )
+    void RagdollPreviewPanel::drawBodyTable()
     {
         const vector<RagdollPreviewBodyRow>& listBodyRow = _model.getBodyRows();
         if ( listBodyRow.empty() )
@@ -266,9 +255,11 @@ namespace sw::editor
                 ImGui::TableSetColumnIndex( 4 );
                 ImGui::TextUnformatted( row._hitZone.empty() ? "-" : row._hitZone.c_str() );
                 ImGui::TableSetColumnIndex( 5 );
-                const bool bBuilt = pRagdoll != nullptr && rowIndex < pRagdoll->getRagdoll()._listBody.size();
-                if ( bBuilt )
-                    ImGui::Text( "%.2f %s", pRagdoll->getBodyWeight( static_cast<uint32>( rowIndex ) ), pRagdoll->isBodyDynamic( static_cast<uint32>( rowIndex ) ) ? "dynamic" : "kinematic" );
+                if ( rowIndex < _ragdollState._listBuiltBody.size() )
+                {
+                    const RagdollPreviewBuiltBody& body = _ragdollState._listBuiltBody[rowIndex];
+                    ImGui::Text( "%.2f %s", body._weight, body._bDynamic != SW_FALSE ? "dynamic" : "kinematic" );
+                }
                 else
                     ImGui::TextDisabled( "-" );
             }
@@ -277,69 +268,23 @@ namespace sw::editor
         EditorSelfTestMarks::record( "ragdoll.bodyTable" );
     }
 
-    void RagdollPreviewPanel::drawOverlay( const RagdollComponent* pRagdoll )
+    void RagdollPreviewPanel::drawOverlay()
     {
         const float2 imagePosition = getPreviewViewport().getImagePosition();
         const float2 imageSize     = getPreviewViewport().getImageSize();
-        Scene*       pScene        = getPreviewScene();
-        if ( pRagdoll == nullptr || imageSize._x <= 0.0f || imageSize._y <= 0.0f || pScene == nullptr || pScene->getObjectManager() == nullptr )
+        if ( _ragdollState._bHasRagdoll == SW_FALSE || imageSize._x <= 0.0f || imageSize._y <= 0.0f )
             return;
-        GameObject*            pOwner        = pRagdoll->getOwner();
-        SkeletalMeshComponent* pUnit         = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
-        IPhysicsScene3D*       pPhysicsScene = pScene->getObjectManager()->getSubsystem<ScenePhysics>().findScene3D();
-
         float4x4 viewProjection{};
         float3   eye{};
         getPreviewViewport().computeViewProjection( imageSize._x / imageSize._y, viewProjection, eye );
         ImDrawList* pDrawList = ImGui::GetWindowDrawList();
         pDrawList->PushClipRect( ImVec2( imagePosition._x, imagePosition._y ), ImVec2( imagePosition._x + imageSize._x, imagePosition._y + imageSize._y ), true );
         EditorProjectedLineRenderer renderer( pDrawList, viewProjection, imagePosition, imageSize );
-
-        if ( _model.editDrawSkeleton() && pUnit != nullptr )
-        {
-            const vector<float4x4>& listModel  = pUnit->getModelSpaceTransforms();
-            const vector<int32>&    listParent = pUnit->getSkeleton().getParentIndices();
-            const float4x4          world      = pUnit->getWorldMatrix();
-            const size_t            boneCount  = listModel.size() < listParent.size() ? listModel.size() : listParent.size();
-            for ( size_t boneIndex = 0; boneIndex < boneCount; ++boneIndex )
-            {
-                const int32 parentIndex = listParent[boneIndex];
-                if ( parentIndex < 0 || static_cast<size_t>( parentIndex ) >= boneCount )
-                    continue;
-                renderer.drawLine( float3::transform( listModel[static_cast<size_t>( parentIndex )].getTranslation(), world ), float3::transform( listModel[boneIndex].getTranslation(), world ),
-                                   SW_THEME_COLOR( "Viewport", "Bone" ).toFloat4() );
-            }
-        }
-
-        const PhysicsRagdoll& ragdoll = pRagdoll->getRagdoll();
-        if ( pPhysicsScene != nullptr )
-        {
-            for ( size_t bodyIndex = 0; bodyIndex < ragdoll._listBody.size(); ++bodyIndex )
-            {
-                if ( pPhysicsScene->isBodyValid( ragdoll._listBody[bodyIndex] ) == false )
-                    continue;
-                if ( _model.editDrawBodies() )
-                    (void)pPhysicsScene->drawBodyDebug( ragdoll._listBody[bodyIndex], renderer );
-
-                float3     position{};
-                quaternion rotation{};
-                if ( _model.editDrawJoints() == false || pPhysicsScene->getBodyTransform( ragdoll._listBody[bodyIndex], position, rotation ) == false )
-                    continue;
-                const bool   bSelected = _model.getSelectedBody() == static_cast<int32>( bodyIndex );
-                const float4 color     = bSelected ? SW_THEME_COLOR( "Viewport", "BoneSelected" ).toFloat4() : SW_THEME_COLOR( "Viewport", "Joint" ).toFloat4();
-                const float  radius    = RagdollPreviewPanelInternal::kJointMarkRadius;
-                renderer.drawLine( position - float3{ radius, 0.0f, 0.0f }, position + float3{ radius, 0.0f, 0.0f }, color );
-                renderer.drawLine( position - float3{ 0.0f, radius, 0.0f }, position + float3{ 0.0f, radius, 0.0f }, color );
-                renderer.drawLine( position - float3{ 0.0f, 0.0f, radius }, position + float3{ 0.0f, 0.0f, radius }, color );
-                const int32 parentBody = bodyIndex < ragdoll._listParentBody.size() ? ragdoll._listParentBody[bodyIndex] : -1; // 루트 바디는 -1
-                if ( parentBody < 0 || static_cast<size_t>( parentBody ) >= ragdoll._listBody.size() )
-                    continue;
-                float3     parentPosition{};
-                quaternion parentRotation{};
-                if ( pPhysicsScene->getBodyTransform( ragdoll._listBody[static_cast<size_t>( parentBody )], parentPosition, parentRotation ) )
-                    renderer.drawLine( parentPosition, position, color );
-            }
-        }
+        RagdollPreviewOverlayColors colors;
+        colors._bone          = SW_THEME_COLOR( "Viewport", "Bone" ).toFloat4();
+        colors._joint         = SW_THEME_COLOR( "Viewport", "Joint" ).toFloat4();
+        colors._selectedJoint = SW_THEME_COLOR( "Viewport", "BoneSelected" ).toFloat4();
+        _model.drawOverlay( getPreviewScene(), renderer, colors );
         pDrawList->PopClipRect();
     }
 
@@ -353,19 +298,21 @@ namespace sw::editor
 
     bool RagdollPreviewPanel::findBuiltBodyCount( uint32& outCount ) const
     {
-        const RagdollComponent* pRagdoll = _model.findRagdoll( getPreviewScene() );
-        if ( pRagdoll == nullptr || pRagdoll->getRagdoll().isEmpty() )
+        RagdollPreviewState state;
+        _model.gatherRagdoll( getPreviewScene(), state );
+        if ( state._listBuiltBody.empty() )
             return false;
-        outCount = static_cast<uint32>( pRagdoll->getRagdoll()._listBody.size() );
+        outCount = static_cast<uint32>( state._listBuiltBody.size() );
         return true;
     }
 
     bool RagdollPreviewPanel::findRagdollState( uint32& outState ) const
     {
-        const RagdollComponent* pRagdoll = _model.findRagdoll( getPreviewScene() );
-        if ( pRagdoll == nullptr )
+        RagdollPreviewState state;
+        _model.gatherRagdoll( getPreviewScene(), state );
+        if ( state._bHasRagdoll == SW_FALSE )
             return false;
-        outState = static_cast<uint32>( pRagdoll->getState() );
+        outState = state._state;
         return true;
     }
 

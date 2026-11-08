@@ -11,21 +11,16 @@
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorViewSurface.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Graphics/Texture/Texture2D.h"
-#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -82,10 +77,10 @@ namespace sw::editor
             /** @brief 열린 패널의 감시 값 값을 읽습니다. 닫혔거나 문서가 없으면 false 입니다. */
             [[nodiscard]] static const UIPreviewProbe* findProbe()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return nullptr;
-                const UIPreviewPanel* pPanel            = pContext->getSubsystem<EditorPanelManager>().findPanel<UIPreviewPanel>();
+                const UIPreviewPanel* pPanel            = pPanels->findPanel<UIPreviewPanel>();
                 const bool            bProbeUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->getProbe()._bValid == false;
                 if ( bProbeUnavailable )
                     return nullptr;
@@ -337,27 +332,18 @@ namespace sw::editor
     {
         if ( _pTextureID == nullptr )
             return;
-        EditorContext* pContext = editor::findSubsystem<EditorContext>();
-        if ( pContext != nullptr && pContext->getSubsystem<EditorRenderViews>().getRenderer() != nullptr )
-            pContext->getSubsystem<EditorRenderViews>().getRenderer()->unregisterTexture( _pTextureID );
+        EditorViewSurface::unregisterImage( _pTextureID );
         _pTextureID = nullptr;
         _texture    = 0;
     }
 
     void UIPreviewPanel::syncTexture()
     {
-        AssetManager*    pAssets    = editor::findSubsystem<AssetManager>();
-        const string&    targetPath = _model.getTargetPath();
-        const Texture2D* pTexture   = pAssets != nullptr && targetPath.empty() == false ? pAssets->getAssetCache<TextureCache>().find( targetPath ) : nullptr;
-        const uint64     texture    = pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
+        const uint64 texture = _model.findTargetTexture();
         if ( texture == _texture && _pTextureID != nullptr )
             return;
         releaseTexture();
-        EditorRenderViews& renderViews            = editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>();
-        const bool         bCannotRegisterTexture = texture == 0 || renderViews.getRenderer() == nullptr;
-        if ( bCannotRegisterTexture )
-            return; // 렌더 스레드가 아직 만들지 않았다(다음 프레임)
-        _pTextureID = renderViews.getRenderer()->registerTexture( texture );
+        _pTextureID = EditorViewSurface::registerImage( texture ); // 렌더 스레드가 아직 만들지 않았으면 nullptr(다음 프레임)
         _texture    = _pTextureID != nullptr ? texture : 0;
     }
 
@@ -1098,7 +1084,7 @@ namespace sw::editor
     void UIPreviewPanel::drawContent()
     {
         using Internal = UIPreviewPanelInternal;
-        UISystem* pUI  = editor::findSubsystem<UISystem>();
+        UISystem* pUI  = UIPreviewModel::findUISystem();
         if ( pUI == nullptr || pUI->isInitialized() == false )
         {
             _model.resetProbe();
@@ -1106,8 +1092,8 @@ namespace sw::editor
             return;
         }
         _model.syncFocusedDocument( isDocumentDirty() );
-        drawToolbar( editor::getSubsystem<UIThemeController>() );
-        UIOffscreenScreens& offscreen = editor::getSubsystem<UIOffscreenScreens>();
+        drawToolbar( UIPreviewModel::getThemeController() );
+        UIOffscreenScreens& offscreen = UIPreviewModel::getOffscreenScreens();
         _model.syncPreview( *pUI, offscreen ); // 렌더 텍스처를 바꾸면 그 전에 releaseTexture 를 부른다
         _model.syncLanguage( offscreen );
         syncTexture();

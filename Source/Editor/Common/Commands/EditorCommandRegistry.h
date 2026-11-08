@@ -188,6 +188,14 @@ namespace sw::editor
         static constexpr const utf8* kSubsystemName = "EditorCommandRegistry";
         const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
+        /**
+         * @brief 지금 에디터 컨텍스트의 커맨드 레지스트리입니다. 컨텍스트가 없으면(에디터 밖 테스트 · 종료 뒤) nullptr 입니다.
+         * @details 패널 View 가 명령을 부르거나 이름 · 단축키를 찾는 길이다 — View 는 작업 공간 헤더(`EditorContext`)를 보지 않는다(`docs/agents/EditorUI.md` MVVM 계약, `EditorPanelManager::findInEditorContext` 와 같은 모양).
+         */
+        [[nodiscard]] static EditorCommandRegistry* findInEditorContext();
+        /** @brief 지금 에디터 컨텍스트의 커맨드 레지스트리입니다. 에디터가 서 있을 때만 부른다 — 없으면 멈춘다. */
+        [[nodiscard]] static EditorCommandRegistry& getInEditorContext();
+
         /** @brief 등록된 커맨드를 모두 지웁니다. */
         void clear();
         /** @brief 커맨드를 등록하고 메뉴를 다시 만듭니다. id 가 비어 있으면 무시합니다. */

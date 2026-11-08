@@ -3,6 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Commands/Asset/EditorDataTableCommands.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Panels/DataTable/Model/DataTableModel.h"
 

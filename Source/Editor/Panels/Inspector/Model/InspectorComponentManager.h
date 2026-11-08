@@ -113,3 +113,11 @@ namespace sw::editor
 #define SW_EDITOR_INSPECTOR( TComponent, TInspector )                                                          \
     SW_EDITOR_REGISTER( ::sw::editor::EditorInspectorRegistration, Inspector_##TInspector, { #TComponent, 0 }, \
                         &TComponent::StaticType, &::sw::editor::createInspectorComponent<TInspector> )
+
+/**
+ * @brief `SW_EDITOR_INSPECTOR` 와 같되 형 정보 함수 @p pfnGetComponentType 를 받습니다(id 는 @p TComponent 이름).
+ * @details MVVM View(`docs/agents/EditorUI.md`)인 확장은 컴포넌트 헤더를 보지 않으므로 형 정보 함수를 edit model 이 준다(`InspectorComponentEdit`).
+ */
+#define SW_EDITOR_INSPECTOR_FOR_TYPE( TComponent, pfnGetComponentType, TInspector )                            \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorInspectorRegistration, Inspector_##TInspector, { #TComponent, 0 }, \
+                        pfnGetComponentType, &::sw::editor::createInspectorComponent<TInspector> )

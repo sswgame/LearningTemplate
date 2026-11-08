@@ -9,11 +9,6 @@
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Panels/Mesh/Model/MeshPreviewModel.h"
 
-namespace sw
-{
-    class MeshComponent;
-} // namespace sw
-
 namespace sw::editor
 {
     /**
@@ -52,11 +47,12 @@ namespace sw::editor
         bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override;
         /** @brief 미리보기 메시가 지금 문서를 그리게 하고 읽힌 뒤 한 번 카메라를 맞춥니다. */
         void syncPreviewSubject();
-        void drawLODTable( const MeshComponent& subject );
+        void drawLODTable();
 
     private:
-        MeshPreviewModel _model;
-        float3           _frameCenter; ///< 맞춤(F)이 담을 구의 중심 — 대상을 바꿀 때 그 경계 구로 정한다
-        float32          _frameRadius;
+        MeshPreviewModel    _model;
+        float3              _frameCenter; ///< 맞춤(F)이 담을 구의 중심 — 대상을 바꿀 때 그 경계 구로 정한다
+        float32             _frameRadius;
+        MeshPreviewLODState _lodState; ///< 프레임마다 다시 채운다(LOD 표가 그린다)
     };
 } // namespace sw::editor

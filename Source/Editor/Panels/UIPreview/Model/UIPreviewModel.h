@@ -13,7 +13,6 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Editor/Common/Widgets/EditableAssetPath.h"
-#include "Editor/Common/Workspace/Undo/UndoStep.h"
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
 #include "Engine/UI/Layout/UIResolutionPresetTable.h"
@@ -33,10 +32,13 @@ namespace sw
     class UIScreen;
     class UIOffscreenScreens;
     class UISystem;
+    class UIThemeController;
 } // namespace sw
 
 namespace sw::editor
 {
+    class UndoStepOwner;
+
     /**
      * @struct UIPreviewProbe
      * @brief 패널이 마지막으로 그린 프레임에서 본 값입니다(자동화 감시 값 `Editor.UIPreview*` 가 읽는다). 창이 닫혔거나 문서가 없으면 `_bValid` 가 false 입니다.
@@ -110,6 +112,14 @@ namespace sw::editor
         UIScreen* findPreviewScreen() const;
         /** @brief 지금 렌더 텍스처 경로입니다. */
         const string& getTargetPath() const { return _targetPath; }
+        /** @brief 미리보기 렌더 텍스처(`getTargetPath`)의 RHI 핸들입니다. 아직 없거나 GPU 에 올라가지 않았으면 0 입니다. */
+        uint64 findTargetTexture() const;
+        /** @brief 에디터 범위의 UI 시스템입니다. 없으면 nullptr 입니다. View 가 서비스 창구(`EditorService.h`)를 보지 않게 여기서 찾는다. */
+        static UISystem* findUISystem();
+        /** @brief UI 테마 고르기(툴바의 테마 콤보)입니다. 없으면 멈춘다. */
+        static UIThemeController& getThemeController();
+        /** @brief 화면 밖 UI 화면(미리보기가 그리는 자리)입니다. 없으면 멈춘다. */
+        static UIOffscreenScreens& getOffscreenScreens();
         /** @brief 마지막으로 열지 못한 까닭입니다. 비면 오류가 없다. */
         const string& getError() const { return _error; }
 
@@ -256,7 +266,7 @@ namespace sw::editor
         bool applyMove( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex );
 
     private:
-        UndoStepOwner                   _undoOwner;         ///< 이 미리보기가 남긴 코드 되돌리기 단계의 주인(모델이 사라지면 그 명령이 빠진다)
+        unique_ptr<UndoStepOwner>       _pUndoOwner;        ///< 이 미리보기가 남긴 코드 되돌리기 단계의 주인(모델이 사라지면 그 명령이 빠진다). 포인터라 헤더가 되돌리기 배관(`UndoStep.h`)을 끌지 않는다(MVVM View include 계약)
         Delegate<void( bool )>          _onDirtyChanged;    ///< 문서 dirty 를 패널에 알린다
         Delegate<void()>                _onTargetReleasing; ///< 렌더 텍스처를 놓기 직전에 뷰에 알린다
         vector<UIPreviewWidgetRow>      _listRow;           ///< 위젯 목록 행. 트리나 그 구조 세대가 바뀔 때만 다시 짓는다

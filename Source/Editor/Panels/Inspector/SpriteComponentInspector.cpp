@@ -4,15 +4,11 @@
  */
 #include "pch.h"
 
-#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
-#include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Localization/LocText.h"
-#include "Engine/Visual/2D/SpriteComponent.h"
 
 #include <imgui.h>
 
@@ -27,10 +23,10 @@ namespace sw::editor
             void drawFooter( Component* /*pComponent*/ ) override
             {
                 if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "OpenSpriteClipTool" ) ) )
-                    editor::getSubsystem<EditorWorkspace>().requestOpenDocumentPanel( EditorAssetType{ SpriteClipAsset::kAssetType } );
+                    InspectorComponentEdit::openSpriteClipTool();
             }
         };
     } // namespace
 
-    SW_EDITOR_INSPECTOR( SpriteComponent, SpriteComponentInspector );
+    SW_EDITOR_INSPECTOR_FOR_TYPE( SpriteComponent, &InspectorComponentEdit::getSpriteComponentType, SpriteComponentInspector );
 } // namespace sw::editor

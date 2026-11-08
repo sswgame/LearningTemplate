@@ -12,11 +12,6 @@
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Panels/Physics/Model/RagdollPreviewModel.h"
 
-namespace sw
-{
-    class RagdollComponent;
-} // namespace sw
-
 namespace sw::editor
 {
     /**
@@ -59,11 +54,12 @@ namespace sw::editor
         void populatePreviewScene( Scene& scene ) override;
         /** @brief 맞춤(F)과 창을 처음 열 때의 카메라가 담을 구입니다. */
         bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override;
-        void drawBodyTable( const RagdollComponent* pRagdoll );
+        void drawBodyTable();
         /** @brief 뷰포트 이미지 위에 스켈레톤 · 바디 셰이프 · 관절을 선으로 겹쳐 그립니다. */
-        void drawOverlay( const RagdollComponent* pRagdoll );
+        void drawOverlay();
 
     private:
         RagdollPreviewModel _model;
+        RagdollPreviewState _ragdollState; ///< 프레임마다 다시 채운다(값만)
     };
 } // namespace sw::editor

@@ -99,4 +99,32 @@ namespace sw::editor
             return;
         pManager->getSubsystem<MeshLODSystem>().setForcedLOD( _lodChoice );
     }
+
+    void MeshPreviewModel::gatherLOD( Scene* pScene, MeshPreviewLODState& outState )
+    {
+        outState._listLOD.clear();
+        outState._lodCount                  = 0;
+        outState._drawnLOD                  = 0;
+        outState._vertexCount               = 0;
+        outState._triangleCount             = 0;
+        outState._bMeshRead                 = SW_FALSE;
+        const MeshComponent* const pSubject = findSubject( pScene );
+        outState._bHasSubject               = pSubject != nullptr ? SW_TRUE : SW_FALSE;
+        outState._bLoading                  = pSubject != nullptr && pSubject->isMeshLoading() ? SW_TRUE : SW_FALSE;
+        const Mesh* const pMesh             = pSubject != nullptr ? pSubject->getRawMesh() : nullptr;
+        if ( pMesh == nullptr )
+            return;
+        outState._bMeshRead     = SW_TRUE;
+        outState._lodCount      = pMesh->getLODCount();
+        outState._drawnLOD      = static_cast<uint32>( pSubject->getLODIndex() );
+        outState._vertexCount   = pMesh->getVertexCount();
+        outState._triangleCount = static_cast<uint32>( pMesh->getIndexCount() / 3u );
+        for ( const MeshLOD& level : pMesh->getLODs() )
+        {
+            MeshPreviewLODRow& row = outState._listLOD.emplace_back();
+            row._vertexCount       = static_cast<uint32>( level._vertexCount );
+            row._triangleCount     = static_cast<uint32>( level._indexCount / 3u );
+            row._screenSize        = static_cast<float32>( level._screenSize );
+        }
+    }
 } // namespace sw::editor

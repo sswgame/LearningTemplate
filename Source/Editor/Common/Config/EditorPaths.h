@@ -6,6 +6,11 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
+namespace sw
+{
+    class AssetPaths;
+} // namespace sw
+
 namespace sw::editor
 {
     class EditorPaths
@@ -47,6 +52,13 @@ namespace sw::editor
          * @details 해석은 `AssetPaths::toDiskPath` 하나다 - 예전에는 `AssetPaths::findLooseDomainFolder` 가 `Content/<도메인>` 을 따로 이어 붙였다(붙인 디스크 도메인을 몰랐다).
          */
         static string findContentFolder( string_view folderID );
+        /**
+         * @brief 에디터 범위의 리소스 경로 해석(`AssetPaths` — id ↔ 디스크, 붙인 도메인)입니다. 없으면 멈춘다.
+         * @details 패널 View 가 서비스 창구(`EditorService.h`)를 보지 않고 경로를 풀게 여기를 지난다(`docs/agents/EditorUI.md` MVVM 계약). 경로 해석은 읽기만 한다.
+         */
+        static const AssetPaths& getAssetPaths();
+        /** @brief `getAssetPaths` 와 같되 없으면(에디터 밖 · 종료 뒤) nullptr 입니다. */
+        static const AssetPaths* findAssetPaths();
         /** @brief 씬 파일 대화상자가 처음 여는 폴더(활성 게임 팩의 `maps`)입니다. 없으면 빈 문자열이고 대화상자가 정한다. */
         static string getSceneDialogFolderPath();
 

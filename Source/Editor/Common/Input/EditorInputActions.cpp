@@ -28,6 +28,17 @@
 
 namespace sw::editor
 {
+    EditorInputActions* EditorInputActions::findInEditorContext()
+    {
+        EditorContext* const pContext = editor::findSubsystem<EditorContext>();
+        return pContext != nullptr ? &pContext->getSubsystem<EditorInputActions>() : nullptr;
+    }
+
+    EditorInputActions& EditorInputActions::getInEditorContext()
+    {
+        return editor::getSubsystem<EditorContext>().getSubsystem<EditorInputActions>();
+    }
+
     namespace
     {
         /** @brief 에디터 UI 가 넘긴 키의 뗌 이벤트입니다(`_bEditorUI` — 배타 가상 입력이 OS 이벤트를 버려도 남는다). */

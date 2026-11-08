@@ -1,17 +1,15 @@
 /**
  * @file CameraComponentInspector.cpp
- * @brief CameraComponent 의 투영 컨트롤(트랜스폼은 SceneComponent 단계가 그린다)
+ * @brief CameraComponent 의 투영 컨트롤(트랜스폼은 SceneComponent 단계가 그린다). 값은 `InspectorComponentEdit` 가 모으고 넣는다(MVVM 계약).
  */
 #include "pch.h"
 
-#include "Core/Math/MathUtil.h"
-
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
+#include "Editor/Panels/Inspector/Model/InspectorComponentEdit.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
 #include "Engine/Localization/LocText.h"
-#include "Engine/Object/Component/CameraComponent.h"
 
 #include <imgui.h>
 
@@ -32,42 +30,44 @@ namespace sw::editor
 
             void drawSection( Component* pComponent ) override
             {
-                auto* pCameraComp = static_cast<CameraComponent*>( pComponent );
+                if ( pComponent == nullptr )
+                    return;
+                CameraSectionValues values;
+                InspectorComponentEdit::gatherCamera( *pComponent, values );
+                bool bChanged = false;
+
                 ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Camera" ) );
-                float32 fovDeg = MathUtil::toDegree( pCameraComp->getFieldOfViewY() );
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FOVDeg" ) );
-                if ( ImGui::SliderFloat( "##FOVDeg", &fovDeg, 10.0f, 140.0f, "%.1f" ) )
-                    pCameraComp->setFieldOfViewY( MathUtil::toRadian( fovDeg ) );
+                bChanged |= ImGui::SliderFloat( "##FOVDeg", &values._fovYDegrees, 10.0f, 140.0f, "%.1f" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraFOV" ) );
 
-                float32 nearZ = pCameraComp->getNearPlane();
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NearPlane" ) );
-                if ( ImGui::DragFloat( "##NearPlane", &nearZ, 0.01f, 0.001f, 10.0f ) )
-                    pCameraComp->setNearPlane( nearZ );
+                bChanged |= ImGui::DragFloat( "##NearPlane", &values._nearPlane, 0.01f, 0.001f, 10.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraNear" ) );
 
-                float32 farZ = pCameraComp->getFarPlane();
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "FarPlane" ) );
-                if ( ImGui::DragFloat( "##FarPlane", &farZ, 1.0f, 1.0f, 10000.0f ) )
-                    pCameraComp->setFarPlane( farZ );
+                bChanged |= ImGui::DragFloat( "##FarPlane", &values._farPlane, 1.0f, 1.0f, 10000.0f );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraFar" ) );
 
-                bool bOrtho = pCameraComp->isOrthographic();
+                bool bOrtho = values._bOrthographic != SW_FALSE;
                 if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Orthographic" ), &bOrtho ) )
-                    pCameraComp->setOrthographic( bOrtho );
+                {
+                    values._bOrthographic = bOrtho ? SW_TRUE : SW_FALSE;
+                    bChanged              = true;
+                }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraOrthographic" ) );
 
                 if ( bOrtho )
                 {
-                    float32 orthoH = pCameraComp->getOrthoHeight();
                     EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "OrthoHeight" ) );
-                    if ( ImGui::DragFloat( "##OrthoHeight", &orthoH, 0.1f, 0.1f, 100.0f ) )
-                        pCameraComp->setOrthoHeight( orthoH );
+                    bChanged |= ImGui::DragFloat( "##OrthoHeight", &values._orthoHeight, 0.1f, 0.1f, 100.0f );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CameraOrthoHeight" ) );
                 }
+                if ( bChanged )
+                    InspectorComponentEdit::applyCamera( *pComponent, values );
             }
         };
     } // namespace
 
-    SW_EDITOR_INSPECTOR( CameraComponent, CameraComponentInspector );
+    SW_EDITOR_INSPECTOR_FOR_TYPE( CameraComponent, &InspectorComponentEdit::getCameraComponentType, CameraComponentInspector );
 } // namespace sw::editor

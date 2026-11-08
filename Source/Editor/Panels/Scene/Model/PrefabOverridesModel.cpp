@@ -4,6 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
