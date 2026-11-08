@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -58,8 +59,8 @@ namespace sw
         vector<int32>              _listParentBody; ///< 에셋 바디 → 부모 쪽 에셋 바디(루트는 -1)
         vector<int32>              _listBodyOfBone; ///< 스켈레톤 뼈 → 에셋 바디(없으면 -1)
 
-        /** @brief 바디 핸들의 에셋 바디 번호입니다(히트 존을 고를 때). 이 래그돌의 바디가 아니면 -1 입니다. */
-        int32 findBodyIndex( PhysicsBodyHandle body ) const;
+        /** @brief 바디 핸들의 에셋 바디 번호입니다(히트 존을 고를 때). 이 래그돌의 바디가 아니면 없음입니다. */
+        optional<uint32> findBodyIndex( PhysicsBodyHandle body ) const;
         /** @brief 바디가 하나도 없으면 true 입니다. */
         bool isEmpty() const { return _listBody.empty(); }
 

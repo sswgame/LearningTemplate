@@ -80,7 +80,7 @@ namespace sw
         }
         for ( const PhysicsAssetPairDef& pair : _listDisabledPair )
         {
-            if ( findBodyIndex( pair._boneA ) < 0 || findBodyIndex( pair._boneB ) < 0 )
+            if ( findBodyIndex( pair._boneA ).has_value() == false || findBodyIndex( pair._boneB ).has_value() == false )
             {
                 SW_LOG_ERROR_ID( "PhysicsAsset.DisabledPairNamesBone", "%#: disabled pair '%#' - '%#' names a bone without a body", sourceName, pair._boneA.c_str(), pair._boneB.c_str() );
                 bValid = false;
@@ -112,13 +112,13 @@ namespace sw
         return bValid;
     }
 
-    int32 PhysicsAsset::findBodyIndex( const hashed_string& bone ) const
+    optional<uint32> PhysicsAsset::findBodyIndex( const hashed_string& bone ) const
     {
         for ( size_t bodyIndex = 0; bodyIndex < _listBody.size(); ++bodyIndex )
         {
             if ( _listBody[bodyIndex]._bone == bone )
-                return static_cast<int32>( bodyIndex );
+                return static_cast<uint32>( bodyIndex );
         }
-        return -1;
+        return nullopt;
     }
 } // namespace sw

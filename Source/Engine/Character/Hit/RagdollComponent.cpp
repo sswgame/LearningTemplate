@@ -3,6 +3,7 @@
 #include "Engine/Character/Hit/RagdollComponent.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -312,13 +313,18 @@ namespace sw
         }
     }
 
-    const PhysicsHitZoneDef* RagdollComponent::findHitZone( PhysicsBodyHandle body, int32& outBodyIndex ) const
+    optional<uint32> RagdollComponent::findHitBodyIndex( const HitInfo& hit ) const
     {
-        outBodyIndex          = _ragdoll.findBodyIndex( body );
-        const bool bNoHitZone = outBodyIndex < 0 || _asset == nullptr || static_cast<size_t>( outBodyIndex ) >= _asset->_listBody.size();
-        if ( bNoHitZone )
+        if ( hit._bodyIndex >= 0 )
+            return static_cast<uint32>( hit._bodyIndex );
+        return _ragdoll.findBodyIndex( hit._body );
+    }
+
+    const PhysicsHitZoneDef* RagdollComponent::findHitZone( uint32 bodyIndex ) const
+    {
+        if ( _asset == nullptr || bodyIndex >= _asset->_listBody.size() )
             return nullptr;
-        const PhysicsHitZoneDef& zone = _asset->_listBody[static_cast<size_t>( outBodyIndex )]._hitZone;
+        const PhysicsHitZoneDef& zone = _asset->_listBody[bodyIndex]._hitZone;
         return zone._name.empty() ? nullptr : &zone;
     }
 
@@ -395,10 +401,10 @@ namespace sw
     void RagdollComponent::onHitReceived( const HitInfo& hit )
     {
         PhysicsComponent::onHitReceived( hit );
-        int32 bodyIndex = hit._bodyIndex;
-        if ( bodyIndex < 0 )
-            (void)findHitZone( hit._body, bodyIndex ); // 못 찾으면 bodyIndex 가 -1 로 남는다
-        const float3 impulse = hit._direction * hit._impulse;
+        // 맞은 바디를 모르면 아래 두 함수의 "바디 없음"(-1, 부분 반응 · 충격 없이) 규약으로 넘긴다 — 그 int32 규약은 `HitInfo::_bodyIndex` 와 함께 옮길 몫이다.
+        const optional<uint32> hitBody   = findHitBodyIndex( hit );
+        const int32            bodyIndex = hitBody.has_value() ? static_cast<int32>( *hitBody ) : constant::invalid_index::kInt32;
+        const float3           impulse   = hit._direction * hit._impulse;
         if ( hit._bFatal && _bRagdollOnFatalHit )
         {
             startRagdoll( impulse, bodyIndex );

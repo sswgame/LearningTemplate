@@ -418,13 +418,12 @@ namespace sw
         const GameObject*       pOwner    = getOwner();
         const RagdollComponent* pRagdoll  = pOwner != nullptr ? pOwner->getComponent<RagdollComponent>() : nullptr;
         const PhysicsAsset*     pAsset    = pRagdoll != nullptr ? pRagdoll->getPhysicsAsset() : nullptr;
-        int32                   bodyIndex = hit._bodyIndex;
-        if ( bodyIndex < 0 && pRagdoll != nullptr )
-            (void)pRagdoll->findHitZone( hit._body, bodyIndex ); // 못 찾으면 bodyIndex 가 -1 로 남는다
-        const bool bInvalidBodyRegion = pAsset == nullptr || bodyIndex < 0 || static_cast<size_t>( bodyIndex ) >= pAsset->_listBody.size();
+        const optional<uint32>  bodyIndex = pRagdoll != nullptr ? pRagdoll->findHitBodyIndex( hit ) : optional<uint32>{};
+        // 래그돌 바디가 아닌 곳(다른 충돌체)에 맞은 치명타는 자를 영역이 없다 — 묻는 자리라 없음이 답이다.
+        const bool bInvalidBodyRegion = pAsset == nullptr || bodyIndex.has_value() == false || *bodyIndex >= pAsset->_listBody.size();
         if ( bInvalidBodyRegion )
             return;
-        const hashed_string region = findRegionOfBone( pAsset->_listBody[static_cast<size_t>( bodyIndex )]._bone );
+        const hashed_string region = findRegionOfBone( pAsset->_listBody[*bodyIndex]._bone );
         if ( region.empty() || VectorUtil::contains( _listSeverableRegion, region ) == false )
             return;
         (void)severRegion( region, hit._direction * hit._impulse );

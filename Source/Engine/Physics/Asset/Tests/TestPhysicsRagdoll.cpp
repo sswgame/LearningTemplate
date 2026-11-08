@@ -182,10 +182,10 @@ SW_TEST_CASE( PhysicsRagdollTest, FindBodyIndexAndIsEmpty )
 {
     PhysicsRagdollTestFixture rig( PhysicsBodyType::Dynamic );
     SW_EXPECT_FALSE( rig._ragdoll.isEmpty() );
-    SW_EXPECT_EQUAL( 0, rig._ragdoll.findBodyIndex( rig._ragdoll._listBody[0] ) );
-    SW_EXPECT_EQUAL( 1, rig._ragdoll.findBodyIndex( rig._ragdoll._listBody[1] ) );
-    SW_EXPECT_EQUAL( -1, rig._ragdoll.findBodyIndex( PhysicsBodyHandle{} ) );
-    SW_EXPECT_EQUAL( -1, rig._ragdoll.findBodyIndex( rig._scene.addBody( float3{}, PhysicsBodyType::Dynamic ) ) );
+    SW_EXPECT_TRUE( rig._ragdoll.findBodyIndex( rig._ragdoll._listBody[0] ) == 0u );
+    SW_EXPECT_TRUE( rig._ragdoll.findBodyIndex( rig._ragdoll._listBody[1] ) == 1u );
+    SW_EXPECT_FALSE( rig._ragdoll.findBodyIndex( PhysicsBodyHandle{} ).has_value() );
+    SW_EXPECT_FALSE( rig._ragdoll.findBodyIndex( rig._scene.addBody( float3{}, PhysicsBodyType::Dynamic ) ).has_value() );
     SW_EXPECT_TRUE( PhysicsRagdoll{}.isEmpty() );
 }
 
