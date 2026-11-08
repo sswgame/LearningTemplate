@@ -103,14 +103,14 @@ namespace sw
                 _listTargetOffset[targetIndex] = offset;
                 continue;
             }
-            const int32 boneIndex = skeleton.findBoneIndex( boneName );
-            if ( boneIndex < 0 )
+            const optional<uint32> boneIndex = skeleton.findBoneIndex( boneName );
+            if ( boneIndex.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "RigInstance.RigTargetNamesUnknown2", "Rig '%#': target '%#' names unknown bone '%#'", label, target._name.c_str(), boneName.c_str() );
                 bOk = false;
                 continue;
             }
-            _listTargetBone[targetIndex]   = boneIndex;
+            _listTargetBone[targetIndex]   = static_cast<int32>( *boneIndex );
             _listTargetOffset[targetIndex] = offset;
         }
 

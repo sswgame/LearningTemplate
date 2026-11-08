@@ -3,7 +3,7 @@
 #include "Engine/Animation/Skeletal/LocomotionSpeedUtil.h"
 
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Constants.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
@@ -16,10 +16,16 @@ namespace sw
     float32 LocomotionSpeedUtil::computeFootSpeed( const AnimationClip& clip, const Skeleton& skeleton, const hashed_string& leftFoot, const hashed_string& rightFoot,
                                                    uint32 sampleCount )
     {
-        const int32   leftBone             = skeleton.findBoneIndex( leftFoot );
-        const int32   rightBone            = skeleton.findBoneIndex( rightFoot );
+        const optional<uint32> leftBone  = skeleton.findBoneIndex( leftFoot );
+        const optional<uint32> rightBone = skeleton.findBoneIndex( rightFoot );
+        if ( leftBone.has_value() == false || rightBone.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "LocomotionSpeed.FootBoneNotInSkeleton", "Clip '%#': foot bone '%#' or '%#' is not in the skeleton - the foot speed is not measured", clip.getName().c_str(), leftFoot.c_str(),
+                             rightFoot.c_str() );
+            return 0.0f;
+        }
         const float32 duration             = clip.getDuration();
-        const bool    bInvalidFootSampling = leftBone < 0 || rightBone < 0 || sampleCount < 2 || duration <= 0.0f;
+        const bool    bInvalidFootSampling = sampleCount < 2 || duration <= 0.0f;
         if ( bInvalidFootSampling )
             return 0.0f;
 
@@ -28,23 +34,23 @@ namespace sw
         Pose             pose;
         Pose             scratchTrackPose;
         vector<float4x4> listModel;
-        const float32    step              = duration / static_cast<float32>( sampleCount - 1 );
-        float32          plantedDistance   = 0.0f;
-        float32          plantedSeconds    = 0.0f;
-        float3           previousPosition  = float3{};
-        int32            previousPlantBone = constant::invalid_index::kInt32;
+        const float32    step             = duration / static_cast<float32>( sampleCount - 1 );
+        float32          plantedDistance  = 0.0f;
+        float32          plantedSeconds   = 0.0f;
+        float3           previousPosition = float3{};
+        optional<uint32> previousPlantBone{};
         for ( uint32 sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
         {
             pose.setToReference( skeleton );
             if ( clip.samplePose( skeleton, step * static_cast<float32>( sampleIndex ), listTrackToBone, pose, scratchTrackPose, true ) == false )
                 return 0.0f;
             pose.computeModelSpace( skeleton.getParentIndices(), listModel );
-            const float3 leftPosition  = listModel[static_cast<size_t>( leftBone )].getTranslation();
-            const float3 rightPosition = listModel[static_cast<size_t>( rightBone )].getTranslation();
+            const float3 leftPosition  = listModel[*leftBone].getTranslation();
+            const float3 rightPosition = listModel[*rightBone].getTranslation();
             const bool   bLeftPlanted  = leftPosition._y <= rightPosition._y;
-            const int32  plantBone     = bLeftPlanted ? leftBone : rightBone;
+            const uint32 plantBone     = bLeftPlanted ? *leftBone : *rightBone;
             const float3 plantPosition = bLeftPlanted ? leftPosition : rightPosition;
-            if ( plantBone == previousPlantBone )
+            if ( previousPlantBone == plantBone )
             {
                 const float32 deltaX = plantPosition._x - previousPosition._x;
                 const float32 deltaZ = plantPosition._z - previousPosition._z;

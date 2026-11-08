@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -249,8 +250,8 @@ namespace sw
         uint64 getHierarchyHash( uint32 boneCount ) const;
         /** @brief 이 스켈레톤으로 @p skinBinding 의 메시를 그릴 수 있으면 true 입니다 — 메시의 본이 모두 있고 앞쪽 본 배치가 같습니다. */
         [[nodiscard]] bool canDrawSkinBinding( const MeshSkinBinding& skinBinding ) const;
-        /** @brief 이름으로 본 인덱스를 찾습니다. 없으면 -1 입니다. */
-        int32 findBoneIndex( const hashed_string& name ) const;
+        /** @brief 이름으로 본 인덱스를 찾습니다. 없으면 없음입니다. */
+        optional<uint32> findBoneIndex( const hashed_string& name ) const;
         /** @brief 본 수입니다. */
         uint32 getBoneCount() const { return static_cast<uint32>( _listBone.size() ); }
         /** @brief 본 하나입니다(범위는 부르는 쪽이 지킵니다). */

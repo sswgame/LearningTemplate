@@ -178,7 +178,7 @@ namespace sw
         vector<vector<optional<uint32>>>              _listExpressionTarget;    ///< 표정마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
         vector<vector<optional<uint32>>>              _listVisemeTarget;        ///< 비즘마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
         vector<optional<uint32>>                      _listBlinkTarget;         ///< 깜빡임 타깃 → 메시 타깃 번호(메시에 없으면 없음)
-        vector<int32>                                 _listEyeBone;             ///< 눈 본 번호
+        vector<uint32>                                _listEyeBone;             ///< 눈 본 번호(스켈레톤에 있는 것만)
         vector<optional<uint32>>                      _listTrackToRigViseme;    ///< 립싱크 비즘 순서 → 리그 비즘 번호(리그에 없으면 없음)
         vector<float32>                               _listScratchVisemeWeight;
         TComponentHandle<SkeletalAnimatorComponent>   _animator; ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)

@@ -34,7 +34,7 @@ namespace sw::editor
             /** @brief 스켈레톤에 없는 본 이름을 한 번씩 모읍니다. 빈 이름(월드 기준)은 건너뜁니다. */
             static void collectMissingBone( const Skeleton& skeleton, const string& bone, vector<string>& inoutListMissing )
             {
-                if ( bone.empty() || skeleton.findBoneIndex( hashed_string( bone ) ) >= 0 )
+                if ( bone.empty() || skeleton.findBoneIndex( hashed_string( bone ) ).has_value() )
                     return;
                 if ( VectorUtil::contains( inoutListMissing, bone ) == false )
                     inoutListMissing.push_back( bone );

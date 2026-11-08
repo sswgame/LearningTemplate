@@ -348,15 +348,16 @@ namespace sw::editor
                     return false;
 
                 const Skeleton& skeleton       = inoutResult._skeleton;
-                int32           rootMotionBone = -1;
+                int32           rootMotionBone = constant::invalid_index::kInt32; // 클립의 루트 모션 트랙 칸 규약(-1 = 루트 모션 없음)
                 if ( rule._rootMotionBone.empty() == false )
                 {
-                    rootMotionBone = skeleton.findBoneIndex( hashed_string( rule._rootMotionBone ) );
-                    if ( rootMotionBone < 0 )
+                    const optional<uint32> foundBone = skeleton.findBoneIndex( hashed_string( rule._rootMotionBone ) );
+                    if ( foundBone.has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.GlTFRootMotionBone", "glTF '%#': root_motion_bone '%#' is not a joint", sourcePath, rule._rootMotionBone.c_str() );
                         return false;
                     }
+                    rootMotionBone = static_cast<int32>( *foundBone );
                 }
                 // 관절의 레스트 TRS(glTF 공간, 루트에 합치기 전)다. 채널이 없는 성분은 이 값을 쓴다.
                 vector<BoneTransform> listRest( skeleton.getBoneCount() );

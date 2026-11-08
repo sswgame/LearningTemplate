@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -331,7 +332,7 @@ namespace sw
         vector<TComponentHandle<SkeletalMeshComponent>> _listDependency;
         vector<IAnimationPhaseTask*>                    _listTask;
         ItemSubscriptionList<IAnimationPhaseTask>       _phaseTaskSubscriptions; ///< `_listTask` 의 등록 구독을 내준다(풀리면 `detachAnimationPhaseTask`). 리플렉션 클래스라 기반을 더하지 않고 멤버로 둔다
-        vector<int32>                                   _listLeaderBone;         ///< 내 본에서 리더 본으로 가는 인덱스다(-1 이면 없음)
+        vector<optional<uint32>>                        _listLeaderBone;         ///< 내 본에서 리더 본으로 가는 인덱스다(리더에 없으면 없음 — 지을 때 알린다)
         TComponentHandle<SkeletalMeshComponent>         _leader;
         const Skeleton*                                 _pLeaderSkeletonForMap; ///< `_listLeaderBone` 을 만든 리더 스켈레톤이다(동일성만 확인한다)
         uint64                                          _skinBindingContentID;  ///< `refreshSkinBinding` 이 마지막으로 본 스킨 메시의 내용 번호

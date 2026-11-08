@@ -19,7 +19,7 @@ namespace sw::editor
         known._name = mask._name;
         for ( const AnimationBoneMaskEntry& entry : mask._listEntry )
         {
-            if ( skeleton.findBoneIndex( entry._bone ) >= 0 )
+            if ( skeleton.findBoneIndex( entry._bone ).has_value() )
                 known._listEntry.push_back( entry );
             else if ( VectorUtil::contains( outListMissingBone, entry._bone ) == false )
                 outListMissingBone.push_back( entry._bone );

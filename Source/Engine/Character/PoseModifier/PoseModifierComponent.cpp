@@ -3,6 +3,7 @@
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -613,12 +614,13 @@ namespace sw
             external._socketLocal        = def._offset;
             if ( def._space.empty() == false )
             {
-                external._spaceBone = _pSkeletalMesh->getSkeleton().findBoneIndex( def._space );
-                if ( external._spaceBone < 0 )
+                const optional<uint32> spaceBone = _pSkeletalMesh->getSkeleton().findBoneIndex( def._space );
+                if ( spaceBone.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "PoseModifier.RigTargetUnknownSpace", "Rig '%#': target '%#' has unknown space bone '%#'", label, def._name.c_str(), def._space.c_str() );
                     continue;
                 }
+                external._spaceBone = static_cast<int32>( *spaceBone );
             }
 
             if ( def._kind == RigTargetKind::Object )
@@ -650,13 +652,15 @@ namespace sw
             const bool             bSocketRoot = resolved._bSocketRoot;
             if ( pTargetUnit == nullptr || pTargetUnit == _pSkeletalMesh )
                 continue; // 아직 없다. bindUnit 이 다시 바인딩한다.
-            external._skeletalMeshBone = bSocketRoot ? -1 : pTargetUnit->getSkeleton().findBoneIndex( boneName );
-            if ( bSocketRoot == false && external._skeletalMeshBone < 0 )
+            // 소켓 루트(유닛 원점 기준)는 본이 없다(-1).
+            const optional<uint32> targetBone = bSocketRoot ? optional<uint32>{} : pTargetUnit->getSkeleton().findBoneIndex( boneName );
+            if ( bSocketRoot == false && targetBone.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "PoseModifier.RigTargetNamesBone", "Rig '%#': target '%#' names bone '%#' that skeletalMesh '%#' does not have", label, def._name.c_str(), boneName.c_str(),
                                  pTargetUnit->getOwner() != nullptr ? pTargetUnit->getOwner()->getName().c_str() : "" );
                 continue;
             }
+            external._skeletalMeshBone = targetBone.has_value() ? static_cast<int32>( *targetBone ) : constant::invalid_index::kInt32;
             // 데이터 오프셋은 소켓 공간에서 먼저 적용된다(행 벡터: 오프셋 × 소켓 로컬).
             external._socketLocal  = BoneTransform::makeFromMatrix( def._offset.toMatrix() * socketLocal.toMatrix() );
             external._skeletalMesh = TComponentHandle<SkeletalMeshComponent>{ pTargetUnit };
@@ -690,13 +694,17 @@ namespace sw
         {
             for ( const PhysicsAssetBodyDef& body : pAsset->_listBody )
             {
-                const int32 bone = _pSkeletalMesh->getSkeleton().findBoneIndex( body._bone );
-                if ( bone < 0 )
+                // 물리 에셋을 이 유닛의 스켈레톤과 다른 것과 짝지었다 — 그 바디만 알리고 뺀다.
+                const optional<uint32> bone = _pSkeletalMesh->getSkeleton().findBoneIndex( body._bone );
+                if ( bone.has_value() == false )
+                {
+                    SW_LOG_ERROR_ID( "PoseModifier.SpringColliderBoneUnknown", "Physics asset '%#': body bone '%#' is not in the skeleton - its spring colliders are skipped", _physicsAssetPath.c_str(), body._bone.c_str() );
                     continue;
+                }
                 for ( const PhysicsShapeDesc3D& shape : body._listShape )
                 {
                     RigSpringCollider collider{};
-                    collider._bone   = static_cast<uint32>( bone );
+                    collider._bone   = *bone;
                     collider._radius = shape._radius;
                     if ( shape._type == PhysicsShapeType3D::Sphere )
                     {

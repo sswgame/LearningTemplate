@@ -488,7 +488,10 @@ namespace sw
         _listEyeBone.clear();
         for ( const hashed_string& bone : getFacialRig().getGaze()._listEyeBone )
         {
-            _listEyeBone.push_back( pSkeleton->findBoneIndex( bone ) );
+            // 스켈레톤에 없는 눈 본은 위 검증(`FacialRig::validate`)이 알렸다 — 시선에서 뺀다.
+            const optional<uint32> boneIndex = pSkeleton->findBoneIndex( bone );
+            if ( boneIndex.has_value() )
+                _listEyeBone.push_back( *boneIndex );
         }
     }
 
@@ -595,15 +598,15 @@ namespace sw
         quaternion*             pRotation  = pose.getRotationData();
         const float32           maxAngle   = gaze._maxAngle;
         const quaternion        saccade    = quaternion::makeFromYawPitchRoll( _saccadeOffset._x, _saccadeOffset._y, 0.0f );
-        for ( const int32 boneIndex : _listEyeBone )
+        for ( const uint32 boneIndex : _listEyeBone )
         {
-            const bool bInvalidEyeBone = boneIndex < 0 || static_cast<size_t>( boneIndex ) >= listModel.size() || static_cast<uint32>( boneIndex ) >= pose.getBoneCount();
+            const bool bInvalidEyeBone = boneIndex >= listModel.size() || boneIndex >= pose.getBoneCount();
             if ( bInvalidEyeBone )
                 continue;
             // 부모 공간에서 돌린다 — 지금 로컬 회전의 앞 방향을 목표 방향으로 돌리는 가장 작은 회전을 최대 각으로 자르고 로컬 회전 뒤에 붙인다.
-            const int32    parentIndex = listParent[static_cast<size_t>( boneIndex )];
+            const int32    parentIndex = listParent[boneIndex];
             const float4x4 toParent    = parentIndex >= 0 ? listModel[static_cast<size_t>( parentIndex )].invert() : float4x4::Identity;
-            const float3   eyePosition = listModel[static_cast<size_t>( boneIndex )].getTranslation();
+            const float3   eyePosition = listModel[boneIndex].getTranslation();
             float3         desired     = float3::transformVector( _lookAtModel - eyePosition, toParent );
             if ( desired.getLengthSquared() <= MathUtil::kEpsilon )
                 continue;

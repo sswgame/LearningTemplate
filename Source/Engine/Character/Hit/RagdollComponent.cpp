@@ -353,9 +353,8 @@ namespace sw
     {
         if ( _state == RagdollState::Ragdoll || _pUnit == nullptr )
             return;
-        const int32 boneIndex = _pUnit->getSkeleton().findBoneIndex( _partialRootBone );
-        const int32 bodyIndex =
-            ( boneIndex >= 0 && static_cast<size_t>( boneIndex ) < _ragdoll._listBodyOfBone.size() ) ? _ragdoll._listBodyOfBone[static_cast<size_t>( boneIndex )] : -1;
+        const optional<uint32> boneIndex = _pUnit->getSkeleton().findBoneIndex( _partialRootBone );
+        const int32            bodyIndex = ( boneIndex.has_value() && *boneIndex < _ragdoll._listBodyOfBone.size() ) ? _ragdoll._listBodyOfBone[*boneIndex] : constant::invalid_index::kInt32;
         if ( bodyIndex < 0 )
         {
             SW_LOG_WARNING_ID( "Ragdoll.PartialRagdollRootBone", "'%#': partial ragdoll root bone '%#' has no body", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)",
@@ -578,12 +577,12 @@ namespace sw
             if ( _ragdoll._listParentBody[body] < 0 )
                 pelvisBone = _ragdoll._listBoneIndex[body];
         }
-        const int32 upperBone = skeleton.findBoneIndex( _partialRootBone );
-        if ( pelvisBone < 0 || upperBone < 0 )
+        const optional<uint32> upperBone = skeleton.findBoneIndex( _partialRootBone );
+        if ( pelvisBone < 0 || upperBone.has_value() == false )
             return false;
         const float4x4      oldUnitWorld  = _pUnit->getWorldMatrix();
         const float4x4      pelvisWorld   = _listPhysicsModel[static_cast<size_t>( pelvisBone )] * oldUnitWorld;
-        const float4x4      upperWorld    = _listPhysicsModel[static_cast<size_t>( upperBone )] * oldUnitWorld;
+        const float4x4      upperWorld    = _listPhysicsModel[*upperBone] * oldUnitWorld;
         const float3        pelvisForward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pelvisWorld );
         const bool          bFaceUp       = pelvisForward._y >= 0.0f;
         const hashed_string clipName      = ( bFaceUp || _getUpClipFaceDown.empty() ) ? _getUpClipFaceUp : _getUpClipFaceDown;

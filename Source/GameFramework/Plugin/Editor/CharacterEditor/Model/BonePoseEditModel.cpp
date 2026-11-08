@@ -67,10 +67,10 @@ namespace sw::editor
 
     bool BonePoseEditModel::getEffectiveTransform( const hashed_string& bone, BoneTransform& outTransform ) const
     {
-        const int32 boneIndex = _skeleton.findBoneIndex( bone );
-        if ( boneIndex < 0 )
+        const optional<uint32> boneIndex = _skeleton.findBoneIndex( bone );
+        if ( boneIndex.has_value() == false )
             return false;
-        outTransform                  = _skeleton.getBone( static_cast<uint32>( boneIndex ) )._referencePose;
+        outTransform                  = _skeleton.getBone( *boneIndex )._referencePose;
         const BoneOverride* pOverride = _override.findOverride( bone );
         if ( pOverride == nullptr )
             return true;
@@ -168,7 +168,7 @@ namespace sw::editor
             return false;
         }
         const hashed_string counterpart{ string_view( mirrorName ) };
-        if ( _skeleton.findBoneIndex( counterpart ) < 0 )
+        if ( _skeleton.findBoneIndex( counterpart ).has_value() == false )
         {
             outError = string( "Mirror bone '" ) + mirrorName + "' is not in the skeleton";
             return false;

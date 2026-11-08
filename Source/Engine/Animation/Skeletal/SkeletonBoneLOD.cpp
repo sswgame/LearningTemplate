@@ -50,9 +50,10 @@ namespace sw
 
             static void markBone( const Skeleton& skeleton, const hashed_string& name, vector<uint8>& inoutMask )
             {
-                const int32 boneIndex = skeleton.findBoneIndex( name );
-                if ( boneIndex >= 0 )
-                    inoutMask[static_cast<uint32>( boneIndex )] = SW_TRUE;
+                // 부르는 쪽이 본 이름을 이미 검사했거나(핵심 본), 스켈레톤 자기 데이터(소켓 · 어태치먼트 — 읽기가 검사)다. 사용처 본은 없으면 지킬 것이 없다.
+                const optional<uint32> boneIndex = skeleton.findBoneIndex( name );
+                if ( boneIndex.has_value() )
+                    inoutMask[*boneIndex] = SW_TRUE;
             }
         };
     } // namespace
@@ -199,14 +200,14 @@ namespace sw
         {
             for ( const hashed_string& boneName : level._listRemovedBone )
             {
-                const int32 boneIndex = skeleton.findBoneIndex( boneName );
-                if ( boneIndex < 0 )
+                const optional<uint32> boneIndex = skeleton.findBoneIndex( boneName );
+                if ( boneIndex.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODBoneNot", "Bone LOD '%#': bone '%#' is not in the skeleton", sourceLabel, boneName.c_str() );
                     outListMask.clear();
                     return false;
                 }
-                mask[static_cast<uint32>( boneIndex )] = SW_FALSE;
+                mask[*boneIndex] = SW_FALSE;
             }
             // 부모가 앞에 있으므로 한 번 훑으면 뺀 본의 자손이 모두 빠진다.
             for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
@@ -240,7 +241,7 @@ namespace sw
         {
             for ( const hashed_string& name : pBoneLOD->_listCoreBone )
             {
-                if ( skeleton.findBoneIndex( name ) < 0 )
+                if ( skeleton.findBoneIndex( name ).has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "SkeletonBoneLOD.CoreBoneUnknown", "Bone LOD '%#': core bone '%#' is not in the skeleton", sourceLabel, name.c_str() );
                     bValid = false;
