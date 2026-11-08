@@ -39,21 +39,21 @@ namespace sw
         explicit HPACKDecoder( uint32 maxDynamicTableSize = 4096 );
 
         /**
-         * @brief 헤더 블록 하나를 읽어 @p outListHeader 를 채웁니다. 깨졌거나 허프만 문자열이 틀렸거나 색인이 표 밖이면 false 이고 @p outError 에 이유가 있습니다(목록은 비운다).
+         * @brief 헤더 블록 하나를 읽어 @p outListHeader 를 채웁니다. 깨졌거나 허프만 문자열이 틀렸거나 색인이 표 밖이면 그 이유입니다(목록은 비운다).
          * @details 동적 표는 읽는 도중 바뀌므로 실패한 블록 뒤의 연결은 쓸 수 없다(RFC 7541 은 압축 상태 오류를 연결 오류로 본다) — 부르는 쪽이 연결을 닫는다.
          */
-        [[nodiscard]] bool decode( const uint8* pBlock, size_t size, vector<HTTPHeader>& outListHeader, string& outError );
-        size_t             getDynamicTableCount() const { return _listDynamic.size(); }
-        uint32             getDynamicTableSize() const { return _dynamicSize; }
+        [[nodiscard]] expected<void> decode( const uint8* pBlock, size_t size, vector<HTTPHeader>& outListHeader );
+        size_t                       getDynamicTableCount() const { return _listDynamic.size(); }
+        uint32                       getDynamicTableSize() const { return _dynamicSize; }
 
     private:
-        [[nodiscard]] bool readInteger( const uint8*& pCursor, const uint8* pEnd, int32 prefixBits, uint32& outValue, string& outError ) const;
-        [[nodiscard]] bool readString( const uint8*& pCursor, const uint8* pEnd, string& outText, string& outError ) const;
-        /** @brief 허프만 부호화된 문자열(RFC 7541 5.2)을 풉니다. 패딩이 7 비트를 넘거나 1 이 아니면, EOS 가 들었거나 부호표에 없는 부호면 false 입니다. */
-        [[nodiscard]] bool decodeHuffman( const uint8* pData, size_t size, string& outText, string& outError ) const;
-        [[nodiscard]] bool findEntry( uint32 index, HTTPHeader& outHeader, string& outError ) const;
-        void               insert( const HTTPHeader& header );
-        void               shrinkTo( uint32 size );
+        [[nodiscard]] expected<uint32> readInteger( const uint8*& pCursor, const uint8* pEnd, int32 prefixBits ) const;
+        [[nodiscard]] expected<void>   readString( const uint8*& pCursor, const uint8* pEnd, string& outText ) const;
+        /** @brief 허프만 부호화된 문자열(RFC 7541 5.2)을 풉니다. 패딩이 7 비트를 넘거나 1 이 아니면, EOS 가 들었거나 부호표에 없는 부호면 오류입니다. */
+        [[nodiscard]] expected<void> decodeHuffman( const uint8* pData, size_t size, string& outText ) const;
+        [[nodiscard]] expected<void> findEntry( uint32 index, HTTPHeader& outHeader ) const;
+        void                         insert( const HTTPHeader& header );
+        void                         shrinkTo( uint32 size );
 
     private:
         deque<HTTPHeader> _listDynamic; ///< 앞이 가장 새 항목(색인 62)

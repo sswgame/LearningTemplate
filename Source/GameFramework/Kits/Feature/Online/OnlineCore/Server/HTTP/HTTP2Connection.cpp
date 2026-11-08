@@ -183,13 +183,10 @@ namespace sw
         }
     }
 
-    bool HTTP2Connection::feed( const uint8* pData, size_t size, vector<uint8>& outBytes, string& outError )
+    expected<void> HTTP2Connection::feed( const uint8* pData, size_t size, vector<uint8>& outBytes )
     {
         if ( _bFailed == SW_TRUE )
-        {
-            outError = "HTTP/2 connection already failed";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "HTTP/2 connection already failed" } );
         _inBytes.insert( _inBytes.end(), pData, pData + size );
         size_t offset = 0;
         for ( ;; )
@@ -198,104 +195,104 @@ namespace sw
             if ( HTTP2FrameHeader::readHeader( _inBytes.data() + offset, _inBytes.size() - offset, header ) == false )
                 break;
             if ( header._length > HTTP2FrameHeader::kDefaultMaxFrameSize )
-                return failConnection( "frame is larger than the advertised maximum", outError ); // 우리는 MAX_FRAME_SIZE 를 올리지 않았다
+                return failConnection( "frame is larger than the advertised maximum" ); // 우리는 MAX_FRAME_SIZE 를 올리지 않았다
             if ( _inBytes.size() - offset < HTTP2FrameHeader::kHeaderSize + header._length )
                 break;
             const uint8* pBody = _inBytes.data() + offset + HTTP2FrameHeader::kHeaderSize;
-            if ( handleFrame( header, pBody, outBytes, outError ) == false )
-                return false;
+            if ( expected<void> handled = handleFrame( header, pBody, outBytes ); handled.has_value() == false )
+                return handled;
             offset += HTTP2FrameHeader::kHeaderSize + header._length;
         }
         _inBytes.erase( _inBytes.begin(), _inBytes.begin() + static_cast<ptrdiff_t>( offset ) );
         promoteQueued( outBytes ); // 스트림이 끝나 줄 선 요청이 열릴 수 있고, 창이 늘어 본문을 더 보낼 수 있다
-        return true;
+        return {};
     }
 
-    bool HTTP2Connection::handleFrame( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes, string& outError )
+    expected<void> HTTP2Connection::handleFrame( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes )
     {
         if ( _continuationStreamID != 0 && ( header._type != static_cast<uint8>( HTTP2FrameType::Continuation ) || header._streamID != _continuationStreamID ) )
-            return failConnection( "expected CONTINUATION", outError );
+            return failConnection( "expected CONTINUATION" );
         switch ( static_cast<HTTP2FrameType>( header._type ) )
         {
             case HTTP2FrameType::Settings:
             {
-                return handleSettings( header, pBody, outBytes, outError );
+                return handleSettings( header, pBody, outBytes );
             }
             case HTTP2FrameType::WindowUpdate:
             {
-                return handleWindowUpdate( header, pBody, outError );
+                return handleWindowUpdate( header, pBody );
             }
             case HTTP2FrameType::Headers:
             {
-                return handleHeaders( header, pBody, outBytes, outError );
+                return handleHeaders( header, pBody, outBytes );
             }
             case HTTP2FrameType::Continuation:
             {
-                return handleContinuation( header, pBody, outBytes, outError );
+                return handleContinuation( header, pBody, outBytes );
             }
             case HTTP2FrameType::Data:
             {
-                return handleData( header, pBody, outBytes, outError );
+                return handleData( header, pBody, outBytes );
             }
             case HTTP2FrameType::Ping:
             {
                 if ( header._streamID != 0 || header._length != kPingOpaqueSize )
-                    return failConnection( "malformed PING", outError );
+                    return failConnection( "malformed PING" );
                 if ( ( header._flags & HTTP2FrameHeader::kFlagAck ) != 0 )
-                    return true;
+                    return {};
                 uint8 arrOpaque[kPingOpaqueSize];
                 for ( size_t index = 0; index < kPingOpaqueSize; ++index )
                 {
                     arrOpaque[index] = pBody[index];
                 }
                 (void)HTTP2FrameHeader::writePing( arrOpaque, true, outBytes ); // 길이가 고정이라 범위 안이다
-                return true;
+                return {};
             }
             case HTTP2FrameType::RstStream:
             {
                 if ( header._streamID == 0 || header._length != HTTP2ConnectionInternal::kRstStreamBodySize )
-                    return failConnection( "malformed RST_STREAM", outError );
+                    return failConnection( "malformed RST_STREAM" );
                 const uint32                            errorCode = HTTP2FrameHeader::readUint32( pBody );
                 fixed_string<constant::buffer::kMax256> text;
                 formatstring( text.data(), text.capacity(), "stream was reset by the server (error %#)", errorCode );
                 failStream( header._streamID, text.c_str(), false, 0, outBytes );
-                return true;
+                return {};
             }
             case HTTP2FrameType::GoAway:
             {
                 HTTP2GoAway goAway;
                 if ( HTTP2FrameHeader::readGoAway( pBody, header._length, goAway ) == false )
-                    return failConnection( "malformed GOAWAY", outError );
+                    return failConnection( "malformed GOAWAY" );
                 handleGoAway( goAway );
-                return true;
+                return {};
             }
             case HTTP2FrameType::PushPromise:
             {
-                return failConnection( "server push was not enabled", outError );
+                return failConnection( "server push was not enabled" );
             }
             case HTTP2FrameType::Priority:
             {
-                return true; // 우선순위는 쓰지 않는다
+                return {}; // 우선순위는 쓰지 않는다
             }
         }
-        return true; // 모르는 종류는 무시한다(RFC 9113 4.1)
+        return {}; // 모르는 종류는 무시한다(RFC 9113 4.1)
     }
 
-    bool HTTP2Connection::handleSettings( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes, string& outError )
+    expected<void> HTTP2Connection::handleSettings( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes )
     {
         if ( header._streamID != 0 )
-            return failConnection( "SETTINGS on a stream", outError );
+            return failConnection( "SETTINGS on a stream" );
         if ( ( header._flags & HTTP2FrameHeader::kFlagAck ) != 0 )
-            return header._length == 0 ? true : failConnection( "SETTINGS acknowledgement has a body", outError );
+            return header._length == 0 ? expected<void>{} : failConnection( "SETTINGS acknowledgement has a body" );
         vector<HTTP2Setting> listSetting;
         if ( HTTP2FrameHeader::readSettings( pBody, header._length, listSetting ) == false )
-            return failConnection( "malformed SETTINGS", outError );
+            return failConnection( "malformed SETTINGS" );
         for ( const HTTP2Setting& setting : listSetting )
         {
             if ( setting._id == HTTP2FrameHeader::kSettingsInitialWindowSize )
             {
                 if ( setting._value > HTTP2ConnectionInternal::kWindowMask )
-                    return failConnection( "initial window size is out of range", outError );
+                    return failConnection( "initial window size is out of range" );
                 const int64 delta  = static_cast<int64>( setting._value ) - _peerInitialWindow;
                 _peerInitialWindow = setting._value;
                 for ( auto& [streamID, stream] : _mapStream )
@@ -303,13 +300,13 @@ namespace sw
                     (void)streamID;
                     stream._sendWindow += delta;
                     if ( stream._sendWindow > kMaxWindowSize )
-                        return failConnection( "stream window overflowed", outError );
+                        return failConnection( "stream window overflowed" );
                 }
             }
             else if ( setting._id == HTTP2FrameHeader::kSettingsMaxFrameSize )
             {
                 if ( setting._value < kMinMaxFrameSize || setting._value > kMaxMaxFrameSize )
-                    return failConnection( "max frame size is out of range", outError );
+                    return failConnection( "max frame size is out of range" );
                 _peerMaxFrameSize = setting._value;
             }
             else if ( setting._id == HTTP2FrameHeader::kSettingsMaxConcurrentStreams )
@@ -319,91 +316,90 @@ namespace sw
             // HEADER_TABLE_SIZE 는 부호기가 동적 표를 쓰지 않아 상관없고, ENABLE_PUSH 와 모르는 항목은 무시한다
         }
         (void)HTTP2FrameHeader::writeSettings( {}, true, outBytes ); // 확인
-        return true;
+        return {};
     }
 
-    bool HTTP2Connection::handleWindowUpdate( const HTTP2FrameHeader& header, const uint8* pBody, string& outError )
+    expected<void> HTTP2Connection::handleWindowUpdate( const HTTP2FrameHeader& header, const uint8* pBody )
     {
         if ( header._length != sizeof( uint32 ) )
-            return failConnection( "malformed WINDOW_UPDATE", outError );
+            return failConnection( "malformed WINDOW_UPDATE" );
         const uint32 increment = HTTP2FrameHeader::readUint32( pBody ) & HTTP2ConnectionInternal::kWindowMask;
         if ( increment == 0 )
-            return failConnection( "WINDOW_UPDATE with a zero increment", outError );
+            return failConnection( "WINDOW_UPDATE with a zero increment" );
         if ( header._streamID == 0 )
         {
             _connectionSendWindow += increment;
-            return _connectionSendWindow <= kMaxWindowSize ? true : failConnection( "connection window overflowed", outError );
+            return _connectionSendWindow <= kMaxWindowSize ? expected<void>{} : failConnection( "connection window overflowed" );
         }
         const auto streamIt = _mapStream.find( header._streamID );
         if ( streamIt == _mapStream.end() )
-            return true; // 끝난 스트림
+            return {}; // 끝난 스트림
         streamIt->second._sendWindow += increment;
         if ( streamIt->second._sendWindow > kMaxWindowSize )
-            return failConnection( "stream window overflowed", outError );
-        return true;
+            return failConnection( "stream window overflowed" );
+        return {};
     }
 
-    bool HTTP2Connection::handleHeaders( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes, string& outError )
+    expected<void> HTTP2Connection::handleHeaders( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes )
     {
         using Internal              = HTTP2ConnectionInternal;
         const bool bNotClientStream = header._streamID == 0 || ( header._streamID & 1u ) == 0; // 요청 스트림은 홀수다
         if ( bNotClientStream || header._streamID >= _nextStreamID )
-            return failConnection( "HEADERS on an invalid stream", outError );
+            return failConnection( "HEADERS on an invalid stream" );
         size_t offset  = 0;
         size_t padding = 0;
         if ( ( header._flags & HTTP2FrameHeader::kFlagPadded ) != 0 )
         {
             if ( header._length < Internal::kPaddingLengthSize )
-                return failConnection( "malformed HEADERS padding", outError );
+                return failConnection( "malformed HEADERS padding" );
             padding = pBody[0];
             offset += Internal::kPaddingLengthSize;
         }
         if ( ( header._flags & HTTP2FrameHeader::kFlagPriority ) != 0 )
             offset += Internal::kPrioritySize;
         if ( header._length < offset + padding )
-            return failConnection( "malformed HEADERS", outError );
+            return failConnection( "malformed HEADERS" );
         _listHeaderBlock.assign( pBody + offset, pBody + header._length - padding );
         _headerStreamID   = header._streamID;
         _bHeaderEndStream = ( header._flags & HTTP2FrameHeader::kFlagEndStream ) != 0 ? SW_TRUE : SW_FALSE;
         if ( static_cast<int32>( _listHeaderBlock.size() ) > _settings._maxHeaderBlockBytes )
-            return failConnection( "header block is too large", outError );
+            return failConnection( "header block is too large" );
         if ( ( header._flags & HTTP2FrameHeader::kFlagEndHeaders ) != 0 )
-            return finishHeaderBlock( outBytes, outError );
+            return finishHeaderBlock( outBytes );
         _continuationStreamID = header._streamID;
-        return true;
+        return {};
     }
 
-    bool HTTP2Connection::handleContinuation( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes, string& outError )
+    expected<void> HTTP2Connection::handleContinuation( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes )
     {
         if ( _continuationStreamID == 0 )
-            return failConnection( "CONTINUATION without HEADERS", outError );
+            return failConnection( "CONTINUATION without HEADERS" );
         _listHeaderBlock.insert( _listHeaderBlock.end(), pBody, pBody + header._length );
         if ( static_cast<int32>( _listHeaderBlock.size() ) > _settings._maxHeaderBlockBytes )
-            return failConnection( "header block is too large", outError );
+            return failConnection( "header block is too large" );
         if ( ( header._flags & HTTP2FrameHeader::kFlagEndHeaders ) == 0 )
-            return true;
+            return {};
         _continuationStreamID = 0;
-        return finishHeaderBlock( outBytes, outError );
+        return finishHeaderBlock( outBytes );
     }
 
-    bool HTTP2Connection::finishHeaderBlock( vector<uint8>& outBytes, string& outError )
+    expected<void> HTTP2Connection::finishHeaderBlock( vector<uint8>& outBytes )
     {
-        vector<HTTPHeader> listHeader;
-        string             decodeError;
-        const bool         bDecoded = _decoder.decode( _listHeaderBlock.data(), _listHeaderBlock.size(), listHeader, decodeError ); // 동적 표가 바뀐다 — 스트림을 알든 모르든 읽어야 한다
+        vector<HTTPHeader>   listHeader;
+        const expected<void> decoded = _decoder.decode( _listHeaderBlock.data(), _listHeaderBlock.size(), listHeader ); // 동적 표가 바뀐다 — 스트림을 알든 모르든 읽어야 한다
         _listHeaderBlock.clear();
-        if ( bDecoded == false )
-            return failConnection( ( "header block could not be decoded: " + decodeError ).c_str(), outError );
+        if ( decoded.has_value() == false )
+            return failConnection( decoded.error() );
         const auto streamIt = _mapStream.find( _headerStreamID );
         if ( streamIt == _mapStream.end() )
-            return true; // 끝난 스트림
+            return {}; // 끝난 스트림
         Stream& stream = streamIt->second;
         if ( stream._bHeadDone == SW_TRUE )
         {
             // 트레일러 — 읽어서 표 상태만 맞추고 버린다
             if ( _bHeaderEndStream == SW_TRUE )
                 completeStream( _headerStreamID, outBytes );
-            return true;
+            return {};
         }
         bool               bHasStatus = false;
         int32              status     = 0;
@@ -418,57 +414,57 @@ namespace sw
         if ( bHasStatus == false )
         {
             failStream( _headerStreamID, "response has no :status", true, HTTP2ErrorCode::kProtocolError, outBytes );
-            return true;
+            return {};
         }
         if ( status >= HTTP2ConnectionInternal::kStatusInformationalBegin && status < HTTP2ConnectionInternal::kStatusInformationalEnd )
-            return true; // 1xx — 최종 응답이 아니다
+            return {}; // 1xx — 최종 응답이 아니다
         stream._statusCode = status;
         stream._listHeader = std::move( listRegular );
         stream._bHeadDone  = SW_TRUE;
         if ( _bHeaderEndStream == SW_TRUE )
             completeStream( _headerStreamID, outBytes );
-        return true;
+        return {};
     }
 
-    bool HTTP2Connection::handleData( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes, string& outError )
+    expected<void> HTTP2Connection::handleData( const HTTP2FrameHeader& header, const uint8* pBody, vector<uint8>& outBytes )
     {
         using Internal = HTTP2ConnectionInternal;
         if ( header._streamID == 0 )
-            return failConnection( "DATA on the connection", outError );
+            return failConnection( "DATA on the connection" );
         size_t offset  = 0;
         size_t padding = 0;
         if ( ( header._flags & HTTP2FrameHeader::kFlagPadded ) != 0 )
         {
             if ( header._length < Internal::kPaddingLengthSize )
-                return failConnection( "malformed DATA padding", outError );
+                return failConnection( "malformed DATA padding" );
             padding = pBody[0];
             offset  = Internal::kPaddingLengthSize;
         }
         if ( header._length < offset + padding )
-            return failConnection( "malformed DATA", outError );
+            return failConnection( "malformed DATA" );
         const size_t dataSize = header._length - offset - padding;
         if ( header._length > 0 )
             (void)HTTP2FrameHeader::writeWindowUpdate( 0, header._length, outBytes ); // 채움을 포함한 길이가 창을 쓴다 — 바로 돌려준다
         const auto streamIt = _mapStream.find( header._streamID );
         if ( streamIt == _mapStream.end() )
-            return true; // 끝난 스트림 — 연결 창만 돌려주었다
+            return {}; // 끝난 스트림 — 연결 창만 돌려주었다
         Stream& stream = streamIt->second;
         if ( stream._bHeadDone == SW_FALSE )
         {
             failStream( header._streamID, "DATA before the response headers", true, HTTP2ErrorCode::kProtocolError, outBytes );
-            return true;
+            return {};
         }
         if ( stream._responseBytes.size() + dataSize > static_cast<size_t>( _settings._maxResponseBodyBytes ) )
         {
             failStream( header._streamID, "response body is too large", true, HTTP2ErrorCode::kCancel, outBytes );
-            return true;
+            return {};
         }
         stream._responseBytes.insert( stream._responseBytes.end(), pBody + offset, pBody + offset + dataSize );
         if ( ( header._flags & HTTP2FrameHeader::kFlagEndStream ) != 0 )
             completeStream( header._streamID, outBytes );
         else if ( header._length > 0 )
             (void)HTTP2FrameHeader::writeWindowUpdate( header._streamID, header._length, outBytes ); // 길이가 0 보다 크고 프레임 상한 이하라 범위 안이다
-        return true;
+        return {};
     }
 
     void HTTP2Connection::handleGoAway( const HTTP2GoAway& goAway )
@@ -528,11 +524,15 @@ namespace sw
         response._failureText        = pFailure;
     }
 
-    bool HTTP2Connection::failConnection( const utf8* pReason, string& outError )
+    expected<void> HTTP2Connection::failConnection( const utf8* pReason )
     {
-        outError = pReason;
-        failAll( pReason );
-        return false;
+        return failConnection( Error{ ErrorKind::InvalidArgument, pReason } );
+    }
+
+    expected<void> HTTP2Connection::failConnection( const Error& error )
+    {
+        failAll( error.message().data() ); // 문장은 리터럴이라 널로 끝난다
+        return unexpected( error );
     }
 
     void HTTP2Connection::cancel( uint64 requestID, const utf8* pFailure, vector<uint8>& outBytes )

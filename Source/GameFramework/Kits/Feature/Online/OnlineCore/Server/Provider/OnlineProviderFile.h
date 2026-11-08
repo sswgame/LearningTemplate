@@ -21,30 +21,30 @@ namespace sw
      */
     struct SW_KIT_SERVER_API OnlineProviderFile
     {
-        /** @brief 항목 하나(객체임은 확인했다)를 읽습니다. 틀리면 false 와 @p outError 입니다. */
+        /** @brief 항목 하나(객체임은 확인했다)를 읽습니다. 틀리면 그 이유입니다. */
         template <typename Config>
-        using EntryReader = bool ( * )( const JSONValue& entry, Config& outConfig, string& outError );
+        using EntryReader = expected<void> ( * )( const JSONValue& entry, Config& outConfig );
 
         /**
          * @brief 제공자 파일 @p providersFile 의 항목을 모두 @p readEntry 로 읽어 @p outListConfig 에 담습니다.
          * @param pProvidersOption · pTrustOption 오류 글에 쓸 옵션 이름(`pushProvidersFile` · `pushTrustFile`)
-         * @return 파일을 정하지 않았으면 빈 목록으로 true 다(제공자 없음). 신뢰 PEM 만 정했거나, 파일을 못 읽거나, JSON · 항목이 틀리면 false 와 @p outError 입니다.
+         * @return 파일을 정하지 않았으면 빈 목록으로 성공이다(제공자 없음). 신뢰 PEM 만 정했거나, 파일을 못 읽거나, JSON · 항목이 틀리면 그 이유입니다.
          */
         template <typename Config>
-        [[nodiscard]] static bool read( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const utf8* pProvidersOption,
-                                        const utf8* pTrustOption, EntryReader<Config> readEntry, vector<Config>& outListConfig, string& outError )
+        [[nodiscard]] static expected<void> read( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const utf8* pProvidersOption,
+                                                  const utf8* pTrustOption, EntryReader<Config> readEntry, vector<Config>& outListConfig )
         {
             outListConfig.clear();
             JSONDocument      document;
             vector<JSONValue> listEntry;
-            if ( readEntries( providersFile, trustFile, pProvidersOption, pTrustOption, document, listEntry, outError ) == false )
-                return false;
+            if ( expected<void> entries = readEntries( providersFile, trustFile, pProvidersOption, pTrustOption, document, listEntry ); entries.has_value() == false )
+                return entries;
             for ( const JSONValue& entry : listEntry )
             {
-                if ( readEntry( entry, outListConfig.emplace_back(), outError ) == false )
-                    return false;
+                if ( expected<void> read = readEntry( entry, outListConfig.emplace_back() ); read.has_value() == false )
+                    return read;
             }
-            return true;
+            return {};
         }
 
         /** @brief 신뢰 PEM 옵션을 제공자의 TLS 등록이 받는 글로 바꿉니다. 정하지 않았으면 빈 글(그때 `https://` 제공자는 등록이 거절한다)입니다. */
@@ -52,7 +52,7 @@ namespace sw
 
     private:
         /** @brief 파일을 읽고 `providers` 배열의 항목(모두 객체)을 @p outListEntry 에 담습니다. 핸들은 @p outDocument 를 가리킨다(읽기만 한다). */
-        [[nodiscard]] static bool readEntries( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const utf8* pProvidersOption,
-                                               const utf8* pTrustOption, JSONDocument& outDocument, vector<JSONValue>& outListEntry, string& outError );
+        [[nodiscard]] static expected<void> readEntries( const optional<AbsolutePath>& providersFile, const optional<AbsolutePath>& trustFile, const utf8* pProvidersOption,
+                                                         const utf8* pTrustOption, JSONDocument& outDocument, vector<JSONValue>& outListEntry );
     };
 } // namespace sw

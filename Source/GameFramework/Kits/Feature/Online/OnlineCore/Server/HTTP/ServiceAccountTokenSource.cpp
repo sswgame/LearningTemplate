@@ -39,28 +39,22 @@ namespace sw
 
 namespace sw
 {
-    bool ServiceAccountCredentials::read( string_view json, ServiceAccountCredentials& outCredentials, string& outError )
+    expected<void> ServiceAccountCredentials::read( string_view json, ServiceAccountCredentials& outCredentials )
     {
         using Internal = ServiceAccountTokenSourceInternal;
         JSONDocument document;
         if ( document.tryParse( json ) == false || document.getRoot().isObject() == false )
-        {
-            outError = "the service account is not a JSON object";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the service account is not a JSON object" } );
         const JSONValue root        = document.getRoot();
         const bool      bHasProject = Internal::readText( root, "project_id", outCredentials._projectID );
         const bool      bHasEmail   = Internal::readText( root, "client_email", outCredentials._clientEmail );
         const bool      bHasKey     = Internal::readText( root, "private_key", outCredentials._privateKeyPem );
         const bool      bComplete   = bHasProject && bHasEmail && bHasKey;
         if ( bComplete == false )
-        {
-            outError = "the service account needs project_id, client_email and private_key";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the service account needs project_id, client_email and private_key" } );
         Internal::readOptionalText( root, "private_key_id", outCredentials._keyID ); // 없어도 서명은 된다
         Internal::readOptionalText( root, "token_uri", outCredentials._tokenURL );   // 없으면 구글의 기본 주소를 쓴다
-        return true;
+        return {};
     }
 
     void ServiceAccountCredentials::wipe()

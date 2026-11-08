@@ -38,9 +38,9 @@ namespace sw
 
         /**
          * @brief @p url 의 호스트에 쓸 클라이언트 TLS 컨텍스트(ALPN `h2`)를 @p trustFile(CA 번들 PEM)로 만들어 등록합니다. 이미 등록한 호스트는 건너뜁니다.
-         * @details 빈 @p url 은 건너뜁니다. 주소가 틀렸거나 `https://` 가 아니거나 신뢰 파일이 비었으면 false 와 @p outError 입니다(@p trustOption 은 그 파일을 정하는 설정 이름).
+         * @details 빈 @p url 은 건너뜁니다. 주소가 틀렸거나 `https://` 가 아니거나 신뢰 파일이 비었으면 오류입니다(@p trustOption 은 그 파일을 정하는 설정 이름).
          */
-        [[nodiscard]] bool registerHostTLS( string_view url, string_view trustFile, string_view trustOption, string& outError );
+        [[nodiscard]] expected<void> registerHostTLS( string_view url, string_view trustFile, string_view trustOption );
 
         HTTP2Client& get() { return _client; }
 

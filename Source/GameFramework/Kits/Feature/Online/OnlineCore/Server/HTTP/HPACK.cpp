@@ -128,51 +128,35 @@ namespace sw
     {
     }
 
-    bool HPACKDecoder::readInteger( const uint8*& pCursor, const uint8* pEnd, int32 prefixBits, uint32& outValue, string& outError ) const
+    expected<uint32> HPACKDecoder::readInteger( const uint8*& pCursor, const uint8* pEnd, int32 prefixBits ) const
     {
         using Internal = HPACKInternal;
         if ( pCursor >= pEnd )
-        {
-            outError = "HPACK integer is cut off";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK integer is cut off" } );
         const uint32 prefixMax = ( 1u << prefixBits ) - 1u;
         // 64 비트로 모아 uint32 를 넘는지 본다 — 32 비트로 모으면 자리 28 의 7 비트가 위로 잘리고 더하기가 감겨 작은 값이 된다.
         uint64 value = static_cast<uint64>( *pCursor++ ) & prefixMax;
         if ( value < prefixMax )
-        {
-            outValue = static_cast<uint32>( value );
-            return true;
-        }
+            return static_cast<uint32>( value );
         uint32 shift = 0;
         while ( true )
         {
             if ( pCursor >= pEnd )
-            {
-                outError = "HPACK integer is cut off";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK integer is cut off" } );
             if ( shift > Internal::kMaxIntegerShift )
-            {
-                outError = "HPACK integer is too large";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK integer is too large" } );
             const uint8 byte = *pCursor++;
             value += static_cast<uint64>( byte & 0x7Fu ) << shift;
             if ( value > static_cast<uint64>( 0xFFFFFFFFu ) )
-            {
-                outError = "HPACK integer is too large";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK integer is too large" } );
             shift += 7;
             if ( ( byte & 0x80u ) == 0 )
                 break;
         }
-        outValue = static_cast<uint32>( value );
-        return true;
+        return static_cast<uint32>( value );
     }
 
-    bool HPACKDecoder::decodeHuffman( const uint8* pData, size_t size, string& outText, string& outError ) const
+    expected<void> HPACKDecoder::decodeHuffman( const uint8* pData, size_t size, string& outText ) const
     {
         const vector<uint64>& listLookup = getHuffmanLookup();
         outText.clear();
@@ -188,20 +172,14 @@ namespace sw
                 ++bitCount;
                 bAllOnes = bAllOnes && bit == 1u;
                 if ( bitCount > 30 )
-                {
-                    outError = "HPACK Huffman string has an invalid code";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK Huffman string has an invalid code" } );
                 const uint64 key   = ( ( static_cast<uint64>( bitCount ) << 32 ) | code ) << 9;
                 const auto   found = std::lower_bound( listLookup.begin(), listLookup.end(), key );
                 if ( found == listLookup.end() || ( *found >> 9 ) != ( key >> 9 ) )
                     continue;
                 const int32 symbol = static_cast<int32>( *found & 0x1FFu );
                 if ( symbol == HPACKHuffman::kEndOfString )
-                {
-                    outError = "HPACK Huffman string contains the end-of-string symbol";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK Huffman string contains the end-of-string symbol" } );
                 outText.push_back( static_cast<utf8>( symbol ) );
                 code     = 0;
                 bitCount = 0;
@@ -209,62 +187,47 @@ namespace sw
             }
         }
         if ( 7 < bitCount || bAllOnes == false )
-        {
-            outError = "HPACK Huffman string has invalid padding";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK Huffman string has invalid padding" } );
+        return {};
     }
 
-    bool HPACKDecoder::readString( const uint8*& pCursor, const uint8* pEnd, string& outText, string& outError ) const
+    expected<void> HPACKDecoder::readString( const uint8*& pCursor, const uint8* pEnd, string& outText ) const
     {
         if ( pCursor >= pEnd )
-        {
-            outError = "HPACK string is cut off";
-            return false;
-        }
-        const bool bHuffman = ( *pCursor & 0x80u ) != 0;
-        uint32     length   = 0;
-        if ( readInteger( pCursor, pEnd, 7, length, outError ) == false )
-            return false;
-        if ( length > static_cast<size_t>( pEnd - pCursor ) )
-        {
-            outError = "HPACK string is longer than the block";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK string is cut off" } );
+        const bool             bHuffman = ( *pCursor & 0x80u ) != 0;
+        const expected<uint32> length   = readInteger( pCursor, pEnd, 7 );
+        if ( length.has_value() == false )
+            return unexpected( length.error() );
+        if ( *length > static_cast<size_t>( pEnd - pCursor ) )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK string is longer than the block" } );
         if ( bHuffman )
         {
-            const bool bDecoded = decodeHuffman( pCursor, length, outText, outError );
-            pCursor += length;
-            return bDecoded;
+            expected<void> decoded = decodeHuffman( pCursor, *length, outText );
+            pCursor += *length;
+            return decoded;
         }
-        outText.assign( reinterpret_cast<const utf8*>( pCursor ), length );
-        pCursor += length;
-        return true;
+        outText.assign( reinterpret_cast<const utf8*>( pCursor ), *length );
+        pCursor += *length;
+        return {};
     }
 
-    bool HPACKDecoder::findEntry( uint32 index, HTTPHeader& outHeader, string& outError ) const
+    expected<void> HPACKDecoder::findEntry( uint32 index, HTTPHeader& outHeader ) const
     {
         using Internal = HPACKInternal;
         if ( index == 0 )
-        {
-            outError = "HPACK index 0 is not valid";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK index 0 is not valid" } );
         if ( index <= Internal::kStaticCount )
         {
             outHeader._name  = HPACKStatic::kArrEntry[index - 1]._pName;
             outHeader._value = HPACKStatic::kArrEntry[index - 1]._pValue;
-            return true;
+            return {};
         }
         const uint32 dynamicIndex = index - Internal::kStaticCount - 1;
         if ( dynamicIndex >= _listDynamic.size() )
-        {
-            outError = "HPACK index is outside the tables";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK index is outside the tables" } );
         outHeader = _listDynamic[dynamicIndex];
-        return true;
+        return {};
     }
 
     void HPACKDecoder::shrinkTo( uint32 size )
@@ -286,7 +249,7 @@ namespace sw
         _dynamicSize += size;
     }
 
-    bool HPACKDecoder::decode( const uint8* pBlock, size_t size, vector<HTTPHeader>& outListHeader, string& outError )
+    expected<void> HPACKDecoder::decode( const uint8* pBlock, size_t size, vector<HTTPHeader>& outListHeader )
     {
         outListHeader.clear();
         const uint8* pCursor = pBlock;
@@ -297,55 +260,53 @@ namespace sw
             HTTPHeader  header;
             if ( ( first & 0x80u ) != 0 ) // 색인된 헤더
             {
-                uint32 index = 0;
-                if ( readInteger( pCursor, pEnd, 7, index, outError ) == false || findEntry( index, header, outError ) == false )
+                const expected<uint32> index = readInteger( pCursor, pEnd, 7 );
+                expected<void>         found = index.has_value() ? findEntry( *index, header ) : expected<void>{ unexpected( index.error() ) };
+                if ( found.has_value() == false )
                 {
                     outListHeader.clear();
-                    return false;
+                    return found;
                 }
                 outListHeader.push_back( header );
                 continue;
             }
             if ( ( first & 0xE0u ) == 0x20u ) // 동적 표 크기 갱신
             {
-                uint32 newLimit = 0;
-                if ( readInteger( pCursor, pEnd, 5, newLimit, outError ) == false )
+                const expected<uint32> newLimit = readInteger( pCursor, pEnd, 5 );
+                if ( newLimit.has_value() == false )
                 {
                     outListHeader.clear();
-                    return false;
+                    return unexpected( newLimit.error() );
                 }
-                if ( newLimit > _maxLimit )
+                if ( *newLimit > _maxLimit )
                 {
-                    outError = "HPACK table size update is above the limit we announced";
                     outListHeader.clear();
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "HPACK table size update is above the limit we announced" } );
                 }
-                _currentLimit = newLimit;
-                shrinkTo( newLimit );
+                _currentLimit = *newLimit;
+                shrinkTo( *newLimit );
                 continue;
             }
-            const bool  bIncremental = ( first & 0xC0u ) == 0x40u;
-            const int32 prefixBits   = bIncremental ? 6 : 4;
-            uint32      nameIndex    = 0;
-            if ( readInteger( pCursor, pEnd, prefixBits, nameIndex, outError ) == false )
+            const bool             bIncremental = ( first & 0xC0u ) == 0x40u;
+            const int32            prefixBits   = bIncremental ? 6 : 4;
+            const expected<uint32> nameIndex    = readInteger( pCursor, pEnd, prefixBits );
+            if ( nameIndex.has_value() == false )
             {
                 outListHeader.clear();
-                return false;
+                return unexpected( nameIndex.error() );
             }
-            bool bNameRead = true;
-            if ( nameIndex == 0 )
-                bNameRead = readString( pCursor, pEnd, header._name, outError );
-            else
-                bNameRead = findEntry( nameIndex, header, outError );
-            if ( bNameRead == false || readString( pCursor, pEnd, header._value, outError ) == false )
+            expected<void> read = *nameIndex == 0 ? readString( pCursor, pEnd, header._name ) : findEntry( *nameIndex, header );
+            if ( read.has_value() )
+                read = readString( pCursor, pEnd, header._value );
+            if ( read.has_value() == false )
             {
                 outListHeader.clear();
-                return false;
+                return read;
             }
             if ( bIncremental )
                 insert( header );
             outListHeader.push_back( header );
         }
-        return true;
+        return {};
     }
 } // namespace sw
