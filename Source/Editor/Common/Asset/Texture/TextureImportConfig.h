@@ -3,6 +3,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -181,12 +182,12 @@ namespace sw::editor
         static bool isCatchAllRule( const TextureImportRule& rule );
 
         /**
-         * @brief 맨 끝이 아닌 자리에 있는 조건 없는 규칙의 인덱스입니다. 없으면 `getRules().size()` 입니다.
+         * @brief 맨 끝이 아닌 자리에 있는 조건 없는 규칙의 인덱스입니다. 없으면 비어 있습니다.
          *
          * @details 조건 없는 규칙은 나머지를 받는 규칙(`Fallback_Default`)이라 맨 끝에 하나만 둡니다. 맨 끝의 캐치올은 정상이고 흔한 쓰임이라
          *          "비어 있다" 만 보지 않고 "비어 있는데 뒤에 규칙이 더 있다" 를 봅니다. 로드는 이 자리가 있으면 오류로 멈춥니다.
          */
-        size_t findShadowingRuleIndex() const;
+        [[nodiscard]] optional<uint32> findShadowingRuleIndex() const;
 
     private:
         /**

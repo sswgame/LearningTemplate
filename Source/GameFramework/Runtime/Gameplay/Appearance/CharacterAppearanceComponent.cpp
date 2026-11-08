@@ -145,49 +145,6 @@ namespace sw
                 }
             }
 
-            static hashed_string makeSectionName( const ResolvedPart& part )
-            {
-                if ( part._owner.empty() )
-                    return part._partName;
-                return hashed_string( ( string( part._owner.c_str() ) + "." + part._partName.c_str() ).c_str() );
-            }
-
-            /**
-             * @brief 부품을 병합에 넣는 모양으로 만듭니다 — `<Section>` 이 없으면 부품의 구간 이름(`makeSectionName`) 조각 하나, 있으면 적은 구간마다 조각 하나다(적지 않은 구간은 빠진다).
-             * @details 몸(@p bBody)의 조각은 원본 구간 이름 그대로다 — 몸의 주 메시와 `_listBodySection` 이 이미 그 이름으로 그려, 병합을 걸고 풀 때 이름을 다시 매기지 않는다.
-             *          다른 부품의 조각은 부품의 구간 이름 뒤에 `/구간` 을 붙여 차림 안에서 겹치지 않게 한다.
-             */
-            static MeshMergePart makeMergePart( const ResolvedPart& part, const Mesh& mesh, bool bBody )
-            {
-                MeshMergePart merge{ makeSectionName( part ), part._material, &mesh };
-                for ( const AppearanceSectionDef& section : part._listSection ) // 변형 · 규칙을 반영한 구간 머티리얼 — 병합해도 구간마다 머티리얼이 남는다
-                {
-                    const hashed_string name = bBody ? section._name : hashed_string( ( string( merge._name.c_str() ) + "/" + section._name.c_str() ).c_str() );
-                    merge._listSection.push_back( MeshMergeSectionPick{ section._name, name, section._material } );
-                }
-                return merge;
-            }
-
-            /**
-             * @brief 병합 조각(@p merge — `makeMergePart` 의 결과)마다 합친 메시 LOD 규칙을 덧붙입니다. 조각 이름이 합친 메시의 구간 이름이다(훅 없는 병합).
-             *        `<Section>` 이 적은 값이 먼저이고, 적지 않으면 부품의 값입니다.
-             */
-            static void appendLODRules( const ResolvedPart& part, const MeshMergePart& merge, vector<CharacterLODSectionRule>& inoutListRule )
-            {
-                if ( merge._listSection.empty() )
-                {
-                    inoutListRule.push_back( CharacterLODSectionRule{ merge._name, part._lodDetail, part._lodDropLevel } );
-                    return;
-                }
-                for ( size_t index = 0; index < merge._listSection.size() && index < part._listSection.size(); ++index )
-                {
-                    const AppearanceSectionDef& section = part._listSection[index]; // `makeMergePart` 가 같은 순서로 조각을 만들었다
-                    const float32               detail  = section._lodDetail != 1.0f ? section._lodDetail : part._lodDetail;
-                    const uint32                drop    = section._lodDropLevel != 0 ? section._lodDropLevel : part._lodDropLevel;
-                    inoutListRule.push_back( CharacterLODSectionRule{ merge._listSection[index]._name, detail, drop } );
-                }
-            }
-
             /** @brief 합친 부품의 조각마다 몸 오브젝트 @p owner 의 구간 컴포넌트를 맞춥니다 — 모자라면 더하고 남으면 지우고, 이름 · 머티리얼을 조각의 것으로 한다. */
             static void applyMergedSections( GameObjectManager& manager, GameObject& owner, const MeshMergePart& merge, const ResolvedPart& part,
                                              vector<TComponentHandle<MeshSectionComponent>>& inoutListSection, const string& presetID )
@@ -1602,7 +1559,6 @@ namespace sw
 
     void CharacterAppearanceMeshBuild::run()
     {
-        using Internal = CharacterAppearanceComponentInternal;
         SW_PROFILE_SCOPE( "Appearance.MeshBuild" );
         if ( _report.empty() && _bBakeCached == false )
             _bBakeBuilt = AppearanceMeshPart::assemble( _resolved, _listPart, _tables.get(), _bindBones, _listBaked, _report, _bPreview ? &_fitResult : nullptr );
@@ -1625,21 +1581,20 @@ namespace sw
                 _merged.reset();
                 return;
             }
-            _listMergePart.push_back( Internal::makeMergePart( part, *mesh, static_cast<int32>( partIndex ) == _bodyPart ) );
-            Internal::appendLODRules( part, _listMergePart.back(), listLODRule );
+            _listMergePart.push_back( AppearanceMeshPart::makeMergePart( part, *mesh, static_cast<int32>( partIndex ) == _bodyPart ) );
+            AppearanceMeshPart::appendLODRules( part, _listMergePart.back(), listLODRule );
         }
         if ( _merged != nullptr || _listMergePart.empty() )
             return;
-        const expected<MeshMergeResult> result = CharacterMeshUtil::mergeMeshes( _listMergePart, nullptr );
-        if ( result.has_value() == false )
+        // 같은 차림은 합친 메시(LOD 포함)를 캐시로 나눈다.
+        expected<shared_ptr<Mesh>> merged = AppearanceMeshPart::mergeParts( _listMergePart, *_pLODSettings, listLODRule );
+        if ( merged.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartsDrawnUnmerged", "Appearance '%#' parts are drawn unmerged: %# '%#'", _presetID.c_str(), result.error().message(), result.error().detail() );
+            SW_LOG_ERROR_ID( "CharacterAppearance.AppearancePartsDrawnUnmerged", "Appearance '%#' parts are drawn unmerged: %# '%#'", _presetID.c_str(), merged.error().message(), merged.error().detail() );
             _listMergePart.clear();
             return;
         }
-        _merged = result->_mesh;
-        // 합친 메시의 LOD 는 여기서 한 번 만든다(조립한 메시라 임포트 LOD 가 없다) — 같은 차림은 캐시로 나눈다. 만들지 못하면 오류를 남기고 LOD 0 만 그린다.
-        (void)CharacterLODSettings::buildLODs( *_merged, *_pLODSettings, listLODRule );
+        _merged      = std::move( *merged );
         _bMergeBuilt = true;
     }
 

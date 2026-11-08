@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
@@ -74,7 +75,7 @@ namespace sw::editor
         /** @brief 이번 프레임에 그린 오브젝트 행을 위에서 아래 순서로 더합니다. */
         void recordDrawnRow( uint64 objectID ) { _listDrawnRow.push_back( objectID ); }
         /** @brief 마지막으로 그린 프레임에서 @p objectID 의 행 번호(0 부터)입니다. 그리지 않았으면 -1 입니다. */
-        int32 findDrawnRowIndex( uint64 objectID ) const;
+        [[nodiscard]] optional<uint32> findDrawnRowIndex( uint64 objectID ) const;
         /** @brief 펼쳐서 보여 줄 오브젝트(뷰포트에서 고른 것)입니다. 없으면 0 입니다. */
         uint64 getRevealObjectID() const { return _revealObjectID; }
         /** @brief 그 행을 보였으니 펼쳐 보이기를 끝냅니다. */

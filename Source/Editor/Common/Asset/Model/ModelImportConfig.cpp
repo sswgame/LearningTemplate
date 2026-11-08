@@ -166,11 +166,11 @@ namespace sw::editor
         }
 
         // 조건 없는 규칙은 나머지를 받는 규칙이라 맨 끝에 하나만 둔다. 중간에 있으면 순서가 뜻을 갖는 설정으로 읽히므로 오류로 멈춘다.
-        const size_t misplacedIndex = AssetImportRuleUtil::findMisplacedCatchAllIndex( _listRule );
-        if ( misplacedIndex < _listRule.size() )
+        const optional<uint32> misplacedIndex = AssetImportRuleUtil::findMisplacedCatchAllIndex( _listRule );
+        if ( misplacedIndex.has_value() )
         {
             SW_LOG_ERROR_ID( "ModelImportConfig.ModelImportConfigRuleNoCondition", "ModelImportConfig: rule #%# ('%#') has no condition, so it takes every path no other rule matches. Put the unconditional rule at the very end of the list, once.",
-                             misplacedIndex, _listRule[misplacedIndex]._name.c_str() );
+                             *misplacedIndex, _listRule[*misplacedIndex]._name.c_str() );
             _listRule.clear();
             return false;
         }

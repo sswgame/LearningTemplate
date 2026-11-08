@@ -10,6 +10,7 @@
 #include "Engine/Foundation/RenderTargetDeclaration.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/PropertyRoleUtil.h"
 
 /**
  * @brief 시야 거리 배율입니다. 사용자 설정 `graphics.viewDistance` 가 넣고, 원근 카메라의 먼 평면에 곱한다(`getProjectionMatrix` — 절두체 컬링이 같은 평면으로 자른다).
@@ -21,14 +22,12 @@ namespace sw
 {
     CameraDepthOfFieldValues CameraDepthOfFieldValues::blend( const CameraDepthOfFieldValues& from, const CameraDepthOfFieldValues& to, float32 weight )
     {
+        CameraDepthOfFieldValues values = PropertyRoleUtil::blendValues( from, to, weight );
         // 흐림은 구경(초점 길이 / f 값)에 비례하므로 f 값의 역수를 섞는다. 0 은 역수 0(핀홀)이라 켜고 끄는 블렌드가 점점 흐려지고 점점 맑아진다.
-        const float32            fromOpening = from._aperture > 0.0f ? 1.0f / from._aperture : 0.0f;
-        const float32            toOpening   = to._aperture > 0.0f ? 1.0f / to._aperture : 0.0f;
-        const float32            opening     = MathUtil::lerp( fromOpening, toOpening, weight );
-        CameraDepthOfFieldValues values;
-        values._focusDistance = MathUtil::lerp( from._focusDistance, to._focusDistance, weight );
-        values._aperture      = opening > 0.0f ? 1.0f / opening : 0.0f;
-        values._sensorHeight  = MathUtil::lerp( from._sensorHeight, to._sensorHeight, weight );
+        const float32 fromOpening = from._aperture > 0.0f ? 1.0f / from._aperture : 0.0f;
+        const float32 toOpening   = to._aperture > 0.0f ? 1.0f / to._aperture : 0.0f;
+        const float32 opening     = MathUtil::lerp( fromOpening, toOpening, weight );
+        values._aperture          = opening > 0.0f ? 1.0f / opening : 0.0f;
         return values;
     }
 

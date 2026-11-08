@@ -10,6 +10,7 @@
 
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
+#include "Engine/Character/Fit/CharacterLODSettings.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Character/Fit/FitPartDef.h"
 #include "Engine/Character/Fit/FitSolver.h"
@@ -251,6 +252,54 @@ namespace sw
         if ( pOutFitResult != nullptr )
             *pOutFitResult = std::move( result );
         return true;
+    }
+} // namespace sw
+
+namespace sw
+{
+    hashed_string AppearanceMeshPart::makeSectionName( const ResolvedPart& part )
+    {
+        if ( part._owner.empty() )
+            return part._partName;
+        return hashed_string( ( string( part._owner.c_str() ) + "." + part._partName.c_str() ).c_str() );
+    }
+
+    MeshMergePart AppearanceMeshPart::makeMergePart( const ResolvedPart& part, const Mesh& mesh, bool bBody )
+    {
+        MeshMergePart merge{ makeSectionName( part ), part._material, &mesh };
+        for ( const AppearanceSectionDef& section : part._listSection ) // 변형 · 규칙을 반영한 구간 머티리얼 — 병합해도 구간마다 머티리얼이 남는다
+        {
+            const hashed_string name = bBody ? section._name : hashed_string( ( string( merge._name.c_str() ) + "/" + section._name.c_str() ).c_str() );
+            merge._listSection.push_back( MeshMergeSectionPick{ section._name, name, section._material } );
+        }
+        return merge;
+    }
+
+    void AppearanceMeshPart::appendLODRules( const ResolvedPart& part, const MeshMergePart& merge, vector<CharacterLODSectionRule>& inoutListRule )
+    {
+        if ( merge._listSection.empty() )
+        {
+            inoutListRule.push_back( CharacterLODSectionRule{ merge._name, part._lodDetail, part._lodDropLevel } );
+            return;
+        }
+        for ( size_t index = 0; index < merge._listSection.size() && index < part._listSection.size(); ++index )
+        {
+            const AppearanceSectionDef& section = part._listSection[index]; // `makeMergePart` 가 같은 순서로 조각을 만들었다
+            const float32               detail  = section._lodDetail != 1.0f ? section._lodDetail : part._lodDetail;
+            const uint32                drop    = section._lodDropLevel != 0 ? section._lodDropLevel : part._lodDropLevel;
+            inoutListRule.push_back( CharacterLODSectionRule{ merge._listSection[index]._name, detail, drop } );
+        }
+    }
+
+    expected<shared_ptr<Mesh>> AppearanceMeshPart::mergeParts( vector_reference<const MeshMergePart> listMergePart, const CharacterLODSettings& lodSettings,
+                                                               const vector<CharacterLODSectionRule>& listLODRule )
+    {
+        expected<MeshMergeResult> result = CharacterMeshUtil::mergeMeshes( listMergePart, nullptr );
+        if ( result.has_value() == false )
+            return unexpected( result.error() );
+        // 합친 메시의 LOD 는 여기서 한 번 만든다(조립한 메시라 임포트 LOD 가 없다). 만들지 못하면 buildLODs 가 오류를 남기고 LOD 0 만 그린다.
+        (void)CharacterLODSettings::buildLODs( *result->_mesh, lodSettings, listLODRule );
+        return std::move( result->_mesh );
     }
 } // namespace sw
 

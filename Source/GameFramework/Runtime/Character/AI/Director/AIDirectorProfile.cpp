@@ -46,7 +46,7 @@ namespace sw
         , _listPhase{}
         , _listPool{}
         , _startPhase{}
-        , _startPhaseIndex{ -1 }
+        , _startPhaseIndex{}
     {
     }
 
@@ -71,7 +71,7 @@ namespace sw
         _listPhase.clear();
         _listPool.clear();
         _startPhase      = hashed_string{};
-        _startPhaseIndex = -1;
+        _startPhaseIndex = nullopt;
     }
 
     optional<int32> AIDirectorProfile::findPhaseIndex( const hashed_string& phaseID ) const
@@ -263,9 +263,8 @@ namespace sw
             SW_LOG_ERROR_ID( "AI.DirectorNoPhase", "%#: no <Phase>", sourceName );
             return false;
         }
-        const optional<int32> startPhaseIndex = _startPhase.empty() ? optional<int32>{ 0 } : findPhaseIndex( _startPhase );
-        _startPhaseIndex                      = startPhaseIndex.has_value() ? *startPhaseIndex : constant::invalid_index::kInt32; // 읽기 실패(아래 bValid)면 쓰지 않는 칸이다
-        if ( startPhaseIndex.has_value() == false )
+        _startPhaseIndex = _startPhase.empty() ? optional<int32>{ 0 } : findPhaseIndex( _startPhase );
+        if ( _startPhaseIndex.has_value() == false )
         {
             SW_LOG_ERROR_ID( "AI.DirectorStartPhaseUnknown", "%#: start phase '%#' is not a <Phase>", sourceName, _startPhase.c_str() );
             bValid = false;
@@ -275,12 +274,9 @@ namespace sw
         {
             for ( AIDirectorExitDef& exit : phase._listExit )
             {
-                const optional<int32> toIndex = findPhaseIndex( exit._to );
-                if ( toIndex.has_value() )
-                {
-                    exit._toIndex = *toIndex;
+                exit._toIndex = findPhaseIndex( exit._to );
+                if ( exit._toIndex.has_value() )
                     continue;
-                }
                 SW_LOG_ERROR_ID( "AI.DirectorExitPhaseUnknown", "%#: phase '%#' exits to an unknown phase '%#'", sourceName, phase._id.c_str(), exit._to.c_str() );
                 bValid = false;
             }
@@ -294,10 +290,8 @@ namespace sw
             }
             if ( pool._trigger == AIDirectorPoolTrigger::PhaseEnter )
             {
-                const optional<int32> phaseIndex = findPhaseIndex( pool._phase );
-                if ( phaseIndex.has_value() )
-                    pool._phaseIndex = *phaseIndex;
-                else
+                pool._phaseIndex = findPhaseIndex( pool._phase );
+                if ( pool._phaseIndex.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "AIDirectorProfile.PoolWaitsUnknownPhase", "%#: pool '%#' waits for an unknown phase '%#'", sourceName, pool._id.c_str(), pool._phase.c_str() );
                     bValid = false;

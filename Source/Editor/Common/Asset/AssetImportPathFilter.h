@@ -6,6 +6,7 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/StringUtil.h"
@@ -120,18 +121,18 @@ namespace sw::editor
         }
 
         /**
-         * @brief 맨 끝이 아닌 자리에 있는 조건 없는 규칙의 인덱스입니다. 없으면 `listRule.size()` 입니다.
+         * @brief 맨 끝이 아닌 자리에 있는 조건 없는 규칙의 인덱스입니다. 없으면 비어 있습니다.
          * @details 조건 없는 규칙은 나머지를 받는 규칙이라 하나뿐이고 맨 끝에 있어야 합니다. 그 뒤에 규칙이 더 있으면 설정을 적은 사람이 의도한 순서와 다르게 읽히므로 로드 오류로 막습니다.
          */
         template <typename Rule>
-        [[nodiscard]] static size_t findMisplacedCatchAllIndex( const vector<Rule>& listRule )
+        [[nodiscard]] static optional<uint32> findMisplacedCatchAllIndex( const vector<Rule>& listRule )
         {
             for ( size_t ruleIndex = 0; ruleIndex + 1 < listRule.size(); ++ruleIndex )
             {
                 if ( listRule[ruleIndex]._filter.isCatchAll() )
-                    return ruleIndex;
+                    return static_cast<uint32>( ruleIndex );
             }
-            return listRule.size();
+            return nullopt;
         }
 
         /**

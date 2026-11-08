@@ -3,6 +3,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "GameFramework/Runtime/Character/Camera/CameraBlend.h"
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
 
@@ -514,6 +515,31 @@ SW_TEST_CASE( CameraModeTest, LensValuesReachThePose )
     // 더치는 앞축으로만 기울인다 - 앞은 그대로, 위가 옆으로 눕는다.
     CameraModeTestUtil::expectPoint( CameraModeTestUtil::computeForward( pose ), float3{ 0.0f, 0.0f, 1.0f } );
     SW_EXPECT_NEAR( MathUtil::abs( float3::transform( float3{ 0.0f, 1.0f, 0.0f }, pose._rotation )._x ), 1.0f, CameraModeTestUtil::kNear );
+}
+
+/**
+ * @brief [CameraModeTest] 렌즈 · 후처리 블렌드가 리플렉션으로 모든 칸을 섞고, 칸마다 규칙(조리개 역수 · 한쪽이 없는 레터박스)만 덮어쓰는지 검증
+ */
+SW_TEST_CASE( CameraModeTest, LensAndPostProcessBlendEveryReflectedField )
+{
+    CameraPose from;
+    CameraPose to;
+    from._depthOfField._focusDistance        = 2.0f;
+    to._depthOfField._focusDistance          = 6.0f;
+    to._depthOfField._aperture               = 2.0f; // 핀홀(0)에서 f/2 로 — 역수 0 → 0.5 의 절반이 0.25 라 f/4
+    from._postProcess._saturation            = 0.0f;
+    to._postProcess._saturation              = 1.0f;
+    from._postProcess._autoExposureSpeedDown = 1.0f;
+    to._postProcess._autoExposureSpeedDown   = 3.0f;
+    to._postProcess._letterboxAspectRatio    = 2.39f; // 한쪽만 있으면 절반에서 바꾼다
+    const CameraPose half                    = blendPoses( from, to, 0.5f );
+    SW_EXPECT_NEAR( half._depthOfField._focusDistance, 4.0f, CameraModeTestUtil::kNear );
+    SW_EXPECT_NEAR( half._depthOfField._aperture, 4.0f, CameraModeTestUtil::kNear );
+    SW_EXPECT_NEAR( half._postProcess._saturation, 0.5f, CameraModeTestUtil::kNear );
+    SW_EXPECT_NEAR( half._postProcess._autoExposureSpeedDown, 2.0f, CameraModeTestUtil::kNear );
+    SW_EXPECT_NEAR( half._postProcess._letterboxAspectRatio, 2.39f, CameraModeTestUtil::kNear );
+    const CameraPose early = blendPoses( from, to, 0.25f );
+    SW_EXPECT_EQUAL( early._postProcess._letterboxAspectRatio, 0.0f );
 }
 
 SW_TEST_CASE( CameraModeTest, ResetForgetsEverything )

@@ -174,14 +174,14 @@ namespace sw::editor
         _bClickedThisFrame = SW_FALSE;
     }
 
-    int32 HierarchyRowModel::findDrawnRowIndex( uint64 objectID ) const
+    optional<uint32> HierarchyRowModel::findDrawnRowIndex( uint64 objectID ) const
     {
         for ( size_t rowIndex = 0; rowIndex < _listDrawnRow.size(); ++rowIndex )
         {
             if ( _listDrawnRow[rowIndex] == objectID )
-                return static_cast<int32>( rowIndex );
+                return static_cast<uint32>( rowIndex );
         }
-        return -1;
+        return nullopt;
     }
 
     void HierarchyRowModel::clickRow( GameObjectManager& manager, GameObject* pObj, bool bCtrl, bool bShift )

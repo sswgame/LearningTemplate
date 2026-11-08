@@ -139,13 +139,13 @@ namespace sw
         _visitedCount = 0;
     }
 
-    int32 AreaGraph::findOtherSide( const AreaLink& link, int32 fromIndex ) const
+    optional<int32> AreaGraph::findOtherSide( const AreaLink& link, int32 fromIndex ) const
     {
         if ( link._fromIndex == fromIndex )
             return link._toIndex;
         if ( link._toIndex == fromIndex && link._bOneWay == SW_FALSE )
             return link._fromIndex;
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool AreaGraph::isUnlocked( const AreaLink& link, const GameFlags& flags ) const
@@ -176,9 +176,9 @@ namespace sw
         markVisited( areaIndex );
         for ( const int32 linkIndex : _listAdjacency[static_cast<size_t>( areaIndex )] )
         {
-            const int32 otherIndex = findOtherSide( _listLink[static_cast<size_t>( linkIndex )], areaIndex );
-            if ( otherIndex >= 0 )
-                _listDiscovered[static_cast<size_t>( otherIndex )] = SW_TRUE;
+            const optional<int32> otherIndex = findOtherSide( _listLink[static_cast<size_t>( linkIndex )], areaIndex );
+            if ( otherIndex.has_value() )
+                _listDiscovered[static_cast<size_t>( *otherIndex )] = SW_TRUE;
         }
         return bFirstVisit;
     }
@@ -256,11 +256,11 @@ namespace sw
             {
                 if ( listUnlocked[static_cast<size_t>( linkIndex )] == SW_FALSE )
                     continue;
-                const int32 otherIndex = findOtherSide( _listLink[static_cast<size_t>( linkIndex )], areaIndex );
-                if ( otherIndex < 0 || listParent[static_cast<size_t>( otherIndex )] != -2 )
+                const optional<int32> otherIndex = findOtherSide( _listLink[static_cast<size_t>( linkIndex )], areaIndex );
+                if ( otherIndex.has_value() == false || listParent[static_cast<size_t>( *otherIndex )] != -2 )
                     continue;
-                listParent[static_cast<size_t>( otherIndex )] = areaIndex;
-                listQueue.push_back( otherIndex );
+                listParent[static_cast<size_t>( *otherIndex )] = areaIndex;
+                listQueue.push_back( *otherIndex );
             }
         }
         if ( listParent[static_cast<size_t>( toIndex )] == -2 )
