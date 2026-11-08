@@ -192,7 +192,7 @@ static float4 Bindless::gatherEngineChannel( uint index, [[maybe_unused]] uint e
 // 쓰므로 컴퓨트에서 둘을 함께 선언하면 DXC 가 RW 텍스처를 결합 샘플러와 합쳐 버린다(엔진도 컴퓨트에는 엔진 텍스처를 걸지 않는다).
 // 엔진 텍스처는 역할 하나가 한 장이다(칸 번호 = C++ 표 shaderslot::emulated::kEngineTextureNames 의 순서, 컴파일러가 SW_EMU_SLOT_<이름> 으로 넣는다).
 // 칸을 나눠 쓰지 않으므로 한 패스가 어떤 역할을 함께 읽어도 겹치지 않는다(언리얼 D3D11 RHI 가 셰이더 매개변수마다 레지스터를 따로 두는 것과 같다).
-// 레지스터는 DX11 t32.., GL 텍스처 유닛 0..(binding_slots.hlsli 2). DX11 은 샘플러 슬롯이 16 개뿐이라 짝이 없고 정적 세트의 엔진 텍스처 샘플러로 읽는다.
+// 레지스터는 DX11 t32.., GL 텍스처 유닛도 같은 번호(binding_slots.hlsli 2). DX11 은 샘플러 슬롯이 16 개뿐이라 짝이 없고 정적 세트의 엔진 텍스처 샘플러로 읽는다.
 SW_DECLARE_ENGINE_TEXTURE( 0 );
 SW_DECLARE_ENGINE_TEXTURE( 1 );
 SW_DECLARE_ENGINE_TEXTURE( 2 );

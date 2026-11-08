@@ -349,13 +349,13 @@ namespace sw
             // instance_animation 컴퓨트: 인스턴스 버퍼를 u0 으로 고쳐 쓴다.
             addReserved( list, shaderslot::resname::kAnimationInstancesRw, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUAVBinding0 ) );
             // 엔진 텍스처 칸 t32.. / 머티리얼 텍스처 t16..t31: 에뮬 백엔드(DX11 · GL)만. Vulkan · DX12 는 선언 자체가 없어야 한다.
-            // 엔진 텍스처 칸의 GL binding 은 칸 번호다(레지스터와 다르다 — shaderslot::emulated::getGlTextureUnit). 짝 샘플러는 계약에 없다 —
+            // 엔진 텍스처 칸의 GL binding 은 레지스터 번호 그대로다(머티리얼 칸과 같다). 짝 샘플러는 계약에 없다 —
             // DX11 은 정적 세트로 읽고, GL 은 결합 샘플러라 리플렉션에 샘플러 이름이 따로 나오지 않는다(binding.hlsli).
             for ( uint32 slotIndex = 0; slotIndex < shaderslot::kEngineTextureCount; ++slotIndex )
             {
                 const uint32 reg = shaderslot::kEngineTexture0 + slotIndex;
                 addReserved( list, string( shaderslot::resname::kEngineTexture ) + to_string( slotIndex ), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(),
-                             slotAt( 0, shaderslot::emulated::getGlTextureUnit( reg ) ) );
+                             slotAt( 0, reg ) );
             }
             for ( uint32 slotIndex = 0; slotIndex < shaderslot::kMaterialTextureCount; ++slotIndex )
             {

@@ -1,5 +1,5 @@
 <Scene formatVersion="2" name="TerrainLayers">
-	<!-- 지형 레이어 규칙 쇼케이스(시나리오 automation/materiallibrary) — envshowcase 의 골짜기에 레이어 여덟: 칠한 풀 · 흙 위에 경사 규칙(바위 36 도 위 · 자갈 27..36 도), 고도 규칙(모래 8.5 m 아래(호수 물가) · 진흙 8.5..10.5 m · 이끼 12..24 m · 눈 28 m 위), 높이 섞기 깊이 0.15. 진흙은 늘 젖어 웅덩이가 진다. -->
+	<!-- 지형 레이어 규칙 쇼케이스(시나리오 automation/surfacelibrary) — envshowcase 의 골짜기에 레이어 여덟: 칠한 풀 · 흙 위에 경사 규칙(바위 36 도 위 · 자갈 27..36 도), 고도 규칙(모래 8.5 m 아래(호수 물가) · 진흙 8.5..10.5 m · 이끼 12..24 m · 눈 28 m 위), 높이 섞기 깊이 0.15. 진흙은 늘 젖어 웅덩이가 진다. -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 	</SceneSettings>

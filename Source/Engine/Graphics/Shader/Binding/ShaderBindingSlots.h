@@ -38,7 +38,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 레지스터 t32..t45 입니다 — 역할 하나가 칸 하나(`emulated::kEngineTextureNames` 의 순서)입니다.
-         * @details GL 텍스처 유닛은 칸 번호(0..)다 — GL 백엔드가 이 레지스터 범위를 유닛으로 옮긴다(`emulated::getGlTextureUnit`). DX12 · Vulkan 은 선언하지 않는다.
+         * @details GL 텍스처 유닛은 레지스터 번호 그대로다(머티리얼 칸과 같은 규칙 — 유닛 t32..). DX12 · Vulkan 은 선언하지 않는다.
          */
         inline constexpr uint32 kEngineTexture0     = SW_SLOT_ENGINE_TEX0;
         inline constexpr uint32 kEngineTextureCount = SW_ENGINE_TEXTURE_COUNT;
@@ -318,8 +318,9 @@ namespace sw
         /// @brief OpenGL SSBO 번호입니다. u# 는 t# 와 겹치지 않게 SW_GL_UAV_BINDING0 부터 셉니다(DXC -fvk-u-shift 값이기도 합니다).
         namespace gl
         {
-            inline constexpr uint32 kUAVBinding0 = SW_GL_UAV_BINDING0;
-            inline constexpr uint32 kImageUnit0  = SW_GL_IMAGE_UNIT0; ///< 컴퓨트 RW 텍스처 u5..u7이 이미지 유닛 0..2 에 대응한다.
+            inline constexpr uint32 kUAVBinding0      = SW_GL_UAV_BINDING0;
+            inline constexpr uint32 kImageUnit0       = SW_GL_IMAGE_UNIT0; ///< 컴퓨트 RW 텍스처 u5..u7이 이미지 유닛 0..2 에 대응한다.
+            inline constexpr uint32 kTextureUnitLimit = 64;                ///< GL 백엔드가 묶고 추적하는 텍스처 유닛 수(유닛 = 레지스터 — 엔진 칸 끝이 이 안이어야 한다)
         } // namespace gl
 
         /**
@@ -401,8 +402,8 @@ namespace sw
         static_assert( kInstanceBuffer == 4, "t0..t3 은 비어 있고 띠는 인스턴스 버퍼 t4 부터다 — 띠를 내리면 DX12 테이블 · Vulkan 범위 · GL SSBO 번호가 함께 움직인다" );
         static_assert( kEngineTexture0 >= kMaterialTexture0 + kMaterialTextureCount && kEngineTexture0 >= vk::kRangeSize,
                        "엔진 텍스처 칸(에뮬)은 t 띠 · 머티리얼 칸 위다 — DX11 SRV 128 칸 안이고, GL 은 유닛을 칸 번호로 옮긴다" );
-        static_assert( SW_SLOT_ENGINE_TEX17 == SW_SLOT_ENGINE_TEX0 + 17 && kEngineTextureCount == 18 && kEngineTextureCount <= kMaterialTexture0,
-                       "엔진 텍스처 칸은 연속 18 칸이고 GL 유닛(칸 번호)이 머티리얼 유닛(16..)과 겹치지 않아야 한다 (binding.hlsli 의 선언 14 줄과 같다)" );
+        static_assert( SW_SLOT_ENGINE_TEX17 == SW_SLOT_ENGINE_TEX0 + 17 && kEngineTextureCount == 18 && kEngineTexture0 + kEngineTextureCount <= gl::kTextureUnitLimit,
+                       "엔진 텍스처 칸은 연속 18 칸이다. GL 텍스처 유닛은 머티리얼 칸처럼 레지스터 번호 그대로(t32..)라 GL 백엔드가 유닛 64 개 안에서 묶는다 (binding.hlsli 의 선언과 같다)" );
         static_assert( kMaterialBuffer == kInstanceBuffer + 1, "머티리얼 데이터 버퍼는 인스턴스 버퍼 바로 다음이어야 한다" );
         static_assert( kMaterialTexture0 == vk::kRangeSize && kSRVSlotCount <= kMaterialTexture0,
                        "머티리얼 텍스처 슬롯(에뮬)은 Vulkan t 밴드 바로 뒤에 둔다 — DX12 테이블 · Vulkan t 밴드 밖이고 SRV 띠가 자라도 겹치지 않는다" );
@@ -505,11 +506,6 @@ namespace sw
                 return tryFindOrdinal( pName, ordinal ) ? kEngineTexture0 + ordinal : unknownEngineTextureName();
             }
 
-            /** @brief 레지스터 @p slot 이 엔진 텍스처 칸이면 GL 텍스처 유닛(칸 번호)을 돌려줍니다. 아니면 레지스터 그대로입니다(머티리얼 칸은 유닛 = 레지스터). */
-            [[nodiscard]] constexpr uint32 getGlTextureUnit( uint32 slot )
-            {
-                return ( slot - kEngineTexture0 ) < kEngineTextureCount ? slot - kEngineTexture0 : slot; // 부호 없는 뺄셈 — 시작보다 앞이면 감겨 커진다
-            }
         } // namespace emulated
 
         static_assert( kPassConstantBuffer != kMaterialConstantBuffer && kMaterialConstantBuffer < kConstantBufferSlotCount &&
