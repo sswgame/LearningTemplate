@@ -57,8 +57,8 @@
 
 ## 남은 일(코드를 붙여 보지 못한 것)
 
-- 빌드: Emscripten · NDK 로 한 번도 짓지 못했다 — 프리셋 `Web-Shipping` · `Android-Shipping` 이 `Tools/emsdk` · `Tools/Android/ndk/<판>` 을 가리킨다(설치 `py -3 Scripts/setup/PlatformSdk.py all`, 프리셋과 설정의 판 대조는 `… check`). Core · Engine 의 `#error "Unsupported platform"` 사슬 중 Android · Web 갈래가 없는 곳이 컴파일에서 드러난다(설계대로).
-- Android 파일 시스템: `Linux/` 폴더는 Android 에서 짓지 않는다 — `PlatformFileSystem` · `UserDataPath`(`#error` 사슬)의 Android 갈래가 없어 위 빌드 줄에서 함께 드러난다. 앱 전용 폴더는 `SW_ANDROID_APP_FOLDER`(ProcessRoots)가 이미 갖고 있으니 사용자 데이터 · 설정 폴더도 그 아래로 잇는다.
+- 웹 빌드: Emscripten 으로 아직 컴파일하지 않았다(Android 는 대상 전체가 컴파일 · 링크된다). Core · Engine 의 `#error "Unsupported platform"` 사슬 중 웹 갈래가 없는 곳 — 전송(WebSocket), 프로세스 · 호출 스택 · 크래시 핸들러 — 이 컴파일에서 드러난다(설계대로). wasm32 에서 64 비트 크기를 가정한 `static_assert` 도 드러난다.
+- Android 실기기: APK 기동 · 회전(pre-rotation 방향) · APK 팩 읽기(`AAssetDir_getNextFileName` 이 폴더 앞머리를 붙이는지) · 터치를 확인한다. 클립보드는 아직 OS 를 잇지 않는다(`AndroidClipboard.cpp` 의 `isAvailable` false — JNI `ClipboardManager` 는 Looper 스레드 제약을 실기기와 함께 본다).
 
 ## 입력(웹 · Android)
 
