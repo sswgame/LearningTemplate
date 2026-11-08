@@ -4,8 +4,8 @@
  *        팀 전원 기절 시 전멸 처리, 자기장 피해, 보급 상자, 남은 인원과 킬 피드 알림을 다룹니다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

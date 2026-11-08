@@ -6,8 +6,8 @@
  *          오브젝트 하나(횃불, 상자)는 1 × 1 격자로 같은 규칙을 쓴다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"

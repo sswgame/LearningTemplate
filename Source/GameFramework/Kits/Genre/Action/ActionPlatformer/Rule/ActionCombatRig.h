@@ -7,8 +7,8 @@
  *          탄은 단일 발사체 시뮬레이션(`ProjectileSimulation`)을 화면 평면(XY, z = 0)에 묶어 돌린다. 2D 를 따로 두지 않는 까닭은 그 헤더에 있다. 편은 `ProjectileState::_team`(= `ActionTeam`)이다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"

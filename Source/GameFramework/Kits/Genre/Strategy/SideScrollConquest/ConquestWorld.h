@@ -8,8 +8,8 @@
  *          서 있는 동안 상대편은 지나지 못한다. 단, 그 성문에 자기편 사다리가 걸쳐 있으면 넘어간다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

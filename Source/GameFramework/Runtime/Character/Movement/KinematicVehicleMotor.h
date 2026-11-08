@@ -11,8 +11,8 @@
  *          **벽이나 차끼리의 충돌은 하지 않는다.** 게임(또는 물리)이 위치와 속도를 고쳐 넣는다(`setPosition`, `setVelocity`, `addImpulse`).
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"

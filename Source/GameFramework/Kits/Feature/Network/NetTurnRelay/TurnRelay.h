@@ -14,8 +14,8 @@
  *            한 연결은 자리를 하나만 가진다. 같은 방에 다시 들어오면 같은 자리를 주고, 다른 방에 들어오면 `AlreadySeated` 로 거절한다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

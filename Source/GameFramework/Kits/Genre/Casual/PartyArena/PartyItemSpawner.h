@@ -5,8 +5,8 @@
  *          `Shield` 를 쓴다). 같은 시드와 같은 걸음이면 같은 위치에 같은 아이템이 나온다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

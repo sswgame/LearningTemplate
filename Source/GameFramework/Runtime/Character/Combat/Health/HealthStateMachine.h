@@ -7,8 +7,8 @@
  *          엔진 컴포넌트가 아닌 보통 클래스라서 씬 없이 돌고, 시간은 `update` 로만 흐르므로 결정적이다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

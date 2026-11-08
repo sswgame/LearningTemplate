@@ -16,10 +16,10 @@
  *          수명: 대상의 인스턴스는 빌려 쓴다 — 대상이 사라지기 전에 `unregisterTarget` 을 부른다. 서버는 연결이 닫히면 그 연결이 주인인 대상을 지운다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"

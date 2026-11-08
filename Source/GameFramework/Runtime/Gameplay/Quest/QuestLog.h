@@ -3,8 +3,8 @@
  * @brief 퀘스트 일지입니다. 받기(선행 퀘스트, 레벨, 반복), 목표 진행 알림, 단계 넘기기, 선택지, 시간 제한, 완료와 실패와 포기, 보상 알림을 다룹니다.
  */
 #pragma once
-#include "Core/Container/EventBuffer.h"
 #include "Core/Container/vector.h"
+#include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
