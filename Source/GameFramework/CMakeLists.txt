@@ -45,6 +45,13 @@ sw_markDeterministicSources(GameFramework
 	Runtime/Character/Combat/Projectile/ProjectileSimulation.cpp
 	Runtime/Character/Combat/Weapon/Weapon.cpp
 	Runtime/Foundation/Utility/Math/RayMath.cpp
+	# 락스텝 RTS(`GF_RealTimeStrategy`)가 판 걸음 안에서 부르는 격자 길찾기 · 흐름장
+	Runtime/Character/Navigation/FlowField.cpp
+	Runtime/Character/Navigation/FlowFieldCache.cpp
+	Runtime/Character/Navigation/GridPathSolver.cpp
+	Runtime/Character/Navigation/GridPathfinder.cpp
+	Runtime/Character/Navigation/GridReachability.cpp
+	Runtime/Character/Navigation/NavGrid.cpp
 )
 # 로컬 저장의 장치 키(Runtime/Foundation/Framework/Save/Local/LocalDeviceKeyProvider)는 Windows DPAPI 로 감싼다.
 if(WIN32)
