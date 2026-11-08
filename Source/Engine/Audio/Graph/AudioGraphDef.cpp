@@ -68,7 +68,7 @@ namespace sw
             for ( size_t parameterIndex = 0; parameterIndex < node._listParameter.size(); ++parameterIndex )
             {
                 const AudioGraphParameterDef& parameter = node._listParameter[parameterIndex];
-                if ( AudioGraphRegistry::findParameterIndex( typeInfo, parameter._name ) < 0 )
+                if ( AudioGraphRegistry::findParameterIndex( typeInfo, parameter._name ).has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "AudioGraphDef.NodeNoValueNamed", "%#: node '%#' (%#) has no value named '%#'", sourceName, pName, typeInfo._pName, parameter._name.c_str() );
                     bValid = false;

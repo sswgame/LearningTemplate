@@ -12,6 +12,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
@@ -61,8 +62,8 @@ namespace sw
 
         /** @brief 종류의 서술입니다. */
         static const AudioGraphNodeKindInfo& getNodeType( AudioGraphNodeKind type );
-        /** @brief 종류의 값 이름의 번호입니다. 없으면 -1 입니다. */
-        static int32 findParameterIndex( const AudioGraphNodeKindInfo& typeInfo, const hashed_string& name );
+        /** @brief 종류의 값 이름의 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] static optional<uint32> findParameterIndex( const AudioGraphNodeKindInfo& typeInfo, const hashed_string& name );
     };
 } // namespace sw
 

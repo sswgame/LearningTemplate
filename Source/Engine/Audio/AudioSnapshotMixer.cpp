@@ -197,12 +197,12 @@ namespace sw
                 const AudioEffectDef* pEffectDesc = desc.findEffect( *busIndex, effectItem._effect );
                 if ( pEffect == nullptr || pEffectDesc == nullptr )
                     continue;
-                const int32 parameterIndex = pEffect->findParameterIndex( effectItem._parameter );
-                if ( parameterIndex < 0 )
+                const optional<uint32> parameterIndex = pEffect->findParameterIndex( effectItem._parameter ); // 그래프 validate 가 모르는 값 이름을 거른다
+                if ( parameterIndex.has_value() == false )
                     continue;
                 const AudioEffectTypeInfo&      typeInfo = pEffect->getTypeInfo();
-                const AudioEffectParameterInfo& info     = typeInfo._pParameter[parameterIndex];
-                float32                         value    = AudioSnapshotMixerInternal::findBaseEffectValue( *pEffectDesc, typeInfo, static_cast<uint32>( parameterIndex ) );
+                const AudioEffectParameterInfo& info     = typeInfo._pParameter[*parameterIndex];
+                float32                         value    = AudioSnapshotMixerInternal::findBaseEffectValue( *pEffectDesc, typeInfo, *parameterIndex );
                 for ( const SnapshotState& snapshot : _listSnapshot )
                 {
                     for ( const AudioSnapshotEffectDef& activeEffect : snapshot._pDesc->_listEffectParameter )
@@ -215,7 +215,7 @@ namespace sw
                                                    : value + ( activeEffect._value - value ) * snapshot._intensity;
                     }
                 }
-                pEffect->setParameter( static_cast<uint32>( parameterIndex ), value );
+                pEffect->setParameter( *parameterIndex, value );
             }
         }
     }

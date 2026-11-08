@@ -161,14 +161,14 @@ namespace sw
         return AudioGraphInternal::kArrNodeType[static_cast<size_t>( type )];
     }
 
-    int32 AudioGraphRegistry::findParameterIndex( const AudioGraphNodeKindInfo& typeInfo, const hashed_string& name )
+    optional<uint32> AudioGraphRegistry::findParameterIndex( const AudioGraphNodeKindInfo& typeInfo, const hashed_string& name )
     {
         for ( uint32 parameterIndex = 0; parameterIndex < typeInfo._parameterCount; ++parameterIndex )
         {
             if ( name == hashed_string( typeInfo._pParameter[parameterIndex]._pName ) )
-                return static_cast<int32>( parameterIndex );
+                return parameterIndex;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 } // namespace sw
 
@@ -212,7 +212,7 @@ namespace sw
             }
             for ( const AudioGraphParameterDef& parameterDesc : desc._listParameter )
             {
-                const uint32                   parameterIndex = static_cast<uint32>( AudioGraphRegistry::findParameterIndex( typeInfo, parameterDesc._name ) );
+                const uint32                   parameterIndex = AudioGraphRegistry::findParameterIndex( typeInfo, parameterDesc._name ).value(); // AudioGraphDef::validate 가 모르는 값 이름을 거른다
                 const AudioGraphParameterInfo& info           = typeInfo._pParameter[parameterIndex];
                 node._arrParameter[parameterIndex]            = MathUtil::clamp( parameterDesc._value, info._minValue, info._maxValue );
                 if ( parameterDesc._parameter.empty() )
