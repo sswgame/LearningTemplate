@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHICommandContext.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -187,6 +188,7 @@ namespace sw
             _pContext->OMSetRenderTargets( rtCount, arrRTV, pDSV );
         else
             _pContext->OMSetRenderTargets( 0, nullptr, pDSV );
+        _pState->_boundRenderTargetCount = rtCount;
 
         // 깊이 · 블렌드 상태는 PSO 의 것만 쓴다(setPipelineState 가 건다). 전역 깊이 상태로 대신하지 않는다 — PSO 없이 그리면
         // bindGraphicsPipelineForDraw 가 멈춘다. 패스 앞에 이미 PSO 가 걸려 있으면 그 상태를 다시 건다.
@@ -288,6 +290,26 @@ namespace sw
             return;
         const D3D11_BOX region{ 0, 0, 0, sizeBytes, 1, 1 };
         _pContext->CopySubresourceRegion( pTarget, 0, 0, 0, 0, pSource, 0, &region );
+    }
+
+    void D3D11RHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    {
+        Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> uav = _pDevice->bindlessUAVAt( index );
+        if ( _pContext == nullptr || uav == nullptr || _pState == nullptr )
+            return;
+        // 픽셀 셰이더의 u 번호는 렌더 타깃 칸과 같은 자리다 — UAVStartSlot 은 건 렌더 타깃 수 이상이어야 한다. 모자라면 걸지 않는다(셰이더의 쓰기는 버려진다).
+        // https://learn.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-id3d11devicecontext-omsetrendertargetsandunorderedaccessviews
+        if ( slot < _pState->_boundRenderTargetCount || slot >= D3D11_PS_CS_UAV_REGISTER_COUNT )
+        {
+            SW_LOG_ERROR_ONCE_ID( "D3D11RHICommandContext.GraphicsUAVBehindTargets", "bindGraphicsUAV: u%# is not behind the %# bound render targets - D3D11 pixel shader UAVs share the render target slots, the writes are dropped",
+                                  slot, _pState->_boundRenderTargetCount );
+            return;
+        }
+        // 렌더 타깃 · 깊이는 그대로 두고(KEEP) UAV 하나만 건다. 같은 버퍼가 CS UAV 로 걸려 있으면 런타임이 그쪽을 뗀다.
+        ID3D11UnorderedAccessView* pUAV = uav.Get();
+        _pContext->OMSetRenderTargetsAndUnorderedAccessViews( D3D11_KEEP_RENDER_TARGETS_AND_DEPTH_STENCIL, nullptr, nullptr, slot, 1, &pUAV, nullptr );
+        if ( slot < D3D11_PS_CS_UAV_REGISTER_COUNT )
+            _pState->_arrComputeUAVBuffer[slot] = 0; // CS 쪽 기록은 런타임이 뗐다
     }
 
     void D3D11RHICommandContext::bindComputeUAV( RHIDescriptorIndex index, uint32 slot )

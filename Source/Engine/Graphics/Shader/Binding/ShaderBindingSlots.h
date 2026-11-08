@@ -246,8 +246,8 @@ namespace sw
         inline constexpr uint32 kComputeUAVSlotCount = SW_COMPUTE_UAV_SLOT_COUNT;
         /// @brief 컴퓨트 셰이더가 제 쓰기 버퍼로 쓰는 슬롯 수입니다(u0..u3).
         inline constexpr uint32 kComputeShaderUAVSlotCount = SW_COMPUTE_SHADER_UAV_SLOT_COUNT;
-        /// @brief 셰이더 assert 링의 쓰기 슬롯(u4)입니다 — 셰이더 소유 슬롯 바로 뒤, RW 텍스처 슬롯 바로 앞이라 어느 컴퓨트와도 겹치지 않습니다.
-        inline constexpr uint32 kComputeAssertUAV = SW_SLOT_COMPUTE_ASSERT_UAV;
+        /// @brief 셰이더 메시지 링의 쓰기 슬롯(u4)입니다 — 셰이더 소유 슬롯 바로 뒤, RW 텍스처 슬롯 바로 앞이라 어느 컴퓨트와도 겹치지 않습니다. 그래픽스 단계도 같은 번호다(`IRHICommandList::bindGraphicsUAV`).
+        inline constexpr uint32 kGPUMessageUAV = SW_SLOT_GPU_MESSAGE_UAV;
         /// @brief 컴퓨트 RW 텍스처 슬롯 u5..u7 입니다. DX11 과 GL 만 실제 슬롯이고, DX12 와 Vulkan 은 배열 인덱스라 bindComputeUAV 가 무시합니다.
         inline constexpr uint32 kComputeTextureUAV0         = SW_SLOT_COMPUTE_TEXUAV0;
         inline constexpr uint32 kComputeTextureUAVSlotCount = SW_COMPUTE_TEXUAV_SLOT_COUNT;
@@ -367,7 +367,7 @@ namespace sw
             inline constexpr const utf8* kSamplers             = "g_SwSamplers";           ///< Vulkan: set 1 binding 1 immutable sampler 배열(s0..s6)
             inline constexpr const utf8* kSamplerSlot          = "g_SwSampler";            ///< 뒤에 0..6 이 붙는다. DX12 정적 샘플러 s#(배열은 정적 샘플러로 채울 수 없다).
             inline constexpr const utf8* kShadowSampler        = "g_SwSamplerShadowCmp";   ///< s7 비교 샘플러
-            inline constexpr const utf8* kGPUAssertRing        = "g_GPUAssertRW";          ///< 셰이더 assert 링(컴퓨트 쓰기 슬롯 u4, gpu_assert.hlsli).
+            inline constexpr const utf8* kGPUMessageRing       = "g_GPUMessageRW";         ///< 셰이더 메시지 링(쓰기 슬롯 u4, gpu_message.hlsli).
             inline constexpr const utf8* kRwTextureSlot        = "g_SwRWSlot";             ///< 뒤에 0..2 가 붙는다(DX11/GL 컴퓨트 RW 텍스처 슬롯).
             inline constexpr const utf8* kVisibleInstances     = "g_SwVisibleInstanceIDs"; ///< t6(그래픽스). 컬링이 만든 가시 목록
             inline constexpr const utf8* kMorphVertices        = "g_SwMorphVertices";      ///< t7(그래픽스). GPU 가 변형한 정점 풀
@@ -528,10 +528,10 @@ namespace sw
         static_assert( SW_SLOT_COMPUTE_TEXUAV1 == SW_SLOT_COMPUTE_TEXUAV0 + 1 && SW_SLOT_COMPUTE_TEXUAV2 == SW_SLOT_COMPUTE_TEXUAV0 + 2 &&
                            SW_COMPUTE_TEXUAV_SLOT_COUNT == 3 && SW_GL_IMAGE_UNIT1 == SW_GL_IMAGE_UNIT0 + 1 && SW_GL_IMAGE_UNIT2 == SW_GL_IMAGE_UNIT0 + 2,
                        "RW 텍스처 슬롯/이미지 유닛은 연속이어야 한다 (셰이더가 서수로 고른다)" );
-        // 컴퓨트 쓰기 슬롯 지도: 셰이더 소유 u0..u3 | assert 링 u4 | RW 텍스처 u5..u7. 셋이 겹치지 않고 빈틈이 없어야 한다 — assert 를 새 컴퓨트에 쓰려는 사람이 슬롯을 따로 잡을 필요가 없다는 근거다.
-        static_assert( kComputeAssertUAV == kComputeShaderUAVSlotCount && kComputeUAVSlotCount == kComputeShaderUAVSlotCount + 1 && kComputeAssertUAV < kComputeUAVSlotCount,
-                       "assert 링 슬롯은 셰이더 소유 쓰기 슬롯 바로 뒤이고 쓰기 버퍼 슬롯 수의 마지막이어야 한다" );
-        /// @brief 컴퓨트 셰이더가 제 쓰기 버퍼로 쓰는 슬롯의 수(u0 부터 연속)를 셰이더별로 등록합니다. 하나라도 `kComputeShaderUAVSlotCount` 를 넘으면 assert 링(u4)과 겹치므로 컴파일이 막습니다.
+        // 컴퓨트 쓰기 슬롯 지도: 셰이더 소유 u0..u3 | 메시지 링 u4 | RW 텍스처 u5..u7. 셋이 겹치지 않고 빈틈이 없어야 한다 — 메시지를 새 컴퓨트에 쓰려는 사람이 슬롯을 따로 잡을 필요가 없다는 근거다.
+        static_assert( kGPUMessageUAV == kComputeShaderUAVSlotCount && kComputeUAVSlotCount == kComputeShaderUAVSlotCount + 1 && kGPUMessageUAV < kComputeUAVSlotCount,
+                       "메시지 링 슬롯은 셰이더 소유 쓰기 슬롯 바로 뒤이고 쓰기 버퍼 슬롯 수의 마지막이어야 한다" );
+        /// @brief 컴퓨트 셰이더가 제 쓰기 버퍼로 쓰는 슬롯의 수(u0 부터 연속)를 셰이더별로 등록합니다. 하나라도 `kComputeShaderUAVSlotCount` 를 넘으면 메시지 링(u4)과 겹치므로 컴파일이 막습니다.
         ///        값은 각 .hlsl 의 `SW_DECLARE_RW_STRUCTURED_BUFFER` / `SW_DECLARE_RW_BYTE_ADDRESS_BUFFER` 선언 수다(ShaderBindingValidatorIssue 가 쿠킹된 바이너리로도 u4 점유를 검사한다).
         struct ComputeUAVUsage
         {
@@ -561,7 +561,7 @@ namespace sw
             }
             return true;
         }
-        static_assert( allComputeUAVUsageFits(), "컴퓨트 셰이더가 셰이더 소유 쓰기 슬롯(u0..u3)을 넘어 assert 링 슬롯(u4)을 침범한다" );
+        static_assert( allComputeUAVUsageFits(), "컴퓨트 셰이더가 셰이더 소유 쓰기 슬롯(u0..u3)을 넘어 메시지 링 슬롯(u4)을 침범한다" );
         static_assert( kStaticSamplerArrayCount + 1 == kStaticSamplerCount && kSamplerShadowCmp == kStaticSamplerArrayCount,
                        "비교 샘플러는 샘플러 배열 바로 다음 번호(마지막)여야 한다" );
         static_assert( gl::kUAVBinding0 >= kSRVSlotCount && gl::kUAVBinding0 >= kComputeSRVSlotCount, "GL UAV SSBO 번호가 SRV 번호와 겹친다" );

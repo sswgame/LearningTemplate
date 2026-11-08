@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  GPU 진단 — 셰이더 메시지 채널 · 픽셀 검사 · 패스별 GPU 시간.
+  `gpu.inspect 16 16` 이 픽셀을 고르면 (1) 렌더 스레드가 공개된 첨부의 그 픽셀 값을 GPUInspect.Pixel 로 내고, (2) Present 의 fullscreen_blit 이 그 픽셀에서만
+  SW_GPU_PRINT 를 적어 몇 프레임 뒤 GPUMessage.Print("present pixel color …")가 나온다(-gv_gpuMessages=1 의 메시지 변형 PSO). 고르지 않은 동안에는 출력이 없다.
+  `gpu.timings on` 뒤 패스별 GPU 시간 줄(GPUTiming.Pass)과 감시 값 GPU.FrameMs · GPU.PassMs 를 본다(값은 통합이 측정에 쓴다 — 여기서는 있는지만 본다).
+  실행: ctest -R Scenario.empty
+-->
+<Scenario name="game.empty.gpumessages" fixedDelta="0.0166667" timeoutFrames="400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<Launch variable="gv_gpuMessages" value="1"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Wait frames="20"/>
+	<ExpectLog id="GPUMessage.RingReady" count="1"/>
+	<ExpectLog id="GPUMessage.Print" count="0"/>
+	<DevCommand line="gpu.inspect 16 16"/>
+	<Wait frames="30"/>
+	<ExpectLog id="GPUInspect.Pixel" contains="pixel 16,16" atLeast="1"/>
+	<ExpectLog id="GPUMessage.Print" contains="present pixel color" atLeast="1"/>
+	<ExpectLog id="GPUMessage.UnknownID" count="0"/>
+	<ExpectLog id="GPUMessage.Error" count="0"/>
+	<DevCommand line="gpu.inspect off"/>
+	<DevCommand line="gpu.show off"/>
+	<DevCommand line="gpu.thread 0"/>
+	<DevCommand line="gpu.timings on"/>
+	<Wait frames="30"/>
+	<DevCommand line="gpu.timings"/>
+	<ExpectLog id="GPUTiming.Pass" atLeast="1"/>
+	<Expect watch="GPU.FrameMs" atLeast="0"/>
+	<Expect watch="GPU.PassMs" key="Frame" atLeast="0"/>
+	<Pass/>
+</Scenario>

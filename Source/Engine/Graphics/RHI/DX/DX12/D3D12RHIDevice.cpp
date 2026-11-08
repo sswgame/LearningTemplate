@@ -793,9 +793,9 @@ namespace sw
     {
         if ( GPUBreadcrumbs::isEnabled() == false || _device == nullptr )
             return;
-        // 읽기 힙(CPU 가 읽는 시스템 메모리) 4 바이트 - GPU 가 소실 중에 쓴 값이 소실 뒤에도 CPU 에서 읽힌다. 읽기 힙 버퍼의 상태는 COPY_DEST 로 고정이다.
+        // 읽기 힙(CPU 가 읽는 시스템 메모리) uint32 둘 — [0] 시작 표지 · [1] 끝 표지. GPU 가 소실 중에 쓴 값이 소실 뒤에도 CPU 에서 읽힌다. 읽기 힙 버퍼의 상태는 COPY_DEST 로 고정이다.
         const D3D12_HEAP_PROPERTIES heapProperties = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
-        const D3D12_RESOURCE_DESC   bufferDesc     = D3D12RHIResourcePreset::bufferDesc( sizeof( uint32 ) );
+        const D3D12_RESOURCE_DESC   bufferDesc     = D3D12RHIResourcePreset::bufferDesc( sizeof( uint32 ) * kBreadcrumbSlotCount );
         if ( isHrSuccess( _device->CreateCommittedResource( &heapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
                                                             IID_PPV_ARGS( _breadcrumbBuffer.GetAddressOf() ) ),
                           "CreateCommittedResource(breadcrumb)" ) == false )
@@ -810,9 +810,10 @@ namespace sw
             _breadcrumbBuffer.Reset();
             return;
         }
-        *static_cast<uint32*>( pMapped ) = 0;
-        _pBreadcrumbMapped               = static_cast<const volatile uint32*>( pMapped );
-        _breadcrumbAddress               = _breadcrumbBuffer->GetGPUVirtualAddress();
+        static_cast<uint32*>( pMapped )[0] = 0;
+        static_cast<uint32*>( pMapped )[1] = 0;
+        _pBreadcrumbMapped                 = static_cast<const volatile uint32*>( pMapped );
+        _breadcrumbAddress                 = _breadcrumbBuffer->GetGPUVirtualAddress();
         SW_LOG_INFO_ID( "D3D12.D3D12GPUBreadcrumbsEnabled", "D3D12 GPU breadcrumbs enabled (WriteBufferImmediate markers)" );
     }
 
@@ -820,11 +821,15 @@ namespace sw
     {
         if ( _pBreadcrumbMapped == nullptr || pOutID == nullptr || capacity == 0 )
             return 0;
-        const uint32 marker = *_pBreadcrumbMapped;
-        if ( marker == 0 )
-            return 0;
-        pOutID[0] = marker;
-        return 1;
+        // [0] 시작 표지 · [1] 끝 표지 — 0 인 칸(아직 쓰지 않음)은 싣지 않는다. 푸는 일은 GPUBreadcrumbs::parse 가 한다.
+        uint32 filled = 0;
+        for ( uint32 slot = 0; slot < kBreadcrumbSlotCount && filled < capacity; ++slot )
+        {
+            const uint32 marker = _pBreadcrumbMapped[slot];
+            if ( marker != 0 )
+                pOutID[filled++] = marker;
+        }
+        return filled;
     }
 
     void D3D12RHIDevice::shutdownInternal()

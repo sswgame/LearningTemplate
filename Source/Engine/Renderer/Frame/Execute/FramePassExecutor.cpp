@@ -23,6 +23,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
+#include "Engine/Graphics/Debug/GPUPixelInspector.h"
 #include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -621,6 +622,22 @@ namespace sw
         return hashed_string{};
     }
 
+    void FramePassExecutor::registerVisualizedAttachment( FramePassContext& context )
+    {
+        // 주 시점만 바꾼다 — 추가 뷰(CCTV · 렌더 텍스처)는 제 원본을 그대로 낸다. 없는 이름이면 원본을 그대로 둔다(개발 명령이 이미 이름을 알렸다).
+        const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
+        string                         attachment;
+        if ( isRenderingExtraView() || pInspector == nullptr || pInspector->findVisualizedAttachment( attachment ) == false )
+            return;
+        const hashed_string name = hashed_string::findInterned( attachment );
+        if ( name.empty() || findTransient( name ) == 0 )
+        {
+            SW_LOG_WARNING_ONCE_ID( "FramePassExecutor.VisualizedAttachmentMissing", "gpu.show: attachment '%#' is not allocated in this view - showing the normal output", attachment.c_str() );
+            return;
+        }
+        registerPassTexture( context, attachmentNames()._sourceColor, name );
+    }
+
     void FramePassExecutor::scanPassOutputsForNan( IRHIDevice* pDevice )
     {
         if ( _nanCheck.isActive() == false || pDevice == nullptr )
@@ -1135,16 +1152,8 @@ namespace sw
             return;
         }
 
-        if ( passName.empty() == false )
-        {
-            utf8         arrPassName[constant::buffer::kMax64];
-            const size_t copyLen = ( passName.size() < sizeof( arrPassName ) - 1 ) ? passName.size() : ( sizeof( arrPassName ) - 1 );
-            Memory::copy( arrPassName, passName.data(), copyLen );
-            arrPassName[copyLen] = '\0';
-            // GPU 브레드크럼 - 디바이스 소실 때 마지막으로 닿은 패스 이름을 싣는다(꺼져 있으면 아무것도 하지 않는다).
-            GPUBreadcrumbs::mark( *context._pCmd, string_view( arrPassName, copyLen ) );
-            context._pCmd->beginEventMarker( arrPassName );
-        }
+        // 이벤트 표지(캡처의 구간 이름) + GPU 브레드크럼 시작 · 끝 표지 — 디바이스 소실 때 끝난 패스와 돌던 패스를 이름으로 싣는다. 어느 길로 돌아가도 짝이 맞는다.
+        const GPUPassScope passScope{ *context._pCmd, passName };
         context._resourceRegistry.reset();
         context._passType = passType;
         // 라이트는 **패스 종류를 가리지 않는다.** 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
@@ -1170,10 +1179,7 @@ namespace sw
         const bool bMissingDeclaredColor = info.hasFlag( RenderPassTraitFlag::kDrawsDeclaredColor ) && declaredColor.empty();
         SW_ASSERT( bMissingDeclaredColor == false );
         if ( bMissingDeclaredColor )
-        {
-            context._pCmd->endEventMarker(); // 함수 끝과 같은 짝
             return;
-        }
         const PassExecuteInput input{ context, passType, passDesc, declaredColor, passDepth, info.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) };
         if ( info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) )
         {
@@ -1324,8 +1330,6 @@ namespace sw
                 }
             }
         }
-
-        context._pCmd->endEventMarker();
     }
 
     RHIRenderPassLoadOp FramePassExecutor::colorLoadFor( const hashed_string& name )
@@ -1903,6 +1907,8 @@ namespace sw
             // 선언한 입력을 **모두** 바인딩한다. Present 가 후처리 체인을 겸하면 깊이(외곽선)와 AO 가 필요하고,
             // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
             registerDeclaredInputs( context, passDesc );
+            // 개발 보기 `gpu.show <첨부>` — 주 시점이 화면에 낼 원본을 그 첨부로 바꾼다(언리얼 Buffer Visualization). 선언한 입력 등록 뒤라 그것을 덮는다.
+            registerVisualizedAttachment( context );
             // 후처리 체인이 톤맵까지 하면 자동 노출을 이 그리기 앞에서 측정한다(Tonemap 패스와 같은 자리).
             _autoExposure.recordAutoExposure( context, *_pActiveView, passDesc );
             // FSR 1 로 키우는 뷰는 렌더 패스를 열기 전에 EASU 를 중간 RT 에 그리고, 아래에서 블릿 대신 RCAS 로 그린다(prepareUpscale 이 셋업에서 정했다).
@@ -2498,6 +2504,10 @@ namespace sw
         context._lastCbBuffer          = engineCb._buffer;
         context._lastCbValuesVersion   = valuesVersion;
         context._lastCbRegistryVersion = registryVersion;
+
+        // 셰이더 메시지 변형 패스(표의 kGPUMessageTarget — Present 의 fullscreen_blit)는 드로우마다 링을 u4 에 건다. 링이 없으면(-gv_gpuMessages 꺼짐) 아무것도 하지 않는다.
+        if ( getRenderPassTypeInfo( context._passType ).hasFlag( RenderPassTraitFlag::kGPUMessageTarget ) )
+            _state._gpuMessages.bindGraphics( *context._pCmd );
     }
 
     void FramePassExecutor::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )
@@ -2864,8 +2874,7 @@ namespace sw
     {
         if ( context._pCmd == nullptr )
             return;
-        GPUBreadcrumbs::mark( *context._pCmd, pass._graphName.view() );
-        context._pCmd->beginEventMarker( pass._graphName.c_str() );
+        const GPUPassScope passScope{ *context._pCmd, pass._graphName.view() };
         context._resourceRegistry.reset();
         context._passType = RenderPassType::Invalid;
         registerLightBuffer( context );
@@ -2875,7 +2884,6 @@ namespace sw
         view._height    = activePool().getHeight();
         ExtensionPassContext moduleContext( *this, &context, &pass, view );
         pass._execute( moduleContext );
-        context._pCmd->endEventMarker();
     }
 
     bool FramePassExecutor::drawModuleFullscreen( FramePassContext& context, const ExtensionFramePass& pass, vector_reference<const ExtensionConstant> listConstant )

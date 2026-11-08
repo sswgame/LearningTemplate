@@ -17,6 +17,9 @@
 
 #include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
+#include "Engine/Graphics/Debug/GPUPixelInspector.h"
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -54,15 +57,14 @@ namespace sw
         , _psoManager{ psoManager }
         , _fog{ fog }
         , _occlusion{}
-        , _gpuAssert{}
     {
     }
 
     void FrameGraphExecutor::ensureResources()
     {
-        // 셰이더 assert 링은 PSO 보다 먼저 만든다 — assert 변형 PSO 는 이 버퍼 없이는 돌릴 수 없으므로 만들지 못하면 멈춘다(폴백 없음).
-        if ( _gpuAssert.initialize( _pDevice ) == false )
-            SW_FATAL( "GPU assert is on but its ring could not be created - see the log above" );
+        // 셰이더 메시지 링은 PSO 보다 먼저 만든다 — 메시지 변형 PSO 는 이 버퍼 없이는 돌릴 수 없으므로 만들지 못하면 멈춘다(폴백 없음).
+        if ( _state._gpuMessages.initialize( _pDevice ) == false )
+            SW_FATAL( "GPU messages are on but the message ring could not be created - see the log above" );
         // 정렬 디스패치의 t2 자리표 — 순번 표가 없는 뷰도 빈 슬롯으로 디스패치하지 않는다(DX12 는 빈 디스크립터를 읽으면 폴트).
         constexpr uint32 kZeroRank = 0;
         if ( _transparentRankPlaceholder.ensureCapacity( _pDevice, sizeof( uint32 ), 1, RHIBufferUsage::ShaderResource, true, false, &kZeroRank ) == false )
@@ -74,13 +76,16 @@ namespace sw
     {
         _transparentRankPlaceholder.release( _pDevice );
         _occlusion.release( _pDevice );
-        _gpuAssert.shutdown();
+        _state._gpuMessages.shutdown();
     }
 
     void FrameGraphExecutor::beginFrame()
     {
         _bGPUCullingActive = 0;
-        _gpuAssert.poll();
+        _state._gpuMessages.poll();
+        // 이번 프레임의 출력 선택(`gpu.inspect` · `gpu.thread`)과 로그 예산 — 프레임의 기록보다 먼저 큐에 들어간다.
+        const GPUPixelInspector* const pInspector = engine::findSubsystem<GPUPixelInspector>();
+        _state._gpuMessages.updateControl( pInspector != nullptr ? pInspector->getSelection() : GPUMessageSelection{}, RenderDiagnostics::get()._gpuMessageLogBudget );
         // 가림 타일 표시는 OcclusionTiles 패스가 다시 켠다. 패스가 없는 파이프라인에서 지난 파이프라인의 표시가 남아 컬링이 낡은 타일을 읽지 않게 비운다.
         _state._mainView._bOcclusionTilesThisFrame = SW_FALSE;
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
@@ -92,6 +97,8 @@ namespace sw
     void FrameGraphExecutor::executePass( RenderPassType type, IRHICommandList& cmd )
     {
         _pCmd = &cmd;
+        // 패스마다 이벤트 표시 + 브레드크럼(시작 · 끝) — 캡처와 장치 손실 보고에 프레임 패스 이름이 남는다.
+        const GPUPassScope scope{ cmd, getEnumName( type ) };
         switch ( type )
         {
             case RenderPassType::DepthHistory:
@@ -149,7 +156,7 @@ namespace sw
             {
                 // 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스(뷰 그래프)보다 앞이다.
                 _state._canvasRenderer.recordMarkerProjection( *_pCmd, _psoManager.getEnginePSO( RenderPassType::CanvasMarker ), _state._gpuScene.getInstanceBuffer(),
-                                                               _state._gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv, _gpuAssert,
+                                                               _state._gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv, _state._gpuMessages,
                                                                _state._mainView._settings._viewMode == RenderViewMode::MarkerSlots );
                 break;
             }
@@ -165,8 +172,8 @@ namespace sw
 
     void FrameGraphExecutor::endFrame( IRHICommandList& cmd )
     {
-        // assert 가 켜진 디스패치(컬링 · 모프 · 마커)가 끝났다 — 링을 읽기 버퍼로 복사하는 명령을 넣는다.
-        _gpuAssert.requestReadback( cmd );
+        // 메시지가 켜진 디스패치(컬링 · 모프 · 마커)가 끝났다 — 링을 읽기 버퍼로 복사하는 명령을 넣는다(그래픽스 패스의 기록은 다음 프레임 사본에 실린다).
+        _state._gpuMessages.requestReadback( cmd );
     }
 
     bool FrameGraphExecutor::usesGPUGeneratedCommands() const
@@ -207,9 +214,7 @@ namespace sw
                 // AnimationParams(b0) / g_InstancesRW(u0). instance_animation.hlsl 레지스터와 1:1 로 대응한다.
                 _pCmd->bindComputeConstantBuffer( _state._deform._instanceAnimationCb._index, 0 );
                 _pCmd->bindComputeUAV( _state._gpuScene.getInstanceUAV(), 0 );
-                const uint32 animationGroups = ( instanceCount + 63u ) / 64u;
-                if ( animationGroups > 0 )
-                    _pCmd->dispatchCompute( animationGroups, 1, 1 );
+                _pCmd->dispatchThreads( instanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
                 // 다음 디스패치(컬링)와 정점 셰이더가 이 결과를 읽는다. 쓰기가 끝났음을 알린다.
                 _pCmd->transitionBuffer( _state._gpuScene.getInstanceBuffer(), RHIBufferState::ShaderResource );
             }
@@ -400,10 +405,8 @@ namespace sw
         _pCmd->bindComputeShaderResource( _state._deform._meshMorphPool.getRestBuffer()._srv, 0 );
         _pCmd->bindComputeShaderResource( programSRV, 1 );
         _pCmd->bindComputeUAV( _state._deform._meshMorphPool.getMorphBuffer()._uav, 0 );
-        _gpuAssert.bind( *_pCmd ); // mesh_morph.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
-        const uint32 morphGroups = ( morphParams._vertexCount + 63u ) / 64u;
-        if ( morphGroups > 0 )
-            _pCmd->dispatchCompute( morphGroups, 1, 1 );
+        _state._gpuMessages.bindCompute( *_pCmd ); // mesh_morph.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
+        _pCmd->dispatchThreads( morphParams._vertexCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
         _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
     }
 
@@ -442,9 +445,7 @@ namespace sw
         _pCmd->bindComputeShaderResource( _state._deform._meshMorphPool.getSkinPaletteBuffer()._srv, 2 );
         _pCmd->bindComputeShaderResource( _state._deform._meshMorphPool.getSkinInstanceBuffer()._srv, 3 );
         _pCmd->bindComputeUAV( _state._deform._meshMorphPool.getMorphBuffer()._uav, 0 );
-        const uint32 skinGroups = ( skinParams._skinVertexCount + 63u ) / 64u;
-        if ( skinGroups > 0 )
-            _pCmd->dispatchCompute( skinGroups, 1, 1 );
+        _pCmd->dispatchThreads( skinParams._skinVertexCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
         _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
         _state._deform._meshMorphPool.markSkinDispatched();
     }
@@ -714,11 +715,9 @@ namespace sw
         {
             _pCmd->bindComputeUAV( view._visibleInstances._uav, 2 );
         }
-        _gpuAssert.bind( *_pCmd ); // gpu_cull.hlsl 의 assert(u4) — assert 변형 PSO 일 때만 버퍼가 있다
+        _state._gpuMessages.bindCompute( *_pCmd ); // gpu_cull.hlsl 의 메시지(u4) — 메시지 변형 PSO 일 때만 버퍼가 있다
         // **인스턴스마다** 스레드 하나를 쓴다. 그래야 보이는 것을 골라 압축할 수 있다.
-        const uint32 groups = ( cullParams._instanceCount + 63u ) / 64u;
-        if ( groups > 0 )
-            _pCmd->dispatchCompute( groups, 1, 1 );
+        _pCmd->dispatchThreads( cullParams._instanceCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
         // 압축이 끝났으면 투명 배치의 순서를 CPU 가 정한 순서(인스턴스 번호 오름차순)로 되돌린다. 원자 연산이 준 슬롯 번호는
         // 완료 순서라 그대로 두면 블렌딩이 틀린다. 되돌리기가 GPU 에서 돌므로 투명도 압축과 컬링 이득을 받는다(instance_sort.hlsl).
         // 컬링이 채운 목록을 정렬이 바로 읽는다. 상태가 그대로라 transitionBuffer 는

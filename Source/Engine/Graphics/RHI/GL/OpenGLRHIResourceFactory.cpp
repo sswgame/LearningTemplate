@@ -715,6 +715,16 @@ namespace sw
         return _pDevice->_transferSerials.makeAccepted( serial );
     }
 
+    void OpenGLRHIResourceFactory::setTextureDebugName( RHITextureHandle texture, const utf8* pName )
+    {
+        const OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
+        if ( pRecord == nullptr || pRecord->_texture == 0 || pName == nullptr )
+            return;
+        // KHR_debug(GL 4.3 코어) — 이벤트 표지 glPushDebugGroup 과 같은 확장이다.
+        const string_view name = pName;
+        glObjectLabel( GL_TEXTURE, pRecord->_texture, static_cast<GLsizei>( name.size() ), name.data() );
+    }
+
     // 길이 유지(긴 함수 정리 기준): 텍스처 생성 · 저장소 할당 · 매개변수 · 초기 데이터의 순서가 곧 의미라 나누지 않는다.
     RHITextureHandle OpenGLRHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
     {

@@ -61,6 +61,12 @@ namespace sw
          *          능력 표가 정한 길이지 실패를 덮는 대체가 아니다(언리얼 `GSupportsEfficientAsyncCompute` 가 거짓이면 RDG 가 AsyncCompute 패스를 그래픽스로 돌리는 것과 같다).
          */
         uint8 _bAsyncCompute{ SW_FALSE };
+        /**
+         * @brief 픽셀 셰이더가 쓰기 버퍼(UAV · 스토리지 버퍼)에 쓸 수 있는지입니다(`IRHICommandList::bindGraphicsUAV`) — 셰이더 메시지 채널(`GPUMessageChannel`)이 그래픽스 단계에서 쓴다.
+         * @details DX11(기능 수준 11) · DX12 · OpenGL 4.3+ 은 늘 참이고, Vulkan 은 디바이스 기능 `fragmentStoresAndAtomics` 가 있어야 참이다. 거짓이면 메시지 채널을 요구한 실행이 초기화에서 멈춘다
+         *          (메시지 변형 PSO 를 버퍼 없이 돌리지 않는다).
+         */
+        uint8 _bGraphicsShaderWrites{ SW_FALSE };
 
         /** @brief 기본값(컴퓨트만 켠 보수적 기본)으로 만듭니다. */
         RHICapabilities() noexcept = default;

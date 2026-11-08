@@ -17,7 +17,7 @@ namespace sw
     struct CanvasFrameData;
 
     class CanvasQuadBuffer;
-    class GPUAssertMonitor;
+    class GPUMessageChannel;
     class IRHICommandList;
     class IRHIDevice;
 
@@ -42,7 +42,7 @@ namespace sw
          * @details 인자는 `CanvasRenderer::recordMarkerProjection` 과 같습니다.
          */
         void record( IRHICommandList& cmd, const CanvasQuadBuffer& quadBuffer, RHIPipelineStateHandle pso, RHIBufferHandle instanceBuffer, RHIDescriptorIndex instanceSRV,
-                     RHIDescriptorIndex placeholderSRV, GPUAssertMonitor& inoutAssert, bool bShowInstanceSlots ) const;
+                     RHIDescriptorIndex placeholderSRV, GPUMessageChannel& inoutMessages, bool bShowInstanceSlots ) const;
         /** @brief 입력 행 버퍼를 해제합니다(디바이스가 없으면 핸들만 잊습니다). */
         void release( IRHIDevice* pDevice );
 

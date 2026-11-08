@@ -117,8 +117,8 @@ namespace sw
      */
     inline constexpr const utf8* kPostTonemapDefine = "SW_POST_TONEMAP";
 
-    /** @brief 셰이더 assert 를 켠 컴퓨트 변형의 define 입니다(`gpu_assert.hlsli`). `-gv_gpuAssert` 가 켜진 개발 빌드에서 `kGPUAssertTarget` 패스에만 붙는다. */
-    inline constexpr const utf8* kGPUAssertDefine = "SW_GPU_ASSERT_ENABLED";
+    /** @brief 셰이더 메시지를 켠 변형의 define 입니다(`gpu_message.hlsli`). `-gv_gpuMessages` 가 켜진 개발 빌드에서 `kGPUMessageTarget` 패스에만 붙는다. */
+    inline constexpr const utf8* kGPUMessagesDefine = "SW_GPU_MESSAGES_ENABLED";
 
     /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
     inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::NanCheck ) + 1;
@@ -181,10 +181,10 @@ namespace sw
          */
         static constexpr uint32 kOutputPass = SW_BIT( 19 );
         /**
-         * @brief 셰이더가 `SW_GPU_ASSERT` 를 가진 컴퓨트 패스다(gpu_cull · mesh_morph · canvas_marker). `-gv_gpuAssert` 가 켜지면 PSO 가 `kGPUAssertDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 assert 버퍼를 u4 에 건다.
-         * @details define 은 `selectRenderPassShader` 가 붙인다 — 쿠커와 런타임이 같은 함수를 부르므로 어긋나지 않고, Shipping 은 `GPUAssertMonitor::isRequested` 가 거짓이라 변형이 생기지 않는다.
+         * @brief 셰이더가 메시지(`SW_GPU_ASSERT` · `SW_GPU_PRINT` · `SW_GPU_LOG`)를 가진 패스다 — 컴퓨트(gpu_cull · mesh_morph · canvas_marker)와 그래픽스(Present 의 fullscreen_blit). `-gv_gpuMessages` 가 켜지면 PSO 가 `kGPUMessagesDefine` 변형으로 만들어지고 렌더러가 그 패스 앞에서 메시지 버퍼를 u4 에 건다(컴퓨트 `bindCompute`, 그래픽스 `bindGraphics`).
+         * @details define 은 `selectRenderPassShader` 가 붙인다 — 쿠커와 런타임이 같은 함수를 부르므로 어긋나지 않고, Shipping 은 `GPUMessageChannel::isRequested` 가 거짓이라 변형이 생기지 않는다.
          */
-        static constexpr uint32 kGPUAssertTarget = SW_BIT( 20 );
+        static constexpr uint32 kGPUMessageTarget = SW_BIT( 20 );
         /**
          * @brief 진단 패스다 — 요청한 실행에서만 PSO 를 만든다(`isDiagnosticPassRequested`). 요청하지 않은 실행(Shipping 은 늘)에서는 PSO 도 디스패치도 없다.
          */

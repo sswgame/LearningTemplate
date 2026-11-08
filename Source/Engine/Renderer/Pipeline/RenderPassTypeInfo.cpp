@@ -4,7 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 
-#include "Engine/Graphics/Debug/GPUAssert.h"
+#include "Engine/Graphics/Debug/GPUMessage.h"
 #include "Engine/Graphics/Debug/GPUNanCheck.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
 
@@ -177,7 +177,7 @@ namespace sw
                         // 후처리 체인(post_chain.hlsl)을 겸하면 깊이 · AO 를 읽는다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderFullscreenBlit;
                         info._inputContract  = makeContract( { Role::SourceColor }, { Role::SceneDepth, Role::AmbientOcclusion } );
-                        info._flags          = Flag::kHasInputContract | Flag::kOutputPass;
+                        info._flags          = Flag::kHasInputContract | Flag::kOutputPass | Flag::kGPUMessageTarget; // fullscreen_blit 의 SW_GPU_PRINT(고른 픽셀의 화면 색)
                         break;
                     }
                     case RenderPassType::MeshOutline:
@@ -334,7 +334,7 @@ namespace sw
                     case RenderPassType::GPUCull:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderGPUCull;
-                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kGPUAssertTarget;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling | Flag::kGPUMessageTarget;
                         break;
                     }
                     case RenderPassType::InstanceAnimation:
@@ -354,7 +354,7 @@ namespace sw
                     case RenderPassType::MeshMorph:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderMeshMorph;
-                        info._flags          = Flag::kCompute | Flag::kGPUAssertTarget;
+                        info._flags          = Flag::kCompute | Flag::kGPUMessageTarget;
                         break;
                     }
                     case RenderPassType::MeshSkin:
@@ -435,7 +435,7 @@ namespace sw
                     {
                         // 구조 버퍼 UAV 와 읽기 버퍼만 쓴다 — 간접 인자 능력과 무관하다(컴퓨트 능력이 없는 백엔드는 렌더러가 마커 입력을 오류로 거절한다).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderCanvasMarker;
-                        info._flags          = Flag::kCompute | Flag::kGPUAssertTarget;
+                        info._flags          = Flag::kCompute | Flag::kGPUMessageTarget;
                         break;
                     }
                     case RenderPassType::ShadowCacheRestore:
@@ -576,9 +576,9 @@ namespace sw
         // 화면 속도 — 출력 선언(데이터)이 정한다. 내부 슬롯은 대신 그리는 패스의 선언을 본다(컬러 포맷과 같은 근거).
         if ( passWritesVelocity( type, pTargetDesc ) )
             selection._listDefine.push_back( kPassVelocityDefine );
-        // 셰이더 assert 변형 — 요구되지 않으면(Shipping 은 늘) define 도 PSO 변형도 없다.
-        if ( info.hasFlag( RenderPassTraitFlag::kGPUAssertTarget ) && GPUAssertMonitor::isRequested() )
-            selection._listDefine.push_back( kGPUAssertDefine );
+        // 셰이더 메시지 변형 — 요구되지 않으면(Shipping 은 늘) define 도 PSO 변형도 없다.
+        if ( info.hasFlag( RenderPassTraitFlag::kGPUMessageTarget ) && GPUMessageChannel::isRequested() )
+            selection._listDefine.push_back( kGPUMessagesDefine );
         return selection;
     }
 

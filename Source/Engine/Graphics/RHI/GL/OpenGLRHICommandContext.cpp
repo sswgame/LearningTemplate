@@ -596,6 +596,12 @@ namespace sw
         glBindBufferBase( GL_SHADER_STORAGE_BUFFER, shaderslot::gl::kUAVBinding0 + slot, ssbo );
     }
 
+    void OpenGLRHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    {
+        // GL 의 SSBO · 이미지 유닛 번호는 단계를 가리지 않는다 — 컴퓨트와 같은 자리(SSBO kUAVBinding0 + slot)에 건다.
+        bindComputeUAV( index, slot );
+    }
+
     void OpenGLRHICommandContext::bindShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
         // **텍스처 전용이다.** 버퍼는 `bindStructuredBuffer` 가 건다.

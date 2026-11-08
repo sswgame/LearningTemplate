@@ -30,6 +30,7 @@ namespace sw
         RHIBufferHandle        createReadbackBuffer( uint32 elementSize, uint32 elementCount ) override;
         [[nodiscard]] bool     readReadbackBuffer( RHIBufferHandle readback, uint32 sizeBytes, void* pDestination ) override;
         RHITextureHandle       createTexture2D( const RHITextureDesc& desc ) override;
+        void                   setTextureDebugName( RHITextureHandle texture, const utf8* pName ) override;
         void                   destroyTexture( RHITextureHandle texture ) override;
         // 전송(RHIAsyncUploads U6): 업로드 · 되읽기 링에 놓고 전송 작업(커맨드 버퍼 + 펜스)으로 내며 기다리지 않는다. 완료는 pollTransfer 가 펜스 줄의 연속 구간 워터마크로 본다.
         [[nodiscard]] RHITransferSubmit submitTextureUpload( RHITextureHandle texture, const RHITextureUploadDesc& desc ) override;

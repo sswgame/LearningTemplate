@@ -12,7 +12,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/Debug/GPUAssert.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Frame/Execute/OcclusionTiles.h"
@@ -47,7 +46,7 @@ namespace sw
         /** @brief 상주 자원과 가림 되읽기 · 우편함을 놓습니다. */
         void releaseResources();
         /**
-         * @brief 프레임 그래프를 돌리기 전에 부릅니다 — 앞 프레임들의 셰이더 assert 기록이 도착했으면 로그로 내고, 이번 프레임의 컬링 · 가림 타일 표시를 비웁니다.
+         * @brief 프레임 그래프를 돌리기 전에 부릅니다 — 앞 프레임들의 셰이더 메시지 기록이 도착했으면 로그로 내고, 이번 프레임의 컬링 · 가림 타일 표시를 비웁니다.
          * @details 표시를 여기서 비우는 까닭: 파이프라인이 그 패스를 선언하지 않으면 패스가 돌지 않아 지난 파이프라인의 값이 남는다.
          */
         void beginFrame();
@@ -138,8 +137,6 @@ namespace sw
         RHIStructuredBuffer _transparentRankPlaceholder{};
         /// @brief GPU 컬링의 가림 판정(가림 타일 짓기 · 되읽기 · 자리표)입니다.
         OcclusionTiles _occlusion;
-        /// @brief 셰이더 assert 링(`-gv_gpuAssert`). assert 가 켜진 디스패치가 u4 로 쓰고, 프레임 그래프 끝에 되읽기를 요청하며 다음 프레임들이 로그로 낸다. 꺼져 있으면 비어 있다.
-        GPUAssertMonitor _gpuAssert;
         /// @brief 이번 프레임의 LOD 전환 진행량(0 ~ 255)입니다. 0 이면 크로스페이드 없이 바로 바꾼다(`dispatchCullAndSort` 가 정하고 `dispatchCullView` 가 컬링 상수로 싣는다).
         uint32 _lodFadeStep{ 0 };
         /// @brief 지난 컬링 프레임의 시각(나노초)입니다. 전환 진행량의 프레임 간격을 잰다(0 이면 아직 없다).

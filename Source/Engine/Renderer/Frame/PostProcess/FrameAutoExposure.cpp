@@ -83,6 +83,7 @@ namespace sw
         for ( uint32 slot = 0; slot < 2; ++slot )
         {
             view._arrAutoExposure[slot] = pFactory->createTexture2D( desc );
+            pFactory->setTextureDebugName( view._arrAutoExposure[slot], "AutoExposure" );
             if ( view._arrAutoExposure[slot] != 0 )
                 view._arrAutoExposureSRV[slot] = pFactory->registerBindlessTexture( view._arrAutoExposure[slot] );
         }

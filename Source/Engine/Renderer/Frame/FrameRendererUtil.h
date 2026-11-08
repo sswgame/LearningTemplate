@@ -160,6 +160,8 @@ namespace sw
         static constexpr uint32 kOcclusionTileSize = 16;
         /** @brief @p value 를 @p divisor 칸으로 나눈 칸 수(올림)입니다. 가림 타일 격자와 그 디스패치 그룹 수가 쓴다. */
         static constexpr uint32 divideRoundUp( uint32 value, uint32 divisor ) { return ( value + divisor - 1u ) / divisor; }
+        /// @brief 한 줄로 스레드를 펴는 프리패스 컴퓨트의 그룹 크기입니다 — instance_animation · mesh_morph · mesh_skin · gpu_cull 의 `SW_NUMTHREADS( 64, 1, 1 )` 와 같아야 한다(`IRHICommandList::dispatchThreads`).
+        static constexpr uint32 kLinearThreadGroupSize = 64;
         /** @brief 인스턴스 애니메이션 디스패치 상수(instance_animation.hlsl `AnimationParams`, b0)입니다. */
         struct GPUAnimationParams
         {

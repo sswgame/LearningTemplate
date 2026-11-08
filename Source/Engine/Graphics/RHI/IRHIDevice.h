@@ -211,7 +211,7 @@ namespace sw
          */
         virtual bool debugRemoveDevice() { return false; }
         /**
-         * @brief 장치를 잃은 뒤 GPU 가 마지막으로 닿은 브레드크럼 id 들을 읽습니다(`IRHICommandList::writeBreadcrumb` 가 남긴 값). DX12 는 하나, Vulkan 은 파이프라인 단계마다 하나씩이다.
+         * @brief 장치를 잃은 뒤 GPU 가 마지막으로 닿은 브레드크럼 id 들을 읽습니다(`IRHICommandList::writeBreadcrumb` 가 남긴 값). DX12 는 [시작 칸, 끝 칸] 둘, Vulkan 은 파이프라인 단계마다 하나씩이다. 끝 표지는 `GPUBreadcrumbs::kEndMarkerBit` 을 가진다(푸는 일은 `GPUBreadcrumbs::parse`).
          * @param pOutID   id 를 받을 배열입니다. 0 이 아닌 값만 채운다.
          * @return 채운 개수입니다. GPU 표지를 쓰지 않는 백엔드(DX11 · OpenGL — `RHICapabilities::_bGPUBreadcrumbs` 가 거짓)와 표지가 없었으면 0 입니다.
          */

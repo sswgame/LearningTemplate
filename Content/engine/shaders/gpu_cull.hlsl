@@ -1,6 +1,6 @@
 #include "common.hlsli"
 #include "batch_data.hlsli"
-#include "gpu_assert.hlsli"
+#include "gpu_message.hlsli"
 
 /**
  * gpu_cull.hlsl — GPU 컬링 + **드로우 커맨드 생성** (언리얼 FInstanceCullingContext 와 같은 자리).
@@ -279,7 +279,7 @@ void advanceLODFade( uint instanceId, uint headBatch, uint levelCount, float scr
 SW_NUMTHREADS( 64, 1, 1 )
 void CSMain( uint3 dispatchThreadID : SV_DispatchThreadID )
 {
-    SW_GPU_ASSERT_THREAD( dispatchThreadID.x );
+    SW_GPU_MESSAGE_THREAD( dispatchThreadID.x );
     const uint instanceId = dispatchThreadID.x;
     if ( instanceId >= g_InstanceCount )
         return;
