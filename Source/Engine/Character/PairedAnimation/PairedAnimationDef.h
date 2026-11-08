@@ -19,6 +19,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -240,8 +241,8 @@ namespace sw
         const vector<PairedAnimationNotifyDef>& getNotifies() const { return _content._listNotify; }
         /** @brief 앵커 역할의 인덱스입니다(읽기에 성공했으면 늘 있습니다). */
         uint32 getAnchorRoleIndex() const { return _anchorRoleIndex; }
-        /** @brief 이름의 역할 인덱스입니다. 없으면 `constant::invalid_index::kUint32` 입니다. */
-        uint32 findRoleIndex( const hashed_string& roleName ) const;
+        /** @brief 이름의 역할 인덱스입니다. 없으면 없음입니다. */
+        optional<uint32> findRoleIndex( const hashed_string& roleName ) const;
         /** @brief 세트 고르기 조건입니다. 적지 않았으면(어느 자리에서나 고를 수 있는 세트) nullptr 입니다. */
         const PairedAnimationSelectDef* findSelect() const { return _content._bHasSelect ? &_content._select : nullptr; }
         /**
