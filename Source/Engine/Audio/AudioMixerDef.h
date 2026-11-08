@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -310,8 +311,8 @@ namespace sw
         /** @brief 이름, 루트, 부모, 센드, 고리를 검사합니다. 어긋나면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
 
-        /** @brief 버스 번호입니다. 없으면 -1 입니다. */
-        int32 findBusIndex( const hashed_string& name ) const;
+        /** @brief 버스 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findBusIndex( const hashed_string& name ) const;
         /** @brief 스냅샷입니다. 없으면 nullptr 입니다. */
         const AudioSnapshotDef* findSnapshot( const hashed_string& name ) const;
         /** @brief 버스의 이펙트 서술입니다. 없으면 nullptr 입니다. */

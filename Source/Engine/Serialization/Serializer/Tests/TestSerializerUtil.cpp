@@ -114,10 +114,10 @@ SW_TEST_CASE( SerializerUtilTest, KeysMatchExactlyAndUnknownNamesAreNotFound )
     SW_EXPECT_NULL( SerializerUtil::matchProperty( listProp, "_Count" ) );
     SW_EXPECT_NULL( SerializerUtil::matchProperty( listProp, "_missing" ) );
     const uint32 unknownHash = static_cast<uint32>( hashed_string::computeHash( string_view{ "_notAField" } ) );
-    SW_EXPECT_EQUAL( listProp.size(), SerializerUtil::findPropertyIndexByNameHash( listProp, unknownHash ) );
-    const size_t countIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, hashed_string( "_count" ).getHash() );
-    SW_REQUIRE_TRUE( countIndex < listProp.size() );
-    SW_EXPECT_TRUE( listProp[countIndex]._name == hashed_string( "_count" ) );
+    SW_EXPECT_FALSE( SerializerUtil::findPropertyIndexByNameHash( listProp, unknownHash ).has_value() );
+    const optional<uint32> countIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, hashed_string( "_count" ).getHash() );
+    SW_REQUIRE_TRUE( countIndex.has_value() );
+    SW_EXPECT_TRUE( listProp[*countIndex]._name == hashed_string( "_count" ) );
 }
 
 /** @brief [SerializerUtilTest] 비트필드 하나를 글로 쓰거나 옮겨도 같은 바이트의 이웃 비트는 그대로이고, 불리언이 아닌 글은 거절한다 */

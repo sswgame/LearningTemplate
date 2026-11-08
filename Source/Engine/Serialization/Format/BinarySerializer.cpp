@@ -190,9 +190,9 @@ namespace sw
                 // 지금 이름을 먼저, 없을 때만 옛 이름(Alias)을 본다. Transient 칸을 가리키는 태그는 모르는 칸과 같다.
                 const vector<PropertyInfo>& listProp     = state._typeInfo.getPropertiesWithBase();
                 const size_t                numProps     = listProp.size();
-                const size_t                matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, tagHash );
-                const bool                  bMatched     = matchedIndex < numProps && listProp[matchedIndex]._metadata->_bTransient == SW_FALSE;
-                const PropertyInfo*         pTargetProp  = bMatched ? &listProp[matchedIndex] : nullptr;
+                const optional<uint32>      matchedIndex = SerializerUtil::findPropertyIndexByNameHash( listProp, tagHash );
+                const bool                  bMatched     = matchedIndex.has_value() && listProp[*matchedIndex]._metadata->_bTransient == SW_FALSE;
+                const PropertyInfo*         pTargetProp  = bMatched ? &listProp[*matchedIndex] : nullptr;
 
                 if ( pTargetProp == nullptr )
                 {
@@ -452,9 +452,9 @@ namespace sw
         for ( const SchemaOrphanValue& unknown : listUnknown )
         {
             // 읽기와 같은 짝짓기다 — Transient 칸을 가리키는 이름은 읽기도 모르는 칸으로 담는다.
-            const size_t knownIndex  = SerializerUtil::findPropertyIndexByNameHash( listProp, unknown._nameHash );
-            const bool   bKnownName  = knownIndex < listProp.size() && listProp[knownIndex]._metadata->_bTransient == SW_FALSE;
-            const bool   bCannotKeep = unknown._name.empty() == false || bKnownName || unknown._wireVersion != kCurrentBinaryWireVersion;
+            const optional<uint32> knownIndex  = SerializerUtil::findPropertyIndexByNameHash( listProp, unknown._nameHash );
+            const bool             bKnownName  = knownIndex.has_value() && listProp[*knownIndex]._metadata->_bTransient == SW_FALSE;
+            const bool             bCannotKeep = unknown._name.empty() == false || bKnownName || unknown._wireVersion != kCurrentBinaryWireVersion;
             if ( bCannotKeep )
             {
                 SW_LOG_ERROR_ID( "BinarySerializer.KeptUnknownFieldName", "%#: a kept unknown field (name hash %#) is a known field or another wire version - the object is not written", typeInfo._name.c_str(),

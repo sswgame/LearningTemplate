@@ -257,7 +257,7 @@ namespace sw
                         const MaterialGraphNodeDef& node = graph._listNode[nodeIndex];
                         if ( isNodeName( node._name ) == false )
                             report( scope, node._name, "BadName", "node name may hold only letters, digits, space, '_', '-' and '.'" );
-                        if ( static_cast<size_t>( graph.findNodeIndex( node._name ) ) != nodeIndex )
+                        if ( static_cast<size_t>( graph.findNodeIndex( node._name ).value() ) != nodeIndex ) // 자기 자신이 목록에 있어 늘 찾는다
                             report( scope, node._name, "DuplicateName", "another node has the same name" );
                         const MaterialGraphNodeKind* pKind = MaterialGraphNodeRegistry::find( node._kind );
                         if ( pKind == nullptr )
@@ -276,7 +276,7 @@ namespace sw
                                 message.append( link._pin ).append( "'" );
                                 report( scope, node._name, "UnknownPin", std::move( message ) );
                             }
-                            if ( graph.findNodeIndex( link._fromNode ) < 0 )
+                            if ( graph.findNodeIndex( link._fromNode ).has_value() == false )
                             {
                                 string message{ "input '" };
                                 message.append( link._pin ).append( "' reads missing node '" ).append( link._fromNode ).append( "'" );
@@ -308,14 +308,14 @@ namespace sw
                     const MaterialGraphLink* pLink = node.findLink( pin );
                     if ( pLink != nullptr )
                     {
-                        const int32 fromIndex = graph.findNodeIndex( pLink->_fromNode );
-                        for ( const NamedValue& output : listResult[static_cast<size_t>( fromIndex )]._listOutput )
+                        const uint32 fromIndex = graph.findNodeIndex( pLink->_fromNode ).value(); // 없는 노드는 `validateNodes` 가 거절했다
+                        for ( const NamedValue& output : listResult[fromIndex]._listOutput )
                         {
                             if ( output._name == pLink->_fromPin )
                                 return output._value;
                         }
                         // 앞 노드가 이미 문제를 남겼으면 출력이 비어 있다 — 없는 핀이라고 또 말하지 않는다.
-                        if ( listResult[static_cast<size_t>( fromIndex )]._listOutput.empty() == false )
+                        if ( listResult[fromIndex]._listOutput.empty() == false )
                         {
                             string message{ "input '" };
                             message.append( pin ).append( "' reads missing output '" ).append( pLink->_fromPin ).append( "' of node '" ).append( pLink->_fromNode ).append( "'" );
@@ -873,7 +873,7 @@ namespace sw
                     {
                         for ( const MaterialGraphLink& link : graph._listNode[nodeIndex]._listLink )
                         {
-                            dependencyGraph.addDependency( nodeIndex, static_cast<uint32>( graph.findNodeIndex( link._fromNode ) ) ); // 없는 노드는 `validateNodes` 가 거절했다
+                            dependencyGraph.addDependency( nodeIndex, graph.findNodeIndex( link._fromNode ).value() ); // 없는 노드는 `validateNodes` 가 거절했다
                         }
                     }
                     const DependencyOrder order = dependencyGraph.sortDepthFirst( listRoot );

@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
@@ -123,10 +124,10 @@ namespace sw::editor
         vector<GimmickGraphNode>&       getMutableNodes() { return _listNode; } ///< 위치와 `_bPlaced` 만 고칩니다(캔버스가 끌린 위치를 되돌려 줍니다)
         const vector<GimmickGraphWire>& getWires() const { return _listWire; }
         const vector<GimmickWireDesc>&  getOrphanWires() const { return _listOrphanWire; }
-        vector<GraphCommentBox>&        getMutableComments() { return _listComment; } ///< 캔버스가 주석 상자를 더하고 옮기고 지운다(고치면 패널이 편집으로 남긴다)
-        int32                           findNodeIndex( int32 graphID ) const;
-        int32                           findNodeIndexByID( const hashed_string& id ) const;
-        int32                           findWireIndex( int32 wireGraphID ) const;
+        vector<GraphCommentBox>&        getMutableComments() { return _listComment; }       ///< 캔버스가 주석 상자를 더하고 옮기고 지운다(고치면 패널이 편집으로 남긴다)
+        [[nodiscard]] optional<uint32>  findNodeIndex( int32 graphID ) const;               ///< 없으면 비어 있습니다
+        [[nodiscard]] optional<uint32>  findNodeIndexByID( const hashed_string& id ) const; ///< 없으면 비어 있습니다
+        [[nodiscard]] optional<uint32>  findWireIndex( int32 wireGraphID ) const;           ///< 없으면 비어 있습니다
         const GimmickNodeKind*          findKind( const GimmickGraphNode& node ) const;
         /** @brief 매개변수 값입니다. 적혀 있지 않으면 빈 문자열입니다. */
         static string readParam( string_view params, string_view name );

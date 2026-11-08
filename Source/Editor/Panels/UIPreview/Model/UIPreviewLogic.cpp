@@ -389,8 +389,7 @@ namespace sw::editor
         pContainer = pTarget != nullptr ? pTarget->getParent() : nullptr;
         if ( pContainer != nullptr )
         {
-            const uint32 targetIndex = pContainer->findChildIndex( pTarget );
-            outIndex                 = targetIndex == constant::invalid_index::kUint32 ? pContainer->getChildCount() : targetIndex + 1; // 패널이 아닌 위젯에 놓으면 그 바로 뒤에 끼운다
+            outIndex = pContainer->findChildIndex( pTarget ).value() + 1; // 패널이 아닌 위젯에 놓으면 그 바로 뒤에 끼운다(부모의 자식이라 늘 있다)
             return pContainer;
         }
         Widget* pRoot = tree.getRoot();
@@ -538,9 +537,10 @@ namespace sw::editor
 
     bool UIPreviewLogic::findBoxReorder( const BoxPanel& box, const Widget& child, const float2& point, uint32& outFromIndex, uint32& outToIndex )
     {
-        outFromIndex = box.findChildIndex( &child );
-        if ( outFromIndex == constant::invalid_index::kUint32 )
+        const optional<uint32> fromIndex = box.findChildIndex( &child );
+        if ( fromIndex.has_value() == false )
             return false;
+        outFromIndex              = *fromIndex;
         const bool      bVertical = box.getOrientation() == UIOrientation::Vertical;
         vector<float32> listCenter;
         for ( uint32 childIndex = 0; childIndex < box.getChildCount(); ++childIndex )
@@ -572,9 +572,7 @@ namespace sw::editor
         const PanelWidget* pParent = widget.getParent();
         if ( pParent == nullptr || delta == 0 )
             return false;
-        outFromIndex = pParent->findChildIndex( &widget );
-        if ( outFromIndex == constant::invalid_index::kUint32 )
-            return false;
+        outFromIndex       = pParent->findChildIndex( &widget ).value(); // 부모의 자식이라 늘 있다
         const int64 target = static_cast<int64>( outFromIndex ) + delta;
         if ( target < 0 || target >= static_cast<int64>( pParent->getChildCount() ) )
             return false;

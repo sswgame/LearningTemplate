@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -75,8 +76,8 @@ namespace sw
 
         /** @brief 종류입니다. */
         const AudioEffectTypeInfo& getTypeInfo() const { return *_pTypeInfo; }
-        /** @brief 이름의 파라미터 번호입니다. 없으면 -1 입니다. */
-        int32 findParameterIndex( const hashed_string& name ) const;
+        /** @brief 이름의 파라미터 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findParameterIndex( const hashed_string& name ) const;
         /** @brief 파라미터를 정합니다(서술의 범위로 묶습니다). 바뀌었으면 계수를 다시 셉니다. */
         void setParameter( uint32 parameterIndex, float32 value );
         /** @brief 파라미터 값입니다. */

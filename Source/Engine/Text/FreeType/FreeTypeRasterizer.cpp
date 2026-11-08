@@ -268,10 +268,16 @@ namespace sw
             return true;
         }
 
-        uint32 findGlyphIndex( FontFaceID face, uint32 codepoint ) const override
+        optional<uint32> findGlyphIndex( FontFaceID face, uint32 codepoint ) const override
         {
             const FaceEntry* pEntry = findEntry( face );
-            return pEntry != nullptr ? static_cast<uint32>( FT_Get_Char_Index( pEntry->_pFace, static_cast<FT_ULong>( codepoint ) ) ) : 0u;
+            if ( pEntry == nullptr )
+                return nullopt;
+            // FreeType 은 없는 문자에 .notdef(0) 을 돌려준다 — 그 값을 이 경계에서 "없음" 으로 바꾼다.
+            const uint32 glyphIndex = static_cast<uint32>( FT_Get_Char_Index( pEntry->_pFace, static_cast<FT_ULong>( codepoint ) ) );
+            if ( glyphIndex == kNotdefGlyphIndex )
+                return nullopt;
+            return glyphIndex;
         }
 
         bool findGlyphMetrics( FontFaceID face, uint32 glyphIndex, GlyphMetrics& outMetrics ) const override
