@@ -104,13 +104,13 @@ namespace sw
                         if ( job == TileJob::Count || arrFound[jobIndex] )
                             continue;
                         arrFound[jobIndex] = true;
-                        blackboard.setVector( kArrTileKey[jobIndex], FarmGameModeComponent::computeTileCenter( x, y ) + float3{ 0.0f, 0.0f, -1.0f } );
+                        blackboard.setVector( hashed_string{ string_view{ kArrTileKey[jobIndex] } }, FarmGameModeComponent::computeTileCenter( x, y ) + float3{ 0.0f, 0.0f, -1.0f } );
                     }
                 }
                 for ( size_t jobIndex = 0; jobIndex < static_cast<size_t>( TileJob::Count ); ++jobIndex )
                 {
                     if ( arrFound[jobIndex] == false )
-                        blackboard.clearValue( kArrTileKey[jobIndex] );
+                        blackboard.clearValue( hashed_string{ string_view{ kArrTileKey[jobIndex] } } );
                 }
             }
         };
@@ -184,7 +184,7 @@ namespace sw
         blackboard.setInt( "SelectedSeedCount", listSeed.empty() ? 0 : bag.getItemCount( listSeed[static_cast<size_t>( gameMode.getSelectedSeedIndex() )] ) );
         for ( size_t toolIndex = 0; toolIndex < std::size( Internal::kArrHoldingKey ); ++toolIndex )
         {
-            blackboard.setBool( Internal::kArrHoldingKey[toolIndex], static_cast<size_t>( gameMode.getTool() ) == toolIndex );
+            blackboard.setBool( hashed_string{ string_view{ Internal::kArrHoldingKey[toolIndex] } }, static_cast<size_t>( gameMode.getTool() ) == toolIndex );
         }
 
         // 이번 계절 씨앗(가진 것 먼저) — 디렉터의 고른 씨앗이 다르면 트리가 다음 씨앗을 누른다(판단마다 한 칸).

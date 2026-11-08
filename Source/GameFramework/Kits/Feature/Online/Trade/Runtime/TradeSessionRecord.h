@@ -163,6 +163,23 @@ namespace sw
 
 namespace sw
 {
+    /** @brief Trade 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
+    struct TradeMethod : OnlineMethodTable<TradeMethodName, OnlineMethodRange::kTrade, TradePushName>
+    {
+        using Invite   = Method<MethodName::Invite, TradeInviteRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 상대의 표시 이름을 받는다
+        using Respond  = Method<MethodName::Respond, TradeRespondRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using SetOffer = Method<MethodName::SetOffer, TradeOfferRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using Lock     = Method<MethodName::Lock, TradeIDRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using Confirm  = Method<MethodName::Confirm, TradeConfirmRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 내가 본 내 제시 버전, 내가 본 상대 제시 버전을 받는다
+        using Cancel   = Method<MethodName::Cancel, TradeIDRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
+        using Invited  = Push<PushName::Invited, TradeNotice>; ///< 초대받았다는 알림이며 스냅샷을 싣는다
+        using Update   = Push<PushName::Update, TradeNotice>;  ///< 바뀌었다는 알림이며 스냅샷을 싣는다
+        using Closed   = Push<PushName::Closed, TradeNotice>;  ///< 닫혔다는 알림이며 스냅샷을 싣고 정산이면 잔액도 싣는다
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 저장소의 거래 레코드입니다. 거래를 맡은 서버와 스냅샷입니다. 자기 기술형(A)으로 씁니다. */
     REFLECT()
     struct SW_KIT_API TradeSessionRecord
@@ -189,22 +206,5 @@ namespace sw
          */
         [[nodiscard]] static bool encodeSession( const TradeSessionRecord& record, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeSession( string_view key, const vector<uint8>& bytes, TradeSessionRecord& outRecord );
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief Trade 메서드 표입니다. 번호는 열거자 순서에서 나오고, 요청 · 응답의 짝과 호출 규칙은 서술자가 정합니다. */
-    struct TradeMethod : OnlineMethodTable<TradeMethodName, OnlineMethodRange::kTrade, TradePushName>
-    {
-        using Invite   = Method<MethodName::Invite, TradeInviteRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 상대의 표시 이름을 받는다
-        using Respond  = Method<MethodName::Respond, TradeRespondRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using SetOffer = Method<MethodName::SetOffer, TradeOfferRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using Lock     = Method<MethodName::Lock, TradeIDRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using Confirm  = Method<MethodName::Confirm, TradeConfirmRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>; ///< 내가 본 내 제시 버전, 내가 본 상대 제시 버전을 받는다
-        using Cancel   = Method<MethodName::Cancel, TradeIDRequest, TradeReply, OnlineMethodFlag::RequiresIdempotencyKey>;
-        using Invited  = Push<PushName::Invited, TradeNotice>; ///< 초대받았다는 알림이며 스냅샷을 싣는다
-        using Update   = Push<PushName::Update, TradeNotice>;  ///< 바뀌었다는 알림이며 스냅샷을 싣는다
-        using Closed   = Push<PushName::Closed, TradeNotice>;  ///< 닫혔다는 알림이며 스냅샷을 싣고 정산이면 잔액도 싣는다
     };
 } // namespace sw

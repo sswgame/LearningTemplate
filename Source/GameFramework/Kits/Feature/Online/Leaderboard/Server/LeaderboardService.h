@@ -149,7 +149,7 @@ namespace sw
         /** @brief 시즌 정산 작업을 등록할 예약 테이블을 지정합니다. 빌려 쓰며 `registerBoard` 전에 지정합니다. 없으면 `settleSeason` 을 부르는 쪽이 정산합니다. */
         void setScheduler( ServiceScheduler* pScheduler ) { _pScheduler = pScheduler; }
         /** @brief 업적을 등록합니다. 기동할 때 게임 데이터로 부르며, 규칙에 맞지 않으면 false 를 반환합니다. */
-        [[nodiscard]] bool registerAchievement( const AchievementDef& definition );
+        [[nodiscard]] bool registerAchievement( const OnlineAchievementDef& definition );
         void               readAchievements( AccountID accountID, uint64 requestTag );
         /** @brief 등록한 업적마다 진행률(연결된 통계 값)과 달성 시각을 읽습니다. 숨긴 업적은 달성 전에 가립니다. id 순서입니다. */
         void readAchievementProgress( AccountID accountID, uint64 requestTag );
@@ -271,7 +271,7 @@ namespace sw
         unordered_map<uint64, uint64>                      _mapRequestToQuery; ///< 캐시 요청에서 질의(순위, 범위, 이름)로 가는 맵이다
         unordered_map<uint64, int32>                       _mapNameRequestToIndex;
         unordered_map<uint64, RankQuery>                   _mapQuery;
-        unordered_map<string, AchievementDef>              _mapAchievement;
+        unordered_map<string, OnlineAchievementDef>        _mapAchievement;
         unordered_map<AccountID, AccountStats>             _mapAccountStats;        ///< 이 서버에 접속한 계정의 통계이다
         unordered_map<string, ScheduledRun>                _mapJobToRun;            ///< 정산 작업 id 에서 차지한 회차로 가는 맵이다. 끝나면 completeRun 을 부른다
         unordered_map<uint64, SettlementProgress>          _mapSettlement;          ///< 진행 중인 정산(정산 번호 → 진행)

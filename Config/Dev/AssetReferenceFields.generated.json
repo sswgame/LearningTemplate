@@ -542,6 +542,7 @@
         "_scheduleDataPath",
         "_soilPrefab",
         "_villagerPrefab",
+        "_weatherPath",
         "autoFarmerPrefab",
         "cropDataPath",
         "cropPrefab",
@@ -550,7 +551,8 @@
         "readyModel",
         "scheduleDataPath",
         "soilPrefab",
-        "villagerPrefab"
+        "villagerPrefab",
+        "weatherPath"
       ]
     },
     {

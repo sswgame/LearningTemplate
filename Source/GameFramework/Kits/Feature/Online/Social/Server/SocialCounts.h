@@ -28,6 +28,8 @@ namespace sw
 
 namespace sw
 {
+    struct SocialLinkDecision;
+
     /** @brief 한 사람의 관계 개수입니다. `social_count` 레코드에 저장합니다. */
     struct SW_KIT_SERVER_API SocialCounts
     {

@@ -137,7 +137,7 @@ namespace sw
                 return writer.getBytes();
             }
 
-            static bool isAchievementIDLess( const AchievementDef& left, const AchievementDef& right ) { return left._achievementID < right._achievementID; }
+            static bool isAchievementIDLess( const OnlineAchievementDef& left, const OnlineAchievementDef& right ) { return left._achievementID < right._achievementID; }
 
             /** @brief 점수와 표시 이름을 읽습니다. 계정 목록 조회가 씁니다. */
             [[nodiscard]] static bool decodeScoreWithName( const vector<uint8>& bytes, int64& outScore, string& outDisplayName )
@@ -318,7 +318,7 @@ namespace sw
             }
 
             /** @brief 업적 하나를 "없어야 함" 조건으로 쓰고 보상 우편을 같은 트랜잭션에 넣습니다. 이미 있으면 아무것도 하지 않고 false 입니다. */
-            static bool unlockAchievement( IServiceStoreConnection& connection, const AchievementDef& definition, AccountID accountID, UnixMilliseconds nowMs )
+            static bool unlockAchievement( IServiceStoreConnection& connection, const OnlineAchievementDef& definition, AccountID accountID, UnixMilliseconds nowMs )
             {
                 using Internal    = LeaderboardServiceInternal;
                 const string  key = ServiceKeyUtil::makeHex64( accountID ) + "/" + definition._achievementID;
@@ -359,7 +359,7 @@ namespace sw
             }
 
             /** @brief 통계와 달성 기록을 읽어 등록한 업적(복사본)마다 진행률 한 줄을 만듭니다. 손상된 기록은 건너뛰지 않고 이 읽기를 실패로 돌려준다. */
-            static LeaderboardRead<vector<AchievementProgress>> readAchievementProgress( IServiceStoreConnection& connection, const vector<AchievementDef>& listDefinition, AccountID accountID )
+            static LeaderboardRead<vector<AchievementProgress>> readAchievementProgress( IServiceStoreConnection& connection, const vector<OnlineAchievementDef>& listDefinition, AccountID accountID )
             {
                 using Internal = LeaderboardServiceInternal;
                 LeaderboardRead<vector<AchievementProgress>> read;
@@ -372,7 +372,7 @@ namespace sw
                                          ServiceStoreResult::Ok;
                 if ( bReadOk == false )
                     return read;
-                for ( const AchievementDef& definition : listDefinition )
+                for ( const OnlineAchievementDef& definition : listDefinition )
                 {
                     AchievementProgress progress;
                     if ( findValue( listAchievementRecord, prefix.size(), definition._achievementID, progress._unlockedMs ) == false )
@@ -616,7 +616,7 @@ namespace sw
         return true;
     }
 
-    bool LeaderboardService::registerAchievement( const AchievementDef& definition )
+    bool LeaderboardService::registerAchievement( const OnlineAchievementDef& definition )
     {
         const bool bRewardOk = definition._rewardAssetID.empty() || ( definition._rewardAmount > 0 && definition._mailTitleKey.empty() == false );
         const bool bValid    = LeaderboardNameRule::isValidID( definition._achievementID ) && LeaderboardNameRule::isValidID( definition._statName ) && bRewardOk;
@@ -766,7 +766,7 @@ namespace sw
             {
                 if ( achievement._statName == boardID && finalScore >= achievement._threshold )
                 {
-                    _store.submit( [achievement, accountID, nowMs]( IServiceStoreConnection& connection )
+                    _store.submit( [achievement = achievement, accountID, nowMs]( IServiceStoreConnection& connection )
                     { return LeaderboardStoreRun::unlockAchievement( connection, achievement, accountID, nowMs ); },
                                    [this, accountID, state = AchievementState{ achievement._achievementID, nowMs.count() }]( bool bUnlocked )
                     { applyAchievementUnlock( accountID, state, bUnlocked ); } );
@@ -1188,7 +1188,7 @@ namespace sw
 
     void LeaderboardService::readAchievementProgress( AccountID accountID, uint64 requestTag )
     {
-        vector<AchievementDef> listDefinition;
+        vector<OnlineAchievementDef> listDefinition;
         listDefinition.reserve( _mapAchievement.size() );
         for ( const auto& [achievementID, definition] : _mapAchievement )
         {

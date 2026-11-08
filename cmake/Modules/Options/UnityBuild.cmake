@@ -29,6 +29,30 @@ function(sw_setUnityBuild TARGET_NAME)
 	)
 
 	sw_skipUnityForX11Sources(${TARGET_NAME})
+	sw_skipUnityForTestSources(${TARGET_NAME})
+endfunction()
+
+# ------------------------------------------------------------------------------
+# 1-0) sw_skipUnityForTestSources — 테스트 .cpp(`/Tests/` 아래)를 Unity 배치에서 뺀다
+#
+# 테스트 파일은 파일마다 익명 이름공간에 짧은 이름(`kNowMs` · `Util` · 가짜 서비스)을 둔다 — 한 묶음에 들면 서로 부딪힌다.
+# 묶음 크기 · 파일 추가로 묶음 경계가 바뀔 때마다 다른 쌍이 깨지므로 이름을 고치지 않고 묶음에서 뺀다(엔진 소스만 묶는다 —
+# 언리얼도 테스트 모듈을 따로 짓는다).
+# ------------------------------------------------------------------------------
+function(sw_skipUnityForTestSources TARGET_NAME)
+	get_target_property(listSource ${TARGET_NAME} SOURCES)
+	get_target_property(sourceDir ${TARGET_NAME} SOURCE_DIR)
+	foreach(src IN LISTS listSource)
+		if(NOT src MATCHES "\\.(c|cc|cpp|cxx)$" OR src MATCHES "^\\$<" OR NOT src MATCHES "(^|/)Tests/")
+			continue()
+		endif()
+		if(IS_ABSOLUTE "${src}")
+			set(srcPath "${src}")
+		else()
+			set(srcPath "${sourceDir}/${src}")
+		endif()
+		set_source_files_properties("${srcPath}" TARGET_DIRECTORY ${TARGET_NAME} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+	endforeach()
 endfunction()
 
 # ------------------------------------------------------------------------------

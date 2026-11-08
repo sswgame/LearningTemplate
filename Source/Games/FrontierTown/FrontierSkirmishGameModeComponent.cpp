@@ -62,14 +62,13 @@ namespace sw
         io.value( soldierValue );
         if ( io.isOk() == false )
             return;
-        RTSWorld restoredWorld;
-        if ( io.isReading() && io.check( initializeWorld( restoredWorld, *pState ) ) == false )
+        // RTSWorld 는 옮길 수 없다(경로 풀이가 같은 객체의 격자를 참조한다) — 읽기는 지형을 다시 세운 _world 에 바로 한다. 유닛 · 시야 복원은 RTSWorld 직렬화가 임시 값에 읽고 다 읽은 뒤에만 옮긴다.
+        if ( io.isReading() && io.check( initializeWorld( _world, *pState ) ) == false )
             return;
-        io.value( io.isWriting() ? _world : restoredWorld );
+        io.value( _world );
         io.end();
         if ( io.isWriting() || io.isOk() == false )
             return;
-        _world       = std::move( restoredWorld );
         _tickCount   = tickCount;
         _bPatrolToB  = bPatrolToB == SW_FALSE ? SW_FALSE : SW_TRUE;
         _worker      = RTSUnitID::fromPacked( workerValue );

@@ -188,7 +188,6 @@ namespace
 SW_TEST_CASE( ServerDirectoryServiceTest, AssignPicksRegisteredServer )
 {
     DirectoryServiceFixture rig;
-    const UnixMilliseconds  nowMs{ kNowMs };
     SW_EXPECT_TRUE( rig.assign( kPlayer, makeAssignment() ) == ServerDirectoryResult::NoServer );
     SW_EXPECT_TRUE( rig.assign( kPlayer, makeAssignment( "unknown" ) ).hasError( ServerDirectoryError::kUnknownKind ) );
     SW_EXPECT_TRUE( rig.assign( kPlayer, makeAssignment( "game", "KR!" ) ).hasError( ServerDirectoryError::kUnknownKind ) );
@@ -254,7 +253,6 @@ SW_TEST_CASE( ServerDirectoryServiceTest, AllowedAccountPassesMaintenance )
 {
     DirectoryServiceFixture rig;
     rig.startServer( ServerState::Maintenance );
-    const UnixMilliseconds nowMs{ kNowMs };
     SW_EXPECT_TRUE( rig.assign( kTester, makeAssignment() ) == ServerDirectoryResult::NoServer ); // 점검이 걸리지 않았으면 점검 서버는 후보가 아니다
 
     MaintenanceWindow window = makeWindow( MaintenanceWindow::kScopeAll );

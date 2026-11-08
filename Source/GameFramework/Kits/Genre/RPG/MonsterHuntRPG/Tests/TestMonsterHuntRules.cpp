@@ -1111,7 +1111,7 @@ SW_TEST_CASE_F( SkillTreeStateTest, DebugLinesExplainWhyTheNextRankIsLocked )
 {
     const auto findLine = []( const sw::DebugHUDSectionWriter& writer, sw::string_view label ) -> sw::string
     {
-        for ( sw::uint32 index = 0; index < writer.getLineCount(); ++index )
+        for ( uint32 index = 0; index < writer.getLineCount(); ++index )
         {
             if ( writer.getLineAt( index )._label == label )
                 return writer.getLineAt( index )._value;

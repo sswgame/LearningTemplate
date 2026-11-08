@@ -121,6 +121,7 @@ namespace sw
 
     void MatchmakingServer::handleCall( OnlineServerCall<MatchmakingMethod::LobbyList> call, const OnlineCallContext& context, const MatchmakingModeRequest& request )
     {
+        (void)context; // 목록은 누가 묻든 같다
         _pPartyLobby->listLobbies( request._modeID, call._callID );
     }
 
