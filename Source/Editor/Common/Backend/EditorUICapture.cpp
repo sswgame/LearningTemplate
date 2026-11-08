@@ -15,7 +15,6 @@
 
 #include "Engine/Automation/Scenario/AutomationDeferredValue.h"
 #include "Engine/Config/RHIBackendType.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
@@ -51,7 +50,7 @@ namespace sw::editor
             /** @brief `-gv_screenshotEditor` 를 찍겠다고 개발 도구의 장부에 알립니다. 장부가 없으면(렌더러 없음) 오류로 알린다 — `-gv_screenshotQuit` 이 끝낼 근거를 잃는다. */
             static void expectStartupCapture()
             {
-                StartupCaptureSubsystem* const pStartupCapture = engine::findSubsystem<StartupCaptureSubsystem>();
+                StartupCaptureSubsystem* const pStartupCapture = editor::findSubsystem<StartupCaptureSubsystem>();
                 if ( pStartupCapture == nullptr )
                 {
                     SW_LOG_ERROR_ID( "EditorUICapture.StartupCaptureNotAnnounced", "Editor UI capture was announced but this host has no startup capture ledger (no renderer)" );
@@ -63,7 +62,7 @@ namespace sw::editor
             /** @brief 읽지 못한 `-gv_screenshotEditor` 건의 끝(쓰지 못함)을 장부에 알립니다. 렌더 스레드에서 부른다. */
             static void reportStartupCaptureFailed()
             {
-                StartupCaptureSubsystem* const pStartupCapture = engine::findSubsystem<StartupCaptureSubsystem>();
+                StartupCaptureSubsystem* const pStartupCapture = editor::findSubsystem<StartupCaptureSubsystem>();
                 if ( pStartupCapture == nullptr )
                 {
                     SW_LOG_ERROR_ID( "EditorUICapture.StartupCaptureNotReported", "Editor UI capture finished but this host has no startup capture ledger (no renderer)" );
@@ -208,7 +207,7 @@ namespace sw::editor
             // 시작 인자 건의 끝 알림은 워커가 다 쓴 뒤 한다 - 장부는 서브시스템이라 여기(UI 스레드)서 찾아 넘긴다. 에디터 컨텍스트 종료가 에디터 잡 단계를 기다리므로 장부(엔진 기동 범위)보다 먼저 끝난다.
             if ( write._job._bFromStartupArgument )
             {
-                write._pStartupCapture = engine::findSubsystem<StartupCaptureSubsystem>();
+                write._pStartupCapture = editor::findSubsystem<StartupCaptureSubsystem>();
                 if ( write._pStartupCapture == nullptr )
                     SW_LOG_ERROR_ID( "EditorUICapture.EditorUICaptureCannot", "Editor UI capture '%#' cannot report its end - this host has no startup capture ledger (no renderer)", write._job._path.c_str() );
             }
