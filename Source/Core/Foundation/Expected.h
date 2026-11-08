@@ -201,7 +201,7 @@ namespace sw
         template <typename U>
         static constexpr bool kIsValueArgument = std::is_constructible_v<T, U&&> && std::is_same_v<std::decay_t<U>, expected> == false &&
                                                  internal::UnexpectedTraits<std::decay_t<U>>::value == false &&
-                                                 std::is_same_v<std::decay_t<U>, nullopt_t> == false;
+                                                 std::is_same_v<std::decay_t<U>, nullopt_t> == false && std::is_same_v<std::decay_t<U>, std::optional<T>> == false;
 
     public:
         using value_type      = T;
@@ -348,6 +348,25 @@ namespace sw
         operator std::optional<T>() &&
         {
             return _bHasValue ? std::optional<T>{ std::move( _storage._value ) } : std::optional<T>{};
+        }
+
+        /**
+         * @brief `optional<T>` 만: 아직 `std::optional<T>` 를 돌려주는 Core 밖 함수의 결과를 받습니다(위 변환의 반대 방향).
+         * @note shortcut: 폴더마다 갈래가 따로 옮기는 동안 부르는 쪽 · 정의 쪽 어느 쪽이 먼저 옮겨도 짓게 둔다 — 기준선이 0 이 되면 위 변환과 함께 지운다.
+         */
+        template <typename G = E, std::enable_if_t<std::is_same_v<G, Absent>, int32> = 0>
+        expected( const std::optional<T>& other )
+            : expected()
+        {
+            if ( other.has_value() )
+                emplace( *other );
+        }
+        template <typename G = E, std::enable_if_t<std::is_same_v<G, Absent>, int32> = 0>
+        expected( std::optional<T>&& other )
+            : expected()
+        {
+            if ( other.has_value() )
+                emplace( std::move( *other ) );
         }
 
         /** @brief `optional<T>` 만: 비웁니다(`TOptional::Reset` · `std::optional::reset`). */

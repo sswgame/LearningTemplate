@@ -125,9 +125,9 @@ namespace sw::editor
 
         // 키 이동 · 프레임 환산
         /** @brief @p frame 앞의 가장 가까운 키의 프레임입니다(@p listKeyFrame 은 시각 순). 타임라인 밖의 키는 건너뜁니다 — 시간 막대가 갈 수 없는 자리입니다. 없으면 비어 있습니다. */
-        [[nodiscard]] std::optional<int32> findPreviousKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const;
+        [[nodiscard]] optional<int32> findPreviousKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const;
         /** @brief @p frame 뒤의 가장 가까운 키의 프레임입니다. 나머지는 `findPreviousKeyFrame` 과 같습니다. */
-        [[nodiscard]] std::optional<int32> findNextKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const;
+        [[nodiscard]] optional<int32> findNextKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const;
         /** @brief 타임라인 띠의 비율(0..1, 밖은 자른다)이 가리키는 프레임입니다. */
         [[nodiscard]] int32 findFrameAtRatio( float32 ratio ) const;
         /** @brief @p frame 의 타임라인 띠 비율입니다. 타임라인 밖이면 0..1 을 벗어납니다. */
@@ -145,7 +145,7 @@ namespace sw::editor
 
     private:
         /** @brief 키의 프레임(가장 가까운 정수)입니다. 타임라인 밖이면 비어 있습니다. */
-        [[nodiscard]] std::optional<int32> findTimelineFrame( float32 keyFrame ) const;
+        [[nodiscard]] optional<int32> findTimelineFrame( float32 keyFrame ) const;
         /** @brief 타임라인 길이(프레임)입니다. 1 이상입니다. */
         [[nodiscard]] int32 getFrameSpan() const;
         /** @brief `_selectedItem` 이 있는 항목을 가리키면 true 입니다. */

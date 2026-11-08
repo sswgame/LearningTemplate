@@ -221,7 +221,7 @@ namespace sw::editor
                 ContentBrowserPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
                 if ( pPanel == nullptr )
                     return;
-                const std::optional<AbsolutePath> fileAbs = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( assetPath ) );
+                const optional<AbsolutePath> fileAbs = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( assetPath ) );
                 if ( fileAbs.has_value() == false )
                     return;
                 pPanel->openFolder( FileUtil::getDirectoryPart( fileAbs->str() ) );

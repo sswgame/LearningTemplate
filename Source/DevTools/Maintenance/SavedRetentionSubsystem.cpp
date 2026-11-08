@@ -48,10 +48,10 @@ namespace sw
                     SW_LOG_ERROR_ID( "SavedRetention.ConfigUnreadable", "Saved retention rules %# could not be read - nothing is removed", path );
                     return false;
                 }
-                const JSONValue             root   = document.getRoot();
-                const std::optional<int64>  minAge = root.readRequired<int64>( "_minAgeSeconds" );
-                const std::optional<string> trash  = root.readRequired<string>( "_trashFolder" );
-                const JSONValue             rules  = root.get( "_listRule" );
+                const JSONValue        root   = document.getRoot();
+                const optional<int64>  minAge = root.readRequired<int64>( "_minAgeSeconds" );
+                const optional<string> trash  = root.readRequired<string>( "_trashFolder" );
+                const JSONValue        rules  = root.get( "_listRule" );
                 if ( minAge.has_value() == false || trash.has_value() == false || trash->empty() || rules.isArray() == false )
                 {
                     SW_LOG_ERROR_ID( "SavedRetention.ConfigInvalid", "Saved retention rules %# need _minAgeSeconds, a non-empty _trashFolder and a _listRule array - nothing is removed", path );
@@ -61,11 +61,11 @@ namespace sw
                 outSettings._trashFolder   = *trash;
                 for ( size_t index = 0; index < rules.size(); ++index )
                 {
-                    const JSONValue             entry     = rules.at( index );
-                    const std::optional<string> folder    = entry.readRequired<string>( "_folder" );
-                    const std::optional<uint32> keepCount = entry.readRequired<uint32>( "_keepCount" );
-                    const std::optional<bool>   bPerChild = entry.readRequired<bool>( "_bPerChild" );
-                    const JSONValue             skip      = entry.get( "_listSkipChild" );
+                    const JSONValue        entry     = rules.at( index );
+                    const optional<string> folder    = entry.readRequired<string>( "_folder" );
+                    const optional<uint32> keepCount = entry.readRequired<uint32>( "_keepCount" );
+                    const optional<bool>   bPerChild = entry.readRequired<bool>( "_bPerChild" );
+                    const JSONValue        skip      = entry.get( "_listSkipChild" );
                     if ( folder.has_value() == false || folder->empty() || keepCount.has_value() == false || bPerChild.has_value() == false || skip.isArray() == false )
                     {
                         SW_LOG_ERROR_ID( "SavedRetention.RuleInvalid", "Saved retention rule %# in %# needs _folder, _keepCount, _bPerChild and a _listSkipChild array - nothing is removed",

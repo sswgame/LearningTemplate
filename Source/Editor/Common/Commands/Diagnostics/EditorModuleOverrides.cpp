@@ -30,7 +30,7 @@ namespace sw::editor
                 if ( name == moduleName )
                     continue;
                 // 다른 모듈의 줄은 그대로 옮긴다. 켬 · 끔이 불리언이 아닌 줄은 고쳐 쓰지 않고 실패한다(읽기가 알린다).
-                const std::optional<bool> bOtherEnabled = entry.readRequired<bool>( "_bEnabled" );
+                const optional<bool> bOtherEnabled = entry.readRequired<bool>( "_bEnabled" );
                 if ( bOtherEnabled.has_value() == false )
                     return false;
                 listEntry.emplace_back( name, *bOtherEnabled );

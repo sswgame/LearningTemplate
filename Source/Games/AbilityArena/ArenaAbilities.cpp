@@ -27,8 +27,8 @@ namespace sw
         AbilityComponent*             pAbilitySystem = getAbilitySystem();
         const ArenaGameModeComponent* pGameMode      = pAbilitySystem != nullptr ? ArenaGameModeComponent::findForUnit( *pAbilitySystem ) : nullptr;
         // 사거리 · 피해는 어빌리티 데이터(`<Param>`)가 반드시 적는다.
-        const std::optional<float32> range  = getParameter( "range" );
-        const std::optional<float32> damage = getParameter( "damage" );
+        const optional<float32> range  = getParameter( "range" );
+        const optional<float32> damage = getParameter( "damage" );
         if ( range.has_value() == false || damage.has_value() == false )
         {
             SW_LOG_ERROR_ID( "ArenaAbilities.AbilityNeedsParamName", "ability '%#' needs <Param name=\"range\"> and <Param name=\"damage\">", getConfig()._id.c_str() );
@@ -111,7 +111,7 @@ namespace sw
         const hashed_string dashEffect = getNameParameter( "dashEffect" );
         if ( dashEffect.empty() == false )
             (void)applyEffectSpecToOwner( makeOutgoingSpec( dashEffect ) ); // 이펙트가 없어도 대시는 시간만큼 돈다
-        const std::optional<float32> duration = getParameter( "duration" );
+        const optional<float32> duration = getParameter( "duration" );
         if ( duration.has_value() == false )
         {
             SW_LOG_ERROR_ID( "ArenaAbilities.AbilityNeedsParamName3", "ability '%#' needs <Param name=\"duration\">", getConfig()._id.c_str() );

@@ -23,11 +23,11 @@ namespace sw::editor
              * @brief 돌고 있는 게임의 프로젝트 매니페스트 소스 경로입니다(게임 이름이 `Source/Games/` 의 폴더 이름이다). 프로젝트 루트 아래로 푼다.
              * @return 게임 이름이 경로로 풀리지 않으면(빈 이름 · 드라이브 글자) 빈 값입니다.
              */
-            static std::optional<AbsolutePath> getProjectManifestPath()
+            static optional<AbsolutePath> getProjectManifestPath()
             {
                 const string gameName = GameSelection::getName();
                 if ( gameName.empty() )
-                    return std::nullopt;
+                    return nullopt;
                 return AbsolutePath::tryResolve( "Source/Games/" + gameName + "/" + config::kTargetGameModule + ModuleCatalog::kManifestExtension, ProcessRoots::get()._project );
             }
 
@@ -157,7 +157,7 @@ namespace sw::editor
 
     void ModulesModel::applyPending()
     {
-        const std::optional<AbsolutePath> manifestPath = ModulesModelInternal::getProjectManifestPath();
+        const optional<AbsolutePath> manifestPath = ModulesModelInternal::getProjectManifestPath();
         if ( manifestPath.has_value() == false )
         {
             SW_LOG_ERROR_ID( "ModulesPanel.ModulesRunningGameDoes", "Modules: the running game '%#' does not name a project manifest path", GameSelection::getName().c_str() );

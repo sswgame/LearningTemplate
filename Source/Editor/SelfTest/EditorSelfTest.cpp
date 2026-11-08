@@ -210,19 +210,19 @@ namespace sw::editor
             }
 
         private:
-            EditorSelfTestContext           _context;
-            std::optional<EditorSettleWait> _settleWait; ///< 테스트가 `WaitSettled` 를 돌려 정지를 기다리는 중이면 있다(그동안 테스트를 부르지 않는다)
-            vector<uint32>                  _listSelectedIndex;
-            vector<EditorSelfTestResult>    _listResult;
-            string                          _pattern;
-            string                          _report;
-            uint32                          _cursor;
-            uint32                          _passedCount;
-            uint32                          _failedCount;
-            uint8                           _bActive           : 1; ///< 실행이 있다(시작 전 워밍업 포함)
-            uint8                           _bStarted          : 1;
-            uint8                           _bQuitWhenDone     : 1;
-            uint8                           _bMarksWereEnabled : 1; ///< 시작 전 레이블 기록 상태(끝나면 되돌린다)
+            EditorSelfTestContext        _context;
+            optional<EditorSettleWait>   _settleWait; ///< 테스트가 `WaitSettled` 를 돌려 정지를 기다리는 중이면 있다(그동안 테스트를 부르지 않는다)
+            vector<uint32>               _listSelectedIndex;
+            vector<EditorSelfTestResult> _listResult;
+            string                       _pattern;
+            string                       _report;
+            uint32                       _cursor;
+            uint32                       _passedCount;
+            uint32                       _failedCount;
+            uint8                        _bActive           : 1; ///< 실행이 있다(시작 전 워밍업 포함)
+            uint8                        _bStarted          : 1;
+            uint8                        _bQuitWhenDone     : 1;
+            uint8                        _bMarksWereEnabled : 1; ///< 시작 전 레이블 기록 상태(끝나면 되돌린다)
         };
 
         EditorSelfTestRun::EditorSelfTestRun()

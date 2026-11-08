@@ -126,9 +126,9 @@ namespace sw
                     outError = document.getLastError();
                     return false;
                 }
-                const JSONValue            root     = document.getRoot();
-                const std::optional<int32> exitCode = root.readRequired<int32>( "exitCode" );
-                const JSONValue            records  = root.get( "records" );
+                const JSONValue       root     = document.getRoot();
+                const optional<int32> exitCode = root.readRequired<int32>( "exitCode" );
+                const JSONValue       records  = root.get( "records" );
                 if ( exitCode.has_value() == false || records.isArray() == false )
                 {
                     outError = reportPath + ": no exitCode or records[]";
@@ -320,11 +320,11 @@ namespace sw
             lineCount = MathUtil::max( lineCount, records._listRecordLine.size() );
         for ( size_t lineIndex = 0; lineIndex < lineCount; ++lineIndex )
         {
-            const auto lineAt = [lineIndex]( const AutomationBackendRecords& records ) -> std::optional<string_view>
+            const auto lineAt = [lineIndex]( const AutomationBackendRecords& records ) -> optional<string_view>
             {
-                return lineIndex < records._listRecordLine.size() ? std::optional<string_view>{ records._listRecordLine[lineIndex] } : std::nullopt;
+                return lineIndex < records._listRecordLine.size() ? optional<string_view>{ records._listRecordLine[lineIndex] } : nullopt;
             };
-            const std::optional<string_view> firstLine = lineAt( listRecords.front() );
+            const optional<string_view> firstLine = lineAt( listRecords.front() );
             if ( std::all_of( listRecords.begin(), listRecords.end(), [&]( const AutomationBackendRecords& records )
             { return lineAt( records ) == firstLine; } ) )
                 continue;
@@ -332,7 +332,7 @@ namespace sw
             string_view label{};
             for ( const AutomationBackendRecords& records : listRecords )
             {
-                const std::optional<string_view> line = lineAt( records );
+                const optional<string_view> line = lineAt( records );
                 if ( line.has_value() )
                 {
                     label = Internal::getRecordLabel( *line );
@@ -342,7 +342,7 @@ namespace sw
             string message = "record #" + to_string( lineIndex + 1 ) + " '" + string( label ) + "':";
             for ( const AutomationBackendRecords& records : listRecords )
             {
-                const std::optional<string_view> line = lineAt( records );
+                const optional<string_view> line = lineAt( records );
                 message += " " + records._backend + "=";
                 if ( line.has_value() == false )
                     message += "(none)";

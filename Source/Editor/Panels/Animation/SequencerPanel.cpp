@@ -231,10 +231,10 @@ namespace sw::editor
             }
 
             /** @brief 키 띠에서 포인터 x 에 가장 가까운 키 프레임입니다(마름모 반지름 안). 없으면 비어 있습니다. */
-            static std::optional<float32> findKeyUnderPointer( const SequenceModel& document, const vector<float32>& listKeyFrame, float32 originX, float32 width, float32 radius, float32 pointerX )
+            static optional<float32> findKeyUnderPointer( const SequenceModel& document, const vector<float32>& listKeyFrame, float32 originX, float32 width, float32 radius, float32 pointerX )
             {
-                std::optional<float32> hit;
-                float32                bestDistance = radius;
+                optional<float32> hit;
+                float32           bestDistance = radius;
                 for ( const float32 keyFrame : listKeyFrame )
                 {
                     const float32 distance = MathUtil::abs( originX + document.computeRatioAtFrame( keyFrame ) * width - pointerX );
@@ -764,8 +764,8 @@ namespace sw::editor
         if ( ImGui::IsItemActivated() )
         {
             // 누른 자리에 키가 있으면 고르고(Ctrl 은 더하기 · 빼기) 끌기를 시작한다. 없으면 그 트랙 · 그 프레임으로 간다(예전 띠 누름과 같다).
-            _document._selectedTrack                   = trackIndex;
-            const std::optional<float32> keyUnderMouse = SequencerPanelInternal::findKeyUnderPointer( _document, _listKeyFrame, origin.x, width, radius, pointer._position._x );
+            _document._selectedTrack              = trackIndex;
+            const optional<float32> keyUnderMouse = SequencerPanelInternal::findKeyUnderPointer( _document, _listKeyFrame, origin.x, width, radius, pointer._position._x );
             if ( keyUnderMouse.has_value() )
             {
                 _document.selectKey( trackIndex, *keyUnderMouse, pointer.hasModifier( ModifierKey::Ctrl ) );
@@ -877,7 +877,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
         if ( ImGui::ArrowButton( "##previousKey", ImGuiDir_Left ) )
         {
-            const std::optional<int32> previousFrame = _document.findPreviousKeyFrame( _listKeyFrame, _currentFrame );
+            const optional<int32> previousFrame = _document.findPreviousKeyFrame( _listKeyFrame, _currentFrame );
             if ( previousFrame.has_value() )
             {
                 _currentFrame = *previousFrame;
@@ -888,7 +888,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
         if ( ImGui::ArrowButton( "##nextKey", ImGuiDir_Right ) )
         {
-            const std::optional<int32> nextFrame = _document.findNextKeyFrame( _listKeyFrame, _currentFrame );
+            const optional<int32> nextFrame = _document.findNextKeyFrame( _listKeyFrame, _currentFrame );
             if ( nextFrame.has_value() )
             {
                 _currentFrame = *nextFrame;

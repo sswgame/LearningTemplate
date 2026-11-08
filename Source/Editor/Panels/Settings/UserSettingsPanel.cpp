@@ -192,7 +192,7 @@ namespace sw::editor
             // 아래 세 칸의 핸들은 스키마에서 꺼낸 정의(`def`)로 풀어 언제나 풀린다 — 못 풀면 `resolveKey` 가 오류를 남기고 칸을 그리지 않는다.
             case UserSettingType::Bool:
             {
-                const std::optional<UserSettingKey<bool>> key = settings.resolveKey<bool>( def._id );
+                const optional<UserSettingKey<bool>> key = settings.resolveKey<bool>( def._id );
                 if ( key.has_value() == false )
                     break;
                 bool bValue = settings.getBoolValue( *key );
@@ -202,7 +202,7 @@ namespace sw::editor
             }
             case UserSettingType::Int:
             {
-                const std::optional<UserSettingKey<int32>> key = settings.resolveKey<int32>( def._id );
+                const optional<UserSettingKey<int32>> key = settings.resolveKey<int32>( def._id );
                 if ( key.has_value() == false )
                     break;
                 int32 number = settings.getIntValue( *key );
@@ -212,7 +212,7 @@ namespace sw::editor
             }
             case UserSettingType::Float:
             {
-                const std::optional<UserSettingKey<float32>> key = settings.resolveKey<float32>( def._id );
+                const optional<UserSettingKey<float32>> key = settings.resolveKey<float32>( def._id );
                 if ( key.has_value() == false )
                     break;
                 float32 number = settings.getFloatValue( *key );

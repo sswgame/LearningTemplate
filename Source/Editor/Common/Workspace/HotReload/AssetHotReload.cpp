@@ -451,8 +451,8 @@ namespace sw::editor
             (void)reloadChangedAsset( AssetID{ assetID } );
             return;
         }
-        const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
-        string                            relativePath{};
+        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
+        string                       relativePath{};
         if ( diskPath.has_value() == false || FileUtil::makeRelativePath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), diskPath->str(), relativePath ) == false )
         {
             // `Content/` 밖(시나리오의 `Saved/Automation/` 임시 문서 · 붙인 디스크 도메인)은 감시도 색인도 없다 — 그 캐시만 다시 읽는다(예전 패널의 저장 뒤 리로드와 같다).

@@ -163,7 +163,7 @@ namespace sw::editor
                 const bool     bArray     = value.isArray() && value.size() >= 3;
                 for ( uint32 axis = 0; bArray && axis < 3; ++axis )
                 {
-                    const std::optional<float32> number = value.at( axis ).read<float32>();
+                    const optional<float32> number = value.at( axis ).read<float32>();
                     if ( number.has_value() == false )
                     {
                         outError = string( context ) + ": vector " + value.dump() + " has a value that is not a number";
@@ -188,7 +188,7 @@ namespace sw::editor
                 const JSONValue value = object.get( key );
                 if ( value.isValid() == false || value.isNull() )
                     return true;
-                const std::optional<float32> number = value.read<float32>();
+                const optional<float32> number = value.read<float32>();
                 if ( number.has_value() == false )
                 {
                     outError = string( context ) + ": " + string( key ) + " " + value.dump() + " is not a number";
@@ -204,7 +204,7 @@ namespace sw::editor
                 const JSONValue value = object.get( key );
                 if ( value.isValid() == false || value.isNull() )
                     return true;
-                const std::optional<bool> flag = value.read<bool>();
+                const optional<bool> flag = value.read<bool>();
                 if ( flag.has_value() == false )
                 {
                     outError = string( context ) + ": " + string( key ) + " " + value.dump() + " is not a boolean";
@@ -218,7 +218,7 @@ namespace sw::editor
             [[nodiscard]] static bool readIndex( const JSONValue& value, size_t count, string_view context, string_view what, string_view reason, uint32& outIndex,
                                                  string& outError )
             {
-                const std::optional<uint32> index = value.read<uint32>();
+                const optional<uint32> index = value.read<uint32>();
                 if ( index.has_value() == false || *index >= count )
                 {
                     outError = string( context ) + ": " + string( what ) + " " + value.dump() + " " + string( reason );
@@ -244,8 +244,8 @@ namespace sw::editor
                 outbInvalid = false;
                 if ( value.isValid() == false || value.isNull() )
                     return false;
-                const std::optional<int64> node = value.read<int64>();
-                outbInvalid                     = node.has_value() == false;
+                const optional<int64> node = value.read<int64>();
+                outbInvalid                = node.has_value() == false;
                 return node.has_value() && *node >= 0;
             }
 
@@ -593,8 +593,8 @@ namespace sw::editor
                 {
                     const JSONValue annotation = listAnnotation.at( index );
                     collectUnknownKeys( annotation, kArrVrm0AnnotationKey, "VRM.firstPerson.meshAnnotations", pOutListIgnored );
-                    VrmFirstPersonMesh          mesh;
-                    const std::optional<uint32> meshIndex = annotation.get( "mesh" ).read<uint32>();
+                    VrmFirstPersonMesh     mesh;
+                    const optional<uint32> meshIndex = annotation.get( "mesh" ).read<uint32>();
                     if ( meshIndex.has_value() == false )
                     {
                         outError = "VRM 0.x meshAnnotations: mesh " + annotation.get( "mesh" ).dump() + " is not a mesh number";

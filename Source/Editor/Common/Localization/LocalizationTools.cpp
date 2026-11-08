@@ -44,7 +44,7 @@ namespace sw
             {
                 if ( AbsolutePath::isStrictAbsolute( path ) )
                     return FileUtil::normalizeSeparators( path );
-                const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( path );
+                const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( path );
                 return diskPath.has_value() ? diskPath->str() : string{};
             }
 

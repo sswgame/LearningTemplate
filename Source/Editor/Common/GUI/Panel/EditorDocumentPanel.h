@@ -88,9 +88,9 @@ namespace sw::editor
          * @brief 열린 문서(리소스 id)의 디스크 자리입니다 - 읽기와 쓰기가 같은 해석이다(R7, `AssetPaths::toDiskPath`: 전역 id 는 아직 없어도 그 도메인 아래, 상대 키는 이긴 있는 파일).
          * @details 예전에는 패널마다 읽기는 `findLooseFile`, 쓰기는 다른 해석(못 찾으면 받은 글 그대로 · 쓸 자리 해석)을 따로 불렀다. 문서가 없거나 풀 수 없으면 빈 값이다(이유는 로그).
          */
-        [[nodiscard]] std::optional<AbsolutePath> getDocumentDiskPath() const;
-        bool                                      isDocumentLoaded() const;
-        bool                                      isDocumentLoadFailed() const { return _bLoadFailed == SW_TRUE; }
+        [[nodiscard]] optional<AbsolutePath> getDocumentDiskPath() const;
+        bool                                 isDocumentLoaded() const;
+        bool                                 isDocumentLoadFailed() const { return _bLoadFailed == SW_TRUE; }
         /** @brief 다른 문서로 바꾸려는데 미저장 편집이 있어 "그래도 바꿀까요?" 확인을 기다리는 중이면 true 입니다. 이 동안 새 문서는 열리지 않습니다(자동화 감시 값이 읽는다). */
         bool isSwitchConfirmPending() const { return _bConfirmSwitch == SW_TRUE; }
         bool canSaveDocument() const override { return _bLoadFailed == SW_FALSE; }

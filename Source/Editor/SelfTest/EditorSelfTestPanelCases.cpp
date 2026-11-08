@@ -60,7 +60,7 @@ namespace sw::editor
                 {
                     // 추적하지 않는 scratch 도메인의 이 프로세스 몫에 쓴다 - 예전에는 활성 게임 팩(추적 원본) 아래에 써, 시나리오의 쓰기 게이트가 거절했고 죽은 실행은 저장소에 폴더를 남겼다.
                     // 백엔드마다 나란히 도는 실행이 서로의 폴더를 지우지 않게 프로세스 꼬리를 단다(`AutomationScratch::makeInstanceID`).
-                    const std::optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( AutomationScratch::makeInstanceID( kProbeFolderID ) );
+                    const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( AutomationScratch::makeInstanceID( kProbeFolderID ) );
                     if ( folder.has_value() == false )
                         return false;
                     _folderAbs = folder->str();

@@ -137,8 +137,8 @@ namespace sw::editor
                     (void)StringUtil::parseUint64( readMetaValue( metaText, "sourceHash" ), entry._sourceContentHash ); // 없으면(옛 메타) 0 — 아래에서 바뀐 원본으로 거절한다
                     // 다른 프로젝트 · 바뀐 원본에는 적용하지 않는다 — 사본이 오래된 원본 위에 덮여 남의 일을 지우지 않게.
                     // 바뀜은 내용 해시로 본다 — 쓰기 시각은 체크아웃 · 복사가 내용과 따로 바꾸고, 같은 틱의 다시 쓰기는 시각이 같다.
-                    const std::optional<AbsolutePath> sourcePath  = editor::getSubsystem<AssetPaths>().toDiskPath( entry._sourceID );
-                    const uint64                      currentHash = sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
+                    const optional<AbsolutePath> sourcePath  = editor::getSubsystem<AssetPaths>().toDiskPath( entry._sourceID );
+                    const uint64                 currentHash = sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
                     if ( FileUtil::pathsEqualNormalized( entry._projectRoot, projectRoot ) == false )
                         entry._refusal = "it was written for another project";
                     else if ( currentHash == 0 )
@@ -199,9 +199,9 @@ namespace sw::editor
                 const string sourceID = pScene->getSourcePath();
                 if ( StringUtil::startsWith( sourceID, string( EditorAutosaveCommands::kDomain ) + "/" ) )
                     return false; // 복원 중인 사본 자신이다
-                const string                      slotFolder = FileUtil::joinPath( getFolder(), EditorAutosaveCommands::makeSlotName( sourceID ) );
-                const std::optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
-                const uint64                      sourceHash = sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
+                const string                 slotFolder = FileUtil::joinPath( getFolder(), EditorAutosaveCommands::makeSlotName( sourceID ) );
+                const optional<AbsolutePath> sourcePath = editor::getSubsystem<AssetPaths>().toDiskPath( sourceID );
+                const uint64                 sourceHash = sourcePath.has_value() ? ContentHash::computeFile( sourcePath->str() ) : 0;
                 if ( sourceHash == 0 || FileUtil::ensureDirectoryExists( slotFolder ) == false )
                     return false;
                 vector<uint32> listGeneration;

@@ -392,7 +392,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "UIPreviewModel.UIPreviewCannotSaved", "UI Preview: '%#' cannot be saved - %#", _openedDocument.c_str(), error.c_str() );
             return false;
         }
-        const std::optional<AbsolutePath> path = editor::getSubsystem<AssetPaths>().toDiskPath( _openedDocument );
+        const optional<AbsolutePath> path = editor::getSubsystem<AssetPaths>().toDiskPath( _openedDocument );
         if ( path.has_value() == false || FileUtil::writeTextFile( path->str(), text ) == false )
         {
             SW_LOG_ERROR_ID( "UIPreviewModel.UIPreviewCouldNot", "UI Preview: '%#' could not be written", _openedDocument.c_str() );

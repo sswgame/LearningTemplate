@@ -130,9 +130,9 @@ namespace sw::editor
 
     bool EditorThemeTokens::loadThemeResource( const AssetID& id, EditorThemeConfig& outConfig )
     {
-        const string&                     assetID = id.str();
-        string                            error;
-        const std::optional<AbsolutePath> themeFile = editor::getSubsystem<AssetPaths>().findLooseFile( assetID );
+        const string&                assetID = id.str();
+        string                       error;
+        const optional<AbsolutePath> themeFile = editor::getSubsystem<AssetPaths>().findLooseFile( assetID );
         if ( themeFile.has_value() && loadThemeFile( themeFile->str(), outConfig, error ) )
             return true;
         SW_LOG_ERROR_ID( "EditorThemeTokens.ThemeTokensNotLoaded", "Theme tokens were not loaded: %#", error.c_str() );

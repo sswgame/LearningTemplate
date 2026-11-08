@@ -219,8 +219,8 @@ namespace sw
                     }
                     if ( phase == "X" )
                     {
-                        const std::optional<float64> begin    = event.readRequired<float64>( "ts" );
-                        const std::optional<float64> duration = event.readRequired<float64>( "dur" );
+                        const optional<float64> begin    = event.readRequired<float64>( "ts" );
+                        const optional<float64> duration = event.readRequired<float64>( "dur" );
                         if ( begin.has_value() == false || duration.has_value() == false )
                         {
                             StringBuilder<constant::buffer::kMax256> errorBuilder;
@@ -245,7 +245,7 @@ namespace sw
                     }
                     else if ( phase == "i" && event.get( "name" ).asString() == "Frame" )
                     {
-                        const std::optional<float64> frameBegin = event.readRequired<float64>( "ts" );
+                        const optional<float64> frameBegin = event.readRequired<float64>( "ts" );
                         if ( frameBegin.has_value() == false )
                         {
                             StringBuilder<constant::buffer::kMax256> errorBuilder;
@@ -342,8 +342,8 @@ namespace sw
                 const bool      bHasClockData = other.isObject() && other.has( "wallUnixMilliseconds" ) && other.has( "monotonicNanoseconds" );
                 if ( bHasClockData )
                 {
-                    const std::optional<int64> wallMilliseconds     = other.readRequired<int64>( "wallUnixMilliseconds" );
-                    const std::optional<int64> monotonicNanoseconds = other.readRequired<int64>( "monotonicNanoseconds" );
+                    const optional<int64> wallMilliseconds     = other.readRequired<int64>( "wallUnixMilliseconds" );
+                    const optional<int64> monotonicNanoseconds = other.readRequired<int64>( "monotonicNanoseconds" );
                     if ( wallMilliseconds.has_value() == false || monotonicNanoseconds.has_value() == false )
                     {
                         StringBuilder<constant::buffer::kMax256> reportBuilder;
@@ -370,7 +370,7 @@ namespace sw
                     const JSONValue pid = outSource._listEvent.at( eventIndex ).get( "pid" );
                     if ( pid.isNumber() )
                     {
-                        const std::optional<int64> sourcePID = pid.read<int64>();
+                        const optional<int64> sourcePID = pid.read<int64>();
                         if ( sourcePID.has_value() == false )
                         {
                             StringBuilder<constant::buffer::kMax256> reportBuilder;
@@ -509,9 +509,9 @@ namespace sw
                         for ( const string& member : event.getMemberNames() )
                         {
                             writer.key( member );
-                            const JSONValue              value      = event.get( member );
-                            const bool                   bTimestamp = member == "ts" && value.isNumber();
-                            const std::optional<float64> ts         = bTimestamp ? value.read<float64>() : std::nullopt;
+                            const JSONValue         value      = event.get( member );
+                            const bool              bTimestamp = member == "ts" && value.isNumber();
+                            const optional<float64> ts         = bTimestamp ? optional<float64>{ value.read<float64>() } : nullopt;
                             if ( member == "pid" )
                                 writer.valueInt( source._outputPID );
                             else if ( ts.has_value() )

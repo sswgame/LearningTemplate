@@ -196,10 +196,10 @@ namespace sw::editor
         *_pUndoTarget = nullptr;
     }
 
-    std::optional<AbsolutePath> EditorDocumentPanel::getDocumentDiskPath() const
+    optional<AbsolutePath> EditorDocumentPanel::getDocumentDiskPath() const
     {
         if ( _loadedAssetPath.empty() )
-            return std::nullopt;
+            return nullopt;
         return editor::getSubsystem<AssetPaths>().toDiskPath( _loadedAssetPath );
     }
 

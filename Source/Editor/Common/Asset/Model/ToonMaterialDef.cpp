@@ -185,7 +185,7 @@ namespace sw::editor
                     const JSONValue element = value.at( index );
                     if ( element.isNumber() == false )
                         return false;
-                    const std::optional<float32> number = element.read<float32>();
+                    const optional<float32> number = element.read<float32>();
                     if ( number.has_value() == false )
                         return false;
                     pOutValue[index] = *number;
@@ -199,7 +199,7 @@ namespace sw::editor
                 const JSONValue value = object.get( key );
                 if ( value.isValid() == false || value.isNull() )
                     return true;
-                const std::optional<float32> number = value.read<float32>();
+                const optional<float32> number = value.read<float32>();
                 if ( number.has_value() == false )
                 {
                     outError = string( key ) + " " + value.dump() + " is not a number";
@@ -235,7 +235,7 @@ namespace sw::editor
             {
                 if ( textureInfo.isObject() == false )
                     return true;
-                const std::optional<int32> index = textureInfo.get( "index" ).read<int32>();
+                const optional<int32> index = textureInfo.get( "index" ).read<int32>();
                 if ( index.has_value() == false || *index < 0 )
                 {
                     outError = string( what ) + ".index " + textureInfo.get( "index" ).dump() + " is not a texture number";
@@ -252,7 +252,7 @@ namespace sw::editor
                 const JSONValue texCoord = textureInfo.get( "texCoord" );
                 if ( texCoord.isValid() )
                 {
-                    const std::optional<int32> texCoordIndex = texCoord.read<int32>();
+                    const optional<int32> texCoordIndex = texCoord.read<int32>();
                     if ( texCoordIndex.has_value() == false )
                     {
                         outError = string( what ) + ".texCoord " + texCoord.dump() + " is not a number";
@@ -350,7 +350,7 @@ namespace sw::editor
                 }
                 for ( const string& key : floats.isObject() ? floats.getMemberNames() : vector<string>{} )
                 {
-                    const std::optional<float32> number = floats.get( key ).read<float32>();
+                    const optional<float32> number = floats.get( key ).read<float32>();
                     if ( number.has_value() == false )
                     {
                         outError = context + ": float property '" + key + "' is not a number";
@@ -437,7 +437,7 @@ namespace sw::editor
                 }
                 for ( const string& key : textures.isObject() ? textures.getMemberNames() : vector<string>{} )
                 {
-                    const std::optional<int32> textureIndex = textures.get( key ).read<int32>();
+                    const optional<int32> textureIndex = textures.get( key ).read<int32>();
                     if ( textureIndex.has_value() == false )
                     {
                         outError = context + ": texture property '" + key + "' is not a texture index";

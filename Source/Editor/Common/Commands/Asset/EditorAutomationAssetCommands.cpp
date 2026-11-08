@@ -130,8 +130,8 @@ namespace sw::editor
                     outReply = "asset.openScratch takes one resource id under " + scratchPrefix;
                     return false;
                 }
-                const std::optional<AbsolutePath> scratchPath  = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
-                const string                      absolutePath = scratchPath.has_value() ? scratchPath->str() : string{};
+                const optional<AbsolutePath> scratchPath  = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
+                const string                 absolutePath = scratchPath.has_value() ? scratchPath->str() : string{};
                 if ( absolutePath.empty() )
                 {
                     outReply = "no scratch asset '" + listArgument[0] + "' (does the scenario declare <Scratch>?)";
@@ -161,10 +161,10 @@ namespace sw::editor
                     outReply = "asset.overwriteScratch takes two resource ids under " + scratchPrefix + " (source, target)";
                     return false;
                 }
-                const AssetPaths&                 assetPaths = editor::getSubsystem<AssetPaths>();
-                const std::optional<AbsolutePath> sourcePath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
-                const std::optional<AbsolutePath> targetPath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[1] ) );
-                string                            text;
+                const AssetPaths&            assetPaths = editor::getSubsystem<AssetPaths>();
+                const optional<AbsolutePath> sourcePath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
+                const optional<AbsolutePath> targetPath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[1] ) );
+                string                       text;
                 if ( sourcePath.has_value() == false || targetPath.has_value() == false || FileUtil::readTextFile( sourcePath->str(), text ) == false )
                 {
                     outReply = "no scratch asset '" + listArgument[0] + "' or '" + listArgument[1] + "' (does the scenario declare <Scratch>?)";

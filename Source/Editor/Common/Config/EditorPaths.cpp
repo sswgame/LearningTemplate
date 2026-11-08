@@ -50,7 +50,7 @@ namespace sw::editor
 {
     string EditorPaths::findContentFolder( string_view folderID )
     {
-        const std::optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( folderID );
+        const optional<AbsolutePath> folder = editor::getSubsystem<AssetPaths>().toDiskPath( folderID );
         return folder.has_value() && FileUtil::isDirectory( folder->str() ) ? folder->str() : string{};
     }
 
