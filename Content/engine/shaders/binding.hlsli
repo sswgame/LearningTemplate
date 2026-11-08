@@ -213,7 +213,7 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4   g_KeyLightDirIntensity;
     float4   g_KeyLightColor;
     float4   g_ShadowParams;
-    // 방향광 캐스케이드 — x 수, y 칸 배율(1 = 아틀라스 전체, 0.5 = 사분면), z 경계 섞기 폭(캐스케이드 깊이 구간의 비율). 칸 c 의 원점은 사분면 c 다(lighting.hlsli).
+    // 방향광 캐스케이드 — x 수, y 칸 배율(1 = 아틀라스 전체, 0.5 = 사분면), z 경계 섞기 폭(캐스케이드 깊이 구간의 비율), w 그림자 거리 끝에서 옅어지기 시작하는 뷰 깊이(m, 1e30 이면 옅어지지 않음). 칸 c 의 원점은 사분면 c 다(lighting.hlsli).
     float4 g_ShadowCascadeLayout;
     // 캐스케이드마다 (배율, 이동 x, 이동 y, 깊이 끝) — 기준 NDC(g_LightViewProj) xy 를 그 캐스케이드 NDC 로 옮긴다. 배열이 아닌 까닭은 C++ 가 이름으로 채우기 때문이다(GL 리플렉션은 배열 이름에 [0] 을 붙인다).
     float4 g_ShadowCascade0;

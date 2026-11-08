@@ -194,6 +194,7 @@ static float Shadow::sampleCascade( uint cascadeIndex, float3 worldPosition, flo
  *
  *          캐스케이드는 카메라 뷰 깊이(`g_ViewProj` 의 클립 w — 원근에서 뷰 z, 직교에서 1)로 고른다. 끝에서 `g_ShadowCascadeLayout.z` 만큼은
  *          다음 캐스케이드와 섞어 경계가 줄로 보이지 않게 한다(유니티 URP Cascade Blend). 고른 캐스케이드 볼륨 밖이면 다음 캐스케이드를 읽는다.
+ *          그림자 거리 끝은 `g_ShadowCascadeLayout.w` 부터 옅어진다(빛의 Distance Fade, 기본 0 — 칼로 자른 끝).
  * @note 맵 밖은 1(가려지지 않음)이다. 0 으로 두면 그림자 볼륨 밖이 통째로 검게 죽는다. early-return 이 없다(GL 드라이버 함정, binding.hlsli MorphPool::computeElement).
  */
 static float Shadow::sampleAtWorld( float3 worldPosition, float3 worldNormal )
@@ -226,6 +227,11 @@ static float Shadow::sampleAtWorld( float3 worldPosition, float3 worldNormal )
                 const float second      = Shadow::sampleCascade( nextIndex, worldPosition, worldNormal, bNextInside );
                 result                  = ( bInside == false ) ? second : lerp( first, second, bNextInside ? blend : 0.0f );
             }
+            // 그림자 거리 끝 — g_ShadowCascadeLayout.w 에서 마지막 캐스케이드 끝까지 1 로 옅어진다(언리얼 ShadowDistanceFadeoutFraction). 1e30 이면 옅어지지 않는다.
+            const float fadeStart = g_ShadowCascadeLayout.w;
+            const float shadowEnd = Shadow::loadCascade( cascadeCount - 1u ).w;
+            const float fade      = saturate( ( viewDepth - fadeStart ) / max( shadowEnd - fadeStart, 1e-4f ) );
+            result                = lerp( result, 1.0f, fade );
         }
     }
     return result;

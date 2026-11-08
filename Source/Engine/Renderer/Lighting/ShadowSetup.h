@@ -100,7 +100,7 @@ namespace sw
         float4x4       _lightViewProj{};                                 ///< `g_LightViewProj`: 모든 캐스케이드를 덮는 기준 볼륨
         float4x4       _cullViewProj{};                                  ///< 그림자 패스 컬링 절두체. 기준 볼륨에 점광과 스폿의 경계 구를 더한 상자(없으면 기준 볼륨)
         float4         _shadowParams{};                                  ///< `g_ShadowParams`
-        float4         _cascadeLayout{};                                 ///< `g_ShadowCascadeLayout`: x 캐스케이드 수, y 슬롯 배율, z 경계 섞기 폭(캐스케이드 깊이 구간의 비율), w 0
+        float4         _cascadeLayout{};                                 ///< `g_ShadowCascadeLayout`: x 캐스케이드 수, y 슬롯 배율, z 경계 섞기 폭(캐스케이드 깊이 구간의 비율), w 거리 끝에서 옅어지기 시작하는 깊이(m, `DirectionalShadowProjection::_fadeStartDepth`)
         float4         _arrCascade[shaderslot::kShadowCascadeMax]{};     ///< `g_ShadowCascade0..3` — (배율, 이동 x, 이동 y, 깊이 끝)
         ShadowTileDraw _arrCascadeTile[shaderslot::kShadowCascadeMax]{}; ///< 캐스케이드마다 그릴 행렬과 슬롯
         float32        _directionalPenumbraScale{ 0.0f };                ///< PCSS 반그림자 배율(`ShadowFilter::computeDirectionalPenumbraScale`) — `g_ShadowFilter.y`

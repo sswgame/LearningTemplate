@@ -307,6 +307,13 @@ namespace sw
         return _viewProj * cascadeTransform;
     }
 
+    float32 DirectionalShadowProjection::computeFadeStartDepth( float32 nearDepth, float32 endDepth, float32 fadeFraction )
+    {
+        if ( fadeFraction <= 0.0f || endDepth >= DirectionalShadowCascade::kUnboundedDepth || endDepth <= nearDepth )
+            return DirectionalShadowCascade::kUnboundedDepth;
+        return endDepth - ( endDepth - nearDepth ) * MathUtil::min( fadeFraction, 1.0f );
+    }
+
     DirectionalLightComponent::DirectionalLightComponent()
         : LightComponent( shaderslot::kLightTypeDirectional, DirectionalLightComponentInternal::kDefaultColor,
                           DirectionalLightComponentInternal::kDefaultIntensity )
@@ -317,6 +324,7 @@ namespace sw
         , _shadowReceiverMinHeight{ 0.0f }
         , _shadowReceiverMaxHeight{ 0.0f }
         , _shadowCascadeCount{ DirectionalLightComponentInternal::kDefaultShadowCascadeCount }
+        , _shadowFadeFraction{ 0.0f }
         , _shadowSettings{}
         , _bCastShadow{ SW_TRUE }
         , _reservedLight{ 0 }
@@ -372,6 +380,12 @@ namespace sw
         _shadowSettings             = settings;
         _shadowSettings._sourceSize = MathUtil::max( settings._sourceSize, 0.0f );
         onPropertyChanged( hashed_string( "_shadowSettings" ) );
+    }
+
+    void DirectionalLightComponent::setShadowFadeFraction( float32 fraction )
+    {
+        _shadowFadeFraction = MathUtil::clamp( fraction, 0.0f, 1.0f );
+        onPropertyChanged( hashed_string( "_shadowFadeFraction" ) );
     }
 
     void DirectionalLightComponent::setCastShadow( bool bCastShadow )
@@ -487,6 +501,8 @@ namespace sw
         projection._depthRange     = farPlane - nearPlane;
         projection._cascadeCount   = fittedCount;
         projection._sourceAngle    = MathUtil::toRadian( _shadowSettings._sourceSize );
+        // 그림자 거리 끝 — 마지막으로 맞춘 캐스케이드의 깊이 끝이다(띠를 벗어나 일찍 멈췄으면 거기가 끝이다). 직교 카메라는 끝이 없어 옅어지지 않는다.
+        projection._fadeStartDepth = DirectionalShadowProjection::computeFadeStartDepth( nearDepth, projection._arrCascade[fittedCount - 1]._splitDepth, _shadowFadeFraction );
 
         // (5) 캐스케이드 c 의 NDC = 기준 NDC · (기준 폭 / c 폭) + 2 (기준 중심 − c 중심) / c 폭. 하나뿐이면 정확히 배율 1 · 이동 0 이다(행렬이 같다).
         if ( fittedCount > 1 )

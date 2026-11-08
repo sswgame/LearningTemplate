@@ -371,6 +371,49 @@ SW_TEST_CASE( ShadowSetupTest, PerspectiveCameraSplitsIntoNestedCascades )
 }
 
 /**
+ * @brief [ShadowSetupTest] 거리 끝 옅어짐 — 시작 깊이는 그림자 구간 끝에서 몫만큼 앞이고, 몫 0 · 끝없는 구간은 옅어지지 않는다(끝없음)
+ */
+SW_TEST_CASE( ShadowSetupTest, DistanceFadeStartsAtFractionOfShadowRange )
+{
+    using Projection = sw::DirectionalShadowProjection;
+    using Cascade    = sw::DirectionalShadowCascade;
+    SW_EXPECT_NEAR( Projection::computeFadeStartDepth( 0.1f, 100.1f, 0.1f ), 90.1f, 1e-3f );
+    SW_EXPECT_NEAR( Projection::computeFadeStartDepth( 0.1f, 100.1f, 1.0f ), 0.1f, 1e-3f );
+    SW_EXPECT_NEAR( Projection::computeFadeStartDepth( 0.1f, 100.1f, 2.0f ), 0.1f, 1e-3f ); // 몫은 1 에서 자른다
+    SW_EXPECT_TRUE( Projection::computeFadeStartDepth( 0.1f, 100.1f, 0.0f ) >= Cascade::kUnboundedDepth );
+    SW_EXPECT_TRUE( Projection::computeFadeStartDepth( 0.1f, Cascade::kUnboundedDepth, 0.1f ) >= Cascade::kUnboundedDepth );
+    SW_EXPECT_TRUE( Projection::computeFadeStartDepth( 5.0f, 5.0f, 0.1f ) >= Cascade::kUnboundedDepth ); // 빈 구간
+}
+
+/**
+ * @brief [ShadowSetupTest] 원근 카메라의 거리 끝 옅어짐은 마지막 캐스케이드 끝(그림자 거리)에서 재고 셰이더 상수 w 로 간다 — 몫 0(기본)이면 끝없음이라 그림이 그대로다
+ */
+SW_TEST_CASE( ShadowSetupTest, PerspectiveFadeEndsAtLastCascadeAndReachesShader )
+{
+    using Internal = sw::ShadowSetupTestInternal;
+    sw::Scene scene{ "ShadowFade" };
+    SW_REQUIRE_NOT_NULL( scene.getObjectManager() );
+    sw::DirectionalLightComponent* pLight = Internal::addSun( scene, 120.0f, 2 );
+    SW_REQUIRE_NOT_NULL( pLight );
+    const sw::float4x4       viewProj = Internal::makePerspectiveViewProj( sw::float3{ 0.0f, 8.0f, 0.0f }, sw::float3{ 0.0f, 6.0f, 40.0f } );
+    sw::vector<sw::GPULight> listLight;
+    const sw::vector<uint32> listShadowIndex;
+    sw::FrameShadowData      frame;
+
+    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    SW_EXPECT_TRUE( frame._mainView._cascadeLayout._w >= sw::DirectionalShadowCascade::kUnboundedDepth );
+
+    pLight->setShadowFadeFraction( 0.25f );
+    const sw::DirectionalShadowProjection projection = pLight->computeShadowProjectionForView( viewProj, Internal::kAtlasResolution / 2u, 2 );
+    SW_REQUIRE_EQUAL( projection._cascadeCount, 2u );
+    const float32 shadowEnd = projection._arrCascade[1]._splitDepth;
+    SW_EXPECT_NEAR( shadowEnd, 120.0f, 0.5f );
+    SW_EXPECT_NEAR( projection._fadeStartDepth, shadowEnd - ( shadowEnd - 0.1f ) * 0.25f, 0.05f );
+    sw::FrameShadowData::populateFrame( pLight, &viewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    SW_EXPECT_NEAR( frame._mainView._cascadeLayout._w, projection._fadeStartDepth, 1e-3f );
+}
+
+/**
  * @brief [ShadowSetupTest] 캐스케이드가 하나면 그 캐스케이드가 기준 볼륨이다 — 배율 1 · 이동 0 이고 그리는 행렬이 기준 행렬과 같다
  * @details 직교 카메라는 캐스케이드를 요청해도 하나다(깊이가 텍셀 크기를 바꾸지 않는다).
  */

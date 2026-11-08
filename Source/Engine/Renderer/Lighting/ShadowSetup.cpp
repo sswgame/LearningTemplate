@@ -253,7 +253,7 @@ namespace sw
         data._shadowParams             = projection.computeShaderParams();
         data._directionalPenumbraScale = ShadowFilter::computeDirectionalPenumbraScale( projection._depthRange, projection._sourceAngle, projection._texelWorldSize );
         data._cascadeCount             = MathUtil::clamp( MathUtil::min( projection._cascadeCount, layout.getCascadeCount() ), 1u, shaderslot::kShadowCascadeMax );
-        data._cascadeLayout            = float4{ static_cast<float32>( data._cascadeCount ), layout.getCascadeTileScale(), kCascadeBlendFraction, 0.0f };
+        data._cascadeLayout            = float4{ static_cast<float32>( data._cascadeCount ), layout.getCascadeTileScale(), kCascadeBlendFraction, projection._fadeStartDepth };
         for ( uint32 cascadeIndex = 0; cascadeIndex < shaderslot::kShadowCascadeMax; ++cascadeIndex )
         {
             const bool bUsed                   = cascadeIndex < data._cascadeCount;
@@ -269,7 +269,7 @@ namespace sw
         // 행렬은 기본값으로 둔다 — 그림자를 받는 방향광(`params.x`)이 없으므로 셰이더는 이 볼륨을 읽지 않는다. 캐스케이드 하나 · 깊이 끝 무한이라 고르기만 성립한다.
         ViewShadowData data           = ViewShadowData{};
         data._cascadeCount            = 1;
-        data._cascadeLayout           = float4{ 1.0f, layout.getCascadeTileScale(), kCascadeBlendFraction, 0.0f };
+        data._cascadeLayout           = float4{ 1.0f, layout.getCascadeTileScale(), kCascadeBlendFraction, DirectionalShadowCascade::kUnboundedDepth };
         data._arrCascade[0]           = float4{ 1.0f, 0.0f, 0.0f, DirectionalShadowCascade::kUnboundedDepth };
         data._arrCascadeTile[0]._cell = layout.getCascadeCell( 0 );
         data._bValid                  = SW_TRUE;

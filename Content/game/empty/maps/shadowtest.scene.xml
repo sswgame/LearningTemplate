@@ -37,7 +37,7 @@
 					                           _ambient="0.3"
 					                           _shadowExtent="8"
 					                           _shadowDistance="20"
-					                           _shadowViewDistance="30"
+					                           _shadowViewDistance="14"
 					                           _shadowCascadeCount="2"
 					                           _bCastShadow="true">
 						<_shadowSettings _sourceSize="3" />
