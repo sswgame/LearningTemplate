@@ -180,7 +180,7 @@ namespace sw
             }
 
             /** @brief 인자를 읽고 시나리오 · 서버 · 봇을 세워 끝까지 돌립니다. 종료 코드는 `LoadBotModuleEntry` 의 것입니다. */
-            [[nodiscard]] static int32 run( int32 argc, utf8* argv[], ConfigManager& configManager )
+            [[nodiscard]] static int32 run( int32 argc, utf8* argv[] )
             {
                 using Exit = LoadBotModuleEntry;
                 LoadBotOptions options;
@@ -207,7 +207,7 @@ namespace sw
                 {
                     LoadBotLocalServerSettings serverSettings;
                     // 전용 서버의 `<이름>.online.json` 과 같은 로더로 읽는다(모르는 키 · 범위 밖 값은 오류).
-                    const ConfigReadResult configRead = configManager.readConfigFileInto( options._onlineConfigPath, serverSettings._config );
+                    const ConfigReadResult configRead = ConfigManager::readConfigFileInto( options._onlineConfigPath, serverSettings._config );
                     if ( configRead != ConfigReadResult::Loaded )
                     {
                         SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotOnlineConfig", "OnlineLoadBot: online config '%#' is %#", options._onlineConfigPath, configRead == ConfigReadResult::Missing ? "missing" : "invalid" );
@@ -290,13 +290,8 @@ namespace sw
     } // namespace
 } // namespace sw
 
-extern "C" SW_MODULE_API int32 swRunOnlineLoadBot( int32 argc, utf8** argv, sw::ConfigManager* pConfigManager )
+extern "C" SW_MODULE_API int32 swRunOnlineLoadBot( int32 argc, utf8** argv )
 {
     static_assert( std::is_same_v<decltype( &swRunOnlineLoadBot ), sw::PFN_RunOnlineLoadBot> );
-    if ( pConfigManager == nullptr )
-    {
-        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotHostPassedNo", "OnlineLoadBot: the host passed no config manager" );
-        return sw::LoadBotModuleEntry::kExitStartup;
-    }
-    return sw::LoadBotMainInternal::run( argc, argv, *pConfigManager );
+    return sw::LoadBotMainInternal::run( argc, argv );
 }

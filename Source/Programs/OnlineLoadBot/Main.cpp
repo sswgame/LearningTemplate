@@ -105,7 +105,7 @@ namespace sw
                 }
                 const int32 botArgumentCount = static_cast<int32>( listBotArgument.size() );
                 listBotArgument.push_back( nullptr );
-                return pfnRun( botArgumentCount, listBotArgument.data(), _engine.getConfigManager() );
+                return pfnRun( botArgumentCount, listBotArgument.data() );
             }
 
         private:

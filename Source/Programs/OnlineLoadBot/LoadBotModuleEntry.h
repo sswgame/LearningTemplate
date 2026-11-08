@@ -10,8 +10,6 @@
 
 namespace sw
 {
-    class ConfigManager;
-
     struct LoadBotModuleEntry
     {
         static constexpr const utf8* kModuleName  = "OnlineLoadBotCore";
@@ -24,6 +22,6 @@ namespace sw
         static constexpr int32 kExitReport    = 4; ///< 보고서(`--report`)를 쓰지 못했다 — 결과를 잃은 실행은 성공이 아니다
     };
 
-    /** @brief 봇 진입점 — 봇 인자 전부(@p argv[0] 은 프로그램)와 엔진의 설정 표를 받아 종료 코드를 돌려준다. 엔진이 선 뒤에만 부른다. */
-    using PFN_RunOnlineLoadBot = int32 ( * )( int32 argc, utf8** argv, ConfigManager* pConfigManager );
+    /** @brief 봇 진입점 — 봇 인자 전부(@p argv[0] 은 프로그램)를 받아 종료 코드를 돌려준다. 엔진이 선 뒤에만 부른다. */
+    using PFN_RunOnlineLoadBot = int32 ( * )( int32 argc, utf8** argv );
 } // namespace sw

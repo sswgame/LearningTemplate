@@ -380,7 +380,7 @@ namespace sw
             if ( pKit->start( outError ) == false )
                 return false;
         }
-        if ( registerServer( outError ) == false )
+        if ( registerServer( nowMs, outError ) == false )
             return false;
 
         if ( parts._pHealthRegistry != nullptr )
@@ -622,7 +622,7 @@ namespace sw
         return true;
     }
 
-    bool OnlineServerRuntime::registerServer( string& outError )
+    bool OnlineServerRuntime::registerServer( UnixMilliseconds nowMs, string& outError )
     {
         Parts& parts = *_parts;
         if ( parts._config._publicAddress.empty() )
@@ -634,6 +634,7 @@ namespace sw
             return false;
         }
         parts._registration.setState( ServerState::Open );
+        parts._registration.update( nowMs ); // 기동 안에서 바로 쓴다 — 첫 틱에 서버 목록을 읽는 키트(매칭 · 디렉터리)가 이 서버를 본다. 첫 틱의 키트 뒤로 미루면 첫 읽기가 빈 목록을 받고 읽기 주기(벽시계)만큼 배정이 늦다
         parts._bRegistered = SW_TRUE;
         return true;
     }

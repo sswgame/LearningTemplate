@@ -7,6 +7,8 @@
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 
+#include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Server/IOnlineStoreDriver.h"
 #include "GameFramework/Runtime/Online/Server/OnlineServerConfig.h"
@@ -124,6 +126,18 @@ namespace
 
     private:
         uint8 _bFailStart : 1;
+    };
+
+    /** @brief 서버 색인 읽기의 답을 받아 둡니다(라우터 델리게이트는 멤버 함수다). */
+    struct DirectoryIndexProbe
+    {
+        int32 _replyCount{ 0 };
+        int32 _memberCount{ 0 };
+        void  onReply( const EphemeralReply& reply )
+        {
+            ++_replyCount;
+            _memberCount = static_cast<int32>( reply._listMember.size() );
+        }
     };
 
     /** @brief 케이스마다 두 테스트 키트를 레지스트리에 올리고 사건 줄을 비웁니다. 소멸자가 둘 다 되돌립니다. */
@@ -334,4 +348,27 @@ SW_TEST_CASE_F( OnlineServerRuntimeTest, ResolveStoresNeedsNamedEntries )
     SW_REQUIRE_TRUE( OnlineServerRuntime::resolveStores( serverConfig, onlineConfig, settings, error ) );
     SW_EXPECT_EQUAL( string( kMemoryStoreDriverName ), settings._store._driver );
     SW_EXPECT_EQUAL( string( kMemoryStoreDriverName ), settings._cache._driver );
+}
+
+/** @brief [OnlineServerRuntimeTest] 게임 서버(공개 주소가 있다)는 기동 안에서 디렉터리에 자기 기록을 쓴다 — 첫 틱에 서버 목록을 읽는 키트(매칭)가 이 서버를 본다.
+ *         첫 틱의 키트 뒤에서 썼을 때는 첫 읽기가 빈 목록을 받아 읽기 주기(벽시계 2 초)만큼 배정이 늦었다(shooter3d.onlinematch 가 빠른 무인 실행에서 졌다). */
+SW_TEST_CASE_F( OnlineServerRuntimeTest, GameServerIsInTheDirectoryBeforeTheFirstTick )
+{
+    OnlineServerRuntimeConfig settings = makeSettings( { ConsumerTestKit::kName, ProviderTestKit::kName } );
+    settings._config._publicAddress    = "127.0.0.1";
+    OnlineServerRuntime runtime;
+    string              error;
+    SW_REQUIRE_TRUE_MSG( runtime.initialize( settings, UnixMilliseconds{ 1000 }, error ), error.c_str() );
+    EphemeralStoreRouter& router = *runtime.getContext()._pRouter;
+    const Subscription    owner  = router.openReplyOwner();
+    DirectoryIndexProbe   probe;
+    (void)router.submit( EphemeralRequest::makeScoreRange( ServerRecord::makeIndexKey( settings._config._serverKind ), 0, 16 ),
+                         EphemeralStoreRouter::ReplyDelegate::create<&DirectoryIndexProbe::onReply>( &probe ), owner );
+    for ( int64 tick = 0; tick < 10 && probe._replyCount == 0; ++tick )
+    {
+        runtime.update( UnixMilliseconds{ 1000 + tick } );
+    }
+    SW_REQUIRE_EQUAL( probe._replyCount, int32( 1 ) );
+    SW_EXPECT_EQUAL( probe._memberCount, int32( 1 ) );
+    runtime.shutdown();
 }

@@ -385,11 +385,10 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, KitOptionsSelectTheProviders )
 /** @brief [ReceiptKitAssemblyTest] 저장소에 든 견본(`Shooter3D.external.*`)이 같은 읽기를 지난다 - 견본이 코드와 어긋나 낡지 않게 한다 */
 SW_TEST_CASE( ReceiptKitAssemblyTest, ExternalSampleConfigReads )
 {
-    ConfigManager      manager;
     ServerConfig       serverConfig;
     OnlineServerConfig onlineConfig;
-    SW_REQUIRE_TRUE( manager.readConfigFileInto( "Config/Server/Online/Shooter3D.external.json", serverConfig ) == ConfigReadResult::Loaded );
-    SW_REQUIRE_TRUE( manager.readConfigFileInto( "Config/Server/Online/Shooter3D.external.online.json", onlineConfig ) == ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( ConfigManager::readConfigFileInto( "Config/Server/Online/Shooter3D.external.json", serverConfig ) == ConfigReadResult::Loaded );
+    SW_REQUIRE_TRUE( ConfigManager::readConfigFileInto( "Config/Server/Online/Shooter3D.external.online.json", onlineConfig ) == ConfigReadResult::Loaded );
     SW_REQUIRE_EQUAL( size_t( 1 ), serverConfig._listStore.size() );
     SW_EXPECT_EQUAL( string( "postgres" ), serverConfig._listStore[0]._driver );
     SW_REQUIRE_EQUAL( size_t( 1 ), serverConfig._listCache.size() );

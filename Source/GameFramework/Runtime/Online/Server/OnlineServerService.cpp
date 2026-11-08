@@ -44,13 +44,13 @@ namespace sw
 {
     bool OnlineServerService::initialize( const ServerServiceContext& context, string& outError )
     {
-        const bool bNoServerConfig = context._pServerConfig == nullptr || context._pConfigManager == nullptr || context._serverConfigPath.empty();
+        const bool bNoServerConfig = context._pServerConfig == nullptr || context._serverConfigPath.empty();
         if ( bNoServerConfig )
             return true; // 서버 설정이 없는 호스트(테스트)에서는 할 일이 없다
         const string path = OnlineServerConfig::makeConfigPath( context._serverConfigPath );
         // 설정 타입이 이 모듈에 있다 — 엔진의 ConfigManager 는 모듈보다 오래 살므로 테이블에 등록하지 않고 이 서비스가 직접 소유한다.
         OnlineServerConfig     onlineConfig;
-        const ConfigReadResult result = context._pConfigManager->readConfigFileInto( path, onlineConfig );
+        const ConfigReadResult result = ConfigManager::readConfigFileInto( path, onlineConfig );
         if ( result == ConfigReadResult::Missing )
         {
             SW_LOG_INFO_ID( "OnlineServerService.OnlineServicesOffDoes", "Online services are off - '%#' does not exist", path.c_str() );

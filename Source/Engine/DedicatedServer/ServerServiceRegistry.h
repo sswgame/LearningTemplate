@@ -22,7 +22,6 @@ namespace sw
 {
     struct ServerConfig;
 
-    class ConfigManager;
     class MetricRegistry;
     class ServiceHealthRegistry;
 
@@ -35,7 +34,6 @@ namespace sw
     {
         string                 _serverConfigPath{};         ///< 서버 설정 파일 경로(서비스가 옆 파일을 찾을 때 쓴다)
         const ServerConfig*    _pServerConfig{ nullptr };   ///< 읽은 서버 설정(`Config/Server/<게임>.json`)
-        ConfigManager*         _pConfigManager{ nullptr };  ///< 서비스가 자기 설정 파일을 읽을 때 쓴다
         MetricRegistry*        _pMetricRegistry{ nullptr }; ///< `/metrics` 로 나가는 지표 레지스트리
         ServiceHealthRegistry* _pHealthRegistry{ nullptr }; ///< `/healthz`, `/readyz` 가 읽는 상태 레지스트리
     };

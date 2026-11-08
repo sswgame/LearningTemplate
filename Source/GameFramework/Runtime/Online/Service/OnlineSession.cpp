@@ -249,17 +249,11 @@ namespace sw
             outError = "the in-process online server is a development tool";
             return false;
         }
-        const ConfigManager* const pConfigManager = game::findSubsystem<ConfigManager>();
-        if ( pConfigManager == nullptr )
-        {
-            outError = "no config manager in this host";
-            return false;
-        }
         const string              serverPath{ serverConfigPath };
         const string              onlinePath = OnlineServerConfig::makeConfigPath( serverConfigPath );
         ServerConfig              serverConfig;
         OnlineServerRuntimeConfig settings;
-        if ( pConfigManager->readConfigFileInto( serverPath, serverConfig ) != ConfigReadResult::Loaded || pConfigManager->readConfigFileInto( onlinePath, settings._config ) != ConfigReadResult::Loaded )
+        if ( ConfigManager::readConfigFileInto( serverPath, serverConfig ) != ConfigReadResult::Loaded || ConfigManager::readConfigFileInto( onlinePath, settings._config ) != ConfigReadResult::Loaded )
         {
             outError = "server config '" + serverPath + "' or its online config '" + onlinePath + "' could not be read";
             return false;

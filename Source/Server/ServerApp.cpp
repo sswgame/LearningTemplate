@@ -243,7 +243,6 @@ namespace sw
                 // 게임 인스턴스를 만들기 전에 건다(의존 선언) — 게임과 키트가 기동하며 서버 지표 · 상태 레지스트리에 자기 것을 올리고 게임 포트를 연다.
                 _serverServiceContext._serverConfigPath = _serverConfigPath;
                 _serverServiceContext._pServerConfig    = _pServerConfig;
-                _serverServiceContext._pConfigManager   = _launch.getEngine().getConfigManager();
                 _serverServiceContext._pMetricRegistry  = _observability.getMetricRegistry();
                 _serverServiceContext._pHealthRegistry  = _observability.getHealthRegistry();
                 return _launch.getHostScope().bind( &_serverServiceContext ); // 게임 · 키트(네트워크 세션)가 `engine::findSubsystem<ServerServiceContext>()` 로 찾는다

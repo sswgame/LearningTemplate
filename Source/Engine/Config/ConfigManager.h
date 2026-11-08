@@ -252,10 +252,11 @@ namespace sw
          * @brief 설정 하나를 파일에서 읽어 @p outConfig 에 담습니다. **테이블에 등록하지 않습니다.**
          * @details 모듈이 정의한 설정 타입은 이쪽으로 읽어 그 모듈의 객체(서비스 · 키트)가 소유한다. 이 매니저는 엔진 서비스라 모듈보다 오래 사는데, 모듈이 내려간 뒤 그 타입의
          *          객체를 소멸시키면 가상 소멸자가 사라진 이미지로 들어가 죽는다. 등록하지 않으면 그럴 객체도 `_mapSource` 의 다시 읽는 함수(모듈 코드)도 남지 않는다.
+         *          매니저의 상태를 쓰지 않아 static 이다 — 매니저가 보이지 않는 게임 모듈(`SubsystemModuleVisibility::HostModules`)도 읽는다.
          * @return 없으면 `Missing`(로그 없음), 틀렸으면 `Invalid`(키 이름과 함께 오류를 남겼다). `loadConfigFile` 과 같은 경로 규칙이다.
          */
         template <typename T>
-        [[nodiscard]] ConfigReadResult readConfigFileInto( const string& filePath, T& outConfig ) const
+        [[nodiscard]] static ConfigReadResult readConfigFileInto( const string& filePath, T& outConfig )
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 

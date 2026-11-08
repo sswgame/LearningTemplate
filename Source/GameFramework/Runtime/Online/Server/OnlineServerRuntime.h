@@ -121,7 +121,7 @@ namespace sw
         /** @brief 설정의 키트를 만들어 노드로 더합니다(모르는 키트 · 두 번 적은 키트 · 설정에 없는 필수 키트는 오류). */
         [[nodiscard]] bool addKits( bool bReverseIndependentOrder, string& outError );
         [[nodiscard]] bool startHost( OnlineServerRuntimeConfig& settings, string& outError );
-        [[nodiscard]] bool registerServer( string& outError );
+        [[nodiscard]] bool registerServer( UnixMilliseconds nowMs, string& outError );
 
     private:
         unique_ptr<Parts> _parts;
