@@ -3,19 +3,25 @@
 #include "Editor/Panels/VFX/Model/VFXPreviewModel.h"
 
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Service/ScenePreviewPolicy.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/VFX/VFXComponent.h"
 #include "Engine/VFX/VFXEffectDef.h"
 
@@ -38,8 +44,118 @@ namespace sw::editor
         , _previewEffectPath{}
         , _status{}
         , _loadedDiskPath{}
+        , _targetPrefabPath{}
+        , _activeTargetPath{}
         , _loadedContentHash{ 0 }
+        , _target{}
+        , _orbitAngle{ 0.0f }
+        , _soloEmitter{ kNoSolo }
+        , _bTargetAttached{ SW_FALSE }
+        , _bTargetPending{ SW_FALSE }
+        , _reserved{ 0 }
     {
+    }
+
+    void VFXPreviewModel::toggleSolo( int32 emitterIndex )
+    {
+        _soloEmitter = ( emitterIndex < 0 || emitterIndex == _soloEmitter ) ? kNoSolo : emitterIndex;
+    }
+
+    bool VFXPreviewModel::computeEmitterEnabled( int32 soloEmitter, uint32 emitterIndex )
+    {
+        return soloEmitter < 0 || static_cast<uint32>( soloEmitter ) == emitterIndex;
+    }
+
+    float3 VFXPreviewModel::computeOrbitPosition( float32 angle )
+    {
+        return float3{ MathUtil::cos( angle ) * kTargetOrbitRadius, 0.0f, MathUtil::sin( angle ) * kTargetOrbitRadius };
+    }
+
+    void VFXPreviewModel::spawnTargetFromField()
+    {
+        _activeTargetPath = _targetPrefabPath;
+        _bTargetPending   = SW_TRUE; // 다음 `syncPlayback` 이 몸을 다시 놓는다(같은 경로를 다시 눌러도 새로 놓는다, 빈 경로면 치운다)
+        _orbitAngle       = 0.0f;
+    }
+
+    bool VFXPreviewModel::hasTarget( Scene* pScene ) const
+    {
+        GameObjectManager* pManager = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+        return pManager != nullptr && pManager->resolveGameObject( _target ) != nullptr;
+    }
+
+    void VFXPreviewModel::syncPlayback( Scene* pScene, float32 frameDeltaSeconds )
+    {
+        VFXComponent* pSubject = findSubject( pScene );
+        if ( pSubject == nullptr )
+            return;
+        // 격리는 보기 상태다 — 효과 파일(방출기 표)은 그대로이고, 다시 읽어도(자동 갱신) 이 자리가 다시 건다.
+        for ( uint32 emitterIndex = 0; emitterIndex < pSubject->getEmitterCount(); ++emitterIndex )
+        {
+            const bool bEnabled = computeEmitterEnabled( _soloEmitter, emitterIndex );
+            if ( pSubject->isEmitterEnabled( emitterIndex ) != bEnabled )
+                (void)pSubject->setEmitterEnabled( emitterIndex, bEnabled );
+        }
+        syncTarget( *pScene, *pSubject );
+        // 몸은 씬 시간(재생 막대의 멈춤 · 한 프레임 · 속도)으로 돈다 — 멈추면 트레일과 몸이 함께 선다.
+        const SceneManager*       pSceneManager = editor::findSubsystem<SceneManager>();
+        const ScenePreviewPolicy* pPolicy       = pSceneManager != nullptr ? pSceneManager->findPreviewPolicy( pScene ) : nullptr;
+        _orbitAngle += frameDeltaSeconds * ( pPolicy != nullptr ? pPolicy->_timeScale : 1.0f ) * kTargetOrbitSpeed;
+        GameObjectManager* pManager = pScene->getObjectManager();
+        GameObject*        pTarget  = pManager != nullptr ? pManager->resolveGameObject( _target ) : nullptr;
+        SceneComponent*    pRoot    = pTarget != nullptr ? pTarget->getPrimarySceneComponent() : nullptr;
+        if ( pRoot != nullptr )
+            pRoot->setLocalPosition( computeOrbitPosition( _orbitAngle ) );
+    }
+
+    void VFXPreviewModel::syncTarget( Scene& scene, VFXComponent& subject )
+    {
+        GameObjectManager* pManager = scene.getObjectManager();
+        GameObject*        pEffect  = subject.getOwner();
+        if ( pManager == nullptr || pEffect == nullptr )
+            return;
+        if ( _bTargetPending == SW_TRUE )
+        {
+            // 효과를 먼저 떼어 원점에 둔다 — 몸을 지우면 붙은 효과도 함께 사라진다.
+            pEffect->detachFromParent( AttachRule::KeepRelative );
+            SceneComponent* pEffectRoot = pEffect->getPrimarySceneComponent();
+            if ( pEffectRoot != nullptr )
+                pEffectRoot->setLocalPosition( float3{} );
+            _bTargetAttached = SW_FALSE;
+            GameObject* pOld = pManager->resolveGameObject( _target );
+            if ( pOld != nullptr )
+                pManager->destroyGameObject( pOld );
+            _target         = GameObjectHandle{};
+            _bTargetPending = SW_FALSE; // 실패해도 같은 경로로 매 프레임 다시 놓지 않는다(경로를 고치고 Spawn 을 다시 누른다)
+            if ( _activeTargetPath.empty() )
+            {
+                _status = "Target cleared";
+                return;
+            }
+            AssetManager* pAssets  = pManager->findAssetManager();
+            GameObject*   pSpawned = pAssets != nullptr ? pAssets->getAssetCache<PrefabCache>().spawn( pManager, _activeTargetPath ) : nullptr;
+            if ( pSpawned == nullptr )
+            {
+                _status = string( "Target prefab '" ) + _activeTargetPath + "' could not be spawned - see the log";
+                return;
+            }
+            _target = pSpawned->getHandle();
+            _status = "Target spawned";
+        }
+        GameObject* pTarget = pManager->resolveGameObject( _target );
+        if ( pTarget == nullptr || _bTargetAttached == SW_TRUE )
+            return;
+        // 몸을 따라 움직이는 효과(트레일 · 리본)가 보이게 몸의 자식으로 가슴께에 붙인다.
+        if ( pEffect->attachToParent( pTarget, AttachRule::KeepRelative ) == false )
+        {
+            _status = "The effect could not be attached to the target";
+            return;
+        }
+        SceneComponent* pEffectRoot = pEffect->getPrimarySceneComponent();
+        if ( pEffectRoot != nullptr )
+            pEffectRoot->setLocalPosition( float3{ 0.0f, kTargetAttachHeight, 0.0f } );
+        _bTargetAttached = SW_TRUE;
+        SW_LOG_INFO_ID( "VFXPreview.TargetAttached", "VFX Preview attached the effect to target '%#'", _activeTargetPath );
     }
 
     ToolAssetLoadResult VFXPreviewModel::loadAsset( string_view assetPath )
@@ -92,8 +208,11 @@ namespace sw::editor
         GameObjectManager* pManager = scene.getObjectManager();
         GameObject*        pSubject = pManager != nullptr ? pManager->createGameObject( hashed_string( VFXPreviewModelInternal::kPreviewSubjectName ) ) : nullptr;
         if ( pSubject != nullptr )
-            (void)pSubject->addComponent<VFXComponent>(); // 효과 파일은 문서를 읽은 뒤 건다(syncEffect)
-        _previewEffectPath.clear();                       // 새 씬의 효과에는 아직 효과 파일이 없다
+            (void)pSubject->addComponent<VFXComponent>();                  // 효과 파일은 문서를 읽은 뒤 건다(syncEffect)
+        _previewEffectPath.clear();                                        // 새 씬의 효과에는 아직 효과 파일이 없다
+        _bTargetPending  = _activeTargetPath.empty() ? SW_FALSE : SW_TRUE; // 새 씬에는 타깃 몸이 없다 — 확정한 타깃이 있으면 다음 `syncPlayback` 이 다시 놓는다
+        _target          = GameObjectHandle{};
+        _bTargetAttached = SW_FALSE;
     }
 
     VFXComponent* VFXPreviewModel::findSubject( Scene* pScene )

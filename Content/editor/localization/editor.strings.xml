@@ -3328,6 +3328,11 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdText.CurvePreviewOpensGraphTip" source="Open this curve in the graph above to drag its keys.">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdText.Curves" source="Curves">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
@@ -3681,6 +3686,11 @@
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.PickACurvePreviewToEditItInTheGraph" source="Click a curve preview below to edit its keys in the graph.">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.PickAnObjectOnTheLeft" source="Pick an object on the left">
@@ -4319,6 +4329,31 @@
 		       source="Write the weights and on/off of this instance's nodes into the rig asset (*.rig.xml); other keys stay as they are">
 			<origins>
 				<item>Source/Editor/Panels/Animation/RigDebugPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVFX.Solo" source="Solo">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVFX.SoloTip" source="Play only this emitter in the preview. The effect file does not change. Click again to play every emitter.">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVFX.TargetLabel" source="Character target">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVFX.TargetSpawnTip" source="Place the character target in the preview scene. With an empty field the target is removed and the effect stands at the origin.">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdVFX.TargetTip" source="Prefab of an animated character. The effect rides on it at chest height while it walks a circle, so trails and afterimages show their motion.">
+			<origins>
+				<item>Source/Editor/Panels/VFX/VFXPreviewPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Apply" source="Apply">

@@ -95,6 +95,13 @@ namespace sw
         bool setUserParameter( string_view name, const float4& value );
         /** @brief 재생 중이면 true 입니다. */
         bool isPlaying() const { return _bPlaying; }
+        /**
+         * @brief 방출기 @p emitterIndex 를 켜고 끕니다(언리얼 Niagara `SetEmitterEnable`). 꺼진 방출기는 시간이 흐르지 않고 입자를 내지 않는다 — CPU 방출기는 다시 켜면 멈춘 자리부터, GPU 방출기는 렌더 스레드가 버퍼를 놓았으므로 새로 낸다.
+         * @details 효과를 다시 읽으면(`setEffectPath` · 핫 리로드) 모두 켜진다. 에디터 미리보기의 방출기 격리(solo)도 이 길이다. 범위 밖이면 false 입니다.
+         */
+        bool setEmitterEnabled( uint32 emitterIndex, bool bEnabled );
+        /** @brief 방출기 @p emitterIndex 가 켜져 있으면 true 입니다. 범위 밖이면 false 입니다. */
+        bool isEmitterEnabled( uint32 emitterIndex ) const;
 
         /** @brief 효과의 방출기 수입니다. 효과를 읽지 못했으면 0 입니다. */
         uint32 getEmitterCount() const { return static_cast<uint32>( _listSimulation.size() ); }
@@ -174,6 +181,7 @@ namespace sw
         vector<VFXGPUEmitterRequest>                  _listGPURequest;         ///< GPU 방출기마다 이번 요청(재생 중이 아니거나 CPU 방출기면 `_pDef` 가 nullptr)
         vector<MeshEmitter>                           _listMeshEmitter;        ///< 방출기마다 하나(`_listSimulation` 과 길이가 같다)
         vector<MeshHandle>                            _listMeshLoad;           ///< 방출기마다 메시 로드(`_listSimulation` 과 길이가 같다, 메시 방출기가 아니거나 내장 도형이면 빈 핸들)
+        vector<uint8>                                 _listEmitterEnabled;     ///< 방출기마다 켜짐(1) · 꺼짐(0)(`_listSimulation` 과 길이가 같다, 효과를 읽으면 모두 1)
         shared_ptr<const VFXEffectDef>                _pEffect;                ///< 읽은 효과(공유 캐시의 한 벌 — 사용자 파라미터의 기본값과 방출기 정의를 든다). 읽지 못했으면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "User Parameters", Tooltip = "Overrides of the effect's user parameters by name" )
         vector<VFXUserParameterDef> _listUserParameter;

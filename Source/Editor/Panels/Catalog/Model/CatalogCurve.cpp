@@ -8,6 +8,10 @@
 
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
+#include "Engine/Reflection/EnumName.h"
+
+#include <algorithm>
+
 namespace sw::editor
 {
     namespace
@@ -25,6 +29,12 @@ namespace sw::editor
                         return childIndex;
                 }
                 return -1;
+            }
+
+            /** @brief 보간의 파일 이름입니다(`makeFloatCurve` 가 읽는 철자 — 리플렉션 열거자 이름). */
+            [[nodiscard]] static string getInterpolationName( CurveInterpolation interpolation )
+            {
+                return string{ getEnumName( interpolation ) };
             }
 
             static bool isGradientChannel( string_view name )
@@ -274,6 +284,109 @@ namespace sw::editor
             inoutDocument.setError( draft.getError() );
             return false;
         }
+        return inoutDocument.replaceTextChecked( draft.getText() );
+    }
+
+    bool CatalogCurve::applyEditedCurve( CatalogDocument& inoutDocument, int32 curveElementIndex, const FloatCurve& edited )
+    {
+        using Internal                      = CatalogCurveModelInternal;
+        const CatalogXMLText& parsed        = inoutDocument.getParsed();
+        const bool            bInvalidCurve = parsed.isParsed() == false || curveElementIndex < 0 || static_cast<size_t>( curveElementIndex ) >= parsed.getElements().size();
+        if ( bInvalidCurve )
+        {
+            inoutDocument.setError( "the curve element does not exist" );
+            return false;
+        }
+        // 곡선의 키는 부모 아래 곡선 모으기와 같은 길로 읽는다(읽지 못한 키 표시까지 같다).
+        vector<CatalogCurve> listSibling;
+        collectCurves( parsed, parsed.getElement( curveElementIndex )._parent, listSibling );
+        const CatalogCurve* pCurve = nullptr;
+        for ( const CatalogCurve& sibling : listSibling )
+        {
+            if ( sibling._elementIndex == curveElementIndex )
+                pCurve = &sibling;
+        }
+        if ( pCurve == nullptr )
+        {
+            inoutDocument.setError( "the element is not a curve (it has no _listKey)" );
+            return false;
+        }
+        const CatalogCurve& curve = *pCurve;
+        // 읽은 키를 시각 순으로 — `makeFloatCurve` 가 편집기에 준 순서와 같다(같은 시각은 문서 순서).
+        vector<const CatalogCurveKey*> listReadKey;
+        for ( const CatalogCurveKey& key : curve._listKey )
+        {
+            if ( key._bValid )
+                listReadKey.push_back( &key );
+        }
+        std::stable_sort( listReadKey.begin(), listReadKey.end(), []( const CatalogCurveKey* pLeft, const CatalogCurveKey* pRight )
+        { return pLeft->_time < pRight->_time; } );
+
+        CatalogDocument draft;
+        (void)draft.load( inoutDocument.getText() ); // 위에서 훑어진 글이다
+        const auto writeNumber = []( float32 value )
+        {
+            StringBuilder<constant::buffer::kMax32> text;
+            text.append( value );
+            return string{ text.view() };
+        };
+        const size_t sharedCount = MathUtil::min( listReadKey.size(), edited._listKey.size() );
+        for ( size_t keyIndex = 0; keyIndex < sharedCount; ++keyIndex )
+        {
+            // 칸 값만 고치므로 원소 번호는 그대로다.
+            const FloatCurveKey& key     = edited._listKey[keyIndex];
+            const int32          element = listReadKey[keyIndex]->_elementIndex;
+            const bool           bSet    = draft.setCell( element, "_time", writeNumber( key._time ) ) && draft.setCell( element, "_value", writeNumber( key._value ) ) &&
+                              draft.setCell( element, "_interpolation", Internal::getInterpolationName( key._interpolation ) );
+            if ( bSet == false )
+            {
+                inoutDocument.setError( draft.getError() );
+                return false;
+            }
+        }
+        if ( edited._listKey.size() > listReadKey.size() )
+        {
+            int32 listKeyIndex = Internal::findChildNamed( draft.getParsed(), draft.getParsed().getElement( curve._elementIndex ), kKeyListName );
+            if ( listKeyIndex < 0 && draft.addChild( curve._elementIndex, kKeyListName, {} ) )
+                listKeyIndex = Internal::findChildNamed( draft.getParsed(), draft.getParsed().getElement( curve._elementIndex ), kKeyListName );
+            for ( size_t keyIndex = sharedCount; keyIndex < edited._listKey.size() && listKeyIndex >= 0; ++keyIndex )
+            {
+                const FloatCurveKey&           key = edited._listKey[keyIndex];
+                vector<CatalogXMLNewAttribute> listAttribute;
+                listAttribute.push_back( CatalogXMLNewAttribute{ "_time", writeNumber( key._time ) } );
+                listAttribute.push_back( CatalogXMLNewAttribute{ "_value", writeNumber( key._value ) } );
+                listAttribute.push_back( CatalogXMLNewAttribute{ "_interpolation", Internal::getInterpolationName( key._interpolation ) } );
+                // 더한 키는 목록 끝이다 — 곡선 · 목록 원소는 그보다 앞이라 번호가 그대로다.
+                if ( draft.addChild( listKeyIndex, kKeyElementName, listAttribute ) == false )
+                {
+                    inoutDocument.setError( draft.getError() );
+                    return false;
+                }
+            }
+            if ( listKeyIndex < 0 )
+            {
+                inoutDocument.setError( draft.getError() );
+                return false;
+            }
+        }
+        // 남는 키는 뒤 원소부터 지운다 — 앞 원소의 번호가 당겨지지 않는다.
+        vector<int32> listRemoved;
+        for ( size_t keyIndex = sharedCount; keyIndex < listReadKey.size(); ++keyIndex )
+        {
+            listRemoved.push_back( listReadKey[keyIndex]->_elementIndex );
+        }
+        std::sort( listRemoved.begin(), listRemoved.end(), []( int32 left, int32 right )
+        { return left > right; } );
+        for ( const int32 element : listRemoved )
+        {
+            if ( draft.removeRow( element ) == false )
+            {
+                inoutDocument.setError( draft.getError() );
+                return false;
+            }
+        }
+        if ( draft.getText() == inoutDocument.getText() )
+            return false; // 같은 자리에 놓았다 — 되돌리기를 쌓지 않는다
         return inoutDocument.replaceTextChecked( draft.getText() );
     }
 } // namespace sw::editor

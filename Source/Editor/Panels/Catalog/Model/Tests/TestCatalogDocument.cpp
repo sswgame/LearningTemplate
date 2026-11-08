@@ -528,6 +528,54 @@ SW_TEST_CASE( CatalogCurveModelTest, AddKeyContinuesAfterTheLastKey )
     SW_EXPECT_FALSE( document.getError().empty() );
 }
 
+// 그래프에서 끈 곡선을 적는다: 읽은 키를 시각 순으로 짝지어 고치고, 모자란 키는 더하고 남는 키는 지운다. 읽지 못한 키는 그대로 두고, 한 번이 되돌리기 한 단계다.
+SW_TEST_CASE( CatalogCurveModelTest, ApplyEditedCurveMatchesTheGraph )
+{
+    CatalogDocument document;
+    SW_REQUIRE_TRUE( document.load( Util::kCurves ) );
+    const int32 size = Util::findElement( document.getParsed(), "_size" );
+    SW_REQUIRE_TRUE( size >= 0 );
+
+    FloatCurve edited;
+    (void)edited.addKey( 0.5f, 2.0f, CurveInterpolation::Linear );
+    (void)edited.addKey( 2.0f, 3.0f, CurveInterpolation::Linear );
+    (void)edited.addKey( 4.0f, 5.0f, CurveInterpolation::Constant );
+    SW_REQUIRE_TRUE( CatalogCurve::applyEditedCurve( document, size, edited ) );
+
+    const auto findSize = [&document]()
+    {
+        vector<CatalogCurve> listCurve;
+        CatalogCurve::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
+        for ( const CatalogCurve& curve : listCurve )
+        {
+            if ( curve._channel == "_size" )
+                return curve;
+        }
+        return CatalogCurve{};
+    };
+    CatalogCurve written = findSize();
+    SW_REQUIRE_EQUAL( size_t{ 4 }, written._listKey.size() ); // 읽지 못한 키(oops)도 남는다
+    const FloatCurve readBack = CatalogCurve::makeFloatCurve( written );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, readBack._listKey.size() );
+    SW_EXPECT_NEAR( 0.5f, readBack._listKey[0]._time, 1e-5f );
+    SW_EXPECT_NEAR( 2.0f, readBack._listKey[0]._value, 1e-5f );
+    SW_EXPECT_NEAR( 4.0f, readBack._listKey[2]._time, 1e-5f );
+    SW_EXPECT_TRUE( readBack._listKey[2]._interpolation == CurveInterpolation::Constant );
+    SW_EXPECT_FALSE( CatalogCurve::applyEditedCurve( document, size, readBack ) ); // 같은 곡선 — 바뀌지 않는다
+
+    FloatCurve shorter;
+    (void)shorter.addKey( 1.0f, 7.0f, CurveInterpolation::Linear );
+    SW_REQUIRE_TRUE( CatalogCurve::applyEditedCurve( document, size, shorter ) );
+    written = findSize();
+    SW_EXPECT_EQUAL( size_t{ 2 }, written._listKey.size() ); // 읽은 키 하나 + 읽지 못한 키
+    SW_EXPECT_NEAR( 7.0f, CatalogCurve::makeFloatCurve( written )._listKey[0]._value, 1e-5f );
+
+    document.undo();
+    SW_EXPECT_EQUAL( size_t{ 4 }, findSize()._listKey.size() );
+    SW_EXPECT_FALSE( CatalogCurve::applyEditedCurve( document, Util::findElement( document.getParsed(), "Def" ), shorter ) ); // 곡선이 아니다
+    SW_EXPECT_FALSE( document.getError().empty() );
+}
+
 // 빈 채널에 키를 더하면 `_listKey` 와 키 두 원소가 생기지만 되돌리기는 한 번이다 — 빈 목록이 남지 않는다.
 SW_TEST_CASE( CatalogCurveModelTest, AddKeyIsOneUndoStep )
 {

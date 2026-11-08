@@ -9,6 +9,8 @@
 
 #include "Editor/Panels/Catalog/Model/CatalogChildSection.h"
 
+#include "Engine/Curve/FloatCurve.h"
+
 namespace sw::editor
 {
     class CatalogDocument;
@@ -26,6 +28,7 @@ namespace sw::editor
             DuplicateRow,
             CreateVariant, ///< `_element` 를 `_base` 로 가리키는 새 행
             AddCurveKey,   ///< `_element` 곡선의 끝에 키를 더한다
+            SetCurveKeys,  ///< `_element` 곡선의 키를 `_curve`(그래프에서 끈 곡선)로 맞춘다
             // 자식 원소 편집 — `_element` 는 행, `_path` 는 원소(또는 담는 원소), `_column` 은 칸 이름(그룹 편집이면 원소 이름)이다.
             SetChildCell,
             UnsetChildCell,
@@ -45,6 +48,7 @@ namespace sw::editor
         string           _column{};
         string           _text{}; ///< 칸의 새 값(`SetCell`) 또는 표 이름(`AddRow`)
         CatalogChildPath _path{};
+        FloatCurve       _curve{}; ///< `SetCurveKeys` 의 고친 곡선
 
         /**
          * @brief 문서에 넣습니다.
