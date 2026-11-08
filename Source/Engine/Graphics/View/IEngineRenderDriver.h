@@ -12,10 +12,6 @@
 #include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
 #include "Engine/Graphics/View/FrameViewports.h"
 
-#include "sw/config/ProcessExitCodes.gen.h"
-
-#include <optional>
-
 namespace sw
 {
     class GameObjectManager;
@@ -24,7 +20,7 @@ namespace sw
 
     /**
      * @class IEngineRenderDriver
-     * @brief 프레임 제출 · 백엔드 교체 · 창 크기 · 캡처 판정을 렌더러에 맡기는 인터페이스입니다. 게임 스레드에서만 부릅니다.
+     * @brief 프레임 제출 · 백엔드 교체 · 창 크기 · 캡처 준비를 렌더러에 맡기는 인터페이스입니다. 게임 스레드에서만 부릅니다.
      */
     class IEngineRenderDriver
     {
@@ -48,15 +44,8 @@ namespace sw
         /** @brief 렌더 스레드와 GPU 를 쉬게 합니다(핫 리로드 · 종료 앞). */
         virtual void waitRenderThreadIdle( RHIWaitIdleReason reason ) = 0;
 
-        /** @brief 시작 인자 캡처(`-gv_screenshotSettledFrames`)가 준비 판정을 기다리면 true 입니다. 판정은 자동화 층의 것이라 엔진 루프가 구해 `submitFrame` 에 넘깁니다. */
-        [[nodiscard]] virtual bool needsCaptureReadiness() const = 0;
-        /**
-         * @brief 머티리얼을 올리고 렌더 프레임 패킷을 채워 렌더 스레드에 냅니다.
-         * @param bReadyForCapture `needsCaptureReadiness` 가 참일 때 구한 판정입니다. 아니면 false 입니다.
-         */
-        virtual void submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bReadyForCapture ) = 0;
-        /** @brief `-gv_screenshotQuit` 의 사진을 모두 찍었으면 그 결과의 종료 코드(`Passed` · `CaptureWriteFailed`), 아직이면 빈 값입니다. */
-        [[nodiscard]] virtual std::optional<ProcessExitCode> findCaptureExitCode() const = 0;
+        /** @brief 머티리얼을 올리고 렌더 프레임 패킷을 채워 렌더 스레드에 냅니다. */
+        virtual void submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider ) = 0;
 
         /** @brief 대기 중인 RHI 핫스왑을 수행합니다. 요청이 없으면 true, 교체에 실패하면(되돌렸어도) false 입니다. */
         [[nodiscard]] virtual bool applyPendingBackendChange() = 0;

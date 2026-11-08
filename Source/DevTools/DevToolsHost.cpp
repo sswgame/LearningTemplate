@@ -125,15 +125,15 @@ namespace sw
 
     EngineFrameExit DevToolsHost::onFrameEnd( [[maybe_unused]] const EngineFrameContext& context )
     {
-        // 셰이더 재컴파일 · 강제 리로드 단축키(Debug 클라이언트) — 클라이언트 전용 부분이 한다.
-        if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )
-            pClientPart->onFrameEnd();
+        // 셰이더 재컴파일 · 강제 리로드 단축키(Debug 클라이언트) · 시작 인자 사진 — 클라이언트 전용 부분이 한다. 사진이 낸 종료 코드는 아래 일을 마친 뒤 돌려준다.
+        IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find();
+        const EngineFrameExit      clientExit  = pClientPart != nullptr ? pClientPart->onFrameEnd() : kEngineFrameRunning;
         if ( ConfigReloadSubsystem* const pConfigReload = engine::findSubsystem<ConfigReloadSubsystem>() )
             pConfigReload->update();
         _pContentFolderWatch->update(); // 기능 · 게임이 건 데이터 폴더 감시(외형 데이터 등)
         // 부모 프로세스(에디터의 멀티 프로세스 재생)가 표준 입력으로 보낸 종료 낱말 — 정상 종료다.
         if ( _pConsole != nullptr && _pConsole->pollStandardInputCommands() )
             return ProcessExitCode::Passed;
-        return kEngineFrameRunning;
+        return clientExit;
     }
 } // namespace sw

@@ -37,20 +37,18 @@ namespace sw
         /** @param startupScope 기동 범위입니다. 백엔드 교체가 그 컬렉션의 단계를 내리고 다시 세웁니다. 이 드라이버를 든 서브시스템의 주인이라 먼저 사라지지 않습니다. */
         EngineRenderDriver( SubsystemScope& startupScope, RHISubsystem& rhiSubsystem, FrameRendererSubsystem& frameRendererSubsystem, RenderThreadSubsystem& renderThreadSubsystem );
 
-        void                                         onStartupFinished() override;
-        void                                         onShutdownBegin() override;
-        [[nodiscard]] RHI*                           findRHI() const override;
-        [[nodiscard]] RHIInitResult                  getRHIInitResult() const override;
-        [[nodiscard]] RenderThread*                  findRenderThread() const override { return _pRenderThread; }
-        void                                         flushSubmittedPackets() override;
-        void                                         waitRenderThreadIdle( RHIWaitIdleReason reason ) override;
-        [[nodiscard]] bool                           needsCaptureReadiness() const override;
-        void                                         submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider, bool bReadyForCapture ) override;
-        [[nodiscard]] std::optional<ProcessExitCode> findCaptureExitCode() const override;
-        [[nodiscard]] bool                           applyPendingBackendChange() override;
-        void                                         setScenarioCaptureEnabled( bool bEnabled ) override;
-        void                                         setPresentInterval( uint32 interval ) override;
-        [[nodiscard]] uint32                         countPendingCaptureWork( const GameObjectManager* pManager ) const override;
+        void                        onStartupFinished() override;
+        void                        onShutdownBegin() override;
+        [[nodiscard]] RHI*          findRHI() const override;
+        [[nodiscard]] RHIInitResult getRHIInitResult() const override;
+        [[nodiscard]] RenderThread* findRenderThread() const override { return _pRenderThread; }
+        void                        flushSubmittedPackets() override;
+        void                        waitRenderThreadIdle( RHIWaitIdleReason reason ) override;
+        void                        submitFrame( float32 deltaTime, const FrameViewports& views, const ViewCameraProviderDelegate& sceneViewCameraProvider ) override;
+        [[nodiscard]] bool          applyPendingBackendChange() override;
+        void                        setScenarioCaptureEnabled( bool bEnabled ) override;
+        void                        setPresentInterval( uint32 interval ) override;
+        [[nodiscard]] uint32        countPendingCaptureWork( const GameObjectManager* pManager ) const override;
 
     private:
         /**

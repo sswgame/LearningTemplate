@@ -12,7 +12,7 @@
  *          `finishJob` 이 읽은 바이트를 쓸 목록에 넣고 다음 UI 프레임의 `takeJob` 이 워커에 넘긴다(워커 제출은 에디터 서비스 범위가 있는 UI 스레드에서만 된다).
  *          마젠타 비율은 워커가 낸다(`EditorUICaptureResult::_pMagentaFraction`) - 시나리오는 그 판정을 끝(`<Pass/>`)으로 미루고(`AutomationStepContext::deferExpectAtMost`)
  *          쓰기가 끝나기를 거기서만 기다린다(`isWritingFiles`, `SW_AUTOMATION_FINISH_BLOCKER`). 예전에는 풀기 · 비율을 렌더 스레드에서 해 캡처하는 프레임이 그만큼 늦었다.
- *          `-gv_screenshotEditor` 의 끝 알림(`-gv_screenshotQuit` 이 앱을 끝낸다)은 워커가 파일을 쓴 뒤 우편함에 직접 한다(패킷 스크린샷과 같다).
+ *          `-gv_screenshotEditor` 의 끝 알림(`-gv_screenshotQuit` 이 앱을 끝낸다)은 워커가 파일을 쓴 뒤 개발 도구의 장부(`StartupCaptureSubsystem`)에 직접 한다.
  *          주의: 읽기는 GPU 를 기다린다. 캡처하는 프레임만 그렇고, 요청이 없으면 아무 일도 하지 않는다.
  *          행 순서는 네 백엔드가 같다(0 행이 위) — RHI 렌더러가 그리고 GL 도 FBO 의 클립 원점을 위로 둔다.
  */
@@ -34,7 +34,7 @@ namespace sw
 {
     class AutomationDeferredValue;
     class IRHIDevice;
-    class ScreenshotRequestQueue;
+    class StartupCaptureSubsystem;
 } // namespace sw
 
 namespace sw::editor
@@ -82,7 +82,7 @@ namespace sw::editor
         vector<uint8>                       _bytes{};  ///< GPU 에서 읽은 그대로의 바이트(백버퍼 포맷)
         RHITextureMipSpan                   _layout{}; ///< `_bytes` 의 크기 · 행 간격(`_pData` 는 비운다 - 워커는 `_bytes` 로 읽는다)
         shared_ptr<AutomationDeferredValue> _pMagentaFraction{};
-        ScreenshotRequestQueue*             _pStartupMailbox{ nullptr }; ///< `-gv_screenshotEditor` 건이면 다 쓴 뒤 알릴 우편함(UI 스레드가 넘길 때 찾는다)
+        StartupCaptureSubsystem*            _pStartupCapture{ nullptr }; ///< `-gv_screenshotEditor` 건이면 다 쓴 뒤 알릴 시작 인자 사진 장부(UI 스레드가 넘길 때 찾는다)
         RHIFormat                           _format{ RHIFormat::R8G8B8A8_UNORM };
     };
 } // namespace sw::editor

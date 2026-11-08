@@ -634,7 +634,6 @@
     "Source/Engine/Renderer/Lighting/LightGrid.cpp": {"integer": 1},
     "Source/Engine/Renderer/Lighting/RealtimeProbeUpdater.cpp": {"float": 1},
     "Source/Engine/Renderer/Lighting/ShadowSetup.cpp": {"float": 1},
-    "Source/Engine/Renderer/RenderThread.cpp": {"float": 1, "integer": 1},
     "Source/Engine/Renderer/Scene/GPUMeshBatchBinding.h": {"integer": 1},
     "Source/Engine/Renderer/Scene/GPUMeshMorphPool.h": {"integer": 1},
     "Source/Engine/Renderer/Scene/GPUScene.cpp": {"integer": 2, "hex": 1},

@@ -7,20 +7,21 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
 
+#include "DevTools/Client/Capture/StartupCaptureSubsystem.h"
+
 #include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Automation/Scenario/AutomationDeferredValue.h"
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
-#include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Renderer/Frame/Capture/RenderTargetImageFile.h"
-#include "Engine/Renderer/RenderThread.h"
 
 #include <cstring>
 #include <imgui.h>
@@ -46,6 +47,30 @@ namespace sw::editor
             static constexpr uint32 kMaxTextureSide = 8192;
             /** @brief 결과를 이만큼만 들고 오래된 것부터 버립니다. 시나리오는 요청 직후 결과를 읽는다. */
             static constexpr size_t kMaxResultCount = 64;
+
+            /** @brief `-gv_screenshotEditor` 를 찍겠다고 개발 도구의 장부에 알립니다. 장부가 없으면(렌더러 없음) 오류로 알린다 — `-gv_screenshotQuit` 이 끝낼 근거를 잃는다. */
+            static void expectStartupCapture()
+            {
+                StartupCaptureSubsystem* const pStartupCapture = engine::findSubsystem<StartupCaptureSubsystem>();
+                if ( pStartupCapture == nullptr )
+                {
+                    SW_LOG_ERROR_ID( "EditorUICapture.StartupCaptureNotAnnounced", "Editor UI capture was announced but this host has no startup capture ledger (no renderer)" );
+                    return;
+                }
+                pStartupCapture->expectCapture( StartupCaptureKind::EditorUI );
+            }
+
+            /** @brief 읽지 못한 `-gv_screenshotEditor` 건의 끝(쓰지 못함)을 장부에 알립니다. 렌더 스레드에서 부른다. */
+            static void reportStartupCaptureFailed()
+            {
+                StartupCaptureSubsystem* const pStartupCapture = engine::findSubsystem<StartupCaptureSubsystem>();
+                if ( pStartupCapture == nullptr )
+                {
+                    SW_LOG_ERROR_ID( "EditorUICapture.StartupCaptureNotReported", "Editor UI capture finished but this host has no startup capture ledger (no renderer)" );
+                    return;
+                }
+                pStartupCapture->reportCaptureFinished( StartupCaptureKind::EditorUI, false );
+            }
             /** @brief 마젠타 판정 임계값입니다(0..255). 보라색 머티리얼 썸네일(약 160,60,220)은 걸리지 않는다. */
             static constexpr uint8 kMagentaMinRedBlue = 230;
             static constexpr uint8 kMagentaMaxGreen   = 40;
@@ -145,8 +170,8 @@ namespace sw::editor
                     SW_LOG_WARNING_ID( "EditorUICapture.EditorUICaptureCould", "Editor UI capture could not be unpacked to RGBA8 (format %#): %#", static_cast<uint32>( write._format ), path.c_str() );
                     write._pMagentaFraction->abandon();
                 }
-                if ( write._pStartupMailbox != nullptr )
-                    write._pStartupMailbox->reportCaptureFinished( static_cast<uint32>( RenderThread::CaptureKind::EditorUI ), bWritten );
+                if ( write._pStartupCapture != nullptr )
+                    write._pStartupCapture->reportCaptureFinished( StartupCaptureKind::EditorUI, bWritten );
                 --*pInFlight;
             }
         };
@@ -180,12 +205,12 @@ namespace sw::editor
         }
         for ( EditorUICaptureWrite& write : listWrite )
         {
-            // 시작 인자 건의 끝 알림은 워커가 다 쓴 뒤 한다 - 우편함은 서비스라 여기(UI 스레드)서 찾아 넘긴다. 에디터 컨텍스트 종료가 에디터 잡 단계를 기다리므로 우편함(엔진 범위)보다 먼저 끝난다.
+            // 시작 인자 건의 끝 알림은 워커가 다 쓴 뒤 한다 - 장부는 서브시스템이라 여기(UI 스레드)서 찾아 넘긴다. 에디터 컨텍스트 종료가 에디터 잡 단계를 기다리므로 장부(엔진 기동 범위)보다 먼저 끝난다.
             if ( write._job._bFromStartupArgument )
             {
-                write._pStartupMailbox = findSubsystem<ScreenshotRequestQueue>();
-                if ( write._pStartupMailbox == nullptr )
-                    SW_LOG_ERROR_ID( "EditorUICapture.EditorUICaptureCannot", "Editor UI capture '%#' cannot report its end - this host has no screenshot mailbox (no renderer)", write._job._path.c_str() );
+                write._pStartupCapture = engine::findSubsystem<StartupCaptureSubsystem>();
+                if ( write._pStartupCapture == nullptr )
+                    SW_LOG_ERROR_ID( "EditorUICapture.EditorUICaptureCannot", "Editor UI capture '%#' cannot report its end - this host has no startup capture ledger (no renderer)", write._job._path.c_str() );
             }
             submitEditorBackgroundJob( "EditorUICaptureWrite", SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorUICaptureInternal::runWriteJob ),
                                        MakeTaskArgs( make_shared<EditorUICaptureWrite>( std::move( write ) ), _pWritesInFlight ) );
@@ -197,7 +222,7 @@ namespace sw::editor
         dispatchWrites();
         ++_uiFrameCount;
         if ( _uiFrameCount == 1u && gv_screenshotEditor.empty() == false )
-            RenderThread::expectCapture( RenderThread::CaptureKind::EditorUI ); // 첫 사진(기본 60 프레임 뒤)보다 앞서 알린다
+            EditorUICaptureInternal::expectStartupCapture(); // 첫 사진(기본 60 프레임 뒤)보다 앞서 알린다
         const bool bGlobalDue = gv_screenshotEditor.empty() == false && _bGlobalRequested == SW_FALSE &&
                                 _uiFrameCount >= static_cast<uint32>( gv_screenshotEditorFrame > 1 ? gv_screenshotEditorFrame : 1 );
         if ( bGlobalDue )
@@ -345,7 +370,7 @@ namespace sw::editor
     {
         // 읽지 못한 시작 인자 건은 여기가 끝이다 — `-gv_screenshotQuit` 이 이 알림으로 앱을 끝낸다(렌더 스레드 안에서 부른다). 읽은 건은 워커가 파일을 쓴 뒤 알린다.
         if ( result._job._bFromStartupArgument && result._bCaptured == SW_FALSE )
-            RenderThread::reportCaptureFinished( RenderThread::CaptureKind::EditorUI, false );
+            EditorUICaptureInternal::reportStartupCaptureFailed();
         const ScopedLock<mutex> lock{ _resultMutex };
         if ( _listResult.size() >= EditorUICaptureInternal::kMaxResultCount )
             _listResult.erase( _listResult.begin() );
