@@ -439,7 +439,7 @@
     "Source/Engine/Character/Fit/FitSolver.cpp": {"float": 1, "integer": 7},
     "Source/Engine/Character/Fit/FitTables.cpp": {"minus-one": 1},
     "Source/Engine/Character/Fit/MergedMesh.h": {"minus-one": 2},
-    "Source/Engine/Character/Fit/SurfaceState.cpp": {"minus-one": 1, "float": 2},
+    "Source/Engine/Character/Fit/SurfaceState.cpp": {"float": 2},
     "Source/Engine/Character/Hit/CharacterHit.cpp": {"minus-one": 2, "float": 7},
     "Source/Engine/Character/Hit/RagdollComponent.cpp": {"minus-one": 3, "float": 2},
     "Source/Engine/Character/Hit/RagdollComponent.h": {"minus-one": 1},
