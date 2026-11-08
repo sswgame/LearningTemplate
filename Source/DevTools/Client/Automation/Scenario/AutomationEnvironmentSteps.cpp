@@ -25,29 +25,23 @@ namespace sw
     {
         struct AutomationEnvironmentStepsInternal
         {
-            static bool validateDevCommand( const AutomationStep& step, string& outError )
+            static expected<void> validateDevCommand( const AutomationStep& step )
             {
                 AutomationDevCommandParams params;
-                if ( step.readFields( params, outError ) == false )
-                    return false;
+                const expected<void>       read = step.readFields( params );
+                if ( read.has_value() == false )
+                    return read;
 #if !defined( SW_SHIPPING )
                 vector<string> listToken;
                 listToken = StringUtil::splitQuotedTokens( params._line );
                 if ( listToken.empty() )
-                {
-                    outError = step.describe() + ": line is empty";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "line is empty" } );
                 // 단계 종류 검사와 같은 때(시작 조건이 참인 프레임)라 게임과 에디터 모듈의 명령이 이미 등록되어 있다.
                 if ( engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] ) == nullptr )
-                {
-                    outError = step.describe() + ": unknown dev command '" + listToken[0] + "'";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::NotFound, "unknown dev command", listToken[0] } );
+                return {};
 #else
-                outError = step.describe() + ": dev commands are compiled out of Shipping";
-                return false;
+                return unexpected( Error{ ErrorKind::Unsupported, "dev commands are compiled out of Shipping" } );
 #endif
             }
 

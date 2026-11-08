@@ -12,6 +12,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/ProfilerTimeline.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetFlowLog.h"
@@ -157,11 +158,11 @@ namespace sw
          * @brief Trace Event JSON(이 파일이 낸 것, 또는 완전 이벤트 `X` 와 스레드 이름 메타를 가진 다른 도구의 것)을 읽습니다.
          * @details 시각은 마이크로초 → 나노초. 같은 (pid, tid) 는 한 스레드이고, 스레드 줄 이름은 `thread_name` 메타입니다(없으면 `tid <번호>`).
          *          깊이는 시작 시각 순으로 겹침을 세어 다시 계산합니다(파일에 깊이가 없다). 구간 이름은 같은 글이면 같은 번호입니다.
-         * @return 사건이 하나라도 있으면 true. 아니면 @p outError 에 이유.
+         * @return 읽은 트레이스. 사건이 하나도 없거나 형식이 틀리면 그 이유.
          */
-        [[nodiscard]] static bool parseTraceJSON( string_view json, ProfilerLoadedTrace& outTrace, string& outError );
-        /** @brief 파일을 읽어 `parseTraceJSON` 으로 해석합니다. */
-        [[nodiscard]] static bool loadTraceFile( string_view path, ProfilerLoadedTrace& outTrace, string& outError );
+        [[nodiscard]] static expected<ProfilerLoadedTrace> parseTraceJSON( string_view json );
+        /** @brief 파일을 읽어 `parseTraceJSON` 으로 해석합니다(`_sourcePath` 에 경로). */
+        [[nodiscard]] static expected<ProfilerLoadedTrace> loadTraceFile( string_view path );
         /** @brief 기본 저장 폴더(`<프로젝트>/Saved/Traces`)에서 가장 최근 `.trace.json` 의 경로입니다. 없으면 빈 글. */
         static string findLatestTraceFile();
 

@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -172,16 +173,15 @@ namespace sw::editor
          * @brief VRM 0.x 의 `extensions.VRM` 을 읽습니다.
          * @details 0.x 확장의 벡터(충돌체 offset, gravityDir, firstPersonBoneOffset)는 유니티 공간이라 z 를 뒤집어 glTF 공간으로 옮긴 뒤(three-vrm 과 같다) 엔진 공간(X 뒤집기)으로 옮긴다.
          *          blendShape 가중치(0..100)는 0..1 로 바꾼다.
-         * @return 번호가 범위를 벗어나면 false 이고 @p outError 에 이유를 씁니다.
+         * @return 읽은 정의. 번호가 범위를 벗어나거나 값의 형식이 틀리면 그 이유(대상은 어느 원소 · 값)입니다.
          */
-        [[nodiscard]] static bool readVrm0Avatar( const JSONValue& vrm, const VrmGltfNames& names, VrmAvatarDef& outDef, vector<string>* pOutListIgnored, string& outError );
+        [[nodiscard]] static expected<VrmAvatarDef> readVrm0Avatar( const JSONValue& vrm, const VrmGltfNames& names, vector<string>* pOutListIgnored );
 
         /**
          * @brief VRM 1.0 의 `extensions.VRMC_vrm` 과 `extensions.VRMC_springBone`(없으면 무효 값)을 읽습니다. 벡터는 glTF 공간이라 X 만 뒤집습니다.
-         * @return 번호가 범위를 벗어나면 false 이고 @p outError 에 이유를 씁니다.
+         * @return 읽은 정의. 번호가 범위를 벗어나거나 값의 형식이 틀리면 그 이유(대상은 어느 원소 · 값)입니다.
          */
-        [[nodiscard]] static bool readVrm1Avatar( const JSONValue& vrmcVrm, const JSONValue& vrmcSpringBone, const VrmGltfNames& names, VrmAvatarDef& outDef,
-                                                  vector<string>* pOutListIgnored, string& outError );
+        [[nodiscard]] static expected<VrmAvatarDef> readVrm1Avatar( const JSONValue& vrmcVrm, const JSONValue& vrmcSpringBone, const VrmGltfNames& names, vector<string>* pOutListIgnored );
 
         /** @brief 아바타 정보를 `.avatar.xml` 문자열로 만듭니다. 같은 값이면 같은 바이트입니다. */
         static string makeAvatarXML( const VrmAvatarDef& def );

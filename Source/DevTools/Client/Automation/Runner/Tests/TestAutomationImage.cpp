@@ -35,17 +35,12 @@ namespace
 
         static uint8* getPixel( AutomationImage& image, uint32 x, uint32 y ) { return &image._listRGB[( static_cast<size_t>( y ) * image._width + x ) * 3u]; }
 
-        /** @brief 틀린 PPM 은 false 와 이유이고, 출력 그림을 건드리지 않습니다. */
+        /** @brief 틀린 PPM 은 이유가 있는 오류입니다. */
         static void expectParseFails( const vector<uint8>& listByte )
         {
-            AutomationImage image;
-            image._width  = 7;
-            image._height = 9;
-            string error;
-            SW_EXPECT_FALSE( AutomationImage::parsePpm( listByte.data(), listByte.size(), image, error ) );
-            SW_EXPECT_FALSE( error.empty() );
-            SW_EXPECT_EQUAL( 7u, image._width );
-            SW_EXPECT_EQUAL( 9u, image._height );
+            const expected<AutomationImage> image = AutomationImage::parsePpm( listByte.data(), listByte.size() );
+            SW_REQUIRE_FALSE( image.has_value() );
+            SW_EXPECT_FALSE( image.error().message().empty() );
         }
     };
     using Util = AutomationImageMetricTestUtil;
@@ -65,15 +60,14 @@ SW_TEST_CASE( AutomationImageMetricTest, PpmRoundTrip )
     SW_REQUIRE_EQUAL( expectedHeader.size() + source._listRGB.size(), listByte.size() );
     SW_EXPECT_TRUE( string_view( reinterpret_cast<const utf8*>( listByte.data() ), expectedHeader.size() ) == expectedHeader );
 
-    AutomationImage image;
-    string          error;
-    SW_REQUIRE_TRUE( AutomationImage::parsePpm( listByte.data(), listByte.size(), image, error ) );
-    SW_EXPECT_EQUAL( 2u, image._width );
-    SW_EXPECT_EQUAL( 3u, image._height );
-    SW_EXPECT_TRUE( image._listRGB == source._listRGB );
+    const expected<AutomationImage> image = AutomationImage::parsePpm( listByte.data(), listByte.size() );
+    SW_REQUIRE_TRUE( image.has_value() );
+    SW_EXPECT_EQUAL( 2u, image->_width );
+    SW_EXPECT_EQUAL( 3u, image->_height );
+    SW_EXPECT_TRUE( image->_listRGB == source._listRGB );
 }
 
-/** @brief [AutomationImageMetricTest] PPM 은 신뢰 경계다 — 어느 길이로 잘려도 false 와 이유이고 출력을 건드리지 않는다 */
+/** @brief [AutomationImageMetricTest] PPM 은 신뢰 경계다 — 어느 길이로 잘려도 이유가 있는 오류다 */
 SW_TEST_CASE( AutomationImageMetricTest, EveryTruncatedLengthIsRejected )
 {
     vector<uint8> listByte;
@@ -87,10 +81,7 @@ SW_TEST_CASE( AutomationImageMetricTest, EveryTruncatedLengthIsRejected )
 /** @brief [AutomationImageMetricTest] 바이트가 없거나 매직이 다르면 PPM 이 아니다(P3 · P5 도 거절한다) */
 SW_TEST_CASE( AutomationImageMetricTest, WrongMagicIsRejected )
 {
-    AutomationImage image;
-    string          error;
-    SW_EXPECT_FALSE( AutomationImage::parsePpm( nullptr, 64, image, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( AutomationImage::parsePpm( nullptr, 64 ).has_value() );
     Util::expectParseFails( Util::makePpmBytes( "P3\n1 1\n255\n", 3 ) );
     Util::expectParseFails( Util::makePpmBytes( "P5\n1 1\n255\n", 3 ) );
     Util::expectParseFails( Util::makePpmBytes( "p6\n1 1\n255\n", 3 ) );
@@ -120,11 +111,10 @@ SW_TEST_CASE( AutomationImageMetricTest, HeaderMustEndWithWhitespace )
         listByte.push_back( 1 );
         listByte.push_back( 2 );
         listByte.push_back( 3 );
-        AutomationImage image;
-        string          error;
-        SW_REQUIRE_TRUE( AutomationImage::parsePpm( listByte.data(), listByte.size(), image, error ) );
-        SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( image._listRGB.size() ) );
-        SW_EXPECT_EQUAL( 1u, static_cast<uint32>( image._listRGB[0] ) );
+        const expected<AutomationImage> image = AutomationImage::parsePpm( listByte.data(), listByte.size() );
+        SW_REQUIRE_TRUE( image.has_value() );
+        SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( image->_listRGB.size() ) );
+        SW_EXPECT_EQUAL( 1u, static_cast<uint32>( image->_listRGB[0] ) );
     }
 }
 
@@ -134,24 +124,22 @@ SW_TEST_CASE( AutomationImageMetricTest, PixelLengthFollowsTheHeader )
     Util::expectParseFails( Util::makePpmBytes( "P6\n2 2\n255\n", 11 ) );
     Util::expectParseFails( Util::makePpmBytes( "P6\n999999999 999999999\n255\n", 3 ) );
 
-    const vector<uint8> listLong = Util::makePpmBytes( "P6\n1 1\n255\n", 7 );
-    AutomationImage     image;
-    string              error;
-    SW_REQUIRE_TRUE( AutomationImage::parsePpm( listLong.data(), listLong.size(), image, error ) );
-    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( image._listRGB.size() ) );
+    const vector<uint8>             listLong = Util::makePpmBytes( "P6\n1 1\n255\n", 7 );
+    const expected<AutomationImage> image    = AutomationImage::parsePpm( listLong.data(), listLong.size() );
+    SW_REQUIRE_TRUE( image.has_value() );
+    SW_EXPECT_EQUAL( 3u, static_cast<uint32>( image->_listRGB.size() ) );
 }
 
 /** @brief [AutomationImageMetricTest] 머리말의 주석과 여러 공백은 건너뛴다. 주석이 끝나지 않고 파일이 끝나면 틀린 머리말이다 */
 SW_TEST_CASE( AutomationImageMetricTest, HeaderCommentsAndWhitespace )
 {
-    const vector<uint8> listByte = Util::makePpmBytes( "P6 # made by a tool\n# second line\n\t2  \r\n1 # height\n255\n", 6 );
-    AutomationImage     image;
-    string              error;
-    SW_REQUIRE_TRUE( AutomationImage::parsePpm( listByte.data(), listByte.size(), image, error ) );
-    SW_EXPECT_EQUAL( 2u, image._width );
-    SW_EXPECT_EQUAL( 1u, image._height );
-    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( image._listRGB[0] ) );
-    SW_EXPECT_EQUAL( 5u, static_cast<uint32>( image._listRGB[5] ) );
+    const vector<uint8>             listByte = Util::makePpmBytes( "P6 # made by a tool\n# second line\n\t2  \r\n1 # height\n255\n", 6 );
+    const expected<AutomationImage> image    = AutomationImage::parsePpm( listByte.data(), listByte.size() );
+    SW_REQUIRE_TRUE( image.has_value() );
+    SW_EXPECT_EQUAL( 2u, image->_width );
+    SW_EXPECT_EQUAL( 1u, image->_height );
+    SW_EXPECT_EQUAL( 0u, static_cast<uint32>( image->_listRGB[0] ) );
+    SW_EXPECT_EQUAL( 5u, static_cast<uint32>( image->_listRGB[5] ) );
 
     Util::expectParseFails( Util::makePpmBytes( "P6\n1 1\n# comment without an end", 0 ) );
 }
@@ -165,14 +153,14 @@ SW_TEST_CASE( AutomationImageMetricTest, LoadPpmFromFile )
     const string path = test::makeScratchPath( "image.ppm" );
     SW_REQUIRE_TRUE( FileUtil::writeFile( path, listByte.data(), listByte.size() ) );
 
-    AutomationImage image;
-    string          error;
-    SW_REQUIRE_TRUE( AutomationImage::loadPpm( path, image, error ) );
-    SW_EXPECT_EQUAL( 9u, static_cast<uint32>( image._listRGB[2] ) );
+    const expected<AutomationImage> image = AutomationImage::loadPpm( path );
+    SW_REQUIRE_TRUE( image.has_value() );
+    SW_EXPECT_EQUAL( 9u, static_cast<uint32>( image->_listRGB[2] ) );
 
-    const string missing = test::makeScratchPath( "missing.ppm" );
-    SW_EXPECT_FALSE( AutomationImage::loadPpm( missing, image, error ) );
-    SW_EXPECT_TRUE( error.find( "missing.ppm" ) != string::npos );
+    const string                    missing  = test::makeScratchPath( "missing.ppm" );
+    const expected<AutomationImage> notThere = AutomationImage::loadPpm( missing );
+    SW_REQUIRE_FALSE( notThere.has_value() );
+    SW_EXPECT_TRUE( notThere.error().detail().find( "missing.ppm" ) != string_view::npos );
 }
 
 /** @brief [AutomationImageMetricTest] 영역 글 — 네 수(공백 허용)이고 0..1 안, 앞 값이 뒤 값보다 작아야 한다. 틀리면 출력을 건드리지 않는다 */
@@ -215,15 +203,14 @@ SW_TEST_CASE( AutomationImageMetricTest, ReduceSmallRegionKeepsPixels )
     Util::getPixel( image, 3, 1 )[1] = 200;
 
     AutomationImageRegion region;
-    region._x0 = 0.5f;
-    region._y0 = 0.5f;
-    AutomationImage reduced;
-    string          error;
-    SW_REQUIRE_TRUE( AutomationImage::reduce( image, region, reduced, error ) );
-    SW_REQUIRE_EQUAL( 2u, reduced._width );
-    SW_REQUIRE_EQUAL( 1u, reduced._height );
-    SW_EXPECT_EQUAL( 100u, static_cast<uint32>( reduced._listRGB[0] ) );
-    SW_EXPECT_EQUAL( 200u, static_cast<uint32>( reduced._listRGB[4] ) );
+    region._x0                              = 0.5f;
+    region._y0                              = 0.5f;
+    const expected<AutomationImage> reduced = AutomationImage::reduce( image, region );
+    SW_REQUIRE_TRUE( reduced.has_value() );
+    SW_REQUIRE_EQUAL( 2u, reduced->_width );
+    SW_REQUIRE_EQUAL( 1u, reduced->_height );
+    SW_EXPECT_EQUAL( 100u, static_cast<uint32>( reduced->_listRGB[0] ) );
+    SW_EXPECT_EQUAL( 200u, static_cast<uint32>( reduced->_listRGB[4] ) );
 }
 
 /** @brief [AutomationImageMetricTest] 넓은 영역은 가로를 골든 폭으로 상자 평균해 줄인다(반올림) — 세로는 비율대로 */
@@ -244,25 +231,23 @@ SW_TEST_CASE( AutomationImageMetricTest, ReduceWideRegionAverages )
         }
     }
 
-    AutomationImage reduced;
-    string          error;
-    SW_REQUIRE_TRUE( AutomationImage::reduce( image, AutomationImageRegion{}, reduced, error ) );
-    SW_REQUIRE_EQUAL( AutomationImage::kGoldenMaxWidth, reduced._width );
-    SW_REQUIRE_EQUAL( 2u, reduced._height );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( reduced._listRGB[0] ) );
-    SW_EXPECT_EQUAL( 100u, static_cast<uint32>( reduced._listRGB[4] ) );
+    const expected<AutomationImage> reduced = AutomationImage::reduce( image, AutomationImageRegion{} );
+    SW_REQUIRE_TRUE( reduced.has_value() );
+    SW_REQUIRE_EQUAL( AutomationImage::kGoldenMaxWidth, reduced->_width );
+    SW_REQUIRE_EQUAL( 2u, reduced->_height );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( reduced->_listRGB[0] ) );
+    SW_EXPECT_EQUAL( 100u, static_cast<uint32>( reduced->_listRGB[4] ) );
 }
 
 /** @brief [AutomationImageMetricTest] 아주 납작한 영역도 세로는 한 줄 남는다(0 줄로 나누지 않는다) */
 SW_TEST_CASE( AutomationImageMetricTest, ReduceKeepsAtLeastOneRow )
 {
-    AutomationImage image = Util::makeImage( 1000, 1, 50 );
-    AutomationImage reduced;
-    string          error;
-    SW_REQUIRE_TRUE( AutomationImage::reduce( image, AutomationImageRegion{}, reduced, error ) );
-    SW_EXPECT_EQUAL( AutomationImage::kGoldenMaxWidth, reduced._width );
-    SW_EXPECT_EQUAL( 1u, reduced._height );
-    SW_EXPECT_EQUAL( 50u, static_cast<uint32>( reduced._listRGB[0] ) );
+    const AutomationImage           image   = Util::makeImage( 1000, 1, 50 );
+    const expected<AutomationImage> reduced = AutomationImage::reduce( image, AutomationImageRegion{} );
+    SW_REQUIRE_TRUE( reduced.has_value() );
+    SW_EXPECT_EQUAL( AutomationImage::kGoldenMaxWidth, reduced->_width );
+    SW_EXPECT_EQUAL( 1u, reduced->_height );
+    SW_EXPECT_EQUAL( 50u, static_cast<uint32>( reduced->_listRGB[0] ) );
 }
 
 /** @brief [AutomationImageMetricTest] 화소 하나도 덮지 않는 영역과 빈 그림은 이유와 함께 거절한다 */
@@ -270,45 +255,40 @@ SW_TEST_CASE( AutomationImageMetricTest, ReduceRejectsEmptyCoverage )
 {
     const AutomationImage image = Util::makeImage( 10, 10, 0 );
     AutomationImageRegion tiny;
-    tiny._x1 = 0.02f;
-    tiny._y1 = 0.02f;
-    AutomationImage reduced;
-    string          error;
-    SW_EXPECT_FALSE( AutomationImage::reduce( image, tiny, reduced, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    tiny._x1                                    = 0.02f;
+    tiny._y1                                    = 0.02f;
+    const expected<AutomationImage> tinyReduced = AutomationImage::reduce( image, tiny );
+    SW_REQUIRE_FALSE( tinyReduced.has_value() );
+    SW_EXPECT_TRUE( tinyReduced.error().detail() == "10x10" );
 
-    error.clear();
-    SW_EXPECT_FALSE( AutomationImage::reduce( AutomationImage{}, AutomationImageRegion{}, reduced, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    const expected<AutomationImage> emptyReduced = AutomationImage::reduce( AutomationImage{}, AutomationImageRegion{} );
+    SW_REQUIRE_FALSE( emptyReduced.has_value() );
+    SW_EXPECT_TRUE( emptyReduced.error().detail() == "0x0" );
 }
 
 /** @brief [AutomationImageMetricTest] 크기가 다르면 비교하지 않고 다시 뜨라는 이유를 낸다(가로 · 세로 어느 쪽이든) */
 SW_TEST_CASE( AutomationImageMetricTest, CompareRejectsDifferentSizes )
 {
-    AutomationImageDifference difference;
-    string                    error;
-    SW_EXPECT_FALSE( AutomationImage::compare( Util::makeImage( 2, 2, 0 ), Util::makeImage( 3, 2, 0 ), difference, error ) );
-    SW_EXPECT_TRUE( error.find( "2x2" ) != string::npos );
-    SW_EXPECT_TRUE( error.find( "3x2" ) != string::npos );
-    error.clear();
-    SW_EXPECT_FALSE( AutomationImage::compare( Util::makeImage( 2, 2, 0 ), Util::makeImage( 2, 3, 0 ), difference, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    const expected<AutomationImageDifference> wider = AutomationImage::compare( Util::makeImage( 2, 2, 0 ), Util::makeImage( 3, 2, 0 ) );
+    SW_REQUIRE_FALSE( wider.has_value() );
+    SW_EXPECT_TRUE( wider.error().detail().find( "2x2" ) != string_view::npos );
+    SW_EXPECT_TRUE( wider.error().detail().find( "3x2" ) != string_view::npos );
+    const expected<AutomationImageDifference> taller = AutomationImage::compare( Util::makeImage( 2, 2, 0 ), Util::makeImage( 2, 3, 0 ) );
+    SW_REQUIRE_FALSE( taller.has_value() );
+    SW_EXPECT_TRUE( taller.error().detail().find( "2x3" ) != string_view::npos );
 }
 
 /** @brief [AutomationImageMetricTest] 같은 그림은 차이가 0 이고 빈 그림끼리도 0 이다(0 으로 나누지 않는다) */
 SW_TEST_CASE( AutomationImageMetricTest, CompareIdenticalImages )
 {
-    AutomationImageDifference difference;
-    difference._differingFraction = 1.0;
-    difference._meanDistance      = 1.0;
-    string error;
-    SW_REQUIRE_TRUE( AutomationImage::compare( Util::makeImage( 4, 4, 33 ), Util::makeImage( 4, 4, 33 ), difference, error ) );
-    SW_EXPECT_NEAR( 0.0, difference._differingFraction, 0.0 );
-    SW_EXPECT_NEAR( 0.0, difference._meanDistance, 0.0 );
+    const expected<AutomationImageDifference> same = AutomationImage::compare( Util::makeImage( 4, 4, 33 ), Util::makeImage( 4, 4, 33 ) );
+    SW_REQUIRE_TRUE( same.has_value() );
+    SW_EXPECT_NEAR( 0.0, same->_differingFraction, 0.0 );
+    SW_EXPECT_NEAR( 0.0, same->_meanDistance, 0.0 );
 
-    difference._differingFraction = 1.0;
-    SW_REQUIRE_TRUE( AutomationImage::compare( AutomationImage{}, AutomationImage{}, difference, error ) );
-    SW_EXPECT_NEAR( 0.0, difference._differingFraction, 0.0 );
+    const expected<AutomationImageDifference> empty = AutomationImage::compare( AutomationImage{}, AutomationImage{} );
+    SW_REQUIRE_TRUE( empty.has_value() );
+    SW_EXPECT_NEAR( 0.0, empty->_differingFraction, 0.0 );
 }
 
 /** @brief [AutomationImageMetricTest] "다른 화소" 의 경계 — 세 채널 차의 합이 하한 미만이면 세지 않고 하한부터 센다. 평균 거리는 모두 더한다 */
@@ -317,26 +297,26 @@ SW_TEST_CASE( AutomationImageMetricTest, CompareDifferingThreshold )
     const AutomationImage golden = Util::makeImage( 2, 1, 100 );
     const uint32          limit  = AutomationImage::kDifferingMinDistance;
 
-    AutomationImage below = golden;
-    below._listRGB[0]     = static_cast<uint8>( 100u + ( limit - 1u ) );
-    AutomationImageDifference difference;
-    string                    error;
-    SW_REQUIRE_TRUE( AutomationImage::compare( below, golden, difference, error ) );
-    SW_EXPECT_NEAR( 0.0, difference._differingFraction, 0.0 );
-    SW_EXPECT_NEAR( static_cast<float64>( limit - 1u ) / ( 2.0 * 765.0 ), difference._meanDistance, 0.0000001 );
+    AutomationImage below                                     = golden;
+    below._listRGB[0]                                         = static_cast<uint8>( 100u + ( limit - 1u ) );
+    const expected<AutomationImageDifference> belowDifference = AutomationImage::compare( below, golden );
+    SW_REQUIRE_TRUE( belowDifference.has_value() );
+    SW_EXPECT_NEAR( 0.0, belowDifference->_differingFraction, 0.0 );
+    SW_EXPECT_NEAR( static_cast<float64>( limit - 1u ) / ( 2.0 * 765.0 ), belowDifference->_meanDistance, 0.0000001 );
 
     // 채널 셋에 나눠도 합이 같으면 같고, 부호는 보지 않는다.
-    AutomationImage spread = golden;
-    spread._listRGB[3]     = static_cast<uint8>( 100u - 4u );
-    spread._listRGB[4]     = static_cast<uint8>( 100u + 4u );
-    spread._listRGB[5]     = static_cast<uint8>( 100u - ( limit - 8u ) );
-    SW_REQUIRE_TRUE( AutomationImage::compare( spread, golden, difference, error ) );
-    SW_EXPECT_NEAR( 0.5, difference._differingFraction, 0.0 );
-    SW_EXPECT_NEAR( static_cast<float64>( limit ) / ( 2.0 * 765.0 ), difference._meanDistance, 0.0000001 );
+    AutomationImage spread                                     = golden;
+    spread._listRGB[3]                                         = static_cast<uint8>( 100u - 4u );
+    spread._listRGB[4]                                         = static_cast<uint8>( 100u + 4u );
+    spread._listRGB[5]                                         = static_cast<uint8>( 100u - ( limit - 8u ) );
+    const expected<AutomationImageDifference> spreadDifference = AutomationImage::compare( spread, golden );
+    SW_REQUIRE_TRUE( spreadDifference.has_value() );
+    SW_EXPECT_NEAR( 0.5, spreadDifference->_differingFraction, 0.0 );
+    SW_EXPECT_NEAR( static_cast<float64>( limit ) / ( 2.0 * 765.0 ), spreadDifference->_meanDistance, 0.0000001 );
 
     // 가장 먼 값 — 평균 거리는 1 이다.
-    AutomationImageDifference farthest;
-    SW_REQUIRE_TRUE( AutomationImage::compare( Util::makeImage( 1, 1, 0 ), Util::makeImage( 1, 1, 255 ), farthest, error ) );
-    SW_EXPECT_NEAR( 1.0, farthest._differingFraction, 0.0 );
-    SW_EXPECT_NEAR( 1.0, farthest._meanDistance, 0.0 );
+    const expected<AutomationImageDifference> farthest = AutomationImage::compare( Util::makeImage( 1, 1, 0 ), Util::makeImage( 1, 1, 255 ) );
+    SW_REQUIRE_TRUE( farthest.has_value() );
+    SW_EXPECT_NEAR( 1.0, farthest->_differingFraction, 0.0 );
+    SW_EXPECT_NEAR( 1.0, farthest->_meanDistance, 0.0 );
 }

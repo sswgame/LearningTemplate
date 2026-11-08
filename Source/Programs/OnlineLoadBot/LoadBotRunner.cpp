@@ -47,16 +47,13 @@ namespace sw
         shutdown();
     }
 
-    bool LoadBotRunner::initialize( IStreamTransport* pTransport, const LoadBotScenario& scenario, const LoadBotRunnerSettings& settings, string& outError )
+    expected<void> LoadBotRunner::initialize( IStreamTransport* pTransport, const LoadBotScenario& scenario, const LoadBotRunnerSettings& settings )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         _scenario = scenario;
         _settings = settings;
         if ( _scenario._botCount <= 0 || _scenario._durationMs <= 0 || _scenario._rampUpMs < 0 )
-        {
-            outError = "the load (bots, ramp-up, duration) is not set - it comes from the <Load> declaration (--load)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the load (bots, ramp-up, duration) is not set - it comes from the <Load> declaration (--load)" } );
         StreamTransportConfig transportSettings;
         transportSettings._ioThreadCount  = 0;
         transportSettings._maxConnections = MathUtil::max( transportSettings._maxConnections, _scenario._botCount + LoadBotRunnerInternal::kSpareConnectionCount );
@@ -64,10 +61,7 @@ namespace sw
         endpointSettings._security._pTLSContext = settings._pTLSContext;
         const bool bTransportSetupFailed        = pTransport == nullptr || _endpoint.initialize( pTransport, endpointSettings ) == false || pTransport->initialize( &_endpoint, transportSettings ) == false;
         if ( bTransportSetupFailed )
-        {
-            outError = "load bot runner could not start its stream transport";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::ExternalFailure, "load bot runner could not start its stream transport" } );
         _pTransport = pTransport;
         _requestClient.initialize( &_endpoint );
         _listBot.reserve( static_cast<size_t>( _scenario._botCount ) );
@@ -76,7 +70,7 @@ namespace sw
             _listBot.push_back( make_unique<LoadBot>( this, botIndex ) );
         }
         _bInitialized = SW_TRUE;
-        return true;
+        return {};
     }
 
     void LoadBotRunner::shutdown()

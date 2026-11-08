@@ -139,7 +139,7 @@ namespace sw::editor
             _bDirty = SW_FALSE;
             return true;
         }
-        const std::optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.c_str() );
+        const optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.c_str() );
         if ( inputMapFile.has_value() == false || _inputMap.saveToAsset( *inputMapFile ) == false )
         {
             SW_LOG_WARNING_ID( "InputMapModel.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
@@ -169,8 +169,8 @@ namespace sw::editor
                 return false;
             if ( bHasDisk && onDisk.writeSourceText( sourceIndex, diskText ) && editedText == diskText )
                 continue;
-            const string&                     assetPath = _inputMap.getSourceAssetPath( sourceIndex );
-            const std::optional<AbsolutePath> filePath  = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath.c_str() );
+            const string&                assetPath = _inputMap.getSourceAssetPath( sourceIndex );
+            const optional<AbsolutePath> filePath  = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath.c_str() );
             if ( filePath.has_value() == false || _inputMap.saveSourceToAsset( sourceIndex, *filePath ) == false )
                 return false;
             SW_LOG_INFO_ID( "InputMapModel.SavedInputMap", "Saved InputMap to %#", assetPath.c_str() );
@@ -521,7 +521,7 @@ namespace sw::editor
 
     void InputMapModel::saveReplay() const
     {
-        const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( _replayFilePath.get() );
+        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( _replayFilePath.get() );
         if ( diskPath.has_value() == false || _replay.saveToFile( *diskPath ) == false )
             SW_LOG_ERROR_ID( "InputMapModel.CouldNotSaveInput", "Could not save input replay '%#'", _replayFilePath.c_str() );
     }
@@ -531,7 +531,7 @@ namespace sw::editor
         if ( input.getVirtualInput() == &_replay )
             input.detachVirtualInput();
         _replay.stopRecording(); // 녹화 중이면 읽은 프레임 뒤에 이어 적는다
-        const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() );
+        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() );
         if ( diskPath.has_value() == false )
             SW_LOG_ERROR_ID( "InputMapModel.CouldNotLoadInput", "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
         else if ( _replay.loadFromFile( diskPath->str() ) == false )

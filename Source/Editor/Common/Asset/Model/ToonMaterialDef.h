@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -87,17 +88,16 @@ namespace sw::editor
          * @brief VRM 0.x 의 `materialProperties[]` 원소 하나를 읽습니다. @p gltfMaterial 은 같은 번호의 glTF 머티리얼이며, 셰이더가 `VRM_USE_GLTFSHADER` 일 때 씁니다.
          * @details 0.x 의 색은 감마 공간(유니티 색)이므로 선형으로 바꾼다. 계단은 0.x 의 [ShadeShift, lerp(1, ShadeShift, ShadeToony)] 구간을 1.0 의
          *          (shadingShift, shadingToony) 로 옮겨 같은 경계가 되게 한다. 외곽선 두께는 월드에서는 cm 를 m 로, 화면에서는 NDC 의 1 % 단위를 화면 높이 비율(× 0.005)로 바꾼다.
-         * @return 모르는 키, 셰이더, 값이 있으면 false 이고 @p outError 에 이유를 씁니다.
+         * @return 읽은 정의. 모르는 키, 셰이더, 값이 있으면 그 이유(대상 앞에 어느 머티리얼인지)입니다.
          */
-        [[nodiscard]] static bool readVrm0Material( const JSONValue& materialProperty, const JSONValue& gltfMaterial, ToonMaterialDef& outDesc,
-                                                    vector<string>* pOutListIgnored, string& outError );
+        [[nodiscard]] static expected<ToonMaterialDef> readVrm0Material( const JSONValue& materialProperty, const JSONValue& gltfMaterial, vector<string>* pOutListIgnored );
 
         /**
          * @brief VRM 1.0 의 glTF 머티리얼 하나를 읽습니다. `extensions.VRMC_materials_mtoon` 이 있으면 MToon 으로, 없으면 glTF 기본 머티리얼을 평면 툰으로 읽습니다.
          * @details 1.0 의 값은 선형이고 이름이 엔진과 같으므로 그대로 옮긴다. `KHR_materials_emissive_strength` 를 받는다.
-         * @return 모르는 MToon 키나 값이 있으면 false 이고 @p outError 에 이유를 씁니다.
+         * @return 읽은 정의. 모르는 MToon 키나 값이 있으면 그 이유(대상 앞에 어느 머티리얼인지)입니다.
          */
-        [[nodiscard]] static bool readMtoon1Material( const JSONValue& gltfMaterial, ToonMaterialDef& outDesc, vector<string>* pOutListIgnored, string& outError );
+        [[nodiscard]] static expected<ToonMaterialDef> readMtoon1Material( const JSONValue& gltfMaterial, vector<string>* pOutListIgnored );
 
         /**
          * @brief 엔진 툰 머티리얼을 템플릿으로 @p desc 의 값을 넣은 `.material` 문자열을 만듭니다. 템플릿을 읽지 못하거나 템플릿에 쓸 프로퍼티가 없으면 빈 문자열입니다.

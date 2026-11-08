@@ -38,13 +38,12 @@ namespace sw
 
 namespace sw
 {
-    bool PropertyEditConditionExpr::parse( const TypeInfo& type, const PropertyInfo& prop, PropertyEditConditionExpr& outExpr, string& outError )
+    expected<PropertyEditConditionExpr> PropertyEditConditionExpr::parse( const TypeInfo& type, const PropertyInfo& prop )
     {
-        outExpr = PropertyEditConditionExpr{};
-        outError.clear();
-        string_view text = StringUtil::trim( prop._metadata->_editCondition );
+        PropertyEditConditionExpr expr;
+        string_view               text = StringUtil::trim( prop._metadata->_editCondition );
         if ( text.empty() )
-            return true;
+            return expr;
 
         string_view  subjectName = text;
         string_view  valueText;
@@ -53,8 +52,8 @@ namespace sw
         if ( equalPos != string_view::npos || notEqualPos != string_view::npos )
         {
             const size_t opPos = ( equalPos != string_view::npos ) ? equalPos : notEqualPos;
-            outExpr._bCompare  = true;
-            outExpr._bNegate   = ( opPos == notEqualPos );
+            expr._bCompare     = true;
+            expr._bNegate      = ( opPos == notEqualPos );
             subjectName        = StringUtil::trim( text.substr( 0, opPos ) );
             valueText          = StringUtil::trim( text.substr( opPos + 2 ) );
             // 열거자는 한정해 적어도 된다(`Mode::Orbit`) — 끝 이름으로 찾는다.
@@ -64,36 +63,33 @@ namespace sw
         }
         else if ( text.front() == '!' )
         {
-            outExpr._bNegate = SW_TRUE;
-            subjectName      = StringUtil::trim( text.substr( 1 ) );
+            expr._bNegate = SW_TRUE;
+            subjectName   = StringUtil::trim( text.substr( 1 ) );
         }
 
-        if ( subjectName.empty() || ( outExpr._bCompare && valueText.empty() ) )
+        if ( subjectName.empty() || ( expr._bCompare && valueText.empty() ) )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "malformed EditCondition (use name, !name, name == Value or name != Value)", text } );
+
+        expr._pSubject = type.findPropertyInHierarchy( hashed_string( subjectName.data(), static_cast<uint32>( subjectName.size() ) ) );
+        if ( expr._pSubject == nullptr )
         {
-            outError = "malformed EditCondition '" + string( text ) + "' (use name, !name, name == Value or name != Value)";
-            return false;
+            return unexpected(
+                Error{ ErrorKind::NotFound, "EditCondition names a property the type does not have", subjectName }.appendDetail( " in " ).appendDetail( type._fullyQualifiedName.c_str() ) );
         }
 
-        outExpr._pSubject = type.findPropertyInHierarchy( hashed_string( subjectName.data(), static_cast<uint32>( subjectName.size() ) ) );
-        if ( outExpr._pSubject == nullptr )
+        expr._pEnum = editor::getSubsystem<TypeRegistry>().findEnum( expr._pSubject->_typeName );
+        if ( expr._bCompare )
         {
-            outError = "EditCondition names '" + string( subjectName ) + "', which is not a property of " + type._fullyQualifiedName.c_str();
-            return false;
-        }
-
-        outExpr._pEnum = editor::getSubsystem<TypeRegistry>().findEnum( outExpr._pSubject->_typeName );
-        if ( outExpr._bCompare )
-        {
-            const bool bParsed = ( outExpr._pEnum != nullptr ) ? outExpr._pEnum->tryParseText( valueText, outExpr._compareValue )
-                                                               : StringUtil::parseInt64( valueText, outExpr._compareValue );
+            const bool bParsed = ( expr._pEnum != nullptr ) ? expr._pEnum->tryParseText( valueText, expr._compareValue )
+                                                            : StringUtil::parseInt64( valueText, expr._compareValue );
             if ( bParsed == false )
             {
-                outError          = "EditCondition value '" + string( valueText ) + "' is not a value of " + outExpr._pSubject->_typeName.c_str();
-                outExpr._pSubject = nullptr;
-                return false;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the EditCondition value is not a value of the property's type", valueText }
+                                       .appendDetail( " for " )
+                                       .appendDetail( expr._pSubject->_typeName.c_str() ) );
             }
         }
-        return true;
+        return expr;
     }
 
     bool PropertyEditConditionExpr::evaluate( const PropertyEditConditionExpr& expr, const ObjectAddress instance )
@@ -111,9 +107,8 @@ namespace sw
     {
         if ( prop._metadata->_editCondition.empty() )
             return PropertyEditState::Enabled;
-        PropertyEditConditionExpr expr;
-        string                    error;
-        if ( parse( type, prop, expr, error ) == false || evaluate( expr, instance ) )
+        const expected<PropertyEditConditionExpr> expr = parse( type, prop );
+        if ( expr.has_value() == false || evaluate( *expr, instance ) )
             return PropertyEditState::Enabled;
         return prop._metadata->_bEditConditionHides == SW_TRUE ? PropertyEditState::Hidden : PropertyEditState::Disabled;
     }

@@ -25,8 +25,7 @@ namespace sw
             if ( step._kind != "ExpectLog" )
                 continue;
             AutomationExpectLogParams params;
-            string                    readError;
-            const bool                bAbsent = step.readFields( params, readError ) && params._count == 0;
+            const bool                bAbsent = step.readFields( params ).has_value() && params._count == 0;
             if ( bAbsent )
                 continue;                                   // count="0" 은 단언이지 선언이 아니다
             const string& id = *step.findAttribute( "id" ); // 검사 함수가 id 를 요구했다

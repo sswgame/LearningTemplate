@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -35,6 +36,6 @@ namespace sw
         /** @brief 명령줄 철자(`dx11`, `dx12`, `vulkan`, `opengl`)와 열거자 이름을 대소문자 없이 받습니다. */
         [[nodiscard]] static bool tryParseBackend( string_view text, RHIBackend& outBackend );
         /** @brief `backend` 하나만 받고, 백엔드 이름 또는 `other` · `start` 여야 합니다. */
-        static bool validateSwapBackend( const AutomationStep& step, string& outError );
+        [[nodiscard]] static expected<void> validateSwapBackend( const AutomationStep& step );
     };
 } // namespace sw

@@ -90,7 +90,7 @@ namespace sw
         float3       position  = pMesh->getLocalPosition();
         const float3 direction = pAbilitySystem->getOwnedTagCounts().hasMatchingTag( "State.Dashing"_tag ) ? _facing : move;
         // 이동 속도 어트리뷰트가 없는 유닛은 움직이지 않는다(0 을 지어내지 않고 그 뜻을 여기서 정한다).
-        const std::optional<float32> speed = pAbilitySystem->getAttributeValue( CombatAttributes::moveSpeed() );
+        const optional<float32> speed = pAbilitySystem->getAttributeValue( CombatAttributes::moveSpeed() );
         // 속박 · 기절 · 둔화 배율은 공용 이동기와 같은 계약으로 읽는다(`MovementConstraint`).
         const MovementConstraint constraint = MovementConstraint::read( *pOwner );
         if ( direction.getLengthSquared() > 0.0f && speed.has_value() && constraint._bMoveBlocked == SW_FALSE )

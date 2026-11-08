@@ -64,7 +64,7 @@ namespace sw::editor
                     const size_t    childCount = children.isArray() ? children.size() : 0;
                     for ( size_t childSlot = 0; childSlot < childCount; ++childSlot )
                     {
-                        const std::optional<uint64> childIndex = children.at( childSlot ).read<uint64>();
+                        const optional<uint64> childIndex = children.at( childSlot ).read<uint64>();
                         if ( childIndex.has_value() == false )
                             return false;
                         if ( *childIndex < nodeCount )
@@ -90,7 +90,7 @@ namespace sw::editor
                     bool           bPromoted = false;
                     for ( size_t slot = 0; slot < sceneNodes.size(); ++slot )
                     {
-                        const std::optional<uint64> listedSlot = sceneNodes.at( slot ).read<uint64>();
+                        const optional<uint64> listedSlot = sceneNodes.at( slot ).read<uint64>();
                         if ( listedSlot.has_value() == false )
                             return false;
                         const uint64 listedIndex = *listedSlot;

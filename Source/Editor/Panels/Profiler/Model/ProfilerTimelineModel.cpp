@@ -162,13 +162,14 @@ namespace sw::editor
 
     bool ProfilerTimelineModel::loadTraceFile( string_view path )
     {
-        string error;
-        if ( ProfilerTraceExport::loadTraceFile( path, _loadedTrace, error ) == false )
+        expected<ProfilerLoadedTrace> loaded = ProfilerTraceExport::loadTraceFile( path );
+        if ( loaded.has_value() == false )
         {
-            _traceStatus = "Load failed: " + error;
-            SW_LOG_WARNING_ID( "ProfilerTimelineModel.TraceNotLoaded", "Trace not loaded: %#", error );
+            _traceStatus = "Load failed: " + string( loaded.error().message() ) + ": " + string( loaded.error().detail() );
+            SW_LOG_WARNING_ID( "ProfilerTimelineModel.TraceNotLoaded", "Trace not loaded: %#", _traceStatus );
             return false;
         }
+        _loadedTrace     = std::move( *loaded );
         _bLoadedTrace    = SW_TRUE;
         _bTimelineZoomed = SW_FALSE;
         StringBuilder<constant::buffer::kMax256> traceStatusBuilder;

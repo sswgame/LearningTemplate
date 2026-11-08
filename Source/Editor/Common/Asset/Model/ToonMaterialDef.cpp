@@ -160,19 +160,16 @@ namespace sw::editor
                     pOutListIgnored->push_back( name );
             }
 
-            /** @brief 객체의 키를 테이블과 대조합니다. 모르는 키가 있으면 그 이름을 @p outError 에 쓰고 false 를 반환합니다. */
+            /** @brief 객체의 키를 테이블과 대조합니다. 모르는 키가 있으면 그 이름이 대상인 오류입니다. */
             template <size_t Count>
-            [[nodiscard]] static bool checkKeys( const JSONValue& object, const string_view ( &arrKnown )[Count], string_view context, string& outError )
+            [[nodiscard]] static expected<void> checkKeys( const JSONValue& object, const string_view ( &arrKnown )[Count] )
             {
                 for ( const string& key : object.getMemberNames() )
                 {
                     if ( VectorUtil::contains( arrKnown, key ) == false )
-                    {
-                        outError = string( context ) + ": unknown key '" + key + "'";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "unknown key", key } );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 숫자 @p count 개의 배열을 읽습니다. 모자란 원소는 그대로 둡니다. 배열이 아니거나 숫자가 아니면 false 입니다. */
@@ -185,7 +182,7 @@ namespace sw::editor
                     const JSONValue element = value.at( index );
                     if ( element.isNumber() == false )
                         return false;
-                    const std::optional<float32> number = element.read<float32>();
+                    const optional<float32> number = element.read<float32>();
                     if ( number.has_value() == false )
                         return false;
                     pOutValue[index] = *number;
@@ -193,20 +190,17 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 없어도 되는 숫자 @p key 를 읽습니다. 없으면 @p inoutValue 를 그대로 두고(정의의 초기값), 숫자가 아니면 이유와 false 입니다. */
-            [[nodiscard]] static bool readFloat( const JSONValue& object, string_view key, float32& inoutValue, string& outError )
+            /** @brief 없어도 되는 숫자 @p key 를 읽습니다. 없으면 @p inoutValue 를 그대로 두고(정의의 초기값), 숫자가 아니면 그 키와 값이 대상인 오류입니다. */
+            [[nodiscard]] static expected<void> readFloat( const JSONValue& object, string_view key, float32& inoutValue )
             {
                 const JSONValue value = object.get( key );
                 if ( value.isValid() == false || value.isNull() )
-                    return true;
-                const std::optional<float32> number = value.read<float32>();
+                    return {};
+                const optional<float32> number = value.read<float32>();
                 if ( number.has_value() == false )
-                {
-                    outError = string( key ) + " " + value.dump() + " is not a number";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "is not a number", key }.appendDetail( " " ).appendDetail( value.dump() ) );
                 inoutValue = *number;
-                return true;
+                return {};
             }
 
             /** @brief 색(원소 3개 또는 4개)을 읽습니다. 3개이면 알파는 1 입니다. */
@@ -229,18 +223,15 @@ namespace sw::editor
             /**
              * @brief glTF textureInfo 의 텍스처 번호를 @p inoutTexture 에 읽습니다. textureInfo 가 없으면 그대로 둡니다(-1, 텍스처 없음).
              *        지원하지 않는 텍스처 확장(KHR_texture_transform)이나 0 이 아닌 texCoord 는 무시 목록에 남깁니다.
-             * @return index 가 0 이상의 정수가 아니거나 texCoord 가 정수가 아니면 이유와 false 입니다.
+             * @return index 가 0 이상의 정수가 아니거나 texCoord 가 정수가 아니면 그 칸이 대상인 오류입니다.
              */
-            [[nodiscard]] static bool readTextureIndex( const JSONValue& textureInfo, string_view what, int32& inoutTexture, vector<string>* pOutListIgnored, string& outError )
+            [[nodiscard]] static expected<void> readTextureIndex( const JSONValue& textureInfo, string_view what, int32& inoutTexture, vector<string>* pOutListIgnored )
             {
                 if ( textureInfo.isObject() == false )
-                    return true;
-                const std::optional<int32> index = textureInfo.get( "index" ).read<int32>();
+                    return {};
+                const optional<int32> index = textureInfo.get( "index" ).read<int32>();
                 if ( index.has_value() == false || *index < 0 )
-                {
-                    outError = string( what ) + ".index " + textureInfo.get( "index" ).dump() + " is not a texture number";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the texture index is not a texture number", what }.appendDetail( ".index " ).appendDetail( textureInfo.get( "index" ).dump() ) );
                 const JSONValue extensions = textureInfo.get( "extensions" );
                 if ( extensions.isObject() )
                 {
@@ -252,37 +243,32 @@ namespace sw::editor
                 const JSONValue texCoord = textureInfo.get( "texCoord" );
                 if ( texCoord.isValid() )
                 {
-                    const std::optional<int32> texCoordIndex = texCoord.read<int32>();
+                    const optional<int32> texCoordIndex = texCoord.read<int32>();
                     if ( texCoordIndex.has_value() == false )
-                    {
-                        outError = string( what ) + ".texCoord " + texCoord.dump() + " is not a number";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "the texCoord is not a number", what }.appendDetail( ".texCoord " ).appendDetail( texCoord.dump() ) );
                     if ( *texCoordIndex != 0 )
                         appendIgnored( pOutListIgnored, "texCoord" );
                 }
                 inoutTexture = *index;
-                return true;
+                return {};
             }
 
             /**
              * @brief glTF 기본 머티리얼(baseColor, alphaMode, alphaCutoff, doubleSided, emissive)을 읽습니다. 1.0 의 MToon 과 0.x 의 평면 셰이더가 함께 씁니다.
-             * @return alphaMode 를 모르면 false 입니다.
+             * @return alphaMode 를 모르거나 칸의 형식이 틀리면 그 이유입니다.
              */
-            [[nodiscard]] static bool readGltfBase( const JSONValue& gltfMaterial, ToonMaterialDef& inoutDesc, vector<string>* pOutListIgnored, string& outError )
+            [[nodiscard]] static expected<void> readGltfBase( const JSONValue& gltfMaterial, ToonMaterialDef& inoutDesc, vector<string>* pOutListIgnored )
             {
                 if ( gltfMaterial.isObject() == false )
-                    return true;
+                    return {};
                 const JSONValue pbr = gltfMaterial.get( "pbrMetallicRoughness" );
                 if ( pbr.isObject() )
                 {
                     if ( pbr.has( "baseColorFactor" ) && readColor( pbr.get( "baseColorFactor" ), inoutDesc._baseColor ) == false )
-                    {
-                        outError = "baseColorFactor is not a color";
-                        return false;
-                    }
-                    if ( readTextureIndex( pbr.get( "baseColorTexture" ), "baseColorTexture", inoutDesc._baseColorTexture, pOutListIgnored, outError ) == false )
-                        return false;
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "baseColorFactor is not a color" } );
+                    const expected<void> baseTexture = readTextureIndex( pbr.get( "baseColorTexture" ), "baseColorTexture", inoutDesc._baseColorTexture, pOutListIgnored );
+                    if ( baseTexture.has_value() == false )
+                        return baseTexture;
                 }
                 const string alphaMode = gltfMaterial.has( "alphaMode" ) ? gltfMaterial.get( "alphaMode" ).asString() : string( "OPAQUE" );
                 if ( alphaMode == "OPAQUE" )
@@ -292,36 +278,28 @@ namespace sw::editor
                 else if ( alphaMode == "BLEND" )
                     inoutDesc._alphaMode = ToonAlphaMode::Transparent;
                 else
-                {
-                    outError = "unknown alphaMode '" + alphaMode + "'";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown alphaMode", alphaMode } );
                 // 적지 않은 칸은 `ToonMaterialDef` 의 초기값(glTF 명세의 기본값)이다.
-                bool bTwoSided = inoutDesc._bTwoSided != SW_FALSE;
-                if ( readFloat( gltfMaterial, "alphaCutoff", inoutDesc._alphaCutoff, outError ) == false )
-                    return false;
+                bool                 bTwoSided = inoutDesc._bTwoSided != SW_FALSE;
+                const expected<void> cutoff    = readFloat( gltfMaterial, "alphaCutoff", inoutDesc._alphaCutoff );
+                if ( cutoff.has_value() == false )
+                    return cutoff;
                 if ( gltfMaterial.readOptionalInto( "doubleSided", bTwoSided ) == false )
-                {
-                    outError = "doubleSided is not a boolean";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "doubleSided is not a boolean" } );
                 inoutDesc._bTwoSided = bTwoSided ? SW_TRUE : SW_FALSE;
                 if ( gltfMaterial.has( "emissiveFactor" ) && readColor( gltfMaterial.get( "emissiveFactor" ), inoutDesc._emissiveColor ) == false )
-                {
-                    outError = "emissiveFactor is not a color";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "emissiveFactor is not a color" } );
                 // 노멀 맵(glTF normalTextureInfo) — 배율은 xy 에 곱한다(셰이더 applyNormalMap).
                 const JSONValue normalTexture = gltfMaterial.get( "normalTexture" );
-                const bool      bTexturesRead = readTextureIndex( gltfMaterial.get( "emissiveTexture" ), "emissiveTexture", inoutDesc._emissiveTexture, pOutListIgnored, outError ) &&
-                                           readTextureIndex( normalTexture, "normalTexture", inoutDesc._normalTexture, pOutListIgnored, outError );
-                if ( bTexturesRead == false )
-                    return false;
-                if ( normalTexture.isObject() && readFloat( normalTexture, "scale", inoutDesc._normalScale, outError ) == false )
-                    return false;
-                const JSONValue extensions = gltfMaterial.get( "extensions" );
-                const JSONValue strength   = extensions.isObject() ? extensions.get( "KHR_materials_emissive_strength" ) : JSONValue{};
-                return strength.isObject() == false || readFloat( strength, "emissiveStrength", inoutDesc._emissiveStrength, outError );
+                const JSONValue extensions    = gltfMaterial.get( "extensions" );
+                const JSONValue strength      = extensions.isObject() ? extensions.get( "KHR_materials_emissive_strength" ) : JSONValue{};
+                return readTextureIndex( gltfMaterial.get( "emissiveTexture" ), "emissiveTexture", inoutDesc._emissiveTexture, pOutListIgnored )
+                    .and_then( [&]()
+                { return readTextureIndex( normalTexture, "normalTexture", inoutDesc._normalTexture, pOutListIgnored ); } )
+                    .and_then( [&]()
+                { return normalTexture.isObject() ? readFloat( normalTexture, "scale", inoutDesc._normalScale ) : expected<void>{}; } )
+                    .and_then( [&]()
+                { return strength.isObject() ? readFloat( strength, "emissiveStrength", inoutDesc._emissiveStrength ) : expected<void>{}; } );
             }
 
             /** @brief 그림자 없이 기본색 하나로 칠하는 평면 툰입니다. 언릿과 glTF 셰이더가 해당합니다. */
@@ -340,8 +318,7 @@ namespace sw::editor
             static constexpr size_t kVrm0ColorCount = sizeof( kArrVrm0Color ) / sizeof( kArrVrm0Color[0] );
 
             /** @brief VRM 0.x `floatProperties` 를 표(`kArrVrm0Float`) 순서로 @p outFloat 에 읽습니다. 적지 않은 키는 표의 기본값이다. 무시하는 키는 중립값에서 벗어났을 때만 알립니다. */
-            [[nodiscard]] static bool readVrm0Floats( const JSONValue& materialProperty, const string& context, vector<string>* pOutListIgnored, float32 ( &outFloat )[Vrm0FloatCount],
-                                                      string& outError )
+            [[nodiscard]] static expected<void> readVrm0Floats( const JSONValue& materialProperty, vector<string>* pOutListIgnored, float32 ( &outFloat )[Vrm0FloatCount] )
             {
                 const JSONValue floats = materialProperty.get( "floatProperties" );
                 for ( uint32 index = 0; index < Vrm0FloatCount; ++index )
@@ -350,12 +327,9 @@ namespace sw::editor
                 }
                 for ( const string& key : floats.isObject() ? floats.getMemberNames() : vector<string>{} )
                 {
-                    const std::optional<float32> number = floats.get( key ).read<float32>();
+                    const optional<float32> number = floats.get( key ).read<float32>();
                     if ( number.has_value() == false )
-                    {
-                        outError = context + ": float property '" + key + "' is not a number";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "the float property is not a number", key } );
                     bool bKnown = false;
                     for ( uint32 index = 0; index < Vrm0FloatCount; ++index )
                     {
@@ -368,19 +342,15 @@ namespace sw::editor
                         continue;
                     const IgnoredFloat* pIgnored = findIgnoredFloat( key );
                     if ( pIgnored == nullptr )
-                    {
-                        outError = context + ": unknown float property '" + key + "'";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "unknown float property", key } );
                     if ( pIgnored->_bAlwaysSilent == false && MathUtil::abs( *number - pIgnored->_neutral ) > 1e-4f )
                         appendIgnored( pOutListIgnored, key );
                 }
-                return true;
+                return {};
             }
 
             /** @brief VRM 0.x `vectorProperties` 의 색을 선형으로 바꿔 표(`kArrVrm0Color`) 순서로 @p outColor 에 읽고, 텍스처 타일링은 항등이 아니면 무시 목록에 올립니다. */
-            [[nodiscard]] static bool readVrm0Colors( const JSONValue& materialProperty, const string& context, vector<string>* pOutListIgnored, float4 ( &outColor )[kVrm0ColorCount],
-                                                      string& outError )
+            [[nodiscard]] static expected<void> readVrm0Colors( const JSONValue& materialProperty, vector<string>* pOutListIgnored, float4 ( &outColor )[kVrm0ColorCount] )
             {
                 const JSONValue vectors = materialProperty.get( "vectorProperties" );
                 outColor[0]             = float4{ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -398,37 +368,27 @@ namespace sw::editor
                             continue;
                         float4 color{};
                         if ( readColor( value, color ) == false )
-                        {
-                            outError = context + ": vector property '" + key + "' is not a color";
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::InvalidArgument, "the vector property is not a color", key } );
                         outColor[index] = convertColorToLinear( color );
                         bKnown          = true;
                     }
                     if ( bKnown )
                         continue;
                     if ( VectorUtil::contains( kArrVrm0Texture, key ) == false && VectorUtil::contains( kArrVrm0IgnoredTexture, key ) == false )
-                    {
-                        outError = context + ": unknown vector property '" + key + "'";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "unknown vector property", key } );
                     // 텍스처 타일링 [x, y, 크기 x, 크기 y] 는 항상 [0, 0, 1, 1] 이어야 한다. 다르면 지원하지 않는 타일링이다.
                     float32 arrTiling[4]{ 0.0f, 0.0f, 1.0f, 1.0f };
                     if ( readNumbers( value, arrTiling, 4 ) == false )
-                    {
-                        outError = context + ": texture tiling '" + key + "' is not four numbers";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "the texture tiling is not four numbers", key } );
                     const bool bIdentity = arrTiling[0] == 0.0f && arrTiling[1] == 0.0f && arrTiling[2] == 1.0f && arrTiling[3] == 1.0f;
                     if ( bIdentity == false )
                         appendIgnored( pOutListIgnored, key + string( " tiling" ) );
                 }
-                return true;
+                return {};
             }
 
             /** @brief VRM 0.x `textureProperties` 를 표(`kArrVrm0Texture`) 순서로 glTF 텍스처 번호로 읽습니다. 적지 않은 키는 -1 입니다. */
-            [[nodiscard]] static bool readVrm0Textures( const JSONValue& materialProperty, const string& context, vector<string>* pOutListIgnored, int32 ( &outTexture )[kVrm0TextureCount],
-                                                        string& outError )
+            [[nodiscard]] static expected<void> readVrm0Textures( const JSONValue& materialProperty, vector<string>* pOutListIgnored, int32 ( &outTexture )[kVrm0TextureCount] )
             {
                 const JSONValue textures = materialProperty.get( "textureProperties" );
                 for ( size_t index = 0; index < kVrm0TextureCount; ++index )
@@ -437,12 +397,9 @@ namespace sw::editor
                 }
                 for ( const string& key : textures.isObject() ? textures.getMemberNames() : vector<string>{} )
                 {
-                    const std::optional<int32> textureIndex = textures.get( key ).read<int32>();
+                    const optional<int32> textureIndex = textures.get( key ).read<int32>();
                     if ( textureIndex.has_value() == false )
-                    {
-                        outError = context + ": texture property '" + key + "' is not a texture index";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "the texture property is not a texture index", key } );
                     bool bKnown = false;
                     for ( size_t index = 0; index < kVrm0TextureCount; ++index )
                     {
@@ -454,17 +411,14 @@ namespace sw::editor
                     if ( bKnown )
                         continue;
                     if ( VectorUtil::contains( kArrVrm0IgnoredTexture, key ) == false )
-                    {
-                        outError = context + ": unknown texture property '" + key + "'";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "unknown texture property", key } );
                     appendIgnored( pOutListIgnored, key );
                 }
-                return true;
+                return {};
             }
 
-            /** @brief 블렌드 모드와 컬 모드를 알파 모드 · 양면으로 옮깁니다. 지원하지 않는 값이면 false 입니다. */
-            [[nodiscard]] static bool applyVrm0BlendAndCull( const float32 ( &arrFloat )[Vrm0FloatCount], const string& context, ToonMaterialDef& inoutDesc, string& outError )
+            /** @brief 블렌드 모드와 컬 모드를 알파 모드 · 양면으로 옮깁니다. 지원하지 않는 값이면 그 값이 대상인 오류입니다. */
+            [[nodiscard]] static expected<void> applyVrm0BlendAndCull( const float32 ( &arrFloat )[Vrm0FloatCount], ToonMaterialDef& inoutDesc )
             {
                 const int32 blendMode = static_cast<int32>( arrFloat[Vrm0BlendMode] + 0.5f );
                 if ( blendMode == 0 )
@@ -474,27 +428,17 @@ namespace sw::editor
                 else if ( blendMode == 2 || blendMode == 3 ) // 3 은 깊이를 쓰는 반투명이다. 엔진의 반투명 패스는 깊이를 쓰지 않는다
                     inoutDesc._alphaMode = ToonAlphaMode::Transparent;
                 else
-                {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "%#: unknown _BlendMode %#", context, static_cast<int64>( blendMode ) );
-                    outError = string( errorBuilder.view() );
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::Unsupported, "unknown _BlendMode", to_string( blendMode ) } );
                 inoutDesc._alphaCutoff = arrFloat[Vrm0Cutoff];
                 const int32 cullMode   = static_cast<int32>( arrFloat[Vrm0CullMode] + 0.5f );
                 if ( cullMode != 0 && cullMode != 2 )
-                {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "%#: unsupported _CullMode %# (only Off = 0 and Back = 2)", context, static_cast<int64>( cullMode ) );
-                    outError = string( errorBuilder.view() );
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::Unsupported, "unsupported _CullMode (only Off = 0 and Back = 2)", to_string( cullMode ) } );
                 inoutDesc._bTwoSided = ( cullMode == 0 ) ? SW_TRUE : SW_FALSE;
-                return true;
+                return {};
             }
 
-            /** @brief 외곽선 모드 · 두께 · 최대 거리 · 빛 섞기를 옮깁니다. 지원하지 않는 모드면 false 입니다. */
-            [[nodiscard]] static bool applyVrm0Outline( const float32 ( &arrFloat )[Vrm0FloatCount], const string& context, ToonMaterialDef& inoutDesc, string& outError )
+            /** @brief 외곽선 모드 · 두께 · 최대 거리 · 빛 섞기를 옮깁니다. 지원하지 않는 모드면 그 값이 대상인 오류입니다. */
+            [[nodiscard]] static expected<void> applyVrm0Outline( const float32 ( &arrFloat )[Vrm0FloatCount], ToonMaterialDef& inoutDesc )
             {
                 // 외곽선에서 0.x 의 월드 두께는 cm 단위이고, 화면 두께는 NDC 의 1 % 단위이다(NDC 높이 2 가 화면 높이). 그래서 화면 높이 비율은 × 0.005 다.
                 const int32   outlineMode  = static_cast<int32>( arrFloat[Vrm0OutlineWidthMode] + 0.5f );
@@ -506,23 +450,18 @@ namespace sw::editor
                 else if ( outlineMode == 2 )
                     inoutDesc._outlineMode = ToonOutlineMode::Screen;
                 else
-                {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "%#: unknown _OutlineWidthMode %#", context, static_cast<int64>( outlineMode ) );
-                    outError = string( errorBuilder.view() );
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::Unsupported, "unknown _OutlineWidthMode", to_string( outlineMode ) } );
                 inoutDesc._outlineWidth         = outlineWidth * ( inoutDesc._outlineMode == ToonOutlineMode::Screen ? 0.005f : 0.01f );
                 const float32 scaledMaxDistance = arrFloat[Vrm0OutlineScaledMaxDistance];
                 inoutDesc._outlineMaxDistance   = scaledMaxDistance > 0.0f && inoutDesc._outlineMode == ToonOutlineMode::Screen ? scaledMaxDistance : kUnlimitedOutlineDistance;
                 // _OutlineColorMode 가 0 이면 고정 색이고 빛을 섞지 않는다. 1 이면 섞는다.
                 inoutDesc._outlineLightingMix = static_cast<int32>( arrFloat[Vrm0OutlineColorMode] + 0.5f ) == 0 ? 0.0f : arrFloat[Vrm0OutlineLightingMix];
-                return true;
+                return {};
             }
 
             /** @brief 읽은 색 · 텍스처 · 실수를 `ToonMaterialDef` 에 옮깁니다 — 색 · 텍스처 칸, UV 애니메이션, 블렌드 · 컬, 음영 계단, 림, 외곽선. */
-            [[nodiscard]] static bool applyVrm0Mtoon( const float4 ( &arrColor )[kVrm0ColorCount], const int32 ( &arrTexture )[kVrm0TextureCount], const float32 ( &arrFloat )[Vrm0FloatCount],
-                                                      const string& context, ToonMaterialDef& inoutDesc, string& outError )
+            [[nodiscard]] static expected<void> applyVrm0Mtoon( const float4 ( &arrColor )[kVrm0ColorCount], const int32 ( &arrTexture )[kVrm0TextureCount], const float32 ( &arrFloat )[Vrm0FloatCount],
+                                                                ToonMaterialDef& inoutDesc )
             {
                 inoutDesc._baseColor              = arrColor[0];
                 inoutDesc._shadeColor             = arrColor[1];
@@ -544,8 +483,9 @@ namespace sw::editor
                 inoutDesc._uvAnimationScrollYSpeed  = -arrFloat[Vrm0UVAnimScrollY];
                 inoutDesc._uvAnimationRotationSpeed = arrFloat[Vrm0UVAnimRotation] * MathUtil::kTwoPi;
 
-                if ( applyVrm0BlendAndCull( arrFloat, context, inoutDesc, outError ) == false )
-                    return false;
+                const expected<void> blend = applyVrm0BlendAndCull( arrFloat, inoutDesc );
+                if ( blend.has_value() == false )
+                    return blend;
 
                 // 계단은 0.x 에서 [shift, lerp( 1, shift, toony )] 를 [0, 1] 로 편다(N·L 기준). 1.0 은 [-1 + toony, 1 - toony] 를 N·L + shift 에 적용한다.
                 // 같은 경계가 되도록 1.0 의 shift 는 -(아래 + 위) / 2, toony 는 1 - (위 - 아래) / 2 로 정한다.
@@ -562,7 +502,14 @@ namespace sw::editor
                 inoutDesc._rimLightingMix  = arrFloat[Vrm0RimLightingMix];
                 inoutDesc._matcapColor     = float4{ 1.0f, 1.0f, 1.0f, 1.0f };
 
-                return applyVrm0Outline( arrFloat, context, inoutDesc, outError );
+                return applyVrm0Outline( arrFloat, inoutDesc );
+            }
+
+            /** @brief 안쪽 오류의 대상 앞에 어느 머티리얼인지(@p context)를 붙입니다. */
+            [[nodiscard]] static Error withContext( Error error, string_view context )
+            {
+                error.prependDetail( ": " ).prependDetail( context );
+                return error;
             }
         };
     } // namespace
@@ -578,128 +525,127 @@ namespace sw::editor
         return MathUtil::pow( ( value + 0.055f ) / 1.055f, 2.4f );
     }
 
-    bool ToonMaterialDef::readVrm0Material( const JSONValue& materialProperty, const JSONValue& gltfMaterial, ToonMaterialDef& outDesc,
-                                            vector<string>* pOutListIgnored, string& outError )
+    expected<ToonMaterialDef> ToonMaterialDef::readVrm0Material( const JSONValue& materialProperty, const JSONValue& gltfMaterial, vector<string>* pOutListIgnored )
     {
         using Internal = VrmMaterialImporterInternal;
-        outDesc        = ToonMaterialDef{};
         if ( materialProperty.isObject() == false )
-        {
-            outError = "materialProperties element is not an object";
-            return false;
-        }
-        outDesc._name        = materialProperty.get( "name" ).asString();
-        const string context = "VRM 0.x material '" + outDesc._name + "'";
-        const string shader  = materialProperty.get( "shader" ).asString();
-        if ( Internal::checkKeys( materialProperty, Internal::kArrVrm0RootKey, context, outError ) == false )
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "materialProperties element is not an object" } );
+        ToonMaterialDef desc;
+        desc._name                   = materialProperty.get( "name" ).asString();
+        const string         context = "VRM 0.x material '" + desc._name + "'";
+        const string         shader  = materialProperty.get( "shader" ).asString();
+        const expected<void> keys    = Internal::checkKeys( materialProperty, Internal::kArrVrm0RootKey );
+        if ( keys.has_value() == false )
+            return unexpected( Internal::withContext( keys.error(), context ) );
 
         // MToon 이 아닌 셰이더(언릿, glTF 셰이더)는 glTF 머티리얼을 평면 툰으로 옮긴다.
         if ( VectorUtil::contains( Internal::kArrVrm0FlatShader, shader ) )
         {
-            if ( Internal::readGltfBase( gltfMaterial, outDesc, pOutListIgnored, outError ) == false )
-            {
-                outError = context + ": " + outError;
-                return false;
-            }
-            Internal::makeFlat( outDesc );
-            return true;
+            const expected<void> base = Internal::readGltfBase( gltfMaterial, desc, pOutListIgnored );
+            if ( base.has_value() == false )
+                return unexpected( Internal::withContext( base.error(), context ) );
+            Internal::makeFlat( desc );
+            return desc;
         }
         if ( shader != "VRM/MToon" )
-        {
-            outError = context + ": unsupported shader '" + shader + "'";
-            return false;
-        }
+            return unexpected( Internal::withContext( Error{ ErrorKind::Unsupported, "unsupported shader", shader }, context ) );
 
-        float32    arrFloat[Internal::Vrm0FloatCount]{};
-        float4     arrColor[Internal::kVrm0ColorCount]{};
-        int32      arrTexture[Internal::kVrm0TextureCount]{};
-        const bool bRead = Internal::readVrm0Floats( materialProperty, context, pOutListIgnored, arrFloat, outError ) &&
-                           Internal::readVrm0Colors( materialProperty, context, pOutListIgnored, arrColor, outError ) &&
-                           Internal::readVrm0Textures( materialProperty, context, pOutListIgnored, arrTexture, outError );
-        if ( bRead == false )
-            return false;
-        return Internal::applyVrm0Mtoon( arrColor, arrTexture, arrFloat, context, outDesc, outError );
+        float32              arrFloat[Internal::Vrm0FloatCount]{};
+        float4               arrColor[Internal::kVrm0ColorCount]{};
+        int32                arrTexture[Internal::kVrm0TextureCount]{};
+        const expected<void> read = Internal::readVrm0Floats( materialProperty, pOutListIgnored, arrFloat )
+                                        .and_then( [&]()
+        { return Internal::readVrm0Colors( materialProperty, pOutListIgnored, arrColor ); } )
+                                        .and_then( [&]()
+        { return Internal::readVrm0Textures( materialProperty, pOutListIgnored, arrTexture ); } )
+                                        .and_then( [&]()
+        { return Internal::applyVrm0Mtoon( arrColor, arrTexture, arrFloat, desc ); } );
+        if ( read.has_value() == false )
+            return unexpected( Internal::withContext( read.error(), context ) );
+        return desc;
     }
 
-    bool ToonMaterialDef::readMtoon1Material( const JSONValue& gltfMaterial, ToonMaterialDef& outDesc, vector<string>* pOutListIgnored, string& outError )
+    expected<ToonMaterialDef> ToonMaterialDef::readMtoon1Material( const JSONValue& gltfMaterial, vector<string>* pOutListIgnored )
     {
-        using Internal       = VrmMaterialImporterInternal;
-        outDesc              = ToonMaterialDef{};
-        outDesc._name        = gltfMaterial.get( "name" ).asString();
-        const string context = "VRM 1.0 material '" + outDesc._name + "'";
-        if ( Internal::readGltfBase( gltfMaterial, outDesc, pOutListIgnored, outError ) == false )
-        {
-            outError = context + ": " + outError;
-            return false;
-        }
+        using Internal = VrmMaterialImporterInternal;
+        ToonMaterialDef desc;
+        desc._name                   = gltfMaterial.get( "name" ).asString();
+        const string         context = "VRM 1.0 material '" + desc._name + "'";
+        const expected<void> base    = Internal::readGltfBase( gltfMaterial, desc, pOutListIgnored );
+        if ( base.has_value() == false )
+            return unexpected( Internal::withContext( base.error(), context ) );
         const JSONValue extensions = gltfMaterial.get( "extensions" );
         const JSONValue mtoon      = extensions.isObject() ? extensions.get( "VRMC_materials_mtoon" ) : JSONValue{};
         if ( mtoon.isObject() == false )
         {
             // MToon 이 없는 머티리얼(KHR_materials_unlit, PBR)은 평면 툰으로 처리한다.
-            Internal::makeFlat( outDesc );
-            return true;
+            Internal::makeFlat( desc );
+            return desc;
         }
-        if ( Internal::checkKeys( mtoon, Internal::kArrMtoon1Key, context + ": VRMC_materials_mtoon", outError ) == false )
-            return false;
+        const expected<void> keys = Internal::checkKeys( mtoon, Internal::kArrMtoon1Key );
+        if ( keys.has_value() == false )
+            return unexpected( Internal::withContext( keys.error(), context + ": VRMC_materials_mtoon" ) );
 
         // 키가 없으면 `ToonMaterialDef` 의 초기값이다 — 그 값이 1.0 의 기본값(VRMC_materials_mtoon 스키마)이다.
-        string_view invalidFactor;
-        auto        readFactor = [&]( string_view key, float4& inoutColor ) -> bool
-        {
-            const bool bRead = mtoon.has( key ) == false || Internal::readColor( mtoon.get( key ), inoutColor );
-            if ( bRead == false && invalidFactor.empty() )
-                invalidFactor = key;
-            return bRead;
+        const pair<string_view, float4*> arrColorFactor[] = {
+            {        "shadeColorFactor",   &desc._shadeColor},
+            {            "matcapFactor",  &desc._matcapColor},
+            {"parametricRimColorFactor",     &desc._rimColor},
+            {      "outlineColorFactor", &desc._outlineColor},
         };
-        const bool bInvalidColorFactor = readFactor( "shadeColorFactor", outDesc._shadeColor ) == false || readFactor( "matcapFactor", outDesc._matcapColor ) == false ||
-                                         readFactor( "parametricRimColorFactor", outDesc._rimColor ) == false || readFactor( "outlineColorFactor", outDesc._outlineColor ) == false;
-        if ( bInvalidColorFactor )
+        for ( const pair<string_view, float4*>& factor : arrColorFactor )
         {
-            outError = context + ": " + string( invalidFactor ) + " is not three or four numbers";
-            return false;
+            if ( mtoon.has( factor.first ) && Internal::readColor( mtoon.get( factor.first ), *factor.second ) == false )
+                return unexpected( Internal::withContext( Error{ ErrorKind::InvalidArgument, "the color factor is not three or four numbers", factor.first }, context ) );
         }
         // 셰이딩 시프트 텍스처는 shadingShiftTextureInfo(index · texCoord · scale)다.
-        const JSONValue shiftTexture  = mtoon.get( "shadingShiftTexture" );
-        const bool      bTexturesRead = Internal::readTextureIndex( mtoon.get( "shadeMultiplyTexture" ), "shadeMultiplyTexture", outDesc._shadeTexture, pOutListIgnored, outError ) &&
-                                   Internal::readTextureIndex( mtoon.get( "matcapTexture" ), "matcapTexture", outDesc._matcapTexture, pOutListIgnored, outError ) &&
-                                   Internal::readTextureIndex( mtoon.get( "rimMultiplyTexture" ), "rimMultiplyTexture", outDesc._rimMultiplyTexture, pOutListIgnored, outError ) &&
-                                   Internal::readTextureIndex( mtoon.get( "outlineWidthMultiplyTexture" ), "outlineWidthMultiplyTexture", outDesc._outlineWidthTexture, pOutListIgnored,
-                                                               outError ) &&
-                                   Internal::readTextureIndex( mtoon.get( "uvAnimationMaskTexture" ), "uvAnimationMaskTexture", outDesc._uvAnimationMaskTexture, pOutListIgnored,
-                                                               outError ) &&
-                                   Internal::readTextureIndex( shiftTexture, "shadingShiftTexture", outDesc._shadingShiftTexture, pOutListIgnored, outError ) &&
-                                   ( shiftTexture.isObject() == false || Internal::readFloat( shiftTexture, "scale", outDesc._shadingShiftTextureScale, outError ) );
-        const bool bFactorsRead = Internal::readFloat( mtoon, "shadingShiftFactor", outDesc._shadingShift, outError ) &&
-                                  Internal::readFloat( mtoon, "shadingToonyFactor", outDesc._shadingToony, outError ) &&
-                                  Internal::readFloat( mtoon, "rimLightingMixFactor", outDesc._rimLightingMix, outError ) &&
-                                  Internal::readFloat( mtoon, "parametricRimFresnelPowerFactor", outDesc._rimFresnelPower, outError ) &&
-                                  Internal::readFloat( mtoon, "parametricRimLiftFactor", outDesc._rimLift, outError ) &&
-                                  Internal::readFloat( mtoon, "outlineWidthFactor", outDesc._outlineWidth, outError ) &&
-                                  Internal::readFloat( mtoon, "outlineLightingMixFactor", outDesc._outlineLightingMix, outError ) &&
-                                  Internal::readFloat( mtoon, "uvAnimationScrollXSpeedFactor", outDesc._uvAnimationScrollXSpeed, outError ) &&
-                                  Internal::readFloat( mtoon, "uvAnimationScrollYSpeedFactor", outDesc._uvAnimationScrollYSpeed, outError ) &&
-                                  Internal::readFloat( mtoon, "uvAnimationRotationSpeedFactor", outDesc._uvAnimationRotationSpeed, outError );
-        if ( bTexturesRead == false || bFactorsRead == false )
+        const JSONValue                 shiftTexture = mtoon.get( "shadingShiftTexture" );
+        const pair<string_view, int32*> arrTexture[] = {
+            {       "shadeMultiplyTexture",           &desc._shadeTexture},
+            {              "matcapTexture",          &desc._matcapTexture},
+            {         "rimMultiplyTexture",     &desc._rimMultiplyTexture},
+            {"outlineWidthMultiplyTexture",    &desc._outlineWidthTexture},
+            {     "uvAnimationMaskTexture", &desc._uvAnimationMaskTexture},
+            {        "shadingShiftTexture",    &desc._shadingShiftTexture},
+        };
+        for ( const pair<string_view, int32*>& texture : arrTexture )
         {
-            outError = context + ": " + outError;
-            return false;
+            const expected<void> textureRead = Internal::readTextureIndex( mtoon.get( texture.first ), texture.first, *texture.second, pOutListIgnored );
+            if ( textureRead.has_value() == false )
+                return unexpected( Internal::withContext( textureRead.error(), context ) );
+        }
+        const expected<void> shiftScale = shiftTexture.isObject() ? Internal::readFloat( shiftTexture, "scale", desc._shadingShiftTextureScale ) : expected<void>{};
+        if ( shiftScale.has_value() == false )
+            return unexpected( Internal::withContext( shiftScale.error(), context ) );
+        const pair<string_view, float32*> arrFactor[] = {
+            {             "shadingShiftFactor",             &desc._shadingShift},
+            {             "shadingToonyFactor",             &desc._shadingToony},
+            {           "rimLightingMixFactor",           &desc._rimLightingMix},
+            {"parametricRimFresnelPowerFactor",          &desc._rimFresnelPower},
+            {        "parametricRimLiftFactor",                  &desc._rimLift},
+            {             "outlineWidthFactor",             &desc._outlineWidth},
+            {       "outlineLightingMixFactor",       &desc._outlineLightingMix},
+            {  "uvAnimationScrollXSpeedFactor",  &desc._uvAnimationScrollXSpeed},
+            {  "uvAnimationScrollYSpeedFactor",  &desc._uvAnimationScrollYSpeed},
+            { "uvAnimationRotationSpeedFactor", &desc._uvAnimationRotationSpeed},
+        };
+        for ( const pair<string_view, float32*>& factor : arrFactor )
+        {
+            const expected<void> factorRead = Internal::readFloat( mtoon, factor.first, *factor.second );
+            if ( factorRead.has_value() == false )
+                return unexpected( Internal::withContext( factorRead.error(), context ) );
         }
 
         const string outlineMode = mtoon.has( "outlineWidthMode" ) ? mtoon.get( "outlineWidthMode" ).asString() : string( "none" );
         if ( outlineMode == "none" )
-            outDesc._outlineMode = ToonOutlineMode::None;
+            desc._outlineMode = ToonOutlineMode::None;
         else if ( outlineMode == "worldCoordinates" )
-            outDesc._outlineMode = ToonOutlineMode::World;
+            desc._outlineMode = ToonOutlineMode::World;
         else if ( outlineMode == "screenCoordinates" )
-            outDesc._outlineMode = ToonOutlineMode::Screen;
+            desc._outlineMode = ToonOutlineMode::Screen;
         else
-        {
-            outError = context + ": unknown outlineWidthMode '" + outlineMode + "'";
-            return false;
-        }
-        return true;
+            return unexpected( Internal::withContext( Error{ ErrorKind::InvalidArgument, "unknown outlineWidthMode", outlineMode }, context ) );
+        return desc;
     }
 
     XMLNode ToonMaterialDef::findMaterialProperty( const XMLNode& properties, string_view name )

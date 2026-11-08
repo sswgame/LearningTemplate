@@ -176,8 +176,8 @@ namespace sw::editor
                 }
                 for ( const string& referrerID : listReferrerID )
                 {
-                    const std::optional<AbsolutePath> referrerFile = editor::getSubsystem<AssetPaths>().findLooseFile( referrerID ); // 해석 하나(붙인 도메인 · 대소문자 규칙)
-                    PreparedRewrite                   rewrite{};
+                    const optional<AbsolutePath> referrerFile = editor::getSubsystem<AssetPaths>().findLooseFile( referrerID ); // 해석 하나(붙인 도메인 · 대소문자 규칙)
+                    PreparedRewrite              rewrite{};
                     if ( referrerFile.has_value() == false || FileUtil::readTextFile( referrerFile->str(), rewrite._originalText ) == false )
                     {
                         StringBuilder<constant::buffer::kMax256> failureBuilder;
@@ -618,7 +618,7 @@ namespace sw::editor
     {
         if ( AbsolutePath::isStrictAbsolute( argument ) )
             return DevCommandRegistry::readDiskPathArgument( argument, outAbsolutePath, outReply );
-        const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( argument );
+        const optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( argument );
         if ( diskPath.has_value() == false || FileUtil::isRegularFile( diskPath->str() ) == false )
         {
             outReply = "no resource '" + argument + "'";

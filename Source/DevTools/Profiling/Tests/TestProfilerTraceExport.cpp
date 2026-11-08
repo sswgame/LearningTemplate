@@ -200,9 +200,9 @@ SW_TEST_CASE( ProfilerTraceExportTest, WrittenFileParsesBackWithDepthAndNames )
     const sw::vector<sw::string> listName{ "GT.Frame", "GT.Scene.tick" };
     const sw::string             json = sw::ProfilerTraceExport::makeTraceJSON( makeThreads(), { 1000, 6000 }, listName, makeMeta() );
 
-    sw::ProfilerLoadedTrace trace;
-    sw::string              error;
-    SW_REQUIRE_TRUE( sw::ProfilerTraceExport::parseTraceJSON( json, trace, error ) );
+    const sw::expected<sw::ProfilerLoadedTrace> parsed = sw::ProfilerTraceExport::parseTraceJSON( json );
+    SW_REQUIRE_TRUE( parsed.has_value() );
+    const sw::ProfilerLoadedTrace& trace = *parsed;
     SW_EXPECT_EQUAL( sw::string( "Game" ), trace._meta._processName );
     SW_EXPECT_EQUAL( static_cast<int32>( 4242 ), trace._meta._processID );
     SW_EXPECT_EQUAL( static_cast<int64>( 1700000000123 ), trace._meta._wallUnixMilliseconds );
@@ -229,16 +229,16 @@ SW_TEST_CASE( ProfilerTraceExportTest, WrittenFileParsesBackWithDepthAndNames )
 SW_TEST_CASE( ProfilerTraceExportTest, ParseRejectsBrokenAndEmptyInput )
 {
     SW_EXPECT_LOG( "JSON.ParseError" ); // "not json" 을 읽는 JSON 문서가 알린다 — 나머지 거절은 오류 글로만 돌아온다
-    sw::ProfilerLoadedTrace trace;
-    sw::string              error;
-    SW_EXPECT_FALSE( sw::ProfilerTraceExport::parseTraceJSON( "not json", trace, error ) );
-    SW_EXPECT_FALSE( error.empty() );
-    SW_EXPECT_FALSE( sw::ProfilerTraceExport::parseTraceJSON( "{\"traceEvents\":[]}", trace, error ) );
-    SW_EXPECT_FALSE( sw::ProfilerTraceExport::parseTraceJSON( "{\"other\":1}", trace, error ) );
+    const sw::expected<sw::ProfilerLoadedTrace> notJSON = sw::ProfilerTraceExport::parseTraceJSON( "not json" );
+    SW_REQUIRE_FALSE( notJSON.has_value() );
+    SW_EXPECT_FALSE( notJSON.error().message().empty() );
+    SW_EXPECT_FALSE( sw::ProfilerTraceExport::parseTraceJSON( "{\"traceEvents\":[]}" ).has_value() );
+    SW_EXPECT_FALSE( sw::ProfilerTraceExport::parseTraceJSON( "{\"other\":1}" ).has_value() );
     // 배열만 있는 형식과 다른 도구가 낸 최소 파일도 읽는다.
-    SW_EXPECT_TRUE( sw::ProfilerTraceExport::parseTraceJSON( "[{\"name\":\"a\",\"ph\":\"X\",\"pid\":1,\"tid\":7,\"ts\":5,\"dur\":2}]", trace, error ) );
-    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), trace._listThread.size() );
-    SW_EXPECT_EQUAL( sw::string( "tid 7" ), trace._listThread[0]._name );
+    const sw::expected<sw::ProfilerLoadedTrace> trace = sw::ProfilerTraceExport::parseTraceJSON( "[{\"name\":\"a\",\"ph\":\"X\",\"pid\":1,\"tid\":7,\"ts\":5,\"dur\":2}]" );
+    SW_REQUIRE_TRUE( trace.has_value() );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), trace->_listThread.size() );
+    SW_EXPECT_EQUAL( sw::string( "tid 7" ), trace->_listThread[0]._name );
 }
 
 namespace
@@ -303,9 +303,9 @@ SW_TEST_CASE( ProfilerTraceExportTest, MergeKeepsSameHostTimestamps )
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), processNameCount );
 
     // 다시 읽으면 스레드 줄 이름 앞에 프로세스가 붙는다(두 프로세스의 같은 스레드 이름을 가른다).
-    sw::ProfilerLoadedTrace trace;
-    sw::string              error;
-    SW_REQUIRE_TRUE( sw::ProfilerTraceExport::parseTraceJSON( json, trace, error ) );
+    const sw::expected<sw::ProfilerLoadedTrace> parsed = sw::ProfilerTraceExport::parseTraceJSON( json );
+    SW_REQUIRE_TRUE( parsed.has_value() );
+    const sw::ProfilerLoadedTrace& trace = *parsed;
     SW_REQUIRE_EQUAL( static_cast<size_t>( 4 ), trace._listThread.size() );
     SW_EXPECT_TRUE( trace._listThread[0]._name.find( "Server" ) == 0 );
     SW_EXPECT_TRUE( trace._listThread[2]._name.find( "Client1" ) == 0 );
@@ -399,9 +399,9 @@ SW_TEST_CASE( ProfilerTraceExportTest, MarkersAndHostNameAreWritten )
     }
     SW_EXPECT_TRUE( bFoundMark );
 
-    sw::ProfilerLoadedTrace trace;
-    sw::string              error;
-    SW_REQUIRE_TRUE( sw::ProfilerTraceExport::parseTraceJSON( json, trace, error ) );
+    const sw::expected<sw::ProfilerLoadedTrace> parsed = sw::ProfilerTraceExport::parseTraceJSON( json );
+    SW_REQUIRE_TRUE( parsed.has_value() );
+    const sw::ProfilerLoadedTrace& trace = *parsed;
     SW_EXPECT_EQUAL( sw::string( "PC1" ), trace._meta._hostName );
 }
 
@@ -450,9 +450,7 @@ SW_TEST_CASE( ProfilerTraceExportTest, NetFlowsAreWrittenAsBoundFlowEvents )
     SW_EXPECT_TRUE( bFoundStart );
     SW_EXPECT_TRUE( bFoundFinish );
 
-    sw::ProfilerLoadedTrace trace;
-    sw::string              error;
-    SW_EXPECT_TRUE( sw::ProfilerTraceExport::parseTraceJSON( json, trace, error ) );
+    SW_EXPECT_TRUE( sw::ProfilerTraceExport::parseTraceJSON( json ).has_value() );
 }
 
 #endif // !SW_SHIPPING

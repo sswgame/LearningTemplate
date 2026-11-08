@@ -589,22 +589,15 @@ namespace sw::editor
         return string( resultBuilder.view() );
     }
 
-    bool UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath, string& outText, string& outError )
+    expected<string> UIPreviewLogic::makeDocumentText( UIDocumentCache& documents, const UIScreen& screen, string_view documentPath )
     {
         const Widget* pRoot = screen.getTree().getRoot();
         if ( pRoot == nullptr )
-        {
-            outError = "the preview has no widget tree";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "the preview has no widget tree" } );
         const expected<shared_ptr<const UIDocumentAsset>> document = documents.findOrLoad( documentPath );
         if ( document.has_value() == false )
-        {
-            outError = string( document.error().message().data(), document.error().message().size() ) + ": " + string( document.error().detail().data(), document.error().detail().size() );
-            return false;
-        }
-        outText = UIDocumentWriter::write( screen.getDesc(), ( *document )->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );
-        return true;
+            return unexpected( Error{ ErrorKind::NotFound, "the document could not be loaded", document.error().message() }.appendDetail( document.error().detail() ) );
+        return UIDocumentWriter::write( screen.getDesc(), ( *document )->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );
     }
 
     UIPreviewAnchorValues UIPreviewLogic::getAnchorPreset( UIPreviewAnchorPreset preset )

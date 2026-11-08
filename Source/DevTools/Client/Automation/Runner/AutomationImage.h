@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -29,18 +30,18 @@ namespace sw
         /// @brief 골든의 최대 가로 화소 수입니다(세로는 비율대로).
         static constexpr uint32 kGoldenMaxWidth = 160;
 
-        /** @brief PPM(P6, 최대값 255) 파일을 읽습니다. 실패면 false 와 이유입니다. */
-        [[nodiscard]] static bool loadPpm( string_view path, AutomationImage& outImage, string& outError );
-        /** @brief 메모리의 PPM(P6, 최대값 255)을 읽습니다. */
-        [[nodiscard]] static bool parsePpm( const uint8* pData, size_t size, AutomationImage& outImage, string& outError );
+        /** @brief PPM(P6, 최대값 255) 파일을 읽습니다. 실패면 그 이유입니다(못 읽은 파일은 경로가 대상). */
+        [[nodiscard]] static expected<AutomationImage> loadPpm( string_view path );
+        /** @brief 메모리의 PPM(P6, 최대값 255)을 읽습니다. 신뢰 경계다 — 틀린 머리말 · 짧은 화소는 오류입니다. */
+        [[nodiscard]] static expected<AutomationImage> parsePpm( const uint8* pData, size_t size );
         /** @brief 이미지를 PPM(P6) 바이트로 씁니다. */
         static void encodePpm( const AutomationImage& image, vector<uint8>& outBytes );
         /** @brief `x0,y0,x1,y1`(0..1, x0<x1, y0<y1)을 읽습니다. */
         [[nodiscard]] static bool tryParseRegion( string_view text, AutomationImageRegion& outRegion );
-        /** @brief @p region 을 가로 `kGoldenMaxWidth` 이하로 상자 평균해 줄입니다. 영역이 화소 하나도 덮지 않으면 false 와 이유입니다. */
-        [[nodiscard]] static bool reduce( const AutomationImage& image, const AutomationImageRegion& region, AutomationImage& outReduced, string& outError );
-        /** @brief 같은 크기의 두 그림을 비교합니다. 크기가 다르면 false 와 이유입니다(영역 · 창 크기가 바뀌었다 — 골든을 다시 떠야 한다). */
-        [[nodiscard]] static bool compare( const AutomationImage& actual, const AutomationImage& golden, AutomationImageDifference& outDifference, string& outError );
+        /** @brief @p region 을 가로 `kGoldenMaxWidth` 이하로 상자 평균해 줄입니다. 영역이 화소 하나도 덮지 않으면 그 그림 크기가 대상인 오류입니다. */
+        [[nodiscard]] static expected<AutomationImage> reduce( const AutomationImage& image, const AutomationImageRegion& region );
+        /** @brief 같은 크기의 두 그림을 비교합니다. 크기가 다르면 두 크기가 대상인 오류입니다(영역 · 창 크기가 바뀌었다 — 골든을 다시 떠야 한다). */
+        [[nodiscard]] static expected<AutomationImageDifference> compare( const AutomationImage& actual, const AutomationImage& golden );
     };
 } // namespace sw
 

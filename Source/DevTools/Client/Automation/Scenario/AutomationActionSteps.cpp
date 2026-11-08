@@ -54,13 +54,12 @@ namespace sw
                 return filter;
             }
 
-            /** @brief 프레임과 초를 함께 적었으면 false 와 이유입니다. */
-            [[nodiscard]] static bool checkDurationChoice( const AutomationStep& step, uint32 frames, float32 seconds, const utf8* pFramesName, const utf8* pSecondsName, string& outError )
+            /** @brief 프레임과 초를 함께 적었으면 두 속성 이름이 대상인 오류입니다. */
+            [[nodiscard]] static expected<void> checkDurationChoice( uint32 frames, float32 seconds, const utf8* pFramesName, const utf8* pSecondsName )
             {
                 if ( frames == kAutomationNoFrames || seconds == kAutomationNoSeconds )
-                    return true;
-                outError = step.describe() + ": give " + pFramesName + " or " + pSecondsName + ", not both";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "give the frames or the seconds, not both", pFramesName }.appendDetail( " / " ).appendDetail( pSecondsName ) );
             }
 
             /** @brief 길이를 프레임으로 냅니다 — 적은 쪽(초는 시나리오 고정 프레임 시간으로 바꾼다), 둘 다 없으면 @p defaultFrames 입니다. */
@@ -71,17 +70,21 @@ namespace sw
                 return frames != kAutomationNoFrames ? frames : defaultFrames;
             }
 
-            static bool validateAction( const AutomationStep& step, string& outError )
+            static expected<void> validateAction( const AutomationStep& step )
             {
                 AutomationActionParams params;
-                return step.readFields( params, outError ) && checkDurationChoice( step, params._hold, params._seconds, "hold", "seconds", outError ) &&
-                       checkDurationChoice( step, params._interval, params._intervalSeconds, "interval", "intervalSeconds", outError );
+                return step.readFields( params )
+                    .and_then( [&]()
+                { return checkDurationChoice( params._hold, params._seconds, "hold", "seconds" ); } )
+                    .and_then( [&]()
+                { return checkDurationChoice( params._interval, params._intervalSeconds, "interval", "intervalSeconds" ); } );
             }
 
-            static bool validateAxis( const AutomationStep& step, string& outError )
+            static expected<void> validateAxis( const AutomationStep& step )
             {
                 AutomationActionAxisParams params;
-                return step.readFields( params, outError ) && checkDurationChoice( step, params._frames, params._seconds, "frames", "seconds", outError );
+                return step.readFields( params ).and_then( [&]()
+                { return checkDurationChoice( params._frames, params._seconds, "frames", "seconds" ); } );
             }
 
             /** @brief 바인딩이 쓰는 장치 종류입니다. */
@@ -101,26 +104,20 @@ namespace sw
             }
 
             /**
-             * @brief 액션의 바인딩 중 @p pAccept 가 받고 @p device 에 맞는 첫 것을 찾습니다(바인딩 순서 — 입력 맵 파일의 순서). 액션이 없거나 받을 바인딩이 없으면 이유와 nullptr 입니다.
+             * @brief 액션의 바인딩 중 @p pAccept 가 받고 @p device 에 맞는 첫 것을 찾습니다(바인딩 순서 — 입력 맵 파일의 순서). 액션이 없거나 받을 바인딩이 없으면 그 이유입니다(값은 nullptr 이 아니다).
              * @details 바인딩은 시작 프레임의 맵에서 찾는다. 게임이 맵을 다시 읽어도 단계가 이미 낸 이벤트는 그대로다.
              */
-            static const ActionBinding* findBinding( AutomationStepContext& runner, const AutomationStep& step, const string& name, AutomationActionDevice deviceChoice, bool ( *pAccept )( const ActionBinding& ),
-                                                     const utf8* pWhat, string& outError )
+            static expected<const ActionBinding*> findBinding( AutomationStepContext& runner, const string& name, AutomationActionDevice deviceChoice, bool ( *pAccept )( const ActionBinding& ),
+                                                               const utf8* pWhat )
             {
                 const InputManager* pInput = runner.getInputManager();
                 const DeviceFilter  device = makeDeviceFilter( deviceChoice );
                 if ( pInput == nullptr )
-                {
-                    outError = step.describe() + ": there is no input manager";
-                    return nullptr;
-                }
+                    return unexpected( Error{ ErrorKind::Unsupported, "there is no input manager" } );
                 const InputMap&     inputMap = pInput->getInputMap();
                 const hashed_string action( name );
                 if ( inputMap.hasAction( action ) == false )
-                {
-                    outError = step.describe() + ": the input map has no action '" + name + "'";
-                    return nullptr;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "the input map has no such action", name } );
                 const uint32 bindingCount = inputMap.getBindingCount( action );
                 for ( uint32 bindIndex = 0; bindIndex < bindingCount; ++bindIndex )
                 {
@@ -129,8 +126,11 @@ namespace sw
                     if ( bUsable )
                         return pBinding;
                 }
-                outError = step.describe() + ": action '" + name + "' has no " + pWhat + ( device._bAny ? string() : " on " + string( getEnumName( deviceChoice ) ) ) + " binding";
-                return nullptr;
+                Error error{ ErrorKind::NotFound, "the action has no binding of that kind", name };
+                error.appendDetail( ": " ).appendDetail( pWhat );
+                if ( device._bAny == false )
+                    error.appendDetail( " on " ).appendDetail( getEnumName( deviceChoice ) );
+                return unexpected( error );
             }
 
             /** @brief 누를 수 있는 슬롯 하나(키 · 마우스 단추 · 패드 단추)인 바인딩입니다. */
@@ -143,42 +143,41 @@ namespace sw
                 return bComposite || binding._kind == BindingKind::GamepadStick2D || binding._kind == BindingKind::MouseDelta2D;
             }
 
-            [[nodiscard]] static bool prepareAction( AutomationStepContext& runner, const AutomationStep& step, string& outError )
+            [[nodiscard]] static expected<void> prepareAction( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const AutomationActionParams params   = step.readValidatedFields<AutomationActionParams>();
-                const ActionBinding*         pBinding = findBinding( runner, step, params._name, params._device, &isButtonBinding, "single button", outError );
-                if ( pBinding == nullptr )
-                    return false;
-                const uint32 holdFrames     = resolveDuration( runner, params._hold, params._seconds, kDefaultHoldFrames );
-                const uint32 intervalFrames = resolveDuration( runner, params._interval, params._intervalSeconds, holdFrames + 1 ); // 적지 않으면 떼고 한 프레임 뒤 다시 누른다
+                const AutomationActionParams         params  = step.readValidatedFields<AutomationActionParams>();
+                const expected<const ActionBinding*> binding = findBinding( runner, params._name, params._device, &isButtonBinding, "single button" );
+                if ( binding.has_value() == false )
+                    return unexpected( binding.error() );
+                const ActionBinding* pBinding       = *binding;
+                const uint32         holdFrames     = resolveDuration( runner, params._hold, params._seconds, kDefaultHoldFrames );
+                const uint32         intervalFrames = resolveDuration( runner, params._interval, params._intervalSeconds, holdFrames + 1 ); // 적지 않으면 떼고 한 프레임 뒤 다시 누른다
                 if ( params._count > 1 && intervalFrames <= holdFrames )
                 {
-                    outError = step.describe() + ": interval (" + to_string( intervalFrames ) + " frames) must be longer than hold (" + to_string( holdFrames ) + " frames) to press again";
-                    return false;
+                    StringBuilder<constant::buffer::kMax64> framesBuilder;
+                    framesBuilder.appendFormat( "interval %# frames, hold %# frames", intervalFrames, holdFrames );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "interval must be longer than hold to press again", framesBuilder.view() } );
                 }
                 connectGamepadOf( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
                 for ( uint32 pressIndex = 0; pressIndex < params._count; ++pressIndex )
                 {
                     if ( runner.getInputScript().addTap( step._frameIndex + pressIndex * intervalFrames, pBinding->_arrSlot[0], holdFrames ) == false )
-                    {
-                        outError = step.describe() + ": the slot " + InputSlot::toText( pBinding->_arrSlot[0] ) + " cannot be pressed";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::Unsupported, "the slot cannot be pressed", InputSlot::toText( pBinding->_arrSlot[0] ) } );
                 }
-                return true;
+                return {};
             }
 
-            [[nodiscard]] static bool preparePressOrRelease( AutomationStepContext& runner, const AutomationStep& step, string& outError )
+            [[nodiscard]] static expected<void> preparePressOrRelease( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const AutomationActionButtonParams params   = step.readValidatedFields<AutomationActionButtonParams>();
-                const ActionBinding*               pBinding = findBinding( runner, step, params._name, params._device, &isButtonBinding, "single button", outError );
-                if ( pBinding == nullptr )
-                    return false;
+                const AutomationActionButtonParams   params  = step.readValidatedFields<AutomationActionButtonParams>();
+                const expected<const ActionBinding*> binding = findBinding( runner, params._name, params._device, &isButtonBinding, "single button" );
+                if ( binding.has_value() == false )
+                    return unexpected( binding.error() );
+                const ActionBinding* pBinding = *binding;
                 connectGamepadOf( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
                 if ( runner.getInputScript().addSlot( step._frameIndex, pBinding->_arrSlot[0], string_view{ step._kind } == "ActionPress" ) )
-                    return true;
-                outError = step.describe() + ": the slot " + InputSlot::toText( pBinding->_arrSlot[0] ) + " cannot be pressed";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::Unsupported, "the slot cannot be pressed", InputSlot::toText( pBinding->_arrSlot[0] ) } );
             }
 
             /** @brief 슬롯이 패드 단추면 그 패드를 먼저 연결합니다(`VirtualInputScript::addGamepadConnection`). */
@@ -198,18 +197,19 @@ namespace sw
              * @brief 축 값을 @p frames 동안 냅니다. 스틱은 그 값 그대로, 합성 축은 부호의 방향 키(크기는 1), 마우스 이동은 프레임마다 그 픽셀만큼입니다.
              * @details 합성 축 값의 크기가 1 이 아니어도 키는 켜고 끄는 것뿐이다 — 아날로그 크기가 필요하면 `device="Gamepad"` 로 스틱을 고른다.
              */
-            [[nodiscard]] static bool prepareAxis( AutomationStepContext& runner, const AutomationStep& step, string& outError )
+            [[nodiscard]] static expected<void> prepareAxis( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const AutomationActionAxisParams params   = step.readValidatedFields<AutomationActionAxisParams>();
-                const ActionBinding*             pBinding = findBinding( runner, step, params._name, params._device, &isAxisBinding, "axis", outError );
-                if ( pBinding == nullptr )
-                    return false;
-                const float32       valueX = params._x;
-                const float32       valueY = params._y;
-                const uint32        frames = resolveDuration( runner, params._frames, params._seconds, kDefaultHoldFrames );
-                VirtualInputScript& script = runner.getInputScript();
-                const uint32        first  = step._frameIndex;
-                bool                bOk    = true;
+                const AutomationActionAxisParams     params  = step.readValidatedFields<AutomationActionAxisParams>();
+                const expected<const ActionBinding*> binding = findBinding( runner, params._name, params._device, &isAxisBinding, "axis" );
+                if ( binding.has_value() == false )
+                    return unexpected( binding.error() );
+                const ActionBinding* pBinding = *binding;
+                const float32        valueX   = params._x;
+                const float32        valueY   = params._y;
+                const uint32         frames   = resolveDuration( runner, params._frames, params._seconds, kDefaultHoldFrames );
+                VirtualInputScript&  script   = runner.getInputScript();
+                const uint32         first    = step._frameIndex;
+                bool                 bOk      = true;
                 switch ( pBinding->_kind )
                 {
                     case BindingKind::GamepadStick2D:
@@ -257,8 +257,8 @@ namespace sw
                     }
                 }
                 if ( bOk == false )
-                    outError = step.describe() + ": a key of the composite binding cannot be pressed";
-                return bOk;
+                    return unexpected( Error{ ErrorKind::Unsupported, "a key of the composite binding cannot be pressed" } );
+                return {};
             }
         };
     } // namespace

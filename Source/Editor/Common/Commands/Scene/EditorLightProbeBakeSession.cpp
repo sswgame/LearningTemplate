@@ -229,7 +229,7 @@ namespace sw::editor
             reportFailure( "no bake output for scene '" + sceneAssetID + "' - it must be a .scene.xml resource and the volume needs a named owner" );
             return;
         }
-        const std::optional<AbsolutePath> gridPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
+        const optional<AbsolutePath> gridPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
         if ( gridPath.has_value() == false || grid.saveToFile( *gridPath ) == false )
         {
             reportFailure( "could not write " + assetPath );

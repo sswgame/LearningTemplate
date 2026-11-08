@@ -325,60 +325,41 @@ namespace sw::editor
 
     string ProjectSettingsDocument::makeDifferenceText() const
     {
-        string text;
-        string error;
-        return tryMakeDifferenceText( text, error ) ? text : string{};
+        return tryMakeDifferenceText().value_or( string{} ); // 보이기 · 비교용 — 못 만들면 빈 글(저장 길은 tryMakeDifferenceText 의 오류를 본다)
     }
 
-    bool ProjectSettingsDocument::tryMakeDifferenceText( string& outText, string& outError ) const
+    expected<string> ProjectSettingsDocument::tryMakeDifferenceText() const
     {
-        outText.clear();
         if ( _pType == nullptr || _current.isValid() == false )
-        {
-            outError = "the document is not open";
-            return false;
-        }
-        return isElementMode() ? makeDifferenceElement( outText, outError ) : makeDifferenceJSON( outText, outError );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the document is not open" } );
+        return isElementMode() ? makeDifferenceElement() : makeDifferenceJSON();
     }
 
-    bool ProjectSettingsDocument::makeDifferenceJSON( string& outText, string& outError ) const
+    expected<string> ProjectSettingsDocument::makeDifferenceJSON() const
     {
         const string fullText = JSONSerializer::serialize( _current.get(), *_pType );
         JSONDocument fullDocument;
         if ( fullDocument.parse( fullText ) == false || fullDocument.getRoot().isObject() == false )
-        {
-            outError = "the serialized settings are not a JSON object";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the serialized settings are not a JSON object" } );
         // 바탕 층(`ConfigBaseLayer`)은 파일이 값의 원본이라 모든 키를 쓴다(언리얼 `BaseEngine.ini` 와 같은 층).
         if ( isBaseLayer() )
-        {
-            outText = fullDocument.dump( 4 );
-            return true;
-        }
+            return fullDocument.dump( 4 );
         vector<string> listEqual;
         if ( _default.isValid() && ConfigManager::collectEqualKeys( _current.get(), _default.get(), *_pType, fullText, listEqual ) == false )
-        {
-            outError = "the settings and their defaults could not be compared (a serialized text did not parse)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the settings and their defaults could not be compared (a serialized text did not parse)" } );
         JSONDocument    document;
         const JSONValue root = document.makeObject();
         ProjectSettingsDocumentInternal::copyDifference( fullDocument.getRoot(), root, string(), listEqual );
-        outText = document.dump( 4 );
-        return true;
+        return document.dump( 4 );
     }
 
-    bool ProjectSettingsDocument::makeDifferenceElement( string& outText, string& outError ) const
+    expected<string> ProjectSettingsDocument::makeDifferenceElement() const
     {
         // 지금 값과 기본값을 같은 직렬화기로 쓰고, 기본값과 글이 같은 속성 · 자식을 뺀다(JSON 쪽 `collectEqualKeys` 와 같은 규칙).
         XMLDocument current;
         XMLDocument defaults;
         if ( current.parse( XMLSerializer::serialize( _current.get(), *_pType ) ) == false )
-        {
-            outError = "the serialized settings are not valid XML";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the serialized settings are not valid XML" } );
         const bool    bHasDefault = _default.isValid() && defaults.parse( XMLSerializer::serialize( _default.get(), *_pType ) );
         const XMLNode currentRoot = current.getRoot();
         const XMLNode defaultRoot = bHasDefault ? defaults.getRoot() : XMLNode{};
@@ -398,16 +379,15 @@ namespace sw::editor
                 continue;
             (void)element.appendClone( child );
         }
-        outText = element.toString();
-        return true;
+        return element.toString();
     }
 
     uint32 ProjectSettingsDocument::countNonDefaultKeys() const
     {
-        string text;
-        string error;
-        if ( tryMakeDifferenceText( text, error ) == false )
+        const expected<string> difference = tryMakeDifferenceText();
+        if ( difference.has_value() == false )
             return 0;
+        const string& text = *difference;
         if ( isElementMode() )
         {
             XMLDocument element;
@@ -471,14 +451,14 @@ namespace sw::editor
         if ( _current.isValid() == false || isLoadFailed() )
             return false;
         // 글을 못 만들면 쓰지 않는다 — 빈 글을 그대로 쓰면 멀쩡한 설정 파일이 비워진다.
-        string text;
-        string textError;
-        if ( tryMakeDifferenceText( text, textError ) == false )
+        const expected<string> difference = tryMakeDifferenceText();
+        if ( difference.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ProjectSettings.ProjectSettingsNotSaved", "Project settings were not saved to %#: %#", _path.c_str(), textError.c_str() );
+            SW_LOG_ERROR_ID( "ProjectSettings.ProjectSettingsNotSaved", "Project settings were not saved to %#: %#", _path.c_str(), difference.error().message() );
             return false;
         }
-        bool bSaved = false;
+        const string& text   = *difference;
+        bool          bSaved = false;
         if ( isElementMode() )
             bSaved = saveElement( text );
         else

@@ -111,34 +111,24 @@ namespace sw
                 return separator == string_view::npos ? line : line.substr( separator + 3 );
             }
 
-            /** @brief 자식이 쓴 단계 보고 하나의 `exitCode` · `records[]` 를 읽습니다. 파일이 없거나 형식이 다르면 false 와 까닭입니다. */
-            [[nodiscard]] static bool readStageReport( const string& reportPath, int32& outExitCode, vector<string>& outListRecordLine, string& outError )
+            /** @brief 자식이 쓴 단계 보고 하나의 `exitCode`(돌려준다) · `records[]`(@p outListRecordLine)를 읽습니다. 파일이 없거나 형식이 다르면 그 까닭입니다. */
+            [[nodiscard]] static expected<int32> readStageReport( const string& reportPath, vector<string>& outListRecordLine )
             {
                 string text;
                 if ( FileUtil::readTextFile( reportPath, text ) == false )
-                {
-                    outError = "could not read " + reportPath;
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "could not read the stage report", reportPath } );
                 JSONDocument document;
                 if ( document.parse( text, reportPath ) == false )
-                {
-                    outError = document.getLastError();
-                    return false;
-                }
-                const JSONValue            root     = document.getRoot();
-                const std::optional<int32> exitCode = root.readRequired<int32>( "exitCode" );
-                const JSONValue            records  = root.get( "records" );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the stage report is not JSON", document.getLastError() } );
+                const JSONValue       root     = document.getRoot();
+                const optional<int32> exitCode = root.readRequired<int32>( "exitCode" );
+                const JSONValue       records  = root.get( "records" );
                 if ( exitCode.has_value() == false || records.isArray() == false )
-                {
-                    outError = reportPath + ": no exitCode or records[]";
-                    return false;
-                }
-                outExitCode = *exitCode;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the stage report has no exitCode or records[]", reportPath } );
                 outListRecordLine.clear();
                 for ( size_t i = 0; i < records.size(); ++i )
                     outListRecordLine.push_back( records.at( i ).asString() );
-                return true;
+                return *exitCode;
             }
 
             /**
@@ -159,19 +149,18 @@ namespace sw
                     {
                         const string             stageReportPath = AutomationScenarioChain::makeStageReportPath( child._reportPath, stage, listPath.size() );
                         AutomationBackendRecords records{ child._backend, {} };
-                        int32                    stageExitCode = -1;
-                        string                   error;
-                        if ( readStageReport( stageReportPath, stageExitCode, records._listRecordLine, error ) == false )
+                        const expected<int32>    stageExitCode = readStageReport( stageReportPath, records._listRecordLine );
+                        if ( stageExitCode.has_value() == false )
                         {
                             if ( child._exitCode == 0 )
                             {
-                                StringBuilder<constant::buffer::kMax256> textBuilder;
-                                textBuilder.appendFormat( "%#: %# report unreadable - %#", listPath[stage], child._backend, error );
+                                StringBuilder<constant::buffer::kMax512> textBuilder;
+                                textBuilder.appendFormat( "%#: %# report unreadable - %#: %#", listPath[stage], child._backend, stageExitCode.error().message(), stageExitCode.error().detail() );
                                 listProblem.push_back( string( textBuilder.view() ) );
                             }
                             continue;
                         }
-                        if ( stageExitCode != 0 )
+                        if ( *stageExitCode != 0 )
                             continue;
                         auto it = std::find_if( listScenarioRecords.begin(), listScenarioRecords.end(), [&]( const auto& entry )
                         { return entry.first == listPath[stage]; } );
@@ -227,10 +216,10 @@ namespace sw
         };
     } // namespace
 
-    bool AutomationPerBackend::parseBackendList( string_view text, vector<string>& outListBackend, string& outError )
+    expected<vector<string>> AutomationPerBackend::parseBackendList( string_view text )
     {
         using Internal = AutomationPerBackendInternal;
-        outListBackend.clear();
+        vector<string>            listBackend;
         const vector<string_view> listName = StringUtil::split( text, ",", { ._bTrim = true, ._bDropEmpty = true } );
         // 표 순서로 모은다 — 적은 순서와 무관하게 보고 · 종료 코드의 "첫 실패" 가 늘 같다.
         // `all` 은 이 플랫폼의 검증 백엔드다(`RHIAvailability::getScenarioBackends` — 쿠킹 표 `scenario_backends`, 리눅스는 vk · gl). 이름을 적은 백엔드는 그대로 띄운다 — 못 돌면 자식이 건너뜀(77)으로 끝난다.
@@ -242,24 +231,18 @@ namespace sw
             const bool                   bSelected    = bAll ? std::find( listScenario.begin(), listScenario.end(), Internal::kArrBackend[index] ) != listScenario.end()
                                                              : std::find( listName.begin(), listName.end(), string_view{ pName } ) != listName.end();
             if ( bSelected )
-                outListBackend.emplace_back( pName );
+                listBackend.emplace_back( pName );
         }
         for ( const string_view name : listName )
         {
             const bool bKnown = name == "all" ? listName.size() == 1
                                               : std::find( std::begin( Internal::kArrBackendName ), std::end( Internal::kArrBackendName ), name ) != std::end( Internal::kArrBackendName );
             if ( bKnown == false || std::count( listName.begin(), listName.end(), name ) > 1 )
-            {
-                outError = "-scenario-backends: '" + string( name ) + "' is not one backend of all | dx11,dx12,vk,gl (each once; all alone)";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "-scenario-backends takes all | dx11,dx12,vk,gl (each once; all alone)", name } );
         }
-        if ( outListBackend.empty() )
-        {
-            outError = "-scenario-backends: no backend given (all | dx11,dx12,vk,gl)";
-            return false;
-        }
-        return true;
+        if ( listBackend.empty() )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "-scenario-backends: no backend given (all | dx11,dx12,vk,gl)" } );
+        return listBackend;
     }
 
     vector<string> AutomationPerBackend::filterPassThroughArguments( const vector<string>& listOriginalArgument )
@@ -319,11 +302,11 @@ namespace sw
             lineCount = MathUtil::max( lineCount, records._listRecordLine.size() );
         for ( size_t lineIndex = 0; lineIndex < lineCount; ++lineIndex )
         {
-            const auto lineAt = [lineIndex]( const AutomationBackendRecords& records ) -> std::optional<string_view>
+            const auto lineAt = [lineIndex]( const AutomationBackendRecords& records ) -> optional<string_view>
             {
-                return lineIndex < records._listRecordLine.size() ? std::optional<string_view>{ records._listRecordLine[lineIndex] } : std::nullopt;
+                return lineIndex < records._listRecordLine.size() ? optional<string_view>{ records._listRecordLine[lineIndex] } : nullopt;
             };
-            const std::optional<string_view> firstLine = lineAt( listRecords.front() );
+            const optional<string_view> firstLine = lineAt( listRecords.front() );
             if ( std::all_of( listRecords.begin(), listRecords.end(), [&]( const AutomationBackendRecords& records )
             { return lineAt( records ) == firstLine; } ) )
                 continue;
@@ -331,7 +314,7 @@ namespace sw
             string_view label{};
             for ( const AutomationBackendRecords& records : listRecords )
             {
-                const std::optional<string_view> line = lineAt( records );
+                const optional<string_view> line = lineAt( records );
                 if ( line.has_value() )
                 {
                     label = Internal::getRecordLabel( *line );
@@ -341,7 +324,7 @@ namespace sw
             string message = "record #" + to_string( lineIndex + 1 ) + " '" + string( label ) + "':";
             for ( const AutomationBackendRecords& records : listRecords )
             {
-                const std::optional<string_view> line = lineAt( records );
+                const optional<string_view> line = lineAt( records );
                 message += " " + records._backend + "=";
                 if ( line.has_value() == false )
                     message += "(none)";

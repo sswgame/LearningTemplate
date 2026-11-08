@@ -58,18 +58,15 @@ namespace sw
 
 namespace sw
 {
-    bool AutomationImage::loadPpm( string_view path, AutomationImage& outImage, string& outError )
+    expected<AutomationImage> AutomationImage::loadPpm( string_view path )
     {
         vector<uint8> bytes;
         if ( FileUtil::readFile( path, bytes ) == false )
-        {
-            outError = "could not read " + string( path );
-            return false;
-        }
-        return parsePpm( bytes.data(), bytes.size(), outImage, outError );
+            return unexpected( Error{ ErrorKind::NotFound, "could not read the image file", path } );
+        return parsePpm( bytes.data(), bytes.size() );
     }
 
-    bool AutomationImage::parsePpm( const uint8* pData, size_t size, AutomationImage& outImage, string& outError )
+    expected<AutomationImage> AutomationImage::parsePpm( const uint8* pData, size_t size )
     {
         using Internal          = AutomationImageMetricInternal;
         size_t     cursor       = 2;
@@ -78,35 +75,24 @@ namespace sw
         uint32     maxVal       = 0;
         const bool bNotPpmMagic = pData == nullptr || size < 2 || pData[0] != 'P' || pData[1] != '6';
         if ( bNotPpmMagic )
-        {
-            outError = "not a binary PPM (P6)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "not a binary PPM (P6)" } );
         const bool bBrokenPpmHeader = Internal::readHeaderNumber( pData, size, cursor, width ) == false || Internal::readHeaderNumber( pData, size, cursor, height ) == false ||
                                       Internal::readHeaderNumber( pData, size, cursor, maxVal ) == false || width == 0 || height == 0 || maxVal != 255 || cursor >= size;
         if ( bBrokenPpmHeader )
-        {
-            outError = "the PPM header is broken (needs width height 255)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the PPM header is broken (needs width height 255)" } );
         // 헤더 끝의 공백 하나 — 공백이 아니면(`255X`) 그 바이트를 화소로 읽어야 할지 알 수 없다.
         const uint8 terminator = pData[cursor];
         if ( terminator != ' ' && terminator != '\t' && terminator != '\r' && terminator != '\n' )
-        {
-            outError = "the PPM header is broken (needs width height 255)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the PPM header is broken (needs width height 255)" } );
         ++cursor;
         const uint64 pixelBytes = static_cast<uint64>( width ) * height * 3u;
         if ( size - cursor < pixelBytes )
-        {
-            outError = "the PPM is shorter than its header says";
-            return false;
-        }
-        outImage._width  = width;
-        outImage._height = height;
-        outImage._listRGB.assign( pData + cursor, pData + cursor + pixelBytes );
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the PPM is shorter than its header says" } );
+        AutomationImage image;
+        image._width  = width;
+        image._height = height;
+        image._listRGB.assign( pData + cursor, pData + cursor + pixelBytes );
+        return image;
     }
 
     bool AutomationImage::tryParseRegion( string_view text, AutomationImageRegion& outRegion )
@@ -136,7 +122,7 @@ namespace sw
         outBytes.insert( outBytes.end(), image._listRGB.begin(), image._listRGB.end() );
     }
 
-    bool AutomationImage::reduce( const AutomationImage& image, const AutomationImageRegion& region, AutomationImage& outReduced, string& outError )
+    expected<AutomationImage> AutomationImage::reduce( const AutomationImage& image, const AutomationImageRegion& region )
     {
         const uint32 x0 = static_cast<uint32>( region._x0 * static_cast<float32>( image._width ) );
         const uint32 y0 = static_cast<uint32>( region._y0 * static_cast<float32>( image._height ) );
@@ -144,18 +130,18 @@ namespace sw
         const uint32 y1 = MathUtil::min( image._height, static_cast<uint32>( region._y1 * static_cast<float32>( image._height ) + 0.5f ) );
         if ( x1 <= x0 || y1 <= y0 )
         {
-            StringBuilder<constant::buffer::kMax256> errorBuilder;
-            errorBuilder.appendFormat( "the region covers no pixel of the %#x%# image", image._width, image._height );
-            outError = string( errorBuilder.view() );
-            return false;
+            StringBuilder<constant::buffer::kMax256> sizeBuilder;
+            sizeBuilder.appendFormat( "%#x%#", image._width, image._height );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the region covers no pixel of the image", sizeBuilder.view() } );
         }
-        const uint32 sourceWidth  = x1 - x0;
-        const uint32 sourceHeight = y1 - y0;
-        const uint32 width        = MathUtil::min( sourceWidth, kGoldenMaxWidth );
-        const uint32 height       = MathUtil::max( 1u, static_cast<uint32>( static_cast<uint64>( sourceHeight ) * width / sourceWidth ) );
-        outReduced._width         = width;
-        outReduced._height        = height;
-        outReduced._listRGB.assign( static_cast<size_t>( width ) * height * 3u, 0 );
+        const uint32    sourceWidth  = x1 - x0;
+        const uint32    sourceHeight = y1 - y0;
+        const uint32    width        = MathUtil::min( sourceWidth, kGoldenMaxWidth );
+        const uint32    height       = MathUtil::max( 1u, static_cast<uint32>( static_cast<uint64>( sourceHeight ) * width / sourceWidth ) );
+        AutomationImage reduced;
+        reduced._width  = width;
+        reduced._height = height;
+        reduced._listRGB.assign( static_cast<size_t>( width ) * height * 3u, 0 );
         for ( uint32 y = 0; y < height; ++y )
         {
             const uint32 sy0 = y0 + static_cast<uint32>( static_cast<uint64>( y ) * sourceHeight / height );
@@ -176,25 +162,23 @@ namespace sw
                     }
                 }
                 const uint64 count = static_cast<uint64>( sy1 - sy0 ) * ( sx1 - sx0 );
-                uint8*       pOut  = &outReduced._listRGB[( static_cast<size_t>( y ) * width + x ) * 3u];
+                uint8*       pOut  = &reduced._listRGB[( static_cast<size_t>( y ) * width + x ) * 3u];
                 for ( uint32 channel = 0; channel < 3; ++channel )
                 {
                     pOut[channel] = static_cast<uint8>( ( arrSum[channel] + count / 2 ) / count );
                 }
             }
         }
-        return true;
+        return reduced;
     }
 
-    bool AutomationImage::compare( const AutomationImage& actual, const AutomationImage& golden, AutomationImageDifference& outDifference, string& outError )
+    expected<AutomationImageDifference> AutomationImage::compare( const AutomationImage& actual, const AutomationImage& golden )
     {
         if ( actual._width != golden._width || actual._height != golden._height )
         {
-            StringBuilder<constant::buffer::kMax256> textBuilder;
-            textBuilder.appendFormat( "%# (region or window size changed - record the golden again)", golden._height );
-            outError = "the image is " + to_string( actual._width ) + "x" + to_string( actual._height ) + " but the golden is " + to_string( golden._width ) + "x" +
-                       string( textBuilder.view() );
-            return false;
+            StringBuilder<constant::buffer::kMax256> sizeBuilder;
+            sizeBuilder.appendFormat( "image %#x%#, golden %#x%#", actual._width, actual._height, golden._width, golden._height );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the image and the golden differ in size (region or window size changed - record the golden again)", sizeBuilder.view() } );
         }
         const size_t pixelCount     = static_cast<size_t>( actual._width ) * actual._height;
         size_t       differingCount = 0;
@@ -208,9 +192,10 @@ namespace sw
             if ( distance >= kDifferingMinDistance )
                 ++differingCount;
         }
-        outDifference._differingFraction = pixelCount > 0 ? static_cast<float64>( differingCount ) / static_cast<float64>( pixelCount ) : 0.0;
-        outDifference._meanDistance      = pixelCount > 0 ? static_cast<float64>( distanceSum ) / ( static_cast<float64>( pixelCount ) * 765.0 ) : 0.0;
-        return true;
+        AutomationImageDifference difference;
+        difference._differingFraction = pixelCount > 0 ? static_cast<float64>( differingCount ) / static_cast<float64>( pixelCount ) : 0.0;
+        difference._meanDistance      = pixelCount > 0 ? static_cast<float64>( distanceSum ) / ( static_cast<float64>( pixelCount ) * 765.0 ) : 0.0;
+        return difference;
     }
 
 } // namespace sw

@@ -120,6 +120,8 @@ namespace sw::editor
         [[nodiscard]] bool addChild( int32 parentIndex, string_view name, const vector<CatalogXMLNewAttribute>& listAttribute );
         /** @brief 여러 단계로 고친 원문을 한 단계로 넣습니다. 훑지 못하는 글이면 거절합니다. */
         [[nodiscard]] bool replaceTextChecked( string_view text );
+        /** @brief 원문 고치기(`CatalogXMLText` 의 편집 함수)의 결과를 받습니다. 고치기가 실패했으면 그 이유를 상태 글로 남기고 false 입니다. */
+        [[nodiscard]] bool applyEdit( const expected<string>& edited );
         /**
          * @brief 글 상자 편집입니다. 훑지 못하는 글도 받습니다(`isParsed` 가 false 가 되고 테이블은 비어 보입니다).
          * @details 칸을 떠나기(`endTextEdit`) 전의 연속 입력은 되돌리기 한 단계입니다 — 글자마다 쌓으면 스택이 금방 차고, 쌓지 않으면 친 글을 되돌릴 수 없다.
@@ -129,6 +131,8 @@ namespace sw::editor
         void endTextEdit() { _bTextEditOpen = SW_FALSE; }
         /** @brief 문서 밖에서 고친 편집의 실패 이유를 남깁니다. */
         void setError( string_view error ) { _error = string( error ); }
+        /** @brief 원문 읽기 · 고치기의 실패를 상태 글로 남깁니다(`<대상>: <문장>` — 읽기 오류는 `line N: …`). */
+        void setError( const Error& error );
 
         bool canUndo() const { return _state.canUndo(); }
         bool canRedo() const { return _state.canRedo(); }

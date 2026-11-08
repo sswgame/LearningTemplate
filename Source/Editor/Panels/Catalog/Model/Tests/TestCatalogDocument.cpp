@@ -50,12 +50,21 @@ namespace
         /** @brief 파싱에 실패하는지 봅니다. 실패하면 표가 비어야 합니다("깨진 문서는 테이블이 없다"). */
         static void expectParseFails( string_view text, const utf8* pExpectedError )
         {
-            CatalogXMLText parsed;
-            string         error;
-            SW_EXPECT_FALSE( parsed.parse( text, error ) );
+            CatalogXMLText       parsed;
+            const expected<void> result = parsed.parse( text );
+            SW_REQUIRE_FALSE( result.has_value() );
             SW_EXPECT_FALSE( parsed.isParsed() );
             SW_EXPECT_TRUE( parsed.getElements().empty() );
-            SW_EXPECT_TRUE_MSG( error.find( pExpectedError ) != string::npos, error.c_str() );
+            const string reason = string( result.error().detail() ) + ": " + string( result.error().message() );
+            SW_EXPECT_TRUE_MSG( reason.find( pExpectedError ) != string::npos, reason.c_str() );
+        }
+
+        /** @brief 편집 함수의 결과를 @p outEdited 에 받고 성공이면 true 입니다. */
+        static bool take( const expected<string>& result, string& outEdited )
+        {
+            if ( result.has_value() )
+                outEdited = *result;
+            return result.has_value();
         }
 
         /** @brief 첫 @p name 원소의 번호입니다. */
@@ -77,9 +86,7 @@ namespace
 SW_TEST_CASE( CatalogXMLTextTest, ParsesElementsAttributesAndNesting )
 {
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( Util::kItems, error ) );
-    SW_EXPECT_TRUE( error.empty() );
+    SW_REQUIRE_TRUE( parsed.parse( Util::kItems ).has_value() );
     SW_REQUIRE_EQUAL( size_t{ 5 }, parsed.getElements().size() );
     const CatalogXMLElement& root = parsed.getElement( parsed.getRootIndex() );
     SW_EXPECT_TRUE( root._name == "Items" );
@@ -115,8 +122,7 @@ SW_TEST_CASE( CatalogXMLTextTest, BrokenDocumentsAreRefusedWithAReason )
 SW_TEST_CASE( CatalogXMLTextTest, MarkupInsideCommentsAndValuesIsNotAnElement )
 {
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( "<a v=\"&lt;x&gt; > /\"><!-- <b> --><![CDATA[<c>]]><?pi <d>?></a>", error ) );
+    SW_REQUIRE_TRUE( parsed.parse( "<a v=\"&lt;x&gt; > /\"><!-- <b> --><![CDATA[<c>]]><?pi <d>?></a>" ).has_value() );
     SW_EXPECT_EQUAL( size_t{ 1 }, parsed.getElements().size() );
     SW_EXPECT_TRUE( parsed.getElement( 0 )._listAttribute[0]._value == "<x> > /" );
 }
@@ -127,29 +133,27 @@ SW_TEST_CASE( CatalogXMLTextTest, SetAttributeKeepsEverythingElse )
 {
     const string   text = "<a  x = \"1\"   y='2'/>";
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( text, error ) );
+    SW_REQUIRE_TRUE( parsed.parse( text ).has_value() );
     string edited;
-    SW_REQUIRE_TRUE( CatalogXMLText::setAttributeValue( text, parsed.getElement( 0 ), "x", "5", edited, error ) );
+    SW_REQUIRE_TRUE( Util::take( CatalogXMLText::setAttributeValue( text, parsed.getElement( 0 ), "x", "5" ), edited ) );
     SW_EXPECT_TRUE( edited == "<a  x = \"5\"   y='2'/>" );
 
-    SW_REQUIRE_TRUE( CatalogXMLText::setAttributeValue( text, parsed.getElement( 0 ), "z", "<&>", edited, error ) );
-    SW_REQUIRE_TRUE( parsed.parse( edited, error ) ); // 새 속성은 끝에 붙고 값은 이스케이프한다
+    SW_REQUIRE_TRUE( Util::take( CatalogXMLText::setAttributeValue( text, parsed.getElement( 0 ), "z", "<&>" ), edited ) );
+    SW_REQUIRE_TRUE( parsed.parse( edited ).has_value() ); // 새 속성은 끝에 붙고 값은 이스케이프한다
     SW_EXPECT_TRUE( parsed.getElement( 0 )._listAttribute[2]._value == "<&>" );
     SW_EXPECT_TRUE( edited.find( "y='2'" ) != string::npos );
 
-    SW_REQUIRE_TRUE( parsed.parse( text, error ) );
-    SW_EXPECT_FALSE( CatalogXMLText::setAttributeValue( text, parsed.getElement( 0 ), "", "1", edited, error ) );
+    SW_REQUIRE_TRUE( parsed.parse( text ).has_value() );
+    SW_EXPECT_FALSE( Util::take( CatalogXMLText::setAttributeValue( text, parsed.getElement( 0 ), "", "1" ), edited ) );
 }
 
 SW_TEST_CASE( CatalogXMLTextTest, FirstAttributeOfABareElementGoesAfterTheName )
 {
     const string   text = "<a/>";
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( text, error ) );
+    SW_REQUIRE_TRUE( parsed.parse( text ).has_value() );
     string edited;
-    SW_REQUIRE_TRUE( CatalogXMLText::setAttributeValue( text, parsed.getElement( 0 ), "x", "1", edited, error ) );
+    SW_REQUIRE_TRUE( Util::take( CatalogXMLText::setAttributeValue( text, parsed.getElement( 0 ), "x", "1" ), edited ) );
     SW_EXPECT_TRUE( edited == "<a x=\"1\"/>" );
 }
 
@@ -157,26 +161,25 @@ SW_TEST_CASE( CatalogXMLTextTest, RemoveAttributeTakesItsLeadingSpace )
 {
     const string   text = "<a x=\"1\" y=\"2\"/>";
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( text, error ) );
+    SW_REQUIRE_TRUE( parsed.parse( text ).has_value() );
     string edited;
-    SW_REQUIRE_TRUE( CatalogXMLText::removeAttribute( text, parsed.getElement( 0 ), "x", edited, error ) );
+    SW_REQUIRE_TRUE( Util::take( CatalogXMLText::removeAttribute( text, parsed.getElement( 0 ), "x" ), edited ) );
     SW_EXPECT_TRUE( edited == "<a y=\"2\"/>" );
-    SW_EXPECT_FALSE( CatalogXMLText::removeAttribute( text, parsed.getElement( 0 ), "z", edited, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    const expected<string> missing = CatalogXMLText::removeAttribute( text, parsed.getElement( 0 ), "z" );
+    SW_REQUIRE_FALSE( missing.has_value() );
+    SW_EXPECT_TRUE( missing.error().detail() == "z" );
 }
 
 SW_TEST_CASE( CatalogXMLTextTest, AppendingOpensASelfClosedParent )
 {
     const string   text = "<r>\n\t<a/>\n</r>\n";
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( text, error ) );
+    SW_REQUIRE_TRUE( parsed.parse( text ).has_value() );
     string edited;
-    SW_REQUIRE_TRUE( CatalogXMLText::appendChildElement( text, parsed.getElement( 1 ), parsed.getElements(), "c", {
-                                                                                                                      { "k", "v" }
-    },
-                                                         edited, error ) );
+    SW_REQUIRE_TRUE( Util::take( CatalogXMLText::appendChildElement( text, parsed.getElement( 1 ), parsed.getElements(), "c", {
+                                                                                                                                  { "k", "v" }
+    } ),
+                                 edited ) );
     SW_EXPECT_TRUE( edited == "<r>\n\t<a>\n\t\t<c k=\"v\" />\n\t</a>\n</r>\n" );
 }
 
@@ -184,22 +187,20 @@ SW_TEST_CASE( CatalogXMLTextTest, AppendingFollowsTheSiblingIndentAndNewlineStyl
 {
     const string   text = "<r>\r\n    <a/>\r\n</r>\r\n";
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( text, error ) );
+    SW_REQUIRE_TRUE( parsed.parse( text ).has_value() );
     string edited;
-    SW_REQUIRE_TRUE( CatalogXMLText::appendChildElement( text, parsed.getElement( 0 ), parsed.getElements(), "b", {}, edited, error ) );
+    SW_REQUIRE_TRUE( Util::take( CatalogXMLText::appendChildElement( text, parsed.getElement( 0 ), parsed.getElements(), "b", {} ), edited ) );
     SW_EXPECT_TRUE( edited == "<r>\r\n    <a/>\r\n    <b />\r\n</r>\r\n" );
-    SW_EXPECT_FALSE( CatalogXMLText::appendChildElement( text, parsed.getElement( 0 ), parsed.getElements(), "", {}, edited, error ) );
+    SW_EXPECT_FALSE( Util::take( CatalogXMLText::appendChildElement( text, parsed.getElement( 0 ), parsed.getElements(), "", {} ), edited ) );
 }
 
 SW_TEST_CASE( CatalogXMLTextTest, AppendingIntoAnOneLineElementBreaksTheLine )
 {
     const string   text = "<r></r>";
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( text, error ) );
+    SW_REQUIRE_TRUE( parsed.parse( text ).has_value() );
     string edited;
-    SW_REQUIRE_TRUE( CatalogXMLText::appendChildElement( text, parsed.getElement( 0 ), parsed.getElements(), "b", {}, edited, error ) );
+    SW_REQUIRE_TRUE( Util::take( CatalogXMLText::appendChildElement( text, parsed.getElement( 0 ), parsed.getElements(), "b", {} ), edited ) );
     SW_EXPECT_TRUE( edited == "<r>\n\t<b />\n</r>" );
 }
 
@@ -207,14 +208,13 @@ SW_TEST_CASE( CatalogXMLTextTest, RemovingAnElementTakesItsLineOnlyWhenItOwnsIt 
 {
     const string   text = "<r>\n\t<a/>\n\t<b/><c/>\n</r>";
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( text, error ) );
+    SW_REQUIRE_TRUE( parsed.parse( text ).has_value() );
     string edited;
-    SW_REQUIRE_TRUE( CatalogXMLText::removeElement( text, parsed.getElement( 1 ), edited, error ) );
+    SW_REQUIRE_TRUE( Util::take( CatalogXMLText::removeElement( text, parsed.getElement( 1 ) ), edited ) );
     SW_EXPECT_TRUE( edited == "<r>\n\t<b/><c/>\n</r>" );
-    SW_REQUIRE_TRUE( CatalogXMLText::removeElement( text, parsed.getElement( 2 ), edited, error ) );
+    SW_REQUIRE_TRUE( Util::take( CatalogXMLText::removeElement( text, parsed.getElement( 2 ) ), edited ) );
     SW_EXPECT_TRUE( edited == "<r>\n\t<a/>\n\t<c/>\n</r>" );
-    SW_EXPECT_FALSE( CatalogXMLText::removeElement( text, parsed.getElement( 0 ), edited, error ) ); // 루트
+    SW_EXPECT_FALSE( Util::take( CatalogXMLText::removeElement( text, parsed.getElement( 0 ) ), edited ) ); // 루트
 }
 
 // ---------------------------------------------------------------------- 문서
@@ -348,12 +348,11 @@ SW_TEST_CASE( CatalogXMLTextTest, DuplicatingAnElementCopiesItsTextOntoANewLine 
 {
     const string   text = "<r>\r\n  <a x=\"1\"><!-- c --></a>\r\n</r>\r\n";
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( text, error ) );
+    SW_REQUIRE_TRUE( parsed.parse( text ).has_value() );
     string edited;
-    SW_REQUIRE_TRUE( CatalogXMLText::duplicateElement( text, parsed.getElement( 1 ), edited, error ) );
+    SW_REQUIRE_TRUE( Util::take( CatalogXMLText::duplicateElement( text, parsed.getElement( 1 ) ), edited ) );
     SW_EXPECT_TRUE( edited == "<r>\r\n  <a x=\"1\"><!-- c --></a>\r\n  <a x=\"1\"><!-- c --></a>\r\n</r>\r\n" );
-    SW_EXPECT_FALSE( CatalogXMLText::duplicateElement( text, parsed.getElement( 0 ), edited, error ) );
+    SW_EXPECT_FALSE( Util::take( CatalogXMLText::duplicateElement( text, parsed.getElement( 0 ) ), edited ) );
 }
 
 // 로더가 겹친 id 를 거절하므로 저장하기 전에 표가 알린다. 이름은 겹쳐도 된다.
@@ -441,8 +440,7 @@ SW_TEST_CASE( CatalogDocumentTest, BrokenTextOpensButRefusesTableEdits )
 SW_TEST_CASE( CatalogCurveModelTest, FindsCurvesWithLabelsAndKeys )
 {
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( Util::kCurves, error ) );
+    SW_REQUIRE_TRUE( parsed.parse( Util::kCurves ).has_value() );
     vector<CatalogCurve> listCurve;
     CatalogCurve::collectCurves( parsed, parsed.getRootIndex(), listCurve );
     SW_REQUIRE_EQUAL( size_t{ 5 }, listCurve.size() );
@@ -462,8 +460,7 @@ SW_TEST_CASE( CatalogCurveModelTest, FindsCurvesWithLabelsAndKeys )
 SW_TEST_CASE( CatalogCurveModelTest, GradientNeedsAllFourChannels )
 {
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( Util::kCurves, error ) );
+    SW_REQUIRE_TRUE( parsed.parse( Util::kCurves ).has_value() );
     vector<CatalogCurve> listCurve;
     CatalogCurve::collectCurves( parsed, parsed.getRootIndex(), listCurve );
     vector<CatalogGradient> listGradient;
@@ -480,8 +477,7 @@ SW_TEST_CASE( CatalogCurveModelTest, GradientNeedsAllFourChannels )
 SW_TEST_CASE( CatalogCurveModelTest, SamplingUsesOnlyValidKeys )
 {
     CatalogXMLText parsed;
-    string         error;
-    SW_REQUIRE_TRUE( parsed.parse( Util::kCurves, error ) );
+    SW_REQUIRE_TRUE( parsed.parse( Util::kCurves ).has_value() );
     vector<CatalogCurve> listCurve;
     CatalogCurve::collectCurves( parsed, parsed.getRootIndex(), listCurve );
     const CatalogCurve& size = listCurve[0];

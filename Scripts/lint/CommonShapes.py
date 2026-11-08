@@ -47,7 +47,7 @@ kDefaultNullPattern = re.compile(r"\bdefault\s*:\s*return\s+nullptr")
 kSeenCountPattern = re.compile(r"\b_seen\w*ReloadCount\b")
 kReloadCallPattern = re.compile(r"::getReloadCount\(\s*\)")
 kFirstComponentPattern = re.compile(r"forEachComponentOfType<[^>]*>\([^\n]*\n\s*\{\s*\n\s*if \( pFound == nullptr \)\s*\n\s*pFound = ")
-kOneLineValidatorPattern = re.compile(r"bool\s+(?:\w+::)?\w+\(\s*const AutomationStep& step,\s*string& outError\s*\)\s*\{\s*\w+ params;\s*return step\.readFields\( params, outError \);\s*\}")
+kOneLineValidatorPattern = re.compile(r"expected<void>\s+(?:\w+::)?\w+\(\s*const AutomationStep& step\s*\)\s*\{\s*\w+ params;\s*return step\.readFields\( params \);\s*\}")
 kCanvasDeletePattern = re.compile(r"\bed::BeginDelete\(")
 kSavedTextPattern = re.compile(r"^\s*string\s+_savedText\s*;", re.M)
 kMakeDeltaPattern = re.compile(r"\bDataInheritance::makeDelta\(")
@@ -169,7 +169,7 @@ def runSelfCheck() -> None:
     assert findProblems([("Source/A/a.cpp", same)], {"enumNameSwitch": {"Source/A/a.cpp|Kind": "이유"}}) == []
     stale = findProblems([("Source/A/a.cpp", "int x;")], {"enumNameSwitch": {"Source/A/a.cpp|Kind": "이유"}})
     assert len(stale) == 1 and "낡은" in stale[0], stale
-    validator = "static bool validateX( const AutomationStep& step, string& outError )\n{\n    MyParams params;\n    return step.readFields( params, outError );\n}"
+    validator = "static expected<void> validateX( const AutomationStep& step )\n{\n    MyParams params;\n    return step.readFields( params );\n}"
     assert [v[0] for v in collectViolations("Source/A/a.cpp", validator)] == ["oneLineValidator"]
     assert collectViolations("Source/A/a.cpp", "// ed::BeginDelete()\nint x;") == []
     assert [v[0] for v in collectViolations("Source/A/a.cpp", "if ( ed::BeginDelete() )")] == ["canvasDelete"]

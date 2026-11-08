@@ -47,10 +47,10 @@ namespace sw::editor
         _listEmitterRow.clear();
         _previewEffectPath.clear();
         // 자동 갱신이 볼 내용 해시 — 리소스 id 면 디스크 경로로 푼다(시나리오의 임시 문서는 이미 디스크 경로다).
-        const std::optional<AbsolutePath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? AbsolutePath::tryMake( assetPath )
-                                                                                                 : editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
-        _loadedDiskPath                            = diskPath.has_value() ? diskPath->str() : string{};
-        _loadedContentHash                         = 0;
+        const optional<AbsolutePath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? AbsolutePath::tryMake( assetPath )
+                                                                                            : optional<AbsolutePath>{ editor::getSubsystem<AssetPaths>().toDiskPath( assetPath ) };
+        _loadedDiskPath                       = diskPath.has_value() ? diskPath->str() : string{};
+        _loadedContentHash                    = 0;
         if ( _loadedDiskPath.empty() == false )
             (void)updateContentHash( _loadedDiskPath, _loadedContentHash );
         // 미리 보기의 표는 씬의 효과와 같은 한 벌을 읽는다(공유 캐시 — 핫 리로드가 떼어 낸 새 객체도 다시 열면 받는다).

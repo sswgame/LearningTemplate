@@ -85,8 +85,8 @@ namespace sw::editor
                     return {};
                 if ( AbsolutePath::isStrictAbsolute( path ) )
                     return FileUtil::normalizeSeparators( path );
-                const AssetPaths&                 paths    = editor::getSubsystem<AssetPaths>();
-                const std::optional<AbsolutePath> diskPath = use == DocumentUse::Read ? paths.findLooseFile( path ) : paths.toDiskPath( path );
+                const AssetPaths&            paths    = editor::getSubsystem<AssetPaths>();
+                const optional<AbsolutePath> diskPath = use == DocumentUse::Read ? paths.findLooseFile( path ) : paths.toDiskPath( path );
                 return diskPath.has_value() ? diskPath->str() : string{};
             }
 

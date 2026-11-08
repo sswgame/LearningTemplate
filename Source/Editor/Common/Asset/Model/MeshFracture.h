@@ -19,6 +19,7 @@
 #pragma once
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -40,13 +41,12 @@ namespace sw::editor
         /** @brief 쪼개기 결과를 바꾸는 수정마다 올립니다. 임포트 원본 해시에 섞여, 쿠킹해 둔 `.fracture` 가 낡은 것으로 판정됩니다(형식 버전과는 별개입니다). */
         static constexpr uint32 kAlgorithmVersion = 1;
         /**
-         * @brief 메시(정점 · 인덱스)를 쪼개 @p outAsset 을 채웁니다. 범위 밖 번호는 오류입니다.
+         * @brief 메시(정점 · 인덱스)를 쪼갠 조각 에셋을 돌려줍니다. 범위 밖 번호는 오류입니다.
          * @details `_volume` 이 Mesh 가 아니면 대리 부피(경계 상자나 볼록 껍질)를 쪼개 안쪽 면, 껍질, 부피를 얻고,
          *          겉면은 원래 메시를 같은 평면으로 막지 않고 잘라 조각마다 붙인다. 열린 판자나 겹친 부품으로 된 모델(Kenney 상자)도 쪼갠다.
-         * @return 입력이 (Mesh 부피인데) 닫혀 있지 않거나 삼각형이 없거나 조각이 하나도 남지 않으면 false 를 반환하고, @p outError 에 이유를 씁니다.
+         * @return 입력이 (Mesh 부피인데) 닫혀 있지 않거나 삼각형이 없거나 조각이 하나도 남지 않으면 그 이유입니다.
          */
-        [[nodiscard]] static bool fracture( vector_reference<const RHIVertex> listMeshVertex, vector_reference<const uint32> listMeshIndex, const FractureSettings& settings, FractureAsset& outAsset,
-                                            string& outError );
+        [[nodiscard]] static expected<FractureAsset> fracture( vector_reference<const RHIVertex> listMeshVertex, vector_reference<const uint32> listMeshIndex, const FractureSettings& settings );
         /** @brief 삼각형 목록이 닫혔는지 반환합니다. 위치가 비트까지 같은 점만 같은 정점으로 봅니다(쪼갠 조각이 정확히 닫혔는지 확인할 때 씁니다). */
         static bool isClosedMesh( vector_reference<const RHIVertex> listVertex );
         /** @brief 허용 오차(1e-5) 안의 위치를 같은 정점으로 보고 닫혔는지 반환합니다. `AppearanceGeometry::isClosed` 를 쓰며, 임포트한 입력을 검사합니다. */

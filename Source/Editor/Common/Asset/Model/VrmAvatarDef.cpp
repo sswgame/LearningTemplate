@@ -148,33 +148,45 @@ namespace sw::editor
                     pOutListIgnored->push_back( path );
             }
 
+            /** @brief 오류를 짓습니다 — 대상은 `<context>: <what> <value>`(빈 칸은 뺀다). 문장은 리터럴이고 어느 원소 · 값인지는 대상에 둔다. */
+            [[nodiscard]] static Error makeError( ErrorKind kind, const utf8* pMessage, string_view context, string_view what = {}, string_view value = {} )
+            {
+                Error error{ kind, pMessage, context };
+                if ( what.empty() == false )
+                    error.appendDetail( ": " ).appendDetail( what );
+                if ( value.empty() == false )
+                    error.appendDetail( " " ).appendDetail( value );
+                return error;
+            }
+
             /**
              * @brief 0.x 벡터 `{ x, y, z }` 나 1.0 벡터 `[ x, y, z ]` 를 읽습니다(원본 공간). 없으면 @p inoutValue 를 그대로 둡니다(정의의 초기값).
-             * @return 벡터 모양이 아니거나 칸이 숫자가 아니면 이유와 false 입니다.
+             * @return 벡터 모양이 아니거나 칸이 숫자가 아니면 그 이유입니다.
              */
-            [[nodiscard]] static bool readVector( const JSONValue& value, string_view context, float3& inoutValue, string& outError )
+            [[nodiscard]] static expected<void> readVector( const JSONValue& value, string_view context, float3& inoutValue )
             {
                 if ( value.isValid() == false || value.isNull() )
-                    return true;
+                    return {};
                 if ( value.isObject() )
-                    return readFloat( value, "x", context, inoutValue._x, outError ) && readFloat( value, "y", context, inoutValue._y, outError ) &&
-                           readFloat( value, "z", context, inoutValue._z, outError );
+                {
+                    return readFloat( value, "x", context, inoutValue._x )
+                        .and_then( [&]()
+                    { return readFloat( value, "y", context, inoutValue._y ); } )
+                        .and_then( [&]()
+                    { return readFloat( value, "z", context, inoutValue._z ); } );
+                }
                 float32* const arrAxis[3] = { &inoutValue._x, &inoutValue._y, &inoutValue._z };
                 const bool     bArray     = value.isArray() && value.size() >= 3;
                 for ( uint32 axis = 0; bArray && axis < 3; ++axis )
                 {
-                    const std::optional<float32> number = value.at( axis ).read<float32>();
+                    const optional<float32> number = value.at( axis ).read<float32>();
                     if ( number.has_value() == false )
-                    {
-                        outError = string( context ) + ": vector " + value.dump() + " has a value that is not a number";
-                        return false;
-                    }
+                        return unexpected( makeError( ErrorKind::InvalidArgument, "the vector has a value that is not a number", context, "vector", value.dump() ) );
                     *arrAxis[axis] = *number;
                 }
                 if ( bArray )
-                    return true;
-                outError = string( context ) + ": vector " + value.dump() + " must be { x, y, z } or [ x, y, z ]";
-                return false;
+                    return {};
+                return unexpected( makeError( ErrorKind::InvalidArgument, "the vector must be { x, y, z } or [ x, y, z ]", context, "vector", value.dump() ) );
             }
 
             /** @brief 0.x 확장의 벡터(유니티 공간)를 엔진 공간으로 옮깁니다. z 를 뒤집어 glTF 로, X 를 뒤집어 엔진으로 간다. */
@@ -182,60 +194,46 @@ namespace sw::editor
             /** @brief 1.0 확장의 벡터(glTF 공간)를 엔진 공간으로 옮깁니다. */
             static float3 convertVrm1Vector( const float3& value ) { return float3{ -value._x, value._y, value._z }; }
 
-            /** @brief 없어도 되는 숫자 @p key 를 읽습니다. 없으면 @p inoutValue 를 그대로 두고(정의의 초기값), 숫자가 아니면 이유와 false 입니다. */
-            [[nodiscard]] static bool readFloat( const JSONValue& object, string_view key, string_view context, float32& inoutValue, string& outError )
+            /** @brief 없어도 되는 숫자 @p key 를 읽습니다. 없으면 @p inoutValue 를 그대로 두고(정의의 초기값), 숫자가 아니면 그 이유입니다. */
+            [[nodiscard]] static expected<void> readFloat( const JSONValue& object, string_view key, string_view context, float32& inoutValue )
             {
                 const JSONValue value = object.get( key );
                 if ( value.isValid() == false || value.isNull() )
-                    return true;
-                const std::optional<float32> number = value.read<float32>();
+                    return {};
+                const optional<float32> number = value.read<float32>();
                 if ( number.has_value() == false )
-                {
-                    outError = string( context ) + ": " + string( key ) + " " + value.dump() + " is not a number";
-                    return false;
-                }
+                    return unexpected( makeError( ErrorKind::InvalidArgument, "is not a number", context, key, value.dump() ) );
                 inoutValue = *number;
-                return true;
+                return {};
             }
 
-            /** @brief 없어도 되는 불리언 @p key 를 읽습니다. 없으면 @p inoutFlag 를 그대로 두고, 불리언이 아니면 이유와 false 입니다. */
-            [[nodiscard]] static bool readFlag( const JSONValue& object, string_view key, string_view context, uint8& inoutFlag, string& outError )
+            /** @brief 없어도 되는 불리언 @p key 를 읽습니다. 없으면 @p inoutFlag 를 그대로 두고, 불리언이 아니면 그 이유입니다. */
+            [[nodiscard]] static expected<void> readFlag( const JSONValue& object, string_view key, string_view context, uint8& inoutFlag )
             {
                 const JSONValue value = object.get( key );
                 if ( value.isValid() == false || value.isNull() )
-                    return true;
-                const std::optional<bool> flag = value.read<bool>();
+                    return {};
+                const optional<bool> flag = value.read<bool>();
                 if ( flag.has_value() == false )
-                {
-                    outError = string( context ) + ": " + string( key ) + " " + value.dump() + " is not a boolean";
-                    return false;
-                }
+                    return unexpected( makeError( ErrorKind::InvalidArgument, "is not a boolean", context, key, value.dump() ) );
                 inoutFlag = *flag ? SW_TRUE : SW_FALSE;
-                return true;
+                return {};
             }
 
-            /** @brief 번호 @p value 가 [0, @p count) 안의 정수이면 @p outIndex 에 넣습니다. 아니면 `<context>: <what> <값> <reason>` 과 false 입니다. */
-            [[nodiscard]] static bool readIndex( const JSONValue& value, size_t count, string_view context, string_view what, string_view reason, uint32& outIndex,
-                                                 string& outError )
+            /** @brief 번호 @p value 가 [0, @p count) 안의 정수이면 돌려줍니다. 아니면 문장 @p pReason 과 `<context>: <what> <값>` 이 대상인 오류입니다. */
+            [[nodiscard]] static expected<uint32> readIndex( const JSONValue& value, size_t count, string_view context, string_view what, const utf8* pReason )
             {
-                const std::optional<uint32> index = value.read<uint32>();
+                const optional<uint32> index = value.read<uint32>();
                 if ( index.has_value() == false || *index >= count )
-                {
-                    outError = string( context ) + ": " + string( what ) + " " + value.dump() + " " + string( reason );
-                    return false;
-                }
-                outIndex = *index;
-                return true;
+                    return unexpected( makeError( ErrorKind::NotFound, pReason, context, what, value.dump() ) );
+                return *index;
             }
 
-            /** @brief 노드 번호를 본 이름으로 풉니다. 번호가 아니거나 범위 밖이면 false 와 이유입니다. */
-            [[nodiscard]] static bool resolveNode( const VrmGltfNames& names, const JSONValue& value, string_view context, string& outName, string& outError )
+            /** @brief 노드 번호를 본 이름으로 풉니다. 번호가 아니거나 범위 밖이면 그 이유입니다. */
+            [[nodiscard]] static expected<string> resolveNode( const VrmGltfNames& names, const JSONValue& value, string_view context )
             {
-                uint32 node{ 0 };
-                if ( readIndex( value, names._listNodeName.size(), context, "node", "is not a node of the model", node, outError ) == false )
-                    return false;
-                outName = names._listNodeName[node];
-                return true;
+                return readIndex( value, names._listNodeName.size(), context, "node", "is not a node of the model" ).transform( [&]( uint32 node )
+                { return names._listNodeName[node]; } );
             }
 
             /** @brief 0.x 의 "없음" 이 -1 인 노드 필드(center · firstPersonBone)가 노드를 가리키는지 봅니다. 없거나 음수면 false 이고, 정수가 아니면 @p outbInvalid 입니다. */
@@ -244,29 +242,21 @@ namespace sw::editor
                 outbInvalid = false;
                 if ( value.isValid() == false || value.isNull() )
                     return false;
-                const std::optional<int64> node = value.read<int64>();
-                outbInvalid                     = node.has_value() == false;
+                const optional<int64> node = value.read<int64>();
+                outbInvalid                = node.has_value() == false;
                 return node.has_value() && *node >= 0;
             }
 
-            /** @brief 메시 번호 · 타깃 번호를 모프 타깃 이름으로 풉니다. 번호가 아니거나 범위 밖이면 false 와 이유입니다. */
-            [[nodiscard]] static bool resolveMorphTarget( const VrmGltfNames& names, uint32 mesh, const JSONValue& indexValue, string_view context, string& outName, string& outError )
+            /** @brief 메시 번호 · 타깃 번호를 모프 타깃 이름으로 풉니다. 번호가 아니거나 범위 밖이면 그 이유입니다. */
+            [[nodiscard]] static expected<string> resolveMorphTarget( const VrmGltfNames& names, uint32 mesh, const JSONValue& indexValue, string_view context )
             {
                 if ( mesh >= names._listMeshMorphName.size() )
-                {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "%#: mesh %# is not a mesh of the model", string( context ), mesh );
-                    outError = string( errorBuilder.view() );
-                    return false;
-                }
+                    return unexpected( makeError( ErrorKind::NotFound, "is not a mesh of the model", context, "mesh", to_string( mesh ) ) );
                 const vector<string>&                    listMorph = names._listMeshMorphName[mesh];
-                uint32                                   index{ 0 };
-                StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "is not a target of mesh %#", mesh );
-                if ( readIndex( indexValue, listMorph.size(), context, "morph target", string( textBuilder.view() ), index, outError ) == false )
-                    return false;
-                outName = listMorph[index];
-                return true;
+                StringBuilder<constant::buffer::kMax256> whatBuilder;
+                whatBuilder.appendFormat( "mesh %# morph target", mesh );
+                return readIndex( indexValue, listMorph.size(), context, whatBuilder.view(), "is not a target of the mesh" ).transform( [&]( uint32 index )
+                { return listMorph[index]; } );
             }
 
             static string makeMeshName( const VrmGltfNames& names, uint32 mesh )
@@ -355,7 +345,7 @@ namespace sw::editor
             }
 
             /** @brief 0.x 의 humanoid 를 읽습니다. */
-            [[nodiscard]] static bool readVrm0Humanoid( const JSONValue& humanoid, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
+            [[nodiscard]] static expected<void> readVrm0Humanoid( const JSONValue& humanoid, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored )
             {
                 collectUnknownKeys( humanoid, kArrVrm0HumanoidKey, "VRM.humanoid", pOutListIgnored );
                 const JSONValue listBone = humanoid.get( "humanBones" );
@@ -373,21 +363,20 @@ namespace sw::editor
                         }
                     }
                     if ( VectorUtil::contains( kArrHumanBone, humanBone ) == false )
-                    {
-                        outError = "VRM 0.x humanoid: unknown human bone '" + humanBone + "'";
-                        return false;
-                    }
+                        return unexpected( makeError( ErrorKind::InvalidArgument, "unknown human bone", "VRM 0.x humanoid", humanBone ) );
+                    const expected<string> node = resolveNode( names, entry.get( "node" ), "VRM 0.x humanoid bone '" + humanBone + "'" );
+                    if ( node.has_value() == false )
+                        return unexpected( node.error() );
                     VrmHumanBone bone;
                     bone._humanBone = humanBone;
-                    if ( resolveNode( names, entry.get( "node" ), "VRM 0.x humanoid bone '" + humanBone + "'", bone._bone, outError ) == false )
-                        return false;
+                    bone._bone      = *node;
                     inoutDef._listHumanBone.push_back( std::move( bone ) );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 0.x 의 blendShapeMaster 를 읽습니다. */
-            [[nodiscard]] static bool readVrm0Expressions( const JSONValue& master, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
+            [[nodiscard]] static expected<void> readVrm0Expressions( const JSONValue& master, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored )
             {
                 collectUnknownKeys( master, kArrVrm0MasterKey, "VRM.blendShapeMaster", pOutListIgnored );
                 const JSONValue listGroup = master.get( "blendShapeGroups" );
@@ -412,40 +401,41 @@ namespace sw::editor
                             }
                         }
                         if ( bKnown == false )
-                        {
-                            outError = "VRM 0.x blend shape group '" + expression._name + "': unknown presetName '" + presetName + "'";
-                            return false;
-                        }
+                            return unexpected( makeError( ErrorKind::InvalidArgument, "unknown presetName", "VRM 0.x blend shape group '" + expression._name + "'", presetName ) );
                     }
-                    const string groupContext = "VRM 0.x blend shape group '" + expression._name + "'";
-                    if ( readFlag( group, "isBinary", groupContext, expression._bBinary, outError ) == false )
-                        return false;
+                    const string         groupContext = "VRM 0.x blend shape group '" + expression._name + "'";
+                    const expected<void> binary       = readFlag( group, "isBinary", groupContext, expression._bBinary );
+                    if ( binary.has_value() == false )
+                        return binary;
                     const JSONValue listBind = group.get( "binds" );
                     for ( size_t bindIndex = 0; bindIndex < listBind.size(); ++bindIndex )
                     {
                         const JSONValue bindValue = listBind.at( bindIndex );
                         collectUnknownKeys( bindValue, kArrVrm0BindKey, "VRM.blendShapeMaster.blendShapeGroups.binds", pOutListIgnored );
+                        const expected<uint32> mesh = readIndex( bindValue.get( "mesh" ), names._listMeshMorphName.size(), groupContext, "mesh", "is not a mesh of the model" );
+                        if ( mesh.has_value() == false )
+                            return unexpected( mesh.error() );
+                        const expected<string> morphTarget = resolveMorphTarget( names, *mesh, bindValue.get( "index" ), groupContext );
+                        if ( morphTarget.has_value() == false )
+                            return unexpected( morphTarget.error() );
+                        float32              weight{ kVrm0FullWeight };
+                        const expected<void> weightRead = readFloat( bindValue, "weight", groupContext, weight );
+                        if ( weightRead.has_value() == false )
+                            return weightRead;
                         VrmExpressionBind bind;
-                        uint32            mesh{ 0 };
-                        float32           weight{ kVrm0FullWeight };
-                        const bool        bBindRead = readIndex( bindValue.get( "mesh" ), names._listMeshMorphName.size(), groupContext, "mesh", "is not a mesh of the model", mesh,
-                                                                 outError ) &&
-                                               resolveMorphTarget( names, mesh, bindValue.get( "index" ), groupContext, bind._morphTarget, outError ) &&
-                                               readFloat( bindValue, "weight", groupContext, weight, outError );
-                        if ( bBindRead == false )
-                            return false;
-                        bind._weight = weight * kVrm0WeightScale;
+                        bind._morphTarget = *morphTarget;
+                        bind._weight      = weight * kVrm0WeightScale;
                         expression._listBind.push_back( std::move( bind ) );
                     }
                     if ( group.get( "materialValues" ).size() > 0 )
                         addIgnored( pOutListIgnored, "VRM.blendShapeMaster.blendShapeGroups.materialValues" );
                     inoutDef._listExpression.push_back( std::move( expression ) );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 0.x 의 secondaryAnimation 을 읽습니다. 루트 본마다 사슬 하나입니다. */
-            [[nodiscard]] static bool readVrm0Springs( const JSONValue& secondary, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
+            [[nodiscard]] static expected<void> readVrm0Springs( const JSONValue& secondary, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored )
             {
                 collectUnknownKeys( secondary, kArrVrm0SecondaryKey, "VRM.secondaryAnimation", pOutListIgnored );
                 const JSONValue listColliderGroup = secondary.get( "colliderGroups" );
@@ -453,11 +443,12 @@ namespace sw::editor
                 {
                     const JSONValue group = listColliderGroup.at( groupIndex );
                     collectUnknownKeys( group, kArrVrm0ColliderGroupKey, "VRM.secondaryAnimation.colliderGroups", pOutListIgnored );
-                    string                                   bone;
-                    StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "VRM 0.x collider group %#", static_cast<uint64>( groupIndex ) );
-                    if ( resolveNode( names, group.get( "node" ), string( textBuilder.view() ), bone, outError ) == false )
-                        return false;
+                    StringBuilder<constant::buffer::kMax256> contextBuilder;
+                    contextBuilder.appendFormat( "VRM 0.x collider group %#", static_cast<uint64>( groupIndex ) );
+                    const string           colliderContext{ contextBuilder.view() };
+                    const expected<string> bone = resolveNode( names, group.get( "node" ), colliderContext );
+                    if ( bone.has_value() == false )
+                        return unexpected( bone.error() );
                     VrmSpringColliderGroup                   colliderGroup;
                     StringBuilder<constant::buffer::kMax256> nameBuilder;
                     nameBuilder.appendFormat( "colliderGroup%#", static_cast<uint64>( groupIndex ) );
@@ -468,14 +459,14 @@ namespace sw::editor
                         const JSONValue colliderValue = listColliderValue.at( colliderIndex );
                         collectUnknownKeys( colliderValue, kArrVrm0ColliderKey, "VRM.secondaryAnimation.colliderGroups.colliders", pOutListIgnored );
                         VrmSpringCollider collider;
-                        collider._bone = bone;
-                        StringBuilder<constant::buffer::kMax256> colliderContextBuilder;
-                        colliderContextBuilder.appendFormat( "VRM 0.x collider group %#", static_cast<uint64>( groupIndex ) );
-                        const string colliderContext{ colliderContextBuilder.view() };
-                        float3       offset{};
-                        if ( readVector( colliderValue.get( "offset" ), colliderContext, offset, outError ) == false ||
-                             readFloat( colliderValue, "radius", colliderContext, collider._radius, outError ) == false )
-                            return false;
+                        collider._bone = *bone;
+                        float3               offset{};
+                        const expected<void> read = readVector( colliderValue.get( "offset" ), colliderContext, offset ).and_then( [&]()
+                        {
+                            return readFloat( colliderValue, "radius", colliderContext, collider._radius );
+                        } );
+                        if ( read.has_value() == false )
+                            return read;
                         collider._offset = convertVrm0Vector( offset );
                         collider._tail   = collider._offset;
                         colliderGroup._listCollider.push_back( static_cast<uint32>( inoutDef._listCollider.size() ) );
@@ -497,43 +488,50 @@ namespace sw::editor
                     VrmSpringJoint jointValue;
                     jointValue._dragForce = kVrm0DragForce;
                     jointValue._hitRadius = kVrm0HitRadius;
-                    float3     gravityDirection{ convertVrm0Vector( jointValue._gravityDirection ) };
-                    const bool bJointRead = readFloat( group, "stiffiness", context, jointValue._stiffness, outError ) &&
-                                            readFloat( group, "gravityPower", context, jointValue._gravityPower, outError ) &&
-                                            readVector( group.get( "gravityDir" ), context, gravityDirection, outError ) &&
-                                            readFloat( group, "dragForce", context, jointValue._dragForce, outError ) &&
-                                            readFloat( group, "hitRadius", context, jointValue._hitRadius, outError );
-                    if ( bJointRead == false )
-                        return false;
+                    float3               gravityDirection{ convertVrm0Vector( jointValue._gravityDirection ) };
+                    const expected<void> jointRead = readFloat( group, "stiffiness", context, jointValue._stiffness )
+                                                         .and_then( [&]()
+                    { return readFloat( group, "gravityPower", context, jointValue._gravityPower ); } )
+                                                         .and_then( [&]()
+                    { return readVector( group.get( "gravityDir" ), context, gravityDirection ); } )
+                                                         .and_then( [&]()
+                    { return readFloat( group, "dragForce", context, jointValue._dragForce ); } )
+                                                         .and_then( [&]()
+                    { return readFloat( group, "hitRadius", context, jointValue._hitRadius ); } );
+                    if ( jointRead.has_value() == false )
+                        return jointRead;
                     jointValue._gravityDirection = convertVrm0Vector( gravityDirection );
 
                     string          centerBone;
                     const JSONValue center         = group.get( "center" );
                     bool            bCenterInvalid = false;
                     const bool      bHasCenter     = refersToNode( center, bCenterInvalid );
-                    if ( bCenterInvalid || ( bHasCenter && resolveNode( names, center, context + " center", centerBone, outError ) == false ) )
+                    if ( bCenterInvalid )
+                        return unexpected( makeError( ErrorKind::InvalidArgument, "the center is not a node number", context, "center", center.dump() ) );
+                    if ( bHasCenter )
                     {
-                        if ( bCenterInvalid )
-                            outError = context + ": center " + center.dump() + " is not a node number";
-                        return false;
+                        const expected<string> centerNode = resolveNode( names, center, context + " center" );
+                        if ( centerNode.has_value() == false )
+                            return unexpected( centerNode.error() );
+                        centerBone = *centerNode;
                     }
                     vector<uint32>  listColliderGroupIndex;
                     const JSONValue listGroupRef = group.get( "colliderGroups" );
                     for ( size_t refIndex = 0; refIndex < listGroupRef.size(); ++refIndex )
                     {
-                        uint32 ref{ 0 };
-                        if ( readIndex( listGroupRef.at( refIndex ), inoutDef._listColliderGroup.size(), context, "collider group", "does not exist", ref, outError ) == false )
-                            return false;
-                        listColliderGroupIndex.push_back( ref );
+                        const expected<uint32> ref = readIndex( listGroupRef.at( refIndex ), inoutDef._listColliderGroup.size(), context, "collider group", "the collider group does not exist" );
+                        if ( ref.has_value() == false )
+                            return unexpected( ref.error() );
+                        listColliderGroupIndex.push_back( *ref );
                     }
 
                     const string    comment  = group.get( "comment" ).asString();
                     const JSONValue listRoot = group.get( "bones" );
                     for ( size_t rootIndex = 0; rootIndex < listRoot.size(); ++rootIndex )
                     {
-                        uint32 rootNode{ 0 };
-                        if ( readIndex( listRoot.at( rootIndex ), names._listNodeName.size(), context + " bone", "node", "is not a node of the model", rootNode, outError ) == false )
-                            return false;
+                        const expected<uint32> rootNode = readIndex( listRoot.at( rootIndex ), names._listNodeName.size(), context + " bone", "node", "is not a node of the model" );
+                        if ( rootNode.has_value() == false )
+                            return unexpected( rootNode.error() );
                         VrmSpring spring;
                         spring._name = comment;
                         if ( spring._name.empty() )
@@ -550,7 +548,7 @@ namespace sw::editor
                         }
                         spring._centerBone        = centerBone;
                         spring._listColliderGroup = listColliderGroupIndex;
-                        collectDescendants( names, rootNode, listChain );
+                        collectDescendants( names, *rootNode, listChain );
                         for ( const uint32 node : listChain )
                         {
                             VrmSpringJoint joint = jointValue;
@@ -560,103 +558,92 @@ namespace sw::editor
                         inoutDef._listSpring.push_back( std::move( spring ) );
                     }
                 }
-                return true;
+                return {};
             }
 
             /** @brief 0.x 의 firstPerson 을 읽습니다. 본이 없으면(-1) humanoid head 입니다. */
-            [[nodiscard]] static bool readVrm0FirstPerson( const JSONValue& firstPerson, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
+            [[nodiscard]] static expected<void> readVrm0FirstPerson( const JSONValue& firstPerson, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored )
             {
                 collectUnknownKeys( firstPerson, kArrVrm0FirstPersonKey, "VRM.firstPerson", pOutListIgnored );
                 const JSONValue bone         = firstPerson.get( "firstPersonBone" );
                 bool            bBoneInvalid = false;
                 const bool      bHasBone     = refersToNode( bone, bBoneInvalid );
                 if ( bBoneInvalid )
-                {
-                    outError = "VRM 0.x firstPersonBone " + bone.dump() + " is not a node number";
-                    return false;
-                }
+                    return unexpected( makeError( ErrorKind::InvalidArgument, "firstPersonBone is not a node number", "VRM 0.x firstPersonBone", {}, bone.dump() ) );
                 if ( bHasBone )
                 {
-                    if ( resolveNode( names, bone, "VRM 0.x firstPersonBone", inoutDef._firstPersonBone, outError ) == false )
-                        return false;
+                    const expected<string> node = resolveNode( names, bone, "VRM 0.x firstPersonBone" );
+                    if ( node.has_value() == false )
+                        return unexpected( node.error() );
+                    inoutDef._firstPersonBone = *node;
                 }
                 else
                 {
                     inoutDef._firstPersonBone = inoutDef.findBone( "head" );
                 }
-                float3 offset{};
-                if ( readVector( firstPerson.get( "firstPersonBoneOffset" ), "VRM 0.x firstPersonBoneOffset", offset, outError ) == false )
-                    return false;
+                float3               offset{};
+                const expected<void> offsetRead = readVector( firstPerson.get( "firstPersonBoneOffset" ), "VRM 0.x firstPersonBoneOffset", offset );
+                if ( offsetRead.has_value() == false )
+                    return offsetRead;
                 inoutDef._firstPersonOffset    = convertVrm0Vector( offset );
                 const JSONValue listAnnotation = firstPerson.get( "meshAnnotations" );
                 for ( size_t index = 0; index < listAnnotation.size(); ++index )
                 {
                     const JSONValue annotation = listAnnotation.at( index );
                     collectUnknownKeys( annotation, kArrVrm0AnnotationKey, "VRM.firstPerson.meshAnnotations", pOutListIgnored );
-                    VrmFirstPersonMesh          mesh;
-                    const std::optional<uint32> meshIndex = annotation.get( "mesh" ).read<uint32>();
+                    VrmFirstPersonMesh     mesh;
+                    const optional<uint32> meshIndex = annotation.get( "mesh" ).read<uint32>();
                     if ( meshIndex.has_value() == false )
-                    {
-                        outError = "VRM 0.x meshAnnotations: mesh " + annotation.get( "mesh" ).dump() + " is not a mesh number";
-                        return false;
-                    }
+                        return unexpected( makeError( ErrorKind::InvalidArgument, "is not a mesh number", "VRM 0.x meshAnnotations", "mesh", annotation.get( "mesh" ).dump() ) );
                     mesh._mesh        = makeMeshName( names, *meshIndex );
                     const string flag = annotation.get( "firstPersonFlag" ).asString();
                     if ( parseFirstPersonMode( flag, mesh._mode ) == false )
-                    {
-                        outError = "VRM 0.x meshAnnotations: unknown firstPersonFlag '" + flag + "'";
-                        return false;
-                    }
+                        return unexpected( makeError( ErrorKind::InvalidArgument, "unknown firstPersonFlag", "VRM 0.x meshAnnotations", flag ) );
                     inoutDef._listFirstPersonMesh.push_back( std::move( mesh ) );
                 }
                 if ( firstPerson.has( "lookAtTypeName" ) )
                     addIgnored( pOutListIgnored, "VRM.firstPerson.lookAt*" );
-                return true;
+                return {};
             }
 
             /** @brief 1.0 표정 하나를 읽습니다. */
-            [[nodiscard]] static bool readVrm1Expression( const JSONValue& value, const string& name, bool bPreset, const VrmGltfNames& names, VrmAvatarDef& inoutDef,
-                                                          vector<string>* pOutListIgnored, string& outError )
+            [[nodiscard]] static expected<void> readVrm1Expression( const JSONValue& value, const string& name, bool bPreset, const VrmGltfNames& names, VrmAvatarDef& inoutDef,
+                                                                    vector<string>* pOutListIgnored )
             {
                 collectUnknownKeys( value, kArrVrm1ExpressionKey, "VRMC_vrm.expressions." + name, pOutListIgnored );
+                const string  context = "VRM 1.0 expression '" + name + "'";
                 VrmExpression expression;
-                expression._name    = name;
-                expression._bPreset = bPreset ? SW_TRUE : SW_FALSE;
-                if ( readFlag( value, "isBinary", "VRM 1.0 expression '" + name + "'", expression._bBinary, outError ) == false )
-                    return false;
+                expression._name            = name;
+                expression._bPreset         = bPreset ? SW_TRUE : SW_FALSE;
+                const expected<void> binary = readFlag( value, "isBinary", context, expression._bBinary );
+                if ( binary.has_value() == false )
+                    return binary;
                 const bool bOverrides = parseOverride( value.get( "overrideBlink" ), expression._overrideBlink ) &&
                                         parseOverride( value.get( "overrideLookAt" ), expression._overrideLookAt ) &&
                                         parseOverride( value.get( "overrideMouth" ), expression._overrideMouth );
                 if ( bOverrides == false )
-                {
-                    outError = "VRM 1.0 expression '" + name + "': override must be none, block or blend";
-                    return false;
-                }
+                    return unexpected( makeError( ErrorKind::InvalidArgument, "override must be none, block or blend", context ) );
                 const JSONValue listBind = value.get( "morphTargetBinds" );
                 for ( size_t index = 0; index < listBind.size(); ++index )
                 {
                     const JSONValue bindValue = listBind.at( index );
                     collectUnknownKeys( bindValue, kArrVrm1BindKey, "VRMC_vrm.expressions." + name + ".morphTargetBinds", pOutListIgnored );
-                    const string      context = "VRM 1.0 expression '" + name + "'";
-                    uint32            node{ 0 };
-                    VrmExpressionBind bind;
-                    if ( readIndex( bindValue.get( "node" ), names._listNodeMesh.size(), context, "node", "is not a node of the model", node, outError ) == false )
-                        return false;
-                    const int64 mesh = names._listNodeMesh[node];
+                    const expected<uint32> node = readIndex( bindValue.get( "node" ), names._listNodeMesh.size(), context, "node", "is not a node of the model" );
+                    if ( node.has_value() == false )
+                        return unexpected( node.error() );
+                    const int64 mesh = names._listNodeMesh[*node];
                     if ( mesh < 0 )
-                    {
-                        StringBuilder<constant::buffer::kMax256> errorBuilder;
-                        errorBuilder.appendFormat( "%#: node %# has no mesh", context, node );
-                        outError = string( errorBuilder.view() );
-                        return false;
-                    }
+                        return unexpected( makeError( ErrorKind::InvalidArgument, "the node has no mesh", context, "node", to_string( *node ) ) );
                     StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "%# node %#", context, node );
-                    const bool bBindRead = resolveMorphTarget( names, static_cast<uint32>( mesh ), bindValue.get( "index" ), string( textBuilder.view() ),
-                                                               bind._morphTarget, outError ) &&
-                                           readFloat( bindValue, "weight", context, bind._weight, outError );
-                    if ( bBindRead == false )
-                        return false;
+                    textBuilder.appendFormat( "%# node %#", context, *node );
+                    const expected<string> morphTarget = resolveMorphTarget( names, static_cast<uint32>( mesh ), bindValue.get( "index" ), textBuilder.view() );
+                    if ( morphTarget.has_value() == false )
+                        return unexpected( morphTarget.error() );
+                    VrmExpressionBind bind;
+                    bind._morphTarget               = *morphTarget;
+                    const expected<void> weightRead = readFloat( bindValue, "weight", context, bind._weight );
+                    if ( weightRead.has_value() == false )
+                        return weightRead;
                     expression._listBind.push_back( std::move( bind ) );
                 }
                 if ( value.get( "materialColorBinds" ).size() > 0 )
@@ -664,67 +651,68 @@ namespace sw::editor
                 if ( value.get( "textureTransformBinds" ).size() > 0 )
                     addIgnored( pOutListIgnored, "VRMC_vrm.expressions.textureTransformBinds" );
                 inoutDef._listExpression.push_back( std::move( expression ) );
-                return true;
+                return {};
             }
 
             /** @brief 1.0 VRMC_springBone 의 콜라이더(구 · 캡슐)를 읽습니다. */
-            [[nodiscard]] static bool readVrm1Colliders( const JSONValue& springBone, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
+            [[nodiscard]] static expected<void> readVrm1Colliders( const JSONValue& springBone, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored )
             {
                 const JSONValue listCollider = springBone.get( "colliders" );
                 for ( size_t index = 0; index < listCollider.size(); ++index )
                 {
                     const JSONValue colliderValue = listCollider.at( index );
                     collectUnknownKeys( colliderValue, kArrVrm1ColliderKey, "VRMC_springBone.colliders", pOutListIgnored );
-                    VrmSpringCollider                        collider;
-                    StringBuilder<constant::buffer::kMax256> textBuilder;
-                    textBuilder.appendFormat( "VRM 1.0 collider %#", static_cast<uint64>( index ) );
-                    if ( resolveNode( names, colliderValue.get( "node" ), string( textBuilder.view() ), collider._bone, outError ) ==
-                         false )
-                        return false;
+                    StringBuilder<constant::buffer::kMax256> colliderContextBuilder;
+                    colliderContextBuilder.appendFormat( "VRM 1.0 collider %#", static_cast<uint64>( index ) );
+                    const string           colliderContext{ colliderContextBuilder.view() };
+                    const expected<string> node = resolveNode( names, colliderValue.get( "node" ), colliderContext );
+                    if ( node.has_value() == false )
+                        return unexpected( node.error() );
+                    VrmSpringCollider collider;
+                    collider._bone          = *node;
                     const JSONValue shape   = colliderValue.get( "shape" );
                     const JSONValue sphere  = shape.get( "sphere" );
                     const JSONValue capsule = shape.get( "capsule" );
                     collectUnknownKeys( shape, kArrVrm1ShapeKey, "VRMC_springBone.colliders.shape", pOutListIgnored );
-                    StringBuilder<constant::buffer::kMax256> colliderContextBuilder;
-                    colliderContextBuilder.appendFormat( "VRM 1.0 collider %#", static_cast<uint64>( index ) );
-                    const string colliderContext{ colliderContextBuilder.view() };
-                    float3       offset{};
-                    float3       tail{};
+                    float3 offset{};
+                    float3 tail{};
                     if ( sphere.isObject() )
                     {
                         collectUnknownKeys( sphere, kArrVrm1SphereKey, "VRMC_springBone.colliders.shape.sphere", pOutListIgnored );
-                        if ( readVector( sphere.get( "offset" ), colliderContext, offset, outError ) == false ||
-                             readFloat( sphere, "radius", colliderContext, collider._radius, outError ) == false )
-                            return false;
+                        const expected<void> read = readVector( sphere.get( "offset" ), colliderContext, offset ).and_then( [&]()
+                        {
+                            return readFloat( sphere, "radius", colliderContext, collider._radius );
+                        } );
+                        if ( read.has_value() == false )
+                            return read;
                         collider._offset = convertVrm1Vector( offset );
                         collider._tail   = collider._offset;
                     }
                     else if ( capsule.isObject() )
                     {
                         collectUnknownKeys( capsule, kArrVrm1CapsuleKey, "VRMC_springBone.colliders.shape.capsule", pOutListIgnored );
-                        const bool bCapsuleRead = readVector( capsule.get( "offset" ), colliderContext, offset, outError ) &&
-                                                  readVector( capsule.get( "tail" ), colliderContext, tail, outError ) &&
-                                                  readFloat( capsule, "radius", colliderContext, collider._radius, outError );
-                        if ( bCapsuleRead == false )
-                            return false;
+                        const expected<void> read = readVector( capsule.get( "offset" ), colliderContext, offset )
+                                                        .and_then( [&]()
+                        { return readVector( capsule.get( "tail" ), colliderContext, tail ); } )
+                                                        .and_then( [&]()
+                        { return readFloat( capsule, "radius", colliderContext, collider._radius ); } );
+                        if ( read.has_value() == false )
+                            return read;
                         collider._offset   = convertVrm1Vector( offset );
                         collider._tail     = convertVrm1Vector( tail );
                         collider._bCapsule = SW_TRUE;
                     }
                     else
                     {
-                        StringBuilder<constant::buffer::kMax256> errorBuilder;
-                        errorBuilder.appendFormat( "VRM 1.0 collider %# has neither a sphere nor a capsule shape", static_cast<uint64>( index ) );
-                        outError = string( errorBuilder.view() );
-                        return false;
+                        return unexpected( makeError( ErrorKind::InvalidArgument, "the collider has neither a sphere nor a capsule shape", colliderContext ) );
                     }
                     inoutDef._listCollider.push_back( std::move( collider ) );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 1.0 VRMC_springBone 의 콜라이더 그룹을 읽습니다. 콜라이더는 앞에서 읽은 목록의 번호로 가리킵니다. */
-            [[nodiscard]] static bool readVrm1ColliderGroups( const JSONValue& springBone, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
+            [[nodiscard]] static expected<void> readVrm1ColliderGroups( const JSONValue& springBone, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored )
             {
                 const JSONValue listGroup = springBone.get( "colliderGroups" );
                 for ( size_t index = 0; index < listGroup.size(); ++index )
@@ -736,20 +724,19 @@ namespace sw::editor
                     const JSONValue listColliderRef = groupValue.get( "colliders" );
                     for ( size_t refIndex = 0; refIndex < listColliderRef.size(); ++refIndex )
                     {
-                        uint32 ref{ 0 };
-                        if ( readIndex( listColliderRef.at( refIndex ), inoutDef._listCollider.size(), "VRM 1.0 collider group '" + group._name + "'", "collider", "does not exist", ref,
-                                        outError ) == false )
-                            return false;
-                        group._listCollider.push_back( ref );
+                        const expected<uint32> ref =
+                            readIndex( listColliderRef.at( refIndex ), inoutDef._listCollider.size(), "VRM 1.0 collider group '" + group._name + "'", "collider", "the collider does not exist" );
+                        if ( ref.has_value() == false )
+                            return unexpected( ref.error() );
+                        group._listCollider.push_back( *ref );
                     }
                     inoutDef._listColliderGroup.push_back( std::move( group ) );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 1.0 VRMC_springBone 의 스프링(중심 · 콜라이더 그룹 · 관절)을 읽습니다. */
-            [[nodiscard]] static bool readVrm1SpringChains( const JSONValue& springBone, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored,
-                                                            string& outError )
+            [[nodiscard]] static expected<void> readVrm1SpringChains( const JSONValue& springBone, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored )
             {
                 const JSONValue listSpring = springBone.get( "springs" );
                 for ( size_t index = 0; index < listSpring.size(); ++index )
@@ -760,47 +747,61 @@ namespace sw::editor
                     spring._name            = springValue.get( "name" ).asString();
                     const string    context = "VRM 1.0 spring '" + spring._name + "'";
                     const JSONValue center  = springValue.get( "center" );
-                    if ( center.isValid() && resolveNode( names, center, context + " center", spring._centerBone, outError ) == false )
-                        return false;
+                    if ( center.isValid() )
+                    {
+                        const expected<string> centerNode = resolveNode( names, center, context + " center" );
+                        if ( centerNode.has_value() == false )
+                            return unexpected( centerNode.error() );
+                        spring._centerBone = *centerNode;
+                    }
                     const JSONValue listGroupRef = springValue.get( "colliderGroups" );
                     for ( size_t refIndex = 0; refIndex < listGroupRef.size(); ++refIndex )
                     {
-                        uint32 ref{ 0 };
-                        if ( readIndex( listGroupRef.at( refIndex ), inoutDef._listColliderGroup.size(), context, "collider group", "does not exist", ref, outError ) == false )
-                            return false;
-                        spring._listColliderGroup.push_back( ref );
+                        const expected<uint32> ref = readIndex( listGroupRef.at( refIndex ), inoutDef._listColliderGroup.size(), context, "collider group", "the collider group does not exist" );
+                        if ( ref.has_value() == false )
+                            return unexpected( ref.error() );
+                        spring._listColliderGroup.push_back( *ref );
                     }
                     const JSONValue listJoint = springValue.get( "joints" );
                     for ( size_t jointIndex = 0; jointIndex < listJoint.size(); ++jointIndex )
                     {
                         const JSONValue jointValue = listJoint.at( jointIndex );
                         collectUnknownKeys( jointValue, kArrVrm1JointKey, "VRMC_springBone.springs.joints", pOutListIgnored );
+                        const expected<string> node = resolveNode( names, jointValue.get( "node" ), context + " joint" );
+                        if ( node.has_value() == false )
+                            return unexpected( node.error() );
                         VrmSpringJoint joint;
-                        if ( resolveNode( names, jointValue.get( "node" ), context + " joint", joint._bone, outError ) == false )
-                            return false;
+                        joint._bone = *node;
                         // 적지 않은 칸은 `VrmSpringJoint` 의 초기값(1.0 명세의 기본값)이다. 중력 방향은 원본 공간에서 읽고 옮긴다.
-                        float3     gravityDirection{ convertVrm1Vector( joint._gravityDirection ) };
-                        const bool bJointRead = readFloat( jointValue, "hitRadius", context, joint._hitRadius, outError ) &&
-                                                readFloat( jointValue, "stiffness", context, joint._stiffness, outError ) &&
-                                                readFloat( jointValue, "gravityPower", context, joint._gravityPower, outError ) &&
-                                                readVector( jointValue.get( "gravityDir" ), context, gravityDirection, outError ) &&
-                                                readFloat( jointValue, "dragForce", context, joint._dragForce, outError );
-                        if ( bJointRead == false )
-                            return false;
+                        float3               gravityDirection{ convertVrm1Vector( joint._gravityDirection ) };
+                        const expected<void> jointRead = readFloat( jointValue, "hitRadius", context, joint._hitRadius )
+                                                             .and_then( [&]()
+                        { return readFloat( jointValue, "stiffness", context, joint._stiffness ); } )
+                                                             .and_then( [&]()
+                        { return readFloat( jointValue, "gravityPower", context, joint._gravityPower ); } )
+                                                             .and_then( [&]()
+                        { return readVector( jointValue.get( "gravityDir" ), context, gravityDirection ); } )
+                                                             .and_then( [&]()
+                        { return readFloat( jointValue, "dragForce", context, joint._dragForce ); } );
+                        if ( jointRead.has_value() == false )
+                            return jointRead;
                         joint._gravityDirection = convertVrm1Vector( gravityDirection );
                         spring._listJoint.push_back( std::move( joint ) );
                     }
                     inoutDef._listSpring.push_back( std::move( spring ) );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 1.0 VRMC_springBone 을 읽습니다 — 콜라이더, 콜라이더 그룹, 스프링 순서로(뒤의 것이 앞의 번호를 가리킨다). */
-            [[nodiscard]] static bool readVrm1Springs( const JSONValue& springBone, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored, string& outError )
+            [[nodiscard]] static expected<void> readVrm1Springs( const JSONValue& springBone, const VrmGltfNames& names, VrmAvatarDef& inoutDef, vector<string>* pOutListIgnored )
             {
                 collectUnknownKeys( springBone, kArrVrm1SpringRootKey, "VRMC_springBone", pOutListIgnored );
-                return readVrm1Colliders( springBone, names, inoutDef, pOutListIgnored, outError ) && readVrm1ColliderGroups( springBone, inoutDef, pOutListIgnored, outError ) &&
-                       readVrm1SpringChains( springBone, names, inoutDef, pOutListIgnored, outError );
+                return readVrm1Colliders( springBone, names, inoutDef, pOutListIgnored )
+                    .and_then( [&]()
+                { return readVrm1ColliderGroups( springBone, inoutDef, pOutListIgnored ); } )
+                    .and_then( [&]()
+                { return readVrm1SpringChains( springBone, names, inoutDef, pOutListIgnored ); } );
             }
 
             /** @brief 표정 목록(`_listExpression`)을 @p root 에 씁니다. */
@@ -888,34 +889,40 @@ namespace sw::editor
         return {};
     }
 
-    bool VrmAvatarDef::readVrm0Avatar( const JSONValue& vrm, const VrmGltfNames& names, VrmAvatarDef& outDef, vector<string>* pOutListIgnored, string& outError )
+    expected<VrmAvatarDef> VrmAvatarDef::readVrm0Avatar( const JSONValue& vrm, const VrmGltfNames& names, vector<string>* pOutListIgnored )
     {
-        using Internal             = VrmAvatarImporterInternal;
-        outDef                     = VrmAvatarDef{};
-        outDef._sourceMajorVersion = 0;
+        using Internal = VrmAvatarImporterInternal;
+        VrmAvatarDef def;
+        def._sourceMajorVersion = 0;
         Internal::collectUnknownKeys( vrm, Internal::kArrVrm0RootKey, "VRM", pOutListIgnored );
-        const JSONValue humanoid = vrm.get( "humanoid" );
-        if ( humanoid.isObject() && Internal::readVrm0Humanoid( humanoid, names, outDef, pOutListIgnored, outError ) == false )
-            return false;
-        const JSONValue master = vrm.get( "blendShapeMaster" );
-        if ( master.isObject() && Internal::readVrm0Expressions( master, names, outDef, pOutListIgnored, outError ) == false )
-            return false;
-        const JSONValue secondary = vrm.get( "secondaryAnimation" );
-        if ( secondary.isObject() && Internal::readVrm0Springs( secondary, names, outDef, pOutListIgnored, outError ) == false )
-            return false;
-        const JSONValue firstPerson = vrm.get( "firstPerson" );
+        const JSONValue      humanoid    = vrm.get( "humanoid" );
+        const JSONValue      master      = vrm.get( "blendShapeMaster" );
+        const JSONValue      secondary   = vrm.get( "secondaryAnimation" );
+        const JSONValue      firstPerson = vrm.get( "firstPerson" );
+        const expected<void> read =
+            ( humanoid.isObject() ? Internal::readVrm0Humanoid( humanoid, names, def, pOutListIgnored ) : expected<void>{} )
+                .and_then( [&]()
+        { return master.isObject() ? Internal::readVrm0Expressions( master, names, def, pOutListIgnored ) : expected<void>{}; } )
+                .and_then( [&]()
+        { return secondary.isObject() ? Internal::readVrm0Springs( secondary, names, def, pOutListIgnored ) : expected<void>{}; } );
+        if ( read.has_value() == false )
+            return unexpected( read.error() );
         if ( firstPerson.isObject() )
-            return Internal::readVrm0FirstPerson( firstPerson, names, outDef, pOutListIgnored, outError );
-        outDef._firstPersonBone = outDef.findBone( "head" );
-        return true;
+        {
+            const expected<void> firstPersonRead = Internal::readVrm0FirstPerson( firstPerson, names, def, pOutListIgnored );
+            if ( firstPersonRead.has_value() == false )
+                return unexpected( firstPersonRead.error() );
+            return def;
+        }
+        def._firstPersonBone = def.findBone( "head" );
+        return def;
     }
 
-    bool VrmAvatarDef::readVrm1Avatar( const JSONValue& vrmcVrm, const JSONValue& vrmcSpringBone, const VrmGltfNames& names, VrmAvatarDef& outDef,
-                                       vector<string>* pOutListIgnored, string& outError )
+    expected<VrmAvatarDef> VrmAvatarDef::readVrm1Avatar( const JSONValue& vrmcVrm, const JSONValue& vrmcSpringBone, const VrmGltfNames& names, vector<string>* pOutListIgnored )
     {
-        using Internal             = VrmAvatarImporterInternal;
-        outDef                     = VrmAvatarDef{};
-        outDef._sourceMajorVersion = 1;
+        using Internal = VrmAvatarImporterInternal;
+        VrmAvatarDef def;
+        def._sourceMajorVersion = 1;
         Internal::collectUnknownKeys( vrmcVrm, Internal::kArrVrm1RootKey, "VRMC_vrm", pOutListIgnored );
 
         const JSONValue humanoid = vrmcVrm.get( "humanoid" );
@@ -924,17 +931,16 @@ namespace sw::editor
         for ( const string& humanBone : humanBones.getMemberNames() )
         {
             if ( VectorUtil::contains( Internal::kArrHumanBone, humanBone ) == false )
-            {
-                outError = "VRM 1.0 humanoid: unknown human bone '" + humanBone + "'";
-                return false;
-            }
+                return unexpected( Internal::makeError( ErrorKind::InvalidArgument, "unknown human bone", "VRM 1.0 humanoid", humanBone ) );
             const JSONValue entry = humanBones.get( humanBone );
             Internal::collectUnknownKeys( entry, Internal::kArrVrm1NodeKey, "VRMC_vrm.humanoid.humanBones." + humanBone, pOutListIgnored );
+            const expected<string> node = Internal::resolveNode( names, entry.get( "node" ), "VRM 1.0 humanoid bone '" + humanBone + "'" );
+            if ( node.has_value() == false )
+                return unexpected( node.error() );
             VrmHumanBone bone;
             bone._humanBone = humanBone;
-            if ( Internal::resolveNode( names, entry.get( "node" ), "VRM 1.0 humanoid bone '" + humanBone + "'", bone._bone, outError ) == false )
-                return false;
-            outDef._listHumanBone.push_back( std::move( bone ) );
+            bone._bone      = *node;
+            def._listHumanBone.push_back( std::move( bone ) );
         }
 
         const JSONValue expressions = vrmcVrm.get( "expressions" );
@@ -943,18 +949,17 @@ namespace sw::editor
         for ( const string& name : preset.getMemberNames() )
         {
             if ( VectorUtil::contains( Internal::kArrVrm1Preset, name ) == false )
-            {
-                outError = "VRM 1.0 expressions: unknown preset '" + name + "'";
-                return false;
-            }
-            if ( Internal::readVrm1Expression( preset.get( name ), name, true, names, outDef, pOutListIgnored, outError ) == false )
-                return false;
+                return unexpected( Internal::makeError( ErrorKind::InvalidArgument, "unknown expression preset", "VRM 1.0 expressions", name ) );
+            const expected<void> expression = Internal::readVrm1Expression( preset.get( name ), name, true, names, def, pOutListIgnored );
+            if ( expression.has_value() == false )
+                return unexpected( expression.error() );
         }
         const JSONValue custom = expressions.get( "custom" );
         for ( const string& name : custom.getMemberNames() )
         {
-            if ( Internal::readVrm1Expression( custom.get( name ), name, false, names, outDef, pOutListIgnored, outError ) == false )
-                return false;
+            const expected<void> expression = Internal::readVrm1Expression( custom.get( name ), name, false, names, def, pOutListIgnored );
+            if ( expression.has_value() == false )
+                return unexpected( expression.error() );
         }
 
         const JSONValue firstPerson = vrmcVrm.get( "firstPerson" );
@@ -964,42 +969,39 @@ namespace sw::editor
         {
             const JSONValue annotation = listAnnotation.at( index );
             Internal::collectUnknownKeys( annotation, Internal::kArrVrm1AnnotationKey, "VRMC_vrm.firstPerson.meshAnnotations", pOutListIgnored );
-            uint32 node{ 0 };
-            if ( Internal::readIndex( annotation.get( "node" ), names._listNodeMesh.size(), "VRM 1.0 meshAnnotations", "node", "is not a node of the model", node, outError ) == false )
-                return false;
-            const int64 nodeMesh = names._listNodeMesh[node];
+            const expected<uint32> node = Internal::readIndex( annotation.get( "node" ), names._listNodeMesh.size(), "VRM 1.0 meshAnnotations", "node", "is not a node of the model" );
+            if ( node.has_value() == false )
+                return unexpected( node.error() );
+            const int64 nodeMesh = names._listNodeMesh[*node];
             if ( nodeMesh < 0 )
-            {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "VRM 1.0 meshAnnotations: node %# has no mesh", node );
-                outError = string( errorBuilder.view() );
-                return false;
-            }
+                return unexpected( Internal::makeError( ErrorKind::InvalidArgument, "the node has no mesh", "VRM 1.0 meshAnnotations", "node", to_string( *node ) ) );
             VrmFirstPersonMesh mesh;
             mesh._mesh        = Internal::makeMeshName( names, static_cast<uint32>( nodeMesh ) );
             const string type = annotation.get( "type" ).asString();
             if ( Internal::parseFirstPersonMode( type, mesh._mode ) == false )
-            {
-                outError = "VRM 1.0 meshAnnotations: unknown type '" + type + "'";
-                return false;
-            }
-            outDef._listFirstPersonMesh.push_back( std::move( mesh ) );
+                return unexpected( Internal::makeError( ErrorKind::InvalidArgument, "unknown first person type", "VRM 1.0 meshAnnotations", type ) );
+            def._listFirstPersonMesh.push_back( std::move( mesh ) );
         }
 
         // 1.0 의 1인칭 본은 humanoid head 이고, 눈 위치는 lookAt.offsetFromHeadBone 이다.
         const JSONValue lookAt = vrmcVrm.get( "lookAt" );
         Internal::collectUnknownKeys( lookAt, Internal::kArrVrm1LookAtKey, "VRMC_vrm.lookAt", pOutListIgnored );
-        outDef._firstPersonBone = outDef.findBone( "head" );
-        float3 offset{};
-        if ( Internal::readVector( lookAt.get( "offsetFromHeadBone" ), "VRM 1.0 lookAt.offsetFromHeadBone", offset, outError ) == false )
-            return false;
-        outDef._firstPersonOffset = Internal::convertVrm1Vector( offset );
+        def._firstPersonBone = def.findBone( "head" );
+        float3               offset{};
+        const expected<void> offsetRead = Internal::readVector( lookAt.get( "offsetFromHeadBone" ), "VRM 1.0 lookAt.offsetFromHeadBone", offset );
+        if ( offsetRead.has_value() == false )
+            return unexpected( offsetRead.error() );
+        def._firstPersonOffset = Internal::convertVrm1Vector( offset );
         if ( lookAt.has( "type" ) )
             Internal::addIgnored( pOutListIgnored, "VRMC_vrm.lookAt" );
 
         if ( vrmcSpringBone.isObject() )
-            return Internal::readVrm1Springs( vrmcSpringBone, names, outDef, pOutListIgnored, outError );
-        return true;
+        {
+            const expected<void> springs = Internal::readVrm1Springs( vrmcSpringBone, names, def, pOutListIgnored );
+            if ( springs.has_value() == false )
+                return unexpected( springs.error() );
+        }
+        return def;
     }
 
     string VrmAvatarDef::makeAvatarXML( const VrmAvatarDef& def )

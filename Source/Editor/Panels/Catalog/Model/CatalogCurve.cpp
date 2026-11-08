@@ -192,8 +192,8 @@ namespace sw::editor
             return false;
         for ( uint32 index = 0; index < sampleCount; ++index )
         {
-            const float32                time  = endTime * static_cast<float32>( index ) / static_cast<float32>( sampleCount - 1 );
-            const std::optional<float32> value = floatCurve.evaluate( time );
+            const float32           time  = endTime * static_cast<float32>( index ) / static_cast<float32>( sampleCount - 1 );
+            const optional<float32> value = floatCurve.evaluate( time );
             outListValue.push_back( value.value_or( 0.0f ) ); // 키가 있으면 값이 있다(위에서 거른다)
         }
         return true;

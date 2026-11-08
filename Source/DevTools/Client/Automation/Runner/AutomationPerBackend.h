@@ -13,6 +13,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -46,9 +47,9 @@ namespace sw
     {
     public:
         /**
-         * @brief `all` 이나 `dx11,vk` 를 쿠킹 표 순서의 명령줄 이름 목록으로 바꿉니다. 모르는 이름 · 빈 목록 · 겹친 이름이면 false 이고 @p outError 에 까닭.
+         * @brief `all` 이나 `dx11,vk` 를 쿠킹 표 순서의 명령줄 이름 목록으로 바꿉니다. 모르는 이름 · 빈 목록 · 겹친 이름이면 그 이름이 대상인 오류입니다.
          */
-        [[nodiscard]] static bool parseBackendList( string_view text, vector<string>& outListBackend, string& outError );
+        [[nodiscard]] static expected<vector<string>> parseBackendList( string_view text );
 
         /**
          * @brief 백엔드마다(@p options 의 `_listBackend` 순서) 돌릴 `-scenario` 목록입니다. 나누지 않으면 모두 같은 목록입니다.

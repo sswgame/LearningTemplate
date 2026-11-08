@@ -13,7 +13,7 @@ namespace
     struct AutomationStepOptionsTestUtil
     {
         static bool               run( AutomationStepContext&, const AutomationStep& ) { return true; }
-        static bool               prepare( AutomationStepContext&, const AutomationStep&, string& ) { return true; }
+        static expected<void>     prepare( AutomationStepContext&, const AutomationStep& ) { return {}; }
         static AutomationStepHold hold( AutomationStepContext&, const AutomationStep&, InputManager& ) { return AutomationStepHold::Run; }
     };
 } // namespace
@@ -51,10 +51,10 @@ SW_TEST_CASE( AutomationStepOptionsTest, ValidateFieldsFollowsTheSchema )
 {
     AutomationStep step;
     step._kind = "Pass";
-    string error;
-    SW_EXPECT_TRUE( AutomationStep::validateFields<AutomationNoParams>( step, error ) );
+    SW_EXPECT_TRUE( AutomationStep::validateFields<AutomationNoParams>( step ).has_value() );
 
     step._listAttribute.push_back( { "unknown", "1" } );
-    SW_EXPECT_FALSE( AutomationStep::validateFields<AutomationNoParams>( step, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    const expected<void> rejected = AutomationStep::validateFields<AutomationNoParams>( step );
+    SW_REQUIRE_FALSE( rejected.has_value() );
+    SW_EXPECT_TRUE( rejected.error().detail().find( "unknown" ) != string_view::npos );
 }

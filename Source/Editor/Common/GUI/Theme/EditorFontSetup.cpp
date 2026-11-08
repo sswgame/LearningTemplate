@@ -32,14 +32,14 @@ namespace sw::editor
              */
             [[nodiscard]] static bool readTypography( float32& outFontSize, float32& outIconScale )
             {
-                const string&     themeName = getPreferences<EditorAppearanceConfig>()._themeName;
-                EditorThemeConfig theme{};
-                string            error;
-                if ( EditorThemeTokens::loadTheme( themeName, theme, error ) == false )
+                const string&                     themeName = getPreferences<EditorAppearanceConfig>()._themeName;
+                const expected<EditorThemeConfig> loaded    = EditorThemeTokens::loadTheme( themeName );
+                if ( loaded.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "EditorFontSetup.EditorFontSizeNeeds", "Editor font size needs the theme '%#' tokens: %#", themeName.c_str(), error.c_str() );
+                    SW_LOG_ERROR_ID( "EditorFontSetup.EditorFontSizeNeeds", "Editor font size needs the theme '%#' tokens: %# (%#)", themeName.c_str(), loaded.error().message(), loaded.error().detail() );
                     return false;
                 }
+                const EditorThemeConfig& theme = *loaded;
                 // 테마 서브시스템보다 먼저라 `SW_THEME_METRIC` 이 아니라 읽은 벌에서 찾는다. 두 키는 해석이 양수로 확인했다(`EditorThemeTokens::resolve`).
                 outFontSize  = *theme.findMetric( hashed_string( "Typography.FontSize" ) );
                 outIconScale = *theme.findMetric( hashed_string( "Typography.IconScale" ) );

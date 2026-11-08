@@ -288,7 +288,7 @@ namespace sw
         // 클라이언트는 접속 전에도 틱을 센다 — 조종을 맡은 뒤 처음 받은 틱에서 시작한다.
         if ( _controllerID >= 0 && _nextInputTick == kInputTickUnknown )
         {
-            const std::optional<uint32> oldestTick = _server.findOldestInputTick( _controllerID );
+            const optional<uint32> oldestTick = _server.findOldestInputTick( _controllerID );
             if ( oldestTick.has_value() )
             {
                 _nextInputTick = *oldestTick;
@@ -343,7 +343,7 @@ namespace sw
     {
         ++_tick;
         // 예측하는 이 입력 틱은 서버에서 (입력 틱 + 서버 차이) 틱에 시뮬레이션된다 — 바닥을 그 자리에 둬야 바닥 위 예측이 서버와 맞는다.
-        const std::optional<int64> serverTickOffset = _client.findServerTickOffset();
+        const optional<int64> serverTickOffset = _client.findServerTickOffset();
         if ( serverTickOffset.has_value() )
             ShooterNetPawnComponentInternal::publishServerTick( getOwner(), static_cast<int64>( _tick ) + *serverTickOffset );
         const ControlIntent intent = takeNetIntent( movement );

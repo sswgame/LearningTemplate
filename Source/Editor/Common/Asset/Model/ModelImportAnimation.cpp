@@ -288,7 +288,7 @@ namespace sw::editor
             ClipExtra extra{};
             if ( clipValue.has( "loop" ) )
             {
-                const std::optional<bool> bLoop = clipValue.readRequired<bool>( "loop" );
+                const optional<bool> bLoop = clipValue.readRequired<bool>( "loop" );
                 if ( bLoop.has_value() == false )
                     return false;
                 extra._loop = bLoop;

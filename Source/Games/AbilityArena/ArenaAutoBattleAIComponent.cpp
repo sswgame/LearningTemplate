@@ -37,8 +37,8 @@ namespace sw
         blackboard.setVector( "SelfPosition", selfPosition );
 
         // 체력 어트리뷰트가 없는 유닛은 비율을 적지 않는다(전투 세트를 받지 않은 유닛) — 트리의 비교가 거짓이라 회복하지 않는다.
-        const std::optional<float32> health    = pAbilitySystem->getAttributeValue( CombatAttributes::health() );
-        const std::optional<float32> maxHealth = pAbilitySystem->getAttributeValue( CombatAttributes::maxHealth() );
+        const optional<float32> health    = pAbilitySystem->getAttributeValue( CombatAttributes::health() );
+        const optional<float32> maxHealth = pAbilitySystem->getAttributeValue( CombatAttributes::maxHealth() );
         if ( health.has_value() && maxHealth.has_value() )
             blackboard.setFloat( "HealthRatio", *health / MathUtil::max( 1.0f, *maxHealth ) );
         else

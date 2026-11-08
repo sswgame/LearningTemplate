@@ -38,8 +38,8 @@ namespace sw
         static constexpr utf8 kExpectUIKind[]   = "ExpectUI";
         static constexpr utf8 kLayoutDumpKind[] = "UILayoutDump"; ///< `<UILayoutDump file="x.txt"/>` 입니다. `UISystem::makeLayoutDump` 를 산출물 폴더에 씁니다.
 
-        /** @brief 속성을 검사합니다. 모르는 속성, 빈 단계, 수가 아닌 `screens` 면 false 와 이유를 반환합니다. */
-        [[nodiscard]] static bool validateExpectUI( const AutomationStep& step, string& outError );
+        /** @brief 속성을 검사합니다. 모르는 속성, 빈 단계, 수가 아닌 `screens` 면 그 이유입니다. */
+        [[nodiscard]] static expected<void> validateExpectUI( const AutomationStep& step );
         /** @brief @p ui 가 단계의 기대와 같으면 true 입니다. 다르면 false 를 반환하고 @p outFailure 에 기대와 실제를 둡니다. */
         [[nodiscard]] static bool isExpectUIMet( const UISystem& ui, const AutomationStep& step, string& outFailure );
     };
@@ -109,16 +109,13 @@ namespace sw
 
 namespace sw
 {
-    bool UIScenarioSteps::validateExpectUI( const AutomationStep& step, string& outError )
+    expected<void> UIScenarioSteps::validateExpectUI( const AutomationStep& step )
     {
         if ( step._listAttribute.empty() )
-        {
-            outError = step.describe() + ": needs focus, screen or screens";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "needs focus, screen or screens" } );
         // 칸(모르는 이름 · 개수 · 범위)은 리플렉션 구조체가 정한다 — 화면은 경로 칸이라 참조 검사 · 옮기기가 따라간다.
         AutomationExpectUIParams params;
-        return step.readFields( params, outError );
+        return step.readFields( params );
     }
 
     bool UIScenarioSteps::isExpectUIMet( const UISystem& ui, const AutomationStep& step, string& outFailure )

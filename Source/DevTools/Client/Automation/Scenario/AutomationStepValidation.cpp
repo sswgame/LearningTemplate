@@ -89,28 +89,28 @@ namespace sw
         return AutomationStepDependency::Resolved;
     }
 
-    bool AutomationStepValidation::validateDesktopSteps( const AutomationScenario& scenario, string& outError )
+    expected<void> AutomationStepValidation::validateDesktopSteps( const AutomationScenario& scenario )
     {
         if ( scenario.getInputMode() == VirtualInputMode::Mixed )
-            return true;
+            return {};
         if ( scenario.getTestOptions()._bRequiresForeground )
         {
-            outError = "requireForeground=\"true\" takes the OS foreground (desktop-global state), so the scenario must declare input=\"mixed\" and run alone in the Desktop suite";
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument,
+                                      "requireForeground=\"true\" takes the OS foreground (desktop-global state), so the scenario must declare input=\"mixed\" and run alone in the Desktop suite" } );
         }
         for ( const AutomationStep& step : scenario.getSteps() )
         {
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
             if ( pRegistration == nullptr || pRegistration->_bUsesDesktop == false )
                 continue;
-            outError = step.describe() + ": this step reads or writes desktop-global state (OS cursor clip / foreground / screen), so the scenario must declare input=\"mixed\" " +
-                       "and run alone in the Desktop suite";
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument,
+                                      "this step reads or writes desktop-global state (OS cursor clip / foreground / screen), so the scenario must declare input=\"mixed\" and run alone in the Desktop suite",
+                                      step.describe() } );
         }
-        return true;
+        return {};
     }
 
-    bool AutomationStepValidation::validateScreenshotFiles( const AutomationScenario& scenario, string& outError )
+    expected<void> AutomationStepValidation::validateScreenshotFiles( const AutomationScenario& scenario )
     {
         vector<string_view> listFile;
         for ( const AutomationStep& step : scenario.getSteps() )
@@ -120,15 +120,17 @@ namespace sw
                 continue;
             if ( std::find( listFile.begin(), listFile.end(), string_view{ *pFile } ) != listFile.end() )
             {
-                outError = step.describe() + ": '" + *pFile + "' was already taken by an earlier <Screenshot> - <ExpectImage> is judged at the end, so give each shot its own file";
-                return false;
+                return unexpected( Error{ ErrorKind::AlreadyExists, "the file was already taken by an earlier <Screenshot> - <ExpectImage> is judged at the end, so give each shot its own file",
+                                          step.describe() }
+                                       .appendDetail( " " )
+                                       .appendDetail( *pFile ) );
             }
             listFile.push_back( *pFile );
         }
-        return true;
+        return {};
     }
 
-    bool AutomationStepValidation::validateStepPhaseOrder( const AutomationScenario& scenario, string& outError )
+    expected<void> AutomationStepValidation::validateStepPhaseOrder( const AutomationScenario& scenario )
     {
         const AutomationStep* pFrameEndStep = nullptr; // 지금 프레임에 앞서 적힌 틱 뒤 단계
         for ( const AutomationStep& step : scenario.getSteps() )
@@ -148,12 +150,13 @@ namespace sw
             }
             if ( pFrameEndStep != nullptr )
             {
-                outError = step.describe() + ": runs at the start of the frame, before " + pFrameEndStep->describe() +
-                           " written above it judges the frame - put <Wait frames=\"1\"/> between them";
-                return false;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a frame-start step runs before the judging step written above it - put <Wait frames=\"1\"/> between them",
+                                          step.describe() }
+                                       .appendDetail( " before " )
+                                       .appendDetail( pFrameEndStep->describe() ) );
             }
         }
-        return true;
+        return {};
     }
 
     const utf8* AutomationStepValidation::getDependencyLabel( AutomationStepDependency dependency )

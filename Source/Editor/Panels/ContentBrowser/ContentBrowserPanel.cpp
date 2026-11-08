@@ -143,8 +143,8 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
-                const std::optional<AbsolutePath> folderPath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
-                const string                      folderAbs  = folderPath.has_value() ? folderPath->str() : string{};
+                const optional<AbsolutePath> folderPath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
+                const string                 folderAbs  = folderPath.has_value() ? folderPath->str() : string{};
                 if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ContentBrowserPanel>( true ) == false )
                     return false;
                 ContentBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
@@ -814,11 +814,11 @@ namespace sw::editor
         if ( EditorWidgets::acceptAssetDrop( assetID ) == false )
             return;
         // 파일이면 그 파일, 폴더(폴더 타일도 끌기 원본이다)면 그 폴더 — 옮기기 전에 확인 대화상자가 계획을 보인다(언리얼 Move Here)
-        const AssetPaths&           assetPaths = editor::getSubsystem<AssetPaths>();
-        std::optional<AbsolutePath> sourcePath = assetPaths.findLooseFile( assetID );
+        const AssetPaths&      assetPaths = editor::getSubsystem<AssetPaths>();
+        optional<AbsolutePath> sourcePath = assetPaths.findLooseFile( assetID );
         if ( sourcePath.has_value() == false )
         {
-            const std::optional<AbsolutePath> folderPath = assetPaths.toDiskPath( assetID );
+            const optional<AbsolutePath> folderPath = assetPaths.toDiskPath( assetID );
             if ( folderPath.has_value() && FileUtil::isDirectory( folderPath->str() ) )
                 sourcePath = folderPath;
         }

@@ -108,7 +108,7 @@ namespace sw::editor
     struct EditorReflectionProbeFilterInput
     {
         shared_ptr<const ReflectionProbeCapture> _pCapture{};
-        std::optional<AbsolutePath>              _dataPath{}; ///< 쓸 파일(UI 스레드가 `AssetPaths` 로 정했다)
+        optional<AbsolutePath>                   _dataPath{}; ///< 쓸 파일(UI 스레드가 `AssetPaths` 로 정했다)
         string                                   _assetPath{};
         uint64                                   _objectID{ 0 };
     };
@@ -316,7 +316,7 @@ namespace sw::editor
             reportFailure( "no bake output for scene '" + sceneAssetID + "' - it must be a .scene.xml resource and the probe needs a named owner" );
             return;
         }
-        std::optional<AbsolutePath> dataPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
+        optional<AbsolutePath> dataPath = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
         if ( dataPath.has_value() == false )
         {
             reportFailure( EditorReflectionProbeBakeSessionInternal::makeWriteError( assetPath ) );

@@ -63,11 +63,9 @@ namespace
             vector<RHIVertex> listVertex;
             vector<uint32>    listIndex;
             makeBox( float3{}, listVertex, listIndex );
-            FractureAsset asset;
-            string        error;
-            SW_EXPECT_TRUE( MeshFractureUtil::fracture( listVertex, listIndex, settings, asset, error ) );
-            SW_EXPECT_EQUAL( error, string() );
-            return asset;
+            expected<FractureAsset> asset = MeshFractureUtil::fracture( listVertex, listIndex, settings );
+            SW_EXPECT_TRUE_MSG( asset.has_value(), asset.has_value() ? "" : asset.error().message().data() );
+            return asset.has_value() ? std::move( *asset ) : FractureAsset{};
         }
 
         static float32 sumPieceVolume( const FractureAsset& asset )
@@ -337,21 +335,19 @@ SW_TEST_CASE( MeshFractureTest, BadInputExplainsItself )
     vector<uint32>    listIndex;
     Util::makeBox( float3{}, listVertex, listIndex );
     const FractureSettings settings;
-    FractureAsset          asset;
-    string                 error;
 
-    SW_EXPECT_FALSE( MeshFractureUtil::fracture( listVertex, vector<uint32>{}, settings, asset, error ) );
-    SW_EXPECT_FALSE( error.empty() );
-    SW_EXPECT_FALSE( MeshFractureUtil::fracture( listVertex, vector<uint32>{ 0, 1 }, settings, asset, error ) );
-    SW_EXPECT_FALSE( MeshFractureUtil::fracture( listVertex, vector<uint32>{ 0, 1, 9999 }, settings, asset, error ) );
-    SW_EXPECT_TRUE( error.find( "index" ) != string::npos );
+    SW_EXPECT_FALSE( MeshFractureUtil::fracture( listVertex, vector<uint32>{}, settings ).has_value() );
+    SW_EXPECT_FALSE( MeshFractureUtil::fracture( listVertex, vector<uint32>{ 0, 1 }, settings ).has_value() );
+    const expected<FractureAsset> pastEnd = MeshFractureUtil::fracture( listVertex, vector<uint32>{ 0, 1, 9999 }, settings );
+    SW_REQUIRE_FALSE( pastEnd.has_value() );
+    SW_EXPECT_TRUE( pastEnd.error().message().find( "index" ) != string_view::npos );
 
     vector<RHIVertex> listOpen;
     vector<uint32>    listOpenIndex;
     Util::makeBox( float3{}, listOpen, listOpenIndex, 1 );
-    SW_EXPECT_FALSE( MeshFractureUtil::fracture( listOpen, listOpenIndex, settings, asset, error ) );
-    SW_EXPECT_TRUE( error.find( "not closed" ) != string::npos );
-    SW_EXPECT_EQUAL( asset.getPieceCount(), 0u );
+    const expected<FractureAsset> open = MeshFractureUtil::fracture( listOpen, listOpenIndex, settings );
+    SW_REQUIRE_FALSE( open.has_value() );
+    SW_EXPECT_TRUE( open.error().message().find( "not closed" ) != string_view::npos );
 }
 
 // 열린 모델은 대리 부피로 쪼갠다: 부피는 대리의 것이고, 겉면은 원래 메시의 조각이다(열린 곳은 열린 채다).
@@ -364,11 +360,11 @@ SW_TEST_CASE( MeshFractureTest, ProxyVolumesCutOpenMeshes )
     for ( const FractureVolume volume : { FractureVolume::Bounds, FractureVolume::Hull } )
     {
         FractureSettings settings;
-        settings._volume     = volume;
-        settings._pieceCount = 6;
-        FractureAsset asset;
-        string        error;
-        SW_REQUIRE_TRUE( MeshFractureUtil::fracture( listOpen, listOpenIndex, settings, asset, error ) );
+        settings._volume                        = volume;
+        settings._pieceCount                    = 6;
+        const expected<FractureAsset> fractured = MeshFractureUtil::fracture( listOpen, listOpenIndex, settings );
+        SW_REQUIRE_TRUE( fractured.has_value() );
+        const FractureAsset& asset = *fractured;
         SW_EXPECT_TRUE( asset.getPieceCount() > 1 );
         float32 total = 0.0f;
         for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
@@ -384,11 +380,10 @@ SW_TEST_CASE( MeshFractureTest, ProxyVolumesCutOpenMeshes )
     const vector<RHIVertex> listFlat{ Util::makeVertex( float3{ 0.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 1.0f, 0.0f, 0.0f } ), Util::makeVertex( float3{ 0.0f, 1.0f, 0.0f } ) };
     const vector<uint32>    listFlatIndex{ 0, 1, 2 };
     FractureSettings        settings;
-    settings._volume = FractureVolume::Hull;
-    FractureAsset asset;
-    string        error;
-    SW_EXPECT_FALSE( MeshFractureUtil::fracture( listFlat, listFlatIndex, settings, asset, error ) );
-    SW_EXPECT_TRUE( error.find( "no volume" ) != string::npos );
+    settings._volume                   = FractureVolume::Hull;
+    const expected<FractureAsset> flat = MeshFractureUtil::fracture( listFlat, listFlatIndex, settings );
+    SW_REQUIRE_FALSE( flat.has_value() );
+    SW_EXPECT_TRUE( flat.error().message().find( "no volume" ) != string_view::npos );
 }
 
 // 구운 파일 왕복: 바이트로 썼다 읽으면 같고, 다시 쓰면 바이트까지 같다.

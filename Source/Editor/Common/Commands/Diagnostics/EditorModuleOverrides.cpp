@@ -30,7 +30,7 @@ namespace sw::editor
                 if ( name == moduleName )
                     continue;
                 // 다른 모듈의 줄은 그대로 옮긴다. 켬 · 끔이 불리언이 아닌 줄은 고쳐 쓰지 않고 실패한다(읽기가 알린다).
-                const std::optional<bool> bOtherEnabled = entry.readRequired<bool>( "_bEnabled" );
+                const optional<bool> bOtherEnabled = entry.readRequired<bool>( "_bEnabled" );
                 if ( bOtherEnabled.has_value() == false )
                     return false;
                 listEntry.emplace_back( name, *bOtherEnabled );
@@ -52,29 +52,20 @@ namespace sw::editor
         return true;
     }
 
-    bool EditorModuleOverrideUtil::previewToggle( const ModuleCatalog& catalog, const ModuleResolveContext& context, string_view moduleName, bool bEnabled,
-                                                  vector<ModuleInactiveEntry>& outListNewlyInactive, vector<string>& outListNewlyActive, string& outError )
+    expected<void> EditorModuleOverrideUtil::previewToggle( const ModuleCatalog& catalog, const ModuleResolveContext& context, string_view moduleName, bool bEnabled,
+                                                            vector<ModuleInactiveEntry>& outListNewlyInactive, vector<string>& outListNewlyActive )
     {
         outListNewlyInactive.clear();
         outListNewlyActive.clear();
         ModuleResolution before;
         if ( const expected<void> resolved = catalog.resolve( context, before ); resolved.has_value() == false )
-        {
-            outError = string( resolved.error().message().data(), resolved.error().message().size() ) + " (" + string( resolved.error().detail().data(), resolved.error().detail().size() ) + ")";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the module graph does not resolve", resolved.error().message() }.appendDetail( resolved.error().detail() ) );
         ModuleCatalog changed = catalog;
         if ( changed.setProjectOverride( context._projectModule, moduleName, bEnabled ) == false )
-        {
-            outError = "the project module " + context._projectModule + " has no manifest";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "the project module has no manifest", context._projectModule } );
         ModuleResolution after;
         if ( const expected<void> resolved = changed.resolve( context, after ); resolved.has_value() == false )
-        {
-            outError = string( resolved.error().message().data(), resolved.error().message().size() ) + " (" + string( resolved.error().detail().data(), resolved.error().detail().size() ) + ")";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the toggle breaks the module graph", resolved.error().message() }.appendDetail( resolved.error().detail() ) );
         for ( const ModuleInactiveEntry& entry : after._listInactive )
         {
             if ( before.isActive( entry._name ) )
@@ -85,7 +76,7 @@ namespace sw::editor
             if ( before.isActive( name ) == false )
                 outListNewlyActive.push_back( name );
         }
-        return true;
+        return {};
     }
 
     bool EditorModuleOverrideUtil::makeDetail( const ModuleCatalog& catalog, string_view projectModule, string_view moduleName, EditorModuleDetail& outDetail )

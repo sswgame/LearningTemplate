@@ -1446,17 +1446,14 @@ namespace sw::editor
         return MathUtil::abs( winding ) > 0.5;
     }
 
-    bool MeshFractureUtil::fracture( vector_reference<const RHIVertex> listMeshVertex, vector_reference<const uint32> listMeshIndex, const FractureSettings& settings, FractureAsset& outAsset,
-                                     string& outError )
+    expected<FractureAsset> MeshFractureUtil::fracture( vector_reference<const RHIVertex> listMeshVertex, vector_reference<const uint32> listMeshIndex, const FractureSettings& settings )
     {
         using Triangle = MeshFractureInternal::Triangle;
         using Build    = MeshFractureInternal;
-        outAsset.clear();
-        outError.clear();
+        FractureAsset asset;
         if ( listMeshIndex.size() < 3 || listMeshIndex.size() % 3 != 0 )
         {
-            outError = "the mesh has no triangles";
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the mesh has no triangles" } );
         }
         // 자르기는 삼각형 목록(모서리마다 정점)으로 한다 — 아래 용접이 위치를 다시 맞춘다.
         vector<RHIVertex> listVertex;
@@ -1465,16 +1462,14 @@ namespace sw::editor
         {
             if ( index >= listMeshVertex.size() )
             {
-                outError = "the mesh has an index past its vertices";
-                return false;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the mesh has an index past its vertices" } );
             }
             listVertex.push_back( listMeshVertex[index] );
         }
         const bool bProxy = settings._volume != FractureVolume::Mesh;
         if ( bProxy == false && isClosedWithinTolerance( listVertex ) == false )
         {
-            outError = "the mesh is not closed (every edge must be shared by exactly two triangles) - use \"volume\": \"bounds\" or \"hull\"";
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the mesh is not closed (every edge must be shared by exactly two triangles) - use \"volume\": \"bounds\" or \"hull\"" } );
         }
 
         // 용접: 허용 오차 안의 위치를 한 점으로 맞춘다. 자르기는 위치가 비트까지 같아야 이웃 삼각형의 교점이 같다.
@@ -1485,8 +1480,7 @@ namespace sw::editor
         float3 volumeCentroid{};
         if ( computeVolume( listVolume, volumeCentroid ) <= 0.0f )
         {
-            outError = "the mesh has no volume to cut (it is flat)"; // 두께 0 인 대리 상자를 자르면 조각마다 열린 고리만 남는다
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the mesh has no volume to cut (it is flat)" } ); // 두께 0 인 대리 상자를 자르면 조각마다 열린 고리만 남는다
         }
         vector<Triangle> listSource;
         vector<Triangle> listSurfaceSource;
@@ -1516,25 +1510,22 @@ namespace sw::editor
         cut.numberPieces( pieces );
         if ( pieces._listSiteOfPiece.empty() )
         {
-            outError = "no piece has volume";
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no piece has volume" } );
         }
         cut.linkPieces( pieces );
 
         vector<uint32> listLeafOrder;
         FractureGraph::populateHierarchy( pieces._graph, settings._listLevelCount, listLeafOrder );
 
-        outAsset._graph = std::move( pieces._graph );
-        outAsset._seed  = settings._seed;
-        MeshFractureInternal::collectBounds( listWelded, outAsset._boundsMin, outAsset._boundsMax );
-        cut.fillPieces( pieces, listLeafOrder, settings, bProxy, outAsset );
+        asset._graph = std::move( pieces._graph );
+        asset._seed  = settings._seed;
+        MeshFractureInternal::collectBounds( listWelded, asset._boundsMin, asset._boundsMax );
+        cut.fillPieces( pieces, listLeafOrder, settings, bProxy, asset );
         string validation;
-        if ( outAsset.isValid( &validation ) == false )
+        if ( asset.isValid( &validation ) == false )
         {
-            outError = string( "fracture produced an invalid asset: " ) + validation;
-            outAsset.clear();
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "fracture produced an invalid asset", validation } );
         }
-        return true;
+        return asset;
     }
 } // namespace sw::editor

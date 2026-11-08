@@ -72,12 +72,11 @@ namespace sw::editor
              * @details 시나리오는 첫 에디터 프레임 앞에 시작하므로 켜는 곳(`EditorStateStore`)은 컨텍스트와 함께 이미 있어야 하고, 없으면(에디터가 꺼진 실행) 켠 척하지 않고 오류로 멈춘다.
              *          예전에는 검사 함수가 켜면서 결과를 버려, 켜는 곳이 아직 없던 때의 호출이 조용히 사라져 모든 클릭이 "no editor widget is marked" 로 졌다.
              */
-            [[nodiscard]] static bool prepareMarks( AutomationStepContext& /*runner*/, const AutomationStep& step, string& outError )
+            [[nodiscard]] static expected<void> prepareMarks( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/ )
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) )
-                    return true;
-                outError = step.describe() + ": needs the editor (no editor context to record widget marks - run with -EnableEditor)";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::Unsupported, "needs the editor (no editor context to record widget marks - run with -EnableEditor)" } );
             }
 
             // ------------------------------------------------------------------------------
@@ -429,39 +428,42 @@ namespace sw::editor
                 PressState    _state{ PressState::Tap };
             };
 
-            [[nodiscard]] static bool parseKey( const AutomationStep& step, KeyArgs& outArgs, string& outError )
+            [[nodiscard]] static expected<KeyArgs> parseKey( const AutomationStep& step )
             {
-                EditorKeyParams params;
-                if ( step.readFields( params, outError ) == false )
-                    return false;
-                outArgs._state = params._state;
-                if ( parseKeyChord( params._key, outArgs._listKey ) == false )
-                {
-                    outError = step.describe() + ": unknown key '" + params._key + "' (ImGui key names, e.g. Enter · Escape · F5 · Ctrl+Z)";
-                    return false;
-                }
-                return true;
+                EditorKeyParams      params;
+                const expected<void> read = step.readFields( params );
+                if ( read.has_value() == false )
+                    return unexpected( read.error() );
+                KeyArgs args;
+                args._state = params._state;
+                if ( parseKeyChord( params._key, args._listKey ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown key (ImGui key names, e.g. Enter · Escape · F5 · Ctrl+Z)", params._key } );
+                return args;
             }
 
             /** @brief 키 단계의 준비 함수입니다 - 위젯 기록을 켜고, 키 이름이 ImGui 가 아는 이름인지 봅니다(속성과 낱말 모양은 `Validation::validateKey` 가 이미 봤다). */
-            [[nodiscard]] static bool prepareKey( AutomationStepContext& runner, const AutomationStep& step, string& outError )
+            [[nodiscard]] static expected<void> prepareKey( AutomationStepContext& runner, const AutomationStep& step )
             {
-                KeyArgs args;
-                return prepareMarks( runner, step, outError ) && parseKey( step, args, outError );
+                const expected<void> marks = prepareMarks( runner, step );
+                if ( marks.has_value() == false )
+                    return marks;
+                const expected<KeyArgs> args = parseKey( step );
+                if ( args.has_value() == false )
+                    return unexpected( args.error() );
+                return {};
             }
 
             /** @brief 수정자를 누르고 키를 눌렀다 놓은 뒤 수정자를 거꾸로 해제합니다. ImGui 가 이벤트를 프레임에 나눠 처리하므로 한 단계로 충분합니다. */
             static bool runKey( AutomationStepContext& runner, const AutomationStep& step )
             {
-                KeyArgs args;
-                string  error;
-                if ( parseKey( step, args, error ) == false )
+                const expected<KeyArgs> args = parseKey( step );
+                if ( args.has_value() == false )
                 {
-                    runner.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+                    runner.recordFailure( step, AutomationStep::describeReason( args.error() ) ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
                     return true;
                 }
-                const vector<int32>& listKey = args._listKey;
-                const PressState     state   = args._state;
+                const vector<int32>& listKey = args->_listKey;
+                const PressState     state   = args->_state;
                 if ( state != PressState::Up )
                 {
                     for ( const int32 key : listKey )
@@ -482,19 +484,17 @@ namespace sw::editor
             // EditorExpectObject: 활성 씬에 그 이름의 오브젝트가 몇 개인지 센다. 그 컴포넌트를 가진 것만 셀 수도 있다
             // ------------------------------------------------------------------------------
             /** @brief 개수 단계의 준비 함수입니다 - 위젯 기록을 켜고, `component` 가 아는 컴포넌트 타입인지 봅니다(속성과 수 형식은 `Validation::validateExpectObject` 가 이미 봤다). */
-            [[nodiscard]] static bool prepareExpectObject( AutomationStepContext& runner, const AutomationStep& step, string& outError )
+            [[nodiscard]] static expected<void> prepareExpectObject( AutomationStepContext& runner, const AutomationStep& step )
             {
-                if ( prepareMarks( runner, step, outError ) == false )
-                    return false;
+                const expected<void> marks = prepareMarks( runner, step );
+                if ( marks.has_value() == false )
+                    return marks;
                 const string component = step.readValidatedFields<EditorExpectObjectParams>()._component;
                 if ( component.empty() )
-                    return true;
+                    return {};
                 if ( editor::getSubsystem<TypeRegistry>().findType( hashed_string( component ) ) == nullptr )
-                {
-                    outError = step.describe() + ": unknown component type '" + component + "'";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::NotFound, "unknown component type", component } );
+                return {};
             }
 
             static bool runExpectObject( AutomationStepContext& runner, const AutomationStep& step )

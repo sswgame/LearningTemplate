@@ -132,12 +132,12 @@ namespace sw
 
     ActionResult FarmAutoFarmerAIComponent::taskWalkUpTo( ActionContext& context, const FarmWalkUpToParams& params )
     {
-        AIControllerComponent*      pController = context._world.find<AIControllerSlot>();
-        const Blackboard*           pBlackboard = context._world.find<BlackboardSlot>();
-        const std::optional<float3> spot        = pBlackboard != nullptr ? pBlackboard->getVector( params._key ) : std::nullopt;
-        const std::optional<float3> position    = pBlackboard != nullptr ? pBlackboard->getVector( "PlayerPosition" ) : std::nullopt;
-        const std::optional<bool>   facingUp    = pBlackboard != nullptr ? pBlackboard->getBool( "FacingUp" ) : std::nullopt;
-        const bool                  bCannotWalk = context._bAborted == SW_TRUE || pController == nullptr || spot.has_value() == false || position.has_value() == false || facingUp.has_value() == false;
+        AIControllerComponent* pController = context._world.find<AIControllerSlot>();
+        const Blackboard*      pBlackboard = context._world.find<BlackboardSlot>();
+        const optional<float3> spot        = pBlackboard != nullptr ? optional<float3>{ pBlackboard->getVector( params._key ) } : nullopt;
+        const optional<float3> position    = pBlackboard != nullptr ? optional<float3>{ pBlackboard->getVector( "PlayerPosition" ) } : nullopt;
+        const optional<bool>   facingUp    = pBlackboard != nullptr ? optional<bool>{ pBlackboard->getBool( "FacingUp" ) } : nullopt;
+        const bool             bCannotWalk = context._bAborted == SW_TRUE || pController == nullptr || spot.has_value() == false || position.has_value() == false || facingUp.has_value() == false;
         if ( bCannotWalk )
             return ActionResult::Failed;
         const bool bOnSpot = float3::getHorizontalDistance( *position, *spot ) <= params._tolerance;
@@ -167,7 +167,7 @@ namespace sw
         blackboard.setBool( "FarmReady", bReady );
         if ( bReady == false )
             return;
-        const std::optional<float32> actionTimer = blackboard.getFloat( "ActionTimer" );
+        const optional<float32> actionTimer = blackboard.getFloat( "ActionTimer" );
         SW_ASSERT( actionTimer.has_value() && "the constructor seeds ActionTimer and nothing clears it" );
         blackboard.setFloat( "ActionTimer", *actionTimer - context._deltaTime );
 

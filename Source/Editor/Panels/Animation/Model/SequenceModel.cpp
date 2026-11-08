@@ -438,32 +438,32 @@ namespace sw::editor
         return removedCount;
     }
 
-    std::optional<int32> SequenceModel::findPreviousKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const
+    optional<int32> SequenceModel::findPreviousKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const
     {
         const float32 limit = static_cast<float32>( frame ) - kSequenceKeyFrameTolerance;
         for ( auto it = listKeyFrame.rbegin(); it != listKeyFrame.rend(); ++it )
         {
             if ( *it >= limit )
                 continue;
-            const std::optional<int32> timelineFrame = findTimelineFrame( *it );
+            const optional<int32> timelineFrame = findTimelineFrame( *it );
             if ( timelineFrame.has_value() )
                 return timelineFrame;
         }
-        return std::nullopt;
+        return nullopt;
     }
 
-    std::optional<int32> SequenceModel::findNextKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const
+    optional<int32> SequenceModel::findNextKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const
     {
         const float32 limit = static_cast<float32>( frame ) + kSequenceKeyFrameTolerance;
         for ( const float32 keyFrame : listKeyFrame )
         {
             if ( keyFrame <= limit )
                 continue;
-            const std::optional<int32> timelineFrame = findTimelineFrame( keyFrame );
+            const optional<int32> timelineFrame = findTimelineFrame( keyFrame );
             if ( timelineFrame.has_value() )
                 return timelineFrame;
         }
-        return std::nullopt;
+        return nullopt;
     }
 
     int32 SequenceModel::findFrameAtRatio( float32 ratio ) const
@@ -493,7 +493,7 @@ namespace sw::editor
 
     float32 SequenceModel::computeChannelDisplayValue( const SequenceKeyTrack& track, uint32 channelIndex, float32 frame, float32 currentValue )
     {
-        const std::optional<float32> keyedValue = track.evaluateChannel( channelIndex, frame );
+        const optional<float32> keyedValue = track.evaluateChannel( channelIndex, frame );
         return ( keyedValue.has_value() ? *keyedValue : currentValue ) * SequenceModelInternal::getChannelDisplayScale( track, channelIndex );
     }
 
@@ -502,13 +502,13 @@ namespace sw::editor
         return track.setChannelKey( channelIndex, frame, displayValue / SequenceModelInternal::getChannelDisplayScale( track, channelIndex ) );
     }
 
-    std::optional<int32> SequenceModel::findTimelineFrame( float32 keyFrame ) const
+    optional<int32> SequenceModel::findTimelineFrame( float32 keyFrame ) const
     {
         // 비교는 실수로 한다 — 파일 · 커브 편집기의 키는 int32 밖일 수 있어 먼저 바꾸면 값이 깨진다.
         const float32 rounded      = MathUtil::round( keyFrame );
         const bool    bInsideRange = static_cast<float32>( _asset._frameMin ) <= rounded && rounded <= static_cast<float32>( _asset._frameMax );
         if ( bInsideRange == false )
-            return std::nullopt;
+            return nullopt;
         return static_cast<int32>( rounded );
     }
 

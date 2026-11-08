@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "DevTools/Client/Automation/Runner/AutomationImage.h"
@@ -20,7 +21,7 @@ namespace sw
 
     /**
      * @struct AutomationStepArgsUtil
-     * @brief 단계 인자 읽기(`read*` · `parse*`)와 비교(`matchesNumber` · `compareVariable`)입니다. 형식이 틀리면 false 와 이유이고 값은 그대로입니다.
+     * @brief 단계 인자 읽기(`read*` · `parse*`)와 비교(`matchesNumber` · `compareVariable`)입니다. 형식이 틀리면 그 이유(위치는 부르는 쪽이 붙인다)이고 값은 그대로입니다.
      */
     struct AutomationStepArgsUtil
     {
@@ -65,17 +66,17 @@ namespace sw
 
         static constexpr float32 kWatchNearTolerance = 1.0e-4f; ///< 감시 값 `near` 의 기본 허용 폭
 
-        /** @brief 있으면 수로 읽습니다. 없으면 @p inoutValue 를 둡니다(기본값은 인자 구조체의 초기값). 형식이 틀리면 false 와 이유이고 값은 그대로입니다. */
-        [[nodiscard]] static bool readFloat( const AutomationStep& step, string_view name, float32& inoutValue, string& outError );
+        /** @brief 있으면 수로 읽습니다. 없으면 @p inoutValue 를 둡니다(기본값은 인자 구조체의 초기값). 형식이 틀리면 이유이고 값은 그대로입니다. */
+        [[nodiscard]] static expected<void> readFloat( const AutomationStep& step, string_view name, float32& inoutValue );
         /** @brief 있으면 음이 아닌 정수로 읽습니다. 없으면 @p inoutValue 를 둡니다. */
-        [[nodiscard]] static bool readUint( const AutomationStep& step, string_view name, uint32& inoutValue, string& outError );
+        [[nodiscard]] static expected<void> readUint( const AutomationStep& step, string_view name, uint32& inoutValue );
 
-        /** @brief 수 비교 하나를 읽습니다. `equals` · `near` · `atLeast` · `atMost` 중 적힌 것이 없으면 false 입니다(정확히 하나인지는 단계의 검사 함수가 봅니다). */
-        [[nodiscard]] static bool parseNumberComparison( const AutomationStep& step, float32 nearTolerance, NumberComparison& outComparison, string& outError );
+        /** @brief 수 비교 하나를 읽습니다. `equals` · `near` · `atLeast` · `atMost` 중 적힌 것이 없으면 오류입니다(정확히 하나인지는 단계의 검사 함수가 봅니다). */
+        [[nodiscard]] static expected<NumberComparison> parseNumberComparison( const AutomationStep& step, float32 nearTolerance );
         /** @brief @p comparison 대로 @p value 를 비교합니다. 실패 메시지의 규칙 글을 @p outRule 에 씁니다. */
-        static bool               matchesNumber( const NumberComparison& comparison, float64 value, string& outRule );
-        [[nodiscard]] static bool parseWaitTimeout( const AutomationStep& step, WaitTimeoutArgs& outArgs, string& outError );
-        [[nodiscard]] static bool parseExpectImage( const AutomationStep& step, ExpectImageArgs& outArgs, string& outError );
+        static bool                                    matchesNumber( const NumberComparison& comparison, float64 value, string& outRule );
+        [[nodiscard]] static expected<WaitTimeoutArgs> parseWaitTimeout( const AutomationStep& step );
+        [[nodiscard]] static expected<ExpectImageArgs> parseExpectImage( const AutomationStep& step );
 
         /**
          * @brief 변수의 지금 값이 @p expected 와 같은지 @p outMatched 에 적습니다. 실수는 @p tolerance 안이면 같습니다.
