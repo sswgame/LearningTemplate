@@ -15,6 +15,7 @@
 #include "Engine/Environment/Foliage/FoliageInfluencerComponent.h"
 #include "Engine/Environment/Foliage/WindComponent.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
+#include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -333,7 +334,7 @@ namespace sw
     void FoliageComponent::onTick( float32 deltaTime )
     {
         SceneComponent::onTick( deltaTime );
-        if ( EnvironmentUtil::isAnimationEnabled() )
+        if ( DeterministicRun::getPolicy()._bFreezeEnvironmentTime == SW_FALSE ) // 결정적 사진은 바람 · 파도 시간을 0 에 멈춘다
             _time += deltaTime;
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;

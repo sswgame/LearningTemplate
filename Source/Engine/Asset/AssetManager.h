@@ -166,13 +166,6 @@ namespace sw
         PackManager&       getPackManager();
         const PackManager& getPackManager() const;
 
-        /**
-         * @brief 결정적 실행(`-gv_finishAssetWorkEachFrame=1`, 시나리오 세션이 켠다)이면 true 입니다.
-         * @details 켜지면 에셋 도착이 벽시계가 아니라 프레임에 묶인다 — 프레임 경계에서 걸린 에셋 일을 모두 끝내고(`finishPendingAssetWork`), 렌더 스레드는
-         *          받은 로드를 상한 없이 올리고 업로드 끝남까지 기다린다(`TextureCache::finishPendingLoads`). 그래서 요청한 에셋은 늘 같은 프레임에 보인다
-         *          (언리얼 자동화의 `FlushAsyncLoading` 과 같은 자리).
-         */
-        [[nodiscard]] static bool isFinishingAssetWorkEachFrame();
         /** @brief 워커에서 도는 에셋 로드 태스크를 로드 단계에 넣습니다. **제출 전에** 부른다(`AssetLoadOperation::startLoad`) — 프레임 경계의 대기가 놓치지 않는다. */
         void addLoadTask( const TaskHandle& task );
         /**

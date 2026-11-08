@@ -8,6 +8,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
+#include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -243,7 +244,7 @@ namespace sw
     void WaterBodyComponent::onTick( float32 deltaTime )
     {
         SceneComponent::onTick( deltaTime );
-        if ( EnvironmentUtil::isAnimationEnabled() )
+        if ( DeterministicRun::getPolicy()._bFreezeEnvironmentTime == SW_FALSE ) // 결정적 사진은 바람 · 파도 시간을 0 에 멈춘다
             _waveTime += deltaTime;
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;

@@ -8,7 +8,6 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Task/TaskManager.h"
 
@@ -27,9 +26,6 @@
 
 namespace sw
 {
-    /** @brief `-gv_finishAssetWorkEachFrame=1`: 에셋 도착을 프레임에 묶는다(`AssetManager::isFinishingAssetWorkEachFrame`). 시나리오 세션이 켠다. */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_finishAssetWorkEachFrame, false, "프레임 경계마다 걸린 에셋 로드 · IO · 업로드를 끝낸다(결정적 실행)" );
-
     namespace
     {
         /** @brief 내장 캐시 정렬 — 종류 이름 순(비우기 순서를 링크 순서와 떼어 고정한다). */
@@ -49,11 +45,6 @@ namespace sw
 
 namespace sw
 {
-    bool AssetManager::isFinishingAssetWorkEachFrame()
-    {
-        return gv_finishAssetWorkEachFrame;
-    }
-
     void AssetManager::addLoadTask( const TaskHandle& task )
     {
         ScopedLock<mutex> lock{ _loadStageMutex };
