@@ -343,7 +343,7 @@
     "Source/Editor/Panels/UIPreview/UIPreviewPanel.h": {"float": 2},
     "Source/Editor/Panels/VFX/VFXPreviewPanel.cpp": {"integer": 1},
     "Source/Editor/SelfTest/EditorSelfTest.cpp": {"integer": 1},
-    "Source/Editor/SelfTest/EditorSelfTestCases.cpp": {"float": 13, "integer": 20},
+    "Source/Editor/SelfTest/EditorSelfTestCases.cpp": {"float": 13, "integer": 21},
     "Source/Editor/SelfTest/EditorSelfTestDevTools.cpp": {"minus-one": 1, "float": 9, "integer": 12},
     "Source/Editor/SelfTest/EditorSelfTestInputCases.cpp": {"float": 6, "integer": 5},
     "Source/Editor/SelfTest/EditorSelfTestPanelCases.cpp": {"minus-one": 1, "integer": 8},

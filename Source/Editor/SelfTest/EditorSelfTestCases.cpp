@@ -5,13 +5,17 @@
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
+#include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/EditorPanelText.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
+#include "Editor/Common/Input/EditorSearchItem.h"
+#include "Editor/Common/Input/QuickLauncherPopup.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -191,6 +195,32 @@ namespace sw::editor
                 ImFont* pFont = ImGui::GetFont();
                 (void)context.expect( hasGlyph( pFont, decodeFirstCodepoint( SW_EDITOR_ICON( "Save" ) ) ), "editor icon font glyph kSave is missing" );
                 (void)context.expect( hasGlyph( pFont, decodeFirstCodepoint( SW_EDITOR_ICON( "Missing" ) ) ), "editor icon font glyph kMissing is missing" );
+                return EditorSelfTestStep::Done;
+            }
+
+            // ------------------------------------------------------------------------------
+            // quickOpen.columnIgnoresTheIndex: Quick Open 의 이름 열은 파일 색인이 오기 전과 뒤가 같다 — 늦게 온 에셋 배지로 다시 재면 칠 때 열이 밀렸다(두 번 재발)
+            // ------------------------------------------------------------------------------
+            static EditorSelfTestStep runQuickOpenColumnIgnoresTheIndex( EditorSelfTestContext& context )
+            {
+                vector<EditorSearchItem> listTail;
+                EditorSearchItem::appendCommands( listTail );
+                EditorSearchItem::appendPanels( listTail );
+                vector<EditorAssetIndexEntry> listEntry;
+                for ( uint32 kindIndex = 0; kindIndex < EditorAssetTypeRegistry::getKindCount(); ++kindIndex )
+                {
+                    const EditorAssetTypeRegistration& kind  = EditorAssetTypeRegistry::getKindAt( kindIndex );
+                    EditorAssetIndexEntry&             entry = listEntry.emplace_back();
+                    entry._kind                              = kind.getType();
+                    entry._category                          = kind._pDisplayName;
+                    entry._title                             = "probe";
+                }
+                vector<EditorSearchItem> listIndexed;
+                EditorSearchItem::appendAssets( listEntry, listIndexed );
+                const float32 beforeIndex = QuickLauncherPopup::measureBadgeColumn( vector<EditorSearchItem>{}, listTail );
+                const float32 afterIndex  = QuickLauncherPopup::measureBadgeColumn( listIndexed, listTail );
+                (void)context.expect( beforeIndex > 0.0f, "the Quick Open badge column has no width" );
+                (void)context.expect( beforeIndex == afterIndex, "the Quick Open name column moves when the asset index arrives" );
                 return EditorSelfTestStep::Done;
             }
 
@@ -1004,6 +1034,7 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( Palette, "theme.palette", 100, &EditorSelfTestCasesInternal::runPaletteFollowsTheTheme );
     SW_EDITOR_SELF_TEST( ThemeReapply, "theme.reapplyKeepsSizes", 110, &EditorSelfTestCasesInternal::runThemeReapplyKeepsSizes );
     SW_EDITOR_SELF_TEST( IconFont, "font.iconGlyphs", 140, &EditorSelfTestCasesInternal::runIconFontHasGlyphs );
+    SW_EDITOR_SELF_TEST( QuickOpenColumn, "quickOpen.columnIgnoresTheIndex", 190, &EditorSelfTestCasesInternal::runQuickOpenColumnIgnoresTheIndex );
     SW_EDITOR_SELF_TEST( HelpMarker, "widgets.helpMarker", 200, &EditorSelfTestCasesInternal::runHelpMarkerDrawsTheMarker );
     SW_EDITOR_SELF_TEST( PropertyRow, "widgets.propertyRow", 210, &EditorSelfTestCasesInternal::runPropertyRowPlacesTheValueColumn );
     SW_EDITOR_SELF_TEST( CoreDock, "dock.corePanelsAreDocked", 300, &EditorSelfTestCasesInternal::runCorePanelsAreDocked );
