@@ -83,7 +83,8 @@ def makeCMakeText(spec: CookContractSpec) -> str:
         listLine += [f"set({prefix}_MODULE {backend.moduleName})",
                      f"set({prefix}_SOURCE_FOLDER {backend.sourceFolder})",
                      f"set({prefix}_GRAPHICS_LIBS {backend.graphicsLibs})",
-                     f"set({prefix}_SHIPPING_DEFINE {backend.shippingDefine})"]
+                     f"set({prefix}_SHIPPING_DEFINE {backend.shippingDefine})",
+                     f"set({prefix}_COMMAND_LINE_NAME {backend.commandLineName})"]
     return "\n".join(listLine) + "\n"
 
 

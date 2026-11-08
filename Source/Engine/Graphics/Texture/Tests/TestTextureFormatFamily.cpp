@@ -30,8 +30,7 @@ namespace
         /** @brief 묶음 둘(BC 는 접미사 없음, ASTC)과 대상 하나의 표입니다. */
         static TextureFormatSettings makeSettings()
         {
-            TextureFormatSettings settings;
-            settings._target                    = "Web";
+            TextureFormatSettings        settings;
             TextureFormatFamilySettings& bc     = settings._listFamily.emplace_back();
             bc._name                            = "BC";
             bc._color                           = "BC7_UNORM";
@@ -47,6 +46,7 @@ namespace
             astc._hdr                           = "R16G16B16A16_FLOAT";
             TextureFormatTargetSettings& target = settings._listTarget.emplace_back();
             target._name                        = "Web";
+            target._listPlatform                = { "Web" };
             target._listFamily                  = { "BC", "ASTC" };
             return settings;
         }
@@ -78,6 +78,39 @@ SW_TEST_CASE( TextureFormatSelectionTest, SelectsTheFirstSupportedFamily )
 
     device._listUnsupportedFormat.push_back( RHIFormat::ASTC_4x4_UNORM );
     SW_EXPECT_TRUE( TextureFormatFamily::selectFamily( listFamily, device ) == nullptr );
+}
+
+/**
+ * @brief [TextureFormatSelectionTest] 실행은 빌드 플랫폼을 적은 대상 하나를 고르고, 없거나 둘이면 오류다(데스크톱으로 대신 고르지 않는다)
+ */
+SW_TEST_CASE( TextureFormatSelectionTest, PlatformPicksExactlyOneTarget )
+{
+    SW_EXPECT_LOG( "TextureFormats.PlatformTarget" );
+    TextureFormatSettings settings = TextureFormatSelectionTestUtil::makeSettings();
+    SW_EXPECT_EQUAL( string( "Web" ), TextureFormatFamily::findPlatformTarget( settings, "Web" ) );
+    SW_EXPECT_TRUE( TextureFormatFamily::findPlatformTarget( settings, "Android" ).empty() );
+
+    TextureFormatTargetSettings& other = settings._listTarget.emplace_back();
+    other._name                        = "Other";
+    other._listPlatform                = { "Web" };
+    other._listFamily                  = { "BC" };
+    SW_EXPECT_TRUE( TextureFormatFamily::findPlatformTarget( settings, "Web" ).empty() );
+}
+
+/**
+ * @brief [TextureFormatSelectionTest] 쿠킹은 모든 대상의 접미사 묶음을 겹치지 않게 한 번에 굽는다 — 임포트한 DDS 묶음(BC)은 빠진다
+ */
+SW_TEST_CASE( TextureFormatSelectionTest, CookFamiliesAreTheUnionOfSuffixedFamilies )
+{
+    TextureFormatSettings        settings = TextureFormatSelectionTestUtil::makeSettings();
+    TextureFormatTargetSettings& mobile   = settings._listTarget.emplace_back();
+    mobile._name                          = "Mobile";
+    mobile._listPlatform                  = { "Android" };
+    mobile._listFamily                    = { "ASTC" };
+    vector<TextureFormatFamily> listFamily;
+    SW_REQUIRE_TRUE( TextureFormatFamily::resolveCookFamilies( settings, engine::getSubsystem<TypeRegistry>(), listFamily ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), listFamily.size() );
+    SW_EXPECT_EQUAL( string( ".astc" ), listFamily[0]._suffix );
 }
 
 /**
@@ -114,7 +147,6 @@ SW_TEST_CASE( TextureFormatSelectionTest, CompanionsCoverEveryFamilySuffix )
     JSONDocument document;
     SW_REQUIRE_TRUE( document.parse( text, "EngineConfig.json" ) );
     const JSONValue table = document.getRoot().get( "_textureFormats" );
-    SW_EXPECT_EQUAL( string( "Desktop" ), table.get( "_target" ).asString() );
 
     const JSONValue families = table.get( "_listFamily" );
     SW_REQUIRE_TRUE( families.isArray() );

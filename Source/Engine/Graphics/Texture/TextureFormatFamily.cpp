@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Texture/TextureFormatFamily.h"
 
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
@@ -101,6 +102,53 @@ namespace sw
         return true;
     }
 
+    string TextureFormatFamily::findPlatformTarget( const TextureFormatSettings& settings, string_view platformName )
+    {
+        string targetName;
+        uint32 matchCount{ 0 };
+        for ( const TextureFormatTargetSettings& target : settings._listTarget )
+        {
+            for ( const string& platform : target._listPlatform )
+            {
+                if ( platform != platformName )
+                    continue;
+                targetName = target._name;
+                ++matchCount;
+            }
+        }
+        if ( matchCount != 1 )
+        {
+            SW_LOG_ERROR_ID( "TextureFormats.PlatformTarget", "Platform '%#' is listed by %# texture format targets - exactly one target must list it (_listPlatform)", platformName, matchCount );
+            return {};
+        }
+        return targetName;
+    }
+
+    bool TextureFormatFamily::resolveCookFamilies( const TextureFormatSettings& settings, const TypeRegistry& types, vector<TextureFormatFamily>& outListFamily )
+    {
+        outListFamily.clear();
+        for ( const TextureFormatTargetSettings& target : settings._listTarget )
+        {
+            vector<TextureFormatFamily> listTargetFamily;
+            if ( resolveTarget( settings, target._name, types, listTargetFamily ) == false )
+            {
+                outListFamily.clear();
+                return false; // 까닭은 resolveTarget 이 남겼다
+            }
+            for ( TextureFormatFamily& family : listTargetFamily )
+            {
+                bool bListed{ false };
+                for ( const TextureFormatFamily& listed : outListFamily )
+                {
+                    bListed = bListed || listed._name == family._name;
+                }
+                if ( family._suffix.empty() == false && bListed == false )
+                    outListFamily.push_back( std::move( family ) );
+            }
+        }
+        return true;
+    }
+
     const TextureFormatFamily* TextureFormatFamily::selectFamily( const vector<TextureFormatFamily>& listFamily, const IRHIDevice& device )
     {
         for ( const TextureFormatFamily& family : listFamily )
@@ -121,17 +169,18 @@ namespace sw
         const TypeRegistry* const pTypes  = engine::findSubsystem<TypeRegistry>();
         if ( pConfig == nullptr || pTypes == nullptr )
             return {};
-        const TextureFormatSettings& settings = pConfig->_textureFormats;
+        const TextureFormatSettings& settings   = pConfig->_textureFormats;
+        const string                 targetName = findPlatformTarget( settings, build::kPlatformName );
         vector<TextureFormatFamily>  listFamily;
-        if ( resolveTarget( settings, settings._target, *pTypes, listFamily ) == false )
+        if ( targetName.empty() || resolveTarget( settings, targetName, *pTypes, listFamily ) == false )
             return {}; // 까닭은 위에서 남겼다
         const TextureFormatFamily* const pFamily = selectFamily( listFamily, device );
         if ( pFamily == nullptr )
         {
-            SW_LOG_ERROR_ID( "TextureFormats.NoSupportedFamily", "This device supports no texture format family of target '%#'", settings._target );
+            SW_LOG_ERROR_ID( "TextureFormats.NoSupportedFamily", "This device supports no texture format family of target '%#'", targetName );
             return {};
         }
-        SW_LOG_INFO_ID( "TextureFormats.FamilySelected", "Texture format family '%#' selected for target '%#'", pFamily->_name, settings._target );
+        SW_LOG_INFO_ID( "TextureFormats.FamilySelected", "Texture format family '%#' selected for target '%#'", pFamily->_name, targetName );
         return pFamily->_suffix;
     }
 

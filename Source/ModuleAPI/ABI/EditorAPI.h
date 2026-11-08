@@ -79,7 +79,7 @@ namespace sw
         Texture        = 0, ///< `textures_raw/` 의 이미지 → DDS(`App --import-textures` · `--check-textures`)
         Model          = 1, ///< `models_raw/` 의 glTF → `.mesh`(`App --import-models` · `--check-models`)
         Heightfield    = 2, ///< `heightfields_raw/` 의 16 비트 PNG · `.r16` → `.heightfield`(`App --import-heightfields` · `--check-heightfields`)
-        TextureVariant = 3, ///< `textures_raw/` 의 이미지 → 이 구성 대상의 형식 변형(`a.astc.dds`, `App --cook-texture-variants` · `--check-texture-variants`)
+        TextureVariant = 3, ///< `textures_raw/` 의 이미지 → 모든 배포 대상의 형식 변형(`a.astc.dds`, `App --cook-texture-variants` · `--check-texture-variants`)
     };
 
     /** @brief 헤드리스 에셋 임포트 진입점의 형입니다(심볼 이름: `kImportEditorAssetsSymbol`). */
