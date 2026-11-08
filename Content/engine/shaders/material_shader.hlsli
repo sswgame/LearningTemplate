@@ -73,8 +73,20 @@
 // 위치 스트림만 읽는 변형(언리얼의 위치 전용 정점 스트림) — 깊이만 쓰고 정점 변형 훅도 없으면 위치 말고 읽을 속성이 없다. DX 는 선언한 정점 입력을 모두
 // 입력 레이아웃에 넣으므로 `VertexInput` 을 받으면 쓰지 않아도 속성 스트림(슬롯 2)을 읽는다 — 그래서 입력 구조를 바꾼다. 정점 변형 훅(지형 지오모프 ·
 // 바람 · 파도)은 깊이 패스에서도 색 · UV · 탄젠트를 읽으므로 전체 입력을 받는다(그림자가 본 패스와 같은 자리여야 한다).
-#if defined( SW_MATERIAL_DEPTH_ONLY ) && !defined( MATERIAL_VERTEX_DEFORM )
+// 변위(MATERIAL_DISPLACEMENT)는 깊이 패스에서도 노멀 · UV 로 표면을 옮기므로 전체 입력을 받는다.
+#if defined( SW_MATERIAL_DEPTH_ONLY ) && !defined( MATERIAL_VERTEX_DEFORM ) && !defined( MATERIAL_DISPLACEMENT )
     #define SW_MATERIAL_POSITION_ONLY 1
+#endif
+
+// 변위 머티리얼(material_displacement.hlsli)이 받지 않는 조합 — 정점 출력이 보간 칸이 아니라 제어점이라 아래 셋은 그 자리에 칸이 없다.
+#if defined( MATERIAL_DISPLACEMENT ) && defined( SW_MATERIAL_NONE )
+    #error "MATERIAL_DISPLACEMENT is drawn by the material shader in every pass (FrameRendererUtil::drawsDepthWithMaterialShader) - a material-less shader cannot displace"
+#endif
+#if defined( MATERIAL_DISPLACEMENT ) && defined( SW_MATERIAL_CUSTOM_VARYINGS )
+    #error "MATERIAL_DISPLACEMENT does not carry custom varyings through the hull and domain stages - use SW_MATERIAL_DEFAULT_VARYINGS"
+#endif
+#if defined( MATERIAL_DISPLACEMENT ) && defined( SW_PASS_MESH_OUTLINE )
+    #error "MATERIAL_DISPLACEMENT has no outline offset in the domain stage - do not enable MATERIAL_OUTLINE on a displaced material"
 #endif
 
 #if defined( SW_MATERIAL_NONE )
@@ -115,6 +127,12 @@ struct MaterialVaryings
 };
 #endif
 
+#if defined( SW_MATERIAL_POSITION_ONLY )
+typedef VertexPositionInput MaterialVertexInput; // 위치 스트림만 — 1 절
+#else
+typedef VertexInput MaterialVertexInput;
+#endif
+
 // ------------------------------------------------------------------------------
 // 3) 문맥 — 훅이 읽는 값. 정점 문맥에는 입력 스트림 · 인스턴스 · 변형이 끝난 위치와 노멀이 있다.
 // ------------------------------------------------------------------------------
@@ -133,10 +151,11 @@ struct VertexContext
 #endif
 
     // 정점 진입점의 단계(material_shader_main.hlsli). 패스 · 기능 스위치마다 다른 정의를 파일 수준 `#if` 가 고른다 — 진입점 본문에는 `#if` 가 없다.
-    void readMaterial();                                           // 정점에서 읽는 셰이더만 읽는다
-    float4 applyWorldPositionOffset( float4 worldPosition );       // 위치 오프셋 훅(MATERIAL_VERTEX_DEFORM)
-    float4 computeClipPosition( inout float4 inoutWorldPosition ); // 오프셋 · 외곽선을 더하고 클립 위치를 만든다
-    static float4 excludeFromDepthPass( float4 clipPosition );     // 이 셰이더가 같은 자리를 못 만드는 깊이 패스 배치를 뺀다
+    void load( MaterialVertexInput input, uint instanceSlot, uint vertexID, out float4 outWorldPosition ); // 입력 · 인스턴스 · 변형 정점으로 문맥을 채운다(두 VSMain 이 함께 쓴다)
+    void readMaterial();                                                                                   // 정점에서 읽는 셰이더만 읽는다
+    float4 applyWorldPositionOffset( float4 worldPosition );                                               // 위치 오프셋 훅(MATERIAL_VERTEX_DEFORM)
+    float4 computeClipPosition( inout float4 inoutWorldPosition );                                         // 오프셋 · 외곽선을 더하고 클립 위치를 만든다
+    static float4 excludeFromDepthPass( float4 clipPosition );                                             // 이 셰이더가 같은 자리를 못 만드는 깊이 패스 배치를 뺀다
 };
 
 #if defined( SW_PASS_MESH_OUTLINE )

@@ -94,6 +94,17 @@
 - 헐 · 도메인의 제어점 위치는 `SV_POSITION` 이 아니라 일반 값으로 넘긴다. 내장 위치로 넘기면 GL 에서 오류 없이 아무것도 그리지 않는다. 예: `game/empty/shaders/optional_stages.hlsl`.
 - 이 스테이지는 패스 상수 · 루트 상수를 받지 않는다고 보고 쓴다. 필요하면 정점 스테이지에서 값으로 넘긴다.
 
+## 머티리얼 변위(테셀레이션)
+
+패스 XML 의 헐 · 도메인과 별개로, 머티리얼이 `_alwaysDefines` 에 `MATERIAL_DISPLACEMENT` 를 적으면 렌더러가 그 머티리얼의 변형 PSO 에 머티리얼 셰이더의 `HSMain` · `DSMain` 과 패치 토폴로지를 붙인다(`FrameRendererUtil::tessellatesMaterial` — 쿠커와 런타임이 같은 판정). 셰이더는 `material_displacement.hlsli`(뼈대가 보간 칸 VSMain 대신 include)다.
+
+- 값은 머티리얼 칸이다: `_displacementMap`(R 높이) · `_displacementScale`(m) · `_displacementMidLevel` · `_tessellationDensity`(각 1 rad 당 분할 수) · `_tessellationMaxFactor`(64 이하). `pbrmaterial.material` 이 칸을 가진다.
+- 변 계수는 변의 두 끝점(월드 위치 · 카메라 뷰 깊이)만으로 정해 틈이 없다. 식의 C++ 짝 `MaterialDisplacement` 를 단위 테스트가 지킨다.
+- 그림자 · 깊이 프리패스도 머티리얼 셰이더로 같은 변위를 그린다(`drawsDepthWithMaterialShader`). 뷰 깊이는 그림자 패스에서도 카메라의 값이라 계수까지 같다.
+- 테셀레이션이 없는 백엔드는 변형을 만들지 않고 `FramePSOManager.DisplacementUnsupported` 오류를 남긴다 — 평면으로 대신 그리지 않는다. 능력은 `RHICapabilities::_bMaterialTessellation`: DX11 · DX12 참, Vulkan 은 장치 기능 `tessellationShader`, OpenGL 거짓(헐 · 도메인이 머티리얼 구조 버퍼를 읽으면 링크 거절 — binding.hlsli 9 절), WebGPU 거짓. 시나리오는 `<SkipUnless watch="RHI.MaterialTessellation">` 로 그 백엔드를 건너뛴다.
+- 받지 않는 조합(셰이더 `#error`): 머티리얼 없는 셰이더, 사용자 보간 칸(`SW_MATERIAL_CUSTOM_VARYINGS`), 외곽선 패스.
+- 언리얼 Nanite 변위 · 옛 테셀레이션과 같은 자리다 — 머티리얼이 높이 · 기준 높이를 주고 렌더러가 분할을 정한다(기억에 의존한 비교). 언리얼은 화면 크기 기준 분할이고 여기는 각 크기 × 밀도다.
+
 ## 고칠 때
 
 렌더 상태 칸을 더할 곳은 `RHIRenderState.h` 하나와 네 백엔드의 읽기다 — XML 읽기 · 쓰기는 리플렉션이, 패스 · 머티리얼 합치기와 해시 · 비교는 바이트가 따라온다(패딩이 생기면 `static_assert` 가 멈춘다). 조합 규칙은 `findInvalidReason`, 머티리얼에게 내주지 않을 칸은 `RHIRenderStateOverride::applyTo` 에 적는다. RHI ABI 번호를 올린다.

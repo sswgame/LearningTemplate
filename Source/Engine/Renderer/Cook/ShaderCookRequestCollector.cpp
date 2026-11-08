@@ -74,21 +74,28 @@ namespace sw
                 bool           _bHasPixelStage{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
-            /** @brief 메시 패스 하나가 그리는 변형 하나입니다 — 셰이더 경로, define, 픽셀 스테이지 유무(깊이 패스의 알파 컷오프는 패스와 달리 PS 가 있다). */
+            /** @brief 메시 패스 하나가 그리는 변형 하나입니다 — 셰이더 경로, define, 픽셀 스테이지 유무(깊이 패스의 알파 컷오프는 패스와 달리 PS 가 있다), 헐 · 도메인 유무(변위 머티리얼). */
             struct MeshDrawVariant
             {
                 string         _shaderPath;
                 vector<string> _listDefine;
                 bool           _bHasPixelStage{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool           _bTessellates{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
-            /** @brief 메시 패스 하나가 이 변형으로 그릴 때의 VS(그리고 픽셀 스테이지가 있으면 PS) 요청을 더합니다. */
+            /** @brief 메시 패스 하나가 이 변형으로 그릴 때의 VS(그리고 픽셀 스테이지가 있으면 PS, 변위 머티리얼이면 HS · DS) 요청을 더합니다. */
             static void appendMeshPassRequest( vector<ShaderCookRequest>& outListRequest, const MeshPassInfo& passInfo, const MeshDrawVariant& drawVariant,
                                                const vector<string>& listDefine )
             {
                 appendRequestUnique( outListRequest, drawVariant._shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listDefine );
                 if ( drawVariant._bHasPixelStage )
                     appendRequestUnique( outListRequest, drawVariant._shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listDefine );
+                // 진입점은 런타임 변형(`FramePSOManager::createMaterialPSOVariant`)과 같은 스테이지 기본값이다.
+                if ( drawVariant._bTessellates )
+                {
+                    appendRequestUnique( outListRequest, drawVariant._shaderPath, getShaderStageInfo( ShaderStage::Hull )._pEntryPoint, ShaderStage::Hull, listDefine );
+                    appendRequestUnique( outListRequest, drawVariant._shaderPath, getShaderStageInfo( ShaderStage::Domain )._pEntryPoint, ShaderStage::Domain, listDefine );
+                }
             }
 
             /** @brief 머티리얼 하나가 요구하는 셰이더 경로와 **런타임과 같은** define 목록입니다. */
@@ -374,7 +381,7 @@ namespace sw
                 for ( const MeshPassInfo& passInfo : listMeshPass )
                 {
                     vector<MeshDrawVariant> listDrawVariant;
-                    listDrawVariant.push_back( MeshDrawVariant{ passInfo._shaderPath, passInfo._listPermutation, passInfo._bHasPixelStage } );
+                    listDrawVariant.push_back( MeshDrawVariant{ passInfo._shaderPath, passInfo._listPermutation, passInfo._bHasPixelStage, false } );
                     for ( const MaterialVariantInfo& variant : listMaterialVariant )
                     {
                         // 패스가 그리지 않는 머티리얼(외곽선 패스 · 외곽선을 켜지 않은 머티리얼)은 런타임도 변형을 만들지 않는다.
@@ -387,7 +394,8 @@ namespace sw
                         const bool    bHasPixelStage =
                             bMaterialDepthShader ? FrameRendererUtil::hasMaterialDepthPixelStage( passInfo._passType, &variant._listDefine )
                                                     : ( passInfo._bHasPixelStage || FrameRendererUtil::addsAppearanceDitherPixelStage( passInfo._passType, &variant._listDefine ) );
-                        listDrawVariant.push_back( MeshDrawVariant{ shaderPath, mergeDefines( passInfo._listPermutation, variant._listDefine ), bHasPixelStage } );
+                        const bool bTessellates = FrameRendererUtil::tessellatesMaterial( passInfo._passType, &variant._listDefine );
+                        listDrawVariant.push_back( MeshDrawVariant{ shaderPath, mergeDefines( passInfo._listPermutation, variant._listDefine ), bHasPixelStage, bTessellates } );
                     }
 
                     for ( const MeshDrawVariant& drawVariant : listDrawVariant )

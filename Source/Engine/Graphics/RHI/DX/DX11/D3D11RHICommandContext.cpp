@@ -313,7 +313,12 @@ namespace sw
         // 머티리얼 텍스처는 정점 셰이더도 읽는다(툰 외곽선 두께 텍스처 — MToon 이 정점에서 읽는다). 다른 세 백엔드는 모든 스테이지가 본다.
         const bool bMaterialSlot = ( shaderslot::kMaterialTexture0 <= slot && slot < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
         if ( bMaterialSlot )
+        {
             _pContext->VSSetShaderResources( slot, 1, &pSRV );
+            // 변위 머티리얼의 높이 맵은 도메인 스테이지가 읽는다(material_displacement.hlsli). 헐은 읽지 않지만 같은 자리를 함께 건다 — 스테이지마다 다른 표를 두지 않는다.
+            _pContext->HSSetShaderResources( slot, 1, &pSRV );
+            _pContext->DSSetShaderResources( slot, 1, &pSRV );
+        }
         if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
             _pState->_arrPixelSRVTexture[slot] = ( pSRV != nullptr ) ? texture : 0;
         // 짝 샘플러는 걸지 않는다 — DX11 샘플러 슬롯은 16 개뿐이라 엔진 텍스처 칸(t32..)과 머티리얼 칸(t16..t31)은 셰이더가 정적 세트(s9..s15)의 샘플러로 읽는다.
@@ -434,6 +439,9 @@ namespace sw
         _pContext->VSSetConstantBuffers( slot, 1, &pCb );
         _pContext->PSSetConstantBuffers( slot, 1, &pCb );
         _pContext->CSSetConstantBuffers( slot, 1, &pCb );
+        // 변위 머티리얼의 헐 · 도메인이 패스 상수(뷰-투영)를 읽는다 — 다른 세 백엔드는 모든 스테이지가 본다.
+        _pContext->HSSetConstantBuffers( slot, 1, &pCb );
+        _pContext->DSSetConstantBuffers( slot, 1, &pCb );
     }
 
     ID3D11ShaderResourceView* D3D11RHICommandContext::findBindlessBufferSRV( RHIDescriptorIndex index ) const
@@ -455,6 +463,9 @@ namespace sw
             return;
         _pContext->VSSetShaderResources( slot, 1, &pSRV );
         _pContext->PSSetShaderResources( slot, 1, &pSRV );
+        // 변위 머티리얼의 헐 · 도메인이 머티리얼 · 인스턴스 버퍼를 읽는다.
+        _pContext->HSSetShaderResources( slot, 1, &pSRV );
+        _pContext->DSSetShaderResources( slot, 1, &pSRV );
         // 버퍼가 그 슬롯의 텍스처를 덮는다.
         if ( _pState != nullptr && slot < D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT )
             _pState->_arrPixelSRVTexture[slot] = 0;
@@ -554,6 +565,9 @@ namespace sw
         {
             _pContext->VSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
             _pContext->PSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
+            // 머티리얼 원소 수(SW_MATERIAL 의 클램프)를 헐 · 도메인도 읽는다.
+            _pContext->HSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
+            _pContext->DSSetConstantBuffers( shaderslot::kRootConstantEmulationSlot, 1, &pCb );
         }
     }
 
@@ -671,6 +685,8 @@ namespace sw
         _pContext->PSSetShaderResources( 0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, arrNullSRV );
         // 머티리얼 슬롯은 정점 셰이더에도 걸린다(bindShaderResource) — 같은 범위만 뗀다(정점 셰이더의 구조버퍼 t4..t11 은 그대로 둔다).
         _pContext->VSSetShaderResources( shaderslot::kMaterialTexture0, shaderslot::kMaterialTextureCount, arrNullSRV );
+        _pContext->HSSetShaderResources( shaderslot::kMaterialTexture0, shaderslot::kMaterialTextureCount, arrNullSRV );
+        _pContext->DSSetShaderResources( shaderslot::kMaterialTexture0, shaderslot::kMaterialTextureCount, arrNullSRV );
         if ( _pState != nullptr )
             Memory::set( _pState->_arrPixelSRVTexture, 0, sizeof( _pState->_arrPixelSRVTexture ) );
     }
@@ -690,7 +706,11 @@ namespace sw
             _pContext->PSSetShaderResources( slot, 1, &pNull );
             const bool bMaterialSlot = ( shaderslot::kMaterialTexture0 <= slot && slot < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
             if ( bMaterialSlot )
+            {
                 _pContext->VSSetShaderResources( slot, 1, &pNull );
+                _pContext->HSSetShaderResources( slot, 1, &pNull );
+                _pContext->DSSetShaderResources( slot, 1, &pNull );
+            }
             _pState->_arrPixelSRVTexture[slot] = 0;
         }
     }

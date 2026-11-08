@@ -592,6 +592,27 @@ namespace sw
             return true;
         }
 
+        /** @brief 감시 값이 0 이면 건너뛴다(장치 능력이 없다고 선언된 백엔드). 못 읽으면 실패다 — 읽지 못한 것을 능력 없음으로 짐작하지 않는다. */
+        static bool runSkipUnless( AutomationStepContext& context, const AutomationStep& step )
+        {
+            AutomationRunner&    runner = asRunner( context );
+            AutomationWatchValue value{};
+            string               message;
+            if ( runner._judge.readWatchValue( context, step, value, message ) == false || value._bText )
+            {
+                const string reason = "<SkipUnless> could not read a number: " + message;
+                runner.recordFailure( step, reason );
+                runner.finish( AutomationResult::Failed, reason );
+                return true;
+            }
+            if ( value._number == 0.0 )
+            {
+                const string* pReason = step.findAttribute( "reason" );
+                runner.finish( AutomationResult::Skipped, pReason != nullptr ? string_view{ *pReason } : string_view{ "<SkipUnless/>" } );
+            }
+            return true;
+        }
+
         // --- 차례(`AutomationStepHoldFunction`) -------------------------------------------------------------------
 
         /** @brief 조건이 참이 될 때까지(또는 시한까지) 시나리오 시계를 붙잡습니다. 놓으면 단계는 끝난다(실행 함수가 없다). */
@@ -663,4 +684,5 @@ namespace sw
     SW_AUTOMATION_STEP( runnerPass, "Pass", &AutomationRunnerEngineSteps::runPass, &AutomationStep::validateFields<AutomationNoParams>, AutomationStepOptions{}.withHold( &AutomationRunnerEngineSteps::holdPass ) );
     SW_AUTOMATION_STEP( runnerFail, "Fail", &AutomationRunnerEngineSteps::runFail, &AutomationStep::validateFields<AutomationEndStepParams>, AutomationStepOptions{} );
     SW_AUTOMATION_STEP( runnerSkip, "Skip", &AutomationRunnerEngineSteps::runSkip, &AutomationStep::validateFields<AutomationEndStepParams>, AutomationStepOptions{} );
+    SW_AUTOMATION_STEP( runnerSkipUnless, "SkipUnless", &AutomationRunnerEngineSteps::runSkipUnless, &AutomationStep::validateFields<AutomationSkipUnlessParams>, AutomationStepOptions{} );
 } // namespace sw

@@ -46,6 +46,14 @@ namespace sw
          *          DX11 · OpenGL 은 GPU 쪽 표지 수단이 없어 늘 거짓이고, 소실 보고는 CPU 가 마지막으로 기록한 패스만 싣는다(`GPUBreadcrumbs::reportDeviceLost`).
          */
         uint8 _bGPUBreadcrumbs{ SW_FALSE };
+        /**
+         * @brief 머티리얼 셰이더에 헐 · 도메인 스테이지를 붙인 변형(변위 머티리얼 `MATERIAL_DISPLACEMENT`)을 그릴 수 있는지입니다.
+         * @details 패스 XML 의 선택 스테이지(`_hullEntryPoint`)와 달리 헐 · 도메인이 머티리얼 버퍼 · 머티리얼 텍스처 · 패스 상수를 읽는다.
+         *          DX11 · DX12 는 참, Vulkan 은 장치 기능 `tessellationShader` 가 있을 때 참이다. OpenGL 은 거짓이다 — 구조 버퍼를 두 스테이지가 함께 읽으면
+         *          ARB_gl_spirv 드라이버가 링크를 거절한다(binding.hlsli 9 절). WebGPU 는 테셀레이션이 없다. 거짓이면 변형을 만들지 않고 오류를 남긴다
+         *          (`FramePSOManager.DisplacementUnsupported`) — 평면으로 대신 그리지 않는다(언리얼도 테셀레이션 없는 플랫폼에서 변위를 빼지만 여기서는 빠진 그림을 숨기지 않는다).
+         */
+        uint8 _bMaterialTessellation{ SW_FALSE };
 
         /** @brief 기본값(컴퓨트만 켠 보수적 기본)으로 만듭니다. */
         RHICapabilities() noexcept = default;

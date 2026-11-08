@@ -233,11 +233,12 @@ namespace sw
 
         RHICapabilities getCapabilities() const override
         {
-            RHICapabilities caps     = RHIAvailability::query( RHIBackend::Vulkan );
-            caps._bMultiDrawIndirect = _bMultiDrawIndirect;
-            caps._bNativeBindless    = _textureSet != nullptr ? 1u : 0u;
-            caps._bWireframeFill     = _bFillModeNonSolid;
-            caps._bGPUBreadcrumbs    = _bCheckpoints != SW_FALSE ? SW_TRUE : SW_FALSE;
+            RHICapabilities caps        = RHIAvailability::query( RHIBackend::Vulkan );
+            caps._bMultiDrawIndirect    = _bMultiDrawIndirect;
+            caps._bNativeBindless       = _textureSet != nullptr ? 1u : 0u;
+            caps._bWireframeFill        = _bFillModeNonSolid;
+            caps._bMaterialTessellation = _bTessellationShader != 0 ? SW_TRUE : SW_FALSE;
+            caps._bGPUBreadcrumbs       = _bCheckpoints != SW_FALSE ? SW_TRUE : SW_FALSE;
             return caps;
         }
 

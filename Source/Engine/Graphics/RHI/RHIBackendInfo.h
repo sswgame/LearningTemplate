@@ -59,6 +59,7 @@ namespace sw
             caps._bParallelCommandRecording   = SW_FALSE;
             caps._bThreadSafeResourceCreation = SW_TRUE;
             caps._bWireframeFill              = SW_TRUE;
+            caps._bMaterialTessellation       = SW_TRUE; // 헐 · 도메인이 정점 · 픽셀과 같은 상수 · 텍스처 · 구조 버퍼를 받는다(D3D11RHICommandContext 가 HS · DS 에도 건다)
             return caps;
         }
 
@@ -74,6 +75,7 @@ namespace sw
             caps._bParallelCommandRecording   = SW_TRUE;
             caps._bThreadSafeResourceCreation = SW_TRUE;
             caps._bWireframeFill              = SW_TRUE;
+            caps._bMaterialTessellation       = SW_TRUE; // 루트 시그니처가 모든 스테이지에 보인다(D3D12_SHADER_VISIBILITY_ALL)
             return caps;
         }
 
@@ -94,6 +96,7 @@ namespace sw
             caps._bParallelCommandRecording   = SW_TRUE;
             caps._bThreadSafeResourceCreation = SW_TRUE;
             caps._bWireframeFill              = SW_TRUE; // 후보. 런타임은 VulkanRHIDevice::getCapabilities 가 fillModeNonSolid 로 덮는다
+            caps._bMaterialTessellation       = SW_TRUE; // 후보. 런타임은 VulkanRHIDevice::getCapabilities 가 tessellationShader 로 덮는다
             return caps;
         }
 
