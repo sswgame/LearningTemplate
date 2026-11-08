@@ -47,19 +47,45 @@ namespace sw::editor
         public:
             static constexpr const utf8* kSubsystemName = "EditorWindowTitleState";
 
-            string      _scenePath{};
-            string      _gameTitle{};
-            string      _title{};
-            const utf8* _pPlayState{ nullptr };
-            uint8       _bDirty : 1;
-            uint8       _bBuilt : 1; ///< 한 번이라도 지었는지(첫 프레임은 입력이 기본값과 같아도 짓는다)
-
             EditorWindowTitleState()
-                : _bDirty{ SW_FALSE }
+                : _scenePath{}
+                , _gameTitle{}
+                , _title{}
+                , _pPlayState{ nullptr }
+                , _bDirty{ SW_FALSE }
                 , _bBuilt{ SW_FALSE }
             {
             }
-            const utf8* getSubsystemName() const override { return kSubsystemName; }
+
+            /**
+             * @brief 입력이 지난번과 다르거나 창의 평소 제목(@p currentBaseTitle)이 이 제목에서 벗어났으면(셸 종료가 되돌렸다) 제목을 다시 짓습니다.
+             * @return 다시 지었으면 true — 부른 쪽이 `getTitle` 을 창 호스트에 건다. 같으면 문자열을 짓지 않고 false 다.
+             */
+            bool rebuildIfChanged( const string& gameTitle, const string& scenePath, bool bDirty, const utf8* pPlayState, const string& currentBaseTitle )
+            {
+                const bool bUnchanged = _bBuilt == SW_TRUE && _pPlayState == pPlayState && ( _bDirty == SW_TRUE ) == bDirty && _scenePath == scenePath &&
+                                        _gameTitle == gameTitle && currentBaseTitle == _title;
+                if ( bUnchanged )
+                    return false;
+                _scenePath  = scenePath;
+                _gameTitle  = gameTitle;
+                _pPlayState = pPlayState;
+                _bDirty     = bDirty ? SW_TRUE : SW_FALSE;
+                _bBuilt     = SW_TRUE;
+                _title      = EditorWindowTitleUtil::makeTitle( gameTitle, scenePath, bDirty, pPlayState );
+                return true;
+            }
+
+            const string& getTitle() const { return _title; }
+            const utf8*   getSubsystemName() const override { return kSubsystemName; }
+
+        private:
+            string      _scenePath;
+            string      _gameTitle;
+            string      _title;
+            const utf8* _pPlayState;
+            uint8       _bDirty : 1;
+            uint8       _bBuilt : 1; ///< 한 번이라도 지었는지(첫 프레임은 입력이 기본값과 같아도 짓는다)
         };
 
         struct EditorFrameStepsInternal
@@ -120,19 +146,10 @@ namespace sw::editor
                 const utf8*               pPlayState{ nullptr };
                 if ( EditorPlaySession::isStopped() == false )
                     pPlayState = EditorPlaySession::isSimulating() ? "Simulating" : ( EditorPlaySession::isPaused() ? "Paused" : "Playing" );
-                // 입력이 같고 창의 평소 제목도 그대로면(셸 종료가 되돌리지 않았다) 문자열을 다시 짓지 않는다.
-                EditorWindowTitleState& state      = editor::getSubsystem<EditorWindowTitleState>(); // 필수 - 이 파일의 SW_EDITOR_SUBSYSTEM 이 컨텍스트와 함께 만든다
-                const bool              bUnchanged = state._bBuilt && state._pPlayState == pPlayState && state._bDirty == bDirty && state._scenePath == scenePath &&
-                                        state._gameTitle == pPackSettings->_windowTitle && pWindowHost->getBaseTitle() == state._title;
-                if ( bUnchanged )
-                    return;
-                state._scenePath  = scenePath;
-                state._gameTitle  = pPackSettings->_windowTitle;
-                state._pPlayState = pPlayState;
-                state._bDirty     = bDirty;
-                state._bBuilt     = SW_TRUE;
-                state._title      = EditorWindowTitleUtil::makeTitle( pPackSettings->_windowTitle, scenePath, bDirty, pPlayState );
-                pWindowHost->setBaseTitle( state._title ); // 창에 거는 일은 엔진이 한다 — 시나리오 실행 정보를 이 제목 뒤에 붙여 건다(AutomationRunTitleTracker)
+                // 입력이 같고 창의 평소 제목도 그대로면 다시 짓지 않는다(`EditorWindowTitleState::rebuildIfChanged`).
+                EditorWindowTitleState& state = editor::getSubsystem<EditorWindowTitleState>(); // 필수 - 이 파일의 SW_EDITOR_SUBSYSTEM 이 컨텍스트와 함께 만든다
+                if ( state.rebuildIfChanged( pPackSettings->_windowTitle, scenePath, bDirty, pPlayState, pWindowHost->getBaseTitle() ) )
+                    pWindowHost->setBaseTitle( state.getTitle() ); // 창에 거는 일은 엔진이 한다 — 시나리오 실행 정보를 이 제목 뒤에 붙여 건다(AutomationRunTitleTracker)
             }
 
             /** @brief 6) 끝난 스크린샷 요청의 토스트를 띄웁니다. */
