@@ -63,7 +63,7 @@
 | `Object` · `Scene`(5) | 컴포넌트 모델 · 씬 |
 | 기능 폴더(6: **`Visual`**(옛 Rendering + 2D) · Physics · Audio · Animation …) | 자기 컴포넌트는 `<기능>/Component`, 씬 서비스 · 시스템은 `<기능>/Scene`, 데이터는 `<기능>/` 바로 아래 |
 | `Renderer`(7) | 렌더 스레드 · 프레임 그래프 · GPU 파이프라인 |
-| `Module` · `Automation`(8) | 엔진 루프 조립 · 핫 리로드 바인딩 · 자동화 실행기 |
+| `Module` · `Automation`(8) | 엔진 루프 조립 · 핫 리로드 바인딩 · 자동화 창구(감시 값 · 단계 등록 · 시나리오 형식 · `IAutomationRuntime`). 실행기 · 판정 · 세션 · 녹화는 `DevTools/Client/Automation`(언리얼 Automation 컨트롤러 · Gauntlet 이 Developer 모듈인 자리) |
 
 ### 4 그 밖의 규칙
 
