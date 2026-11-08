@@ -18,6 +18,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
@@ -229,8 +230,8 @@ namespace sw
         void render( float32* pOutput, uint32 frameCount );
         /** @brief 오디오 스레드 역할을 놓습니다. 출력을 닫거나 열기 직전에 부른다 — 다음에 `render` 를 부르는 스레드(새 장치 스레드 · 오프라인 렌더)가 역할을 받는다. */
         void releaseAudioThread() { _audioThread.unbind(); }
-        /** @brief 버스 하나의 마지막 블록 피크를 반환합니다. 오디오 스레드와 테스트가 씁니다. 없는 버스면 0 입니다. */
-        float32 getBusPeak( const hashed_string& bus ) const;
+        /** @brief 버스 하나의 마지막 블록 피크를 반환합니다. 오디오 스레드와 테스트가 씁니다. 그래프가 없거나 없는 버스면 비어 있습니다. */
+        [[nodiscard]] optional<float32> getBusPeak( const hashed_string& bus ) const;
         /** @brief 파라미터의 현재 값(seek 이후)을 반환합니다. 오디오 스레드와 테스트가 씁니다. 모르는 파라미터면 0 입니다. */
         float32 getParameterValue( const hashed_string& name ) const;
         /** @brief 스냅샷 세기 · 버스 사용자 상태입니다(`getSnapshotIntensity`). 오디오 스레드와 테스트가 씁니다. */
@@ -356,8 +357,8 @@ namespace sw
         void stopVoices( AudioPlayingID playingID, AudioEmitterID emitterID, float32 fadeSeconds );
         /** @brief 클립을 기다리는 슬롯에 클립이 도착했으면 시작합니다. 디코드에 실패한 클립의 슬롯은 반환합니다. */
         void startWaitingVoice( AudioVoiceSlot& slot );
-        /** @brief 버스 이름을 현재 그래프의 번호로 찾습니다. 없으면 sfx 를, 그것도 없으면 master 를 씁니다. */
-        uint32 resolveBusIndex( const hashed_string& bus ) const;
+        /** @brief 버스 이름을 현재 그래프의 번호로 찾습니다. 빈 이름은 sfx 입니다. 없으면 오류를 남기고 비어 있습니다(보이스를 내지 않는다). */
+        [[nodiscard]] optional<uint32> resolveBusIndex( const hashed_string& bus ) const;
         /** @brief 에미터의 가림 값이 이번 블록 동안 목표값을 따라가게 합니다. */
         void updateEmitters();
         /** @brief 보이스 하나의 이번 블록 목표(볼륨, 팬, 피치, 로우패스, 들림)를 정합니다. */
