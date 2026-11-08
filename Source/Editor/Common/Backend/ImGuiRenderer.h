@@ -15,6 +15,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
+#include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
@@ -75,8 +76,11 @@ namespace sw::editor
          *          그 뒤의 그리기가 버려진다. 버퍼는 프레임에 한 번만 올린다(같은 프레임에 같은 버퍼를 두 번 올리지 않는다 — 캔버스와 같은 규칙). nullptr 항목은 건너뛴다.
          */
         void prepareFrame( IRHIDevice& device, const vector<ImDrawData*>& listDrawData );
-        /** @brief @p drawData 를 지금 열린 렌더 패스에 그립니다. `prepareFrame` 이 이번 프레임에 올린 목록만 그린다(올리지 않은 목록은 오류를 남기고 건너뛴다). */
-        void render( IRHIDevice& device, const ImDrawData& drawData );
+        /**
+         * @brief @p drawData 를 지금 열린 렌더 패스에 그립니다. `prepareFrame` 이 이번 프레임에 올린 목록만 그린다(올리지 않은 목록은 오류를 남기고 건너뛴다).
+         * @param listExcludedTexture 그리지 않을 텍스처 ID — 에디터 UI 캡처가 개발 겹치기(게임 뷰 위 디버그 HUD)를 빼고 다시 그릴 때 넘긴다(`EditorUICapture::setTextureExcluded`)
+         */
+        void render( IRHIDevice& device, const ImDrawData& drawData, span<const uint64> listExcludedTexture = {} );
         /**
          * @brief 스냅샷의 보조 창(메인 밖으로 끌어낸 패널)마다 그 창의 스왑체인 백버퍼에 그립니다. 렌더 스레드에서, 메인 그리기 뒤에 부릅니다.
          * @details 열린 패스를 닫고 창마다 패스를 열어 그린 뒤 닫는다. 이번 프레임에 그릴 수 없는 창(`IRHIDevice::acquireSwapChainImage` 가 false)은 건너뛴다.

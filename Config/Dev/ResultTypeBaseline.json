@@ -296,7 +296,7 @@
     "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.cpp": {"out-error": 1},
     "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLConnectionPool.h": {"out-error": 1},
     "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h": {"out-error": 1},
-    "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.cpp": {"out-error": 2},
+    "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.cpp": {"out-error": 1},
     "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.h": {"out-error": 1},
     "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLLocalSlotStorage.cpp": {"out-error": 2},
     "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQLLocalSlotStorage.h": {"out-error": 2},

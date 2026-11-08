@@ -109,9 +109,10 @@ namespace sw
             {
             }
 
-            [[nodiscard]] bool start( Engine& engine, SubsystemScope& host, const CommandLineManager& commandLine ) override;
-            bool               isBusy() const override;
-            void               runPerBackend( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState ) override;
+            [[nodiscard]] bool         start( Engine& engine, SubsystemScope& host, const CommandLineManager& commandLine ) override;
+            bool                       isBusy() const override;
+            void                       runPerBackend( string_view backends, CommandLineManager& commandLine, HeadlessTaskState& inoutState ) override;
+            const AutomationRunStatus* findRunStatus() const override;
             /** @brief 재생기를 호스트 범위에서 풀어 내리고 세션을 엔진 프레임에서 뗍니다(세션 종료가 부른다). 시작하지 않았으면 아무것도 하지 않습니다. */
             void detach();
 
@@ -140,8 +141,15 @@ namespace sw
         void startRecordingWhenReady();
         /** @brief 녹화를 멈추고 검사점을 읽어 파일을 씁니다. 녹화 중이 아니면 아무것도 하지 않습니다. */
         void finishRecording();
+        /** @brief 지금 단계 실행기의 진행 · 판정 상태를 `_runStatus` 에 옮깁니다(실행기가 없으면 아무것도 하지 않는다). 창 제목과 바깥 읽기 창구가 같은 값을 읽는다. */
+        void updateRunStatus();
         /** @brief 창 제목에 실행 정보를 적습니다(바뀔 때와 일정 프레임마다만 시스템 호출). 시나리오가 없어도 벤치 인자만 있으면 적는다. */
         void updateRunTitle();
+        /**
+         * @brief 체인이 끝난 종료 코드를 바로 내지 않고 보이는 실행이면 `gv_scenarioResultHoldFrames` 프레임 뒤에 냅니다 — 지켜보는 사람이 끝 결과(HUD · 창 제목)를 읽을 틈이다.
+         * @details 판정 · 보고는 이미 끝났다 — 남기는 프레임은 결과를 바꾸지 않는다. 무인 숨김 실행 · 창 없는 호스트는 바로 낸다.
+         */
+        [[nodiscard]] EngineFrameExit holdFinalExit( EngineFrameExit exitCode );
         /** @brief 처리한 패킷 사진 수입니다(우편함이 없는 호스트는 0). */
         static uint32 findCompletedScreenshotCount();
 
@@ -162,5 +170,8 @@ namespace sw
         IEngineRenderDriver*                _pRenderDriver{ nullptr }; ///< 사진을 실은 패킷을 단계 앞에서 비운다(`onFrameEnd`). `Runtime::start` 가 건다, 없으면(헤드리스) 비울 것이 없다
         Runtime                             _runtime;                  ///< 바깥 창구(`getPublishedPart`)
         AutomationRunTitleTracker           _runTitle;                 ///< 창 제목의 실행 정보(시나리오 · 백엔드 · 단계 · 프레임)
+        AutomationRunStatus                 _runStatus;                ///< 지금 단계의 진행 · 판정 상태(`updateRunStatus`, 바깥 창구 `findRunStatus`)
+        EngineFrameExit                     _heldExit;                 ///< 끝 결과를 남기는 동안 쥔 종료 코드(`holdFinalExit`, 없으면 빈 값)
+        uint32                              _heldExitFrames;           ///< 종료 코드를 내기까지 남은 프레임
     };
 } // namespace sw

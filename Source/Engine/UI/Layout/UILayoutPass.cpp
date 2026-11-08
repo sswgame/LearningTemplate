@@ -16,11 +16,6 @@ namespace sw
 {
     namespace
     {
-        /** @brief 레이아웃 순회 번호입니다(0 은 "측정한 적 없음"). 게임 스레드에서만 쓰며, 순회마다 하나씩 늘려 같은 순회 안의 중복 측정을 막습니다. */
-        uint32 s_layoutSerial = 0;
-        /** @brief `computeDesiredSize` 호출 수(누적)입니다. `update` 가 앞뒤 차이로 이번 순회의 호출 수를 냅니다. */
-        uint32 s_measureCount = 0;
-
         struct UILayoutPassInternal
         {
             static constexpr uint32 kLayoutBits = WidgetDirty::kLayout | WidgetDirty::kChildLayout;
@@ -82,10 +77,10 @@ namespace sw
 {
     uint32 UILayoutPass::update( WidgetTree& tree, const UILayoutContext& context )
     {
-        ++s_layoutSerial;
-        if ( s_layoutSerial == 0 )
-            s_layoutSerial = 1;
-        const uint32 measureCountBefore = s_measureCount;
+        ++tree._layoutSerial;
+        if ( tree._layoutSerial == 0 )
+            tree._layoutSerial = 1;
+        const uint32 measureCountBefore = tree._measureCount;
 
         const bool bScaleChanged = tree._layoutUIScale != context._uiScale || tree._layoutTextScale != context._textScale;
         if ( bScaleChanged )
@@ -129,7 +124,7 @@ namespace sw
             arrange( *pWidget, context, pWidget->getParent()->getGeometry(), pWidget->_lastSlotPosition, pWidget->_lastSlotSize );
             clearLayoutFlags( *pWidget );
         }
-        return s_measureCount - measureCountBefore;
+        return tree._measureCount - measureCountBefore;
     }
 
     float2 UILayoutPass::measure( Widget& widget, const UILayoutContext& context, const float2& availableSize )
@@ -152,8 +147,10 @@ namespace sw
         if ( bCached )
             return widget._desiredSize;
 
-        float2 desired = widget.computeDesiredSize( context, inner );
-        ++s_measureCount;
+        float2            desired = widget.computeDesiredSize( context, inner );
+        WidgetTree* const pTree   = widget.getTree(); // 순회 번호 · 측정 수는 트리가 든다 — 떨어진 위젯은 캐시하지 않는다(번호 0)
+        if ( pTree != nullptr )
+            ++pTree->_measureCount;
         if ( slot._widthOverride > 0.0f )
             desired._x = slot._widthOverride;
         if ( slot._heightOverride > 0.0f )
@@ -167,7 +164,7 @@ namespace sw
 
         widget._desiredSize       = desired;
         widget._lastAvailableSize = inner;
-        widget._layoutSerial      = s_layoutSerial;
+        widget._layoutSerial      = pTree != nullptr ? pTree->_layoutSerial : 0;
         return desired;
     }
 
@@ -231,7 +228,8 @@ namespace sw
 
     bool UILayoutPass::isMeasureStale( const Widget& widget )
     {
-        return widget._layoutSerial == 0 || ( ( widget._dirtyFlags & UILayoutPassInternal::kLayoutBits ) != 0 && widget._layoutSerial != s_layoutSerial );
+        const WidgetTree* const pTree = widget.getTree();
+        return widget._layoutSerial == 0 || pTree == nullptr || ( ( widget._dirtyFlags & UILayoutPassInternal::kLayoutBits ) != 0 && widget._layoutSerial != pTree->_layoutSerial );
     }
 
     void UILayoutPass::clearLayoutFlags( Widget& widget )

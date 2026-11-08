@@ -97,10 +97,10 @@ namespace sw
             /** @brief 보드 · 업적 정의를 서비스에 올립니다. 규칙을 어긴 정의가 있으면 false 와 까닭입니다. */
             [[nodiscard]] bool registerDefinitions( string& outError )
             {
-                const vector<LeaderboardDef>  listNoBoard;
-                const vector<AchievementDef>  listNoAchievement;
-                const vector<LeaderboardDef>& listBoard       = _pCatalog != nullptr ? _pCatalog->getBoards() : listNoBoard;
-                const vector<AchievementDef>& listAchievement = _pCatalog != nullptr ? _pCatalog->getAchievements() : listNoAchievement;
+                const vector<LeaderboardDef>        listNoBoard;
+                const vector<OnlineAchievementDef>  listNoAchievement;
+                const vector<LeaderboardDef>&       listBoard       = _pCatalog != nullptr ? _pCatalog->getBoards() : listNoBoard;
+                const vector<OnlineAchievementDef>& listAchievement = _pCatalog != nullptr ? _pCatalog->getAchievements() : listNoAchievement;
                 for ( const LeaderboardDef& board : listBoard )
                 {
                     if ( _service.registerBoard( board ) == false )
@@ -119,7 +119,7 @@ namespace sw
                         return false;
                     }
                 }
-                for ( const AchievementDef& achievement : listAchievement )
+                for ( const OnlineAchievementDef& achievement : listAchievement )
                 {
                     if ( _service.registerAchievement( achievement ) == false )
                     {

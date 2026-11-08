@@ -83,7 +83,6 @@ namespace sw
         static constexpr int32 kIndex = ReflectBuiltinIndex::k##Canon; \
     };
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
 } // namespace sw

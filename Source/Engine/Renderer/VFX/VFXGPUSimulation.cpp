@@ -117,6 +117,7 @@ namespace sw
         , _particleBuffer{}
         , _argsBuffer{}
         , _drawSource{}
+        , _pRunToken{}
         , _bNeedsReset{ SW_TRUE }
         , _bSeen{ SW_FALSE }
     {
@@ -321,10 +322,15 @@ namespace sw
 
     VFXGPUSimulation::EmitterState* VFXGPUSimulation::prepareEmitterState( IRHIDevice& device, const VFXGPUEmitterRequest& request )
     {
-        using Internal                                                  = VFXGPUSimulationInternal;
-        unordered_map<uint64, unique_ptr<EmitterState>>::iterator found = _mapState.find( request._runID );
+        using Internal = VFXGPUSimulationInternal;
+        // 열쇠는 재생 토큰의 주소다. 상태가 토큰을 들어(`EmitterState::_pRunToken`) 상태가 사는 동안 그 주소가 다른 재생에 다시 쓰이지 않는다.
+        const uint64                                              runKey = reinterpret_cast<uint64>( request._pRunToken.get() );
+        unordered_map<uint64, unique_ptr<EmitterState>>::iterator found  = _mapState.find( runKey );
         if ( found == _mapState.end() )
-            found = _mapState.emplace( request._runID, sw::make_unique<EmitterState>( request._pDef, request._spawnScale ) ).first;
+        {
+            found                     = _mapState.emplace( runKey, sw::make_unique<EmitterState>( request._pDef, request._spawnScale ) ).first;
+            found->second->_pRunToken = request._pRunToken;
+        }
         EmitterState& state = *found->second;
         state._bSeen        = SW_TRUE;
 

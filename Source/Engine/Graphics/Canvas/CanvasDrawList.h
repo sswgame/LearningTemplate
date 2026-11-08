@@ -209,8 +209,16 @@ namespace sw
          *          사각형(144 바이트)을 모두 패킷에 베꼈다. 디버그 그리기 · 테스트 그림을 겹치는 프레임만 사본을 만들어 그 위에 칠한다(`RenderPacketCanvasCollector`).
          */
         shared_ptr<const CanvasDrawList> _pMainOutput{};
-        vector<CanvasTargetDrawList>     _listTarget{};      ///< 렌더 텍스처 대상 목록(장면 앞에서 그리며 월드 공간 UI 에 해당한다)
-        vector<GlyphAtlasUpload>         _listAtlasUpload{}; ///< 지난 프레임 뒤 바뀐 글리프 아틀라스 구간(`GlyphAtlas::takeUploads`)
+        /**
+         * @brief 개발 겹치기 목록(디버그 HUD — `UIScreen::isDevOverlay`)입니다. 없으면 nullptr 입니다(`getDevOverlay` 는 빈 목록).
+         * @details 주 출력 목록과 달리 **사진 캡처가 읽는 지점 뒤**, 화면에 내보내기 직전의 대상(백버퍼)에 그린다(`FramePassExecutor::drawDevOverlay`) — 그래서 스크린샷 ·
+         *          `<ExpectImage>` 골든에 들지 않는다. 주 출력이 호스트 렌더 타깃(에디터 게임 뷰)이면 그 타깃에 그리지 않고 자기 렌더 텍스처 대상(`kDevOverlayTargetPath`)으로 싣는다 —
+         *          에디터가 게임 뷰 위에 겹치고 에디터 UI 캡처는 그 텍스처를 빼고 다시 그린다.
+         */
+        shared_ptr<const CanvasDrawList> _pDevOverlay{};
+        uint64                           _devOverlayRevision{ 0 }; ///< `_pDevOverlay` 내용 번호(사각형 버퍼 서명에 섞는다, 0 이면 모른다)
+        vector<CanvasTargetDrawList>     _listTarget{};            ///< 렌더 텍스처 대상 목록(장면 앞에서 그리며 월드 공간 UI 에 해당한다)
+        vector<GlyphAtlasUpload>         _listAtlasUpload{};       ///< 지난 프레임 뒤 바뀐 글리프 아틀라스 구간(`GlyphAtlas::takeUploads`)
         /** @brief 업로드를 낸 아틀라스입니다. 렌더러 거울이 묶음을 놓쳤을 때 `GlyphAtlas::requestFullUpload`(원자 표시) 하나만 부른다 — 다른 멤버는 렌더 스레드에서 읽지 않는다. */
         GlyphAtlas* _pAtlasSource{ nullptr };
         /** @brief 주 출력 사각형의 `_anchor` 가 가리키는 앵커입니다. 프레임마다 바뀌어도 `_contentRevision` 을 증가시키지 않습니다. 렌더러가 앵커 구간만 업로드합니다. */
@@ -233,8 +241,13 @@ namespace sw
          */
         uint32 _colorVisionMode{ 0 };
 
+        /** @brief 개발 겹치기를 호스트 렌더 타깃 대신 그리는 렌더 텍스처 경로입니다(에디터 게임 뷰가 위에 겹친다). */
+        static constexpr const utf8* kDevOverlayTargetPath = "rendertarget/dev_overlay";
+
         /** @brief 주 출력 목록입니다. 실은 것이 없으면 빈 목록입니다. */
         const CanvasDrawList& getMainOutput() const;
+        /** @brief 개발 겹치기 목록입니다(사진 캡처 뒤에 화면에 그린다). 실은 것이 없으면 빈 목록입니다. */
+        const CanvasDrawList& getDevOverlay() const;
         /** @brief 비웁니다(용량은 남깁니다. 패킷 재사용이며 `RenderFramePacket::resetForFrame` 이 부릅니다). */
         void clear();
     };

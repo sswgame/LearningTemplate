@@ -271,7 +271,6 @@ namespace sw
                 static const array<hashed_string, kBuiltinTypeCount> s_arrName{ {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, ... ) hashed_string( #Canon ),
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
                 } };
@@ -441,7 +440,6 @@ namespace sw
       &readIntegerAs<ReflectBuiltinCppTypeT<CppType>>, &writeNumberAs<ReflectBuiltinCppTypeT<CppType>>,                                          \
       getReflectBuiltinClass<ReflectBuiltinCppTypeT<CppType>>() },
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
             };

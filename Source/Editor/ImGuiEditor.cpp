@@ -532,7 +532,6 @@ namespace sw::editor
         if ( _pIconGlyphTable->loadFromAsset( AssetID{ EditorPaths::kIconGlyphTable } ) == false ||
              _pComponentIconTable->loadFromAsset( AssetID{ EditorPaths::kComponentIconTable } ) == false )
             return SubsystemInitResult::Failed;
-        EditorIconGlyphTable::publish( _pIconGlyphTable.get(), _pComponentIconTable.get() );
         // 정적 칸에 걸지 않는다 — 범위가 서기 전의 단계(글꼴)는 인자로 받고, 에디터 컨텍스트가 자기 범위에 빌려 건다(`initializeEditorContext`).
         return SubsystemInitResult::Succeeded;
     }
@@ -541,7 +540,6 @@ namespace sw::editor
     {
         EditorAutosaveCommands::endSession(); // 정상 종료 — 자동 저장 사본과 세션 잠금을 지운다(남으면 다음 기동이 비정상 종료로 보고 복구를 묻는다)
         EditorPreferencesStore::close();      // 서비스가 서 있을 때 마지막으로 쓴다 — 뒤에 모듈이 내려가며 부르는 저장은 쓰지 않는다
-        EditorIconGlyphTable::publish( nullptr, nullptr );
         _pComponentIconTable.reset();
         _pIconGlyphTable.reset();
         _editorToolDefaults.reset();
@@ -656,7 +654,7 @@ namespace sw::editor
     SubsystemInitResult ImGuiEditor::initializeEditorContext()
     {
         _editorContext = make_unique<EditorContext>();
-        _editorContext->initialize( *_editorToolDefaults, &EditorSubsystemSet::install );
+        _editorContext->initialize( *_editorToolDefaults, *_pIconGlyphTable, *_pComponentIconTable, &EditorSubsystemSet::install );
         _editorContext->setDockLayout( &_dockLayout );
         _pUICapture = &_editorContext->getSubsystem<EditorUICapture>();
         // 테마는 컨텍스트가 활성화된 뒤에 읽어야 한다. 테마 상태를 컨텍스트가 보관하므로, 그 전에 부르면 적용한 테마가 갈 곳이

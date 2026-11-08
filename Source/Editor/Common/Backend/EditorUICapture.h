@@ -47,12 +47,13 @@ namespace sw::editor
     /** @struct EditorUICaptureJob @brief UI 스레드가 렌더 스레드로 넘기는 캡처 한 건입니다. 잘림 지표는 UI 스레드가 ImGui 를 닫을 때 측정한 값입니다. */
     struct EditorUICaptureJob
     {
-        string _path{};                        ///< 쓸 파일(.png)
-        string _clippedWindowNames{};          ///< 잘린 창 이름들(", " 로 잇는다)
-        uint32 _ticket{ 0 };                   ///< `request` 가 돌려준 번호
-        uint32 _clippedWindowCount{ 0 };       ///< 내용이 창보다 큰데 그 방향 스크롤바가 없는 창 수입니다(내용이 잘려 보이지 않는다)
-        uint32 _windowCount{ 0 };              ///< 그린 창 수(자식 창 포함)
-        bool   _bFromStartupArgument{ false }; ///< `-gv_screenshotEditor` 가 요청한 건이다(`-gv_screenshotQuit` 이 이 건의 결과로 앱을 끝낸다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        string         _path{};                        ///< 쓸 파일(.png)
+        string         _clippedWindowNames{};          ///< 잘린 창 이름들(", " 로 잇는다)
+        uint32         _ticket{ 0 };                   ///< `request` 가 돌려준 번호
+        uint32         _clippedWindowCount{ 0 };       ///< 내용이 창보다 큰데 그 방향 스크롤바가 없는 창 수입니다(내용이 잘려 보이지 않는다)
+        uint32         _windowCount{ 0 };              ///< 그린 창 수(자식 창 포함)
+        vector<uint64> _listExcludedTexture{};         ///< 다시 그리지 않을 ImGui 텍스처 ID(`EditorUICapture::setTextureExcluded` — 게임 뷰 위 개발 겹치기). `takeJob` 이 넣은 사본이다
+        bool           _bFromStartupArgument{ false }; ///< `-gv_screenshotEditor` 가 요청한 건이다(`-gv_screenshotQuit` 이 이 건의 결과로 앱을 끝낸다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -113,6 +114,12 @@ namespace sw::editor
         [[nodiscard]] bool findResult( uint32 ticket, EditorUICaptureResult& outResult ) const;
         /** @brief 읽은 캡처의 파일 쓰기가 남았거나 도는 중이면 true 입니다(시나리오 끝이 기다린다). */
         [[nodiscard]] bool isWritingFiles() const;
+        /**
+         * @brief ImGui 텍스처 ID @p pTextureID 를 캡처에서 뺄지 정합니다(UI 스레드). 뺀 텍스처를 그리는 명령은 캡처 다시 그리기에서 건너뛴다 — 화면에는 그대로 그린다.
+         * @details 게임 뷰 위에 겹친 개발 겹치기(디버그 HUD — `CanvasFrameData::kDevOverlayTargetPath`)가 쓴다. 게임의 사진과 같은 규칙이다: 개발 겹치기는 캡처 뒤의 층이다.
+         *          텍스처를 놓기 전에 false 로 되돌린다(ID 칸은 다른 등록이 다시 받는다).
+         */
+        void setTextureExcluded( const void* pTextureID, bool bExcluded );
 
         // ------------------------------------------------------------------------------
         // 렌더 스레드
@@ -131,7 +138,8 @@ namespace sw::editor
         void dispatchWrites();
 
     private:
-        vector<EditorUICaptureJob>                   _listQueued; ///< UI 스레드 전용
+        vector<EditorUICaptureJob>                   _listQueued;          ///< UI 스레드 전용
+        vector<uint64>                               _listExcludedTexture; ///< UI 스레드 전용 — 캡처에서 뺄 ImGui 텍스처 ID(`setTextureExcluded`)
         mutable mutex                                _resultMutex;
         vector<EditorUICaptureResult> _listResult    SW_GUARDED_BY( _resultMutex );                         ///< `_resultMutex` 로 지킨다
         vector<EditorUICaptureWrite> _listWriteReady SW_GUARDED_BY( _resultMutex );                         ///< 렌더 스레드가 넣고 UI 스레드가 워커에 넘긴다

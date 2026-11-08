@@ -1,22 +1,27 @@
 /**
  * @file RenderViewWatches.cpp
  * @brief 추가 뷰 수집의 자동화 감시 값 `RenderView.HiddenCount` 입니다.
- * @details 시나리오만 읽는 감시 값이라 수집 TU 가 아니라 이 파일에 둔다 — 수집기는 진단 읽기(`RenderViewCollector::getLastHiddenViewCount`)만 연다.
+ * @details 시나리오만 읽는 감시 값이라 수집 TU 가 아니라 이 파일에 둔다 — 값은 패킷 빌더의 뷰 설정이 든다(`RenderPacketBuilder::getLastHiddenViewCount`).
  */
 #include "pch.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Renderer/Frame/View/RenderViewCollector.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Renderer/Frame/FrameRendererSubsystem.h"
+#include "Engine/Renderer/Frame/Packet/RenderPacketBuilder.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 마지막 수집에서 보임 판정으로 쉰 추가 뷰 수입니다. 씬과 무관하다(수집기는 프로세스에 하나다). */
+        /** @brief 마지막 수집에서 보임 판정으로 쉰 추가 뷰 수입니다. 씬과 무관하다(주 렌더러의 패킷 빌더가 든다). 렌더러가 없는 실행에는 값이 없다. */
         [[nodiscard]] bool readHiddenViewCount( const GameObjectManager* pManager, float64& outValue )
         {
             (void)pManager;
-            outValue = static_cast<float64>( RenderViewCollector::getLastHiddenViewCount() );
+            const FrameRendererSubsystem* const pFrameRenderer = engine::findSubsystem<FrameRendererSubsystem>();
+            if ( pFrameRenderer == nullptr )
+                return false;
+            outValue = static_cast<float64>( pFrameRenderer->getPacketBuilder().getLastHiddenViewCount() );
             return true;
         }
     } // namespace

@@ -20,7 +20,6 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_debugHUD );               ///< 디버그 HUD
 SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_debugHUDSections ); ///< 섹션 켬과 끔 텍스트입니다(DebugHUDSectionState).
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_debugHUDCorner );        ///< HUD 모서리입니다(0 왼쪽 위, 1 오른쪽 위, 2 왼쪽 아래, 3 오른쪽 아래).
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_debugHUDOpacity );     ///< HUD 불투명도 0.2~1.
-
 namespace sw
 {
     class InputMap;
@@ -90,8 +89,17 @@ namespace sw
          */
         void update( const InputMap* pShellMap );
 
-        /** @brief HUD 가 켜져 있으면 true 입니다(`gv_debugHUD`). */
+        /** @brief 사용자가 HUD 를 켰으면 true 입니다(`gv_debugHUD`). 자동화 실행 상태로만 뜬 HUD 는 세지 않는다(`isRunStatusShown`). */
         bool isShown() const;
+        /**
+         * @brief 자동화 실행 상태 섹션(`DebugHUDSectionFlag::kAutomationRun`)을 그릴 때면 true 입니다 — 시나리오가 있고(`IAutomationRuntime::findRunStatus`),
+         *        창이 보이는 실행이며(`MainWindowSubsystem::shouldRenderOffScreen` 이 false), `gv_debugHUDScenario` 가 켜져 있을 때.
+         * @details 사용자 설정에 쓰지 않는다 — 실행 중에만 HUD 화면을 띄운다. 그 화면은 개발 겹치기 층이라 사진 · 골든 · 에디터 UI 캡처에 들지 않는다(`UIScreen::isDevOverlay`).
+         *          언리얼 Automation 이 테스트 중 화면 구석에 상태를 띄우는 것(Gauntlet 의 테스트 상태 표시)과 같은 자리이고, 실행기는 HUD 를 모른다(읽기 창구만 낸다).
+         */
+        bool isRunStatusShown() const;
+        /** @brief HUD 화면이 섹션 @p registration 을 그릴지입니다 — 사용자 섹션은 사용자 켜짐과 섹션 켜짐, 자동화 실행 상태 섹션은 `isRunStatusShown`. */
+        bool shouldDrawSection( const DebugHUDSectionRegistration& registration ) const;
         /** @brief HUD 를 켜거나 끕니다(설정 `debug.hud`, 저장됩니다). 화면은 다음 `update` 가 엽니다. */
         void setShown( bool bShown );
         /** @brief 섹션이 켜져 있으면 true 입니다(설정 텍스트와 등록 기본값 기준). */
@@ -113,7 +121,7 @@ namespace sw
         bool               isWindowOpen() const;
         /** @brief HUD 화면이 열려 있으면 true 입니다(켜짐과 다음 `update` 사이에는 다를 수 있습니다). */
         bool isScreenOpen() const;
-        /** @brief HUD 화면이 지금 그리는 섹션 수입니다(화면이 없으면 0. 감시 값 `DebugHUD.SectionCount`). */
+        /** @brief HUD 화면이 지금 그리는 사용자 섹션 수입니다(화면이 없으면 0. 감시 값 `DebugHUD.SectionCount` — 실행 상태 섹션은 세지 않아 보이는 실행과 숨김 실행의 값이 같다). */
         uint32 getDrawnSectionCount() const;
         /** @brief HUD 화면이 섹션 @p name 을 그리고 있으면 true 입니다(감시 값 `DebugHUD.SectionShown`). */
         bool isSectionDrawn( string_view name ) const;
@@ -133,8 +141,10 @@ namespace sw
         void shutdown();
         /** @brief 설정 @p settingID 에 @p value 를 쓰고 확정합니다. 스키마가 없으면 @p pVariableName 전역 변수에 바로 씁니다. */
         void writeSetting( const hashed_string& settingID, const utf8* pVariableName, string_view value );
-        /** @brief 켜짐 상태와 HUD 화면을 맞춥니다. */
-        void syncScreen();
+        /** @brief HUD 화면을 @p bShowScreen 에 맞춰 열거나 닫습니다(사용자 켜짐 또는 실행 상태). */
+        void syncScreen( bool bShowScreen );
+        /** @brief 이 실행이 창을 띄우지 않는 무인 실행인지를 처음 한 번 읽어 둡니다(`MainWindowSubsystem::shouldRenderOffScreen`). */
+        void readRunVisibility();
         /** @brief 보이는 섹션이 프로파일러를 쓰면 켜고, HUD 가 켠 것을 더 쓰지 않으면 끕니다. */
         void syncFrameProfiler();
 
@@ -148,6 +158,8 @@ namespace sw
         uint64                 _profilerSeenRevision;      ///< `syncFrameProfiler` 가 마지막으로 본 레지스트리 판 번호입니다(처음은 아무 판과도 다른 값).
         uint8                  _bProfilerEnabledByHUD : 1; ///< HUD 가 프로파일러를 켰는지 나타냅니다(감출 때 끕니다).
         uint8                  _bSectionsNeedProfiler : 1; ///< 켜진 섹션 중 프로파일러를 쓰는 것이 있는지의 캐시입니다(판 번호 · 상태 글이 같으면 다시 세지 않습니다).
-        [[maybe_unused]] uint8 _reserved              : 6;
+        uint8                  _bRunVisibilityRead    : 1; ///< `readRunVisibility` 가 읽었다
+        uint8                  _bOffScreenRun         : 1; ///< 창을 띄우지 않는 무인 실행이다 — 실행 상태 섹션을 그리지 않는다
+        [[maybe_unused]] uint8 _reserved              : 4;
     };
 } // namespace sw

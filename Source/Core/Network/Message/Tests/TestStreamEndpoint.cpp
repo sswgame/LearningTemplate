@@ -13,7 +13,7 @@ using namespace sw;
 
 namespace
 {
-    struct EndpointRecord final : public IStreamEndpointListener
+    struct StreamEndpointTestRecord final : public IStreamEndpointListener
     {
         vector<StreamConnectionHandle> _listOpened{};
         vector<vector<uint8>>          _listMessage{};
@@ -42,8 +42,8 @@ namespace
 
 SW_TEST_CASE( StreamEndpointTest, MessagesKeepBoundariesAndOrderAcrossChunks )
 {
-    EndpointRecord           serverRecord;
-    EndpointRecord           clientRecord;
+    StreamEndpointTestRecord serverRecord;
+    StreamEndpointTestRecord clientRecord;
     test::StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointConfig{}, LoopbackStreamConditions{ 5, 0 } ); // 1..5 바이트 조각
     SW_REQUIRE_TRUE( pair._bReady );
     pair.step( 2 );
@@ -66,8 +66,8 @@ SW_TEST_CASE( StreamEndpointTest, MessagesKeepBoundariesAndOrderAcrossChunks )
 
 SW_TEST_CASE( StreamEndpointTest, MalformedFrameClosesWithProtocolError )
 {
-    EndpointRecord           serverRecord;
-    EndpointRecord           clientRecord;
+    StreamEndpointTestRecord serverRecord;
+    StreamEndpointTestRecord clientRecord;
     test::StreamEndpointPair pair( serverRecord, clientRecord, StreamEndpointConfig{}, LoopbackStreamConditions{} );
     SW_REQUIRE_TRUE( pair._bReady );
     pair.step( 2 );
@@ -89,8 +89,8 @@ SW_TEST_CASE( StreamEndpointTest, PendingReceiveCapPausesTransportUntilPumped )
 {
     StreamEndpointConfig settings;
     settings._maxPendingReceiveBytes = 4096;
-    EndpointRecord           serverRecord;
-    EndpointRecord           clientRecord;
+    StreamEndpointTestRecord serverRecord;
+    StreamEndpointTestRecord clientRecord;
     test::StreamEndpointPair pair( serverRecord, clientRecord, settings, LoopbackStreamConditions{ 0, 2048 } ); // 한 pollIO 가 2 KB 씩 — 멈춤이 걸릴 틈을 준다
     SW_REQUIRE_TRUE( pair._bReady );
     pair.step( 2 );
@@ -115,8 +115,8 @@ SW_TEST_CASE( StreamEndpointTest, PingMeasuresRoundTripAndFailedConnectStillClos
 {
     StreamEndpointConfig settings;
     settings._pingIntervalSeconds = 0.001;
-    EndpointRecord           serverRecord;
-    EndpointRecord           clientRecord;
+    StreamEndpointTestRecord serverRecord;
+    StreamEndpointTestRecord clientRecord;
     test::StreamEndpointPair pair( serverRecord, clientRecord, settings, LoopbackStreamConditions{} );
     SW_REQUIRE_TRUE( pair._bReady );
     const Deadline deadline = Deadline::afterMilliseconds( 2000 );

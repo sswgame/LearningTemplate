@@ -14,7 +14,7 @@ namespace sw
     {
         struct HorseFollowAIControllerInternal
         {
-            static constexpr const utf8* kCalledKey = "Called"; ///< 휘파람을 들었다(트리가 닿으면 지운다)
+            static constexpr utf8 kCalledKey[] = "Called"; ///< 휘파람을 들었다(트리가 닿으면 지운다)
         };
     } // namespace
 } // namespace sw

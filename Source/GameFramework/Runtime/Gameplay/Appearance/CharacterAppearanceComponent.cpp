@@ -26,6 +26,7 @@
 #include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -44,6 +45,21 @@
 
 namespace sw
 {
+    /**
+     * @struct CharacterAppearanceInFlightTable
+     * @brief 짓는 중인 조립(짓기 키 → 짓기)입니다. 같은 프레임에 스폰한 같은 차림이 캐시를 다 놓치고(캐시는 짓기가 끝나야 찬다) 따로 짓지 않게 나눈다 —
+     *        Mutable · DDC 가 진행 중인 같은 요청을 합치는 자리. 약한 참조라 걸기를 마친 짓기는 사라진다. 게임 스레드에서만 쓴다.
+     * @details GameFramework 의 모듈 부분이라 엔진 범위와 함께 생기고 사라진다(구운 메시 표 `AppearanceBakedMeshTable` 과 같은 자리). 게임 서비스가 없는 실행(테스트)은 나누지 않는다.
+     */
+    struct CharacterAppearanceInFlightTable
+    {
+        static constexpr const utf8* kModulePartName = "CharacterAppearanceInFlightTable";
+
+        unordered_map<uint64, weak_ptr<CharacterAppearanceMeshBuild>> _mapBuild;
+    };
+
+    SW_MODULE_PART( Engine, CharacterAppearanceInFlightTable, CharacterAppearanceInFlightTable );
+
     namespace
     {
         struct CharacterAppearanceComponentInternal
@@ -209,16 +225,6 @@ namespace sw
 
             /** @brief 병합한 메시를 같은 차림끼리 나누는 캐시 키에 섞는 값입니다(구운 메시와 키가 겹치지 않게). */
             static constexpr uint64 kMergedMeshKeySalt = 0x4D45524745ull; // "MERGE"
-
-            /**
-             * @brief 짓는 중인 조립(짓기 키 → 짓기)입니다. 같은 프레임에 스폰한 같은 차림이 캐시를 다 놓치고(캐시는 짓기가 끝나야 찬다) 따로 짓지 않게 나눈다 —
-             *        Mutable · DDC 가 진행 중인 같은 요청을 합치는 자리. 약한 참조라 걸기를 마친 짓기는 사라진다. 게임 스레드에서만 쓴다.
-             */
-            static unordered_map<uint64, weak_ptr<CharacterAppearanceMeshBuild>>& inFlightBuilds()
-            {
-                static unordered_map<uint64, weak_ptr<CharacterAppearanceMeshBuild>> s_mapBuild;
-                return s_mapBuild;
-            }
 
             /** @brief 보고에 한 줄을 덧붙입니다. */
             template <typename... Args>
@@ -1544,11 +1550,15 @@ namespace sw
         if ( job._listMergeLoad.empty() == false && AppearanceBakedMeshCache::tryGet( job._mergedKey, listCached ) && listCached.size() == 1 )
             job._merged = listCached[0];
         // 같은 차림을 짓는 중이면 그것을 나눈다(결과가 같다). 미리보기는 나누지 않는다 — 걸 때 피팅 결과를 옮겨 간다. 읽기 오류도 나누지 않는다(차림마다 알린다).
-        const bool                                                     bShares     = job._bPreview == false && job._report.empty();
-        const uint64                                                   buildKey    = job._listMergeLoad.empty() ? job._bakeKey : job._mergedKey;
-        unordered_map<uint64, weak_ptr<CharacterAppearanceMeshBuild>>& mapInFlight = Internal::inFlightBuilds();
-        const auto                                                     found       = bShares ? mapInFlight.find( buildKey ) : mapInFlight.end();
-        shared_ptr<CharacterAppearanceMeshBuild>                       inFlight    = found != mapInFlight.end() ? found->second.lock() : nullptr;
+        CharacterAppearanceInFlightTable* const  pInFlight = game::findSubsystem<CharacterAppearanceInFlightTable>();
+        const bool                               bShares   = pInFlight != nullptr && job._bPreview == false && job._report.empty();
+        const uint64                             buildKey  = job._listMergeLoad.empty() ? job._bakeKey : job._mergedKey;
+        shared_ptr<CharacterAppearanceMeshBuild> inFlight;
+        if ( bShares )
+        {
+            const auto found = pInFlight->_mapBuild.find( buildKey );
+            inFlight         = found != pInFlight->_mapBuild.end() ? found->second.lock() : nullptr;
+        }
         if ( inFlight != nullptr )
         {
             _meshBuild = std::move( inFlight );
@@ -1559,6 +1569,7 @@ namespace sw
         _meshBuild        = build;
         if ( bShares )
         {
+            unordered_map<uint64, weak_ptr<CharacterAppearanceMeshBuild>>& mapInFlight = pInFlight->_mapBuild;
             for ( auto it = mapInFlight.begin(); it != mapInFlight.end(); )
             {
                 it = it->second.expired() ? mapInFlight.erase( it ) : std::next( it );

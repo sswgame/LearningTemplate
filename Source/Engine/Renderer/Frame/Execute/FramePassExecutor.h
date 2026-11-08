@@ -238,6 +238,13 @@ namespace sw
         /** @brief 화면 2D 를 주 출력에 그립니다. 주 출력에 마지막으로 그리는 뷰만 그립니다. */
         void executeCanvasPass( const PassExecuteInput& input );
         /**
+         * @brief 개발 겹치기 목록(`CanvasFrameData::getDevOverlay` — 디버그 HUD)을 **사진 캡처를 읽은 뒤** 화면에 나가는 대상에 그립니다. 주 출력의 마지막 쓰기 패스 끝에서만 부른다.
+         * @details 캡처 실행이면 캡처를 백버퍼로 옮긴 뒤 백버퍼(0)에, 아니면 출력(백버퍼)에 그린다 — 캡처 텍스처에는 쓰지 않으므로 스크린샷 · `<ExpectImage>` 골든에 들지 않는다.
+         *          출력이 호스트 렌더 타깃(에디터 게임 뷰)이면 그리지 않는다 — 그 타깃은 사진이 읽고 에디터 UI 캡처에 든다(수집기가 겹치기를 자기 렌더 텍스처로 실었다).
+         *          화면에 나가지 않는 캡처(크기를 덮어쓴 출력)와 렌더 텍스처 · 호스트 타깃 뷰도 그리지 않는다. 언리얼이 디버그 캔버스를 하이레스 스크린샷 뒤 뷰포트에 그리는 순서와 같다.
+         */
+        void drawDevOverlay( FramePassContext& context, const RenderGraphPassDesc& passDesc, const PresentTarget& target );
+        /**
          * @brief XML 이 선언한 입력을 **역할 이름으로** 모두 바인딩합니다. 풀스크린 패스가 공통으로 씁니다.
          * @details 역할은 로드 시점에 해석해 둔다(`_listResolvedInput`). 여기서 바인딩하는 목록과 검증이 대조한 목록이 같으므로
          *          "선언은 했는데 바인딩되지 않는 입력" 이 생기지 않는다. 쇼 플래그로 끈 역할은 건너뛴다.

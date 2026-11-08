@@ -13,6 +13,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
+#include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
@@ -377,6 +378,7 @@ namespace sw
         , _initResult{ RHIInitResult::NotStarted }
         , _memoryTracker{ make_unique<RHIMemoryTracker>() }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
+        , _pBindlessIndexReportLog{ make_unique<BindlessIndexReportLog>() }
         , _initPhaseTimings{}
     {
     }

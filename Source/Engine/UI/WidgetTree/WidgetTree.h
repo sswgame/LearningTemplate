@@ -125,5 +125,7 @@ namespace sw
         unique_ptr<CanvasDrawList>                                     _paintOutput;          ///< 지난 그리기 순회가 이어 붙인 트리 전체의 목록입니다(바뀐 것이 없으면 순회하지 않고 이것을 냅니다).
         uint8                                                          _bPaintOutputStale;    ///< 지난 순회 뒤 무효화가 하나라도 있었는지 나타냅니다(구조, 레이아웃, 스타일, 그리기 무엇이든).
         uint64                                                         _structureGeneration;  ///< 붙기 · 떨어지기 · 이름 바꾸기마다 오릅니다(`getStructureGeneration`).
+        uint32                                                         _layoutSerial;         ///< 레이아웃 순회 번호입니다(0 은 "측정한 적 없음" — UILayoutPass). 순회마다 올라 같은 순회 안의 중복 측정을 막습니다
+        uint32                                                         _measureCount;         ///< `computeDesiredSize` 호출 수(누적)입니다. `UILayoutPass::update` 가 앞뒤 차이로 이번 순회의 호출 수를 냅니다
     };
 } // namespace sw

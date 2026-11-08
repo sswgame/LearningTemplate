@@ -15,17 +15,32 @@
 #include "Engine/Audio/AudioPcm.h"
 #include "Engine/Audio/AudioRenderListener.h"
 #include "Engine/Audio/AudioTypes.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 namespace sw
 {
     /** @brief `-gv_audioDumpPath=<파일>.wav`: 장치 없는 오프라인 렌더를 스트림이 끝날 때 이 WAV(채널 마스크 포함, 최대 60 초)로 남깁니다. 비면 쌓지 않습니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_audioDumpPath, "", "오프라인 오디오 렌더를 내릴 때 이 WAV 로 남김(비면 끄기)" );
 
+    /**
+     * @struct AudioDumpBuffer
+     * @brief 쌓은 오프라인 렌더(채널 교차)입니다. 엔진 이미지의 모듈 부분이라 엔진 범위와 함께 생기고 사라진다 — 리스너(정적 등록 항목)는 칸을 들지 않는다.
+     */
+    struct AudioDumpBuffer
+    {
+        static constexpr const utf8* kModulePartName = "AudioDumpBuffer";
+
+        vector<float32> _listSample;
+    };
+
+    SW_MODULE_PART( Engine, AudioDumpBuffer, AudioDumpBuffer );
+
     namespace
     {
         /**
          * @class AudioDumpListener
-         * @brief 경로가 있으면 블록을 쌓고(상한까지), 스트림이 끝나면 WAV 로 씁니다. 게임 스레드에서만 불린다(오프라인 렌더).
+         * @brief 경로가 있으면 블록을 쌓고(상한까지), 스트림이 끝나면 WAV 로 씁니다. 게임 스레드에서만 불린다(오프라인 렌더). 쌓는 곳은 엔진 범위의 `AudioDumpBuffer` 다.
          */
         class AudioDumpListener final : public IAudioRenderListener
         {
@@ -37,23 +52,29 @@ namespace sw
             {
                 if ( gv_audioDumpPath.empty() )
                     return;
-                const size_t channelCount = AudioChannelLayoutUtil::getChannelCount( layout );
-                const size_t dumpLimit    = static_cast<size_t>( kMaxDumpSeconds ) * audio::kSampleRate * channelCount;
-                if ( _listSample.size() >= dumpLimit )
+                AudioDumpBuffer* const pBuffer = engine::findSubsystem<AudioDumpBuffer>();
+                if ( pBuffer == nullptr )
+                    return; // 엔진 범위가 없다(엔진 없는 오디오 테스트) — 쌓을 곳이 없다
+                vector<float32>& listSample   = pBuffer->_listSample;
+                const size_t     channelCount = AudioChannelLayoutUtil::getChannelCount( layout );
+                const size_t     dumpLimit    = static_cast<size_t>( kMaxDumpSeconds ) * audio::kSampleRate * channelCount;
+                if ( listSample.size() >= dumpLimit )
                     return;
-                _listSample.insert( _listSample.end(), pSample, pSample + static_cast<size_t>( frameCount ) * channelCount );
+                listSample.insert( listSample.end(), pSample, pSample + static_cast<size_t>( frameCount ) * channelCount );
             }
 
             void onStreamEnded( AudioChannelLayout layout ) override
             {
-                if ( _listSample.empty() )
+                AudioDumpBuffer* const pBuffer = engine::findSubsystem<AudioDumpBuffer>();
+                if ( pBuffer == nullptr || pBuffer->_listSample.empty() )
                     return;
-                const string  path         = gv_audioDumpPath;
-                const uint32  channelCount = AudioChannelLayoutUtil::getChannelCount( layout );
-                vector<uint8> bytes;
-                AudioWAVEncoder::encodeFloat32( _listSample.data(), static_cast<uint32>( _listSample.size() / channelCount ), channelCount,
+                vector<float32>& listSample   = pBuffer->_listSample;
+                const string     path         = gv_audioDumpPath;
+                const uint32     channelCount = AudioChannelLayoutUtil::getChannelCount( layout );
+                vector<uint8>    bytes;
+                AudioWAVEncoder::encodeFloat32( listSample.data(), static_cast<uint32>( listSample.size() / channelCount ), channelCount,
                                                 AudioChannelLayoutUtil::getChannelMask( layout ), audio::kSampleRate, bytes );
-                _listSample.clear();
+                listSample.clear();
                 if ( FileUtil::writeFile( path, bytes.data(), bytes.size() ) == false )
                 {
                     SW_LOG_ERROR_ID( "AudioService.CouldNotWriteAudio", "Could not write the audio dump '%#'", path );
@@ -61,9 +82,6 @@ namespace sw
                 }
                 SW_LOG_INFO_ID( "AudioService.AudioDumpWrittenChannels", "Audio dump written: %# (%# channels)", path, channelCount );
             }
-
-        private:
-            vector<float32> _listSample; ///< 쌓은 오프라인 렌더(채널 교차)
         };
 
         AudioDumpListener s_audioDumpListener;

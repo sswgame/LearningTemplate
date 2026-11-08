@@ -49,7 +49,6 @@ namespace sw
         string text{ "Usage: <executable> [-argument | -argument=value] ...\n" };
 #define SW_REGISTER_ARGUMENT( name, defaultValue, useDefaultValue, ... ) \
     appendUsageLine( text, { __VA_ARGS__ }, _listArgument[static_cast<size_t>( CommandLineArgument::name )] );
-#include "Core/Predefined/ArgumentList.xxx"
 
 #undef SW_REGISTER_ARGUMENT
         text += "  -gv_<name>=<value>  (global variable)\n";

@@ -20,8 +20,8 @@ namespace sw
     class INetSecurityProvider;
     class ITLSContext;
 
-    template <typename TValue>
-    class DevOnlineExtension;
+    template <typename T>
+    class RegistrationSlot;
 } // namespace sw
 
 namespace sw
@@ -72,6 +72,6 @@ namespace sw
 
         EnsureDevCertificateFunction _pEnsureDevCertificate{ nullptr };
 
-        static DevOnlineExtension<NetSecurityDevOptions> s_devOnline;
+        static RegistrationSlot<const NetSecurityDevOptions>& getDevOnline(); ///< 개발 대체물 칸(`SW_DEFINE_DEV_ONLINE_EXTENSION` 이 정의 — `DevOnlineExtension` 으로 읽는다)
     };
 } // namespace sw

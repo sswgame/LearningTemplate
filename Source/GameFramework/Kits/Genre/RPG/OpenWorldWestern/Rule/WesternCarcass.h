@@ -28,6 +28,8 @@ namespace sw
 
 namespace sw
 {
+    struct WesternPelt;
+
     /** @brief 땅(또는 말 등)에 있는 사체 하나입니다. */
     struct SW_KIT_API WesternCarcass
     {

@@ -270,6 +270,8 @@ namespace sw
         {
             if constexpr ( std::is_same_v<typename TMethod::Reply, MailboxClaimReply> )
                 notifyClaimedBalances( accountID, done._outcome, done._reply );
+            else
+                (void)accountID;                              // 잔액 알림이 있는 메서드만 쓴다
             (void)finish( call, done._outcome, done._reply ); // 모르는 표지는 호출 표가 경고한다
         } );
     }

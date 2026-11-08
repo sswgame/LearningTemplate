@@ -15,20 +15,28 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 namespace sw
 {
+    /**
+     * @struct AutomationScratchCounter
+     * @brief 사본 폴더를 끝까지 만든 횟수입니다(`AutomationScratch::getPrepareCount` — 세대 번호). 엔진 이미지의 모듈 부분이라 엔진 범위와 함께 생기고 사라진다.
+     * @details 시나리오 실행기는 단계마다 새로 서므로 실행기 멤버로 두면 번호가 되돌아가 에디터 울타리가 새 사본을 놓친다 — 엔진 범위가 든다(예전에는 프로세스 원자 칸).
+     */
+    struct AutomationScratchCounter
+    {
+        static constexpr const utf8* kModulePartName = "AutomationScratchCounter";
+
+        atomic<uint64> _prepareCount{ 0 };
+    };
+
+    SW_MODULE_PART( Engine, AutomationScratchCounter, AutomationScratchCounter );
+
     namespace
     {
         struct AutomationScratchInternal
         {
-            /**
-             * @brief 사본 폴더를 끝까지 만든 횟수입니다(`AutomationScratch::getPrepareCount`).
-             * @details 읽는 쪽(에디터 감시 울타리)이 서비스 범위를 거치지 않고 정적 창구로 읽으므로 범위에 맡기지 않는다. 원자 변수 하나라 상수 초기화되고,
-             *          지연 생성하는 접근자를 두지 않는다. 프로세스가 도는 동안 오르기만 한다.
-             */
-            static inline atomic<uint64> s_prepareCount{ 0 };
-
             /**
              * @brief 자동화 실행이 쓰면 안 되는 추적 폴더(프로젝트 루트 기준)입니다 — `docs/` 와 `Config/`.
              * @details 언리얼 · 유니티의 자동화 실행도 소스 관리 아래 폴더(`Config/` · `ProjectSettings/`)는 쓰기를 막고 `Saved/` · 임시 폴더로 보낸다. 같은 이유로 둔다.
@@ -287,7 +295,8 @@ namespace sw
                 return false;
             }
         }
-        (void)AutomationScratchInternal::s_prepareCount.fetch_add( 1 );
+        if ( AutomationScratchCounter* const pCounter = engine::findSubsystem<AutomationScratchCounter>() )
+            (void)pCounter->_prepareCount.fetch_add( 1 );
         return true;
     }
 
@@ -303,6 +312,7 @@ namespace sw
 
     uint64 AutomationScratch::getPrepareCount()
     {
-        return AutomationScratchInternal::s_prepareCount.load();
+        const AutomationScratchCounter* const pCounter = engine::findSubsystem<AutomationScratchCounter>();
+        return pCounter != nullptr ? pCounter->_prepareCount.load() : 0u; // 엔진 범위가 없으면 만든 사본도 없다
     }
 } // namespace sw

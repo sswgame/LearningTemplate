@@ -183,7 +183,7 @@ namespace
 
         void addAchievement( string_view id, string_view statName, int64 threshold, bool bHidden = false, int64 rewardAmount = 5 )
         {
-            AchievementDef achievement;
+            OnlineAchievementDef achievement;
             achievement._achievementID = string( id );
             achievement._statName      = string( statName );
             achievement._threshold     = threshold;
@@ -249,7 +249,7 @@ SW_TEST_CASE( LeaderboardServiceTest, RegistrationRefusesBrokenDefinitions )
     seasons._listSeason[0]._endMs = 10;
     SW_EXPECT_FALSE( service.registerBoard( seasons ) ); // 시작이 끝보다 앞서야 한다
 
-    AchievementDef achievement;
+    OnlineAchievementDef achievement;
     achievement._achievementID = "ok";
     achievement._statName      = "kills";
     achievement._rewardAssetID = "cur.gem"; // 보상이 있으면 수량과 제목이 있어야 한다

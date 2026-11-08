@@ -105,6 +105,7 @@ namespace sw
         , _listCallbackRegistration{}
         , _callbackIDAllocator{}
         , _deferredUnloadQueue{ kMaxDeferredUnloadBatchCount }
+        , _shadowCopySerials{}
         , _completedReloadCount{ 0 }
         , _bReloadGraphBroken{ SW_FALSE }
         , _bBuildStampPending{ SW_FALSE }
@@ -708,7 +709,7 @@ namespace sw
             ShadowCopyParams params;
             populateShadowCopyParams( context, params );
             params._sourceMtime = outShadow._sourceMtime;
-            if ( ModuleShadowCopy::writeShadowCopy( params, context._libraryName, outShadow._tempPath ) == false )
+            if ( ModuleShadowCopy::writeShadowCopy( params, _shadowCopySerials, context._libraryName, outShadow._tempPath ) == false )
                 return false;
         }
 

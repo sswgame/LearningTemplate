@@ -48,7 +48,7 @@ namespace sw
         if ( environment.empty() )
         {
             // 개발 키는 DevOnline 단위만 준다 — 그 단위가 없는 구성(배포)은 주 키가 반드시 있어야 한다.
-            const AccountDevOptions* pDevOptions = AccountDevOptions::s_devOnline.require( outError );
+            const AccountDevOptions* pDevOptions = DevOnlineExtension<AccountDevOptions>::require( outError );
             if ( pDevOptions == nullptr )
             {
                 outError.append( " - the game ticket master key is required, set the ticketKeySecretEnvironment option" );

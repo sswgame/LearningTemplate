@@ -11,6 +11,7 @@
 
 namespace sw
 {
+    struct VoxelTerrainReport;
     class VoxelWorld;
 
     /** @brief 지형 생성 설정입니다. 블록은 id 로 고르며, 카탈로그에 없으면 그 층을 건너뜁니다. */

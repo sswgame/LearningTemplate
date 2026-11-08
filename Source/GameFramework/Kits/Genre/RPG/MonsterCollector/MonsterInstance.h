@@ -35,6 +35,8 @@ namespace sw
 
 namespace sw
 {
+    struct MonsterGrowthEvent;
+
     /** @brief 개체 하나(잡은 몬스터, 야생, 트레이너의 몬스터)입니다. 능력치 `_arrStat` 는 `MonsterInstance::recomputeStats` 가 채웁니다. */
     struct SW_KIT_API MonsterInstance
     {

@@ -25,14 +25,14 @@ namespace sw::editor
             static void onDiagnosticsChanged()
             {
                 const EditorDiagnosticsPreferences& preferences = getPreferences<EditorDiagnosticsPreferences>();
-                internal::setAssertDialogOptions( preferences._bShowAssertDialog, preferences._bRememberIgnoredAsserts );
+                ::sw::internal::setAssertDialogOptions( preferences._bShowAssertDialog, preferences._bRememberIgnoredAsserts );
             }
 
             /** @brief 기억한 "늘 무시" 자리 수입니다. 대화상자가 없는 구성은 0 입니다. */
             static uint32 countIgnoredSites()
             {
 #if defined( SW_DEBUG )
-                return internal::getIgnoredAssertSiteCount();
+                return ::sw::internal::getIgnoredAssertSiteCount();
 #else
                 return 0;
 #endif
@@ -45,7 +45,7 @@ namespace sw::editor
                     return false;
                 const uint32 count = countIgnoredSites();
 #if defined( SW_DEBUG )
-                internal::clearIgnoredAssertSites();
+                ::sw::internal::clearIgnoredAssertSites();
 #endif
                 outReply = formatToString( "forgot %# ignored assert site(s)", count );
                 return true;
@@ -54,14 +54,14 @@ namespace sw::editor
             /** @brief 감시 값 `Editor.AssertDialogShown` — 걸린 대화상자를 띄우는 설정이면 1 입니다. */
             [[nodiscard]] static bool readAssertDialogShown( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = internal::isAssertDialogShown() ? 1.0 : 0.0;
+                outValue = ::sw::internal::isAssertDialogShown() ? 1.0 : 0.0;
                 return true;
             }
 
             /** @brief 감시 값 `Editor.AssertIgnoreRemembered` — "늘 무시" 를 기억하는 설정이면 1 입니다. */
             [[nodiscard]] static bool readAssertIgnoreRemembered( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = internal::isIgnoredAssertSiteRemembered() ? 1.0 : 0.0;
+                outValue = ::sw::internal::isIgnoredAssertSiteRemembered() ? 1.0 : 0.0;
                 return true;
             }
 

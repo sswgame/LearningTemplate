@@ -22,7 +22,6 @@ namespace sw
         struct CookJobInternal
         {
             inline static thread_local CookJob* _t_pCurrent{ nullptr };
-            inline static atomic<int32>         _s_sessionCount{ 0 };
 
             /** @brief 리소스 읽기 입력의 id 입니다(`normalizeAssetID` 로 맞춘다). 루트 밖으로 나가는 id(`..`)는 입력이 될 수 없어 오류를 남기고 false 입니다. */
             [[nodiscard]] static bool makeInputID( const AssetID& id, string& outID )
@@ -75,7 +74,8 @@ namespace sw
             /** @brief 작업이 없을 때의 읽기 판정입니다(`CookJob::allowRead` 참고). */
             [[nodiscard]] static bool allowReadOutsideJob( string_view source )
             {
-                if ( CookSession::isActive() == false )
+                const AssetPaths* const pAssetPaths = engine::findSubsystem<AssetPaths>(); // 엔진 범위 없이 도는 도구 · 테스트는 쿠킹 세션이 없다
+                if ( pAssetPaths == nullptr || pAssetPaths->isCookSessionOpen() == false )
                     return true;
                 SW_LOG_ERROR_ID( "CookJob.ReadDuringCookingOutside", "'%#' was read during cooking outside a cook job - the read is not recorded as an input, so it fails (open a CookJob around the cooker)",
                                  source );
@@ -87,19 +87,15 @@ namespace sw
 
 namespace sw
 {
-    CookSession::CookSession()
+    CookSession::CookSession( AssetPaths& assetPaths )
+        : _assetPaths{ assetPaths }
     {
-        CookJobInternal::_s_sessionCount.fetch_add( 1, std::memory_order_acq_rel );
+        _assetPaths.openCookSession();
     }
 
     CookSession::~CookSession()
     {
-        CookJobInternal::_s_sessionCount.fetch_sub( 1, std::memory_order_acq_rel );
-    }
-
-    bool CookSession::isActive()
-    {
-        return CookJobInternal::_s_sessionCount.load( std::memory_order_acquire ) > 0;
+        _assetPaths.closeCookSession();
     }
 
     CookJob::CookJob( const CookJobDesc& desc )

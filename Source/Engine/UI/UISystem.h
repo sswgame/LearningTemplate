@@ -137,7 +137,8 @@ namespace sw
         UIScreen* findScreen( UIScreenHandle handle ) const;
         /** @brief 지금 활성 화면(맨 위에서 포커스를 받는 화면)을 반환합니다. 입력을 막는 화면 아래로는 내려가지 않습니다. 없으면 nullptr 입니다. */
         UIScreen* getActiveScreen() const;
-        uint32    getScreenCount() const { return static_cast<uint32>( _listScreen.size() ); }
+        /** @brief 게임 화면 수입니다 — 개발 겹치기 화면(`UIScreen::isDevOverlay`)은 세지 않아 HUD 를 띄운 실행과 아닌 실행의 값이 같다(`<ExpectUI screens>`). */
+        uint32 getGameScreenCount() const;
         /** @brief 스택의 화면들입니다(그리기 순서 — 레이어, 쌓인 순서. 입력은 역순). 화면 스택 위의 서비스가 읽기만 합니다(접근성 트리 뽑기). */
         const vector<unique_ptr<UIScreen>>& getScreens() const { return _listScreen; }
 
@@ -358,6 +359,8 @@ namespace sw
         void refreshHiddenLayers();
         /** @brief 화면을 그리기 순서로 칠해 그리기 목록을 만들고, 내용이 바뀌었으면 번호를 올립니다. */
         void paintScreens();
+        /** @brief 개발 겹치기 화면(`UIScreen::isDevOverlay`)만 따로 칠해 개발 겹치기 목록(`UICanvasPaintState::getDevOverlay`)을 냅니다. */
+        void paintDevOverlayScreens( const UIPaintContext& context );
         /** @brief 등록된 화면 스위치(`UIScreenSwitches`, 견본 · 벤치 · 옵션 메뉴 등)를 순서대로 돌려 개발 스위치에 맞게 화면을 열고 닫습니다. */
         void syncScreenSwitches();
         /**

@@ -14,6 +14,35 @@
 
 namespace sw
 {
+    /**
+     * @class UICanvasOutput
+     * @brief 그리기 목록 하나의 공유 출력입니다 — 칠하는 중인 목록, 낸 불변 목록, 그 전 목록(저장소 재사용), 내용 번호를 듭니다.
+     * @details 화면 UI 목록과 개발 겹치기 목록(`UIScreen::isDevOverlay`)이 같은 모양으로 쓴다. 렌더 스레드가 지난 목록을 들고 있을 수 있어 제자리에 쓰지 않는다.
+     */
+    class SW_API UICanvasOutput
+    {
+    public:
+        UICanvasOutput();
+
+        /** @brief 칠하는 중인 목록을 비워 대상 크기 @p targetSize 로 돌려줍니다. */
+        CanvasDrawList& beginPaint( const float2& targetSize );
+        /** @brief 칠한 목록이 낸 목록과 다를 때만 새 공유 목록으로 내고(맞바꾼다) 내용 번호를 올립니다. */
+        void endPaint();
+
+        const CanvasDrawList&                   getCanvas() const { return *_pCanvas; }
+        const shared_ptr<const CanvasDrawList>& getSharedCanvas() const { return _pCanvas; }
+        uint64                                  getRevision() const { return _revision; }
+
+    private:
+        shared_ptr<const CanvasDrawList> _pCanvas;      ///< 낸 목록입니다(늘 있다. 패킷이 함께 쥔다).
+        shared_ptr<CanvasDrawList>       _pCanvasSpare; ///< 그 전 목록입니다. 아무도 쥐지 않으면 다음 바뀐 목록의 저장소로 다시 쓴다.
+        CanvasDrawList                   _scratch;      ///< 칠하는 중인 목록입니다(같은 내용이면 버립니다).
+        uint64                           _revision;     ///< `_pCanvas` 내용의 번호입니다.
+    };
+} // namespace sw
+
+namespace sw
+{
     class WidgetTree;
 
     /**
@@ -64,27 +93,33 @@ namespace sw
         /** @brief 기동 뒤 자란 스크래치를 놓습니다(종료 누수 보고가 이 상태의 소멸보다 먼저다). */
         void releasePaintScratch() { _paintScratch = UIPaintScratch{}; }
 
-        const CanvasDrawList& getCanvas() const { return *_pCanvas; }
+        const CanvasDrawList& getCanvas() const { return _canvas.getCanvas(); }
         /** @brief 이번 프레임의 그리기 목록을 불변 공유 값으로 줍니다(패킷이 베끼지 않고 싣는다). 내용이 그대로면 같은 포인터입니다. */
-        const shared_ptr<const CanvasDrawList>& getSharedCanvas() const { return _pCanvas; }
-        uint64                                  getCanvasRevision() const { return _canvasRevision; }
+        const shared_ptr<const CanvasDrawList>& getSharedCanvas() const { return _canvas.getSharedCanvas(); }
+        uint64                                  getCanvasRevision() const { return _canvas.getRevision(); }
         uint32                                  getDeferredGlyphCount() const { return _deferredGlyphCount; }
+
+        // --- 개발 겹치기 목록 ---------------------------------------------------------
+        /**
+         * @brief 개발 겹치기 화면(`UIScreen::isDevOverlay` — 디버그 HUD)의 목록입니다. 화면 UI 목록과 따로 칠하고 따로 싣는다 — 렌더러가 사진 캡처를 읽은 뒤에 화면에 합친다.
+         * @details 그래서 사진 · 골든 · 에디터 UI 캡처에 들지 않는다. 겹치기 화면이 있는 프레임마다 다시 칠한다(재사용 판정 없음 — 개발 도구가 떠 있을 때만 드는 비용).
+         */
+        UICanvasOutput&       getDevOverlay() { return _devOverlay; }
+        const UICanvasOutput& getDevOverlay() const { return _devOverlay; }
 
     private:
         /** @brief 레이어마다의 숨김 요청 수에서 `_hiddenLayers` 를 다시 만듭니다. */
         void rebuildHiddenLayers();
 
     private:
-        shared_ptr<const CanvasDrawList> _pCanvas;                          ///< 이번 프레임의 그리기 목록입니다(늘 있다. 패킷이 함께 쥔다).
-        shared_ptr<CanvasDrawList>       _pCanvasSpare;                     ///< 그 전 목록입니다. 아무도 쥐지 않으면 다음 바뀐 목록의 저장소로 다시 쓴다.
-        CanvasDrawList                   _canvasScratch;                    ///< 칠하는 중인 목록입니다(같은 내용이면 버립니다).
-        mutable UIPaintScratch           _paintScratch;                     ///< 그리기 순회 스크래치입니다. 칠하기 문맥으로 넘기고, 이 상태와 함께 사라집니다.
-        uint64                           _canvasRevision;                   ///< `_canvas` 내용의 번호입니다.
-        vector<const WidgetTree*>        _listPaintedTree;                  ///< 지난 그리기의 화면 트리 순서입니다(같고 모두 재사용이면 이어 붙이기를 건너뛴다).
-        uint32                           _deferredGlyphCount;               ///< 지난 그리기가 래스터화 예산 때문에 미룬 글리프 수입니다.
-        uint16                           _arrLayerHideCount[kUILayerCount]; ///< 레이어마다 건 숨김 요청 수입니다.
-        UILayerMask                      _hiddenLayers;                     ///< 숨김 요청이 하나라도 걸린 레이어입니다(`_arrLayerHideCount` 에서 만든 값).
-        UILayerMask                      _paintedHiddenLayers;              ///< 지난 그리기가 따른 `_hiddenLayers` 입니다(달라지면 목록을 다시 만든다).
-        uint8                            _bLastCanvasReusable;              ///< 지난 그리기 목록이 트리 출력만으로 이루어졌다(포커스 테두리 · 숨김 없음).
+        UICanvasOutput            _canvas;                           ///< 화면 UI 의 그리기 목록(사진 캡처가 읽는 출력에 그린다)
+        UICanvasOutput            _devOverlay;                       ///< 개발 겹치기 화면의 그리기 목록(사진 캡처 뒤에 화면에 합친다)
+        mutable UIPaintScratch    _paintScratch;                     ///< 그리기 순회 스크래치입니다. 칠하기 문맥으로 넘기고, 이 상태와 함께 사라집니다.
+        vector<const WidgetTree*> _listPaintedTree;                  ///< 지난 그리기의 화면 트리 순서입니다(같고 모두 재사용이면 이어 붙이기를 건너뛴다).
+        uint32                    _deferredGlyphCount;               ///< 지난 그리기가 래스터화 예산 때문에 미룬 글리프 수입니다.
+        uint16                    _arrLayerHideCount[kUILayerCount]; ///< 레이어마다 건 숨김 요청 수입니다.
+        UILayerMask               _hiddenLayers;                     ///< 숨김 요청이 하나라도 걸린 레이어입니다(`_arrLayerHideCount` 에서 만든 값).
+        UILayerMask               _paintedHiddenLayers;              ///< 지난 그리기가 따른 `_hiddenLayers` 입니다(달라지면 목록을 다시 만든다).
+        uint8                     _bLastCanvasReusable;              ///< 지난 그리기 목록이 트리 출력만으로 이루어졌다(포커스 테두리 · 숨김 없음).
     };
 } // namespace sw

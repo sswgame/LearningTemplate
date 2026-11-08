@@ -44,6 +44,8 @@ namespace sw
         constexpr string_view kStartSceneVariable = "gv_firstScene";
         /** @brief 단계 사이에 앞 씬을 비우는 빈 씬의 이름입니다. */
         constexpr string_view kStageResetSceneName = "AutomationStageReset";
+        /** @brief 보이는 실행이 끝 결과를 남기는 기본 프레임 수입니다(60 Hz 로 1.5 초 — HUD 가 4 Hz 로 갱신하므로 몇 번은 읽힌다). */
+        constexpr int32 kDefaultResultHoldFrames = 90;
     } // namespace
 
     /**
@@ -52,6 +54,11 @@ namespace sw
      *          게임 시간 배율(`gv_timeScale`)은 프레임마다 흘리는 시간을 바꿔 대기 프레임 · 골든이 달라지므로 배속으로 쓰지 않는다(언리얼 `-benchmark` · 유니티 `captureFramerate` 도 시간은 고정하고 루프만 빨리 돈다).
      */
     SW_GLOBAL_VARIABLE( int32, gv_scenarioPresentInterval, 1, "Watched scenario runs present one of every N drawn frames (1 = every frame) - scenario fast-forward" );
+    /**
+     * @brief `-gv_scenarioResultHoldFrames=<N>`: 창이 보이는 실행은 체인이 끝난 뒤 N 프레임 동안 끝 결과를 남기고 종료한다(0 = 바로 종료). 무인 숨김 실행은 늘 바로 끝낸다.
+     * @details 판정 · 보고는 끝난 뒤라 결과를 바꾸지 않는다. 언리얼 Gauntlet 이 테스트 끝 상태를 화면에 남기고 세션을 닫는 것과 같은 자리다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_scenarioResultHoldFrames, kDefaultResultHoldFrames, "Watched scenario runs keep the final result on screen for N frames before exiting (0 = exit at once)" );
 
     AutomationSession::AutomationSession()
         : _pRunner{ nullptr }
@@ -68,6 +75,10 @@ namespace sw
         , _screenshotBaseline{ 0 }
         , _bUnattended{ SW_FALSE }
         , _runtime{ *this }
+        , _runTitle{}
+        , _runStatus{}
+        , _heldExit{ kEngineFrameRunning }
+        , _heldExitFrames{ 0 }
     {
     }
 
@@ -339,7 +350,15 @@ namespace sw
 
     EngineFrameExit AutomationSession::onFrameEnd( const EngineFrameContext& context )
     {
+        updateRunStatus();
         updateRunTitle();
+        if ( _heldExit.has_value() )
+        {
+            // 끝 결과를 남기는 프레임 — 판정 · 보고는 끝났다. 다 세면 쥔 코드를 낸다.
+            if ( _heldExitFrames > 0 )
+                --_heldExitFrames;
+            return _heldExitFrames == 0 ? _heldExit : kEngineFrameRunning;
+        }
         // 녹화는 시나리오보다 먼저 이 프레임을 적는다 — 시나리오가 이 프레임에 끝나도 마지막 프레임이 녹화에 포함된다.
         if ( _recorder.isRecording() && context._pInput != nullptr )
             _recorder.update( *context._pInput, context._deltaSeconds );
@@ -358,9 +377,22 @@ namespace sw
         if ( result == AutomationResult::Running )
             return kEngineFrameRunning;
         const EngineFrameExit exitCode = onStageEnded( result, completedScreenshotCount );
-        if ( exitCode.has_value() )
-            finishRecording();
-        return exitCode;
+        if ( exitCode.has_value() == false )
+            return kEngineFrameRunning;
+        finishRecording();
+        return holdFinalExit( exitCode );
+    }
+
+    EngineFrameExit AutomationSession::holdFinalExit( EngineFrameExit exitCode )
+    {
+        // 보이는 실행만 남긴다 — 무인 숨김 실행(`_bUnattended`)과 창 없는 호스트(렌더 구동기 없음)는 바로 끝낸다.
+        const bool bWatched = _bUnattended == SW_FALSE && _pRenderDriver != nullptr && gv_scenarioResultHoldFrames > 0;
+        if ( bWatched == false )
+            return exitCode;
+        updateRunStatus(); // 끝난 프레임의 결과를 바로 싣는다
+        _heldExit       = exitCode;
+        _heldExitFrames = static_cast<uint32>( gv_scenarioResultHoldFrames );
+        return kEngineFrameRunning;
     }
 
     uint32 AutomationSession::findCompletedScreenshotCount()
@@ -374,17 +406,31 @@ namespace sw
         MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
         const RHI* const           pRHI        = _pRenderDriver != nullptr ? _pRenderDriver->findRHI() : nullptr;
         const utf8* const          pBackend    = pRHI != nullptr && pRHI->hasDevice() ? RHI::getBackendTypeName( pRHI->getCommittedBackend() ) : "";
-        AutomationRunStatus        status{};
-        const bool                 bRunning = _pRunner != nullptr && _pRunner->isActive();
-        if ( bRunning )
-        {
-            status._scenarioName = _pRunner->getScenario().getName();
-            status._stepKind     = _pRunner->getCurrentStepKind();
-            status._stepNumber   = _pRunner->getCurrentStepNumber();
-            status._frame        = _pRunner->getFrameIndex();
-        }
+        const bool                 bRunning    = _pRunner != nullptr && _pRunner->isActive();
         _runTitle.onFrameEnd( pWindowHost != nullptr ? pWindowHost->getTitleTarget() : nullptr, engine::findSubsystem<CommandLineManager>(), pBackend,
-                              bRunning ? &status : nullptr );
+                              bRunning ? &_runStatus : nullptr );
+    }
+
+    void AutomationSession::updateRunStatus()
+    {
+        if ( _pRunner == nullptr )
+            return;
+        const AutomationRunner& runner = *_pRunner;
+        _runStatus._scenarioName       = runner.getScenario().getName();
+        _runStatus._stepKind           = runner.getCurrentStepKind();
+        _runStatus._stepNumber         = runner.getCurrentStepNumber();
+        _runStatus._frame              = runner.getFrameIndex();
+        _runStatus._result             = runner.getResult();
+        _runStatus._stageIndex         = _pChain != nullptr ? static_cast<uint32>( _pChain->getStageIndex() ) : 0u;
+        _runStatus._stageCount         = _pChain != nullptr ? static_cast<uint32>( _pChain->getStageCount() ) : 1u;
+        const vector<string>& listFail = runner.getFailures();
+        _runStatus._failureCount       = static_cast<uint32>( listFail.size() );
+        if ( listFail.empty() )
+            _runStatus._firstFailure.clear();
+        else if ( _runStatus._firstFailure != listFail.front() )
+            _runStatus._firstFailure = listFail.front();
+        // 끝맺은 뒤에는 로그 게이트가 판정한 줄 수, 그 전에는 모은 Warning · Error 수(허용 판정 전)다.
+        _runStatus._warningErrorCount = runner.hasEnded() ? static_cast<uint32>( runner.getUnhandledLogs().size() ) : runner.getCapturedWarningErrorCount();
     }
 
     EngineFrameExit AutomationSession::onStageEnded( AutomationResult result, uint32 completedScreenshotCount )
@@ -403,6 +449,8 @@ namespace sw
         }
         if ( bNextStage )
         {
+            _runStatus._previousStageName   = stageName; // 다음 단계가 곧 서므로 끝난 단계의 결과는 "앞 단계" 줄로 남긴다
+            _runStatus._previousStageResult = result;
             startStage( completedScreenshotCount );
             return kEngineFrameRunning;
         }
@@ -416,6 +464,9 @@ namespace sw
     EngineFrameExit AutomationSession::onWindowClosed( const EngineFrameContext& context )
     {
         finishRecording();
+        // 끝 결과를 남기던 중에 창이 닫혔다 — 쥔 체인 결과를 그대로 낸다.
+        if ( _heldExit.has_value() )
+            return _heldExit;
         // 이미 끝난 세션은 정하지 않는다 — 종료 코드는 끝낸 프레임(`onStageEnded`)이 체인 전체의 결과로 정했다. 여기서 러너의 결과를 돌려주면
         // 마지막 단계의 결과(통과 0)가 앞 단계의 실패(10)를 덮는다(엔진 루프는 창 닫힘 관찰자의 코드를 앞선 종료 요청보다 앞세운다).
         if ( _pRunner == nullptr || _pRunner->hasEnded() )
@@ -473,6 +524,12 @@ namespace sw
         (void)bPlayerBound;
         _pHost = &host;
         return true;
+    }
+
+    const AutomationRunStatus* AutomationSession::Runtime::findRunStatus() const
+    {
+        // 끝난 단계의 실행기도 남는다(마지막 단계 · 결과를 남기는 프레임) — 그동안은 끝난 상태를 준다. 녹화만 도는 실행은 시나리오가 없다.
+        return _owner._pRunner != nullptr ? &_owner._runStatus : nullptr;
     }
 
     bool AutomationSession::Runtime::isBusy() const

@@ -31,7 +31,7 @@ namespace sw
         void update( float32 deltaSeconds );
         /** @brief 사용자 값을 정합니다. 다음 요청부터 실립니다(일정은 그대로다). */
         void setUserValues( const VFXEmitterUserValues& values ) { _userValues = values; }
-        /** @brief 처음부터 다시 시작합니다. 새 재생 번호를 받아 렌더 스레드가 GPU 상태를 새로 만든다. */
+        /** @brief 처음부터 다시 시작합니다. 새 재생 토큰을 만들어 렌더 스레드가 GPU 상태를 새로 만든다. */
         void restart();
 
         /** @brief 방출이 끝나고 모든 입자의 수명이 지났으면 true 입니다(일정에서 구한 상한 — 클래스 설명). */
@@ -44,11 +44,11 @@ namespace sw
         VFXGPUEmitterRequest makeRequest() const;
 
     private:
-        VFXEmitterClock      _clock;
-        VFXEmitterUserValues _userValues;
-        uint64               _seed;
-        uint64               _runID;
-        uint64               _stepCount;
-        uint64               _lastSpawnStep; ///< 마지막으로 입자를 만든 단계의 번호(1 부터). 0 이면 아직 만든 적이 없다
+        VFXEmitterClock                  _clock;
+        VFXEmitterUserValues             _userValues;
+        uint64                           _seed;
+        shared_ptr<const VFXGPURunToken> _pRunToken; ///< 이 재생의 정체성(`restart` 가 새로 만든다)
+        uint64                           _stepCount;
+        uint64                           _lastSpawnStep; ///< 마지막으로 입자를 만든 단계의 번호(1 부터). 0 이면 아직 만든 적이 없다
     };
 } // namespace sw

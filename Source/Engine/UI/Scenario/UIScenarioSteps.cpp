@@ -153,9 +153,9 @@ namespace sw
                 outFailure += "screens '" + *pCount + "' is not a number. "; // 검사 뒤 단계가 바뀌었다(핫 리로드)
                 bPassed = false;
             }
-            else if ( ui.getScreenCount() != static_cast<uint32>( expected ) )
+            else if ( ui.getGameScreenCount() != static_cast<uint32>( expected ) )
             {
-                outFailure += "screen count is " + to_string( ui.getScreenCount() ) + ", expected " + *pCount + ". ";
+                outFailure += "screen count is " + to_string( ui.getGameScreenCount() ) + ", expected " + *pCount + ". ";
                 bPassed = false;
             }
         }

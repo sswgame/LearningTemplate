@@ -41,6 +41,23 @@ namespace sw
                 packet._canvas._markerView = markers.getGPUMarkerView();
             }
         }
+        // 개발 겹치기(디버그 HUD)는 화면 UI 와 다른 목록이다 — 렌더러가 사진 캡처를 읽은 뒤에 화면에 합친다. 주 출력이 호스트 렌더 타깃(에디터 게임 뷰)이면
+        // 그 타깃(에디터 UI 캡처 · 게임 뷰 사진이 읽는다)에 그리지 않고 자기 렌더 텍스처로 싣는다 — 에디터가 게임 뷰 위에 겹치고, 에디터 UI 캡처는 그 텍스처를 빼고 다시 그린다.
+        const UICanvasOutput* const pDevOverlay       = bUIReady ? &pUISystem->getPaintState().getDevOverlay() : nullptr;
+        const bool                  bSubmitDevOverlay = bSceneMain == false && pDevOverlay != nullptr && pDevOverlay->getCanvas().isEmpty() == false;
+        if ( bSubmitDevOverlay && packet._outputRenderTarget == 0 )
+        {
+            packet._canvas._pDevOverlay        = pDevOverlay->getSharedCanvas();
+            packet._canvas._devOverlayRevision = pDevOverlay->getRevision();
+        }
+        else if ( bSubmitDevOverlay )
+        {
+            CanvasTargetDrawList& target = packet._canvas._listTarget.emplace_back();
+            target._targetPath           = hashed_string( CanvasFrameData::kDevOverlayTargetPath );
+            target._list                 = pDevOverlay->getCanvas(); // 에디터 게임 뷰에서만 드는 사본(개발 도구가 떠 있을 때)
+            target._clearColor           = float4{};
+            target._contentRevision      = pDevOverlay->getRevision();
+        }
         if ( bUIReady )
         {
             engine::getSubsystem<UIWidgetComponentService>().appendWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처

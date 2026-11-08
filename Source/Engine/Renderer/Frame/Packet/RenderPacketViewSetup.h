@@ -64,6 +64,8 @@ namespace sw
          */
         void collectExtraViews( RenderFramePacket& packet, const FrameViewports& views, Scene& activeScene, const RenderPacketMainView& mainView, float32 deltaTime,
                                 const FrameRenderer* pFrameRenderer );
+        /** @brief 마지막 `collectExtraViews` 에서 보임 판정으로 쉰 추가 뷰 수입니다. 진단 읽기입니다(감시 값 `RenderView.HiddenCount` — 게임 스레드). */
+        uint32 getLastHiddenViewCount() const { return _lastHiddenViewCount; }
 
     private:
         /** @brief 자동 렌더 배율(`gv_autoRenderScale`)에 이번 프레임 시간(초)을 넣고 주 시점 배율에 곱할 값을 돌려줍니다. 꺼져 있으면 1 입니다. */
@@ -74,6 +76,8 @@ namespace sw
         unique_ptr<RenderViewScheduler> _renderViewScheduler;
         /** @brief 스케줄러의 시각(초)입니다. 프레임 델타의 누적입니다. */
         float64 _renderViewClock;
+        /** @brief 마지막 수집에서 보임 판정으로 쉰 추가 뷰 수입니다(`getLastHiddenViewCount`). */
+        uint32 _lastHiddenViewCount;
         /** @brief 주 시점 자동 렌더 배율 조정기입니다(`gv_autoRenderScale`). 처음 켤 때 만듭니다. */
         unique_ptr<RenderScaleAdjuster> _renderScaleAdjuster;
         uint8                           _bAutoRenderScaleActive : 1;

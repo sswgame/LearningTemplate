@@ -80,7 +80,7 @@ namespace sw
 {
     /**
      * @class VFXGPUSimulation
-     * @brief 재생 번호(`VFXGPUEmitterRequest::_runID`)마다 GPU 상태(입자 상태 두 반쪽, 렌더 입력, 간접 인자)를 들고, 프레임마다 밀린 단계를 디스패치합니다.
+     * @brief 재생 토큰(`VFXGPUEmitterRequest::_pRunToken`)마다 GPU 상태(입자 상태 두 반쪽, 렌더 입력, 간접 인자)를 들고, 프레임마다 밀린 단계를 디스패치합니다.
      * @details 기록 전(`prepareFrame`)에 상태를 만들고 매개변수(방출기 상수 · 단계마다의 일정 · 커브 키 · 해시 상수 · 방출기 행렬 · 깊이 히스토리)를 한 버퍼로 올린다.
      *          일정은 게임 스레드와 같은 시계(`VFXEmitterClock`)를 여기서 다시 돌려 얻는다 — 요청이 누적 단계 수라 패킷을 건너뛴 프레임도 다음 프레임에 이어 돈다
      *          (디스패치마다 상한 SW_VFX_MAX_STEPS_PER_DISPATCH, 넘친 단계는 다음 프레임). 컴퓨트 프리패스(`recordDispatches`)는 인스턴스 애니메이션 · 컬링 **앞에**
@@ -136,14 +136,15 @@ namespace sw
         struct EmitterState
         {
 
-            VFXEmitterClock     _clock;          ///< 게임 스레드와 같은 일정(여기서 다시 돈다)
-            uint64              _doneStepCount;  ///< 디스패치에 실은 단계 수
-            RHIStructuredBuffer _stateBuffer;    ///< 입자 상태(풀 크기 × 2)
-            RHIStructuredBuffer _particleBuffer; ///< 렌더 입력(풀 크기)
-            RHIStructuredBuffer _argsBuffer;     ///< 간접 인자 · 살아 있는 수 · 버린 수(SW_VFX_ARGS_WORD_COUNT 단어)
-            DrawSource          _drawSource;
-            uint8               _bNeedsReset : 1; ///< 아직 한 번도 디스패치하지 않았다
-            uint8               _bSeen       : 1; ///< 이번 프레임 목록에 있었다
+            VFXEmitterClock                  _clock;          ///< 게임 스레드와 같은 일정(여기서 다시 돈다)
+            uint64                           _doneStepCount;  ///< 디스패치에 실은 단계 수
+            RHIStructuredBuffer              _stateBuffer;    ///< 입자 상태(풀 크기 × 2)
+            RHIStructuredBuffer              _particleBuffer; ///< 렌더 입력(풀 크기)
+            RHIStructuredBuffer              _argsBuffer;     ///< 간접 인자 · 살아 있는 수 · 버린 수(SW_VFX_ARGS_WORD_COUNT 단어)
+            DrawSource                       _drawSource;
+            shared_ptr<const VFXGPURunToken> _pRunToken;       ///< 이 상태의 재생 토큰 — 들고 있어 열쇠(토큰 주소)가 다른 재생에 다시 쓰이지 않는다
+            uint8                            _bNeedsReset : 1; ///< 아직 한 번도 디스패치하지 않았다
+            uint8                            _bSeen       : 1; ///< 이번 프레임 목록에 있었다
             EmitterState( shared_ptr<const VFXEmitterDef> pDef, float32 spawnScale );
         };
 

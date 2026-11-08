@@ -360,6 +360,7 @@ namespace sw
         vector<CallbackRegistration>                     _listCallbackRegistration; ///< 살아 있는 칸 구독이 가리키는 칸
         IDAllocator<uint64>                              _callbackIDAllocator;      ///< 칸 구독 번호(0 은 빈 구독)
         DeferredLibraryUnloadQueue                       _deferredUnloadQueue;      ///< 언로드를 미룬 옛 라이브러리(`kMaxDeferredUnloadBatchCount` 배치까지)
+        ShadowCopySerials                                _shadowCopySerials;        ///< 섀도 복사본 이름의 일련번호 · 라이브러리 이름 세대(`ModuleShadowCopy::writeShadowCopy`)
         uint32                                           _completedReloadCount;     ///< 끝까지 성공한 연쇄 리로드 수(`getCompletedReloadCount`)
         uint8                                            _bReloadGraphBroken : 1;
         uint8                                            _bBuildStampPending : 1; ///< 스탬프가 바뀌었는데 이 프로세스의 빌드가 도는 중이라 아직 보지 않았다

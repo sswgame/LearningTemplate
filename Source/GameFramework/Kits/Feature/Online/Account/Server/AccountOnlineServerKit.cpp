@@ -60,7 +60,7 @@ namespace sw
                 const bool bDevOption = kitConfig._bLightPasswordHash || kitConfig._listSeedTestAccount.empty() == false;
                 if ( bDevOption )
                 {
-                    const AccountDevOptions* pDevOptions = AccountDevOptions::s_devOnline.require( outError );
+                    const AccountDevOptions* pDevOptions = DevOnlineExtension<AccountDevOptions>::require( outError );
                     if ( pDevOptions == nullptr )
                         return false;
                     if ( kitConfig._bLightPasswordHash )
@@ -194,7 +194,7 @@ namespace sw
 
 namespace sw
 {
-    SW_DEFINE_DEV_ONLINE_EXTENSION( AccountDevOptions, "the Account kit development settings (_bLightPasswordHash, _listSeedTestAccount, empty _ticketKeySecretEnvironment)" );
+    SW_DEFINE_DEV_ONLINE_EXTENSION( AccountDevOptions, "the Account kit development settings (_bLightPasswordHash, _listSeedTestAccount, empty _ticketKeySecretEnvironment)" )
 
     SW_REGISTER_ONLINE_SERVER_KIT( AccountOnlineServerKit, OnlineServerKitName::kAccount );
 

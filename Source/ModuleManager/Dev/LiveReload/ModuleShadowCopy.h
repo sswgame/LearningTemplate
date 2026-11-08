@@ -28,6 +28,16 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @struct ShadowCopySerials
+     * @brief 섀도 복사본의 일련번호 둘입니다. 리로드 매니저(`LiveReloadManager`)가 하나 들고 `writeShadowCopy` 에 넘긴다 — 프로세스 정적 칸이 아니라 번호를 쓰는 주인의 멤버다.
+     */
+    struct ShadowCopySerials
+    {
+        uint32 _reloadCount{ 0 };           ///< 복사본 이름의 일련번호(`ShadowCopyName::make`)
+        uint32 _libraryNameGeneration{ 0 }; ///< 라이브러리 이름 세대 — 모듈과 무관하게 하나씩 오르므로 앞부분이 같은 두 모듈도 같은 이름을 받지 않는다
+    };
+
     /** @brief 이 매니저가 올린 다른 모듈 하나의 이름과 라이브러리 이름입니다(`ShadowCopyParams`). */
     struct ShadowCopyModuleLibrary
     {
@@ -82,7 +92,7 @@ namespace sw
          *         실패하면 쓰다 만 복사본을 지웁니다.
          * @details 로드하기 **전에** 확인한다. 로드하면 정적 초기화가 돌므로, 돌고 있는 엔진과 다른 헤더로 빌드된 모듈은 그 전에 거절해야 한다.
          */
-        [[nodiscard]] static bool writeShadowCopy( const ShadowCopyParams& params, ShadowLibraryNameState& inoutLibraryName, string& outShadowPath );
+        [[nodiscard]] static bool writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, string& outShadowPath );
 
         /**
          * @brief 섀도 복사본과 그 디버그 심볼을 지웁니다(Windows 는 비었으면 복사본 폴더까지). 경로가 비면 아무것도 하지 않습니다.

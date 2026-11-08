@@ -8,6 +8,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/EngineFrameHooks.h"
 #include "Engine/Window/IWindowTitleTarget.h"
 

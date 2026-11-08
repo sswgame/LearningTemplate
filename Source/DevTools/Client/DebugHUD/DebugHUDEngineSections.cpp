@@ -9,9 +9,12 @@
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryTag.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
+#include "Engine/Automation/AutomationRunTitle.h"
+#include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Console/DebugHUDRegistry.h"
 #include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Console/DebugOverlayState.h"
@@ -26,6 +29,7 @@
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 
@@ -39,6 +43,10 @@ namespace sw
             static constexpr float32 kGraphMaxMilliseconds = 66.7f;
             /** @brief 메모리 섹션이 보이는 태그 수입니다(살아 있는 바이트가 큰 순). */
             static constexpr uint32 kMemoryTagLineCount = 4;
+            /** @brief Scenario 섹션의 긴 값(첫 실패 · 앞 단계) 줄 길이의 위쪽 한계(바이트)입니다 — HUD 패널이 화면을 가로지르지 않게. */
+            static constexpr uint32 kFailureLineBytes = 72;
+            /** @brief Scenario 섹션의 순서 값입니다 — 맨 위(지켜보는 사람이 가장 먼저 읽는 줄). */
+            static constexpr int32 kScenarioSectionOrder = -100;
 
             /** @brief 활성 씬의 오브젝트 매니저입니다(씬이 없으면 nullptr). */
             static GameObjectManager* findActiveObjectManager() { return engine::getSubsystem<SceneManager>().findActiveObjectManager(); }
@@ -250,6 +258,48 @@ namespace sw
                     writer.addLineFormat( "FOV", "%.1f deg", pCamera->getFieldOfViewY() * MathUtil::kRadianToDegree );
             }
 
+            /**
+             * @brief 자동화 시나리오의 진행 · 판정 상태입니다(`IAutomationRuntime::findRunStatus` 를 읽기만 한다 — 실행기는 HUD 를 모른다).
+             * @details 통과 · 진행은 중립 색, 실패 · 처리하지 않은 로그만 경고색이다. 체인이면 단계 n/N 과 앞 단계의 결과를 함께 낸다.
+             */
+            static void writeScenario( DebugHUDSectionWriter& writer )
+            {
+                const IAutomationRuntime* const  pRuntime = engine::findSubsystem<IAutomationRuntime>();
+                const AutomationRunStatus* const pStatus  = pRuntime != nullptr ? pRuntime->findRunStatus() : nullptr;
+                if ( pStatus == nullptr )
+                {
+                    writer.addLine( "scenario", "none" );
+                    return;
+                }
+                const AutomationRunStatus& status = *pStatus;
+                if ( status._stageCount > 1 )
+                    writer.addLineFormat( "scenario", "%# (%#/%#)", status._scenarioName.c_str(), status._stageIndex + 1, status._stageCount );
+                else
+                    writer.addLine( "scenario", status._scenarioName );
+                writer.addLineFormat( "step", "%# %#", status._stepNumber, status._stepKind.empty() ? "-" : status._stepKind.c_str() );
+                const bool bRunning = status._result == AutomationResult::Running;
+                const bool bGood    = status._result == AutomationResult::Passed || status._result == AutomationResult::Skipped;
+                // 진행 중의 실패는 이미 적혀 끝에서 Failed 가 된다 — 진행 중이어도 경고색이다.
+                const bool bWarn = ( bRunning == false && bGood == false ) || status._failureCount > 0;
+                writer.addLine( "state", bRunning ? "running" : getEnumName( status._result ), bWarn ? DebugHUDLineStyle::Warning : DebugHUDLineStyle::Neutral );
+                if ( status._failureCount > 0 )
+                {
+                    // 첫 실패 줄만 — HUD 한 줄 폭에 맞춰 자른다(전문은 로그 · 보고에 있다).
+                    const string failure = formatToString( "%# - %#", status._failureCount, status._firstFailure.c_str() );
+                    writer.addLine( "failures", AutomationRunTitleInput::truncateUTF8( failure, kFailureLineBytes ), DebugHUDLineStyle::Warning );
+                }
+                // 진행 중에는 모은 Warning · Error 수(허용 판정 전 — 중립), 끝나면 로그 게이트가 처리하지 않은 줄 수(있으면 경고색).
+                const bool bUnhandledLog = bRunning == false && status._warningErrorCount > 0;
+                writer.addLine( bRunning ? "warn/error" : "unhandled log", to_string( status._warningErrorCount ), bUnhandledLog ? DebugHUDLineStyle::Warning : DebugHUDLineStyle::Neutral );
+                writer.addLineFormat( "frame", "%#", status._frame );
+                if ( status._previousStageName.empty() == false )
+                {
+                    const bool   bPreviousGood = status._previousStageResult == AutomationResult::Passed || status._previousStageResult == AutomationResult::Skipped;
+                    const string previous      = formatToString( "%# %#", status._previousStageName.c_str(), getEnumName( status._previousStageResult ) );
+                    writer.addLine( "previous", AutomationRunTitleInput::truncateUTF8( previous, kFailureLineBytes ), bPreviousGood ? DebugHUDLineStyle::Neutral : DebugHUDLineStyle::Warning );
+                }
+            }
+
             static void writeOverlay( DebugHUDSectionWriter& writer )
             {
                 // 게임이 쓴 디버그 값(`DebugOverlayState`)이다. 에디터 게임 뷰의 줄과 같은 것이다.
@@ -279,4 +329,6 @@ namespace sw
     SW_DEBUG_HUD_SECTION( input, "input", "Input", 70, DebugHUDSectionFlag::kNone, &DebugHUDEngineSectionsInternal::writeInput );
     SW_DEBUG_HUD_SECTION( camera, "camera", "Camera", 80, DebugHUDSectionFlag::kNone, &DebugHUDEngineSectionsInternal::writeCamera );
     SW_DEBUG_HUD_SECTION( overlay, "overlay", "Game values", 90, DebugHUDSectionFlag::kDefaultOn, &DebugHUDEngineSectionsInternal::writeOverlay );
+    // 맨 위 — 지켜보는 사람이 가장 먼저 읽는 줄이다. 실행이 켠다(사용자 켬 · 끔 · 설정 파일과 무관).
+    SW_DEBUG_HUD_SECTION( scenario, "scenario", "Scenario", DebugHUDEngineSectionsInternal::kScenarioSectionOrder, DebugHUDSectionFlag::kAutomationRun, &DebugHUDEngineSectionsInternal::writeScenario );
 } // namespace sw

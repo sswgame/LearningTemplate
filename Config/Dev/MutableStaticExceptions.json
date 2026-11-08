@@ -7,9 +7,49 @@
             "_why": "웹(Emscripten) 주 루프 콜백은 문맥 없이 불린다 — main 이 끝난 뒤에도 앱이 살아야 해 프로세스 수명 자리에 둔다."
         },
         {
+            "_path": "Source/Core/Compression/CompressionCodecRegistry.cpp",
+            "_name": "s_pActiveRegistry",
+            "_why": "압축 바닥 — CompressionStream 의 문맥 없는 정적 입구가 읽는 활성 코덱 레지스트리 칸이다(Engine · 테스트 호스트가 건다)."
+        },
+        {
+            "_path": "Source/Core/Compression/CompressionStream.cpp",
+            "_name": "s_nullCodec",
+            "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 내장 코덱이다. 레지스트리가 없는 실행(Core 만 링크하는 도구)의 기본 코덱으로 이미지 수명 동안 하나다."
+        },
+        {
+            "_path": "Source/Core/Compression/CompressionStream.cpp",
+            "_name": "s_rleCodec",
+            "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 내장 코덱이다. 레지스트리가 없는 실행(Core 만 링크하는 도구)의 기본 코덱으로 이미지 수명 동안 하나다."
+        },
+        {
+            "_path": "Source/Core/Concurrency/DataRaceDetector.cpp",
+            "_name": "s_pReportFunction",
+            "_why": "데이터 경쟁 검출 바닥 — 검사는 Core 아래 층의 모든 감시 칸에서 문맥 없이 불린다. 걸린 보고 함수 칸 하나(원자)다."
+        },
+        {
             "_path": "Source/Core/Concurrency/Futex.cpp",
             "_name": "s_arrBucket",
             "_why": "주소로 고르는 대기 버킷 표 — 리눅스 커널 futex 해시처럼 프로세스의 모든 대기 주소가 한 표를 나눈다(주인 객체가 없다: 아무 원자 변수나 기다린다)."
+        },
+        {
+            "_path": "Source/Core/Concurrency/ShardedCounter.cpp",
+            "_name": "s_nextThreadShard",
+            "_why": "스레드 번호 공간 — 스레드마다 한 칸을 고르는 ShardedCounter 의 스레드 번호다. 스레드는 프로세스의 것이라 주인 범위가 없다(thread_local 칸이 이 번호를 받는다)."
+        },
+        {
+            "_path": "Source/Core/Concurrency/mutex.cpp",
+            "_name": "s_pLockObserver",
+            "_why": "잠금 바닥 — sw::mutex 는 Core 아래 층의 모든 잠금에서 문맥 없이 불린다. 개발 도구가 거는 관찰자 칸 하나(원자 포인터)다."
+        },
+        {
+            "_path": "Source/Core/Delegate/Delegate.cpp",
+            "_name": "s_nextHandleID",
+            "_why": "델리게이트 핸들 번호 공간 — 델리게이트는 Core 아래 층에서 어디서나 만들어지고 핸들은 서로 다른 델리게이트 사이에서도 겹치지 않아야 한다(잘못 푼 핸들을 가린다). 상수 초기화 원자 번호다."
+        },
+        {
+            "_path": "Source/Core/Diagnostics/CacheStats.cpp",
+            "_name": "s_registry",
+            "_why": "캐시 통계 칸 배열 — 캐시 핸들이 쥔 포인터가 엔진을 다시 세워도 살아 있어야 하는 정적 저장소다(소멸자가 하는 일이 없어 정적 소멸 뒤 기록도 안전). Core 아래 층이라 범위에 둘 수 없다."
         },
         {
             "_path": "Source/Core/Diagnostics/CrashHandler.cpp",
@@ -162,9 +202,149 @@
             "_why": "크래시 처리 — OS 예외 필터 · CRT 처리기는 문맥 인자 없이 불리고 죽는 중에는 할당 · 잠금 · 객체 찾기를 못 한다. 프로세스에 하나인 처리기의 상수 초기화 저장소다."
         },
         {
+            "_path": "Source/Core/File/ContentFileSource.cpp",
+            "_name": "s_pContentFileSource",
+            "_why": "파일 IO 바닥 — 콘텐츠 파일 원천 칸은 FileUtil 의 문맥 없는 읽기 입구가 읽는다(엔진이 팩을 걸고 내린다). 범위 아래 층(Core)이라 서비스로 둘 수 없다."
+        },
+        {
+            "_path": "Source/Core/File/FileUtil.cpp",
+            "_name": "s_writeCounters",
+            "_why": "파일 IO 바닥 — FileUtil · PlatformFileUtil 은 문맥 없는 정적 함수로 모든 층(정적 초기화 · 도구 · 테스트)에서 불린다. 관찰자 칸 · 열기 수 · 임시 파일 번호 · 쓰기 게이트는 그 입구가 읽는 프로세스 칸이다(언리얼 IPlatformFile 체인 자리)."
+        },
+        {
+            "_path": "Source/Core/File/PlatformFileUtil.cpp",
+            "_name": "s_fileOpenCount",
+            "_why": "파일 IO 바닥 — FileUtil · PlatformFileUtil 은 문맥 없는 정적 함수로 모든 층(정적 초기화 · 도구 · 테스트)에서 불린다. 관찰자 칸 · 열기 수 · 임시 파일 번호 · 쓰기 게이트는 그 입구가 읽는 프로세스 칸이다(언리얼 IPlatformFile 체인 자리)."
+        },
+        {
+            "_path": "Source/Core/File/PlatformFileUtil.cpp",
+            "_name": "s_pReadObserver",
+            "_why": "파일 IO 바닥 — FileUtil · PlatformFileUtil 은 문맥 없는 정적 함수로 모든 층(정적 초기화 · 도구 · 테스트)에서 불린다. 관찰자 칸 · 열기 수 · 임시 파일 번호 · 쓰기 게이트는 그 입구가 읽는 프로세스 칸이다(언리얼 IPlatformFile 체인 자리)."
+        },
+        {
+            "_path": "Source/Core/File/PlatformFileUtil.cpp",
+            "_name": "s_pWriteObserver",
+            "_why": "파일 IO 바닥 — FileUtil · PlatformFileUtil 은 문맥 없는 정적 함수로 모든 층(정적 초기화 · 도구 · 테스트)에서 불린다. 관찰자 칸 · 열기 수 · 임시 파일 번호 · 쓰기 게이트는 그 입구가 읽는 프로세스 칸이다(언리얼 IPlatformFile 체인 자리)."
+        },
+        {
+            "_path": "Source/Core/Foundation/Macros.cpp",
+            "_name": "s_assertCaptureDepth",
+            "_why": "단언 바닥 — SW_ASSERT 는 Core 아래 층에서 문맥 없이 불리고 단언 안에서 할당 · 서비스 조회를 할 수 없다(로그 보고자 · 대화상자 설정 · 가로채기 깊이). 상수 초기화 원자 칸이다."
+        },
+        {
+            "_path": "Source/Core/Foundation/Macros.cpp",
+            "_name": "s_bRememberIgnoredAssertSites",
+            "_why": "단언 바닥 — SW_ASSERT 는 Core 아래 층에서 문맥 없이 불리고 단언 안에서 할당 · 서비스 조회를 할 수 없다(로그 보고자 · 대화상자 설정 · 가로채기 깊이). 상수 초기화 원자 칸이다."
+        },
+        {
+            "_path": "Source/Core/Foundation/Macros.cpp",
+            "_name": "s_bShowAssertDialog",
+            "_why": "단언 바닥 — SW_ASSERT 는 Core 아래 층에서 문맥 없이 불리고 단언 안에서 할당 · 서비스 조회를 할 수 없다(로그 보고자 · 대화상자 설정 · 가로채기 깊이). 상수 초기화 원자 칸이다."
+        },
+        {
+            "_path": "Source/Core/Foundation/Macros.cpp",
+            "_name": "s_capturedAssertCount",
+            "_why": "단언 바닥 — SW_ASSERT 는 Core 아래 층에서 문맥 없이 불리고 단언 안에서 할당 · 서비스 조회를 할 수 없다(로그 보고자 · 대화상자 설정 · 가로채기 깊이). 상수 초기화 원자 칸이다."
+        },
+        {
+            "_path": "Source/Core/Foundation/Macros.cpp",
+            "_name": "s_dialogState",
+            "_why": "단언 바닥 — SW_ASSERT 는 Core 아래 층에서 문맥 없이 불리고 단언 안에서 할당 · 서비스 조회를 할 수 없다(로그 보고자 · 대화상자 설정 · 가로채기 깊이). 상수 초기화 원자 칸이다."
+        },
+        {
+            "_path": "Source/Core/Foundation/Macros.cpp",
+            "_name": "s_pfnLowLevelReporter",
+            "_why": "단언 바닥 — SW_ASSERT 는 Core 아래 층에서 문맥 없이 불리고 단언 안에서 할당 · 서비스 조회를 할 수 없다(로그 보고자 · 대화상자 설정 · 가로채기 깊이). 상수 초기화 원자 칸이다."
+        },
+        {
             "_path": "Source/Core/GlobalVariable/GlobalVariableManager.cpp",
             "_name": "s_pHead",
             "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다). 전역 변수(gv_) 등록자다."
+        },
+        {
+            "_path": "Source/Core/GlobalVariable/GlobalVariableManager.cpp",
+            "_name": "s_pathBaseDirectory",
+            "_why": "전역 변수 바닥 — GlobalVariableManager 는 정적 등록 변수(SW_GLOBAL_VARIABLE)의 문맥 없는 읽기 · 쓰기 입구다. 글 변수 잠금과 경로 기준은 그 입구가 쓰는 프로세스 칸이다."
+        },
+        {
+            "_path": "Source/Core/GlobalVariable/GlobalVariableManager.cpp",
+            "_name": "s_stringVarMutex",
+            "_why": "전역 변수 바닥 — GlobalVariableManager 는 정적 등록 변수(SW_GLOBAL_VARIABLE)의 문맥 없는 읽기 · 쓰기 입구다. 글 변수 잠금과 경로 기준은 그 입구가 쓰는 프로세스 칸이다."
+        },
+        {
+            "_path": "Source/Core/Log/LogOnce.cpp",
+            "_name": "s_state",
+            "_why": "수명 범위 소유 칸 — 저장소는 엔진 수명 범위(ScopeOwned)가 소유하고 엔진 종료 때 사라진다. 이름 풀 · 태그 · 한 번 알림은 Core 아래 층에서 문맥 없이 불려 서비스 범위에 둘 수 없다."
+        },
+        {
+            "_path": "Source/Core/Log/Logger.cpp",
+            "_name": "s_arrBacklog",
+            "_why": "로그 바닥 — SW_LOG 매크로는 Core 의 아래 층에서 문맥 없이 불리고(정적 초기화 · 크래시 처리기 · 할당기 안), 서비스 범위가 서기 전 줄과 내린 뒤 줄도 받아야 한다. 범위가 소유하면 기동 · 종료 줄을 잃는다(언리얼 GLog 와 같은 프로세스 자리)."
+        },
+        {
+            "_path": "Source/Core/Log/Logger.cpp",
+            "_name": "s_backlogCount",
+            "_why": "로그 바닥 — SW_LOG 매크로는 Core 의 아래 층에서 문맥 없이 불리고(정적 초기화 · 크래시 처리기 · 할당기 안), 서비스 범위가 서기 전 줄과 내린 뒤 줄도 받아야 한다. 범위가 소유하면 기동 · 종료 줄을 잃는다(언리얼 GLog 와 같은 프로세스 자리)."
+        },
+        {
+            "_path": "Source/Core/Log/Logger.cpp",
+            "_name": "s_backlogMutex",
+            "_why": "로그 바닥 — SW_LOG 매크로는 Core 의 아래 층에서 문맥 없이 불리고(정적 초기화 · 크래시 처리기 · 할당기 안), 서비스 범위가 서기 전 줄과 내린 뒤 줄도 받아야 한다. 범위가 소유하면 기동 · 종료 줄을 잃는다(언리얼 GLog 와 같은 프로세스 자리)."
+        },
+        {
+            "_path": "Source/Core/Log/Logger.cpp",
+            "_name": "s_clockPacked",
+            "_why": "로그 바닥 — SW_LOG 매크로는 Core 의 아래 층에서 문맥 없이 불리고(정적 초기화 · 크래시 처리기 · 할당기 안), 서비스 범위가 서기 전 줄과 내린 뒤 줄도 받아야 한다. 범위가 소유하면 기동 · 종료 줄을 잃는다(언리얼 GLog 와 같은 프로세스 자리)."
+        },
+        {
+            "_path": "Source/Core/Log/Logger.cpp",
+            "_name": "s_droppedBacklogCount",
+            "_why": "로그 바닥 — SW_LOG 매크로는 Core 의 아래 층에서 문맥 없이 불리고(정적 초기화 · 크래시 처리기 · 할당기 안), 서비스 범위가 서기 전 줄과 내린 뒤 줄도 받아야 한다. 범위가 소유하면 기동 · 종료 줄을 잃는다(언리얼 GLog 와 같은 프로세스 자리)."
+        },
+        {
+            "_path": "Source/Core/Log/Logger.cpp",
+            "_name": "s_globalSink",
+            "_why": "로그 바닥 — SW_LOG 매크로는 Core 의 아래 층에서 문맥 없이 불리고(정적 초기화 · 크래시 처리기 · 할당기 안), 서비스 범위가 서기 전 줄과 내린 뒤 줄도 받아야 한다. 범위가 소유하면 기동 · 종료 줄을 잃는다(언리얼 GLog 와 같은 프로세스 자리)."
+        },
+        {
+            "_path": "Source/Core/Log/Logger.cpp",
+            "_name": "s_runtimeVerbosity",
+            "_why": "로그 바닥 — SW_LOG 매크로는 Core 의 아래 층에서 문맥 없이 불리고(정적 초기화 · 크래시 처리기 · 할당기 안), 서비스 범위가 서기 전 줄과 내린 뒤 줄도 받아야 한다. 범위가 소유하면 기동 · 종료 줄을 잃는다(언리얼 GLog 와 같은 프로세스 자리)."
+        },
+        {
+            "_path": "Source/Core/Log/Sink/ConsoleLogOutput.cpp",
+            "_name": "s_flags",
+            "_why": "콘솔 출력 바닥 — 콘솔 싱크는 로거와 같은 바닥이다(기동 전 · 종료 뒤 줄). 깃발 두 비트 원자 칸이다."
+        },
+        {
+            "_path": "Source/Core/Memory/LifetimeScope.cpp",
+            "_name": "s_globalLifetimeScope",
+            "_why": "수명 범위의 뿌리 — ScopeOwned 가 거는 전역 수명 범위 자체다. 상수 초기화이고 소멸자가 없어 정적 소멸 순서와 무관하다(모든 정적 소유자가 이 뿌리에서 떨어진다)."
+        },
+        {
+            "_path": "Source/Core/Memory/Memory.cpp",
+            "_name": "s_nextTrackerID",
+            "_why": "할당 바닥 — operator new · 할당기 훅은 문맥 인자 없이 모든 할당에서 불린다(언리얼 GMalloc 자리). 기록기 · 관찰자 칸과 기록기 번호는 할당 경로가 읽는 프로세스 칸이다."
+        },
+        {
+            "_path": "Source/Core/Memory/Memory.cpp",
+            "_name": "s_pAllocationObserver",
+            "_why": "할당 바닥 — operator new · 할당기 훅은 문맥 인자 없이 모든 할당에서 불린다(언리얼 GMalloc 자리). 기록기 · 관찰자 칸과 기록기 번호는 할당 경로가 읽는 프로세스 칸이다."
+        },
+        {
+            "_path": "Source/Core/Memory/Memory.cpp",
+            "_name": "s_pAllocationTracker",
+            "_why": "할당 바닥 — operator new · 할당기 훅은 문맥 인자 없이 모든 할당에서 불린다(언리얼 GMalloc 자리). 기록기 · 관찰자 칸과 기록기 번호는 할당 경로가 읽는 프로세스 칸이다."
+        },
+        {
+            "_path": "Source/Core/Module/ModuleLibraryUtil.cpp",
+            "_name": "s_moduleSubdirectory",
+            "_why": "모듈 경로 바닥 — 서비스 범위 없이 도는 도구 · 테스트 · 모듈 호스트도 findModuleLibraryPath 를 부른다. 기동 스레드가 한 번 적는 고정 배열이다."
+        },
+        {
+            "_path": "Source/Core/Network/Connection/NetFlowLog.cpp",
+            "_name": "s_ring",
+            "_why": "연결 흐름 링 — NetConnection 이 보낼 때마다 잠금 없이 기록하는 핫 경로라 서비스 범위를 찾지 않는다(Core 아래 층). 원자 칸뿐이라 상수 초기화된다."
         },
         {
             "_path": "Source/Core/Process/Posix/PosixShutdownSignal.cpp",
@@ -212,6 +392,36 @@
             "_why": "정적 등록 공통 틀(RegistrationList) 자체의 사슬 · 핫 리로드 깊이 — 틀이 정적 등록자보다 먼저 서야 하므로 상수 초기화 파일 범위에 둔다."
         },
         {
+            "_path": "Source/Core/Name/TagID.cpp",
+            "_name": "s_mapIDToStr",
+            "_why": "수명 범위 소유 칸 — 저장소는 엔진 수명 범위(ScopeOwned)가 소유하고 엔진 종료 때 사라진다. 이름 풀 · 태그 · 한 번 알림은 Core 아래 층에서 문맥 없이 불려 서비스 범위에 둘 수 없다."
+        },
+        {
+            "_path": "Source/Core/Name/TagID.cpp",
+            "_name": "s_mutex",
+            "_why": "수명 범위 소유 칸 — 저장소는 엔진 수명 범위(ScopeOwned)가 소유하고 엔진 종료 때 사라진다. 이름 풀 · 태그 · 한 번 알림은 Core 아래 층에서 문맥 없이 불려 서비스 범위에 둘 수 없다."
+        },
+        {
+            "_path": "Source/Core/Name/hashed_string.cpp",
+            "_name": "s_pInstance",
+            "_why": "이름 풀 바닥 — hashed_string 은 정적 초기화부터 문맥 없이 만들어진다. 풀 칸은 이름 풀 서브시스템(NamePoolSubsystem)이 걸고 내리는 자리다."
+        },
+        {
+            "_path": "Source/Core/Task/TaskManager.cpp",
+            "_name": "s_nextInstanceID",
+            "_why": "태스크 바닥 — 태스크 프로파일 훅 칸은 워커 스레드의 문맥 없는 대기 구간이 읽는다(Core 아래 층). 매니저 번호는 스레드 지역 상태가 어느 매니저의 것인지 가르는 프로세스 번호 공간이다(매니저가 여럿 · 테스트)."
+        },
+        {
+            "_path": "Source/Core/Task/TaskManager.cpp",
+            "_name": "s_profileHookSlot",
+            "_why": "태스크 바닥 — 태스크 프로파일 훅 칸은 워커 스레드의 문맥 없는 대기 구간이 읽는다(Core 아래 층). 매니저 번호는 스레드 지역 상태가 어느 매니저의 것인지 가르는 프로세스 번호 공간이다(매니저가 여럿 · 테스트)."
+        },
+        {
+            "_path": "Source/DevTools/Client/DevToolsClient.cpp",
+            "_name": "s_devToolsClient",
+            "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리)."
+        },
+        {
             "_path": "Source/DevTools/RenderDoc/RenderDocCapture.cpp",
             "_name": "_s_bTried",
             "_why": "RenderDoc API 는 프로세스에 한 번 붙는다(주입된 DLL 의 전역)."
@@ -220,6 +430,11 @@
             "_path": "Source/DevTools/RenderDoc/RenderDocCapture.cpp",
             "_name": "_s_pAPI",
             "_why": "RenderDoc API 는 프로세스에 한 번 붙는다(주입된 DLL 의 전역)."
+        },
+        {
+            "_path": "Source/Editor/Common/Backend/FileDialog.cpp",
+            "_name": "s_pOpenDialog",
+            "_why": "이미지 수명 자리 — 열린 파일 대화상자 스레드가 이 DLL 의 코드를 도는 동안 호스트의 C-ABI 콜백(isReloadHeld)이 문맥 없이 리로드를 붙잡는다. 에디터 컨텍스트가 내려간 뒤에도(떼어 낸 스레드) 남아야 한다."
         },
         {
             "_path": "Source/Editor/Common/Workspace/EditorService.cpp",
@@ -232,9 +447,39 @@
             "_why": "에디터 서비스 표의 뿌리 — 엔진 서비스 표(EngineServices)와 같은 까닭으로 묶은 범위를 가리키기만 한다."
         },
         {
+            "_path": "Source/Editor/ImGuiEditor.cpp",
+            "_name": "s_pMainWindow",
+            "_why": "외부 라이브러리 콜백 바닥 — ImGui 백엔드의 보조 창 띄우기(Platform_ShowWindow)는 문맥 인자 없이 불린다. 그 콜백이 메인 창 숨김을 보는 자리다."
+        },
+        {
+            "_path": "Source/Engine/Animation/Rig/RigAsset.cpp",
+            "_name": "s_rigAssetNextContentID",
+            "_why": "번호 공간(설계 남김) — 엔진 밖(도구 · 테스트 · 워커)에서도 만들어지는 객체의 프로세스 고유 번호다. 소비자(GPU 풀 · 캐시)가 번호로 키를 잡아 다른 주인 사이에서도 겹치면 안 된다. 소비자가 정체성 토큰을 들고 키를 잡는 설계(VFXGPURunToken 과 같은 길)로 옮길 때까지 남긴다."
+        },
+        {
+            "_path": "Source/Engine/Animation/Skeletal/SkeletonBoneLOD.cpp",
+            "_name": "s_skeletonBoneLODNextRevision",
+            "_why": "번호 공간(설계 남김) — 엔진 밖(도구 · 테스트 · 워커)에서도 만들어지는 객체의 프로세스 고유 번호다. 소비자(GPU 풀 · 캐시)가 번호로 키를 잡아 다른 주인 사이에서도 겹치면 안 된다. 소비자가 정체성 토큰을 들고 키를 잡는 설계(VFXGPURunToken 과 같은 길)로 옮길 때까지 남긴다."
+        },
+        {
+            "_path": "Source/Engine/Audio/AudioVoiceDecoder.cpp",
+            "_name": "s_audioVoiceDecoder",
+            "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리)."
+        },
+        {
+            "_path": "Source/DevTools/Client/Audio/AudioDumpListener.cpp",
+            "_name": "s_audioDumpListener",
+            "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리)."
+        },
+        {
             "_path": "Source/Engine/Audio/IAudioService.cpp",
             "_name": "s_pHead",
             "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
+        },
+        {
+            "_path": "Source/Engine/Config/GameSelection.cpp",
+            "_name": "s_arrName",
+            "_why": "게임 선택 — 코어 범위의 CrashHandlerSubsystem 이 기동 스레드에서 한 번 적고, 모듈 · 설정 경로를 찾는 정적 함수가 서비스 범위가 서기 전에도 묻는다(테스트는 범위 없이 기본 게임). 고정 배열이라 상수 초기화된다."
         },
         {
             "_path": "Source/Engine/Foundation/EngineServices.cpp",
@@ -250,6 +495,31 @@
             "_path": "Source/Engine/Foundation/EngineSubsystemRegistration.cpp",
             "_name": "s_list",
             "_why": "엔진 등록 목록(getGlobal) — 서브시스템 · 서비스 칸의 정적 등록자가 엔진보다 먼저 단다(정적 등록 틀과 같은 자리)."
+        },
+        {
+            "_path": "Source/Engine/Graphics/Material/MaterialPermutation.cpp",
+            "_name": "s_permutationGeneration",
+            "_why": "번호 공간(설계 남김) — 엔진 밖(도구 · 테스트 · 워커)에서도 만들어지는 객체의 프로세스 고유 번호다. 소비자(GPU 풀 · 캐시)가 번호로 키를 잡아 다른 주인 사이에서도 겹치면 안 된다. 소비자가 정체성 토큰을 들고 키를 잡는 설계(VFXGPURunToken 과 같은 길)로 옮길 때까지 남긴다."
+        },
+        {
+            "_path": "Source/Engine/Graphics/Material/MaterialRenderVersion.h",
+            "_name": "_s_global",
+            "_why": "번호 공간(설계 남김) — 엔진 밖(도구 · 테스트 · 워커)에서도 만들어지는 객체의 프로세스 고유 번호다. 소비자(GPU 풀 · 캐시)가 번호로 키를 잡아 다른 주인 사이에서도 겹치면 안 된다. 소비자가 정체성 토큰을 들고 키를 잡는 설계(VFXGPURunToken 과 같은 길)로 옮길 때까지 남긴다."
+        },
+        {
+            "_path": "Source/Engine/Graphics/Mesh/Mesh.cpp",
+            "_name": "s_meshNextContentID",
+            "_why": "번호 공간(설계 남김) — 엔진 밖(도구 · 테스트 · 워커)에서도 만들어지는 객체의 프로세스 고유 번호다. 소비자(GPU 풀 · 캐시)가 번호로 키를 잡아 다른 주인 사이에서도 겹치면 안 된다. 소비자가 정체성 토큰을 들고 키를 잡는 설계(VFXGPURunToken 과 같은 길)로 옮길 때까지 남긴다."
+        },
+        {
+            "_path": "Source/Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.cpp",
+            "_name": "s_mapBackendToCount",
+            "_why": "RHI 진단 바닥(설계 남김) — 잘못된 드로우 보고 상한을 백엔드 이름마다 센다. 부르는 곳(RHIGeometryBindings 템플릿 · 백엔드 문맥)이 장치를 받지 않아, 장치 멤버로 옮기려면 네 백엔드의 기록 경로에 장치를 실어야 한다."
+        },
+        {
+            "_path": "Source/Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.cpp",
+            "_name": "s_mutex",
+            "_why": "RHI 진단 바닥(설계 남김) — 잘못된 드로우 보고 상한을 백엔드 이름마다 센다. 부르는 곳(RHIGeometryBindings 템플릿 · 백엔드 문맥)이 장치를 받지 않아, 장치 멤버로 옮기려면 네 백엔드의 기록 경로에 장치를 실어야 한다."
         },
         {
             "_path": "Source/Engine/Graphics/RHI/RHIBackendRegistry.cpp",
@@ -272,6 +542,16 @@
             "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
         },
         {
+            "_path": "Source/Engine/Object/Component/Component.h",
+            "_name": "_s_nextComponentID",
+            "_why": "번호 공간(설계 남김) — 엔진 밖(도구 · 테스트 · 워커)에서도 만들어지는 객체의 프로세스 고유 번호다. 소비자(GPU 풀 · 캐시)가 번호로 키를 잡아 다른 주인 사이에서도 겹치면 안 된다. 소비자가 정체성 토큰을 들고 키를 잡는 설계(VFXGPURunToken 과 같은 길)로 옮길 때까지 남긴다."
+        },
+        {
+            "_path": "Source/Engine/Object/GameObject/GameObjectStore.h",
+            "_name": "_s_nextObjectID",
+            "_why": "번호 공간(설계 남김) — 엔진 밖(도구 · 테스트 · 워커)에서도 만들어지는 객체의 프로세스 고유 번호다. 소비자(GPU 풀 · 캐시)가 번호로 키를 잡아 다른 주인 사이에서도 겹치면 안 된다. 소비자가 정체성 토큰을 들고 키를 잡는 설계(VFXGPURunToken 과 같은 길)로 옮길 때까지 남긴다."
+        },
+        {
             "_path": "Source/Engine/Physics/Jolt/JoltPhysicsBackend.cpp",
             "_name": "s_arrFactoryStorage",
             "_why": "Jolt 는 형식 공장(JPH::Factory::sInstance) · 할당기 훅을 프로세스 전역으로 요구한다 — 그 한 번 초기화의 저장소다."
@@ -292,14 +572,74 @@
             "_why": "Jolt 는 형식 공장(JPH::Factory::sInstance) · 할당기 훅을 프로세스 전역으로 요구한다 — 그 한 번 초기화의 저장소다."
         },
         {
+            "_path": "Source/Engine/Profiling/ProfilerBackend.cpp",
+            "_name": "s_arrNameArena",
+            "_why": "프로파일러 바닥 — 계측 지점(SW_PROFILE_SCOPE)은 모든 스레드 · 층에서 문맥 없이 불리고 엔진이 내려간 뒤 닫히는 구간도 받는다. Tracy 는 프로세스 전역 라이브러리이고 지점 표 · 이름 저장소는 그 지점이 가리키는 정적 저장소다."
+        },
+        {
+            "_path": "Source/Engine/Profiling/ProfilerBackend.cpp",
+            "_name": "s_arrSite",
+            "_why": "프로파일러 바닥 — 계측 지점(SW_PROFILE_SCOPE)은 모든 스레드 · 층에서 문맥 없이 불리고 엔진이 내려간 뒤 닫히는 구간도 받는다. Tracy 는 프로세스 전역 라이브러리이고 지점 표 · 이름 저장소는 그 지점이 가리키는 정적 저장소다."
+        },
+        {
+            "_path": "Source/Engine/Profiling/ProfilerBackend.cpp",
+            "_name": "s_nameArenaUsed",
+            "_why": "프로파일러 바닥 — 계측 지점(SW_PROFILE_SCOPE)은 모든 스레드 · 층에서 문맥 없이 불리고 엔진이 내려간 뒤 닫히는 구간도 받는다. Tracy 는 프로세스 전역 라이브러리이고 지점 표 · 이름 저장소는 그 지점이 가리키는 정적 저장소다."
+        },
+        {
+            "_path": "Source/Engine/Profiling/ProfilerBackend.cpp",
+            "_name": "s_pActive",
+            "_why": "프로파일러 바닥 — 계측 지점(SW_PROFILE_SCOPE)은 모든 스레드 · 층에서 문맥 없이 불리고 엔진이 내려간 뒤 닫히는 구간도 받는다. Tracy 는 프로세스 전역 라이브러리이고 지점 표 · 이름 저장소는 그 지점이 가리키는 정적 저장소다."
+        },
+        {
+            "_path": "Source/Engine/Profiling/ProfilerBackend.cpp",
+            "_name": "s_siteCount",
+            "_why": "프로파일러 바닥 — 계측 지점(SW_PROFILE_SCOPE)은 모든 스레드 · 층에서 문맥 없이 불리고 엔진이 내려간 뒤 닫히는 구간도 받는다. Tracy 는 프로세스 전역 라이브러리이고 지점 표 · 이름 저장소는 그 지점이 가리키는 정적 저장소다."
+        },
+        {
+            "_path": "Source/Engine/Profiling/ProfilerBackend.cpp",
+            "_name": "s_siteMutex",
+            "_why": "프로파일러 바닥 — 계측 지점(SW_PROFILE_SCOPE)은 모든 스레드 · 층에서 문맥 없이 불리고 엔진이 내려간 뒤 닫히는 구간도 받는다. Tracy 는 프로세스 전역 라이브러리이고 지점 표 · 이름 저장소는 그 지점이 가리키는 정적 저장소다."
+        },
+        {
+            "_path": "Source/Engine/Profiling/ProfilerBackend.cpp",
+            "_name": "s_taskProfileHookBinding",
+            "_why": "프로파일러 바닥 — 계측 지점(SW_PROFILE_SCOPE)은 모든 스레드 · 층에서 문맥 없이 불리고 엔진이 내려간 뒤 닫히는 구간도 받는다. Tracy 는 프로세스 전역 라이브러리이고 지점 표 · 이름 저장소는 그 지점이 가리키는 정적 저장소다."
+        },
+        {
+            "_path": "Source/Engine/Profiling/ProfilerBackend.cpp",
+            "_name": "s_tracy",
+            "_why": "프로파일러 바닥 — 계측 지점(SW_PROFILE_SCOPE)은 모든 스레드 · 층에서 문맥 없이 불리고 엔진이 내려간 뒤 닫히는 구간도 받는다. Tracy 는 프로세스 전역 라이브러리이고 지점 표 · 이름 저장소는 그 지점이 가리키는 정적 저장소다."
+        },
+        {
+            "_path": "Source/Engine/Reflection/TypeRegistry.cpp",
+            "_name": "_s_typeIDCounter",
+            "_why": "리플렉션 바닥 — 타입 등록은 정적 초기화(침입형 등록 머리와 같은 경로)에서 엔진보다 먼저 돈다. 타입 번호 발급과 타입 표 세대는 그 등록과 인라인 캐시(TypeCacheSlot)가 읽는 프로세스 칸이다."
+        },
+        {
             "_path": "Source/Engine/Reflection/TypeRegistry.cpp",
             "_name": "s_pHead",
             "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다). 리플렉션 형식 · 열거 등록자다."
         },
         {
+            "_path": "Source/Engine/Reflection/TypeRegistry.cpp",
+            "_name": "s_typeTableGeneration",
+            "_why": "리플렉션 바닥 — 타입 등록은 정적 초기화(침입형 등록 머리와 같은 경로)에서 엔진보다 먼저 돈다. 타입 번호 발급과 타입 표 세대는 그 등록과 인라인 캐시(TypeCacheSlot)가 읽는 프로세스 칸이다."
+        },
+        {
+            "_path": "Source/Engine/Renderer/Cook/ShaderCookService.cpp",
+            "_name": "s_shaderCookService",
+            "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리)."
+        },
+        {
             "_path": "Source/Engine/UI/Accessibility/UIAccessibilityBridgeFactory.cpp",
             "_name": "s_pHead",
             "_why": "침입형 정적 등록 머리 — 다른 TU · DLL 의 정적 등록자가 정적 초기화 때(할당 · 엔진보다 먼저) 자기를 잇는다. RegistrationList 로 옮기면 그 목록 자체가 정적 초기화 순서에 걸린다(머리 포인터는 상수 초기화라 순서와 무관하다)."
+        },
+        {
+            "_path": "Source/Engine/UI/WidgetTree/Widget.cpp",
+            "_name": "s_nextWidgetID",
+            "_why": "번호 공간(설계 남김) — 엔진 밖(도구 · 테스트 · 워커)에서도 만들어지는 객체의 프로세스 고유 번호다. 소비자(GPU 풀 · 캐시)가 번호로 키를 잡아 다른 주인 사이에서도 겹치면 안 된다. 소비자가 정체성 토큰을 들고 키를 잡는 설계(VFXGPURunToken 과 같은 길)로 옮길 때까지 남긴다."
         },
         {
             "_path": "Source/Engine/UserSettings/UserSettingsHandlerRegistry.cpp",
@@ -315,6 +655,61 @@
             "_path": "Source/Engine/Window/Android/AndroidWindow.cpp",
             "_name": "s_pWindow",
             "_why": "android_main · 네이티브 앱 콜백은 문맥 없이 불린다 — 프로세스에 하나인 앱 · 창 포인터다."
+        },
+        {
+            "_path": "Source/GameFramework/Client/Flow/GameInstanceClient.cpp",
+            "_name": "s_gameInstanceClient",
+            "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리)."
+        },
+        {
+            "_path": "Source/GameFramework/Kits/Feature/Storage/SQLStore/Runtime/Driver/SQLite/SQLiteDriver.cpp",
+            "_name": "s_driver",
+            "_why": "정적 등록 항목 — 상태 없는 SQL 드라이버다. SQLDriverRegistration(잠금을 든 정적 등록 표)이 가리키고 이미지와 수명이 같다."
+        },
+        {
+            "_path": "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/PostgresDriver.cpp",
+            "_name": "s_driver",
+            "_why": "정적 등록 항목 — 상태 없는 SQL 드라이버다. SQLDriverRegistration(잠금을 든 정적 등록 표)이 가리키고 이미지와 수명이 같다."
+        },
+        {
+            "_path": "Source/GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.cpp",
+            "_name": "s_meshModifierNextInstanceID",
+            "_why": "번호 공간(설계 남김) — 엔진 밖(도구 · 테스트 · 워커)에서도 만들어지는 객체의 프로세스 고유 번호다. 소비자(GPU 풀 · 캐시)가 번호로 키를 잡아 다른 주인 사이에서도 겹치면 안 된다. 소비자가 정체성 토큰을 들고 키를 잡는 설계(VFXGPURunToken 과 같은 길)로 옮길 때까지 남긴다."
+        },
+        {
+            "_path": "Source/GameFramework/Runtime/Foundation/Framework/GameService.cpp",
+            "_name": "s_gameServiceState",
+            "_why": "게임 서비스 찾기의 뿌리 — game::findSubsystem 이 범위를 찾는 자리 자체다(엔진 쪽 s_pSubsystems 와 같은 자리). GameFramework.dll 정적이라 게임 · 키트 이미지보다 오래 산다."
+        },
+        {
+            "_path": "Source/GameFramework/Runtime/Foundation/GameData/Dev/GameSettingsLaunchOverride.cpp",
+            "_name": "s_gameSettingsLaunchOverride",
+            "_why": "정적 등록 항목 — 칸이 없는(상태 없는) 구현 객체다. 정적 등록 틀(RegistrationSlot · RegistrationList 등록자)이 이 객체를 가리키고 이미지와 수명이 같다(언리얼 compiled-in 등록 항목 자리)."
+        },
+        {
+            "_path": "Source/GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.cpp",
+            "_name": "s_nextInstanceID",
+            "_why": "번호 공간(설계 남김) — 엔진 밖(도구 · 테스트 · 워커)에서도 만들어지는 객체의 프로세스 고유 번호다. 소비자(GPU 풀 · 캐시)가 번호로 키를 잡아 다른 주인 사이에서도 겹치면 안 된다. 소비자가 정체성 토큰을 들고 키를 잡는 설계(VFXGPURunToken 과 같은 길)로 옮길 때까지 남긴다."
+        },
+        {
+            "_path": "Source/ModuleManager/Dev/LiveReload/ModuleCallGuard.cpp",
+            "_name": "_s_installDepth",
+            "_why": "OS 시그널 바닥 — 모듈 호출 보호의 시그널 처리기 설치 깊이다. 처리기는 문맥 인자 없이 불리고(크래시 처리기와 같은 자리) 바깥 호출이 설치 · 해제한다."
+        },
+        {
+            "_path": "Source/Programs/ReflectionParser/SourceTokens.cpp",
+            "_name": "s_callCount",
+            "_why": "도구 프로세스 — ReflectionParser 는 실행 한 번이 파서 한 번인 빌드 도구다(엔진 범위가 없다). 토큰화 누계는 워커들이 더하고 끝에 한 번 읽는다."
+        },
+        {
+            "_path": "Source/Programs/ReflectionParser/SourceTokens.cpp",
+            "_name": "s_nanoseconds",
+            "_why": "도구 프로세스 — ReflectionParser 는 실행 한 번이 파서 한 번인 빌드 도구다(엔진 범위가 없다). 토큰화 누계는 워커들이 더하고 끝에 한 번 읽는다."
+        },
+        {
+            "_path": "Source/Programs/ReflectionParser/SourceTokens.cpp",
+            "_name": "s_tokenCount",
+            "_why": "도구 프로세스 — ReflectionParser 는 실행 한 번이 파서 한 번인 빌드 도구다(엔진 범위가 없다). 토큰화 누계는 워커들이 더하고 끝에 한 번 읽는다."
         },
         {
             "_path": "Source/Server/Windows/WindowsServiceHost.cpp",

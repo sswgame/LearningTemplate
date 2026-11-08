@@ -20,11 +20,6 @@ namespace sw
     {
         struct ModuleShadowCopyInternal
         {
-            /** @brief 복사본 이름의 일련번호입니다(`ShadowCopyName::make`). 프로세스 하나에 하나씩 오릅니다. */
-            inline static uint32 s_reloadCount{ 0 };
-            /** @brief 라이브러리 이름 세대입니다(`rewriteLibraryNames`). 모듈과 무관하게 하나씩 오르므로 앞부분이 같은 두 모듈도 같은 이름을 받지 않습니다. */
-            inline static uint32 s_libraryNameGeneration{ 0 };
-
             static void tryDeleteFile( string_view path )
             {
                 // 아직 매핑된 그림자 사본은 지금 지울 수 없다. 남은 것은 다음 시작 · 종료의 ShadowCopyName::removeStaleCopies 가 지운다.
@@ -52,14 +47,14 @@ namespace sw
              * @return Windows 에서 세대 이름을 만들 수 없거나(이름이 너무 짧다), 복사본이 등록된 모듈을 의존 목록에 없이 원본 이름으로 부르면 false 입니다.
              *         리눅스는 늘 true 입니다(SONAME 이 없는 라이브러리는 바꾸지 않는다).
              */
-            [[nodiscard]] static bool rewriteLibraryNames( const ShadowCopyParams& params, ShadowLibraryNameState& inoutLibraryName, vector<uint8>& inoutBytes )
+            [[nodiscard]] static bool rewriteLibraryNames( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, vector<uint8>& inoutBytes )
             {
 #if defined( SW_PLATFORM_WINDOWS )
                 // 로더가 import 를 맞추는 이름은 DLL 파일 이름이다. 복사본에 세대 이름을 주고(파일 이름 — `writeShadowCopy`), 등록된 의존 모듈을 부르는
                 // import 를 그 의존의 지금 이름으로 바꾼다. 같은 길이라야 import 표의 문자열을 제자리에서 덮는다.
                 if ( inoutLibraryName._original.empty() )
                     inoutLibraryName._original = ModuleLibraryUtil::formatSharedLibraryName( params._moduleName );
-                const string generationName = ModuleLibraryPatch::makeGenerationName( inoutLibraryName._original, ++s_libraryNameGeneration );
+                const string generationName = ModuleLibraryPatch::makeGenerationName( inoutLibraryName._original, ++inoutSerials._libraryNameGeneration );
                 if ( generationName.empty() )
                 {
                     SW_LOG_ERROR_ID( "LiveReloadManager.ModuleCannotGetSame", "Module %# cannot get a same-length generation name for its shadow copy (the name needs at least five characters before .dll)",
@@ -108,7 +103,7 @@ namespace sw
 
                 if ( inoutLibraryName._original.empty() == false )
                 {
-                    const string generationName = ModuleLibraryPatch::makeGenerationName( inoutLibraryName._original, ++s_libraryNameGeneration );
+                    const string generationName = ModuleLibraryPatch::makeGenerationName( inoutLibraryName._original, ++inoutSerials._libraryNameGeneration );
                     const bool   bRenamed       = generationName.empty() == false &&
                                           ModuleLibraryPatch::replaceDynamicString( inoutBytes, ModuleLibraryPatch::kTagSoname, inoutLibraryName._original, generationName ) > 0;
                     if ( bRenamed )
@@ -166,10 +161,10 @@ namespace sw
 #endif
     }
 
-    bool ModuleShadowCopy::writeShadowCopy( const ShadowCopyParams& params, ShadowLibraryNameState& inoutLibraryName, string& outShadowPath )
+    bool ModuleShadowCopy::writeShadowCopy( const ShadowCopyParams& params, ShadowCopySerials& inoutSerials, ShadowLibraryNameState& inoutLibraryName, string& outShadowPath )
     {
-        ++ModuleShadowCopyInternal::s_reloadCount;
-        const string tempName = ShadowCopyName::make( params._moduleName, Process::getCurrentProcessID(), ModuleShadowCopyInternal::s_reloadCount, params._sourceMtime );
+        ++inoutSerials._reloadCount;
+        const string tempName = ShadowCopyName::make( params._moduleName, Process::getCurrentProcessID(), inoutSerials._reloadCount, params._sourceMtime );
         const string execDir  = FileUtil::getDirectoryPart( params._originalModulePath );
 
         // 원본을 한 번 읽어 대조하고(리눅스는 고치고) 복사본으로 쓴다. 대조에 걸리면 복사본을 만들기 전이라 치울 것이 없다.
@@ -195,7 +190,7 @@ namespace sw
         }
         if ( rejectsDelayImports( params._moduleName, params._originalModulePath, bytes ) )
             return false;
-        if ( ModuleShadowCopyInternal::rewriteLibraryNames( params, inoutLibraryName, bytes ) == false )
+        if ( ModuleShadowCopyInternal::rewriteLibraryNames( params, inoutSerials, inoutLibraryName, bytes ) == false )
         {
             inoutLibraryName._current = inoutLibraryName._loaded;
             return false;

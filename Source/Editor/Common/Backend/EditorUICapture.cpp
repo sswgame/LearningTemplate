@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Backend/EditorUICapture.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/String/StringBuilder.h"
@@ -235,8 +236,19 @@ namespace sw::editor
 
         outJob = std::move( _listQueued.front() );
         _listQueued.erase( _listQueued.begin() );
+        outJob._listExcludedTexture = _listExcludedTexture; // 렌더 스레드는 잡의 사본만 읽는다
         EditorUICaptureInternal::measureWindows( outJob );
         return true;
+    }
+
+    void EditorUICapture::setTextureExcluded( const void* pTextureID, bool bExcluded )
+    {
+        if ( pTextureID == nullptr )
+            return;
+        const uint64 id = reinterpret_cast<uint64>( pTextureID );
+        (void)VectorUtil::removeValue( _listExcludedTexture, id );
+        if ( bExcluded )
+            _listExcludedTexture.push_back( id );
     }
 
     bool EditorUICapture::findResult( uint32 ticket, EditorUICaptureResult& outResult ) const
@@ -284,7 +296,7 @@ namespace sw::editor
         capturePass._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear;
         capturePass._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
         pStream->beginRenderPass( capturePass );
-        renderer.render( device, drawData );
+        renderer.render( device, drawData, job._listExcludedTexture ); // 개발 겹치기 텍스처(게임 뷰 위 디버그 HUD)는 다시 그리지 않는다
         pStream->prepareTextureForShaderRead( _texture );
         // 연 패스는 이 함수 안에서 닫는다. OpenGL 은 패스를 닫아야 기본 프레임버퍼가 다시 묶이는데, 닫지 않으면 이 뒤에 패스 없이 직접 그리는 코드(렌더 스레드가 그리는 플로팅 뷰포트 창)가
         // 캡처 텍스처에 그려 플로팅 창이 캡처에 두 번 나오고 제 창에는 그려지지 않는다. Vulkan · DX12 · DX11 은 이미 닫혔거나 상태만 비우는 호출이다.

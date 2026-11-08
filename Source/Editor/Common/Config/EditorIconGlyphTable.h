@@ -61,10 +61,8 @@ namespace sw::editor
         /** @brief `U+XXXX` 를 코드포인트로 읽습니다. 형식이 틀리거나 기본 다국어 평면 밖이면 false 입니다. */
         [[nodiscard]] static bool parseCodepoint( string_view text, uint16& outCodepoint );
 
-        // 아이콘 이름 → 글리프입니다. 표는 셸(`ImGuiEditor`)이 들고 글꼴을 세울 때 읽어 여기 게시한다(`EditorUIContextState::publish` 와 같은 모양).
-        /** @brief 셸이 표 둘을 게시합니다(읽은 뒤). 셸을 내릴 때 nullptr 둘로 거둔다. 표는 게시가 거둘 때까지 살아 있어야 한다. */
-        static void publish( const EditorIconGlyphTable* pGlyphTable, const EditorComponentIconTable* pComponentTable );
-        /** @brief 게시된 컴포넌트 아이콘 표입니다. 게시 전에 부르면 멈춘다(그리기는 셸이 선 뒤다). */
+        // 아이콘 이름 → 글리프입니다. 표 둘은 셸(`ImGuiEditor`)이 들고 에디터 컨텍스트가 자기 범위에 빌려 건다(`EditorContext::initialize` — 도구 시드와 같은 길).
+        /** @brief 에디터 범위의 컴포넌트 아이콘 표입니다. 에디터 컨텍스트가 없으면 멈춘다(그리기는 셸이 선 뒤다). */
         static const EditorComponentIconTable& getComponentIconTable();
         /** @brief 이름의 글리프(UTF-8)입니다. 표에 없으면 Missing 아이콘이고 오류를 남깁니다(이름마다 한 번). 늘 nullptr 이 아닙니다. */
         static const utf8* findPublishedGlyph( const hashed_string& name );
@@ -77,6 +75,7 @@ namespace sw::editor
         vector<hashed_string> _listNameKey;    ///< `_listIcon` 과 같은 순서의 이름 키(읽을 때 만든다)
         vector<string>        _listGlyphUTF8;  ///< `_listIcon` 과 같은 순서의 글리프(읽을 때 만든다)
         vector<uint16>        _listGlyphRange; ///< 읽을 때 만든다
+        vector<hashed_string> _listReported;   ///< 표에 없다고 이미 알린 이름(`findPublishedGlyph` — 이름마다 한 번). 그리기 스레드 하나가 쓴다
     };
 } // namespace sw::editor
 

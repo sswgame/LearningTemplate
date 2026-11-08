@@ -105,6 +105,9 @@ namespace sw
         // --- 붙인 디스크 도메인 ---
         mutex                                     _diskDomainMutex{};
         vector<MountedDiskDomain> _listDiskDomain SW_GUARDED_BY( _diskDomainMutex ){};
+
+        // --- 쿠킹 세션 ---
+        atomic<int32> _cookSessionDepth{ 0 }; ///< 열린 `CookSession` 수(`openCookSession`)
     };
 
     namespace
@@ -462,6 +465,21 @@ namespace sw
     }
 
     AssetPaths::~AssetPaths() = default; // `State` 가 여기서 완전한 형식이다
+
+    void AssetPaths::openCookSession()
+    {
+        _pState->_cookSessionDepth.fetch_add( 1, std::memory_order_acq_rel );
+    }
+
+    void AssetPaths::closeCookSession()
+    {
+        _pState->_cookSessionDepth.fetch_sub( 1, std::memory_order_acq_rel );
+    }
+
+    bool AssetPaths::isCookSessionOpen() const
+    {
+        return _pState->_cookSessionDepth.load( std::memory_order_acquire ) > 0;
+    }
 
     /**
      * @brief 상대 id 에 `..` 성분이 있으면 true 입니다 — 리소스 루트 밖으로 나가는 id 입니다.

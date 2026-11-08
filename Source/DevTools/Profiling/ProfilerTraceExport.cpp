@@ -12,7 +12,6 @@
 
 #if !defined( SW_SHIPPING )
 
-    #include "Core/String/StringUtil.h"
     #include "Core/File/FileUtil.h"
     #include "Core/File/ProcessRoots.h"
     #include "Core/Memory/Memory.h"
@@ -21,8 +20,6 @@
     #include "Core/Time/MonotonicClock.h"
     #include "Core/Time/WallClock.h"
 
-    #include "Engine/Foundation/EngineServices.h"
-    #include "Engine/Profiling/FrameProfiler.h"
     #include "Engine/Content/AssetPaths.h"
     #include "Engine/Serialization/JSON/JSONDocument.h"
     #include "Engine/Serialization/JSON/JSONWriter.h"

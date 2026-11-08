@@ -25,7 +25,7 @@ namespace sw
 {
     namespace
     {
-        struct VehicleSeatComponentInternal
+        struct VehicleSeatMountInternal
         {
             /** @brief 하차 위치가 막혔을 때 둘러보는 방향 수입니다. 45° 간격입니다. */
             static constexpr int32 kExitProbeCount = 8;
@@ -108,7 +108,7 @@ namespace sw
 {
     MountResult VehicleSeatComponent::mount( PawnComponent& riderPawn, VehicleSeatComponent& seat )
     {
-        using Internal                   = VehicleSeatComponentInternal;
+        using Internal                   = VehicleSeatMountInternal;
         GameObject*        pRider        = riderPawn.getOwner();
         GameObject*        pVehicle      = seat.getOwner();
         GameObjectManager* pManager      = Internal::findManager( riderPawn );
@@ -171,7 +171,7 @@ namespace sw
 
     bool VehicleSeatComponent::dismount( PawnComponent& riderPawn, bool bForced )
     {
-        using Internal                           = VehicleSeatComponentInternal;
+        using Internal                           = VehicleSeatMountInternal;
         VehicleSeatComponent* pSeat              = findSeatOf( riderPawn );
         GameObject*           pRider             = riderPawn.getOwner();
         GameObjectManager*    pManager           = Internal::findManager( riderPawn );

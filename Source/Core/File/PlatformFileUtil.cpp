@@ -17,7 +17,6 @@
     #include <share.h>
     #include <shellapi.h>
 #elif defined( SW_PLATFORM_LINUX )
-    #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <cerrno>
     #include <ctime>

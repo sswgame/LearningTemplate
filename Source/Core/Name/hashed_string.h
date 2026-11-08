@@ -51,7 +51,6 @@ namespace sw
     /** @brief REGISTER_NAME 번호를 줄 순서대로 늘어놓은 테이블입니다(아래 static_assert 전용). */
     inline constexpr uint32 kArrPredefinedNameIndex[] = {
 #define REGISTER_NAME( index, name ) static_cast<uint32>( PredefinedNameType::NameType_##name ),
-#include "Core/Predefined/PredefinedNameType.xxx"
 
 #undef REGISTER_NAME
     };
@@ -542,7 +541,6 @@ namespace sw
         {
             static_assert( std::is_same_v<T, utf8>, "hashed_string 은 UTF-8 하나다(쓰지 않던 UTF-16 판은 지웠다)" );
 #define REGISTER_NAME( index, name ) basic_hashed_string<T, N> predefined_##name{ *this, #name };
-#include "Core/Predefined/PredefinedNameType.xxx"
 #undef REGISTER_NAME
         }
     };

@@ -9,6 +9,8 @@
 namespace sw::editor
 {
     class EditorDockLayout;
+    struct EditorIconGlyphTable;
+    struct EditorComponentIconTable;
 } // namespace sw::editor
 
 namespace sw::editor
@@ -33,8 +35,9 @@ namespace sw::editor
          * @brief 에디터 서브시스템들을 만들고 초기화합니다.
          * @param install 범위에 하위 객체를 넣는 조립점(`EditorSubsystemSet::install`)입니다. 어느 하위 객체가 있는지는 컨텍스트가 아니라 셸 층이 정한다.
          * @param toolDefaults 에디터 도구 시드 — 셸(ImGuiEditor)이 소유하고 이 컨텍스트보다 오래 산다. 서브시스템을 세우기 전에 범위에 빌려 건다(`getEditorToolDefaults`).
+         * @param iconGlyphs · componentIcons 아이콘 표 둘 — 셸이 소유하고 같은 길로 빌려 건다(`EditorIconGlyphTable::findPublishedGlyph` · `getComponentIconTable`).
          */
-        void initialize( EditorToolDefaults& toolDefaults, SubsystemInstaller install );
+        void initialize( EditorToolDefaults& toolDefaults, EditorIconGlyphTable& iconGlyphs, const EditorComponentIconTable& componentIcons, SubsystemInstaller install );
         /** @brief 에디터 서브시스템들을 정리하고 해제합니다. */
         void shutdown();
 

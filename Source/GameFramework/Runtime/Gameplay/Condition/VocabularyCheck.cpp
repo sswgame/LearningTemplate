@@ -15,36 +15,51 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Gameplay/GameplayContext.h"
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSystem.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h"
 
 namespace sw
 {
+    /**
+     * @struct VocabularyCheckResult
+     * @brief 마지막 `vocabulary.check` 의 플래그 표입니다. 감시 값이 읽는다(게임 스레드만).
+     * @details GameFramework 의 모듈 부분(`SW_MODULE_PART( Engine, … )`)이라 엔진 범위와 함께 생기고 사라진다 — 정적 칸이면 엔진을 다시 세워도 지난 점검이 남는다.
+     */
+    struct VocabularyCheckResult
+    {
+        static constexpr const utf8* kModulePartName = "VocabularyCheckResult";
+
+        GameFlags _flags;
+    };
+
+    SW_MODULE_PART( Engine, VocabularyCheckResult, VocabularyCheckResult );
+
     namespace
     {
         struct VocabularyCheckInternal
         {
             static constexpr int32 kMinutesPerHour = 60;
 
-            /** @brief 마지막 점검의 플래그입니다. 감시 값이 읽는다(게임 스레드만). */
-            static GameFlags& getLastFlags()
-            {
-                static GameFlags s_flags;
-                return s_flags;
-            }
-
             static bool run( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.size() != 1 )
                     return false;
+                VocabularyCheckResult* const pResult = game::findSubsystem<VocabularyCheckResult>();
+                if ( pResult == nullptr )
+                {
+                    outReply = "no game services in this process";
+                    return true;
+                }
                 const string& folder = listArgument[0];
-                GameFlags&    flags  = getLastFlags();
+                GameFlags&    flags  = pResult->_flags;
                 flags.clear();
                 GameplayContext world;
                 world.set<GameFlagsSlot>( &flags );
@@ -97,7 +112,8 @@ namespace sw
             /** @brief 감시 값 `Vocabulary.Flag` 입니다. 마지막 `vocabulary.check` 의 플래그 `key` 값입니다(없으면 0). */
             [[nodiscard]] static bool readFlag( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
-                outValue.setNumber( static_cast<float64>( getLastFlags().getFlag( hashed_string( query._key ) ) ) );
+                const VocabularyCheckResult* const pResult = game::findSubsystem<VocabularyCheckResult>();
+                outValue.setNumber( pResult != nullptr ? static_cast<float64>( pResult->_flags.getFlag( hashed_string( query._key ) ) ) : 0.0 );
                 return true;
             }
         };

@@ -11,6 +11,8 @@
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/Config/EditorComponentIconTable.h"
+#include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
@@ -41,12 +43,12 @@ namespace sw::editor
         shutdown();
     }
 
-    void EditorContext::initialize( EditorToolDefaults& toolDefaults, const SubsystemInstaller install )
+    void EditorContext::initialize( EditorToolDefaults& toolDefaults, EditorIconGlyphTable& iconGlyphs, const EditorComponentIconTable& componentIcons, const SubsystemInstaller install )
     {
-        // 도구 시드는 서브시스템이 서며 읽을 수 있다(입력 맵 경로 · 핫 리로드 확장자) — 그보다 먼저 범위에 빌려 건다. 내리는 것은 `shutdown`.
-        const bool bToolDefaultsBound = _scope.bind( &toolDefaults );
-        SW_ASSERT( bToolDefaultsBound );
-        (void)bToolDefaultsBound;
+        // 도구 시드 · 아이콘 표는 서브시스템이 서며 읽을 수 있다(입력 맵 경로 · 핫 리로드 확장자 · 아이콘 이름) — 그보다 먼저 범위에 빌려 건다. 내리는 것은 `shutdown`.
+        const bool bShellDataBound = _scope.bind( &toolDefaults ) && _scope.bind( &iconGlyphs ) && _scope.bind( &componentIcons );
+        SW_ASSERT( bShellDataBound );
+        (void)bShellDataBound;
         // 어느 하위 객체가 있는지는 조립점(`install`, 셸이 넘긴다)이 정한다 — 컨텍스트는 범위와 생명 주기만 안다(패널 · 팝업 · 인스펙터 매니저를 모른다).
         SW_ASSERT( install != nullptr );
         install( _scope, *this );
@@ -95,7 +97,9 @@ namespace sw::editor
                         SubsystemTimingReport::describe( _scope.getCollection().getShutdownTimings() ).c_str() );
         _scope.destroyAll();                 // 뷰 렌더 타깃은 EditorRenderViews 의 종료가 놓는다
         _scope.unbind<EditorToolDefaults>(); // 셸이 소유한 값 — 다음 `initialize` 가 다시 건다
-        _scope.unbind<CommandStack>();       // `EditorUndoHistory` 가 소유한 스택 — 방금 사라졌다
+        _scope.unbind<EditorIconGlyphTable>();
+        _scope.unbind<const EditorComponentIconTable>();
+        _scope.unbind<CommandStack>(); // `EditorUndoHistory` 가 소유한 스택 — 방금 사라졌다
     }
 
     void EditorContext::setDockLayout( EditorDockLayout* pDockLayout )

@@ -100,6 +100,12 @@ namespace sw
         bool receivesPointer() const { return _desc._layer != UILayer::Overlay && _bHiddenByLayer == SW_FALSE; }
         /** @brief 레이어 가시성 요청(`UISystem::addLayerHideRequest`)이 이 화면의 레이어를 숨기고 있으면 true 입니다. 숨긴 화면은 그리지 않고 포인터를 받지 않습니다(상태·포커스는 그대로). */
         bool isHiddenByLayer() const { return _bHiddenByLayer == SW_TRUE; }
+        /**
+         * @brief 개발 겹치기 화면(디버그 HUD)이면 true 입니다. 게임 UI 가 아니다 — 따로 칠해(`UICanvasPaintState::getDevOverlay`) 렌더러가 사진 캡처를 읽은 뒤에 화면에 합치므로
+         *        스크린샷 · `<ExpectImage>` 골든 · 에디터 UI 캡처에 들지 않고, `<ExpectUI screens>` 의 화면 수에도 세지 않는다(`UISystem::getGameScreenCount`).
+         * @details 언리얼은 디버그 캔버스(`stat` · `showdebug`)를 게임 뷰포트 위 별도 단계에서 그리고, 하이레스 스크린샷은 UI 를 뺀 장면을 찍는다 — 같은 나눔을 형식으로 둔다.
+         */
+        virtual bool isDevOverlay() const { return false; }
         /** @brief 아래 화면과 게임의 입력을 막는 화면이면 true 입니다. 모달이거나 로딩 레이어입니다. */
         bool blocksLowerInput() const { return _desc._bModal || _desc._layer == UILayer::Loading; }
         /** @brief 닫기를 요청했는지 나타냅니다(이번 입력 처리가 끝나면 지워집니다). */

@@ -11,6 +11,8 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
+#include "Editor/Common/EditorSubsystem.h"
+#include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorScenarioStepValidation.h"
@@ -40,6 +42,21 @@ namespace sw::editor
 
     namespace
     {
+        /**
+         * @class EditorSelfTestStepState
+         * @brief 시나리오 단계 `EditorSelfTest` 가 시작시킨 실행의 단계입니다. 단계는 한 번에 하나만 돈다(자체 테스트 실행도 하나뿐이다).
+         * @details 에디터 서브시스템이라 컨텍스트와 함께 생기고 사라진다 — 정적 칸이면 컨텍스트를 새로 만들어도 지난 단계 주소가 남는다.
+         */
+        class EditorSelfTestStepState final : public EditorSubsystem
+        {
+        public:
+            static constexpr const utf8* kSubsystemName  = "EditorSelfTestStepState";
+            static constexpr int32       kSubsystemOrder = 9510; ///< 자체 테스트 세션(9500) 뒤
+
+            const AutomationStep* _pRequestedStep{ nullptr }; ///< 실행을 청한 단계(빌림 — 시나리오가 단계를 든다)
+            const utf8*           getSubsystemName() const override { return kSubsystemName; }
+        };
+
         struct EditorScenarioStepsInternal
         {
             /** @brief `EditorExpectDockLayout` 의 도크 노드 최소 변(px) 기본값입니다. 이보다 좁은 노드는 탭 글자도 담지 못합니다. */
@@ -589,8 +606,6 @@ namespace sw::editor
             //    Error · Warning 이면 실패)를 받는다. 예전에는 따로 도는 CTest 항목(EditorTests)이 기본 백엔드 하나에서 케이스 성패만 봐, 결함이 로그로만 드러나는
             //    케이스(sceneView.resizeEveryFrame - 쓰는 중인 텍스처 해제)는 통과가 아무것도 증명하지 못했다.
             // ------------------------------------------------------------------------------
-            /** @brief 이 시나리오 단계가 시작시킨 실행입니다. 단계는 한 번에 하나만 돈다(자체 테스트 실행도 하나뿐이다). */
-            static inline const AutomationStep* s_pRequestedSelfTestStep = nullptr;
 
             /**
              * @brief 첫 차례에 실행을 청하고, 실행이 끝날 때까지 시나리오 시계를 붙잡습니다. 청할 수 없으면 돌려 실패를 적게 합니다.
@@ -604,11 +619,14 @@ namespace sw::editor
 
             static AutomationStepHold holdUntilSelfTestsEnd( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
-                if ( s_pRequestedSelfTestStep != &step )
+                EditorSelfTestStepState* const pState = findSubsystem<EditorSelfTestStepState>();
+                if ( pState == nullptr )
+                    return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 - 단계가 결과 없음으로 진다
+                if ( pState->_pRequestedStep != &step )
                 {
                     if ( EditorSelfTestRunner::requestRun( readSelfTestPattern( step ), false ) == false )
                         return AutomationStepHold::Run; // 에디터가 없거나 다른 실행(Test Runner 창)이 돈다 - 단계가 결과 없음으로 진다
-                    s_pRequestedSelfTestStep = &step;
+                    pState->_pRequestedStep = &step;
                 }
                 return runner.holdUntilReady( step, input, EditorSelfTestRunner::isRunning() == false, std::numeric_limits<uint32>::max(),
                                               "editor self tests (" + EditorSelfTestRunner::describeProgress() + ")" );
@@ -616,8 +634,10 @@ namespace sw::editor
 
             static bool runSelfTest( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const bool bRequested                                         = s_pRequestedSelfTestStep == &step;
-                s_pRequestedSelfTestStep                                      = nullptr;
+                EditorSelfTestStepState* const pState     = findSubsystem<EditorSelfTestStepState>();
+                const bool                     bRequested = pState != nullptr && pState->_pRequestedStep == &step;
+                if ( pState != nullptr )
+                    pState->_pRequestedStep = nullptr;
                 const vector_reference<const EditorSelfTestResult> listResult = EditorSelfTestRunner::getResults();
                 if ( bRequested == false || listResult.empty() )
                 {
@@ -633,6 +653,8 @@ namespace sw::editor
             }
         };
     } // namespace
+
+    SW_EDITOR_SUBSYSTEM( EditorSelfTestStepState, EditorSelfTestStepState::kSubsystemOrder );
 
     SW_AUTOMATION_STEP( editorClick, EditorScenarioStepValidation::kClickKind, &EditorScenarioStepsInternal::runClick, &EditorScenarioStepValidation::validateClick, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilClickAimed ) );
     SW_AUTOMATION_STEP( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepValidation::validateDrag, AutomationStepOptions{}.withPrepare( &EditorScenarioStepsInternal::prepareMarks ).withHold( &EditorScenarioStepsInternal::holdUntilMarkSettled ) );

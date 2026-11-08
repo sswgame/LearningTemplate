@@ -100,13 +100,14 @@ namespace sw
         _graphMax = 0.0f;
     }
 
-    void DebugHUDSectionWriter::addLine( string_view label, string_view value )
+    void DebugHUDSectionWriter::addLine( string_view label, string_view value, DebugHUDLineStyle style )
     {
         if ( _lineCount == _listLine.size() )
             _listLine.emplace_back();
         DebugHUDLine& line = _listLine[_lineCount];
         line._label.assign( label.data(), label.size() );
         line._value.assign( value.data(), value.size() );
+        line._style = style;
         ++_lineCount;
     }
 

@@ -3,22 +3,18 @@
 #include "Engine/Asset/Cook/AssetCompanion.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringUtil.h"
 
 namespace sw
 {
-    vector<AssetCompanionRule>& AssetCompanionRegistry::getRules()
-    {
-        // 함수 안 정적 값 — 다른 번역 단위의 정적 등록자가 먼저 불러도 표가 이미 있다.
-        static vector<AssetCompanionRule> s_listRule;
-        return s_listRule;
-    }
+    SW_DEFINE_REGISTRATION_LIST( AssetCompanionRegistry::getRegistrars, const AssetCompanionRegistrar, "AssetCompanionRegistry" )
 
     void AssetCompanionRegistry::appendCompanionPaths( string_view assetID, vector<string>& outListPath )
     {
-        for ( const AssetCompanionRule& rule : getRules() )
+        for ( const AssetCompanionRegistrar* pRegistrar : getRegistrars().getItems() )
         {
-            string path = rule._pMakePath( assetID );
+            string path = pRegistrar->getRule()._pMakePath( assetID );
             if ( path.empty() == false && string_view( path ) != assetID )
                 outListPath.push_back( std::move( path ) );
         }
@@ -26,9 +22,9 @@ namespace sw
 
     bool AssetCompanionRegistry::hasRule( string_view name )
     {
-        for ( const AssetCompanionRule& rule : getRules() )
+        for ( const AssetCompanionRegistrar* pRegistrar : getRegistrars().getItems() )
         {
-            if ( StringUtil::equals( rule._pName, name ) )
+            if ( StringUtil::equals( pRegistrar->getRule()._pName, name ) )
                 return true;
         }
         return false;
@@ -37,12 +33,11 @@ namespace sw
     AssetCompanionRegistrar::AssetCompanionRegistrar( const AssetCompanionRule& rule )
         : _rule{ rule }
     {
-        AssetCompanionRegistry::getRules().push_back( _rule );
+        (void)AssetCompanionRegistry::getRegistrars().add( this );
     }
 
     AssetCompanionRegistrar::~AssetCompanionRegistrar()
     {
-        VectorUtil::removeIf( AssetCompanionRegistry::getRules(), [this]( const AssetCompanionRule& rule )
-        { return rule._pMakePath == _rule._pMakePath && rule._pName == _rule._pName; } );
+        (void)AssetCompanionRegistry::getRegistrars().remove( this );
     }
 } // namespace sw

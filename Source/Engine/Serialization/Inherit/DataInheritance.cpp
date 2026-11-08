@@ -6,6 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Registry/RegistrationList.h"
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Config/EngineConfig.h"
@@ -598,18 +599,8 @@ namespace sw
             }
         };
 
-        /** @brief 손 형식 규칙 사슬의 머리와 잠금입니다. 정적 초기화에서 쓰이므로 함수 안에 둡니다. */
-        struct DataInheritanceSchemaChain
-        {
-            mutex                           _mutex;
-            DataInheritanceSchemaRegistrar* _pHead{ nullptr };
-
-            static DataInheritanceSchemaChain& get()
-            {
-                static DataInheritanceSchemaChain s_chain;
-                return s_chain;
-            }
-        };
+        /** @brief 손 형식 규칙 표입니다. 정적 등록 공통 틀(잠금을 든 함수 정적 목록)이라 다른 TU 의 정적 등록자가 먼저 와도 서 있다. */
+        SW_DEFINE_LOCKED_REGISTRATION_LIST( getSchemaRegistrars, const DataInheritanceSchemaRegistrar, "DataInheritanceSchemaRegistry" )
 
         /** @brief `makeFromType` 의 재귀 단계입니다. @p inoutStack 은 지나온 형식이고, 자기 자신을 담는 칸은 통째로 바꾸는 칸으로 둡니다. */
         struct DataInheritanceSchemaBuilder
@@ -839,62 +830,53 @@ namespace sw
         : _pRootName{ pRootName }
         , _pfnMakeSchema{ pfnMakeSchema }
         , _pfnMerge{ nullptr }
-        , _pNext{ nullptr }
     {
-        DataInheritanceSchemaChain& chain = DataInheritanceSchemaChain::get();
-        const ScopedLock<mutex>     lock( chain._mutex );
-        _pNext       = chain._pHead;
-        chain._pHead = this;
+        getSchemaRegistrars().withLock( [this]( RegistrationList<const DataInheritanceSchemaRegistrar>& list )
+        { (void)list.add( this ); } );
     }
 
     DataInheritanceSchemaRegistrar::DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MergeFunction pfnMerge )
         : _pRootName{ pRootName }
         , _pfnMakeSchema{ nullptr }
         , _pfnMerge{ pfnMerge }
-        , _pNext{ nullptr }
     {
-        DataInheritanceSchemaChain& chain = DataInheritanceSchemaChain::get();
-        const ScopedLock<mutex>     lock( chain._mutex );
-        _pNext       = chain._pHead;
-        chain._pHead = this;
+        getSchemaRegistrars().withLock( [this]( RegistrationList<const DataInheritanceSchemaRegistrar>& list )
+        { (void)list.add( this ); } );
     }
 
     DataInheritanceSchemaRegistrar::~DataInheritanceSchemaRegistrar()
     {
-        DataInheritanceSchemaChain& chain = DataInheritanceSchemaChain::get();
-        const ScopedLock<mutex>     lock( chain._mutex );
-        for ( DataInheritanceSchemaRegistrar** ppLink = &chain._pHead; *ppLink != nullptr; ppLink = &( *ppLink )->_pNext )
-        {
-            if ( *ppLink == this )
-            {
-                *ppLink = _pNext;
-                return;
-            }
-        }
+        getSchemaRegistrars().withLock( [this]( RegistrationList<const DataInheritanceSchemaRegistrar>& list )
+        { (void)list.remove( this ); } );
     }
 
     DataInheritance::MakeSchemaFunction DataInheritanceSchemaRegistrar::find( string_view rootName )
     {
-        DataInheritanceSchemaChain& chain = DataInheritanceSchemaChain::get();
-        const ScopedLock<mutex>     lock( chain._mutex );
-        for ( const DataInheritanceSchemaRegistrar* pEntry = chain._pHead; pEntry != nullptr; pEntry = pEntry->_pNext )
+        return getSchemaRegistrars().withLock( [rootName]( const RegistrationList<const DataInheritanceSchemaRegistrar>& list ) -> DataInheritance::MakeSchemaFunction
         {
-            if ( rootName == pEntry->_pRootName )
-                return pEntry->_pfnMakeSchema;
-        }
-        return nullptr;
+            // 나중에 올린 것이 먼저다(예전 사슬과 같은 순서) — 같은 루트의 규칙 함수 · 합치기 함수가 따로 오를 수 있어 이름 찾기 대신 훑는다.
+            const vector<const DataInheritanceSchemaRegistrar*>& listItem = list.getItems();
+            for ( size_t index = listItem.size(); index > 0; --index )
+            {
+                if ( rootName == listItem[index - 1]->_pRootName && listItem[index - 1]->_pfnMakeSchema != nullptr )
+                    return listItem[index - 1]->_pfnMakeSchema;
+            }
+            return nullptr;
+        } );
     }
 
     DataInheritance::MergeFunction DataInheritanceSchemaRegistrar::findMerge( string_view rootName )
     {
-        DataInheritanceSchemaChain& chain = DataInheritanceSchemaChain::get();
-        const ScopedLock<mutex>     lock( chain._mutex );
-        for ( const DataInheritanceSchemaRegistrar* pEntry = chain._pHead; pEntry != nullptr; pEntry = pEntry->_pNext )
+        return getSchemaRegistrars().withLock( [rootName]( const RegistrationList<const DataInheritanceSchemaRegistrar>& list ) -> DataInheritance::MergeFunction
         {
-            if ( rootName == pEntry->_pRootName )
-                return pEntry->_pfnMerge;
-        }
-        return nullptr;
+            const vector<const DataInheritanceSchemaRegistrar*>& listItem = list.getItems();
+            for ( size_t index = listItem.size(); index > 0; --index )
+            {
+                if ( rootName == listItem[index - 1]->_pRootName && listItem[index - 1]->_pfnMerge != nullptr )
+                    return listItem[index - 1]->_pfnMerge;
+            }
+            return nullptr;
+        } );
     }
 
     bool DataInheritance::makeDelta( string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, string& outText )

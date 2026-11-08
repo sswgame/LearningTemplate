@@ -35,8 +35,6 @@ namespace sw
     {
         struct RenderViewCollectorInternal
         {
-            /// 마지막 수집에서 보임 판정으로 쉰(안 보이거나 가려진) 추가 뷰 수입니다(`RenderViewCollector::getLastHiddenViewCount`). 렌더 스레드가 쓰고 게임 스레드가 읽는다.
-            inline static atomic<uint32> _s_hiddenViewCount{ 0 };
             /// 정수 업스케일 배율의 상한입니다(`CameraRenderOutput::_upscaleZoom` 의 Max 와 같다 — 넘는 값은 데이터 오류라 자른다).
             static constexpr uint32 kMaxUpscaleZoom = 16;
             /// 배율이 1 인지 보는 허용 오차입니다(부동소수 저장 오차만 받는다).
@@ -151,11 +149,6 @@ namespace sw
         return ( width > 0.0f && height > 0.0f ) ? width / height : ( 16.0f / 9.0f );
     }
 
-    uint32 RenderViewCollector::getLastHiddenViewCount()
-    {
-        return RenderViewCollectorInternal::_s_hiddenViewCount.load( std::memory_order_relaxed );
-    }
-
     RenderViewBudget RenderViewCollector::getDefaultBudget()
     {
         RenderViewBudget budget;
@@ -165,9 +158,9 @@ namespace sw
         return budget;
     }
 
-    void RenderViewCollector::collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj,
-                                                 const float3& mainPosition, uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, const RenderViewBudget& budget,
-                                                 RenderViewScheduler& scheduler, const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView )
+    uint32 RenderViewCollector::collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj,
+                                                   const float3& mainPosition, uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, const RenderViewBudget& budget,
+                                                   RenderViewScheduler& scheduler, const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView )
     {
         outListView.clear();
         RenderViewScheduler::Candidate arrCandidate[kMaxExtraRenderView]{};
@@ -249,7 +242,6 @@ namespace sw
             arrCandidate[index]._bVisible = bVisible ? SW_TRUE : SW_FALSE;
             hiddenViewCount += bVisible ? 0u : 1u;
         }
-        RenderViewCollectorInternal::_s_hiddenViewCount.store( hiddenViewCount, std::memory_order_relaxed );
 
         uint8 arrRender[kMaxExtraRenderView]{};
         (void)scheduler.schedule( now, arrCandidate, candidateCount, budget, arrRender );
@@ -257,6 +249,7 @@ namespace sw
         {
             outListView[index]._bRender = arrRender[index];
         }
+        return hiddenViewCount;
     }
 
     void RenderViewCollector::appendViewportView( CameraComponent& camera, const ViewportTarget& target, RenderViewMode viewMode, vector<RenderViewRequest>& inoutListView )

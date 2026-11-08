@@ -466,7 +466,7 @@ namespace sw
                     }
                 }
                 // 세션 안에서는 작업(`CookJob`) 밖의 리소스 읽기가 실패한다 — 쿠커가 읽은 것이 모두 그 출력의 입력으로 기록된다.
-                const CookSession cookSession;
+                const CookSession cookSession{ engine::getSubsystem<AssetPaths>() };
                 bool              bSucceeded = true;
                 if ( bCookScenes || bCookAll )
                     bSucceeded = cookSceneStage( cookedDir, cookStore, crowdSettings, bCrowdSettingsLoaded );

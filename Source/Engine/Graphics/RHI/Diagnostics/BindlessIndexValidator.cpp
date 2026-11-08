@@ -39,11 +39,14 @@ namespace sw
                 return BindlessSiteKey{ passName.getIndex(), fieldName.getIndex(), element };
             }
         };
-
-        mutex                          s_reportMutex;
-        unordered_set<BindlessSiteKey> s_uniqueReportedSite;
-        unordered_set<BindlessSiteKey> s_uniqueAbsentSite;
     } // namespace
+
+    struct BindlessIndexReportLog::State
+    {
+        mutable mutex                                      _mutex;
+        unordered_set<BindlessSiteKey> _uniqueReportedSite SW_GUARDED_BY( _mutex );
+        unordered_set<BindlessSiteKey> _uniqueAbsentSite   SW_GUARDED_BY( _mutex );
+    };
 
     bool BindlessIndexValidator::isEnabled()
     {
@@ -63,22 +66,29 @@ namespace sw
         if ( index == kInvalidDescriptorIndex )
         {
             if ( isTracingAbsent() )
-                (void)recordAbsent( site._passName, fieldName, element ); // 위치마다 한 번만 남긴다
+                (void)site._pDevice->getBindlessIndexReportLog().recordAbsent( site._passName, fieldName, element ); // 위치마다 한 번만 남긴다
             return true;
         }
         if ( site._pDevice->isBindlessIndexLive( space, index ) )
             return true;
-        (void)report( space, index, site._passName, fieldName, element ); // 같은 위치를 두 번째 본 것이면 이미 로그가 있다
+        (void)site._pDevice->getBindlessIndexReportLog().report( space, index, site._passName, fieldName, element ); // 같은 위치를 두 번째 본 것이면 이미 로그가 있다
         return false;
     }
 
-    bool BindlessIndexValidator::report( RHIBindlessIndexSpace space, RHIDescriptorIndex index, const hashed_string& passName,
+    BindlessIndexReportLog::BindlessIndexReportLog()
+        : _pState{ make_unique<State>() }
+    {
+    }
+
+    BindlessIndexReportLog::~BindlessIndexReportLog() = default;
+
+    bool BindlessIndexReportLog::report( RHIBindlessIndexSpace space, RHIDescriptorIndex index, const hashed_string& passName,
                                          const hashed_string& fieldName, uint32 element )
     {
         const BindlessSiteKey siteKey = BindlessIndexValidatorInternal::makeSiteKey( passName, fieldName, element );
         {
-            ScopedLock<mutex> lock{ s_reportMutex };
-            if ( s_uniqueReportedSite.insert( siteKey ).second == false )
+            ScopedLock<mutex> lock{ _pState->_mutex };
+            if ( _pState->_uniqueReportedSite.insert( siteKey ).second == false )
                 return false;
         }
         const utf8* pPassName  = passName.empty() ? "<no pass>" : passName.c_str();
@@ -88,12 +98,12 @@ namespace sw
         return true;
     }
 
-    bool BindlessIndexValidator::recordAbsent( const hashed_string& passName, const hashed_string& fieldName, uint32 element )
+    bool BindlessIndexReportLog::recordAbsent( const hashed_string& passName, const hashed_string& fieldName, uint32 element )
     {
         const BindlessSiteKey siteKey = BindlessIndexValidatorInternal::makeSiteKey( passName, fieldName, element );
         {
-            ScopedLock<mutex> lock{ s_reportMutex };
-            if ( s_uniqueAbsentSite.insert( siteKey ).second == false )
+            ScopedLock<mutex> lock{ _pState->_mutex };
+            if ( _pState->_uniqueAbsentSite.insert( siteKey ).second == false )
                 return false;
         }
         SW_LOG_INFO_ID( "BindlessIndexValidator.PassFieldAbsentKInvalidDescriptorIndex", "[BindlessIndex] pass '%#' field '%#'[%#] = absent (kInvalidDescriptorIndex) — the shader must not form a descriptor address from it",
@@ -101,23 +111,23 @@ namespace sw
         return true;
     }
 
-    uint32 BindlessIndexValidator::getReportCount()
+    uint32 BindlessIndexReportLog::getReportCount() const
     {
-        ScopedLock<mutex> lock{ s_reportMutex };
-        return static_cast<uint32>( s_uniqueReportedSite.size() );
+        ScopedLock<mutex> lock{ _pState->_mutex };
+        return static_cast<uint32>( _pState->_uniqueReportedSite.size() );
     }
 
-    uint32 BindlessIndexValidator::getAbsentNoteCount()
+    uint32 BindlessIndexReportLog::getAbsentNoteCount() const
     {
-        ScopedLock<mutex> lock{ s_reportMutex };
-        return static_cast<uint32>( s_uniqueAbsentSite.size() );
+        ScopedLock<mutex> lock{ _pState->_mutex };
+        return static_cast<uint32>( _pState->_uniqueAbsentSite.size() );
     }
 
-    void BindlessIndexValidator::clearReports()
+    void BindlessIndexReportLog::clear()
     {
-        ScopedLock<mutex> lock{ s_reportMutex };
-        // 저장소까지 놓는다 — clear 는 버킷을 남겨 테스트가 비운 뒤에도 종료 누수 보고에 찍혔다.
-        s_uniqueReportedSite = unordered_set<BindlessSiteKey>{};
-        s_uniqueAbsentSite   = unordered_set<BindlessSiteKey>{};
+        ScopedLock<mutex> lock{ _pState->_mutex };
+        // 저장소까지 놓는다 — clear 는 버킷을 남긴다.
+        _pState->_uniqueReportedSite = unordered_set<BindlessSiteKey>{};
+        _pState->_uniqueAbsentSite   = unordered_set<BindlessSiteKey>{};
     }
 } // namespace sw

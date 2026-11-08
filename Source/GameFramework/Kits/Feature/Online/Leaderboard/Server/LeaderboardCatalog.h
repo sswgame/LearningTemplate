@@ -46,8 +46,8 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `LeaderboardCatalog.cpp` 의 줄이 로더를 더한다). */
         static constexpr AssetTypeDef kAssetType{ "LeaderboardCatalog", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        const vector<LeaderboardDef>& getBoards() const { return _listBoard; }
-        const vector<AchievementDef>& getAchievements() const { return _listAchievement; }
+        const vector<LeaderboardDef>&       getBoards() const { return _listBoard; }
+        const vector<OnlineAchievementDef>& getAchievements() const { return _listAchievement; }
 
     private:
         static constexpr const utf8* kXMLRootName = "LeaderboardCatalog";
@@ -57,8 +57,8 @@ namespace sw
         [[nodiscard]] static bool readBoard( const XMLNode& node, string_view sourceName, LeaderboardDef& outBoard );
 
     private:
-        vector<LeaderboardDef> _listBoard{};
-        vector<AchievementDef> _listAchievement{};
+        vector<LeaderboardDef>       _listBoard{};
+        vector<OnlineAchievementDef> _listAchievement{};
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<LeaderboardCatalog>::acquire` 로 한 벌을 받습니다. */

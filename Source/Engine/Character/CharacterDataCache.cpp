@@ -2,6 +2,7 @@
 
 #include "Engine/Character/CharacterDataCache.h"
 
+#include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Notify/AnimationNotifyTable.h"
@@ -21,26 +22,19 @@ namespace sw
     {
         struct CharacterDataCacheInternal
         {
-            [[nodiscard]] static bool loadDefaultKinds( SocketKindTable& outKinds )
-            {
-                if ( outKinds.loadDefault() )
-                    return true;
-                SW_LOG_ERROR_ID( "CharacterDataCache.DefaultSocketKindsCould", "Default socket kinds could not be loaded - no socket asset is handed out" );
-                return false;
-            }
-
-            /** @brief 엔진 기본 소켓 종류 표입니다. 읽지 못했으면 nullptr 입니다(오류는 한 번) — 종류 검사를 건너뛴 반쪽 소켓을 내주지 않습니다. */
-            static const SocketKindTable* findDefaultKinds()
-            {
-                static SocketKindTable s_kinds;
-                static const bool      s_bLoaded = loadDefaultKinds( s_kinds );
-                return s_bLoaded ? &s_kinds : nullptr;
-            }
-
+            /**
+             * @brief 소켓 세트 하나를 엔진 기본 소켓 종류 표로 검사하며 읽습니다. 종류 표를 읽지 못하면 내주지 않습니다(종류 검사를 건너뛴 반쪽 소켓을 내주지 않는다).
+             * @details 종류 표는 읽을 때마다 짓는다 — 소켓 세트는 공유 캐시가 한 번 읽어 나누므로 드물고, 읽은 표를 함수 정적(감춘 싱글턴)에 두지 않는다.
+             */
             [[nodiscard]] static bool loadSocketSet( const AssetID& assetID, SocketSet& outSocketSet )
             {
-                const SocketKindTable* pKinds = findDefaultKinds();
-                return pKinds != nullptr && outSocketSet.loadFromAsset( assetID, *pKinds );
+                SocketKindTable kinds;
+                if ( kinds.loadDefault() == false )
+                {
+                    SW_LOG_ERROR_ONCE_ID( "CharacterDataCache.DefaultSocketKindsCould", "Default socket kinds could not be loaded - no socket asset is handed out" );
+                    return false;
+                }
+                return outSocketSet.loadFromAsset( assetID, kinds );
             }
             [[nodiscard]] static bool loadNotifyTable( const AssetID& assetID, AnimationNotifyTable& outTable ) { return outTable.loadFromAsset( assetID, sw::engine::getSubsystem<AnimationNotifyHandlerRegistry>() ); }
             /** @brief 엔진 기본 연산(`FitSolver` 가 등록하는 넷)으로 연산 이름 · 인자를 대조합니다. 사용자 연산을 쓰는 표는 자기 풀이기로 직접 읽습니다. */

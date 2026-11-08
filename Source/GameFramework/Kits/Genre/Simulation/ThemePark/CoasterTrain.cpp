@@ -203,6 +203,7 @@ namespace sw
         _elapsedTime += deltaTime;
 
         // G: 속도 벡터의 변화(가속도)에 중력을 되돌려 더한 것이 탑승자가 느끼는 힘이다(서 있으면 위로 1G).
+        const float32           gravity  = _params._gravity;
         const CoasterTrackFrame newFrame = _pTrack->sample( _distance );
         const float3            velocity = newFrame._forward * _speed;
         if ( _bHasPreviousVelocity == SW_TRUE )
