@@ -476,9 +476,9 @@ SW_TEST_CASE( AIDirectorProfileTest, CollectsEveryEncounterIDOnce )
     vector<hashed_string> listID;
     rig._profile.collectEncounterIDs( listID );
     SW_EXPECT_EQUAL( size_t( 3 ), listID.size() );
-    SW_EXPECT_EQUAL( 1, rig._profile.findPhaseIndex( hashed_string( "Peak" ) ) );
-    SW_EXPECT_EQUAL( -1, rig._profile.findPhaseIndex( hashed_string( "Nothing" ) ) );
-    SW_EXPECT_EQUAL( 2, rig._profile.findSignalIndex( hashed_string( "low" ) ) );
+    SW_EXPECT_TRUE( rig._profile.findPhaseIndex( hashed_string( "Peak" ) ) == 1u );
+    SW_EXPECT_FALSE( rig._profile.findPhaseIndex( hashed_string( "Nothing" ) ).has_value() );
+    SW_EXPECT_TRUE( rig._profile.findSignalIndex( hashed_string( "low" ) ) == 2u );
 }
 
 /**
@@ -495,9 +495,9 @@ SW_TEST_CASE( AIDirectorProfileTest, SharedCacheGivesOneObjectAndReloadDetaches 
     const shared_ptr<const AIDirectorProfile> pAgain = SharedAssetCache<AIDirectorProfile>::acquire( id );
     SW_REQUIRE_TRUE( pHeld != nullptr );
     SW_EXPECT_TRUE( pHeld.get() == pAgain.get() );
-    const int32 peak = pHeld->findPhaseIndex( hashed_string( "Peak" ) );
-    SW_REQUIRE_TRUE( peak >= 0 );
-    SW_EXPECT_NEAR( 2.0f, pHeld->getPhases()[static_cast<size_t>( peak )]._spawnScale, 0.0001f );
+    const optional<uint32> peak = pHeld->findPhaseIndex( hashed_string( "Peak" ) );
+    SW_REQUIRE_TRUE( peak.has_value() );
+    SW_EXPECT_NEAR( 2.0f, pHeld->getPhases()[*peak]._spawnScale, 0.0001f );
 
     string       changed = DirectorRig::kProfileXML;
     const size_t at      = changed.find( "<Phase id=\"Peak\" spawnScale=\"2\">" );
@@ -505,12 +505,12 @@ SW_TEST_CASE( AIDirectorProfileTest, SharedCacheGivesOneObjectAndReloadDetaches 
     changed.replace( at, string_view( "<Phase id=\"Peak\" spawnScale=\"2\">" ).size(), "<Phase id=\"Peak\" spawnScale=\"3\">" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "arena.director.xml" ), changed ) );
     SW_REQUIRE_TRUE( SharedAssetCache<AIDirectorProfile>::reloadShared( id ) );
-    SW_EXPECT_NEAR( 2.0f, pHeld->getPhases()[static_cast<size_t>( peak )]._spawnScale, 0.0001f ); // 쥔 쪽은 옛 객체 그대로(Detach)
+    SW_EXPECT_NEAR( 2.0f, pHeld->getPhases()[*peak]._spawnScale, 0.0001f ); // 쥔 쪽은 옛 객체 그대로(Detach)
 
     const shared_ptr<const AIDirectorProfile> pFresh = SharedAssetCache<AIDirectorProfile>::acquire( id );
     SW_REQUIRE_TRUE( pFresh != nullptr );
     SW_EXPECT_TRUE( pFresh.get() != pHeld.get() );
-    SW_EXPECT_NEAR( 3.0f, pFresh->getPhases()[static_cast<size_t>( peak )]._spawnScale, 0.0001f );
+    SW_EXPECT_NEAR( 3.0f, pFresh->getPhases()[*peak]._spawnScale, 0.0001f );
 }
 
 /**

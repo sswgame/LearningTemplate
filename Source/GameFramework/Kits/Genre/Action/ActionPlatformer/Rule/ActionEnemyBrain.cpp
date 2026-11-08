@@ -2,8 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Rule/ActionEnemyBrain.h"
 
-#include "Core/Foundation/Constants.h"
-
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -14,7 +12,7 @@ namespace sw
     ActionEnemyBrain::ActionEnemyBrain()
         : _pPattern{ nullptr }
         , _pCatalog{ nullptr }
-        , _stateIndex{ constant::invalid_index::kInt32 }
+        , _stateIndex{}
         , _stateFrame{ 0 }
         , _facing{ 1 }
         , _bEntered{ SW_FALSE }
@@ -24,18 +22,18 @@ namespace sw
     bool ActionEnemyBrain::initialize( const ActionPatternDef* pPattern, int32 facing )
     {
         setFacing( facing );
-        const int32 startIndex = pPattern != nullptr ? pPattern->findStateIndex( pPattern->_start ) : constant::invalid_index::kInt32;
-        if ( startIndex < 0 )
+        const optional<uint32> startIndex = pPattern != nullptr ? pPattern->findStateIndex( pPattern->_start ) : nullopt;
+        if ( startIndex.has_value() == false )
         {
             // 첫 상태로 대신 시작하지 않는다. 실패하면 앞 패턴의 진행도 남기지 않는다.
             _pPattern   = nullptr;
-            _stateIndex = constant::invalid_index::kInt32;
+            _stateIndex = nullopt;
             _stateFrame = 0;
             _bEntered   = SW_FALSE;
             return false;
         }
         _pPattern = pPattern;
-        enterState( startIndex );
+        enterState( *startIndex );
         return true;
     }
 
@@ -49,15 +47,15 @@ namespace sw
         if ( _bEntered == SW_FALSE )
         {
             ++_stateFrame;
-            int32 targetIndex = constant::invalid_index::kInt32;
+            optional<uint32> targetIndex;
             if ( pState->_onNear.empty() == false && playerDistance <= pState->_nearRange )
                 targetIndex = _pPattern->findStateIndex( pState->_onNear );
-            const bool bShouldAdvanceToNextState = targetIndex < 0 && pState->_next.empty() == false && _stateFrame >= pState->_frames;
+            const bool bShouldAdvanceToNextState = targetIndex.has_value() == false && pState->_next.empty() == false && _stateFrame >= pState->_frames;
             if ( bShouldAdvanceToNextState )
                 targetIndex = _pPattern->findStateIndex( pState->_next );
-            if ( targetIndex >= 0 && targetIndex != _stateIndex )
-                enterState( targetIndex );
-            else if ( targetIndex == _stateIndex )
+            if ( targetIndex.has_value() && targetIndex != _stateIndex )
+                enterState( *targetIndex );
+            else if ( targetIndex.has_value() )
                 _stateFrame = 0; // 같은 상태로 머물고 시간만 다시 센다
             pState = getState();
         }
@@ -78,10 +76,10 @@ namespace sw
         const ActionPatternStateDef* pState = getState();
         if ( pState == nullptr || pState->_onHit.empty() )
             return false;
-        const int32 targetIndex = _pPattern->findStateIndex( pState->_onHit );
-        if ( targetIndex < 0 )
+        const optional<uint32> targetIndex = _pPattern->findStateIndex( pState->_onHit );
+        if ( targetIndex.has_value() == false )
             return false;
-        enterState( targetIndex );
+        enterState( *targetIndex );
         return true;
     }
 
@@ -94,7 +92,7 @@ namespace sw
         return s_empty;
     }
 
-    void ActionEnemyBrain::enterState( int32 stateIndex )
+    void ActionEnemyBrain::enterState( uint32 stateIndex )
     {
         _stateIndex = stateIndex;
         _stateFrame = 0;
@@ -103,10 +101,10 @@ namespace sw
 
     const ActionPatternStateDef* ActionEnemyBrain::getState() const
     {
-        const bool bStateIndexInvalid = _pPattern == nullptr || _stateIndex < 0 || _stateIndex >= static_cast<int32>( _pPattern->_listState.size() );
+        const bool bStateIndexInvalid = _pPattern == nullptr || _stateIndex.has_value() == false || *_stateIndex >= _pPattern->_listState.size();
         if ( bStateIndexInvalid )
             return nullptr;
-        return &_pPattern->_listState[static_cast<size_t>( _stateIndex )];
+        return &_pPattern->_listState[*_stateIndex];
     }
 
     void ActionEnemyBrain::serializeState( StateIO& io )
@@ -121,8 +119,8 @@ namespace sw
         io.check( 0 <= _stateFrame && ( _facing == -1 || _facing == 1 ) );
         if ( io.isReading() )
         {
-            _stateIndex = _pPattern != nullptr && stateID.empty() == false ? _pPattern->findStateIndex( stateID ) : constant::invalid_index::kInt32;
-            io.check( stateID.empty() || _stateIndex >= 0 ); // 이름이 있는데 찾지 못하면 다른 데이터의 바이트다
+            _stateIndex = _pPattern != nullptr && stateID.empty() == false ? _pPattern->findStateIndex( stateID ) : nullopt;
+            io.check( stateID.empty() || _stateIndex.has_value() ); // 이름이 있는데 찾지 못하면 다른 데이터의 바이트다
         }
     }
 

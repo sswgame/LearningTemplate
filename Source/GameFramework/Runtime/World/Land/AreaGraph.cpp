@@ -108,15 +108,17 @@ namespace sw
     {
         outbInvalidCondition = false;
         AreaLink link;
-        link._from              = from;
-        link._to                = to;
-        link._kind              = kind;
-        link._fromIndex         = _catalog.findIndex( from );
-        link._toIndex           = _catalog.findIndex( to );
-        link._bOneWay           = bOneWay ? SW_TRUE : SW_FALSE;
-        const bool bInvalidLink = link._fromIndex < 0 || link._toIndex < 0 || link._fromIndex == link._toIndex;
+        link._from               = from;
+        link._to                 = to;
+        link._kind               = kind;
+        link._bOneWay            = bOneWay ? SW_TRUE : SW_FALSE;
+        const int32 fromIndex    = _catalog.findIndex( from );
+        const int32 toIndex      = _catalog.findIndex( to );
+        const bool  bInvalidLink = fromIndex < 0 || toIndex < 0 || fromIndex == toIndex;
         if ( bInvalidLink )
             return false;
+        link._fromIndex = static_cast<uint32>( fromIndex );
+        link._toIndex   = static_cast<uint32>( toIndex );
         // 틀린 조건은 부르는 쪽이 어느 연결인지 함께 경고한다
         if ( ConditionExpr::tryCompile( condition, link._requires ).has_value() == false )
         {
@@ -124,8 +126,8 @@ namespace sw
             outbInvalidCondition    = true;
         }
         const int32 linkIndex = static_cast<int32>( _listLink.size() );
-        _listAdjacency[static_cast<size_t>( link._fromIndex )].push_back( linkIndex );
-        _listAdjacency[static_cast<size_t>( link._toIndex )].push_back( linkIndex );
+        _listAdjacency[link._fromIndex].push_back( linkIndex );
+        _listAdjacency[link._toIndex].push_back( linkIndex );
         _listLink.push_back( link );
         return true;
     }
@@ -137,13 +139,13 @@ namespace sw
         _visitedCount = 0;
     }
 
-    int32 AreaGraph::findOtherSide( const AreaLink& link, int32 fromIndex ) const
+    optional<uint32> AreaGraph::findOtherSide( const AreaLink& link, uint32 fromIndex ) const
     {
         if ( link._fromIndex == fromIndex )
             return link._toIndex;
         if ( link._toIndex == fromIndex && link._bOneWay == SW_FALSE )
             return link._fromIndex;
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool AreaGraph::isUnlocked( const AreaLink& link, const GameFlags& flags ) const
@@ -173,9 +175,9 @@ namespace sw
         markVisited( areaIndex );
         for ( const int32 linkIndex : _listAdjacency[static_cast<size_t>( areaIndex )] )
         {
-            const int32 otherIndex = findOtherSide( _listLink[static_cast<size_t>( linkIndex )], areaIndex );
-            if ( otherIndex >= 0 )
-                _listDiscovered[static_cast<size_t>( otherIndex )] = SW_TRUE;
+            const optional<uint32> otherIndex = findOtherSide( _listLink[static_cast<size_t>( linkIndex )], static_cast<uint32>( areaIndex ) );
+            if ( otherIndex.has_value() )
+                _listDiscovered[*otherIndex] = SW_TRUE;
         }
         return bFirstVisit;
     }
@@ -212,7 +214,7 @@ namespace sw
         for ( const int32 linkIndex : _listAdjacency[static_cast<size_t>( fromIndex )] )
         {
             const AreaLink& link = _listLink[static_cast<size_t>( linkIndex )];
-            if ( findOtherSide( link, fromIndex ) == toIndex && isUnlocked( link, flags ) )
+            if ( findOtherSide( link, static_cast<uint32>( fromIndex ) ) == static_cast<uint32>( toIndex ) && isUnlocked( link, flags ) )
                 return true;
         }
         return false;
@@ -249,11 +251,11 @@ namespace sw
             {
                 if ( listUnlocked[static_cast<size_t>( linkIndex )] == SW_FALSE )
                     continue;
-                const int32 otherIndex = findOtherSide( _listLink[static_cast<size_t>( linkIndex )], areaIndex );
-                if ( otherIndex < 0 || listParent[static_cast<size_t>( otherIndex )] != -2 )
+                const optional<uint32> otherIndex = findOtherSide( _listLink[static_cast<size_t>( linkIndex )], static_cast<uint32>( areaIndex ) );
+                if ( otherIndex.has_value() == false || listParent[*otherIndex] != -2 )
                     continue;
-                listParent[static_cast<size_t>( otherIndex )] = areaIndex;
-                listQueue.push_back( otherIndex );
+                listParent[*otherIndex] = areaIndex;
+                listQueue.push_back( static_cast<int32>( *otherIndex ) );
             }
         }
         if ( listParent[static_cast<size_t>( toIndex )] == -2 )

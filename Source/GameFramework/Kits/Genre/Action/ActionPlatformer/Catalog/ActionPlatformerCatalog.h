@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -194,8 +195,8 @@ namespace sw
         hashed_string                 _start{}; ///< 상태 목록에 있는 id 여야 한다
         vector<ActionPatternStateDef> _listState{};
 
-        /** @brief 상태 인덱스를 반환합니다. 없으면 −1 입니다. */
-        int32 findStateIndex( const hashed_string& stateID ) const;
+        /** @brief 상태 인덱스를 반환합니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findStateIndex( const hashed_string& stateID ) const;
     };
 } // namespace sw
 

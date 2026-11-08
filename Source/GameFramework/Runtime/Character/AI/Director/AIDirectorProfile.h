@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -84,8 +85,8 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Required )
-        hashed_string _to{};
-        int32         _toIndex{ -1 };
+        hashed_string    _to{};
+        optional<uint32> _toIndex{}; ///< 읽을 때 푼 `_to` 의 단계 번호(`resolveReferences` — 모르는 이름이면 읽기 실패)
         PROPERTY( Min = 0.0, Tooltip = "Time spent in the phase is at least this", Units = s )
         float32 _minTime{ 0.0f };
         PROPERTY( Tooltip = "Intensity is at least this; negative is no clause" )
@@ -215,8 +216,8 @@ namespace sw
         PROPERTY( Min = 0.0 )
         float32 _maxBudget{ 5.0f };
         PROPERTY()
-        float32 _needScale{ 0.0f };
-        int32   _phaseIndex{ -1 };
+        float32          _needScale{ 0.0f };
+        optional<uint32> _phaseIndex{}; ///< `PhaseEnter` 풀이 기다리는 단계 번호(읽을 때 푼다). 다른 트리거는 비어 있다
         PROPERTY( Min = 1 )
         int32 _picks{ 1 };
         PROPERTY() ///< 적지 않으면 조우 풀이다
@@ -268,13 +269,14 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
 
-        int32 findPhaseIndex( const hashed_string& phaseID ) const;
-        int32 findSignalIndex( const hashed_string& signalID ) const;
+        [[nodiscard]] optional<uint32> findPhaseIndex( const hashed_string& phaseID ) const;
+        [[nodiscard]] optional<uint32> findSignalIndex( const hashed_string& signalID ) const;
 
         const AIDirectorIntensityDef&     getIntensity() const { return _intensity; }
         const vector<AIDirectorPhaseDef>& getPhases() const { return _listPhase; }
         const vector<AIDirectorPoolDef>&  getPools() const { return _listPool; }
-        int32                             getStartPhaseIndex() const { return _startPhaseIndex; }
+        /** @brief 시작 단계 번호입니다. 읽은 프로필이면 늘 있다(없으면 읽기 실패) — 읽지 않은 프로필이면 비어 있다. */
+        optional<uint32> getStartPhaseIndex() const { return _startPhaseIndex; }
         /** @brief 이 프로필이 내는 모든 조우와 보상 id 를 @p outListID 에 겹치지 않게 붙입니다. 게임이 아는 id 인지 검사할 때 씁니다. */
         void collectEncounterIDs( vector<hashed_string>& outListID ) const;
 
@@ -293,7 +295,7 @@ namespace sw
         vector<AIDirectorPhaseDef> _listPhase;
         vector<AIDirectorPoolDef>  _listPool;
         hashed_string              _startPhase;
-        int32                      _startPhaseIndex;
+        optional<uint32>           _startPhaseIndex;
     };
 
     /**

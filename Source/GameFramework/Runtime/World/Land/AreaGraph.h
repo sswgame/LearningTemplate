@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -75,10 +76,10 @@ namespace sw
     {
         hashed_string _from{};
         hashed_string _to{};
-        hashed_string _kind{};     ///< `Door`, `Passage`, `Vent` … 게임이 정한다
-        ConditionExpr _requires{}; ///< 읽을 때 컴파일한 플래그 조건식. 비면 늘 열려 있다
-        int32         _fromIndex{ constant::invalid_index::kInt32 };
-        int32         _toIndex{ constant::invalid_index::kInt32 };
+        hashed_string _kind{};                        ///< `Door`, `Passage`, `Vent` … 게임이 정한다
+        ConditionExpr _requires{};                    ///< 읽을 때 컴파일한 플래그 조건식. 비면 늘 열려 있다
+        uint32        _fromIndex{ 0 };                ///< `_from` 의 방 번호. 두 방이 모두 표에 있는 연결만 남는다(`addLink`)
+        uint32        _toIndex{ 0 };                  ///< `_to` 의 방 번호
         uint8         _bOneWay{ SW_FALSE };           ///< `_from` → `_to` 로만 지난다
         uint8         _bInvalidCondition{ SW_FALSE }; ///< 조건식이 문법에 맞지 않았다. 늘 잠기며 읽을 때 한 번만 경고한다
     };
@@ -183,11 +184,11 @@ namespace sw
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         [[nodiscard]] bool           loadArea( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadLink( const XMLNode& node, string_view sourceName );
-        /** @brief 연결을 @p fromIndex 쪽에서 지나면 닿는 방을 반환합니다. 그 방향으로 지날 수 없으면 -1 이며, 잠금은 보지 않습니다. */
-        int32 findOtherSide( const AreaLink& link, int32 fromIndex ) const;
-        bool  isUnlocked( const AreaLink& link, const GameFlags& flags ) const;
-        void  markVisited( int32 areaIndex );
-        void  fillMarkedAreas( const vector<uint8>& listMark, vector<hashed_string>& outListArea ) const;
+        /** @brief 연결을 @p fromIndex 쪽에서 지나면 닿는 방을 반환합니다. 그 방향으로 지날 수 없으면 비어 있으며, 잠금은 보지 않습니다. */
+        [[nodiscard]] optional<uint32> findOtherSide( const AreaLink& link, uint32 fromIndex ) const;
+        bool                           isUnlocked( const AreaLink& link, const GameFlags& flags ) const;
+        void                           markVisited( int32 areaIndex );
+        void                           fillMarkedAreas( const vector<uint8>& listMark, vector<hashed_string>& outListArea ) const;
 
     private:
         GameCatalog<AreaDef>  _catalog;
