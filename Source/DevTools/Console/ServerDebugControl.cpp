@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "DevTools/Console/ServerDebugControl.h"
+
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/NetTypes.h"
@@ -10,8 +12,6 @@
 #include "DevTools/Console/DevConsole.h"
 
 #include "Engine/Observability/DebugChannel.h"
-
-#include "Server/IServerDebugControl.h"
 
 // 개발 구성에만 있다 — 배포는 짓지 않고 `ServerApp` 이 `build::kShipping` 이 아닐 때만 만든다.
 

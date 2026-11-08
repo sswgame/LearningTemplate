@@ -58,6 +58,11 @@ namespace sw
 
         /** @brief @p pModuleName 모듈과 그것에 의존하는 모듈의 리로드를 요청합니다(단축키 · 개발 명령). 실제 교체는 `update` 가 합니다. */
         void requestReload( const utf8* pModuleName );
+        /**
+         * @brief 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신하고, 리로드 단축키가 눌렸으면 리로드를 요청합니다(Ctrl+F7 게임, 에디터 모드의 Ctrl+F6 에디터).
+         * @details 예전에는 App 의 `AppDevTools` 가 들었다 — 리로드 요청의 주인인 이 구동기로 옮겼다(배포에는 개발 계층이 없어 부르지 않는다).
+         */
+        void pollShellActions( float32 deltaTime, bool bEnableEditor );
         /** @brief 요청된 모듈 교체를 실행합니다. **틱 직전**(게임 업데이트 뒤, 씬 틱 앞)에 부릅니다. 여기서 DLL 이 바뀌고 인스턴스가 새로 만들어집니다. */
         void update();
 

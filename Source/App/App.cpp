@@ -2,7 +2,6 @@
 
 #include "App/App.h"
 
-#include "App/AppAssertDialog.h"
 #include "App/AppHeadlessTasks.h"
 #include "App/EditorModuleManager.h"
 
@@ -12,6 +11,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
+
+#include "DevTools/Client/Diagnostics/AssertDialog.h"
 
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -119,7 +120,7 @@ namespace sw
         , _pAutomation{ nullptr }
         , _pWindow{ nullptr }
         , _fixedTimestep{}
-        , _backendSwitcher{}
+        , _pBackendSwitcher{}
         , _userSettingsHost{}
         , _runtimeUIHost{}
         , _sceneViewCameraProvider{}
@@ -136,6 +137,9 @@ namespace sw
         , _bActiveSceneSeen{ SW_FALSE }
         , _reserved{ 0 }
     {
+        // 백엔드 교체기는 개발 구성에만 있다(`App/Dev/` — 배포 구성은 짓지 않는다). 렌더 스레드 훅이 호스트 서비스보다 먼저 묶으므로 여기서 만든다.
+        if constexpr ( build::kShipping == false )
+            _pBackendSwitcher = make_unique<RHIBackendSwitcher>();
     }
 
     App::~App() = default;
@@ -336,9 +340,15 @@ namespace sw
             }
             case HostServiceID::BackendSwitcher:
             {
-                _backendSwitcher.initialize( &_launch.getEngine(), getModuleManager(), bEnableEditor );
-                // 시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` 가 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾는다(엔진 범위 → 호스트 범위).
-                return _launch.getHostScope().bind( &_backendSwitcher );
+                // 실행 중 백엔드 교체는 개발 기능이다(App/Dev — 언리얼도 RHI 변경은 재시작). 배포는 교체기가 없어 설 것이 없다.
+                if constexpr ( build::kShipping )
+                    return true;
+                else
+                {
+                    _pBackendSwitcher->initialize( &_launch.getEngine(), getModuleManager(), bEnableEditor );
+                    // 시나리오 단계 `SwapBackend` 와 감시 값 `RHI.*` 가 `engine::findSubsystem<RHIBackendSwitcher>()` 로 찾는다(엔진 범위 → 호스트 범위).
+                    return _launch.getHostScope().bind( _pBackendSwitcher.get() );
+                }
             }
             case HostServiceID::UserSettings:
             {
@@ -386,8 +396,11 @@ namespace sw
             case HostServiceID::BackendSwitcher:
             {
                 // 범위에서 먼저 풀어 자동화가 내려간 교체기를 찾지 않게 한다. 전역 변수 훅은 GlobalVariableManager(엔진 소유)가 사라지기 전에 뗀다.
-                _launch.getHostScope().unbind<RHIBackendSwitcher>();
-                _backendSwitcher.shutdown();
+                if constexpr ( build::kShipping == false )
+                {
+                    _launch.getHostScope().unbind<RHIBackendSwitcher>();
+                    _pBackendSwitcher->shutdown();
+                }
                 return;
             }
             case HostServiceID::UserSettings:
@@ -431,16 +444,22 @@ namespace sw
             _sceneViewCameraProvider = SW_DELEGATE_METHOD( ViewCameraProviderDelegate, &EditorModuleManager::getSceneViewCamera, static_cast<const EditorModuleManager*>( getModuleManager() ) );
             // 에디터 창은 패널 배치가 겹치는 크기 아래로 줄이지 않는다(언리얼 메인 프레임과 유니티 에디터 창도 최소 크기를 둔다).
             _pWindow->setMinimumClientSize( AppInternal::kEditorMinClientWidth, AppInternal::kEditorMinClientHeight );
-            // 대화형 에디터 실행에서만 단언을 묻는다(Windows Debug). 자동 실행과 테스트는 기존처럼 멈춘다.
-            const CommandLineManager* pCommandLine = _launch.getEngine().getCommandLineManager();
-            if ( pCommandLine != nullptr )
-                AppAssertDialog::installForInteractiveRun( *pCommandLine );
+            // 대화형 에디터 실행에서만 단언을 묻는다(Windows Debug). 자동 실행과 테스트는 기존처럼 멈춘다. 대화상자는 개발 도구다(배포는 DevTools 를 링크하지 않는다).
+            if constexpr ( build::kShipping == false )
+            {
+                const CommandLineManager* pCommandLine = _launch.getEngine().getCommandLineManager();
+                if ( pCommandLine != nullptr )
+                    AssertDialog::installForInteractiveRun( *pCommandLine );
+            }
         }
 
         // 개발 도구의 프레임 시작 훅은 렌더 스레드에 바로 건다(엔진은 렌더 스레드를 빌려 줄 뿐 훅을 중계하지 않는다). 헤드리스가 아닌 클라이언트에는 늘 있다.
-        // 에디터 렌더 훅은 게임 호스트 서비스와 함께 걸고 뗀다(`bindEditorRenderHooks`).
-        if ( RenderThread* const pRenderThread = _launch.getEngine().getRenderThread() )
-            AppDevTools::bindRenderThreadHooks( *pRenderThread, _backendSwitcher );
+        // 에디터 렌더 훅은 게임 호스트 서비스와 함께 걸고 뗀다(`bindEditorRenderHooks`). 백엔드 교체기는 개발 구성에만 있다(`App/Dev/`).
+        if constexpr ( build::kShipping == false )
+        {
+            if ( RenderThread* const pRenderThread = _launch.getEngine().getRenderThread() )
+                _pBackendSwitcher->bindRenderThreadHook( *pRenderThread );
+        }
     }
 
     void App::bindEditorRenderHooks( bool bBind )
@@ -551,7 +570,7 @@ namespace sw
 
         // 셸 액션(리로드 단축키 · 개발 콘솔 키)을 이번 프레임 것으로 갱신한 뒤 읽는다(콘솔은 씬 틱 뒤 개발 도구 관찰자). Shipping 에는 둘 다 없어 셸 InputMap 도 로드하지 않는다.
         if ( _launch.getDevLayer() != nullptr )
-            AppDevTools::pollShellActions( frameTime._deltaTime, *_launch.getDevLayer(), _bEnableEditor == SW_TRUE );
+            _launch.getDevLayer()->pollShellActions( frameTime._deltaTime, _bEnableEditor == SW_TRUE );
 
         getModuleManager()->updateGameFrame( frameTime._fixedDeltaTime, frameTime._fixedStepCount, frameTime._deltaTime );
 
@@ -576,7 +595,8 @@ namespace sw
         _launch.getEngine().update( frameTime._deltaTime, frameState._views, _sceneViewCameraProvider, frameState._bTickScene == SW_TRUE );
         getModuleManager()->endEditorFrame();
 
-        _backendSwitcher.applyIfPending();
+        if constexpr ( build::kShipping == false )
+            _pBackendSwitcher->applyIfPending();
 
         _launch.getEngine().endFrame();
         onStartupFrameEnded();

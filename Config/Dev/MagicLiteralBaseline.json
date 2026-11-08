@@ -3,7 +3,7 @@
   "_files": {
     "Source/App/App.cpp": {"minus-one": 1, "float": 4},
     "Source/App/AppHeadlessTasks.cpp": {"integer": 2},
-    "Source/App/RHIBackendSwitcher.cpp": {"integer": 4},
+    "Source/App/Dev/RHIBackendSwitcher.cpp": {"integer": 4},
     "Source/Core/Compression/CompressionCodecType.h": {"integer": 1},
     "Source/Core/Compression/CompressionStream.h": {"integer": 1},
     "Source/Core/Compression/RleCompressionCodec.cpp": {"integer": 3, "hex": 3},
@@ -1106,7 +1106,7 @@
     "Source/Programs/ReflectionParser/PropertyResolver.cpp": {"integer": 1},
     "Source/Programs/ReflectionParser/ReflectionParser.cpp": {"float": 1},
     "Source/Programs/ReflectionParser/SourceTokens.cpp": {"minus-one": 1},
-    "Source/Server/ServerObservability.cpp": {"float": 3},
+    "Source/Engine/DedicatedServer/ServerObservability.cpp": {"float": 3},
     "Source/Server/Windows/WindowsServiceHost.cpp": {"minus-one": 1}
   }
 }

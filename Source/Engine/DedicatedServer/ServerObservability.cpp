@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Server/ServerObservability.h"
+#include "Engine/DedicatedServer/ServerObservability.h"
 
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"

@@ -1,6 +1,8 @@
 /**
- * @file RHIBackendSwitcher.h
+ * @file App/Dev/RHIBackendSwitcher.h
  * @brief gv_rhiBackend 변경을 받아 프레임 경계에서 그래픽 API 를 교체합니다(전역 변수 훅부터 모듈 재생성까지).
+ * @details 실행 중 교체 · 디바이스 제거 시험은 개발 기능이라 `App/Dev/` 에 둔다(배포는 짓지 않는다 — 언리얼도 RHI 변경은 재시작). 에디터 모듈을 다시 세우는 일이
+ *          App 전용 `EditorModuleManager` 를 알아야 해 DevTools 가 아니라 App 안의 개발 폴더다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -9,6 +11,7 @@
 namespace sw
 {
     class IRHIDevice;
+    class RenderThread;
     enum class RHIBackend : uint32;
 
     struct GlobalVariableInfo;
@@ -82,6 +85,8 @@ namespace sw
          * @param waitMilliseconds 1..kMaxDeviceLossDriverWaitMilliseconds. 아직 소비하지 않은 요청이 있으면 새 값으로 바꾼다.
          */
         void removeDeviceAfterDriverWaitForTest( uint32 waitMilliseconds );
+        /** @brief 렌더 스레드의 프레임 시작 훅(`onBeginFrameOnRenderThread`)을 겁니다. App 이 렌더 스레드를 얻은 뒤 한 번 부른다(예전 AppDevTools). */
+        void bindRenderThreadHook( RenderThread& renderThread );
         /** @brief 렌더 스레드 프레임 시작 훅입니다(`RenderThread::setBeginFrameHook` — App 이 프레젠트 훅과 같이 건다). 걸린 대기가 있으면 잠든 뒤 디바이스를 제거한다. */
         void onBeginFrameOnRenderThread( IRHIDevice& device );
 

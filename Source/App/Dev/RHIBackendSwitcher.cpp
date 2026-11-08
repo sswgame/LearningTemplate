@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "App/RHIBackendSwitcher.h"
+#include "App/Dev/RHIBackendSwitcher.h"
 
 #include "App/EditorModuleManager.h"
 
@@ -343,6 +343,11 @@ namespace sw
     {
         SW_ASSERT( 1u <= waitMilliseconds && waitMilliseconds <= kMaxDeviceLossDriverWaitMilliseconds );
         _pendingDeviceLossWaitMilliseconds.store( waitMilliseconds, std::memory_order_relaxed );
+    }
+
+    void RHIBackendSwitcher::bindRenderThreadHook( RenderThread& renderThread )
+    {
+        renderThread.setBeginFrameHook( SW_DELEGATE_METHOD( BeginFrameHookDelegate, &RHIBackendSwitcher::onBeginFrameOnRenderThread, this ) ); // 개발 명령 `rhi.removeDevice <ms>`
     }
 
     void RHIBackendSwitcher::onBeginFrameOnRenderThread( IRHIDevice& device )

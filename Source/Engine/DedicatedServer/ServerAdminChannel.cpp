@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Server/ServerAdminChannel.h"
+#include "Engine/DedicatedServer/ServerAdminChannel.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Network/NetTypes.h"

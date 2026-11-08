@@ -278,7 +278,7 @@
 | App/AppEntry · main.cpp · Android/AndroidMain.cpp · App.h/.cpp | 진입점 · 앱 본체 | 호스트 본체 | 그대로 | |
 | Server/ServerObservability (94/237) | 운영 지표 · 상태 · 운영 HTTP · 틱 지표 · 느린 틱 덤프 | **엔진 일(제품, 서버)** | Engine/DedicatedServer/ServerObservability | Engine/Observability · DedicatedServer 를 쓰고 서버 루프와는 델리게이트로만 잇는다. OpsHTTPEndpoint · ServiceHealthRegistry · ServerFrameHistory 가 이미 Engine/DedicatedServer |
 | Server/ServerAdminChannel (64/140) | 관리 채널(루프백 · 토큰, help · status · maintenance · shutdown), 모든 구성 | **엔진 일(제품, 서버)** | Engine/DedicatedServer/ServerAdminChannel | 위와 같다 — 서버 상태를 델리게이트로 묻는다(서버 루프를 모름) |
-| Server/IServerDebugControl.h (51) + Server/Dev/ServerDebugControl.cpp (247) | 서버 개발 조종(표준 입력 개발 명령 · 디버그 채널) | **개발** | DevTools/Console/ServerDebugControl(서버도 짓는 비클라이언트 DevTools) | DevTools/Console · Engine/Observability 만 씀. Server 는 DevTools 를 본다 |
+| DevTools/Console/ServerDebugControl.h (51) + DevTools/Console/ServerDebugControl.cpp (247) | 서버 개발 조종(표준 입력 개발 명령 · 디버그 채널) | **개발** | DevTools/Console/ServerDebugControl(서버도 짓는 비클라이언트 DevTools) | DevTools/Console · Engine/Observability 만 씀. Server 는 DevTools 를 본다 |
 | Server/ServerApp · main.cpp · Windows/WindowsServiceHost | 서버 본체 · OS 서비스 호스트 | 호스트 본체 | 그대로 | |
 
 → 옮기면 App 은 App · AppEntry · AppHeadlessTasks · EditorModuleManager(+ RHIBackendSwitcher 의 제품 쪽이 Engine 으로 가면 그것도 사라짐), Server 는 ServerApp · WindowsServiceHost 만 남는다.

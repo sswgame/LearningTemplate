@@ -9,11 +9,16 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Input/DebugKeyActions.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/InputMap.h"
 #include "Engine/Module/ModuleCatalog.h"
 
 #include "ModuleManager/Dev/LiveReload/LiveReloadManager.h"
 #include "ModuleManager/ModuleCatalogLoader.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
+
+#include "sw/config/ConfigConstants.h"
 
 // 개발 구성에만 있다(`ModuleManager/Dev/` — 배포는 폴더째 짓지 않는다). 호스트는 개발 계층(`IHostDevLayer`)으로만 닿는다.
 namespace sw
@@ -23,6 +28,9 @@ namespace sw
         /** @brief 개발 명령 `module.reload` 와 감시 값 `Module.*` 의 처리 함수입니다. 리로드 구동기는 호스트 범위에 걸려 있어 엔진 범위에서 올라가 찾습니다. */
         struct ModuleReloadDriverInternal
         {
+            /** @brief 에디터 모듈(EditorModule) 핫 리로드 단축키의 액션 이름(`default.input.xml` 의 Debug 레이어). 에디터를 올리는 App 만 부른다(배포본엔 리로드가 없다). */
+            static constexpr const utf8* kReloadEditorAction = "ReloadEditor";
+
             /** @brief 매니저가 살아 있는 구동기입니다. 범위에 없거나(엔진 밖) 씬 뒤 훅이 매니저를 내렸으면 nullptr 입니다. */
             static const LiveReloadManager* findManager()
             {
@@ -158,6 +166,24 @@ namespace sw
     {
         if ( _pState->_liveReloadManager != nullptr )
             _pState->_liveReloadManager->triggerReload( pModuleName );
+    }
+
+    void ModuleReloadDriver::pollShellActions( float32 deltaTime, bool bEnableEditor )
+    {
+        DebugKeyActions& debugKeys = engine::getSubsystem<DebugKeyActions>();
+        debugKeys.update( engine::getSubsystem<InputManager>(), deltaTime );
+
+        // 모듈을 다시 로드하는 장치는 호스트에 있다. 디버그 키 맵에는 "이 액션이 눌렸나"만 묻는다.
+        if ( debugKeys.wasActionTriggered( hashed_string( InputMapDefaults::kReloadGameAction ) ) )
+        {
+            requestReload( config::kTargetGameModule );
+            SW_LOG_INFO_ID( "App.ForceSWGameReload", "%#: force SWGame reload", InputMapDefaults::kReloadGameAction );
+        }
+        if ( bEnableEditor && debugKeys.wasActionTriggered( hashed_string( ModuleReloadDriverInternal::kReloadEditorAction ) ) )
+        {
+            requestReload( config::kTargetEditorModule );
+            SW_LOG_INFO_ID( "App.ForceEditorModuleReload", "%#: force EditorModule reload", ModuleReloadDriverInternal::kReloadEditorAction );
+        }
     }
 
     void ModuleReloadDriver::update()
