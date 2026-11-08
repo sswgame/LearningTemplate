@@ -24,14 +24,17 @@
         "Editor/Common/Commands/Diagnostics/EditorModuleDetail.h": "모듈 창 상세 값"
     },
     "_migratedViews": [
+        "Source/Editor/Panels/Animation/AnimationClipPreviewPanel",
         "Source/Editor/Panels/Animation/AnimationGraphLayerEditor",
         "Source/Editor/Panels/Animation/AnimationGraphPanel",
         "Source/Editor/Panels/Animation/SequenceDebuggerPanel",
         "Source/Editor/Panels/Animation/SpriteClipPanel",
+        "Source/Editor/Panels/AudioEvents/AudioEventBrowserPanel",
         "Source/Editor/Panels/AudioGraph/AudioGraphPanel",
         "Source/Editor/Panels/AudioMixer/AudioMixerPanel",
         "Source/Editor/Panels/Autosave/RecoveredWorkPanel",
         "Source/Editor/Panels/BugReport/BugReportPanel",
+        "Source/Editor/Panels/Catalog/CatalogPanel",
         "Source/Editor/Panels/Catalog/CatalogTableEditor",
         "Source/Editor/Panels/DataTable/DataTablePanel",
         "Source/Editor/Panels/Dialogue/DialogueGraphPanel",
@@ -46,9 +49,12 @@
         "Source/Editor/Panels/Inspector/SceneComponentInspector",
         "Source/Editor/Panels/Inspector/SpriteComponentInspector",
         "Source/Editor/Panels/Inspector/TagComponentInspector",
+        "Source/Editor/Panels/Material/MaterialPanel",
         "Source/Editor/Panels/MaterialGraph/MaterialGraphPanel",
+        "Source/Editor/Panels/Mesh/MeshPreviewPanel",
         "Source/Editor/Panels/Multiplayer/MultiplayerTab",
         "Source/Editor/Panels/Packaging/PackagingPanel",
+        "Source/Editor/Panels/Physics/RagdollPreviewPanel",
         "Source/Editor/Panels/Profiler/ProfilerWatches",
         "Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel",
         "Source/Editor/Panels/RenderTarget/RenderTargetWatches",
@@ -62,6 +68,7 @@
         "Source/Editor/Panels/Settings/ShortcutsPanel",
         "Source/Editor/Panels/Settings/UserSettingsPanel",
         "Source/Editor/Panels/SourceControl/SourceControlChangesPanel",
-        "Source/Editor/Panels/TileSet/TileSetPanel"
+        "Source/Editor/Panels/TileSet/TileSetPanel",
+        "Source/Editor/Panels/VFX/VFXPreviewPanel"
     ]
 }

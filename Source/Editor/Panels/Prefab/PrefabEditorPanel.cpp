@@ -62,7 +62,7 @@ namespace sw::editor
 
     PrefabEditorPanel* PrefabEditorPanel::findWindow()
     {
-        return editor::getSubsystem<EditorContext>().getSubsystem<EditorPanelManager>().findPanel<PrefabEditorPanel>();
+        return EditorPanelManager::getInEditorContext().findPanel<PrefabEditorPanel>();
     }
 
     PrefabEditorPanel* PrefabEditorPanel::findIsolatingWindow()

@@ -94,4 +94,14 @@ namespace sw::editor
 
         return FileUtil::joinPath( stateDir, pFileName );
     }
+
+    const AssetPaths& EditorPaths::getAssetPaths()
+    {
+        return editor::getSubsystem<AssetPaths>();
+    }
+
+    const AssetPaths* EditorPaths::findAssetPaths()
+    {
+        return editor::findSubsystem<AssetPaths>();
+    }
 } // namespace sw::editor

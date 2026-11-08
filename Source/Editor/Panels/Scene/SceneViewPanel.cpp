@@ -113,8 +113,8 @@ namespace sw::editor
             /** @brief 씬 뷰 패널입니다(없으면 nullptr). */
             static SceneViewPanel* findSceneViewPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<SceneViewPanel>() : nullptr;
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                return pPanels != nullptr ? pPanels->findPanel<SceneViewPanel>() : nullptr;
             }
 
             /** @brief 씬 뷰 오버레이입니다(씬 뷰 패널이 없으면 nullptr). */

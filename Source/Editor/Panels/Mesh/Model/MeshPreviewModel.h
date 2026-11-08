@@ -6,6 +6,8 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -17,6 +19,27 @@ namespace sw
 
 namespace sw::editor
 {
+    /** @brief LOD 표의 한 줄(LOD 1 부터)입니다(값만). */
+    struct MeshPreviewLODRow
+    {
+        uint32  _vertexCount{ 0 };
+        uint32  _triangleCount{ 0 };
+        float32 _screenSize{ 0.0f };
+    };
+
+    /** @brief 미리보기 메시의 LOD 표 값입니다. 포인터 · 참조를 두지 않는다(MVVM 계약 — 창은 이 값만 그린다). */
+    struct MeshPreviewLODState
+    {
+        vector<MeshPreviewLODRow> _listLOD; ///< LOD 1 부터
+        uint32                    _lodCount{ 0 };
+        uint32                    _drawnLOD{ 0 };           ///< 지금 그리는 단계
+        uint32                    _vertexCount{ 0 };        ///< LOD 0 정점 수
+        uint32                    _triangleCount{ 0 };      ///< LOD 0 삼각형 수
+        uint8                     _bHasSubject{ SW_FALSE }; ///< 미리보기 씬에 메시 오브젝트가 있다
+        uint8                     _bMeshRead{ SW_FALSE };   ///< 메시를 읽었다
+        uint8                     _bLoading{ SW_FALSE };    ///< 메시를 읽는 중이다
+    };
+
     /**
      * @class MeshPreviewModel
      * @brief 메시 미리보기 창의 상태와 명령입니다. 파일 머리말 참고.
@@ -45,6 +68,8 @@ namespace sw::editor
         void applyLODChoice( Scene* pScene ) const;
         /** @brief @p pScene 의 메시 컴포넌트입니다. 씬이 없으면 nullptr 입니다(이 호출 안에서만 씁니다). */
         [[nodiscard]] static MeshComponent* findSubject( Scene* pScene );
+        /** @brief 미리보기 씬 @p pScene 의 메시 LOD 표 값을 모읍니다(@p outState 를 비우고 채운다). */
+        static void gatherLOD( Scene* pScene, MeshPreviewLODState& outState );
 
         /** @brief 라디오 단추가 직접 고치는 고른 LOD 단계입니다(`kAutoLOD` = 화면 크기로 고른다). */
         int32&        editLODChoice() { return _lodChoice; }

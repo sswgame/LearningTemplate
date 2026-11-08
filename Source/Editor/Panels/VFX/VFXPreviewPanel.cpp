@@ -11,15 +11,11 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/VFX/VFXComponent.h"
 #include "Engine/VFX/VFXEffectDef.h"
 
@@ -39,10 +35,10 @@ namespace sw::editor
             /** @brief 열린 VFX 미리보기 창입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const VFXPreviewPanel* findOpenPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return nullptr;
-                const VFXPreviewPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<VFXPreviewPanel>();
+                const VFXPreviewPanel* pPanel = pPanels->findPanel<VFXPreviewPanel>();
                 return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
             }
 
@@ -121,8 +117,7 @@ namespace sw::editor
         // 효과 파일이 바뀌었으면(카탈로그 편집기의 저장) 다시 읽고 다시 건다 — Reload 를 누르지 않아도 된다.
         if ( _model.pollFileChanged() )
         {
-            // 공유 캐시를 먼저 새 글로 다시 읽는다(감시 사건이 뒤늦게 와도 같은 저장을 두 번 읽지 않게 도장을 남긴다) — 그래야 다시 연 문서와 다시 건 효과가 새 정의다.
-            editor::getSubsystem<AssetHotReload>().applySavedAsset( getLoadedAssetPath() );
+            VFXPreviewModel::applySavedAsset( getLoadedAssetPath() );
             reloadDocument();
             _model.requestResync();
             ++_autoReloadCount;

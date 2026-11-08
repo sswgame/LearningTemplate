@@ -13,6 +13,7 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -156,7 +157,7 @@ namespace sw::editor
                     AssetPickerState& picker = getAssetPickerState();
                     picker._listEntry.clear();
                     picker._search.clear();
-                    EditorAssetIndex::collectEntries( editor::getSubsystem<AssetPaths>(), picker._listEntry );
+                    EditorAssetIndex::collectEntries( EditorPaths::getAssetPaths(), picker._listEntry );
                     EditorInputGUI::openPopup( "AssetPicker" );
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PickAsset" ) );
@@ -221,7 +222,7 @@ namespace sw::editor
                 ContentBrowserPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>();
                 if ( pPanel == nullptr )
                     return;
-                const optional<AbsolutePath> fileAbs = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( assetPath ) );
+                const optional<AbsolutePath> fileAbs = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( assetPath ) );
                 if ( fileAbs.has_value() == false )
                     return;
                 pPanel->openFolder( FileUtil::getDirectoryPart( fileAbs->str() ) );

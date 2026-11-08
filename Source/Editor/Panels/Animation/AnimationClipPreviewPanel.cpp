@@ -9,16 +9,12 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/AnimationClip.h"
-#include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include <imgui.h>
 
@@ -38,10 +34,10 @@ namespace sw::editor
             /** @brief 열린 클립 미리보기 창입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const AnimationClipPreviewPanel* findOpenPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return nullptr;
-                const AnimationClipPreviewPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<AnimationClipPreviewPanel>();
+                const AnimationClipPreviewPanel* pPanel = pPanels->findPanel<AnimationClipPreviewPanel>();
                 return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
             }
 
@@ -103,8 +99,7 @@ namespace sw::editor
         EditorSelfTestMarks::record( "clip.spawn" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlaceTheBodyInThePreviewScene" ) );
 
-        SkeletalAnimatorComponent* pAnimator = _model.findAnimator( getPreviewScene() );
-        if ( pAnimator != nullptr )
+        if ( _model.hasBody( getPreviewScene() ) )
         {
             // 재생 · 멈춤 · 속도 · 문지르기는 뷰포트 위 공통 재생 막대가 맡는다(EditorPreviewPanel).
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Restart" ) ) );
@@ -128,21 +123,20 @@ namespace sw::editor
 
     void AnimationClipPreviewPanel::drawClipInfo()
     {
-        const SkeletalAnimatorComponent* pAnimator = _model.findAnimator( getPreviewScene() );
-        if ( pAnimator == nullptr )
+        if ( _model.hasBody( getPreviewScene() ) == false )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoBodyYetEnterAPrefabPathAnd" ) );
             return;
         }
-        const AnimationClip* pClip = AnimationClipPreviewModel::findOpenClip( *pAnimator, getLoadedAssetPath() );
-        if ( pClip == nullptr )
+        AnimationClipPreviewInfo info;
+        if ( _model.gatherClipInfo( getPreviewScene(), getLoadedAssetPath(), info ) == false )
             return; // 읽지 못했다 — 상태 줄이 알렸다
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "DurationSTracksCurves", TextArgumentList().addDecimal( "duration", static_cast<float64>( pClip->getDuration() ), 2 ).addInteger( "trackCount", static_cast<int64>( pClip->getTrackCount() ) ).addInteger( "curvesCount", static_cast<int64>( pClip->getCurves().size() ) ).addText( "loopingByDefault", pClip->isLoopingByDefault() ? "yes" : "no" ).addText( "rootMotionTrack", pClip->getRootMotionTrack() >= 0 ? "yes" : "no" ).addText( "findNotifyTrack", pClip->findNotifyTrack() != nullptr ? "yes" : "no" ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "DurationSTracksCurves", TextArgumentList().addDecimal( "duration", static_cast<float64>( info._durationSeconds ), 2 ).addInteger( "trackCount", static_cast<int64>( info._trackCount ) ).addInteger( "curvesCount", static_cast<int64>( info._curveCount ) ).addText( "loopingByDefault", info._bLoopingByDefault != SW_FALSE ? "yes" : "no" ).addText( "rootMotionTrack", info._bHasRootMotion != SW_FALSE ? "yes" : "no" ).addText( "findNotifyTrack", info._bHasNotifyTrack != SW_FALSE ? "yes" : "no" ) ).c_str() );
     }
 
     bool AnimationClipPreviewPanel::findPreviewClipDuration( float32& outSeconds ) const
     {
-        if ( _model.getClipSeconds() <= 0.0f || _model.findAnimator( getPreviewScene() ) == nullptr )
+        if ( _model.getClipSeconds() <= 0.0f || _model.hasBody( getPreviewScene() ) == false )
             return false;
         outSeconds = _model.getClipSeconds();
         return true;
@@ -176,19 +170,14 @@ namespace sw::editor
 
     bool AnimationClipPreviewPanel::readPreviewTimeline( float32& outTime, float32& outDuration ) const
     {
-        const SkeletalAnimatorComponent* pAnimator = _model.findAnimator( getPreviewScene() );
-        const float32                    duration  = _model.getClipSeconds();
-        if ( pAnimator == nullptr || duration <= 0.0f )
+        if ( _model.readPlayTime( getPreviewScene(), outTime ) == false )
             return false;
-        outDuration = duration;
-        outTime     = MathUtil::fmod( pAnimator->getStateTime(), duration ); // 반복 재생은 상태 시간이 길이를 넘는다
+        outDuration = _model.getClipSeconds();
         return true;
     }
 
     void AnimationClipPreviewPanel::seekPreviewTimeline( float32 seconds )
     {
-        SkeletalAnimatorComponent* pAnimator = _model.findAnimator( getPreviewScene() );
-        if ( pAnimator != nullptr )
-            (void)pAnimator->seekCurrentTime( MathUtil::clamp( seconds, 0.0f, _model.getClipSeconds() ) ); // 범위 밖이면 애니메이터가 알린다
+        _model.seek( getPreviewScene(), seconds );
     }
 } // namespace sw::editor

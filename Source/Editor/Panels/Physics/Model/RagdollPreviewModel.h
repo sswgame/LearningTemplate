@@ -7,7 +7,9 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
@@ -16,6 +18,7 @@
 
 namespace sw
 {
+    class IPhysicsDebugRenderer;
     class RagdollComponent;
     class Scene;
 } // namespace sw
@@ -30,6 +33,31 @@ namespace sw::editor
         string           _hitZone{};
         float32          _mass{ 0.0f };
         PhysicsJointType _jointType{ PhysicsJointType::Fixed };
+    };
+
+    /** @brief 지어진 래그돌 바디 하나의 지금 상태입니다(값만). 번호는 바디 표 줄과 같다. */
+    struct RagdollPreviewBuiltBody
+    {
+        float32 _weight{ 0.0f };
+        uint8   _bDynamic{ SW_FALSE };
+    };
+
+    /** @brief 미리보기 몸의 래그돌 상태입니다. 포인터 · 참조를 두지 않는다(MVVM 계약 — 창은 이 값만 그린다). */
+    struct RagdollPreviewState
+    {
+        vector<RagdollPreviewBuiltBody> _listBuiltBody;
+        const utf8*                     _pStateName{ "" }; ///< 래그돌 상태 이름(정적 글)
+        uint32                          _state{ 0 };       ///< 래그돌 상태 값(감시 값)
+        uint8                           _bHasRagdoll{ SW_FALSE };
+        uint8                           _bSettled{ SW_FALSE };
+    };
+
+    /** @brief 겹쳐 그리기 색입니다(창이 테마 토큰에서 정해 넘긴다). */
+    struct RagdollPreviewOverlayColors
+    {
+        float4 _bone{};
+        float4 _joint{};
+        float4 _selectedJoint{};
     };
 
     /**
@@ -62,6 +90,20 @@ namespace sw::editor
         [[nodiscard]] RagdollComponent* findRagdoll( Scene* pScene ) const;
         /** @brief 래그돌로 넘기고 고른 바디(없으면 첫 바디)를 충격 값만큼 밉니다(Impulse 단추). */
         void applyImpulse( RagdollComponent& ragdoll ) const;
+        /** @brief @p pScene 의 몸 래그돌 상태를 모읍니다(@p outState 를 비우고 채운다). 몸이 없으면 `_bHasRagdoll` 이 거짓입니다. */
+        void gatherRagdoll( Scene* pScene, RagdollPreviewState& outState ) const;
+
+        // 아래 명령은 미리보기 씬의 몸만 움직인다(문서가 아니라 되돌리기에 남지 않는다). 몸이 없으면 아무것도 하지 않는다.
+        /** @brief 모든 바디를 동적으로 바꿉니다(몸이 넘어진다). */
+        void startRagdoll( Scene* pScene ) const;
+        /** @brief 래그돌로 넘기고 고른 바디를 밉니다(`applyImpulse`). */
+        void applyImpulse( Scene* pScene ) const;
+        /** @brief 래그돌 시작 뼈 아래만 동적으로 바꿉니다. */
+        void startPartialRagdoll( Scene* pScene ) const;
+        /** @brief 부분 래그돌을 끝내고 애니메이션으로 섞어 돌아갑니다. */
+        void stopPartialRagdoll( Scene* pScene ) const;
+        /** @brief 켠 겹쳐 그리기(뼈대 · 바디 · 관절)를 @p renderer 로 냅니다. 몸이나 물리 씬이 없으면 아무것도 하지 않습니다. */
+        void drawOverlay( Scene* pScene, IPhysicsDebugRenderer& renderer, const RagdollPreviewOverlayColors& colors ) const;
 
         const vector<RagdollPreviewBodyRow>& getBodyRows() const { return _listBodyRow; }
         const string&                        getStatus() const { return _status; }

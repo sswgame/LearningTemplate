@@ -143,7 +143,7 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
-                const optional<AbsolutePath> folderPath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
+                const optional<AbsolutePath> folderPath = EditorPaths::getAssetPaths().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
                 const string                 folderAbs  = folderPath.has_value() ? folderPath->str() : string{};
                 if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getSubsystem<EditorPanelManager>().setPanelOpen<ContentBrowserPanel>( true ) == false )
                     return false;
@@ -198,8 +198,8 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static ContentBrowserPanel* findWritablePanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<ContentBrowserPanel>() : nullptr;
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                return pPanels != nullptr ? pPanels->findPanel<ContentBrowserPanel>() : nullptr;
             }
 
             /** @brief 대상 에셋의 절대 경로입니다. 누른 항목 → 선택 스냅숏 → 창의 지금 선택 순서로 고릅니다. 없으면 빈 문자열입니다. */
@@ -235,7 +235,7 @@ namespace sw::editor
 
             static void showInExplorer( const EditorCommandTarget& target ) { EditorAssetFileCommands::showInFileExplorer( findTargetPath( target ) ); }
 
-            static void copyRelativePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( editor::getSubsystem<AssetPaths>().toAssetID( findTargetPath( target ) ).c_str() ); }
+            static void copyRelativePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( EditorPaths::getAssetPaths().toAssetID( findTargetPath( target ) ).c_str() ); }
 
             static void copyAbsolutePath( const EditorCommandTarget& target ) { ImGui::SetClipboardText( findTargetPath( target ).c_str() ); }
 
@@ -660,7 +660,7 @@ namespace sw::editor
                 {
                     bChanged = _collections.createCollection( _collectionNameBuffer.c_str(), bSharedScope );
                     // 고른 에셋이 있으면 새 컬렉션에 바로 넣는다(언리얼의 "Add to new collection")
-                    const string selectedID = editor::getSubsystem<AssetPaths>().toAssetID( _model.getSelectedAssetPath() );
+                    const string selectedID = EditorPaths::getAssetPaths().toAssetID( _model.getSelectedAssetPath() );
                     if ( bChanged && selectedID.empty() == false && FileUtil::isDirectory( _model.getSelectedAssetPath() ) == false )
                         (void)_collections.addToCollection( _collectionNameBuffer.c_str(), bSharedScope, selectedID );
                 }
@@ -708,7 +708,7 @@ namespace sw::editor
             const string& assetID = collection._listAssetID[rowIndex];
             ImGui::PushID( static_cast<int32>( rowIndex ) );
             // 옮기거나 지운 에셋은 회색과 이유 글로 남긴다 — 줄을 말없이 지우지 않는다
-            const bool bExists = editor::getSubsystem<AssetPaths>().findLooseFile( assetID ).has_value();
+            const bool bExists = EditorPaths::getAssetPaths().findLooseFile( assetID ).has_value();
             if ( bExists )
             {
                 ImGui::Selectable( assetID.c_str(), false, ImGuiSelectableFlags_AllowDoubleClick );
@@ -751,7 +751,7 @@ namespace sw::editor
         // 지우기 전에 이 에셋을 쓰는 곳을 보여 준다. 언리얼의 Delete Assets 대화상자가 보여 주는 참조 수와 같다.
         if ( referenceIndex.isReady() )
         {
-            const uint32 referrerCount = referenceIndex.countReferrerFiles( editor::getSubsystem<AssetPaths>().toAssetID( pendingDeleteAbs ) );
+            const uint32 referrerCount = referenceIndex.countReferrerFiles( EditorPaths::getAssetPaths().toAssetID( pendingDeleteAbs ) );
             if ( referrerCount > 0 )
                 ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferrerWarningText ), "%s", SW_LOCKEYFORMAT( "EdFormat", "UsedByFileS", TextArgumentList().addText( "sW_EDITORICON", SW_EDITOR_ICON( "Warning" ) ).addInteger( "referrerCount", static_cast<int64>( referrerCount ) ) ).c_str() );
             else
@@ -814,7 +814,7 @@ namespace sw::editor
         if ( EditorWidgets::acceptAssetDrop( assetID ) == false )
             return;
         // 파일이면 그 파일, 폴더(폴더 타일도 끌기 원본이다)면 그 폴더 — 옮기기 전에 확인 대화상자가 계획을 보인다(언리얼 Move Here)
-        const AssetPaths&      assetPaths = editor::getSubsystem<AssetPaths>();
+        const AssetPaths&      assetPaths = EditorPaths::getAssetPaths();
         optional<AbsolutePath> sourcePath = assetPaths.findLooseFile( assetID );
         if ( sourcePath.has_value() == false )
         {
@@ -864,7 +864,7 @@ namespace sw::editor
             ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "MoveAssetCount",
                                                      TextArgumentList()
                                                          .addInteger( "assetCount", static_cast<int64>( plan._listMove.size() ) )
-                                                         .addText( "destination", editor::getSubsystem<AssetPaths>().toAssetID( _model.getMoveRequestFolderPath() ).c_str() ) )
+                                                         .addText( "destination", EditorPaths::getAssetPaths().toAssetID( _model.getMoveRequestFolderPath() ).c_str() ) )
                                         .c_str() );
             ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "MoveFixesReferrers", TextArgumentList().addInteger( "referrerCount", static_cast<int64>( plan._listReferrerID.size() ) ) ).c_str() );
             if ( plan._listOutsideDomain.empty() == false )
@@ -1243,7 +1243,7 @@ namespace sw::editor
         const bool opened = ImGui::TreeNodeEx( labelWithIcon.c_str(), flags );
         ImGui::PopStyleColor();
         if ( EditorSelfTestMarks::isEnabled() )
-            ContentBrowserPanelInternal::recordMark( "contentBrowser.folder.", editor::getSubsystem<AssetPaths>().toAssetID( absPath ) );
+            ContentBrowserPanelInternal::recordMark( "contentBrowser.folder.", EditorPaths::getAssetPaths().toAssetID( absPath ) );
         acceptAssetDrop( absPath );
 
         if ( EditorInputGUI::wasItemClicked() && ImGui::IsItemToggledOpen() == false )

@@ -6,7 +6,6 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
-#include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/EditorColor.h"
@@ -15,8 +14,6 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Audio/AudioEngine.h"
@@ -37,8 +34,7 @@ namespace sw::editor
         {
             static void openPanel()
             {
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<AudioEventBrowserPanel>( true ); // 패널은 이 파일에 등록되어 있다
+                (void)EditorPanelManager::getInEditorContext().setPanelOpen<AudioEventBrowserPanel>( true ); // 패널은 이 파일에 등록되어 있다
             }
 
             /** @brief 사용률 막대 하나를 그립니다. 상한에 닿으면 경고색입니다. */
@@ -59,10 +55,10 @@ namespace sw::editor
             /** @brief 열린 오디오 이벤트 창입니다. 닫혔으면 nullptr 입니다(감시 값이 읽는다). */
             [[nodiscard]] static const AudioEventBrowserPanel* findOpenPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return nullptr;
-                const AudioEventBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<AudioEventBrowserPanel>();
+                const AudioEventBrowserPanel* pPanel = pPanels->findPanel<AudioEventBrowserPanel>();
                 return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
             }
 
@@ -96,7 +92,7 @@ namespace sw::editor
             /** @brief 오디오 스레드가 마지막으로 게시한 받아들인 이벤트 수입니다. 오디오 서비스가 없거나 시작하지 않았으면 값을 내지 않는다. */
             [[nodiscard]] static bool readPlayedCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                IAudioService* pAudio = editor::findSubsystem<IAudioService>();
+                IAudioService* pAudio = AudioEventBrowserUtil::findAudioService();
                 if ( pAudio == nullptr || pAudio->isInitialized() == false )
                     return false;
                 outValue = static_cast<float64>( pAudio->getEngine().getStats()._playedEventCount );
@@ -277,7 +273,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "OpenDataFile" ) ) )
         {
             // 데이터 파일을 직접 연다(고치기 창 밖의 편집 — 예: 새 클립 경로를 여러 개 붙여 넣기). 여는 도구가 없으면 경로를 클립보드에 둔다.
-            if ( EditorAssetCommands::openPath( _selectedLibrary.view() ) == false )
+            if ( AudioEventBrowserUtil::openDataFile( _selectedLibrary.view() ) == false )
                 ImGui::SetClipboardText( _selectedLibrary.c_str() );
         }
         EditorSelfTestMarks::record( "audioevents.openDataFile" );
@@ -384,7 +380,7 @@ namespace sw::editor
 
     void AudioEventBrowserPanel::drawContent()
     {
-        IAudioService& audio = editor::getSubsystem<IAudioService>(); // 에디터는 오디오를 짓는 구성이라 늘 있다(전용 서버 구성만 오디오를 짓지 않는다)
+        IAudioService& audio = AudioEventBrowserUtil::getAudioService();
         if ( audio.isInitialized() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorAudioEvents", "NoService" ) );

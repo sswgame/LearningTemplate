@@ -12,17 +12,12 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Visual/Component/MeshComponent.h"
 
 #include <imgui.h>
 
@@ -40,10 +35,10 @@ namespace sw::editor
             /** @brief 열린 메시 미리보기 창입니다. 닫혔으면 nullptr 입니다. */
             [[nodiscard]] static const MeshPreviewPanel* findOpenPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return nullptr;
-                const MeshPreviewPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<MeshPreviewPanel>();
+                const MeshPreviewPanel* pPanel = pPanels->findPanel<MeshPreviewPanel>();
                 return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
             }
 
@@ -95,6 +90,7 @@ namespace sw::editor
         , _model{}
         , _frameCenter{}
         , _frameRadius{ MeshPreviewPanelInternal::kDefaultFrameRadius }
+        , _lodState{}
     {
     }
 
@@ -121,9 +117,9 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "ReadTheMeshFileAgainAfterImporting" ) );
 
         syncPreviewSubject();
-        const MeshComponent* pSubject = MeshPreviewModel::findSubject( getPreviewScene() );
-        if ( pSubject != nullptr )
-            drawLODTable( *pSubject );
+        MeshPreviewModel::gatherLOD( getPreviewScene(), _lodState );
+        if ( _lodState._bHasSubject != SW_FALSE )
+            drawLODTable();
         _model.applyLODChoice( getPreviewScene() );
 
         const float2 viewSize = computeViewportFillSize( MeshPreviewPanelInternal::kMinViewportHeight * EditorThemeUtil::getDPIScale() );
@@ -132,18 +128,17 @@ namespace sw::editor
         EditorWidgets::drawPanelStatus( _model.getStatus().c_str() );
     }
 
-    void MeshPreviewPanel::drawLODTable( const MeshComponent& subject )
+    void MeshPreviewPanel::drawLODTable()
     {
-        const Mesh* pMesh = subject.getRawMesh();
-        if ( pMesh == nullptr )
+        if ( _lodState._bMeshRead == SW_FALSE )
         {
-            ImGui::TextDisabled( subject.isMeshLoading() ? "Reading the mesh..." : "The mesh could not be read" );
+            ImGui::TextDisabled( _lodState._bLoading != SW_FALSE ? "Reading the mesh..." : "The mesh could not be read" );
             return;
         }
 
         ImGui::RadioButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Auto" ), "Auto" ), &_model.editLODChoice(), MeshPreviewModel::kAutoLOD );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PickTheLevelByTheScreenSize" ) );
-        const uint32 lodCount = pMesh->getLODCount();
+        const uint32 lodCount = _lodState._lodCount;
         for ( uint32 lod = 0; lod < lodCount; ++lod )
         {
             fixed_string<constant::buffer::kMax32> label;
@@ -151,13 +146,13 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( label.c_str() ) );
             ImGui::RadioButton( label.c_str(), &_model.editLODChoice(), static_cast<int32>( lod ) );
         }
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "DrawingLOD", TextArgumentList().addInteger( "lod", subject.getLODIndex() ).addInteger( "count", lodCount ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "DrawingLOD", TextArgumentList().addInteger( "lod", static_cast<int64>( _lodState._drawnLOD ) ).addInteger( "count", lodCount ) ).c_str() );
 
-        ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "LODVerticesTriangles", TextArgumentList().addInteger( "vertexCount", static_cast<int64>( pMesh->getVertexCount() ) ).addInteger( "indexCount", static_cast<int64>( pMesh->getIndexCount() / 3u ) ) ).c_str() );
+        ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "LODVerticesTriangles", TextArgumentList().addInteger( "vertexCount", static_cast<int64>( _lodState._vertexCount ) ).addInteger( "indexCount", static_cast<int64>( _lodState._triangleCount ) ) ).c_str() );
         uint32 lod = 1;
-        for ( const MeshLOD& level : pMesh->getLODs() )
+        for ( const MeshPreviewLODRow& level : _lodState._listLOD )
         {
-            ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "LODVerticesTrianglesFrom", TextArgumentList().addInteger( "lod", static_cast<int64>( lod ) ).addInteger( "vertexCount", static_cast<int64>( level._vertexCount ) ).addInteger( "indexCount", static_cast<int64>( level._indexCount / 3u ) ).addDecimal( "screenSize", static_cast<float64>( level._screenSize ), 3 ) ).c_str() );
+            ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdFormat", "LODVerticesTrianglesFrom", TextArgumentList().addInteger( "lod", static_cast<int64>( lod ) ).addInteger( "vertexCount", static_cast<int64>( level._vertexCount ) ).addInteger( "indexCount", static_cast<int64>( level._triangleCount ) ).addDecimal( "screenSize", static_cast<float64>( level._screenSize ), 3 ) ).c_str() );
             ++lod;
         }
         if ( lodCount == 1 )
@@ -166,20 +161,21 @@ namespace sw::editor
 
     bool MeshPreviewPanel::findPreviewVertexCount( uint32& outCount ) const
     {
-        const MeshComponent* pSubject = MeshPreviewModel::findSubject( getPreviewScene() );
-        const Mesh*          pMesh    = pSubject != nullptr ? pSubject->getRawMesh() : nullptr;
-        if ( pMesh == nullptr )
+        MeshPreviewLODState state;
+        MeshPreviewModel::gatherLOD( getPreviewScene(), state );
+        if ( state._bMeshRead == SW_FALSE )
             return false;
-        outCount = pMesh->getVertexCount();
+        outCount = state._vertexCount;
         return true;
     }
 
     bool MeshPreviewPanel::findPreviewDrawnLOD( uint32& outLOD ) const
     {
-        const MeshComponent* pSubject = MeshPreviewModel::findSubject( getPreviewScene() );
-        if ( pSubject == nullptr || pSubject->getRawMesh() == nullptr )
+        MeshPreviewLODState state;
+        MeshPreviewModel::gatherLOD( getPreviewScene(), state );
+        if ( state._bMeshRead == SW_FALSE )
             return false;
-        outLOD = pSubject->getLODIndex();
+        outLOD = state._drawnLOD;
         return true;
     }
 

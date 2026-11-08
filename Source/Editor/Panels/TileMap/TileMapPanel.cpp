@@ -35,10 +35,10 @@ namespace sw::editor
 
             [[nodiscard]] static bool readFlagCells( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return false;
-                const TileMapPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileMapPanel>();
+                const TileMapPanel* pPanel = pPanels->findPanel<TileMapPanel>();
                 if ( pPanel == nullptr )
                     return false;
                 outValue = static_cast<float64>( pPanel->countSelectedFlagCells() );
@@ -47,10 +47,10 @@ namespace sw::editor
 
             [[nodiscard]] static bool readDataLayerCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return false;
-                const TileMapPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileMapPanel>();
+                const TileMapPanel* pPanel = pPanels->findPanel<TileMapPanel>();
                 if ( pPanel == nullptr )
                     return false;
                 outValue = static_cast<float64>( pPanel->getDataLayerCount() );
@@ -59,10 +59,10 @@ namespace sw::editor
 
             [[nodiscard]] static bool readDataCells( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return false;
-                const TileMapPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileMapPanel>();
+                const TileMapPanel* pPanel = pPanels->findPanel<TileMapPanel>();
                 if ( pPanel == nullptr )
                     return false;
                 outValue = static_cast<float64>( pPanel->countDataCells() );
@@ -71,10 +71,10 @@ namespace sw::editor
 
             [[nodiscard]] static bool readPaintTool( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return false;
-                const TileMapPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<TileMapPanel>();
+                const TileMapPanel* pPanel = pPanels->findPanel<TileMapPanel>();
                 if ( pPanel == nullptr )
                     return false;
                 outValue = static_cast<float64>( pPanel->getPaintToolIndex() );

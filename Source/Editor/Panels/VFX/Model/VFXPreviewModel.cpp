@@ -8,6 +8,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
@@ -115,5 +116,10 @@ namespace sw::editor
         pVFX->play();
         _previewEffectPath = assetPath;
         SW_LOG_INFO_ID( "VFXPreview.Playing", "VFX Preview playing '%#' (%# emitters)", _previewEffectPath, pVFX->getEmitterCount() );
+    }
+
+    void VFXPreviewModel::applySavedAsset( string_view assetPath )
+    {
+        editor::getSubsystem<AssetHotReload>().applySavedAsset( assetPath );
     }
 } // namespace sw::editor

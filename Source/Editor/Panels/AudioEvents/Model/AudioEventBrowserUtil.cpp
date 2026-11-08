@@ -8,8 +8,12 @@
 #include "Core/String/fixed_string.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
+#include "Editor/Common/Workspace/EditorService.h"
+
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioSpatial.h"
+#include "Engine/Audio/IAudioService.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/EnumName.h"
 
@@ -175,5 +179,20 @@ namespace sw::editor
             return false;
         listEvent.erase( eventIt );
         return true;
+    }
+
+    IAudioService* AudioEventBrowserUtil::findAudioService()
+    {
+        return editor::findSubsystem<IAudioService>();
+    }
+
+    IAudioService& AudioEventBrowserUtil::getAudioService()
+    {
+        return editor::getSubsystem<IAudioService>();
+    }
+
+    bool AudioEventBrowserUtil::openDataFile( string_view path )
+    {
+        return EditorAssetCommands::openPath( path );
     }
 } // namespace sw::editor

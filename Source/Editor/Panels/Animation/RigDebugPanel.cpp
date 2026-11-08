@@ -12,6 +12,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -131,14 +132,14 @@ namespace sw::editor
             static string saveRig( const PoseModifierComponent& modifier, const RigSaveParams& params, const utf8* pUndoLabel )
             {
                 const string_view            rigPath  = modifier.getRigPath();
-                const optional<AbsolutePath> readPath = editor::getSubsystem<AssetPaths>().findLooseFile( rigPath );
+                const optional<AbsolutePath> readPath = EditorPaths::getAssetPaths().findLooseFile( rigPath );
                 string                       text;
                 if ( readPath.has_value() == false || FileUtil::readTextFile( readPath->str(), text ) == false )
                     return string( "The rig file could not be read" );
                 string rewritten;
                 if ( RigSaveParams::rewriteSettings( text, rigPath, params, rewritten ) == false )
                     return string( "The rig was not saved - see the log" );
-                const optional<AbsolutePath> rigFile = editor::getSubsystem<AssetPaths>().toDiskPath( rigPath );
+                const optional<AbsolutePath> rigFile = EditorPaths::getAssetPaths().toDiskPath( rigPath );
                 if ( rigFile.has_value() == false )
                     return string( "The rig file could not be written" );
                 const string& writePath = rigFile->str();

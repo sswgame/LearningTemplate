@@ -24,7 +24,6 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -162,8 +161,8 @@ namespace sw::editor
             /** @brief 열린 Output Log 패널입니다. 없으면 nullptr 입니다. */
             static ConsolePanel* findPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<ConsolePanel>() : nullptr;
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                return pPanels != nullptr ? pPanels->findPanel<ConsolePanel>() : nullptr;
             }
 
             /** @brief Output Log 가 지난 그리기에 보인 줄 수입니다(접기 · 거르기 뒤). */

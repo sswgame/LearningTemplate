@@ -68,8 +68,8 @@ namespace sw::editor
 
             static InspectorPanel* findPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                return pContext != nullptr ? pContext->getSubsystem<EditorPanelManager>().findPanel<InspectorPanel>() : nullptr;
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                return pPanels != nullptr ? pPanels->findPanel<InspectorPanel>() : nullptr;
             }
 
             /** @brief 프리셋 하위 메뉴는 인스펙터가 프리셋 목록 · 이름 칸을 들고 있어 그 창이 있을 때 켜진다. */
