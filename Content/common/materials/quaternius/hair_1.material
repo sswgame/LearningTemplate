@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Quaternius 머리 꾸미기(hair_simpleparted · hair_buzzed · hair_beard · eyebrows_regular)의 머리카락 머티리얼 — 셰이딩 모델 Hair(engine/materials/hair.material)에 텍스처만 바꾼다.
+     임포트가 만든 PBR 머티리얼(mi_hair_1) 대신 itemvisuals.xml 의 머리카락 부품이 이것을 든다. 가닥 축은 V(바이탄젠트), 뿌리 V 0 → 끝 V 1 로 둔다. -->
+<MaterialDef formatVersion="0" name="hair_1" _base="engine/materials/hair.material">
+	<_properties>
+		<item name="_albedoMap" assetPath="common/textures/quaternius/hair/t_hair_1_basecolor.dds" />
+	</_properties>
+</MaterialDef>
