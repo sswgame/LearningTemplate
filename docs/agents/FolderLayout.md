@@ -33,7 +33,7 @@
 | `Foundation`(0) | 형식 별칭 · 매크로 · OS 헤더 · enum 깃발 · 글자 하나 수준 도구(ASCII · 16진 숫자 — Hash 가 써서 여기) | UE Core/HAL · Templates |
 | `Hash`(0) | 해시 · 씨앗 상수 · 비밀 비교 · PRF | UE Core/Hash |
 | `Predefined`(0) | `.xxx` 이름 표 | |
-| `Concurrency`(1) | 원시 동기화(atomic · mutex · SpinLock · Futex · StopToken)와 경합 검출 훅. **자료 구조(큐)는 두지 않는다** | UE HAL/Thread*, Async |
+| `Concurrency`(1) | 원시 동기화(atomic · mutex · SpinLock · Futex · StopToken)와 경합 검출 훅. 스레드 사이에서 나눠 쓰는 자료 구조(ConcurrentQueue · WorkStealingDeque · SpscQueue · LockedSwapQueue · SharedVectorPool)는 하위 폴더 `Concurrency/Queue`(Container 위 티어 — vector 를 쓰므로)에 둔다(사용자 결정 2026-11-08: 하는 일로 묶는다) | UE HAL/Thread*, Async |
 | `Math`(1) | 벡터 · 행렬 · 쿼터니언 · 듀얼 쿼터니언 · 색 · 압축 수치 형식 · 결정적 난수 · 노이즈 | UE Core/Math, Godot core/math |
 | `Memory`(2) | 할당기 · 메모리 태그 · 블록 | UE HAL/Memory |
 | **`Algorithm`(2, 새)** | 컨테이너 형식에 묶이지 않은 알고리즘(정렬 비교자 · 연속 배열 도우미 · 유니온 파인드) | UE Core/Algo |

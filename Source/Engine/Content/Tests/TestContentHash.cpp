@@ -89,5 +89,6 @@ SW_TEST_CASE( ContentHashTest, OwnRewriteOfTheSameSizeIsSeenAtOnce )
         SW_EXPECT_EQUAL( ContentHash::computeFile( path ), expected ); // 두 번째는 캐시에서 — 같은 값이어야 한다
     }
     SW_REQUIRE_TRUE( FileUtil::removeFile( path ) );
+    SW_EXPECT_LOG( "File.NotFound" ); // 지운 파일은 못 읽음(0)이고, 파일 계층이 그 사실을 알린다
     SW_EXPECT_EQUAL( ContentHash::computeFile( path ), uint64( 0 ) );
 }

@@ -19,7 +19,7 @@
 
 1. Core/String 재편 — `Core/String`(티어 4, 로그 없는 글자 도구)·`Core/Name`(티어 6, intern 이름)·`Core/Registry`(티어 6)·`Core/Encoding`(티어 4). StringUtil · UTF8Util · formatString 이 Container 에서 들어온다. include 약 1,950.
 2. `Core/Algorithm`(티어 2) — VectorUtil · CompareUtil · UnionFindUtil. include 약 540.
-3. 큐 둘을 Concurrency → Container, VarInt · LittleEndian 을 Serialization 으로. include 약 40.
+3. 스레드 간 큐(ConcurrentQueue · WorkStealingDeque · SpscQueue · LockedSwapQueue · SharedVectorPool)를 `Core/Concurrency/Queue/`(Container 위 티어)로, VarInt · LittleEndian 을 Serialization 으로. include 약 50.
 4. Engine 자리 틀림(Localization 의 창구 · 서브시스템, Gameplay/InstancedStruct, Animation · Character 갈라짐, Profiling 개발 도구, BugReport, Rendering → Visual 개명).
 5. GameFramework `Runtime/Foundation/Utility` 해체, `World/Query` 의 조건 어휘 분리.
 6. Dev 기능 정리(ModuleManager LiveReload, AppDevTools · RHIBackendSwitcher 가르기, Engine 의 `Dev/` 셋 → DevTools).
@@ -47,8 +47,10 @@
 | Core/Container/VectorUtil.h | Core/Algorithm/VectorUtil.h | 연속 배열에 쓰는 static 템플릿 알고리즘 — Foundation 만 include. Delegate(4) · Subsystem(4) · Container .cpp 가 쓰니 티어 2 | 522 |
 | Core/Container/CompareUtil.h | Core/Algorithm/CompareUtil.h | 정렬 · 이진 탐색 비교자 | 18 |
 | Core/Container/UnionFindUtil.h | Core/Algorithm/UnionFindUtil.h | 유니온 파인드 | 2 |
-| Core/Concurrency/SpscQueue.h | Core/Container/SpscQueue.h | 자료 구조(lock-free 링 큐). ConcurrentQueue · WorkStealingDeque 가 이미 Container. UE TQueue 도 Containers | 1 |
-| Core/Concurrency/LockedSwapQueue.h | Core/Container/LockedSwapQueue.h | 〃 — **지금 Concurrency(1) 가 Container/vector.h(3) 를 include 하는 티어 역류**(Log 아래라 린트가 안 잡는다) | 5 |
+| Core/Concurrency/SpscQueue.h | Core/Concurrency/Queue/SpscQueue.h | 스레드 간 자료 구조는 Concurrency 아래 한 폴더(사용자 결정 — 하는 일로 묶는다). vector 를 쓰는 형제가 있어 Container 위 티어 | 1 |
+| Core/Container/ConcurrentQueue.h · WorkStealingDeque.h | Core/Concurrency/Queue/ | 〃 | 6 · 2 |
+| Core/Concurrency/SharedVectorPool.h | Core/Concurrency/Queue/SharedVectorPool.h | 〃(갈래 C 가 Concurrency 바로 아래로 옮겨 티어 역류) | 2 |
+| Core/Concurrency/LockedSwapQueue.h | Core/Concurrency/Queue/LockedSwapQueue.h | 〃 — 지금 Concurrency(1) 가 Container/vector.h(3) 를 include 하는 티어 역류가 이 이동으로 풀린다 | — |
 | Core/Process/ThreadCrashStack.h | (그대로) | Diagnostics(10) 가 더 맞지만 File(8) · Task(7) · Log/Sink 가 include — 옮기면 티어 역류 | 16 |
 | Core/Math/SecureRandom.h | (그대로) | OS 암호 난수 — Math 의 난수 묶음. Hash 는 해시만 | 9 |
 | Core/Container/DependencyGraph.h | (그대로) | 노드 · 간선 자료 구조 + 위상 정렬 — 컨테이너. Algorithm(2) 은 vector 를 못 쓴다 | 11 |
