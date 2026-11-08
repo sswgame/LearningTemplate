@@ -444,7 +444,7 @@
     "Source/Engine/Character/Hit/RagdollComponent.cpp": {"minus-one": 3, "float": 2},
     "Source/Engine/Character/Hit/RagdollComponent.h": {"minus-one": 1},
     "Source/Engine/Character/PairedAnimation/PairedAnimationDef.cpp": {"float": 2},
-    "Source/Engine/Character/PoseModifier/PoseModifierComponent.cpp": {"minus-one": 2},
+    "Source/Engine/Character/PoseModifier/PoseModifierComponent.cpp": {"minus-one": 1},
     "Source/Engine/Character/PoseModifier/PoseModifierComponent.h": {"minus-one": 2},
     "Source/Engine/Character/Socket/SocketBindingComponent.cpp": {"float": 1, "integer": 1},
     "Source/Engine/Compression/ZlibCompressionCodec.cpp": {"minus-one": 1},

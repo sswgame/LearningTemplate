@@ -170,14 +170,14 @@ namespace sw
         }
     }
 
-    int32 RigInstance::findTargetIndex( const hashed_string& name ) const
+    optional<uint32> RigInstance::findTargetIndex( const hashed_string& name ) const
     {
         for ( size_t index = 0; index < _listTargetDef.size(); ++index )
         {
             if ( _listTargetDef[index]._name == name )
-                return static_cast<int32>( index );
+                return static_cast<uint32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void RigInstance::setExternalTarget( uint32 targetIndex, const RigTargetValue& value )
