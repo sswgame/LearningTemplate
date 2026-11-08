@@ -18,11 +18,6 @@
     #include "Core/File/FileUtil.h"
     #include "Core/Module/ModuleLibraryUtil.h"
     #include "Core/Path/AbsolutePath.h"
-    #include "Core/Subsystem/SubsystemScope.h"
-    #include "DevTools/AssetReload/ConfigReloadSubsystem.h"
-    #include "DevTools/AssetReload/ReloadTracker.h"
-    #include "DevTools/Client/Capture/StartupCaptureSubsystem.h"
-    #include "DevTools/Client/DebugHUD/DebugHUD.h"
     #include "ModuleManager/LiveReload/LiveReloadManager.h"
 #endif
 
@@ -355,9 +350,7 @@ namespace sw
 
         // 새 범위를 채워 넘긴 뒤에 앞 범위를 놓는다 — 모듈이 앞 범위를 들고 있는 동안 사라지지 않게.
         unique_ptr<SubsystemScope> editorServices = make_unique<SubsystemScope>();
-        fillModuleServiceScope( *editorServices, false );
-        if constexpr ( build::kShipping == false ) // 개발 도구 서비스(`EditorModuleManager.cpp` 의 개발 전용 구역)는 개발 구성에만 있다
-            bindDevToolServices( *editorServices );
+        fillModuleServiceScope( *editorServices, false ); // 개발 도구 서비스는 스스로 호스트 모듈에 보인다고 선언해 부모 창구로 찾힌다(`SubsystemModuleVisibility`)
         _editorAPI.bindService( editorServices.get() );
         _editorServices = std::move( editorServices );
     }
@@ -385,7 +378,7 @@ namespace sw
 
 #if !defined( SW_SHIPPING )
     // ----------------------------------------------------------------------------------------------------------------------
-    // 개발 구성에만 있는 경로 — 리로드 그래프 등록 · 개발 도구 서비스(LiveReload · DevTools), 인스턴스 없는 헤드리스 작업(동적 모듈 올리고 내리기).
+    // 개발 구성에만 있는 경로 — 리로드 그래프 등록(LiveReload), 인스턴스 없는 헤드리스 작업(동적 모듈 올리고 내리기).
     // 배포는 이 헤더 · 라이브러리를 짓지 않아 여기만 `#if` 로 가른다(docs/agents/BuildConfigSwitch.md 둘째 줄). 부르는 자리는 `build::kShipping` 으로 가른다.
     // ----------------------------------------------------------------------------------------------------------------------
     bool EditorModuleManager::registerEditorModule( LiveReloadManager* pLiveReloadManager )
@@ -438,16 +431,6 @@ namespace sw
             }
         }
         return true;
-    }
-
-    void EditorModuleManager::bindDevToolServices( SubsystemScope& editorServices ) const
-    {
-        // 개발 도구는 엔진의 기동 확장(`DevToolsHost`)이 세워 서비스 목록의 행이 아니다 — 에디터가 찾는 것(HUD 조작 · 설정 리로드 창)을 빌려 건다(없는 호스트면 걸지 않는다).
-        (void)editorServices.bind( engine::findSubsystem<DebugHUD>() );
-        (void)editorServices.bind( engine::findSubsystem<ConfigReloadSubsystem>() );
-        // 에디터 에셋 리로드가 결과를 적는 집계(`reload.status`)와 에디터 UI 사진이 알리는 시작 인자 사진 장부. 빠져 있어 에디터 리로드가 집계되지 않았다(assetcascade).
-        (void)editorServices.bind( engine::findSubsystem<ReloadTracker>() );
-        (void)editorServices.bind( engine::findSubsystem<StartupCaptureSubsystem>() );
     }
 
     namespace

@@ -20,7 +20,8 @@ namespace sw
         , _hostMask{ hostMask }
         , _mapHead{}
         , _mapAttachedObject{}
-        , _mountedLocator{ *this }
+        , _mountedLocator{ *this, ModuleLocatorKind::GameModules }
+        , _hostModuleLocator{ *this, ModuleLocatorKind::HostModules }
     {
     }
 
@@ -78,9 +79,20 @@ namespace sw
         _pProcessScope->unmountChildScope( moduleName );
     }
 
-    void* ModuleRegistrationHost::findInMounted( uint64 typeHash ) const
+    void* ModuleRegistrationHost::findForModule( uint64 typeHash, ModuleLocatorKind kind ) const
     {
-        void* const pFound = _pProcessScope->findInMounted( typeHash );
-        return pFound != nullptr ? pFound : _pEngineScope->findInMounted( typeHash );
+        void* pFound = _pProcessScope->findInMounted( typeHash );
+        if ( pFound == nullptr )
+            pFound = _pEngineScope->findInMounted( typeHash );
+        if ( pFound != nullptr || kind == ModuleLocatorKind::GameModules )
+            return pFound; // 게임 모듈은 호스트 모듈에 보이는 서브시스템을 찾지 못한다 — 호스트 전용의 경계
+        // 엔진 범위(기동 단계) → 서비스 → 코어 → 호스트 범위. 선언한 서브시스템이 어느 범위에 섰든 찾는다.
+        for ( const ISubsystemLocator* pScope = _pEngineScope; pScope != nullptr; pScope = pScope->getParentScope() )
+        {
+            pFound = pScope->findHostModuleVisibleInScope( typeHash );
+            if ( pFound != nullptr )
+                return pFound;
+        }
+        return nullptr;
     }
 } // namespace sw

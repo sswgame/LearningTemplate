@@ -6,7 +6,8 @@
  *          (프로세스 · 엔진)에 모듈 이름의 자식 범위를 매달아 서브시스템을 세우고, 내리는 길(`engine::unregisterModuleTypes`)이 그 자식 범위째 걷는다.
  *          Shipping 은 모듈을 내리지 않는다 — 자식 범위는 그것을 매단 범위가 사라질 때 함께 사라진다(`SubsystemScope::destroyAll` 이 자식을 먼저 지운다).
  *          조회 창구(`ISubsystemLocator`)는 매단 자식이 공개한 칸만 본다 — 모듈에 넘기는 서비스 범위가 이것을 부모로 두어(`GameModuleManager::fillModuleServiceScope`)
- *          게임 · 에디터 모듈이 호스트 전용 서비스는 못 보고 모듈이 공개한 구현(암호 제공자 …)만 찾게 한다.
+ *          게임 모듈이 호스트 전용 서비스는 못 보고 모듈이 공개한 구현(암호 제공자 …)만 찾게 한다. 에디터 모듈의 창구(`getHostModuleLocator`)는 거기에 더해
+ *          호스트 모듈에 보인다고 스스로 선언한 서브시스템(`SubsystemModuleVisibility::HostModules` — 개발 도구의 HUD · 리로드 집계 …)을 엔진 범위부터 상위로 찾는다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -26,7 +27,7 @@ namespace sw
 
     /**
      * @class ModuleRegistrationHost
-     * @brief 모듈 서브시스템의 자식 범위를 매달고 떼는 서브시스템이고, 매단 자식이 공개한 칸의 조회 창구(`getMountedLocator`)를 가집니다. 스레드: 모듈을 올리고 내리는 스레드만 부른다.
+     * @brief 모듈 서브시스템의 자식 범위를 매달고 떼는 서브시스템이고, 모듈 서비스 범위의 부모가 될 조회 창구(`getMountedLocator` · `getHostModuleLocator`)를 가집니다. 스레드: 모듈을 올리고 내리는 스레드만 부른다.
      */
     class SW_API ModuleRegistrationHost final : public ISubsystem
     {
@@ -65,34 +66,51 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
-        /** @brief 매단 자식이 공개한 칸만 보는 조회 창구입니다(모듈 범위의 부모 — `GameModuleManager::fillModuleServiceScope`). 수명은 이 서브시스템과 같다. */
+        /** @brief 매단 자식이 공개한 칸만 보는 조회 창구입니다(게임 모듈 범위의 부모 — `GameModuleManager::fillModuleServiceScope`). 수명은 이 서브시스템과 같다. */
         const ISubsystemLocator& getMountedLocator() const { return _mountedLocator; }
+        /**
+         * @brief 매단 자식이 공개한 칸에 더해, 호스트 모듈에 보인다고 선언한 서브시스템(`SubsystemModuleVisibility::HostModules`)을 보는 조회 창구입니다(에디터 모듈 범위의 부모).
+         * @details 예전에는 호스트가 개발 도구 서브시스템을 손 목록으로 에디터 범위에 빌려 걸었다 — 목록에서 빠지면 에디터가 조용히 못 찾았다(ReloadTracker · assetcascade).
+         */
+        const ISubsystemLocator& getHostModuleLocator() const { return _hostModuleLocator; }
 
     private:
+        /** @brief 창구가 누구의 범위 부모인지입니다(무엇을 보는지가 갈린다). */
+        enum class ModuleLocatorKind : uint8
+        {
+            GameModules, ///< 매단 자식이 공개한 칸만
+            HostModules, ///< 그것에 더해 `SubsystemModuleVisibility::HostModules` 로 선언한 서브시스템
+        };
+
         /**
          * @class MountedLocator
-         * @brief 매단 자식이 공개한 칸만 보는 `ISubsystemLocator` 입니다(상위 범위 없음). 호스트가 그 인터페이스를 상속하지 않고 이 멤버를 내놓는다.
+         * @brief 모듈 범위의 부모가 되는 `ISubsystemLocator` 입니다(상위 범위 없음). 호스트가 그 인터페이스를 상속하지 않고 이 멤버를 내놓는다.
          */
         class MountedLocator final : public ISubsystemLocator
         {
         public:
-            explicit MountedLocator( const ModuleRegistrationHost& owner )
+            MountedLocator( const ModuleRegistrationHost& owner, ModuleLocatorKind kind )
                 : _owner{ owner }
+                , _kind{ kind }
             {
             }
 
-            void*                    findInScope( uint64 typeHash ) const override { return _owner.findInMounted( typeHash ); }
+            void*                    findInScope( uint64 typeHash ) const override { return _owner.findForModule( typeHash, _kind ); }
             const ISubsystemLocator* getParentScope() const override { return nullptr; }
 
         private:
             const ModuleRegistrationHost& _owner;
+            ModuleLocatorKind             _kind;
         };
 
     private:
         /** @brief @p scope 의 범위입니다. */
         SubsystemScope& resolveScope( uint8 scope ) const;
-        /** @brief 매단 자식이 공개한 칸에서 @p typeHash 를 찾습니다(프로세스 범위의 자식이 먼저). 없으면 nullptr 입니다. */
-        void* findInMounted( uint64 typeHash ) const;
+        /**
+         * @brief @p kind 창구의 모듈이 보는 칸에서 @p typeHash 를 찾습니다 — 매단 자식이 공개한 칸(프로세스 범위의 자식이 먼저), 호스트 모듈이면 이어서
+         *        엔진 범위부터 상위로 호스트 모듈에 보인다고 선언한 서브시스템. 없으면 nullptr 입니다.
+         */
+        void* findForModule( uint64 typeHash, ModuleLocatorKind kind ) const;
 
     private:
         SubsystemScope*                                       _pProcessScope;     ///< 프로세스 범위(엔진보다 오래 산다)
@@ -100,6 +118,7 @@ namespace sw
         SubsystemHostMask                                     _hostMask;          ///< 자식 서브시스템을 세울 호스트 종류
         unordered_map<string, HeadRecord>                     _mapHead;           ///< 모듈 이름 → 마지막으로 걷은 등록자 머리
         unordered_map<string, vector<ModuleObjectRegistrar*>> _mapAttachedObject; ///< 모듈 이름 → 붙인 모듈 객체 등록자
-        MountedLocator                                        _mountedLocator;    ///< 매단 자식이 공개한 칸의 조회 창구
+        MountedLocator                                        _mountedLocator;    ///< 게임 모듈 범위의 부모(매단 자식이 공개한 칸)
+        MountedLocator                                        _hostModuleLocator; ///< 에디터 모듈 범위의 부모(공개한 칸 + 호스트 모듈에 보이는 서브시스템)
     };
 } // namespace sw

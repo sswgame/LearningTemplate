@@ -53,7 +53,8 @@ namespace sw
     class SW_DEVTOOLS_API ReloadTracker final : public ISubsystem
     {
     public:
-        static constexpr const utf8* kSubsystemName = "ReloadTracker";
+        static constexpr const utf8*               kSubsystemName    = "ReloadTracker";
+        static constexpr SubsystemModuleVisibility kModuleVisibility = SubsystemModuleVisibility::HostModules; ///< 에디터 에셋 리로드가 결과를 적는다(`AssetHotReload`)
         /** @brief 기억하는 경로 수의 상한입니다(고정 용량 — 체크아웃 한 번에 수천 파일이 바뀌어도 이 이상 쌓지 않는다). */
         static constexpr uint32 kMaxPathCount = 256;
 

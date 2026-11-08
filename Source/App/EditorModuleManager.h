@@ -174,8 +174,6 @@ namespace sw
          * @return 매니페스트가 에디터 모듈을 껐거나 등록이 실패하거나 리로드 그래프가 깨졌으면 false 입니다(기동 실패).
          */
         [[nodiscard]] bool registerEditorModule( LiveReloadManager* pLiveReloadManager );
-        /** @brief 에디터 모듈의 서비스 범위에 개발 도구(HUD 조작 · 설정 리로드 창)를 빌려 겁니다. 배포는 개발 도구가 없어 아무것도 걸지 않습니다. */
-        void bindDevToolServices( SubsystemScope& editorServices ) const;
 
     private:
         EditorAPI                     _editorAPI;

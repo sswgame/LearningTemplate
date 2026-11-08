@@ -49,6 +49,15 @@ namespace sw
         virtual void* findInScope( uint64 typeHash ) const = 0;
         /** @brief 상위 범위입니다. 없으면 nullptr 입니다. */
         virtual const ISubsystemLocator* getParentScope() const = 0;
+        /**
+         * @brief 이 범위의 칸 중 호스트 모듈(에디터)에 보인다고 선언한 것(`SubsystemModuleVisibility::HostModules`)에서만 @p typeHash 를 찾습니다. 상위는 보지 않습니다.
+         * @details 호스트 모듈 창구(`ModuleRegistrationHost::getHostModuleLocator`)가 엔진 범위부터 상위로 올라가며 묻는다. 칸을 갖지 않는 창구는 없다(nullptr).
+         */
+        virtual void* findHostModuleVisibleInScope( uint64 typeHash ) const
+        {
+            (void)typeHash;
+            return nullptr;
+        }
     };
 
     /**
@@ -123,7 +132,7 @@ namespace sw
         TSubsystem& addSubsystem( unique_ptr<TSubsystem> subsystem )
         {
             TSubsystem& added       = _collection.add( std::move( subsystem ) );
-            const bool  bRegistered = registerEntry( getSubsystemTypeHash<TSubsystem>(), &added, true );
+            const bool  bRegistered = registerEntry( getSubsystemTypeHash<TSubsystem>(), &added, true, TSubsystem::kModuleVisibility );
             SW_ASSERT( bRegistered );
             (void)bRegistered;
             return added;
@@ -249,15 +258,17 @@ namespace sw
 
         void*                    findInScope( uint64 typeHash ) const override;
         const ISubsystemLocator* getParentScope() const override { return _pParent; }
+        void*                    findHostModuleVisibleInScope( uint64 typeHash ) const override;
 
     private:
         /** @brief 조회 칸 하나입니다. */
         struct Entry
         {
-            uint64 _typeHash;            ///< 걸린 타입의 해시
-            void*  _pObject;             ///< 걸린 객체(그 타입으로 바꾼 주소)
-            bool   _bOwned;              ///< 이 범위의 컬렉션이 소유한 서브시스템이면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool   _bPublished{ false }; ///< 매단 부모 범위의 조회에도 보이면 true(`publish`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            uint64                    _typeHash;                                                 ///< 걸린 타입의 해시
+            void*                     _pObject;                                                  ///< 걸린 객체(그 타입으로 바꾼 주소)
+            bool                      _bOwned;                                                   ///< 이 범위의 컬렉션이 소유한 서브시스템이면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                      _bPublished{ false };                                      ///< 매단 부모 범위의 조회에도 보이면 true(`publish`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            SubsystemModuleVisibility _moduleVisibility{ SubsystemModuleVisibility::ScopeOnly }; ///< 모듈 서비스 범위에도 보이는지(소유한 서브시스템의 `kModuleVisibility`)
         };
 
         /** @brief 매단 자식 범위 하나입니다(이 범위가 소유한다). */
@@ -270,7 +281,7 @@ namespace sw
         /** @brief 매단 자식 범위를 매단 역순으로 지웁니다(`shutdownAll` · `destroyAll` 의 첫 단계). */
         void destroyMountedScopes();
         /** @brief 칸을 더합니다. 이 범위의 칸에 같은 타입이 이미 있으면 false 입니다. */
-        [[nodiscard]] bool registerEntry( uint64 typeHash, void* pObject, bool bOwned );
+        [[nodiscard]] bool registerEntry( uint64 typeHash, void* pObject, bool bOwned, SubsystemModuleVisibility moduleVisibility = SubsystemModuleVisibility::ScopeOnly );
         /** @brief 칸을 공개합니다. 같은 객체로 이미 걸렸으면 표시만 더하고, 다른 객체로 걸렸으면 false 입니다. */
         [[nodiscard]] bool publishEntry( uint64 typeHash, void* pObject, bool bOwned );
         /** @brief 이 범위 자신의 칸에서만 찾습니다(자식 · 상위는 보지 않는다). */

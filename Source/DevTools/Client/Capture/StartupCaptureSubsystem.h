@@ -32,8 +32,9 @@ namespace sw
     class SW_DEVTOOLS_API StartupCaptureSubsystem final : public ISubsystem
     {
     public:
-        static constexpr const utf8* kSubsystemName      = "StartupCapture";
-        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::RenderCPU;
+        static constexpr const utf8*               kSubsystemName      = "StartupCapture";
+        static constexpr MemoryTag                 kSubsystemMemoryTag = MemoryTag::RenderCPU;
+        static constexpr SubsystemModuleVisibility kModuleVisibility   = SubsystemModuleVisibility::HostModules; ///< 에디터 UI 사진이 시작 인자 사진 장부에 알린다(`EditorUICapture`)
 
         StartupCaptureSubsystem();
         ~StartupCaptureSubsystem() override;
