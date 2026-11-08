@@ -1484,9 +1484,10 @@ namespace sw
         const vector<float32>&       listCurveValue = _curves.getValues();
         for ( size_t curveIndex = 0; curveIndex < listCurveName.size(); ++curveIndex )
         {
-            const int32 targetIndex = skeletalMesh.findMorphTargetIndex( listCurveName[curveIndex] );
-            if ( targetIndex >= 0 )
-                skeletalMesh.addMorphWeight( static_cast<uint32>( targetIndex ), listCurveValue[curveIndex] );
+            // 모프 타깃이 아닌 커브(일반 애니메이션 커브)는 없음이 정상이다.
+            const optional<uint32> targetIndex = skeletalMesh.findMorphTargetIndex( listCurveName[curveIndex] );
+            if ( targetIndex.has_value() )
+                skeletalMesh.addMorphWeight( *targetIndex, listCurveValue[curveIndex] );
         }
     }
 } // namespace sw

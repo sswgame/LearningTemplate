@@ -615,10 +615,12 @@ namespace sw
         return ( pMesh != nullptr ) ? pMesh->getMorphTargetCount() : 0u;
     }
 
-    int32 SkeletalMeshComponent::findMorphTargetIndex( const hashed_string& targetName ) const
+    optional<uint32> SkeletalMeshComponent::findMorphTargetIndex( const hashed_string& targetName ) const
     {
         const Mesh* pMesh = getRawMesh();
-        return ( pMesh != nullptr ) ? pMesh->findMorphTargetIndex( targetName ) : constant::invalid_index::kInt32;
+        if ( pMesh == nullptr )
+            return nullopt;
+        return pMesh->findMorphTargetIndex( targetName );
     }
 
     void SkeletalMeshComponent::setMorphWeight( uint32 targetIndex, float32 weight )

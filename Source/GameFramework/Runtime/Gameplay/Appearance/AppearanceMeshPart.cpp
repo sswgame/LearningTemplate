@@ -87,7 +87,7 @@ namespace sw
             {
                 for ( const BodyMorphWeight& weight : listWeight )
                 {
-                    if ( weight._weight != 0.0f && mesh.findMorphTargetIndex( weight._morph ) >= 0 )
+                    if ( weight._weight != 0.0f && mesh.findMorphTargetIndex( weight._morph ).has_value() )
                         return true;
                 }
                 return false;

@@ -28,8 +28,8 @@ namespace sw
     {
         struct FacialAnimationInternal
         {
-            /** @brief 이름들을 그리는 메시의 타깃 번호로 바꿉니다(없으면 -1 — 검증이 이미 알렸다). */
-            static void mapTargets( const SkeletalMeshComponent& skeletalMesh, const FacialPose& pose, vector<int32>& outListIndex )
+            /** @brief 이름들을 그리는 메시의 타깃 번호로 바꿉니다(없으면 없음 — 검증 `FacialRig::validate` 가 이미 알렸고 적용이 건너뛴다). */
+            static void mapTargets( const SkeletalMeshComponent& skeletalMesh, const FacialPose& pose, vector<optional<uint32>>& outListIndex )
             {
                 outListIndex.clear();
                 for ( const FacialTargetWeight& target : pose._listTarget )
@@ -481,14 +481,14 @@ namespace sw
         }
     }
 
-    void FacialAnimationComponent::addPose( SkeletalMeshComponent& skeletalMesh, const vector<int32>& listTargetIndex, const FacialPose& pose, float32 weight ) const
+    void FacialAnimationComponent::addPose( SkeletalMeshComponent& skeletalMesh, const vector<optional<uint32>>& listTargetIndex, const FacialPose& pose, float32 weight ) const
     {
         if ( weight == 0.0f )
             return;
         for ( size_t targetIndex = 0; targetIndex < listTargetIndex.size() && targetIndex < pose._listTarget.size(); ++targetIndex )
         {
-            if ( listTargetIndex[targetIndex] >= 0 )
-                skeletalMesh.addMorphWeight( static_cast<uint32>( listTargetIndex[targetIndex] ), pose._listTarget[targetIndex]._weight * weight );
+            if ( listTargetIndex[targetIndex].has_value() )
+                skeletalMesh.addMorphWeight( *listTargetIndex[targetIndex], pose._listTarget[targetIndex]._weight * weight );
         }
     }
 
@@ -564,10 +564,10 @@ namespace sw
         }
 
         // 깜빡임
-        for ( const int32 targetIndex : _listBlinkTarget )
+        for ( const optional<uint32>& targetIndex : _listBlinkTarget )
         {
-            if ( targetIndex >= 0 && _blinkAmount > 0.0f )
-                skeletalMesh.addMorphWeight( static_cast<uint32>( targetIndex ), _blinkAmount );
+            if ( targetIndex.has_value() && _blinkAmount > 0.0f )
+                skeletalMesh.addMorphWeight( *targetIndex, _blinkAmount );
         }
 
         applyGaze( skeletalMesh );
