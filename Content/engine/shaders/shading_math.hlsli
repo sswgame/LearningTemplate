@@ -53,8 +53,6 @@ namespace sw::shadermath
         // --- 천 · 털 ---
         static float computeDistributionCharlieTimesPi( float normalDotHalf, float sheenAlpha ); ///< Estevez · Kulla 2017 시엔 분포(정규화됨)
         static float computeVisibilityNeubelt( float normalDotLight, float normalDotView );      ///< Neubelt · Pettineo 2013 천 가시성
-        static float computeStrandSpecular( float tangentDotHalf, float exponent );              ///< Kajiya · Kay 머리결 반사(sin^n)
-        static float computeStrandExponent( float roughness );                                   ///< 거칠기 → 머리결 반사 지수
         // --- 확산 ---
         static float computeWrappedDiffuse( float normalDotLight, float wrap );      ///< 에너지 보존 감싼 확산(N·L 이 -wrap 까지 빛을 받는다, 적분은 램버트와 같다)
         static float computeDiffuseTransmission( float normalDotLight, float wrap ); ///< 얇은 면의 뒤에서 오는 빛(커튼 · 잎 · 귀)
@@ -151,19 +149,6 @@ namespace sw::shadermath
     SW_SHADING_MATH_DEFINITION float ShadingMath::computeVisibilityNeubelt( float normalDotLight, float normalDotView )
     {
         return 1.0f / max( 4.0f * ( normalDotLight + normalDotView - normalDotLight * normalDotView ), kShadingMathEpsilon );
-    }
-
-    SW_SHADING_MATH_DEFINITION float ShadingMath::computeStrandSpecular( float tangentDotHalf, float exponent )
-    {
-        const float sinTangentHalf = sqrt( max( 1.0f - tangentDotHalf * tangentDotHalf, 0.0f ) );
-        return pow( sinTangentHalf, exponent );
-    }
-
-    SW_SHADING_MATH_DEFINITION float ShadingMath::computeStrandExponent( float roughness )
-    {
-        // 블린-퐁 지수와 GGX α 의 흔한 대응 2/α² - 2 를 머리결에 쓴다. 거칠기 0 이 무한대가 되지 않게 하한을 건다.
-        const float alpha = max( roughness * roughness, 0.02f );
-        return max( 2.0f / ( alpha * alpha ) - 2.0f, 1.0f );
     }
 
     SW_SHADING_MATH_DEFINITION float ShadingMath::computeWrappedDiffuse( float normalDotLight, float wrap )

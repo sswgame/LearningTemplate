@@ -1,7 +1,8 @@
 /**
  * material_functions.hlsli — 머티리얼 함수 묶음(언리얼 Material Function 라이브러리 · 유니티 Shader Graph 서브그래프 자리). 표면 훅(`computeMaterialSurface`)이 부르는 순수 함수다.
  *
- * 쓰는 곳: terrain.hlsl(3 축 · 높이 섞기 · 규칙 · 젖음 · 눈), environment_surface.hlsl(무늬 · 마모 · 녹 · 때 · 변색 · 날씨), gimmick_surface.hlsl(프레넬 · 녹아 사라짐 · 홀로그램 · 흐름).
+ * 쓰는 곳: terrain.hlsl(3 축 · 높이 섞기 · 규칙 · 젖음 · 눈), environment_surface.hlsl(무늬 · 마모 · 녹 · 때 · 변색 · 날씨), gimmick_surface.hlsl(프레넬 · 녹아 사라짐 · 홀로그램 · 흐름),
+ * surface_lit.hlsl(몸의 젖음 · 흙 — 같은 값을 따로 두지 않는다).
  * 머티리얼 셰이더 뼈대의 `material_shader.hlsli` 뒤에 include 한다(MaterialTexture · View · 픽셀 미분을 쓴다). 상태가 없고 텍스처 슬롯을 새로 두지 않는다 — 텍스처는 머티리얼 번호로만 읽는다.
  *
  * CPU 짝: 3 축 가중치 · 타일 변형 해시는 `MaterialProjection`(C++), 높이 섞기는 `SurfaceLayerWeights::computeHeightBlended`, 규칙 띠는 `TerrainLayerRule::computeBand`.
@@ -29,7 +30,7 @@ static const float kMinTriplanarAxis      = 1.0e-5f;
 static const float kMinTriplanarSharpness = 1.0f;
 // 규칙 띠 페이드 폭의 아래 한계 — C++ TerrainLayerRule::kMinFade 와 같다.
 static const float kMinRuleFade = 1.0e-4f;
-// 젖음: 다 젖었을 때 알베도 배율(다공성 1 기준)과 거칠기 — surface_lit.hlsl 의 kWetAlbedoScale · kWetRoughness 와 같은 값(Lagarde 의 젖은 표면 관찰).
+// 젖음: 다 젖었을 때 알베도 배율(다공성 1 기준)과 거칠기(Lagarde 의 젖은 표면 관찰). 몸(surface_lit.hlsl)과 땅 · 벽이 이 한 벌을 쓴다.
 static const float kWetAlbedoScale = 0.55f;
 static const float kWetRoughness   = 0.15f;
 // 웅덩이 물막: 거칠기 · 알베도 배율 — 고인 물은 거의 거울이고 밑바닥이 어둡다.
@@ -41,9 +42,10 @@ static const float  kSnowRoughness    = 0.65f;
 static const float  kSparkleRoughness = 0.04f;
 static const float  kSparkleTiltScale = 0.6f;
 // 녹 · 때 · 변색 색(선형). 녹은 거친 비금속, 은 변색은 갈흑색 황화은 막이다.
-static const float3 kRustColor        = float3( 0.32f, 0.12f, 0.04f );
-static const float3 kRustDarkColor    = float3( 0.12f, 0.05f, 0.02f );
-static const float  kRustRoughness    = 0.85f;
+static const float3 kRustColor     = float3( 0.32f, 0.12f, 0.04f );
+static const float3 kRustDarkColor = float3( 0.12f, 0.05f, 0.02f );
+static const float  kRustRoughness = 0.85f;
+// 흙 · 때 — 벽의 때(computeDirtMask)와 몸의 흙(surface_lit.hlsl)이 같은 색이다.
 static const float3 kDirtColor        = float3( 0.16f, 0.12f, 0.08f );
 static const float  kDirtRoughness    = 0.95f;
 static const float3 kTarnishColor     = float3( 0.18f, 0.13f, 0.09f );
