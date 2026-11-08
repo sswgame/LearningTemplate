@@ -3,7 +3,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Profiling/ProfilerTraceExport.h"
+#include "DevTools/Profiling/ProfilerTraceExport.h"
+
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 #if !defined( SW_SHIPPING )

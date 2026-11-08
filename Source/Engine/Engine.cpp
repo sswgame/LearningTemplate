@@ -74,7 +74,6 @@
 #include "Engine/Presentation/IEngineUIDriver.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
-#include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Profiling/SubsystemTimingReport.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
 #include "Engine/Scene/Scene.h"
@@ -565,9 +564,6 @@ namespace sw
     void Engine::endFrame()
     {
         engine::getSubsystem<FrameProfiler>().endFrame();
-#if !defined( SW_SHIPPING )
-        ProfilerTraceExport::updateRecording( engine::getSubsystem<FrameProfiler>() ); // `profile.trace record` 의 끝 시각 확인(진행 중이 아니면 atomic 하나)
-#endif
         // 외부 프로파일러(Tracy)의 주 프레임 경계 — 게임 스레드 프레임이다.
         IProfilerBackend* pProfilerBackend = ProfilerBackend::getActiveBackend();
         if ( pProfilerBackend != nullptr )

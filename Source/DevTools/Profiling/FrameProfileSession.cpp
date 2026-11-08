@@ -15,6 +15,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "DevTools/Profiling/ProfilerTraceExport.h"
+
 #include "Engine/Asset/Cache/CacheStatsUtil.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
@@ -23,7 +25,6 @@
 #include "Engine/Graphics/View/IEngineRenderDriver.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
-#include "Engine/Profiling/ProfilerTraceExport.h"
 
 namespace sw
 {

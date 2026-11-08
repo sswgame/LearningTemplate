@@ -20,12 +20,13 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Time/WallClock.h"
 
+#include "DevTools/Profiling/ProfilerTraceExport.h"
+
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Net/GameNetSession.h"
-#include "Engine/Profiling/ProfilerTraceExport.h"
 
 #include <thread>
 

@@ -1,13 +1,14 @@
 /**
- * @file AutomationProfilerWatches.cpp
+ * @file DevTools/Profiling/ProfilerTraceWatches.cpp
  * @brief 긴 캡처(`ProfilerTraceExport`)의 자동화 감시 값 `Profiler.TraceRecording` 입니다.
  */
 #include "pch.h"
 
+#include "DevTools/Profiling/ProfilerTraceExport.h"
+
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Profiling/ProfilerTraceExport.h"
 
 #if !defined( SW_SHIPPING )
 namespace sw

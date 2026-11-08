@@ -16,6 +16,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Connection/NetFlowLog.h"
 
+#include "DevTools/DevToolsAPI.h"
+
 #if !defined( SW_SHIPPING )
 
 namespace sw
@@ -82,7 +84,7 @@ namespace sw
      * @class ProfilerTraceExport
      * @brief 타임라인 사건 → Trace Event JSON 변환기와 저장 창구입니다(전부 static).
      */
-    class SW_API ProfilerTraceExport
+    class SW_DEVTOOLS_API ProfilerTraceExport
     {
     public:
         /** @brief 기본 파일 확장자입니다. */

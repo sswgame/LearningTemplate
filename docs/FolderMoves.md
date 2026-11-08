@@ -87,7 +87,7 @@
 | Engine/Animation/Component/PoseModifierComponent.h | Engine/Animation/Component/PoseModifierComponent.h | 리그 에셋(IK · 제약)을 돌리는 후처리 컴포넌트 — Animation/Rig 의 실행 쪽. 캐릭터 형상 다리(`CharacterPoseUtil`)만 Character 에 남는다 | 8 |
 | Engine/Console/DebugOverlayState.h | Engine/Console/DebugOverlayState.h | 모듈 사이 디버그 오버레이 값(게임이 쓰고 에디터가 읽음) — 계측이 아니다. 디버그 HUD 레지스트리 옆. 게임이 쓰므로 DevTools(게임이 못 봄)는 안 된다 | 5 |
 | Engine/Profiling/FrameProfileReport.h | DevTools/Profiling/FrameProfileReport.h | 프로파일 한 회분 보고(개발). **막힘**: `FrameProfiler.h` 가 include — 보고 형식 의존을 끊은 뒤 | 4 |
-| Engine/Profiling/ProfilerTraceExport.h | DevTools/Profiling/ProfilerTraceExport.h | Chrome Trace 내보내기(개발). **막힘**: Engine.cpp · Automation · Renderer/Capture/BugReport 가 부름 → EngineFrameHooks 로 거는 자리로 바꾼 뒤 | 9 |
+| DevTools/Profiling/ProfilerTraceExport.h | DevTools/Profiling/ProfilerTraceExport.h | Chrome Trace 내보내기(개발). **막힘**: Engine.cpp · Automation · Renderer/Capture/BugReport 가 부름 → EngineFrameHooks 로 거는 자리로 바꾼 뒤 | 9 |
 | Engine/Profiling/SubsystemTimingReport.h | DevTools/Profiling/SubsystemTimingReport.h | 기동 시간 요약(개발 구성만). **막힘**: Engine.cpp 가 부름 — 위와 같다 | 4 |
 | Engine/Profiling/Tracy/TracyProfilerBackend.h | DevTools/Profiling/Tracy/TracyProfilerBackend.h | 외부 프로파일러 연결(개발). ProfilerBackend 가 고르는 대신 DevTools 의 `ProfilerLaunchSwitches` 가 `IProfilerBackend` 를 등록하게 뒤집는다 | 2 |
 | DevTools/Client/Capture/BugReport.h | DevTools/Client/Capture/BugReport.h | 쓰는 곳이 Editor 셋뿐 + 개발 명령 — "Engine 에 편집기만 부르는 함수 금지"(AGENTS.md) 위반. Editor 는 DevTools 를 본다 | 5 |
