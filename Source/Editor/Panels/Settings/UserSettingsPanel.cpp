@@ -11,7 +11,7 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Panels/Settings/Model/UserSettingsViewModel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -35,7 +35,7 @@ namespace sw::editor
             /** @brief 적용 · 되돌리기를 기다리는 보류 값이 있으면 1 입니다(감시 값 `Editor.UserSettingsPending`). 설정 매니저가 없으면 값을 내지 않는다. */
             [[nodiscard]] static bool readPending( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UserSettingsManager* pSettings = editor::findSubsystem<UserSettingsManager>();
+                const UserSettingsManager* pSettings = UserSettingsViewModel::findSettings();
                 if ( pSettings == nullptr )
                     return false;
                 outValue = pSettings->hasPendingChanges() ? 1.0 : 0.0;
@@ -68,7 +68,7 @@ namespace sw::editor
 
     void UserSettingsPanel::drawContent()
     {
-        UserSettingsManager& settings = editor::getSubsystem<UserSettingsManager>();
+        UserSettingsManager& settings = UserSettingsViewModel::getSettings();
         if ( settings.getCategories().empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSettings", "UserSettingsNotLoaded" ) );

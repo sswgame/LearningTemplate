@@ -15,7 +15,8 @@
         "Editor/Common/Workspace/Play/EditorSessionPolicy.h": "미저장 · 플레이 중 편집 판정 값(IEditorPanel 이 쓴다)",
         "Editor/Common/Workspace/Asset/EditorAssetType.h": "에셋 종류 서술(IEditorPanel 이 쓴다)",
         "Editor/Common/Commands/EditorCommandText.h": "명령의 표시 · 배치 데이터(라벨 · 아이콘 · 메뉴) — 값이고, 허용한 EditorCommandRegistry.h 가 include 한다",
-        "Engine/Object/GameObject/Service/ScenePreviewPolicy.h": "미리보기 씬 틱 정책 값(집합체) — 미리보기 패널이 getPreviewPolicy 로 돌려준다"
+        "Engine/Object/GameObject/Service/ScenePreviewPolicy.h": "미리보기 씬 틱 정책 값(집합체) — 미리보기 패널이 getPreviewPolicy 로 돌려준다",
+        "Editor/Common/Commands/Diagnostics/EditorModuleDetail.h": "모듈 창 상세 한 모듈의 값(집합체) — makeDetail 이 채우고 View 가 그린다"
     },
     "_migratedViews": [
         "Source/Editor/Panels/Animation/AnimationGraphLayerEditor",
@@ -38,6 +39,11 @@
         "Source/Editor/Panels/Settings/SettingsWatches",
         "Source/Editor/Panels/Scene/EditorSceneViewUtil",
         "Source/Editor/Panels/Inspector/IInspectorProperty",
-        "Source/Editor/Panels/Multiplayer/MultiplayerTab"
+        "Source/Editor/Panels/Multiplayer/MultiplayerTab",
+        "Source/Editor/Panels/Settings/UserSettingsPanel",
+        "Source/Editor/Panels/SourceControl/SourceControlChangesPanel",
+        "Source/Editor/Panels/AudioMixer/AudioMixerPanel",
+        "Source/Editor/Panels/InputMap/InputMapPanel",
+        "Source/Editor/Panels/Settings/ModulesPanel"
     ]
 }

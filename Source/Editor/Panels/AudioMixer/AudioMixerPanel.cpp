@@ -13,8 +13,6 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Audio/AudioEngine.h"
@@ -46,8 +44,7 @@ namespace sw::editor
 
             static void openPanel()
             {
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<AudioMixerPanel>( true ); // 패널은 이 파일에 등록되어 있다
+                (void)EditorPanelManager::getInEditorContext().setPanelOpen<AudioMixerPanel>( true ); // 패널은 이 파일에 등록되어 있다
             }
 
             [[nodiscard]] static bool readBusCount( const GameObjectManager* /*pManager*/, float64& outValue )
@@ -203,7 +200,7 @@ namespace sw::editor
 
     void AudioMixerPanel::drawContent()
     {
-        IAudioService& audio = editor::getSubsystem<IAudioService>(); // 에디터는 오디오를 짓는 구성이라 늘 있다(전용 서버 구성만 오디오를 짓지 않는다)
+        IAudioService& audio = AudioMixerModel::getAudioService();
         if ( audio.isInitialized() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "TheAudioServiceIsNotRunning" ) );
