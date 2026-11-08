@@ -48,14 +48,12 @@
 - 디렉터 컴포넌트의 카탈로그 읽기는 컴포넌트 칸의 경로로 씬마다 다른 데이터라 게임 범위 `loadRequiredCatalog` 로 옮기지 않고 실패 등급만 ERROR 로. 파일 글 되돌리기 둘(프리팹은 캐시를 바로, 리그는 파일 감시가 다시 읽는다)은 뒤따르는 일이 달라 합치지 않는다.
 
 ### T8 구성 차이
-- 플랫폼 백엔드 파일(오디오 · 접근성) 안의 파일 전체 `#if` 는 남긴다 — Engine 은 아직 `sw_filterPlatformSources` 를 쓰지 않고 서버 타깃(클라이언트 코드 없음)도 같은 매크로로 가른다. Engine 에 폴더 규칙을 켤 때 함께 지운다.
-- Engine 의 `SW_SHIPPING` 은 리플렉션 메타데이터(툴팁 · 문서 필드)를 배포에서 빼는 자리와 배포 전용 정의 몇 곳뿐이다. 언리얼 `WITH_METADATA` · `WITH_EDITORONLY_DATA` 와 같은 자리라 유지한다(데이터 배치가 구성마다 다르다 — 빌드 단위로 가를 것이 아니다).
+- 리플렉션의 에디터 메타데이터(카테고리 · 표시 이름 · 툴팁 · 커스텀 메타 · 편집 조건 · 슬라이더 범위 …)는 옆 표(`ReflectionEditorMetadata.h`)에 두고 런타임 메타데이터는 포인터(`_pEditor`)로만 가리킨다 — 구조체 배치가 구성마다 같다. 값은 헤더마다의 개발 전용 단위(`<이름>.gen.meta.cpp`)가 정적 등록으로 올리고 `TypeRegistry` 가 등록 때 붙이며, 배포 구성은 그 단위를 짓지 않는다(언리얼 `WITH_METADATA` 자리를 `#if` 대신 빌드 단위로). 새 표시 · 편집 필드는 `ReflectionEditorMetadata.h` 에, 런타임 필드는 `ReflectionMetadata.h` 에 더한다.
+- 전용 서버는 플랫폼 구현을 폴더째 고른다 — `Window/Linux` · `Input/Linux`(와 오디오 · UI)는 짓지 않고(`SW_UNBUILT_ENGINE_FOLDERS`, 헤더는 `serverbuild` 게이트) 창 없는 대체는 `Window/Headless` · `Input/Headless` 가 정의한다(클라이언트는 `Headless` 를 짓지 않는다). 엔진 층에 `SW_WITH_CLIENT_CODE` 구역은 빌드가 무엇을 담는지 말하는 파일(`Config/Dev/ClientCodeGuards.json`)에만 둔다.
 - **남긴 구성 분기와 이유**:
-  - Reflection 메타데이터(`ReflectionMetadata.h` · `Reflection.cpp` · `ReflectionTypes.h` · `ReflectionDocWriter.cpp`, 24) — 구조체 배치가 구성마다 다른 에디터 전용 데이터라 빌드 단위로 가를 수 없다(언리얼 `WITH_METADATA` · `WITH_EDITORONLY_DATA` 도 `#if`). 옮기려면 메타데이터를 옆 표로 떼고 생성기(ReflectionParser 템플릿)가 개발 전용 `.gen` 단위를 따로 내야 한다 — 생성기 · 에디터 읽는 쪽 전부를 바꾸는 일이라 따로 한다.
   - `GameObjectManager::resolveComponent` 의 타입 확인 — 뜨거운 길의 검사(언리얼 `DO_CHECK` 자리)라 함수 호출로 바꾸면 비용이 는다.
-  - `LocalizationManager` 의 가짜 언어 숨김 둘 · `UIBindingSet` 의 배포 전용 경고 · `SplashWindow`(에디터 도메인 에셋) · `DiagnosticsSubsystem`(Core 할당 헤더 스위치를 따른다) — 모두 `build::kShipping` 으로 옮겼다(가짜 언어 · 스플래시 · 진단 · 모듈 구성 · UI 폴 경고 · 배포 평문 포트).
-  - `GameNetSession` 의 배포 평문 공개 포트 거절 — 개발 허용은 `DevOnlineExtension` 에 올릴 개발 대체물이다(키트 등록표 차례에 함께).
-  - 스위치를 정의하는 자리(`ContentSource.h` · `AnimationRewind.h` · `ProfilerBackend.h` · `ModuleCatalog::getCurrentConfiguration`)와 플랫폼 백엔드 파일의 `SW_WITH_CLIENT_CODE`(Engine 이 `sw_filterPlatformSources` 를 쓰지 않는다 — 위 결정)는 대상이 아니다. `SW_PROFILER_TRACE_ENABLED`(ServerApp 1)는 그대로다.
+  - 스위치를 정의하는 자리(`ContentSource.h` · `AnimationRewind.h` · `ProfilerBackend.h` · `ModuleCatalog::getCurrentConfiguration`)는 대상이 아니다. `SW_PROFILER_TRACE_ENABLED`(ServerApp 1)는 그대로다.
+  - 개발에서만 허용하는 동작(평문 공개 게임 포트 · 개발 인증서 · 가짜 제공자)은 구성 이름이 아니라 개발 대체물 등록으로 묻는다(`Core/Network/DevOnlineExtension.h` — 배포는 등록하지 않는다).
 
 ### T9 생성 계약
 - `ReflectionSchema`: `ReflectionSchema` 는 include 경로로 막지 못한다(Core 가 `Source` 루트를 준다) — 목록 밖 Engine 헤더 include 를 막으려면 루트를 층별로 나눠야 한다.
@@ -66,13 +64,7 @@
 ## 5. 남은 확인
 
 - 배포 구성(통합에서 한 번): `py -3 -m Scripts shipping-check` — `Ninja-Shipping` · `Ninja-Shipping-Server` 를 짓고(쿠킹 포함), 배포 App 을 몇 초 돌려 창 닫기로 0 종료, 서버를 몇 초 돌린 뒤 종료 신호(Ctrl+Break · SIGTERM)로 0 종료, 배포 App 의 `-scenario` 가 기동 오류인지(배포 구성은 자동화 실행기 · 테스트용 변수를 짓지 않는다) 보고 로그의 [Error] · [Warning] 을 모아 찍는다. CTest 가 아닌 이유: 프리셋마다 빌드 폴더가 달라 한 ctest 트리에 담기지 않는다.
-- 새로 만들 확인(원칙 4 — 손 확인 대신 자동화, 패치 · dlc 팩 찾기는 `PackManagerTest`, 콘텐츠 참조 풀이는 `ToolCheckAssetRefs` 가 이미 본다):
-  - 같은 상대 경로가 common · game 두 도메인에 있을 때 domain=비움 / common / game 으로 각각 읽기 · 편집 왕복(연 도메인 파일만 바뀐다).
-  - 작업 폴더를 바꾸고 상대 경로 인자로 띄워도 산출물 위치가 같다 / 상대 경로 · `C:foo` · 잘못된 정수 인자는 종료 코드 ≠ 0.
-  - 저장 왕복 시나리오가 없는 패널(Catalog · InputMap + 재생 · Material · Sequencer · SpriteClip · BehaviorTree · Rig · Terrain · AudioEvent/Graph)에 `scratch` 사본 저장 왕복 단계.
-  - 쿠킹 입력 종류마다 기록 → 원본 수정 → 낡음 판정(`TestCookJob` 확장).
-  - 셰이더: 캐시 두 폴더를 지운 ctest, 쿠킹본 정책의 메모리 캐시 적중 수, `--verify-shaders`.
-  - 파서: 같은 입력 두 번 → 같은 바이트 · 시각 그대로, 설정 · 템플릿 · 철자 표를 망가뜨리면 종료 코드 ≠ 0.
+- 새로 만들 확인(원칙 4 — 손 확인 대신 자동화): 저장 왕복 시나리오가 아직 없는 패널 — Catalog · InputMap + 재생 · BehaviorTree · Rig · Terrain · AudioEvent/Graph. 틀(`panel.saveDocument` · `panel.reloadDocument` · `asset.snapshotScratch` · `asset.expectScratchUnchanged`, 예: `saveroundtripmaterial.scenario.xml`)은 있다. 이 패널들은 경로로 열리지 않거나(자체 저장 패널 · 리그) 고정 파일을 쓰므로 `scratch` 사본을 가리킬 문서 경로 입구가 먼저 필요하다.
 
 ## 7. SOLID 점검 — Core · Engine (2026-11-01)
 
