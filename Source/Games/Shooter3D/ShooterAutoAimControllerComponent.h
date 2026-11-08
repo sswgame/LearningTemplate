@@ -22,6 +22,23 @@ namespace sw
      *          조종 회전은 `_turnRate` 로 돈다 — 표적이 바뀌어도 시점이 튀지 않게. 적 목록 · 상자는 디렉터가 앞 프레임에 적은 것을 읽습니다(조종 단계 — 틱 전, 게임 스레드).
      *          언리얼 `AAIController` + BT 서비스(감각) + 트리(판단)와 같은 나눔이다 — 스켈레톤 적(`ShooterEnemyAIControllerComponent`)과 같은 모양.
      */
+    /**
+     * @struct ShooterAutoPlayOptions
+     * @brief 자동 플레이 조종자 모두에 걸리는 게임 범위 값입니다. 게임이 멤버로 들고 게임 범위에 겁니다(`Shooter3DGame`). 게임 스레드에서 씁니다.
+     * @details 조종자마다 밀어 넣지 않고 조종자가 읽는다 — 한 프로세스 재생(넷 시뮬)의 서버 · 클라이언트 월드는 활성 씬과 다른 매니저라, 활성 씬의 조종자만 켜면
+     *          그 월드의 자동 플레이는 근접을 누르지 않았다(shooter3d.netauthority). 게임 범위는 월드와 상관없이 하나다.
+     */
+    struct ShooterAutoPlayOptions
+    {
+        /**
+         * @brief 데이터 칸 `Melee` 와 상관없이 닿는 거리의 적을 근접으로도 칠 스위치입니다. 개발 부분이 생길 때 걸고(`Dev/ShooterDevPart.cpp` — `-gv_shooterAutoMelee`) 질 때 푼다.
+         * @details 값이 아니라 스위치를 가리킨다 — 개발 부분의 갱신은 게임 플레이 중에만 돌아(에디터의 넷 시뮬은 아니다) 매 프레임 옮기면 그 월드에는 닿지 않았다.
+         */
+        const int32* _pForceMelee{ nullptr };
+
+        bool isMeleeForced() const { return _pForceMelee != nullptr && *_pForceMelee != 0; }
+    };
+
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Auto Aim Controller", Tooltip = "AI controller that aims, shoots, picks weapons and circles the arena with the player pawn when auto play is on" )
     class ShooterAutoAimControllerComponent : public AIControllerComponent
     {
@@ -30,9 +47,6 @@ namespace sw
 
         ShooterAutoAimControllerComponent();
         ~ShooterAutoAimControllerComponent() override = default;
-
-        /** @brief 닿는 거리의 적을 근접으로도 칠지 정합니다(데이터 칸 `Melee` — 개발 스위치 `-gv_shooterAutoMelee` 도 이것을 부른다, `Dev/ShooterDevPart.cpp`). 게임 스레드, 틱 밖. */
-        void setMelee( bool bMelee ) { _bMelee = bMelee ? SW_TRUE : SW_FALSE; }
 
     protected:
         void updateBlackboard( const ControlFrameContext& context, const PawnComponent& pawn ) override;

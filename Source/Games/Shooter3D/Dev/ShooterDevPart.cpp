@@ -55,12 +55,16 @@ namespace sw
             ShooterDevPart()
                 : _motionTrace{}
                 , _traceFrame{ 0 }
-                , _bMeleeForced{ SW_FALSE }
             {
+                // 근접 스위치는 주소로 건다 — 이 부분의 갱신은 게임 플레이 중에만 돌지만 조종자는 에디터의 넷 시뮬 월드에서도 돈다(`ShooterAutoPlayOptions`).
+                if ( ShooterAutoPlayOptions* const pOptions = game::findSubsystem<ShooterAutoPlayOptions>() )
+                    pOptions->_pForceMelee = &gv_shooterAutoMelee;
             }
 
             ~ShooterDevPart() override
             {
+                if ( ShooterAutoPlayOptions* const pOptions = game::findSubsystem<ShooterAutoPlayOptions>() )
+                    pOptions->_pForceMelee = nullptr;
                 if ( _motionTrace.empty() == false && FileUtil::writeTextFile( gv_shooterMotionTrace, _motionTrace ) == false )
                     SW_LOG_WARNING_ID( "ShooterGameMode.MotionTraceCouldNot", "[Shooter] motion trace '%#' could not be written", gv_shooterMotionTrace.c_str() );
             }
@@ -72,7 +76,6 @@ namespace sw
                 GameObjectManager* const pManager      = pScene != nullptr ? pScene->getObjectManager() : nullptr;
                 if ( pManager == nullptr )
                     return;
-                applyMelee( *pManager );
                 if ( gv_shooterMotionTrace.empty() )
                     return;
                 // 게임 모드는 레지스트리에 없다 — 폰(레지스트리에 오른다)의 Shooter 플레이어가 가리키는 게임 모드를 쓴다(그 게임 모드의 플레이어가 기록 대상이다).
@@ -89,24 +92,6 @@ namespace sw
             }
 
         private:
-            /**
-             * @brief `-gv_shooterAutoMelee` 가 켜져 있는 동안 자동 조준 조종자마다 근접을 켜고(늦게 선 조종자도), 꺼진 첫 프레임에 한 번 끈다.
-             * @details shortcut: 끌 때 조종자 데이터의 원래 근접 값으로 돌리지 않고 끈다 — 데이터가 근접을 켠 조종자가 생기면 켜기 전 값을 기억한다.
-             */
-            void applyMelee( GameObjectManager& manager )
-            {
-                const bool bForce = gv_shooterAutoMelee != 0;
-                if ( bForce == false && _bMeleeForced == SW_FALSE )
-                    return;
-                for ( ControllerComponent* pController : manager.getComponentRegistry().getAll<ControllerComponent>() )
-                {
-                    ShooterAutoAimControllerComponent* const pAutoAim = castTo<ShooterAutoAimControllerComponent>( pController );
-                    if ( pAutoAim != nullptr )
-                        pAutoAim->setMelee( bForce );
-                }
-                _bMeleeForced = bForce ? SW_TRUE : SW_FALSE;
-            }
-
             /** @brief 지난 프레임에 그려진 플레이어 몸, 본, 카메라, 적 하나의 위치를 CSV 한 줄로 쌓습니다. 게임 갱신은 씬 틱 밖이라 읽는 월드 · 본은 지난 프레임에 그려진 그대로다. */
             void appendMotionTrace( GameObjectManager& manager, const ShooterGameModeComponent& gameMode, float32 deltaTime )
             {
@@ -184,9 +169,8 @@ namespace sw
             }
 
         private:
-            string _motionTrace;      ///< 움직임 기록 CSV(게임이 내려갈 때 파일로 쓴다)
-            uint32 _traceFrame;       ///< 움직임 기록의 프레임 번호
-            uint8  _bMeleeForced : 1; ///< 지난 프레임에 근접을 켜 두었다 — 꺼진 첫 프레임에만 끈다
+            string _motionTrace; ///< 움직임 기록 CSV(게임이 내려갈 때 파일로 쓴다)
+            uint32 _traceFrame;  ///< 움직임 기록의 프레임 번호
         };
     } // namespace
 

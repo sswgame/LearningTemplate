@@ -10,6 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
@@ -116,7 +117,8 @@ namespace sw
         blackboard.setFloat( "EngageDistance", _engageDistance );
         blackboard.setFloat( "CloseRangeDistance", _closeRangeDistance );
         blackboard.setFloat( "MeleeReach", pPlayer->getMeleeReach() );
-        blackboard.setBool( "Melee", _bMelee == SW_TRUE );
+        const ShooterAutoPlayOptions* const pOptions = game::findSubsystem<ShooterAutoPlayOptions>();
+        blackboard.setBool( "Melee", _bMelee == SW_TRUE || ( pOptions != nullptr && pOptions->isMeleeForced() ) );
         // 무기: 0 소총 · 1 산탄총. 탄은 탄창 + 예비 — 트리가 남은 쪽만 고른다.
         const WeaponState& rifle   = pPlayer->getWeapon( 0 );
         const WeaponState& shotgun = pPlayer->getWeapon( 1 );

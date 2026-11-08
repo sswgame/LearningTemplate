@@ -17,6 +17,7 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
+#include "Games/Shooter3D/ShooterAutoAimControllerComponent.h"
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Shooter3D/ShooterOnlineFlow.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
@@ -44,6 +45,7 @@ namespace sw
         shared_ptr<const WeaponCatalog>     _pWeaponCatalog;     ///< 공유 캐시의 한 벌(게임 범위 서비스)
         shared_ptr<const ProjectileCatalog> _pProjectileCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
         ShooterOnlineFlow                   _onlineFlow;         ///< 온라인 키트를 쓰는 흐름(게임 범위 서비스). 연결은 세션(`OnlineSession`)이 맡는다
+        ShooterAutoPlayOptions              _autoPlayOptions;    ///< 모든 월드의 자동 플레이 조종자가 읽는 값(게임 범위 서비스)
     };
 } // namespace sw
 
@@ -53,6 +55,7 @@ namespace sw
         : _pWeaponCatalog{}
         , _pProjectileCatalog{}
         , _onlineFlow{}
+        , _autoPlayOptions{}
     {
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
         getStateSnapshot().registerGameMode<ShooterGameModeComponent>();
@@ -85,7 +88,7 @@ namespace sw
             }
             return false;
         }
-        if ( bindScopedService( &_onlineFlow ) == false )
+        if ( bindScopedService( &_onlineFlow ) == false || bindScopedService( &_autoPlayOptions ) == false )
             return false;
         // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
         (void)getSubsystem<GameSceneFlow>().requestFirstScene();
