@@ -587,20 +587,20 @@ namespace sw::editor
             return unexpected( Internal::withContext( keys.error(), context + ": VRMC_materials_mtoon" ) );
 
         // 키가 없으면 `ToonMaterialDef` 의 초기값이다 — 그 값이 1.0 의 기본값(VRMC_materials_mtoon 스키마)이다.
-        const std::pair<string_view, float4*> arrColorFactor[] = {
+        const pair<string_view, float4*> arrColorFactor[] = {
             {        "shadeColorFactor",   &desc._shadeColor},
             {            "matcapFactor",  &desc._matcapColor},
             {"parametricRimColorFactor",     &desc._rimColor},
             {      "outlineColorFactor", &desc._outlineColor},
         };
-        for ( const std::pair<string_view, float4*>& factor : arrColorFactor )
+        for ( const pair<string_view, float4*>& factor : arrColorFactor )
         {
             if ( mtoon.has( factor.first ) && Internal::readColor( mtoon.get( factor.first ), *factor.second ) == false )
                 return unexpected( Internal::withContext( Error{ ErrorKind::InvalidArgument, "the color factor is not three or four numbers", factor.first }, context ) );
         }
         // 셰이딩 시프트 텍스처는 shadingShiftTextureInfo(index · texCoord · scale)다.
-        const JSONValue                      shiftTexture = mtoon.get( "shadingShiftTexture" );
-        const std::pair<string_view, int32*> arrTexture[] = {
+        const JSONValue                 shiftTexture = mtoon.get( "shadingShiftTexture" );
+        const pair<string_view, int32*> arrTexture[] = {
             {       "shadeMultiplyTexture",           &desc._shadeTexture},
             {              "matcapTexture",          &desc._matcapTexture},
             {         "rimMultiplyTexture",     &desc._rimMultiplyTexture},
@@ -608,7 +608,7 @@ namespace sw::editor
             {     "uvAnimationMaskTexture", &desc._uvAnimationMaskTexture},
             {        "shadingShiftTexture",    &desc._shadingShiftTexture},
         };
-        for ( const std::pair<string_view, int32*>& texture : arrTexture )
+        for ( const pair<string_view, int32*>& texture : arrTexture )
         {
             const expected<void> textureRead = Internal::readTextureIndex( mtoon.get( texture.first ), texture.first, *texture.second, pOutListIgnored );
             if ( textureRead.has_value() == false )
@@ -617,7 +617,7 @@ namespace sw::editor
         const expected<void> shiftScale = shiftTexture.isObject() ? Internal::readFloat( shiftTexture, "scale", desc._shadingShiftTextureScale ) : expected<void>{};
         if ( shiftScale.has_value() == false )
             return unexpected( Internal::withContext( shiftScale.error(), context ) );
-        const std::pair<string_view, float32*> arrFactor[] = {
+        const pair<string_view, float32*> arrFactor[] = {
             {             "shadingShiftFactor",             &desc._shadingShift},
             {             "shadingToonyFactor",             &desc._shadingToony},
             {           "rimLightingMixFactor",           &desc._rimLightingMix},
@@ -629,7 +629,7 @@ namespace sw::editor
             {  "uvAnimationScrollYSpeedFactor",  &desc._uvAnimationScrollYSpeed},
             { "uvAnimationRotationSpeedFactor", &desc._uvAnimationRotationSpeed},
         };
-        for ( const std::pair<string_view, float32*>& factor : arrFactor )
+        for ( const pair<string_view, float32*>& factor : arrFactor )
         {
             const expected<void> factorRead = Internal::readFloat( mtoon, factor.first, *factor.second );
             if ( factorRead.has_value() == false )
