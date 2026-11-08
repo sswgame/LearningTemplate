@@ -80,7 +80,7 @@
     "Source/Core/Network/Security/NetSessionKeys.cpp": {"integer": 1},
     "Source/Core/Network/Transport/Linux/EpollStreamTransport.cpp": {"integer": 2},
     "Source/Core/Network/Transport/LoopbackStreamTransport.cpp": {"hex": 1},
-    "Source/Core/Network/Transport/NetEmulation.cpp": {"float": 3, "integer": 3},
+    "Source/Core/Network/Transport/NetEmulation.cpp": {"float": 3},
     "Source/Core/Network/Transport/NetTransport.cpp": {"integer": 1},
     "Source/Core/Network/Transport/PlatformSocketUtil.cpp": {"integer": 2},
     "Source/Core/Network/Transport/UDPNetTransport.cpp": {"integer": 1},

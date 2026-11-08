@@ -5,7 +5,6 @@
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/String/StringBuilder.h"
@@ -41,13 +40,6 @@ namespace sw
             }
         };
     } // namespace
-
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationLatencyMs, 0, "네트워크 흉내: 한쪽 지연(ms) — 언리얼 PktLag" );
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationJitterMs, 0, "네트워크 흉내: ± 흔들림(ms) — PktLagVariance" );
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationLossPercent, 0, "네트워크 흉내: 손실(%) — PktLoss" );
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationDuplicatePercent, 0, "네트워크 흉내: 중복(%) — PktDup" );
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationReorderPercent, 0, "네트워크 흉내: 순서 뒤바뀜(%) — PktOrder" );
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_netEmulationBandwidthKilobytesPerSecond, 0, "네트워크 흉내: 회선 속도(KB/s, 0=제한 없음)" );
 } // namespace sw
 
 namespace sw
@@ -56,19 +48,6 @@ namespace sw
     {
         return _latency > 0.0 || _jitter > 0.0 || _lossRate > 0.0f || _duplicateRate > 0.0f || _reorderRate > 0.0f || _corruptRate > 0.0f ||
                _bandwidthBytesPerSecond > 0;
-    }
-
-    NetEmulationConditions NetEmulationConditions::makeFromGlobalVariables()
-    {
-        using Internal = NetEmulationInternal;
-        NetEmulationConditions conditions;
-        conditions._latency                 = static_cast<float64>( MathUtil::max( 0, gv_netEmulationLatencyMs ) ) * Internal::kMillisecond;
-        conditions._jitter                  = static_cast<float64>( MathUtil::max( 0, gv_netEmulationJitterMs ) ) * Internal::kMillisecond;
-        conditions._lossRate                = static_cast<float32>( MathUtil::clamp( gv_netEmulationLossPercent, 0, 100 ) ) * Internal::kPercent;
-        conditions._duplicateRate           = static_cast<float32>( MathUtil::clamp( gv_netEmulationDuplicatePercent, 0, 100 ) ) * Internal::kPercent;
-        conditions._reorderRate             = static_cast<float32>( MathUtil::clamp( gv_netEmulationReorderPercent, 0, 100 ) ) * Internal::kPercent;
-        conditions._bandwidthBytesPerSecond = MathUtil::max( 0, gv_netEmulationBandwidthKilobytesPerSecond ) * static_cast<int32>( constant::memory::kBytesPerKilobyte );
-        return conditions;
     }
 
     bool NetEmulationConditions::parseOverrides( string_view text, NetEmulationConditions& inoutConditions, string& outError )
