@@ -138,7 +138,7 @@
     {
       "name": "Android-Shipping",
       "displayName": "Android Shipping (NDK, Vulkan, arm64)",
-      "description": "Android 배포(API 29, arm64-v8a). NDK 는 저장소의 Tools/Android/ndk/<판>(설치 py -3 Scripts/setup/PlatformSdk.py android — 판은 Config/Environment/search_paths.defaults.json 의 android_ndk_version, 이 경로와 같은지 설치 스크립트가 본다) — APK 패키징은 아직 없다(docs/PlatformTargets.md)",
+      "description": "Android 배포(API 29, arm64-v8a). NDK 는 저장소의 Tools/Android/ndk/<판>(설치 py -3 Scripts/setup/PlatformSdk.py android — 판은 Config/Environment/search_paths.defaults.json 의 android_ndk_version, 이 경로와 같은지 설치 스크립트가 본다) — APK 는 빌드 뒤 py -3 -m Scripts android-apk --game <게임>(서명한 디버그 APK, build/Android-Shipping/Apk)",
       "inherits": [
         "base-vcpkg",
         "base-shipping"
