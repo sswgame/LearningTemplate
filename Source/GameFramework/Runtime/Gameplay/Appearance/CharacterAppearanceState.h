@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -37,7 +38,7 @@ namespace sw
         CharacterAppearanceState();
 
         /**
-         * @brief 프리셋을 처음부터 입힙니다. 데이터베이스는 **기억하지 않고** 번호(`AppearanceDatabase::getInstanceID`)만 적는다 — 데이터 서비스가 모듈과 함께 먼저 사라져도 허공을 가리키는 포인터가 남지 않는다.
+         * @brief 프리셋을 처음부터 입힙니다. 데이터베이스는 **기억하지 않고** 정체성 토큰(`AppearanceDatabase::getInstanceID`)만 든다 — 데이터 서비스가 모듈과 함께 먼저 사라져도 허공을 가리키는 포인터가 남지 않는다.
          *        해석은 늘 부르는 쪽이 그 프레임에 찾은 데이터베이스를 넘겨 한다(`update`).
          */
         void initialize( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec );
@@ -71,7 +72,7 @@ namespace sw
         CharacterAppearanceSpec       _spec;
         ResolvedAppearance            _resolved;
         vector<AppearanceDetachEvent> _listPendingEvent;
-        uint64                        _databaseID;
+        IdentityToken                 _databaseID;
         const Equipment*              _pLastEquipment;
         uint32                        _specRevision;
         uint32                        _resolvedSpecRevision;

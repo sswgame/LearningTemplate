@@ -470,10 +470,10 @@ namespace sw
 
     void GPUSceneBuilder::applyGPULODGroup( DrawCandidate& candidate ) const
     {
-        // 후보 배열은 지난 프레임 값 위에 덮어쓰므로 **늘 기록한다**(0 도 값이다).
-        candidate._lodContentID = 0;
-        candidate._bLODDither   = SW_FALSE;
-        const Mesh* pMesh       = candidate._mesh.get();
+        // 후보 배열은 지난 프레임 값 위에 덮어쓰므로 **늘 기록한다**(빈 토큰도 값이다).
+        candidate._lodContentID.reset();
+        candidate._bLODDither = SW_FALSE;
+        const Mesh* pMesh     = candidate._mesh.get();
         if ( _bGPULODActive == SW_FALSE || pMesh == nullptr )
             return;
         // 불투명 메시만이다 — 투명은 정렬이 배치 안 인스턴스 번호 순서(`instance_sort.hlsl`)라 단계 배치로 나누면 단계 사이 블렌딩 순서가 깨지고 디더 대상도 아니다.
@@ -1773,7 +1773,7 @@ namespace sw
         }
 
         // LOD 그룹은 불투명 배치뿐이다(`applyGPULODGroup`). 머리 배치가 단계 수를 들고, 낮은 단계 배치가 바로 뒤에 붙는다.
-        const bool bLODGroup = headCandidate._lodContentID != 0 && blendMode != RHIBlendMode::Transparent;
+        const bool bLODGroup = headCandidate._lodContentID.isValid() && blendMode != RHIBlendMode::Transparent;
         if ( bLODGroup )
             batch._lodLevelCount = batch._mesh->getLODCount();
         // 배치 목록은 한 벌이다. 불투명 · 투명은 스냅샷이 내주는 구간 뷰다.

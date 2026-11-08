@@ -12,6 +12,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
@@ -272,11 +273,11 @@ namespace sw
              */
             uint64 _permutationHash{ 0 };
             /**
-             * @brief 이 후보를 GPU 인스턴스 LOD 그룹(`GPUMeshBatch::_lodLevelCount`)으로 그리면 그 메시의 내용 번호(`Mesh::getContentID`), 아니면 0 입니다. **배치 키**입니다.
-             * @details 그룹이면 구간은 LOD 0(메시 전체)이고 단계는 컬링이 고른다. 메시가 제자리에서 다시 읽혀 단계가 바뀌면(`Mesh::setLODs`) 내용 번호가 달라 배치를 다시 나눈다.
+             * @brief 이 후보를 GPU 인스턴스 LOD 그룹(`GPUMeshBatch::_lodLevelCount`)으로 그리면 그 메시의 내용 토큰(`Mesh::getContentID`), 아니면 빈 토큰입니다. **배치 키**입니다.
+             * @details 그룹이면 구간은 LOD 0(메시 전체)이고 단계는 컬링이 고른다. 메시가 제자리에서 다시 읽혀 단계가 바뀌면(`Mesh::setLODs`) 내용 토큰이 달라 배치를 다시 나눈다(후보가 토큰을 들어 주소 재사용이 없다).
              *          메시만 바뀐 교체(`hasSameBatchKeyExceptMesh`)는 그룹을 받지 않는다 — 단계 배치가 메시의 정점 구간을 굳히기 때문이다.
              */
-            uint64 _lodContentID{ 0 };
+            IdentityToken _lodContentID{};
             /**
              * @brief 월드 행렬식이 음수(거울 변환)인지 나타냅니다. 배치 키이며 `GPUMeshBatch::_bReverseCulling` 으로 전달됩니다.
              * @details 월드 행렬에서 나오는 값이라 트랜스폼만 바뀐 프레임에도 다시 구한다(`copyCandidateTransforms`). 부호가 바뀌면 배치를 다시 나눈다.
@@ -344,7 +345,7 @@ namespace sw
         };
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역폭입니다. 필드 크기의 합을 정렬 단위로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 빌드를 멈춥니다.
         static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) * 2 + sizeof( float32 ) * 2 + sizeof( uint32 ) * 7 +
-                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( InstanceCustomData ) + sizeof( uint64 ) * 2 +
+                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( InstanceCustomData ) + sizeof( uint64 ) + sizeof( IdentityToken ) +
                                                     sizeof( uint8 ) * 2 + sizeof( float32 ) * 2 + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),
                        "DrawCandidate has padding between fields (or a field was added without adding its size here)" );
@@ -611,7 +612,7 @@ namespace sw
          */
         /** @return 후보의 머티리얼이 초기화되지 않았으면(`MaterialInitState` 가 `Ready` 가 아님) 세고 false 입니다 — 그 후보는 싣지 않습니다. 워커에서 불립니다. */
         [[nodiscard]] bool fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode );
-        /** @brief 후보를 GPU 인스턴스 LOD 그룹으로 그릴 수 있으면 그 단계 구간을 LOD 0 으로 되돌리고 `_lodContentID` 를 기록합니다(아니면 0). 블렌드가 정해진 뒤에 부른다. */
+        /** @brief 후보를 GPU 인스턴스 LOD 그룹으로 그릴 수 있으면 그 단계 구간을 LOD 0 으로 되돌리고 `_lodContentID` 를 기록합니다(아니면 빈 토큰). 블렌드가 정해진 뒤에 부른다. */
         void applyGPULODGroup( DrawCandidate& candidate ) const;
         /** @brief 후보의 퍼뮤테이션 해시를 기록합니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */
         static void stampPermutationHash( DrawCandidate& candidate );

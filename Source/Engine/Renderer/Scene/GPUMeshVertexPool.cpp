@@ -106,10 +106,10 @@ namespace sw
         {
             if ( pMesh == nullptr || pMesh->getIndices().empty() || pMesh->getVertexFormat() != _format )
                 continue; // 다른 형식은 그 형식의 풀이 담는다
-            const uint64 contentID   = pMesh->getContentID();
-            const uint32 vertexCount = pMesh->getDrawVertexCount(); // LOD 0 뒤에 낮은 단계까지(배치는 단계의 범위로 그린다)
-            const uint32 indexCount  = pMesh->getDrawIndexCount();
-            const auto   it          = _mapEntry.find( pMesh );
+            const IdentityToken& contentID   = pMesh->getContentID();
+            const uint32         vertexCount = pMesh->getDrawVertexCount(); // LOD 0 뒤에 낮은 단계까지(배치는 단계의 범위로 그린다)
+            const uint32         indexCount  = pMesh->getDrawIndexCount();
+            const auto           it          = _mapEntry.find( pMesh );
             if ( it == _mapEntry.end() )
             {
                 _mapEntry.emplace( pMesh, Entry{ contentID, _updateCount, kInvalidBase, vertexCount, kInvalidBase, indexCount } );

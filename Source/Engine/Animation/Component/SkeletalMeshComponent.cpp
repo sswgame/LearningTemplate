@@ -119,7 +119,7 @@ namespace sw
         , _skinningMethod{ SkinningMethod::Linear }
         , _skeleton{ SkeletalMeshComponentInternal::getImplicitSkeleton() }
         , _skinSourceMesh{}
-        , _skinSourceContentID{ 0 }
+        , _skinSourceContentID{}
         , _localPose{}
         , _listModelSpace{}
         , _listSkinPalette{}
@@ -129,7 +129,7 @@ namespace sw
         , _listLeaderBone{}
         , _leader{}
         , _pLeaderSkeletonForMap{ nullptr }
-        , _skinBindingContentID{ 0 }
+        , _skinBindingContentID{}
         , _pSkinBindingSkeleton{ nullptr }
         , _pAnimationSystem{ nullptr }
         , _frameContext{}
@@ -137,9 +137,9 @@ namespace sw
         , _lodState{}
         , _boneLOD{}
         , _listBoneLODMask{}
-        , _boneLODRevision{ 0 }
+        , _boneLODRevision{}
         , _pBoneLODMaskSkeleton{ nullptr }
-        , _boneLODMeshContentID{ 0 }
+        , _boneLODMeshContentID{}
         , _listBoneLODMaskCount{}
         , _listBoneRequirement{}
         , _boneRequirementSubscriptions{ SubscriptionList::ReleaseFunction::create<&SkeletalMeshComponent::releaseBoneRequirement>( this ) }
@@ -282,8 +282,8 @@ namespace sw
     void SkeletalMeshComponent::setSkinSourceMesh( shared_ptr<Mesh> source )
     {
         leaveCrowd( _pAnimationSystem != nullptr ? &_pAnimationSystem->getCrowd() : nullptr );
-        _skinSourceMesh      = nullptr;
-        _skinSourceContentID = 0;
+        _skinSourceMesh = nullptr;
+        _skinSourceContentID.reset();
         setMesh( std::move( source ) );
         resolveSkinInstanceMesh();
         _bPoseDirty = SW_TRUE;
@@ -341,9 +341,9 @@ namespace sw
 
     void SkeletalMeshComponent::refreshBoneLODMasks()
     {
-        const uint64 revision      = _boneLOD != nullptr ? _boneLOD->getRevision() : 0u;
-        const uint64 meshContentID = _skinSourceMesh != nullptr ? _skinSourceMesh->getContentID() : 0u;
-        const bool   bFresh        = _bBoneLODDirty == SW_FALSE && _boneLODRevision == revision && _pBoneLODMaskSkeleton == _skeleton.get() && _boneLODMeshContentID == meshContentID;
+        const IdentityToken revision      = _boneLOD != nullptr ? _boneLOD->getRevision() : IdentityToken{};
+        const IdentityToken meshContentID = _skinSourceMesh != nullptr ? _skinSourceMesh->getContentID() : IdentityToken{};
+        const bool          bFresh        = _bBoneLODDirty == SW_FALSE && _boneLODRevision == revision && _pBoneLODMaskSkeleton == _skeleton.get() && _boneLODMeshContentID == meshContentID;
         if ( bFresh )
             return;
         _boneLODRevision      = revision;

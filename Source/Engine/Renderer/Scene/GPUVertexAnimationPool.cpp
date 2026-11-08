@@ -118,7 +118,7 @@ namespace sw
         vector<Wanted> listWanted;
         for ( const Mesh* pMesh : listMesh )
         {
-            const uint64 contentID = pMesh != nullptr ? pMesh->getContentID() : 0u;
+            const IdentityToken contentID = pMesh != nullptr ? pMesh->getContentID() : IdentityToken{};
             _listBuiltContentID.push_back( contentID );
             const MeshVertexAnimation* pAnimation = ( pMesh != nullptr ) ? pMesh->findVertexAnimation() : nullptr;
             if ( pAnimation == nullptr || pAnimation->isEmpty() )

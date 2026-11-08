@@ -34,6 +34,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/IdentityToken.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -101,12 +102,12 @@ namespace sw
         /** @brief 풀에 든 메시 하나의 기록입니다. */
         struct Entry
         {
-            uint64 _contentID{ 0 };
-            uint64 _seenStamp{ 0 };            ///< 이 메시를 마지막으로 본 `update` 의 번호
-            uint32 _base{ kInvalidBase };      ///< 정점 구간 시작. 못 들어갔으면 kInvalidBase(인덱스 구간도 없다)
-            uint32 _count{ 0 };                ///< 정점 수(`Mesh::getDrawVertexCount`)
-            uint32 _indexBase{ kInvalidBase }; ///< 인덱스 구간 시작
-            uint32 _indexCount{ 0 };           ///< 인덱스 수(`Mesh::getDrawIndexCount`)
+            IdentityToken _contentID{};               ///< 올린 내용의 토큰(들고 있어 지운 메시의 주소가 새 메시와 같아 보이지 않는다)
+            uint64        _seenStamp{ 0 };            ///< 이 메시를 마지막으로 본 `update` 의 번호
+            uint32        _base{ kInvalidBase };      ///< 정점 구간 시작. 못 들어갔으면 kInvalidBase(인덱스 구간도 없다)
+            uint32        _count{ 0 };                ///< 정점 수(`Mesh::getDrawVertexCount`)
+            uint32        _indexBase{ kInvalidBase }; ///< 인덱스 구간 시작
+            uint32        _indexCount{ 0 };           ///< 인덱스 수(`Mesh::getDrawIndexCount`)
         };
 
         /// @brief 풀 상한(정점 수)입니다. 4M 정점 × 44 바이트(Packed — 위치 12 + 속성 32) = 176MB 로, 이 저장소의 씬에는 넉넉합니다.

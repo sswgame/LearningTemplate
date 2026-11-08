@@ -31,6 +31,7 @@ namespace sw
             {
                 vector<weak_ptr<Mesh>> _listMesh{};
                 vector<uint8>          _listBaked{};
+                vector<IdentityToken>  _listSourceContent{}; ///< 키에 섞은 원본 내용 토큰(들고 있어 키의 주소가 다른 원본에 다시 쓰이지 않는다)
             };
 
             /** @brief 항목의 베이크한 메시가 모두 살아 있으면 true 입니다. */
@@ -273,7 +274,7 @@ namespace sw
         return true;
     }
 
-    void AppearanceBakedMeshCache::store( uint64 key, const vector<shared_ptr<Mesh>>& listMesh )
+    void AppearanceBakedMeshCache::store( uint64 key, const vector<shared_ptr<Mesh>>& listMesh, const vector<IdentityToken>& listSourceContent )
     {
         using Internal                         = AppearanceMeshAssemblyInternal;
         AppearanceBakedMeshTable* const pTable = game::findSubsystem<AppearanceBakedMeshTable>();
@@ -293,7 +294,8 @@ namespace sw
             entry._listMesh.push_back( mesh );
             entry._listBaked.push_back( mesh != nullptr ? SW_TRUE : SW_FALSE );
         }
-        pTable->_mapEntry[key] = std::move( entry );
+        entry._listSourceContent = listSourceContent;
+        pTable->_mapEntry[key]   = std::move( entry );
     }
 } // namespace sw
 

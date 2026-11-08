@@ -17,12 +17,12 @@ namespace sw::editor
 {
     MeshModifiersPanelModel::MeshModifiersPanelModel()
         : _listNestedPath{}
-        , _nestedRootID{ 0 }
+        , _nestedRootID{}
         , _nestedSelectedIndex{ -1 }
         , _enterRequest{ -1 }
         , _bLeaveRequested{ SW_FALSE }
         , _bEditing{ SW_FALSE }
-        , _curveModifierID{ 0 }
+        , _curveModifierID{}
         , _curveParamIndex{ 0 }
         , _curveItemIndex{ -1 }
         , _descriptionID{}
@@ -79,7 +79,7 @@ namespace sw::editor
 
     bool MeshModifiersPanelModel::isCurvePopupFor( const MeshModifier& modifier, uint32 paramIndex, int32 itemIndex ) const
     {
-        return _curveModifierID != 0 && _curveModifierID == modifier.getInstanceID() && _curveParamIndex == paramIndex && _curveItemIndex == itemIndex;
+        return _curveModifierID.isValid() && _curveModifierID == modifier.getInstanceID() && _curveParamIndex == paramIndex && _curveItemIndex == itemIndex;
     }
 
     const string& MeshModifiersPanelModel::findDescription( const MeshModifierRegistration& registration )

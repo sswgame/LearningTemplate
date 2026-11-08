@@ -385,8 +385,8 @@ namespace sw
     {
         if ( sourceMesh == nullptr )
             return nullptr;
-        const uint64 skinDataID = sourceMesh->getSkinDataID();
-        const uint8  anchor     = bAnchorRootMotion ? SW_TRUE : SW_FALSE;
+        const IdentityToken& skinDataID = sourceMesh->getSkinDataID();
+        const uint8          anchor     = bAnchorRootMotion ? SW_TRUE : SW_FALSE;
         for ( const VertexAnimationEntry& entry : _listVertexAnimation )
         {
             const bool bCachedVertexAnimation = entry._skinDataID == skinDataID && entry._pSkeleton == &skeleton && entry._pClip == &clip && entry._bAnchorRootMotion == anchor;

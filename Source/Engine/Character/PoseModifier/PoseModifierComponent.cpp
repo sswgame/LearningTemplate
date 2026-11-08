@@ -180,7 +180,7 @@ namespace sw
         , _pFrameAnimator{ nullptr }
         , _pSkeletalMesh{ nullptr }
         , _pBoundSkeleton{ nullptr }
-        , _boundContentID{ 0 }
+        , _boundContentID{}
         , _bRigEnabled{ SW_TRUE }
         , _reserved{ 0 }
     {
@@ -386,7 +386,7 @@ namespace sw
         _instance.shutdown();
         _listExternal.clear();
         _boneRequirement.reset();
-        _boundContentID                      = 0;
+        _boundContentID.reset();
         GameObject*            pOwner        = getOwner();
         SkeletalMeshComponent* pSkeletalMesh = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
         if ( pSkeletalMesh != _pSkeletalMesh )

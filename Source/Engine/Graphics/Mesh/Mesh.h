@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
@@ -401,7 +402,7 @@ namespace sw
          * @details 모프 풀이 같은 번호의 스킨 인스턴스(칸)들을 한 원본 구간으로 묶는다(언리얼 스킨 캐시가 같은 스켈레탈 메시의 정점 팩토리를 공유하는 것과 같은 방식이다).
          *          캐릭터마다 사본을 두지 않는다 — 결과는 스킨 칸(`AnimationSkinSlot`)마다다.
          */
-        uint64 getSkinDataID() const { return _contentID; }
+        const IdentityToken& getSkinDataID() const { return _contentID; }
 
         /**
          * @brief 정점 애니메이션 테이블(VAT)을 설정합니다. 설정한 메시는 스키닝 대신 정점 셰이더가 테이블을 인스턴스마다의 시각으로 읽습니다(먼 군중). 내용 번호가 바뀝니다.
@@ -425,11 +426,12 @@ namespace sw
         /** @brief 메시 공간의 축 정렬 경계(최대)입니다. */
         const float3& getLocalBoundsMax() const { return _localBoundsMax; }
         /**
-         * @brief 이 메시 **내용**의 프로세스 고유 번호입니다. 만들 때와 `setVertices` 때마다 새 번호를 받습니다.
-         * @details 정점 풀과 모프 풀은 메시 집합이 그대로인지를 이 번호로 판단한다. 포인터만 보면 메시가 지워진 위치에 새 메시가
+         * @brief 이 메시 **내용**의 정체성 토큰입니다(`IdentityToken`). 만들 때와 `setVertices` 때마다 새 토큰을 받습니다.
+         * @details 정점 풀과 모프 풀은 메시 집합이 그대로인지를 이 토큰으로 판단한다. 포인터만 보면 메시가 지워진 위치에 새 메시가
          *          생기거나(할당기는 같은 크기의 공간을 곧바로 다시 준다) 같은 메시의 정점을 바꿀 때 "같은 집합" 으로 보여 옛 정점을 그린다.
+         *          기억하는 쪽은 토큰을 값으로 들어 주소 재사용이 없다 — 프로세스 번호 발급기를 두지 않는다(언리얼 `FRenderResource` 가 GPU 자원을 객체 수명에 묶는 자리).
          */
-        uint64 getContentID() const { return _contentID; }
+        const IdentityToken& getContentID() const { return _contentID; }
 
         /** @brief 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 여러 번 불러도 결과가 같습니다. */
         [[nodiscard]] bool initRHI( IRHIDevice* pDevice ) override;
@@ -448,8 +450,6 @@ namespace sw
     private:
         /** @brief 정점 · 인덱스 버퍼를 실제로 해제합니다. 살아 있는 디바이스면 반환하고, 아니면 버립니다. */
         void releaseVertexBuffer();
-        /** @brief 새 내용 번호를 발급합니다(프로세스 전역이며 0은 쓰지 않습니다). */
-        static uint64 allocateContentID();
         /** @brief 정점에서 경계 반지름을 다시 구합니다. */
         void refreshBoundingRadius();
         /** @brief 낮은 단계를 뗍니다(정점 · 스킨이 바뀌어 옛 단계가 맞지 않을 때). */
@@ -480,7 +480,7 @@ namespace sw
         float3  _localBoundsMin{};
         float3  _localBoundsMax{};
         /// @brief getContentID 를 참고하세요. 만들 때와 setVertices 때 새로 받습니다.
-        uint64 _contentID{ allocateContentID() };
+        IdentityToken _contentID{ IdentityToken::make() };
         /// @brief setGPUMorphEnabled 를 참고하세요. 이 메시가 모프 풀에 들어갈지 여부입니다.
         uint8 _bGPUMorph{ SW_FALSE };
         /// @brief setDynamic 을 참고하세요. 업로드 큐에 넣지 않는(정점 풀이 올리는) 프레임마다의 메시입니다.

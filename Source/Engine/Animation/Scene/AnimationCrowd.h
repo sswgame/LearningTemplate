@@ -16,6 +16,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
@@ -118,7 +119,7 @@ namespace sw
     struct AnimationCrowdBucketKey
     {
         const Skeleton*      _pSkeleton{ nullptr };
-        uint64               _skinDataID{ 0 };
+        IdentityToken        _skinDataID{}; ///< 스킨 원본의 내용 토큰(`Mesh::getSkinDataID`) — 키가 들고 있어 지운 원본의 주소가 다른 원본과 같아 보이지 않는다
         const AnimationClip* _pClip{ nullptr };
         float32              _playRate{ 1.0f };
         uint32               _variation{ 0 };
@@ -147,7 +148,7 @@ namespace sw
         size_t operator()( const AnimationCrowdBucketKey& key ) const
         {
             size_t hash = reinterpret_cast<size_t>( key._pSkeleton ) * 1315423911u;
-            hash ^= static_cast<size_t>( key._skinDataID ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
+            hash ^= static_cast<size_t>( key._skinDataID.getKey() ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             hash ^= reinterpret_cast<size_t>( key._pClip ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             hash ^= static_cast<size_t>( ( key._variation * 2u + key._bAnchorRootMotion ) * 2u + static_cast<uint32>( key._skinningMethod ) ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             hash ^= reinterpret_cast<size_t>( key._pNextClip ) + static_cast<size_t>( key._blendStartFrame ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
@@ -314,7 +315,7 @@ namespace sw
         /** @brief 베이크한 VAT 메시 하나입니다. */
         struct VertexAnimationEntry
         {
-            uint64               _skinDataID{ 0 };
+            IdentityToken        _skinDataID{};
             const Skeleton*      _pSkeleton{ nullptr };
             const AnimationClip* _pClip{ nullptr };
             uint8                _bAnchorRootMotion{ SW_FALSE };

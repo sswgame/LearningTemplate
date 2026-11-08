@@ -1331,6 +1331,7 @@ namespace sw
         ResolvedAppearance                   _resolved{};          ///< 체형 모프를 더한 해석
         vector<AppearanceMeshPart>           _listPart{};          ///< 로드 순서(몸이 먼저). 포인터는 아래 쥔 메시 · 피팅 데이터를 가리킨다
         vector<shared_ptr<Mesh>>             _listSource{};        ///< 로드마다 원본 메시
+        vector<IdentityToken>                _listSourceContent{}; ///< 키(`_bakeKey`)에 섞은 원본 내용 토큰 — 캐시 항목이 들어 키의 주소가 다른 원본에 다시 쓰이지 않는다
         vector<shared_ptr<const FitPartDef>> _listFit{};           ///< 로드마다 피팅 데이터(없으면 nullptr)
         vector<uint32>                       _listLoadPartIndex{}; ///< 로드마다 해석의 부품 번호
         vector<uint32>                       _listMergeLoad{};     ///< 합칠 로드 번호(몸이 먼저). 비면 합치지 않는다
@@ -1515,7 +1516,8 @@ namespace sw
             const shared_ptr<const FitPartDef> fit  = load._fit.get();
             if ( load._fit.hasFailed() || mesh == nullptr )
                 Internal::appendReport( job._report, "part '%#' mesh or fit data could not be read", part._partName.c_str() );
-            load._sourceContentID = mesh != nullptr ? mesh->getContentID() : 0;
+            load._sourceContentID = mesh != nullptr ? mesh->getContentID() : IdentityToken{};
+            job._listSourceContent.push_back( load._sourceContentID );
             job._listPart.push_back( AppearanceMeshPart{ part._partName, part._owner, mesh.get(), fit.get() } );
             job._listSource.push_back( std::move( mesh ) );
             job._listFit.push_back( fit );
@@ -1526,7 +1528,7 @@ namespace sw
         job._bakeKey = HashUtil::combine( job._resolved._meshHash, _seenFitReloadStamp );
         for ( const MeshAssemblyLoad& load : _listMeshAssemblyLoad )
         {
-            job._bakeKey = HashUtil::combine( HashUtil::combine( job._bakeKey, load._partIndex ), load._sourceContentID );
+            job._bakeKey = HashUtil::combine( HashUtil::combine( job._bakeKey, load._partIndex ), load._sourceContentID.getKey() ); // 키는 토큰 주소 — 캐시 항목이 토큰을 들어 겹치지 않는다
         }
         job._tables    = _fitTablesLoad.isValid() ? _fitTablesLoad.get() : nullptr;
         job._bindBones = _bodyBindBones;
@@ -1645,9 +1647,9 @@ namespace sw
             ++_fitResultRevision;
         }
         else if ( job._bBakeBuilt )
-            AppearanceBakedMeshCache::store( job._bakeKey, job._listBaked );
+            AppearanceBakedMeshCache::store( job._bakeKey, job._listBaked, job._listSourceContent );
         if ( job._bMergeBuilt )
-            AppearanceBakedMeshCache::store( job._mergedKey, { job._merged } );
+            AppearanceBakedMeshCache::store( job._mergedKey, { job._merged }, job._listSourceContent );
         // 합친 메시가 있으면 몸 유닛에 건다. 합치지 못했으면(오류는 워커가 남겼다) 몸 원본만 그려지고 아래 부품별 길로 간다.
         SkeletalMeshComponent* pBodyUnit = _bodyPart >= 0 ? findSkinnedUnit( *pManager, static_cast<uint32>( _bodyPart ) ) : nullptr;
         const bool             bMerged   = job._merged != nullptr && job._listMergePart.empty() == false && pBodyUnit != nullptr && applyMergedMeshes( *pManager, *pBodyUnit, job );

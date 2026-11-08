@@ -22,14 +22,8 @@ namespace sw
 {
     namespace
     {
-        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
-        atomic<uint64> s_meshNextContentID{ 1 };
-    } // namespace
-
-    namespace
-    {
-        /** @brief 강체 스킨 원본 표입니다(키: 원본의 내용 번호) — 에셋 매니저가 내장 캐시로 만들어 소유한다(`Mesh::acquireRigidSkinSource`). */
-        class RigidSkinMeshCache final : public WeakInternCache<uint64, Mesh>
+        /** @brief 강체 스킨 원본 표입니다(키: 원본의 내용 토큰 — 표가 들고 있어 지운 원본의 주소가 새 원본의 키로 다시 쓰이지 않는다) — 에셋 매니저가 내장 캐시로 만들어 소유한다(`Mesh::acquireRigidSkinSource`). */
+        class RigidSkinMeshCache final : public WeakInternCache<IdentityToken, Mesh, IdentityToken::HashFunc>
         {
         public:
             static constexpr const utf8* kAssetKindName = "RigidSkinMesh";
@@ -135,7 +129,7 @@ namespace sw
     {
         // 표는 에셋 매니저가 소유하는 내장 캐시다(내장 도형과 같은 길) — 함수 안 static 표였을 때는 프로세스 끝까지 살아, 다 쓴 원본의 make_shared 블록을
         // 만료된 weak_ptr 가 붙들어 종료 누수 보고에 찍혔다. 엔진 수명이면 종료와 재초기화가 다른 캐시와 같이 비운다.
-        return engine::getSubsystem<AssetManager>().getAssetCache<RigidSkinMeshCache>().acquire( source._contentID, [&source]( uint64 )
+        return engine::getSubsystem<AssetManager>().getAssetCache<RigidSkinMeshCache>().acquire( source._contentID, [&source]( const IdentityToken& )
         { return createRigidSkinSource( source ); } );
     }
 
@@ -226,7 +220,7 @@ namespace sw
         releaseVertexBuffer();
         // 낮은 단계는 옛 LOD 0 에서 만든 것이다 — 정점이 바뀌면 맞지 않으므로 뗀다(읽기는 정점 뒤에 `setLODs` 로 다시 건다).
         clearLODs();
-        _contentID               = allocateContentID();
+        _contentID               = IdentityToken::make();
         const uint32 vertexCount = static_cast<uint32>( listVertex.size() );
         bool         bValid      = listIndex.size() % 3 == 0;
         for ( size_t index = 0; bValid && index < listIndex.size(); ++index )
@@ -315,7 +309,7 @@ namespace sw
     {
         releaseVertexBuffer();
         clearLODs();
-        _contentID = allocateContentID();
+        _contentID = IdentityToken::make();
         if ( listLevel.empty() )
             return true;
         if ( _vertexAnimation != nullptr )
@@ -585,7 +579,7 @@ namespace sw
         _skinBinding        = bMatches ? std::move( skinBinding ) : MeshSkinBinding{};
         // 낮은 단계는 옛 스킨(뼈 번호 · 있고 없음)에 맞춘 것이다 — 스킨을 바꾸면 뗀다(읽기는 스킨 뒤에 `setLODs` 로 다시 건다).
         clearLODs();
-        _contentID = allocateContentID();
+        _contentID = IdentityToken::make();
     }
 
     bool Mesh::setSections( vector<MeshSection> listSection )
@@ -639,7 +633,7 @@ namespace sw
             { return delta._vertexIndex >= vertexCount; } );
         }
         _listMorphTarget = std::move( listTarget );
-        _contentID       = allocateContentID();
+        _contentID       = IdentityToken::make();
     }
 
     int32 Mesh::findMorphTargetIndex( const hashed_string& name ) const
@@ -655,7 +649,7 @@ namespace sw
     void Mesh::setVertexAnimation( shared_ptr<const MeshVertexAnimation> animation )
     {
         _vertexAnimation = std::move( animation );
-        _contentID       = allocateContentID();
+        _contentID       = IdentityToken::make();
     }
 
     void Mesh::setGPUDeformProgram( const vector<float4>& listProgram )
@@ -696,11 +690,6 @@ namespace sw
             maxLengthSquared = MathUtil::max( maxLengthSquared, ( position - _localBoundsCenter ).getLengthSquared() );
         }
         _boundingRadius = MathUtil::sqrt( maxLengthSquared );
-    }
-
-    uint64 Mesh::allocateContentID()
-    {
-        return s_meshNextContentID.fetch_add( 1u, std::memory_order_relaxed );
     }
 
     bool Mesh::initRHI( IRHIDevice* pDevice )
@@ -763,7 +752,7 @@ namespace sw
         if ( _vertexFormat == format )
             return;
         _vertexFormat = format;
-        _contentID    = allocateContentID(); // 정점 풀이 다른 형식의 풀로 옮겨 다시 올린다
+        _contentID    = IdentityToken::make(); // 정점 풀이 다른 형식의 풀로 옮겨 다시 올린다
     }
 
     uint32 Mesh::getAttributeStreamOffset() const
