@@ -330,7 +330,7 @@ namespace sw::editor
         _wordBuffer.upload( &device, _listWord.data(), wordCount * static_cast<uint32>( sizeof( uint32 ) ) );
     }
 
-    void ImGuiRenderer::render( IRHIDevice& device, const ImDrawData& drawData )
+    void ImGuiRenderer::render( IRHIDevice& device, const ImDrawData& drawData, span<const uint64> listExcludedTexture )
     {
         using Internal                           = ImGuiRendererInternal;
         IRHICommandContext* const pCmd           = device.getFrameStreamContext();
@@ -378,7 +378,15 @@ namespace sw::editor
                 const float32 clipMaxY = MathUtil::min( framebufferH, ( cmd.ClipRect.w - drawData.DisplayPos.y ) * drawData.FramebufferScale.y );
                 if ( clipMaxX <= clipMinX || clipMaxY <= clipMinY || cmd.ElemCount == 0 )
                     continue;
-                const RHIDescriptorIndex srv = resolveTexture( static_cast<uint64>( cmd.GetTexID() ) );
+                const uint64 textureID = static_cast<uint64>( cmd.GetTexID() );
+                bool         bExcluded = false;
+                for ( const uint64 excludedID : listExcludedTexture )
+                {
+                    bExcluded = bExcluded || excludedID == textureID;
+                }
+                if ( bExcluded )
+                    continue; // 캡처에서 뺀 개발 겹치기 — 화면 그리기는 빈 목록을 넘겨 그대로 그린다
+                const RHIDescriptorIndex srv = resolveTexture( textureID );
                 if ( srv == kInvalidDescriptorIndex )
                     continue; // 아직 등록되지 않았거나(업로드 중) 해제한 텍스처 — 흰색으로 대신 그리지 않는다
 

@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"
@@ -38,6 +39,8 @@ namespace sw::editor
         void drawContent() override;
         /** @brief 창이 숨겨지면 게임 뷰 포커스를 해제합니다(게임 입력이 끊긴다). */
         void onPanelCollapsed() override;
+        /** @brief 개발 겹치기 텍스처의 ImGui 등록과 캡처 제외를 놓습니다. */
+        void shutdown() override;
 
         /** @brief 마지막 프레임에 "No camera rendering" 안내를 띄웠으면 true 입니다. */
         bool wasNoCameraHintShown() const { return _model.isNoCameraHintShown(); }
@@ -47,8 +50,19 @@ namespace sw::editor
         void drawToolbar();
         /** @brief 패널 창이 주 뷰포트가 아니면 포인터 · 키를 읽어 모델에 넘깁니다(보조 창의 입력은 ImGui 백엔드만 받는다 — `GameViewModel::forwardDetachedPointer`). */
         void forwardDetachedInput();
+        /**
+         * @brief 개발 겹치기(디버그 HUD — 엔진이 게임 뷰 RT 대신 `CanvasFrameData::kDevOverlayTargetPath` 에 그린다)를 게임 이미지 위에 겹칩니다.
+         * @details 그 텍스처는 에디터 UI 캡처에서 뺀다(`EditorUICapture::setTextureExcluded`) — 게임의 사진처럼 개발 겹치기는 캡처 뒤의 층이다.
+         *          유니티 게임 뷰의 Stats 겹치기 · 언리얼 PIE 뷰포트의 `stat` 이 게임 화면 위 따로 그려지는 것과 같다.
+         */
+        void drawDevOverlay( const float2& imagePos, const float2& imageSize );
+        /** @brief 개발 겹치기 텍스처의 ImGui 등록을 렌더 텍스처 핸들에 맞춥니다(바뀌었으면 옛 것을 놓고 새로 등록한다). */
+        void syncDevOverlayTexture();
+        void releaseDevOverlayTexture();
 
     private:
         GameViewModel _model;
+        void*         _pDevOverlayTextureID; ///< 개발 겹치기 텍스처의 ImGui ID(이 패널 소유, 없으면 nullptr)
+        uint64        _devOverlayTexture;    ///< 그 ID 의 RHI 텍스처
     };
 } // namespace sw::editor

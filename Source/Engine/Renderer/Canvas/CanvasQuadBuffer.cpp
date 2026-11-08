@@ -31,6 +31,7 @@ namespace sw
         , _uploadedRevision{ 0 }
         , _uploadedQuadCount{ 0 }
         , _mainQuadBase{ 0 }
+        , _devOverlayQuadBase{ 0 }
     {
     }
 
@@ -38,13 +39,17 @@ namespace sw
 
     void CanvasQuadBuffer::upload( IRHIDevice& device, const CanvasFrameData& frame, bool bNeedsUAV )
     {
-        // 앞에 화면 앵커, 그 뒤에 주 출력, 그 뒤에 대상들을 잇는다. 내용 서명(주 출력 · 대상의 내용 번호)과 앵커 수가 같고 버퍼가 그대로면
+        // 앞에 화면 앵커, 그 뒤에 주 출력, 그 뒤에 개발 겹치기, 그 뒤에 대상들을 잇는다. 내용 서명(주 출력 · 겹치기 · 대상의 내용 번호)과 앵커 수가 같고 버퍼가 그대로면
         // 사각형은 올리지 않고 바뀐 앵커만 올린다(번호 0 은 "모른다" 라 늘 올린다).
-        const uint32 anchorCount = static_cast<uint32>( frame._listAnchor.size() );
-        _mainQuadBase            = anchorCount;
-        uint32 quadCount         = anchorCount + static_cast<uint32>( frame.getMainOutput()._listQuad.size() );
-        uint64 signature         = frame._contentRevision;
-        bool   bKnown            = frame._contentRevision != 0;
+        const uint32 anchorCount    = static_cast<uint32>( frame._listAnchor.size() );
+        const bool   bHasDevOverlay = frame.getDevOverlay().isEmpty() == false;
+        _mainQuadBase               = anchorCount;
+        _devOverlayQuadBase         = anchorCount + static_cast<uint32>( frame.getMainOutput()._listQuad.size() );
+        uint32 quadCount            = _devOverlayQuadBase + static_cast<uint32>( frame.getDevOverlay()._listQuad.size() );
+        uint64 signature            = frame._contentRevision;
+        bool   bKnown               = frame._contentRevision != 0 && ( bHasDevOverlay == false || frame._devOverlayRevision != 0 );
+        if ( bHasDevOverlay )
+            signature = HashUtil::mix64( signature ^ ( frame._devOverlayRevision * HashUtil::kGoldenRatio64 ) );
         _listTargetQuadBase.clear();
         for ( const CanvasTargetDrawList& target : frame._listTarget )
         {
@@ -71,10 +76,11 @@ namespace sw
         }
         const vector<CanvasQuad>& listMainQuad = frame.getMainOutput()._listQuad;
         const CanvasQuad*         pQuads       = listMainQuad.data();
-        if ( frame._listTarget.empty() == false )
+        if ( frame._listTarget.empty() == false || bHasDevOverlay )
         {
             _listQuadScratch.clear();
             _listQuadScratch.insert( _listQuadScratch.end(), listMainQuad.begin(), listMainQuad.end() );
+            _listQuadScratch.insert( _listQuadScratch.end(), frame.getDevOverlay()._listQuad.begin(), frame.getDevOverlay()._listQuad.end() );
             for ( const CanvasTargetDrawList& target : frame._listTarget )
             {
                 _listQuadScratch.insert( _listQuadScratch.end(), target._list._listQuad.begin(), target._list._listQuad.end() );

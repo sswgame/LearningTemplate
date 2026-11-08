@@ -1486,6 +1486,7 @@ namespace sw
         }
         if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( passDesc ) )
             _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
+        drawDevOverlay( context, passDesc, target ); // Canvas 패스가 없는 파이프라인은 Present 가 마지막 쓰기다
     }
 
     void FramePassExecutor::executeCanvasPass( const PassExecuteInput& input )
@@ -1516,6 +1517,32 @@ namespace sw
             context._pCmd->blitTexture( target._texture, 0 );
         if ( target._bCaptureFromOutput == SW_TRUE && bLastWriter )
             _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
+        drawDevOverlay( context, input._passDesc, target );
+    }
+
+    void FramePassExecutor::drawDevOverlay( FramePassContext& context, const RenderGraphPassDesc& passDesc, const PresentTarget& target )
+    {
+        // 순서가 계약이다: 사진 캡처(캡처 텍스처에 그리기 · 출력에서 복사)가 끝난 뒤, 화면에 나가는 대상에만 그린다 — 사진 · 골든에 개발 겹치기가 들지 않는다.
+        const CanvasDrawList& list         = _state._canvasFrame.getDevOverlay();
+        const bool            bOnScreen    = target._bCapture == SW_FALSE || target._bCaptureToBack == SW_TRUE; // 크기를 덮어쓴 캡처는 화면에 나가지 않는다
+        const bool            bBackBuffer  = target._bCaptureToBack == SW_TRUE || target._texture == 0;         // 호스트 타깃(에디터 게임 뷰)에는 그리지 않는다
+        const bool            bDrawOverlay = list.isEmpty() == false && isLastSwapchainWriter( passDesc ) && _pActiveView == _pMainOutputCanvasView && target._bOwnOutput == SW_FALSE &&
+                                  bOnScreen && bBackBuffer && target._width > 0 && target._height > 0;
+        if ( bDrawOverlay == false )
+            return;
+        const RHIFormat              format = _pDevice->getBackBufferFormat();
+        const RHIPipelineStateHandle pso    = _psoManager.findOutputPSO( RenderPassType::Canvas, format ); // 백버퍼 포맷의 캔버스 PSO 는 셋업이 늘 만든다
+        RHIRenderPassBeginInfo       beginInfo{};
+        beginInfo._bBindColor        = SW_TRUE;
+        beginInfo._arrColorTarget[0] = 0; // 백버퍼 — 캡처를 옮긴 뒤이거나 처음부터 백버퍼에 그린 프레임이다
+        beginInfo._colorTargetCount  = 1;
+        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
+        beginInfo._width             = target._width;
+        beginInfo._height            = target._height;
+        context._pCmd->beginRenderPass( beginInfo );
+        (void)_state._canvasRenderer.drawList( *context._pCmd, list, _state._canvasRenderer.getDevOverlayQuadBase(), pso, target._width, target._height,
+                                               _pDevice->supportsNativeBindlessSampling() );
+        context._pCmd->endRenderPass();
     }
 
     bool FramePassExecutor::beginColorPass( FramePassContext& context, const hashed_string& colorName, const hashed_string& depthName, const float4& clearColor,

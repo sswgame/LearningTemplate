@@ -7,7 +7,9 @@
 
 #include "DevTools/Client/DebugDraw/DebugDrawCanvas.h"
 
+#include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
+#include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPreferences.h"
@@ -25,6 +27,10 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -62,7 +68,56 @@ namespace sw::editor
 
     GameViewPanel::GameViewPanel()
         : _model{}
+        , _pDevOverlayTextureID{ nullptr }
+        , _devOverlayTexture{ 0 }
     {
+    }
+
+    void GameViewPanel::shutdown()
+    {
+        releaseDevOverlayTexture();
+    }
+
+    void GameViewPanel::releaseDevOverlayTexture()
+    {
+        if ( _pDevOverlayTextureID == nullptr )
+            return;
+        EditorContext* pContext = editor::findSubsystem<EditorContext>();
+        if ( pContext != nullptr )
+        {
+            pContext->getSubsystem<EditorUICapture>().setTextureExcluded( _pDevOverlayTextureID, false ); // ID 칸은 다른 등록이 다시 받는다
+            if ( pContext->getSubsystem<EditorRenderViews>().getRenderer() != nullptr )
+                pContext->getSubsystem<EditorRenderViews>().getRenderer()->unregisterTexture( _pDevOverlayTextureID );
+        }
+        _pDevOverlayTextureID = nullptr;
+        _devOverlayTexture    = 0;
+    }
+
+    void GameViewPanel::syncDevOverlayTexture()
+    {
+        AssetManager* const    pAssets  = editor::findSubsystem<AssetManager>();
+        const Texture2D* const pTexture = pAssets != nullptr ? pAssets->getAssetCache<TextureCache>().find( CanvasFrameData::kDevOverlayTargetPath ) : nullptr;
+        const uint64           texture  = pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
+        if ( texture == _devOverlayTexture && ( _pDevOverlayTextureID != nullptr || texture == 0 ) )
+            return;
+        releaseDevOverlayTexture();
+        EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
+        EditorRenderViews& renderViews   = editorContext.getSubsystem<EditorRenderViews>();
+        if ( texture == 0 || renderViews.getRenderer() == nullptr )
+            return; // 겹치기가 없거나 렌더 스레드가 아직 만들지 않았다(다음 프레임)
+        _pDevOverlayTextureID = renderViews.getRenderer()->registerTexture( texture );
+        _devOverlayTexture    = _pDevOverlayTextureID != nullptr ? texture : 0;
+        editorContext.getSubsystem<EditorUICapture>().setTextureExcluded( _pDevOverlayTextureID, true );
+    }
+
+    void GameViewPanel::drawDevOverlay( const float2& imagePos, const float2& imageSize )
+    {
+        // 렌더 텍스처는 겹치기가 처음 실린 뒤 캐시에 남는다(내용이 빈 프레임도 지운 채로 남는다) — 겹치기가 없으면 투명이라 그려도 보이지 않는다.
+        syncDevOverlayTexture();
+        if ( _pDevOverlayTextureID == nullptr || imageSize._x <= 1.0f || imageSize._y <= 1.0f )
+            return;
+        ImGui::GetWindowDrawList()->AddImage( reinterpret_cast<ImTextureID>( _pDevOverlayTextureID ), ImVec2{ imagePos._x, imagePos._y },
+                                              ImVec2{ imagePos._x + imageSize._x, imagePos._y + imageSize._y } );
     }
 
     void GameViewPanel::forwardDetachedInput()
@@ -135,6 +190,8 @@ namespace sw::editor
         }
         else
             ImGui::Dummy( ImVec2{ MathUtil::max( imageSize.x, 1.0f ), MathUtil::max( imageSize.y, 1.0f ) } );
+        if ( bCanDrawGameImage )
+            drawDevOverlay( float2{ imagePos.x, imagePos.y }, float2{ imageSize.x, imageSize.y } );
         EditorSelfTestMarks::record( "gameView.canvas" );
 
         // 게임 카메라가 없으면(꺼짐 · 지움) 그릴 눈이 없다 — 지난 이미지 위에 안내를 띄운다(유니티 "No cameras rendering").

@@ -1016,20 +1016,54 @@ namespace sw
         }
     }
 
+    uint32 UISystem::getGameScreenCount() const
+    {
+        uint32 count = 0;
+        for ( const unique_ptr<UIScreen>& screen : _listScreen )
+        {
+            count += screen->isDevOverlay() ? 0u : 1u;
+        }
+        return count;
+    }
+
+    void UISystem::paintDevOverlayScreens( const UIPaintContext& context )
+    {
+        // 개발 겹치기 화면(디버그 HUD)은 따로 칠한다 — 렌더러가 사진 캡처를 읽은 뒤 화면에 합치므로 사진 · 골든 · 에디터 UI 캡처에 들지 않는다.
+        // 겹치기가 있는 프레임마다 다시 칠한다(재사용 판정 없음, 내용이 같으면 번호를 올리지 않아 렌더러가 다시 올리지 않는다).
+        UICanvasOutput& output = _paintState.getDevOverlay();
+        if ( getGameScreenCount() == _listScreen.size() && output.getCanvas().isEmpty() )
+            return; // 겹치기 화면이 없고 낸 목록도 비었다 — 칠할 것이 없다
+        CanvasDrawList& target = output.beginPaint( _viewport._physicalSize );
+        CanvasPainter   painter( target, context._uiScale );
+        for ( const unique_ptr<UIScreen>& screen : _listScreen )
+        {
+            const bool bSkip = screen->isDevOverlay() == false || screen->isHiddenByLayer() || _bOnScreenSuppressed == SW_TRUE;
+            if ( bSkip == false )
+                (void)UIPaintContext::paint( screen->getTree(), context, painter, target );
+        }
+        output.endPaint();
+    }
+
     void UISystem::paintScreens()
     {
         SW_PROFILE_SCOPE( "GT.UI.Paint" );
         const UIPaintContext context = makePaintContext();
+        paintDevOverlayScreens( context );
         // 지난 프레임과 같은 화면이 같은 순서이고 트리마다 지난 출력을 그대로 낼 수 있으며 포커스 테두리가 없으면, 목록은 지난 것과 같다 —
         // 이어 붙이기와 같은 내용 비교(사각형 수 × 144 바이트씩)를 건너뛴다. 움직이는 화면 마커만 있는 프레임이 이 길이다(앵커만 바뀐다).
         // 판정 순서(프레임 조건 → 트리마다 같은 트리인지 → `canReuseOutput`)를 바꾸지 않는다 — 재사용을 잘못 고르면 화면이 깜박인다.
+        // 개발 겹치기 화면은 이 목록에 들지 않는다(위에서 따로 칠했다) — 재사용 판정에서도 뺀다.
         const bool bFocusRingMode = _input.getInputMode() == UIInputMode::Navigation && _input.getFocusManager().getFocusedTree() != nullptr;
         const bool bReusableFrame = bFocusRingMode == false && _bOnScreenSuppressed == SW_FALSE;
-        bool       bUnchanged     = _paintState.canReuseLastCanvas( bReusableFrame, _listScreen.size(), _viewport._physicalSize );
+        bool       bUnchanged     = _paintState.canReuseLastCanvas( bReusableFrame, getGameScreenCount(), _viewport._physicalSize );
+        size_t     paintedIndex   = 0;
         for ( size_t index = 0; bUnchanged && index < _listScreen.size(); ++index )
         {
+            if ( _listScreen[index]->isDevOverlay() )
+                continue;
             const WidgetTree& tree = _listScreen[index]->getTree();
-            bUnchanged             = _paintState.isPaintedTree( index, tree ) && UIPaintContext::canReuseOutput( tree, context, _viewport._physicalSize );
+            bUnchanged             = _paintState.isPaintedTree( paintedIndex, tree ) && UIPaintContext::canReuseOutput( tree, context, _viewport._physicalSize );
+            ++paintedIndex;
         }
         if ( bUnchanged )
         {
@@ -1041,7 +1075,8 @@ namespace sw
         CanvasDrawList& target = _paintState.beginPaint( bReusableFrame, _viewport._physicalSize );
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
         {
-            _paintState.addPaintedTree( screen->getTree() );
+            if ( screen->isDevOverlay() == false )
+                _paintState.addPaintedTree( screen->getTree() );
         }
         CanvasPainter painter( target, context._uiScale );
         uint32        paintedCount = 0;
@@ -1049,8 +1084,8 @@ namespace sw
         {
             if ( _bOnScreenSuppressed == SW_TRUE )
                 break; // 그리기 목록을 비운다. 아래 같은 내용 확인이 바뀐 것으로 보고 번호를 올린다
-            if ( screen->isHiddenByLayer() )
-                continue; // 레이어 숨김 요청(`addLayerHideRequest`)이 가린 화면 — 포커스 테두리도 그리지 않는다
+            if ( screen->isHiddenByLayer() || screen->isDevOverlay() )
+                continue; // 레이어 숨김 요청(`addLayerHideRequest`)이 가린 화면 · 따로 칠한 개발 겹치기 화면 — 포커스 테두리도 그리지 않는다
             WidgetTree& tree = screen->getTree();
             paintedCount += UIPaintContext::paint( tree, context, painter, target );
             // 포커스 테두리는 패드나 키보드로 다룰 때만 그린다(언리얼 CommonUI, 콘솔 게임과 같다). 그 화면 위, 위 화면 아래에 놓는다.

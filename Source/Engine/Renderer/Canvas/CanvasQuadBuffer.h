@@ -43,6 +43,8 @@ namespace sw
         const RHIStructuredBuffer& getSlot() const { return _quadBuffer; }
         /** @brief 마지막 `upload` 에서 주 출력 사각형이 버퍼에서 시작하는 위치입니다(버퍼 맨 앞은 화면 앵커입니다). */
         uint32 getMainQuadBase() const { return _mainQuadBase; }
+        /** @brief 마지막 `upload` 에서 개발 겹치기 사각형이 버퍼에서 시작하는 위치입니다(주 출력 바로 뒤). */
+        uint32 getDevOverlayQuadBase() const { return _devOverlayQuadBase; }
         /** @brief 마지막 `upload` 에서 대상 @p targetIndex 의 사각형이 버퍼에서 시작하는 위치입니다. */
         uint32 getTargetQuadBase( uint32 targetIndex ) const { return targetIndex < _listTargetQuadBase.size() ? _listTargetQuadBase[targetIndex] : 0; }
 
@@ -58,6 +60,7 @@ namespace sw
         RHIStructuredBuffer  _quadBuffer;
         uint64               _uploadedRevision; ///< 사각형 버퍼에 지금 있는 내용의 서명(주 출력과 대상 내용 번호, 0이면 없음)
         uint32               _uploadedQuadCount;
-        uint32               _mainQuadBase; ///< 주 출력 사각형이 버퍼에서 시작하는 위치(앞의 앵커 수)
+        uint32               _mainQuadBase;       ///< 주 출력 사각형이 버퍼에서 시작하는 위치(앞의 앵커 수)
+        uint32               _devOverlayQuadBase; ///< 개발 겹치기 사각형이 버퍼에서 시작하는 위치(주 출력 뒤)
     };
 } // namespace sw
