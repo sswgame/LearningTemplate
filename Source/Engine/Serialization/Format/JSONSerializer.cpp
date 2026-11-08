@@ -524,7 +524,11 @@ namespace sw
             {
                 const JSONValue element = value.at( elementIndex );
                 if ( element.isObject() )
-                    collectMissingRequired( element, *pNested, outListPath, formatToString( "%#[%#]", path, static_cast<uint64>( elementIndex ) ) );
+                {
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "%#[%#]", path, static_cast<uint64>( elementIndex ) );
+                    collectMissingRequired( element, *pNested, outListPath, string( textBuilder.view() ) );
+                }
             }
         }
     }

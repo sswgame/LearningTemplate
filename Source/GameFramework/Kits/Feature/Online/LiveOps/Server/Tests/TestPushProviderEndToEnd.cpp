@@ -294,12 +294,14 @@ namespace
 
         [[nodiscard]] string writeProvidersFile()
         {
-            const string fcmURL = _fcm.makeBaseURL();
-            const string text   = formatToString( R"({"providers":[
+            const string                             fcmURL = _fcm.makeBaseURL();
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( R"({"providers":[
                 {"kind":"fcm","serviceAccountEnvironment":"%#","tokenUrl":"%#/token","sendUrl":"%#"},
                 {"kind":"apns","keyEnvironment":"%#","keyId":"key","teamId":"team","topic":"%#","sendUrl":"https://localhost:%#"}
             ]})",
-                                                  kFCMEnv, fcmURL, fcmURL, kAPNSEnv, kTopic, _apns.getPort() );
+                                      kFCMEnv, fcmURL, fcmURL, kAPNSEnv, kTopic, _apns.getPort() );
+            const string text{ textBuilder.view() };
             return test::writeScratchText( "push.json", text );
         }
 
@@ -423,13 +425,17 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
     string       apnsKey;
     NetPublicKey publicKey;
     SW_REQUIRE_TRUE( game::getSubsystem<INetSecurityProvider>().createSigningKeyPair( NetSignatureAlgorithm::EcdsaP256Sha256, apnsKey, publicKey ) );
-    const test::ScopedEnvironmentVariable apnsEnv{ kAPNSEnv, apnsKey };
-    const string                          providersFile = test::writeScratchText( "kit-push.json", formatToString( R"({"providers":[{"kind":"apns","keyEnvironment":"%#","keyId":"key","teamId":"team","topic":"%#","sendUrl":"https://localhost:%#"}]})", kAPNSEnv, kTopic, apns.getPort() ) );
+    const test::ScopedEnvironmentVariable    apnsEnv{ kAPNSEnv, apnsKey };
+    StringBuilder<constant::buffer::kMax256> textBuilder2;
+    textBuilder2.appendFormat( R"({"providers":[{"kind":"apns","keyEnvironment":"%#","keyId":"key","teamId":"team","topic":"%#","sendUrl":"https://localhost:%#"}]})", kAPNSEnv, kTopic, apns.getPort() );
+    const string providersFile = test::writeScratchText( "kit-push.json", string( textBuilder2.view() ) );
 
     constexpr const utf8* kServerJSON    = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })";
     const auto            makeOnlineJSON = [&providersFile]( string_view trustOption )
     {
-        return formatToString( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "liveops", "_settings": { "_pushProvidersFile": "%#"%# } } ] })", providersFile, trustOption );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( R"({ "_storeName": "local", "_cacheName": "local", "_listKit": [ { "_name": "liveops", "_settings": { "_pushProvidersFile": "%#"%# } } ] })", providersFile, trustOption );
+        return string( resultBuilder.view() );
     };
     const int64 nowMs = WallClock::nowUnixMilliseconds().count();
 
@@ -440,9 +446,11 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
         SW_EXPECT_TRUE( error.find( "pushTrustFile" ) != string::npos );
     }
 
-    test::OnlineRuntimeFixture rig;
-    string                     error;
-    SW_REQUIRE_TRUE_MSG( rig.fromConfig( kServerJSON, makeOnlineJSON( formatToString( R"(, "_pushTrustFile": "%#")", apns.getTrustFile() ) ), nowMs, error ), error.c_str() );
+    test::OnlineRuntimeFixture               rig;
+    string                                   error;
+    StringBuilder<constant::buffer::kMax256> textBuilder;
+    textBuilder.appendFormat( R"(, "_pushTrustFile": "%#")", apns.getTrustFile() );
+    SW_REQUIRE_TRUE_MSG( rig.fromConfig( kServerJSON, makeOnlineJSON( string( textBuilder.view() ) ), nowMs, error ), error.c_str() );
     SW_EXPECT_TRUE( rig._runtime.getContext()._kits.find<IOfflinePushSender>() != nullptr );
 }
 

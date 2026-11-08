@@ -63,8 +63,10 @@ namespace sw
                     outReply = "mods: no mod session";
                     return true;
                 }
-                const ModSetDigest& digest = pSession->getDigest();
-                outReply                   = formatToString( "mods: %# active [%#] config %#", digest._listEntry.size(), digest.toText(), digest._configHash );
+                const ModSetDigest&                      digest = pSession->getDigest();
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "mods: %# active [%#] config %#", digest._listEntry.size(), digest.toText(), digest._configHash );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -75,7 +77,9 @@ namespace sw
                 string text;
                 if ( AssetIO::readTextAsset( AssetID{ listArgument[0] }, text ) == false )
                 {
-                    outReply = formatToString( "mod.read %#: not found", listArgument[0] );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "mod.read %#: not found", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
                 string line{ StringUtil::trim( text ) };
@@ -86,7 +90,9 @@ namespace sw
                 }
                 if ( line.size() > kReplyLineLimit )
                     line.resize( kReplyLineLimit );
-                outReply = formatToString( "mod.read %#: %#", listArgument[0], line );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "mod.read %#: %#", listArgument[0], line );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -99,10 +105,14 @@ namespace sw
                 string folder;
                 if ( ModSession::exportPackedMod( listArgument[0], pGameConfig->_packRoot.get(), folder ) == false )
                 {
-                    outReply = formatToString( "mod.pack %#: failed (see the error above)", listArgument[0] );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "mod.pack %#: failed (see the error above)", listArgument[0] );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
-                outReply = formatToString( "mod.pack %#: %#", listArgument[0], folder );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "mod.pack %#: %#", listArgument[0], folder );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -446,7 +456,9 @@ namespace sw
             return false;
         }
         // 프로세스마다 다른 이름이다 — 시나리오 체인은 백엔드마다 자식 프로세스가 같은 폴더를 동시에 쓰고, 마운트한 팩은 열려 있어 바꿔 쓸 수 없다.
-        const string builtPath = FileUtil::joinPath( request._buildFolder, formatToString( "%#.%#.pack", manifest._id, Process::getCurrentProcessID() ) );
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "%#.%#.pack", manifest._id, Process::getCurrentProcessID() );
+        const string builtPath = FileUtil::joinPath( request._buildFolder, textBuilder.view() );
         if ( ModPackBuilder::buildFromFolder( sourceFolder, builtPath, settings ) == false )
             return false;
         _listBuiltPackPath.push_back( builtPath );

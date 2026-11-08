@@ -59,10 +59,14 @@ namespace sw::editor
         }
         if ( EditorToolAssetCommands::saveTileSet( path, _content ) == false )
         {
-            _status = formatToString( "Failed to save %# (see the log)", path );
+            StringBuilder<constant::buffer::kMax256> statusBuilder;
+            statusBuilder.appendFormat( "Failed to save %# (see the log)", path );
+            _status = string( statusBuilder.view() );
             return false;
         }
-        _status = formatToString( "Saved %#", path );
+        StringBuilder<constant::buffer::kMax256> statusBuilder;
+        statusBuilder.appendFormat( "Saved %#", path );
+        _status = string( statusBuilder.view() );
         return true;
     }
 
@@ -132,7 +136,9 @@ namespace sw::editor
         string            name  = pStem;
         for ( uint32 suffix = 2; _content.findBrush( hashed_string( string_view( name ) ) ) >= 0; ++suffix )
         {
-            name = formatToString( "%#%#", pStem, suffix );
+            StringBuilder<constant::buffer::kMax256> nameBuilder;
+            nameBuilder.appendFormat( "%#%#", pStem, suffix );
+            name = string( nameBuilder.view() );
         }
         TileBrush brush{};
         brush._name          = hashed_string( string_view( name ) );
@@ -166,7 +172,9 @@ namespace sw::editor
         const hashed_string newName( name );
         if ( name.empty() || ( newName != pBrush->_name && _content.findBrush( newName ) >= 0 ) )
         {
-            _status = formatToString( "Brush name '%#' is empty or already used - the name stays '%#'", name, pBrush->_name.view() );
+            StringBuilder<constant::buffer::kMax256> statusBuilder;
+            statusBuilder.appendFormat( "Brush name '%#' is empty or already used - the name stays '%#'", name, pBrush->_name.view() );
+            _status = string( statusBuilder.view() );
             return false;
         }
         if ( newName == pBrush->_name )

@@ -74,14 +74,18 @@ namespace sw
             const PropScatterModel& model = listModel[modelIndex];
             if ( model._meshID.empty() )
             {
-                outError = formatToString( "model %# has no mesh", modelIndex );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "model %# has no mesh", modelIndex );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             if ( model._listSection.empty() )
                 continue;
             if ( componentMaterial.empty() == false )
             {
-                outError = formatToString( "model '%#' lists section materials and the component also sets a material - set one of them", model._meshID.c_str() );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "model '%#' lists section materials and the component also sets a material - set one of them", model._meshID.c_str() );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             for ( size_t sectionIndex = 0; sectionIndex < model._listSection.size(); ++sectionIndex )
@@ -89,14 +93,18 @@ namespace sw
                 const PropScatterSection& section = model._listSection[sectionIndex];
                 if ( section._sectionName.empty() || section._materialPath.empty() )
                 {
-                    outError = formatToString( "model '%#' section %# needs both a section name and a material", model._meshID.c_str(), sectionIndex );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "model '%#' section %# needs both a section name and a material", model._meshID.c_str(), sectionIndex );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 for ( size_t earlierIndex = 0; earlierIndex < sectionIndex; ++earlierIndex )
                 {
                     if ( model._listSection[earlierIndex]._sectionName == section._sectionName )
                     {
-                        outError = formatToString( "model '%#' lists section '%#' twice", model._meshID.c_str(), section._sectionName.c_str() );
+                        StringBuilder<constant::buffer::kMax256> errorBuilder;
+                        errorBuilder.appendFormat( "model '%#' lists section '%#' twice", model._meshID.c_str(), section._sectionName.c_str() );
+                        outError = string( errorBuilder.view() );
                         return false;
                     }
                 }

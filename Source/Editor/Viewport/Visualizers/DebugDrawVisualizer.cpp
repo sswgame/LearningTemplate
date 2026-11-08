@@ -120,7 +120,9 @@ namespace sw::editor
                 pQueue->drawArrow( center - right * 0.6f, center + right * 0.6f, float4{ 0.3f, 1.0f, 0.3f, 1.0f }, duration, "Demo" );
                 pQueue->drawText( center + float3{ 0.0f, 1.0f, 0.0f }, "DebugDrawQueue demo", float4{ 1.0f, 1.0f, 0.3f, 1.0f }, duration, "Demo" );
                 editor::getSubsystem<DebugOverlayState>().setFloat( hashed_string( "debugdraw.demo.seconds" ), duration );
-                outReply = formatToString( "debug draw demo for %# s", seconds );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "debug draw demo for %# s", seconds );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

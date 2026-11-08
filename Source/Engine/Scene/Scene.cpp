@@ -451,7 +451,9 @@ namespace sw
                 const SceneStreamingSubsystem& streaming = pScene->getObjectManager()->getSubsystem<SceneStreamingSubsystem>();
                 if ( streaming.isStreaming() )
                 {
-                    outReply = formatToString( "streaming: %# of %# cells loaded", streaming.getLoadedCellCount(), streaming.getCellCount() );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "streaming: %# of %# cells loaded", streaming.getLoadedCellCount(), streaming.getCellCount() );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
                 if ( pScene->getSceneSettings()._bStreaming == false )
@@ -471,8 +473,10 @@ namespace sw
                                " cross-cell references (see the log or the Streaming Cells window)";
                     return false;
                 }
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%# entities always loaded", static_cast<uint32>( preview._listAlwaysLoadedID.size() ) );
                 outReply = to_string( static_cast<uint32>( preview._listCell.size() ) ) + " cells, " +
-                           formatToString( "%# entities always loaded", static_cast<uint32>( preview._listAlwaysLoadedID.size() ) );
+                           string( textBuilder.view() );
                 return true;
             }
 

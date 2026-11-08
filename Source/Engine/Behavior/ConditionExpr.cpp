@@ -41,7 +41,11 @@ namespace sw
         void fail( string_view reason )
         {
             if ( hasError() == false )
-                _error = formatToString( "%# near column %#", reason, static_cast<int32>( _position ) );
+            {
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "%# near column %#", reason, static_cast<int32>( _position ) );
+                _error = string( errorBuilder.view() );
+            }
         }
 
         void skipSpace()
@@ -89,7 +93,9 @@ namespace sw
             string          argsError;
             if ( InstancedStructText::read( args.getInstance(), *args.getType(), listToken, argsError ) == false )
             {
-                fail( formatToString( "'%#': %#", entry._pName, argsError.c_str() ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "'%#': %#", entry._pName, argsError.c_str() );
+                fail( textBuilder.view() );
                 return;
             }
             ConditionInstruction instruction;
@@ -156,7 +162,9 @@ namespace sw
             const ConditionEntry* pEntry = ConditionRegistry::find( name );
             if ( pEntry == nullptr )
             {
-                fail( formatToString( "unknown condition '%#'", name ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "unknown condition '%#'", name );
+                fail( textBuilder.view() );
                 return;
             }
             vector<string_view> listToken;
@@ -176,7 +184,9 @@ namespace sw
             const ConditionEntry* pBare = _pBareCondition != nullptr ? ConditionRegistry::find( _pBareCondition ) : nullptr;
             if ( pBare == nullptr )
             {
-                fail( formatToString( "unknown name '%#'", name ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "unknown name '%#'", name );
+                fail( textBuilder.view() );
                 return;
             }
             const vector<string_view> listToken{ name };

@@ -224,7 +224,9 @@ namespace sw::editor
 
             const XMLNode node = nodes.appendChild( "item" );
             node.appendAttribute( "type", "SpringChain" );
-            node.appendAttribute( "name", string_view{ formatToString( "Spring%#%#", chain._springIndex, ( partIndex > 0 ? "_" + to_string( partIndex ) : string{} ) ) } );
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "Spring%#%#", chain._springIndex, ( partIndex > 0 ? "_" + to_string( partIndex ) : string{} ) );
+            node.appendAttribute( "name", textBuilder.view() );
             // VRM(three-vrm VRMSpringBoneJoint.update) 의 한 프레임: 다음 끝 = 끝 + (끝 − 이전 끝) × (1 − dragForce) + 뼈 방향 × stiffness × dt + gravityDir × gravityPower × dt,
             // 그 뒤 길이를 맞추고 충돌체(hitRadius + 반지름)에서 밀어낸다. 리그 사슬의 고정 스텝과 항마다 같다 — 감쇠 = dragForce, axis_pull = stiffness(m/s),
             // 중력 가속도 = gravityDir × gravityPower ÷ 스텝(스텝마다 가속도 × 스텝² = gravityPower × 스텝), 비율 당김(stiffness) 은 0, 반지름 = hitRadius.

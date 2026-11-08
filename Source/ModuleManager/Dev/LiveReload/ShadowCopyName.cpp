@@ -96,7 +96,9 @@ namespace sw
             {
                 // 끝난 프로세스의 폴더는 나란히 도는 프로세스들이 함께 치운다 — 먼저 이름을 바꿔 차지한 쪽만 지운다(옮기기는 원자적이다).
                 // 예전에는 둘이 같은 폴더를 동시에 훑어, 한쪽이 지우는 동안 다른 쪽의 목록이 끊겼다(`FileUtil.CollectingFilesUnderStopped` — Release Scenario.editor netsyncobjects).
-                const string claimedPath = FileUtil::joinPath( directoryPath, formatToString( ".reap_p%#_%#", currentProcessID, reapSerial++ ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( ".reap_p%#_%#", currentProcessID, reapSerial++ );
+                const string claimedPath = FileUtil::joinPath( directoryPath, textBuilder.view() );
                 if ( FileUtil::renamePath( folderPath, claimedPath ) && FileUtil::removeDirectory( claimedPath ) )
                     ++removedCount;
                 continue;

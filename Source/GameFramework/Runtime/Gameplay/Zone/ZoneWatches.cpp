@@ -11,6 +11,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
@@ -266,8 +267,8 @@ namespace sw
                 uint32 zoneCount = 0;
                 forEachZoneOf( *pManager, *pTarget, [&]( const hashed_string& source, const ZoneSample& sample )
                 {
-                    writer.addLine( source.c_str(), formatToString( "depth %# dist %# immersion %# time %# impact %#", sample._zoneDepth01, sample._distanceToCenter, sample._immersion,
-                                                                    sample._timeInside, sample._impactSpeed ) );
+                    writer.addLineFormat( source.c_str(), "depth %# dist %# immersion %# time %# impact %#", sample._zoneDepth01, sample._distanceToCenter, sample._immersion,
+                                          sample._timeInside, sample._impactSpeed );
                     ++zoneCount;
                 } );
                 if ( zoneCount == 0 )
@@ -275,8 +276,8 @@ namespace sw
                 if ( pController != nullptr )
                 {
                     const PhysicsFieldSample& field = pController->getPhysicsField();
-                    writer.addLine( "movement", formatToString( "%# gravity %# drag %# fluid %# friction %#", getEnumName( pController->getMovementMode() ), field._gravityScale, field._drag,
-                                                                field._fluidDensity, field._friction ) );
+                    writer.addLineFormat( "movement", "%# gravity %# drag %# fluid %# friction %#", getEnumName( pController->getMovementMode() ), field._gravityScale, field._drag,
+                                          field._fluidDensity, field._friction );
                 }
             }
         };

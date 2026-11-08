@@ -102,17 +102,33 @@ namespace sw
                 switch ( outCondition._kind )
                 {
                     case AppearanceRuleConditionKind::TargetTag:
-                        text += formatToString( "targetTag(%#, %#)", outCondition._target.c_str(), params._tag.c_str() );
-                        break;
+                    {
+                        StringBuilder<constant::buffer::kMax256> textPart4;
+                        textPart4.appendFormat( "targetTag(%#, %#)", outCondition._target.c_str(), params._tag.c_str() );
+                        text += textPart4.c_str();
+                    }
+                    break;
                     case AppearanceRuleConditionKind::AnyTag:
-                        text += formatToString( "anyTag(%#)", params._tag.c_str() );
-                        break;
+                    {
+                        StringBuilder<constant::buffer::kMax256> textPart3;
+                        textPart3.appendFormat( "anyTag(%#)", params._tag.c_str() );
+                        text += textPart3.c_str();
+                    }
+                    break;
                     case AppearanceRuleConditionKind::CharacterTag:
-                        text += formatToString( "tag(%#)", params._characterTag.c_str() );
-                        break;
+                    {
+                        StringBuilder<constant::buffer::kMax256> textPart2;
+                        textPart2.appendFormat( "tag(%#)", params._characterTag.c_str() );
+                        text += textPart2.c_str();
+                    }
+                    break;
                     case AppearanceRuleConditionKind::Occupied:
-                        text += formatToString( "occupied(%#)", outCondition._target.c_str() );
-                        break;
+                    {
+                        StringBuilder<constant::buffer::kMax256> textPart;
+                        textPart.appendFormat( "occupied(%#)", outCondition._target.c_str() );
+                        text += textPart.c_str();
+                    }
+                    break;
                     case AppearanceRuleConditionKind::BodyShape:
                     case AppearanceRuleConditionKind::BodyType:
                     {

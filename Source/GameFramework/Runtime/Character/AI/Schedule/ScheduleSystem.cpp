@@ -753,7 +753,11 @@ namespace sw
                     }
                 }
                 if ( outReply.empty() )
-                    outReply = formatToString( "no live schedule NPC matches '%#'", request );
+                {
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "no live schedule NPC matches '%#'", request );
+                    outReply = string( replyBuilder.view() );
+                }
                 return true;
             }
         };

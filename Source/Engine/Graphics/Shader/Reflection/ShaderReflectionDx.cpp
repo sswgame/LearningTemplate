@@ -77,7 +77,9 @@ namespace sw
                     const bool bFloat4x4Matrix = rows == 4 && columns == 4 && varType == D3D_SVT_FLOAT;
                     if ( bFloat4x4Matrix )
                         return string( "Float4x4" );
-                    return formatToString( "%#%#x%#", string( pBase ), rows, columns );
+                    StringBuilder<constant::buffer::kMax256> resultBuilder;
+                    resultBuilder.appendFormat( "%#%#x%#", string( pBase ), rows, columns );
+                    return string( resultBuilder.view() );
                 }
                 if ( varClass == D3D_SVC_VECTOR )
                 {

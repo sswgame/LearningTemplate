@@ -2028,7 +2028,9 @@ namespace sw
         column->setSpacing( _settings._nameplateSpacing );
         unique_ptr<TextWidget> name = make_unique<TextWidget>();
         name->setLocalized( false );
-        name->setText( formatToString( "Unit %#", index ) );
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "Unit %#", index );
+        name->setText( string( textBuilder.view() ) );
         StressTestSceneInternal::setFixedSize( *name, _settings._nameplateWidth, _settings._nameplateTextHeight );
         (void)column->addChild( std::move( name ) );
         unique_ptr<ProgressBarWidget> health = make_unique<ProgressBarWidget>();

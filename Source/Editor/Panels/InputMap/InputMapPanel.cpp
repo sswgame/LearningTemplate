@@ -407,7 +407,11 @@ namespace sw::editor
         const utf8*         pCurrent = getEnumName( trigger );
         const bool          bOpen    = ImGui::BeginCombo( "##trigger", pCurrent != nullptr ? pCurrent : "?" );
         if ( EditorSelfTestMarks::isEnabled() )
-            EditorSelfTestMarks::record( ( formatToString( "inputMap.binding.%#.trigger", static_cast<uint64>( bindIndex ) ) ).c_str() );
+        {
+            fixed_string<constant::buffer::kMax64> text2;
+            formatstring( text2.data(), text2.capacity(), "inputMap.binding.%#.trigger", static_cast<uint64>( bindIndex ) );
+            EditorSelfTestMarks::record( text2.c_str() );
+        }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "TriggerTip" ) );
         if ( bOpen == false )
             return;
@@ -417,7 +421,11 @@ namespace sw::editor
             if ( ImGui::Selectable( getEnumName( value ), value == trigger ) )
                 (void)_document.setBindingTrigger( action, bindIndex, value );
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::record( ( formatToString( "inputMap.trigger.%#", static_cast<uint64>( option ) ) ).c_str() );
+            {
+                fixed_string<constant::buffer::kMax64> text;
+                formatstring( text.data(), text.capacity(), "inputMap.trigger.%#", static_cast<uint64>( option ) );
+                EditorSelfTestMarks::record( text.c_str() );
+            }
         }
         ImGui::EndCombo();
     }

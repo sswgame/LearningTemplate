@@ -215,7 +215,9 @@ namespace sw::editor
                 if ( bInvalidStepArguments )
                     return false;
                 EditorPlaySession::stepFrames( frameCount );
-                outReply = formatToString( "step %#", frameCount );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "step %#", frameCount );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

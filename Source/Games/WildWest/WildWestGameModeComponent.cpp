@@ -255,16 +255,36 @@ namespace sw
         const bool             bNothingToShow = pOutlaw->getHonorValue() == startHonor && pOutlaw->getWantedLevel() == 0 && pOutlaw->getBounty() == 0 && pOutlaw->getPeltCount() == 0 && pOutlaw->getCarcassCount() == 0 && bLowCore == false;
         if ( bNothingToShow )
             return string{};
-        string status = formatToString( "Honor %# (%#)", pOutlaw->getHonorValue(), pOutlaw->getHonorTierName().c_str() );
+        StringBuilder<constant::buffer::kMax256> statusBuilder;
+        statusBuilder.appendFormat( "Honor %# (%#)", pOutlaw->getHonorValue(), pOutlaw->getHonorTierName().c_str() );
+        string status{ statusBuilder.view() };
         if ( pOutlaw->getWantedLevel() > 0 )
-            status += formatToString( " - Wanted %#", pOutlaw->getWantedLevel() );
+        {
+            StringBuilder<constant::buffer::kMax256> statusPart5;
+            statusPart5.appendFormat( " - Wanted %#", pOutlaw->getWantedLevel() );
+            status += statusPart5.c_str();
+        }
         if ( pOutlaw->getBounty() > 0 )
-            status += formatToString( " - Bounty $%#", pOutlaw->getBounty() );
+        {
+            StringBuilder<constant::buffer::kMax256> statusPart4;
+            statusPart4.appendFormat( " - Bounty $%#", pOutlaw->getBounty() );
+            status += statusPart4.c_str();
+        }
         if ( pOutlaw->getCarcassCount() > 0 )
-            status += formatToString( " - Carcasses %#", pOutlaw->getCarcassCount() );
+        {
+            StringBuilder<constant::buffer::kMax256> statusPart3;
+            statusPart3.appendFormat( " - Carcasses %#", pOutlaw->getCarcassCount() );
+            status += statusPart3.c_str();
+        }
         if ( pOutlaw->getPeltCount() > 0 )
-            status += formatToString( " - Pelts %#", pOutlaw->getPeltCount() );
-        status += formatToString( " - $%#", pOutlaw->getMoney() );
+        {
+            StringBuilder<constant::buffer::kMax256> statusPart2;
+            statusPart2.appendFormat( " - Pelts %#", pOutlaw->getPeltCount() );
+            status += statusPart2.c_str();
+        }
+        StringBuilder<constant::buffer::kMax256> statusPart;
+        statusPart.appendFormat( " - $%#", pOutlaw->getMoney() );
+        status += statusPart.c_str();
         if ( bLowCore )
             status += " - Hungry";
         return status;

@@ -83,7 +83,11 @@ namespace sw::editor
                 return false;
             }
             if ( outListToon[index]._name.empty() )
-                outListToon[index]._name = formatToString( "material%#", static_cast<uint64>( index ) );
+            {
+                StringBuilder<constant::buffer::kMax256> nameBuilder;
+                nameBuilder.appendFormat( "material%#", static_cast<uint64>( index ) );
+                outListToon[index]._name = string( nameBuilder.view() );
+            }
         }
         return true;
     }
@@ -132,8 +136,10 @@ namespace sw::editor
         inoutResult._listPBRMaterial.resize( data.materials_count );
         for ( cgltf_size materialIndex = 0; materialIndex < data.materials_count; ++materialIndex )
         {
-            const cgltf_material& material = data.materials[materialIndex];
-            const string          rawName  = material.name != nullptr && material.name[0] != '\0' ? string( material.name ) : formatToString( "material%#", static_cast<uint64>( materialIndex ) );
+            const cgltf_material&                  material = data.materials[materialIndex];
+            fixed_string<constant::buffer::kMax64> fallbackName;
+            formatstring( fallbackName.data(), fallbackName.capacity(), "material%#", static_cast<uint64>( materialIndex ) );
+            const string rawName = material.name != nullptr && material.name[0] != '\0' ? string( material.name ) : string( fallbackName.view() );
             if ( readPBRMaterialValues( material, rawName, sourcePath, inoutResult._listPBRMaterial[materialIndex] ) == false )
                 return false;
         }

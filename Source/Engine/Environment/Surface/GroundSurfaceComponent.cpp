@@ -88,11 +88,13 @@ namespace sw
                     outReply = "surface.probe: nothing with a surface kind under '" + listArgument[0] + "' (see Surface.KindMissing in the log)";
                     return true;
                 }
-                outReply = formatToString( "surface %# kind=%# source=%# material=%# layer=%# point=%#,%#,%# normal=%#,%#,%# velocity=%#,%#,%# water=%# moveScale=%#", listArgument[0],
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "surface %# kind=%# source=%# material=%# layer=%# point=%#,%#,%# normal=%#,%#,%# velocity=%#,%#,%# water=%# moveScale=%#", listArgument[0],
                                            sample._pKind->_name.c_str(), SurfaceSample::getSourceName( sample._source ), sample._material.c_str(),
                                            sample._terrainLayer == SurfaceSample::kNoTerrainLayer ? -1 : static_cast<int32>( sample._terrainLayer ), sample._point._x, sample._point._y,
                                            sample._point._z, sample._normal._x, sample._normal._y, sample._normal._z, sample._surfaceVelocity._x, sample._surfaceVelocity._y,
                                            sample._surfaceVelocity._z, sample._waterDepth, sample._pKind->_moveScale );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

@@ -198,7 +198,9 @@ SW_TEST_CASE( ConditionExprTest, CallsInOneExpressionRollApart )
     GameplayContext expected = context;
     expected.mixCallSeed( 1u );
     SW_EXPECT_NOT_EQUAL( 12345u, expected.getSeed() );
-    const string text = formatToString( "testFixed == 7 && testSeed == %#", expected.getSeed() % XTestUtil::kSeedModulo );
+    StringBuilder<constant::buffer::kMax256> textBuilder;
+    textBuilder.appendFormat( "testFixed == 7 && testSeed == %#", expected.getSeed() % XTestUtil::kSeedModulo );
+    const string text{ textBuilder.view() };
     SW_EXPECT_TRUE( XTestUtil::run( text, context ) );
     SW_EXPECT_TRUE( XTestUtil::run( text, context ) );
 }

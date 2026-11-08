@@ -243,7 +243,9 @@ namespace sw::editor
                     ImGui::TableNextColumn();
 
                     // 호출 스택을 펼쳐 볼 수 있도록 트리로 만든다
-                    string treeLabel = formatToString( "Stack Hash: %#", info._stack._hash );
+                    StringBuilder<constant::buffer::kMax256> treeLabelBuilder;
+                    treeLabelBuilder.appendFormat( "Stack Hash: %#", info._stack._hash );
+                    string treeLabel{ treeLabelBuilder.view() };
                     if ( ImGui::TreeNode( treeLabel.c_str() ) )
                     {
                         string stackStr = CallStackCapture::symbolize( info._stack );

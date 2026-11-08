@@ -66,7 +66,9 @@ namespace sw
                 const int32 arrBlockPopulation[] = { 0, layout._secondBlockPeople, layout._thirdBlockPeople };
                 if ( block < 1 || block > 3 )
                 {
-                    outError = formatToString( "block %# is not 1..3", block );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "block %# is not 1..3", block );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 outPopulation = arrBlockPopulation[block - 1];

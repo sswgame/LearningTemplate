@@ -140,7 +140,9 @@ namespace sw
         {
             if ( size != integerSize )
             {
-                outError = formatToString( "integer column of type %# holds %# bytes", typeOid, size );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "integer column of type %# holds %# bytes", typeOid, size );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             uint64 raw = 0;
@@ -156,7 +158,9 @@ namespace sw
         const bool bText = typeOid == kTextOid || typeOid == kVarcharOid;
         if ( bText == false && typeOid != kByteaOid )
         {
-            outError = formatToString( "column type %# has no SQLValue form", typeOid );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "column type %# has no SQLValue form", typeOid );
+            outError = string( errorBuilder.view() );
             return false;
         }
         outValue._type = bText ? SQLValueType::Text : SQLValueType::Blob;

@@ -62,7 +62,9 @@ namespace sw
                 const bool          bRebindRejected = bindIndex < 0 || map.hasAction( action ) == false || map.rebindSlot( action, slot, static_cast<uint32>( bindIndex ) ) == false;
                 if ( bRebindRejected )
                 {
-                    outReply = formatToString( "'%#' has no rebindable binding %#", listArgument[0], bindIndex );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "'%#' has no rebindable binding %#", listArgument[0], bindIndex );
+                    outReply = string( replyBuilder.view() );
                     return false;
                 }
                 const bool bSaved = pDebugKeys->getUserBindingsPath().empty() || pDebugKeys->saveUserBindings();

@@ -51,9 +51,13 @@ namespace sw
     void PointLightComponent::validateRadius( ValidationContext& context ) const
     {
         // 세터는 0 을 막지만 데이터(씬 · 프리팹)의 0 은 그대로 들어온다 — 셰이더가 반경으로 나누는 자리다.
-        if ( _radius <= 0.0f )
-            context.addErrorWithFix( "Radius is 0 - the light reaches nothing and the shader divides by it",
-                                     ValidationPropertyEdit{ hashed_string{}, formatToString( "%#", PointLightComponentInternal::kDefaultRadius ), formatToString( "Set Radius to the default %# m", PointLightComponentInternal::kDefaultRadius ) } );
+        if ( _radius > 0.0f )
+            return;
+        fixed_string<constant::buffer::kMax64> valueText;
+        formatstring( valueText.data(), valueText.capacity(), "%#", PointLightComponentInternal::kDefaultRadius );
+        fixed_string<constant::buffer::kMax64> description;
+        formatstring( description.data(), description.capacity(), "Set Radius to the default %# m", PointLightComponentInternal::kDefaultRadius );
+        context.addErrorWithFix( "Radius is 0 - the light reaches nothing and the shader divides by it", ValidationPropertyEdit{ hashed_string{}, valueText.c_str(), description.c_str() } );
     }
 
     void PointLightComponent::writeGPULightKindFields( GPULight& outLight ) const

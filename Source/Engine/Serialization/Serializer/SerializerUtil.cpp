@@ -64,9 +64,11 @@ namespace sw
             {
                 if ( range.contains( value ) )
                     return;
-                const string lower = range._bHasMin ? to_string( range._min ) : string( "-" );
-                const string upper = range._bHasMax ? to_string( range._max ) : string( "-" );
-                outListError.push_back( formatToString( "%# = %# is outside [%#, %#]", path, value, lower, upper ) );
+                const string                             lower = range._bHasMin ? to_string( range._min ) : string( "-" );
+                const string                             upper = range._bHasMax ? to_string( range._max ) : string( "-" );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%# = %# is outside [%#, %#]", path, value, lower, upper );
+                outListError.push_back( string( textBuilder.view() ) );
             }
 
             /** @brief @p value(@p typeName 의 숫자)가 @p range 안인지입니다. 숫자가 아니면 범위가 없으므로 true 입니다. */
@@ -1081,7 +1083,9 @@ namespace sw
             const PropertyAllowedRange range = prop._metadata->hasAllowedRange() ? prop._metadata->computeAllowedRange( pInstance ) : PropertyAllowedRange{};
             for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
             {
-                const string      elementPath   = formatToString( "%#[%#]", path, elementIndex );
+                StringBuilder<constant::buffer::kMax256> elementPathBuilder;
+                elementPathBuilder.appendFormat( "%#[%#]", path, elementIndex );
+                const string      elementPath{ elementPathBuilder.view() };
                 const void* const pElementValue = pSequence->getElementConst( pValue, elementIndex );
                 float64           value         = 0.0;
                 // 구조체 원소의 값 주소는 그 원소 타입의 객체 주소다.

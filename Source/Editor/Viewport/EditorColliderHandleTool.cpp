@@ -192,8 +192,10 @@ namespace sw::editor
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
                     return;
-                static const utf8* const arrAxisName[3] = { "x", "y", "z" };
-                const string             key            = formatToString( "collider.handle.%#.%#%#", handle._shapeIndex, arrAxisName[handle._axis], ( handle._sign > 0.0f ? "+" : "-" ) );
+                static const utf8* const                 arrAxisName[3] = { "x", "y", "z" };
+                StringBuilder<constant::buffer::kMax256> keyBuilder;
+                keyBuilder.appendFormat( "collider.handle.%#.%#%#", handle._shapeIndex, arrAxisName[handle._axis], ( handle._sign > 0.0f ? "+" : "-" ) );
+                const string key{ keyBuilder.view() };
                 EditorSelfTestMarks::recordRect( key.c_str(), float2{ screen.x - kHandleHalfSize, screen.y - kHandleHalfSize },
                                                  float2{ screen.x + kHandleHalfSize, screen.y + kHandleHalfSize } );
             }

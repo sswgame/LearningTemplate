@@ -148,7 +148,9 @@ namespace sw::editor
                 }
                 pSession->updateUntil( static_cast<int64>( seconds ) * constant::time::kMillisecondsPerSecond, [&]()
                 { return pSession->getConnectedClientCount() >= clientCount; } );
-                outReply = formatToString( "netplay connected clients %# of %#", pSession->getConnectedClientCount(), clientCount );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "netplay connected clients %# of %#", pSession->getConnectedClientCount(), clientCount );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

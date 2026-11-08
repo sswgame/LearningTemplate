@@ -113,7 +113,11 @@ namespace sw::editor
                         ImGui::TextDisabled( "    %s = %s", param._name.c_str(), param._value.c_str() ); // 물려받은 값은 흐린 글(테마의 비활성 글 토큰)
                 }
                 if ( merged._condition.empty() == false )
-                    EditorWidgets::drawEmptyHint( formatToString( "%# %#", SW_LOCKEY( "EdLabel", "ZoneCondition" ), merged._condition ).c_str() );
+                {
+                    fixed_string<constant::buffer::kMax256> text;
+                    formatstring( text.data(), text.capacity(), "%# %#", SW_LOCKEY( "EdLabel", "ZoneCondition" ), merged._condition );
+                    EditorWidgets::drawEmptyHint( text.c_str() );
+                }
             }
         };
 

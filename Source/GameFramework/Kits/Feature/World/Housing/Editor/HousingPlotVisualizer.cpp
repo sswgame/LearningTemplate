@@ -70,7 +70,9 @@ namespace sw::editor
                 ImVec2 labelPos;
                 if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, origin, args._canvasPos, args._canvasSize, labelPos ) )
                 {
-                    const string label = formatToString( "%#  %# x %#", settings._plotID.c_str(), settings._sizeX, settings._sizeZ );
+                    StringBuilder<constant::buffer::kMax256> labelBuilder;
+                    labelBuilder.appendFormat( "%#  %# x %#", settings._plotID.c_str(), settings._sizeX, settings._sizeZ );
+                    const string label{ labelBuilder.view() };
                     args._pDrawList->AddText( labelPos, colorLabel, label.c_str() );
                 }
             }

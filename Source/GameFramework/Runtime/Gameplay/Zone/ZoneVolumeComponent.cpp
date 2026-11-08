@@ -103,9 +103,11 @@ namespace sw
 
     bool ZoneVolumeComponent::composeProfile( ZoneProfile& outProfile ) const
     {
-        const GameObject* const             pOwner     = getOwner();
-        const string                        sourceName = formatToString( "zone volume '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
-        const shared_ptr<const ZoneProfile> pProfile   = _zoneProfile.acquire();
+        const GameObject* const                  pOwner = getOwner();
+        StringBuilder<constant::buffer::kMax256> sourceNameBuilder;
+        sourceNameBuilder.appendFormat( "zone volume '%#'", pOwner != nullptr ? pOwner->getName().c_str() : "?" );
+        const string                        sourceName{ sourceNameBuilder.view() };
+        const shared_ptr<const ZoneProfile> pProfile = _zoneProfile.acquire();
         if ( pProfile == nullptr )
         {
             SW_LOG_ERROR_ID( "Zone.ProfileMissing", "%#: zone profile '%#' could not be read", sourceName, _zoneProfile.empty() ? "(none)" : _zoneProfile.path().c_str() );
@@ -134,7 +136,9 @@ namespace sw
         if ( pOwner == nullptr || composeProfile( composed ) == false )
             return;
         // 참조(이펙트 · 스킬)는 게임의 어빌리티 카탈로그로 본다 — 틀리면 이 영역은 돌지 않는다(반쯤 맞은 효과로 돌지 않는다).
-        const string sourceName = formatToString( "%# (volume '%#')", _zoneProfile.path().c_str(), pOwner->getName().c_str() );
+        StringBuilder<constant::buffer::kMax256> sourceNameBuilder;
+        sourceNameBuilder.appendFormat( "%# (volume '%#')", _zoneProfile.path().c_str(), pOwner->getName().c_str() );
+        const string sourceName{ sourceNameBuilder.view() };
         if ( _compiled.compile( composed, sourceName, game::findSubsystem<const AbilityCatalog>() ) == false )
         {
             SW_LOG_ERROR_ID( "Zone.VolumeNotReady", "Zone volume '%#' does not run: its profile did not load (see the errors above)", pOwner->getName().c_str() );

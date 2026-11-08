@@ -56,8 +56,14 @@ namespace sw
             static string makeRowText( const FriendEntry& entry )
             {
                 if ( entry._activity.empty() )
-                    return formatToString( "#%#  %#", entry._accountID, getPresenceText( entry._status ) );
-                return formatToString( "#%#  %#  %#", entry._accountID, getPresenceText( entry._status ), entry._activity );
+                {
+                    StringBuilder<constant::buffer::kMax256> resultBuilder2;
+                    resultBuilder2.appendFormat( "#%#  %#", entry._accountID, getPresenceText( entry._status ) );
+                    return string( resultBuilder2.view() );
+                }
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "#%#  %#  %#", entry._accountID, getPresenceText( entry._status ), entry._activity );
+                return string( resultBuilder.view() );
             }
         };
     } // namespace
@@ -161,12 +167,18 @@ namespace sw
             {
                 statusText = listEntry.empty() ? "No friends yet" : "Friends";
                 if ( _pModel->getPendingRequestCount() > 0 )
-                    statusText += formatToString( "  (%# pending requests)", _pModel->getPendingRequestCount() );
+                {
+                    StringBuilder<constant::buffer::kMax256> statusTextPart;
+                    statusTextPart.appendFormat( "  (%# pending requests)", _pModel->getPendingRequestCount() );
+                    statusText += statusTextPart.c_str();
+                }
                 break;
             }
             case FriendListState::Failed:
             {
-                statusText = formatToString( "Could not load the friend list (error %#)", static_cast<uint32>( _pModel->getErrorCode() ) );
+                StringBuilder<constant::buffer::kMax256> statusTextBuilder;
+                statusTextBuilder.appendFormat( "Could not load the friend list (error %#)", static_cast<uint32>( _pModel->getErrorCode() ) );
+                statusText = string( statusTextBuilder.view() );
                 break;
             }
         }

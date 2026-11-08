@@ -304,9 +304,17 @@ namespace sw::test
             // 안정 이름(`_pTestName`)이 있으면 그것 — 배열 순서가 바뀌어도 이름이 같은 입력을 가리킨다. 비면 등록표가 이름 없는 줄로 거절한다.
             const utf8* const pParamName = pfnName != nullptr ? pfnName( index ) : nullptr;
             if ( pfnName != nullptr && pfnName( 0 ) != nullptr )
-                _listName.push_back( formatToString( "%#/%#", string( pBaseName ), string( pParamName != nullptr ? pParamName : "" ) ) );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder2;
+                textBuilder2.appendFormat( "%#/%#", string( pBaseName ), string( pParamName != nullptr ? pParamName : "" ) );
+                _listName.push_back( string( textBuilder2.view() ) );
+            }
             else
-                _listName.push_back( formatToString( "%#/%#", string( pBaseName ), index ) );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#/%#", string( pBaseName ), index );
+                _listName.push_back( string( textBuilder.view() ) );
+            }
         }
         for ( size_t index = 0; index < count; ++index )
         {
@@ -325,7 +333,9 @@ namespace sw::test
 
     void reportFailure( const utf8* pFile, int32 line, string_view message )
     {
-        TestRunnerInternal::addFailure( formatToString( "%#(%#): error: %#", string( pFile ), line, string( message ) ) );
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "%#(%#): error: %#", string( pFile ), line, string( message ) );
+        TestRunnerInternal::addFailure( string( textBuilder.view() ) );
     }
 
     void countAssertion()
@@ -509,9 +519,11 @@ namespace sw::test
             return; // 띄우지 못한 까닭은 위에서 적었다
         if ( child._exitCode == 0 )
             return;
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "the isolated case %# (exit code %#) - child output:\n%#", child._bTimedOut ? "timed out and was killed" : "failed", child._exitCode,
+                                  child.getOutputTail( 20 ) );
         reportFailure( testCase._pFile, testCase._line,
-                       formatToString( "the isolated case %# (exit code %#) - child output:\n%#", child._bTimedOut ? "timed out and was killed" : "failed", child._exitCode,
-                                       child.getOutputTail( 20 ) ) );
+                       string( textBuilder.view() ) );
     }
 
     bool isRunningIsolated()
@@ -795,11 +807,19 @@ namespace sw::test
                     ScopedLock<mutex> lock{ state._mutex };
                     state._bActive = SW_FALSE;
                     if ( state._assertionCount == 0 )
-                        listLateFailure.push_back( formatToString( "%#(%#): error: the case made no assertion - a case that checks nothing is not a pass", string( pCase->_pFile ), pCase->_line ) );
+                    {
+                        StringBuilder<constant::buffer::kMax256> textBuilder2;
+                        textBuilder2.appendFormat( "%#(%#): error: the case made no assertion - a case that checks nothing is not a pass", string( pCase->_pFile ), pCase->_line );
+                        listLateFailure.push_back( string( textBuilder2.view() ) );
+                    }
                     for ( const TestRunnerInternal::ExpectedLog& expected : state._listExpectedLog )
                     {
                         if ( expected._seenCount == 0 )
-                            listLateFailure.push_back( formatToString( "%#(%#): error: expected log [id:%#] never appeared", string( expected._pFile ), expected._line, expected._id ) );
+                        {
+                            StringBuilder<constant::buffer::kMax256> textBuilder;
+                            textBuilder.appendFormat( "%#(%#): error: expected log [id:%#] never appeared", string( expected._pFile ), expected._line, expected._id );
+                            listLateFailure.push_back( string( textBuilder.view() ) );
+                        }
                     }
                 }
                 for ( string& failure : listLateFailure )
@@ -829,7 +849,7 @@ namespace sw::test
                 caseReport += caseReport.empty() ? "\n" : ",\n";
                 caseReport += string( "    {\"name\": \"" ) + Internal::escapeJSON( pCase->_pName ) + "\", \"file\": \"" + Internal::escapeJSON( pCase->_pFile ) +
                               "\", \"line\": " + to_string( pCase->_line ) + ", \"round\": " + to_string( roundIndex ) + ", \"isolated\": " + ( bIsolate ? "true" : "false" ) +
-                              ", \"passed\": " + formatToString( "%#, \"milliseconds\": %#, \"failures\": [", ( bPassed ? "true" : "false" ), caseMilliseconds );
+                              ", \"passed\": " + ( bPassed ? "true" : "false" ) + ", \"milliseconds\": " + to_string( caseMilliseconds ) + ", \"failures\": [";
                 for ( size_t failureIndex = 0; failureIndex < listFailure.size(); ++failureIndex )
                 {
                     caseReport += ( failureIndex == 0 ? "\"" : ", \"" ) + Internal::escapeJSON( listFailure[failureIndex] ) + "\"";
@@ -865,10 +885,12 @@ namespace sw::test
                                                                                                             : string{};
         if ( reportPath.empty() == false )
         {
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%#\",\n  \"disabled\": [", options._shardCount );
             string report = "{\n  \"schemaVersion\": " + to_string( kReportSchemaVersion ) + ",\n  \"seed\": " + to_string( baseSeed ) + ",\n  \"filter\": \"" + Internal::escapeJSON( options._filter ) + "\",\n  \"selectedCount\": " +
                             to_string( listCase.size() ) + ",\n  \"runCount\": " + to_string( ranCount ) + ",\n  \"failedCount\": " + to_string( failedCount ) +
                             ",\n  \"milliseconds\": " + to_string( runMilliseconds ) + ",\n  \"shard\": \"" + to_string( options._shardIndex ) + "/" +
-                            formatToString( "%#\",\n  \"disabled\": [", options._shardCount );
+                            string( textBuilder.view() );
             for ( size_t index = 0; index < listDisabled.size(); ++index )
             {
                 report += string( index == 0 ? "" : ", " ) + "{\"name\": \"" + Internal::escapeJSON( listDisabled[index]->_pName ) + "\", \"reason\": \"" +

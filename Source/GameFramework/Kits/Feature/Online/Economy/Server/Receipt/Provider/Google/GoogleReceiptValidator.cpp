@@ -112,8 +112,10 @@ namespace sw
 
     string GoogleReceiptValidator::makeVoidedURL( int64 sinceUnixMs, string_view pageToken ) const
     {
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "/purchases/voidedpurchases?startTime=%#&maxResults=%#&type=0", sinceUnixMs, kVoidedMaxResults );
         string url = _settings._baseURL + "/androidpublisher/v3/applications/" + HTTPUtil::encodePercent( _settings._packageName ) +
-                     formatToString( "/purchases/voidedpurchases?startTime=%#&maxResults=%#&type=0", sinceUnixMs, kVoidedMaxResults );
+                     string( textBuilder.view() );
         if ( pageToken.empty() == false )
             url += "&token=" + HTTPUtil::encodePercent( pageToken );
         return url;
@@ -198,7 +200,11 @@ namespace sw
         outFacts._status   = mapPurchaseState( purchaseState );
         outFacts._bSandbox = purchaseType == 0 ? SW_TRUE : SW_FALSE; // 라이선스 테스트 구매
         if ( outFacts._status != ReceiptStatus::Valid )
-            outFacts._failureText = formatToString( "google purchase state %#", purchaseState );
+        {
+            StringBuilder<constant::buffer::kMax256> failureTextBuilder;
+            failureTextBuilder.appendFormat( "google purchase state %#", purchaseState );
+            outFacts._failureText = string( failureTextBuilder.view() );
+        }
         outFacts._bNeedsDeliveryConfirm = acknowledgementState == 0 ? SW_TRUE : SW_FALSE;
         outFacts._deliveryDeadlineMs    = ( outFacts._purchaseTimeMs > 0 ? outFacts._purchaseTimeMs : now.count() ) + GoogleReceiptSettings::kAcknowledgeWindowMs;
     }

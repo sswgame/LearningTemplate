@@ -28,7 +28,9 @@ namespace sw
 
             static string describeFailure( const AccountClientReply& reply )
             {
-                return formatToString( "error %#, result %#", static_cast<int32>( reply._errorCode ), static_cast<int32>( reply._result._result ) );
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "error %#, result %#", static_cast<int32>( reply._errorCode ), static_cast<int32>( reply._result._result ) );
+                return string( resultBuilder.view() );
             }
         };
 

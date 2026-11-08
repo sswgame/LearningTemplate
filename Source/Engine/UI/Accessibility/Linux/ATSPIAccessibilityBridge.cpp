@@ -58,7 +58,9 @@ namespace sw
 
             string makeNodePath( const AccessibleNode& node )
             {
-                return formatToString( "%#/n%#_%#", string( kPathPrefix ), node._screen, node._widget.getKey() );
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "%#/n%#_%#", string( kPathPrefix ), node._screen, node._widget.getKey() );
+                return string( resultBuilder.view() );
             }
 
             /** @brief `/org/a11y/atspi/accessible/n<화면>_<위젯 키>` 에서 화면 번호와 위젯 토큰 키(`WidgetID::getKey`)를 읽습니다. 모양이 다르면 false. */

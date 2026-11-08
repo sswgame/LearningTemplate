@@ -881,7 +881,9 @@ namespace sw
     {
         if ( listLevelExperience.size() > static_cast<size_t>( GuildLimit::kMaxLevelCount ) )
         {
-            outError = formatToString( "the level table has %# levels, at most %# are allowed", listLevelExperience.size(), static_cast<int32>( GuildLimit::kMaxLevelCount ) );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "the level table has %# levels, at most %# are allowed", listLevelExperience.size(), static_cast<int32>( GuildLimit::kMaxLevelCount ) );
+            outError = string( errorBuilder.view() );
             return false;
         }
         int64 previous = 0;
@@ -889,7 +891,9 @@ namespace sw
         {
             if ( experience <= previous )
             {
-                outError = formatToString( "level experience %# must be positive and greater than the previous %#", experience, previous );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "level experience %# must be positive and greater than the previous %#", experience, previous );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             previous = experience;

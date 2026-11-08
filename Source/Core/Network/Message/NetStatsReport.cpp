@@ -94,7 +94,9 @@ namespace sw
                     const NetStatsKindEntry& entry = listEntry[index];
                     if ( index > 0 )
                         inoutText += ',';
-                    inoutText += formatToString( "%#:%#:%#", static_cast<int32>( entry._kind ), entry._messageCount, entry._byteCount );
+                    StringBuilder<constant::buffer::kMax256> textPart;
+                    textPart.appendFormat( "%#:%#:%#", static_cast<int32>( entry._kind ), entry._messageCount, entry._byteCount );
+                    inoutText += textPart.c_str();
                 }
             }
 
@@ -111,7 +113,9 @@ namespace sw
                 {
                     if ( NetStatsReport::isValidReplicaName( entry._name ) == false )
                         continue;
-                    const string item = formatToString( "%#:%#:%#", entry._name, entry._updateCount, entry._byteCount );
+                    StringBuilder<constant::buffer::kMax256> itemBuilder;
+                    itemBuilder.appendFormat( "%#:%#:%#", entry._name, entry._updateCount, entry._byteCount );
+                    const string item{ itemBuilder.view() };
                     if ( inoutText.size() + ( bFirst ? 0u : 1u ) + item.size() > maxBytes )
                     {
                         bDropped = true;
@@ -172,11 +176,19 @@ namespace sw
 
     string NetStatsReport::makeLine() const
     {
-        string text{ kLinePrefix };
-        text += formatToString( " connections=%#", _connectionCount );
-        text += formatToString( " sentPackets=%#", _sentPacketCount );
-        text += formatToString( " receivedPackets=%#", _receivedPacketCount );
-        text += formatToString( " resent=%#", _resentMessageCount );
+        string                                   text{ kLinePrefix };
+        StringBuilder<constant::buffer::kMax256> textPart4;
+        textPart4.appendFormat( " connections=%#", _connectionCount );
+        text += textPart4.c_str();
+        StringBuilder<constant::buffer::kMax256> textPart3;
+        textPart3.appendFormat( " sentPackets=%#", _sentPacketCount );
+        text += textPart3.c_str();
+        StringBuilder<constant::buffer::kMax256> textPart2;
+        textPart2.appendFormat( " receivedPackets=%#", _receivedPacketCount );
+        text += textPart2.c_str();
+        StringBuilder<constant::buffer::kMax256> textPart;
+        textPart.appendFormat( " resent=%#", _resentMessageCount );
+        text += textPart.c_str();
         NetStatsReportInternal::appendFloat( text, "sentBps", _sentBytesPerSecond );
         NetStatsReportInternal::appendFloat( text, "receivedBps", _receivedBytesPerSecond );
         NetStatsReportInternal::appendFloat( text, "rttMs", _rttMilliseconds );

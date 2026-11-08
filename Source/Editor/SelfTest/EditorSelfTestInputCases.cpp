@@ -136,7 +136,9 @@ namespace sw::editor
                             what += describeInputTarget( "hierarchy.filter" );
                             what += "]";
                             (void)context.expect( pHierarchy->getFilterText() == "tag:SwSelfTest", what.c_str() );
-                            const string rootCountWhat = formatToString( "the typed tag filter did not find the probe object (visible roots %#)", pHierarchy->getVisibleRootCount() );
+                            StringBuilder<constant::buffer::kMax256> rootCountWhatBuilder;
+                            rootCountWhatBuilder.appendFormat( "the typed tag filter did not find the probe object (visible roots %#)", pHierarchy->getVisibleRootCount() );
+                            const string rootCountWhat{ rootCountWhatBuilder.view() };
                             (void)context.expect( pHierarchy->getVisibleRootCount() == 1, rootCountWhat.c_str() );
                             // 지우고 없는 이름을 입력한다. 입력 중인 입력란은 ImGui 가 가진 텍스트를 쓰므로, 먼저 놓고 지운 뒤 다시 누른다.
                             ImGui::ClearActiveID();
@@ -400,11 +402,13 @@ namespace sw::editor
                     }
                     if ( context.expect( bMarked, "the hierarchy visibility toggle left no mark" ) )
                     {
-                        const float32 width     = mark._max._x - mark._min._x;
-                        const float32 height    = mark._max._y - mark._min._y;
-                        const float32 iconWidth = ImGui::CalcTextSize( SW_EDITOR_ICON( "EyeSlash" ) ).x;
-                        string        what{ "the visibility toggle (" };
-                        what += formatToString( "%# px) is narrower than its icon (%# px)", width, iconWidth );
+                        const float32                            width     = mark._max._x - mark._min._x;
+                        const float32                            height    = mark._max._y - mark._min._y;
+                        const float32                            iconWidth = ImGui::CalcTextSize( SW_EDITOR_ICON( "EyeSlash" ) ).x;
+                        string                                   what{ "the visibility toggle (" };
+                        StringBuilder<constant::buffer::kMax256> whatPart;
+                        whatPart.appendFormat( "%# px) is narrower than its icon (%# px)", width, iconWidth );
+                        what += whatPart.c_str();
                         (void)context.expect( width >= iconWidth, what.c_str() );
                         (void)context.expect( width + 0.5f >= height, "the visibility toggle is not square - it does not follow the frame height" );
                     }
@@ -456,8 +460,10 @@ namespace sw::editor
                         return EditorSelfTestStep::Continue;
                     if ( context.expect( bMarked, "the probe row or its toggle left no mark" ) )
                     {
-                        string what{ "the selected row starts at x " };
-                        what += formatToString( "%#, over the toggle that ends at x %#", row._min._x, toggle._max._x );
+                        string                                   what{ "the selected row starts at x " };
+                        StringBuilder<constant::buffer::kMax256> whatPart;
+                        whatPart.appendFormat( "%#, over the toggle that ends at x %#", row._min._x, toggle._max._x );
+                        what += whatPart.c_str();
                         (void)context.expect( toggle._max._x <= row._min._x + 0.5f, what.c_str() );
                     }
                     editorContext.getSubsystem<EditorWorkspace>().clearSelection();

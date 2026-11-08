@@ -85,7 +85,9 @@ namespace sw
                         bChanged = stats.addTime( statID, amount );
                         break;
                 }
-                outReply = formatToString( "stats: %# = %# (%#)", listArgument[0].c_str(), stats.getValue( statID ), bChanged ? "changed" : "unchanged" );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "stats: %# = %# (%#)", listArgument[0].c_str(), stats.getValue( statID ), bChanged ? "changed" : "unchanged" );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

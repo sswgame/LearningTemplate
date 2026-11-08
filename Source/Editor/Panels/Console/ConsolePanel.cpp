@@ -201,7 +201,9 @@ namespace sw::editor
                     else
                         SW_LOG_INFO_ID( "Console.LogRepeat", "%#", text.c_str() );
                 }
-                outReply = formatToString( "logged %# lines", count );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "logged %# lines", count );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

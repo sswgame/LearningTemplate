@@ -282,7 +282,9 @@ namespace sw
         {
             if ( listMeshSection.empty() )
                 return true;
-            outError = formatToString( "the mesh has %# sections - list each one with its material (_listSection)", static_cast<uint32>( listMeshSection.size() ) );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "the mesh has %# sections - list each one with its material (_listSection)", static_cast<uint32>( listMeshSection.size() ) );
+            outError = string( errorBuilder.view() );
             return false;
         }
         if ( listMeshSection.empty() )
@@ -295,28 +297,36 @@ namespace sw
             const FoliageSection& section = foliageMesh._listSection[index];
             if ( section._sectionName.empty() || section._materialPath.empty() )
             {
-                outError = formatToString( "section %# needs both a name and a material", static_cast<uint32>( index ) );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "section %# needs both a name and a material", static_cast<uint32>( index ) );
+                outError = string( errorBuilder.view() );
                 return false;
             }
             for ( size_t earlier = 0; earlier < index; ++earlier )
             {
                 if ( foliageMesh._listSection[earlier]._sectionName == section._sectionName )
                 {
-                    outError = formatToString( "section '%#' is listed twice", section._sectionName.c_str() );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "section '%#' is listed twice", section._sectionName.c_str() );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
             }
             if ( mesh.findSectionIndex( hashed_string( section._sectionName.c_str() ) ) < 0 )
             {
-                outError = formatToString( "the mesh has no section '%#'", section._sectionName.c_str() );
+                StringBuilder<constant::buffer::kMax256> errorBuilder;
+                errorBuilder.appendFormat( "the mesh has no section '%#'", section._sectionName.c_str() );
+                outError = string( errorBuilder.view() );
                 return false;
             }
         }
         // 이름이 모두 메시에 있고 겹치지 않으니 수가 같으면 모든 구간을 적은 것이다.
         if ( foliageMesh._listSection.size() != listMeshSection.size() )
         {
-            outError = formatToString( "%# of the mesh's %# sections are listed - list every section", static_cast<uint32>( foliageMesh._listSection.size() ),
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "%# of the mesh's %# sections are listed - list every section", static_cast<uint32>( foliageMesh._listSection.size() ),
                                        static_cast<uint32>( listMeshSection.size() ) );
+            outError = string( errorBuilder.view() );
             return false;
         }
         return true;

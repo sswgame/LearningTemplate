@@ -151,12 +151,16 @@ namespace sw
                 const bool bToken                   = binding == kBuyerAccountToken && allowedBinding == ReceiptBuyerBinding::AccountToken;
                 if ( bLinked == false && bToken == false && binding != kBuyerNone )
                 {
-                    outError = formatToString( "receipt provider '%#' needs buyerBinding '%#' or '%#'", outConfig._kind, allowedBinding == ReceiptBuyerBinding::LinkedLogin ? kBuyerLinkedLogin : kBuyerAccountToken, kBuyerNone );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "receipt provider '%#' needs buyerBinding '%#' or '%#'", outConfig._kind, allowedBinding == ReceiptBuyerBinding::LinkedLogin ? kBuyerLinkedLogin : kBuyerAccountToken, kBuyerNone );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 if ( bLinked != ( outConfig._buyerRule._loginProvider.empty() == false ) )
                 {
-                    outError = formatToString( "receipt provider '%#' needs buyerLoginProvider exactly when buyerBinding is '%#'", outConfig._kind, kBuyerLinkedLogin );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "receipt provider '%#' needs buyerLoginProvider exactly when buyerBinding is '%#'", outConfig._kind, kBuyerLinkedLogin );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 outConfig._buyerRule._binding = bLinked ? ReceiptBuyerBinding::LinkedLogin : ( bToken ? ReceiptBuyerBinding::AccountToken : ReceiptBuyerBinding::None );
@@ -254,7 +258,9 @@ namespace sw
         const utf8* pPollKey = bSteam ? "reportPollSeconds" : ( bGoogle ? "voidedPollSeconds" : "historyPollSeconds" );
         if ( entry.readOptionalInto( pPollKey, outConfig._pollSeconds ) == false || outConfig._pollSeconds < Internal::kMinPollSeconds )
         {
-            outError = formatToString( "receipt provider '%#' needs %# of at least %#", outConfig._kind, pPollKey, Internal::kMinPollSeconds );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "receipt provider '%#' needs %# of at least %#", outConfig._kind, pPollKey, Internal::kMinPollSeconds );
+            outError = string( errorBuilder.view() );
             return false;
         }
         if ( bSteam )

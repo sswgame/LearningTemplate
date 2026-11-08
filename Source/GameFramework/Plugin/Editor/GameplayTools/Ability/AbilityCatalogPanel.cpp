@@ -203,13 +203,23 @@ namespace sw::editor
         // 읽지 못하면 앞 파일을 그대로 둔다 — 앞 파일의 글을 이 경로에 저장하지 않는다.
         if ( absolutePath.has_value() == false || FileUtil::readTextFile( absolutePath->str(), text ) == false )
         {
-            _status = formatToString( "Could not read '%#'", path );
+            StringBuilder<constant::buffer::kMax256> statusBuilder;
+            statusBuilder.appendFormat( "Could not read '%#'", path );
+            _status = string( statusBuilder.view() );
             return;
         }
         if ( _model.load( text, &_inheritanceSource ) == false )
-            _status = formatToString( "'%#' is not well-formed XML: %#", path, _model.getDocument().getError() );
+        {
+            StringBuilder<constant::buffer::kMax256> statusBuilder2;
+            statusBuilder2.appendFormat( "'%#' is not well-formed XML: %#", path, _model.getDocument().getError() );
+            _status = string( statusBuilder2.view() );
+        }
         else
-            _status = formatToString( "Opened %#", path );
+        {
+            StringBuilder<constant::buffer::kMax256> statusBuilder;
+            statusBuilder.appendFormat( "Opened %#", path );
+            _status = string( statusBuilder.view() );
+        }
         _openPath      = string( path );
         _selectedEntry = _model.getEntries().empty() ? -1 : 0;
         _validation    = ValidationState::NotRun;
@@ -227,11 +237,15 @@ namespace sw::editor
         }
         if ( FileUtil::writeTextFile( absolutePath->str(), _model.getDocument().getText() ) == false )
         {
-            _status = formatToString( "Could not write '%#'", _openPath );
+            StringBuilder<constant::buffer::kMax256> statusBuilder;
+            statusBuilder.appendFormat( "Could not write '%#'", _openPath );
+            _status = string( statusBuilder.view() );
             return false;
         }
         _model.editDocument().markSaved();
-        _status = formatToString( "Saved %#", _openPath );
+        StringBuilder<constant::buffer::kMax256> statusBuilder;
+        statusBuilder.appendFormat( "Saved %#", _openPath );
+        _status = string( statusBuilder.view() );
         validateText();
         return true;
     }
@@ -372,7 +386,9 @@ namespace sw::editor
         const bool bUnresolved = ref._target < 0 && ref._bRequired == SW_TRUE;
         if ( bUnresolved )
             ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ) );
-        const string comboID = formatToString( "abilityCatalog.ref.%#", reference );
+        StringBuilder<constant::buffer::kMax256> comboIDBuilder;
+        comboIDBuilder.appendFormat( "abilityCatalog.ref.%#", reference );
+        const string comboID{ comboIDBuilder.view() };
         const bool   bPicked = drawIDCombo( comboID.c_str(), ref._targetKind, ref._targetID, picked );
         if ( bUnresolved )
             ImGui::PopStyleColor();
@@ -463,7 +479,9 @@ namespace sw::editor
             const AbilityCatalogReference& ref  = _model.getReferences()[static_cast<size_t>( reference )];
             const AbilityCatalogEntry&     user = _model.getEntries()[static_cast<size_t>( ref._from )];
             ImGui::PushID( 10000 + reference );
-            const string label = formatToString( "%#  (%#)", user._id, ref._label );
+            StringBuilder<constant::buffer::kMax256> labelBuilder;
+            labelBuilder.appendFormat( "%#  (%#)", user._id, ref._label );
+            const string label{ labelBuilder.view() };
             if ( ImGui::Selectable( label.c_str(), false ) )
                 _selectedEntry = ref._from;
             Internal::recordIndexedMark( "abilityCatalog.usedBy", reference );

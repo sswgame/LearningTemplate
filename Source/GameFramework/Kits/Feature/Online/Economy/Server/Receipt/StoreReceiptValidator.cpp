@@ -273,7 +273,9 @@ namespace sw
         {
             case ReceiptCall::Kind::Validate:
             {
-                completeRetry( call, formatToString( "%# credentials are not available", getStoreName() ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%# credentials are not available", getStoreName() );
+                completeRetry( call, string( textBuilder.view() ) );
                 break;
             }
             case ReceiptCall::Kind::ConfirmDelivery:
@@ -308,20 +310,31 @@ namespace sw
         {
             case ReceiptResponseKind::Unreachable:
             {
-                completeRetry( call, response._bTransportFailed == SW_TRUE ? response._failureText : string( formatToString( "%# answered status %#", getStoreName(), response._statusCode ) ) );
+                if ( response._bTransportFailed == SW_TRUE )
+                {
+                    completeRetry( call, response._failureText );
+                    return;
+                }
+                StringBuilder<constant::buffer::kMax256> reason;
+                reason.appendFormat( "%# answered status %#", getStoreName(), response._statusCode );
+                completeRetry( call, string( reason.view() ) );
                 return;
             }
             case ReceiptResponseKind::CredentialRejected:
             {
                 onCredentialRejected( response );
-                completeRetry( call, formatToString( "%# rejected our credentials (status %#)", getStoreName(), response._statusCode ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%# rejected our credentials (status %#)", getStoreName(), response._statusCode );
+                completeRetry( call, string( textBuilder.view() ) );
                 return;
             }
             case ReceiptResponseKind::Refused:
             {
                 ReceiptValidationResult result = makeResult( call );
                 result._status                 = ReceiptStatus::Invalid; // 모르는 영수증이면 스토어가 4xx 로 답한다
-                result._failureText            = formatToString( "%# does not know this purchase (status %#)", getStoreName(), response._statusCode );
+                StringBuilder<constant::buffer::kMax256> failureTextBuilder;
+                failureTextBuilder.appendFormat( "%# does not know this purchase (status %#)", getStoreName(), response._statusCode );
+                result._failureText = string( failureTextBuilder.view() );
                 _listDone.push_back( std::move( result ) );
                 return;
             }
@@ -334,7 +347,9 @@ namespace sw
         if ( document.tryParse( response.getBodyText() ) == false )
         {
             // 2xx 인데 읽을 수 없다 — 영수증이 없다는 답이 아니다(프록시 · 잘린 몸). Invalid 면 결제한 사람의 영수증을 버린다.
-            completeRetry( call, formatToString( "%# answered a body that is not JSON", getStoreName() ) );
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%# answered a body that is not JSON", getStoreName() );
+            completeRetry( call, string( textBuilder.view() ) );
             return;
         }
         ReceiptOrderFacts facts;
@@ -534,7 +549,9 @@ namespace sw
     void StoreReceiptValidator::shutdown()
     {
         // 날아가던 검증은 같은 영수증으로 다시 시도하게 Retry 로 끝낸다. 지급 알림(저장소에 남아 있다) · 조회는 다음 기동의 일이다.
-        const string text = formatToString( "%# validation was interrupted by shutdown", getStoreName() );
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "%# validation was interrupted by shutdown", getStoreName() );
+        const string text{ textBuilder.view() };
         for ( const auto& [requestID, call] : _mapRequestToCall )
         {
             if ( call._kind == ReceiptCall::Kind::Validate )

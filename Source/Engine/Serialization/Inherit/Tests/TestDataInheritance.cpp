@@ -288,11 +288,17 @@ SW_TEST_CASE( DataInheritanceTest, ChainDeeperThanConfigIsAnError )
     const uint32              maxDepth = DataInheritance::getMaxDepth();
     for ( uint32 index = 0; index <= maxDepth; ++index )
     {
-        const string id   = formatToString( "d%#.xml", index );
-        const string text = formatToString( "<Doc _base=\"d%#.xml\" />", index + 1 );
+        StringBuilder<constant::buffer::kMax256> idBuilder;
+        idBuilder.appendFormat( "d%#.xml", index );
+        const string                             id{ idBuilder.view() };
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "<Doc _base=\"d%#.xml\" />", index + 1 );
+        const string text{ textBuilder.view() };
         source.add( id.c_str(), text.c_str() );
     }
-    source.add( formatToString( "d%#.xml", maxDepth + 1 ).c_str(), "<Doc />" );
+    fixed_string<constant::buffer::kMax64> text;
+    formatstring( text.data(), text.capacity(), "d%#.xml", maxDepth + 1 );
+    source.add( text.c_str(), "<Doc />" );
     string flat;
     SW_EXPECT_LOG( "DataInheritance.TooDeep" );
     SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="d0.xml" />)", flat ) );

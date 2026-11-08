@@ -293,9 +293,17 @@ namespace sw::editor
             return {};
         SW_ASSERT( settings._windowColumnCount > 0 ); // `start` 가 막는다(`isWindowLayoutValid`)
         // 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 제 틀로 정한다(`IWindow::createMainWindow`) — 틀은 창 스타일 · DPI · 창 관리자가 정해 에디터는 모른다.
-        return { formatToString( "-W=%#", settings._windowWidth ), formatToString( "-H=%#", settings._windowHeight ),
-                 formatToString( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE ), windowIndex ),
-                 formatToString( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE_COLUMNS ), settings._windowColumnCount ) };
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE_COLUMNS ), settings._windowColumnCount );
+        StringBuilder<constant::buffer::kMax256> textBuilder2;
+        textBuilder2.appendFormat( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE ), windowIndex );
+        StringBuilder<constant::buffer::kMax256> textBuilder3;
+        textBuilder3.appendFormat( "-H=%#", settings._windowHeight );
+        StringBuilder<constant::buffer::kMax256> textBuilder4;
+        textBuilder4.appendFormat( "-W=%#", settings._windowWidth );
+        return { string( textBuilder4.view() ), string( textBuilder3.view() ),
+                 string( textBuilder2.view() ),
+                 string( textBuilder.view() ) };
     }
 
     EditorNetPlaySession::~EditorNetPlaySession()
@@ -435,10 +443,14 @@ namespace sw::editor
 #if !defined( SW_SHIPPING )
         if ( settings._bRecordTraces )
         {
-            _traceDirectory = settings._traceDirectory.empty()
-                                ? FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Traces" ),
-                                                      formatToString( "netplay_%#", WallClock::nowUnixMilliseconds().count() ) )
-                                : settings._traceDirectory;
+            if ( settings._traceDirectory.empty() )
+            {
+                fixed_string<constant::buffer::kMax64> folderName;
+                formatstring( folderName.data(), folderName.capacity(), "netplay_%#", WallClock::nowUnixMilliseconds().count() );
+                _traceDirectory = FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Traces" ), folderName.view() );
+            }
+            else
+                _traceDirectory = settings._traceDirectory;
             if ( FileUtil::ensureDirectoryExists( _traceDirectory ) == false )
             {
                 SW_LOG_ERROR_ID( "NetPlay.TraceFolderCouldNot", "Trace folder %# could not be created - the multiplayer session was not started", _traceDirectory );
@@ -454,8 +466,10 @@ namespace sw::editor
         const vector<string> listUserClientArgument = StringUtil::splitQuotedTokens( settings._clientArguments );
         // 클라이언트도 서버 틱 번호로 해시를 남긴다(S7). 포커스는 한 창만 가지므로 나머지 클라이언트가 배경 상한에 걸리지 않게 전속을 명시로 고른다
         // (`FramePacingState::FullSpeed`). 리슨 호스트는 넷 역할로 이미 전속(`Server`)이다.
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "-gv_stateHashHistory=%#", kServerStateHashHistoryTicks );
         vector<string> listClientArgument{ "-gv_netConnectAddress=127.0.0.1:" + port, "-gv_standardInputCommands=1",
-                                           formatToString( "-gv_stateHashHistory=%#", kServerStateHashHistoryTicks ), "-gv_framePacing=FullSpeed" };
+                                           string( textBuilder.view() ), "-gv_framePacing=FullSpeed" };
         listClientArgument.insert( listClientArgument.end(), listUserClientArgument.begin(), listUserClientArgument.end() );
         // 모든 프로세스가 같은 씬으로 시작한다 — 서버와 클라이언트가 다른 씬을 열면 복제할 것이 맞지 않는다.
         const string firstSceneArgument = firstScenePath.empty() ? string{} : "-gv_firstScene=" + string( firstScenePath );
@@ -478,8 +492,12 @@ namespace sw::editor
         if ( bDedicated )
         {
             _debugChannelToken = EditorNetPlaySessionInternal::makeDebugChannelToken();
-            vector<string> listServerArgument{ "-gv_netListenPort=" + port, formatToString( "-gv_debugChannelPort=%#", _debugChannelPort ),
-                                               "-gv_debugChannelToken=" + _debugChannelToken, formatToString( "-gv_stateHashHistory=%#", kServerStateHashHistoryTicks ) };
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "-gv_stateHashHistory=%#", kServerStateHashHistoryTicks );
+            StringBuilder<constant::buffer::kMax256> textBuilder2;
+            textBuilder2.appendFormat( "-gv_debugChannelPort=%#", _debugChannelPort );
+            vector<string> listServerArgument{ "-gv_netListenPort=" + port, string( textBuilder2.view() ),
+                                               "-gv_debugChannelToken=" + _debugChannelToken, string( textBuilder.view() ) };
             if ( _bReplayServer )
                 listServerArgument.push_back( "-gv_serverStartPaused=1" );
             if ( firstSceneArgument.empty() == false )

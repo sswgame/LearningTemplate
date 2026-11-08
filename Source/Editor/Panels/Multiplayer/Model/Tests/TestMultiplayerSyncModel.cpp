@@ -101,7 +101,9 @@ SW_TEST_CASE_F( MultiplayerSyncModelTest, HistoryWaitsForANewAnswer )
 {
     SW_REQUIRE_TRUE( _model.requestClientHistory( _processes, _compare, 0, 1 ) );
     SW_REQUIRE_EQUAL( _processes._listCommand.size(), size_t{ 1 } );
-    SW_EXPECT_EQUAL( _processes._listCommand[0], formatToString( "state.hashline %#", MultiplayerSyncModel::kClientHistoryTicks ) );
+    StringBuilder<constant::buffer::kMax256> textBuilder;
+    textBuilder.appendFormat( "state.hashline %#", MultiplayerSyncModel::kClientHistoryTicks );
+    SW_EXPECT_EQUAL( _processes._listCommand[0], string( textBuilder.view() ) );
     SW_EXPECT_TRUE( _model.isWaitingForHistory( 0, 1 ) );
     SW_EXPECT_FALSE( _model.isWaitingForHistory( 1, 1 ) );
 
@@ -122,7 +124,9 @@ SW_TEST_CASE_F( MultiplayerSyncModelTest, HistoryAsksForTheChosenChannel )
 {
     SW_REQUIRE_TRUE( _compare.setHashChannel( "destruction" ) );
     SW_REQUIRE_TRUE( _model.requestClientHistory( _processes, _compare, 0, 1 ) );
-    SW_EXPECT_EQUAL( _processes._listCommand[0], formatToString( "state.hashline %# destruction", MultiplayerSyncModel::kClientHistoryTicks ) );
+    StringBuilder<constant::buffer::kMax256> textBuilder;
+    textBuilder.appendFormat( "state.hashline %# destruction", MultiplayerSyncModel::kClientHistoryTicks );
+    SW_EXPECT_EQUAL( _processes._listCommand[0], string( textBuilder.view() ) );
 }
 
 // 끝난 프로세스에는 묻지 못한다. 대기 상태가 되지 않는다.

@@ -176,8 +176,10 @@ namespace sw
                         return index;
                 }
                 inoutState._listKey.push_back( { pid, tid } );
-                ProfilerTimelineThread thread;
-                thread._name = formatToString( "tid %#", tid );
+                ProfilerTimelineThread                   thread;
+                StringBuilder<constant::buffer::kMax256> nameBuilder;
+                nameBuilder.appendFormat( "tid %#", tid );
+                thread._name = string( nameBuilder.view() );
                 inoutTrace._listThread.push_back( thread );
                 return inoutState._listKey.size() - 1;
             }
@@ -210,7 +212,9 @@ namespace sw
                     int64 tid{ 0 };
                     if ( event.readOptionalInto( "pid", pid ) == false || event.readOptionalInto( "tid", tid ) == false )
                     {
-                        outError = formatToString( "event %# has a pid or tid that is not an integer", index );
+                        StringBuilder<constant::buffer::kMax256> errorBuilder;
+                        errorBuilder.appendFormat( "event %# has a pid or tid that is not an integer", index );
+                        outError = string( errorBuilder.view() );
                         return false;
                     }
                     if ( phase == "X" )
@@ -219,7 +223,9 @@ namespace sw
                         const std::optional<float64> duration = event.readRequired<float64>( "dur" );
                         if ( begin.has_value() == false || duration.has_value() == false )
                         {
-                            outError = formatToString( "complete event %# needs numeric ts and dur", index );
+                            StringBuilder<constant::buffer::kMax256> errorBuilder;
+                            errorBuilder.appendFormat( "complete event %# needs numeric ts and dur", index );
+                            outError = string( errorBuilder.view() );
                             return false;
                         }
                         ProfilerTimelineEvent loaded;
@@ -242,7 +248,9 @@ namespace sw
                         const std::optional<float64> frameBegin = event.readRequired<float64>( "ts" );
                         if ( frameBegin.has_value() == false )
                         {
-                            outError = formatToString( "frame marker %# needs a numeric ts", index );
+                            StringBuilder<constant::buffer::kMax256> errorBuilder;
+                            errorBuilder.appendFormat( "frame marker %# needs a numeric ts", index );
+                            outError = string( errorBuilder.view() );
                             return false;
                         }
                         inoutTrace._listFrameBegin.push_back( static_cast<uint64>( *frameBegin * constant::time::kNanosecondsPerMicrosecond + 0.5 ) );
@@ -268,7 +276,9 @@ namespace sw
                     return;
                 for ( size_t index = 0; index < state._listKey.size(); ++index )
                 {
-                    string processName = formatToString( "pid %#", state._listKey[index]._pid );
+                    StringBuilder<constant::buffer::kMax256> processNameBuilder;
+                    processNameBuilder.appendFormat( "pid %#", state._listKey[index]._pid );
+                    string processName{ processNameBuilder.view() };
                     for ( const TraceParseState::ProcessName& entry : state._listProcessName )
                     {
                         if ( entry._pid == state._listKey[index]._pid )
@@ -314,14 +324,18 @@ namespace sw
             {
                 if ( outSource._document.parse( input._json ) == false )
                 {
-                    outReport = formatToString( "input %# is not valid JSON: %#", index, outSource._document.getLastError() );
+                    StringBuilder<constant::buffer::kMax256> reportBuilder;
+                    reportBuilder.appendFormat( "input %# is not valid JSON: %#", index, outSource._document.getLastError() );
+                    outReport = string( reportBuilder.view() );
                     return false;
                 }
                 const JSONValue root = outSource._document.getRoot();
                 outSource._listEvent = root.isArray() ? root : root.get( "traceEvents" );
                 if ( outSource._listEvent.isArray() == false )
                 {
-                    outReport = formatToString( "input %# has no traceEvents array", index );
+                    StringBuilder<constant::buffer::kMax256> reportBuilder;
+                    reportBuilder.appendFormat( "input %# has no traceEvents array", index );
+                    outReport = string( reportBuilder.view() );
                     return false;
                 }
                 const JSONValue other         = root.isObject() ? root.get( "otherData" ) : JSONValue{};
@@ -332,7 +346,9 @@ namespace sw
                     const std::optional<int64> monotonicNanoseconds = other.readRequired<int64>( "monotonicNanoseconds" );
                     if ( wallMilliseconds.has_value() == false || monotonicNanoseconds.has_value() == false )
                     {
-                        outReport = formatToString( "input %# has a clock header that is not integers", index );
+                        StringBuilder<constant::buffer::kMax256> reportBuilder;
+                        reportBuilder.appendFormat( "input %# has a clock header that is not integers", index );
+                        outReport = string( reportBuilder.view() );
                         return false;
                     }
                     outSource._bHasClock            = true;
@@ -344,7 +360,11 @@ namespace sw
                 if ( outSource._label.empty() && other.isObject() )
                     outSource._label = other.get( "processName" ).asString();
                 if ( outSource._label.empty() )
-                    outSource._label = formatToString( "trace %#", index );
+                {
+                    StringBuilder<constant::buffer::kMax256> labelBuilder;
+                    labelBuilder.appendFormat( "trace %#", index );
+                    outSource._label = string( labelBuilder.view() );
+                }
                 for ( size_t eventIndex = 0; eventIndex < outSource._listEvent.size(); ++eventIndex )
                 {
                     const JSONValue pid = outSource._listEvent.at( eventIndex ).get( "pid" );
@@ -353,7 +373,9 @@ namespace sw
                         const std::optional<int64> sourcePID = pid.read<int64>();
                         if ( sourcePID.has_value() == false )
                         {
-                            outReport = formatToString( "input %# has a pid that is not an integer", index );
+                            StringBuilder<constant::buffer::kMax256> reportBuilder;
+                            reportBuilder.appendFormat( "input %# has a pid that is not an integer", index );
+                            outReport = string( reportBuilder.view() );
                             return false;
                         }
                         outSource._sourcePID = *sourcePID;
@@ -548,7 +570,11 @@ namespace sw
                         if ( bSlotNamed )
                             writer.valueString( listSlotName[event._slot] );
                         else
-                            writer.valueString( formatToString( "slot %#", event._slot ) );
+                        {
+                            StringBuilder<constant::buffer::kMax256> textBuilder;
+                            textBuilder.appendFormat( "slot %#", event._slot );
+                            writer.valueString( textBuilder.view() );
+                        }
                         writer.key( "cat" );
                         writer.valueString( "cpu" );
                         writer.key( "ph" );
@@ -869,8 +895,10 @@ namespace sw
             {
                 eventCount += thread._listEvent.size();
             }
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%# frame marks, %# net flows)", listFrameBegin.size(), metaWithFlow._listFlow.size() );
             outReply = "saved " + path + " (" + to_string( listThread.size() ) + " threads, " + to_string( eventCount ) + " events, " +
-                       formatToString( "%# frame marks, %# net flows)", listFrameBegin.size(), metaWithFlow._listFlow.size() );
+                       string( textBuilder.view() );
             return true;
         }
 
@@ -987,10 +1015,12 @@ namespace sw
         {
             if ( --capture._slowFramesUntilSave > 0 )
                 return;
-            ProfilerTraceMeta meta      = makeCurrentMeta( processName );
-            const uint64      tickMicro = ( capture._slowEndNanos - capture._slowBeginNanos ) / constant::time::kNanosecondsPerMicrosecond;
+            ProfilerTraceMeta                        meta      = makeCurrentMeta( processName );
+            const uint64                             tickMicro = ( capture._slowEndNanos - capture._slowBeginNanos ) / constant::time::kNanosecondsPerMicrosecond;
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "Slow tick %#.%# ms", tickMicro / constant::time::kMicrosecondsPerMillisecond, ( tickMicro % constant::time::kMicrosecondsPerMillisecond ) / 100 );
             meta._listMarker.push_back(
-                { formatToString( "Slow tick %#.%# ms", tickMicro / constant::time::kMicrosecondsPerMillisecond, ( tickMicro % constant::time::kMicrosecondsPerMillisecond ) / 100 ), capture._slowBeginNanos } );
+                { string( textBuilder.view() ), capture._slowBeginNanos } );
             const string path = makeDefaultTracePath( "slowtick", meta._wallUnixMilliseconds );
             string       reply;
             if ( saveRecentFramesWithMeta( profiler, ProfilerTimeline::kFrameCapacity - 1, path, meta, reply ) )
@@ -1081,7 +1111,9 @@ namespace sw
             outReport = "the traces have no events";
             return false;
         }
-        outReport = formatToString( "merged %# traces (%# events)", listSource.size(), eventCount );
+        StringBuilder<constant::buffer::kMax256> reportBuilder;
+        reportBuilder.appendFormat( "merged %# traces (%# events)", listSource.size(), eventCount );
+        outReport = string( reportBuilder.view() );
         return true;
     }
 

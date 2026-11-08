@@ -83,7 +83,9 @@ namespace sw
 
     string AutosaveSettings::makeSlotName( int32 slot ) const
     {
-        return formatToString( "%#/%#%#", _group, _prefix, slot );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "%#/%#%#", _group, _prefix, slot );
+        return string( resultBuilder.view() );
     }
 
     string AutosaveSettings::makeInfoSlotName( int32 slot ) const

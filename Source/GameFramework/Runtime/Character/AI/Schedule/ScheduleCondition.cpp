@@ -135,7 +135,7 @@ namespace sw
                 for ( const int32 value : listValue )
                 {
                     joined += joined.empty() ? "" : ", ";
-                    joined += formatToString( "%#", value );
+                    joined += to_string( value );
                 }
                 return joined;
             }
@@ -356,18 +356,18 @@ namespace sw
         {
             string arguments;
             if ( fromDay > 0 )
-                arguments += string( "fromSeason=" ) + fromSeason.c_str() + ", fromDay=" + formatToString( "%#", fromDay );
+                arguments += string( "fromSeason=" ) + fromSeason.c_str() + ", fromDay=" + to_string( fromDay );
             if ( toDay > 0 )
-                arguments += string( arguments.empty() ? "" : ", " ) + "toSeason=" + toSeason.c_str() + ", toDay=" + formatToString( "%#", toDay );
+                arguments += string( arguments.empty() ? "" : ", " ) + "toSeason=" + toSeason.c_str() + ", toDay=" + to_string( toDay );
             addCall( ScheduleConditionClause::DateRange, "date", arguments );
         }
         if ( minAffinity.has_value() || maxAffinity.has_value() )
         {
             string text;
             if ( minAffinity.has_value() )
-                text += string( "affinity >= " ) + formatToString( "%#", *minAffinity );
+                text += "affinity >= " + to_string( *minAffinity );
             if ( maxAffinity.has_value() )
-                text += string( text.empty() ? "" : " && " ) + "affinity <= " + formatToString( "%#", *maxAffinity );
+                text += string( text.empty() ? "" : " && " ) + "affinity <= " + to_string( *maxAffinity );
             bValid = Internal::addClause( *this, ScheduleConditionClause::Affinity, text, sourceName ) && bValid;
         }
         addCall( ScheduleConditionClause::Season, "season", Internal::joinTokens( node.getAttributeText( "seasons" ) ) );

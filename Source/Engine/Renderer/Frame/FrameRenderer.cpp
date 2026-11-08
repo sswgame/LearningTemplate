@@ -147,9 +147,11 @@ namespace sw
         // 모드가 아닌 값(`Count` 표식, 에디터 · 콘솔이 숫자로 넣은 범위 밖 값)은 Lit 으로 바꾸지 않고 초기화를 멈춘다 — 검증 실행이 다른 모드를 찍고 통과하면 안 된다.
         if ( isRenderViewModeIndex( static_cast<int32>( gv_viewMode ) ) == false )
         {
-            _status        = FrameRendererStatus::Failed;
+            _status = FrameRendererStatus::Failed;
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%#)", static_cast<int64>( RenderViewMode::Count ) - 1 );
             _statusMessage = "-gv_viewMode=" + to_string( static_cast<int64>( gv_viewMode ) ) + " is not a view mode (0 .. " +
-                             formatToString( "%#)", static_cast<int64>( RenderViewMode::Count ) - 1 );
+                             string( textBuilder.view() );
             SW_LOG_ERROR_ID( "FrameRenderer.Initialize", "initialize: %#", _statusMessage );
             return false;
         }

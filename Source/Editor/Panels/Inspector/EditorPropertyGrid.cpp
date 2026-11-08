@@ -1093,7 +1093,9 @@ namespace sw::editor
             {
                 // 시나리오가 인자 입력란을 누른다(핸들 선택기의 콤보가 마지막 항목이다). 인자 레이블 글("mesh (ComponentHandle)")이 오른쪽에 붙어
                 // 좁은 창에서 위젯 사각형의 가운데가 레이블 글 위에 놓이므로 입력 칸만 표식으로 남긴다.
-                const string argMark = formatToString( "%#%#.%#", string( "inspector.method.arg." ), method._name.c_str(), paramIndex );
+                StringBuilder<constant::buffer::kMax256> argMarkBuilder;
+                argMarkBuilder.appendFormat( "%#%#.%#", string( "inspector.method.arg." ), method._name.c_str(), paramIndex );
+                const string argMark{ argMarkBuilder.view() };
                 EditorSelfTestMarks::recordInputFrame( argMark.c_str() );
             }
             ImGui::PopID();
@@ -1137,7 +1139,11 @@ namespace sw::editor
         if ( pOwner == nullptr )
             call(); // 오브젝트 밖 대상(환경설정 구조체 등)은 되돌리기 대상이 없다
         else
-            InspectorObjectEdit::applyObjectEdit( pOwner, formatToString( "Call %#", method._name.c_str() ), call );
+        {
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "Call %#", method._name.c_str() );
+            InspectorObjectEdit::applyObjectEdit( pOwner, textBuilder.view(), call );
+        }
         InspectorBuiltinValue::formatMethodResult( result, method._returnTypeName, _lastInvokeResult.data(),
                                                    _lastInvokeResult.capacity() );
     }

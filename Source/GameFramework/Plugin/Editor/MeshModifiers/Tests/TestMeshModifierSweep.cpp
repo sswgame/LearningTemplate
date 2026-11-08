@@ -102,7 +102,9 @@ SW_TEST_CASE( MeshModifierSweepTest, EveryModifierIsFiniteAndDeterministic )
         const size_t     count = first.getVertexCount();
         stack.apply( first, evaluation );
         stack.apply( again, evaluation );
-        const string context = formatToString( "modifier %#", pRegistration->_pID );
+        StringBuilder<constant::buffer::kMax256> contextBuilder;
+        contextBuilder.appendFormat( "modifier %#", pRegistration->_pID );
+        const string context{ contextBuilder.view() };
         SW_EXPECT_TRUE_MSG( count == first.getVertexCount(), context.c_str() );
         SW_EXPECT_TRUE_MSG( MeshModifierSweepTestUtil::isSamePositions( first, again ), context.c_str() );
         for ( const float3& position : first._listPosition )
@@ -125,8 +127,10 @@ SW_TEST_CASE( MeshModifierSweepTest, EveryModifierSurvivesTheDocumentRoundTrip )
     {
         MeshModifierStack stack;
         MeshModifierSweepTestUtil::makeStack( stack, pRegistration->_pID );
-        MeshModifierStack loaded;
-        const string      context = formatToString( "modifier %#", pRegistration->_pID );
+        MeshModifierStack                        loaded;
+        StringBuilder<constant::buffer::kMax256> contextBuilder;
+        contextBuilder.appendFormat( "modifier %#", pRegistration->_pID );
+        const string context{ contextBuilder.view() };
         SW_EXPECT_TRUE_MSG( loaded.readJSONText( stack.makeJSONText( -1 ) ), context.c_str() );
         MeshModifierMesh original = MeshModifierSweepTestUtil::makeGridMesh();
         MeshModifierMesh reread   = original;

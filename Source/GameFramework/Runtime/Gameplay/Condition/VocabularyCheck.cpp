@@ -105,7 +105,9 @@ namespace sw
                 dialogue.setFlags( &flags );
                 (void)dialogue.startDialogue(); // 결과는 플래그로 본다
 
-                outReply = formatToString( "alarm=%# visits=%# reported=%#", flags.getFlag( "alarm" ), flags.getFlag( "visits" ), flags.getFlag( "reported" ) );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "alarm=%# visits=%# reported=%#", flags.getFlag( "alarm" ), flags.getFlag( "visits" ), flags.getFlag( "reported" ) );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

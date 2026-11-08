@@ -104,8 +104,10 @@ namespace sw
                     outReply = "cheat.give: the session state has no inventory (slot count 0)";
                     return true;
                 }
-                const int32 addedCount = inventory.addItem( hashed_string( listArgument[0] ), count );
-                outReply               = formatToString( "cheat.give added %# of %# '%#'", addedCount, count, listArgument[0] );
+                const int32                              addedCount = inventory.addItem( hashed_string( listArgument[0] ), count );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "cheat.give added %# of %# '%#'", addedCount, count, listArgument[0] );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -122,7 +124,9 @@ namespace sw
                 const hashed_string currency = listArgument.size() == 2 ? hashed_string( listArgument[1] ) : Wallet::getDefaultCurrency();
                 Wallet&             wallet   = pState->getWallet();
                 wallet.add( currency, amount );
-                outReply = formatToString( "cheat.money balance %#%#", wallet.getBalance( currency ), ( listArgument.size() == 2 ? " " + listArgument[1] : string( " (default currency)" ) ) );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "cheat.money balance %#%#", wallet.getBalance( currency ), ( listArgument.size() == 2 ? " " + listArgument[1] : string( " (default currency)" ) ) );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

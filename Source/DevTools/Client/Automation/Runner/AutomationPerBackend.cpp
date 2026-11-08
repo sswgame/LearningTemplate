@@ -164,7 +164,11 @@ namespace sw
                         if ( readStageReport( stageReportPath, stageExitCode, records._listRecordLine, error ) == false )
                         {
                             if ( child._exitCode == 0 )
-                                listProblem.push_back( formatToString( "%#: %# report unreadable - %#", listPath[stage], child._backend, error ) );
+                            {
+                                StringBuilder<constant::buffer::kMax256> textBuilder;
+                                textBuilder.appendFormat( "%#: %# report unreadable - %#", listPath[stage], child._backend, error );
+                                listProblem.push_back( string( textBuilder.view() ) );
+                            }
                             continue;
                         }
                         if ( stageExitCode != 0 )
@@ -357,7 +361,9 @@ namespace sw
         using Internal            = AutomationPerBackendInternal;
         const string scenarioStem = FileUtil::removeExtension( FileUtil::removeExtension( FileUtil::getFileNamePart( options._scenarioPath ) ) ); // x.scenario.xml → x
         // 실행마다 새 폴더다(`reserveUniquePath`) - 프로세스 id 는 Windows 가 다시 쓴다.
-        const string defaultFolder = FileUtil::reserveUniquePath( formatToString( "%#/%#/per-backend-%#", makeAutomationOutputFolderPath(), scenarioStem, Process::getCurrentProcessID() ), {}, true );
+        StringBuilder<constant::buffer::kMax256> textBuilder3;
+        textBuilder3.appendFormat( "%#/%#/per-backend-%#", makeAutomationOutputFolderPath(), scenarioStem, Process::getCurrentProcessID() );
+        const string defaultFolder = FileUtil::reserveUniquePath( textBuilder3.view(), {}, true );
 
         // 넘겨받은 인자가 창 위치를 정했으면(손으로 돌린 실행) 그것을 따른다. 칸 간격(클라이언트 크기 + 틀 두께)은 자식 창이 스스로 정한다(`IWindow::createMainWindow`).
         const bool bTileWindows = std::none_of( options._listPassThroughArgument.begin(), options._listPassThroughArgument.end(), []( const string& argument )
@@ -398,8 +404,12 @@ namespace sw
             vector<string> listArgument{ "-scenario=" + scenarioList, "-" + backend, "-log-file=" + pChild->_logPath, "-scenario-report=" + pChild->_reportPath };
             if ( bTileWindows )
             {
-                listArgument.push_back( formatToString( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE ), listChild.size() ) );
-                listArgument.push_back( formatToString( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE_COLUMNS ), Internal::kTileColumnCount ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder2;
+                textBuilder2.appendFormat( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE ), listChild.size() );
+                listArgument.push_back( string( textBuilder2.view() ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "-%#=%#", getCommandLineArgumentSpelling( CommandLineArgument::WINDOW_TILE_COLUMNS ), Internal::kTileColumnCount );
+                listArgument.push_back( string( textBuilder.view() ) );
             }
             listArgument.insert( listArgument.end(), options._listPassThroughArgument.begin(), options._listPassThroughArgument.end() );
 

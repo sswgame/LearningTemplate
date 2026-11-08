@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 namespace sw::editor
 {
@@ -42,7 +43,11 @@ namespace sw::editor
          */
         static string makeDocumentCoalesceKey( string_view coalesceKey, uintptr_t panelID, string_view documentPath, uint32 loadEpoch )
         {
-            return coalesceKey.empty() ? string{} : formatToString( "%#|%#|%#|%#", coalesceKey, static_cast<uint64>( panelID ), documentPath, loadEpoch );
+            if ( coalesceKey.empty() )
+                return string{};
+            StringBuilder<constant::buffer::kMax256> key;
+            key.appendFormat( "%#|%#|%#|%#", coalesceKey, static_cast<uint64>( panelID ), documentPath, loadEpoch );
+            return string( key.view() );
         }
         /** @brief 씬이나 도구 문서가 dirty 이면 종료 확인이 필요합니다. */
         static bool needsQuitPrompt( bool bSceneDirty, uint32 dirtyDocumentCount )

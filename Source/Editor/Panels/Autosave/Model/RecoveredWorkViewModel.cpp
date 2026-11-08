@@ -41,9 +41,19 @@ namespace sw::editor
             return string( "-" );
         const int64 seconds = ( nowTicks - savedTicks ) / FileUtil::kFileTimeTicksPerSecond;
         if ( seconds < constant::time::kSecondsPerMinute )
-            return formatToString( "%# s ago", seconds < 0 ? 0 : seconds );
+        {
+            StringBuilder<constant::buffer::kMax256> resultBuilder3;
+            resultBuilder3.appendFormat( "%# s ago", seconds < 0 ? 0 : seconds );
+            return string( resultBuilder3.view() );
+        }
         if ( seconds < constant::time::kSecondsPerHour )
-            return formatToString( "%# min ago", seconds / constant::time::kSecondsPerMinute );
-        return formatToString( "%# h ago", seconds / constant::time::kSecondsPerHour );
+        {
+            StringBuilder<constant::buffer::kMax256> resultBuilder2;
+            resultBuilder2.appendFormat( "%# min ago", seconds / constant::time::kSecondsPerMinute );
+            return string( resultBuilder2.view() );
+        }
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "%# h ago", seconds / constant::time::kSecondsPerHour );
+        return string( resultBuilder.view() );
     }
 } // namespace sw::editor

@@ -80,20 +80,28 @@ namespace sw
         string line;
         for ( uint32 kindIndex = 0; kindIndex < kFrameKindCount; ++kindIndex )
         {
-            const AutomationTimelineSlice& slice = _arrSlice[kindIndex];
-            line += formatToString( "%#%# %#ms/%#f", line.empty() ? "" : ", ", getKindKey( static_cast<AutomationFrameKind>( kindIndex ) ), toMilliseconds( slice._seconds ),
-                                    slice._frameCount );
+            const AutomationTimelineSlice&           slice = _arrSlice[kindIndex];
+            StringBuilder<constant::buffer::kMax256> linePart;
+            linePart.appendFormat( "%#%# %#ms/%#f", line.empty() ? "" : ", ", getKindKey( static_cast<AutomationFrameKind>( kindIndex ) ), toMilliseconds( slice._seconds ),
+                                   slice._frameCount );
+            line += linePart.c_str();
         }
         vector<AutomationStepKindCost> listCost = _listStepKindCost;
         std::sort( listCost.begin(), listCost.end(), []( const AutomationStepKindCost& left, const AutomationStepKindCost& right )
         { return left._seconds > right._seconds; } );
         line += "; steps";
         for ( size_t index = 0; index < listCost.size() && index < kStepKindKeep; ++index )
-            line += formatToString( " %# %#ms/%#f", listCost[index]._stepKind, toMilliseconds( listCost[index]._seconds ), listCost[index]._frameCount );
+        {
+            StringBuilder<constant::buffer::kMax256> linePart2;
+            linePart2.appendFormat( " %# %#ms/%#f", listCost[index]._stepKind, toMilliseconds( listCost[index]._seconds ), listCost[index]._frameCount );
+            line += linePart2.c_str();
+        }
         if ( _listSlowestWait.empty() == false )
         {
-            const AutomationSlowWait& wait = _listSlowestWait.front();
-            line += formatToString( "; longest wait %#ms/%#f before %# #%#", toMilliseconds( wait._seconds ), wait._waitedFrameCount, wait._stepKind, wait._stepNumber );
+            const AutomationSlowWait&                wait = _listSlowestWait.front();
+            StringBuilder<constant::buffer::kMax256> linePart;
+            linePart.appendFormat( "; longest wait %#ms/%#f before %# #%#", toMilliseconds( wait._seconds ), wait._waitedFrameCount, wait._stepKind, wait._stepNumber );
+            line += linePart.c_str();
         }
         return line;
     }

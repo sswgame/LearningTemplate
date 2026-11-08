@@ -167,7 +167,11 @@ namespace sw::editor
                     const string* pText = Internal::findAttribute( childElement, "text" );
                     const string* pName = Internal::findAttribute( childElement, "name" );
                     if ( pText != nullptr && findEntry( AbilityEntryKind::Effect, *pText ) >= 0 )
-                        addReference( entryIndex, child, "text", formatToString( "param %#", pName != nullptr ? *pName : string{} ), AbilityEntryKind::Effect, false );
+                    {
+                        StringBuilder<constant::buffer::kMax256> textBuilder;
+                        textBuilder.appendFormat( "param %#", pName != nullptr ? *pName : string{} );
+                        addReference( entryIndex, child, "text", string( textBuilder.view() ), AbilityEntryKind::Effect, false );
+                    }
                 }
                 else if ( entry._kind == AbilityEntryKind::Effect && childElement._name == "Cue" )
                 {
@@ -199,9 +203,11 @@ namespace sw::editor
         {
             if ( reference._bRequired == SW_FALSE || reference._target >= 0 )
                 continue;
-            const AbilityCatalogEntry& from = _listEntry[static_cast<size_t>( reference._from )];
-            _listIssue.push_back( AbilityCatalogIssue{ formatToString( "%# '%#' %# '%#' is not an %# in this file", getElementName( from._kind ), from._id, reference._label, reference._targetID,
-                                                                       getElementName( reference._targetKind ) ),
+            const AbilityCatalogEntry&               from = _listEntry[static_cast<size_t>( reference._from )];
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%# '%#' %# '%#' is not an %# in this file", getElementName( from._kind ), from._id, reference._label, reference._targetID,
+                                      getElementName( reference._targetKind ) );
+            _listIssue.push_back( AbilityCatalogIssue{ string( textBuilder.view() ),
                                                        reference._from } );
         }
         // 같은 종류의 id 가 둘이면 뒤의 것이 앞의 것을 덮는다 — 실수로 보이게 둘째부터 알린다.
@@ -210,11 +216,17 @@ namespace sw::editor
             const AbilityCatalogEntry& entry = _listEntry[static_cast<size_t>( entryIndex )];
             if ( entry._id.empty() )
             {
-                _listIssue.push_back( AbilityCatalogIssue{ formatToString( "%# has no %#", getElementName( entry._kind ), Internal::getNameAttribute( entry._kind ) ), entryIndex } );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%# has no %#", getElementName( entry._kind ), Internal::getNameAttribute( entry._kind ) );
+                _listIssue.push_back( AbilityCatalogIssue{ string( textBuilder.view() ), entryIndex } );
                 continue;
             }
             if ( findEntry( entry._kind, entry._id ) != entryIndex )
-                _listIssue.push_back( AbilityCatalogIssue{ formatToString( "%# '%#' is listed twice", getElementName( entry._kind ), entry._id ), entryIndex } );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%# '%#' is listed twice", getElementName( entry._kind ), entry._id );
+                _listIssue.push_back( AbilityCatalogIssue{ string( textBuilder.view() ), entryIndex } );
+            }
         }
     }
 
@@ -334,9 +346,11 @@ namespace sw::editor
         {
             if ( reference._target == entry && reference._bRequired == SW_TRUE )
             {
-                const AbilityCatalogEntry& user = _listEntry[static_cast<size_t>( reference._from )];
-                _document.setError( formatToString( "'%#' is used by %# '%#' (%#) - change that first", _listEntry[static_cast<size_t>( entry )]._id, getElementName( user._kind ), user._id,
-                                                    reference._label ) );
+                const AbilityCatalogEntry&               user = _listEntry[static_cast<size_t>( reference._from )];
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "'%#' is used by %# '%#' (%#) - change that first", _listEntry[static_cast<size_t>( entry )]._id, getElementName( user._kind ), user._id,
+                                          reference._label );
+                _document.setError( string( textBuilder.view() ) );
                 return false;
             }
         }

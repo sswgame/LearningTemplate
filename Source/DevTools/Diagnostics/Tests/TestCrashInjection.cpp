@@ -46,9 +46,15 @@ namespace
     /** @brief 자식 인자 `<종류 번호>|<보고 폴더>[|<보고 시한 초>]` 를 만듭니다(`|` 는 Windows 경로에 들 수 없다). */
     string makeCrashChildArgument( CrashInjectionKind kind, const string& folder, uint32 deadlineSeconds = 0 )
     {
-        string argument = formatToString( "%#|%#", static_cast<int32>( kind ), folder );
+        StringBuilder<constant::buffer::kMax256> argumentBuilder;
+        argumentBuilder.appendFormat( "%#|%#", static_cast<int32>( kind ), folder );
+        string argument{ argumentBuilder.view() };
         if ( deadlineSeconds > 0 )
-            argument += formatToString( "|%#", deadlineSeconds );
+        {
+            StringBuilder<constant::buffer::kMax256> argumentPart;
+            argumentPart.appendFormat( "|%#", deadlineSeconds );
+            argument += argumentPart.c_str();
+        }
         return argument;
     }
 

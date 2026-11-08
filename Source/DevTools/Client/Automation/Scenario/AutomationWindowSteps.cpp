@@ -182,9 +182,10 @@ namespace sw
                     runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": the window lost the foreground while the scenario ran, so the cursor lock cannot be observed" );
                     return true;
                 }
-                runner.recordFailure( step, string( "cursor clip is not " ) + ( bWantLocked ? "inside the client area" : "the whole screen" ) + " (clip " +
-                                                to_string( static_cast<int32>( clip.left ) ) + "," + to_string( static_cast<int32>( clip.top ) ) + "," +
-                                                formatToString( "%#,%#)", static_cast<int32>( clip.right ), static_cast<int32>( clip.bottom ) ) );
+                StringBuilder<constant::buffer::kMax256> failure;
+                failure.appendFormat( "cursor clip is not %# (clip %#,%#,%#,%#)", bWantLocked ? "inside the client area" : "the whole screen", static_cast<int32>( clip.left ),
+                                      static_cast<int32>( clip.top ), static_cast<int32>( clip.right ), static_cast<int32>( clip.bottom ) );
+                runner.recordFailure( step, failure.view() );
                 return true;
             }
 

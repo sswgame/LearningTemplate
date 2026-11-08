@@ -154,8 +154,12 @@ namespace sw::editor
                 const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames,
                                                                          "editor widget '" + *pMark + ( bDrawn ? "' to settle (same rect two frames in a row, no pending input)" : "' to be drawn" ) );
                 if ( hold == AutomationStepHold::Run && bReady == false && bDrawn )
-                    runner.recordFailure( step, formatToString( "editor widget '%#' did not settle (same rect two frames in a row, no pending input) within %# frame(s)", pMark->c_str(),
-                                                                kSettleWaitFrames ) );
+                {
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "editor widget '%#' did not settle (same rect two frames in a row, no pending input) within %# frame(s)", pMark->c_str(),
+                                              kSettleWaitFrames );
+                    runner.recordFailure( step, textBuilder.view() );
+                }
                 return hold;
             }
 
@@ -183,7 +187,11 @@ namespace sw::editor
                 const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames,
                                                                          "the pointer to reach editor widget '" + params._mark + ( bDrawn ? "' and it to settle" : "' (not drawn yet)" ) );
                 if ( hold == AutomationStepHold::Run && bReady == false && bDrawn )
-                    runner.recordFailure( step, formatToString( "editor widget '%#' did not settle under the pointer within %# frame(s)", params._mark, kSettleWaitFrames ) );
+                {
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "editor widget '%#' did not settle under the pointer within %# frame(s)", params._mark, kSettleWaitFrames );
+                    runner.recordFailure( step, textBuilder.view() );
+                }
                 return hold;
             }
 
@@ -226,7 +234,11 @@ namespace sw::editor
                 const bool               bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetSettled();
                 const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames, "the keyboard focus to settle (no pending input)" );
                 if ( hold == AutomationStepHold::Run && bReady == false )
-                    runner.recordFailure( step, formatToString( "the keyboard focus did not settle within %# frame(s)", kSettleWaitFrames ) );
+                {
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "the keyboard focus did not settle within %# frame(s)", kSettleWaitFrames );
+                    runner.recordFailure( step, textBuilder.view() );
+                }
                 return hold;
             }
 
@@ -242,7 +254,11 @@ namespace sw::editor
                 const bool               bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetSettled() && ImGui::GetIO().WantTextInput;
                 const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames, "a text field to take the keyboard focus (no pending input)" );
                 if ( hold == AutomationStepHold::Run && bReady == false )
-                    runner.recordFailure( step, formatToString( "no text field took the keyboard focus within %# frame(s) - the text would be lost", kSettleWaitFrames ) );
+                {
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "no text field took the keyboard focus within %# frame(s) - the text would be lost", kSettleWaitFrames );
+                    runner.recordFailure( step, textBuilder.view() );
+                }
                 return hold;
             }
 
@@ -513,7 +529,9 @@ namespace sw::editor
                 }
                 if ( foundCount != expectedCount )
                 {
-                    runner.recordFailure( step, formatToString( "found %# object(s), expected %#", foundCount, expectedCount ) );
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "found %# object(s), expected %#", foundCount, expectedCount );
+                    runner.recordFailure( step, textBuilder.view() );
                     return true;
                 }
                 if ( bSelected != 0 && pickCount == 0 )

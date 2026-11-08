@@ -50,7 +50,9 @@ namespace sw
         _listGhost.assign( count, Ghost{} );
         for ( uint32 ghostIndex = 0; ghostIndex < count && pManager != nullptr; ++ghostIndex )
         {
-            GameObject* pGhost = pManager->createGameObject( hashed_string( formatToString( "%#_Afterimage%#", pOwner->getName().c_str(), ghostIndex ).c_str() ) );
+            fixed_string<constant::buffer::kMax128> ghostName;
+            formatstring( ghostName.data(), ghostName.capacity(), "%#_Afterimage%#", pOwner->getName().c_str(), ghostIndex );
+            GameObject* pGhost = pManager->createGameObject( hashed_string( ghostName.c_str() ) );
             if ( pGhost == nullptr )
                 continue;
             SkeletalMeshComponent* pMesh = pGhost->addComponent<SkeletalMeshComponent>();

@@ -154,7 +154,11 @@ namespace sw
         // 씬의 디바이스. 본문은 이미 있는 객체를 다시 쓰므로 렌더 스레드에 걸린 훅과 그것을 가리키는 포인터가 그대로다.
         const bool bRestarted = _startupScope.getCollection().restartStopped();
         if ( pOutTiming != nullptr )
-            *pOutTiming = formatToString( "re-init resources %#ms, restart stages %#ms", initMicroseconds / 1000, ( rebindWatch.getElapsedMicroseconds() - initMicroseconds ) / 1000 );
+        {
+            StringBuilder<constant::buffer::kMax256> outTimingBuilder;
+            outTimingBuilder.appendFormat( "re-init resources %#ms, restart stages %#ms", initMicroseconds / 1000, ( rebindWatch.getElapsedMicroseconds() - initMicroseconds ) / 1000 );
+            *pOutTiming = string( outTimingBuilder.view() );
+        }
         if ( bRestarted == false )
             SW_LOG_ERROR_ID( "Engine.BackendChange", "Backend change: %#", _startupScope.getCollection().getError().c_str() );
 

@@ -35,7 +35,11 @@ namespace sw
                 vector<HTTPHeader> listHeader;
                 string             authority = url._host;
                 if ( url._port != kDefaultHTTPSPort )
-                    authority += formatToString( ":%#", static_cast<int32>( url._port ) );
+                {
+                    StringBuilder<constant::buffer::kMax256> authorityPart;
+                    authorityPart.appendFormat( ":%#", static_cast<int32>( url._port ) );
+                    authority += authorityPart.c_str();
+                }
                 listHeader.push_back( HTTPHeader{ ":method", toString( request._method ) } );
                 listHeader.push_back( HTTPHeader{ ":scheme", "https" } );
                 listHeader.push_back( HTTPHeader{ ":authority", authority } );
@@ -251,8 +255,10 @@ namespace sw
             {
                 if ( header._streamID == 0 || header._length != HTTP2ConnectionInternal::kRstStreamBodySize )
                     return failConnection( "malformed RST_STREAM", outError );
-                const uint32 errorCode = HTTP2FrameHeader::readUint32( pBody );
-                failStream( header._streamID, ( formatToString( "stream was reset by the server (error %#)", errorCode ) ).c_str(), false, 0, outBytes );
+                const uint32                            errorCode = HTTP2FrameHeader::readUint32( pBody );
+                fixed_string<constant::buffer::kMax256> text;
+                formatstring( text.data(), text.capacity(), "stream was reset by the server (error %#)", errorCode );
+                failStream( header._streamID, text.c_str(), false, 0, outBytes );
                 return true;
             }
             case HTTP2FrameType::GoAway:

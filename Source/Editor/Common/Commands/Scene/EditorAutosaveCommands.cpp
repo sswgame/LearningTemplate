@@ -98,8 +98,14 @@ namespace sw::editor
                 std::sort( outListGeneration.begin(), outListGeneration.end() );
             }
 
-            static string makeSnapshotPath( const string& slotFolder, uint32 generation ) { return FileUtil::joinPath( slotFolder, formatToString( "%#%#", generation, kSceneSuffix ) ); }
-            static string makeMetaPath( const string& slotFolder, uint32 generation ) { return FileUtil::joinPath( slotFolder, formatToString( "%#%#", generation, kMetaSuffix ) ); }
+            static string makeSnapshotPath( const string& slotFolder, uint32 generation ) { return makeGenerationPath( slotFolder, generation, kSceneSuffix ); }
+            static string makeMetaPath( const string& slotFolder, uint32 generation ) { return makeGenerationPath( slotFolder, generation, kMetaSuffix ); }
+            static string makeGenerationPath( const string& slotFolder, uint32 generation, string_view suffix )
+            {
+                fixed_string<constant::buffer::kMax64> fileName;
+                formatstring( fileName.data(), fileName.capacity(), "%#%#", generation, suffix );
+                return FileUtil::joinPath( slotFolder, fileName.view() );
+            }
 
             /** @brief 사본 폴더를 훑어 씬마다 가장 새 사본 하나를 복구 후보로 만듭니다. 다른 프로젝트 · 바뀐 원본은 거절 이유를 단다. */
             static void scanRecoverable( vector<EditorAutosaveEntry>& outListEntry )
@@ -120,8 +126,10 @@ namespace sw::editor
                     if ( FileUtil::readTextFile( makeMetaPath( slotFolder, newest ), metaText ) == false )
                         continue; // 메타 없는 사본은 어디 것인지 모른다 — 복구하지 않는다
                     EditorAutosaveEntry entry{};
-                    entry._snapshotAbs     = makeSnapshotPath( slotFolder, newest );
-                    entry._snapshotID      = formatToString( "%#/%#/%#%#", EditorAutosaveCommands::kDomain, FileUtil::getFileNamePart( slotFolder ), newest, kSceneSuffix );
+                    entry._snapshotAbs = makeSnapshotPath( slotFolder, newest );
+                    StringBuilder<constant::buffer::kMax256> snapshotIDBuilder;
+                    snapshotIDBuilder.appendFormat( "%#/%#/%#%#", EditorAutosaveCommands::kDomain, FileUtil::getFileNamePart( slotFolder ), newest, kSceneSuffix );
+                    entry._snapshotID      = string( snapshotIDBuilder.view() );
                     entry._sourceID        = readMetaValue( metaText, "source" );
                     entry._projectRoot     = readMetaValue( metaText, "project" );
                     entry._generationCount = static_cast<uint32>( listGeneration.size() );
@@ -162,7 +170,9 @@ namespace sw::editor
                         editor::getSubsystem<EditorWorkspace>().requestOpenPanelByID( editorpanel::kRecoveredWork.getView() );
                     }
                 }
-                if ( FileUtil::writeTextFile( lockPath, formatToString( "%#\n", Process::getCurrentProcessID() ) ) == false )
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#\n", Process::getCurrentProcessID() );
+                if ( FileUtil::writeTextFile( lockPath, textBuilder.view() ) == false )
                     SW_LOG_WARNING_ID( "EditorAutosaveCommands.LockNotWritten", "Autosave: could not write the session lock - a crash of this session will not offer recovery" );
                 state._bMounted = editor::getSubsystem<AssetPaths>().mountDiskDomain( EditorAutosaveCommands::kDomain, folder ); // 거절하면 이유를 로그로 남긴다(복원만 막힌다)
             }
@@ -203,7 +213,9 @@ namespace sw::editor
                     SW_LOG_WARNING_ID( "EditorAutosaveCommands.CopyFailed", "Autosave: could not write a copy of '%#'", sourceID );
                     return false;
                 }
-                const string meta = formatToString( "source=%#\nproject=%#\nsaved=%#\nsourceHash=%#\n", sourceID, ProcessRoots::get()._project.str(), FileUtil::getCurrentFileWriteTime(), sourceHash );
+                StringBuilder<constant::buffer::kMax256> metaBuilder;
+                metaBuilder.appendFormat( "source=%#\nproject=%#\nsaved=%#\nsourceHash=%#\n", sourceID, ProcessRoots::get()._project.str(), FileUtil::getCurrentFileWriteTime(), sourceHash );
+                const string meta{ metaBuilder.view() };
                 if ( FileUtil::writeTextFile( makeMetaPath( slotFolder, generation ), meta ) == false )
                 {
                     (void)FileUtil::tryRemoveFile( snapshotPath->str() ); // 메타 없는 사본은 복구할 수 없다
@@ -253,7 +265,9 @@ namespace sw::editor
             {
                 if ( listArgument.empty() == false )
                     return false;
-                outReply = formatToString( "%# recoverable scene copy(ies)", EditorAutosaveCommands::refreshRecoverable() );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "%# recoverable scene copy(ies)", EditorAutosaveCommands::refreshRecoverable() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

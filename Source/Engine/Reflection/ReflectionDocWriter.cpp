@@ -206,7 +206,9 @@ namespace sw
         { return lhs.first < rhs.first || ( lhs.first == rhs.first && lhs.second.lexicalLess( rhs.second ) ); } );
         for ( const auto& [value, name] : listEntry )
         {
-            out += formatToString( "| `%#` | %# |\n", string( name.c_str() ), value );
+            StringBuilder<constant::buffer::kMax256> outPart;
+            outPart.appendFormat( "| `%#` | %# |\n", string( name.c_str() ), value );
+            out += outPart.c_str();
         }
         out += "\n";
         return out;
@@ -273,8 +275,7 @@ namespace sw
             if ( FileUtil::writeTextFile( FileUtil::joinPath( outputDir, fileName ), page ) == false )
                 continue;
             ++fileCount;
-            index += "| [" + string( moduleName.empty() ? "Unknown" : moduleName.c_str() ) + "](" + fileName + ") | " + to_string( typeCount ) + " | " +
-                     formatToString( "%# |\n", enumCount );
+            index += "| [" + string( moduleName.empty() ? "Unknown" : moduleName.c_str() ) + "](" + fileName + ") | " + to_string( typeCount ) + " | " + to_string( enumCount ) + " |\n";
         }
         index += "\n## 타입\n\n";
         for ( const TypeInfo* pType : listType )

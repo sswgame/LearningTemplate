@@ -167,9 +167,11 @@ namespace sw
 
     string SteamReceiptValidator::makeReportURL( int64 sinceUnixMs ) const
     {
-        const utf8* pInterface = _settings._bSandbox == SW_TRUE ? "ISteamMicroTxnSandbox" : "ISteamMicroTxn";
+        const utf8*                              pInterface = _settings._bSandbox == SW_TRUE ? "ISteamMicroTxnSandbox" : "ISteamMicroTxn";
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "&maxresults=%#", kReportMaxResults );
         return _settings._baseURL + "/" + pInterface + "/GetReport/v4/?key=" + _settings._key + "&appid=" + _settings._appID + "&type=STANDARD&time=" + formatTime( sinceUnixMs ) +
-               formatToString( "&maxresults=%#", kReportMaxResults );
+               string( textBuilder.view() );
     }
 
     bool SteamReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk, string& outFailureText ) const

@@ -46,7 +46,12 @@ namespace sw
                     outCondition._kind  = params._pieces > 0 ? EquipmentConditionKind::SetPieces : EquipmentConditionKind::SetComplete;
                     if ( outCondition._setID.empty() )
                         return false;
-                    text = params._pieces > 0 ? formatToString( "setPieces(%#, %#)", outCondition._setID.c_str(), params._pieces ) : formatToString( "setComplete(%#)", outCondition._setID.c_str() );
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    if ( params._pieces > 0 )
+                        textBuilder.appendFormat( "setPieces(%#, %#)", outCondition._setID.c_str(), params._pieces );
+                    else
+                        textBuilder.appendFormat( "setComplete(%#)", outCondition._setID.c_str() );
+                    text = string( textBuilder.view() );
                 }
                 else if ( pEquippedTag != nullptr || pCharacterTag != nullptr )
                 {

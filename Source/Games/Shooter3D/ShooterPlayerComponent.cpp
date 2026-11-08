@@ -179,7 +179,9 @@ namespace sw
                 {
                     pPlayer->addWaveAmmo();
                 }
-                outReply = formatToString( "cheat.ammo refilled %# player(s)", listPlayer.size() );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "cheat.ammo refilled %# player(s)", listPlayer.size() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -199,7 +201,9 @@ namespace sw
                     pPlayer->restoreHealth( pPlayer->getMaxHealth() ); // 최대 체력만큼 채우면 가득 찬다(heal 이 최대에서 자른다).
                     ++healedCount;
                 }
-                outReply = formatToString( "cheat.shooter.heal healed %# of %# player(s)", healedCount, listPlayer.size() );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "cheat.shooter.heal healed %# of %# player(s)", healedCount, listPlayer.size() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -219,7 +223,9 @@ namespace sw
                 {
                     pPlayer->setDamageImmune( bImmune );
                 }
-                outReply = formatToString( "%#%# player(s)", string( bImmune ? "cheat.shooter.god on for " : "cheat.shooter.god off for " ), listPlayer.size() );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "%#%# player(s)", string( bImmune ? "cheat.shooter.god on for " : "cheat.shooter.god off for " ), listPlayer.size() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -237,7 +243,9 @@ namespace sw
                 {
                     loadedCount += pPlayer->loadProjectile( projectileID ) ? 1 : 0; // 거절한 까닭은 장전이 남겼다
                 }
-                outReply = formatToString( "cheat.shooter.projectile loaded '%#' for %# of %# player(s)", projectileID.c_str(), loadedCount, listPlayer.size() );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "cheat.shooter.projectile loaded '%#' for %# of %# player(s)", projectileID.c_str(), loadedCount, listPlayer.size() );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

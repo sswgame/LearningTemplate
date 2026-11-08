@@ -551,7 +551,9 @@ namespace
                 {
                     result._listRow.push_back( { encodeInt( version, 4 ), checksum } );
                 }
-                result._tag = formatToString( "SELECT %#", result._listRow.size() );
+                StringBuilder<constant::buffer::kMax256> tagBuilder;
+                tagBuilder.appendFormat( "SELECT %#", result._listRow.size() );
+                result._tag = string( tagBuilder.view() );
             }
             else if ( StringUtil::startsWith( sql, "INSERT INTO sw_schema_migration" ) )
             {
@@ -589,7 +591,9 @@ namespace
                     else
                         outResult._listRow.push_back( { encodeInt( rowIt->second._version, 8 ) } );
                 }
-                outResult._tag = formatToString( "SELECT %#", outResult._listRow.size() );
+                StringBuilder<constant::buffer::kMax256> tagBuilder;
+                tagBuilder.appendFormat( "SELECT %#", outResult._listRow.size() );
+                outResult._tag = string( tagBuilder.view() );
                 return;
             }
             if ( StringUtil::startsWith( sql, "INSERT INTO sw_record" ) )
@@ -646,7 +650,9 @@ namespace
                 const map<string, Row>::value_type& entry = *listMatch[bDescending ? listMatch.size() - 1 - index : index];
                 outResult._listRow.push_back( { entry.first.substr( listParam[0].size() + 1 ), entry.second._bytes, encodeInt( entry.second._version, 8 ) } );
             }
-            outResult._tag = formatToString( "SELECT %#", outResult._listRow.size() );
+            StringBuilder<constant::buffer::kMax256> tagBuilder;
+            tagBuilder.appendFormat( "SELECT %#", outResult._listRow.size() );
+            outResult._tag = string( tagBuilder.view() );
         }
 
     private:
@@ -687,8 +693,10 @@ namespace
     {
         static string makeServerJSON( uint16 port )
         {
-            return formatToString( R"({ "_listStore": [ { "_name": "main", "_driver": "postgres", "_connection": "host=127.0.0.1 port=%# dbname=game user=game sslmode=disable gssencmode=disable", "_secretEnvironment": "%#" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })",
-                                   port, kSecretEnv );
+            StringBuilder<constant::buffer::kMax256> resultBuilder;
+            resultBuilder.appendFormat( R"({ "_listStore": [ { "_name": "main", "_driver": "postgres", "_connection": "host=127.0.0.1 port=%# dbname=game user=game sslmode=disable gssencmode=disable", "_secretEnvironment": "%#" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })",
+                                        port, kSecretEnv );
+            return string( resultBuilder.view() );
         }
 
         static constexpr const utf8* kOnlineJSON = R"({ "_storeName": "main", "_cacheName": "local", "_storeWorkerCount": 1, "_listKit": [ { "_name": "testLogin" } ] })";

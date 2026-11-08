@@ -75,7 +75,9 @@ namespace sw
                     if ( bTaken == false )
                     {
                         pSettings->revertPending();
-                        outReply = formatToString( "settings: '%#' was not taken (result %#) - nothing applied", argument, static_cast<uint32>( result ) );
+                        StringBuilder<constant::buffer::kMax256> replyBuilder;
+                        replyBuilder.appendFormat( "settings: '%#' was not taken (result %#) - nothing applied", argument, static_cast<uint32>( result ) );
+                        outReply = string( replyBuilder.view() );
                         return true;
                     }
                 }
@@ -1126,9 +1128,14 @@ namespace sw
         {
             const string gameName = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
             // 실행마다 새 폴더의 빈 자리다(`reserveUniquePath`) - 프로세스 id 파일을 그대로 쓰면 Windows 가 다시 쓴 id 의 옛 실행 설정을 읽었다.
-            const string automatedFolder =
-                bAutomatedRun ? FileUtil::reserveUniquePath( formatToString( "%#/Automation/UserSettings/%#", ProcessRoots::get()._saved.str(), Process::getCurrentProcessID() ), {}, true ) : string{};
-            setUserFilePath( bAutomatedRun ? FileUtil::joinPath( automatedFolder, UserSettingsFileEntry::kFileName ) : makeDefaultUserFilePath( gameName ) );
+            if ( bAutomatedRun )
+            {
+                StringBuilder<constant::buffer::kMax256> basePath;
+                basePath.appendFormat( "%#/Automation/UserSettings/%#", ProcessRoots::get()._saved.str(), Process::getCurrentProcessID() );
+                setUserFilePath( FileUtil::joinPath( FileUtil::reserveUniquePath( basePath.view(), {}, true ), UserSettingsFileEntry::kFileName ) );
+            }
+            else
+                setUserFilePath( makeDefaultUserFilePath( gameName ) );
         }
         if ( loadUserFile( getUserFilePath() ) == false && bAutomatedRun == false )
             (void)applyAutoDetectedPreset( HardwareDetectionResult::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다

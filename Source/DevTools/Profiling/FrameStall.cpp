@@ -30,7 +30,9 @@ namespace sw
                 const bool bInRange = 1 <= milliseconds && milliseconds <= kMaxStallMilliseconds;
                 if ( bInRange == false )
                 {
-                    outReply = formatToString( "stall must be 1..%# ms", kMaxStallMilliseconds );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "stall must be 1..%# ms", kMaxStallMilliseconds );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
                 DevToolsHost* const pHost = engine::findSubsystem<DevToolsHost>();
@@ -40,7 +42,9 @@ namespace sw
                     return true;
                 }
                 pHost->getFrameStall().request( milliseconds );
-                outReply = formatToString( "next game frame stalls %# ms", milliseconds );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "next game frame stalls %# ms", milliseconds );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

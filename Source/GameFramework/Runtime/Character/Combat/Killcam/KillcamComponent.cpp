@@ -43,7 +43,9 @@ namespace sw
                     ++killcamCount;
                     playedCount += pKillcam->playLastKill() ? 1u : 0u;
                 } );
-                outReply = formatToString( "killcam.play played %# of %# killcam(s)", playedCount, killcamCount );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "killcam.play played %# of %# killcam(s)", playedCount, killcamCount );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

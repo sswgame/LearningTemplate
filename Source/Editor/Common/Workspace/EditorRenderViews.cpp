@@ -176,8 +176,10 @@ namespace sw::editor
         if ( bAlreadyRequested == false )
         {
             // 새 크기는 바꾸는 중인 칸에 요청한다 — 지금 타깃은 새 것이 준비될 때까지 그대로 그린다.
-            TextureCache& textures = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-            view._pendingPath      = formatToString( "%#editor/view%#", TextureCache::kRenderTargetPrefix, _nextTargetSerial++ );
+            TextureCache&                            textures = editor::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+            StringBuilder<constant::buffer::kMax256> pendingPathBuilder;
+            pendingPathBuilder.appendFormat( "%#editor/view%#", TextureCache::kRenderTargetPrefix, _nextTargetSerial++ );
+            view._pendingPath = string( pendingPathBuilder.view() );
             textures.declareRenderTarget( view._pendingPath, width, height );
             view._pendingTexture = textures.request( view._pendingPath, AssetLoadStart::Async );
             view._pendingWidth   = width;

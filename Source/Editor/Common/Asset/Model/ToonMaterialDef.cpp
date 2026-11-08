@@ -475,14 +475,18 @@ namespace sw::editor
                     inoutDesc._alphaMode = ToonAlphaMode::Transparent;
                 else
                 {
-                    outError = formatToString( "%#: unknown _BlendMode %#", context, static_cast<int64>( blendMode ) );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "%#: unknown _BlendMode %#", context, static_cast<int64>( blendMode ) );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 inoutDesc._alphaCutoff = arrFloat[Vrm0Cutoff];
                 const int32 cullMode   = static_cast<int32>( arrFloat[Vrm0CullMode] + 0.5f );
                 if ( cullMode != 0 && cullMode != 2 )
                 {
-                    outError = formatToString( "%#: unsupported _CullMode %# (only Off = 0 and Back = 2)", context, static_cast<int64>( cullMode ) );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "%#: unsupported _CullMode %# (only Off = 0 and Back = 2)", context, static_cast<int64>( cullMode ) );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 inoutDesc._bTwoSided = ( cullMode == 0 ) ? SW_TRUE : SW_FALSE;
@@ -503,7 +507,9 @@ namespace sw::editor
                     inoutDesc._outlineMode = ToonOutlineMode::Screen;
                 else
                 {
-                    outError = formatToString( "%#: unknown _OutlineWidthMode %#", context, static_cast<int64>( outlineMode ) );
+                    StringBuilder<constant::buffer::kMax256> errorBuilder;
+                    errorBuilder.appendFormat( "%#: unknown _OutlineWidthMode %#", context, static_cast<int64>( outlineMode ) );
+                    outError = string( errorBuilder.view() );
                     return false;
                 }
                 inoutDesc._outlineWidth         = outlineWidth * ( inoutDesc._outlineMode == ToonOutlineMode::Screen ? 0.005f : 0.01f );

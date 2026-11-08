@@ -558,16 +558,24 @@ namespace sw
                 const bool bPathField = prop._bAssetPath == SW_TRUE || prop._typeName == "DataPath" || prop._elementTypeName == "DataPath";
                 if ( bPathField == false )
                     continue;
-                const string target = prop._assetType.empty() ? string( "-" ) : prop._assetType;
-                stamp._listAssetField.push_back( formatToString( "%#\t%#", prop._name, target ) );
+                const string                             target = prop._assetType.empty() ? string( "-" ) : prop._assetType;
+                StringBuilder<constant::buffer::kMax256> textBuilder3;
+                textBuilder3.appendFormat( "%#\t%#", prop._name, target );
+                stamp._listAssetField.push_back( string( textBuilder3.view() ) );
                 // 속성으로 읽는 문서(`XMLFields::readFields`)는 C++ 이름이 아니라 속성 이름(`_shaderPath` → `shaderPath`)으로 적는다 — 그 이름도 낸다.
                 // 예전에는 그 이름을 손 표(`AssetReferenceFields.json`)가 따로 적었다.
                 const string attribute = ReflectionPipelineInternal::makeXMLAttributeName( prop._name );
                 if ( attribute != prop._name )
-                    stamp._listAssetField.push_back( formatToString( "%#\t%#", attribute, target ) );
+                {
+                    StringBuilder<constant::buffer::kMax256> textBuilder2;
+                    textBuilder2.appendFormat( "%#\t%#", attribute, target );
+                    stamp._listAssetField.push_back( string( textBuilder2.view() ) );
+                }
                 for ( const string& alias : prop._listAlias )
                 {
-                    stamp._listAssetField.push_back( formatToString( "%#\t%#", alias, target ) );
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "%#\t%#", alias, target );
+                    stamp._listAssetField.push_back( string( textBuilder.view() ) );
                 }
             }
         }
@@ -676,7 +684,9 @@ namespace sw
             }
             for ( const string& typeFqn : stamp._listTypeFqn )
             {
-                listLine.push_back( formatToString( "%#\t%#", typeFqn, _pOptions->_moduleName ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#\t%#", typeFqn, _pOptions->_moduleName );
+                listLine.push_back( string( textBuilder.view() ) );
             }
         }
         if ( bComplete == false )

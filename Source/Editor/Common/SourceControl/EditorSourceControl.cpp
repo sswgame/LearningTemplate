@@ -247,7 +247,9 @@ namespace sw::editor
                 }
                 else
                 {
-                    _lastError = formatToString( "Listing changes failed (exit %#): %#", exitCode, lastLine );
+                    StringBuilder<constant::buffer::kMax256> lastErrorBuilder;
+                    lastErrorBuilder.appendFormat( "Listing changes failed (exit %#): %#", exitCode, lastLine );
+                    _lastError = string( lastErrorBuilder.view() );
                     SW_LOG_WARNING_ID( "SourceControl.StatusFailed", "Source control: %#", _lastError );
                 }
                 ++_changeRevision;
@@ -260,7 +262,11 @@ namespace sw::editor
                 _detailOperation = operation._operation;
                 _listDetailLine  = listLine;
                 if ( exitCode != 0 )
-                    _lastError = formatToString( "%# of %# failed (exit %#): %#", operation._operation == SourceControlOperation::Diff ? "Diff" : "History", operation._repositoryPath, exitCode, lastLine );
+                {
+                    StringBuilder<constant::buffer::kMax256> lastErrorBuilder;
+                    lastErrorBuilder.appendFormat( "%# of %# failed (exit %#): %#", operation._operation == SourceControlOperation::Diff ? "Diff" : "History", operation._repositoryPath, exitCode, lastLine );
+                    _lastError = string( lastErrorBuilder.view() );
+                }
                 ++_changeRevision;
                 return;
             }
@@ -273,7 +279,9 @@ namespace sw::editor
                 }
                 else
                 {
-                    _lastError = formatToString( "Revert of %# failed (exit %#): %#", operation._repositoryPath, exitCode, lastLine );
+                    StringBuilder<constant::buffer::kMax256> lastErrorBuilder;
+                    lastErrorBuilder.appendFormat( "Revert of %# failed (exit %#): %#", operation._repositoryPath, exitCode, lastLine );
+                    _lastError = string( lastErrorBuilder.view() );
                     SW_LOG_WARNING_ID( "SourceControl.RevertFailed", "Source control: %#", _lastError );
                 }
                 (void)requestStatus();

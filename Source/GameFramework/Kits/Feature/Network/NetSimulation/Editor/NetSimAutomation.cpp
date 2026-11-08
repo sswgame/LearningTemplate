@@ -97,13 +97,17 @@ namespace sw::editor
                 NetSimWorld* pWorld = worldIndex == 0 ? &pHarness->getServer() : pHarness->findClient( worldIndex );
                 if ( pWorld == nullptr )
                 {
-                    outValue.setText( formatToString( "no world %#", worldIndex ) );
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "no world %#", worldIndex );
+                    outValue.setText( textBuilder.view() );
                     return false;
                 }
                 const GameObject* pObject = pWorld->getObjectManager().findGameObjectByName( hashed_string( string( query._key ) ) );
                 if ( pObject == nullptr || pObject->getPrimarySceneComponent() == nullptr )
                 {
-                    outValue.setText( formatToString( "world %# has no object '%#'", worldIndex, string( query._key ) ) );
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "world %# has no object '%#'", worldIndex, string( query._key ) );
+                    outValue.setText( textBuilder.view() );
                     return false;
                 }
                 const float3 position = pObject->getPrimarySceneComponent()->getWorldPosition();
@@ -127,7 +131,9 @@ namespace sw::editor
                 float64                    value    = 0.0;
                 if ( pGame == nullptr || pGame->readValue( query._key, value ) == false )
                 {
-                    outValue.setText( formatToString( "world %# has no value '%#'", worldIndex, string( query._key ) ) );
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "world %# has no value '%#'", worldIndex, string( query._key ) );
+                    outValue.setText( textBuilder.view() );
                     return false;
                 }
                 outValue.setNumber( value );
@@ -156,7 +162,9 @@ namespace sw::editor
                     return true;
                 }
                 (void)session.setInputFocus( 1 );
-                outReply = formatToString( "netsim.start: %# with %# client(s)", settings._gameName, clientCount );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "netsim.start: %# with %# client(s)", settings._gameName, clientCount );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 

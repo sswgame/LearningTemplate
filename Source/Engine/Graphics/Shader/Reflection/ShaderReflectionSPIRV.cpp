@@ -343,7 +343,9 @@ namespace sw
                         outSize = columnSize * spirvType._count;
                         if ( spirvType._count == 4 )
                             return "Float4x4";
-                        return formatToString( "Float%#x%#", spirvType._count, spirvType._count );
+                        StringBuilder<constant::buffer::kMax256> resultBuilder;
+                        resultBuilder.appendFormat( "Float%#x%#", spirvType._count, spirvType._count );
+                        return string( resultBuilder.view() );
                     }
                     case SPIRVType::Kind::Array:
                     {

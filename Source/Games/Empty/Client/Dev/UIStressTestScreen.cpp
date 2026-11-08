@@ -47,8 +47,10 @@ namespace sw
                 icon->setBrush( UIBrush::makeSolid( float4{ 0.3f + 0.1f * static_cast<float32>( index % 5 ), 0.6f, 0.9f, 1.0f }, 4.0f ) );
                 setFixedSize( *icon, 24.0f, 24.0f );
                 (void)row->addChild( std::move( icon ) );
-                unique_ptr<TextWidget> text = make_unique<TextWidget>();
-                text->setText( formatToString( "Cell %#", index ) );
+                unique_ptr<TextWidget>                   text = make_unique<TextWidget>();
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "Cell %#", index );
+                text->setText( string( textBuilder.view() ) );
                 setFixedSize( *text, UIStressTestScreen::kCellWidth - 48.0f, 24.0f );
                 outTextID = text->getID();
                 (void)row->addChild( std::move( text ) );
@@ -136,7 +138,11 @@ namespace sw
             const uint32 cell = _churnCursor;
             _churnCursor      = ( _churnCursor + 1 ) % window;
             if ( TextWidget* pText = castTo<TextWidget>( tree.findWidgetByID( _listCellText[cell] ) ); pText != nullptr )
-                pText->setText( formatToString( "Cell %# #%#", cell, _frameIndex ) );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "Cell %# #%#", cell, _frameIndex );
+                pText->setText( string( textBuilder.view() ) );
+            }
         }
     }
 } // namespace sw

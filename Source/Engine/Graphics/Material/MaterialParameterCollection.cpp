@@ -135,7 +135,7 @@ namespace sw
         {
             if ( index > 0 )
                 text += " ";
-            text += formatToString( "%#", arrComponent[index] );
+            text += to_string( arrComponent[index] );
         }
         return text;
     }

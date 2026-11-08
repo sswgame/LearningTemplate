@@ -105,7 +105,9 @@ namespace sw::editor
             const string& name = file._listPreset[presetIndex]._name;
             if ( name.empty() )
             {
-                outReason = formatToString( "preset %# has no name", presetIndex );
+                StringBuilder<constant::buffer::kMax256> reasonBuilder;
+                reasonBuilder.appendFormat( "preset %# has no name", presetIndex );
+                outReason = string( reasonBuilder.view() );
                 return false;
             }
             for ( size_t laterIndex = presetIndex + 1; laterIndex < file._listPreset.size(); ++laterIndex )

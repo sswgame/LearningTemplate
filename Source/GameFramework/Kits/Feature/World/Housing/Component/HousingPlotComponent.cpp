@@ -68,7 +68,9 @@ namespace sw
             /** @brief 결과 한 줄입니다(개발 명령 답). */
             static string describe( const HousingPlotComponent& plot, HousingPlaceResult result )
             {
-                return formatToString( "%# placements %# funds %#", getEnumName( result ), plot.getLayout().getPlacements().size(), plot.getFunds() );
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "%# placements %# funds %#", getEnumName( result ), plot.getLayout().getPlacements().size(), plot.getFunds() );
+                return string( resultBuilder.view() );
             }
 
             /** @brief 배치 id 인자입니다(1 이상). */
@@ -92,9 +94,11 @@ namespace sw
                 HousingPlotComponent* pPlot = findPlot( listArgument[0], outReply );
                 if ( pPlot == nullptr )
                     return true;
-                candidate._partID             = hashed_string( listArgument[1] );
-                const HousingPlaceCheck check = pPlot->previewPlacement( candidate );
-                outReply                      = formatToString( "%# at %#,%# level %# cost %#", getEnumName( check._result ), check._transform._position._x, check._transform._position._y, check._transform._level, check._cost );
+                candidate._partID                              = hashed_string( listArgument[1] );
+                const HousingPlaceCheck                  check = pPlot->previewPlacement( candidate );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "%# at %#,%# level %# cost %#", getEnumName( check._result ), check._transform._position._x, check._transform._position._y, check._transform._level, check._cost );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -107,10 +111,12 @@ namespace sw
                 HousingPlotComponent* pPlot = findPlot( listArgument[0], outReply );
                 if ( pPlot == nullptr )
                     return true;
-                candidate._partID               = hashed_string( listArgument[1] );
-                uint32                   newID  = 0;
-                const HousingPlaceResult result = pPlot->place( candidate, newID );
-                outReply                        = formatToString( "id %# - %#", newID, describe( *pPlot, result ) );
+                candidate._partID                               = hashed_string( listArgument[1] );
+                uint32                                   newID  = 0;
+                const HousingPlaceResult                 result = pPlot->place( candidate, newID );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "id %# - %#", newID, describe( *pPlot, result ) );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -153,7 +159,9 @@ namespace sw
                         placed += result == HousingPlaceResult::Ok ? 1 : 0;
                     }
                 }
-                outReply = formatToString( "filled %# - %#", placed, describe( *pPlot, result ) );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "filled %# - %#", placed, describe( *pPlot, result ) );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -314,11 +322,13 @@ namespace sw
                     return false;
                 }
                 // 정수(cm · 도)로 적는다 — 실수 표기가 바뀌어도 시나리오의 글 비교가 흔들리지 않는다.
-                const HousingTransform& transform = pPlacement->_transform;
-                const int32             xCm       = static_cast<int32>( MathUtil::round( transform._position._x * 100.0f ) );
-                const int32             zCm       = static_cast<int32>( MathUtil::round( transform._position._y * 100.0f ) );
-                const int32             yawDegree = static_cast<int32>( MathUtil::round( transform._yaw * MathUtil::kRadianToDegree ) );
-                outValue.setText( formatToString( "%# %# %# %#", xCm, zCm, transform._level, yawDegree ) );
+                const HousingTransform&                  transform = pPlacement->_transform;
+                const int32                              xCm       = static_cast<int32>( MathUtil::round( transform._position._x * 100.0f ) );
+                const int32                              zCm       = static_cast<int32>( MathUtil::round( transform._position._y * 100.0f ) );
+                const int32                              yawDegree = static_cast<int32>( MathUtil::round( transform._yaw * MathUtil::kRadianToDegree ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%# %# %# %#", xCm, zCm, transform._level, yawDegree );
+                outValue.setText( textBuilder.view() );
                 return true;
             }
         };
@@ -636,9 +646,11 @@ namespace sw
                 }
                 destroySpawned( manager, view._object );
             }
-            const HousingPartDef* pPart   = _pCatalog->findPart( placement._partID );
-            const string          name    = formatToString( "%#_Part%#", getOwner()->getName().c_str(), placement._placementID );
-            GameObject*           pObject = pPart != nullptr ? spawnPrefab( manager, pPart->_prefabPath, name.c_str() ) : nullptr;
+            const HousingPartDef*                    pPart = _pCatalog->findPart( placement._partID );
+            StringBuilder<constant::buffer::kMax256> nameBuilder;
+            nameBuilder.appendFormat( "%#_Part%#", getOwner()->getName().c_str(), placement._placementID );
+            const string name{ nameBuilder.view() };
+            GameObject*  pObject = pPart != nullptr ? spawnPrefab( manager, pPart->_prefabPath, name.c_str() ) : nullptr;
             if ( pObject == nullptr )
             {
                 SW_LOG_ERROR_ID( "HousingPlot.PartPrefabNotSpawned", "Housing plot '%#': placement %# of part '%#' could not spawn its prefab", _settings._plotID.c_str(), placement._placementID,
@@ -665,10 +677,12 @@ namespace sw
         destroySpawned( manager, _ghost );
         if ( _bGhostShown == SW_FALSE )
             return;
-        const bool      bPlaceable = _ghostCheck._result == HousingPlaceResult::Ok;
-        const string    name       = formatToString( "%#_Ghost", getOwner()->getName().c_str() );
-        GameObject*     pGhost     = spawnPrefab( manager, bPlaceable ? _ghostPlaceablePrefab.path() : _ghostBlockedPrefab.path(), name.c_str() );
-        SceneComponent* pRoot      = pGhost != nullptr ? pGhost->getPrimarySceneComponent() : nullptr;
+        const bool                               bPlaceable = _ghostCheck._result == HousingPlaceResult::Ok;
+        StringBuilder<constant::buffer::kMax256> nameBuilder;
+        nameBuilder.appendFormat( "%#_Ghost", getOwner()->getName().c_str() );
+        const string    name{ nameBuilder.view() };
+        GameObject*     pGhost = spawnPrefab( manager, bPlaceable ? _ghostPlaceablePrefab.path() : _ghostBlockedPrefab.path(), name.c_str() );
+        SceneComponent* pRoot  = pGhost != nullptr ? pGhost->getPrimarySceneComponent() : nullptr;
         if ( pRoot == nullptr )
         {
             SW_LOG_ERROR_ID( "HousingPlot.GhostPrefabNotSpawned", "Housing plot '%#': the ghost prefab could not spawn or has no scene component", _settings._plotID.c_str() );
@@ -700,7 +714,9 @@ namespace sw
         const shared_ptr<const HousingPartCatalog> pCatalog = _partCatalog.acquire();
         if ( pCatalog == nullptr )
         {
-            context.addError( formatToString( "part catalog '%#' cannot be loaded", _partCatalog.path() ) );
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "part catalog '%#' cannot be loaded", _partCatalog.path() );
+            context.addError( textBuilder.view() );
             return;
         }
         // 스냅 지점 · 판: 카탈로그 읽기와 같은 검사다(읽기를 지난 카탈로그는 비어 있다 — 핫 리로드 전 편집 사본을 보는 길이 같다).
@@ -711,7 +727,11 @@ namespace sw
             const bool bFits        = part._sizeX <= _settings._sizeX && part._sizeZ <= _settings._sizeZ;
             const bool bFitsRotated = part._sizeZ <= _settings._sizeX && part._sizeX <= _settings._sizeZ;
             if ( bFits == false && bFitsRotated == false )
-                listProblem.push_back( formatToString( "part '%#' (%#x%#) never fits this %#x%# plot", part._id.c_str(), part._sizeX, part._sizeZ, _settings._sizeX, _settings._sizeZ ) );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "part '%#' (%#x%#) never fits this %#x%# plot", part._id.c_str(), part._sizeX, part._sizeZ, _settings._sizeX, _settings._sizeZ );
+                listProblem.push_back( string( textBuilder.view() ) );
+            }
         }
         for ( const string& problem : listProblem )
             context.addError( problem );
@@ -735,14 +755,22 @@ namespace sw
             if ( pOther == this || pOtherOwner == nullptr || pOtherOwner->getPrimarySceneComponent() == nullptr )
                 return; // 루트가 없는 부지는 제 검증이 알린다
             if ( pOther->_settings._plotID == _settings._plotID )
-                context.addError( formatToString( "plot id '%#' is also used by another plot in this scene", _settings._plotID.c_str() ) );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder2;
+                textBuilder2.appendFormat( "plot id '%#' is also used by another plot in this scene", _settings._plotID.c_str() );
+                context.addError( textBuilder2.view() );
+            }
             const float3 otherOrigin = pOther->getPlotOrigin();
             const bool   bSeparateX  = origin._x + static_cast<float32>( _settings._sizeX ) * cellSize <= otherOrigin._x + Internal::kTouchEpsilon ||
                                     otherOrigin._x + static_cast<float32>( pOther->_settings._sizeX ) * cellSize <= origin._x + Internal::kTouchEpsilon;
             const bool bSeparateZ = origin._z + static_cast<float32>( _settings._sizeZ ) * cellSize <= otherOrigin._z + Internal::kTouchEpsilon ||
                                     otherOrigin._z + static_cast<float32>( pOther->_settings._sizeZ ) * cellSize <= origin._z + Internal::kTouchEpsilon;
             if ( bSeparateX == false && bSeparateZ == false )
-                context.addError( formatToString( "plot '%#' overlaps plot '%#'", _settings._plotID.c_str(), pOther->_settings._plotID.c_str() ) );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "plot '%#' overlaps plot '%#'", _settings._plotID.c_str(), pOther->_settings._plotID.c_str() );
+                context.addError( textBuilder.view() );
+            }
         } );
     }
 } // namespace sw

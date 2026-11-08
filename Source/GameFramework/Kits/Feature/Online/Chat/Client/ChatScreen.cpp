@@ -97,11 +97,15 @@ namespace sw
             }
             case ChatResult::Muted:
             {
-                return formatToString( "You are muted (%# s left)", retryAfterMs / 1000 );
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "You are muted (%# s left)", retryAfterMs / 1000 );
+                return string( resultBuilder.view() );
             }
             case ChatResult::RateLimited:
             {
-                return formatToString( "Too fast, wait %# ms", retryAfterMs );
+                StringBuilder<constant::buffer::kMax256> resultBuilder;
+                resultBuilder.appendFormat( "Too fast, wait %# ms", retryAfterMs );
+                return string( resultBuilder.view() );
             }
             case ChatResult::Repeated:
             {

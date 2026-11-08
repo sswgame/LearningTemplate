@@ -8,7 +8,8 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/StringBuilder.h"
+#include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -20,9 +21,11 @@ namespace sw
         /** @brief @p accountID 의 토큰(`xxxxxxxx-xxxx-4000-8000-00000000xxxx`, 소문자 16 진)입니다. 계정 id 의 16 자리가 모두 들어가 계정마다 다릅니다. */
         static string make( uint64 accountID )
         {
-            const string      hex  = ServiceKeyUtil::makeHex64( accountID );
-            const string_view text = hex;
-            return formatToString( "%#-%#-4000-8000-00000000%#", text.substr( 0, 8 ), text.substr( 8, 4 ), text.substr( 12, 4 ) );
+            const string                           hex  = ServiceKeyUtil::makeHex64( accountID );
+            const string_view                      text = hex;
+            fixed_string<constant::buffer::kMax64> token; // 36 자 고정
+            formatstring( token.data(), token.capacity(), "%#-%#-4000-8000-00000000%#", text.substr( 0, 8 ), text.substr( 8, 4 ), text.substr( 12, 4 ) );
+            return string( token.view() );
         }
     };
 } // namespace sw

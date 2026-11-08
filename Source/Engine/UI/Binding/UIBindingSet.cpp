@@ -210,9 +210,11 @@ namespace sw
             string error;
             if ( bindOne( desc, context, error ) )
                 continue;
-            const string& documentPath = _pScreen->getDocumentPath();
-            string        message      = documentPath.empty() ? string( "(code)" ) : documentPath;
-            message += formatToString( ":%#: binding '%#' on %#: %#", desc._sourceLine, desc._expression, desc._propertyPath, error );
+            const string&                            documentPath = _pScreen->getDocumentPath();
+            string                                   message      = documentPath.empty() ? string( "(code)" ) : documentPath;
+            StringBuilder<constant::buffer::kMax256> messagePart;
+            messagePart.appendFormat( ":%#: binding '%#' on %#: %#", desc._sourceLine, desc._expression, desc._propertyPath, error );
+            message += messagePart.c_str();
             SW_LOG_ERROR_ID( "UIBindingSet.BindingInvalid", "[UI] %#", message.c_str() );
             _listError.push_back( std::move( message ) );
         }

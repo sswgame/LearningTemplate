@@ -318,7 +318,12 @@ namespace sw
                 return true;
             }
 
-            string makeLocation( uint32 line ) const { return formatToString( "%#:%#", string( _originName ), line ); }
+            string makeLocation( uint32 line ) const
+            {
+                StringBuilder<constant::buffer::kMax256> location;
+                location.appendFormat( "%#:%#", string( _originName ), line );
+                return string( location.view() );
+            }
 
             void readMacroCall( string_view macroName )
             {

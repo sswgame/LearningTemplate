@@ -105,7 +105,9 @@ namespace sw::editor
     {
         if ( node.name != nullptr && node.name[0] != '\0' )
             return string( node.name );
-        return formatToString( "node%#", static_cast<uint64>( &node - data.nodes ) );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "node%#", static_cast<uint64>( &node - data.nodes ) );
+        return string( resultBuilder.view() );
     }
 
     string ModelImportUtil::makeFileStem( string_view name )
@@ -137,7 +139,9 @@ namespace sw::editor
         const bool bHasMorphTargetName = pMesh != nullptr && targetIndex < pMesh->target_names_count && pMesh->target_names[targetIndex] != nullptr;
         if ( bHasMorphTargetName )
             return hashed_string( pMesh->target_names[targetIndex] );
-        return hashed_string( formatToString( "target%#", static_cast<uint64>( targetIndex ) ) );
+        StringBuilder<constant::buffer::kMax256> textBuilder;
+        textBuilder.appendFormat( "target%#", static_cast<uint64>( targetIndex ) );
+        return hashed_string( string( textBuilder.view() ) );
     }
 
     string ModelImportUtil::formatMaterialNumber( float32 value )

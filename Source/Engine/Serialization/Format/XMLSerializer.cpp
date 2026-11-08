@@ -1016,7 +1016,9 @@ namespace sw
             size_t elementIndex{ 0 };
             for ( XMLNode item = child.findChild(); item.isValid(); item = item.findNextSibling(), ++elementIndex )
             {
-                collectMissingRequired( item, *pNested, outListPath, formatToString( "%#[%#]", path, static_cast<uint64>( elementIndex ) ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#[%#]", path, static_cast<uint64>( elementIndex ) );
+                collectMissingRequired( item, *pNested, outListPath, string( textBuilder.view() ) );
             }
         }
     }

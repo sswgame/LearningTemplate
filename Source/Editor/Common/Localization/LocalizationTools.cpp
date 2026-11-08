@@ -104,7 +104,11 @@ namespace sw
                     inoutReport._listIssue.push_back( { location, "translation rich text tags differ from the source tags", false } );
                 const uint32 length = countCharacters( translation._text );
                 if ( source._maxLength != 0 && length > source._maxLength )
-                    inoutReport._listIssue.push_back( { location, formatToString( "translation is %# characters, over maxLength %#", length, source._maxLength ), false } );
+                {
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "translation is %# characters, over maxLength %#", length, source._maxLength );
+                    inoutReport._listIssue.push_back( { location, string( textBuilder.view() ), false } );
+                }
             }
 
             /** @brief 번역 메모리 경로(`<프로젝트 폴더>/tm/<culture>.tm.xml`)입니다. */
@@ -284,7 +288,11 @@ namespace sw
                     if ( pSource->_comment.empty() == false )
                         entry._listExtractedComment.push_back( pSource->_comment );
                     if ( pSource->_maxLength != 0 )
-                        entry._listExtractedComment.push_back( formatToString( "Max length: %#", pSource->_maxLength ) );
+                    {
+                        StringBuilder<constant::buffer::kMax256> textBuilder;
+                        textBuilder.appendFormat( "Max length: %#", pSource->_maxLength );
+                        entry._listExtractedComment.push_back( string( textBuilder.view() ) );
+                    }
                     for ( const string& origin : pSource->_listOrigin )
                     {
                         entry._listReference.push_back( origin );

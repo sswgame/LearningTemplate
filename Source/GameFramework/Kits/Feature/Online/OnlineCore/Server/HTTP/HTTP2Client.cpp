@@ -117,7 +117,9 @@ namespace sw
             failImmediately( requestID, "no TLS context for this host" );
             return requestID;
         }
-        const string key      = formatToString( "%#:%#", url._host, static_cast<int32>( url._port ) );
+        StringBuilder<constant::buffer::kMax256> keyBuilder;
+        keyBuilder.appendFormat( "%#:%#", url._host, static_cast<int32>( url._port ) );
+        const string key{ keyBuilder.view() };
         Session*     pSession = nullptr;
         const auto   keyIt    = _mapKeyToSession.find( key );
         if ( keyIt != _mapKeyToSession.end() )

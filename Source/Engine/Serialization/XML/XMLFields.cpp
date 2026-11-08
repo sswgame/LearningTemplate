@@ -124,7 +124,9 @@ namespace sw
             }
             if ( pFound == nullptr )
             {
-                report( "XMLFields.UnknownField", formatToString( "%#: <%# %#=...> is not a field of %#", sourceName, pElement, attributeName, typeInfo._name.c_str() ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#: <%# %#=...> is not a field of %#", sourceName, pElement, attributeName, typeInfo._name.c_str() );
+                report( "XMLFields.UnknownField", string( textBuilder.view() ) );
                 bOk = false;
                 continue;
             }
@@ -135,14 +137,18 @@ namespace sw
             {
                 if ( Internal::readTextList( *pFound, *pList, pInstance, pValue, context ) == false )
                 {
-                    report( "XMLFields.ValueUnreadable", formatToString( "%#: <%# %#=\"%#\"> cannot be read as %#", sourceName, pElement, attributeName, pValue, pFound->_typeName.c_str() ) );
+                    StringBuilder<constant::buffer::kMax256> textBuilder;
+                    textBuilder.appendFormat( "%#: <%# %#=\"%#\"> cannot be read as %#", sourceName, pElement, attributeName, pValue, pFound->_typeName.c_str() );
+                    report( "XMLFields.ValueUnreadable", string( textBuilder.view() ) );
                     bOk = false;
                 }
                 continue;
             }
             if ( SerializerUtil::applyPropertyText( *pFound, MutableObjectAddress{ pInstance }, pValue, context ) == false )
             {
-                report( "XMLFields.ValueUnreadable", formatToString( "%#: <%# %#=\"%#\"> cannot be read as %#", sourceName, pElement, attributeName, pValue, pFound->_typeName.c_str() ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#: <%# %#=\"%#\"> cannot be read as %#", sourceName, pElement, attributeName, pValue, pFound->_typeName.c_str() );
+                report( "XMLFields.ValueUnreadable", string( textBuilder.view() ) );
                 bOk = false;
             }
         }
@@ -155,7 +161,9 @@ namespace sw
             const string& attributeName = listAttributeName[propIndex];
             if ( node.findAttribute( attributeName.c_str() ) == nullptr )
             {
-                report( "XMLFields.RequiredFieldMissing", formatToString( "%#: <%#> needs %#=\"...\" (%#)", sourceName, pElement, attributeName.c_str(), typeInfo._name.c_str() ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#: <%#> needs %#=\"...\" (%#)", sourceName, pElement, attributeName.c_str(), typeInfo._name.c_str() );
+                report( "XMLFields.RequiredFieldMissing", string( textBuilder.view() ) );
                 bOk = false;
             }
         }
@@ -173,7 +181,9 @@ namespace sw
             // 받는 곳이 없으면 바이너리 · JSON 의 읽기 공통 끝과 같은 id 로도 남긴다.
             if ( sink._pfnAdd == nullptr )
                 SW_LOG_ERROR_ID( "Serialization.ValueOutOfRange", "%#: %# - the read fails", typeInfo._fullyQualifiedName.c_str(), rangeError.c_str() );
-            report( "XMLFields.ValueOutOfRange", formatToString( "%#: <%#> %#", sourceName, pElement, rangeError.c_str() ) );
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%#: <%#> %#", sourceName, pElement, rangeError.c_str() );
+            report( "XMLFields.ValueOutOfRange", string( textBuilder.view() ) );
             bOk = false;
         }
         return bOk;

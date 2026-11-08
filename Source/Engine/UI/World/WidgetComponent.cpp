@@ -177,7 +177,9 @@ namespace sw
 
     string WidgetComponent::getRenderTargetPath() const
     {
-        return formatToString( "rendertarget/widget_%#", getComponentID() );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "rendertarget/widget_%#", getComponentID() );
+        return string( resultBuilder.view() );
     }
 
     void WidgetComponent::attachMarker()

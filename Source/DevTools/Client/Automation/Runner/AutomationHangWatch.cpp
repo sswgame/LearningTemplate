@@ -72,11 +72,15 @@ namespace sw
                 const bool bInRange = 1 <= seconds && seconds <= kMaxHangSeconds;
                 if ( bInRange == false )
                 {
-                    outReply = formatToString( "hang must be 1..%# s", kMaxHangSeconds );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "hang must be 1..%# s", kMaxHangSeconds );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
                 MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( seconds ) * constant::time::kNanosecondsPerSecond );
-                outReply = formatToString( "the game thread was held for %# s", seconds );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "the game thread was held for %# s", seconds );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
         };

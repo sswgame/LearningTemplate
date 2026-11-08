@@ -263,12 +263,16 @@ namespace sw::editor
             return false;
         }
         // 개수로 이름을 지으면 앞 구간을 지운 뒤 남은 이름과 겹쳤다 - 겹친 이름은 `play( name )` 이 찾지 못한다.
-        size_t suffix = _clip._listAnimation.size();
-        string name   = formatToString( "anim%#", suffix );
+        size_t                                   suffix = _clip._listAnimation.size();
+        StringBuilder<constant::buffer::kMax256> nameBuilder2;
+        nameBuilder2.appendFormat( "anim%#", suffix );
+        string name{ nameBuilder2.view() };
         while ( _clip.findAnimation( name ) != nullptr )
         {
             ++suffix;
-            name = formatToString( "anim%#", suffix );
+            StringBuilder<constant::buffer::kMax256> nameBuilder;
+            nameBuilder.appendFormat( "anim%#", suffix );
+            name = string( nameBuilder.view() );
         }
         SpriteClipAnimation animation{};
         animation._name       = std::move( name );

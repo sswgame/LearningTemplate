@@ -113,7 +113,9 @@ namespace sw::editor
                 {
                     sentCount += pSession->sendProcessCommand( processIndex, command ) ? 1 : 0;
                 }
-                outReply = formatToString( "sent to %# process(es): %#", sentCount, command );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "sent to %# process(es): %#", sentCount, command );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -146,10 +148,12 @@ namespace sw::editor
             /** @brief `netplay stats from <답한 수> of <물은 수> process(es): ...` 답 줄입니다. 시나리오가 이 앞머리를 로그에서 찾습니다. */
             static string makeStatsReply( const EditorNetPlaySession& session, int32 answeredCount, int32 askedCount )
             {
-                const NetEmulationReport total = sumReports( session );
+                const NetEmulationReport                 total = sumReports( session );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#%%", static_cast<int32>( total._measuredLossPercent ) );
                 return "netplay stats from " + to_string( answeredCount ) + " of " + to_string( askedCount ) + " process(es): resent " +
                        to_string( total._resentMessageCount ) + ", dropped " + to_string( total._droppedPacketCount ) + ", measured loss " +
-                       formatToString( "%#%%", static_cast<int32>( total._measuredLossPercent ) );
+                       string( textBuilder.view() );
             }
 
             /**
@@ -208,9 +212,17 @@ namespace sw::editor
                 }
                 outReply = makeStatsReply( *pSession, answeredCount, askedCount );
                 if ( bReached )
-                    outReply += formatToString( " (resent reached %#)", wantedCount );
+                {
+                    StringBuilder<constant::buffer::kMax256> replyPart2;
+                    replyPart2.appendFormat( " (resent reached %#)", wantedCount );
+                    outReply += replyPart2.c_str();
+                }
                 else
-                    outReply += formatToString( " (resent stayed below %# for %# s)", wantedCount, seconds );
+                {
+                    StringBuilder<constant::buffer::kMax256> replyPart;
+                    replyPart.appendFormat( " (resent stayed below %# for %# s)", wantedCount, seconds );
+                    outReply += replyPart.c_str();
+                }
                 return true;
             }
         };

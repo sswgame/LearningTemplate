@@ -68,8 +68,10 @@ namespace sw
                 ValeWorldComponent* const pVale = findVale( outReply );
                 if ( pVale == nullptr )
                     return true;
-                const uint32 sequence = pVale->getClient().callServerFunction( pFunctionName, { ReflectedValue::make( targetID ) } );
-                outReply              = formatToString( "vale: %# %# sent (call %#)", pFunctionName, targetID, sequence );
+                const uint32                             sequence = pVale->getClient().callServerFunction( pFunctionName, { ReflectedValue::make( targetID ) } );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "vale: %# %# sent (call %#)", pFunctionName, targetID, sequence );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -87,8 +89,10 @@ namespace sw
                 ValeWorldComponent* const pVale = findVale( outReply );
                 if ( pVale == nullptr )
                     return true;
-                const uint32 sequence = pVale->getClient().callServerFunction( "moveTo", { ReflectedValue::make( x ), ReflectedValue::make( z ) } );
-                outReply              = formatToString( "vale: moveTo %# %# sent (call %#)", x, z, sequence );
+                const uint32                             sequence = pVale->getClient().callServerFunction( "moveTo", { ReflectedValue::make( x ), ReflectedValue::make( z ) } );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "vale: moveTo %# %# sent (call %#)", x, z, sequence );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -99,7 +103,9 @@ namespace sw
                 ValeWorldComponent* const pVale = findVale( outReply );
                 if ( pVale == nullptr )
                     return true;
-                outReply = formatToString( "vale: leaveParty sent (call %#)", pVale->getClient().callServerFunction( "leaveParty", {} ) );
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "vale: leaveParty sent (call %#)", pVale->getClient().callServerFunction( "leaveParty", {} ) );
+                outReply = string( replyBuilder.view() );
                 return true;
             }
 
@@ -110,9 +116,11 @@ namespace sw
                 const ValeWorldComponent* const pVale = findVale( outReply );
                 if ( pVale == nullptr )
                     return true;
-                const ValeAvatarAgent& agent = pVale->getClient().getAgent();
-                outReply                     = formatToString( "vale: avatar %# level %# experience %# coins %# herbs %# defeats %# party %# visible %#", agent._avatarID, agent._shownLevel, agent._shownExperience,
-                                                               agent._shownCoins, agent._shownHerbCount, agent._shownDefeatCount, agent._shownPartySize, pVale->getClient().getView().getEntityCount() );
+                const ValeAvatarAgent&                   agent = pVale->getClient().getAgent();
+                StringBuilder<constant::buffer::kMax256> replyBuilder;
+                replyBuilder.appendFormat( "vale: avatar %# level %# experience %# coins %# herbs %# defeats %# party %# visible %#", agent._avatarID, agent._shownLevel, agent._shownExperience,
+                                           agent._shownCoins, agent._shownHerbCount, agent._shownDefeatCount, agent._shownPartySize, pVale->getClient().getView().getEntityCount() );
+                outReply = string( replyBuilder.view() );
                 SW_LOG_INFO_ID( "LanternVale.Status", "[LanternVale] %#", outReply.c_str() );
                 return true;
             }

@@ -113,7 +113,9 @@ namespace sw
                     const bool bInRange = 1 <= waitMilliseconds && static_cast<uint32>( waitMilliseconds ) <= RHIBackendSwitcher::kMaxDeviceLossDriverWaitMilliseconds;
                     if ( bInRange == false )
                     {
-                        outReply = formatToString( "driver wait must be 1..%# ms", RHIBackendSwitcher::kMaxDeviceLossDriverWaitMilliseconds );
+                        StringBuilder<constant::buffer::kMax256> replyBuilder;
+                        replyBuilder.appendFormat( "driver wait must be 1..%# ms", RHIBackendSwitcher::kMaxDeviceLossDriverWaitMilliseconds );
+                        outReply = string( replyBuilder.view() );
                         return false;
                     }
                     if ( pSwitcher == nullptr )
@@ -122,7 +124,9 @@ namespace sw
                         return false;
                     }
                     pSwitcher->removeDeviceAfterDriverWaitForTest( static_cast<uint32>( waitMilliseconds ) );
-                    outReply = formatToString( "next render frame waits %# ms where the fence wait is, then removes the device", waitMilliseconds );
+                    StringBuilder<constant::buffer::kMax256> replyBuilder;
+                    replyBuilder.appendFormat( "next render frame waits %# ms where the fence wait is, then removes the device", waitMilliseconds );
+                    outReply = string( replyBuilder.view() );
                     return true;
                 }
                 if ( pSwitcher == nullptr || pSwitcher->removeDeviceForTest() == false )
