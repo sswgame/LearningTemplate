@@ -1,0 +1,435 @@
+<Scene formatVersion="2" name="MaterialLibrary">
+	<!-- 시나리오 automation/materiallibrary 의 첫 무대 — 외형 라이브러리 불투명 프리셋을 9 열로 세운다(왼쪽 위부터 아래 목록 차례). 털 둘은 껍질 8 장씩이다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,3,-8.2" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.8" _nearZ="0.1" _farZ="80" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.7,2.5,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.97,0.92" _intensity="1.2" _ambient="0.25" _shadowExtent="8" _shadowDistance="30" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="BackLight">
+			<GameObject _schemaVersion="0" _name="BackLight" _bActive="true">
+				<_listComponent>
+					<PointLightComponent _localPosition="0,3,4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.9,0.8" _intensity="3" _radius="14" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="14,1,10" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="game/empty/materials/toonshowcase_ground.material" _boundsRadius="9.00" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="skin_light">
+			<GameObject _schemaVersion="0" _name="skin_light" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-4.80,5.40,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/skin/skin_light.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="skin_medium">
+			<GameObject _schemaVersion="0" _name="skin_medium" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-3.60,5.40,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/skin/skin_medium.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="skin_deep">
+			<GameObject _schemaVersion="0" _name="skin_deep" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-2.40,5.40,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/skin/skin_deep.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="skin_oily">
+			<GameObject _schemaVersion="0" _name="skin_oily" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-1.20,5.40,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/skin/skin_oily.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="lips_gloss">
+			<GameObject _schemaVersion="0" _name="lips_gloss" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0.00,5.40,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/skin/lips_gloss.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="skin_wet">
+			<GameObject _schemaVersion="0" _name="skin_wet" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.20,5.40,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/skin/skin_wet.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="oily_glaze">
+			<GameObject _schemaVersion="0" _name="oily_glaze" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.40,5.40,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/coated/oily_glaze.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="wet_surface">
+			<GameObject _schemaVersion="0" _name="wet_surface" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="3.60,5.40,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/coated/wet_surface.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="dried_tear_trail">
+			<GameObject _schemaVersion="0" _name="dried_tear_trail" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="4.80,5.40,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/coated/dried_tear_trail.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="cotton">
+			<GameObject _schemaVersion="0" _name="cotton" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-4.80,4.20,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/cloth/cotton.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="wool">
+			<GameObject _schemaVersion="0" _name="wool" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-3.60,4.20,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/cloth/wool.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="velvet">
+			<GameObject _schemaVersion="0" _name="velvet" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-2.40,4.20,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/cloth/velvet.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="17" name="denim">
+			<GameObject _schemaVersion="0" _name="denim" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-1.20,4.20,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/cloth/denim.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="18" name="silk">
+			<GameObject _schemaVersion="0" _name="silk" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0.00,4.20,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/silk/silk.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="19" name="satin">
+			<GameObject _schemaVersion="0" _name="satin" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.20,4.20,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/silk/satin.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="20" name="leather_rough">
+			<GameObject _schemaVersion="0" _name="leather_rough" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.40,4.20,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/leather/leather_rough.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="21" name="leather_polished">
+			<GameObject _schemaVersion="0" _name="leather_polished" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="3.60,4.20,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/leather/leather_polished.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="22" name="leaf">
+			<GameObject _schemaVersion="0" _name="leaf" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="4.80,4.20,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/thin/leaf.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="23" name="fishnet_over_skin">
+			<GameObject _schemaVersion="0" _name="fishnet_over_skin" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-4.80,3.00,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/stocking/fishnet_over_skin.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="24" name="lace_over_skin">
+			<GameObject _schemaVersion="0" _name="lace_over_skin" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-3.60,3.00,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/stocking/lace_over_skin.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="25" name="lace_white">
+			<GameObject _schemaVersion="0" _name="lace_white" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-2.40,3.00,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/lace/lace_white.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="26" name="fishnet_black">
+			<GameObject _schemaVersion="0" _name="fishnet_black" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-1.20,3.00,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/lace/fishnet_black.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="27" name="paper">
+			<GameObject _schemaVersion="0" _name="paper" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0.00,3.00,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/thin/paper.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="28" name="mother_of_pearl">
+			<GameObject _schemaVersion="0" _name="mother_of_pearl" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.20,3.00,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/nacre/mother_of_pearl.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="29" name="pearl">
+			<GameObject _schemaVersion="0" _name="pearl" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.40,3.00,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/nacre/pearl.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="30" name="reptile_scales">
+			<GameObject _schemaVersion="0" _name="reptile_scales" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="3.60,3.00,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/scales/reptile_scales.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="31" name="fish_scales">
+			<GameObject _schemaVersion="0" _name="fish_scales" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="4.80,3.00,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/scales/fish_scales.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="32" name="steel">
+			<GameObject _schemaVersion="0" _name="steel" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-4.80,1.80,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/metal/steel.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="33" name="iron">
+			<GameObject _schemaVersion="0" _name="iron" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-3.60,1.80,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/metal/iron.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="34" name="gold">
+			<GameObject _schemaVersion="0" _name="gold" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-2.40,1.80,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/metal/gold.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="35" name="bronze">
+			<GameObject _schemaVersion="0" _name="bronze" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-1.20,1.80,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/metal/bronze.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="36" name="mirror">
+			<GameObject _schemaVersion="0" _name="mirror" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0.00,1.80,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/metal/mirror.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="37" name="blade_steel">
+			<GameObject _schemaVersion="0" _name="blade_steel" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.20,1.80,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/brushedmetal/blade_steel.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="38" name="rusty_scrap">
+			<GameObject _schemaVersion="0" _name="rusty_scrap" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.40,1.80,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/rustmetal/rusty_scrap.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="39" name="rust_heavy">
+			<GameObject _schemaVersion="0" _name="rust_heavy" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="3.60,1.80,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/rustmetal/rust_heavy.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="40" name="wood_raw">
+			<GameObject _schemaVersion="0" _name="wood_raw" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="4.80,1.80,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/wood/wood_raw.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="41" name="wood_painted">
+			<GameObject _schemaVersion="0" _name="wood_painted" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-4.80,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/wood/wood_painted.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="42" name="wood_varnished">
+			<GameObject _schemaVersion="0" _name="wood_varnished" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-3.60,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/wood/wood_varnished.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="43" name="granite">
+			<GameObject _schemaVersion="0" _name="granite" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-2.40,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/stone/granite.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="44" name="marble_polished">
+			<GameObject _schemaVersion="0" _name="marble_polished" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-1.20,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/stone/marble_polished.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="45" name="stone_wet">
+			<GameObject _schemaVersion="0" _name="stone_wet" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0.00,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/stone/stone_wet.material" _boundsRadius="0.90" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="46" name="fur_short_shell0">
+			<GameObject _schemaVersion="0" _name="fur_short_shell0" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.20,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_short.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.0000,0.0000,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="47" name="fur_short_shell1">
+			<GameObject _schemaVersion="0" _name="fur_short_shell1" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.20,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_short.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.1429,0.0057,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="48" name="fur_short_shell2">
+			<GameObject _schemaVersion="0" _name="fur_short_shell2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.20,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_short.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.2857,0.0114,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="49" name="fur_short_shell3">
+			<GameObject _schemaVersion="0" _name="fur_short_shell3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.20,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_short.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.4286,0.0171,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="50" name="fur_short_shell4">
+			<GameObject _schemaVersion="0" _name="fur_short_shell4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.20,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_short.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.5714,0.0229,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="51" name="fur_short_shell5">
+			<GameObject _schemaVersion="0" _name="fur_short_shell5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.20,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_short.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.7143,0.0286,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="52" name="fur_short_shell6">
+			<GameObject _schemaVersion="0" _name="fur_short_shell6" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.20,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_short.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.8571,0.0343,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="53" name="fur_short_shell7">
+			<GameObject _schemaVersion="0" _name="fur_short_shell7" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.20,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_short.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,1.0000,0.0400,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="54" name="fur_long_shell0">
+			<GameObject _schemaVersion="0" _name="fur_long_shell0" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.40,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_long.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.0000,0.0000,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="55" name="fur_long_shell1">
+			<GameObject _schemaVersion="0" _name="fur_long_shell1" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.40,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_long.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.1429,0.0129,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="56" name="fur_long_shell2">
+			<GameObject _schemaVersion="0" _name="fur_long_shell2" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.40,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_long.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.2857,0.0257,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="57" name="fur_long_shell3">
+			<GameObject _schemaVersion="0" _name="fur_long_shell3" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.40,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_long.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.4286,0.0386,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="58" name="fur_long_shell4">
+			<GameObject _schemaVersion="0" _name="fur_long_shell4" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.40,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_long.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.5714,0.0514,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="59" name="fur_long_shell5">
+			<GameObject _schemaVersion="0" _name="fur_long_shell5" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.40,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_long.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.7143,0.0643,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="60" name="fur_long_shell6">
+			<GameObject _schemaVersion="0" _name="fur_long_shell6" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.40,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_long.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,0.8571,0.0771,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="61" name="fur_long_shell7">
+			<GameObject _schemaVersion="0" _name="fur_long_shell7" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.40,0.60,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/fur/fur_long.material" _boundsRadius="0.90" _blendMode="Opaque" _customData0="0,1.0000,0.0900,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
