@@ -35,42 +35,16 @@ namespace sw
             /** @brief 콘솔 제어 처리기 — OS 가 새 스레드에서 부른다. TRUE 를 돌려주면 다음 처리기(기본 = 즉시 종료)로 넘기지 않는다. */
             static BOOL WINAPI onConsoleControl( DWORD controlType )
             {
-                switch ( controlType )
-                {
-                    case CTRL_C_EVENT:
-                    case CTRL_BREAK_EVENT:
-                    {
-                        // 두 번째 Ctrl+C 는 기본 처리기(즉시 종료)로 넘긴다 — 멈춘 종료를 사람이 끊는 경로(POSIX 의 _exit(130) 에 해당).
-                        if ( s_interruptCount.fetch_add( 1, std::memory_order_relaxed ) >= 1 )
-                            return FALSE;
-                        ShutdownSignal::request( ShutdownCause::Interrupt );
-                        return TRUE;
-                    }
-                    case CTRL_CLOSE_EVENT:
-                    {
-                        ShutdownSignal::request( ShutdownCause::ConsoleClose );
-                        waitForShutdownComplete();
-                        return TRUE;
-                    }
-                    case CTRL_LOGOFF_EVENT:
-                    {
-                        if ( s_serviceMode.load( std::memory_order_relaxed ) != 0 )
-                            return FALSE; // 서비스는 사용자가 로그오프해도 돈다
-                        ShutdownSignal::request( ShutdownCause::SystemShutdown );
-                        waitForShutdownComplete();
-                        return TRUE;
-                    }
-                    case CTRL_SHUTDOWN_EVENT:
-                    {
-                        ShutdownSignal::request( ShutdownCause::SystemShutdown );
-                        waitForShutdownComplete();
-                        return TRUE;
-                    }
-                    default:
-                    {
-                        return FALSE;
-                    }
-                }
+                const bool                 bInterrupt = controlType == CTRL_C_EVENT || controlType == CTRL_BREAK_EVENT;
+                const uint32               earlier    = bInterrupt ? s_interruptCount.fetch_add( 1, std::memory_order_relaxed ) : 0u;
+                const ShutdownSignalAction action =
+                    ShutdownSignal::decideConsoleControl( static_cast<uint32>( controlType ), earlier, s_serviceMode.load( std::memory_order_relaxed ) != 0 );
+                if ( action._bPassToDefault || action._cause == ShutdownCause::None )
+                    return FALSE;
+                ShutdownSignal::request( action._cause );
+                if ( action._bWaitForCompletion )
+                    waitForShutdownComplete();
+                return TRUE;
             }
         };
     } // namespace
@@ -105,18 +79,36 @@ namespace sw
         WindowsShutdownSignalInternal::s_serviceMode.store( bServiceMode ? 1u : 0u, std::memory_order_relaxed );
     }
 
-    void ShutdownSignal::resetForTest()
+    ShutdownSignalAction ShutdownSignal::decideConsoleControl( uint32 controlType, uint32 earlierInterruptCount, bool bServiceMode )
     {
-        _s_requestedCause.store( static_cast<uint8>( ShutdownCause::None ), std::memory_order_release );
-        WindowsShutdownSignalInternal::s_interruptCount.store( 0, std::memory_order_relaxed );
-        const HANDLE hComplete = WindowsShutdownSignalInternal::completeEvent();
-        if ( hComplete != nullptr )
-            (void)ResetEvent( hComplete );
-    }
-
-    bool ShutdownSignal::dispatchConsoleControlForTest( uint32 controlType )
-    {
-        return WindowsShutdownSignalInternal::onConsoleControl( static_cast<DWORD>( controlType ) ) != FALSE;
+        switch ( controlType )
+        {
+            case CTRL_C_EVENT:
+            case CTRL_BREAK_EVENT:
+            {
+                if ( earlierInterruptCount >= 1 )
+                    return ShutdownSignalAction{ ShutdownCause::None, true, false };
+                return ShutdownSignalAction{ ShutdownCause::Interrupt, false, false };
+            }
+            case CTRL_CLOSE_EVENT:
+            {
+                return ShutdownSignalAction{ ShutdownCause::ConsoleClose, false, true };
+            }
+            case CTRL_LOGOFF_EVENT:
+            {
+                if ( bServiceMode )
+                    return ShutdownSignalAction{ ShutdownCause::None, true, false }; // 서비스는 사용자가 로그오프해도 돈다
+                return ShutdownSignalAction{ ShutdownCause::SystemShutdown, false, true };
+            }
+            case CTRL_SHUTDOWN_EVENT:
+            {
+                return ShutdownSignalAction{ ShutdownCause::SystemShutdown, false, true };
+            }
+            default:
+            {
+                return ShutdownSignalAction{ ShutdownCause::None, true, false };
+            }
+        }
     }
 } // namespace sw
 

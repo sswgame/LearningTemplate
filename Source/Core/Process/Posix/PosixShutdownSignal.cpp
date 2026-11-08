@@ -23,14 +23,15 @@ namespace sw
             /** @brief 신호 처리기 — async-signal-safe 함수만 부른다(원자 연산 · write · _exit). */
             static void onSignal( int32 signalNumber )
             {
-                if ( signalNumber == SIGINT && s_interruptCount.fetch_add( 1, std::memory_order_relaxed ) >= 1 )
+                const uint32               earlier = signalNumber == SIGINT ? s_interruptCount.fetch_add( 1, std::memory_order_relaxed ) : 0u;
+                const ShutdownSignalAction action  = ShutdownSignal::decideSignal( signalNumber, earlier );
+                if ( action._bPassToDefault )
                 {
                     static constexpr utf8 kMessage[] = "\nSecond interrupt - exiting immediately\n";
                     (void)write( STDERR_FILENO, kMessage, sizeof( kMessage ) - 1 ); // 신호 처리기 안 — 알림을 못 써도 바로 _exit 한다
                     _exit( 130 );
                 }
-                const ShutdownCause cause = signalNumber == SIGTERM ? ShutdownCause::Terminate : ( signalNumber == SIGHUP ? ShutdownCause::Hangup : ShutdownCause::Interrupt );
-                ShutdownSignal::request( cause );
+                ShutdownSignal::request( action._cause );
             }
         };
     } // namespace
@@ -75,10 +76,12 @@ namespace sw
     {
     }
 
-    void ShutdownSignal::resetForTest()
+    ShutdownSignalAction ShutdownSignal::decideSignal( int32 signalNumber, uint32 earlierInterruptCount )
     {
-        _s_requestedCause.store( static_cast<uint8>( ShutdownCause::None ), std::memory_order_release );
-        PosixShutdownSignalInternal::s_interruptCount.store( 0, std::memory_order_relaxed );
+        if ( signalNumber == SIGINT && earlierInterruptCount >= 1 )
+            return ShutdownSignalAction{ ShutdownCause::None, true, false };
+        const ShutdownCause cause = signalNumber == SIGTERM ? ShutdownCause::Terminate : ( signalNumber == SIGHUP ? ShutdownCause::Hangup : ShutdownCause::Interrupt );
+        return ShutdownSignalAction{ cause, false, false }; // 신호 처리기 안에서는 기다리지 않는다(async-signal-safe 만)
     }
 } // namespace sw
 

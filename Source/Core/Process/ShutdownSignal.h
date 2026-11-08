@@ -34,6 +34,19 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct ShutdownSignalAction
+     * @brief OS 종료 신호 하나에 처리기가 할 일입니다. 처리기(OS 스레드 · 신호 처리기)는 이 결정대로만 움직인다.
+     * @details 결정(`ShutdownSignal::decideConsoleControl` · `decideSignal`)은 전역 상태를 읽지 않는 순수 함수라 처리기를 띄우지 않고 검사한다.
+     *          예전에는 처리기 본문을 테스트가 직접 부르는 함수와 전역 상태를 되돌리는 함수를 이 클래스에 두었다 — 테스트 때문에 배포 코드에 생긴 창구였다.
+     */
+    struct ShutdownSignalAction
+    {
+        ShutdownCause _cause{ ShutdownCause::None }; ///< 세울 까닭. None 이면 세우지 않는다
+        bool          _bPassToDefault{ false };      ///< NOLINT(sw-bool-flag): 집합체다. 다음 처리기(기본 = 즉시 종료)로 넘긴다 — 두 번째 인터럽트 · 서비스의 로그오프
+        bool          _bWaitForCompletion{ false };  ///< NOLINT(sw-bool-flag): 집합체다. 정리 완료 알림(`notifyShutdownComplete`)을 기다린 뒤 돌아간다 — 돌아가는 순간 OS 가 프로세스를 끝낸다
+    };
+
+    /**
      * @class ShutdownSignal
      * @brief 프로세스에 하나인 종료 요청 깃발과 그것을 세우는 OS 처리기입니다. 모두 정적입니다.
      */
@@ -57,11 +70,17 @@ namespace sw
         /** @brief 까닭의 로그 이름입니다(플랫폼과 무관한 이름 — `"Terminate"`). */
         static const utf8* getCauseName( ShutdownCause cause );
 
-        /** @brief 테스트용 — 요청 · 완료 · 두 번째 인터럽트 셈을 처음으로 되돌립니다. 설치한 처리기는 그대로입니다. */
-        static void resetForTest();
 #if defined( SW_PLATFORM_WINDOWS )
-        /** @brief 테스트용 — 콘솔 제어 처리기 본문을 이 스레드에서 직접 부릅니다(`CTRL_*_EVENT` 값). 처리기의 반환값(TRUE = 처리함)입니다. */
-        static bool dispatchConsoleControlForTest( uint32 controlType );
+        /**
+         * @brief 콘솔 제어 사건(`CTRL_*_EVENT`) 하나에 할 일입니다. @p earlierInterruptCount 는 이 사건 앞에 받은 Ctrl+C · Ctrl+Break 수입니다.
+         * @details 두 번째 인터럽트는 기본 처리기(즉시 종료)로 넘긴다 — 멈춘 종료를 사람이 끊는 길(POSIX `_exit(130)` 자리). 서비스는 로그오프에 돌기를 멈추지 않는다.
+         */
+        static ShutdownSignalAction decideConsoleControl( uint32 controlType, uint32 earlierInterruptCount, bool bServiceMode );
+#elif defined( SW_PLATFORM_POSIX )
+        /** @brief 신호(`SIGINT` · `SIGTERM` · `SIGHUP`) 하나에 할 일입니다. 두 번째 `SIGINT` 는 기다리지 않고 끝낸다(`_bPassToDefault` — 처리기가 `_exit(130)`). */
+        static ShutdownSignalAction decideSignal( int32 signalNumber, uint32 earlierInterruptCount );
+#else
+    #error "Unsupported platform"
 #endif
 
     private:
