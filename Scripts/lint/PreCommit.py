@@ -39,6 +39,7 @@ from lint.FrameIntern import checkFrameIntern  # noqa: E402
 from lint.TickSceneWalk import checkTickSceneWalk  # noqa: E402
 from lint.NamingWords import checkNamingWords  # noqa: E402
 from lint.PlatformChains import checkPlatformChains  # noqa: E402
+from lint.DevOnlyVariables import checkDevOnlyVariables  # noqa: E402
 from lint.ServerUIIncludes import checkServerUIIncludes  # noqa: E402
 from generate.ClientOnlyTypes import checkClientOnlyTypes  # noqa: E402
 from lint.StateShape import checkStateShape  # noqa: E402
@@ -179,6 +180,13 @@ def main(argv: list[str] | None = None) -> int:
         hasErrors = True
         print(f"[EditorViewIncludes] FAIL — MVVM View 의 모델 · 씬 include {len(listViewIncludeProblem)}건")
         for line in listViewIncludeProblem:
+            print(f"  - {line}")
+    # --- 런타임 코드의 테스트용 전역 변수(합법 C++ 라 형식으로 자리를 막지 못한다 — DevOnlyVariables.py 머리말)
+    listDevVariableProblem = checkDevOnlyVariables(projectRoot)
+    if listDevVariableProblem:
+        hasErrors = True
+        print(f"[DevOnlyVariables] FAIL — 런타임 코드의 테스트용 변수 {len(listDevVariableProblem)}건")
+        for line in listDevVariableProblem:
             print(f"  - {line}")
     # --- 서버도 짓는 게임 코드의 UI include(한 DLL 안의 폴더라 타깃 게이트가 못 가른다 — ServerUIIncludes.py 머리말)
     listServerUIProblem = checkServerUIIncludes(projectRoot)
