@@ -258,10 +258,9 @@ namespace sw::editor
             const int32 toNode   = mapID( wire._toNode );
             if ( fromNode == kNoGraphID || toNode == kNoGraphID )
                 continue;
-            int32  wireID = 0;
-            string error;
-            if ( addWire( fromNode, wire._fromPort, toNode, wire._toPort, wireID, error ) && wire._bInvert )
-                (void)setWireInvert( wireID, true ); // 방금 만든 배선이라 늘 있다
+            const expected<int32> wireID = addWire( fromNode, wire._fromPort, toNode, wire._toPort ); // 원본에 있던 배선이라 실패는 없다 — 있으면 그 배선만 빠진다
+            if ( wireID.has_value() && wire._bInvert )
+                (void)setWireInvert( *wireID, true ); // 방금 만든 배선이라 늘 있다
         }
         return listNew;
     }
@@ -281,28 +280,18 @@ namespace sw::editor
         return true;
     }
 
-    bool GimmickGraphModel::renameNode( int32 graphID, const hashed_string& newID, string& outError )
+    expected<void> GimmickGraphModel::renameNode( int32 graphID, const hashed_string& newID )
     {
-        outError.clear();
         const int32 index = findNodeIndex( graphID );
         if ( index < 0 )
-        {
-            outError = "no such node";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "No such node" } );
         if ( newID.empty() )
-        {
-            outError = "node id is empty";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Node id is empty" } );
         const int32 other = findNodeIndexByID( newID );
         if ( other >= 0 && other != index )
-        {
-            outError = "node id is already used by another node";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::AlreadyExists, "Node id is already used by another node", newID.view() } );
         _listNode[static_cast<size_t>( index )]._id = newID;
-        return true;
+        return {};
     }
 
     bool GimmickGraphModel::setNodeParam( int32 graphID, string_view name, string_view value )
@@ -352,53 +341,36 @@ namespace sw::editor
         return true;
     }
 
-    bool GimmickGraphModel::addWire( int32 fromNode, string_view fromPort, int32 toNode, string_view toPort, int32& outWireGraphID, string& outError )
+    expected<int32> GimmickGraphModel::addWire( int32 fromNode, string_view fromPort, int32 toNode, string_view toPort )
     {
-        outError.clear();
-        outWireGraphID        = kNoGraphID;
         const int32 fromIndex = findNodeIndex( fromNode );
         const int32 toIndex   = findNodeIndex( toNode );
         if ( fromIndex < 0 || toIndex < 0 )
-        {
-            outError = "no such node";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "No such node" } );
         const GimmickNodeKind* pFromKind = findKind( _listNode[static_cast<size_t>( fromIndex )] );
         const GimmickNodeKind* pToKind   = findKind( _listNode[static_cast<size_t>( toIndex )] );
         if ( pFromKind == nullptr || pToKind == nullptr )
-        {
-            outError = "the node kind is unknown";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "The node kind is unknown" } );
         if ( pFromKind->findOutput( hashed_string( fromPort ) ) < 0 )
-        {
-            outError = "the first end is not an output port of its node";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "The first end is not an output port of its node", fromPort } );
         if ( pToKind->findInput( hashed_string( toPort ) ) < 0 )
-        {
-            outError = "the second end is not an input port of its node";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "The second end is not an input port of its node", toPort } );
         for ( const GimmickGraphWire& wire : _listWire )
         {
             const bool bWireExists = wire._fromNode == fromNode && wire._toNode == toNode && GimmickGraphModelInternal::isSamePort( wire._fromPort, fromPort ) &&
                                      GimmickGraphModelInternal::isSamePort( wire._toPort, toPort );
             if ( bWireExists )
-            {
-                outError = "the wire already exists";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::AlreadyExists, "The wire already exists" } );
         }
         GimmickGraphWire wire;
-        wire._fromNode = fromNode;
-        wire._fromPort = string( fromPort );
-        wire._toNode   = toNode;
-        wire._toPort   = string( toPort );
-        wire._graphID  = _nextWireGraphID++;
-        outWireGraphID = wire._graphID;
+        wire._fromNode      = fromNode;
+        wire._fromPort      = string( fromPort );
+        wire._toNode        = toNode;
+        wire._toPort        = string( toPort );
+        wire._graphID       = _nextWireGraphID++;
+        const int32 graphID = wire._graphID;
         _listWire.push_back( std::move( wire ) );
-        return true;
+        return graphID;
     }
 
     bool GimmickGraphModel::removeWire( int32 wireGraphID )

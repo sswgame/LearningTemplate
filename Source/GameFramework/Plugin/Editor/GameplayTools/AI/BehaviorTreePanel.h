@@ -76,8 +76,8 @@ namespace sw::editor
          * @details 복사 버퍼는 고른 첫 노드를 루트로 한 트리 글이고(`BehaviorTreeEditModel::writeSubtree`), 붙여 넣기는 고른 노드의 맨 뒤 자식(빈 트리면 루트)이다.
          */
         void handleEditCommands();
-        /** @brief 붙이거나 복제한 하위 트리 @p newID 를 고르고 구조 편집으로 남깁니다. 실패(-1)면 @p error 를 상태 줄에 둡니다. */
-        void               attachPastedSubtree( int32 newID, const string& error, const utf8* pLabel );
+        /** @brief 붙이거나 복제한 하위 트리 @p newID 를 고르고 구조 편집으로 남깁니다. 실패면 이유를 상태 줄에 둡니다. */
+        void               attachPastedSubtree( const expected<int32>& newID, const utf8* pLabel );
         [[nodiscard]] bool findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const;
 
         // 편집

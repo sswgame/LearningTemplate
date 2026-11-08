@@ -131,12 +131,11 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould", "Behavior tree file '%#' could not be read", path.c_str() );
             return ToolAssetLoadResult::Malformed;
         }
-        string error;
-        if ( _model.parse( text, error ) == false )
+        if ( const expected<void> parsed = _model.parse( text ); parsed.has_value() == false )
         {
             // 읽지 못한 파일은 덮어쓰지 않도록 저장을 막는다(Malformed).
-            _statusText = error;
-            SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould2", "Behavior tree file '%#' could not be opened: %#", path.c_str(), error.c_str() );
+            _statusText = EditorWidgets::makeStatusText( parsed.error() );
+            SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould2", "Behavior tree file '%#' could not be opened: %# (%#)", path.c_str(), parsed.error().message(), parsed.error().detail() );
             return ToolAssetLoadResult::Malformed;
         }
         _statusText = "Loaded";
@@ -154,15 +153,14 @@ namespace sw::editor
         _model.collectIssues( _listIssue );
         if ( _listIssue.empty() == false )
             SW_LOG_WARNING_ID( "BehaviorTreePanel.SavingBehaviorTreeProblems", "Saving behavior tree '%#' with %# problems - the game will not load it until they are fixed", path.c_str(), _listIssue.size() );
-        string saveText;
-        string saveError;
-        if ( _model.makeSaveText( saveText, saveError ) == false ) // 변형(`_base`)은 부모와의 차이로 쓴다
+        const expected<string> saveText = _model.makeSaveText(); // 변형(`_base`)은 부모와의 차이로 쓴다
+        if ( saveText.has_value() == false )
         {
-            _statusText = saveError;
-            SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeVariantNotSaved", "Behavior tree '%#' was not saved: %#", path.c_str(), saveError.c_str() );
+            _statusText = EditorWidgets::makeStatusText( saveText.error() );
+            SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeVariantNotSaved", "Behavior tree '%#' was not saved: %# (%#)", path.c_str(), saveText.error().message(), saveText.error().detail() );
             return false;
         }
-        if ( ResourceComposer::saveText( diskPath->str(), saveText ) == false )
+        if ( ResourceComposer::saveText( diskPath->str(), *saveText ) == false )
         {
             _statusText = "The file could not be written";
             SW_LOG_ERROR_ID( "BehaviorTreePanel.BehaviorTreeFileCould3", "Behavior tree file '%#' could not be written", diskPath->c_str() );
@@ -181,12 +179,11 @@ namespace sw::editor
 
     void BehaviorTreePanel::applyDocumentText( string_view text )
     {
-        string       error;
         const string baseID = _model.getBaseID(); // 되돌리기 글은 펼친 한 벌이다 — 문서의 부모는 그대로 둬야 저장이 차이로 쓴다
-        if ( _model.parse( text, error ) == false )
+        if ( const expected<void> parsed = _model.parse( text ); parsed.has_value() == false )
         {
             // 되돌리기 글은 이 창이 쓴 XML 이다. 읽지 못하면 결함이므로 알리고 지금 모델을 둔다.
-            SW_LOG_WARNING_ID( "BehaviorTreePanel.BehaviorTreeUndoSnapshot", "Behavior tree undo snapshot could not be read: %#", error.c_str() );
+            SW_LOG_WARNING_ID( "BehaviorTreePanel.BehaviorTreeUndoSnapshot", "Behavior tree undo snapshot could not be read: %# (%#)", parsed.error().message(), parsed.error().detail() );
             return;
         }
         _model.setBaseID( baseID );
@@ -455,14 +452,14 @@ namespace sw::editor
         }
     }
 
-    void BehaviorTreePanel::attachPastedSubtree( int32 newID, const string& error, const utf8* pLabel )
+    void BehaviorTreePanel::attachPastedSubtree( const expected<int32>& newID, const utf8* pLabel )
     {
-        if ( newID < 0 )
+        if ( newID.has_value() == false )
         {
-            _statusText = error;
+            _statusText = EditorWidgets::makeStatusText( newID.error() );
             return;
         }
-        _selectedID     = newID;
+        _selectedID     = *newID;
         _bSelectPending = SW_TRUE;
         markStructureChanged( pLabel );
     }
@@ -495,10 +492,9 @@ namespace sw::editor
         const int32 targetID = listNodeID.empty() ? -1 : listNodeID.front();
         if ( command == EditorGraphEditCommand::Duplicate )
             duplicateID = targetID;
-        string error;
         if ( duplicateID >= 0 )
         {
-            attachPastedSubtree( _model.duplicateSubtree( duplicateID, error ), error, "Duplicate Behavior Subtree" );
+            attachPastedSubtree( _model.duplicateSubtree( duplicateID ), "Duplicate Behavior Subtree" );
             return;
         }
         if ( command == EditorGraphEditCommand::Paste )
@@ -512,7 +508,7 @@ namespace sw::editor
                 _statusText = "Select the parent node first";
                 return;
             }
-            attachPastedSubtree( _model.pasteSubtree( parentID, text, -1, error ), error, "Paste Behavior Subtree" );
+            attachPastedSubtree( _model.pasteSubtree( parentID, text, -1 ), "Paste Behavior Subtree" );
             return;
         }
         if ( ( command != EditorGraphEditCommand::Copy && command != EditorGraphEditCommand::Cut ) || _model.find( targetID ) == nullptr )
