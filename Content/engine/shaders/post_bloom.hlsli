@@ -91,11 +91,11 @@ static float Bloom::computeLensWeight( float2 uv, float sharpness )
 static float3 Bloom::computeLensFlare( float2 uv, float2 texel, bool bDownsampled )
 {
     float3 flare = float3( 0.0f, 0.0f, 0.0f );
-    [branch] if ( g_BloomLens.y > 0.0f )
+    SW_BRANCH if ( g_BloomLens.y > 0.0f )
     {
         const float2 flipped   = 1.0f - uv;
         const float2 ghostStep = ( 0.5f - flipped ) * g_BloomLens.z;
-        [unroll] for ( int ghost = 0; ghost < kLensFlareGhostCount; ++ghost )
+        SW_UNROLL for ( int ghost = 0; ghost < kLensFlareGhostCount; ++ghost )
         {
             const float2 ghostUv = flipped + ghostStep * float( ghost );
             flare += Bloom::sampleBright( ghostUv, texel, bDownsampled ) * Bloom::computeLensWeight( ghostUv, 4.0f );
@@ -115,7 +115,7 @@ static float3 Bloom::computeLensFlare( float2 uv, float2 texel, bool bDownsample
 static float3 Bloom::applyDirt( float2 uv, float3 bloom )
 {
     float3 result = bloom;
-    [branch] if ( g_BloomLens.x > 0.0f )
+    SW_BRANCH if ( g_BloomLens.x > 0.0f )
     {
         result = bloom * ( 1.0f + g_BloomLens.x * Bindless::sampleIndex( g_BloomDirtMaskIndex, uv ).rgb );
     }

@@ -204,6 +204,27 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 화면 공간 반사(screen_space_reflection.hlsl) — 하늘까지 칠한 장면 색 사본 · 깊이 · G버퍼 노멀로 반사를 구해 장면 색(LitColor) 위에 프리멀티플라이 블렌드한다.
+		     반투명 앞이라 반투명은 반사 위에 그린다. 뷰의 후처리 값 _screenSpaceReflectionIntensity 가 0(기본)이면 그리지 않는다(장면 색 그대로). -->
+		<RenderGraphPassDesc _name="ScreenSpaceReflection"
+		                     _type="ScreenSpaceReflection"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _blendPreset="Premultiplied">
+			<_listInput>
+				<item>SceneColorCopy</item>
+				<item>SceneDepth</item>
+				<item>GBufferNormal</item>
+				<item>GBufferMaterial</item>
+			</_listInput>
+			<_listOutput>
+				<item>LitColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Transparent"
 		                     _type="Transparent"
 		                     _depthAttachment="SceneDepth"

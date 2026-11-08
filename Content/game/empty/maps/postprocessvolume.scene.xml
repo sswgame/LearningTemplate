@@ -4,7 +4,8 @@
 	     Volume: 카메라를 감싼 상자(채도 0, 우선순위 1) 위에 무한 볼륨(채도 2 · 비네트, 우선순위 0) — 상자 안은 회색, 블렌드 반경 밖은 짙은 색.
 	     Grading: 무한 볼륨 하나 — 화이트 밸런스 4000 K, 그림자 게인 파랑 · 밝은 부분 게인 주황, LUT(textures/postprocess/lut_sepia, 세기 0.5).
 	     LensDistortion · ChromaticAberration · Sharpen · FilmGrain: 효과 하나씩 켜는 무한 볼륨(postprocess_lens 가 하나씩 켜고 끈다).
-	     BloomLamp: 가운데 큐브 앞의 강한 점광(블룸의 밝은 부분). BloomDirt · LensFlare: 먼지 마스크(textures/postprocess/bloomdirt) · 렌즈 플레어를 켜는 무한 볼륨. -->
+	     BloomLamp: 가운데 큐브 앞의 강한 점광(블룸의 밝은 부분). BloomDirt · LensFlare: 먼지 마스크(textures/postprocess/bloomdirt) · 렌즈 플레어를 켜는 무한 볼륨.
+	     SSR: 화면 공간 반사를 켜는 무한 볼륨(디퍼드 파이프라인에만 패스가 있다 — 최대 거칠기 1 이라 격자 바닥도 받는다). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 		<_listDataLayer>
@@ -17,6 +18,7 @@
 			<SceneDataLayerDef _name="BloomLamp" _bInitiallyActive="false" />
 			<SceneDataLayerDef _name="BloomDirt" _bInitiallyActive="false" />
 			<SceneDataLayerDef _name="LensFlare" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="SSR" _bInitiallyActive="false" />
 		</_listDataLayer>
 	</SceneSettings>
 	<entities>
@@ -313,6 +315,26 @@
 					                            _shape="Unbound">
 						<_values _bloomScale="2" _lensFlareIntensity="2" _lensFlareTint="1,0.8,0.6,1" />
 						<_overrides _bBloomScale="true" _bLensFlareIntensity="true" _bLensFlareTint="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="17" name="ReflectionWorld" layers="SSR">
+			<GameObject _schemaVersion="0" _name="ReflectionWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _screenSpaceReflectionIntensity="1" _screenSpaceReflectionMaxDistance="15" _screenSpaceReflectionMaxRoughness="1" />
+						<_overrides _bScreenSpaceReflectionIntensity="true" _bScreenSpaceReflectionMaxDistance="true" _bScreenSpaceReflectionMaxRoughness="true" />
 					</PostProcessVolumeComponent>
 				</_listComponent>
 			</GameObject>

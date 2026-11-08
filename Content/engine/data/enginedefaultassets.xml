@@ -81,6 +81,7 @@
                      _shaderDepthOfField="engine/shaders/depth_of_field.hlsl"
                      _shaderSky="engine/shaders/sky.hlsl"
                      _shaderFog="engine/shaders/fog.hlsl"
+                     _shaderScreenSpaceReflection="engine/shaders/screen_space_reflection.hlsl"
                      _shaderVolumetricFog="engine/shaders/volumetric_fog.hlsl"
                      _shaderProbeUpdate="engine/shaders/probe_update.hlsl"
                      _shaderCanvasMarker="engine/shaders/canvas_marker.hlsl"

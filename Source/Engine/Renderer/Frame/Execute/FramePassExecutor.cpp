@@ -492,6 +492,9 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._bloomLens, float4{ pDirt != nullptr ? post._bloomDirtMaskIntensity : 0.0f, MathUtil::max( 0.0f, post._lensFlareIntensity ),
                                                                                MathUtil::saturate( post._lensFlareGhostSpacing ), MathUtil::saturate( post._lensFlareHaloWidth ) } );
         context._passValues.setFloat4( passConstantNames()._flareTint, float4{ post._lensFlareTint._x, post._lensFlareTint._y, post._lensFlareTint._z, 0.0f } );
+        context._passValues.setFloat4( passConstantNames()._ssrParams, float4{ MathUtil::saturate( post._screenSpaceReflectionIntensity ), MathUtil::max( 0.0f, post._screenSpaceReflectionMaxDistance ),
+                                                                               MathUtil::max( 0.0f, post._screenSpaceReflectionThickness ),
+                                                                               MathUtil::saturate( post._screenSpaceReflectionMaxRoughness ) } );
         // 피사계 심도(depth_of_field.hlsl) — 얇은 렌즈의 착란원. 지름 / 센서 높이 = 센서 높이 · s² / ( 4 · N · 초점 거리 ) · |1 - 초점 거리 / 깊이|
         // (s = 1 / tan( fovY / 2 ) 라 초점 길이 = 센서 높이 · s / 2, 구경 = 초점 길이 / N, 초점 길이가 초점 거리보다 훨씬 짧다고 본다). y 는 그 반지름을 화면 높이 px 로 바꾼 배율이다.
         // 조리개 0(핀홀) · 직교 · 후처리를 끈 뷰는 패스를 기록하지 않는다(applyViewPassSelection). 그때는 배율을 0 으로 두고 w 도 0 이다(셰이더는 w 를 읽지 않는다).
@@ -1037,6 +1040,11 @@ namespace sw
                     executeFogPass( input );
                     break;
                 }
+                case RenderPassType::ScreenSpaceReflection:
+                {
+                    executeScreenSpaceReflectionPass( input );
+                    break;
+                }
                 case RenderPassType::TAA:
                 {
                     executeTAAPass( input );
@@ -1392,6 +1400,29 @@ namespace sw
         bindForDraw( context, pso, kInvalidDescriptorIndex );
         if ( bVolume )
             context._pCmd->bindStructuredBuffer( _fog.getFogVolumeBuffer()._srv, shaderslot::kPassBuffer );
+        context._pCmd->draw( 3, 0 );
+        context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executeScreenSpaceReflectionPass( const PassExecuteInput& input )
+    {
+        // 화면 공간 반사다. 맞은 자리의 장면 색 사본을 선언한 컬러 출력(장면 색) 위에 프리멀티플라이 블렌드한다(screen_space_reflection.hlsl).
+        // 세기 0 · 후처리를 끈 뷰(CCTV) · 표면 값 보기(usesPostProcess 가 거른다)에서는 그리지 않는다 — 출력이 입력의 위(블렌드)라 "그리지 않음" 은 아무것도 하지 않는 것이다(안개와 같다).
+        const RenderViewSettings&    settings = _pActiveView->_settings;
+        const RHIPipelineStateHandle pso      = _psoManager.getEnginePSO( RenderPassType::ScreenSpaceReflection );
+        const bool                   bDraws   = settings.usesPostProcess() && settings._postProcess._screenSpaceReflectionIntensity > 0.0f && pso != 0;
+        if ( bDraws == false )
+            return;
+
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
+        registerDeclaredInputs( context, input._passDesc );
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+            return;
+        setIdentityWorld( context );
+        commitBindlessTextureBindings( context );
+        context._pCmd->setPipelineState( pso );
+        bindForDraw( context, pso, kInvalidDescriptorIndex );
         context._pCmd->draw( 3, 0 );
         context._pCmd->endRenderPass();
     }

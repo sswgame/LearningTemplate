@@ -148,6 +148,19 @@ namespace sw
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Radius of the lens flare halo ring (fraction of the screen height)" )
         float32 _lensFlareHaloWidth{ 0.4f };
 
+        /**
+         * @brief 화면 공간 반사입니다(언리얼 Screen Space Reflections — Intensity · Max Roughness). 디퍼드 파이프라인의 ScreenSpaceReflection 패스가 읽고
+         *        세기 0 이면 그 패스를 그리지 않는다(screen_space_reflection.hlsl). 포워드 파이프라인에는 G버퍼 노멀이 없어 패스가 없다.
+         */
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Screen space reflection intensity (deferred pipeline); 0 is off" )
+        float32 _screenSpaceReflectionIntensity{ 0.0f };
+        PROPERTY( Min = 0.1, Tooltip = "How far a reflection ray travels", Units = m )
+        float32 _screenSpaceReflectionMaxDistance{ 20.0f };
+        PROPERTY( Min = 0.01, Tooltip = "Depth a ray may go behind the scene and still count as a hit", Units = m )
+        float32 _screenSpaceReflectionThickness{ 0.3f };
+        PROPERTY( Min = 0.01, Max = 1.0, Tooltip = "Surfaces at or above this roughness get no screen space reflection" )
+        float32 _screenSpaceReflectionMaxRoughness{ 0.6f };
+
         /** @brief 자동 노출이 장면을 측정하는지(최소 EV 가 최대보다 작다) 나타냅니다. 같으면 고정 노출 2^-최소 EV 입니다. */
         bool usesAutoExposure() const { return _autoExposureMinEv < _autoExposureMaxEv; }
 
@@ -275,5 +288,13 @@ namespace sw
         uint8 _bLensFlareGhostSpacing : 1;
         PROPERTY()
         uint8 _bLensFlareHaloWidth : 1;
+        PROPERTY()
+        uint8 _bScreenSpaceReflectionIntensity : 1;
+        PROPERTY()
+        uint8 _bScreenSpaceReflectionMaxDistance : 1;
+        PROPERTY()
+        uint8 _bScreenSpaceReflectionThickness : 1;
+        PROPERTY()
+        uint8 _bScreenSpaceReflectionMaxRoughness : 1;
     };
 } // namespace sw

@@ -585,6 +585,8 @@ namespace sw
         /// @brief 블룸 렌즈(먼지 마스크 세기 · 플레어 세기 · 고스트 간격 · 헤일로 반지름)와 플레어 색입니다. post_bloom.hlsli 의 `Bloom::computeLensFlare` · `applyDirt`.
         hashed_string _bloomLens{ "g_BloomLens" };
         hashed_string _flareTint{ "g_FlareTint" };
+        /// @brief 화면 공간 반사(세기 · 최대 거리 · 두께 · 최대 거칠기)입니다. screen_space_reflection.hlsl.
+        hashed_string _ssrParams{ "g_SSRParams" };
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };
         hashed_string _sourceTexel{ "g_SourceTexel" };

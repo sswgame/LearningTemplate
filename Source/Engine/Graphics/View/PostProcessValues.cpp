@@ -59,6 +59,10 @@ namespace sw
         , _bLensFlareTint{ SW_FALSE }
         , _bLensFlareGhostSpacing{ SW_FALSE }
         , _bLensFlareHaloWidth{ SW_FALSE }
+        , _bScreenSpaceReflectionIntensity{ SW_FALSE }
+        , _bScreenSpaceReflectionMaxDistance{ SW_FALSE }
+        , _bScreenSpaceReflectionThickness{ SW_FALSE }
+        , _bScreenSpaceReflectionMaxRoughness{ SW_FALSE }
     {
     }
 

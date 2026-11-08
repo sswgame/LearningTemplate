@@ -60,7 +60,7 @@ static float3 CameraGrade::correctRange( float3 color, float4 saturation, float4
 static float3 CameraGrade::applyColorGrading( float3 hdrColor )
 {
     float3 graded = hdrColor;
-    [branch] if ( g_GradeParams.z > 0.5f )
+    SW_BRANCH if ( g_GradeParams.z > 0.5f )
     {
         const float3 balanced         = max( 0.0f, float3( dot( g_GradeWhiteBalance0.xyz, hdrColor ), dot( g_GradeWhiteBalance1.xyz, hdrColor ), dot( g_GradeWhiteBalance2.xyz, hdrColor ) ) );
         const float  luminance        = dot( balanced, kGradeLumaWeights );
@@ -90,7 +90,7 @@ static float2 CameraGrade::computeLutUv( float3 color, float size, float slice )
 static float3 CameraGrade::applyLut( float3 color )
 {
     float3 result = color;
-    [branch] if ( g_GradeLut.x > 0.5f )
+    SW_BRANCH if ( g_GradeLut.x > 0.5f )
     {
         const float  size    = g_GradeLut.x;
         const float3 clamped = saturate( color );
@@ -120,7 +120,7 @@ static float CameraGrade::computeLensRadius( float2 uv )
 static float3 CameraGrade::applyLens( float2 uv, float2 texel, float3 sourceColor )
 {
     float3 color = sourceColor;
-    [branch] if ( any( g_LensParams != 0.0f ) )
+    SW_BRANCH if ( any( g_LensParams != 0.0f ) )
     {
         const float  radius2    = CameraGrade::computeLensRadius( uv );
         const float  distortion = g_LensParams.z;
@@ -130,12 +130,12 @@ static float3 CameraGrade::applyLens( float2 uv, float2 texel, float3 sourceColo
         color                   = center;
         const float startRadius = g_LensParams.y;
         const float fringe      = g_LensParams.x * 0.01f * saturate( ( sqrt( radius2 ) - startRadius ) / max( 1.0f - startRadius, 1e-4f ) );
-        [branch] if ( fringe > 0.0f )
+        SW_BRANCH if ( fringe > 0.0f )
         {
             color.r = PassTexture::sampleSource( 0.5f + centered * ( 1.0f - fringe ) ).r;
             color.b = PassTexture::sampleSource( 0.5f + centered * ( 1.0f + fringe ) ).b;
         }
-        [branch] if ( g_LensParams.w > 0.0f )
+        SW_BRANCH if ( g_LensParams.w > 0.0f )
         {
             const float3 neighbors = ( PassTexture::sampleSource( lensUv + float2( texel.x, 0.0f ) ).rgb + PassTexture::sampleSource( lensUv - float2( texel.x, 0.0f ) ).rgb +
                                        PassTexture::sampleSource( lensUv + float2( 0.0f, texel.y ) ).rgb + PassTexture::sampleSource( lensUv - float2( 0.0f, texel.y ) ).rgb ) *
@@ -153,7 +153,7 @@ static float3 CameraGrade::applyLens( float2 uv, float2 texel, float3 sourceColo
 static float3 CameraGrade::applyFilmGrain( float2 pixelPosition, float3 color )
 {
     float3 result = color;
-    [branch] if ( g_GrainParams.x > 0.0f )
+    SW_BRANCH if ( g_GrainParams.x > 0.0f )
     {
         const uint2 cell  = uint2( max( pixelPosition / max( g_GrainParams.y, 1.0f ), 0.0f ) );
         const uint  frame = uint( max( g_SwMaterialTime, 0.0f ) * 60.0f );

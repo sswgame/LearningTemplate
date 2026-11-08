@@ -101,6 +101,13 @@ namespace sw
          */
         SceneDepthCopy,
         /**
+         * @brief 화면 공간 반사입니다(screen_space_reflection.hlsl). G버퍼 노멀로 반사한 광선을 장면 깊이에 대고 나아가 맞은 자리의 장면 색 사본(`SceneColorCopy`)을 읽어
+         *        선언한 컬러 출력(장면 색) **위에 프리멀티플라이 블렌드**합니다 — 안개와 같은 모양이라 출력이 장면 색 그대로이고 반투명이 그 위에 그린다. 디퍼드에서 하늘 · 사본 뒤, 반투명 앞에 둡니다.
+         *        뷰의 후처리 값 `_screenSpaceReflectionIntensity` 가 0 이거나 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않습니다(전용 실행: `FramePassExecutor::executeScreenSpaceReflectionPass`).
+         *        끄는 길이 "원본을 가리킴"(`kBypassesToSource`)이 아닌 까닭: 그 길은 출력을 그 패스만 써야 하는데(로드 검증 3-6), 반투명이 같은 장면 색에 그려야 한다.
+         */
+        ScreenSpaceReflection,
+        /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
          */

@@ -201,6 +201,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderFog; ///< 높이 · 거리 지수 안개(안개 패스) — 장면 깊이로 광학 두께를 구해 장면 색 위에 블렌드한다
         PROPERTY( Required )
+        DataPath _shaderScreenSpaceReflection; ///< 화면 공간 반사(디퍼드) — G버퍼 노멀로 반사한 광선을 장면 깊이에 대고 나아가 장면 색 위에 블렌드한다
+        PROPERTY( Required )
         DataPath _shaderVolumetricFog; ///< 볼륨 안개(컴퓨트) — froxel 마다 라이트 산란을 구해 깊이 방향으로 누적한다
         PROPERTY( Required )
         DataPath _shaderProbeUpdate; ///< 실시간 라이트 프로브 갱신(컴퓨트) — 프로브마다 복셀로 광선을 쏘아 SH9 를 갱신한다
