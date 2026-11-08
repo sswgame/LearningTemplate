@@ -28,6 +28,10 @@ namespace sw
 
 namespace sw
 {
+    class AssetCompanionRegistrar;
+    template <typename T>
+    class RegistrationList;
+
     /**
      * @struct AssetCompanionRegistry
      * @brief 등록된 곁 파일 규칙의 표입니다. 표는 프로세스 값이고 정적 등록자가 채웁니다.
@@ -41,7 +45,8 @@ namespace sw
 
     private:
         friend class AssetCompanionRegistrar;
-        static vector<AssetCompanionRule>& getRules();
+        /** @brief 정적 등록 표입니다(공통 틀 `SW_DEFINE_REGISTRATION_LIST`). */
+        static RegistrationList<const AssetCompanionRegistrar>& getRegistrars();
     };
 
     /** @brief `SW_ASSET_COMPANION` 이 두는 정적 등록자입니다. 만들 때 올리고 사라질 때 내립니다. */
@@ -52,6 +57,9 @@ namespace sw
         ~AssetCompanionRegistrar();
         AssetCompanionRegistrar( const AssetCompanionRegistrar& )            = delete;
         AssetCompanionRegistrar& operator=( const AssetCompanionRegistrar& ) = delete;
+
+        /** @brief 등록한 규칙입니다. */
+        const AssetCompanionRule& getRule() const { return _rule; }
 
     private:
         AssetCompanionRule _rule;

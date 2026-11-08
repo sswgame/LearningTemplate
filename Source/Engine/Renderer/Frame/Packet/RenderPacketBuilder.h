@@ -58,6 +58,8 @@ namespace sw
 
         /** @brief 패킷을 낼 수 있는지(기동 단계 `FrameRenderer` 가 섰는지) 반환합니다. */
         bool isInitialized() const;
+        /** @brief 마지막 프레임에 보임 판정으로 쉰 추가 뷰 수입니다(`RenderPacketViewSetup::getLastHiddenViewCount` — 감시 값 `RenderView.HiddenCount`). */
+        uint32 getLastHiddenViewCount() const { return _views.getLastHiddenViewCount(); }
         /** @brief 씬 스냅샷 빌더가 머티리얼이 달라도 배치를 합치는지 반환합니다(없으면 false). 백엔드 교체 뒤 로그가 읽습니다. */
         bool isMergeBatchesAcrossMaterials() const;
 

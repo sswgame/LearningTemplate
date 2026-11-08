@@ -201,7 +201,7 @@ namespace sw
 {
     /**
      * @class DataInheritanceSchemaRegistrar
-     * @brief 손 형식의 규칙 하나를 정적 초기화에서 올립니다(`SW_DATA_INHERITANCE_SCHEMA`). 힙을 쓰지 않는 사슬이고, 모듈이 내려가면 소멸자가 뺍니다.
+     * @brief 손 형식의 규칙 하나를 정적 초기화에서 올립니다(`SW_DATA_INHERITANCE_SCHEMA`). 정적 등록 표(`LockedRegistrationList`)에 오르고, 모듈이 내려가면 소멸자가 뺍니다.
      */
     class SW_API DataInheritanceSchemaRegistrar
     {
@@ -221,7 +221,6 @@ namespace sw
         const utf8*                         _pRootName;
         DataInheritance::MakeSchemaFunction _pfnMakeSchema;
         DataInheritance::MergeFunction      _pfnMerge;
-        DataInheritanceSchemaRegistrar*     _pNext;
     };
 } // namespace sw
 

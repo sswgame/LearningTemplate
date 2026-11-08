@@ -43,6 +43,8 @@ namespace sw
         , _paintOutput{}
         , _bPaintOutputStale{ SW_TRUE }
         , _structureGeneration{ 1 }
+        , _layoutSerial{ 0 }
+        , _measureCount{ 0 }
     {
     }
 

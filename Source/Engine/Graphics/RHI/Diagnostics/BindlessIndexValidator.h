@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -31,7 +32,7 @@ namespace sw
     /**
      * @struct BindlessIndexValidator
      * @brief 바인드 시점의 bindless 인덱스 생존 검사와 그 보고입니다. 같은 위치(패스, 필드, 원소)는 한 번만 남깁니다.
-     * @details 병렬 기록 스레드에서 동시에 불러도 된다. 보고 기록은 잠금 하나가 지키고, 잠금은 죽은 번호를 찾았을 때만 잡는다.
+     * @details 병렬 기록 스레드에서 동시에 불러도 된다. 보고 기록은 묻는 디바이스가 든다(`IRHIDevice::getBindlessIndexReportLog`).
      */
     struct SW_API BindlessIndexValidator
     {
@@ -48,27 +49,47 @@ namespace sw
          */
         static bool validate( const BindlessIndexCheckSite& site, RHIBindlessIndexSpace space, RHIDescriptorIndex index, const hashed_string& fieldName,
                               uint32 element = 0 );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class BindlessIndexReportLog
+     * @brief 남긴 bindless 인덱스 보고 자리(패스, 필드, 원소)의 기록입니다. 같은 자리는 한 번만 남긴다. 디바이스가 하나 든다(`IRHIDevice::getBindlessIndexReportLog`).
+     * @details 디바이스와 함께 생기고 사라진다 — 프로세스 전역 표였을 때는 백엔드를 바꿔도 앞 장치의 기록이 남았다. 병렬 기록 스레드에서 동시에 불러도 된다(잠금 하나,
+     *          죽은 번호를 찾았을 때만 잡는다). 언리얼 RHI 검증 레이어의 보고 기록이 RHI 객체에 있는 자리다.
+     */
+    class SW_API BindlessIndexReportLog
+    {
+    public:
+        BindlessIndexReportLog();
+        ~BindlessIndexReportLog();
+        BindlessIndexReportLog( const BindlessIndexReportLog& )            = delete;
+        BindlessIndexReportLog& operator=( const BindlessIndexReportLog& ) = delete;
 
         /**
          * @brief 죽은 번호 하나를 보고합니다. 같은 위치(패스, 필드, 원소)를 처음 볼 때만 로그를 남기고 true 를 돌려줍니다.
-         * @details `validate` 가 생존 질의 뒤에 부른다. 디바이스 없이 보고 규칙만 확인하는 테스트도 이것을 직접 부른다.
+         * @details `BindlessIndexValidator::validate` 가 생존 질의 뒤에 부른다. 디바이스 없이 보고 규칙만 확인하는 테스트도 이것을 직접 부른다.
          */
-        static bool report( RHIBindlessIndexSpace space, RHIDescriptorIndex index, const hashed_string& passName, const hashed_string& fieldName, uint32 element );
-
+        bool report( RHIBindlessIndexSpace space, RHIDescriptorIndex index, const hashed_string& passName, const hashed_string& fieldName, uint32 element );
         /**
          * @brief "없음"(`kInvalidDescriptorIndex`)이 셰이더로 가는 위치 하나를 정보 로그로 남깁니다(`BindlessIndexCheck::TraceAbsent`). 처음 볼 때만 true 입니다.
          * @details 셰이더는 그 번호를 분기로 걸러야 하는데, 드라이버가 디스크립터 읽기를 분기 앞으로 끌어올리면 배열 밖을 읽어 디바이스를 잃는다.
          *          손실이 났을 때 어느 패스와 필드가 후보인지 고르는 데 쓴다.
          */
-        static bool recordAbsent( const hashed_string& passName, const hashed_string& fieldName, uint32 element );
-
+        bool recordAbsent( const hashed_string& passName, const hashed_string& fieldName, uint32 element );
         /** @brief 지금까지 오류 로그를 남긴(죽은 번호) 자리 수입니다(테스트와 진단용). */
-        static uint32 getReportCount();
-
+        uint32 getReportCount() const;
         /** @brief 지금까지 "없음" 정보 로그를 남긴 자리 수입니다(테스트와 진단용). */
-        static uint32 getAbsentNoteCount();
-
+        uint32 getAbsentNoteCount() const;
         /** @brief 남긴 위치 기록(죽은 번호와 없음)을 비웁니다. 같은 위치를 다시 보고하게 됩니다(테스트용). */
-        static void clearReports();
+        void clear();
+
+        /** @brief 기록의 저장소입니다(.cpp 에 정의 — 잠금 · 해시 집합이 헤더로 새지 않게). */
+        struct State;
+
+    private:
+        unique_ptr<State> _pState;
     };
 } // namespace sw

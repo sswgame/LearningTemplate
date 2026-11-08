@@ -1,7 +1,7 @@
 /**
  * @file TestBindlessIndexValidator.cpp
  * @brief 바인드 시점의 bindless 인덱스 생존 검사(`BindlessIndexValidator`, Debug · Dev 전용) 테스트입니다.
- * @details 생존 판정은 가짜 디바이스(살아 있는 번호 목록)로 대신한다. 보고 기록은 전역이므로 픽스처가 앞뒤로 비운다.
+ * @details 생존 판정은 가짜 디바이스(살아 있는 번호 목록)로 대신한다. 보고 기록은 디바이스가 든다(`BindlessIndexReportLog`) — 케이스마다 새로 선다.
  */
 #include "pch.h"
 
@@ -18,11 +18,10 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 전역 보고 기록을 케이스 앞뒤로 비웁니다 — 순서가 섞여도 다른 케이스의 기록을 보지 않습니다. */
+    /** @brief 케이스마다 새 보고 기록입니다 — 순서가 섞여도 다른 케이스의 기록을 보지 않습니다. */
     struct BindlessIndexValidatorTest
     {
-        BindlessIndexValidatorTest() { BindlessIndexValidator::clearReports(); }
-        ~BindlessIndexValidatorTest() { BindlessIndexValidator::clearReports(); }
+        BindlessIndexReportLog _reports;
     };
 } // namespace
 
@@ -44,12 +43,12 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, OnlyDeadIndicesFail )
     SW_EXPECT_TRUE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, kInvalidDescriptorIndex, shadowField ) );
     SW_EXPECT_TRUE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, 3, shadowField ) );
     SW_EXPECT_TRUE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Buffer, 7, lightField ) );
-    SW_EXPECT_EQUAL( 0u, BindlessIndexValidator::getReportCount() );
+    SW_EXPECT_EQUAL( 0u, device.getBindlessIndexReportLog().getReportCount() );
 
     // 해제된(목록에 없는) 번호, 그리고 버퍼 번호를 텍스처 자리에 넣은 것.
     SW_EXPECT_FALSE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, 4, shadowField ) );
     SW_EXPECT_FALSE( BindlessIndexValidator::validate( site, RHIBindlessIndexSpace::Texture, 7, lightField ) );
-    SW_EXPECT_EQUAL( 2u, BindlessIndexValidator::getReportCount() );
+    SW_EXPECT_EQUAL( 2u, device.getBindlessIndexReportLog().getReportCount() );
 
     // 디바이스가 없는 자리는 검사하지 않는다(부르는 쪽이 디바이스를 못 준 경로).
     const BindlessIndexCheckSite noDevice{};
@@ -67,17 +66,17 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, ReportsEachSiteOnce )
     const hashed_string otherPass{ "ForwardOpaque" };
     const hashed_string field{ "MaterialTexture" };
 
-    SW_EXPECT_TRUE( BindlessIndexValidator::report( RHIBindlessIndexSpace::Texture, 9, passName, field, 0 ) );
-    SW_EXPECT_FALSE( BindlessIndexValidator::report( RHIBindlessIndexSpace::Texture, 9, passName, field, 0 ) );
-    SW_EXPECT_FALSE_MSG( BindlessIndexValidator::report( RHIBindlessIndexSpace::Texture, 10, passName, field, 0 ),
+    SW_EXPECT_TRUE( _reports.report( RHIBindlessIndexSpace::Texture, 9, passName, field, 0 ) );
+    SW_EXPECT_FALSE( _reports.report( RHIBindlessIndexSpace::Texture, 9, passName, field, 0 ) );
+    SW_EXPECT_FALSE_MSG( _reports.report( RHIBindlessIndexSpace::Texture, 10, passName, field, 0 ),
                          "a different value at the same site must not log again" );
-    SW_EXPECT_TRUE( BindlessIndexValidator::report( RHIBindlessIndexSpace::Texture, 9, passName, field, 1 ) );
-    SW_EXPECT_TRUE( BindlessIndexValidator::report( RHIBindlessIndexSpace::Texture, 9, otherPass, field, 0 ) );
-    SW_EXPECT_EQUAL( 3u, BindlessIndexValidator::getReportCount() );
+    SW_EXPECT_TRUE( _reports.report( RHIBindlessIndexSpace::Texture, 9, passName, field, 1 ) );
+    SW_EXPECT_TRUE( _reports.report( RHIBindlessIndexSpace::Texture, 9, otherPass, field, 0 ) );
+    SW_EXPECT_EQUAL( 3u, _reports.getReportCount() );
 
-    BindlessIndexValidator::clearReports();
-    SW_EXPECT_EQUAL( 0u, BindlessIndexValidator::getReportCount() );
-    SW_EXPECT_TRUE( BindlessIndexValidator::report( RHIBindlessIndexSpace::Texture, 9, passName, field, 0 ) );
+    _reports.clear();
+    SW_EXPECT_EQUAL( 0u, _reports.getReportCount() );
+    SW_EXPECT_TRUE( _reports.report( RHIBindlessIndexSpace::Texture, 9, passName, field, 0 ) );
 }
 
 /**
@@ -88,13 +87,13 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, AbsentNotesAreCountedApart )
 {
     const hashed_string material{ "GlassMaterial" };
     const hashed_string field{ "_albedoMap" };
-    SW_EXPECT_TRUE( BindlessIndexValidator::recordAbsent( material, field, 0 ) );
-    SW_EXPECT_FALSE( BindlessIndexValidator::recordAbsent( material, field, 0 ) );
-    SW_EXPECT_EQUAL( 1u, BindlessIndexValidator::getAbsentNoteCount() );
-    SW_EXPECT_EQUAL( 0u, BindlessIndexValidator::getReportCount() );
+    SW_EXPECT_TRUE( _reports.recordAbsent( material, field, 0 ) );
+    SW_EXPECT_FALSE( _reports.recordAbsent( material, field, 0 ) );
+    SW_EXPECT_EQUAL( 1u, _reports.getAbsentNoteCount() );
+    SW_EXPECT_EQUAL( 0u, _reports.getReportCount() );
 
-    BindlessIndexValidator::clearReports();
-    SW_EXPECT_EQUAL( 0u, BindlessIndexValidator::getAbsentNoteCount() );
+    _reports.clear();
+    SW_EXPECT_EQUAL( 0u, _reports.getAbsentNoteCount() );
 }
 
 /**
@@ -111,11 +110,11 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, ConcurrentReportsLogOnce )
     vector<std::thread> listThread;
     for ( uint32 threadIndex = 0; threadIndex < kThreadCount; ++threadIndex )
     {
-        listThread.emplace_back( [&firstCount, &passName, &field]()
+        listThread.emplace_back( [this, &firstCount, &passName, &field]()
         {
             for ( uint32 repeat = 0; repeat < 64; ++repeat )
             {
-                if ( BindlessIndexValidator::report( RHIBindlessIndexSpace::Texture, 42, passName, field, 0 ) )
+                if ( _reports.report( RHIBindlessIndexSpace::Texture, 42, passName, field, 0 ) )
                     firstCount.fetch_add( 1 );
             }
         } );
@@ -126,5 +125,5 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, ConcurrentReportsLogOnce )
     }
 
     SW_EXPECT_EQUAL( 1u, firstCount.load() );
-    SW_EXPECT_EQUAL( 1u, BindlessIndexValidator::getReportCount() );
+    SW_EXPECT_EQUAL( 1u, _reports.getReportCount() );
 }

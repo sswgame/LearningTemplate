@@ -3,9 +3,10 @@
 #include "Engine/Window/Linux/XTestInputInjector.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_XTEST )
 
@@ -131,14 +132,6 @@ namespace sw
 
     namespace
     {
-        /// 명령 사이에 연결을 유지한다(누른 채로 다음 명령에서 떼는 시험이 있다). 개발 콘솔(게임 스레드)에서만 부른다.
-        ScopeOwned<XTestInputInjector> s_injector{};
-
-        XTestInputInjector& getInjector()
-        {
-            return s_injector.getRequired();
-        }
-
         /// 동작 이름(down · up · tap · click)을 읽습니다. @p outPress · @p outRelease 는 누름 · 뗌이 필요한지입니다.
         bool parseAction( const string& action, bool& outPress, bool& outRelease )
         {
@@ -194,7 +187,14 @@ namespace sw
             else
                 return false;
 
-            XTestInputInjector& injector = getInjector();
+            // 연결은 엔진 범위의 모듈 부분이 명령 사이에 유지한다(누른 채로 다음 명령에서 떼는 시험이 있다). 개발 콘솔(게임 스레드)에서만 부른다.
+            XTestInputInjector* const pInjector = engine::findSubsystem<XTestInputInjector>();
+            if ( pInjector == nullptr )
+            {
+                outReply = "XTest unavailable: no engine scope";
+                return true;
+            }
+            XTestInputInjector& injector = *pInjector;
             string              reason;
             if ( injector.open( reason ) == false )
             {
@@ -223,6 +223,8 @@ namespace sw
             return true;
         }
     } // namespace
+
+    SW_MODULE_PART( Engine, XTestInputInjector, XTestInputInjector );
 
     SW_DEV_COMMAND( XTestInput, "input.xtest", "input.xtest move <x> <y> | button <1-9> <down|up|click> | key <keysym> <down|up|tap>",
                     "Inject mouse / key input into the X server through XTest (screen coordinates; X11 window input checks)", &runXTest );

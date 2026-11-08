@@ -30,6 +30,7 @@ namespace sw
     class IRHISwapChain;
     class IRHITimestampProvider;
     class RHIMemoryTracker;
+    class BindlessIndexReportLog;
 
     /** @brief `IRHIDevice::releaseHandle` 이 해제하는 핸들의 종류입니다. 종류마다 해제에 쓰는 팩터리 함수가 다릅니다. */
     enum class RHIHandleKind : uint8
@@ -337,6 +338,8 @@ namespace sw
             (void)index;
             return true;
         }
+        /** @brief 이 장치가 남긴 bindless 인덱스 보고 자리입니다(`BindlessIndexValidator` — 같은 자리는 한 번만). 병렬 기록 스레드에서 불러도 된다. */
+        BindlessIndexReportLog& getBindlessIndexReportLog() const { return *_pBindlessIndexReportLog; }
 
         /**
          * @brief 그래픽스 VS 가 GPUScene 인스턴스 구조 버퍼(InstanceData)를 읽을 수 있으면 true 를 반환합니다.
@@ -650,6 +653,8 @@ namespace sw
         unique_ptr<RHIMemoryTracker> _memoryTracker;
         /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 넘긴 · 끝낸 프레임 수입니다(releaseHandle 참고).
         unique_ptr<RHIDeferredHandleQueue> _pDeferredHandleQueue;
+        /// @brief 남긴 bindless 인덱스 보고 자리입니다(getBindlessIndexReportLog 참고). 장치와 함께 생기고 사라진다.
+        unique_ptr<BindlessIndexReportLog> _pBindlessIndexReportLog;
         /// @brief 마지막 `initialize` 의 단계별 시간입니다(`markInitPhase`).
         RHIInitPhaseTimings _initPhaseTimings;
     };

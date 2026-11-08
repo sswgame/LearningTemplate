@@ -24,10 +24,23 @@ namespace sw
         , _baseTitle{}
         , _framePacer{}
         , _titleTarget{ *this }
+        , _pendingClientWidth{ 0 }
+        , _pendingClientHeight{ 0 }
     {
     }
 
     MainWindowSubsystem::~MainWindowSubsystem() = default;
+
+    bool MainWindowSubsystem::consumePendingClientSize()
+    {
+        if ( _pendingClientWidth == 0 )
+            return true;
+        if ( _window == nullptr || _window->getWidth() != _pendingClientWidth || _window->getHeight() != _pendingClientHeight )
+            return false;
+        _pendingClientWidth  = 0;
+        _pendingClientHeight = 0;
+        return true;
+    }
 
     void MainWindowSubsystem::shutdownSubsystem()
     {

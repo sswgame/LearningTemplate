@@ -17,6 +17,10 @@
 
 namespace sw
 {
+    class AssetCookRootRegistrar;
+    template <typename T>
+    class RegistrationList;
+
     /**
      * @struct AssetCookRootRegistry
      * @brief 등록된 코드 뿌리(리소스 id)의 표입니다. 표는 프로세스 값이고 정적 등록자가 채웁니다.
@@ -30,7 +34,8 @@ namespace sw
 
     private:
         friend class AssetCookRootRegistrar;
-        static vector<string_view>& getRoots();
+        /** @brief 정적 등록 표입니다(공통 틀 `SW_DEFINE_REGISTRATION_LIST` — 함수 정적이라 다른 TU 의 등록자가 먼저 와도 서 있다). */
+        static RegistrationList<const AssetCookRootRegistrar>& getRegistrars();
     };
 
     /** @brief `SW_ASSET_COOK_ROOT` 가 두는 정적 등록자입니다. 만들 때 올리고 사라질 때 내립니다. 경로는 정적 글(상수)이어야 한다. */
@@ -41,6 +46,9 @@ namespace sw
         ~AssetCookRootRegistrar();
         AssetCookRootRegistrar( const AssetCookRootRegistrar& )            = delete;
         AssetCookRootRegistrar& operator=( const AssetCookRootRegistrar& ) = delete;
+
+        /** @brief 등록한 리소스 id 입니다. */
+        string_view getAssetID() const { return _assetID; }
 
     private:
         string_view _assetID;
