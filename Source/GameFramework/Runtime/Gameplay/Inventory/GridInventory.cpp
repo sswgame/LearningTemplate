@@ -175,24 +175,24 @@ namespace sw
 
     int32 GridInventory::takeFromInstance( int32 instanceID, int32 count )
     {
-        const int32 itemIndex = findItemIndex( instanceID );
-        if ( itemIndex < 0 || count <= 0 )
+        const optional<uint32> itemIndex = findItemIndex( instanceID );
+        if ( itemIndex.has_value() == false || count <= 0 )
             return 0;
-        GridItem&   item  = _listItem[static_cast<size_t>( itemIndex )];
+        GridItem&   item  = _listItem[*itemIndex];
         const int32 taken = MathUtil::min( count, item._count );
         item._count -= taken;
         if ( item._count <= 0 )
-            eraseItemAt( static_cast<size_t>( itemIndex ) );
+            eraseItemAt( *itemIndex );
         ++_revision;
         return taken;
     }
 
     bool GridInventory::moveItem( int32 instanceID, int32 x, int32 y, bool bRotated )
     {
-        const int32 itemIndex = findItemIndex( instanceID );
-        if ( itemIndex < 0 )
+        const optional<uint32> itemIndex = findItemIndex( instanceID );
+        if ( itemIndex.has_value() == false )
             return false;
-        GridItem& item = _listItem[static_cast<size_t>( itemIndex )];
+        GridItem& item = _listItem[*itemIndex];
         if ( canPlace( item._itemID, x, y, bRotated, instanceID ) == false )
             return false;
         stampItem( item, constant::invalid_index::kInt32 );
@@ -221,8 +221,8 @@ namespace sw
 
     const GridItem* GridInventory::findInstance( int32 instanceID ) const
     {
-        const int32 itemIndex = findItemIndex( instanceID );
-        return itemIndex >= 0 ? &_listItem[static_cast<size_t>( itemIndex )] : nullptr;
+        const optional<uint32> itemIndex = findItemIndex( instanceID );
+        return itemIndex.has_value() ? &_listItem[*itemIndex] : nullptr;
     }
 
     int32 GridInventory::getItemCount( const hashed_string& itemID ) const
@@ -257,14 +257,14 @@ namespace sw
         return true;
     }
 
-    int32 GridInventory::findItemIndex( int32 instanceID ) const
+    optional<uint32> GridInventory::findItemIndex( int32 instanceID ) const
     {
         for ( size_t itemIndex = 0; itemIndex < _listItem.size(); ++itemIndex )
         {
             if ( _listItem[itemIndex]._instanceID == instanceID )
-                return static_cast<int32>( itemIndex );
+                return static_cast<uint32>( itemIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void GridInventory::computeFootprint( const GridItemShape& shape, bool bRotated, int32& outWidth, int32& outHeight ) const

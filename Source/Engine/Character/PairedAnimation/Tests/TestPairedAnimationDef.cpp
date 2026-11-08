@@ -25,7 +25,7 @@ SW_TEST_CASE( PairedAnimationDefTest, DefLoadsRolesAlignmentAndNotifies )
     SW_EXPECT_NEAR( 1.5f, def.getDuration(), 1e-6f );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( def.getRoles().size() ) );
     SW_EXPECT_EQUAL( 0u, def.getAnchorRoleIndex() );
-    const PairedAnimationRoleDef& victim = def.getRoles()[def.findRoleIndex( hashed_string( "Victim" ) )];
+    const PairedAnimationRoleDef& victim = def.getRoles()[def.findRoleIndex( hashed_string( "Victim" ) ).value()];
     SW_EXPECT_TRUE( victim._align == PairedAnimationAlign::Warp );
     SW_EXPECT_NEAR( 1.2f, victim._offset._z, 1e-6f );
     SW_EXPECT_NEAR( MathUtil::kPi, victim._yawRadians, 1e-5f );
@@ -34,7 +34,7 @@ SW_TEST_CASE( PairedAnimationDefTest, DefLoadsRolesAlignmentAndNotifies )
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( def.getNotifies().size() ) );
     SW_EXPECT_TRUE( def.getNotifies()[0]._name == hashed_string( "Grip" ) );
     SW_EXPECT_TRUE( def.getNotifies()[1]._name == hashed_string( "Impact" ) );
-    SW_EXPECT_EQUAL( constant::invalid_index::kUint32, def.findRoleIndex( hashed_string( "Nobody" ) ) );
+    SW_EXPECT_FALSE( def.findRoleIndex( hashed_string( "Nobody" ) ).has_value() );
 }
 
 /**

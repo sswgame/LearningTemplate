@@ -584,10 +584,11 @@ namespace sw::editor
         Widget*     pWidget = tree.findWidgetByID( _selected );
         if ( pWidget == nullptr || pWidget->getParent() == nullptr )
             return false; // 루트는 지우지 않는다(문서에는 루트가 있어야 한다)
-        PanelWidget* pParent = pWidget->getParent();
-        const uint32 index   = pParent->findChildIndex( pWidget );
-        if ( index == constant::invalid_index::kUint32 )
+        PanelWidget*           pParent    = pWidget->getParent();
+        const optional<uint32> foundIndex = pParent->findChildIndex( pWidget );
+        if ( foundIndex.has_value() == false )
             return false;
+        const uint32 index         = *foundIndex;
         const uint32 parentOrdinal = UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() );
         _pointer.clearHover();
         shared_ptr<RemovedWidget> pHolder = sw::make_shared<RemovedWidget>();

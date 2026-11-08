@@ -95,7 +95,9 @@ namespace sw::editor
                 const GameObject*  pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorWatchHierarchyObject.c_str() ) ) : nullptr;
                 if ( pObject == nullptr )
                     return true;
-                outValue = static_cast<float64>( HierarchyRowModel::get().findDrawnRowIndex( pObject->getObjectID() ) );
+                const optional<uint32> rowIndex = HierarchyRowModel::get().findDrawnRowIndex( pObject->getObjectID() );
+                if ( rowIndex.has_value() )
+                    outValue = static_cast<float64>( *rowIndex ); // 그려지지 않은 오브젝트는 위의 -1 그대로
                 return true;
             }
 

@@ -47,11 +47,11 @@ namespace sw
 
     unique_ptr<Widget> PanelWidget::removeChild( Widget* pChild )
     {
-        const uint32 index = findChildIndex( pChild );
-        if ( index == constant::invalid_index::kUint32 )
+        const optional<uint32> index = findChildIndex( pChild );
+        if ( index.has_value() == false )
             return nullptr;
-        unique_ptr<Widget> child = std::move( _listChild[index] );
-        _listChild.erase( _listChild.begin() + index );
+        unique_ptr<Widget> child = std::move( _listChild[*index] );
+        _listChild.erase( _listChild.begin() + static_cast<ptrdiff_t>( *index ) );
         child->detachFromTree();
         child->_pParent = nullptr;
         invalidate( WidgetDirty::kLayout );
@@ -85,14 +85,14 @@ namespace sw
         }
     }
 
-    uint32 PanelWidget::findChildIndex( const Widget* pChild ) const
+    optional<uint32> PanelWidget::findChildIndex( const Widget* pChild ) const
     {
         for ( uint32 index = 0; index < static_cast<uint32>( _listChild.size() ); ++index )
         {
             if ( _listChild[index].get() == pChild )
                 return index;
         }
-        return constant::invalid_index::kUint32;
+        return nullopt;
     }
 
     void PanelWidget::setClipChildren( bool bClip )

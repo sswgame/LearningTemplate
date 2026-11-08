@@ -355,12 +355,12 @@ namespace sw
 
     bool PoseModifierComponent::isTargetBound( const hashed_string& targetName ) const
     {
-        const int32 targetIndex = _instance.isInitialized() ? _instance.findTargetIndex( targetName ) : -1;
-        if ( targetIndex < 0 )
+        const optional<uint32> targetIndex = _instance.isInitialized() ? _instance.findTargetIndex( targetName ) : nullopt;
+        if ( targetIndex.has_value() == false )
             return false;
-        if ( _instance.isTargetExternal( static_cast<uint32>( targetIndex ) ) == false )
+        if ( _instance.isTargetExternal( *targetIndex ) == false )
             return true;
-        return static_cast<size_t>( targetIndex ) < _listExternal.size() && _listExternal[static_cast<size_t>( targetIndex )]._bBound == SW_TRUE;
+        return *targetIndex < _listExternal.size() && _listExternal[*targetIndex]._bBound == SW_TRUE;
     }
 
     void PoseModifierComponent::releaseDependencies()

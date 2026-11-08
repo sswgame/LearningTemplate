@@ -117,8 +117,8 @@ namespace sw
 
     bool PairedAnimationSession::isRolePlaying( const hashed_string& roleName ) const
     {
-        const uint32 roleIndex = _def->findRoleIndex( roleName );
-        return roleIndex < _listRole.size() && _listRole[roleIndex]._stage == PairedAnimationRoleStage::Playing;
+        const optional<uint32> roleIndex = _def->findRoleIndex( roleName );
+        return roleIndex.has_value() && *roleIndex < _listRole.size() && _listRole[*roleIndex]._stage == PairedAnimationRoleStage::Playing;
     }
 
     bool PairedAnimationSession::tryComputeAlignTarget( GameObjectManager& manager, const PairedAnimationRoleDef& roleDef, float3& outPosition, float32& outYaw ) const
@@ -150,13 +150,13 @@ namespace sw
         const PairedAnimationDef& def = *_def;
         for ( const PairedAnimationBinding& binding : listBinding )
         {
-            const uint32 roleIndex = def.findRoleIndex( binding._role );
-            if ( roleIndex == constant::invalid_index::kUint32 )
+            const optional<uint32> roleIndex = def.findRoleIndex( binding._role );
+            if ( roleIndex.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationBindsUnknown", "Paired animation binds unknown role '%#'", binding._role.c_str() );
                 return PairedAnimationStartResult::InvalidBinding;
             }
-            if ( _listRole[roleIndex]._animator.isValid() )
+            if ( _listRole[*roleIndex]._animator.isValid() )
             {
                 SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationBindsRole", "Paired animation binds role '%#' twice", binding._role.c_str() );
                 return PairedAnimationStartResult::InvalidBinding;
@@ -169,7 +169,7 @@ namespace sw
                     return PairedAnimationStartResult::InvalidBinding;
                 }
             }
-            _listRole[roleIndex]._animator = binding._animator;
+            _listRole[*roleIndex]._animator = binding._animator;
         }
         return PairedAnimationStartResult::Started;
     }
@@ -239,7 +239,7 @@ namespace sw
     {
         for ( const PairedAnimationNotifyDef& notify : _def->getNotifies() )
         {
-            const RoleState& role = _listRole[_def->findRoleIndex( notify._role )];
+            const RoleState& role = _listRole[_def->findRoleIndex( notify._role ).value()];
             if ( role._stage == PairedAnimationRoleStage::Unbound )
                 continue;
             const SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
@@ -535,7 +535,7 @@ namespace sw
     void PairedAnimationSession::fireNotify( GameObjectManager& manager, uint32 notifyIndex )
     {
         const PairedAnimationNotifyDef&  notify    = _def->getNotifies()[notifyIndex];
-        const RoleState&                 role      = _listRole[_def->findRoleIndex( notify._role )];
+        const RoleState&                 role      = _listRole[_def->findRoleIndex( notify._role ).value()];
         const bool                       bBound    = role._stage == PairedAnimationRoleStage::Waiting || role._stage == PairedAnimationRoleStage::Playing;
         const SkeletalAnimatorComponent* pAnimator = bBound ? resolveAnimator( manager, role ) : nullptr;
         AnimationNotifyComponent*        pNotify   = pAnimator != nullptr ? PairedAnimationSessionInternal::findSibling<AnimationNotifyComponent>( *pAnimator ) : nullptr;

@@ -23,6 +23,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -158,8 +159,8 @@ namespace sw
         [[nodiscard]] bool validate( string_view sourceName ) const;
         /** @brief 모든 바디의 뼈가 스켈레톤의 이름에 있는지 검사합니다. 없는 뼈는 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validateAgainstSkeleton( span<const hashed_string> listBoneName, string_view sourceName ) const;
-        /** @brief 뼈 이름의 바디 번호입니다. 없으면 -1 입니다. */
-        int32 findBodyIndex( const hashed_string& bone ) const;
+        /** @brief 뼈 이름의 바디 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findBodyIndex( const hashed_string& bone ) const;
 
     private:
         /** @brief 합성 문맥을 받는 읽기의 본문입니다. `loadFromAsset` 은 리소스 id 를 실은 문맥(`withAsset`)을, 글 입구는 id 없는 문맥을 넘깁니다(덮어쓰기 층 · 다시 읽기 기록 · 접속 대조는 id 로 읽을 때만 받는다). */

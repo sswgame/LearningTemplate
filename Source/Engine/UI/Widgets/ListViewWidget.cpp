@@ -77,10 +77,12 @@ namespace sw
             setScrollOffset( bottom - _viewportHeight );
     }
 
-    uint32 ListViewWidget::findItemIndex( const Widget& row ) const
+    optional<uint32> ListViewWidget::findItemIndex( const Widget& row ) const
     {
-        const uint32 rowIndex = findChildIndex( &row );
-        return rowIndex < _listRowItem.size() ? _listRowItem[rowIndex] : constant::invalid_index::kUint32;
+        const optional<uint32> rowIndex = findChildIndex( &row );
+        if ( rowIndex.has_value() == false || *rowIndex >= _listRowItem.size() )
+            return nullopt;
+        return _listRowItem[*rowIndex];
     }
 
     bool ListViewWidget::scrollIntoView( const Widget& widget )
@@ -93,9 +95,11 @@ namespace sw
         }
         if ( pRow == nullptr )
             return false;
-        const uint32  itemIndex = findItemIndex( *pRow );
-        const float32 before    = _scrollOffset;
-        scrollToItem( itemIndex );
+        const optional<uint32> itemIndex = findItemIndex( *pRow );
+        if ( itemIndex.has_value() == false )
+            return false; // 항목을 맡지 않은 줄
+        const float32 before = _scrollOffset;
+        scrollToItem( *itemIndex );
         return before != _scrollOffset;
     }
 

@@ -49,19 +49,19 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "NetPlayPresets.MultiplayerPresetNeedsName", "A multiplayer preset needs a name" );
             return false;
         }
-        const uint32            presetIndex = findPresetIndex( name );
+        const optional<uint32>  presetIndex = findPresetIndex( name );
         EditorNetPlayPresetFile changed     = _file;
-        if ( presetIndex == constant::invalid_index::kUint32 )
+        if ( presetIndex.has_value() == false )
             changed._listPreset.push_back( EditorNetPlayPreset{ string( name ), settings } );
         else
-            changed._listPreset[presetIndex]._settings = settings;
+            changed._listPreset[*presetIndex]._settings = settings;
         changed._selectedPresetName = string( name );
         return commitFile( std::move( changed ) );
     }
 
     bool EditorNetPlayPresetStore::selectPreset( string_view name )
     {
-        if ( findPresetIndex( name ) == constant::invalid_index::kUint32 )
+        if ( findPresetIndex( name ).has_value() == false )
         {
             SW_LOG_ERROR_ID( "NetPlayPresets.NoMultiplayerPresetNamed", "No multiplayer preset named '%#'", string( name ) );
             return false;
@@ -73,14 +73,14 @@ namespace sw::editor
 
     bool EditorNetPlayPresetStore::removePreset( string_view name )
     {
-        const uint32 presetIndex = findPresetIndex( name );
-        if ( presetIndex == constant::invalid_index::kUint32 )
+        const optional<uint32> presetIndex = findPresetIndex( name );
+        if ( presetIndex.has_value() == false )
         {
             SW_LOG_ERROR_ID( "NetPlayPresets.NoMultiplayerPresetNamed", "No multiplayer preset named '%#'", string( name ) );
             return false;
         }
         EditorNetPlayPresetFile changed = _file;
-        changed._listPreset.erase( changed._listPreset.begin() + presetIndex );
+        changed._listPreset.erase( changed._listPreset.begin() + static_cast<ptrdiff_t>( *presetIndex ) );
         if ( changed._selectedPresetName == name )
             changed._selectedPresetName.clear();
         return commitFile( std::move( changed ) );
@@ -88,8 +88,8 @@ namespace sw::editor
 
     const EditorNetPlaySettings* EditorNetPlayPresetStore::findPreset( string_view name ) const
     {
-        const uint32 presetIndex = findPresetIndex( name );
-        return presetIndex == constant::invalid_index::kUint32 ? nullptr : &_file._listPreset[presetIndex]._settings;
+        const optional<uint32> presetIndex = findPresetIndex( name );
+        return presetIndex.has_value() == false ? nullptr : &_file._listPreset[*presetIndex]._settings;
     }
 
     string EditorNetPlayPresetStore::getDefaultFilePath()
@@ -120,14 +120,14 @@ namespace sw::editor
         return {};
     }
 
-    uint32 EditorNetPlayPresetStore::findPresetIndex( string_view name ) const
+    optional<uint32> EditorNetPlayPresetStore::findPresetIndex( string_view name ) const
     {
         for ( uint32 presetIndex = 0; presetIndex < static_cast<uint32>( _file._listPreset.size() ); ++presetIndex )
         {
             if ( _file._listPreset[presetIndex]._name == name )
                 return presetIndex;
         }
-        return constant::invalid_index::kUint32;
+        return nullopt;
     }
 
     bool EditorNetPlayPresetStore::commitFile( EditorNetPlayPresetFile&& file )

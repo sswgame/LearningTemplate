@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -55,7 +56,7 @@ namespace sw
         /** @brief 항목 @p itemIndex 가 보이도록 최소한만 옮깁니다. */
         void scrollToItem( uint32 itemIndex );
         /** @brief 줄 위젯 @p row 가 지금 맡은 항목입니다(없으면 `constant::invalid_index::kUint32`). */
-        uint32 findItemIndex( const Widget& row ) const;
+        [[nodiscard]] optional<uint32> findItemIndex( const Widget& row ) const;
         /** @brief 지금까지 만든 줄 위젯 수입니다(테스트용이며, 보이는 줄 + 1 을 넘지 않습니다). */
         uint32 getCreatedRowCount() const { return static_cast<uint32>( _listRowItem.size() ); }
         /** @brief 지금까지 줄을 다시 연결한 횟수입니다(테스트용). */

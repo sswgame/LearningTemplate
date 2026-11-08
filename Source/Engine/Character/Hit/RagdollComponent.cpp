@@ -3,6 +3,7 @@
 #include "Engine/Character/Hit/RagdollComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -314,8 +315,9 @@ namespace sw
 
     const PhysicsHitZoneDef* RagdollComponent::findHitZone( PhysicsBodyHandle body, int32& outBodyIndex ) const
     {
-        outBodyIndex          = _ragdoll.findBodyIndex( body );
-        const bool bNoHitZone = outBodyIndex < 0 || _asset == nullptr || static_cast<size_t>( outBodyIndex ) >= _asset->_listBody.size();
+        const optional<uint32> bodyIndex = _ragdoll.findBodyIndex( body );
+        outBodyIndex                     = bodyIndex.has_value() ? static_cast<int32>( *bodyIndex ) : constant::invalid_index::kInt32;
+        const bool bNoHitZone            = outBodyIndex < 0 || _asset == nullptr || static_cast<size_t>( outBodyIndex ) >= _asset->_listBody.size();
         if ( bNoHitZone )
             return nullptr;
         const PhysicsHitZoneDef& zone = _asset->_listBody[static_cast<size_t>( outBodyIndex )]._hitZone;

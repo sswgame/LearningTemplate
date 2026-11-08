@@ -49,8 +49,8 @@ SW_TEST_CASE( ListViewWidgetTest, CreatesOnlyTheVisibleRows )
     (void)UITestUtil::layout( tree, Util::kViewport );
     SW_EXPECT_EQUAL( 6u, list.getCreatedRowCount() );
     SW_EXPECT_EQUAL( 6u, Util::s_bindCount );
-    SW_EXPECT_EQUAL( 0u, list.findItemIndex( *list.getChild( 0 ) ) );
-    SW_EXPECT_EQUAL( 5u, list.findItemIndex( *list.getChild( 5 ) ) );
+    SW_EXPECT_TRUE( list.findItemIndex( *list.getChild( 0 ) ) == 0u );
+    SW_EXPECT_TRUE( list.findItemIndex( *list.getChild( 5 ) ) == 5u );
 }
 
 /** @brief [ListViewWidgetTest] 한 줄 스크롤은 위로 나간 위젯 하나만 새 항목에 다시 잇는다 */
@@ -63,8 +63,8 @@ SW_TEST_CASE( ListViewWidgetTest, ScrollingOneRowRebindsOneWidget )
     list.setScrollOffset( Util::kRowHeight );
     (void)UITestUtil::layout( tree, Util::kViewport );
     SW_EXPECT_EQUAL( bindsBefore + 1u, Util::s_bindCount );
-    SW_EXPECT_EQUAL( 6u, list.findItemIndex( *list.getChild( 0 ) ) ); // 항목 k 는 줄 k % 6 이 맡는다
-    SW_EXPECT_EQUAL( 1u, list.findItemIndex( *list.getChild( 1 ) ) );
+    SW_EXPECT_TRUE( list.findItemIndex( *list.getChild( 0 ) ) == 6u ); // 항목 k 는 줄 k % 6 이 맡는다
+    SW_EXPECT_TRUE( list.findItemIndex( *list.getChild( 1 ) ) == 1u );
     SW_EXPECT_EQUAL( 6u, list.getCreatedRowCount() );
 }
 
@@ -96,10 +96,10 @@ SW_TEST_CASE( ListViewWidgetTest, ExtraRowsCollapseWhenItemsShrink )
     SW_EXPECT_EQUAL( 6u, list.getCreatedRowCount() );
     SW_EXPECT_TRUE( list.getChild( 1 )->getVisibility() != WidgetVisibility::Collapsed );
     SW_EXPECT_TRUE( list.getChild( 2 )->getVisibility() == WidgetVisibility::Collapsed );
-    SW_EXPECT_EQUAL( constant::invalid_index::kUint32, list.findItemIndex( *list.getChild( 2 ) ) );
+    SW_EXPECT_FALSE( list.findItemIndex( *list.getChild( 2 ) ).has_value() );
     list.setItemCount( 0 );
     (void)UITestUtil::layout( tree, Util::kViewport );
-    SW_EXPECT_EQUAL( constant::invalid_index::kUint32, list.findItemIndex( *list.getChild( 0 ) ) );
+    SW_EXPECT_FALSE( list.findItemIndex( *list.getChild( 0 ) ).has_value() );
 }
 
 /** @brief [ListViewWidgetTest] 휠은 내려가고, 끝에서는 처리하지 않아 부모가 받는다 */
