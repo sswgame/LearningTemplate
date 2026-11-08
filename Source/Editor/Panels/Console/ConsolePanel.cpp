@@ -11,6 +11,9 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "DevTools/Client/Automation/Runner/AutomationLogPolicy.h"
+#include "DevTools/Client/Automation/Runner/AutomationSession.h"
+
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
