@@ -3,7 +3,7 @@
 """
 Scripts/lint/CppShape.py
 
-C++ 모양 규칙 중 컴파일러가 보지 않는 아홉을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
+C++ 모양 규칙 중 컴파일러가 보지 않는 열을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
 **왜 형식이 아니라 린트인가.** 여섯 다 C++ 문법으로 막을 수 없다(멤버 순서 · 칸 형식의 선택 · 익명 네임스페이스 수 · 함수가 놓인 타입 · include 자리).
 
 1. 선언 순서(`docs/agents/Includes.md`): public 멤버 변수 → 생성자 · 소멸자 → … → private 함수(따로 된 접근 구역) → private 멤버 변수(마지막).
@@ -27,6 +27,9 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 아홉을 본다. 규칙 문
    (`SubsystemScope::exposeMember` · 모듈 창구 `SW_MODULE_PART` · `getPublishedPart`). `std::enable_shared_from_this` 는 세지 않는다(표준 믹스인).
    예외는 `Config/Dev/CppShapeExceptions.json` 의 `multipleBase` 에 `경로|클래스` → 까닭으로 적는다(플랫폼 COM · 빈 기반 최적화 · 역할 인터페이스 묶음).
    전체 실행(`--all`)은 더는 없는 예외 자리도 위반으로 센다.
+10. 상태와 그것을 바꾸는 논리는 한 타입(`docs/agents/Helpers.md` — 규칙 4 의 `.cpp` 짝): `.cpp` 에 정의한 상태 타입(공개 칸, 이름이 `…Internal` 아님)의 공개 칸을
+   같은 파일 `…Internal` 의 static 함수가 `const` 아닌 참조 · 포인터(`outX` 이름 말고 — 한 번 채우는 기록은 제외)로 받아 바꾸는 수가 문턱 이상이면 위반이다.
+   문턱 `stateMutatorMinFunctions` 과 예외 `stateMutator`(`경로|타입` → 까닭)는 `Config/Dev/CppShapeExceptions.json`, 전체 실행은 낡은 예외도 센다.
 
 `py -3 -m Scripts cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
 """
@@ -113,6 +116,22 @@ def matchBrace(text: str, openIndex: int) -> int:
             if depth == 0:
                 return index
     return len(text) - 1
+
+
+kBodyOpen = re.compile(r"\s*(?:const\s*|noexcept\s*|override\s*|final\s*|->\s*[\w:<>]+\s*)*\{")  # 인자 목록 `)` 뒤의 함수 본문 시작
+
+
+def findParamListEnd(code: str, index: int) -> int:
+    """인자 목록 안의 @p index 에서 그 목록을 닫는 `)` 위치입니다(없으면 글 끝)."""
+    depth = 0
+    for position in range(index, len(code)):
+        if code[position] == "(":
+            depth += 1
+        elif code[position] == ")":
+            if depth == 0:
+                return position
+            depth -= 1
+    return len(code)
 
 
 def previousToken(text: str, index: int) -> str:
@@ -586,6 +605,91 @@ def checkMultipleBases(info: ClassInfo, relative: str, exceptions: dict[str, str
                         f"(`SubsystemScope::exposeMember` · `SW_MODULE_PART`). 불가피하면 {kExceptionsPath} 의 multipleBase 에 까닭과 함께 적는다")]
 
 
+kFieldMutation = (r"\s*(?:\.|->)\s*(?:{fields})\b\s*(?:\[[^\]]*\]\s*)*(?:[-+*/%|&^]?=(?!=)|\+\+|--|"
+                  r"\.\s*(?:push_back|emplace_back|pop_back|clear|erase|insert|emplace|resize|reserve|append|assign|reset|swap)\s*\()")
+
+
+def publicFieldName(statement: str) -> str | None:
+    """칸 문장(`vector<int32> _listX{};` · `uint8 _bY : 1;` · `float32 _arr[4];`)의 이름입니다."""
+    text = re.split(r"[={]", re.sub(r"\s+", " ", statement).strip(), maxsplit=1)[0]
+    text = re.sub(r"\[[^\]]*\]", "", re.sub(r":\s*\d+\s*$", "", text)).strip()
+    match = re.search(r"(\w+)$", text)
+    return match.group(1) if match else None
+
+
+def findStateMutators(code: str) -> dict[str, tuple[int, str, int]]:
+    """
+    `.cpp` 의 상태 타입(공개 칸이 있고 이름이 `…Internal` 이 아닌 것) → (줄, 그 공개 칸을 바꾸는 `…Internal` 타입, 바꾸는 static 함수 수).
+    `const` 로 받거나 `outX` 로 받는 함수(한 번 채워 돌려주는 기록 — 파서 · 팩토리)는 세지 않는다.
+    """
+    states: dict[str, tuple[int, set[str]]] = {}
+    for info in collectClasses(code):
+        fields = {publicFieldName(statement) for kind, access, _, statement in info.items if kind == "var" and access == "public"} - {None}
+        if info.name and not info.name.endswith("Internal") and fields:
+            states[info.name] = (info.line, fields)
+    if not states:
+        return {}
+    statePattern = re.compile(r"(?<![\w:])(" + "|".join(map(re.escape, states)) + r")\s*[&*]\s*(\w+)\s*(?=[,)=])")
+    functionsByPair: dict[tuple[str, str], set[int]] = {}
+    for match in kTypeOpen.finditer(code):
+        helper = match.group(2)
+        if not helper.endswith("Internal"):
+            continue
+        openIndex = match.end() - 1
+        body = code[openIndex:matchBrace(code, openIndex)]
+        for param in statePattern.finditer(body):
+            state, name = param.group(1), param.group(2)
+            if re.search(r"\bconst\s*$", body[:param.start()]) or re.match(r"out[A-Z]", name):
+                continue
+            opening = kBodyOpen.match(body, findParamListEnd(body, param.end()) + 1)
+            if opening is None:
+                continue
+            functionBody = body[opening.end() - 1:matchBrace(body, opening.end() - 1)]
+            if re.search(r"(?<![\w.>])" + re.escape(name) + kFieldMutation.format(fields="|".join(map(re.escape, states[state][1]))), functionBody):
+                functionsByPair.setdefault((state, helper), set()).add(openIndex + opening.end())
+    result: dict[str, tuple[int, str, int]] = {}
+    for (state, helper), functions in functionsByPair.items():
+        if state not in result or len(functions) > result[state][2]:
+            result[state] = (states[state][0], helper, len(functions))
+    return result
+
+
+def checkStateMutators(code: str, relative: str, rules: dict) -> list[tuple[int, str]]:
+    """
+    상태와 그것을 바꾸는 논리는 한 타입(`docs/agents/Helpers.md` 주인 우선): `.cpp` 의 상태 구조체 공개 칸을 따로 선 `…Internal` 의 static 함수 여럿이
+    차례로 바꾸면, 상태를 비공개 칸 + 그 함수들을 멤버로 든 클래스로 합친다(`TerrainBrushToolState`). 규칙 4 는 헤더만 보아 이 모양이 `.cpp` 에 남았다(2026-11-09).
+    형식으로는 막을 수 없다(어느 함수가 어느 상태의 일인지 C++ 이 모른다). 문턱(`stateMutatorMinFunctions`)과 예외(`stateMutator`, `경로|타입` → 까닭)는 데이터다.
+    """
+    if not relative.endswith(".cpp"):
+        return []
+    problems = []
+    for state, (line, helper, count) in findStateMutators(code).items():
+        if count >= rules["stateMutatorMinFunctions"] and f"{relative}|{state}" not in rules["stateMutator"]:
+            problems.append((line, f"`{state}` 의 공개 칸을 `{helper}` 의 static 함수 {count} 개가 바꾼다 — 상태와 그것을 바꾸는 논리는 한 타입이다: 칸을 비공개로, 그 함수들을 `{state}` 의 멤버로"
+                                   f"(Helpers.md). 불가피하면 {kExceptionsPath} 의 stateMutator 에 까닭과 함께 적는다"))
+    return problems
+
+
+@functools.lru_cache(maxsize=1)
+def loadStateMutatorRules(projectRoot: str) -> dict:
+    """규칙 10 의 문턱 · 예외입니다. 칸이 없으면 오류로 멈춘다."""
+    data = json.loads((Path(projectRoot) / kExceptionsPath).read_text(encoding="utf-8"))
+    return {"stateMutatorMinFunctions": data["stateMutatorMinFunctions"], "stateMutator": data["stateMutator"]}
+
+
+def findStaleStateMutatorExceptions(projectRoot: Path) -> list[str]:
+    """더는 걸리지 않는(또는 사라진) 규칙 10 예외 자리 — 전체 실행에서만 센다."""
+    rules = loadStateMutatorRules(str(projectRoot))
+    listProblem = []
+    for key in rules["stateMutator"]:
+        relative, state = key.split("|", 1)
+        path = projectRoot / relative
+        hit = findStateMutators(stripCode(path.read_text(encoding="utf-8-sig", errors="ignore"))).get(state) if path.exists() else None
+        if hit is None or hit[2] < rules["stateMutatorMinFunctions"]:
+            listProblem.append(f"{kExceptionsPath}: 예외 `{key}` 는 더는 걸리지 않는다 — 줄을 지운다")
+    return listProblem
+
+
 def findStaleMultipleBaseExceptions(projectRoot: Path) -> list[str]:
     """더는 다중 기반이 아닌(또는 사라진) 예외 자리 — 전체 실행에서만 센다."""
     listProblem = []
@@ -614,6 +718,7 @@ def inspectFile(path: Path, relative: str) -> list[str]:
         listProblem += checkBitFieldRuns(info, rawLines)
     if relative.endswith(".cpp"):
         listProblem += checkAnonymousNamespaces(code)
+        listProblem += checkStateMutators(code, relative, loadStateMutatorRules(str(Path(__file__).resolve().parents[2])))
     listProblem += checkStaticOwner(code, relative, loadStaticOwnerExceptions(str(Path(__file__).resolve().parents[2])))
     listProblem += checkIncludesInsideBraces(raw, code)
     listProblem += checkSharedTempInTests(code, relative)
@@ -642,13 +747,46 @@ def checkCppShape(projectRoot: Path, listFile: Sequence[str]) -> list[str]:
     return flatMapInProcesses(functools.partial(inspectListedFile, projectRoot), listFile)
 
 
+def runSelfCheck() -> int:
+    """규칙 10(.cpp 상태 · `…Internal` 변경자)의 자체 시험입니다."""
+    failures = 0
+
+    def expect(condition: bool, message: str) -> None:
+        nonlocal failures
+        if not condition:
+            print(f"[CppShape] self-check: {message}")
+            failures += 1
+
+    rules = {"stateMutatorMinFunctions": 2, "stateMutator": {}}
+    helper = ("struct CapState\n{\n    vector<int32> _listGroup;\n    int32 _count = 0;\n};\n"
+              "struct FooInternal\n{\n    static void group( CapState& inoutState ) { inoutState._listGroup.push_back( 1 ); }\n"
+              "    static void count( CapState* pState ) { pState->_count += 1; }\n"
+              "    static int32 read( const CapState& state ) { return state._count; }\n};\n")
+    expect(len(checkStateMutators(helper, "Source/Engine/Foo.cpp", rules)) == 1, "two Internal statics mutating a .cpp state's public fields are flagged")
+    expect(checkStateMutators(helper, "Source/Engine/Foo.h", rules) == [], "headers are rule 4's job")
+    expect(checkStateMutators(helper, "Source/Engine/Foo.cpp", {"stateMutatorMinFunctions": 2, "stateMutator": {"Source/Engine/Foo.cpp|CapState": "why"}}) == [], "an exception passes")
+    expect(checkStateMutators(helper, "Source/Engine/Foo.cpp", {"stateMutatorMinFunctions": 3, "stateMutator": {}}) == [], "the threshold is data")
+    readers = helper.replace("CapState& inoutState ) { inoutState._listGroup.push_back( 1 ); }", "const CapState& state ) { use( state._listGroup ); }")
+    expect(checkStateMutators(readers, "Source/Engine/Foo.cpp", rules) == [], "const readers are not counted")
+    factory = helper.replace("CapState& inoutState ) { inoutState.", "CapState& outState ) { outState.")
+    expect(checkStateMutators(factory, "Source/Engine/Foo.cpp", rules) == [], "an outX fill (parser · factory record) is not counted")
+    owned = ("class CapState\n{\npublic:\n    void group();\nprivate:\n    vector<int32> _listGroup;\n};\n"
+             "struct FooInternal\n{\n    static void a( CapState& s ) { s._listGroup.clear(); }\n    static void b( CapState& s ) { s._listGroup.clear(); }\n};\n")
+    expect(checkStateMutators(owned, "Source/Engine/Foo.cpp", rules) == [], "private fields are not counted")
+    print(f"[CppShape] self-check {'OK' if failures == 0 else 'FAIL'}")
+    return 0 if failures == 0 else 1
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="C++ 모양 규칙(선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 중괄호 안 include)을 본다")
+    parser = argparse.ArgumentParser(description="C++ 모양 규칙(선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 중괄호 안 include · .cpp 상태 변경자)을 본다")
     parser.add_argument("--files", nargs="*", default=None, help="볼 파일(없으면 --all)")
     parser.add_argument("--all", action="store_true", help="Source 전체")
     parser.add_argument("--summary", action="store_true", help="종류별 수만")
+    parser.add_argument("--self-check", action="store_true", help="규칙 10 의 자체 시험")
     args = parser.parse_args(argv)
     sys.stdout.reconfigure(encoding="utf-8")
+    if args.self_check:
+        return runSelfCheck()
     projectRoot = Path(__file__).resolve().parents[2]
     if args.files:
         listFile = args.files
@@ -657,6 +795,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     listViolation = checkCppShape(projectRoot, listFile)
     if not args.files:
         listViolation += findStaleMultipleBaseExceptions(projectRoot)
+        listViolation += findStaleStateMutatorExceptions(projectRoot)
     if args.summary:
         counts: dict[str, int] = {}
         for line in listViolation:

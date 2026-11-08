@@ -37,7 +37,7 @@ from typing import Iterable, Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
-from lint.CppShape import matchBrace, stripCode  # noqa: E402
+from lint.CppShape import findParamListEnd, kBodyOpen, matchBrace, stripCode  # noqa: E402
 from lint.Format import getModifiedCppFiles  # noqa: E402
 from lint.MagicLiterals import isSourceFile, listSourceFiles, readStagedRenames  # noqa: E402
 
@@ -53,7 +53,6 @@ kPattern = {
 kOutTextParam = re.compile(r"\b(?:sw\s*::\s*)?string\s*&\s*(out\w+)\s*(?=[,)])")
 kReasonName = re.compile(r"Error|Reason|Message")
 kFailureReturn = re.compile(r"\s*return\s+(?:false\b|nullptr\b|(?:std\s*::\s*|sw\s*::\s*)?nullopt\b|(?:sw\s*::\s*)?unexpected\b)")
-kBodyOpen = re.compile(r"\s*(?:const\s*|noexcept\s*|override\s*|final\s*|->\s*[\w:<>]+\s*)*\{")
 # 0 이어야 하는 폴더(옮김이 끝난 곳). 그 안의 예외는 기준선 파일의 `_coreExemptions` 데이터다.
 kStrictPrefix = "Source/Core/"
 kAdvice = {
@@ -62,19 +61,6 @@ kAdvice = {
     "out-error-pointer": "`bool f( …, string* pOutError = nullptr )` 도 같은 결함이다 — `sw::expected<T>` 를 돌려주고 부르는 쪽이 버릴지 정한다(docs/agents/Errors.md)",
     "out-text-on-failure": "실패 때만 쓰는 글 출력 인자는 이유다 — `sw::expected<T>`(또는 `expected<T, DomainError>`)의 오류로 돌려준다(docs/agents/Errors.md)",
 }
-
-
-def findParamListEnd(code: str, index: int) -> int:
-    """인자 목록 안의 @p index 에서 그 목록을 닫는 `)` 위치입니다(없으면 글 끝)."""
-    depth = 0
-    for position in range(index, len(code)):
-        if code[position] == "(":
-            depth += 1
-        elif code[position] == ")":
-            if depth == 0:
-                return position
-            depth -= 1
-    return len(code)
 
 
 def isFailureOnlyWrite(body: str, write: re.Match[str]) -> bool:
