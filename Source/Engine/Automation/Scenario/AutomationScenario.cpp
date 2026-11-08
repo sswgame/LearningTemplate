@@ -177,7 +177,9 @@ namespace sw
 
     string AutomationStep::describe() const
     {
-        return formatToString( "frame %# <%#> #%#", _frameIndex, _kind, _orderInFile + 1 );
+        StringBuilder<constant::buffer::kMax256> resultBuilder;
+        resultBuilder.appendFormat( "frame %# <%#> #%#", _frameIndex, _kind, _orderInFile + 1 );
+        return string( resultBuilder.view() );
     }
 
     bool AutomationStep::readFieldsOf( void* pParams, const TypeInfo& typeInfo, string& outError, std::initializer_list<string_view> listHandRead ) const

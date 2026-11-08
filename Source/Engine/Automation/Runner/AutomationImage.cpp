@@ -129,7 +129,9 @@ namespace sw
 
     void AutomationImage::encodePpm( const AutomationImage& image, vector<uint8>& outBytes )
     {
-        const string header = formatToString( "P6\n%# %#\n255\n", image._width, image._height );
+        StringBuilder<constant::buffer::kMax256> headerBuilder;
+        headerBuilder.appendFormat( "P6\n%# %#\n255\n", image._width, image._height );
+        const string header{ headerBuilder.view() };
         outBytes.assign( header.begin(), header.end() );
         outBytes.insert( outBytes.end(), image._listRGB.begin(), image._listRGB.end() );
     }
@@ -142,7 +144,9 @@ namespace sw
         const uint32 y1 = MathUtil::min( image._height, static_cast<uint32>( region._y1 * static_cast<float32>( image._height ) + 0.5f ) );
         if ( x1 <= x0 || y1 <= y0 )
         {
-            outError = formatToString( "the region covers no pixel of the %#x%# image", image._width, image._height );
+            StringBuilder<constant::buffer::kMax256> errorBuilder;
+            errorBuilder.appendFormat( "the region covers no pixel of the %#x%# image", image._width, image._height );
+            outError = string( errorBuilder.view() );
             return false;
         }
         const uint32 sourceWidth  = x1 - x0;
@@ -186,8 +190,10 @@ namespace sw
     {
         if ( actual._width != golden._width || actual._height != golden._height )
         {
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%# (region or window size changed - record the golden again)", golden._height );
             outError = "the image is " + to_string( actual._width ) + "x" + to_string( actual._height ) + " but the golden is " + to_string( golden._width ) + "x" +
-                       formatToString( "%# (region or window size changed - record the golden again)", golden._height );
+                       string( textBuilder.view() );
             return false;
         }
         const size_t pixelCount     = static_cast<size_t>( actual._width ) * actual._height;

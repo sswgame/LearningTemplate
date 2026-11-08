@@ -109,7 +109,11 @@ namespace sw
         string text = "chain stage " + to_string( stageIndex + 1 ) + "/" + to_string( _listPath.size() ) + " " + getEnumName( result ) + " (" +
                       string( scenarioName ) + ")";
         if ( result != AutomationResult::Passed && _skippedStageCount > 0 )
-            text += formatToString( " - %# later stage(s) skipped", _skippedStageCount );
+        {
+            StringBuilder<constant::buffer::kMax256> textPart;
+            textPart.appendFormat( " - %# later stage(s) skipped", _skippedStageCount );
+            text += textPart.c_str();
+        }
         return text;
     }
 } // namespace sw

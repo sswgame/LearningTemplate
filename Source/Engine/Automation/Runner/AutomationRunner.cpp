@@ -106,7 +106,9 @@ namespace sw
              */
             static string makeOutputDirectory( string_view scenarioName )
             {
-                return FileUtil::reserveUniquePath( formatToString( "%#/%#/%#", makeAutomationOutputFolderPath(), string( scenarioName ), Process::getCurrentProcessID() ), {}, true );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%#/%#/%#", makeAutomationOutputFolderPath(), string( scenarioName ), Process::getCurrentProcessID() );
+                return FileUtil::reserveUniquePath( textBuilder.view(), {}, true );
             }
 
             /** @brief 단조 시계의 지금 시각(초)입니다. 벽시계 감시와 시한이 같은 시계를 읽는다. */
@@ -633,14 +635,28 @@ namespace sw
         const float64 elapsedSeconds = AutomationRunnerInternal::readNowSeconds() - _run._wallStartSeconds;
         if ( elapsedSeconds <= static_cast<float64>( _wallLimitSeconds ) )
             return;
-        string reason = formatToString( "the wall-clock limit of %# s (wallTimeoutSeconds %# + step budgets) was exceeded at %#", _wallLimitSeconds, _scenario.getWallTimeoutSeconds(),
-                                        describeRunPosition() );
+        StringBuilder<constant::buffer::kMax256> reasonBuilder;
+        reasonBuilder.appendFormat( "the wall-clock limit of %# s (wallTimeoutSeconds %# + step budgets) was exceeded at %#", _wallLimitSeconds, _scenario.getWallTimeoutSeconds(),
+                                    describeRunPosition() );
+        string reason{ reasonBuilder.view() };
         if ( _bStarted == SW_FALSE )
-            reason += formatToString( ", the scenario never started (%# frame(s) spent waiting for the start condition)", _run._waitFrameCount );
+        {
+            StringBuilder<constant::buffer::kMax256> reasonPart3;
+            reasonPart3.appendFormat( ", the scenario never started (%# frame(s) spent waiting for the start condition)", _run._waitFrameCount );
+            reason += reasonPart3.c_str();
+        }
         if ( _run._holdFrameCount > 0 )
-            reason += formatToString( ", the current step has held the scenario clock for %# frame(s), waiting for %#", _run._holdFrameCount, _run._waitingFor.c_str() );
+        {
+            StringBuilder<constant::buffer::kMax256> reasonPart2;
+            reasonPart2.appendFormat( ", the current step has held the scenario clock for %# frame(s), waiting for %#", _run._holdFrameCount, _run._waitingFor.c_str() );
+            reason += reasonPart2.c_str();
+        }
         if ( _run._clockHoldFrameCount > 0 )
-            reason += formatToString( ", %# has held the scenario clock for %# frame(s)", _run._clockHolderName, _run._clockHoldFrameCount );
+        {
+            StringBuilder<constant::buffer::kMax256> reasonPart;
+            reasonPart.appendFormat( ", %# has held the scenario clock for %# frame(s)", _run._clockHolderName, _run._clockHoldFrameCount );
+            reason += reasonPart.c_str();
+        }
         finish( AutomationResult::TimedOut, reason );
     }
 
@@ -903,8 +919,12 @@ namespace sw
             _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
         // 시한은 `AutomationTimeLimits` 한 곳에 있다(저장 검증은 쉬는 기계에서 몇 초, 빌드가 겹치면 30 초를 넘긴다).
         if ( nowSeconds - _run._clockHoldStartSeconds > AutomationTimeLimits::kClockHoldTimeoutSeconds )
+        {
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "%# s", static_cast<uint32>( AutomationTimeLimits::kClockHoldTimeoutSeconds ) );
             finish( AutomationResult::TimedOut, _run._clockHolderName + " held the scenario clock for more than " +
-                                                    formatToString( "%# s", static_cast<uint32>( AutomationTimeLimits::kClockHoldTimeoutSeconds ) ) );
+                                                    string( textBuilder.view() ) );
+        }
         return true;
     }
 
@@ -932,7 +952,11 @@ namespace sw
         if ( bReady && heldFrameCount == 0 )
             SW_LOG_INFO_ID( "Automation.AlreadyTrue", "[Scenario] %# was already true", step.describe().c_str() );
         if ( bReady == false )
-            recordFailure( step, formatToString( "WaitUntil gave up after %# frame(s): %#", heldFrameCount, message ) );
+        {
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "WaitUntil gave up after %# frame(s): %#", heldFrameCount, message );
+            recordFailure( step, string( textBuilder.view() ) );
+        }
         return false;
     }
 
@@ -985,7 +1009,11 @@ namespace sw
             }
             // 진 실행의 처리하지 않은 줄은 `failures` 에 섞지 않고 보고의 `unhandledLogs` 에 둔다 — 로그에는 있다는 사실만 적는다.
             if ( _result != AutomationResult::UnhandledLog && _judge.getUnhandledLogs().empty() == false )
-                detail += formatToString( "\n    (%# unhandled Warning/Error log line(s) also remain - see unhandledLogs in the report)", static_cast<uint32>( _judge.getUnhandledLogs().size() ) );
+            {
+                StringBuilder<constant::buffer::kMax256> detailPart;
+                detailPart.appendFormat( "\n    (%# unhandled Warning/Error log line(s) also remain - see unhandledLogs in the report)", static_cast<uint32>( _judge.getUnhandledLogs().size() ) );
+                detail += detailPart.c_str();
+            }
             SW_LOG_ERROR_ID( "Automation.Finished", "[Scenario] %# %# at frame %#: %#", getEnumName( _result ), _scenario.getName().c_str(), _run._frameIndex, detail.c_str() );
         }
         // 결과마다 말씨가 다른 위 줄과 별개로, 시작 줄(`started after`)과 짝이 되는 같은 모양의 끝 줄을 남긴다(grep 한 번으로 시작 · 끝을 묶는다).

@@ -316,11 +316,19 @@ namespace sw
         if ( params._count != kAutomationNoCount )
         {
             if ( matchCount != params._count )
-                context.recordFailure( step, formatToString( "ExpectLog id '%#' count == %#, got %#", target, params._count, matchCount ) );
+            {
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "ExpectLog id '%#' count == %#, got %#", target, params._count, matchCount );
+                context.recordFailure( step, textBuilder.view() );
+            }
             return;
         }
         if ( matchCount < params._atLeast )
-            context.recordFailure( step, formatToString( "ExpectLog id '%#' count >= %#, got %#", target, params._atLeast, matchCount ) );
+        {
+            StringBuilder<constant::buffer::kMax256> textBuilder;
+            textBuilder.appendFormat( "ExpectLog id '%#' count >= %#, got %#", target, params._atLeast, matchCount );
+            context.recordFailure( step, textBuilder.view() );
+        }
     }
 
     void AutomationJudge::deferExpectImage( AutomationStepContext& context, const AutomationStep& step )

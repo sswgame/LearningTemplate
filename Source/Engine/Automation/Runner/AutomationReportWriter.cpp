@@ -52,7 +52,9 @@ namespace sw
             {
                 writer.beginObject();
                 writer.key( "beforeStep" );
-                writer.valueString( formatToString( "%# #%#", wait._stepKind, wait._stepNumber ) );
+                StringBuilder<constant::buffer::kMax256> textBuilder;
+                textBuilder.appendFormat( "%# #%#", wait._stepKind, wait._stepNumber );
+                writer.valueString( textBuilder.view() );
                 writer.key( "frame" );
                 writer.valueUint( wait._frameIndex );
                 writer.key( "frames" );
