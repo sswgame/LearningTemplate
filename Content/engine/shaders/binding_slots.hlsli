@@ -13,7 +13,7 @@
  *   t0..t3 비어 있음 · t4 인스턴스 · t5 머티리얼 데이터 · t6 가시 인스턴스 ID · t7 모프 정점 · t8 라이트 ·
  *   t9 배치 테이블 · t10 VAT · t11 패스 전용(캔버스 사각형 · 입자) · t12 라이트 그리드 · t13 라이트 프로브 | t14 빈 자리(띠 안) | t15 G버퍼 머티리얼(에뮬) |
  *   t16..t31 머티리얼 텍스처(에뮬 — DX11 · GL 만, 띠 밖) — 2 절
- *   컴퓨트는 따로: b0 · t0..t3 읽기 버퍼 · u0..u3 쓰기 버퍼(셰이더 소유) · u4 셰이더 assert 링 · u5..u7 RW 텍스처(에뮬) — 3 절
+ *   컴퓨트는 따로: b0 · t0..t3 읽기 버퍼 · u0..u3 쓰기 버퍼(셰이더 소유) · u4 셰이더 메시지 링(그래픽스 단계도 같은 u4) · u5..u7 RW 텍스처(에뮬) — 3 절
  *   s0..s6 정적 샘플러 · s7 그림자 비교(DX12 · Vulkan) | DX11 은 s0..s3 엔진 슬롯 결합 샘플러 + s9..s15 정적 세트 — 4 절
  *   t0 space1 / u0 space1 bindless 텍스처 배열(DX12), Vulkan 은 set 1 binding 0..3 — 5 절
  *   그 밖: Vulkan set 0 시프트(6) · GL SSBO · 이미지 유닛(7) · 라이트 타입(8) · 패스 플래그(9) · 버퍼 배치 상수(10).
@@ -186,10 +186,13 @@
 #define SW_COMPUTE_UAV_SLOT_COUNT 5
 
 // 쓰기 버퍼 슬롯은 둘로 나뉜다 — u0..u3 은 컴퓨트 셰이더가 제 버퍼로 쓰고(셰이더 소유, 최대 4 개 — vfx_simulate 가 4 개를 다 쓴다), u4 는 어느 셰이더든 같은 번호로 쓰는
-// 셰이더 assert 링(gpu_assert.hlsli)이다. 그래서 assert 를 가진 컴퓨트는 쓰기 버퍼를 4 개까지 가질 수 있고 슬롯이 겹치지 않는다. 겹침은 ShaderBindingSlots.h 의 static_assert 와
-// ShaderBindingValidator(쿠킹된 바이너리의 u4 를 g_GPUAssertRW 만 쓰는지)가 본다. DX11 의 컴퓨트 UAV 는 u0..u7 여덟 개뿐이라 이 다섯 + RW 텍스처 셋이 꽉 찬 값이다.
+// 셰이더 메시지 링(gpu_message.hlsli — SW_GPU_PRINT · SW_GPU_LOG · SW_GPU_ASSERT)이다. 그래서 메시지를 가진 컴퓨트는 쓰기 버퍼를 4 개까지 가질 수 있고 슬롯이 겹치지 않는다.
+// 겹침은 ShaderBindingSlots.h 의 static_assert 와 ShaderBindingValidator(쿠킹된 바이너리의 u4 를 g_GPUMessageRW 만 쓰는지)가 본다. DX11 의 컴퓨트 UAV 는 u0..u7 여덟 개뿐이라
+// 이 다섯 + RW 텍스처 셋이 꽉 찬 값이다.
+// 그래픽스(픽셀) 단계도 같은 u4 를 쓴다 — DX12 · Vulkan 은 u 테이블 · 슬롯 세트가 모든 단계에 보이고, GL 은 SSBO 번호가 단계를 가리지 않는다. DX11 은 픽셀 셰이더의 u 번호가
+// 렌더 타깃 칸과 같은 자리(UAVStartSlot >= 렌더 타깃 수)라 렌더 타깃이 넷 이하인 패스에서만 걸린다. SRV t 띠(t4..t15)는 꽉 차 있어 메시지 링은 t 가 아니라 u 다.
 #define SW_COMPUTE_SHADER_UAV_SLOT_COUNT 4
-#define SW_SLOT_COMPUTE_ASSERT_UAV       4
+#define SW_SLOT_GPU_MESSAGE_UAV          4
 
 // 컴퓨트 RW 텍스처 — DX11/GL 은 고정 슬롯 u5..u7(g_SwRWSlot#), DX12/Vulkan 은 무제한 배열(g_SwBindlessRWTex2D, 아래 5)을
 // 인덱스로 고른다. 셰이더는 Bindless::storeRwTexture2D( index, texelPosition, value ) 로만 쓴다 — 에뮬 백엔드에서 index 는 슬롯 서수(0..2). 서수 0 만 쓰이고 있다(깊이 히스토리).

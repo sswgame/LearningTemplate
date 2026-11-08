@@ -109,6 +109,7 @@ namespace sw
         , _bMemoryBudget{ SW_FALSE }
         , _bSurfaceLost{ SW_FALSE }
         , _bDeviceFault{ SW_FALSE }
+        , _bFragmentStores{ SW_FALSE }
         , _bSwapChainRecreateFailing{ SW_FALSE }
         , _bCheckpoints{ SW_FALSE }
         , _pCmdSetCheckpoint{ nullptr }
@@ -1194,6 +1195,9 @@ namespace sw
         deviceFeatures.depthClamp = availableFeatures.depthClamp;
         // 렌더 타깃마다 다른 블렌드 · 쓰기 마스크(RHIRenderState::_arrBlendTarget). 켜지 않으면 첨부 상태가 모두 같아야 한다.
         deviceFeatures.independentBlend = availableFeatures.independentBlend;
+        // 프래그먼트 셰이더의 스토리지 버퍼 쓰기 · 원자 연산 — 셰이더 메시지 채널(`SW_GPU_PRINT`)이 픽셀 셰이더에서 쓴다. 없으면 능력이 거짓이고 메시지를 요구한 실행이 멈춘다.
+        // https://docs.vulkan.org/refpages/latest/refpages/source/VkPhysicalDeviceFeatures.html — 꺼져 있으면 프래그먼트 단계의 스토리지 자원은 읽기 전용이어야 한다.
+        deviceFeatures.fragmentStoresAndAtomics = availableFeatures.fragmentStoresAndAtomics;
         // 파이프라인 XML 이 고르는 선택 스테이지다. 없는 장치에서 그런 패스의 PSO 는 오류로 만들어지지 않는다.
         deviceFeatures.geometryShader     = availableFeatures.geometryShader;
         deviceFeatures.tessellationShader = availableFeatures.tessellationShader;
@@ -1211,6 +1215,7 @@ namespace sw
         _bSamplerAnisotropy                                    = availableFeatures.samplerAnisotropy ? 1 : 0;
         _bFillModeNonSolid                                     = availableFeatures.fillModeNonSolid ? 1 : 0;
         _bDepthClamp                                           = availableFeatures.depthClamp ? 1 : 0;
+        _bFragmentStores                                       = availableFeatures.fragmentStoresAndAtomics ? 1 : 0;
 
         // pickPhysicalDevice 가 요구 판(1.2) 미만 디바이스를 건너뛰므로 1.2 기능 구조체는 늘 체인에 넣을 수 있다.
         VkPhysicalDeviceVulkan12Features available12{};

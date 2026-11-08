@@ -74,6 +74,8 @@ namespace sw
          *          어떤 버퍼가 바인딩되어 있는지 기록해 두고, transitionBuffer 가 읽기 상태로 돌릴 때 해제한다.
          */
         RHIBufferHandle _arrComputeUAVBuffer[D3D11_PS_CS_UAV_REGISTER_COUNT]{};
+        /// @brief 지금 건 렌더 타깃 수입니다(`beginRenderPass`). 픽셀 셰이더 UAV 는 렌더 타깃 칸 뒤에만 걸린다(`bindGraphicsUAV` — UAVStartSlot >= 렌더 타깃 수).
+        uint32 _boundRenderTargetCount{ 0 };
         /**
          * @brief PS SRV 슬롯마다 지금 바인딩되어 있는 텍스처입니다(0이면 없음이거나 버퍼).
          * @details 같은 리소스를 입력(SRV)과 출력(RTV, DSV)에 동시에 바인딩하면 `OMSetRenderTargets` 가 **SRV 를 NULL 로 강제하고** 경고만 낸다.

@@ -57,11 +57,12 @@ namespace sw
     /**
      * @struct RenderDiagnosticsPolicy
      * @brief 이 실행의 렌더러 진단 값입니다. 기본값이 배포 동작이다. 묻는 쪽마다 필요한 칸만 읽는다.
-     * @details 셰이더 assert 는 단계를 가리지 않는 스위치다 — 어느 셰이더 단계가 assert 변형을 갖는지는 패스 표(`RenderPassTraitFlag::kGPUAssertTarget`)가 정한다.
+     * @details 셰이더 메시지는 단계를 가리지 않는 스위치다 — 어느 패스가 메시지 변형을 갖는지는 패스 표(`RenderPassTraitFlag::kGPUMessageTarget`)가 정한다.
      */
     struct RenderDiagnosticsPolicy
     {
-        uint8              _bGPUAssert{ SW_FALSE };                        ///< 셰이더 assert(`SW_GPU_ASSERT`) 변형으로 컴파일하고 링 버퍼를 건다(`GPUAssertMonitor`) — 렌더러 초기화 때 읽는다
+        uint8              _bGPUMessages{ SW_FALSE };                      ///< 셰이더 메시지(`SW_GPU_PRINT` · `SW_GPU_LOG` · `SW_GPU_ASSERT`) 변형으로 컴파일하고 링 버퍼를 건다(`GPUMessageChannel`) — 렌더러 초기화 때 읽는다
+        uint8              _gpuMessageLogBudget{ 4 };                      ///< `SW_GPU_LOG` 가 메시지 id 하나당 한 프레임에 적는 기록 수(`GPUMessageChannel::updateControl`)
         uint8              _bNanCheck{ SW_FALSE };                         ///< 패스 출력의 NaN · Inf 를 컴퓨트로 센다(`GPUNanCheck`, 진단 패스 `RenderPassType::NanCheck`) — 렌더러 초기화 때 읽는다
         uint8              _bShaderDebugCodegen{ SW_FALSE };               ///< 실행 중 셰이더 컴파일을 디버그 코드젠으로(RenderDoc 에서 한 줄씩, `ShaderCache::makeLiveCompileDesc`)
         BindlessIndexCheck _bindlessIndexCheck{ BindlessIndexCheck::Off }; ///< bindless 인덱스 검사 수준(`BindlessIndexValidator`)

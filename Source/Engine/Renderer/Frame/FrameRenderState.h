@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/Debug/GPUMessage.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
@@ -129,6 +130,12 @@ namespace sw
          *          차이로 구해야 한다. 그런 추측(클리어, 포맷 비용 등)은 쉽게 틀린다.
          */
         GPUPassTimeline _gpuPassTimeline{};
+        /**
+         * @brief 셰이더 메시지 링(`-gv_gpuMessages`)입니다. 컴퓨트 프리패스(`FramePrepass` — 컬링 · 모프 · 마커)와 그래프의 그래픽스 패스(`FramePassExecutor::bindForDraw`)가 함께 u4 로 쓴다.
+         * @details 프리패스가 프레임 앞에서 선택을 올리고(`updateControl`) 앞 프레임들의 기록을 로그로 내며(`poll`), 프리패스 끝에서 되읽기를 요청한다 — 그래픽스 패스의 기록은 다음 프레임의 사본에 실린다(누적 카운터라 잃지 않는다).
+         *          꺼져 있으면 비어 있다.
+         */
+        GPUMessageChannel _gpuMessages{};
         /// @brief 병렬 기록(`RenderGraph::executeParallel`)이 쓰는 태스크 매니저입니다. 없으면 직렬로 기록합니다.
         TaskManager*     _pTaskManager{ nullptr };
         RHITextureHandle _outputRenderTarget{ 0 }; ///< 주 출력 RT(에디터 게임 뷰). 0 이면 백버퍼

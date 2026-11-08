@@ -10,7 +10,6 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/Debug/GPUAssert.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Frame/Execute/OcclusionTiles.h"
@@ -39,13 +38,13 @@ namespace sw
         FramePrepass( const FramePrepass& )            = delete;
         FramePrepass& operator=( const FramePrepass& ) = delete;
 
-        /** @brief 상주 자원(GPU assert 링 · 정렬 · 컬링 자리표)을 만듭니다. assert 링을 만들지 못하면 멈춥니다. */
+        /** @brief 상주 자원(셰이더 메시지 링 · 정렬 · 컬링 자리표)을 만듭니다. 메시지 링을 만들지 못하면 멈춥니다. */
         void ensureResources();
         /** @brief 상주 자원과 가림 되읽기 · 우편함을 놓습니다. */
         void releaseResources();
         /**
-         * @brief 프리패스를 @p cmd 에 순서대로 기록합니다(리스트는 부르는 쪽이 열고 닫는다). 앞 프레임들의 셰이더 assert 기록이 도착했으면 로그로 냅니다.
-         * @details 기록이 끝나면 assert 링 되읽기를 요청한다. 월드 UI 렌더 텍스처 · 2D 빛 쿠키 아틀라스는 그리기 경로라 실행기가 이 뒤에 같은 리스트에 기록한다.
+         * @brief 프리패스를 @p cmd 에 순서대로 기록합니다(리스트는 부르는 쪽이 열고 닫는다). 앞 프레임들의 셰이더 메시지 기록이 도착했으면 로그로 냅니다.
+         * @details 기록이 끝나면 메시지 링 되읽기를 요청한다. 월드 UI 렌더 텍스처 · 2D 빛 쿠키 아틀라스는 그리기 경로라 실행기가 이 뒤에 같은 리스트에 기록한다.
          */
         void record( IRHICommandList& cmd );
         /** @brief 이번 프레임에 그린 뷰마다 그 뷰-투영과 눈 위치를 적어 둡니다(다음 프레임의 깊이 히스토리가 짝이 된다). 모든 뷰를 그린 뒤 부릅니다. */
@@ -133,8 +132,6 @@ namespace sw
         RHIStructuredBuffer _transparentRankPlaceholder{};
         /// @brief GPU 컬링의 가림 판정(가림 타일 짓기 · 되읽기 · 자리표)입니다.
         OcclusionTiles _occlusion;
-        /// @brief 셰이더 assert 링(`-gv_gpuAssert`). assert 가 켜진 디스패치가 u4 로 쓰고, 프리패스 끝에 되읽기를 요청하며 다음 프레임들이 로그로 낸다. 꺼져 있으면 비어 있다.
-        GPUAssertMonitor _gpuAssert;
         /// @brief 이번 프레임의 LOD 전환 진행량(0 ~ 255)입니다. 0 이면 크로스페이드 없이 바로 바꾼다(`dispatchCullAndSort` 가 정하고 `dispatchCullView` 가 컬링 상수로 싣는다).
         uint32 _lodFadeStep{ 0 };
         /// @brief 지난 컬링 프레임의 시각(나노초)입니다. 전환 진행량의 프레임 간격을 잰다(0 이면 아직 없다).

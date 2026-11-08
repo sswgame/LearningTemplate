@@ -589,26 +589,26 @@ namespace sw
                         report( reflectedA._name, string( "OpenGL 은 descriptor set 을 무시하는데 set " ) + to_string( reflectedA._space ) + " 로 선언돼 있습니다 — binding " +
                                                       formatToString( "%# 하나로 취급됩니다", reflectedA._bindPoint ) );
                     }
-                    checkAssertSlot( reflectedA );
+                    checkMessageSlot( reflectedA );
                     checkCollisionsAfter( listReflected, indexA );
                 }
             }
 
             /**
-             * @brief 컴퓨트 쓰기 슬롯 u4 는 셰이더 assert 링(g_GPUAssertRW) 전용이고, 그 링은 u4 에만 놓인다.
+             * @brief 쓰기 슬롯 u4 는 셰이더 메시지 링(g_GPUMessageRW) 전용이고, 그 링은 u4 에만 놓인다(컴퓨트 · 그래픽스 단계 모두).
              * @details SPIR-V 는 RW 구조버퍼도 StorageBuffer(읽기 구조버퍼와 같은 종류)로 보고하므로 종류로 거르면 Vulkan · GL 에서 이 검사가 돌지 않는다 — 스토리지 버퍼는 모두 본다.
              */
-            void checkAssertSlot( const Internal::ReflectedBinding& reflected )
+            void checkMessageSlot( const Internal::ReflectedBinding& reflected )
             {
                 const bool bWritableKind = Internal::registerClassOf( reflected._kind ) == Internal::RegisterClass::UnorderedAccess ||
                                            ( Internal::isSPIRV( _targetFormat ) && reflected._kind == ShaderBindingKind::StructuredBuffer );
                 if ( reflected._space != 0 || bWritableKind == false )
                     return;
-                const uint32 bindOffset  = _bVulkan ? shaderslot::vk::kUShift : ( _bOpenGl ? shaderslot::gl::kUAVBinding0 : 0u );
-                const bool   bAssertName = reflected._name == shaderslot::resname::kGPUAssertRing;
-                const bool   bAssertSlot = reflected._bindPoint == bindOffset + shaderslot::kComputeAssertUAV;
-                if ( bAssertName != bAssertSlot )
-                    report( reflected._name, "컴퓨트 쓰기 슬롯 u4 는 셰이더 assert 링(g_GPUAssertRW) 전용이고 그 링은 u4 에만 놓입니다" );
+                const uint32 bindOffset   = _bVulkan ? shaderslot::vk::kUShift : ( _bOpenGl ? shaderslot::gl::kUAVBinding0 : 0u );
+                const bool   bMessageName = reflected._name == shaderslot::resname::kGPUMessageRing;
+                const bool   bMessageSlot = reflected._bindPoint == bindOffset + shaderslot::kGPUMessageUAV;
+                if ( bMessageName != bMessageSlot )
+                    report( reflected._name, "쓰기 슬롯 u4 는 셰이더 메시지 링(g_GPUMessageRW) 전용이고 그 링은 u4 에만 놓입니다" );
             }
 
             /**

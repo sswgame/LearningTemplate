@@ -59,6 +59,7 @@ namespace sw
             caps._bParallelCommandRecording   = SW_FALSE;
             caps._bThreadSafeResourceCreation = SW_TRUE;
             caps._bWireframeFill              = SW_TRUE;
+            caps._bGraphicsShaderWrites       = SW_TRUE; // 픽셀 셰이더 UAV 는 렌더 타깃 칸 뒤(UAVStartSlot >= 렌더 타깃 수)
             return caps;
         }
 
@@ -74,6 +75,7 @@ namespace sw
             caps._bParallelCommandRecording   = SW_TRUE;
             caps._bThreadSafeResourceCreation = SW_TRUE;
             caps._bWireframeFill              = SW_TRUE;
+            caps._bGraphicsShaderWrites       = SW_TRUE;
             return caps;
         }
 
@@ -94,6 +96,7 @@ namespace sw
             caps._bParallelCommandRecording   = SW_TRUE;
             caps._bThreadSafeResourceCreation = SW_TRUE;
             caps._bWireframeFill              = SW_TRUE; // 후보. 런타임은 VulkanRHIDevice::getCapabilities 가 fillModeNonSolid 로 덮는다
+            caps._bGraphicsShaderWrites       = SW_TRUE; // 후보. 런타임은 VulkanRHIDevice::getCapabilities 가 fragmentStoresAndAtomics 로 덮는다
             return caps;
         }
 
@@ -114,6 +117,7 @@ namespace sw
             caps._bParallelCommandRecording   = SW_FALSE;
             caps._bThreadSafeResourceCreation = SW_FALSE;
             caps._bWireframeFill              = SW_FALSE;
+            caps._bGraphicsShaderWrites       = SW_FALSE; // 그래픽스 단계 u 바인딩을 구현하지 않았다 — 셰이더 메시지 채널은 이 백엔드에서 켜지 않는다
             return caps;
         }
 
@@ -135,6 +139,7 @@ namespace sw
 #endif
             caps._bThreadSafeResourceCreation = SW_FALSE;
             caps._bWireframeFill              = SW_TRUE;
+            caps._bGraphicsShaderWrites       = SW_TRUE; // GL 4.3 SSBO 는 단계를 가리지 않는다
             return caps;
         }
     };

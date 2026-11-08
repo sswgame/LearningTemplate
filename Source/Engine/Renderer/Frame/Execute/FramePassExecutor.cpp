@@ -1932,6 +1932,10 @@ namespace sw
         context._lastCbBuffer          = engineCb._buffer;
         context._lastCbValuesVersion   = valuesVersion;
         context._lastCbRegistryVersion = registryVersion;
+
+        // 셰이더 메시지 변형 패스(표의 kGPUMessageTarget — Present 의 fullscreen_blit)는 드로우마다 링을 u4 에 건다. 링이 없으면(-gv_gpuMessages 꺼짐) 아무것도 하지 않는다.
+        if ( getRenderPassTypeInfo( context._passType ).hasFlag( RenderPassTraitFlag::kGPUMessageTarget ) )
+            _state._gpuMessages.bindGraphics( *context._pCmd );
     }
 
     void FramePassExecutor::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, bool bTransparentPass )

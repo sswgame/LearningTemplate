@@ -211,13 +211,16 @@ namespace sw
                 commandListForRecord()->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kSRVTableParam, table );
             state._bSRVDirty = SW_FALSE;
         }
-        // u 테이블은 컴퓨트만 쓴다. 그래픽스 스테이지에는 UAV 선언이 없다(binding.hlsli 가 RW 텍스처를 컴퓨트에서만 선언한다).
-        if ( bCompute && state._bUAVDirty != SW_FALSE )
+        // u 테이블 — 컴퓨트는 셰이더 소유 버퍼 · 메시지 링, 그래픽스는 셰이더 메시지 링(u4, bindGraphicsUAV)만 건다. 그래픽스 상태는 걸린 것이 없으면 더럽지 않아 테이블을 세우지 않는다.
+        if ( state._bUAVDirty != SW_FALSE )
         {
             D3D12_GPU_DESCRIPTOR_HANDLE table{};
             if ( writeSlotTable( state._arrUAV, shaderslot::kComputeUAVSlotCount, _pDevice->offlineDescriptorAt( D3D12RHIDevice::kOfflineNullUAVIndex ), table ) == false )
                 return false;
-            commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kUAVTableParam, table );
+            if ( bCompute )
+                commandListForRecord()->SetComputeRootDescriptorTable( D3D12RHIDevice::kUAVTableParam, table );
+            else
+                commandListForRecord()->SetGraphicsRootDescriptorTable( D3D12RHIDevice::kUAVTableParam, table );
             state._bUAVDirty = SW_FALSE;
         }
         return true;
@@ -485,6 +488,22 @@ namespace sw
         if ( view.ptr == 0 )
             return;
         D3D12SlotTableState& state = _pState->_arrSlotState[1];
+        if ( state._arrUAV[slot].ptr == view.ptr )
+            return;
+        state._arrUAV[slot] = view;
+        state._bUAVDirty    = SW_TRUE;
+    }
+
+    void D3D12RHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    {
+        // 그래픽스 u# → 그래픽스 슬롯 테이블 상태. 루트 시그니처의 u 테이블은 모든 단계에 보인다(SHADER_VISIBILITY_ALL). 드로우 직전 flushSlotTables( false ) 가 굳힌다.
+        const bool bCannotBindUnorderedAccess = _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || slot >= shaderslot::kComputeUAVSlotCount;
+        if ( bCannotBindUnorderedAccess )
+            return;
+        const D3D12_CPU_DESCRIPTOR_HANDLE view = resolveOfflineView( index, true );
+        if ( view.ptr == 0 )
+            return;
+        D3D12SlotTableState& state = _pState->_arrSlotState[0];
         if ( state._arrUAV[slot].ptr == view.ptr )
             return;
         state._arrUAV[slot] = view;

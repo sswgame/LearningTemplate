@@ -122,7 +122,14 @@ namespace sw
          */
         virtual void setGraphicsRootConstants( uint32 rootParameterIndex, uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues = 0 ) = 0;
         virtual void bindComputeUAV( RHIDescriptorIndex index, uint32 slot )                                                                             = 0;
-        virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot )                                                                         = 0;
+        /**
+         * @brief 그래픽스(픽셀) 단계에 쓰기 버퍼 u# 를 겁니다(UAV 레지스트리의 인덱스). 렌더 패스를 연 **뒤** 드로우 앞에서 부릅니다 — 셰이더 메시지 채널(`GPUMessageChannel::bindGraphics`)이 쓴다.
+         * @details DX12 는 슬롯 테이블의 u 범위(모든 단계에 보인다), Vulkan 은 슬롯 세트의 u 바인딩, GL 은 SSBO `kUAVBinding0 + slot`, DX11 은 `OMSetRenderTargetsAndUnorderedAccessViews` 의
+         *          렌더 타깃 유지 형식이다. DX11 픽셀 셰이더의 u 번호는 렌더 타깃 칸과 같은 자리라 @p slot 이 지금 건 렌더 타깃 수보다 작으면 걸지 않는다(오류를 한 번 남긴다 — 셰이더의 쓰기는 버려진다).
+         *          `RHICapabilities::_bGraphicsShaderWrites` 가 거짓인 백엔드는 아무것도 하지 않는다.
+         */
+        virtual void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )    = 0;
+        virtual void bindShaderResource( RHIDescriptorIndex index, uint32 slot ) = 0;
 
         // ------------------------------------------------------------------------------
         // 4-1) 리플렉션 기반 바인딩: 셰이더가 선언한 레지스터로 CB/SRV 버퍼를 바인딩한다.

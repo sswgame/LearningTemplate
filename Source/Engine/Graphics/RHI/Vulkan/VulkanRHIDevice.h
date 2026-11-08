@@ -233,11 +233,12 @@ namespace sw
 
         RHICapabilities getCapabilities() const override
         {
-            RHICapabilities caps     = RHIAvailability::query( RHIBackend::Vulkan );
-            caps._bMultiDrawIndirect = _bMultiDrawIndirect;
-            caps._bNativeBindless    = _textureSet != nullptr ? 1u : 0u;
-            caps._bWireframeFill     = _bFillModeNonSolid;
-            caps._bGPUBreadcrumbs    = _bCheckpoints != SW_FALSE ? SW_TRUE : SW_FALSE;
+            RHICapabilities caps        = RHIAvailability::query( RHIBackend::Vulkan );
+            caps._bMultiDrawIndirect    = _bMultiDrawIndirect;
+            caps._bNativeBindless       = _textureSet != nullptr ? 1u : 0u;
+            caps._bWireframeFill        = _bFillModeNonSolid;
+            caps._bGPUBreadcrumbs       = _bCheckpoints != SW_FALSE ? SW_TRUE : SW_FALSE;
+            caps._bGraphicsShaderWrites = _bFragmentStores;
             return caps;
         }
 
@@ -815,6 +816,7 @@ namespace sw
         uint16                  _bMemoryBudget           : 1; ///< 디바이스에 VK_EXT_memory_budget 을 켰는가(GPU 메모리 사용량과 예산 질의)
         uint16                  _bSurfaceLost            : 1; ///< 서피스를 잃었고 아직 다시 만들지 못했다(다음 beginFrame 이 다시 시도한다).
         uint16                  _bDeviceFault            : 1; ///< 디바이스에 VK_EXT_device_fault 를 켰는가(디바이스 손실 때 결함 주소 · 공급사 코드 질의)
+        uint16                  _bFragmentStores         : 1; ///< 프래그먼트 셰이더가 스토리지 버퍼에 쓸 수 있는가(fragmentStoresAndAtomics — 셰이더 메시지 채널의 그래픽스 단계)
         // 1바이트 필드는 위 비트필드 뒤에 모은다. 8바이트 필드 사이에 끼면 필드마다 패딩이 생긴다.
         uint8 _bSwapChainRecreateFailing; ///< 재생성 실패를 한 번만 알린다(성공하면 내린다). 실패하면 프레임마다 다시 시도한다.
         /// @brief 디바이스에 VK_NV_device_diagnostic_checkpoints 를 켰는가(GPU 브레드크럼 - `vkCmdSetCheckpointNV` 로 패스 id 를 남기고 소실 뒤 `vkGetQueueCheckpointDataNV` 로 읽는다).

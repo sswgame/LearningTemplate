@@ -37,18 +37,6 @@ namespace sw::editor
         void setDepthPlanes( float32 nearPlane, float32 farPlane );
 
         // 렌더 타깃 창이 쓰는 계산 모음입니다. 언리얼의 Buffer Visualization, 유니티 Frame Debugger 의 타깃 보기에 해당합니다.
-        /** @brief CPU 로 읽은 값을 풀 수 있는 포맷이면 true 입니다. 블록 압축과 Unknown 은 해당하지 않습니다. 깊이는 항상 true 입니다. */
-        static bool isDecodableFormat( RHIFormat format, bool bDepth );
-        /** @brief 포맷이 가진 채널 수를 반환합니다. 깊이는 1 입니다. 픽셀 값 행에 몇 개를 적을지 정합니다. */
-        static uint32 getChannelCount( RHIFormat format, bool bDepth );
-
-        /**
-         * @brief 픽셀 (@p x, @p y) 의 값을 float4 로 풉니다. 없는 채널은 0, 없는 알파는 1 입니다.
-         * @return 포맷을 풀 수 없거나 좌표나 바이트가 범위 밖이면 false 입니다.
-         */
-        [[nodiscard]] static bool readPixel( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, bool bDepth, uint32 x, uint32 y,
-                                             float4& outValue );
-
         /** @brief 원근 투영 깊이를 시점에서의 거리로 되돌립니다. 0 이 가까운 면이고 1 이 먼 면입니다. 면 값이 잘못되었으면 깊이를 그대로 반환합니다. */
         static float32 linearizeDepth( float32 depth, float32 nearPlane, float32 farPlane );
 

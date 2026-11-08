@@ -23,6 +23,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
@@ -66,6 +67,19 @@ namespace sw
         RHITextureHandle  _texture{ 0 };           ///< 읽은 텍스처
         uint32            _serial{ 0 };            ///< 요청 번호(`requestReadback` 이 돌려준 값)
         uint8             _bSucceeded{ SW_FALSE }; ///< 읽기에 성공했으면 1
+
+        // 픽셀 풀기 — 에디터 렌더 타깃 창의 픽셀 값과 `gpu.inspect` 가 같은 함수를 쓴다(예전에는 에디터에만 있었다).
+        /** @brief CPU 로 읽은 값을 풀 수 있는 포맷이면 true 입니다. 블록 압축과 Unknown 은 해당하지 않습니다. 깊이는 항상 true 입니다. */
+        [[nodiscard]] static bool isDecodableFormat( RHIFormat format, bool bDepth );
+        /** @brief 포맷이 가진 채널 수를 반환합니다. 깊이는 1 입니다. 픽셀 값 행에 몇 개를 적을지 정합니다. */
+        [[nodiscard]] static uint32 getChannelCount( RHIFormat format, bool bDepth );
+
+        /**
+         * @brief 픽셀 (@p x, @p y) 의 값을 float4 로 풉니다. 없는 채널은 0, 없는 알파는 1 입니다.
+         * @return 포맷을 풀 수 없거나 좌표나 바이트가 범위 밖이면 false 입니다.
+         */
+        [[nodiscard]] static bool readPixel( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, bool bDepth, uint32 x, uint32 y,
+                                             float4& outValue );
     };
 } // namespace sw
 

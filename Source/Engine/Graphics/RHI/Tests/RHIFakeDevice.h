@@ -61,6 +61,7 @@ namespace sw::test
         void setComputeRootConstants( uint32, uint32, const void*, uint32 ) override {}
         void setGraphicsRootConstants( uint32, uint32, const void*, uint32 ) override {}
         void bindComputeUAV( RHIDescriptorIndex, uint32 ) override {}
+        void bindGraphicsUAV( RHIDescriptorIndex, uint32 ) override {}
         void bindShaderResource( RHIDescriptorIndex, uint32 ) override {}
         void bindConstantBuffer( RHIDescriptorIndex, uint32 ) override {}
         void updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}

@@ -39,6 +39,7 @@ namespace sw
         /** @brief D3D11 은 UAV 해저드를 런타임이 풀어 의도적으로 아무것도 하지 않습니다. */
         void prepareTextureForUnorderedAccessNative( RHITextureHandle texture ) override { (void)texture; }
         void bindComputeUAV( RHIDescriptorIndex index, uint32 slot ) override;
+        void bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot ) override;
         void setVertexBuffer( uint32 slot, RHIBufferHandle buffer, uint32 stride, uint32 offset = 0 ) override;
         void drawNative( uint32 vertexCount, uint32 startVertex = 0 ) override;
         void drawInstancedNative( uint32 vertexCount, uint32 instanceCount, uint32 startVertex = 0, uint32 startInstance = 0 ) override;
