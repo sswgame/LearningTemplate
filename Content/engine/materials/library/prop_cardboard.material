@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 골판지 · 종이 — 섬유 잔무늬, 골(줄 무늬), 비에 잘 젖는다. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="Cardboard" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.62 0.48 0.32 1"/>
+		<item name="_roughness" defaultValue="0.95"/>
+		<item name="_secondaryColor" defaultValue="0.52 0.39 0.25 1"/>
+		<item name="_secondaryRoughness" defaultValue="0.95"/>
+		<item name="_patternScale" defaultValue="0.008 0.008 0.5 0"/>
+		<item name="_patternShape" defaultValue="5 0 0.0008 1"/>
+		<item name="_noiseStrength" defaultValue="0.15"/>
+		<item name="_noiseScale" defaultValue="0.003"/>
+		<item name="_porosity" defaultValue="1"/>
+	</_properties>
+</MaterialDef>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 자기 찻잔 — 흰 소지 위 투명 유약(클리어 코트), 볼록한 굽 · 입술은 유약이 얇아 거친 소지가 드러난다(모서리 마모 = 밑 층). 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="PorcelainTeacup" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.93 0.94 0.96 1"/>
+		<item name="_roughness" defaultValue="0.35"/>
+		<item name="_clearCoat" defaultValue="1"/>
+		<item name="_clearCoatRoughness" defaultValue="0.03"/>
+		<item name="_underColor" defaultValue="0.86 0.81 0.73 1"/>
+		<item name="_underRoughness" defaultValue="0.85"/>
+		<item name="_underMetallic" defaultValue="0"/>
+		<item name="_edgeWear" defaultValue="0.25"/>
+		<item name="_edgeWearScale" defaultValue="0.02"/>
+		<item name="_porosity" defaultValue="0"/>
+	</_properties>
+</MaterialDef>

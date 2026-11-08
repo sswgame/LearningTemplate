@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 기와 — 엇갈린 타일 줄, 짙은 틈, 장마다 색. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="RoofTiles" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.55 0.22 0.14 1"/>
+		<item name="_roughness" defaultValue="0.7"/>
+		<item name="_secondaryColor" defaultValue="0.18 0.08 0.05 1"/>
+		<item name="_secondaryRoughness" defaultValue="0.9"/>
+		<item name="_patternScale" defaultValue="0.25 0.18 0.015 0.5"/>
+		<item name="_patternShape" defaultValue="1 0.25 0.01 1"/>
+		<item name="_macroVariation" defaultValue="0.2"/>
+		<item name="_porosity" defaultValue="0.6"/>
+	</_properties>
+</MaterialDef>

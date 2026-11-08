@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 상호작용 강조 — 밑 색 위에 맥동하는 프레넬 테두리(외곽선 패스와 함께 쓴다 — 외곽선은 하이라이트 컴포넌트가 그린다). 부모(gimmicksurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="InteractHighlight" _base="engine/materials/gimmicksurface.material">
+	<_properties>
+		<item name="_effect" defaultValue="1"/>
+		<item name="_baseColor" defaultValue="0.5 0.5 0.5 1"/>
+		<item name="_emissiveColor" defaultValue="1 0.8 0.3 1"/>
+		<item name="_emissiveStrength" defaultValue="3"/>
+		<item name="_fresnelPower" defaultValue="3"/>
+		<item name="_pulseSpeed" defaultValue="2"/>
+	</_properties>
+</MaterialDef>
