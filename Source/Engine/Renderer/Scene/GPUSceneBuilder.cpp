@@ -151,7 +151,7 @@ namespace sw
                        Memory::compare( &instance._boundsCenter, &raw._boundsCenter, sizeof( instance._boundsCenter ) ) != 0 ||
                        Memory::compare( &instance._boundsRadius, &raw._boundsRadius, sizeof( instance._boundsRadius ) ) != 0 ||
                        instance._blendMode != raw._blendMode || instance._spinSeed != raw._spinSeed || instance._sprite != raw._sprite || instance._customData != raw._customData ||
-                       instance._highlight != raw._highlight || instance._skinSlot != raw._skinSlot ||
+                       instance._highlight != raw._highlight || instance._skinSlot != raw._skinSlot || instance._motionKey != raw._motionKey ||
                        Memory::compare( &instance._vertexAnimationPhase, &raw._vertexAnimationPhase, sizeof( instance._vertexAnimationPhase ) ) != 0 ||
                        Memory::compare( &instance._appearance, &raw._appearance, sizeof( instance._appearance ) ) != 0;
             }
@@ -168,6 +168,7 @@ namespace sw
                 outInstance._customData           = raw._customData;
                 outInstance._highlight            = raw._highlight;
                 outInstance._skinSlot             = raw._skinSlot;
+                outInstance._motionKey            = raw._motionKey;
                 outInstance._vertexAnimationPhase = raw._vertexAnimationPhase;
                 outInstance._appearance           = raw._appearance;
             }
@@ -391,6 +392,7 @@ namespace sw
         candidate._customData           = pMeshComp->getInstanceCustomData();
         candidate._highlight            = GPUInstanceHighlight::pack( pMeshComp->getHighlight() ); // 담는 법은 렌더러가 안다
         candidate._skinSlot             = pMeshComp->getSkinSlot();
+        candidate._motionKey            = pMeshComp->getMotionHistoryKey();
         candidate._vertexAnimationPhase = pMeshComp->getVertexAnimationPhase();
         candidate._appearance           = pMeshComp->getAppearance();
         candidate._sortKey              = pMeshComp->getSortKey();
@@ -454,6 +456,7 @@ namespace sw
         candidate._customData                = item._customData;
         candidate._highlight                 = 0;                                // 인스턴스 배치 항목(데미지 숫자 · HP 바)은 강조하지 않는다
         candidate._skinSlot                  = constant::invalid_index::kUint32; // 인스턴스 배치 항목은 스키닝하지 않는다
+        candidate._motionKey                 = 0;                                // 항목은 기록이 없다 — 정지 식생 · UI 라 속도는 카메라 움직임뿐(GPU 가 쓰는 메시 입자도 같다)
         candidate._vertexAnimationPhase      = 0.0f;
         candidate._appearance                = 1.0f; // 인스턴스 배치(식생 · UI)는 등장하지 않는다
         candidate._sortKey                   = pBatch->getSortKey();
@@ -549,6 +552,7 @@ namespace sw
         outInstance._customData           = candidate._customData;
         outInstance._highlight            = candidate._highlight;
         outInstance._skinSlot             = candidate._skinSlot;
+        outInstance._motionKey            = candidate._motionKey;
         outInstance._vertexAnimationPhase = candidate._vertexAnimationPhase;
         outInstance._appearance           = candidate._appearance;
     }

@@ -496,6 +496,10 @@ namespace sw
         hashed_string _sceneColorCopy{ "SceneColorCopy" };
         /// 반투명 앞에 떠 둔 장면 깊이 사본(SceneDepthCopy 패스의 출력, R32 실수) — 반투명 패스가 선언한 입력을 역할로 건다(물의 화면 공간 두께).
         hashed_string _sceneDepthCopy{ "SceneDepthCopy" };
+        /// 화면 속도(SceneVelocity — 불투명 지오메트리 패스의 출력) — TAA · 모션 블러가 선언한 입력을 역할로 건다(`g_VelocityIndex`).
+        hashed_string _velocity{ "Velocity" };
+        /// 화면 왜곡 오프셋(SceneDistortion — 왜곡 누적 패스의 출력) — 왜곡 적용 패스가 선언한 입력을 역할로 건다(`g_DistortionIndex`).
+        hashed_string _distortion{ "Distortion" };
         /// 2D 빛 쿠키 아틀라스(Light2DCookieAtlas) — 파이프라인 첨부가 아니라 렌더러가 소유한 텍스처를 역할 이름으로 건다.
         hashed_string _light2DCookieAtlas{ "Light2DCookieAtlas" };
         /// 자동 노출의 이번 프레임 EV(1x1, 뷰의 `_arrAutoExposure`) — 톤맵하는 패스가 `g_AutoExposureIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
@@ -581,6 +585,14 @@ namespace sw
         hashed_string _swSkinResultOffsets{ "SwSkinResultOffsets" };
         /// @brief 그 표의 칸 수입니다. PassCB g_SwSkinResultOffsetCount 에 대응합니다.
         hashed_string _swSkinResultOffsetCount{ "g_SwSkinResultOffsetCount" };
+        /// @brief 스킨 결과의 이번 벌 이동(정점)입니다. PassCB g_SwSkinResultShift 에 대응합니다(`GPUMeshMorphPool::getSkinCurrentShift`).
+        hashed_string _swSkinResultShift{ "g_SwSkinResultShift" };
+        /// @brief 지난 프레임 스킨 결과가 든 벌의 이동(정점, 없으면 무효)입니다. PassCB g_SwSkinPreviousShift 에 대응합니다.
+        hashed_string _swSkinPreviousShift{ "g_SwSkinPreviousShift" };
+        /// @brief 인스턴스마다의 지난 월드 행렬입니다. binding.hlsli 의 g_SwPrevInstanceWorlds(t15)와 PassCB g_SwPrevInstanceWorldsIndex 에 대응합니다.
+        hashed_string _swPrevInstanceWorlds{ "SwPrevInstanceWorlds" };
+        /// @brief 그 버퍼의 원소 수입니다. PassCB g_SwPrevInstanceWorldCount 에 대응합니다.
+        hashed_string _swPrevInstanceWorldCount{ "g_SwPrevInstanceWorldCount" };
         /// @brief 컬링이 만든 가시 인스턴스 ID 목록입니다. binding.hlsli g_SwVisibleInstanceIDs 와 "SwVisibleInstanceIDs" 에 대응합니다.
         hashed_string _swVisibleInstanceIDs{ "SwVisibleInstanceIDs" };
         /// @brief 배치의 머티리얼 데이터 구조 버퍼입니다. binding.hlsli g_SwMaterials 와 "SwMaterials" 에 대응하며, 배치마다 등록합니다.

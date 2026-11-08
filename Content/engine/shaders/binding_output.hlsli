@@ -13,6 +13,18 @@
 //     언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 것에 해당한다. 여기서는 패스가 define 을
 //     추가하고(SW_PASS_GBUFFER), 출력 서명이 그 define 을 따라간다.
 // ------------------------------------------------------------------------------
+// 화면 속도(이번 UV - 지난 UV) — 깊이를 쓰는 불투명 지오메트리 패스가 함께 쓴다. G버퍼는 명세(C++ GBufferLayout 판 2)의 넷째 MRT, 포워드는 출력을 선언한 패스만
+// SW_PASS_VELOCITY 로 둘째 타깃이다(C++ kPassVelocityDefine). 값은 픽셀 단계가 보간한 이번 · 지난 클립 위치로 구해 여기 둔다(PixelContext::make → MaterialInterpolants::storeSurfaceVelocity).
+// 언리얼 베이스 패스의 속도 출력(r.VelocityOutputPass=1)과 같은 자리다 — 속도만 따로 그리는 패스를 두지 않는다.
+#if defined( SW_PASS_GBUFFER ) || defined( SW_PASS_VELOCITY )
+    #define SW_WRITES_VELOCITY 1
+#else
+    #define SW_WRITES_VELOCITY 0
+#endif
+static float2 g_SurfaceVelocity = float2( 0.0f, 0.0f );
+// 화면 왜곡 오프셋(화면 UV) — 왜곡 누적 패스(SW_PASS_DISTORTION)가 머티리얼의 왜곡 훅으로 정해(PixelContext::storeSurface) 단일 타깃에 낸다(가산 블렌드).
+static float2 g_SurfaceDistortion = float2( 0.0f, 0.0f );
+
 // 양쪽 다 **구조체**다. 포워드 쪽을 `float4` 로 두면 `SurfaceOutput PSMain(...)` 에 반환
 // 시맨틱이 사라져 DXC 가 "Semantic must be defined for all outputs" 로 거절한다 — 그러면 머티리얼
 // 셰이더가 통째로 컴파일되지 않아 화면이 빈다(실제로 한 번 그랬다).
@@ -22,6 +34,12 @@ struct SurfaceOutput
     float4 _albedo : SV_TARGET0;
     float2 _normal : SV_TARGET1;   // R16G16_SNORM — Octahedral::encode(월드 노멀)
     float4 _material : SV_TARGET2; // SurfaceOutput::encodeGbufferMaterial
+    float2 _velocity : SV_TARGET3; // R16G16 실수 — 이번 UV - 지난 UV(g_SurfaceVelocity)
+#elif defined( SW_PASS_VELOCITY )
+    float4 _color : SV_TARGET0;
+    float2 _velocity : SV_TARGET1; // R16G16 실수 — 이번 UV - 지난 UV(g_SurfaceVelocity)
+#elif defined( SW_PASS_DISTORTION )
+    float4 _distortion : SV_TARGET0; // R16G16 실수 — rg 화면 UV 오프셋(g_SurfaceDistortion), a 1(가산 블렌드의 SrcAlpha)
 #else
     float4 _color : SV_TARGET0;
 #endif
@@ -284,7 +302,7 @@ static void ViewMode::applyToSurface( inout float4 inoutLitColor, inout float4 i
 // 디퍼드 조명 패스는 머티리얼 PSO 가 아니라 뷰 모드를 모르므로, 뷰 모드를 받는 G버퍼 패스가 픽셀마다 적어 넘긴다(언리얼 G버퍼의 ShadingModelID 와 같은 자리).
 // G버퍼 명세의 판이다 — C++ `GBufferLayout::kVersion`(Renderer/Pipeline/GBufferLayout.h)과 같아야 한다(단위 테스트 GBufferLayoutTest 가 맞춘다).
 // 첨부 · 채널 · 인코딩(아래 셰이딩 모델 · 그려짐 · 옥타헤드럴 노멀)을 바꾸면 두 곳을 함께 올린다.
-#define SW_GBUFFER_LAYOUT_VERSION 1
+#define SW_GBUFFER_LAYOUT_VERSION 2
 #define SW_GBUFFER_SHADING_LIT    1.0f
 #define SW_GBUFFER_SHADING_UNLIT  0.0f
 #if SW_VIEWMODE_SKIPS_LIGHTING
@@ -324,6 +342,22 @@ static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3
     output._albedo   = float4( albedo.rgb, SW_GBUFFER_SHADING );
     output._normal   = Octahedral::encode( normalize( worldNormal ) );
     output._material = SurfaceOutput::encodeGbufferMaterial( roughness, metallic );
+    output._velocity = g_SurfaceVelocity;
+    return output;
+}
+#elif defined( SW_PASS_VELOCITY )
+static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic )
+{
+    SurfaceOutput output;
+    output._color    = litColor;
+    output._velocity = g_SurfaceVelocity;
+    return output;
+}
+#elif defined( SW_PASS_DISTORTION )
+static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic )
+{
+    SurfaceOutput output;
+    output._distortion = float4( g_SurfaceDistortion, 0.0f, 1.0f );
     return output;
 }
 #else

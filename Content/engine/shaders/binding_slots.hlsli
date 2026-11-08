@@ -80,7 +80,7 @@
 // 로드 검증으로도 막을 수 없었다. 칸 순서는 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정한다(컴파일러가 SW_EMU_SLOT_<이름> 으로 넣는다).
 // HLSL 레지스터는 DX11 t32..(SRV 128 칸 — t 띠 · 머티리얼 칸 위), GL 텍스처 유닛은 0..(GL 버퍼는 SSBO 라 텍스처 유닛과 이름공간이 다르다 —
 // 컴퓨트 RW 텍스처의 이미지 유닛과 같은 방식, GL 프래그먼트 유닛은 32 개라 t32 를 유닛으로 쓸 수 없다). 레지스터는 리터럴이라 칸마다 적는다.
-// DX11 은 샘플러 슬롯이 16 개뿐이라 짝이 없고 셰이더가 정적 세트의 엔진 텍스처 샘플러로 읽는다. GL 텍스처 유닛은 칸 번호 그대로(0..11)이고 엔진이 그 유닛에 엔진 텍스처 샘플러를 건다.
+// DX11 은 샘플러 슬롯이 16 개뿐이라 짝이 없고 셰이더가 정적 세트의 엔진 텍스처 샘플러로 읽는다. GL 텍스처 유닛은 칸 번호 그대로(0..13)이고 엔진이 그 유닛에 엔진 텍스처 샘플러를 건다.
 #define SW_SLOT_ENGINE_TEX0     32
 #define SW_SLOT_ENGINE_TEX1     33
 #define SW_SLOT_ENGINE_TEX2     34
@@ -93,7 +93,9 @@
 #define SW_SLOT_ENGINE_TEX9     41
 #define SW_SLOT_ENGINE_TEX10    42
 #define SW_SLOT_ENGINE_TEX11    43
-#define SW_ENGINE_TEXTURE_COUNT 12
+#define SW_SLOT_ENGINE_TEX12    44
+#define SW_SLOT_ENGINE_TEX13    45
+#define SW_ENGINE_TEXTURE_COUNT 14
 
 // GPUScene 인스턴스 구조버퍼 (per-instance world/material). 네 백엔드 공통.
 #define SW_SLOT_INSTANCE_SRV 4
@@ -151,7 +153,11 @@
 // 모프 풀(g_SwMorphVertices) 안 그 스킨 결과의 첫 원소. 풀에 못 든 칸은 kInvalidIndex 다. 읽는 함수는 binding.hlsli MorphPool::computeElement 하나다.
 #define SW_SLOT_SKIN_RESULT_OFFSET_SRV 14
 
-#define SW_SRV_SLOT_COUNT 15 // t0..t14 — DX12 t 테이블 크기. Vulkan set 0 의 t 밴드 폭(16)까지 늘릴 수 있다 — 머티리얼 슬롯은 밴드 뒤라 밀리지 않는다
+// 인스턴스마다의 지난 월드 행렬 (StructuredBuffer<InstancePrevWorld> g_SwPrevInstanceWorlds) — 인스턴스 번호 순서(g_SwInstances 와 같은 번호). 렌더 쪽 움직임 기록(GPUInstanceMotionHistory)이 쓴다.
+// 기록이 없는 칸은 모두 0(_44 가 0)이고 정점 셰이더가 이번 행렬로 읽는다. 읽는 함수는 binding.hlsli InstanceData::loadPreviousWorld 하나다.
+#define SW_SLOT_PREV_INSTANCE_WORLD_SRV 15
+
+#define SW_SRV_SLOT_COUNT 16 // t0..t15 — DX12 t 테이블 크기 = Vulkan set 0 의 t 밴드 폭(16). 더 늘리려면 밴드를 넓혀야 한다(머티리얼 슬롯은 밴드 뒤라 밀리지 않는다)
 
 // 머티리얼 텍스처 고정 슬롯 t16..t31(16 칸). DX11/GL 은 bindless 가 없어 머티리얼이 준 전역 인덱스를 풀 수 없으므로
 // 엔진이 텍스처를 이 슬롯에 걸고 머티리얼 데이터에는 **서수(0..N-1)** 를 넣는다. DX12/Vulkan 은 전역 인덱스라 이 슬롯을 선언하지 않는다.

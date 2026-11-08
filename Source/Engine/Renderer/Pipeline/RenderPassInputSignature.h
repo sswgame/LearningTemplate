@@ -36,6 +36,15 @@ namespace sw
         GBufferMaterial,  ///< G버퍼 머티리얼 칸(r 금속도, g 거칠기 — binding.hlsli SurfaceOutput::encodeGbufferMaterial)
         SceneColorCopy,   ///< 반투명 앞에 떠 둔 장면 색 사본(SceneColorCopy 패스의 출력). 물의 굴절이 읽는다(`g_SceneColorCopyIndex`) — 반투명이 그리는 장면 색 자체는 읽으며 쓸 수 없어서다.
         SceneDepthCopy,   ///< 반투명 앞에 떠 둔 장면 깊이 사본(SceneDepthCopy 패스의 출력, R32 실수). 물의 화면 공간 두께가 읽는다(`g_SceneDepthCopyIndex`) — 반투명 패스는 장면 깊이를 깊이 붙임으로 쥐고 있어 샘플할 수 없어서다.
+        /**
+         * 화면 속도(SceneVelocity, R16G16 실수 — 이번 화면 UV 에서 지난 화면 UV 를 뺀 값). 깊이를 쓰는 불투명 지오메트리 패스가 출력으로 쓰고(`RenderPassTraitFlag::kWritesVelocity`),
+         * TAA · 모션 블러가 읽는다(`g_VelocityIndex`). 그리지 않은 픽셀(하늘)은 클리어 0 이고 읽는 쪽이 깊이 1 로 가려 카메라 재투영을 쓴다.
+         */
+        Velocity,
+        /**
+         * 화면 왜곡 오프셋(SceneDistortion, R16G16 실수 — 화면 UV 오프셋, 클리어 0). 왜곡 누적 패스(`RenderPassType::Distortion`)가 쓰고 왜곡 적용 패스가 읽는다(`g_DistortionIndex`).
+         */
+        Distortion,
         Count,
     };
 
@@ -47,7 +56,7 @@ namespace sw
 
     /**
      * @brief 첨부의 역할을 정합니다. 첨부가 선언한 역할(`RenderPassAttachment::_role`)이 먼저입니다.
-     * @details 선언이 없거나 모르는 문자열이면(검증이 오류로 알립니다) 고정 역할 이름(GBufferAlbedo, GBufferNormal, GBufferMaterial, ShadowMap, AOColor, BloomBright, SceneColorCopy, SceneDepthCopy)은 그 역할,
+     * @details 선언이 없거나 모르는 문자열이면(검증이 오류로 알립니다) 고정 역할 이름(GBufferAlbedo, GBufferNormal, GBufferMaterial, ShadowMap, AOColor, BloomBright, SceneColorCopy, SceneDepthCopy, SceneVelocity, SceneDistortion)은 그 역할,
      *          그 밖의 깊이 포맷은 SceneDepth, 나머지 컬러는 SourceColor 입니다. ShadowMap 은 깊이 포맷이지만 이름이 먼저입니다.
      */
     RenderPassInputRole resolveRenderPassInputRole( string_view attachmentName, bool bDepthFormat, string_view declaredRole );

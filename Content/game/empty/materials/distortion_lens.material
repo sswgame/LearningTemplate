@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 왜곡 시나리오(automation/distortion)의 렌즈 — 엔진 왜곡 머티리얼에서 세기만 올린다. 표면은 보이지 않는다(알파 0). -->
+<MaterialDef formatVersion="0" name="DistortionLens" _base="engine/materials/distortion.material">
+	<_properties>
+		<item name="_strength" defaultValue="0.08"/>
+	</_properties>
+</MaterialDef>

@@ -46,6 +46,7 @@ namespace sw
         , _appearance{ 1.0f }
         , _appearanceRate{ 0.0f }
         , _bTeleportAppearPending{ false }
+        , _motionTeleportSerial{ 0 }
         , _lodIndex{ 0 }
         , _pPrimitiveRegistry{ nullptr }
         , _bVisible{ SW_TRUE }
@@ -168,9 +169,18 @@ namespace sw
         return self.advanceAppearance( deltaSeconds );
     }
 
+    uint64 MeshComponent::getMotionHistoryKey() const
+    {
+        constexpr uint64 kSerialMask = 0xFFFFu; // 차례는 감겨도 된다 — 열쇠는 지난 한 프레임과만 견준다
+        return ( getComponentID() << 16 ) | ( static_cast<uint64>( _motionTeleportSerial.load( std::memory_order_relaxed ) ) & kSerialMask );
+    }
+
     void MeshComponent::onTeleported()
     {
         ScenePrimitive::onTeleported();
+        // 화면 속도의 기록을 버린다 — 열쇠가 바뀌어 렌더 쪽이 지난 행렬을 찾지 못한다. 트랜스폼만 바뀐 프레임은 후보를 다시 채우지 않으므로 렌더 상태 더티로 열쇠를 다시 읽게 한다.
+        _motionTeleportSerial.fetch_add( 1u, std::memory_order_relaxed );
+        markRenderStateDirty();
         if ( _bAppearOnTeleport == SW_FALSE || _pPrimitiveRegistry == nullptr )
             return;
         // 틱 중(워커)에도 불린다 — 표시만 하고(원자값) 등장은 씬 프레임의 도착 단계가 시작한다. 거는 것은 레지스트리가 잠근다.

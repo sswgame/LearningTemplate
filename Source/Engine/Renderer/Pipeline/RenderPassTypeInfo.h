@@ -51,6 +51,23 @@ namespace sw
      */
     inline constexpr const utf8* kPassBloomDownsampleDefine = "SW_PASS_BLOOM_DOWNSAMPLE=1";
 
+    /**
+     * @brief 화면 속도 출력(Velocity 역할 컬러 출력)을 선언한 불투명 지오메트리 패스가 셰이더에 추가하는 define 입니다. 포워드는 픽셀 출력 서명에 `SV_TARGET1` 속도를 더합니다(binding_output.hlsli).
+     * @details 출력 선언(데이터)이 정하므로 속도를 읽는 패스(TAA · 모션 블러)가 없는 파이프라인은 첨부도 쓰기도 없다(유니티 URP 가 모션 벡터를 요청한 기능이 있을 때만 그리는 것과 같다).
+     *          G버퍼는 명세(`GBufferLayout`)가 속도를 늘 넷째 MRT 로 가지므로 출력 서명이 이 define 과 무관하다. 쿠커와 런타임은 같은 함수(`selectRenderPassShader`)로 붙인다.
+     */
+    inline constexpr const utf8* kPassVelocityDefine = "SW_PASS_VELOCITY=1";
+
+    /** @brief 왜곡 누적 패스가 머티리얼 셰이더에 추가하는 define 입니다. 픽셀 출력을 왜곡 오프셋 하나로 바꾸고 왜곡 훅(`computeMaterialDistortion`)을 부른다(material_shader_main.hlsli). */
+    inline constexpr const utf8* kPassDistortionDefine = "SW_PASS_DISTORTION=1";
+
+    /**
+     * @brief 화면 왜곡을 그리는 머티리얼의 define 입니다(`.material` 의 `_alwaysDefines`). 왜곡 누적 패스는 이것이 있는 배치만 그린다(`_pRequiredMaterialDefine`).
+     * @details 이 define 을 적는 머티리얼의 셰이더는 왜곡 훅을 정의한다(`SW_MATERIAL_CUSTOM_DISTORTION` — 없으면 material_shader.hlsli 의 `#error`). 본보기는 engine/shaders/distortion.hlsl 이다.
+     *          VFX 메시 입자는 방출기의 메시 머티리얼이 이 머티리얼이면 같은 길로 왜곡을 그린다.
+     */
+    inline constexpr const utf8* kMaterialDistortionDefine = "MATERIAL_DISTORTION";
+
     /** @brief FSR 1 의 RCAS 단계가 fsr1.hlsl 에 추가하는 define 입니다. 없으면 같은 파일이 EASU 단계입니다. */
     inline constexpr const utf8* kPassFSRRcasDefine = "SW_PASS_FSR_RCAS=1";
 
@@ -176,6 +193,12 @@ namespace sw
         static constexpr uint32 kMaterialFixedState = SW_BIT( 24 );
         /** @brief 머티리얼이 블렌드까지 덮을 수 있는 색 패스다(한 첨부에 그리는 포워드 · 반투명). G버퍼는 첨부 셋의 의미가 정해져 있어 받지 않는다. */
         static constexpr uint32 kMaterialBlend = SW_BIT( 25 );
+        /**
+         * @brief 깊이를 쓰는 불투명 지오메트리 패스라 화면 속도(Velocity 역할 출력)를 쓸 수 있다(G버퍼 · 포워드 불투명 · 포워드 전용 불투명). 이 비트가 없는 패스가 속도 출력을 선언하면 읽기 오류다.
+         * @details 속도는 깊이와 같은 픽셀의 것이어야 TAA · 모션 블러가 깊이와 짝지어 읽는다 — 깊이를 쓰지 않는 반투명 · 외곽선은 쓰지 않는다(언리얼 기본값도 반투명은 속도를 쓰지 않는다).
+         *          G버퍼는 명세가 속도를 넷째 MRT 로 늘 가지고, 포워드는 출력 선언이 있을 때만 `kPassVelocityDefine` 으로 둘째 타깃에 쓴다.
+         */
+        static constexpr uint32 kWritesVelocity = SW_BIT( 26 );
     };
 } // namespace sw
 
@@ -240,9 +263,18 @@ namespace sw
      * @details 경로는 패스 서술의 `_shaderPath` 가 우선이고, 비어 있으면 테이블의 기본 셰이더를 씁니다. define 은 패스 서술의
      *          `_listPermutation` 뒤에 테이블의 패스 define 을 (겹치지 않게) 붙인 것입니다. 둘이 어긋나면 런타임이 찾는 해시를
      *          아무도 쿠킹하지 않아 Shipping 에서 그 패스의 드로우가 사라집니다.
+     *          화면 속도를 쓰는 패스(`passWritesVelocity`)는 `kPassVelocityDefine` 을 붙입니다.
      * @param pPassDesc 파이프라인의 패스 서술입니다. nullptr 이면 테이블의 기본값만 씁니다.
+     * @param pTargetDesc 컬러 출력을 정하는 서술입니다(`passWritesVelocity`). 파이프라인 패스는 @p pPassDesc 와 같고, 내부 슬롯은 대신 그리는 파이프라인 패스의 서술입니다.
      */
-    SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const EngineDefaultAssets& engineDefaultAssets );
+    SW_API RenderPassShaderSelection selectRenderPassShader( RenderPassType type, const RenderGraphPassDesc* pPassDesc, const RenderGraphPassDesc* pTargetDesc,
+                                                             const EngineDefaultAssets& engineDefaultAssets );
+
+    /**
+     * @brief 패스가 화면 속도를 쓰는지 반환합니다 — 패스 종류가 `kWritesVelocity` 이고 @p pTargetDesc 의 컬러 출력에 Velocity 역할이 있습니다.
+     * @param pTargetDesc 컬러 타깃을 정하는 서술입니다. 파이프라인 패스는 자기 서술, 내부 슬롯(`ForwardOpaqueNoDepthWrite`)은 대신 그리는 패스(`_targetSourceType`)의 서술입니다. nullptr 이면 false 입니다.
+     */
+    SW_API bool passWritesVelocity( RenderPassType type, const RenderGraphPassDesc* pTargetDesc );
 
     /** @brief `kDiagnostic` 패스가 이 실행에서 요청됐는지 반환합니다(NanCheck 는 `-gv_nanCheck`). 진단 패스가 아니면 false 입니다. */
     SW_API bool isDiagnosticPassRequested( RenderPassType type );

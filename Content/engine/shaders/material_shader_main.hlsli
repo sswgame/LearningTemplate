@@ -154,6 +154,27 @@ typedef VertexPositionInput MaterialVertexInput; // 위치 스트림만 — mate
 typedef VertexInput MaterialVertexInput;
 #endif
 
+#if SW_WRITES_VELOCITY
+/**
+ * @brief 화면 속도의 이번 · 지난 클립 위치를 넘긴다. 지난 위치는 지난 월드 행렬(렌더 쪽 기록 — binding.hlsli 8-2)과 스킨 결과의 지난 벌(MorphPool::loadPreviousPosition)로
+ *        만들고 지난 뷰-투영으로 옮긴다. 정점을 옮기는 훅(바람 · 외곽선)의 월드 오프셋은 이번 것을 그대로 더한다 — 지난 시각의 오프셋은 모른다(유니티 모션 벡터의 정점 변형 기본값과 같다).
+ */
+void MaterialInterpolants::storeVelocity( VertexContext context, uint instanceSlot, float4 restWorldPosition, float4 vertexWorldPosition, float4 vertexClipPosition )
+{
+    const float4x4 previousWorld         = InstanceData::loadPreviousWorld( instanceSlot, context._instance._world );
+    const float3   previousLocalPosition = MorphPool::loadPreviousPosition( context._instance._meshBatchIndex, context._instance._skinSlot, context._vertexID, context._localPosition );
+    float4         previousWorldPosition = Transform::computeWorldPosition( previousLocalPosition, previousWorld );
+    previousWorldPosition.xyz += vertexWorldPosition.xyz - restWorldPosition.xyz;
+    _velocityClip     = vertexClipPosition;
+    _velocityPrevClip = Transform::computeClipPosition( previousWorldPosition, g_PrevViewProj );
+}
+#else
+void MaterialInterpolants::storeVelocity( VertexContext context, uint instanceSlot, float4 restWorldPosition, float4 vertexWorldPosition, float4 vertexClipPosition )
+{
+    // 화면 속도를 쓰지 않는 패스다.
+}
+#endif
+
 MaterialInterpolants VSMain( MaterialVertexInput input, SW_INSTANCE_SLOT_INPUT( instanceSlot ), uint vertexID : SV_VertexID )
 {
     MaterialInterpolants output;
@@ -171,9 +192,11 @@ MaterialInterpolants VSMain( MaterialVertexInput input, SW_INSTANCE_SLOT_INPUT( 
     context._worldNormal  = Transform::computeWorldNormal( context._localNormal, context._instance._world );
     context._clipPosition = float4( 0.0f, 0.0f, 0.0f, 0.0f );
     context.readMaterial();
-    const float4 clipPosition = VertexContext::excludeFromDepthPass( context.computeClipPosition( worldPosition ) );
-    output._position          = clipPosition;
+    const float4 restWorldPosition = worldPosition; // 훅의 오프셋 전 — 화면 속도의 지난 위치가 같은 오프셋을 더한다
+    const float4 clipPosition      = VertexContext::excludeFromDepthPass( context.computeClipPosition( worldPosition ) );
+    output._position               = clipPosition;
     output.storeVaryings( context, worldPosition, clipPosition );
+    output.storeVelocity( context, instanceSlot, restWorldPosition, worldPosition, clipPosition );
     SW_APPEARANCE_WRITE( output, context._instance )
     SW_LODDEBUG_WRITE( output, instanceSlot )
     return output;
@@ -220,11 +243,30 @@ void PixelContext::readMaterial( MaterialInterpolants input )
 }
     #endif
 
+    #if SW_WRITES_VELOCITY
+/**
+ * @brief 보간한 이번 · 지난 클립 위치로 화면 속도(이번 UV - 지난 UV)를 정한다 — 나누기는 픽셀마다 한다(정점에서 나누면 큰 삼각형에서 틀린다).
+ * @details 지난 위치가 카메라 뒤(w ≤ 0)면 속도를 0 으로 둔다 — 재투영할 자리가 없다(읽는 쪽은 이번 자리의 기록을 쓴다). UV 의 y 는 NDC 와 반대다(motion_blur.hlsl 과 같은 식).
+ */
+void MaterialInterpolants::storeSurfaceVelocity()
+{
+    const float2 currentNdc  = _velocityClip.xy / _velocityClip.w;
+    const float2 previousNdc = _velocityPrevClip.xy / max( _velocityPrevClip.w, 1e-5f );
+    g_SurfaceVelocity        = ( _velocityPrevClip.w > 0.0f ) ? ( currentNdc - previousNdc ) * float2( 0.5f, -0.5f ) : float2( 0.0f, 0.0f );
+}
+    #else
+void MaterialInterpolants::storeSurfaceVelocity()
+{
+    // 화면 속도를 쓰지 않는 패스다.
+}
+    #endif
+
 /** @brief 보간된 값(과 픽셀에서 읽는 셰이더의 머티리얼)으로 픽셀 문맥을 만든다. */
 static PixelContext PixelContext::make( MaterialInterpolants input, bool bFrontFace )
 {
     PixelContext context;
     SW_LODDEBUG_READ( input )
+    input.storeSurfaceVelocity();
     context._position      = input._position;
     context._color         = input._color;
     context._uv            = input._uv;
@@ -337,6 +379,13 @@ void PSMain( MaterialInterpolants input )
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
     return SurfaceOutput::store( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic );
+}
+    #elif defined( SW_PASS_DISTORTION )
+/** @brief 왜곡 누적 패스 — 조명 없이 왜곡 훅의 화면 UV 오프셋만 낸다. 보기 모드는 받지 않는다(패스가 값 보기에서 돌지 않는다). */
+SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
+{
+    g_SurfaceDistortion = computeMaterialDistortion( this, surface );
+    return SurfaceOutput::pack( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, surface._roughness, surface._metallic );
 }
     #elif defined( MATERIAL_BLEND_TRANSLUCENT )
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )

@@ -9,6 +9,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -454,4 +455,167 @@ SW_TEST_CASE( RenderPipelineAssetTest, DiscardedAttachmentCannotBeRead )
     string xml = Util::makeXML( passAttributes, "", "", "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _storeOp=\"DontCare\"/>" );
     xml.insert( xml.find( "</_listPass>" ), string( "<RenderGraphPassDesc _name=\"Second\" " ) + passAttributes + "><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>" );
     SW_EXPECT_FALSE( Util::load( asset, xml ) );
+}
+
+namespace
+{
+    struct VelocityTestUtil
+    {
+        /** @brief 패스 하나가 @p outputs 를 컬러 · 깊이 출력으로 쓰는 파이프라인입니다. 속도 첨부의 포맷은 @p velocityFormat 입니다. */
+        static string makeXML( string_view passType, string_view outputs, string_view velocityFormat = "R16G16_FLOAT", string_view passState = RenderPipelineTestUtil::kOpaqueState )
+        {
+            string xml = "<RenderPipelineDesc _name=\"Velocity\"><_listAttachment>"
+                         "<RenderPassAttachment _name=\"SceneColor\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                         "<RenderPassAttachment _name=\"SceneVelocity\" _format=\"";
+            xml.append( velocityFormat );
+            xml += "\" _clearColor=\"0,0,0,0\" _loadOp=\"Clear\"/>"
+                   "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
+                   "</_listAttachment><_listPass><RenderGraphPassDesc _name=\"Pass\" _type=\"";
+            xml.append( passType );
+            xml += "\" _depthAttachment=\"SceneDepth\" ";
+            xml.append( passState );
+            xml += "><_listOutput>";
+            xml.append( outputs );
+            xml += "</_listOutput></RenderGraphPassDesc></_listPass></RenderPipelineDesc>";
+            return xml;
+        }
+    };
+} // namespace
+
+/** @brief [RenderPipelineAssetTest] 화면 속도 출력은 데이터가 정한다 — 선언한 불투명 패스만 속도 define 을 받고, 내부 슬롯은 대신 그리는 패스의 선언을 따른다 */
+SW_TEST_CASE( RenderPipelineAssetTest, VelocityOutputIsDeclaredByThePipeline )
+{
+    const string        kVelocityDefine{ kPassVelocityDefine };
+    RenderPipelineAsset asset;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, VelocityTestUtil::makeXML( "ForwardOpaque", "<item>SceneColor</item><item>SceneVelocity</item><item>SceneDepth</item>" ) ) );
+    const RenderGraphPassDesc& pass = asset.getGraphPass()[0];
+    SW_EXPECT_TRUE( passWritesVelocity( RenderPassType::ForwardOpaque, &pass ) );
+    SW_EXPECT_TRUE( passWritesVelocity( RenderPassType::ForwardOpaqueNoDepthWrite, &pass ) ); // 내부 슬롯은 ForwardOpaque 의 선언을 본다
+    SW_EXPECT_FALSE( passWritesVelocity( RenderPassType::Transparent, &pass ) );              // 반투명은 속도를 쓰지 않는다
+    SW_EXPECT_FALSE( passWritesVelocity( RenderPassType::ForwardOpaque, nullptr ) );
+    const EngineDefaultAssets& assets = engine::getSubsystem<EngineDefaultAssets>();
+    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassType::ForwardOpaque, &pass, &pass, assets )._listDefine, kVelocityDefine ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassType::ForwardOpaqueNoDepthWrite, nullptr, &pass, assets )._listDefine, kVelocityDefine ) );
+    SW_EXPECT_FALSE( VectorUtil::contains( selectRenderPassShader( RenderPassType::ForwardOpaqueNoDepthWrite, nullptr, nullptr, assets )._listDefine, kVelocityDefine ) );
+
+    // 속도를 선언하지 않은 파이프라인은 첨부도 define 도 없다.
+    RenderPipelineAsset withoutVelocity;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( withoutVelocity, VelocityTestUtil::makeXML( "ForwardOpaque", "<item>SceneColor</item><item>SceneDepth</item>" ) ) );
+    SW_EXPECT_FALSE( passWritesVelocity( RenderPassType::ForwardOpaque, &withoutVelocity.getGraphPass()[0] ) );
+}
+
+/** @brief [RenderPipelineAssetTest] 화면 속도 출력은 깊이를 쓰는 불투명 패스의 둘째 컬러 출력이고 명세의 포맷이다 — 어기면 읽기 오류다 */
+SW_TEST_CASE( RenderPipelineAssetTest, VelocityOutputFollowsTheRules )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.VelocityWriterType" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.VelocityFormat" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.VelocityOutputSlot" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    RenderPipelineAsset asset;
+    // 반투명은 깊이를 쓰지 않는다 — 속도가 깊이와 짝이 아니다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, VelocityTestUtil::makeXML( "Transparent", "<item>SceneColor</item><item>SceneVelocity</item>", "R16G16_FLOAT",
+                                                                                     "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"false\" _cullMode=\"Back\" _blendPreset=\"Transparent\"" ) ) );
+    // 포맷이 명세(R16G16 실수)와 다르다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, VelocityTestUtil::makeXML( "ForwardOpaque", "<item>SceneColor</item><item>SceneVelocity</item><item>SceneDepth</item>", "R16G16B16A16_FLOAT" ) ) );
+    // 셰이더는 속도를 SV_TARGET1 에 쓴다 — 첫 출력이면 안 된다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, VelocityTestUtil::makeXML( "ForwardOpaque", "<item>SceneVelocity</item><item>SceneColor</item><item>SceneDepth</item>" ) ) );
+}
+
+/** @brief [RenderPipelineAssetTest] 엔진 파이프라인의 불투명 패스는 화면 속도를 쓰고 TAA · 모션 블러가 그것을 읽는다(2D 는 모션 블러가 없어 쓰지 않는다) */
+SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesWireVelocity )
+{
+    struct PipelineCase
+    {
+        const utf8* _pPath;
+        bool        _bWritesVelocity;
+    };
+    for ( const PipelineCase& expectation : {
+              PipelineCase{   "engine/pipeline/deferredpipeline.xml",  true},
+              PipelineCase{    "engine/pipeline/forwardpipeline.xml",  true},
+              PipelineCase{"engine/pipeline/forwardtoonpipeline.xml",  true},
+              PipelineCase{  "engine/pipeline/forward2dpipeline.xml", false}
+    } )
+    {
+        RenderPipelineAsset asset;
+        SW_REQUIRE_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( expectation._pPath ) } ), expectation._pPath );
+        bool bAnyWriter = false;
+        for ( const RenderGraphPassDesc& pass : asset.getGraphPass() )
+        {
+            bAnyWriter         = bAnyWriter || passWritesVelocity( pass._type, &pass );
+            const bool bReader = pass._type == RenderPassType::TAA || pass._type == RenderPassType::MotionBlur;
+            if ( bReader == false )
+                continue;
+            const bool bReadsVelocity = VectorUtil::containsIf( pass._listResolvedInput, []( const RenderGraphPassDesc::ResolvedAttachment& input )
+            { return static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::Velocity; } );
+            SW_EXPECT_TRUE_MSG( bReadsVelocity, pass._name.c_str() );
+        }
+        SW_EXPECT_TRUE_MSG( bAnyWriter == expectation._bWritesVelocity, expectation._pPath );
+    }
+}
+
+/** @brief [RenderPipelineAssetTest] 화면 왜곡 누적은 왜곡 머티리얼(MATERIAL_DISTORTION)의 반투명 배치만 왜곡 퍼뮤테이션으로 그리고, 적용은 사본 · 왜곡 · 깊이를 읽는다 */
+SW_TEST_CASE( RenderPipelineAssetTest, DistortionPassTypesFollowTheTable )
+{
+    SW_EXPECT_TRUE( isPipelinePassType( RenderPassType::Distortion ) );
+    SW_EXPECT_TRUE( isPipelinePassType( RenderPassType::DistortionApply ) );
+    const RenderPassTypeInfo& accumulate = getRenderPassTypeInfo( RenderPassType::Distortion );
+    SW_EXPECT_TRUE( accumulate.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) );
+    SW_EXPECT_FALSE( accumulate.hasFlag( RenderPassTraitFlag::kDepthWrite ) );
+    const vector<string> listDistortion{ string( kMaterialDistortionDefine ), string( "MATERIAL_BLEND_TRANSLUCENT" ) };
+    const vector<string> listPlain{ string( "MATERIAL_BLEND_TRANSLUCENT" ) };
+    SW_EXPECT_TRUE( FrameRendererUtil::drawsMaterialInPass( RenderPassType::Distortion, &listDistortion ) );
+    SW_EXPECT_FALSE( FrameRendererUtil::drawsMaterialInPass( RenderPassType::Distortion, &listPlain ) );
+    SW_EXPECT_FALSE( FrameRendererUtil::drawsMaterialInPass( RenderPassType::Distortion, nullptr ) ); // 머티리얼 없는 배치는 왜곡이 없다
+    const EngineDefaultAssets& assets = engine::getSubsystem<EngineDefaultAssets>();
+    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassType::Distortion, nullptr, nullptr, assets )._listDefine, string( kPassDistortionDefine ) ) );
+    const RenderPassInputSignature* pApply = findRenderPassInputSignature( RenderPassType::DistortionApply );
+    SW_REQUIRE_TRUE( pApply != nullptr );
+    SW_EXPECT_TRUE( pApply->reads( RenderPassInputRole::SceneColorCopy ) );
+    SW_EXPECT_TRUE( pApply->reads( RenderPassInputRole::Distortion ) );
+    SW_EXPECT_TRUE( pApply->reads( RenderPassInputRole::SceneDepth ) );
+    SW_EXPECT_TRUE( resolveRenderPassInputRole( "SceneDistortion", false, "" ) == RenderPassInputRole::Distortion );
+}
+
+/** @brief [RenderPipelineAssetTest] 엔진 포워드 · 디퍼드는 반투명 앞에서 왜곡을 누적하고 적용한다 — 적용 패스는 누적 패스 뒤, 반투명 앞이고 장면 색에 쓴다 */
+SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesWireDistortion )
+{
+    for ( const utf8* pPath : { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" } )
+    {
+        RenderPipelineAsset asset;
+        SW_REQUIRE_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( pPath ) } ), pPath );
+        const vector<RenderGraphPassDesc>& listPass         = asset.getGraphPass();
+        size_t                             accumulateIndex  = listPass.size();
+        size_t                             applyIndex       = listPass.size();
+        size_t                             transparentIndex = listPass.size();
+        for ( size_t index = 0; index < listPass.size(); ++index )
+        {
+            accumulateIndex  = listPass[index]._type == RenderPassType::Distortion ? index : accumulateIndex;
+            applyIndex       = listPass[index]._type == RenderPassType::DistortionApply ? index : applyIndex;
+            transparentIndex = listPass[index]._type == RenderPassType::Transparent ? index : transparentIndex;
+        }
+        SW_REQUIRE_TRUE_MSG( accumulateIndex < applyIndex && applyIndex < transparentIndex, pPath );
+        const RenderGraphPassDesc& accumulate = listPass[accumulateIndex];
+        SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( accumulate._listResolvedColorOutput.size() ) );
+        SW_EXPECT_TRUE( static_cast<RenderPassInputRole>( accumulate._listResolvedColorOutput[0]._role ) == RenderPassInputRole::Distortion );
+        SW_EXPECT_TRUE( accumulate._resolvedRenderState.isAnyBlendEnabled() ); // 겹친 왜곡이 합쳐진다(가산)
+    }
+}
+
+/** @brief [RenderPipelineAssetTest] 왜곡 적용이 왜곡 입력을 적지 않으면 읽기 오류다(입력 계약) */
+SW_TEST_CASE( RenderPipelineAssetTest, DistortionApplyNeedsItsInputs )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassRequiredInputRole" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    const string        xml = "<RenderPipelineDesc _name=\"DistortionApply\"><_listAttachment>"
+                              "<RenderPassAttachment _name=\"SceneColor\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                              "<RenderPassAttachment _name=\"SceneColorCopy\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                              "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
+                              "</_listAttachment><_listPass>"
+                              "<RenderGraphPassDesc _name=\"Apply\" _type=\"DistortionApply\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\">"
+                              "<_listInput><item>SceneColorCopy</item><item>SceneDepth</item></_listInput><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>"
+                              "</_listPass></RenderPipelineDesc>";
+    RenderPipelineAsset asset;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, xml ) );
 }

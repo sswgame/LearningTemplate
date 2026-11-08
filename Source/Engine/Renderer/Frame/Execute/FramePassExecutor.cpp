@@ -53,6 +53,7 @@
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
+#include "Engine/Renderer/Pipeline/GBufferLayout.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Visual/Component/MeshComponent.h"
@@ -854,6 +855,10 @@ namespace sw
                 return names._sceneColorCopy;
             case RenderPassInputRole::SceneDepthCopy:
                 return names._sceneDepthCopy;
+            case RenderPassInputRole::Velocity:
+                return names._velocity;
+            case RenderPassInputRole::Distortion:
+                return names._distortion;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -1004,6 +1009,16 @@ namespace sw
                 case RenderPassType::TAA:
                 {
                     executeTAAPass( input );
+                    break;
+                }
+                case RenderPassType::Distortion:
+                {
+                    executeDistortionPass( input );
+                    break;
+                }
+                case RenderPassType::DistortionApply:
+                {
+                    executeDistortionApplyPass( input );
                     break;
                 }
                 case RenderPassType::Present:
@@ -1160,9 +1175,19 @@ namespace sw
         const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ShadowMap );
         if ( pShadowInput != nullptr )
             registerPassTexture( context, attachmentNames()._shadowMap, pShadowInput->_attachment );
-        const hashed_string& colorTarget = input._declaredColor[0]._attachment;
-        const float4         sceneClear  = getTargetClearColor( colorTarget );
-        if ( beginColorPass( context, colorTarget, passDepth, sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
+        // 선언한 컬러 출력을 모두 연다 — 화면 속도를 선언했으면 [색, 속도] 두 타깃이다(검증 3-3, 셰이더 SV_TARGET0 · 1).
+        const vector<RenderGraphPassDesc::ResolvedAttachment>& declaredColor = input._declaredColor;
+        const uint32                                           colorCount    = static_cast<uint32>( declaredColor.size() ) < kMaxColorAttachments ? static_cast<uint32>( declaredColor.size() ) : kMaxColorAttachments;
+        hashed_string                                          arrNames[kMaxColorAttachments]{};
+        float4                                                 arrClears[kMaxColorAttachments]{};
+        RHIRenderPassLoadOp                                    arrLoads[kMaxColorAttachments]{};
+        for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
+        {
+            arrNames[colorIndex]  = declaredColor[colorIndex]._attachment;
+            arrClears[colorIndex] = getTargetClearColor( arrNames[colorIndex] );
+            arrLoads[colorIndex]  = colorLoadFor( arrNames[colorIndex] );
+        }
+        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, colorCount, passDepth, colorLoadFor( passDepth ) ) == false )
             return;
         const bool bDepthAlreadyWritten = input._passType == RenderPassType::ForwardOpaque && _bHasExecutedDepthPrepass.load() != 0 &&
                                           _psoManager.getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0;
@@ -1173,24 +1198,27 @@ namespace sw
 
     void FramePassExecutor::executeGBufferPass( const PassExecuteInput& input )
     {
-        // 알베도 · 노멀 · 머티리얼은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼)를 따른다.
-        // 한 MRT 패스로 셋 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 컬러 출력 수가 표의 값이 아닌 G버퍼는 검증(3-2)이 거부한다.
+        // 알베도 · 노멀 · 머티리얼 · 속도는 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼, [3] 속도)를 따른다.
+        // 한 MRT 패스로 넷 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 컬러 출력 수가 표의 값이 아닌 G버퍼는 검증(3-2)이 거부한다.
         using Internal                       = FramePassExecutorInternal;
         FramePassContext&    context         = input._context;
         const hashed_string& passDepth       = input._passDepth;
         const hashed_string* pAlbedoTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferAlbedo, 0, nullptr );
         const hashed_string* pNormalTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget );
         const hashed_string* pMaterialTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferMaterial, 2, pNormalTarget );
+        // 화면 속도는 명세의 넷째 슬롯이다(GBufferLayout::kVelocitySlot — 셰이더 SV_TARGET3).
+        const hashed_string* pVelocityTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::Velocity, GBufferLayout::kVelocitySlot, pMaterialTarget );
         const bool           bHasTargets     = pAlbedoTarget != nullptr && pNormalTarget != nullptr && findTransient( *pNormalTarget ) != 0 &&
-                                 pMaterialTarget != nullptr && findTransient( *pMaterialTarget ) != 0;
+                                 pMaterialTarget != nullptr && findTransient( *pMaterialTarget ) != 0 && pVelocityTarget != nullptr && findTransient( *pVelocityTarget ) != 0;
         if ( bHasTargets == false || _psoManager.getEnginePSO( RenderPassType::GBuffer ) == 0 )
             return;
         const hashed_string&      albedoTarget = *pAlbedoTarget;
-        const hashed_string       arrNames[]   = { albedoTarget, *pNormalTarget, *pMaterialTarget };
+        const hashed_string       arrNames[]   = { albedoTarget, *pNormalTarget, *pMaterialTarget, *pVelocityTarget };
         const float4              arrClears[]  = { getTargetClearColor( albedoTarget ), getTargetClearColor( *pNormalTarget ),
-                                                   getTargetClearColor( *pMaterialTarget ) };
-        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ), colorLoadFor( *pMaterialTarget ) };
-        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 3, passDepth, colorLoadFor( passDepth ) ) == false )
+                                                   getTargetClearColor( *pMaterialTarget ), getTargetClearColor( *pVelocityTarget ) };
+        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ), colorLoadFor( *pMaterialTarget ), colorLoadFor( *pVelocityTarget ) };
+        static_assert( sizeof( arrNames ) / sizeof( arrNames[0] ) == GBufferLayout::kAttachmentCount, "G버퍼 MRT 수는 명세의 첨부 수다" );
+        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, GBufferLayout::kAttachmentCount, passDepth, colorLoadFor( passDepth ) ) == false )
             return;
         drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
         context._pCmd->endRenderPass();
@@ -1321,6 +1349,45 @@ namespace sw
         if ( beginColorPass( context, colorTarget, input._passDepth, _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
             return;
         drawFullscreen( context, skyPSO );
+        context._pCmd->endRenderPass();
+    }
+
+    bool FramePassExecutor::drawsDistortionThisView() const
+    {
+        // 값 보기(노멀 · 깊이 · 오버드로)와 와이어프레임은 장면 색을 덮지 않는다 — 왜곡도 없다(안개와 같은 판정).
+        const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const bool                bShowsScene  = ( viewModeInfo._bWireframe == false || viewModeInfo._bOverlay ) && viewModeInfo._bShowsBuffer == false;
+        return bShowsScene && _state._gpuScene.hasDistortionBatches();
+    }
+
+    void FramePassExecutor::executeDistortionPass( const PassExecuteInput& input )
+    {
+        // 화면 왜곡 누적 — 왜곡 머티리얼(MATERIAL_DISTORTION)의 반투명 배치가 화면 UV 오프셋을 선언한 출력에 더한다(가산 블렌드, 깊이는 테스트만).
+        // 왜곡 배치가 없으면 기록하지 않는다 — 출력은 지워지지도 않지만 읽는 적용 패스도 같은 판정으로 돌지 않는다(쓰지 않을 때 비용이 없다).
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::Distortion );
+        if ( drawsDistortionThisView() == false || pso == 0 )
+            return;
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
+        if ( beginColorPass( context, target, input._passDepth, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+            return;
+        drawSceneMeshes( context, pso, input._bTransparentBatch );
+        context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executeDistortionApplyPass( const PassExecuteInput& input )
+    {
+        // 화면 왜곡 적용 — 장면 색 사본을 왜곡 오프셋만큼 비껴 읽어 장면 색에 쓴다(distortion_apply.hlsl). 왜곡이 없으면 출력(장면 색)이 이미 맞아 아무것도 하지 않는다
+        // — 일반 풀스크린 패스의 복사 길을 타면 왜곡 없는 프레임에도 전 화면을 한 번 읽고 쓴다.
+        const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::DistortionApply );
+        if ( drawsDistortionThisView() == false || pso == 0 )
+            return;
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
+        registerDeclaredInputs( context, input._passDesc );
+        if ( beginColorPass( context, target, hashed_string{}, _state._clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
+            return;
+        drawFullscreen( context, pso );
         context._pCmd->endRenderPass();
     }
 
@@ -1790,7 +1857,7 @@ namespace sw
         if ( morphBuffer._buffer != 0 && morphBuffer._srv != kInvalidDescriptorIndex )
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );
-            context._passValues.setUint( passConstantNames()._swMorphVertexCount, _state._deform._meshMorphPool.getVertexCount() );
+            context._passValues.setUint( passConstantNames()._swMorphVertexCount, _state._deform._meshMorphPool.getResultVertexCapacity() );
         }
         // 스킨 칸 표 — 패스당 한 번. 스키닝을 디스패치할 수 없으면 걸지 않는다 — 칸이 있는 인스턴스는 그리지 않는다(레스트 포즈로 대신 그리지 않는다, 풀이 오류를 남겼다).
         // 진단(SkipDispatch)이면 스킨 결과가 없어 걸지 않는다 — 칸 있는 인스턴스는 그 진단에서 그려지지 않는다.
@@ -1801,6 +1868,17 @@ namespace sw
         {
             context._resourceRegistry.registerBuffer( passConstantNames()._swSkinResultOffsets, skinResultOffsetBuffer._buffer, skinResultOffsetBuffer._srv );
             context._passValues.setUint( passConstantNames()._swSkinResultOffsetCount, _state._deform._meshMorphPool.getSkinResultOffsetCount() );
+            // 스킨 결과는 두 벌이다 — 이번 벌의 이동과 지난 프레임 결과가 든 벌의 이동(없으면 무효 — 셰이더가 이번 위치를 지난 위치로 쓴다).
+            context._passValues.setUint( passConstantNames()._swSkinResultShift, _state._deform._meshMorphPool.getSkinCurrentShift() );
+            context._passValues.setUint( passConstantNames()._swSkinPreviousShift, _state._deform._meshMorphPool.getSkinPreviousShift() );
+        }
+
+        // 지난 월드 행렬 — 패스당 한 번. 화면 속도를 쓰는 패스의 정점 셰이더만 읽는다. 안 걸리면 셰이더가 이번 행렬을 쓴다(속도는 카메라 움직임뿐).
+        const RHIStructuredBuffer& prevWorldBuffer = _state._gpuScene.getPrevInstanceWorldBuffer();
+        if ( prevWorldBuffer._buffer != 0 && prevWorldBuffer._srv != kInvalidDescriptorIndex )
+        {
+            context._resourceRegistry.registerBuffer( passConstantNames()._swPrevInstanceWorlds, prevWorldBuffer._buffer, prevWorldBuffer._srv );
+            context._passValues.setUint( passConstantNames()._swPrevInstanceWorldCount, _state._gpuScene.getPrevInstanceWorldCount() );
         }
 
         // 정점 애니메이션(VAT) 표 — 패스당 한 번. 시계는 게임 스레드의 군중 시계(스냅샷)라 인스턴스 시각 오프셋과 더하면 CPU 의 클립 시각이다.

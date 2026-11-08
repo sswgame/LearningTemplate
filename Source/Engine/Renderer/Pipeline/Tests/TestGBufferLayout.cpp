@@ -65,3 +65,21 @@ SW_TEST_CASE( GBufferLayoutTest, DecodeFollowsTheShaderEncoding )
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( listValue.size() ) );
     SW_EXPECT_NEAR( 0.0f, listValue[3]._value._x, 1.0e-6f ); // Unlit
 }
+
+/**
+ * @brief [GBufferLayoutTest] 판 2 의 넷째 슬롯은 화면 속도다 — 역할 Velocity, R16G16 실수, 클리어 0, 값은 u · v 그대로(부호 있는 UV 차이)
+ */
+SW_TEST_CASE( GBufferLayoutTest, VelocityIsTheLastSlot )
+{
+    SW_EXPECT_EQUAL( 2u, GBufferLayout::kVersion );
+    const GBufferAttachmentSpec& velocity = GBufferLayout::kArrAttachment[GBufferLayout::kVelocitySlot];
+    SW_EXPECT_EQUAL( GBufferLayout::kAttachmentCount - 1u, GBufferLayout::kVelocitySlot );
+    SW_EXPECT_TRUE( velocity._role == RenderPassInputRole::Velocity );
+    SW_EXPECT_TRUE( velocity._format == RHIFormat::R16G16_FLOAT );
+    SW_EXPECT_TRUE( resolveRenderPassInputRole( velocity._pName, false, "" ) == RenderPassInputRole::Velocity ); // 이름이 곧 역할이다
+    vector<GBufferDecodedValue> listValue;
+    GBufferLayout::decodeTexel( velocity, float4{ 0.125f, -0.25f, 0.0f, 0.0f }, listValue );
+    SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( listValue.size() ) );
+    SW_EXPECT_NEAR( 0.125f, listValue[0]._value._x, 1.0e-6f );
+    SW_EXPECT_NEAR( -0.25f, listValue[1]._value._x, 1.0e-6f );
+}

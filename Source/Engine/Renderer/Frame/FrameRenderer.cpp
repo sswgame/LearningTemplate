@@ -583,7 +583,7 @@ namespace sw
         beginViewHistory( _state._mainView );
         // 지난 뷰-투영과 견주므로 applyViewProjection(지난 것을 이번 것으로 바꾼다) 앞이다.
         // 주 시점의 첨부만 렌더 타깃 목록(에디터 패널)에 싣는다 — 가리키는 곳이 바뀌거나 타깃을 만들고 놓았을 때만 다시 싣는다.
-        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state._mainView, mainViewProj );
+        const FrameViewResources::PassSelectionResult selection = _viewResources.applyViewPassSelection( _state._mainView, mainViewProj, _state._gpuScene.hasObjectMotion() );
         if ( selection._bTargetsRepointed == SW_TRUE || selection._bTargetsChanged == SW_TRUE )
             publishRenderTargets();
         if ( selection._bTargetsChanged == SW_TRUE )
@@ -1115,7 +1115,7 @@ namespace sw
         // 기록을 버릴지는 컬링(가림 판정)이 기록 전에 보므로 그리기(renderExtraView)가 아니라 여기서 정한다.
         beginViewHistory( view );
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.
-        (void)_viewResources.applyViewPassSelection( view, request._viewProj ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
+        (void)_viewResources.applyViewPassSelection( view, request._viewProj, _state._gpuScene.hasObjectMotion() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
         _upscale.prepareUpscale( view, view._outputWidth, view._outputHeight );
     }
 

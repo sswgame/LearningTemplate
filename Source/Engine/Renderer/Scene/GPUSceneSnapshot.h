@@ -81,6 +81,15 @@ namespace sw
         uint32 _skinSlot{ constant::invalid_index::kUint32 };
         /** @brief 인스턴스 사용자 값입니다(`InstanceCustomData` — 담는 법 없는 실수라 컴포넌트의 형식을 그대로 싣는다). 스프라이트 칸처럼 내용이고 배치 키가 아닙니다. 셰이더의 `customData0` · `customData1` 입니다. */
         InstanceCustomData _customData{};
+        /**
+         * @brief 움직임 기록의 열쇠입니다(`MeshComponent::getMotionHistoryKey` — 컴포넌트 일련번호 + 순간이동 차례). 0 이면 기록이 없다(인스턴스 배치 항목 · GPU 가 쓰는 칸).
+         * @details 렌더 쪽(`GPUInstanceMotionHistory`)이 이 열쇠로 지난번 그린 월드 행렬을 찾아 화면 속도의 지난 위치를 만든다. 인스턴스 번호는 배치를 다시 나누면 바뀌므로 열쇠가
+         *          따로 있다(언리얼 프리미티브 프록시가 PreviousLocalToWorld 를 들고 있는 것과 같은 자리 — 여기서는 게임 스레드가 정체성만 싣고 기록은 렌더 쪽이 소유한다).
+         *          순간이동이 차례를 올려 열쇠가 바뀌면 기록이 없는 것으로 보여 그 프레임의 속도가 카메라 움직임뿐이다. 셰이더는 읽지 않는다.
+         */
+        uint64 _motionKey{ 0 };
+        /** @brief 원소를 16 바이트 단위로 맞추는 칸입니다(HLSL 구조 버퍼 원소 정렬). 0 으로 둔다. */
+        uint64 _motionPad{ 0 };
     };
 } // namespace sw
 
@@ -89,7 +98,7 @@ namespace sw
     /// @brief GPU 인스턴스 LOD 그룹이 받는 메시의 최대 단계 수(LOD 0 포함)입니다. 더 많으면 그 메시는 CPU 가 단계를 고른다(`GPUSceneBuilder::applyGPULODGroup`).
     inline constexpr uint32 kGPULODMaxLevels = 8;
 
-    static_assert( sizeof( GPUInstance ) == 160, "GPUInstance must match InstanceData (instance_data.hlsli) byte for byte" );
+    static_assert( sizeof( GPUInstance ) == 176, "GPUInstance must match InstanceData (instance_data.hlsli) byte for byte" );
     static_assert( sizeof( InstanceCustomData ) == sizeof( float4 ) * InstanceCustomData::kCount, "InstanceCustomData must be exactly the float4 slots of InstanceData" );
 
     /**

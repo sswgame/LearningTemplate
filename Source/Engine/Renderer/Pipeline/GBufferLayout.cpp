@@ -29,7 +29,10 @@ namespace sw
                 case GBufferChannelKind::OctahedralV:
                     break; // v 는 u 와 함께 노멀 하나로 푼다
                 case GBufferChannelKind::Unorm:
+                case GBufferChannelKind::VelocityU:
+                case GBufferChannelKind::VelocityV:
                 {
+                    // 값 그대로 — 화면 속도는 UV 차이(부호 있는 실수)라 풀 것이 없다.
                     outListValue.push_back( GBufferDecodedValue{
                         channelSpec._pMeaning, float3{ arrRaw[channel], 0.0f, 0.0f },
                         1

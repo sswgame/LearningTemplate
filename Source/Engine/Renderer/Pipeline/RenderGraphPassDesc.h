@@ -68,10 +68,11 @@ namespace sw
          */
         DepthOfField,
         /**
-         * @brief 카메라 모션 블러입니다. 깊이로 복원한 월드 위치를 지난 프레임 뷰-투영(`g_PrevViewProj`)으로 다시 투영해 화면 속도를 구하고, 그 방향으로 원본을 섞습니다(motion_blur.hlsl).
-         *        사용자 설정 `graphics.motionBlur`(`gv_motionBlur`)를 끄거나 후처리를 끈 뷰, 카메라가 서 있거나 컷인 프레임(속도가 모두 0)은
+         * @brief 모션 블러입니다. 불투명 지오메트리 패스가 쓴 화면 속도(Velocity 역할 입력 — 물체마다 지난 월드 행렬 · 스킨 위치)를 따라 원본을 섞습니다(motion_blur.hlsl).
+         *        그리지 않은 픽셀(하늘)은 깊이로 복원한 월드 위치를 지난 프레임 뷰-투영(`g_PrevViewProj`)으로 다시 투영한 카메라 속도다.
+         *        사용자 설정 `graphics.motionBlur`(`gv_motionBlur`)를 끄거나 후처리를 끈 뷰, 컷, 카메라와 물체가 모두 서 있는 프레임(속도가 모두 0)은
          *        피사계 심도와 같이 패스를 기록하지 않고 출력 이름이 원본을 가리킵니다(`kBypassesToSource`).
-         *        움직이는 물체의 속도 버퍼는 아직 없다(카메라 움직임만 흐린다). 디퍼드는 피사계 심도와 Tonemap 사이에, 포워드는 피사계 심도와 후처리 체인(Present) 사이에 둡니다.
+         *        디퍼드는 피사계 심도와 Tonemap 사이에, 포워드는 피사계 심도와 후처리 체인(Present) 사이에 둡니다.
          */
         MotionBlur,
         /**
@@ -100,6 +101,17 @@ namespace sw
          *        물의 화면 공간 두께(`g_SceneDepthCopyIndex`)가 읽습니다. 반투명 앞에 둡니다(언리얼의 Scene Depth 사본 · 유니티 URP 의 Depth Texture 와 같은 자리).
          */
         SceneDepthCopy,
+        /**
+         * @brief 화면 왜곡 누적입니다. 반투명 배치 중 머티리얼에 `MATERIAL_DISTORTION` 이 있는 것만 머티리얼 셰이더의 왜곡 훅(`computeMaterialDistortion`)으로 그려
+         *        화면 UV 오프셋을 선언한 R16G16 실수 출력(`Distortion` 역할, 클리어 0)에 더한다(가산 블렌드 — 겹친 왜곡이 합쳐진다). 장면 깊이로 테스트만 한다(가려진 왜곡은 없다).
+         *        씬에 왜곡 배치가 없으면 기록하지 않는다(`GPUScene::hasDistortionBatches` — 쓰지 않을 때 비용이 없다). 언리얼 Distortion 패스 · 유니티 왜곡과 같은 자리다.
+         */
+        Distortion,
+        /**
+         * @brief 화면 왜곡 적용입니다. 장면 색 사본(`SceneColorCopy` 역할)을 왜곡 오프셋(`Distortion` 역할)만큼 비껴 읽어 선언한 컬러 출력(장면 색)에 쓴다(distortion_apply.hlsl).
+         *        비껴 읽은 자리의 깊이가 이 픽셀보다 가까우면(앞의 물체) 끌어오지 않는다. 왜곡 누적과 같은 조건으로 돌지 않는다 — 출력이 곧 왜곡 없는 장면 색이라 그대로 둔다(안개와 같은 전용 실행).
+         */
+        DistortionApply,
         /**
          * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
          *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.

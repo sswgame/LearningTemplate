@@ -27,6 +27,8 @@ namespace sw
         OctahedralV,  ///< 월드 노멀의 옥타헤드럴 좌표 v
         ShadingModel, ///< 1 조명(Lit), 0 조명 없음(Unlit) — `SW_GBUFFER_SHADING_*`
         Drawn,        ///< 클리어 0, G버퍼 패스가 그리면 1
+        VelocityU,    ///< 화면 속도 u(이번 UV - 지난 UV, 다음 채널이 v). 클리어 0 은 "움직임 없음" 이다
+        VelocityV,    ///< 화면 속도 v
     };
 
     /** @brief 채널 하나입니다. */
@@ -61,10 +63,15 @@ namespace sw
      */
     struct SW_API GBufferLayout
     {
-        /** @brief 명세의 판입니다. 첨부 · 채널 · 인코딩이 바뀌면 올리고 binding_output.hlsli 의 `SW_GBUFFER_LAYOUT_VERSION` 도 같이 올린다. */
-        static constexpr uint32 kVersion = 1;
+        /**
+         * @brief 명세의 판입니다. 첨부 · 채널 · 인코딩이 바뀌면 올리고 binding_output.hlsli 의 `SW_GBUFFER_LAYOUT_VERSION` 도 같이 올린다.
+         * @details 판 2: 화면 속도(SceneVelocity)를 네 번째 MRT 로 더했다 — 언리얼 베이스 패스의 속도 출력(r.VelocityOutputPass=1)과 같은 자리다.
+         */
+        static constexpr uint32 kVersion = 2;
         /** @brief 첨부 수입니다(G버퍼 패스의 MRT 수). */
-        static constexpr uint32 kAttachmentCount = 3;
+        static constexpr uint32 kAttachmentCount = 4;
+        /** @brief 화면 속도 첨부의 MRT 슬롯입니다(마지막). 포워드 불투명 패스도 같은 첨부 · 포맷을 마지막 컬러 출력으로 쓴다. */
+        static constexpr uint32 kVelocitySlot = 3;
 
         // clang-format off
         static constexpr GBufferAttachmentSpec kArrAttachment[kAttachmentCount] = {
@@ -74,16 +81,19 @@ namespace sw
               { { "Normal u", GBufferChannelKind::OctahedralU }, { "Normal v", GBufferChannelKind::OctahedralV }, { "", GBufferChannelKind::Unused }, { "", GBufferChannelKind::Unused } }, 2 },
             { "GBufferMaterial", RenderPassInputRole::GBufferMaterial, RHIFormat::R8G8B8A8_UNORM, float4{ 0.0f, 0.0f, 0.0f, 0.0f },
               { { "Metallic", GBufferChannelKind::Unorm }, { "Roughness", GBufferChannelKind::Unorm }, { "Unused", GBufferChannelKind::Unused }, { "Drawn", GBufferChannelKind::Drawn } }, 4 },
+            { "SceneVelocity",   RenderPassInputRole::Velocity,        RHIFormat::R16G16_FLOAT,   float4{ 0.0f, 0.0f, 0.0f, 0.0f },
+              { { "Velocity u", GBufferChannelKind::VelocityU }, { "Velocity v", GBufferChannelKind::VelocityV }, { "", GBufferChannelKind::Unused }, { "", GBufferChannelKind::Unused } }, 2 },
         };
         // clang-format on
 
         /** @brief MRT 포맷 표입니다(`RenderPassTypeInfo` 의 G버퍼 패스 행이 PSO 포맷으로 쓴다). */
-        static constexpr RHIFormat kArrColorFormat[kAttachmentCount] = { kArrAttachment[0]._format, kArrAttachment[1]._format, kArrAttachment[2]._format };
+        static constexpr RHIFormat kArrColorFormat[kAttachmentCount] = { kArrAttachment[0]._format, kArrAttachment[1]._format, kArrAttachment[2]._format, kArrAttachment[3]._format };
+        static_assert( kArrAttachment[kVelocitySlot]._role == RenderPassInputRole::Velocity, "화면 속도는 G버퍼의 마지막 슬롯이다(셰이더 SurfaceOutput 의 SV_TARGET3)" );
 
         /** @brief 이름의 첨부 명세입니다. G버퍼 첨부가 아니면 nullptr 입니다. */
         static const GBufferAttachmentSpec* findAttachment( string_view name );
         /**
-         * @brief 첨부 @p spec 에서 읽은 텍셀 @p raw(포맷대로 푼 float4)를 뜻 있는 값으로 풉니다 — 노멀은 옥타헤드럴을 풀어 단위 벡터, 셰이딩 모델 · 그려짐은 0/1 입니다.
+         * @brief 첨부 @p spec 에서 읽은 텍셀 @p raw(포맷대로 푼 float4)를 뜻 있는 값으로 풉니다 — 노멀은 옥타헤드럴을 풀어 단위 벡터, 셰이딩 모델 · 그려짐은 0/1, 화면 속도는 u · v 값 그대로입니다.
          * @details 셰이더 읽기와 같은 식이다(`OctahedralNormal::decodeOctant` — 셰이더 `Octahedral::decode` 와 같다). 먼저 출력 목록을 비운다.
          */
         static void decodeTexel( const GBufferAttachmentSpec& spec, const float4& raw, vector<GBufferDecodedValue>& outListValue );

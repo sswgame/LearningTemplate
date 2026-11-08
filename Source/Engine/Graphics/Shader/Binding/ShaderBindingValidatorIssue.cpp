@@ -333,6 +333,9 @@ namespace sw
             // 스킨 칸 표 t14 (네 백엔드 공통): 정점 셰이더가 인스턴스의 스킨 칸으로 결과 시작을 읽는다(binding.hlsli MorphPool::loadSkinResultOffset).
             addReserved( list, shaderslot::resname::kSkinResultOffsets, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kSkinResultOffsetBuffer ), slotAt( 0, shaderslot::kSkinResultOffsetBuffer ),
                          slotAt( vk::kTShift, shaderslot::kSkinResultOffsetBuffer ), slotAt( 0, shaderslot::kSkinResultOffsetBuffer ) );
+            // 지난 월드 행렬 t15 (네 백엔드 공통): 화면 속도를 쓰는 지오메트리 패스의 정점 셰이더가 인스턴스 번호로 읽는다(binding.hlsli InstanceData::loadPreviousWorld).
+            addReserved( list, shaderslot::resname::kPrevInstanceWorlds, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kPrevInstanceWorldBuffer ),
+                         slotAt( 0, shaderslot::kPrevInstanceWorldBuffer ), slotAt( vk::kTShift, shaderslot::kPrevInstanceWorldBuffer ), slotAt( 0, shaderslot::kPrevInstanceWorldBuffer ) );
             // light_grid 컴퓨트: 라이트 t0 · 뷰 정보 t1 읽기, 그리드 u0 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
             addReserved( list, shaderslot::resname::kLightGridLights, ShaderBindingKind::StructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kTShift, 0 ), slotAt( 0, 0 ) );
             addReserved( list, shaderslot::resname::kLightGridViews, ShaderBindingKind::StructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kTShift, 1 ), slotAt( 0, 1 ) );

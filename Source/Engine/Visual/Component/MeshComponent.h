@@ -135,6 +135,12 @@ namespace sw
          * @details 스킨 결과는 메시가 아니라 칸마다 하나다 — 유닛(`SkeletalMeshComponent`)과 군중 묶음이 칸을 갖고, 구간 컴포넌트는 따르는 주 메시의 칸을 그린다.
          */
         virtual uint32 getSkinSlot() const { return constant::invalid_index::kUint32; }
+        /**
+         * @brief 화면 속도의 움직임 기록 열쇠입니다(컴포넌트 일련번호 << 16 | 순간이동 차례). 빌더가 `GPUInstance::_motionKey` 로 옮기고 렌더 쪽 기록이 지난 월드 행렬을 이 열쇠로 찾는다.
+         * @details 순간이동(`onTeleported`)이 차례를 올려 열쇠가 바뀌면 그 프레임은 기록이 없어 속도가 카메라 움직임뿐이다 — 언리얼 `ETeleportType` 이 이전 변환을 버리는 것과 같다.
+         *          일련번호는 프로세스에서 하나뿐이라(`Component::getComponentID`) 지운 컴포넌트의 자리를 새 컴포넌트가 물려받지 않는다.
+         */
+        uint64 getMotionHistoryKey() const;
 
         /**
          * @brief GPU 인스턴스에 실을 스프라이트 프레임(UV 사각형) · 색 · 픽셀 스냅 단위입니다. 빌더가 담아(`GPUSpriteInstanceData::make`) `GPUInstance::_sprite` 로 옮깁니다.
@@ -349,6 +355,8 @@ namespace sw
         float32 _appearanceRate; ///< 등장 비율의 초당 변화(양수 등장 · 음수 사라지기 · 0 멈춤, 저장하지 않음)
         /** @brief 순간이동이 표시한 등장 요청입니다(`onTeleported`, 워커가 쓴다). 도착 단계가 꺼내 `beginAppearance` 한다. 비트필드에 두면 이웃 비트와 레이스다. */
         atomic<bool> _bTeleportAppearPending;
+        /** @brief 순간이동 차례입니다(`onTeleported` 가 올린다, 워커가 쓴다). 움직임 기록 열쇠의 아래 16 비트다(`getMotionHistoryKey`). 저장하지 않습니다. */
+        atomic<uint32> _motionTeleportSerial;
         /** @brief 그리는 LOD 단계입니다(0 = 원본, `setLODIndex`). 저장하지 않습니다. 게임 스레드만 쓴다(렌더 수집은 그 프레임의 더티 뒤에 읽는다). */
         uint8 _lodIndex;
         /** @brief 등록할 때 받은 레지스트리입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */

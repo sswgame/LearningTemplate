@@ -107,6 +107,7 @@ struct View
 struct MorphPool
 {
     static uint2 loadSkinResultOffset( uint skinSlot );
+    static float3 loadPreviousPosition( uint batchIndex, uint skinSlot, uint vertexID, float3 currentPosition ); // 화면 속도의 지난 로컬 위치(스킨 결과의 지난 벌)
     static uint computeElement( uint batchIndex, uint skinSlot, uint vertexID );
     static void loadVertex( uint batchIndex, uint skinSlot, uint vertexID, float3 restPosition, float3 restNormal, out float3 outPosition, out float3 outNormal );
     static float4 loadTangent( uint batchIndex, uint skinSlot, uint vertexID, float4 restTangent );
@@ -169,6 +170,8 @@ struct PassTexture
     static void sampleDepthCross( float2 uv, float2 texel, out float outCenterDepth, out float4 outNeighborDepth );
     static float4 gatherDepthRed( float2 uv );
     static float sampleAmbientOcclusion( float2 uv );
+    static float2 sampleVelocityPoint( float2 uv );   // 화면 속도(이번 UV - 지난 UV) — 불투명 지오메트리 패스의 출력(SceneVelocity)
+    static float2 sampleDistortionPoint( float2 uv ); // 화면 왜곡 오프셋(화면 UV) — 왜곡 누적 패스의 출력(SceneDistortion)
     static float4 sampleLight2dCookieAtlas( float2 uv );
 };
 
@@ -249,9 +252,9 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_FogDebugParams; // 안개 진단 보기(C++ FrameFog::makeDebugParams) — x 보기(0 없음 · 1 비교 · 2 산란 단면 · 3 투과율 단면), y 단면 조각, z 비교 경계 uv.x. 안개 패스만 읽는다
     // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.
     // 손으로 적지 않는다: 표에 없는 엔진 텍스처 인덱스가 생기면 에뮬 백엔드(DX11 · GL)가 칸을 몰라 자홍을 낸다(뜻은 표의 주석). 걸려 있지 않은 역할은 kInvalidIndex 다.
-    // 아래 12 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
-#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_11 ) || defined( SW_ENGINE_TEXTURE_INDEX_12 ) || SW_ENGINE_TEXTURE_COUNT != 12
-    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 12 fields below"
+    // 아래 14 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
+#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_13 ) || defined( SW_ENGINE_TEXTURE_INDEX_14 ) || SW_ENGINE_TEXTURE_COUNT != 14
+    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 14 fields below"
 #endif
     uint  SW_ENGINE_TEXTURE_INDEX_0;
     uint  SW_ENGINE_TEXTURE_INDEX_1;
@@ -265,6 +268,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  SW_ENGINE_TEXTURE_INDEX_9;
     uint  SW_ENGINE_TEXTURE_INDEX_10;
     uint  SW_ENGINE_TEXTURE_INDEX_11;
+    uint  SW_ENGINE_TEXTURE_INDEX_12;
+    uint  SW_ENGINE_TEXTURE_INDEX_13;
     uint  g_Flags;
     uint  g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
     uint  g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
@@ -274,6 +279,10 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
     uint  g_SwSkinResultOffsetsIndex;  // 스킨 칸 → 결과 시작 표(g_SwSkinResultOffsets, t14)가 걸려 있으면 유효, 아니면 kInvalidIndex
     uint  g_SwSkinResultOffsetCount;   // 그 표의 칸 수 — 범위 밖 칸을 막는다
+    uint  g_SwSkinResultShift;         // 스킨 결과의 이번 벌 이동(정점) — 스킨 구간은 두 벌이고 표의 시작은 앞 벌 기준이다(C++ GPUMeshMorphPool::getSkinCurrentShift)
+    uint  g_SwSkinPreviousShift;       // 지난 프레임 스킨 결과가 든 벌의 이동(정점). kInvalidIndex 면 기록이 없다(배치가 바뀐 프레임) — 화면 속도의 지난 위치가 이번 위치다
+    uint  g_SwPrevInstanceWorldsIndex; // 지난 월드 행렬 버퍼(g_SwPrevInstanceWorlds, t15)가 걸려 있으면 유효, 아니면 kInvalidIndex — 지난 행렬이 이번 행렬이다(속도는 카메라 움직임뿐)
+    uint  g_SwPrevInstanceWorldCount;  // 그 버퍼의 원소 수(인스턴스 수) — 범위 밖 번호를 막는다
     uint  g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 kInvalidIndex
     uint  g_SwLightCount;              // 그 버퍼의 빛 원소 수 (0 이면 빛 없음 — 앰비언트만 받는다)
     uint  g_SwLightGridIndex;          // 라이트 그리드 버퍼(g_SwLightGrid, t12)가 걸려 있으면 유효, 아니면 kInvalidIndex
@@ -419,8 +428,10 @@ static uint MorphPool::computeElement( uint batchIndex, uint skinSlot, uint vert
     // 결과 시작은 메시 종류마다 하나다 — 스킨 메시는 인스턴스의 칸(유닛마다 결과, 변형한 단계의 첫 정점부터), 모프 메시는 배치(메시마다 결과). 폴백이 아니다.
     const uint2 skinResultOffset = MorphPool::loadSkinResultOffset( skinSlot );
     const bool  bSkin            = skinSlot != kInvalidIndex;
-    const uint  base             = bSkin ? skinResultOffset.x : batch._morphVertexBase;
-    const uint  element          = base + ( local - ( bSkin ? skinResultOffset.y : 0u ) ); // 칸의 인스턴스는 모두 변형한 그 단계를 그린다(구간 컴포넌트는 주 메시의 단계를 따른다 — MeshComponent::setLODIndex)
+    // 스킨 결과는 두 벌이라 이번 벌의 이동을 더한다(표의 시작은 앞 벌 기준). 표가 없는 칸(시작 kInvalidIndex)은 그대로 무효로 둔다.
+    const uint skinBase = ( skinResultOffset.x != kInvalidIndex ) ? skinResultOffset.x + g_SwSkinResultShift : kInvalidIndex;
+    const uint base     = bSkin ? skinBase : batch._morphVertexBase;
+    const uint element  = base + ( local - ( bSkin ? skinResultOffset.y : 0u ) ); // 칸의 인스턴스는 모두 변형한 그 단계를 그린다(구간 컴포넌트는 주 메시의 단계를 따른다 — MeshComponent::setLODIndex)
     // 잘못된 번호(밑돎으로 커진 local)는 element 가 풀 크기를 넘어 여기서 걸러진다.
     const bool bValid = ( base != kInvalidIndex ) && ( g_SwMorphVerticesIndex != kInvalidIndex ) && ( element < g_SwMorphVertexCount );
     return bValid ? element : kInvalidIndex;
@@ -445,6 +456,26 @@ static void MorphPool::loadVertex( uint batchIndex, uint skinSlot, uint vertexID
     // 칸이 있는데 결과가 없다(풀 상한 초과 · 버퍼 실패 — 풀이 오류를 남겼다) — 레스트 포즈로 대신 그리지 않는다. NaN 위치의 삼각형은 래스터에서 버려진다.
     const bool bRefused = ( skinSlot != kInvalidIndex ) && ( element == kInvalidIndex );
     outPosition         = bRefused ? asfloat( 0x7FC00000u ).xxx : outPosition;
+}
+
+/**
+ * @brief 이 정점의 **지난 프레임** 로컬 위치 — 화면 속도의 지난 위치다. 스킨 결과의 지난 벌이 있으면 그 값, 없으면(스킨이 아님 · 배치가 바뀐 프레임 · 모프 메시) @p currentPosition.
+ * @details 스킨 구간은 두 벌이고 이번 벌과 지난 벌의 차이는 벌 크기 하나다(g_SwSkinResultShift · g_SwSkinPreviousShift). 모프(블렌드 셰이프 컴퓨트) 메시는 한 벌이라 변형의 속도는 싣지 않는다 — 물체 움직임은 지난 월드 행렬이 싣는다.
+ *          early-return 이 없다 — GL 드라이버 사연은 MorphPool::computeElement 참고.
+ */
+static float3 MorphPool::loadPreviousPosition( uint batchIndex, uint skinSlot, uint vertexID, float3 currentPosition )
+{
+    float3     previous = currentPosition;
+    const uint element  = MorphPool::computeElement( batchIndex, skinSlot, vertexID );
+    // 이번 벌 번호에서 이번 이동을 빼고 지난 이동을 더한다. 부호 없는 덧셈은 감겨도 같은 값이다.
+    const uint previousElement = element - g_SwSkinResultShift + g_SwSkinPreviousShift;
+    const bool bValid          = ( skinSlot != kInvalidIndex ) && ( element != kInvalidIndex ) && ( g_SwSkinPreviousShift != kInvalidIndex ) && ( previousElement < g_SwMorphVertexCount );
+    if ( bValid )
+    {
+        const uint word = previousElement * SW_MORPH_RESULT_WORDS_PER_VERTEX;
+        previous        = asfloat( uint3( g_SwMorphVertices[word], g_SwMorphVertices[word + 1u], g_SwMorphVertices[word + 2u] ) );
+    }
+    return previous;
 }
 
 /**
@@ -664,12 +695,40 @@ static InstanceData InstanceData::load( uint instanceSlot )
     instance._highlight            = 0u;            // 강조 없음
     instance._appearance           = 1.0f;          // 다 보인다
     instance._skinSlot             = kInvalidIndex; // 스킨 결과 없음
+    instance._customData0          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    instance._customData1          = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    instance._motionKey            = uint2( 0u, 0u ); // 기록 없음
+    instance._motionPad            = uint2( 0u, 0u );
     return instance;
 }
 
 static float4x4 InstanceData::loadWorld( uint instanceSlot )
 {
     return InstanceData::load( instanceSlot )._world;
+}
+
+// ------------------------------------------------------------------------------
+// 8-2) 지난 월드 행렬 — 화면 속도(이번 UV - 지난 UV)의 지난 위치. 렌더 쪽 움직임 기록(C++ GPUInstanceMotionHistory)이 인스턴스 번호 순서로 채운다.
+//      언리얼 GPUScene 의 PreviousLocalToWorld 와 같은 자리다. 기록이 없는 칸(생성 · 순간이동 · GPU 가 고쳐 쓰는 회전 · 인스턴스 배치 항목)은 모두 0 이라 이번 행렬로 읽는다.
+// ------------------------------------------------------------------------------
+struct InstancePrevWorld
+{
+    float4x4 _world;
+};
+SW_DECLARE_STRUCTURED_BUFFER( InstancePrevWorld, g_SwPrevInstanceWorlds, SW_SLOT_PREV_INSTANCE_WORLD_SRV );
+
+/** @brief 인스턴스 슬롯의 지난 월드 행렬입니다. 버퍼가 없거나 범위 밖이거나 기록이 없는 칸(`_44` 가 0)이면 @p currentWorld 입니다. early-return 없이 값을 고른다. */
+static float4x4 InstanceData::loadPreviousWorld( uint instanceSlot, float4x4 currentWorld )
+{
+    float4x4   previous = currentWorld;
+    const uint element  = InstanceData::resolveID( instanceSlot );
+    const bool bValid   = ( g_SwPrevInstanceWorldsIndex != kInvalidIndex ) && ( element < g_SwPrevInstanceWorldCount );
+    if ( bValid )
+    {
+        const float4x4 stored = g_SwPrevInstanceWorlds[element]._world;
+        previous              = ( stored[3][3] != 0.0f ) ? stored : currentWorld;
+    }
+    return previous;
 }
 
 // ------------------------------------------------------------------------------

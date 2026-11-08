@@ -278,6 +278,8 @@ namespace sw
              *          메시만 바뀐 교체(`hasSameBatchKeyExceptMesh`)는 그룹을 받지 않는다 — 단계 배치가 메시의 정점 구간을 굳히기 때문이다.
              */
             IdentityToken _lodContentID{};
+            /// @brief 움직임 기록 열쇠입니다(`MeshComponent::getMotionHistoryKey`, 인스턴스 배치 항목은 0). GPUInstance::_motionKey 로 전달됩니다(배치 키가 아니라 내용).
+            uint64 _motionKey{ 0 };
             /**
              * @brief 월드 행렬식이 음수(거울 변환)인지 나타냅니다. 배치 키이며 `GPUMeshBatch::_bReverseCulling` 으로 전달됩니다.
              * @details 월드 행렬에서 나오는 값이라 트랜스폼만 바뀐 프레임에도 다시 구한다(`copyCandidateTransforms`). 부호가 바뀌면 배치를 다시 나눈다.
@@ -313,6 +315,7 @@ namespace sw
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
                        _sectionFirstIndex == other._sectionFirstIndex && _sectionIndexCount == other._sectionIndexCount &&
                        _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite && _customData == other._customData && _highlight == other._highlight && _skinSlot == other._skinSlot &&
+                       _motionKey == other._motionKey &&
                        Memory::compare( &_vertexAnimationPhase, &other._vertexAnimationPhase, sizeof( _vertexAnimationPhase ) ) == 0 &&
                        Memory::compare( &_appearance, &other._appearance, sizeof( _appearance ) ) == 0 &&
                        _permutationHash == other._permutationHash && _lodContentID == other._lodContentID && _bLODDither == other._bLODDither && _sortKey == other._sortKey &&
@@ -345,7 +348,7 @@ namespace sw
         };
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역폭입니다. 필드 크기의 합을 정렬 단위로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 빌드를 멈춥니다.
         static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) * 2 + sizeof( float32 ) * 2 + sizeof( uint32 ) * 7 +
-                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( InstanceCustomData ) + sizeof( uint64 ) + sizeof( IdentityToken ) +
+                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( InstanceCustomData ) + sizeof( uint64 ) * 2 + sizeof( IdentityToken ) +
                                                     sizeof( uint8 ) * 2 + sizeof( float32 ) * 2 + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),
                        "DrawCandidate has padding between fields (or a field was added without adding its size here)" );

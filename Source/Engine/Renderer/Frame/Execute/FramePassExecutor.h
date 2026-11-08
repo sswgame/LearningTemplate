@@ -96,6 +96,8 @@ namespace sw
          * @details 판정은 `FrameRendererUtil::drawsMaterialInPass` 하나로 한다. 머티리얼 PSO 변형과 셰이더 쿠커도 같은 판정을 쓴다.
          */
         bool drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch, const GPUMeshBatchBinding& binding ) const;
+        /** @brief 지금 뷰가 화면 왜곡을 그리는지 — 씬에 왜곡 배치가 있고(`GPUScene::hasDistortionBatches`) 장면 색을 보이는 뷰 모드입니다. 왜곡 누적 · 적용 패스가 같은 판정을 본다. */
+        bool drawsDistortionThisView() const;
 
         // ------------------------------------------------------------------------------
         // 3) 뷰 패스 상수(셋업의 주 시점 시드와 추가 뷰 기록이 함께 쓴다)
@@ -231,6 +233,10 @@ namespace sw
         void executeSkyPass( const PassExecuteInput& input );
         /** @brief 안개 패스(`RenderPassType::Fog`)를 실행합니다. 안개가 없거나 표면 값 보기에서는 그리지 않습니다. 안개 상수 · 볼륨 버퍼는 `FrameFog` 가 정해 둔 것을 읽습니다. */
         void executeFogPass( const PassExecuteInput& input );
+        /** @brief 화면 왜곡 누적 — 왜곡 머티리얼의 반투명 배치가 오프셋을 선언한 출력에 더한다. 왜곡이 없는 뷰는 기록하지 않는다. */
+        void executeDistortionPass( const PassExecuteInput& input );
+        /** @brief 화면 왜곡 적용 — 장면 색 사본을 오프셋만큼 비껴 읽어 장면 색에 쓴다. 왜곡이 없는 뷰는 기록하지 않는다(출력이 이미 맞다). */
+        void executeDistortionApplyPass( const PassExecuteInput& input );
         /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */
         void executeTAAPass( const PassExecuteInput& input );
         /** @brief 최종 출력(백버퍼 · 캡처 · 렌더 텍스처)으로의 블릿입니다. 화면 사각형 · 정수 업스케일 뷰포트를 적용합니다. */
