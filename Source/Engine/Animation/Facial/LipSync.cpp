@@ -267,7 +267,7 @@ namespace sw
         for ( size_t visemeIndex = 0; visemeIndex < _listViseme.size(); ++visemeIndex )
         {
             const LipSyncViseme& viseme = _listViseme[visemeIndex];
-            if ( viseme._name.empty() || findVisemeIndex( viseme._name ) != static_cast<int32>( visemeIndex ) )
+            if ( viseme._name.empty() || findVisemeIndex( viseme._name ) != static_cast<uint32>( visemeIndex ) )
             {
                 SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsViseme", "Lip sync settings '%#': viseme %# needs a unique, non-empty _name", sourceLabel, visemeIndex );
                 return false;
@@ -293,7 +293,7 @@ namespace sw
             SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsPlosiveOnsetRatio", "Lip sync settings '%#': _plosiveOnsetRatio must be greater than 1 (an energy rise)", sourceLabel );
             return false;
         }
-        if ( findVisemeIndex( _fallbackViseme ) < 0 )
+        if ( findVisemeIndex( _fallbackViseme ).has_value() == false )
         {
             SW_LOG_ERROR_ID( "LipSync.LipSyncSettingsFallbackViseme", "Lip sync settings '%#': _fallbackViseme '%#' is not a viseme", sourceLabel, _fallbackViseme.c_str() );
             return false;
@@ -301,14 +301,14 @@ namespace sw
         return true;
     }
 
-    int32 LipSyncSettings::findVisemeIndex( const hashed_string& name ) const
+    optional<uint32> LipSyncSettings::findVisemeIndex( const hashed_string& name ) const
     {
         for ( size_t visemeIndex = 0; visemeIndex < _listViseme.size(); ++visemeIndex )
         {
             if ( _listViseme[visemeIndex]._name == name )
-                return static_cast<int32>( visemeIndex );
+                return static_cast<uint32>( visemeIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void VisemeTrack::sample( float32 time, vector<float32>& outListWeight ) const

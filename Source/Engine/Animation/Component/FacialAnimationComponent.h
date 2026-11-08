@@ -136,6 +136,8 @@ namespace sw
         void bindToUnit();
         /** @brief 리그를 경로에서 다시 읽습니다. */
         void loadRig();
+        /** @brief 말하는 트랙의 비즘 순서를 지금 리그의 비즘 번호로 잇습니다(`_listTrackToRigViseme`). 리그에 없는 비즘은 경고를 남깁니다. */
+        void remapTrackVisemes();
         /** @brief 유닛의 메시 · 스켈레톤에 맞춰 타깃 번호 · 눈 본 번호를 다시 짓습니다(바뀌었을 때만). */
         void refreshBindings( const SkeletalMeshComponent& skeletalMesh );
         /** @brief 시간 단계 — 깜빡임 · 사카드 · 말하기 시각을 흘립니다. */
@@ -177,7 +179,7 @@ namespace sw
         vector<vector<optional<uint32>>>              _listVisemeTarget;        ///< 비즘마다 타깃 → 메시 타깃 번호(메시에 없으면 없음)
         vector<optional<uint32>>                      _listBlinkTarget;         ///< 깜빡임 타깃 → 메시 타깃 번호(메시에 없으면 없음)
         vector<int32>                                 _listEyeBone;             ///< 눈 본 번호
-        vector<int32>                                 _listTrackToRigViseme;    ///< 립싱크 비즘 순서 → 리그 비즘 번호
+        vector<optional<uint32>>                      _listTrackToRigViseme;    ///< 립싱크 비즘 순서 → 리그 비즘 번호(리그에 없으면 없음)
         vector<float32>                               _listScratchVisemeWeight;
         TComponentHandle<SkeletalAnimatorComponent>   _animator; ///< 같은 오브젝트의 애니메이터(표정 커브 — 게임 스레드가 프레임마다 찾아 둔다)
         SkeletalMeshComponent*                        _pSkeletalMesh;

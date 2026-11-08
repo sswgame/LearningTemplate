@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -129,10 +130,10 @@ namespace sw
         const vector<FacialPose>& getVisemes() const { return _listViseme; }
         const FacialBlinkDef&     getBlink() const { return _blink; }
         const FacialGazeDef&      getGaze() const { return _gaze; }
-        /** @brief 이름의 표정 번호입니다. 없으면 -1 입니다. */
-        int32 findExpressionIndex( const hashed_string& name ) const;
-        /** @brief 이름의 비즘 번호입니다. 없으면 -1 입니다. */
-        int32 findVisemeIndex( const hashed_string& name ) const;
+        /** @brief 이름의 표정 번호입니다. 없으면 없음입니다. */
+        optional<uint32> findExpressionIndex( const hashed_string& name ) const;
+        /** @brief 이름의 비즘 번호입니다. 없으면 없음입니다. */
+        optional<uint32> findVisemeIndex( const hashed_string& name ) const;
 
     private:
         /** @brief 리소스 경로의 리그를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<FacialRig>::acquire` 로 한 벌을 쥔다. */

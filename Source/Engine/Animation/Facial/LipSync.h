@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -111,8 +112,8 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 프레임 속도 · RMS 순서 · 대역 순서 · 비즘 수 · 대체 비즘을 봅니다. 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
-        /** @brief 비즘 번호입니다. 없으면 -1 입니다. */
-        int32 findVisemeIndex( const hashed_string& name ) const;
+        /** @brief 비즘 번호입니다. 없으면 없음입니다. */
+        optional<uint32> findVisemeIndex( const hashed_string& name ) const;
 
     private:
         /** @brief 리소스 경로의 표를 읽습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<LipSyncSettings>::acquire` 로 한 벌을 쥔다. */
