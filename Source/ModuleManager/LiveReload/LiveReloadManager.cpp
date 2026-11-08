@@ -147,8 +147,9 @@ namespace sw
 
         if ( _bReloadGraphBroken == SW_TRUE )
         {
-            for ( auto& [moduleName, moduleRecord] : _mapModule )
+            for ( auto& [moduleName, pModuleRecord] : _mapModule )
             {
+                ModuleRecord& moduleRecord = *pModuleRecord;
                 unloadModule( moduleRecord );
             }
             clearRecords();
@@ -163,8 +164,9 @@ namespace sw
         if ( _dependencyGraph.sortByDependency( listName, listOrder ) == false )
         {
             SW_LOG_ERROR_ID( "LiveReloadManager.TopologicalSortFailedDuring", "Topological sort failed during shutdown — unloading in arbitrary order" );
-            for ( auto& [name, context] : _mapModule )
+            for ( auto& [name, pContext] : _mapModule )
             {
+                ModuleRecord& context = *pContext;
                 unloadModule( context );
             }
             clearRecords();
@@ -177,7 +179,7 @@ namespace sw
         {
             auto mapIt = _mapModule.find( *it );
             if ( mapIt != _mapModule.end() )
-                unloadModule( mapIt->second );
+                unloadModule( *mapIt->second );
         }
         clearRecords();
         unloadSharedModules();
@@ -185,9 +187,9 @@ namespace sw
 
     bool LiveReloadManager::loadSharedModule( string_view moduleName )
     {
-        for ( const auto& [registeredName, registeredRecord] : _mapModule )
+        for ( const auto& [registeredName, pRegisteredRecord] : _mapModule )
         {
-            (void)registeredRecord;
+            (void)pRegisteredRecord;
             if ( LiveReloadManagerInternal::isSameModuleName( registeredName, moduleName ) )
             {
                 SW_LOG_ERROR_ID( "LiveReloadManager.ModuleAlreadyRegisteredReload", "Module %# is already registered for reload - it cannot also be a shared module that never unloads", moduleName );
@@ -304,7 +306,7 @@ namespace sw
         if ( iter == _mapModule.end() )
             return;
 
-        ModuleRecord& context = iter->second;
+        ModuleRecord& context = *iter->second;
         SW_LOG_INFO_ID( "LiveReload.ManualQueued", "Manual Live Reload queued for %# (debounce %#ms)...",
                         moduleName, kMtimeDebounceMs );
         context._debounceMtime = 0;
@@ -343,8 +345,9 @@ namespace sw
             if ( notice._bSucceeded == false )
             {
                 // 실패한 빌드가 다시 쓴 모듈은 반쯤 완성된 집합일 수 있으므로 로드하지 않는다. 파일은 그대로라 다음에 성공한 빌드의 변경과 함께 로드된다.
-                for ( auto& [name, context] : _mapModule )
+                for ( auto& [name, pContext] : _mapModule )
                 {
+                    ModuleRecord& context = *pContext;
                     if ( context._bMtimeDebouncing || context._bForceReload )
                         SW_LOG_WARNING_ID( "LiveReloadManager.BuildFailedNotReloaded", "Build failed - %# is not reloaded from its partial output", context._moduleName );
                     context._bMtimeDebouncing = false;
@@ -391,17 +394,19 @@ namespace sw
         if ( _bBuildStampPending == SW_TRUE && bBuildInProgress == false )
         {
             _bBuildStampPending = SW_FALSE;
-            for ( auto& [name, context] : _mapModule )
+            for ( auto& [name, pContext] : _mapModule )
             {
-                uint64 sourceMtime = 0;
+                ModuleRecord& context     = *pContext;
+                uint64        sourceMtime = 0;
                 if ( FileUtil::tryGetFileTimestamp( context._originalModulePath, sourceMtime ) == false || sourceMtime <= context._loadedSourceMtime )
                     continue; // 없으면(빌드가 아직 쓰는 중) 바뀐 것으로 보지 않는다
                 SW_LOG_TRACE_ID( "LiveReloadManager.ModuleBuildStampChanged", "Module build stamp changed — queuing reload for %#", context._moduleName );
                 context._bPendingReload = true;
             }
         }
-        for ( auto& [name, context] : _mapModule )
+        for ( auto& [name, pContext] : _mapModule )
         {
+            ModuleRecord& context = *pContext;
             if ( context._bMtimeDebouncing == false || bBuildInProgress )
                 continue;
 
@@ -439,8 +444,9 @@ namespace sw
         vector<string> listPendingRoot;
         BLOCK( "Collect Pending Reloads" )
         {
-            for ( auto& [name, context] : _mapModule )
+            for ( auto& [name, pContext] : _mapModule )
             {
+                ModuleRecord& context = *pContext;
                 if ( context._bPendingReload )
                 {
                     context._bPendingReload = false;
@@ -545,7 +551,7 @@ namespace sw
         const auto recordIt = _mapModule.find( registration._moduleName );
         if ( recordIt == _mapModule.end() )
             return;
-        ModuleRecord& record = recordIt->second;
+        ModuleRecord& record = *recordIt->second;
         switch ( registration._slot )
         {
             case CallbackSlot::BeforeReload:
@@ -586,15 +592,16 @@ namespace sw
     bool LiveReloadManager::verifyModuleBindings() const
     {
         bool bAllBound = true;
-        for ( const auto& [moduleName, moduleRecord] : _mapModule )
+        for ( const auto& [moduleName, pModuleRecord] : _mapModule )
         {
+            const ModuleRecord& moduleRecord = *pModuleRecord;
             if ( moduleRecord._pLibraryModule == nullptr )
                 continue;
             for ( const string& dependencyName : _dependencyGraph.getDependsOn( moduleName ) )
             {
                 // 이 매니저가 로드하지 않은 의존(Engine 처럼 처음부터 링크된 것)은 교체되지 않으므로 검사할 것이 없다.
                 const auto dependencyIt = _mapModule.find( dependencyName );
-                if ( dependencyIt == _mapModule.end() || dependencyIt->second._pLibraryModule == nullptr )
+                if ( dependencyIt == _mapModule.end() || dependencyIt->second->_pLibraryModule == nullptr )
                     continue;
 
                 const void*                   pActual{ nullptr };
@@ -615,13 +622,16 @@ namespace sw
     void* LiveReloadManager::getModuleHandle( string_view moduleName ) const
     {
         auto it = _mapModule.find( string( moduleName ) );
-        return it != _mapModule.end() ? it->second._pLibraryModule : nullptr;
+        return it != _mapModule.end() ? it->second->_pLibraryModule : nullptr;
     }
 
     LiveReloadManager::ModuleRecord& LiveReloadManager::getOrCreateRecord( string_view moduleName )
     {
         _dependencyGraph.ensureModule( moduleName );
-        return _mapModule[string( moduleName )];
+        unique_ptr<ModuleRecord>& pRecord = _mapModule[string( moduleName )];
+        if ( pRecord == nullptr )
+            pRecord = make_unique<ModuleRecord>();
+        return *pRecord;
     }
 
     void LiveReloadManager::clearRecords()
@@ -643,12 +653,13 @@ namespace sw
         {
             const auto dependencyIt = _mapModule.find( dependencyName );
             if ( dependencyIt != _mapModule.end() )
-                outParams._listDependencyLibrary.push_back( ShadowCopyModuleLibrary{ dependencyIt->first, &dependencyIt->second._libraryName } );
+                outParams._listDependencyLibrary.push_back( ShadowCopyModuleLibrary{ dependencyIt->first, &dependencyIt->second->_libraryName } );
         }
 
         outParams._listRegisteredLibrary.reserve( _mapModule.size() );
-        for ( const auto& [registeredName, registeredRecord] : _mapModule )
+        for ( const auto& [registeredName, pRegisteredRecord] : _mapModule )
         {
+            const ModuleRecord& registeredRecord = *pRegisteredRecord;
             outParams._listRegisteredLibrary.push_back( ShadowCopyModuleLibrary{ registeredName, &registeredRecord._libraryName } );
         }
     }
@@ -847,7 +858,7 @@ namespace sw
     bool LiveReloadManager::runAfterReload( string_view moduleName )
     {
         const auto it = _mapModule.find( string( moduleName ) );
-        if ( it == _mapModule.end() || it->second._pLibraryModule == nullptr )
+        if ( it == _mapModule.end() || it->second->_pLibraryModule == nullptr )
         {
             SW_LOG_ERROR_ID( "LiveReloadManager.ModuleNotLoadedNothing", "Module %# is not loaded - nothing to start", moduleName );
             return false;
@@ -962,7 +973,7 @@ namespace sw
             if ( found == _mapModule.end() )
                 continue;
             PreparedEntry entry;
-            entry._pRecord = &found->second;
+            entry._pRecord = found->second.get();
             if ( prepareShadowCopy( *entry._pRecord, entry._shadow ) == false )
             {
                 SW_LOG_ERROR_ID( "LiveReloadManager.CascadePrepareFailedAborting", "Cascade prepare failed for %# — aborting, previous modules kept", name );
