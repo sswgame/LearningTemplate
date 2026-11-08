@@ -2,7 +2,6 @@
 
 #include "Editor/Common/Workspace/Undo/UndoStep.h"
 
-#include "Core/Container/map.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
@@ -13,53 +12,39 @@ namespace sw::editor
     {
         struct UndoStepRegistryInternal
         {
-            /** @brief 표의 한 칸 — 같은 함수를 올린 곳 수(편집기와 확장 DLL 이 같은 헤더 함수를 쓰면 둘)를 센다. */
-            struct Entry
-            {
-                UndoStepInvoker _invoker{ nullptr };
-                uint32          _count{ 0 };
-            };
-
-            /** @brief 표입니다. 정적 초기화 순서와 상관없게 함수 안에 둔다. 편집기 UI 스레드와 DLL 적재 · 해제(같은 스레드)만 만진다. */
-            static map<uint64, Entry>& getTable()
-            {
-                static map<uint64, Entry> s_table;
-                return s_table;
-            }
+            /** @brief 처리기 줄 목록입니다(올린 순서, 이름 없음 — 같은 해시가 여러 DLL 에서 올 수 있다). 편집기 UI 스레드와 DLL 적재 · 해제(같은 스레드)만 만진다. */
+            static SW_DEFINE_REGISTRATION_LIST( getHandlers, const UndoStepHandler, "UndoStepRegistry" )
         };
     } // namespace
 
-    void UndoStepRegistry::add( uint64 functionHash, UndoStepInvoker invoker )
+    bool UndoStepRegistry::add( const UndoStepHandler* pHandler )
     {
-        UndoStepRegistryInternal::Entry& entry = UndoStepRegistryInternal::getTable()[functionHash];
-        if ( entry._count == 0 )
-            entry._invoker = invoker;
-        ++entry._count;
+        const bool bInvalidHandler = pHandler == nullptr || pHandler->_functionHash == 0 || pHandler->_invoker == nullptr;
+        if ( bInvalidHandler )
+            return false;
+        const RegistrationResult result = UndoStepRegistryInternal::getHandlers().addLogged( pHandler, "Undo step handler" );
+        return result == RegistrationResult::Added || result == RegistrationResult::AlreadyPresent;
     }
 
-    void UndoStepRegistry::remove( uint64 functionHash )
+    void UndoStepRegistry::remove( const UndoStepHandler* pHandler )
     {
-        map<uint64, UndoStepRegistryInternal::Entry>& table = UndoStepRegistryInternal::getTable();
-        const auto                                    it    = table.find( functionHash );
-        if ( it == table.end() )
-            return;
-        if ( --it->second._count == 0 )
-            table.erase( it );
+        (void)UndoStepRegistryInternal::getHandlers().remove( pHandler ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
     }
 
     UndoStepInvoker UndoStepRegistry::find( uint64 functionHash )
     {
-        const map<uint64, UndoStepRegistryInternal::Entry>& table = UndoStepRegistryInternal::getTable();
-        const auto                                          it    = table.find( functionHash );
-        return it != table.end() ? it->second._invoker : nullptr;
+        for ( const UndoStepHandler* pHandler : UndoStepRegistryInternal::getHandlers().getItems() )
+        {
+            if ( pHandler->_functionHash == functionHash )
+                return pHandler->_invoker;
+        }
+        return nullptr;
     }
 
     UndoStepOwner::UndoStepOwner()
-        : _id{ 0 }
+        : _id{ reinterpret_cast<uint64>( this ) } // 살아 있는 주인끼리만 달라면 된다 — 주인이 사라지며 알려 그 id 의 명령이 먼저 빠지므로 같은 주소의 다음 주인과 섞이지 않는다
         , _released{}
     {
-        static uint64 s_nextID = 1; // 편집기 UI 스레드만 만든다
-        _id                    = s_nextID++;
     }
 
     UndoStepOwner::~UndoStepOwner()
