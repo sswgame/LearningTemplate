@@ -39,11 +39,11 @@
  *   ├────────┼──────────────────┼─────────────────────────────────────────┼──────────────────────────────────────────┤
  *   │ DX12   │ 네이티브 bindless│ t0 space1 무제한 배열(힙 전체 테이블)   │ 배열 원소 번호                           │
  *   │ Vulkan │ 네이티브 bindless│ set 1 binding 0 무제한 배열             │ 배열 원소 번호                           │
- *   │ DX11   │ 슬롯 에뮬        │ 엔진 t0..t3 · t15 · 머티리얼 t16..t31   │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
- *   │ OpenGL │ 슬롯 에뮬        │ 텍스처 유닛 0..3 · 15 · 16..31(결합)    │ 머티리얼: 서수 0..15 (DX11 과 같다)      │
+ *   │ DX11   │ 슬롯 에뮬        │ 엔진 t32..t43 · 머티리얼 t16..t31       │ 엔진: PassCB 인덱스와 값 비교로 슬롯 선택│
+ *   │ OpenGL │ 슬롯 에뮬        │ 텍스처 유닛 0..11 · 16..31(결합)        │ 머티리얼: 서수 0..15 (DX11 과 같다)      │
  *   └────────┴──────────────────┴─────────────────────────────────────────┴──────────────────────────────────────────┘
  *   네이티브인지는 common.hlsli 의 `SW_NATIVE_BINDLESS` 가 정한다(ShaderCompiler 가 DX12 · Vulkan 에만 SW_BINDLESS=1 을 준다).
- *   에뮬 백엔드는 엔진이 아는 텍스처(PassCB 의 g_*Index)만 찾을 수 있다 — 모르는 인덱스는 슬롯 0 을 읽는다.
+ *   에뮬 백엔드는 엔진이 아는 텍스처(PassCB 의 g_*Index — C++ 표에서 나온다)만 찾을 수 있다 — 모르는 인덱스는 자홍(kUnmappedEngineTextureColor)이다.
  *
  * 자주 하는 실수
  *   - 무효 인덱스로 배열을 읽는다. `kInvalidIndex` 로 원소를 읽으면 DX12 는 페이지 폴트(DEVICE_HUNG), Vulkan 은 DEVICE_LOST 다.
@@ -247,38 +247,44 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_FogInscatter;
     float4 g_FogVolumeParams;
     float4 g_FogDebugParams; // 안개 진단 보기(C++ FrameFog::makeDebugParams) — x 보기(0 없음 · 1 비교 · 2 산란 단면 · 3 투과율 단면), y 단면 조각, z 비교 경계 uv.x. 안개 패스만 읽는다
-    uint   g_ShadowMapIndex;
-    uint   g_GBufferAlbedoIndex;
-    uint   g_GBufferNormalIndex;
-    uint   g_GBufferMaterialIndex; // G버퍼 머티리얼 칸(금속도 · 거칠기) — 디퍼드 조명이 읽는다(PassTexture::loadGbufferMaterial)
-    uint   g_SceneDepthIndex;
-    uint   g_SourceColorIndex;
-    uint   g_AmbientOcclusionIndex;   // SSAO 결과(AOColor)가 걸려 있으면 유효, 아니면 kInvalidIndex (AO = 1 로 폴백)
-    uint   g_BloomBrightIndex;        // 반해상도 블룸 밝은 부분(BloomDownsample 출력)이 걸려 있으면 유효, 아니면 kInvalidIndex (원본에서 직접 구한다)
-    uint   g_Light2DCookieAtlasIndex; // 2D 빛 쿠키 아틀라스(Light2DCookieAtlas)가 걸려 있으면 유효, 아니면 kInvalidIndex — 쿠키를 쓴 2D 빛이 있는 프레임에만 걸린다
-    uint   g_AutoExposureIndex;       // 자동 노출의 이번 EV(1x1 R32, auto_exposure.hlsl)가 걸려 있으면 유효, 아니면 kInvalidIndex(EV 0) — 톤맵하는 패스에만 걸린다(post_grade.hlsli)
-    uint   g_SceneColorCopyIndex;     // 반투명 앞에 떠 둔 장면 색 사본(SceneColorCopy 패스 출력)이 걸려 있으면 유효, 아니면 kInvalidIndex — 반투명 패스가 선언했을 때만 걸린다(water.hlsl 의 굴절)
-    uint   g_SceneDepthCopyIndex;     // 반투명 앞에 떠 둔 장면 깊이 사본(SceneDepthCopy 패스 출력, R32 실수)이 걸려 있으면 유효, 아니면 kInvalidIndex — 반투명 패스가 선언했을 때만 걸린다(water.hlsl 의 화면 공간 두께)
-    uint   g_Flags;
-    uint   g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
-    uint   g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
-    uint   g_SwVisibleInstanceIDsIndex; // 컬링이 만든 가시 ID 목록이 걸려 있으면 유효, 아니면 kInvalidIndex
-    uint   g_SwVisibleSlotCount;        // 그 목록의 칸 수(가시 구간의 합 — LOD 그룹이 없으면 인스턴스 수) — 범위 밖 슬롯을 막는다
-    uint   g_SwMorphVerticesIndex;      // GPU 가 변형한 정점 풀이 걸려 있으면 유효, 아니면 kInvalidIndex
-    uint   g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
-    uint   g_SwSkinResultOffsetsIndex;  // 스킨 칸 → 결과 시작 표(g_SwSkinResultOffsets, t14)가 걸려 있으면 유효, 아니면 kInvalidIndex
-    uint   g_SwSkinResultOffsetCount;   // 그 표의 칸 수 — 범위 밖 칸을 막는다
-    uint   g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 kInvalidIndex
-    uint   g_SwLightCount;              // 그 버퍼의 빛 원소 수 (0 이면 빛 없음 — 앰비언트만 받는다)
-    uint   g_SwLightGridIndex;          // 라이트 그리드 버퍼(g_SwLightGrid, t12)가 걸려 있으면 유효, 아니면 kInvalidIndex
-    uint   g_SwLightGridBase;           // 지금 뷰의 라이트 그리드 첫 단어(g_SwLightGrid 안). kInvalidIndex 면 그리드 없이 목록 전체를 돈다(gv_lightCulling 0)
-    uint   g_SwLightProbesIndex;        // 라이트 프로브 SH9 버퍼(g_SwLightProbes, t13)가 걸려 있으면 유효, 아니면 kInvalidIndex — 프로브 볼륨 원소는 이것이 유효할 때만 읽는다
-    uint   g_SwBatchesIndex;            // 씬 배치 표가 걸려 있으면 유효, 아니면 kInvalidIndex (풀스크린·픽스처)
-    uint   g_SwBatchCount;              // 그 표의 원소 수 — 범위 밖 배치 번호를 막는다
-    uint   g_SwVertexAnimationIndex;    // 정점 애니메이션(VAT) 표가 걸려 있으면 유효, 아니면 kInvalidIndex
-    uint   g_SwVertexAnimationCount;    // 그 표의 단어(uint32) 수 — 범위 밖 번호를 막는다
-    float  g_SwVertexAnimationTime;     // VAT 시계(초) — 게임 스레드의 군중 시계와 같은 값이라 인스턴스 위상이 CPU 시각과 맞는다
-    float  g_SwMaterialTime;            // 머티리얼 애니메이션 시계(초, 툰 UV 애니메이션) — VAT 시계와 같은 값이지만 VAT 표가 없어도 늘 걸린다
+    // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.
+    // 손으로 적지 않는다: 표에 없는 엔진 텍스처 인덱스가 생기면 에뮬 백엔드(DX11 · GL)가 칸을 몰라 자홍을 낸다(뜻은 표의 주석). 걸려 있지 않은 역할은 kInvalidIndex 다.
+    // 아래 12 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
+#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_11 ) || defined( SW_ENGINE_TEXTURE_INDEX_12 ) || SW_ENGINE_TEXTURE_COUNT != 12
+    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 12 fields below"
+#endif
+    uint  SW_ENGINE_TEXTURE_INDEX_0;
+    uint  SW_ENGINE_TEXTURE_INDEX_1;
+    uint  SW_ENGINE_TEXTURE_INDEX_2;
+    uint  SW_ENGINE_TEXTURE_INDEX_3;
+    uint  SW_ENGINE_TEXTURE_INDEX_4;
+    uint  SW_ENGINE_TEXTURE_INDEX_5;
+    uint  SW_ENGINE_TEXTURE_INDEX_6;
+    uint  SW_ENGINE_TEXTURE_INDEX_7;
+    uint  SW_ENGINE_TEXTURE_INDEX_8;
+    uint  SW_ENGINE_TEXTURE_INDEX_9;
+    uint  SW_ENGINE_TEXTURE_INDEX_10;
+    uint  SW_ENGINE_TEXTURE_INDEX_11;
+    uint  g_Flags;
+    uint  g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
+    uint  g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)
+    uint  g_SwVisibleInstanceIDsIndex; // 컬링이 만든 가시 ID 목록이 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint  g_SwVisibleSlotCount;        // 그 목록의 칸 수(가시 구간의 합 — LOD 그룹이 없으면 인스턴스 수) — 범위 밖 슬롯을 막는다
+    uint  g_SwMorphVerticesIndex;      // GPU 가 변형한 정점 풀이 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint  g_SwMorphVertexCount;        // 그 풀의 원소 수 — 범위 밖 인덱스를 막는다
+    uint  g_SwSkinResultOffsetsIndex;  // 스킨 칸 → 결과 시작 표(g_SwSkinResultOffsets, t14)가 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint  g_SwSkinResultOffsetCount;   // 그 표의 칸 수 — 범위 밖 칸을 막는다
+    uint  g_SwLightsIndex;             // 씬 라이트 버퍼가 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint  g_SwLightCount;              // 그 버퍼의 빛 원소 수 (0 이면 빛 없음 — 앰비언트만 받는다)
+    uint  g_SwLightGridIndex;          // 라이트 그리드 버퍼(g_SwLightGrid, t12)가 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint  g_SwLightGridBase;           // 지금 뷰의 라이트 그리드 첫 단어(g_SwLightGrid 안). kInvalidIndex 면 그리드 없이 목록 전체를 돈다(gv_lightCulling 0)
+    uint  g_SwLightProbesIndex;        // 라이트 프로브 SH9 버퍼(g_SwLightProbes, t13)가 걸려 있으면 유효, 아니면 kInvalidIndex — 프로브 볼륨 원소는 이것이 유효할 때만 읽는다
+    uint  g_SwBatchesIndex;            // 씬 배치 표가 걸려 있으면 유효, 아니면 kInvalidIndex (풀스크린·픽스처)
+    uint  g_SwBatchCount;              // 그 표의 원소 수 — 범위 밖 배치 번호를 막는다
+    uint  g_SwVertexAnimationIndex;    // 정점 애니메이션(VAT) 표가 걸려 있으면 유효, 아니면 kInvalidIndex
+    uint  g_SwVertexAnimationCount;    // 그 표의 단어(uint32) 수 — 범위 밖 번호를 막는다
+    float g_SwVertexAnimationTime;     // VAT 시계(초) — 게임 스레드의 군중 시계와 같은 값이라 인스턴스 위상이 CPU 시각과 맞는다
+    float g_SwMaterialTime;            // 머티리얼 애니메이션 시계(초, 툰 UV 애니메이션) — VAT 시계와 같은 값이지만 VAT 표가 없어도 늘 걸린다
 };
 
 // ------------------------------------------------------------------------------

@@ -327,47 +327,44 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
 
 /**
  * @brief 에뮬 백엔드(DX11 · GL)의 슬롯 표에 없는 엔진 텍스처 인덱스를 읽었을 때 내는 오류 색(자홍)입니다.
- * @details 표에 없는 인덱스를 슬롯 0 으로 읽지 않는다 — 그러면 그림자 · 원본 색이 엉뚱한 자리에 조용히 나온다. 이 색이 보이면
- *          그 인덱스를 C++ 표(`shaderslot::emulated::kEngineTextureNames` — ShaderBindingSlots.h)에 더해야 한다. 셰이더에는 멈출 길이 없어 눈에 띄는 값으로 낸다.
+ * @details 표에 없는 인덱스를 슬롯 0 으로 읽지 않는다 — 그러면 그림자 · 원본 색이 엉뚱한 자리에 조용히 나온다. PassCB 의 g_*Index 는 C++ 표
+ *          (`shaderslot::emulated::kEngineTextureNames`)에서 선언되므로 이 색은 PassCB 밖 값(루트 상수 · 머티리얼 인덱스)을 `Bindless::sampleIndex` 에
+ *          넘긴 셰이더에서만 난다 — 그런 입력은 엔진 텍스처 역할(표)로 걸거나 `loadEngineTexel( index, SW_EMU_SLOT_<역할> )` 로 칸을 직접 고른다.
  */
 static const float4 kUnmappedEngineTextureColor = float4( 1, 0, 1, 1 );
 static const uint   kUnmappedEngineTextureSlot  = 0xFFFFFFFFu;
 
-        // 칸 번호는 셰이더 컴파일러가 C++ 표에서 내는 `SW_EMU_SLOT_<이름>` 매크로다(ShaderCompiler::compileHLSL) — 여기에 손으로 맞춘 번호가 없다.
-        // 매크로가 없으면 셰이더를 컴파일하는 경로가 표를 넣지 않은 것이라 조용히 0 으로 읽지 않고 멈춘다.
-        #if !defined( SW_EMU_SLOT_ShadowMap ) || !defined( SW_EMU_SLOT_SourceColor ) || !defined( SW_EMU_SLOT_GBufferAlbedo ) || !defined( SW_EMU_SLOT_AmbientOcclusion ) ||      \
-            !defined( SW_EMU_SLOT_Light2DCookieAtlas ) || !defined( SW_EMU_SLOT_GBufferNormal ) || !defined( SW_EMU_SLOT_BloomBright ) || !defined( SW_EMU_SLOT_AutoExposure ) || \
-            !defined( SW_EMU_SLOT_SceneDepth ) || !defined( SW_EMU_SLOT_GBufferMaterial ) || !defined( SW_EMU_SLOT_SceneColorCopy ) || !defined( SW_EMU_SLOT_SceneDepthCopy )
-            #error "SW_EMU_SLOT_* is missing - ShaderCompiler::compileHLSL injects it from shaderslot::emulated::kEngineTextureNames"
-        #endif
+// 칸 번호 · 인덱스 이름은 셰이더 컴파일러가 C++ 표에서 내는 매크로다(ShaderCompiler::appendEngineDefines) — 여기에 손으로 맞춘 표가 없다.
+// SW_EMU_SLOT_<이름> 은 역할을 이름으로 고르는 자리(PassTexture · 히스토리 읽기)가, SW_ENGINE_TEXTURE_INDEX_<칸> 은 아래 되짚기가 쓴다.
+// PassCB 의 엔진 텍스처 필드도 같은 매크로로 선언하므로(binding.hlsli 1 절) 셰이더가 가진 g_*Index 는 모두 이 표에 있다.
 
-/** @brief 엔진 텍스처 인덱스가 걸리는 칸 번호(역할 하나에 한 칸)입니다. 표에 없는 인덱스면 `kUnmappedEngineTextureSlot` 입니다. */
+/** @brief 엔진 텍스처 인덱스가 걸리는 칸 번호(역할 하나에 한 칸)입니다. PassCB 의 g_*Index 가 아닌 값이면 `kUnmappedEngineTextureSlot` 입니다. */
 static uint Bindless::emulatedSlot( uint index )
 {
-    if ( index == g_ShadowMapIndex )
-        return SW_EMU_SLOT_ShadowMap;
-    if ( index == g_SourceColorIndex )
-        return SW_EMU_SLOT_SourceColor;
-    if ( index == g_GBufferAlbedoIndex )
-        return SW_EMU_SLOT_GBufferAlbedo;
-    if ( index == g_AmbientOcclusionIndex )
-        return SW_EMU_SLOT_AmbientOcclusion;
-    if ( index == g_Light2DCookieAtlasIndex )
-        return SW_EMU_SLOT_Light2DCookieAtlas;
-    if ( index == g_GBufferNormalIndex )
-        return SW_EMU_SLOT_GBufferNormal;
-    if ( index == g_BloomBrightIndex )
-        return SW_EMU_SLOT_BloomBright;
-    if ( index == g_AutoExposureIndex )
-        return SW_EMU_SLOT_AutoExposure;
-    if ( index == g_SceneColorCopyIndex )
-        return SW_EMU_SLOT_SceneColorCopy;
-    if ( index == g_SceneDepthCopyIndex )
-        return SW_EMU_SLOT_SceneDepthCopy;
-    if ( index == g_SceneDepthIndex )
-        return SW_EMU_SLOT_SceneDepth;
-    if ( index == g_GBufferMaterialIndex )
-        return SW_EMU_SLOT_GBufferMaterial;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_0 )
+        return 0u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_1 )
+        return 1u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_2 )
+        return 2u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_3 )
+        return 3u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_4 )
+        return 4u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_5 )
+        return 5u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_6 )
+        return 6u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_7 )
+        return 7u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_8 )
+        return 8u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_9 )
+        return 9u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_10 )
+        return 10u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_11 )
+        return 11u;
     return kUnmappedEngineTextureSlot;
 }
 
