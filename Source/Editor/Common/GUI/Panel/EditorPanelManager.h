@@ -9,9 +9,9 @@
 #include "Core/Memory/Memory.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/EditorSubsystem.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

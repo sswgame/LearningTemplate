@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/Diagnostics/EditorSourceLocation.h"
+#include "Editor/Panels/Console/Model/EditorSourceLocation.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"

@@ -16,7 +16,6 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
@@ -149,7 +148,7 @@ namespace sw::editor
     {
         if ( _document.needsFirstLoad() )
             reloadFromFile();
-        _document.tick( editor::getSubsystem<InputManager>(), ImGui::GetIO().DeltaTime );
+        _document.tick( InputMapModel::getInputManager(), ImGui::GetIO().DeltaTime );
 
         // 탭은 셋이다. 편집(Mappings), 들여다보기(Debug), 녹화와 주입(Replay & Inject)이다. 언리얼의 Enhanced Input 은 액션, 매핑, 트리거를 한 화면에서 편집한다.
         if ( ImGui::BeginTabBar( "InputEditorTabs" ) )
@@ -182,7 +181,7 @@ namespace sw::editor
 
     void InputMapPanel::onPanelCollapsed()
     {
-        _document.tick( editor::getSubsystem<InputManager>(), ImGui::GetIO().DeltaTime );
+        _document.tick( InputMapModel::getInputManager(), ImGui::GetIO().DeltaTime );
     }
 
     void InputMapPanel::drawMappingsTab()
@@ -643,7 +642,7 @@ namespace sw::editor
             captureFrame._pressedKey           = ImGuiKeyForward::findPressedKey();
             captureFrame._bPendingModifierDown = ImGuiKeyForward::isKeyDown( _document.getPendingCaptureModifier() );
             _document.advanceKeyCapture( captureFrame );
-            _document.pollGamepadCapture( editor::getSubsystem<InputManager>() );
+            _document.pollGamepadCapture( InputMapModel::getInputManager() );
             if ( _document.isCapturingKey() == false )
                 ImGui::CloseCurrentPopup();
 
@@ -679,7 +678,7 @@ namespace sw::editor
 
     void InputMapPanel::drawDeviceMonitorTab()
     {
-        InputManager& input = editor::getSubsystem<InputManager>();
+        InputManager& input = InputMapModel::getInputManager();
 
         // 1) 활성 장치 상태
         const InputGlyphStyle devType   = input.getActiveGlyphStyle();
@@ -700,7 +699,7 @@ namespace sw::editor
 
     void InputMapPanel::drawKeyboardMonitor()
     {
-        InputManager& input = editor::getSubsystem<InputManager>();
+        InputManager& input = InputMapModel::getInputManager();
 
         // 2) 키보드 실시간 모니터
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "KeyboardStatus" ), ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -731,7 +730,7 @@ namespace sw::editor
 
     void InputMapPanel::drawMouseMonitor()
     {
-        InputManager& input = editor::getSubsystem<InputManager>();
+        InputManager& input = InputMapModel::getInputManager();
 
         // 3) 마우스 실시간 모니터
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "MouseStatus" ), ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -769,7 +768,7 @@ namespace sw::editor
 
     void InputMapPanel::drawGamepadMonitor()
     {
-        InputManager& input = editor::getSubsystem<InputManager>();
+        InputManager& input = InputMapModel::getInputManager();
 
         // 4) 게임패드 실시간 모니터
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "Gamepad0Status" ), ImGuiTreeNodeFlags_DefaultOpen ) )
@@ -879,7 +878,7 @@ namespace sw::editor
 
     void InputMapPanel::drawInputSimulatorTab()
     {
-        InputManager& input = editor::getSubsystem<InputManager>();
+        InputManager& input = InputMapModel::getInputManager();
 
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "VirtualInputInjectorGameplayMacroSimulator" ) );
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "InjectorHint" ) );
@@ -943,7 +942,7 @@ namespace sw::editor
 
     void InputMapPanel::drawInputReplayTab()
     {
-        InputManager& input = editor::getSubsystem<InputManager>();
+        InputManager& input = InputMapModel::getInputManager();
 
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "InputReplayRecorderDeterministicQAPlayback" ) );
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "ReplayHint" ) );
@@ -1047,7 +1046,7 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "GameViewportOnScreenControllerOverlayHUDSettings" ) );
         ImGui::Separator();
 
-        ViewportInputOverlay& config = editor::getSubsystem<ViewportInputOverlaySettings>()._overlay;
+        ViewportInputOverlay& config = InputMapModel::editViewportOverlay();
 
         bool bEnabled = ( config._bEnabled == SW_TRUE );
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "EnableViewportOnScreenHUDOverlay" ), &bEnabled ) )

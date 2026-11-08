@@ -6,6 +6,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
 #include "Engine/Profiling/FrameProfiler.h"
@@ -106,5 +107,10 @@ namespace sw::editor
             EditorPlaySession::pause();
         SW_LOG_INFO_ID( "Profiler.SpikePaused", "Profiler paused on a spike: GT.Frame %# ms (threshold %# ms)", Fmt( static_cast<float64>( frameMicro ) / constant::time::kMicrosecondsPerMillisecond, Format().precision( 2 ) ),
                         Fmt( static_cast<float64>( _spikeThresholdMs ), Format().precision( 1 ) ) );
+    }
+
+    const FrameProfiler* ProfilerCaptureModel::findProfiler()
+    {
+        return editor::findSubsystem<FrameProfiler>();
     }
 } // namespace sw::editor

@@ -10,6 +10,8 @@
 
 namespace sw
 {
+    struct float3;
+
     class GameObject;
 } // namespace sw
 
@@ -39,4 +41,6 @@ namespace sw::editor
 
     /** @brief 활성 씬에서 `gv_editorWatchObject` 이름의 오브젝트를 찾습니다. 없으면 nullptr 입니다. */
     [[nodiscard]] const GameObject* findWatchedObject();
+    /** @brief `findWatchedObject` 의 주 씬 컴포넌트 로컬 위치를 @p outPosition 에 담습니다. 오브젝트나 씬 컴포넌트가 없으면 false 입니다 — 패널 View 의 감시 값이 오브젝트 헤더를 보지 않게 한다. */
+    [[nodiscard]] bool readWatchedObjectLocalPosition( float3& outPosition );
 } // namespace sw::editor

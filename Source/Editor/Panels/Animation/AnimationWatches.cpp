@@ -6,19 +6,15 @@
  */
 #include "pch.h"
 
+#include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Animation/AnimationGraphPanel.h"
 #include "Editor/Panels/Animation/SequencerPanel.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Object/Component/SceneComponent.h"
-#include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw::editor
 {
@@ -27,10 +23,10 @@ namespace sw::editor
         /** @brief 애니메이션 그래프 패널의 개수 하나를 읽습니다(@p count 는 패널의 개수 함수). 패널이 없으면 값을 내지 않습니다. */
         [[nodiscard]] bool readAnimationGraphCount( uint32 ( AnimationGraphPanel::*count )() const, float64& outValue )
         {
-            EditorContext* pContext = getWatchContext( __func__ );
-            if ( pContext == nullptr )
+            const EditorPanelManager* pPanels = getWatchPanelManager( __func__ );
+            if ( pPanels == nullptr )
                 return false;
-            const AnimationGraphPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<AnimationGraphPanel>();
+            const AnimationGraphPanel* pPanel = pPanels->findPanel<AnimationGraphPanel>();
             if ( pPanel == nullptr )
                 return false;
             outValue = static_cast<float64>( ( pPanel->*count )() );
@@ -70,22 +66,20 @@ namespace sw::editor
         /** @brief `-gv_editorWatchObject` 오브젝트의 로컬 위치 X 입니다. 시퀀서 키 트랙 미리보기가 옮긴 값입니다. */
         [[nodiscard]] bool readObjectPositionX( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            const GameObjectManager* pManager = editor::getActiveObjectManager();
-            const GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorWatchObject.c_str() ) ) : nullptr;
-            const SceneComponent*    pScene   = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
-            if ( pScene == nullptr )
+            float3 position{};
+            if ( readWatchedObjectLocalPosition( position ) == false )
                 return false;
-            outValue = static_cast<float64>( pScene->getLocalPosition()._x );
+            outValue = static_cast<float64>( position._x );
             return true;
         }
 
         /** @brief Sequencer 패널이 선택한 키 트랙의 키 프레임 수입니다. 패널이 닫혔거나 선택한 트랙이 없으면 값을 내지 않습니다. */
         [[nodiscard]] bool readSequencerKeyFrameCount( const GameObjectManager* /*pManager*/, float64& outValue )
         {
-            EditorContext* pContext = getWatchContext( __func__ );
-            if ( pContext == nullptr )
+            const EditorPanelManager* pPanels = getWatchPanelManager( __func__ );
+            if ( pPanels == nullptr )
                 return false;
-            const SequencerPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<SequencerPanel>();
+            const SequencerPanel* pPanel = pPanels->findPanel<SequencerPanel>();
             uint32                count{ 0 };
             const bool            bKeyFrameCountUnavailable = pPanel == nullptr || pPanel->isOpen() == false || pPanel->findSelectedTrackKeyFrameCount( count ) == false;
             if ( bKeyFrameCountUnavailable )
@@ -97,10 +91,10 @@ namespace sw::editor
         /** @brief 열린 Sequencer 패널입니다. 닫혔으면 nullptr 입니다. */
         [[nodiscard]] const SequencerPanel* findOpenSequencer( const utf8* pCaller )
         {
-            EditorContext* pContext = getWatchContext( pCaller );
-            if ( pContext == nullptr )
+            const EditorPanelManager* pPanels = getWatchPanelManager( pCaller );
+            if ( pPanels == nullptr )
                 return nullptr;
-            const SequencerPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<SequencerPanel>();
+            const SequencerPanel* pPanel = pPanels->findPanel<SequencerPanel>();
             return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
         }
 

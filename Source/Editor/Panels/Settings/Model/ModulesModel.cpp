@@ -8,6 +8,9 @@
 #include "Core/Module/ModuleLibraryUtil.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorModuleOverrides.h"
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/GameSelection.h"
 
@@ -203,5 +206,10 @@ namespace sw::editor
         }
         SW_LOG_INFO_ID( "ModulesPanel.ModulesTurnedBuildRestart", "Modules: %# turned %# in %# - build and restart to apply", _pendingModule.c_str(), _bPendingEnabled ? "on" : "off", path.c_str() );
         return true;
+    }
+
+    bool ModulesModel::requestBuildAll()
+    {
+        return editor::getSubsystem<EditorContext>().getSubsystem<EditorCommandRegistry>().execute( "build.compileAll", EditorCommandTarget::none() );
     }
 } // namespace sw::editor
