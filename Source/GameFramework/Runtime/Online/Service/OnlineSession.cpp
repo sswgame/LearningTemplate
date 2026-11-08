@@ -282,7 +282,7 @@ namespace sw
             disconnect();
             return false;
         }
-        return connectTo( _transport.get(), OnlineClientSecurity::plaintextForTests(), NetAddress::makeLoopback( _localServer->getListenPort() ), outError );
+        return connectTo( _transport.get(), OnlineClientSecurity::plaintextLoopback(), NetAddress::makeLoopback( _localServer->getListenPort() ), outError );
     }
 
     void OnlineSession::disconnect()

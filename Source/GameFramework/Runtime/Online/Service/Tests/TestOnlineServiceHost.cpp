@@ -236,7 +236,7 @@ namespace
         {
             SW_EXPECT_TRUE( _client.registerClientService( &_serviceA ) );
             SW_EXPECT_TRUE( _client.registerClientService( &_serviceB ) );
-            OnlineServiceClientConfig settings{ OnlineClientSecurity::plaintextForTests() };
+            OnlineServiceClientConfig settings{ OnlineClientSecurity::plaintextLoopback() };
             settings._transportSettings._ioThreadCount = 0;
             settings._serverAddress                    = NetAddress::makeLoopback( port );
             settings._gameBuild                        = "test-1";

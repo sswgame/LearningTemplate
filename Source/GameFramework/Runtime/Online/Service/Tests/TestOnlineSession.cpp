@@ -82,7 +82,7 @@ SW_TEST_CASE_F( OnlineSessionTest, ConnectsAndDisconnects )
     test::OnlineTestFixture      rig;
     unique_ptr<IStreamTransport> transport = rig._network.createTransport();
     string                       error;
-    SW_REQUIRE_TRUE_MSG( _session.connectTo( transport.get(), OnlineClientSecurity::plaintextForTests(), NetAddress::makeLoopback( rig._server._port ), error ), error.c_str() );
+    SW_REQUIRE_TRUE_MSG( _session.connectTo( transport.get(), OnlineClientSecurity::plaintextLoopback(), NetAddress::makeLoopback( rig._server._port ), error ), error.c_str() );
     for ( int32 round = 0; round < 8; ++round )
     {
         _session.updateAt( MonotonicMilliseconds{ kNowMs } );

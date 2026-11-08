@@ -151,7 +151,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedWhileFailingQueuedCallsGet
     kit->_pResponseCount                                  = &responseCount;
     SW_REQUIRE_TRUE( client.registerClientService( kit.get() ) );
     string                    error;
-    OnlineServiceClientConfig settings{ OnlineClientSecurity::plaintextForTests() };
+    OnlineServiceClientConfig settings{ OnlineClientSecurity::plaintextLoopback() };
+    settings._serverAddress                    = NetAddress::makeLoopback( 1 );                  // 평문은 루프백에만 맺는다 — 서버는 없다
     settings._transportSettings._ioThreadCount = 0;                                              // 루프백 전송은 IO 스레드를 두지 않는다
     SW_REQUIRE_TRUE_MSG( client.initialize( transport.get(), settings, error ), error.c_str() ); // 서버가 없다 — 요청은 모인다
 
@@ -309,4 +310,21 @@ SW_TEST_CASE( ServiceClientCallTableTest, UnwritableMessageEndsAsInvalidRequestI
     SW_EXPECT_EQUAL( recorder._listErrorCode[0], OnlineError::kInvalidRequest );
     SW_EXPECT_EQUAL( tableClient._callTable.getCount(), size_t( 0 ) );
     SW_EXPECT_EQUAL( client.peekNextRequestID(), requestID + 1 ); // id 는 sendRequest 와 같은 순서에서 나온다
+}
+
+/**
+ * @brief [ServiceClientCallTableTest] 평문 보안(`plaintextLoopback`)으로 루프백이 아닌 주소에 맺으려 하면 시작부터 거절한다
+ * @details 평문이 기계 밖으로 나가면 토큰 · 게임 데이터가 노출 · 변조된다 — 조용히 맺지도, TLS 로 바꾸지도 않는다.
+ */
+SW_TEST_CASE( ServiceClientCallTableTest, PlaintextToANonLoopbackAddressIsRefused )
+{
+    LoopbackStreamNetwork        network( 5u );
+    unique_ptr<IStreamTransport> transport = network.createTransport();
+    OnlineServiceClient          client;
+    OnlineServiceClientConfig    settings{ OnlineClientSecurity::plaintextLoopback() };
+    SW_REQUIRE_TRUE( NetAddress::parse( "203.0.113.7", 7780, settings._serverAddress ) ); // 문서용 주소(TEST-NET-3)
+    settings._transportSettings._ioThreadCount = 0;
+    string error;
+    SW_EXPECT_FALSE( client.initialize( transport.get(), settings, error ) );
+    SW_EXPECT_TRUE( error.find( "loopback" ) != string::npos );
 }

@@ -130,15 +130,18 @@ namespace sw
         {
             Tls,
             SharedEndpoint,
-            PlaintextForTests
+            PlaintextLoopback
         };
 
         /** @brief 이 컨텍스트로 모든 연결을 TLS 로 맺는다. 컨텍스트는 클라이언트보다 오래 산다. */
         static OnlineClientSecurity tls( ITLSContext& context ) { return OnlineClientSecurity{ Kind::Tls, &context }; }
         /** @brief 연결을 호출하는 쪽의 공유 엔드포인트가 맺는다(`initializeOnSharedEndpoint`) — TLS 는 그 엔드포인트의 설정이 정한다. */
         static OnlineClientSecurity sharedEndpoint() { return OnlineClientSecurity{ Kind::SharedEndpoint, nullptr }; }
-        /** @brief 평문 — 루프백 테스트 서버(`_bTLS` 끔)에만 쓴다. */
-        static OnlineClientSecurity plaintextForTests() { return OnlineClientSecurity{ Kind::PlaintextForTests, nullptr }; }
+        /**
+         * @brief 평문 — 같은 기계의 서버(루프백 주소)에만 맺는다: 개발 구성의 같은 프로세스 로컬 서버(`OnlineSession::startLocalServer`) · 테스트 서버.
+         * @details 루프백이 아닌 주소면 `OnlineServiceClient::initialize` 가 거절한다 — 평문이 기계 밖으로 나가면 토큰 · 게임 데이터가 노출 · 변조된다.
+         */
+        static OnlineClientSecurity plaintextLoopback() { return OnlineClientSecurity{ Kind::PlaintextLoopback, nullptr }; }
 
         Kind         _kind;
         ITLSContext* _pTLSContext;

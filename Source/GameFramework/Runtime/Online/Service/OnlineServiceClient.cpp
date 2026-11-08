@@ -119,7 +119,13 @@ namespace sw
         SW_ASSERT( _bInitialized == SW_FALSE );
         if ( settings._security._kind == OnlineClientSecurity::Kind::SharedEndpoint )
         {
-            outError = "online service client owns its endpoint - choose OnlineClientSecurity::tls (or plaintextForTests), not sharedEndpoint";
+            outError = "online service client owns its endpoint - choose OnlineClientSecurity::tls (or plaintextLoopback), not sharedEndpoint";
+            return false;
+        }
+        // 평문은 같은 기계에만 — 다른 주소로 가는 평문 연결은 맺지 않는다(조용히 TLS 로 바꾸지도 않는다).
+        if ( settings._security._kind == OnlineClientSecurity::Kind::PlaintextLoopback && settings._serverAddress.isLoopback() == false )
+        {
+            outError = "plaintext is only allowed to a loopback address - use OnlineClientSecurity::tls for " + settings._serverAddress.toString();
             return false;
         }
         _settings                               = settings;
