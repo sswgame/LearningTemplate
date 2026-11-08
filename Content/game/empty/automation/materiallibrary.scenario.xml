@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  머티리얼 라이브러리 쇼케이스 — 프리셋 29 종(engine/materials/library — 일상 물건 · 소품 · 배경 · 기믹)의 줄 세우기와 지형 레이어 규칙(경사 · 고도 · 높이 섞기)을
+  맑음 · 비 · 눈 날씨로 찍는다. 날씨는 파라미터 묶음 engine/materials/weather.matparams.xml 의 Weather(x 젖음, y 웅덩이, z 눈, w 설선 m)를 개발 명령 matparam 으로 바꾼다 —
+  묶은 지형 · 환경 머티리얼이 다음 프레임에 함께 바뀐다(언리얼 MPC 날씨).
+  시간을 멈춰(gv_timeScale=0) 홀로그램 주사선 · 용암 흐름 · 강조 맥동이 장마다 같은 시각이다.
+  판정: ① 같은 실행의 맑음 · 비 · 눈 장이 바닥 영역에서 다르다(날씨가 셰이더에 닿는다). ② 장마다 골든(통합에서 백엔드마다 기록한다).
+  골든을 뜰 때 볼 것 — 줄 세우기: 자기 찻잔의 날카로운 코트 하이라이트, 빙렬 균열, 은의 갈색 변색, 칠 벗겨진 금속의 밝은 칩, 녹 줄, 벽돌 · 타일 · 돌담 줄눈 범프, 마루 판자 이음과 결,
+  네온 · 화면 · 용암 틈 · 녹아 사라짐 경계의 발광, 홀로그램 · 역장 반투명. 비: 바닥이 어둡고 번들거리며 평평한 곳에 웅덩이 거울. 눈: 위를 보는 면이 희다.
+  지형: 비탈 바위(3 축), 자갈 띠, 물가 모래 · 진흙(늘 젖어 웅덩이), 중턱 이끼, 봉우리 눈(반짝이), 레이어 경계가 높이 섞기로 깨진다.
+  실행: App -game=Empty -scenario=game/empty/automation/materiallibrary.scenario.xml -unattended (체인: ctest -R Scenario.game.empty.materiallibrary). Shipping 은 개발 명령이 없어 건너뛴다.
+-->
+<Scenario name="game.empty.materiallibrary" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/materiallineup.scene.xml"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Variable name="gv_timeScale" value="0"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="90"/>
+	<Wait frames="20"/>
+	<Screenshot file="materiallibrary_lineup_clear.ppm"/>
+	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 1 0.8 0 0"/>
+	<Wait frames="10"/>
+	<Screenshot file="materiallibrary_lineup_rain.ppm"/>
+	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0 0 1 -10"/>
+	<Wait frames="10"/>
+	<Screenshot file="materiallibrary_lineup_snow.ppm"/>
+	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0 0 0 0"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="materiallibrary_lineup_clear.ppm" second="materiallibrary_lineup_rain.ppm" region="0,0.55,1,1" minDiffering="0.2"/>
+	<ExpectImagesDiffer first="materiallibrary_lineup_clear.ppm" second="materiallibrary_lineup_snow.ppm" region="0,0.55,1,1" minDiffering="0.2"/>
+	<ExpectImage file="materiallibrary_lineup_clear.ppm" golden="lineup_clear"/>
+	<ExpectImage file="materiallibrary_lineup_rain.ppm" golden="lineup_rain"/>
+	<ExpectImage file="materiallibrary_lineup_snow.ppm" golden="lineup_snow"/>
+
+	<LoadScene path="game/empty/maps/terrainlayers.scene.xml" timeoutFrames="900"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="90"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="90"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="30"/>
+	<Screenshot file="materiallibrary_terrain_clear.ppm"/>
+	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0.8 0.6 0 0"/>
+	<Wait frames="10"/>
+	<Screenshot file="materiallibrary_terrain_rain.ppm"/>
+	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0 0 1 18"/>
+	<Wait frames="10"/>
+	<Screenshot file="materiallibrary_terrain_snow.ppm"/>
+	<DevCommand line="matparam engine/materials/weather.matparams.xml Weather 0 0 0 0"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="materiallibrary_terrain_clear.ppm" second="materiallibrary_terrain_rain.ppm" region="0,0.4,1,1" minDiffering="0.1"/>
+	<ExpectImagesDiffer first="materiallibrary_terrain_clear.ppm" second="materiallibrary_terrain_snow.ppm" region="0,0.2,1,1" minDiffering="0.1"/>
+	<ExpectImage file="materiallibrary_terrain_clear.ppm" golden="terrain_clear"/>
+	<ExpectImage file="materiallibrary_terrain_rain.ppm" golden="terrain_rain"/>
+	<ExpectImage file="materiallibrary_terrain_snow.ppm" golden="terrain_snow"/>
+	<Pass/>
+</Scenario>
