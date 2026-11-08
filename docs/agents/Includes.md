@@ -17,7 +17,7 @@
 
 ### Core tiers
 
-Core folders are tiers: `Common` → `Concurrency` · `Math` → `Memory` → `Container` → … → `Diagnostics` → `Log/Sink` (the sink sub-folder implements the `ILogSink` port that `Log` declares, so it sits on top). A file includes only its own folder or a lower tier.
+Core folders are tiers (table: `Scripts/generate/rules/CoreLayers.toml`; below `Log` the build enforces it, above it the `CoreTiers` lint): `Foundation` → `Concurrency` · `Math` → `Memory` → `Container` → … → `Diagnostics` → `Log/Sink` (the sink sub-folder implements the `ILogSink` port that `Log` declares, so it sits on top). A file includes only its own folder or a lower tier.
 
 - A lower tier that must reach up takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`).
 - Tiers below `Log` get **no `Logger.h`**: their `.cpp` files build with `Core/pchLow.h`, so `SW_LOG_*`, `StringBuilder` and `FileUtil` fail to compile. Report with `SW_LOW_LEVEL_*`.
@@ -63,4 +63,3 @@ Reach a service through the window of its lifetime: `getSubsystem<T>()` (must ex
 - Allocate on the heap through an **owning type**: `make_unique<T>( ... )`, `vector<T>`, `make_unique<T[]>( n )`, `MemoryBlock` for a raw byte block. A bare `new` is rejected. Where ownership must leave the type system (lock-free slot table, COM refcount, C-ABI handle), write `make_unique<T>( ... ).release()`.
 - **Borrow with a pointer, keep with a handle.** A `GameObject*` / `Component*` you do not own is valid only inside the current call (at most the current frame). Anything kept across frames (members, selection lists, undo records) holds a `GameObjectHandle` / `ComponentHandle` and resolves it on each use through the owning manager (`resolveGameObject` / `resolveComponent`, `nullptr` once the target is gone). A handle resolves only through the manager (scene) that owns the object. Structural links the object model maintains itself (owner, hierarchy, registries) stay raw pointers.
 - **Saved state never points at another object by name.** A parent reference is the parent's id, resolved by `ObjectStateBatch` after every object of the batch is loaded. Any new path that loads object state goes through a batch (`ObjectLoadContext::_pBatch` + `finish()`).
-- No magic buffer or path sizes (`char buf[64]`, `fixed_string<256>`); use `constant::buffer::kMax16` .. `kMax8192` and `constant::file::kMaxPathSize` ([Constants](Constants.md)).
