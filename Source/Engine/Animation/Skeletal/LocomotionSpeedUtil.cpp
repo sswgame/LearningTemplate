@@ -16,10 +16,10 @@ namespace sw
     float32 LocomotionSpeedUtil::computeFootSpeed( const AnimationClip& clip, const Skeleton& skeleton, const hashed_string& leftFoot, const hashed_string& rightFoot,
                                                    uint32 sampleCount )
     {
-        const int32   leftBone             = skeleton.findBoneIndex( leftFoot );
-        const int32   rightBone            = skeleton.findBoneIndex( rightFoot );
-        const float32 duration             = clip.getDuration();
-        const bool    bInvalidFootSampling = leftBone < 0 || rightBone < 0 || sampleCount < 2 || duration <= 0.0f;
+        const optional<uint32> leftBone             = skeleton.findBoneIndex( leftFoot );
+        const optional<uint32> rightBone            = skeleton.findBoneIndex( rightFoot );
+        const float32          duration             = clip.getDuration();
+        const bool             bInvalidFootSampling = leftBone.has_value() == false || rightBone.has_value() == false || sampleCount < 2 || duration <= 0.0f;
         if ( bInvalidFootSampling )
             return 0.0f;
 
@@ -39,10 +39,10 @@ namespace sw
             if ( clip.samplePose( skeleton, step * static_cast<float32>( sampleIndex ), listTrackToBone, pose, scratchTrackPose, true ) == false )
                 return 0.0f;
             pose.computeModelSpace( skeleton.getParentIndices(), listModel );
-            const float3 leftPosition  = listModel[static_cast<size_t>( leftBone )].getTranslation();
-            const float3 rightPosition = listModel[static_cast<size_t>( rightBone )].getTranslation();
+            const float3 leftPosition  = listModel[*leftBone].getTranslation();
+            const float3 rightPosition = listModel[*rightBone].getTranslation();
             const bool   bLeftPlanted  = leftPosition._y <= rightPosition._y;
-            const int32  plantBone     = bLeftPlanted ? leftBone : rightBone;
+            const int32  plantBone     = static_cast<int32>( bLeftPlanted ? *leftBone : *rightBone );
             const float3 plantPosition = bLeftPlanted ? leftPosition : rightPosition;
             if ( plantBone == previousPlantBone )
             {

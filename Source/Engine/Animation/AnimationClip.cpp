@@ -133,7 +133,7 @@ namespace sw
         const hashed_string* pFirstMissing = nullptr;
         for ( size_t trackIndex = 0; trackIndex < _listTrackName.size(); ++trackIndex )
         {
-            outListBone[trackIndex] = skeleton.findBoneIndex( _listTrackName[trackIndex] );
+            outListBone[trackIndex] = Skeleton::toBoneSlot( skeleton.findBoneIndex( _listTrackName[trackIndex] ) );
             if ( outListBone[trackIndex] >= 0 )
                 continue;
             ++missingCount;

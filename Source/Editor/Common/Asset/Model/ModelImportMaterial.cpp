@@ -149,13 +149,13 @@ namespace sw::editor
     void ModelImportMaterial::populateMaterialSections( ModelImportUtil::MergedMesh& inoutBody, const cgltf_data& data, const vector<string>& listMaterialName, ModelImportResult& inoutResult )
     {
         // 1인칭 본(머리) 아래 본 — Auto 메시는 이 본에 가중치가 있는 꼭짓점을 가진 삼각형을 3인칭 전용으로 나눈다(UniVRM 과 같다).
-        const Skeleton& skeleton = inoutResult._skeleton;
-        vector<uint8>   listHeadBone( skeleton.getBoneCount(), SW_FALSE );
-        const int32     headBone = inoutResult._avatar._firstPersonBone.empty() ? -1 : skeleton.findBoneIndex( hashed_string( inoutResult._avatar._firstPersonBone ) );
-        for ( uint32 bone = 0; headBone >= 0 && bone < skeleton.getBoneCount(); ++bone )
+        const Skeleton&        skeleton = inoutResult._skeleton;
+        vector<uint8>          listHeadBone( skeleton.getBoneCount(), SW_FALSE );
+        const optional<uint32> headBone = inoutResult._avatar._firstPersonBone.empty() ? nullopt : skeleton.findBoneIndex( hashed_string( inoutResult._avatar._firstPersonBone ) );
+        for ( uint32 bone = 0; headBone.has_value() && bone < skeleton.getBoneCount(); ++bone )
         {
             const int32 parent = skeleton.getBone( bone )._parentIndex;
-            listHeadBone[bone] = ( static_cast<int32>( bone ) == headBone || ( parent >= 0 && listHeadBone[static_cast<uint32>( parent )] == SW_TRUE ) ) ? SW_TRUE : SW_FALSE;
+            listHeadBone[bone] = ( headBone == bone || ( parent >= 0 && listHeadBone[static_cast<uint32>( parent )] == SW_TRUE ) ) ? SW_TRUE : SW_FALSE;
         }
 
         // 삼각형마다 묶음 열쇠 — (머티리얼 번호, 가시성). 머티리얼이 없는 삼각형은 어느 구간에도 들지 않고 뒤에 남는다(그리는 컴포넌트가 없다).

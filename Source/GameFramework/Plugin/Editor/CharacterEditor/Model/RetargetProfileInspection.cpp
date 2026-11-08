@@ -28,12 +28,12 @@ namespace sw::editor
                 int32   previous = -1;
                 for ( const hashed_string& name : listBone )
                 {
-                    const int32 bone = skeleton.findBoneIndex( name );
-                    if ( bone < 0 )
+                    const optional<uint32> bone = skeleton.findBoneIndex( name );
+                    if ( bone.has_value() == false )
                         continue;
                     if ( previous >= 0 )
-                        length += ( listModel[static_cast<size_t>( bone )].getTranslation() - listModel[static_cast<size_t>( previous )].getTranslation() ).getLength();
-                    previous = bone;
+                        length += ( listModel[*bone].getTranslation() - listModel[static_cast<size_t>( previous )].getTranslation() ).getLength();
+                    previous = static_cast<int32>( *bone );
                 }
                 return length;
             }
@@ -50,7 +50,7 @@ namespace sw::editor
                     outListProblem.push_back( std::move( line ) );
                     return;
                 }
-                if ( skeleton.findBoneIndex( name ) >= 0 )
+                if ( skeleton.findBoneIndex( name ).has_value() )
                     return;
                 line += ": the ";
                 line += pSide;
@@ -103,12 +103,14 @@ namespace sw::editor
             }
 
             /** @brief @p ancestor 가 @p bone 의 조상이면 true 입니다. */
-            static bool isAncestor( const Skeleton& skeleton, int32 ancestor, int32 bone )
+            static bool isAncestor( const Skeleton& skeleton, const optional<uint32>& ancestor, const optional<uint32>& bone )
             {
+                if ( ancestor.has_value() == false || bone.has_value() == false )
+                    return false; // 없는 본은 사슬을 이루지 않는다(checkBone 이 따로 알린다)
                 const vector<int32>& listParent = skeleton.getParentIndices();
-                for ( int32 current = listParent[static_cast<size_t>( bone )]; current >= 0; current = listParent[static_cast<size_t>( current )] )
+                for ( int32 current = listParent[*bone]; current >= 0; current = listParent[static_cast<size_t>( current )] )
                 {
-                    if ( current == ancestor )
+                    if ( ancestor == static_cast<uint32>( current ) )
                         return true;
                 }
                 return false;

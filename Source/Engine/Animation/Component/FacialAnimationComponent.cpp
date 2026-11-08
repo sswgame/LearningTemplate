@@ -477,7 +477,7 @@ namespace sw
         _listEyeBone.clear();
         for ( const hashed_string& bone : getFacialRig().getGaze()._listEyeBone )
         {
-            _listEyeBone.push_back( pSkeleton->findBoneIndex( bone ) );
+            _listEyeBone.push_back( Skeleton::toBoneSlot( pSkeleton->findBoneIndex( bone ) ) );
         }
     }
 

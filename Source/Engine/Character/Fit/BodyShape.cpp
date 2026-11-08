@@ -127,7 +127,7 @@ namespace sw
         bool bValid = true;
         for ( const BoneProportionEntry& entry : _listEntry )
         {
-            if ( skeleton.findBoneIndex( entry._bone ) >= 0 )
+            if ( skeleton.findBoneIndex( entry._bone ).has_value() )
                 continue;
             SW_LOG_ERROR_ID( "BoneProportion.BoneNotInSkeleton", "Body shape '%#': bone '%#' is not in the skeleton - the proportion does nothing", sourceLabel, entry._bone.c_str() );
             bValid = false;
@@ -139,13 +139,13 @@ namespace sw
     {
         for ( const BoneProportionEntry& entry : _listEntry )
         {
-            const int32 boneIndex = skeleton.findBoneIndex( entry._bone );
-            if ( boneIndex < 0 || static_cast<uint32>( boneIndex ) >= inoutPose.getBoneCount() )
+            const optional<uint32> boneIndex = skeleton.findBoneIndex( entry._bone );
+            if ( boneIndex.has_value() == false || *boneIndex >= inoutPose.getBoneCount() )
                 continue;
-            BoneTransform local = inoutPose.getBoneTransform( static_cast<uint32>( boneIndex ) );
+            BoneTransform local = inoutPose.getBoneTransform( *boneIndex );
             local._scale        = float3::multiply( local._scale, entry._scale );
             local._translation  = local._translation + entry._offset;
-            inoutPose.setBoneTransform( static_cast<uint32>( boneIndex ), local );
+            inoutPose.setBoneTransform( *boneIndex, local );
         }
     }
 } // namespace sw

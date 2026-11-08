@@ -32,7 +32,7 @@ namespace sw::editor
             {
                 for ( const RetargetPoseBone& poseBone : profile.getTargetPose() )
                 {
-                    if ( target.findBoneIndex( poseBone._bone ) < 0 )
+                    if ( target.findBoneIndex( poseBone._bone ).has_value() == false )
                         return false;
                 }
                 return true;
@@ -106,12 +106,12 @@ namespace sw::editor
 
     bool RetargetPreviewModel::hasSourceBone( const hashed_string& name ) const
     {
-        return isSourceReady() && _source.findBoneIndex( name ) >= 0;
+        return isSourceReady() && _source.findBoneIndex( name ).has_value();
     }
 
     bool RetargetPreviewModel::hasTargetBone( const hashed_string& name ) const
     {
-        return isTargetReady() && _target.findBoneIndex( name ) >= 0;
+        return isTargetReady() && _target.findBoneIndex( name ).has_value();
     }
 
     bool RetargetPreviewModel::consumeFramePending()

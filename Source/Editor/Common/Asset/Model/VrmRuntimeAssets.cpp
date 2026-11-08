@@ -96,13 +96,13 @@ namespace sw::editor
                 int32 lastBone = -1;
                 for ( const VrmSpringJoint& joint : spring._listJoint )
                 {
-                    const int32 bone = skeleton.findBoneIndex( hashed_string( joint._bone ) );
-                    if ( bone < 0 )
+                    const optional<uint32> bone = skeleton.findBoneIndex( hashed_string( joint._bone ) );
+                    if ( bone.has_value() == false )
                     {
                         addIgnored( pOutListIgnored, "springBone joint '" + joint._bone + "' (not a skeleton bone)" );
                         continue;
                     }
-                    const int32 parent = skeleton.getBone( static_cast<uint32>( bone ) )._parentIndex;
+                    const int32 parent = skeleton.getBone( *bone )._parentIndex;
                     if ( current._listBone.empty() == false && parent != lastBone )
                     {
                         // 가지 — 앞 사슬을 끝내고 이 관절의 부모(고정된 루트)에서 새 사슬을 시작한다.
@@ -111,7 +111,7 @@ namespace sw::editor
                             current._listBone.push_back( string( skeleton.getBone( static_cast<uint32>( parent ) )._name.c_str() ) );
                     }
                     current._listBone.push_back( joint._bone );
-                    lastBone = bone;
+                    lastBone = static_cast<int32>( *bone );
                 }
                 flush();
             }
@@ -267,7 +267,7 @@ namespace sw::editor
             for ( const uint32 colliderIndex : listCollider )
             {
                 const VrmSpringCollider& collider = def._listCollider[colliderIndex];
-                if ( skeleton.findBoneIndex( hashed_string( collider._bone ) ) < 0 )
+                if ( skeleton.findBoneIndex( hashed_string( collider._bone ) ).has_value() == false )
                 {
                     Internal::addIgnored( pOutListIgnored, "springBone collider on '" + collider._bone + "' (not a skeleton bone)" );
                     continue;

@@ -153,17 +153,17 @@ namespace sw
         for ( size_t entryIndex = 0; entryIndex < _listEntry.size(); ++entryIndex )
         {
             const AnimationBoneMaskEntry& entry     = _listEntry[entryIndex];
-            const int32                   boneIndex = skeleton.findBoneIndex( entry._bone );
-            if ( boneIndex < 0 )
+            const optional<uint32>        boneIndex = skeleton.findBoneIndex( entry._bone );
+            if ( boneIndex.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "AnimationBoneMask.BoneMaskNamesBone", "Bone mask '%#' names bone '%#' that is not in the skeleton", _name.c_str(), entry._bone.c_str() );
                 outListWeight.assign( boneCount, 0.0f );
                 return false;
             }
             if ( entry._bPropagate == SW_TRUE )
-                listRootWeight[static_cast<uint32>( boneIndex )] = entry._weight;
+                listRootWeight[*boneIndex] = entry._weight;
             else
-                listSingleBone[entryIndex] = boneIndex;
+                listSingleBone[entryIndex] = static_cast<int32>( *boneIndex );
         }
         // 부모가 자식보다 앞이므로 한 번 훑으면 root 의 값이 자손에 퍼진다(가까운 root 가 이긴다).
         for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )

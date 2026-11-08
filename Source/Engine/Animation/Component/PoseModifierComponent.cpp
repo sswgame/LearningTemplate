@@ -612,7 +612,7 @@ namespace sw
             external._socketLocal        = def._offset;
             if ( def._space.empty() == false )
             {
-                external._spaceBone = _pSkeletalMesh->getSkeleton().findBoneIndex( def._space );
+                external._spaceBone = Skeleton::toBoneSlot( _pSkeletalMesh->getSkeleton().findBoneIndex( def._space ) );
                 if ( external._spaceBone < 0 )
                 {
                     SW_LOG_ERROR_ID( "PoseModifier.RigTargetUnknownSpace", "Rig '%#': target '%#' has unknown space bone '%#'", label, def._name.c_str(), def._space.c_str() );
@@ -649,7 +649,7 @@ namespace sw
             const bool             bSocketRoot = resolved._bSocketRoot;
             if ( pTargetUnit == nullptr || pTargetUnit == _pSkeletalMesh )
                 continue; // 아직 없다. bindUnit 이 다시 바인딩한다.
-            external._skeletalMeshBone = bSocketRoot ? -1 : pTargetUnit->getSkeleton().findBoneIndex( boneName );
+            external._skeletalMeshBone = bSocketRoot ? constant::invalid_index::kInt32 : Skeleton::toBoneSlot( pTargetUnit->getSkeleton().findBoneIndex( boneName ) );
             if ( bSocketRoot == false && external._skeletalMeshBone < 0 )
             {
                 SW_LOG_ERROR_ID( "PoseModifier.RigTargetNamesBone", "Rig '%#': target '%#' names bone '%#' that skeletalMesh '%#' does not have", label, def._name.c_str(), boneName.c_str(),
@@ -689,13 +689,13 @@ namespace sw
         {
             for ( const PhysicsAssetBodyDef& body : pAsset->_listBody )
             {
-                const int32 bone = _pSkeletalMesh->getSkeleton().findBoneIndex( body._bone );
-                if ( bone < 0 )
+                const optional<uint32> bone = _pSkeletalMesh->getSkeleton().findBoneIndex( body._bone );
+                if ( bone.has_value() == false )
                     continue;
                 for ( const PhysicsShapeDesc3D& shape : body._listShape )
                 {
                     RigSpringCollider collider{};
-                    collider._bone   = static_cast<uint32>( bone );
+                    collider._bone   = *bone;
                     collider._radius = shape._radius;
                     if ( shape._type == PhysicsShapeType3D::Sphere )
                     {

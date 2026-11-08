@@ -137,7 +137,7 @@ namespace sw
         }
         for ( const hashed_string& bone : _gaze._listEyeBone )
         {
-            if ( skeleton.findBoneIndex( bone ) >= 0 )
+            if ( skeleton.findBoneIndex( bone ).has_value() )
                 continue;
             SW_LOG_ERROR_ID( "FacialRig.FacialRigEyeBone", "Facial rig '%#': eye bone '%#' is not in the skeleton", sourceLabel, bone.c_str() );
             bValid = false;

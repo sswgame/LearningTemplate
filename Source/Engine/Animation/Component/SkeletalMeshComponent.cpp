@@ -505,11 +505,11 @@ namespace sw
 
     bool SkeletalMeshComponent::findBoneModelTransform( const hashed_string& boneName, float4x4& outTransform ) const
     {
-        const int32             boneIndex      = _skeleton->findBoneIndex( boneName );
+        const optional<uint32>  boneIndex      = _skeleton->findBoneIndex( boneName );
         const vector<float4x4>& listModelSpace = getModelSpaceTransforms();
-        if ( boneIndex < 0 || static_cast<size_t>( boneIndex ) >= listModelSpace.size() )
+        if ( boneIndex.has_value() == false || *boneIndex >= listModelSpace.size() )
             return false;
-        outTransform = listModelSpace[static_cast<size_t>( boneIndex )];
+        outTransform = listModelSpace[*boneIndex];
         return true;
     }
 
@@ -911,7 +911,7 @@ namespace sw
             _listLeaderBone.resize( _skeleton->getBoneCount() );
             for ( uint32 boneIndex = 0; boneIndex < _skeleton->getBoneCount(); ++boneIndex )
             {
-                _listLeaderBone[boneIndex] = leaderSkeleton.findBoneIndex( _skeleton->getBone( boneIndex )._name );
+                _listLeaderBone[boneIndex] = Skeleton::toBoneSlot( leaderSkeleton.findBoneIndex( _skeleton->getBone( boneIndex )._name ) );
                 // 변형이 뒤에 붙인 본(망토 · 머리카락)과 부품 스켈레톤만 리더에 없어도 된다 — 나머지는 레퍼런스에 얼어 있는 틀린 조합이다.
                 const bool bMissing = _listLeaderBone[boneIndex] < 0 && _skeleton->isAddedBone( boneIndex ) == false && _skeleton->isPartial() == false && leaderSkeleton.isPartial() == false;
                 if ( bMissing )

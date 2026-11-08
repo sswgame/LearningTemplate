@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -249,8 +250,13 @@ namespace sw
         uint64 getHierarchyHash( uint32 boneCount ) const;
         /** @brief 이 스켈레톤으로 @p skinBinding 의 메시를 그릴 수 있으면 true 입니다 — 메시의 본이 모두 있고 앞쪽 본 배치가 같습니다. */
         [[nodiscard]] bool canDrawSkinBinding( const MeshSkinBinding& skinBinding ) const;
-        /** @brief 이름으로 본 인덱스를 찾습니다. 없으면 -1 입니다. */
-        int32 findBoneIndex( const hashed_string& name ) const;
+        /** @brief 이름으로 본 인덱스를 찾습니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findBoneIndex( const hashed_string& name ) const;
+        /**
+         * @brief 찾은 본 번호를 본 번호 표의 int32 칸(부모 번호 `_parentIndex` 와 같이 -1 = 없음)으로 바꿉니다.
+         * @details 트랙 → 본 표 · 리그 대상 · 리더 본 표처럼 부모 사슬과 함께 걷는 int32 표에 넣는 자리 한 곳이다 — 찾기 결과는 optional 로 받고 표의 형식은 그대로 둔다.
+         */
+        static int32 toBoneSlot( const optional<uint32>& boneIndex ) { return boneIndex.has_value() ? static_cast<int32>( *boneIndex ) : constant::invalid_index::kInt32; }
         /** @brief 본 수입니다. */
         uint32 getBoneCount() const { return static_cast<uint32>( _listBone.size() ); }
         /** @brief 본 하나입니다(범위는 부르는 쪽이 지킵니다). */

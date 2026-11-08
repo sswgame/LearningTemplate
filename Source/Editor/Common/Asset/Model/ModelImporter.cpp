@@ -352,7 +352,7 @@ namespace sw::editor
                 int32           rootMotionBone = -1;
                 if ( rule._rootMotionBone.empty() == false )
                 {
-                    rootMotionBone = skeleton.findBoneIndex( hashed_string( rule._rootMotionBone ) );
+                    rootMotionBone = Skeleton::toBoneSlot( skeleton.findBoneIndex( hashed_string( rule._rootMotionBone ) ) );
                     if ( rootMotionBone < 0 )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.GlTFRootMotionBone", "glTF '%#': root_motion_bone '%#' is not a joint", sourcePath, rule._rootMotionBone.c_str() );
