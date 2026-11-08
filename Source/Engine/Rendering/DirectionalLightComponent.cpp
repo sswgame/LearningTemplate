@@ -35,6 +35,8 @@ namespace sw
             static constexpr float32 kShadowStrength{ 0.45f };
             static constexpr float32 kDefaultShadowViewDistance{ 0.0f };
             static constexpr uint32  kDefaultShadowCascadeCount{ 1 };
+            /// @brief 기본 원천 크기 — 해의 시직경(도). 언리얼 `LightSourceAngle` 의 기본값과 같다. PCSS 만 읽는다.
+            static constexpr float32 kDefaultShadowSourceAngle{ 0.5357f };
             /// @brief 맞춘 볼륨의 지름을 올리는 단위(m)의 상한 — 줌할 때 크기가 매 프레임 조금씩 바뀌어 텍셀 격자가 떨리는 것을 줄인다.
             static constexpr float32 kShadowFitQuantum{ 2.0f };
             /// @brief 단위는 지름의 이 분의 일보다 크지 않다 — 몇 m 짜리 가까운 캐스케이드가 2 m 단위로 부풀지 않게.
@@ -315,9 +317,11 @@ namespace sw
         , _shadowReceiverMinHeight{ 0.0f }
         , _shadowReceiverMaxHeight{ 0.0f }
         , _shadowCascadeCount{ DirectionalLightComponentInternal::kDefaultShadowCascadeCount }
+        , _shadowSettings{}
         , _bCastShadow{ SW_TRUE }
         , _reservedLight{ 0 }
     {
+        _shadowSettings._sourceSize = DirectionalLightComponentInternal::kDefaultShadowSourceAngle;
     }
 
     float3 DirectionalLightComponent::getLightDirection() const
@@ -363,6 +367,13 @@ namespace sw
         onPropertyChanged( hashed_string( "_shadowCascadeCount" ) );
     }
 
+    void DirectionalLightComponent::setShadowSettings( const LightShadowSettings& settings )
+    {
+        _shadowSettings             = settings;
+        _shadowSettings._sourceSize = MathUtil::max( settings._sourceSize, 0.0f );
+        onPropertyChanged( hashed_string( "_shadowSettings" ) );
+    }
+
     void DirectionalLightComponent::setCastShadow( bool bCastShadow )
     {
         _bCastShadow = bCastShadow ? SW_TRUE : SW_FALSE;
@@ -402,6 +413,7 @@ namespace sw
         projection._texelWorldSize                = _shadowExtent * 2.0f / static_cast<float32>( projection._resolution );
         projection._depthRange                    = _shadowExtent * 2.0f; // computeShadowViewProj 의 [거리 - 반경, 거리 + 반경]
         projection._cascadeCount                  = 1;
+        projection._sourceAngle                   = MathUtil::toRadian( _shadowSettings._sourceSize );
         projection._arrCascade[0]._texelWorldSize = projection._texelWorldSize;
         return projection;
     }
@@ -474,6 +486,7 @@ namespace sw
         projection._texelWorldSize = side / static_cast<float32>( resolution );
         projection._depthRange     = farPlane - nearPlane;
         projection._cascadeCount   = fittedCount;
+        projection._sourceAngle    = MathUtil::toRadian( _shadowSettings._sourceSize );
 
         // (5) 캐스케이드 c 의 NDC = 기준 NDC · (기준 폭 / c 폭) + 2 (기준 중심 − c 중심) / c 폭. 하나뿐이면 정확히 배율 1 · 이동 0 이다(행렬이 같다).
         if ( fittedCount > 1 )
@@ -498,5 +511,6 @@ namespace sw
         outLight._directionType._x = direction._x;
         outLight._directionType._y = direction._y;
         outLight._directionType._z = direction._z;
+        _shadowSettings.writeGPULightFields( outLight );
     }
 } // namespace sw

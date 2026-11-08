@@ -1,0 +1,111 @@
+<Scene formatVersion="2" name="ShadowTest">
+	<!-- 그림자 기능 시나리오(automation/shadow_*)의 무대 — 애니메이션 · 비동기 메시가 없어 같은 프레임이 실행마다 같은 그림이다.
+	     해는 카메라에 맞춘 캐스케이드 둘(_shadowViewDistance), 점광은 아틀라스 칸 여섯을 쓴다. 원천 크기(_shadowSettings)는 PCSS(gv_shadowFilter 1)만 읽는다 —
+	     눈으로 보이게 해는 3°, 점광은 반지름 0.15 m 로 크게 잡았다. 기둥은 길쭉해 바닥에 반그림자가 길게 진다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,3,-7"
+					                 _localRotation="0.35,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.8"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.5,3.4,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.2"
+					                           _ambient="0.3"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _shadowViewDistance="30"
+					                           _shadowCascadeCount="2"
+					                           _bCastShadow="true">
+						<_shadowSettings _sourceSize="3" />
+					</DirectionalLightComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Lamp">
+			<GameObject _schemaVersion="0" _name="Lamp" _bActive="true">
+				<_listComponent>
+					<PointLightComponent _localPosition="2.5,2.2,2"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachComponent="None"
+					                     _color="1,0.7,0.45"
+					                     _intensity="3"
+					                     _radius="7"
+					                     _bCastShadow="true">
+						<_shadowSettings _sourceSize="0.15" />
+					</PointLightComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,3"
+					               _localRotation="0,0,0"
+					               _localScale="16,1,16"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="12"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Pillar">
+			<GameObject _schemaVersion="0" _name="Pillar" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-1.5,1.5,2"
+					               _localRotation="0,0.3,0"
+					               _localScale="0.4,3,0.4"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_orange.material"
+					               _boundsRadius="1.6"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Crate">
+			<GameObject _schemaVersion="0" _name="Crate" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.2,0.5,2.6"
+					               _localRotation="0,-0.4,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/materials/prototypegrid_light.material"
+					               _boundsRadius="0.9"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

@@ -9,6 +9,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Rendering/LightComponent.h"
+#include "Engine/Rendering/LightShadowSettings.h"
 
 namespace sw
 {
@@ -55,6 +56,7 @@ namespace sw
         float32                  _depthRange{ 1.0f };     ///< 깊이 구간 길이(m) — far - near(모든 캐스케이드가 같다)
         uint32                   _resolution{ 1 };        ///< 캐스케이드 타일 한 변의 텍셀 수
         uint32                   _cascadeCount{ 1 };
+        float32                  _sourceAngle{ 0.0f }; ///< 빛 원천의 시직경(라디안, `LightShadowSettings::_sourceSize` 를 바꾼 값) — PCSS 반그림자 폭(`ShadowFilter::computeDirectionalPenumbraScale`)
         DirectionalShadowCascade _arrCascade[kMaxCascade]{};
 
         /** @brief 셰이더의 `g_ShadowParams` 입니다 — x 깊이 바이어스(NDC) · y 그늘 세기 · z 노멀 오프셋(m) · w 텍셀 하나의 UV 폭(타일 기준). 캐스케이드 c 의 x · z 는 이 값 ÷ 배율입니다. */
@@ -157,6 +159,11 @@ namespace sw
         /** @brief 그림자를 받는 높이 띠를 설정합니다. 두 값이 같으면 띠로 자르지 않습니다. */
         void setShadowReceiverHeightRange( float32 minHeight, float32 maxHeight );
 
+        /** @brief 그림자 모양 값(원천 크기)입니다. */
+        const LightShadowSettings& getShadowSettings() const { return _shadowSettings; }
+        /** @brief 그림자 모양 값을 설정합니다. */
+        void setShadowSettings( const LightShadowSettings& settings );
+
     protected:
         /** @brief 방향(`_directionType.xyz`)을 씁니다. */
         void writeGPULightKindFields( GPULight& outLight ) const override;
@@ -176,6 +183,8 @@ namespace sw
         float32 _shadowReceiverMaxHeight;
         PROPERTY( Category = "Shadow", DisplayName = "Cascade Count", Min = 1, Max = 4, Tooltip = "Cascades for a perspective camera when fitting to the view (orthographic cameras use one)" )
         uint32 _shadowCascadeCount;
+        PROPERTY( Category = "Shadow", DisplayName = "Shadow Shape", Tooltip = "Light source size for soft shadows" )
+        LightShadowSettings _shadowSettings;
         PROPERTY( Category = "Shadow", DisplayName = "Cast Shadow", Tooltip = "Render this light into the shadow map" )
         uint8                  _bCastShadow   : 1;
         [[maybe_unused]] uint8 _reservedLight : 7;

@@ -37,9 +37,17 @@ namespace sw
         , _radius{ SpotLightComponentInternal::kDefaultRadius }
         , _innerConeAngle{ SpotLightComponentInternal::kDefaultInnerCone }
         , _outerConeAngle{ SpotLightComponentInternal::kDefaultOuterCone }
+        , _shadowSettings{}
         , _bCastShadow{ SW_FALSE }
         , _reservedSpotLight{ 0 }
     {
+    }
+
+    void SpotLightComponent::setShadowSettings( const LightShadowSettings& settings )
+    {
+        _shadowSettings             = settings;
+        _shadowSettings._sourceSize = MathUtil::max( settings._sourceSize, 0.0f );
+        onPropertyChanged( hashed_string( "_shadowSettings" ) );
     }
 
     void SpotLightComponent::setCastShadow( bool bCastShadow )
@@ -86,5 +94,6 @@ namespace sw
         // 원뿔은 **코사인으로** 보낸다. 셰이더가 픽셀마다 acos 를 하지 않게 하려는 것이다.
         outLight._params._y = MathUtil::cos( _outerConeAngle );
         outLight._params._z = MathUtil::cos( _innerConeAngle );
+        _shadowSettings.writeGPULightFields( outLight );
     }
 } // namespace sw

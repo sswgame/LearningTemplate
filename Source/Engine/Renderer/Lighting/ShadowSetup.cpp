@@ -5,6 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Rendering/DirectionalLightComponent.h"
 
 namespace sw
@@ -233,6 +234,8 @@ namespace sw
                                                ( static_cast<float32>( cell._y + cell._size ) - 0.5f ) * inverseResolution };
                 info._colorIntensity = float4{ texelAngle * Internal::kLocalNormalOffsetTexels, texelAngle * Internal::kLocalDepthBiasTexels, inverseResolution,
                                                Internal::kLocalShadowStrength };
+                // PCSS 가 가리개 깊이를 시선 깊이로 되돌리고(가까운 면 · 먼 면) 반그림자를 텍셀로 잰다(원천 반지름 = 빛 원소의 `_extra.x`, `LightShadowSettings`).
+                info._directionType = float4{ nearPlane, radius, texelAngle, MathUtil::max( light._extra._x, 0.0f ) };
                 outFrame._listTileElement.push_back( info );
             }
             outFrame._listLocalBound.push_back( float4{ position._x, position._y, position._z, radius } );
@@ -243,13 +246,14 @@ namespace sw
     ViewShadowData FrameShadowData::makeViewShadow( const DirectionalShadowProjection& projection, const ShadowAtlasLayout& layout, const vector<float4>& listLocalBound )
     {
         ViewShadowData data{};
-        data._lightViewProj = projection._viewProj;
-        data._cullViewProj  = listLocalBound.empty()
-                                ? projection._viewProj
-                                : ShadowSetupInternal::makeUnionCullViewProj( projection._lightView, projection._lightSpaceMin, projection._lightSpaceMax, listLocalBound );
-        data._shadowParams  = projection.computeShaderParams();
-        data._cascadeCount  = MathUtil::clamp( MathUtil::min( projection._cascadeCount, layout.getCascadeCount() ), 1u, shaderslot::kShadowCascadeMax );
-        data._cascadeLayout = float4{ static_cast<float32>( data._cascadeCount ), layout.getCascadeTileScale(), kCascadeBlendFraction, 0.0f };
+        data._lightViewProj            = projection._viewProj;
+        data._cullViewProj             = listLocalBound.empty()
+                                           ? projection._viewProj
+                                           : ShadowSetupInternal::makeUnionCullViewProj( projection._lightView, projection._lightSpaceMin, projection._lightSpaceMax, listLocalBound );
+        data._shadowParams             = projection.computeShaderParams();
+        data._directionalPenumbraScale = ShadowFilter::computeDirectionalPenumbraScale( projection._depthRange, projection._sourceAngle, projection._texelWorldSize );
+        data._cascadeCount             = MathUtil::clamp( MathUtil::min( projection._cascadeCount, layout.getCascadeCount() ), 1u, shaderslot::kShadowCascadeMax );
+        data._cascadeLayout            = float4{ static_cast<float32>( data._cascadeCount ), layout.getCascadeTileScale(), kCascadeBlendFraction, 0.0f };
         for ( uint32 cascadeIndex = 0; cascadeIndex < shaderslot::kShadowCascadeMax; ++cascadeIndex )
         {
             const bool bUsed                   = cascadeIndex < data._cascadeCount;

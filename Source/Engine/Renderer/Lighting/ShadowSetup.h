@@ -103,6 +103,7 @@ namespace sw
         float4         _cascadeLayout{};                                 ///< `g_ShadowCascadeLayout`: x 캐스케이드 수, y 슬롯 배율, z 경계 섞기 폭(캐스케이드 깊이 구간의 비율), w 0
         float4         _arrCascade[shaderslot::kShadowCascadeMax]{};     ///< `g_ShadowCascade0..3` — (배율, 이동 x, 이동 y, 깊이 끝)
         ShadowTileDraw _arrCascadeTile[shaderslot::kShadowCascadeMax]{}; ///< 캐스케이드마다 그릴 행렬과 슬롯
+        float32        _directionalPenumbraScale{ 0.0f };                ///< PCSS 반그림자 배율(`ShadowFilter::computeDirectionalPenumbraScale`) — `g_ShadowFilter.y`
         uint32         _cascadeCount{ 0 };
         uint8          _bValid{ SW_FALSE };
     };
@@ -164,7 +165,7 @@ namespace sw
          * @details 우선순위는 화면 크기의 대리값(경계 구 반경 / 카메라 깊이)이 큰 빛부터입니다. 언리얼이 그림자 해상도와 아틀라스 위치를 투영한 화면 반경으로
          *          고르는 것과 같은 기준입니다. @p pPriorityViewProj 가 없으면(카메라 없음) 목록 순서입니다. 값이 같으면 목록 순서를 지킵니다.
          *          슬롯을 받은 빛 원소에 `_params.x = 1`, `_params.w = 첫 타일 원소의 상대 번호` 를 쓰고, 타일마다 라이트 버퍼 원소 둘(아틀라스 위치를 접은 뷰-투영,
-         *          슬롯 사각형과 바이어스), 그릴 타일, 경계 구를 더합니다. 점광의 면은 +X −X +Y −Y +Z −Z 순서이고 시야각은 90°에 PCF 여유 텍셀을 더한 것입니다.
+         *          슬롯 사각형과 바이어스 — 그 원소의 `_directionType` 은 PCSS 의 (가까운 면, 먼 면, 거리 1 m 의 텍셀 길이, 원천 반지름)), 그릴 타일, 경계 구를 더합니다. 점광의 면은 +X −X +Y −Y +Z −Z 순서이고 시야각은 90°에 PCF 여유 텍셀을 더한 것입니다.
          * @param pPriorityViewProj 주 시점 카메라의 뷰-투영(우선순위의 기준). nullptr 이면 목록 순서입니다.
          */
         static void populateLocalShadows( const ShadowAtlasLayout& layout, const float4x4* pPriorityViewProj, const vector<uint32>& listShadowLightIndex,

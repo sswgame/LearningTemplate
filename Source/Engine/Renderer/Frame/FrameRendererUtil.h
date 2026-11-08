@@ -555,6 +555,8 @@ namespace sw
         /// @brief 캐스케이드마다 (배율, 이동 x, 이동 y, 깊이 끝)입니다. 이름이 넷인 까닭: 배열 멤버의 리플렉션 이름이 백엔드마다 다르다(GL 은 `[0]` 이 붙는다).
         hashed_string _arrShadowCascade[shaderslot::kShadowCascadeMax]{ hashed_string{ "g_ShadowCascade0" }, hashed_string{ "g_ShadowCascade1" },
                                                                         hashed_string{ "g_ShadowCascade2" }, hashed_string{ "g_ShadowCascade3" } };
+        /// @brief 그림자 필터입니다 — x 품질(0 PCF 3x3, 1 PCSS), y 방향광 반그림자 배율, z · w 커널 반지름 상한 · 하한(텍셀). `ShadowFilter::makeShaderParams`.
+        hashed_string _shadowFilter{ "g_ShadowFilter" };
         hashed_string _bloomParams{ "g_BloomParams" };
         /// @brief 카메라별 색 보정입니다 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기. `CameraPostProcessValues`, post_grade.hlsli.
         hashed_string _cameraGrade{ "g_CameraGrade" };
