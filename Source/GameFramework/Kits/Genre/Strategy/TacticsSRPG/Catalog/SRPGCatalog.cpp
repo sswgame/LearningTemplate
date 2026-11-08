@@ -73,7 +73,7 @@ namespace sw
                 bool bValid = true;
                 for ( int32 stat = 0; stat < kSRPGPilotStatCount; ++stat )
                 {
-                    std::optional<int32> value;
+                    optional<int32> value;
                     if ( node.readOptionalAttribute( arrName[stat], value ) == false )
                         bValid = false;
                     else if ( value.has_value() )

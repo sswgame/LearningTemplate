@@ -238,12 +238,12 @@ namespace sw
         return _bFailed == false && _bRootWritten && _depth == 0;
     }
 
-    std::optional<JSONText> JSONWriter::finish()
+    optional<JSONText> JSONWriter::finish()
     {
         const bool bOwnsBuffer = _pString == &_ownedText;
         SW_ASSERT( bOwnsBuffer );
         if ( bOwnsBuffer == false || isComplete() == false )
-            return std::nullopt;
+            return nullopt;
         _bFailed = SW_TRUE; // 꺼낸 뒤에는 쓰지 않는다 — 이어 쓰면 빈 버퍼에 조각이 생긴다
         return JSONText{ std::move( _ownedText ) };
     }

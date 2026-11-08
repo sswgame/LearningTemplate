@@ -317,7 +317,7 @@ namespace sw
         {
             // `loop` 는 적지 않음 · 참 · 거짓 셋이라 스키마 칸이 아니다 — 적었을 때만 클립 설정을 덮는다.
             AnimationGraphNodeParams params;
-            std::optional<bool>      loop;
+            optional<bool>           loop;
             if ( Internal::isTag( nodeXML, "node", "nodes", sourceLabel ) == false ||
                  ( Internal::readElement( nodeXML, params, sourceLabel, Internal::kArrNodeChild, { "loop" } ) && ( nodeXML.getAttributeText( "loop" ).empty() || nodeXML.readOptionalAttribute( "loop", loop ) ) ) == false )
             {

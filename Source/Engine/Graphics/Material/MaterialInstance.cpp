@@ -705,9 +705,9 @@ namespace sw
             return false;
 
         // 칸은 스키마(MaterialXML.h)가 정한다. 품질은 적지 않음이 "덮어쓰지 않음"이라 따로 읽는다.
-        const string_view                   sourceName{ root.getAttributeText( "name" ) };
-        MaterialInstanceRootParams          rootParams;
-        std::optional<MaterialQualityLevel> quality;
+        const string_view              sourceName{ root.getAttributeText( "name" ) };
+        MaterialInstanceRootParams     rootParams;
+        optional<MaterialQualityLevel> quality;
         if ( XMLFields::readFields( root, rootParams, sourceName, { "formatVersion", "quality" } ) == false ||
              XMLFields::readOptionalEnum( root, "quality", quality, sourceName ) == false )
             return false;

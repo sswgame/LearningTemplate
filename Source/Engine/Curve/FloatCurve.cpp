@@ -27,10 +27,10 @@ namespace sw
         return h00 * _value + h10 * span * _leaveTangent + h01 * next._value + h11 * span * next._arriveTangent;
     }
 
-    std::optional<float32> FloatCurve::evaluate( float32 time ) const
+    optional<float32> FloatCurve::evaluate( float32 time ) const
     {
         if ( _listKey.empty() )
-            return std::nullopt;
+            return nullopt;
         if ( time <= _listKey.front()._time )
             return _listKey.front()._value;
         if ( time >= _listKey.back()._time )

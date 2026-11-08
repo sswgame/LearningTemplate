@@ -52,7 +52,7 @@ namespace sw
             {
                 ShaderCookSummary _summary{};
                 /** @brief 소스 · include 해석기입니다 — 컴파일러와 같은 규칙으로 계획 · 스탬프 쓰기 · 최신 판정이 함께 쓴다(쿠킹 시작 때 한 번 만든다). */
-                std::optional<ShaderSourceResolver> _resolver;
+                optional<ShaderSourceResolver> _resolver;
                 /** @brief 쿠킹 출력의 루트(`--cooked-dir`)입니다. 바이너리는 `<여기>/<domain>/shaders/bin/<rhi>` 에 쓴다 — 씬 · 프리팹 쿠킹본과 같은 스테이징이다. */
                 string _cookedDir;
                 /** @brief 출력 폴더(`.../bin/<rhi>`)마다 그 바이너리의 소스 폴더(`<리소스 루트>/<domain>/shaders`)입니다. 스탬프 키가 소스 폴더 기준이다(계획 단계가 채운다). */
@@ -190,9 +190,9 @@ namespace sw
             static void planRequest( const ShaderCookRequest& request, const vector<ShaderTargetFormat>& listTargetFormat, CookState& ioState, vector<FormatTask>& outListTask )
             {
                 // 소스는 컴파일러와 같은 해석기로 푼다. 출력은 쿠킹 스테이징의 같은 상대 자리다 — 런타임이 팩에서 읽는 자리와 같은 규칙 하나(`ShaderBinaryLocation`)로 정한다.
-                const ShaderSourceID                    source{ request._shaderPath };
-                string                                  error;
-                const std::optional<ShaderCompileInput> input = ioState._resolver->resolve( source, error );
+                const ShaderSourceID               source{ request._shaderPath };
+                string                             error;
+                const optional<ShaderCompileInput> input = ioState._resolver->resolve( source, error );
                 if ( input.has_value() == false )
                 {
                     ++ioState._summary._failedCount;
@@ -416,8 +416,8 @@ namespace sw
         outListDomain.clear();
         for ( const ShaderCookRequest& request : listRequest )
         {
-            const ShaderSourceID             source{ request._shaderPath }; // 폴더 값은 이 객체의 글을 가리킨다
-            const std::optional<string_view> shadersFolder = source.getShadersFolder();
+            const ShaderSourceID        source{ request._shaderPath }; // 폴더 값은 이 객체의 글을 가리킨다
+            const optional<string_view> shadersFolder = source.getShadersFolder();
             if ( shadersFolder.has_value() == false || StringUtil::endsWith( *shadersFolder, kShadersSuffix ) == false )
                 continue;
             string domain{ shadersFolder->substr( 0, shadersFolder->size() - kShadersSuffix.size() ) };

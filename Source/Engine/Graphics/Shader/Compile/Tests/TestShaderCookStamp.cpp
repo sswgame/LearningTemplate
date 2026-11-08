@@ -39,12 +39,12 @@ namespace
                    FileUtil::writeTextFile( FileUtil::joinPath( _commonShaders, "x.hlsli" ), "float4 x() { return 1; }\n" );
         }
 
-        [[nodiscard]] std::optional<ShaderIncludeResolver> makeResolver() const
+        [[nodiscard]] optional<ShaderIncludeResolver> makeResolver() const
         {
             const optional<AbsolutePath> engine = AbsolutePath::tryMake( _engineShaders );
             const optional<AbsolutePath> common = AbsolutePath::tryMake( _commonShaders );
             if ( engine.has_value() == false || common.has_value() == false )
-                return std::nullopt;
+                return nullopt;
             return ShaderIncludeResolver{
                 vector<ShaderIncludeRootDomain>{ ShaderIncludeRootDomain{ "engine", *engine }, ShaderIncludeRootDomain{ "common", *common } }
             };
@@ -64,7 +64,7 @@ SW_TEST_CASE( ShaderCookStampTest, AbsentCandidateThatAppearsMakesTheCookStale )
 {
     const StampFixture fixture;
     SW_REQUIRE_TRUE( fixture.create() );
-    const std::optional<ShaderIncludeResolver> resolver = fixture.makeResolver();
+    const optional<ShaderIncludeResolver> resolver = fixture.makeResolver();
     SW_REQUIRE_TRUE( resolver.has_value() );
 
     unordered_map<string, vector<string>> mapIncluded;

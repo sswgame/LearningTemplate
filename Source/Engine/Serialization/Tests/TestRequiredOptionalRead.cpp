@@ -23,11 +23,11 @@ SW_TEST_CASE( RequiredOptionalReadTest, XMLAttributeAndChild )
     SW_EXPECT_EQUAL( sw::string( "Orc" ), unit.readRequiredAttribute<sw::string>( "name" ).value_or( sw::string{} ) );
     SW_EXPECT_EQUAL( 4, unit.readRequiredChild<int32>( "Armor" ).value_or( 0 ) );
 
-    std::optional<int32> optional;
-    SW_EXPECT_TRUE( unit.readOptionalAttribute( "missing", optional ) );
-    SW_EXPECT_FALSE( optional.has_value() );
-    SW_EXPECT_TRUE( unit.readOptionalAttribute( "hp", optional ) );
-    SW_EXPECT_EQUAL( 12, optional.value_or( 0 ) );
+    optional<int32> maybe;
+    SW_EXPECT_TRUE( unit.readOptionalAttribute( "missing", maybe ) );
+    SW_EXPECT_FALSE( maybe.has_value() );
+    SW_EXPECT_TRUE( unit.readOptionalAttribute( "hp", maybe ) );
+    SW_EXPECT_EQUAL( 12, maybe.value_or( 0 ) );
 
     SW_EXPECT_LOG( "Xml.MissingRequired" );
     SW_EXPECT_LOG( "Xml.AttributeTypeMismatch" );
@@ -35,9 +35,9 @@ SW_TEST_CASE( RequiredOptionalReadTest, XMLAttributeAndChild )
     SW_EXPECT_FALSE( unit.readRequiredAttribute<int32>( "missing" ).has_value() );
     SW_EXPECT_FALSE( unit.readRequiredAttribute<int32>( "bad" ).has_value() );
     SW_EXPECT_FALSE( unit.readRequiredAttribute<uint32>( "huge" ).has_value() ); // 음수는 부호 없는 칸에 감기지 않는다
-    SW_EXPECT_FALSE( unit.readOptionalAttribute( "bad", optional ) );
-    SW_EXPECT_FALSE( optional.has_value() );
-    std::optional<int32> child;
+    SW_EXPECT_FALSE( unit.readOptionalAttribute( "bad", maybe ) );
+    SW_EXPECT_FALSE( maybe.has_value() );
+    optional<int32> child;
     SW_EXPECT_FALSE( unit.readOptionalChild( "Broken", child ) );
     SW_EXPECT_FALSE( unit.readRequiredChild<int32>( "Shield" ).has_value() );
 }
@@ -53,12 +53,12 @@ SW_TEST_CASE( RequiredOptionalReadTest, JSONNullIsAbsentAndIntegerReadsAsFloat )
     SW_EXPECT_NEAR( 0.25f, root.readRequired<float32>( "ratio" ).value_or( 0.0f ), 1e-6 );
     SW_EXPECT_NEAR( 3.0f, root.readRequired<float32>( "count" ).value_or( 0.0f ), 1e-6 ); // 정수는 실수 칸에 읽힌다
 
-    std::optional<int32> optional{ 5 };
-    SW_EXPECT_TRUE( root.readOptional( "none", optional ) );
-    SW_EXPECT_FALSE( optional.has_value() );
+    optional<int32> maybe{ 5 };
+    SW_EXPECT_TRUE( root.readOptional( "none", maybe ) );
+    SW_EXPECT_FALSE( maybe.has_value() );
 
     SW_EXPECT_LOG( "JSON.WrongType" );
     SW_EXPECT_FALSE( root.readRequired<int32>( "text" ).has_value() ); // 글로 쓴 숫자는 숫자가 아니다
     SW_EXPECT_FALSE( root.readRequired<bool>( "count" ).has_value() );
-    SW_EXPECT_FALSE( root.readOptional( "fraction", optional ) );
+    SW_EXPECT_FALSE( root.readOptional( "fraction", maybe ) );
 }

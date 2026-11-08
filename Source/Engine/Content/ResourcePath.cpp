@@ -38,16 +38,16 @@ namespace sw
 
 namespace sw
 {
-    std::optional<ResourcePath> ResourcePath::tryMake( string_view domain, string_view relative )
+    optional<ResourcePath> ResourcePath::tryMake( string_view domain, string_view relative )
     {
         // 절대 경로(`/x` · `\x` · `C:/x`)는 리소스 경로가 아니다 - 앞 구분자를 지워 상대로 바꾸지 않고 거절한다.
         if ( relative.empty() || relative[0] == '/' || relative[0] == '\\' )
-            return std::nullopt;
+            return nullopt;
 
         string normalizedDomain;
         string normalizedRelative;
         if ( normalizeComponents( domain, normalizedDomain ) == false || normalizeComponents( relative, normalizedRelative ) == false || normalizedRelative.empty() )
-            return std::nullopt;
+            return nullopt;
 
         return ResourcePath{ std::move( normalizedDomain ), std::move( normalizedRelative ) };
     }
@@ -55,7 +55,7 @@ namespace sw
     bool DomainTable::add( string_view name, int32 priority, bool bCooked )
     {
         // 이름도 리소스 경로와 같은 정규화를 거친다 - 같은 이름이 글자만 달라 둘 들어가지 않게.
-        const std::optional<ResourcePath> normalized = ResourcePath::tryMake( {}, name );
+        const optional<ResourcePath> normalized = ResourcePath::tryMake( {}, name );
         if ( normalized.has_value() == false || find( normalized->relative() ) != nullptr )
             return false;
 
@@ -86,12 +86,12 @@ namespace sw
         return result;
     }
 
-    std::optional<ResourcePath> DomainTable::split( string_view reference ) const
+    optional<ResourcePath> DomainTable::split( string_view reference ) const
     {
         // 정규화한 뒤 가른다 - 대소문자 · 구분자가 달라도 같은 도메인으로 간다.
-        const std::optional<ResourcePath> whole = ResourcePath::tryMake( {}, reference );
+        const optional<ResourcePath> whole = ResourcePath::tryMake( {}, reference );
         if ( whole.has_value() == false )
-            return std::nullopt;
+            return nullopt;
 
         const string&             text  = whole->relative();
         const DomainTable::Entry* pBest = nullptr;

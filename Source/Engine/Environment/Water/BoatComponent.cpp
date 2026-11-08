@@ -171,7 +171,7 @@ namespace sw
             float32      sailAngle    = 0.0f;
             if ( computeSailAngle( forward, apparentWind, sailAngle ) )
             {
-                const std::optional<float32> efficiency = _sailEfficiency.evaluate( sailAngle ); // 키가 있는 곡선만 여기에 온다
+                const optional<float32> efficiency = _sailEfficiency.evaluate( sailAngle ); // 키가 있는 곡선만 여기에 온다
                 if ( efficiency.has_value() )
                 {
                     _state._sailForce = computeSailForce( _sailArea, float2{ apparentWind._x, apparentWind._z }.getLength(), *efficiency ) * _input._throttle;

@@ -216,7 +216,7 @@ namespace sw
             entry._context = string{ entryNode.getAttributeText( "context" ) };
             entry._comment = string{ entryNode.getAttributeText( "comment" ) };
             // 최대 길이는 없으면 항목의 초기값(제한 없음 0)이다.
-            std::optional<uint32> maxLength;
+            optional<uint32> maxLength;
             if ( entryNode.readOptionalAttribute( "maxLength", maxLength ) == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' maxLength must be a non-negative integer";
@@ -332,7 +332,7 @@ namespace sw
             TranslationEntry entry;
             entry._text              = string{ entryNode.getAttributeText( "text" ) };
             entry._translatorComment = string{ entryNode.getAttributeText( "translatorComment" ) };
-            std::optional<bool> review;
+            optional<bool> review;
             if ( entryNode.readOptionalAttribute( "review", review ) == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' review must be true or false";

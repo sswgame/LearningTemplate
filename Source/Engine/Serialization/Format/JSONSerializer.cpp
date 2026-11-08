@@ -387,10 +387,10 @@ namespace sw
                 if ( pEnumInfo != nullptr )
                 {
                     // 모르는 이름 · 값이면 쓰지 않고 실패한다(XML 과 같다 — `EnumInfo::tryParseText`).
-                    int64                      parsedValue{ 0 };
-                    const std::optional<int64> number = src.isNumber() ? src.read<int64>() : std::nullopt;
-                    const string               text   = src.isString() ? string( src.asString() ) : number.has_value() ? sw::to_string( *number )
-                                                                                                                       : src.dump();
+                    int64                 parsedValue{ 0 };
+                    const optional<int64> number = src.isNumber() ? src.read<int64>() : nullopt;
+                    const string          text   = src.isString() ? string( src.asString() ) : number.has_value() ? sw::to_string( *number )
+                                                                                                                  : src.dump();
                     if ( ( src.isString() || number.has_value() ) && pEnumInfo->tryParseText( text, parsedValue ) )
                     {
                         pEnumInfo->writeValueToMemory( pValPtr, parsedValue );
@@ -444,8 +444,8 @@ namespace sw
                     bool bVal = false;
                     if ( field.isBool() || field.isNumber() )
                     {
-                        const std::optional<bool>  flag   = field.isBool() ? field.read<bool>() : std::nullopt;
-                        const std::optional<int64> number = field.isNumber() ? field.read<int64>() : std::nullopt;
+                        const optional<bool>  flag   = field.isBool() ? field.read<bool>() : nullopt;
+                        const optional<int64> number = field.isNumber() ? field.read<int64>() : nullopt;
                         if ( flag.has_value() == false && number.has_value() == false )
                             return FieldReadResult::FieldFailed;
                         bVal = flag.has_value() ? *flag : *number != 0;
@@ -591,7 +591,7 @@ namespace sw
                 if ( pOutVersion == nullptr )
                     continue;
                 // 판 번호가 부호 없는 정수가 아니면 이관을 고를 수 없다 — 0 판으로 읽지 않고 실패한다(읽기가 값을 알린다).
-                const std::optional<uint32> version = field.read<uint32>();
+                const optional<uint32> version = field.read<uint32>();
                 if ( version.has_value() == false )
                     return FieldReadResult::ObjectRejected; // 판을 모르면 이관할 수 없다 — 칸 하나가 아니라 객체째 실패다
                 *pOutVersion = *version;

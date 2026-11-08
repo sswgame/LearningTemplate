@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    std::optional<string_view> ShaderSourceID::getShadersFolder() const
+    optional<string_view> ShaderSourceID::getShadersFolder() const
     {
         // 칸 단위로 본다 — `myshaders/` 나 `shadersx/` 는 `shaders` 칸이 아니다(예전 글자 검색 `shaders/` 는 앞을, `/shaders/` 는 둘 다 놓쳤다).
         const string_view id     = _id.view();
@@ -24,12 +24,12 @@ namespace sw
             const size_t      componentEnd   = id.find( '/', componentBegin );
             const string_view component      = id.substr( componentBegin, componentEnd == string_view::npos ? string_view::npos : componentEnd - componentBegin );
             if ( componentEnd == string_view::npos )
-                return std::nullopt; // 마지막 칸은 파일 이름이다
+                return nullopt; // 마지막 칸은 파일 이름이다
             if ( StringUtil::equals( component, folder, true ) )
                 return id.substr( 0, componentEnd );
             begin = componentEnd;
         }
-        return std::nullopt;
+        return nullopt;
     }
 
     string ShaderSourceID::getStemLower() const
@@ -37,11 +37,11 @@ namespace sw
         return StringUtil::toLower( FileUtil::removeExtension( FileUtil::getFileNamePart( _id.view() ) ).c_str() );
     }
 
-    std::optional<ShaderBinaryLocation> ShaderBinaryLocation::make( const ShaderSourceID& source, ShaderTargetFormat format )
+    optional<ShaderBinaryLocation> ShaderBinaryLocation::make( const ShaderSourceID& source, ShaderTargetFormat format )
     {
-        const std::optional<string_view> shadersFolder = source.getShadersFolder();
+        const optional<string_view> shadersFolder = source.getShadersFolder();
         if ( shadersFolder.has_value() == false )
-            return std::nullopt;
+            return nullopt;
         return makeUnderShadersFolder( *shadersFolder, format );
     }
 
@@ -72,18 +72,18 @@ namespace sw
     {
     }
 
-    std::optional<AbsolutePath> ShaderIncludeResolver::findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes, vector<string>& outListAbsentCandidate ) const
+    optional<AbsolutePath> ShaderIncludeResolver::findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes, vector<string>& outListAbsentCandidate ) const
     {
         for ( const AbsolutePath& root : input._listIncludeRoot )
         {
-            const string                      candidate = FileUtil::normalizeSeparators( FileUtil::joinPath( root.str(), includeName ) );
-            const std::optional<AbsolutePath> found     = readInclude( candidate, outBytes );
+            const string                 candidate = FileUtil::normalizeSeparators( FileUtil::joinPath( root.str(), includeName ) );
+            const optional<AbsolutePath> found     = readInclude( candidate, outBytes );
             if ( found.has_value() )
                 return found;
             if ( isAbsentCandidate( candidate ) )
                 outListAbsentCandidate.push_back( candidate );
         }
-        return std::nullopt;
+        return nullopt;
     }
 
     bool ShaderIncludeResolver::isAbsentCandidate( string_view candidatePath )
@@ -91,14 +91,14 @@ namespace sw
         return FileUtil::isAbsolutePath( candidatePath ) && FileUtil::exists( candidatePath ) == false;
     }
 
-    std::optional<AbsolutePath> ShaderIncludeResolver::readInclude( string_view candidatePath, vector<uint8>& outBytes ) const
+    optional<AbsolutePath> ShaderIncludeResolver::readInclude( string_view candidatePath, vector<uint8>& outBytes ) const
     {
         outBytes.clear();
         const optional<AbsolutePath> candidate = AbsolutePath::tryMake( candidatePath );
         if ( candidate.has_value() == false || FileUtil::isRegularFile( candidate->str() ) == false )
-            return std::nullopt;
+            return nullopt;
         if ( FileUtil::readFile( candidate->str(), outBytes ) == false ) // 실패 로그는 readFile 이 남긴다
-            return std::nullopt;
+            return nullopt;
         return candidate;
     }
 
@@ -108,54 +108,54 @@ namespace sw
     {
     }
 
-    std::optional<ShaderSourceResolver> ShaderSourceResolver::make( const AssetPaths& assetPaths )
+    optional<ShaderSourceResolver> ShaderSourceResolver::make( const AssetPaths& assetPaths )
     {
         vector<string> listDomain;
         if ( ShaderCookStamp::collectIncludeRootDomains( assetPaths.getSearchPriority(), listDomain ) == false )
-            return std::nullopt; // 오류는 위 함수가 남겼다
+            return nullopt; // 오류는 위 함수가 남겼다
         vector<ShaderIncludeRootDomain> listRootDomain;
         for ( string& domain : listDomain )
         {
-            const std::optional<AbsolutePath> folder = assetPaths.toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
+            const optional<AbsolutePath> folder = assetPaths.toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
             if ( folder.has_value() == false || FileUtil::isDirectory( folder->str() ) == false )
             {
                 SW_LOG_ERROR_ID( "ShaderSource.ShaderIncludeRootNo", "Shader include root '%#/%#' has no folder on disk - the engine headers cannot be found", domain, constant::path::kShaderFolder );
-                return std::nullopt;
+                return nullopt;
             }
             listRootDomain.push_back( ShaderIncludeRootDomain{ std::move( domain ), *folder } );
         }
         return ShaderSourceResolver{ assetPaths, ShaderIncludeResolver{ std::move( listRootDomain ) } };
     }
 
-    std::optional<ShaderCompileInput> ShaderSourceResolver::resolve( const ShaderSourceID& source, string& outError ) const
+    optional<ShaderCompileInput> ShaderSourceResolver::resolve( const ShaderSourceID& source, string& outError ) const
     {
-        const std::optional<string_view> shadersFolderID = source.getShadersFolder();
+        const optional<string_view> shadersFolderID = source.getShadersFolder();
         if ( shadersFolderID.has_value() == false )
         {
             outError = "Shader source id has no domain 'shaders' folder: " + source.str();
-            return std::nullopt;
+            return nullopt;
         }
-        const std::optional<AbsolutePath> sourceFile = _pAssetPaths->findLooseFile( source.str() );
+        const optional<AbsolutePath> sourceFile = _pAssetPaths->findLooseFile( source.str() );
         if ( sourceFile.has_value() == false || FileUtil::isRegularFile( sourceFile->str() ) == false )
         {
             outError = "Shader source file not found: " + source.str();
-            return std::nullopt;
+            return nullopt;
         }
-        const std::optional<AbsolutePath> shadersFolder = _pAssetPaths->toDiskPath( *shadersFolderID );
-        const bool                        bInsideFolder = shadersFolder.has_value() &&
+        const optional<AbsolutePath> shadersFolder = _pAssetPaths->toDiskPath( *shadersFolderID );
+        const bool                   bInsideFolder = shadersFolder.has_value() &&
                                    FileUtil::startsWithPathComponent( StringUtil::toLower( sourceFile->c_str() ), StringUtil::toLower( shadersFolder->c_str() ) );
         if ( bInsideFolder == false )
         {
             // 스탬프 키와 가림 검사는 소스가 자기 `shaders` 폴더 아래라는 데 기댄다 - 다른 자리로 풀린 소스(덮어쓴 도메인)를 고르지 않고 멈춘다.
             outError = "Shader source '" + source.str() + "' resolves to '" + sourceFile->str() + "', outside its 'shaders' folder";
-            return std::nullopt;
+            return nullopt;
         }
 
         const optional<AbsolutePath> sourceDir = AbsolutePath::tryMake( FileUtil::getDirectoryPart( sourceFile->str() ) );
         if ( sourceDir.has_value() == false )
         {
             outError = "Shader source folder cannot be resolved: " + sourceFile->str();
-            return std::nullopt;
+            return nullopt;
         }
         vector<AbsolutePath> listIncludeRoot{ *sourceDir };
         for ( const ShaderIncludeRootDomain& rootDomain : _includeResolver.getRootDomains() )
@@ -165,9 +165,9 @@ namespace sw
         return ShaderCompileInput{ *sourceFile, *shadersFolder, std::move( listIncludeRoot ) };
     }
 
-    std::optional<AbsolutePath> ShaderSourceResolver::findDomainShadersFolder( string_view domain ) const
+    optional<AbsolutePath> ShaderSourceResolver::findDomainShadersFolder( string_view domain ) const
     {
-        const std::optional<AbsolutePath> folder = _pAssetPaths->toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
-        return folder.has_value() && FileUtil::isDirectory( folder->str() ) ? folder : std::nullopt;
+        const optional<AbsolutePath> folder = _pAssetPaths->toDiskPath( FileUtil::joinPath( domain, constant::path::kShaderFolder ) );
+        return folder.has_value() && FileUtil::isDirectory( folder->str() ) ? folder : nullopt;
     }
 } // namespace sw

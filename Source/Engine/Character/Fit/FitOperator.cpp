@@ -39,7 +39,7 @@ namespace sw
              */
             static float32 findArgumentOr( const FitPairContext& pair, const utf8* pName, float32 profileValue )
             {
-                const std::optional<float32> argument = pair._pInteraction != nullptr ? pair._pInteraction->findArgument( hashed_string( pName ) ) : std::nullopt;
+                const optional<float32> argument = pair._pInteraction != nullptr ? pair._pInteraction->findArgument( hashed_string( pName ) ) : nullopt;
                 return argument.has_value() ? *argument : profileValue;
             }
 

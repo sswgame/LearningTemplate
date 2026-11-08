@@ -184,12 +184,12 @@ namespace sw
         return it->second._pClip;
     }
 
-    std::optional<AssetLoadState> AudioClipCache::findLoadState( const hashed_string& path ) const
+    optional<AssetLoadState> AudioClipCache::findLoadState( const hashed_string& path ) const
     {
         ScopedLock<mutex> lock{ _mutex };
         const auto        it = _mapPathToEntry.find( path );
         if ( it == _mapPathToEntry.end() )
-            return std::nullopt;
+            return nullopt;
         return it->second._status;
     }
 

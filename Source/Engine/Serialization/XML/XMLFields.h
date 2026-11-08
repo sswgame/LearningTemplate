@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -13,7 +14,6 @@
 #include "Engine/Reflection/TypeFqn.h"
 
 #include <initializer_list>
-#include <optional>
 
 namespace sw
 {
@@ -88,7 +88,7 @@ namespace sw
          *          부르는 쪽은 이 속성을 `readFields` 의 손 읽기 목록에 둔다.
          */
         template <typename E>
-        [[nodiscard]] static bool readOptionalEnum( const XMLNode& node, const utf8* pName, std::optional<E>& outValue, string_view sourceName )
+        [[nodiscard]] static bool readOptionalEnum( const XMLNode& node, const utf8* pName, optional<E>& outValue, string_view sourceName )
         {
             E value{};
             outValue.reset();

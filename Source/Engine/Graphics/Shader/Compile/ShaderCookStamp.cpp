@@ -694,8 +694,8 @@ namespace sw
             /** @brief 도메인 하나의 `bin/<폴더>` 를 판정합니다(`ShaderCookStamp::verifyCookedShaders` 의 본체). */
             static void verifyDomain( const ShaderSourceResolver& resolver, string_view cookedDir, const string& domain, ShaderTargetFormat format, vector<string>& outListProblem )
             {
-                const string_view                 shaderFolder  = ShaderCooker::getSubfolderForFormat( format ); // 문제 글의 이름표 - 자리는 아래 `ShaderBinaryLocation` 이 정한다
-                const std::optional<AbsolutePath> shadersFolder = resolver.findDomainShadersFolder( domain );
+                const string_view            shaderFolder  = ShaderCooker::getSubfolderForFormat( format ); // 문제 글의 이름표 - 자리는 아래 `ShaderBinaryLocation` 이 정한다
+                const optional<AbsolutePath> shadersFolder = resolver.findDomainShadersFolder( domain );
                 if ( shadersFolder.has_value() == false )
                     return;
                 const string& shadersDir = shadersFolder->str();
@@ -948,7 +948,7 @@ namespace sw
             ShaderCookStampInternal::appendProblem( outListProblem, "shader verification needs a content root and the cook staging folder (got '%#', '%#')", resourceRoot, cookedDir );
             return;
         }
-        const std::optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( assetPaths );
+        const optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( assetPaths );
         if ( resolver.has_value() == false )
         {
             ShaderCookStampInternal::appendProblem( outListProblem, "shader domains cannot be found: _listResourcePriority must list the engine and common domains and their shaders folders must exist" );

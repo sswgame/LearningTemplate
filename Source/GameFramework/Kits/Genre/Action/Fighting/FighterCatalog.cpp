@@ -61,8 +61,8 @@ namespace sw
             /** @brief 없어도 되는 정수 속성을 읽습니다. 없으면 @p inoutValue 를 그대로 두고, 깨졌거나 @p minValue 보다 작으면 오류입니다. */
             [[nodiscard]] static bool readOptionalInt( const XMLNode& node, const utf8* pName, int32 minValue, string_view sourceName, int32& inoutValue )
             {
-                std::optional<int32> value;
-                const bool           bRead = node.readOptionalAttribute( pName, value );
+                optional<int32> value;
+                const bool      bRead = node.readOptionalAttribute( pName, value );
                 if ( bRead == false || ( value.has_value() && *value < minValue ) )
                 {
                     SW_LOG_ERROR_ID( "FighterCatalog.IdNeedsIntegerMore", "%#: <%# id=\"%#\" %#=\"%#\"> needs an integer of %# or more", sourceName, node.getName(), node.getAttributeText( "id" ), pName,

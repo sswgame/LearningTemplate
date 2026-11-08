@@ -710,7 +710,7 @@ namespace sw
 
     void ObjectStateBatch::addReferenceTarget( GameObject* pObject, uint64 savedID, hashed_string savedName )
     {
-        addEntry( pObject, savedID, savedName, true, std::nullopt, 0 );
+        addEntry( pObject, savedID, savedName, true, nullopt, 0 );
     }
 
     void ObjectStateBatch::addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, SerializePurpose purpose, bool bExternalParentAllowed, uint64 savedIDScope )
@@ -719,7 +719,7 @@ namespace sw
     }
 
     void ObjectStateBatch::addEntry( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed,
-                                     std::optional<SerializePurpose> loadedPurpose, uint64 savedIDScope )
+                                     optional<SerializePurpose> loadedPurpose, uint64 savedIDScope )
     {
         if ( pObject == nullptr )
             return;

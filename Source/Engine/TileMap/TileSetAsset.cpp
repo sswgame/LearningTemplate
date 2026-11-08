@@ -294,7 +294,7 @@ namespace sw
         }
         if ( node.findAttribute( "cell" ) != nullptr )
         {
-            const std::optional<int32> cell = node.readRequiredAttribute<int32>( "cell" );
+            const optional<int32> cell = node.readRequiredAttribute<int32>( "cell" );
             if ( cell.has_value() == false )
                 return false;
             outVisual._listFrameCell.push_back( *cell );

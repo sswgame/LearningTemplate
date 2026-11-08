@@ -40,7 +40,7 @@ namespace sw
             /** @brief 디스크의 글이 @p text 와 다르면 씁니다. */
             [[nodiscard]] static bool writeIfChanged( const AssetPaths& assetPaths, string_view assetID, string_view text, uint32* pOutWrittenCount )
             {
-                const std::optional<AbsolutePath> diskPath = assetPaths.toDiskPath( assetID );
+                const optional<AbsolutePath> diskPath = assetPaths.toDiskPath( assetID );
                 if ( diskPath.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "MaterialGraph.GeneratedPathUnresolved", "Generated material graph file '%#' has no disk path", assetID );
@@ -77,7 +77,7 @@ namespace sw
             /** @brief 같은 줄기의 옛 해시 셰이더를 지웁니다. 남겨 두면 그 내용을 아무도 안 쓰는데 쿠킹 입력과 저장소에 쌓인다. */
             static void removeStaleShaders( const AssetPaths& assetPaths, const MaterialGraphGeneratedPaths& paths, string_view currentShaderPath )
             {
-                const std::optional<AbsolutePath> folder = assetPaths.toDiskPath( paths._shadersFolder );
+                const optional<AbsolutePath> folder = assetPaths.toDiskPath( paths._shadersFolder );
                 if ( folder.has_value() == false || FileUtil::isDirectory( folder->str() ) == false )
                     return;
                 vector<string> listFile;

@@ -370,10 +370,10 @@ namespace sw
     {
         using Internal = InputMapXMLInternal;
         // `valueType` 은 적지 않음이 뜻이다(바인딩이 정한다) — 스키마 칸이 아니라 적었을 때만 읽는다.
-        InputMapActionParams                params;
-        std::optional<InputActionValueType> valueType;
-        const bool                          bFields   = XMLFields::readFields( actionNode, params, sourceName, { "valueType" } ) && XMLFields::readOptionalEnum( actionNode, "valueType", valueType, sourceName );
-        const bool                          bChildren = XMLNameCheck::reportUnknownChildren( actionNode, Internal::kArrBindingElement, sourceName );
+        InputMapActionParams           params;
+        optional<InputActionValueType> valueType;
+        const bool                     bFields   = XMLFields::readFields( actionNode, params, sourceName, { "valueType" } ) && XMLFields::readOptionalEnum( actionNode, "valueType", valueType, sourceName );
+        const bool                     bChildren = XMLNameCheck::reportUnknownChildren( actionNode, Internal::kArrBindingElement, sourceName );
         if ( bFields == false || bChildren == false )
         {
             inoutbValid = false;

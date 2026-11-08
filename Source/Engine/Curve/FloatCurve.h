@@ -4,11 +4,10 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -67,7 +66,7 @@ namespace sw
         vector<FloatCurveKey> _listKey{};
 
         /** @brief @p time 의 값입니다. 키가 없으면 비어 있습니다 — 호출부가 대체값을 넘기지 않고 "키 없음" 을 직접 다룬다. */
-        [[nodiscard]] std::optional<float32> evaluate( float32 time ) const;
+        [[nodiscard]] optional<float32> evaluate( float32 time ) const;
         /** @brief 키를 시각 순 자리에 넣고 자동 접선을 다시 셉니다. 넣은 자리입니다. */
         uint32 addKey( float32 time, float32 value, CurveInterpolation interpolation = CurveInterpolation::Cubic );
         /** @brief 키를 시각 순으로 정렬하고 `_bAutoTangent` 키의 접선을 이웃 키로 다시 셉니다(가운데 키는 이웃 기울기, 끝 키는 평평). */

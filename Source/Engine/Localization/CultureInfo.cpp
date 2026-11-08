@@ -200,7 +200,7 @@ namespace sw
             /** @brief 글쓰기 방향 · 숫자 체계(@p mapNumberingSystem 의 id) · 의사 로케일을 덮어씁니다. 모르는 이름이면 false 입니다. */
             [[nodiscard]] static bool applyScriptFields( const XMLNode& entry, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo, string& outError )
             {
-                std::optional<bool> bRightToLeft;
+                optional<bool> bRightToLeft;
                 if ( entry.readOptionalAttribute( "rightToLeft", bRightToLeft ) == false )
                 {
                     outError = "rightToLeft must be true or false";
@@ -355,8 +355,8 @@ namespace sw
                     CurrencyInfo currency;
                     currency._code   = string{ entry.getAttributeText( "code" ) };
                     currency._symbol = string{ entry.getAttributeText( "symbol" ) };
-                    std::optional<int32> digits;
-                    const bool           bShape = string_view{ entry.getName() } == "currency" && currency._code.empty() == false && currency._symbol.empty() == false &&
+                    optional<int32> digits;
+                    const bool      bShape = string_view{ entry.getName() } == "currency" && currency._code.empty() == false && currency._symbol.empty() == false &&
                                         entry.readOptionalAttribute( "digits", digits ) && digits.has_value() && 0 <= *digits && *digits <= 4;
                     if ( bShape == false )
                     {

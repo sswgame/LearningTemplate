@@ -41,7 +41,7 @@ namespace
     /** @brief `dxgi` 칸을 읽습니다(없거나 틀리면 0 — DXGI_FORMAT_UNKNOWN 이라 어떤 줄과도 맞지 않는다). */
     uint32 readDXGI( const JSONValue& row )
     {
-        const std::optional<uint32> dxgi = row.get( "dxgi" ).read<uint32>();
+        const optional<uint32> dxgi = row.get( "dxgi" ).read<uint32>();
         return dxgi.has_value() ? *dxgi : 0u;
     }
 } // namespace
@@ -107,7 +107,7 @@ SW_TEST_CASE( DDSFormatFileTest, MatchesTheLoaderTables )
             }
             else
             {
-                const std::optional<uint32> d3dFormat = row.get( "d3dfmt" ).read<uint32>();
+                const optional<uint32> d3dFormat = row.get( "d3dfmt" ).read<uint32>();
                 SW_REQUIRE_TRUE_MSG( d3dFormat.has_value(), "a legacy_fourcc row has neither fourcc nor d3dfmt" );
                 code = *d3dFormat;
             }

@@ -6,10 +6,9 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -93,7 +92,7 @@ namespace sw
          * @brief 가진 버퍼로 쓴 글을 `JSONText` 로 꺼냅니다. 완성되지 않았으면(`isComplete` 가 false) nullopt 이고, 꺼낸 뒤에는 더 쓰지 않는다.
          * @details 버퍼를 받은 쓰기기(문자열 · 고정 버퍼)에서 부르면 단언이고 nullopt 다.
          */
-        [[nodiscard]] std::optional<JSONText> finish();
+        [[nodiscard]] optional<JSONText> finish();
         /** @brief 이 쓰기기가 쓴 바이트 수입니다(고정 버퍼면 0 앞까지의 길이). */
         size_t getWrittenSize() const { return _writtenSize; }
 

@@ -252,8 +252,8 @@ namespace sw
     bool ShaderReflectionLibrary::tryGet( const ShaderCompileDesc& desc, ShaderReflectionData& outReflection )
     {
         SW_MEMORY_SCOPE( Shader );
-        const string_view                         ext      = ShaderCooker::getExtensionForFormat( desc._targetFormat );
-        const std::optional<ShaderBinaryLocation> location = ShaderBinaryLocation::make( desc._source, desc._targetFormat );
+        const string_view                    ext      = ShaderCooker::getExtensionForFormat( desc._targetFormat );
+        const optional<ShaderBinaryLocation> location = ShaderBinaryLocation::make( desc._source, desc._targetFormat );
         if ( location.has_value() == false )
         {
             SW_LOG_ERROR_ID( "ShaderReflectionLibrary.ShaderSourceNotInside", "Shader source is not inside a domain 'shaders' folder: '%#'", desc._source.c_str() );

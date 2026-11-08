@@ -344,7 +344,7 @@ namespace sw
             return false;
         for ( size_t index = 0; index < count; ++index )
         {
-            const std::optional<float32> number = at( offset + index ).read<float32>();
+            const optional<float32> number = at( offset + index ).read<float32>();
             if ( number.has_value() == false )
                 return false;
             pOutValue[index] = *number;

@@ -79,7 +79,7 @@ namespace sw
                         outFlag = pText[0] != '0' ? 1 : 0;
                     return true;
                 }
-                std::optional<int32> value;
+                optional<int32> value;
                 if ( tileNode.readOptionalAttribute( info._pXMLAttribute, value ) == false )
                     return false;
                 if ( value.has_value() )
@@ -100,9 +100,9 @@ namespace sw
             [[nodiscard]] static bool readHeader( const XMLNode& root, TileMapXMLData& data, bool& inoutValid )
             {
                 root.takeChildText( "name", data._name );
-                const std::optional<int32> width      = root.readRequiredChild<int32>( "width" );
-                const std::optional<int32> height     = root.readRequiredChild<int32>( "height" );
-                const bool                 bValidSize = width.has_value() && height.has_value() && *width > 0 && *height > 0;
+                const optional<int32> width      = root.readRequiredChild<int32>( "width" );
+                const optional<int32> height     = root.readRequiredChild<int32>( "height" );
+                const bool            bValidSize = width.has_value() && height.has_value() && *width > 0 && *height > 0;
                 if ( bValidSize == false )
                 {
                     SW_LOG_ERROR_ID( "TileMap.InvalidSize", "<TileMap> needs <width> and <height> of at least 1" );

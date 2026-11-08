@@ -546,12 +546,12 @@ namespace sw
         return _pState->_bInitialized;
     }
 
-    std::optional<AbsolutePath> AssetPaths::findLooseFile( string_view resourceID ) const
+    optional<AbsolutePath> AssetPaths::findLooseFile( string_view resourceID ) const
     {
         // 리소스 id 만 받는다 - 디스크 경로를 받아 있으면 그대로 돌려주던 길은 "id 인가 디스크 경로인가" 를 추측하게 했다(디스크 경로는 `AbsolutePath::tryMake`).
         // 루트 밖으로 나가는 id 는 풀지 않는다(`readResourceCommon` 과 같은 규칙).
         if ( resourceID.empty() || FileUtil::isAbsolutePath( resourceID ) || hasParentDirectoryComponent( resourceID ) )
-            return std::nullopt;
+            return nullopt;
 
         State& state = *_pState;
         // 원문 키다 — 해시만 비교하면 충돌한 다른 파일의 경로를 조용히 돌려준다.
@@ -629,7 +629,7 @@ namespace sw
         if ( AssetPathsInternal::mapGlobalIDToRoot( state, lowerFolder, domainRoot, keyUnderRoot ) )
         {
             // 도메인이 정해진 id 는 폴더가 하나다 — 대소문자 처리까지 하는 `findLooseFile` 로 푼다.
-            const std::optional<AbsolutePath> found = findLooseFile( folderID );
+            const optional<AbsolutePath> found = findLooseFile( folderID );
             if ( found.has_value() && FileUtil::isDirectory( found->str() ) )
                 outListFolder.push_back( found->str() );
             return;
@@ -679,24 +679,24 @@ namespace sw
         return id;
     }
 
-    std::optional<AbsolutePath> AssetPaths::toDiskPath( string_view resourceID ) const
+    optional<AbsolutePath> AssetPaths::toDiskPath( string_view resourceID ) const
     {
         const string id = normalizeAssetID( resourceID );
         if ( id.empty() )
         {
             SW_LOG_ERROR_ID( "AssetPaths.WriteNotResourceID", "'%#' is not a resource id (a disk path, empty or leaving the tree with '..') - nothing is written there", resourceID );
-            return std::nullopt;
+            return nullopt;
         }
         // 이미 있는 파일이면 그 디스크 경로가 답이다(덮어쓸 자리). 상대 키는 읽기가 검색 순서로 고른 그 파일이다.
-        const std::optional<AbsolutePath> existing = findLooseFile( id );
-        string                            result   = existing.has_value() ? existing->str() : string{};
-        string                            domainRoot;
-        string                            keyUnderRoot;
-        const bool                        bGlobalID = AssetPathsInternal::mapGlobalIDToRoot( *_pState, id, domainRoot, keyUnderRoot );
+        const optional<AbsolutePath> existing = findLooseFile( id );
+        string                       result   = existing.has_value() ? existing->str() : string{};
+        string                       domainRoot;
+        string                       keyUnderRoot;
+        const bool                   bGlobalID = AssetPathsInternal::mapGlobalIDToRoot( *_pState, id, domainRoot, keyUnderRoot );
         if ( result.empty() && bGlobalID == false )
         {
             SW_LOG_ERROR_ID( "AssetPaths.WriteRelativeKeyMissing", "'%#' is a relative key with no file yet - give the domain (e.g. game/<pack>/%#) to create it", resourceID, id );
-            return std::nullopt;
+            return nullopt;
         }
         if ( result.empty() )
         {

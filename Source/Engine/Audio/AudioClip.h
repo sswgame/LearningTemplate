@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -20,8 +21,6 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Presentation/AudioPlayableAsset.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -117,7 +116,7 @@ namespace sw
          * @brief 경로의 로드 상태입니다(`AssetLoadState` — 다른 에셋 핸들과 같은 상태, 실패는 다시 요청하면 다시 시도한다). 요청한 적이 없으면(또는 `clear` 뒤) 빈 값입니다.
          * @details "요청한 적 없음" 을 상태 열거형의 한 값으로 두지 않는다 — 그러면 `Failed` 와 한데 묶는 호출처가 생긴다(`AssetHandle.h` 머리말).
          */
-        std::optional<AssetLoadState> findLoadState( const hashed_string& path ) const;
+        optional<AssetLoadState> findLoadState( const hashed_string& path ) const;
 
         /** @brief 지금 디코드해 캐시에 넣고 반환합니다. 이미 있으면 그것을 반환합니다. 읽기나 디코드에 실패하면 nullptr 를 반환합니다. */
         shared_ptr<const AudioClipData> loadClip( const hashed_string& path );

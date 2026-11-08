@@ -606,7 +606,7 @@ namespace sw::editor
         ImGui::SetNextItemWidth( -FLT_MIN );
         if ( ImGui::Combo( "##stateLoop", &loopIndex, arrLoop, 3 ) )
         {
-            pNode->_loop = loopIndex == 0 ? std::optional<bool>{} : std::optional<bool>( loopIndex == 1 );
+            pNode->_loop = loopIndex == 0 ? optional<bool>{} : optional<bool>( loopIndex == 1 );
             notifyDocumentEdited( "Edit Animation State" );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "StateLoopTip" ) );

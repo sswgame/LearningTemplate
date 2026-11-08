@@ -28,9 +28,9 @@ SW_TEST_CASE( JSONDocumentTest, TypedReadsRefuseWrongValues )
     SW_EXPECT_LOG( "JSON.MissingMember" );
     SW_EXPECT_FALSE( root.readRequired<int32>( "absent" ).has_value() );
 
-    std::optional<int32> optional{ 5 };
-    SW_EXPECT_TRUE( root.readOptional( "absent", optional ) ); // 없으면 비우고 true
-    SW_EXPECT_FALSE( optional.has_value() );
+    optional<int32> maybe{ 5 };
+    SW_EXPECT_TRUE( root.readOptional( "absent", maybe ) ); // 없으면 비우고 true
+    SW_EXPECT_FALSE( maybe.has_value() );
 }
 
 /**
@@ -50,7 +50,7 @@ SW_TEST_CASE( JSONDocumentTest, KeepsOrderAndRoundTripsTheWriter )
     writer.valueNull();
     writer.endArray();
     writer.endObject();
-    const std::optional<sw::JSONText> text = writer.finish();
+    const optional<sw::JSONText> text = writer.finish();
     SW_REQUIRE_TRUE( text.has_value() );
 
     sw::JSONDocument document;

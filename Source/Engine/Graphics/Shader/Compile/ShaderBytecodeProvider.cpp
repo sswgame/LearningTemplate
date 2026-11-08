@@ -36,8 +36,8 @@ namespace sw
 
     ShaderCompileResult CookedShaderBytecodeProvider::load( const ShaderCompileDesc& desc ) const
     {
-        using Internal                                     = ShaderBytecodeProviderInternal;
-        const std::optional<ShaderBinaryLocation> location = ShaderBinaryLocation::make( desc._source, desc._targetFormat );
+        using Internal                                = ShaderBytecodeProviderInternal;
+        const optional<ShaderBinaryLocation> location = ShaderBinaryLocation::make( desc._source, desc._targetFormat );
         if ( location.has_value() == false )
         {
             SW_LOG_ERROR_ID( "ShaderCache.ShaderSourceNotInside", "Shader source is not inside a domain 'shaders' folder: '%#'", desc._source.c_str() );

@@ -6,6 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
@@ -13,8 +14,6 @@
 
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -213,9 +212,9 @@ namespace sw
                     outError = string{ kLayerLimitsPath }.append( " cannot be read" );
                     return false;
                 }
-                const std::optional<uint32> maxLayerCount       = doc.getRoot().get( "_maxLayerCount" ).read<uint32>();
-                const std::optional<uint32> maxMaskChannelCount = doc.getRoot().get( "_maxMaskChannelCount" ).read<uint32>();
-                const bool                  bValid              = maxLayerCount.has_value() && *maxLayerCount > 0 && maxMaskChannelCount.has_value() && *maxMaskChannelCount > 0 && *maxMaskChannelCount <= kMaskChannels.size();
+                const optional<uint32> maxLayerCount       = doc.getRoot().get( "_maxLayerCount" ).read<uint32>();
+                const optional<uint32> maxMaskChannelCount = doc.getRoot().get( "_maxMaskChannelCount" ).read<uint32>();
+                const bool             bValid              = maxLayerCount.has_value() && *maxLayerCount > 0 && maxMaskChannelCount.has_value() && *maxMaskChannelCount > 0 && *maxMaskChannelCount <= kMaskChannels.size();
                 if ( bValid == false )
                 {
                     outError = string{ kLayerLimitsPath }.append( " needs _maxLayerCount (1 or more) and _maxMaskChannelCount (1 to 4)" );

@@ -580,10 +580,10 @@ namespace sw
         outListFrame.erase( itUnique, outListFrame.end() );
     }
 
-    std::optional<float32> SequenceKeyTrack::evaluateChannel( uint32 channelIndex, float32 frame ) const
+    optional<float32> SequenceKeyTrack::evaluateChannel( uint32 channelIndex, float32 frame ) const
     {
         if ( channelIndex >= _listChannel.size() )
-            return std::nullopt;
+            return nullopt;
         return _listChannel[channelIndex].evaluate( frame );
     }
 
