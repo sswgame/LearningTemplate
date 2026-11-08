@@ -1,6 +1,7 @@
 // 표면 변형 층 — 도장 모양(SurfaceStampDef), 높이 격자(SurfaceDeformGrid: 찍기 · 겹침 · 메우기 · 창 옮기기 · 텍스처 인코딩), 씬 서비스(SurfaceDeformSystem: 붙잡기 · 놓기 · 띠)(nogpu).
 #include "pch.h"
 
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -168,9 +169,16 @@ SW_TEST_CASE( SurfaceDeformGridTest, TexelsEncodeSinkInRedAndFlatAsWhite )
  */
 SW_TEST_CASE( SurfaceDeformSystemTest, HeldStampStaysUntilReleased )
 {
-    GameObjectManager        manager;
-    SurfaceDeformSystem&     deform = manager.getSubsystem<SurfaceDeformSystem>();
-    const SurfaceStampDef    funnel = SurfaceDeformTestUtil::makeFunnel();
+    GameObjectManager     manager;
+    SurfaceDeformSystem&  deform = manager.getSubsystem<SurfaceDeformSystem>();
+    const SurfaceStampDef funnel = SurfaceDeformTestUtil::makeFunnel();
+    if constexpr ( build::kWithClientCode == false )
+    {
+        // 변형은 보이는 것만이다 — 전용 서버는 격자를 두지 않아 도장을 받지 않는다(SurfaceDeformSystem::ensureGrid).
+        SW_EXPECT_FALSE( deform.addPersistentStamp( funnel, float3{ 3.0f, 0.0f, -2.0f }, 0.0f ).isValid() );
+        SW_EXPECT_EQUAL( 0u, deform.getPersistentStampCount() );
+        return;
+    }
     const SurfaceStampHandle handle = deform.addPersistentStamp( funnel, float3{ 3.0f, 0.0f, -2.0f }, 0.0f );
     SW_REQUIRE_TRUE( handle.isValid() );
     SW_EXPECT_EQUAL( 1u, deform.getPersistentStampCount() );
@@ -204,7 +212,13 @@ SW_TEST_CASE( SurfaceDeformSystemTest, SegmentAndFootstepsStampTheLayer )
 {
     GameObjectManager    manager;
     SurfaceDeformSystem& deform = manager.getSubsystem<SurfaceDeformSystem>();
-    SurfaceStampDef      wheel;
+    if constexpr ( build::kWithClientCode == false )
+    {
+        // 전용 서버는 변형 격자를 두지 않는다 — 찍어도 쌓이지 않는다(SurfaceDeformSystem::ensureGrid)
+        SW_EXPECT_EQUAL( 0u, deform.getPersistentStampCount() );
+        return;
+    }
+    SurfaceStampDef wheel;
     wheel._shape     = SurfaceStampShape::Trail;
     wheel._size      = float2{ 0.2f, 0.2f };
     wheel._depth     = 0.03f;
