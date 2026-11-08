@@ -143,7 +143,7 @@ namespace sw::editor
         }
         _bSeedComments = SW_TRUE;
         _signature     = _model.computeSignature();
-        if ( _model.findNodeIndex( _selectedNode ) < 0 )
+        if ( _model.findNodeIndex( _selectedNode ).has_value() == false )
             _selectedNode = 0;
         _formFrom = PortChoice{};
         _formTo   = PortChoice{};
@@ -289,12 +289,12 @@ namespace sw::editor
         }
         for ( const GimmickGraphWire& wire : _model.getWires() )
         {
-            const int32 fromIndex = _model.findNodeIndex( wire._fromNode );
-            const int32 toIndex   = _model.findNodeIndex( wire._toNode );
-            if ( fromIndex < 0 || toIndex < 0 )
+            const optional<uint32> fromIndex = _model.findNodeIndex( wire._fromNode );
+            const optional<uint32> toIndex   = _model.findNodeIndex( wire._toNode );
+            if ( fromIndex.has_value() == false || toIndex.has_value() == false )
                 continue;
-            const GimmickNodeKind* pFromKind = _model.findKind( _model.getNodes()[static_cast<size_t>( fromIndex )] );
-            const GimmickNodeKind* pToKind   = _model.findKind( _model.getNodes()[static_cast<size_t>( toIndex )] );
+            const GimmickNodeKind* pFromKind = _model.findKind( _model.getNodes()[*fromIndex] );
+            const GimmickNodeKind* pToKind   = _model.findKind( _model.getNodes()[*toIndex] );
             if ( pFromKind == nullptr || pToKind == nullptr )
                 continue;
             const int32 outPort = pFromKind->findOutput( hashed_string( wire._fromPort ) );
@@ -371,10 +371,10 @@ namespace sw::editor
 
     bool GimmickGraphPanel::findGraphPin( int32 pinID, EditorGraphPinInfo& outInfo ) const
     {
-        const int32 nodeIndex = _model.findNodeIndex( GimmickGraphPanelInternal::decodeNode( pinID ) );
-        if ( nodeIndex < 0 )
+        const optional<uint32> nodeIndex = _model.findNodeIndex( GimmickGraphPanelInternal::decodeNode( pinID ) );
+        if ( nodeIndex.has_value() == false )
             return false;
-        const GimmickNodeKind* pKind = _model.findKind( _model.getNodes()[static_cast<size_t>( nodeIndex )] );
+        const GimmickNodeKind* pKind = _model.findKind( _model.getNodes()[*nodeIndex] );
         if ( pKind == nullptr )
             return false;
         const bool   bOutput = GimmickGraphPanelInternal::isOutputPin( pinID );
@@ -396,8 +396,8 @@ namespace sw::editor
             const int32 wireNode = bOutput ? wire._fromNode : wire._toNode;
             if ( wireNode != nodeID )
                 continue;
-            const int32            nodeIndex = _model.findNodeIndex( nodeID );
-            const GimmickNodeKind* pKind     = nodeIndex >= 0 ? _model.findKind( _model.getNodes()[static_cast<size_t>( nodeIndex )] ) : nullptr;
+            const optional<uint32> nodeIndex = _model.findNodeIndex( nodeID );
+            const GimmickNodeKind* pKind     = nodeIndex.has_value() ? _model.findKind( _model.getNodes()[*nodeIndex] ) : nullptr;
             if ( pKind == nullptr )
                 continue;
             const int32 wirePort = bOutput ? pKind->findOutput( hashed_string( wire._fromPort ) ) : pKind->findInput( hashed_string( wire._toPort ) );
@@ -416,10 +416,10 @@ namespace sw::editor
         {
             const int32            fromNode  = GimmickGraphPanelInternal::decodeNode( fromPin );
             const int32            toNode    = GimmickGraphPanelInternal::decodeNode( toPin );
-            const int32            fromIndex = _model.findNodeIndex( fromNode );
-            const int32            toIndex   = _model.findNodeIndex( toNode );
-            const GimmickNodeKind* pFromKind = fromIndex >= 0 ? _model.findKind( _model.getNodes()[static_cast<size_t>( fromIndex )] ) : nullptr;
-            const GimmickNodeKind* pToKind   = toIndex >= 0 ? _model.findKind( _model.getNodes()[static_cast<size_t>( toIndex )] ) : nullptr;
+            const optional<uint32> fromIndex = _model.findNodeIndex( fromNode );
+            const optional<uint32> toIndex   = _model.findNodeIndex( toNode );
+            const GimmickNodeKind* pFromKind = fromIndex.has_value() ? _model.findKind( _model.getNodes()[*fromIndex] ) : nullptr;
+            const GimmickNodeKind* pToKind   = toIndex.has_value() ? _model.findKind( _model.getNodes()[*toIndex] ) : nullptr;
             if ( pFromKind != nullptr && pToKind != nullptr )
             {
                 const size_t fromPort = static_cast<size_t>( GimmickGraphPanelInternal::decodePort( fromPin ) );
@@ -495,13 +495,13 @@ namespace sw::editor
 
     void GimmickGraphPanel::drawNodeInspector( GimmickCircuitComponent& circuit )
     {
-        const int32 nodeIndex = _model.findNodeIndex( _selectedNode );
-        if ( nodeIndex < 0 )
+        const optional<uint32> nodeIndex = _model.findNodeIndex( _selectedNode );
+        if ( nodeIndex.has_value() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdPlugin", "ClickANodeToEditIt" ) );
             return;
         }
-        const GimmickGraphNode node  = _model.getNodes()[static_cast<size_t>( nodeIndex )]; // 편집이 목록을 바꾸므로 사본으로 그린다
+        const GimmickGraphNode node  = _model.getNodes()[*nodeIndex]; // 편집이 목록을 바꾸므로 사본으로 그린다
         const GimmickNodeKind* pKind = _model.findKind( node );
         EditorWidgets::drawSectionHeader( node._id.c_str(), node._kind.c_str() );
 
@@ -632,13 +632,13 @@ namespace sw::editor
         int32 removeWireID = 0;
         for ( const GimmickGraphWire& wire : _model.getWires() )
         {
-            const int32 fromIndex = _model.findNodeIndex( wire._fromNode );
-            const int32 toIndex   = _model.findNodeIndex( wire._toNode );
-            if ( fromIndex < 0 || toIndex < 0 )
+            const optional<uint32> fromIndex = _model.findNodeIndex( wire._fromNode );
+            const optional<uint32> toIndex   = _model.findNodeIndex( wire._toNode );
+            if ( fromIndex.has_value() == false || toIndex.has_value() == false )
                 continue;
             ImGui::PushID( wire._graphID );
-            ImGui::Text( "%s.%s -> %s.%s", _model.getNodes()[static_cast<size_t>( fromIndex )]._id.c_str(), wire._fromPort.c_str(),
-                         _model.getNodes()[static_cast<size_t>( toIndex )]._id.c_str(), wire._toPort.c_str() );
+            ImGui::Text( "%s.%s -> %s.%s", _model.getNodes()[*fromIndex]._id.c_str(), wire._fromPort.c_str(),
+                         _model.getNodes()[*toIndex]._id.c_str(), wire._toPort.c_str() );
             bool bInvert = wire._bInvert;
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdPlugin", "Invert" ) ) );
             if ( ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "Invert" ), &bInvert ) )
@@ -725,10 +725,10 @@ namespace sw::editor
                 return; // 이 패널이 쓴 번호 목록이다 — 읽지 못하면 붙일 것이 없다
             for ( const int32 graphID : listID )
             {
-                const int32 index = _model.findNodeIndex( graphID );
-                if ( index < 0 )
+                const optional<uint32> index = _model.findNodeIndex( graphID );
+                if ( index.has_value() == false )
                     continue;
-                const float2& position = _model.getNodes()[static_cast<size_t>( index )]._position;
+                const float2& position = _model.getNodes()[*index]._position;
                 corner                 = bCorner ? float2{ MathUtil::min( corner._x, position._x ), MathUtil::min( corner._y, position._y ) } : position;
                 bCorner                = true;
                 listCopied.push_back( graphID );
@@ -776,10 +776,10 @@ namespace sw::editor
         const int32          graphID = _model.addNode( kind );
         if ( graphID == GimmickGraphModel::kNoGraphID )
             return;
-        const int32 index = _model.findNodeIndex( graphID );
-        if ( index >= 0 && pPosition != nullptr )
+        const optional<uint32> index = _model.findNodeIndex( graphID );
+        if ( index.has_value() && pPosition != nullptr )
         {
-            GimmickGraphNode& node = _model.getMutableNodes()[static_cast<size_t>( index )];
+            GimmickGraphNode& node = _model.getMutableNodes()[*index];
             node._position         = *pPosition;
             node._bPlaced          = false;
         }

@@ -45,7 +45,7 @@ namespace
 
         static float32 getMusicOffsetDb( const AudioMixer& mixer )
         {
-            return mixer.getBusVolumeOffsetDb( static_cast<uint32>( mixer.findBusIndex( hashed_string( "music" ) ) ) );
+            return mixer.getBusVolumeOffsetDb( mixer.findBusIndex( hashed_string( "music" ) ).value() );
         }
     };
     using Util = AudioSnapshotTestUtil;
@@ -154,7 +154,7 @@ SW_TEST_CASE( AudioSnapshotMixerTest, UserStateCombinesWithData )
     SW_REQUIRE_TRUE( mixer.initialize( desc, AudioChannelLayout::Stereo ) );
     AudioSnapshotMixer  snapshots;
     const hashed_string music( "music" );
-    const uint32        musicIndex = static_cast<uint32>( mixer.findBusIndex( music ) );
+    const uint32        musicIndex = mixer.findBusIndex( music ).value();
 
     snapshots.setBusUserVolume( mixer, music, 5.0f );
     SW_EXPECT_NEAR( 1.0f, mixer.getBusUserVolume( musicIndex ), 0.0001f );
@@ -186,8 +186,8 @@ SW_TEST_CASE( AudioSnapshotMixerTest, AdoptMixerKeepsUserStateAndDropsLostSnapsh
     SW_REQUIRE_TRUE( nextMixer.initialize( nextDesc, AudioChannelLayout::Stereo ) );
 
     snapshots.applyMixer( nextMixer );
-    SW_EXPECT_NEAR( 0.25f, nextMixer.getBusUserVolume( static_cast<uint32>( nextMixer.findBusIndex( music ) ) ), 0.0001f );
-    SW_EXPECT_NEAR( 0.75f, nextMixer.getBusUserVolume( static_cast<uint32>( nextMixer.findBusIndex( hashed_string( "late" ) ) ) ), 0.0001f );
+    SW_EXPECT_NEAR( 0.25f, nextMixer.getBusUserVolume( nextMixer.findBusIndex( music ).value() ), 0.0001f );
+    SW_EXPECT_NEAR( 0.75f, nextMixer.getBusUserVolume( nextMixer.findBusIndex( hashed_string( "late" ) ).value() ), 0.0001f );
     SW_EXPECT_NEAR( 0.0f, snapshots.getSnapshotIntensity( hashed_string( "Duck" ) ), 0.0001f );
     SW_EXPECT_NEAR( 1.0f, snapshots.getSnapshotIntensity( hashed_string( "Hush" ) ), 0.0001f );
     snapshots.update( nextMixer );

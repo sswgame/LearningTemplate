@@ -21,6 +21,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -133,7 +134,7 @@ namespace sw
         [[nodiscard]] string saveToXMLText() const;
         /** @brief 파일에 씁니다. @p baseID 가 있으면 그 부모와 다른 칸만 적습니다(`ReflectedXMLFile::saveDescAsChild`). */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath, const AssetID& baseID ) const;
-        /** @brief 이름의 노드 번호입니다. 없으면 -1 입니다. */
-        [[nodiscard]] int32 findNodeIndex( string_view name ) const;
+        /** @brief 이름의 노드 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findNodeIndex( string_view name ) const;
     };
 } // namespace sw

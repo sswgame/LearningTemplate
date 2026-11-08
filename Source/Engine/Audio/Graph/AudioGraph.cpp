@@ -161,14 +161,14 @@ namespace sw
         return AudioGraphInternal::kArrNodeType[static_cast<size_t>( type )];
     }
 
-    int32 AudioGraphRegistry::findParameterIndex( const AudioGraphNodeKindInfo& typeInfo, const hashed_string& name )
+    optional<uint32> AudioGraphRegistry::findParameterIndex( const AudioGraphNodeKindInfo& typeInfo, const hashed_string& name )
     {
         for ( uint32 parameterIndex = 0; parameterIndex < typeInfo._parameterCount; ++parameterIndex )
         {
             if ( name == hashed_string( typeInfo._pParameter[parameterIndex]._pName ) )
-                return static_cast<int32>( parameterIndex );
+                return static_cast<uint32>( parameterIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 } // namespace sw
 
@@ -193,7 +193,7 @@ namespace sw
 
         shared_ptr<AudioGraph> pGraph = make_shared<AudioGraph>();
         pGraph->_frameCount           = static_cast<uint32>( def._durationSeconds * static_cast<float32>( audio::kSampleRate ) );
-        pGraph->_outputIndex          = listDataToOrder[static_cast<size_t>( def.findNodeIndex( def._output ) )];
+        pGraph->_outputIndex          = listDataToOrder[def.findNodeIndex( def._output ).value()];
         pGraph->_listNode.resize( listOrder.size() );
         for ( uint32 orderIndex = 0; orderIndex < listOrder.size(); ++orderIndex )
         {
@@ -208,11 +208,11 @@ namespace sw
             }
             for ( const hashed_string& input : desc._listInput )
             {
-                node._listInput.push_back( listDataToOrder[static_cast<size_t>( def.findNodeIndex( input ) )] );
+                node._listInput.push_back( listDataToOrder[def.findNodeIndex( input ).value()] );
             }
             for ( const AudioGraphParameterDef& parameterDesc : desc._listParameter )
             {
-                const uint32                   parameterIndex = static_cast<uint32>( AudioGraphRegistry::findParameterIndex( typeInfo, parameterDesc._name ) );
+                const uint32                   parameterIndex = AudioGraphRegistry::findParameterIndex( typeInfo, parameterDesc._name ).value(); // 모르는 매개변수는 읽을 때 거절했다
                 const AudioGraphParameterInfo& info           = typeInfo._pParameter[parameterIndex];
                 node._arrParameter[parameterIndex]            = MathUtil::clamp( parameterDesc._value, info._minValue, info._maxValue );
                 if ( parameterDesc._parameter.empty() )

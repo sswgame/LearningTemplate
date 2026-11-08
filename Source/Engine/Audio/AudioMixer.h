@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -52,8 +53,8 @@ namespace sw
 
         /** @brief 버스 수입니다. */
         uint32 getBusCount() const { return static_cast<uint32>( _listBusState.size() ); }
-        /** @brief 이름의 버스 번호입니다. 없으면 -1 입니다. */
-        int32 findBusIndex( const hashed_string& name ) const;
+        /** @brief 이름의 버스 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findBusIndex( const hashed_string& name ) const;
         /** @brief 버스 이름입니다. */
         const hashed_string& getBusName( uint32 busIndex ) const { return _listBusState[busIndex]._name; }
         /** @brief 부모 버스의 번호입니다. master 는 -1 입니다. */

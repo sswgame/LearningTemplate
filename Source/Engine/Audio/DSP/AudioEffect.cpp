@@ -845,14 +845,14 @@ namespace sw
         }
     }
 
-    int32 IAudioEffect::findParameterIndex( const hashed_string& name ) const
+    optional<uint32> IAudioEffect::findParameterIndex( const hashed_string& name ) const
     {
         for ( uint32 parameterIndex = 0; parameterIndex < _pTypeInfo->_parameterCount; ++parameterIndex )
         {
             if ( name == hashed_string( _pTypeInfo->_pParameter[parameterIndex]._pName ) )
-                return static_cast<int32>( parameterIndex );
+                return static_cast<uint32>( parameterIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void IAudioEffect::setParameter( uint32 parameterIndex, float32 value )
@@ -893,13 +893,13 @@ namespace sw
             return nullptr;
         for ( const AudioEffectParameterDef& parameter : desc._listParameter )
         {
-            const int32 parameterIndex = pEffect->findParameterIndex( parameter._name );
-            if ( parameterIndex < 0 )
+            const optional<uint32> parameterIndex = pEffect->findParameterIndex( parameter._name );
+            if ( parameterIndex.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "AudioEffect.AudioEffectNoParameter", "Audio effect '%#' has no parameter '%#'", desc._type.c_str(), parameter._name.c_str() );
                 return nullptr;
             }
-            pEffect->setParameter( static_cast<uint32>( parameterIndex ), parameter._value );
+            pEffect->setParameter( *parameterIndex, parameter._value );
         }
         return pEffect;
     }

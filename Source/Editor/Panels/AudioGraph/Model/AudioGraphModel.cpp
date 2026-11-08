@@ -140,8 +140,8 @@ namespace sw::editor
         const vector<hashed_string> listNew = AudioGraphEditUtil::duplicateNodes( _editGraph, listName, offset );
         if ( listNew.empty() )
             return 0;
-        _selectedNode      = _editGraph.findNodeIndex( listNew.back() );
-        _pendingPlacedNode = _editGraph.findNodeIndex( listNew.front() ); // 사본은 뒤에 붙는다 — 다음 캔버스 프레임이 첫 사본부터 데이터 자리에 놓는다
+        _selectedNode      = static_cast<int32>( _editGraph.findNodeIndex( listNew.back() ).value() );  // 방금 더한 사본이다
+        _pendingPlacedNode = static_cast<int32>( _editGraph.findNodeIndex( listNew.front() ).value() ); // 사본은 뒤에 붙는다 — 다음 캔버스 프레임이 첫 사본부터 데이터 자리에 놓는다
         recordEdit( "Duplicate Audio Graph Nodes" );
         return static_cast<uint32>( listNew.size() );
     }

@@ -219,7 +219,7 @@ namespace sw
         bool              bValid     = true;
         for ( const AudioEventDef& event : library._listEvent )
         {
-            if ( _pGameMixerDesc == nullptr || _pGameMixerDesc->findBusIndex( event._bus ) < 0 )
+            if ( _pGameMixerDesc == nullptr || _pGameMixerDesc->findBusIndex( event._bus ).has_value() == false )
             {
                 Internal::appendError( outListError, "%#: event '%#' sends to unknown bus '%#'", sourceName, event._name.c_str(), event._bus.c_str() );
                 bValid = false;
@@ -633,8 +633,8 @@ namespace sw
     {
         if ( _pMixer == nullptr )
             return 0.0f;
-        const int32 busIndex = _pMixer->findBusIndex( bus );
-        return busIndex < 0 ? 0.0f : _pMixer->getBusPeak( static_cast<uint32>( busIndex ) );
+        const optional<uint32> busIndex = _pMixer->findBusIndex( bus );
+        return busIndex.has_value() == false ? 0.0f : _pMixer->getBusPeak( *busIndex );
     }
 
     void AudioEngine::pushCommand( Command&& command )
@@ -1023,12 +1023,12 @@ namespace sw
 
     uint32 AudioEngine::resolveBusIndex( const hashed_string& bus ) const
     {
-        int32 busIndex = bus.empty() ? constant::invalid_index::kInt32 : _pMixer->findBusIndex( bus );
-        if ( busIndex < 0 )
+        optional<uint32> busIndex = bus.empty() ? nullopt : _pMixer->findBusIndex( bus );
+        if ( busIndex.has_value() == false )
             busIndex = _pMixer->findBusIndex( hashed_string( AudioBusNames::kSFX ) );
-        if ( busIndex < 0 )
+        if ( busIndex.has_value() == false )
             busIndex = _pMixer->findBusIndex( hashed_string( AudioBusNames::kMaster ) );
-        return busIndex < 0 ? 0u : static_cast<uint32>( busIndex );
+        return busIndex.has_value() == false ? 0u : *busIndex;
     }
 
     void AudioEngine::updateEmitters()

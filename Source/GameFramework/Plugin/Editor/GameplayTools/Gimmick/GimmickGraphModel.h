@@ -9,6 +9,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Name/hashed_string.h"
@@ -124,7 +125,7 @@ namespace sw::editor
         const vector<GimmickGraphWire>& getWires() const { return _listWire; }
         const vector<GimmickWireDesc>&  getOrphanWires() const { return _listOrphanWire; }
         vector<GraphCommentBox>&        getMutableComments() { return _listComment; } ///< 캔버스가 주석 상자를 더하고 옮기고 지운다(고치면 패널이 편집으로 남긴다)
-        int32                           findNodeIndex( int32 graphID ) const;
+        [[nodiscard]] optional<uint32>  findNodeIndex( int32 graphID ) const;
         int32                           findNodeIndexByID( const hashed_string& id ) const;
         int32                           findWireIndex( int32 wireGraphID ) const;
         const GimmickNodeKind*          findKind( const GimmickGraphNode& node ) const;

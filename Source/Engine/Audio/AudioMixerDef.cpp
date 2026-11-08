@@ -103,7 +103,7 @@ namespace sw
                 bool bValid = true;
                 for ( const AudioDuckDef& duck : bus._listDuck )
                 {
-                    if ( mixer.findBusIndex( duck._sourceBus ) < 0 )
+                    if ( mixer.findBusIndex( duck._sourceBus ).has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "AudioMixerDef.BusDuckedUnknownBus", "%#: bus '%#' is ducked by unknown bus '%#'", sourceName, bus._name.c_str(), duck._sourceBus.c_str() );
                         bValid = false;
@@ -122,7 +122,7 @@ namespace sw
                 }
                 for ( const AudioSendDef& send : bus._listSend )
                 {
-                    if ( mixer.findBusIndex( send._bus ) < 0 )
+                    if ( mixer.findBusIndex( send._bus ).has_value() == false )
                     {
                         SW_LOG_ERROR_ID( "AudioMixerDef.BusSendsUnknownBus", "%#: bus '%#' sends to unknown bus '%#'", sourceName, bus._name.c_str(), send._bus.c_str() );
                         bValid = false;
@@ -163,7 +163,7 @@ namespace sw
                         bValid = false;
                     }
                 }
-                else if ( mixer.findBusIndex( bus._parent ) < 0 )
+                else if ( mixer.findBusIndex( bus._parent ).has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "AudioMixerDef.BusNamesUnknownParent", "%#: bus '%#' names unknown parent '%#'", sourceName, bus._name.c_str(), bus._parent.c_str() );
                     bValid = false;
@@ -186,14 +186,14 @@ namespace sw
             if ( AudioMixerDescInternal::validateBus( *this, busIndex, sourceName, rootCount ) == false )
                 bValid = false;
         }
-        if ( rootCount != 1 || findBusIndex( hashed_string( AudioBusNames::kMaster ) ) < 0 )
+        if ( rootCount != 1 || findBusIndex( hashed_string( AudioBusNames::kMaster ) ).has_value() == false )
         {
             SW_LOG_ERROR_ID( "AudioMixerDef.MixerNeedsExactlyOne", "%#: the mixer needs exactly one root bus named '%#'", sourceName, AudioBusNames::kMaster );
             bValid = false;
         }
         // master 는 장치로 나간다 — 출력 레이아웃이 아니면 장치 버퍼와 채널 수가 어긋난다.
-        const int32 masterIndex = findBusIndex( hashed_string( AudioBusNames::kMaster ) );
-        if ( masterIndex >= 0 && _listBus[static_cast<size_t>( masterIndex )]._channels != AudioBusChannels::Output )
+        const optional<uint32> masterIndex = findBusIndex( hashed_string( AudioBusNames::kMaster ) );
+        if ( masterIndex.has_value() && _listBus[*masterIndex]._channels != AudioBusChannels::Output )
         {
             SW_LOG_ERROR_ID( "AudioMixerDef.BusFeedsDeviceMust", "%#: the '%#' bus feeds the device and must use the output channels (_channels=\"Output\")", sourceName, AudioBusNames::kMaster );
             bValid = false;
@@ -301,7 +301,7 @@ namespace sw
             }
             for ( const AudioSnapshotBusDef& busVolume : snapshot._listBusVolume )
             {
-                if ( findBusIndex( busVolume._bus ) < 0 )
+                if ( findBusIndex( busVolume._bus ).has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "AudioMixerDef.SnapshotNamesUnknownBus", "%#: snapshot '%#' names unknown bus '%#'", sourceName, pName, busVolume._bus.c_str() );
                     bValid = false;
@@ -309,11 +309,11 @@ namespace sw
             }
             for ( const AudioSnapshotSendDef& send : snapshot._listSend )
             {
-                const int32 busIndex = findBusIndex( send._bus );
-                bool        bFound   = false;
-                if ( busIndex >= 0 )
+                const optional<uint32> busIndex = findBusIndex( send._bus );
+                bool                   bFound   = false;
+                if ( busIndex.has_value() )
                 {
-                    for ( const AudioSendDef& existing : _listBus[static_cast<size_t>( busIndex )]._listSend )
+                    for ( const AudioSendDef& existing : _listBus[*busIndex]._listSend )
                     {
                         bFound = bFound || existing._bus == send._target;
                     }
@@ -326,9 +326,9 @@ namespace sw
             }
             for ( const AudioSnapshotEffectDef& effect : snapshot._listEffectParameter )
             {
-                const int32           busIndex = findBusIndex( effect._bus );
-                const AudioEffectDef* pEffect  = busIndex >= 0 ? findEffect( static_cast<uint32>( busIndex ), effect._effect ) : nullptr;
-                bool                  bKnown   = false;
+                const optional<uint32> busIndex = findBusIndex( effect._bus );
+                const AudioEffectDef*  pEffect  = busIndex.has_value() ? findEffect( *busIndex, effect._effect ) : nullptr;
+                bool                   bKnown   = false;
                 if ( pEffect != nullptr )
                 {
                     const AudioEffectTypeInfo* pTypeInfo = AudioEffectRegistry::findType( pEffect->_type );
@@ -358,14 +358,14 @@ namespace sw
         return true;
     }
 
-    int32 AudioMixerDef::findBusIndex( const hashed_string& name ) const
+    optional<uint32> AudioMixerDef::findBusIndex( const hashed_string& name ) const
     {
         for ( size_t busIndex = 0; busIndex < _listBus.size(); ++busIndex )
         {
             if ( _listBus[busIndex]._name == name )
-                return static_cast<int32>( busIndex );
+                return static_cast<uint32>( busIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool AudioMixerDef::makeProcessingOrder( vector<uint32>& outListBusIndex ) const
@@ -374,15 +374,15 @@ namespace sw
         DependencyGraph graph{ static_cast<uint32>( _listBus.size() ) };
         for ( size_t busIndex = 0; busIndex < _listBus.size(); ++busIndex )
         {
-            const AudioBusDef& bus         = _listBus[busIndex];
-            const int32        parentIndex = findBusIndex( bus._parent );
-            if ( parentIndex >= 0 )
-                graph.addDependency( static_cast<uint32>( parentIndex ), static_cast<uint32>( busIndex ) );
+            const AudioBusDef&     bus         = _listBus[busIndex];
+            const optional<uint32> parentIndex = findBusIndex( bus._parent );
+            if ( parentIndex.has_value() )
+                graph.addDependency( *parentIndex, static_cast<uint32>( busIndex ) );
             for ( const AudioSendDef& send : bus._listSend )
             {
-                const int32 targetIndex = findBusIndex( send._bus );
-                if ( targetIndex >= 0 )
-                    graph.addDependency( static_cast<uint32>( targetIndex ), static_cast<uint32>( busIndex ) );
+                const optional<uint32> targetIndex = findBusIndex( send._bus );
+                if ( targetIndex.has_value() )
+                    graph.addDependency( *targetIndex, static_cast<uint32>( busIndex ) );
             }
         }
         DependencyOrder order = graph.sortInDataOrder();

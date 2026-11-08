@@ -122,7 +122,7 @@ SW_TEST_CASE( AudioDataVariantTest, MixerVariantMergesBusesByName )
     SW_REQUIRE_TRUE( mixer.loadFromXMLText( flat ) );
     SW_EXPECT_EQUAL( 16u, mixer._maxVoiceCount );
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( mixer._listBus.size() ) );
-    const AudioBusDef& sfx = mixer._listBus[static_cast<size_t>( mixer.findBusIndex( hashed_string( "sfx" ) ) )];
+    const AudioBusDef& sfx = mixer._listBus[mixer.findBusIndex( hashed_string( "sfx" ) ).value()];
     SW_EXPECT_NEAR( -6.0f, sfx._volumeDb, 0.0f );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( sfx._listSend.size() ) );
     SW_EXPECT_NEAR( -6.0f, sfx._listSend[0]._levelDb, 0.0f );

@@ -49,14 +49,15 @@ namespace sw
         _listBusState.resize( desc._listBus.size() );
         for ( size_t busIndex = 0; busIndex < desc._listBus.size(); ++busIndex )
         {
-            const AudioBusDef& busDesc = desc._listBus[busIndex];
-            Bus&               bus     = _listBusState[busIndex];
-            bus._name                  = busDesc._name;
-            bus._parentIndex           = desc.findBusIndex( busDesc._parent );
-            bus._volumeDb              = busDesc._volumeDb;
-            bus._bMuted                = busDesc._bMuted ? SW_TRUE : SW_FALSE;
-            bus._bSolo                 = busDesc._bSolo ? SW_TRUE : SW_FALSE;
-            bus._layout                = resolveAudioMixerBusLayout( busDesc._channels, layout );
+            const AudioBusDef& busDesc         = desc._listBus[busIndex];
+            Bus&               bus             = _listBusState[busIndex];
+            bus._name                          = busDesc._name;
+            const optional<uint32> parentIndex = desc.findBusIndex( busDesc._parent );
+            bus._parentIndex                   = parentIndex.has_value() ? static_cast<int32>( *parentIndex ) : constant::invalid_index::kInt32; // 부모 사슬을 걷는 칸이라 -1 이 뿌리(master)다
+            bus._volumeDb                      = busDesc._volumeDb;
+            bus._bMuted                        = busDesc._bMuted ? SW_TRUE : SW_FALSE;
+            bus._bSolo                         = busDesc._bSolo ? SW_TRUE : SW_FALSE;
+            bus._layout                        = resolveAudioMixerBusLayout( busDesc._channels, layout );
             bus._input.allocate( bus._layout );
             // 넓은 버스가 두 채널 버스(부모 · 센드)로 갈 때 쓰는 BS.775 행렬이다. 레이아웃의 마스크는 늘 아는 스피커라 실패하지 않는다.
             const uint32 busChannelCount = AudioChannelLayoutUtil::getChannelCount( bus._layout );
@@ -70,7 +71,7 @@ namespace sw
             for ( const AudioSendDef& sendDesc : busDesc._listSend )
             {
                 Send send;
-                send._targetIndex = static_cast<uint32>( desc.findBusIndex( sendDesc._bus ) );
+                send._targetIndex = desc.findBusIndex( sendDesc._bus ).value();
                 send._levelDb     = sendDesc._levelDb;
                 send._gain        = AudioMath::dbToLinear( sendDesc._levelDb );
                 send._bPreFader   = sendDesc._bPreFader;
@@ -79,7 +80,7 @@ namespace sw
             for ( const AudioDuckDef& duckDesc : busDesc._listDuck )
             {
                 Duck duck;
-                duck._sourceIndex    = static_cast<uint32>( desc.findBusIndex( duckDesc._sourceBus ) );
+                duck._sourceIndex    = desc.findBusIndex( duckDesc._sourceBus ).value();
                 duck._thresholdDb    = duckDesc._thresholdDb;
                 duck._depthDb        = duckDesc._depthDb;
                 duck._attackSeconds  = duckDesc._attackSeconds;
@@ -106,14 +107,14 @@ namespace sw
         return true;
     }
 
-    int32 AudioMixer::findBusIndex( const hashed_string& name ) const
+    optional<uint32> AudioMixer::findBusIndex( const hashed_string& name ) const
     {
         for ( size_t busIndex = 0; busIndex < _listBusState.size(); ++busIndex )
         {
             if ( _listBusState[busIndex]._name == name )
-                return static_cast<int32>( busIndex );
+                return static_cast<uint32>( busIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void AudioMixer::setBusUserVolume( uint32 busIndex, float32 volume )
