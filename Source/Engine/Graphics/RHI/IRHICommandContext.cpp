@@ -116,6 +116,22 @@ namespace sw
         transitionBufferNative( buffer, newState );
     }
 
+    void IRHICommandContext::transitionBuffers( const RHIBufferTransition* pTransition, uint32 count )
+    {
+        if ( pTransition == nullptr || count == 0 )
+            return;
+        endRenderPass();
+        transitionBuffersNative( pTransition, count );
+    }
+
+    void IRHICommandContext::transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count )
+    {
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            transitionBufferNative( pTransition[index]._buffer, pTransition[index]._state );
+        }
+    }
+
     void IRHICommandContext::copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )
     {
         endRenderPass();

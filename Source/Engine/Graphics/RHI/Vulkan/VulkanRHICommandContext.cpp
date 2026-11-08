@@ -550,39 +550,66 @@ namespace sw
 
     void VulkanRHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )
     {
-        VkCommandBuffer                      cmd     = commandBuffer();
-        VulkanRHIDevice::VulkanBufferRecord* pRecord = _pDevice->resolveAllocatedBuffer( buffer );
-        if ( cmd == VK_NULL_HANDLE || pRecord == nullptr )
-            return;
+        const RHIBufferTransition transition{ buffer, newState };
+        transitionBuffersNative( &transition, 1 );
+    }
 
-        if ( pRecord->_buffer == VK_NULL_HANDLE || pRecord->_state == newState )
+    void VulkanRHICommandContext::transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count )
+    {
+        VkCommandBuffer cmd = commandBuffer();
+        if ( cmd == VK_NULL_HANDLE )
             return;
-
-        if ( _pState->_bRenderPassActive == SW_TRUE )
+        // 모은 전이를 vkCmdPipelineBarrier 한 번에 낸다 — 앞 · 뒤 단계는 모든 전이의 합이다(한 버퍼씩 내면 그때마다 파이프라인이 단계 사이를 비운다).
+        // https://registry.khronos.org/vulkan/specs/latest/man/html/vkCmdPipelineBarrier.html (pBufferMemoryBarriers 여럿, 단계 마스크는 그 합)
+        constexpr uint32      kMaxBarrierPerCall = 16;
+        VkBufferMemoryBarrier arrBarrier[kMaxBarrierPerCall]{};
+        uint32                barrierCount  = 0;
+        VkPipelineStageFlags  srcStageSum   = 0;
+        VkPipelineStageFlags  dstStageSum   = 0;
+        auto                  flushBarriers = [&]()
         {
-            vkCmdEndRenderPass( cmd );
-            _pState->_bRenderPassActive = SW_FALSE;
+            if ( barrierCount == 0 )
+                return;
+            vkCmdPipelineBarrier( cmd, srcStageSum, dstStageSum, 0, 0, nullptr, barrierCount, arrBarrier, 0, nullptr );
+            barrierCount = 0;
+            srcStageSum  = 0;
+            dstStageSum  = 0;
+        };
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            const RHIBufferState                 newState = pTransition[index]._state;
+            VulkanRHIDevice::VulkanBufferRecord* pRecord  = _pDevice->resolveAllocatedBuffer( pTransition[index]._buffer );
+            if ( pRecord == nullptr || pRecord->_buffer == VK_NULL_HANDLE || pRecord->_state == newState )
+                continue;
+            if ( _pState->_bRenderPassActive == SW_TRUE )
+            {
+                vkCmdEndRenderPass( cmd );
+                _pState->_bRenderPassActive = SW_FALSE;
+            }
+            VkAccessFlags        srcAccess{ 0 };
+            VkAccessFlags        dstAccess{ 0 };
+            VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+            mapStateVal( pRecord->_state, srcAccess, srcStage );
+            mapStateVal( newState, dstAccess, dstStage );
+
+            VkBufferMemoryBarrier& barrier = arrBarrier[barrierCount++];
+            barrier.sType                  = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+            barrier.pNext                  = nullptr;
+            barrier.srcAccessMask          = srcAccess;
+            barrier.dstAccessMask          = dstAccess;
+            barrier.srcQueueFamilyIndex    = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex    = VK_QUEUE_FAMILY_IGNORED;
+            barrier.buffer                 = pRecord->_buffer;
+            barrier.offset                 = 0;
+            barrier.size                   = VK_WHOLE_SIZE;
+            srcStageSum |= srcStage;
+            dstStageSum |= dstStage;
+            pRecord->_state = newState;
+            if ( barrierCount == kMaxBarrierPerCall )
+                flushBarriers();
         }
-
-        VkAccessFlags        srcAccess{ 0 };
-        VkAccessFlags        dstAccess{ 0 };
-        VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        mapStateVal( pRecord->_state, srcAccess, srcStage );
-        mapStateVal( newState, dstAccess, dstStage );
-
-        VkBufferMemoryBarrier barrier{};
-        barrier.sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-        barrier.srcAccessMask       = srcAccess;
-        barrier.dstAccessMask       = dstAccess;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.buffer              = pRecord->_buffer;
-        barrier.offset              = 0;
-        barrier.size                = VK_WHOLE_SIZE;
-
-        vkCmdPipelineBarrier( cmd, srcStage, dstStage, 0, 0, nullptr, 1, &barrier, 0, nullptr );
-        pRecord->_state = newState;
+        flushBarriers();
     }
 
     void VulkanRHICommandContext::copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )

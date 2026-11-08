@@ -262,6 +262,12 @@ namespace sw
          */
         virtual void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) = 0;
         /**
+         * @brief 여러 버퍼의 전이를 한 번에 냅니다(`transitionBuffer` 와 같은 상태 표). 이미 그 상태인 버퍼 · 핸들 0 은 건너뛴다.
+         * @details DX12 는 `ResourceBarrier` 한 번, Vulkan 은 `vkCmdPipelineBarrier` 한 번으로 낸다(단계는 모든 전이의 합). DX11 · GL · WebGPU 는 버퍼마다 같은 일을 한다 —
+         *          DX11 은 할 일이 없고 GL 은 전역 배리어라 묶어도 같다. 같은 버퍼가 둘 들면 안 된다(모으는 `RHIBufferTransitionBatch` 가 하나로 합친다).
+         */
+        virtual void transitionBuffers( const RHIBufferTransition* pTransition, uint32 count ) = 0;
+        /**
          * @brief 버퍼 앞쪽 @p sizeBytes 를 읽기 버퍼(`IRHIResourceFactory::createReadbackBuffer`)로 복사합니다. GPU 가 끝낸 뒤 CPU 가 읽는 비동기 되읽기의 기록 쪽입니다.
          * @param source    복사할 버퍼. 부르기 전에 `transitionBuffer( source, RHIBufferState::CopySource )` 로 옮겨 둔다(DX12 · Vulkan 은 상태가 맞아야 한다).
          * @param readback  `createReadbackBuffer` 가 만든 버퍼. 원본보다 작지 않아야 한다.

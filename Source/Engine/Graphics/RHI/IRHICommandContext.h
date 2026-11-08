@@ -69,6 +69,7 @@ namespace sw
         void prepareTextureForUnorderedAccess( RHITextureHandle texture ) final;
         void blitTexture( RHITextureHandle src, RHITextureHandle dst ) final;
         void transitionBuffer( RHIBufferHandle buffer, RHIBufferState newState ) final;
+        void transitionBuffers( const RHIBufferTransition* pTransition, uint32 count ) final;
         void copyBufferToReadback( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) final;
         void uavBarrier( RHIBufferHandle buffer ) final;
 
@@ -93,8 +94,10 @@ namespace sw
         virtual void prepareTextureForUnorderedAccessNative( RHITextureHandle texture )                                                                                         = 0;
         virtual void blitTextureNative( RHITextureHandle src, RHITextureHandle dst )                                                                                            = 0;
         virtual void transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )                                                                                  = 0;
-        virtual void copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )                                                           = 0;
-        virtual void uavBarrierNative( RHIBufferHandle buffer )                                                                                                                 = 0;
+        /** @brief 여러 전이를 냅니다. 기본은 버퍼마다 `transitionBufferNative` 다 — 네이티브 배리어를 묶을 수 있는 백엔드(DX12 · Vulkan)가 덮어 한 번에 낸다. */
+        virtual void transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count );
+        virtual void copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) = 0;
+        virtual void uavBarrierNative( RHIBufferHandle buffer )                                                       = 0;
 
     private:
         /** @brief 드로우를 내도 되는지 봅니다. 패스가 없으면 백버퍼가 없던 패스면 조용히, 아니면 알리고 false 입니다. */

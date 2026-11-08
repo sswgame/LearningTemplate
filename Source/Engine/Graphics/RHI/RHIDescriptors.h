@@ -461,6 +461,16 @@ namespace sw
         uint32 _dstOffset{ 0 }; ///< 목적 버퍼 안의 바이트 오프셋
         uint32 _sizeBytes{ 0 }; ///< 옮길 바이트 수
     };
+
+    /**
+     * @struct RHIBufferTransition
+     * @brief 버퍼 하나의 상태 전이입니다(`IRHICommandList::transitionBuffers` 의 한 원소). 모으는 쪽은 `RHIBufferTransitionBatch` 다.
+     */
+    struct RHIBufferTransition
+    {
+        RHIBufferHandle _buffer{ 0 };
+        RHIBufferState  _state{ RHIBufferState::Common };
+    };
 } // namespace sw
 
 namespace sw
