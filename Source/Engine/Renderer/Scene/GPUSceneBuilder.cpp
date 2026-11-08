@@ -433,10 +433,10 @@ namespace sw
         candidate._sectionIndexCount = 0;
         if ( pBatch->getDrawSection().empty() == false )
         {
-            const int32 sectionIndex = pMesh->findSectionIndex( pBatch->getDrawSection() );
-            if ( sectionIndex < 0 )
+            const optional<uint32> sectionIndex = pMesh->findSectionIndex( pBatch->getDrawSection() );
+            if ( sectionIndex.has_value() == false )
                 return false;
-            const MeshSection& section   = pMesh->getSections()[static_cast<size_t>( sectionIndex )];
+            const MeshSection& section   = pMesh->getSections()[*sectionIndex];
             candidate._sectionFirstIndex = section._firstIndex;
             candidate._sectionIndexCount = section._indexCount;
             if ( section._indexCount == 0 )

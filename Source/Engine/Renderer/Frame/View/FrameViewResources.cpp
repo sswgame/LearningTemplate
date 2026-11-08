@@ -85,30 +85,30 @@ namespace sw
                 return false;
             }
 
-            /** @brief 파이프라인이 선언한 첨부 가운데 @p name 의 자리입니다. 선언되지 않은 이름(Swapchain)이면 첨부 수입니다. */
-            static size_t findAttachmentIndex( const vector<RenderPassAttachment>& listAttachment, const hashed_string& name )
+            /** @brief 파이프라인이 선언한 첨부 가운데 @p name 의 자리입니다. 선언되지 않은 이름(Swapchain)이면 비어 있습니다. */
+            static optional<size_t> findAttachmentIndex( const vector<RenderPassAttachment>& listAttachment, const hashed_string& name )
             {
-                size_t index = 0;
-                while ( index < listAttachment.size() && string_view( listAttachment[index]._name ) != name.view() )
+                for ( size_t index = 0; index < listAttachment.size(); ++index )
                 {
-                    ++index;
+                    if ( string_view( listAttachment[index]._name ) == name.view() )
+                        return index;
                 }
-                return index;
+                return nullopt;
             }
 
             /** @brief @p name 을 이번 프레임에 "읽힌다" 로 적습니다. 플래그는 선언한 첨부 자리마다 하나다(선언 밖 이름은 적지 않는다). */
             static void markNeeded( const vector<RenderPassAttachment>& listAttachment, const hashed_string& name, vector<uint8>& outListNeeded )
             {
-                const size_t index = findAttachmentIndex( listAttachment, name );
-                if ( index < outListNeeded.size() )
-                    outListNeeded[index] = SW_TRUE;
+                const optional<size_t> index = findAttachmentIndex( listAttachment, name );
+                if ( index.has_value() && *index < outListNeeded.size() )
+                    outListNeeded[*index] = SW_TRUE;
             }
 
             /** @brief @p name 이 이번 프레임에 "읽힌다" 로 적혀 있으면 true 입니다. */
             static bool isNeeded( const vector<RenderPassAttachment>& listAttachment, const hashed_string& name, const vector<uint8>& listNeeded )
             {
-                const size_t index = findAttachmentIndex( listAttachment, name );
-                return index < listNeeded.size() && listNeeded[index] == SW_TRUE;
+                const optional<size_t> index = findAttachmentIndex( listAttachment, name );
+                return index.has_value() && *index < listNeeded.size() && listNeeded[*index] == SW_TRUE;
             }
 
             /** @brief 도는 패스가 읽는 첨부를 "읽힌다" 로 적습니다. @p bIncludeOutputs 면 쓰는 첨부도 적는다(늘 도는 패스는 앞 판을 불러 이어 그릴 수 있다). */

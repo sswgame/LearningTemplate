@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -98,8 +99,8 @@ namespace sw
         [[nodiscard]] string_view getParameterHLSLType() const { return _parameterHLSLType; }
         /** @brief 머티리얼 칸의 프로퍼티 형식(`MaterialPacking::stringToType` 의 이름)입니다. */
         [[nodiscard]] string_view getParameterPropertyType() const { return _parameterPropertyType; }
-        /** @brief 입력 핀 번호입니다. 없으면 -1 입니다. */
-        [[nodiscard]] int32 findInputIndex( string_view name ) const;
+        /** @brief 입력 핀 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findInputIndex( string_view name ) const;
         /** @brief 설정입니다. 없으면 nullptr 입니다. */
         [[nodiscard]] const MaterialGraphSettingDecl* findSetting( string_view name ) const;
         /** @brief 선언 글이 문법에 맞지 않으면 그 까닭입니다. 맞으면 nullptr 입니다(`MaterialGraphNodeRegistry::collectProblems`). */

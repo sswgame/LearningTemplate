@@ -615,14 +615,14 @@ namespace sw
         return true;
     }
 
-    int32 Mesh::findSectionIndex( const hashed_string& name ) const
+    optional<uint32> Mesh::findSectionIndex( const hashed_string& name ) const
     {
         for ( size_t index = 0; index < _listSection.size(); ++index )
         {
             if ( _listSection[index]._name == name )
-                return static_cast<int32>( index );
+                return static_cast<uint32>( index );
         }
-        return -1;
+        return nullopt;
     }
 
     void Mesh::setMorphTargets( vector<MeshMorphTarget> listTarget )

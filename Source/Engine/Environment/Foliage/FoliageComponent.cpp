@@ -302,7 +302,7 @@ namespace sw
                 if ( foliageMesh._listSection[earlier]._sectionName == section._sectionName )
                     return unexpected( Error{ ErrorKind::AlreadyExists, "a section is listed twice", section._sectionName.c_str() } );
             }
-            if ( mesh.findSectionIndex( hashed_string( section._sectionName.c_str() ) ) < 0 )
+            if ( mesh.findSectionIndex( hashed_string( section._sectionName.c_str() ) ).has_value() == false )
                 return unexpected( Error{ ErrorKind::NotFound, "the mesh has no section of that name", section._sectionName.c_str() } );
         }
         // 이름이 모두 메시에 있고 겹치지 않으니 수가 같으면 모든 구간을 적은 것이다.

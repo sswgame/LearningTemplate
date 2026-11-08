@@ -270,7 +270,7 @@ namespace sw
                         const bool bSubgraphNode = pKind->getRole() == MaterialGraphNodeRole::Subgraph;
                         for ( const MaterialGraphLink& link : node._listLink )
                         {
-                            if ( bSubgraphNode == false && pKind->findInputIndex( link._pin ) < 0 )
+                            if ( bSubgraphNode == false && pKind->findInputIndex( link._pin ).has_value() == false )
                             {
                                 string message{ "kind has no input pin '" };
                                 message.append( link._pin ).append( "'" );
@@ -285,7 +285,7 @@ namespace sw
                         }
                         for ( const MaterialGraphValue& value : node._listValue )
                         {
-                            if ( bSubgraphNode == false && pKind->findInputIndex( value._name ) < 0 && pKind->findSetting( value._name ) == nullptr )
+                            if ( bSubgraphNode == false && pKind->findInputIndex( value._name ).has_value() == false && pKind->findSetting( value._name ) == nullptr )
                             {
                                 string message{ "kind has no setting or input named '" };
                                 message.append( value._name ).append( "'" );
@@ -455,10 +455,10 @@ namespace sw
                         bool bFound             = false;
                         if ( c == '$' )
                         {
-                            const int32 inputIndex = kind.findInputIndex( token );
-                            if ( inputIndex >= 0 )
+                            const optional<uint32> inputIndex = kind.findInputIndex( token );
+                            if ( inputIndex.has_value() )
                             {
-                                text.append( listInput[static_cast<size_t>( inputIndex )] );
+                                text.append( listInput[*inputIndex] );
                                 bFound = true;
                             }
                             for ( const NamedValue& output : listOutput )

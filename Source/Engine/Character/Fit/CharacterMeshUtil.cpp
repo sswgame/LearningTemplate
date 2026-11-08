@@ -277,10 +277,10 @@ namespace sw
                     }
                     for ( const MeshMergeSectionPick& pick : part._listSection )
                     {
-                        const int32 sectionIndex = part._pMesh->findSectionIndex( pick._source );
-                        if ( sectionIndex < 0 )
+                        const optional<uint32> sectionIndex = part._pMesh->findSectionIndex( pick._source );
+                        if ( sectionIndex.has_value() == false )
                             return unexpected( Error{ ErrorKind::NotFound, "a merge part has no section of that name", part._name.c_str() }.appendDetail( "." ).appendDetail( pick._source.c_str() ) );
-                        const MeshSection& section = part._pMesh->getSections()[static_cast<size_t>( sectionIndex )];
+                        const MeshSection& section = part._pMesh->getSections()[*sectionIndex];
                         piece._source._name        = pick._name;
                         piece._source._material    = pick._material;
                         piece._firstIndex          = section._firstIndex;

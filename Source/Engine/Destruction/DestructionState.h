@@ -17,6 +17,7 @@
 #pragma once
 #include "Core/Container/span.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -172,8 +173,8 @@ namespace sw
         bool spreadLoad( const vector<uint32>& listNode, const OverloadGraph& graph, const vector<uint32>& listDepth, const vector<uint32>& listQueue, DestructionChange& outChange );
         /** @brief 활성 노드가 앵커 잎을 포함하는지 반환합니다. */
         bool hasAnchoredLeaf( uint32 node ) const;
-        /** @brief 그룹 번호의 인덱스를 반환합니다. 없으면 -1 입니다. */
-        int32 findGroupIndex( uint32 groupID ) const;
+        /** @brief 그룹 번호의 인덱스를 반환합니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findGroupIndex( uint32 groupID ) const;
 
     private:
         const FractureGraph*     _pGraph;

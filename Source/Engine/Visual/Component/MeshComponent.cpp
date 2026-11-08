@@ -311,12 +311,12 @@ namespace sw
             }
             return true;
         }
-        const int32 sectionIndex = ( _mesh != nullptr ) ? _mesh->findSectionIndex( _sectionName ) : -1;
-        if ( sectionIndex < 0 )
+        const optional<uint32> sectionIndex = ( _mesh != nullptr ) ? _mesh->findSectionIndex( _sectionName ) : nullopt;
+        if ( sectionIndex.has_value() == false )
             return false;
         // 낮은 단계면 그 단계의 구간 범위(`Mesh::setLODs` 가 구간마다 범위를 받았다).
-        const MeshSection&         section = _mesh->getSections()[static_cast<size_t>( sectionIndex )];
-        const MeshLODSectionRange* pLower  = lodSlot > 0 ? &_mesh->getLODs()[lodSlot - 1]._listSectionRange[static_cast<size_t>( sectionIndex )] : nullptr;
+        const MeshSection&         section = _mesh->getSections()[*sectionIndex];
+        const MeshLODSectionRange* pLower  = lodSlot > 0 ? &_mesh->getLODs()[lodSlot - 1]._listSectionRange[*sectionIndex] : nullptr;
         outFirstIndex                      = pLower != nullptr ? pLower->_firstIndex : section._firstIndex;
         outIndexCount                      = pLower != nullptr ? pLower->_indexCount : section._indexCount;
         return outIndexCount > 0; // 빈 구간(조립이 덮인 삼각형을 모두 뺐다)은 그리지 않는다 — (0, 0) 은 "메시 전체" 라 넘기면 안 된다
@@ -324,7 +324,7 @@ namespace sw
 
     void MeshComponent::validateSectionName() const
     {
-        const bool bResolvable = _sectionName.empty() || _mesh == nullptr || _mesh->findSectionIndex( _sectionName ) >= 0;
+        const bool bResolvable = _sectionName.empty() || _mesh == nullptr || _mesh->findSectionIndex( _sectionName ).has_value();
         if ( bResolvable )
             return;
         SW_LOG_ERROR_ID( "MeshComponent.MeshNoSectionComponent", "Mesh '%#' has no section '%#' - the component draws nothing", _meshID.c_str(), _sectionName.c_str() );
@@ -347,10 +347,10 @@ namespace sw
 
     bool MeshComponent::isVisibleInCurrentPerson() const
     {
-        const int32 sectionIndex = ( _mesh != nullptr && _sectionName.empty() == false ) ? _mesh->findSectionIndex( _sectionName ) : -1;
-        if ( sectionIndex < 0 )
+        const optional<uint32> sectionIndex = ( _mesh != nullptr && _sectionName.empty() == false ) ? _mesh->findSectionIndex( _sectionName ) : nullopt;
+        if ( sectionIndex.has_value() == false )
             return true;
-        const MeshPersonVisibility visibility = _mesh->getSections()[static_cast<size_t>( sectionIndex )]._personVisibility;
+        const MeshPersonVisibility visibility = _mesh->getSections()[*sectionIndex]._personVisibility;
         if ( visibility == MeshPersonVisibility::ThirdPersonOnly )
             return _bFirstPersonView == SW_FALSE;
         if ( visibility == MeshPersonVisibility::FirstPersonOnly )
