@@ -51,13 +51,15 @@ namespace sw
         void startRunner();
         /** @brief 재생을 끝맺고(돌고 있으면 멈추고) 고정 프레임 시간을 되돌린 뒤 알린다. */
         void endPlayback( ScenarioPlayEnd end, InputManager* pInput );
+        /** @brief 결정적 실행 정책의 프레임 고정 시간만 @p fixedFrameDelta 로 바꿉니다(App 이 다음 프레임부터 흘린다). */
+        static void setFixedFrameDelta( float32 fixedFrameDelta );
 
     private:
-        unique_ptr<AutomationRunner> _pRunner;               ///< 지금 재생하는 실행기(쉬면 nullptr)
-        ScenarioPlayOptions          _options{};             ///< 재생 선택(재생 중일 때만 뜻이 있다)
-        AssetID                      _path{};                ///< 재생하는 시나리오
-        string                       _previousFixedDelta{};  ///< 재생이 고정 프레임 시간을 걸기 전 값(끝나면 되돌린다)
-        uint64                       _humanInputSerial{ 0 }; ///< 재생을 시작할 때의 사람 입력 수
-        Subscription                 _frameSubscription{};   ///< 엔진 프레임 훅 구독(만들 때 붙고 사라질 때 뗀다)
+        unique_ptr<AutomationRunner> _pRunner;                    ///< 지금 재생하는 실행기(쉬면 nullptr)
+        ScenarioPlayOptions          _options{};                  ///< 재생 선택(재생 중일 때만 뜻이 있다)
+        AssetID                      _path{};                     ///< 재생하는 시나리오
+        float32                      _previousFixedDelta{ 0.0f }; ///< 재생이 고정 프레임 시간을 걸기 전 정책 값(끝나면 되돌린다)
+        uint64                       _humanInputSerial{ 0 };      ///< 재생을 시작할 때의 사람 입력 수
+        Subscription                 _frameSubscription{};        ///< 엔진 프레임 훅 구독(만들 때 붙고 사라질 때 뗀다)
     };
 } // namespace sw

@@ -335,7 +335,7 @@ namespace sw
     void FoliageComponent::onTick( float32 deltaTime )
     {
         SceneComponent::onTick( deltaTime );
-        if ( DeterministicRun::getPolicy()._bFreezeEnvironmentTime == SW_FALSE ) // 결정적 사진은 바람 · 파도 시간을 0 에 멈춘다
+        if ( engine::getSubsystem<DeterministicRun>().getPolicy()._bFreezeEnvironmentTime == SW_FALSE ) // 결정적 사진은 바람 · 파도 시간을 0 에 멈춘다
             _time += deltaTime;
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;

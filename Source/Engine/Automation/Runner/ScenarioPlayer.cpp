@@ -2,12 +2,12 @@
 
 #include "Engine/Automation/Runner/ScenarioPlayer.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Automation/AutomationRuntime.h"
 #include "Engine/Automation/Runner/AutomationRunner.h"
 #include "Engine/EngineFrameHookList.h"
+#include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/InputManager.h"
 
@@ -42,10 +42,7 @@ namespace sw
         _options = options;
         _path    = scenarioPath;
         if ( options._bFixedDelta )
-        {
-            GlobalVariableInfo* pFixedDelta = engine::getSubsystem<GlobalVariableManager>().findVariable( "gv_fixedFrameDelta" );
-            _previousFixedDelta             = pFixedDelta != nullptr ? pFixedDelta->getValueAsString() : string{};
-        }
+            _previousFixedDelta = engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta;
         startRunner();
         SW_LOG_INFO_ID( "ScenarioPlayer.Playing", "[Scenario] playing %#%#%#", scenarioPath.c_str(), options._bLoop ? " (loop)" : "", options._bStopOnHumanInput ? " (stops on input)" : "" );
         return true;
@@ -57,7 +54,15 @@ namespace sw
         _pRunner->startFromPath( _path, {} );
         _humanInputSerial = engine::getSubsystem<InputManager>().getHumanInputSerial();
         if ( _options._bFixedDelta && _pRunner->isActive() )
-            (void)engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_fixedFrameDelta", to_string( _pRunner->getScenario().getFixedDelta() ) );
+            setFixedFrameDelta( _pRunner->getScenario().getFixedDelta() );
+    }
+
+    void ScenarioPlayer::setFixedFrameDelta( float32 fixedFrameDelta )
+    {
+        DeterministicRun&      run    = engine::getSubsystem<DeterministicRun>();
+        DeterministicRunPolicy policy = run.getPolicy();
+        policy._fixedFrameDelta       = fixedFrameDelta;
+        run.setPolicy( policy );
     }
 
     void ScenarioPlayer::stopPlayback()
@@ -71,8 +76,8 @@ namespace sw
         if ( _pRunner != nullptr )
             _pRunner->stop( pInput, "playback stopped" ); // 끝난 실행기면 아무것도 하지 않는다 — 가상 입력은 실행기가 뗀다
         _pRunner.reset();
-        if ( _options._bFixedDelta && _previousFixedDelta.empty() == false )
-            (void)engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_fixedFrameDelta", _previousFixedDelta );
+        if ( _options._bFixedDelta )
+            setFixedFrameDelta( _previousFixedDelta );
         const ScenarioPlayFinishedDelegate onFinished = _options._onFinished;
         _options                                      = ScenarioPlayOptions{};
         SW_LOG_INFO_ID( "ScenarioPlayer.PlaybackEnded", "[Scenario] playback of %# ended (%#)", _path.c_str(),

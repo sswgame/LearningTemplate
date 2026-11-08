@@ -261,10 +261,11 @@ namespace sw
             }
             // 결정적 실행 정책 — 애니메이터가 시작 클립을 기다리고(첫 포즈가 디스크 지연에 달리지 않게), 에셋 도착을 프레임에 묶는다(끄면 셰이더 캐시가 빈 첫 실행 —
             // 느린 프레임 — 이 다른 그림을 낸다). 게임이 서기 전에 건다(첫 단계는 게임이 이 뒤에 서고, 다음 단계는 아래에서 다시 선다). 환경 시간 멈춤은 시나리오가 고른다.
-            DeterministicRunPolicy policy     = DeterministicRun::getPolicy();
+            DeterministicRunPolicy policy     = engine::getSubsystem<DeterministicRun>().getPolicy();
             policy._bWaitForAnimationClips    = SW_TRUE;
             policy._bFinishAssetWorkEachFrame = SW_TRUE;
-            DeterministicRun::setPolicy( policy );
+            policy._fixedFrameDelta           = _pRunner->getScenario().getFixedDelta(); // 시나리오 프레임 시간 — App 이 벽시계 대신 흘린다
+            engine::getSubsystem<DeterministicRun>().setPolicy( policy );
             // 둘째 단계부터는 게임을 처음부터 다시 세운다 — 새 게임 인스턴스가 기동 때처럼 첫 씬(`gv_firstScene` > 타이틀 > 시작 맵)을 열거나 벤치를 세운다.
             // 그래서 단계는 첫 단계와 같은 길로 선다(첫 씬을 선언하지 않은 단계도 체인에 든다). 재시작할 호스트가 없으면 앞 단계의 상태로 돌지 않고 멈춘다.
             if ( bLaterStage )
@@ -279,9 +280,6 @@ namespace sw
             }
             if ( startScene.empty() == false )
                 _pRunner->requireStartScene( startScene );
-            const string fixedDelta = to_string( _pRunner->getScenario().getFixedDelta() );
-            if ( engine::getSubsystem<GlobalVariableManager>().setValueFromString( "gv_fixedFrameDelta", fixedDelta ) == false )
-                SW_LOG_WARNING_ID( "AutomationSession.HostNoGvFixedFrameDelta", "[Scenario] this host has no gv_fixedFrameDelta - the scenario runs on the wall clock" );
         }
     }
 

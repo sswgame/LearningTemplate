@@ -32,7 +32,7 @@ namespace sw
      *          구성은 등록이 없고, 호스트는 실행기를 모른다. 런처가 엔진이 선 뒤에 `IAutomationRuntime::start` 로 시작하면 `Engine::getFrameHooks().add( makeFrameHooks() )` 로 붙습니다.
      *          엔진 범위의 자식이라 기동 단계보다 먼저 내려간다 — 실행기가 빌려 쓰는 엔진 서비스(로그 리스너 · 입력)가 사라지기 전에 `shutdownSubsystem` 이 떼고 비웁니다. 한 단계가 끝나면(통과해야 다음으로 간다 — `AutomationScenarioChain`) 같은 프로세스에서 다음 시나리오의 실행기를 새로 만든다. 그 단계가 시작할 때
      *          - 프로세스의 **작업 폴더**가 처음과 같은지 보고(파일 대화상자 같은 것이 옮긴다) 다르면 경고하고 되돌린다,
-     *          - `gv_fixedFrameDelta` 를 그 시나리오의 `fixedDelta` 로 맞추고,
+     *          - 결정적 실행 정책의 프레임 고정 시간(`DeterministicRunPolicy::_fixedFrameDelta`)을 그 시나리오의 `fixedDelta` 로 맞추고,
      *          - 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수를 기준선으로 잡는다(실행기는 자기 단계가 요청한 것만 기다린다 — 렌더 스레드의 수는 프로세스 전체로 누적된다),
      *          - 시작할 때 모은 재현 명령 재료(게임 · 백엔드 · 에디터 · `-scenario` 목록)를 단계 실행기에 넘긴다(보고의 `reproduce`).
      *          **재생**(`ScenarioPlayback::play` — 데모 · 어트랙트 · 시퀀서)은 세션이 하지 않는다. 별도 객체 `ScenarioPlayer` 가 자기 실행기 · 프레임 훅으로 돌리고,

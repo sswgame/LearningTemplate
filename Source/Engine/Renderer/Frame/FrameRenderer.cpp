@@ -314,7 +314,7 @@ namespace sw
         if ( engine::areEngineServicesBound() )
         {
             // 결정적 실행(`DeterministicRunPolicy::_bFinishAssetWorkEachFrame`)이면 아래 프레임당 상한을 모두 푼다 — 상한 안에 무엇이 드느냐가 워커의 도착 순서에 달린다.
-            const bool bFinishAssetWork = DeterministicRun::getPolicy()._bFinishAssetWorkEachFrame == SW_TRUE;
+            const bool bFinishAssetWork = engine::getSubsystem<DeterministicRun>().getPolicy()._bFinishAssetWorkEachFrame == SW_TRUE;
             // 새 머티리얼의 초기화는 여기서 하지 않는다 — 머티리얼은 게임 스레드 객체다(`Engine::submitRenderPacket`). 상수 버퍼는 `GPUScene::upload` 의 프록시가 만든다.
             SW_PROFILE_SCOPE( "RT.TextureRegionUpdates" );
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();

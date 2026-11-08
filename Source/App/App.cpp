@@ -19,6 +19,7 @@
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Foundation/DeterministicRun.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
@@ -536,10 +537,9 @@ namespace sw
             return false;
         }
 
-        float32 fixedFrameDelta = 0.0f; // 결정적 실행(`-gv_fixedFrameDelta`)은 개발 구성에만 있다 — 배포는 벽시계다
-        if constexpr ( build::kShipping == false )
-            fixedFrameDelta = AppDevTools::getFixedFrameDelta();
-        const FrameTime frameTime = _fixedTimestep.advance( engine::getSubsystem<GameTimeScale>().get(), fixedFrameDelta );
+        // 결정적 실행의 프레임 고정 시간(0 이면 벽시계) — 채우는 쪽(자동화 · 개발 스위치)이 없는 배포본은 늘 0 이다.
+        const float32   fixedFrameDelta = engine::getSubsystem<DeterministicRun>().getPolicy()._fixedFrameDelta;
+        const FrameTime frameTime       = _fixedTimestep.advance( engine::getSubsystem<GameTimeScale>().get(), fixedFrameDelta );
 
         // 사용자 설정의 화면 변경(창 방식, 해상도, VSync)은 OS 리사이즈와 같은 시점인 프레임 시작 전에 처리한다.
         _userSettingsHost.update( frameTime._deltaTime );
