@@ -1,7 +1,7 @@
 /**
  * @file GPUNanCheck.h
  * @brief 패스 출력 텍스처의 NaN · Inf 감시입니다 — 컴퓨트가 부동소수 출력 텍스처를 훑어 NaN · Inf 가 든 텍셀 수를 슬롯별 카운터에 더하고, CPU 가 몇 프레임 뒤 되읽어 패스 이름과 함께 로그로 냅니다.
- * @details 언리얼 `r.CheckNaN`(패스마다 출력의 NaN · Inf 를 잡는다)과 같은 선이다. 켜는 스위치는 `-gv_nanCheck=1`(기본 끔)이고 개발 빌드에서만 등록된다(Shipping 은 늘 꺼진다 — PSO 도 디스패치도 없다).
+ * @details 언리얼 `r.CheckNaN`(패스마다 출력의 NaN · Inf 를 잡는다)과 같은 선이다. 켜는 스위치는 진단 정책(`RenderDiagnosticsPolicy::_bNanCheck`, 개발 도구의 `-gv_nanCheck=1`, 기본 끔)이다(Shipping 은 늘 꺼진다 — PSO 도 디스패치도 없다).
  *          카운터는 지우지 않는 누적 값이라 클리어 패스가 필요 없다: CPU 가 지난번 읽은 값과의 차가 이번 구간의 수다. 슬롯은 이름으로 정해진다(패스 이름 + 첨부 이름 — 같은 이름은 늘 같은 슬롯).
  *
  *          **네이티브 bindless(DX12 · Vulkan)만 쓴다.** 컴퓨트가 엔진 텍스처를 읽어야 하는데 DX11 · GL 의 컴퓨트는 샘플 텍스처를 못 읽는다(binding.hlsli). 그 백엔드에서는 `initialize` 가 이유를 경고로 남기고
@@ -40,7 +40,7 @@ namespace sw
         GPUNanCheck( const GPUNanCheck& )            = delete;
         GPUNanCheck& operator=( const GPUNanCheck& ) = delete;
 
-        /** @brief 이 실행이 NaN 감시를 요구하는지입니다 — 개발 빌드이고 `-gv_nanCheck` 가 켜졌을 때만 참입니다. Shipping 은 늘 거짓입니다. PSO 는 이 값으로 만들어집니다. */
+        /** @brief 이 실행이 NaN 감시를 요구하는지입니다 — 진단 정책(`RenderDiagnostics::get`)이 켰을 때만 참입니다. Shipping 은 늘 거짓입니다. PSO 는 이 값으로 만들어집니다. */
         [[nodiscard]] static bool isRequested();
 
         /**

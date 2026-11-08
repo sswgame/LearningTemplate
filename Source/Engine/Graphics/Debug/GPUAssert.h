@@ -4,7 +4,7 @@
  * @details 언리얼 ShaderPrint · ShaderDebug, 유니티 셰이더 printf 선과 같은 자리다. 셰이더 쪽은 `Content/engine/shaders/gpu_assert.hlsli`(`SW_GPU_ASSERT( 조건, id, 값 )`),
  *          조건 id 표는 `gpu_assert_ids.hlsli` 하나다 — HLSL 과 이 파일이 같은 파일을 include 하므로 번호를 두 번 적지 않는다. id 별 심각도 · 메시지는 `GPUAssert.cpp` 의 표가 정한다.
  *
- *          **퍼뮤테이션이다.** 켜는 스위치는 `-gv_gpuAssert=1`(기본 끔)이고, 켜면 assert 를 가진 컴퓨트 패스(표의 `RenderPassTraitFlag::kGPUAssertTarget`)가 셰이더에
+ *          **퍼뮤테이션이다.** 켜는 스위치는 진단 정책(`RenderDiagnosticsPolicy::_bGPUAssert`, 개발 도구의 `-gv_gpuAssert=1`, 기본 끔)이고, 켜면 assert 를 가진 컴퓨트 패스(표의 `RenderPassTraitFlag::kGPUAssertTarget`)가 셰이더에
  *          `SW_GPU_ASSERT_ENABLED` 를 붙여 컴파일되고(`selectRenderPassShader` — 쿠커와 같은 함수) 렌더러가 그 패스 앞에서 이 버퍼를 u4 에 건다. Shipping 은 `isRequested` 가 늘 거짓이라
  *          define 도 PSO 변형도 바인딩도 생기지 않는다. 필수 값(버퍼)을 만들지 못하면 오류로 멈춘다 — assert 가 켜진 PSO 를 버퍼 없이 돌리는 길은 없다.
  *
@@ -71,7 +71,7 @@ namespace sw
         GPUAssertMonitor( const GPUAssertMonitor& )            = delete;
         GPUAssertMonitor& operator=( const GPUAssertMonitor& ) = delete;
 
-        /** @brief 이 실행이 셰이더 assert 를 요구하는지입니다 — 개발 빌드이고 `-gv_gpuAssert` 가 켜졌을 때만 참입니다. Shipping 은 늘 거짓입니다. PSO define 이 이 값으로 정해집니다. */
+        /** @brief 이 실행이 셰이더 assert 를 요구하는지입니다 — 진단 정책(`RenderDiagnostics::get`)이 켰을 때만 참입니다. Shipping 은 늘 거짓입니다. PSO define 이 이 값으로 정해집니다. */
         [[nodiscard]] static bool isRequested();
 
         /**

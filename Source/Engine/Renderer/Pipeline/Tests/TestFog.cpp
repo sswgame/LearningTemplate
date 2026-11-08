@@ -180,14 +180,11 @@ SW_TEST_CASE( FogTest, PassTypeRowDeclaresDepthOnlyBlendedDraw )
  */
 SW_TEST_CASE( FogTest, DebugParamsNeedTheVolume )
 {
-    const FogDebugView previousView  = gv_fogDebugView;
-    const int32        previousSlice = gv_fogDebugSlice;
-    gv_fogDebugView                  = FogDebugView::Compare;
-    gv_fogDebugSlice                 = 99;
-    const float4 withVolume          = FrameFog::makeDebugParams( true );
-    const float4 withoutVolume       = FrameFog::makeDebugParams( false );
-    gv_fogDebugView                  = previousView;
-    gv_fogDebugSlice                 = previousSlice;
+    RenderDiagnosticsPolicy policy{};
+    policy._fogDebugView       = FogDebugView::Compare;
+    policy._fogDebugSlice      = 99;
+    const float4 withVolume    = FrameFog::makeDebugParams( true, policy );
+    const float4 withoutVolume = FrameFog::makeDebugParams( false, policy );
     SW_EXPECT_NEAR( static_cast<float32>( FogDebugView::Compare ), withVolume._x, 1.0e-6f );
     SW_EXPECT_NEAR( static_cast<float32>( SW_FOG_VOLUME_DIM_Z - 1u ), withVolume._y, 1.0e-6f );
     SW_EXPECT_NEAR( 0.5f, withVolume._z, 1.0e-6f );

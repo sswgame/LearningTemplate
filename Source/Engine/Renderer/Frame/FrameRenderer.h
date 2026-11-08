@@ -384,7 +384,7 @@ namespace sw
          */
         void updateLightBuffer( IRHIDevice* pDevice );
         /**
-         * @brief 이번 프레임의 라이트 그리드 생산자입니다. 개발 빌드는 `gv_lightCulling`(None · CPU · GPU), Shipping 은 GPU 로 고정입니다.
+         * @brief 이번 프레임의 라이트 그리드 생산자입니다. 진단 정책(`RenderDiagnosticsPolicy::_lightGridProducer`, 기본 GPU)이 고르고, Shipping 은 GPU 로 고정입니다.
          * @details GPU 를 골랐는데 컴퓨트 PSO 가 없으면 오류를 한 번 남기고 그리드 없이 그린다 — 채우지 않은 그리드 버퍼를 셰이더가 읽게 두지 않는다.
          */
         LightGridProducer selectLightGridProducer();

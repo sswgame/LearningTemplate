@@ -23,6 +23,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -198,7 +199,7 @@ namespace sw
     {
         _prepass.ensureResources();
         if ( _nanCheck.initialize( _pDevice ) == false )
-            SW_FATAL( "gv_nanCheck is on but the NaN check counters could not be created - see the log above" );
+            SW_FATAL( "The NaN check is on but its counters could not be created - see the log above" );
     }
 
     void FramePassExecutor::releaseResources()
@@ -322,7 +323,7 @@ namespace sw
         }
 
         const bool bOk = executeMainGraph( pDevice );
-        // 그래프가 끝난 주 시점의 패스 출력을 NaN · Inf 감시 컴퓨트로 훑는다(`-gv_nanCheck` 일 때만).
+        // 그래프가 끝난 주 시점의 패스 출력을 NaN · Inf 감시 컴퓨트로 훑는다(진단 정책이 NaN 감시를 켰을 때만).
         scanPassOutputsForNan( pDevice );
 
         // 화면 사각형 뷰(분할 화면, PiP)는 주 시점 위에 겹친다.
@@ -563,7 +564,7 @@ namespace sw
         const RHIPipelineStateHandle pso = _psoManager.getEnginePSO( RenderPassType::NanCheck );
         if ( pso == 0 )
         {
-            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.GvNanCheckButNaN", "gv_nanCheck is on but the NaN check PSO is missing (shader not cooked?) - no output is scanned" );
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.GvNanCheckButNaN", "The NaN check is on but its PSO is missing (shader not cooked?) - no output is scanned" );
             return;
         }
         if ( _nanCheckCommandList == nullptr )
@@ -1344,7 +1345,7 @@ namespace sw
         float4     volumeParams = _fog.getFrameFog()._volumeParams;
         volumeParams._x         = bVolume ? 1.0f : 0.0f;
         context._passValues.setFloat4( passConstantNames()._fogVolumeParams, volumeParams );
-        context._passValues.setFloat4( passConstantNames()._fogDebugParams, FrameFog::makeDebugParams( bVolume ) );
+        context._passValues.setFloat4( passConstantNames()._fogDebugParams, FrameFog::makeDebugParams( bVolume, RenderDiagnostics::get() ) );
 
         if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
             return;
@@ -1808,7 +1809,7 @@ namespace sw
             context._resourceRegistry.registerTexture( attachmentNames()._light2DCookieAtlas, pCookieAtlas->getHandle(), pCookieAtlas->getSRV() );
         // 개수는 버퍼가 없어도 채운다. 셰이더는 0 이면 빛을 돌지 않는다(앰비언트만).
         context._passValues.setUint( passConstantNames()._swLightCount, _state._lightBuffer.isBindable() ? _state._lightBuffer.getCount() : 0u );
-        // 지금 그리는 뷰의 라이트 그리드(t12). 없으면(gv_lightCulling=None, 투영이 깨진 뷰) 셰이더는 목록 전체를 돈다.
+        // 지금 그리는 뷰의 라이트 그리드(t12). 없으면(생산자 None, 투영이 깨진 뷰) 셰이더는 목록 전체를 돈다.
         // 그리드 첫 단어와 버퍼는 같이 켜지고 같이 꺼진다 — 첫 단어만 있고 버퍼가 없으면 셰이더가 빈 슬롯을 읽는다(LightGrid::hasGrid 가 둘 다 본다).
         const RHIStructuredBuffer* pGridBuffer = _state._lightBuffer.isBindable() ? _state._lightBuffer.findGridBuffer() : nullptr;
         const bool                 bGridReady  = pGridBuffer != nullptr && pGridBuffer->_buffer != 0 && pGridBuffer->_srv != kInvalidDescriptorIndex;

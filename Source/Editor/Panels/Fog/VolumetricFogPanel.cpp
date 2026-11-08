@@ -34,7 +34,7 @@ namespace sw::editor
     {
         struct VolumetricFogPanelInternal
         {
-            static constexpr const utf8* kViewVariable  = "gv_fogDebugView";  ///< 안개 패스의 진단 보기(`FrameFog.h`)
+            static constexpr const utf8* kViewVariable  = "gv_fogDebugView";  ///< 안개 패스의 진단 보기(개발 도구 `RenderDiagnosticsSwitches.cpp` 가 진단 정책으로 넘긴다)
             static constexpr const utf8* kSliceVariable = "gv_fogDebugSlice"; ///< 진단 단면의 거리 조각
 
             /** @brief 전역 변수의 지금 글입니다. 등록되지 않았으면(Shipping 이 아닌데 없으면 결함) 빈 글입니다. */

@@ -2,23 +2,16 @@
 
 #include "Engine/Graphics/Debug/GPUNanCheck.h"
 
-#include "Core/Foundation/BuildInfo.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIFormatInfo.h"
 
 namespace sw
 {
-    /**
-     * @brief `-gv_nanCheck=1`: 그래프가 끝난 뒤 주 시점의 부동소수 패스 출력을 컴퓨트로 훑어 NaN · Inf 텍셀 수를 세고, CPU 가 몇 프레임 뒤 패스 이름과 함께 로그로 낸다(언리얼 r.CheckNaN).
-     * @details 기본 끔 — 켜면 프레임마다 출력 텍스처 수만큼 풀스크린 컴퓨트가 돈다(진단용). DX12 · Vulkan 만 쓴다(에뮬 백엔드의 컴퓨트는 샘플 텍스처를 읽지 못한다). Shipping 은 등록되지 않아 늘 끔.
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_nanCheck, false, "패스 출력 텍스처의 NaN/Inf 를 컴퓨트로 세고 패스 이름과 함께 로그로 낸다 (개발 빌드, DX12 · Vulkan 만)" );
-
     namespace
     {
         /// gpu_nan_check.hlsl 의 루트 상수입니다 — 선언 순서 · 크기가 같아야 한다.
@@ -52,7 +45,7 @@ namespace sw
 
     bool GPUNanCheck::isRequested()
     {
-        return build::kShipping == false && static_cast<bool>( gv_nanCheck ); // 배포본은 PSO 도 디스패치도 만들지 않는다
+        return RenderDiagnostics::get()._bNanCheck == SW_TRUE; // 배포본은 상수 기본값이라 PSO 도 디스패치도 만들지 않는다
     }
 
     bool GPUNanCheck::isScannableFormat( RHIFormat format )
@@ -66,13 +59,13 @@ namespace sw
             return true;
         if ( pDevice == nullptr )
         {
-            SW_LOG_ERROR_ID( "GPUNanCheck.NaNCheckRequestedGv", "NaN check is requested (gv_nanCheck) but there is no device" );
+            SW_LOG_ERROR_ID( "GPUNanCheck.NaNCheckRequestedGv", "NaN check is requested but there is no device" );
             return false;
         }
         // 능력 선언 분기 - 컴퓨트가 엔진 텍스처를 읽을 수 있는 백엔드만 쓴다. 에뮬 백엔드(DX11 · GL)의 컴퓨트는 샘플 텍스처를 읽지 못하고, 다른 읽기 길을 두지 않는다.
         if ( pDevice->getCapabilities()._bCompute == SW_FALSE || pDevice->supportsNativeBindlessSampling() == false )
         {
-            SW_LOG_WARNING_ID( "GPUNanCheck.GvNanCheckIgnoredBackend", "gv_nanCheck is ignored on this backend: the NaN scan reads output textures in a compute shader and needs native bindless sampling (DirectX12, Vulkan)" );
+            SW_LOG_WARNING_ID( "GPUNanCheck.GvNanCheckIgnoredBackend", "The NaN check is ignored on this backend: the NaN scan reads output textures in a compute shader and needs native bindless sampling (DirectX12, Vulkan)" );
             return true;
         }
 
@@ -81,13 +74,13 @@ namespace sw
                                                                 RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess, true, true, zeroed.data() );
         if ( bCreated == false )
         {
-            SW_LOG_ERROR_ID( "GPUNanCheck.FailedCreateNaNCheck", "Failed to create the NaN check counter buffer (%# uints) - gv_nanCheck cannot run", kMaxSlot * 2 );
+            SW_LOG_ERROR_ID( "GPUNanCheck.FailedCreateNaNCheck", "Failed to create the NaN check counter buffer (%# uints) - the NaN check cannot run", kMaxSlot * 2 );
             _buffer.release( pDevice );
             return false;
         }
         if ( _readback.initialize( pDevice, sizeof( uint32 ), kMaxSlot * 2 ) == false )
         {
-            SW_LOG_ERROR_ID( "GPUNanCheck.FailedCreateNaNCheck2", "Failed to create the NaN check readback buffers - gv_nanCheck cannot run" );
+            SW_LOG_ERROR_ID( "GPUNanCheck.FailedCreateNaNCheck2", "Failed to create the NaN check readback buffers - the NaN check cannot run" );
             _buffer.release( pDevice );
             return false;
         }

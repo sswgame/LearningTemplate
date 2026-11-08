@@ -70,7 +70,7 @@ namespace sw
             // 셰이더 DDC 는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 컴파일러 안에서 DDC 에 맞아 컴파일러를
             // 타지 않는다. DDC 항목은 소스와 자기가 연 헤더의 내용(의존 기록)을 보므로, 바뀐 헤더를
             // 연 셰이더만 실제로 다시 컴파일된다.
-            // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(`gv_shaderDebugCodegen`). 요청 그대로 컴파일하면 리로드한
+            // 캐시의 실시간 컴파일과 **같은 요청**으로 컴파일한다(진단 정책의 디버그 코드젠). 요청 그대로 컴파일하면 리로드한
             // 셰이더만 디버그 정보를 잃는다.
             const ShaderCompileDesc   liveDesc  = ShaderCache::makeLiveCompileDesc( desc );
             const ShaderCompileResult newResult = ShaderCompiler::compileHLSL( liveDesc );
