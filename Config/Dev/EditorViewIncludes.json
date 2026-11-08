@@ -36,6 +36,7 @@
         "Source/Editor/Panels/BugReport/BugReportPanel",
         "Source/Editor/Panels/Catalog/CatalogPanel",
         "Source/Editor/Panels/Catalog/CatalogTableEditor",
+        "Source/Editor/Panels/Console/ConsolePanel",
         "Source/Editor/Panels/DataTable/DataTablePanel",
         "Source/Editor/Panels/Dialogue/DialogueGraphPanel",
         "Source/Editor/Panels/InputMap/InputMapPanel",
@@ -60,6 +61,7 @@
         "Source/Editor/Panels/RenderTarget/RenderTargetWatches",
         "Source/Editor/Panels/Scene/DataLayersPanel",
         "Source/Editor/Panels/Scene/EditorSceneViewUtil",
+        "Source/Editor/Panels/Scene/HistoryPanel",
         "Source/Editor/Panels/Settings/GlobalVariablesPanel",
         "Source/Editor/Panels/Settings/GlobalVariablesPanelWatches",
         "Source/Editor/Panels/Settings/ModulesPanel",
@@ -68,6 +70,7 @@
         "Source/Editor/Panels/Settings/ShortcutsPanel",
         "Source/Editor/Panels/Settings/UserSettingsPanel",
         "Source/Editor/Panels/SourceControl/SourceControlChangesPanel",
+        "Source/Editor/Panels/TileMap/TileMapPanel",
         "Source/Editor/Panels/TileSet/TileSetPanel",
         "Source/Editor/Panels/VFX/VFXPreviewPanel"
     ]

@@ -6,16 +6,12 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -400,9 +396,7 @@ namespace sw::editor
 
     void TileMapPanel::drawTileMapFileControls()
     {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-
-        const string& focused = editorContext.getSubsystem<EditorWorkspace>().getFocusedAssetPath();
+        const string focused = TileMapModel::getFocusedAssetPath();
         if ( focused.empty() == false )
             ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Focused", TextArgumentList().addText( "path", focused ) ).c_str() );
 
@@ -445,7 +439,7 @@ namespace sw::editor
             // 적어 넣은 경로에 파일이 없으면 지금 맵을 그대로 둔다(새 문서로 표시하면 편집 중인 맵이 저장 안 한 채 깨끗해진다).
             // 읽기(`EditorToolAssetCommands::loadTileMap`)와 같은 해석으로 묻는다 — 입력란은 리소스 경로와 디스크 경로를 모두 받는다.
             // 다른 문서는 열기 경로로 넘긴다 — 미저장 확인 · 최근 목록 · 되돌리기의 문서 경로가 이 파일을 가리킨다(곧바로 읽으면 열린 문서는 옛 경로로 남았다).
-            if ( EditorToolAssetCommands::hasToolDocument( path.c_str() ) == false )
+            if ( TileMapModel::hasDocumentFile( path.c_str() ) == false )
                 SW_LOG_WARNING_ID( "TileMapPanel.NoTileMap", "No tile map at '%#'", path.c_str() );
             else if ( string_view( path.c_str() ) == string_view( getLoadedAssetPath() ) )
                 reloadDocument();

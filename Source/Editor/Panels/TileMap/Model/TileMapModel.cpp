@@ -11,6 +11,7 @@
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
 #include "Engine/Localization/LocText.h"
@@ -770,5 +771,16 @@ namespace sw::editor
     {
         // 곱셈을 size_t 로 한다(Engine 의 TileMap::indexOf 와 같은 이유).
         return static_cast<size_t>( y ) * static_cast<size_t>( _map._width ) + static_cast<size_t>( x );
+    }
+
+    string TileMapModel::getFocusedAssetPath()
+    {
+        const EditorWorkspace* const pWorkspace = editor::findSubsystem<EditorWorkspace>();
+        return pWorkspace != nullptr ? pWorkspace->getFocusedAssetPath() : string{};
+    }
+
+    bool TileMapModel::hasDocumentFile( string_view path )
+    {
+        return EditorToolAssetCommands::hasToolDocument( path );
     }
 } // namespace sw::editor
