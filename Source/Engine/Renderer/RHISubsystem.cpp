@@ -24,13 +24,6 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_crashTest=N`: RHI 초기화 직후 일부러 크래시를 냅니다(리포트 경로 검증용). N 은 `CrashTestKind` 입니다.
-     * @details 크래시 리포트는 크래시가 나야만 만들어집니다. 그래서 "덤프가 제대로 써지는가"는 일부러
-     *          죽여 보는 것 말고는 확인할 방법이 없습니다. 배포하고 나서 안 된다는 것을 알면 늦습니다. **죽는 방식마다** 따로 실행해 봐야
-     *          합니다. 접근 위반으로 남는 리포트가 스택 오버플로나 abort 에서도 남는다는 보장은 없습니다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_crashTest, 0, "일부러 크래시를 내 리포트 경로를 검증합니다 (1=널 쓰기 2=스택 오버플로 3=작업 스레드 스택 오버플로 4=abort 5=순수 가상 호출)" );
 } // namespace sw
 
 namespace sw
@@ -93,9 +86,6 @@ namespace sw
         _bReady = SW_TRUE;
         // 백엔드가 정해졌으니 크래시 리포트에 남긴다. "어느 백엔드에서 났는가"가 범위를 좁히는 첫 질문이다.
         engine::getSubsystem<CrashHandler>().setContextValue( "RHI", _rhi->getDevice().getBackendName() );
-        // `-gv_crashTest=1`: 크래시 리포트 경로를 실제로 확인하는 유일한 방법이다(리포트는 크래시가 나야만 만들어진다).
-        if ( gv_crashTest != 0 )
-            CrashHandler::crashForTest( static_cast<CrashTestKind>( gv_crashTest ) );
         return SubsystemInitResult::Succeeded;
     }
 

@@ -20,24 +20,6 @@ namespace sw
     struct CrashHandlerProcessHook;
 
     /**
-     * @brief 개발 중 크래시 리포트 경로를 일부러 태워 보는 방법입니다(`CrashHandler::crashForTest`).
-     * @details 언리얼의 `debug crash` · `debug stackoverflow` · `debug gpf` 콘솔 명령과 같은 역할입니다. 리포트는 크래시가 나야만
-     *          만들어지므로 죽는 방식마다 한 번씩 태워 보지 않으면 배포 뒤에야 "그 방식으로 죽으면 아무것도 안 남는다" 를 압니다.
-     */
-    enum class CrashTestKind : uint8
-    {
-        None = 0,
-        AccessViolation,     ///< 널 포인터 쓰기
-        StackOverflow,       ///< 이 스레드에서 끝없는 재귀
-        WorkerStackOverflow, ///< 새 스레드에서 끝없는 재귀(스레드별 준비 `ThreadCrashStack::initializeCurrentThread` 를 태운다)
-        Abort,               ///< std::abort() — 엔진의 "로그 + abort" 치명 경로
-        PureVirtualCall,     ///< 생성 중인 객체의 순수 가상 함수 호출
-        StderrHeld,          ///< 다른 스레드가 stderr 를 쥔 채 놓지 않는 동안 접근 위반 — 보고가 끝날 수 없다(시한이 끝내야 한다)
-        AssertFailure,       ///< `SW_ASSERT` 실패(Debug 에서만 멈춘다 — 그 밖의 빌드는 아무것도 하지 않고 돌아온다)
-        Count
-    };
-
-    /**
      * @brief 크래시 문맥 파일(`crash_<세션>.txt`) 끝에 붙일 글을 쓰는 함수입니다. **할당 · 잠금 없이** @p pOutText 에 쓰고 쓴 길이를 돌려줍니다.
      * @details 크래시 시점에 읽어야 하는 소유자 쪽 상태(서버의 최근 틱 이력 링 버퍼 같은 것)를 미리 정해 둔 키-값 대신 그대로 싣는 자리입니다.
      *          죽어 가는 프로세스에서 새 파일을 쓰지 않고 이미 쓰는 문맥 파일에 얹으므로, 보고 묶음(`CrashReportService`)이 따로 챙길 것이 없습니다.
@@ -98,9 +80,6 @@ namespace sw
          *          할당하지 않는다(멈춘 스레드가 힙 락을 쥐었을 수 있다). POSIX 는 살아 있는 프로세스를 할당 없이 덤프할 길이 없어 컨텍스트만 쓴다.
          */
         void reportHang( const utf8* pReason );
-
-        /** @brief 일부러 죽습니다(`CrashTestKind` 설명). 돌아오지 않습니다. `None` · 모르는 값이면 아무것도 하지 않습니다. 설치된 처리기가 보고합니다. */
-        static void crashForTest( CrashTestKind kind );
 
         // ------------------------------------------------------------------------------
         // 크래시 경로 — 설치된 처리기의 OS 진입점(플랫폼 파일)과 행 보고가 부른다. 테스트도 죽지 않고 파일 모양을 볼 때 부른다.
@@ -168,15 +147,6 @@ namespace sw
 
         /** @brief 설치 · 해제가 처리기 사슬(`_pOuter`)을 바꿀 때 잡는 잠금입니다. 크래시 경로는 잡지 않는다(원자 포인터만 읽는다). */
         static mutex& getChainMutex();
-        /**
-         * @brief stderr 의 스트림 락을 쥐고 영영 놓지 않습니다(`CrashTestKind::StderrHeld`).
-         * @details 가득 찬 파이프에 쓰다 막힌 스레드의 흉내다 — 읽는 쪽이 멈추면 그 스레드는 stderr 의 락을 쥔 채 서 있다.
-         */
-        [[noreturn]] static void holdStderrForever();
-        /** @brief 스택이 넘칠 때까지 재귀합니다(`CrashTestKind::StackOverflow`). 프레임마다 4 KB 를 써서 금방 넘친다. */
-        static uint32 overflowStack( uint32 depth );
-        /** @brief 새 스레드의 본체입니다. 스레드별 준비를 거친 뒤 넘친다(`CrashTestKind::WorkerStackOverflow`). */
-        static void overflowStackOnWorker();
 
         /** @brief OS 훅(플랫폼 파일)은 가장 안쪽 처리기(`_s_pInstalled`)를 읽는다. */
         friend struct CrashHandlerProcessHook;

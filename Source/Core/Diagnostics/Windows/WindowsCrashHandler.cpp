@@ -288,7 +288,7 @@ namespace sw
                     }
                     if ( bReportStalled )
                     {
-                        // **stdio 를 거치지 않는다.** 보고가 막힌 지점이 바로 stderr 의 락일 수 있다(CrashTestKind::StderrHeld). fputs 로
+                        // **stdio 를 거치지 않는다.** 보고가 막힌 지점이 바로 stderr 의 락일 수 있다(CrashInjectionKind::StderrHeld). fputs 로
                         // 쓰면 시한이 지나도 여기서 다시 막힌다. 그리고 이전 필터에 넘기지 않고 여기서 끝낸다. 그 필터도
                         // 같은 락에서 막힐 수 있고, 시한은 "여기서 끝난다"는 약속이어야 하기 때문이다.
                         constexpr utf8 kMessage[] = "\n[CrashHandler] crash report made no progress before its deadline - exiting without it\n";

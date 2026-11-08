@@ -6,7 +6,7 @@
         { "_path": "Source/Core/Task/DedicatedWorker", "_reason": "이름 있는 전용 스레드 하나의 작업 줄 — OS 를 막고 기다리는 일(디스크 · 소켓 · 드라이버)을 워커 밖에서 돌리는 집의 형식이다. 쓰는 곳도 이 목록에 따로 든다" },
         { "_path": "Source/Core/Log/Sink/AsyncLogSink", "_reason": "로그 쓰기 — 작업 풀이 막히거나 멈춘 때(교착 · 크래시 직전)에도 로그가 나가야 한다" },
         { "_path": "Source/Core/Process/StandardInputReader", "_reason": "표준 입력의 막히는 읽기 — 줄이 올 때까지 OS 가 돌려주지 않는다" },
-        { "_path": "Source/Core/Diagnostics/CrashHandler", "_reason": "크래시 경로 — 스택 넘침 재현 · 보고 중 stderr 붙잡기는 작업 풀을 믿을 수 없는 때다" },
+        { "_path": "Source/DevTools/Diagnostics/CrashInjection", "_reason": "일부러 죽는 개발 기능 — 작업 스레드 스택 넘침 재현 · 보고 중 stderr 붙잡기는 작업 풀을 믿을 수 없는 때다" },
         { "_path": "Source/Core/Diagnostics/Windows/WindowsCrashHandler", "_reason": "크래시 보고 스레드 — 넘친 스택 · 깨진 풀에서 덤프를 쓴다" },
         { "_path": "Source/Core/File/AsyncFileIO", "_reason": "스레드 풀 파일 IO 백엔드(io_uring 없는 리눅스 · 기타) — 위치 지정 읽기가 OS 에서 막힌다. 수는 동시 요청 수다" },
         { "_path": "Source/Core/File/Windows/WindowsAsyncFileIOBackend", "_reason": "IOCP 완료 대기(GetQueuedCompletionStatus) — OS 에서 막힌다" },

@@ -238,7 +238,7 @@ namespace sw::test
     /**
      * @brief 자식 역할 하나를 띄운 결과입니다(`runChildRole`).
      */
-    struct ChildRunResult
+    struct SW_API ChildRunResult
     {
         int32  _exitCode{ -1 };     ///< 자식의 종료 코드(띄우지 못했으면 -1). 자식 역할이 통과하면 0 이다
         bool   _bLaunched{ false }; ///< 프로세스를 만들었는가 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다

@@ -46,7 +46,7 @@ namespace sw
         _handler.setContextValue( "Platform", build::kPlatformName );
         // 심볼과 짝짓는 열쇠 — 실행 파일과(다르면) 엔진 모듈의 빌드 id. 덤프의 모듈 목록에도 같은 값이 있다.
         const ModuleBuildID executableID = ModuleBuildID::find( nullptr );
-        const ModuleBuildID engineID     = ModuleBuildID::find( reinterpret_cast<const void*>( &CrashHandler::crashForTest ) );
+        const ModuleBuildID engineID     = ModuleBuildID::find( reinterpret_cast<const void*>( &Logger::flushGlobalForCrash ) );
         _handler.setContextValue( "BuildID", executableID._id );
         if ( engineID._id != executableID._id )
             _handler.setContextValue( "EngineBuildID", engineID._id );

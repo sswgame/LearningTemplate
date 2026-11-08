@@ -23,29 +23,6 @@ namespace sw
 {
     namespace
     {
-        /// @brief `CrashTestKind::AssertFailure` 가 거짓으로 만드는 단언 식입니다(컴파일러가 단언을 상수로 접지 못하게 volatile).
-        ///        단언이 빠지는 빌드(Release · Shipping)에서는 읽는 곳이 없다.
-        [[maybe_unused]] volatile bool s_bAssertProbeHolds{ false };
-        /// @brief `CrashHandler::holdStderrForever` 가 stderr 를 쥐었는지입니다(죽는 시험 프로세스 안에서만 쓴다).
-        atomic<bool> s_bStderrHeld{ false };
-        /// @brief `CrashHandler::overflowStack` 의 재귀를 멈추는 척하는 값입니다. 컴파일러가 끝없는 재귀를 없애거나 경고로 막지 못하게 합니다.
-        volatile bool s_bStopStackOverflow{ false };
-
-        /** @brief 생성자에서 순수 가상 함수를 (한 단계 건너) 부르는 기반 클래스입니다(`CrashTestKind::PureVirtualCall`). */
-        struct PureCallProbeBase
-        {
-            PureCallProbeBase() { callThrough(); }
-            virtual ~PureCallProbeBase() = default;
-            /** @brief 생성자에서 바로 부르면 컴파일러가 막는다. 한 단계 건너 부른다. */
-            void         callThrough() { onProbe(); }
-            virtual void onProbe() = 0;
-        };
-
-        struct PureCallProbe final : PureCallProbeBase
-        {
-            void onProbe() override {}
-        };
-
         /**
          * @brief 버퍼 뒤에 포맷한 한 줄을 이어 붙입니다. **할당하지 않습니다.** 문맥 파일과 빵부스러기 글이 함께 쓴다(주인 타입이 없다).
          * @details formatstring 은 버퍼의 **처음부터** 쓰므로, 이어 붙이려면 남은 공간을 직접 넘겨야 합니다.
@@ -111,38 +88,6 @@ namespace sw
     {
         static mutex s_mutex;
         return s_mutex;
-    }
-
-    void CrashHandler::holdStderrForever()
-    {
-#if defined( SW_PLATFORM_WINDOWS )
-        _lock_file( stderr );
-#elif defined( SW_PLATFORM_POSIX )
-        flockfile( stderr );
-#else
-    #error "Unsupported platform"
-#endif
-        s_bStderrHeld.store( true );
-        while ( true )
-        {
-            ThreadUtil::sleepForSeconds( 1 * 3600.0 );
-        }
-    }
-
-    uint32 CrashHandler::overflowStack( uint32 depth )
-    {
-        volatile uint8 arrPad[constant::buffer::kMax4096];
-        arrPad[depth % constant::buffer::kMax4096] = static_cast<uint8>( depth );
-        if ( s_bStopStackOverflow )
-            return 0;
-        // 재귀 뒤에 값을 더해 꼬리 호출로 바뀌지 않게 한다(꼬리 호출이면 스택이 자라지 않는다).
-        return overflowStack( depth + 1 ) + arrPad[0];
-    }
-
-    void CrashHandler::overflowStackOnWorker()
-    {
-        ThreadCrashStack::initializeCurrentThread();
-        overflowStack( 0 );
     }
 
     CrashHandler::CrashHandler()
@@ -362,7 +307,7 @@ namespace sw
         builder.append( "===============================================\n" );
 
         // 배포 환경에서는 아무도 stderr 를 보지 않는다. 파일로 남겨야 사용자가 보내 줄 수 있다 — 그래서 **파일이 먼저다.** stderr 는
-        // 막힐 수 있다(읽는 쪽이 멈춘 파이프에 쓰다 그 락을 쥔 채 선 스레드 — CrashTestKind::StderrHeld). 순서가 반대면 거기서
+        // 막힐 수 있다(읽는 쪽이 멈춘 파이프에 쓰다 그 락을 쥔 채 선 스레드 — CrashInjectionKind::StderrHeld). 순서가 반대면 거기서
         // 막혔을 때 스택 파일이 없다.
         writeStackFile( builder.c_str() );
         recordProgress();
@@ -375,65 +320,4 @@ namespace sw
         Logger::flushGlobalForCrash();
     }
 
-    void CrashHandler::crashForTest( CrashTestKind kind )
-    {
-        switch ( kind )
-        {
-            case CrashTestKind::AccessViolation:
-            {
-                SW_LOG_ERROR_ID( "CrashHandler.WritingThroughNullPointer", "[CrashTest] writing through a null pointer" );
-                volatile int32* pNull = nullptr;
-                *pNull                = 1;
-                break;
-            }
-            case CrashTestKind::StackOverflow:
-            {
-                SW_LOG_ERROR_ID( "CrashHandler.OverflowingStackThread", "[CrashTest] overflowing the stack of this thread" );
-                overflowStack( 0 );
-                break;
-            }
-            case CrashTestKind::WorkerStackOverflow:
-            {
-                SW_LOG_ERROR_ID( "CrashHandler.OverflowingStackNewThread", "[CrashTest] overflowing the stack of a new thread" );
-                std::thread worker( &CrashHandler::overflowStackOnWorker );
-                worker.join();
-                break;
-            }
-            case CrashTestKind::Abort:
-            {
-                SW_LOG_ERROR_ID( "CrashHandler.CallingStdAbort", "[CrashTest] calling std::abort()" );
-                std::abort();
-            }
-            case CrashTestKind::PureVirtualCall:
-            {
-                SW_LOG_ERROR_ID( "CrashHandler.CallingPureVirtualFunction", "[CrashTest] calling a pure virtual function during construction" );
-                PureCallProbe probe;
-                break;
-            }
-            case CrashTestKind::AssertFailure:
-            {
-                SW_LOG_ERROR_ID( "CrashHandler.FailingSWASSERT", "[CrashTest] failing SW_ASSERT" );
-                SW_ASSERT( s_bAssertProbeHolds );
-                break;
-            }
-            case CrashTestKind::StderrHeld:
-            {
-                SW_LOG_ERROR_ID( "CrashHandler.WritingThroughNullPointer2", "[CrashTest] writing through a null pointer while another thread holds stderr" );
-                std::thread holder( &CrashHandler::holdStderrForever );
-                holder.detach();
-                while ( s_bStderrHeld.load() == false )
-                {
-                    ThreadUtil::yield();
-                }
-                volatile int32* pNull = nullptr;
-                *pNull                = 1;
-                break;
-            }
-            case CrashTestKind::None:
-            case CrashTestKind::Count:
-            {
-                break;
-            }
-        }
-    }
 } // namespace sw

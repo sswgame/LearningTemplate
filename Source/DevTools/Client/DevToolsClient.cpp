@@ -7,6 +7,7 @@
 
 #include "DevTools/Client/Console/DevConsoleOverlay.h"
 #include "DevTools/Client/DebugHUD/DebugHUD.h"
+#include "DevTools/Client/Diagnostics/CrashInjectionSubsystem.h"
 #include "DevTools/Client/Shader/LiveShaderSubsystem.h"
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
 #include "DevTools/DevToolsClientPart.h"
@@ -32,7 +33,10 @@ namespace sw
             {
                 // 셰이더 라이브 리로드는 렌더러가 있는 호스트만(렌더러를 끈 기동은 렌더 쪽이 nullptr).
                 if ( parts._pFrameRendererSubsystem != nullptr && parts._pRenderThread != nullptr )
+                {
                     (void)startup.emplaceSubsystem<LiveShaderSubsystem>( *parts._pFrameRendererSubsystem, *parts._pRenderThread );
+                    (void)startup.emplaceSubsystem<CrashInjectionSubsystem>(); // `-gv_crashTest` — 렌더러 뒤에 죽어 백엔드 이름까지 보고에 든다
+                }
                 // 디버그 HUD 는 런타임 UI 위에 그린다 — UI 가 있는 실행만.
                 if ( parts._pUISystem != nullptr )
                     (void)startup.emplaceSubsystem<DebugHUD>( *parts._pUISystem, parts._pUserSettings );
