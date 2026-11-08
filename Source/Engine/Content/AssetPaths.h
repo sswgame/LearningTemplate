@@ -184,6 +184,15 @@ namespace sw
         void clearPathCache();
 
         /**
+         * @brief 쿠킹 세션을 열고 닫습니다(`CookSession` 만 부른다 — 겹쳐 열 수 있다). 열린 동안 작업 범위(`CookJob`) 밖의 리소스 읽기가 오류가 된다.
+         * @details 리소스를 읽는 길의 상태라 경로 상태와 같은 주인이 든다(예전에는 프로세스 원자 칸이었다 — 언리얼 쿠커의 `IsCookingInEditor` 상태가 쿠커 객체에 있는 자리).
+         */
+        void openCookSession();
+        void closeCookSession();
+        /** @brief 쿠킹 세션이 열려 있으면 true 입니다. 어느 스레드에서도 된다. */
+        bool isCookSessionOpen() const;
+
+        /**
          * @brief 상태 전부(불변 경로 표 · 붙인 디스크 도메인 · 해석 캐시)입니다. 정의는 .cpp 에 둔다 — 잠금 · 해시 맵이 헤더로 새지 않게.
          * @details 이름만 공개다(.cpp 의 내부 도우미가 받는다). 밖에서는 불완전 형식이라 만들거나 읽을 수 없다.
          */

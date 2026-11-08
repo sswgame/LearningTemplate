@@ -27,6 +27,11 @@
 
 namespace sw
 {
+    class AssetPaths;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 입력의 종류입니다. */
     enum class CookInputKind : uint8
     {
@@ -101,13 +106,14 @@ namespace sw
     class SW_API CookSession
     {
     public:
-        CookSession();
+        /** @param assetPaths 세션을 여는 리소스 경로 상태(엔진 범위 — `AssetPaths::openCookSession`)입니다. 세션보다 오래 산다. */
+        explicit CookSession( AssetPaths& assetPaths );
         ~CookSession();
         CookSession( const CookSession& )            = delete;
         CookSession& operator=( const CookSession& ) = delete;
 
-        /** @brief 세션이 열려 있으면 true 입니다(프로세스 전체). */
-        static bool isActive();
+    private:
+        AssetPaths& _assetPaths;
     };
 } // namespace sw
 

@@ -121,8 +121,9 @@ namespace sw
         /**
          * @brief 지금 도는 인스턴스입니다(없으면 nullptr). 게임 스레드에서만 부른다.
          * @details 인스턴스를 들지 않은 창구 — 세이브 메뉴 자리의 개발 명령(`game.save` · `game.load`)과 감시 값 — 가 세이브 슬롯을 부르는 자리다. 프로세스당 하나라 뜻이 하나다.
+         *          인스턴스는 기동 때 자기 게임 범위에 자신을 건다 — 지금 게임 범위에서 찾는다(정적 칸을 두지 않는다 — 언리얼 `UGameInstance` 도 월드 문맥이 든다).
          */
-        static GameInstance* findRunningInstance() { return _s_pRunningInstance; }
+        static GameInstance* findRunningInstance();
 
         // --------------------------------------------------------------------------
         // 게임 인스턴스 서브시스템
@@ -309,8 +310,5 @@ namespace sw
         uint8                             _bStarted        : 1; ///< `initialize` 가 끝까지 섰다 — 종료 저장 · 세션 명령은 이때만
         uint8                             _bDerivedEntered : 1; ///< `onInitialize` 에 들어갔다 — `onShutdown` 은 이때만(파생은 자기 부분 실패를 스스로 거둔다)
         uint8                             _bSecuritySet    : 1; ///< 넷 세션에 이 인스턴스의 보안 제공자를 넣었다 — 거둘 때 이 인스턴스가 넣은 것만 뺀다
-
-        /** @brief 지금 도는 인스턴스입니다(`initialize` 가 잡고 `shutdown` · 소멸이 놓는다). 게임 스레드에서만 읽고 쓴다 — 프로세스당 하나의 계약을 지키는 자리다. */
-        static GameInstance* _s_pRunningInstance;
     };
 } // namespace sw

@@ -2,7 +2,6 @@
 
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
@@ -22,13 +21,6 @@ namespace sw::editor
         /** @brief 공유 저장소의 TU 로컬 상태 · 도우미입니다. */
         struct ImportedAssetStoreInternal
         {
-            /** @brief 저장소 쓰기를 한 줄로 세웁니다. 병렬 임포트의 두 원본이 같은 키를 쓸 수 있다(윈도우는 같은 파일을 동시에 열어 쓰지 못한다). */
-            static mutex& getWriteMutex()
-            {
-                static mutex s_mutex;
-                return s_mutex;
-            }
-
             /** @brief 글에서 찾는 저장소 구간입니다(`/models/_shared/`). */
             static string makeMarker() { return "/" + string( ImportedAssetStore::kModelFolderName ) + "/" + string( ImportedAssetStore::kStoreFolderName ) + "/"; }
         };
@@ -57,8 +49,9 @@ namespace sw::editor
 
     bool ImportedAssetStore::writeIfAbsent( string_view storePath, const void* pBytes, size_t byteCount )
     {
-        UniqueLock<mutex> lock{ ImportedAssetStoreInternal::getWriteMutex() };
-        const string      path{ storePath };
+        // 잠그지 않는다: 병렬 임포트의 두 원본이 같은 키를 써도 키가 내용 지문이라 같은 바이트이고, `FileUtil::writeFile` 은 저마다의 임시 파일에 쓴 뒤
+        // 바꿔 끼운다(언리얼 DDC 의 내용 주소 쓰기와 같다) — 프로세스 전역 잠금이 지킬 상태가 없다.
+        const string path{ storePath };
         if ( FileUtil::exists( path ) )
         {
             vector<uint8> existing;

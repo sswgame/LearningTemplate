@@ -20,6 +20,9 @@ namespace sw
     class XTestInputInjector
     {
     public:
+        /** @brief 모듈 부분 이름입니다 — 엔진 범위가 하나 든다(`SW_MODULE_PART`, 개발 명령 `input.xtest` 가 찾는다). */
+        static constexpr const utf8* kModulePartName = "XTestInputInjector";
+
         XTestInputInjector();
         ~XTestInputInjector();
         XTestInputInjector( const XTestInputInjector& )            = delete;

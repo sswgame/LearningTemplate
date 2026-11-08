@@ -115,10 +115,9 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReservedNamesAreUnique )
     SW_REQUIRE_TRUE( listReserved.empty() == false );
     for ( size_t indexA = 0; indexA < listReserved.size(); ++indexA )
     {
-        SW_REQUIRE_NOT_NULL( listReserved[indexA]._name );
-        SW_EXPECT_TRUE( string_view( listReserved[indexA]._name ).empty() == false );
+        SW_EXPECT_TRUE( listReserved[indexA]._name.empty() == false );
         for ( size_t indexB = indexA + 1; indexB < listReserved.size(); ++indexB )
-            SW_EXPECT_FALSE( string_view( listReserved[indexA]._name ) == string_view( listReserved[indexB]._name ) );
+            SW_EXPECT_FALSE( listReserved[indexA]._name == listReserved[indexB]._name );
     }
 }
 
@@ -135,8 +134,8 @@ SW_TEST_CASE( ShaderBindingValidatorTest, EveryReservedEntryPassesAtItsLocation 
             const ShaderReservedLocation& location = Util::locationOf( reserved, format );
             if ( location._bDeclared == false )
                 continue;
-            const uint32 issueCount = Util::validateOne( format, reserved._name, Util::labelOf( reserved._kind ), location._space, location._bind );
-            SW_EXPECT_TRUE_MSG( issueCount == 0, reserved._name );
+            const uint32 issueCount = Util::validateOne( format, reserved._name.c_str(), Util::labelOf( reserved._kind ), location._space, location._bind );
+            SW_EXPECT_TRUE_MSG( issueCount == 0, reserved._name.c_str() );
         }
     }
 }
@@ -152,7 +151,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, ReservedTableHoldsSlotContract )
     const ShaderReservedBinding* pRootConstants{ nullptr };
     for ( const ShaderReservedBinding& reserved : ShaderBindingValidatorIssue::getReservedBindings() )
     {
-        const string_view name( reserved._name );
+        const string_view name( reserved._name.c_str(), reserved._name.size() );
         if ( name == shaderslot::cbname::kPass )
             pPass = &reserved;
         else if ( name == shaderslot::resname::kMaterials )

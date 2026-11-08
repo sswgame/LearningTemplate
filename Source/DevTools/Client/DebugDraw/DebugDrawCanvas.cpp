@@ -55,20 +55,15 @@ namespace sw
                 painter.popTransform();
             }
 
-            /** @brief 펼친 선분의 재사용 버퍼입니다. 게임 스레드 하나가 패킷을 채우므로 하나를 프레임마다 재사용한다. */
-            static vector<DebugLine>& getScratchLines()
-            {
-                static vector<DebugLine> s_listLine;
-                return s_listLine;
-            }
-
             /** @brief 캔버스 겹치기: 켜져 있고 주 시점이 카메라에서 왔으면 큐의 도형을 칠한다. 칠한 것이 있으면 내용 번호 없이 올린다(도형은 프레임마다 바뀐다). */
             static void paintOverlay( const CanvasOverlayContext& context, CanvasOverlayTarget& target )
             {
                 if ( gv_debugDrawGameView == false || context._pViewProj == nullptr )
                     return;
-                const uint32 paintedCount = DebugDrawCanvasUtil::paint( engine::getSubsystem<DebugDrawQueue>(), *context._pViewProj, context._targetSize, context._pFontService,
-                                                                        context._glyphFrameIndex, getScratchLines(), target.acquire() );
+                // 펼친 선분 버퍼는 이 부름의 지역 값이다 — 개발 겹치기 한 장이라 프레임마다 잡아도 되고, 정적 재사용 버퍼(감춘 싱글턴)를 두지 않는다.
+                vector<DebugLine> listLine;
+                const uint32      paintedCount = DebugDrawCanvasUtil::paint( engine::getSubsystem<DebugDrawQueue>(), *context._pViewProj, context._targetSize, context._pFontService,
+                                                                             context._glyphFrameIndex, listLine, target.acquire() );
                 if ( paintedCount > 0 )
                     target.markContentChanged();
             }

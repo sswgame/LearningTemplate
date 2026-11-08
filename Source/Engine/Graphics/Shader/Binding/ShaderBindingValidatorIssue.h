@@ -59,7 +59,7 @@ namespace sw
      */
     struct ShaderReservedBinding
     {
-        const utf8*            _name{ nullptr };
+        string                 _name; ///< 리소스 이름(칸 번호를 붙인 이름은 표가 지어 든다)
         ShaderBindingKind      _kind{ ShaderBindingKind::Unknown };
         ShaderReservedLocation _dx11;
         ShaderReservedLocation _dx12;

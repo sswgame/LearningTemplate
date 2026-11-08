@@ -19,14 +19,6 @@ namespace sw
     {
         struct CrashInjectionInternal
         {
-            /// @brief `CrashInjectionKind::AssertFailure` 가 거짓으로 만드는 단언 식입니다(컴파일러가 단언을 상수로 접지 못하게 volatile).
-            ///        단언이 빠지는 빌드(Release · Shipping)에서는 읽는 곳이 없다.
-            [[maybe_unused]] static inline volatile bool s_bAssertProbeHolds{ false };
-            /// @brief `holdStderrForever` 가 stderr 를 쥐었는지입니다(죽는 시험 프로세스 안에서만 쓴다).
-            static inline atomic<bool> s_bStderrHeld{ false };
-            /// @brief `overflowStack` 의 재귀를 멈추는 척하는 값입니다. 컴파일러가 끝없는 재귀를 없애거나 경고로 막지 못하게 합니다.
-            static inline volatile bool s_bStopStackOverflow{ false };
-
             /** @brief 생성자에서 순수 가상 함수를 (한 단계 건너) 부르는 기반 클래스입니다(`CrashInjectionKind::PureVirtualCall`). */
             struct PureCallProbeBase
             {
@@ -42,7 +34,8 @@ namespace sw
                 void onProbe() override {}
             };
 
-            [[noreturn]] static void holdStderrForever()
+            /** @brief stderr 를 쥐고 @p pHeld 를 올린 뒤 영원히 잡니다. @p pHeld 는 부른 쪽의 지역 값이다 — 그 쪽은 올라온 것을 본 뒤 죽는다(이 스레드보다 먼저 사라지지 않는다). */
+            [[noreturn]] static void holdStderrForever( atomic<bool>* pHeld )
             {
 #if defined( SW_PLATFORM_WINDOWS )
                 _lock_file( stderr );
@@ -51,27 +44,29 @@ namespace sw
 #else
     #error "Unsupported platform"
 #endif
-                s_bStderrHeld.store( true );
+                pHeld->store( true );
                 while ( true )
                 {
                     ThreadUtil::sleepForSeconds( 1 * 3600.0 );
                 }
             }
 
-            static uint32 overflowStack( uint32 depth )
+            /** @brief @p bStop 은 재귀를 멈추는 척하는 값이다(부른 쪽의 지역 volatile) — 컴파일러가 끝없는 재귀를 없애거나 경고로 막지 못하게 한다. */
+            static uint32 overflowStack( uint32 depth, const volatile bool& bStop )
             {
                 volatile uint8 arrPad[constant::buffer::kMax4096];
                 arrPad[depth % constant::buffer::kMax4096] = static_cast<uint8>( depth );
-                if ( s_bStopStackOverflow )
+                if ( bStop )
                     return 0;
                 // 재귀 뒤에 값을 더해 꼬리 호출로 바뀌지 않게 한다(꼬리 호출이면 스택이 자라지 않는다).
-                return overflowStack( depth + 1 ) + arrPad[0];
+                return overflowStack( depth + 1, bStop ) + arrPad[0];
             }
 
             static void overflowStackOnWorker()
             {
                 ThreadCrashStack::initializeCurrentThread();
-                overflowStack( 0 );
+                volatile bool bStop = false;
+                overflowStack( 0, bStop );
             }
         };
     } // namespace
@@ -90,7 +85,8 @@ namespace sw
             case CrashInjectionKind::StackOverflow:
             {
                 SW_LOG_ERROR_ID( "CrashInjection.OverflowingStackThread", "[CrashTest] overflowing the stack of this thread" );
-                CrashInjectionInternal::overflowStack( 0 );
+                volatile bool bStop = false;
+                CrashInjectionInternal::overflowStack( 0, bStop );
                 break;
             }
             case CrashInjectionKind::WorkerStackOverflow:
@@ -114,15 +110,17 @@ namespace sw
             case CrashInjectionKind::AssertFailure:
             {
                 SW_LOG_ERROR_ID( "CrashInjection.FailingSWASSERT", "[CrashTest] failing SW_ASSERT" );
-                SW_ASSERT( CrashInjectionInternal::s_bAssertProbeHolds );
+                [[maybe_unused]] volatile bool bProbeHolds = false; // volatile 이라 컴파일러가 단언을 상수로 접지 못한다(단언이 빠지는 구성은 읽지 않는다)
+                SW_ASSERT( bProbeHolds );
                 break;
             }
             case CrashInjectionKind::StderrHeld:
             {
                 SW_LOG_ERROR_ID( "CrashInjection.WritingThroughNullPointer2", "[CrashTest] writing through a null pointer while another thread holds stderr" );
-                std::thread holder( &CrashInjectionInternal::holdStderrForever );
+                atomic<bool> bStderrHeld{ false };
+                std::thread  holder( &CrashInjectionInternal::holdStderrForever, &bStderrHeld );
                 holder.detach();
-                while ( CrashInjectionInternal::s_bStderrHeld.load() == false )
+                while ( bStderrHeld.load() == false )
                 {
                     ThreadUtil::yield();
                 }

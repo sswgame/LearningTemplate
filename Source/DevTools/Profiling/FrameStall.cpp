@@ -2,20 +2,19 @@
 
 #include "DevTools/Profiling/FrameStall.h"
 
-#include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "DevTools/DevToolsHost.h"
+
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Foundation/EngineServices.h"
 
 namespace sw
 {
     namespace
     {
-        /** @brief 다음 `consume` 이 붙잡을 시간(밀리초)입니다. 0 이면 걸린 지연이 없습니다. 개발 명령이 쓰고 게임 스레드가 비웁니다. */
-        atomic<int32> s_pendingStallMilliseconds{ 0 };
-
         struct FrameStallInternal
         {
             /** @brief 한 번에 걸 수 있는 가장 긴 지연(밀리초)입니다. 잘못 친 값이 시나리오 시한보다 오래 창을 멈추지 않게 합니다. */
@@ -33,21 +32,32 @@ namespace sw
                     outReply = formatToString( "stall must be 1..%# ms", kMaxStallMilliseconds );
                     return true;
                 }
-                FrameStall::request( milliseconds );
+                DevToolsHost* const pHost = engine::findSubsystem<DevToolsHost>();
+                if ( pHost == nullptr )
+                {
+                    outReply = "no dev tools host in this process";
+                    return true;
+                }
+                pHost->getFrameStall().request( milliseconds );
                 outReply = formatToString( "next game frame stalls %# ms", milliseconds );
                 return true;
             }
         };
     } // namespace
 
+    FrameStall::FrameStall()
+        : _pendingStallMilliseconds{ 0 }
+    {
+    }
+
     void FrameStall::request( int32 milliseconds )
     {
-        s_pendingStallMilliseconds.store( milliseconds, std::memory_order_relaxed );
+        _pendingStallMilliseconds.store( milliseconds, std::memory_order_relaxed );
     }
 
     void FrameStall::consume()
     {
-        const int32 milliseconds = s_pendingStallMilliseconds.exchange( 0, std::memory_order_relaxed );
+        const int32 milliseconds = _pendingStallMilliseconds.exchange( 0, std::memory_order_relaxed );
         if ( milliseconds <= 0 )
             return;
         MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + static_cast<int64>( milliseconds ) * constant::time::kNanosecondsPerMillisecond );

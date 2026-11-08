@@ -44,6 +44,7 @@ from lint.ServerUIIncludes import checkServerUIIncludes  # noqa: E402
 from generate.ClientOnlyTypes import checkClientOnlyTypes  # noqa: E402
 from lint.StateShape import checkStateShape  # noqa: E402
 from lint.ThreadOwners import checkThreadOwners  # noqa: E402
+from lint.MutableStatics import checkMutableStatics  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 from lint.MagicLiterals import checkMagicLiterals  # noqa: E402
 from lint.ResultTypes import checkResultTypes  # noqa: E402
@@ -231,6 +232,14 @@ def main(argv: list[str] | None = None) -> int:
         hasErrors = True
         print(f"[ThreadOwners] FAIL — 허용 목록 밖의 자체 스레드 {len(listThreadProblem)}건")
         for line in listThreadProblem:
+            print(f"  - {line}")
+
+    # --- 가변 정적 저장소(합법 C++ 이라 형식으로 막지 못한다 — 감춘 싱글턴, MutableStatics.py 머리말) ---------------
+    listMutableStaticProblem = checkMutableStatics(projectRoot)
+    if listMutableStaticProblem:
+        hasErrors = True
+        print(f"[MutableStatics] FAIL — 주인 객체 밖의 가변 정적 {len(listMutableStaticProblem)}건")
+        for line in listMutableStaticProblem:
             print(f"  - {line}")
 
     # --- 참조 0 인 컴포넌트 · 감시 값 · 개발 명령(쓰는 곳은 형식이 말하지 못한다 — FeatureReferences.py 머리말) ---------------

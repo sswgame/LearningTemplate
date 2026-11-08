@@ -828,6 +828,51 @@ namespace sw
 namespace sw
 {
     /**
+     * @class LockedRegistrationList
+     * @brief 자기 잠금을 든 `RegistrationList` 입니다. 모듈 로더 스레드의 정적 등록자와 런타임 조회가 겹치는 정적 등록 표(로컬 저장 바닥 · SQL 드라이버)가 쓴다.
+     * @details 표마다 "잠금 + 목록 + 함수 정적 홀더" 를 손으로 짜던 것을 한 벌로 둔다 — 잠금이 목록 옆에 있어야 둘이 함께 정적 초기화 순서를 타지 않는다.
+     *          목록은 `withLock` 안에서만 만진다(잠금이 "가장 안쪽" — 람다 안에서 다른 잠금을 잡지 않는다). 함수 정적으로 둘 때는 `SW_DEFINE_LOCKED_REGISTRATION_LIST`.
+     */
+    template <typename T>
+    class LockedRegistrationList final
+    {
+    public:
+        /** @brief 인자는 `RegistrationList` 생성자 인자(목록 이름 · 순서 · 이름 필수 · 대소문자)입니다. */
+        template <typename... TArgs>
+        explicit LockedRegistrationList( TArgs&&... args )
+            : _mutex{}
+            , _list{ std::forward<TArgs>( args )... }
+        {
+        }
+
+        LockedRegistrationList( const LockedRegistrationList& )            = delete;
+        LockedRegistrationList& operator=( const LockedRegistrationList& ) = delete;
+
+        /** @brief 잠금을 잡고 @p function( RegistrationList<T>& ) 을 부릅니다. 그 반환값을 돌려줍니다. */
+        template <typename TFunction>
+        decltype( auto ) withLock( TFunction&& function )
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            return function( _list );
+        }
+
+        /** @brief 잠금을 잡고 @p function( const RegistrationList<T>& ) 을 부릅니다. */
+        template <typename TFunction>
+        decltype( auto ) withLock( TFunction&& function ) const
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            return function( static_cast<const RegistrationList<T>&>( _list ) );
+        }
+
+    private:
+        mutable mutex       _mutex;
+        RegistrationList<T> _list;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class StaticRegistrar
      * @brief 정적 등록자의 공통 틀입니다. 만들 때 등록 함수로 올리고, 사라질 때(모듈 언로드 · 프로세스 끝) 올렸던 것만 내리기 함수로 내립니다.
      * @details 기능마다 손으로 쓰던 "등록자 구조체 + 생성자에서 올리기 + 소멸자에서 거절되지 않았으면 내리기" 를 한 벌로 둔다 — 거절된 등록을 내리면 같은 이름의
@@ -867,7 +912,7 @@ namespace sw
 /**
  * @brief 정적 등록 목록을 함수 지역 정적으로 돌려주는 함수 @p getName 을 정의합니다(.cpp 에서 — 이미지마다 하나라 헤더에 두지 않는다).
  * @details 함수 정적이라 다른 TU · DLL 의 정적 등록자가 먼저 와도 비어 있는 채로 서고, 등록자보다 늦게 사라진다. 함수 정적 가변 변수는 이 매크로와
- *          `SW_DEFINE_REGISTRATION_SLOT` 으로만 둔다(린트 `function-statics`) — 나머지 런타임 상태 · 정책 · 신호는 엔진 · 에디터 서브시스템이 든다.
+ *          `SW_DEFINE_LOCKED_REGISTRATION_LIST` · `SW_DEFINE_REGISTRATION_SLOT` 으로만 둔다(린트 `mutable-statics`) — 나머지 런타임 상태 · 정책 · 신호는 엔진 · 에디터 서브시스템이 든다.
  *          클래스 안에서는 앞에 `static` 을 붙인다(`static SW_DEFINE_REGISTRATION_LIST( getList, ... )`).
  * @param T 항목 형식입니다. 나머지 인자는 `RegistrationList` 생성자 인자(목록 이름 · 순서 · 이름 필수 · 대소문자 · 해제 함수)입니다.
  */
@@ -876,6 +921,17 @@ namespace sw
     {                                                           \
         static ::sw::RegistrationList<T> s_list{ __VA_ARGS__ }; \
         return s_list;                                          \
+    }
+
+/**
+ * @brief 자기 잠금을 든 정적 등록 목록(`LockedRegistrationList`)을 함수 지역 정적으로 돌려주는 함수 @p getName 을 정의합니다(.cpp 에서). 나머지 인자는 목록 생성자 인자입니다.
+ * @details 모듈 로더 스레드의 등록자와 런타임 조회가 겹치는 표가 쓴다 — 잠금이 없는 표는 `SW_DEFINE_REGISTRATION_LIST`.
+ */
+#define SW_DEFINE_LOCKED_REGISTRATION_LIST( getName, T, ... )         \
+    ::sw::LockedRegistrationList<T>& getName()                        \
+    {                                                                 \
+        static ::sw::LockedRegistrationList<T> s_list{ __VA_ARGS__ }; \
+        return s_list;                                                \
     }
 
 /**

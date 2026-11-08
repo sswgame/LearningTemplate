@@ -13,8 +13,9 @@ namespace sw
 {
     class IReceiptValidator;
 
-    template <typename TValue>
-    class DevOnlineExtension;
+    template <typename T>
+
+    class RegistrationSlot;
 
     /**
      * @struct EconomyDevOptions
@@ -26,6 +27,6 @@ namespace sw
 
         CreateFakeReceiptValidatorFunction _pCreateFakeReceiptValidator{ nullptr }; ///< `_bFakeReceipts` 가 레지스트리에 올리는 가짜 스토어("fake")를 만든다
 
-        static DevOnlineExtension<EconomyDevOptions> s_devOnline;
+        static RegistrationSlot<const EconomyDevOptions>& getDevOnline(); ///< 개발 대체물 칸(`SW_DEFINE_DEV_ONLINE_EXTENSION` 이 정의 — `DevOnlineExtension` 으로 읽는다)
     };
 } // namespace sw

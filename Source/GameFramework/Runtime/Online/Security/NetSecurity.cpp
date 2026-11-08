@@ -59,7 +59,7 @@ namespace sw
 
 namespace sw
 {
-    SW_DEFINE_DEV_ONLINE_EXTENSION( NetSecurityDevOptions, "the development TLS certificate (empty certificate / trust file)" );
+    SW_DEFINE_DEV_ONLINE_EXTENSION( NetSecurityDevOptions, "the development TLS certificate (empty certificate / trust file)" )
 
     bool NetSecurity::resolveProjectPath( string_view path, string& outPath, string& outError )
     {
@@ -79,7 +79,7 @@ namespace sw
 
     bool NetSecurity::ensureDevCertificate( INetSecurityProvider& provider, string& outCertificateFile, string& outPrivateKeyFile, string& outError )
     {
-        const NetSecurityDevOptions* pDevOptions = NetSecurityDevOptions::s_devOnline.require( outError );
+        const NetSecurityDevOptions* pDevOptions = DevOnlineExtension<NetSecurityDevOptions>::require( outError );
         if ( pDevOptions == nullptr )
         {
             outError.append( " - configure the TLS certificate and private key files" );

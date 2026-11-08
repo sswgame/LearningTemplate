@@ -40,8 +40,6 @@ namespace sw
         static float32 computeAspect( const RenderViewSettings& settings, uint32 outputWidth, uint32 outputHeight );
         /** @brief 렌더 텍스처 뷰의 한 프레임 예산입니다(`-gv_renderViewBudget` 뷰 수, `-gv_renderViewMegapixelBudget` 픽셀 합). */
         static RenderViewBudget getDefaultBudget();
-        /** @brief 마지막 `collectExtraViews` 에서 보임 판정으로 쉰(화면 밖 · 가려짐 · 너무 작음) 추가 뷰 수입니다. 진단 읽기입니다(감시 값 `RenderView.HiddenCount` 가 읽는다). */
-        static uint32 getLastHiddenViewCount();
         /**
          * @brief 추가 뷰 요청을 @p outListView 에 채웁니다(지우고 채운다).
          * @param mainViewProj 주 시점의 뷰-투영(보이는가 판정의 절두체와 화면 크기).
@@ -50,10 +48,11 @@ namespace sw
          * @param autoScale    자동 렌더 배율. 화면 사각형 뷰의 내부 해상도에 곱한다(주 시점과 같은 규칙). 렌더 텍스처 뷰는 자기 크기가 데이터라 곱하지 않는다.
          * @param now          스케줄러 시각(초).
          * @param pMainOcclusion 주 시점의 가림 타일 사본(`FrameRenderer::getOcclusionSnapshot`). nullptr 이면 가려짐을 보지 않는다. 호출하는 동안 살려 둔다.
+         * @return 보임 판정으로 쉰(화면 밖 · 가려짐 · 너무 작음) 추가 뷰 수입니다 — 부른 쪽(`RenderPacketViewSetup`)이 진단 값으로 든다(감시 값 `RenderView.HiddenCount`).
          */
-        static void collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj, const float3& mainPosition,
-                                       uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, const RenderViewBudget& budget, RenderViewScheduler& scheduler,
-                                       const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView );
+        static uint32 collectExtraViews( const GameObjectManager& manager, const CameraComponent* pMainCamera, const float4x4& mainViewProj, const float3& mainPosition,
+                                         uint32 outputWidth, uint32 outputHeight, float32 autoScale, float64 now, const RenderViewBudget& budget, RenderViewScheduler& scheduler,
+                                         const OcclusionTileSnapshot* pMainOcclusion, vector<RenderViewRequest>& outListView );
         /**
          * @brief 호스트 타깃 뷰(에디터 씬 뷰) 요청을 @p inoutListView 끝에 더합니다. 예산과 갱신 주기와 무관하게 매 프레임 그립니다.
          * @details 목록이 가득 찼으면(`kMaxExtraRenderView`) 마지막 추가 뷰 위치를 씁니다. 호스트 뷰는 빠지면 패널이 멈춰 보입니다.

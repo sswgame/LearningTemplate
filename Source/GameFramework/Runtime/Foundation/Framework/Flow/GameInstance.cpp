@@ -84,7 +84,10 @@ namespace sw
         };
     } // namespace
 
-    GameInstance* GameInstance::_s_pRunningInstance = nullptr;
+    GameInstance* GameInstance::findRunningInstance()
+    {
+        return game::findSubsystem<GameInstance>();
+    }
 
     GameInstance::GameInstance()
         : GameInstance( make_unique<GameLocalStore>() )
@@ -127,10 +130,8 @@ namespace sw
 
     GameInstance::~GameInstance()
     {
-        // shutdown 을 거치지 않고 지워져도 지금 범위가 지운 범위를 가리키지 않게 하고, 프로세스의 자리를 놓는다.
+        // shutdown 을 거치지 않고 지워져도 지금 범위가 지운 범위를 가리키지 않게 한다(범위에 건 자신도 함께 떨어진다).
         detachGameScope();
-        if ( _s_pRunningInstance == this )
-            _s_pRunningInstance = nullptr;
     }
 
     void GameInstance::detachGameScope()
@@ -174,7 +175,8 @@ namespace sw
     bool GameInstance::initialize( IWindow* pWindow )
     {
         // 프로세스당 하나다 — 다른 인스턴스가 돌면 아무것도 걸지 않고 멈춘다(앞 인스턴스의 지금 범위 · 서비스를 덮지 않는다).
-        if ( _s_pRunningInstance != nullptr && _s_pRunningInstance != this )
+        const GameInstance* const pRunning = findRunningInstance();
+        if ( pRunning != nullptr && pRunning != this )
         {
             SW_LOG_ERROR_ID( "GameInstance.SecondGameInstance", "Game instance cannot start - another game instance is running in this process (one per process; the host shuts the old one down first)" );
             return false;
@@ -182,8 +184,7 @@ namespace sw
         // 필수 엔진 서비스가 없으면 아무것도 걸기 전에 멈춘다. 쓰는 곳(입력 맵 · 세션 명령 · 설정 재적용)은 그 자리에서 게임 창구로 찾는다.
         if ( checkEngineServices( pWindow ) == false )
             return false;
-        _s_pRunningInstance = this;
-        _pWindow            = pWindow;
+        _pWindow = pWindow;
         if ( startInstance() == false )
         {
             // 되감기는 한 길이다 — 세운 만큼만 거두는 종료가 같은 일을 한다. 호스트는 이 인스턴스를 부순다(`ModuleInstanceUtil::createInstance`).
@@ -226,7 +227,8 @@ namespace sw
         if ( game::findGameScope() != &_gameScope )
             _gameScope.setParentScope( game::findGameScope() );
         game::setGameScope( &_gameScope );
-        if ( bindScopedService( &_packConfig._data ) == false || applyPackConfig() == false )
+        // 자신도 건다 — 도는 인스턴스(`findRunningInstance`)는 지금 게임 범위에서 찾는다.
+        if ( bindScopedService( this ) == false || bindScopedService( &_packConfig._data ) == false || applyPackConfig() == false )
             return false;
         // 인스턴스 서브시스템을 onInitialize 앞에 세운다(의존 순서: 화면 전환 · 로딩 화면 → 씬 흐름) — 씬 흐름이 씬 로드 받아들임 알림을 걸어 첫 씬 요청(onInitialize 안)이
         // 로딩 화면을 띄우고, 파생이 네트워크 역할을 보고 키트 처리기를 단다. 하나라도 서지 않으면(로딩 팁 파일을 못 읽었다) 게임을 띄우지 않는다 — 파생 초기화도 부르지 않는다.
@@ -304,8 +306,6 @@ namespace sw
         _pItemCatalog.reset();
         _pAutosave.reset();
         _pWindow = nullptr;
-        if ( _s_pRunningInstance == this )
-            _s_pRunningInstance = nullptr;
     }
 
     bool GameInstance::loadGameSettings()

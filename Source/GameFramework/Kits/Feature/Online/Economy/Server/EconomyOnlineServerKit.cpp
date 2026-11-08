@@ -146,7 +146,7 @@ namespace sw
             /** @brief 설정 `_bFakeReceipts` 의 가짜 스토어를 레지스트리에 올립니다(DevOnline 단위가 만든다 — 그 단위가 없는 구성은 거절한다). */
             [[nodiscard]] bool registerFakeReceipts( string& outError )
             {
-                const EconomyDevOptions* pDevOptions = EconomyDevOptions::s_devOnline.require( outError );
+                const EconomyDevOptions* pDevOptions = DevOnlineExtension<EconomyDevOptions>::require( outError );
                 if ( pDevOptions == nullptr )
                     return false;
                 _pFakeValidator = pDevOptions->_pCreateFakeReceiptValidator();

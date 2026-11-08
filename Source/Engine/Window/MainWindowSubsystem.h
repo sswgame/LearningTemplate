@@ -75,6 +75,18 @@ namespace sw
         FramePacer&       getFramePacer() { return _framePacer; }
         const FramePacer& getFramePacer() const { return _framePacer; }
 
+        /**
+         * @brief 창에 요청했고 아직 반영되지 않은 클라이언트 크기를 적습니다(자동화 단계 `ResizeWindow`). 창의 크기 바꾸기는 다음 메시지 펌프에야 든다.
+         * @details 창 크기 요청의 상태라 창 주인이 든다 — 정적 칸이면 엔진을 다시 세워도 앞 실행의 요청이 남는다(언리얼 `FSceneViewport` 의 대기 크기 자리).
+         */
+        void setPendingClientSize( uint32 width, uint32 height )
+        {
+            _pendingClientWidth  = width;
+            _pendingClientHeight = height;
+        }
+        /** @brief 적은 크기가 창에 반영됐으면(또는 적은 것이 없으면) true 이고 적은 것을 지웁니다. 창이 없으면 false 입니다. */
+        [[nodiscard]] bool consumePendingClientSize();
+
     private:
         /**
          * @class TitleTarget
@@ -102,7 +114,9 @@ namespace sw
         unique_ptr<IWindow> _window;
         string              _baseTitle;
         FramePacer          _framePacer;
-        TitleTarget         _titleTarget; ///< 제목을 거는 이음매(`getTitleTarget`)
+        TitleTarget         _titleTarget;         ///< 제목을 거는 이음매(`getTitleTarget`)
+        uint32              _pendingClientWidth;  ///< `setPendingClientSize` 가 적은 너비(0 이면 요청 없음)
+        uint32              _pendingClientHeight; ///< `setPendingClientSize` 가 적은 높이
     };
 
     SW_SERVICE_SLOT( MainWindowSubsystem, Optional );

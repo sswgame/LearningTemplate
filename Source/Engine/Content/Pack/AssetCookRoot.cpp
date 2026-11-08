@@ -2,30 +2,25 @@
 
 #include "Engine/Content/Pack/AssetCookRoot.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/String/RegistrationList.h"
 
 namespace sw
 {
-    vector<string_view>& AssetCookRootRegistry::getRoots()
-    {
-        // 함수 안 정적 값 — 다른 번역 단위의 정적 등록자가 먼저 불러도 표가 이미 있다.
-        static vector<string_view> s_listRoot;
-        return s_listRoot;
-    }
+    SW_DEFINE_REGISTRATION_LIST( AssetCookRootRegistry::getRegistrars, const AssetCookRootRegistrar, "AssetCookRootRegistry" )
 
     void AssetCookRootRegistry::appendRoots( vector<string>& outListAssetID )
     {
-        for ( const string_view assetID : getRoots() )
+        for ( const AssetCookRootRegistrar* pRegistrar : getRegistrars().getItems() )
         {
-            outListAssetID.emplace_back( assetID );
+            outListAssetID.emplace_back( pRegistrar->getAssetID() );
         }
     }
 
     bool AssetCookRootRegistry::hasRoot( string_view assetID )
     {
-        for ( const string_view root : getRoots() )
+        for ( const AssetCookRootRegistrar* pRegistrar : getRegistrars().getItems() )
         {
-            if ( root == assetID )
+            if ( pRegistrar->getAssetID() == assetID )
                 return true;
         }
         return false;
@@ -34,12 +29,11 @@ namespace sw
     AssetCookRootRegistrar::AssetCookRootRegistrar( string_view assetID )
         : _assetID{ assetID }
     {
-        AssetCookRootRegistry::getRoots().push_back( _assetID );
+        (void)AssetCookRootRegistry::getRegistrars().add( this );
     }
 
     AssetCookRootRegistrar::~AssetCookRootRegistrar()
     {
-        VectorUtil::removeIf( AssetCookRootRegistry::getRoots(), [this]( const string_view root )
-        { return root.data() == _assetID.data() && root.size() == _assetID.size(); } );
+        (void)AssetCookRootRegistry::getRegistrars().remove( this );
     }
 } // namespace sw
