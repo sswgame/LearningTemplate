@@ -54,20 +54,7 @@ float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
     hair._scatter   = context._material._hairScatter;
     hair._tangent   = normalize( context._material._hairStrandAxis > 0.5f ? tangentV : tangentU );
 
-    const float3 toView = View::computeToView( context._worldPosition );
-    const float  shadow = Shadow::sampleAtWorld( context._worldPosition, surface._normal );
-    float3       color  = albedo * g_KeyLightColor.rgb * g_KeyLightColor.a;
-    LightCursor  cursor = LightCursor::begin( context._worldPosition );
-    LightData    light;
-    while ( cursor.next( light ) )
-    {
-        float3 toLight;
-        float  attenuation;
-        if ( light.computeIncidence( context._worldPosition, toLight, attenuation ) == false )
-            continue;
-        const float3 radiance = light._colorIntensity.rgb * light._colorIntensity.a * attenuation * light.computeShadow( context._worldPosition, surface._normal, shadow );
-        color += ( HairShading::evaluateLobes( hair, toView, toLight ) + HairShading::evaluateScatter( hair, surface._normal, toView, toLight ) ) * radiance;
-    }
+    float3 color = HairShading::shadeLights( hair, context._worldPosition, surface._normal );
         #if defined( SW_MATERIAL_GRAPH_EMISSIVE )
     color += computeMaterialEmissive( context );
         #endif

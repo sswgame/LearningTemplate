@@ -178,6 +178,31 @@ static const float kTwoPi  = 6.28318530717958647692f;
 static const float kHalfPi = 1.57079632679489661923f;
 static const float kInvPi  = 0.31830988618379067154f;
 
+// 선형 Rec.709 휘도 가중치 — 노출 측정 · 그레이딩 · 가닥 흔들림이 같은 값을 쓴다.
+static const float3 kLuminanceWeights = float3( 0.2126f, 0.7152f, 0.0722f );
+
+/** @brief 여러 셰이더가 함께 쓰는 순수 함수(상태 · 리소스 없음). 같은 식을 셰이더마다 두지 않는다. */
+struct CommonMath
+{
+    static float computeLuminance( float3 linearColor );
+    static float computeInterleavedGradientNoise( float2 pixel );
+};
+
+/** @brief 선형 색의 휘도(Rec.709)입니다. */
+static float CommonMath::computeLuminance( float3 linearColor )
+{
+    return dot( linearColor, kLuminanceWeights );
+}
+
+/**
+ * @brief 픽셀 좌표의 문턱 · 회전(0..1) — 인터리브 그래디언트 노이즈(Jimenez 2014). 프레임마다 같아 골든이 정해진다.
+ * @details 픽셀 칸(floor)으로 잰다 — SV_Position(칸 가운데 .5)이든 UV × 크기든 같은 칸은 같은 값이다(GTAO · SSGI · 접촉 그림자 · 머리카락 디더가 같은 무늬).
+ */
+static float CommonMath::computeInterleavedGradientNoise( float2 pixel )
+{
+    return frac( 52.9829189f * frac( dot( floor( pixel ), float2( 0.06711056f, 0.00583715f ) ) ) );
+}
+
 // ------------------------------------------------------------------------------
 // 6) 정점 입력 — **정본은 C++ 의 메시 정점 표(`constant::render::getMeshVertexAttributes`)다.** location 은 표의 칸 번호와 같다.
 // ------------------------------------------------------------------------------

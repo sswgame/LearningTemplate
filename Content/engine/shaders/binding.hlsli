@@ -94,6 +94,7 @@ struct Transform
     static float4 computeClipPosition( float4 worldPosition, float4x4 viewProj );
     static float3 computeWorldNormal( float3 localNormal, float4x4 world );
     static float3 computeWorldPositionFromDepth( float2 uv, float deviceDepth );
+    static float2 computeCameraPreviousUv( float2 uv, float deviceDepth, out float outPreviousClipW ); // 카메라 움직임만의 지난 화면 자리
 };
 
 /** @brief 지금 뷰(PassCB)에서 구하는 값. */
@@ -672,6 +673,31 @@ static float3 Transform::computeWorldNormal( float3 localNormal, float4x4 world 
     const float  handedness  = ( dot( row0, cofactor0 ) < 0.0f ) ? -1.0f : 1.0f;
     const float3 worldNormal = localNormal.x * cofactor0 + localNormal.y * cofactor1 + localNormal.z * cofactor2;
     return normalize( worldNormal * handedness );
+}
+
+/**
+ * @brief 화면 UV와 깊이에서 월드 위치를 복원합니다 (깊이를 읽는 풀스크린 패스 — 디퍼드 조명 · SSR · GTAO · 접촉 그림자 · TAA · 모션 블러).
+ * @details G버퍼에 위치를 저장하지 않는다 — 첨부 하나를 통째로 아끼고, 복원은 역행렬 곱 하나다.
+ *          이 엔진은 행벡터 규약이라 `mul( 벡터, 행렬 )` 이다(`mul( worldPosition, g_ViewProj )` 와 같은 순서).
+ */
+static float3 Transform::computeWorldPositionFromDepth( float2 uv, float deviceDepth )
+{
+    const float2 ndcXy = uv * float2( 2.0f, -2.0f ) + float2( -1.0f, 1.0f );
+    const float4 world = mul( float4( ndcXy, deviceDepth, 1.0f ), g_InvViewProj );
+    return world.xyz / world.w;
+}
+
+/**
+ * @brief 깊이로 복원한 월드 위치를 지난 뷰-투영(g_PrevViewProj)으로 옮긴 화면 UV 입니다 — 카메라 움직임만의 재투영(하늘 · 속도 없는 픽셀).
+ * @param outPreviousClipW 지난 클립 w — 0 이하면 지난 프레임에 카메라 뒤였다
+ */
+static float2 Transform::computeCameraPreviousUv( float2 uv, float deviceDepth, out float outPreviousClipW )
+{
+    const float3 worldPosition = Transform::computeWorldPositionFromDepth( uv, deviceDepth );
+    const float4 previousClip  = mul( float4( worldPosition, 1.0f ), g_PrevViewProj );
+    const float2 previousNdc   = previousClip.xy / max( abs( previousClip.w ), 1e-5f ) * sign( previousClip.w );
+    outPreviousClipW           = previousClip.w;
+    return previousNdc * float2( 0.5f, -0.5f ) + 0.5f;
 }
 
 // ------------------------------------------------------------------------------

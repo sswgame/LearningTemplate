@@ -84,7 +84,7 @@ float4 PSMain( PSInput input ) : SV_TARGET
     const float3 worldPosition = Transform::computeWorldPositionFromDepth( input._uv, device );
     const float  viewDepth     = mul( float4( worldPosition, 1.0f ), g_ViewProj ).w;
     // 걸음 출발을 픽셀마다 조금씩 비켜 걸음 사이의 띠를 잡음으로 바꾼다(Jimenez 의 interleaved gradient noise — 픽셀 좌표만의 함수라 같은 프레임은 같은 그림).
-    const float jitter = frac( 52.9829189f * frac( dot( input._position.xy, float2( 0.06711056f, 0.00583715f ) ) ) );
+    const float jitter = CommonMath::computeInterleavedGradientNoise( input._position.xy );
     float4      mask   = float4( 1.0f, 1.0f, 1.0f, 1.0f );
     if ( device < 1.0f )
     {
