@@ -286,6 +286,64 @@ SW_TEST_CASE( ZoneTest, LoadRejectsWhatItCannotRun )
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), compiled.getModules().size() );
 }
 
+/** @brief [ZoneTest] 표면 도장 모듈: 도장 칸(크기 · 깊이 · 메워지는 속도)이 빠지거나 규칙에 어긋나면(메워지지 않음 · 테두리 반쪽 · 모르는 모양 · 자리) 로드 실패, 식 깊이는 받는다 */
+SW_TEST_CASE( ZoneTest, SurfaceStampModuleChecksTheStamp )
+{
+    ZoneFixture         fixture;
+    ZoneCompiledProfile compiled;
+    const auto          compileOne = [&]( const ZoneModuleDef& module )
+    {
+        ZoneProfile profile;
+        profile._listModule.push_back( module );
+        return compiled.compile( profile, "test", &fixture._catalog );
+    };
+
+    SW_EXPECT_LOG( "Zone.ParamMissing" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "a", "SurfaceStamp", {
+                                                                                   { "size", "1,1,0"},
+                                                                                   {"depth",  "0.06"}
+    } ) ) );
+    SW_EXPECT_LOG( "Surface.StampFillMissing" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "b", "SurfaceStamp", {
+                                                                                   {     "size", "1,1,0"},
+                                                                                   {    "depth",  "0.06"},
+                                                                                   {"fillSpeed",     "0"}
+    } ) ) );
+    SW_EXPECT_LOG( "Surface.StampRimHalf" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "c", "SurfaceStamp", {
+                                                                                   {     "size", "1,1,0"},
+                                                                                   {    "depth",  "0.06"},
+                                                                                   {"fillSpeed",  "0.02"},
+                                                                                   {"rimHeight",  "0.03"}
+    } ) ) );
+    SW_EXPECT_LOG( "Zone.ChoiceInvalid" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "d", "SurfaceStamp", {
+                                                                                   {    "shape", "Square"},
+                                                                                   {     "size",  "1,1,0"},
+                                                                                   {    "depth",   "0.06"},
+                                                                                   {"fillSpeed",   "0.02"}
+    } ) ) );
+    SW_EXPECT_LOG( "Zone.ChoiceInvalid" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "e", "SurfaceStamp", {
+                                                                                   {       "at",  "Feet"},
+                                                                                   {     "size", "1,1,0"},
+                                                                                   {    "depth",  "0.06"},
+                                                                                   {"fillSpeed",  "0.02"}
+    } ) ) );
+
+    // 안쪽일수록 깊은 깔때기 — 깊이는 위치 값의 식이다(대상 없는 검사 문맥에서는 0 이라 빈 도장으로 지난다).
+    SW_EXPECT_TRUE( compileOne( ZoneFixture::makeModule( "funnel", "SurfaceStamp", {
+                                                                                       {    "shape",             "Funnel"},
+                                                                                       {       "at",             "Center"},
+                                                                                       {     "size",              "2,0,0"},
+                                                                                       {    "depth", "0.12 * zoneDepth01"},
+                                                                                       {"fillSpeed",               "0.05"},
+                                                                                       {"spinSpeed",                "1.5"},
+                                                                                       { "armCount",                  "3"}
+    } ) ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), compiled.getModules().size() );
+}
+
 /** @brief [ZoneTest] 배치 덮어쓰기 — 이름으로 칸 하나만 고치고, 빼고, 더한다. 없는 이름을 빼면 오류다 */
 SW_TEST_CASE( ZoneTest, PlacementOverridesWorkByName )
 {

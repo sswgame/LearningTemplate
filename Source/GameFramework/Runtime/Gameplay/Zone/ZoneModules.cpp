@@ -1,9 +1,10 @@
 /**
  * @file ZoneModules.cpp
- * @brief 기본 모듈 종류(처리기) — 할 일(`Action`), 물리 필드(`PhysicsField`), NPC 판단 질의(`Blackboard`), 내비 비용(`NavArea`), 표면 채널(`SurfaceChannel`).
+ * @brief 기본 모듈 종류(처리기) — 할 일(`Action`), 물리 필드(`PhysicsField`), NPC 판단 질의(`Blackboard`), 내비 비용(`NavArea`), 표면 채널(`SurfaceChannel`),
+ *        표면 도장(`SurfaceStamp` — 변형 층의 파묻힘 테두리 · 깔때기 · 끌린 자국).
  * @details 처리기는 서로를 모른다. 가라앉음 · 감속 · 화상 · 버프 · 스킬 · 즉사 · 이동 · 규칙 신호는 모두 `Action` 의 동작 어휘(이펙트가 정본 — 스택 · 속성 · 태그)이고,
  *          무중력 · 부력 · 해류 · 당김 · 소용돌이 · 빙판은 `PhysicsField` 의 값이다. 외형 내리기 · 점프 탈출은 대상 쪽 반응 컴포넌트가 속성 · 태그만 읽어 한다
- *          (`VisualSinkReactionComponent` · `JumpEscapeReactionComponent`). 새 효과는 처리기 하나를 더한다.
+ *          (`VisualSinkReactionComponent` · `JumpEscapeReactionComponent` · `ScreenReactionComponent`). 새 효과는 처리기 하나를 더한다.
  */
 #include "pch.h"
 
@@ -12,7 +13,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Fit/SurfaceState.h"
+#include "Engine/Environment/Surface/SurfaceDeformSystem.h"
+#include "Engine/Environment/Surface/SurfaceStamp.h"
 #include "Engine/Navigation/Component/SceneNavigation.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
@@ -312,6 +316,85 @@ namespace sw
                                           context._pTarget->getName().c_str() );
             }
         };
+
+        /**
+         * @brief 표면 도장입니다 — 안에 있는 동안 표면 변형 층(`SurfaceDeformSystem`)에 도장을 찍습니다: 대상 둘레의 파묻힘 테두리, 중심의 빨려드는 깔때기, 끌린 자국.
+         * @details 도장 칸(`shape` · `size` · `depth` · `rimHeight` · `rimWidth` · `fillSpeed` · `spinSpeed` · `armCount`)은 `SurfaceStampDef` 와 같고, 수치 칸은 식이라
+         *          위치 값을 읽는다(`depth="0.12 * zoneDepth01"` — 안쪽일수록 깊은 깔때기). 자리는 `at`(대상 발 `Target` · 당김 중심 `Center`)이고 `interval` 초마다(0 = 매 프레임) 찍는다.
+         *          매 프레임 다시 찍는 도장은 붙잡은 도장과 같다 — 머무는 동안 메워지지 않고, 나가면 자기 속도로 메워진다(처리기는 상태를 갖지 않아 핸들을 들지 않는다).
+         *          깔때기 홈은 머문 시간 × `spinSpeed` 만큼 돈다. 충돌 · 내비는 고치지 않는다(보이는 것만). 눈 · 모래 차이는 프리셋의 칸이다(눈 깊고 느리게, 모래 얕고 빠르게).
+         */
+        class ZoneSurfaceStampProcessor final : public ZoneModuleProcessor
+        {
+        public:
+            const utf8* getKindName() const override { return "SurfaceStamp"; }
+            void        collectParamSpecs( vector<ZoneParamSpec>& outListSpec ) const override
+            {
+                outListSpec.push_back( ZoneParamSpec{ "shape", ZoneParamKind::Text, "Print" } );
+                outListSpec.push_back( ZoneParamSpec{ "size", ZoneParamKind::Vector, nullptr } );
+                outListSpec.push_back( ZoneParamSpec{ "depth", ZoneParamKind::Number, nullptr } );
+                outListSpec.push_back( ZoneParamSpec{ "rimHeight", ZoneParamKind::Number, "0" } );
+                outListSpec.push_back( ZoneParamSpec{ "rimWidth", ZoneParamKind::Number, "0" } );
+                outListSpec.push_back( ZoneParamSpec{ "fillSpeed", ZoneParamKind::Number, nullptr } );
+                outListSpec.push_back( ZoneParamSpec{ "spinSpeed", ZoneParamKind::Number, "0" } );
+                outListSpec.push_back( ZoneParamSpec{ "armCount", ZoneParamKind::Number, "0" } );
+                outListSpec.push_back( ZoneParamSpec{ "at", ZoneParamKind::Text, "Target" } );
+                outListSpec.push_back( ZoneParamSpec{ "interval", ZoneParamKind::Number, "0" } );
+            }
+            bool checkModule( const ZoneCompiledModule& module, string_view sourceName ) const override
+            {
+                bool bOk = ZoneModulesInternal::checkChoice( module, "shape", { "Print", "Trail", "Funnel" }, sourceName );
+                bOk      = ZoneModulesInternal::checkChoice( module, "at", { "Target", "Center" }, sourceName ) && bOk;
+                // shortcut: 칸 사이 규칙(크기 · 메워지는 속도)은 대상 없는 문맥으로 평가해 본다 — 대상 속성만 읽는 식은 0 으로 보여 오류가 된다. 그런 식이 필요해지면 찍을 때 검사로 옮긴다.
+                return bOk && makeStamp( module, GameplayContext{} ).validate( sourceName, module._name.c_str() );
+            }
+
+            void onEnter( ZoneEventContext& context ) const override { context._pMemory->_timer = 0.0f; } // 들어온 프레임에 찍고 시작한다
+
+            void onStay( ZoneEventContext& context, float32 deltaTime ) const override
+            {
+                if ( context._bConditionTrue == SW_FALSE )
+                    return;
+                ZoneModuleMemory& memory = *context._pMemory;
+                memory._timer -= deltaTime;
+                if ( memory._timer > 0.0f )
+                    return;
+                const ZoneCompiledModule& module   = *context._pModule;
+                const float32             interval = module.evaluateNumber( hashed_string( "interval" ), context._world );
+                memory._timer                      = interval > 0.0f ? MathUtil::max( 0.0f, memory._timer + interval ) : 0.0f; // 밀린 주기는 따라잡지 않는다
+                const SurfaceStampDef stamp        = makeStamp( module, context._world );
+                const ZoneSample&     sample       = *context._pSample;
+                const bool            bAtCenter    = module.getText( hashed_string( "at" ) ) == "Center";
+                // 깔때기는 머문 시간만큼 홈을 돌리고, 나머지는 대상이 보는 쪽으로 눕힌다(끌린 자국 · 발 모양).
+                float32 yaw = sample._timeInside * stamp._spinSpeed;
+                if ( stamp._shape != SurfaceStampShape::Funnel )
+                {
+                    const SceneComponent* const pRoot = context._pTarget->getPrimarySceneComponent();
+                    yaw                               = pRoot != nullptr ? pRoot->getLocalRotation()._y : 0.0f;
+                }
+                context._pManager->getSubsystem<SurfaceDeformSystem>().stamp( stamp, bAtCenter ? sample._center : sample._position, yaw );
+            }
+
+        private:
+            /** @brief 모듈 칸을 @p world 로 평가한 도장입니다. */
+            static SurfaceStampDef makeStamp( const ZoneCompiledModule& module, const GameplayContext& world )
+            {
+                const string&   shape = module.getText( hashed_string( "shape" ) );
+                const float3    size  = module.getVector( hashed_string( "size" ) );
+                SurfaceStampDef stamp;
+                stamp._shape     = shape == "Funnel" ? SurfaceStampShape::Funnel : ( shape == "Trail" ? SurfaceStampShape::Trail : SurfaceStampShape::Print );
+                stamp._size      = float2{ size._x, size._y };
+                stamp._depth     = MathUtil::max( 0.0f, module.evaluateNumber( hashed_string( "depth" ), world ) );
+                stamp._rimHeight = MathUtil::max( 0.0f, module.evaluateNumber( hashed_string( "rimHeight" ), world ) );
+                stamp._rimWidth  = MathUtil::max( 0.0f, module.evaluateNumber( hashed_string( "rimWidth" ), world ) );
+                stamp._fillSpeed = MathUtil::max( 0.0f, module.evaluateNumber( hashed_string( "fillSpeed" ), world ) );
+                stamp._spinSpeed = module.evaluateNumber( hashed_string( "spinSpeed" ), world );
+                stamp._armCount  = static_cast<uint32>( MathUtil::clamp( module.evaluateNumber( hashed_string( "armCount" ), world ), 0.0f, kMaxArmCount ) );
+                return stamp;
+            }
+
+            static constexpr float32 kMaxArmCount = 16.0f; ///< 깔때기 홈 수 상한(`SurfaceStampDef::_armCount` 의 PROPERTY Max 와 같다)
+        };
     } // namespace
 
     SW_ZONE_MODULE( Action, ZoneActionProcessor );
@@ -319,4 +402,5 @@ namespace sw
     SW_ZONE_MODULE( Blackboard, ZoneBlackboardProcessor );
     SW_ZONE_MODULE( NavArea, ZoneNavAreaProcessor );
     SW_ZONE_MODULE( SurfaceChannel, ZoneSurfaceChannelProcessor );
+    SW_ZONE_MODULE( SurfaceStamp, ZoneSurfaceStampProcessor );
 } // namespace sw
