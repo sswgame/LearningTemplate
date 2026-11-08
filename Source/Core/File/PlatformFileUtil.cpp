@@ -38,6 +38,8 @@ namespace sw
             inline static atomic<uint64> s_fileOpenCount{ 0 };
             /** @brief 걸린 읽기 관찰자입니다(`registerReadObserver`). 없으면 nullptr 입니다. */
             inline static atomic<IFileReadObserver*> s_pReadObserver{ nullptr };
+            /** @brief 걸린 쓰기 관찰자입니다(`registerWriteObserver`). 없으면 nullptr 입니다. */
+            inline static atomic<IFileWriteObserver*> s_pWriteObserver{ nullptr };
 
 #if defined( SW_PLATFORM_LINUX )
             /** @brief freedesktop 휴지통 폴더입니다(`$XDG_DATA_HOME/Trash`, 없으면 `~/.local/share/Trash`). 홈을 모르면 빈 글입니다. */
@@ -182,6 +184,24 @@ namespace sw
     {
         IFileReadObserver* pExpected = pObserver;
         (void)PlatformFileUtilInternal::s_pReadObserver.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
+    }
+
+    void PlatformFileUtil::recordFileWritten( string_view filePath )
+    {
+        if ( IFileWriteObserver* const pObserver = PlatformFileUtilInternal::s_pWriteObserver.load( std::memory_order_acquire ) )
+            pObserver->recordFileWritten( filePath );
+    }
+
+    bool PlatformFileUtil::registerWriteObserver( IFileWriteObserver* pObserver )
+    {
+        IFileWriteObserver* pExpected{ nullptr };
+        return PlatformFileUtilInternal::s_pWriteObserver.compare_exchange_strong( pExpected, pObserver, std::memory_order_acq_rel, std::memory_order_relaxed );
+    }
+
+    void PlatformFileUtil::unregisterWriteObserver( IFileWriteObserver* pObserver )
+    {
+        IFileWriteObserver* pExpected = pObserver;
+        (void)PlatformFileUtilInternal::s_pWriteObserver.compare_exchange_strong( pExpected, nullptr, std::memory_order_acq_rel, std::memory_order_relaxed );
     }
 
     bool PlatformFileUtil::acceptsPathInput( string_view path )

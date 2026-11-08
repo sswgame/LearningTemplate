@@ -19,6 +19,9 @@ namespace sw
     /**
      * @brief 파일 하나의 크기와 마지막 쓰기 시각입니다. "지난번에 본 그 파일 그대로인가" 를 파일을 열지 않고 확인할 때 씁니다.
      * @details 시각은 1601 기원 100 ns 눈금입니다(플랫폼이 같다). **같은지만** 비교합니다. `tryGetFileTimestamp` 는 초 단위라 1초 안에 일어난 편집을 놓칩니다.
+     *          쓰기 시각은 시계 틱(Windows 약 16 ms) 단위로 오르므로 같은 틱 안에 같은 크기로 다시 쓴 파일은 도장이 같다. 도장으로 내용 값을 캐시하는 쪽은
+     *          이 프로세스의 쓰기를 쓰기 관찰자(`IFileWriteObserver`)로 받고, 바깥 도구의 쓰기만 시간 창으로 거른다(`ContentHashCache`). "바뀌었나" 를 묻는 쪽은
+     *          도장이 아니라 내용 해시(`ContentHash::computeFile`)를 비교한다.
      */
     struct FileStamp
     {
