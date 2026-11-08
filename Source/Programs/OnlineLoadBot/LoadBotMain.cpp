@@ -63,16 +63,13 @@ namespace sw
             /**
              * @brief 봇 인자를 `CommandLineManager` 로 읽습니다(엔진 표준 인자는 등록하지 않는다 — 봇 인자만 받는다).
              * @details 경로 인자는 `CommandLineDiskPath` 라 받을 때 기동 폴더 기준으로 한 번 절대화되고 비면 거절된다. 값 없는 `--tls` 도 그래서 거절된다
-             *          (예전에는 값 없는 `--tls` 가 개발용 인증서를 신뢰했다). 틀린 인자는 모두 모아 @p outError 로 돌려준다.
+             *          (예전에는 값 없는 `--tls` 가 개발용 인증서를 신뢰했다). 틀린 인자는 모두 모아 여러 줄 글(쓰는 법 포함)로 돌려준다 — 길이가 정해지지 않아 오류 형식이 글이다.
              */
-            [[nodiscard]] static bool readOptions( int32 argc, utf8* argv[], LoadBotOptions& outOptions, string& outError )
+            [[nodiscard]] static expected<LoadBotOptions, string> readOptions( int32 argc, utf8* argv[] )
             {
                 const optional<AbsolutePath> baseDirectory = AbsolutePath::tryMake( FileUtil::getCurrentPath() );
                 if ( baseDirectory.has_value() == false )
-                {
-                    outError = "cannot read the startup directory - path arguments cannot be resolved";
-                    return false;
-                }
+                    return unexpected( string( "cannot read the startup directory - path arguments cannot be resolved" ) );
                 CommandLineManager commandLine;
                 commandLine.addArgument( { "scenario" }, CommandLineDiskPath{}, false );
                 commandLine.addArgument( { "load" }, CommandLineDiskPath{}, false );
@@ -87,80 +84,65 @@ namespace sw
                 commandLine.parse( argc, argv, *baseDirectory );
                 if ( commandLine.getParseErrors().empty() == false )
                 {
+                    string usage;
                     for ( const string& error : commandLine.getParseErrors() )
                     {
-                        outError += error + "\n";
+                        usage += error + "\n";
                     }
-                    outError += "usage:\n" + commandLine.makeUsageText();
-                    return false;
+                    usage += "usage:\n" + commandLine.makeUsageText();
+                    return unexpected( std::move( usage ) );
                 }
 
-                (void)commandLine.getArgument( "scenario", outOptions._scenarioPath );
-                (void)commandLine.getArgument( "load", outOptions._loadPath );
-                (void)commandLine.getArgument( "online-config", outOptions._onlineConfigPath );
-                (void)commandLine.getArgument( "report", outOptions._reportPath );
-                (void)commandLine.getArgument( "tls", outOptions._tlsTrustFile );
-                (void)commandLine.getArgument( "server", outOptions._serverAddress );
-                (void)commandLine.getArgument( "game", outOptions._gameAddress );
-                (void)commandLine.getArgument( "max-error-percent", outOptions._maxErrorPercent );
+                LoadBotOptions options;
+                (void)commandLine.getArgument( "scenario", options._scenarioPath );
+                (void)commandLine.getArgument( "load", options._loadPath );
+                (void)commandLine.getArgument( "online-config", options._onlineConfigPath );
+                (void)commandLine.getArgument( "report", options._reportPath );
+                (void)commandLine.getArgument( "tls", options._tlsTrustFile );
+                (void)commandLine.getArgument( "server", options._serverAddress );
+                (void)commandLine.getArgument( "game", options._gameAddress );
+                (void)commandLine.getArgument( "max-error-percent", options._maxErrorPercent );
                 bool bLightHash = false;
                 (void)commandLine.getArgument( "light-hash", bLightHash );
-                outOptions._bLightHash = bLightHash ? SW_TRUE : SW_FALSE;
+                options._bLightHash = bLightHash ? SW_TRUE : SW_FALSE;
                 if ( commandLine.isArgumentProvided( "local-server" ) )
-                    (void)commandLine.getArgument( "local-server", outOptions._localServerPort );
+                    (void)commandLine.getArgument( "local-server", options._localServerPort );
 
-                const bool bLocalServer          = outOptions._localServerPort >= 0;
-                const bool bNoTarget             = outOptions._serverAddress.empty() && bLocalServer == false;
-                const bool bTwoTarget            = outOptions._serverAddress.empty() == false && bLocalServer;
-                const bool bInvalidTargetOptions = outOptions._scenarioPath.empty() || outOptions._loadPath.empty() || bNoTarget || bTwoTarget;
+                const bool bLocalServer          = options._localServerPort >= 0;
+                const bool bNoTarget             = options._serverAddress.empty() && bLocalServer == false;
+                const bool bTwoTarget            = options._serverAddress.empty() == false && bLocalServer;
+                const bool bInvalidTargetOptions = options._scenarioPath.empty() || options._loadPath.empty() || bNoTarget || bTwoTarget;
                 if ( bInvalidTargetOptions )
-                {
-                    outError = "need --scenario=<json>, --load=<.scenario.xml> and exactly one of --server=<ip:port> or --local-server=<port>";
-                    return false;
-                }
-                if ( outOptions._localServerPort > constant::network::kMaxPort || outOptions._maxErrorPercent < 0 )
-                {
-                    outError = "--local-server port must be 0..65535 (0 = any free port) and --max-error-percent not negative";
-                    return false;
-                }
-                if ( bLocalServer && outOptions._onlineConfigPath.empty() )
-                {
-                    outError = "--local-server needs --online-config=<LoadBot.online.json> (the kits and options the local server runs)";
-                    return false;
-                }
-                if ( bLocalServer && outOptions._tlsTrustFile.empty() == false )
-                {
-                    outError = "--tls goes with --server (the local server listens in plaintext)";
-                    return false;
-                }
-                return true;
+                    return unexpected( string( "need --scenario=<json>, --load=<.scenario.xml> and exactly one of --server=<ip:port> or --local-server=<port>" ) );
+                if ( options._localServerPort > constant::network::kMaxPort || options._maxErrorPercent < 0 )
+                    return unexpected( string( "--local-server port must be 0..65535 (0 = any free port) and --max-error-percent not negative" ) );
+                if ( bLocalServer && options._onlineConfigPath.empty() )
+                    return unexpected( string( "--local-server needs --online-config=<LoadBot.online.json> (the kits and options the local server runs)" ) );
+                if ( bLocalServer && options._tlsTrustFile.empty() == false )
+                    return unexpected( string( "--tls goes with --server (the local server listens in plaintext)" ) );
+                return options;
             }
 
             /**
              * @brief 부하 선언(Automation `<Load clients rampUpSeconds durationSeconds>`)을 읽어 시나리오에 넣습니다 — 부하 값의 정본은 이것 하나다.
-             * @return 파일을 못 읽거나 `<Load>` 가 없거나 봇 수가 0 이면 false 와 @p outError 입니다.
+             * @return 파일을 못 읽거나 `<Load>` 가 없거나 봇 수가 0 이면 그 이유입니다(대상은 경로 · 시나리오 읽기 글).
              */
-            [[nodiscard]] static bool readLoad( const string& loadPath, LoadBotScenario& inoutScenario, string& outError )
+            [[nodiscard]] static expected<void> readLoad( const string& loadPath, LoadBotScenario& inoutScenario )
             {
                 string text;
                 if ( FileUtil::readTextFile( loadPath, text ) == false )
-                {
-                    outError = "cannot read the load declaration '" + loadPath + "'";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "cannot read the load declaration", loadPath } );
                 AutomationScenario declaration;
-                if ( declaration.parse( text, loadPath, outError ) == false )
-                    return false;
+                string             parseError; // 시나리오 읽기(엔진)의 글 — 그 쪽이 결과 형식으로 옮기면 이 줄도 따라간다
+                if ( declaration.parse( text, loadPath, parseError ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the load declaration does not parse", parseError } );
                 const AutomationLoad& load = declaration.getTestOptions()._load;
                 if ( load._bDeclared == false || load._clientCount == 0 )
-                {
-                    outError = loadPath + ": needs <Load clients=\"N\" rampUpSeconds=\"S\" durationSeconds=\"S\"/> with clients > 0";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs <Load clients=\"N\" rampUpSeconds=\"S\" durationSeconds=\"S\"/> with clients > 0", loadPath } );
                 inoutScenario._botCount   = static_cast<int32>( load._clientCount );
                 inoutScenario._rampUpMs   = static_cast<int64>( load._rampUpSeconds * constant::time::kMillisecondsPerSecond );
                 inoutScenario._durationMs = static_cast<int64>( load._durationSeconds * constant::time::kMillisecondsPerSecond );
-                return true;
+                return {};
             }
 
             static void logLines( LogLevel level, const string& text )
@@ -182,22 +164,24 @@ namespace sw
             /** @brief 인자를 읽고 시나리오 · 서버 · 봇을 세워 끝까지 돌립니다. 종료 코드는 `LoadBotModuleEntry` 의 것입니다. */
             [[nodiscard]] static int32 run( int32 argc, utf8* argv[], ConfigManager& configManager )
             {
-                using Exit = LoadBotModuleEntry;
-                LoadBotOptions options;
-                string         error;
-                if ( readOptions( argc, argv, options, error ) == false )
+                using Exit                                               = LoadBotModuleEntry;
+                const expected<LoadBotOptions, string> readOptionsResult = readOptions( argc, argv );
+                if ( readOptionsResult.has_value() == false )
                 {
-                    logLines( LogLevel::Error, error );
+                    logLines( LogLevel::Error, readOptionsResult.error() );
                     return Exit::kExitUsage;
                 }
-                const bool bLocalServer = options._localServerPort >= 0;
+                const LoadBotOptions& options      = *readOptionsResult;
+                const bool            bLocalServer = options._localServerPort >= 0;
 
-                LoadBotScenario scenario;
-                if ( LoadBotScenario::loadFromFile( options._scenarioPath, scenario, error ) == false || readLoad( options._loadPath, scenario, error ) == false )
+                expected<LoadBotScenario> loadedScenario = LoadBotScenario::loadFromFile( options._scenarioPath );
+                const expected<void>      loaded         = loadedScenario.has_value() ? readLoad( options._loadPath, *loadedScenario ) : expected<void>( unexpected( loadedScenario.error() ) );
+                if ( loaded.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBot", "OnlineLoadBot: %#", error );
+                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBot", "OnlineLoadBot: %#: %#", loaded.error().message(), loaded.error().detail() );
                     return Exit::kExitUsage;
                 }
+                const LoadBotScenario& scenario = *loadedScenario;
 
                 LoadBotRunnerSettings        runnerSettings;
                 unique_ptr<IStreamTransport> serverTransport;
@@ -219,9 +203,11 @@ namespace sw
                     serverSettings._maxConnections     = scenario._botCount + kSpareConnectionCount;
                     serverSettings._bLightPasswordHash = options._bLightHash;
                     serverSettings._pClock             = &serverClock;
-                    if ( serverTransport == nullptr || localServer.initialize( serverTransport.get(), serverSettings, error ) == false )
+                    const expected<void> started       = serverTransport != nullptr ? localServer.initialize( serverTransport.get(), serverSettings )
+                                                                                    : expected<void>( unexpected( Error{ ErrorKind::ExternalFailure, "no platform stream transport" } ) );
+                    if ( started.has_value() == false )
                     {
-                        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotLocalServerDid", "OnlineLoadBot: local server did not start: %#", error );
+                        SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotLocalServerDid", "OnlineLoadBot: local server did not start: %#: %#", started.error().message(), started.error().detail() );
                         return Exit::kExitUsage;
                     }
                     // 포트 0 이면 OS 가 고른 포트다 — 받은 포트로 붙는다.
@@ -242,6 +228,7 @@ namespace sw
                 unique_ptr<ITLSContext> tlsContext;
                 if ( options._tlsTrustFile.empty() == false )
                 {
+                    string error; // TLS 맥락 만들기(GF NetSecurity)의 글 — 그 쪽이 결과 형식으로 옮기면 이 줄도 따라간다
                     tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), options._tlsTrustFile, "", error );
                     if ( tlsContext == nullptr )
                     {
@@ -253,9 +240,11 @@ namespace sw
 
                 unique_ptr<IStreamTransport> botTransport = StreamTransportFactory::createPlatformTransport();
                 LoadBotRunner                runner;
-                if ( botTransport == nullptr || runner.initialize( botTransport.get(), scenario, runnerSettings, error ) == false )
+                const expected<void>         runnerStarted = botTransport != nullptr ? runner.initialize( botTransport.get(), scenario, runnerSettings )
+                                                                                     : expected<void>( unexpected( Error{ ErrorKind::ExternalFailure, "no platform stream transport" } ) );
+                if ( runnerStarted.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBot", "OnlineLoadBot: %#", error );
+                    SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBot", "OnlineLoadBot: %#: %#", runnerStarted.error().message(), runnerStarted.error().detail() );
                     return Exit::kExitUsage;
                 }
                 SW_LOG_INFO_ID( "OnlineLoadBot.OnlineLoadBotScenarioBotsAgainst", "OnlineLoadBot: scenario '%#' with %# bots against %#", scenario._name, scenario._botCount, runnerSettings._serverAddress.toString() );

@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw
@@ -75,8 +76,8 @@ namespace sw
         int32  _botCount{ 0 };
         uint32 _seed{ 1 };
 
-        /** @brief 파일을 읽습니다. 실패하면 false 와 @p outError(경로 · 칸 이름). */
-        [[nodiscard]] static bool loadFromFile( string_view path, LoadBotScenario& outScenario, string& outError );
-        [[nodiscard]] static bool loadFromXMLText( string_view jsonText, LoadBotScenario& outScenario, string& outError );
+        /** @brief 파일을 읽습니다. 실패하면 그 이유(대상은 경로 · 칸 이름)입니다. */
+        [[nodiscard]] static expected<LoadBotScenario> loadFromFile( string_view path );
+        [[nodiscard]] static expected<LoadBotScenario> loadFromXMLText( string_view jsonText );
     };
 } // namespace sw

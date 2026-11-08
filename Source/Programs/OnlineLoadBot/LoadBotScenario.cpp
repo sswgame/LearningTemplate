@@ -106,8 +106,8 @@ namespace sw
                 return false;
             }
 
-            [[nodiscard]] static bool readStep( const JSONValue& value, LoadBotStep& outStep, string& outError, int32 depth );
-            [[nodiscard]] static bool readStepList( const JSONValue& listValue, vector<LoadBotStep>& outListStep, string& outError, int32 depth );
+            [[nodiscard]] static expected<void> readStep( const JSONValue& value, LoadBotStep& outStep, int32 depth );
+            [[nodiscard]] static expected<void> readStepList( const JSONValue& listValue, vector<LoadBotStep>& outListStep, int32 depth );
         };
 
         static_assert( LoadBotScenarioInternal::isInEnumOrder(), "kArrAction rows follow LoadBotAction order" );
@@ -123,28 +123,23 @@ namespace sw
         return LoadBotScenarioInternal::getRow( action )._name.data();
     }
 
-    bool LoadBotScenarioInternal::readStepList( const JSONValue& listValue, vector<LoadBotStep>& outListStep, string& outError, int32 depth )
+    expected<void> LoadBotScenarioInternal::readStepList( const JSONValue& listValue, vector<LoadBotStep>& outListStep, int32 depth )
     {
         if ( listValue.isArray() == false || listValue.size() == 0 )
-        {
-            outError = "_listStep must be a non-empty array";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "_listStep must be a non-empty array" } );
         for ( size_t index = 0; index < listValue.size(); ++index )
         {
-            if ( readStep( listValue.at( index ), outListStep.emplace_back(), outError, depth ) == false )
-                return false;
+            const expected<void> step = readStep( listValue.at( index ), outListStep.emplace_back(), depth );
+            if ( step.has_value() == false )
+                return step;
         }
-        return true;
+        return {};
     }
 
-    bool LoadBotScenarioInternal::readStep( const JSONValue& value, LoadBotStep& outStep, string& outError, int32 depth )
+    expected<void> LoadBotScenarioInternal::readStep( const JSONValue& value, LoadBotStep& outStep, int32 depth )
     {
         if ( depth > kMaxRepeatDepth || value.isObject() == false )
-        {
-            outError = "step must be an object (repeat nesting up to 8)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "step must be an object (repeat nesting up to 8)" } );
         const string actionName = value.get( "_action" ).asString();
         bool         bFound     = false;
         for ( const ActionRow& entry : kArrAction )
@@ -156,26 +151,17 @@ namespace sw
             }
         }
         if ( bFound == false )
-        {
-            outError = "unknown action '" + actionName + "'";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "unknown action", actionName } );
         for ( const string& key : value.getMemberNames() )
         {
             if ( isKnownKey( outStep._action, key ) == false )
-            {
-                outError = "action '" + actionName + "' has unknown key '" + key + "'";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the action has an unknown key", actionName }.appendDetail( " / " ).appendDetail( key ) );
         }
         for ( const string_view key : kArrRequiredKey )
         {
             const bool bMissingRequired = isKnownKey( outStep._action, key ) && value.has( key ) == false;
             if ( bMissingRequired )
-            {
-                outError = "action '" + actionName + "' needs '" + string( key ) + "'";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::NotFound, "the action needs a key", actionName }.appendDetail( " / " ).appendDetail( key ) );
         }
 
         // 적지 않은 시간 · 횟수는 단계의 초기값이고, `_maxMs` 는 없으면 `_minMs` 와 같다(고정 대기). 정수가 아니면 거절한다.
@@ -189,10 +175,7 @@ namespace sw
             outStep._maxMs = outStep._minMs;
         }
         if ( bTimingRead == false )
-        {
-            outError = "action '" + actionName + "' has a time or _count that is not an integer";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the action has a time or _count that is not an integer", actionName } );
         for ( const string_view key : kArrTextKey )
         {
             if ( value.has( key ) )
@@ -204,67 +187,51 @@ namespace sw
             outStep._secondText = value.get( "_activity" ).asString();
         const bool bInvalidStepTiming = outStep._minMs < 0 || outStep._maxMs < outStep._minMs || outStep._count <= 0;
         if ( bInvalidStepTiming )
-        {
-            outError = "action '" + actionName + "' has a negative time, _maxMs below _minMs or a non-positive _count";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the action has a negative time, _maxMs below _minMs or a non-positive _count", actionName } );
         const bool bBadText = isAllowedText( getRow( outStep._action ), outStep._text ) == false;
         if ( bBadText )
-        {
-            outError = "action '" + actionName + "' has an unknown value '" + outStep._text + "'";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the action has an unknown value", actionName }.appendDetail( " / " ).appendDetail( outStep._text ) );
         if ( bRepeat )
-            return readStepList( value.get( "_listStep" ), outStep._listStep, outError, depth + 1 );
-        return true;
+            return readStepList( value.get( "_listStep" ), outStep._listStep, depth + 1 );
+        return {};
     }
 
-    bool LoadBotScenario::loadFromFile( string_view path, LoadBotScenario& outScenario, string& outError )
+    expected<LoadBotScenario> LoadBotScenario::loadFromFile( string_view path )
     {
         string text;
         if ( FileUtil::readTextFile( path, text ) == false )
-        {
-            outError = "cannot read scenario '" + string( path ) + "'";
-            return false;
-        }
-        if ( loadFromXMLText( text, outScenario, outError ) )
-            return true;
-        outError = string( path ) + ": " + outError;
-        return false;
+            return unexpected( Error{ ErrorKind::NotFound, "cannot read the scenario", path } );
+        expected<LoadBotScenario> scenario = loadFromXMLText( text );
+        if ( scenario.has_value() )
+            return scenario;
+        // 어느 파일인지를 앞에 붙인다 — 문장은 안쪽 오류의 리터럴 그대로다.
+        const Error& inner = scenario.error();
+        return unexpected( Error{ inner.kind(), inner.message().data(), path }.appendDetail( ": " ).appendDetail( inner.detail() ) );
     }
 
-    bool LoadBotScenario::loadFromXMLText( string_view jsonText, LoadBotScenario& outScenario, string& outError )
+    expected<LoadBotScenario> LoadBotScenario::loadFromXMLText( string_view jsonText )
     {
         JSONDocument document;
         if ( document.parse( jsonText, "<scenario>" ) == false )
-        {
-            outError = "scenario is not valid JSON: " + document.getLastError();
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "scenario is not valid JSON", document.getLastError() } );
         const JSONValue root = document.getRoot();
         if ( root.isObject() == false )
-        {
-            outError = "scenario root must be an object";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "scenario root must be an object" } );
         for ( const string& key : root.getMemberNames() )
         {
             if ( LoadBotScenarioInternal::isKnownRootKey( key ) == false )
-            {
-                outError = "scenario has unknown key '" + key + "'";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "scenario has an unknown key", key } );
         }
         // 적지 않은 칸은 시나리오의 초기값이다. 정수가 아니면 거절한다.
-        outScenario       = LoadBotScenario{};
-        outScenario._name = root.get( "_name" ).asString();
-        if ( root.readOptionalInto( "_seed", outScenario._seed ) == false )
-        {
-            outError = "_seed must be an integer";
-            return false;
-        }
+        LoadBotScenario scenario;
+        scenario._name = root.get( "_name" ).asString();
+        if ( root.readOptionalInto( "_seed", scenario._seed ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "_seed must be an integer" } );
         if ( root.has( "_region" ) )
-            outScenario._region = root.get( "_region" ).asString();
-        return LoadBotScenarioInternal::readStepList( root.get( "_listStep" ), outScenario._listStep, outError, 0 );
+            scenario._region = root.get( "_region" ).asString();
+        const expected<void> steps = LoadBotScenarioInternal::readStepList( root.get( "_listStep" ), scenario._listStep, 0 );
+        if ( steps.has_value() == false )
+            return unexpected( steps.error() );
+        return scenario;
     }
 } // namespace sw

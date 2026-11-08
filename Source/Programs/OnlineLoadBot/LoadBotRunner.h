@@ -53,8 +53,8 @@ namespace sw
         LoadBotRunner& operator=( const LoadBotRunner& ) = delete;
 
         /** @brief @p pTransport 를 빌려 엔드포인트 · 요청 클라이언트를 띄웁니다. 실패하면 false 와 @p outError. */
-        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const LoadBotScenario& scenario, const LoadBotRunnerSettings& settings, string& outError );
-        void               shutdown();
+        [[nodiscard]] expected<void> initialize( IStreamTransport* pTransport, const LoadBotScenario& scenario, const LoadBotRunnerSettings& settings );
+        void                         shutdown();
 
         /** @brief 테스트 — 시계를 바깥이 정한다(밀리초, 처음 값이 시작). 한 번이라도 부르면 그 뒤로 이 값만 쓴다. */
         void setManualClock( MonotonicMilliseconds nowMs );

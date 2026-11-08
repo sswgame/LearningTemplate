@@ -358,14 +358,6 @@
     "Source/GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.cpp": {"out-error": 3},
     "Source/GameFramework/Runtime/Online/Service/Tests/OnlineHostTestUtil.h": {"out-error": 1},
     "Source/GameFramework/Runtime/World/Land/PropScatterComponent.cpp": {"out-error": 1},
-    "Source/GameFramework/Runtime/World/Land/PropScatterComponent.h": {"out-error": 1},
-    "Source/Games/NileCity/NileCityPlanner.cpp": {"out-error": 2},
-    "Source/Programs/OnlineLoadBot/LoadBotLocalServer.cpp": {"out-error": 2},
-    "Source/Programs/OnlineLoadBot/LoadBotLocalServer.h": {"out-error": 1},
-    "Source/Programs/OnlineLoadBot/LoadBotMain.cpp": {"out-error": 2},
-    "Source/Programs/OnlineLoadBot/LoadBotRunner.cpp": {"out-error": 1},
-    "Source/Programs/OnlineLoadBot/LoadBotRunner.h": {"out-error": 1},
-    "Source/Programs/OnlineLoadBot/LoadBotScenario.cpp": {"out-error": 6},
-    "Source/Programs/OnlineLoadBot/LoadBotScenario.h": {"out-error": 2}
+    "Source/GameFramework/Runtime/World/Land/PropScatterComponent.h": {"out-error": 1}
   }
 }

@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/Clock.h"
@@ -53,9 +54,9 @@ namespace sw
         LoadBotLocalServer( const LoadBotLocalServer& )            = delete;
         LoadBotLocalServer& operator=( const LoadBotLocalServer& ) = delete;
 
-        /** @brief @p pTransport 를 빌려(I/O 스레드 없이 — `tick` 이 돈다) 서비스를 올리고 받기 시작합니다. 실패하면 false 와 @p outError. */
-        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const LoadBotLocalServerSettings& settings, string& outError );
-        void               shutdown();
+        /** @brief @p pTransport 를 빌려(I/O 스레드 없이 — `tick` 이 돈다) 서비스를 올리고 받기 시작합니다. 실패하면 그 이유입니다. */
+        [[nodiscard]] expected<void> initialize( IStreamTransport* pTransport, const LoadBotLocalServerSettings& settings );
+        void                         shutdown();
 
         /** @brief 호스트 틱 · 서버 등록 하트비트입니다. @p nowMs 는 서비스 시각(실제 실행은 UTC 밀리초, 테스트는 가짜 시각) — 캐시 만료도 이 시각으로 측정한다. */
         void update( UnixMilliseconds nowMs );
