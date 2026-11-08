@@ -2,9 +2,9 @@
 
 #include "Editor/Common/Commands/Scene/EditorNavigationCommands.h"
 
-#include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Navigation/INavMeshTileStore.h"
 #include "Engine/Navigation/NavMeshSettings.h"
+#include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw::editor

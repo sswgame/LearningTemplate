@@ -8,8 +8,8 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Localization/IPlayerNoticeSink.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Presentation/IPlayerNoticeSink.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"

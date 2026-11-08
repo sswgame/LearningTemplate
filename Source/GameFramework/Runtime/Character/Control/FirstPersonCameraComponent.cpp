@@ -6,7 +6,7 @@
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"

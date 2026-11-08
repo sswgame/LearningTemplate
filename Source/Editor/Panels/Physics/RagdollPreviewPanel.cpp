@@ -23,7 +23,7 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Scene/Scene.h"
 

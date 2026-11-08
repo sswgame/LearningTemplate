@@ -17,8 +17,8 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Rendering/MeshLODSettings.h"
-#include "Engine/Rendering/MeshSectionComponent.h"
+#include "Engine/Visual/Component/MeshSectionComponent.h"
+#include "Engine/Visual/MeshLODSettings.h"
 
 namespace sw
 {

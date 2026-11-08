@@ -16,8 +16,8 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/PhysicsSettings.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"

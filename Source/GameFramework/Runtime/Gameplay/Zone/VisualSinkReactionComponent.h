@@ -15,7 +15,7 @@
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

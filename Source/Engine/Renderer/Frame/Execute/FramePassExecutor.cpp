@@ -55,7 +55,7 @@
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw
 {

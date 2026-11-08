@@ -2,7 +2,7 @@
  * @file Engine/Animation/Scene/AnimationFrameObserver.h
  * @brief 애니메이션 시스템의 프레임 관찰자 등록입니다 — 평가 앞에서 그 프레임을 대신하거나(기록된 포즈 걸기) 평가 뒤에 결과를 보는(기록) 개발 도구가 `SW_ANIMATION_FRAME_OBSERVER`
  *        한 줄로 스스로 등록하고, `AnimationSystem` 은 만들 때 등록마다 관찰자 하나를 만들어 들고 돌리기만 합니다.
- * @details 되감기 기록기(`Animation/Scene/Dev/AnimationRewind` — 배포 구성이 짓지 않는다)가 등록한다. 배포본에는 등록이 없어 시스템은 관찰자 없이 평가만 한다.
+ * @details 되감기 기록기(`DevTools/Client/Animation/AnimationRewind` — 배포 구성이 짓지 않는다)가 등록한다. 배포본에는 등록이 없어 시스템은 관찰자 없이 평가만 한다.
  *          예전에는 `AnimationSystem` 이 `#if !SW_SHIPPING` 으로 기록기 칸을 들고 테스트용 전역 변수를 읽었다. 언리얼 Rewind Debugger 의
  *          `IRewindDebuggerExtension`(모듈러 기능 등록 — 엔진은 무엇이 붙었는지 모른다)과 같은 자리다.
  */

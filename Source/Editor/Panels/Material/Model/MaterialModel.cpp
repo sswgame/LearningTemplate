@@ -13,8 +13,8 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw::editor
 {

@@ -8,13 +8,14 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 
+#include "DevTools/Client/Capture/BugReport.h"
+
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Localization/LocText.h"
-#include "Engine/Renderer/Capture/BugReport.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include <algorithm>

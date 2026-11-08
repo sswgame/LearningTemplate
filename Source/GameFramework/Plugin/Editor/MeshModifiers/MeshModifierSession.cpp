@@ -21,7 +21,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Modifiers/DeformableModifier.h"
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifierGPUProgram.h"

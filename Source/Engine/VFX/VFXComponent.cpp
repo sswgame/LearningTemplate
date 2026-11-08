@@ -21,10 +21,10 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Rendering/MeshInstanceBatch.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/VFX/VFXEffectDef.h"
+#include "Engine/Visual/MeshInstanceBatch.h"
 
 /**
  * @brief 이펙트 입자 생성 배율입니다. 사용자 설정 `graphics.effectsQuality` 선택지의 `targetValue` 가 넣는다(`engine.settings.xml`).

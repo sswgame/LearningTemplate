@@ -2,7 +2,7 @@
  * @file Engine/Foundation/Dev/FixedFrameDeltaSwitch.cpp
  * @brief `-gv_fixedFrameDelta=<초>` — 사람이 실행 인자 · 콘솔로 주는 프레임 고정 시간을 결정적 실행 정책(`DeterministicRunPolicy::_fixedFrameDelta`)에 옮기는 개발 스위치입니다.
  * @details 개발 전용 소스다(Dev/ — 배포 구성이 짓지 않는다). App 은 이 파일을 모르고 정책만 읽는다. 자동화 실행기 · 시나리오 재생기는 이 변수를 거치지 않고 정책에 직접 넣는다.
- *          모양은 `Environment/Dev/EnvironmentFreezeSwitch.cpp` 와 같다(기동 때 지금 값을 옮기고, 변경 콜백으로 뒤의 변경을 받는다).
+ *          모양은 `DevTools/Diagnostics/EnvironmentFreezeSwitch.cpp` 와 같다(기동 때 지금 값을 옮기고, 변경 콜백으로 뒤의 변경을 받는다).
  */
 #include "pch.h"
 

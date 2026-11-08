@@ -25,7 +25,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Rendering/MeshInstanceBatch.h"
+#include "Engine/Visual/MeshInstanceBatch.h"
 
 namespace sw
 {

@@ -8,9 +8,9 @@
 
 #include "Engine/Dialogue/DialogueCursor.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
-#include "Engine/Localization/ISubtitleSink.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Presentation/ISubtitleSink.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/World/Query/GameConditions.h"

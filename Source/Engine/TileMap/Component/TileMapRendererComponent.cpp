@@ -6,20 +6,20 @@
 #include "Core/Math/AABB.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/2D/SortingLayerNameValidation.h"
-#include "Engine/2D/SpriteInstanceBatch.h"
-#include "Engine/2D/SpriteRenderUtil.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Component/PhysicsNameValidation.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Scene/PhysicsNameValidation.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/TileMap/TileMapXML.h"
+#include "Engine/Visual/2D/SortingLayerNameValidation.h"
+#include "Engine/Visual/2D/SpriteInstanceBatch.h"
+#include "Engine/Visual/2D/SpriteRenderUtil.h"
 
 namespace sw
 {

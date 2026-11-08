@@ -12,7 +12,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
-#include "Engine/Gameplay/InstancedStruct.h"
+#include "Engine/Reflection/InstancedStruct.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"

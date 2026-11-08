@@ -43,7 +43,7 @@
         "Source/Engine/Window/WindowPlatform.h|WindowPlatform": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",
         "Source/Engine/UI/Screen/UIScreenSwitch.h|UIScreenSwitches": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",
         "Source/Engine/Object/GameObject/Service/ISceneService.h|SceneServiceRegistry": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",
-        "Source/Engine/Navigation/Component/NavGeometryContributor.h|NavGeometryContributorRegistry": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",
+        "Source/Engine/Navigation/Scene/NavGeometryContributor.h|NavGeometryContributorRegistry": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",
         "Source/Engine/Graphics/Canvas/CanvasOverlay.h|CanvasOverlays": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",
         "Source/Engine/Graphics/Debug/RenderDiagnostics.h|RenderDiagnostics": "다른 갈래의 파일 — 이번 묶음에서 그 갈래가 같은 파일을 고친다(B: 싱글턴 정책 · C: Core/Container · E: 시간). 그 갈래 병합 뒤 주인 우선으로 다시 본다",
         "Source/Engine/Config/Dev/GameAutoplay.h|GameAutoplay": "등록 목록 창구 — 함수가 다루는 값은 여러 등록 줄의 목록(숨은 정적 목록)이고 줄 타입 하나가 아니다. 목록을 공통 틀(RegistrationList · 서브시스템)로 옮기는 일은 B 갈래(정적 등록 목록 한 틀)가 한다",

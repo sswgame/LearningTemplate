@@ -13,8 +13,8 @@
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Physics/Component/PhysicsNameValidation.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
+#include "Engine/Physics/Scene/PhysicsNameValidation.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Scene/SceneManager.h"
 

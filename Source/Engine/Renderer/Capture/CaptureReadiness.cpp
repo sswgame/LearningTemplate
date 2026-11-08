@@ -5,7 +5,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Navigation/Component/SceneNavigation.h"
+#include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"

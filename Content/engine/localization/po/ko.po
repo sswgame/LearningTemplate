@@ -1925,7 +1925,7 @@ msgctxt "Notification.GameSaved"
 msgid "Game saved"
 msgstr "게임을 저장했습니다"
 
-#: Source/Engine/UI/Screen/OptionsMenuScreen.cpp
+#: Source/Engine/UI/Menu/OptionsMenuScreen.cpp
 msgctxt "Notification.RestartRequired"
 msgid "Some changes take effect after a restart."
 msgstr "일부 변경은 다시 시작한 뒤 적용됩니다."

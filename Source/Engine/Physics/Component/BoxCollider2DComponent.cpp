@@ -12,8 +12,8 @@
 #include "Engine/Physics/Collision/CollisionLayers.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
 #include "Engine/Physics/Collision/SweepHit.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 
 namespace sw
 {

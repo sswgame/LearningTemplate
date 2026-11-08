@@ -2,7 +2,7 @@
 
 #include "Engine/Audio/Component/AudioListenerComponent.h"
 
-#include "Engine/Audio/Component/SceneAudio.h"
+#include "Engine/Audio/Scene/SceneAudio.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw

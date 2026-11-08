@@ -13,7 +13,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Gameplay/GameplayContext.h"
-#include "Engine/Gameplay/InstancedStruct.h"
+#include "Engine/Reflection/InstancedStruct.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

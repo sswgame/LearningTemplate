@@ -22,9 +22,9 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Renderer/RenderThreadSubsystem.h"
-#include "Engine/Rendering/ReflectionProbeComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Visual/Component/ReflectionProbeComponent.h"
 
 namespace sw::editor
 {

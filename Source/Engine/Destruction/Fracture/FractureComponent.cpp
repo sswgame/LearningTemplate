@@ -11,7 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 // FractureAssetCache — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
 namespace sw

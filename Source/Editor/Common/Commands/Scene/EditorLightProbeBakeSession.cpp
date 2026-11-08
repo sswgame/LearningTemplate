@@ -21,9 +21,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/IPhysicsScene.h"
-#include "Engine/Rendering/LightProbeVolumeComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Visual/Component/LightProbeVolumeComponent.h"
 
 namespace sw::editor
 {

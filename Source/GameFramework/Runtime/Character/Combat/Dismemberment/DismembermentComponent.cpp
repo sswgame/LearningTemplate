@@ -18,10 +18,10 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
-#include "Engine/Physics/Component/PhysicsNameValidation.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
+#include "Engine/Physics/Scene/PhysicsNameValidation.h"
 #include "Engine/Reflection/ReflectionValidation.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Character/Combat/Dismemberment/Dismemberment.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"

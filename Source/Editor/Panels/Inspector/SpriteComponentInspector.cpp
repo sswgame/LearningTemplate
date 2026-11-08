@@ -10,9 +10,9 @@
 #include "Editor/Panels/Inspector/IInspectorComponent.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 
-#include "Engine/2D/SpriteComponent.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Localization/LocText.h"
+#include "Engine/Visual/2D/SpriteComponent.h"
 
 #include <imgui.h>
 

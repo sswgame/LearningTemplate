@@ -31,6 +31,7 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationScratch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Console/DebugOverlayState.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -38,7 +39,6 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Profiling/DebugOverlayState.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw::editor

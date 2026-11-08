@@ -40,9 +40,9 @@
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
-#include "Engine/Rendering/DirectionalLightComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
+#include "Engine/Visual/Component/DirectionalLightComponent.h"
 
 namespace sw
 {

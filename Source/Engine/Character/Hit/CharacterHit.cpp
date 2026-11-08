@@ -13,8 +13,8 @@
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw

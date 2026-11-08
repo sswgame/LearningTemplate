@@ -4,7 +4,7 @@
 
 #include "Engine/Audio/Component/AudioAmbientEmitterComponent.h"
 #include "Engine/Audio/Component/AudioReverbZoneComponent.h"
-#include "Engine/Audio/Component/SceneAudio.h"
+#include "Engine/Audio/Scene/SceneAudio.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 

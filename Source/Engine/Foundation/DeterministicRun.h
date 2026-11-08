@@ -2,7 +2,7 @@
  * @file Engine/Foundation/DeterministicRun.h
  * @brief 결정적 실행 정책 — 시간 · 디스크 · 스레드 도착 순서에 달린 런타임 동작을 프레임에 묶을지 정하는 한 묶음입니다. 런타임은 이 정책만 읽습니다.
  * @details 채우는 쪽은 개발 장치다: 자동화 시나리오 세션(`Automation/Runner` — 배포 구성에 없다)이 에셋 도착 · 클립 대기를 켜고, 개발 스위치
- *          (`Environment/Dev/EnvironmentFreezeSwitch.cpp` 의 `-gv_environmentAnimate=0`)가 환경 시간을 멈춘다. 배포본에는 채우는 쪽이 없어 늘 기본값(모두 꺼짐)이다.
+ *          (`DevTools/Diagnostics/EnvironmentFreezeSwitch.cpp` 의 `-gv_environmentAnimate=0`)가 환경 시간을 멈춘다. 배포본에는 채우는 쪽이 없어 늘 기본값(모두 꺼짐)이다.
  *          예전에는 런타임 파일마다 테스트용 전역 변수(`gv_finishAssetWorkEachFrame` · `gv_animationWaitForClips` · `gv_environmentAnimate`)를 직접 읽었고,
  *          시나리오 세션이 그 이름을 문자열로 넣었다. 언리얼 자동화의 `FlushAsyncLoading` · `FApp::UseFixedTimeStep`(엔진 전역 한 자리를 테스트 틀이 켠다),
  *          유니티 테스트 프레임워크가 `Time.captureDeltaTime` 으로 시간을 묶는 자리와 같다 — 칸을 늘릴 때는 이 구조체에 한 칸을 더한다(변수마다 setter 를 두지 않는다).

@@ -8,11 +8,11 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Physics/Component/PhysicsNameValidation.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/Physics/Scene/PhysicsNameValidation.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/ReflectionValidation.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw
 {

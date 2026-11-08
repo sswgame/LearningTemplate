@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Rendering/LightComponent.h"
+#include "Engine/Visual/Component/LightComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"

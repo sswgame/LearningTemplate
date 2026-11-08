@@ -12,9 +12,9 @@
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
 

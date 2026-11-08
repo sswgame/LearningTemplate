@@ -16,14 +16,14 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
-#include "Engine/2D/SpriteComponent.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/2D/SpriteComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw::editor
 {

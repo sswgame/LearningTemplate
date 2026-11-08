@@ -5,6 +5,8 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
+#include "DevTools/Client/Animation/AnimationRewind.h"
+
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -18,7 +20,6 @@
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
-#include "Engine/Animation/Scene/Dev/AnimationRewind.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"

@@ -68,7 +68,7 @@ def selfCheck() -> bool:
     assert findDeclarations('SW_EXTERN_TEST_GLOBAL_VARIABLE( int32, gv_y );') == ["gv_y"]
     assert findDeclarations('#define SW_TEST_GLOBAL_VARIABLE( type, name ) x') == []  # 매크로 정의 줄은 선언이 아니다
     assert findDeclarations('SW_GLOBAL_VARIABLE( bool, gv_z, false, "d" );') == []
-    assert isDevOnlyPath("Source/Engine/Audio/Dev/AudioDumpListener.cpp")
+    assert isDevOnlyPath("Source/DevTools/Client/Audio/AudioDumpListener.cpp")
     assert isDevOnlyPath("Source/Engine/Audio/Tests/TestAudio.cpp")
     assert isDevOnlyPath("Source/DevTools/Client/Render/RenderDiagnosticsSwitches.cpp")
     assert isDevOnlyPath("Source/Engine/Automation/Runner/AutomationSession.cpp")

@@ -311,13 +311,13 @@ sw_markDeterministicSources(Engine
 	Destruction/Fracture/FractureAsset.cpp
 	Destruction/Fracture/FractureGraph.cpp
 	Destruction/Fracture/PolygonFracture.cpp
-	Destruction/Fracture/PolygonTriangulation.cpp
 )
 # 물리(Jolt · Box2D 감싸개, 강체 · 천 · 래그돌 컴포넌트)도 같다 — 시뮬레이션에 넣는 값이 구성마다 끝 비트가 달라지면 천 · 래그돌이 갈린다
 # (cloth 쇼케이스가 Debug 와 Release 에서 2 % 달랐다). Jolt 자체는 결정적 빌드다(`ThirdParty/joltphysics/vcpkg-port`). 폴더째라 새 파일도 든다.
 file(GLOB_RECURSE swDeterministicPhysicsSources RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Physics/*.cpp")
 list(FILTER swDeterministicPhysicsSources EXCLUDE REGEX "/Tests/")
-sw_markDeterministicSources(Engine ${swDeterministicPhysicsSources})
+# 부력 부피(Environment/Water/BuoyancyVolumeComponent — 물 기능이 자기 컴포넌트를 들게 Physics 에서 옮겼다)도 물리에 넣는 값이라 같은 표시를 건다.
+sw_markDeterministicSources(Engine ${swDeterministicPhysicsSources} Environment/Water/BuoyancyVolumeComponent.cpp)
 
 # ------------------------------------------------------------------------------
 # 8) 리플렉션 코드젠 — ReflectionParser 필요 (루트가 Tools 이후 이 파일을 호출)

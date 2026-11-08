@@ -5,11 +5,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Skeletal/LocomotionSpeedUtil.h"
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

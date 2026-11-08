@@ -12,7 +12,6 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
-#include "Engine/2D/SpriteComponent.h"
 #include "Engine/Animation/Component/SpriteAnimatorComponent.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/GameObjectHandle.h"
@@ -24,11 +23,12 @@
 #include "Engine/Reflection/ReflectedValue.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequenceTimelineUtil.h"
+#include "Engine/Visual/2D/SpriteComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw::editor
 {

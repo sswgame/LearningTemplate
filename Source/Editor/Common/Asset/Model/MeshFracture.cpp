@@ -9,6 +9,7 @@
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Spatial/PolygonTriangulation.h"
 #include "Core/Spatial/PositionWelder.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
@@ -16,7 +17,6 @@
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
 #include "Engine/Destruction/Fracture/FractureSiteUtil.h"
-#include "Engine/Destruction/Fracture/PolygonTriangulation.h"
 
 namespace sw::editor
 {

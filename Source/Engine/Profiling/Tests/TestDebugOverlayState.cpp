@@ -3,7 +3,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Profiling/DebugOverlayState.h"
+#include "Engine/Console/DebugOverlayState.h"
 
 using namespace sw;
 

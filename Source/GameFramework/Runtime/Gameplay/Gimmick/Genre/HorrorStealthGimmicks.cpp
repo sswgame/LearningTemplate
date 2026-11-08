@@ -9,9 +9,9 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Presentation/AudioPlayableAsset.h"
-#include "Engine/Rendering/DirectionalLightComponent.h"
-#include "Engine/Rendering/PointLightComponent.h"
-#include "Engine/Rendering/SpotLightComponent.h"
+#include "Engine/Visual/Component/DirectionalLightComponent.h"
+#include "Engine/Visual/Component/PointLightComponent.h"
+#include "Engine/Visual/Component/SpotLightComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"

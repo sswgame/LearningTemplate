@@ -75,28 +75,28 @@
 
 | 현재 경로 | 새 경로 | 까닭 | include 수 |
 | --- | --- | --- | --- |
-| Engine/Gameplay/InstancedStruct.h | Engine/Reflection/InstancedStruct.h | 형식을 런타임에 고르는 리플렉션 값(UE FInstancedStruct 는 CoreUObject/StructUtils). 같은 층 1 | 4 |
-| Engine/Localization/IPlayerNoticeSink.h | Engine/Presentation/IPlayerNoticeSink.h | UI 없이 게임이 거는 표현 창구 — 다른 I*Sink · I*Driver 와 같은 자리(층 2 → 2) | 4 |
-| Engine/Localization/ISubtitleSink.h | Engine/Presentation/ISubtitleSink.h | 〃 | 4 |
-| Engine/Localization/EngineDefaultAssetsSubsystem.h | Engine/Asset/EngineDefaultAssetsSubsystem.h | 엔진 데이터(`EngineDefaultAssets`)를 읽어 소유하는 기동 서브시스템 — 짝인 `Asset/PackEngineSettingsSubsystem.h` 와 같은 자리. 문화권 표도 올리므로 층 2 는 유지 | 4 |
-| Engine/Animation/Scene/LocomotionWarpingComponent.h | Engine/Animation/Component/LocomotionWarpingComponent.h | 컴포넌트 — Animation/Component 가 있다 | 2 |
-| Engine/Animation/Scene/MotionWarpingComponent.h | Engine/Animation/Component/MotionWarpingComponent.h | 〃 | 4 |
-| Engine/Animation/Skeletal/DualQuaternion.h | Core/Math/DualQuaternion.h | 순수 수학(Core/Math · Foundation 만 include) — Renderer(GPUSceneBuilder)도 쓴다. UE Core/Math/DualQuat.h | 3 |
-| Engine/Character/AnimationNotify/AnimationNotifyComponent.h · AnimationNotifyHandlers.h · AnimationNotifyTable.h | Engine/Animation/Notify/ | 애니메이션 알림이 Animation/Notify(FootContact · Listener) 와 Character/AnimationNotify 로 갈렸다. 둘 다 층 6 | 4 · 2 · 7 |
+| Engine/Reflection/InstancedStruct.h | Engine/Reflection/InstancedStruct.h | 형식을 런타임에 고르는 리플렉션 값(UE FInstancedStruct 는 CoreUObject/StructUtils). 같은 층 1 | 4 |
+| Engine/Presentation/IPlayerNoticeSink.h | Engine/Presentation/IPlayerNoticeSink.h | UI 없이 게임이 거는 표현 창구 — 다른 I*Sink · I*Driver 와 같은 자리(층 2 → 2) | 4 |
+| Engine/Presentation/ISubtitleSink.h | Engine/Presentation/ISubtitleSink.h | 〃 | 4 |
+| Engine/Asset/EngineDefaultAssetsSubsystem.h | Engine/Asset/EngineDefaultAssetsSubsystem.h | 엔진 데이터(`EngineDefaultAssets`)를 읽어 소유하는 기동 서브시스템 — 짝인 `Asset/PackEngineSettingsSubsystem.h` 와 같은 자리. 문화권 표도 올리므로 층 2 는 유지 | 4 |
+| Engine/Animation/Component/LocomotionWarpingComponent.h | Engine/Animation/Component/LocomotionWarpingComponent.h | 컴포넌트 — Animation/Component 가 있다 | 2 |
+| Engine/Animation/Component/MotionWarpingComponent.h | Engine/Animation/Component/MotionWarpingComponent.h | 〃 | 4 |
+| Core/Math/DualQuaternion.h | Core/Math/DualQuaternion.h | 순수 수학(Core/Math · Foundation 만 include) — Renderer(GPUSceneBuilder)도 쓴다. UE Core/Math/DualQuat.h | 3 |
+| Engine/Animation/Notify/AnimationNotifyComponent.h · AnimationNotifyHandlers.h · AnimationNotifyTable.h | Engine/Animation/Notify/ | 애니메이션 알림이 Animation/Notify(FootContact · Listener) 와 Character/AnimationNotify 로 갈렸다. 둘 다 층 6 | 4 · 2 · 7 |
 | Engine/Foundation/AnimationNotifyPhase.h | (그대로) | `Object/Component/Component.h`(층 5)가 include — Animation(6)으로 옮기면 층 역류. 층 0 에 둔 까닭이 맞다 | 2 |
-| Engine/Character/PoseModifier/PoseModifierComponent.h | Engine/Animation/Component/PoseModifierComponent.h | 리그 에셋(IK · 제약)을 돌리는 후처리 컴포넌트 — Animation/Rig 의 실행 쪽. 캐릭터 형상 다리(`CharacterPoseUtil`)만 Character 에 남는다 | 8 |
-| Engine/Profiling/DebugOverlayState.h | Engine/Console/DebugOverlayState.h | 모듈 사이 디버그 오버레이 값(게임이 쓰고 에디터가 읽음) — 계측이 아니다. 디버그 HUD 레지스트리 옆. 게임이 쓰므로 DevTools(게임이 못 봄)는 안 된다 | 5 |
+| Engine/Animation/Component/PoseModifierComponent.h | Engine/Animation/Component/PoseModifierComponent.h | 리그 에셋(IK · 제약)을 돌리는 후처리 컴포넌트 — Animation/Rig 의 실행 쪽. 캐릭터 형상 다리(`CharacterPoseUtil`)만 Character 에 남는다 | 8 |
+| Engine/Console/DebugOverlayState.h | Engine/Console/DebugOverlayState.h | 모듈 사이 디버그 오버레이 값(게임이 쓰고 에디터가 읽음) — 계측이 아니다. 디버그 HUD 레지스트리 옆. 게임이 쓰므로 DevTools(게임이 못 봄)는 안 된다 | 5 |
 | Engine/Profiling/FrameProfileReport.h | DevTools/Profiling/FrameProfileReport.h | 프로파일 한 회분 보고(개발). **막힘**: `FrameProfiler.h` 가 include — 보고 형식 의존을 끊은 뒤 | 4 |
 | Engine/Profiling/ProfilerTraceExport.h | DevTools/Profiling/ProfilerTraceExport.h | Chrome Trace 내보내기(개발). **막힘**: Engine.cpp · Automation · Renderer/Capture/BugReport 가 부름 → EngineFrameHooks 로 거는 자리로 바꾼 뒤 | 9 |
 | Engine/Profiling/SubsystemTimingReport.h | DevTools/Profiling/SubsystemTimingReport.h | 기동 시간 요약(개발 구성만). **막힘**: Engine.cpp 가 부름 — 위와 같다 | 4 |
 | Engine/Profiling/Tracy/TracyProfilerBackend.h | DevTools/Profiling/Tracy/TracyProfilerBackend.h | 외부 프로파일러 연결(개발). ProfilerBackend 가 고르는 대신 DevTools 의 `ProfilerLaunchSwitches` 가 `IProfilerBackend` 를 등록하게 뒤집는다 | 2 |
-| Engine/Renderer/Capture/BugReport.h | DevTools/Client/Capture/BugReport.h | 쓰는 곳이 Editor 셋뿐 + 개발 명령 — "Engine 에 편집기만 부르는 함수 금지"(AGENTS.md) 위반. Editor 는 DevTools 를 본다 | 5 |
+| DevTools/Client/Capture/BugReport.h | DevTools/Client/Capture/BugReport.h | 쓰는 곳이 Editor 셋뿐 + 개발 명령 — "Engine 에 편집기만 부르는 함수 금지"(AGENTS.md) 위반. Editor 는 DevTools 를 본다 | 5 |
 | Engine/UI/Screen/UIScreenSwitch.h | DevTools/Client/UI/UIScreenSwitch.h | 개발 스위치(gv)로 화면 열기 — 개발. **막힘**: UISystem.cpp · Games/Empty/Client/Dev 가 include(게임은 DevTools 를 못 봄) → 게임 쪽은 엔진 확장점(화면 등록)으로 | 5 |
-| Engine/UI/Screen/KeyRebindScreen.h · OptionsMenuScreen.h · PauseMenuScreen.h · SettingsConfirmScreen.h | Engine/UI/Menu/ | 구체 엔진 메뉴 화면 — 화면 틀(UIScreen · UIScreenTypes)과 섞였다 | 2 · 3 · 2 · 2 |
-| Engine/UI/Screen/UINotificationService.h · UISubtitleService.h · UITooltipService.h | Engine/UI/Service/ | 화면 스택 밖 서비스(알림 · 자막 · 툴팁) — Input/UIClipboardService 와 같은 종류 | 4 · 4 · 2 |
+| Engine/UI/Menu/KeyRebindScreen.h · OptionsMenuScreen.h · PauseMenuScreen.h · SettingsConfirmScreen.h | Engine/UI/Menu/ | 구체 엔진 메뉴 화면 — 화면 틀(UIScreen · UIScreenTypes)과 섞였다 | 2 · 3 · 2 · 2 |
+| Engine/UI/Service/UINotificationService.h · UISubtitleService.h · UITooltipService.h | Engine/UI/Service/ | 화면 스택 밖 서비스(알림 · 자막 · 툴팁) — Input/UIClipboardService 와 같은 종류 | 4 · 4 · 2 |
 | Engine/Config/NetEmulationPresetTable.h | (그대로) | Net(6) 이 더 맞지만 Automation · GF · DevTools · Editor 가 쓰고 Config(1) 이 읽는 표 — 층 1 이 필요 | 6 |
-| Engine/Telemetry/HTTPClient.h | Engine/Net/HTTPClient.h | 범용 HTTP 창구 — GF Online(BlockingHTTPClient)도 쓴다. 텔레메트리 전용이 아니다. 같은 층 6 | 4 |
-| Engine/Destruction/Fracture/PolygonTriangulation.h | Core/Spatial/PolygonTriangulation.h | 구멍 있는 다각형 삼각 분할 — Core 만 쓰고 Editor MeshFracture 도 쓴다. Container 를 써서 Math(1) 은 안 되고 Spatial(4) | 4 |
+| Engine/Net/HTTPClient.h | Engine/Net/HTTPClient.h | 범용 HTTP 창구 — GF Online(BlockingHTTPClient)도 쓴다. 텔레메트리 전용이 아니다. 같은 층 6 | 4 |
+| Core/Spatial/PolygonTriangulation.h | Core/Spatial/PolygonTriangulation.h | 구멍 있는 다각형 삼각 분할 — Core 만 쓰고 Editor MeshFracture 도 쓴다. Container 를 써서 Math(1) 은 안 되고 Spatial(4) | 4 |
 
 ---
 
@@ -229,7 +229,7 @@
 | Engine/Sequencer/SequenceSpanTracks.h | Engine/Sequencer/SequenceAsset.h 의 선언 절 | extern 셋(17 줄), SequenceAsset.cpp 만 씀 | 17 | 2 |
 | Engine/Serialization/Serializer/SerializeReflectAny.h | Engine/Serialization/Serializer/SerializeContext.h | 함수 선언 하나(21 줄), SerializeContext.cpp 만 씀 | 21 | 2 |
 | Engine/Object/GameObject/Serialization/ClientOnlyTypeTable.h | Engine/Object/GameObject/Serialization/ObjectStateSerializer.h | 22 줄, ObjectStateSerializer.cpp 만 씀 | 22 | 2 |
-| Engine/Character/AnimationNotify/AnimationNotifyHandlers.h | (Animation/Notify 로 옮긴 뒤) AnimationNotifyTable.h | 31 줄, AnimationNotifyTable.cpp 만 씀 | 31 | 2 |
+| Engine/Animation/Notify/AnimationNotifyHandlers.h | (Animation/Notify 로 옮긴 뒤) AnimationNotifyTable.h | 31 줄, AnimationNotifyTable.cpp 만 씀 | 31 | 2 |
 | Editor/Common/Commands/Scene/EditorBakeOutputPath.h · EditorBakeRunState.h | Editor/Common/Commands/Scene/EditorBakeSession.h | 라이트 · 반사 프로브 굽기 세션 둘이 같이 쓰는 경로 · 진행 상태 | 69 | 3 · 3 |
 | Core/Math/YawUtil.h + GF Utility/Math/OrientationUtil.h | Core/Math/OrientationUtil.h | 둘 다 회전 ↔ 방향 변환(32 + 26 줄) — 같은 일이 두 타깃에 | 58 | 5 · 15 |
 

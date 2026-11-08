@@ -11,12 +11,12 @@
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Localization/ISubtitleSink.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Presentation/ISoundPlayer.h"
+#include "Engine/Presentation/ISubtitleSink.h"
 
 namespace sw
 {

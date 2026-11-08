@@ -15,7 +15,7 @@
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
 #include "Engine/Physics/Component/CharacterController2DComponent.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"

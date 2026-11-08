@@ -25,9 +25,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw::editor
 {

@@ -4,7 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 
-#include "Engine/Navigation/Component/SceneNavigation.h"
+#include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw
