@@ -193,15 +193,15 @@ SW_TEST_CASE( MaterialGraphCompilerTest, ParameterBecomesMaterialField )
     SW_EXPECT_NEAR( 0.25f, rough, 1e-5f );
 }
 
-/** @brief [MaterialGraphCompilerTest] 자체 발광을 쓰면 포워드 전용이 된다 — G버퍼에 칸이 없다 */
-SW_TEST_CASE( MaterialGraphCompilerTest, EmissiveIsForwardOnly )
+/** @brief [MaterialGraphCompilerTest] 자체 발광을 써도 디퍼드로 그린다 — G버퍼 패스가 장면 색에 발광을 적는다(G버퍼 명세 판 3) */
+SW_TEST_CASE( MaterialGraphCompilerTest, EmissiveStaysDeferred )
 {
     const string               nodes = MaterialGraphTestUtil::makeNode( "Out", "Output", {}, "BaseColor=1 1 1,Emissive=2 0 0" );
     MaterialGraphCompileResult result;
     SW_REQUIRE_TRUE( MaterialGraphTestUtil::compileNodes( nodes, result ) );
     SW_EXPECT_TRUE( result._bEmissive );
     SW_EXPECT_TRUE( StringUtil::contains( result._hlsl, "#define SW_MATERIAL_GRAPH_EMISSIVE" ) );
-    SW_EXPECT_TRUE( StringUtil::contains( MaterialGraphCompileResult::makeMaterialText( result, "test", "x", "y" ), "MATERIAL_FORWARD_ONLY" ) );
+    SW_EXPECT_FALSE( StringUtil::contains( MaterialGraphCompileResult::makeMaterialText( result, "test", "x", "y" ), "MATERIAL_FORWARD_ONLY" ) );
 }
 
 /** @brief [MaterialGraphCompilerTest] 순환은 그 길의 노드 이름과 함께 오류다 */

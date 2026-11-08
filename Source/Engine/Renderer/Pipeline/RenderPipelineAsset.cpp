@@ -133,7 +133,7 @@ namespace sw
                     if ( attachment._role.empty() == false && tryParseRenderPassInputRole( attachment._role, declaredRole ) == false )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentUnknownRoleMust", "[%#] attachment '%#': unknown role '%#' - must be one of SourceColor, SceneDepth, GBufferAlbedo, GBufferNormal, GBufferMaterial, "
-                                                                                          "ShadowMap, AmbientOcclusion, BloomBright, SceneColorCopy, SceneDepthCopy",
+                                                                                          "GBufferCustomData, ShadowMap, AmbientOcclusion, BloomBright, SceneColorCopy, SceneDepthCopy",
                                          sourcePath, attachment._name, attachment._role );
                         ++issueCount;
                     }
@@ -612,8 +612,9 @@ namespace sw
                         const RenderPassAttachment*  pAttachment    = findAttachment( desc, outputName.view() );
                         const bool                   bFormatMatches = pAttachment != nullptr && pAttachment->_format == spec._format;
                         const float4                 clear          = pAttachment != nullptr ? pAttachment->_clearColor : float4{};
-                        const bool                   bClearMatches  = pAttachment != nullptr && clear._x == spec._clearColor._x && clear._y == spec._clearColor._y && clear._z == spec._clearColor._z &&
-                                                   clear._w == spec._clearColor._w;
+                        // 장면 색 칸(자체 발광)의 클리어는 파이프라인의 배경색이다 — 표가 정하지 않는다.
+                        const bool bClearMatches = pAttachment != nullptr && ( spec._bPipelineClear != 0 || ( clear._x == spec._clearColor._x && clear._y == spec._clearColor._y &&
+                                                                                                              clear._z == spec._clearColor._z && clear._w == spec._clearColor._w ) );
                         if ( bFormatMatches && bClearMatches )
                             continue;
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.GBufferLayoutMismatch", "[%#] pass '%#': G-buffer slot %# ('%#', %#) must be %# cleared to 0 by the G-buffer layout v%#%#",

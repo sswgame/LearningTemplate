@@ -298,6 +298,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesLoad )
     {
         if ( pass._type == RenderPassType::Transparent )
             SW_EXPECT_TRUE( pass._resolvedRenderState.isAnyBlendEnabled() );
+        // 디퍼드 조명은 G버퍼 패스가 장면 색에 먼저 적은 자체 발광 위에 더한다(G버퍼 명세 판 3).
+        if ( pass._type == RenderPassType::Lighting )
+            SW_EXPECT_TRUE( pass._resolvedRenderState.isAnyBlendEnabled() );
     }
 }
 

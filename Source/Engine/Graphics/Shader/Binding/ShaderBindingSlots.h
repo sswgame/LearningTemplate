@@ -395,8 +395,8 @@ namespace sw
         static_assert( kInstanceBuffer == 4, "t0..t3 은 비어 있고 띠는 인스턴스 버퍼 t4 부터다 — 띠를 내리면 DX12 테이블 · Vulkan 범위 · GL SSBO 번호가 함께 움직인다" );
         static_assert( kEngineTexture0 >= kMaterialTexture0 + kMaterialTextureCount && kEngineTexture0 >= vk::kRangeSize,
                        "엔진 텍스처 칸(에뮬)은 t 띠 · 머티리얼 칸 위다 — DX11 SRV 128 칸 안이고, GL 은 유닛을 칸 번호로 옮긴다" );
-        static_assert( SW_SLOT_ENGINE_TEX11 == SW_SLOT_ENGINE_TEX0 + 11 && kEngineTextureCount == 12 && kEngineTextureCount <= kMaterialTexture0,
-                       "엔진 텍스처 칸은 연속 12 칸이고 GL 유닛(칸 번호)이 머티리얼 유닛(16..)과 겹치지 않아야 한다 (binding.hlsli 의 선언 12 줄과 같다)" );
+        static_assert( SW_SLOT_ENGINE_TEX12 == SW_SLOT_ENGINE_TEX0 + 12 && kEngineTextureCount == 13 && kEngineTextureCount <= kMaterialTexture0,
+                       "엔진 텍스처 칸은 연속 13 칸이고 GL 유닛(칸 번호)이 머티리얼 유닛(16..)과 겹치지 않아야 한다 (binding.hlsli 의 선언 13 줄과 같다)" );
         static_assert( kMaterialBuffer == kInstanceBuffer + 1, "머티리얼 데이터 버퍼는 인스턴스 버퍼 바로 다음이어야 한다" );
         static_assert( kMaterialTexture0 == vk::kRangeSize && kSRVSlotCount <= kMaterialTexture0,
                        "머티리얼 텍스처 슬롯(에뮬)은 Vulkan t 밴드 바로 뒤에 둔다 — DX12 테이블 · Vulkan t 밴드 밖이고 SRV 띠가 자라도 겹치지 않는다" );
@@ -455,6 +455,7 @@ namespace sw
                 "GBufferMaterial",    ///< G버퍼 머티리얼 칸(금속도 · 거칠기) — 디퍼드 조명(PassTexture::loadGbufferMaterial)
                 "Light2DCookieAtlas", ///< 2D 빛 쿠키 아틀라스 — 쿠키를 쓴 2D 빛이 있는 프레임에만
                 "AutoExposure",       ///< 자동 노출의 이번 EV(1x1 R32) — 톤맵하는 패스에만(post_grade.hlsli). 없으면 EV 0
+                "GBufferCustomData",  ///< G버퍼 사용자 칸(셰이딩 모델 번호마다의 값) — 디퍼드 조명(PassTexture::sampleGbufferCustomData)
             };
             static_assert( sizeof( kEngineTextureNames ) / sizeof( kEngineTextureNames[0] ) == kEngineTextureCount, "엔진 텍스처 칸 표와 칸 수(SW_ENGINE_TEXTURE_COUNT)가 다르다" );
 

@@ -3,8 +3,12 @@
 		<RenderPassAttachment _name="GBufferAlbedo" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _loadOp="Clear" />
 		<!-- G버퍼 노멀 칸 — 옥타헤드럴 좌표 snorm16 둘(binding.hlsli Octahedral::encode). 클리어 (0, 0) 은 +z 로 풀린다. -->
 		<RenderPassAttachment _name="GBufferNormal" _format="R16G16_SNORM" _clearColor="0,0,0,0" _loadOp="Clear" />
-		<!-- G버퍼 머티리얼 칸 — r 금속도, g 거칠기, a "그려졌다" 표시(binding.hlsli SurfaceOutput::encodeGbufferMaterial). 디퍼드 조명이 PBR 식에 넘긴다. -->
+		<!-- G버퍼 머티리얼 칸 — r 금속도, g 거칠기, b 반사율(Specular), a 머티리얼 가림(binding_output.hlsli SurfaceOutput::encodeGbufferMaterial). 그려짐은 알베도 알파의 셰이딩 모델 번호(0 = 클리어)다. -->
 		<RenderPassAttachment _name="GBufferMaterial" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _loadOp="Clear" />
+		<!-- G버퍼 사용자 칸 — 셰이딩 모델 번호마다의 값(shading_model_ids.hlsli 표: 피부 감쌈 · 천 시엔 · 코트 · 눈 · 투과 · 비등방). RGBA8 한 장(픽셀당 4 바이트)을 더한 까닭:
+		     머티리얼 칸의 b · a 는 반사율 · 가림이 쓰고, 노멀 칸에 접어 넣으면 snorm16 두 칸을 8 비트로 쪼개는 부호 · 정밀도 문제가 생긴다 — 언리얼 GBufferD(CustomData)와 같은 선택. -->
+		<RenderPassAttachment _name="GBufferCustomData" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _loadOp="Clear" />
+		<!-- 장면 색 — G버퍼 패스가 처음 열어(배경색으로 지우고) 자체 발광을 적고, 디퍼드 조명(Shading)이 그 위에 더한다. -->
 		<RenderPassAttachment _name="LitColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
 		<RenderPassAttachment _name="AOColor" _format="R8G8B8A8_UNORM" _clearColor="1,1,1,1" _loadOp="Clear" />
 		<!-- 블룸의 밝은 부분은 반해상도로 구한다(BloomDownsample) — PostBloom 이 업샘플해 더한다. -->
@@ -52,6 +56,8 @@
 				<item>GBufferAlbedo</item>
 				<item>GBufferNormal</item>
 				<item>GBufferMaterial</item>
+				<item>GBufferCustomData</item>
+				<item>LitColor</item>
 				<item>SceneDepth</item>
 			</_listOutput>
 			<_listPermutation />
@@ -62,11 +68,13 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false">
+		                     _bEnableDepthWrite="false"
+		                     _blendPreset="Additive">
 			<_listInput>
 				<item>GBufferAlbedo</item>
 				<item>GBufferNormal</item>
 				<item>GBufferMaterial</item>
+				<item>GBufferCustomData</item>
 				<item>SceneDepth</item>
 				<item>ShadowMap</item>
 			</_listInput>

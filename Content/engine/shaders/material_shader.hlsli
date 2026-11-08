@@ -19,7 +19,7 @@
  *             rgb 는 조명을 받은 색, a 는 알파다(알파를 쓰는지는 뼈대가 MATERIAL_BLEND_TRANSLUCENT 로 정한다).
  *             SW_MATERIAL_CUSTOM_LIGHTING(훅 정의) · SW_MATERIAL_DEFAULT_LIGHTING(PBR) · SW_MATERIAL_UNLIT(표면 색 그대로) 중 하나.
  *             SW_MATERIAL_RIM_LIGHT 는 기본 PBR 에 포워드 림 라이트를 더한다(선택이 아니라 덧붙임이다).
- *             SW_MATERIAL_EMISSIVE 는 기본 PBR 에 `float3 computeMaterialEmissive( PixelContext context )` 훅의 빛을 더한다(덧붙임 — G버퍼에 칸이 없어 머티리얼이 MATERIAL_FORWARD_ONLY 를 함께 적는다).
+ *             SW_MATERIAL_EMISSIVE 는 기본 PBR 에 `float3 computeMaterialEmissive( PixelContext context )` 훅의 빛을 더한다(덧붙임 — G버퍼 패스는 장면 색에 미리 적어 디퍼드로도 그린다).
  *   월드 위치 오프셋 `float3 computeWorldPositionOffset( VertexContext context )`        MATERIAL_VERTEX_DEFORM 퍼뮤테이션에서만 부른다
  *   사용자 보간 칸  `MaterialVaryings computeMaterialVaryings( VertexContext context )`
  *             SW_MATERIAL_CUSTOM_VARYINGS(구조체 + 훅 정의) · SW_MATERIAL_DEFAULT_VARYINGS(칸 없음) 중 하나. 시맨틱은 TEXCOORD8 ~ TEXCOORD14.
@@ -229,7 +229,8 @@ struct PixelContext
     void copyTangent( MaterialInterpolants input );
     void readMaterial( MaterialInterpolants input );                 // 픽셀에서 읽는 셰이더만 읽는다
     static void addRimLight( float3 normal, inout float3 inoutLit ); // SW_MATERIAL_RIM_LIGHT 의 단계
-    void addEmissive( inout float3 inoutLit );                       // SW_MATERIAL_EMISSIVE 의 단계
+    void addEmissive( inout float3 inoutLit );                       // SW_MATERIAL_EMISSIVE 의 단계(포워드 빛 · G버퍼 셰이딩 값)
+    static uint getShadingModel();                                   // G버퍼에 적을 셰이딩 모델 번호
     float4 computeSelectedLighting( MaterialSurface surface );       // 조명 훅의 선택(훅 정의 · 기본 PBR · 조명 없음)을 푼다
     SurfaceOutput storeSurface( MaterialSurface surface );           // 패스가 원하는 출력(포워드 색 · G버퍼 셋)으로 낸다
 };

@@ -28,19 +28,20 @@ namespace sw
     {
         struct Attachment
         {
-            static constexpr auto kSwapchain        = "Swapchain";
-            static constexpr auto kSceneColor       = "SceneColor";
-            static constexpr auto kSceneDepth       = "SceneDepth";
-            static constexpr auto kShadowMap        = "ShadowMap";
-            static constexpr auto kGBufferAlbedo    = "GBufferAlbedo";
-            static constexpr auto kGBufferNormal    = "GBufferNormal";
-            static constexpr auto kGBufferMaterial  = "GBufferMaterial";
-            static constexpr auto kLitColor         = "LitColor";
-            static constexpr auto kBloomColor       = "BloomColor";
-            static constexpr auto kBloomBright      = "BloomBright";
-            static constexpr auto kOutlineColor     = "OutlineColor";
-            static constexpr auto kTransparentColor = "TransparentColor";
-            static constexpr auto kTAAColor         = "TAAColor";
+            static constexpr auto kSwapchain         = "Swapchain";
+            static constexpr auto kSceneColor        = "SceneColor";
+            static constexpr auto kSceneDepth        = "SceneDepth";
+            static constexpr auto kShadowMap         = "ShadowMap";
+            static constexpr auto kGBufferAlbedo     = "GBufferAlbedo";
+            static constexpr auto kGBufferNormal     = "GBufferNormal";
+            static constexpr auto kGBufferMaterial   = "GBufferMaterial";
+            static constexpr auto kGBufferCustomData = "GBufferCustomData";
+            static constexpr auto kLitColor          = "LitColor";
+            static constexpr auto kBloomColor        = "BloomColor";
+            static constexpr auto kBloomBright       = "BloomBright";
+            static constexpr auto kOutlineColor      = "OutlineColor";
+            static constexpr auto kTransparentColor  = "TransparentColor";
+            static constexpr auto kTAAColor          = "TAAColor";
         };
 
         static constexpr uint32 kDefaultTransientSize = 1280;
@@ -481,6 +482,7 @@ namespace sw
         hashed_string _gbufferAlbedo{ FrameRendererUtil::Attachment::kGBufferAlbedo };
         hashed_string _gbufferNormal{ FrameRendererUtil::Attachment::kGBufferNormal };
         hashed_string _gbufferMaterial{ FrameRendererUtil::Attachment::kGBufferMaterial };
+        hashed_string _gbufferCustomData{ FrameRendererUtil::Attachment::kGBufferCustomData };
         hashed_string _litColor{ FrameRendererUtil::Attachment::kLitColor };
         hashed_string _bloomColor{ FrameRendererUtil::Attachment::kBloomColor };
         hashed_string _outlineColor{ FrameRendererUtil::Attachment::kOutlineColor };

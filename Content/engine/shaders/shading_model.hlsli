@@ -33,6 +33,7 @@ struct SurfaceBRDF
     float3     _normal;
     float3     _toView;
     float      _normalDotView;
+    float      _occlusion;       ///< 머티리얼 가림(앰비언트 · 프로브에만, 기본 1)
     float      _lightAcceptance; ///< N·L 이 -이 값보다 크면 빛을 받는다(기본 0 — 감싼 확산 · 투과가 넓힌다)
 
     float  _coatWeight;
@@ -86,6 +87,7 @@ static SurfaceBRDF SurfaceBRDF::makePBR( float3 albedo, float3 worldPosition, fl
     brdf._normal            = normal;
     brdf._toView            = View::computeToView( worldPosition );
     brdf._normalDotView     = max( saturate( dot( normal, brdf._toView ) ), 1e-4f );
+    brdf._occlusion         = 1.0f;
     brdf._lightAcceptance   = 0.0f;
     brdf._coatWeight        = 0.0f;
     brdf._coatAlpha         = brdf._pbr._alpha;

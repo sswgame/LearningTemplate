@@ -26,16 +26,17 @@ namespace sw
     enum class RenderPassInputRole : uint8
     {
         Invalid = 0,
-        SourceColor,      ///< 이 패스가 가공할 컬러 (직전 패스의 출력). 패스당 하나.
-        SceneDepth,       ///< 씬 깊이 (깊이 포맷 첨부 전부)
-        GBufferAlbedo,    ///< G버퍼 알베도
-        GBufferNormal,    ///< G버퍼 노멀
-        ShadowMap,        ///< 그림자 깊이
-        AmbientOcclusion, ///< SSAO 결과 (AOColor)
-        BloomBright,      ///< 반해상도 블룸의 밝은 부분(BloomDownsample 패스 출력). Bloom 패스가 있으면 업샘플해 더하고, 없으면 원본에서 직접 구한다.
-        GBufferMaterial,  ///< G버퍼 머티리얼 칸(r 금속도, g 거칠기 — binding.hlsli SurfaceOutput::encodeGbufferMaterial)
-        SceneColorCopy,   ///< 반투명 앞에 떠 둔 장면 색 사본(SceneColorCopy 패스의 출력). 물의 굴절이 읽는다(`g_SceneColorCopyIndex`) — 반투명이 그리는 장면 색 자체는 읽으며 쓸 수 없어서다.
-        SceneDepthCopy,   ///< 반투명 앞에 떠 둔 장면 깊이 사본(SceneDepthCopy 패스의 출력, R32 실수). 물의 화면 공간 두께가 읽는다(`g_SceneDepthCopyIndex`) — 반투명 패스는 장면 깊이를 깊이 붙임으로 쥐고 있어 샘플할 수 없어서다.
+        SourceColor,       ///< 이 패스가 가공할 컬러 (직전 패스의 출력). 패스당 하나.
+        SceneDepth,        ///< 씬 깊이 (깊이 포맷 첨부 전부)
+        GBufferAlbedo,     ///< G버퍼 알베도
+        GBufferNormal,     ///< G버퍼 노멀
+        ShadowMap,         ///< 그림자 깊이
+        AmbientOcclusion,  ///< SSAO 결과 (AOColor)
+        BloomBright,       ///< 반해상도 블룸의 밝은 부분(BloomDownsample 패스 출력). Bloom 패스가 있으면 업샘플해 더하고, 없으면 원본에서 직접 구한다.
+        GBufferMaterial,   ///< G버퍼 머티리얼 칸(r 금속도, g 거칠기 — binding.hlsli SurfaceOutput::encodeGbufferMaterial)
+        SceneColorCopy,    ///< 반투명 앞에 떠 둔 장면 색 사본(SceneColorCopy 패스의 출력). 물의 굴절이 읽는다(`g_SceneColorCopyIndex`) — 반투명이 그리는 장면 색 자체는 읽으며 쓸 수 없어서다.
+        SceneDepthCopy,    ///< 반투명 앞에 떠 둔 장면 깊이 사본(SceneDepthCopy 패스의 출력, R32 실수). 물의 화면 공간 두께가 읽는다(`g_SceneDepthCopyIndex`) — 반투명 패스는 장면 깊이를 깊이 붙임으로 쥐고 있어 샘플할 수 없어서다.
+        GBufferCustomData, ///< G버퍼 사용자 칸 — 셰이딩 모델 번호마다의 값(shading_model_ids.hlsli 표). 디퍼드 조명이 읽는다(`g_GBufferCustomDataIndex`)
         Count,
     };
 
@@ -47,7 +48,7 @@ namespace sw
 
     /**
      * @brief 첨부의 역할을 정합니다. 첨부가 선언한 역할(`RenderPassAttachment::_role`)이 먼저입니다.
-     * @details 선언이 없거나 모르는 문자열이면(검증이 오류로 알립니다) 고정 역할 이름(GBufferAlbedo, GBufferNormal, GBufferMaterial, ShadowMap, AOColor, BloomBright, SceneColorCopy, SceneDepthCopy)은 그 역할,
+     * @details 선언이 없거나 모르는 문자열이면(검증이 오류로 알립니다) 고정 역할 이름(GBufferAlbedo, GBufferNormal, GBufferMaterial, GBufferCustomData, ShadowMap, AOColor, BloomBright, SceneColorCopy, SceneDepthCopy)은 그 역할,
      *          그 밖의 깊이 포맷은 SceneDepth, 나머지 컬러는 SourceColor 입니다. ShadowMap 은 깊이 포맷이지만 이름이 먼저입니다.
      */
     RenderPassInputRole resolveRenderPassInputRole( string_view attachmentName, bool bDepthFormat, string_view declaredRole );

@@ -578,6 +578,7 @@ struct SurfaceBRDF
     float3     _normal; ///< 월드 노멀(정규화)
     float3     _toView;
     float      _normalDotView;
+    float      _occlusion; ///< 머티리얼 가림 — 앰비언트 · 프로브 빛에만 곱한다(직접광은 그림자가 가린다). 기본 1
 
     static SurfaceBRDF makePBR( float3 albedo, float3 worldPosition, float3 normal, float roughness, float metallic );
     bool receivesLight( float normalDotLight );                   // 이 N·L(자르지 않은 값)의 빛이 응답을 내는지
@@ -595,6 +596,7 @@ static SurfaceBRDF SurfaceBRDF::makePBR( float3 albedo, float3 worldPosition, fl
     brdf._normal        = normal;
     brdf._toView        = View::computeToView( worldPosition );
     brdf._normalDotView = max( saturate( dot( normal, brdf._toView ) ), 1e-4f );
+    brdf._occlusion     = 1.0f;
     return brdf;
 }
 
@@ -640,7 +642,7 @@ float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
     const float3 diffuseColor        = getAmbientDiffuseColor();
     const float3 environmentSpecular = computeEnvironmentSpecular();
     const float3 reflectDirection    = reflect( -_toView, _normal );
-    float3       lit                 = ( diffuseColor + environmentSpecular ) * ambient;
+    float3       lit                 = ( diffuseColor + environmentSpecular ) * ambient * _occlusion;
     float3       probeSum            = float3( 0.0f, 0.0f, 0.0f );
     float        probeWeight         = 0.0f;
     float3       reflectionSum       = float3( 0.0f, 0.0f, 0.0f );
@@ -680,13 +682,13 @@ float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
     }
     // 볼륨이 덮는 곳은 확산 앰비언트를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.
     if ( probeWeight > 0.0f )
-        lit += diffuseColor * ( probeSum / probeWeight - ambient );
+        lit += diffuseColor * ( probeSum / probeWeight - ambient ) * _occlusion;
     // 반사 프로브가 덮는 곳은 반사 앰비언트를 프로브의 빛으로 바꾼다(IndirectLighting.md P4). 겹친 프로브는 가중 평균이고, 가중치 합이 1 보다 작은 경계는
     // 모자란 몫을 앰비언트로 채워 상자 밖과 이어진다. 덮지 않으면 아무 연산도 더하지 않는다.
     if ( reflectionWeight > 0.0f )
     {
         const float3 environment = ( reflectionSum + ambient * max( 1.0f - reflectionWeight, 0.0f ) ) / max( reflectionWeight, 1.0f );
-        lit += environmentSpecular * ( environment - ambient );
+        lit += environmentSpecular * ( environment - ambient ) * _occlusion;
     }
     return lit;
 }
