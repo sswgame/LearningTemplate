@@ -140,7 +140,7 @@ namespace sw
         // 셰이더 레이아웃도 여기(게임 스레드)서 맞춘다. 결과(레거시 MaterialCB 는 stride 0)는 사본(`getRenderBinding`)이 실어 간다.
         (void)ensureShaderLayout( pRHI->getBackendType() );
 
-        SW_LOG_INFO_ID( "Material.InitializedBytes", "Initialized '%#' (%# bytes)", _desc._name.c_str(), _data._bytes.size() );
+        SW_LOG_INFO_ID( "Material.InitializedBytes", "Initialized '%#' (%# bytes, element stride %#)", _desc._name.c_str(), _data._bytes.size(), _elementStride );
         loadScope.setBytes( _data._bytes.size() );
         loadScope.setSucceeded();
         finishInitState._bSucceeded = true;
