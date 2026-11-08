@@ -151,6 +151,11 @@ namespace sw
         uint32 getRevision() const { return _revision; }
         uint16 getResolution() const { return _resolution; }
         bool   isClean() const { return _bDirty == SW_FALSE; }
+        /**
+         * @brief 격자를 굽기가 읽는 RGBA8 픽셀(해상도²)로 씁니다(비우고 채움). R · G = 0.5 + 이동 ÷ (2 × @p offsetRange)(범위 밖은 끝에서 자른다), B = 묽음, A = 255.
+         * @details 굽기 셰이더(`layer_bake.hlsl`)가 같은 식으로 푼다 — 범위는 `TextureLayerBakeConstants::kSmearOffsetRange` 를 넘긴다. 행은 v 가 커지는 쪽(텍스처 위 = v 0)이다.
+         */
+        void makeTexturePixels( float32 offsetRange, vector<uint8>& outListPixel ) const;
 
     private:
         /** @brief 칸 번호입니다. */

@@ -3,7 +3,7 @@
  * @brief 피부 층(화장 · 문신 · 흉터 · 바디 페인트) 굽기의 공용 함수입니다. 캐릭터마다 층 목록이 바뀔 때만 UV 공간 텍스처 한 장에 차례로 그린다 — 피부 머티리얼은 구운 한 장만 읽는다.
  * @details C++ 기준 구현은 `SkinLayerComposite` · `SkinLayerPlacement` · `SkinLayerSmearState`(GameFramework Appearance/SkinLayer.h)이고 식이 같다(테스트가 그쪽을 본다).
  *          층 하나 = 마스크 × 색 × 불투명도 × (1 − 번짐 묽음), 번짐 이동만큼 옮겨 읽는다. 배치 층은 피부 UV → 층 UV 로 바꾸고 영역 경계 밖은 덮지 않는다.
- *          굽기 패스(렌더 그래프)와 캐시는 머티리얼 라이브러리 작업과 합칠 자리다 — 이 파일은 패스가 부를 함수만 둔다.
+ *          굽기 패스는 `layer_bake.hlsl`(층마다 전체 화면 한 번 — `FramePassExecutor::drawTextureLayerBakes`), 열쇠 · 캐시는 `SkinLayerBakeBinding` 이다.
  */
 #ifndef SW_ENGINE_SKINLAYERCOMPOSITE_HLSLI
 #define SW_ENGINE_SKINLAYERCOMPOSITE_HLSLI

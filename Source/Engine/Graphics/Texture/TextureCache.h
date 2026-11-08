@@ -56,6 +56,8 @@ namespace sw
         static constexpr uint32 kMaxUploadsPerFrame = 8;
         /** @brief 렌더 스레드가 한 프레임에 업로드하는 위쪽 밉 수의 상한입니다(`updateStreaming`). 텍스처 하나가 밉 사슬 전부라 처음 로드보다 무겁다. */
         static constexpr uint32 kMaxStreamingUpgradesPerFrame = 2;
+        /** @brief 기억하는 최근 굽기 수입니다(`wasLayerBakedAfter`). 프레임마다 묻는 쪽이 놓치지 않을 만큼 크다. */
+        static constexpr uint32 kBakeHistoryCount = 256;
         /** @brief 빈 캐시로 만듭니다. */
         TextureCache();
         /** @brief 캐시를 해제합니다. */
@@ -206,6 +208,15 @@ namespace sw
         void deferLayerBake( TextureLayerBakeRequest request );
         /** @brief 맡겨 둔 굽기를 모두 가져갑니다(렌더 스레드, 프레임 프리패스). @p outListRequest 는 비우고 채운다. */
         void takeLayerBakes( vector<TextureLayerBakeRequest>& outListRequest );
+        /** @brief 결과 타깃 @p albedoTarget 의 굽기를 기록했다고 적습니다(렌더 스레드). 머티리얼이 그 프레임 뒤의 그리기에서 읽으면 구운 내용이다(같은 큐의 제출 순서). */
+        void recordLayerBaked( const string& albedoTarget );
+        /** @brief 지금까지 그린 굽기 번호입니다(게임 스레드가 맡길 때 적어 두고 `wasLayerBakedAfter` 에 넘긴다). */
+        uint32 getLayerBakeSerial() const;
+        /**
+         * @brief @p albedoTarget 의 굽기가 번호 @p serial 뒤에 그려졌으면 true 입니다(게임 스레드 — 새 결과로 머티리얼을 바꿀 때를 고른다. 바꾸기 전에는 옛 결과를 그린다).
+         * @details 같은 결과를 여러 캐릭터가 기다려도 모두 본다(지우지 않는다). 최근 `kBakeHistoryCount` 개만 기억한다 — 맡긴 쪽은 프레임마다 묻는다.
+         */
+        bool wasLayerBakedAfter( string_view albedoTarget, uint32 serial ) const;
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다(붙은 디바이스에서). */
         void release( string_view relativePath );
         /** @brief 그 경로를 지금 캐시가 보관하고 있는지 반환합니다(`MaterialCache::isCached` 와 같은 뜻). */

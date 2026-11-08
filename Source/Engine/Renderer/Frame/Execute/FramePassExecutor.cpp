@@ -2961,6 +2961,7 @@ namespace sw
             // 결과는 머티리얼이 읽는다 — 읽기 상태로 둔다.
             _pCmd->prepareTextureForShaderRead( arrTarget[1][0]->getHandle() );
             _pCmd->prepareTextureForShaderRead( arrTarget[1][1]->getHandle() );
+            textures.recordLayerBaked( request._albedoTarget );
         }
     }
 

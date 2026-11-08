@@ -42,6 +42,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceMeshPart.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CharacterBodyDynamicsComponent.h"
 
 namespace sw
 {
@@ -319,6 +320,7 @@ namespace sw
         : _presetID{}
         , _seed{ 0 }
         , _surfaceChannelsPath{}
+        , _skinBakeResolution{ 512 }
         , _bMergeParts{ SW_FALSE }
         , _reservedProperty{ 0 }
         , _socketTask{ *this }
@@ -364,6 +366,7 @@ namespace sw
         , _loadedSurfaceChannels{}
         , _surfaceAppliedRevision{ constant::invalid_index::kUint64 }
         , _surfaceRegionCount{ 0 }
+        , _skinBake{}
     {
     }
 
@@ -393,6 +396,7 @@ namespace sw
             _surface.update( deltaTime ); // 감쇠한다. 바뀐 프레임에만 머티리얼로 올라간다
             applySurface( *pManager, false );
         }
+        applySkinLayers();
         if ( _bMeshAssemblyPending == SW_TRUE || _bMeshApplyQueued == SW_TRUE )
             return; // 베이크한 메시를 기다리거나(`waitMeshAssembly`) 걸기가 틱 뒤로 예약됐다 — 걸기 전의 원본 내용 id 는 0 이라 낡음으로 보이면 조립을 끝없이 다시 한다
         // 소켓 파일을 고치면 공유 캐시가 제자리에서 다시 읽는다 — 몸 소켓은 조립 때 덮어쓰기와 합쳐 사본으로 들었으므로 다시 조립해야 바뀐다.
@@ -417,6 +421,11 @@ namespace sw
         _reloadSubscription.reset();
         unregisterSocketTask();
         _surfaceBinding.releaseTextures(); // 마스크 텍스처를 놓는다(상태 값은 다음 시작에 다시 만든다)
+        {
+            GameObject*            pOwner = getOwner();
+            SkeletalMeshComponent* pBody  = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+            _skinBake.release( pBody != nullptr ? pBody->getMaterialInstance().get() : nullptr ); // 구운 결과 · 번짐 텍스처를 놓는다(다음 시작에 다시 굽는다)
+        }
         _surface = CharacterSurfaceState{};
         _loadedSurfaceChannels.clear();
         _surfaceRegionCount     = 0;
@@ -1309,6 +1318,24 @@ namespace sw
         }
         if ( bComplete )
             _surfaceAppliedRevision = _surface.getRevision();
+    }
+
+    void CharacterAppearanceComponent::applySkinLayers()
+    {
+        GameObject*            pOwner = getOwner();
+        SkeletalMeshComponent* pBody  = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( pBody == nullptr )
+            return;
+        const vector<ResolvedSkinLayer>& listLayer = _state.getResolved()._listSkinLayer;
+        if ( listLayer.empty() && _skinBake.getAppliedKey() == 0 && _skinBake.getPendingKey() == 0 )
+            return; // 층이 없고 건 것도 없다 — 머티리얼 인스턴스를 만들지 않는다
+        MaterialInstance* pInstance = CharacterSurfaceBinding::acquireInstance( *pBody );
+        if ( pInstance == nullptr )
+            return; // 머티리얼이 아직 없다 — 다음 틱에 다시
+        // 번짐은 몸 동작 컴포넌트의 실행 상태다(해석 순서 — 층 목록이 바뀌면 그쪽이 새로 시작한다). 없으면 번짐 없이 굽는다.
+        const CharacterBodyDynamicsComponent*             pDynamics = pOwner->getComponent<CharacterBodyDynamicsComponent>();
+        const vector_reference<const SkinLayerSmearState> listSmear = pDynamics != nullptr ? vector_reference<const SkinLayerSmearState>( pDynamics->getSmearStates() ) : vector_reference<const SkinLayerSmearState>{};
+        _skinBake.apply( pOwner->getHandle().objectID(), listLayer, listSmear, _skinBakeResolution, *pInstance );
     }
 
     void CharacterAppearanceComponent::refreshSocketTransforms( const SkeletalMeshComponent& body )

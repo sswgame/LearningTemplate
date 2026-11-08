@@ -31,6 +31,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceState.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterSurfaceBinding.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/SkinLayerBakeBinding.h"
 
 namespace sw
 {
@@ -387,6 +388,8 @@ namespace sw
         void rebuildSurfaceState( uint32 regionCount );
         /** @brief 표면 상태를 부품의 머티리얼에 올립니다(채널 스칼라 · 영역 벡터 · 마스크 텍스처). 상태 번호가 그대로면 @p bForce 가 아닌 한 올리지 않습니다. */
         void applySurface( GameObjectManager& manager, bool bForce );
+        /** @brief 해석의 피부 층(과 같은 오브젝트의 몸 동작 컴포넌트가 든 번짐)을 굽고 몸 머티리얼에 겁니다(`SkinLayerBakeBinding` — 층 목록 열쇠가 그대로면 다시 굽지 않는다). */
+        void applySkinLayers();
 
     private:
         PROPERTY( Category = "Appearance", DisplayName = "Preset", Tooltip = "CharacterAppearance preset id (data/appearance/presets.xml)" )
@@ -396,6 +399,9 @@ namespace sw
         PROPERTY( Category = "Appearance", DisplayName = "Surface Channels",
                   Tooltip = "Surface channel table (*.surfacechannels.xml): wetness, dirt, blood, tears... Empty keeps the body surface state off" )
         string _surfaceChannelsPath;
+        PROPERTY( Category = "Appearance", DisplayName = "Skin Bake Resolution", Min = 16, Max = 4096,
+                  Tooltip = "Side (px) of the per-character skin layer bake (makeup, tattoos, smear) the body material reads instead of its albedo map" )
+        uint32 _skinBakeResolution;
         PROPERTY( Category = "Appearance", DisplayName = "Merge Parts",
                   Tooltip = "Merge the body and the skinned parts that follow it into one sectioned mesh: one skinning unit and one pose, each part still drawn with its own material" )
         uint8                  _bMergeParts      : 1;
@@ -449,5 +455,6 @@ namespace sw
         string                                         _loadedSurfaceChannels;  ///< 지금 상태가 읽은 채널 파일 경로(바뀌었는지 가른다)
         uint64                                         _surfaceAppliedRevision; ///< 머티리얼에 마지막으로 올린 상태 번호(같은 번호는 다시 올리지 않는다)
         uint32                                         _surfaceRegionCount;     ///< 상태가 가진 영역 수(피팅 표의 영역 수)
+        SkinLayerBakeBinding                           _skinBake;               ///< 피부 층 굽기와 몸 머티리얼 걸기(번짐 텍스처 · 결과 핸들을 쥔다)
     };
 } // namespace sw
