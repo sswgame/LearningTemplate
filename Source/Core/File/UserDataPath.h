@@ -5,7 +5,7 @@
  *          - 리눅스: 데이터는 `$XDG_DATA_HOME`(없으면 `~/.local/share`)`/swengine/<game>/`, 설정은 `$XDG_CONFIG_HOME`(없으면 `~/.config`)`/swengine/<game>/`.
  *          - 사용자 폴더를 모르면(환경 변수 없음) 멈춘다(`SW_USER_DATA_ROOT` 로 정한다 - 작업 폴더로 대신하지 않는다). `<game>` 은 소문자, 비면 `default`.
  *          - 환경 변수 `SW_USER_DATA_ROOT`(`kUserDataRootVariable`)가 있으면 데이터 · 설정 모두 그 아래 `<game>/` 이다. 엔진이 읽는 위치만 가리키므로(`LOCALAPPDATA` 를 옮기면
- *            드라이버 셰이더 캐시 같은 남의 폴더도 따라간다) 자동화가 `-gv_userSettingsFile` 을 모르는 배포본의 사용자 설정 · 세이브를 실행별 폴더로 가를 때 쓴다.
+ *            드라이버 셰이더 캐시 같은 남의 폴더도 따라간다) 자동화가 개발 도구의 `-gv_userSettingsFile` 이 없는 배포본의 사용자 설정 · 세이브를 실행별 폴더로 가를 때 쓴다.
  *          언리얼 `FPlatformProcess::UserSettingsDir` · 유니티 `Application.persistentDataPath` 에 해당한다. 모바일 샌드박스는 지원 플랫폼이 되면 분기 하나로 추가한다.
  */
 #pragma once

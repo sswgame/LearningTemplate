@@ -3,7 +3,6 @@
 #include "GameFramework/Runtime/Online/Service/OnlineSession.h"
 
 #include "Core/Foundation/BuildInfo.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/PlatformSocketUtil.h"
@@ -26,9 +25,6 @@
 
 namespace sw
 {
-    /** @brief `-gv_onlineServerAddress=<주소:포트>`: gamesettings 의 온라인 서버 대신 붙을 주소입니다(로컬 실행 · 자동화). */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_onlineServerAddress, "", "gamesettings 의 온라인 서버 대신 붙을 주소 (주소:포트, 비면 gamesettings)" );
-
     namespace
     {
         struct OnlineSessionInternal
@@ -198,7 +194,7 @@ namespace sw
 
     bool OnlineSession::connect( string& outError )
     {
-        const string address = gv_onlineServerAddress.empty() ? _settings._onlineServerAddress : string( gv_onlineServerAddress );
+        const string& address = _settings._onlineServerAddress; // 개발 구성의 실행 인자 덮어쓰기는 게임 인스턴스가 이미 넣었다(`IGameSettingsOverride`)
         if ( address.empty() )
         {
             outError = "no server address (onlineServerAddress in gamesettings)";
@@ -329,7 +325,7 @@ namespace sw
 
 namespace sw
 {
-    SW_DEV_COMMAND( OnlineConnect, "online.connect", "online.connect", "Connect the online session to the server in gamesettings (or -gv_onlineServerAddress)", &OnlineSessionInternal::runConnect );
+    SW_DEV_COMMAND( OnlineConnect, "online.connect", "online.connect", "Connect the online session to the server in gamesettings", &OnlineSessionInternal::runConnect );
     SW_DEV_COMMAND( OnlineDisconnect, "online.disconnect", "online.disconnect", "Close the online session and stop its in-process server", &OnlineSessionInternal::runDisconnect );
     SW_DEV_COMMAND( OnlineStatus, "online.status", "online.status", "Show the online session state, its kit client count and whether an in-process server runs", &OnlineSessionInternal::runStatus );
     SW_DEV_COMMAND( OnlineLocalStart, "online.local.start", "online.local.start <server config path>", "Start an in-process online server from that server config and connect the session to it (development only)", &OnlineSessionInternal::runLocalStart );

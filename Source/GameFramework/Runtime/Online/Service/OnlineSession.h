@@ -55,7 +55,7 @@ namespace sw
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
-         * @brief gamesettings 의 서버(`-gv_onlineServerAddress` 가 있으면 그 주소)에 TLS 로 연결을 겁니다. 결과는 `getState` 입니다.
+         * @brief gamesettings 의 서버(개발 구성은 `-gv_onlineServerAddress` 가 덮어쓴 값 — `IGameSettingsOverride`)에 TLS 로 연결을 겁니다. 결과는 `getState` 입니다.
          * @return 주소 · 빌드 글이 없거나 TLS 문맥을 만들지 못하면 false 와 @p outError 입니다. 평문이나 다른 서버로 대신하지 않습니다.
          */
         [[nodiscard]] bool connect( string& outError );

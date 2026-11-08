@@ -31,6 +31,3 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_uiReduceMotion );               ///< UI 움�
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_subtitles );                    ///< 자막 표시입니다(UISubtitleService 가 읽으며, 끄면 줄은 받되 화면을 닫습니다).
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_subtitleSize );                ///< 자막 크기입니다(0 작게, 1 보통, 2 크게).
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_subtitleBackgroundOpacity ); ///< 자막 배경 불투명도 0~1.
-
-// 기동
-SW_EXTERN_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_userSettingsFile ); ///< 사용자 설정 파일 경로 덮어쓰기입니다(자동화용이며 사용자 폴더를 건드리지 않습니다).

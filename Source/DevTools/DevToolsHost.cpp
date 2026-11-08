@@ -4,6 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Foundation/BuildInfo.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -16,6 +17,7 @@
 #include "DevTools/File/FileReadDiagnostics.h"
 #include "DevTools/Maintenance/SavedRetentionSubsystem.h"
 #include "DevTools/Net/NetLineEmulation.h"
+#include "DevTools/Net/NetListenLaunch.h"
 #include "DevTools/Profiling/FrameStall.h"
 #include "DevTools/Profiling/LeakBaselineDetailSwitch.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
@@ -33,6 +35,13 @@
 
 namespace sw
 {
+    /**
+     * @brief `-gv_userSettingsFile=<경로>`: 사용자 설정 파일 자리입니다(비면 사용자 폴더의 usersettings.json, 무인 실행은 실행마다 새 자리).
+     * @details 실행 짝(`Scripts/net/LockstepPairRun.py`) · 순서 시나리오(`Test/Scenario/RunStateDirPair.cmake`)가 한 파일을 이어 쓰거나 사람의 파일을 피할 때 쓴다.
+     *          배포본에는 없다 — 배포본의 자리를 가를 때는 환경 변수 `SW_USER_DATA_ROOT`(`Core/File/UserDataPath.h`)다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_userSettingsFile, "", "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)" );
+
     DevToolsHost::DevToolsHost()
         : _pConsole{}
         , _pContentFolderWatch{ make_unique<ContentFolderWatchService>() }
@@ -101,13 +110,22 @@ namespace sw
             (void)startup.emplaceSubsystem<ConfigReloadSubsystem>( *parts._pConfigManager );
         }
         // 회선 흉내 — 세션이 열기 전에 샤드 전송 데코레이터를 건다(실행 중 조건은 `net.emulation`).
+        // 리슨 포트 덮어쓰기(`-gv_netListenPort`) — 세션이 기동 역할을 정하기 전에 건다.
         if ( parts._pNetSession != nullptr )
+        {
             (void)startup.emplaceSubsystem<NetLineEmulationSubsystem>( *parts._pNetSession );
+            (void)startup.emplaceSubsystem<NetListenLaunchSubsystem>( *parts._pNetSession );
+        }
         // 서버 포즈 고스트 — 서버가 가진 위치를 클라이언트 씬에 겹친다(`-gv_serverPoseOverlayPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
         (void)startup.emplaceSubsystem<ServerPoseOverlay>();
         // 디버그 HUD 설정 — 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다(설정 매니저는 아직 초기화 전이다).
+        // 사용자 설정 파일 자리(`-gv_userSettingsFile`)도 초기화 전에 정한다 — 초기화가 그 자리를 읽는다.
         if ( parts._pUserSettings != nullptr )
+        {
             parts._pUserSettings->addStartupSchema( &EngineDefaultAssets::_debugHUDSettingsSchema );
+            if ( gv_userSettingsFile.empty() == false )
+                parts._pUserSettings->setUserFilePath( gv_userSettingsFile );
+        }
         // 클라이언트 전용 부분(셰이더 라이브 리로드 · 디버그 HUD) — 전용 서버는 그 소스를 짓지 않아 창구가 없다.
         if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )
             pClientPart->addStartupSubsystems( startup, parts );

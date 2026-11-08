@@ -116,7 +116,7 @@ namespace sw
      *          **장면 요약**: `recordFrame` 이 장면별 프레임 시간을 모아, 장면이 바뀌거나 끝날 때 `perf.sceneSummary`(프레임 수 · 평균 · p50 · p99 · 최대)를 남깁니다.
      *          **프레임 관찰자**: 엔진 루프가 기동 뒤 서비스를 관찰자로 붙입니다(서브시스템이 섰을 때만). 씬 틱 뒤(`onAfterSceneTick`)에 활성 씬의 프레임 하나를
      *          기록하고 세션 시계를 흘립니다(`recordFrame` → `update`).
-     *          **서브시스템** `Telemetry`(Client 대상): 엔진 · 게임 스키마를 읽고 스풀 폴더(`gv_telemetryFolder`, 비면 사용자 설정 파일 옆 `telemetry/`)로
+     *          **서브시스템** `Telemetry`(Client 대상): 엔진 · 게임 스키마를 읽고 스풀 폴더(사용자 설정 파일 옆 `telemetry/`)로
      *          서며 동의를 사용자 설정에 묶습니다. 같은 동의를 쓰는 크래시 보고(`CrashReportService`)의 지난 크래시 묶기도 이 단계가 세우고 내립니다.
      */
     class SW_API TelemetryService : public ISubsystem

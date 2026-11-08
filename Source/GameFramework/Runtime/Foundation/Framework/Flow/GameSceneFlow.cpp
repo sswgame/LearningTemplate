@@ -18,10 +18,11 @@ namespace sw
 {
     /**
      * @brief `"-gv_firstScene=<리소스 경로>"` 인자입니다. 팩 설정(gamesettings)의 시작 씬 대신 이 씬을 처음 엽니다.
-     * @details 에디터 없이 다른 씬(환경 쇼케이스 등)을 띄워 볼 때 쓴다.
+     * @details 배포 전용 서버가 띄울 맵을 고르는 길이라 배포에도 있다(언리얼 `Server.exe <맵>` · 실행 인자 URL 의 맵 자리, `gv_netConnectAddress` 와 같은 일반 변수).
+     *          에디터 새 창 플레이 · 멀티 프로세스 재생 · 시나리오(`<Launch>`)도 이것으로 시작 씬을 준다.
      * @note PowerShell 은 점이 든 인자를 쪼개므로 따옴표로 감싸야 한다.
      */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_firstScene, "", "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)" );
+    SW_GLOBAL_VARIABLE( sw::string, gv_firstScene, "", "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)" );
 
     GameSceneFlow::GameSceneFlow( const GameSettings& settings, ScreenTransitionManager& screenTransition, ILoadingScreen* pLoadingScreen )
         : _settings{ settings }

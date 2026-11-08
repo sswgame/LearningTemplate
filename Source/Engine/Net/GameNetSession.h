@@ -12,7 +12,8 @@
  *            리눅스에서 `_bGamePortReuse` 면 한 포트에 `SO_REUSEPORT` 소켓 N 개(커널이 4-튜플로 나눈다). 키트는 샤드를 모른다 — `getPeers()` 가 연결 ID 에
  *            샤드 번호를 접어 넣은 묶음(`NetEndpointShardSet`)이다. 어느 샤드 포트로 붙을지는 서버 배정(`ServerDescriptor::pickPort`)이 계정마다 정한다.
  *            샤드 여럿에 포트 0 은 받지 않는다(연이은 포트가 배정의 계약이다).
- *          - 서버(개발 덮어쓰기): `-gv_netListenPort=<포트>` 로 연다. 리슨 호스트(`App`)는 이 길뿐이고, 전용 서버에서는 설정보다 우선한다. Shipping 에는 없다.
+ *          - 서버(개발 덮어쓰기): 개발 도구가 건 기동 덮어쓰기(`setLaunchOverride` — `DevTools/Net/NetListenLaunch` 의 `-gv_netListenPort`)로 연다. 리슨 호스트(`App`)는
+ *            이 길뿐이고, 전용 서버에서는 설정보다 우선한다. 배포에는 개발 도구가 없어 이 길도 없다 — 평문 리슨은 루프백 · 개발 빌드로만 남긴다(U4).
  *          - 클라이언트: `-gv_netConnectAddress=<호스트:포트>` 로 붙는다(Shipping 에도 있다). 호스트는 이름이어도 된다(`PlatformSocketUtil::resolveAddress` — HTTP 클라이언트와 같은 해석기,
  *            기동 때 한 번 막고 푼다). 포트를 빼면 `kDefaultPort` 를 쓴다. 풀리지 않으면 기동 오류다. 이 길은 자격 없이 붙는다 — 접속 티켓을 요구하는 서버
  *            (`ServerConfig::_bGameConnectTicket`)는 거절한다. 그 서버에는 로그인 뒤 `makeTicketClientParams` 의 인자로 `initialize` 해 붙는다.
@@ -139,6 +140,8 @@ namespace sw
 
     /** @brief 샤드 전송 데코레이터 — 샤드 번호와 안쪽 전송(소켓)을 받아 감싼 전송을 돌려준다(nullptr 이면 감싸지 않는다). */
     using GameNetTransportDecoratorDelegate = Delegate<unique_ptr<INetTransport>( int32 shardIndex, INetTransport& inner )>;
+    /** @brief 기동 덮어쓰기 — 실행 인자 · 서버 설정보다 먼저 세션 인자를 정한다. `None` 이면 덮어쓰지 않고 원래 길로 간다(@p outParams 는 그대로 둔다). */
+    using GameNetLaunchOverrideDelegate = Delegate<GameNetLaunch( GameNetSessionParams& outParams )>;
 
     /**
      * @struct GameNetSessionMessage
@@ -217,9 +220,9 @@ namespace sw
         GameNetSession& operator=( const GameNetSession& ) = delete;
 
         /**
-         * @brief 이 프로세스의 기동 상태에서 세션 인자를 만듭니다. 실행 인자(`-gv_netListenPort`, `-gv_netConnectAddress`)가 먼저이고, 없으면 전용 서버의
+         * @brief 이 프로세스의 기동 상태에서 세션 인자를 만듭니다. 기동 덮어쓰기(`setLaunchOverride`)와 실행 인자(`-gv_netConnectAddress`)가 먼저이고, 없으면 전용 서버의
          *        서버 설정(`makeServerParams`)입니다. 어느 것도 없으면 `None` 이며 세션을 열지 않습니다.
-         * @details 실행 인자가 둘 다 있거나, 포트가 범위 밖이거나, 주소를 풀지 못하거나, 서버 설정이 틀리면 오류 로그와 `Invalid` 다 — 한쪽을 골라 대신 열지 않는다.
+         * @details 덮어쓰기와 실행 인자가 둘 다 있거나, 덮어쓰기가 틀렸거나, 주소를 풀지 못하거나, 서버 설정이 틀리면 오류 로그와 `Invalid` 다 — 한쪽을 골라 대신 열지 않는다.
          */
         [[nodiscard]] GameNetLaunch makeLaunchParams( GameNetSessionParams& outParams );
         /**
@@ -272,6 +275,11 @@ namespace sw
         void setTransportDecorator( const GameNetTransportDecoratorDelegate& decorator ) { _transportDecorator = decorator; }
         /** @brief 샤드 하나의 데코레이터입니다. 세션을 열지 않았거나 걸지 않았으면 nullptr 입니다. */
         INetTransport* findTransportDecorator( int32 shardIndex );
+        /**
+         * @brief 기동 덮어쓰기를 겁니다. 다음 `openFromLaunch` 가 실행 인자 · 서버 설정보다 먼저 묻는다.
+         * @details 개발 도구가 기동 확장에서 리슨 포트 덮어쓰기를 건다(`setTransportDecorator` 와 같은 자리 — 엔진은 무엇인지 모른다). 배포에는 거는 쪽이 없다.
+         */
+        void setLaunchOverride( const GameNetLaunchOverrideDelegate& launchOverride ) { _launchOverride = launchOverride; }
 
         /**
          * @brief 서버가 방금 끝낸 틱 번호를 모든 클라이언트에 보냅니다(비신뢰 순서 — 옛 번호는 받는 쪽이 버린다). 서버가 아니면 아무 일도 없습니다.
@@ -410,6 +418,7 @@ namespace sw
     private:
         vector<unique_ptr<Shard>>         _listShard;          ///< 포트 샤드마다 소켓 · 데코레이터 · 호스트 · 네트워크 스레드(클라이언트는 하나)
         GameNetTransportDecoratorDelegate _transportDecorator; ///< `setTransportDecorator` 가 건 것(없으면 비었다)
+        GameNetLaunchOverrideDelegate     _launchOverride;     ///< `setLaunchOverride` 가 건 것(없으면 비었다)
         NetEndpointShardSet               _peers;              ///< `_listShard` 의 호스트를 키트에 하나로 보이는 묶음
         NetMessageRouter                  _router;
         EngineMessageHandler              _engineMessageHandler; ///< 클라이언트가 `_router` 의 엔진 영역에 다는 처리기(등록보다 먼저 선언 — 나중에 풀린다)

@@ -7,7 +7,6 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleBuildID.h"
@@ -28,12 +27,6 @@
 
 #include <algorithm>
 #include <cstdio>
-
-namespace sw
-{
-    /** @brief `-gv_telemetryFolder=<경로>`: 텔레메트리 스풀 폴더입니다(자동화 — 사용자 폴더를 건드리지 않는다). 비면 사용자 설정 파일 옆의 `telemetry/`. */
-    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_telemetryFolder, "", "텔레메트리 스풀 폴더 (비면 사용자 폴더의 telemetry/)" );
-} // namespace sw
 
 namespace sw
 {
@@ -293,8 +286,8 @@ namespace sw
         context._platform    = build::kPlatformName;
         context._buildID     = ModuleBuildID::find( nullptr )._id;
         context._game        = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
-        const string folder  = gv_telemetryFolder.empty() ? FileUtil::joinPath( FileUtil::getDirectoryPart( userSettings.getUserFilePath() ), "telemetry" )
-                                                          : string( gv_telemetryFolder );
+        // 스풀은 사용자 설정 파일 옆이다 — 자동화가 설정 파일 자리를 옮기면(무인 실행 · `-gv_userSettingsFile`) 같이 옮겨 간다.
+        const string folder = FileUtil::joinPath( FileUtil::getDirectoryPart( userSettings.getUserFilePath() ), "telemetry" );
 
         // 스키마가 틀려도 기동은 멈추지 않는다 — 스키마에 없는 사건은 기록되지 않을 뿐이다.
         if ( loadSchema( AssetID{ engineSchema } ) == false )

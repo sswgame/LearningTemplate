@@ -2,9 +2,6 @@
 
 #include "App/UserSettingsHost.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-
 #include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
@@ -13,15 +10,11 @@
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/IWindow.h"
 
-SW_TEST_GLOBAL_VARIABLE( sw::string, gv_userSettingsApply, "", "사용자 설정을 메뉴와 같은 길로 바꾼다: \"id=value;id=value\" (자동화)" );
-SW_TEST_GLOBAL_VARIABLE( bool, gv_userSettingsAutoConfirm, true, "gv_userSettingsApply 의 화면 변경을 바로 확인한다 (false 면 카운트다운이 되돌린다)" );
-
 namespace sw
 {
     UserSettingsHost::UserSettingsHost()
         : _pEngine{ nullptr }
         , _pWindow{ nullptr }
-        , _appliedText{}
     {
     }
 
@@ -29,7 +22,6 @@ namespace sw
     {
         _pEngine = pEngine;
         _pWindow = pWindow;
-        _appliedText.clear();
     }
 
     void UserSettingsHost::shutdown()
@@ -42,55 +34,11 @@ namespace sw
     {
         if ( _pEngine == nullptr || engine::areEngineServicesBound() == false )
             return;
-        // 값마다 한 번 적용한다 — 명령줄 값은 첫 프레임에, 시나리오(`<Variable>`)가 실행 중에 바꾼 값은 바뀐 프레임에 들어간다.
-        // 적용할 프레임을 고르는 스위치는 두지 않는다. 시점은 시나리오의 단계가 정한다(백엔드 교체 · 모듈 리로드와 같은 방식).
-        const bool bNewApplyText = gv_userSettingsApply.empty() == false && gv_userSettingsApply != _appliedText;
-        if ( bNewApplyText )
-        {
-            _appliedText = gv_userSettingsApply;
-            applyCommandLineSettings();
-        }
-
         UserSettingsManager& settings = engine::getSubsystem<UserSettingsManager>();
         settings.update( deltaSeconds );
         DisplaySettingsRequest request;
         if ( settings.consumeDisplayRequest( request ) )
             applyDisplayRequest( request );
-    }
-
-    void UserSettingsHost::applyCommandLineSettings()
-    {
-        UserSettingsManager& settings = engine::getSubsystem<UserSettingsManager>();
-        const string_view    text( gv_userSettingsApply );
-        size_t               start = 0;
-        while ( start < text.size() )
-        {
-            size_t end = text.find( ';', start );
-            if ( end == string_view::npos )
-                end = text.size();
-            const string_view part = StringUtil::trim( text.substr( start, end - start ) );
-            start                  = end + 1;
-            if ( part.empty() )
-                continue; // 끝의 `;` 나 `;;` 는 빈 토막이다
-            string_view key;
-            string_view value;
-            if ( StringUtil::trySplitKeyValue( part, key, value ) == false )
-            {
-                SW_LOG_WARNING_ID( "UserSettingsHost.GvUserSettingsApplyNotSetting", "gv_userSettingsApply: '%#' is not <setting>=<value> - skipped", part );
-                continue;
-            }
-            const hashed_string        settingID( key );
-            const UserSettingSetResult result = settings.setPendingValue( settingID, value );
-            const bool                 bTaken = result == UserSettingSetResult::Accepted || result == UserSettingSetResult::Clamped || result == UserSettingSetResult::Unchanged;
-            if ( bTaken == false )
-                SW_LOG_WARNING_ID( "UserSettingsHost.GvUserSettingsApplyNotTaken", "gv_userSettingsApply: '%#' = '%#' was not taken (result %#)", settingID.c_str(), value, static_cast<uint32>( result ) );
-        }
-
-        const UserSettingsApplyResult applied = settings.applyPending();
-        SW_LOG_INFO_ID( "UserSettingsHost.GvUserSettingsApplyAppliedSetting", "gv_userSettingsApply: applied %# setting(s), %# failed, restart %#, confirm %#", applied._appliedCount, applied._failedCount,
-                        applied._bNeedsRestart ? "needed" : "not needed", applied._bAwaitingConfirm ? "pending" : "not needed" );
-        if ( applied._bAwaitingConfirm && gv_userSettingsAutoConfirm )
-            settings.confirmChanges();
     }
 
     void UserSettingsHost::applyDisplayRequest( const DisplaySettingsRequest& request )

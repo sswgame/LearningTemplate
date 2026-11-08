@@ -194,24 +194,11 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE( float32, gv_netResourceDigestGraceSeconds, 5.0f, "합성 해시가 어긋난 클라이언트를 끊기 전에 기다리는 시간(초)" );
     /**
-     * @brief `-gv_netListenPort=<포트>`: 게임 인스턴스가 이 UDP 포트를 열고 클라이언트를 받습니다(0=끄기). 전용 서버 · 리슨 호스트 모두.
-     * @details 언리얼 `?listen` · `-port=` 의 자리. 리슨 호스트(App)는 이것으로만 연다. 전용 서버는 이것이 없으면 서버 설정(`ServerConfig::_gamePort`)을
-     *          열고, 있으면 개발 덮어쓰기로 설정보다 우선한다(에디터 멀티 프로세스 재생이 고른 포트). 테스트 변수라 Shipping 에는 없다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_netListenPort, 0, "게임 네트워크 서버로 열 UDP 포트 (0=끄기)" );
-    /**
      * @brief `-gv_netConnectAddress=<주소:포트>`: 게임 인스턴스가 그 서버에 클라이언트로 붙습니다(비면 끄기). 포트를 빼면 7777 입니다.
      * @details 배포 클라이언트도 이것으로 서버에 붙으므로 Shipping 에도 등록한다(언리얼 실행 인자 URL 의 자리).
      * @note PowerShell 은 점이 든 인자를 쪼갠다 — 따옴표로 감쌀 것.
      */
     SW_GLOBAL_VARIABLE( sw::string, gv_netConnectAddress, "", "클라이언트로 붙을 게임 서버 주소 (주소:포트, 비면 끄기)" );
-    /**
-     * @brief `-gv_netLoopbackOnly=0`: `-gv_netListenPort` 로 연 서버의 UDP 소켓을 모든 인터페이스에 묶는다(기본 1 = 127.0.0.1 만).
-     * @details 모든 인터페이스에 묶으면 Windows 방화벽이 실행 파일 경로마다 "허용" 창을 띄운다 — 워크트리 · 테스트 실행 파일이 많은 개발 환경에서는 매번 뜬다.
-     *          다른 기계와 붙을 때만 0 으로 둔다. `gv_netListenPort` 와 함께 쓰는 개발 덮어쓰기라 같이 Shipping 에 없다.
-     *          클라이언트는 서버 주소가, 서버 설정으로 연 전용 서버는 `ServerConfig::_listenAddress` 가 묶을 곳을 정한다 — 이 값을 읽지 않는다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_netLoopbackOnly, true, "게임 UDP 소켓을 127.0.0.1 에만 묶는다 (0=모든 인터페이스, 다른 기계와 붙을 때)" );
 } // namespace sw
 
 namespace sw
@@ -233,6 +220,8 @@ namespace sw
 {
     GameNetSession::GameNetSession()
         : _listShard{}
+        , _transportDecorator{}
+        , _launchOverride{}
         , _peers{}
         , _router{}
         , _engineMessageHandler{ *this }
@@ -268,35 +257,27 @@ namespace sw
 
     GameNetLaunch GameNetSession::makeLaunchParams( GameNetSessionParams& outParams )
     {
-        outParams           = GameNetSessionParams{};
-        const bool bListen  = gv_netListenPort != 0;
-        const bool bConnect = gv_netConnectAddress.empty() == false;
-        if ( bListen == false && bConnect == false )
+        outParams                      = GameNetSessionParams{};
+        const bool          bConnect   = gv_netConnectAddress.empty() == false;
+        const GameNetLaunch overridden = _launchOverride.isBound() ? _launchOverride( outParams ) : GameNetLaunch::None;
+        if ( overridden != GameNetLaunch::None )
         {
-            // 개발 덮어쓰기가 없으면 전용 서버는 서버 설정의 게임 포트를 연다. 리슨 호스트(App) · 테스트는 서버 문맥이 없어 열지 않는다.
+            // 두 역할을 함께 주면 어느 쪽을 바랐는지 모른다 — 한쪽을 골라 띄우지 않는다.
+            if ( bConnect )
+            {
+                SW_LOG_ERROR_ID( "GameNetSession.LaunchOverrideAndConnect", "Both the launch override (listen port) and gv_netConnectAddress are set - pick one role" );
+                outParams = GameNetSessionParams{};
+                return GameNetLaunch::Invalid;
+            }
+            return overridden; // 틀린 값이면 덮어쓰기가 알리고 `Invalid` 다
+        }
+        if ( bConnect == false )
+        {
+            // 덮어쓰기가 없으면 전용 서버는 서버 설정의 게임 포트를 연다. 리슨 호스트(App) · 테스트는 서버 문맥이 없어 열지 않는다.
             const ServerServiceContext* pHostContext = engine::areEngineServicesBound() ? engine::findSubsystem<ServerServiceContext>() : nullptr;
             if ( pHostContext == nullptr || pHostContext->_pServerConfig == nullptr )
                 return GameNetLaunch::None;
             return makeServerParams( *pHostContext->_pServerConfig, outParams ) ? GameNetLaunch::Open : GameNetLaunch::Invalid;
-        }
-        // 두 역할을 함께 주면 어느 쪽을 바랐는지 모른다 — 한쪽을 골라 띄우지 않는다.
-        if ( bListen && bConnect )
-        {
-            SW_LOG_ERROR_ID( "GameNetSession.BothGvNetListenPortGv", "Both gv_netListenPort and gv_netConnectAddress are set - pick one role" );
-            return GameNetLaunch::Invalid;
-        }
-        if ( bListen )
-        {
-            const bool bPortInRange = 0 < gv_netListenPort && gv_netListenPort <= constant::network::kMaxPort;
-            if ( bPortInRange == false )
-            {
-                SW_LOG_ERROR_ID( "GameNetSession.GvNetListenPortNotUDP", "gv_netListenPort %# is not a UDP port", gv_netListenPort );
-                return GameNetLaunch::Invalid;
-            }
-            outParams._role          = GameNetRole::Server;
-            outParams._listenPort    = static_cast<uint16>( gv_netListenPort );
-            outParams._bLoopbackOnly = gv_netLoopbackOnly;
-            return GameNetLaunch::Open;
         }
         // 기동 때 한 번 막고 푼다 — HTTP 클라이언트의 해석 스레드와 같은 해석기다(이름 · hosts 파일 · 점 넷 숫자).
         const bool bResolved = PlatformSocketUtil::resolveAddress( gv_netConnectAddress, kDefaultPort, outParams._serverAddress );
