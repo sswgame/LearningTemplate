@@ -29,6 +29,43 @@ namespace sw::editor
                 string _added;
                 uint32 _prefixLength{ 0 };
                 uint32 _suffixLength{ 0 };
+
+                /** @brief 편집 후 텍스트와 변경 구간으로 편집 전 본문을 만듭니다. */
+                string reconstructBefore( string_view afterText ) const
+                {
+                    const size_t prefixLength = static_cast<size_t>( _prefixLength );
+                    const size_t suffixLength = static_cast<size_t>( _suffixLength );
+                    if ( afterText.size() < prefixLength + suffixLength )
+                        return string{ afterText };
+                    string result;
+                    result.reserve( prefixLength + _removed.size() + suffixLength );
+                    // `data()` 를 넘기지만 **길이도 함께** 넘기므로, 널 종료를 기대하는 호출이 아니다.
+                    // 검사기가 커스텀 string 의 (ptr, count) 오버로드를 알아보지 못한다.
+                    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
+                    result.append( afterText.data(), prefixLength );
+                    result.append( _removed );
+                    if ( suffixLength > 0 )
+                        result.append( afterText.data() + ( afterText.size() - suffixLength ), suffixLength );
+                    return result;
+                }
+
+                /** @brief 편집 전 텍스트와 변경 구간으로 편집 후 본문을 만듭니다. */
+                string reconstructAfter( string_view beforeText ) const
+                {
+                    const size_t prefixLength = static_cast<size_t>( _prefixLength );
+                    const size_t suffixLength = static_cast<size_t>( _suffixLength );
+                    if ( beforeText.size() < prefixLength + suffixLength )
+                        return string{ beforeText };
+                    string result;
+                    result.reserve( prefixLength + _added.size() + suffixLength );
+                    // 위와 같다. 길이를 함께 넘긴다.
+                    // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
+                    result.append( beforeText.data(), prefixLength );
+                    result.append( _added );
+                    if ( suffixLength > 0 )
+                        result.append( beforeText.data() + ( beforeText.size() - suffixLength ), suffixLength );
+                    return result;
+                }
             };
 
             /** @brief 편집 전후 텍스트의 공통 접두 · 접미를 빼고 바뀐 가운데 부분만 남깁니다. */
@@ -59,43 +96,6 @@ namespace sw::editor
                 span._removed      = string{ before.substr( prefix, beforeSize - prefix - suffix ) };
                 span._added        = string{ after.substr( prefix, afterSize - prefix - suffix ) };
                 return span;
-            }
-
-            /** @brief 편집 후 텍스트와 변경 구간으로 편집 전 본문을 만듭니다. */
-            static string reconstructBefore( const StringChangeSpan& span, string_view afterText )
-            {
-                const size_t prefixLength = static_cast<size_t>( span._prefixLength );
-                const size_t suffixLength = static_cast<size_t>( span._suffixLength );
-                if ( afterText.size() < prefixLength + suffixLength )
-                    return string{ afterText };
-                string result;
-                result.reserve( prefixLength + span._removed.size() + suffixLength );
-                // `data()` 를 넘기지만 **길이도 함께** 넘기므로, 널 종료를 기대하는 호출이 아니다.
-                // 검사기가 커스텀 string 의 (ptr, count) 오버로드를 알아보지 못한다.
-                // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
-                result.append( afterText.data(), prefixLength );
-                result.append( span._removed );
-                if ( suffixLength > 0 )
-                    result.append( afterText.data() + ( afterText.size() - suffixLength ), suffixLength );
-                return result;
-            }
-
-            /** @brief 편집 전 텍스트와 변경 구간으로 편집 후 본문을 만듭니다. */
-            static string reconstructAfter( const StringChangeSpan& span, string_view beforeText )
-            {
-                const size_t prefixLength = static_cast<size_t>( span._prefixLength );
-                const size_t suffixLength = static_cast<size_t>( span._suffixLength );
-                if ( beforeText.size() < prefixLength + suffixLength )
-                    return string{ beforeText };
-                string result;
-                result.reserve( prefixLength + span._added.size() + suffixLength );
-                // 위와 같다. 길이를 함께 넘긴다.
-                // NOLINTNEXTLINE(bugprone-suspicious-stringview-data-usage)
-                result.append( beforeText.data(), prefixLength );
-                result.append( span._added );
-                if ( suffixLength > 0 )
-                    result.append( beforeText.data() + ( beforeText.size() - suffixLength ), suffixLength );
-                return result;
             }
 
             /** @brief Undo 스택입니다. 서비스가 풀린 뒤(종료 · 테스트)에는 nullptr 이라 부르는 쪽이 확인합니다. */
@@ -338,12 +338,12 @@ namespace sw::editor
         {
             push( UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
             {
-                restore( EditorTransactionInternal::reconstructBefore( span, capture() ) );
+                restore( span.reconstructBefore( capture() ) );
             } ),
                                            owner ),
                   UndoStep::makeTransient( SW_DELEGATE_LAMBDA( Delegate<void()>, [restore, capture, span]()
             {
-                restore( EditorTransactionInternal::reconstructAfter( span, capture() ) );
+                restore( span.reconstructAfter( capture() ) );
             } ),
                                            owner ),
                   label, coalesceKey );

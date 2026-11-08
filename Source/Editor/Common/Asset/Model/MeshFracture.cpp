@@ -1077,20 +1077,99 @@ namespace sw::editor
 
             /** @brief `MeshFractureUtil::fracture` 의 단계 함수들입니다. 단계마다 앞 단계의 결과를 값으로 받습니다. */
 
-            /** @brief 시드마다 자른 조각과, 대리 부피일 때 원래 겉면의 조각입니다. */
-            struct SiteCut
-            {
-                vector<vector<Triangle>> _listSitePiece;
-                vector<vector<Triangle>> _listSiteSurface;
-                uint32                   _openLoopCount{ 0 };
-            };
-
             /** @brief 부피가 있는 조각의 번호표와 그래프입니다. */
             struct PieceSet
             {
                 vector<uint32> _listPieceOfSite;
                 vector<uint32> _listSiteOfPiece;
                 FractureGraph  _graph;
+            };
+
+            /** @brief 시드마다 자른 조각과, 대리 부피일 때 원래 겉면의 조각입니다. */
+            struct SiteCut
+            {
+                vector<vector<Triangle>> _listSitePiece;
+                vector<vector<Triangle>> _listSiteSurface;
+                uint32                   _openLoopCount{ 0 };
+
+                /** @brief 부피가 있는 조각만 번호를 매기고 그래프 노드(무게중심 · 부피)를 만듭니다. 빈 셀과 부피 0 은 뺍니다. */
+                void numberPieces( PieceSet& outPieces ) const
+                {
+                    const uint32      siteCount = static_cast<uint32>( _listSitePiece.size() );
+                    vector<RHIVertex> listScratchVertex;
+                    outPieces._listPieceOfSite.assign( siteCount, 0xFFFFFFFFu );
+                    for ( uint32 site = 0; site < siteCount; ++site )
+                    {
+                        if ( _listSitePiece[site].empty() )
+                            continue;
+                        float3        centroid{};
+                        const float32 volume = MeshFractureUtil::computeVolume( MeshFractureInternal::asVertices( _listSitePiece[site], listScratchVertex ), centroid );
+                        if ( volume <= 0.0f )
+                            continue;
+                        outPieces._listPieceOfSite[site] = static_cast<uint32>( outPieces._listSiteOfPiece.size() );
+                        outPieces._listSiteOfPiece.push_back( site );
+                        FractureNode node;
+                        node._centroid = centroid;
+                        node._volume   = volume;
+                        outPieces._graph._listNode.push_back( node );
+                    }
+                    outPieces._graph._leafCount = static_cast<uint32>( outPieces._listSiteOfPiece.size() );
+                }
+
+                /** @brief 연결: 조각 i 에 j 쪽 평면이 만든 안쪽 면 넓이다. 두 쪽 중 작은 값을 쓴다(둘 다 닿아야 연결이다). */
+                void linkPieces( PieceSet& inoutPieces ) const
+                {
+                    const uint32                   pieceCount = static_cast<uint32>( inoutPieces._listSiteOfPiece.size() );
+                    unordered_map<uint64, float32> mapArea;
+                    for ( uint32 piece = 0; piece < pieceCount; ++piece )
+                    {
+                        for ( const Triangle& triangle : _listSitePiece[inoutPieces._listSiteOfPiece[piece]] )
+                        {
+                            if ( triangle._tag < 0 || inoutPieces._listPieceOfSite[static_cast<uint32>( triangle._tag )] == 0xFFFFFFFFu )
+                                continue;
+                            const uint32 other = inoutPieces._listPieceOfSite[static_cast<uint32>( triangle._tag )];
+                            const uint64 key   = ( static_cast<uint64>( piece ) << 32 ) | other;
+                            mapArea[key] += MeshFractureInternal::computeTriangleArea( MeshFractureInternal::getPosition( triangle._arrVertex[0] ),
+                                                                                       MeshFractureInternal::getPosition( triangle._arrVertex[1] ),
+                                                                                       MeshFractureInternal::getPosition( triangle._arrVertex[2] ) );
+                        }
+                    }
+                    for ( uint32 pieceA = 0; pieceA < pieceCount; ++pieceA )
+                    {
+                        for ( uint32 pieceB = pieceA + 1; pieceB < pieceCount; ++pieceB )
+                        {
+                            const auto iterAb = mapArea.find( ( static_cast<uint64>( pieceA ) << 32 ) | pieceB );
+                            const auto iterBa = mapArea.find( ( static_cast<uint64>( pieceB ) << 32 ) | pieceA );
+                            if ( iterAb == mapArea.end() || iterBa == mapArea.end() )
+                                continue;
+                            inoutPieces._graph._listLink.push_back( FractureLink{ pieceA, pieceB, MathUtil::min( iterAb->second, iterBa->second ) } );
+                        }
+                    }
+                    FractureGraph::normalizeLinks( inoutPieces._graph._listLink );
+                }
+
+                /** @brief 잎 조각마다 정점 · 경계 · 껍질 점을 에셋에 채웁니다. 잎 순서는 계층 구성(`populateHierarchy`)이 정합니다. */
+                void fillPieces( const PieceSet& pieces, const vector<uint32>& listLeafOrder, const FractureSettings& settings, bool bProxy, FractureAsset& inoutAsset ) const
+                {
+                    const uint32 pieceCount = static_cast<uint32>( pieces._listSiteOfPiece.size() );
+                    for ( uint32 leaf = 0; leaf < pieceCount; ++leaf )
+                    {
+                        const uint32            site         = pieces._listSiteOfPiece[listLeafOrder[leaf]];
+                        const vector<Triangle>& listTriangle = _listSitePiece[site];
+                        FracturePiece           piece;
+                        piece._firstVertex = static_cast<uint32>( inoutAsset._listVertex.size() );
+                        appendPieceMesh( listTriangle, _listSiteSurface[site], bProxy, inoutAsset );
+                        piece._vertexCount = static_cast<uint32>( inoutAsset._listVertex.size() ) - piece._firstVertex;
+                        MeshFractureInternal::collectBounds( vector_reference<const RHIVertex>{ inoutAsset._listVertex.data() + piece._firstVertex, piece._vertexCount }, piece._boundsMin,
+                                                             piece._boundsMax );
+                        vector<float3> listHull;
+                        MeshFractureInternal::makeHull( listTriangle, inoutAsset._graph._listNode[leaf]._centroid, MathUtil::max( settings._maxHullPoint, 8u ), listHull );
+                        piece._firstHullPoint = static_cast<uint32>( inoutAsset._listHullPoint.size() );
+                        piece._hullPointCount = static_cast<uint32>( listHull.size() );
+                        inoutAsset._listHullPoint.insert( inoutAsset._listHullPoint.end(), listHull.begin(), listHull.end() );
+                        inoutAsset._listPiece.push_back( piece );
+                    }
+                }
             };
 
             static void makeTriangles( const vector<RHIVertex>& listInput, int32 tag, vector<Triangle>& outListTriangle )
@@ -1191,62 +1270,6 @@ namespace sw::editor
                 inoutCut._listSiteSurface[site] = std::move( listSurfaceTriangle );
             }
 
-            /** @brief 부피가 있는 조각만 번호를 매기고 그래프 노드(무게중심 · 부피)를 만듭니다. 빈 셀과 부피 0 은 뺍니다. */
-            static void numberPieces( const SiteCut& cut, PieceSet& outPieces )
-            {
-                const uint32      siteCount = static_cast<uint32>( cut._listSitePiece.size() );
-                vector<RHIVertex> listScratchVertex;
-                outPieces._listPieceOfSite.assign( siteCount, 0xFFFFFFFFu );
-                for ( uint32 site = 0; site < siteCount; ++site )
-                {
-                    if ( cut._listSitePiece[site].empty() )
-                        continue;
-                    float3        centroid{};
-                    const float32 volume = MeshFractureUtil::computeVolume( MeshFractureInternal::asVertices( cut._listSitePiece[site], listScratchVertex ), centroid );
-                    if ( volume <= 0.0f )
-                        continue;
-                    outPieces._listPieceOfSite[site] = static_cast<uint32>( outPieces._listSiteOfPiece.size() );
-                    outPieces._listSiteOfPiece.push_back( site );
-                    FractureNode node;
-                    node._centroid = centroid;
-                    node._volume   = volume;
-                    outPieces._graph._listNode.push_back( node );
-                }
-                outPieces._graph._leafCount = static_cast<uint32>( outPieces._listSiteOfPiece.size() );
-            }
-
-            /** @brief 연결: 조각 i 에 j 쪽 평면이 만든 안쪽 면 넓이다. 두 쪽 중 작은 값을 쓴다(둘 다 닿아야 연결이다). */
-            static void linkPieces( const SiteCut& cut, PieceSet& inoutPieces )
-            {
-                const uint32                   pieceCount = static_cast<uint32>( inoutPieces._listSiteOfPiece.size() );
-                unordered_map<uint64, float32> mapArea;
-                for ( uint32 piece = 0; piece < pieceCount; ++piece )
-                {
-                    for ( const Triangle& triangle : cut._listSitePiece[inoutPieces._listSiteOfPiece[piece]] )
-                    {
-                        if ( triangle._tag < 0 || inoutPieces._listPieceOfSite[static_cast<uint32>( triangle._tag )] == 0xFFFFFFFFu )
-                            continue;
-                        const uint32 other = inoutPieces._listPieceOfSite[static_cast<uint32>( triangle._tag )];
-                        const uint64 key   = ( static_cast<uint64>( piece ) << 32 ) | other;
-                        mapArea[key] += MeshFractureInternal::computeTriangleArea( MeshFractureInternal::getPosition( triangle._arrVertex[0] ),
-                                                                                   MeshFractureInternal::getPosition( triangle._arrVertex[1] ),
-                                                                                   MeshFractureInternal::getPosition( triangle._arrVertex[2] ) );
-                    }
-                }
-                for ( uint32 pieceA = 0; pieceA < pieceCount; ++pieceA )
-                {
-                    for ( uint32 pieceB = pieceA + 1; pieceB < pieceCount; ++pieceB )
-                    {
-                        const auto iterAb = mapArea.find( ( static_cast<uint64>( pieceA ) << 32 ) | pieceB );
-                        const auto iterBa = mapArea.find( ( static_cast<uint64>( pieceB ) << 32 ) | pieceA );
-                        if ( iterAb == mapArea.end() || iterBa == mapArea.end() )
-                            continue;
-                        inoutPieces._graph._listLink.push_back( FractureLink{ pieceA, pieceB, MathUtil::min( iterAb->second, iterBa->second ) } );
-                    }
-                }
-                FractureGraph::normalizeLinks( inoutPieces._graph._listLink );
-            }
-
             /** @brief 조각 하나의 렌더링 삼각형을 에셋에 더합니다. 메시 부피면 조각 그대로, 대리 부피면 원래 겉면 조각과 대리의 안쪽 면을 씁니다(대리의 바깥 면은 그리지 않는다). */
             static void appendPieceMesh( const vector<Triangle>& listTriangle, const vector<Triangle>& listSurface, bool bProxy, FractureAsset& inoutAsset )
             {
@@ -1268,29 +1291,6 @@ namespace sw::editor
                         appendTriangle( triangle, FractureSurfaceSlot::Interior );
                     else if ( bProxy == false )
                         appendTriangle( triangle, FractureSurfaceSlot::Outer );
-                }
-            }
-
-            /** @brief 잎 조각마다 정점 · 경계 · 껍질 점을 에셋에 채웁니다. 잎 순서는 계층 구성(`populateHierarchy`)이 정합니다. */
-            static void fillPieces( const SiteCut& cut, const PieceSet& pieces, const vector<uint32>& listLeafOrder, const FractureSettings& settings, bool bProxy, FractureAsset& inoutAsset )
-            {
-                const uint32 pieceCount = static_cast<uint32>( pieces._listSiteOfPiece.size() );
-                for ( uint32 leaf = 0; leaf < pieceCount; ++leaf )
-                {
-                    const uint32            site         = pieces._listSiteOfPiece[listLeafOrder[leaf]];
-                    const vector<Triangle>& listTriangle = cut._listSitePiece[site];
-                    FracturePiece           piece;
-                    piece._firstVertex = static_cast<uint32>( inoutAsset._listVertex.size() );
-                    appendPieceMesh( listTriangle, cut._listSiteSurface[site], bProxy, inoutAsset );
-                    piece._vertexCount = static_cast<uint32>( inoutAsset._listVertex.size() ) - piece._firstVertex;
-                    MeshFractureInternal::collectBounds( vector_reference<const RHIVertex>{ inoutAsset._listVertex.data() + piece._firstVertex, piece._vertexCount }, piece._boundsMin,
-                                                         piece._boundsMax );
-                    vector<float3> listHull;
-                    MeshFractureInternal::makeHull( listTriangle, inoutAsset._graph._listNode[leaf]._centroid, MathUtil::max( settings._maxHullPoint, 8u ), listHull );
-                    piece._firstHullPoint = static_cast<uint32>( inoutAsset._listHullPoint.size() );
-                    piece._hullPointCount = static_cast<uint32>( listHull.size() );
-                    inoutAsset._listHullPoint.insert( inoutAsset._listHullPoint.end(), listHull.begin(), listHull.end() );
-                    inoutAsset._listPiece.push_back( piece );
                 }
             }
         };
@@ -1513,13 +1513,13 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "MeshFracture.FractureLeftCutLoops", "Fracture left %# cut loops open (non-manifold input) - those pieces may have holes", cut._openLoopCount );
 
         Build::PieceSet pieces;
-        Build::numberPieces( cut, pieces );
+        cut.numberPieces( pieces );
         if ( pieces._listSiteOfPiece.empty() )
         {
             outError = "no piece has volume";
             return false;
         }
-        Build::linkPieces( cut, pieces );
+        cut.linkPieces( pieces );
 
         vector<uint32> listLeafOrder;
         FractureGraph::populateHierarchy( pieces._graph, settings._listLevelCount, listLeafOrder );
@@ -1527,7 +1527,7 @@ namespace sw::editor
         outAsset._graph = std::move( pieces._graph );
         outAsset._seed  = settings._seed;
         MeshFractureInternal::collectBounds( listWelded, outAsset._boundsMin, outAsset._boundsMax );
-        Build::fillPieces( cut, pieces, listLeafOrder, settings, bProxy, outAsset );
+        cut.fillPieces( pieces, listLeafOrder, settings, bProxy, outAsset );
         string validation;
         if ( outAsset.isValid( &validation ) == false )
         {

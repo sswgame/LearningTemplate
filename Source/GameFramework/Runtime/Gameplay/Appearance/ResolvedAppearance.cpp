@@ -24,6 +24,13 @@ namespace sw
     {
         struct AppearanceResolverInternal
         {
+            /** @brief 규칙 동작 하나의 판정입니다. 같은 대상을 두고 이긴 쪽을 담습니다. */
+            struct Decision
+            {
+                const AppearanceRuleAction* _pAction{ nullptr };
+                const AppearanceRuleDef*    _pRule{ nullptr };
+            };
+
             /** @brief 해석 중인 외형 하나입니다. 몸, 꾸미기 외형, 슬롯의 장비, 세트 완성 표현이 있습니다. */
             struct Entry
             {
@@ -36,6 +43,55 @@ namespace sw
                 hashed_string                _customMaterialVariant{}; ///< 꾸미기 고르기가 정한 머티리얼 변형
                 vector<hashed_string>        _listHiddenPart{};        ///< 규칙이 숨긴 부품(`<Hide target part>`) — 나머지 부품은 그린다
                 uint8                        _bHidden{ SW_FALSE };
+
+                /** @brief 고른 변형 @p variant 의 머티리얼(부품 전체), 구간 머티리얼, 머티리얼 값을 겁니다. 구간 이름은 로드가 부품의 구간인지 봤다(`Appearance.SectionUnknown`). */
+                void applyVariantMaterials( const AppearancePartDef& part, const AppearancePartVariantDef& variant, ResolvedPart& inoutResolved, ResolvedAppearance& out ) const
+                {
+                    if ( variant._material.empty() == false )
+                        setPartMaterial( inoutResolved, variant._material );
+                    for ( const AppearanceSectionDef& section : variant._listSection )
+                    {
+                        (void)setSectionMaterial( inoutResolved, section._name, section._material );
+                    }
+                    for ( const AppearanceMaterialValueDef& value : variant._listMaterialValue )
+                    {
+                        addMaterialValue( out, _owner, part._name, value._section, value._name, value._value, ResolvedMaterialTarget::Parameter, 0 );
+                    }
+                }
+
+                /**
+                 * @brief 규칙의 머티리얼 교체(`<SwapMaterial>`)를 넓은 대상부터 좁은 대상 순으로 겁니다 — 주인 전체, 부품, 구간, 부품의 구간. 좁은 것이 넓은 것 위에 덮는다.
+                 * @details 언리얼 Material Slot 덮어쓰기(슬롯 이름) · 유니티 `Renderer.materials`(서브메시 번호)와 같은 자리를 이름으로 짚는다. 대상이 다르면 충돌이 아니므로(`hasSameTarget`)
+                 *          한 부품에 여러 교체가 함께 걸린다. 그 구간이 없는 부품은 건너뛰고 설명에 남긴다.
+                 */
+                void applyMaterialSwaps( const AppearancePartDef& part, const vector<Decision>& listDecision, ResolvedPart& inoutResolved, ResolvedAppearance& out ) const
+                {
+                    for ( int32 specificity = 0; specificity < 4; ++specificity )
+                    {
+                        for ( const Decision& decision : listDecision )
+                        {
+                            const AppearanceRuleAction& action            = *decision._pAction;
+                            const bool                  bTargets          = action._kind == AppearanceRuleActionKind::SwapMaterial && action._target == _owner && ( action._part.empty() || action._part == part._name );
+                            const int32                 actionSpecificity = ( action._section.empty() ? 0 : 2 ) + ( action._part.empty() ? 0 : 1 );
+                            if ( bTargets == false || actionSpecificity != specificity )
+                                continue;
+                            if ( action._section.empty() )
+                            {
+                                setPartMaterial( inoutResolved, action._value );
+                                addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "material of '%#.%#' swapped to '%#'", _owner.c_str(), part._name.c_str(), action._value.c_str() );
+                            }
+                            else if ( setSectionMaterial( inoutResolved, action._section, action._value ) )
+                            {
+                                addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "material of '%#.%#' section '%#' swapped to '%#'", _owner.c_str(), part._name.c_str(), action._section.c_str(),
+                                          action._value.c_str() );
+                            }
+                            else if ( action._part.empty() == false )
+                            {
+                                addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "part '%#.%#' has no section '%#' - material swap ignored", _owner.c_str(), part._name.c_str(), action._section.c_str() );
+                            }
+                        }
+                    }
+                }
             };
 
             /** @brief 외형 규칙의 어휘(`targetTag` · `anyTag` · `occupied`)가 읽는 칸입니다. 규칙 판정에 든 외형 목록입니다. */
@@ -43,13 +99,6 @@ namespace sw
             {
                 using Type                      = const vector<Entry>;
                 static constexpr uint32 kSlotID = FourCcUtil::make( "APRE" );
-            };
-
-            /** @brief 규칙 동작 하나의 판정입니다. 같은 대상을 두고 이긴 쪽을 담습니다. */
-            struct Decision
-            {
-                const AppearanceRuleAction* _pAction{ nullptr };
-                const AppearanceRuleDef*    _pRule{ nullptr };
             };
 
             /** @brief FNV-1a 64 로 값을 누적합니다. 이름은 내용 해시(대소문자 무시)이므로 프로세스나 기계가 달라도 같은 값이 나옵니다. */
@@ -458,13 +507,13 @@ namespace sw
                         resolved._asset = pVariant->_asset;
                     if ( pVariant->_skeleton.empty() == false )
                         resolved._skeleton = pVariant->_skeleton;
-                    applyVariantMaterials( entry, part, *pVariant, resolved, out );
+                    entry.applyVariantMaterials( part, *pVariant, resolved, out );
                 }
                 const AppearancePartVariantDef* pMaterialVariant = entry._customMaterialVariant.empty() ? nullptr : part.findMaterialVariant( entry._customMaterialVariant );
                 if ( pMaterialVariant != nullptr )
                 {
                     resolved._materialVariant = pMaterialVariant->_name;
-                    applyVariantMaterials( entry, part, *pMaterialVariant, resolved, out );
+                    entry.applyVariantMaterials( part, *pMaterialVariant, resolved, out );
                 }
                 const Decision* pSwapMesh = findDecision( listDecision, AppearanceRuleActionKind::SwapMesh, entry._owner, part._name );
                 if ( pSwapMesh != nullptr )
@@ -472,7 +521,7 @@ namespace sw
                     resolved._asset = pSwapMesh->_pAction->_value;
                     addTrace( out, AppearanceTraceStep::Rule, pSwapMesh->_pRule->_id, "mesh of '%#.%#' swapped to '%#'", entry._owner.c_str(), part._name.c_str(), resolved._asset.c_str() );
                 }
-                applyMaterialSwaps( entry, part, listDecision, resolved, out );
+                entry.applyMaterialSwaps( part, listDecision, resolved, out );
                 return resolved;
             }
 
@@ -498,55 +547,6 @@ namespace sw
                     return false;
                 pSection->_material = material;
                 return true;
-            }
-
-            /** @brief 고른 변형 @p variant 의 머티리얼(부품 전체), 구간 머티리얼, 머티리얼 값을 겁니다. 구간 이름은 로드가 부품의 구간인지 봤다(`Appearance.SectionUnknown`). */
-            static void applyVariantMaterials( const Entry& entry, const AppearancePartDef& part, const AppearancePartVariantDef& variant, ResolvedPart& inoutResolved, ResolvedAppearance& out )
-            {
-                if ( variant._material.empty() == false )
-                    setPartMaterial( inoutResolved, variant._material );
-                for ( const AppearanceSectionDef& section : variant._listSection )
-                {
-                    (void)setSectionMaterial( inoutResolved, section._name, section._material );
-                }
-                for ( const AppearanceMaterialValueDef& value : variant._listMaterialValue )
-                {
-                    addMaterialValue( out, entry._owner, part._name, value._section, value._name, value._value, ResolvedMaterialTarget::Parameter, 0 );
-                }
-            }
-
-            /**
-             * @brief 규칙의 머티리얼 교체(`<SwapMaterial>`)를 넓은 대상부터 좁은 대상 순으로 겁니다 — 주인 전체, 부품, 구간, 부품의 구간. 좁은 것이 넓은 것 위에 덮는다.
-             * @details 언리얼 Material Slot 덮어쓰기(슬롯 이름) · 유니티 `Renderer.materials`(서브메시 번호)와 같은 자리를 이름으로 짚는다. 대상이 다르면 충돌이 아니므로(`hasSameTarget`)
-             *          한 부품에 여러 교체가 함께 걸린다. 그 구간이 없는 부품은 건너뛰고 설명에 남긴다.
-             */
-            static void applyMaterialSwaps( const Entry& entry, const AppearancePartDef& part, const vector<Decision>& listDecision, ResolvedPart& inoutResolved, ResolvedAppearance& out )
-            {
-                for ( int32 specificity = 0; specificity < 4; ++specificity )
-                {
-                    for ( const Decision& decision : listDecision )
-                    {
-                        const AppearanceRuleAction& action            = *decision._pAction;
-                        const bool                  bTargets          = action._kind == AppearanceRuleActionKind::SwapMaterial && action._target == entry._owner && ( action._part.empty() || action._part == part._name );
-                        const int32                 actionSpecificity = ( action._section.empty() ? 0 : 2 ) + ( action._part.empty() ? 0 : 1 );
-                        if ( bTargets == false || actionSpecificity != specificity )
-                            continue;
-                        if ( action._section.empty() )
-                        {
-                            setPartMaterial( inoutResolved, action._value );
-                            addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "material of '%#.%#' swapped to '%#'", entry._owner.c_str(), part._name.c_str(), action._value.c_str() );
-                        }
-                        else if ( setSectionMaterial( inoutResolved, action._section, action._value ) )
-                        {
-                            addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "material of '%#.%#' section '%#' swapped to '%#'", entry._owner.c_str(), part._name.c_str(), action._section.c_str(),
-                                      action._value.c_str() );
-                        }
-                        else if ( action._part.empty() == false )
-                        {
-                            addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "part '%#.%#' has no section '%#' - material swap ignored", entry._owner.c_str(), part._name.c_str(), action._section.c_str() );
-                        }
-                    }
-                }
             }
 
             static void emitParts( const ItemVisualDef& visual, const Entry& entry, int32 stageIndex, const vector<Decision>& listDecision, ResolvedAppearance& out )

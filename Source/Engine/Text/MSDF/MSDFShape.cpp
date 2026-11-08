@@ -44,6 +44,14 @@ namespace sw
             // 간선(곡선) 기하
             // ---------------------------------------------------------------------------
 
+            /** @brief 점에서 간선까지의 부호 있는 참 거리(안쪽이 +, 간선 진행 방향 왼쪽)와 의사 거리 확장에 쓰는 값입니다. */
+            struct EdgeHit
+            {
+                float64 _distance{ kInfinity };
+                float64 _orthogonality{ kInfinity }; ///< 같은 거리일 때 작은 쪽이 이긴다(끝점 접선에 수직에 가까운 쪽).
+                float64 _param{ 0.0 };               ///< 가장 가까운 점의 매개변수입니다(선분은 [0, 1] 밖일 수 있다).
+            };
+
             /** @brief 간선 하나의 배정밀도 사본과 경계 상자입니다(훑는 동안 쓴다). */
             struct Curve
             {
@@ -52,6 +60,187 @@ namespace sw
                 Vec          _arrPoint[4]{};
                 Vec          _boundsMin{};
                 Vec          _boundsMax{};
+
+                Vec getLastPoint() const
+                {
+                    return _arrPoint[getPointCount( _kind ) - 1];
+                }
+
+                Vec evaluate( float64 t ) const
+                {
+                    const float64 mt = 1.0 - t;
+                    switch ( _kind )
+                    {
+                        case MSDFEdgeKind::Linear:
+                            return lerp( _arrPoint[0], _arrPoint[1], t );
+                        case MSDFEdgeKind::Quadratic:
+                            return add( add( scale( _arrPoint[0], mt * mt ), scale( _arrPoint[1], 2.0 * mt * t ) ), scale( _arrPoint[2], t * t ) );
+                        case MSDFEdgeKind::Cubic:
+                            return add( add( scale( _arrPoint[0], mt * mt * mt ), scale( _arrPoint[1], 3.0 * mt * mt * t ) ),
+                                        add( scale( _arrPoint[2], 3.0 * mt * t * t ), scale( _arrPoint[3], t * t * t ) ) );
+                    }
+                    return Vec{};
+                }
+
+                Vec evaluateDerivative( float64 t ) const
+                {
+                    const float64 mt = 1.0 - t;
+                    switch ( _kind )
+                    {
+                        case MSDFEdgeKind::Linear:
+                            return sub( _arrPoint[1], _arrPoint[0] );
+                        case MSDFEdgeKind::Quadratic:
+                            return scale( add( scale( sub( _arrPoint[1], _arrPoint[0] ), mt ), scale( sub( _arrPoint[2], _arrPoint[1] ), t ) ), 2.0 );
+                        case MSDFEdgeKind::Cubic:
+                            return scale( add( add( scale( sub( _arrPoint[1], _arrPoint[0] ), mt * mt ), scale( sub( _arrPoint[2], _arrPoint[1] ), 2.0 * mt * t ) ),
+                                               scale( sub( _arrPoint[3], _arrPoint[2] ), t * t ) ),
+                                          3.0 );
+                    }
+                    return Vec{};
+                }
+
+                Vec evaluateSecondDerivative( float64 t ) const
+                {
+                    switch ( _kind )
+                    {
+                        case MSDFEdgeKind::Linear:
+                        {
+                            return Vec{};
+                        }
+                        case MSDFEdgeKind::Quadratic:
+                        {
+                            return scale( add( sub( _arrPoint[2], scale( _arrPoint[1], 2.0 ) ), _arrPoint[0] ), 2.0 );
+                        }
+                        case MSDFEdgeKind::Cubic:
+                        {
+                            const Vec first  = add( sub( _arrPoint[2], scale( _arrPoint[1], 2.0 ) ), _arrPoint[0] );
+                            const Vec second = add( sub( _arrPoint[3], scale( _arrPoint[2], 2.0 ) ), _arrPoint[1] );
+                            return scale( add( scale( first, 1.0 - t ), scale( second, t ) ), 6.0 );
+                        }
+                    }
+                    return Vec{};
+                }
+
+                /** @brief 간선의 시작(@p bAtEnd 가 false)이나 끝의 진행 방향입니다. 제어점이 겹쳐 0 이면 다음 제어점으로 넘어간다. */
+                Vec findEndDirection( bool bAtEnd ) const
+                {
+                    const uint32 last = getPointCount( _kind ) - 1;
+                    for ( uint32 step = 1; step <= last; ++step )
+                    {
+                        const Vec direction = bAtEnd ? sub( _arrPoint[last], _arrPoint[last - step] ) : sub( _arrPoint[step], _arrPoint[0] );
+                        if ( dot( direction, direction ) > 0.0 )
+                            return direction;
+                    }
+                    return Vec{};
+                }
+
+                /** @brief 베지어 간선에서 @p point 에 가장 가까운 매개변수([0, 1])입니다. 표본으로 훑고 뉴턴으로 다듬는다. */
+                float64 findClosestParam( Vec point ) const
+                {
+                    float64 bestParam    = 0.0;
+                    float64 bestDistance = kInfinity;
+                    for ( int32 index = 0; index <= kSampleCount; ++index )
+                    {
+                        const float64 t        = static_cast<float64>( index ) / static_cast<float64>( kSampleCount );
+                        const Vec     offset   = sub( evaluate( t ), point );
+                        const float64 distance = dot( offset, offset );
+                        if ( distance < bestDistance )
+                        {
+                            bestDistance = distance;
+                            bestParam    = t;
+                        }
+                    }
+                    const float64 lower = MathUtil::max( 0.0, bestParam - 1.0 / static_cast<float64>( kSampleCount ) );
+                    const float64 upper = MathUtil::min( 1.0, bestParam + 1.0 / static_cast<float64>( kSampleCount ) );
+                    float64       t     = bestParam;
+                    for ( int32 step = 0; step < kNewtonSteps; ++step )
+                    {
+                        const Vec     offset = sub( evaluate( t ), point );
+                        const Vec     first  = evaluateDerivative( t );
+                        const float64 slope  = dot( offset, first );
+                        const float64 curv   = dot( first, first ) + dot( offset, evaluateSecondDerivative( t ) );
+                        if ( MathUtil::abs( curv ) < 1e-12 )
+                            break;
+                        const float64 next = MathUtil::clamp( t - slope / curv, lower, upper );
+                        if ( MathUtil::abs( next - t ) < 1e-10 )
+                        {
+                            t = next;
+                            break;
+                        }
+                        t = next;
+                    }
+                    const Vec     refinedOffset = sub( evaluate( t ), point );
+                    const float64 refined       = dot( refinedOffset, refinedOffset );
+                    return refined <= bestDistance ? t : bestParam;
+                }
+
+                EdgeHit evaluateEdge( Vec point ) const
+                {
+                    EdgeHit hit{};
+                    if ( _kind == MSDFEdgeKind::Linear )
+                    {
+                        const Vec     edge     = sub( _arrPoint[1], _arrPoint[0] );
+                        const Vec     toward   = sub( point, _arrPoint[0] );
+                        const float64 length2  = dot( edge, edge );
+                        const float64 t        = length2 > 0.0 ? dot( toward, edge ) / length2 : 0.0;
+                        const float64 clamped  = MathUtil::clamp( t, 0.0, 1.0 );
+                        const Vec     offset   = sub( point, lerp( _arrPoint[0], _arrPoint[1], clamped ) );
+                        const float64 distance = length( offset );
+                        hit._distance          = cross( edge, offset ) >= 0.0 ? distance : -distance;
+                        hit._orthogonality     = ( t > 0.0 && t < 1.0 ) ? 0.0 : MathUtil::abs( dot( normalize( edge ), normalize( offset ) ) );
+                        hit._param             = t;
+                        return hit;
+                    }
+                    const float64 t         = findClosestParam( point );
+                    const Vec     offset    = sub( point, evaluate( t ) );
+                    const bool    bStart    = t <= kParamEpsilon;
+                    const bool    bEnd      = t >= 1.0 - kParamEpsilon;
+                    Vec           direction = bStart ? findEndDirection( false ) : ( bEnd ? findEndDirection( true ) : evaluateDerivative( t ) );
+                    if ( dot( direction, direction ) <= 0.0 )
+                        direction = findEndDirection( bEnd );
+                    const float64 distance = length( offset );
+                    hit._distance          = cross( direction, offset ) >= 0.0 ? distance : -distance;
+                    hit._orthogonality     = ( bStart || bEnd ) ? MathUtil::abs( dot( normalize( direction ), normalize( offset ) ) ) : 0.0;
+                    hit._param             = t;
+                    return hit;
+                }
+
+                /** @brief 가장 가까운 점이 간선 끝점이면 그 끝의 접선 직선까지의 거리(의사 거리)로 바꿉니다 — 모서리 바깥에서 모서리가 날카롭게 보이는 근거다. */
+                float64 toPseudoDistance( Vec point, const EdgeHit& hit ) const
+                {
+                    if ( hit._param <= kParamEpsilon )
+                    {
+                        const Vec     direction = normalize( findEndDirection( false ) );
+                        const Vec     toward    = sub( point, _arrPoint[0] );
+                        const float64 along     = dot( toward, direction );
+                        if ( along < 0.0 )
+                        {
+                            const float64 pseudo = cross( direction, toward );
+                            if ( MathUtil::abs( pseudo ) <= MathUtil::abs( hit._distance ) )
+                                return pseudo;
+                        }
+                    }
+                    else if ( hit._param >= 1.0 - kParamEpsilon )
+                    {
+                        const Vec     direction = normalize( findEndDirection( true ) );
+                        const Vec     toward    = sub( point, getLastPoint() );
+                        const float64 along     = dot( toward, direction );
+                        if ( along > 0.0 )
+                        {
+                            const float64 pseudo = cross( direction, toward );
+                            if ( MathUtil::abs( pseudo ) <= MathUtil::abs( hit._distance ) )
+                                return pseudo;
+                        }
+                    }
+                    return hit._distance;
+                }
+
+                float64 computeBoundsDistance( Vec point ) const
+                {
+                    const float64 dx = MathUtil::max( MathUtil::max( _boundsMin._x - point._x, 0.0 ), point._x - _boundsMax._x );
+                    const float64 dy = MathUtil::max( MathUtil::max( _boundsMin._y - point._y, 0.0 ), point._y - _boundsMax._y );
+                    return MathUtil::sqrt( dx * dx + dy * dy );
+                }
             };
 
             static uint32 getPointCount( MSDFEdgeKind kind )
@@ -88,201 +277,15 @@ namespace sw
                 return curve;
             }
 
-            static Vec getLastPoint( const Curve& curve ) { return curve._arrPoint[getPointCount( curve._kind ) - 1]; }
-
-            static Vec evaluate( const Curve& curve, float64 t )
-            {
-                const float64 mt = 1.0 - t;
-                switch ( curve._kind )
-                {
-                    case MSDFEdgeKind::Linear:
-                        return lerp( curve._arrPoint[0], curve._arrPoint[1], t );
-                    case MSDFEdgeKind::Quadratic:
-                        return add( add( scale( curve._arrPoint[0], mt * mt ), scale( curve._arrPoint[1], 2.0 * mt * t ) ), scale( curve._arrPoint[2], t * t ) );
-                    case MSDFEdgeKind::Cubic:
-                        return add( add( scale( curve._arrPoint[0], mt * mt * mt ), scale( curve._arrPoint[1], 3.0 * mt * mt * t ) ),
-                                    add( scale( curve._arrPoint[2], 3.0 * mt * t * t ), scale( curve._arrPoint[3], t * t * t ) ) );
-                }
-                return Vec{};
-            }
-
-            static Vec evaluateDerivative( const Curve& curve, float64 t )
-            {
-                const float64 mt = 1.0 - t;
-                switch ( curve._kind )
-                {
-                    case MSDFEdgeKind::Linear:
-                        return sub( curve._arrPoint[1], curve._arrPoint[0] );
-                    case MSDFEdgeKind::Quadratic:
-                        return scale( add( scale( sub( curve._arrPoint[1], curve._arrPoint[0] ), mt ), scale( sub( curve._arrPoint[2], curve._arrPoint[1] ), t ) ), 2.0 );
-                    case MSDFEdgeKind::Cubic:
-                        return scale( add( add( scale( sub( curve._arrPoint[1], curve._arrPoint[0] ), mt * mt ), scale( sub( curve._arrPoint[2], curve._arrPoint[1] ), 2.0 * mt * t ) ),
-                                           scale( sub( curve._arrPoint[3], curve._arrPoint[2] ), t * t ) ),
-                                      3.0 );
-                }
-                return Vec{};
-            }
-
-            static Vec evaluateSecondDerivative( const Curve& curve, float64 t )
-            {
-                switch ( curve._kind )
-                {
-                    case MSDFEdgeKind::Linear:
-                    {
-                        return Vec{};
-                    }
-                    case MSDFEdgeKind::Quadratic:
-                    {
-                        return scale( add( sub( curve._arrPoint[2], scale( curve._arrPoint[1], 2.0 ) ), curve._arrPoint[0] ), 2.0 );
-                    }
-                    case MSDFEdgeKind::Cubic:
-                    {
-                        const Vec first  = add( sub( curve._arrPoint[2], scale( curve._arrPoint[1], 2.0 ) ), curve._arrPoint[0] );
-                        const Vec second = add( sub( curve._arrPoint[3], scale( curve._arrPoint[2], 2.0 ) ), curve._arrPoint[1] );
-                        return scale( add( scale( first, 1.0 - t ), scale( second, t ) ), 6.0 );
-                    }
-                }
-                return Vec{};
-            }
-
-            /** @brief 간선의 시작(@p bAtEnd 가 false)이나 끝의 진행 방향입니다. 제어점이 겹쳐 0 이면 다음 제어점으로 넘어간다. */
-            static Vec findEndDirection( const Curve& curve, bool bAtEnd )
-            {
-                const uint32 last = getPointCount( curve._kind ) - 1;
-                for ( uint32 step = 1; step <= last; ++step )
-                {
-                    const Vec direction = bAtEnd ? sub( curve._arrPoint[last], curve._arrPoint[last - step] ) : sub( curve._arrPoint[step], curve._arrPoint[0] );
-                    if ( dot( direction, direction ) > 0.0 )
-                        return direction;
-                }
-                return Vec{};
-            }
-
             // ---------------------------------------------------------------------------
             // 부호 있는 거리
             // ---------------------------------------------------------------------------
-
-            /** @brief 점에서 간선까지의 부호 있는 참 거리(안쪽이 +, 간선 진행 방향 왼쪽)와 의사 거리 확장에 쓰는 값입니다. */
-            struct EdgeHit
-            {
-                float64 _distance{ kInfinity };
-                float64 _orthogonality{ kInfinity }; ///< 같은 거리일 때 작은 쪽이 이긴다(끝점 접선에 수직에 가까운 쪽).
-                float64 _param{ 0.0 };               ///< 가장 가까운 점의 매개변수입니다(선분은 [0, 1] 밖일 수 있다).
-            };
-
-            /** @brief 베지어 간선에서 @p point 에 가장 가까운 매개변수([0, 1])입니다. 표본으로 훑고 뉴턴으로 다듬는다. */
-            static float64 findClosestParam( const Curve& curve, Vec point )
-            {
-                float64 bestParam    = 0.0;
-                float64 bestDistance = kInfinity;
-                for ( int32 index = 0; index <= kSampleCount; ++index )
-                {
-                    const float64 t        = static_cast<float64>( index ) / static_cast<float64>( kSampleCount );
-                    const Vec     offset   = sub( evaluate( curve, t ), point );
-                    const float64 distance = dot( offset, offset );
-                    if ( distance < bestDistance )
-                    {
-                        bestDistance = distance;
-                        bestParam    = t;
-                    }
-                }
-                const float64 lower = MathUtil::max( 0.0, bestParam - 1.0 / static_cast<float64>( kSampleCount ) );
-                const float64 upper = MathUtil::min( 1.0, bestParam + 1.0 / static_cast<float64>( kSampleCount ) );
-                float64       t     = bestParam;
-                for ( int32 step = 0; step < kNewtonSteps; ++step )
-                {
-                    const Vec     offset = sub( evaluate( curve, t ), point );
-                    const Vec     first  = evaluateDerivative( curve, t );
-                    const float64 slope  = dot( offset, first );
-                    const float64 curv   = dot( first, first ) + dot( offset, evaluateSecondDerivative( curve, t ) );
-                    if ( MathUtil::abs( curv ) < 1e-12 )
-                        break;
-                    const float64 next = MathUtil::clamp( t - slope / curv, lower, upper );
-                    if ( MathUtil::abs( next - t ) < 1e-10 )
-                    {
-                        t = next;
-                        break;
-                    }
-                    t = next;
-                }
-                const Vec     refinedOffset = sub( evaluate( curve, t ), point );
-                const float64 refined       = dot( refinedOffset, refinedOffset );
-                return refined <= bestDistance ? t : bestParam;
-            }
-
-            static EdgeHit evaluateEdge( const Curve& curve, Vec point )
-            {
-                EdgeHit hit{};
-                if ( curve._kind == MSDFEdgeKind::Linear )
-                {
-                    const Vec     edge     = sub( curve._arrPoint[1], curve._arrPoint[0] );
-                    const Vec     toward   = sub( point, curve._arrPoint[0] );
-                    const float64 length2  = dot( edge, edge );
-                    const float64 t        = length2 > 0.0 ? dot( toward, edge ) / length2 : 0.0;
-                    const float64 clamped  = MathUtil::clamp( t, 0.0, 1.0 );
-                    const Vec     offset   = sub( point, lerp( curve._arrPoint[0], curve._arrPoint[1], clamped ) );
-                    const float64 distance = length( offset );
-                    hit._distance          = cross( edge, offset ) >= 0.0 ? distance : -distance;
-                    hit._orthogonality     = ( t > 0.0 && t < 1.0 ) ? 0.0 : MathUtil::abs( dot( normalize( edge ), normalize( offset ) ) );
-                    hit._param             = t;
-                    return hit;
-                }
-                const float64 t         = findClosestParam( curve, point );
-                const Vec     offset    = sub( point, evaluate( curve, t ) );
-                const bool    bStart    = t <= kParamEpsilon;
-                const bool    bEnd      = t >= 1.0 - kParamEpsilon;
-                Vec           direction = bStart ? findEndDirection( curve, false ) : ( bEnd ? findEndDirection( curve, true ) : evaluateDerivative( curve, t ) );
-                if ( dot( direction, direction ) <= 0.0 )
-                    direction = findEndDirection( curve, bEnd );
-                const float64 distance = length( offset );
-                hit._distance          = cross( direction, offset ) >= 0.0 ? distance : -distance;
-                hit._orthogonality     = ( bStart || bEnd ) ? MathUtil::abs( dot( normalize( direction ), normalize( offset ) ) ) : 0.0;
-                hit._param             = t;
-                return hit;
-            }
-
-            /** @brief 가장 가까운 점이 간선 끝점이면 그 끝의 접선 직선까지의 거리(의사 거리)로 바꿉니다 — 모서리 바깥에서 모서리가 날카롭게 보이는 근거다. */
-            static float64 toPseudoDistance( const Curve& curve, Vec point, const EdgeHit& hit )
-            {
-                if ( hit._param <= kParamEpsilon )
-                {
-                    const Vec     direction = normalize( findEndDirection( curve, false ) );
-                    const Vec     toward    = sub( point, curve._arrPoint[0] );
-                    const float64 along     = dot( toward, direction );
-                    if ( along < 0.0 )
-                    {
-                        const float64 pseudo = cross( direction, toward );
-                        if ( MathUtil::abs( pseudo ) <= MathUtil::abs( hit._distance ) )
-                            return pseudo;
-                    }
-                }
-                else if ( hit._param >= 1.0 - kParamEpsilon )
-                {
-                    const Vec     direction = normalize( findEndDirection( curve, true ) );
-                    const Vec     toward    = sub( point, getLastPoint( curve ) );
-                    const float64 along     = dot( toward, direction );
-                    if ( along > 0.0 )
-                    {
-                        const float64 pseudo = cross( direction, toward );
-                        if ( MathUtil::abs( pseudo ) <= MathUtil::abs( hit._distance ) )
-                            return pseudo;
-                    }
-                }
-                return hit._distance;
-            }
 
             static bool isCloser( const EdgeHit& candidate, const EdgeHit& best )
             {
                 const float64 candidateAbs = MathUtil::abs( candidate._distance );
                 const float64 bestAbs      = MathUtil::abs( best._distance );
                 return candidateAbs < bestAbs || ( candidateAbs == bestAbs && candidate._orthogonality < best._orthogonality );
-            }
-
-            static float64 computeBoundsDistance( const Curve& curve, Vec point )
-            {
-                const float64 dx = MathUtil::max( MathUtil::max( curve._boundsMin._x - point._x, 0.0 ), point._x - curve._boundsMax._x );
-                const float64 dy = MathUtil::max( MathUtil::max( curve._boundsMin._y - point._y, 0.0 ), point._y - curve._boundsMax._y );
-                return MathUtil::sqrt( dx * dx + dy * dy );
             }
 
             // ---------------------------------------------------------------------------
@@ -384,13 +387,13 @@ namespace sw
                     return;
                 // 1) 모서리: 앞 간선의 끝 방향과 뒤 간선의 시작 방향이 꺾이는 간선 번호
                 vector<size_t> listCorner;
-                Vec            previousDirection = normalize( findEndDirection( makeCurve( listEdge.back() ), true ) );
+                Vec            previousDirection = normalize( ( makeCurve( listEdge.back() ) ).findEndDirection( true ) );
                 for ( size_t index = 0; index < listEdge.size(); ++index )
                 {
                     const Curve curve = makeCurve( listEdge[index] );
-                    if ( isCorner( previousDirection, normalize( findEndDirection( curve, false ) ), crossThreshold ) )
+                    if ( isCorner( previousDirection, normalize( curve.findEndDirection( false ) ), crossThreshold ) )
                         listCorner.push_back( index );
-                    previousDirection = normalize( findEndDirection( curve, true ) );
+                    previousDirection = normalize( curve.findEndDirection( true ) );
                 }
                 // 2) 모서리가 없으면 모두 흰색(일반 SDF 와 같다)
                 if ( listCorner.empty() )
@@ -587,9 +590,9 @@ namespace sw
                         if ( ( curve._channels & ( 1u << channel ) ) != 0 )
                             threshold = MathUtil::max( threshold, MathUtil::abs( arrBest[channel]._distance ) );
                     }
-                    if ( Internal::computeBoundsDistance( curve, point ) > threshold )
+                    if ( curve.computeBoundsDistance( point ) > threshold )
                         continue;
-                    const Internal::EdgeHit hit = Internal::evaluateEdge( curve, point );
+                    const Internal::EdgeHit hit = curve.evaluateEdge( point );
                     if ( Internal::isCloser( hit, allBest ) )
                         allBest = hit;
                     for ( uint32 channel = 0; channel < 3; ++channel )
@@ -604,7 +607,7 @@ namespace sw
                 float32* pTexel = &field[( static_cast<size_t>( row ) * params._width + column ) * 4];
                 for ( uint32 channel = 0; channel < 3; ++channel )
                 {
-                    const float64 distance = arrBestCurve[channel] != nullptr ? Internal::toPseudoDistance( *arrBestCurve[channel], point, arrBest[channel] ) : -range;
+                    const float64 distance = arrBestCurve[channel] != nullptr ? ( *arrBestCurve[channel] ).toPseudoDistance( point, arrBest[channel] ) : -range;
                     pTexel[channel]        = static_cast<float32>( 0.5 + distance * invRange2 );
                 }
                 const float64 trueDistance = allBest._distance == Internal::kInfinity ? -range : allBest._distance;
