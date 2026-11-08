@@ -866,7 +866,7 @@
     "Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityCatalogPanel.h": {"float": 2},
     "Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.cpp": {"integer": 1},
     "Source/GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugPanel.h": {"float": 2},
-    "Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphModel.cpp": {"minus-one": 6},
+    "Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphModel.cpp": {"minus-one": 1},
     "Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp": {"float": 1, "integer": 1},
     "Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.h": {"float": 2},
     "Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphSelfTest.cpp": {"float": 6, "integer": 2},

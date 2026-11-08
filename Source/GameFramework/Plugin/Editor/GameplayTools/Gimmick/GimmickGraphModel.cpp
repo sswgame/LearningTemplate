@@ -68,22 +68,22 @@ namespace sw::editor
         }
         for ( const GimmickWireDesc& desc : listWire )
         {
-            hashed_string fromNode;
-            hashed_string fromPort;
-            hashed_string toNode;
-            hashed_string toPort;
-            const bool    bParsed   = GimmickCircuitDef::splitPortReference( desc._from, fromNode, fromPort ) && GimmickCircuitDef::splitPortReference( desc._to, toNode, toPort );
-            const int32   fromIndex = bParsed ? findNodeIndexByID( fromNode ) : -1;
-            const int32   toIndex   = bParsed ? findNodeIndexByID( toNode ) : -1;
-            if ( fromIndex < 0 || toIndex < 0 )
+            hashed_string         fromNode;
+            hashed_string         fromPort;
+            hashed_string         toNode;
+            hashed_string         toPort;
+            const bool            bParsed   = GimmickCircuitDef::splitPortReference( desc._from, fromNode, fromPort ) && GimmickCircuitDef::splitPortReference( desc._to, toNode, toPort );
+            const optional<int32> fromIndex = bParsed ? findNodeIndexByID( fromNode ) : optional<int32>{};
+            const optional<int32> toIndex   = bParsed ? findNodeIndexByID( toNode ) : optional<int32>{};
+            if ( fromIndex.has_value() == false || toIndex.has_value() == false )
             {
                 _listOrphanWire.push_back( desc );
                 continue;
             }
             GimmickGraphWire wire;
-            wire._fromNode = _listNode[static_cast<size_t>( fromIndex )]._graphID;
+            wire._fromNode = _listNode[static_cast<size_t>( *fromIndex )]._graphID;
             wire._fromPort = fromPort.c_str();
-            wire._toNode   = _listNode[static_cast<size_t>( toIndex )]._graphID;
+            wire._toNode   = _listNode[static_cast<size_t>( *toIndex )]._graphID;
             wire._toPort   = toPort.c_str();
             wire._bInvert  = desc._bInvert;
             wire._graphID  = _nextWireGraphID++;
@@ -120,10 +120,12 @@ namespace sw::editor
         }
         for ( const GimmickGraphWire& wire : _listWire )
         {
-            const int32 fromIndex = findNodeIndex( wire._fromNode );
-            const int32 toIndex   = findNodeIndex( wire._toNode );
-            if ( fromIndex < 0 || toIndex < 0 )
+            const optional<int32> foundFrom = findNodeIndex( wire._fromNode );
+            const optional<int32> foundTo   = findNodeIndex( wire._toNode );
+            if ( foundFrom.has_value() == false || foundTo.has_value() == false )
                 continue; // 노드를 지울 때 배선도 지우므로 닿지 않는 경우다
+            const int32     fromIndex = *foundFrom;
+            const int32     toIndex   = *foundTo;
             GimmickWireDesc desc;
             desc._from    = makePortReference( _listNode[static_cast<size_t>( fromIndex )], wire._fromPort );
             desc._to      = makePortReference( _listNode[static_cast<size_t>( toIndex )], wire._toPort );
@@ -160,34 +162,34 @@ namespace sw::editor
         return HashUtil::computeStringHash64( text.c_str(), text.size(), false );
     }
 
-    int32 GimmickGraphModel::findNodeIndex( int32 graphID ) const
+    optional<int32> GimmickGraphModel::findNodeIndex( int32 graphID ) const
     {
         for ( size_t index = 0; index < _listNode.size(); ++index )
         {
             if ( _listNode[index]._graphID == graphID )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return nullopt;
     }
 
-    int32 GimmickGraphModel::findNodeIndexByID( const hashed_string& id ) const
+    optional<int32> GimmickGraphModel::findNodeIndexByID( const hashed_string& id ) const
     {
         for ( size_t index = 0; index < _listNode.size(); ++index )
         {
             if ( _listNode[index]._id == id )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return nullopt;
     }
 
-    int32 GimmickGraphModel::findWireIndex( int32 wireGraphID ) const
+    optional<int32> GimmickGraphModel::findWireIndex( int32 wireGraphID ) const
     {
         for ( size_t index = 0; index < _listWire.size(); ++index )
         {
             if ( _listWire[index]._graphID == wireGraphID )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return nullopt;
     }
 
     const GimmickNodeKind* GimmickGraphModel::findKind( const GimmickGraphNode& node ) const
@@ -204,7 +206,7 @@ namespace sw::editor
         {
             StringBuilder<constant::buffer::kMax128> candidate;
             candidate.appendFormat( "%#_%#", base, serial );
-            if ( findNodeIndexByID( hashed_string( candidate.view() ) ) < 0 )
+            if ( findNodeIndexByID( hashed_string( candidate.view() ) ).has_value() == false )
                 return string( candidate.view() );
         }
     }
@@ -227,10 +229,10 @@ namespace sw::editor
         vector<int32> listSource;
         for ( const int32 graphID : listGraphID )
         {
-            const int32 index = findNodeIndex( graphID );
-            if ( index < 0 )
+            const optional<int32> index = findNodeIndex( graphID );
+            if ( index.has_value() == false )
                 continue;
-            const GimmickGraphNode source = _listNode[static_cast<size_t>( index )]; // addNode 가 목록을 늘리기 전에 값으로 둔다
+            const GimmickGraphNode source = _listNode[static_cast<size_t>( *index )]; // addNode 가 목록을 늘리기 전에 값으로 둔다
             const int32            newID  = addNode( source._kind );
             if ( newID == kNoGraphID )
                 continue;
@@ -267,10 +269,10 @@ namespace sw::editor
 
     bool GimmickGraphModel::removeNode( int32 graphID )
     {
-        const int32 index = findNodeIndex( graphID );
-        if ( index < 0 )
+        const optional<int32> index = findNodeIndex( graphID );
+        if ( index.has_value() == false )
             return false;
-        _listNode.erase( _listNode.begin() + index );
+        _listNode.erase( _listNode.begin() + *index );
         for ( size_t wireIndex = _listWire.size(); wireIndex > 0; --wireIndex )
         {
             const GimmickGraphWire& wire = _listWire[wireIndex - 1];
@@ -282,24 +284,24 @@ namespace sw::editor
 
     expected<void> GimmickGraphModel::renameNode( int32 graphID, const hashed_string& newID )
     {
-        const int32 index = findNodeIndex( graphID );
-        if ( index < 0 )
+        const optional<int32> index = findNodeIndex( graphID );
+        if ( index.has_value() == false )
             return unexpected( Error{ ErrorKind::NotFound, "No such node" } );
         if ( newID.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "Node id is empty" } );
-        const int32 other = findNodeIndexByID( newID );
-        if ( other >= 0 && other != index )
+        const optional<int32> other = findNodeIndexByID( newID );
+        if ( other.has_value() && *other != *index )
             return unexpected( Error{ ErrorKind::AlreadyExists, "Node id is already used by another node", newID.view() } );
-        _listNode[static_cast<size_t>( index )]._id = newID;
+        _listNode[static_cast<size_t>( *index )]._id = newID;
         return {};
     }
 
     bool GimmickGraphModel::setNodeParam( int32 graphID, string_view name, string_view value )
     {
-        const int32 index = findNodeIndex( graphID );
-        if ( index < 0 || name.empty() )
+        const optional<int32> index = findNodeIndex( graphID );
+        if ( index.has_value() == false || name.empty() )
             return false;
-        GimmickGraphNode& node = _listNode[static_cast<size_t>( index )];
+        GimmickGraphNode& node = _listNode[static_cast<size_t>( *index )];
         vector<string>    listName;
         vector<string>    listValue;
         parseParams( node._params, listName, listValue );
@@ -334,19 +336,21 @@ namespace sw::editor
 
     bool GimmickGraphModel::setNodeTarget( int32 graphID, GameObjectHandle target )
     {
-        const int32 index = findNodeIndex( graphID );
-        if ( index < 0 )
+        const optional<int32> index = findNodeIndex( graphID );
+        if ( index.has_value() == false )
             return false;
-        _listNode[static_cast<size_t>( index )]._target = target;
+        _listNode[static_cast<size_t>( *index )]._target = target;
         return true;
     }
 
     expected<int32> GimmickGraphModel::addWire( int32 fromNode, string_view fromPort, int32 toNode, string_view toPort )
     {
-        const int32 fromIndex = findNodeIndex( fromNode );
-        const int32 toIndex   = findNodeIndex( toNode );
-        if ( fromIndex < 0 || toIndex < 0 )
+        const optional<int32> foundFrom = findNodeIndex( fromNode );
+        const optional<int32> foundTo   = findNodeIndex( toNode );
+        if ( foundFrom.has_value() == false || foundTo.has_value() == false )
             return unexpected( Error{ ErrorKind::NotFound, "No such node" } );
+        const int32            fromIndex = *foundFrom;
+        const int32            toIndex   = *foundTo;
         const GimmickNodeKind* pFromKind = findKind( _listNode[static_cast<size_t>( fromIndex )] );
         const GimmickNodeKind* pToKind   = findKind( _listNode[static_cast<size_t>( toIndex )] );
         if ( pFromKind == nullptr || pToKind == nullptr )
@@ -375,19 +379,19 @@ namespace sw::editor
 
     bool GimmickGraphModel::removeWire( int32 wireGraphID )
     {
-        const int32 index = findWireIndex( wireGraphID );
-        if ( index < 0 )
+        const optional<int32> index = findWireIndex( wireGraphID );
+        if ( index.has_value() == false )
             return false;
-        _listWire.erase( _listWire.begin() + index );
+        _listWire.erase( _listWire.begin() + *index );
         return true;
     }
 
     bool GimmickGraphModel::setWireInvert( int32 wireGraphID, bool bInvert )
     {
-        const int32 index = findWireIndex( wireGraphID );
-        if ( index < 0 )
+        const optional<int32> index = findWireIndex( wireGraphID );
+        if ( index.has_value() == false )
             return false;
-        _listWire[static_cast<size_t>( index )]._bInvert = bInvert;
+        _listWire[static_cast<size_t>( *index )]._bInvert = bInvert;
         return true;
     }
 
@@ -408,12 +412,14 @@ namespace sw::editor
             bool bChanged = false;
             for ( const GimmickGraphWire& wire : _listWire )
             {
-                const int32 fromIndex             = findNodeIndex( wire._fromNode );
-                const int32 toIndex               = findNodeIndex( wire._toNode );
-                const bool  bInvalidWireEndpoints = fromIndex < 0 || toIndex < 0 || fromIndex == toIndex;
+                const optional<int32> foundFrom             = findNodeIndex( wire._fromNode );
+                const optional<int32> foundTo               = findNodeIndex( wire._toNode );
+                const bool            bInvalidWireEndpoints = foundFrom.has_value() == false || foundTo.has_value() == false || *foundFrom == *foundTo;
                 if ( bInvalidWireEndpoints )
                     continue;
-                const int32 wanted = listLevel[static_cast<size_t>( fromIndex )] + 1;
+                const int32 fromIndex = *foundFrom;
+                const int32 toIndex   = *foundTo;
+                const int32 wanted    = listLevel[static_cast<size_t>( fromIndex )] + 1;
                 if ( listLevel[static_cast<size_t>( toIndex )] < wanted && wanted < static_cast<int32>( nodeCount ) )
                 {
                     listLevel[static_cast<size_t>( toIndex )] = wanted;
@@ -517,10 +523,12 @@ namespace sw::editor
         }
         for ( const GimmickGraphWire& wire : _listWire )
         {
-            const int32 fromIndex = findNodeIndex( wire._fromNode );
-            const int32 toIndex   = findNodeIndex( wire._toNode );
-            if ( fromIndex < 0 || toIndex < 0 )
+            const optional<int32> foundFrom = findNodeIndex( wire._fromNode );
+            const optional<int32> foundTo   = findNodeIndex( wire._toNode );
+            if ( foundFrom.has_value() == false || foundTo.has_value() == false )
                 continue;
+            const int32 fromIndex = *foundFrom;
+            const int32 toIndex   = *foundTo;
             (void)outDef.addWire( makePortReference( _listNode[static_cast<size_t>( fromIndex )], wire._fromPort ), makePortReference( _listNode[static_cast<size_t>( toIndex )], wire._toPort ),
                                   wire._bInvert ); // 둘 다 "node.port" 모양이라 실패하지 않는다
         }

@@ -126,9 +126,9 @@ namespace sw::editor
         const vector<GimmickGraphWire>& getWires() const { return _listWire; }
         const vector<GimmickWireDesc>&  getOrphanWires() const { return _listOrphanWire; }
         vector<GraphCommentBox>&        getMutableComments() { return _listComment; } ///< 캔버스가 주석 상자를 더하고 옮기고 지운다(고치면 패널이 편집으로 남긴다)
-        int32                           findNodeIndex( int32 graphID ) const;
-        int32                           findNodeIndexByID( const hashed_string& id ) const;
-        int32                           findWireIndex( int32 wireGraphID ) const;
+        [[nodiscard]] optional<int32>   findNodeIndex( int32 graphID ) const;
+        [[nodiscard]] optional<int32>   findNodeIndexByID( const hashed_string& id ) const;
+        [[nodiscard]] optional<int32>   findWireIndex( int32 wireGraphID ) const;
         const GimmickNodeKind*          findKind( const GimmickGraphNode& node ) const;
         /** @brief 매개변수 값입니다. 적혀 있지 않으면 빈 문자열입니다. */
         static string readParam( string_view params, string_view name );
