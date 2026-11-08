@@ -2,7 +2,7 @@
  * @file Engine/Profiling/ProfilerBackendSubsystem.h
  * @brief 외부 프로파일러 출력(`ProfilerBackend`)을 서비스 범위에서 내립니다.
  * @details 서비스 범위의 서브시스템이라 엔진 범위(기동 단계)가 모두 사라진 뒤에 할당 관찰을 떼고 출력을 비운다. 켜는 쪽은 개발 도구다 —
- *          실행 인자(`-gv_tracy`)는 `DevTools/Profiling/ProfilerLaunchSwitches` 가 기동 단계에, 에디터의 "Tracy 열기" 는 실행 중에 `ProfilerBackend::startTracy` 를 부른다.
+ *          실행 인자(`-gv_tracy`)는 `DevTools/Profiling/ProfilerLaunchSwitches` 가 기동 단계에, 에디터의 "Tracy 열기" 는 실행 중에 `TracyProfilerBackend::start`(개발 도구)를 부른다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

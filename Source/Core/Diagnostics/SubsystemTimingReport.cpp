@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Profiling/SubsystemTimingReport.h"
+#include "Core/Diagnostics/SubsystemTimingReport.h"
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/BuildInfo.h"

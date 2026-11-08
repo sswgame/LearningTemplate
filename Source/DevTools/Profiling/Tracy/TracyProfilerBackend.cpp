@@ -6,15 +6,18 @@
  */
 #include "pch.h"
 
-#include "Engine/Profiling/Tracy/TracyProfilerBackend.h"
+#include "DevTools/Profiling/Tracy/TracyProfilerBackend.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/ProcessEnvironment.h"
 #include "Core/String/StringUtil.h"
+
+#include "Engine/Profiling/ProfilerBackend.h"
 
 #if defined( SW_PROFILER_TRACY )
     #include "Core/Foundation/PlatformOSHeaders.h"
@@ -177,12 +180,48 @@ namespace sw
                 return s_api;
             }
 #endif
+
+            /** @brief Tracy 출력입니다. **프로세스 수명**이다 — 엔진이 내려간 뒤에 닫히는 구간도 이것을 부른다(`ProfilerBackend` 의 활성 칸이 가리킨다). */
+            static TracyProfilerBackend s_tracy;
         };
+
+        TracyProfilerBackend TracyProfilerBackendInternal::s_tracy{};
     } // namespace
 } // namespace sw
 
 namespace sw
 {
+    bool TracyProfilerBackend::start( bool bObserveAllocations )
+    {
+        if ( isCompiled() == false )
+        {
+            SW_LOG_WARNING_ID( "Profiler.TracyNotLinkedBuild", "Tracy is not linked into this build (SW_ENABLE_TRACY=OFF)" );
+            return false;
+        }
+        if ( ProfilerBackend::getActiveBackend() == &TracyProfilerBackendInternal::s_tracy )
+            return true;
+        // 함수 표를 채우며 TracyClient.dll 을 올린다 — 수집 스레드 · 리슨 소켓이 이때 선다.
+        if ( loadClient() == false )
+        {
+            SW_LOG_WARNING_ID( "Profiler.TracyClientLibraryTracyClient", "Tracy client library (TracyClient.dll) could not be loaded or lacks a function this engine calls - Tracy stays off" );
+            return false;
+        }
+        if ( ProfilerBackend::startBackend( TracyProfilerBackendInternal::s_tracy, bObserveAllocations ) == false )
+            return false;
+        SW_LOG_INFO_ID( "Profiler.TracyProfilerStartedData", "Tracy profiler started (data port %#, memory %#) — connect with tracy-profiler -a 127.0.0.1", getDataPort(),
+                        bObserveAllocations ? "on" : "off" );
+        return true;
+    }
+
+    void TracyProfilerBackend::logSummary()
+    {
+        const TracyProfilerBackend& tracy = TracyProfilerBackendInternal::s_tracy;
+        if ( ProfilerBackend::getActiveBackend() != &tracy )
+            return;
+        SW_LOG_INFO_ID( "Profiler.TracyProfilerCPUZones", "Tracy profiler: %# CPU zones, %# GPU zones emitted (viewer %#)", tracy.getZoneCount(), tracy.getGPUZoneCount(),
+                        tracy.isViewerConnected() ? "connected" : "not connected" );
+    }
+
     TracyProfilerBackend::TracyProfilerBackend()
         : _zoneCount{ 0 }
         , _gpuZoneCount{ 0 }

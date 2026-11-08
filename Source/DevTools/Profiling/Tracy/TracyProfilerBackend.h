@@ -1,11 +1,16 @@
 /**
- * @file TracyProfilerBackend.h
+ * @file DevTools/Profiling/Tracy/TracyProfilerBackend.h
  * @brief Tracy 출력(`IProfilerBackend`)입니다. Tracy 헤더는 짝 .cpp 하나만 include 합니다.
+ * @details 외부 프로파일러 연결은 개발 도구다 — 엔진(`ProfilerBackend`)은 출력 인터페이스와 활성 칸만 알고 Tracy 형식을 모른다. 켜는 쪽(`-gv_tracy` 의
+ *          `ProfilerLaunchSwitches`, 에디터 "Tracy 열기")이 `start` 로 이 출력을 `ProfilerBackend::startBackend` 에 꽂는다. 언리얼 Insights 의 Trace 전송 · 뷰어가
+ *          Developer 쪽인 것과 같은 자리다. Tracy 클라이언트는 DevTools.dll 하나만 링크한다(Windows 는 켤 때 TracyClient.dll 을 올린다).
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+
+#include "DevTools/DevToolsAPI.h"
 
 #include "Engine/Profiling/IProfilerBackend.h"
 
@@ -17,11 +22,11 @@ namespace sw
      * @details **GPU 구간은 "수동 GPU 컨텍스트" 로 냅니다.** Tracy 의 API 별 헤더(TracyD3D12 · TracyVulkan …)를 쓰지 않습니다 — 그것들은
      *          RHI 백엔드 DLL 안에서 네이티브 쿼리를 두 번째로 만들고, 백엔드 DLL 마다 클라이언트를 링크하게 만듭니다. 대신 엔진이 이미
      *          네 백엔드에서 모으는 타임스탬프(`IRHITimestampProvider::readTimestamps`)를 그대로 Tracy 에 넘깁니다 — 쿼리는 한 벌이고, Tracy 클라이언트는
-     *          Engine.dll 하나만 링크합니다.
+     *          DevTools.dll 하나만 링크합니다.
      *
-     *          Tracy 가 이 빌드에 없으면 모든 함수가 아무것도 하지 않습니다(`ProfilerBackend` 가 이 출력을 켜지도 않는다).
+     *          Tracy 가 이 빌드에 없으면 모든 함수가 아무것도 하지 않습니다(`start` 가 이 출력을 켜지도 않는다).
      */
-    class SW_API TracyProfilerBackend final : public IProfilerBackend
+    class SW_DEVTOOLS_API TracyProfilerBackend final : public IProfilerBackend
     {
     public:
         /** @brief GPU 컨텍스트 수 상한입니다. Tracy 의 컨텍스트 번호는 1 바이트이고, 디바이스를 바꿀 때마다 하나씩 씁니다. */
@@ -56,11 +61,20 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 이 빌드 · 상태
         // ------------------------------------------------------------------------------
+        /**
+         * @brief Tracy 출력을 켭니다. 처음 부르면 TracyClient.dll 이 올라오고 수집 스레드가 섭니다. 이미 켜져 있으면 true 입니다.
+         * @details 출력 객체는 이 파일의 프로세스 수명 저장소다 — 엔진이 내려간 뒤 닫히는 구간도 이것을 부른다. @p bObserveAllocations 면 할당 관찰도 겁니다(`-gv_tracyMemory`).
+         *          한 번 켜면 프로세스가 끝날 때까지 켜져 있습니다(Tracy 는 중간에 끊으면 뷰어 쪽 타임라인이 깨집니다).
+         * @return Tracy 가 이 빌드에 없거나 클라이언트 라이브러리를 올리지 못하면 false 입니다(경고를 남긴다).
+         */
+        static bool start( bool bObserveAllocations );
+        /** @brief 켜져 있으면 지금까지 낸 구간 수와 뷰어 연결을 한 줄로 남깁니다(종료 앞 — 뷰어 없이 돌린 실행에서도 경로가 살아 있었는지 보인다). */
+        static void logSummary();
         /** @brief Tracy 클라이언트가 이 빌드에 들어 있으면 true 입니다. */
         static bool isCompiled();
         /**
          * @brief Tracy 클라이언트 함수 표를 채우고(Windows 는 TracyClient.dll 을 올린다 — 수집 스레드 · 리슨 소켓이 선다), 다 찼으면 true 입니다.
-         * @details 이 출력을 켜기 전에 부릅니다(`ProfilerBackend::startTracy`). 거짓이면 이 출력의 함수를 부르지 않습니다.
+         * @details 이 출력을 켜기 전에 부릅니다(`start`). 거짓이면 이 출력의 함수를 부르지 않습니다.
          */
         [[nodiscard]] static bool loadClient();
         /** @brief Tracy 데이터 포트입니다(`TRACY_PORT` 환경 변수가 있으면 그 값, 없으면 8086). */

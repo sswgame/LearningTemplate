@@ -86,6 +86,12 @@ namespace sw
         static constexpr uint64 kFNVOffset64 = 14695981039346656037ull;
         /** @brief FNV-1a 64 비트 소수입니다. */
         static constexpr uint64 kFNVPrime64 = 1099511628211ull;
+        /** @brief 좌표 해시(`hashCoord`)의 축마다 곱수입니다 — 축을 맞바꾸면 다른 값이 나오게 서로 다른 홀수다. */
+        static constexpr uint32 kCoordMultiplierX = 0x9e3779b1u;
+        static constexpr uint32 kCoordMultiplierY = 0xc2b2ae35u;
+        static constexpr uint32 kCoordMultiplierZ = 0x85ebca77u;
+        /** @brief 단위 실수(`toUnitFloat`)가 보는 아래 24 비트입니다(float32 가수에 손실 없이 든다). */
+        static constexpr uint32 kUnitFloatMask = 0xffffffu;
 
         /** @brief splitmix64 의 마무리 섞기입니다. 비트를 고르게 퍼뜨립니다. */
         [[nodiscard]] static constexpr uint64 mix64( uint64 value ) noexcept
@@ -102,6 +108,24 @@ namespace sw
             value = ( value ^ ( value >> 15 ) ) * 0x846ca68bu;
             return value ^ ( value >> 16 );
         }
+
+        /**
+         * @brief 2 차원 정수 좌표의 해시입니다(`mix32` 섞기). 상태가 없어 어느 셀부터 물어도 같은 값이라 절차 생성(지형 · 나무 · 광석 · 값 노이즈)에 씁니다.
+         * @details 예전에는 GameFramework `GameHash` 에 있어 Core 의 노이즈(`ValueNoise`)가 쓸 수 없었다. 언리얼 `FMath::Hash`/`HashCombine` 처럼 Core 해시 도구다.
+         */
+        [[nodiscard]] static constexpr uint32 hashCoord( int32 x, int32 z, uint32 seed ) noexcept
+        {
+            return mix32( static_cast<uint32>( x ) * kCoordMultiplierX ^ mix32( static_cast<uint32>( z ) * kCoordMultiplierZ ^ seed ) );
+        }
+
+        /** @brief 3 차원 셀의 해시입니다. y 를 섞어 x 에 접은 뒤 2 차원 해시로 넘깁니다. */
+        [[nodiscard]] static constexpr uint32 hashCoord( int32 x, int32 y, int32 z, uint32 seed ) noexcept
+        {
+            return hashCoord( static_cast<int32>( static_cast<uint32>( x ) ^ mix32( static_cast<uint32>( y ) * kCoordMultiplierY ^ seed ) ), z, seed );
+        }
+
+        /** @brief 해시의 아래 24 비트를 [0, 1] 실수로 바꿉니다. 확률 비교 · 노이즈 값에 씁니다. */
+        [[nodiscard]] static constexpr float32 toUnitFloat( uint32 hash ) noexcept { return static_cast<float32>( hash & kUnitFloatMask ) / static_cast<float32>( kUnitFloatMask ); }
 
         /** @brief splitmix64 수열의 다음 값입니다 — 상태에 황금비를 더하고 마무리 섞기를 합니다. 씨앗 0 도 쓸 수 있습니다(고정점이 없다). */
         [[nodiscard]] static constexpr uint64 splitMix64Next( uint64& inoutState ) noexcept

@@ -1,22 +1,24 @@
 /**
- * @file Engine/Graphics/View/IEngineRenderDriver.h
+ * @file Engine/Presentation/IEngineRenderDriver.h
  * @brief 엔진 루프 · 호스트가 렌더러를 보는 유일한 창구입니다 — 구현은 렌더러 폴더(`EngineRenderDriver`)가 스스로 등록하고, 렌더러를 짓지 않는 구성(전용 서버)에는 없습니다.
  * @details 언리얼 `IRendererModule` · Godot `RenderingServer` 와 같은 자리입니다. 엔진 루프는 렌더러 형식을 하나도 알지 못하고 이 포인터가 nullptr 이면 그리는 일을 건너뜁니다.
- *          렌더러는 층 7, 이 헤더는 층 4 라 렌더러가 이것을 구현하고 층 8(엔진 루프 · 자동화)이 부른다. 렌더 스레드를 직접 다뤄야 하는 클라이언트 전용 호스트(App)만 `findRenderThread` 를 쓴다.
+ *          렌더러는 층 7, 이 헤더는 층 2(Presentation — `IEngineUIDriver` · `IEngineAudioDriver` 와 한 자리)라 렌더러가 이것을 구현하고 층 8(엔진 루프 · 자동화)이 부른다.
+ *          렌더 스레드를 직접 다뤄야 하는 클라이언트 전용 호스트(App)만 `findRenderThread` 를 쓴다. 그래픽 형식(뷰 요청 · RHI 열거형)은 앞 선언 · 참조로만 받는다 — 층 2 는 Graphics(4)를 읽지 못한다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Graphics/RHI/RHIInitResult.h"
-#include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
-#include "Engine/Graphics/View/FrameViewports.h"
+#include "Engine/Presentation/ViewCameraProvider.h"
 
 namespace sw
 {
     class GameObjectManager;
     class RenderThread;
     class RHI;
+    struct FrameViewports;
+    enum class RHIInitResult : uint8;
+    enum class RHIWaitIdleReason : uint8;
 
     /**
      * @class IEngineRenderDriver

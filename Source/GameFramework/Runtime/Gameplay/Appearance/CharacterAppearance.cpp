@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringUtil.h"
 
@@ -625,7 +626,7 @@ namespace sw
     float32 CharacterAppearanceCatalog::pickUnit( uint32 seed, uint64 keyHash )
     {
         const uint32 key = static_cast<uint32>( keyHash ) ^ HashUtil::mix32( static_cast<uint32>( keyHash >> 32 ) );
-        return GameHash::toUnitFloat( HashUtil::mix32( seed ^ HashUtil::mix32( key ^ 0x68e31da4u ) ) );
+        return HashUtil::toUnitFloat( HashUtil::mix32( seed ^ HashUtil::mix32( key ^ 0x68e31da4u ) ) );
     }
 
     bool CharacterAppearanceCatalog::expand( const hashed_string& id, uint32 seed, const SlotCatalog& slotTable, const EquipmentSetCatalog& sets, const CustomizationSchemaCatalog& schemas,

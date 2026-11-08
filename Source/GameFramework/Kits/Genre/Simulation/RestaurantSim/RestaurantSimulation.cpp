@@ -4,6 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -914,7 +915,7 @@ namespace sw
         const int32            day      = _pClock != nullptr ? _pClock->getDay() : 0;
         for ( int32 shopIndex = 0; shopIndex < static_cast<int32>( listShop.size() ); ++shopIndex )
         {
-            const float32 unit     = GameHash::toUnitFloat( GameHash::hashCoord( day, shopIndex, _settings._randomSeed ) );
+            const float32 unit     = HashUtil::toUnitFloat( HashUtil::hashCoord( day, shopIndex, _settings._randomSeed ) );
             const float32 modifier = MathUtil::max( 0.1f, 1.0f + _settings._marketVolatility * ( unit * 2.0f - 1.0f ) );
             if ( _market.setPriceModifier( listShop[static_cast<size_t>( shopIndex )]._id, modifier, 1.0f ) == false )
                 SW_LOG_ERROR_ID( "RestaurantSimulation.RestaurantSimulationMarketCouldNot", "RestaurantSimulation: the market could not price shop %#", static_cast<int32>( shopIndex ) );

@@ -1,38 +1,42 @@
 #include "pch.h"
 
-#include "App/UserSettingsHost.h"
+#include "Engine/UserSettings/UserSettingsHost.h"
 
-#include "Engine/Engine.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
-#include "Engine/Renderer/RenderThread.h"
+#include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
+#include "Engine/Presentation/IEngineRenderDriver.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Window/IWindow.h"
 
 namespace sw
 {
     UserSettingsHost::UserSettingsHost()
-        : _pEngine{ nullptr }
+        : _pRenderDriver{ nullptr }
         , _pWindow{ nullptr }
+        , _bInitialized{ SW_FALSE }
+        , _reservedFlags{ 0 }
     {
     }
 
-    void UserSettingsHost::initialize( Engine* pEngine, IWindow* pWindow )
+    void UserSettingsHost::initialize( IEngineRenderDriver* pRenderDriver, IWindow* pWindow )
     {
-        _pEngine = pEngine;
-        _pWindow = pWindow;
+        _pRenderDriver = pRenderDriver;
+        _pWindow       = pWindow;
+        _bInitialized  = SW_TRUE;
     }
 
     void UserSettingsHost::shutdown()
     {
-        _pEngine = nullptr;
-        _pWindow = nullptr;
+        _pRenderDriver = nullptr;
+        _pWindow       = nullptr;
+        _bInitialized  = SW_FALSE;
     }
 
     void UserSettingsHost::update( float32 deltaSeconds )
     {
-        if ( _pEngine == nullptr || engine::areEngineServicesBound() == false )
+        if ( _bInitialized == SW_FALSE || engine::areEngineServicesBound() == false )
             return;
         UserSettingsManager& settings = engine::getSubsystem<UserSettingsManager>();
         settings.update( deltaSeconds );
@@ -43,14 +47,12 @@ namespace sw
 
     void UserSettingsHost::applyDisplayRequest( const DisplaySettingsRequest& request )
     {
-        RHI* pRHI = _pEngine->getRHI();
+        RHI* pRHI = _pRenderDriver != nullptr ? _pRenderDriver->findRHI() : nullptr;
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
             return;
 
         // 렌더 스레드가 지난 프레임을 그리는 중일 수 있다 — 스왑체인 · present 값을 바꾸기 전에 비운다(Engine::onMainWindowResize 와 같은 규칙).
-        RenderThread* pRenderThread = _pEngine->getRenderThread();
-        if ( pRenderThread != nullptr )
-            pRenderThread->waitIdle( RHIWaitIdleReason::Resize );
+        _pRenderDriver->waitRenderThreadIdle( RHIWaitIdleReason::Resize );
 
         IRHIDevice& device = pRHI->getDevice();
         if ( device.isVSyncEnabled() != request._bVSync )

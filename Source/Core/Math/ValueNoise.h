@@ -1,21 +1,19 @@
 /**
- * @file ValueNoise.h
+ * @file Core/Math/ValueNoise.h
  * @brief 시드 고정 2D 값 노이즈입니다. 지형 높이, 바이옴, 구름, 바람처럼 부드럽게 변하는 절차 값을 만듭니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "GameFramework/GameFrameworkExports.h"
-
 namespace sw
 {
     /**
      * @struct ValueNoise
-     * @brief 격자 꼭짓점에 정수 해시(`GameHash`)로 값을 두고 smoothstep 으로 보간합니다. 같은 시드면 어느 기계에서나 같은 값입니다.
+     * @brief 격자 꼭짓점에 정수 해시(`HashUtil::hashCoord`)로 값을 두고 smoothstep 으로 보간합니다. 같은 시드면 어느 기계에서나 같은 값입니다.
      * @details 장르를 가리지 않는 기반이다(복셀 지형, 농장의 들판 높낮이, 공원 지형, 2D 동굴).
      */
-    struct SW_GF_API ValueNoise
+    struct SW_API ValueNoise
     {
         /** @brief 정수 격자점의 값(0..1)입니다. */
         static float32 hashLattice( int32 x, int32 z, uint32 seed );

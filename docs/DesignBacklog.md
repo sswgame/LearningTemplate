@@ -44,7 +44,7 @@
 
 | 우선순위 | 현재 코드에서 확인한 내용 | 개선 방향과 완료 조건 |
 |---|---|---|
-| 검증 필요 | **엔진 프레임 API에는 뷰 입력이 남아 있지만 렌더 구현 경계는 이미 분리돼 있다.** [`Engine::update`](../Source/Engine/Engine.h)는 `FrameViewports`와 카메라 공급자를 받지만, 제출은 [`IEngineRenderDriver`](../Source/Engine/Graphics/View/IEngineRenderDriver.h)로 전달한다. 따라서 “Engine이 Renderer 구현을 직접 안다”는 이전 주장은 틀렸다. | 서버·쿠커 타깃에서 이 프레임 입력 형식이 실제로 불필요한 의존을 끌어오는지 빌드 타깃·include 그래프로 확인한다. 컴파일 경계 위반이 재현될 때만 뷰 데이터 계약을 분리한다. |
+| 검증 필요 | **엔진 프레임 API에는 뷰 입력이 남아 있지만 렌더 구현 경계는 이미 분리돼 있다.** [`Engine::update`](../Source/Engine/Engine.h)는 `FrameViewports`와 카메라 공급자를 받지만, 제출은 [`IEngineRenderDriver`](../Source/Engine/Presentation/IEngineRenderDriver.h)로 전달한다. 따라서 “Engine이 Renderer 구현을 직접 안다”는 이전 주장은 틀렸다. | 서버·쿠커 타깃에서 이 프레임 입력 형식이 실제로 불필요한 의존을 끌어오는지 빌드 타깃·include 그래프로 확인한다. 컴파일 경계 위반이 재현될 때만 뷰 데이터 계약을 분리한다. |
 | 점검 보류 | **렌더 확장 두 경로는 확인했으나 중복 결함은 입증되지 않았다.** 기본 씬 수집은 엔진 컴포넌트를 구체적으로 처리하고, 모듈 확장은 [`RenderExtensionRegistry`](../Source/Engine/Renderer/Extension/RenderExtensionRegistry.h)와 프록시 수명 계약을 쓴다. 둘의 입력·수명·스레드 계약은 다르다. | 일괄 통합하지 않는다. 실제 플러그인 기능이 기본 수집 경로에 의존하거나 같은 기능을 두 번 구현하는 사례가 확인될 때만 공통 기여 API를 설계한다. |
 | 점검 보류 | **온라인 서비스는 공통 프로토콜 기반을 이미 갖췄다.** [`OnlineProtocolService`](../Source/GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h)는 타입 있는 메서드 호출·응답과 공통 결과 지표·재시도 처리를 제공한다. “키트마다 손 디스패치·지표·오류 처리가 제각각”이라는 이전 요약은 현재 코드에 맞지 않는다. | 새 `OnlineSession`이나 두 번째 서버 추상화를 먼저 만들지 않는다. 게임의 실제 클라이언트 조립·수명 소유를 확인하고, 여러 게임에서 같은 통합 결함이 확인될 때만 세션 경계를 정한다. |
 
@@ -420,6 +420,8 @@ GameFramework의 모듈·수명주기·서비스·테스트 경계를 현재 코
 | 씬 쿠킹 병렬 | `--cook-all` 을 DDC 없이 · 있이 각 2 번 | `Headless.CookStageTimes` · `SceneCooker.SceneCookTime`(합 · 가장 느린 씬) | scenes 가 쿠킹 벽시계의 절반을 넘고 가장 느린 씬이 합의 1/4 아래면 씬 단위 병렬 설계 | 없음(캐시 격리가 먼저) | |
 | GPU 업로드 · 텍스처 | shooter3d · meadowvillage 첫 진입, DX12 · Vulkan · GL, `-gv_assetLoadReport=1` × `-gv_gpuUploadQueue=0/1` 3 번 | Asset 표의 `Texture` · `TextureUpload` 행, `RT.TextureUpload.pump` · `.submitted` · `.polled` · `.waiting`, `GT.GPUUpload.flush` | pump 가 RT 의 10% 를 넘거나 waiting 이 계속 0 이 아니면 RHI Thread 형 시제품 | 없음 | |
 | 렌더 그래프 레벨 폭 | `game/empty/automation/benchmark` · Shooter3D 플레이, `-gv_renderGraphParallelMinWidth=2 · 3 · 4 · 99`, DX12 · Vulkan 3 번 | RT 프레임 중앙값, `RT.Graph.parallelLevel` · `.parallelLevels` · `.parallelPasses` · `.serialPasses` · `.maxLevelWidth` | 3 · 4 가 2 보다 흔들림 밖으로 빠르면 기본값을 바꾼다. 그림은 같아야 한다 | 폭 문턱 gv(기본 2 = 지금 동작) | |
+
+**개발 그림은 사진에 들지 않는다(2026-11-09, 들어감).** 캔버스 겹치기 등록(`SW_CANVAS_OVERLAY`)은 칠할 층(`CanvasOverlayLayer`)을 밝힌다. 디버그 드로우 게임 뷰 겹치기는 디버그 HUD 와 같은 개발 겹치기 층 — 사진 캡처 뒤에 화면에만 합치고(에디터 게임 뷰는 `rendertarget/dev_overlay` 텍스처), 스크린샷 · `<ExpectImage>` 골든에 들지 않는다. 캔버스 테스트 그림만 주 출력 층이다 — Canvas 패스 자체가 확인 대상이라 사진에 들어야 한다. 대조: 유니티 기즈모는 게임 뷰 캡처에 들지 않고 언리얼 `HighResShot` 은 기본으로 UI · `stat` 글자를 뺀다. Godot 의 디버그 그리기는 뷰포트 안이라 캡처에 든다 — 골든이 게임 출력을 재는 이 저장소는 앞의 둘을 따른다.
 
 **하지 않기로 정한 것.** Meadow 밭 크기는 소유 타입 상수로 둔다(레벨별 크기 요구 없음). Shooter3D 탄착 표면 목록은 코드 상수로 둔다. 범용 스크립팅 VM · 네이티브 모드 DLL · 원격 명령 서버는 넣지 않는다.
 

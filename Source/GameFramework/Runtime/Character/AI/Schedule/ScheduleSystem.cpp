@@ -1024,9 +1024,9 @@ namespace sw
                 const uint32  npcKey      = ScheduleHash::computeNameKey( def._id );
                 for ( int32 hopStart = startMinute; hopStart < endMinute; hopStart += stepMinutes )
                 {
-                    const uint32    hash   = GameHash::hashCoord( day, hopStart, _settings._seed ^ npcKey );
-                    const float32   angle  = GameHash::toUnitFloat( hash ) * ( 2.0f * MathUtil::kPi );
-                    const float32   length = radius * ::sqrtf( GameHash::toUnitFloat( HashUtil::mix32( hash ) ) );
+                    const uint32    hash   = HashUtil::hashCoord( day, hopStart, _settings._seed ^ npcKey );
+                    const float32   angle  = HashUtil::toUnitFloat( hash ) * ( 2.0f * MathUtil::kPi );
+                    const float32   length = radius * ::sqrtf( HashUtil::toUnitFloat( HashUtil::mix32( hash ) ) );
                     ScheduleSegment hop    = segment;
                     hop._startMinute       = hopStart;
                     hop._endMinute         = MathUtil::min( endMinute, hopStart + stepMinutes );

@@ -9,11 +9,12 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 
+#include "DevTools/Profiling/Tracy/TracyProfilerBackend.h"
+
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Profiling/ProfilerBackend.h"
 
 namespace sw::editor
 {
@@ -67,7 +68,7 @@ namespace sw::editor
 
     EditorTracyLaunchResult EditorTracyLauncher::openViewer()
     {
-        if ( ProfilerBackend::isTracyCompiled() == false )
+        if ( TracyProfilerBackend::isCompiled() == false )
             return EditorTracyLaunchResult::TracyNotCompiled;
 
         string viewerPath;
@@ -79,10 +80,10 @@ namespace sw::editor
         }
 
         // 뷰어가 붙기 전에 출력을 켠다 — 켜는 순간부터 기록하고, 뷰어는 붙을 때 그때까지 쌓인 것을 받는다.
-        if ( ProfilerBackend::startTracy( false ) == false )
+        if ( TracyProfilerBackend::start( false ) == false )
             return EditorTracyLaunchResult::TracyNotCompiled;
 
-        const ProcessCommand command = makeViewerCommand( viewerPath, ProfilerBackend::getTracyPort() );
+        const ProcessCommand command = makeViewerCommand( viewerPath, TracyProfilerBackend::getDataPort() );
         if ( Process::launchDetached( command ) == false )
         {
             SW_LOG_WARNING_ID( "EditorTracy.FailedLaunchTracyViewer", "Failed to launch the Tracy viewer: %#", command.toCommandLine() );

@@ -2,6 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/Genre/RacingGimmicks.h"
 
+#include "Core/Hash/HashUtil.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
@@ -76,7 +78,7 @@ namespace sw
         if ( bCannotOpen )
             return hashed_string{};
         // 시드와 연 횟수로 뽑는다. 같은 순서로 열면 같은 것이 나온다.
-        GameRandom  random( GameHash::hashCoord( _openCount, 0, _seed ) );
+        GameRandom  random( HashUtil::hashCoord( _openCount, 0, _seed ) );
         const int32 index = random.pickWeightedIndex( _listChoice, RacingGimmicksInternal::ChoiceWeight{} );
         ++_openCount;
         if ( index < 0 )

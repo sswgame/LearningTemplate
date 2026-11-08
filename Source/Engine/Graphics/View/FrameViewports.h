@@ -3,7 +3,6 @@
  * @brief 호스트가 엔진 루프에 넘기는 뷰 요청 값(`Engine::update`)입니다 — 값 타입이고 렌더 스레드 · 렌더러 형식이 없어 전용 서버 호스트도 읽습니다.
  */
 #pragma once
-#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -11,18 +10,10 @@
 
 #include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/View/RenderViewSettings.h"
+#include "Engine/Presentation/ViewCameraProvider.h"
 
 namespace sw
 {
-    class CameraComponent;
-
-    /**
-     * @brief 이번 프레임의 뷰 카메라를 반환합니다.
-     * @details tick 안의 핫 리로드와 씬 전환이 GameObject 를 파괴할 수 있으므로,
-     *          카메라는 미리 잡아 두지 않고 파괴 단계가 끝난 뒤 이 델리게이트로 조회합니다.
-     */
-    SW_DECLARE_DELEGATE( CameraComponent*, ViewCameraProviderDelegate, void );
-
     /**
      * @brief 뷰포트 하나의 출력입니다 — 호스트(에디터)가 만든 렌더 타깃과 그것이 창에 보인 자리입니다(언리얼 `FViewport` 자리). 렌더 타깃이 0이면 이번 프레임에 그 뷰를 그리지 않습니다.
      * @details `_windowX` · `_windowY` 는 이 출력의 왼쪽 위가 주 창 클라이언트의 어느 픽셀에 보였는지다(에디터 패널의 이미지 자리). 런타임 UI 는 창 픽셀 포인터를

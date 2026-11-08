@@ -19,7 +19,6 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Profiling/Tracy/TracyProfilerBackend.h"
 
 namespace sw
 {
@@ -29,9 +28,6 @@ namespace sw
         {
             /** @brief 활성 출력입니다. 계측 지점마다 relaxed 읽기 하나입니다. */
             static atomic<IProfilerBackend*> s_pActive;
-            /** @brief Tracy 출력입니다. **프로세스 수명**이다 — 엔진이 내려간 뒤에 닫히는 구간도 이것을 부른다. */
-            static TracyProfilerBackend s_tracy;
-
             /** @brief 지점 등록 · 이름 복사를 지킵니다. 지점마다 한 번뿐이라 잠금이 비용이 되지 않습니다. */
             static mutex           s_siteMutex;
             static ProfileZoneSite s_arrSite[ProfilerBackend::kMaxZoneSite];
@@ -45,7 +41,7 @@ namespace sw
              */
             static const utf8* internLocked( const utf8* pText )
             {
-                // 없는 문자열은 빈 문자열로 둔다 — 출력(Tracy)은 함수 · 파일 칸을 nullptr 검사 없이 문자열로 읽는다.
+                // 없는 문자열은 빈 문자열로 둔다 — 외부 출력(Tracy)은 함수 · 파일 칸을 nullptr 검사 없이 문자열로 읽는다.
                 if ( pText == nullptr )
                     pText = "";
                 const size_t length = std::strlen( pText );
@@ -148,13 +144,12 @@ namespace sw
             static void endTaskZone( const TaskProfileZone& zone ) { static_cast<IProfilerBackend*>( zone._pContext )->endZone( zone._token ); }
 
             static constexpr TaskProfileHook kTaskProfileHook{ &beginTaskZone, &endTaskZone };
-            /** @brief Tracy 가 켜진 동안 태스크 훅을 쥡니다(`shutdown` 이 풉니다). */
+            /** @brief 외부 출력이 켜진 동안 태스크 훅을 쥡니다(`shutdown` 이 풉니다). */
             static inline Subscription s_taskProfileHookBinding{};
 #endif
         };
 
         atomic<IProfilerBackend*> ProfilerBackendInternal::s_pActive{ nullptr };
-        TracyProfilerBackend      ProfilerBackendInternal::s_tracy{};
         mutex                     ProfilerBackendInternal::s_siteMutex{};
         ProfileZoneSite           ProfilerBackendInternal::s_arrSite[ProfilerBackend::kMaxZoneSite]{};
         uint32                    ProfilerBackendInternal::s_siteCount{ 0 };
@@ -164,12 +159,7 @@ namespace sw
 
     void ProfilerBackend::shutdown()
     {
-        // 무엇이 나갔는지 한 줄로 남긴다 — 뷰어 없이 돌린 실행에서도 경로가 살아 있었는지 로그로 보인다.
-        if ( getActiveBackend() == &ProfilerBackendInternal::s_tracy )
-        {
-            SW_LOG_INFO_ID( "Profiler.TracyProfilerCPUZones", "Tracy profiler: %# CPU zones, %# GPU zones emitted (viewer %#)", ProfilerBackendInternal::s_tracy.getZoneCount(),
-                            ProfilerBackendInternal::s_tracy.getGPUZoneCount(), ProfilerBackendInternal::s_tracy.isViewerConnected() ? "connected" : "not connected" );
-        }
+        // 무엇이 나갔는지의 요약 줄은 출력을 켠 개발 도구가 남긴다(`TracyProfilerBackend::logSummary`).
         Memory::unregisterAllocationObserver();
 #if SW_PROFILER_BACKEND_COMPILED
         ProfilerBackendInternal::s_taskProfileHookBinding.reset();
@@ -177,53 +167,23 @@ namespace sw
         setActiveBackend( nullptr );
     }
 
-    bool ProfilerBackend::startTracy( [[maybe_unused]] bool bObserveAllocations )
+    bool ProfilerBackend::startBackend( [[maybe_unused]] IProfilerBackend& backend, [[maybe_unused]] bool bObserveAllocations )
     {
 #if SW_PROFILER_BACKEND_COMPILED
-        if ( TracyProfilerBackend::isCompiled() == false )
-        {
-            SW_LOG_WARNING_ID( "Profiler.TracyNotLinkedBuild", "Tracy is not linked into this build (SW_ENABLE_TRACY=OFF)" );
-            return false;
-        }
-        if ( getActiveBackend() == &ProfilerBackendInternal::s_tracy )
+        if ( getActiveBackend() == &backend )
             return true;
-
-        // 함수 표를 채우며 TracyClient.dll 을 올린다 — 수집 스레드 · 리슨 소켓이 이때 선다.
-        if ( TracyProfilerBackend::loadClient() == false )
-        {
-            SW_LOG_WARNING_ID( "Profiler.TracyClientLibraryTracyClient", "Tracy client library (TracyClient.dll) could not be loaded or lacks a function this engine calls - Tracy stays off" );
-            return false;
-        }
-        setActiveBackend( &ProfilerBackendInternal::s_tracy );
+        setActiveBackend( &backend );
         // 태스크 · 스테이지 이름이 구간이 된다(Core 는 프로파일러를 모르므로 여기서 꽂는다).
         ProfilerBackendInternal::s_taskProfileHookBinding = TaskManager::bindProfileHook( &ProfilerBackendInternal::kTaskProfileHook );
         if ( bObserveAllocations )
             Memory::registerAllocationObserver( &ProfilerBackendInternal::kObserver );
-
-        // 카운터 그래프 · GPU 타임스탬프는 엔진 프로파일러 경로를 탄다. 켜 두지 않으면 Tracy 에 GPU 줄이 없다.
+        // 카운터 그래프 · GPU 타임스탬프는 엔진 프로파일러 경로를 탄다. 켜 두지 않으면 외부 출력에 GPU 줄이 없다.
         if ( engine::areEngineServicesBound() )
             engine::getSubsystem<FrameProfiler>().setEnabled( true );
-
-        SW_LOG_INFO_ID( "Profiler.TracyProfilerStartedData", "Tracy profiler started (data port %#, memory %#) — connect with tracy-profiler -a 127.0.0.1", getTracyPort(),
-                        bObserveAllocations ? "on" : "off" );
         return true;
 #else
         return false;
 #endif
-    }
-
-    bool ProfilerBackend::isTracyCompiled()
-    {
-#if SW_PROFILER_BACKEND_COMPILED
-        return TracyProfilerBackend::isCompiled();
-#else
-        return false;
-#endif
-    }
-
-    uint16 ProfilerBackend::getTracyPort()
-    {
-        return TracyProfilerBackend::getDataPort();
     }
 
 #if SW_PROFILER_BACKEND_COMPILED
