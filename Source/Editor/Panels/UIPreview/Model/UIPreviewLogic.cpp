@@ -592,7 +592,7 @@ namespace sw::editor
         const Widget* pRoot = screen.getTree().getRoot();
         if ( pRoot == nullptr )
             return unexpected( Error{ ErrorKind::NotFound, "the preview has no widget tree" } );
-        const expected<shared_ptr<const UIDocumentAsset>> document = documents.findOrLoad( documentPath );
+        const expected<shared_ptr<const UIDocumentAsset>> document = documents.findOrLoad( documentPath, screen.getResourceTagOverride() );
         if ( document.has_value() == false )
             return unexpected( Error{ ErrorKind::NotFound, "the document could not be loaded", document.error().message() }.appendDetail( document.error().detail() ) );
         return UIDocumentWriter::write( screen.getDesc(), ( *document )->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );

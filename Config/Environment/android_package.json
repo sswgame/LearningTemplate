@@ -1,0 +1,13 @@
+{
+    "_comment": "Android APK 패키징 값(py -3 -m Scripts android-apk). 최소 API 는 프리셋 Android-Shipping 의 ANDROID_PLATFORM 하나가 정본이고, 대상 API · build-tools 판은 search_paths.defaults.json(android_platform · android_build_tools)이다. games 는 게임마다 덮는 칸이다(없는 칸은 위 값).",
+    "application_id_prefix": "com.swengine.",
+    "lib_name": "App",
+    "label": "SW Engine",
+    "version_code": 1,
+    "version_name": "0.1",
+    "screen_orientation": "sensorLandscape",
+    "vulkan_version": "0x402000",
+    "page_size_kb": 16,
+    "debug_keystore": "build/AndroidDebug/debug.keystore",
+    "games": {}
+}

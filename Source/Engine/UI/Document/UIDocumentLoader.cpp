@@ -14,6 +14,8 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/UI/Document/UIDocument.h"
@@ -208,6 +210,7 @@ namespace sw
             struct InstantiateContext
             {
                 UIDocumentCache*      _pCache;
+                const ResourceTagSet* _pTagOverride; ///< 조각을 찾을 변형의 태그(문서와 같은 것)
                 vector<string>        _listFragmentStack;
                 vector<UIBindingDef>* _pOutListBinding;
                 string*               _pError;
@@ -284,7 +287,7 @@ namespace sw
                             widget = failInstantiate( document, node, ( bRecursive ? "fragment includes itself: " : "fragments nest too deep: " ) + chain );
                             return widget;
                         }
-                        const expected<shared_ptr<const UIDocumentAsset>> loaded = _pCache->findOrLoad( node._fragment );
+                        const expected<shared_ptr<const UIDocumentAsset>> loaded = _pCache->findOrLoad( node._fragment, *_pTagOverride );
                         if ( loaded.has_value() == false )
                         {
                             widget = failInstantiate( document, node, "fragment '" + node._fragment + "' is not loaded: " + string( loaded.error().message().data(), loaded.error().message().size() ) + ": " + string( loaded.error().detail().data(), loaded.error().detail().size() ) );
@@ -404,11 +407,18 @@ namespace sw
 
 namespace sw
 {
-    expected<void> UIDocumentLoader::parse( string_view text, string_view path, UIDocumentAsset& outAsset )
+    expected<void> UIDocumentLoader::parse( string_view sourceText, string_view path, const ResourceContext& composeContext, UIDocumentAsset& outAsset )
     {
         using Internal = UIDocumentLoaderInternal;
         UIDocumentAsset asset{};
         asset._path = Internal::normalizeDocumentPath( path );
+
+        // 리소스 글의 한 길(조건 · 층)을 지난다 — 예전에는 원문을 바로 읽어 `_when="screen.compact"` 가 풀리지 않았다(`docs/PlatformTargets.md`).
+        string flatText;
+        bool   bComposed = false;
+        if ( ResourceComposer::compose( sourceText, path, composeContext, flatText, bComposed ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document could not be composed (the log says why)", path } );
+        const string_view text = bComposed ? string_view( flatText ) : sourceText;
 
         XMLDocument document;
         if ( document.parse( text, path ) == false )
@@ -496,13 +506,13 @@ namespace sw
         return unique_ptr<Widget>( static_cast<Widget*>( block.release() ) );
     }
 
-    expected<unique_ptr<Widget>> UIDocumentLoader::instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, vector<UIBindingDef>& outListBinding )
+    expected<unique_ptr<Widget>> UIDocumentLoader::instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, const ResourceTagSet& tagOverride, vector<UIBindingDef>& outListBinding )
     {
         if ( document._listNode.empty() )
             return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document cannot be built", UIDocumentLoaderInternal::makeError( document._path, 0, "document has no root widget" ) } );
         const size_t                                 bindingStart = outListBinding.size();
         string                                       reason; // 위젯을 만드는 깊은 곳(조각 · 필드 읽기)이 `경로:줄: 까닭` 을 적는다
-        UIDocumentLoaderInternal::InstantiateContext context{ &cache, vector<string>{ document._path }, &outListBinding, &reason };
+        UIDocumentLoaderInternal::InstantiateContext context{ &cache, &tagOverride, vector<string>{ document._path }, &outListBinding, &reason };
         unique_ptr<Widget>                           root = context.instantiateNode( document, 0, string{} );
         if ( root == nullptr )
         {

@@ -47,15 +47,17 @@
 
 - 안전 여백: 플랫폼 창이 `IWindow::getSafeAreaInsets`(물리 픽셀)를 준다 — Android 는 JNI `getRootWindowInsets`, 웹은 셸 HTML 의 CSS 변수 `--sw-safe-left/top/right/bottom`(= `env(safe-area-inset-*)`). `UIScaleSettings::makeViewport` 가 변마다 디버그 흉내(`gv_uiSafeZone`)와 큰 쪽을 고른다.
 - 크기 · 회전 · 수명: `CallbackInputWindow::applyPlatformResize` 하나로 모은다. Android `APP_CMD_TERM_WINDOW` → `SurfaceLost`(렌더러가 `IRHIDevice::releaseSurface`), `INIT_WINDOW` → `SurfaceRestored`(`restoreSurface`), `PAUSE` · `RESUME` · 웹 `visibilitychange` → 앱 멈춤 · 돌아옴. Vulkan 스왑체인은 `IDENTITY` 변환이라 합성기가 돌린다 — 회전한 기기는 표시마다 `VK_SUBOPTIMAL_KHR` 를 주므로 서피스의 회전 · 크기가 정말 바뀌었을 때만 다시 만든다(`VulkanRHISwapChain::hasSurfaceChanged`). 엔진이 그림을 미리 돌리는 pre-rotation 은 남은 일이다.
-- 좁은 화면 · 방향: 리소스 태그 `screen.compact`(dp 너비 < `uiscale.xml` `_compactMaxWidth`) · `orientation.portrait` — UI 문서가 `_when` 변형으로 다시 배치한다.
+- 좁은 화면 · 방향: 리소스 태그 `screen.compact`(dp 너비 < `uiscale.xml` `_compactMaxWidth`) · `orientation.portrait` — UI 문서 · 스타일 시트가 읽을 때 `_when` 변형으로 다시 배치한다(캐시가 합성의 한 길을 지난다, 태그가 바뀌면 `reloadComposed`). 규칙은 `UIScaleSettings::makeScreenTags` 한 곳이다.
 - 손가락: 터치 장치의 첫 손가락이 UI 포인터가 되고, 조작을 비켜 짚으면 `_minTouchTargetSize`(48)까지 넓혀 고른다(`UIEventRouter::hitTestTouch`).
 - 품질 등급: `engine.settings.xml` 의 `<AutoDetect platform=… requireNativeBindless=…>` — 플랫폼 기본 RHI 의 정적 능력과 시스템 메모리로 고른다.
-- 에디터: UI 미리보기 견본(`uiresolutions.xml`)이 기기 여백 · density 를 싣고 "돌리기" 로 가로를 본다. 같은 조건의 시나리오는 `engine/automation/screenadapt`(단계 `Touch`).
+- 에디터: UI 미리보기 견본(`uiresolutions.xml`)이 기기 여백 · density 를 싣고 "돌리기" 로 가로를 본다. 미리보기 화면은 자기 뷰포트의 화면 태그를 그 화면에만 바꿔 끼운다(`ResourceContext::withTagOverride` — 엔진 태그 · 게임 UI 는 그대로, 변형은 캐시에 따로, 저장은 같은 태그로 조건을 되돌린다). 같은 조건의 시나리오는 `engine/automation/screenadapt`(단계 `Touch`).
+- APK: `py -3 -m Scripts android-apk --game <게임>` 이 Android-Shipping 빌드의 `libApp.so` 와 쿠킹한 팩(`assets/Packs`, 압축하지 않는다)을 서명한 디버그 APK(`build/Android-Shipping/Apk/<게임>-debug.apk`)로 묶는다 — Gradle 없이 aapt2 · zipalign(16KB 페이지) · apksigner. 매니페스트 틀은 `cmake/Modules/Platform/AndroidManifest.xml`, 값(앱 id · 방향 · 판)은 `Config/Environment/android_package.json`.
 
 ## 남은 일(코드를 붙여 보지 못한 것)
 
 - 빌드: Emscripten · NDK 로 한 번도 짓지 못했다 — 프리셋 `Web-Shipping` · `Android-Shipping` 이 `Tools/emsdk` · `Tools/Android/ndk/<판>` 을 가리킨다(설치 `py -3 Scripts/setup/PlatformSdk.py all`, 프리셋과 설정의 판 대조는 `… check`). Core · Engine 의 `#error "Unsupported platform"` 사슬 중 Android · Web 갈래가 없는 곳이 컴파일에서 드러난다(설계대로).
-- Android: APK 패키징(매니페스트 · Gradle), pre-rotation(스왑체인을 `currentTransform` 으로 만들고 백버퍼에 그리는 정점 단계 · 뷰포트 · 가위를 돌린다 — 백버퍼를 쓰는 PSO 마다 회전 변형이 필요하다), 미리보기 문맥의 `screen` 태그(지금 태그는 전역이라 에디터 미리보기에 compact 변형이 보이지 않는다).
+- Android 내용 읽기: APK 의 `assets/Packs` 를 읽는 `IContentFileSource`(AAsset)를 기동이 걸어야 한다 — 지금 Android 는 소스가 없으면 `ContentFileSource::getCurrent` 가 멈춘다(설계대로). 팩을 Android 대상(ASTC · ETC2)으로 쿠킹하는 길도 함께 정한다(`android-apk --packs-dir`).
+- Android pre-rotation: 백버퍼를 쓰는 곳이 하나가 아니다(Present · Canvas · 캡처 → 백버퍼 블릿 · 개발 겹치기) — 그래서 패스마다 회전 변형을 두지 않고 한 곳에서 돌린다. 계획: 회전한 서피스면 Vulkan 이 스왑체인을 `currentTransform` 으로 만들고 논리 크기(90 · 270 이면 너비 · 높이를 맞바꾼 것)를 백버퍼 크기로 알린다(`IRHIDevice` 에 회전 조회) → 프레임은 출력을 논리 크기 대기 텍스처로 돌려(에디터 게임 뷰 RT 와 같은 길 — 캡처 · 개발 겹치기 순서 그대로) → 끝에 엔진 내부 출력 패스 하나(FSR RCAS 처럼 PSO 칸만 있는 타입, 정점 단계가 UV 를 돌리는 전용 셰이더)가 대기 텍스처를 실제 백버퍼에 돌려 그린다. `hasSurfaceChanged` 는 그대로 만든 때의 회전과 대조한다. 언리얼 모바일도 백버퍼 앞 마지막 패스에서 돌린다(기억).
 
 ## 입력(웹 · Android)
 
@@ -71,7 +73,7 @@
 | Dawn | vcpkg `dawn`(`ThirdParty/dawn`) — 데스크톱은 네이티브 구현(`dawn::webgpu_dawn`, Windows `vulkan,d3d12`, Linux `vulkan,x11`), 웹은 같은 판의 emdawnwebgpu 포트 파일(`webgpu/webgpu.h`) | vcpkg 기준선의 판(지금 20260911.162847) | BSD-3-Clause |
 | Tint 실행 파일 | 셰이더 쿠커의 SPIR-V → WGSL 단계 — `dawn[tint-tools]` 가 깔고 빌드가 App 옆에 둔다(`sw_copyTintTool`) | Dawn 과 같은 판 | BSD-3-Clause |
 | Android NDK | `libvulkan.so` · `libandroid.so` · `liblog.so`, `android_native_app_glue`(NDK 소스) — `Tools/Android/ndk/<판>`(`PlatformSdk.py android`) | `android_ndk_version` | Apache-2.0(NDK), 앱 글루 Apache-2.0 |
-| Android SDK · Gradle | APK 패키징(NativeActivity 매니페스트) | AGP 8.x | Apache-2.0 |
+| Android SDK build-tools · 플랫폼 | APK 패키징(aapt2 · zipalign · apksigner, android.jar) — `Tools/Android`(`PlatformSdk.py android`) | `android_build_tools` · `android_platform` | Apache-2.0 |
 
 ## 엔진 비교(기억)
 

@@ -17,6 +17,7 @@
 
 #include "Engine/Presentation/UILayer.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Document/UIBindingDef.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
@@ -116,6 +117,8 @@ namespace sw
         const string& getDocumentPath() const { return _documentPath; }
         /** @brief 문서에서 분리한 바인딩 식입니다(위젯 번호가 채워진 것이며, 바인딩 단계가 연결합니다). */
         const vector<UIBindingDef>& getBindings() const { return _listBinding; }
+        /** @brief 문서 · 조각 · 스타일 시트를 찾을 변형의 태그입니다(엔진 태그에서 바꿔 끼울 축 — `UISystem::setResourceTagOverride`). 게임 화면은 빈 집합(엔진 판)입니다. */
+        const ResourceTagSet& getResourceTagOverride() const { return _resourceTagOverride; }
         /** @brief 문서(와 그 조각)가 지정한 스타일 시트 경로입니다(테마 시트 뒤에 붙습니다). */
         const vector<string>& getStyleSheets() const { return _listStyleSheet; }
         /** @brief 이 화면의 스타일 세트(테마, 문서 시트 순서)입니다. 올리기 전이면 nullptr 입니다. */
@@ -191,12 +194,13 @@ namespace sw
 
         WidgetTree                                                          _tree;
         UIScreenDef                                                         _desc;
-        string                                                              _documentPath;    ///< 생성한 문서입니다(코드로 만들었으면 빈 문자열).
-        vector<UIBindingDef>                                                _listBinding;     ///< 문서에서 분리한 바인딩 식입니다.
-        vector<string>                                                      _listStyleSheet;  ///< 문서와 조각이 지정한 스타일 시트입니다.
-        unique_ptr<UIStyleSet>                                              _styleSet;        ///< 테마, 문서 시트 순서의 스타일 세트입니다(UISystem 이 설정합니다).
-        unique_ptr<UIBindingSet>                                            _bindingSet;      ///< 바인딩 식을 해석한 것입니다(뷰모델, 설정과 위젯 필드를 연결합니다).
-        UIAnimationPlayer                                                   _animationPlayer; ///< 문서 애니메이션과 코드 트윈 재생기입니다(트리를 가리키므로 `_tree` 뒤에 생성합니다).
+        string                                                              _documentPath;        ///< 생성한 문서입니다(코드로 만들었으면 빈 문자열).
+        ResourceTagSet                                                      _resourceTagOverride; ///< 문서 변형의 태그(`getResourceTagOverride`). 비면 엔진 판
+        vector<UIBindingDef>                                                _listBinding;         ///< 문서에서 분리한 바인딩 식입니다.
+        vector<string>                                                      _listStyleSheet;      ///< 문서와 조각이 지정한 스타일 시트입니다.
+        unique_ptr<UIStyleSet>                                              _styleSet;            ///< 테마, 문서 시트 순서의 스타일 세트입니다(UISystem 이 설정합니다).
+        unique_ptr<UIBindingSet>                                            _bindingSet;          ///< 바인딩 식을 해석한 것입니다(뷰모델, 설정과 위젯 필드를 연결합니다).
+        UIAnimationPlayer                                                   _animationPlayer;     ///< 문서 애니메이션과 코드 트윈 재생기입니다(트리를 가리키므로 `_tree` 뒤에 생성합니다).
         unordered_map<hashed_string, CommandEntry, hashed_string::HashFunc> _mapCommandToHandler;
         IDAllocator<uint64>                                                 _commandIDAllocator; ///< 명령 등록 구독 번호
         UISystem*                                                           _pUISystem;          ///< 이 화면을 올린 시스템입니다(올리기 전에는 nullptr).

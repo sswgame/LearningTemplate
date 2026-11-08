@@ -48,6 +48,8 @@ namespace sw
          * @return 읽지 못하거나 파싱이 실패하면 nullptr 과 @p outError(`<경로>:<줄>: <이유>`)입니다. 실패는 캐시에 남기지 않습니다(고치면 다음 요청이 다시 읽는다).
          */
         expected<shared_ptr<const UIDocumentAsset>> findOrLoad( string_view path );
+        /** @brief `findOrLoad` 와 같되 엔진 태그에 @p tagOverride 의 축을 바꿔 끼워 합친 변형입니다(에디터 UI 미리보기 — `UITextAssetCache` 의 변형). 빈 집합이면 엔진 판입니다. */
+        expected<shared_ptr<const UIDocumentAsset>> findOrLoad( string_view path, const ResourceTagSet& tagOverride );
         /** @brief 파일 대신 읽을 문서 텍스트를 경로에 등록합니다(테스트와 도구용). 이미 읽어 둔 그 경로의 문서는 버립니다. */
         void registerMemoryDocument( string_view path, string_view text ) { _cache.registerMemoryText( path, text ); }
         /** @brief 문서 글을 읽어 파싱한 횟수입니다(캐시가 파일을 한 번만 읽는지 테스트가 본다). */
