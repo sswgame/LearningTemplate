@@ -19,6 +19,7 @@
 #include "Editor/Common/Workspace/Undo/SaveReloadGuard.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/AppearanceEditModel.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/BodyDataEditModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/BonePoseEditModel.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/FitCheckSummary.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/SocketEditModel.h"
@@ -221,7 +222,22 @@ namespace sw::editor
         const AppearanceDatabase&        getDatabase() const { return _database; }
         const UserAppearancePresetStore& getPresetStore() const { return _presetStore; }
 
+        // --- 몸 데이터 파일(채널 매핑 · 몸 프로필 · 구간 별칭) ---
+        BodyDataEditModel& getBodyShapesModel() { return _bodyShapes; }
+        BodyDataEditModel& getBodyProfilesModel() { return _bodyProfiles; }
+        BodyDataEditModel& getVisualsModel() { return _visuals; }
+        /**
+         * @brief 몸 데이터 파일을 엽니다 — 몸 부품의 채널 매핑 @p bodyShapesAsset(리소스 id, 비면 닫는다)과 외형 폴더의 `bodyprofiles.xml` · `itemvisuals.xml`. 고친 파일은 다시 읽지 않습니다.
+         * @details 못 연 파일은 상태 줄에 까닭을 남긴다(그 줄의 편집 칸은 비활성).
+         */
+        void openBodyData( string_view bodyShapesAsset );
+        /** @brief 고친 몸 데이터 파일을 쓰고 외형 데이터를 다시 읽습니다(미리보기 몸이 새 값으로 다시 입는다). 하나라도 못 쓰면 false 이고 상태 줄에 까닭이 있다. */
+        [[nodiscard]] bool saveBodyData();
+        bool               isBodyDataDirty() const { return _bodyShapes.isDirty() || _bodyProfiles.isDirty() || _visuals.isDirty(); }
+
     private:
+        /** @brief 리소스 id @p assetPath 의 몸 데이터 파일을 @p model 에 엽니다. 못 열면 상태 줄에 남깁니다. */
+        void openBodyDataFile( BodyDataEditModel& model, string_view assetPath );
         /** @brief 클립 폴더를 훑어 클립 이름을 모읍니다. */
         void loadClipNames();
         /** @brief 에디터 쪽 로컬 저장소입니다. 없으면 까닭을 상태 줄에 남기고 nullptr 입니다. */
@@ -236,6 +252,9 @@ namespace sw::editor
         SocketEditModel               _sockets;
         BonePoseEditModel             _pose;
         AppearanceEditModel           _appearance;
+        BodyDataEditModel             _bodyShapes;   ///< 몸 부품의 채널 매핑(`*.bodyshape.xml`)
+        BodyDataEditModel             _bodyProfiles; ///< 외형 폴더의 `bodyprofiles.xml`(지글 · 주름 · 체액)
+        BodyDataEditModel             _visuals;      ///< 외형 폴더의 `itemvisuals.xml`(구간 별칭 · 묶음 · 염색 여부)
         SaveReloadGuard<SocketSet>    _reloadGuard;
         FitCheckSummary               _fit;
         shared_ptr<const ItemCatalog> _pItems; ///< 공유 캐시의 한 벌(게임이 쥔 아이템 카탈로그와 같은 객체)

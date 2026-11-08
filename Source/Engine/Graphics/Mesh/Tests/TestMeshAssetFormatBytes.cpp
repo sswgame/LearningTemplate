@@ -97,6 +97,21 @@ namespace
     };
 } // namespace
 
+/** @brief [MeshAssetFormatBytesTest] 구간의 날 이름(원본 머티리얼 · 메시)이 `SSRC` 덩어리로 왕복하고, 구간 수가 다른 덩어리는 깨진 파일이다 */
+SW_TEST_CASE( MeshAssetFormatBytesTest, SectionSourceNamesRoundTrip )
+{
+    MeshAssetData data = XTestUtil::makeQuad();
+    data._listSection.push_back( MeshSection{ hashed_string( "wood" ), 0, 3, MeshPersonVisibility::Both, hashed_string( "Wood" ), hashed_string( "Table" ) } );
+    data._listSection.push_back( MeshSection{ hashed_string( "stone" ), 3, 3, MeshPersonVisibility::Both } );
+    const vector<uint8> bytes = XTestUtil::makeBytes( data );
+    MeshAssetData       read{};
+    SW_REQUIRE_TRUE( MeshAssetFormat::readFromBytes( bytes.data(), bytes.size(), read ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, read._listSection.size() );
+    SW_EXPECT_TRUE( read._listSection[0]._sourceMaterial == hashed_string( "Wood" ) );
+    SW_EXPECT_TRUE( read._listSection[0]._sourceNode == hashed_string( "Table" ) );
+    SW_EXPECT_TRUE( read._listSection[1].hasSourceNames() == false );
+}
+
 /** @brief [MeshAssetFormatBytesTest] 모든 덩어리가 왕복한다 — 읽기를 공통 도구로 옮겨도 형식은 그대로다 */
 SW_TEST_CASE( MeshAssetFormatBytesTest, EveryChunkRoundTrips )
 {
@@ -122,6 +137,7 @@ SW_TEST_CASE( MeshAssetFormatBytesTest, EveryChunkRoundTrips )
     SW_EXPECT_EQUAL( uint16{ 1 }, read._listSkinVertex[3]._arrJoint[0] );
     SW_REQUIRE_EQUAL( size_t{ 1 }, read._listSection.size() );
     SW_EXPECT_TRUE( read._listSection[0]._name == hashed_string( "Left" ) );
+    SW_EXPECT_TRUE( read._listSection[0]._sourceMaterial.empty() ); // 날 이름이 없으면 `SSRC` 덩어리를 쓰지 않는다(옛 파일과 같은 바이트)
     SW_REQUIRE_EQUAL( size_t{ 1 }, read._listMorphTarget.size() );
     SW_REQUIRE_EQUAL( size_t{ 1 }, read._listMorphTarget[0]._listDelta.size() );
     SW_EXPECT_NEAR( 0.5f, read._listMorphTarget[0]._listDelta[0]._position._x, 0.0f );

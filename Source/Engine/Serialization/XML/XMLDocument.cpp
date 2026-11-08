@@ -559,6 +559,16 @@ namespace sw
 
     bool XMLDocument::parse( string_view xmlText, string_view sourceName )
     {
+        return parseText( xmlText, sourceName, false );
+    }
+
+    bool XMLDocument::parseKeepingComments( string_view xmlText, string_view sourceName )
+    {
+        return parseText( xmlText, sourceName, true );
+    }
+
+    bool XMLDocument::parseText( string_view xmlText, string_view sourceName, bool bKeepComments )
+    {
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
         _impl->doc.reset();
@@ -574,7 +584,7 @@ namespace sw
         const pugi::xml_parse_result result = _impl->doc.load_buffer(
             xmlText.data(),
             xmlText.size(),
-            pugi::parse_default | pugi::parse_trim_pcdata );
+            pugi::parse_default | pugi::parse_trim_pcdata | ( bKeepComments ? pugi::parse_comments : 0u ) );
 
         if ( result.status != pugi::status_ok )
         {
@@ -693,7 +703,13 @@ namespace sw
         if ( _impl == nullptr )
             return {};
         if ( pName == nullptr )
-            return XMLNode{ _impl->doc.first_child().internal_object() };
+        {
+            // 첫 엘리먼트다 — 주석을 남긴 문서(`parseKeepingComments`)는 루트 앞에 주석 노드가 온다.
+            pugi::xml_node node = _impl->doc.first_child();
+            while ( node && node.type() != pugi::node_element )
+                node = node.next_sibling();
+            return XMLNode{ node.internal_object() };
+        }
         return XMLNode{ XMLDocumentInternal::findChild( _impl->doc, pName ).internal_object() };
     }
 

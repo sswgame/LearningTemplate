@@ -2,6 +2,7 @@
 <!--
   에디터 시나리오 — 캐릭터 편집 창의 몸 탭: 외형 데이터를 읽고 몸 탭에서 피부 층(화장 · 문신) 하나를 더한다. 탭 화면을 찍는다(사람 · 에이전트가 EditorUI.md 체크리스트로 본다).
   ① 외형 탭에서 데이터 읽기. ② 몸 탭 — 빈 층 목록은 안내 글을 보이고, 층 더하기 콤보의 첫 종류를 고르면 층이 하나다(되돌리기 기록은 단위 테스트 BodyCustomizationEditTest 가 본다).
+  ③ 몸 데이터 편집 줄(채널 매핑 · 지글 · 주름 · 체액 경로 · 구간 별칭 — 저장 · 되돌리기)은 열기만으로 미저장이 되지 않는다(편집 · 되돌리기 · 주석 보존은 단위 테스트 BodyDataEditTest).
   실행: App -EnableEditor -scenario=engine/automation/editor/characterbody.scenario.xml -unattended
 -->
 <Scenario name="editor.characterbody" fixedDelta="0.0166667" timeoutFrames="1300" startAfter="Immediately" input="exclusive">
@@ -34,5 +35,6 @@
 	<EditorWaitSettled/>
 	<CaptureEditorUI file="charactereditor/body_layer.png"/>
 	<Expect watch="Editor.CharacterEditorStatusSet" equals="0"/>
+	<Expect watch="Editor.CharacterEditorBodyDataDirty" equals="0"/>
 	<Pass/>
 </Scenario>

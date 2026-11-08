@@ -131,10 +131,15 @@ namespace sw
             vector<uint8> _rgbaBytes;
             bool          _bSwappedToBgra{ false }; ///< `_rgbaBytes` 를 이미 BGRA 순서로 바꿨다(`Busy` 로 미룬 갱신을 다시 낼 때 두 번 바꾸지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
-        unordered_map<string, Entry> _mapEntry  SW_GUARDED_BY( _mutex );
-        vector<RegionUpdate>                    _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
-        vector<RegionUpdate>                    _listFlushingRegion; ///< 렌더 스레드만 쓰는 맞바꾸기 자리(저장소를 재사용한다)
-        mutex                                   _regionMutex;
+        unordered_map<string, Entry> _mapEntry SW_GUARDED_BY( _mutex );
+        vector<RegionUpdate>                   _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
+        vector<RegionUpdate>                   _listFlushingRegion; ///< 렌더 스레드만 쓰는 맞바꾸기 자리(저장소를 재사용한다)
+        mutex                                  _regionMutex;
+        vector<TextureLayerBakeRequest>        _listPendingBake; ///< 게임 스레드가 쌓고 렌더 스레드가 가져간다(`_bakeMutex`) — 결과 타깃마다 하나
+        /// @brief 최근에 그린 굽기(결과 타깃, 그린 번호) — 앞이 오래된 것이고 `kBakeHistoryCount` 를 넘으면 앞을 버린다(`_bakeMutex`).
+        vector<pair<string, uint32>>            _listBakedTarget;
+        uint32                                  _bakeSerial{ 0 }; ///< 그린 굽기마다 오르는 번호(`_bakeMutex`)
+        mutex                                   _bakeMutex;
         unordered_map<string, RenderTargetSize> _mapRenderTargetSize; ///< `declareRenderTarget` 이 알린 크기
         shared_mutex                            _mutex;
         /// @brief 항목의 `_bLoading` 이 내려갈 때 깨운다. 태스크 대기가 아니다 — 맵 잠금 아래의 항목 상태를 기다리고, 올리는 쪽(`reload` · `resizeRenderTarget`)은 태스크 없이 디바이스 스레드에서 돈다.
@@ -926,6 +931,76 @@ namespace sw
         }
         return uploadedCount;
     }
+    void TextureCache::requestLayerBake( TextureLayerBakeRequest request )
+    {
+        if ( _impl == nullptr || request._albedoTarget.empty() )
+            return;
+        ScopedLock<mutex> lock{ _impl->_bakeMutex };
+        for ( TextureLayerBakeRequest& pending : _impl->_listPendingBake )
+        {
+            if ( pending._albedoTarget == request._albedoTarget )
+            {
+                pending = std::move( request ); // 같은 결과의 앞 요청은 낡았다
+                return;
+            }
+        }
+        _impl->_listPendingBake.push_back( std::move( request ) );
+    }
+
+    void TextureCache::deferLayerBake( TextureLayerBakeRequest request )
+    {
+        if ( _impl == nullptr || request._albedoTarget.empty() )
+            return;
+        ScopedLock<mutex> lock{ _impl->_bakeMutex };
+        for ( const TextureLayerBakeRequest& pending : _impl->_listPendingBake )
+        {
+            if ( pending._albedoTarget == request._albedoTarget )
+                return; // 그 사이 게임 스레드가 새 요청을 냈다 — 미룬 옛 요청은 버린다
+        }
+        _impl->_listPendingBake.push_back( std::move( request ) );
+    }
+
+    void TextureCache::takeLayerBakes( vector<TextureLayerBakeRequest>& outListRequest )
+    {
+        outListRequest.clear();
+        if ( _impl == nullptr )
+            return;
+        ScopedLock<mutex> lock{ _impl->_bakeMutex };
+        outListRequest.swap( _impl->_listPendingBake );
+    }
+
+    void TextureCache::recordLayerBaked( const string& albedoTarget )
+    {
+        if ( _impl == nullptr )
+            return;
+        ScopedLock<mutex> lock{ _impl->_bakeMutex };
+        ++_impl->_bakeSerial;
+        _impl->_listBakedTarget.push_back( pair<string, uint32>{ albedoTarget, _impl->_bakeSerial } );
+        if ( _impl->_listBakedTarget.size() > kBakeHistoryCount )
+            _impl->_listBakedTarget.erase( _impl->_listBakedTarget.begin() );
+    }
+
+    uint32 TextureCache::getLayerBakeSerial() const
+    {
+        if ( _impl == nullptr )
+            return 0;
+        ScopedLock<mutex> lock{ _impl->_bakeMutex };
+        return _impl->_bakeSerial;
+    }
+
+    bool TextureCache::wasLayerBakedAfter( string_view albedoTarget, uint32 serial ) const
+    {
+        if ( _impl == nullptr )
+            return false;
+        ScopedLock<mutex> lock{ _impl->_bakeMutex };
+        for ( const pair<string, uint32>& baked : _impl->_listBakedTarget )
+        {
+            if ( baked.second > serial && StringUtil::equals( baked.first, albedoTarget ) )
+                return true;
+        }
+        return false;
+    }
+
     void TextureCache::release( string_view relativePath )
     {
         if ( relativePath.empty() || _impl == nullptr )

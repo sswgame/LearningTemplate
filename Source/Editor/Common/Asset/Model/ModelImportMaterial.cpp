@@ -233,17 +233,47 @@ namespace sw::editor
                 const string baseStem = ModelImportUtil::makeFileStem( listMaterialName[materialIndex] );
                 stemIt                = mapMaterialStem.emplace( materialIndex, ModelImportUtil::makeNumberedStem( baseStem, mapStemUse[baseStem]++ ) ).first;
             }
-            section._fileStem         = stemIt->second;
-            section._sectionName      = section._fileStem + ( visibility == MeshPersonVisibility::ThirdPersonOnly ? "_tp" : ( visibility == MeshPersonVisibility::FirstPersonOnly ? "_fp" : "" ) );
-            section._firstIndex       = static_cast<uint32>( begin * 3 );
-            section._indexCount       = static_cast<uint32>( ( end - begin ) * 3 );
-            section._personVisibility = visibility;
+            section._fileStem                    = stemIt->second;
+            section._sectionName                 = section._fileStem + ( visibility == MeshPersonVisibility::ThirdPersonOnly ? "_tp" : ( visibility == MeshPersonVisibility::FirstPersonOnly ? "_fp" : "" ) );
+            section._firstIndex                  = static_cast<uint32>( begin * 3 );
+            section._indexCount                  = static_cast<uint32>( ( end - begin ) * 3 );
+            section._personVisibility            = visibility;
+            const cgltf_material& sourceMaterial = data.materials[materialIndex]; // 날 이름(파일 이름 꼴로 바꾸기 전) — 대소문자만 다른 두 머티리얼도 가른다
+            section._sourceMaterial              = sourceMaterial.name != nullptr ? string( sourceMaterial.name ) : listMaterialName[materialIndex];
+            const cgltf_mesh* pSource            = inoutBody._listTriangleSourceMesh[begin];
+            section._sourceNode                  = pSource != nullptr && pSource->name != nullptr ? string( pSource->name ) : string{};
             inoutResult._listSection.push_back( std::move( section ) );
             begin = end;
         }
         // 구간 없는 꼬리(머티리얼 없는 삼각형)도 순서만 최적화한다.
         if ( begin < triangleCount )
             ModelImportGeometry::optimizeTriangleRange( inoutBody, begin, triangleCount );
+    }
+
+    uint32 ModelImportMaterial::keepPreviousSectionNames( vector<ModelImportSection>& inoutListSection, const vector<MeshSection>& listPrevious )
+    {
+        uint32 keptCount = 0;
+        for ( ModelImportSection& section : inoutListSection )
+        {
+            if ( section._sourceMaterial.empty() )
+                continue;
+            for ( const MeshSection& previous : listPrevious )
+            {
+                // 날 이름 · 가시성이 같은 앞 구간 — 머티리얼 파일 이름(번호)이 바뀌어도 같은 구간이다.
+                const bool bSameSource = previous.hasSourceNames() && previous._personVisibility == section._personVisibility &&
+                                         StringUtil::equals( previous._sourceMaterial.c_str(), section._sourceMaterial ) && StringUtil::equals( previous._sourceNode.c_str(), section._sourceNode );
+                if ( bSameSource == false || StringUtil::equals( previous._name.c_str(), section._sectionName ) )
+                    continue;
+                const bool bNameTaken = VectorUtil::containsIf( inoutListSection, [&previous]( const ModelImportSection& other )
+                { return StringUtil::equals( other._sectionName, previous._name.c_str() ); } );
+                if ( bNameTaken )
+                    continue; // 다른 새 구간이 이미 그 이름이다 — 이름이 겹치는 메시는 구간이 없어진다(`Mesh::setSections`)
+                section._sectionName = previous._name.c_str();
+                ++keptCount;
+                break;
+            }
+        }
+        return keptCount;
     }
 
     bool ModelImportMaterial::collectSectionTextures( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult )

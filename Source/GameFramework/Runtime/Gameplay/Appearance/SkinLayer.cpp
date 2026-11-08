@@ -22,6 +22,8 @@ namespace sw
         struct SkinLayerInternal
         {
             static constexpr const utf8* kArrValueAttribute[] = { "layer", "color", "opacity", "offset", "scale", "rotation", "mirror", "hidden" };
+            static constexpr float32     kByteMax             = 255.0f; ///< 번짐 텍스처 한 채널의 끝 값
+            static constexpr float32     kTexelMidpoint       = 0.5f;   ///< 번짐 이동 0 의 채널 값
 
             static float32 quantizeUnit( float32 value, uint32 steps )
             {
@@ -226,6 +228,23 @@ namespace sw
     float32 SkinLayerSmearState::sampleDilution( const float2& uv ) const
     {
         return _resolution == 0 ? 0.0f : _listDilution[findCell( uv )];
+    }
+
+    void SkinLayerSmearState::makeTexturePixels( float32 offsetRange, vector<uint8>& outListPixel ) const
+    {
+        using Internal              = SkinLayerInternal;
+        constexpr float32 kByteMax  = Internal::kByteMax;
+        const size_t      cellCount = static_cast<size_t>( _resolution ) * _resolution;
+        outListPixel.assign( cellCount * 4, 0 );
+        const float32 scale = offsetRange > 0.0f ? Internal::kTexelMidpoint / offsetRange : 0.0f;
+        for ( size_t cell = 0; cell < cellCount; ++cell )
+        {
+            const float2& offset       = _listOffset[cell];
+            outListPixel[cell * 4]     = static_cast<uint8>( MathUtil::round( MathUtil::saturate( Internal::kTexelMidpoint + offset._x * scale ) * kByteMax ) );
+            outListPixel[cell * 4 + 1] = static_cast<uint8>( MathUtil::round( MathUtil::saturate( Internal::kTexelMidpoint + offset._y * scale ) * kByteMax ) );
+            outListPixel[cell * 4 + 2] = static_cast<uint8>( MathUtil::round( MathUtil::saturate( _listDilution[cell] ) * kByteMax ) );
+            outListPixel[cell * 4 + 3] = static_cast<uint8>( kByteMax );
+        }
     }
 
     float3 SkinSurfaceSample::blend( const float3& below, const float3& layer, float32 coverage, SkinLayerBlend mode )

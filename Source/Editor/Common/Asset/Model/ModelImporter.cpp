@@ -848,6 +848,17 @@ namespace sw::editor
         if ( rule._bodySurface.empty() == false && transferBodySurface( sourcePath, rule, result._mesh ) == false )
             return false;
 
+        // 다시 임포트면 앞 `.mesh` 의 구간 이름을 날 이름으로 이어받는다 — 외형 데이터가 짚는 구간 이름이 원본 머티리얼 추가 · 이름 바꿈으로 밀리지 않게.
+        vector<uint8> listPreviousByte;
+        MeshAssetData previous{};
+        const bool    bHasPrevious = result._listSection.empty() == false && FileUtil::exists( outputPath ) && FileUtil::readFile( outputPath, listPreviousByte ) &&
+                                  MeshAssetFormat::readFromBytes( listPreviousByte.data(), listPreviousByte.size(), previous );
+        if ( bHasPrevious && ModelImportMaterial::keepPreviousSectionNames( result._listSection, previous._listSection ) > 0 )
+        {
+            result._mesh._listSection = ModelImportVrm::makeMeshSections( result._listSection );
+            SW_LOG_INFO_ID( "ModelImporter.KeptSectionNames", "Re-import of '%#' kept the previous section names of sections with the same source material and mesh", sourcePath );
+        }
+
         // 옆 폴더는 임포트할 때마다 새로 쓴다. 규칙에서 빠진 클립과 사라진 부착 메시가 이전 파일로 남지 않게 하기 위해서다.
         const string sideFolder = makeImportedSideFolder( outputPath );
         if ( FileUtil::removeDirectory( sideFolder ) == false )

@@ -119,6 +119,8 @@ namespace sw
         RHIPipelineStateHandle findOrCreateExtensionProgramPSO( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest );
         /** @brief 2D 빛 쿠키 아틀라스 칸에 옮겨 그리는 PSO(전체 화면 블릿 셰이더, 아틀라스 포맷)를 찾거나 만듭니다. 기록 전(프레임 프리패스)에만 부릅니다. 못 만들면 0 입니다. */
         RHIPipelineStateHandle findOrCreateCookieAtlasPSO( RHIFormat atlasFormat );
+        /** @brief UV 공간 층 굽기 PSO(층 굽기 셰이더, 타깃 둘 — @p targetFormat)를 찾거나 만듭니다. 기록 전(프레임 프리패스)에만 부릅니다. 못 만들면 0 입니다. */
+        RHIPipelineStateHandle findOrCreateLayerBakePSO( RHIFormat targetFormat );
 
         /**
          * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 모두 만들어 둡니다.

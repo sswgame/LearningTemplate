@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 침 가닥 — 침 방아쇠(Drool)가 켜진 동안 몸 동작(CharacterBodyDynamicsComponent)이 입꼬리(소켓 Mouth)에서 켠다(bodyprofiles.xml 의 Fluid strand="true").
+     느리게 늘어지는 띠(태어난 순서로 잇는다)라 끈적한 줄기로 보인다. 텍스처는 Kenney 파티클 팩(CC0) circle_05(띠는 u 가 길이 · v 가 폭). -->
+<VFXEffectDef>
+	<_listEmitter>
+		<VFXEmitterDef _name="Strand" _renderMode="Ribbon" _texturePath="engine/textures/particles/kenney_particle/circle_05.dds" _blendMode="Alpha" _bLooping="true"
+		               _maxParticles="24" _duration="1" _spawnRate="12" _lifetimeMin="1.2" _lifetimeMax="1.2"
+		               _velocityMin="0, -0.04, 0.01" _velocityMax="0, -0.04, 0.01" _gravity="0, -0.15, 0">
+			<_sizeOverLife><_listKey><FloatCurveKey _time="0" _value="0.004" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0.002" _interpolation="Linear"/></_listKey></_sizeOverLife>
+			<_colorOverLife>
+				<_red><_listKey><FloatCurveKey _time="0" _value="0.9" _interpolation="Linear"/></_listKey></_red>
+				<_green><_listKey><FloatCurveKey _time="0" _value="0.92" _interpolation="Linear"/></_listKey></_green>
+				<_blue><_listKey><FloatCurveKey _time="0" _value="0.95" _interpolation="Linear"/></_listKey></_blue>
+				<_alpha><_listKey><FloatCurveKey _time="0" _value="0.6" _interpolation="Linear"/><FloatCurveKey _time="1" _value="0" _interpolation="Linear"/></_listKey></_alpha>
+			</_colorOverLife>
+		</VFXEmitterDef>
+	</_listEmitter>
+</VFXEffectDef>

@@ -14,9 +14,20 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
 
 namespace sw
 {
+    bool CustomizationDriveDef::isDrivenSection( const AppearanceSectionDef& section ) const
+    {
+        if ( _kind == CustomizationDriveKind::DyeChannel && section._bDyeable == false )
+            return false;
+        const auto matches = [&section]( const hashed_string& tag )
+        { return section.matchesTag( tag ); };
+        const bool bIncluded = _listInclude.empty() || VectorUtil::containsIf( _listInclude, matches );
+        return bIncluded && VectorUtil::containsIf( _listExclude, matches ) == false;
+    }
+
     namespace
     {
         struct CustomizationSchemaInternal

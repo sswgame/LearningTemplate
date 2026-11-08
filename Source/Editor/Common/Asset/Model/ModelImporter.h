@@ -76,6 +76,8 @@ namespace sw::editor
         uint32               _indexCount{ 0 };
         uint32               _materialIndex{ 0 }; ///< glTF 머티리얼 번호(`ModelImportResult::_listToonMaterial` · `_listPBRMaterial` 의 칸)
         MeshPersonVisibility _personVisibility{ MeshPersonVisibility::Both };
+        string               _sourceMaterial; ///< 원본의 날 머티리얼 이름(`MeshSection::_sourceMaterial` — 다시 임포트할 때 구간 이름을 지키는 열쇠)
+        string               _sourceNode;     ///< 이 구간의 첫 삼각형이 온 원본 메시 이름
     };
 } // namespace sw::editor
 

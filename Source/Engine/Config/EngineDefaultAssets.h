@@ -161,6 +161,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderFullscreenBlit; ///< 전체 화면 복사
         PROPERTY( Required )
+        DataPath _shaderLayerBake; ///< UV 공간 층 굽기(피부 화장 · 문신 · 번짐 — `TextureLayerBakeRequest`)
+        PROPERTY( Required )
         DataPath _shaderGPUCull; ///< GPU 컬링 · 드로우 커맨드 생성(컴퓨트)
         PROPERTY( Required )
         DataPath _shaderInstanceAnimation; ///< 인스턴스 애니메이션(컴퓨트)

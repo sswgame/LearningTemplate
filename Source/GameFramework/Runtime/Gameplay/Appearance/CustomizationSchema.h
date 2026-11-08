@@ -18,6 +18,7 @@
 namespace sw
 {
     class AppearanceLoadReport;
+    struct AppearanceSectionDef;
     class XMLNode;
 
     /** @brief 매개변수 종류입니다. */
@@ -76,6 +77,8 @@ namespace sw
         bool isMaterialDrive() const { return _kind == CustomizationDriveKind::MaterialScalar || _kind == CustomizationDriveKind::MaterialColor || _kind == CustomizationDriveKind::DyeChannel; }
         /** @brief 구간을 골라 거는 드라이브면 true 입니다(`include` · `exclude` 를 적었다). */
         bool isSectionTargeted() const { return _listInclude.empty() == false || _listExclude.empty() == false; }
+        /** @brief 구간 @p section 이 이 드라이브의 대상이면 true 입니다 — `include`(비면 모두) 안이고 `exclude` 밖이며, 염색이면 `dyeable` 구간이다(해석과 편집 창 강조가 같은 판정을 쓴다). */
+        bool isDrivenSection( const AppearanceSectionDef& section ) const;
     };
 
     /** @brief 매개변수 원소(`<Slider>` · `<Color>` · `<Choice>` · `<Attachment>`)가 함께 받는 칸입니다. 종류마다 받는 칸이 다르다(읽기가 막는다). `default` 는 종류마다 꼴이 달라 손으로 푼다. */
