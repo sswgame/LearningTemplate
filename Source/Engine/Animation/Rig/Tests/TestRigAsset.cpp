@@ -202,7 +202,7 @@ SW_TEST_CASE( RigAssetTest, RetargetChildSavesOnlyItsDifference )
     SW_EXPECT_EQUAL( baseID, profile.getBaseID() );
     profile.addBonePair( RetargetBonePair{ hashed_string( "head" ), hashed_string( "head_b" ) } );
 
-    const std::optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.retarget.xml" ) );
+    const optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.retarget.xml" ) );
     SW_REQUIRE_TRUE( childPath.has_value() );
     SW_REQUIRE_TRUE( profile.saveToFile( *childPath ) );
     string saved;

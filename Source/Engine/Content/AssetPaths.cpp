@@ -548,7 +548,7 @@ namespace sw
                 AssetPathsInternal::getPathStats().recordHit();
                 if ( cached.empty() )
                     AssetPathsInternal::getMissingStats().recordHit();
-                return cached.empty() ? std::nullopt : AbsolutePath::tryMake( cached );
+                return cached.empty() ? nullopt : AbsolutePath::tryMake( cached );
             }
         }
         AssetPathsInternal::getPathStats().recordMiss();
@@ -596,7 +596,7 @@ namespace sw
             AssetPathsInternal::getMissingStats().recordMiss();
         // 없음도 저장한다(음성 결과) — 같은 없는 파일을 묻는 호출(선택적 파일 · 팩에만 있는 에셋)이 매번 모든 검색 루트를 훑지 않게.
         AssetPathsInternal::storeResolved( state, std::move( cacheKey ), found, stamp );
-        return found.empty() ? std::nullopt : AbsolutePath::tryMake( found );
+        return found.empty() ? nullopt : AbsolutePath::tryMake( found );
     }
 
     void AssetPaths::collectLooseFolders( string_view folderID, vector<string>& outListFolder ) const
@@ -689,7 +689,7 @@ namespace sw
             const bool bMixedCaseDomain = AssetPathsInternal::kCaseSensitiveFileSystem && AssetPathsInternal::findMountedDiskDomain( *_pState, id, mountedRoot, mountedKey );
             result                      = bMixedCaseDomain ? FileUtil::makePathIgnoringCase( mountedRoot, id.substr( id.find( '/' ) + 1 ) ) : FileUtil::joinPath( domainRoot, keyUnderRoot );
         }
-        std::optional<AbsolutePath> absPath = AbsolutePath::tryMake( result );
+        optional<AbsolutePath> absPath = AbsolutePath::tryMake( result );
         if ( absPath.has_value() == false )
             SW_LOG_ERROR_ID( "AssetPaths.WriteNotResourceID", "'%#' resolved to '%#', which is not an absolute disk path", resourceID, result );
         return absPath;

@@ -453,8 +453,8 @@ namespace sw::test
 
     void TestRunnerInternal::launchSelf( vector<string> listArgument, float32 timeoutSeconds, ChildRunResult& outResult )
     {
-        ChildRunResult&                   result     = outResult;
-        const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
+        ChildRunResult&              result     = outResult;
+        const optional<AbsolutePath> executable = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
         if ( executable.has_value() == false )
         {
             reportFailure( __FILE__, __LINE__, "the test executable path is not absolute: " + FileUtil::getExecutablePath() );

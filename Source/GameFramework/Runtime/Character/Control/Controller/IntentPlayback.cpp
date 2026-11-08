@@ -144,7 +144,7 @@ namespace sw
                 if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
                     return true;
                 pControl->setRecording( false );
-                const std::optional<AbsolutePath> historyFile = FileUtil::requireAbsolutePath( path ); // readDiskPathArgument 가 절대만 받았다
+                const optional<AbsolutePath> historyFile = FileUtil::requireAbsolutePath( path ); // readDiskPathArgument 가 절대만 받았다
                 if ( historyFile.has_value() == false || pControl->getHistory().saveToFile( *historyFile ) == false )
                 {
                     outReply = makeReply( "intent: could not write '%#'", path.c_str() );

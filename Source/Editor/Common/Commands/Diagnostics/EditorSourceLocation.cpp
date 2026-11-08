@@ -136,7 +136,7 @@ namespace sw::editor
         const string executable = std::move( listToken.front() );
         listToken.erase( listToken.begin() );
         // 사람이 적은 설정이다 - 여기(입력 경계)에서 한 번 가른다: 절대 경로면 그 파일, 아니면 PATH 의 이름(`code`).
-        const std::optional<AbsolutePath> executablePath = AbsolutePath::tryMake( executable );
+        const optional<AbsolutePath> executablePath = AbsolutePath::tryMake( executable );
         if ( executablePath.has_value() )
             return ProcessCommand::at( *executablePath, std::move( listToken ) );
         return ProcessCommand::fromSearchPath( executable, std::move( listToken ) );

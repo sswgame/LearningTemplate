@@ -116,10 +116,10 @@ SW_TEST_CASE( LocalStoreFileTest, SlotIsAFileUnderTheRootAndLeftoverTempFilesAre
 /** @brief [LocalStoreFileTest] 공장은 file · memory 를 만들고 모르는 백엔드는 이름을 담은 오류로 거절한다. 기반 이름은 키트가 덮지 못한다 */
 SW_TEST_CASE( LocalStoreFileTest, FactoryBuildsFileAndMemoryAndRefusesUnknownBackends )
 {
-    test::LocalStoreSealParts         seal;
-    const LocalSealContext            context  = seal.makeSealContext();
-    const string                      root     = test::makeScratchPath( "local_store_factory" );
-    const std::optional<AbsolutePath> rootPath = AbsolutePath::tryMake( root );
+    test::LocalStoreSealParts    seal;
+    const LocalSealContext       context  = seal.makeSealContext();
+    const string                 root     = test::makeScratchPath( "local_store_factory" );
+    const optional<AbsolutePath> rootPath = AbsolutePath::tryMake( root );
     SW_REQUIRE_TRUE( rootPath.has_value() );
     string                  error;
     LocalStoreConfig        settings{ LocalStoreBackend::kFileBackendName, LocalStoreLocation::absolute( *rootPath ) };

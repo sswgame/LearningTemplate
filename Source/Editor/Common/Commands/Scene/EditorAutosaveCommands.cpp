@@ -196,8 +196,8 @@ namespace sw::editor
                     return false;
                 vector<uint32> listGeneration;
                 collectGenerations( slotFolder, listGeneration );
-                const uint32                      generation   = listGeneration.empty() ? 1u : listGeneration.back() + 1u;
-                const std::optional<AbsolutePath> snapshotPath = AbsolutePath::tryMake( makeSnapshotPath( slotFolder, generation ) );
+                const uint32                 generation   = listGeneration.empty() ? 1u : listGeneration.back() + 1u;
+                const optional<AbsolutePath> snapshotPath = AbsolutePath::tryMake( makeSnapshotPath( slotFolder, generation ) );
                 if ( snapshotPath.has_value() == false || editor::getSubsystem<SceneManager>().saveActiveSceneCopy( *snapshotPath ) == false )
                 {
                     SW_LOG_WARNING_ID( "EditorAutosaveCommands.CopyFailed", "Autosave: could not write a copy of '%#'", sourceID );

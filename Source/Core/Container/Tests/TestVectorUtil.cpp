@@ -65,7 +65,7 @@ SW_TEST_CASE( VectorUtilTest, FindIndexByAndContainsBy )
         {6, 1, 0}
     };
 
-    const std::optional<size_t> index = sw::VectorUtil::findIndexBy<&KeyedItem::_id>( listItem, 6 );
+    const sw::optional<size_t> index = sw::VectorUtil::findIndexBy<&KeyedItem::_id>( listItem, 6 );
     SW_EXPECT_TRUE( index.has_value() );
     SW_EXPECT_EQUAL( size_t{ 1 }, *index );
     SW_EXPECT_FALSE( sw::VectorUtil::findIndexBy<&KeyedItem::_id>( listItem, 4 ).has_value() );

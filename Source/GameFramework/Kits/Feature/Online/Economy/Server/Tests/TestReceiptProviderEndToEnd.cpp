@@ -91,10 +91,10 @@ namespace
             INetSecurityProvider& security = game::getSubsystem<INetSecurityProvider>();
             TLSContextConfig      settings;
             SW_REQUIRE_TRUE( security.createSelfSignedCertificate( "localhost", 1, settings._certificatePem, settings._privateKeyPem ) );
-            _trustFile = test::writeScratchText( "store-trust.pem", settings._certificatePem );
-            string error;
-            _tlsContext = security.createTLSContext( settings, error );
-            SW_REQUIRE_TRUE_MSG( _tlsContext != nullptr, error.c_str() );
+            _trustFile                                = test::writeScratchText( "store-trust.pem", settings._certificatePem );
+            expected<unique_ptr<ITLSContext>> context = security.createTLSContext( settings );
+            SW_REQUIRE_TRUE_MSG( context.has_value(), context.has_value() ? "" : string( context.error().detail() ).c_str() );
+            _tlsContext = std::move( context ).value();
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
             HTTPServerConfig serverSettings;
@@ -222,10 +222,10 @@ namespace
         /** @brief 운영의 경제 키트 조립과 같은 순서로 파일에서 제공자를 세웁니다. */
         [[nodiscard]] bool assemble( string& outError )
         {
-            const std::optional<AbsolutePath> providersFile = AbsolutePath::tryMake( _secrets.writeProvidersFile( _endpoint.makeBaseURL() ) );
-            const std::optional<AbsolutePath> trustFile     = AbsolutePath::tryMake( _endpoint._trustFile );
-            vector<ReceiptProviderConfig>     listConfig;
-            const bool                        bRead = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, trustFile, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderSet::readEntry, listConfig, outError );
+            const optional<AbsolutePath>  providersFile = AbsolutePath::tryMake( _secrets.writeProvidersFile( _endpoint.makeBaseURL() ) );
+            const optional<AbsolutePath>  trustFile     = AbsolutePath::tryMake( _endpoint._trustFile );
+            vector<ReceiptProviderConfig> listConfig;
+            const bool                    bRead = OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, trustFile, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderSet::readEntry, listConfig, outError );
             if ( bRead == false || _providers.initialize( listConfig, OnlineProviderFile::getTrustText( trustFile ), _clock, outError ) == false )
                 return false;
             for ( int32 index = 0; index < _providers.getProviderCount(); ++index )
@@ -387,8 +387,8 @@ SW_TEST_CASE( ReceiptKitAssemblyTest, ExternalSampleConfigReads )
     SW_EXPECT_EQUAL( serverConfig._listStore[0]._name, onlineConfig._storeName );
     SW_EXPECT_EQUAL( serverConfig._listCache[0]._name, onlineConfig._cacheName );
 
-    string                            error;
-    const std::optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Shooter3D.receipts.json", ProcessRoots::get()._project );
+    string                       error;
+    const optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Shooter3D.receipts.json", ProcessRoots::get()._project );
     SW_REQUIRE_TRUE( providersFile.has_value() );
     vector<ReceiptProviderConfig> listConfig;
     SW_REQUIRE_TRUE_MSG( OnlineProviderFile::read<ReceiptProviderConfig>( providersFile, std::nullopt, "receiptProvidersFile", "receiptTrustFile", &ReceiptProviderSet::readEntry, listConfig, error ), error.c_str() );

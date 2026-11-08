@@ -384,7 +384,7 @@ namespace sw
         const bool             bBaked = pCodec != nullptr && retargeter.initialize( *pProfile, *pSourceSkeleton, *pTargetSkeleton, nullptr ) &&
                             bakeClip( retargeter, *pSourceClip, *pSourceSkeleton, *pTargetSkeleton, PoseRetargeterInternal::kBakeSampleRate, *pCodec, AnimationCodecSettings{},
                                       baked );
-        const std::optional<AbsolutePath> clipFile = FileUtil::requireAbsolutePath( outClipPath );
+        const optional<AbsolutePath> clipFile = FileUtil::requireAbsolutePath( outClipPath );
         if ( clipFile.has_value() == false || bBaked == false || baked.saveToFile( *clipFile ) == false )
         {
             SW_LOG_ERROR_ID( "PoseRetargeter.RetargetBakeCouldNot2", "Retarget bake: '%#' could not be baked to '%#'", sourceClipPath, outClipPath );

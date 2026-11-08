@@ -313,7 +313,7 @@ SW_TEST_CASE( ReflectionProbeAssetTest, SampleLevelStaysInItsLevel )
 /** @brief [ReflectionProbeAssetTest] 저장은 없는 폴더를 만들고 같은 바이트를 쓴다 */
 SW_TEST_CASE( ReflectionProbeAssetTest, SaveToFileCreatesTheFolder )
 {
-    const std::optional<AbsolutePath> absPath = AbsolutePath::tryMake( test::makeScratchPath( "nested/folder/probe.reflprobe" ) );
+    const optional<AbsolutePath> absPath = AbsolutePath::tryMake( test::makeScratchPath( "nested/folder/probe.reflprobe" ) );
     SW_REQUIRE_TRUE( absPath.has_value() );
     SW_REQUIRE_TRUE( Util::makeAsset().saveToFile( *absPath ) );
     vector<uint8> listRead;

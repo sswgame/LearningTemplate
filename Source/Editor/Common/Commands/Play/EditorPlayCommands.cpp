@@ -155,7 +155,7 @@ namespace sw::editor
 
     ProcessCommand EditorPlayCommands::makeStandaloneCommand( string_view executablePath, string_view scenePath, string_view extraArguments )
     {
-        const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( executablePath );
+        const optional<AbsolutePath> executable = AbsolutePath::tryMake( executablePath );
         if ( executable.has_value() == false )
             return {}; // 빈 명령 - 띄우기가 실패로 알린다
         ProcessCommand       command           = ProcessCommand::at( *executable, { "-gv_firstScene=" + string( scenePath ) } );

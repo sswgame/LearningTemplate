@@ -104,7 +104,7 @@ namespace sw
         {
             for ( const string& dependency : _mapDependsOn.find( string{ listSubgraph[nodeIndex] } )->second )
             {
-                const std::optional<size_t> dependencyIndex = VectorUtil::findIndex( listSubgraph, string_view{ dependency } );
+                const optional<size_t> dependencyIndex = VectorUtil::findIndex( listSubgraph, string_view{ dependency } );
                 if ( dependencyIndex.has_value() )
                     graph.addDependency( nodeIndex, static_cast<uint32>( *dependencyIndex ) );
             }

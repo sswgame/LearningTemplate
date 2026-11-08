@@ -739,7 +739,7 @@ namespace sw
         const bool bInvalidMoveRequest = pComp == nullptr || pComp->getOwner() != this || direction == 0 || isComponentMutationFrozen();
         if ( bInvalidMoveRequest )
             return false;
-        const std::optional<size_t> found = VectorUtil::findIndex( _listComponent, pComp );
+        const optional<size_t> found = VectorUtil::findIndex( _listComponent, pComp );
         if ( found.has_value() == false )
             return false;
         const size_t index  = *found;

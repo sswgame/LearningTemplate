@@ -160,7 +160,7 @@ namespace sw
         { (void)self.unregisterSubTick( subTickID ); } ) ) )
             return true;
 
-        const std::optional<size_t> index = VectorUtil::findIndexBy<&SubTickInfo::_subTickID>( _listSubTick, subTickID );
+        const optional<size_t> index = VectorUtil::findIndexBy<&SubTickInfo::_subTickID>( _listSubTick, subTickID );
         if ( index.has_value() == false )
             return false;
         _listSubTick.erase( _listSubTick.begin() + static_cast<ptrdiff_t>( *index ) );

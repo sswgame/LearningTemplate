@@ -14,7 +14,7 @@ namespace sw
 {
     bool DevCommandRegistry::readDiskPathArgument( string_view argument, string& outAbsolutePath, string& outReply )
     {
-        const std::optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( argument );
+        const optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( argument );
         if ( absolutePath.has_value() == false )
         {
             outReply = "needs an absolute path (use {out}/...): '";

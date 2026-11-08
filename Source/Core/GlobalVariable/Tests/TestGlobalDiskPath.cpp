@@ -15,7 +15,7 @@ SW_TEST_CASE( GlobalDiskPathTest, RelativeValueBecomesAbsolute )
     SW_REQUIRE_TRUE( manager.registerVariable( "gv_testDiskPath", GlobalVariableType::DiskPath, &value, string{}, "test" ) );
 
     // 기준은 기동 때 명령줄이 정했다(App --test 의 작업 폴더 - 테스트 중에 바뀌지 않는다).
-    const std::optional<AbsolutePath> base = AbsolutePath::tryMake( FileUtil::getCurrentPath() );
+    const optional<AbsolutePath> base = AbsolutePath::tryMake( FileUtil::getCurrentPath() );
     SW_REQUIRE_TRUE( base.has_value() );
     SW_REQUIRE_TRUE( manager.setValueFromString( "gv_testDiskPath", "out/dump.wav" ) );
     SW_EXPECT_EQUAL( AbsolutePath::tryResolve( "out/dump.wav", *base )->str(), string( value ) );

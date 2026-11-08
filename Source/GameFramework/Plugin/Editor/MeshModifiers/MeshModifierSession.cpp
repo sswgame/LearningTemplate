@@ -620,8 +620,8 @@ namespace sw::editor
         const std::optional<AbsolutePath> meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
         if ( meshPath.has_value() == false )
             return false; // 이유는 toDiskPath 가 남겼다
-        const string                      path      = MeshModifierStack::makeSidecarPath( meshPath->str() );
-        const std::optional<AbsolutePath> stackFile = FileUtil::requireAbsolutePath( path );
+        const string                 path      = MeshModifierStack::makeSidecarPath( meshPath->str() );
+        const optional<AbsolutePath> stackFile = FileUtil::requireAbsolutePath( path );
         if ( stackFile.has_value() == false || _stack.saveToFile( *stackFile ) == false )
         {
             SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteMeshModifier", "Failed to write mesh modifier stack %#", path.c_str() );
@@ -673,7 +673,7 @@ namespace sw::editor
 
         // 구운 메시도 원본 메시 파일 곁이다
         const std::optional<AbsolutePath> meshPath = editor::getSubsystem<AssetPaths>().toDiskPath( _meshPath );
-        const std::optional<AbsolutePath> path     = meshPath.has_value() ? AbsolutePath::tryMake( MeshModifierStack::makeBakedMeshPath( meshPath->str() ) ) : std::nullopt;
+        const optional<AbsolutePath>      path     = meshPath.has_value() ? AbsolutePath::tryMake( MeshModifierStack::makeBakedMeshPath( meshPath->str() ) ) : nullopt;
         if ( path.has_value() == false || MeshAssetFormat::saveToFile( *path, baked ) == false )
         {
             SW_LOG_ERROR_ID( "MeshModifierSession.FailedWriteBakedMesh", "Failed to write the baked mesh of '%#'", _meshPath.c_str() );

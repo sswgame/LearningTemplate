@@ -48,18 +48,15 @@ namespace sw
             }
 
             /** @brief `FileUtil::WriteGate` — 리소스 루트 아래에서 `scratch/` 밖의 쓰기와 프로젝트의 `docs/` · `Config/`(허용 목록 밖) 쓰기를 거절합니다. 그 밖(Saved · 임시 폴더)은 시나리오의 몫이라 막지 않는다. */
-            static bool allowWrite( string_view path, string& outReason )
+            static expected<void> allowWrite( string_view path )
             {
                 // 지킬 원본(`Content`)이 없는 구성(패키지 - 팩만)에는 막을 것이 없다.
                 const string& rootPath = ProcessRoots::get()._content.str();
                 if ( FileUtil::isDirectory( rootPath ) == false )
-                    return true;
+                    return {};
                 // 상대 경로는 어디를 가리키는지 정할 수 없다 - 통과시키지 않는다(예전에는 절대로 바꾸지 못하면 열어 줬다).
                 if ( AbsolutePath::isStrictAbsolute( path ) == false )
-                {
-                    outReason = "the path is not absolute - a scenario writes under {out} or a <Scratch> folder";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the path is not absolute - a scenario writes under {out} or a <Scratch> folder" } );
                 const string root        = FileUtil::normalizePath( rootPath ) + "/";
                 const string scratchRoot = root + AutomationScratch::kScratchDomain + "/";
                 const string target      = FileUtil::normalizePath( path );
@@ -75,14 +72,13 @@ namespace sw
                         return isInside( target, projectRoot, allowed );
                     } );
                     if ( bAllowed )
-                        return true;
-                    outReason = "an automation run may not write the tracked folder " + string( folder ) + "/ (only Config/Editor is open); run on a copy under Content/scratch/ or write under Saved/";
-                    return false;
+                        return {};
+                    return unexpected( Error{ ErrorKind::Unsupported, "an automation run may not write this tracked folder (only Config/Editor is open); run on a copy under Content/scratch/ or write under Saved/", folder } );
                 }
 
                 const bool bScratch = StringUtil::startsWith( target, scratchRoot ) || target + "/" == scratchRoot; // 사본 도메인 폴더 자체도 사본의 것이다
                 if ( StringUtil::startsWith( target, root ) == false || bScratch )
-                    return true;
+                    return {};
                 // 골든 갱신 실행(`-scenario-update-golden`)만 시나리오 옆 `golden/`(자동화 폴더 아래 어느 깊이든 — `engine/automation/editor/golden/`)에 쓴다.
                 // 그 실행이 하는 일이 바로 그것이고, 쓴 파일은 보고에 남아 리뷰한다. 폴더 이름은 판정이 쓰는 것과 같은 상수다.
                 bool bUpdateGolden = false;
@@ -90,9 +86,8 @@ namespace sw
                     (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, bUpdateGolden );
                 const bool bGoldenFolder = FileUtil::getFileNamePart( FileUtil::getDirectoryPart( target ) ) == kAutomationGoldenFolder;
                 if ( bUpdateGolden && bGoldenFolder && target.find( "/automation/" ) != string::npos )
-                    return true;
-                outReason = "an automation run may write under Resource only inside " + string( AutomationScratch::kScratchDomain ) + "/ (declare <Scratch>); this path is a tracked original";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::Unsupported, "an automation run may write under Resource only inside this folder (declare <Scratch>); this path is a tracked original", AutomationScratch::kScratchDomain } );
             }
 
             /** @brief 프로세스 꼬리의 앞머리(`<이름>_p<pid>`)입니다. */

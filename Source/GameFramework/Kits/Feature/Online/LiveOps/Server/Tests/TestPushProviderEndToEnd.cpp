@@ -72,11 +72,11 @@ namespace
             TLSContextConfig      settings;
             settings._alpnProtocol = "h2";
             SW_REQUIRE_TRUE( security.createSelfSignedCertificate( "localhost", 1, settings._certificatePem, settings._privateKeyPem ) );
-            _trustFile = test::writeScratchText( "apns-trust.pem", settings._certificatePem );
-            string error;
-            _tlsContext = security.createTLSContext( settings, error );
-            SW_REQUIRE_TRUE_MSG( _tlsContext != nullptr, error.c_str() );
-            _transport = StreamTransportFactory::createPlatformTransport();
+            _trustFile                                = test::writeScratchText( "apns-trust.pem", settings._certificatePem );
+            expected<unique_ptr<ITLSContext>> context = security.createTLSContext( settings );
+            SW_REQUIRE_TRUE_MSG( context.has_value(), context.has_value() ? "" : string( context.error().detail() ).c_str() );
+            _tlsContext = std::move( context ).value();
+            _transport  = StreamTransportFactory::createPlatformTransport();
             SW_REQUIRE_TRUE( _transport != nullptr );
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
@@ -306,10 +306,10 @@ namespace
         /** @brief 운영의 라이브 운영 키트 조립과 같은 순서로 파일에서 제공자를 세워 발송기에 올립니다. */
         [[nodiscard]] bool assemble( string& outError )
         {
-            const std::optional<AbsolutePath> providersFile = AbsolutePath::tryMake( writeProvidersFile() );
-            const std::optional<AbsolutePath> trustFile     = AbsolutePath::tryMake( _apns.getTrustFile() );
-            vector<PushProviderConfig>        listConfig;
-            const bool                        bRead = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "pushProvidersFile", "pushTrustFile", &PushProviderSet::readEntry, listConfig, outError );
+            const optional<AbsolutePath> providersFile = AbsolutePath::tryMake( writeProvidersFile() );
+            const optional<AbsolutePath> trustFile     = AbsolutePath::tryMake( _apns.getTrustFile() );
+            vector<PushProviderConfig>   listConfig;
+            const bool                   bRead = OnlineProviderFile::read<PushProviderConfig>( providersFile, trustFile, "pushProvidersFile", "pushTrustFile", &PushProviderSet::readEntry, listConfig, outError );
             if ( bRead == false || _providers.initialize( listConfig, OnlineProviderFile::getTrustText( trustFile ), _clock, outError ) == false )
                 return false;
             _dispatcher.initialize( &_store, PushDispatcherConfig{} );
@@ -449,8 +449,8 @@ SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
 /** @brief [PushKitAssemblyTest] 저장소에 든 견본(`Shooter3D.push.json`)이 같은 읽기를 지난다 - 견본이 코드와 어긋나 낡지 않게 한다 */
 SW_TEST_CASE( PushKitAssemblyTest, ExternalSampleConfigReads )
 {
-    string                            error;
-    const std::optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Shooter3D.push.json", ProcessRoots::get()._project );
+    string                       error;
+    const optional<AbsolutePath> providersFile = AbsolutePath::tryResolve( "Config/Server/Online/Providers/Shooter3D.push.json", ProcessRoots::get()._project );
     SW_REQUIRE_TRUE( providersFile.has_value() );
     vector<PushProviderConfig> listConfig;
     SW_REQUIRE_TRUE_MSG( OnlineProviderFile::read<PushProviderConfig>( providersFile, std::nullopt, "pushProvidersFile", "pushTrustFile", &PushProviderSet::readEntry, listConfig, error ), error.c_str() );

@@ -516,7 +516,7 @@ namespace sw
 
     void OnlineServiceHost::releaseSubscription( uint64 id )
     {
-        const std::optional<size_t> index = VectorUtil::findIndexBy<&BusSubscription::_subscriptionID>( _listBusSubscription, id );
+        const optional<size_t> index = VectorUtil::findIndexBy<&BusSubscription::_subscriptionID>( _listBusSubscription, id );
         if ( index.has_value() == false )
             return;
         const string topic = _listBusSubscription[*index]._topic;

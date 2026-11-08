@@ -123,8 +123,8 @@ namespace sw
             {
                 for ( const utf8* pModule : kArrModule )
                 {
-                    const std::optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( ModuleLibraryUtil::findModuleLibraryPath( pModule ) );
-                    void* const                       pHandle     = libraryPath.has_value() ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr;
+                    const optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( ModuleLibraryUtil::findModuleLibraryPath( pModule ) );
+                    void* const                  pHandle     = libraryPath.has_value() ? ModuleLibraryUtil::loadLibraryAt( *libraryPath ) : nullptr;
                     if ( pHandle == nullptr )
                     {
                         SW_LOG_ERROR_ID( "OnlineLoadBot.OnlineLoadBotCannotLoadModule", "OnlineLoadBot: cannot load the module %#", pModule );

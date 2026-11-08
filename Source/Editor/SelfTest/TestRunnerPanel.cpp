@@ -199,10 +199,10 @@ namespace sw::editor
         {
             const string& scenarioPath = _scenarios.getChosen();
             // 에디터 상태 폴더는 주지 않는다 — 시나리오 실행은 자식 프로세스가 자기 폴더를 비우고 쓴다(`EditorPaths::prepareAutomationStateDirectory`).
-            const std::optional<AbsolutePath> executable      = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
-            ProcessCommand                    command         = executable.has_value() ? ProcessCommand::at( *executable, {} ) : ProcessCommand{};
-            const string                      backendArgument = TestRunnerPanelInternal::makeBackendArgument(); // " -dx12" 꼴 — 앞 공백 · 줄표를 뗀다
-            command._listArgument                             = EditorTestOutputParser::makeScenarioArguments( scenarioPath, backendArgument.empty() ? string_view{} : string_view( backendArgument ).substr( 2 ) );
+            const optional<AbsolutePath> executable      = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
+            ProcessCommand               command         = executable.has_value() ? ProcessCommand::at( *executable, {} ) : ProcessCommand{};
+            const string                 backendArgument = TestRunnerPanelInternal::makeBackendArgument(); // " -dx12" 꼴 — 앞 공백 · 줄표를 뗀다
+            command._listArgument                        = EditorTestOutputParser::makeScenarioArguments( scenarioPath, backendArgument.empty() ? string_view{} : string_view( backendArgument ).substr( 2 ) );
             if ( _pJob->request( command, TestRunnerPanelInternal::getBinDirectory() ) )
             {
                 _externalRunKind = ExternalRunKind::Scenario;
@@ -236,7 +236,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RunSelectedCases" ) ) )
         {
             // 작업 폴더는 Bin 이다 — 테스트는 거기서 위로 올라가며 Content/ 를 찾는다(CLAUDE.md 의 테스트 실행 규칙).
-            const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
+            const optional<AbsolutePath> executable = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
             if ( executable.has_value() && _pJob->request( ProcessCommand::at( *executable, EditorTestOutputParser::makeUnitTestArguments( filter ) ), TestRunnerPanelInternal::getBinDirectory() ) )
             {
                 _externalRunKind = ExternalRunKind::UnitTestRun;

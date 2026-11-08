@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -110,7 +111,7 @@ namespace sw
          * @brief 이미 절대여야 하는 경로 글을 형식(`AbsolutePath`)으로 올립니다. 아니면 OS 경계와 같은 오류(`File.RelativePath`)를 남기고 빈 값입니다.
          * @details 사람이 적은 상대 경로를 푸는 일(`AbsolutePath::tryResolve`)이 아니다 — 앞에서 절대로 정한 글(설정 · 명령줄 · 루트 아래로 이은 경로)을 `save*(AbsolutePath)` 로 넘길 때 쓴다.
          */
-        [[nodiscard]] static std::optional<AbsolutePath> requireAbsolutePath( string_view path );
+        [[nodiscard]] static optional<AbsolutePath> requireAbsolutePath( string_view path );
         /**
          * @brief 비교 · 맵 키용으로 경로를 정규화합니다(`\` 를 `/` 로 바꾸고 소문자로).
          * @note Linux 의 파일 I/O 에는 쓰지 마십시오. 파일을 열 때는 normalizeSeparators 나 실제 파일 시스템 경로를 씁니다.
@@ -236,7 +237,7 @@ namespace sw
          *          이 클래스 밖에서 경로를 스스로 여는 서드파티 저장 함수(DDS 저장 · SQLite)는 쓰기 전에 `isWriteAllowed` 를 직접 부른다 —
          *          그런 호출과 OS · C 런타임의 직접 쓰기는 이 쓰기 경로를 우회한 것이다.
          */
-        using WriteGate = bool ( * )( string_view path, string& outReason );
+        using WriteGate = expected<void> ( * )( string_view path );
         /** @brief 쓰기 게이트를 바꿉니다. nullptr 이면 게이트가 없습니다. 거절된 쓰기는 이유를 오류로 남기고 false 입니다(원본은 그대로). */
         static void setWriteGate( WriteGate gate );
         /** @brief 게이트가 @p path 를 바꾸는 것을 허락하는지 봅니다. 거절하면 경로와 이유를 오류로 남기고 false 입니다. 게이트가 없으면 true. 파일을 바꾸는 모든 입구가 부릅니다. */

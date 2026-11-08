@@ -114,13 +114,13 @@ namespace sw
 
     void UserSettingsHandlerRegistry::releaseSubscription( uint64 id )
     {
-        const std::optional<size_t> handlerIndex = VectorUtil::findIndexBy<&HandlerEntry::_subscriptionID>( _listHandler, id );
+        const optional<size_t> handlerIndex = VectorUtil::findIndexBy<&HandlerEntry::_subscriptionID>( _listHandler, id );
         if ( handlerIndex.has_value() )
         {
             _listHandler.erase( _listHandler.begin() + static_cast<ptrdiff_t>( *handlerIndex ) );
             return;
         }
-        const std::optional<size_t> providerIndex = VectorUtil::findIndexBy<&ProviderEntry::_subscriptionID>( _listProvider, id );
+        const optional<size_t> providerIndex = VectorUtil::findIndexBy<&ProviderEntry::_subscriptionID>( _listProvider, id );
         if ( providerIndex.has_value() )
             _listProvider.erase( _listProvider.begin() + static_cast<ptrdiff_t>( *providerIndex ) );
     }

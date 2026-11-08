@@ -264,7 +264,7 @@ SW_TEST_CASE( NavMeshAssetTest, SaveToFileCreatesTheFolder )
     NavMeshAsset asset;
     asset.setEntry( Util::makeEntry( hashed_string{ "Walker" }, 1 ) );
 
-    const std::optional<AbsolutePath> absPath = AbsolutePath::tryMake( test::makeScratchPath( "nested/folder/level.navmesh" ) );
+    const optional<AbsolutePath> absPath = AbsolutePath::tryMake( test::makeScratchPath( "nested/folder/level.navmesh" ) );
     SW_REQUIRE_TRUE( absPath.has_value() );
     SW_REQUIRE_TRUE( asset.saveToFile( *absPath ) );
 

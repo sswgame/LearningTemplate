@@ -44,8 +44,8 @@ namespace sw::editor
                     return;
 
                 // 필수: 대화상자 결과는 에디터 메인 스레드가 돌릴 때만 온다(종료 때는 `cancelFileDialogResults` 가 비운다).
-                EditorNotificationManager&        notifications = editor::getSubsystem<EditorNotificationManager>();
-                const std::optional<AbsolutePath> absPath       = FileUtil::requireAbsolutePath( listPath[0] ); // 대화상자는 절대 경로를 돌려준다
+                EditorNotificationManager&   notifications = editor::getSubsystem<EditorNotificationManager>();
+                const optional<AbsolutePath> absPath       = FileUtil::requireAbsolutePath( listPath[0] ); // 대화상자는 절대 경로를 돌려준다
                 if ( absPath.has_value() == false || EditorSceneFileCommands::saveActiveSceneAs( *absPath ) == false )
                 {
                     notifications.push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationKind::Error );
@@ -319,8 +319,8 @@ namespace sw::editor
                 string absolutePath;
                 if ( listArgument.size() != 1 || DevCommandRegistry::readDiskPathArgument( listArgument[0], absolutePath, outReply ) == false )
                     return false;
-                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );         // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
-                const std::optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( absolutePath ); // readDiskPathArgument 가 절대만 받았다
+                (void)FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( absolutePath ) );    // 못 만들면 ensure 가 폴더와 이유를 남기고 뒤따르는 쓰기가 실패로 답한다
+                const optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( absolutePath ); // readDiskPathArgument 가 절대만 받았다
                 if ( scenePath.has_value() == false || EditorSceneFileCommands::saveActiveSceneAs( *scenePath ) == false )
                 {
                     outReply = "could not save the active scene to '" + absolutePath + "'";

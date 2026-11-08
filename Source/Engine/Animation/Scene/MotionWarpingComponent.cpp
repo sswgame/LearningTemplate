@@ -84,7 +84,7 @@ namespace sw
 
     void MotionWarpingComponent::clearWarpTarget( const hashed_string& name )
     {
-        if ( const std::optional<size_t> targetIndex = VectorUtil::findIndexBy<&MotionWarpTarget::_name>( _listTarget, name ) )
+        if ( const optional<size_t> targetIndex = VectorUtil::findIndexBy<&MotionWarpTarget::_name>( _listTarget, name ) )
             _listTarget.erase( _listTarget.begin() + static_cast<ptrdiff_t>( *targetIndex ) );
     }
 

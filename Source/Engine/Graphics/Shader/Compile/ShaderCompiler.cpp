@@ -378,8 +378,8 @@ namespace sw
             /** @brief DXC 라이브러리의 `DxcCreateInstance` 주소를 찾습니다(`ShaderCompiler::findDXCCreateInstance` 가 한 번 부른다). 빌드가 DXC 를 실행 파일 옆에 둔다(배포 구성의 테스트는 TestBin) - 다른 곳을 찾아다니지 않는다. */
             static void* loadDXCCreateInstance()
             {
-                const string                      libraryText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), ModuleLibraryUtil::formatSharedLibraryName( "dxcompiler" ) );
-                const std::optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( libraryText );
+                const string                 libraryText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), ModuleLibraryUtil::formatSharedLibraryName( "dxcompiler" ) );
+                const optional<AbsolutePath> libraryPath = AbsolutePath::tryMake( libraryText );
                 if ( libraryPath.has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "ShaderCompiler.DXCPathNotAbsolute", "DXC path is not absolute: %#", libraryText.c_str() );
@@ -496,8 +496,8 @@ namespace sw
     #else
         #error "Unsupported platform"
     #endif
-                const string                      tintText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), kTintName );
-                const std::optional<AbsolutePath> tintPath = AbsolutePath::tryMake( tintText );
+                const string                 tintText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), kTintName );
+                const optional<AbsolutePath> tintPath = AbsolutePath::tryMake( tintText );
                 if ( tintPath.has_value() == false || FileUtil::isRegularFile( tintText ) == false )
                 {
                     outError = "Tint (SPIR-V -> WGSL) is not next to the executable: " + tintText + " - the WebGPU shader target needs it (docs/PlatformTargets.md)";

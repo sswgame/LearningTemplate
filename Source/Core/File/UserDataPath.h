@@ -10,6 +10,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
@@ -53,8 +54,8 @@ namespace sw
 
         [[nodiscard]] static LocalStoreLocation memory();
         /** @brief 사용자 데이터 폴더 아래 상대 경로 @p relativePath 입니다. 빈 글 · 절대 꼴(드라이브 상대 `C:foo` · 드라이브 없는 루트 포함) · `..` 마디는 빈 값입니다(데이터 오류 - 부르는 쪽이 알린다). */
-        [[nodiscard]] static std::optional<LocalStoreLocation> tryUnderUserData( string_view relativePath );
-        [[nodiscard]] static LocalStoreLocation                absolute( const AbsolutePath& path );
+        [[nodiscard]] static optional<LocalStoreLocation> tryUnderUserData( string_view relativePath );
+        [[nodiscard]] static LocalStoreLocation           absolute( const AbsolutePath& path );
 
         [[nodiscard]] Kind getKind() const { return _kind; }
         /** @brief 디스크 자리입니다 - 사용자 데이터 폴더 아래면 `<데이터 폴더>/<상대>`, 절대면 그대로. 메모리 자리는 디스크가 없어 멈춥니다(부르는 쪽이 종류를 먼저 본다). */

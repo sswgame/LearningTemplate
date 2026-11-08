@@ -144,11 +144,10 @@ namespace sw::test
                 return nullptr;
             return make_unique<FakeAead>( pKey );
         }
-        unique_ptr<ITLSContext> createTLSContext( const TLSContextConfig& settings, string& outError ) override
+        expected<unique_ptr<ITLSContext>> createTLSContext( const TLSContextConfig& settings ) override
         {
             (void)settings;
-            outError = "not supported";
-            return nullptr;
+            return unexpected( Error{ ErrorKind::Unsupported, "not supported" } );
         }
         bool createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) override
         {

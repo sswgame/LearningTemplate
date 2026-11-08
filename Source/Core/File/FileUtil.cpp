@@ -690,10 +690,10 @@ namespace sw
         const WriteGate gate = FileUtilInternal::s_writeCounters._writeGate.load( std::memory_order_acquire );
         if ( gate == nullptr )
             return true;
-        string reason;
-        if ( gate( path, reason ) )
+        const expected<void> verdict = gate( path );
+        if ( verdict.has_value() )
             return true;
-        SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %#", string( path ).c_str(), reason.c_str() );
+        SW_LOG_ERROR_ID( "File.WriteRefused", "Changing %# was refused: %# (%#)", path, verdict.error().message(), verdict.error().detail() );
         return false;
     }
 
@@ -954,14 +954,14 @@ namespace sw
         return true;
     }
 
-    std::optional<AbsolutePath> FileUtil::requireAbsolutePath( string_view path )
+    optional<AbsolutePath> FileUtil::requireAbsolutePath( string_view path )
     {
         // 빈 글도 절대가 아니다 - `acceptsPathInput` 은 빈 글을 통과시키므로(열기 실패로 드러난다) 여기서 따로 거절한다.
         if ( path.empty() || PlatformFileUtil::acceptsPathInput( path ) == false )
         {
             if ( path.empty() )
                 SW_LOG_ERROR_ID( "File.RelativePath", "An empty path was given where an absolute disk path is required" );
-            return std::nullopt;
+            return nullopt;
         }
         return AbsolutePath::tryMake( path );
     }

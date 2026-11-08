@@ -304,7 +304,7 @@ namespace sw::editor
                 }
                 PrefabAsset asset;
                 asset.setFromGameObject( pObject );
-                const std::optional<AbsolutePath> assetFile = FileUtil::requireAbsolutePath( absolutePath );
+                const optional<AbsolutePath> assetFile = FileUtil::requireAbsolutePath( absolutePath );
                 if ( assetFile.has_value() == false || asset.saveToFile( *assetFile ) == false )
                 {
                     outReply = "could not write the prefab '" + absolutePath + "'";

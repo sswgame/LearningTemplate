@@ -15,10 +15,9 @@
 namespace
 {
     /** @brief 모든 쓰기를 거절하는 쓰기 게이트입니다(`FileUtil::setWriteGate`). */
-    bool refuseEveryWrite( sw::string_view /*path*/, sw::string& outReason )
+    sw::expected<void> refuseEveryWrite( sw::string_view path )
     {
-        outReason = "test gate refuses every write";
-        return false;
+        return sw::unexpected( sw::Error{ sw::ErrorKind::Unsupported, "test gate refuses every write", path } );
     }
 } // namespace
 

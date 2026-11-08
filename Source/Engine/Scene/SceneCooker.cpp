@@ -447,7 +447,7 @@ namespace sw
                     return CookStep::Failed;
                 // 쿠킹본은 펼친 결과만 싣는다 — 런타임의 짓는 길이 하나다.
                 doc.stripAuthoringInstanceData();
-                const std::optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
+                const optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
                 if ( outputFile.has_value() == false || doc.saveBinary( *outputFile ) == false )
                 {
                     SW_LOG_ERROR_ID( "SceneCooker.SceneCookFailedWrite", "Scene cook failed to write '%#'.", outputPath );

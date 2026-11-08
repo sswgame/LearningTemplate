@@ -12,6 +12,7 @@
  *          정렬 비교자는 `CompareUtil.h`(`Ascending<&T::_member>`)에 있습니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 
@@ -90,14 +91,14 @@ namespace sw
 
         /** @brief `value` 와 같은 첫 원소의 인덱스입니다. 없으면 빈 값입니다(언리얼 `TArray::Find`). `findIndexBy` 는 멤버 키로 찾고, 이것은 원소 값 자체로 찾습니다. */
         template <typename TVector, typename TValue>
-        [[nodiscard]] static std::optional<size_t> findIndex( const TVector& list, const TValue& value )
+        [[nodiscard]] static optional<size_t> findIndex( const TVector& list, const TValue& value )
         {
             for ( size_t index = 0; index < list.size(); ++index )
             {
                 if ( list[index] == value )
                     return index;
             }
-            return std::nullopt;
+            return nullopt;
         }
 
         /**
@@ -107,7 +108,7 @@ namespace sw
         template <typename TVector, typename TValue>
         static size_t removeFirst( TVector& list, const TValue& value )
         {
-            const std::optional<size_t> index = findIndex( list, value );
+            const optional<size_t> index = findIndex( list, value );
             if ( index.has_value() == false )
                 return 0;
             list.erase( list.begin() + static_cast<ptrdiff_t>( *index ) );
@@ -150,14 +151,14 @@ namespace sw
          *          `if ( const auto index = VectorUtil::findIndexBy<&T::_id>( list, id ) ) VectorUtil::removeAtSwap( list, *index );`
          */
         template <auto Member, typename TVector, typename TValue>
-        [[nodiscard]] static std::optional<size_t> findIndexBy( const TVector& list, const TValue& value )
+        [[nodiscard]] static optional<size_t> findIndexBy( const TVector& list, const TValue& value )
         {
             for ( size_t index = 0; index < list.size(); ++index )
             {
                 if ( std::invoke( Member, list[index] ) == value )
                     return index;
             }
-            return std::nullopt;
+            return nullopt;
         }
 
         /**

@@ -19,10 +19,10 @@ namespace sw
 
     bool InterestReplicationPolicy::initialize( float32 cellSize, float32 enterRadius, float32 leaveRadius )
     {
-        string error;
-        if ( _interest.initialize( cellSize, enterRadius, leaveRadius, error ) == false )
+        const expected<void> result = _interest.initialize( cellSize, enterRadius, leaveRadius );
+        if ( result.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "InterestReplicationPolicy.InterestReplicationPolicyRefusedCellEnter", "InterestReplicationPolicy: refused - %# (cell %#, enter %#, leave %#)", error.c_str(), cellSize, enterRadius, leaveRadius );
+            SW_LOG_ERROR_ID( "InterestReplicationPolicy.InterestReplicationPolicyRefusedCellEnter", "InterestReplicationPolicy: refused - %# (cell %#, enter %#, leave %#)", result.error().message(), cellSize, enterRadius, leaveRadius );
             return false;
         }
         _mapPosition.clear();

@@ -131,10 +131,10 @@ SW_TEST_CASE( SubsystemCollectionTest, DependenciesOrderAndNameBreaksTies )
         {"B",              {}},
         {"A", kArrADependency}
     };
-    SubsystemGraph graph{};
-    string         error;
-    SW_REQUIRE_TRUE_MSG( SubsystemCollection::computeGraph( listNode, graph, error ), error );
-    string order;
+    const expected<SubsystemGraph> result = SubsystemCollection::computeGraph( listNode );
+    SW_REQUIRE_TRUE( result.has_value() );
+    const SubsystemGraph& graph = *result;
+    string                order;
     for ( const uint32 nodeIndex : graph._listOrder )
     {
         if ( order.empty() == false )
@@ -267,10 +267,10 @@ SW_TEST_CASE( SubsystemCollectionTest, DependentsInitializeAfterTheDeclarer )
     static constexpr const utf8* kArrDependent[] = { "Alpha", "NotRegistered" };
     SubsystemNode                later{ "Alpha", {} };
     SubsystemNode                declarer{ "Zulu", {} };
-    declarer._listDependent = kArrDependent;
-    SubsystemGraph graph{};
-    string         error;
-    SW_REQUIRE_TRUE_MSG( SubsystemCollection::computeGraph( { later, declarer }, graph, error ), error );
+    declarer._listDependent               = kArrDependent;
+    const expected<SubsystemGraph> result = SubsystemCollection::computeGraph( { later, declarer } );
+    SW_REQUIRE_TRUE( result.has_value() );
+    const SubsystemGraph& graph = *result;
     SW_REQUIRE_EQUAL( static_cast<size_t>( 2 ), graph._listOrder.size() );
     SW_EXPECT_EQUAL( 1u, graph._listOrder[0] ); // Zulu 가 먼저
     SW_EXPECT_EQUAL( 0u, graph._listOrder[1] );
@@ -296,21 +296,20 @@ SW_TEST_CASE( SubsystemCollectionTest, InvalidGraphIsRejected )
     collection.destroyAll();
     SW_EXPECT_EQUAL( string( "D C B A" ), recorder.joinEvents( 'D' ) );
 
-    SubsystemGraph               graph{};
-    string                       error;
-    static constexpr const utf8* kArrMissing[] = { "Missing" };
-    SW_EXPECT_FALSE( SubsystemCollection::computeGraph( {
-                                                            { "A", kArrMissing }
-    },
-                                                        graph, error ) );
-    SW_EXPECT_EQUAL( string( "Subsystem 'A' depends on unknown subsystem 'Missing'" ), error );
-    error.clear();
-    SW_EXPECT_FALSE( SubsystemCollection::computeGraph( {
-                                                            {"A", {}},
-                                                            {"A", {}}
-    },
-                                                        graph, error ) );
-    SW_EXPECT_EQUAL( string( "Subsystem 'A' is declared twice" ), error );
+    static constexpr const utf8*   kArrMissing[] = { "Missing" };
+    const expected<SubsystemGraph> missing       = SubsystemCollection::computeGraph( {
+        { "A", kArrMissing }
+    } );
+    SW_REQUIRE_FALSE( missing.has_value() );
+    SW_EXPECT_TRUE( missing.error().kind() == ErrorKind::NotFound );
+    SW_EXPECT_TRUE( missing.error().detail() == "A -> Missing" );
+    const expected<SubsystemGraph> twice = SubsystemCollection::computeGraph( {
+        {"A", {}},
+        {"A", {}}
+    } );
+    SW_REQUIRE_FALSE( twice.has_value() );
+    SW_EXPECT_TRUE( twice.error().kind() == ErrorKind::AlreadyExists );
+    SW_EXPECT_TRUE( twice.error().detail() == "A" );
 }
 
 /**

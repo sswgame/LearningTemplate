@@ -72,7 +72,7 @@ namespace sw
             return;
         vector<Entry>& listEntry = pBucket->_listEntry;
         // 순서를 지키며 뺀다 — "활성인 첫 것" 고르기가 등록 순서로 정해진다.
-        if ( const std::optional<size_t> index = VectorUtil::findIndexBy<&Entry::_pComponent>( listEntry, pComponent ) )
+        if ( const optional<size_t> index = VectorUtil::findIndexBy<&Entry::_pComponent>( listEntry, pComponent ) )
             listEntry.erase( listEntry.begin() + static_cast<ptrdiff_t>( *index ) );
     }
 

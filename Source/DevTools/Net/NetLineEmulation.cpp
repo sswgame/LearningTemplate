@@ -41,14 +41,13 @@ namespace sw
                 utf8 arrText[constant::buffer::kMax256]{};
                 formatstring( arrText, constant::buffer::kMax256, "latencyMs=%# jitterMs=%# lossPercent=%# duplicatePercent=%# reorderPercent=%# bandwidthKBps=%#", gv_netEmulationLatencyMs,
                               gv_netEmulationJitterMs, gv_netEmulationLossPercent, gv_netEmulationDuplicatePercent, gv_netEmulationReorderPercent, gv_netEmulationBandwidthKilobytesPerSecond );
-                NetEmulationConditions conditions;
-                string                 error;
-                if ( NetEmulationConditions::parseOverrides( arrText, conditions, error ) == false )
+                const expected<NetEmulationConditions> conditions = NetEmulationConditions::parseOverrides( arrText, NetEmulationConditions{} );
+                if ( conditions.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "NetLineEmulation.GvNetEmulationInvalid", "gv_netEmulation* values are invalid (%#) - no emulation", error.c_str() );
+                    SW_LOG_ERROR_ID( "NetLineEmulation.GvNetEmulationInvalid", "gv_netEmulation* values are invalid (%#: %#) - no emulation", conditions.error().message(), conditions.error().detail() );
                     return NetEmulationConditions{};
                 }
-                return conditions;
+                return *conditions;
             }
 
             /** @brief 보내는 쪽 · 받는 쪽 조건을 한 줄로 씁니다(`net.emulation` 의 답). */
@@ -135,22 +134,21 @@ namespace sw
                     overrideText += ' ';
                 }
                 // 방향마다 시작점(프리셋 또는 지금 조건)에 같은 덮어쓰기를 얹는다. 하나라도 틀리면 아무것도 바꾸지 않는다.
-                NetEmulationConditions upConditions   = bPreset ? preset : pEmulation->getDefaultConditions();
-                NetEmulationConditions downConditions = bPreset ? preset : pEmulation->getIncomingConditions();
-                string                 error;
-                if ( NetEmulationConditions::parseOverrides( overrideText, upConditions, error ) == false ||
-                     NetEmulationConditions::parseOverrides( overrideText, downConditions, error ) == false )
+                const expected<NetEmulationConditions> upConditions   = NetEmulationConditions::parseOverrides( overrideText, bPreset ? preset : pEmulation->getDefaultConditions() );
+                const expected<NetEmulationConditions> downConditions = NetEmulationConditions::parseOverrides( overrideText, bPreset ? preset : pEmulation->getIncomingConditions() );
+                if ( upConditions.has_value() == false || downConditions.has_value() == false )
                 {
-                    outReply = "net.emulation: " + error;
+                    const Error& error = upConditions.has_value() ? downConditions.error() : upConditions.error();
+                    outReply           = formatToString( "net.emulation: %# '%#'", error.message(), error.detail() );
                     return true;
                 }
                 for ( int32 shardIndex = 0; shardIndex < pSession->getShardCount(); ++shardIndex )
                 {
                     NetEmulationTransport* pShardEmulation = pTool->find( *pSession, shardIndex );
                     if ( bUp )
-                        pShardEmulation->setDefaultConditions( upConditions );
+                        pShardEmulation->setDefaultConditions( *upConditions );
                     if ( bDown )
-                        pShardEmulation->setIncomingConditions( downConditions );
+                        pShardEmulation->setIncomingConditions( *downConditions );
                 }
                 outReply = describeEmulation( *pEmulation );
                 return true;

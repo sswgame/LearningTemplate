@@ -3,7 +3,7 @@
 """
 Scripts/lint/PreCommit.py
 
-Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`) · C++ 모양 검사(`CppShape.py`) · 파일 읽기 모양 검사(`ByteReadShape.py`) · 카탈로그 루트 모양 검사(`CatalogRootShape.py`) · Core 티어 역류 검사(`CoreTiers.py`) · 에디터 위젯 이름표 검사(`EditorWidgetLabels.py`) · 숫자 리터럴 래칫(`MagicLiterals.py`)과 clang-format 포맷 검사를, 저장소의 CMake 파일에 경로 대소문자 검사(`CMakePathCase.py`)를,
+Git pre-commit 훅에서 호출되어 staged C++ · 셰이더 파일에 include 순서 검사(`IncludeOrder.py`) · C++ 모양 검사(`CppShape.py`) · 파일 읽기 모양 검사(`ByteReadShape.py`) · 카탈로그 루트 모양 검사(`CatalogRootShape.py`) · Core 티어 역류 검사(`CoreTiers.py`) · 에디터 위젯 이름표 검사(`EditorWidgetLabels.py`) · 숫자 리터럴 래칫(`MagicLiterals.py`) · 결과 형식 래칫(`ResultTypes.py`)과 clang-format 포맷 검사를, 저장소의 CMake 파일에 경로 대소문자 검사(`CMakePathCase.py`)를,
 Content · 테스트 CMake 의 변경에 에셋 참조 검사(`AssetReferences.py` — 지우기 · 옮기기만 한 커밋도)를 돌립니다.
 검사에 실패하면 커밋을 중단시킵니다. 고치는 것은 `py -3 -m Scripts format` · `format-includes` 다.
 
@@ -46,6 +46,7 @@ from lint.StateShape import checkStateShape  # noqa: E402
 from lint.ThreadOwners import checkThreadOwners  # noqa: E402
 from lint.IncludeOrder import checkIncludeOrder  # noqa: E402
 from lint.MagicLiterals import checkMagicLiterals  # noqa: E402
+from lint.ResultTypes import checkResultTypes  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -113,6 +114,15 @@ def main(argv: list[str] | None = None) -> int:
             hasErrors = True
             print(f"[MagicLiterals] FAIL — 기준선(Config/Dev/MagicLiteralBaseline.json)과 다른 리터럴 수 {len(listLiteralProblem)}건")
             for line in listLiteralProblem:
+                print(f"  - {line}")
+
+    # --- 결과 형식 래칫(std::optional · string& outError 는 언어가 주는 모양이라 형식으로 막지 못한다 — ResultTypes.py 머리말) ---------------
+    if stagedCppFiles:
+        listResultProblem = checkResultTypes(projectRoot, stagedCppFiles)
+        if listResultProblem:
+            hasErrors = True
+            print(f"[ResultTypes] FAIL — 결과 형식 규칙(Core 0 · 그 밖은 Config/Dev/ResultTypeBaseline.json)과 다른 수 {len(listResultProblem)}건")
+            for line in listResultProblem:
                 print(f"  - {line}")
 
     # --- 파일에서 읽은 개수를 믿고 할당하는 모양(`vector::resize` 를 형식으로 막지 못하는 자리 — ByteReadShape.py 머리말) ---------------

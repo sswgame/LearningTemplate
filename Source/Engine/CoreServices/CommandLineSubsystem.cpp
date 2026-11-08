@@ -34,7 +34,7 @@ namespace sw
         GlobalVariableRegistrar::getHead() = nullptr;
         _globalVariables->registerToCommandLine( _commandLine.get() );
         // 경로 인자의 상대 경로 기준은 기동 때 이 프로세스가 받은 작업 폴더다(그 셸에서 적은 상대 경로의 뜻) - 여기서 한 번 읽고 다시 읽지 않는다.
-        const std::optional<AbsolutePath> baseDirectory = AbsolutePath::tryMake( FileUtil::getCurrentPath() );
+        const optional<AbsolutePath> baseDirectory = AbsolutePath::tryMake( FileUtil::getCurrentPath() );
         if ( baseDirectory.has_value() == false )
         {
             SW_LOW_LEVEL_ERROR( "Cannot read the startup directory - command-line paths cannot be resolved" ); // 로거는 명령줄 다음에 선다 - stderr 로 바로 쓴다

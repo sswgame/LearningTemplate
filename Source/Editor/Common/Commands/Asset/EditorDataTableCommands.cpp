@@ -111,7 +111,7 @@ namespace sw::editor
                 bool bAllWritten{ true };
                 for ( size_t tableIndex = 0; tableIndex < listTable.size(); ++tableIndex )
                 {
-                    const std::optional<AbsolutePath> tableFile = FileUtil::requireAbsolutePath( sheet._listTablePath[tableIndex] );
+                    const optional<AbsolutePath> tableFile = FileUtil::requireAbsolutePath( sheet._listTablePath[tableIndex] );
                     if ( tableFile.has_value() == false || listTable[tableIndex].saveToFile( *tableFile ) == false )
                     {
                         SW_LOG_ERROR_ID( "EditorDataTableCommands.StringTableCouldNot", "String table '%#' could not be written", sheet._listTablePath[tableIndex].c_str() );
@@ -125,7 +125,7 @@ namespace sw::editor
                     const string path = LocalizationProject::makeTranslationPath( sheet._projectPath, sheet._listCulture[cultureIndex] );
                     if ( listTranslation[cultureIndex].getEntries().empty() && FileUtil::exists( path ) == false )
                         continue; // 번역이 하나도 없는 문화권의 빈 파일은 만들지 않는다
-                    const std::optional<AbsolutePath> translationFile = FileUtil::requireAbsolutePath( path );
+                    const optional<AbsolutePath> translationFile = FileUtil::requireAbsolutePath( path );
                     if ( translationFile.has_value() == false || listTranslation[cultureIndex].saveToFile( *translationFile ) == false )
                     {
                         SW_LOG_ERROR_ID( "EditorDataTableCommands.TranslationTableCouldNot", "Translation table '%#' could not be written", path.c_str() );

@@ -102,11 +102,11 @@ namespace sw
         return LocalStoreLocation( Kind::Memory, string{} );
     }
 
-    std::optional<LocalStoreLocation> LocalStoreLocation::tryUnderUserData( string_view relativePath )
+    optional<LocalStoreLocation> LocalStoreLocation::tryUnderUserData( string_view relativePath )
     {
         // 느슨한 판정(`isAbsolutePath`)으로 거른다 - 드라이브 상대 · 드라이브 없는 루트도 데이터 폴더 아래 상대 경로가 아니다.
         if ( relativePath.empty() || FileUtil::isAbsolutePath( relativePath ) )
-            return std::nullopt;
+            return nullopt;
         size_t segmentBegin = 0;
         while ( segmentBegin <= relativePath.size() )
         {
@@ -114,7 +114,7 @@ namespace sw
             if ( segmentEnd == string_view::npos )
                 segmentEnd = relativePath.size();
             if ( relativePath.substr( segmentBegin, segmentEnd - segmentBegin ) == ".." )
-                return std::nullopt; // 데이터 폴더 밖으로 나간다
+                return nullopt; // 데이터 폴더 밖으로 나간다
             segmentBegin = segmentEnd + 1;
         }
         return LocalStoreLocation( Kind::UnderUserData, string( relativePath ) );

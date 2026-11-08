@@ -41,8 +41,8 @@ namespace
 
         [[nodiscard]] std::optional<ShaderIncludeResolver> makeResolver() const
         {
-            const std::optional<AbsolutePath> engine = AbsolutePath::tryMake( _engineShaders );
-            const std::optional<AbsolutePath> common = AbsolutePath::tryMake( _commonShaders );
+            const optional<AbsolutePath> engine = AbsolutePath::tryMake( _engineShaders );
+            const optional<AbsolutePath> common = AbsolutePath::tryMake( _commonShaders );
             if ( engine.has_value() == false || common.has_value() == false )
                 return std::nullopt;
             return ShaderIncludeResolver{

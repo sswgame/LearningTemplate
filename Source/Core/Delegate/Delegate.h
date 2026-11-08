@@ -600,7 +600,7 @@ namespace sw
         /** @brief 핸들에 해당하는 항목을 즉시 제거합니다. broadcast 밖에서만 부르십시오. */
         void removeNow( const DelegateHandle& handle )
         {
-            if ( const std::optional<size_t> index = VectorUtil::findIndexBy<&DelegateEntry::_handle>( _listDelegate, handle ) )
+            if ( const optional<size_t> index = VectorUtil::findIndexBy<&DelegateEntry::_handle>( _listDelegate, handle ) )
                 _listDelegate.erase( _listDelegate.begin() + static_cast<ptrdiff_t>( *index ) );
         }
 

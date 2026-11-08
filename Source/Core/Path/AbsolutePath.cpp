@@ -35,10 +35,10 @@ namespace sw
 #endif
     }
 
-    std::optional<AbsolutePath> AbsolutePath::tryMake( string_view path )
+    optional<AbsolutePath> AbsolutePath::tryMake( string_view path )
     {
         if ( isStrictAbsolute( path ) == false )
-            return std::nullopt;
+            return nullopt;
 
         string normalized{ path };
         for ( utf8& ch : normalized )
@@ -49,17 +49,17 @@ namespace sw
         return AbsolutePath{ std::move( normalized ) };
     }
 
-    std::optional<AbsolutePath> AbsolutePath::tryResolve( string_view text, const AbsolutePath& baseDirectory )
+    optional<AbsolutePath> AbsolutePath::tryResolve( string_view text, const AbsolutePath& baseDirectory )
     {
         if ( text.empty() )
-            return std::nullopt;
+            return nullopt;
         if ( isStrictAbsolute( text ) )
             return tryMake( text );
         // 절대도 상대도 아닌 모양 - 드라이브 상대(`C:foo`)와 드라이브 없는 루트(`/foo` · `\foo`, Windows).
         const bool bDriveRelative = text.size() >= 2 && text[1] == ':';
         const bool bRootless      = text[0] == '/' || text[0] == '\\';
         if ( bDriveRelative || bRootless )
-            return std::nullopt;
+            return nullopt;
         string joined{ baseDirectory.str() };
         joined.push_back( '/' );
         joined.append( text.data(), text.size() );

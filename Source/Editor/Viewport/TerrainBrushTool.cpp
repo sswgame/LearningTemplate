@@ -244,7 +244,7 @@ namespace sw::editor
                     return false;
                 HeightfieldAsset data;
                 heightfield.makeHeightfieldAsset( terrain.getHeightMin(), terrain.getHeightMax(), data );
-                const std::optional<AbsolutePath> heightfieldFile = FileUtil::requireAbsolutePath( filePath );
+                const optional<AbsolutePath> heightfieldFile = FileUtil::requireAbsolutePath( filePath );
                 return heightfieldFile.has_value() && data.saveToFile( *heightfieldFile );
             }
 
@@ -255,10 +255,10 @@ namespace sw::editor
                 if ( heightfield.getSplatWidth() == 0 )
                     return false;
                 LayerWeightsAsset data;
-                data._width                                 = heightfield.getSplatWidth();
-                data._height                                = heightfield.getSplatHeight();
-                data._bytes                                 = heightfield.getSplatBytes();
-                const std::optional<AbsolutePath> splatFile = FileUtil::requireAbsolutePath( filePath );
+                data._width                            = heightfield.getSplatWidth();
+                data._height                           = heightfield.getSplatHeight();
+                data._bytes                            = heightfield.getSplatBytes();
+                const optional<AbsolutePath> splatFile = FileUtil::requireAbsolutePath( filePath );
                 return splatFile.has_value() && data.saveToFile( *splatFile );
             }
         };

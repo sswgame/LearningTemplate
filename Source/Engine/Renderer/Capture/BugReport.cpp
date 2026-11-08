@@ -485,7 +485,7 @@ namespace sw
 #endif
         if ( inputs._pInputRecording != nullptr && inputs._pInputRecording->getFrameCount() > 0 )
         {
-            const std::optional<AbsolutePath> inputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( directory, kInputFileName ) );
+            const optional<AbsolutePath> inputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( directory, kInputFileName ) );
             if ( inputPath.has_value() == false || inputs._pInputRecording->saveToFile( *inputPath ) == false )
                 SW_LOG_WARNING_ID( "BugReport.BugreportInputCould", "bugreport: the input recording could not be saved" );
             else
@@ -493,7 +493,7 @@ namespace sw
         }
         if ( inputs._pSceneManager != nullptr )
         {
-            const std::optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( FileUtil::joinPath( directory, kSceneFileName ) );
+            const optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( FileUtil::joinPath( directory, kSceneFileName ) );
             if ( scenePath.has_value() == false || inputs._pSceneManager->saveActiveSceneCopy( *scenePath ) == false )
                 SW_LOG_WARNING_ID( "BugReport.BugreportSceneCopyCould", "bugreport: the scene copy could not be saved" );
         }

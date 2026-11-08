@@ -14,7 +14,7 @@ namespace sw
             /** @brief 절대 경로를 만들거나 멈춥니다 - 루트는 폴백 없이 정해져야 한다. */
             static AbsolutePath requireAbsolute( const string& path, const utf8* pWhat )
             {
-                const std::optional<AbsolutePath> absolute = AbsolutePath::tryMake( path );
+                const optional<AbsolutePath> absolute = AbsolutePath::tryMake( path );
                 if ( absolute.has_value() == false )
                     SW_FATAL( "ProcessRoots: the %# path '%#' is not absolute", pWhat, path );
                 return *absolute;

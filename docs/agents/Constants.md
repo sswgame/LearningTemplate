@@ -35,7 +35,7 @@ A `-1` says one of several things; each has one form (Unreal: `INDEX_NONE` · `T
 
 | Meaning | Form |
 | --- | --- |
-| No index / not found / no subject in an event or a record / not known yet | `constant::invalid_index::kInt32` (`kInt64` · `kUint32` … by the slot's type) in code, or a domain name whose value comes from it (`static constexpr int32 kNoTeam = constant::invalid_index::kInt32;`). A value that is never stored or sent may be `std::optional` instead |
+| No index / not found / no subject in an event or a record / not known yet | `constant::invalid_index::kInt32` (`kInt64` · `kUint32` … by the slot's type) in code, or a domain name whose value comes from it (`static constexpr int32 kNoTeam = constant::invalid_index::kInt32;`). A value that is never stored or sent may be `sw::optional` instead ([Errors](Errors.md)) |
 | Unlimited, endless, "all", "use the default" | A named constant on the owning type with a predicate when code branches on it (`ShopStockDef::kUnlimitedStock` + `hasFiniteStock`, `MonsterBattle::kEndlessWeather`, `AbilityComponent::kAllStacks`) — not `invalid_index`: it is not an index |
 | Sign, direction, delta, a loop that starts below zero, `-1..1` ranges | Arithmetic — stays `-1` (the ratchet does not count sign ternaries and `clamp( x, -1, 1 )`) |
 | An external API or protocol value (POSIX descriptors, OpenSSL `-1` = append, RESP null) | Stays literal at the call |

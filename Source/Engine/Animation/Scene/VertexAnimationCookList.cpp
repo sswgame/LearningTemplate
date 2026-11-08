@@ -223,9 +223,9 @@ namespace sw
                 const string     outputID = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
                 const CookResult result   = store.cookFile( desc, outputID, FileUtil::joinPath( cookedDir, outputID ), [&]()
                   {
-                    VertexAnimationCookList           jobList;
-                    const std::optional<AbsolutePath> outputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( cookedDir, outputID ) );
-                    const bool                        bCooked    = outputPath.has_value() && jobList.loadFromAsset( AssetID{ relativePath } ) && cookClip( jobList, clipName, *outputPath, framesPerSecond );
+                    VertexAnimationCookList      jobList;
+                    const optional<AbsolutePath> outputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( cookedDir, outputID ) );
+                    const bool                   bCooked    = outputPath.has_value() && jobList.loadFromAsset( AssetID{ relativePath } ) && cookClip( jobList, clipName, *outputPath, framesPerSecond );
                     return bCooked ? CookStep::Written : CookStep::Failed;
                 } );
                 outFailedCount += result == CookResult::Failed ? 1u : 0u;

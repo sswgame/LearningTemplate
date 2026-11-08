@@ -402,9 +402,9 @@ namespace sw
             }
             listArgument.insert( listArgument.end(), options._listPassThroughArgument.begin(), options._listPassThroughArgument.end() );
 
-            const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( options._executablePath );
-            pChild->_command                             = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
-            pChild->_bPending                            = true;
+            const optional<AbsolutePath> executable = AbsolutePath::tryMake( options._executablePath );
+            pChild->_command                        = executable.has_value() ? ProcessCommand::at( *executable, std::move( listArgument ) ) : ProcessCommand{};
+            pChild->_bPending                       = true;
             listChild.push_back( std::move( pChild ) );
         }
 

@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
@@ -239,8 +240,8 @@ namespace sw
         /** @brief 열거값을 `_listArgument` 인덱스로 바로 씁니다(initialize 가 그 일치를 보장합니다). */
         const ArgumentInfo* findArgument( CommandLineArgument argument ) const;
 
-        /** @brief 인자 값을 등록된 기본값의 타입에 맞춰 변환해 넣습니다. 변환하지 못하면 이유를 @p outError 에 담고 false 입니다(값을 바꾸지 않는다). */
-        [[nodiscard]] static bool trySetValue( ArgumentInfo& argument, string_view key, string_view newValue, const AbsolutePath& baseDirectory, string& outError );
+        /** @brief 인자 값을 등록된 기본값의 타입에 맞춰 변환해 넣습니다. 변환하지 못하면 `ErrorKind::InvalidArgument`(대상은 받은 값)이고 값을 바꾸지 않는다. */
+        [[nodiscard]] static expected<void> trySetValue( ArgumentInfo& argument, string_view newValue, const AbsolutePath& baseDirectory );
 
         /** @brief 도움말 한 줄(철자들과 값 모양)을 @p inoutText 에 붙입니다. */
         static void appendUsageLine( string& inoutText, const std::initializer_list<string_view>& listAlias, const ArgumentInfo& argument );

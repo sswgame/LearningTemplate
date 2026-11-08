@@ -146,7 +146,7 @@ namespace sw
             else
                 ++replyIt;
         }
-        const std::optional<size_t> index = VectorUtil::findIndexBy<&ChannelSubscriber::_subscriptionID>( _listSubscriber, id );
+        const optional<size_t> index = VectorUtil::findIndexBy<&ChannelSubscriber::_subscriptionID>( _listSubscriber, id );
         if ( index.has_value() == false )
             return;
         const string channel = std::move( _listSubscriber[*index]._channel );

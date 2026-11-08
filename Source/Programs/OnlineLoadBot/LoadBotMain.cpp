@@ -67,7 +67,7 @@ namespace sw
              */
             [[nodiscard]] static bool readOptions( int32 argc, utf8* argv[], LoadBotOptions& outOptions, string& outError )
             {
-                const std::optional<AbsolutePath> baseDirectory = AbsolutePath::tryMake( FileUtil::getCurrentPath() );
+                const optional<AbsolutePath> baseDirectory = AbsolutePath::tryMake( FileUtil::getCurrentPath() );
                 if ( baseDirectory.has_value() == false )
                 {
                     outError = "cannot read the startup directory - path arguments cannot be resolved";
