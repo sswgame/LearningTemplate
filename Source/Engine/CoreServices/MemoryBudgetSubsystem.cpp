@@ -19,13 +19,6 @@ namespace sw
     {
     }
 
-    SubsystemInitResult MemoryBudgetSubsystem::initializeSubsystem()
-    {
-        // `-gv_memoryTracking=1` 은 기동의 할당부터 센다(Release 는 추적이 꺼진 채 선다).
-        _monitor.applyTrackingSetting();
-        return SubsystemInitResult::Succeeded;
-    }
-
     void MemoryBudgetSubsystem::onFrameEnd()
     {
         if ( _bBudgetFileRead == false )

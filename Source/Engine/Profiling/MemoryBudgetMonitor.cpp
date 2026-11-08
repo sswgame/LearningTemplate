@@ -9,12 +9,12 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/File/FileUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -32,21 +32,9 @@ namespace sw
 
 namespace sw
 {
-    /**
-     * @brief `-gv_memoryReport=1`: 다음 프레임 끝에 태그 표(살아 있는 · 최고치 · 예산)를 한 번 남깁니다. 남긴 뒤 0 으로 돌아갑니다.
-     * @details 에디터 · 스크립트가 값을 1 로 바꾸면 그 프레임에 다시 남깁니다(언리얼 `stat llm` · 콘솔 명령 자리).
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_memoryReport, 0, "다음 프레임에 메모리 태그 표(살아 있는 · 최고치 · 예산)를 한 번 남김 (1=남기기)" );
-    /**
-     * @brief `-gv_memoryTracking=0|1`: 메모리 태그 추적을 끄거나 켭니다. -1 이면 구성 기본값(Debug 켜짐 · Release 꺼짐)입니다.
-     * @details 꺼져 있으면 할당마다 분기 하나만 남습니다. 켜면 태그 · 최고치 · 예산 경고가 돕니다. 배포본에는 프로파일러가 없습니다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_memoryTracking, -1, "메모리 태그 추적 (-1=구성 기본, 0=끄기, 1=켜기)" );
-
     MemoryBudgetMonitor::MemoryBudgetMonitor()
         : _arrTagCounterSlot{}
         , _liveCounterSlot{ FrameProfiler::kInvalidSlot }
-        , _appliedTrackingSetting{ -1 }
     {
         _arrTagCounterSlot.fill( FrameProfiler::kInvalidSlot );
     }
@@ -114,39 +102,16 @@ namespace sw
         return true;
     }
 
-    void MemoryBudgetMonitor::applyTrackingSetting()
-    {
-        MemoryProfiler* pProfiler = MemoryProfiler::getActive();
-        if ( pProfiler == nullptr || gv_memoryTracking == _appliedTrackingSetting )
-            return;
-        if ( gv_memoryTracking >= 0 )
-        {
-            pProfiler->setTrackingEnabled( gv_memoryTracking != 0 );
-            // 꺼져 있는 동안의 할당은 세지 않았다 — 최고치는 켠 순간부터 다시 측정한다.
-            pProfiler->resetPeaks();
-        }
-        _appliedTrackingSetting = gv_memoryTracking;
-    }
-
     void MemoryBudgetMonitor::onFrameEnd()
     {
         MemoryProfiler* pProfiler = MemoryProfiler::getActive();
         if ( pProfiler == nullptr )
             return;
 
-        applyTrackingSetting();
-
         if ( pProfiler->isTrackingEnabled() == false )
             return;
 
         (void)pProfiler->reportExceededBudgets();
-#if !defined( SW_SHIPPING ) // 한 번 남기고 되돌리는 요청 스위치 — Shipping 에서 테스트용 변수는 상수다(`SW_TEST_GLOBAL_VARIABLE`)
-        if ( gv_memoryReport != 0 )
-        {
-            gv_memoryReport = 0; // 한 번만
-            logMemoryReport( *pProfiler, "gv_memoryReport" );
-        }
-#endif
         addFrameProfilerCounters( *pProfiler );
     }
 
@@ -232,4 +197,60 @@ namespace sw
         }
 #endif
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        /**
+         * @brief 메모리 태그 개발 명령입니다(배포본에는 등록되지 않는다 — `SW_DEV_COMMAND`). 언리얼 `stat llm` · `memreport` 콘솔 명령 자리.
+         * @details 예전에는 테스트용 변수 둘(`-gv_memoryReport` · `-gv_memoryTracking`)을 감시가 프레임마다 읽었다. 묻는 쪽이 부르는 명령으로 바꿔 런타임 프레임에서 개발 분기를 뺐다.
+         *          시작부터는 `-gv_devConsoleExec=memory.tracking on`(시작 씬이 열린 뒤 — 기동 중 할당까지 세려면 Debug 구성을 쓴다).
+         */
+        struct MemoryDevCommandsInternal
+        {
+            /** @brief `memory.report`: 태그 표(살아 있는 · 최고치 · 예산)를 로그로 한 번 남깁니다. */
+            static bool runReport( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false )
+                    return false;
+                const MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+                if ( pProfiler == nullptr )
+                {
+                    outReply = "memory: no memory profiler in this build";
+                    return true;
+                }
+                MemoryBudgetMonitor::logMemoryReport( *pProfiler, "memory.report" );
+                outReply = pProfiler->isTrackingEnabled() ? "memory: tag table logged" : "memory: tag table logged - tracking is off, the counts did not move (memory.tracking on)";
+                return true;
+            }
+
+            /** @brief `memory.tracking [on|off]`: 메모리 태그 추적을 켜고 끕니다(인자가 없으면 지금 상태를 답한다). 켜거나 끄면 최고치를 다시 잰다 — 꺼진 동안의 할당은 세지 않았다. */
+            static bool runTracking( const vector<string>& listArgument, string& outReply )
+            {
+                MemoryProfiler* pProfiler = MemoryProfiler::getActive();
+                if ( pProfiler == nullptr )
+                {
+                    outReply = "memory: no memory profiler in this build";
+                    return true;
+                }
+                if ( listArgument.size() > 1 )
+                    return false;
+                if ( listArgument.size() == 1 )
+                {
+                    bool bOn = false;
+                    if ( StringUtil::tryParseBool( listArgument[0], bOn ) == false )
+                        return false;
+                    pProfiler->setTrackingEnabled( bOn );
+                    pProfiler->resetPeaks();
+                }
+                outReply = pProfiler->isTrackingEnabled() ? "memory tracking: on" : "memory tracking: off";
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( MemoryReport, "memory.report", "memory.report", "Log the memory tag table once (live, peak, budget)", &MemoryDevCommandsInternal::runReport );
+    SW_DEV_COMMAND( MemoryTracking, "memory.tracking", "memory.tracking [on|off]", "Show or switch memory tag tracking (peaks restart when switched)", &MemoryDevCommandsInternal::runTracking );
 } // namespace sw

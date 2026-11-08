@@ -68,6 +68,9 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="profiler.callTree.record"/>
 	<EditorWaitSettled/>
+	<!-- 5) 메모리 태그 개발 명령 — 상태를 묻고(바꾸지 않는다: 체인의 다음 단계가 구성 기본 추적으로 돈다) 태그 표를 로그로 남긴다 -->
+	<DevCommand line="memory.tracking"/>
+	<DevCommand line="memory.report"/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>
