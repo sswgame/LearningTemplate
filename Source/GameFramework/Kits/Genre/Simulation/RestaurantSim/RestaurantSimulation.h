@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -296,14 +297,14 @@ namespace sw
         /** @brief 읽은 상태의 손님, 주문, 직원, 메뉴, 자리가 서로와 카탈로그에 맞는지 반환합니다. `readState` 가 사본에 부릅니다. */
         [[nodiscard]] bool areLinksValid() const;
 
-        int32            findCustomerIndex( int32 customerID ) const;
-        int32            findIdleStaff( StaffRole role ) const;
-        int32            findBestCookLevel() const;
-        int32            countStations( const hashed_string& station ) const;
-        int32            countCookingAt( const hashed_string& station ) const;
-        const MenuEntry* findMenuEntry( const hashed_string& dishID ) const;
-        const RecipeDef* findRecipe( const DishDef& dish ) const;
-        float32          computeDishDemand( const DishDef& dish, int64 price ) const;
+        [[nodiscard]] optional<int32> findCustomerIndex( int32 customerID ) const;
+        int32                         findIdleStaff( StaffRole role ) const;
+        int32                         findBestCookLevel() const;
+        int32                         countStations( const hashed_string& station ) const;
+        int32                         countCookingAt( const hashed_string& station ) const;
+        const MenuEntry*              findMenuEntry( const hashed_string& dishID ) const;
+        const RecipeDef*              findRecipe( const DishDef& dish ) const;
+        float32                       computeDishDemand( const DishDef& dish, int64 price ) const;
 
     private:
         vector<StaffMember>          _listStaff;

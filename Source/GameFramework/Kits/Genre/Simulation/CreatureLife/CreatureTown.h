@@ -6,6 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -251,11 +252,11 @@ namespace sw
         /** @brief 처음부터 다시 맞추고, 전 결과와 비교해 생기거나 없어진 서식지를 알립니다. */
         void refreshHabitats();
         /** @brief 패턴을 그 위치와 회전에 맞춰 봅니다. 맞으면 차지할 타일을 @p outListTile 에 적습니다. */
-        bool  matchesAt( const HabitatDef& habitat, int32 rotation, int32 originX, int32 originY, const vector<uint8>& listClaimed,
-                         vector<int32>& outListTile ) const;
-        int32 findCreatureIndex( const hashed_string& speciesID ) const;
-        bool  hasRoom( const HabitatInstance& instance ) const;
-        void  notifyHabitatObjectives();
+        bool                          matchesAt( const HabitatDef& habitat, int32 rotation, int32 originX, int32 originY, const vector<uint8>& listClaimed,
+                                                 vector<int32>& outListTile ) const;
+        [[nodiscard]] optional<int32> findCreatureIndex( const hashed_string& speciesID ) const;
+        bool                          hasRoom( const HabitatInstance& instance ) const;
+        void                          notifyHabitatObjectives();
         /** @brief 호감도를 바꾸고 단계가 바뀌었으면 알립니다(빌린 평판의 이벤트는 꺼내지 않고, 앞뒤 단계를 비교합니다). */
         void changeFriendship( const hashed_string& speciesID, int32 delta );
         /** @brief 받은 부탁 중 끝난 것에 보상하고 목록에서 뺍니다(실패와 포기는 보상 없이 뺍니다). 일지 이벤트는 꺼내지 않습니다. */

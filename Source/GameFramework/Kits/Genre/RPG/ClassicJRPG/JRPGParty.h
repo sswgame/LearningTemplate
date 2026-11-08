@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
@@ -148,12 +149,12 @@ namespace sw
         SW_DECLARE_STATE_IO();
 
         /** @brief 이 주문이나 초식을 쓸 수 있는지 반환합니다(배웠거나, 비급 숙련이 그 단계에 닿았으면 true 입니다). */
-        bool  canUseSpell( int32 memberIndex, const hashed_string& spellID ) const;
-        bool  isTechniqueUnlocked( int32 memberIndex, const hashed_string& techniqueID ) const;
-        int32 computeAttack( int32 memberIndex ) const;
-        int32 computeDefense( int32 memberIndex ) const;
-        int32 countAlive() const;
-        int32 findMemberIndex( const hashed_string& memberID ) const;
+        bool                          canUseSpell( int32 memberIndex, const hashed_string& spellID ) const;
+        bool                          isTechniqueUnlocked( int32 memberIndex, const hashed_string& techniqueID ) const;
+        int32                         computeAttack( int32 memberIndex ) const;
+        int32                         computeDefense( int32 memberIndex ) const;
+        int32                         countAlive() const;
+        [[nodiscard]] optional<int32> findMemberIndex( const hashed_string& memberID ) const;
 
         int32              getMemberCount() const { return static_cast<int32>( _listMember.size() ); }
         const JRPGMember&  getMember( int32 memberIndex ) const { return _listMember[static_cast<size_t>( memberIndex )]; }

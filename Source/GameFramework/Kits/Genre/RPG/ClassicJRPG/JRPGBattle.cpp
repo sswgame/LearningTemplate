@@ -127,10 +127,10 @@ namespace sw
             bool bParticipant = false;
             for ( const hashed_string& participantID : pCombo->_listMemberID )
             {
-                const int32 participant = _pParty->findMemberIndex( participantID );
-                if ( participant < 0 || _pParty->getMember( participant ).isAlive() == false )
+                const optional<int32> participant = _pParty->findMemberIndex( participantID );
+                if ( participant.has_value() == false || _pParty->getMember( *participant ).isAlive() == false )
                     return false;
-                bParticipant = bParticipant || participant == memberIndex;
+                bParticipant = bParticipant || *participant == memberIndex;
             }
             if ( bParticipant == false )
                 return false;
@@ -161,9 +161,9 @@ namespace sw
                 continue;
             for ( const hashed_string& participantID : pCombo->_listMemberID )
             {
-                const int32 participant = _pParty->findMemberIndex( participantID );
-                if ( participant >= 0 && static_cast<size_t>( participant ) != memberIndex )
-                    _listCommand[static_cast<size_t>( participant )] = JRPGCommand{};
+                const optional<int32> participant = _pParty->findMemberIndex( participantID );
+                if ( participant.has_value() && static_cast<size_t>( *participant ) != memberIndex )
+                    _listCommand[static_cast<size_t>( *participant )] = JRPGCommand{};
             }
         }
         for ( size_t memberIndex = 0; memberIndex < _listCommand.size(); ++memberIndex )
@@ -439,12 +439,13 @@ namespace sw
         int32 attackSum = 0;
         for ( const hashed_string& participantID : pCombo->_listMemberID )
         {
-            const int32 participant = _pParty->findMemberIndex( participantID );
-            if ( participant < 0 || _pParty->getMember( participant ).isAlive() == false )
+            const optional<int32> foundParticipant = _pParty->findMemberIndex( participantID );
+            if ( foundParticipant.has_value() == false || _pParty->getMember( *foundParticipant ).isAlive() == false )
             {
                 pushEvent( JRPGBattleEvent::Kind::CannotUse, false, memberIndex, command._target, 0, command._id );
                 return;
             }
+            const int32 participant = *foundParticipant;
             attackSum += _pParty->computeAttack( participant );
         }
         _comboPoints -= pCombo->_points;

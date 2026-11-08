@@ -45,10 +45,10 @@ namespace sw
 
     bool CardPile::takeByID( uint16 cardID, Card& outCard )
     {
-        const int32 index = findIndexByID( cardID );
-        if ( index < 0 )
+        const optional<int32> index = findIndexByID( cardID );
+        if ( index.has_value() == false )
             return false;
-        outCard = removeAt( index );
+        outCard = removeAt( *index );
         return true;
     }
 
@@ -59,14 +59,14 @@ namespace sw
         return card;
     }
 
-    int32 CardPile::findIndexByID( uint16 cardID ) const
+    optional<int32> CardPile::findIndexByID( uint16 cardID ) const
     {
         for ( size_t index = 0; index < _listCard.size(); ++index )
         {
             if ( _listCard[index]._id == cardID )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void CardPile::shuffle( GameRandom& random )

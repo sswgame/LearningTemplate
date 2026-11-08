@@ -98,7 +98,7 @@ namespace sw
     int32 JRPGParty::addMember( const hashed_string& memberID, string_view name, const hashed_string& classID, int32 level )
     {
         const JRPGClassDef* pClass           = _pCatalog != nullptr ? _pCatalog->findClass( classID ) : nullptr;
-        const bool          bCannotAddMember = pClass == nullptr || memberID.empty() || static_cast<int32>( _listMember.size() ) >= kMaxMembers || findMemberIndex( memberID ) >= 0;
+        const bool          bCannotAddMember = pClass == nullptr || memberID.empty() || static_cast<int32>( _listMember.size() ) >= kMaxMembers || findMemberIndex( memberID ).has_value();
         if ( bCannotAddMember )
             return constant::invalid_index::kInt32;
 
@@ -392,14 +392,14 @@ namespace sw
         return count;
     }
 
-    int32 JRPGParty::findMemberIndex( const hashed_string& memberID ) const
+    optional<int32> JRPGParty::findMemberIndex( const hashed_string& memberID ) const
     {
         for ( int32 index = 0; index < static_cast<int32>( _listMember.size() ); ++index )
         {
             if ( _listMember[static_cast<size_t>( index )]._id == memberID )
                 return index;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void JRPGParty::growOneLevel( int32 memberIndex, const JRPGClassDef& classDef )
