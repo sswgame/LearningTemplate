@@ -108,8 +108,9 @@ namespace sw
         RHIRenderPassBeginInfo beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;
         beginInfo._colorTargetCount  = 1;
-        beginInfo._arrColorTarget[0] = 0; // 스왑체인 이미지(실제 크기)
-        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::DontCare;
+        beginInfo._arrColorTarget[0] = 0;                          // 스왑체인 이미지(실제 크기)
+        beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Clear; // 이 프레임에 아무도 쓰지 않은 스왑체인 이미지(Vulkan 레이아웃 UNDEFINED)는 Load 로 열 수 없다 — 타일 GPU 에서 클리어는 거의 공짜다
+        beginInfo._arrClearColor[0]  = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
         beginInfo._width             = rotation.getPhysicalWidth();
         beginInfo._height            = rotation.getPhysicalHeight();
         cmd.beginRenderPass( beginInfo );
