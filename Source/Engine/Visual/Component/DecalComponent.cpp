@@ -13,9 +13,9 @@ namespace sw
     {
         struct DecalComponentInternal
         {
-            static constexpr float32 kDefaultRoughness      = 0.8f;   ///< 흙 · 아스팔트 · 칠 자국의 거칠기
-            static constexpr float32 kDefaultAngleFadeStart = 0.3f;   ///< 투영 축과 약 72 도를 넘는 면(가파른 벽)부터 사라진다
-            static constexpr float32 kMaxAngleFadeStart     = 0.999f; ///< 1 이면 페이드 폭이 0 이라 나눗셈이 터진다
+            static constexpr float32 kDefaultRoughness       = 0.8f;   ///< 흙 · 아스팔트 · 칠 자국의 거칠기
+            static constexpr float32 kDefaultFadeStartCosine = 0.3f;   ///< 투영 축과 약 72 도를 넘는 면(가파른 벽)부터 사라진다
+            static constexpr float32 kMaxFadeStartCosine     = 0.999f; ///< 1 이면 페이드 폭이 0 이라 나눗셈이 터진다
         };
     } // namespace
 
@@ -26,7 +26,7 @@ namespace sw
         , _roughness{ DecalComponentInternal::kDefaultRoughness }
         , _metallic{ 0.0f }
         , _normalStrength{ 1.0f }
-        , _angleFadeStart{ DecalComponentInternal::kDefaultAngleFadeStart }
+        , _fadeStartCosine{ DecalComponentInternal::kDefaultFadeStartCosine }
         , _sortOrder{ 0 }
         , _channels{ DecalChannels::All }
     {
@@ -49,7 +49,7 @@ namespace sw
         outData._world         = getWorldMatrix();
         outData._worldToLocal  = outData._world.invert();
         outData._color         = _color;
-        outData._surface       = float4{ MathUtil::saturate( _roughness ), MathUtil::saturate( _metallic ), _normalStrength, MathUtil::clamp( _angleFadeStart, -1.0f, DecalComponentInternal::kMaxAngleFadeStart ) };
+        outData._surface       = float4{ MathUtil::saturate( _roughness ), MathUtil::saturate( _metallic ), _normalStrength, MathUtil::clamp( _fadeStartCosine, -1.0f, DecalComponentInternal::kMaxFadeStartCosine ) };
         outData._albedoTexture = _albedoTexture;
         outData._normalTexture = _normalTexture;
         outData._sortOrder     = _sortOrder;

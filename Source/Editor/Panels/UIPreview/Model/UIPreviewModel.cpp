@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/formatString.h"
 
+#include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
@@ -81,6 +82,11 @@ namespace sw::editor
     {
         unique_ptr<Widget> _pWidget{};
     };
+
+    const DataPath& UIPreviewModel::getDefaultDocument()
+    {
+        return getEditorToolDefaults()._uiPreviewDocument;
+    }
 
     UIPreviewModel::UIPreviewModel( const DataPath& initialDocument )
         : _pUndoOwner{ make_unique<UndoStepOwner>() }

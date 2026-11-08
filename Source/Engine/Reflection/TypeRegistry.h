@@ -306,9 +306,9 @@ namespace sw
          * @details 줄이 없으면(배포 구성 · 적은 것 없음) 아무것도 하지 않아 포인터가 빈 채다. 묶음은 이 레지스트리가 든다 — 다시 등록하면 새 묶음을 만들고 옛 묶음은
          *          버리지 않고 모아 둔다(밖에서 든 옛 정보 사본이 가리킬 수 있다 — 핫 리로드 한 번에 타입 몇 개 분량이다).
          */
-        void attachEditorMetadata( TypeInfo& info );
+        void attachEditorMetadata( TypeInfo& info ) SW_REQUIRES_LOCK( _mutex );
         /** @brief 열거형 @p info 에 에디터 메타데이터를 붙입니다(`attachEditorMetadata` 의 짝). 잠금 안에서 부른다. */
-        void attachEditorMetadata( EnumInfo& info );
+        void attachEditorMetadata( EnumInfo& info ) SW_REQUIRES_LOCK( _mutex );
 
         /** @brief 템플릿 enum 의 EnumInfo 입니다. 찾는 규칙은 `findEnumByTypeFqn` 입니다. */
         template <typename E>

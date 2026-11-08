@@ -82,6 +82,8 @@ namespace sw::editor
     public:
         /** @brief 처음 여는 문서 @p initialDocument(editortooldefaults 의 칸)로 만듭니다. */
         explicit UIPreviewModel( const DataPath& initialDocument );
+        /** @brief 처음 여는 문서입니다(에디터 도구 시드 editortooldefaults.json). View 가 서비스 로케이터에 닿지 않게 Model 이 읽는다. */
+        [[nodiscard]] static const DataPath& getDefaultDocument();
         ~UIPreviewModel();
         UIPreviewModel( const UIPreviewModel& )            = delete;
         UIPreviewModel& operator=( const UIPreviewModel& ) = delete;

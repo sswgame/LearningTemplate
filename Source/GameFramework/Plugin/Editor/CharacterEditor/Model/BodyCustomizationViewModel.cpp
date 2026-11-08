@@ -223,7 +223,7 @@ namespace sw::editor
             for ( const BodyActionScaleDef& action : pProfile->_listActionScale )
             {
                 const bool bActive = pBody->hasTag( TagID::request( action._tag.c_str() ), true );
-                outState._listAction.push_back( BodyCustomizationViewState::ActionRow{ action._tag, action._scale, bActive ? SW_TRUE : SW_FALSE } );
+                outState._listAction.push_back( BodyCustomizationViewState::ActionRow{ action._tag, action._scale, static_cast<uint8>( bActive ? SW_TRUE : SW_FALSE ) } );
             }
         }
         for ( size_t index = 0; pProfile != nullptr && index < pProfile->_listFluid.size(); ++index )

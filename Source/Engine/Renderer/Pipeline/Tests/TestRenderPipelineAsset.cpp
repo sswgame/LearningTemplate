@@ -691,6 +691,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, PostProcessMaterialPassesNameOneLocation 
 /** @brief [RenderPipelineAssetTest] 데칼 패스는 G버퍼 알베도 · 노멀 · 머티리얼에만 쓴다(차례 그대로) — 엔진 디퍼드는 G버퍼 뒤 · 조명 앞에 둔다 */
 SW_TEST_CASE( RenderPipelineAssetTest, DecalPassWritesTheGBuffer )
 {
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassBlendOff" ); // 틀린 파이프라인은 블렌드도 꺼 두었다 — 경고가 함께 난다
     SW_EXPECT_LOG( "RenderPipelineAsset.PassDecalOutputs" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );

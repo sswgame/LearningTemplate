@@ -283,7 +283,7 @@ namespace sw::editor
 
     UIPreviewPanel::UIPreviewPanel()
         : IEditorDocumentPanel( false )
-        , _model{ getEditorToolDefaults()._uiPreviewDocument } // 처음 여는 문서 — 원본은 editortooldefaults.json
+        , _model{ UIPreviewModel::getDefaultDocument() }
         , _grid{}
         , _paletteFilter{}
         , _listTreeRow{}

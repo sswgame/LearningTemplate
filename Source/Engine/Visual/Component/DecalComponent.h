@@ -79,7 +79,7 @@ namespace sw
         PROPERTY( Min = 0.0, Max = 4.0, Tooltip = "Normal texture strength" )
         float32 _normalStrength;
         PROPERTY( Min = -1.0, Max = 1.0, Tooltip = "Cosine between the projection axis and the surface normal where the decal starts to fade (steep walls fade out)" )
-        float32 _angleFadeStart;
+        float32 _fadeStartCosine;
         PROPERTY( Tooltip = "Draw order; larger draws on top" )
         int32 _sortOrder;
         PROPERTY( Tooltip = "G-buffer channels the decal covers" )

@@ -247,7 +247,7 @@ namespace sw
         if ( pProfile == nullptr )
             return;
         for ( const BodyFluidDef& fluid : pProfile->_listFluid )
-            _listFluid.push_back( FluidStream{ {}, fluid._name, 0.0f } );
+            _listFluid.push_back( FluidStream{ {}, fluid._name, {}, 0.0f } );
     }
 
     void CharacterBodyDynamicsComponent::update( GameObjectManager& manager )

@@ -88,7 +88,7 @@
 					                _roughness="0.9"
 					                _metallic="0"
 					                _normalStrength="1"
-					                _angleFadeStart="0.3"
+					                _fadeStartCosine="0.3"
 					                _sortOrder="0"
 					                _channels="All" />
 				</_listComponent>
@@ -107,7 +107,7 @@
 					                _roughness="1"
 					                _metallic="0"
 					                _normalStrength="1"
-					                _angleFadeStart="0.3"
+					                _fadeStartCosine="0.3"
 					                _sortOrder="1"
 					                _channels="All" />
 				</_listComponent>
@@ -125,7 +125,7 @@
 					                _roughness="0.35"
 					                _metallic="0"
 					                _normalStrength="1"
-					                _angleFadeStart="0.3"
+					                _fadeStartCosine="0.3"
 					                _sortOrder="2"
 					                _channels="Albedo|Material" />
 				</_listComponent>
