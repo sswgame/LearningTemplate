@@ -3,7 +3,6 @@
 #include "Engine/Rendering/MeshLODSystem.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
@@ -23,14 +22,6 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_meshLodForce=N` — 메시 LOD 를 화면 크기와 상관없이 단계 N 으로 그립니다(-1 이면 화면 크기로 고른다). 단계 확인 캡처 · 비교 측정용입니다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_meshLodForce, -1, "Draw every LOD mesh at this LOD level regardless of screen size (-1 = pick by screen size)" );
-} // namespace sw
-
-namespace sw
-{
     SW_SCENE_SERVICE( MeshLODSystem, FlushEnd )
 
     MeshLODSystem::MeshLODSystem( GameObjectManager& manager )
@@ -38,7 +29,7 @@ namespace sw
         , _listView{}
         , _listPickedLOD{}
         , _pendingView{}
-        , _forcedLOD{ -1 }
+        , _forcedLOD{ kPickByScreenSize }
         , _bViewsSet{ SW_FALSE }
         , _bHasPendingView{ SW_FALSE }
         , _bGPUSelectionActive{ SW_FALSE }
@@ -79,7 +70,7 @@ namespace sw
 
     bool MeshLODSystem::needsCPUSelection() const
     {
-        return gv_meshLodForce >= 0 || _forcedLOD >= 0 || _bHasPendingView == SW_TRUE || _bViewsSet == SW_FALSE;
+        return _forcedLOD >= 0 || _bHasPendingView == SW_TRUE || _bViewsSet == SW_FALSE;
     }
 
     float32 MeshLODSystem::computeScreenSize( const MeshComponent& component ) const
@@ -114,15 +105,14 @@ namespace sw
         }
         text += "] by ";
         // `update` 와 같은 순서로 누가 단계를 정하는지 가른다.
-        const int32 forcedLOD = gv_meshLodForce >= 0 ? gv_meshLodForce : _forcedLOD;
         if ( pMesh->getLODs().empty() )
             text += "single";
         else if ( castTo<MeshSectionComponent>( &component ) != nullptr )
             text += "section";
         else if ( _bGPUSelectionActive == SW_TRUE && needsCPUSelection() == false && isGPUSelectable( *pMesh, component.getSkinSlot() ) )
             text += "gpu (strict pick " + to_string( pMesh->selectLOD( screenSize ) ) + ")";
-        else if ( forcedLOD >= 0 )
-            text += "forced " + to_string( forcedLOD );
+        else if ( _forcedLOD >= 0 )
+            text += "forced " + to_string( _forcedLOD );
         else if ( _bViewsSet == SW_FALSE )
             text += "views-not-set";
         else
@@ -137,7 +127,7 @@ namespace sw
         // GPU 컬링이 인스턴스마다 단계를 고르는 프레임은 그것이 고르는 컴포넌트의 단계를 건드리지 않는다(고정 단계 · 대기 뷰가 생기면 빌더가 다음 빌드에 CPU 로 돌려 놓는다).
         const bool                     bGPUPicks     = _bGPUSelectionActive == SW_TRUE && needsCPUSelection() == false;
         const vector<ScenePrimitive*>& listPrimitive = _manager.getPrimitiveRegistry().getLODPrimitives();
-        const int32                    forcedLOD     = gv_meshLodForce >= 0 ? gv_meshLodForce : _forcedLOD;
+        const int32                    forcedLOD     = _forcedLOD;
         const uint32                   count         = static_cast<uint32>( listPrimitive.size() );
         // 고르기(화면 크기 · 판정)는 컴포넌트마다 독립이라 워커로 나누고, 적용(`setLODIndex`)은 이 스레드가 목록 순서로 한다(언리얼 ParallelFor + 게임 스레드 반영).
         // 스레드 안전: 본문은 뷰 · 고정 단계(이 객체, 병렬 동안 바뀌지 않는다) · 컴포넌트의 메시 · 월드 캐시를 읽고 자기 칸 `_listPickedLOD[index]` 에만 쓴다.

@@ -645,7 +645,6 @@
     "Source/Engine/Rendering/DirectionalLightComponent.cpp": {"float": 3, "integer": 1},
     "Source/Engine/Rendering/MaterialWatches.cpp": {"minus-one": 1},
     "Source/Engine/Rendering/MeshComponent.cpp": {"minus-one": 2},
-    "Source/Engine/Rendering/MeshLODSystem.cpp": {"minus-one": 2},
     "Source/Engine/Rendering/PointLightComponent.cpp": {"float": 1},
     "Source/Engine/Rendering/SpotLightComponent.cpp": {"float": 1},
     "Source/Engine/Scene/Scene.cpp": {"float": 2},
