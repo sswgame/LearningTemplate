@@ -9,12 +9,17 @@
 #include "App/AppEntry.h"
 
 #if defined( SW_PLATFORM_ANDROID )
-    #include "Core/String/StringUtil.h"
     #include "Core/Container/vector.h"
+    #include "Core/File/Android/AndroidAssetFileReader.h"
+    #include "Core/File/BundledContentFileSource.h"
+    #include "Core/File/ProcessRoots.h"
+    #include "Core/Log/Logger.h"
+    #include "Core/String/StringUtil.h"
 
     #include "Engine/Window/Android/AndroidWindow.h"
 
     #include <android_native_app_glue.h>
+    #include <stdlib.h>
 
 // NOLINTNEXTLINE(readability-identifier-naming): NDK 글루가 부르는 이름이다
 extern "C" void android_main( android_app* pApp )
@@ -31,7 +36,15 @@ extern "C" void android_main( android_app* pApp )
         listArgumentPointer.push_back( argument.data() );
     }
     listArgumentPointer.push_back( nullptr );
+
+    // 루트와 콘텐츠 소스는 무엇이 읽기 전에 건다 — 앱 전용 폴더가 바이너리 폴더를 대신하고(ProcessRoots), 팩 폴더 경로는 APK 의 assets/Packs 로 옮겨 읽는다.
+    if ( pApp->activity->internalDataPath == nullptr || setenv( sw::kAndroidAppFolderVariable, pApp->activity->internalDataPath, 1 ) != 0 )
+        SW_FATAL( "AndroidMain: the activity has no internal data path - the process roots cannot be set" );
+    const sw::AndroidAssetFileReader    assetReader{ pApp->activity->assetManager };
+    const sw::BundledContentFileSource  packSource{ assetReader, sw::ProcessRoots::get()._packs.str(), sw::constant::path::kPacksFolder };
+    const sw::IContentFileSource* const pPreviousSource = sw::ContentFileSource::bindCurrent( &packSource );
     (void)sw::AppEntry::run( static_cast<int32>( listArgument.size() ), listArgumentPointer.data() );
+    (void)sw::ContentFileSource::bindCurrent( pPreviousSource );
     sw::AndroidWindow::setApplication( nullptr );
 }
 

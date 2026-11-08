@@ -12,6 +12,12 @@
 namespace sw
 {
     /**
+     * @brief Android 기동(AndroidMain)이 앱 전용 폴더(`ANativeActivity::internalDataPath`)를 넘기는 환경 변수입니다. APK 안에는 실행 파일 폴더가 없어 그 폴더가 바이너리 폴더를 대신한다 —
+     *        `Saved` 가 그 아래 생기고, 팩 폴더(`<그 폴더>/Packs`)는 APK 의 `assets/Packs` 에 걸린다(`BundledContentFileSource`).
+     */
+    inline constexpr const utf8* kAndroidAppFolderVariable = "SW_ANDROID_APP_FOLDER";
+
+    /**
      * @struct ProcessRoots
      * @brief 프로세스의 루트 폴더들입니다. `get()` 이 처음 부를 때 실행 파일 위치로 정한다.
      */

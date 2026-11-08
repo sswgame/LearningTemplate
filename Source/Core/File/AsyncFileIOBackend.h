@@ -27,9 +27,10 @@ namespace sw
     struct AsyncOpenFile
     {
 
-        string           _path;   ///< 연 경로(로그용)
-        uint64           _size;   ///< 열 때 측정한 크기
-        NativeFileHandle _handle; ///< OS 핸들(Windows HANDLE · POSIX fd)
+        string           _path;       ///< 연 경로(로그용)
+        uint64           _size;       ///< 열 때 측정한 크기(구간이면 그 길이)
+        uint64           _baseOffset; ///< OS 파일 안에서 이 파일이 시작하는 위치 — 보통 0, 묶음 안 구간(APK 안 저장된 팩 — `openNativeRange`)이면 그 시작
+        NativeFileHandle _handle;     ///< OS 핸들(Windows HANDLE · POSIX fd)
         /**
          * @brief (Windows) 이 핸들을 묶은 완료 포트입니다. 핸들 하나는 포트 하나에만 묶이므로, 다른 매니저의 포트에 묶였으면 그 매니저는
          *        이 파일을 동기로 읽습니다. 묶다가 실패하면 `kUnbindablePort` 입니다.
@@ -37,8 +38,8 @@ namespace sw
         atomic<void*> _pBoundPort;
         /** @brief 메모리에 든 파일이면 그 바이트입니다(`_handle` 은 없다). 큐의 `prepare` 가 OS 에 넘기지 않고 옮겨 끝낸다 — 세 백엔드가 몰라도 된다. */
         shared_ptr<const vector<uint8>> _pMemoryBytes;
-        /** @brief 이미 연 핸들을 넘겨받습니다. */
-        AsyncOpenFile( NativeFileHandle handle, uint64 size, string path );
+        /** @brief 이미 연 핸들을 넘겨받습니다. @p baseOffset 부터 @p size 바이트가 이 파일이다. */
+        AsyncOpenFile( NativeFileHandle handle, uint64 baseOffset, uint64 size, string path );
         /** @brief 메모리에 든 파일입니다. */
         AsyncOpenFile( shared_ptr<const vector<uint8>> pMemoryBytes, string path );
         /** @brief 핸들을 닫습니다. */
@@ -74,7 +75,7 @@ namespace sw
         AsyncReadCompleteDelegate _onComplete; ///< 완료 콜백
         AsyncReadResult           _result;     ///< 결과(바이트 · 상태)
         AsyncFileIOQueue*         _pQueue;     ///< 기다리기에 쓰는 큐(요청이 끝나기 전에는 큐가 살아 있다 — `shutdown` 이 모두 기다린다)
-        uint64                    _offset;     ///< 구간 시작
+        uint64                    _offset;     ///< 구간 시작 — `AsyncFileIOQueue::prepare` 뒤에는 OS 파일 안 위치(파일의 `_baseOffset` 을 더한 것)다
         uint64                    _size;       ///< 구간 크기(`kWholeFile` 은 `prepare` 가 실제 크기로 바꾼다)
         uint64                    _bytesDone;  ///< 백엔드가 지금까지 읽은 바이트(짧은 읽기를 이어 읽는다)
         atomic<uint8>             _state;      ///< `AsyncReadState`
