@@ -26,7 +26,7 @@ namespace sw
             static constexpr const utf8* kDocumentElement = "Document"; ///< 규칙 표: 문서 형식 한 줄
             static constexpr const utf8* kCatalogElement  = "Catalog";  ///< 규칙 표: 카탈로그 한 줄
             static constexpr const utf8* kEntryElement    = "Entry";    ///< 규칙 표: 카탈로그의 항목 종류(`key` 필수)
-            static constexpr const utf8* kFieldElement    = "Field";    ///< 규칙 표: 칸(`key` 가 있으면 목록 원소의 열쇠)
+            static constexpr const utf8* kFieldElement    = "Field";    ///< 규칙 표: 칸(`key` 가 있으면 목록 원소의 열쇠). 카탈로그 줄 바로 아래면 항목이 아닌 칸이다(`_base` 를 받지 않는다)
 
             static bool isElement( const XMLNode& node )
             {
@@ -337,6 +337,10 @@ namespace sw
                         continue;
                     DataInheritanceSchema schema{ rootName };
                     if ( readSchemaFields( row, pChildName, schema, bKeyRequired ) == false )
+                        return false;
+                    // 카탈로그 줄의 `<Field>` 는 항목 종류가 아닌 루트 칸이다 — 래퍼 하나에 든 열쇠 목록(입력 맵의 `<layers><layer name>`)처럼 항목 id 가 없는 것.
+                    const bool bCatalogRow = StringUtil::equals( pRowElement, kCatalogElement );
+                    if ( bCatalogRow && readSchemaFields( row, kFieldElement, schema, false ) == false )
                         return false;
                     outSchema  = std::move( schema );
                     outbListed = true;
