@@ -23,7 +23,7 @@ Ask in this order. Stop at the first yes.
 ## Helpers used by one `.cpp`
 
 - **One class or struct definition per named `namespace` block.** A file with several classes closes the block after each `};` and reopens it, so each class folds on its own (template specializations of one name stay together; the anonymous namespace stays one block).
-- Locator-only `s_*` state used by bind/get APIs stays in the implementation block's anonymous namespace (`Source/` and `Source/Programs/ReflectionParser/`).
+- Mutable `s_*` state is a hidden singleton and belongs to an owner object ([CppStyle](CppStyle.md) "No mutable statics"). The few listed exceptions (`Config/Dev/MutableStaticExceptions.json` — e.g. the bind/get root of the engine service table) stay in the implementation block's anonymous namespace.
 
 The anonymous namespace is a **separate** `namespace sw` block above the class implementation:
 
@@ -59,7 +59,7 @@ A constant declared directly in the anonymous namespace (`constexpr int32 kLimit
 
 ### One anonymous namespace per file, at the top of its scope
 
-- A `.cpp` has **at most one** anonymous namespace, at the top of the enclosing namespace, and never an empty one. Everything TU-local lives in it: helper structs, constants, `s_*` state, free functions.
+- A `.cpp` has **at most one** anonymous namespace, at the top of the enclosing namespace, and never an empty one. Everything TU-local lives in it: helper structs, constants, listed `s_*` exceptions, free functions.
 - **No free `static` functions.** The anonymous namespace already gives internal linkage.
 - The block may only sit above things it does not use: a file-scope `static` it references moves **into** the block.
 - Exceptions:

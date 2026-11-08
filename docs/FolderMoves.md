@@ -9,7 +9,7 @@
 | 항목 | 지금 | 막는 것 | 풀 모양 |
 | --- | --- | --- | --- |
 | `Engine/Profiling/SubsystemTimingReport` → DevTools/Profiling | Engine.cpp 가 기동 · 종료 시간 요약을 이름으로 부른다 | 엔진 루프가 개발 보고를 직접 부른다 | 기동 단계 확장점(`EngineStartupExtension`)에 "서브시스템 시간 관찰자" 를 두고 DevTools 가 붙는다 — ProfilerTraceExport 를 프레임 끝 훅으로 옮긴 것과 같은 모양 |
-| `Engine/Profiling/Tracy/TracyProfilerBackend` → DevTools/Profiling/Tracy | `ProfilerBackend` 가 정적 칸으로 Tracy 를 고른다 | 그 정적 칸은 갈래 M(가변 정적 → 주인 멤버) 범위 | M 이 `ProfilerBackend` 를 서브시스템 멤버로 바꾼 뒤, DevTools `ProfilerLaunchSwitches` 가 `IProfilerBackend` 를 등록한다 |
+| `Engine/Profiling/Tracy/TracyProfilerBackend` → DevTools/Profiling/Tracy | `ProfilerBackend::startTracy` 가 Tracy 출력을 직접 만든다 | `ProfilerBackend` 의 정적 칸(지점 표 · 이름 저장소 · 활성 출력)은 프로세스 수명 바닥이라 그대로 둔다(`Config/Dev/MutableStaticExceptions.json`) — 엔진이 Tracy 형식을 아는 것만 남았다 | `startTracy` 를 지우고 DevTools `ProfilerLaunchSwitches` · 에디터 "Tracy 열기" 가 `TracyProfilerBackend` 를 만들어 `ProfilerBackend::setActiveBackend` 로 꽂는다 |
 | `Graphics/View/IEngineRenderDriver.h` → `Presentation` | 창구 셋(UI · Audio · Render) 중 하나만 Graphics(층 4) | `FrameViewports` 등 Graphics 형식을 값으로 쓴다(층 2 가 못 본다) | 그 형식을 앞 선언 · 포인터로 바꾸고 옮긴다(include 6) |
 | `App/RuntimeUIHost` · `App/UserSettingsHost` → Engine(UI · UserSettings) | 엔진 헤더만 쓰는 엔진 일인데 App 에 있다 | `Engine/Engine.h`(층 8)를 받아 서비스를 꺼낸다 — 층 6 폴더가 못 본다 | `Engine&` 대신 필요한 서비스(UISystem · UserSettingsManager · RenderThread · IWindow)를 인자로 받게 한 뒤 옮긴다 |
 | `GameFramework/Runtime/Foundation/Random/ValueNoise` → Core/Math | GF | `GameHash`(GF)를 쓴다 | 좌표 해시를 `Core/Hash/HashUtil` 로 내린 뒤 옮긴다 |
