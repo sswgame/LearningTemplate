@@ -57,9 +57,19 @@ namespace sw::editor
         bool setSlotItem( const hashed_string& slot, const hashed_string& itemID );
         /** @brief 슬롯 요청 자체를 지웁니다(기준 프리셋의 기본값으로 돌아갑니다). 없으면 false 입니다. */
         [[nodiscard]] bool removeSlot( const hashed_string& slot );
-        bool               setNumber( const hashed_string& parameter, float32 value, bool bContinuous );
-        bool               setColor( const hashed_string& parameter, const float4& color, bool bContinuous );
-        bool               setOption( const hashed_string& parameter, const hashed_string& option );
+        /** @brief 슬롯을 플레이어가 숨긴 것으로 둡니다(투구 숨기기 — 외형 · 몸 채널만 빠진다). 슬롯 요청이 없으면 false 입니다. */
+        bool setSlotHidden( const hashed_string& slot, bool bHidden );
+        /** @brief 피부 층을 맨 위(목록 끝)에 더합니다. */
+        bool addSkinLayer( const hashed_string& layer, const float4& color, float32 opacity );
+        /** @brief 피부 층 하나를 지웁니다. 번호가 범위 밖이면 false 입니다. */
+        [[nodiscard]] bool removeSkinLayer( uint32 index );
+        /** @brief 피부 층을 @p delta 칸 옮깁니다(−1 아래로 · +1 위로 — 목록 뒤가 위다). 끝을 넘으면 false 입니다. */
+        bool moveSkinLayer( uint32 index, int32 delta );
+        /** @brief 피부 층 하나의 값(색 · 불투명도 · 배치 · 대칭 · 숨김)을 바꿉니다. */
+        bool setSkinLayer( uint32 index, const SkinLayerValue& value, bool bContinuous );
+        bool setNumber( const hashed_string& parameter, float32 value, bool bContinuous );
+        bool setColor( const hashed_string& parameter, const float4& color, bool bContinuous );
+        bool setOption( const hashed_string& parameter, const hashed_string& option );
         /** @brief @p other 가 @p param 과 같은 대칭 그룹의 다른 매개변수(같은 종류)이면 true 입니다. */
         static bool isSymmetryPartner( const CustomizationParamDef& param, const CustomizationParamDef& other );
         /** @brief 값을 정하고 대칭 그룹(좌우 귀)의 짝도 같은 값으로 바꿉니다. 짝은 자기 범위로 자릅니다. */
