@@ -66,7 +66,11 @@ if(SW_TOOLCHAIN_CONFIG_FOUND)
 		sw_prependEnvPath("${SW_TOOLCHAIN_LLVM_PATH}/bin")
 
 		# project() 전이다 — 호스트 판정(CMAKE_HOST_WIN32)으로 고른다.
-		if(CMAKE_HOST_WIN32 AND EXISTS "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang-cl.exe")
+		# 교차 빌드(웹 · Android)는 대상 툴체인(VCPKG_CHAINLOAD_TOOLCHAIN_FILE — emcc · NDK clang)이 컴파일러를 정한다. 여기서 호스트 clang-cl 을 강제로 묶으면
+		# 대상 툴체인을 덮어 웹 · Android 구성이 Windows 컴파일러 · x64-windows 패키지로 섰다.
+		if(VCPKG_CHAINLOAD_TOOLCHAIN_FILE)
+			message(STATUS "[Toolchain] cross build - compilers come from ${VCPKG_CHAINLOAD_TOOLCHAIN_FILE}")
+		elseif(CMAKE_HOST_WIN32 AND EXISTS "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang-cl.exe")
 			set(CMAKE_C_COMPILER "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang-cl.exe" CACHE FILEPATH "C 컴파일러" FORCE)
 			set(CMAKE_CXX_COMPILER "${SW_TOOLCHAIN_LLVM_PATH}/bin/clang-cl.exe" CACHE FILEPATH "CXX 컴파일러" FORCE)
 
