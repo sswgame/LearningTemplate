@@ -3,10 +3,10 @@
   Shooter3D 스프링 망토(ShooterCharacterIntegration S7) — 플레이어(UBC 몸)의 문장 망토(itemvisuals.xml 의 cape_heraldic_ubc, kind="Skinned" 에 자기 스켈레톤 · 리그 ubc_cape.rig.xml)가
   몸이 움직일 때 뒤처져 흔들리는지 3인칭 사진을 골든과 견준다. 서 있는 사진 · 달리기 시작 · 달리는 중 · 달리다 멈춘 직후(관성으로 앞으로 쏠린다) · 가라앉은 뒤를 찍는다.
   달리기는 키를 쥔 채 프레임이 흘러야 하므로 고정 대기다.
-  실행: App -scenario=game/shooter3d/automation/cape.scenario.xml -unattended -gv_cameraPreset=orbit (체인: ctest -R Scenario.shooter3d)
+  실행: App -scenario=game/shooter3d/automation/cape.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
 -->
 <Scenario name="game.shooter3d.cape" fixedDelta="0.0166667" timeoutFrames="500" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
-	<Launch variable="gv_cameraPreset" value="orbit"/>
+	<DevCommand line="camera.preset orbit"/>
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<Wait frames="60"/>
 	<Screenshot file="standing.ppm"/>

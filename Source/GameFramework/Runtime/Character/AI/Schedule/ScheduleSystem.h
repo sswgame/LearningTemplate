@@ -248,7 +248,7 @@ namespace sw
         [[nodiscard]] bool initialize( const ScheduleCatalog* pCatalog, const ScheduleSystemSettings& settings, int32 absoluteMinute );
         void               shutdown();
 
-        /** @brief 시계의 지금까지 시간을 흘립니다. 화면 밖 디버그 출력(`gv_scheduleTrace`)도 여기서 처리합니다. */
+        /** @brief 시계의 지금까지 시간을 흘립니다. */
         void update( const WorldClock& clock );
         /** @brief @p absoluteMinute 까지 시간을 흘립니다. 뒤로는 가지 않습니다. */
         void advanceTo( int32 absoluteMinute );
@@ -421,7 +421,6 @@ namespace sw
         void updateNearRoutes();
         void popExpiredInterruptions( int32 npcIndex, int32 minute );
         void resumeNPC( int32 npcIndex );
-        void logTraceRequest();
 
     private:
         const ScheduleCatalog*     _pCatalog;
@@ -437,7 +436,6 @@ namespace sw
         vector<int32>              _listMetAppointment;    ///< 오늘 모인 약속의 인덱스. 사건을 한 번만 내려고 보관한다
         hashed_string              _weather;
         GameplayContext            _actionWorld;
-        string                     _lastTraceRequest;
         float32                    _minuteFraction; ///< `update` 가 준 시간 중 분 아래 나머지. 보이는 위치를 보간할 때 쓴다
         int32                      _minute;
         uint32                     _flagsRevision;

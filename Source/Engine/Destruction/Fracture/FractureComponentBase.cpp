@@ -30,8 +30,8 @@
 namespace sw
 {
     SW_GLOBAL_VARIABLE( int32, gv_destructionMaxDebrisBodies, 512, "한 씬(월드)의 모든 파괴 오브젝트가 함께 드는 떨어진 덩어리 바디의 상한(넘으면 오래된 작은 것부터 사라진다)" );
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_fractureShapeWarmMicroseconds, 500,
-                             "파괴 잎 셰이프를 온전한 동안 미리 짓는 시간(us, 스레드마다 4 ms 창마다). 0=처음 깨질 때 모두, 음수=상태를 시작할 때 모두(전/후 비교용)" );
+    /** @brief 성능 예산이라 배포본도 바꾼다 — 언리얼 Chaos 의 파괴 예산(`p.Chaos.*` 콘솔 변수)과 같은 자리다. */
+    SW_GLOBAL_VARIABLE( int32, gv_fractureShapeWarmMicroseconds, 500, "파괴 잎 셰이프를 온전한 동안 미리 짓는 시간(us, 스레드마다 4 ms 창마다). 0 이하=처음 깨질 때 모두" );
 } // namespace sw
 
 namespace sw
@@ -907,8 +907,6 @@ namespace sw
         readObjectPose( position, rotation, scale );
         _leafShapeScale = 0.0f;
         prepareLeafPoints( scale );
-        if ( gv_fractureShapeWarmMicroseconds < 0 && _physics != nullptr )
-            (void)_physics->warmLeafShapes( 0 ); // 전/후 비교용: 예전처럼 지금 모두 짓는다
         return true;
     }
 

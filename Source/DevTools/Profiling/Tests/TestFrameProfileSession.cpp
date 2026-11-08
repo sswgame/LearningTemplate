@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Profiling/FrameProfileSession.h"
+#include "DevTools/Profiling/FrameProfileSession.h"
 
 /**
  * @brief [FrameProfileSessionTest] 측정 창은 프레임 목표와 시간 목표 가운데 먼저 닿는 쪽이 닫는다

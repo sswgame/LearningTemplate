@@ -3,7 +3,7 @@
  * @brief 앱 루프의 프레임 페이싱 상태(`FramePacingState`)와 그 상태대로 프레임 끝에서 기다리는 `FramePacer` 입니다.
  * @details 상태는 프레임마다 입력(실행 인자 · 넷 역할 · 창 이벤트가 적은 최소화 · 포커스 · 에디터의 다시 그릴 까닭)으로 다시 정한다. 어느 상태인지가 값으로 드러나야
  *          "배경인데 왜 전속인가" 를 감시 값(`Engine.FramePacingState`)으로 바로 본다 — 조건문 속 숨은 분기로 두지 않는다.
- *          전속 상태(Automation · Server · FullSpeed)는 모두 **실행 인자가 고른 명시 상태**다: `-scenario` · `-gv_profileFrames` · `-gv_netListenPort` ·
+ *          전속 상태(Automation · Server · FullSpeed)는 모두 **실행 인자가 고른 명시 상태**다: `-scenario` · `-gv_netListenPort` ·
  *          `-gv_framePacing=FullSpeed`. 창 상태를 모를 때 전속으로 떨어지는 숨은 폴백은 없다 — 인자가 없으면 창 상태대로다.
  *          언리얼(`t.IdleWhenNotForeground` · 최소화 때 렌더 생략 · 에디터 비실시간 뷰포트)과 유니티(`Application.runInBackground` · 배경 `targetFrameRate` ·
  *          에디터의 입력 때만 다시 그리기)와 같은 방향이다.
@@ -24,7 +24,7 @@ namespace sw
         Foreground = 0, ///< 포커스를 가진 창 — 따로 묶지 않는다(VSync 설정만).
         Background,     ///< 보이지만 포커스가 없는 창 — `gv_backgroundFrameRate` 로 묶는다.
         Minimized,      ///< 최소화된 창 — 창 메시지가 올 때까지(최대 `FramePacer::kMinimizedWakeMilliseconds`) 잔다.
-        Automation,     ///< 시나리오 · 프로파일 실행(실행 인자) — 포커스 · 최소화와 상관없이 전속이다.
+        Automation,     ///< 시나리오 실행(실행 인자) — 포커스 · 최소화와 상관없이 전속이다.
         Server,         ///< 리슨 호스트(`-gv_netListenPort`) — 클라이언트가 이 프레임으로 상태를 받으므로 전속이다.
         FullSpeed,      ///< `-gv_framePacing=FullSpeed` 가 고정한 전속 — 에디터 멀티플레이가 띄운 클라이언트처럼 포커스 없이 정속이어야 하는 실행.
         EditorIdle,     ///< 에디터가 조용하다(다시 그릴 까닭 없는 프레임이 이어졌다) — 창 메시지가 올 때까지(최대 `kEditorIdleWakeMilliseconds`) 잔다.
@@ -45,7 +45,7 @@ namespace sw
     /** @brief 상태를 정하는 프레임 입력입니다. 앱 루프가 프레임마다 채운다. */
     struct FramePacingInputs
     {
-        bool _bAutomationRun{ false }; ///< `-scenario`(녹화 포함) · `-gv_profileFrames` · `-gv_profileSeconds` 실행이다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bAutomationRun{ false }; ///< `-scenario`(녹화 포함) 실행이다(프로파일 실행 `-gv_profileFrames` 는 개발 도구가 `gv_framePacing=FullSpeed` 로 고른다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool _bListenHost{ false };    ///< 이 프로세스의 넷 세션이 서버다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool _bMinimized{ false };     ///< `IWindow::isMinimized` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool _bFocused{ false };       ///< `IWindow::hasFocus` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다

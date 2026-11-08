@@ -5,9 +5,11 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Ray.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
@@ -18,6 +20,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
@@ -28,12 +32,6 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_cameraPreset=<id>` — 시작 프리셋을 이것으로 바꿉니다(그 id 가 카탈로그에 있는 디렉터만, 캡처 카메라는 빼고).
-     * @details 프리셋마다 스크린샷을 찍으려면(`-gv_screenshot`) 키를 누르지 않고 시점을 골라야 한다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_cameraPreset, "", "카메라 디렉터의 시작 프리셋 id (캡처 카메라 제외, 비우면 데이터대로)" );
-
     namespace
     {
         struct CameraDirectorComponentInternal
@@ -332,17 +330,6 @@ namespace sw
 
     hashed_string CameraDirectorComponent::resolveStartPreset() const
     {
-        const GameObject*      pOwner   = getOwner();
-        const CameraComponent* pCamera  = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
-        const bool             bCapture = pCamera != nullptr && pCamera->getRole() == CameraRole::Capture;
-        if ( gv_cameraPreset.empty() == false && bCapture == false )
-        {
-            const hashed_string overrideID( string_view{ gv_cameraPreset.c_str(), gv_cameraPreset.size() } );
-            if ( _pCatalog->find( overrideID ) != nullptr )
-                return overrideID;
-            // 요청한 프리셋이 없으면 기본 프리셋으로 조용히 넘어가지 않는다 - 시나리오가 틀린 화면으로 골든을 뜰 수 있었다.
-            SW_LOG_ERROR_ID( "Camera.UnknownPreset", "-gv_cameraPreset='%#' is not a preset in '%#'", gv_cameraPreset.c_str(), _catalogPath.c_str() );
-        }
         return _initialPreset.empty() ? _pCatalog->getAll().front()._id : _initialPreset;
     }
 
@@ -570,4 +557,51 @@ namespace sw
             (void)CameraDirectorComponentInternal::readFacing( *pObject, target._focus, target._yaw, target._pitch );
         return target;
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        /**
+         * @brief 개발 명령 `camera.preset <id>` — 활성 씬의 카메라 디렉터(캡처 카메라 제외) 중 그 프리셋이 카탈로그에 있는 것을 그 프리셋으로 자릅니다(`startWithPreset`).
+         * @details 프리셋마다 스크린샷을 찍으려면(시나리오 골든) 키를 누르지 않고 시점을 골라야 한다. 예전에는 테스트용 변수(`-gv_cameraPreset`)를 시작 때 컴포넌트가 읽었다 —
+         *          묻는 쪽이 부르는 명령으로 바꿔 런타임 시작 경로에서 개발 분기를 뺐다(배포본에는 등록되지 않는다). 받은 디렉터가 하나도 없으면 오류다 — 틀린 화면으로 골든을 뜨지 않는다.
+         */
+        struct CameraPresetDevCommandInternal
+        {
+            static bool runPreset( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 1 )
+                    return false;
+                SceneManager* const pSceneManager = game::findSubsystem<SceneManager>();
+                Scene* const        pScene        = pSceneManager != nullptr ? pSceneManager->getActiveScene() : nullptr;
+                GameObjectManager*  pManager      = pScene != nullptr ? pScene->getObjectManager() : nullptr;
+                if ( pManager == nullptr )
+                {
+                    outReply = "camera.preset: no active scene";
+                    return true;
+                }
+                const hashed_string id( listArgument[0] );
+                uint32              applied = 0;
+                for ( CameraDirectorComponent* pDirector : pManager->getComponentRegistry().getAll<CameraDirectorComponent>() )
+                {
+                    const GameObject*      pOwner   = pDirector->getOwner();
+                    const CameraComponent* pCamera  = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
+                    const bool             bCapture = pCamera != nullptr && pCamera->getRole() == CameraRole::Capture;
+                    if ( bCapture || pDirector->getCatalog().find( id ) == nullptr )
+                        continue;
+                    pDirector->startWithPreset( id );
+                    ++applied;
+                }
+                if ( applied == 0 )
+                    SW_LOG_ERROR_ID( "Camera.UnknownPreset", "camera.preset '%#': no camera director in the active scene has that preset", id.c_str() );
+                outReply = formatToString( "camera.preset '%#': %# director(s)", id.c_str(), applied );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( CameraPreset, "camera.preset", "camera.preset <id>", "Cut every camera director of the active scene (capture cameras excluded) that has this preset to it",
+                    &CameraPresetDevCommandInternal::runPreset );
 } // namespace sw

@@ -15,7 +15,6 @@
     #include "Core/Container/StringUtil.h"
     #include "Core/File/FileUtil.h"
     #include "Core/File/ProcessRoots.h"
-    #include "Core/GlobalVariable/GlobalVariableManager.h"
     #include "Core/Memory/Memory.h"
     #include "Core/Process/Process.h"
     #include "Core/String/HexUtil.h"
@@ -30,17 +29,6 @@
 
 namespace sw
 {
-    /**
-     * @brief `-gv_traceSlowTickMs=N`: 틱 본문이 N ms 를 넘으면 그 앞뒤 링 버퍼를 트레이스로 저장합니다(0=끄기). 켜 두면 타임라인 기록이 늘 돈다.
-     * @details 전용 서버가 부릅니다(`ServerApp::run`). Shipping 에는 없습니다 — 운영 캡처는 Dev 구성 서버로.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_traceSlowTickMs, 0, "틱 본문이 N ms 를 넘으면 앞뒤 프레임을 트레이스로 저장 (0=끄기)" );
-    /**
-     * @brief `-gv_traceSaveOnExit=<경로>`: 기동부터 타임라인 링 버퍼를 켜 두고, 종료할 때 최근 프레임을 그 경로에 트레이스로 저장합니다(비면 끄기).
-     * @details 에디터의 멀티 프로세스 재생이 서버 · 클라이언트마다 경로를 주고 Stop 뒤에 합친다(`EditorNetPlaySession`).
-     */
-    SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_traceSaveOnExit, "", "종료할 때 최근 프레임의 타임라인을 이 경로에 트레이스로 저장 (비면 끄기)" );
-
     namespace
     {
         /** @brief 시각은 나노초를 마이크로초(소수 셋째 자리까지)로 쓴다 — `valueFixedPoint( nanos, 이것 )`, 실수를 거치지 않는다. */
@@ -975,11 +963,11 @@ namespace sw
         return true;
     }
 
-    void ProfilerTraceExport::updateSlowFrameCapture( FrameProfiler& profiler, uint64 frameBeginNanos, uint64 frameEndNanos, string_view processName )
+    void ProfilerTraceExport::updateSlowFrameCapture( FrameProfiler& profiler, int32 budgetMilliseconds, uint64 frameBeginNanos, uint64 frameEndNanos, string_view processName )
     {
         ProfilerTraceSession& capture  = profiler.getTraceSession();
         ProfilerTimeline&     timeline = profiler.getTimeline();
-        if ( gv_traceSlowTickMs <= 0 )
+        if ( budgetMilliseconds <= 0 )
         {
             if ( capture._bSlowRecordingByCapture )
             {
@@ -1011,7 +999,7 @@ namespace sw
             if ( saveRecentFramesWithMeta( profiler, ProfilerTimeline::kFrameCapacity - 1, path, meta, reply ) )
             {
                 ++capture._slowSavedFileCount;
-                SW_LOG_WARNING_ID( "ProfilerTraceExport.SlowTickUsBudget", "Slow tick %# us (budget %# ms) - trace saved %#", tickMicro, gv_traceSlowTickMs, path );
+                SW_LOG_WARNING_ID( "ProfilerTraceExport.SlowTickUsBudget", "Slow tick %# us (budget %# ms) - trace saved %#", tickMicro, budgetMilliseconds, path );
             }
             else
             {
@@ -1022,7 +1010,7 @@ namespace sw
             return;
         }
 
-        const uint64 budgetNanos = static_cast<uint64>( gv_traceSlowTickMs ) * 1000000ull;
+        const uint64 budgetNanos = static_cast<uint64>( budgetMilliseconds ) * 1000000ull;
         if ( frameEndNanos <= frameBeginNanos || frameEndNanos - frameBeginNanos <= budgetNanos )
             return;
         if ( capture._slowSavedFileCount >= kSlowFrameMaxFileCount || MonotonicClock::nowNanoseconds() < capture._slowCooldownEndNanos )
@@ -1040,22 +1028,18 @@ namespace sw
         return saveRecentFramesWithMeta( profiler, frameCount, outSavedPath, meta, outReply );
     }
 
-    void ProfilerTraceExport::startExitCapture( FrameProfiler& profiler )
+    void ProfilerTraceExport::startExitCapture( FrameProfiler& profiler, string_view path )
     {
-        if ( gv_traceSaveOnExit.empty() )
-            return;
         profiler.setEnabled( true ); // 스코프가 시계를 읽어야 사건이 쌓인다
         profiler.getTimeline().setRecording( true );
-        SW_LOG_INFO_ID( "ProfilerTraceExport.TimelineRecordingTraceSaved", "Timeline recording on - the trace is saved to %# on exit", gv_traceSaveOnExit );
+        SW_LOG_INFO_ID( "ProfilerTraceExport.TimelineRecordingTraceSaved", "Timeline recording on - the trace is saved to %# on exit", path );
     }
 
-    void ProfilerTraceExport::finishExitCapture( const FrameProfiler& profiler, string_view processName )
+    void ProfilerTraceExport::finishExitCapture( const FrameProfiler& profiler, string_view path, string_view processName )
     {
-        if ( gv_traceSaveOnExit.empty() )
-            return;
         string savedPath;
         string reply;
-        if ( saveRecentFrames( profiler, ProfilerTimeline::kFrameCapacity - 1, gv_traceSaveOnExit, processName, savedPath, reply ) )
+        if ( saveRecentFrames( profiler, ProfilerTimeline::kFrameCapacity - 1, path, processName, savedPath, reply ) )
             SW_LOG_INFO_ID( "ProfilerTraceExport.ExitTraceSaved", "Exit trace saved %# (%#)", savedPath, reply );
         else
             SW_LOG_WARNING_ID( "ProfilerTraceExport.ExitTraceNotSaved", "Exit trace not saved to %#: %#", savedPath, reply );

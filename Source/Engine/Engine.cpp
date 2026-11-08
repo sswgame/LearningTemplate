@@ -16,17 +16,14 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/hashed_string.h"
-#include "Core/String/string_splitter.h"
 #include "Core/Subsystem/SubsystemScope.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/VertexAnimationCooker.h"
-#include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
-#include "Engine/Asset/Cache/CacheStatsUtil.h"
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
@@ -51,7 +48,6 @@
 #include "Engine/Graphics/Debug/VisualLogger.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
@@ -81,7 +77,6 @@
 #include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Profiling/SubsystemTimingReport.h"
 #include "Engine/Reflection/ReflectionDocWriter.h"
-#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneCooker.h"
 #include "Engine/Scene/SceneDebugDraw.h"
@@ -96,16 +91,6 @@
 #include "Engine/Window/MainWindowSubsystem.h"
 
 #include "sw/config/ConfigConstants.h"
-
-namespace sw
-{
-    /**
-     * @brief `-gv_dumpReflection=CameraComponent,CameraRole`: 첫 프레임에 그 타입 · enum 의 등록 내용을 로그로 남깁니다(`TypeRegistry::describeType`).
-     * @details 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다. 한 번 찍고 비운다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_dumpReflection, "", "첫 프레임에 이 이름들(쉼표로 여럿)의 리플렉션 등록 내용을 로그로 남긴다 — 타입 · enum (비우면 사용 안 함)" );
-
-} // namespace sw
 
 namespace sw
 {
@@ -127,7 +112,6 @@ namespace sw
         , _frameDeltaSeconds{ 0.0f }
         , _exitCode{ ProcessExitCode::Passed }
         , _pQuitRequest{ nullptr }
-        , _profileSession{}
         , _pMemoryBudget{ nullptr }
         , _startup{}
         , _pRenderDriver{ nullptr }
@@ -316,11 +300,6 @@ namespace sw
         if ( bDedicatedServer == false )
             _netFrameSubscription = _frameHooks.add( engine::getSubsystem<GameNetSession>().makeClientHostFrameHooks() );
 
-        _profileSession.begin();
-#if !defined( SW_SHIPPING )
-        ProfilerTraceExport::startExitCapture( engine::getSubsystem<FrameProfiler>() ); // `-gv_traceSaveOnExit` — 없으면 아무것도 하지 않는다
-#endif
-
         MemoryProfiler::captureMemoryLeakBaseline();
 
         return true;
@@ -336,18 +315,11 @@ namespace sw
 
     void Engine::shutdown( SubsystemScope& hostScope )
     {
-#if !defined( SW_SHIPPING )
-        // 종료 트레이스(`-gv_traceSaveOnExit`)는 서비스 · 프로파일러가 아직 있을 때 쓴다. 기동이 서비스 표 전에 멈췄으면 쓸 것이 없다.
-        if ( engine::areEngineServicesBound() && _headlessState.isHeadless() == false )
-            ProfilerTraceExport::finishExitCapture( engine::getSubsystem<FrameProfiler>(), _hostRole == EngineHostRole::DedicatedServer ? "Server" : "App" );
-#endif
         // 프레임 관찰자는 붙인 쪽이 서비스보다 먼저 내린다(로그 리스너 · 입력을 빌려 쓴다). 남은 것은 더 부르지 않는다.
         // 목록의 용량은 기동 뒤에 잡았으므로 누수 보고 전에 해제한다.
         _frameHooks.clear(); // 남은 구독을 무효화하고 저장소를 놓는다
         if ( _pRenderDriver != nullptr )
             _pRenderDriver->onShutdownBegin(); // 창(MainWindow 단계가 파괴)과 RHI 보다 먼저 놓는다
-        if ( const AssetLoadProfiler* pAssetLoadProfiler = engine::findSubsystem<AssetLoadProfiler>(); pAssetLoadProfiler != nullptr )
-            pAssetLoadProfiler->reportIfRequested( "session" );
         // 초기화한 단계만 역순으로 내린다: UI → 텔레메트리 → 씬의 디바이스 → 렌더 스레드 → 렌더러 → RHI → 씬 → 입력 · 오디오 → 모듈 라이브러리 → 태스크 → 셰이더 캐시.
         // 범위째 내린다 — 모듈 서브시스템의 자식 범위(배포는 정적 링크한 모듈이 여기 남아 있다)가 기동 단계보다 먼저 내려간다.
         _startup.shutdownAll();
@@ -456,25 +428,6 @@ namespace sw
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
         if ( _pUIDriver != nullptr )
             _pUIDriver->processFrameInput( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 정지 메뉴의 탐색 반복은 실제 시간
-
-#if !defined( SW_SHIPPING ) // 개발 기능이다 — Shipping 에서 테스트용 변수는 상수다(DevTools 로 옮길 대상)
-        if ( gv_dumpReflection.empty() == false )
-        {
-            const TypeRegistry&   registry = engine::getSubsystem<TypeRegistry>();
-            const string_splitter parts( string_view{ gv_dumpReflection.c_str(), gv_dumpReflection.size() }, { "," } );
-            for ( const string_view part : parts.getSplitList() )
-            {
-                const string_view name = StringUtil::trim( part );
-                if ( name.empty() )
-                    continue;
-                const hashed_string key( name );
-                const string        text = ( registry.findType( key ) == nullptr && registry.findEnum( key ) != nullptr ) ? registry.describeEnum( key )
-                                                                                                                          : registry.describeType( key );
-                SW_LOG_INFO_ID( "Engine.ReflectionDump", "[gv_dumpReflection]\n%#", text.c_str() );
-            }
-            gv_dumpReflection = string{}; // 한 번만
-        }
-#endif
     }
 
     void Engine::updateFrameServices()
@@ -627,19 +580,6 @@ namespace sw
         IProfilerBackend* pProfilerBackend = ProfilerBackend::getActiveBackend();
         if ( pProfilerBackend != nullptr )
             pProfilerBackend->markFrame( nullptr );
-        const bool bReportedBefore = _profileSession.hasReported();
-        _profileSession.onFrameEnd();
-        // CPU 메모리 태그 표 옆에 GPU 메모리 표를 둔다. 보고 세션은 Utility 층이라 Graphics 의 추적기를 볼 수 없어 여기서 잇는다.
-        const bool bReportedNow = bReportedBefore == false && _profileSession.hasReported();
-        const bool bHasDevice   = _pRHI != nullptr && _pRHI->hasDevice();
-        if ( bReportedNow && bHasDevice )
-            _pRHI->getDevice().getMemoryTracker().report( _pRHI->getDevice().getBackendName() );
-        // 기계 판독 보고(`-gv_profileReportPath`) — RHI · 씬은 보고 세션의 층이 볼 수 없어 여기서 채운다. 실패는 세션이 오류로 남겼다.
-        if ( bReportedNow )
-            (void)_profileSession.saveReport( bHasDevice ? string_view( _pRHI->getDevice().getBackendName() ) : string_view{}, makeFrameContext()._activeSceneID );
-        // 캐시 적중 · 실패 표도 같은 자리에서 잇는다. 보고 세션은 Profiling 층이라 에셋 매니저(Resource)를 볼 수 없다.
-        if ( bReportedNow )
-            CacheStatsUtil::logReport( "profile window" );
 
         if ( _pMemoryBudget != nullptr )
             _pMemoryBudget->onFrameEnd();

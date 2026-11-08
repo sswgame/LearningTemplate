@@ -11,7 +11,6 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Foundation/StdHeaders.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -163,28 +162,6 @@ namespace sw
         uint32                    ProfilerBackendInternal::s_nameArenaUsed{ 0 };
     } // namespace
 
-    /**
-     * @brief `-gv_tracy=1`: 기동부터 Tracy 로 계측을 내보냅니다(뷰어는 `tracy-profiler.exe -a 127.0.0.1` 로 붙는다).
-     * @details 끄면(기본) TracyClient.dll 을 올리지도 않는다. 에디터 프로파일러 패널의 "Tracy 열기" 는 실행 중에 켠다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_tracy, false, "Tracy 프로파일러로 계측을 내보낸다(기동부터, 뷰어는 localhost 로 붙는다)" );
-    /**
-     * @brief `-gv_tracyMemory=1`: Tracy 에 할당 · 해제를 메모리 태그별로 보냅니다. 할당마다 큐 기록이 붙어 느려집니다.
-     * @details Tracy 를 켜기 **전에** 잡힌 블록의 해제는 보내지 않습니다(짝 없는 해제는 뷰어가 기록을 멈춘다).
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_tracyMemory, false, "Tracy 에 할당 · 해제를 메모리 태그별로 보낸다(느림, gv_tracy 와 같이)" );
-
-    bool ProfilerBackend::initialize()
-    {
-#if SW_PROFILER_BACKEND_COMPILED
-        if ( gv_tracy == false )
-            return false;
-        return startTracy();
-#else
-        return false;
-#endif
-    }
-
     void ProfilerBackend::shutdown()
     {
         // 무엇이 나갔는지 한 줄로 남긴다 — 뷰어 없이 돌린 실행에서도 경로가 살아 있었는지 로그로 보인다.
@@ -200,7 +177,7 @@ namespace sw
         setActiveBackend( nullptr );
     }
 
-    bool ProfilerBackend::startTracy()
+    bool ProfilerBackend::startTracy( [[maybe_unused]] bool bObserveAllocations )
     {
 #if SW_PROFILER_BACKEND_COMPILED
         if ( TracyProfilerBackend::isCompiled() == false )
@@ -220,7 +197,7 @@ namespace sw
         setActiveBackend( &ProfilerBackendInternal::s_tracy );
         // 태스크 · 스테이지 이름이 구간이 된다(Core 는 프로파일러를 모르므로 여기서 꽂는다).
         ProfilerBackendInternal::s_taskProfileHookBinding = TaskManager::bindProfileHook( &ProfilerBackendInternal::kTaskProfileHook );
-        if ( gv_tracyMemory )
+        if ( bObserveAllocations )
             Memory::registerAllocationObserver( &ProfilerBackendInternal::kObserver );
 
         // 카운터 그래프 · GPU 타임스탬프는 엔진 프로파일러 경로를 탄다. 켜 두지 않으면 Tracy 에 GPU 줄이 없다.
@@ -228,7 +205,7 @@ namespace sw
             engine::getSubsystem<FrameProfiler>().setEnabled( true );
 
         SW_LOG_INFO_ID( "Profiler.TracyProfilerStartedData", "Tracy profiler started (data port %#, memory %#) — connect with tracy-profiler -a 127.0.0.1", getTracyPort(),
-                        gv_tracyMemory ? "on" : "off" );
+                        bObserveAllocations ? "on" : "off" );
         return true;
 #else
         return false;

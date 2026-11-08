@@ -8,7 +8,6 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
@@ -78,9 +77,6 @@ namespace sw
         };
     } // namespace
 
-    /** @brief 부하 검증의 하드웨어 흉내(`Test/Load/Profiles.json` 의 `vram_mb`) — 비디오 메모리를 이 값(MB) 이하로 보고합니다(0 = 실제 값). 품질 자동 선택이 흉내 낸 기계처럼 고른다. */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_emulatedGPUMemoryMb, 0, "하드웨어 흉내: 사양 조사가 보고하는 비디오 메모리 상한(MB, 0=실제 값)" );
-
     HardwareDetectionResult HardwareDetection::probe()
     {
         HardwareDetectionResult result;
@@ -110,8 +106,6 @@ namespace sw
         result._platformName                     = build::kPlatformName;
         const span<const RHIBackend> listBackend = RHIAvailability::getPlatformBackendOrder();
         result._rhiCapabilities                  = listBackend.empty() ? RHICapabilities{} : RHIAvailability::query( listBackend[0] );
-        if ( gv_emulatedGPUMemoryMb > 0 )
-            result._gpuMemoryMb = result._gpuMemoryMb > 0 ? MathUtil::min( result._gpuMemoryMb, static_cast<uint32>( gv_emulatedGPUMemoryMb ) ) : static_cast<uint32>( gv_emulatedGPUMemoryMb );
         return result;
     }
 } // namespace sw

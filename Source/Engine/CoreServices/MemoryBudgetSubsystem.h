@@ -1,6 +1,6 @@
 /**
  * @file Engine/CoreServices/MemoryBudgetSubsystem.h
- * @brief 메모리 태그 예산 감시(`MemoryBudgetMonitor`)를 코어 범위에서 세웁니다 — 추적 설정(`-gv_memoryTracking`)을 걸고 예산 표(데이터)를 읽습니다.
+ * @brief 메모리 태그 예산 감시(`MemoryBudgetMonitor`)를 코어 범위에서 세웁니다 — 예산 표(데이터)를 읽고 프레임 끝마다 검사합니다.
  * @details 코어 범위의 끝(리소스 루트 · 게임이 정해진 뒤)에 서므로 서비스 · 엔진 범위의 생성부터 센다. 프레임 끝의 검사는 엔진 루프가
  *          `onFrameEnd()` 로 부른다(프레임 단계의 일). 크래시 보고 프로세스에서는 리소스 루트가 없어 표를 읽지 않는다. 배포본에서는 감시가 아무 일도 하지 않는다.
  * @warning 예산 표는 초기화에서 읽지 않는다 — 표는 리플렉션으로 읽는데 타입 레지스트리는 엔진 범위(`ReflectionSubsystem`)에서 선다. 첫 프레임 끝에 한 번 읽는다
@@ -29,8 +29,8 @@ namespace sw
         MemoryBudgetSubsystem( const MemoryBudgetSubsystem& )            = delete;
         MemoryBudgetSubsystem& operator=( const MemoryBudgetSubsystem& ) = delete;
 
-        /** @brief 추적 설정을 겁니다. */
-        SubsystemInitResult     initializeSubsystem() override;
+        /** @brief 세울 것이 없다 — 예산 표는 첫 프레임 끝에 읽는다(위 경고). */
+        SubsystemInitResult     initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                    shutdownSubsystem() override {}
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override;

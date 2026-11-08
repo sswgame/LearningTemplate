@@ -166,7 +166,7 @@ namespace sw
         void releasePhotoModeUILayers();
         /** @brief 미뤄 둔 포즈 계산과 쓰기를 합니다. 틱 뒤 게임 스레드에서 돕니다. */
         void resolveCamera();
-        /** @brief 시작 프리셋을 고릅니다. `-gv_cameraPreset` 이 카탈로그에 있으면(게임 시점 카메라만) 그것을 쓰고, 아니면 `_initialPreset`, 그것도 아니면 첫 프리셋을 씁니다. */
+        /** @brief 시작 프리셋을 고릅니다. `_initialPreset`, 그것도 아니면 첫 프리셋을 씁니다. */
         hashed_string resolveStartPreset() const;
         /** @brief 보관해 둔 상태 바이트를 디렉터에 적용합니다. 적용했으면 true 입니다. */
         [[nodiscard]] bool applyPendingState();

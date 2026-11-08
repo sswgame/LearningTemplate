@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
@@ -42,9 +41,6 @@ namespace sw
             static float32 identityWeight( float32 weight ) { return weight; }
         };
     } // namespace
-
-    /** @brief `-gv_aiDirectorTrace=1` — 감독이 낸 일(단계 · 스폰 · 조우 · 보상)을 낼 때마다 로그에 한 줄씩 남깁니다(테스트용 — 배포본에는 없다). */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_aiDirectorTrace, 0, "AIDirector: log every phase change, spawn, encounter and reward (1=on)" );
 } // namespace sw
 
 namespace sw
@@ -444,12 +440,7 @@ namespace sw
     void AIDirector::pushEvent( const AIDirectorEvent& event )
     {
         _eventBuffer.push( event );
-        _listTrace.push( event );
-        if ( gv_aiDirectorTrace != 0 )
-        {
-            SW_LOG_INFO_ID( "AIDirector.TICountScale", "[AIDirector] t=%.2f I=%.2f %# '%#' (%#) count %# scale %.2f", event._time, event._intensity, getEnumName( event._kind ), event._id.c_str(),
-                            event._source.c_str(), event._count, event._scale );
-        }
+        _listTrace.push( event ); // 최근 사건은 `explain` 이 보여 준다
     }
 
     void AIDirector::pollEvents( vector<AIDirectorEvent>& outListEvent )

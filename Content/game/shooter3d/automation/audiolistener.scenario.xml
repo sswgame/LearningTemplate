@@ -4,11 +4,11 @@
   (리스너가 없으면 게임 카메라가 듣는다. 언리얼 3인칭 게임이 리스너를 폰에 두는 것과 같다).
   ① 궤도 카메라는 플레이어에서 멀리 떨어져 있다. ② 벽의 전력함 점 소리(PowerBoxHum, -19.95 1.4 6)까지 거리는 플레이어 자리(스폰 0 · -16, 눈 높이)에서 잰 값 약 29.7 m 다.
   카메라가 들었다면 궤도 거리만큼 달라진다. 값으로 판정한다(골든 없음).
-  실행: App -scenario=game/shooter3d/automation/audiolistener.scenario.xml -unattended -gv_cameraPreset=orbit (체인: ctest -R Scenario.shooter3d)
+  실행: App -scenario=game/shooter3d/automation/audiolistener.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
 -->
 <Scenario name="game.shooter3d.audiolistener" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<AllowLog id="Audio.DeviceLost" reason="장치 없는 러너에서도 오프라인으로 돈다"/>
-	<Launch variable="gv_cameraPreset" value="orbit"/>
+	<DevCommand line="camera.preset orbit"/>
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<Wait frames="5"/>
 	<WaitUntil watch="Audio.InstanceCount" atLeast="2" timeoutWallSeconds="10"/>

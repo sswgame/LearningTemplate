@@ -5,12 +5,12 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Reflection/EnumName.h"
 
@@ -177,7 +177,6 @@ namespace sw
         , _listMetAppointment{}
         , _weather{}
         , _actionWorld{}
-        , _lastTraceRequest{}
         , _minuteFraction{ 0.0f }
         , _minute{ 0 }
         , _flagsRevision{ 0 }
@@ -316,7 +315,6 @@ namespace sw
         const int32   wholeMinute = static_cast<int32>( minuteOfDay );
         advanceTo( clock.getDay() * kScheduleMinutesPerDay + wholeMinute );
         _minuteFraction = minuteOfDay - static_cast<float32>( wholeMinute );
-        logTraceRequest();
     }
 
     void ScheduleSystem::advanceTo( int32 absoluteMinute )
@@ -603,8 +601,6 @@ namespace sw
         _eventBuffer.moveAllTo( outListEvent );
     }
 
-    /** @brief `-gv_scheduleTrace=<npc id | *>` — 값이 바뀌면 그 NPC 의 "왜 여기 있나" 와 오늘 시간표를 로그에 한 번 남깁니다. */
-    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_scheduleTrace, "", "Schedule: log the why-am-I-here trace and today's timeline of this NPC id (* = all) when the value changes" );
 } // namespace sw
 
 namespace sw
@@ -722,26 +718,49 @@ namespace sw
         outText.assign( text.c_str() );
     }
 
-    void ScheduleSystem::logTraceRequest()
-    {
-        if ( gv_scheduleTrace == _lastTraceRequest )
-            return;
-        _lastTraceRequest = gv_scheduleTrace;
-        if ( _lastTraceRequest.empty() )
-            return;
-        const bool bAll = _lastTraceRequest == "*";
-        string     text;
-        for ( int32 npcIndex = 0; npcIndex < getNPCCount(); ++npcIndex )
-        {
-            if ( bAll == false && getNPCID( npcIndex ) != hashed_string( _lastTraceRequest ) )
-                continue;
-            explainNPC( npcIndex, text );
-            SW_LOG_INFO_ID( "ScheduleSystem.TraceExplain", "[Schedule] %#", text );
-            dumpTimeline( npcIndex, text );
-            SW_LOG_INFO_ID( "ScheduleSystem.TraceTimeline", "[Schedule] %#", text );
-        }
-    }
+} // namespace sw
 
+namespace sw
+{
+    namespace
+    {
+        struct ScheduleTraceCommandInternal
+        {
+            /**
+             * @brief `schedule.trace <npc id | *>`: 살아 있는 일정 시스템마다 그 NPC 의 "왜 여기 있나" 와 오늘 시간표를 답합니다(개발 명령 — 배포본에는 등록되지 않는다).
+             * @details 예전에는 테스트용 변수(`-gv_scheduleTrace`)를 일정 시스템이 틱마다 읽었다. 묻는 쪽이 부르는 명령으로 바꿔 런타임 틱에서 개발 분기를 뺐다.
+             *          시작부터 찍으려면 `-gv_devConsoleExec=schedule.trace *`.
+             */
+            static bool runTrace( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() != 1 )
+                    return false;
+                const string&                 request = listArgument[0];
+                const bool                    bAll    = request == "*";
+                vector<const ScheduleSystem*> listSystem;
+                ScheduleSystem::collectLiveSystems( listSystem );
+                string text;
+                for ( const ScheduleSystem* pSystem : listSystem )
+                {
+                    for ( int32 npcIndex = 0; npcIndex < pSystem->getNPCCount(); ++npcIndex )
+                    {
+                        if ( bAll == false && pSystem->getNPCID( npcIndex ) != hashed_string( request ) )
+                            continue;
+                        pSystem->explainNPC( npcIndex, text );
+                        outReply += text;
+                        pSystem->dumpTimeline( npcIndex, text );
+                        outReply += text;
+                    }
+                }
+                if ( outReply.empty() )
+                    outReply = formatToString( "no live schedule NPC matches '%#'", request );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_DEV_COMMAND( ScheduleTrace, "schedule.trace", "schedule.trace <npc id | *>", "Reply the why-am-I-here trace and today's timeline of this schedule NPC (* = all)",
+                    &ScheduleTraceCommandInternal::runTrace );
 } // namespace sw
 
 namespace sw

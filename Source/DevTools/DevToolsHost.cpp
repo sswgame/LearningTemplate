@@ -14,12 +14,16 @@
 #include "DevTools/AssetReload/ReloadTracker.h"
 #include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DevToolsClientPart.h"
+#include "DevTools/Diagnostics/ReflectionDump.h"
+#include "DevTools/Diagnostics/StateHashRecorder.h"
 #include "DevTools/File/FileReadDiagnostics.h"
 #include "DevTools/Maintenance/SavedRetentionSubsystem.h"
 #include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Net/NetListenLaunch.h"
+#include "DevTools/Profiling/FrameProfileSession.h"
 #include "DevTools/Profiling/FrameStall.h"
 #include "DevTools/Profiling/LeakBaselineDetailSwitch.h"
+#include "DevTools/Profiling/ProfilerLaunchSwitches.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 #include "DevTools/ServerPose/ServerPoseOverlay.h"
 
@@ -86,9 +90,12 @@ namespace sw
 
     void DevToolsHost::onFrameBegin( [[maybe_unused]] const EngineFrameContext& context )
     {
+        if ( ProfilerLaunchSwitches* const pProfilerSwitches = engine::findSubsystem<ProfilerLaunchSwitches>() )
+            pProfilerSwitches->onFrameBegin(); // 느린 프레임 판정의 시작 시각
         // 시작 명령(`-gv_devConsoleExec`)은 시작 씬이 열린 뒤 한 번 — 이 프레임의 입력 재생 앞이다.
         if ( _pConsole != nullptr )
             _pConsole->runPendingExec();
+        ReflectionDump::runPending(); // `-gv_dumpReflection` — 첫 프레임이라 게임 · 에디터 모듈의 타입까지 등록된 뒤다
     }
 
     void DevToolsHost::addStartupSubsystems( SubsystemScope& startup, const engine::StartupParts& parts )
@@ -116,6 +123,12 @@ namespace sw
             (void)startup.emplaceSubsystem<NetLineEmulationSubsystem>( *parts._pNetSession );
             (void)startup.emplaceSubsystem<NetListenLaunchSubsystem>( *parts._pNetSession );
         }
+        // 프로파일러 출력의 실행 인자(Tracy · 종료 트레이스 · 느린 프레임 캡처) — 서비스 범위의 프레임 프로파일러가 이미 섰다.
+        (void)startup.emplaceSubsystem<ProfilerLaunchSwitches>();
+        // 프레임 프로파일 실행(`-gv_profileFrames` · `-gv_profileSeconds`, 부하 시나리오의 측정 창) — 프레임 끝 훅이 돌린다. GPU 메모리 표는 렌더러 창구로 묻는다(전용 서버는 없다).
+        (void)startup.emplaceSubsystem<FrameProfileSession>( parts._pRenderDriver );
+        // 틱별 상태 해시 이력(`-gv_stateHashHistory`) — 이력 서비스는 서비스 범위라 이미 섰다. 초기화 때 용량을 건다(서버 디버깅 S7).
+        (void)startup.emplaceSubsystem<StateHashRecorder>();
         // 서버 포즈 고스트 — 서버가 가진 위치를 클라이언트 씬에 겹친다(`-gv_serverPoseOverlayPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
         (void)startup.emplaceSubsystem<ServerPoseOverlay>();
         // 디버그 HUD 설정 — 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다(설정 매니저는 아직 초기화 전이다).
@@ -148,8 +161,14 @@ namespace sw
             _pConsole->update( pShellMap );
     }
 
-    EngineFrameExit DevToolsHost::onFrameEnd( [[maybe_unused]] const EngineFrameContext& context )
+    EngineFrameExit DevToolsHost::onFrameEnd( const EngineFrameContext& context )
     {
+        // 프레임 프로파일 측정 — 루프가 `FrameProfiler` 프레임을 마감한 뒤다. 목표를 채우면 보고하고 통과 코드로 끝낸다(창 닫힘의 관찰자 코드가 이긴다).
+        EngineFrameExit exitCode = kEngineFrameRunning;
+        if ( FrameProfileSession* const pProfileSession = engine::findSubsystem<FrameProfileSession>() )
+            exitCode = pProfileSession->onFrameEnd( context._activeSceneID );
+        if ( ProfilerLaunchSwitches* const pProfilerSwitches = engine::findSubsystem<ProfilerLaunchSwitches>() )
+            pProfilerSwitches->onFrameEnd(); // 느린 프레임 자동 캡처(`-gv_traceSlowTickMs`)
         // 셰이더 재컴파일 · 강제 리로드 단축키(Debug 클라이언트) — 클라이언트 전용 부분이 한다.
         if ( IDevToolsClientPart* const pClientPart = IDevToolsClientPart::find() )
             pClientPart->onFrameEnd();
@@ -159,6 +178,6 @@ namespace sw
         // 부모 프로세스(에디터의 멀티 프로세스 재생)가 표준 입력으로 보낸 종료 낱말 — 정상 종료다.
         if ( _pConsole != nullptr && _pConsole->pollStandardInputCommands() )
             return ProcessExitCode::Passed;
-        return kEngineFrameRunning;
+        return exitCode;
     }
 } // namespace sw

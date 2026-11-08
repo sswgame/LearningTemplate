@@ -4,7 +4,7 @@
  */
 #include "pch.h"
 
-#include "Engine/Profiling/FrameProfileSession.h"
+#include "DevTools/Profiling/FrameProfileSession.h"
 
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Diagnostics/CallStackCapture.h"
@@ -15,7 +15,12 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Asset/Cache/CacheStatsUtil.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/View/IEngineRenderDriver.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
 #include "Engine/Profiling/ProfilerTraceExport.h"
@@ -29,7 +34,7 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE( int32, gv_profileFrames, 0, "프레임 프로파일 측정 프레임 수 (0=사용 안 함)" );
     /**
      * @brief `-gv_profileSeconds=S`: 워밍업 뒤 S 초를 재고 보고한 다음 종료합니다. `-gv_profileFrames` 와 함께 주면 먼저 닿는 쪽이 끝냅니다.
-     * @details 장시간 실행(soak)이 쓴다. 프레임 상한이 없으면 같은 프레임 수가 장면마다 몇 초인지 모른다.
+     * @details 장시간 실행(soak)이 쓴다. 프레임 상한이 없으면 같은 프레임 수가 장면마다 몇 초인지 모른다. 부하 시나리오(`<Load>`)는 이름으로 넣는다(`AutomationRunner`).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_profileSeconds, 0, "프레임 프로파일 측정 시간(초, 0=사용 안 함)" );
     /**
@@ -38,18 +43,34 @@ namespace sw
      *          할당마다 콜스택을 잡으므로 느립니다. 숫자를 읽는 용도이지 프레임 시간을 같이 측정하는 용도가 아닙니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_profileAllocSites, 0, "측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기)" );
-#if !defined( SW_SHIPPING )
     /**
      * @brief `-gv_profileTracePath=<경로>`: 측정 창(워밍업 뒤 ~ 보고) 전체를 트레이스로 저장합니다(비면 끄기).
      * @details 성능 회귀 스크립트가 진 게임을 한 번 더 돌려 "어느 스레드의 어느 구간이 늘었나" 를 볼 파일을 남길 때 씁니다.
      *          긴 캡처가 사건마다 24 B 를 쓰므로 숫자를 측정하는 판에는 켜지 않습니다.
      */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_profileTracePath, "", "측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기)" );
-#endif
     /**
      * @brief `-gv_profileReportPath=<경로>`: 측정 창의 보고를 JSON 으로도 씁니다(비면 끄기). 회귀 스크립트가 로그 글을 긁지 않고 칸으로 읽는다.
      */
     SW_TEST_GLOBAL_VARIABLE( sw::GlobalDiskPath, gv_profileReportPath, "", "측정 창의 보고를 이 경로에 JSON 으로 저장 (비면 끄기)" );
+
+    FrameProfileSession::FrameProfileSession( IEngineRenderDriver* pRenderDriver )
+        : _pRenderDriver{ pRenderDriver }
+        , _frameTarget{ 0 }
+        , _secondsTarget{ 0 }
+        , _allocationCountAtStart{ 0 }
+        , _measureStartMicro{ 0 }
+        , _lastFrameEndMicro{ 0 }
+        , _arrWorstFrameMicro{}
+        , _arrHitchCount{}
+        , _arrPacingBin{}
+        , _report{}
+        , _bActive{ SW_FALSE }
+        , _bReported{ SW_FALSE }
+        , _bWarmedUp{ SW_FALSE }
+        , _bAllocationTrackingStarted{ SW_FALSE }
+    {
+    }
 
     bool FrameProfileSession::isMeasureWindowDone( uint64 frames, uint64 frameTarget, int64 elapsedMicro, int64 secondsTarget )
     {
@@ -60,32 +81,39 @@ namespace sw
 
     void FrameProfileSession::begin()
     {
-        if ( gv_profileFrames <= 0 && gv_profileSeconds <= 0 )
-            return;
-
-        _frameTarget   = gv_profileFrames > 0 ? static_cast<uint64>( gv_profileFrames ) : 0;
-        _secondsTarget = gv_profileSeconds > 0 ? static_cast<int64>( gv_profileSeconds ) : 0;
-        _bActive       = SW_TRUE;
-        engine::getSubsystem<FrameProfiler>().setEnabled( true );
+        _frameTarget            = gv_profileFrames > 0 ? static_cast<uint64>( gv_profileFrames ) : 0;
+        _secondsTarget          = gv_profileSeconds > 0 ? static_cast<int64>( gv_profileSeconds ) : 0;
+        _bActive                = SW_TRUE;
+        FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
+        profiler.setEnabled( true );
+        profiler.reset(); // 워밍업을 지금부터 센다
+        // 배경 창의 상한(`gv_backgroundFrameRate`)이 측정을 흐리지 않게 한다 — 예전에는 엔진이 "프로파일 실행 중" 을 앱 루프에 따로 알렸다. 실행 인자가 고른 페이싱은 그대로 둔다.
+        GlobalVariableManager&    variables = engine::getSubsystem<GlobalVariableManager>();
+        const GlobalVariableInfo* pPacing   = variables.findVariable( "gv_framePacing" );
+        if ( pPacing != nullptr && pPacing->getValueAsString() == "Auto" )
+            (void)variables.setValueFromString( "gv_framePacing", "FullSpeed" );
         SW_LOG_INFO_ID( "FrameProfileSession.ProfilingEnabledWarmupMeasure", "[Profile] Profiling enabled - warmup %# + measure %# frames / %# seconds (0 = no such criterion)", kWarmupFrames, _frameTarget, _secondsTarget );
     }
 
-    void FrameProfileSession::onFrameEnd()
+    EngineFrameExit FrameProfileSession::onFrameEnd( string_view activeSceneID )
     {
         if ( _bReported == SW_TRUE )
-            return;
+            return kEngineFrameRunning;
         if ( _bActive == SW_FALSE )
         {
-            // 기동 뒤에 목표를 걸 수 있다 — 부하 시나리오(`<Load durationSeconds>`)가 씬 플레이를 시작한 프레임에 `gv_profileSeconds` 를 넣어 측정 창을 연다.
-            const bool bLateStart = gv_profileFrames > 0 || gv_profileSeconds > 0;
-            if ( bLateStart )
-            {
+            // 실행 인자로 준 목표는 첫 프레임 끝에, 부하 시나리오(`<Load durationSeconds>`)가 씬 플레이를 시작한 프레임에 넣은 목표는 그 프레임 끝에 연다.
+            if ( gv_profileFrames > 0 || gv_profileSeconds > 0 )
                 begin();
-                engine::getSubsystem<FrameProfiler>().reset(); // 워밍업을 지금부터 센다
-            }
-            return;
+            return kEngineFrameRunning;
         }
+        if ( advance() == false )
+            return kEngineFrameRunning;
+        reportEngineTables( activeSceneID );
+        return ProcessExitCode::Passed;
+    }
 
+    bool FrameProfileSession::advance()
+    {
         FrameProfiler& profiler = engine::getSubsystem<FrameProfiler>();
         const uint64   frames   = profiler.getFrameCount();
 
@@ -94,7 +122,7 @@ namespace sw
         if ( _bWarmedUp == SW_FALSE )
         {
             if ( frames < kWarmupFrames )
-                return;
+                return false;
 
             // reset() 은 프레임 카운터도 0 으로 되돌린다. 플래그가 없으면 이 조건이 60
             // 프레임마다 다시 참이 되어 영원히 워밍업만 한다.
@@ -105,15 +133,13 @@ namespace sw
             CacheStats::markWindowStart(); // 캐시 적중 · 실패는 워밍업(첫 로드가 모두 실패)을 빼고 센다
             SW_LOG_INFO_ID( "FrameProfileSession.DiscardedWarmupFramesMeasuring", "[Profile] Discarded %# warmup frames. Measuring %# frames from now.", kWarmupFrames,
                             _frameTarget );
-#if !defined( SW_SHIPPING )
             if ( gv_profileTracePath.empty() == false )
             {
                 string reply;
                 if ( ProfilerTraceExport::startRecording( profiler, 0.0, gv_profileTracePath, "Game", 0, reply ) == false )
                     SW_LOG_WARNING_ID( "FrameProfileSession.TraceCaptureNotStarted", "[Profile] trace capture not started: %#", reply );
             }
-#endif
-            // 할당 횟수도 같은 측정 구간에서 센다. 시간 표에는 보이지 않는 비용이다. 배포본에는 프로파일러가 없다.
+            // 할당 횟수도 같은 측정 구간에서 센다. 시간 표에는 보이지 않는 비용이다. 프로파일러가 없는 구성도 있다.
             if ( MemoryProfiler* pMemory = MemoryProfiler::getActive(); pMemory != nullptr )
             {
                 pMemory->setTrackingEnabled( true );
@@ -123,14 +149,14 @@ namespace sw
                 _allocationCountAtStart     = pMemory->getTotalAllocationCount();
                 _bAllocationTrackingStarted = SW_TRUE;
             }
-            return;
+            return false;
         }
 
         const int64 frameEndMicro = MonotonicClock::nowMicroseconds();
         recordFrameInterval( frameEndMicro - _lastFrameEndMicro );
         _lastFrameEndMicro = frameEndMicro;
         if ( isMeasureWindowDone( frames, _frameTarget, frameEndMicro - _measureStartMicro, _secondsTarget ) == false )
-            return;
+            return false;
 
         _bReported = SW_TRUE;
         profiler.report( "frame breakdown" );
@@ -140,12 +166,28 @@ namespace sw
         reportHitches();
         fillReport( profiler, frames, elapsedMicro );
         reportAllocations( frames );
-#if !defined( SW_SHIPPING )
         if ( gv_profileTracePath.empty() == false )
             (void)ProfilerTraceExport::finishRecording( profiler ); // 저장 경로 · 실패 이유는 finishRecording 이 로그로 남긴다
-#endif
         profiler.setEnabled( false );
-        _bQuitRequested = SW_TRUE;
+        return true;
+    }
+
+    void FrameProfileSession::reportEngineTables( string_view activeSceneID )
+    {
+        // CPU 메모리 태그 표 옆에 GPU 메모리 표를 둔다. 렌더러가 없는 호스트(전용 서버)는 표가 없다.
+        RHI* const        pRHI       = _pRenderDriver != nullptr ? _pRenderDriver->findRHI() : nullptr;
+        const bool        bHasDevice = pRHI != nullptr && pRHI->hasDevice();
+        const string_view rhiBackend = bHasDevice ? string_view( pRHI->getDevice().getBackendName() ) : string_view{};
+        if ( bHasDevice )
+            pRHI->getDevice().getMemoryTracker().report( pRHI->getDevice().getBackendName() );
+        // 캐시 적중 · 실패 표도 같은 자리에서 남긴다.
+        CacheStatsUtil::logReport( "profile window" );
+        // 기계 판독 보고(`-gv_profileReportPath`). 실패는 `saveToFile` 이 오류로 남긴다.
+        if ( gv_profileReportPath.empty() )
+            return;
+        _report._rhiBackend = string( rhiBackend );
+        _report._scene      = string( activeSceneID );
+        (void)_report.saveToFile( gv_profileReportPath.c_str() );
     }
 
     void FrameProfileSession::fillReport( const FrameProfiler& profiler, uint64 frames, int64 elapsedMicro )
@@ -176,15 +218,6 @@ namespace sw
             report._allocationTracked      = 1;
         }
         profiler.collectScopeSummaries( report._listScope );
-    }
-
-    bool FrameProfileSession::saveReport( string_view rhiBackend, string_view scene )
-    {
-        if ( gv_profileReportPath.empty() )
-            return true;
-        _report._rhiBackend = string( rhiBackend );
-        _report._scene      = string( scene );
-        return _report.saveToFile( gv_profileReportPath.c_str() );
     }
 
     void FrameProfileSession::recordFrameInterval( int64 intervalMicro )
@@ -258,7 +291,7 @@ namespace sw
 
     void FrameProfileSession::reportAllocations( [[maybe_unused]] uint64 frames )
     {
-        // 보고는 Info 로그로만 나간다. 그것이 사라지는 빌드(Shipping)에는 프로파일러도 없으니 본문을 통째로 뺀다.
+        // 보고는 Info 로그로만 나간다. 그것이 사라지는 구성에는 본문을 통째로 뺀다.
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
         if ( _bAllocationTrackingStarted == SW_FALSE || frames == 0 )
             return;

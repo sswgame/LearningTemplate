@@ -56,7 +56,7 @@ namespace sw
 
         /**
          * @brief 이 씬에서 `takePart` 가 쉬는 부품을 내준 수 / 내주지 못한 수 / `storePart` 가 받은 수입니다(누적). 풀의 효과를 재는 값입니다 —
-         *        비교는 `-gv_socketPartPool=0`(풀 끔)과 하고, 시간은 프로파일 구간 `GT.Appearance.syncParts`(부품 스폰이 든다)로 읽습니다.
+         *        시간은 프로파일 구간 `GT.Appearance.syncParts`(부품 스폰이 든다)로 읽습니다.
          */
         uint32 getTakeHitCount() const { return _takeHitCount; }
         uint32 getTakeMissCount() const { return _takeMissCount; }

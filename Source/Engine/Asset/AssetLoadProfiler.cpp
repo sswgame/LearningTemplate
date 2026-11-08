@@ -40,8 +40,6 @@ namespace sw
 
     /** @brief `-gv_assetLoadProfile=0` — 에셋 로드 기록을 끕니다(기본 켬, 로드마다 시계 몇 번이라 싸다). */
     SW_GLOBAL_VARIABLE( int32, gv_assetLoadProfile, 1, "에셋 로드 시간 · 바이트 기록 (0=끄기)" );
-    /** @brief `-gv_assetLoadReport=1` — 엔진을 끌 때 에셋 로드 표(종류별 · 가장 느린 로드)를 로그에 남깁니다. 배포본 측정에도 쓴다. */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_assetLoadReport, 0, "엔진 종료 때 에셋 로드 표를 로그로 (1=켜기)" );
 } // namespace sw
 
 namespace sw
@@ -201,12 +199,6 @@ namespace sw
                             record._kind.c_str(), record._path.c_str() );
         }
 #endif // 표는 Info 로그로만 나간다 — 그것이 사라지는 빌드(Shipping)에서는 모을 것만 모은다
-    }
-
-    void AssetLoadProfiler::reportIfRequested( const utf8* pTitle ) const
-    {
-        if ( gv_assetLoadReport != 0 )
-            report( pTitle );
     }
 
     void AssetLoadProfiler::reset()

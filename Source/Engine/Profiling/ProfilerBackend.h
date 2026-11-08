@@ -3,7 +3,7 @@
  * @brief 외부 프로파일러 출력(`IProfilerBackend`)을 고르고, 계측 지점을 프로세스 수명 저장소에 둡니다.
  *
  * [켜는 법]
- * 개발 빌드에서도 기본은 꺼짐입니다. `-gv_tracy=1` 로 켜거나(기동부터 기록), 에디터 프로파일러 패널의 "Tracy 열기" 가 실행 중에 켭니다.
+ * 개발 빌드에서도 기본은 꺼짐입니다. `-gv_tracy=1`(개발 도구 `ProfilerLaunchSwitches` 가 기동 단계에 켠다)로 켜거나, 에디터 프로파일러 패널의 "Tracy 열기" 가 실행 중에 켭니다.
  * 꺼져 있으면 Tracy 클라이언트 DLL 을 **올리지도 않습니다**(지연 로드) — 리슨 소켓 · 수집 스레드가 없습니다.
  * 한 번 켜면 프로세스가 끝날 때까지 켜져 있습니다(Tracy 는 중간에 끊으면 뷰어 쪽 타임라인이 깨집니다).
  *
@@ -44,21 +44,16 @@ namespace sw
         /** @brief 지점 · 그래프 이름 문자열을 복사해 두는 저장소 크기(바이트)입니다. */
         static constexpr uint32 kNameArenaBytes = 64u * 1024u;
 
-        /**
-         * @brief `-gv_tracy` 를 읽어 켤 출력을 고릅니다. 기동이 명령줄을 반영한 직후 한 번 부릅니다.
-         * @return 출력을 켰으면 true 입니다.
-         */
-        [[nodiscard]] static bool initialize();
         /** @brief 메모리 관찰을 떼고 활성 출력을 비웁니다. 출력 객체는 살려 둡니다(늦게 닫히는 구간이 그것을 부른다). */
         static void shutdown();
 
         /**
          * @brief Tracy 출력을 켭니다. 처음 부르면 TracyClient.dll 이 올라오고 수집 스레드가 섭니다. 이미 켜져 있으면 true 입니다.
-         * @details `-gv_tracyMemory` 가 켜져 있으면 할당 관찰도 겁니다. 엔진 `FrameProfiler` 도 함께 켭니다 — 카운터 그래프 · GPU 타임스탬프가
+         * @details @p bObserveAllocations 면 할당 관찰도 겁니다(할당마다 큐 기록이 붙어 느리다 — `-gv_tracyMemory`). 엔진 `FrameProfiler` 도 함께 켭니다 — 카운터 그래프 · GPU 타임스탬프가
          *          그 경로를 탑니다.
          * @return Tracy 가 이 빌드에 없으면 false 입니다.
          */
-        static bool startTracy();
+        static bool startTracy( bool bObserveAllocations );
         /** @brief Tracy 가 이 빌드에 링크되어 있으면 true 입니다(Shipping · `SW_ENABLE_TRACY=OFF` 이면 false). */
         static bool isTracyCompiled();
         /** @brief Tracy 가 쓰는 데이터 포트입니다(뷰어 연결 · 에디터 버튼). */

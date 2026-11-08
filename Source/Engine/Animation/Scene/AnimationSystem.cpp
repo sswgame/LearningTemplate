@@ -24,13 +24,15 @@ namespace sw
     SW_GLOBAL_VARIABLE( int32, gv_animationLod, 1, "Animation LOD: frustum visibility, update rate, bone LOD and budget (0 = every skeletalMesh every frame)" );
 
     /**
-     * @brief `-gv_animationForceVertexAnimation=1` — 군중 공유를 켠 모든 유닛을 거리와 상관없이 VAT 로 그립니다(VAT 경로 검증 · 측정용).
+     * @brief `-gv_animationForceVertexAnimation=1` — 군중 공유를 켠 모든 유닛을 거리와 상관없이 VAT 로 그립니다.
+     * @details 성능 설정이라 배포본에도 있다 — 약한 기기(모바일)가 군중 전체를 텍스처 애니메이션으로 돌린다. 언리얼 Animation Sharing 의 플랫폼별 스케일러빌리티 · 유니티 GPU 군중 설정과 같은 자리다.
      */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_animationForceVertexAnimation, 0, "Draw every crowd-shared skeletalMesh with vertex animation regardless of distance (verification)" );
+    SW_GLOBAL_VARIABLE( int32, gv_animationForceVertexAnimation, 0, "Draw every crowd-shared skeletalMesh with vertex animation regardless of distance (low-end scalability, verification)" );
     /**
-     * @brief `-gv_animationLODGrade=2` — 모든 유닛의 LOD 등급을 이 값으로 두고 노드를 페이드 없이 바로 바꿉니다(그래프 · 리그 노드의 `max_lod` 검증 · 측정용). -1 이면 판정한 등급입니다.
+     * @brief `-gv_animationLODGrade=2` — 모든 유닛의 LOD 등급을 이 값으로 두고 노드를 페이드 없이 바로 바꿉니다(그래프 · 리그 노드의 `max_lod`). -1 이면 판정한 등급입니다.
+     * @details 품질 설정이라 배포본에도 있다 — 언리얼 `r.SkeletalMeshLODBias` · `r.ForceLOD`(스케일러빌리티 콘솔 변수)와 같은 자리다. 시나리오(riglod · animgraphlod)가 등급마다의 모양을 본다.
      */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_animationLODGrade, -1, "Force every skeletalMesh's animation LOD grade (graph layers, blend branches and rig nodes compare it with max_lod; -1 = judged grade)" );
+    SW_GLOBAL_VARIABLE( int32, gv_animationLODGrade, -1, "Force every skeletalMesh's animation LOD grade (graph layers, blend branches and rig nodes compare it with max_lod; -1 = judged grade)" );
 
     namespace
     {
