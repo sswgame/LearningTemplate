@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
 #include "GameFramework/Runtime/Gameplay/Zone/JumpEscapeReactionComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ScreenReactionComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneOccupantIndex.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneProfile.h"
@@ -366,4 +367,35 @@ SW_TEST_CASE( ZoneTest, ZoneSystemRunsRegisteredZoneComponents )
     SW_REQUIRE_TRUE( pSystem != nullptr );          // 첫 지역 컴포넌트가 등록될 때 붙는다
     pSystem->runFramePass( manager, 1.0f / 60.0f ); // 컨트롤러 · 어빌리티가 없는 몸 — 할 일 없이 지난다
     SW_EXPECT_EQUAL( 0u, pEscape->getEscapeCount() );
+}
+
+/** @brief [ZoneTest] 화면 반응: 태그(기본 State.Poisoned)가 있으면 페이드 인 시간(0.5 초) 동안 가중치가 1 로 오르고, 태그가 사라지면 페이드 아웃(1 초) 동안 0 으로 내린다. 시간이 0 이면 그대로다 */
+SW_TEST_CASE( ZoneTest, ScreenReactionFadesWithTag )
+{
+    ZoneFixture              fixture;
+    GameObject*              pHero   = fixture._pHero->getOwner();
+    ScreenReactionComponent* pScreen = pHero->addComponent<ScreenReactionComponent>();
+    SW_REQUIRE_TRUE( pScreen != nullptr );
+    ZoneSystem* pSystem = ZoneSystem::find( fixture._manager );
+    SW_REQUIRE_TRUE( pSystem != nullptr ); // 화면 반응도 지역 프레임 시스템을 붙인다
+    const float32 step = 0.1f;
+
+    pSystem->runFramePass( fixture._manager, step );
+    SW_EXPECT_NEAR( 0.0f, pScreen->getWeight(), 1.0e-6f ); // 태그 없음
+
+    fixture._pHero->getOwnedTagCounts().updateCount( "State.Poisoned"_tag, 1 );
+    pSystem->runFramePass( fixture._manager, step );
+    SW_EXPECT_NEAR( 0.2f, pScreen->getWeight(), 1.0e-5f ); // 0.1 / 0.5
+    pSystem->runFramePass( fixture._manager, 0.0f );
+    SW_EXPECT_NEAR( 0.2f, pScreen->getWeight(), 1.0e-5f ); // 일시정지 — 옮기지 않는다
+    for ( int32 index = 0; index < 10; ++index )
+        pSystem->runFramePass( fixture._manager, step );
+    SW_EXPECT_NEAR( 1.0f, pScreen->getWeight(), 1.0e-6f );
+
+    fixture._pHero->getOwnedTagCounts().updateCount( "State.Poisoned"_tag, -1 );
+    pSystem->runFramePass( fixture._manager, step );
+    SW_EXPECT_NEAR( 0.9f, pScreen->getWeight(), 1.0e-5f ); // 0.1 / 1
+    for ( int32 index = 0; index < 20; ++index )
+        pSystem->runFramePass( fixture._manager, step );
+    SW_EXPECT_NEAR( 0.0f, pScreen->getWeight(), 1.0e-6f );
 }

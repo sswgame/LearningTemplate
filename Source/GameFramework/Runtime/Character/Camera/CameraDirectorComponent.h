@@ -139,6 +139,8 @@ namespace sw
         void addImpulse( const CameraImpulseDef& def, const float3& origin ) { _director.addImpulse( def, origin ); }
         /** @brief 시야각 킥(+, 달리기나 부스트)이나 줌 펀치(-, 사격이나 착탄)를 더합니다. */
         void addFieldOfViewKick( const CameraFieldOfViewKickDef& def ) { _director.addFieldOfViewKick( def ); }
+        /** @brief 출처 @p source 의 후처리 덧칠을 가중치 @p weight 로 정합니다(0 이하이면 뺀다). 지역의 화면 반응이 쓴다(`CameraDirector::setPostProcessOverlay`). */
+        void setPostProcessOverlay( const GameObjectHandle& source, const CameraPostProcessValues& values, float32 weight ) { _director.setPostProcessOverlay( source, values, weight ); }
 
         const hashed_string& getActivePresetID() const { return _director.getActivePresetID(); }
         bool                 isBlending() const { return _director.isBlending(); }

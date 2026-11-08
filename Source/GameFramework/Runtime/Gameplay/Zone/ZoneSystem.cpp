@@ -6,6 +6,7 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Runtime/Gameplay/Zone/JumpEscapeReactionComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ScreenReactionComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneContactComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneVolumeComponent.h"
 
@@ -39,7 +40,8 @@ namespace sw
     {
         // 모듈을 내리면 컴포넌트가 먼저 지워진다 — 마지막 지역 컴포넌트가 떠날 때 떼므로 매니저에 이 타입이 남지 않는다(`ISceneFrameSystem` 의 약속).
         const ComponentRegistry& registry = manager.getComponentRegistry();
-        const bool               bUnused  = registry.getAll<ZoneVolumeComponent>().empty() && registry.getAll<ZoneContactComponent>().empty() && registry.getAll<JumpEscapeReactionComponent>().empty();
+        const bool               bUnused  = registry.getAll<ZoneVolumeComponent>().empty() && registry.getAll<ZoneContactComponent>().empty() && registry.getAll<JumpEscapeReactionComponent>().empty() &&
+                             registry.getAll<ScreenReactionComponent>().empty();
         if ( bUnused )
             manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
     }
@@ -73,5 +75,8 @@ namespace sw
         }
         manager.forEachActiveRegistered<JumpEscapeReactionComponent>( _listHandleScratch, []( JumpEscapeReactionComponent& escape )
         { escape.updateJumpEscape(); } );
+        // 화면 반응은 이번 프레임 볼륨 · 접촉이 건 태그를 본다(일시정지면 가중치가 그대로다).
+        manager.forEachActiveRegistered<ScreenReactionComponent>( _listHandleScratch, [&manager, deltaTime]( ScreenReactionComponent& screen )
+        { screen.updateScreen( manager, deltaTime ); } );
     }
 } // namespace sw

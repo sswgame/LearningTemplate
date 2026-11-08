@@ -84,6 +84,7 @@ namespace sw
         : _listLayer{}
         , _impulseListener{}
         , _fieldOfViewKickListener{}
+        , _listPostProcessOverlay{}
         , _emptyState{}
         , _outputPose{}
         , _userSettings{}
@@ -249,7 +250,30 @@ namespace sw
         _fieldOfViewKickListener.step( elapsed );
         if ( _fieldOfViewKickListener.isActive() )
             _outputPose = _fieldOfViewKickListener.applyToPose( _outputPose );
+        // 후처리 덧칠도 섞인 포즈 위에 — 프리셋 블렌드가 덧칠을 출발점에 싣지 않게.
+        for ( const PostProcessOverlay& overlay : _listPostProcessOverlay )
+            _outputPose._postProcess = blendPostProcess( _outputPose._postProcess, overlay._values, overlay._weight );
         return _outputPose;
+    }
+
+    void CameraDirector::setPostProcessOverlay( const GameObjectHandle& source, const CameraPostProcessValues& values, float32 weight )
+    {
+        for ( size_t index = 0; index < _listPostProcessOverlay.size(); ++index )
+        {
+            PostProcessOverlay& overlay = _listPostProcessOverlay[index];
+            if ( overlay._source != source )
+                continue;
+            if ( weight <= 0.0f )
+                _listPostProcessOverlay.erase( _listPostProcessOverlay.begin() + static_cast<ptrdiff_t>( index ) );
+            else
+            {
+                overlay._values = values;
+                overlay._weight = MathUtil::min( weight, 1.0f );
+            }
+            return;
+        }
+        if ( weight > 0.0f )
+            _listPostProcessOverlay.push_back( PostProcessOverlay{ source, values, MathUtil::min( weight, 1.0f ) } );
     }
 
     const CameraPresetDef& CameraDirector::getActivePreset() const

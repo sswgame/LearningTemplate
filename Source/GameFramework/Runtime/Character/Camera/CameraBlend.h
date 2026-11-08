@@ -19,6 +19,11 @@ namespace sw
      *          Cinemachine 도 투영을 섞지 않습니다. 두 투영 사이의 행렬은 어느 쪽 화면과도 닮지 않기 때문입니다.
      */
     SW_GF_API CameraPose blendPoses( const CameraPose& from, const CameraPose& to, float32 weight );
+    /**
+     * @brief 두 후처리 값을 @p weight(0 = @p from, 1 = @p to)로 섞습니다. 레터박스는 양쪽에 있을 때만 비율을 섞고, 한쪽에만 있으면 절반에서 바꿉니다.
+     * @details 포즈 블렌드와 후처리 덧칠(`CameraDirector::setPostProcessOverlay` — 독가스 · 늪의 화면 반응)이 같은 규칙을 쓴다.
+     */
+    SW_GF_API CameraPostProcessValues blendPostProcess( const CameraPostProcessValues& from, const CameraPostProcessValues& to, float32 weight );
 } // namespace sw
 
 namespace sw

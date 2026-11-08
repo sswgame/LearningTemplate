@@ -1,9 +1,9 @@
 /**
  * @file ZoneSystem.h
- * @brief 지역 컴포넌트(`ZoneVolumeComponent` · `ZoneContactComponent` · `JumpEscapeReactionComponent`)의 프레임 일을 한 곳에서 한 번에 하는 프레임 시스템입니다.
+ * @brief 지역 컴포넌트(`ZoneVolumeComponent` · `ZoneContactComponent` · `JumpEscapeReactionComponent` · `ScreenReactionComponent`)의 프레임 일을 한 곳에서 한 번에 하는 프레임 시스템입니다.
  * @details 세 컴포넌트는 예전에 매 틱 자기 일을 통째로 틱 뒤 큐로 미뤘다(물리 질의 · 이펙트 적용 · 오브젝트 지우기는 게임 스레드 일이다) — 컴포넌트 수만큼 미룬 일이 쌓이고,
  *          순서는 워커 순서였다. 이제 컴포넌트는 칸과 등록(`ComponentRegistry`)만 들고, 이 시스템이 프레임마다 틱 뒤 큐에 일 **하나**를 넣어 같은 자리
- *          (`ApplyPrePhysics` 의 틱 뒤 큐 — 틱이 남긴 구조 변경 · 트랜스폼 쓰기를 적용한 뒤, 물리 앞)에서 타입마다 등록 순서로 돈다: 볼륨 → 접촉 → 점프 탈출.
+ *          (`ApplyPrePhysics` 의 틱 뒤 큐 — 틱이 남긴 구조 변경 · 트랜스폼 쓰기를 적용한 뒤, 물리 앞)에서 타입마다 등록 순서로 돈다: 볼륨 → 접촉 → 점프 탈출 → 화면.
  *          언리얼 `UWorldSubsystem` 이 등록받은 목록을 돌고, Mass 처리기가 한 종류를 한 번에 도는 자리다.
  *
  *          - 왜 씬 서비스가 아닌가: 씬 서비스 표(`SW_SCENE_SERVICE`)는 Engine 이미지 안에서만 채운다(매니저가 만들 때 표를 읽는다). GameFramework 의 타입은 프레임 시스템으로
@@ -52,8 +52,8 @@ namespace sw
         SceneFrameAccess getFrameAccess() const override;
 
         /**
-         * @brief 이번 프레임의 지역 일을 등록 순서로 합니다 — 볼륨(`updateZone`) → 접촉(`updateContacts`) → 점프 탈출(`updateJumpEscape`). 게임 스레드, 틱 밖(테스트도 부른다).
-         * @details 볼륨과 접촉은 흐른 시간이 없으면(일시정지) 돌지 않는다 — 예전 틱이 `deltaTime <= 0` 에서 미루지 않던 규칙이다. 점프 탈출은 시간과 무관하게 돈다.
+         * @brief 이번 프레임의 지역 일을 등록 순서로 합니다 — 볼륨(`updateZone`) → 접촉(`updateContacts`) → 점프 탈출(`updateJumpEscape`) → 화면(`updateScreen`). 게임 스레드, 틱 밖(테스트도 부른다).
+         * @details 볼륨과 접촉은 흐른 시간이 없으면(일시정지) 돌지 않는다 — 예전 틱이 `deltaTime <= 0` 에서 미루지 않던 규칙이다. 점프 탈출 · 화면은 시간과 무관하게 돈다(화면은 흐른 시간만큼 가중치를 옮긴다).
          */
         void runFramePass( GameObjectManager& manager, float32 deltaTime );
 
