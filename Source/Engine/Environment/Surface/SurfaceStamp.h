@@ -12,6 +12,7 @@
  *          @endcode
  */
 #pragma once
+#include "Core/Container/SlotHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -76,15 +77,8 @@ namespace sw
     };
 
     /**
-     * @struct SurfaceStampHandle
      * @brief 붙잡은 도장(`SurfaceDeformSystem::addPersistentStamp`) 하나를 가리킵니다. 기본값은 아무것도 가리키지 않는다(`isValid`).
-     * @details 번호와 세대를 함께 들어, 놓은 칸을 다른 도장이 다시 쓴 뒤 옛 핸들로 옮기거나 놓아도 새 도장에 닿지 않는다.
+     * @details 번호와 세대(`SlotHandle` 한 벌)를 함께 들어, 놓은 칸을 다른 도장이 다시 쓴 뒤 옛 핸들로 옮기거나 놓아도 새 도장에 닿지 않는다.
      */
-    struct SW_API SurfaceStampHandle
-    {
-        uint32 _slot{ 0 };
-        uint32 _generation{ 0 }; ///< 0 이면 비었다 — 칸의 세대는 1 부터다
-
-        bool isValid() const { return _generation != 0; }
-    };
+    using SurfaceStampHandle = SlotHandle;
 } // namespace sw

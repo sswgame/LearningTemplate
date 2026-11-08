@@ -4,6 +4,8 @@
  * @details 핸들 표 한 벌: 빈 칸 재사용 정책은 `IndexFreeList`(LIFO), 낡은 핸들 가리기는 슬롯의 세대, 주소 고정은 `PagedArray` 가 맡습니다.
  *          맨 인덱스만 필요하면(셰이더에 넘기는 bindless 번호 · 결정적 저장 바이트에 드는 슬롯 순서) `IndexFreeList` 를 바로 쓰고,
  *          다시 쓰면 안 되는 id 는 `IDAllocator` 입니다(언리얼 `TSparseArray` + 세대 핸들 · 유니티 `Entity`(index, version) 와 같은 자리).
+ *          잠금 정책(`SlotTableSync`)이 둘입니다: `Internal`(기본 — 표가 뮤텍스를 들고 `get` 은 락 없이 원자값으로 읽는다)과
+ *          `External`(부르는 쪽이 제 잠금 · 스레드 하나로 지킨다 — 뮤텍스 · 원자값 없이 같은 규칙). 칸 번호 + 세대를 손으로 짜지 않는다.
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
@@ -17,8 +19,15 @@
 
 namespace sw
 {
+    /** @brief 핸들 표를 누가 지키는지입니다(`SlotHandleTable` 의 정책). */
+    enum class SlotTableSync : uint8
+    {
+        Internal, ///< 표가 제 뮤텍스로 고치기를 직렬화하고, `get` 은 락 없이 동시에 읽는다(RHI 자원 표 — 렌더 스레드가 읽는 동안 게임 스레드가 만든다)
+        External, ///< 부르는 쪽이 제 잠금 · 스레드 하나로 모든 호출을 지킨다 — 표는 잠그지 않는다(전송의 망 잠금 · 경로 줄의 잠금 아래에서 쓰는 표)
+    };
+
     /**
-     * @brief T 슬롯을 세대(generation)와 함께 보관합니다.
+     * @brief T 슬롯을 세대(generation)와 함께 보관합니다. @p kSync 가 `Internal`(기본)인 정의입니다 — `External` 은 아래 특수화입니다.
      * @details 슬롯 저장소로 `PagedArray` 를 쓰므로 슬롯이 늘어나도 이미 돌려준 원소 주소가 바뀌지 않습니다. 주의: `vector` 로
      *          바꾸면 한 스레드가 `insert()` 로 재할당을 일으킬 때 다른 스레드가 `get()` 으로 받아 둔 포인터가 댕글링 포인터가
      *          됩니다(RHI 백엔드에서 렌더 스레드가 리소스를 그리는 동안 게임 스레드가 리소스를 만들면 바로 이 상황입니다).
@@ -29,7 +38,7 @@ namespace sw
      *          슬롯의 점유 여부와 세대는 원자값 하나에 함께 들어 있습니다. 다만 "쓰는 중인 슬롯의 값을 동시에 읽는 것" 까지
      *          막아 주지는 않습니다. 사용 중인 자원을 파괴하지 않을 책임(예: GPU 펜스 기반 지연 해제)은 상위 계층에 있습니다.
      */
-    template <typename T>
+    template <typename T, SlotTableSync kSync = SlotTableSync::Internal>
     class SlotHandleTable
     {
     public:
@@ -217,10 +226,7 @@ namespace sw
             slot._value = T{};
             // 점유 해제와 세대 증가를 한 번의 store 로 발행한다. 둘로 나누면 그 사이에 락 없이 읽는 쪽이
             // "점유 중 + 옛 세대" 를 보고 비워지는 중인 값의 주소를 받아 간다.
-            uint32 nextGeneration = ( slot.generation( std::memory_order_relaxed ) + 1u ) & Slot::kGenerationMask;
-            if ( nextGeneration == 0 )
-                nextGeneration = 1; // 세대 0 은 무효 핸들용으로 예약한다. 한 바퀴 돌면 건너뛴다.
-            slot._state.store( nextGeneration, std::memory_order_release );
+            slot._state.store( SlotHandle::nextGeneration( slot.generation( std::memory_order_relaxed ), Slot::kGenerationMask ), std::memory_order_release );
             _freeSlot.push( index ); // 세대를 올린 바로 이 자리가 반납이다 — 이중 반납은 `findOccupiedSlot` 의 세대 검사가 막는다
         }
 
@@ -229,5 +235,130 @@ namespace sw
         IndexFreeList _freeSlot SW_GUARDED_BY( _mutex );
         mutable mutex           _mutex;
         uint32 _slotCount       SW_GUARDED_BY( _mutex ){ 0 }; ///< 지금까지 쓴 슬롯 수. 뮤텍스 안에서만 읽고 쓴다
+    };
+
+    /**
+     * @brief 부르는 쪽이 지키는 핸들 표입니다(`SlotTableSync::External`). 칸 재사용 · 세대 규칙은 기본 정의와 같고 잠금 · 원자값이 없습니다.
+     * @details 모든 호출(읽기 포함)을 부르는 쪽의 잠금 하나 또는 스레드 하나가 직렬화해야 합니다. 칸은 `vector` 라 `insert` 가 앞서 받은 `get` 포인터를
+     *          무효로 만들 수 있습니다 — 포인터는 그 잠금 구간 안에서만 씁니다. 언리얼 `TSparseArray`(잠금 없음) + 세대 핸들과 같은 자리입니다.
+     */
+    template <typename T>
+    class SlotHandleTable<T, SlotTableSync::External>
+    {
+    public:
+        /** @brief 값을 넣고 핸들을 반환합니다. 빈 칸이 있으면 마지막에 놓은 칸부터 다시 쓰고, 그 칸의 세대는 놓을 때 이미 올랐습니다. */
+        SlotHandle insert( T value )
+        {
+            const uint32 index = _freeSlot.reserve( _listSlot );
+            if ( index == _listSlot.size() )
+                _listSlot.push_back( Slot{} );
+            Slot& slot  = _listSlot[index];
+            slot._value = std::move( value );
+            slot._state = Slot::kOccupiedBit | slot.generation();
+            return SlotHandle::make( index, slot.generation() );
+        }
+
+        /** @brief 핸들이 점유된 칸의 지금 세대를 가리키면 값 포인터를, 아니면 nullptr 을 반환합니다. */
+        T* get( SlotHandle handle ) { return const_cast<T*>( static_cast<const SlotHandleTable*>( this )->get( handle ) ); }
+
+        /** @brief 핸들이 점유된 칸의 지금 세대를 가리키면 값 포인터를, 아니면 nullptr 을 반환합니다. */
+        const T* get( SlotHandle handle ) const
+        {
+            const Slot* pSlot = findOccupiedSlot( handle );
+            return pSlot != nullptr ? std::addressof( pSlot->_value ) : nullptr;
+        }
+
+        /** @brief 칸을 비우고 세대를 올린 뒤, 꺼낸 값을 outValue 에 담습니다. 핸들이 무효면 false 입니다. */
+        bool take( SlotHandle handle, T& outValue )
+        {
+            Slot* const pSlot = const_cast<Slot*>( findOccupiedSlot( handle ) );
+            if ( pSlot == nullptr )
+                return false;
+            outValue = std::move( pSlot->_value );
+            freeSlot( handle.index(), *pSlot );
+            return true;
+        }
+
+        /** @brief 핸들이 가리키는 칸을 비워 핸들을 무효로 만듭니다. 이미 무효면 할 일이 없습니다(이중 반납은 세대 검사가 막는다). */
+        void erase( SlotHandle handle )
+        {
+            Slot* const pSlot = const_cast<Slot*>( findOccupiedSlot( handle ) );
+            if ( pSlot != nullptr )
+                freeSlot( handle.index(), *pSlot );
+        }
+
+        /** @brief 점유된 칸마다 fn(T&) 를 칸 번호 순으로 부릅니다. 도는 동안 표를 고치지 않습니다. */
+        template <typename Fn>
+        void forEach( Fn&& fn )
+        {
+            for ( Slot& slot : _listSlot )
+            {
+                if ( slot.isOccupied() )
+                    fn( slot._value );
+            }
+        }
+
+        /** @brief 점유된 칸마다 fn(SlotHandle, T&) 를 칸 번호 순으로 부릅니다. 도는 동안 표를 고치지 않습니다. */
+        template <typename Fn>
+        void forEachHandle( Fn&& fn )
+        {
+            for ( uint32 slotIndex = 0; slotIndex < static_cast<uint32>( _listSlot.size() ); ++slotIndex )
+            {
+                Slot& slot = _listSlot[slotIndex];
+                if ( slot.isOccupied() )
+                    fn( SlotHandle::make( slotIndex, slot.generation() ), slot._value );
+            }
+        }
+
+        /** @brief 지금 점유된 칸 수를 반환합니다. */
+        uint32 size() const { return static_cast<uint32>( _listSlot.size() - _freeSlot.size() ); }
+
+        /** @brief 표가 비어 있는지 반환합니다. */
+        bool empty() const { return size() == 0; }
+
+        /** @brief 모든 칸을 비웁니다. **세대는 이어 갑니다** — 비우기 전에 받은 핸들은 비운 뒤 새로 넣은 값을 가리키지 않습니다(기본 정의의 `clear` 와 같다). */
+        void clear()
+        {
+            for ( uint32 slotIndex = 0; slotIndex < static_cast<uint32>( _listSlot.size() ); ++slotIndex )
+            {
+                if ( _listSlot[slotIndex].isOccupied() )
+                    freeSlot( slotIndex, _listSlot[slotIndex] );
+            }
+        }
+
+    private:
+        /** @brief 칸 하나의 값과 상태입니다. 상태는 기본 정의와 같은 모양(점유 비트 | 세대)이라 두 정책의 세대 규칙이 같습니다. */
+        struct Slot
+        {
+            static constexpr uint32 kOccupiedBit    = 0x8000'0000u;
+            static constexpr uint32 kGenerationMask = 0x7FFF'FFFFu;
+
+            T      _value{};
+            uint32 _state{ 1 }; /**< kOccupiedBit | generation */
+
+            uint32 generation() const { return _state & kGenerationMask; }
+            bool   isOccupied() const { return ( _state & kOccupiedBit ) != 0; }
+        };
+
+        /** @brief 핸들이 가리키는 점유된 칸입니다. 없으면 nullptr 입니다. */
+        const Slot* findOccupiedSlot( SlotHandle handle ) const
+        {
+            if ( handle.isValid() == false || handle.index() >= _listSlot.size() )
+                return nullptr;
+            const Slot& slot = _listSlot[handle.index()];
+            return slot.isOccupied() && slot.generation() == handle.generation() ? &slot : nullptr;
+        }
+
+        /** @brief 칸을 비우고 세대를 올린 뒤 빈 칸 스택에 넣습니다. */
+        void freeSlot( uint32 index, Slot& slot )
+        {
+            slot._value = T{};
+            slot._state = SlotHandle::nextGeneration( slot.generation(), Slot::kGenerationMask );
+            _freeSlot.push( index );
+        }
+
+    private:
+        vector<Slot>  _listSlot; ///< 칸(번호 = 핸들의 index)
+        IndexFreeList _freeSlot; ///< 놓은 칸 번호(마지막에 놓은 것부터 다시 쓴다)
     };
 } // namespace sw

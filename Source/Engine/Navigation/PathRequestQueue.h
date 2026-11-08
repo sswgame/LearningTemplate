@@ -21,9 +21,9 @@
 #pragma once
 #include "Core/Concurrency/ScopedLock.h"
 #include "Core/Concurrency/SpinLock.h"
-#include "Core/Container/IndexFreeList.h"
+#include "Core/Container/SlotHandle.h"
+#include "Core/Container/SlotHandleTable.h"
 #include "Core/Container/vector.h"
-#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
@@ -33,14 +33,8 @@
 
 namespace sw
 {
-    /** @brief 경로 요청 하나의 핸들입니다. 칸 번호와 세대 — 받거나 취소하면 세대가 올라 옛 핸들은 아무것도 가리키지 않습니다. */
-    struct PathRequestHandle
-    {
-        uint32 _slot{ constant::invalid_index::kUint32 };
-        uint32 _generation{ 0 };
-
-        bool isValid() const { return _slot != constant::invalid_index::kUint32; }
-    };
+    /** @brief 경로 요청 하나의 핸들입니다. 칸 번호와 세대(`SlotHandle` 한 벌) — 받거나 취소하면 세대가 올라 옛 핸들은 아무것도 가리키지 않습니다. */
+    using PathRequestHandle = SlotHandle;
 
     /** @brief 요청의 지금 상태입니다. */
     enum class PathRequestState : uint8
@@ -74,8 +68,7 @@ namespace sw
         };
 
         explicit PathRequestQueue( TSolver& solver )
-            : _listSlot{}
-            , _freeSlot{}
+            : _slotTable{}
             , _listPending{}
             , _listInFlightJob{}
             , _listInFlightHandle{}
@@ -100,17 +93,8 @@ namespace sw
         /** @brief 질의 칸을 채운 @p job 을 줄에 세우고 핸들을 돌려줍니다(아무 스레드). 다음 `launch` 가 워커에 넘기고 그다음 `complete` 가 결과를 칸에 둡니다. */
         [[nodiscard]] PathRequestHandle request( Job job )
         {
-            ScopedLock<SpinLock> lock{ _lock };
-            uint32               slotIndex = 0;
-            if ( _freeSlot.tryPop( slotIndex ) == false )
-            {
-                slotIndex = static_cast<uint32>( _listSlot.size() );
-                _listSlot.push_back( Slot{} );
-            }
-            Slot& slot  = _listSlot[slotIndex];
-            slot._job   = std::move( job );
-            slot._state = PathRequestState::Pending;
-            const PathRequestHandle handle{ slotIndex, slot._generation };
+            ScopedLock<SpinLock>    lock{ _lock };
+            const PathRequestHandle handle = _slotTable.insert( Slot{ std::move( job ), PathRequestState::Pending } );
             _listPending.push_back( handle );
             return handle;
         }
@@ -119,15 +103,15 @@ namespace sw
         void cancel( const PathRequestHandle& handle )
         {
             ScopedLock<SpinLock> lock{ _lock };
-            if ( isLiveUnlocked( handle ) )
-                freeSlotUnlocked( handle._slot );
+            _slotTable.erase( handle );
         }
 
         /** @brief 요청의 상태입니다(아무 스레드). */
         PathRequestState getState( const PathRequestHandle& handle ) const
         {
             ScopedLock<SpinLock> lock{ _lock };
-            return isLiveUnlocked( handle ) ? _listSlot[handle._slot]._state : PathRequestState::Unknown;
+            const Slot*          pSlot = _slotTable.get( handle );
+            return pSlot != nullptr ? pSlot->_state : PathRequestState::Unknown;
         }
 
         /**
@@ -136,13 +120,13 @@ namespace sw
         [[nodiscard]] PathRequestState takeResult( const PathRequestHandle& handle, Job& outJob )
         {
             ScopedLock<SpinLock> lock{ _lock };
-            if ( isLiveUnlocked( handle ) == false )
+            Slot* const          pSlot = _slotTable.get( handle );
+            if ( pSlot == nullptr )
                 return PathRequestState::Unknown;
-            Slot& slot = _listSlot[handle._slot];
-            if ( slot._state != PathRequestState::Ready )
-                return slot._state;
-            outJob = std::move( slot._job );
-            freeSlotUnlocked( handle._slot );
+            if ( pSlot->_state != PathRequestState::Ready )
+                return pSlot->_state;
+            outJob = std::move( pSlot->_job );
+            _slotTable.erase( handle );
             return PathRequestState::Ready;
         }
 
@@ -160,9 +144,10 @@ namespace sw
                 for ( const PathRequestHandle& handle : _listPending )
                 {
                     // 줄에 선 뒤 취소했으면 칸의 세대가 올랐다 — 넘기지 않는다.
-                    if ( isLiveUnlocked( handle ) == false )
+                    Slot* const pSlot = _slotTable.get( handle );
+                    if ( pSlot == nullptr )
                         continue;
-                    _listInFlightJob.push_back( std::move( _listSlot[handle._slot]._job ) );
+                    _listInFlightJob.push_back( std::move( pSlot->_job ) );
                     _listInFlightHandle.push_back( handle );
                 }
                 _listPending.clear();
@@ -214,12 +199,11 @@ namespace sw
                 ScopedLock<SpinLock> lock{ _lock };
                 for ( size_t jobIndex = 0; jobIndex < _listInFlightJob.size(); ++jobIndex )
                 {
-                    const PathRequestHandle& handle = _listInFlightHandle[jobIndex];
-                    if ( isLiveUnlocked( handle ) == false )
-                        continue;
-                    Slot& slot  = _listSlot[handle._slot];
-                    slot._job   = std::move( _listInFlightJob[jobIndex] );
-                    slot._state = PathRequestState::Ready;
+                    Slot* const pSlot = _slotTable.get( _listInFlightHandle[jobIndex] );
+                    if ( pSlot == nullptr )
+                        continue; // 넘긴 뒤 취소했다 — 결과를 버린다
+                    pSlot->_job   = std::move( _listInFlightJob[jobIndex] );
+                    pSlot->_state = PathRequestState::Ready;
                     ++_completedCount;
                 }
             }
@@ -233,11 +217,7 @@ namespace sw
         {
             (void)complete(); // 아래에서 결과를 모두 버린다 — 증표는 이 함수가 새로 낸다
             ScopedLock<SpinLock> lock{ _lock };
-            for ( uint32 slotIndex = 0; slotIndex < static_cast<uint32>( _listSlot.size() ); ++slotIndex )
-            {
-                if ( _listSlot[slotIndex]._state != PathRequestState::Unknown )
-                    freeSlotUnlocked( slotIndex );
-            }
+            _slotTable.clear(); // 세대는 이어 간다 — 옛 핸들이 새 요청을 가리키지 않는다
             _listPending.clear();
             return Fence{};
         }
@@ -256,11 +236,10 @@ namespace sw
         }
 
     private:
-        /** @brief 칸 하나 — 요청의 질의 · 결과와 상태. 세대는 칸을 놓을 때 오른다. */
+        /** @brief 칸 하나 — 요청의 질의 · 결과와 상태(`Pending` · `Ready`). 놓인 칸은 표가 가린다(`Unknown`). */
         struct Slot
         {
             Job              _job{};
-            uint32           _generation{ 0 };
             PathRequestState _state{ PathRequestState::Unknown };
         };
 
@@ -281,21 +260,6 @@ namespace sw
             }
         };
 
-        bool isLiveUnlocked( const PathRequestHandle& handle ) const SW_REQUIRES_LOCK( _lock )
-        {
-            return handle.isValid() && handle._slot < _listSlot.size() && _listSlot[handle._slot]._generation == handle._generation &&
-                   _listSlot[handle._slot]._state != PathRequestState::Unknown;
-        }
-
-        void freeSlotUnlocked( uint32 slotIndex ) SW_REQUIRES_LOCK( _lock )
-        {
-            Slot& slot  = _listSlot[slotIndex];
-            slot._job   = Job{};
-            slot._state = PathRequestState::Unknown;
-            ++slot._generation;
-            _freeSlot.push( slotIndex );
-        }
-
         /** @brief 워커에 넘긴 태스크가 있으면 모두 끝날 때까지 기다립니다(인라인으로 푼 묶음은 기다릴 것이 없다). */
         void waitLaunchedTasks()
         {
@@ -306,16 +270,15 @@ namespace sw
         }
 
     private:
-        vector<Slot> _listSlot                 SW_GUARDED_BY( _lock );
-        IndexFreeList _freeSlot                SW_GUARDED_BY( _lock );
-        vector<PathRequestHandle> _listPending SW_GUARDED_BY( _lock ); ///< 요청 순서 — 워커에 넘기는 순서다
-        vector<Job>                            _listInFlightJob;       ///< 주인 스레드가 `launch` 에서 채우고 `complete` 에서 비운다. 그 사이 워커만 원소를 쓴다
-        vector<PathRequestHandle>              _listInFlightHandle;    ///< `_listInFlightJob` 과 같은 순서의 핸들
-        vector<LaneTask>                       _listLane;
-        TaskStageHandle                        _stage; ///< 이 줄이 낸 태스크 전부(주인 하나가 묶는다 — `NavMeshRuntime::_bakeStage` 와 같은 모양)
-        TSolver*                               _pSolver;
-        uint64 _completedCount                 SW_GUARDED_BY( _lock );
-        mutable SpinLock                       _lock;
-        TaskManager*                           _pLaunchedTaskManager; ///< 태스크를 넘긴 풀 — 기다릴 곳(넘긴 것이 없거나 인라인으로 풀었으면 nullptr)
+        SlotHandleTable<Slot, SlotTableSync::External> _slotTable SW_GUARDED_BY( _lock ); ///< 요청 칸(칸 번호 + 세대) — 이 줄의 잠금이 지킨다
+        vector<PathRequestHandle> _listPending                    SW_GUARDED_BY( _lock ); ///< 요청 순서 — 워커에 넘기는 순서다
+        vector<Job>                                               _listInFlightJob;       ///< 주인 스레드가 `launch` 에서 채우고 `complete` 에서 비운다. 그 사이 워커만 원소를 쓴다
+        vector<PathRequestHandle>                                 _listInFlightHandle;    ///< `_listInFlightJob` 과 같은 순서의 핸들
+        vector<LaneTask>                                          _listLane;
+        TaskStageHandle                                           _stage; ///< 이 줄이 낸 태스크 전부(주인 하나가 묶는다 — `NavMeshRuntime::_bakeStage` 와 같은 모양)
+        TSolver*                                                  _pSolver;
+        uint64 _completedCount                                    SW_GUARDED_BY( _lock );
+        mutable SpinLock                                          _lock;
+        TaskManager*                                              _pLaunchedTaskManager; ///< 태스크를 넘긴 풀 — 기다릴 곳(넘긴 것이 없거나 인라인으로 풀었으면 nullptr)
     };
 } // namespace sw

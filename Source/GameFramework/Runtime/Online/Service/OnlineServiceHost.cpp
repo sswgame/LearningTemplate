@@ -85,7 +85,7 @@ namespace sw
         }
 
         bool hasAdminListener() const { return _listenerCount == kMaxListener; }
-        bool isAdminConnection( StreamConnectionHandle handle ) const { return handle._index % _listenerCount == kAdminListener; }
+        bool isAdminConnection( StreamConnectionHandle handle ) const { return handle.index() % _listenerCount == kAdminListener; }
 
         /** @brief GM 리슨에서 받기 시작합니다. GM 전송이 없으면 false 입니다. */
         [[nodiscard]] bool listenAdmin( const NetAddress& bindAddress ) { return hasAdminListener() && _arrTransport[kAdminListener]->listen( bindAddress ); }

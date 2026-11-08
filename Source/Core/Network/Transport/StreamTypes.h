@@ -3,6 +3,7 @@
  * @brief 스트림(TCP) 전송의 공통 타입 — 연결 핸들 · 닫힘 까닭 · 보내기 결과 · 설정 · 통계입니다.
  */
 #pragma once
+#include "Core/Container/SlotHandle.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -21,23 +22,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct StreamConnectionHandle
-     * @brief 스트림 연결 하나 — 슬롯 번호 + 세대입니다. 세대 0 은 무효. 닫힌 슬롯을 다시 쓰면 세대가 올라 옛 핸들은 아무것도 가리키지 않습니다.
+     * @brief 스트림 연결 하나 — 슬롯 번호 + 세대(`SlotHandle` 한 벌)입니다. 세대 0 은 무효. 닫힌 슬롯을 다시 쓰면 세대가 올라 옛 핸들은 아무것도 가리키지 않습니다.
+     * @details 예전에는 같은 모양(번호 · 세대 · packed)을 손으로 다시 짰다. 전송 구현은 칸 표를 `SlotHandleTable`(루프백) 또는 연결마다의 세대(+ `SlotHandle::nextGeneration`)로 든다.
      */
-    struct StreamConnectionHandle
-    {
-        uint32 _index{ 0 };
-        uint32 _generation{ 0 };
-
-        static constexpr StreamConnectionHandle make( uint32 index, uint32 generation ) { return StreamConnectionHandle{ index, generation }; }
-        static constexpr StreamConnectionHandle fromPacked( uint64 packed ) { return make( static_cast<uint32>( packed ), static_cast<uint32>( packed >> 32 ) ); }
-
-        constexpr bool   isValid() const { return _generation != 0; }
-        constexpr uint64 packed() const { return ( static_cast<uint64>( _generation ) << 32 ) | _index; }
-
-        constexpr bool operator==( const StreamConnectionHandle& other ) const { return _index == other._index && _generation == other._generation; }
-        constexpr bool operator!=( const StreamConnectionHandle& other ) const { return ( *this == other ) == false; }
-    };
+    using StreamConnectionHandle = SlotHandle;
 } // namespace sw
 
 namespace sw

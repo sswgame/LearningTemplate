@@ -18,6 +18,9 @@ namespace sw
     class SlotHandle
     {
     public:
+        /** @brief 세대 칸 전부(32비트)입니다 — 상태 비트를 따로 담지 않는 쪽의 `nextGeneration` 기본 마스크. */
+        static constexpr uint32 kAllGenerationBits = 0xFFFF'FFFFu;
+
         /** @brief 무효 핸들(index 0, generation 0)을 만듭니다. */
         constexpr SlotHandle() noexcept = default;
 
@@ -28,6 +31,16 @@ namespace sw
             handle._index      = index;
             handle._generation = generation;
             return handle;
+        }
+
+        /**
+         * @brief 칸을 놓을 때 올릴 다음 세대입니다 — @p generation + 1 을 @p mask 로 자르고, 한 바퀴 돌아 0(무효 핸들 몫)이 되면 1 로 건너뜁니다.
+         * @details 핸들 표 두 벌(`SlotHandleTable` 의 잠금 정책 둘)이 같은 규칙을 쓴다. 상태 비트를 세대와 한 값에 담는 표는 세대 칸만 남긴 @p mask 를 넘긴다.
+         */
+        static constexpr uint32 nextGeneration( uint32 generation, uint32 mask = kAllGenerationBits ) noexcept
+        {
+            const uint32 next = ( generation + 1u ) & mask;
+            return next != 0 ? next : 1u;
         }
 
         /** @brief packed uint64 에서 핸들을 복원합니다. */

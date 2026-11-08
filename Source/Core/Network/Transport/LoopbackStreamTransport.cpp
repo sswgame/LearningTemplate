@@ -5,6 +5,7 @@
 #include "Core/Concurrency/OnceInit.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/IndexFreeList.h"
+#include "Core/Container/SlotHandleTable.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
@@ -52,12 +53,11 @@ namespace sw
             uint8                    _bUsed{ SW_FALSE };
         };
 
+        /** @brief 이 전송 쪽 연결 하나 — 어느 링크의 어느 쪽인지(칸 번호 + 세대는 `SlotHandleTable` 이 든다). */
         struct LoopbackHandleSlot
         {
-            int32  _linkIndex{ constant::invalid_index::kInt32 };
-            uint32 _generation{ 1 };
-            uint8  _side{ 0 };
-            uint8  _bUsed{ SW_FALSE };
+            int32 _linkIndex{ constant::invalid_index::kInt32 };
+            uint8 _side{ 0 };
         };
 
         struct LoopbackStreamTransportInternal
@@ -83,8 +83,7 @@ namespace sw
         {
         public:
             explicit LoopbackStreamTransport( LoopbackNetworkState* pState )
-                : _listSlot{}
-                , _freeSlot{}
+                : _slotTable{}
                 , _listPending{}
                 , _listDispatch{}
                 , _settings{}
@@ -123,11 +122,8 @@ namespace sw
                     if ( _listenPort != 0 )
                         _pState->_mapListener.erase( _listenPort );
                     _listenPort = 0;
-                    for ( LoopbackHandleSlot& slot : _listSlot )
-                    {
-                        if ( slot._bUsed == SW_TRUE )
-                            abortLinkLocked( slot._linkIndex, slot._side, StreamCloseReason::Shutdown );
-                    }
+                    _slotTable.forEach( [this]( const LoopbackHandleSlot& slot )
+                    { abortLinkLocked( slot._linkIndex, slot._side, StreamCloseReason::Shutdown ); } );
                 }
                 (void)pollIO( 0 ); // 닫힘 사건을 지금 넘긴다 — 돌아온 뒤에는 콜백이 없다
                 {
@@ -171,8 +167,7 @@ namespace sw
                 const bool                     bConnectRefused = pPeer == nullptr || pPeer->_bInitialized == SW_FALSE || pPeer->countOpenLocked() >= pPeer->_settings->_maxConnections;
                 if ( bConnectRefused )
                 {
-                    // 실제 전송처럼 핸들은 주고 다음 pollIO 에 ConnectFailed 로 닫는다.
-                    _listSlot[handle._index]._linkIndex = constant::invalid_index::kInt32;
+                    // 실제 전송처럼 핸들은 주고 다음 pollIO 에 ConnectFailed 로 닫는다(칸은 링크 없이 섰다).
                     pushEventLocked( LoopbackEvent{ {}, remote, handle, StreamCloseReason::ConnectFailed, LoopbackEventKind::Closed, SW_FALSE } );
                     return handle;
                 }
@@ -188,10 +183,8 @@ namespace sw
                     const StreamTransportConfig& sideSettings = link._arrSide[side]->_settings.get();
                     link._arrQueue[side].configure( sideSettings._sendHighWatermarkBytes, sideSettings._sendLowWatermarkBytes, sideSettings._maxQueuedSendBytes );
                 }
-                _listSlot[handle._index]._linkIndex            = linkIndex;
-                _listSlot[handle._index]._side                 = 0;
-                pPeer->_listSlot[peerHandle._index]._linkIndex = linkIndex;
-                pPeer->_listSlot[peerHandle._index]._side      = 1;
+                *_slotTable.get( handle )            = LoopbackHandleSlot{ linkIndex, 0 };
+                *pPeer->_slotTable.get( peerHandle ) = LoopbackHandleSlot{ linkIndex, 1 };
                 pushEventLocked( LoopbackEvent{ {}, remote, handle, StreamCloseReason::None, LoopbackEventKind::Opened, SW_FALSE } );
                 pPeer->pushEventLocked( LoopbackEvent{ {}, NetAddress::makeLoopback( _localPort ), peerHandle, StreamCloseReason::None, LoopbackEventKind::Opened, SW_TRUE } );
                 ++_stats._connectedCount;
@@ -203,7 +196,7 @@ namespace sw
             {
                 ScopedLock<mutex> lock{ _pState->_mutex };
                 LoopbackLink*     pLink                   = findLinkLocked( handle );
-                const uint8       side                    = pLink != nullptr ? _listSlot[handle._index]._side : 0;
+                const uint8       side                    = pLink != nullptr ? _slotTable.get( handle )->_side : 0;
                 const bool        bLinkUnavailableForSend = pLink == nullptr || pLink->_arrFinRequested[side] == SW_TRUE || pLink->_arrClosed[side] == SW_TRUE;
                 if ( bLinkUnavailableForSend )
                     return StreamSendResult::Closed;
@@ -219,10 +212,11 @@ namespace sw
                 LoopbackLink*     pLink = findLinkLocked( handle );
                 if ( pLink == nullptr )
                     return;
-                const uint8 side = _listSlot[handle._index]._side;
+                const LoopbackHandleSlot& slot = *_slotTable.get( handle ); // 링크를 찾았으면 칸이 산다
+                const uint8               side = slot._side;
                 if ( mode == StreamCloseMode::Abort )
                 {
-                    abortLinkLocked( _listSlot[handle._index]._linkIndex, side, StreamCloseReason::LocalClose );
+                    abortLinkLocked( slot._linkIndex, side, StreamCloseReason::LocalClose );
                     return;
                 }
                 if ( pLink->_arrFinRequested[side] == SW_FALSE )
@@ -237,7 +231,7 @@ namespace sw
                 ScopedLock<mutex> lock{ _pState->_mutex };
                 LoopbackLink*     pLink = findLinkLocked( handle );
                 if ( pLink != nullptr )
-                    pLink->_arrPaused[_listSlot[handle._index]._side] = bPaused ? SW_TRUE : SW_FALSE;
+                    pLink->_arrPaused[_slotTable.get( handle )->_side] = bPaused ? SW_TRUE : SW_FALSE;
             }
 
             int32 pollIO( int32 timeoutMilli ) override
@@ -286,7 +280,7 @@ namespace sw
                 const LoopbackLink* pLink = const_cast<LoopbackStreamTransport*>( this )->findLinkLocked( handle );
                 if ( pLink == nullptr )
                     return NetAddress{};
-                const uint8                    peerSide = static_cast<uint8>( 1 - _listSlot[handle._index]._side );
+                const uint8                    peerSide = static_cast<uint8>( 1 - _slotTable.get( handle )->_side );
                 const LoopbackStreamTransport* pPeer    = pLink->_arrSide[peerSide];
                 if ( pPeer == nullptr )
                     return NetAddress{}; // 저쪽 전송을 이미 내렸다
@@ -304,29 +298,14 @@ namespace sw
             void pushEventLocked( LoopbackEvent&& event ) { _listPending.push_back( std::move( event ) ); }
 
         private:
-            StreamConnectionHandle allocateSlotLocked()
-            {
-                const uint32 index = _freeSlot.reserve( _listSlot );
-                if ( index == _listSlot.size() )
-                    _listSlot.push_back( LoopbackHandleSlot{} );
-                LoopbackHandleSlot& slot = _listSlot[index];
-                slot._bUsed              = SW_TRUE;
-                slot._linkIndex          = constant::invalid_index::kInt32;
-                return StreamConnectionHandle::make( index, slot._generation );
-            }
+            StreamConnectionHandle allocateSlotLocked() { return _slotTable.insert( LoopbackHandleSlot{} ); }
 
             void freeSlotLocked( StreamConnectionHandle handle )
             {
-                if ( handle._index >= _listSlot.size() || _listSlot[handle._index]._generation != handle._generation )
+                LoopbackHandleSlot slot{};
+                if ( _slotTable.take( handle, slot ) == false )
                     return;
-                LoopbackHandleSlot& slot      = _listSlot[handle._index];
-                const int32         linkIndex = slot._linkIndex;
-                slot._bUsed                   = SW_FALSE;
-                slot._linkIndex               = constant::invalid_index::kInt32;
-                ++slot._generation;
-                if ( slot._generation == 0 )
-                    slot._generation = 1;
-                _freeSlot.push( handle._index );
+                const int32 linkIndex = slot._linkIndex;
                 ++_stats._closedCount;
                 if ( linkIndex >= 0 )
                 {
@@ -338,8 +317,7 @@ namespace sw
                         const uint8                  otherSide   = static_cast<uint8>( 1 - slot._side );
                         LoopbackStreamTransport*     pOther      = link._arrSide[otherSide];
                         const StreamConnectionHandle otherHandle = link._arrHandle[otherSide];
-                        const bool                   bOtherFreed = pOther == nullptr || otherHandle._index >= pOther->_listSlot.size() ||
-                                                 pOther->_listSlot[otherHandle._index]._generation != otherHandle._generation;
+                        const bool                   bOtherFreed = pOther == nullptr || pOther->_slotTable.get( otherHandle ) == nullptr;
                         if ( bOtherFreed )
                         {
                             link = LoopbackLink{};
@@ -360,24 +338,13 @@ namespace sw
 
             LoopbackLink* findLinkLocked( StreamConnectionHandle handle )
             {
-                if ( handle.isValid() == false || handle._index >= _listSlot.size() )
-                    return nullptr;
-                const LoopbackHandleSlot& slot         = _listSlot[handle._index];
-                const bool                bStaleHandle = slot._bUsed == SW_FALSE || slot._generation != handle._generation || slot._linkIndex < 0;
-                if ( bStaleHandle )
-                    return nullptr;
-                return &_pState->_listLink[static_cast<size_t>( slot._linkIndex )];
+                const LoopbackHandleSlot* const pSlot = _slotTable.get( handle );
+                if ( pSlot == nullptr || pSlot->_linkIndex < 0 )
+                    return nullptr; // 낡은 핸들이거나 연결하지 못한 칸
+                return &_pState->_listLink[static_cast<size_t>( pSlot->_linkIndex )];
             }
 
-            int32 countOpenLocked() const
-            {
-                int32 count = 0;
-                for ( const LoopbackHandleSlot& slot : _listSlot )
-                {
-                    count += slot._bUsed == SW_TRUE ? 1 : 0;
-                }
-                return count;
-            }
+            int32 countOpenLocked() const { return static_cast<int32>( _slotTable.size() ); }
 
             void abortLinkLocked( int32 linkIndex, uint8 side, StreamCloseReason reason )
             {
@@ -399,15 +366,16 @@ namespace sw
             void transferLocked()
             {
                 int32 budget = _pState->_conditions._maxBytesPerPoll > 0 ? _pState->_conditions._maxBytesPerPoll : 0x7FFFFFFF;
-                for ( LoopbackHandleSlot& slot : _listSlot )
+                // 칸 표는 도는 동안 바뀌지 않는다 — 사건만 쌓고 칸을 놓는 일(`freeSlotLocked`)은 넘긴 뒤 pollIO 가 한다.
+                _slotTable.forEach( [this, &budget]( const LoopbackHandleSlot& slot )
                 {
-                    if ( slot._bUsed == SW_FALSE || slot._linkIndex < 0 )
-                        continue;
+                    if ( slot._linkIndex < 0 )
+                        return;
                     LoopbackLink& link     = _pState->_listLink[static_cast<size_t>( slot._linkIndex )];
                     const uint8   side     = slot._side;
                     const uint8   peerSide = static_cast<uint8>( 1 - side );
                     if ( link._arrClosed[side] == SW_TRUE )
-                        continue;
+                        return;
                     StreamSendQueue& queue = link._arrQueue[peerSide];
                     while ( true )
                     {
@@ -445,7 +413,7 @@ namespace sw
                         }
                     }
                     settleLinkLocked( link );
-                }
+                } );
             }
 
             /** @brief 두 쪽 EOF 가 모두 넘어갔으면 각 쪽에 닫힘을 한 번 냅니다. */
@@ -463,17 +431,16 @@ namespace sw
             }
 
         private:
-            vector<LoopbackHandleSlot>      _listSlot;
-            IndexFreeList                   _freeSlot;
-            vector<LoopbackEvent>           _listPending;  ///< 망 잠금 안에서 쌓인 사건
-            vector<LoopbackEvent>           _listDispatch; ///< pollIO 스레드 전용 — 잠금 밖에서 넘긴다
-            OnceInit<StreamTransportConfig> _settings;     ///< initialize 가 한 번 정한다 — 저쪽 전송이 망 잠금 아래에서 읽는다.
-            StreamTransportStats            _stats;
-            LoopbackNetworkState* const     _pState; ///< 생성자에서 받는다(망이 전송보다 오래 산다).
-            OnceInit<IStreamHandler*>       _pHandler;
-            uint16                          _localPort; ///< 이 전송이 건 연결의 "보낸 쪽 포트"(저쪽의 getRemoteAddress)
-            uint16                          _listenPort;
-            uint8                           _bInitialized;
+            SlotHandleTable<LoopbackHandleSlot, SlotTableSync::External> _slotTable;    ///< 이 전송 쪽 연결(칸 번호 + 세대) — 망 잠금이 지킨다
+            vector<LoopbackEvent>                                        _listPending;  ///< 망 잠금 안에서 쌓인 사건
+            vector<LoopbackEvent>                                        _listDispatch; ///< pollIO 스레드 전용 — 잠금 밖에서 넘긴다
+            OnceInit<StreamTransportConfig>                              _settings;     ///< initialize 가 한 번 정한다 — 저쪽 전송이 망 잠금 아래에서 읽는다.
+            StreamTransportStats                                         _stats;
+            LoopbackNetworkState* const                                  _pState; ///< 생성자에서 받는다(망이 전송보다 오래 산다).
+            OnceInit<IStreamHandler*>                                    _pHandler;
+            uint16                                                       _localPort; ///< 이 전송이 건 연결의 "보낸 쪽 포트"(저쪽의 getRemoteAddress)
+            uint16                                                       _listenPort;
+            uint8                                                        _bInitialized;
         };
     } // namespace
 } // namespace sw

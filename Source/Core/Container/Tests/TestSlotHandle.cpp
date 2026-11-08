@@ -250,3 +250,41 @@ SW_TEST_CASE( SlotHandleTableTest, ClearKeepsOldHandlesInvalid )
     SW_EXPECT_EQUAL( 200, *table.get( newHandle ) );
     SW_EXPECT_TRUE_MSG( table.get( oldHandle ) == nullptr, "비우기 전의 핸들이 새 값을 가리킵니다" );
 }
+
+/**
+ * @brief [SlotHandleTableTest] 부르는 쪽이 지키는 표(`SlotTableSync::External`)도 같은 규칙이다 — 놓은 칸은 다시 쓰되 옛 핸들 · 비우기 전 핸들은 무효다.
+ */
+SW_TEST_CASE( SlotHandleTableTest, ExternalSyncFollowsTheSameRules )
+{
+    sw::SlotHandleTable<int32, sw::SlotTableSync::External> table;
+    const sw::SlotHandle                                    first  = table.insert( 1 );
+    const sw::SlotHandle                                    second = table.insert( 2 );
+    SW_EXPECT_EQUAL( 2u, table.size() );
+    SW_REQUIRE_NOT_NULL( table.get( second ) );
+    SW_EXPECT_EQUAL( 2, *table.get( second ) );
+
+    int32 taken = 0;
+    SW_EXPECT_TRUE( table.take( first, taken ) );
+    SW_EXPECT_EQUAL( 1, taken );
+    SW_EXPECT_FALSE( table.take( first, taken ) ); // 이중 반납은 세대 검사가 막는다
+    const sw::SlotHandle reused = table.insert( 3 );
+    SW_EXPECT_EQUAL( first.index(), reused.index() );
+    SW_EXPECT_TRUE( reused.generation() != first.generation() );
+    SW_EXPECT_TRUE( table.get( first ) == nullptr );
+
+    uint32 visited = 0;
+    table.forEachHandle( [&]( sw::SlotHandle handle, int32& value )
+    {
+        ++visited;
+        SW_EXPECT_TRUE( table.get( handle ) == &value );
+    } );
+    SW_EXPECT_EQUAL( 2u, visited );
+
+    table.clear();
+    SW_EXPECT_TRUE( table.empty() );
+    const sw::SlotHandle fresh = table.insert( 4 );
+    SW_EXPECT_TRUE( table.get( reused ) == nullptr && table.get( second ) == nullptr ); // 비우기 전 핸들은 새 값을 가리키지 않는다
+    SW_REQUIRE_NOT_NULL( table.get( fresh ) );
+    SW_EXPECT_EQUAL( 4, *table.get( fresh ) );
+    SW_EXPECT_EQUAL( 1u, sw::SlotHandle::nextGeneration( 0x7FFF'FFFFu, 0x7FFF'FFFFu ) ); // 한 바퀴 돌면 0 을 건너뛴다
+}
