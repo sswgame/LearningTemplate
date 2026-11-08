@@ -985,6 +985,11 @@ namespace sw
         return stage._pNode == nullptr ? 0u : stage._pNode->_join.getPending();
     }
 
+    string TaskManager::describeStageFirstUnfinished( const TaskStageHandle& stage )
+    {
+        return stage._pNode == nullptr ? string{} : _nodePool->describeFirstUnfinished( stage._pNode );
+    }
+
     // ------------------------------------------------------------------------------
     // 6) 기다리기 — 다른 일을 돕다가 자기 워드에서 잠들기, 브로드캐스트, 메인 스레드 깨우기
     // ------------------------------------------------------------------------------

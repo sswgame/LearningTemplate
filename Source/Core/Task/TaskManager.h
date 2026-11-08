@@ -193,6 +193,8 @@ namespace sw
         void addToStage( TaskStageHandle& inoutStage, const TaskHandle& task, string_view stageName );
         /** @brief 스테이지에 아직 끝나지 않은 태스크 수입니다. */
         uint32 getStagePendingCount( const TaskStageHandle& stage );
+        /** @brief 스테이지에 든 끝나지 않은 태스크 하나의 이름입니다(진단 — 풀을 훑으므로 매 프레임 부르지 않는다). 못 찾으면 빈 문자열, Shipping 은 늘 비어 있다. */
+        [[nodiscard]] string describeStageFirstUnfinished( const TaskStageHandle& stage );
 
         /**
          * @brief 만들 때(빌더) 걸어 둔 임시 잠금 의존성을 해제하고 태스크를 스케줄러에 제출합니다.

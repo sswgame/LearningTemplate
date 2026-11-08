@@ -304,6 +304,16 @@ namespace sw
         TaskNode* pTaskNode = task.getNode();
         if ( _pNode != nullptr && pTaskNode != nullptr )
         {
+            // 태스크는 완료를 알릴 스테이지를 하나만 적는다(`_parentStage`). 다른 스테이지에 또 넣으면 앞 스테이지의 남은 수가 영영 줄지 않아 그 스테이지를
+            // 기다리는 쪽(에디터 정지 판정 · 종료 대기)이 멈춘다 — 덮어쓰지 않고 거절한다. 두 곳이 기다려야 하면 뒤에 도는 빈 태스크(`runAfter`)를 다른 스테이지에 넣는다.
+            if ( pTaskNode->_parentStage != nullptr && pTaskNode->_parentStage != _pNode )
+            {
+                SW_LOG_ERROR_ID( "Task.StageAlreadySet", "Task '%#' is already in another stage - a task reports to one stage only, so it was not added (chain an empty task with runAfter instead).",
+                                 describeNode( pTaskNode ) );
+                return *this;
+            }
+            if ( pTaskNode->_parentStage == _pNode )
+                return *this; // 같은 스테이지에 두 번 — 남은 수를 두 번 올리면 영영 끝나지 않는다
             // 스테이지는 태스크를 붙들지 않는다. 완료할 때 찾아올 곳만 적어 둔다(제출 전이라 아직 아무도 이 값을 읽지 않는다).
             pTaskNode->_parentStage = _pNode;
             // 남은 태스크가 생기는 순간 스테이지가 스스로를 잡는다. 핸들이 먼저 사라져도 완료 통지가 갈 곳이 남는다.

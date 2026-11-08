@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 
+#include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
@@ -30,8 +31,17 @@ namespace sw::editor
                 // 스테이지는 에디터 컨텍스트가 만든 상태 저장소에 산다(게임 스레드에서만 낸다). 컨텍스트가 없으면(테스트) 종료에서 기다릴 주인도 없으므로 넣지 않는다.
                 if ( EditorStateStore* pStore = editor::findSubsystem<EditorStateStore>() )
                     pTaskManager->addToStage( pStore->get<EditorBackgroundJob>()._stage, handle, "EditorBackgroundJobs" );
+                // 태스크는 스테이지 하나에만 완료를 알린다(`TaskStageHandle::addTask`) — 잡 객체의 스테이지에는 잡 뒤에 도는 빈 태스크를 넣는다.
+                // 예전에는 같은 태스크를 두 스테이지에 넣어 뒤 등록이 앞을 덮었고, 전역 스테이지가 영영 끝나지 않아 에디터 정지 대기가 멈췄다.
                 if ( pJobStage != nullptr )
-                    pTaskManager->addToStage( *pJobStage, handle, name ); // 제출 전에 넣는다
+                {
+                    TaskHandle marker = pTaskManager->emplaceTask( name, TaskDelegate{} );
+                    if ( marker.runAfter( handle ) )
+                    {
+                        pTaskManager->addToStage( *pJobStage, marker, name ); // 제출 전에 넣는다
+                        marker.submit();
+                    }
+                }
                 handle.submit();
             }
         };
@@ -80,9 +90,20 @@ namespace sw::editor
         TaskManager*      pTaskManager = editor::findSubsystem<TaskManager>();
         return pStore != nullptr && pTaskManager != nullptr && pTaskManager->isStageComplete( pStore->get<EditorBackgroundJob>()._stage ) == false;
     }
+
+    /** @brief 남은 잡 수와 그중 하나의 이름 — 정지 대기가 오래 걸릴 때 무엇이 끝나지 않는지 로그에 남긴다(`AutomationStepRegistry::describeActiveBlockers`). */
+    static string describeEditorBackgroundJobs()
+    {
+        EditorStateStore* pStore       = editor::findSubsystem<EditorStateStore>();
+        TaskManager*      pTaskManager = editor::findSubsystem<TaskManager>();
+        if ( pStore == nullptr || pTaskManager == nullptr )
+            return "no editor";
+        const TaskStageHandle& stage = pStore->get<EditorBackgroundJob>()._stage;
+        return formatToString( "%# job(s) left, one is '%#'", pTaskManager->getStagePendingCount( stage ), pTaskManager->describeStageFirstUnfinished( stage ).c_str() );
+    }
 } // namespace sw::editor
 
 namespace sw
 {
-    SW_AUTOMATION_FINISH_BLOCKER( editorBackgroundJobs, "EditorBackgroundJobs", &editor::isRunningEditorBackgroundJobs );
+    SW_AUTOMATION_FINISH_BLOCKER_DESCRIBED( editorBackgroundJobs, "EditorBackgroundJobs", &editor::isRunningEditorBackgroundJobs, &editor::describeEditorBackgroundJobs );
 } // namespace sw

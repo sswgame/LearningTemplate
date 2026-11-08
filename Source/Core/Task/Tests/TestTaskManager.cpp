@@ -380,6 +380,39 @@ SW_TEST_CASE( TaskManagerTest, WaitStageReturnsOnlyAfterEveryStageTaskIsDone )
 }
 
 /**
+ * @brief 태스크는 스테이지 하나에만 완료를 알린다 — 다른 스테이지에 또 넣으면 거절하고, 두 스테이지가 기다려야 하면 뒤에 도는 빈 태스크를 쓴다
+ * @details 예전에는 두 번째 스테이지가 첫 번째를 덮어 첫 스테이지의 남은 수가 영영 줄지 않았다(에디터 백그라운드 잡 — 정지 대기가 끝나지 않았다).
+ */
+SW_TEST_CASE( TaskManagerTest, TaskReportsToOneStageOnly )
+{
+    sw::TaskManager manager;
+    SW_REQUIRE_TRUE( manager.initialize( kWorkerCount ) );
+
+    sw::TaskStageHandle firstStage  = manager.createStage();
+    sw::TaskStageHandle secondStage = manager.createStage();
+    sw::TaskHandle      job         = manager.emplaceTask( "StageJob", sw::TaskDelegate{} );
+    firstStage.addTask( job );
+    firstStage.addTask( job ); // 같은 스테이지에 두 번 — 남은 수는 하나다
+    {
+        SW_EXPECT_LOG( "Task.StageAlreadySet" ); // a task already in a stage must not be moved to another
+        secondStage.addTask( job );
+    }
+    sw::TaskHandle marker = manager.emplaceTask( "StageMarker", sw::TaskDelegate{} );
+    SW_REQUIRE_TRUE( marker.runAfter( job ) );
+    secondStage.addTask( marker );
+    marker.submit();
+    job.submit();
+
+    manager.waitStage( firstStage );
+    manager.waitStage( secondStage );
+    SW_EXPECT_TRUE( manager.isStageComplete( firstStage ) );
+    SW_EXPECT_TRUE( manager.isStageComplete( secondStage ) );
+
+    manager.waitAll( "TaskManagerTest" );
+    manager.shutdown();
+}
+
+/**
  * @brief 메인 스레드 친화도 작업은 메인 스레드에서만, dispatch 로만 돈다
  * @details 워커가 집어가면 그 작업이 기대한 스레드 규약(렌더 컨텍스트 · UI 등)이 깨진다.
  *          dispatch 를 부르기 전에는 돌지 않아야 하고, 돈 스레드가 메인이어야 한다.
