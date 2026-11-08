@@ -74,23 +74,35 @@ namespace sw::editor
             EditorScreenshotCommands::captureSceneView();
     }
 
+    void* EditorViewSurface::registerImage( uint64 rhiTexture )
+    {
+        EditorRenderViews* const pViews = EditorViewSurfaceInternal::findRenderViews();
+        if ( rhiTexture == 0 || pViews == nullptr || pViews->getRenderer() == nullptr )
+            return nullptr; // 렌더 스레드가 아직 만들지 않았다(다음 프레임)
+        return pViews->getRenderer()->registerTexture( rhiTexture );
+    }
+
+    void EditorViewSurface::unregisterImage( void* pTextureID )
+    {
+        EditorRenderViews* const pViews = EditorViewSurfaceInternal::findRenderViews();
+        if ( pTextureID != nullptr && pViews != nullptr && pViews->getRenderer() != nullptr )
+            pViews->getRenderer()->unregisterTexture( pTextureID );
+    }
+
     void* EditorViewSurface::registerOverlayTexture( uint64 rhiTexture )
     {
-        EditorContext* const pContext = editor::findSubsystem<EditorContext>();
-        if ( rhiTexture == 0 || pContext == nullptr || pContext->getSubsystem<EditorRenderViews>().getRenderer() == nullptr )
-            return nullptr; // 렌더 스레드가 아직 만들지 않았다(다음 프레임)
-        void* const pTextureID = pContext->getSubsystem<EditorRenderViews>().getRenderer()->registerTexture( rhiTexture );
-        pContext->getSubsystem<EditorUICapture>().setTextureExcluded( pTextureID, true );
+        void* const          pTextureID = registerImage( rhiTexture );
+        EditorContext* const pContext   = editor::findSubsystem<EditorContext>();
+        if ( pTextureID != nullptr && pContext != nullptr )
+            pContext->getSubsystem<EditorUICapture>().setTextureExcluded( pTextureID, true );
         return pTextureID;
     }
 
     void EditorViewSurface::unregisterOverlayTexture( void* pTextureID )
     {
         EditorContext* const pContext = editor::findSubsystem<EditorContext>();
-        if ( pTextureID == nullptr || pContext == nullptr )
-            return;
-        pContext->getSubsystem<EditorUICapture>().setTextureExcluded( pTextureID, false ); // ID 칸은 다른 등록이 다시 받는다
-        if ( pContext->getSubsystem<EditorRenderViews>().getRenderer() != nullptr )
-            pContext->getSubsystem<EditorRenderViews>().getRenderer()->unregisterTexture( pTextureID );
+        if ( pTextureID != nullptr && pContext != nullptr )
+            pContext->getSubsystem<EditorUICapture>().setTextureExcluded( pTextureID, false ); // ID 칸은 다른 등록이 다시 받는다
+        unregisterImage( pTextureID );
     }
 } // namespace sw::editor

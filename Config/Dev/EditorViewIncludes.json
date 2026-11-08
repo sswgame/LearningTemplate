@@ -75,6 +75,7 @@
         "Source/Editor/Panels/SourceControl/SourceControlChangesPanel",
         "Source/Editor/Panels/TileMap/TileMapPanel",
         "Source/Editor/Panels/TileSet/TileSetPanel",
+        "Source/Editor/Panels/UIPreview/UIPreviewPanel",
         "Source/Editor/Panels/VFX/VFXPreviewPanel"
     ]
 }

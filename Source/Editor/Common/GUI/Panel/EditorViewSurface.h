@@ -34,6 +34,10 @@ namespace sw::editor
         static void recordFocusedView( EditorViewKind kind );
         /** @brief 뷰 @p kind 의 스크린숏을 찍습니다(다음 프레임에 저장한다). */
         static void captureScreenshot( EditorViewKind kind );
+        /** @brief RHI 텍스처 @p rhiTexture 를 ImGui 이미지로 등록합니다(렌더 타깃 미리보기 · UI 미리보기). 렌더러가 아직 없거나 텍스처가 0 이면 nullptr 입니다(다음 프레임에 다시 부른다). */
+        static void* registerImage( uint64 rhiTexture );
+        /** @brief `registerImage` 가 준 id 를 돌려줍니다. 에디터 컨텍스트가 먼저 내려갔으면 아무것도 하지 않습니다. */
+        static void unregisterImage( void* pTextureID );
         /**
          * @brief RHI 텍스처 @p rhiTexture 를 ImGui 이미지로 등록하고 UI 캡처에서 뺍니다(게임 뷰 위 개발 겹치기). 렌더러가 아직 없으면 nullptr 입니다(다음 프레임에 다시 부른다).
          * @details 받은 id 는 `unregisterOverlayTexture` 로 돌려준다.
