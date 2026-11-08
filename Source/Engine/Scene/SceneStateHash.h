@@ -107,8 +107,8 @@ namespace sw
     /**
      * @class StateHashHistory
      * @brief 최근 N 틱의 해시 이력(링 버퍼)입니다. 서버가 틱마다 `record` 하고 개발 명령이 읽습니다.
-     * @details 엔진 서비스입니다(`engine::findSubsystem<StateHashHistory>()`) — 서비스 범위가 소유한다. 용량은 서비스가 설 때 실행 인자
-     *          `-gv_stateHashHistory=N` 으로 정한다(0 이면 끈 채로 둔다. Shipping 에는 인자가 없어 늘 꺼져 있다).
+     * @details 엔진 서비스입니다(`engine::findSubsystem<StateHashHistory>()`) — 서비스 범위가 소유한다. 용량은 개발 도구가 실행 인자
+     *          `-gv_stateHashHistory=N` 으로 정한다(`DevTools/Diagnostics/StateHashRecorder` — 0 이면 끈 채로 둔다. 배포 호스트는 DevTools 가 없어 늘 꺼져 있다).
      *          씬 해시 줄(기본) 말고 키트가 이름 붙은 줄(`registerChannel`)을 더한다 — 줄마다 같은 용량의 링이고 샘플 형식 · 비교(`findFirstDivergence`)가 같다.
      *          이름 붙은 줄은 구독이 풀려도(키트 종료) 이력을 남긴다. 같은 이름으로 다시 등록하면 그 줄을 이어 쓴다.
      */
@@ -131,7 +131,7 @@ namespace sw
         /** @brief 이름 붙은 줄의 이름이 맞는지 봅니다(`[a-z0-9_.-]`, 1 ~ 32 자, 씬 줄의 이름 `scene` 은 쓸 수 없다). 명령 인자 · 로그 줄에 그대로 실려 공백이 없어야 한다. */
         [[nodiscard]] static bool isValidChannelName( string_view name );
 
-        SubsystemInitResult initializeSubsystem() override;
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
 

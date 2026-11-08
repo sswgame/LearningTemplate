@@ -14,6 +14,7 @@
 #include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DevToolsClientPart.h"
 #include "DevTools/Diagnostics/ReflectionDump.h"
+#include "DevTools/Diagnostics/StateHashRecorder.h"
 #include "DevTools/Maintenance/SavedRetentionSubsystem.h"
 #include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Profiling/FrameStall.h"
@@ -98,6 +99,8 @@ namespace sw
         // 회선 흉내 — 세션이 열기 전에 샤드 전송 데코레이터를 건다(실행 중 조건은 `net.emulation`).
         if ( parts._pNetSession != nullptr )
             (void)startup.emplaceSubsystem<NetLineEmulationSubsystem>( *parts._pNetSession );
+        // 틱별 상태 해시 이력(`-gv_stateHashHistory`) — 이력 서비스는 서비스 범위라 이미 섰다. 초기화 때 용량을 건다(서버 디버깅 S7).
+        (void)startup.emplaceSubsystem<StateHashRecorder>();
         // 서버 포즈 고스트 — 서버가 가진 위치를 클라이언트 씬에 겹친다(`-gv_serverPoseOverlayPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
         (void)startup.emplaceSubsystem<ServerPoseOverlay>();
         // 디버그 HUD 설정 — 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다(설정 매니저는 아직 초기화 전이다).

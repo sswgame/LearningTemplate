@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/DebugReplyLine.h"
@@ -261,12 +260,6 @@ namespace sw
             }
         };
     } // namespace
-
-    /**
-     * @brief `-gv_stateHashHistory=N`: 틱마다 씬 상태 해시를 남기고 최근 N 틱을 보관합니다(0=끄기). 개발 명령 `state.hashes` 로 읽습니다.
-     * @details 전용 서버는 자기 틱으로, 클라이언트 App 은 서버가 알린 틱으로 남긴다(`StateHashHistory::recordActiveScene`). 에디터 멀티 프로세스 재생이 둘 다에 준다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_stateHashHistory, 0, "틱별 씬 상태 해시 이력 길이 (0=끄기)" );
 } // namespace sw
 
 namespace sw
@@ -484,13 +477,6 @@ namespace sw
         }
         outListName.erase( std::unique( outListName.begin(), outListName.end() ), outListName.end() );
         return outListName.empty() == false;
-    }
-
-    SubsystemInitResult StateHashHistory::initializeSubsystem()
-    {
-        if ( gv_stateHashHistory > 0 )
-            setCapacity( static_cast<uint32>( gv_stateHashHistory ) );
-        return SubsystemInitResult::Succeeded;
     }
 
     void StateHashHistory::recordActiveScene( uint64 tick )
