@@ -577,6 +577,9 @@ namespace sw
         /// @brief 컬러 그레이딩 범위 경계 · 켬(`PostGradeConstants::_params`)과 LUT 크기 · 세기(`_lut`)입니다.
         hashed_string _gradeParams{ "g_GradeParams" };
         hashed_string _gradeLut{ "g_GradeLut" };
+        /// @brief 렌즈 효과(색수차 세기 · 시작 반경 · 렌즈 왜곡 · 선명화)와 필름 그레인(세기 · 크기 px)입니다. post_grade.hlsli 의 `CameraGrade::applyLens` · `applyFilmGrain`.
+        hashed_string _lensParams{ "g_LensParams" };
+        hashed_string _grainParams{ "g_GrainParams" };
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };
         hashed_string _sourceTexel{ "g_SourceTexel" };

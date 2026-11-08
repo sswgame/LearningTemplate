@@ -47,6 +47,12 @@ namespace sw
         , _bHighlightsMin{ SW_FALSE }
         , _bColorGradingLut{ SW_FALSE }
         , _bColorGradingLutIntensity{ SW_FALSE }
+        , _bChromaticAberrationIntensity{ SW_FALSE }
+        , _bChromaticAberrationStart{ SW_FALSE }
+        , _bLensDistortion{ SW_FALSE }
+        , _bSharpen{ SW_FALSE }
+        , _bFilmGrainIntensity{ SW_FALSE }
+        , _bFilmGrainSize{ SW_FALSE }
     {
     }
 

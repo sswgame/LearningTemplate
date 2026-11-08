@@ -114,6 +114,23 @@ namespace sw
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "How much of the LUT result replaces the colour; 0 is off" )
         float32 _colorGradingLutIntensity{ 0.0f };
 
+        /**
+         * @brief 렌즈 · 필름 효과입니다(언리얼 Lens · Film Grain 칸). 모두 톤맵하는 셰이더 안에서 돈다(`CameraGrade::applyLens` · `applyFilmGrain`) — 원본을 읽는 자리에서
+         *        왜곡 · 색수차 · 선명화를 하고, 톤맵 뒤에 그레인을 더한다. 따로 패스를 두면 720p 왕복 하나(약 57 us)가 늘어난다. 세기가 모두 0 이면 셰이더가 건너뛴다.
+         */
+        PROPERTY( Min = 0.0, Max = 5.0, Tooltip = "Chromatic aberration (colour fringing towards the screen edges); 0 is off" )
+        float32 _chromaticAberrationIntensity{ 0.0f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Distance from the centre (0 centre, 1 corner) where chromatic aberration starts" )
+        float32 _chromaticAberrationStart{ 0.0f };
+        PROPERTY( Min = -1.0, Max = 1.0, Tooltip = "Lens distortion; positive is barrel, negative is pincushion, 0 is off" )
+        float32 _lensDistortion{ 0.0f };
+        PROPERTY( Min = 0.0, Max = 2.0, Tooltip = "Sharpen (unsharp mask on the source colour); 0 is off" )
+        float32 _sharpen{ 0.0f };
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Film grain intensity; 0 is off" )
+        float32 _filmGrainIntensity{ 0.0f };
+        PROPERTY( Min = 1.0, Max = 8.0, Tooltip = "Film grain size in pixels" )
+        float32 _filmGrainSize{ 1.0f };
+
         /** @brief 자동 노출이 장면을 측정하는지(최소 EV 가 최대보다 작다) 나타냅니다. 같으면 고정 노출 2^-최소 EV 입니다. */
         bool usesAutoExposure() const { return _autoExposureMinEv < _autoExposureMaxEv; }
 
@@ -217,5 +234,17 @@ namespace sw
         uint8 _bColorGradingLut : 1;
         PROPERTY()
         uint8 _bColorGradingLutIntensity : 1;
+        PROPERTY()
+        uint8 _bChromaticAberrationIntensity : 1;
+        PROPERTY()
+        uint8 _bChromaticAberrationStart : 1;
+        PROPERTY()
+        uint8 _bLensDistortion : 1;
+        PROPERTY()
+        uint8 _bSharpen : 1;
+        PROPERTY()
+        uint8 _bFilmGrainIntensity : 1;
+        PROPERTY()
+        uint8 _bFilmGrainSize : 1;
     };
 } // namespace sw

@@ -1,6 +1,7 @@
 /**
  * @file post_grade.hlsli
- * @brief 뷰의 후처리 값(PostProcessValues)을 톤맵 앞뒤에서 적용합니다 — 노출 · 컬러 그레이딩은 앞, LUT · 채도 · 대비 · 비네트 · 레터박스는 뒤.
+ * @brief 뷰의 후처리 값(PostProcessValues)을 톤맵 앞뒤에서 적용합니다 — 원본을 읽는 자리에서 렌즈(왜곡 · 색수차 · 선명화), 톤맵 앞 노출 · 컬러 그레이딩,
+ *        뒤에 LUT · 필름 그레인 · 채도 · 대비 · 비네트 · 레터박스.
  * @details 값은 PassCB 의 g_CameraGrade · g_CameraFrame 이고 엔진이 뷰마다 채운다(FramePassExecutor::applyViewPassConstants).
  *          중립 값(노출 배율 1, 채도 1, 대비 1, 비네트 0, 레터박스 0)이면 두 함수가 색을 바꾸지 않는다 — 카메라 값을 쓰지 않는 게임의 화면이 그대로다.
  *          톤맵을 하는 두 셰이더(tonemap.hlsl, post_chain.hlsl 의 SW_POST_TONEMAP)가 같은 함수를 부른다.
@@ -17,6 +18,9 @@ struct CameraGrade
     static float3 applyColorGrading( float3 hdrColor );
     static float2 computeLutUv( float3 color, float size, float slice );
     static float3 applyLut( float3 color );
+    static float computeLensRadius( float2 uv );
+    static float3 applyLens( float2 uv, float2 texel, float3 sourceColor );
+    static float3 applyFilmGrain( float2 pixelPosition, float3 color );
     static float3 apply( float2 uv, float3 color );
 };
 
@@ -96,6 +100,73 @@ static float3 CameraGrade::applyLut( float3 color )
         const float3 lower   = Bindless::sampleIndex( g_ColorGradingLutIndex, CameraGrade::computeLutUv( clamped, size, slice0 ) ).rgb;
         const float3 upper   = Bindless::sampleIndex( g_ColorGradingLutIndex, CameraGrade::computeLutUv( clamped, size, slice1 ) ).rgb;
         result               = lerp( color, lerp( lower, upper, blue - slice0 ), g_GradeLut.y );
+    }
+    return result;
+}
+
+/** @brief 화면 가운데에서 @p uv 까지의 거리 제곱입니다 — 가로/세로 비율을 보정해 원이고, 모서리가 1 이다. */
+static float CameraGrade::computeLensRadius( float2 uv )
+{
+    const float  aspect   = max( g_CameraFrame.y, 1e-4f );
+    const float2 centered = ( uv - 0.5f ) * float2( aspect, 1.0f );
+    return dot( centered, centered ) / ( 0.25f * ( aspect * aspect + 1.0f ) );
+}
+
+/**
+ * @brief 원본을 읽는 자리의 렌즈 효과입니다 — 렌즈 왜곡(UV 를 반경으로 옮긴다), 색수차(빨강 · 파랑을 반경 방향으로 비켜 읽는다), 선명화(이웃 넷과의 차이를 더한다).
+ * @param sourceColor 부르는 쪽이 @p uv 에서 이미 읽은 원본 색 — 세 효과가 모두 0 이면 그대로 돌려준다(값 선택, 원본을 다시 읽지 않는다)
+ * @details 언리얼은 색수차(SceneColorFringe) · 그레인 · 선명화를 톤맵 패스 안에서 한다 — 같은 자리다. 왜곡은 양수가 술통형이고, 모서리가 모서리를 짚도록 줄여 화면 밖을 읽지 않는다.
+ */
+static float3 CameraGrade::applyLens( float2 uv, float2 texel, float3 sourceColor )
+{
+    float3 color = sourceColor;
+    [branch] if ( any( g_LensParams != 0.0f ) )
+    {
+        const float  radius2    = CameraGrade::computeLensRadius( uv );
+        const float  distortion = g_LensParams.z;
+        const float2 centered   = ( uv - 0.5f ) * ( 1.0f + distortion * radius2 ) / ( 1.0f + max( distortion, 0.0f ) );
+        const float2 lensUv     = 0.5f + centered;
+        const float3 center     = PassTexture::sampleSource( lensUv ).rgb;
+        color                   = center;
+        const float startRadius = g_LensParams.y;
+        const float fringe      = g_LensParams.x * 0.01f * saturate( ( sqrt( radius2 ) - startRadius ) / max( 1.0f - startRadius, 1e-4f ) );
+        [branch] if ( fringe > 0.0f )
+        {
+            color.r = PassTexture::sampleSource( 0.5f + centered * ( 1.0f - fringe ) ).r;
+            color.b = PassTexture::sampleSource( 0.5f + centered * ( 1.0f + fringe ) ).b;
+        }
+        [branch] if ( g_LensParams.w > 0.0f )
+        {
+            const float3 neighbors = ( PassTexture::sampleSource( lensUv + float2( texel.x, 0.0f ) ).rgb + PassTexture::sampleSource( lensUv - float2( texel.x, 0.0f ) ).rgb +
+                                       PassTexture::sampleSource( lensUv + float2( 0.0f, texel.y ) ).rgb + PassTexture::sampleSource( lensUv - float2( 0.0f, texel.y ) ).rgb ) *
+                                     0.25f;
+            color = max( 0.0f, color + ( center - neighbors ) * g_LensParams.w );
+        }
+    }
+    return color;
+}
+
+/**
+ * @brief 톤맵한 [0,1] 색에 필름 그레인을 더합니다. 그레인은 `g_GrainParams.y` 픽셀 칸마다 하나이고 프레임마다 바뀐다(머티리얼 시계 — 고정 프레임 시간이면 같은 프레임이 같은 그레인).
+ * @details 정수 해시라 백엔드마다 같은 값이다(sin 해시는 GPU 마다 정밀도가 달라 골든이 갈린다). 중간 밝기에서 가장 세고 검정 · 흰색에서 사라진다(언리얼 그레인의 범위 응답).
+ */
+static float3 CameraGrade::applyFilmGrain( float2 pixelPosition, float3 color )
+{
+    float3 result = color;
+    [branch] if ( g_GrainParams.x > 0.0f )
+    {
+        const uint2 cell  = uint2( max( pixelPosition / max( g_GrainParams.y, 1.0f ), 0.0f ) );
+        const uint  frame = uint( max( g_SwMaterialTime, 0.0f ) * 60.0f );
+        uint        hash  = cell.x * 1973u + cell.y * 9277u + frame * 26699u;
+        hash              = ( hash ^ 61u ) ^ ( hash >> 16 );
+        hash *= 9u;
+        hash ^= hash >> 4;
+        hash *= 0x27d4eb2du;
+        hash ^= hash >> 15;
+        const float noise     = float( hash & 0xFFFFu ) / 65535.0f - 0.5f;
+        const float luminance = dot( saturate( color ), kGradeLumaWeights );
+        const float response  = 4.0f * luminance * ( 1.0f - luminance );
+        result                = saturate( color + noise * g_GrainParams.x * response );
     }
     return result;
 }

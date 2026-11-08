@@ -2,12 +2,17 @@
 	<!-- 후처리 시나리오(automation/postprocess_*)의 무대 — rendertest3d 와 같은 정적 장면(애니메이션 · 비동기 메시 없음)에 레이어마다 후처리 볼륨을 둔다.
 	     시나리오가 레이어를 켜고 끈 두 장을 같은 실행에서 견준다(scene.layer <이름> on). 카메라는 순간이동으로만 옮긴다(teleport GameCamera …).
 	     Volume: 카메라를 감싼 상자(채도 0, 우선순위 1) 위에 무한 볼륨(채도 2 · 비네트, 우선순위 0) — 상자 안은 회색, 블렌드 반경 밖은 짙은 색.
-	     Grading: 무한 볼륨 하나 — 화이트 밸런스 4000 K, 그림자 게인 파랑 · 밝은 부분 게인 주황, LUT(textures/postprocess/lut_sepia, 세기 0.5). -->
+	     Grading: 무한 볼륨 하나 — 화이트 밸런스 4000 K, 그림자 게인 파랑 · 밝은 부분 게인 주황, LUT(textures/postprocess/lut_sepia, 세기 0.5).
+	     LensDistortion · ChromaticAberration · Sharpen · FilmGrain: 효과 하나씩 켜는 무한 볼륨(postprocess_lens 가 하나씩 켜고 끈다). -->
 	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
 		<_cellGrid _cellSize="0" _loadingRadius="0" />
 		<_listDataLayer>
 			<SceneDataLayerDef _name="Volume" _bInitiallyActive="false" />
 			<SceneDataLayerDef _name="Grading" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="LensDistortion" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="ChromaticAberration" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="Sharpen" _bInitiallyActive="false" />
+			<SceneDataLayerDef _name="FilmGrain" _bInitiallyActive="false" />
 		</_listDataLayer>
 	</SceneSettings>
 	<entities>
@@ -170,6 +175,86 @@
 						            _bHighlightsGain="true"
 						            _bColorGradingLut="true"
 						            _bColorGradingLutIntensity="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="LensDistortionWorld" layers="LensDistortion">
+			<GameObject _schemaVersion="0" _name="LensDistortionWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _lensDistortion="0.4" />
+						<_overrides _bLensDistortion="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="ChromaticAberrationWorld" layers="ChromaticAberration">
+			<GameObject _schemaVersion="0" _name="ChromaticAberrationWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _chromaticAberrationIntensity="4" _chromaticAberrationStart="0.2" />
+						<_overrides _bChromaticAberrationIntensity="true" _bChromaticAberrationStart="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="SharpenWorld" layers="Sharpen">
+			<GameObject _schemaVersion="0" _name="SharpenWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _sharpen="1.5" />
+						<_overrides _bSharpen="true" />
+					</PostProcessVolumeComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="FilmGrainWorld" layers="FilmGrain">
+			<GameObject _schemaVersion="0" _name="FilmGrainWorld" _bActive="true">
+				<_listComponent>
+					<PostProcessVolumeComponent _localPosition="0,0,0"
+					                            _localRotation="0,0,0"
+					                            _localScale="1,1,1"
+					                            _attachOwner="None"
+					                            _attachComponent="None"
+					                            _halfExtents="1,1,1"
+					                            _radius="1"
+					                            _blendRadius="0"
+					                            _blendWeight="1"
+					                            _priority="0"
+					                            _shape="Unbound">
+						<_values _filmGrainIntensity="0.6" _filmGrainSize="2" />
+						<_overrides _bFilmGrainIntensity="true" _bFilmGrainSize="true" />
 					</PostProcessVolumeComponent>
 				</_listComponent>
 			</GameObject>

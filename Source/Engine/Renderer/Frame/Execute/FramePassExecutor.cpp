@@ -481,6 +481,10 @@ namespace sw
         }
         context._passValues.setFloat4( passConstantNames()._gradeParams, grade._params );
         context._passValues.setFloat4( passConstantNames()._gradeLut, grade._lut );
+        // 렌즈 · 필름(post_grade.hlsli) — 모두 0 이면 셰이더가 원본을 다시 읽지 않는다. 범위는 칸의 Min · Max 와 같게 자른다(데이터 오류가 화면 밖을 읽지 않게).
+        context._passValues.setFloat4( passConstantNames()._lensParams, float4{ MathUtil::max( 0.0f, post._chromaticAberrationIntensity ), MathUtil::saturate( post._chromaticAberrationStart ),
+                                                                                MathUtil::clamp( post._lensDistortion, -1.0f, 1.0f ), MathUtil::max( 0.0f, post._sharpen ) } );
+        context._passValues.setFloat4( passConstantNames()._grainParams, float4{ MathUtil::saturate( post._filmGrainIntensity ), MathUtil::max( 1.0f, post._filmGrainSize ), 0.0f, 0.0f } );
         // 피사계 심도(depth_of_field.hlsl) — 얇은 렌즈의 착란원. 지름 / 센서 높이 = 센서 높이 · s² / ( 4 · N · 초점 거리 ) · |1 - 초점 거리 / 깊이|
         // (s = 1 / tan( fovY / 2 ) 라 초점 길이 = 센서 높이 · s / 2, 구경 = 초점 길이 / N, 초점 길이가 초점 거리보다 훨씬 짧다고 본다). y 는 그 반지름을 화면 높이 px 로 바꾼 배율이다.
         // 조리개 0(핀홀) · 직교 · 후처리를 끈 뷰는 패스를 기록하지 않는다(applyViewPassSelection). 그때는 배율을 0 으로 두고 w 도 0 이다(셰이더는 w 를 읽지 않는다).
