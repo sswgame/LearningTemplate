@@ -62,196 +62,198 @@ namespace sw
                 uint32    _holdFrameCount{ 1 }; ///< `Tap` 이 누르고 있는 프레임 수
             };
 
-            [[nodiscard]] static bool parseSlotStep( const AutomationStep& step, SlotStepArgs& outArgs, string& outError )
+            [[nodiscard]] static expected<SlotStepArgs> parseSlotStep( const AutomationStep& step )
             {
                 AutomationSlotStepParams params;
-                if ( step.readFields( params, outError ) == false )
-                    return false;
-                outArgs._holdFrameCount = params._hold;
-                if ( InputSlot::tryParse( params._slot, outArgs._slot ) == false )
-                {
-                    outError = step.describe() + ": unknown slot '" + params._slot + "' (Key.E · Mouse.Left · Gamepad.A · Gamepad1.A)";
-                    return false;
-                }
-                return true;
+                const expected<void>     read = step.readFields( params );
+                if ( read.has_value() == false )
+                    return unexpected( read.error() );
+                SlotStepArgs args;
+                args._holdFrameCount = params._hold;
+                if ( InputSlot::tryParse( params._slot, args._slot ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown slot (Key.E · Mouse.Left · Gamepad.A · Gamepad1.A)", params._slot } );
+                return args;
             }
 
             // --- 엔진 단계의 검사 함수(`AutomationStepValidateFunction`). 속성의 허용 값과 오류 메시지가 여기 있다 -------------
 
             /** @brief `Press` · `Release` · `Tap` 입니다. `hold` 는 `Tap` 에만 씁니다. */
-            static bool validateSlotStep( const AutomationStep& step, string& outError )
+            static expected<void> validateSlotStep( const AutomationStep& step )
             {
                 if ( string_view{ step._kind } != "Tap" && step.findAttribute( "hold" ) != nullptr )
-                {
-                    outError = step.describe() + ": hold is only for <Tap>";
-                    return false;
-                }
-                SlotStepArgs args;
-                return parseSlotStep( step, args, outError );
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "hold is only for <Tap>" } );
+                const expected<SlotStepArgs> args = parseSlotStep( step );
+                if ( args.has_value() == false )
+                    return unexpected( args.error() );
+                return {};
             }
 
-            /** @brief `name` · `value` 가 있고 `name` 이 등록된 전역 변수인지 봅니다. 아니면 nullptr 과 이유입니다(`Variable` · `ExpectVariable` 이 함께 씁니다). */
-            static GlobalVariableInfo* findRegisteredVariable( const AutomationStep& step, const string& name, string& outError )
+            /** @brief `name` 이 등록된 전역 변수인지 봅니다. 아니면 그 이름이 대상인 오류입니다(`Variable` · `ExpectVariable` 이 함께 씁니다). */
+            static expected<GlobalVariableInfo*> findRegisteredVariable( const string& name )
             {
                 GlobalVariableInfo* pInfo = engine::areEngineServicesBound() ? engine::getSubsystem<GlobalVariableManager>().findVariable( name ) : nullptr;
                 if ( pInfo == nullptr )
-                    outError = step.describe() + ": unknown global variable '" + name + "'";
+                    return unexpected( Error{ ErrorKind::NotFound, "unknown global variable", name } );
                 return pInfo;
             }
 
-            static bool validateVariable( const AutomationStep& step, string& outError )
+            static expected<void> validateVariable( const AutomationStep& step )
             {
                 AutomationVariableParams params;
-                return step.readFields( params, outError ) && findRegisteredVariable( step, params._name, outError ) != nullptr;
+                const expected<void>     read = step.readFields( params );
+                if ( read.has_value() == false )
+                    return read;
+                const expected<GlobalVariableInfo*> info = findRegisteredVariable( params._name );
+                if ( info.has_value() == false )
+                    return unexpected( info.error() );
+                return {};
             }
 
             /**
              * @brief `ExpectVariable` 의 `value` · `tolerance` 를 @p info 의 타입으로 읽어 지금 값과 비교합니다(검사와 실행이 함께 씁니다).
-             * @return `value` 가 그 타입으로 읽히지 않거나 `tolerance` 가 음수이거나 실수 변수가 아닌데 붙었으면 false 와 이유입니다.
+             * @return 같으면 true. `value` 가 그 타입으로 읽히지 않거나 `tolerance` 가 음수이거나 실수 변수가 아닌데 붙었으면 그 이유입니다.
              */
-            [[nodiscard]] static bool evaluateExpectVariable( const AutomationStep& step, const GlobalVariableInfo& info, bool& outMatched, string& outError )
+            [[nodiscard]] static expected<bool> evaluateExpectVariable( const AutomationStep& step, const GlobalVariableInfo& info )
             {
                 AutomationExpectVariableParams params;
-                if ( step.readFields( params, outError ) == false )
-                    return false;
+                const expected<void>           read = step.readFields( params );
+                if ( read.has_value() == false )
+                    return unexpected( read.error() );
                 if ( step.findAttribute( "tolerance" ) != nullptr && info._type != GlobalVariableType::Float )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "tolerance is a non-negative number for float variables only", params._name } );
+                bool bMatched = false;
+                if ( AutomationStepArgsUtil::compareVariable( info, string_view{ params._value }, params._tolerance, bMatched ) == false )
                 {
-                    outError = step.describe() + ": tolerance is a non-negative number for float variables only";
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "value is not of the variable's type (enum variables take the number)", params._value }
+                                           .appendDetail( " for " )
+                                           .appendDetail( info.getTypeName() ) );
                 }
-                const string& value = params._value;
-                if ( AutomationStepArgsUtil::compareVariable( info, string_view{ value }, params._tolerance, outMatched ) == false )
-                {
-                    outError = step.describe() + ": value '" + value + "' is not a " + info.getTypeName() + " (enum variables take the number)";
-                    return false;
-                }
-                return true;
+                return bMatched;
             }
 
             /** @brief `ExpectVariable` 입니다. 변수가 등록돼 있고, `value` 가 그 타입으로 읽히며, `tolerance`(0 이상)는 실수 변수에만 붙습니다. */
-            static bool validateExpectVariable( const AutomationStep& step, string& outError )
+            static expected<void> validateExpectVariable( const AutomationStep& step )
             {
                 AutomationExpectVariableParams params;
-                if ( step.readFields( params, outError ) == false )
-                    return false;
-                const GlobalVariableInfo* pInfo    = findRegisteredVariable( step, params._name, outError );
-                bool                      bMatched = false;
-                return pInfo != nullptr && evaluateExpectVariable( step, *pInfo, bMatched, outError );
+                const expected<void>           read = step.readFields( params );
+                if ( read.has_value() == false )
+                    return read;
+                const expected<GlobalVariableInfo*> info = findRegisteredVariable( params._name );
+                if ( info.has_value() == false )
+                    return unexpected( info.error() );
+                const expected<bool> matched = evaluateExpectVariable( step, **info );
+                if ( matched.has_value() == false )
+                    return unexpected( matched.error() );
+                return {};
             }
 
             /** @brief 감시 값 이름과 그 감시 값이 꼭 받아야 하는 `target` · `key` 를 봅니다. */
-            static bool validateWatchReference( const AutomationStep& step, string& outError )
+            static expected<void> validateWatchReference( const AutomationStep& step )
             {
-                const string* pWatch = step.requireAttribute( "watch", outError );
-                if ( pWatch == nullptr )
-                    return false;
-                const AutomationWatchRegistration* pRegistration = AutomationWatchRegistry::find( *pWatch );
+                const expected<const string*> watch = step.requireAttribute( "watch" );
+                if ( watch.has_value() == false )
+                    return unexpected( watch.error() );
+                const AutomationWatchRegistration* pRegistration = AutomationWatchRegistry::find( **watch );
                 if ( pRegistration == nullptr )
-                {
-                    outError = step.describe() + ": unknown watch '" + *pWatch + "' (is the game that registers it running?)";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "unknown watch (is the game that registers it running?)", **watch } );
                 const bool bQueryOnlyAttribute = pRegistration->_pQueryFunction == nullptr && ( step.findAttribute( "target" ) != nullptr || step.findAttribute( "key" ) != nullptr );
                 if ( bQueryOnlyAttribute )
-                {
-                    outError = step.describe() + ": watch '" + *pWatch + "' takes no target or key";
-                    return false;
-                }
-                if ( pRegistration->_bNeedsTarget && step.requireAttribute( "target", outError ) == nullptr )
-                    return false;
-                return pRegistration->_bNeedsKey == false || step.requireAttribute( "key", outError ) != nullptr;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "this watch takes no target or key", **watch } );
+                if ( pRegistration->_bNeedsTarget && step.findAttribute( "target" ) == nullptr )
+                    return unexpected( Error{ ErrorKind::NotFound, "needs the attribute", "target" } );
+                if ( pRegistration->_bNeedsKey && step.findAttribute( "key" ) == nullptr )
+                    return unexpected( Error{ ErrorKind::NotFound, "needs the attribute", "key" } );
+                return {};
             }
 
             /** @brief 감시 값 단계(`Expect`, `WaitUntil`)의 공통 부분입니다. 감시 값이 있고 비교가 정확히 하나이며 수 비교는 수로 읽혀야 합니다(`is` 는 글 비교). */
-            static bool validateWatchComparison( const AutomationStep& step, string& outError )
+            static expected<void> validateWatchComparison( const AutomationStep& step )
             {
-                if ( validateWatchReference( step, outError ) == false )
-                    return false;
+                const expected<void> reference = validateWatchReference( step );
+                if ( reference.has_value() == false )
+                    return reference;
                 if ( countComparisons( step, { "equals", "near", "atLeast", "atMost", "is", "sameAs", "differsFrom" } ) == false )
-                {
-                    outError = step.describe() + ": needs exactly one of equals · near · atLeast · atMost · is · sameAs · differsFrom";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs exactly one of equals · near · atLeast · atMost · is · sameAs · differsFrom" } );
                 const bool bTextRule = step.findAttribute( "is" ) != nullptr || step.findAttribute( "sameAs" ) != nullptr || step.findAttribute( "differsFrom" ) != nullptr;
                 if ( bTextRule )
-                    return true;
-                AutomationStepArgsUtil::NumberComparison comparison;
-                return AutomationStepArgsUtil::parseNumberComparison( step, AutomationStepArgsUtil::kWatchNearTolerance, comparison, outError );
+                    return {};
+                const expected<AutomationStepArgsUtil::NumberComparison> comparison = AutomationStepArgsUtil::parseNumberComparison( step, AutomationStepArgsUtil::kWatchNearTolerance );
+                if ( comparison.has_value() == false )
+                    return unexpected( comparison.error() );
+                return {};
             }
 
-            static bool validateExpect( const AutomationStep& step, string& outError )
+            static expected<void> validateExpect( const AutomationStep& step )
             {
                 AutomationExpectParams params;
-                return step.readFields( params, outError, { "equals", "near", "atLeast", "atMost" } ) && validateWatchComparison( step, outError );
+                return step.readFields( params, { "equals", "near", "atLeast", "atMost" } ).and_then( [&]()
+                { return validateWatchComparison( step ); } );
             }
 
             /** @brief `WaitUntil` 입니다. 그 프레임에 혼자 있는지는 준비 함수(`AutomationRunnerEngineSteps::prepareWaitUntil`)가 시나리오 전체를 보고 확인합니다. */
-            static bool validateWaitUntil( const AutomationStep& step, string& outError )
+            static expected<void> validateWaitUntil( const AutomationStep& step )
             {
                 AutomationWaitUntilParams params;
-                if ( step.readFields( params, outError, { "equals", "near", "atLeast", "atMost" } ) == false )
-                    return false;
+                const expected<void>      read = step.readFields( params, { "equals", "near", "atLeast", "atMost" } );
+                if ( read.has_value() == false )
+                    return read;
                 const uint32 timeoutCount = ( step.findAttribute( "timeoutFrames" ) != nullptr ? 1u : 0u ) + ( step.findAttribute( "timeoutSeconds" ) != nullptr ? 1u : 0u ) +
                                             ( step.findAttribute( "timeoutWallSeconds" ) != nullptr ? 1u : 0u );
                 if ( timeoutCount > 1 )
-                {
-                    outError = step.describe() + ": give one of timeoutFrames, timeoutSeconds or timeoutWallSeconds";
-                    return false;
-                }
-                AutomationStepArgsUtil::WaitTimeoutArgs timeout;
-                if ( AutomationStepArgsUtil::parseWaitTimeout( step, timeout, outError ) == false || validateWatchComparison( step, outError ) == false )
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "give one of timeoutFrames, timeoutSeconds or timeoutWallSeconds" } );
+                const expected<AutomationStepArgsUtil::WaitTimeoutArgs> timeout = AutomationStepArgsUtil::parseWaitTimeout( step );
+                if ( timeout.has_value() == false )
+                    return unexpected( timeout.error() );
+                const expected<void> comparison = validateWatchComparison( step );
+                if ( comparison.has_value() == false )
+                    return comparison;
                 // 바깥 일을 따르는 값(`SW_AUTOMATION_WALL_WATCH`)은 벽시계로만 기다린다 — 프레임은 실시간보다 빨리 돌아 시한이 몇 초인지 정하지 못한다.
                 const AutomationWatchRegistration* pRegistration = AutomationWatchRegistry::find( *step.findAttribute( "watch" ) );
-                if ( pRegistration->_bWallClock && timeout._bWallSeconds == false )
-                {
-                    outError = step.describe() + ": watch '" + pRegistration->_pName + "' follows work outside the engine frame - wait for it with timeoutWallSeconds";
-                    return false;
-                }
-                return true;
+                if ( pRegistration->_bWallClock && timeout->_bWallSeconds == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "this watch follows work outside the engine frame - wait for it with timeoutWallSeconds", pRegistration->_pName } );
+                return {};
             }
 
             /** @brief `ExpectVisited` 입니다. `is`(그 값을 한 번이라도 거쳤다) 또는 `sequence`(쉼표로 적은 값을 이 순서로 거쳤다) 하나와 `since`(프레임) 입니다. */
-            static bool validateExpectVisited( const AutomationStep& step, string& outError )
+            static expected<void> validateExpectVisited( const AutomationStep& step )
             {
                 AutomationExpectVisitedParams params;
-                if ( step.readFields( params, outError ) == false || validateWatchReference( step, outError ) == false )
-                    return false;
+                const expected<void>          read = step.readFields( params ).and_then( [&]()
+                { return validateWatchReference( step ); } );
+                if ( read.has_value() == false )
+                    return read;
                 if ( countComparisons( step, { "is", "sequence" } ) == false )
-                {
-                    outError = step.describe() + ": needs exactly one of is · sequence";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs exactly one of is · sequence" } );
+                return {};
             }
 
             /** @brief `Record` 입니다. 감시 값 값을 보고의 `records` 에 남깁니다. */
-            static bool validateRecord( const AutomationStep& step, string& outError )
+            static expected<void> validateRecord( const AutomationStep& step )
             {
                 AutomationRecordParams params;
-                return step.readFields( params, outError ) && validateWatchReference( step, outError );
+                return step.readFields( params ).and_then( [&]()
+                { return validateWatchReference( step ); } );
             }
 
             /** @brief `Remember` 입니다. 감시 값 값을 `as` 이름으로 기억합니다(뒤 단계의 `sameAs` · `differsFrom` 이 비교한다). */
-            static bool validateRemember( const AutomationStep& step, string& outError )
+            static expected<void> validateRemember( const AutomationStep& step )
             {
                 AutomationRememberParams params;
-                return step.readFields( params, outError ) && validateWatchReference( step, outError );
+                return step.readFields( params ).and_then( [&]()
+                { return validateWatchReference( step ); } );
             }
 
-            static bool validateExpectLog( const AutomationStep& step, string& outError )
+            static expected<void> validateExpectLog( const AutomationStep& step )
             {
                 // 사건은 로그 id 로만 센다 — 문장으로 세면 문구를 고칠 때 단언이 조용히 낡는다. contains 는 그 id 줄의 값(경로 · 수)을 좁히는 데만 쓴다.
                 // 세려는 줄에 id 가 없으면 소스에서 `SW_LOG_*_ID` 로 쓴다.
                 AutomationExpectLogParams params;
-                if ( step.readFields( params, outError ) == false )
-                    return false;
+                const expected<void>      read = step.readFields( params );
+                if ( read.has_value() == false )
+                    return read;
                 if ( ( params._count == kAutomationNoCount ) == ( params._atLeast == kAutomationNoCount ) )
-                {
-                    outError = step.describe() + ": needs exactly one of count · atLeast";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "needs exactly one of count · atLeast" } );
+                return {};
             }
 
             /**
@@ -264,29 +266,26 @@ namespace sw
                 return step.readValidatedFields<AutomationScreenshotParams>()._bWaitForSettle == false;
             }
 
-            static bool validateExpectImagesDiffer( const AutomationStep& step, string& outError )
+            static expected<void> validateExpectImagesDiffer( const AutomationStep& step )
             {
                 AutomationExpectImagesDifferParams params;
-                if ( step.readFields( params, outError ) == false )
-                    return false;
+                const expected<void>               read = step.readFields( params );
+                if ( read.has_value() == false )
+                    return read;
                 if ( params._minDiffering > params._maxDiffering )
-                {
-                    outError = step.describe() + ": minDiffering must not exceed maxDiffering";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "minDiffering must not exceed maxDiffering" } );
                 AutomationImageRegion region{};
                 if ( params._region.empty() == false && AutomationImage::tryParseRegion( params._region, region ) == false )
-                {
-                    outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + params._region + "'";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1", params._region } );
+                return {};
             }
 
-            static bool validateExpectImage( const AutomationStep& step, string& outError )
+            static expected<void> validateExpectImage( const AutomationStep& step )
             {
-                AutomationStepArgsUtil::ExpectImageArgs args;
-                return AutomationStepArgsUtil::parseExpectImage( step, args, outError );
+                const expected<AutomationStepArgsUtil::ExpectImageArgs> args = AutomationStepArgsUtil::parseExpectImage( step );
+                if ( args.has_value() == false )
+                    return unexpected( args.error() );
+                return {};
             }
 
             /** @brief 값 비교 단계(`Expect`)의 비교 하나를 읽습니다. 정확히 하나여야 합니다. */
@@ -317,47 +316,49 @@ namespace sw
 
         // --- 준비(`AutomationStepPrepareFunction`): 입력 단계는 가상 입력 원천으로 옮긴다. 인자는 검사와 같은 `parse*` 로 읽고, 실패하면 버리지 않고 오류다 ---
 
-        [[nodiscard]] static bool prepareSlotStep( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static expected<void> prepareSlotStep( AutomationStepContext& context, const AutomationStep& step )
         {
-            AutomationRunner&                           runner = asRunner( context );
-            AutomationRunnerStepsInternal::SlotStepArgs args;
-            if ( AutomationRunnerStepsInternal::parseSlotStep( step, args, outError ) == false )
-                return false;
+            AutomationRunner&                                           runner = asRunner( context );
+            const expected<AutomationRunnerStepsInternal::SlotStepArgs> args   = AutomationRunnerStepsInternal::parseSlotStep( step );
+            if ( args.has_value() == false )
+                return unexpected( args.error() );
             const string_view kind = step._kind;
             // 가상 입력 세션의 패드는 끊긴 채 시작한다 — 패드 단추를 누르는 단계는 그 패드를 먼저 연결한다(안 하면 단추가 입력 맵에 닿지 않는다).
-            if ( args._slot._deviceKind == InputDeviceKind::Gamepad )
-                runner._inputScript.addGamepadConnection( step._frameIndex, args._slot._deviceIndex );
-            const bool bAdded = kind == "Tap" ? runner._inputScript.addTap( step._frameIndex, args._slot, args._holdFrameCount )
-                                              : runner._inputScript.addSlot( step._frameIndex, args._slot, kind == "Press" );
+            if ( args->_slot._deviceKind == InputDeviceKind::Gamepad )
+                runner._inputScript.addGamepadConnection( step._frameIndex, args->_slot._deviceIndex );
+            const bool bAdded = kind == "Tap" ? runner._inputScript.addTap( step._frameIndex, args->_slot, args->_holdFrameCount )
+                                              : runner._inputScript.addSlot( step._frameIndex, args->_slot, kind == "Press" );
             if ( bAdded == false )
-                outError = step.describe() + ": that slot cannot be pressed (an axis or an unknown device)";
-            return bAdded;
+                return unexpected( Error{ ErrorKind::Unsupported, "that slot cannot be pressed (an axis or an unknown device)" } );
+            return {};
         }
 
-        [[nodiscard]] static bool prepareWheel( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static expected<void> prepareWheel( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&        runner = asRunner( context );
             AutomationAxisPairParams args;
-            if ( step.readFields( args, outError ) == false )
-                return false;
+            const expected<void>     read = step.readFields( args );
+            if ( read.has_value() == false )
+                return read;
             if ( args._y != 0.0f )
                 runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeMouseWheel( args._y ) );
             if ( args._x != 0.0f )
                 runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeMouseHorizontalWheel( args._x ) );
-            return true;
+            return {};
         }
 
-        [[nodiscard]] static bool prepareMouseDelta( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static expected<void> prepareMouseDelta( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&        runner = asRunner( context );
             AutomationAxisPairParams args;
-            if ( step.readFields( args, outError ) == false )
-                return false;
+            const expected<void>     read = step.readFields( args );
+            if ( read.has_value() == false )
+                return read;
             runner._inputScript.addMouseDelta( step._frameIndex, args._x, args._y );
-            return true;
+            return {};
         }
 
-        [[nodiscard]] static bool prepareMousePosition( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static expected<void> prepareMousePosition( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
             // 창 클라이언트 영역의 비율을 픽셀로 바꾼다(시작할 때의 창 크기). 창이 없으면(헤드리스) 그 위치를 낼 수 없다.
@@ -365,20 +366,18 @@ namespace sw
             const IWindow*             pWindow             = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
             const bool                 bNoWindowForPointer = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
             if ( bNoWindowForPointer )
-            {
-                outError = step.describe() + ": no window to place the pointer in";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::Unsupported, "no window to place the pointer in" } );
             AutomationMousePositionParams args;
-            if ( step.readFields( args, outError ) == false )
-                return false;
+            const expected<void>          read = step.readFields( args );
+            if ( read.has_value() == false )
+                return read;
             const float32 maxX = static_cast<float32>( pWindow->getWidth() - 1 );
             const float32 maxY = static_cast<float32>( pWindow->getHeight() - 1 );
             runner._inputScript.addMousePosition( step._frameIndex, static_cast<int32>( MathUtil::round( args._x * maxX ) ), static_cast<int32>( MathUtil::round( args._y * maxY ) ) );
-            return true;
+            return {};
         }
 
-        [[nodiscard]] static bool prepareTouch( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static expected<void> prepareTouch( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner& runner = asRunner( context );
             // 창 클라이언트 영역의 비율을 픽셀로 바꾼다(`MousePosition` 과 같은 규칙). 손가락은 마우스와 따로 간다 — 터치 장치의 포인터 0 이다.
@@ -386,53 +385,49 @@ namespace sw
             const IWindow*             pWindow           = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
             const bool                 bNoWindowForTouch = pWindow == nullptr || pWindow->getWidth() == 0 || pWindow->getHeight() == 0;
             if ( bNoWindowForTouch )
-            {
-                outError = step.describe() + ": no window to touch";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::Unsupported, "no window to touch" } );
             AutomationTouchParams args;
-            if ( step.readFields( args, outError ) == false )
-                return false;
+            const expected<void>  read = step.readFields( args );
+            if ( read.has_value() == false )
+                return read;
             const int32 x = static_cast<int32>( MathUtil::round( args._x * static_cast<float32>( pWindow->getWidth() - 1 ) ) );
             const int32 y = static_cast<int32>( MathUtil::round( args._y * static_cast<float32>( pWindow->getHeight() - 1 ) ) );
             runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeTouch( RawInputEventType::TouchDown, 0, x, y ) );
             runner._inputScript.addEvent( step._frameIndex + args._holdFrameCount, RawInputEvent::makeTouch( RawInputEventType::TouchUp, 0, x, y ) );
-            return true;
+            return {};
         }
 
-        [[nodiscard]] static bool prepareGamepadAxis( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static expected<void> prepareGamepadAxis( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&           runner = asRunner( context );
             AutomationGamepadAxisParams args;
-            if ( step.readFields( args, outError ) == false )
-                return false;
+            const expected<void>        read = step.readFields( args );
+            if ( read.has_value() == false )
+                return read;
             // 가상 입력 세션의 패드는 끊긴 채 시작하고 끊긴 패드의 스틱은 입력 맵 · 가상 커서가 읽지 않는다 — 축을 내는 단계는 그 패드를 먼저 연결한다.
             runner._inputScript.addGamepadConnection( step._frameIndex, static_cast<uint8>( args._pad ) );
             runner._inputScript.addGamepadAxis( step._frameIndex, static_cast<uint16>( args._axis ), args._value, static_cast<uint8>( args._pad ) );
-            return true;
+            return {};
         }
 
-        [[nodiscard]] static bool prepareText( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static expected<void> prepareText( AutomationStepContext& context, const AutomationStep& step )
         {
-            AutomationRunner& runner = asRunner( context );
-            const string*     pValue = step.requireAttribute( "value", outError );
-            if ( pValue == nullptr )
-                return false;
-            runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeTextInput( *pValue ) );
-            return true;
+            AutomationRunner&             runner = asRunner( context );
+            const expected<const string*> value  = step.requireAttribute( "value" );
+            if ( value.has_value() == false )
+                return unexpected( value.error() );
+            runner._inputScript.addEvent( step._frameIndex, RawInputEvent::makeTextInput( **value ) );
+            return {};
         }
 
         /** @brief 붙잡는 동안 같은 프레임의 다른 단계가 여러 번 돌거나(입력 전 단계) 조건보다 먼저 돌지 않게, 기다림은 그 프레임에 혼자 둔다(순차 형식은 읽기가 자리를 나눈다 — 이것은 그 약속의 그물이다). */
-        [[nodiscard]] static bool prepareWaitUntil( AutomationStepContext& context, const AutomationStep& step, string& outError )
+        [[nodiscard]] static expected<void> prepareWaitUntil( AutomationStepContext& context, const AutomationStep& step )
         {
             AutomationRunner&     runner     = asRunner( context );
             const AutomationStep* pOtherStep = runner._scenario.findOtherStepAtSameFrame( step );
             if ( pOtherStep != nullptr )
-            {
-                outError = step.describe() + ": <WaitUntil> must be the only step at its frame (move " + pOtherStep->describe() + ")";
-                return false;
-            }
-            return true;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "<WaitUntil> must be the only step at its frame - move the other step", pOtherStep->describe() } );
+            return {};
         }
 
         // --- 실행(`AutomationStepFunction`): 씬 틱 뒤에 돈다 -------------------------------------------------------
@@ -458,11 +453,10 @@ namespace sw
                 runner.recordFailure( step, name + " is no longer registered" ); // 검사 뒤에 모듈이 언로드됐다(핫 리로드)
                 return true;
             }
-            bool   bMatched = false;
-            string error;
-            if ( AutomationRunnerStepsInternal::evaluateExpectVariable( step, *pInfo, bMatched, error ) == false ) // 변수가 다른 타입으로 다시 등록됐다(핫 리로드)
-                runner.recordFailure( step, error );
-            else if ( bMatched == false )
+            const expected<bool> matched = AutomationRunnerStepsInternal::evaluateExpectVariable( step, *pInfo );
+            if ( matched.has_value() == false ) // 변수가 다른 타입으로 다시 등록됐다(핫 리로드)
+                runner.recordFailure( step, AutomationStep::describeReason( matched.error() ) );
+            else if ( *matched == false )
                 runner.recordFailure( step, name + " is '" + pInfo->getValueAsString() + "', expected '" + value + "'" +
                                                 ( step.findAttribute( "tolerance" ) != nullptr ? " (tolerance " + *step.findAttribute( "tolerance" ) + ")" : string() ) );
             return true;

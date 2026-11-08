@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -206,11 +207,11 @@ namespace sw::editor
         [[nodiscard]] static bool splitKeyChord( string_view chord, vector<string_view>& outListToken );
 
         // 단계 등록의 검사 함수(`AutomationStepValidateFunction`)입니다.
-        static bool validateClick( const AutomationStep& step, string& outError );
-        static bool validateDrag( const AutomationStep& step, string& outError );
-        static bool validateHover( const AutomationStep& step, string& outError );
+        [[nodiscard]] static expected<void> validateClick( const AutomationStep& step );
+        [[nodiscard]] static expected<void> validateDrag( const AutomationStep& step );
+        [[nodiscard]] static expected<void> validateHover( const AutomationStep& step );
         /** @brief 속성 이름 · 필수 · 누름 방식 · 키 조합의 낱말 모양을 봅니다. 키 이름이 ImGui 이름인지는 단계의 준비 함수가 봅니다(이 파일은 ImGui 를 모른다). */
-        static bool validateKey( const AutomationStep& step, string& outError );
-        static bool validateCapture( const AutomationStep& step, string& outError );
+        [[nodiscard]] static expected<void> validateKey( const AutomationStep& step );
+        [[nodiscard]] static expected<void> validateCapture( const AutomationStep& step );
     };
 } // namespace sw::editor

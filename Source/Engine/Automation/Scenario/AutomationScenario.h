@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -78,40 +79,46 @@ namespace sw
         const string* findAttribute( string_view name ) const;
         /** @brief 보고에 적는 위치(`frame 40 <Expect> #7`)입니다. */
         string describe() const;
-        /** @brief 속성 이름이 모두 @p listAllowed 안에 있는지 봅니다. 아니면 false 와 이유(@p outError). */
-        bool hasOnlyAttributes( std::initializer_list<string_view> listAllowed, string& outError ) const;
-        /** @brief `hasOnlyAttributes` 에 더해 @p listRequired 의 속성이 모두 있는지 봅니다. 없으면 false 와 이유. */
-        bool hasRequiredAttributes( std::initializer_list<string_view> listAllowed, std::initializer_list<string_view> listRequired, string& outError ) const;
         /**
-         * @brief 속성을 스키마 구조체 @p outParams 로 읽습니다(`XMLFields::readFields` 와 같은 규칙 — 모르는 이름 · 필수 · 범위가 `PROPERTY` 에서 나온다). 틀리면 false 와 이유.
+         * @brief 이 단계의 검사 · 준비 실패를 보고 글(`frame 40 <Expect> #7: <문장>: <대상>`)로 만듭니다.
+         * @details 단계 함수의 오류는 위치를 담지 않는다(`sw::Error` 는 고정 문장 + 대상) — 어느 단계인지는 이 글을 짓는 쪽이 붙인다.
+         */
+        [[nodiscard]] string describeError( const Error& error ) const;
+        /** @brief 위치 없는 이유 글(`<문장>: <대상>`)입니다 — 위치를 스스로 붙이는 곳(`AutomationStepContext::recordFailure`)에 넘긴다. */
+        [[nodiscard]] static string describeReason( const Error& error );
+        /** @brief 속성 이름이 모두 @p listAllowed 안에 있는지 봅니다. 아니면 모르는 속성 이름이 대상인 오류입니다. */
+        [[nodiscard]] expected<void> hasOnlyAttributes( std::initializer_list<string_view> listAllowed ) const;
+        /** @brief `hasOnlyAttributes` 에 더해 @p listRequired 의 속성이 모두 있는지 봅니다. 없으면 빠진 이름이 대상인 오류입니다. */
+        [[nodiscard]] expected<void> hasRequiredAttributes( std::initializer_list<string_view> listAllowed, std::initializer_list<string_view> listRequired ) const;
+        /**
+         * @brief 속성을 스키마 구조체 @p outParams 로 읽습니다(`XMLFields::readFields` 와 같은 규칙 — 모르는 이름 · 필수 · 범위가 `PROPERTY` 에서 나온다). 틀리면 그 글이 대상인 오류입니다.
          * @param listHandRead 적었는지가 뜻인 속성(스키마 기본값으로 담지 못한다) — 부르는 쪽이 `findAttribute` 로 읽는다.
          */
         template <typename TParams>
-        [[nodiscard]] bool readFields( TParams& outParams, string& outError, std::initializer_list<string_view> listHandRead = {} ) const
+        [[nodiscard]] expected<void> readFields( TParams& outParams, std::initializer_list<string_view> listHandRead = {} ) const
         {
-            return readFieldsOf( &outParams, *TParams::StaticType(), outError, listHandRead );
+            return readFieldsOf( &outParams, *TParams::StaticType(), listHandRead );
         }
         /** @brief 스키마 구조체를 읽을 수 있는지만 보는 검사 함수입니다(`AutomationStepValidateFunction`). 의미 검사가 없는 단계의 등록이 이 함수를 가리킵니다. */
         template <typename TParams>
-        [[nodiscard]] static bool validateFields( const AutomationStep& step, string& outError )
+        [[nodiscard]] static expected<void> validateFields( const AutomationStep& step )
         {
             TParams params;
-            return step.readFields( params, outError );
+            return step.readFields( params );
         }
         /** @brief 검사를 지난 단계의 스키마 구조체입니다(실행 함수가 읽는다). 시작 때 검사한 값이라 실패하면 단언합니다. */
         template <typename TParams>
         [[nodiscard]] TParams readValidatedFields( std::initializer_list<string_view> listHandRead = {} ) const
         {
-            TParams    params{};
-            string     error;
-            const bool bRead = readFieldsOf( &params, *TParams::StaticType(), error, listHandRead );
-            SW_LOG_ASSERT( bRead, "%#", error );
+            TParams              params{};
+            const expected<void> read = readFieldsOf( &params, *TParams::StaticType(), listHandRead );
+            SW_LOG_ASSERT( read.has_value(), "%#", read.has_value() ? string{} : describeError( read.error() ) );
             return params;
         }
         /** @brief `readFields` 의 몸통입니다. */
-        [[nodiscard]] bool readFieldsOf( void* pParams, const TypeInfo& typeInfo, string& outError, std::initializer_list<string_view> listHandRead ) const;
-        /** @brief 꼭 있어야 하는 속성입니다. 없으면 nullptr 와 이유(@p outError). */
-        const string* requireAttribute( string_view name, string& outError ) const;
+        [[nodiscard]] expected<void> readFieldsOf( void* pParams, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead ) const;
+        /** @brief 꼭 있어야 하는 속성입니다. 없으면 그 이름이 대상인 `NotFound` 오류입니다(값은 nullptr 이 아니다). */
+        [[nodiscard]] expected<const string*> requireAttribute( string_view name ) const;
     };
 } // namespace sw
 

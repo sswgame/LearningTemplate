@@ -29,6 +29,12 @@ namespace sw::test
         return text;
     }
 
+    /** @brief `makeScenarioFailureText` 의 결과 형식 판입니다. */
+    inline string makeScenarioFailureText( const expected<void>& result, string_view prefix )
+    {
+        return result.has_value() ? string() : makeScenarioFailureText( false, prefix, AutomationStep::describeReason( result.error() ) );
+    }
+
     /** @brief @p scenario 의 `requiresModule` 이 모두 켜졌으면 true 입니다 — 실행기(`AutomationRunner::skipIfThisBuildCannotRun`)와 같은 판정이다. 호스트가 없으면(nullptr) 꺼짐으로 본다. */
     inline bool areRequiredModulesActive( const AutomationScenario& scenario, const IModuleLoader* pModuleLoader )
     {
@@ -60,9 +66,9 @@ namespace sw::test
             SW_EXPECT_EQUAL( string(), makeScenarioFailureText( bParsed, path, error ) );
             if ( bParsed == false )
                 continue;
-            SW_EXPECT_EQUAL( string(), makeScenarioFailureText( AutomationStepValidation::validateDesktopSteps( scenario, error ), path, error ) );
-            SW_EXPECT_EQUAL( string(), makeScenarioFailureText( AutomationStepValidation::validateScreenshotFiles( scenario, error ), path, error ) );
-            SW_EXPECT_EQUAL( string(), makeScenarioFailureText( AutomationStepValidation::validateStepPhaseOrder( scenario, error ), path, error ) );
+            SW_EXPECT_EQUAL( string(), makeScenarioFailureText( AutomationStepValidation::validateDesktopSteps( scenario ), path ) );
+            SW_EXPECT_EQUAL( string(), makeScenarioFailureText( AutomationStepValidation::validateScreenshotFiles( scenario ), path ) );
+            SW_EXPECT_EQUAL( string(), makeScenarioFailureText( AutomationStepValidation::validateStepPhaseOrder( scenario ), path ) );
             if ( areRequiredModulesActive( scenario, pModuleLoader ) == false )
                 continue; // 그 모듈이 없는 빌드 — 이름은 그 모듈이 등록한다(실행기는 건너뜀으로 끝낸다)
             for ( const AutomationStep& step : scenario.getSteps() )
@@ -77,9 +83,7 @@ namespace sw::test
                 AutomationStepValidateFunction pfnValidate = nullptr;
                 if ( AutomationStepValidation::findValidator( step._kind, pfnValidate ) != AutomationValidatorLookup::Found )
                     continue;
-                string     stepError;
-                const bool bValid = pfnValidate( step, stepError );
-                SW_EXPECT_EQUAL( string(), makeScenarioFailureText( bValid, path + " " + step.describe(), stepError ) );
+                SW_EXPECT_EQUAL( string(), makeScenarioFailureText( pfnValidate( step ), path + " " + step.describe() ) );
             }
         }
         return listScenario.empty() == false;

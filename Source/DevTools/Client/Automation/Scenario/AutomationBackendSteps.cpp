@@ -35,19 +35,17 @@ namespace sw
         return false;
     }
 
-    bool AutomationBackendSteps::validateSwapBackend( const AutomationStep& step, string& outError )
+    expected<void> AutomationBackendSteps::validateSwapBackend( const AutomationStep& step )
     {
         AutomationSwapBackendParams params;
-        if ( step.readFields( params, outError ) == false )
-            return false;
+        const expected<void>        read = step.readFields( params );
+        if ( read.has_value() == false )
+            return read;
         RHIBackend backend{};
         const bool bRelative = params._backend == kOtherBackend || params._backend == kStartBackend;
         if ( bRelative == false && tryParseBackend( params._backend, backend ) == false )
-        {
-            outError = step.describe() + ": needs backend=\"dx11|dx12|vk|gl|other|start\"";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "needs backend=\"dx11|dx12|vk|gl|other|start\"", params._backend } );
+        return {};
     }
 
     // App 이 올라오지 않은 프로세스(nogpu 테스트)도 이 단계의 속성을 검사할 수 있게, App 의 단계 등록이 받는 것과 같은 검사 함수를 따로 올린다.

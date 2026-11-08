@@ -40,10 +40,10 @@ namespace sw
         AutomationJudge& operator=( const AutomationJudge& ) = delete;
 
         /**
-         * @brief 시나리오가 시작하는 프레임에 판정을 준비합니다 — 로그 허용 목록을 읽고, `<ExpectLog>` 선언을 올리고, 방문 이력을 만들고, 로그 수집을 시작합니다.
-         * @return 허용 목록이 틀리면 false 이고 @p outError 에 이유를 적는다(폴백 없이 읽기 오류로 멈춘다)
+         * @brief 시나리오가 시작하는 프레임에 판정을 준비합니다 — 로그 허용 정책을 올리고, 감시 값 이력을 만들고, 로그 수집을 시작합니다.
+         * @details 실패하지 않는다 — 허용 목록(`<AllowLog>`)은 시나리오 파일을 읽을 때 검사가 끝났다.
          */
-        [[nodiscard]] bool prepare( const AutomationScenario& scenario, string& outError );
+        void prepare( const AutomationScenario& scenario );
         /** @brief 로그 수집이 줄에 적을 프레임을 정합니다. */
         void setFrameIndex( uint32 frameIndex ) { _logCapture.setFrameIndex( frameIndex ); }
         /** @brief 로그 수집을 멈춥니다. */
@@ -85,12 +85,12 @@ namespace sw
 
         /**
          * @brief 로그 게이트입니다. 시작한 시나리오의 처리하지 않은 Warning · Error 줄과 빠진 현지화 키를 모아 보고(`unhandledLogs`)에 싣습니다 — 결과가 실패여도 싣는다.
-         *        통과(`Passed`)한 시나리오는 그 줄이 있으면 @p inOutResult 를 `UnhandledLog`(15)로 바꾸고 @p outReason 을 채웁니다. 이미 진 시나리오의 결과는 그대로 둡니다(원인은 단언 · 시한이다).
+         *        @p result 가 통과(`Passed`)이고 그 줄이 있으면 결과를 `UnhandledLog`(15)로 바꿀 끝 이유를 돌려줍니다. 이미 진 시나리오는 빈 값이다(원인은 단언 · 시한이다).
          * @details 처리는 `AutomationLogPolicy`(전역 허용 목록의 이 시나리오 항목 + 이 시나리오의 `<ExpectLog>`)가 정한다. id 없는 줄은 허용 목록으로 가릴 수 없다.
          *          빠진 현지화 키는 `LocalizationManager::getMissingKeys` 로 프로세스 전체를 본다(키마다 경고를 한 번만 남기므로 시나리오 앞 기동 구간에 남은 줄도
          *          여기서 잡는다 — id 가 없는 줄이라 `<ExpectLog>` 로만 가릴 수 있다). 허용 항목이 맞은 id 는 `getAllowedLogIDs` 에 남아 보고에 적힌다.
          */
-        void applyLogGate( AutomationResult& inOutResult, string& outReason );
+        [[nodiscard]] optional<string> applyLogGate( AutomationResult result );
 
         const vector<string>& getFailures() const { return _listFailure; }
         /** @brief `-scenario-update-golden` 으로 이 실행이 새로 쓰거나 바꾼 골든 파일(리소스 id)입니다. 리뷰할 목록이다. */

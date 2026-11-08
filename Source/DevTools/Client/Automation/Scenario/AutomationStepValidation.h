@@ -9,6 +9,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Registry/RegistrationList.h"
@@ -64,23 +65,23 @@ namespace sw
         [[nodiscard]] static AutomationStepDependency findUnresolvedDependency( const AutomationStep& step, string& outName );
 
         /**
-         * @brief 데스크톱 전역 상태를 쓰는 단계(`AutomationStepRegistration::_bUsesDesktop`)나 루트 `requireForeground="true"` 가 혼합 입력(`input="mixed"`)이 아닌 시나리오에 있으면 false 와 이유입니다.
+         * @brief 데스크톱 전역 상태를 쓰는 단계(`AutomationStepRegistration::_bUsesDesktop`)나 루트 `requireForeground="true"` 가 혼합 입력(`input="mixed"`)이 아닌 시나리오에 있으면 그 이유입니다(대상은 그 단계 위치).
          * @details 그런 단계(OS 커서 클립 · 화면 복사 `CaptureWindow` 등)와 전경 요구(OS 에 전경 창은 하나뿐이다)는 겹쳐 도는 다른 프로세스의 창과 서로 방해해서 `<타깃>_Desktop` 에서 혼자 도는 시나리오(혼합 입력)에서만 쓸 수 있다.
          *          표시를 시나리오 이름이 아니라 단계 등록에 두었으므로 새 데스크톱 단계는 등록 때 한 번 표시하면 모든 시나리오에 걸린다. 이 프로세스에 등록되지 않은 단계는 모르는 것이라 건너뛴다
          *          (그 판단은 `findUnresolvedDependency`).
          */
-        [[nodiscard]] static bool validateDesktopSteps( const AutomationScenario& scenario, string& outError );
+        [[nodiscard]] static expected<void> validateDesktopSteps( const AutomationScenario& scenario );
         /**
          * @brief 같은 파일을 두 번 찍는 `<Screenshot>` 을 거절합니다. `<ExpectImage>` 는 시나리오 끝에서 판정하므로(`AutomationJudge::deferExpectImage`)
          *        앞 사진을 덮으면 앞 단언이 뒤 그림을 본다.
          */
-        [[nodiscard]] static bool validateScreenshotFiles( const AutomationScenario& scenario, string& outError );
+        [[nodiscard]] static expected<void> validateScreenshotFiles( const AutomationScenario& scenario );
         /**
          * @brief 같은 프레임에서 씬 틱 뒤 단계(`<Expect>` 등) 아래에 적힌 프레임 시작 단계(입력 · `_bBeforeInput`)를 거절합니다.
          * @details 프레임 시작 단계는 그 프레임의 입력 재생 · 게임 틱 전에, 틱 뒤 단계는 틱 뒤에 돈다 — 그래서 `<Expect/><Press/>` 의 단언은 적힌 순서와 달리 누른 뒤의 틱을 본다.
          *          적은 순서가 곧 도는 순서라는 형식의 약속을 지키게, 둘 사이에 `<Wait frames="1"/>` 를 두게 한다. 이 프로세스에 등록되지 않은 단계는 모르는 것이라 건너뛴다.
          */
-        [[nodiscard]] static bool validateStepPhaseOrder( const AutomationScenario& scenario, string& outError );
+        [[nodiscard]] static expected<void> validateStepPhaseOrder( const AutomationScenario& scenario );
 
         /** @brief 못 본 까닭의 종류 이름입니다(보고에 적는다). */
         [[nodiscard]] static const utf8* getDependencyLabel( AutomationStepDependency dependency );

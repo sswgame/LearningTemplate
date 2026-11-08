@@ -11,37 +11,35 @@
 
 namespace sw
 {
-    bool AutomationStepArgsUtil::readFloat( const AutomationStep& step, string_view name, float32& inoutValue, string& outError )
+    expected<void> AutomationStepArgsUtil::readFloat( const AutomationStep& step, string_view name, float32& inoutValue )
     {
         const string* pValue = step.findAttribute( name );
         if ( pValue == nullptr )
-            return true;
+            return {};
         float32 value = 0.0f;
         if ( StringUtil::parseFloat( string_view{ *pValue }, value ) )
         {
             inoutValue = value;
-            return true;
+            return {};
         }
-        outError = step.describe() + ": " + string( name ) + " must be a number, got '" + *pValue + "'";
-        return false;
+        return unexpected( Error{ ErrorKind::InvalidArgument, "must be a number", name }.appendDetail( "=" ).appendDetail( *pValue ) );
     }
 
-    bool AutomationStepArgsUtil::readUint( const AutomationStep& step, string_view name, uint32& inoutValue, string& outError )
+    expected<void> AutomationStepArgsUtil::readUint( const AutomationStep& step, string_view name, uint32& inoutValue )
     {
         const string* pValue = step.findAttribute( name );
         if ( pValue == nullptr )
-            return true;
+            return {};
         int32 value = 0;
         if ( StringUtil::parseInt( string_view{ *pValue }, value ) && value >= 0 )
         {
             inoutValue = static_cast<uint32>( value );
-            return true;
+            return {};
         }
-        outError = step.describe() + ": " + string( name ) + " must be a non-negative integer, got '" + *pValue + "'";
-        return false;
+        return unexpected( Error{ ErrorKind::InvalidArgument, "must be a non-negative integer", name }.appendDetail( "=" ).appendDetail( *pValue ) );
     }
 
-    bool AutomationStepArgsUtil::parseNumberComparison( const AutomationStep& step, float32 nearTolerance, NumberComparison& outComparison, string& outError )
+    expected<AutomationStepArgsUtil::NumberComparison> AutomationStepArgsUtil::parseNumberComparison( const AutomationStep& step, float32 nearTolerance )
     {
         static constexpr pair<const utf8*, NumberRule> kArrRule[] = {
             { "equals",  NumberRule::Equals},
@@ -49,18 +47,22 @@ namespace sw
             {"atLeast", NumberRule::AtLeast},
             { "atMost",  NumberRule::AtMost},
         };
-        outComparison._tolerance = nearTolerance;
+        NumberComparison comparison;
+        comparison._tolerance = nearTolerance;
         for ( const pair<const utf8*, NumberRule>& entry : kArrRule )
         {
             const string* pText = step.findAttribute( entry.first );
             if ( pText == nullptr )
                 continue;
-            outComparison._rule = entry.second;
-            outComparison._text = *pText;
-            return readFloat( step, entry.first, outComparison._expected, outError ) && readFloat( step, "tolerance", outComparison._tolerance, outError );
+            comparison._rule          = entry.second;
+            comparison._text          = *pText;
+            const expected<void> read = readFloat( step, entry.first, comparison._expected ).and_then( [&]()
+            { return readFloat( step, "tolerance", comparison._tolerance ); } );
+            if ( read.has_value() == false )
+                return unexpected( read.error() );
+            return comparison;
         }
-        outError = step.describe() + ": needs one of equals · near · atLeast · atMost";
-        return false;
+        return unexpected( Error{ ErrorKind::InvalidArgument, "needs one of equals · near · atLeast · atMost" } );
     }
 
     bool AutomationStepArgsUtil::matchesNumber( const NumberComparison& comparison, float64 value, string& outRule )
@@ -92,34 +94,37 @@ namespace sw
         return false;
     }
 
-    bool AutomationStepArgsUtil::parseWaitTimeout( const AutomationStep& step, WaitTimeoutArgs& outArgs, string& outError )
+    expected<AutomationStepArgsUtil::WaitTimeoutArgs> AutomationStepArgsUtil::parseWaitTimeout( const AutomationStep& step )
     {
-        outArgs._bSeconds     = step.findAttribute( "timeoutSeconds" ) != nullptr;
-        outArgs._bWallSeconds = step.findAttribute( "timeoutWallSeconds" ) != nullptr;
-        return readUint( step, "timeoutFrames", outArgs._timeoutFrames, outError ) && readFloat( step, "timeoutSeconds", outArgs._timeoutSeconds, outError ) &&
-               readFloat( step, "timeoutWallSeconds", outArgs._timeoutWallSeconds, outError );
+        WaitTimeoutArgs args;
+        args._bSeconds            = step.findAttribute( "timeoutSeconds" ) != nullptr;
+        args._bWallSeconds        = step.findAttribute( "timeoutWallSeconds" ) != nullptr;
+        const expected<void> read = readUint( step, "timeoutFrames", args._timeoutFrames )
+                                        .and_then( [&]()
+        { return readFloat( step, "timeoutSeconds", args._timeoutSeconds ); } )
+                                        .and_then( [&]()
+        { return readFloat( step, "timeoutWallSeconds", args._timeoutWallSeconds ); } );
+        if ( read.has_value() == false )
+            return unexpected( read.error() );
+        return args;
     }
 
-    bool AutomationStepArgsUtil::parseExpectImage( const AutomationStep& step, ExpectImageArgs& outArgs, string& outError )
+    expected<AutomationStepArgsUtil::ExpectImageArgs> AutomationStepArgsUtil::parseExpectImage( const AutomationStep& step )
     {
         AutomationExpectImageParams params;
-        if ( step.readFields( params, outError ) == false )
-            return false;
+        const expected<void>        read = step.readFields( params );
+        if ( read.has_value() == false )
+            return unexpected( read.error() );
         // 골든 이름은 파일 이름의 한 조각이다 — 경로 · 점을 받지 않는다(`<시나리오>.<이름>.<백엔드>.ppm` 이 하나로 읽혀야 한다).
         const bool bPlainName = params._golden.empty() == false && params._golden.find_first_of( "/\\.:" ) == string::npos;
         if ( bPlainName == false )
-        {
-            outError = step.describe() + ": golden must be a plain name (no path, no dot), got '" + params._golden + "'";
-            return false;
-        }
-        outArgs._golden    = params._golden;
-        outArgs._tolerance = params._tolerance;
-        if ( params._region.empty() == false && AutomationImage::tryParseRegion( params._region, outArgs._region ) == false )
-        {
-            outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + params._region + "'";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "golden must be a plain name (no path, no dot)", params._golden } );
+        ExpectImageArgs args;
+        args._golden    = params._golden;
+        args._tolerance = params._tolerance;
+        if ( params._region.empty() == false && AutomationImage::tryParseRegion( params._region, args._region ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1", params._region } );
+        return args;
     }
 
     bool AutomationStepArgsUtil::compareVariable( const GlobalVariableInfo& info, string_view expected, float32 tolerance, bool& outMatched )

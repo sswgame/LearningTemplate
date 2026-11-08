@@ -383,11 +383,11 @@ namespace sw
                     finish( AutomationResult::TimedOut, "the start condition never became true" );
                 return;
             }
-            _pInputManager = &input;
-            string error;
-            if ( prepare( error ) == false )
+            _pInputManager                        = &input;
+            const expected<void, string> prepared = prepare();
+            if ( prepared.has_value() == false )
             {
-                finish( AutomationResult::LoadError, error );
+                finish( AutomationResult::LoadError, prepared.error() );
                 return;
             }
             _bStarted = SW_TRUE;
@@ -614,12 +614,12 @@ namespace sw
                 limitSeconds += pRegistration->_wallSeconds;
             const bool bDeclaresWait = step.findAttribute( "timeoutFrames" ) != nullptr || step.findAttribute( "timeoutSeconds" ) != nullptr ||
                                        step.findAttribute( "timeoutWallSeconds" ) != nullptr;
-            AutomationStepArgsUtil::WaitTimeoutArgs timeout;
-            string                                  error;
-            if ( bDeclaresWait && AutomationStepArgsUtil::parseWaitTimeout( step, timeout, error ) )
-                limitSeconds += timeout._bWallSeconds ? timeout._timeoutWallSeconds
-                              : timeout._bSeconds     ? timeout._timeoutSeconds
-                                                      : static_cast<float32>( timeout._timeoutFrames ) * _scenario.getFixedDelta();
+            const expected<AutomationStepArgsUtil::WaitTimeoutArgs> timeout =
+                bDeclaresWait ? AutomationStepArgsUtil::parseWaitTimeout( step ) : expected<AutomationStepArgsUtil::WaitTimeoutArgs>( unexpected( Error{ ErrorKind::NotFound, "declares no wait" } ) );
+            if ( timeout.has_value() ) // 틀린 시한은 시작 때 검사가 읽기 오류로 멈춘다 — 여기서는 더하지 않는다
+                limitSeconds += timeout->_bWallSeconds ? timeout->_timeoutWallSeconds
+                              : timeout->_bSeconds     ? timeout->_timeoutSeconds
+                                                       : static_cast<float32>( timeout->_timeoutFrames ) * _scenario.getFixedDelta();
         }
         return static_cast<float32>( scaleWallSeconds( limitSeconds ) ); // 기계가 느린 만큼(소프트웨어 렌더러) 데이터로 늘린다 — 시나리오마다 시한을 고치지 않는다
     }
@@ -826,7 +826,7 @@ namespace sw
         _finishReason = string( reason );
     }
 
-    bool AutomationRunner::prepare( string& outError )
+    expected<void, string> AutomationRunner::prepare()
     {
         // 기동 때 정해지는 값(첫 씬 · 렌더 파이프라인)은 시나리오가 바꿀 수 없다 — 띄운 명령줄이 선언과 다르면 다른 화면을 단언하게 되므로 멈춘다.
         for ( const AutomationAttribute& variable : _scenario.getTestOptions()._listLaunchVariable )
@@ -836,28 +836,29 @@ namespace sw
             const bool                bLaunchedWithIt = pInfo != nullptr && AutomationStepArgsUtil::compareVariable( *pInfo, string_view{ variable._value }, 0.0f, bMatched ) && bMatched;
             if ( bLaunchedWithIt == false )
             {
-                outError = "<Launch> needs the command line -" + variable._name + "=" + variable._value + " (now " +
-                           ( pInfo != nullptr ? "'" + pInfo->getValueAsString() + "'" : string( "no such variable" ) ) + ")";
-                return false;
+                return unexpected( "<Launch> needs the command line -" + variable._name + "=" + variable._value + " (now " +
+                                   ( pInfo != nullptr ? "'" + pInfo->getValueAsString() + "'" : string( "no such variable" ) ) + ")" );
             }
         }
-        if ( AutomationStepValidation::validateDesktopSteps( _scenario, outError ) == false || AutomationStepValidation::validateScreenshotFiles( _scenario, outError ) == false ||
-             AutomationStepValidation::validateStepPhaseOrder( _scenario, outError ) == false )
-            return false;
+        const expected<void> scenarioChecked = AutomationStepValidation::validateDesktopSteps( _scenario )
+                                                   .and_then( [&]()
+        { return AutomationStepValidation::validateScreenshotFiles( _scenario ); } )
+                                                   .and_then( [&]()
+        { return AutomationStepValidation::validateStepPhaseOrder( _scenario ); } );
+        if ( scenarioChecked.has_value() == false )
+            return unexpected( AutomationStep::describeReason( scenarioChecked.error() ) );
         for ( const AutomationStep& step : _scenario.getSteps() )
         {
             const AutomationStepRegistration* pRegistration = AutomationStepRegistry::find( step._kind );
             if ( pRegistration == nullptr )
-            {
-                outError = step.describe() + ": unknown step (nothing registered under that name)";
-                return false;
-            }
-            if ( pRegistration->_pValidate != nullptr && pRegistration->_pValidate( step, outError ) == false )
-                return false;
-            if ( pRegistration->_pPrepare != nullptr && pRegistration->_pPrepare( *this, step, outError ) == false )
-                return false;
+                return unexpected( step.describe() + ": unknown step (nothing registered under that name)" );
+            const expected<void> validated = pRegistration->_pValidate != nullptr ? pRegistration->_pValidate( step ) : expected<void>{};
+            const expected<void> prepared  = validated.has_value() && pRegistration->_pPrepare != nullptr ? pRegistration->_pPrepare( *this, step ) : validated;
+            if ( prepared.has_value() == false )
+                return unexpected( step.describeError( prepared.error() ) );
         }
-        return _judge.prepare( _scenario, outError ); // 허용 목록이 틀리면 폴백 없이 읽기 오류(11)로 멈춘다
+        _judge.prepare( _scenario );
+        return {};
     }
 
     AutomationStepHold AutomationRunner::holdUntilReady( [[maybe_unused]] const AutomationStep& step, InputManager& input, bool bReady, uint32 timeoutFrames, string_view waitingFor )
@@ -937,22 +938,22 @@ namespace sw
 
     bool AutomationRunner::shouldHoldForCondition( const AutomationStep& step, InputManager& input )
     {
-        bool                                    bMatched = false;
-        string                                  message;
-        const bool                              bHasValue = _judge.compareWatch( *this, step, bMatched, message );
-        const bool                              bReady    = bHasValue && bMatched;
-        string                                  error;
-        AutomationStepArgsUtil::WaitTimeoutArgs timeout;
-        if ( AutomationStepArgsUtil::parseWaitTimeout( step, timeout, error ) == false )
+        bool                                                    bMatched = false;
+        string                                                  message;
+        const bool                                              bHasValue     = _judge.compareWatch( *this, step, bMatched, message );
+        const bool                                              bReady        = bHasValue && bMatched;
+        const expected<AutomationStepArgsUtil::WaitTimeoutArgs> parsedTimeout = AutomationStepArgsUtil::parseWaitTimeout( step );
+        if ( parsedTimeout.has_value() == false )
         {
-            recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드) — 기다리지 않고 실패로 적는다
+            recordFailure( step, AutomationStep::describeReason( parsedTimeout.error() ) ); // 검사 뒤 단계가 바뀌었다(핫 리로드) — 기다리지 않고 실패로 적는다
             return false;
         }
-        const uint32             heldFrameCount = _run._holdFrameCount;
-        const uint32             timeoutFrames  = timeout._bSeconds ? convertSecondsToFrames( timeout._timeoutSeconds ) : timeout._timeoutFrames;
-        const string             waitingFor     = step.describe() + " (" + message + ")";
-        const AutomationStepHold hold           = timeout._bWallSeconds ? holdUntilReadyWithin( step, input, bReady, timeout._timeoutWallSeconds, waitingFor )
-                                                                        : holdUntilReady( step, input, bReady, timeoutFrames, waitingFor );
+        const AutomationStepArgsUtil::WaitTimeoutArgs& timeout        = *parsedTimeout;
+        const uint32                                   heldFrameCount = _run._holdFrameCount;
+        const uint32                                   timeoutFrames  = timeout._bSeconds ? convertSecondsToFrames( timeout._timeoutSeconds ) : timeout._timeoutFrames;
+        const string                                   waitingFor     = step.describe() + " (" + message + ")";
+        const AutomationStepHold                       hold           = timeout._bWallSeconds ? holdUntilReadyWithin( step, input, bReady, timeout._timeoutWallSeconds, waitingFor )
+                                                                                              : holdUntilReady( step, input, bReady, timeoutFrames, waitingFor );
         if ( hold == AutomationStepHold::Hold )
             return true;
         // 처음부터 참이던 조건도 남긴다 - 고정 대기를 조건 대기로 바꿀 때 "기다리지 않고 지나간" 단언(일어나지 않음을 보는 부정형일 수 있다)을 가려낸다.
@@ -992,7 +993,14 @@ namespace sw
         _judge.stopLogCapture();
         // 시작한 시나리오는 결과와 상관없이 로그 게이트를 지난다 — 시작하지 못한 실행은 허용 목록도 로그 수집도 준비되지 않았다.
         if ( _bStarted == SW_TRUE )
-            _judge.applyLogGate( _result, _finishReason );
+        {
+            optional<string> gateReason = _judge.applyLogGate( _result );
+            if ( gateReason.has_value() )
+            {
+                _result       = AutomationResult::UnhandledLog;
+                _finishReason = std::move( *gateReason );
+            }
+        }
         if ( _result == AutomationResult::Passed )
         {
             SW_LOG_INFO_ID( "Automation.PASSFrame", "[Scenario] PASS %# (%# frame(s))", _scenario.getName().c_str(), _run._frameIndex );

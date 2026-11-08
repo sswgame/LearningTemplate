@@ -151,14 +151,13 @@ namespace sw
         }
         else
         {
-            Internal::NumberComparison comparison;
-            string                     error;
-            if ( Internal::parseNumberComparison( step, Internal::kWatchNearTolerance, comparison, error ) == false )
+            const expected<Internal::NumberComparison> comparison = Internal::parseNumberComparison( step, Internal::kWatchNearTolerance );
+            if ( comparison.has_value() == false )
             {
-                outMessage = error; // 검사 뒤 단계가 바뀌었다(핫 리로드)
+                outMessage = AutomationStep::describeReason( comparison.error() ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
                 return false;
             }
-            bOk = Internal::matchesNumber( comparison, value._number, rule );
+            bOk = Internal::matchesNumber( *comparison, value._number, rule );
         }
         outMatched = bOk;
         outMessage = subject + " " + rule + ", got " + valueText;
@@ -334,11 +333,10 @@ namespace sw
 
     void AutomationJudge::deferExpectImage( AutomationStepContext& context, const AutomationStep& step )
     {
-        string                                  error;
-        AutomationStepArgsUtil::ExpectImageArgs args;
-        if ( AutomationStepArgsUtil::parseExpectImage( step, args, error ) == false )
+        const expected<AutomationStepArgsUtil::ExpectImageArgs> args = AutomationStepArgsUtil::parseExpectImage( step );
+        if ( args.has_value() == false )
         {
-            context.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            context.recordFailure( step, AutomationStep::describeReason( args.error() ) ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
             return;
         }
         // 골든은 백엔드마다 따로다(래스터 · 정밀도 차가 백엔드마다 다르다). 시나리오 안에서 백엔드를 바꿀 수 있어 단언하는 때의 백엔드를 쓴다.
@@ -364,22 +362,26 @@ namespace sw
     {
         const AutomationExpectImagesDifferParams params = step.readValidatedFields<AutomationExpectImagesDifferParams>();
         AutomationImageRegion                    region{};
-        string                                   error;
-        AutomationImage                          first;
-        AutomationImage                          second;
-        AutomationImage                          reducedFirst;
-        AutomationImage                          reducedSecond;
-        AutomationImageDifference                difference;
-        const bool                               bRegionRead = params._region.empty() || AutomationImage::tryParseRegion( params._region, region );
-        const bool                               bCompared   = bRegionRead && AutomationImage::loadPpm( context.resolveOutputPath( params._first ), first, error ) &&
-                               AutomationImage::loadPpm( context.resolveOutputPath( params._second ), second, error ) && AutomationImage::reduce( first, region, reducedFirst, error ) &&
-                               AutomationImage::reduce( second, region, reducedSecond, error ) && AutomationImage::compare( reducedFirst, reducedSecond, difference, error );
-        if ( bCompared == false )
+        if ( params._region.empty() == false && AutomationImage::tryParseRegion( params._region, region ) == false )
         {
-            context.recordFailure( step, "could not compare the images: " + error );
+            context.recordFailure( step, "could not compare the images: the region is not x0,y0,x1,y1 - " + params._region ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
             return;
         }
-        string line = params._first + " vs " + params._second + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (at least " +
+        const auto loadReduced = [&]( const string& file )
+        { return AutomationImage::loadPpm( context.resolveOutputPath( file ) ).and_then( [&]( const AutomationImage& image )
+          { return AutomationImage::reduce( image, region ); } ); };
+        const expected<AutomationImage>           reducedFirst  = loadReduced( params._first );
+        const expected<AutomationImage>           reducedSecond = reducedFirst.has_value() ? loadReduced( params._second ) : reducedFirst;
+        const expected<AutomationImageDifference> compared =
+            reducedSecond.and_then( [&]( const AutomationImage& second )
+        { return AutomationImage::compare( *reducedFirst, second ); } );
+        if ( compared.has_value() == false )
+        {
+            context.recordFailure( step, "could not compare the images: " + AutomationStep::describeReason( compared.error() ) );
+            return;
+        }
+        const AutomationImageDifference& difference = *compared;
+        string                           line       = params._first + " vs " + params._second + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (at least " +
                       AutomationStepArgsUtil::formatNumber( static_cast<float64>( params._minDiffering ) * 100.0 ) + "%)";
         SW_LOG_INFO_ID( "Automation.ImagesDiffer", "[Scenario] image %#", line.c_str() );
         _listMetricLine.push_back( line );
@@ -425,17 +427,23 @@ namespace sw
 
     void AutomationJudge::judgeImage( AutomationStepContext& context, const AutomationStep& step, const utf8* pBackendTag )
     {
-        string                                  error;
-        AutomationStepArgsUtil::ExpectImageArgs args;
-        (void)AutomationStepArgsUtil::parseExpectImage( step, args, error ); // 미룰 때 읽혔다
-        const string    file = step.readValidatedFields<AutomationExpectImageParams>()._file;
-        AutomationImage image;
-        AutomationImage reduced;
-        if ( AutomationImage::loadPpm( context.resolveOutputPath( file ), image, error ) == false || AutomationImage::reduce( image, args._region, reduced, error ) == false )
+        const expected<AutomationStepArgsUtil::ExpectImageArgs> parsedArgs = AutomationStepArgsUtil::parseExpectImage( step );
+        if ( parsedArgs.has_value() == false )
         {
-            context.recordFailure( step, "could not read the image: " + error );
+            context.recordFailure( step, AutomationStep::describeReason( parsedArgs.error() ) ); // 미룰 때 읽혔다 — 그 뒤 단계가 바뀌었다(핫 리로드)
             return;
         }
+        const AutomationStepArgsUtil::ExpectImageArgs& args = *parsedArgs;
+        const string                                   file = step.readValidatedFields<AutomationExpectImageParams>()._file;
+        const expected<AutomationImage>                loaded =
+            AutomationImage::loadPpm( context.resolveOutputPath( file ) ).and_then( [&]( const AutomationImage& image )
+        { return AutomationImage::reduce( image, args._region ); } );
+        if ( loaded.has_value() == false )
+        {
+            context.recordFailure( step, "could not read the image: " + AutomationStep::describeReason( loaded.error() ) );
+            return;
+        }
+        const AutomationImage& reduced = *loaded;
         // Linux 는 골든을 따로 둔다 - 편집기 기본 글꼴이 OS 마다 달라 배치가 다르고, 지금 도는 곳이 소프트웨어 렌더러(lavapipe)다.
 #if defined( SW_PLATFORM_LINUX )
         static constexpr const utf8* kGoldenPlatformTag = ".linux";
@@ -444,14 +452,18 @@ namespace sw
 #else
     #error "Unsupported platform"
 #endif
-        const string    goldenID = _goldenFolderID + "/" + _goldenPrefix + "." + args._golden + "." + pBackendTag + kGoldenPlatformTag + ".ppm";
-        vector<uint8>   listBytes;
-        AutomationImage golden;
-        const bool      bHasGolden = AssetIO::hasAsset( AssetID{ goldenID } ) && AssetIO::readBinaryAsset( AssetID{ goldenID }, listBytes ) &&
-                                AutomationImage::parsePpm( listBytes.data(), listBytes.size(), golden, error );
-        AutomationImageDifference difference;
-        const bool                bCompared = bHasGolden && AutomationImage::compare( reduced, golden, difference, error );
-        const bool                bMatches  = bCompared && difference._differingFraction <= args._tolerance;
+        const string                              goldenID = _goldenFolderID + "/" + _goldenPrefix + "." + args._golden + "." + pBackendTag + kGoldenPlatformTag + ".ppm";
+        vector<uint8>                             listBytes;
+        const bool                                bReadGolden = AssetIO::hasAsset( AssetID{ goldenID } ) && AssetIO::readBinaryAsset( AssetID{ goldenID }, listBytes );
+        const expected<AutomationImage>           golden      = bReadGolden ? AutomationImage::parsePpm( listBytes.data(), listBytes.size() )
+                                                                            : expected<AutomationImage>( unexpected( Error{ ErrorKind::NotFound, "no golden yet", goldenID } ) );
+        const bool                                bHasGolden  = golden.has_value();
+        const expected<AutomationImageDifference> compared =
+            golden.and_then( [&]( const AutomationImage& goldenImage )
+        { return AutomationImage::compare( reduced, goldenImage ); } );
+        const bool                      bCompared  = compared.has_value();
+        const AutomationImageDifference difference = bCompared ? *compared : AutomationImageDifference{};
+        const bool                      bMatches   = bCompared && difference._differingFraction <= args._tolerance;
         if ( bCompared )
         {
             string line = file + " vs " + goldenID + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (tolerance " +
@@ -483,14 +495,14 @@ namespace sw
         }
         if ( bCompared == false )
         {
-            context.recordFailure( step, error );
+            context.recordFailure( step, AutomationStep::describeReason( compared.error() ) );
             return;
         }
         context.recordFailure( step, file + " differs from " + goldenID + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) +
                                          "% of pixels differ (tolerance " + AutomationStepArgsUtil::formatNumber( args._tolerance * 100.0 ) + "%)" );
     }
 
-    void AutomationJudge::applyLogGate( AutomationResult& inOutResult, string& outReason )
+    optional<string> AutomationJudge::applyLogGate( AutomationResult result )
     {
         AutomationLogJudgement judgement = _logCapture.judgeLines( *_pLogPolicy );
         if ( engine::areEngineServicesBound() )
@@ -509,19 +521,18 @@ namespace sw
         }
         _listAllowedLogID = std::move( judgement._listAllowedID );
         if ( judgement.hasUnhandled() == false )
-            return;
+            return nullopt;
         _listUnhandledLog = std::move( judgement._listUnhandled );
         // 이미 진 실행은 결과를 바꾸지 않는다(원인은 단언 · 시한이다). 줄은 보고의 `unhandledLogs` 에만 남겨, 진 보고도 경고 · 오류 줄을 숨기지 않게 한다.
-        if ( inOutResult != AutomationResult::Passed )
-            return;
+        if ( result != AutomationResult::Passed )
+            return nullopt;
         for ( const string& line : _listUnhandledLog )
         {
             _listFailure.push_back( "unhandled log: " + line );
         }
-        inOutResult = AutomationResult::UnhandledLog;
-        outReason   = to_string( _listUnhandledLog.size() ) + " unhandled Warning/Error log line(s), " + to_string( judgement._missingIDCount ) +
-                    " without a log id - fix the cause, declare the line with <ExpectLog>, or allow its log id in this scenario with <AllowLog id=\"...\" reason=\"...\"/>"
-                    " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
+        return to_string( _listUnhandledLog.size() ) + " unhandled Warning/Error log line(s), " + to_string( judgement._missingIDCount ) +
+               " without a log id - fix the cause, declare the line with <ExpectLog>, or allow its log id in this scenario with <AllowLog id=\"...\" reason=\"...\"/>"
+               " (a line without a log id needs SW_LOG_WARNING_ID / SW_LOG_ERROR_ID first)";
     }
 
     void AutomationJudge::addFailure( const AutomationStep& step, string_view message )
@@ -531,9 +542,8 @@ namespace sw
         _listFailure.push_back( std::move( line ) );
     }
 
-    bool AutomationJudge::prepare( const AutomationScenario& scenario, string& outError )
+    void AutomationJudge::prepare( const AutomationScenario& scenario )
     {
-        (void)outError; // 읽기는 시나리오 파일을 읽을 때 끝났다 — 허용은 그 파일의 `<AllowLog>` 다
         _pLogPolicy->prepare( scenario );
         prepareWatches( scenario );
         _listRemembered.clear();
@@ -544,6 +554,5 @@ namespace sw
         if ( engine::areEngineServicesBound() )
             (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::SCENARIO_UPDATE_GOLDEN, _bUpdateGolden );
         _logCapture.start();
-        return true;
     }
 } // namespace sw

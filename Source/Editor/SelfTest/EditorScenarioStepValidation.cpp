@@ -14,23 +14,21 @@ namespace sw::editor
     {
         struct EditorScenarioStepValidationInternal
         {
-            /** @brief 레이블 안의 위치(0..1)인지 봅니다. 아니면 false 와 이유입니다. */
-            [[nodiscard]] static bool checkAnchor( const AutomationStep& step, const float2& anchor, string& outError )
+            /** @brief 레이블 안의 위치(0..1)인지 봅니다. 아니면 그 이유입니다. */
+            [[nodiscard]] static expected<void> checkAnchor( const float2& anchor )
             {
                 if ( anchor._x >= 0.0f && anchor._x <= 1.0f && anchor._y >= 0.0f && anchor._y <= 1.0f )
-                    return true;
-                outError = step.describe() + ": anchor must be 'x,y' in 0..1 (0.5,0.5 is the centre)";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "anchor must be 'x,y' in 0..1 (0.5,0.5 is the centre)" } );
             }
 
-            /** @brief 수정자 글을 봅니다. */
-            [[nodiscard]] static bool checkModifiers( const AutomationStep& step, const string& mods, string& outError )
+            /** @brief 수정자 글을 봅니다. 모르는 낱말이면 그 글이 대상인 오류입니다. */
+            [[nodiscard]] static expected<void> checkModifiers( const string& mods )
             {
                 uint8 mask = 0;
                 if ( EditorScenarioStepValidation::parseModifiers( mods, mask ) )
-                    return true;
-                outError = step.describe() + ": mods must be ctrl, shift or alt joined with '+', got '" + mods + "'";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "mods must be ctrl, shift or alt joined with '+'", mods } );
             }
         };
     } // namespace
@@ -80,65 +78,63 @@ namespace sw::editor
         return outListToken.empty() == false;
     }
 
-    bool EditorScenarioStepValidation::validateClick( const AutomationStep& step, string& outError )
+    expected<void> EditorScenarioStepValidation::validateClick( const AutomationStep& step )
     {
         using Internal = EditorScenarioStepValidationInternal;
         EditorClickParams params;
-        return step.readFields( params, outError ) && Internal::checkAnchor( step, params._anchor, outError ) && Internal::checkModifiers( step, params._mods, outError );
+        return step.readFields( params ).and_then( [&]()
+        { return Internal::checkAnchor( params._anchor ); } )
+            .and_then( [&]()
+        { return Internal::checkModifiers( params._mods ); } );
     }
 
-    bool EditorScenarioStepValidation::validateDrag( const AutomationStep& step, string& outError )
+    expected<void> EditorScenarioStepValidation::validateDrag( const AutomationStep& step )
     {
         using Internal = EditorScenarioStepValidationInternal;
-        EditorDragParams params;
-        if ( step.readFields( params, outError ) == false )
-            return false;
+        EditorDragParams     params;
+        const expected<void> read = step.readFields( params );
+        if ( read.has_value() == false )
+            return read;
         if ( params._toMark.empty() == false && ( step.findAttribute( "dx" ) != nullptr || step.findAttribute( "dy" ) != nullptr ) )
-        {
-            outError = step.describe() + ": give either toMark or dx/dy, not both";
-            return false;
-        }
-        return Internal::checkAnchor( step, params._anchor, outError ) && Internal::checkModifiers( step, params._mods, outError );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "give either toMark or dx/dy, not both" } );
+        return Internal::checkAnchor( params._anchor ).and_then( [&]()
+        { return Internal::checkModifiers( params._mods ); } );
     }
 
-    bool EditorScenarioStepValidation::validateHover( const AutomationStep& step, string& outError )
+    expected<void> EditorScenarioStepValidation::validateHover( const AutomationStep& step )
     {
         using Internal = EditorScenarioStepValidationInternal;
-        EditorHoverParams params;
-        if ( step.readFields( params, outError, { "release" } ) == false )
-            return false;
+        EditorHoverParams    params;
+        const expected<void> read = step.readFields( params, { "release" } );
+        if ( read.has_value() == false )
+            return read;
         const bool bRelease = step.findAttribute( "release" ) != nullptr;
         if ( bRelease == ( params._mark.empty() == false ) )
-        {
-            outError = step.describe() + ": give either mark (and anchor) or release=\"true\"";
-            return false;
-        }
-        return Internal::checkAnchor( step, params._anchor, outError );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "give either mark (and anchor) or release=\"true\"" } );
+        return Internal::checkAnchor( params._anchor );
     }
 
-    bool EditorScenarioStepValidation::validateKey( const AutomationStep& step, string& outError )
+    expected<void> EditorScenarioStepValidation::validateKey( const AutomationStep& step )
     {
-        EditorKeyParams params;
-        if ( step.readFields( params, outError ) == false )
-            return false;
+        EditorKeyParams      params;
+        const expected<void> read = step.readFields( params );
+        if ( read.has_value() == false )
+            return read;
         vector<string_view> listToken;
         if ( splitKeyChord( params._key, listToken ) == false )
-        {
-            outError = step.describe() + ": key must be names joined with '+' (e.g. Enter · Escape · F5 · Ctrl+Z), got '" + params._key + "'";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "key must be names joined with '+' (e.g. Enter · Escape · F5 · Ctrl+Z)", params._key } );
+        return {};
     }
 
-    bool EditorScenarioStepValidation::validateCapture( const AutomationStep& step, string& outError )
+    expected<void> EditorScenarioStepValidation::validateCapture( const AutomationStep& step )
     {
-        EditorCaptureParams params;
-        if ( step.readFields( params, outError ) == false )
-            return false;
+        EditorCaptureParams  params;
+        const expected<void> read = step.readFields( params );
+        if ( read.has_value() == false )
+            return read;
         if ( StringUtil::endsWith( params._file, ".png", true ) )
-            return true;
-        outError = step.describe() + ": needs file=\"….png\"";
-        return false;
+            return {};
+        return unexpected( Error{ ErrorKind::InvalidArgument, "needs file=\"….png\"", params._file } );
     }
 
     // 에디터 모듈이 올라오지 않은 프로세스도 이 단계들의 속성을 검사할 수 있게, 단계 등록이 받는 것과 같은 검사 함수를 따로 올린다.

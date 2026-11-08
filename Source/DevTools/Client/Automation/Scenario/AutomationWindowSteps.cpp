@@ -36,26 +36,26 @@ namespace sw
     {
         struct AutomationWindowStepsInternal
         {
-            static bool validateCapture( const AutomationStep& step, string& outError )
+            static expected<void> validateCapture( const AutomationStep& step )
             {
                 AutomationFileStepParams params;
-                if ( step.readFields( params, outError ) == false )
-                    return false;
+                const expected<void>     read = step.readFields( params );
+                if ( read.has_value() == false )
+                    return read;
                 if ( StringUtil::endsWith( params._file, ".png", true ) )
-                    return true;
-                outError = step.describe() + ": file must end with .png";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "file must end with .png", params._file } );
             }
 
-            static bool validateAppSuspend( const AutomationStep& step, string& outError )
+            static expected<void> validateAppSuspend( const AutomationStep& step )
             {
                 AutomationAppSuspendParams params;
-                if ( step.readFields( params, outError ) == false )
-                    return false;
+                const expected<void>       read = step.readFields( params );
+                if ( read.has_value() == false )
+                    return read;
                 if ( params._ticks > 0 )
-                    return true;
-                outError = step.describe() + ": ticks must be above 0";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "ticks must be above 0" } );
             }
 
             /** @brief 앱 멈춤을 흉내 냅니다. 메인 루프가 `ticks` 틱 동안 프레임을 돌지 않고 돌아온다(플랫폼 수명 이벤트와 같은 길). */

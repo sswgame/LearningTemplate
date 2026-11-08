@@ -203,11 +203,7 @@ namespace sw
         /** @brief 단계 `<FeedHorse horse="Bessie" food="oats"/>` 입니다 — 대상 말(`AutomationTarget` 규칙)에게 카탈로그의 먹이를 준다. 키트가 제 단계를 등록하는 본보기다. */
         struct WesternHorseStepsInternal
         {
-            static bool validateFeedHorse( const AutomationStep& step, string& outError )
-            {
-                return step.hasOnlyAttributes( { "horse", "food" }, outError ) && step.requireAttribute( "horse", outError ) != nullptr &&
-                       step.requireAttribute( "food", outError ) != nullptr;
-            }
+            static expected<void> validateFeedHorse( const AutomationStep& step ) { return step.hasRequiredAttributes( { "horse", "food" }, { "horse", "food" } ); }
 
             static bool runFeedHorse( AutomationStepContext& context, const AutomationStep& step )
             {

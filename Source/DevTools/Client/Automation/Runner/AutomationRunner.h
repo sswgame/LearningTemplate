@@ -250,8 +250,8 @@ namespace sw
         bool skipIfThisBuildCannotRun();
         /** @brief 시나리오가 선언한 사본 폴더(`<Scratch>`)를 새로 만듭니다. 하나라도 실패하면 읽기 오류(LoadError)로 끝내고 false 입니다 — 원본에 쓰며 돌지 않는다. */
         [[nodiscard]] bool prepareScratchFolders();
-        /** @brief 시작 조건이 참이 된 프레임에서 단계마다 등록의 검사 · 준비(입력 단계는 가상 입력으로 옮긴다)를 돌리고 로그 수집을 시작합니다. 실패면 false 를 반환하고 이유를 남깁니다. */
-        [[nodiscard]] bool prepare( string& outError );
+        /** @brief 시작 조건이 참이 된 프레임에서 단계마다 등록의 검사 · 준비(입력 단계는 가상 입력으로 옮긴다)를 돌리고 로그 수집을 시작합니다. 실패면 끝 이유 글(어느 단계인지 붙인 보고 줄)입니다 — 길이가 정해지지 않은 보고라 오류 형식이 글이다. */
+        [[nodiscard]] expected<void, string> prepare();
         /**
          * @brief `WaitUntil` 이 아직 시나리오 시계를 붙잡아야 하면 true 입니다(이 프레임은 세지 않고 뒤의 입력 이벤트를 한 프레임 밉니다).
          * @details 조건이 참이거나 `timeoutFrames` 를 넘으면(실패로 적는다) false 이고, 그 단계는 끝난다.

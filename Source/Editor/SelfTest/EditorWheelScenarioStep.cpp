@@ -25,44 +25,45 @@ namespace sw::editor
         {
             static constexpr const utf8* kWheelKind = "EditorWheel";
 
-            [[nodiscard]] static bool readNotches( const AutomationStep& step, float64& outNotches, string& outError )
+            [[nodiscard]] static expected<float64> readNotches( const AutomationStep& step )
             {
-                const string* pValue = step.requireAttribute( "dy", outError );
-                if ( pValue == nullptr )
-                    return false;
-                if ( StringUtil::parseDouble( string_view{ *pValue }, outNotches ) == false )
-                {
-                    outError = step.describe() + ": dy must be a number, got '" + *pValue + "'";
-                    return false;
-                }
-                return true;
+                const expected<const string*> value = step.requireAttribute( "dy" );
+                if ( value.has_value() == false )
+                    return unexpected( value.error() );
+                float64 notches = 0.0;
+                if ( StringUtil::parseDouble( string_view{ **value }, notches ) == false )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "dy must be a number", **value } );
+                return notches;
             }
 
-            static bool validate( const AutomationStep& step, string& outError )
+            static expected<void> validate( const AutomationStep& step )
             {
-                float64 notches = 0.0;
-                return step.hasOnlyAttributes( { "dy" }, outError ) && readNotches( step, notches, outError );
+                const expected<void> allowed = step.hasOnlyAttributes( { "dy" } );
+                if ( allowed.has_value() == false )
+                    return allowed;
+                const expected<float64> notches = readNotches( step );
+                if ( notches.has_value() == false )
+                    return unexpected( notches.error() );
+                return {};
             }
 
             /** @brief 입력 큐가 에디터 컨텍스트에 있으므로 에디터가 없는 실행은 오류로 멈춘다. */
-            [[nodiscard]] static bool prepare( AutomationStepContext& /*runner*/, const AutomationStep& step, string& outError )
+            [[nodiscard]] static expected<void> prepare( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/ )
             {
                 if ( EditorSelfTestMarks::setEnabled( true ) )
-                    return true;
-                outError = step.describe() + ": needs the editor (no editor context to queue the wheel - run with -EnableEditor)";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::Unsupported, "needs the editor (no editor context to queue the wheel - run with -EnableEditor)" } );
             }
 
             static bool run( AutomationStepContext& runner, const AutomationStep& step )
             {
-                float64 notches = 0.0;
-                string  error;
-                if ( readNotches( step, notches, error ) == false )
+                const expected<float64> notches = readNotches( step );
+                if ( notches.has_value() == false )
                 {
-                    runner.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+                    runner.recordFailure( step, AutomationStep::describeReason( notches.error() ) ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
                     return true;
                 }
-                EditorSelfTestInput::scrollMouseWheel( static_cast<float32>( notches ) );
+                EditorSelfTestInput::scrollMouseWheel( static_cast<float32>( *notches ) );
                 return true;
             }
         };

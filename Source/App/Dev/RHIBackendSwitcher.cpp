@@ -41,15 +41,12 @@ namespace sw
         struct RHIBackendSwitcherInternal
         {
             /** @brief 준비 함수가 시나리오가 시작할 때의 백엔드를 교체기에 적습니다(`RHIBackendSwitcher::recordStartBackend`). 교체기는 백엔드 교체 · 모듈 리로드에서 내려가지 않는 App 의 객체다. */
-            [[nodiscard]] static bool prepareSwapBackend( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/, string& outError )
+            [[nodiscard]] static expected<void> prepareSwapBackend( AutomationStepContext& /*runner*/, const AutomationStep& /*step*/ )
             {
                 RHIBackendSwitcher* pSwitcher = engine::findSubsystem<RHIBackendSwitcher>();
                 if ( pSwitcher == nullptr || pSwitcher->recordStartBackend() == false )
-                {
-                    outError = "SwapBackend: backend switching is not available in this process (no RHI)";
-                    return false;
-                }
-                return true;
+                    return unexpected( Error{ ErrorKind::Unsupported, "backend switching is not available in this process (no RHI)" } );
+                return {};
             }
 
             /** @brief 교체를 요청합니다. 이미 그 백엔드이고 대기 중인 교체도 없으면 아무것도 하지 않습니다. 끝은 `RHI.SwapPending` 이 0 이 되는 것으로 봅니다. */

@@ -182,7 +182,21 @@ namespace sw
         return string( resultBuilder.view() );
     }
 
-    bool AutomationStep::readFieldsOf( void* pParams, const TypeInfo& typeInfo, string& outError, std::initializer_list<string_view> listHandRead ) const
+    string AutomationStep::describeError( const Error& error ) const
+    {
+        return describe() + ": " + describeReason( error );
+    }
+
+    string AutomationStep::describeReason( const Error& error )
+    {
+        StringBuilder<constant::buffer::kMax512> textBuilder;
+        textBuilder.append( error.message() );
+        if ( error.detail().empty() == false )
+            textBuilder.appendFormat( ": %#", error.detail() );
+        return string( textBuilder.view() );
+    }
+
+    expected<void> AutomationStep::readFieldsOf( void* pParams, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead ) const
     {
         // 속성은 파일을 읽을 때 글로 풀어 뒀다 — 원소 하나를 다시 지어 XML 칸 읽기(`XMLFields`)와 같은 규칙으로 읽는다.
         XMLDocument   document;
@@ -191,18 +205,22 @@ namespace sw
         {
             node.appendAttribute( attribute._name.c_str(), string_view{ attribute._value } );
         }
+        // 칸 읽기의 글은 앞머리(출처 이름)를 붙인다 — 단계 위치는 `describeError` 가 붙이므로 출처는 짧은 이름만 준다.
+        string             firstIssue;
         XMLFieldsIssueSink sink;
-        sink._pContext = &outError;
+        sink._pContext = &firstIssue;
         sink._pfnAdd   = []( void* pContext, const utf8* /*pID*/, string_view text )
         {
-            string& error = *static_cast<string*>( pContext );
-            if ( error.empty() ) // 첫 오류만 — 뒤 오류는 대개 첫 오류의 결과다
-                error = string( text );
+            string& issue = *static_cast<string*>( pContext );
+            if ( issue.empty() ) // 첫 오류만 — 뒤 오류는 대개 첫 오류의 결과다
+                issue = string( text );
         };
-        return XMLFields::readFields( node, pParams, typeInfo, describe(), listHandRead, nullptr, sink );
+        if ( XMLFields::readFields( node, pParams, typeInfo, "attributes", listHandRead, nullptr, sink ) )
+            return {};
+        return unexpected( Error{ ErrorKind::InvalidArgument, "attributes do not fit the step", firstIssue } );
     }
 
-    bool AutomationStep::hasOnlyAttributes( std::initializer_list<string_view> listAllowed, string& outError ) const
+    expected<void> AutomationStep::hasOnlyAttributes( std::initializer_list<string_view> listAllowed ) const
     {
         for ( const AutomationAttribute& attribute : _listAttribute )
         {
@@ -212,34 +230,29 @@ namespace sw
                 bKnown = bKnown || string_view{ attribute._name } == allowed;
             }
             if ( bKnown == false )
-            {
-                outError = describe() + ": unknown attribute '" + attribute._name + "'";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "unknown attribute", attribute._name } );
         }
-        return true;
+        return {};
     }
 
-    bool AutomationStep::hasRequiredAttributes( std::initializer_list<string_view> listAllowed, std::initializer_list<string_view> listRequired, string& outError ) const
+    expected<void> AutomationStep::hasRequiredAttributes( std::initializer_list<string_view> listAllowed, std::initializer_list<string_view> listRequired ) const
     {
-        if ( hasOnlyAttributes( listAllowed, outError ) == false )
-            return false;
+        const expected<void> allowed = hasOnlyAttributes( listAllowed );
+        if ( allowed.has_value() == false )
+            return allowed;
         for ( const string_view required : listRequired )
         {
             if ( findAttribute( required ) == nullptr )
-            {
-                outError = describe() + ": needs " + string( required ) + "=\"…\"";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::NotFound, "needs the attribute", required } );
         }
-        return true;
+        return {};
     }
 
-    const string* AutomationStep::requireAttribute( string_view name, string& outError ) const
+    expected<const string*> AutomationStep::requireAttribute( string_view name ) const
     {
         const string* pValue = findAttribute( name );
         if ( pValue == nullptr )
-            outError = describe() + ": needs " + string( name ) + "=\"…\"";
+            return unexpected( Error{ ErrorKind::NotFound, "needs the attribute", name } );
         return pValue;
     }
 

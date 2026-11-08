@@ -34,16 +34,16 @@ namespace sw
         struct GameplayAutomationStepsInternal
         {
             /** @brief `AdvanceGameTime` 은 `minutes` · `hours` · `toHour`(다음 그 시각, 0..24) 중 정확히 하나를 받습니다. */
-            static bool validateAdvanceGameTime( const AutomationStep& step, string& outError )
+            static expected<void> validateAdvanceGameTime( const AutomationStep& step )
             {
                 AdvanceGameTimeParams params;
-                if ( step.readFields( params, outError ) == false )
-                    return false;
+                const expected<void>  read = step.readFields( params );
+                if ( read.has_value() == false )
+                    return read;
                 const uint32 count = ( params._minutes >= 0.0f ? 1u : 0u ) + ( params._hours >= 0.0f ? 1u : 0u ) + ( params._toHour >= 0.0f ? 1u : 0u );
                 if ( count == 1 )
-                    return true;
-                outError = step.describe() + ": needs exactly one of minutes · hours · toHour";
-                return false;
+                    return {};
+                return unexpected( Error{ ErrorKind::InvalidArgument, "needs exactly one of minutes · hours · toHour" } );
             }
 
             /**
