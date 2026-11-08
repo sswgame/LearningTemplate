@@ -7,30 +7,21 @@
 
 #include "DevTools/Client/DebugDraw/DebugDrawCanvas.h"
 
-#include "Editor/Common/Backend/EditorUICapture.h"
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
-#include "Editor/Common/Backend/ImGuiRenderer.h"
-#include "Editor/Common/Commands/Play/EditorScreenshotCommands.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/EditorViewSurface.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorDebugHUDControls.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/ViewportInputOverlay.h"
 
-#include "Engine/Asset/AssetManager.h"
-#include "Engine/Graphics/Canvas/CanvasDrawList.h"
-#include "Engine/Graphics/Texture/Texture2D.h"
-#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -82,32 +73,19 @@ namespace sw::editor
     {
         if ( _pDevOverlayTextureID == nullptr )
             return;
-        EditorContext* pContext = editor::findSubsystem<EditorContext>();
-        if ( pContext != nullptr )
-        {
-            pContext->getSubsystem<EditorUICapture>().setTextureExcluded( _pDevOverlayTextureID, false ); // ID 칸은 다른 등록이 다시 받는다
-            if ( pContext->getSubsystem<EditorRenderViews>().getRenderer() != nullptr )
-                pContext->getSubsystem<EditorRenderViews>().getRenderer()->unregisterTexture( _pDevOverlayTextureID );
-        }
+        EditorViewSurface::unregisterOverlayTexture( _pDevOverlayTextureID );
         _pDevOverlayTextureID = nullptr;
         _devOverlayTexture    = 0;
     }
 
     void GameViewPanel::syncDevOverlayTexture()
     {
-        AssetManager* const    pAssets  = editor::findSubsystem<AssetManager>();
-        const Texture2D* const pTexture = pAssets != nullptr ? pAssets->getAssetCache<TextureCache>().find( CanvasFrameData::kDevOverlayTargetPath ) : nullptr;
-        const uint64           texture  = pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
+        const uint64 texture = GameViewModel::findDevOverlayTexture();
         if ( texture == _devOverlayTexture && ( _pDevOverlayTextureID != nullptr || texture == 0 ) )
             return;
         releaseDevOverlayTexture();
-        EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
-        EditorRenderViews& renderViews   = editorContext.getSubsystem<EditorRenderViews>();
-        if ( texture == 0 || renderViews.getRenderer() == nullptr )
-            return; // 겹치기가 없거나 렌더 스레드가 아직 만들지 않았다(다음 프레임)
-        _pDevOverlayTextureID = renderViews.getRenderer()->registerTexture( texture );
+        _pDevOverlayTextureID = EditorViewSurface::registerOverlayTexture( texture ); // 겹치기가 없거나 렌더 스레드가 아직 만들지 않았으면 nullptr(다음 프레임)
         _devOverlayTexture    = _pDevOverlayTextureID != nullptr ? texture : 0;
-        editorContext.getSubsystem<EditorUICapture>().setTextureExcluded( _pDevOverlayTextureID, true );
     }
 
     void GameViewPanel::drawDevOverlay( const float2& imagePos, const float2& imageSize )
@@ -139,23 +117,15 @@ namespace sw::editor
 
     void GameViewPanel::onPanelCollapsed()
     {
-        EditorContext* pClosedContext = editor::findSubsystem<EditorContext>();
-        if ( pClosedContext != nullptr )
-        {
-            pClosedContext->getSubsystem<EditorRenderViews>().setGameViewFocused( false );
-            pClosedContext->getSubsystem<EditorRenderViews>().setGameViewHovered( false );
-        }
+        EditorViewSurface::setGameViewInput( false, false );
     }
 
     void GameViewPanel::drawContent()
     {
-        EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-
         // Play 중 게임 입력은 이 패널 위에서만 게임으로 간다(`ImGuiEditor::processEvent`). 씬 뷰 위의 입력은 에디터 카메라 담당이다.
-        editorContext.getSubsystem<EditorRenderViews>().setGameViewFocused( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ) );
-        if ( editorContext.getSubsystem<EditorRenderViews>().isGameViewFocused() )
-            EditorScreenshotCommands::recordFocusedView( EditorViewKind::Game );
-        editorContext.getSubsystem<EditorRenderViews>().setGameViewHovered( ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) );
+        EditorViewSurface::setGameViewInput( ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows ), ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows ) );
+        if ( EditorViewSurface::isGameViewFocused() )
+            EditorViewSurface::recordFocusedView( EditorViewKind::Game );
 
         drawToolbar();
 
@@ -164,27 +134,23 @@ namespace sw::editor
         const uint32         width     = static_cast<uint32>( rect._size._x );
         const uint32         height    = static_cast<uint32>( rect._size._y );
         if ( width > 1 && height > 1 )
-        {
-            const EditorViewTarget& view = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
-            if ( EditorViewTargetUtil::needsResize( view.getRequestedWidth(), view.getRequestedHeight(), width, height ) )
-                editorContext.getSubsystem<EditorRenderViews>().ensureViewTargetSize( EditorViewKind::Game, width, height );
-        }
+            EditorViewSurface::fitTargetSize( EditorViewKind::Game, width, height );
         // 레터박스 — 남는 쪽은 비워 둔다. 이미지는 RT 크기 그대로(늘이지 않는다).
         const ImVec2 origin = ImGui::GetCursorScreenPos();
         const ImVec2 imagePos{ origin.x + rect._offset._x, origin.y + rect._offset._y };
         const ImVec2 imageSize{ rect._size._x, rect._size._y };
         // 이 패널이 보이는 프레임만 게임 뷰를 그린다(접힘 · 닫힘 · 다른 탭이면 drawContent 가 불리지 않는다 — 게임 뷰 RT 요청 0).
         // 이미지 자리도 함께 알린다 — 런타임 UI 가 창 픽셀 포인터를 게임 뷰 픽셀로 옮긴다(`ViewportTarget::_windowX`).
-        editorContext.getSubsystem<EditorRenderViews>().markViewDrawn( EditorViewKind::Game, float2{ imagePos.x - ImGui::GetMainViewport()->Pos.x, imagePos.y - ImGui::GetMainViewport()->Pos.y } );
+        EditorViewSurface::markDrawn( EditorViewKind::Game, float2{ imagePos.x - ImGui::GetMainViewport()->Pos.x, imagePos.y - ImGui::GetMainViewport()->Pos.y } );
         forwardDetachedInput();
         ImGui::SetCursorScreenPos( imagePos );
-        const void* pTextureID        = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game )._pTextureID;
+        const void* pTextureID        = EditorViewSurface::getTextureID( EditorViewKind::Game );
         const bool  bCanDrawGameImage = pTextureID != nullptr && imageSize.x > 1.0f && imageSize.y > 1.0f;
         if ( bCanDrawGameImage )
         {
             ImGui::Image( reinterpret_cast<ImTextureID>( pTextureID ), imageSize );
             // 에디터에서는 ImGui 가 OS 커서를 쥐어 엔진이 창에 건 커서가 덮이므로, 게임 UI 가 호버한 위젯의 모양(손 · 글 상자 …)을 ImGui 커서로 낸다.
-            const InputManager* pCursorInput = findSubsystem<InputManager>();
+            const InputManager* pCursorInput = GameViewModel::findInputManager();
             if ( pCursorInput != nullptr && ImGui::IsItemHovered() )
                 ImGui::SetMouseCursor( toImGuiCursor( pCursorInput->getCursorShape() ) );
         }
@@ -209,11 +175,10 @@ namespace sw::editor
                                 EditorColorUtil::toImU32( kHintText ), kHint );
         }
 
-        if ( imageSize.x > 1.0f && imageSize.y > 1.0f )
-        {
-            InputManager& input = editor::getSubsystem<InputManager>();
-            editor::getSubsystem<ViewportInputOverlaySettings>()._overlay.draw( pDrawList, imagePos, imageSize, &input, &input.getInputMap() );
-        }
+        InputManager* const         pInput   = GameViewModel::findInputManager();
+        ViewportInputOverlay* const pOverlay = GameViewModel::findInputOverlay();
+        if ( imageSize.x > 1.0f && imageSize.y > 1.0f && pInput != nullptr && pOverlay != nullptr )
+            pOverlay->draw( pDrawList, imagePos, imageSize, pInput, &pInput->getInputMap() );
     }
 
     void GameViewPanel::drawToolbar()
@@ -257,7 +222,7 @@ namespace sw::editor
 
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Camera" ), "##GameViewScreenshot" ) ) );
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Camera" ), "##GameViewScreenshot" ) ) )
-                EditorScreenshotCommands::captureGameView();
+                EditorViewSurface::captureScreenshot( EditorViewKind::Game );
             EditorSelfTestMarks::record( "gameView.screenshot" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "GameViewScreenshot" ) );
         }

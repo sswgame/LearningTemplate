@@ -10,7 +10,12 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
+#include "Editor/Viewport/ViewportInputOverlay.h"
 
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -92,5 +97,23 @@ namespace sw::editor
         {
             (void)session.sendProcessCommand( processIndex, pCommand ); // 끝난 프로세스는 false — 받을 쪽이 없다
         }
+    }
+
+    uint64 GameViewModel::findDevOverlayTexture()
+    {
+        AssetManager* const    pAssets  = editor::findSubsystem<AssetManager>();
+        const Texture2D* const pTexture = pAssets != nullptr ? pAssets->getAssetCache<TextureCache>().find( CanvasFrameData::kDevOverlayTargetPath ) : nullptr;
+        return pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
+    }
+
+    InputManager* GameViewModel::findInputManager()
+    {
+        return editor::findSubsystem<InputManager>();
+    }
+
+    ViewportInputOverlay* GameViewModel::findInputOverlay()
+    {
+        ViewportInputOverlaySettings* const pSettings = editor::findSubsystem<ViewportInputOverlaySettings>();
+        return pSettings != nullptr ? &pSettings->_overlay : nullptr;
     }
 } // namespace sw::editor

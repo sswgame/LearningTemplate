@@ -8,6 +8,7 @@
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"
+#include "Editor/Panels/Scene/Model/SceneViewModel.h"
 #include "Editor/Viewport/EditorViewportClient.h"
 
 namespace sw::editor
@@ -47,7 +48,7 @@ namespace sw::editor
         void drawDebugCategoryPopup();
 
     private:
-        EditorViewportClient  _viewportClient;
-        vector<hashed_string> _listDebugCategory; ///< 카테고리 팝업 재사용 버퍼
+        EditorViewportClient              _viewportClient;
+        vector<SceneViewDebugCategoryRow> _listDebugCategory; ///< 카테고리 팝업 재사용 버퍼
     };
 } // namespace sw::editor

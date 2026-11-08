@@ -12,9 +12,15 @@
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
 #include "Editor/Common/Workspace/EditorViewTargetUtil.h"
 
+namespace sw
+{
+    class InputManager;
+} // namespace sw
+
 namespace sw::editor
 {
     struct EditorPointerState;
+    struct ViewportInputOverlay;
 
     /**
      * @class GameViewModel
@@ -53,6 +59,12 @@ namespace sw::editor
          * @details 이 에디터의 게임 뷰와, 멀티 프로세스 재생이 띄운 자식 프로세스(클라이언트의 권위 고스트) 모두에 같은 값을 건다.
          */
         static void setDebugDrawShown( bool bShown );
+        /** @brief 개발 겹치기 렌더 텍스처(`CanvasFrameData::kDevOverlayTargetPath`)의 RHI 핸들입니다. 아직 없거나 GPU 에 올라가지 않았으면 0 입니다. */
+        static uint64 findDevOverlayTexture();
+        /** @brief 에디터 범위의 입력 관리자입니다(커서 모양 · 입력 오버레이). 없으면 nullptr 입니다. View 가 서비스 창구를 보지 않게 여기서 찾는다. */
+        static InputManager* findInputManager();
+        /** @brief 뷰포트 입력 오버레이(눌린 키 · 패드 표시)입니다. 없으면 nullptr 입니다. */
+        static ViewportInputOverlay* findInputOverlay();
 
     private:
         EditorGameViewAspect _aspect;                 ///< 이미지 화면 비율(자유 · 16:9)
