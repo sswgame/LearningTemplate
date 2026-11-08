@@ -8,7 +8,6 @@
  *          여기서는 변수는 개발 도구에 두고 런타임에는 정책 값 하나만 남긴다(Godot 의 RenderingServer 디버그 설정 묶음과 같은 모양).
  */
 #pragma once
-#include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -83,10 +82,12 @@ namespace sw
         /** @brief 지금의 진단 정책입니다. 채우는 쪽이 없으면 기본값이고, Shipping 은 늘 기본값(상수)입니다. 값은 부를 때마다 새로 읽는다(실행 중에 바뀐 개발 변수가 바로 든다). */
         [[nodiscard]] static RenderDiagnosticsPolicy get()
         {
-            if constexpr ( build::kShipping )
-                return RenderDiagnosticsPolicy{};
-            else
-                return fetch();
+            // 전처리기로 접는다 — `BuildInfo.h` 는 CMake 정의를 요구해 리플렉션 파서가 이 헤더를 읽지 못한다(SW_SHIPPING 은 구성 정의 그대로다).
+#if defined( SW_SHIPPING )
+            return RenderDiagnosticsPolicy{};
+#else
+            return fetch();
+#endif
         }
 
         /** @brief 채우는 함수를 붙입니다. 이미 붙어 있으면 false 이고 오류를 남깁니다. */
