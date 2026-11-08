@@ -51,7 +51,7 @@ namespace sw::editor
 
     void EditorDrawReleaseQueue::flushAll()
     {
-        KeyedPendingList<RHIResourceReleaseDelegate> listFlush;
+        RHIRetireList<RHIResourceReleaseDelegate> listFlush;
         {
             ScopedLock<mutex> lock{ _mutex };
             listFlush.swap( _listEntry );
