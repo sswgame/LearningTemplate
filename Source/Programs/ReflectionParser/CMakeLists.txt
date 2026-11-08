@@ -5,28 +5,19 @@
 
 # ------------------------------------------------------------------------------
 # 0) ReflectionSchema — 파서와 엔진 런타임이 함께 지키는 리플렉션 스키마 헤더(헤더만, 구현 없음)
-# 파서는 Engine.dll 을 링크하지 않는다(순환). 예전에는 그러면서 Engine 헤더를 그냥 include 해 무엇에 기대는지 대상 그래프에 없었다 —
-# 이 목록이 파서가 읽어도 되는 Engine 헤더의 전부다(그 헤더들이 include 하는 Engine 헤더까지). 구현이 필요한 헤더를 여기 넣지 않는다(파서가 링크하지 못한다).
+# 파서는 Engine.dll 을 링크하지 않는다(순환). 그래도 `Source/` 가 Core 의 include 루트라 경로로는 나머지 Engine 헤더를 막지 못한다 —
+# 목록은 타깃 경계 표(`Scripts/generate/rules/TargetLayers.toml` 의 `[allow] reflectionparser`) 하나이고, 파서는 게이트 `reflectionparser` 를 받아
+# 목록 밖 Engine 헤더를 include 하면(전이도) 컴파일이 멈춘다. 연 헤더가 막힌 헤더를 include 하면 configure 가 멈춘다(`TargetLayers.py`).
 # ------------------------------------------------------------------------------
+if(NOT SW_TARGET_LAYER_ALLOW_reflectionparser)
+	message(FATAL_ERROR "SW_TARGET_LAYER_ALLOW_reflectionparser is empty - Scripts/generate/rules/TargetLayers.toml needs an [allow] reflectionparser list")
+endif()
+list(TRANSFORM SW_TARGET_LAYER_ALLOW_reflectionparser PREPEND "${CMAKE_SOURCE_DIR}/Source/" OUTPUT_VARIABLE listReflectionSchemaHeader)
 add_library(ReflectionSchema INTERFACE)
 target_sources(ReflectionSchema INTERFACE
 	FILE_SET HEADERS
 	BASE_DIRS "${CMAKE_SOURCE_DIR}/Source"
-	FILES
-		"${CMAKE_SOURCE_DIR}/Source/Engine/EngineMinimal.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Foundation/EngineDefines.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Foundation/Foundation.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionUnits.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionAnnotationKeys.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionConstants.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionContainers.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionEnumNames.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionIntellisense.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionMacros.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/ReflectionTypes.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/TextAddress.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/TypeCastHeader.h"
-		"${CMAKE_SOURCE_DIR}/Source/Engine/Reflection/TypeLookupCache.h"
+	FILES ${listReflectionSchemaHeader}
 )
 target_link_libraries(ReflectionSchema INTERFACE sw_public_source_includes)
 
@@ -48,6 +39,7 @@ sw_addExecutable(ReflectionParser ${PARSER_SOURCES})
 
 # 헤더는 같은 폴더면 짧은 이름, 아니면 `Source/` 기준 전체 경로다 — 이 폴더를 include 경로에 두지 않는다(`sw_verifySourceIncludeRoots`).
 target_link_libraries(ReflectionParser PRIVATE ReflectionSchema)
+sw_applyTargetLayerGate(ReflectionParser reflectionparser) # 목록(ReflectionSchema) 밖 Engine · 위 타깃 헤더를 막는다
 sw_addPCHEntryDirectory(ReflectionParser PRIVATE core "Core/pch.h")
 # 외부 헤더는 SYSTEM 으로 — 우리 경고 규칙(-Werror=covered-switch-default 등)이 그 안에 걸리지 않는다.
 target_include_directories(ReflectionParser SYSTEM PRIVATE "${swLibclangIncludeDir}" "${CMAKE_SOURCE_DIR}/ThirdParty/nlohmann-json")
