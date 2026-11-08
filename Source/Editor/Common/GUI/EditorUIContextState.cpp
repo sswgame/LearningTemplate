@@ -6,6 +6,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -108,6 +109,46 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 인자의 id 가 문서 패널이면 그것을, 아니면 이유를 적고 nullptr 를 돌려줍니다(`panel.saveDocument` · `panel.reloadDocument`). */
+            static IEditorDocumentPanel* findDocumentPanel( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext*        pContext  = editor::findSubsystem<EditorContext>();
+                IEditorPanel*         pPanel    = ( listArgument.size() == 1 && pContext != nullptr ) ? pContext->getSubsystem<EditorPanelManager>().findPanelByID( listArgument[0] ) : nullptr;
+                IEditorDocumentPanel* pDocument = pPanel != nullptr ? pPanel->asDocumentPanel() : nullptr;
+                if ( pDocument == nullptr )
+                    outReply = "no document panel '" + ( listArgument.empty() ? string{} : listArgument[0] ) + "'";
+                return pDocument;
+            }
+
+            /**
+             * @brief 문서 패널의 문서를 dirty 와 무관하게 저장합니다(Ctrl+S 는 dirty 일 때만 저장한다). 저장하지 못하면 실패입니다.
+             * @details 저장 왕복 시나리오가 연 문서를 고치지 않고 저장해 정규 꼴로 만든 뒤, 다시 읽고(`panel.reloadDocument`) 또 저장해 바이트를 견준다(`asset.expectScratchUnchanged`).
+             */
+            static bool runPanelSaveDocument( const vector<string>& listArgument, string& outReply )
+            {
+                IEditorDocumentPanel* pDocument = findDocumentPanel( listArgument, outReply );
+                if ( pDocument == nullptr )
+                    return false;
+                if ( pDocument->saveDocumentAndClearDirty() == false )
+                {
+                    outReply = "could not save the document of '" + listArgument[0] + "'";
+                    return false;
+                }
+                outReply = "saved the document of " + listArgument[0];
+                return true;
+            }
+
+            /** @brief 문서 패널의 문서를 dirty 와 무관하게 디스크에서 다시 읽습니다(`IEditorDocumentPanel::reloadDocument`). */
+            static bool runPanelReloadDocument( const vector<string>& listArgument, string& outReply )
+            {
+                IEditorDocumentPanel* pDocument = findDocumentPanel( listArgument, outReply );
+                if ( pDocument == nullptr )
+                    return false;
+                pDocument->reloadDocument();
+                outReply = "reloaded the document of " + listArgument[0];
+                return true;
+            }
+
             static bool runPanelClose( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext* pContext          = editor::findSubsystem<EditorContext>();
@@ -156,6 +197,10 @@ namespace sw::editor
                     "Undock an open panel and move it outside the main window on the next frame - it becomes its own OS window (an ImGui platform viewport)",
                     &EditorUIDevCommandsInternal::runPanelFloat );
     SW_DEV_COMMAND( PanelClose, "panel.close", "panel.close <panelID>", "Close a panel", &EditorUIDevCommandsInternal::runPanelClose );
+    SW_DEV_COMMAND( PanelSaveDocument, "panel.saveDocument", "panel.saveDocument <panelID>", "Save the document of a document panel whether or not it has unsaved edits (save round trips)",
+                    &EditorUIDevCommandsInternal::runPanelSaveDocument );
+    SW_DEV_COMMAND( PanelReloadDocument, "panel.reloadDocument", "panel.reloadDocument <panelID>", "Read the document of a document panel again from disk, dropping unsaved edits (save round trips)",
+                    &EditorUIDevCommandsInternal::runPanelReloadDocument );
     SW_DEV_COMMAND( PanelResetOptional, "panel.resetOptional", "panel.resetOptional",
                     "Close every panel that is not a core panel (tools, custom and extension panels) and replace it with a new instance, as in a new editor session",
                     &EditorUIDevCommandsInternal::runPanelResetOptional );

@@ -6,6 +6,7 @@
  */
 #include "pch.h"
 
+#include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Name/TagID.h"
@@ -53,6 +54,12 @@ namespace sw::editor
              *        `.gitignore` 의 `/Content/scratch/` 가 무시한다. 자동화가 쓰는 리소스 폴더는 이 도메인 하나다(결정 5-11).
              */
             static constexpr const utf8* kImportTempFolder = "scratch/import";
+
+            /** @brief `asset.snapshotScratch` 가 붙잡은 사본 파일의 글입니다(id → 글). 에디터 범위의 상태 저장소가 소유한다. */
+            struct ScratchSnapshotState
+            {
+                unordered_map<string, string> _mapTextByID{};
+            };
 
             /** @brief 마지막으로 `asset.open` 한 임시 에셋의 상태입니다. 감시 값 `Editor.TempAssetExists` 가 읽는다. 에디터 범위의 상태 저장소가 소유한다. */
             struct TempAssetState
@@ -176,6 +183,61 @@ namespace sw::editor
                     return false;
                 }
                 outReply = "overwrote " + listArgument[1] + " with " + listArgument[0];
+                return true;
+            }
+
+            /** @brief `scratch/` 아래 id 하나를 받아 그 사본 파일의 글을 읽습니다. id 가 틀렸거나 파일이 없으면 이유를 적고 false 입니다. */
+            [[nodiscard]] static bool readScratchText( const vector<string>& listArgument, const utf8* pCommand, string& outText, string& outReply )
+            {
+                const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
+                const bool   bBadID        = listArgument.size() != 1 || StringUtil::startsWith( listArgument[0], scratchPrefix ) == false || AssetPaths::hasParentDirectoryComponent( listArgument[0] );
+                if ( bBadID )
+                {
+                    outReply = string( pCommand ) + " takes one resource id under " + scratchPrefix;
+                    return false;
+                }
+                const optional<AbsolutePath> scratchPath = editor::getSubsystem<AssetPaths>().findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
+                if ( scratchPath.has_value() == false || FileUtil::readTextFile( scratchPath->str(), outText ) == false )
+                {
+                    outReply = "no scratch asset '" + listArgument[0] + "' (does the scenario declare <Scratch>?)";
+                    return false;
+                }
+                return true;
+            }
+
+            /** @brief 사본 파일 하나의 지금 글을 붙잡습니다 — 저장 왕복의 첫 저장 뒤에 부르고, 다시 읽고 저장한 뒤 `asset.expectScratchUnchanged` 로 견준다. */
+            static bool runSnapshotScratchAsset( const vector<string>& listArgument, string& outReply )
+            {
+                string text;
+                if ( readScratchText( listArgument, "asset.snapshotScratch", text, outReply ) == false )
+                    return false;
+                getEditorState<ScratchSnapshotState>()._mapTextByID.insert_or_assign( listArgument[0], std::move( text ) );
+                outReply = "snapshot of " + listArgument[0];
+                return true;
+            }
+
+            /**
+             * @brief 사본 파일의 글이 `asset.snapshotScratch` 때와 같은지 봅니다. 다르면(또는 붙잡은 적이 없으면) 실패입니다.
+             * @details 저장 → 다시 읽기 → 저장이 같은 바이트여야 한다 — 다르면 읽기가 저장한 값을 잃었거나(대칭이 아니다) 저장이 결정적이지 않다.
+             */
+            static bool runExpectScratchUnchanged( const vector<string>& listArgument, string& outReply )
+            {
+                string text;
+                if ( readScratchText( listArgument, "asset.expectScratchUnchanged", text, outReply ) == false )
+                    return false;
+                const unordered_map<string, string>& mapSnapshot = getEditorState<ScratchSnapshotState>()._mapTextByID;
+                const auto                           iter        = mapSnapshot.find( listArgument[0] );
+                if ( iter == mapSnapshot.end() )
+                {
+                    outReply = "no snapshot of '" + listArgument[0] + "' - run asset.snapshotScratch first";
+                    return false;
+                }
+                if ( iter->second != text )
+                {
+                    outReply = "'" + listArgument[0] + "' changed after save, reload and save again - loading drops or alters what saving wrote";
+                    return false;
+                }
+                outReply = listArgument[0] + " is unchanged";
                 return true;
             }
 
@@ -369,6 +431,12 @@ namespace sw::editor
     SW_DEV_COMMAND( OverwriteScratchAsset, "asset.overwriteScratch", "asset.overwriteScratch <scratch/...source id> <scratch/...target id>",
                     "Overwrite a scratch asset with another scratch file's text the way an outside editor saves (atomic write, the file watch reports it)",
                     &EditorAutomationAssetCommandsInternal::runOverwriteScratchAsset );
+    SW_DEV_COMMAND( SnapshotScratchAsset, "asset.snapshotScratch", "asset.snapshotScratch <scratch/...resource id>",
+                    "Remember the current text of a scratch asset (save round trips compare against it with asset.expectScratchUnchanged)",
+                    &EditorAutomationAssetCommandsInternal::runSnapshotScratchAsset );
+    SW_DEV_COMMAND( ExpectScratchUnchanged, "asset.expectScratchUnchanged", "asset.expectScratchUnchanged <scratch/...resource id>",
+                    "Fail unless a scratch asset still has the text asset.snapshotScratch remembered (save, reload and save again must give the same bytes)",
+                    &EditorAutomationAssetCommandsInternal::runExpectScratchUnchanged );
     SW_DEV_COMMAND( MakeTempFolder, "asset.makeTempFolder", "asset.makeTempFolder <folder>", "Create a temp folder under Saved/Automation/ (editor saves do not create missing folders)",
                     &EditorAutomationAssetCommandsInternal::runMakeTempFolder );
     SW_DEV_COMMAND( RemoveTempAsset, "asset.removeTemp", "asset.removeTemp <path>", "Remove a temp asset file under Saved/Automation/",
