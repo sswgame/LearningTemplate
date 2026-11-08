@@ -23,6 +23,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from common import AppArguments
 from common.ExitCode import ExitCode
 from common.HostPlatform import executableName
 from common.Paths import getProjectRoot
@@ -88,8 +89,8 @@ def _run(argument: argparse.Namespace) -> int:
     outDir.mkdir(parents=True, exist_ok=True)
     serverLog = outDir / "server.log"
     clientLog = outDir / "client.log"
-    serverArgs = [str(serverExe), f"-game={argument.game}", f"-server-config={serverConfig}"]
-    clientArgs = [str(clientExe), f"-game={argument.game}", "-gv_standardInputCommands=1", f"-gv_onlineServerAddress=127.0.0.1:{servicePort}"]
+    serverArgs = [str(serverExe), AppArguments.option("game", argument.game), AppArguments.option("server-config", serverConfig)]
+    clientArgs = [str(clientExe), AppArguments.option("game", argument.game), AppArguments.variable("gv_standardInputCommands", "1"), AppArguments.variable("gv_onlineServerAddress", f"127.0.0.1:{servicePort}")]
     print(f"[online-local] server: {' '.join(serverArgs)}")
     print(f"[online-local] client: {' '.join(clientArgs)}")
     with serverLog.open("wb") as serverOut, clientLog.open("wb") as clientOut:

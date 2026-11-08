@@ -23,7 +23,6 @@ import io
 import os
 import pathlib
 import re
-import shlex
 import shutil
 import signal
 import subprocess
@@ -32,6 +31,7 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
 from common.HostPlatform import isWindowsHost  # noqa: E402
+from common import AppArguments  # noqa: E402
 from dev import ScenarioCulprit  # noqa: E402
 
 DISTRO = 'Ubuntu-26.04'
@@ -223,20 +223,25 @@ def report_file(path):
     return 1 if failed else 0
 
 
+def window_arguments():
+    """Xvfb 화면 왼쪽 위에 창을 두고, 소프트웨어 렌더링만큼 벽시계 시한을 늘린다."""
+    return [AppArguments.option('WinX', 0), AppArguments.option('WinY', 0), AppArguments.variable('gv_scenarioWallScale', WALL_SCALE)]
+
+
 def run_chain(name, record, display):
     """체인 하나를 자기 Xvfb 에서 돌리고 (이름, 코드, 보고 글)을 돌려줍니다."""
     with Xvfb(display):
         env = scenario_env(display)
-        listing = subprocess.run(['ctest', '-V', '-N', '-R', f'^Scenario\\.{name}$'], cwd=RELEASE, env=env, capture_output=True, text=True).stdout
-        found = [l for l in listing.splitlines() if 'Test command:' in l and '-scenario=' in l]
-        if not found:
+        try:
+            chain_command = AppArguments.findChainCommand(pathlib.Path(RELEASE), name, env)
+        except AppArguments.AppArgumentError:
             return name, 1, '체인 없음'
-        command = re.sub(r'.*Test command: ', '', found[0])
         # 백엔드마다 프로세스를 나누는 대신 Vulkan 하나만 돈다(GL 교체 단계는 체인 안에서 돈다).
-        command = command.replace('"-scenario-backend-split" ', '').replace('-scenario-backends=all', '-scenario-backends=vk')
-        command += f' -WinX=0 -WinY=0 -gv_scenarioWallScale={WALL_SCALE}' + (' -scenario-update-golden' if record else '')
+        command = AppArguments.without(chain_command, 'scenario-backend-split', 'scenario-backends') + [AppArguments.option('scenario-backends', 'vk'), *window_arguments()]
+        if record:
+            command.append(AppArguments.flag('scenario-update-golden'))
         started = time.time()
-        result = subprocess.run(f'timeout 3000 {command}', shell=True, executable='/bin/bash', cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        result = subprocess.run(['timeout', '3000', *command], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
             reported = report(name)
@@ -260,8 +265,8 @@ def chain(arguments):
 def run_stage_set(names, env, log_name):
     """단계 이름 묶음을 부분 체인으로 돌린다. 건너뜀 · 실패가 있어도 끝까지 간다 - 없으면 뒤 단계가 돌지 않아 통과로 착각한다."""
     listed = ','.join(f'engine/automation/editor/{n}.scenario.xml' for n in names)
-    return subprocess.run(['timeout', '1200', './App', '-EnableEditor', f'-scenario={listed}', '-scenario-keep-going', '-unattended', '-scenario-backends=vk',
-                           '-WinX=0', '-WinY=0', f'-gv_scenarioWallScale={WALL_SCALE}', f'-log-file={log_name}.log'],
+    return subprocess.run(['timeout', '1200', './App', AppArguments.flag('EnableEditor'), AppArguments.option('scenario', listed), AppArguments.flag('scenario-keep-going'),
+                           AppArguments.flag('unattended'), AppArguments.option('scenario-backends', 'vk'), *window_arguments(), AppArguments.option('log-file', f'{log_name}.log')],
                           cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
 
 
@@ -286,18 +291,14 @@ def culprit(arguments):
     target_index, target_name = ScenarioCulprit.resolveTarget(names, target)
     with Xvfb():
         env = scenario_env(99)
-        listing = subprocess.run(['ctest', '-V', '-N', '-R', rf'^Scenario\.{pack}$'], cwd=RELEASE, env=env, capture_output=True, text=True).stdout
-        found = [l for l in listing.splitlines() if 'Test command:' in l and '-scenario=' in l]
-        if not found:
-            sys.exit(f'Scenario.{pack} 이 없다')
-        command = shlex.split(re.sub(r'.*Test command: ', '', found[0]))
-        paths = ScenarioCulprit.readChainStages(command)
-        base = [a for a in command if a not in ('-scenario-backend-split', '-scenario-keep-going') and not a.startswith(('-scenario-backends=', '-log-file=', '-scenario='))]
+        command = AppArguments.findChainCommand(pathlib.Path(RELEASE), pack, env)
+        paths = AppArguments.readChainStages(command)
+        base = AppArguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario')
 
         def fails(prefix):
             listed = ','.join(prefix + [paths[target_index]])
-            subprocess.run(['timeout', '1200', *base, f'-scenario={listed}', '-scenario-keep-going', '-scenario-backends=vk', '-WinX=0', '-WinY=0',
-                            f'-gv_scenarioWallScale={WALL_SCALE}', '-log-file=x_culprit.log'], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(['timeout', '1200', *base, AppArguments.option('scenario', listed), AppArguments.flag('scenario-keep-going'), AppArguments.option('scenario-backends', 'vk'),
+                            *window_arguments(), AppArguments.option('log-file', 'x_culprit.log')], cwd=f'{RELEASE}/Bin', env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             bad = ScenarioCulprit.stageFailed(open(f'{RELEASE}/Bin/x_culprit.vk.log', errors='replace').read(), target_name)
             print(len(prefix), prefix[0] if prefix else '-', '짐' if bad else '통과', flush=True)
             return bad

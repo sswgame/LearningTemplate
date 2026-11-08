@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from common import AppArguments
 from common.ExitCode import ExitCode
 from common.HostPlatform import executableName
 from common.Paths import getProjectRoot
@@ -132,11 +133,11 @@ def _runOnce(argument: argparse.Namespace, clientExe: Path, outDir: Path, port: 
     log = outDir / f"run{index}.log"
     clientArgs = [
         str(clientExe),
-        f"-game={argument.game}",
-        "-gv_standardInputCommands=1",
-        f"-gv_userSettingsFile={outDir / 'usersettings.json'}",
-        f"-gv_telemetryUploadEndpoint=http://127.0.0.1:{port}/telemetry",
-        f"-gv_crashUploadEndpoint=http://127.0.0.1:{port}/crash",
+        AppArguments.option("game", argument.game),
+        AppArguments.variable("gv_standardInputCommands", "1"),
+        AppArguments.variable("gv_userSettingsFile", outDir / 'usersettings.json'),
+        AppArguments.variable("gv_telemetryUploadEndpoint", f"http://127.0.0.1:{port}/telemetry"),
+        AppArguments.variable("gv_crashUploadEndpoint", f"http://127.0.0.1:{port}/crash"),
     ]
     print(f"[telemetry-local] run {index}: {' '.join(clientArgs)}")
     with log.open("wb") as clientOut:

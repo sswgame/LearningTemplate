@@ -25,6 +25,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from common import AppArguments
 from common.ExitCode import ExitCode
 from common.HostPlatform import executableName
 from common.Paths import getProjectRoot
@@ -131,8 +132,8 @@ def _run(argument: argparse.Namespace) -> int:
     serverConfig = writeConfigs(outDir, argument.game_port, argument.service_port)
     serverLog = outDir / "server.log"
     clientLog = outDir / "client.log"
-    serverArgs = [str(serverExe), f"-game={_kGame}", f"-server-config={serverConfig}"]
-    clientArgs = [str(clientExe), f"-game={_kGame}", "-gv_standardInputCommands=1"]
+    serverArgs = [str(serverExe), AppArguments.option("game", _kGame), AppArguments.option("server-config", serverConfig)]
+    clientArgs = [str(clientExe), AppArguments.option("game", _kGame), AppArguments.variable("gv_standardInputCommands", "1")]
     ticketCommand = (f"net.ticketconnect 127.0.0.1:{argument.service_port} {_kAccount} {_kPassword} {_kServerName} "
                      f"127.0.0.1:{argument.game_port}\n")
     print(f"[net-pair] server: {' '.join(serverArgs)}")
@@ -211,7 +212,7 @@ def _runMmo(argument: argparse.Namespace) -> int:
     outDir.mkdir(parents=True, exist_ok=True)
     serverConfig = writeConfigs(outDir, _kMmoGamePort, _kMmoServicePort, _kMmoAccount, _kMmoPassword, _kMmoServerName)
     serverLog = outDir / "server.log"
-    serverArgs = [str(serverExe), f"-game={_kMmoGame}", f"-server-config={serverConfig}", "-gv_valeMemoryProfiles=1"]
+    serverArgs = [str(serverExe), AppArguments.option("game", _kMmoGame), AppArguments.option("server-config", serverConfig), AppArguments.variable("gv_valeMemoryProfiles", "1")]
     print(f"[net-pair] server: {' '.join(serverArgs)}")
     listClientLog: list[Path] = []
     with serverLog.open("wb") as serverOut:
@@ -224,7 +225,7 @@ def _runMmo(argument: argparse.Namespace) -> int:
         for index, scenario in enumerate(_kMmoScenarios):
             clientLog = outDir / f"client{index + 1}.log"
             listClientLog.append(clientLog)
-            clientArgs = [str(clientExe), f"-game={_kMmoGame}", "-" + "scenario=" + scenario, "-unattended"]
+            clientArgs = [str(clientExe), AppArguments.option("game", _kMmoGame), AppArguments.option("scenario", scenario), AppArguments.flag("unattended")]
             print(f"[net-pair] client {index + 1}: {' '.join(clientArgs)}")
             with clientLog.open("wb") as clientOut:
                 client = subprocess.Popen(clientArgs, cwd=str(binDir), stdout=clientOut, stderr=subprocess.STDOUT)

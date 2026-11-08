@@ -31,6 +31,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
+from common import AppArguments  # noqa: E402
 from common.ExitCode import ExitCode  # noqa: E402
 from common.HostPlatform import isWindowsHost, kHost  # noqa: E402
 from common.Paths import getProjectRoot  # noqa: E402
@@ -97,7 +98,7 @@ def runApp(projectRoot: Path) -> SmokeResult:
     executable = findBinDir(projectRoot, preset) / f"App{kExecutableSuffix}"
     if executable.is_file() is False:
         return SmokeResult("App", logPath, False, f"{executable} is missing")
-    process = subprocess.Popen([str(executable), "-unattended", f"-log-file={logPath}"], cwd=projectRoot)
+    process = subprocess.Popen([str(executable), AppArguments.flag("unattended"), AppArguments.option("log-file", logPath)], cwd=projectRoot)
     try:
         process.wait(timeout=kAppRunSeconds)
         return SmokeResult("App", logPath, False, f"exited early with {process.returncode}")
@@ -119,7 +120,7 @@ def runServer(projectRoot: Path) -> SmokeResult:
     executable = findBinDir(projectRoot, preset) / f"Server{kExecutableSuffix}"
     if executable.is_file() is False:
         return SmokeResult("Server", logPath, False, f"{executable} is missing")
-    result = runProcess([executable, f"-gv_serverExitAfterTicks={kServerExitTicks}", f"-log-file={logPath}"], cwd=projectRoot,
+    result = runProcess([executable, AppArguments.variable("gv_serverExitAfterTicks", kServerExitTicks), AppArguments.option("log-file", logPath)], cwd=projectRoot,
                         timeoutSeconds=kExitTimeoutSeconds)
     return SmokeResult("Server", logPath, result.bSucceeded, f"exit code {result.returnCode}{' (timed out)' if result.bTimedOut else ''}")
 
@@ -131,7 +132,7 @@ def runNoAutomationScenario(projectRoot: Path) -> SmokeResult:
     executable = findBinDir(projectRoot, preset) / f"App{kExecutableSuffix}"
     if executable.is_file() is False:
         return SmokeResult("NoAutomation", logPath, False, f"{executable} is missing")
-    result = runProcess([executable, "-unattended", "-scenario=Test/Scenario/none.xml", f"-log-file={logPath}"], cwd=projectRoot,
+    result = runProcess([executable, AppArguments.flag("unattended"), AppArguments.option("scenario", "Test/Scenario/none.xml"), AppArguments.option("log-file", logPath)], cwd=projectRoot,
                         timeoutSeconds=kExitTimeoutSeconds)
     bLogged = logPath.is_file() and kNoAutomationError in logPath.read_text(encoding="utf-8", errors="replace")
     bPassed = result.bLaunched and not result.bTimedOut and result.returnCode != 0 and bLogged

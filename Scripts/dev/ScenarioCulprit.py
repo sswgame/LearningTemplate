@@ -1,7 +1,7 @@
 """체인에서만 지는 단계의 범인(앞 단계)을 이분 탐색한다 — Windows · Linux 공용(py -3 Scripts/dev/ScenarioCulprit.py <체인> <단계> [옵션]).
 
 체인을 처음부터 다시 돌리지 않고, 진 단계 앞의 단계들 중 뒤쪽 구간만 붙여 부분 체인을 돌려 가며 "어느 단계부터 붙이면 지는가" 를 찾는다.
-단계 목록 · 나머지 인자(게임 체인의 <Launch> 값 등)는 `Scenario.<체인>` 의 ctest 명령에서 그대로 가져오고 `-scenario=` 만 바꾼다 —
+단계 목록 · 나머지 인자(게임 체인의 <Launch> 값 등)는 `Scenario.<체인>` 의 ctest 명령에서 그대로 가져오고(`common/AppArguments`) `-scenario=` 만 바꾼다 —
 예전 Linux 판은 `engine/automation/editor/` 경로를 고정해 에디터 체인만 됐다. 단계 이름은 마지막 체인 로그(`chain stage i/n … (<이름>)`)의 순번으로
 ctest 목록의 경로와 짝짓는다(이름 속성은 경로에서 알 수 없다).
 
@@ -16,30 +16,15 @@ from __future__ import annotations
 import argparse
 import pathlib
 import re
-import shlex
 import subprocess
 import sys
 from typing import Callable, Sequence
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
+from common import AppArguments  # noqa: E402
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 kStagePattern = re.compile(r'chain stage (\d+)/\d+ \w+ \(([^)]+)\)')
-
-
-def findChainCommand(buildDir: pathlib.Path, chain: str) -> list[str]:
-    """`Scenario.<chain>` 의 ctest 명령(인자 목록)."""
-    listing = subprocess.run(['ctest', '-V', '-N', '-R', f'^Scenario\\.{re.escape(chain)}$'], cwd=buildDir, capture_output=True, text=True, encoding='utf-8', errors='replace').stdout
-    found = [line for line in listing.splitlines() if 'Test command:' in line and '-scenario=' in line]
-    if not found:
-        sys.exit(f'Scenario.{chain} 이 {buildDir} 에 없다')
-    return shlex.split(re.sub(r'.*Test command: ', '', found[0]).replace('\\', '/'))
-
-
-def readChainStages(command: Sequence[str]) -> list[str]:
-    """ctest 명령의 `-scenario=` 경로 목록(체인 순서)."""
-    for argument in command:
-        if argument.startswith('-scenario='):
-            return argument[len('-scenario='):].split(',')
-    sys.exit('ctest 명령에 -scenario= 가 없다')
 
 
 def readStageNames(logText: str) -> dict[int, str]:
@@ -113,18 +98,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     chainLog = logDir / f'Scenario.{options.chain}.{options.backend}.log'
     if not chainLog.is_file():
         sys.exit(f'{chainLog} 이 없다 — 그 백엔드로 체인을 먼저 돌린다')
-    command = findChainCommand(buildDir, options.chain)
-    paths = readChainStages(command)
+    command = AppArguments.findChainCommand(buildDir, options.chain)
+    paths = AppArguments.readChainStages(command)
     targetIndex, targetName = resolveTarget(readStageNames(chainLog.read_text(encoding='utf-8', errors='replace')), options.stage)
     if targetIndex >= len(paths):
         sys.exit(f'로그의 순번 {targetIndex + 1} 이 ctest 목록({len(paths)} 단계)을 넘는다 — 체인 로그가 지금 빌드와 다르다')
-    dropped = ('-unattended',) if options.show else ()
-    base = [a for a in command if a not in ('-scenario-backend-split', '-scenario-keep-going') + dropped and not a.startswith(('-scenario-backends=', '-log-file=', '-scenario='))]
+    dropped = ('unattended',) if options.show else ()
+    base = AppArguments.without(command, 'scenario-backend-split', 'scenario-keep-going', 'scenario-backends', 'log-file', 'scenario', *dropped)
     runLog = logDir / 'Culprit.log'
 
     def fails(prefix: list[str]) -> bool:
         listed = ','.join(prefix + [paths[targetIndex]])
-        subprocess.run(base + [f'-scenario={listed}', '-scenario-keep-going', f'-scenario-backends={options.backend}', f'-log-file={runLog}'], cwd=buildDir / 'Bin',
+        subprocess.run(base + [AppArguments.option('scenario', listed), AppArguments.flag('scenario-keep-going'), AppArguments.option('scenario-backends', options.backend),
+                               AppArguments.option('log-file', runLog)], cwd=buildDir / 'Bin',
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         text = (logDir / f'Culprit.{options.backend}.log').read_text(encoding='utf-8', errors='replace')
         bad = stageFailed(text, targetName)

@@ -7,20 +7,13 @@
 """
 import argparse
 import pathlib
-import re
-import shlex
 import subprocess
 import sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
+from common import AppArguments  # noqa: E402
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
-
-
-def find_chain_command(build_dir, chain):
-    listing = subprocess.run(['ctest', '-V', '-N', '-R', f'^Scenario\\.{chain}$'], cwd=build_dir, capture_output=True, text=True, encoding='utf-8', errors='replace').stdout
-    found = [line for line in listing.splitlines() if 'Test command:' in line and '-scenario=' in line]
-    if not found:
-        sys.exit(f'Scenario.{chain} 이 {build_dir} 에 없다')
-    return shlex.split(re.sub(r'.*Test command: ', '', found[0]).replace('\\', '/'))
 
 
 def main():
@@ -36,12 +29,12 @@ def main():
     build_dir = REPO / 'build' / options.preset
     code = 0
     for chain in options.chains if options.stages is None else ['editor']:
-        command = [a for a in find_chain_command(build_dir, chain) if a not in ('-unattended', '-scenario-backend-split') and not a.startswith(('-scenario-backends=', '-log-file='))]
+        command = AppArguments.without(AppArguments.findChainCommand(build_dir, chain), 'unattended', 'scenario-backend-split', 'scenario-backends', 'log-file')
         if options.stages is not None:
             listed = ','.join(f'engine/automation/editor/{n}.scenario.xml' for n in options.stages.split(','))
-            command = [f'-scenario={listed}' if a.startswith('-scenario=') else a for a in command]
+            command = AppArguments.without(command, 'scenario') + [AppArguments.option('scenario', listed)]
         log = build_dir / 'Testing' / 'Logs' / f'Watch.{chain}.log'
-        command += [f'-scenario-backends={options.backend}', f'-log-file={log}', f'-gv_scenarioPresentInterval={options.speed}']
+        command += [AppArguments.option('scenario-backends', options.backend), AppArguments.option('log-file', log), AppArguments.variable('gv_scenarioPresentInterval', options.speed)]
         print(f'{chain}: {options.preset} {options.backend} x{options.speed}', flush=True)
         rc = subprocess.run(command, cwd=build_dir / 'Bin').returncode
         print(f'{chain} rc={rc} 로그 {log}', flush=True)

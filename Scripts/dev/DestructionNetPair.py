@@ -21,6 +21,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from common import AppArguments
 from common.ExitCode import ExitCode
 from common.HostPlatform import executableName
 from common.Paths import getProjectRoot
@@ -114,9 +115,9 @@ def _runPair(argument: argparse.Namespace) -> int:
     serverLog = outDir / "server.log"
     clientLog = outDir / "client.log"
     port = argument.port
-    serverArgs = [str(serverExe), f"-game={_kGame}", f"-gv_firstScene={_kScene}", f"-gv_netListenPort={port}",
-                  f"-gv_serverExitAfterTicks={argument.server_ticks}"]
-    clientArgs = [str(clientExe), f"-game={_kGame}", f"-gv_firstScene={_kScene}", f"-gv_netConnectAddress=127.0.0.1:{port}"]
+    serverArgs = [str(serverExe), AppArguments.option("game", _kGame), AppArguments.variable("gv_firstScene", _kScene), AppArguments.variable("gv_netListenPort", port),
+                  AppArguments.variable("gv_serverExitAfterTicks", argument.server_ticks)]
+    clientArgs = [str(clientExe), AppArguments.option("game", _kGame), AppArguments.variable("gv_firstScene", _kScene), AppArguments.variable("gv_netConnectAddress", f"127.0.0.1:{port}")]
     print(f"[destruction-net] server: {' '.join(serverArgs)}")
     print(f"[destruction-net] client: {' '.join(clientArgs)}")
     with serverLog.open("wb") as serverOut, clientLog.open("wb") as clientOut:

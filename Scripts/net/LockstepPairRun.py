@@ -20,6 +20,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from common import AppArguments
 from common.ExitCode import ExitCode
 from common.HostPlatform import executableName
 from common.Paths import getProjectRoot
@@ -105,9 +106,9 @@ def _run(argument: argparse.Namespace) -> int:
     outDir = Path(argument.out) if argument.out else root / "Saved" / "LockstepPairRun"
     outDir.mkdir(parents=True, exist_ok=True)
     port = _freePort()
-    common = [f"-game={argument.game}", "-gv_standardInputCommands=1", "-gv_skirmishAutoPlay=1"]
-    hostArgs = [str(clientExe), *common, f"-gv_netListenPort={port}", f"-gv_userSettingsFile={outDir / 'host.usersettings.json'}"]
-    clientArgs = [str(clientExe), *common, f"-gv_netConnectAddress=127.0.0.1:{port}", f"-gv_userSettingsFile={outDir / 'client.usersettings.json'}"]
+    common = [AppArguments.option("game", argument.game), AppArguments.variable("gv_standardInputCommands", "1"), AppArguments.variable("gv_skirmishAutoPlay", "1")]
+    hostArgs = [str(clientExe), *common, AppArguments.variable("gv_netListenPort", port), AppArguments.variable("gv_userSettingsFile", outDir / 'host.usersettings.json')]
+    clientArgs = [str(clientExe), *common, AppArguments.variable("gv_netConnectAddress", f"127.0.0.1:{port}"), AppArguments.variable("gv_userSettingsFile", outDir / 'client.usersettings.json')]
     hostLog = outDir / "host.log"
     clientLog = outDir / "client.log"
     print(f"[lockstep-pair] host: {' '.join(hostArgs)}")

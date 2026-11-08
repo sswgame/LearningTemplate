@@ -13,6 +13,9 @@ import pathlib
 import subprocess
 import sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))   # Scripts
+from common import AppArguments  # noqa: E402
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PROBE_H = REPO / 'Source/Games/Empty/HotReloadProbeComponent.h'
 PROBE_CPP = REPO / 'Source/Games/Empty/HotReloadProbeComponent.cpp'
@@ -82,7 +85,7 @@ def main():
         sys.exit('SWGame 을 짓지 못했다')
     config = {
         'app': str(binDir / 'App.exe'), 'bin': str(binDir), 'repo': str(REPO), 'function': FUNCTION,
-        'args': [f'-scenario={scenario}', '-unattended', f'-log-file={logPath}'],
+        'args': [AppArguments.option('scenario', scenario), AppArguments.flag('unattended'), AppArguments.option('log-file', logPath)],
         'build': build, 'probe_h': str(PROBE_H), 'probe_cpp': str(PROBE_CPP),
         'patch': PATCH_CODE if options.variant == 'code' else PATCH_LAYOUT,
     }
