@@ -66,7 +66,10 @@
 	<Expect watch="Surface.DeformStamps" atLeast="20"/>
 	<Screenshot file="surface_deform.ppm"/>
 
-	<Wait frames="300"/>
+	<!-- 메워짐 5 초는 게임 시간이 드는 구간이라 시간 배율 4 로 돈다(75 프레임 = 게임 시간 5 초). 메워짐은 속도 × 게임 시간이라 배율과 무관하게 같은 깊이다(surfacefootprint 와 같다). -->
+	<Variable name="gv_timeScale" value="4"/>
+	<Wait frames="75"/>
+	<Variable name="gv_timeScale" value="1"/>
 	<Expect watch="Surface.DeformDepth" key="7.6 -2.2" atMost="0.035"/>
 	<Expect watch="Surface.DeformDepth" key="7.6 -2.2" atLeast="0.02"/>
 	<Expect watch="Surface.DeformHeld" equals="1"/>

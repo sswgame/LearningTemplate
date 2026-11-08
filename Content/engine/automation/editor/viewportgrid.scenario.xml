@@ -22,10 +22,14 @@
 	<Expect watch="Editor.GridStep" near="1" tolerance="0.001"/>
 	<Expect watch="Editor.GridMisplacedMajorLines" equals="0"/>
 	<!-- 높이 올라가면 간격이 10 m 가 된다 -->
+	<!-- 오른쪽 단추를 쥔 채 휠 네 눈금으로 비행 속도를 1.2^4 ≈ 2.07 배로 올리고(viewportnavigation 이 올려 둔 속도여도 상한 20 m/s 아래), 높이 110 m(간격 10 m 구간 100 ~ 1000 m 안)에 닿을 때까지 오른다.
+	     고정 460 프레임은 속도 5 m/s 를 가정했다 — 앞 시나리오가 속도를 바꾸면 높이가 달라졌다. 끝나면 같은 눈금만큼 내려 속도(에디터 설정에 남는다)를 되돌린다. -->
 	<EditorClick mark="sceneView.canvas" button="1" state="Down"/>
+	<EditorWheel dy="4"/>
 	<EditorKey key="Shift+E" state="Down"/>
-	<Wait frames="460"/>
+	<WaitUntil watch="Editor.SceneViewCameraY" atLeast="110" timeoutFrames="600"/>
 	<EditorKey key="Shift+E" state="Up"/>
+	<EditorWheel dy="-4"/>
 	<EditorClick mark="sceneView.canvas" button="1" state="Up"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewCameraY" atLeast="100"/>

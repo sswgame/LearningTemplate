@@ -3,22 +3,25 @@
   본 LOD — 부품을 몸 메시 하나로 합친 Quaternius 마을 사람 40 명(8 열 격자)에서, 먼 캐릭터의 몸 유닛이 합친 메시 LOD 단계마다 가중치 없는 본을 풀지 않는지(SkeletonBoneLOD::computeMeshMasks) 본다.
   비용은 감시 값 Animation.EvaluatedBones(포즈를 만든 유닛이 풀어 낸 본 수의 합)로 판정한다 — 마스크를 끈 값(gv_animationBoneLOD=0)과 달라야 한다.
   그림은 골든 없이 같은 실행의 두 장(끔 · 켬)으로 견준다 — 빠진 본은 그 메시 단계가 쓰지 않으므로 그림이 거의 같아야 한다(maxDiffering).
-  시간을 멈춰(gv_timeScale=0) 두 장의 포즈를 맞추고, 대기는 갱신 주기(1 · 2 · 4 · 8 · 16)의 배수(240)라 두 판정에서 포즈를 만드는 유닛 묶음이 같다.
+  시간을 멈춰(gv_timeScale=0) 두 장의 포즈를 맞추고, 대기는 갱신 주기(1 · 2 · 4 · 8 · 16)의 배수(48 — 가장 긴 주기 16 의 세 바퀴)라 두 판정에서 포즈를 만드는 유닛 묶음이 같다.
+  멈춘 뒤의 대기는 주기의 배수이기만 하면 길이가 판정을 바꾸지 않는다(시간이 멈춰 포즈 · LOD 가 그대로다) — 예전 240 은 같은 위상이다.
   실행: App -scenario=game/empty/automation/bonelod.scenario.xml -unattended (체인: ctest -R Scenario.game.empty.bonelod)
 -->
 <Scenario name="game.empty.bonelod" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="1800" input="exclusive">
 	<Launch variable="gv_stressTestCharacters" value="40"/>
 	<Launch variable="gv_stressTestCharacterColumns" value="8"/>
 	<Launch variable="gv_stressTestCharacterPrefab" value="common/prefabs/quaternius/townsfolk_merged.prefab.xml"/>
-	<Wait frames="240"/>
+	<!-- 캐릭터 에셋이 다 올라온 뒤 걷기가 잠깐 돌고(주기 16 의 여섯 바퀴) 멈춘다 — 멈춘 포즈는 두 장이 함께 쓰므로 어느 순간이든 판정이 같다. -->
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="96"/>
 	<Variable name="gv_timeScale" value="0"/>
 	<Variable name="gv_animationBoneLOD" value="0"/>
-	<Wait frames="240"/>
+	<Wait frames="48"/>
 	<Expect watch="Animation.PoseEvaluatedSkeletalMeshes" atLeast="1"/>
 	<Remember watch="Animation.EvaluatedBones" as="full"/>
 	<Screenshot file="bonelod_full.ppm"/>
 	<Variable name="gv_animationBoneLOD" value="1"/>
-	<Wait frames="240"/>
+	<Wait frames="48"/>
 	<Expect watch="Animation.EvaluatedBones" differsFrom="full"/>
 	<Screenshot file="bonelod_on.ppm"/>
 	<Wait frames="5"/>
