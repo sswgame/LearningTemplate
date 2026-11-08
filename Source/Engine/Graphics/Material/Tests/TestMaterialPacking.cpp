@@ -6,7 +6,7 @@
 
 #include "Engine/Graphics/Material/MaterialPacking.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
-#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 
 // MaterialPacking — 타입 표 · 정렬 · 리플렉션 타입 대응 · 불리언 글 · 폴백 원소 · 값을 바이트로 묶기. 리플렉션 enum(`_enumType` 이 등록된 이름인 경우)은 TypeRegistry 서브시스템이 있어야 해서 여기서 보지 않는다.
 

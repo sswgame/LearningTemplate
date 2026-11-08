@@ -78,7 +78,7 @@ namespace sw
             Element::of<&StatCatalog::loadStat>( "Stat" ),
             Element::of<&StatCatalog::loadAchievement>( "Achievement" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         return result._loadedCount;
     }
 

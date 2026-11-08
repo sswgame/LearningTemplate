@@ -324,12 +324,12 @@ SW_TEST_CASE_F( AppearanceSelectionTest, CodecRoundTripsAndKeepsUnknownNames )
     selection._listSlot.push_back( makeSlot( "Tail", "gone_item" ) );
 
     BitWriter writer;
-    AppearanceSelectionCodec::writeSelection( writer, selection, _database );
+    AppearanceSelection::writeSelection( writer, selection, _database );
     const vector<uint8> bytes = writer.releaseBytes();
 
     BitReader           reader( bytes.data(), static_cast<int32>( bytes.size() ) );
     AppearanceSelection decoded;
-    SW_REQUIRE_TRUE( AppearanceSelectionCodec::readSelection( reader, _database, decoded ) );
+    SW_REQUIRE_TRUE( AppearanceSelection::readSelection( reader, _database, decoded ) );
     SW_EXPECT_EQUAL( uint32( 77 ), decoded._seed );
     SW_EXPECT_TRUE( decoded._basePresetID == hashed_string( "Base" ) );
     SW_EXPECT_TRUE( decoded._schema == hashed_string( "Human" ) );
@@ -357,13 +357,13 @@ SW_TEST_CASE_F( AppearanceSelectionTest, CodecRoundTripsAndKeepsUnknownNames )
 SW_TEST_CASE_F( AppearanceSelectionTest, CodecRejectsBadInput )
 {
     BitWriter writer;
-    AppearanceSelectionCodec::writeSelection( writer, capture(), _database );
+    AppearanceSelection::writeSelection( writer, capture(), _database );
     const vector<uint8> bytes = writer.releaseBytes();
     AppearanceSelection decoded;
     for ( const size_t cut : { size_t( 1 ), bytes.size() / 2, bytes.size() - 1 } )
     {
         BitReader reader( bytes.data(), static_cast<int32>( cut ) );
-        SW_EXPECT_FALSE( AppearanceSelectionCodec::readSelection( reader, _database, decoded ) );
+        SW_EXPECT_FALSE( AppearanceSelection::readSelection( reader, _database, decoded ) );
     }
 
     BitWriter huge;
@@ -376,7 +376,7 @@ SW_TEST_CASE_F( AppearanceSelectionTest, CodecRejectsBadInput )
     huge.writeVarUint( 1025 ); // 카테고리 수 - 상한을 넘는다
     const vector<uint8> hugeBytes = huge.releaseBytes();
     BitReader           hugeReader( hugeBytes.data(), static_cast<int32>( hugeBytes.size() ) );
-    SW_EXPECT_FALSE( AppearanceSelectionCodec::readSelection( hugeReader, _database, decoded ) );
+    SW_EXPECT_FALSE( AppearanceSelection::readSelection( hugeReader, _database, decoded ) );
 }
 
 /** @brief [AppearanceSelectionTest] 공유 코드: 되돌아오고 앞뒤 공백은 무시한다. 망가진 글자 · 체크섬 · 빈 글은 이유와 함께 거절한다 */
@@ -384,22 +384,22 @@ SW_TEST_CASE_F( AppearanceSelectionTest, ShareCodeRoundTripAndRejects )
 {
     AppearanceSelection selection = capture();
     selection._customization.setOption( hashed_string( "Style" ), hashed_string( "Long" ) );
-    const string code = AppearanceShareCode::encode( selection, _database );
+    const string code = AppearanceSelection::encode( selection, _database );
     SW_REQUIRE_FALSE( code.empty() );
 
     AppearanceSelection decoded;
     string              reason;
-    SW_REQUIRE_TRUE( AppearanceShareCode::decode( string( "  " ) + code + "\n", _database, decoded, &reason ) );
+    SW_REQUIRE_TRUE( AppearanceSelection::decode( string( "  " ) + code + "\n", _database, decoded, &reason ) );
     SW_EXPECT_TRUE( decoded._basePresetID == hashed_string( "Base" ) );
-    SW_EXPECT_EQUAL( code, AppearanceShareCode::encode( decoded, _database ) );
+    SW_EXPECT_EQUAL( code, AppearanceSelection::encode( decoded, _database ) );
 
-    SW_EXPECT_FALSE( AppearanceShareCode::decode( "", _database, decoded, &reason ) );
+    SW_EXPECT_FALSE( AppearanceSelection::decode( "", _database, decoded, &reason ) );
     SW_EXPECT_EQUAL( string( "not a share code" ), reason );
-    SW_EXPECT_FALSE( AppearanceShareCode::decode( "***", _database, decoded, &reason ) );
+    SW_EXPECT_FALSE( AppearanceSelection::decode( "***", _database, decoded, &reason ) );
     SW_EXPECT_EQUAL( string( "not a share code" ), reason );
 
     string tampered               = code;
     tampered[tampered.size() / 2] = tampered[tampered.size() / 2] == 'A' ? 'B' : 'A';
-    SW_EXPECT_FALSE( AppearanceShareCode::decode( tampered, _database, decoded, &reason ) );
+    SW_EXPECT_FALSE( AppearanceSelection::decode( tampered, _database, decoded, &reason ) );
     SW_EXPECT_EQUAL( string( "checksum mismatch" ), reason );
 }

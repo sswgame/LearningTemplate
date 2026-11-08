@@ -10,8 +10,8 @@
 
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/ModelImporter.h"
-#include "Editor/Common/Asset/Model/VrmAvatarImporter.h"
-#include "Editor/Common/Asset/Model/VrmMaterialImporter.h"
+#include "Editor/Common/Asset/Model/ToonMaterialDef.h"
+#include "Editor/Common/Asset/Model/VrmAvatarDef.h"
 
 #include <cgltf.h>
 

@@ -607,7 +607,7 @@
 		</entry>
 		<entry key="EdCommon.AlignSelected" source="Align and distribute the selected objects (select two or more).">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.AssetSlotClear" source="Clear this asset reference.">
@@ -657,18 +657,18 @@
 		</entry>
 		<entry key="EdCommon.CameraBookmarkPosition" source="Position: {position}">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.CameraBookmarks" source="Camera bookmarks: move the view to a saved camera position (Ctrl+1~9)">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.CameraSpeed"
 		       source="Camera fly speed (0.5 to 20). Turning the mouse wheel while holding the right mouse button also changes it.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.CommandPaletteHint" source="Type a command or search objects... (Esc to close)">
@@ -694,17 +694,17 @@
 		</entry>
 		<entry key="EdCommon.CurveEditorHint" source="Click a key to edit it. Right-click to add a key. F fits the view.">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.CurveNoKeys" source="(no keys)">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.CurvePreviewEdit" source="Click to edit the curve">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.DataPathHint" source="Resource id, or drop an asset">
@@ -882,12 +882,12 @@
 		</entry>
 		<entry key="EdCommon.GridSnap" source="Grid snap: moved objects jump in steps of the grid size on the right.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.GridSnapSize" source="Grid snap step, in world units.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.LayoutNameHint" source="layout name">
@@ -1371,12 +1371,12 @@
 		</entry>
 		<entry key="EdCommon.RotationSnap" source="Rotation snap: rotations jump in steps of the angle on the right.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.RotationSnapSize" source="Rotation snap step, in degrees.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.SaveLayout"
@@ -1387,12 +1387,12 @@
 		</entry>
 		<entry key="EdCommon.ScaleSnap" source="Scale snap: scaling jumps in steps of the value on the right.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ScaleSnapSize" source="Scale snap step, as a scale factor.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.SearchAssetsHint" source="Search assets">
@@ -1430,7 +1430,7 @@
 		</entry>
 		<entry key="EdCommon.SurfaceSnap" source="Surface snap: objects you drag land on the surface under the cursor.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ThemeAccentColor"
@@ -1495,40 +1495,40 @@
 		</entry>
 		<entry key="EdCommon.View2D" source="2D view (XY plane grid). Click to switch to 3D.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.View3D" source="3D view (XZ plane grid). Click to switch to 2D.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ViewMode"
 		       source="Scene view mode: Lit / Unlit / Wireframe / Normals / Depth / Overdraw (the game view always draws Lit)">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ViewModeNoRenderer" source="The renderer is not attached yet.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ViewportGrid" source="Show or hide the ground grid.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ViewportHUD"
 		       source="Show the Debug HUD box in this view (view size and HUD sections). Right-click to choose sections.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.ViewportOrientationCube"
 		       source="Show or hide the orientation cube that shows which way the camera faces.">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdField.AccentColor" source="Accent Color">
@@ -2391,7 +2391,7 @@
 		</entry>
 		<entry key="EdLabel.AddKey" source="Add Key">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
@@ -2429,7 +2429,7 @@
 		</entry>
 		<entry key="EdLabel.AutoTangent" source="Auto Tangent">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.Bodies" source="Bodies">
@@ -2489,7 +2489,7 @@
 		</entry>
 		<entry key="EdLabel.DeleteKey" source="Delete Key">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.Duplicate" source="Duplicate">
@@ -2526,7 +2526,7 @@
 		</entry>
 		<entry key="EdLabel.FitView" source="Fit View">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.Follow" source="Follow">
@@ -3278,7 +3278,7 @@
 		</entry>
 		<entry key="EdText.CameraBookmarksCtrl19" source="Camera Bookmarks (Ctrl+1~9)">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.CinematicNote" source="Cinematic note">
@@ -3511,7 +3511,7 @@
 		</entry>
 		<entry key="EdText.Interpolation" source="Interpolation">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.Invoke" source="Invoke">
@@ -3561,7 +3561,7 @@
 		</entry>
 		<entry key="EdText.MultiObjectAlignment" source="Multi-Object Alignment">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.NetworkPresetsCouldNotBeReadSeeThe" source="Network presets could not be read - see the log">
@@ -4033,7 +4033,7 @@
 		</entry>
 		<entry key="EdText.Time" source="Time">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.TracyNotInThisBuild" source="Tracy: not in this build">
@@ -4103,7 +4103,7 @@
 		</entry>
 		<entry key="EdText.Value" source="Value">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
 			</origins>
 		</entry>
@@ -4477,93 +4477,93 @@
 		</entry>
 		<entry key="EdViewMode.Depth" source="Depth">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.LODFadeCode" source="LOD Fade Code">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.LODLevel" source="LOD Level">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.LightComplexity" source="Light Complexity">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.LightingOnly" source="Lighting Only">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.Lit" source="Lit">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.MarkerSlots" source="Marker Slots">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.Metallic" source="Metallic">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.Mipmaps" source="Mipmaps">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.Normals" source="Normals">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.Overdraw" source="Overdraw">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.Roughness" source="Roughness">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.ShadedWireframe" source="Shaded Wireframe">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.ShadingPath" source="Shading Path">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.Unlit" source="Unlit">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdViewMode.Wireframe" source="Wireframe">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportToolbar.cpp</item>
+				<item>Source/Editor/Viewport/ViewportToolbarSettings.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.BillboardLabel" source="Icons">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportBillboard.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportBillboardItem.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.BillboardTip"
 		       source="Shows components without a mesh (lights, cameras, audio) as icons you can click to select">
 			<origins>
-				<item>Source/Editor/Viewport/EditorViewportBillboard.cpp</item>
+				<item>Source/Editor/Viewport/EditorViewportBillboardItem.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVisualizer.BoxCollider2DLabel" source="Col">
@@ -9169,18 +9169,18 @@
 		<entry key="EditorTip.CurveKeyInterpolation"
 		       source="How the curve moves from this key to the next: Constant holds the value, Linear is a straight line, Cubic is a smooth spline.">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTip.CurveKeyTime"
 		       source="When the key sits on the curve's time axis. It stays between its neighbouring keys.">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTip.CurveKeyValue" source="The curve's value at this key.">
 			<origins>
-				<item>Source/Editor/Common/Widgets/EditorCurveEditor.cpp</item>
+				<item>Source/Editor/Common/Widgets/EditorCurveEditorState.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTip.DebugHUDCorner" source="Which screen corner the Debug HUD is anchored to.">

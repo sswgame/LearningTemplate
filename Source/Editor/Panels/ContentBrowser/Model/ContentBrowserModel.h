@@ -12,8 +12,8 @@
 #include "Editor/Common/Commands/Asset/EditorFolderListing.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserCrumb.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.h"
-#include "Editor/Panels/ContentBrowser/Model/ContentBrowserLogic.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserReferenceSearch.h"
 
 namespace sw::editor

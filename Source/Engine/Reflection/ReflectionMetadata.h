@@ -74,7 +74,7 @@ namespace sw
         string                               _displayName;
         string                               _tooltip;
         unordered_map<hashed_string, string> _mapCustomMeta;
-        /** @brief `EditCondition = "…"` 식입니다. 식이 거짓이면 인스펙터가 편집을 막습니다(`PropertyEditCondition`). */
+        /** @brief `EditCondition = "…"` 식입니다. 식이 거짓이면 인스펙터가 편집을 막습니다(`PropertyEditConditionExpr`). */
         string _editCondition;
         /** @brief `FileFilter = "*.png;*.dds"` 로 적은, 경로 필드가 받는 파일 형식입니다. */
         string _fileFilter;

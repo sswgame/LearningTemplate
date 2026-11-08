@@ -17,7 +17,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
-#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Serialization/Format/Archive.h"
 
 namespace sw

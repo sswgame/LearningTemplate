@@ -44,7 +44,7 @@ namespace sw
         };
         // **읽었는데 하나도 없으면 실패로 본다.** 성공으로 넘기면 `<Monster>` 를 `<monster>` 로 잘못 적은 오타 하나가
         // **텅 빈 카탈로그**가 되고, 모든 `findMonster` 가 nullptr 을 반환해서 그 널을 다루는 쪽이 조용히 아무것도 하지 않는다.
-        const uint32 loadedCount = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        const uint32 loadedCount = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
         if ( loadedCount > 0 )
             SW_LOG_INFO_ID( "MonsterCatalog.LoadedMonsterDefinitions", "Loaded %# monster definitions from %#", static_cast<int32>( loadedCount ), sourceName );
         return loadedCount;

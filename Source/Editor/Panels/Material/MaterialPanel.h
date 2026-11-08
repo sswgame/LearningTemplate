@@ -10,7 +10,7 @@ namespace sw::editor
     /**
      * @brief 마스터 머티리얼 XML을 편집합니다.
      * @details 미리보기는 둘이다 — 렌더러가 그리는 미리보기 씬의 구(`EditorPreviewPanel`, 메인 씬과 섞이지 않는다)와,
-     *          값으로 CPU 에서 셰이딩한 작은 구(`MaterialPreviewShading` — 렌더 타깃이 없을 때의 폴백이자 감시 값 `Editor.MaterialPreviewRedMinusBlue` 의 출처).
+     *          값으로 CPU 에서 셰이딩한 작은 구(`MaterialPreviewInputs` — 렌더 타깃이 없을 때의 폴백이자 감시 값 `Editor.MaterialPreviewRedMinusBlue` 의 출처).
      *          편집 사본 · 입력란 · 읽기 · 쓰기 · 미리보기 구 걸기는 `MaterialModel`(Model/, ImGui 없음)이 들고, 이 창은 위젯 · CPU 구 그리기와 문서 dirty · 되돌리기 기록만 맡는다.
      */
     class MaterialPanel : public EditorPreviewPanel
@@ -38,7 +38,7 @@ namespace sw::editor
         ToolAssetLoadResult loadDocument() override;
         /** @brief 편집 사본을 선택 오브젝트와 캐시 사본에 바로 보입니다. */
         void applyLivePreview();
-        /** @brief 머티리얼 값으로 셰이딩한 구 미리보기를 그립니다(`MaterialPreviewShading`). */
+        /** @brief 머티리얼 값으로 셰이딩한 구 미리보기를 그립니다(`MaterialPreviewInputs`). */
         void drawPreview();
         /** @brief 창이 접히거나 탭이 가려져 내용을 그리지 않은 프레임입니다 — 지난 미리보기 값은 더 이상 지금 문서의 것이 아니다. */
         void onPanelCollapsed() override { _model.beginFrame(); }

@@ -46,7 +46,7 @@ namespace sw
     /**
      * @class WesternDeedComponent
      * @brief 플레이어가 곁에서 할 수 있는 일 하나입니다. 무엇을 하는지는 데이터(`_kind` · `_id`)이고, 규칙은 `WesternOutlaw` 가 돌립니다. 언리얼 Smart Object 처럼 "세상 쪽에 놓인 행동" 의 자리입니다(기억에 의존한 비교).
-     * @details `useNearest` 가 거리(`_reach`)로 고른다(`InteractionSelector` — 상호작용과 같은 계산). `_bOnce` 면 한 번 쓴 뒤 다시 고르지 않고, `_bHideWhenUsed` 면 오브젝트를 끈다(잡은 사슴).
+     * @details `useNearest` 가 거리(`_reach`)로 고른다(`InteractionView` — 상호작용과 같은 계산). `_bOnce` 면 한 번 쓴 뒤 다시 고르지 않고, `_bHideWhenUsed` 면 오브젝트를 끈다(잡은 사슴).
      *          사용 횟수는 씬 상태에 실린다.
      */
     REFLECT( Category = "Western", DisplayName = "Western Deed", Tooltip = "A spot where the player can do something: a crime, a hunt, a sale, a meal" )

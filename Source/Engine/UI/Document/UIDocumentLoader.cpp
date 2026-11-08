@@ -42,6 +42,166 @@ namespace sw
                 string_view      _path;
                 UIDocumentAsset* _pAsset;
                 string*          _pError;
+
+                uint32 findLine( const XMLNode& node ) const
+                {
+                    return XMLDocument::computeLineNumber( _text, node.getSourceOffset() );
+                }
+
+                bool fail( const XMLNode& node, string_view message ) const
+                {
+                    *_pError = makeError( _path, findLine( node ), message );
+                    return false;
+                }
+
+                /** @brief 구조체나 컨테이너 필드 요소 @p source 를 @p destinationParent 아래로 옮겨 적고, 그 안의 바인딩 속성은 분리해 @p inoutNode 에 모읍니다. */
+                void copyPropertyElement( const XMLNode& source, const XMLNode& destinationParent, const string& path,
+                                          UIDocumentNode& inoutNode ) const
+                {
+                    const XMLNode destination = destinationParent.appendChild( source.getName() );
+                    for ( XMLAttribute attribute = source.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                    {
+                        if ( isBindingValue( attribute.getValue() ) )
+                        {
+                            inoutNode._listBinding.push_back(
+                                UIBindingDef{ path + "." + attribute.getName(), string( attribute.getValue() ), kInvalidWidgetID, findLine( source ) } );
+                            continue;
+                        }
+                        destination.appendAttribute( attribute.getName(), attribute.getValue() );
+                    }
+                    const utf8* pText = source.getText();
+                    if ( StringUtil::isNullOrEmpty( pText ) == false )
+                        destination.setValue( pText );
+                    for ( XMLNode child = source.findChild(); child.isValid(); child = child.findNextSibling() )
+                    {
+                        copyPropertyElement( child, destination, path + "." + child.getName(), inoutNode );
+                    }
+                }
+
+                /** @brief 위젯 요소 @p element 를 노드로 파싱해 문서 끝에 붙이고(자식은 그 뒤에), 그 인덱스를 @p outIndex 에 적습니다. */
+                [[nodiscard]] bool parseWidget( const XMLNode& element, uint32& outIndex ) const
+                {
+                    const utf8*     pTag  = element.getName();
+                    const TypeInfo* pType = findWidgetType( pTag );
+                    if ( pType == nullptr )
+                        return fail( element, string( "'" ) + pTag + "' is not a widget type" );
+
+                    UIDocumentNode node{};
+                    node._typeName   = pType->_name;
+                    node._sourceLine = findLine( element );
+
+                    // 위젯 PROPERTY 로 읽을 요소만 남긴 사본이다. 자식 위젯과 바인딩 식은 분리한다.
+                    XMLDocument   propertyDocument;
+                    const XMLNode propertyRoot = propertyDocument.appendRoot( pType->_name.c_str() );
+                    for ( XMLAttribute attribute = element.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                    {
+                        const utf8* pName = attribute.getName();
+                        if ( isKnownProperty( *pType, pName ) == false )
+                            return fail( element, string( "'" ) + pTag + "' has unknown attribute '" + pName + "'" );
+                        if ( isBindingValue( attribute.getValue() ) )
+                        {
+                            node._listBinding.push_back( UIBindingDef{ string( pName ), string( attribute.getValue() ), kInvalidWidgetID, node._sourceLine } );
+                            continue;
+                        }
+                        propertyRoot.appendAttribute( pName, attribute.getValue() );
+                    }
+
+                    vector<XMLNode> listChildWidget;
+                    for ( XMLNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
+                    {
+                        const utf8* pChildName = child.getName();
+                        if ( findWidgetType( pChildName ) != nullptr )
+                        {
+                            listChildWidget.push_back( child );
+                            continue;
+                        }
+                        if ( isKnownProperty( *pType, pChildName ) == false )
+                            return fail( child, string( "'" ) + pTag + "' has unknown element <" + pChildName + ">" );
+                        copyPropertyElement( child, propertyRoot, string( pChildName ), node );
+                    }
+
+                    if ( pType->isDerivedFrom( UserWidget::StaticType() ) )
+                    {
+                        if ( listChildWidget.empty() == false )
+                            return fail( listChildWidget.front(), string( "'" ) + pTag + "' cannot have child widgets - its content is the _document" );
+                        const utf8* pFragment = element.findAttribute( kFragmentProperty );
+                        if ( StringUtil::isNullOrEmpty( pFragment ) || isBindingValue( pFragment ) )
+                            return fail( element, string( "'" ) + pTag + "' needs a _document path" );
+                        node._fragment               = normalizeDocumentPath( pFragment );
+                        vector<string>& listFragment = _pAsset->_listFragment;
+                        if ( VectorUtil::contains( listFragment, node._fragment ) == false )
+                            listFragment.push_back( node._fragment );
+                    }
+                    else if ( listChildWidget.empty() == false && pType->isDerivedFrom( PanelWidget::StaticType() ) == false )
+                        return fail( listChildWidget.front(), string( "'" ) + pTag + "' cannot have children - it is not a panel" );
+
+                    node._propertyXML = propertyDocument.saveToString();
+                    outIndex          = static_cast<uint32>( _pAsset->_listNode.size() );
+                    _pAsset->_listNode.push_back( std::move( node ) );
+                    for ( const XMLNode& child : listChildWidget )
+                    {
+                        uint32 childIndex{ 0 };
+                        if ( parseWidget( child, childIndex ) == false )
+                            return false;
+                        _pAsset->_listNode[outIndex]._listChildIndex.push_back( childIndex );
+                    }
+                    return true;
+                }
+
+                /** @brief 화면 서술 요소를 읽습니다. 모르는 속성이나 읽지 못한 값은 오류입니다. */
+                [[nodiscard]] bool parseScreenDesc( const XMLNode& element ) const
+                {
+                    vector<SchemaOrphanValue> listOrphan;
+                    const SoftReadResult      result = XMLSerializer::deserializeSoft( &_pAsset->_screenDesc, *UIScreenDef::StaticType(), element.toString(), &listOrphan );
+                    return acceptSoftRead( element, "UIScreenDef", result, listOrphan );
+                }
+
+                /** @brief 스타일 시트 목록(`<item>경로</item>`)을 읽습니다. */
+                [[nodiscard]] bool parseStyleSheetList( const XMLNode& element ) const
+                {
+                    for ( XMLNode item = element.findChild(); item.isValid(); item = item.findNextSibling() )
+                    {
+                        if ( StringUtil::equals( item.getName(), kItemElement ) == false )
+                            return fail( item, string( "_listStyleSheet has unknown element <" ) + item.getName() + ">" );
+                        const utf8* pPath = item.getText();
+                        if ( StringUtil::isNullOrEmpty( pPath ) )
+                            return fail( item, "_listStyleSheet has an empty item" );
+                        _pAsset->_listStyleSheet.push_back( normalizeDocumentPath( pPath ) );
+                    }
+                    return true;
+                }
+
+                /** @brief 애니메이션 목록(`<UIAnimation>` 요소들)을 읽습니다. 모르는 필드, 읽지 못한 값, 이름 없음, 겹친 이름은 오류입니다. */
+                [[nodiscard]] bool parseAnimationList( const XMLNode& element ) const
+                {
+                    UIAnimationList           list{};
+                    vector<SchemaOrphanValue> listOrphan;
+                    const string              text   = string( "<UIAnimationList>" ) + element.toString() + "</UIAnimationList>";
+                    const SoftReadResult      result = XMLSerializer::deserializeSoft( &list, *UIAnimationList::StaticType(), text, &listOrphan );
+                    if ( acceptSoftRead( element, "_listAnimation", result, listOrphan ) == false )
+                        return false;
+                    vector<UIAnimation>& listAnimation = _pAsset->_listAnimation;
+                    for ( UIAnimation& animation : list._listAnimation )
+                    {
+                        if ( animation._name.empty() )
+                            return fail( element, "_listAnimation has an animation without _name" );
+                        for ( const UIAnimation& other : listAnimation )
+                        {
+                            if ( other._name == animation._name )
+                                return fail( element, string( "_listAnimation has two animations named '" ) + animation._name.c_str() + "'" );
+                        }
+                        listAnimation.push_back( std::move( animation ) );
+                    }
+                    return true;
+                }
+
+                /** @brief 소프트 읽기에 문제가 없으면 true 입니다. 있으면 모두 적어 실패로 남기고 false 입니다(`describeSoftReadProblem`). */
+                [[nodiscard]] bool acceptSoftRead( const XMLNode& element, const string_view what, const SoftReadResult result,
+                                                   const vector<SchemaOrphanValue>& listOrphan ) const
+                {
+                    const string problem = describeSoftReadProblem( what, result, listOrphan );
+                    return problem.empty() || fail( element, problem );
+                }
             };
 
             /** @brief 생성 한 번의 컨텍스트입니다. 조각 캐시, 지금 지나는 조각 연쇄(자기를 다시 부르는지 판정), 바인딩, 오류를 가집니다. */
@@ -51,6 +211,114 @@ namespace sw
                 vector<string>        _listFragmentStack;
                 vector<UIBindingDef>* _pOutListBinding;
                 string*               _pError;
+
+                unique_ptr<Widget> failInstantiate( const UIDocumentAsset& document, const UIDocumentNode& node, string_view message )
+                {
+                    *_pError = makeError( document._path, node._sourceLine, message );
+                    return {};
+                }
+
+                /** @brief 노드 @p nodeIndex 와 그 아래를 만듭니다. @p namePrefix 가 있으면(조각 안) 이름을 `접두.이름` 으로 감쌉니다. */
+                unique_ptr<Widget> instantiateNode( const UIDocumentAsset& document, uint32 nodeIndex, const string& namePrefix )
+                {
+                    unique_ptr<Widget>    widget;
+                    const UIDocumentNode& node               = document._listNode[nodeIndex];
+                    const TypeInfo*       pType              = engine::getSubsystem<TypeRegistry>().findType( node._typeName );
+                    const bool            bNotWidgetTypeName = pType == nullptr || pType->isAlive() == false || pType->isDerivedFrom( Widget::StaticType() ) == false;
+                    if ( bNotWidgetTypeName )
+                    {
+                        widget = failInstantiate( document, node, string( "'" ) + node._typeName.c_str() + "' is not a widget type" );
+                        return widget;
+                    }
+
+                    widget = UIDocumentLoader::createWidget( *pType );
+                    if ( widget == nullptr )
+                    {
+                        widget = failInstantiate( document, node, string( "'" ) + node._typeName.c_str() + "' cannot be created (abstract or no default constructor)" );
+                        return widget;
+                    }
+                    const TypeInfo* pDynamicType = widget->getTypeInfo();
+                    if ( pDynamicType == nullptr || pDynamicType->_name != pType->_name )
+                    {
+                        widget = failInstantiate( document, node, string( "'" ) + node._typeName.c_str() + "' does not override getTypeInfo()" );
+                        return widget;
+                    }
+
+                    vector<SchemaOrphanValue> listOrphan;
+                    const SoftReadResult      result  = XMLSerializer::deserializeSoft( widget.get(), *pType, node._propertyXML, &listOrphan );
+                    const string              problem = describeSoftReadProblem( string( "'" ) + node._typeName.c_str() + "'", result, listOrphan );
+                    if ( problem.empty() == false )
+                    {
+                        widget = failInstantiate( document, node, problem );
+                        return widget;
+                    }
+
+                    if ( namePrefix.empty() == false && widget->getName().empty() == false )
+                        widget->setName( hashed_string( namePrefix + "." + widget->getName().c_str() ) );
+                    for ( const UIBindingDef& binding : node._listBinding )
+                    {
+                        UIBindingDef instanceBinding = binding;
+                        instanceBinding._widget      = widget->getID();
+                        _pOutListBinding->push_back( std::move( instanceBinding ) );
+                    }
+
+                    PanelWidget* pPanel = castTo<PanelWidget>( widget.get() );
+                    if ( node._fragment.empty() == false )
+                    {
+                        if ( pPanel == nullptr )
+                        {
+                            widget = failInstantiate( document, node, "a fragment needs a panel to hold it" );
+                            return widget;
+                        }
+                        vector<string>& listStack  = _listFragmentStack;
+                        const bool      bRecursive = VectorUtil::contains( listStack, node._fragment );
+                        const bool      bTooDeep   = listStack.size() >= kMaxFragmentDepth;
+                        if ( bRecursive || bTooDeep )
+                        {
+                            string chain;
+                            for ( const string& path : listStack )
+                            {
+                                chain += path + " -> ";
+                            }
+                            chain += node._fragment;
+                            widget = failInstantiate( document, node, ( bRecursive ? "fragment includes itself: " : "fragments nest too deep: " ) + chain );
+                            return widget;
+                        }
+                        string                                  fragmentError;
+                        const shared_ptr<const UIDocumentAsset> fragment = _pCache->findOrLoad( node._fragment, fragmentError );
+                        if ( fragment == nullptr )
+                        {
+                            widget = failInstantiate( document, node, "fragment '" + node._fragment + "' is not loaded: " + fragmentError );
+                            return widget;
+                        }
+                        // 조각 안의 이름은 이 위젯의 (감싼) 이름으로 감싼다. 이름 없는 조각은 바깥 접두를 그대로 넘긴다.
+                        string childPrefix = namePrefix;
+                        if ( widget->getName().empty() == false )
+                            childPrefix = widget->getName().c_str();
+                        listStack.push_back( node._fragment );
+                        unique_ptr<Widget> child = instantiateNode( *fragment, 0, childPrefix );
+                        listStack.pop_back();
+                        if ( child == nullptr )
+                        {
+                            widget.reset();
+                            return widget;
+                        }
+                        pPanel->addChild( std::move( child ) );
+                        return widget;
+                    }
+
+                    for ( const uint32 childIndex : node._listChildIndex )
+                    {
+                        unique_ptr<Widget> child = instantiateNode( document, childIndex, namePrefix );
+                        if ( child == nullptr )
+                        {
+                            widget.reset();
+                            return widget;
+                        }
+                        pPanel->addChild( std::move( child ) );
+                    }
+                    return widget;
+                }
             };
 
             /** @brief `<경로>:<줄>: <이유>` 형식의 문구입니다. 줄을 모르면(0) 경로만 적습니다. */
@@ -62,14 +330,6 @@ namespace sw
                 error += ": ";
                 error += message;
                 return error;
-            }
-
-            static uint32 findLine( const ParseContext& context, const XMLNode& node ) { return XMLDocument::computeLineNumber( context._text, node.getSourceOffset() ); }
-
-            static bool fail( const ParseContext& context, const XMLNode& node, string_view message )
-            {
-                *context._pError = makeError( context._path, findLine( context, node ), message );
-                return false;
             }
 
             /** @brief 속성 값이 바인딩 식(`{` 로 시작)인지 판정합니다. 식은 값으로 읽지 않고 분리합니다. */
@@ -103,149 +363,8 @@ namespace sw
                 return false;
             }
 
-            /** @brief 구조체나 컨테이너 필드 요소 @p source 를 @p destinationParent 아래로 옮겨 적고, 그 안의 바인딩 속성은 분리해 @p inoutNode 에 모읍니다. */
-            static void copyPropertyElement( const ParseContext& context, const XMLNode& source, const XMLNode& destinationParent, const string& path,
-                                             UIDocumentNode& inoutNode )
-            {
-                const XMLNode destination = destinationParent.appendChild( source.getName() );
-                for ( XMLAttribute attribute = source.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
-                {
-                    if ( isBindingValue( attribute.getValue() ) )
-                    {
-                        inoutNode._listBinding.push_back(
-                            UIBindingDef{ path + "." + attribute.getName(), string( attribute.getValue() ), kInvalidWidgetID, findLine( context, source ) } );
-                        continue;
-                    }
-                    destination.appendAttribute( attribute.getName(), attribute.getValue() );
-                }
-                const utf8* pText = source.getText();
-                if ( StringUtil::isNullOrEmpty( pText ) == false )
-                    destination.setValue( pText );
-                for ( XMLNode child = source.findChild(); child.isValid(); child = child.findNextSibling() )
-                {
-                    copyPropertyElement( context, child, destination, path + "." + child.getName(), inoutNode );
-                }
-            }
-
             /** @brief 경로를 정규화해 적습니다(캐시 키와 조각 연쇄 비교용). */
             static string normalizeDocumentPath( string_view path ) { return FileUtil::normalizePath( path ); }
-
-            /** @brief 위젯 요소 @p element 를 노드로 파싱해 문서 끝에 붙이고(자식은 그 뒤에), 그 인덱스를 @p outIndex 에 적습니다. */
-            [[nodiscard]] static bool parseWidget( const ParseContext& context, const XMLNode& element, uint32& outIndex )
-            {
-                const utf8*     pTag  = element.getName();
-                const TypeInfo* pType = findWidgetType( pTag );
-                if ( pType == nullptr )
-                    return fail( context, element, string( "'" ) + pTag + "' is not a widget type" );
-
-                UIDocumentNode node{};
-                node._typeName   = pType->_name;
-                node._sourceLine = findLine( context, element );
-
-                // 위젯 PROPERTY 로 읽을 요소만 남긴 사본이다. 자식 위젯과 바인딩 식은 분리한다.
-                XMLDocument   propertyDocument;
-                const XMLNode propertyRoot = propertyDocument.appendRoot( pType->_name.c_str() );
-                for ( XMLAttribute attribute = element.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
-                {
-                    const utf8* pName = attribute.getName();
-                    if ( isKnownProperty( *pType, pName ) == false )
-                        return fail( context, element, string( "'" ) + pTag + "' has unknown attribute '" + pName + "'" );
-                    if ( isBindingValue( attribute.getValue() ) )
-                    {
-                        node._listBinding.push_back( UIBindingDef{ string( pName ), string( attribute.getValue() ), kInvalidWidgetID, node._sourceLine } );
-                        continue;
-                    }
-                    propertyRoot.appendAttribute( pName, attribute.getValue() );
-                }
-
-                vector<XMLNode> listChildWidget;
-                for ( XMLNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
-                {
-                    const utf8* pChildName = child.getName();
-                    if ( findWidgetType( pChildName ) != nullptr )
-                    {
-                        listChildWidget.push_back( child );
-                        continue;
-                    }
-                    if ( isKnownProperty( *pType, pChildName ) == false )
-                        return fail( context, child, string( "'" ) + pTag + "' has unknown element <" + pChildName + ">" );
-                    copyPropertyElement( context, child, propertyRoot, string( pChildName ), node );
-                }
-
-                if ( pType->isDerivedFrom( UserWidget::StaticType() ) )
-                {
-                    if ( listChildWidget.empty() == false )
-                        return fail( context, listChildWidget.front(), string( "'" ) + pTag + "' cannot have child widgets - its content is the _document" );
-                    const utf8* pFragment = element.findAttribute( kFragmentProperty );
-                    if ( StringUtil::isNullOrEmpty( pFragment ) || isBindingValue( pFragment ) )
-                        return fail( context, element, string( "'" ) + pTag + "' needs a _document path" );
-                    node._fragment               = normalizeDocumentPath( pFragment );
-                    vector<string>& listFragment = context._pAsset->_listFragment;
-                    if ( VectorUtil::contains( listFragment, node._fragment ) == false )
-                        listFragment.push_back( node._fragment );
-                }
-                else if ( listChildWidget.empty() == false && pType->isDerivedFrom( PanelWidget::StaticType() ) == false )
-                    return fail( context, listChildWidget.front(), string( "'" ) + pTag + "' cannot have children - it is not a panel" );
-
-                node._propertyXML = propertyDocument.saveToString();
-                outIndex          = static_cast<uint32>( context._pAsset->_listNode.size() );
-                context._pAsset->_listNode.push_back( std::move( node ) );
-                for ( const XMLNode& child : listChildWidget )
-                {
-                    uint32 childIndex{ 0 };
-                    if ( parseWidget( context, child, childIndex ) == false )
-                        return false;
-                    context._pAsset->_listNode[outIndex]._listChildIndex.push_back( childIndex );
-                }
-                return true;
-            }
-
-            /** @brief 화면 서술 요소를 읽습니다. 모르는 속성이나 읽지 못한 값은 오류입니다. */
-            [[nodiscard]] static bool parseScreenDesc( const ParseContext& context, const XMLNode& element )
-            {
-                vector<SchemaOrphanValue> listOrphan;
-                const SoftReadResult      result = XMLSerializer::deserializeSoft( &context._pAsset->_screenDesc, *UIScreenDef::StaticType(), element.toString(), &listOrphan );
-                return acceptSoftRead( context, element, "UIScreenDef", result, listOrphan );
-            }
-
-            /** @brief 스타일 시트 목록(`<item>경로</item>`)을 읽습니다. */
-            [[nodiscard]] static bool parseStyleSheetList( const ParseContext& context, const XMLNode& element )
-            {
-                for ( XMLNode item = element.findChild(); item.isValid(); item = item.findNextSibling() )
-                {
-                    if ( StringUtil::equals( item.getName(), kItemElement ) == false )
-                        return fail( context, item, string( "_listStyleSheet has unknown element <" ) + item.getName() + ">" );
-                    const utf8* pPath = item.getText();
-                    if ( StringUtil::isNullOrEmpty( pPath ) )
-                        return fail( context, item, "_listStyleSheet has an empty item" );
-                    context._pAsset->_listStyleSheet.push_back( normalizeDocumentPath( pPath ) );
-                }
-                return true;
-            }
-
-            /** @brief 애니메이션 목록(`<UIAnimation>` 요소들)을 읽습니다. 모르는 필드, 읽지 못한 값, 이름 없음, 겹친 이름은 오류입니다. */
-            [[nodiscard]] static bool parseAnimationList( const ParseContext& context, const XMLNode& element )
-            {
-                UIAnimationList           list{};
-                vector<SchemaOrphanValue> listOrphan;
-                const string              text   = string( "<UIAnimationList>" ) + element.toString() + "</UIAnimationList>";
-                const SoftReadResult      result = XMLSerializer::deserializeSoft( &list, *UIAnimationList::StaticType(), text, &listOrphan );
-                if ( acceptSoftRead( context, element, "_listAnimation", result, listOrphan ) == false )
-                    return false;
-                vector<UIAnimation>& listAnimation = context._pAsset->_listAnimation;
-                for ( UIAnimation& animation : list._listAnimation )
-                {
-                    if ( animation._name.empty() )
-                        return fail( context, element, "_listAnimation has an animation without _name" );
-                    for ( const UIAnimation& other : listAnimation )
-                    {
-                        if ( other._name == animation._name )
-                            return fail( context, element, string( "_listAnimation has two animations named '" ) + animation._name.c_str() + "'" );
-                    }
-                    listAnimation.push_back( std::move( animation ) );
-                }
-                return true;
-            }
 
             /** @brief orphan 하나를 `이름 = '텍스트'` 로 적습니다(안쪽 요소면 타입 이름이 앞에 붙습니다). */
             static string describeOrphan( const SchemaOrphanValue& orphan )
@@ -274,122 +393,6 @@ namespace sw
                 if ( result == SoftReadResult::Rejected )
                     problem += ( problem.empty() ? string( what ) + " has" : string( "; and" ) ) + " a field that cannot be read or is outside its PROPERTY( Min, Max )";
                 return problem;
-            }
-
-            /** @brief 소프트 읽기에 문제가 없으면 true 입니다. 있으면 모두 적어 실패로 남기고 false 입니다(`describeSoftReadProblem`). */
-            [[nodiscard]] static bool acceptSoftRead( const ParseContext& context, const XMLNode& element, const string_view what, const SoftReadResult result,
-                                                      const vector<SchemaOrphanValue>& listOrphan )
-            {
-                const string problem = describeSoftReadProblem( what, result, listOrphan );
-                return problem.empty() || fail( context, element, problem );
-            }
-
-            static unique_ptr<Widget> failInstantiate( InstantiateContext& context, const UIDocumentAsset& document, const UIDocumentNode& node, string_view message )
-            {
-                *context._pError = makeError( document._path, node._sourceLine, message );
-                return {};
-            }
-
-            /** @brief 노드 @p nodeIndex 와 그 아래를 만듭니다. @p namePrefix 가 있으면(조각 안) 이름을 `접두.이름` 으로 감쌉니다. */
-            static unique_ptr<Widget> instantiateNode( InstantiateContext& context, const UIDocumentAsset& document, uint32 nodeIndex, const string& namePrefix )
-            {
-                unique_ptr<Widget>    widget;
-                const UIDocumentNode& node               = document._listNode[nodeIndex];
-                const TypeInfo*       pType              = engine::getSubsystem<TypeRegistry>().findType( node._typeName );
-                const bool            bNotWidgetTypeName = pType == nullptr || pType->isAlive() == false || pType->isDerivedFrom( Widget::StaticType() ) == false;
-                if ( bNotWidgetTypeName )
-                {
-                    widget = failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' is not a widget type" );
-                    return widget;
-                }
-
-                widget = UIDocumentLoader::createWidget( *pType );
-                if ( widget == nullptr )
-                {
-                    widget = failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' cannot be created (abstract or no default constructor)" );
-                    return widget;
-                }
-                const TypeInfo* pDynamicType = widget->getTypeInfo();
-                if ( pDynamicType == nullptr || pDynamicType->_name != pType->_name )
-                {
-                    widget = failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' does not override getTypeInfo()" );
-                    return widget;
-                }
-
-                vector<SchemaOrphanValue> listOrphan;
-                const SoftReadResult      result  = XMLSerializer::deserializeSoft( widget.get(), *pType, node._propertyXML, &listOrphan );
-                const string              problem = describeSoftReadProblem( string( "'" ) + node._typeName.c_str() + "'", result, listOrphan );
-                if ( problem.empty() == false )
-                {
-                    widget = failInstantiate( context, document, node, problem );
-                    return widget;
-                }
-
-                if ( namePrefix.empty() == false && widget->getName().empty() == false )
-                    widget->setName( hashed_string( namePrefix + "." + widget->getName().c_str() ) );
-                for ( const UIBindingDef& binding : node._listBinding )
-                {
-                    UIBindingDef instanceBinding = binding;
-                    instanceBinding._widget      = widget->getID();
-                    context._pOutListBinding->push_back( std::move( instanceBinding ) );
-                }
-
-                PanelWidget* pPanel = castTo<PanelWidget>( widget.get() );
-                if ( node._fragment.empty() == false )
-                {
-                    if ( pPanel == nullptr )
-                    {
-                        widget = failInstantiate( context, document, node, "a fragment needs a panel to hold it" );
-                        return widget;
-                    }
-                    vector<string>& listStack  = context._listFragmentStack;
-                    const bool      bRecursive = VectorUtil::contains( listStack, node._fragment );
-                    const bool      bTooDeep   = listStack.size() >= kMaxFragmentDepth;
-                    if ( bRecursive || bTooDeep )
-                    {
-                        string chain;
-                        for ( const string& path : listStack )
-                        {
-                            chain += path + " -> ";
-                        }
-                        chain += node._fragment;
-                        widget = failInstantiate( context, document, node, ( bRecursive ? "fragment includes itself: " : "fragments nest too deep: " ) + chain );
-                        return widget;
-                    }
-                    string                                  fragmentError;
-                    const shared_ptr<const UIDocumentAsset> fragment = context._pCache->findOrLoad( node._fragment, fragmentError );
-                    if ( fragment == nullptr )
-                    {
-                        widget = failInstantiate( context, document, node, "fragment '" + node._fragment + "' is not loaded: " + fragmentError );
-                        return widget;
-                    }
-                    // 조각 안의 이름은 이 위젯의 (감싼) 이름으로 감싼다. 이름 없는 조각은 바깥 접두를 그대로 넘긴다.
-                    string childPrefix = namePrefix;
-                    if ( widget->getName().empty() == false )
-                        childPrefix = widget->getName().c_str();
-                    listStack.push_back( node._fragment );
-                    unique_ptr<Widget> child = instantiateNode( context, *fragment, 0, childPrefix );
-                    listStack.pop_back();
-                    if ( child == nullptr )
-                    {
-                        widget.reset();
-                        return widget;
-                    }
-                    pPanel->addChild( std::move( child ) );
-                    return widget;
-                }
-
-                for ( const uint32 childIndex : node._listChildIndex )
-                {
-                    unique_ptr<Widget> child = instantiateNode( context, document, childIndex, namePrefix );
-                    if ( child == nullptr )
-                    {
-                        widget.reset();
-                        return widget;
-                    }
-                    pPanel->addChild( std::move( child ) );
-                }
-                return widget;
             }
         };
     } // namespace
@@ -422,14 +425,14 @@ namespace sw
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
             if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey ) == false )
-                return Internal::fail( context, root, string( "UIDocument has unknown attribute '" ) + attribute.getName() + "'" );
+                return context.fail( root, string( "UIDocument has unknown attribute '" ) + attribute.getName() + "'" );
             int32 version{ 0 };
             if ( StringUtil::parseInt( string( attribute.getValue() ), version ) == false || version != static_cast<int32>( UIDocumentAsset::kVersion ) )
-                return Internal::fail( context, root, formatToString( "%#%#' is not supported (expected %#)", string( "_schemaVersion '" ), attribute.getValue(), UIDocumentAsset::kVersion ) );
+                return context.fail( root, formatToString( "%#%#' is not supported (expected %#)", string( "_schemaVersion '" ), attribute.getValue(), UIDocumentAsset::kVersion ) );
             bVersioned = true;
         }
         if ( bVersioned == false )
-            return Internal::fail( context, root, "UIDocument needs _schemaVersion" );
+            return context.fail( root, "UIDocument needs _schemaVersion" );
 
         bool bScreenDesc{ false };
         bool bRootWidget{ false };
@@ -439,35 +442,35 @@ namespace sw
             if ( StringUtil::equals( pName, Internal::kScreenDescElement ) )
             {
                 if ( bScreenDesc )
-                    return Internal::fail( context, child, "UIDocument has more than one UIScreenDef" );
+                    return context.fail( child, "UIDocument has more than one UIScreenDef" );
                 bScreenDesc = true;
-                if ( Internal::parseScreenDesc( context, child ) == false )
+                if ( context.parseScreenDesc( child ) == false )
                     return false;
                 continue;
             }
             if ( StringUtil::equals( pName, Internal::kStyleSheetListElement ) )
             {
-                if ( Internal::parseStyleSheetList( context, child ) == false )
+                if ( context.parseStyleSheetList( child ) == false )
                     return false;
                 continue;
             }
             if ( StringUtil::equals( pName, Internal::kAnimationListElement ) )
             {
-                if ( Internal::parseAnimationList( context, child ) == false )
+                if ( context.parseAnimationList( child ) == false )
                     return false;
                 continue;
             }
             if ( Internal::findWidgetType( pName ) == nullptr )
-                return Internal::fail( context, child, string( "UIDocument has unknown element <" ) + pName + "> (not a widget type)" );
+                return context.fail( child, string( "UIDocument has unknown element <" ) + pName + "> (not a widget type)" );
             if ( bRootWidget )
-                return Internal::fail( context, child, "UIDocument has more than one root widget" );
+                return context.fail( child, "UIDocument has more than one root widget" );
             bRootWidget = true;
             uint32 rootIndex{ 0 };
-            if ( Internal::parseWidget( context, child, rootIndex ) == false )
+            if ( context.parseWidget( child, rootIndex ) == false )
                 return false;
         }
         if ( bRootWidget == false )
-            return Internal::fail( context, root, "UIDocument has no root widget" );
+            return context.fail( root, "UIDocument has no root widget" );
 
         outAsset = std::move( asset );
         return true;
@@ -501,7 +504,7 @@ namespace sw
         }
         const size_t                                 bindingStart = outListBinding.size();
         UIDocumentLoaderInternal::InstantiateContext context{ &cache, vector<string>{ document._path }, &outListBinding, &outError };
-        unique_ptr<Widget>                           root = UIDocumentLoaderInternal::instantiateNode( context, document, 0, string{} );
+        unique_ptr<Widget>                           root = context.instantiateNode( document, 0, string{} );
         if ( root == nullptr )
             outListBinding.resize( bindingStart );
         return root;

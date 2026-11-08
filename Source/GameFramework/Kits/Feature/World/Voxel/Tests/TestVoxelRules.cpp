@@ -7,7 +7,7 @@
 #include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelBody.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelHotbar.h"
-#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelRaycast.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelRayHit.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelTerrain.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
 
@@ -217,7 +217,7 @@ SW_TEST_CASE( VoxelRaycastTest, HitsTheFirstSolidWithFaceAndPlaceCell )
     VoxelFixture rig;
     SW_REQUIRE_TRUE( rig._world.setBlock( 5, 2, 2, rig._stone ) );
     VoxelRayHit hit;
-    SW_REQUIRE_TRUE( VoxelRaycast::raycast( rig._world, float3{ 0.5f, 2.5f, 2.5f }, float3{ 1.0f, 0.0f, 0.0f }, 10.0f, hit ) );
+    SW_REQUIRE_TRUE( VoxelRayHit::raycast( rig._world, float3{ 0.5f, 2.5f, 2.5f }, float3{ 1.0f, 0.0f, 0.0f }, 10.0f, hit ) );
     SW_EXPECT_TRUE( hit._block == ( VoxelCoord{ 5, 2, 2 } ) );
     SW_EXPECT_TRUE( hit._previous == ( VoxelCoord{ 4, 2, 2 } ) ); // 블록을 놓을 자리다
     SW_EXPECT_TRUE( hit._normal == ( VoxelCoord{ -1, 0, 0 } ) );
@@ -231,11 +231,11 @@ SW_TEST_CASE( VoxelRaycastTest, RangeAndBadInputsMiss )
     SW_REQUIRE_TRUE( rig._world.setBlock( 5, 2, 2, rig._stone ) );
     VoxelRayHit  hit;
     const float3 origin{ 0.5f, 2.5f, 2.5f };
-    SW_EXPECT_FALSE( VoxelRaycast::raycast( rig._world, origin, float3{ 1.0f, 0.0f, 0.0f }, 4.0f, hit ) ); // 닿기 전에 끝난다
-    SW_EXPECT_FALSE( VoxelRaycast::raycast( rig._world, origin, float3{ -1.0f, 0.0f, 0.0f }, 10.0f, hit ) );
-    SW_EXPECT_FALSE( VoxelRaycast::raycast( rig._world, origin, float3{ 0.0f, 0.0f, 0.0f }, 10.0f, hit ) );
-    SW_EXPECT_FALSE( VoxelRaycast::raycast( rig._world, origin, float3{ 1.0f, 0.0f, 0.0f }, 0.0f, hit ) );
-    SW_EXPECT_FALSE( VoxelRaycast::raycast( rig._world, float3{ 0.5f, 90.0f, 0.5f }, float3{ 0.0f, 1.0f, 0.0f }, 100.0f, hit ) ); // 위로 빠져나간다
+    SW_EXPECT_FALSE( VoxelRayHit::raycast( rig._world, origin, float3{ 1.0f, 0.0f, 0.0f }, 4.0f, hit ) ); // 닿기 전에 끝난다
+    SW_EXPECT_FALSE( VoxelRayHit::raycast( rig._world, origin, float3{ -1.0f, 0.0f, 0.0f }, 10.0f, hit ) );
+    SW_EXPECT_FALSE( VoxelRayHit::raycast( rig._world, origin, float3{ 0.0f, 0.0f, 0.0f }, 10.0f, hit ) );
+    SW_EXPECT_FALSE( VoxelRayHit::raycast( rig._world, origin, float3{ 1.0f, 0.0f, 0.0f }, 0.0f, hit ) );
+    SW_EXPECT_FALSE( VoxelRayHit::raycast( rig._world, float3{ 0.5f, 90.0f, 0.5f }, float3{ 0.0f, 1.0f, 0.0f }, 100.0f, hit ) ); // 위로 빠져나간다
 }
 
 SW_TEST_CASE( VoxelRaycastTest, WaterStopsOnlyWhenAsked )
@@ -245,9 +245,9 @@ SW_TEST_CASE( VoxelRaycastTest, WaterStopsOnlyWhenAsked )
     SW_REQUIRE_TRUE( rig._world.setBlock( 4, 2, 2, rig._stone ) );
     const float3 origin{ 0.5f, 2.5f, 2.5f };
     VoxelRayHit  hit;
-    SW_REQUIRE_TRUE( VoxelRaycast::raycast( rig._world, origin, float3{ 1.0f, 0.0f, 0.0f }, 10.0f, hit ) );
+    SW_REQUIRE_TRUE( VoxelRayHit::raycast( rig._world, origin, float3{ 1.0f, 0.0f, 0.0f }, 10.0f, hit ) );
     SW_EXPECT_EQUAL( 4, hit._block._x );
-    SW_REQUIRE_TRUE( VoxelRaycast::raycast( rig._world, origin, float3{ 1.0f, 0.0f, 0.0f }, 10.0f, hit, true ) );
+    SW_REQUIRE_TRUE( VoxelRayHit::raycast( rig._world, origin, float3{ 1.0f, 0.0f, 0.0f }, 10.0f, hit, true ) );
     SW_EXPECT_EQUAL( 2, hit._block._x );
 }
 
@@ -256,7 +256,7 @@ SW_TEST_CASE( VoxelRaycastTest, StartingInsideABlockHasNoFace )
     VoxelFixture rig;
     SW_REQUIRE_TRUE( rig._world.setBlock( 1, 1, 1, rig._stone ) );
     VoxelRayHit hit;
-    SW_REQUIRE_TRUE( VoxelRaycast::raycast( rig._world, float3{ 1.5f, 1.5f, 1.5f }, float3{ 0.0f, 1.0f, 0.0f }, 5.0f, hit ) );
+    SW_REQUIRE_TRUE( VoxelRayHit::raycast( rig._world, float3{ 1.5f, 1.5f, 1.5f }, float3{ 0.0f, 1.0f, 0.0f }, 5.0f, hit ) );
     SW_EXPECT_TRUE( hit._normal == ( VoxelCoord{ 0, 0, 0 } ) );
     SW_EXPECT_NEAR( 0.0f, hit._distance, 1.0e-6f );
 }
@@ -456,14 +456,14 @@ SW_TEST_CASE( VoxelTerrainTest, SameSeedSameWorldAndColumnsAreLayered )
 
     VoxelTerrainSettings settings;
     settings._treeChance            = 0.0f;
-    const VoxelTerrainReport report = VoxelTerrainGenerator::fillWorld( rig._world, settings );
+    const VoxelTerrainReport report = VoxelTerrainSettings::fillWorld( rig._world, settings );
     SW_EXPECT_TRUE( report._minHeight <= report._maxHeight );
     SW_EXPECT_EQUAL( uint32( 0 ), report._treeCount );
     SW_EXPECT_TRUE( rig._world.getBlock( 3, 0, 3 ) == bedrock );
     SW_EXPECT_TRUE( rig._world.countBlocks( grass ) > 0 );
     SW_EXPECT_TRUE( rig._world.countBlocks( dirt ) > 0 );
 
-    const int32 surface = VoxelTerrainGenerator::computeSurfaceHeight( 3, 3, settings );
+    const int32 surface = VoxelTerrainSettings::computeSurfaceHeight( 3, 3, settings );
     SW_EXPECT_TRUE( report._minHeight <= surface && surface <= report._maxHeight );
     SW_EXPECT_EQUAL( surface, rig._world.findTopSolidY( 3, 3 ) ); // 나무가 없으면 맨 위 단단한 블록이 지면이다
 
@@ -472,6 +472,6 @@ SW_TEST_CASE( VoxelTerrainTest, SameSeedSameWorldAndColumnsAreLayered )
     (void)again.addBlock( "dirt", true, true );
     (void)again.addBlock( "bedrock", true, true );
     (void)again.addBlock( "sand", true, true );
-    (void)VoxelTerrainGenerator::fillWorld( again._world, settings );
+    (void)VoxelTerrainSettings::fillWorld( again._world, settings );
     SW_EXPECT_TRUE( VoxelFixture::save( again._world ) == VoxelFixture::save( rig._world ) );
 }

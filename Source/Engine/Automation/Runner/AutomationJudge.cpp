@@ -15,7 +15,7 @@
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/Runner/AutomationExitCode.h"
-#include "Engine/Automation/Runner/AutomationImageMetric.h"
+#include "Engine/Automation/Runner/AutomationImage.h"
 #include "Engine/Automation/Runner/AutomationRunnerParams.h"
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
 #include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
@@ -355,10 +355,10 @@ namespace sw
         AutomationImage                          reducedFirst;
         AutomationImage                          reducedSecond;
         AutomationImageDifference                difference;
-        const bool                               bRegionRead = params._region.empty() || AutomationImageMetric::tryParseRegion( params._region, region );
-        const bool                               bCompared   = bRegionRead && AutomationImageMetric::loadPpm( context.resolveOutputPath( params._first ), first, error ) &&
-                               AutomationImageMetric::loadPpm( context.resolveOutputPath( params._second ), second, error ) && AutomationImageMetric::reduce( first, region, reducedFirst, error ) &&
-                               AutomationImageMetric::reduce( second, region, reducedSecond, error ) && AutomationImageMetric::compare( reducedFirst, reducedSecond, difference, error );
+        const bool                               bRegionRead = params._region.empty() || AutomationImage::tryParseRegion( params._region, region );
+        const bool                               bCompared   = bRegionRead && AutomationImage::loadPpm( context.resolveOutputPath( params._first ), first, error ) &&
+                               AutomationImage::loadPpm( context.resolveOutputPath( params._second ), second, error ) && AutomationImage::reduce( first, region, reducedFirst, error ) &&
+                               AutomationImage::reduce( second, region, reducedSecond, error ) && AutomationImage::compare( reducedFirst, reducedSecond, difference, error );
         if ( bCompared == false )
         {
             context.recordFailure( step, "could not compare the images: " + error );
@@ -416,7 +416,7 @@ namespace sw
         const string    file = step.readValidatedFields<AutomationExpectImageParams>()._file;
         AutomationImage image;
         AutomationImage reduced;
-        if ( AutomationImageMetric::loadPpm( context.resolveOutputPath( file ), image, error ) == false || AutomationImageMetric::reduce( image, args._region, reduced, error ) == false )
+        if ( AutomationImage::loadPpm( context.resolveOutputPath( file ), image, error ) == false || AutomationImage::reduce( image, args._region, reduced, error ) == false )
         {
             context.recordFailure( step, "could not read the image: " + error );
             return;
@@ -433,9 +433,9 @@ namespace sw
         vector<uint8>   listBytes;
         AutomationImage golden;
         const bool      bHasGolden = AssetIO::hasAsset( AssetID{ goldenID } ) && AssetIO::readBinaryAsset( AssetID{ goldenID }, listBytes ) &&
-                                AutomationImageMetric::parsePpm( listBytes.data(), listBytes.size(), golden, error );
+                                AutomationImage::parsePpm( listBytes.data(), listBytes.size(), golden, error );
         AutomationImageDifference difference;
-        const bool                bCompared = bHasGolden && AutomationImageMetric::compare( reduced, golden, difference, error );
+        const bool                bCompared = bHasGolden && AutomationImage::compare( reduced, golden, difference, error );
         const bool                bMatches  = bCompared && difference._differingFraction <= args._tolerance;
         if ( bCompared )
         {
@@ -450,7 +450,7 @@ namespace sw
         {
             // 골든 쓰기는 이 모드에서만 연다(`AutomationScratch` 의 쓰기 문 — 평소에는 리소스 루트에 쓰지 못한다). 쓴 파일은 보고에 남아 리뷰한다.
             vector<uint8> listEncoded;
-            AutomationImageMetric::encodePpm( reduced, listEncoded );
+            AutomationImage::encodePpm( reduced, listEncoded );
             const std::optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( goldenID );
             if ( path.has_value() == false || FileUtil::ensureParentDirectoryExists( path->str() ) == false || FileUtil::writeFile( path->str(), listEncoded.data(), listEncoded.size() ) == false )
             {

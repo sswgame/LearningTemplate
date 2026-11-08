@@ -268,7 +268,7 @@ namespace sw
                         campaign._startMs        = request._startMs;
                         campaign._endMs          = request._endMs;
                         campaign._actorID        = command._adminID;
-                        staged                   = ServiceMailCampaignTable::stageCreate( campaign, inoutTransaction ) ? AdminResult::Ok : AdminOutcome::fail( OnlineError::kInvalidRequest );
+                        staged                   = ServiceMailCampaign::stageCreate( campaign, inoutTransaction ) ? AdminResult::Ok : AdminOutcome::fail( OnlineError::kInvalidRequest );
                         audit._action            = "admin.campaign";
                         audit._subject           = "campaign." + ServiceKeyUtil::makeHex64( request._batchID );
                         break;

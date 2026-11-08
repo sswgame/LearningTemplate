@@ -9,8 +9,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
-#include "Core/Log/LogLineFormat.h"
 #include "Core/Log/Logger.h"
+#include "Core/Log/ParsedLogLine.h"
 #include "Core/Math/SecureRandom.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/UDPNetTransport.h"
@@ -561,7 +561,7 @@ namespace sw::editor
                 continue;
             }
             // Sync 탭이 물은 오브젝트별 해시(한 줄)도 보관만 한다 — 오브젝트 수만큼 길다.
-            if ( SceneStateHash::tryParseObjectReportLine( line, child._objectHashTick, child._listObjectHash ) )
+            if ( SceneObjectHash::tryParseObjectReportLine( line, child._objectHashTick, child._listObjectHash ) )
             {
                 // 바란 틱보다 이른 답(서버는 멈췄고 클라이언트가 아직 따라오는 중)은 답으로 세지 않고 다시 묻는다 — 비교는 두 쪽이 같은 틱이어야 한다.
                 // 상한에 닿으면 이른 답을 그대로 넘긴다: 비교가 "틱이 다르다" 로 실패해 드러난다(숨기지 않는다).
@@ -575,10 +575,10 @@ namespace sw::editor
                 ++child._objectHashReportCount;
                 continue;
             }
-            // 자식의 로그 줄은 그 수준 · id 로 다시 쓴다 — 시나리오 · 게이트가 자식 줄도 id 로 센다(`LogLineFormat` 이 쓰는 쪽과 같은 모양으로 읽는다).
+            // 자식의 로그 줄은 그 수준 · id 로 다시 쓴다 — 시나리오 · 게이트가 자식 줄도 id 로 센다(`ParsedLogLine` 이 쓰는 쪽과 같은 모양으로 읽는다).
             // 자식의 오류 줄은 경고로 남긴다. 에디터 로그의 오류 수는 에디터 자신의 오류만 센다. 로그 줄이 아닌 출력은 `NetPlay.ChildOutput` 이다.
             ParsedLogLine parsed;
-            if ( LogLineFormat::tryParse( line, parsed ) )
+            if ( ParsedLogLine::tryParse( line, parsed ) )
             {
                 // id 는 정적 글자여야 한다(`LogEntry::_pID`) — intern 한 이름의 글자는 프로세스가 끝날 때까지 산다.
                 const utf8*    pID   = parsed._id.empty() ? "NetPlay.ChildOutput" : hashed_string( parsed._id ).c_str();

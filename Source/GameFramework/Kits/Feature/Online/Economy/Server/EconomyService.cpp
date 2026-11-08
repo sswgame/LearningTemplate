@@ -15,7 +15,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/OnlinePushRelay.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAudit.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Config/DevOnlineExtension.h"
 #include "GameFramework/Runtime/Online/Config/RemoteConfig.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
@@ -506,7 +506,7 @@ namespace sw
         _store.submit( []( IServiceStoreConnection& connection )
         {
             ServiceStoreRead<LedgerAuditReport> read;
-            read._result = LedgerAudit::computeReport( connection, read._value );
+            read._result = LedgerAuditReport::computeReport( connection, read._value );
             return read;
         }, [this]( const ServiceStoreRead<LedgerAuditReport>& read, ServiceStoreCompletion completion )
         { completeLedgerAudit( read._result, read._value, completion ); } );

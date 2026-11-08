@@ -16,7 +16,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
-#include "Editor/Common/GUI/Theme/EditorComponentIcon.h"
+#include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorComponentMenu.h"
@@ -39,7 +39,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
 #include "Editor/Panels/Inspector/Model/InspectorMultiSelection.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
-#include "Editor/Panels/Inspector/Model/PropertyEditCondition.h"
+#include "Editor/Panels/Inspector/Model/PropertyEditConditionExpr.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -485,7 +485,7 @@ namespace sw::editor
             const utf8* pComponentName = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str() : "Component";
             // 카드 헤더 앞에 컴포넌트 아이콘을 둔다. 유니티 Inspector 와 언리얼 Details 의 컴포넌트 헤더에 해당한다
             fixed_string<constant::buffer::kMax128> cardTitle;
-            formatstring( cardTitle.data(), cardTitle.capacity(), "%#  %#", EditorComponentIcon::findRow( pComp->getTypeInfo() )._pGlyph, pComponentName );
+            formatstring( cardTitle.data(), cardTitle.capacity(), "%#  %#", EditorComponentIconRow::findRow( pComp->getTypeInfo() )._pGlyph, pComponentName );
             const utf8* pName = cardTitle.c_str();
             // 체크박스는 컴포넌트 자기 비트다. 실효값(isActive, 소유 오브젝트의 계층 활성까지 포함)을 읽어 그대로 다시 쓰면
             // 꺼진 부모 아래의 컴포넌트는 인스펙터에 보이기만 해도 자기 비트가 꺼지므로 주의한다. 쓰는 것도 값이 바뀐 때 한 번이다(아래).

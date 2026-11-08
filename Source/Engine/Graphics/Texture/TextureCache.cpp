@@ -27,7 +27,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
-#include "Engine/Graphics/Texture/TextureFormatSelection.h"
+#include "Engine/Graphics/Texture/TextureFormatFamily.h"
 #include "Engine/Profiling/FrameProfiler.h"
 
 #include <condition_variable>
@@ -339,7 +339,7 @@ namespace sw
     void TextureCache::bindDevice( IRHIDevice* pDevice )
     {
         // 접미사를 먼저 정한다 — 장치를 본 워커 읽기가 이 장치의 형식을 읽게 한다.
-        string formatSuffix = pDevice != nullptr ? TextureFormatSelection::selectVariantSuffix( *pDevice ) : string{};
+        string formatSuffix = pDevice != nullptr ? TextureFormatFamily::selectVariantSuffix( *pDevice ) : string{};
         {
             const UniqueLock<shared_mutex> lock{ _impl->_mutex };
             _impl->_formatVariantSuffix = std::move( formatSuffix );

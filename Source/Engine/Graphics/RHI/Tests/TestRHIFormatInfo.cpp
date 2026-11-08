@@ -27,7 +27,7 @@ SW_TEST_CASE( RHIFormatInfoTest, RowsAnswerTheFormatFacts )
 SW_TEST_CASE( RHIFormatInfoTest, OutOfRangeReadsTheUnknownRow )
 {
     const RHIFormat outOfRange = static_cast<RHIFormat>( kRHIFormatCount );
-    SW_EXPECT_TRUE( RHIFormatInfoTable::find( outOfRange )._format == RHIFormat::Unknown );
+    SW_EXPECT_TRUE( RHIFormatInfo::find( outOfRange )._format == RHIFormat::Unknown );
     SW_EXPECT_FALSE( isRHIFormatRenderable( outOfRange ) );
     SW_EXPECT_EQUAL( 0u, getRHIFormatBlockInfo( outOfRange )._blockBytes );
 }
@@ -35,7 +35,7 @@ SW_TEST_CASE( RHIFormatInfoTest, OutOfRangeReadsTheUnknownRow )
 /** @brief [RHIFormatInfoTest] 첨부가 되는 형식은 압축이 아니고, 깊이는 첨부가 되며 CPU 바이트를 말하지 않습니다(읽기 배치는 kRHIDepthReadbackFormat 이 말한다). */
 SW_TEST_CASE( RHIFormatInfoTest, EveryRowKeepsTheColumnsConsistent )
 {
-    for ( const RHIFormatInfo& row : RHIFormatInfoTable::kArrRow )
+    for ( const RHIFormatInfo& row : RHIFormatInfo::kArrRow )
     {
         const bool bCompressed = row._block._blockWidth > 1;
         SW_EXPECT_FALSE( row._bRenderable != 0 && bCompressed );

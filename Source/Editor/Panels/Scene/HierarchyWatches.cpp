@@ -9,7 +9,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
-#include "Editor/Common/GUI/Theme/EditorComponentIcon.h"
+#include "Editor/Common/GUI/Theme/EditorComponentIconRow.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/Scene/HierarchyPanel.h"
@@ -43,7 +43,7 @@ namespace sw::editor
             const GameObject* pObject = pManager->findGameObjectByName( hashed_string( gv_editorWatchObject.c_str() ) );
             if ( pObject == nullptr )
                 return false;
-            outValue = static_cast<float64>( EditorComponentIcon::decodeGlyph( EditorComponentIcon::findObjectRow( *pObject )._pGlyph ) );
+            outValue = static_cast<float64>( EditorComponentIconRow::decodeGlyph( EditorComponentIconRow::findObjectRow( *pObject )._pGlyph ) );
             return true;
         }
     } // namespace

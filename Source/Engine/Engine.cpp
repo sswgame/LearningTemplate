@@ -21,7 +21,7 @@
 
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
-#include "Engine/Animation/Scene/VertexAnimationCooker.h"
+#include "Engine/Animation/Scene/VertexAnimationCookList.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"
 #include "Engine/Config/ConfigManager.h"
@@ -84,7 +84,7 @@
 #include "Engine/Serialization/Inherit/ResourceTags.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontService.h"
-#include "Engine/UserSettings/HardwareDetection.h"
+#include "Engine/UserSettings/HardwareDetectionResult.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 #include "Engine/Window/IWindow.h"

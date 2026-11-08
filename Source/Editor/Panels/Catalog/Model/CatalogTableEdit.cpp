@@ -4,7 +4,7 @@
 
 #include "Core/String/StringBuilder.h"
 
-#include "Editor/Panels/Catalog/Model/CatalogCurveModel.h"
+#include "Editor/Panels/Catalog/Model/CatalogCurve.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
 namespace sw::editor
@@ -79,7 +79,7 @@ namespace sw::editor
             }
             case Kind::AddCurveKey:
             {
-                bChanged       = CatalogCurveModel::addKey( inoutDocument, _element );
+                bChanged       = CatalogCurve::addKey( inoutDocument, _element );
                 outDescription = Internal::describe( "Added a key to", groupName, string_view() );
                 break;
             }

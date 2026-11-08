@@ -9,8 +9,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
 
 namespace sw
 {

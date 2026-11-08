@@ -154,10 +154,8 @@ namespace sw::editor
 
         if ( imageSize.x > 1.0f && imageSize.y > 1.0f )
         {
-            InputManager&                     input         = editor::getSubsystem<InputManager>();
-            const ViewportInputOverlayConfig& overlayConfig = editor::getSubsystem<ViewportInputOverlaySettings>()._config;
-            if ( overlayConfig._bEnabled == SW_TRUE )
-                ViewportInputOverlay::draw( pDrawList, imagePos, imageSize, &input, &input.getInputMap(), overlayConfig );
+            InputManager& input = editor::getSubsystem<InputManager>();
+            editor::getSubsystem<ViewportInputOverlaySettings>()._overlay.draw( pDrawList, imagePos, imageSize, &input, &input.getInputMap() );
         }
     }
 

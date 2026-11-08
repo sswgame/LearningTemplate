@@ -18,7 +18,7 @@
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Panels/Material/Model/MaterialPreviewShading.h"
+#include "Editor/Panels/Material/Model/MaterialPreviewInputs.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -87,7 +87,7 @@ namespace sw::editor
                     case MaterialPropertyType::Range:
                     {
                         float32 arrVal[1]{};
-                        if ( MaterialPreviewShading::parseFloats( prop._value, arrVal ) == false )
+                        if ( MaterialPreviewInputs::parseFloats( prop._value, arrVal ) == false )
                             return drawUnreadableValue( pLabel, prop );
                         bool bChanged{ false };
                         EditorWidgets::drawPropertyRowLabel( pLabel );
@@ -102,7 +102,7 @@ namespace sw::editor
                     case MaterialPropertyType::Float2:
                     {
                         float32 arrVal[2]{};
-                        if ( MaterialPreviewShading::parseFloats( prop._value, arrVal ) == false )
+                        if ( MaterialPreviewInputs::parseFloats( prop._value, arrVal ) == false )
                             return drawUnreadableValue( pLabel, prop );
                         EditorWidgets::drawPropertyRowLabel( pLabel );
                         const bool bChanged = ImGui::DragFloat2( pID, arrVal, 0.01f );
@@ -113,7 +113,7 @@ namespace sw::editor
                     case MaterialPropertyType::Float3:
                     {
                         float32 arrVal[3]{};
-                        if ( MaterialPreviewShading::parseFloats( prop._value, arrVal ) == false )
+                        if ( MaterialPreviewInputs::parseFloats( prop._value, arrVal ) == false )
                             return drawUnreadableValue( pLabel, prop );
                         EditorWidgets::drawPropertyRowLabel( pLabel );
                         const bool bChanged = ImGui::DragFloat3( pID, arrVal, 0.01f );
@@ -125,8 +125,8 @@ namespace sw::editor
                     case MaterialPropertyType::Float4:
                     {
                         float32    arrVal[4]{};
-                        const bool bRead = prop._type == MaterialPropertyType::Color ? MaterialPreviewShading::parseColor( prop._value, arrVal )
-                                                                                     : MaterialPreviewShading::parseFloats( prop._value, arrVal );
+                        const bool bRead = prop._type == MaterialPropertyType::Color ? MaterialPreviewInputs::parseColor( prop._value, arrVal )
+                                                                                     : MaterialPreviewInputs::parseFloats( prop._value, arrVal );
                         if ( bRead == false )
                             return drawUnreadableValue( pLabel, prop );
                         Color      color{ arrVal[0], arrVal[1], arrVal[2], arrVal[3] };
@@ -422,7 +422,7 @@ namespace sw::editor
         constexpr int32 kRingCount    = 20;
         constexpr int32 kSegmentCount = 48;
 
-        const MaterialPreviewInputs inputs = MaterialPreviewShading::readInputs( _model.getMaterial().getProperties() );
+        const MaterialPreviewInputs inputs = MaterialPreviewInputs::readInputs( _model.getMaterial().getProperties() );
         const float32               side   = MaterialPanelInternal::kPreviewSide * EditorThemeUtil::getDPIScale();
         const ImVec2                minPos = ImGui::GetCursorScreenPos();
         ImGui::Dummy( ImVec2( side, side ) );
@@ -436,7 +436,7 @@ namespace sw::editor
 
         auto toColor = [&inputs]( float32 nx, float32 ny )
         {
-            const float3 color = MaterialPreviewShading::shadePoint( inputs, nx, ny );
+            const float3 color = MaterialPreviewInputs::shadePoint( inputs, nx, ny );
             return EditorColorUtil::toImU32( Color{ color._x, color._y, color._z, 1.0f } );
         };
 
@@ -481,7 +481,7 @@ namespace sw::editor
             }
         }
 
-        _model.recordPreviewDrawn( MaterialPreviewShading::computeMeanRedMinusBlue( inputs ) );
+        _model.recordPreviewDrawn( MaterialPreviewInputs::computeMeanRedMinusBlue( inputs ) );
     }
 
     void MaterialPanel::populatePreviewScene( Scene& scene )

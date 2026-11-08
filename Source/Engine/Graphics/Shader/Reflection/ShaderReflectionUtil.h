@@ -1,9 +1,9 @@
 /**
  * @file ShaderReflectionUtil.h
- * @brief ShaderReflection 포맷별 TU 가 함께 쓰는 선언입니다.
+ * @brief ShaderReflectionData 포맷별 TU 가 함께 쓰는 선언입니다.
  */
 #pragma once
-#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 
 namespace sw
 {

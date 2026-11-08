@@ -16,11 +16,11 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 #include "Editor/SelfTest/EditorWatchSupport.h"
-#include "Editor/Viewport/EditorViewportBillboard.h"
-#include "Editor/Viewport/EditorViewportToolbar.h"
+#include "Editor/Viewport/EditorViewportBillboardItem.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorGridLevel.h"
 #include "Editor/Viewport/Model/EditorViewportOverlayLayout.h"
+#include "Editor/Viewport/ViewportToolbarSettings.h"
 #include "Editor/Viewport/Visualizers/SelectionBoundsVisualizer.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -286,7 +286,7 @@ namespace sw::editor
             const GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorWatchObject.c_str() ) ) : nullptr;
             if ( pObject == nullptr )
                 return false;
-            outValue = static_cast<float64>( EditorViewportBillboard::findDrawnGlyph( *pObject ) );
+            outValue = static_cast<float64>( EditorViewportBillboardItem::findDrawnGlyph( *pObject ) );
             return true;
         }
 

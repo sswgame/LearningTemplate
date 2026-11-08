@@ -123,6 +123,32 @@ namespace sw
                 uint32            _rotation{ 0 };
                 uint8             _arrTokenDigest[LoginConstant::kDigestSize]{};
                 LoginRevokeReason _revokeReason{ LoginRevokeReason::None }; ///< None 이 아니면 묘비이다
+
+                vector<uint8> encodeSession() const
+                {
+                    BitWriter writer;
+                    writer.writeBits( kRecordFormat, 8 );
+                    writer.writeVarUint( _accountID );
+                    writer.writeVarInt( _issuedAtMs );
+                    writer.writeVarInt( _expiresAtMs );
+                    writer.writeVarInt( _resumeDeadlineMs );
+                    writer.writeVarUint( _rotation );
+                    writer.writeBytes( _arrTokenDigest, LoginConstant::kDigestSize );
+                    writer.writeBits( static_cast<uint32>( _revokeReason ), 8 );
+                    return writer.releaseBytes();
+                }
+
+                /** @brief 세션을 지금 쓸 수 있는지 판정합니다. 쓸 수 없으면 그 이유를 결과로 반환합니다. */
+                LoginOutcome evaluateSession( int64 nowMs ) const
+                {
+                    if ( _revokeReason != LoginRevokeReason::None )
+                        return LoginResult::Revoked;
+                    if ( nowMs >= _expiresAtMs )
+                        return LoginResult::Expired;
+                    if ( _resumeDeadlineMs != 0 && nowMs >= _resumeDeadlineMs )
+                        return LoginResult::Expired;
+                    return LoginResult::Ok;
+                }
             };
 
             static vector<uint8> encodeAccount( const AccountRecord& record )
@@ -194,20 +220,6 @@ namespace sw
                     return false;
                 outRecord = std::move( record );
                 return true;
-            }
-
-            static vector<uint8> encodeSession( const SessionRecord& record )
-            {
-                BitWriter writer;
-                writer.writeBits( kRecordFormat, 8 );
-                writer.writeVarUint( record._accountID );
-                writer.writeVarInt( record._issuedAtMs );
-                writer.writeVarInt( record._expiresAtMs );
-                writer.writeVarInt( record._resumeDeadlineMs );
-                writer.writeVarUint( record._rotation );
-                writer.writeBytes( record._arrTokenDigest, LoginConstant::kDigestSize );
-                writer.writeBits( static_cast<uint32>( record._revokeReason ), 8 );
-                return writer.releaseBytes();
             }
 
             [[nodiscard]] static bool decodeSession( const vector<uint8>& bytes, SessionRecord& outRecord )
@@ -393,18 +405,6 @@ namespace sw
                     }
                 }
                 return false;
-            }
-
-            /** @brief 세션을 지금 쓸 수 있는지 판정합니다. 쓸 수 없으면 그 이유를 결과로 반환합니다. */
-            static LoginOutcome evaluateSession( const SessionRecord& session, int64 nowMs )
-            {
-                if ( session._revokeReason != LoginRevokeReason::None )
-                    return LoginResult::Revoked;
-                if ( nowMs >= session._expiresAtMs )
-                    return LoginResult::Expired;
-                if ( session._resumeDeadlineMs != 0 && nowMs >= session._resumeDeadlineMs )
-                    return LoginResult::Expired;
-                return LoginResult::Ok;
             }
 
             /** @brief 프로필을 읽습니다. 없으면 NotFound 를 반환합니다. */
@@ -750,7 +750,7 @@ namespace sw
                 return LoginOutcome::fail( OnlineError::kUnavailable );
             if ( SecureUtil::equalsConstantTime( arrDigest, session._arrTokenDigest, LoginConstant::kDigestSize ) == false )
                 return LoginResult::InvalidToken;
-            const LoginOutcome state = Internal::evaluateSession( session, nowMs );
+            const LoginOutcome state = session.evaluateSession( nowMs );
             if ( state != LoginResult::Ok )
             {
                 outGrant._revokeReason = session._revokeReason;
@@ -773,7 +773,7 @@ namespace sw
             session._resumeDeadlineMs = 0;
             ++session._rotation;
             ServiceTransaction transaction;
-            transaction.put( Internal::getSessionTable(), sessionKey, Internal::encodeSession( session ), sessionRaw._version );
+            transaction.put( Internal::getSessionTable(), sessionKey, session.encodeSession(), sessionRaw._version );
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
                 continue; // 같은 토큰으로 그사이 돌아온 쪽이 있다. 다시 읽으면 비밀이 달라서 InvalidToken 이 된다
@@ -808,7 +808,7 @@ namespace sw
             return LoginOutcome::fail( OnlineError::kUnavailable );
         if ( SecureUtil::equalsConstantTime( arrDigest, session._arrTokenDigest, LoginConstant::kDigestSize ) == false )
             return LoginResult::InvalidToken;
-        const LoginOutcome state = Internal::evaluateSession( session, nowMs );
+        const LoginOutcome state = session.evaluateSession( nowMs );
         if ( pOutRevokeReason != nullptr )
             *pOutRevokeReason = session._revokeReason;
         if ( state != LoginResult::Ok )
@@ -856,7 +856,7 @@ namespace sw
                 return;
             session._resumeDeadlineMs = nowMs + _settings._reconnectGraceMs;
             ServiceTransaction transaction;
-            transaction.put( Internal::getSessionTable(), sessionKey, Internal::encodeSession( session ), sessionRaw._version );
+            transaction.put( Internal::getSessionTable(), sessionKey, session.encodeSession(), sessionRaw._version );
             const ServiceStoreResult commitResult = _connection.commit( transaction );
             if ( commitResult == ServiceStoreResult::Conflict )
                 continue;
@@ -1255,7 +1255,7 @@ namespace sw
                 return; // 저장소에 문제가 있으면 아무도 끊지 않는다
             Internal::SessionRecord session;
             const bool              bReadable = readResult == ServiceStoreResult::Ok && Internal::decodeSession( sessionRaw._bytes, session );
-            if ( bReadable && Internal::evaluateSession( session, nowMs ) == LoginResult::Ok )
+            if ( bReadable && session.evaluateSession( nowMs ) == LoginResult::Ok )
                 continue;
             const LoginRevokeReason reason = bReadable ? session._revokeReason : LoginRevokeReason::Administrative;
             _result._listRevoked.push_back( LoginSessionRef{ online._accountID, online._sessionID, reason } );
@@ -1387,7 +1387,7 @@ namespace sw
                 return LoginOutcome::fail( OnlineError::kUnavailable );
             Internal::SessionRecord oldSession;
             const bool              bOldReadable = readResult == ServiceStoreResult::Ok && Internal::decodeSession( oldSessionRaw._bytes, oldSession );
-            const bool              bOldLive     = bOldReadable && Internal::evaluateSession( oldSession, nowMs ) == LoginResult::Ok;
+            const bool              bOldLive     = bOldReadable && oldSession.evaluateSession( nowMs ) == LoginResult::Ok;
             const bool              bReject      = bOldLive && _settings._duplicatePolicy == LoginDuplicatePolicy::RejectNew && oldSession._resumeDeadlineMs == 0;
             if ( bReject )
                 return LoginResult::AlreadyLoggedIn;
@@ -1395,7 +1395,7 @@ namespace sw
             {
                 oldSession._revokeReason = LoginRevokeReason::DuplicateLogin;
                 oldSession._expiresAtMs  = MathUtil::min( oldSession._expiresAtMs, nowMs + _settings._tombstoneLifetimeMs );
-                inoutTransaction.put( Internal::getSessionTable(), oldSessionKey, Internal::encodeSession( oldSession ), oldSessionRaw._version );
+                inoutTransaction.put( Internal::getSessionTable(), oldSessionKey, oldSession.encodeSession(), oldSessionRaw._version );
                 outReplacedSessionID = oldSessionID;
             }
         }
@@ -1409,7 +1409,7 @@ namespace sw
         session._expiresAtMs = nowMs + _settings._sessionLifetimeMs;
         if ( Internal::computeTokenDigest( _crypto, outToken._arrSecret, session._arrTokenDigest ) == false )
             return LoginOutcome::fail( OnlineError::kUnavailable );
-        inoutTransaction.put( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( outToken._sessionID ), Internal::encodeSession( session ),
+        inoutTransaction.put( Internal::getSessionTable(), ServiceKeyUtil::makeHex64( outToken._sessionID ), session.encodeSession(),
                               ServiceRecord::kAbsentVersion );
         inoutTransaction.put( Internal::getAccountSessionTable(), accountKey, ServiceKeyUtil::encodeVarID( outToken._sessionID ), linkRaw._version );
         outExpiresAtMs = session._expiresAtMs;
@@ -1451,7 +1451,7 @@ namespace sw
             return LoginOutcome::fail( OnlineError::kUnavailable );
         session._revokeReason = reason;
         session._expiresAtMs  = MathUtil::min( session._expiresAtMs, nowMs + _settings._tombstoneLifetimeMs );
-        inoutTransaction.put( Internal::getSessionTable(), sessionKey, Internal::encodeSession( session ), sessionRaw._version );
+        inoutTransaction.put( Internal::getSessionTable(), sessionKey, session.encodeSession(), sessionRaw._version );
         inoutTransaction.erase( Internal::getAccountSessionTable(), accountKey, linkRaw._version );
         outSessionID = sessionID;
         return LoginResult::Ok;

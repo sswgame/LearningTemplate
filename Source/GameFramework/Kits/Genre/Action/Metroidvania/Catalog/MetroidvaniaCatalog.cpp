@@ -99,7 +99,7 @@ namespace sw
             Element::of<&MetroidvaniaCatalog::loadPickup>( "Pickup" ),
             Element::of<&MetroidvaniaCatalog::loadEnemy>( "Enemy" ),
         };
-        return XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool MetroidvaniaCatalog::loadAbility( const XMLNode& node, string_view sourceName )

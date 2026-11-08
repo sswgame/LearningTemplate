@@ -3,7 +3,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Audio/AudioPanner.h"
+#include "Engine/Audio/AudioPanDirection.h"
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Audio/AudioTypes.h"
 

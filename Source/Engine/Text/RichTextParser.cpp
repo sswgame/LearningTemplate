@@ -3,7 +3,7 @@
 #include "Engine/Text/RichTextParser.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/String/MarkupTagScanner.h"
+#include "Core/String/MarkupToken.h"
 
 namespace sw
 {
@@ -211,7 +211,7 @@ namespace sw
         vector<MarkupToken> listToken;
         size_t              offset = 0;
         MarkupToken         token{};
-        while ( MarkupTagScanner::readToken( markup, offset, token ) )
+        while ( MarkupToken::read( markup, offset, token ) )
         {
             listToken.push_back( token );
         }
@@ -280,7 +280,7 @@ namespace sw
 
     bool RichTextParser::hasSameTags( string_view sourceMarkup, string_view translatedMarkup )
     {
-        return MarkupTagScanner::hasSameTags( sourceMarkup, translatedMarkup );
+        return MarkupToken::hasSameTags( sourceMarkup, translatedMarkup );
     }
 
     uint32 RichTextParser::expandActionTags( string_view markup, const RichTextActionGlyphResolver& resolve, string& outText )

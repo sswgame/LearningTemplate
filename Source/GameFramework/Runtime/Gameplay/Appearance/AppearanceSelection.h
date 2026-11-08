@@ -1,7 +1,7 @@
 /**
  * @file AppearanceSelection.h
  * @brief 외형 선택입니다. 플레이어가 저장하고 공유하며 네트워크로 보내는 "기준 프리셋, 시드, 꾸미기 값, 장비 구성" 의 묶음이고, 이것을 지금 콘텐츠에 맞춰 펼치는 일도 맡습니다.
- * @details 같은 선택 하나가 세 곳에 쓰인다. 플레이어 프리셋 저장(`UserAppearancePresetStore`), 공유 코드(`AppearanceShareCode`), 네트워크 동기화(`AppearanceSelectionCodec`)이다.
+ * @details 같은 선택 하나가 세 곳에 쓰인다. 플레이어 프리셋 저장(`UserAppearancePresetStore`), 공유 코드(`AppearanceSelection`), 네트워크 동기화(`AppearanceSelection`)이다.
  *          이름은 32 비트 해시로 싣는다. 같은 해시를 가진 두 이름은 데이터 로드가 막는다. 받는 쪽이 알지 못하는 해시는 `#xxxxxxxx` 형태의
  *          임시 이름이 되고, 펼칠 때 "지워진 콘텐츠" 로 보고된다.
  */
@@ -74,6 +74,19 @@ namespace sw
         /** @brief 입혀 보기입니다. 펼쳐서 해석만 하고 아무것도 바꾸지 않습니다. */
         static void previewSelection( const AppearanceDatabase& database, const AppearanceSelection& selection, const CharacterAppearanceSpec& current,
                                       const IAppearanceUnlockQuery* pUnlockQuery, ResolvedAppearance& outResolved, AppearanceSelectionReport& outReport );
+
+        // 선택을 비트로 씁니다. 네트워크 외형 동기화에 쓰며, 받는 쪽이 펼쳐서 해석하면 같은 해시가 나옵니다. 공유 코드와 세이브도 이것을 씁니다.
+        // 슬라이더는 스키마 범위의 16 비트, 색은 성분마다 8 비트, 피해는 8 비트로 쓴다. 해석기가 쓰는 정밀도와 같으므로 손실이 없다. 값마다 종류를 2 비트로
+        static void writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database );
+        /** @brief 읽습니다. 비트가 모자라거나 개수가 비정상이면 false 입니다. */
+        [[nodiscard]] static bool readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection );
+
+        // 공유 코드입니다. 버전 1 바이트, 선택 비트, CRC32 를 base64url(패딩 없음)로 쓴 짧은 문자열입니다. 버전이 다르거나 체크섬이 틀리면 거절합니다(정확히 같은 판만 읽습니다).
+        static constexpr uint32 kShareCodeVersion = 1;
+
+        static string encode( const AppearanceSelection& selection, const AppearanceDatabase& database );
+        /** @brief 공유 코드를 해석합니다. 코드가 망가졌거나(base64 오류, 체크섬 불일치) 이 빌드가 모르는 버전이면 false 를 반환하고, @p pOutReason 에 이유를 씁니다. */
+        [[nodiscard]] static bool decode( string_view code, const AppearanceDatabase& database, AppearanceSelection& outSelection, string* pOutReason = nullptr );
     };
 } // namespace sw
 
@@ -122,37 +135,5 @@ namespace sw
         IAppearanceUnlockQuery& operator=( IAppearanceUnlockQuery&& ) noexcept = default;
 
         virtual bool isItemUnlocked( const hashed_string& itemID ) const = 0;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct AppearanceSelectionCodec
-     * @brief 선택을 비트로 씁니다. 네트워크 외형 동기화에 쓰며, 받는 쪽이 펼쳐서 해석하면 같은 해시가 나옵니다. 공유 코드와 세이브도 이것을 씁니다.
-     * @details 슬라이더는 스키마 범위의 16 비트, 색은 성분마다 8 비트, 피해는 8 비트로 쓴다. 해석기가 쓰는 정밀도와 같으므로 손실이 없다. 값마다 종류를 2 비트로
-     *          붙이므로, 받는 쪽이 알지 못하는 매개변수도 길이를 알고 건너뛸 수 있다.
-     */
-    struct SW_GF_API AppearanceSelectionCodec
-    {
-        static void writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database );
-        /** @brief 읽습니다. 비트가 모자라거나 개수가 비정상이면 false 입니다. */
-        [[nodiscard]] static bool readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection );
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct AppearanceShareCode
-     * @brief 공유 코드입니다. 버전 1 바이트, 선택 비트, CRC32 를 base64url(패딩 없음)로 쓴 짧은 문자열입니다. 버전이 다르거나 체크섬이 틀리면 거절합니다(정확히 같은 판만 읽습니다).
-     */
-    struct SW_GF_API AppearanceShareCode
-    {
-        static constexpr uint32 kVersion = 1;
-
-        static string encode( const AppearanceSelection& selection, const AppearanceDatabase& database );
-        /** @brief 공유 코드를 해석합니다. 코드가 망가졌거나(base64 오류, 체크섬 불일치) 이 빌드가 모르는 버전이면 false 를 반환하고, @p pOutReason 에 이유를 씁니다. */
-        [[nodiscard]] static bool decode( string_view code, const AppearanceDatabase& database, AppearanceSelection& outSelection, string* pOutReason = nullptr );
     };
 } // namespace sw

@@ -34,7 +34,7 @@
 #include "Engine/Text/GlyphAtlas.h"
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/TextLayout.h"
-#include "Engine/UI/Animation/UIStyleTransition.h"
+#include "Engine/UI/Animation/UIStyleTransitionState.h"
 #include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 #include "Engine/UI/Binding/UIBindingSet.h"
 #include "Engine/UI/Document/UIDocument.h"
@@ -347,7 +347,7 @@ namespace sw
             for ( size_t index = 0; index < _listScreen.size(); ++index )
             {
                 _listScreen[index]->_animationPlayer.update( deltaSeconds );
-                (void)UIStyleTransition::update( _listScreen[index]->getTree(), deltaSeconds ); // 스타일 전환: 새로 바뀐 것은 아래 스타일 단계가 시작한다
+                (void)UIStyleTransitionState::update( _listScreen[index]->getTree(), deltaSeconds ); // 스타일 전환: 새로 바뀐 것은 아래 스타일 단계가 시작한다
             }
             applyPendingCloses(); // 닫기 애니메이션이 끝난 화면을 지운다
         }
@@ -1029,7 +1029,7 @@ namespace sw
         for ( size_t index = 0; bUnchanged && index < _listScreen.size(); ++index )
         {
             const WidgetTree& tree = _listScreen[index]->getTree();
-            bUnchanged             = _paintState.isPaintedTree( index, tree ) && UIPaintPass::canReuseOutput( tree, context, _viewport._physicalSize );
+            bUnchanged             = _paintState.isPaintedTree( index, tree ) && UIPaintContext::canReuseOutput( tree, context, _viewport._physicalSize );
         }
         if ( bUnchanged )
         {
@@ -1052,13 +1052,13 @@ namespace sw
             if ( screen->isHiddenByLayer() )
                 continue; // 레이어 숨김 요청(`addLayerHideRequest`)이 가린 화면 — 포커스 테두리도 그리지 않는다
             WidgetTree& tree = screen->getTree();
-            paintedCount += UIPaintPass::paint( tree, context, painter, target );
+            paintedCount += UIPaintContext::paint( tree, context, painter, target );
             // 포커스 테두리는 패드나 키보드로 다룰 때만 그린다(언리얼 CommonUI, 콘솔 게임과 같다). 그 화면 위, 위 화면 아래에 놓는다.
             if ( _input.getInputMode() != UIInputMode::Navigation || _input.getFocusManager().getFocusedTree() != &tree )
                 continue;
             const Widget* pFocused = tree.findWidgetByID( _input.getFocusManager().getFocusedWidget() );
             if ( pFocused != nullptr && pFocused->isVisible() )
-                UIPaintPass::paintFocusRing( *pFocused, painter );
+                UIPaintContext::paintFocusRing( *pFocused, painter );
         }
         SW_PROFILE_COUNT( "UI.PaintWidgets", paintedCount );
         SW_PROFILE_COUNT( "UI.CanvasQuads", target._listQuad.size() );

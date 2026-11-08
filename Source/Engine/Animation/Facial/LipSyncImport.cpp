@@ -59,7 +59,7 @@ namespace sw
                 continue;
             }
             VisemeTrack track;
-            LipSyncAnalyzer::analyze( listSample, sampleRate, settings, track );
+            VisemeTrack::analyze( listSample, sampleRate, settings, track );
             const string                      trackPath = VisemeTrack::makePathForAudio( normalized );
             const std::optional<AbsolutePath> trackFile = FileUtil::requireAbsolutePath( trackPath );
             if ( trackFile.has_value() == false || track.saveToFile( *trackFile ) == false )

@@ -14,7 +14,7 @@
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIResourcePreset.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -1407,7 +1407,7 @@ namespace sw
         uint64 cpuTick{ 0 };
         if ( FAILED( _commandQueue->GetClockCalibration( &gpuTick, &cpuTick ) ) )
             return false;
-        outGPUNanos = RHITimestamp::convertTickToNanos( gpuTick, constant::time::kNanosecondsPerSecond / static_cast<float64>( frequency ) );
+        outGPUNanos = RHITimestampFrame::convertTickToNanos( gpuTick, constant::time::kNanosecondsPerSecond / static_cast<float64>( frequency ) );
         return true;
     }
 
@@ -1471,7 +1471,7 @@ namespace sw
         // 그래서 어느 칸이 이번 것인지 비트로 가려야 한다. 안 그러면 건너뛴 패스가 0us 로 보고된다.
         const uint64* pTicks = reinterpret_cast<const uint64*>( static_cast<const uint8*>( pMapped ) + byteOffset );
         // 그래서 writtenMask 가 곧 준비 비트다. 이 슬롯은 방금 펜스를 통과했다.
-        RHITimestamp::resolve( pTicks, writtenMask, constant::time::kNanosecondsPerSecond / static_cast<float64>( _timestampFrequency ), _timestampFrame );
+        RHITimestampFrame::resolve( pTicks, writtenMask, constant::time::kNanosecondsPerSecond / static_cast<float64>( _timestampFrequency ), _timestampFrame );
 
         const D3D12_RANGE emptyRange{ 0, 0 };
         _timestampReadback->Unmap( 0, &emptyRange );

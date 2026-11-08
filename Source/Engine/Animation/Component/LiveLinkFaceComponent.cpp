@@ -72,7 +72,7 @@ namespace sw
         // 늦게 읽어 쌓였으면 마지막 패킷이 지금 얼굴이다 — 모두 풀되 마지막 성공 하나만 옮긴다.
         while ( _transport->receive( from, _listReceive ) )
         {
-            if ( LiveLinkFacePacket::parse( _listReceive.data(), _listReceive.size(), _layout, parsed, error ) )
+            if ( LiveLinkFaceFrame::parse( _listReceive.data(), _listReceive.size(), _layout, parsed, error ) )
             {
                 _frame   = std::move( parsed );
                 bApplied = true;

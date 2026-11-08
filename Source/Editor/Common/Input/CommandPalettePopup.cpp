@@ -65,9 +65,9 @@ namespace sw::editor
         _searchBuffer.clear();
         // 팔레트의 제공자 순서: 명령 → 창 → 씬 오브젝트 → 에셋(Quick Open 은 오브젝트 · 에셋이 먼저다)
         _listItem.clear();
-        EditorSearchSources::appendCommands( _listItem );
-        EditorSearchSources::appendPanels( _listItem );
-        EditorSearchSources::appendSceneObjects( _listItem );
+        EditorSearchItem::appendCommands( _listItem );
+        EditorSearchItem::appendPanels( _listItem );
+        EditorSearchItem::appendSceneObjects( _listItem );
         _assetIndexJob.request();
     }
 
@@ -77,7 +77,7 @@ namespace sw::editor
 
         vector<EditorAssetIndexEntry> listAssetEntry;
         if ( _assetIndexJob.take( listAssetEntry ) == EditorTaskPoll::Ready )
-            EditorSearchSources::appendAssets( listAssetEntry, _listItem );
+            EditorSearchItem::appendAssets( listAssetEntry, _listItem );
 
         editor::EditorSearchOverlayDesc overlayDesc{};
         overlayDesc._pID          = "##CommandPalette";
@@ -93,7 +93,7 @@ namespace sw::editor
             ImGui::Separator();
 
             vector<const EditorSearchItem*> listFiltered;
-            EditorSearchSources::filter( { &_listItem }, _searchBuffer.view(), listFiltered );
+            EditorSearchItem::filter( { &_listItem }, _searchBuffer.view(), listFiltered );
 
             const bool bExecuteSelected = EditorWidgets::updateListSelection( _selectedIndex, static_cast<int32>( listFiltered.size() ) );
 
@@ -138,7 +138,7 @@ namespace sw::editor
             {
                 const EditorSearchItem item = *pExecute; // 실행이 목록을 다시 만들 수 있다(씬 열기) — 사본으로 부른다
                 _bOpen                      = false;
-                EditorSearchSources::execute( item );
+                EditorSearchItem::execute( item );
             }
         }
         EditorChrome::endSearchOverlay();

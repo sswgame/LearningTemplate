@@ -13,7 +13,7 @@
 #include "Core/Testing/TestFramework.h"
 #include "Core/Testing/TestWait.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSlotEnvelope.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSealContext.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalSlotStorage.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStore.h"
 #include "GameFramework/Runtime/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
@@ -180,7 +180,7 @@ namespace sw::test
             const vector<uint8> body = makeText( "gold=100" );
             SW_EXPECT_TRUE( std::search( envelopeBytes.begin(), envelopeBytes.end(), body.begin(), body.end() ) != envelopeBytes.end() ); // 내용은 보인다
             SW_EXPECT_TRUE( read( fixture.getStore(), "profile" )._bytes == body );
-            envelopeBytes[LocalSlotEnvelope::kHeaderSize + 5] ^= 0x01; // "gold=1" → "gold=0"
+            envelopeBytes[LocalSealContext::kHeaderSize + 5] ^= 0x01; // "gold=1" → "gold=0"
             SW_REQUIRE_TRUE( fixture.getStorage().writeSlot( "profile", envelopeBytes ) == LocalStoreResult::Ok );
             SW_EXPECT_TRUE( read( fixture.getStore(), "profile" )._result == LocalStoreResult::Corrupt );
         }
@@ -213,7 +213,7 @@ namespace sw::test
             SW_EXPECT_TRUE( write( fixture.getStore(), "plain", makeText( "readable save" ) ) == LocalStoreResult::Ok );
             vector<uint8> envelopeBytes;
             SW_REQUIRE_TRUE( fixture.getStorage().readSlot( "plain", envelopeBytes ) == LocalStoreResult::Ok );
-            envelopeBytes[LocalSlotEnvelope::kHeaderSize] ^= 0x20;
+            envelopeBytes[LocalSealContext::kHeaderSize] ^= 0x20;
             SW_REQUIRE_TRUE( fixture.getStorage().writeSlot( "plain", envelopeBytes ) == LocalStoreResult::Ok );
             SW_EXPECT_TRUE( read( fixture.getStore(), "plain" )._result == LocalStoreResult::Corrupt );
             envelopeBytes.resize( envelopeBytes.size() / 2 ); // 반쪽 파일

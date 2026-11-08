@@ -13,7 +13,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/UI/WidgetTree/UIEvents.h"
-#include "Engine/UI/World/WorldWidgetPick.h"
+#include "Engine/UI/World/WorldWidgetHit.h"
 
 namespace sw
 {

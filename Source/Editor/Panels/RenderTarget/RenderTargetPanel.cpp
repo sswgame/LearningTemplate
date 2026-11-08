@@ -408,8 +408,8 @@ namespace sw::editor
         }
         else
         {
-            // G버퍼 첨부면 명세(`GBufferLayout`)의 뜻으로 채널을 이름 짓고 값을 푼다(노멀은 옥타헤드럴을 풀어 단위 벡터) — 셰이더 읽기와 같은 식이다.
-            const GBufferAttachmentSpec* pSpec        = GBufferLayout::findAttachment( selected._name );
+            // G버퍼 첨부면 명세(`GBufferAttachmentSpec`)의 뜻으로 채널을 이름 짓고 값을 푼다(노멀은 옥타헤드럴을 풀어 단위 벡터) — 셰이더 읽기와 같은 식이다.
+            const GBufferAttachmentSpec* pSpec        = GBufferAttachmentSpec::findAttachment( selected._name );
             const uint32                 channelCount = RenderTargetViewSettings::getChannelCount( selected._format, false );
             const float32                arrValue[4]{ value._x, value._y, value._z, value._w };
             const utf8*                  arrLabel[4]{ "R", "G", "B", "A" };
@@ -422,7 +422,7 @@ namespace sw::editor
             if ( pSpec != nullptr )
             {
                 ImGui::Separator();
-                GBufferLayout::decodeTexel( *pSpec, value, _listDecodedValue );
+                GBufferAttachmentSpec::decodeTexel( *pSpec, value, _listDecodedValue );
                 for ( const GBufferDecodedValue& decoded : _listDecodedValue )
                 {
                     if ( decoded._componentCount == 3 )
@@ -431,7 +431,7 @@ namespace sw::editor
                     else
                         ImGui::Text( "%s %.3f", decoded._pName, static_cast<float64>( decoded._value._x ) );
                 }
-                ImGui::TextDisabled( "G-buffer layout v%u", GBufferLayout::kVersion );
+                ImGui::TextDisabled( "G-buffer layout v%u", GBufferAttachmentSpec::kVersion );
             }
         }
         ImGui::EndTooltip();

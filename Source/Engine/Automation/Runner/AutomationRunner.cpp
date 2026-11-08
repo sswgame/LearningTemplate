@@ -17,7 +17,7 @@
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/Runner/AutomationExitCode.h"
-#include "Engine/Automation/Runner/AutomationImageMetric.h"
+#include "Engine/Automation/Runner/AutomationImage.h"
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
 #include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"

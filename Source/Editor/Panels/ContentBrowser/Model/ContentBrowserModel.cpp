@@ -336,11 +336,11 @@ namespace sw::editor
         {
             if ( FileUtil::startsWithPathComponent( folderNorm, FileUtil::normalizePath( root._absolutePath ) ) )
             {
-                ContentBrowserLogic::makeFolderTrail( root._displayName, root._absolutePath, folderAbs, outListCrumb );
+                ContentBrowserCrumb::makeFolderTrail( root._displayName, root._absolutePath, folderAbs, outListCrumb );
                 return;
             }
         }
-        ContentBrowserLogic::makeFolderTrail( {}, {}, folderAbs, outListCrumb );
+        ContentBrowserCrumb::makeFolderTrail( {}, {}, folderAbs, outListCrumb );
     }
 
     void ContentBrowserModel::navigateBack()
@@ -395,7 +395,7 @@ namespace sw::editor
         if ( entry._bIsDirectory )
         {
             vector<ContentBrowserCrumb> listCrumb = _listCrumb;
-            ContentBrowserLogic::appendChildCrumb( entry._absolutePath, listCrumb );
+            ContentBrowserCrumb::appendChildCrumb( entry._absolutePath, listCrumb );
             selectFolder( entry._absolutePath, listCrumb );
             return;
         }

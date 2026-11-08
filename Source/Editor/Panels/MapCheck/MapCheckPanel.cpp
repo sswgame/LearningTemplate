@@ -90,7 +90,7 @@ namespace sw::editor
                     return getState()._statusCounts;
                 vector<ValidationIssue> listIssue;
                 collectActiveIssues( pLog, listIssue );
-                getState()._statusCounts      = MapCheckRows::countIssues( listIssue );
+                getState()._statusCounts      = MapCheckCounts::countIssues( listIssue );
                 getState()._statusRevisionKey = revisionKey;
                 getState()._bStatusCounted    = true;
                 return getState()._statusCounts;
@@ -229,7 +229,7 @@ namespace sw::editor
         filter._search        = _searchBuffer.c_str();
         filter._bShowErrors   = _bShowErrors == SW_TRUE;
         filter._bShowWarnings = _bShowWarnings == SW_TRUE;
-        MapCheckRows::populate( listIssue, filter, _listRow, _counts );
+        MapCheckCounts::populate( listIssue, filter, _listRow, _counts );
         _builtRevisionKey = revisionKey;
         _builtSearch      = _searchBuffer.c_str();
         _bRowsDirty       = SW_FALSE;

@@ -237,7 +237,7 @@ namespace sw
          */
         virtual float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const;
         /**
-         * @brief 자기 그림을 칠합니다(그리기, `UIPaintPass`). 자식은 트리가 칠합니다. 기본은 아무것도 칠하지 않습니다.
+         * @brief 자기 그림을 칠합니다(그리기, `UIPaintContext`). 자식은 트리가 칠합니다. 기본은 아무것도 칠하지 않습니다.
          * @details 그리기 도구의 변환은 이 위젯의 기하다. 로컬 (0, 0) 부터 크기(`getGeometry()._size`, UI 단위)까지 칠한다. 결과는 위젯의 그리기 캐시에 남으며,
          *          그리기 더티(`kPaint`, `kStyle`, 조상의 `kTransform`)가 없으면 다시 부르지 않는다.
          */
@@ -258,10 +258,10 @@ namespace sw
         friend class PanelWidget;
         friend class WidgetTree;
         friend class UILayoutPass;
-        friend class UIPaintPass;
+        friend class UIPaintContext;
         friend class UIPointerState;
         friend class UIStylePass;
-        friend class UIStyleTransition;
+        friend class UIStyleTransitionState;
 
         /** @brief 이 위젯과 자손을 @p pTree 에 붙입니다. 번호를 이름에 연결하고 밀려 있던 무효화를 트리에 넘깁니다. */
         void attachToTree( WidgetTree* pTree, PanelWidget* pParent );
@@ -286,9 +286,9 @@ namespace sw
         PROPERTY( DisplayName = "Accessible Labelled By", Tooltip = "Name of a text widget in the same tree that names this widget when Accessible Name is empty (a setting row's label)" )
         hashed_string _accessibleLabelledBy;
 
-        unique_ptr<WidgetPaintCache>       _paintCache;       ///< 마지막으로 칠한 사각형(물리 픽셀)입니다. `UIPaintPass` 가 채우며, 처음 칠할 때 만듭니다.
+        unique_ptr<WidgetPaintCache>       _paintCache;       ///< 마지막으로 칠한 사각형(물리 픽셀)입니다. `UIPaintContext` 가 채우며, 처음 칠할 때 만듭니다.
         shared_ptr<const UIComputedStyle>  _computedStyle;    ///< 계산된 스타일입니다(같은 조건의 위젯이 공유하며, `UIStylePass` 가 정합니다).
-        unique_ptr<UIStyleTransitionState> _styleTransition;  ///< 스타일 전환 중의 보이는 값입니다(전환이 없으면 비어 있으며, `UIStyleTransition` 이 정합니다).
+        unique_ptr<UIStyleTransitionState> _styleTransition;  ///< 스타일 전환 중의 보이는 값입니다(전환이 없으면 비어 있으며, `UIStyleTransitionState` 이 정합니다).
         uint64                             _styleAncestorKey; ///< 이 위젯에 맞는 "조상 쪽" 선택자 조각의 해시입니다. 바뀌면 자손을 다시 맞춥니다(`UIStylePass`).
         uint32                             _styleStates;      ///< `_computedStyle` 을 맞출 때의 상태(`computeStyleStates`)입니다. 스타일 전환이 옛 쪽 자기 값을 묻는 데 씁니다(`UIStylePass`).
 

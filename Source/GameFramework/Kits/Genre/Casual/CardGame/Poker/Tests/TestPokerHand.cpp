@@ -61,8 +61,8 @@ namespace
             listCard.push_back( parseCard( pText ) );
         }
         if ( listCard.size() == 5 )
-            return sw::PokerHandEvaluator::evaluateFive( listCard.data() );
-        return sw::PokerHandEvaluator::evaluateBest( listCard.data(), static_cast<int32>( listCard.size() ) );
+            return sw::PokerHandValue::evaluateFive( listCard.data() );
+        return sw::PokerHandValue::evaluateBest( listCard.data(), static_cast<int32>( listCard.size() ) );
     }
 } // namespace
 
@@ -99,7 +99,7 @@ SW_TEST_CASE( PokerHandTest, FiveCardsClassifyIntoEveryRank )
     {
         SW_EXPECT_TRUE( arrValue[index]._rank == arrExpected[index] );
         if ( index > 0 )
-            SW_EXPECT_TRUE( sw::PokerHandEvaluator::compareHands( arrValue[index], arrValue[index - 1] ) > 0 );
+            SW_EXPECT_TRUE( sw::PokerHandValue::compareHands( arrValue[index], arrValue[index - 1] ) > 0 );
     }
 }
 
@@ -112,7 +112,7 @@ SW_TEST_CASE( PokerHandTest, WheelIsFiveHighStraight )
     SW_EXPECT_TRUE( wheel._rank == sw::PokerHandRank::Straight );
     SW_EXPECT_EQUAL( uint8( 5 ), wheel._arrTieBreak[0] );
     const sw::PokerHandValue sixHigh = evaluate( { "2c", "3d", "4h", "5s", "6c" } );
-    SW_EXPECT_TRUE( sw::PokerHandEvaluator::compareHands( wheel, sixHigh ) < 0 );
+    SW_EXPECT_TRUE( sw::PokerHandValue::compareHands( wheel, sixHigh ) < 0 );
     const sw::PokerHandValue aceHigh = evaluate( { "Tc", "Jd", "Qh", "Ks", "Ac" } );
     SW_EXPECT_TRUE( aceHigh._rank == sw::PokerHandRank::Straight );
     SW_EXPECT_EQUAL( uint8( 14 ), aceHigh._arrTieBreak[0] );
@@ -133,15 +133,15 @@ SW_TEST_CASE( PokerHandTest, TieBreakOrderWithinRank )
     const sw::PokerHandValue twosOverKings  = evaluate( { "2c", "2d", "2h", "Ks", "Kc" } );
     SW_EXPECT_EQUAL( uint8( 3 ), threesOverAces._arrTieBreak[0] );
     SW_EXPECT_EQUAL( uint8( 14 ), threesOverAces._arrTieBreak[1] );
-    SW_EXPECT_TRUE( sw::PokerHandEvaluator::compareHands( threesOverAces, twosOverKings ) > 0 );
+    SW_EXPECT_TRUE( sw::PokerHandValue::compareHands( threesOverAces, twosOverKings ) > 0 );
 
     const sw::PokerHandValue kingsAndTwos   = evaluate( { "Kc", "Kd", "2h", "2s", "3c" } );
     const sw::PokerHandValue queensAndJacks = evaluate( { "Qc", "Qd", "Jh", "Js", "Ac" } );
-    SW_EXPECT_TRUE( sw::PokerHandEvaluator::compareHands( kingsAndTwos, queensAndJacks ) > 0 ); // 높은 페어가 먼저
+    SW_EXPECT_TRUE( sw::PokerHandValue::compareHands( kingsAndTwos, queensAndJacks ) > 0 ); // 높은 페어가 먼저
     const sw::PokerHandValue kingsAndThrees = evaluate( { "Kh", "Ks", "3h", "3s", "2c" } );
-    SW_EXPECT_TRUE( sw::PokerHandEvaluator::compareHands( kingsAndThrees, kingsAndTwos ) > 0 ); // 그다음 낮은 페어
+    SW_EXPECT_TRUE( sw::PokerHandValue::compareHands( kingsAndThrees, kingsAndTwos ) > 0 ); // 그다음 낮은 페어
     const sw::PokerHandValue kingsTwosAce = evaluate( { "Kh", "Ks", "2c", "2d", "Ah" } );
-    SW_EXPECT_TRUE( sw::PokerHandEvaluator::compareHands( kingsTwosAce, kingsAndTwos ) > 0 ); // 마지막 키커
+    SW_EXPECT_TRUE( sw::PokerHandValue::compareHands( kingsTwosAce, kingsAndTwos ) > 0 ); // 마지막 키커
 
     const sw::PokerHandValue pairKicker = evaluate( { "9c", "9d", "Ah", "4s", "3c" } );
     SW_EXPECT_EQUAL( uint8( 9 ), pairKicker._arrTieBreak[0] );
@@ -158,13 +158,13 @@ SW_TEST_CASE( PokerHandTest, SuitsNeverBreakTies )
 {
     const sw::PokerHandValue clubs  = evaluate( { "Ac", "Kc", "9d", "5h", "2s" } );
     const sw::PokerHandValue hearts = evaluate( { "Ah", "Kh", "9s", "5c", "2d" } );
-    SW_EXPECT_EQUAL( 0, sw::PokerHandEvaluator::compareHands( clubs, hearts ) );
+    SW_EXPECT_EQUAL( 0, sw::PokerHandValue::compareHands( clubs, hearts ) );
     SW_EXPECT_EQUAL( clubs._score, hearts._score );
 
     const sw::PokerHandValue aceFlush  = evaluate( { "Ad", "9d", "7d", "4d", "2d" } );
     const sw::PokerHandValue kingFlush = evaluate( { "Ks", "Qs", "Js", "9s", "8s" } );
-    SW_EXPECT_TRUE( sw::PokerHandEvaluator::compareHands( aceFlush, kingFlush ) > 0 );
-    SW_EXPECT_TRUE( sw::PokerHandEvaluator::compareHands( kingFlush, aceFlush ) < 0 );
+    SW_EXPECT_TRUE( sw::PokerHandValue::compareHands( aceFlush, kingFlush ) > 0 );
+    SW_EXPECT_TRUE( sw::PokerHandValue::compareHands( kingFlush, aceFlush ) < 0 );
 }
 
 /**
@@ -184,7 +184,7 @@ SW_TEST_CASE( PokerHandTest, BestOfSevenPicksStrongestFive )
     const sw::PokerHandValue first  = evaluate( { "2c", "3d", "Ts", "Js", "Qs", "Ks", "As" } );
     const sw::PokerHandValue second = evaluate( { "Ah", "Ac", "Ts", "Js", "Qs", "Ks", "As" } );
     SW_EXPECT_TRUE( first._rank == sw::PokerHandRank::RoyalFlush );
-    SW_EXPECT_EQUAL( 0, sw::PokerHandEvaluator::compareHands( first, second ) );
+    SW_EXPECT_EQUAL( 0, sw::PokerHandValue::compareHands( first, second ) );
 
     // 풀하우스 둘을 만들 수 있으면 트리플이 높은 쪽
     const sw::PokerHandValue doubleTrips = evaluate( { "8c", "8d", "8h", "Kc", "Kd", "Kh", "2s" } );
@@ -199,10 +199,10 @@ SW_TEST_CASE( PokerHandTest, BestOfSevenPicksStrongestFive )
 SW_TEST_CASE( PokerHandTest, FewerThanFiveCardsGiveEmptyValue )
 {
     const sw::Card           arrCard[] = { parseCard( "Ac" ), parseCard( "Ad" ), parseCard( "Ah" ), parseCard( "As" ) };
-    const sw::PokerHandValue empty     = sw::PokerHandEvaluator::evaluateBest( arrCard, 4 );
+    const sw::PokerHandValue empty     = sw::PokerHandValue::evaluateBest( arrCard, 4 );
     SW_EXPECT_EQUAL( uint32( 0 ), empty._score );
     SW_EXPECT_FALSE( empty._arrBest[0].isValid() );
-    SW_EXPECT_TRUE( sw::PokerHandEvaluator::compareHands( empty, evaluate( { "2c", "3d", "4h", "5s", "7c" } ) ) < 0 );
+    SW_EXPECT_TRUE( sw::PokerHandValue::compareHands( empty, evaluate( { "2c", "3d", "4h", "5s", "7c" } ) ) < 0 );
 
     const sw::PokerHandValue six = evaluate( { "Ac", "Ad", "Ah", "As", "2c", "Kd" } );
     SW_EXPECT_TRUE( six._rank == sw::PokerHandRank::FourOfAKind );

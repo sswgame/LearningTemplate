@@ -10,8 +10,8 @@
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Audio/AudioChannelLayout.h"
-#include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioDownmix.h"
+#include "Engine/Audio/AudioPcm.h"
 #include "Engine/Audio/AudioStream.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/Graph/AudioGraph.h"
@@ -279,7 +279,7 @@ namespace sw
             return decodeGraph( path );
         AudioPcm pcm;
         bool     bDecoded = false;
-        if ( AudioClipDecoder::isSupportedExtension( pathView ) )
+        if ( AudioPcm::isSupportedExtension( pathView ) )
         {
             vector<uint8> bytes;
             const bool    bRead = AssetIO::readBinaryAsset( assetID, bytes ); // 낱개 파일 허용 정책은 AssetIO 한 곳이 본다
@@ -299,7 +299,7 @@ namespace sw
                         return pClip;
                     }
                 }
-                bDecoded = AudioClipDecoder::decode( pathView, bytes.data(), bytes.size(), pcm );
+                bDecoded = AudioPcm::decode( pathView, bytes.data(), bytes.size(), pcm );
             }
         }
         // 공통 디코더가 못 읽는 WAV(ADPCM 등)와 다른 형식(MP3 등)은 백엔드의 대체 디코더에 넘긴다. OGG 는 넘기지 않는다(Media Foundation 은 Vorbis 를 모른다).

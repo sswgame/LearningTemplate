@@ -17,7 +17,7 @@
 
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelBody.h"
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelHotbar.h"
-#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelRaycast.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelRayHit.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeBoundComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 

@@ -15,7 +15,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphCook.h"
+#include "Engine/Graphics/Material/Dev/MaterialGraphGeneratedPaths.h"
 #include "Engine/Graphics/Material/Dev/MaterialGraphNodeRegistry.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
@@ -78,10 +78,10 @@ namespace sw::editor
 
     bool MaterialGraphModel::saveDocument( const AbsolutePath& diskPath )
     {
-        if ( MaterialGraphCompiler::isSubgraph( _graph ) == false )
+        if ( MaterialGraphCompileResult::isSubgraph( _graph ) == false )
         {
             MaterialGraphCompileResult result;
-            if ( MaterialGraphCompiler::compile( _graph, "<save>", result ) == false )
+            if ( MaterialGraphCompileResult::compile( _graph, "<save>", result ) == false )
             {
                 for ( const MaterialGraphIssue& issue : result._listIssue )
                 {
@@ -118,7 +118,7 @@ namespace sw::editor
         for ( size_t nodeIndex = 0; nodeIndex < _graph._listNode.size(); ++nodeIndex )
         {
             // 모르는 종류 · 읽지 못한 하위 그래프는 핀 없이 그린다 — 컴파일 문제가 노드에 이유를 붙인다.
-            (void)MaterialGraphCompiler::collectNodePins( _graph._listNode[nodeIndex], _listNodePin[nodeIndex]._listInput, _listNodePin[nodeIndex]._listOutput );
+            (void)MaterialGraphCompileResult::collectNodePins( _graph._listNode[nodeIndex], _listNodePin[nodeIndex]._listInput, _listNodePin[nodeIndex]._listOutput );
         }
     }
 
@@ -311,10 +311,10 @@ namespace sw::editor
         if ( _bCompileDirty == SW_FALSE )
             return;
         _bCompileDirty = SW_FALSE;
-        _bSubgraph     = MaterialGraphCompiler::isSubgraph( _graph ) ? SW_TRUE : SW_FALSE;
+        _bSubgraph     = MaterialGraphCompileResult::isSubgraph( _graph ) ? SW_TRUE : SW_FALSE;
         _result        = MaterialGraphCompileResult{};
         if ( _bSubgraph == SW_FALSE )
-            (void)MaterialGraphCompiler::compile( _graph, documentPath, _result ); // 문제는 결과에 남아 노드에 붙는다
+            (void)MaterialGraphCompileResult::compile( _graph, documentPath, _result ); // 문제는 결과에 남아 노드에 붙는다
     }
 
     void MaterialGraphModel::populatePreview( Scene& scene )
@@ -336,12 +336,12 @@ namespace sw::editor
         if ( _bSubgraph != SW_FALSE || _result._listIssue.empty() == false || _result._hlsl.empty() )
             return;
         MaterialGraphGeneratedPaths paths;
-        if ( MaterialGraphCook::makeGeneratedPaths( documentPath, paths ) == false )
+        if ( MaterialGraphGeneratedPaths::makeGeneratedPaths( documentPath, paths ) == false )
             return;
-        const MaterialGraphGeneratedPaths previewPaths = MaterialGraphCook::makePreviewPaths( paths );
+        const MaterialGraphGeneratedPaths previewPaths = MaterialGraphGeneratedPaths::makePreviewPaths( paths );
         const AssetPaths&                 assetPaths   = editor::getSubsystem<AssetPaths>();
         uint32                            writtenCount = 0;
-        if ( MaterialGraphCook::writeGenerated( assetPaths, documentPath, previewPaths, _result, &writtenCount ) == false )
+        if ( MaterialGraphGeneratedPaths::writeGenerated( assetPaths, documentPath, previewPaths, _result, &writtenCount ) == false )
             return;
         if ( _previewPath == previewPaths._materialPath )
         {

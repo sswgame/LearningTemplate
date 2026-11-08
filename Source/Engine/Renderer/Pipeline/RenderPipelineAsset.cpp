@@ -10,7 +10,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Renderer/Pipeline/GBufferLayout.h"
+#include "Engine/Renderer/Pipeline/GBufferAttachmentSpec.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -594,7 +594,7 @@ namespace sw
             }
 
             /**
-             * @brief 3-1) G버퍼 패스의 출력이 명세(`GBufferLayout` 판 `kVersion`)와 같은가 — MRT 슬롯마다 첨부의 포맷 · 클리어 값.
+             * @brief 3-1) G버퍼 패스의 출력이 명세(`GBufferAttachmentSpec` 판 `kVersion`)와 같은가 — MRT 슬롯마다 첨부의 포맷 · 클리어 값.
              * @details 셰이더는 명세의 슬롯 순서 · 인코딩으로 쓰고(SV_TARGET0 ..) PSO 포맷도 명세에서 온다. 첨부 이름은 파이프라인이 고른다(역할로 읽는다).
              *          XML 의 포맷이 다르면 PSO 와 첨부가 어긋나고, 클리어 값이 다르면 "그려지지 않은 픽셀" 표시(알파 0)가 깨진다 — 로드 오류로 막는다.
              */
@@ -603,11 +603,11 @@ namespace sw
                 uint32 issueCount{ 0 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
-                    if ( pass._type != RenderPassType::GBuffer || pass._listResolvedColorOutput.size() != GBufferLayout::kAttachmentCount )
+                    if ( pass._type != RenderPassType::GBuffer || pass._listResolvedColorOutput.size() != GBufferAttachmentSpec::kAttachmentCount )
                         continue;
-                    for ( uint32 slot = 0; slot < GBufferLayout::kAttachmentCount; ++slot )
+                    for ( uint32 slot = 0; slot < GBufferAttachmentSpec::kAttachmentCount; ++slot )
                     {
-                        const GBufferAttachmentSpec& spec           = GBufferLayout::kArrAttachment[slot];
+                        const GBufferAttachmentSpec& spec           = GBufferAttachmentSpec::kArrAttachment[slot];
                         const hashed_string&         outputName     = pass._listResolvedColorOutput[slot]._attachment;
                         const RenderPassAttachment*  pAttachment    = findAttachment( desc, outputName.view() );
                         const bool                   bFormatMatches = pAttachment != nullptr && pAttachment->_format == spec._format;
@@ -617,7 +617,7 @@ namespace sw
                         if ( bFormatMatches && bClearMatches )
                             continue;
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.GBufferLayoutMismatch", "[%#] pass '%#': G-buffer slot %# ('%#', %#) must be %# cleared to 0 by the G-buffer layout v%#%#",
-                                         sourcePath, pass._name, slot, outputName.c_str(), spec._pName, getEnumName( spec._format ), GBufferLayout::kVersion,
+                                         sourcePath, pass._name, slot, outputName.c_str(), spec._pName, getEnumName( spec._format ), GBufferAttachmentSpec::kVersion,
                                          pAttachment == nullptr ? " - the attachment is not declared" : ( bFormatMatches ? " - its clear color differs" : " - its format differs" ) );
                         ++issueCount;
                     }

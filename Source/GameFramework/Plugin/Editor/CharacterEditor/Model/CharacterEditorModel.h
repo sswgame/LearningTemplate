@@ -22,7 +22,7 @@
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/FitCheckSummary.h"
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/SocketEditModel.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceResolver.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/UserAppearancePresetStore.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 

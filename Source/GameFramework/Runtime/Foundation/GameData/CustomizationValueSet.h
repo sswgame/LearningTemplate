@@ -35,7 +35,7 @@ namespace sw
     /**
      * @class CustomizationValueSet
      * @brief 넣은 순서를 지키는 작은 이름 → 꾸미기 값 목록입니다(보통 수십 개 안이라 선형 조회).
-     * @details 값은 스키마의 범위와 간격에 맞추기 전의 것일 수 있습니다. 해석기(`AppearanceResolver`)가 스키마로 정규화한 뒤 씁니다.
+     * @details 값은 스키마의 범위와 간격에 맞추기 전의 것일 수 있습니다. 해석기(`ResolvedAppearance`)가 스키마로 정규화한 뒤 씁니다.
      */
     class SW_GF_API CustomizationValueSet
     {

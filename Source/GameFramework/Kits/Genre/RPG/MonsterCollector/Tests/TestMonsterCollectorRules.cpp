@@ -156,11 +156,11 @@ namespace
             monster._level     = level;
             monster._nickname  = pSpecies != nullptr ? pSpecies->_name : sw::string{};
             monster._exp       = pSpecies != nullptr ? sw::MonsterCollectorCatalog::computeTotalExp( pSpecies->_expGroup, level ) : 0;
-            sw::MonsterRules::recomputeStats( _catalog, monster );
+            sw::MonsterInstance::recomputeStats( _catalog, monster );
             if ( moveA.empty() == false )
-                SW_EXPECT_TRUE( sw::MonsterRules::learnMove( _catalog, monster, moveA ) );
+                SW_EXPECT_TRUE( sw::MonsterInstance::learnMove( _catalog, monster, moveA ) );
             if ( moveB.empty() == false )
-                SW_EXPECT_TRUE( sw::MonsterRules::learnMove( _catalog, monster, moveB ) );
+                SW_EXPECT_TRUE( sw::MonsterInstance::learnMove( _catalog, monster, moveB ) );
             return monster;
         }
 
@@ -233,7 +233,7 @@ namespace
  */
 SW_TEST_CASE_F( MonsterCollectorRulesTest, StatFormula )
 {
-    using Rules = sw::MonsterRules;
+    using Rules = sw::MonsterInstance;
     SW_EXPECT_EQUAL( 110, Rules::computeStat( sw::MonsterStat::HP, 50, 0, 0, 50, 100 ) );
     SW_EXPECT_EQUAL( 55, Rules::computeStat( sw::MonsterStat::Attack, 50, 0, 0, 50, 100 ) );
     SW_EXPECT_EQUAL( 60, Rules::computeStat( sw::MonsterStat::Attack, 50, 0, 0, 50, 110 ) );
@@ -252,7 +252,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, StatFormula )
 
     sw::MonsterInstance strong = make( "normie", 50 );
     strong._natureID           = "Adamant";
-    sw::MonsterRules::recomputeStats( _catalog, strong );
+    sw::MonsterInstance::recomputeStats( _catalog, strong );
     SW_EXPECT_EQUAL( 60, strong.getStat( sw::MonsterStat::Attack ) );
     SW_EXPECT_EQUAL( 49, strong.getStat( sw::MonsterStat::SpecialAttack ) );
     SW_EXPECT_EQUAL( 110, strong.getMaxHP() );
@@ -276,9 +276,9 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, ExpGroups )
     SW_EXPECT_EQUAL( Catalog::kMaxLevel, Catalog::computeLevelForExp( sw::MonsterExpGroup::Medium, 999999999 ) );
 
     const sw::MonsterSpeciesDef* pNormie = _catalog.findSpecies( "normie" );
-    SW_EXPECT_EQUAL( 500, sw::MonsterRules::computeExpYield( *pNormie, 50, false ) );
-    SW_EXPECT_EQUAL( 750, sw::MonsterRules::computeExpYield( *pNormie, 50, true ) );
-    SW_EXPECT_EQUAL( 10, sw::MonsterRules::computeExpYield( *pNormie, 0, false ) );
+    SW_EXPECT_EQUAL( 500, sw::MonsterInstance::computeExpYield( *pNormie, 50, false ) );
+    SW_EXPECT_EQUAL( 750, sw::MonsterInstance::computeExpYield( *pNormie, 50, true ) );
+    SW_EXPECT_EQUAL( 10, sw::MonsterInstance::computeExpYield( *pNormie, 0, false ) );
 }
 
 /**
@@ -288,7 +288,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, CreateMonster )
 {
     sw::GameRandom random;
     random.setSeed( 9 );
-    const sw::MonsterInstance monster = sw::MonsterRules::createMonster( _catalog, "normie", 1, random );
+    const sw::MonsterInstance monster = sw::MonsterInstance::createMonster( _catalog, "normie", 1, random );
     SW_EXPECT_TRUE( monster._arrMove[0]._moveID == sw::hashed_string( "ember" ) );
     SW_EXPECT_TRUE( monster._arrMove[3]._moveID == sw::hashed_string( "quick" ) );
     SW_EXPECT_EQUAL( 25, monster._arrMove[0]._pp );
@@ -297,11 +297,11 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, CreateMonster )
     SW_EXPECT_TRUE( _catalog.findNature( monster._natureID ) != nullptr );
     for ( const int32 iv : monster._arrIv )
     {
-        SW_EXPECT_TRUE( 0 <= iv && iv <= sw::MonsterRules::kMaxIv );
+        SW_EXPECT_TRUE( 0 <= iv && iv <= sw::MonsterInstance::kMaxIv );
     }
 
     // 레벨 5 의 기술은 XML 에서 앞에 적혔어도 카탈로그가 정렬해 마지막에 온다.
-    const sw::MonsterInstance grown = sw::MonsterRules::createMonster( _catalog, "normie", 5, random );
+    const sw::MonsterInstance grown = sw::MonsterInstance::createMonster( _catalog, "normie", 5, random );
     SW_EXPECT_TRUE( grown._arrMove[0]._moveID == sw::hashed_string( "growl" ) );
     SW_EXPECT_TRUE( grown._arrMove[3]._moveID == sw::hashed_string( "tackle" ) );
     SW_EXPECT_EQUAL( 125, grown._exp );
@@ -310,12 +310,12 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, CreateMonster )
     sw::GameRandom randomB;
     randomA.setSeed( 4 );
     randomB.setSeed( 4 );
-    SW_EXPECT_TRUE( MonsterTestUtil::isSameState( sw::MonsterRules::createMonster( _catalog, "normie", 7, randomA ), sw::MonsterRules::createMonster( _catalog, "normie", 7, randomB ) ) );
+    SW_EXPECT_TRUE( MonsterTestUtil::isSameState( sw::MonsterInstance::createMonster( _catalog, "normie", 7, randomA ), sw::MonsterInstance::createMonster( _catalog, "normie", 7, randomB ) ) );
 
-    SW_EXPECT_TRUE( sw::MonsterRules::createMonster( _catalog, "nope", 5, random )._speciesID.empty() );
+    SW_EXPECT_TRUE( sw::MonsterInstance::createMonster( _catalog, "nope", 5, random )._speciesID.empty() );
     SW_EXPECT_LOG( "MonsterInstance.MonsterRulesRefusedLevelMust" );
-    SW_EXPECT_TRUE( sw::MonsterRules::createMonster( _catalog, "normie", 0, random )._speciesID.empty() );
-    SW_EXPECT_TRUE( sw::MonsterRules::createMonster( _catalog, "normie", 101, random )._speciesID.empty() );
+    SW_EXPECT_TRUE( sw::MonsterInstance::createMonster( _catalog, "normie", 0, random )._speciesID.empty() );
+    SW_EXPECT_TRUE( sw::MonsterInstance::createMonster( _catalog, "normie", 101, random )._speciesID.empty() );
 }
 
 /**
@@ -326,11 +326,11 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, GainExp )
     sw::MonsterInstance monster = make( "flamo", 2, "strike" );
     SW_EXPECT_EQUAL( 8, monster._exp );
     SW_EXPECT_EQUAL( 14, monster.getMaxHP() );
-    SW_EXPECT_EQUAL( 0, sw::MonsterRules::gainExp( _catalog, monster, 0, _listGrowth ) );
-    SW_EXPECT_EQUAL( 0, sw::MonsterRules::gainExp( _catalog, monster, -5, _listGrowth ) );
+    SW_EXPECT_EQUAL( 0, sw::MonsterInstance::gainExp( _catalog, monster, 0, _listGrowth ) );
+    SW_EXPECT_EQUAL( 0, sw::MonsterInstance::gainExp( _catalog, monster, -5, _listGrowth ) );
     SW_EXPECT_TRUE( _listGrowth.empty() );
 
-    SW_EXPECT_EQUAL( 1, sw::MonsterRules::gainExp( _catalog, monster, 19, _listGrowth ) ); // 27 = 3³
+    SW_EXPECT_EQUAL( 1, sw::MonsterInstance::gainExp( _catalog, monster, 19, _listGrowth ) ); // 27 = 3³
     SW_EXPECT_EQUAL( 3, monster._level );
     SW_EXPECT_EQUAL( 16, monster.getMaxHP() );
     SW_EXPECT_EQUAL( 16, monster._hp );
@@ -343,24 +343,24 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, GainExp )
     // 쓰러진 개체는 HP 가 그대로이고, 슬롯이 차면 막힘 알림만 낸다.
     _listGrowth.clear();
     sw::MonsterInstance full = make( "flamo", 2, "strike", "ember" );
-    SW_EXPECT_TRUE( sw::MonsterRules::learnMove( _catalog, full, "quick" ) );
-    SW_EXPECT_TRUE( sw::MonsterRules::learnMove( _catalog, full, "swords" ) );
+    SW_EXPECT_TRUE( sw::MonsterInstance::learnMove( _catalog, full, "quick" ) );
+    SW_EXPECT_TRUE( sw::MonsterInstance::learnMove( _catalog, full, "swords" ) );
     full._hp = 0;
-    SW_EXPECT_EQUAL( 1, sw::MonsterRules::gainExp( _catalog, full, 19, _listGrowth ) );
+    SW_EXPECT_EQUAL( 1, sw::MonsterInstance::gainExp( _catalog, full, 19, _listGrowth ) );
     SW_EXPECT_EQUAL( 0, full._hp );
     SW_EXPECT_EQUAL( 1, countGrowth( sw::MonsterGrowthEvent::Kind::MoveLearnBlocked ) );
     SW_EXPECT_EQUAL( -1, full.findMoveSlot( "growl" ) );
 
     _listGrowth.clear();
     sw::MonsterInstance veteran = make( "normie", 99 );
-    SW_EXPECT_EQUAL( 1, sw::MonsterRules::gainExp( _catalog, veteran, 99999999, _listGrowth ) );
+    SW_EXPECT_EQUAL( 1, sw::MonsterInstance::gainExp( _catalog, veteran, 99999999, _listGrowth ) );
     SW_EXPECT_EQUAL( sw::MonsterCollectorCatalog::kMaxLevel, veteran._level );
     SW_EXPECT_EQUAL( 1000000, veteran._exp );
-    SW_EXPECT_EQUAL( 0, sw::MonsterRules::gainExp( _catalog, veteran, 100, _listGrowth ) );
+    SW_EXPECT_EQUAL( 0, sw::MonsterInstance::gainExp( _catalog, veteran, 100, _listGrowth ) );
 
     sw::MonsterInstance unknown;
     unknown._speciesID = "nope";
-    SW_EXPECT_EQUAL( 0, sw::MonsterRules::gainExp( _catalog, unknown, 100, _listGrowth ) );
+    SW_EXPECT_EQUAL( 0, sw::MonsterInstance::gainExp( _catalog, unknown, 100, _listGrowth ) );
 }
 
 /**
@@ -370,15 +370,15 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, LearnMove )
 {
     sw::MonsterInstance monster = make( "normie", 50, "strike", "ember" );
     SW_EXPECT_EQUAL( 2, monster.countMoves() );
-    SW_EXPECT_FALSE( sw::MonsterRules::learnMove( _catalog, monster, "strike" ) );
-    SW_EXPECT_FALSE( sw::MonsterRules::learnMove( _catalog, monster, "nope" ) );
-    SW_EXPECT_TRUE( sw::MonsterRules::learnMove( _catalog, monster, "growl", 3 ) ); // 빈 슬롯이 있으면 교체 번호는 보지 않는다
+    SW_EXPECT_FALSE( sw::MonsterInstance::learnMove( _catalog, monster, "strike" ) );
+    SW_EXPECT_FALSE( sw::MonsterInstance::learnMove( _catalog, monster, "nope" ) );
+    SW_EXPECT_TRUE( sw::MonsterInstance::learnMove( _catalog, monster, "growl", 3 ) ); // 빈 슬롯이 있으면 교체 번호는 보지 않는다
     SW_EXPECT_EQUAL( 2, monster.findMoveSlot( "growl" ) );
-    SW_EXPECT_TRUE( sw::MonsterRules::learnMove( _catalog, monster, "swords" ) );
+    SW_EXPECT_TRUE( sw::MonsterInstance::learnMove( _catalog, monster, "swords" ) );
 
-    SW_EXPECT_FALSE( sw::MonsterRules::learnMove( _catalog, monster, "quick" ) );
-    SW_EXPECT_FALSE( sw::MonsterRules::learnMove( _catalog, monster, "quick", 4 ) );
-    SW_EXPECT_TRUE( sw::MonsterRules::learnMove( _catalog, monster, "quick", 1 ) );
+    SW_EXPECT_FALSE( sw::MonsterInstance::learnMove( _catalog, monster, "quick" ) );
+    SW_EXPECT_FALSE( sw::MonsterInstance::learnMove( _catalog, monster, "quick", 4 ) );
+    SW_EXPECT_TRUE( sw::MonsterInstance::learnMove( _catalog, monster, "quick", 1 ) );
     SW_EXPECT_EQUAL( -1, monster.findMoveSlot( "ember" ) );
     SW_EXPECT_EQUAL( 30, monster._arrMove[1]._pp );
     SW_EXPECT_EQUAL( -1, monster.findMoveSlot( sw::hashed_string{} ) );
@@ -393,17 +393,17 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, EffortValueCaps )
     sw::MonsterInstance          monster  = make( "normie", 50 );
 
     monster._arrEv[static_cast<size_t>( sw::MonsterStat::Attack )] = 251;
-    sw::MonsterRules::addEffortValues( _catalog, monster, defeated );
+    sw::MonsterInstance::addEffortValues( _catalog, monster, defeated );
     SW_EXPECT_EQUAL( 252, monster._arrEv[static_cast<size_t>( sw::MonsterStat::Attack )] );
     SW_EXPECT_EQUAL( 1, monster._arrEv[static_cast<size_t>( sw::MonsterStat::Speed )] );
     SW_EXPECT_EQUAL( 86, monster.getStat( sw::MonsterStat::Attack ) );
 
     monster._arrEv[static_cast<size_t>( sw::MonsterStat::Defense )] = 252;
     monster._arrEv[static_cast<size_t>( sw::MonsterStat::Speed )]   = 5; // 합 509
-    sw::MonsterRules::addEffortValues( _catalog, monster, defeated );
+    sw::MonsterInstance::addEffortValues( _catalog, monster, defeated );
     SW_EXPECT_EQUAL( 252, monster._arrEv[static_cast<size_t>( sw::MonsterStat::Attack )] );
     SW_EXPECT_EQUAL( 6, monster._arrEv[static_cast<size_t>( sw::MonsterStat::Speed )] );
-    sw::MonsterRules::addEffortValues( _catalog, monster, defeated );
+    sw::MonsterInstance::addEffortValues( _catalog, monster, defeated );
     SW_EXPECT_EQUAL( 6, monster._arrEv[static_cast<size_t>( sw::MonsterStat::Speed )] );
 }
 
@@ -413,20 +413,20 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, EffortValueCaps )
 SW_TEST_CASE_F( MonsterCollectorRulesTest, Evolution )
 {
     sw::MonsterInstance monster = make( "flamo", 2 );
-    SW_EXPECT_TRUE( sw::MonsterRules::findEvolution( _catalog, monster, sw::hashed_string{} ).empty() );
+    SW_EXPECT_TRUE( sw::MonsterInstance::findEvolution( _catalog, monster, sw::hashed_string{} ).empty() );
     monster._level = 3;
-    SW_EXPECT_TRUE( sw::MonsterRules::findEvolution( _catalog, monster, sw::hashed_string{} ) == sw::hashed_string( "flamor" ) );
-    SW_EXPECT_TRUE( sw::MonsterRules::findEvolution( _catalog, monster, "stone" ) == sw::hashed_string( "flamox" ) );
-    SW_EXPECT_TRUE( sw::MonsterRules::findEvolution( _catalog, monster, "moon" ).empty() );
+    SW_EXPECT_TRUE( sw::MonsterInstance::findEvolution( _catalog, monster, sw::hashed_string{} ) == sw::hashed_string( "flamor" ) );
+    SW_EXPECT_TRUE( sw::MonsterInstance::findEvolution( _catalog, monster, "stone" ) == sw::hashed_string( "flamox" ) );
+    SW_EXPECT_TRUE( sw::MonsterInstance::findEvolution( _catalog, monster, "moon" ).empty() );
 
     sw::MonsterInstance pal = make( "pal", 5 );
-    SW_EXPECT_TRUE( sw::MonsterRules::findEvolution( _catalog, pal, sw::hashed_string{} ).empty() );
+    SW_EXPECT_TRUE( sw::MonsterInstance::findEvolution( _catalog, pal, sw::hashed_string{} ).empty() );
     pal._friendship = 220;
-    SW_EXPECT_TRUE( sw::MonsterRules::findEvolution( _catalog, pal, sw::hashed_string{} ) == sw::hashed_string( "flamor" ) );
+    SW_EXPECT_TRUE( sw::MonsterInstance::findEvolution( _catalog, pal, sw::hashed_string{} ) == sw::hashed_string( "flamor" ) );
 
     sw::MonsterInstance adult = make( "flamo", 50 );
-    SW_EXPECT_FALSE( sw::MonsterRules::evolve( _catalog, adult, "nope" ) );
-    SW_EXPECT_TRUE( sw::MonsterRules::evolve( _catalog, adult, "flamor" ) );
+    SW_EXPECT_FALSE( sw::MonsterInstance::evolve( _catalog, adult, "nope" ) );
+    SW_EXPECT_TRUE( sw::MonsterInstance::evolve( _catalog, adult, "flamor" ) );
     SW_EXPECT_TRUE( adult._speciesID == sw::hashed_string( "flamor" ) );
     SW_EXPECT_TRUE( adult._nickname == "Flamor" );
     SW_EXPECT_EQUAL( 85, adult.getStat( sw::MonsterStat::Attack ) ); // 160 × 50 / 100 + 5
@@ -436,7 +436,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, Evolution )
     sw::MonsterInstance named = make( "flamo", 50 );
     named._nickname           = "Sparky";
     named._hp                 = 0;
-    SW_EXPECT_TRUE( sw::MonsterRules::evolve( _catalog, named, "flamor" ) );
+    SW_EXPECT_TRUE( sw::MonsterInstance::evolve( _catalog, named, "flamor" ) );
     SW_EXPECT_TRUE( named._nickname == "Sparky" );
     SW_EXPECT_EQUAL( 0, named._hp );
 
@@ -444,7 +444,7 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, Evolution )
     tired._hp                 = 1;
     tired._status             = sw::MonsterStatus::Burn;
     tired._arrMove[0]._pp     = 0;
-    sw::MonsterRules::restore( tired );
+    sw::MonsterInstance::restore( tired );
     SW_EXPECT_EQUAL( 110, tired._hp );
     SW_EXPECT_EQUAL( sw::MonsterStatus::None, tired._status );
     SW_EXPECT_EQUAL( 30, tired._arrMove[0]._pp );
@@ -489,11 +489,11 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, InstanceStateRange )
     SW_EXPECT_TRUE( bad( []( sw::MonsterInstance& monster )
     { monster._arrIv[1] = -1; } ) );
     SW_EXPECT_TRUE( bad( []( sw::MonsterInstance& monster )
-    { monster._arrIv[1] = sw::MonsterRules::kMaxIv + 1; } ) );
+    { monster._arrIv[1] = sw::MonsterInstance::kMaxIv + 1; } ) );
     SW_EXPECT_TRUE( bad( []( sw::MonsterInstance& monster )
     { monster._arrEv[1] = -1; } ) );
     SW_EXPECT_TRUE( bad( []( sw::MonsterInstance& monster )
-    { monster._arrEv[1] = sw::MonsterRules::kMaxEvPerStat + 1; } ) );
+    { monster._arrEv[1] = sw::MonsterInstance::kMaxEvPerStat + 1; } ) );
     SW_EXPECT_TRUE( bad( []( sw::MonsterInstance& monster )
     {
         monster._arrEv[0] = 252;
@@ -509,11 +509,11 @@ SW_TEST_CASE_F( MonsterCollectorRulesTest, InstanceStateRange )
     SW_EXPECT_TRUE( bad( []( sw::MonsterInstance& monster )
     { monster._friendship = -1; } ) );
     SW_EXPECT_TRUE( bad( []( sw::MonsterInstance& monster )
-    { monster._friendship = sw::MonsterRules::kMaxFriendship + 1; } ) );
+    { monster._friendship = sw::MonsterInstance::kMaxFriendship + 1; } ) );
     SW_EXPECT_TRUE( bad( []( sw::MonsterInstance& monster )
     { monster._statusTurns = -1; } ) );
     SW_EXPECT_TRUE( bad( []( sw::MonsterInstance& monster )
-    { monster._statusTurns = sw::MonsterRules::kMaxStatusTurns + 1; } ) );
+    { monster._statusTurns = sw::MonsterInstance::kMaxStatusTurns + 1; } ) );
     SW_EXPECT_TRUE( bad( []( sw::MonsterInstance& monster )
     { monster._exp = -1; } ) );
     SW_EXPECT_TRUE( bad( []( sw::MonsterInstance& monster )

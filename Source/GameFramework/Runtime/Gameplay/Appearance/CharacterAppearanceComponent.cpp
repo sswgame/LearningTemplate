@@ -13,7 +13,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Character/CharacterDataCache.h"
-#include "Engine/Character/Fit/CharacterMeshLOD.h"
+#include "Engine/Character/Fit/CharacterLODSettings.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Character/Fit/FitPartDef.h"
 #include "Engine/Character/Fit/FitSolver.h"
@@ -38,7 +38,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceMeshAssembly.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceMeshPart.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 
@@ -1578,7 +1578,7 @@ namespace sw
         using Internal = CharacterAppearanceComponentInternal;
         SW_PROFILE_SCOPE( "Appearance.MeshBuild" );
         if ( _report.empty() && _bBakeCached == false )
-            _bBakeBuilt = AppearanceMeshAssembly::assemble( _resolved, _listPart, _tables.get(), _bindBones, _listBaked, _report, _bPreview ? &_fitResult : nullptr );
+            _bBakeBuilt = AppearanceMeshPart::assemble( _resolved, _listPart, _tables.get(), _bindBones, _listBaked, _report, _bPreview ? &_fitResult : nullptr );
         if ( _listBaked.size() != _listPart.size() )
         {
             SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceMeshesDrawnUnbaked", "Appearance '%#' meshes are drawn unbaked: %#", _presetID.c_str(), _report.c_str() );
@@ -1613,7 +1613,7 @@ namespace sw
         }
         _merged = result._mesh;
         // 합친 메시의 LOD 는 여기서 한 번 만든다(조립한 메시라 임포트 LOD 가 없다) — 같은 차림은 캐시로 나눈다. 만들지 못하면 오류를 남기고 LOD 0 만 그린다.
-        (void)CharacterMeshLOD::buildLODs( *_merged, *_pLODSettings, listLODRule );
+        (void)CharacterLODSettings::buildLODs( *_merged, *_pLODSettings, listLODRule );
         _bMergeBuilt = true;
     }
 

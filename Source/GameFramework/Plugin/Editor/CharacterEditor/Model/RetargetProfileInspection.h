@@ -41,14 +41,8 @@ namespace sw::editor
         float32                         _heightRatio{ 0.0f };
         uint32                          _mappedTargetBoneCount{ 0 };
         uint32                          _targetBoneCount{ 0 };
-    };
-} // namespace sw::editor
 
-namespace sw::editor
-{
-    /** @brief 프로필을 두 스켈레톤에 묶어 보는 점검입니다 — 런타임 리타기터와 같은 검사 하나(에디터 쪽 사본 규칙을 두지 않는다). */
-    struct RetargetProfileInspector
-    {
+        // 프로필을 두 스켈레톤에 묶어 보는 점검입니다 — 런타임 리타기터와 같은 검사 하나(에디터 쪽 사본 규칙을 두지 않는다). */
         /**
          * @brief 프로필이 적은 두 스켈레톤을 디스크에서 읽어 점검합니다. 저장 직전처럼 지금 파일로 판정할 때 씁니다.
          * @return 스켈레톤을 읽지 못하거나 묶이지 않으면 false 이고 까닭을 @p outError 에 영어 한 문장으로 담습니다.

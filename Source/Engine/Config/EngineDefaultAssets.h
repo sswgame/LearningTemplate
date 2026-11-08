@@ -114,7 +114,7 @@ namespace sw
         PROPERTY( Required )
         DataPath _animationLODSettings; ///< 애니메이션 LOD 표(`AnimationSystem`, `AnimationLODSettings`)
         PROPERTY( Required )
-        DataPath _characterLODSettings; ///< 조립한 캐릭터 메시의 LOD 표(`CharacterMeshLOD`, `CharacterLODSettings`)
+        DataPath _characterLODSettings; ///< 조립한 캐릭터 메시의 LOD 표(`CharacterLODSettings`, `CharacterLODSettings`)
         PROPERTY( Required )
         DataPath _meshLODSettings; ///< 메시 LOD · 경계 정책(`MeshLODSystem` · `SkeletalMeshComponent`, `MeshLODSettings`)
         PROPERTY( Required )
@@ -138,7 +138,7 @@ namespace sw
         PROPERTY( Required )
         DataPath _spriteMaterial; ///< 스프라이트(2D) — 머티리얼 칸이 비면 쓰는 기본 머티리얼(`SpriteRenderUtil`)
         PROPERTY( Required )
-        DataPath _toonMaterialTemplate; ///< VRM 임포트가 MToon 재질마다 복사하는 툰 머티리얼 견본(`VrmMaterialImporter`)
+        DataPath _toonMaterialTemplate; ///< VRM 임포트가 MToon 재질마다 복사하는 툰 머티리얼 견본(`ToonMaterialDef`)
         PROPERTY( Required )
         DataPath _pbrMaterialTemplate; ///< 일반 glTF 임포트가 금속도 · 거칠기 머티리얼마다 복사하는 PBR 머티리얼 견본(`ModelImportMaterial::writePbrMaterial`)
 

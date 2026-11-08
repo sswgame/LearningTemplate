@@ -13,7 +13,7 @@ namespace sw
             /** @brief 숫자별 장수를 (장수 내림, 숫자 내림) 순서로 늘어놓고, 서로 다른 숫자의 개수를 반환합니다. */
             static int32 makeGroups( const uint8* pRank, uint8* pOutGroupRank, uint8* pOutGroupCount )
             {
-                uint8 arrCount[PokerHandEvaluator::kAceHigh + 1]{};
+                uint8 arrCount[PokerHandValue::kAceHigh + 1]{};
                 for ( int32 index = 0; index < kHandSize; ++index )
                 {
                     ++arrCount[pRank[index]];
@@ -21,7 +21,7 @@ namespace sw
                 int32 groupCount = 0;
                 for ( int32 count = 4; count >= 1; --count )
                 {
-                    for ( int32 rank = PokerHandEvaluator::kAceHigh; rank >= 2; --rank )
+                    for ( int32 rank = PokerHandValue::kAceHigh; rank >= 2; --rank )
                     {
                         if ( arrCount[rank] != count )
                             continue;
@@ -38,7 +38,7 @@ namespace sw
             {
                 if ( pSortedRank[0] - pSortedRank[4] == 4 )
                     return pSortedRank[0];
-                const bool bWheel = pSortedRank[0] == PokerHandEvaluator::kAceHigh && pSortedRank[1] == 5 && pSortedRank[4] == 2;
+                const bool bWheel = pSortedRank[0] == PokerHandValue::kAceHigh && pSortedRank[1] == 5 && pSortedRank[4] == 2;
                 return bWheel ? 5 : 0;
             }
 
@@ -57,7 +57,7 @@ namespace sw
 
 namespace sw
 {
-    PokerHandValue PokerHandEvaluator::evaluateFive( const Card* pCard )
+    PokerHandValue PokerHandValue::evaluateFive( const Card* pCard )
     {
         PokerHandValue value;
         uint8          arrRank[PokerHandInternal::kHandSize]{};
@@ -107,7 +107,7 @@ namespace sw
         return value;
     }
 
-    PokerHandValue PokerHandEvaluator::evaluateBest( const Card* pCard, int32 count )
+    PokerHandValue PokerHandValue::evaluateBest( const Card* pCard, int32 count )
     {
         PokerHandValue best;
         if ( count < PokerHandInternal::kHandSize )
@@ -141,7 +141,7 @@ namespace sw
         return best;
     }
 
-    int32 PokerHandEvaluator::compareHands( const PokerHandValue& lhs, const PokerHandValue& rhs )
+    int32 PokerHandValue::compareHands( const PokerHandValue& lhs, const PokerHandValue& rhs )
     {
         if ( lhs._score == rhs._score )
             return 0;

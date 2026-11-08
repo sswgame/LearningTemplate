@@ -19,7 +19,7 @@
 
 namespace sw
 {
-    /** @brief 백엔드 하나의 기술자입니다. 테이블(`RHIBackendInfoTable`)의 항목 하나입니다. */
+    /** @brief 백엔드 하나의 기술자입니다. 테이블(`RHIBackendInfo`)의 항목 하나입니다. */
     struct RHIBackendInfo
     {
         RHIBackend          _backend;
@@ -28,13 +28,40 @@ namespace sw
         const utf8*         _pModuleName;  ///< 개발 빌드가 로드하는 장치 모듈 이름(`Bin/Modules/<이름>`)
         ProfilerGraphicsAPI _profilerAPI;  ///< 외부 프로파일러에 알리는 GPU API 종류
         RHICapabilities     _capabilities; ///< 정적 능력 테이블. 디바이스가 있으면 `IRHIDevice::getCapabilities` 가 런타임 값으로 덮을 수 있다
+
+        // 백엔드 기술자 테이블입니다. 항목 순서는 RHIBackend 열거값과 같습니다. */
+        static constexpr RHIBackendInfo kArrInfo[] = {
+            {RHIBackend::DirectX11, "DirectX11",   ShaderTargetFormat::DXBC_D3D11,   "RHI_DX11", ProfilerGraphicsAPI::Direct3D11, RHIStaticCapabilities::makeDirectX11Capabilities()},
+            {RHIBackend::DirectX12, "DirectX12",   ShaderTargetFormat::DXIL_D3D12,   "RHI_DX12", ProfilerGraphicsAPI::Direct3D12, RHIStaticCapabilities::makeDirectX12Capabilities()},
+            {   RHIBackend::Vulkan,    "Vulkan", ShaderTargetFormat::SPIRV_Vulkan, "RHI_Vulkan",     ProfilerGraphicsAPI::Vulkan,    RHIStaticCapabilities::makeVulkanCapabilities()},
+            {   RHIBackend::OpenGL,    "OpenGL", ShaderTargetFormat::SPIRV_OpenGL,     "RHI_GL",     ProfilerGraphicsAPI::OpenGl,    RHIStaticCapabilities::makeOpenGlCapabilities()},
+            {   RHIBackend::WebGPU,    "WebGPU",  ShaderTargetFormat::WGSL_WebGPU, "RHI_WebGPU",     ProfilerGraphicsAPI::WebGPU,    RHIStaticCapabilities::makeWebGPUCapabilities()},
+        };
+
+        /** @brief 그 백엔드의 항목입니다. 열거 범위 밖 값이면 nullptr 입니다. */
+        static constexpr const RHIBackendInfo* find( RHIBackend backend )
+        {
+            const size_t index = static_cast<size_t>( backend );
+            return index < std::size( kArrInfo ) ? &kArrInfo[index] : nullptr;
+        }
+
+        /** @brief 항목 순서가 열거값과 같은지 확인합니다(`find` 가 열거값을 인덱스로 쓴다). */
+        static constexpr bool isOrderedByBackend()
+        {
+            for ( size_t index = 0; index < std::size( kArrInfo ); ++index )
+            {
+                if ( static_cast<size_t>( kArrInfo[index]._backend ) != index )
+                    return false;
+            }
+            return true;
+        }
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @brief 백엔드마다의 정적 능력 테이블을 만듭니다. 기술자 테이블(`RHIBackendInfoTable`)의 능력 항목입니다.
+     * @brief 백엔드마다의 정적 능력 테이블을 만듭니다. 기술자 테이블(`RHIBackendInfo`)의 능력 항목입니다.
      * @details 테이블과 다른 구조체에 두는 이유는, 클래스 안 정적 상수의 초기화에서는 같은 클래스의 constexpr 함수를 아직 부를 수 없기 때문입니다(클래스가 덜 정의됐습니다).
      */
     struct RHIStaticCapabilities
@@ -142,41 +169,12 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 백엔드 기술자 테이블입니다. 항목 순서는 RHIBackend 열거값과 같습니다. */
-    struct RHIBackendInfoTable
-    {
-        static constexpr RHIBackendInfo kArrInfo[] = {
-            {RHIBackend::DirectX11, "DirectX11",   ShaderTargetFormat::DXBC_D3D11,   "RHI_DX11", ProfilerGraphicsAPI::Direct3D11, RHIStaticCapabilities::makeDirectX11Capabilities()},
-            {RHIBackend::DirectX12, "DirectX12",   ShaderTargetFormat::DXIL_D3D12,   "RHI_DX12", ProfilerGraphicsAPI::Direct3D12, RHIStaticCapabilities::makeDirectX12Capabilities()},
-            {   RHIBackend::Vulkan,    "Vulkan", ShaderTargetFormat::SPIRV_Vulkan, "RHI_Vulkan",     ProfilerGraphicsAPI::Vulkan,    RHIStaticCapabilities::makeVulkanCapabilities()},
-            {   RHIBackend::OpenGL,    "OpenGL", ShaderTargetFormat::SPIRV_OpenGL,     "RHI_GL",     ProfilerGraphicsAPI::OpenGl,    RHIStaticCapabilities::makeOpenGlCapabilities()},
-            {   RHIBackend::WebGPU,    "WebGPU",  ShaderTargetFormat::WGSL_WebGPU, "RHI_WebGPU",     ProfilerGraphicsAPI::WebGPU,    RHIStaticCapabilities::makeWebGPUCapabilities()},
-        };
-
-        /** @brief 그 백엔드의 항목입니다. 열거 범위 밖 값이면 nullptr 입니다. */
-        static constexpr const RHIBackendInfo* find( RHIBackend backend )
-        {
-            const size_t index = static_cast<size_t>( backend );
-            return index < std::size( kArrInfo ) ? &kArrInfo[index] : nullptr;
-        }
-
-        /** @brief 항목 순서가 열거값과 같은지 확인합니다(`find` 가 열거값을 인덱스로 쓴다). */
-        static constexpr bool isOrderedByBackend()
-        {
-            for ( size_t index = 0; index < std::size( kArrInfo ); ++index )
-            {
-                if ( static_cast<size_t>( kArrInfo[index]._backend ) != index )
-                    return false;
-            }
-            return true;
-        }
-    };
-    static_assert( RHIBackendInfoTable::isOrderedByBackend(), "RHIBackendInfoTable rows must follow RHIBackend enumerator order" );
+    static_assert( RHIBackendInfo::isOrderedByBackend(), "RHIBackendInfoTable rows must follow RHIBackend enumerator order" );
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 이 OS와 빌드의 백엔드 가용성과 정적 능력 테이블 조회입니다. 둘 다 `RHIBackendInfoTable` 을 읽습니다. */
+    /** @brief 이 OS와 빌드의 백엔드 가용성과 정적 능력 테이블 조회입니다. 둘 다 `RHIBackendInfo` 을 읽습니다. */
     struct RHIAvailability
     {
         /** @brief 이 플랫폼에서 만들 수 있는 백엔드입니다(건너갈 순서, 맨 앞이 기본). 원본은 `Config/Engine/CookContract.json` 의 `platform_rhi_backends` 입니다. */
@@ -247,7 +245,7 @@ namespace sw
         /** @brief 백엔드의 정적 capability 테이블을 반환합니다. 범위 밖 값이면 기본값(컴퓨트만)입니다. */
         static RHICapabilities query( RHIBackend backend ) noexcept
         {
-            const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
+            const RHIBackendInfo* pInfo = RHIBackendInfo::find( backend );
             return pInfo != nullptr ? pInfo->_capabilities : RHICapabilities{};
         }
     };

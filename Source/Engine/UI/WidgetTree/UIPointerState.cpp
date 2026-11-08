@@ -31,19 +31,19 @@ namespace sw
         const bool bCapturedHere = _captured != kInvalidWidgetID && _pCaptureTree == &tree;
         if ( bCapturedHere )
         {
-            (void)UIEventRouter::makePathTo( tree, _captured, _scratchPath );
+            (void)UIWidgetPath::makePathTo( tree, _captured, _scratchPath );
             result._bHitWidget = SW_TRUE;
         }
         else
         {
-            const bool bHit    = event._touchTargetSize > 0.0f ? UIEventRouter::hitTestTouch( tree, event._position, event._touchTargetSize, _scratchPath )
-                                                               : UIEventRouter::hitTest( tree, event._position, _scratchPath );
+            const bool bHit    = event._touchTargetSize > 0.0f ? UIWidgetPath::hitTestTouch( tree, event._position, event._touchTargetSize, _scratchPath )
+                                                               : UIWidgetPath::hitTest( tree, event._position, _scratchPath );
             result._bHitWidget = bHit ? SW_TRUE : SW_FALSE;
         }
         updateHover( &tree, _scratchPath );
 
         WidgetID      handler = kInvalidWidgetID;
-        const UIReply reply   = UIEventRouter::routePointerEvent( tree, _scratchPath, event, handler );
+        const UIReply reply   = UIWidgetPath::routePointerEvent( tree, _scratchPath, event, handler );
         if ( reply.isHandled() == false )
             return result;
         result._bHandled     = SW_TRUE;

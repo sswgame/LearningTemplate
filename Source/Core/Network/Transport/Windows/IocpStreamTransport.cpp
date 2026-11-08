@@ -94,28 +94,335 @@ namespace sw
             }
         };
 
-        struct IocpConnection
+        /**
+         * @class IocpConnection
+         * @brief 연결 슬롯 하나와 그 슬롯을 바꾸는 일입니다(열기 · 받기/보내기 걸기 · 완료 반영 · 닫기 · 정리 · 시한). 슬롯 객체는 지워지지 않고 세대 번호로 다시 쓴다.
+         * @details `…Locked` 멤버는 부르는 쪽이 `getMutex()` 를 잡은 채로 부른다 — 수송 객체가 콜백을 잠금 밖에서 내도록 잠금 범위를 직접 정한다.
+         *          닫힘 · 정리 통지는 완료 포트(@p completionPort)로 I/O 스레드에 넘긴다.
+         */
+        class IocpConnection
         {
+        public:
+            IocpConnection()
+                : _mutex{}
+                , _sendQueue{}
+                , _receiveBuffer{}
+                , _receiveOperation{}
+                , _sendOperation{}
+                , _arrSendBuffer{}
+                , _remote{}
+                , _socket{ INVALID_SOCKET }
+                , _lastReceiveNanoseconds{ 0 }
+                , _deadlineNanoseconds{ 0 }
+                , _pendingOperationCount{ 0 }
+                , _generation{ 1 }
+                , _closeReason{ StreamCloseReason::None }
+                , _state{ IocpConnectionState::Free }
+                , _bAccepted{ SW_FALSE }
+                , _bReceivePosted{ SW_FALSE }
+                , _bSendPosted{ SW_FALSE }
+                , _bReceivePaused{ SW_FALSE }
+                , _bShutdownSent{ SW_FALSE }
+                , _bRemoteFinished{ SW_FALSE }
+            {
+            }
+
+            mutex&                 getMutex() { return _mutex; }
+            StreamConnectionHandle makeHandle( uint32 index ) const { return StreamConnectionHandle::make( index, _generation ); }
+            const uint8*           getReceiveData() const { return _receiveBuffer.data(); }
+
+            /** @brief 핸들이 지금 이 슬롯의 살아 있는 연결을 가리키는지입니다(잠금 안). */
+            bool isLiveLocked( StreamConnectionHandle handle ) const
+            {
+                return _generation == handle._generation && _state != IocpConnectionState::Free && _state != IocpConnectionState::Retiring;
+            }
+
+            /** @brief 빈 슬롯 @p index 를 소켓 @p socket 의 연결로 엽니다(잠금 안). 여는 쪽이 작업 참조를 하나 잡는다 — 열림 콜백(수락)이나 ConnectEx(연결)가 끝나면 놓는다. */
+            void openLocked( uint32 index, SOCKET socket, const NetAddress& remote, bool bAccepted, IocpConnectionState state, const StreamTransportConfig& settings )
+            {
+                _sendQueue.clear();
+                _sendQueue.configure( settings._sendHighWatermarkBytes, settings._sendLowWatermarkBytes, settings._maxQueuedSendBytes );
+                _receiveBuffer.resize( static_cast<size_t>( settings._receiveChunkBytes ) );
+                _receiveOperation._index = index;
+                _sendOperation._index    = index;
+                _remote                  = remote;
+                _socket                  = socket;
+                _lastReceiveNanoseconds  = MonotonicClock::nowNanoseconds();
+                _deadlineNanoseconds     = _lastReceiveNanoseconds + MonotonicClock::secondsToNanoseconds( settings._connectTimeoutSeconds );
+                _pendingOperationCount   = 1;
+                _closeReason             = StreamCloseReason::None;
+                _state                   = state;
+                _bAccepted               = bAccepted ? SW_TRUE : SW_FALSE;
+                _bReceivePosted          = SW_FALSE;
+                _bSendPosted             = SW_FALSE;
+                _bReceivePaused          = SW_FALSE;
+                _bShutdownSent           = SW_FALSE;
+                _bRemoteFinished         = SW_FALSE;
+            }
+
+            /** @brief ConnectEx 를 걸 작업 칸을 비워 돌려줍니다(받기 칸을 같이 쓴다 — 받기는 연결이 열린 뒤에 건다). */
+            IocpOperation& beginConnectOperationLocked()
+            {
+                std::memset( &_receiveOperation._overlapped, 0, sizeof( _receiveOperation._overlapped ) );
+                _receiveOperation._kind = IocpOperationKind::Connect;
+                return _receiveOperation;
+            }
+
+            void closeSocketLocked( StreamCloseReason reason, bool bAbortive, HANDLE completionPort )
+            {
+                if ( _socket == INVALID_SOCKET )
+                    return;
+                if ( _closeReason == StreamCloseReason::None )
+                    _closeReason = reason;
+                if ( bAbortive )
+                    IocpStreamTransportInternal::closeAbortive( _socket );
+                else
+                    closesocket( _socket );
+                _socket = INVALID_SOCKET;
+                _state  = IocpConnectionState::Closed;
+                _sendQueue.clear();
+                // 걸린 작업은 취소 완료로 돌아온다. 하나도 없으면 아무것도 오지 않으므로 정리 키를 넣는다. 닫힘 콜백도 I/O 스레드에서 낸다.
+                (void)PostQueuedCompletionStatus( completionPort, _receiveOperation._index, IocpStreamTransportInternal::kRetireKey, nullptr );
+            }
+
+            void postReceiveLocked( HANDLE completionPort )
+            {
+                const bool bReceiving         = _state == IocpConnectionState::Open || _state == IocpConnectionState::Closing;
+                const bool bCannotPostReceive = bReceiving == false || _socket == INVALID_SOCKET || _bReceivePosted == SW_TRUE || _bReceivePaused == SW_TRUE || _bRemoteFinished == SW_TRUE;
+                if ( bCannotPostReceive )
+                    return;
+                IocpOperation& operation = _receiveOperation;
+                std::memset( &operation._overlapped, 0, sizeof( operation._overlapped ) );
+                operation._kind = IocpOperationKind::Receive;
+                WSABUF buffer{};
+                buffer.len  = static_cast<ULONG>( _receiveBuffer.size() );
+                buffer.buf  = reinterpret_cast<CHAR*>( _receiveBuffer.data() );
+                DWORD flags = 0;
+                if ( WSARecv( _socket, &buffer, 1, nullptr, &flags, &operation._overlapped, nullptr ) == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING )
+                {
+                    closeSocketLocked( StreamCloseReason::Reset, true, completionPort );
+                    return;
+                }
+                _bReceivePosted = SW_TRUE;
+                ++_pendingOperationCount;
+            }
+
+            void postSendLocked( HANDLE completionPort )
+            {
+                const bool bSending        = _state == IocpConnectionState::Open || _state == IocpConnectionState::Closing;
+                const bool bCannotPostSend = bSending == false || _socket == INVALID_SOCKET || _bSendPosted == SW_TRUE;
+                if ( bCannotPostSend )
+                    return;
+                if ( _sendQueue.isEmpty() )
+                {
+                    if ( _state == IocpConnectionState::Closing && _bShutdownSent == SW_FALSE )
+                    {
+                        (void)::shutdown( _socket, SD_SEND );
+                        _bShutdownSent = SW_TRUE;
+                    }
+                    // 상대의 FIN 을 이미 받았고 이쪽도 다 보냈으므로 닫는다.
+                    if ( _state == IocpConnectionState::Closing && _bRemoteFinished == SW_TRUE )
+                        closeSocketLocked( _closeReason, false, completionPort );
+                    return;
+                }
+                StreamSendSpan arrSpan[IocpStreamTransportInternal::kMaxSendSpans];
+                const int32    spanCount = _sendQueue.collectSpans( arrSpan, IocpStreamTransportInternal::kMaxSendSpans, IocpStreamTransportInternal::kMaxSendBytes );
+                for ( int32 index = 0; index < spanCount; ++index )
+                {
+                    _arrSendBuffer[index].len = static_cast<ULONG>( arrSpan[index]._size );
+                    _arrSendBuffer[index].buf = reinterpret_cast<CHAR*>( const_cast<uint8*>( arrSpan[index]._pData ) );
+                }
+                IocpOperation& operation = _sendOperation;
+                std::memset( &operation._overlapped, 0, sizeof( operation._overlapped ) );
+                operation._kind = IocpOperationKind::Send;
+                if ( WSASend( _socket, _arrSendBuffer, static_cast<DWORD>( spanCount ), nullptr, 0, &operation._overlapped, nullptr ) == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING )
+                {
+                    closeSocketLocked( StreamCloseReason::Reset, true, completionPort );
+                    return;
+                }
+                _bSendPosted = SW_TRUE;
+                ++_pendingOperationCount;
+            }
+
+            /** @brief 작업 참조 하나를 놓습니다(잠금 안). 마지막이었는지는 `takeRetireLocked` 가 본다. */
+            void releaseOperationLocked() { --_pendingOperationCount; }
+
+            /** @brief 소켓이 닫혔고 걸린 작업이 없으면 정리 상태로 바꾸고 true 를 반환합니다. 부르는 쪽이 잠금을 푼 뒤 닫힘을 알리고 `freeLocked` 해야 합니다. */
+            bool takeRetireLocked( uint32 index, StreamConnectionHandle& outHandle, StreamCloseReason& outReason )
+            {
+                if ( _state != IocpConnectionState::Closed || _pendingOperationCount != 0 )
+                    return false;
+                _state    = IocpConnectionState::Retiring;
+                outHandle = makeHandle( index );
+                outReason = _closeReason;
+                return true;
+            }
+
+            /** @brief 슬롯을 비웁니다(잠금 안). 세대를 올려 옛 핸들이 이 슬롯을 다시 가리키지 않게 한다(0 은 무효 핸들이라 건너뛴다). */
+            void freeLocked()
+            {
+                ++_generation;
+                if ( _generation == 0 )
+                    _generation = 1;
+                _state = IocpConnectionState::Free;
+            }
+
+            /**
+             * @brief 받기 완료를 반영합니다(잠금 안). 받은 바이트를 넘길 차례면 true 다 — 부르는 쪽이 잠금 밖에서 `getReceiveData` 를 넘긴 뒤 받기를 다시 건다.
+             * @details 0 바이트는 상대의 FIN 이다. 이쪽이 닫는 중이 아니었으면 이쪽도 우아하게 닫는다(반쯤 열린 연결은 두지 않는다).
+             */
+            bool completeReceiveLocked( bool bSucceeded, DWORD transferred, int64 closeLingerNanoseconds, HANDLE completionPort )
+            {
+                _bReceivePosted = SW_FALSE;
+                if ( bSucceeded == false )
+                {
+                    closeSocketLocked( StreamCloseReason::Reset, true, completionPort ); // 이미 닫힌 소켓이면(우리가 닫았다) 아무것도 하지 않는다.
+                    return false;
+                }
+                if ( transferred == 0 )
+                {
+                    _bRemoteFinished = SW_TRUE;
+                    if ( _state == IocpConnectionState::Open )
+                    {
+                        _state               = IocpConnectionState::Closing;
+                        _closeReason         = StreamCloseReason::RemoteClose;
+                        _deadlineNanoseconds = MonotonicClock::nowNanoseconds() + closeLingerNanoseconds;
+                    }
+                    if ( _bSendPosted == SW_FALSE )
+                        postSendLocked( completionPort ); // 큐가 비었으면 FIN 을 보내고 닫는다.
+                    return false;
+                }
+                _lastReceiveNanoseconds = MonotonicClock::nowNanoseconds();
+                return true;
+            }
+
+            /** @brief 보내기 완료를 반영하고 다음 보내기를 겁니다(잠금 안). 큐가 낮은 수위 밑으로 내려가 쓰기 가능을 알릴 차례면 true 다. */
+            bool completeSendLocked( bool bSucceeded, DWORD transferred, HANDLE completionPort )
+            {
+                _bSendPosted = SW_FALSE;
+                if ( bSucceeded == false )
+                {
+                    closeSocketLocked( StreamCloseReason::Reset, true, completionPort );
+                    return false;
+                }
+                const bool bWritable = _sendQueue.consume( static_cast<int32>( transferred ) );
+                postSendLocked( completionPort );
+                return bWritable && _state == IocpConnectionState::Open;
+            }
+
+            /** @brief 연결 완료를 반영합니다(잠금 안). 열렸으면 true 이고 @p outRemote 에 상대 주소를 담는다. 실패면 소켓을 닫는다. */
+            bool completeConnectLocked( bool bSucceeded, bool bTCPNoDelay, HANDLE completionPort, NetAddress& outRemote )
+            {
+                outRemote                    = _remote;
+                const bool bConnectCompleted = bSucceeded && _socket != INVALID_SOCKET && _state == IocpConnectionState::Connecting;
+                if ( bConnectCompleted == false )
+                {
+                    closeSocketLocked( StreamCloseReason::ConnectFailed, true, completionPort );
+                    return false;
+                }
+                (void)setsockopt( _socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0 );
+                IocpStreamTransportInternal::setNoDelay( _socket, bTCPNoDelay );
+                _state                  = IocpConnectionState::Open;
+                _lastReceiveNanoseconds = MonotonicClock::nowNanoseconds();
+                return true;
+            }
+
+            /** @brief 받기 쉼 · 연결 시한 · 우아한 종료 상한을 넘었으면 닫습니다(잠금 안, 주기 점검). */
+            void closeIfExpiredLocked( int64 now, int64 idleNanoseconds, HANDLE completionPort )
+            {
+                switch ( _state )
+                {
+                    case IocpConnectionState::Open:
+                    {
+                        if ( idleNanoseconds > 0 && now - _lastReceiveNanoseconds > idleNanoseconds )
+                            closeSocketLocked( StreamCloseReason::IdleTimeout, true, completionPort );
+                        break;
+                    }
+                    case IocpConnectionState::Connecting:
+                    {
+                        if ( now > _deadlineNanoseconds )
+                            closeSocketLocked( StreamCloseReason::ConnectFailed, true, completionPort );
+                        break;
+                    }
+                    case IocpConnectionState::Closing:
+                    {
+                        if ( now > _deadlineNanoseconds )
+                            closeSocketLocked( _closeReason, true, completionPort );
+                        break;
+                    }
+                    case IocpConnectionState::Free:
+                    case IocpConnectionState::Closed:
+                    case IocpConnectionState::Retiring:
+                    {
+                        break;
+                    }
+                }
+            }
+
+            /** @brief 보낼 바이트를 큐에 넣고 보내기를 겁니다(잠금 안). 살아 있는 열린 · 연결 중 연결이 아니면 닫힘이다. */
+            StreamSendResult appendSendLocked( StreamConnectionHandle handle, const uint8* pData, int32 size, HANDLE completionPort )
+            {
+                const bool bAccepting = _state == IocpConnectionState::Open || _state == IocpConnectionState::Connecting;
+                if ( isLiveLocked( handle ) == false || bAccepting == false )
+                    return StreamSendResult::Closed;
+                const StreamSendResult result = _sendQueue.append( pData, size );
+                if ( result != StreamSendResult::QueueFull )
+                    postSendLocked( completionPort );
+                return result;
+            }
+
+            /** @brief 닫기를 요청합니다(잠금 안). 끊기 · 연결 중이면 바로 닫고, 열려 있으면 큐를 비운 뒤 FIN 을 주고받는 우아한 종료로 간다. */
+            void requestCloseLocked( StreamConnectionHandle handle, StreamCloseMode mode, int64 closeLingerNanoseconds, HANDLE completionPort )
+            {
+                if ( isLiveLocked( handle ) == false )
+                    return;
+                if ( mode == StreamCloseMode::Abort || _state == IocpConnectionState::Connecting )
+                {
+                    closeSocketLocked( StreamCloseReason::LocalClose, true, completionPort );
+                    return;
+                }
+                if ( _state != IocpConnectionState::Open )
+                    return;
+                _state               = IocpConnectionState::Closing;
+                _closeReason         = StreamCloseReason::LocalClose;
+                _deadlineNanoseconds = MonotonicClock::nowNanoseconds() + closeLingerNanoseconds;
+                _bReceivePaused      = SW_FALSE; // 상대의 FIN 을 받아야 끝난다.
+                postReceiveLocked( completionPort );
+                postSendLocked( completionPort );
+            }
+
+            void setReceivePausedLocked( StreamConnectionHandle handle, bool bPaused, HANDLE completionPort )
+            {
+                if ( isLiveLocked( handle ) == false || _state == IocpConnectionState::Closing )
+                    return;
+                _bReceivePaused = bPaused ? SW_TRUE : SW_FALSE;
+                if ( bPaused == false )
+                    postReceiveLocked( completionPort );
+            }
+
+            NetAddress findRemoteLocked( StreamConnectionHandle handle ) const { return isLiveLocked( handle ) ? _remote : NetAddress{}; }
+
+        private:
             mutex               _mutex;
-            StreamSendQueue     _sendQueue{};
-            vector<uint8>       _receiveBuffer{};
-            IocpOperation       _receiveOperation{}; ///< 연결 중에는 ConnectEx 가 같은 슬롯을 쓴다(받기는 연결이 열린 뒤에 건다).
-            IocpOperation       _sendOperation{};
-            WSABUF              _arrSendBuffer[IocpStreamTransportInternal::kMaxSendSpans]{};
-            NetAddress          _remote{};
-            SOCKET              _socket{ INVALID_SOCKET };
-            int64               _lastReceiveNanoseconds{ 0 };
-            int64               _deadlineNanoseconds{ 0 }; ///< 연결 시한과 우아한 종료 상한.
-            int32               _pendingOperationCount{ 0 };
-            uint32              _generation{ 1 };
-            StreamCloseReason   _closeReason{ StreamCloseReason::None };
-            IocpConnectionState _state{ IocpConnectionState::Free };
-            uint8               _bAccepted{ SW_FALSE };
-            uint8               _bReceivePosted{ SW_FALSE };
-            uint8               _bSendPosted{ SW_FALSE };
-            uint8               _bReceivePaused{ SW_FALSE };
-            uint8               _bShutdownSent{ SW_FALSE };
-            uint8               _bRemoteFinished{ SW_FALSE };
+            StreamSendQueue     _sendQueue;
+            vector<uint8>       _receiveBuffer;
+            IocpOperation       _receiveOperation; ///< 연결 중에는 ConnectEx 가 같은 슬롯을 쓴다(받기는 연결이 열린 뒤에 건다).
+            IocpOperation       _sendOperation;
+            WSABUF              _arrSendBuffer[IocpStreamTransportInternal::kMaxSendSpans];
+            NetAddress          _remote;
+            SOCKET              _socket;
+            int64               _lastReceiveNanoseconds;
+            int64               _deadlineNanoseconds; ///< 연결 시한과 우아한 종료 상한.
+            int32               _pendingOperationCount;
+            uint32              _generation;
+            StreamCloseReason   _closeReason;
+            IocpConnectionState _state;
+            uint8               _bAccepted       : 1;
+            uint8               _bReceivePosted  : 1;
+            uint8               _bSendPosted     : 1;
+            uint8               _bReceivePaused  : 1;
+            uint8               _bShutdownSent   : 1;
+            uint8               _bRemoteFinished : 1;
         };
 
         struct IocpAcceptSlot
@@ -176,28 +483,11 @@ namespace sw
                 _listConnection.push_back( make_unique<IocpConnection>() );
             }
             IocpConnection&   connection = *_listConnection[index];
-            ScopedLock<mutex> connectionLock{ connection._mutex };
-            connection._sendQueue.clear();
-            connection._sendQueue.configure( _settings->_sendHighWatermarkBytes, _settings->_sendLowWatermarkBytes, _settings->_maxQueuedSendBytes );
-            connection._receiveBuffer.resize( static_cast<size_t>( _settings->_receiveChunkBytes ) );
-            connection._receiveOperation._index = index;
-            connection._sendOperation._index    = index;
-            connection._remote                  = remote;
-            connection._socket                  = socket;
-            connection._lastReceiveNanoseconds  = MonotonicClock::nowNanoseconds();
-            connection._deadlineNanoseconds     = connection._lastReceiveNanoseconds + MonotonicClock::secondsToNanoseconds( _settings->_connectTimeoutSeconds );
-            connection._pendingOperationCount   = 1; // 여는 쪽이 참조를 하나 잡는다. 열림 콜백(수락)이나 ConnectEx(연결)가 끝나면 놓는다.
-            connection._closeReason             = StreamCloseReason::None;
-            connection._state                   = state;
-            connection._bAccepted               = bAccepted ? SW_TRUE : SW_FALSE;
-            connection._bReceivePosted          = SW_FALSE;
-            connection._bSendPosted             = SW_FALSE;
-            connection._bReceivePaused          = SW_FALSE;
-            connection._bShutdownSent           = SW_FALSE;
-            connection._bRemoteFinished         = SW_FALSE;
+            ScopedLock<mutex> connectionLock{ connection.getMutex() };
+            connection.openLocked( index, socket, remote, bAccepted, state, *_settings );
             _openCount.fetch_add( 1, std::memory_order_relaxed );
             pOutConnection = &connection;
-            return StreamConnectionHandle::make( index, connection._generation );
+            return connection.makeHandle( index );
         }
 
         /** @brief 핸들의 슬롯을 반환합니다. 세대는 부르는 쪽이 연결 잠금 안에서 `isLive` 로 확인합니다. 슬롯 객체는 지워지지 않습니다. */
@@ -215,112 +505,13 @@ namespace sw
             return *_listConnection[index];
         }
 
-        static bool isLive( const IocpConnection& connection, StreamConnectionHandle handle )
-        {
-            return connection._generation == handle._generation && connection._state != IocpConnectionState::Free && connection._state != IocpConnectionState::Retiring;
-        }
-
-        // ---- 연결 잠금 안에서 ----
-
-        void closeSocketLocked( IocpConnection& connection, StreamCloseReason reason, bool bAbortive )
-        {
-            if ( connection._socket == INVALID_SOCKET )
-                return;
-            if ( connection._closeReason == StreamCloseReason::None )
-                connection._closeReason = reason;
-            if ( bAbortive )
-                Internal::closeAbortive( connection._socket );
-            else
-                closesocket( connection._socket );
-            connection._socket = INVALID_SOCKET;
-            connection._state  = IocpConnectionState::Closed;
-            connection._sendQueue.clear();
-            // 걸린 작업은 취소 완료로 돌아온다. 하나도 없으면 아무것도 오지 않으므로 정리 키를 넣는다. 닫힘 콜백도 I/O 스레드에서 낸다.
-            (void)PostQueuedCompletionStatus( _completionPort, connection._receiveOperation._index, Internal::kRetireKey, nullptr );
-        }
-
-        void postReceiveLocked( IocpConnection& connection )
-        {
-            const bool bReceiving         = connection._state == IocpConnectionState::Open || connection._state == IocpConnectionState::Closing;
-            const bool bCannotPostReceive = bReceiving == false || connection._socket == INVALID_SOCKET || connection._bReceivePosted == SW_TRUE || connection._bReceivePaused == SW_TRUE ||
-                                            connection._bRemoteFinished == SW_TRUE;
-            if ( bCannotPostReceive )
-                return;
-            IocpOperation& operation = connection._receiveOperation;
-            std::memset( &operation._overlapped, 0, sizeof( operation._overlapped ) );
-            operation._kind = IocpOperationKind::Receive;
-            WSABUF buffer{};
-            buffer.len  = static_cast<ULONG>( connection._receiveBuffer.size() );
-            buffer.buf  = reinterpret_cast<CHAR*>( connection._receiveBuffer.data() );
-            DWORD flags = 0;
-            if ( WSARecv( connection._socket, &buffer, 1, nullptr, &flags, &operation._overlapped, nullptr ) == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING )
-            {
-                closeSocketLocked( connection, StreamCloseReason::Reset, true );
-                return;
-            }
-            connection._bReceivePosted = SW_TRUE;
-            ++connection._pendingOperationCount;
-        }
-
-        void postSendLocked( IocpConnection& connection )
-        {
-            const bool bSending        = connection._state == IocpConnectionState::Open || connection._state == IocpConnectionState::Closing;
-            const bool bCannotPostSend = bSending == false || connection._socket == INVALID_SOCKET || connection._bSendPosted == SW_TRUE;
-            if ( bCannotPostSend )
-                return;
-            if ( connection._sendQueue.isEmpty() )
-            {
-                if ( connection._state == IocpConnectionState::Closing && connection._bShutdownSent == SW_FALSE )
-                {
-                    (void)::shutdown( connection._socket, SD_SEND );
-                    connection._bShutdownSent = SW_TRUE;
-                }
-                // 상대의 FIN 을 이미 받았고 이쪽도 다 보냈으므로 닫는다.
-                if ( connection._state == IocpConnectionState::Closing && connection._bRemoteFinished == SW_TRUE )
-                    closeSocketLocked( connection, connection._closeReason, false );
-                return;
-            }
-            StreamSendSpan arrSpan[Internal::kMaxSendSpans];
-            const int32    spanCount = connection._sendQueue.collectSpans( arrSpan, Internal::kMaxSendSpans, Internal::kMaxSendBytes );
-            for ( int32 index = 0; index < spanCount; ++index )
-            {
-                connection._arrSendBuffer[index].len = static_cast<ULONG>( arrSpan[index]._size );
-                connection._arrSendBuffer[index].buf = reinterpret_cast<CHAR*>( const_cast<uint8*>( arrSpan[index]._pData ) );
-            }
-            IocpOperation& operation = connection._sendOperation;
-            std::memset( &operation._overlapped, 0, sizeof( operation._overlapped ) );
-            operation._kind = IocpOperationKind::Send;
-            if ( WSASend( connection._socket, connection._arrSendBuffer, static_cast<DWORD>( spanCount ), nullptr, 0, &operation._overlapped, nullptr ) == SOCKET_ERROR &&
-                 WSAGetLastError() != WSA_IO_PENDING )
-            {
-                closeSocketLocked( connection, StreamCloseReason::Reset, true );
-                return;
-            }
-            connection._bSendPosted = SW_TRUE;
-            ++connection._pendingOperationCount;
-        }
-
-        /** @brief 소켓이 닫혔고 걸린 작업이 없으면 정리 상태로 바꾸고 true 를 반환합니다. 부르는 쪽이 잠금을 푼 뒤 `retire` 해야 합니다. */
-        static bool takeRetireLocked( IocpConnection& connection, StreamConnectionHandle& outHandle, StreamCloseReason& outReason, uint32 index )
-        {
-            if ( connection._state != IocpConnectionState::Closed || connection._pendingOperationCount != 0 )
-                return false;
-            connection._state = IocpConnectionState::Retiring;
-            outHandle         = StreamConnectionHandle::make( index, connection._generation );
-            outReason         = connection._closeReason;
-            return true;
-        }
-
         void retire( IocpConnection& connection, StreamConnectionHandle handle, StreamCloseReason reason )
         {
             _pHandler->onStreamClosed( handle, reason );
             ScopedLock<mutex> lock{ _tableMutex };
             {
-                ScopedLock<mutex> connectionLock{ connection._mutex };
-                ++connection._generation;
-                if ( connection._generation == 0 )
-                    connection._generation = 1;
-                connection._state = IocpConnectionState::Free;
+                ScopedLock<mutex> connectionLock{ connection.getMutex() };
+                connection.freeLocked();
             }
             _listFreeIndex.push_back( handle._index );
             _openCount.fetch_sub( 1, std::memory_order_relaxed );
@@ -334,9 +525,9 @@ namespace sw
             StreamCloseReason      reason  = StreamCloseReason::None;
             bool                   bRetire = false;
             {
-                ScopedLock<mutex> lock{ connection._mutex };
-                --connection._pendingOperationCount;
-                bRetire = takeRetireLocked( connection, handle, reason, index );
+                ScopedLock<mutex> lock{ connection.getMutex() };
+                connection.releaseOperationLocked();
+                bRetire = connection.takeRetireLocked( index, handle, reason );
             }
             if ( bRetire )
                 retire( connection, handle, reason );
@@ -350,40 +541,18 @@ namespace sw
             StreamConnectionHandle handle{};
             bool                   bDeliver = false;
             {
-                ScopedLock<mutex> lock{ connection._mutex };
-                connection._bReceivePosted = SW_FALSE;
-                handle                     = StreamConnectionHandle::make( index, connection._generation );
-                if ( bSucceeded == false )
-                {
-                    closeSocketLocked( connection, StreamCloseReason::Reset, true ); // 이미 닫힌 소켓이면(우리가 닫았다) 아무것도 하지 않는다.
-                }
-                else if ( transferred == 0 )
-                {
-                    // 상대의 FIN 이다. 이쪽이 닫는 중이 아니었으면 이쪽도 우아하게 닫는다(반쯤 열린 연결은 두지 않는다).
-                    connection._bRemoteFinished = SW_TRUE;
-                    if ( connection._state == IocpConnectionState::Open )
-                    {
-                        connection._state               = IocpConnectionState::Closing;
-                        connection._closeReason         = StreamCloseReason::RemoteClose;
-                        connection._deadlineNanoseconds = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( _settings->_closeLingerSeconds );
-                    }
-                    if ( connection._bSendPosted == SW_FALSE )
-                        postSendLocked( connection ); // 큐가 비었으면 FIN 을 보내고 닫는다.
-                }
-                else
-                {
-                    bDeliver                           = true;
-                    connection._lastReceiveNanoseconds = MonotonicClock::nowNanoseconds();
-                    _receivedBytes.fetch_add( transferred, std::memory_order_relaxed );
-                    _receiveCallCount.fetch_add( 1, std::memory_order_relaxed );
-                }
+                ScopedLock<mutex> lock{ connection.getMutex() };
+                handle   = connection.makeHandle( index );
+                bDeliver = connection.completeReceiveLocked( bSucceeded, transferred, MonotonicClock::secondsToNanoseconds( _settings->_closeLingerSeconds ), _completionPort );
             }
             if ( bDeliver )
             {
+                _receivedBytes.fetch_add( transferred, std::memory_order_relaxed );
+                _receiveCallCount.fetch_add( 1, std::memory_order_relaxed );
                 // 받기는 다시 걸기 전이라 버퍼가 그대로다. 작업 수는 아직 유지한다. 콜백 중에 닫혀도 슬롯이 반환되지 않는다.
-                _pHandler->onStreamReceived( handle, connection._receiveBuffer.data(), static_cast<int32>( transferred ) );
-                ScopedLock<mutex> lock{ connection._mutex };
-                postReceiveLocked( connection );
+                _pHandler->onStreamReceived( handle, connection.getReceiveData(), static_cast<int32>( transferred ) );
+                ScopedLock<mutex> lock{ connection.getMutex() };
+                connection.postReceiveLocked( _completionPort );
             }
             finishOperation( connection, index );
         }
@@ -394,21 +563,14 @@ namespace sw
             StreamConnectionHandle handle{};
             bool                   bWritable = false;
             {
-                ScopedLock<mutex> lock{ connection._mutex };
-                connection._bSendPosted = SW_FALSE;
-                handle                  = StreamConnectionHandle::make( index, connection._generation );
-                if ( bSucceeded == false )
-                {
-                    closeSocketLocked( connection, StreamCloseReason::Reset, true );
-                }
-                else
-                {
-                    bWritable = connection._sendQueue.consume( static_cast<int32>( transferred ) );
-                    _sentBytes.fetch_add( transferred, std::memory_order_relaxed );
-                    _sendCallCount.fetch_add( 1, std::memory_order_relaxed );
-                    postSendLocked( connection );
-                    bWritable = bWritable && connection._state == IocpConnectionState::Open;
-                }
+                ScopedLock<mutex> lock{ connection.getMutex() };
+                handle    = connection.makeHandle( index );
+                bWritable = connection.completeSendLocked( bSucceeded, transferred, _completionPort );
+            }
+            if ( bSucceeded )
+            {
+                _sentBytes.fetch_add( transferred, std::memory_order_relaxed );
+                _sendCallCount.fetch_add( 1, std::memory_order_relaxed );
             }
             if ( bWritable )
                 _pHandler->onStreamWritable( handle );
@@ -422,30 +584,17 @@ namespace sw
             NetAddress             remote{};
             bool                   bOpened = false;
             {
-                ScopedLock<mutex> lock{ connection._mutex };
-                handle                       = StreamConnectionHandle::make( index, connection._generation );
-                remote                       = connection._remote;
-                const bool bConnectCompleted = bSucceeded && connection._socket != INVALID_SOCKET && connection._state == IocpConnectionState::Connecting;
-                if ( bConnectCompleted )
-                {
-                    (void)setsockopt( connection._socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0 );
-                    Internal::setNoDelay( connection._socket, _settings->_bTCPNoDelay == SW_TRUE );
-                    connection._state                  = IocpConnectionState::Open;
-                    connection._lastReceiveNanoseconds = MonotonicClock::nowNanoseconds();
-                    bOpened                            = true;
-                }
-                else
-                {
-                    closeSocketLocked( connection, StreamCloseReason::ConnectFailed, true );
-                }
+                ScopedLock<mutex> lock{ connection.getMutex() };
+                handle  = connection.makeHandle( index );
+                bOpened = connection.completeConnectLocked( bSucceeded, _settings->_bTCPNoDelay == SW_TRUE, _completionPort, remote );
             }
             if ( bOpened )
             {
                 _connectedCount.fetch_add( 1, std::memory_order_relaxed );
                 _pHandler->onStreamOpened( handle, remote, false );
-                ScopedLock<mutex> lock{ connection._mutex };
-                postReceiveLocked( connection );
-                postSendLocked( connection ); // 연결 중에 쌓인 것을 보낸다.
+                ScopedLock<mutex> lock{ connection.getMutex() };
+                connection.postReceiveLocked( _completionPort );
+                connection.postSendLocked( _completionPort ); // 연결 중에 쌓인 것을 보낸다.
             }
             finishOperation( connection, index );
         }
@@ -502,9 +651,9 @@ namespace sw
                     _acceptedCount.fetch_add( 1, std::memory_order_relaxed );
                     _pHandler->onStreamOpened( handle, address, true ); // 받기는 열림 뒤에 건다. 열림이 항상 첫 콜백이어야 하기 때문이다.
                     {
-                        ScopedLock<mutex> lock{ pConnection->_mutex };
-                        postReceiveLocked( *pConnection );
-                        postSendLocked( *pConnection );
+                        ScopedLock<mutex> lock{ pConnection->getMutex() };
+                        pConnection->postReceiveLocked( _completionPort );
+                        pConnection->postSendLocked( _completionPort );
                     }
                     finishOperation( *pConnection, handle._index );
                 }
@@ -524,8 +673,8 @@ namespace sw
             StreamCloseReason      reason  = StreamCloseReason::None;
             bool                   bRetire = false;
             {
-                ScopedLock<mutex> lock{ connection._mutex };
-                bRetire = takeRetireLocked( connection, handle, reason, index );
+                ScopedLock<mutex> lock{ connection.getMutex() };
+                bRetire = connection.takeRetireLocked( index, handle, reason );
             }
             if ( bRetire )
                 retire( connection, handle, reason );
@@ -549,34 +698,8 @@ namespace sw
             const int64 idleNanoseconds = MonotonicClock::secondsToNanoseconds( _settings->_idleTimeoutSeconds );
             for ( IocpConnection* pConnection : listConnection )
             {
-                ScopedLock<mutex> lock{ pConnection->_mutex };
-                switch ( pConnection->_state )
-                {
-                    case IocpConnectionState::Open:
-                    {
-                        if ( idleNanoseconds > 0 && now - pConnection->_lastReceiveNanoseconds > idleNanoseconds )
-                            closeSocketLocked( *pConnection, StreamCloseReason::IdleTimeout, true );
-                        break;
-                    }
-                    case IocpConnectionState::Connecting:
-                    {
-                        if ( now > pConnection->_deadlineNanoseconds )
-                            closeSocketLocked( *pConnection, StreamCloseReason::ConnectFailed, true );
-                        break;
-                    }
-                    case IocpConnectionState::Closing:
-                    {
-                        if ( now > pConnection->_deadlineNanoseconds )
-                            closeSocketLocked( *pConnection, pConnection->_closeReason, true );
-                        break;
-                    }
-                    case IocpConnectionState::Free:
-                    case IocpConnectionState::Closed:
-                    case IocpConnectionState::Retiring:
-                    {
-                        break;
-                    }
-                }
+                ScopedLock<mutex> lock{ pConnection->getMutex() };
+                pConnection->closeIfExpiredLocked( now, idleNanoseconds, _completionPort );
             }
         }
 
@@ -694,8 +817,8 @@ namespace sw
             ScopedLock<mutex> lock{ state._tableMutex };
             for ( const unique_ptr<IocpConnection>& connection : state._listConnection )
             {
-                ScopedLock<mutex> connectionLock{ connection->_mutex };
-                state.closeSocketLocked( *connection, StreamCloseReason::Shutdown, true );
+                ScopedLock<mutex> connectionLock{ connection->getMutex() };
+                connection->closeSocketLocked( StreamCloseReason::Shutdown, true, state._completionPort );
             }
         }
         // 닫힘 콜백이 모두 나가고 걸린 수락이 돌아올 때까지 돈다(스레드가 없으면 여기서 돈다).
@@ -794,12 +917,10 @@ namespace sw
         }
         IocpConnection*              pConnection = nullptr;
         const StreamConnectionHandle handle      = state.allocateConnection( socket, remote, false, IocpConnectionState::Connecting, pConnection );
-        ScopedLock<mutex>            lock{ pConnection->_mutex };
-        IocpOperation&               operation = pConnection->_receiveOperation;
-        std::memset( &operation._overlapped, 0, sizeof( operation._overlapped ) );
-        operation._kind            = IocpOperationKind::Connect;
-        const sockaddr_in native   = NativeSocketAddress::toNative( remote );
-        const BOOL        bStarted = pConnectEx != nullptr &&
+        ScopedLock<mutex>            lock{ pConnection->getMutex() };
+        IocpOperation&               operation = pConnection->beginConnectOperationLocked();
+        const sockaddr_in            native    = NativeSocketAddress::toNative( remote );
+        const BOOL                   bStarted  = pConnectEx != nullptr &&
                               pConnectEx( socket, reinterpret_cast<const sockaddr*>( &native ), sizeof( native ), nullptr, 0, nullptr, &operation._overlapped ) == TRUE;
         if ( bStarted == FALSE && ( pConnectEx == nullptr || WSAGetLastError() != ERROR_IO_PENDING ) )
         {
@@ -815,14 +936,8 @@ namespace sw
         IocpConnection* pConnection = _state->findConnection( handle );
         if ( pConnection == nullptr )
             return StreamSendResult::Closed;
-        ScopedLock<mutex> lock{ pConnection->_mutex };
-        const bool        bAccepting = pConnection->_state == IocpConnectionState::Open || pConnection->_state == IocpConnectionState::Connecting;
-        if ( State::isLive( *pConnection, handle ) == false || bAccepting == false )
-            return StreamSendResult::Closed;
-        const StreamSendResult result = pConnection->_sendQueue.append( pData, size );
-        if ( result != StreamSendResult::QueueFull )
-            _state->postSendLocked( *pConnection );
-        return result;
+        ScopedLock<mutex> lock{ pConnection->getMutex() };
+        return pConnection->appendSendLocked( handle, pData, size, _state->_completionPort );
     }
 
     void IocpStreamTransport::close( StreamConnectionHandle handle, StreamCloseMode mode )
@@ -830,22 +945,8 @@ namespace sw
         IocpConnection* pConnection = _state->findConnection( handle );
         if ( pConnection == nullptr )
             return;
-        ScopedLock<mutex> lock{ pConnection->_mutex };
-        if ( State::isLive( *pConnection, handle ) == false )
-            return;
-        if ( mode == StreamCloseMode::Abort || pConnection->_state == IocpConnectionState::Connecting )
-        {
-            _state->closeSocketLocked( *pConnection, StreamCloseReason::LocalClose, true );
-            return;
-        }
-        if ( pConnection->_state != IocpConnectionState::Open )
-            return;
-        pConnection->_state               = IocpConnectionState::Closing;
-        pConnection->_closeReason         = StreamCloseReason::LocalClose;
-        pConnection->_deadlineNanoseconds = MonotonicClock::nowNanoseconds() + MonotonicClock::secondsToNanoseconds( _state->_settings->_closeLingerSeconds );
-        pConnection->_bReceivePaused      = SW_FALSE; // 상대의 FIN 을 받아야 끝난다.
-        _state->postReceiveLocked( *pConnection );
-        _state->postSendLocked( *pConnection );
+        ScopedLock<mutex> lock{ pConnection->getMutex() };
+        pConnection->requestCloseLocked( handle, mode, MonotonicClock::secondsToNanoseconds( _state->_settings->_closeLingerSeconds ), _state->_completionPort );
     }
 
     void IocpStreamTransport::setReceivePaused( StreamConnectionHandle handle, bool bPaused )
@@ -853,12 +954,8 @@ namespace sw
         IocpConnection* pConnection = _state->findConnection( handle );
         if ( pConnection == nullptr )
             return;
-        ScopedLock<mutex> lock{ pConnection->_mutex };
-        if ( State::isLive( *pConnection, handle ) == false || pConnection->_state == IocpConnectionState::Closing )
-            return;
-        pConnection->_bReceivePaused = bPaused ? SW_TRUE : SW_FALSE;
-        if ( bPaused == false )
-            _state->postReceiveLocked( *pConnection );
+        ScopedLock<mutex> lock{ pConnection->getMutex() };
+        pConnection->setReceivePausedLocked( handle, bPaused, _state->_completionPort );
     }
 
     int32 IocpStreamTransport::pollIO( int32 timeoutMilli )
@@ -874,8 +971,8 @@ namespace sw
         IocpConnection* pConnection = _state->findConnection( handle );
         if ( pConnection == nullptr )
             return NetAddress{};
-        ScopedLock<mutex> lock{ pConnection->_mutex };
-        return State::isLive( *pConnection, handle ) ? pConnection->_remote : NetAddress{};
+        ScopedLock<mutex> lock{ pConnection->getMutex() };
+        return pConnection->findRemoteLocked( handle );
     }
 
     StreamTransportStats IocpStreamTransport::getStats() const

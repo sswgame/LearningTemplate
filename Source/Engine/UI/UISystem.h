@@ -27,7 +27,7 @@
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Layout/UIScale.h"
 #include "Engine/UI/Render/UICanvasPaintState.h"
-#include "Engine/UI/Render/UIPaintPass.h"
+#include "Engine/UI/Render/UIPaintContext.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UIEngineDocuments.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"

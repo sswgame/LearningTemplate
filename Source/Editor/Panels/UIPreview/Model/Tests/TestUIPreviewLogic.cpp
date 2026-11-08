@@ -3,7 +3,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
-#include "Editor/Panels/MapCheck/Model/MapCheckRows.h"
+#include "Editor/Panels/MapCheck/Model/MapCheckCounts.h"
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
 #include "Engine/UI/Layout/BoxPanel.h"
@@ -653,13 +653,13 @@ SW_TEST_CASE( MapCheckRowsTest, RowsAreFilteredAndErrorsComeFirst )
         Util::makeIssue( ValidationSeverity::Error, "Zeta", "broken" ),
         Util::makeIssue( ValidationSeverity::Error, "Beta", "broken" ),
     };
-    const MapCheckCounts counts = MapCheckRows::countIssues( listIssue );
+    const MapCheckCounts counts = MapCheckCounts::countIssues( listIssue );
     SW_EXPECT_EQUAL( 2u, counts._errorCount );
     SW_EXPECT_EQUAL( 1u, counts._warningCount );
 
     vector<ValidationIssue> listRow;
     MapCheckCounts          shownCounts;
-    MapCheckRows::populate( listIssue, MapCheckFilter{}, listRow, shownCounts );
+    MapCheckCounts::populate( listIssue, MapCheckFilter{}, listRow, shownCounts );
     SW_REQUIRE_EQUAL( size_t{ 3 }, listRow.size() );
     SW_EXPECT_TRUE( listRow[0]._sourceLabel == "Beta" );
     SW_EXPECT_TRUE( listRow[1]._sourceLabel == "Zeta" );
@@ -667,13 +667,13 @@ SW_TEST_CASE( MapCheckRowsTest, RowsAreFilteredAndErrorsComeFirst )
 
     MapCheckFilter onlyWarnings;
     onlyWarnings._bShowErrors = false;
-    MapCheckRows::populate( listIssue, onlyWarnings, listRow, shownCounts );
+    MapCheckCounts::populate( listIssue, onlyWarnings, listRow, shownCounts );
     SW_EXPECT_EQUAL( size_t{ 1 }, listRow.size() );
     SW_EXPECT_EQUAL( 2u, shownCounts._errorCount ); // 수는 거르기와 상관없이 전체다
 
     MapCheckFilter search;
     search._search = "zeta";
-    MapCheckRows::populate( listIssue, search, listRow, shownCounts );
+    MapCheckCounts::populate( listIssue, search, listRow, shownCounts );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listRow.size() );
     SW_EXPECT_TRUE( listRow[0]._sourceLabel == "Zeta" );
 }

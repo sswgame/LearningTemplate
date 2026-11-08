@@ -222,7 +222,7 @@ namespace sw
             Element::of<&ProjectileCatalog::loadProjectile>( "Projectile" ),
             Element::of<&ProjectileCatalog::loadImpact>( "Impact" ).uncounted(),
         };
-        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool ProjectileCatalog::loadProjectile( const XMLNode& node, string_view sourceName )

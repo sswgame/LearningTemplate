@@ -8,7 +8,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-#include "Editor/Panels/MapCheck/Model/MapCheckRows.h"
+#include "Editor/Panels/MapCheck/Model/MapCheckCounts.h"
 
 namespace sw::editor
 {

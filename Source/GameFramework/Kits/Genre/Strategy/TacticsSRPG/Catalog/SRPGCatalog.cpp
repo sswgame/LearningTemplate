@@ -144,7 +144,7 @@ namespace sw
             Element::of<&SRPGCatalog::loadUnit>( "Unit" ),
             Element::of<&SRPGCatalog::loadPilot>( "Pilot" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
         // 서로 가리키는 id 는 데이터 표(`engine/settings/datacatalogreferences.xml`)가 정하고 카탈로그 읽기가 이 뒤에 본다 — 쿠커도 같은 표로 본다.
         return result._loadedCount;

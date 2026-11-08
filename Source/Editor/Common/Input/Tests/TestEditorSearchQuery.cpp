@@ -3,7 +3,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/Common/Input/EditorSearchSources.h"
+#include "Editor/Common/Input/EditorSearchItem.h"
 
 using namespace sw;
 using namespace sw::editor;
@@ -48,17 +48,17 @@ SW_TEST_CASE( EditorSearchQueryTest, FacetsNarrowSceneObjects )
     listItem.push_back( command );
 
     vector<const EditorSearchItem*> listFound;
-    EditorSearchSources::filter( { &listItem }, "type:mesh", listFound );
+    EditorSearchItem::filter( { &listItem }, "type:mesh", listFound );
     SW_EXPECT_EQUAL( size_t{ 3 }, listFound.size() ); // 메시 둘 + 스켈레탈 메시 — 명령은 칸이 없어 빠진다
 
-    EditorSearchSources::filter( { &listItem }, "tag:enemy is:inactive", listFound );
+    EditorSearchItem::filter( { &listItem }, "tag:enemy is:inactive", listFound );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listFound.size() );
     SW_EXPECT_EQUAL( string( "Goblin_02" ), listFound[0]->_title );
 
-    EditorSearchSources::filter( { &listItem }, "goblin", listFound );
+    EditorSearchItem::filter( { &listItem }, "goblin", listFound );
     SW_EXPECT_EQUAL( size_t{ 3 }, listFound.size() ); // 칸 필터가 없으면 예전 그대로 글로 거른다(명령 포함)
 
-    EditorSearchSources::filter( { &listItem }, "goblin is:active", listFound );
+    EditorSearchItem::filter( { &listItem }, "goblin is:active", listFound );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listFound.size() );
     SW_EXPECT_EQUAL( string( "Goblin_01" ), listFound[0]->_title );
 }

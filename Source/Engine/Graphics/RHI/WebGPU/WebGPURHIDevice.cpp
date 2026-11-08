@@ -881,10 +881,10 @@ namespace sw
             const uint8 state = readback->_state.load( std::memory_order_acquire );
             if ( state == WebGPUTimestampReadback::Mapped )
             {
-                // 값은 나노초다(명세) — 틱 하나 = 1 ns. 적지 않은 칸은 `RHITimestamp::resolve` 가 음수로 둔다(마스크).
+                // 값은 나노초다(명세) — 틱 하나 = 1 ns. 적지 않은 칸은 `RHITimestampFrame::resolve` 가 음수로 둔다(마스크).
                 const uint64* const pTick = static_cast<const uint64*>( wgpuBufferGetConstMappedRange( readback->_buffer, 0, WebGPURHIDeviceInternal::kTimestampBytes ) );
                 if ( pTick != nullptr )
-                    (void)RHITimestamp::resolve( pTick, readback->_writtenMask, 1.0, _timestampFrame );
+                    (void)RHITimestampFrame::resolve( pTick, readback->_writtenMask, 1.0, _timestampFrame );
                 wgpuBufferUnmap( readback->_buffer );
             }
             if ( state == WebGPUTimestampReadback::Mapped || state == WebGPUTimestampReadback::Failed )

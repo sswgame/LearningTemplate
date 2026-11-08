@@ -35,7 +35,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 개체 하나(잡은 몬스터, 야생, 트레이너의 몬스터)입니다. 능력치 `_arrStat` 는 `MonsterRules::recomputeStats` 가 채웁니다. */
+    /** @brief 개체 하나(잡은 몬스터, 야생, 트레이너의 몬스터)입니다. 능력치 `_arrStat` 는 `MonsterInstance::recomputeStats` 가 채웁니다. */
     struct SW_KIT_API MonsterInstance
     {
         static constexpr int32  kMoveSlotCount = 4;
@@ -68,38 +68,9 @@ namespace sw
         SW_DECLARE_STATE_IO();
         /** @brief 종, 성격, 기술이 모두 카탈로그에 있는지입니다. 카탈로그를 가진 쪽이 읽은 뒤에 봅니다. */
         [[nodiscard]] bool isKnownTo( const MonsterCollectorCatalog& catalog ) const;
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 성장에서 일어난 일입니다. */
-    struct MonsterGrowthEvent
-    {
-        enum class Kind : uint8
-        {
-            LevelUp = 0,
-            LearnedMove,
-            MoveLearnBlocked, ///< 슬롯 네 개가 다 찼다. 게임이 "무엇을 잊을까"를 묻고 `learnMove( …, slot )` 을 호출한다
-            CanEvolve         ///< 레벨이나 친밀도 진화 조건이 맞았다(`_id` 는 진화할 종). 게임이 B 취소를 받고 `evolve` 를 호출한다
-        };
-        hashed_string _id{}; ///< 기술이나 종의 id
-        int32         _level{ 0 };
-        Kind          _kind{ Kind::LevelUp };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct MonsterRules
-     * @brief 개체에 대한 규칙입니다(상태 없음).
-     * @details 능력치 공식(3세대 이후)은 다음과 같다.
-     *          HP = ⌊(2B + IV + ⌊EV/4⌋) × L / 100⌋ + L + 10,
-     *          그 밖의 능력치 = ⌊(⌊(2B + IV + ⌊EV/4⌋) × L / 100⌋ + 5) × 성격⌋(성격은 110, 100, 90 %).
-     */
-    struct SW_KIT_API MonsterRules
-    {
+        // 개체에 대한 규칙입니다(상태 없음).
+        // 능력치 공식(3세대 이후)은 다음과 같다.
         static constexpr int32 kMaxIv              = 31;
         static constexpr int32 kMaxEvPerStat       = 252;
         static constexpr int32 kMaxEvTotal         = 510;
@@ -137,6 +108,24 @@ namespace sw
         [[nodiscard]] static bool evolve( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& targetSpeciesID );
         /** @brief HP, PP, 상태이상을 모두 회복합니다(포켓몬 센터). */
         static void restore( MonsterInstance& inoutMonster );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 성장에서 일어난 일입니다. */
+    struct MonsterGrowthEvent
+    {
+        enum class Kind : uint8
+        {
+            LevelUp = 0,
+            LearnedMove,
+            MoveLearnBlocked, ///< 슬롯 네 개가 다 찼다. 게임이 "무엇을 잊을까"를 묻고 `learnMove( …, slot )` 을 호출한다
+            CanEvolve         ///< 레벨이나 친밀도 진화 조건이 맞았다(`_id` 는 진화할 종). 게임이 B 취소를 받고 `evolve` 를 호출한다
+        };
+        hashed_string _id{}; ///< 기술이나 종의 id
+        int32         _level{ 0 };
+        Kind          _kind{ Kind::LevelUp };
     };
 } // namespace sw
 

@@ -96,7 +96,7 @@ namespace sw
         if ( _bPlaying == SW_FALSE )
             return;
         _elapsed += MathUtil::max( deltaTime, 0.0f );
-        _pose = KillcamTimeline::sample( _playing, _settings, _elapsed );
+        _pose = KillcamShot::sample( _playing, _settings, _elapsed );
         applyPose();
         if ( _pose._phase == KillcamPhase::Done )
             skip();
@@ -132,10 +132,10 @@ namespace sw
         _playing  = shot;
         _elapsed  = 0.0f;
         _bPlaying = SW_TRUE;
-        _pose     = KillcamTimeline::sample( _playing, _settings, 0.0f );
+        _pose     = KillcamShot::sample( _playing, _settings, 0.0f );
         applyPose();
         pManager->getCameraRegistry().setCutCamera( pCamera );
-        SW_LOG_INFO_ID( "Killcam.Play", "Killcam replays a shot with %# hit(s) for %# s", _playing.getHits().size(), KillcamTimeline::computeDuration( _playing, _settings ) );
+        SW_LOG_INFO_ID( "Killcam.Play", "Killcam replays a shot with %# hit(s) for %# s", _playing.getHits().size(), KillcamShot::computeDuration( _playing, _settings ) );
         return true;
     }
 

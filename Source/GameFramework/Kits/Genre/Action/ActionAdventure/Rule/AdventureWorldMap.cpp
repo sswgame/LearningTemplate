@@ -71,7 +71,7 @@ namespace sw
             Element::of<&AdventureWorldMap::loadTower>( "Tower" ),
             Element::of<&AdventureWorldMap::loadShrine>( "Shrine" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement );
         resetState();
         return result._loadedCount;
     }

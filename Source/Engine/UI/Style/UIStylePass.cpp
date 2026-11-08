@@ -5,7 +5,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Reflection/ReflectionCast.h"
-#include "Engine/UI/Animation/UIStyleTransition.h"
+#include "Engine/UI/Animation/UIStyleTransitionState.h"
 #include "Engine/UI/Style/UIStyleSet.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
@@ -69,7 +69,7 @@ namespace sw
         const bool                              bPropagate    = style != widget._computedStyle || ancestorKey != widget._styleAncestorKey;
         const uint32                            styleStates   = widget.computeStyleStates();
         if ( changedFields != 0 )
-            UIStyleTransition::onStyleChanged( widget, widget._computedStyle.get(), style.get(), changedFields, widget._styleStates, styleStates );
+            UIStyleTransitionState::onStyleChanged( widget, widget._computedStyle.get(), style.get(), changedFields, widget._styleStates, styleStates );
         widget._computedStyle    = style;
         widget._styleAncestorKey = ancestorKey;
         widget._styleStates      = styleStates;

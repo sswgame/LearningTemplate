@@ -22,19 +22,237 @@ namespace sw
 {
     namespace
     {
+        /** @brief 바꾸기 전에 원본 값을 한 꼴로 읽어 둔 것입니다 — 숫자거나 글이거나 둘 다 아니거나. 읽기(`read` · `readBuiltin`)와 바꾸기(`convertToBuiltin` · `readEnum`)가 이 타입의 일이다. */
+        class ReflectSourceValue
+        {
+        public:
+            ReflectSourceValue()
+                : _text{}
+                , _floatValue{ 0.0 }
+                , _intValue{ 0 }
+                , _bNumber{ SW_FALSE }
+                , _bInteger{ SW_FALSE }
+                , _bText{ SW_FALSE }
+            {
+            }
+
+            /** @brief 담긴 값을 숫자 · 글로 읽습니다. 내장 타입 · 열거형(이름 글)만 읽힙니다. */
+            [[nodiscard]] bool read( const ReflectedValue& in );
+
+            /** @brief 열거형 @p target 의 값으로 읽습니다 — 이름이든 숫자든 `tryParseText` 한 길로, 알려진 값만 받는다(모르는 이름 · 숫자는 false). */
+            [[nodiscard]] bool readEnum( const EnumInfo& target, int64& outValue ) const
+            {
+                if ( _bText )
+                    return target.tryParseText( _text, outValue );
+                return _bInteger && target.tryParseText( to_string( _intValue ), outValue );
+            }
+
+            /** @brief 내장 타입 값 하나를 숫자 · 글로 읽습니다. 숫자도 글도 아닌 타입(벡터 · 핸들 · 행렬)은 글로만 씁니다. */
+            template <typename T>
+            static void readBuiltin( const void* pValue, ReflectSourceValue& out )
+            {
+                const T& value = *static_cast<const T*>( pValue );
+                if constexpr ( std::is_same_v<T, bool> )
+                    out.setNumber( value ? 1.0 : 0.0, true, value ? 1 : 0 );
+                else if constexpr ( std::is_same_v<T, atomic<bool>> )
+                {
+                    const bool bValue = value.load( std::memory_order_relaxed );
+                    out.setNumber( bValue ? 1.0 : 0.0, true, bValue ? 1 : 0 );
+                }
+                else if constexpr ( std::is_integral_v<T> )
+                    out.setNumber( static_cast<float64>( value ), true, static_cast<int64>( value ) );
+                else if constexpr ( std::is_floating_point_v<T> )
+                    out.setFloatNumber( static_cast<float64>( value ) );
+                else if constexpr ( std::is_same_v<T, string> )
+                {
+                    out._text  = value;
+                    out._bText = SW_TRUE;
+                }
+                else if constexpr ( std::is_same_v<T, hashed_string> )
+                {
+                    out._text  = string( value.c_str() );
+                    out._bText = SW_TRUE;
+                }
+                else if constexpr ( std::is_same_v<T, TagID> )
+                {
+                    out._text  = value.isValid() ? string( value.getString() ) : string();
+                    out._bText = SW_TRUE;
+                }
+                else if constexpr ( kIsPackedValue<T> )
+                {
+                    // 성분이 하나인 압축 타입(half · unorm · snorm)만 숫자로 읽힌다. 무한대 · NaN 은 정수 변환이 정의되지 않으므로 숫자로 읽지 않는다(인자 변환이 거절).
+                    if constexpr ( PackedValueTraits<T>::kComponentCount == 1 )
+                    {
+                        const float32 asFloat = PackedValueTraits<T>::toFloats( value )._arrValue[0];
+                        if ( isPackedFloatsInRange<T>( PackedFloats{ { asFloat } } ) )
+                            out.setFloatNumber( static_cast<float64>( asFloat ) );
+                    }
+                }
+            }
+
+            /** @brief 원본 값을 내장 타입 T 로 바꿉니다. 숫자 범위를 넘거나 소수를 정수로 바꾸는 것은 거절합니다(조용히 깎지 않게). */
+            template <typename T>
+            [[nodiscard]] static bool convertToBuiltin( const ReflectSourceValue& source, TaskValue& outValue )
+            {
+                if constexpr ( std::is_same_v<T, bool> || std::is_same_v<T, atomic<bool>> )
+                {
+                    bool bValue = false;
+                    if ( source._bNumber )
+                        bValue = source._floatValue != 0.0;
+                    else if ( source._bText == SW_FALSE || StringUtil::tryParseBool( source._text, bValue ) == false )
+                        return false;
+                    outValue = TaskValue{ T( bValue ) };
+                    return true;
+                }
+                else if constexpr ( std::is_integral_v<T> )
+                {
+                    if ( source._bNumber == SW_FALSE || source._bInteger == SW_FALSE )
+                        return false;
+                    const bool bInRange = static_cast<float64>( std::numeric_limits<T>::lowest() ) <= source._floatValue &&
+                                          source._floatValue <= static_cast<float64>( std::numeric_limits<T>::max() );
+                    if ( bInRange == false )
+                        return false;
+                    outValue = TaskValue{ static_cast<T>( source._intValue ) };
+                    return true;
+                }
+                else if constexpr ( std::is_floating_point_v<T> )
+                {
+                    if ( source._bNumber == SW_FALSE )
+                        return false;
+                    outValue = TaskValue{ static_cast<T>( source._floatValue ) };
+                    return true;
+                }
+                else if constexpr ( std::is_same_v<T, string> )
+                {
+                    if ( source._bText )
+                        outValue = TaskValue{ string( source._text ) };
+                    else if ( source._bNumber )
+                        outValue = TaskValue{ source._bInteger ? to_string( source._intValue ) : to_string( source._floatValue ) };
+                    else
+                        return false;
+                    return true;
+                }
+                else if constexpr ( std::is_same_v<T, hashed_string> )
+                {
+                    if ( source._bText == SW_FALSE )
+                        return false;
+                    outValue = TaskValue{ hashed_string( source._text.c_str() ) };
+                    return true;
+                }
+                else if constexpr ( std::is_same_v<T, TagID> )
+                {
+                    if ( source._bText == SW_FALSE )
+                        return false;
+                    outValue = TaskValue{ source._text.empty() ? TagID{} : TagID::request( source._text ) };
+                    return true;
+                }
+                else if constexpr ( kIsFloatVector<T> )
+                {
+                    constexpr uint32 kCount = sizeof( T ) / sizeof( float32 );
+                    float32          arrValue[4]{};
+                    if ( source._bText == SW_FALSE || StringUtil::parseExactFloats( source._text, kVectorSeparators, arrValue, kCount ) == false )
+                        return false;
+                    outValue = TaskValue{ T( arrValue ) };
+                    return true;
+                }
+                else if constexpr ( std::is_same_v<T, quaternion> )
+                {
+                    float32 arrValue[4]{};
+                    if ( source._bText == SW_FALSE || StringUtil::parseExactFloats( source._text, kVectorSeparators, arrValue, 4 ) == false )
+                        return false;
+                    outValue = TaskValue{ quaternion( arrValue[0], arrValue[1], arrValue[2], arrValue[3] ) };
+                    return true;
+                }
+                else if constexpr ( kIsPackedValue<T> )
+                {
+                    // 압축 타입은 성분 실수로 받는다. 성분이 하나면 숫자도 받고, 여럿이면 벡터처럼 글(`0.5, 1, 0.25`)만 받는다.
+                    // 범위를 넘으면 거절한다 — `fromFloats` 는 자르거나(unorm) 무한대로 보내므로(half) 조용히 다른 값이 되지 않게 한다.
+                    using Traits = PackedValueTraits<T>;
+                    PackedFloats floats{};
+                    if ( Traits::kComponentCount == 1 && source._bNumber )
+                    {
+                        // float32 로 줄이기 전에 float64 에서 거른다(범위를 넘는 float64 를 float32 로 바꾸면 값이 정의되지 않는다).
+                        const bool bInRange = static_cast<float64>( Traits::kRangeMin ) <= source._floatValue && source._floatValue <= static_cast<float64>( Traits::kRangeMax );
+                        if ( bInRange == false )
+                            return false;
+                        floats._arrValue[0] = static_cast<float32>( source._floatValue );
+                    }
+                    else if ( source._bText == SW_FALSE || StringUtil::parseExactFloats( source._text, kVectorSeparators, floats._arrValue, Traits::kComponentCount ) == false )
+                        return false;
+                    if ( isPackedFloatsInRange<T>( floats ) == false )
+                        return false;
+                    outValue = TaskValue{ Traits::fromFloats( floats ) };
+                    return true;
+                }
+                else
+                {
+                    // 행렬 · 핸들은 같은 타입으로만 받는다(같은 타입은 부르는 쪽이 이미 그대로 넘겼다).
+                    (void)source;
+                    (void)outValue;
+                    return false;
+                }
+            }
+
+        private:
+            /** @brief 벡터 · 사원수 글(`1, 2, 3` · `(1 2 3)`)의 구분자입니다. */
+            static constexpr string_view kVectorSeparators = " ,()\t";
+
+            /** @brief T 가 float2 · float3 · float4 중 하나인지입니다. */
+            template <typename T>
+            static constexpr bool kIsFloatVector = std::is_same_v<T, float2> || std::is_same_v<T, float3> || std::is_same_v<T, float4>;
+
+            void setNumber( const float64 value, const bool bInteger, const int64 intValue )
+            {
+                _bNumber    = SW_TRUE;
+                _floatValue = value;
+                _intValue   = intValue;
+                _bInteger   = bInteger ? SW_TRUE : SW_FALSE;
+            }
+
+            /**
+             * @brief 실수 하나를 숫자로 읽어 둡니다. 무한대 · NaN 은 숫자로 읽지 않고(정수 변환이 정의되지 않는다), int64 범위 밖의 유한값은 정수가 아닌 숫자로만 둡니다.
+             * @details `static_cast<int64>` 는 범위 밖 · NaN 에서 정의되지 않으므로 변환은 항상 범위 검사 뒤에만 한다. 2^63 은 float64 로 정확히 나타내는 int64 범위의 열린 상한이다.
+             */
+            void setFloatNumber( const float64 value )
+            {
+                constexpr float64 kInt64Bound = 9223372036854775808.0;
+                if ( std::isfinite( value ) == false )
+                    return;
+                if ( value >= -kInt64Bound && value < kInt64Bound )
+                {
+                    const int64 intValue = static_cast<int64>( value );
+                    setNumber( value, value == static_cast<float64>( intValue ), intValue );
+                }
+                else
+                    setNumber( value, false, 0 );
+            }
+
+            /** @brief 글을 숫자로도 읽어 둡니다 — 숫자 인자에 글을 넘기는 길(콘솔 · 기본 인자). */
+            void parseTextAsNumber()
+            {
+                const string_view trimmed = StringUtil::trim( _text );
+                int64             intValue{ 0 };
+                float64           floatValue{ 0.0 };
+                bool              boolValue{ false };
+                if ( StringUtil::parseInt64( trimmed, intValue ) )
+                    setNumber( static_cast<float64>( intValue ), true, intValue );
+                else if ( StringUtil::parseDouble( trimmed, floatValue ) )
+                    setFloatNumber( floatValue );
+                else if ( StringUtil::tryParseBool( trimmed, boolValue ) )
+                    setNumber( boolValue ? 1.0 : 0.0, true, boolValue ? 1 : 0 );
+            }
+
+        private:
+            string  _text;
+            float64 _floatValue;
+            int64   _intValue;
+            uint8   _bNumber  : 1;
+            uint8   _bInteger : 1; ///< 정수 타입에서 왔다(또는 소수부가 없다) — 정수 타입으로 바꿀 수 있다
+            uint8   _bText    : 1;
+        };
+
         struct ReflectValueInternal
         {
-            /** @brief 바꾸기 전에 원본 값을 한 꼴로 읽어 둔 것입니다 — 숫자거나 글이거나 둘 다 아니거나. */
-            struct SourceValue
-            {
-                string  _text;
-                float64 _floatValue{ 0.0 };
-                int64   _intValue{ 0 };
-                bool    _bNumber{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool    _bInteger{ false }; ///< 정수 타입에서 왔다(또는 소수부가 없다) — 정수 타입으로 바꿀 수 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool    _bText{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            };
-
             static constexpr const utf8* kArrBuiltinTypeName[] = {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, ... ) #Canon,
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
@@ -58,200 +276,6 @@ namespace sw
 #undef SW_REFLECT_BUILTIN_CONTAINER
                 } };
                 return s_arrName;
-            }
-
-            static void setNumber( SourceValue& out, const float64 value, const bool bInteger, const int64 intValue )
-            {
-                out._bNumber    = true;
-                out._floatValue = value;
-                out._intValue   = intValue;
-                out._bInteger   = bInteger;
-            }
-
-            /**
-             * @brief 실수 하나를 숫자로 읽어 둡니다. 무한대 · NaN 은 숫자로 읽지 않고(정수 변환이 정의되지 않는다), int64 범위 밖의 유한값은 정수가 아닌 숫자로만 둡니다.
-             * @details `static_cast<int64>` 는 범위 밖 · NaN 에서 정의되지 않으므로 변환은 항상 범위 검사 뒤에만 한다. 2^63 은 float64 로 정확히 나타내는 int64 범위의 열린 상한이다.
-             */
-            static void setFloatNumber( SourceValue& out, const float64 value )
-            {
-                constexpr float64 kInt64Bound = 9223372036854775808.0;
-                if ( std::isfinite( value ) == false )
-                    return;
-                if ( value >= -kInt64Bound && value < kInt64Bound )
-                {
-                    const int64 intValue = static_cast<int64>( value );
-                    setNumber( out, value, value == static_cast<float64>( intValue ), intValue );
-                }
-                else
-                    setNumber( out, value, false, 0 );
-            }
-
-            /** @brief 내장 타입 값 하나를 숫자 · 글로 읽습니다. 숫자도 글도 아닌 타입(벡터 · 핸들 · 행렬)은 글로만 씁니다. */
-            template <typename T>
-            static void readSource( const void* pValue, SourceValue& out )
-            {
-                const T& value = *static_cast<const T*>( pValue );
-                if constexpr ( std::is_same_v<T, bool> )
-                    setNumber( out, value ? 1.0 : 0.0, true, value ? 1 : 0 );
-                else if constexpr ( std::is_same_v<T, atomic<bool>> )
-                {
-                    const bool bValue = value.load( std::memory_order_relaxed );
-                    setNumber( out, bValue ? 1.0 : 0.0, true, bValue ? 1 : 0 );
-                }
-                else if constexpr ( std::is_integral_v<T> )
-                    setNumber( out, static_cast<float64>( value ), true, static_cast<int64>( value ) );
-                else if constexpr ( std::is_floating_point_v<T> )
-                    setFloatNumber( out, static_cast<float64>( value ) );
-                else if constexpr ( std::is_same_v<T, string> )
-                {
-                    out._text  = value;
-                    out._bText = true;
-                }
-                else if constexpr ( std::is_same_v<T, hashed_string> )
-                {
-                    out._text  = string( value.c_str() );
-                    out._bText = true;
-                }
-                else if constexpr ( std::is_same_v<T, TagID> )
-                {
-                    out._text  = value.isValid() ? string( value.getString() ) : string();
-                    out._bText = true;
-                }
-                else if constexpr ( kIsPackedValue<T> )
-                {
-                    // 성분이 하나인 압축 타입(half · unorm · snorm)만 숫자로 읽힌다. 무한대 · NaN 은 정수 변환이 정의되지 않으므로 숫자로 읽지 않는다(인자 변환이 거절).
-                    if constexpr ( PackedValueTraits<T>::kComponentCount == 1 )
-                    {
-                        const float32 asFloat = PackedValueTraits<T>::toFloats( value )._arrValue[0];
-                        if ( isPackedFloatsInRange<T>( PackedFloats{ { asFloat } } ) )
-                            setFloatNumber( out, static_cast<float64>( asFloat ) );
-                    }
-                }
-            }
-
-            /** @brief 글을 숫자로도 읽어 둡니다 — 숫자 인자에 글을 넘기는 길(콘솔 · 기본 인자). */
-            static void parseTextAsNumber( SourceValue& source )
-            {
-                const string_view trimmed = StringUtil::trim( source._text );
-                int64             intValue{ 0 };
-                float64           floatValue{ 0.0 };
-                bool              boolValue{ false };
-                if ( StringUtil::parseInt64( trimmed, intValue ) )
-                    setNumber( source, static_cast<float64>( intValue ), true, intValue );
-                else if ( StringUtil::parseDouble( trimmed, floatValue ) )
-                    setFloatNumber( source, floatValue );
-                else if ( StringUtil::tryParseBool( trimmed, boolValue ) )
-                    setNumber( source, boolValue ? 1.0 : 0.0, true, boolValue ? 1 : 0 );
-            }
-
-            /** @brief 벡터 · 사원수 글(`1, 2, 3` · `(1 2 3)`)의 구분자입니다. */
-            static constexpr string_view kVectorSeparators = " ,()\t";
-
-            /** @brief T 가 float2 · float3 · float4 중 하나인지입니다. */
-            template <typename T>
-            static constexpr bool kIsFloatVector = std::is_same_v<T, float2> || std::is_same_v<T, float3> || std::is_same_v<T, float4>;
-
-            /** @brief 원본 값을 내장 타입 T 로 바꿉니다. 숫자 범위를 넘거나 소수를 정수로 바꾸는 것은 거절합니다(조용히 깎지 않게). */
-            template <typename T>
-            [[nodiscard]] static bool convertSource( const SourceValue& source, TaskValue& outValue )
-            {
-                if constexpr ( std::is_same_v<T, bool> || std::is_same_v<T, atomic<bool>> )
-                {
-                    bool bValue = false;
-                    if ( source._bNumber )
-                        bValue = source._floatValue != 0.0;
-                    else if ( source._bText == false || StringUtil::tryParseBool( source._text, bValue ) == false )
-                        return false;
-                    outValue = TaskValue{ T( bValue ) };
-                    return true;
-                }
-                else if constexpr ( std::is_integral_v<T> )
-                {
-                    if ( source._bNumber == false || source._bInteger == false )
-                        return false;
-                    const bool bInRange = static_cast<float64>( std::numeric_limits<T>::lowest() ) <= source._floatValue &&
-                                          source._floatValue <= static_cast<float64>( std::numeric_limits<T>::max() );
-                    if ( bInRange == false )
-                        return false;
-                    outValue = TaskValue{ static_cast<T>( source._intValue ) };
-                    return true;
-                }
-                else if constexpr ( std::is_floating_point_v<T> )
-                {
-                    if ( source._bNumber == false )
-                        return false;
-                    outValue = TaskValue{ static_cast<T>( source._floatValue ) };
-                    return true;
-                }
-                else if constexpr ( std::is_same_v<T, string> )
-                {
-                    if ( source._bText )
-                        outValue = TaskValue{ string( source._text ) };
-                    else if ( source._bNumber )
-                        outValue = TaskValue{ source._bInteger ? to_string( source._intValue ) : to_string( source._floatValue ) };
-                    else
-                        return false;
-                    return true;
-                }
-                else if constexpr ( std::is_same_v<T, hashed_string> )
-                {
-                    if ( source._bText == false )
-                        return false;
-                    outValue = TaskValue{ hashed_string( source._text.c_str() ) };
-                    return true;
-                }
-                else if constexpr ( std::is_same_v<T, TagID> )
-                {
-                    if ( source._bText == false )
-                        return false;
-                    outValue = TaskValue{ source._text.empty() ? TagID{} : TagID::request( source._text ) };
-                    return true;
-                }
-                else if constexpr ( kIsFloatVector<T> )
-                {
-                    constexpr uint32 kCount = sizeof( T ) / sizeof( float32 );
-                    float32          arrValue[4]{};
-                    if ( source._bText == false || StringUtil::parseExactFloats( source._text, kVectorSeparators, arrValue, kCount ) == false )
-                        return false;
-                    outValue = TaskValue{ T( arrValue ) };
-                    return true;
-                }
-                else if constexpr ( std::is_same_v<T, quaternion> )
-                {
-                    float32 arrValue[4]{};
-                    if ( source._bText == false || StringUtil::parseExactFloats( source._text, kVectorSeparators, arrValue, 4 ) == false )
-                        return false;
-                    outValue = TaskValue{ quaternion( arrValue[0], arrValue[1], arrValue[2], arrValue[3] ) };
-                    return true;
-                }
-                else if constexpr ( kIsPackedValue<T> )
-                {
-                    // 압축 타입은 성분 실수로 받는다. 성분이 하나면 숫자도 받고, 여럿이면 벡터처럼 글(`0.5, 1, 0.25`)만 받는다.
-                    // 범위를 넘으면 거절한다 — `fromFloats` 는 자르거나(unorm) 무한대로 보내므로(half) 조용히 다른 값이 되지 않게 한다.
-                    using Traits = PackedValueTraits<T>;
-                    PackedFloats floats{};
-                    if ( Traits::kComponentCount == 1 && source._bNumber )
-                    {
-                        // float32 로 줄이기 전에 float64 에서 거른다(범위를 넘는 float64 를 float32 로 바꾸면 값이 정의되지 않는다).
-                        const bool bInRange = static_cast<float64>( Traits::kRangeMin ) <= source._floatValue && source._floatValue <= static_cast<float64>( Traits::kRangeMax );
-                        if ( bInRange == false )
-                            return false;
-                        floats._arrValue[0] = static_cast<float32>( source._floatValue );
-                    }
-                    else if ( source._bText == false || StringUtil::parseExactFloats( source._text, kVectorSeparators, floats._arrValue, Traits::kComponentCount ) == false )
-                        return false;
-                    if ( isPackedFloatsInRange<T>( floats ) == false )
-                        return false;
-                    outValue = TaskValue{ Traits::fromFloats( floats ) };
-                    return true;
-                }
-                else
-                {
-                    // 행렬 · 핸들은 같은 타입으로만 받는다(같은 타입은 부르는 쪽이 이미 그대로 넘겼다).
-                    (void)source;
-                    (void)outValue;
-                    return false;
-                }
             }
 
             /** @brief 내장 타입 값 하나를 사람이 읽는 글로 씁니다. */
@@ -391,8 +415,8 @@ namespace sw
                 }
             }
 
-            using ReadSourceFn    = void ( * )( const void* pValue, SourceValue& out );
-            using ConvertSourceFn = bool ( * )( const SourceValue& source, TaskValue& outValue );
+            using ReadSourceFn    = void ( * )( const void* pValue, ReflectSourceValue& out );
+            using ConvertSourceFn = bool ( * )( const ReflectSourceValue& source, TaskValue& outValue );
             using FormatFn        = string ( * )( const void* pValue );
             using ReadNumberFn    = bool ( * )( const void* pValue, float64& outValue );
             using ReadIntegerFn   = bool ( * )( const void* pValue, int64& outValue );
@@ -411,10 +435,10 @@ namespace sw
             };
 
             static constexpr BuiltinRow kArrBuiltinRow[] = {
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... )                                                  \
-    { &readSource<ReflectBuiltinCppTypeT<CppType>>, &convertSource<ReflectBuiltinCppTypeT<CppType>>,    \
-      &formatBuiltin<ReflectBuiltinCppTypeT<CppType>>, &readNumberAs<ReflectBuiltinCppTypeT<CppType>>,  \
-      &readIntegerAs<ReflectBuiltinCppTypeT<CppType>>, &writeNumberAs<ReflectBuiltinCppTypeT<CppType>>, \
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, ... )                                                                                           \
+    { &ReflectSourceValue::readBuiltin<ReflectBuiltinCppTypeT<CppType>>, &ReflectSourceValue::convertToBuiltin<ReflectBuiltinCppTypeT<CppType>>, \
+      &formatBuiltin<ReflectBuiltinCppTypeT<CppType>>, &readNumberAs<ReflectBuiltinCppTypeT<CppType>>,                                           \
+      &readIntegerAs<ReflectBuiltinCppTypeT<CppType>>, &writeNumberAs<ReflectBuiltinCppTypeT<CppType>>,                                          \
       getReflectBuiltinClass<ReflectBuiltinCppTypeT<CppType>>() },
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
@@ -422,25 +446,6 @@ namespace sw
 #undef SW_REFLECT_BUILTIN_CONTAINER
             };
             static_assert( std::size( kArrBuiltinRow ) == ReflectBuiltinIndex::kCount, "kArrBuiltinRow must have one row per ReflectBuiltins.xxx type" );
-
-            /** @brief 담긴 값을 숫자 · 글로 읽습니다. 내장 타입 · 열거형(이름 글)만 읽힙니다. */
-            [[nodiscard]] static bool readSourceValue( const ReflectedValue& in, SourceValue& out )
-            {
-                const int32 builtinIndex = ReflectedValueUtil::findBuiltinIndex( in._typeName );
-                if ( 0 <= builtinIndex )
-                {
-                    kArrBuiltinRow[builtinIndex]._pReadSource( in._value.getRawPtr(), out );
-                    if ( out._bText && out._bNumber == false )
-                        parseTextAsNumber( out );
-                    return out._bText || out._bNumber;
-                }
-                const EnumInfo* pEnumInfo = engine::getSubsystem<TypeRegistry>().findEnum( in._typeName );
-                if ( pEnumInfo == nullptr || in._value.getStoredSize() != pEnumInfo->_size )
-                    return false;
-                const int64 raw = pEnumInfo->readValueFromMemory( in._value.getRawPtr() );
-                setNumber( out, static_cast<float64>( raw ), true, raw );
-                return true;
-            }
 
             /** @brief @p builtinIndex 가 표 안 자리이고 @p pValue 가 있으면 그 줄, 아니면 nullptr 입니다(값 하나를 읽는 공개 함수의 입구). */
             [[nodiscard]] static const BuiltinRow* findReadableRow( const int32 builtinIndex, const void* pValue )
@@ -451,6 +456,24 @@ namespace sw
                 return &kArrBuiltinRow[builtinIndex];
             }
         };
+
+        bool ReflectSourceValue::read( const ReflectedValue& in )
+        {
+            const int32 builtinIndex = ReflectedValueUtil::findBuiltinIndex( in._typeName );
+            if ( 0 <= builtinIndex )
+            {
+                ReflectValueInternal::kArrBuiltinRow[builtinIndex]._pReadSource( in._value.getRawPtr(), *this );
+                if ( _bText && _bNumber == SW_FALSE )
+                    parseTextAsNumber();
+                return _bText || _bNumber;
+            }
+            const EnumInfo* pEnumInfo = engine::getSubsystem<TypeRegistry>().findEnum( in._typeName );
+            if ( pEnumInfo == nullptr || in._value.getStoredSize() != pEnumInfo->_size )
+                return false;
+            const int64 raw = pEnumInfo->readValueFromMemory( in._value.getRawPtr() );
+            setNumber( static_cast<float64>( raw ), true, raw );
+            return true;
+        }
     } // namespace
 } // namespace sw
 
@@ -531,8 +554,8 @@ namespace sw
     {
         if ( builtinIndex < 0 || ReflectBuiltinIndex::kCount <= builtinIndex )
             return false;
-        ReflectValueInternal::SourceValue source;
-        if ( ReflectValueInternal::readSourceValue( in, source ) == false )
+        ReflectSourceValue source;
+        if ( source.read( in ) == false )
             return false;
         return ReflectValueInternal::kArrBuiltinRow[builtinIndex]._pConvertSource( source, outValue );
     }
@@ -551,13 +574,8 @@ namespace sw
             outValue = pTarget->readValueFromMemory( in._value.getRawPtr() );
             return true;
         }
-        ReflectValueInternal::SourceValue source;
-        if ( ReflectValueInternal::readSourceValue( in, source ) == false )
-            return false;
-        // 이름이든 숫자든 `tryParseText` 한 길로 — 알려진 값만 받는다(모르는 이름 · 숫자는 false).
-        if ( source._bText )
-            return pTarget->tryParseText( source._text, outValue );
-        return source._bInteger && pTarget->tryParseText( to_string( source._intValue ), outValue );
+        ReflectSourceValue source;
+        return source.read( in ) && source.readEnum( *pTarget, outValue );
     }
 
     string ReflectedValueUtil::formatText( const ReflectedValue& value )

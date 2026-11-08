@@ -153,7 +153,7 @@ SW_TEST_CASE( RetargetProfileInspectionTest, AGoodProfileReportsLengthsAndMapped
     const Skeleton            skeleton = Util::makeSkeleton();
     RetargetProfileInspection inspection;
     string                    error;
-    SW_REQUIRE_TRUE( RetargetProfileInspector::inspect( Util::makeProfile(), &skeleton, &skeleton, inspection, error ) );
+    SW_REQUIRE_TRUE( RetargetProfileInspection::inspect( Util::makeProfile(), &skeleton, &skeleton, inspection, error ) );
     SW_EXPECT_TRUE( error.empty() );
     SW_EXPECT_TRUE( inspection._listProblem.empty() );
     SW_EXPECT_TRUE( inspection._listWarning.empty() );
@@ -175,17 +175,17 @@ SW_TEST_CASE( RetargetProfileInspectionTest, MissingBonesAreNamedWithoutErrorLog
     } );
     RetargetProfileInspection inspection;
     string                    error;
-    SW_EXPECT_FALSE( RetargetProfileInspector::inspect( profile, &skeleton, &skeleton, inspection, error ) );
+    SW_EXPECT_FALSE( RetargetProfileInspection::inspect( profile, &skeleton, &skeleton, inspection, error ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( inspection._listProblem.size() ) );
     SW_EXPECT_TRUE( Util::containsText( inspection._listProblem, "nope_source" ) );
     SW_EXPECT_TRUE( Util::containsText( inspection._listProblem, "nope_target" ) );
     SW_EXPECT_TRUE( Util::containsText( inspection._listProblem, "nope_pose" ) );
     SW_EXPECT_TRUE( error == inspection._listProblem.front() );
 
-    SW_EXPECT_FALSE( RetargetProfileInspector::inspect( RetargetProfile{}, &skeleton, &skeleton, inspection, error ) ); // 빈 칸도 까닭을 말한다
+    SW_EXPECT_FALSE( RetargetProfileInspection::inspect( RetargetProfile{}, &skeleton, &skeleton, inspection, error ) ); // 빈 칸도 까닭을 말한다
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( inspection._listProblem.size() ) );
 
-    SW_EXPECT_FALSE( RetargetProfileInspector::inspect( profile, nullptr, &skeleton, inspection, error ) );
+    SW_EXPECT_FALSE( RetargetProfileInspection::inspect( profile, nullptr, &skeleton, inspection, error ) );
     SW_EXPECT_TRUE( error.find( "source skeleton" ) != string::npos );
 }
 
@@ -210,7 +210,7 @@ SW_TEST_CASE( RetargetProfileInspectionTest, SuspiciousMappingsWarnButStillBind 
 
     RetargetProfileInspection inspection;
     string                    error;
-    SW_REQUIRE_TRUE( RetargetProfileInspector::inspect( profile, &skeleton, &skeleton, inspection, error ) );
+    SW_REQUIRE_TRUE( RetargetProfileInspection::inspect( profile, &skeleton, &skeleton, inspection, error ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( inspection._listWarning.size() ) );
     SW_EXPECT_TRUE( Util::containsText( inspection._listWarning, "source bones do not run" ) );
     SW_EXPECT_TRUE( Util::containsText( inspection._listWarning, "IK goal" ) );

@@ -98,15 +98,15 @@ namespace sw
             static MailboxOutcome claimCampaign( IServiceStoreConnection& connection, uint64 campaignID, const MailboxClaimInput& input, MailboxClaimReply& outReply )
             {
                 ServiceRecord            campaignRecord;
-                const ServiceStoreResult read = connection.readRecord( ServiceMailCampaignTable::getCampaignTable(), ServiceKeyUtil::makeHex64( campaignID ), campaignRecord );
+                const ServiceStoreResult read = connection.readRecord( ServiceMailCampaign::getCampaignTable(), ServiceKeyUtil::makeHex64( campaignID ), campaignRecord );
                 if ( read == ServiceStoreResult::NotFound )
                     return MailboxResult::NotFound;
                 ServiceMailCampaign campaign;
-                if ( read != ServiceStoreResult::Ok || ServiceMailCampaignTable::decode( campaignRecord._bytes, campaign ) == false )
+                if ( read != ServiceStoreResult::Ok || ServiceMailCampaign::decode( campaignRecord._bytes, campaign ) == false )
                     return MailboxOutcome::fail( OnlineError::kUnavailable );
                 if ( campaign.isActive( input._nowMs ) == false )
                     return MailboxResult::Expired;
-                const string          claimKey = ServiceMailCampaignTable::makeClaimKey( campaignID, input._accountID );
+                const string          claimKey = ServiceMailCampaign::makeClaimKey( campaignID, input._accountID );
                 LedgerTransferRequest request;
                 if ( LedgerJournalKey::makeFromToken( "mail.campaign", claimKey, request._journalKey ) == false )
                     return MailboxOutcome::fail( OnlineError::kInvalidRequest );
@@ -129,7 +129,7 @@ namespace sw
                         return toOutcome( staged );
                     if ( outcome._bReplayed == SW_TRUE )
                         return MailboxResult::AlreadyClaimed;
-                    transaction.put( ServiceMailCampaignTable::getClaimTable(), claimKey, vector<uint8>{}, ServiceRecord::kAbsentVersion );
+                    transaction.put( ServiceMailCampaign::getClaimTable(), claimKey, vector<uint8>{}, ServiceRecord::kAbsentVersion );
                     const ServiceStoreResult committed = connection.commit( transaction );
                     if ( committed == ServiceStoreResult::Ok )
                     {
@@ -215,7 +215,7 @@ namespace sw
                     continue;
                 ServiceRecord            claimRecord;
                 const ServiceStoreResult claimed =
-                    connection.readRecord( ServiceMailCampaignTable::getClaimTable(), ServiceMailCampaignTable::makeClaimKey( campaign._campaignID, accountID ), claimRecord );
+                    connection.readRecord( ServiceMailCampaign::getClaimTable(), ServiceMailCampaign::makeClaimKey( campaign._campaignID, accountID ), claimRecord );
                 if ( claimed == ServiceStoreResult::Ok )
                     continue;
                 if ( claimed != ServiceStoreResult::NotFound )

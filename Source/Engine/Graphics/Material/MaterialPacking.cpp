@@ -9,7 +9,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 

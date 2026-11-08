@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Audio/AudioClip.h"
-#include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioMixerDef.h"
+#include "Engine/Audio/AudioPcm.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/DSP/AudioBiquad.h"
 #include "Engine/Audio/DSP/AudioFFT.h"
@@ -563,7 +563,7 @@ namespace sw
                 vector<uint8> bytes;
                 AudioPcm      pcm;
                 AudioClipData clip;
-                const bool    bDecoded = AssetIO::readBinaryAsset( AssetID{ path.get() }, bytes ) && AudioClipDecoder::decode( path.get(), bytes.data(), bytes.size(), pcm ) &&
+                const bool    bDecoded = AssetIO::readBinaryAsset( AssetID{ path.get() }, bytes ) && AudioPcm::decode( path.get(), bytes.data(), bytes.size(), pcm ) &&
                                       AudioClipData::convertPcm( pcm, clip );
                 if ( bDecoded == false || clip._frameCount == 0 )
                 {

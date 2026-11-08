@@ -23,7 +23,7 @@
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
-#include "Engine/UI/Render/UIPaintPass.h"
+#include "Engine/UI/Render/UIPaintContext.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/World/UIWidgetComponentService.h"
@@ -476,12 +476,12 @@ namespace sw
         UIPaintContext paint = basePaint;
         paint._uiScale       = 1.0f;
         // 다시 잴 위젯도 무효화도 없으면 지난 목록이 그대로다 — 스크래치에 이어 붙이고 견주는 일을 건너뛴다(화면 UI 의 `paintScreens` 와 같은 조건).
-        if ( measuredCount == 0 && UIPaintPass::canReuseOutput( *_worldTree, paint, size ) )
+        if ( measuredCount == 0 && UIPaintContext::canReuseOutput( *_worldTree, paint, size ) )
             return;
         _worldScratch.clear();
         _worldScratch._targetSize = size;
         CanvasPainter painter( _worldScratch, 1.0f );
-        (void)UIPaintPass::paint( *_worldTree, paint, painter, _worldScratch );
+        (void)UIPaintContext::paint( *_worldTree, paint, painter, _worldScratch );
         if ( _worldScratch.isSameContent( _worldCanvas ) && _worldScratch._targetSize == _worldCanvas._targetSize )
             return;
         std::swap( _worldCanvas, _worldScratch );
@@ -533,7 +533,7 @@ namespace sw
         float4x4 quadWorld{};
         if ( acceptsWorldInput() == false || computeWorldQuadMatrix( quadWorld ) == false )
             return false;
-        if ( WorldWidgetPick::intersectQuad( quadWorld, ray, getWorldTextureSize(), bRequireInside, outHit ) == false )
+        if ( WorldWidgetHit::intersectQuad( quadWorld, ray, getWorldTextureSize(), bRequireInside, outHit ) == false )
             return false;
         return _bOccludedByPhysics == false || isRayBlockedByPhysics( ray._origin, ray._direction, outHit._distance ) == false;
     }

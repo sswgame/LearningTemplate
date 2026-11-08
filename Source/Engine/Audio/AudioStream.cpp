@@ -6,7 +6,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
-#include "Engine/Audio/AudioClipDecoder.h"
+#include "Engine/Audio/AudioPcm.h"
 #include "Engine/Audio/AudioVorbisDecoder.h"
 
 namespace sw
@@ -217,7 +217,7 @@ namespace sw
             AudioPcm format;
             size_t   dataOffset{ 0 };
             uint32   dataBytes{ 0 };
-            if ( AudioClipDecoder::parseWAVLayout( inoutBytes.data(), inoutBytes.size(), format, dataOffset, dataBytes ) == false )
+            if ( AudioPcm::parseWAVLayout( inoutBytes.data(), inoutBytes.size(), format, dataOffset, dataBytes ) == false )
                 return nullptr;
             const bool bChannelsOk              = 1 <= format._channelCount && format._channelCount <= AudioDownmix::kMaxSourceChannelCount;
             const bool bPcm16                   = format._bFloat == SW_FALSE && format._bitsPerSample == 16;

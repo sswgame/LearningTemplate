@@ -22,7 +22,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
-#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"

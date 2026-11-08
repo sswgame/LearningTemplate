@@ -755,7 +755,7 @@ namespace sw::editor
     {
         const MeshModifierParamDef& def = modifier.getParamDefs()[paramIndex];
         // 매개변수의 곡선은 편집기와 같은 FloatCurve(보간 · 접선 포함)라 그대로 넘기고 그대로 받는다
-        const bool bOpen = EditorCurveEditor::drawPreview( "##CurvePreview", curve, ImGui::GetFrameHeight() * 2.0f );
+        const bool bOpen = EditorCurveEditorState::drawPreview( "##CurvePreview", curve, ImGui::GetFrameHeight() * 2.0f );
         if ( itemIndex < 0 )
             EditorSelfTestMarks::record( "meshmodifiers.curve" );
         else
@@ -778,7 +778,7 @@ namespace sw::editor
             // 끄는 중 · 칸 입력 중이 아니면 값에서 다시 뜬다(되돌리기 · 다른 곳의 편집이 편집기에 보인다)
             if ( _curveState._drag == EditorCurveDrag::None && ImGui::IsAnyItemActive() == false )
                 _curveState._working = curve;
-            if ( EditorCurveEditor::drawEditor( _curveState, "meshmodifiers.curveEditor" ) )
+            if ( EditorCurveEditorState::drawEditor( _curveState, "meshmodifiers.curveEditor" ) )
             {
                 // 편집기는 작업 사본만 고친다 - 마칠 때 한 번 기록하고 넣으니 끌기 한 번이 되돌리기 한 줄이다
                 MeshModifierParamValue value = modifier.getParamValue( paramIndex );

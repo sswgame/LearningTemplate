@@ -5,10 +5,10 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
 
 using namespace sw;
 
@@ -88,7 +88,7 @@ SW_TEST_CASE( AppearanceSectionsTest, VariantsChangeNamedSections )
     AppearanceSlotRequest& suit = Util::equip( spec, "Torso", "suit" );
     suit._damage                = 0.5f;
     ResolvedAppearance resolved;
-    AppearanceResolver::resolve( database, spec, resolved );
+    ResolvedAppearance::resolve( database, spec, resolved );
 
     const ResolvedPart* pSuit = resolved.findPart( hashed_string( "Torso" ), hashed_string( "Suit" ) );
     SW_REQUIRE_NOT_NULL( pSuit );
@@ -104,7 +104,7 @@ SW_TEST_CASE( AppearanceSectionsTest, VariantsChangeNamedSections )
 
     // 머티리얼 변형은 메시 변형 위에 걸린다: 부품 머티리얼이 모든 구간을 바꾸고, 그 위에 구간 하나를 덮는다.
     spec.findSlot( hashed_string( "Torso" ) )->_customization.setOption( hashed_string( "Finish" ), hashed_string( "Gold" ) );
-    AppearanceResolver::resolve( database, spec, resolved );
+    ResolvedAppearance::resolve( database, spec, resolved );
     pSuit = resolved.findPart( hashed_string( "Torso" ), hashed_string( "Suit" ) );
     SW_REQUIRE_NOT_NULL( pSuit );
     SW_EXPECT_TRUE( Util::findSectionMaterial( *pSuit, "cloth" ) == hashed_string( "gold.material" ) );
@@ -129,7 +129,7 @@ SW_TEST_CASE( AppearanceSectionsTest, RulesSwapSectionsNarrowestLast )
     spec._bodyVisual = hashed_string( "body" );
     (void)Util::equip( spec, "Torso", "suit" );
     ResolvedAppearance resolved;
-    AppearanceResolver::resolve( database, spec, resolved );
+    ResolvedAppearance::resolve( database, spec, resolved );
 
     const ResolvedPart* pSuit = resolved.findPart( hashed_string( "Torso" ), hashed_string( "Suit" ) );
     SW_REQUIRE_NOT_NULL( pSuit );
@@ -149,12 +149,12 @@ SW_TEST_CASE( AppearanceSectionsTest, RigidAndSpritePartsAreSocketBound )
     CharacterAppearanceSpec spec;
     spec._bodyVisual = hashed_string( "body" );
     ResolvedAppearance bare;
-    AppearanceResolver::resolve( database, spec, bare );
+    ResolvedAppearance::resolve( database, spec, bare );
 
     (void)Util::equip( spec, "Shoulder", "pauldron" );
     (void)Util::equip( spec, "Head", "paper" );
     ResolvedAppearance resolved;
-    AppearanceResolver::resolve( database, spec, resolved );
+    ResolvedAppearance::resolve( database, spec, resolved );
     const ResolvedPart* pPlate = resolved.findPart( hashed_string( "Shoulder" ), hashed_string( "Plate" ) );
     const ResolvedPart* pCap   = resolved.findPart( hashed_string( "Head" ), hashed_string( "Cap" ) );
     SW_REQUIRE_NOT_NULL( pPlate );

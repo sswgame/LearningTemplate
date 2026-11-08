@@ -81,7 +81,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct UIStyleSheetAsset
+     * @struct SW_API UIStyleSheetAsset
      * @brief 스타일 시트 하나입니다(`UIStyleSheetCache` 가 경로별로 나눠 줍니다).
      * @details 형식:
      *          ```xml
@@ -114,14 +114,8 @@ namespace sw
 
         string              _path{};
         vector<UIStyleRule> _listRule{}; ///< 시트 안의 순서입니다(같은 특정도에서는 뒤의 규칙이 이깁니다).
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @struct UIStyleSheetLoader @brief 스타일 시트 텍스트를 읽고, 규칙 필드를 계산된 스타일에 씁니다. */
-    struct SW_API UIStyleSheetLoader
-    {
+        // 스타일 시트 텍스트를 읽고, 규칙 필드를 계산된 스타일에 씁니다. */
         /** @brief 스타일 시트 텍스트를 읽습니다. 실패하면 false 를 반환하고 오류는 `<경로>:<줄>: <이유>` 형식입니다. */
         [[nodiscard]] static bool parse( string_view text, string_view path, UIStyleSheetAsset& outSheet, string& outError );
         /** @brief 필드 하나를 @p inoutStyle 에 씁니다(읽을 때 이미 확인한 텍스트라 실패하지 않습니다). */

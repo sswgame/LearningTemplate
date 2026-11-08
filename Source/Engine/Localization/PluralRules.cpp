@@ -64,65 +64,65 @@ namespace sw
                         return false;
                     return StringUtil::parseDouble( _text.substr( start, _position - start ), outValue );
                 }
+
+                [[nodiscard]] bool readRangeList( vector<PluralRuleSet::Clause::Range>& outListRange, string& outError )
+                {
+                    do
+                    {
+                        PluralRuleSet::Clause::Range range;
+                        if ( readNumber( range._min ) == false )
+                        {
+                            outError = "expected a number";
+                            return false;
+                        }
+                        range._max = range._min;
+                        if ( accept( ".." ) && readNumber( range._max ) == false )
+                        {
+                            outError = "expected a number after '..'";
+                            return false;
+                        }
+                        if ( range._max < range._min )
+                        {
+                            outError = "range end is below its start";
+                            return false;
+                        }
+                        outListRange.push_back( range );
+                    } while ( accept( "," ) );
+                    return true;
+                }
+
+                [[nodiscard]] bool readClause( PluralRuleSet::Clause& outClause, string& outError )
+                {
+                    skipSpace();
+                    const utf8 operand  = _position < _text.size() ? _text[_position] : '\0';
+                    const bool bKnown   = operand == 'n' || operand == 'i' || operand == 'v' || operand == 'f' || operand == 't';
+                    const bool bOperand = bKnown && ( _position + 1 >= _text.size() || _text[_position + 1] == ' ' || _text[_position + 1] == '%' ||
+                                                      _text[_position + 1] == '=' || _text[_position + 1] == '!' );
+                    if ( bOperand == false )
+                    {
+                        outError = "expected an operand n, i, v, f or t";
+                        return false;
+                    }
+                    ++_position;
+                    outClause._operand = operand;
+                    if ( accept( "%" ) || accept( "mod" ) )
+                    {
+                        if ( readNumber( outClause._modulus ) == false || outClause._modulus <= 0.0 )
+                        {
+                            outError = "expected a positive modulus";
+                            return false;
+                        }
+                    }
+                    if ( accept( "!=" ) )
+                        outClause._bNegated = true;
+                    else if ( accept( "=" ) == false )
+                    {
+                        outError = "expected '=' or '!='";
+                        return false;
+                    }
+                    return readRangeList( outClause._listRange, outError );
+                }
             };
-
-            [[nodiscard]] static bool readRangeList( Cursor& cursor, vector<PluralRuleSet::Clause::Range>& outListRange, string& outError )
-            {
-                do
-                {
-                    PluralRuleSet::Clause::Range range;
-                    if ( cursor.readNumber( range._min ) == false )
-                    {
-                        outError = "expected a number";
-                        return false;
-                    }
-                    range._max = range._min;
-                    if ( cursor.accept( ".." ) && cursor.readNumber( range._max ) == false )
-                    {
-                        outError = "expected a number after '..'";
-                        return false;
-                    }
-                    if ( range._max < range._min )
-                    {
-                        outError = "range end is below its start";
-                        return false;
-                    }
-                    outListRange.push_back( range );
-                } while ( cursor.accept( "," ) );
-                return true;
-            }
-
-            [[nodiscard]] static bool readClause( Cursor& cursor, PluralRuleSet::Clause& outClause, string& outError )
-            {
-                cursor.skipSpace();
-                const utf8 operand  = cursor._position < cursor._text.size() ? cursor._text[cursor._position] : '\0';
-                const bool bKnown   = operand == 'n' || operand == 'i' || operand == 'v' || operand == 'f' || operand == 't';
-                const bool bOperand = bKnown && ( cursor._position + 1 >= cursor._text.size() || cursor._text[cursor._position + 1] == ' ' || cursor._text[cursor._position + 1] == '%' ||
-                                                  cursor._text[cursor._position + 1] == '=' || cursor._text[cursor._position + 1] == '!' );
-                if ( bOperand == false )
-                {
-                    outError = "expected an operand n, i, v, f or t";
-                    return false;
-                }
-                ++cursor._position;
-                outClause._operand = operand;
-                if ( cursor.accept( "%" ) || cursor.accept( "mod" ) )
-                {
-                    if ( cursor.readNumber( outClause._modulus ) == false || outClause._modulus <= 0.0 )
-                    {
-                        outError = "expected a positive modulus";
-                        return false;
-                    }
-                }
-                if ( cursor.accept( "!=" ) )
-                    outClause._bNegated = true;
-                else if ( cursor.accept( "=" ) == false )
-                {
-                    outError = "expected '=' or '!='";
-                    return false;
-                }
-                return readRangeList( cursor, outClause._listRange, outError );
-            }
 
             /** @brief 규칙 글 하나(보기 `@integer` · `@decimal` 앞까지)를 읽습니다. */
             [[nodiscard]] static bool readRule( string_view text, PluralRuleSet::Rule& outRule, string& outError )
@@ -140,7 +140,7 @@ namespace sw
                     do
                     {
                         PluralRuleSet::Clause clause;
-                        if ( readClause( cursor, clause, outError ) == false )
+                        if ( cursor.readClause( clause, outError ) == false )
                             return false;
                         condition.push_back( std::move( clause ) );
                     } while ( cursor.accept( "and" ) );

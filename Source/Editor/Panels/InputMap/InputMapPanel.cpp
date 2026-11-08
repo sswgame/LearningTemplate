@@ -267,7 +267,7 @@ namespace sw::editor
         }
         for ( const hashed_string& actionName : _listVisibleAction )
         {
-            const bool bConflict = InputMapConflicts::involves( _document.getConflicts(), actionName );
+            const bool bConflict = InputMapConflict::involves( _document.getConflicts(), actionName );
             const bool bDown     = inputMap.isActionDown( actionName );
             ImGui::PushID( actionName.c_str() );
             if ( bConflict )
@@ -470,7 +470,7 @@ namespace sw::editor
     void InputMapPanel::drawActionConflicts( const hashed_string& action )
     {
         // 충돌은 같은 레이어에서 한 입력에 함께 발화하는 다른 액션이다. 이쪽을 다시 잡거나 저쪽 바인딩을 지운다.
-        InputMapConflicts::collectFor( _document.getConflicts(), action, _listActionConflictView );
+        InputMapConflict::collectFor( _document.getConflicts(), action, _listActionConflictView );
         if ( _listActionConflictView.empty() )
             return;
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Conflicts" ) );
@@ -1039,7 +1039,7 @@ namespace sw::editor
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "GameViewportOnScreenControllerOverlayHUDSettings" ) );
         ImGui::Separator();
 
-        ViewportInputOverlayConfig& config = editor::getSubsystem<ViewportInputOverlaySettings>()._config;
+        ViewportInputOverlay& config = editor::getSubsystem<ViewportInputOverlaySettings>()._overlay;
 
         bool bEnabled = ( config._bEnabled == SW_TRUE );
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "EnableViewportOnScreenHUDOverlay" ), &bEnabled ) )

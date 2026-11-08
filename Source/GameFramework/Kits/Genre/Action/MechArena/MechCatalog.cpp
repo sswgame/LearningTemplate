@@ -134,7 +134,7 @@ namespace sw
             Element::of<&MechCatalog::loadClass>( "Class" ).uncounted(),
             Element::of<&MechCatalog::loadSkill>( "Skill" ).uncounted(),
         };
-        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool MechCatalog::loadClass( const XMLNode& node, string_view sourceName )

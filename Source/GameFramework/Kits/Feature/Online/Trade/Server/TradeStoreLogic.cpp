@@ -6,7 +6,7 @@
 #include "Core/Serialization/BitStream.h"
 #include "Core/String/StringBuilder.h"
 
-#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
 #include "GameFramework/Runtime/Online/Audit/ServiceAuditLog.h"
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
@@ -25,7 +25,7 @@ namespace sw
             [[nodiscard]] static bool stageSession( const TradeSnapshot& snapshot, uint64 ownerServerID, uint64 expectedVersion, ServiceTransaction& inoutTransaction )
             {
                 vector<uint8> bytes;
-                if ( TradeProtocol::encodeSession( TradeSessionRecord{ snapshot, ownerServerID }, bytes ) == false )
+                if ( TradeSessionRecord::encodeSession( TradeSessionRecord{ snapshot, ownerServerID }, bytes ) == false )
                     return false;
                 inoutTransaction.put( TradeStoreLogic::getSessionTable(), ServiceKeyUtil::makeHex64( snapshot._tradeID ), std::move( bytes ), expectedVersion );
                 return true;
@@ -34,7 +34,7 @@ namespace sw
             [[nodiscard]] static bool decodeSession( const string_view key, const vector<uint8>& bytes, TradeSnapshot& outSnapshot, uint64& outOwnerServerID )
             {
                 TradeSessionRecord record;
-                if ( TradeProtocol::decodeSession( key, bytes, record ) == false )
+                if ( TradeSessionRecord::decodeSession( key, bytes, record ) == false )
                     return false;
                 outSnapshot      = std::move( record._snapshot );
                 outOwnerServerID = record._ownerServerID;

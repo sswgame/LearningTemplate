@@ -8,7 +8,7 @@
 #include "Engine/UI/Screen/UISubtitleService.h"
 #include "Engine/UI/Screen/UITooltipService.h"
 #include "Engine/UI/WidgetTree/Tests/UITestWidgets.h"
-#include "Engine/UI/WidgetTree/UIEventRouter.h"
+#include "Engine/UI/WidgetTree/UIWidgetPath.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
 using namespace sw;

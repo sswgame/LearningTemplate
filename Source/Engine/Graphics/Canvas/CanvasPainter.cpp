@@ -27,7 +27,7 @@ namespace sw
             };
 
             /**
-             * @brief 길이 @p length 를 여백 둘로 나눕니다 — 여백 합이 길이보다 크면 비율대로 줄입니다(SpriteMeshBuilder 와 같은 규칙).
+             * @brief 길이 @p length 를 여백 둘로 나눕니다 — 여백 합이 길이보다 크면 비율대로 줄입니다(SlicedSpriteDef 와 같은 규칙).
              * @param marginStart 시작 여백(UI 단위) · @param marginEnd 끝 여백 · @param uvFractionStart 시작 여백의 UV 비율 · @param uvFractionEnd 끝 여백의 UV 비율
              */
             static void makeSpans( float32 length, float32 marginStart, float32 marginEnd, float32 uvStart, float32 uvEnd, float32 uvFractionStart,

@@ -20,19 +20,19 @@ namespace sw
 
 namespace sw
 {
-    const hashed_string& ServiceMailCampaignTable::getCampaignTable()
+    const hashed_string& ServiceMailCampaign::getCampaignTable()
     {
         static const hashed_string s_table{ "mail_campaign" };
         return s_table;
     }
 
-    const hashed_string& ServiceMailCampaignTable::getClaimTable()
+    const hashed_string& ServiceMailCampaign::getClaimTable()
     {
         static const hashed_string s_table{ "mail_campaign_claim" };
         return s_table;
     }
 
-    bool ServiceMailCampaignTable::stageCreate( const ServiceMailCampaign& campaign, ServiceTransaction& inoutTransaction )
+    bool ServiceMailCampaign::stageCreate( const ServiceMailCampaign& campaign, ServiceTransaction& inoutTransaction )
     {
         const bool bAttachmentCountOk = campaign._listAttachment.empty() == false &&
                                         static_cast<int32>( campaign._listAttachment.size() ) <= ServiceMailConstant::kMaxAttachmentCount;
@@ -52,7 +52,7 @@ namespace sw
         return true;
     }
 
-    ServiceStoreResult ServiceMailCampaignTable::listCampaigns( IServiceStoreConnection& connection, vector<ServiceMailCampaign>& outListCampaign )
+    ServiceStoreResult ServiceMailCampaign::listCampaigns( IServiceStoreConnection& connection, vector<ServiceMailCampaign>& outListCampaign )
     {
         string cursor;
         while ( true )
@@ -75,7 +75,7 @@ namespace sw
         }
     }
 
-    string ServiceMailCampaignTable::makeClaimKey( uint64 campaignID, uint64 accountID )
+    string ServiceMailCampaign::makeClaimKey( uint64 campaignID, uint64 accountID )
     {
         string key = ServiceKeyUtil::makeHex64( campaignID );
         key.push_back( '/' );
@@ -83,7 +83,7 @@ namespace sw
         return key;
     }
 
-    vector<uint8> ServiceMailCampaignTable::encode( const ServiceMailCampaign& campaign )
+    vector<uint8> ServiceMailCampaign::encode( const ServiceMailCampaign& campaign )
     {
         BitWriter writer;
         writer.writeVarUint( ServiceMailCampaignInternal::kFormat );
@@ -104,7 +104,7 @@ namespace sw
         return writer.getBytes();
     }
 
-    bool ServiceMailCampaignTable::decode( const vector<uint8>& bytes, ServiceMailCampaign& outCampaign )
+    bool ServiceMailCampaign::decode( const vector<uint8>& bytes, ServiceMailCampaign& outCampaign )
     {
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
         if ( reader.readVarUint() != ServiceMailCampaignInternal::kFormat )

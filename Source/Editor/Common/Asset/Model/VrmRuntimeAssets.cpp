@@ -7,7 +7,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/String/hashed_string.h"
 
-#include "Editor/Common/Asset/Model/VrmAvatarImporter.h"
+#include "Editor/Common/Asset/Model/VrmAvatarDef.h"
 
 #include "Engine/Animation/Rig/RigSpringChain.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"

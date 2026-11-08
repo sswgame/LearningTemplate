@@ -36,8 +36,8 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<IPlatformLoginProvider> PlatformLoginProviderFactory::create( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider,
-                                                                             HTTPClient* pHTTPClient )
+    unique_ptr<IPlatformLoginProvider> PlatformLoginProviderConfig::create( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider,
+                                                                            HTTPClient* pHTTPClient )
     {
         if ( isValidSettings( settings ) == false || pHTTPClient == nullptr )
             return nullptr;
@@ -54,7 +54,7 @@ namespace sw
         return make_unique<ProfileAPILoginProvider>( settings, pHTTPClient );
     }
 
-    bool PlatformLoginProviderFactory::readEntry( const JSONValue& entry, PlatformLoginProviderConfig& outSettings, string& outError )
+    bool PlatformLoginProviderConfig::readEntry( const JSONValue& entry, PlatformLoginProviderConfig& outSettings, string& outError )
     {
         using Internal = PlatformLoginProviderSettingsInternal;
         for ( const string& key : entry.getMemberNames() )
@@ -116,7 +116,7 @@ namespace sw
         return true;
     }
 
-    bool PlatformLoginProviderFactory::isValidSettings( const PlatformLoginProviderConfig& settings )
+    bool PlatformLoginProviderConfig::isValidSettings( const PlatformLoginProviderConfig& settings )
     {
         if ( AccountUtil::isValidLowerToken( settings._name, LoginConstant::kMaxProviderNameSize ) == false || settings._subjectPath.empty() )
             return false;

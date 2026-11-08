@@ -406,7 +406,7 @@ namespace sw::editor
     {
         // 겹침 규칙은 충돌 칸과 한 벌이다. 그대로 두는 것은 덮어쓰기를 원할 수 있어서이고, 충돌 칸이 다시 잡기 · 지우기를 준다.
         refreshConflicts();
-        if ( InputMapConflicts::involves( _listConflict, action, bindIndex ) )
+        if ( InputMapConflict::involves( _listConflict, action, bindIndex ) )
             SW_LOG_WARNING_ID( "InputMapModel.BindingConflictsSameLayer", "Binding %# of '%#' now fires together with another action on the same layer - see Conflicts", bindIndex, action.c_str() );
         return recordEdit( true );
     }
@@ -477,7 +477,7 @@ namespace sw::editor
 
     void InputMapModel::refreshConflicts()
     {
-        InputMapConflicts::collect( _inputMap, _listConflict );
+        InputMapConflict::collect( _inputMap, _listConflict );
     }
 
     bool InputMapModel::readSelectedBindingCount( uint32& outCount ) const

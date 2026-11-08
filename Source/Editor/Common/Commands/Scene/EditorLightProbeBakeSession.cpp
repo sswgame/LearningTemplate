@@ -196,7 +196,7 @@ namespace sw::editor
         }
         LightProbeBakeInput input{};
         string              error;
-        const bool          bStarted = LightProbeBaker::collectInput( scene, *pVolume, _pOccluders, input, &error ) && _job.begin( pVolume->computeLayout(), input, &error );
+        const bool          bStarted = LightProbeBakeInput::collectInput( scene, *pVolume, _pOccluders, input, &error ) && _job.begin( pVolume->computeLayout(), input, &error );
         if ( bStarted == false )
         {
             reportFailure( error );

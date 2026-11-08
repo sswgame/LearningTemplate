@@ -10,7 +10,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Presentation/UILayer.h"
-#include "Engine/UI/Render/UIPaintPass.h"
+#include "Engine/UI/Render/UIPaintContext.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw
      * @class UICanvasPaintState
      * @brief 이번 프레임 그리기 목록(`_canvas`)과 칠하는 중인 목록, 내용 번호, 지난 그리기의 트리 순서 · 숨김 레이어, 레이어마다의 숨김 요청 수를 듭니다.
      * @details 화면 스택 순회 · 포커스 테두리 · 앵커 내기는 `UISystem::paintScreens` 가 하고, 이 클래스는 "지난 목록을 그대로 쓸 수 있는가" 의 판정에 쓰는 값과
-     *          목록 맞바꾸기만 맡는다. 판정 순서(프레임 조건 → 트리마다 `isPaintedTree` → `UIPaintPass::canReuseOutput`)는 `paintScreens` 본문이 기준이다.
+     *          목록 맞바꾸기만 맡는다. 판정 순서(프레임 조건 → 트리마다 `isPaintedTree` → `UIPaintContext::canReuseOutput`)는 `paintScreens` 본문이 기준이다.
      */
     class SW_API UICanvasPaintState
     {

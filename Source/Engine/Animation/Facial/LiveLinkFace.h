@@ -126,14 +126,8 @@ namespace sw
         string          _subjectName;
         int32           _frameNumber{ 0 };
         vector<float32> _listValue; ///< 배치 표의 채널 순서
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @struct LiveLinkFacePacket @brief 패킷 해석입니다(파일 머리말의 형식). */
-    struct SW_API LiveLinkFacePacket
-    {
+        // 패킷 해석입니다(파일 머리말의 형식). */
         /**
          * @brief @p pData(@p size 바이트)를 @p layout 대로 풉니다. 판 번호 · 채널 수가 다르거나 길이가 모자라거나 남으면 @p outError 에 까닭을 적고 false 입니다.
          */

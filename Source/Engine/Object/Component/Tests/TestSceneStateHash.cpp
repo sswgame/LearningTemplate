@@ -9,7 +9,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Scene/SceneStateHash.h"
+#include "Engine/Scene/SceneObjectHash.h"
 
 #include <limits>
 
@@ -56,13 +56,13 @@ SW_TEST_CASE( SceneStateHashTest, RotationChangesTheHash )
 {
     GameObjectManager manager;
     SceneComponent*   pRoot   = addStateHashTestObject( manager, "Turret", float3{ 1.0f, 0.0f, 2.0f } );
-    const uint64      initial = SceneStateHash::compute( manager );
+    const uint64      initial = SceneObjectHash::compute( manager );
     pRoot->setLocalRotation( float3{ 0.0f, 0.5f, 0.0f } );
-    SW_EXPECT_TRUE( SceneStateHash::compute( manager ) != initial );
+    SW_EXPECT_TRUE( SceneObjectHash::compute( manager ) != initial );
     pRoot->setLocalRotation( float3{ 0.0f, 0.0f, 0.0f } );
-    SW_EXPECT_EQUAL( initial, SceneStateHash::compute( manager ) );
+    SW_EXPECT_EQUAL( initial, SceneObjectHash::compute( manager ) );
     pRoot->setLocalPosition( float3{ 1.0f, -0.0f, 2.0f } );
-    SW_EXPECT_EQUAL( initial, SceneStateHash::compute( manager ) );
+    SW_EXPECT_EQUAL( initial, SceneObjectHash::compute( manager ) );
 }
 
 /**
@@ -77,5 +77,5 @@ SW_TEST_CASE( SceneStateHashTest, NanPositionIsIndependentOfCreationOrder )
     GameObjectManager second;
     addStateHashTestObject( second, "CrateB", float3{ nan, 0.0f, 0.0f } );
     addStateHashTestObject( second, "CrateA", float3{ 1.0f, 0.0f, 0.0f } );
-    SW_EXPECT_EQUAL( SceneStateHash::compute( first ), SceneStateHash::compute( second ) );
+    SW_EXPECT_EQUAL( SceneObjectHash::compute( first ), SceneObjectHash::compute( second ) );
 }

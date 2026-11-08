@@ -3,7 +3,7 @@
  * @brief Mesh Modifiers 패널 — 대상 메시 고르기, 모디파이어 스택(추가 · 켜짐 · 위/아래 · 삭제), 매개변수 편집, 미리보기, 사이드카 저장, 베이크.
  * @details 매개변수 입력칸은 모디파이어의 선언(`MeshModifierParamDef`)만 보고 그린다 — 새 모디파이어는 이 패널을 고치지 않는다.
  *          선언의 선택 칸이 모양을 정한다 — 구역(`_pGroup`) · 툴팁 · 단위, NumberList 열 선언(행 × 열 표), 참조의 컴포넌트 걸러 보기, 경로의 확장자.
- *          곡선은 엔진 공용 곡선 편집기(`EditorCurveEditor`)를 `MeshModifierParamEdit` 의 선형 키 어댑터로 쓴다.
+ *          곡선은 엔진 공용 곡선 편집기(`EditorCurveEditorState`)를 `MeshModifierParamEdit` 의 선형 키 어댑터로 쓴다.
  *          격자(Lattice) 모디파이어만 제어점 목록 입력칸을 더 그린다.
  *          하위 스택 경로 · 곡선 팝업을 연 자리 · 설명 캐시 · 워프 내보내기 경로 · 편집 묶기는 `MeshModifiersPanelModel`(Model/, ImGui 없음)이 든다.
  */
@@ -13,7 +13,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
-#include "Editor/Common/Widgets/EditorCurveEditor.h"
+#include "Editor/Common/Widgets/EditorCurveEditorState.h"
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Model/MeshModifiersPanelModel.h"
 

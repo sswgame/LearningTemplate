@@ -233,7 +233,7 @@ SW_TEST_CASE( MailboxServiceTest, CampaignsAppearInFirstPage )
     campaign._endMs      = kNowMs + 10000;
     campaign._listAttachment.push_back( ServiceMailAttachment{ "cur.gold", 3 } );
     ServiceTransaction transaction;
-    SW_REQUIRE_TRUE( ServiceMailCampaignTable::stageCreate( campaign, transaction ) );
+    SW_REQUIRE_TRUE( ServiceMailCampaign::stageCreate( campaign, transaction ) );
     SW_REQUIRE_TRUE( rig._rig._database.commit( transaction ) == ServiceStoreResult::Ok );
 
     SW_EXPECT_TRUE( rig.list()._reply._listMail.empty() ); // 아직 다시 읽지 않았다

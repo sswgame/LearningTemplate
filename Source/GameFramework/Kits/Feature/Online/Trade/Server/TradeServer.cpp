@@ -189,7 +189,7 @@ namespace sw
             if ( ledgerIt != _mapTradeToLedger.end() )
                 collectBalances( ledgerIt->second, accountID, push._listBalance );
             BitWriter body;
-            if ( TradeProtocol::MessageTypes::write( body, push ) == false )
+            if ( TradeSessionRecord::MessageTypes::write( body, push ) == false )
                 continue; // write 가 범위 밖 값을 로그에 남겼다
             if ( host.sendPush( accountID, kind, body ) == false && _presenceFinds.hasPresence() )
                 (void)_presenceFinds.getPresence()->sendRemotePush( accountID, static_cast<TradePushName>( kind - TradeMethod::kFirstPush ), push ); // 상대가 다른 서버에 접속해 있다
@@ -232,7 +232,7 @@ namespace sw
 namespace sw
 {
     // 다른 서버에 접속한 계정에게 가는 알림이다. 받는 서버가 이 항목으로 자기 빌드의 번호와 B 를 만든다(OnlinePushRelay.h).
-    const OnlinePushRelayEntry kTradeInvitedRelay{ "Trade.Invited", TradeMethod{}, TradePushName::Invited, TradeProtocol::MessageTypes{}, OnlinePushBody<TradeNotice>{} };
-    const OnlinePushRelayEntry kTradeUpdateRelay{ "Trade.Update", TradeMethod{}, TradePushName::Update, TradeProtocol::MessageTypes{}, OnlinePushBody<TradeNotice>{} };
-    const OnlinePushRelayEntry kTradeClosedRelay{ "Trade.Closed", TradeMethod{}, TradePushName::Closed, TradeProtocol::MessageTypes{}, OnlinePushBody<TradeNotice>{} };
+    const OnlinePushRelayEntry kTradeInvitedRelay{ "Trade.Invited", TradeMethod{}, TradePushName::Invited, TradeSessionRecord::MessageTypes{}, OnlinePushBody<TradeNotice>{} };
+    const OnlinePushRelayEntry kTradeUpdateRelay{ "Trade.Update", TradeMethod{}, TradePushName::Update, TradeSessionRecord::MessageTypes{}, OnlinePushBody<TradeNotice>{} };
+    const OnlinePushRelayEntry kTradeClosedRelay{ "Trade.Closed", TradeMethod{}, TradePushName::Closed, TradeSessionRecord::MessageTypes{}, OnlinePushBody<TradeNotice>{} };
 } // namespace sw

@@ -20,7 +20,7 @@
 
 /**
  * @file SceneInspectCommands.cpp
- * @brief 활성 씬을 들여다보고 고치는 개발 명령입니다(`scene.tree` · `object.dump` · `object.place`). 상태 해시 명령(`state.*`)은 `SceneStateHash.cpp` 에 있다.
+ * @brief 활성 씬을 들여다보고 고치는 개발 명령입니다(`scene.tree` · `object.dump` · `object.place`). 상태 해시 명령(`state.*`)은 `SceneObjectHash.cpp` 에 있다.
  */
 namespace sw
 {

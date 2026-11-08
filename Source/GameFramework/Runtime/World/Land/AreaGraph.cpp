@@ -37,7 +37,7 @@ namespace sw
             Element::of<&AreaGraph::loadArea>( "Area" ),
             Element::of<&AreaGraph::loadLink>( "Link" ).uncounted(),
         };
-        const uint32 loadedCount = XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        const uint32 loadedCount = XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
         resetState();
         return loadedCount;
     }

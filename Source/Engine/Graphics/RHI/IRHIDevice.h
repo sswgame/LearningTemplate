@@ -263,7 +263,7 @@ namespace sw
          */
         virtual RHICapabilities getCapabilities() const;
         /**
-         * @brief 이 장치가 @p format 의 텍스처를 만들어 샘플링할 수 있으면 true 입니다. 쿠킹 변형을 고를 때 묻습니다(`TextureFormatSelection`). 어느 스레드에서 불러도 됩니다.
+         * @brief 이 장치가 @p format 의 텍스처를 만들어 샘플링할 수 있으면 true 입니다. 쿠킹 변형을 고를 때 묻습니다(`TextureFormatFamily`). 어느 스레드에서 불러도 됩니다.
          * @details 언리얼 `GPixelFormats[].Supported` · Godot `RenderingDevice::texture_is_format_supported_for_usage` 자리다(기억에 의존한 비교).
          */
         [[nodiscard]] virtual bool supportsTextureFormat( RHIFormat format ) const = 0;

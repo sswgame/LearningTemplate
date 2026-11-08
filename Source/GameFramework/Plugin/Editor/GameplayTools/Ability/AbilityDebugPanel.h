@@ -3,7 +3,7 @@
  * @brief 어빌리티 런타임 상태 창입니다. 고른 오브젝트의 `AbilityComponent` 가 지금 가진 어트리뷰트 · 걸린 이펙트 · 태그 개수 · 어빌리티 쿨다운을 읽기 전용으로 보입니다.
  * @details 언리얼 gameplay debugger 의 Ability 카테고리, `showdebug abilitysystem` 의 자리다. 런타임 상태는 저장하지 않으므로 플레이 중에만 값이 있고,
  *          멈춰 있으면 빈 상태 힌트를 보인다. 대상은 선택한 오브젝트에 컴포넌트가 있으면 그것이고, 없으면 활성 씬의 컴포넌트 목록에서 고른 것이다.
- *          행 만들기는 `AbilityDebugModel` 이 맡는다.
+ *          행 만들기는 `AbilityDebugSnapshot` 이 맡는다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -14,7 +14,7 @@
 
 #include "Engine/Foundation/GameObjectHandle.h"
 
-#include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugModel.h"
+#include "GameFramework/Plugin/Editor/GameplayTools/Ability/AbilityDebugSnapshot.h"
 
 namespace sw
 {

@@ -110,7 +110,7 @@ SW_TEST_CASE( CoasterTrainTest, ZeroGravityIsRefused )
     CoasterTrain train;
     SW_EXPECT_FALSE( train.initialize( &track, params ) );
 
-    const CoasterRideStats stats = CoasterRideAnalyzer::analyze( track, params );
+    const CoasterRideStats stats = CoasterRideStats::analyze( track, params );
     SW_EXPECT_TRUE( stats._bCompleted == SW_FALSE );
     SW_EXPECT_EQUAL( 1.0f, stats._maxVerticalG ); // 측정하지 않은 기본값 그대로다
     SW_EXPECT_NEAR( track.getLength(), stats._length, 1.0e-4f );
@@ -327,7 +327,7 @@ SW_TEST_CASE( CoasterTrainTest, AnalyzeReportsStallOnUndrivenTrack )
 {
     const CoasterPhysicsParams params = CoasterPhysicsParams{};
     const CoasterTrack         track  = Util::makeTrack( { Util::makePiece( CoasterPieceType::Straight, 50.0f ) }, false );
-    const CoasterRideStats     stats  = CoasterRideAnalyzer::analyze( track, params );
+    const CoasterRideStats     stats  = CoasterRideStats::analyze( track, params );
     SW_EXPECT_TRUE( stats._bStalled == SW_TRUE );
     SW_EXPECT_TRUE( stats._bCompleted == SW_FALSE );
     SW_EXPECT_NEAR( params._stallSeconds, stats._lapTime, 0.05f );
@@ -341,18 +341,18 @@ SW_TEST_CASE( CoasterTrainTest, AnalyzeCompletesDrivenOpenTrackWithinTime )
 {
     const CoasterPhysicsParams params = CoasterPhysicsParams{};
     const CoasterTrack         track  = Util::makeTrack( { Util::makePiece( CoasterPieceType::Station, 30.0f ) }, false );
-    const CoasterRideStats     stats  = CoasterRideAnalyzer::analyze( track, params );
+    const CoasterRideStats     stats  = CoasterRideStats::analyze( track, params );
     SW_EXPECT_TRUE( stats._bCompleted == SW_TRUE );
     SW_EXPECT_TRUE( stats._bStalled == SW_FALSE );
     SW_EXPECT_NEAR( params._stationSpeed, stats._maxSpeed, 0.2f );
     SW_EXPECT_NEAR( 30.0f / params._stationSpeed, stats._lapTime, 1.0f );
     SW_EXPECT_NEAR( 30.0f / stats._lapTime, stats._averageSpeed, 0.1f );
 
-    const CoasterRideStats shortRun = CoasterRideAnalyzer::analyze( track, params, 1.0f );
+    const CoasterRideStats shortRun = CoasterRideStats::analyze( track, params, 1.0f );
     SW_EXPECT_TRUE( shortRun._bCompleted == SW_FALSE );
     SW_EXPECT_TRUE( shortRun._bStalled == SW_FALSE );
 
-    const CoasterRideStats noTrack = CoasterRideAnalyzer::analyze( CoasterTrack{}, params );
+    const CoasterRideStats noTrack = CoasterRideStats::analyze( CoasterTrack{}, params );
     SW_EXPECT_TRUE( noTrack._bCompleted == SW_FALSE );
     SW_EXPECT_EQUAL( 0.0f, noTrack._lapTime );
 }
@@ -367,7 +367,7 @@ SW_TEST_CASE( CoasterTrainTest, AnalyzeMeasuresClosedCircuit )
                                                   Util::makeTurnRight( 15.0f, MathUtil::kPi ), Util::makePiece( CoasterPieceType::Straight, 70.0f ), Util::makeTurnRight( 15.0f, MathUtil::kPi ) },
                                                 true );
     SW_REQUIRE_TRUE( track.isClosed() );
-    const CoasterRideStats stats = CoasterRideAnalyzer::analyze( track, CoasterPhysicsParams{} );
+    const CoasterRideStats stats = CoasterRideStats::analyze( track, CoasterPhysicsParams{} );
     SW_EXPECT_TRUE( stats._bCompleted == SW_TRUE );
     SW_EXPECT_TRUE( stats._bStalled == SW_FALSE );
     SW_EXPECT_EQUAL( 1u, stats._dropCount );
@@ -392,7 +392,7 @@ SW_TEST_CASE( CoasterTrainTest, AnalyzeCountsLoopAsOneInversion )
     loop._radius = 6.0f;
     const CoasterTrack track =
         Util::makeTrack( { Util::makePiece( CoasterPieceType::Station, 5.0f ), Util::makePiece( CoasterPieceType::LiftHill, 30.0f, 25.0f ), Util::makePiece( CoasterPieceType::Drop, 30.0f, 25.0f ), loop, Util::makePiece( CoasterPieceType::Straight, 20.0f ) }, false );
-    const CoasterRideStats stats = CoasterRideAnalyzer::analyze( track, CoasterPhysicsParams{} );
+    const CoasterRideStats stats = CoasterRideStats::analyze( track, CoasterPhysicsParams{} );
     SW_EXPECT_TRUE( stats._bCompleted == SW_TRUE );
     SW_EXPECT_EQUAL( 1u, stats._inversionCount );
 }
@@ -413,26 +413,26 @@ SW_TEST_CASE( CoasterTrainTest, RatingsFollowTheFormula )
     stats._maxDropHeight  = 30.0f;
     stats._length         = 400.0f;
     stats._bCompleted     = SW_TRUE;
-    CoasterRideAnalyzer::computeRatings( stats, CoasterRatingWeights{} );
+    CoasterRideStats::computeRatings( stats, CoasterRatingWeights{} );
     SW_EXPECT_NEAR( 6.5f, stats._intensity, 1.0e-4f );  // 2 x 0.9 + 1 x 1.5 + 1 x 1.2 + 30 / 15
     SW_EXPECT_NEAR( 5.425f, stats._nausea, 1.0e-4f );   // 1.5 + 2 + 0.3 + 6.5 x 0.25
     SW_EXPECT_NEAR( 8.8f, stats._excitement, 1.0e-4f ); // 3 + 0.6 + 1.6 + 0.6 + 2 + 1
 
     CoasterRideStats notCompleted = stats;
     notCompleted._bCompleted      = SW_FALSE;
-    CoasterRideAnalyzer::computeRatings( notCompleted, CoasterRatingWeights{} );
+    CoasterRideStats::computeRatings( notCompleted, CoasterRatingWeights{} );
     SW_EXPECT_EQUAL( 0.0f, notCompleted._excitement );
 
     CoasterRideStats tooIntense = stats;
     tooIntense._maxVerticalG    = 6.0f; // 강도 9.2 - 흥분에서 1.2 를 깎는다
-    CoasterRideAnalyzer::computeRatings( tooIntense, CoasterRatingWeights{} );
+    CoasterRideStats::computeRatings( tooIntense, CoasterRatingWeights{} );
     SW_EXPECT_NEAR( 9.2f, tooIntense._intensity, 1.0e-4f );
     SW_EXPECT_NEAR( 7.6f, tooIntense._excitement, 1.0e-4f );
 
     CoasterRideStats extreme = stats;
     extreme._maxVerticalG    = 50.0f;
     extreme._maxLateralG     = 50.0f;
-    CoasterRideAnalyzer::computeRatings( extreme, CoasterRatingWeights{} );
+    CoasterRideStats::computeRatings( extreme, CoasterRatingWeights{} );
     SW_EXPECT_EQUAL( 10.0f, extreme._intensity );
     SW_EXPECT_EQUAL( 10.0f, extreme._nausea );
     SW_EXPECT_EQUAL( 0.0f, extreme._excitement ); // 강도가 지나치면 아래로 잘린다
@@ -451,10 +451,10 @@ SW_TEST_CASE( CoasterTrainTest, RatingsFollowTheWeights )
     CoasterRatingWeights weights;
     weights._intensityPerLateralG = 2.0f;  // 기본 1.2
     weights._intensitySpeedScale  = 10.0f; // 기본 15
-    CoasterRideAnalyzer::computeRatings( stats, weights );
+    CoasterRideStats::computeRatings( stats, weights );
     SW_EXPECT_NEAR( 5.0f, stats._intensity, 1.0e-4f ); // 1 x 2 + 30 / 10
 
     weights._maxRating = 4.0f;
-    CoasterRideAnalyzer::computeRatings( stats, weights );
+    CoasterRideStats::computeRatings( stats, weights );
     SW_EXPECT_EQUAL( 4.0f, stats._intensity );
 }

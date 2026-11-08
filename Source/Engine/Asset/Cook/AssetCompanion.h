@@ -1,7 +1,7 @@
 /**
  * @file AssetCompanion.h
  * @brief 곁 파일 규칙의 등록표입니다 — 런타임이 칸이 아니라 이름 규칙으로 찾는 옆 파일(`a/b.mesh` → `a/b.fracture`, `a/line.wav` → `a/line.visemes.xml`).
- * @details 팩 쿠킹은 참조 칸(`AssetReferenceFields`)을 따라 쓰는 것만 담는다(`PackReachability`). 칸이 없는 옆 파일은 그 길로 보이지 않으므로, 규칙을 가진
+ * @details 팩 쿠킹은 참조 칸(`AssetReferenceFields`)을 따라 쓰는 것만 담는다(`PackReachResult`). 칸이 없는 옆 파일은 그 길로 보이지 않으므로, 규칙을 가진
  *          기능이 자기 .cpp 에 `SW_ASSET_COMPANION` 한 줄로 경로 함수를 올린다 — 런타임이 쓰는 함수(`FractureAsset::makePathForMesh` 등)를 그대로 넘겨 규칙이 한 벌이다.
  *          곁 파일은 있으면 담고 없으면 넘어간다(런타임도 있으면 쓰는 선택 파일이다). 빠진 참조와 달리 오류가 아니다.
  *          등록은 엔진 안에만 둔다 — 팩 쿠킹은 게임 모듈을 올리기 전에 돈다(`HeadlessSubsystem::runCookTask`). 게임 · 키트가 곁 규칙을 쓰려면 칸으로 적는다.

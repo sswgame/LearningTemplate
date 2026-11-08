@@ -133,7 +133,7 @@ namespace sw
             Element::of<&DirectorElementReader::loadPool>( "Pool" ).uncounted(),
         };
         DirectorElementReader reader{ *this, {} };
-        bValid = XMLCatalogReader::readInTableOrder( reader, root, sourceName, kArrElement ).isClean() && bValid;
+        bValid = XMLCatalogReadResult::readInTableOrder( reader, root, sourceName, kArrElement ).isClean() && bValid;
         bValid = resolveReferences( sourceName ) && bValid;
         if ( bValid == false )
             clear();

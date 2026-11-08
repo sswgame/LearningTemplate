@@ -11,7 +11,8 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 아홉을 본다. 규칙 문
 2. 깃발 칸(`docs/agents/CppStyle.md` "bit packing"): `bool _bX` 멤버 대신 `uint8 _bX : 1`. 주소를 쓰는 칸(ImGui `&b` · 출력 인자) · 여러 스레드가 따로 쓰는
    이웃 칸(같은 바이트 경합)은 `bool` 로 두고 그 줄에 `NOLINT(sw-bool-flag): <이유>` 를 적는다.
 3. 익명 네임스페이스(`docs/agents/Helpers.md`): `.cpp` 에 하나(전처리 갈래가 갈리는 경우는 갈래마다), 빈 블록 없음.
-4. 주인 우선(`docs/agents/Helpers.md`): 같은 헤더에 타입 `X`(열거 · 템플릿이 아닌)와 `XUtil` 이 있고 `XUtil` 함수 서명의 절반 이상이 `X` 를 쓰면, 그 함수는 `X` 의 (static) 멤버다(이름만 옆에 있는 수학 · 비트 입출력 Util 은 주인이 없다).
+4. 주인 우선(`docs/agents/Helpers.md`): 헤더의 static 함수만 든 타입(이름은 보지 않는다 — Util · Scanner · Rules …)이 같은 헤더의 타입 하나(열거 · 템플릿 · I 인터페이스 제외)를
+   함수 서명 절반 이상에서 받으면, 그 함수는 그 타입의 (static) 멤버다. 주인이 정말 없는 것은 `Config/Dev/CppShapeExceptions.json` 의 `staticOwner` 에 까닭을 적는다.
 5. 중괄호 안 헤더 include: X-매크로 표(`.xxx`) · 인라인 본문(`.inl`) 말고는 `#include` 가 이름공간 · 클래스 · 함수 몸통 안에 있으면 안 된다.
    2026-11-05 — 파일을 합치는 일회용 스크립트가 "마지막 include 뒤" 에 헤더를 붙여 클래스 몸통 · 배열 초기값 안에 들어갔고, 다른 헤더가 먼저 끌어와
    `#pragma once` 로 비어 있어 컴파일러가 알리지 않았다.
@@ -412,28 +413,94 @@ def checkAnonymousNamespaces(code: str) -> list[tuple[int, str]]:
     return problems
 
 
-def checkUtilBesideOwner(code: str, relative: str) -> list[tuple[int, str]]:
+kTypeOpen = re.compile(r"(?<![\w<,])(class|struct)\s+(?:SW_\w+\s+)?(\w+)\s*(?:final\s*)?(?::(?!:)[^{;]*)?\{")
+
+
+def flattenBody(body: str) -> str:
+    """중첩 중괄호 안(함수 본문 · 중첩 타입)을 지운 몸통 — 깊이 0 문장만 남는다."""
+    out = []
+    depth = 0
+    for char in body:
+        if char == "{":
+            depth += 1
+            if depth == 1:
+                out.append("{")
+            continue
+        if char == "}":
+            depth -= 1
+            if depth == 0:
+                out.append("};")
+            continue
+        if depth == 0:
+            out.append(char)
+    return "".join(out)
+
+
+def collectStaticOnlyTypes(code: str) -> tuple[dict[str, tuple[int, list[str]]], set[str]]:
+    """헤더의 타입 중 static 함수만 든 것(칸 · 인스턴스 함수 없음) → (줄, static 서명 목록)과, 주인이 될 수 있는 같은 헤더의 타입 이름(열거 · 템플릿 · I 인터페이스 제외)."""
+    enums = set(re.findall(r"\benum\s+(?:class|struct)?\s*(?:SW_\w+\s+)?(\w+)", code))
+    owners: set[str] = set()
+    staticOnly: dict[str, tuple[int, list[str]]] = {}
+    for match in kTypeOpen.finditer(code):
+        name = match.group(2)
+        isTemplate = re.search(r"template\s*<[^;{}]*>\s*$", code[max(0, match.start() - 200):match.start()]) is not None
+        if not isTemplate and name not in enums and re.match(r"I[A-Z]", name) is None:
+            owners.add(name)
+        openIndex = match.end() - 1
+        statements = [re.sub(r"\s+", " ", text).strip() for text in flattenBody(code[openIndex + 1:matchBrace(code, openIndex)]).split(";")]
+        statics: list[str] = []
+        isStaticOnly = True
+        for statement in statements:
+            text = re.sub(r"^(?:(?:public|private|protected)\s*:\s*)+", "", statement)
+            text = re.sub(r"^(?:\[\[[^\]]*\]\]\s*|[A-Z][A-Z0-9_]+(?:\s*\([^()]*\))?\s+)*", "", text)
+            if not text or text.startswith(("{", "}", "using ", "typedef ", "friend ", "static_assert", "enum ", "template<", "template <")) and "(" not in text:
+                continue
+            if re.match(r"(?:template\s*<[^>]*>\s*)?(?:\[\[[^\]]*\]\]\s*)?(?:inline\s+|constexpr\s+)*static\b", text):
+                if "(" in text and re.search(r"=\s*[^=]", text.split("(")[0]) is None:
+                    statics.append(text)
+                continue
+            if text.startswith(("constexpr", "inline constexpr", "struct ", "class ", "union ")):
+                continue
+            if re.match(r"(?:explicit\s+|constexpr\s+)*~?" + re.escape(name) + r"\s*\(", text) or "= delete" in text or re.match(r"[A-Z][A-Z0-9_]+\s*\(", text):
+                continue
+            isStaticOnly = False
+            break
+        if isStaticOnly and statics:
+            staticOnly[name] = (lineOf(code, match.start()), statics)
+    return staticOnly, owners
+
+
+def checkStaticOwner(code: str, relative: str, exceptions: dict[str, str]) -> list[tuple[int, str]]:
+    """
+    주인 우선(`docs/agents/Helpers.md`): 헤더의 static 함수만 든 타입이 같은 헤더의 타입 하나를 함수 서명 절반 이상에서 받으면 그 함수들은 그 타입의 (static) 멤버다.
+    이름(`XUtil` · `XScanner` · `XRules` …)은 보지 않는다 — 2026-11-08 `MarkupTagScanner`(데이터 `MarkupToken` 옆)처럼 Util 이 아닌 이름으로 같은 모양이 남았다.
+    형식으로는 막을 수 없다(어느 함수가 어느 타입의 일인지는 C++ 이 모른다). 여러 타입에 걸친 알고리즘 · 등록 목록처럼 주인이 정말 없는 것은
+    `Config/Dev/CppShapeExceptions.json` 의 staticOwner 에 까닭과 함께 적는다.
+    """
     if not relative.endswith(".h"):
         return []
-    enums = set(re.findall(r"\benum\s+(?:class|struct)\s+(?:SW_\w+\s+)?(\w+)", code))
-    types = {}
-    templates = set()
-    for match in re.finditer(r"(?<!enum )\b(?:class|struct)\s+(?:SW_\w+\s+)?(\w+)\s*(?:final\s*)?(?::[^{;:][^{;]*)?\{", code):
-        types.setdefault(match.group(1), (lineOf(code, match.start()), match.end() - 1))
-        if re.search(r"template\s*<[^;{}]*>\s*$", code[max(0, match.start() - 200):match.start()]):
-            templates.add(match.group(1))
+    staticOnly, owners = collectStaticOnlyTypes(code)
     problems = []
-    for name, (line, openIndex) in types.items():
-        owner = name[:-4]
-        if not name.endswith("Util") or owner not in types or owner in enums or owner in templates:
+    for name, (line, statics) in staticOnly.items():
+        if f"{relative}|{name}" in exceptions:
             continue
-        # 이름이 옆에 있을 뿐 함수가 그 타입을 다루지 않으면(수학 · 비트 입출력 …) 주인이 없는 Util 이 맞다 — 함수 서명의 절반 이상이 그 타입을 쓸 때만 본다
-        body = code[openIndex + 1:matchBrace(code, openIndex)]
-        signatures = [re.sub(r"\s+", " ", head) for head in re.findall(r"(?:^|[;}])\s*((?:template\s*<[^>]*>\s*)?(?:\[\[[^\]]*\]\]\s*)?static\s[^;{=]*\()", body)]
-        owning = [s for s in signatures if re.search(r"\b" + re.escape(owner) + r"\b", s + body[body.find(s):body.find(s) + 400].split(")")[0])]
-        if signatures and len(owning) * 2 >= len(signatures):
-            problems.append((line, f"`{name}` 의 함수 대부분이 같은 헤더의 `{owner}` 를 다룬다 — `{owner}` 의 (static) 멤버다(Helpers.md 주인 우선)"))
+        counts: dict[str, int] = {}
+        for signature in statics:
+            for owner in set(re.findall(r"\b([A-Z]\w*)\b", signature)) & owners - {name}:
+                counts[owner] = counts.get(owner, 0) + 1
+        if not counts:
+            continue
+        owner, count = max(counts.items(), key=lambda item: item[1])
+        if count * 2 >= len(statics):
+            problems.append((line, f"`{name}` 는 static 함수만 들고 그 함수 대부분({count}/{len(statics)})이 같은 헤더의 `{owner}` 를 다룬다 — `{owner}` 의 (static) 멤버로 합친다"
+                                   f"(Helpers.md 주인 우선). 주인이 정말 없으면 {kExceptionsPath} 의 staticOwner 에 까닭과 함께 적는다"))
     return problems
+
+
+@functools.lru_cache(maxsize=1)
+def loadStaticOwnerExceptions(projectRoot: str) -> dict[str, str]:
+    """`경로|타입` → 까닭(주인 우선 예외). 파일이나 칸이 없으면 오류로 멈춘다."""
+    return json.loads((Path(projectRoot) / kExceptionsPath).read_text(encoding="utf-8"))["staticOwner"]
 
 
 kIncludeLine = re.compile(r'^[ \t]*#[ \t]*include[ \t]*[<"]([^>"]+)[>"]', re.M)
@@ -547,7 +614,7 @@ def inspectFile(path: Path, relative: str) -> list[str]:
         listProblem += checkBitFieldRuns(info, rawLines)
     if relative.endswith(".cpp"):
         listProblem += checkAnonymousNamespaces(code)
-    listProblem += checkUtilBesideOwner(code, relative)
+    listProblem += checkStaticOwner(code, relative, loadStaticOwnerExceptions(str(Path(__file__).resolve().parents[2])))
     listProblem += checkIncludesInsideBraces(raw, code)
     listProblem += checkSharedTempInTests(code, relative)
     listProblem += checkHandDepletion(code, relative)

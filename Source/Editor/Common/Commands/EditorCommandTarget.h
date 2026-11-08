@@ -55,17 +55,8 @@ namespace sw::editor
         }
         /** @brief 선택한 항목이 정확히 하나면 true 입니다(Rename · Open in IDE 처럼 하나에만 뜻이 있는 명령의 켜짐 — R3). */
         bool hasSingleSelection() const { return _listSelectedID.size() == 1; }
-    };
-} // namespace sw::editor
 
-namespace sw::editor
-{
-    /**
-     * @struct EditorContextMenuRules
-     * @brief 맥락 메뉴가 열리는 순간의 대상 규칙(`EditorUI.md` R2 · R3)입니다. ImGui 를 쓰지 않아 EditorTest 가 테스트하고, 어댑터(`EditorInputGUI`)가 이것 하나를 부른다.
-     */
-    struct EditorContextMenuRules
-    {
+        // 맥락 메뉴가 열리는 순간의 대상 규칙(`EditorUI.md` R2 · R3)입니다. ImGui 를 쓰지 않아 EditorTest 가 테스트하고, 어댑터(`EditorInputGUI`)가 이것 하나를 부른다.
         /**
          * @brief 메뉴의 대상을 만듭니다. 누른 항목(@p hoveredID)이 선택 밖이면 그것만 고른 선택이 대상이고 @p outbSelectOnlyHovered 가 true 입니다(부른 쪽이 선택을 바꾼다).
          *        선택 안이면 선택 전체가, 빈 곳(0)이면 선택을 바꾸지 않은 지금 선택이 대상입니다.

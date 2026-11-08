@@ -12,7 +12,7 @@
 #include "Engine/Asset/Image/DDSLoader.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
-#include "Engine/Graphics/Texture/TextureFormatSelection.h"
+#include "Engine/Graphics/Texture/TextureFormatFamily.h"
 
 using namespace sw;
 using namespace sw::editor;

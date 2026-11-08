@@ -947,34 +947,34 @@ SW_TEST_CASE_F( SRPGRulesTest, MissionOutcomes )
     _field.setCommander( boss, true );
 
     sw::SRPGMissionRule rule;
-    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMission::evaluate( _field, rule ) ); // 시작 전
+    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMissionRule::evaluate( _field, rule ) ); // 시작 전
     _field.beginBattle();
-    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMission::evaluate( _field, rule ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMissionRule::evaluate( _field, rule ) );
 
     rule._objective = sw::SRPGObjective::ReachCell;
-    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMission::evaluate( _field, rule ) ); // 목표 없음
+    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMissionRule::evaluate( _field, rule ) ); // 목표 없음
     rule._listGoalCell.push_back( sw::int2{ 1, 0 } );
-    SW_EXPECT_EQUAL( sw::SRPGResult::Victory, sw::SRPGMission::evaluate( _field, rule ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Victory, sw::SRPGMissionRule::evaluate( _field, rule ) );
     unit( ally )._bAlive = SW_FALSE; // 죽은 유닛은 서 있지 않다
-    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMission::evaluate( _field, rule ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMissionRule::evaluate( _field, rule ) );
     unit( ally )._bAlive = SW_TRUE;
 
     rule._objective = sw::SRPGObjective::DefeatCommander;
-    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMission::evaluate( _field, rule ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMissionRule::evaluate( _field, rule ) );
     unit( boss )._bAlive = SW_FALSE;
-    SW_EXPECT_EQUAL( sw::SRPGResult::Victory, sw::SRPGMission::evaluate( _field, rule ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Victory, sw::SRPGMissionRule::evaluate( _field, rule ) );
 
     rule._objective = sw::SRPGObjective::DefeatAll;
-    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMission::evaluate( _field, rule ) ); // 졸개가 남았다
+    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMissionRule::evaluate( _field, rule ) ); // 졸개가 남았다
     unit( grunt )._bAlive = SW_FALSE;
-    SW_EXPECT_EQUAL( sw::SRPGResult::Victory, sw::SRPGMission::evaluate( _field, rule ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Victory, sw::SRPGMissionRule::evaluate( _field, rule ) );
 
     unit( commander )._bAlive = SW_FALSE; // 같은 순간의 승리보다 앞선다
-    SW_EXPECT_EQUAL( sw::SRPGResult::Defeat, sw::SRPGMission::evaluate( _field, rule ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Defeat, sw::SRPGMissionRule::evaluate( _field, rule ) );
     rule._bLoseOnCommander = SW_FALSE;
-    SW_EXPECT_EQUAL( sw::SRPGResult::Victory, sw::SRPGMission::evaluate( _field, rule ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Victory, sw::SRPGMissionRule::evaluate( _field, rule ) );
     unit( ally )._bAlive = SW_FALSE; // 아군 전멸
-    SW_EXPECT_EQUAL( sw::SRPGResult::Defeat, sw::SRPGMission::evaluate( _field, rule ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Defeat, sw::SRPGMissionRule::evaluate( _field, rule ) );
 }
 
 /**
@@ -1002,18 +1002,18 @@ SW_TEST_CASE_F( SRPGRulesTest, MissionTurnLimit )
     };
     nextTurn();
     SW_REQUIRE_EQUAL( 2, _field.getTurn() );
-    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMission::evaluate( _field, survive ) );
-    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMission::evaluate( _field, timed ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMissionRule::evaluate( _field, survive ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMissionRule::evaluate( _field, timed ) );
     nextTurn();
-    SW_EXPECT_EQUAL( sw::SRPGResult::Victory, sw::SRPGMission::evaluate( _field, survive ) );
-    SW_EXPECT_EQUAL( sw::SRPGResult::Defeat, sw::SRPGMission::evaluate( _field, timed ) );
-    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMission::evaluate( _field, endless ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Victory, sw::SRPGMissionRule::evaluate( _field, survive ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Defeat, sw::SRPGMissionRule::evaluate( _field, timed ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMissionRule::evaluate( _field, endless ) );
 
     sw::SRPGMissionRule leaderless;
     leaderless._objective = sw::SRPGObjective::DefeatCommander;
-    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMission::evaluate( _field, leaderless ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Ongoing, sw::SRPGMissionRule::evaluate( _field, leaderless ) );
     unit( foe )._bAlive = SW_FALSE;
-    SW_EXPECT_EQUAL( sw::SRPGResult::Victory, sw::SRPGMission::evaluate( _field, leaderless ) );
+    SW_EXPECT_EQUAL( sw::SRPGResult::Victory, sw::SRPGMissionRule::evaluate( _field, leaderless ) );
 }
 
 /**

@@ -133,7 +133,7 @@ namespace sw
     bool ServerRegistryReader::pickServer( const ServerSelectionQuery& query, UnixMilliseconds nowMs, ServerStatus& outStatus )
     {
         int32 index = constant::invalid_index::kInt32;
-        if ( ServerSelection::pickServer( _listSnapshot, query, nowMs.count(), index ) == false )
+        if ( ServerSelectionQuery::pickServer( _listSnapshot, query, nowMs.count(), index ) == false )
             return false;
         ServerStatus& picked = _listSnapshot[static_cast<size_t>( index )];
         picked._load += query._seatCount;

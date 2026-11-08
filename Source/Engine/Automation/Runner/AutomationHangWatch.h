@@ -47,6 +47,16 @@ namespace sw
 
         /** @brief @p text 를 @p capacity 바이트 배열 @p pDestination 에 복사합니다(넘으면 자르고, 늘 0 으로 끝낸다). */
         static void assign( utf8* pDestination, uint32 capacity, string_view text );
+
+        // 행 보고 글을 만드는 순수 함수 묶음입니다(스레드 · 파일 없이 글자만 다룬다). */
+        /** @brief 시작부터 @p elapsedSeconds 가 지났을 때 행으로 볼지입니다 — 상한 @p limitSeconds 와 유예 @p graceSeconds 를 모두 넘겨야 합니다. */
+        [[nodiscard]] static bool isDeadlineExceeded( float64 elapsedSeconds, float32 limitSeconds, float32 graceSeconds );
+        /**
+         * @brief 행 보고 JSON 을 @p pOutText(@p capacity 바이트)에 씁니다. 할당하지 않습니다. 쓴 길이를 돌려주고 늘 0 으로 끝납니다.
+         * @details 필드는 실행기의 보고(`AutomationReportWriter`)와 같은 이름이고 `hang` 만 더 있다. `records` 는 끝에 둔다.
+         * @param elapsedMilliseconds 시작부터 지금까지 벽시계로 지난 시간
+         */
+        [[nodiscard]] static uint32 format( const AutomationHangPayload& payload, uint32 elapsedMilliseconds, utf8* pOutText, uint32 capacity );
     };
 
     static_assert( sizeof( AutomationHangPayload ) % sizeof( uint64 ) == 0, "the payload is copied in 64-bit words" );
@@ -77,22 +87,6 @@ namespace sw
 
         atomic<uint32> _version;
         atomic<uint64> _arrWord[kWordCount];
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @struct AutomationHangReport @brief 행 보고 글을 만드는 순수 함수 묶음입니다(스레드 · 파일 없이 글자만 다룬다). */
-    struct SW_API AutomationHangReport
-    {
-        /** @brief 시작부터 @p elapsedSeconds 가 지났을 때 행으로 볼지입니다 — 상한 @p limitSeconds 와 유예 @p graceSeconds 를 모두 넘겨야 합니다. */
-        [[nodiscard]] static bool isDeadlineExceeded( float64 elapsedSeconds, float32 limitSeconds, float32 graceSeconds );
-        /**
-         * @brief 행 보고 JSON 을 @p pOutText(@p capacity 바이트)에 씁니다. 할당하지 않습니다. 쓴 길이를 돌려주고 늘 0 으로 끝납니다.
-         * @details 필드는 실행기의 보고(`AutomationReportWriter`)와 같은 이름이고 `hang` 만 더 있다. `records` 는 끝에 둔다.
-         * @param elapsedMilliseconds 시작부터 지금까지 벽시계로 지난 시간
-         */
-        [[nodiscard]] static uint32 format( const AutomationHangPayload& payload, uint32 elapsedMilliseconds, utf8* pOutText, uint32 capacity );
     };
 } // namespace sw
 

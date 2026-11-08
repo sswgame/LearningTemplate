@@ -2,7 +2,7 @@
  * @file SurfaceKind.h
  * @brief 표면 종류 표입니다. 바닥이 무엇인지(눈 · 모래 · 돌 · 물)와 그 표면이 캐릭터 · 탈것에게 하는 일(발소리 분류 · 이동 계수 · 구름 저항 · 그립 · 발자국 도장 · 지역 프로필)을 한 곳에 둡니다.
  * @details 표면 종류의 이름은 물리 재질 이름과 같다(`physicssettings.xml` 의 `_listMaterial`) — 콜라이더는 재질을, 지형 레이어는 그 레이어가 뜻하는 재질
- *          (`TerrainLayer::_physicsMaterial`)을, 물은 표의 `_waterKind` 를 낸다(`SurfaceQuery`). 언리얼 `UPhysicalMaterial::SurfaceType` · 랜드스케이프 레이어의
+ *          (`TerrainLayer::_physicsMaterial`)을, 물은 표의 `_waterKind` 를 낸다(`SurfaceSample`). 언리얼 `UPhysicalMaterial::SurfaceType` · 랜드스케이프 레이어의
  *          물리 재질과 같은 자리다 — 형식(콜라이더 · 높이장 · 물)마다 데이터를 합치지 않고, 각 형식이 재질 이름 하나를 내는 어댑터가 된다.
  *          물리 마찰(`PhysicsMaterialDef::_friction`)과 게임 이동 계수(`_moveScale`)는 같은 값이라고 가정하지 않는다 — 얼음은 미끄럽지만 걷는 속도는 그대로다.
  *          지역 효과(빙판 · 용암 · 바다 · 가시덩굴)는 종류의 `_zoneProfile` 이 가리키는 지역 프로필(`*.zone.xml`, GameFramework `ZoneProfile`)이다 — 지형 레이어 · 아무 메시든

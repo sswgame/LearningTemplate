@@ -39,7 +39,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&ReputationCatalog::loadFaction>( "Faction" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         return result._loadedCount;
     }
 

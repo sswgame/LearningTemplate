@@ -198,7 +198,7 @@ namespace sw
             return false;
         VoxelTerrainSettings settings;
         settings._seed                                   = static_cast<uint32>( _terrainSeed );
-        [[maybe_unused]] const VoxelTerrainReport report = VoxelTerrainGenerator::fillWorld( _world, settings );
+        [[maybe_unused]] const VoxelTerrainReport report = VoxelTerrainSettings::fillWorld( _world, settings );
         decorateTerrain();
         SW_LOG_INFO_ID( "VoxelGameMode.TerrainXXHeights", "[Voxel] terrain %# x %# x %# - heights %#..%#, %# trees", _world.getSizeX(), _world.getSizeY(), _world.getSizeZ(), report._minHeight,
                         report._maxHeight, report._treeCount );

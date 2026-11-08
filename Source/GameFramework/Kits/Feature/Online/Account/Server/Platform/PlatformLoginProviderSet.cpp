@@ -57,7 +57,7 @@ namespace sw
                 entry._provider = AppleLoginProvider::create( settings, &game::getSubsystem<INetSecurityProvider>(), &entry._httpClient->get(), &entry._secondHTTPClient->get() );
             }
             else
-                entry._provider = PlatformLoginProviderFactory::create( settings, &game::getSubsystem<INetSecurityProvider>(), &entry._httpClient->get() );
+                entry._provider = PlatformLoginProviderConfig::create( settings, &game::getSubsystem<INetSecurityProvider>(), &entry._httpClient->get() );
             if ( entry._provider == nullptr )
             {
                 outError = "platform login provider '" + settings._name + "' has invalid settings";

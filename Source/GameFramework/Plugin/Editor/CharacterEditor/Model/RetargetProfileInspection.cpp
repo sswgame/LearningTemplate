@@ -167,7 +167,7 @@ namespace sw::editor
         };
     } // namespace
 
-    bool RetargetProfileInspector::inspect( const RetargetProfile& profile, RetargetProfileInspection& outInspection, string& outError )
+    bool RetargetProfileInspection::inspect( const RetargetProfile& profile, RetargetProfileInspection& outInspection, string& outError )
     {
         // 스켈레톤은 런타임과 같은 공유 캐시의 한 벌을 읽는다(빈 경로는 읽지 않는다 — nullptr).
         const shared_ptr<const Skeleton> pSourceSkeleton = SharedAssetCache<Skeleton>::acquire( profile.getSourceSkeletonPath() );
@@ -175,7 +175,7 @@ namespace sw::editor
         return inspect( profile, pSourceSkeleton.get(), pTargetSkeleton.get(), outInspection, outError );
     }
 
-    bool RetargetProfileInspector::inspect( const RetargetProfile& profile, const Skeleton* pSourceSkeleton, const Skeleton* pTargetSkeleton, RetargetProfileInspection& outInspection, string& outError )
+    bool RetargetProfileInspection::inspect( const RetargetProfile& profile, const Skeleton* pSourceSkeleton, const Skeleton* pTargetSkeleton, RetargetProfileInspection& outInspection, string& outError )
     {
         using Internal = RetargetProfileInspectionInternal;
         outInspection  = RetargetProfileInspection{};

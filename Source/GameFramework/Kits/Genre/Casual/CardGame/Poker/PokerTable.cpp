@@ -471,7 +471,7 @@ namespace sw
                 {
                     arrCard[cardCount++] = _board.getAt( index );
                 }
-                score = PokerHandEvaluator::evaluateBest( arrCard, cardCount )._score;
+                score = PokerHandValue::evaluateBest( arrCard, cardCount )._score;
             }
             listScore.push_back( score );
         }

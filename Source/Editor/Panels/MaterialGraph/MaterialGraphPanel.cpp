@@ -16,7 +16,7 @@
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Panels/Material/Model/MaterialModel.h"
-#include "Editor/Panels/Material/Model/MaterialPreviewShading.h"
+#include "Editor/Panels/Material/Model/MaterialPreviewInputs.h"
 
 #include "Engine/Graphics/Material/Dev/MaterialGraph.h"
 #include "Engine/Graphics/Material/Dev/MaterialGraphNodeRegistry.h"
@@ -291,7 +291,7 @@ namespace sw::editor
             case MaterialGraphValueType::Float:
             {
                 float32 arrOne[1]{};
-                bRead = MaterialPreviewShading::parseFloats( text, arrOne );
+                bRead = MaterialPreviewInputs::parseFloats( text, arrOne );
                 if ( bRead )
                 {
                     EditorWidgets::drawPropertyRowLabel( pName );
@@ -304,7 +304,7 @@ namespace sw::editor
             case MaterialGraphValueType::Float2:
             {
                 float32 arrTwo[2]{};
-                bRead = MaterialPreviewShading::parseFloats( text, arrTwo );
+                bRead = MaterialPreviewInputs::parseFloats( text, arrTwo );
                 if ( bRead )
                 {
                     EditorWidgets::drawPropertyRowLabel( pName );
@@ -318,7 +318,7 @@ namespace sw::editor
             case MaterialGraphValueType::Float3:
             {
                 float32 arrThree[3]{};
-                bRead = MaterialPreviewShading::parseFloats( text, arrThree );
+                bRead = MaterialPreviewInputs::parseFloats( text, arrThree );
                 if ( bRead )
                 {
                     EditorWidgets::drawPropertyRowLabel( pName );
@@ -332,7 +332,7 @@ namespace sw::editor
             }
             case MaterialGraphValueType::Float4:
             {
-                bRead = MaterialPreviewShading::parseFloats( text, arrValue );
+                bRead = MaterialPreviewInputs::parseFloats( text, arrValue );
                 if ( bRead && bColor )
                 {
                     Color color{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] };

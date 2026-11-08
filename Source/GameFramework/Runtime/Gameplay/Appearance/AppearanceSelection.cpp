@@ -12,8 +12,8 @@
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
 namespace sw
@@ -459,10 +459,10 @@ namespace sw
     {
         CharacterAppearanceSpec previewSpec;
         applySelection( database, selection, current, pUnlockQuery, previewSpec, outReport );
-        AppearanceResolver::resolve( database, previewSpec, outResolved );
+        ResolvedAppearance::resolve( database, previewSpec, outResolved );
     }
 
-    void AppearanceSelectionCodec::writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database )
+    void AppearanceSelection::writeSelection( BitWriter& writer, const AppearanceSelection& selection, const AppearanceDatabase& database )
     {
         using Internal = AppearanceSelectionInternal;
         writer.writeUint32( Internal::toHash32( selection._basePresetID ) );
@@ -484,7 +484,7 @@ namespace sw
             writer.writeUint32( Internal::toHash32( request._itemID ) );
             writer.writeUint32( Internal::toHash32( request._visibleVisual ) );
             writer.writeUint32( Internal::toHash32( request._state ) );
-            writer.writeBits( static_cast<uint32>( AppearanceResolver::snapDamage( request._damage ) * 255.0f + 0.5f ), Internal::kDamageBits );
+            writer.writeBits( static_cast<uint32>( ResolvedAppearance::snapDamage( request._damage ) * 255.0f + 0.5f ), Internal::kDamageBits );
             writer.writeBool( request._bSuppressed == SW_TRUE );
             Internal::writeVarCount( writer, request._listDetachedPart.size() );
             for ( const hashed_string& part : request._listDetachedPart )
@@ -496,7 +496,7 @@ namespace sw
         }
     }
 
-    bool AppearanceSelectionCodec::readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection )
+    bool AppearanceSelection::readSelection( BitReader& reader, const AppearanceDatabase& database, AppearanceSelection& outSelection )
     {
         using Internal = AppearanceSelectionInternal;
         outSelection   = AppearanceSelection{};
@@ -595,11 +595,11 @@ namespace sw
         return reader.hasOverflowed() == false;
     }
 
-    string AppearanceShareCode::encode( const AppearanceSelection& selection, const AppearanceDatabase& database )
+    string AppearanceSelection::encode( const AppearanceSelection& selection, const AppearanceDatabase& database )
     {
         BitWriter writer;
-        writer.writeBits( kVersion, AppearanceSelectionInternal::kVersionBits );
-        AppearanceSelectionCodec::writeSelection( writer, selection, database );
+        writer.writeBits( kShareCodeVersion, AppearanceSelectionInternal::kVersionBits );
+        AppearanceSelection::writeSelection( writer, selection, database );
         vector<uint8> bytes = writer.releaseBytes();
         const uint32  crc   = HashUtil::computeCRC32( bytes.data(), bytes.size() );
         for ( uint32 byteIndex = 0; byteIndex < AppearanceSelectionInternal::kChecksumBytes; ++byteIndex )
@@ -609,7 +609,7 @@ namespace sw
         return Base64Util::encodeURL( bytes.data(), bytes.size() );
     }
 
-    bool AppearanceShareCode::decode( string_view code, const AppearanceDatabase& database, AppearanceSelection& outSelection, string* pOutReason )
+    bool AppearanceSelection::decode( string_view code, const AppearanceDatabase& database, AppearanceSelection& outSelection, string* pOutReason )
     {
         using Internal = AppearanceSelectionInternal;
         vector<uint8> bytes;
@@ -633,13 +633,13 @@ namespace sw
         }
         BitReader    reader( bytes.data(), static_cast<int32>( payloadSize ) );
         const uint32 version = reader.readBits( Internal::kVersionBits );
-        if ( version != kVersion )
+        if ( version != kShareCodeVersion )
         {
             if ( pOutReason != nullptr )
                 *pOutReason = "unsupported share code version";
             return false;
         }
-        if ( AppearanceSelectionCodec::readSelection( reader, database, outSelection ) == false )
+        if ( AppearanceSelection::readSelection( reader, database, outSelection ) == false )
         {
             if ( pOutReason != nullptr )
                 *pOutReason = "truncated share code";

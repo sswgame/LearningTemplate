@@ -9,7 +9,7 @@
 
 #include "Engine/Text/IFontRasterizer.h"
 #include "Engine/Text/ITextShaper.h"
-#include "Engine/Text/MSDF/MSDFGenerator.h"
+#include "Engine/Text/MSDF/MSDFShape.h"
 
 #include <ft2build.h>
 #include <freetype/freetype.h>
@@ -223,7 +223,7 @@ namespace sw
                     reverseContour( contour );
                 }
             }
-            MSDFGenerator::colorEdges( shape );
+            MSDFShape::colorEdges( shape );
 
             FT_BBox box{};
             FT_Outline_Get_CBox( &pSlot->outline, &box );
@@ -237,7 +237,7 @@ namespace sw
             msdfParams._height  = static_cast<uint32>( top - bottom );
             msdfParams._origin  = float2{ static_cast<float32>( left ), static_cast<float32>( top ) };
             msdfParams._rangePx = static_cast<float32>( spread );
-            MSDFGenerator::computeBitmap( shape, msdfParams, outBitmap._bytes );
+            MSDFShape::computeBitmap( shape, msdfParams, outBitmap._bytes );
             outBitmap._width     = msdfParams._width;
             outBitmap._height    = msdfParams._height;
             outBitmap._bearingPx = float2{ static_cast<float32>( left ), static_cast<float32>( top ) };

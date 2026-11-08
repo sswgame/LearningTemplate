@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
-#include "Engine/Scene/SceneStateHash.h"
+#include "Engine/Scene/SceneObjectHash.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 

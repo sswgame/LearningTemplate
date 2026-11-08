@@ -3,7 +3,7 @@
  * @brief 아틀라스 굽기의 순수 계산 — 부품 텍스처를 한 장에 앉히는 배치, 배치대로 UV 를 옮기는 병합 훅, 텍스처 픽셀을 배치에 옮겨 그리는 합성입니다.
  * @details 같은 옷차림을 오래 쓰는 캐릭터(NPC 세트)는 부품마다 텍스처 · 머티리얼이 따로라 그리기 호출이 부품 수만큼 든다. 아틀라스는 부품 텍스처를 한 장에 모으고
  *          부품 메시의 UV 를 그 자리로 옮겨, 부품들이 머티리얼 하나(구간 하나)로 그려지게 한다(`CharacterMeshUtil::mergeMeshes` 의 훅 `IMeshMergeHooks`).
- *          이 파일은 디스크도 GPU 도 모른다 — 읽기 · 쓰기와 명령은 에디터의 `OutfitAtlasBaker` 가 한다. 언리얼 Mutable 의 텍스처 합성(Compose)과 같은 자리다.
+ *          이 파일은 디스크도 GPU 도 모른다 — 읽기 · 쓰기와 명령은 에디터의 `OutfitAtlasSpec` 가 한다. 언리얼 Mutable 의 텍스처 합성(Compose)과 같은 자리다.
  */
 #pragma once
 #include "Core/Container/span.h"
@@ -16,7 +16,7 @@
 
 #include "Editor/Common/EditorExports.h"
 
-#include "Engine/Character/Fit/MeshMerger.h"
+#include "Engine/Character/Fit/MergedMesh.h"
 
 namespace sw
 {

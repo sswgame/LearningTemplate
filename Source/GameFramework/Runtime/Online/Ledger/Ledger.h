@@ -8,7 +8,7 @@
  *          - 분개: 이동 한 건의 원본이다(다리, 사유, 주체, 시각, 이동 뒤 잔액, 키는 분개 키). "없어야 한다" 조건으로 넣으므로 분개 키가 멱등 키이다.
  *          - 내역 색인: 계정과 맡김마다 `<보유자 키>/<시각 16 진 16>/<분개 키>` 를 두며 값은 없다. 최근 것부터 읽는다.
  *          - 불변식: 자산마다 계정 잔액과 맡김 잔액의 합은 발행에서 나간 양에서 소각으로 들어간 양을 뺀 값과 같다.
- *            맡김 잔액은 0 이상이고, 계정 잔액은 빚(환불 회수)일 때만 음수이다(`LedgerAudit`).
+ *            맡김 잔액은 0 이상이고, 계정 잔액은 빚(환불 회수)일 때만 음수이다(`LedgerAuditReport`).
  *          - 잔액은 버전 조건으로 쓴다. 읽은 뒤 다른 이동이 끼면 커밋이 `Conflict` 이고, `executeTransfer` 가 다시 읽어 다시 한다.
  */
 #pragma once
@@ -29,7 +29,7 @@ namespace sw
         static const hashed_string& getBalanceTable();
         static const hashed_string& getJournalTable();
         static const hashed_string& getHistoryTable();
-        /** @brief 분개 레코드에서 이동 시각을 읽습니다(보존 기간 쓸기 `ServiceRetention` 용). 형식이 틀리면 false 입니다. */
+        /** @brief 분개 레코드에서 이동 시각을 읽습니다(보존 기간 쓸기 `ServiceRetentionRule` 용). 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool readJournalTimeMs( const ServiceRecord& record, int64& outTimeMs );
         /**
          * @brief 내역 레코드의 키 `<보유자>/<시각 16 진 16>/<분개 키>` 에서 이동 시각을 읽습니다. 계정 · 발행 · 소각 · 맡김(에스크로) 보유자의 키를 읽고, 모르는 키는 false 입니다.

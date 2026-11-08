@@ -3,7 +3,7 @@
  * @brief Multiplayer 창 Sync 탭(서버 디버깅 S7)의 틱별 상태 해시 비교입니다 — 두 이력을 모아 처음 어긋난 틱을 찾습니다. ImGui 에 의존하지 않습니다.
  * @details 이력의 원천은 셋이다. 디버그 채널로 붙은 서버의 `state.hashes`(세션이 띄운 전용 서버는 `-gv_stateHashHistory` 를 늘 켠다), 저장한 이력 파일,
  *          그리고 같은 줄 형식의 글(`StateHashHistory::writeReport` — `<tick> <16자리 16진 해시>`)이다. 파일은 그 글을 그대로 담으므로 운영 서버가 남긴 이력과도 비교한다.
- *          해시는 씬 트랜스폼(이름 · 활성 · 월드 위치)만 접는다(`SceneStateHash`). 처음 어긋난 틱을 찾는 규칙은 `StateHashHistory::findFirstDivergence` 하나다.
+ *          해시는 씬 트랜스폼(이름 · 활성 · 월드 위치)만 접는다(`SceneObjectHash`). 처음 어긋난 틱을 찾는 규칙은 `StateHashHistory::findFirstDivergence` 하나다.
  *          클라이언트(App)는 서버 틱 번호를 모르므로 아직 원천이 아니다 — 같은 입력의 두 서버, 또는 서버와 저장한 이력을 비교한다.
  */
 #pragma once
@@ -14,7 +14,7 @@
 
 #include "Editor/Common/EditorExports.h"
 
-#include "Engine/Scene/SceneStateHash.h"
+#include "Engine/Scene/SceneObjectHash.h"
 
 namespace sw::editor
 {

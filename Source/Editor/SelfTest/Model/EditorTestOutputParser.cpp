@@ -4,7 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Log/LogLineFormat.h"
+#include "Core/Log/ParsedLogLine.h"
 #include "Core/Testing/TestFramework.h"
 
 namespace sw::editor
@@ -175,7 +175,7 @@ namespace sw::editor
                     declared = 0; // 모양이 다르면 빼지 않는다(모두 센다)
                 continue;
             }
-            if ( LogLineFormat::tryParse( line, parsed ) && parsed._level == LogLevel::Error )
+            if ( ParsedLogLine::tryParse( line, parsed ) && parsed._level == LogLevel::Error )
                 ++count;
         }
         return static_cast<int64>( count ) > declared ? count - static_cast<uint32>( declared ) : 0;

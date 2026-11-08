@@ -57,7 +57,7 @@ namespace sw
             Element::of<&SpawnTable::loadEntry>( "Entry" ).uncounted(),
             Element::of<&SpawnTable::loadCurve>( "Curve" ).uncounted(),
         };
-        bValid = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement ).isClean() && bValid;
+        bValid = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement ).isClean() && bValid;
         if ( bValid == false )
         {
             SW_LOG_ERROR_ID( "SpawnDirector.SpawnTableInvalidParams", "%#: spawn table has invalid fields - not loaded", sourceName );

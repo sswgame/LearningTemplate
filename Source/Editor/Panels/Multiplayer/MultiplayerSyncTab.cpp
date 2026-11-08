@@ -20,7 +20,7 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Scene/SceneStateHash.h"
+#include "Engine/Scene/SceneObjectHash.h"
 
 #include <imgui.h>
 

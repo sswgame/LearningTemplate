@@ -2,7 +2,7 @@
  * @file ShaderBindingSlots.h
  * @brief 셰이더 바인딩 계약의 C++ 쪽입니다. `Content/engine/shaders/binding_slots.hlsli` 를 **그대로 include** 합니다.
  * @details 번호는 이 파일에 없다. HLSL 과 C++ 가 같은 파일을 읽으므로 "수동 동기" 가 없다.
- *          백엔드 4개는 여기 constexpr 로만 바인딩 위치를 정하고, ShaderBindingValidator 가 쿠킹된 바이너리의
+ *          백엔드 4개는 여기 constexpr 로만 바인딩 위치를 정하고, ShaderBindingValidatorIssue 가 쿠킹된 바이너리의
  *          리플렉션을 이 값과 대조한다(런타임 로드 시와 테스트).
  *
  *          모델은 언리얼 GPUScene 방식이다. 셰이더 선언은 네 백엔드에서 같고(register b#/t#/u#), 드로우별 데이터는
@@ -319,7 +319,7 @@ namespace sw
 
         /**
          * @brief WebGPU 바인드 그룹 0 의 번호입니다. binding = 레지스터 종류별 시프트 + 번호(DXC -fvk-b/t/s/u-shift 와 같은 값)이고 그룹은 하나다.
-         * @details 셰이더는 이 값을 읽지 않는다 — DXC 인자(ShaderCompiler)와 백엔드의 바인드 그룹(WebGPURHICommandContext)과 리플렉션의 번호 되돌림(ShaderReflection)만 쓴다.
+         * @details 셰이더는 이 값을 읽지 않는다 — DXC 인자(ShaderCompiler)와 백엔드의 바인드 그룹(WebGPURHICommandContext)과 리플렉션의 번호 되돌림(ShaderReflectionData)만 쓴다.
          *          t 띠가 엔진 텍스처 칸(t32..t43)까지 가므로 t 폭이 가장 넓다. 샘플러가 따로 있다 — WGSL 은 텍스처 · 샘플러를 나눠 받는다(DX11 과 같은 모양, GL 의 결합 샘플러가 아니다).
          */
         namespace wgpu
@@ -519,7 +519,7 @@ namespace sw
         static_assert( kComputeAssertUAV == kComputeShaderUAVSlotCount && kComputeUAVSlotCount == kComputeShaderUAVSlotCount + 1 && kComputeAssertUAV < kComputeUAVSlotCount,
                        "assert 링 슬롯은 셰이더 소유 쓰기 슬롯 바로 뒤이고 쓰기 버퍼 슬롯 수의 마지막이어야 한다" );
         /// @brief 컴퓨트 셰이더가 제 쓰기 버퍼로 쓰는 슬롯의 수(u0 부터 연속)를 셰이더별로 등록합니다. 하나라도 `kComputeShaderUAVSlotCount` 를 넘으면 assert 링(u4)과 겹치므로 컴파일이 막습니다.
-        ///        값은 각 .hlsl 의 `SW_DECLARE_RW_STRUCTURED_BUFFER` / `SW_DECLARE_RW_BYTE_ADDRESS_BUFFER` 선언 수다(ShaderBindingValidator 가 쿠킹된 바이너리로도 u4 점유를 검사한다).
+        ///        값은 각 .hlsl 의 `SW_DECLARE_RW_STRUCTURED_BUFFER` / `SW_DECLARE_RW_BYTE_ADDRESS_BUFFER` 선언 수다(ShaderBindingValidatorIssue 가 쿠킹된 바이너리로도 u4 점유를 검사한다).
         struct ComputeUAVUsage
         {
             const utf8* _pShader;

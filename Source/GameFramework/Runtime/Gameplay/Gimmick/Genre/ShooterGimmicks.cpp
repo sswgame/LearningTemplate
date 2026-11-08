@@ -20,7 +20,7 @@
 #include "GameFramework/Runtime/Gameplay/Gimmick/Genre/GenreGimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickSensorComponent.h"
-#include "GameFramework/Runtime/Gameplay/Interaction/InteractionSelector.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/InteractionView.h"
 #include "GameFramework/Runtime/World/Query/WorldQuery.h"
 
 namespace sw
@@ -343,7 +343,7 @@ namespace sw
             listCandidate.push_back( candidate );
         }
         const WorldLineOfSightQuery lineOfSight{ *pManager };
-        const int32                 pick = InteractionSelector::selectBest( viewer, listCandidate, &lineOfSight );
+        const int32                 pick = InteractionView::selectBest( viewer, listCandidate, &lineOfSight );
         _target                          = pick >= 0 ? GameObjectHandle::make( listCandidate[static_cast<size_t>( pick )]._objectID ) : GameObjectHandle{};
         stepProjectiles( *pOwner ); // 대상을 놓쳐도 이미 쏜 탄은 날아간다
         if ( pick < 0 )

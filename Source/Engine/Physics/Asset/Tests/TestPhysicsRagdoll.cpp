@@ -6,7 +6,7 @@
 
 using namespace sw;
 
-// 래그돌 빌더(PhysicsRagdollBuilder) — 바디 역할(`IPhysicsBodyScene3D`)만 받는 함수를 가짜 씬으로 본다. 물리 백엔드 없음.
+// 래그돌 빌더(PhysicsRagdoll) — 바디 역할(`IPhysicsBodyScene3D`)만 받는 함수를 가짜 씬으로 본다. 물리 백엔드 없음.
 // `create` · `driveToPoseWithMotors` 는 씬 전체(`IPhysicsScene3D`)를 받아 실제 씬이 있어야 하므로 여기서 다루지 않는다.
 
 namespace
@@ -197,7 +197,7 @@ SW_TEST_CASE( PhysicsRagdollTest, DestroySkipsInvalidHandlesAndEmpties )
     PhysicsRagdollTestFixture rig( PhysicsBodyType::Dynamic );
     const PhysicsBodyHandle   first = rig._ragdoll._listBody[0];
     rig._ragdoll._listBody[1]       = PhysicsBodyHandle{};
-    PhysicsRagdollBuilder::destroy( rig._scene, rig._ragdoll );
+    PhysicsRagdoll::destroy( rig._scene, rig._ragdoll );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( rig._scene._listDestroyed.size() ) );
     SW_EXPECT_TRUE( rig._scene._listDestroyed[0] == first );
     SW_EXPECT_TRUE( rig._ragdoll.isEmpty() );
@@ -210,7 +210,7 @@ SW_TEST_CASE( PhysicsRagdollTest, DestroySkipsInvalidHandlesAndEmpties )
 SW_TEST_CASE( PhysicsRagdollTest, SetBodyTypeAppliesToEveryBody )
 {
     PhysicsRagdollTestFixture rig( PhysicsBodyType::Kinematic );
-    PhysicsRagdollBuilder::setBodyType( rig._scene, rig._ragdoll, PhysicsBodyType::Dynamic );
+    PhysicsRagdoll::setBodyType( rig._scene, rig._ragdoll, PhysicsBodyType::Dynamic );
     for ( const PhysicsRagdollTestBodyScene::BodyState& state : rig._scene._listState )
     {
         SW_EXPECT_TRUE( state._type == PhysicsBodyType::Dynamic );
@@ -224,7 +224,7 @@ SW_TEST_CASE( PhysicsRagdollTest, DriveToPoseMovesKinematicBodies )
 {
     using Util = PhysicsRagdollTestUtil;
     PhysicsRagdollTestFixture rig( PhysicsBodyType::Kinematic );
-    PhysicsRagdollBuilder::driveToPose( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, 0.25f );
+    PhysicsRagdoll::driveToPose( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, 0.25f );
 
     const PhysicsRagdollTestBodyScene::BodyState& root = rig._scene._listState[0];
     const PhysicsRagdollTestBodyScene::BodyState& hand = rig._scene._listState[1];
@@ -242,13 +242,13 @@ SW_TEST_CASE( PhysicsRagdollTest, DriveToPoseTeleportsOtherwise )
 {
     {
         PhysicsRagdollTestFixture rig( PhysicsBodyType::Kinematic );
-        PhysicsRagdollBuilder::driveToPose( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, 0.0f );
+        PhysicsRagdoll::driveToPose( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, 0.0f );
         SW_EXPECT_EQUAL( 0u, rig._scene._listState[0]._moveCount );
         SW_EXPECT_EQUAL( 1u, rig._scene._listState[0]._teleportCount );
     }
     {
         PhysicsRagdollTestFixture rig( PhysicsBodyType::Dynamic );
-        PhysicsRagdollBuilder::driveToPose( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, 0.25f );
+        PhysicsRagdoll::driveToPose( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, 0.25f );
         SW_EXPECT_EQUAL( 0u, rig._scene._listState[1]._moveCount );
         SW_EXPECT_EQUAL( 1u, rig._scene._listState[1]._teleportCount );
     }
@@ -262,7 +262,7 @@ SW_TEST_CASE( PhysicsRagdollTest, DriveToPoseSkipsDisabledAndOutOfRange )
     PhysicsRagdollTestFixture rig( PhysicsBodyType::Kinematic );
     rig._scene._listState[0]._bEnabled = SW_FALSE;
     rig._ragdoll._listBoneIndex[1]     = 99;
-    PhysicsRagdollBuilder::driveToPose( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, 0.25f );
+    PhysicsRagdoll::driveToPose( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, 0.25f );
     for ( const PhysicsRagdollTestBodyScene::BodyState& state : rig._scene._listState )
     {
         SW_EXPECT_EQUAL( 0u, state._moveCount );
@@ -283,7 +283,7 @@ SW_TEST_CASE( PhysicsRagdollTest, ReadBoneTransformsFollowsBodiesAndParents )
     rig._scene._listState[1]._rotation     = handRotation;
 
     vector<float4x4> listOut( rig._listModel.size(), float4x4::Identity );
-    PhysicsRagdollBuilder::readBoneTransforms( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, span<float4x4>{ listOut.data(), listOut.size() } );
+    PhysicsRagdoll::readBoneTransforms( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, span<float4x4>{ listOut.data(), listOut.size() } );
 
     Util::expectNear( float3{ 0.0f, 0.0f, 1.0f }, listOut[0].getTranslation() );
     Util::expectNear( float3{ 0.0f, 1.0f, 1.0f }, listOut[1].getTranslation() ); // 뿌리에서 y 로 1
@@ -310,7 +310,7 @@ SW_TEST_CASE( PhysicsRagdollTest, ReadBoneTransformsTreatsUnreadableBodyAsBonele
     rig._scene._listState[0]._bReadable = SW_FALSE;
     rig._scene._listState[1]._bReadable = SW_FALSE;
     vector<float4x4> listOut( rig._listModel.size(), float4x4::Identity );
-    PhysicsRagdollBuilder::readBoneTransforms( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, span<float4x4>{ listOut.data(), listOut.size() } );
+    PhysicsRagdoll::readBoneTransforms( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, span<float4x4>{ listOut.data(), listOut.size() } );
     for ( size_t bone = 0; bone < listOut.size(); ++bone )
     {
         Util::expectNear( rig._listModel[bone].getTranslation(), listOut[bone].getTranslation() );
@@ -328,11 +328,11 @@ SW_TEST_CASE( PhysicsRagdollTest, ReadBoneTransformsRejectsBoneCountMismatch )
     rig._scene._listState[0]._position = float3{ 50.0f, 0.0f, 0.0f };
 
     vector<float4x4> listShort( 2, float4x4::Identity );
-    PhysicsRagdollBuilder::readBoneTransforms( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, span<float4x4>{ listShort.data(), listShort.size() } );
+    PhysicsRagdoll::readBoneTransforms( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, span<float4x4>{ listShort.data(), listShort.size() } );
     Util::expectNear( float3{}, listShort[0].getTranslation() );
 
     rig._ragdoll._listBodyOfBone.pop_back();
     vector<float4x4> listOut( rig._listModel.size(), float4x4::Identity );
-    PhysicsRagdollBuilder::readBoneTransforms( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, span<float4x4>{ listOut.data(), listOut.size() } );
+    PhysicsRagdoll::readBoneTransforms( rig._scene, rig._ragdoll, rig.makeView(), rig._worldFromModel, span<float4x4>{ listOut.data(), listOut.size() } );
     Util::expectNear( float3{}, listOut[0].getTranslation() );
 }

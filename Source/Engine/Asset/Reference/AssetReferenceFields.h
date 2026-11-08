@@ -4,7 +4,7 @@
  * @details 칸 이름은 두 표의 합이다 — 리플렉션 칸은 파서가 낸 표(`kGeneratedFile`), 손으로 읽는 XML 칸은 `kConfigFile` 의 `listField`.
  *          에셋은 경로 하나로 가리킨다(식별자 표 · `.meta` 는 없다 — 언리얼 소프트 경로와 같다). 그래서 끊어진 경로를 잡는 규칙이 참조의 정본이고, 같은 데이터 파일을
  *          다섯 곳이 읽는다: 커밋 전 검사(`Scripts/lint/AssetReferences.py`), `py -3 -m Scripts move-asset`, 헤드리스 검사(`App --check-asset-refs` — ctest
- *          `ToolCheckAssetRefs`), 에디터 이름 바꾸기 · 옮기기(`EditorAssetFileCommands::moveAsset`), 팩 쿠킹의 참조 따라가기(`PackReachability` — 쓰는 것만 담는다).
+ *          `ToolCheckAssetRefs`), 에디터 이름 바꾸기 · 옮기기(`EditorAssetFileCommands::moveAsset`), 팩 쿠킹의 참조 따라가기(`PackReachResult` — 쓰는 것만 담는다).
  *          뽑기 규칙은 파이썬 쪽(`AssetReferences.py` 의 `_extract*`)과 같은 것이다 — 하나를 고치면 다른 하나도 고친다(언어가 달라 코드를 나눌 수 없는 자리라 둘이다).
  *          글 모양을 짐작해 찾지 않는다: 목록에 든 이름의 XML 속성 · XML 요소 글(`<_listX><item>…</item></_listX>` 포함) · JSON 키 · CMake 인자의 값만 보고,
  *          그 안에서도 도메인(`engine/` …)으로 시작하는 낱말만 경로다. 팩 쿠커가 쓰므로 엔진(`Engine/Asset/Reference`)에 둔다 — 배포 실행 파일도 패키징 때

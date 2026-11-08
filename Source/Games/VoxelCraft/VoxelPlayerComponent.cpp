@@ -377,7 +377,7 @@ namespace sw
     void VoxelPlayerComponent::updateTarget( const VoxelGameModeComponent& gameMode, const FirstPersonCameraComponent& camera )
     {
         VoxelRayHit hit;
-        const bool  bHit             = VoxelRaycast::raycast( gameMode.getWorld(), _body.getEyePosition(), camera.getLook().getForward(), _reachDistance, hit );
+        const bool  bHit             = VoxelRayHit::raycast( gameMode.getWorld(), _body.getEyePosition(), camera.getLook().getForward(), _reachDistance, hit );
         const bool  bBreakTargetLost = bHit == false || hit._block != _target._block || _bHasTarget == SW_FALSE;
         if ( bBreakTargetLost )
             _breakProgress = 0.0f; // 다른 블록을 보면 처음부터 다시 부숩니다.

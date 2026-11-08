@@ -6,7 +6,7 @@
 #include "Core/Serialization/BitStream.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
-#include "GameFramework/Kits/Feature/Online/Social/Server/SocialLinkRules.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
@@ -238,7 +238,7 @@ namespace sw
                 if ( otherCount._version != ServiceRecord::kAbsentVersion && Internal::decodeCounts( otherCount._bytes, otherCounts ) == false )
                     otherCounts = SocialCounts{};
 
-                _decision = SocialLinkRules::decide( _operation, selfState, otherState, selfCounts, otherCounts );
+                _decision = SocialCounts::decide( _operation, selfState, otherState, selfCounts, otherCounts );
                 if ( _decision._bWrite == SW_FALSE )
                     return ServiceStoreResult::Ok;
 

@@ -17,9 +17,9 @@
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
-#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -173,7 +173,7 @@ namespace sw
 
     string_view ShaderCooker::getExtensionForFormat( ShaderTargetFormat format )
     {
-        const ShaderTargetFormatInfo* const pInfo = ShaderTargetFormatTable::find( format );
+        const ShaderTargetFormatInfo* const pInfo = ShaderTargetFormatInfo::find( format );
         if ( pInfo != nullptr )
             return pInfo->_pExtension;
         SW_FATAL( "ShaderCooker::getExtensionForFormat: unknown shader target format %#", static_cast<uint32>( format ) );

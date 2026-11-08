@@ -32,11 +32,11 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphCook.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
+#include "Engine/Graphics/Material/Dev/MaterialGraphGeneratedPaths.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
-#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 #include "Engine/Renderer/Cook/ShaderCookRequestCollector.h"
 
@@ -102,7 +102,7 @@ namespace sw
 
             /**
              * @brief 병렬로 도는 쿠킹 한 번의 입력과 본문입니다. 병렬 단위는 **사슬**(같은 바이너리 파일을 만드는 작업의 묶음)이라 두 스레드가 한 파일을 쓰지 않습니다.
-             * @details 컴파일러(DXC · FXC) · `ContentHash` · `isCookedOutputCurrent`(쿠킹 상태의 스탬프 캐시 잠금) · `ShaderReflection::reflect` · `ShaderBindingValidator::validate` 가 스레드 안전해야 하고,
+             * @details 컴파일러(DXC · FXC) · `ContentHash` · `isCookedOutputCurrent`(쿠킹 상태의 스탬프 캐시 잠금) · `ShaderReflectionData::reflect` · `ShaderBindingValidatorIssue::validate` 가 스레드 안전해야 하고,
              *          그 확인은 각 함수의 주석에 있다.
              */
             struct CookJob
@@ -163,9 +163,9 @@ namespace sw
                     const bool      bOutputRead = FileUtil::exists( task._outPath ) && FileUtil::readFile( task._outPath, bytecode ); // 컴파일이 실패하면 출력이 없다 - 아래 분기가 그 오류를 센다
                     if ( bOutputRead && bytecode.empty() == false )
                     {
-                        outResult._reflection = ShaderReflection::reflect( bytecode, task._format );
+                        outResult._reflection = ShaderReflectionData::reflect( bytecode, task._format );
                         // 쿠킹된 바이너리를 계약과 대조한다. 셰이더 헤더와 백엔드 상수가 한쪽만 바뀌면 여기서 이름과 숫자로 드러난다.
-                        outResult._violationCount = ShaderBindingValidator::validate( outResult._reflection, task._format, task._outPath );
+                        outResult._violationCount = ShaderBindingValidatorIssue::validate( outResult._reflection, task._format, task._outPath );
                         outResult._bReflected     = true;
                     }
                     else if ( outResult._bCompileFailed == false )
@@ -381,7 +381,7 @@ namespace sw
         // 머티리얼 그래프의 생성물을 먼저 맞춘다 — 그 뒤로는 손으로 쓴 셰이더 · 머티리얼과 같은 입력이다(스탬프가 내용 해시로 추적한다). 배포 구성에는 그래프 컴파일러가 없다.
         if constexpr ( build::kShipping == false )
         {
-            if ( MaterialGraphCook::refreshAll( engine::getSubsystem<AssetPaths>(), rootDir, nullptr ) == false )
+            if ( MaterialGraphGeneratedPaths::refreshAll( engine::getSubsystem<AssetPaths>(), rootDir, nullptr ) == false )
             {
                 SW_LOG_ERROR_ID( "ShaderCooker.MaterialGraphsNotCompiled", "Material graphs could not be compiled - their generated shaders would be stale" );
                 ShaderCookSummary nothingCooked{};

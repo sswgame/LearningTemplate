@@ -165,7 +165,7 @@ namespace sw
 
     /**
      * @struct PackCookRules
-     * @brief 무엇을 담을지의 뿌리 규칙입니다 — 쓰는 것만 담는다(`PackReachability`).
+     * @brief 무엇을 담을지의 뿌리 규칙입니다 — 쓰는 것만 담는다(`PackReachResult`).
      * @details 담는 것은 뿌리(항상 담기 묶음 · 게임 설정의 필수 데이터)에서 참조 칸(`AssetReferenceFields`)과 곁 파일(`SW_ASSET_COMPANION`)을 따라 닿는 파일이다.
      *          언리얼 쿠커가 맵 · Primary Asset 에서 참조된 패키지만 쿠킹하는 것과 같다. 닿는 참조가 가리키는 파일이 없으면 쿠킹 오류다(조용히 빼지 않는다).
      */

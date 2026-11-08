@@ -11,7 +11,7 @@
  *            닿지 못했거나 서버가 죽었으면 `_deliveryScanIntervalMs` 마다(기동 직후 포함) 남은 레코드를 읽어 다시 보낸다. 기한이 `_deliveryAlarmMarginMs` 안으로 오면 오류 로그를 한 번 남긴다.
  *          - 영수증 구매자를 외부 로그인으로 묶는 제공자가 있는데 계정 연동 포트(`IAccountExternalLinks`)가 없으면 `initialize` 가 실패한다 — 묶지 않은 채로 뜨지 않는다.
  *          - 청약철회(`WithdrawPurchase`)는 설정의 기한(`_withdrawalWindowMs`, 기본 7일) 안에 쓰지 않은 만큼 회수한다.
- *          - 원장 보존 검사(`LedgerAudit`)는 예약 작업 `ledger.audit`(매일 `_auditMinuteOfDay`)으로 서버 하나가 돌린다. 자산마다 발행, 소각, 보유 총량을
+ *          - 원장 보존 검사(`LedgerAuditReport`)는 예약 작업 `ledger.audit`(매일 `_auditMinuteOfDay`)으로 서버 하나가 돌린다. 자산마다 발행, 소각, 보유 총량을
  *            지표 `economy_issued_total{asset}` · `economy_burned_total{asset}` · `economy_held_total{asset}` 로 내고, 맞지 않으면 오류 로그와 `economy_ledger_imbalance{asset}` 이다.
  *          - `shutdown` 은 맡긴 작업이 모두 끝날 때까지 저장소를 회수한다(상한 5초). 저장소를 종료하기 **전에** 부른다.
  *

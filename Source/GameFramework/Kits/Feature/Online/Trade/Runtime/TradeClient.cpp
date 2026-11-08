@@ -4,7 +4,7 @@
 
 #include "Core/Foundation/Constants.h"
 
-#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineClientRegistry.h"
 

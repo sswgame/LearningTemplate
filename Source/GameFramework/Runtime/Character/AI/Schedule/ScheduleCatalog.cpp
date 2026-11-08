@@ -198,7 +198,7 @@ namespace sw
         };
         _bUnknownIdleActivity = SW_FALSE;
         ScheduleElementReader reader{ *this };
-        const uint32          loadedCount = XMLCatalogReader::readInTableOrder( reader, root, sourceName, kArrElement )._loadedCount;
+        const uint32          loadedCount = XMLCatalogReadResult::readInTableOrder( reader, root, sourceName, kArrElement )._loadedCount;
         resolveReferences( sourceName );
         // 같은 파일의 id 연결은 참조 표가 본다(로드 실패). 코드 등록 이름(활동)은 여기서 보고 같은 정책(로드 실패)으로 맞춘다.
         const bool bActivitiesKnown = validateActivityNames( root, sourceName ) && _bUnknownIdleActivity == SW_FALSE;

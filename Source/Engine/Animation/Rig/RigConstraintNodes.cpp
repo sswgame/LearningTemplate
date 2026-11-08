@@ -24,20 +24,20 @@ namespace sw
             {
                 float3     _position{};
                 quaternion _rotation{};
+
+                /** @brief @p child 를 @p parent 기준으로 봅니다(스케일 없이). */
+                RigidTransform makeRelative( const RigidTransform& child ) const
+                {
+                    const quaternion inverse = _rotation.inverse();
+                    return RigidTransform{ float3::transform( child._position - _position, inverse ), ( inverse * child._rotation ).normalize() };
+                }
+
+                /** @brief 상대 변환을 @p parent 위에 적용합니다. */
+                RigidTransform compose( const RigidTransform& relative ) const
+                {
+                    return RigidTransform{ _position + float3::transform( relative._position, _rotation ), ( _rotation * relative._rotation ).normalize() };
+                }
             };
-
-            /** @brief @p child 를 @p parent 기준으로 봅니다(스케일 없이). */
-            static RigidTransform makeRelative( const RigidTransform& parent, const RigidTransform& child )
-            {
-                const quaternion inverse = parent._rotation.inverse();
-                return RigidTransform{ float3::transform( child._position - parent._position, inverse ), ( inverse * child._rotation ).normalize() };
-            }
-
-            /** @brief 상대 변환을 @p parent 위에 적용합니다. */
-            static RigidTransform compose( const RigidTransform& parent, const RigidTransform& relative )
-            {
-                return RigidTransform{ parent._position + float3::transform( relative._position, parent._rotation ), ( parent._rotation * relative._rotation ).normalize() };
-            }
 
             static RigidTransform readBone( RigPoseBuffer& pose, uint32 bone ) { return RigidTransform{ pose.getModelPosition( bone ), pose.getModelRotation( bone ) }; }
         };
@@ -108,11 +108,11 @@ namespace sw
                     return;
                 if ( _params._bMaintainOffset && _bCaptured == SW_FALSE )
                 {
-                    _offset    = RigConstraintNodesInternal::makeRelative( target, RigConstraintNodesInternal::readBone( pose, _bone ) );
+                    _offset    = target.makeRelative( RigConstraintNodesInternal::readBone( pose, _bone ) );
                     _bCaptured = SW_TRUE;
                 }
                 const RigConstraintNodesInternal::RigidTransform desired =
-                    _params._bMaintainOffset ? RigConstraintNodesInternal::compose( target, _offset ) : target;
+                    _params._bMaintainOffset ? target.compose( _offset ) : target;
                 if ( _bRotation == SW_TRUE )
                     pose.setModelRotation( _bone, desired._rotation );
                 if ( _bPosition == SW_TRUE )
@@ -203,7 +203,7 @@ namespace sw
                 {
                     // 처음이면 현재(애니메이션) 위치를, 바꿈이면 지난 출력 위치를 새 부모 기준으로 측정한다.
                     const RigConstraintNodesInternal::RigidTransform from = _bCaptured == SW_TRUE ? _lastOutput : RigConstraintNodesInternal::readBone( pose, _bone );
-                    _offset                                               = RigConstraintNodesInternal::makeRelative( parent, from );
+                    _offset                                               = parent.makeRelative( from );
                     _settleElapsed                                        = 0.0f;
                     _bCaptured                                            = SW_TRUE;
                     _bSwitchPending                                       = SW_FALSE;
@@ -217,7 +217,7 @@ namespace sw
                     relative._position  = float3::lerp( _offset._position, float3::Zero, eased );
                     relative._rotation  = quaternion::slerp( _offset._rotation, quaternion::Identity, eased );
                 }
-                _lastOutput = RigConstraintNodesInternal::compose( parent, relative );
+                _lastOutput = parent.compose( relative );
                 pose.setModelRotation( _bone, _lastOutput._rotation );
                 pose.setModelPosition( _bone, _lastOutput._position );
             }

@@ -6,7 +6,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 // ShaderBindingLayout — 스테이지별 리플렉션을 슬롯으로 합치기(가시성 · CB 멤버 · 구조 버퍼 stride), 이름 조회(canonical 이름), 드로우 전 바인딩 계획.
-// 리플렉션 값은 손으로 만든다 — 실제 바이트코드의 리플렉션은 ShaderReflection 쪽이 본다.
+// 리플렉션 값은 손으로 만든다 — 실제 바이트코드의 리플렉션은 ShaderReflectionData 쪽이 본다.
 
 using namespace sw;
 

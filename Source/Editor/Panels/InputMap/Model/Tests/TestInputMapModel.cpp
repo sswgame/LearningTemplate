@@ -281,11 +281,11 @@ SW_TEST_CASE( InputMapConflictsTest, SameKeyWithDifferentTriggersIsNotAConflict 
     vector<InputMapConflict> listConflict;
     map.bind( hashed_string( "Dodge" ), Key::Space, ActionTrigger::Tap );
     map.bind( hashed_string( "Charge" ), Key::Space, ActionTrigger::HoldThreshold );
-    InputMapConflicts::collect( map, listConflict );
+    InputMapConflict::collect( map, listConflict );
     SW_EXPECT_TRUE( listConflict.empty() );
 
     map.bind( hashed_string( "Jump" ), Key::Space, ActionTrigger::Tap );
-    InputMapConflicts::collect( map, listConflict );
+    InputMapConflict::collect( map, listConflict );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listConflict.size() );
     SW_EXPECT_TRUE( listConflict[0]._actionA == hashed_string( "Dodge" ) );
     SW_EXPECT_TRUE( listConflict[0]._actionB == hashed_string( "Jump" ) );
@@ -298,7 +298,7 @@ SW_TEST_CASE( InputMapConflictsTest, CompositeOverlapsAnySharedKey )
     vector<InputMapConflict> listConflict;
     map.bindAxis1DComposite( hashed_string( "Move" ), Key::A, Key::D );
     map.bind( hashed_string( "Dash" ), Key::D, ActionTrigger::Tap );
-    InputMapConflicts::collect( map, listConflict );
+    InputMapConflict::collect( map, listConflict );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listConflict.size() );
     SW_EXPECT_TRUE( listConflict[0]._slot == InputSlot::fromKey( Key::D ) );
 }
@@ -312,11 +312,11 @@ SW_TEST_CASE( InputMapConflictsTest, CombinationsAndLayers )
     map.bindShortcut( hashed_string( "Save" ), Key::S, ctrl );
     map.bind( hashed_string( "Back" ), Key::S );
     map.bindShortcut( hashed_string( "Other" ), Key::S, ctrl, ActionTrigger::Pressed, hashed_string( "Menu" ) );
-    InputMapConflicts::collect( map, listConflict );
+    InputMapConflict::collect( map, listConflict );
     SW_EXPECT_TRUE( listConflict.empty() );
 
     map.bindShortcut( hashed_string( "SaveAgain" ), Key::S, ctrl );
-    InputMapConflicts::collect( map, listConflict );
+    InputMapConflict::collect( map, listConflict );
     SW_EXPECT_EQUAL( size_t{ 1 }, listConflict.size() );
 }
 
@@ -329,13 +329,13 @@ SW_TEST_CASE( InputMapConflictsTest, ViewIsSeenFromTheAction )
     map.bind( hashed_string( "A" ), Key::Space );
     map.bind( hashed_string( "B" ), Key::Space );
     map.bind( hashed_string( "C" ), Key::X );
-    InputMapConflicts::collect( map, listConflict );
-    SW_EXPECT_TRUE( InputMapConflicts::involves( listConflict, hashed_string( "A" ), 1 ) );
-    SW_EXPECT_FALSE( InputMapConflicts::involves( listConflict, hashed_string( "A" ), 0 ) );
-    SW_EXPECT_FALSE( InputMapConflicts::involves( listConflict, hashed_string( "C" ) ) );
+    InputMapConflict::collect( map, listConflict );
+    SW_EXPECT_TRUE( InputMapConflict::involves( listConflict, hashed_string( "A" ), 1 ) );
+    SW_EXPECT_FALSE( InputMapConflict::involves( listConflict, hashed_string( "A" ), 0 ) );
+    SW_EXPECT_FALSE( InputMapConflict::involves( listConflict, hashed_string( "C" ) ) );
 
     vector<InputMapConflictView> listView;
-    InputMapConflicts::collectFor( listConflict, hashed_string( "B" ), listView );
+    InputMapConflict::collectFor( listConflict, hashed_string( "B" ), listView );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listView.size() );
     SW_EXPECT_TRUE( listView[0]._otherAction == hashed_string( "A" ) );
     SW_EXPECT_EQUAL( uint32{ 0 }, listView[0]._bindIndex );

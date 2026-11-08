@@ -68,7 +68,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&CurrencyCatalog::loadCurrency>( "Currency" ),
         };
-        uint32 loadedCount = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        uint32 loadedCount = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
         // 가상 화폐의 재원은 정의된 비가상 화폐여야 한다. 적힌 순서와 상관없이 모두 읽은 뒤에 확인한다.
         for ( size_t defIndex = 0; defIndex < _listCurrency.size(); )
         {

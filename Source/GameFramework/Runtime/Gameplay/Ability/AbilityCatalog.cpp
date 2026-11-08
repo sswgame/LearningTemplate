@@ -308,7 +308,7 @@ namespace sw
             Element::of<&AbilityCatalog::loadAbilitySet>( "AbilitySet" ),
             Element::of<&AbilityCatalog::loadCue>( "AbilityPresentation" ),
         };
-        return XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool AbilityCatalog::loadEffect( const XMLNode& node, string_view sourceName )

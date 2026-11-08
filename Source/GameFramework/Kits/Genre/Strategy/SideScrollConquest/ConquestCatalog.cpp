@@ -89,7 +89,7 @@ namespace sw
             Element::of<&ConquestCatalog::loadBuilding>( "Building" ),
             Element::of<&ConquestCatalog::loadSite>( "Site" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
         // 서로 가리키는 id 는 데이터 표(`engine/settings/datacatalogreferences.xml`)가 정하고 카탈로그 읽기가 이 뒤에 본다(반격 병종 `waveUnit` 포함) — 쿠커도 같은 표로 본다.
         return result._loadedCount;

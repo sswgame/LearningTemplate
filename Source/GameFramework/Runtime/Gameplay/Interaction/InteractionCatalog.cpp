@@ -174,7 +174,7 @@ namespace sw
             Element::of<&InteractionCatalog::loadInteraction>( "Interaction" ).uncounted(),
             Element::of<&InteractionCatalog::loadSmartObject>( "SmartObject" ).uncounted(),
         };
-        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement ).isClean();
+        return XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement ).isClean();
     }
 
     bool InteractionCatalog::loadInteraction( const XMLNode& node, string_view sourceName )

@@ -2,7 +2,7 @@
  * @file MaterialGraphModel.h
  * @brief 머티리얼 그래프 창의 모델 — 고치는 그래프 사본, 고른 노드, 핀 표, 잇기 · 넣기 · 지우기 · 값 고치기, 컴파일 문제, 미리보기 생성물, 저장. ImGui 를 모릅니다.
  * @details 패널(`MaterialGraphPanel`)은 캔버스와 인스펙터를 그리고 캔버스가 낸 id 를 넘기기만 한다 — 소리 그래프 창(`AudioGraphModel`)과 같은 선이다. 연결의 기준은 받는 노드의 `_listLink` 이고 캔버스 링크는 그것을 그린 것이다.
- *          미리보기는 머티리얼 창의 미리보기 구(`MaterialModel`)를 그대로 쓴다. 저장 전 편집은 작업 도메인(`scratch`)에 생성해 콘텐츠를 건드리지 않는다(`MaterialGraphCook::makePreviewPaths`).
+ *          미리보기는 머티리얼 창의 미리보기 구(`MaterialModel`)를 그대로 쓴다. 저장 전 편집은 작업 도메인(`scratch`)에 생성해 콘텐츠를 건드리지 않는다(`MaterialGraphGeneratedPaths::makePreviewPaths`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -13,7 +13,7 @@
 #include "Editor/Panels/Material/Model/MaterialModel.h"
 
 #include "Engine/Graphics/Material/Dev/MaterialGraph.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphCompiler.h"
+#include "Engine/Graphics/Material/Dev/MaterialGraphCompileResult.h"
 
 namespace sw
 {

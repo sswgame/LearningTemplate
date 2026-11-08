@@ -14,8 +14,8 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Gameplay/Interaction/InteractionSelector.h"
 #include "GameFramework/Runtime/Gameplay/Interaction/InteractionSession.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/InteractionView.h"
 
 namespace sw
 {
@@ -39,7 +39,7 @@ namespace sw
 
     /**
      * @class InteractorComponent
-     * @brief 틱마다 씬의 `InteractableComponent` 중 쓸 수 있는 것(켜짐, 쿨다운, 태그 조건)을 후보로 모아 `InteractionSelector` 로 고르고, 입력(`setInput`)으로
+     * @brief 틱마다 씬의 `InteractableComponent` 중 쓸 수 있는 것(켜짐, 쿨다운, 태그 조건)을 후보로 모아 `InteractionView` 로 고르고, 입력(`setInput`)으로
      *        `InteractionSession` 을 진행합니다. 2D 는 `_space = Space2D` 와 `setFacing2D`(좌우 보기)를 쓰며 같은 코드가 동작합니다.
      * @details 눈의 위치는 소유자의 월드 위치에 `_eyeOffset` 을 더한 값이고, 시선은 3D 이면 소유자의 앞(+Z), 2D 이면 `_facing2D` 이다. 진행 중에는 대상을 바꾸지 않고, 대상이 쓸 수 없게
      *          되거나 거리의 1.25 배 밖으로 나가면 취소한다. 완료하면 틱 뒤에 대상의 `completeInteraction` 을 부른다. 대상 상태를 게임 스레드에서 바꾸기 위해서다.

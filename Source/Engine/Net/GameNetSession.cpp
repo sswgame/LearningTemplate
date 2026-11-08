@@ -27,7 +27,7 @@
 #include "Engine/Net/GameConnectSecurity.h"
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Scene/SceneStateHash.h"
+#include "Engine/Scene/SceneObjectHash.h"
 #include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 #include <algorithm>

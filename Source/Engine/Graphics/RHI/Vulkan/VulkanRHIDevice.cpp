@@ -41,7 +41,7 @@
 #include "Core/Foundation/BuildInfo.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
@@ -1909,7 +1909,7 @@ namespace sw
             reportQueueResult( static_cast<int32>( clockResult ), "readGPUClockNanos: vkGetQueryPoolResults" );
         if ( clockResult != VK_SUCCESS )
             return false;
-        outGPUNanos = RHITimestamp::convertTickToNanos( tick, static_cast<float64>( properties.limits.timestampPeriod ) );
+        outGPUNanos = RHITimestampFrame::convertTickToNanos( tick, static_cast<float64>( properties.limits.timestampPeriod ) );
         return true;
     }
 
@@ -1972,7 +1972,7 @@ namespace sw
             arrTick[index] = arrResult[index * 2];
             readyMask |= makeGPUTimestampSlotBit( index );
         }
-        RHITimestamp::resolve( arrTick, readyMask, static_cast<float64>( _timestampPeriod ), _timestampFrame );
+        RHITimestampFrame::resolve( arrTick, readyMask, static_cast<float64>( _timestampPeriod ), _timestampFrame );
     }
 
     // 길이 유지(긴 함수 정리 기준): 펜스 대기 · 이미지 획득 · 기록 시작의 프레임 순서가 곧 의미라 나누지 않는다.

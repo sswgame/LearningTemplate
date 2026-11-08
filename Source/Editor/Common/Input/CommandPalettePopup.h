@@ -10,14 +10,14 @@
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/GUI/IEditorPopup.h"
-#include "Editor/Common/Input/EditorSearchSources.h"
+#include "Editor/Common/Input/EditorSearchItem.h"
 
 namespace sw::editor
 {
     /**
      * @class CommandPalettePopup
      * @brief Ctrl+Shift+P / Ctrl+Space 로 여는 퍼지 검색기입니다 — 명령 · 창 · 씬 오브젝트 · 에셋을 이 순서로 찾는다.
-     * @details 항목은 Quick Open 과 같은 검색 제공자(`EditorSearchSources`)가 모은다 — 두 팝업은 진입점과 제공자 순서만 다르다.
+     * @details 항목은 Quick Open 과 같은 검색 제공자(`EditorSearchItem`)가 모은다 — 두 팝업은 진입점과 제공자 순서만 다르다.
      *          커맨드를 **직접 보관하고 있지 않습니다.** 열릴 때마다 `EditorCommandRegistry` 와 패널 목록과 활성 씬을 읽고, 에셋은 워커가 색인한다.
      *          팔레트에 커맨드를 더하려면 `EditorCommandGUI::registerDefaults` 의 테이블에 한 줄을 넣으십시오. 그러면 메뉴와 단축키에도 같이 나타납니다.
      */

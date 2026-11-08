@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAudit.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
 
@@ -35,7 +35,7 @@ namespace
     void expectAuditBalanced( sw::MemoryServiceDatabase& database )
     {
         sw::LedgerAuditReport report;
-        SW_EXPECT_TRUE( sw::LedgerAudit::computeReport( database, report ) == sw::ServiceStoreResult::Ok );
+        SW_EXPECT_TRUE( sw::LedgerAuditReport::computeReport( database, report ) == sw::ServiceStoreResult::Ok );
         SW_EXPECT_TRUE( report.isBalanced() );
         SW_EXPECT_EQUAL( 0, report._unreadableRecordCount );
     }

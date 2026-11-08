@@ -114,7 +114,7 @@ namespace sw
         }
         outArgs._golden    = params._golden;
         outArgs._tolerance = params._tolerance;
-        if ( params._region.empty() == false && AutomationImageMetric::tryParseRegion( params._region, outArgs._region ) == false )
+        if ( params._region.empty() == false && AutomationImage::tryParseRegion( params._region, outArgs._region ) == false )
         {
             outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + params._region + "'";
             return false;

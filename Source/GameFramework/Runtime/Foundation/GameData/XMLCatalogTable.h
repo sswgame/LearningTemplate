@@ -17,7 +17,7 @@
  *             Element::of<&GhostCatalog::_rules, &Rules::_hook>( "Hook" ), // 칸 안의 칸
  *             Element::of<&GhostCatalog::loadRoom>( "Room" ),             // 손 읽기
  *         };
- *         const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+ *         const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
  *         return result._loadedCount;
  *     }
  * @endcode
@@ -41,12 +41,93 @@
 namespace sw
 {
     /** @brief 표 읽기의 결과입니다. 항목 수로 답하는 루트 읽기는 `_loadedCount` 를, 틀린 원소가 있으면 파일 전체를 물리는 루트 읽기는 `isClean` 을 봅니다. */
-    struct XMLCatalogReadResult
+    struct SW_GF_API XMLCatalogReadResult
     {
         uint32 _loadedCount{ 0 }; ///< 읽기에 성공한 원소 중 세는 줄(`uncounted` 가 아닌 줄)의 수
         uint32 _failedCount{ 0 }; ///< 읽지 못한 원소와 모르는 이름의 원소 수
 
         [[nodiscard]] bool isClean() const { return _failedCount == 0; }
+
+        // 표를 돌리는 쪽입니다.
+        // 문서 순서는 원소끼리 서로 보지 않는 카탈로그, 표 순서는 뒤 줄이 앞 줄을 읽는 동안 찾아보는 카탈로그(줍는 것 → 능력)가 쓴다.
+        /** @brief 자식 원소를 적힌 순서대로 읽습니다. 이름은 철자 그대로 비교합니다(`XMLNameCheck`). */
+        template <typename TCatalog, size_t Count>
+        [[nodiscard]] static XMLCatalogReadResult readInDocumentOrder( TCatalog& catalog, const XMLNode& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
+        {
+            XMLCatalogReadResult result = checkNames( root, sourceName, arrElement );
+            for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
+            {
+                for ( const XMLCatalogElement<TCatalog>& element : arrElement )
+                {
+                    if ( StringUtil::equals( node.getName(), element._pName ) )
+                    {
+                        addResult( result, element, element._pRead( catalog, node, sourceName ) );
+                        break;
+                    }
+                }
+            }
+            reportIfEmpty( root, sourceName, result, arrElement );
+            return result;
+        }
+
+        /** @brief 표의 줄 순서대로, 같은 줄의 원소는 적힌 순서대로 읽습니다. 파일 안의 순서와 상관없이 앞 줄이 먼저 다 읽힙니다. */
+        template <typename TCatalog, size_t Count>
+        [[nodiscard]] static XMLCatalogReadResult readInTableOrder( TCatalog& catalog, const XMLNode& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
+        {
+            XMLCatalogReadResult result = checkNames( root, sourceName, arrElement );
+            for ( const XMLCatalogElement<TCatalog>& element : arrElement )
+            {
+                for ( XMLNode node = root.findChild( element._pName ); node; node = node.findNextSibling( element._pName ) )
+                {
+                    addResult( result, element, element._pRead( catalog, node, sourceName ) );
+                }
+            }
+            reportIfEmpty( root, sourceName, result, arrElement );
+            return result;
+        }
+
+    private:
+        /** @brief 표에 없는 이름의 원소를 모두 알리고 그 수만큼 실패로 세어 시작합니다. */
+        template <typename TCatalog, size_t Count>
+        [[nodiscard]] static XMLCatalogReadResult checkNames( const XMLNode& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
+        {
+            const utf8* arrName[Count];
+            for ( size_t index = 0; index < Count; ++index )
+            {
+                arrName[index] = arrElement[index]._pName;
+            }
+            vector<const utf8*>  listUnknown;
+            XMLCatalogReadResult result;
+            result._failedCount = XMLNameCheck::collectUnknownChildren( root, arrName, static_cast<uint32>( Count ), listUnknown );
+            if ( result._failedCount > 0 )
+                (void)XMLNameCheck::reportUnknownChildren( root, arrName, static_cast<uint32>( Count ), sourceName );
+            return result;
+        }
+        template <typename TCatalog>
+        static void addResult( XMLCatalogReadResult& inoutResult, const XMLCatalogElement<TCatalog>& element, bool bRead )
+        {
+            if ( bRead == false )
+                ++inoutResult._failedCount;
+            else if ( element._bCounted == SW_TRUE )
+                ++inoutResult._loadedCount;
+        }
+        template <typename TCatalog, size_t Count>
+        static void reportIfEmpty( const XMLNode& root, string_view sourceName, const XMLCatalogReadResult& result, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
+        {
+            // 틀린 원소가 있으면 그 오류가 이미 까닭을 말했다 — 정말 적은 것이 없을 때만 알린다.
+            if ( result._loadedCount > 0 || result._failedCount > 0 )
+                return;
+            for ( const XMLCatalogElement<TCatalog>& element : arrElement )
+            {
+                if ( element._bCounted == SW_TRUE )
+                {
+                    reportNoEntries( sourceName, root.getName() );
+                    return;
+                }
+            }
+        }
+        /** @brief 세는 원소를 하나도 읽지 못한 파일을 경고합니다(`XMLCatalog.NoEntries`). 호출한 쪽은 0 을 실패로 받습니다. */
+        static void reportNoEntries( string_view sourceName, const utf8* pRootName );
     };
 } // namespace sw
 
@@ -132,96 +213,5 @@ namespace sw
         struct HasOwnRead<TValue, std::void_t<decltype( std::declval<TValue&>().loadFromXML( std::declval<const XMLNode&>(), std::declval<string_view>() ) )>> : std::true_type
         {
         };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct XMLCatalogReader
-     * @brief 표를 돌리는 쪽입니다.
-     * @details 문서 순서는 원소끼리 서로 보지 않는 카탈로그, 표 순서는 뒤 줄이 앞 줄을 읽는 동안 찾아보는 카탈로그(줍는 것 → 능력)가 쓴다.
-     *          세는 줄이 있는 표에서 적은 것이 없으면 경고한다 — 세는 줄이 없는 표는 파일이 비어도 맞는 표다.
-     */
-    struct SW_GF_API XMLCatalogReader
-    {
-        /** @brief 자식 원소를 적힌 순서대로 읽습니다. 이름은 철자 그대로 비교합니다(`XMLNameCheck`). */
-        template <typename TCatalog, size_t Count>
-        [[nodiscard]] static XMLCatalogReadResult readInDocumentOrder( TCatalog& catalog, const XMLNode& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
-        {
-            XMLCatalogReadResult result = checkNames( root, sourceName, arrElement );
-            for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
-            {
-                for ( const XMLCatalogElement<TCatalog>& element : arrElement )
-                {
-                    if ( StringUtil::equals( node.getName(), element._pName ) )
-                    {
-                        addResult( result, element, element._pRead( catalog, node, sourceName ) );
-                        break;
-                    }
-                }
-            }
-            reportIfEmpty( root, sourceName, result, arrElement );
-            return result;
-        }
-
-        /** @brief 표의 줄 순서대로, 같은 줄의 원소는 적힌 순서대로 읽습니다. 파일 안의 순서와 상관없이 앞 줄이 먼저 다 읽힙니다. */
-        template <typename TCatalog, size_t Count>
-        [[nodiscard]] static XMLCatalogReadResult readInTableOrder( TCatalog& catalog, const XMLNode& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
-        {
-            XMLCatalogReadResult result = checkNames( root, sourceName, arrElement );
-            for ( const XMLCatalogElement<TCatalog>& element : arrElement )
-            {
-                for ( XMLNode node = root.findChild( element._pName ); node; node = node.findNextSibling( element._pName ) )
-                {
-                    addResult( result, element, element._pRead( catalog, node, sourceName ) );
-                }
-            }
-            reportIfEmpty( root, sourceName, result, arrElement );
-            return result;
-        }
-
-    private:
-        /** @brief 표에 없는 이름의 원소를 모두 알리고 그 수만큼 실패로 세어 시작합니다. */
-        template <typename TCatalog, size_t Count>
-        [[nodiscard]] static XMLCatalogReadResult checkNames( const XMLNode& root, string_view sourceName, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
-        {
-            const utf8* arrName[Count];
-            for ( size_t index = 0; index < Count; ++index )
-            {
-                arrName[index] = arrElement[index]._pName;
-            }
-            vector<const utf8*>  listUnknown;
-            XMLCatalogReadResult result;
-            result._failedCount = XMLNameCheck::collectUnknownChildren( root, arrName, static_cast<uint32>( Count ), listUnknown );
-            if ( result._failedCount > 0 )
-                (void)XMLNameCheck::reportUnknownChildren( root, arrName, static_cast<uint32>( Count ), sourceName );
-            return result;
-        }
-        template <typename TCatalog>
-        static void addResult( XMLCatalogReadResult& inoutResult, const XMLCatalogElement<TCatalog>& element, bool bRead )
-        {
-            if ( bRead == false )
-                ++inoutResult._failedCount;
-            else if ( element._bCounted == SW_TRUE )
-                ++inoutResult._loadedCount;
-        }
-        template <typename TCatalog, size_t Count>
-        static void reportIfEmpty( const XMLNode& root, string_view sourceName, const XMLCatalogReadResult& result, const XMLCatalogElement<TCatalog> ( &arrElement )[Count] )
-        {
-            // 틀린 원소가 있으면 그 오류가 이미 까닭을 말했다 — 정말 적은 것이 없을 때만 알린다.
-            if ( result._loadedCount > 0 || result._failedCount > 0 )
-                return;
-            for ( const XMLCatalogElement<TCatalog>& element : arrElement )
-            {
-                if ( element._bCounted == SW_TRUE )
-                {
-                    reportNoEntries( sourceName, root.getName() );
-                    return;
-                }
-            }
-        }
-        /** @brief 세는 원소를 하나도 읽지 못한 파일을 경고합니다(`XMLCatalog.NoEntries`). 호출한 쪽은 0 을 실패로 받습니다. */
-        static void reportNoEntries( string_view sourceName, const utf8* pRootName );
     };
 } // namespace sw

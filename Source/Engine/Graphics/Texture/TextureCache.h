@@ -80,7 +80,7 @@ namespace sw
         /** @brief 올릴 디바이스를 붙이거나(엔진이 RHI 를 세울 때) 뗍니다(nullptr, 내릴 때). 붙은 디바이스가 없으면 `request` 는 실패 핸들을 돌려준다. */
         void bindDevice( IRHIDevice* pDevice );
         /**
-         * @brief 붙은 장치가 지원하는 첫 형식 묶음의 파일 접미사입니다(`TextureFormatSelection`, `bindDevice` 가 정한다). BC(데스크톱)는 빈 글이고 임포트한 DDS 를 그대로 읽습니다. 어느 스레드에서든 부릅니다.
+         * @brief 붙은 장치가 지원하는 첫 형식 묶음의 파일 접미사입니다(`TextureFormatFamily`, `bindDevice` 가 정한다). BC(데스크톱)는 빈 글이고 임포트한 DDS 를 그대로 읽습니다. 어느 스레드에서든 부릅니다.
          */
         string getFormatVariantSuffix() const;
         /**

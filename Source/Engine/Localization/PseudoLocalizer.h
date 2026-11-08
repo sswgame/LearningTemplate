@@ -27,7 +27,7 @@ namespace sw
         static string transform( string_view pattern, PseudoLocaleMode mode );
         /**
          * @brief 텍스트 조각 하나를 변환합니다. ASCII 글자는 악센트 글자로 바꾸고, 모음은 한 번 더 써서 길이를 약 40 % 늘립니다. 구문 문자(`{` `}` `'` `#`)는 그대로 둡니다.
-         * @details 리치 텍스트 표기(`[b]`, `[color=…]`, `[[`. `MarkupTagScanner` 참고)도 그대로 둔다.
+         * @details 리치 텍스트 표기(`[b]`, `[color=…]`, `[[`. `MarkupToken` 참고)도 그대로 둔다.
          */
         static string accentLiteral( string_view literalText );
         /** @brief 의사 변환을 거친 텍스트인지(앞뒤 표시가 있는지) 확인합니다. 하드코딩 텍스트 찾기와 테스트가 씁니다. */

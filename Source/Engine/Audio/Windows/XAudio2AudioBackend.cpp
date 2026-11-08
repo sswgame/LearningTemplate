@@ -5,8 +5,8 @@
 #include "Core/Concurrency/StopToken.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 
-#include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioEngine.h"
+#include "Engine/Audio/AudioPcm.h"
 
 #if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
     #include "Engine/Foundation/EnginePlatformHeaders.h"

@@ -17,7 +17,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Backend/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIContextThreadBinding.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"

@@ -79,7 +79,7 @@ namespace sw
             Element::of<&RestaurantCatalog::loadArrival>( "Arrival" ).uncounted(),
             Element::of<&RestaurantCatalog::_weatherCatalog>( "Weather" ).uncounted(),
         };
-        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool RestaurantCatalog::loadArrival( const XMLNode& node, string_view sourceName )

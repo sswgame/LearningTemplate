@@ -10,8 +10,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/CollisionLayers.h"
-#include "Engine/Physics/Collision/ContinuousCollision.h"
 #include "Engine/Physics/Collision/PhysicsQuery.h"
+#include "Engine/Physics/Collision/SweepHit.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
 
@@ -336,7 +336,7 @@ namespace sw
                 continue;
             SweepHit   hit{};
             const AABB otherFromBox = Internal::makeSweepBox( pOther->_frameFromCenter, pOther->_bodyHalfExtent );
-            const bool bEntered     = ContinuousCollision::sweepAABB( fromBox, float3( relative._x, relative._y, 0.0f ), otherFromBox, hit ) && hit._hitFraction > 0.0f;
+            const bool bEntered     = SweepHit::sweepAABB( fromBox, float3( relative._x, relative._y, 0.0f ), otherFromBox, hit ) && hit._hitFraction > 0.0f;
             const bool bStillInside = bEntered && toBox.intersects( Internal::makeSweepBox( pOther->_bodyCenter, pOther->_bodyHalfExtent ) );
             if ( bEntered == false || bStillInside )
                 continue;

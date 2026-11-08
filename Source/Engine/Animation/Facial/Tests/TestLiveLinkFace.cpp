@@ -34,7 +34,7 @@ namespace
         static vector<uint8> makeBytes( const LiveLinkFaceFrame& frame, uint8 version = kVersion )
         {
             vector<uint8> listByte;
-            LiveLinkFacePacket::write( frame, version, listByte );
+            LiveLinkFaceFrame::write( frame, version, listByte );
             return listByte;
         }
     };
@@ -47,7 +47,7 @@ SW_TEST_CASE( LiveLinkFaceTest, PacketRoundTrip )
     const vector<uint8> listByte = Util::makeBytes( Util::makeFrame() );
     LiveLinkFaceFrame   frame{};
     string              error;
-    SW_REQUIRE_TRUE( LiveLinkFacePacket::parse( listByte.data(), listByte.size(), Util::makeLayout(), frame, error ) );
+    SW_REQUIRE_TRUE( LiveLinkFaceFrame::parse( listByte.data(), listByte.size(), Util::makeLayout(), frame, error ) );
     SW_EXPECT_TRUE( error.empty() );
     SW_EXPECT_TRUE( frame._deviceID == "iPhone" );
     SW_EXPECT_TRUE( frame._subjectName == "Actor" );
@@ -74,7 +74,7 @@ SW_TEST_CASE( LiveLinkFaceTest, OtherVersionIsRejected )
     const vector<uint8> listByte = Util::makeBytes( Util::makeFrame(), Util::kVersion + 1 );
     LiveLinkFaceFrame   frame{};
     string              error;
-    SW_EXPECT_FALSE( LiveLinkFacePacket::parse( listByte.data(), listByte.size(), Util::makeLayout(), frame, error ) );
+    SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( listByte.data(), listByte.size(), Util::makeLayout(), frame, error ) );
     SW_EXPECT_FALSE( error.empty() );
 }
 
@@ -86,7 +86,7 @@ SW_TEST_CASE( LiveLinkFaceTest, ChannelCountMismatchLeavesNoPartialFrame )
     const vector<uint8> bytes = Util::makeBytes( source );
     LiveLinkFaceFrame   frame{};
     string              error;
-    SW_EXPECT_FALSE( LiveLinkFacePacket::parse( bytes.data(), bytes.size(), Util::makeLayout(), frame, error ) );
+    SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( bytes.data(), bytes.size(), Util::makeLayout(), frame, error ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( frame._deviceID.empty() );
     SW_EXPECT_TRUE( frame._listValue.empty() );
@@ -101,7 +101,7 @@ SW_TEST_CASE( LiveLinkFaceTest, EveryTruncationIsRejected )
     {
         LiveLinkFaceFrame frame{};
         string            error;
-        SW_EXPECT_FALSE( LiveLinkFacePacket::parse( listByte.data(), size, layout, frame, error ) );
+        SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( listByte.data(), size, layout, frame, error ) );
         SW_EXPECT_FALSE( error.empty() );
         SW_EXPECT_TRUE( frame._listValue.empty() );
     }
@@ -114,7 +114,7 @@ SW_TEST_CASE( LiveLinkFaceTest, TrailingBytesAreRejected )
     listByte.push_back( 0 );
     LiveLinkFaceFrame frame{};
     string            error;
-    SW_EXPECT_FALSE( LiveLinkFacePacket::parse( listByte.data(), listByte.size(), Util::makeLayout(), frame, error ) );
+    SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( listByte.data(), listByte.size(), Util::makeLayout(), frame, error ) );
     SW_EXPECT_FALSE( error.empty() );
 }
 
@@ -128,7 +128,7 @@ SW_TEST_CASE( LiveLinkFaceTest, BadStringLengthIsRejected )
         listByte[1]            = firstLengthByte; // 판 번호 뒤 장치 id 의 길이 맨 앞 바이트
         LiveLinkFaceFrame frame{};
         string            error;
-        SW_EXPECT_FALSE( LiveLinkFacePacket::parse( listByte.data(), listByte.size(), layout, frame, error ) );
+        SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( listByte.data(), listByte.size(), layout, frame, error ) );
         SW_EXPECT_FALSE( error.empty() );
     }
 }
@@ -138,7 +138,7 @@ SW_TEST_CASE( LiveLinkFaceTest, NullDataIsRejected )
 {
     LiveLinkFaceFrame frame{};
     string            error;
-    SW_EXPECT_FALSE( LiveLinkFacePacket::parse( nullptr, 0, Util::makeLayout(), frame, error ) );
+    SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( nullptr, 0, Util::makeLayout(), frame, error ) );
     SW_EXPECT_FALSE( error.empty() );
 }
 

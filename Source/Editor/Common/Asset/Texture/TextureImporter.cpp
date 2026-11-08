@@ -26,7 +26,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
-#include "Engine/Graphics/Texture/TextureFormatSelection.h"
+#include "Engine/Graphics/Texture/TextureFormatFamily.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -480,7 +480,7 @@ namespace sw::editor
             string_view getStampHeader() const override { return "SWTEXVARIANT 1"; }
             string_view getStampFileName() const override { return _stampFileName; }
             string_view getImportedLabel() const override { return "variant DDS"; }
-            string      makeImportedPath( string_view sourcePath ) const override { return TextureFormatSelection::makeVariantPath( TextureImporter::makeImportedTexturePath( sourcePath ), _family._suffix ); }
+            string      makeImportedPath( string_view sourcePath ) const override { return TextureFormatFamily::makeVariantPath( TextureImporter::makeImportedTexturePath( sourcePath ), _family._suffix ); }
             uint64      computeSourceHash( string_view sourcePath, string_view assetPath ) const override
             {
                 const uint64 sourceHash = TextureRawImporter::computeSourceHash( sourcePath, assetPath );

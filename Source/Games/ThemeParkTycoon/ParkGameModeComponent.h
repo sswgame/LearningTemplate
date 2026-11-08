@@ -2,7 +2,7 @@
  * @file ParkGameModeComponent.h
  * @brief ThemeParkTycoon 의 규칙을 돌리는 컴포넌트입니다. 시뮬레이션, 건설, 입력, 자동 건설, 로그를 맡고 런타임 오브젝트(프리팹) 스폰을 지시합니다.
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 손님, 대기줄, 티켓, 평점은 키트의 `ThemeParkSimulation` 이, 코스터 트랙, 물리, 평가는
- *          `CoasterTrackBuilder`, `CoasterTrain`, `CoasterRideAnalyzer` 가 맡는다. 이 컴포넌트는 무엇을 언제 건설하는지와 그 모습(프리팹)을 어디에 스폰하는지를 안다.
+ *          `CoasterTrackBuilder`, `CoasterTrain`, `CoasterRideStats` 가 맡는다. 이 컴포넌트는 무엇을 언제 건설하는지와 그 모습(프리팹)을 어디에 스폰하는지를 안다.
  *          모습을 매 프레임 맞추는 일은 뷰 컴포넌트(`ParkGuestComponent`, `CoasterCarComponent`, `FlatRideComponent`)가 이 컴포넌트를 **읽기만** 해서 처리한다.
  *
  *          틱 규칙, 틱이 끝난 뒤의 스폰, 상태 바이트 보류, 정리는 베이스 `GameModeComponent` 가 맡는다. 디렉터는 `PrePhysics` 에서 상태를 쓰고,

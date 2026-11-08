@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    void XMLCatalogReader::reportNoEntries( string_view sourceName, const utf8* pRootName )
+    void XMLCatalogReadResult::reportNoEntries( string_view sourceName, const utf8* pRootName )
     {
         SW_LOG_WARNING_ID( "XMLCatalog.NoEntries", "%#: <%#> has no entries", sourceName, pRootName );
     }

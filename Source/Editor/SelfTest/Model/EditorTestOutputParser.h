@@ -46,7 +46,7 @@ namespace sw::editor
         /** @brief `Suite.Case` 의 스위트 부분입니다(점이 없으면 전체). */
         static string_view findSuiteName( string_view caseName );
         /**
-         * @brief 출력의 Error 수준 로그 줄 중 테스트가 선언하지 않은 줄 수입니다(쓰는 쪽과 같은 모양으로 읽는다 — `LogLineFormat`).
+         * @brief 출력의 Error 수준 로그 줄 중 테스트가 선언하지 않은 줄 수입니다(쓰는 쪽과 같은 모양으로 읽는다 — `ParsedLogLine`).
          * @details 단위 테스트 실행은 끝에 선언된 Error 줄 수(`test::kDeclaredErrorLinesPrefix`)를 알린다 — 그 수를 뺀다. 그 줄이 없는 실행(시나리오 · 도구)은 모두 센다.
          */
         static uint32 countUndeclaredErrorLines( const vector<string>& listLine );

@@ -7,7 +7,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/LogContext.h"
-#include "Core/Log/LogLineFormat.h"
+#include "Core/Log/ParsedLogLine.h"
 #include "Core/Log/Sink/ConsoleLogOutput.h"
 #include "Core/Log/Sink/FileLogOutput.h"
 #include "Core/Log/Sink/ILogOutput.h"
@@ -130,7 +130,7 @@ namespace sw
             static void formatLine( fixed_string<constant::buffer::kMax8192>& outBuffer, const DateStamp& stamp, LogLevel level, const utf8* pTag, const utf8* pTickTag,
                                     const utf8* pContextTag, const utf8* pIDTag, const utf8* pMessage, const utf8* pFile, int32 line )
             {
-                const utf8* pHeader = LogLineFormat::getLevelLabel( level ); // 읽는 쪽(`LogLineFormat::tryParse`)과 같은 표
+                const utf8* pHeader = ParsedLogLine::getLevelLabel( level ); // 읽는 쪽(`ParsedLogLine::tryParse`)과 같은 표
                 formatstring( outBuffer.data(), outBuffer.capacity(), "[%#] [%#] [%#] %#%#- %#%#\n -> %#:%#\n", stamp._text.c_str(), pTag, pHeader, pTickTag, pContextTag, pIDTag,
                               pMessage, pFile, line );
             }

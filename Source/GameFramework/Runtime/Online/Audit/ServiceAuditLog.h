@@ -65,7 +65,7 @@ namespace sw
         /** @brief 운영자 행위자 이름 `gm.<16 진>` 입니다. @p operatorID 가 0(없는 계정)이면 시스템이 한 일이라 `kSystemActor` 입니다. */
         static string makeOperatorActor( uint64 operatorID );
         static string makeKey( const ServiceAuditEntry& entry, uint64 uniqueHigh, uint64 uniqueLow );
-        /** @brief 줄의 키 `<대상>/<시각 16 진 16>/<고유 16 진 32>` 에서 기록 시각을 읽습니다(보존 기간 쓸기 `ServiceRetention` 용). 형식이 틀리면 false 입니다. */
+        /** @brief 줄의 키 `<대상>/<시각 16 진 16>/<고유 16 진 32>` 에서 기록 시각을 읽습니다(보존 기간 쓸기 `ServiceRetentionRule` 용). 형식이 틀리면 false 입니다. */
         [[nodiscard]] static bool readTimeMs( const ServiceRecord& record, int64& outTimeMs );
         /** @brief 상한, 키 규칙, 동작 코드 문자를 지키는지입니다. */
         static bool isValidEntry( const ServiceAuditEntry& entry );

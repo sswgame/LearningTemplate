@@ -6,10 +6,10 @@
 #include "Engine/UI/Layout/OverlayPanel.h"
 #include "Engine/UI/Layout/ScrollPanel.h"
 #include "Engine/UI/WidgetTree/Tests/UITestWidgets.h"
-#include "Engine/UI/WidgetTree/UIEventRouter.h"
 #include "Engine/UI/WidgetTree/UIFocusManager.h"
 #include "Engine/UI/WidgetTree/UINavigationSolver.h"
 #include "Engine/UI/WidgetTree/UIPointerState.h"
+#include "Engine/UI/WidgetTree/UIWidgetPath.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/SliderWidget.h"
 
@@ -383,14 +383,14 @@ SW_TEST_CASE( UIEventRouterTest, HitTestFindsTheDeepestUnderThePoint )
 {
     UIEventScene scene;
     UIWidgetPath path;
-    SW_EXPECT_TRUE( UIEventRouter::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );
+    SW_EXPECT_TRUE( UIWidgetPath::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );
     SW_EXPECT_TRUE( path.getLeaf() == scene._pLeaf->getID() );
     SW_EXPECT_TRUE( path.contains( scene._pRoot->getID() ) );
 
-    SW_EXPECT_TRUE( UIEventRouter::hitTest( scene._tree, float2{ 90.0f, 10.0f }, path ) );
+    SW_EXPECT_TRUE( UIWidgetPath::hitTest( scene._tree, float2{ 90.0f, 10.0f }, path ) );
     SW_EXPECT_TRUE( path.getLeaf() == scene._pRoot->getID() );
 
-    SW_EXPECT_FALSE( UIEventRouter::hitTest( scene._tree, float2{ 500.0f, 10.0f }, path ) );
+    SW_EXPECT_FALSE( UIWidgetPath::hitTest( scene._tree, float2{ 500.0f, 10.0f }, path ) );
     SW_EXPECT_TRUE( path.isEmpty() );
 }
 
@@ -399,20 +399,20 @@ SW_TEST_CASE( UIEventRouterTest, VisibilityDecidesWhatIsHit )
     UIEventScene scene;
     UIWidgetPath path;
     scene._pLeaf->setVisibility( WidgetVisibility::Hidden );
-    SW_EXPECT_TRUE( UIEventRouter::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );
+    SW_EXPECT_TRUE( UIWidgetPath::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );
     SW_EXPECT_TRUE( path.getLeaf() == scene._pRoot->getID() );
 
     scene._pLeaf->setVisibility( WidgetVisibility::HitTestInvisible );
-    SW_EXPECT_TRUE( UIEventRouter::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );
+    SW_EXPECT_TRUE( UIWidgetPath::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );
     SW_EXPECT_TRUE( path.getLeaf() == scene._pRoot->getID() );
 
     scene._pLeaf->setVisibility( WidgetVisibility::Visible );
     scene._pRoot->setVisibility( WidgetVisibility::SelfHitTestInvisible );
-    SW_EXPECT_TRUE( UIEventRouter::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );  // 자식은 받는다
-    SW_EXPECT_FALSE( UIEventRouter::hitTest( scene._tree, float2{ 90.0f, 10.0f }, path ) ); // 자기는 받지 않는다
+    SW_EXPECT_TRUE( UIWidgetPath::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );  // 자식은 받는다
+    SW_EXPECT_FALSE( UIWidgetPath::hitTest( scene._tree, float2{ 90.0f, 10.0f }, path ) ); // 자기는 받지 않는다
 
     scene._pRoot->setVisibility( WidgetVisibility::HitTestInvisible );
-    SW_EXPECT_FALSE( UIEventRouter::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );
+    SW_EXPECT_FALSE( UIWidgetPath::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );
 }
 
 SW_TEST_CASE( UIEventRouterTest, TopmostChildIsHitFirstFollowingZOrder )
@@ -426,7 +426,7 @@ SW_TEST_CASE( UIEventRouterTest, TopmostChildIsHitFirstFollowingZOrder )
     UITestLeaf& lowered     = UITestUtil::addLeaf( canvas, float2{}, slot );
     (void)UITestUtil::layout( tree, float2{ 100.0f, 100.0f } );
     UIWidgetPath path;
-    SW_REQUIRE_TRUE( UIEventRouter::hitTest( tree, float2{ 10.0f, 10.0f }, path ) );
+    SW_REQUIRE_TRUE( UIWidgetPath::hitTest( tree, float2{ 10.0f, 10.0f }, path ) );
     SW_EXPECT_TRUE( path.getLeaf() == raised.getID() ); // 뒤에 붙은 쪽이 아니라 z 가 높은 쪽이다
     SW_EXPECT_TRUE( path.contains( lowered.getID() ) == false );
 }
@@ -440,10 +440,10 @@ SW_TEST_CASE( UIEventRouterTest, ClippedChildIsNotHitOutsideItsPanel )
     UITestLeaf&  leaf    = UITestUtil::addLeaf( clipped, float2{}, UITestUtil::makeCanvasSlot( 0.0f, 0.0f, 100.0f, 100.0f ) );
     (void)UITestUtil::layout( tree, float2{ 200.0f, 200.0f } );
     UIWidgetPath path;
-    SW_REQUIRE_TRUE( UIEventRouter::hitTest( tree, float2{ 80.0f, 80.0f }, path ) );
+    SW_REQUIRE_TRUE( UIWidgetPath::hitTest( tree, float2{ 80.0f, 80.0f }, path ) );
     SW_EXPECT_TRUE( path.getLeaf() == leaf.getID() ); // 자르지 않으면 받는다
     clipped.setClipChildren( true );
-    SW_REQUIRE_TRUE( UIEventRouter::hitTest( tree, float2{ 80.0f, 80.0f }, path ) );
+    SW_REQUIRE_TRUE( UIWidgetPath::hitTest( tree, float2{ 80.0f, 80.0f }, path ) );
     SW_EXPECT_TRUE( path.getLeaf() == root.getID() );
 }
 
@@ -451,20 +451,20 @@ SW_TEST_CASE( UIEventRouterTest, RouteTunnelsThenBubblesAndStopsWhenHandled )
 {
     UIEventScene scene;
     UIWidgetPath path;
-    SW_REQUIRE_TRUE( UIEventRouter::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );
+    SW_REQUIRE_TRUE( UIWidgetPath::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );
     const UIPointerEvent event   = UIEventScene::makeEvent( UIPointerEventKind::Down, 10.0f, 10.0f );
     WidgetID             handler = kInvalidWidgetID;
-    SW_EXPECT_FALSE( UIEventRouter::routePointerEvent( scene._tree, path, event, handler ).isHandled() );
+    SW_EXPECT_FALSE( UIWidgetPath::routePointerEvent( scene._tree, path, event, handler ).isHandled() );
     SW_EXPECT_TRUE( scene._log.take() == "root:T,leaf:T,leaf:B,root:B" );
     SW_EXPECT_TRUE( handler == kInvalidWidgetID );
 
     scene._pLeaf->setHandleBubble();
-    SW_EXPECT_TRUE( UIEventRouter::routePointerEvent( scene._tree, path, event, handler ).isHandled() );
+    SW_EXPECT_TRUE( UIWidgetPath::routePointerEvent( scene._tree, path, event, handler ).isHandled() );
     SW_EXPECT_TRUE( scene._log.take() == "root:T,leaf:T,leaf:B" );
     SW_EXPECT_TRUE( handler == scene._pLeaf->getID() );
 
     scene._pLeaf->setHandleTunnel();
-    SW_EXPECT_TRUE( UIEventRouter::routePointerEvent( scene._tree, path, event, handler ).isHandled() );
+    SW_EXPECT_TRUE( UIWidgetPath::routePointerEvent( scene._tree, path, event, handler ).isHandled() );
     SW_EXPECT_TRUE( scene._log.take() == "root:T,leaf:T" );
 }
 
@@ -473,10 +473,10 @@ SW_TEST_CASE( UIEventRouterTest, DisabledWidgetsBlockButDoNotReceive )
     UIEventScene scene;
     scene._pLeaf->setEnabled( false );
     UIWidgetPath path;
-    SW_REQUIRE_TRUE( UIEventRouter::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );
+    SW_REQUIRE_TRUE( UIWidgetPath::hitTest( scene._tree, float2{ 10.0f, 10.0f }, path ) );
     SW_EXPECT_TRUE( path.getLeaf() == scene._pLeaf->getID() ); // 아래로 새지 않는다
     WidgetID handler = kInvalidWidgetID;
-    (void)UIEventRouter::routePointerEvent( scene._tree, path, UIEventScene::makeEvent( UIPointerEventKind::Down, 10.0f, 10.0f ), handler );
+    (void)UIWidgetPath::routePointerEvent( scene._tree, path, UIEventScene::makeEvent( UIPointerEventKind::Down, 10.0f, 10.0f ), handler );
     SW_EXPECT_TRUE( scene._log.take() == "root:T,root:B" );
 }
 
@@ -484,11 +484,11 @@ SW_TEST_CASE( UIEventRouterTest, PathToAWidgetGoesRootFirst )
 {
     UIEventScene scene;
     UIWidgetPath path;
-    SW_REQUIRE_TRUE( UIEventRouter::makePathTo( scene._tree, scene._pLeaf->getID(), path ) );
+    SW_REQUIRE_TRUE( UIWidgetPath::makePathTo( scene._tree, scene._pLeaf->getID(), path ) );
     SW_REQUIRE_EQUAL( size_t{ 2 }, path._listWidget.size() );
     SW_EXPECT_TRUE( path._listWidget[0] == scene._pRoot->getID() );
     SW_EXPECT_TRUE( path._listWidget[1] == scene._pLeaf->getID() );
-    SW_EXPECT_FALSE( UIEventRouter::makePathTo( scene._tree, kInvalidWidgetID, path ) );
+    SW_EXPECT_FALSE( UIWidgetPath::makePathTo( scene._tree, kInvalidWidgetID, path ) );
 }
 
 // ---------------------------------------------------------------------- 포인터 상태
@@ -698,14 +698,14 @@ SW_TEST_CASE( UIEventRouterTest, TouchHitTestGrowsSmallTargets )
 {
     UIFocusGrid  grid;
     UIWidgetPath path;
-    SW_REQUIRE_TRUE( UIEventRouter::hitTestTouch( grid._tree, float2{ 60.0f, 20.0f }, 80.0f, path ) );
+    SW_REQUIRE_TRUE( UIWidgetPath::hitTestTouch( grid._tree, float2{ 60.0f, 20.0f }, 80.0f, path ) );
     SW_EXPECT_TRUE( path.getLeaf() == grid._pA->getID() );
     SW_EXPECT_TRUE( path.contains( grid._pCanvas->getID() ) );
 
-    (void)UIEventRouter::hitTestTouch( grid._tree, float2{ 60.0f, 20.0f }, 0.0f, path ); // 캔버스가 받거나 아무도 받지 않는다 — 조작은 아니다
+    (void)UIWidgetPath::hitTestTouch( grid._tree, float2{ 60.0f, 20.0f }, 0.0f, path ); // 캔버스가 받거나 아무도 받지 않는다 — 조작은 아니다
     SW_EXPECT_TRUE( path.getLeaf() != grid._pA->getID() );
 
     // 두 조작 사이 한가운데보다 B 쪽이면 B 가 받는다(중심 거리)
-    SW_REQUIRE_TRUE( UIEventRouter::hitTestTouch( grid._tree, float2{ 90.0f, 20.0f }, 80.0f, path ) );
+    SW_REQUIRE_TRUE( UIWidgetPath::hitTestTouch( grid._tree, float2{ 90.0f, 20.0f }, 80.0f, path ) );
     SW_EXPECT_TRUE( path.getLeaf() == grid._pB->getID() );
 }

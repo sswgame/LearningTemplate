@@ -267,7 +267,7 @@ namespace sw
             Element::of<&CameraPresetCatalog::loadPreset>( "Preset" ),
             Element::of<&CameraPresetCatalog::loadBlendRule>( "Blend" ).uncounted(),
         };
-        return XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool CameraPresetCatalog::loadDefaultBlend( const XMLNode& node, string_view sourceName )

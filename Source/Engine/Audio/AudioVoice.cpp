@@ -179,7 +179,7 @@ namespace sw
         else
         {
             float32 arrPanGain[audio::kMaxChannelCount]{};
-            AudioPanner::computeGains( layout, direction, arrPanGain );
+            AudioPanDirection::computeGains( layout, direction, arrPanGain );
             for ( uint32 channelIndex = 0; channelIndex < audio::kMaxChannelCount; ++channelIndex )
             {
                 _arrTargetGain[channelIndex] = volume * arrPanGain[channelIndex];

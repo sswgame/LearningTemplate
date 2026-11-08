@@ -88,7 +88,7 @@ namespace sw
             Element::of<&JRPGCatalog::loadEnemy>( "Enemy" ),
             Element::of<&JRPGCatalog::loadArea>( "Area" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
         // 전투는 모르는 주문을 위력 0 으로 터뜨린다 — 오타가 말없이 시전만 하는 적이 되지 않게 참조 표(`engine/settings/datacatalogreferences.xml`)가 로드를 멈춘다.
         return result._loadedCount;

@@ -234,9 +234,9 @@ SW_TEST_CASE( LipSyncTest, TrackPathReplacesTheAudioExtension )
 SW_TEST_CASE( LipSyncTest, OpennessMapsRmsBetweenSilenceAndFull )
 {
     const LipSyncSettings settings = LipSyncTestUtil::makeSettings();
-    SW_EXPECT_EQUAL( LipSyncAnalyzer::computeOpenness( 0.0f, settings ), 0.0f );
-    SW_EXPECT_EQUAL( LipSyncAnalyzer::computeOpenness( 1.0f, settings ), 1.0f );
-    SW_EXPECT_NEAR( LipSyncAnalyzer::computeOpenness( ( settings._silenceRms + settings._fullRms ) * 0.5f, settings ), 0.5f, 1e-5f );
+    SW_EXPECT_EQUAL( VisemeTrack::computeOpenness( 0.0f, settings ), 0.0f );
+    SW_EXPECT_EQUAL( VisemeTrack::computeOpenness( 1.0f, settings ), 1.0f );
+    SW_EXPECT_NEAR( VisemeTrack::computeOpenness( ( settings._silenceRms + settings._fullRms ) * 0.5f, settings ), 0.5f, 1e-5f );
 }
 
 SW_TEST_CASE( LipSyncTest, RmsReadsTheWindowAroundTheTime )
@@ -246,25 +246,25 @@ SW_TEST_CASE( LipSyncTest, RmsReadsTheWindowAroundTheTime )
     {
         listSample[index] = 0.5f;
     }
-    SW_EXPECT_EQUAL( LipSyncAnalyzer::computeRms( listSample, 16000, 0.02f, 0.01f ), 0.0f );
-    SW_EXPECT_NEAR( LipSyncAnalyzer::computeRms( listSample, 16000, 0.08f, 0.01f ), 0.5f, 1e-5f );
-    SW_EXPECT_EQUAL( LipSyncAnalyzer::computeRms( listSample, 16000, 1.0f, 0.01f ), 0.0f ); // 끝 뒤
-    SW_EXPECT_EQUAL( LipSyncAnalyzer::computeRms( listSample, 16000, -1.0f, 0.01f ), 0.0f );
-    SW_EXPECT_EQUAL( LipSyncAnalyzer::computeRms( listSample, 0, 0.08f, 0.01f ), 0.0f );
-    SW_EXPECT_EQUAL( LipSyncAnalyzer::computeRms( {}, 16000, 0.08f, 0.01f ), 0.0f );
+    SW_EXPECT_EQUAL( VisemeTrack::computeRms( listSample, 16000, 0.02f, 0.01f ), 0.0f );
+    SW_EXPECT_NEAR( VisemeTrack::computeRms( listSample, 16000, 0.08f, 0.01f ), 0.5f, 1e-5f );
+    SW_EXPECT_EQUAL( VisemeTrack::computeRms( listSample, 16000, 1.0f, 0.01f ), 0.0f ); // 끝 뒤
+    SW_EXPECT_EQUAL( VisemeTrack::computeRms( listSample, 16000, -1.0f, 0.01f ), 0.0f );
+    SW_EXPECT_EQUAL( VisemeTrack::computeRms( listSample, 0, 0.08f, 0.01f ), 0.0f );
+    SW_EXPECT_EQUAL( VisemeTrack::computeRms( {}, 16000, 0.08f, 0.01f ), 0.0f );
 }
 
 SW_TEST_CASE( LipSyncTest, FormantsOfASyntheticVowelAreFound )
 {
     float2                formantHz;
     const vector<float32> listSample = LipSyncTestUtil::makeVowel( LipSyncTestUtil::kSampleRate, 700.0f, 1800.0f, 1024 );
-    SW_REQUIRE_TRUE( LipSyncAnalyzer::tryComputeFormants( listSample.data(), listSample.size(), LipSyncTestUtil::kSampleRate, formantHz ) );
+    SW_REQUIRE_TRUE( VisemeTrack::tryComputeFormants( listSample.data(), listSample.size(), LipSyncTestUtil::kSampleRate, formantHz ) );
     SW_EXPECT_NEAR( formantHz._x, 700.0f, 100.0f );
     SW_EXPECT_NEAR( formantHz._y, 1800.0f, 150.0f );
 
     // 높은 표본율은 솎아서 같은 답을 낸다.
     const vector<float32> listHighRate = LipSyncTestUtil::makeVowel( 48000, 700.0f, 1800.0f, 3072 );
-    SW_REQUIRE_TRUE( LipSyncAnalyzer::tryComputeFormants( listHighRate.data(), listHighRate.size(), 48000, formantHz ) );
+    SW_REQUIRE_TRUE( VisemeTrack::tryComputeFormants( listHighRate.data(), listHighRate.size(), 48000, formantHz ) );
     SW_EXPECT_NEAR( formantHz._x, 700.0f, 100.0f );
     SW_EXPECT_NEAR( formantHz._y, 1800.0f, 150.0f );
 }
@@ -273,21 +273,21 @@ SW_TEST_CASE( LipSyncTest, FormantsNeedEnoughSamples )
 {
     float2                formantHz;
     const vector<float32> listSample( 16, 0.5f );
-    SW_EXPECT_FALSE( LipSyncAnalyzer::tryComputeFormants( listSample.data(), listSample.size(), LipSyncTestUtil::kSampleRate, formantHz ) ); // 차수보다 짧다
-    SW_EXPECT_FALSE( LipSyncAnalyzer::tryComputeFormants( nullptr, 1024, LipSyncTestUtil::kSampleRate, formantHz ) );
-    SW_EXPECT_FALSE( LipSyncAnalyzer::tryComputeFormants( listSample.data(), listSample.size(), 0, formantHz ) );
+    SW_EXPECT_FALSE( VisemeTrack::tryComputeFormants( listSample.data(), listSample.size(), LipSyncTestUtil::kSampleRate, formantHz ) ); // 차수보다 짧다
+    SW_EXPECT_FALSE( VisemeTrack::tryComputeFormants( nullptr, 1024, LipSyncTestUtil::kSampleRate, formantHz ) );
+    SW_EXPECT_FALSE( VisemeTrack::tryComputeFormants( listSample.data(), listSample.size(), 0, formantHz ) );
     const vector<float32> listSilence( 1024, 0.0f );
-    SW_EXPECT_FALSE( LipSyncAnalyzer::tryComputeFormants( listSilence.data(), listSilence.size(), LipSyncTestUtil::kSampleRate, formantHz ) ); // 자기상관이 0 이다
+    SW_EXPECT_FALSE( VisemeTrack::tryComputeFormants( listSilence.data(), listSilence.size(), LipSyncTestUtil::kSampleRate, formantHz ) ); // 자기상관이 0 이다
 }
 
 SW_TEST_CASE( LipSyncTest, AnalyzeWithNothingKeepsTheNamesAndNoFrames )
 {
     const LipSyncSettings settings = LipSyncTestUtil::makeSettings();
     VisemeTrack           track;
-    LipSyncAnalyzer::analyze( {}, LipSyncTestUtil::kSampleRate, settings, track );
+    VisemeTrack::analyze( {}, LipSyncTestUtil::kSampleRate, settings, track );
     SW_EXPECT_EQUAL( track.getVisemeCount(), 4u );
     SW_EXPECT_EQUAL( track.getFrameCount(), 0u );
-    LipSyncAnalyzer::analyze( vector<float32>( 100, 0.5f ), 0, settings, track );
+    VisemeTrack::analyze( vector<float32>( 100, 0.5f ), 0, settings, track );
     SW_EXPECT_EQUAL( track.getFrameCount(), 0u );
 }
 
@@ -295,7 +295,7 @@ SW_TEST_CASE( LipSyncTest, AnalyzeCountsPartialLastFrame )
 {
     const LipSyncSettings settings = LipSyncTestUtil::makeSettings();
     VisemeTrack           track;
-    LipSyncAnalyzer::analyze( vector<float32>( 534, 0.0f ), LipSyncTestUtil::kSampleRate, settings, track ); // 프레임당 533 표본
+    VisemeTrack::analyze( vector<float32>( 534, 0.0f ), LipSyncTestUtil::kSampleRate, settings, track ); // 프레임당 533 표본
     SW_EXPECT_EQUAL( track.getFrameCount(), 2u );
     SW_EXPECT_EQUAL( LipSyncTestUtil::readWeight( track, 1, LipSyncTestUtil::kSilence ), 1.0f );
 }
@@ -304,7 +304,7 @@ SW_TEST_CASE( LipSyncTest, AnalyzeSilenceIsAllSilenceViseme )
 {
     const LipSyncSettings settings = LipSyncTestUtil::makeSettings();
     VisemeTrack           track;
-    LipSyncAnalyzer::analyze( vector<float32>( 2000, 0.0f ), LipSyncTestUtil::kSampleRate, settings, track );
+    VisemeTrack::analyze( vector<float32>( 2000, 0.0f ), LipSyncTestUtil::kSampleRate, settings, track );
     SW_REQUIRE_TRUE( track.getFrameCount() > 0 );
     for ( uint32 frame = 0; frame < track.getFrameCount(); ++frame )
     {
@@ -320,7 +320,7 @@ SW_TEST_CASE( LipSyncTest, AnalyzeLowToneIsAVowelNotAPlosive )
     vector<float32>       listSample;
     LipSyncTestUtil::appendSine( listSample, 300.0f, 0.5f, 3000 );
     VisemeTrack track;
-    LipSyncAnalyzer::analyze( listSample, LipSyncTestUtil::kSampleRate, settings, track );
+    VisemeTrack::analyze( listSample, LipSyncTestUtil::kSampleRate, settings, track );
     SW_REQUIRE_TRUE( track.getFrameCount() >= 3 );
     for ( uint32 frame = 0; frame < 3; ++frame )
     {
@@ -336,7 +336,7 @@ SW_TEST_CASE( LipSyncTest, AnalyzeNoiseBurstIsAPlosiveThenAFricative )
     vector<float32>       listSample;
     LipSyncTestUtil::appendNoise( listSample, 0.6f, 533 * 4 );
     VisemeTrack track;
-    LipSyncAnalyzer::analyze( listSample, LipSyncTestUtil::kSampleRate, settings, track );
+    VisemeTrack::analyze( listSample, LipSyncTestUtil::kSampleRate, settings, track );
     SW_REQUIRE_TRUE( track.getFrameCount() >= 3 );
     SW_EXPECT_TRUE( LipSyncTestUtil::readWeight( track, 0, LipSyncTestUtil::kPlosive ) > LipSyncTestUtil::readWeight( track, 0, LipSyncTestUtil::kHiss ) );
     SW_EXPECT_TRUE( LipSyncTestUtil::readWeight( track, 2, LipSyncTestUtil::kHiss ) > LipSyncTestUtil::readWeight( track, 2, LipSyncTestUtil::kPlosive ) );
@@ -349,7 +349,7 @@ SW_TEST_CASE( LipSyncTest, AnalyzeWeightsSumToOneAndFollowOpenness )
     vector<float32>       listSample;
     LipSyncTestUtil::appendSine( listSample, 300.0f, 0.191f, 5000 ); // RMS 0.135 - 무음과 최대의 한가운데
     VisemeTrack track;
-    LipSyncAnalyzer::analyze( listSample, LipSyncTestUtil::kSampleRate, settings, track );
+    VisemeTrack::analyze( listSample, LipSyncTestUtil::kSampleRate, settings, track );
     SW_REQUIRE_TRUE( track.getFrameCount() >= 3 );
     for ( uint32 frame = 0; frame < track.getFrameCount(); ++frame )
     {

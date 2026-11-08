@@ -30,7 +30,7 @@
 #include "Editor/Common/Asset/Model/ModelImportMaterial.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/ModelImportVrm.h"
-#include "Editor/Common/Asset/Model/VrmMaterialImporter.h"
+#include "Editor/Common/Asset/Model/ToonMaterialDef.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -989,7 +989,7 @@ namespace sw::editor
         const bool bVrm = ModelImportVrm::containsVrmExtension( bytes );
         if ( bVrm )
         {
-            const string avatarText = formatToString( "avatar=%#", VrmAvatarImporter::kVersion );
+            const string avatarText = formatToString( "avatar=%#", VrmAvatarDef::kVersion );
             hash                    = HashUtil::computeStringHash64( avatarText.c_str(), avatarText.size(), false, hash );
         }
         // 모델 옆 머티리얼을 찍어 내는 견본(VRM 은 툰, 그 밖은 PBR)도 섞는다 — 견본에 프로퍼티 · 스위치를 더하면 이미 쓴 머티리얼도 다시 써야 한다.

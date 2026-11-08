@@ -116,7 +116,7 @@ namespace sw::editor
         if ( bOpenRequested )
         {
             bool                bSelectOnlyHovered = false;
-            EditorCommandTarget target             = EditorContextMenuRules::makeMenuTarget( subject._kind, subject._hoveredID, subject._listSelectedID, bSelectOnlyHovered );
+            EditorCommandTarget target             = EditorCommandTarget::makeMenuTarget( subject._kind, subject._hoveredID, subject._listSelectedID, bSelectOnlyHovered );
             target._worldPosition                  = subject._worldPosition;
             target._bHasWorldPosition              = subject._bHasWorldPosition;
             registry.collectContextMenuItems( subject._kind, listItem );

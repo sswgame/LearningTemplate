@@ -4,10 +4,10 @@
 Scripts/lint/CatalogRootShape.py
 
 게임 데이터 루트의 원소를 손으로 고르는 모양을 막는다. 2026-11-07 — 카탈로그 68 곳이 저마다 고르면서 대소문자 판정 · 모르는 원소 처리(오류 · 경고 · 말없이 넘김) · 로그 id 가 갈렸다.
-**왜 형식이 아니라 린트인가.** 길은 형식으로 냈다(`XMLCatalogElement` · `XMLCatalogReader`). `XMLNode::findChild` 는 어디서든 부를 수 있어 다른 길을 형식으로 막지 못한다.
+**왜 형식이 아니라 린트인가.** 길은 형식으로 냈다(`XMLCatalogElement` · `XMLCatalogReadResult`). `XMLNode::findChild` 는 어디서든 부를 수 있어 다른 길을 형식으로 막지 못한다.
 
 1. `XMLReadUtil::isElement` 를 부르지 않는다 — 대소문자를 무시해 표의 철자 판정과 갈린다.
-2. `for ( XMLNode x = root.findChild(...` 로 루트 자식을 돌지 않는다 — `XMLCatalogReader` 를 지난다. 까닭이 있는 파일은 `Config/Dev/CatalogRootLoopFiles.json` 에 이유와 함께 적는다.
+2. `for ( XMLNode x = root.findChild(...` 로 루트 자식을 돌지 않는다 — `XMLCatalogReadResult` 를 지난다. 까닭이 있는 파일은 `Config/Dev/CatalogRootLoopFiles.json` 에 이유와 함께 적는다.
 
 `py -3 -m Scripts catalog-root [--files …|--all|--self-check]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
 """
@@ -41,7 +41,7 @@ def inspectText(text: str, relative: str, setException: frozenset[str]) -> list[
         if kIsElement.search(line):
             listViolation.append(f"{relative}:{index + 1}: `XMLReadUtil::isElement` 는 대소문자를 무시한다 — 루트면 `XMLCatalogElement` 표, 안쪽 원소면 `StringUtil::equals` 를 쓴다")
         if kRootLoop.search(line) and relative not in setException:
-            listViolation.append(f"{relative}:{index + 1}: 루트 자식을 손으로 돈다 — `XMLCatalogReader` 를 지난다(까닭이 있으면 {kExceptionFile} 에 이유와 함께 적는다)")
+            listViolation.append(f"{relative}:{index + 1}: 루트 자식을 손으로 돈다 — `XMLCatalogReadResult` 를 지난다(까닭이 있으면 {kExceptionFile} 에 이유와 함께 적는다)")
     return listViolation
 
 

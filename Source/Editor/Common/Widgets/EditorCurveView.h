@@ -19,7 +19,7 @@ namespace sw::editor
     /**
      * @struct EditorCurveView
      * @brief 커브 편집기 화면 하나의 보이는 범위입니다. 시간은 오른쪽으로, 값은 위로 늘어납니다(화면 y 는 아래로 늘어난다).
-     * @details 키 · 접선 손잡이 맞힘, 화면 맞추기(F), 확대(휠) · 이동(가운데 끌기), 격자 눈금 간격을 셉니다. 그리기는 `EditorCurveEditor` 가 합니다.
+     * @details 키 · 접선 손잡이 맞힘, 화면 맞추기(F), 확대(휠) · 이동(가운데 끌기), 격자 눈금 간격을 셉니다. 그리기는 `EditorCurveEditorState` 가 합니다.
      */
     struct SW_EDITOR_API EditorCurveView
     {

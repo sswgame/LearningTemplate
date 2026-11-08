@@ -128,7 +128,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&PartyRoundSeries::_listRound>( "Round" ),
         };
-        const uint32 loadedCount = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        const uint32 loadedCount = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
         if ( loadedCount == 0 )
         {
             _listRound.swap( listPreviousRound );

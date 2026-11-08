@@ -52,7 +52,7 @@ namespace sw
 
 namespace sw
 {
-    int32 VoxelTerrainGenerator::computeSurfaceHeight( int32 x, int32 z, const VoxelTerrainSettings& settings )
+    int32 VoxelTerrainSettings::computeSurfaceHeight( int32 x, int32 z, const VoxelTerrainSettings& settings )
     {
         const float32 noise = ValueNoise::sampleFractal( static_cast<float32>( x ) * settings._noiseScale, static_cast<float32>( z ) * settings._noiseScale,
                                                          settings._seed, settings._octaveCount );
@@ -61,7 +61,7 @@ namespace sw
         return MathUtil::clamp( height, 1, kVoxelChunkHeight - 10 );
     }
 
-    VoxelTerrainReport VoxelTerrainGenerator::fillWorld( VoxelWorld& world, const VoxelTerrainSettings& settings )
+    VoxelTerrainReport VoxelTerrainSettings::fillWorld( VoxelWorld& world, const VoxelTerrainSettings& settings )
     {
         VoxelTerrainReport report;
         report._minHeight                 = kVoxelChunkHeight;

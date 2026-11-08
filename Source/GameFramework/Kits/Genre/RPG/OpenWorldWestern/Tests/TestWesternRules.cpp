@@ -6,9 +6,9 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternCarcass.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternHonor.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternHorse.h"
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternHunting.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternLaw.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternSurvival.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
@@ -241,7 +241,7 @@ namespace
     {
         int32 stars( const sw::hashed_string& animal, const sw::hashed_string& weapon, const sw::hashed_string& zone, int32 hitCount ) const
         {
-            return sw::WesternHunting::computePeltStars( _catalog, sw::WesternKill{ animal, weapon, zone, hitCount } );
+            return sw::WesternCarcass::computePeltStars( _catalog, sw::WesternKill{ animal, weapon, zone, hitCount } );
         }
 
         sw::WesternCarcass carcass( int32 carcassStars, float32 ageHours ) const
@@ -972,7 +972,7 @@ SW_TEST_CASE_F( WesternHuntingTest, PeltStarsFromKill )
     SW_EXPECT_EQUAL( 1, stars( "rabbit", "varmint", "head", 1 ) ); // 품질 1
     SW_EXPECT_EQUAL( 0, stars( "rabbit", "rifle", "head", 1 ) );
 
-    const sw::WesternCarcass made = sw::WesternHunting::makeCarcass( _catalog, sw::WesternKill{ "deer", "rifle", "body", 1 } );
+    const sw::WesternCarcass made = sw::WesternCarcass::makeCarcass( _catalog, sw::WesternKill{ "deer", "rifle", "body", 1 } );
     SW_EXPECT_EQUAL( 2, made._stars );
     SW_EXPECT_EQUAL( sw::hashed_string( "deer" ), made._animalID );
 }
@@ -983,20 +983,20 @@ SW_TEST_CASE_F( WesternHuntingTest, PeltStarsFromKill )
 SW_TEST_CASE_F( WesternHuntingTest, CarcassDecayBoundaries )
 {
     sw::WesternCarcass fresh = carcass( 3, 0.0f );
-    sw::WesternHunting::ageCarcass( fresh, -100.0f );
+    sw::WesternCarcass::ageCarcass( fresh, -100.0f );
     SW_EXPECT_NEAR( 0.0f, fresh._ageHours, kWesternTolerance );
-    sw::WesternHunting::ageCarcass( fresh, 23.5f );
-    SW_EXPECT_EQUAL( 3, sw::WesternHunting::computeCarcassStars( _catalog, fresh ) );
+    sw::WesternCarcass::ageCarcass( fresh, 23.5f );
+    SW_EXPECT_EQUAL( 3, sw::WesternCarcass::computeCarcassStars( _catalog, fresh ) );
 
-    SW_EXPECT_EQUAL( 2, sw::WesternHunting::computeCarcassStars( _catalog, carcass( 3, 24.0f ) ) );
-    SW_EXPECT_EQUAL( 0, sw::WesternHunting::computeCarcassStars( _catalog, carcass( 0, 24.0f ) ) ); // 음수로 가지 않는다
-    SW_EXPECT_FALSE( sw::WesternHunting::isRotten( _catalog, carcass( 3, 47.5f ) ) );
-    SW_EXPECT_TRUE( sw::WesternHunting::isRotten( _catalog, carcass( 3, 48.0f ) ) );
-    SW_EXPECT_EQUAL( 0, sw::WesternHunting::computeCarcassStars( _catalog, carcass( 3, 48.0f ) ) );
+    SW_EXPECT_EQUAL( 2, sw::WesternCarcass::computeCarcassStars( _catalog, carcass( 3, 24.0f ) ) );
+    SW_EXPECT_EQUAL( 0, sw::WesternCarcass::computeCarcassStars( _catalog, carcass( 0, 24.0f ) ) ); // 음수로 가지 않는다
+    SW_EXPECT_FALSE( sw::WesternCarcass::isRotten( _catalog, carcass( 3, 47.5f ) ) );
+    SW_EXPECT_TRUE( sw::WesternCarcass::isRotten( _catalog, carcass( 3, 48.0f ) ) );
+    SW_EXPECT_EQUAL( 0, sw::WesternCarcass::computeCarcassStars( _catalog, carcass( 3, 48.0f ) ) );
 
     sw::WesternCarcass unknown;
     unknown._animalID = "nothing";
-    SW_EXPECT_TRUE( sw::WesternHunting::isRotten( _catalog, unknown ) );
+    SW_EXPECT_TRUE( sw::WesternCarcass::isRotten( _catalog, unknown ) );
 }
 
 /**
@@ -1013,21 +1013,21 @@ SW_TEST_CASE_F( WesternHuntingTest, SkinningOnceWithLoot )
     sw::WesternPelt   pelt;
 
     sw::WesternCarcass aged = carcass( 3, 30.0f );
-    SW_REQUIRE_TRUE( sw::WesternHunting::skin( _catalog, aged, &loot, random, pelt, items ) );
+    SW_REQUIRE_TRUE( sw::WesternCarcass::skin( _catalog, aged, &loot, random, pelt, items ) );
     SW_EXPECT_EQUAL( 2, pelt._stars );
     SW_EXPECT_EQUAL( sw::hashed_string( "deer" ), pelt._animalID );
     SW_EXPECT_EQUAL( 1, items.getItemCount( "meat" ) );
     SW_EXPECT_TRUE( aged._bSkinned != SW_FALSE );
 
-    SW_EXPECT_FALSE( sw::WesternHunting::skin( _catalog, aged, &loot, random, pelt, items ) );
+    SW_EXPECT_FALSE( sw::WesternCarcass::skin( _catalog, aged, &loot, random, pelt, items ) );
     SW_EXPECT_EQUAL( 1, items.getItemCount( "meat" ) );
 
     sw::WesternCarcass rotten = carcass( 3, 48.0f );
-    SW_EXPECT_FALSE( sw::WesternHunting::skin( _catalog, rotten, &loot, random, pelt, items ) );
+    SW_EXPECT_FALSE( sw::WesternCarcass::skin( _catalog, rotten, &loot, random, pelt, items ) );
     SW_EXPECT_TRUE( rotten._bSkinned == SW_FALSE );
 
     sw::WesternCarcass noLoot = carcass( 1, 0.0f );
-    SW_EXPECT_TRUE( sw::WesternHunting::skin( _catalog, noLoot, nullptr, random, pelt, items ) );
+    SW_EXPECT_TRUE( sw::WesternCarcass::skin( _catalog, noLoot, nullptr, random, pelt, items ) );
     SW_EXPECT_EQUAL( 1, items.getItemCount( "meat" ) );
 }
 
@@ -1036,21 +1036,21 @@ SW_TEST_CASE_F( WesternHuntingTest, SkinningOnceWithLoot )
  */
 SW_TEST_CASE_F( WesternHuntingTest, PricesInCents )
 {
-    SW_EXPECT_EQUAL( 150, sw::WesternHunting::computePeltPrice( _catalog, sw::WesternPelt{ "deer", 3 } ) );
-    SW_EXPECT_EQUAL( 90, sw::WesternHunting::computePeltPrice( _catalog, sw::WesternPelt{ "deer", 2 } ) );
-    SW_EXPECT_EQUAL( 45, sw::WesternHunting::computePeltPrice( _catalog, sw::WesternPelt{ "deer", 1 } ) );
-    SW_EXPECT_EQUAL( 0, sw::WesternHunting::computePeltPrice( _catalog, sw::WesternPelt{ "deer", 0 } ) );
-    SW_EXPECT_EQUAL( 0, sw::WesternHunting::computePeltPrice( _catalog, sw::WesternPelt{ "deer", -1 } ) );
-    SW_EXPECT_EQUAL( 150, sw::WesternHunting::computePeltPrice( _catalog, sw::WesternPelt{ "deer", 9 } ) );
-    SW_EXPECT_EQUAL( 0, sw::WesternHunting::computePeltPrice( _catalog, sw::WesternPelt{ "nothing", 3 } ) );
+    SW_EXPECT_EQUAL( 150, sw::WesternCarcass::computePeltPrice( _catalog, sw::WesternPelt{ "deer", 3 } ) );
+    SW_EXPECT_EQUAL( 90, sw::WesternCarcass::computePeltPrice( _catalog, sw::WesternPelt{ "deer", 2 } ) );
+    SW_EXPECT_EQUAL( 45, sw::WesternCarcass::computePeltPrice( _catalog, sw::WesternPelt{ "deer", 1 } ) );
+    SW_EXPECT_EQUAL( 0, sw::WesternCarcass::computePeltPrice( _catalog, sw::WesternPelt{ "deer", 0 } ) );
+    SW_EXPECT_EQUAL( 0, sw::WesternCarcass::computePeltPrice( _catalog, sw::WesternPelt{ "deer", -1 } ) );
+    SW_EXPECT_EQUAL( 150, sw::WesternCarcass::computePeltPrice( _catalog, sw::WesternPelt{ "deer", 9 } ) );
+    SW_EXPECT_EQUAL( 0, sw::WesternCarcass::computePeltPrice( _catalog, sw::WesternPelt{ "nothing", 3 } ) );
 
-    SW_EXPECT_EQUAL( 300, sw::WesternHunting::computeCarcassPrice( _catalog, carcass( 3, 0.0f ) ) );
-    SW_EXPECT_EQUAL( 180, sw::WesternHunting::computeCarcassPrice( _catalog, carcass( 3, 24.0f ) ) );
-    SW_EXPECT_EQUAL( 90, sw::WesternHunting::computeCarcassPrice( _catalog, carcass( 0, 0.0f ) ) );
+    SW_EXPECT_EQUAL( 300, sw::WesternCarcass::computeCarcassPrice( _catalog, carcass( 3, 0.0f ) ) );
+    SW_EXPECT_EQUAL( 180, sw::WesternCarcass::computeCarcassPrice( _catalog, carcass( 3, 24.0f ) ) );
+    SW_EXPECT_EQUAL( 90, sw::WesternCarcass::computeCarcassPrice( _catalog, carcass( 0, 0.0f ) ) );
     sw::WesternCarcass skinned = carcass( 3, 0.0f );
     skinned._bSkinned          = SW_TRUE;
-    SW_EXPECT_EQUAL( 150, sw::WesternHunting::computeCarcassPrice( _catalog, skinned ) );
-    SW_EXPECT_EQUAL( 0, sw::WesternHunting::computeCarcassPrice( _catalog, carcass( 3, 48.0f ) ) );
+    SW_EXPECT_EQUAL( 150, sw::WesternCarcass::computeCarcassPrice( _catalog, skinned ) );
+    SW_EXPECT_EQUAL( 0, sw::WesternCarcass::computeCarcassPrice( _catalog, carcass( 3, 48.0f ) ) );
 }
 
 /**

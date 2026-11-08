@@ -79,7 +79,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&VelmoraRegionCatalog::loadRegion>( "Region" ),
         };
-        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool VelmoraRegionCatalog::loadRegion( const XMLNode& node, string_view sourceName )

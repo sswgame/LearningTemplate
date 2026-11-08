@@ -24,7 +24,7 @@
 #include "Core/Network/Replication/TickRingBuffer.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Scene/SceneStateHash.h"
+#include "Engine/Scene/SceneObjectHash.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Network/NetKitMessageRange.h"

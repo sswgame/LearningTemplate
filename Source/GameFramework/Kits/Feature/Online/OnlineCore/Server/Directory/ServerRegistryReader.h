@@ -15,7 +15,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerSelection.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerSelectionQuery.h"
 
 namespace sw
 {

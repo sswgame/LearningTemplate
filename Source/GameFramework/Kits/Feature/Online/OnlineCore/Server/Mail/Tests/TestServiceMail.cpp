@@ -2,7 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAudit.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/LedgerAuditReport.h"
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
@@ -114,7 +114,7 @@ SW_TEST_CASE( ServiceMailTest, PlayerAttachmentsGoToEscrow )
     SW_EXPECT_TRUE( transaction.isEmpty() );
 
     sw::LedgerAuditReport report;
-    SW_REQUIRE_TRUE( sw::LedgerAudit::computeReport( database, report ) == sw::ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( sw::LedgerAuditReport::computeReport( database, report ) == sw::ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( report.isBalanced() );
 }
 

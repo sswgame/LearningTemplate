@@ -131,7 +131,7 @@ namespace sw
         {
             UserAppearancePresetRecord record;
             record._name          = preset._name;
-            record._code          = _pDatabase != nullptr ? AppearanceShareCode::encode( preset._selection, *_pDatabase ) : string{};
+            record._code          = _pDatabase != nullptr ? AppearanceSelection::encode( preset._selection, *_pDatabase ) : string{};
             record._thumbnailSlot = preset._thumbnailSlot;
             record._bFavorite     = preset._bFavorite == SW_TRUE;
             file._listPreset.push_back( std::move( record ) );
@@ -160,7 +160,7 @@ namespace sw
             preset._thumbnailSlot = record._thumbnailSlot;
             preset._bFavorite     = record._bFavorite ? SW_TRUE : SW_FALSE;
             string reason;
-            if ( _pDatabase == nullptr || AppearanceShareCode::decode( string_view( record._code ), *_pDatabase, preset._selection, &reason ) == false )
+            if ( _pDatabase == nullptr || AppearanceSelection::decode( string_view( record._code ), *_pDatabase, preset._selection, &reason ) == false )
             {
                 SW_LOG_WARNING_ID( "UserAppearancePresetStore.AppearancePresetCannotRead", "Appearance preset '%#' cannot be read (%#) - skipped", preset._name, _pDatabase == nullptr ? "no appearance data" : reason.c_str() );
                 continue;

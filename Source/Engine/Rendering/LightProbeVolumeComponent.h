@@ -48,7 +48,7 @@ namespace sw
         void setSpacing( float32 spacing );
         /** @brief 베이크 결과(`.probes`) 경로입니다. 비었으면 베이크하지 않은 볼륨입니다. */
         const string& getProbeDataPath() const { return _probeDataPath; }
-        /** @brief 베이크가 프로브마다 쏘는 균일 구 방향 수입니다(`LightProbeBaker`). */
+        /** @brief 베이크가 프로브마다 쏘는 균일 구 방향 수입니다(`LightProbeBakeInput`). */
         uint32 getBakeSampleCount() const { return _bakeSampleCount; }
         /**
          * @brief 베이크가 레이가 닿은 면에 두는 반사율입니다. 물리 씬은 표면의 머티리얼을 모르므로 볼륨이 한 값으로 정한다(회색 0.5 가 기본).

@@ -7,7 +7,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Audio/AudioClipDecoder.h"
+#include "Engine/Audio/AudioPcm.h"
 
 namespace sw
 {
@@ -15,7 +15,7 @@ namespace sw
 
     class IAudioStreamDecoder;
 
-    /** @brief OGG Vorbis 를 PCM 으로 풀거나 순차로 읽는 디코더를 엽니다. 확장자로 고르는 일은 `AudioClipDecoder::decode` 가 한다. */
+    /** @brief OGG Vorbis 를 PCM 으로 풀거나 순차로 읽는 디코더를 엽니다. 확장자로 고르는 일은 `AudioPcm::decode` 가 한다. */
     struct SW_API AudioVorbisDecoder
     {
         /**

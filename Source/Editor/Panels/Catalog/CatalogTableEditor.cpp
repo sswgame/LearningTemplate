@@ -224,7 +224,7 @@ namespace sw::editor
         const bool bHovered = document.canCreateVariant( elementIndex ) == false && element._listChild.empty() == false && ImGui::IsItemHovered();
         if ( element._listChild.empty() == false )
         {
-            CatalogCurveModel::collectCurves( document.getParsed(), elementIndex, _listProbeCurve );
+            CatalogCurve::collectCurves( document.getParsed(), elementIndex, _listProbeCurve );
             if ( _listProbeCurve.empty() == false )
             {
                 EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Curves" ) ) );
@@ -520,7 +520,7 @@ namespace sw::editor
         ImGui::Dummy( ImVec2{ width, height } );
         ImDrawList* pDrawList  = ImGui::GetWindowDrawList();
         const ImU32 frameColor = ImGui::ColorConvertFloat4ToU32( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "Border" ) ) );
-        if ( CatalogCurveModel::sampleGradient( _listCurve, gradient, kSegmentCount + 1, _listGradientColor ) == false )
+        if ( CatalogCurve::sampleGradient( _listCurve, gradient, kSegmentCount + 1, _listGradientColor ) == false )
         {
             pDrawList->AddRect( origin, ImVec2{ origin.x + width, origin.y + height }, frameColor ); // 네 채널 중 키가 없는 것이 있다 - 띠 대신 빈 틀만 보인다
             return;
@@ -545,7 +545,7 @@ namespace sw::editor
     {
         ImGui::PushID( curve._elementIndex );
         ImGui::TextUnformatted( curve._label.c_str() );
-        if ( CatalogCurveModel::sample( curve, CatalogCurveModel::computeEndTime( curve ), 48, _listSample ) )
+        if ( CatalogCurve::sample( curve, CatalogCurve::computeEndTime( curve ), 48, _listSample ) )
             ImGui::PlotLines( "##plot", _listSample.data(), static_cast<int32>( _listSample.size() ), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2{ ImGui::GetContentRegionAvail().x, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 0.0f, 3.0f ) ).y } );
         else
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoKeysYet" ) );
@@ -588,8 +588,8 @@ namespace sw::editor
         bool bOpen = true;
         if ( ImGui::BeginPopupModal( kPopupName, &bOpen ) == false )
             return;
-        CatalogCurveModel::collectCurves( document.getParsed(), _curveOwner, _listCurve );
-        CatalogCurveModel::collectGradients( _listCurve, _listGradient );
+        CatalogCurve::collectCurves( document.getParsed(), _curveOwner, _listCurve );
+        CatalogCurve::collectGradients( _listCurve, _listGradient );
         if ( _listCurve.empty() )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoCurvesUnderThisRow" ) );

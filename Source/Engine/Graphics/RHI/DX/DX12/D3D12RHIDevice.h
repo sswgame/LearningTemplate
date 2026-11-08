@@ -22,7 +22,7 @@
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIRenderPassRegistry.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHITimestampProvider.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"

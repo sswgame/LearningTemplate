@@ -159,7 +159,7 @@ namespace sw
         /** @brief 보일 프레임과 색을 GPU 인스턴스 슬롯 값으로 넘깁니다(`MeshComponent::setSpriteFrame`). */
         void refreshSpriteFrame();
         /**
-         * @brief 그리기 방식, 크기, 테두리에 맞는 메시를 설정합니다. Sliced 와 Tiled 는 `SpriteMeshBuilder::acquireSlicedMesh`(같은 값끼리 공유),
+         * @brief 그리기 방식, 크기, 테두리에 맞는 메시를 설정합니다. Sliced 와 Tiled 는 `SlicedSpriteDef::acquireSlicedMesh`(같은 값끼리 공유),
          *        Simple 은 공유 사각형을 씁니다. 같은 메시면 아무것도 하지 않습니다.
          */
         void refreshDrawModeMesh();

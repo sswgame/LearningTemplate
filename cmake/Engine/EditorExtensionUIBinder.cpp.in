@@ -3,7 +3,7 @@
 
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/GUI/EditorUIContext.h"
+#include "Editor/Common/GUI/EditorUIContextState.h"
 
 #include <imgui.h>
 #include <implot.h>

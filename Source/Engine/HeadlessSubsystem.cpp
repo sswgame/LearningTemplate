@@ -19,7 +19,7 @@
 #include "Engine/Animation/Facial/LipSyncImport.h"
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
-#include "Engine/Animation/Scene/VertexAnimationCooker.h"
+#include "Engine/Animation/Scene/VertexAnimationCookList.h"
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Asset/Cook/PackCooker.h"
 #include "Engine/Automation/AutomationRuntime.h"
@@ -83,7 +83,7 @@ namespace sw
                 stageStopwatch.restart();
                 [[maybe_unused]] const uint32 vertexAnimationCount =
                     bCrowdSettingsLoaded
-                        ? VertexAnimationCooker::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, cookStore, vertexAnimationFailedCount )
+                        ? VertexAnimationCookList::cookAll( resourceRoot, cookedDir, crowdSettings._vertexAnimationFramesPerSecond, cookStore, vertexAnimationFailedCount )
                         : 0u;
                 const int64 vertexAnimationMs = stageStopwatch.getElapsedMilliseconds();
                 // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
@@ -402,7 +402,7 @@ namespace sw
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 IShaderCookService* const pService    = requireShaderCookService( "--verify-shaders" );
                 bool                      bAllCurrent = pService != nullptr;
-                for ( const RHIBackendInfo& info : RHIBackendInfoTable::kArrInfo )
+                for ( const RHIBackendInfo& info : RHIBackendInfo::kArrInfo )
                 {
                     bAllCurrent = pService != nullptr && pService->verifyCookedShaders( cookedDir, info._shaderTarget ) && bAllCurrent;
                 }

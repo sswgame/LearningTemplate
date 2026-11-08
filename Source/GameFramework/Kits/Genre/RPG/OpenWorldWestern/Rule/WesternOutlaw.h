@@ -14,8 +14,8 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternCarcass.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternHonor.h"
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternHunting.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternLaw.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternSurvival.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
@@ -60,7 +60,7 @@ namespace sw
      * @class WesternOutlaw
      * @brief 게임 디렉터가 하나 가지는 보통 클래스입니다(세이브는 디렉터가 `writeState` 로 싣는다). 지갑 · 평판 · 시계 · 날씨 · 플래그는 빌려 씁니다(`SessionStateRefs`).
      * @details 시간은 빌린 시계로 잰다 — `update` 가 지난번 뒤로 흐른 게임 시간과 넘은 날을 구해 생존 · 사체 · 현상금에 넘긴다. 잠과 빨리 감기(`AdvanceGameTime`)도 같은 길로 닿는다.
-     *          돈의 단위는 카탈로그의 통화 하나다. 가죽 값(`WesternHunting`)은 센트이므로 팔 때 달러로 내리고 남은 센트는 다음 판매로 넘긴다. 명예 단계의 할인 비율은 파는 값에 웃돈으로 얹는다.
+     *          돈의 단위는 카탈로그의 통화 하나다. 가죽 값(`WesternCarcass`)은 센트이므로 팔 때 달러로 내리고 남은 센트는 다음 판매로 넘긴다. 명예 단계의 할인 비율은 파는 값에 웃돈으로 얹는다.
      *          레드 데드 리뎀션 2 의 명예 · 현상금 · 코어 흐름을 따랐다(기억에 의존한 비교).
      */
     class SW_KIT_API WesternOutlaw

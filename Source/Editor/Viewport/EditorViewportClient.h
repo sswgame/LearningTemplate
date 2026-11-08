@@ -10,8 +10,8 @@
 #include "Editor/Viewport/EditorViewportGizmo.h"
 #include "Editor/Viewport/EditorViewportOverlays.h"
 #include "Editor/Viewport/EditorViewportPicker.h"
-#include "Editor/Viewport/EditorViewportToolbar.h"
 #include "Editor/Viewport/EditorVisualizerStats.h"
+#include "Editor/Viewport/ViewportToolbarSettings.h"
 
 namespace sw
 {

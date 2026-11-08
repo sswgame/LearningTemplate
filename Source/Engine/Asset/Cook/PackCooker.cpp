@@ -13,7 +13,7 @@
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cook/CookStore.h"
-#include "Engine/Asset/Cook/PackReachability.h"
+#include "Engine/Asset/Cook/PackReachResult.h"
 #include "Engine/Asset/Reference/AssetReferenceFields.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
@@ -131,7 +131,7 @@ namespace sw
             }
 
             /**
-             * @brief 굽는 모든 도메인을 한 번에 보고 담을 파일을 고릅니다(`PackReachability`). 빠진 참조가 있으면 오류를 남기고 false 입니다.
+             * @brief 굽는 모든 도메인을 한 번에 보고 담을 파일을 고릅니다(`PackReachResult`). 빠진 참조가 있으면 오류를 남기고 false 입니다.
              * @details 작업 범위 하나(`PackReach`) 안에서 읽는다 — 쿠킹 세션은 작업 밖 읽기를 막는다. 그 범위의 입력은 기록하지 않는다: 고른 결과는 팩마다 설정 해시로 들어가고
              *          담긴 파일은 팩 작업이 다시 읽어 그 작업의 입력이 된다(`computeSelectionHash`).
              */
@@ -182,7 +182,7 @@ namespace sw
                 AssetCookRootRegistry::appendRoots( files._listCodeRoot );
                 files._automation = params._automationContent;
                 PackReachResult reach;
-                const bool      bReached = PackReachability::collect( fields, config._cookRules, files, source, reach );
+                const bool      bReached = PackReachResult::collect( fields, config._cookRules, files, source, reach );
                 logSelection( listCandidates, reach );
                 if ( bReached == false )
                 {
@@ -441,7 +441,7 @@ namespace sw
                         continue;
                     }
                     if ( selection._setIncluded.contains( makeAssetID( domain, relativePath ) ) == false )
-                        continue; // 뿌리에서 참조로 닿지 않는다 - 이 빌드의 게임이 쓰지 않는다(`PackReachability`)
+                        continue; // 뿌리에서 참조로 닿지 않는다 - 이 빌드의 게임이 쓰지 않는다(`PackReachResult`)
                     if ( addSourceFile( writer, relativePath, absPath, params._resourceRoot, references, ioTiming ) == false )
                         return CookStep::Failed;
                 }

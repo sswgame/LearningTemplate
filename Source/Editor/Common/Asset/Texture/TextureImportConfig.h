@@ -8,7 +8,7 @@
 
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
 
-#include "Engine/Graphics/Texture/TextureFormatSelection.h"
+#include "Engine/Graphics/Texture/TextureFormatFamily.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw

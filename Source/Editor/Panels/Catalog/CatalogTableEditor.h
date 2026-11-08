@@ -13,7 +13,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogChildSection.h"
-#include "Editor/Panels/Catalog/Model/CatalogCurveModel.h"
+#include "Editor/Panels/Catalog/Model/CatalogCurve.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 #include "Editor/Panels/Catalog/Model/CatalogTableEdit.h"
 

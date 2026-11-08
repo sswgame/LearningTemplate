@@ -13,7 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
 #include "GameFramework/Runtime/Online/Service/OnlineProtocolClient.h"
 
 namespace sw
@@ -52,7 +52,7 @@ namespace sw
      * @class TradeClient
      * @brief 거래 클라이언트입니다.
      */
-    class SW_KIT_API TradeClient final : public OnlineProtocolClient<TradeClient, TradeProtocol>
+    class SW_KIT_API TradeClient final : public OnlineProtocolClient<TradeClient, TradeSessionRecord>
     {
     public:
         /**

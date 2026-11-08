@@ -3,8 +3,8 @@
 #include "Engine/UI/WidgetTree/UIFocusManager.h"
 
 #include "Engine/UI/WidgetTree/PanelWidget.h"
-#include "Engine/UI/WidgetTree/UIEventRouter.h"
 #include "Engine/UI/WidgetTree/UINavigationSolver.h"
+#include "Engine/UI/WidgetTree/UIWidgetPath.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 
@@ -81,7 +81,7 @@ namespace sw
         outPath._listWidget.clear();
         if ( _pFocusedTree != &tree || tree._focusedWidget == kInvalidWidgetID )
             return;
-        (void)UIEventRouter::makePathTo( tree, tree._focusedWidget, outPath );
+        (void)UIWidgetPath::makePathTo( tree, tree._focusedWidget, outPath );
     }
 
     void UIFocusManager::removeTree( const WidgetTree& tree )

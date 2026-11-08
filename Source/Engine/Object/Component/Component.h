@@ -431,7 +431,7 @@ namespace sw
          */
         virtual void onModuleUnloading( string_view moduleName ) { (void)moduleName; }
         /**
-         * @brief 씬 상태 해시(`SceneStateHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 아무것도 넣지 않습니다(렌더 · 연출 컴포넌트).
+         * @brief 씬 상태 해시(`SceneObjectHash`)에 이 컴포넌트의 시뮬레이션 상태를 접습니다. 기본은 아무것도 넣지 않습니다(렌더 · 연출 컴포넌트).
          * @details 두 프로세스가 같은 입력으로 같은 상태가 되었는지 견주는 값이라 게임플레이를 바꾸는 상태(트랜스폼 · 속도 · 난수 상태 · 남은 시간)만 넣는다.
          *          게임 스레드에서, 해시 이력이 켜진 틱에만 불린다(`-gv_stateHashHistory`). 파생 타입은 부모 것을 먼저 부른다.
          */

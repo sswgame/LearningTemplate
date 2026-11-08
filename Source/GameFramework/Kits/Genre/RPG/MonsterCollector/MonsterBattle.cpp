@@ -526,12 +526,12 @@ namespace sw
         if ( pDefeated == nullptr )
             return;
         MonsterInstance& winner = getActiveMutable( kPlayerSide );
-        const int64      amount = MonsterRules::computeExpYield( *pDefeated, defeated._level, _bWild == false );
+        const int64      amount = MonsterInstance::computeExpYield( *pDefeated, defeated._level, _bWild == false );
         pushEvent( MonsterBattleEvent::Kind::ExpGained, kPlayerSide, static_cast<int32>( amount ), winner._speciesID );
-        MonsterRules::addEffortValues( *_pCatalog, winner, *pDefeated );
+        MonsterInstance::addEffortValues( *_pCatalog, winner, *pDefeated );
 
         vector<MonsterGrowthEvent> listGrowth;
-        (void)MonsterRules::gainExp( *_pCatalog, winner, amount, listGrowth );
+        (void)MonsterInstance::gainExp( *_pCatalog, winner, amount, listGrowth );
         for ( const MonsterGrowthEvent& growth : listGrowth )
         {
             MonsterBattleEvent::Kind kind = MonsterBattleEvent::Kind::LevelUp;

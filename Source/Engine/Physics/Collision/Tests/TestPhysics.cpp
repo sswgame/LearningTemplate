@@ -4,7 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Physics/Collision/CollisionLayers.h"
-#include "Engine/Physics/Collision/ContinuousCollision.h"
+#include "Engine/Physics/Collision/SweepHit.h"
 
 using namespace sw;
 
@@ -62,7 +62,7 @@ SW_TEST_CASE( PhysicsTest, CollisionLayersFilter )
 }
 
 /**
- * @brief [PhysicsTest] ContinuousCollision Swept AABB 초고속 투사체 벽 관통(Tunneling) 방지 검증
+ * @brief [PhysicsTest] SweepHit Swept AABB 초고속 투사체 벽 관통(Tunneling) 방지 검증
  */
 SW_TEST_CASE( PhysicsTest, ContinuousCollision_SweptAABBTunnelingPrevention )
 {
@@ -80,7 +80,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_SweptAABBTunnelingPrevention )
     float3 bulletDisplacement{ 0.0f, 0.0f, 100.0f };
 
     SweepHit hit{};
-    bool     bCollided = ContinuousCollision::sweepAABB( bulletBox, bulletDisplacement, wallBox, hit );
+    bool     bCollided = SweepHit::sweepAABB( bulletBox, bulletDisplacement, wallBox, hit );
 
     SW_EXPECT_TRUE( bCollided );
     SW_EXPECT_TRUE( hit._bHit );
@@ -90,7 +90,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_SweptAABBTunnelingPrevention )
 }
 
 /**
- * @brief [PhysicsTest] ContinuousCollision Swept Sphere 검증
+ * @brief [PhysicsTest] SweepHit Swept Sphere 검증
  */
 SW_TEST_CASE( PhysicsTest, ContinuousCollision_SweptSphere )
 {
@@ -104,7 +104,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_SweptSphere )
     float3   disp{ 40.0f, 0.0f, 0.0f };
     SweepHit hit{};
 
-    bool bHit = ContinuousCollision::sweepSphere( startCenter, radius, disp, targetBox, hit );
+    bool bHit = SweepHit::sweepSphere( startCenter, radius, disp, targetBox, hit );
     SW_EXPECT_TRUE( bHit );
     SW_EXPECT_TRUE( hit._bHit );
     // 구 앞면이 targetBox minX(20.0)에 닿을 때 center = 19.0 -> t = 19.0 / 40.0 = 0.475
@@ -113,7 +113,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_SweptSphere )
 }
 
 /**
- * @brief [PhysicsTest] ContinuousCollision 모서리 스침(Corner Grazing) 및 평행 궤적 빗나감(Parallel Miss) 정밀 판별 검증
+ * @brief [PhysicsTest] SweepHit 모서리 스침(Corner Grazing) 및 평행 궤적 빗나감(Parallel Miss) 정밀 판별 검증
  */
 SW_TEST_CASE( PhysicsTest, ContinuousCollision_CornerGrazingAndParallelMiss )
 {
@@ -129,7 +129,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_CornerGrazingAndParallelMiss )
     };
     float3   missDisp{ 0.0f, 0.0f, 50.0f };
     SweepHit missHit{};
-    bool     bMiss = ContinuousCollision::sweepAABB( missBox, missDisp, targetBox, missHit );
+    bool     bMiss = SweepHit::sweepAABB( missBox, missDisp, targetBox, missHit );
     SW_EXPECT_FALSE( bMiss );
     SW_EXPECT_FALSE( missHit._bHit );
 
@@ -140,7 +140,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_CornerGrazingAndParallelMiss )
     };
     float3   diagDisp{ 30.0f, 30.0f, 30.0f };
     SweepHit diagHit{};
-    bool     bDiagHit = ContinuousCollision::sweepAABB( diagBox, diagDisp, targetBox, diagHit );
+    bool     bDiagHit = SweepHit::sweepAABB( diagBox, diagDisp, targetBox, diagHit );
     SW_EXPECT_TRUE( bDiagHit );
     SW_EXPECT_TRUE( diagHit._bHit );
     // min corner (10, 10, 10)에 max (1, 1, 1)이 닿는 시각: (10 - 1) / 30 = 9 / 30 = 0.3
@@ -167,7 +167,7 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
     sw::SweepHit hit{};
 
     // 1) 먼저 맞힌다 — 결과가 채워진다.
-    SW_EXPECT_TRUE( sw::ContinuousCollision::sweepAABB( hittingBox, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_TRUE( sw::SweepHit::sweepAABB( hittingBox, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_TRUE( hit._bHit );
 
     // 2) **같은 구조체로** 완전히 빗나가는 스윕을 한다.
@@ -175,13 +175,13 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
         sw::float3{-100.0f, -100.0f, -100.0f},
         sw::float3{ -99.0f,  -99.0f,  -99.0f}
     };
-    SW_EXPECT_FALSE( sw::ContinuousCollision::sweepAABB( missingBox, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_FALSE( sw::SweepHit::sweepAABB( missingBox, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_FALSE( hit._bHit );
     SW_EXPECT_NEAR( 1.0f, hit._hitFraction, 1e-4f );
 
     // 3) 구 스윕도 같은 약속이다.
-    SW_EXPECT_TRUE( sw::ContinuousCollision::sweepSphere( sw::float3{ 0.0f, 10.5f, 10.5f }, 0.5f, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_TRUE( sw::SweepHit::sweepSphere( sw::float3{ 0.0f, 10.5f, 10.5f }, 0.5f, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_TRUE( hit._bHit );
-    SW_EXPECT_FALSE( sw::ContinuousCollision::sweepSphere( sw::float3{ -100.0f, -100.0f, -100.0f }, 0.5f, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_FALSE( sw::SweepHit::sweepSphere( sw::float3{ -100.0f, -100.0f, -100.0f }, 0.5f, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_FALSE( hit._bHit );
 }

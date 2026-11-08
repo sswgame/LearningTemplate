@@ -11,7 +11,7 @@
 #include "Engine/Animation/Sprite/SpriteClipCache.h"
 #include "Engine/Animation/Sprite/SpriteLibrary.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
-#include "Engine/Graphics/2D/SpriteMeshBuilder.h"
+#include "Engine/Graphics/2D/SlicedSpriteDef.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
@@ -310,7 +310,7 @@ namespace sw
         desc._size            = _size;
         desc._border          = getEffectiveSliceBorder();
         desc._bTiled          = ( _drawMode == SpriteDrawMode::Tiled ) ? SW_TRUE : SW_FALSE;
-        shared_ptr<Mesh> mesh = SpriteMeshBuilder::acquireSlicedMesh( desc );
+        shared_ptr<Mesh> mesh = SlicedSpriteDef::acquireSlicedMesh( desc );
         _bSliceMeshApplied    = SW_TRUE;
         if ( mesh != getMesh() )
             setMesh( std::move( mesh ) );

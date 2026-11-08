@@ -247,7 +247,7 @@ namespace sw
             Element::of<&FighterElementReader::loadFighter>( "Fighter" ),
         };
         FighterElementReader reader{ *this, moveCatalog, parser };
-        return XMLCatalogReader::readInDocumentOrder( reader, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInDocumentOrder( reader, root, sourceName, kArrElement )._loadedCount;
     }
 } // namespace sw
 
