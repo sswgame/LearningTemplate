@@ -63,7 +63,7 @@ namespace sw
     {
         // 셰이더 assert 링은 PSO 보다 먼저 만든다 — assert 변형 PSO 는 이 버퍼 없이는 돌릴 수 없으므로 만들지 못하면 멈춘다(폴백 없음).
         if ( _gpuAssert.initialize( _pDevice ) == false )
-            SW_FATAL( "gv_gpuAssert is on but the GPU assert ring could not be created - see the log above" );
+            SW_FATAL( "GPU assert is on but its ring could not be created - see the log above" );
         // 정렬 디스패치의 t2 자리표 — 순번 표가 없는 뷰도 빈 슬롯으로 디스패치하지 않는다(DX12 는 빈 디스크립터를 읽으면 폴트).
         constexpr uint32 kZeroRank = 0;
         if ( _transparentRankPlaceholder.ensureCapacity( _pDevice, sizeof( uint32 ), 1, RHIBufferUsage::ShaderResource, true, false, &kZeroRank ) == false )

@@ -622,7 +622,7 @@
     "Source/Engine/Renderer/Frame/Packet/RenderFramePacket.h": {"float": 3},
     "Source/Engine/Renderer/Frame/Packet/RenderPacketSceneCollector.cpp": {"float": 1},
     "Source/Engine/Renderer/Frame/Packet/RenderPacketViewSetup.cpp": {"float": 2},
-    "Source/Engine/Renderer/Frame/PostProcess/FrameFog.cpp": {"float": 3, "integer": 1},
+    "Source/Engine/Renderer/Frame/PostProcess/FrameFog.cpp": {"float": 3},
     "Source/Engine/Renderer/Frame/PostProcess/FrameUpscale.cpp": {"float": 1},
     "Source/Engine/Renderer/Frame/Resource/MaterialPSOBuilder.cpp": {"integer": 1},
     "Source/Engine/Renderer/Frame/Resource/RenderPSOCache.cpp": {"hex": 3},

@@ -82,7 +82,7 @@ SW_TEST_CASE_F( BindlessIndexValidatorTest, ReportsEachSiteOnce )
 
 /**
  * @brief [BindlessIndexValidatorTest] "없음" 번호의 자리 기록은 죽은 번호 보고와 따로 세고, 자리마다 한 번이다
- * @details `-gv_validateBindlessIndex=2` 가 남기는 정보 로그다. 오류(죽은 번호) 수에 섞이면 "검사가 결함을 찾았다" 를 셀 수 없다.
+ * @details `BindlessIndexCheck::TraceAbsent` 가 남기는 정보 로그다. 오류(죽은 번호) 수에 섞이면 "검사가 결함을 찾았다" 를 셀 수 없다.
  */
 SW_TEST_CASE_F( BindlessIndexValidatorTest, AbsentNotesAreCountedApart )
 {

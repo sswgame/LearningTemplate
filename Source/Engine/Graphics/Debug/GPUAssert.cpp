@@ -2,24 +2,16 @@
 
 #include "Engine/Graphics/Debug/GPUAssert.h"
 
-#include "Core/Foundation/BuildInfo.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/BitUtil.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 namespace sw
 {
-    /**
-     * @brief `-gv_gpuAssert=1`: assert 를 가진 컴퓨트 셰이더(gpu_cull · canvas_marker · mesh_morph)를 `SW_GPU_ASSERT_ENABLED` 변형으로 컴파일해 조건이 틀린 스레드가 링 버퍼에 기록을 남기고, CPU 가 몇 프레임 뒤 로그로 낸다.
-     * @details 기본 끔 — 켜면 그 패스의 셰이더 변형이 하나 더 컴파일되고 u4 에 버퍼가 걸린다(Shipping 은 등록되지 않아 늘 끔).
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_gpuAssert, false,
-                             "셰이더 assert(SW_GPU_ASSERT) 를 켠다 - assert 를 가진 컴퓨트 셰이더가 UAV 링에 기록하고 CPU 가 몇 프레임 뒤 로그로 낸다 (개발 빌드만)" );
-
     namespace
     {
         struct GPUAssertInternal
@@ -95,7 +87,7 @@ namespace sw
 
     bool GPUAssertMonitor::isRequested()
     {
-        return build::kShipping == false && static_cast<bool>( gv_gpuAssert ); // 배포본은 define 도 PSO 변형도 바인딩도 만들지 않는다
+        return RenderDiagnostics::get()._bGPUAssert == SW_TRUE; // 배포본은 상수 기본값이라 define 도 PSO 변형도 바인딩도 만들지 않는다
     }
 
     bool GPUAssertMonitor::initialize( IRHIDevice* pDevice )
@@ -106,12 +98,12 @@ namespace sw
             return true;
         if ( pDevice == nullptr )
         {
-            SW_LOG_ERROR_ID( "GPUAssert.GPUAssertRequestedGv", "GPU assert is requested (gv_gpuAssert) but there is no device" );
+            SW_LOG_ERROR_ID( "GPUAssert.GPUAssertRequestedGv", "GPU assert is requested but there is no device" );
             return false;
         }
         if ( pDevice->getCapabilities()._bCompute == SW_FALSE )
         {
-            SW_LOG_ERROR_ID( "GPUAssert.GPUAssertRequestedGv2", "GPU assert is requested (gv_gpuAssert) but this backend has no compute support (the UAV ring needs compute)" );
+            SW_LOG_ERROR_ID( "GPUAssert.GPUAssertRequestedGv2", "GPU assert is requested but this backend has no compute support (the UAV ring needs compute)" );
             return false;
         }
 
@@ -121,13 +113,13 @@ namespace sw
                                                                 RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess, true, true, zeroed.data() );
         if ( bCreated == false )
         {
-            SW_LOG_ERROR_ID( "GPUAssert.FailedCreateGPUAssert", "Failed to create the GPU assert ring buffer (%# uints) - gv_gpuAssert cannot run", static_cast<uint32>( SW_GPU_ASSERT_BUFFER_UINTS ) );
+            SW_LOG_ERROR_ID( "GPUAssert.FailedCreateGPUAssert", "Failed to create the GPU assert ring buffer (%# uints) - GPU assert cannot run", static_cast<uint32>( SW_GPU_ASSERT_BUFFER_UINTS ) );
             _buffer.release( pDevice );
             return false;
         }
         if ( _readback.initialize( pDevice, sizeof( uint32 ), SW_GPU_ASSERT_BUFFER_UINTS ) == false )
         {
-            SW_LOG_ERROR_ID( "GPUAssert.FailedCreateGPUAssert2", "Failed to create the GPU assert readback buffers - gv_gpuAssert cannot run" );
+            SW_LOG_ERROR_ID( "GPUAssert.FailedCreateGPUAssert2", "Failed to create the GPU assert readback buffers - GPU assert cannot run" );
             _buffer.release( pDevice );
             return false;
         }

@@ -22,6 +22,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/Lighting/SceneVoxelGrid.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
@@ -137,19 +138,6 @@ namespace sw
     SW_API void collectSceneLights( const Scene* pScene, vector<GPULight>& outList, vector<uint32>* pOutListShadowLightIndex = nullptr,
                                     LightProbeElementBuilder* pOutProbeElement = nullptr, vector<GPULightCookie>* pOutListCookie = nullptr,
                                     vector<RealtimeProbeRequest>* pOutListRealtimeProbe = nullptr );
-
-    /**
-     * @enum LightGridProducer
-     * @brief 라이트 그리드를 누가 만드는지입니다. 개발 빌드는 `gv_lightCulling` 이 고르고 Shipping 은 GPU 로 고정합니다.
-     * @details 리플렉션 enum 이라 명령줄이 이름으로 고른다(`-gv_lightCulling=CPU`). 숫자는 받지 않는다.
-     */
-    ENUM()
-    enum class LightGridProducer : uint8
-    {
-        None, ///< 그리드 없이 목록 전체를 돈다(비교 기준)
-        CPU,  ///< `LightGrid::populate` 가 만들어 동적 버퍼로 올린다
-        GPU,  ///< 컴퓨트 light_grid.hlsl 이 기본 힙 버퍼에 만든다(`FramePassExecutor::dispatchLightGrid`)
-    };
 
     /**
      * @class GPULightBuffer

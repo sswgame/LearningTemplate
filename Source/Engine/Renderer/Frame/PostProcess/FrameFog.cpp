@@ -27,9 +27,6 @@
 
 namespace sw
 {
-    SW_TEST_GLOBAL_VARIABLE( FogDebugView, gv_fogDebugView, FogDebugView::None, "안개 진단 보기 (None / Compare=왼쪽 볼륨 · 오른쪽 평범 / Scattering / Transmittance=froxel 단면)" );
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_fogDebugSlice, 16, "안개 진단 단면의 거리 조각 (0 .. 31, 큰 번호가 먼 조각)" );
-
     namespace
     {
         struct FrameFogInternal
@@ -120,10 +117,10 @@ namespace sw
             _volumeState = FogVolumeState::Active; // 준비(`prepareVolumetricFog`)가 못 켜면 그 이유로 바꾼다
     }
 
-    float4 FrameFog::makeDebugParams( bool bVolume )
+    float4 FrameFog::makeDebugParams( bool bVolume, const RenderDiagnosticsPolicy& policy )
     {
-        const FogDebugView view  = bVolume ? gv_fogDebugView : FogDebugView::None;
-        const int32        slice = MathUtil::clamp( gv_fogDebugSlice, 0, static_cast<int32>( SW_FOG_VOLUME_DIM_Z ) - 1 );
+        const FogDebugView view  = bVolume ? policy._fogDebugView : FogDebugView::None;
+        const uint32       slice = MathUtil::min( static_cast<uint32>( policy._fogDebugSlice ), static_cast<uint32>( SW_FOG_VOLUME_DIM_Z ) - 1 );
         return float4{ static_cast<float32>( view ), static_cast<float32>( slice ), FrameFogInternal::kCompareSplit, 0.0f };
     }
 

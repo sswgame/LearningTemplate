@@ -4,10 +4,9 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/unordered_set.h"
-#include "Core/Foundation/BuildInfo.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 
+#include "Engine/Graphics/Debug/RenderDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 
 namespace sw
@@ -30,16 +29,6 @@ namespace sw
 
         struct BindlessIndexValidatorInternal
         {
-            // 검사 수준: 0 끔, 1 죽은 번호(오류), 2 죽은 번호와 "없음(kInvalidDescriptorIndex)" 이 셰이더로 가는 곳(정보).
-            static constexpr int32 kLevelDeadIndex   = 1;
-            static constexpr int32 kLevelTraceAbsent = 2;
-            // Debug 는 항상 검사한다. Release 는 성능 측정에 쓰는 빌드라(검사는 드로우마다 읽기 잠금 하나) 끄고, 필요할 때 -gv_ 로 켠다.
-#if defined( SW_DEBUG )
-            static constexpr int32 kDefaultLevel = kLevelDeadIndex;
-#else
-            static constexpr int32 kDefaultLevel = 0;
-#endif
-
             static const utf8* getSpaceName( RHIBindlessIndexSpace space )
             {
                 return ( space == RHIBindlessIndexSpace::Texture ) ? "texture" : "buffer";
@@ -56,23 +45,14 @@ namespace sw
         unordered_set<BindlessSiteKey> s_uniqueAbsentSite;
     } // namespace
 
-    /**
-     * @brief 셰이더에 넘기기 직전의 bindless 인덱스를 검사합니다(Graphics README "함정과 주의").
-     * @details 1 이면 죽은 번호를 `[BindlessIndex] pass '<패스>' field '<이름>'[<원소>] = <값> is not a live <공간> slot` 오류로 위치마다 한 번 남긴다.
-     *          2 이면 "없음"(kInvalidDescriptorIndex)이 셰이더로 가는 위치도 `[BindlessIndex] ... = absent` 정보로 남긴다. 셰이더가 분기로 거르는
-     *          번호인데 드라이버가 디스크립터 읽기를 분기 앞으로 끌어올리면 디바이스 손실이 나므로, 손실이 났을 때 후보 위치를 고르는 데 쓴다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_validateBindlessIndex, BindlessIndexValidatorInternal::kDefaultLevel,
-                             "셰이더에 넘기는 bindless 인덱스 검사 — 0 끔, 1 죽은 번호(Debug 기본), 2 '없음' 번호가 가는 자리까지" );
-
     bool BindlessIndexValidator::isEnabled()
     {
-        return build::kShipping == false && gv_validateBindlessIndex >= BindlessIndexValidatorInternal::kLevelDeadIndex;
+        return RenderDiagnostics::get()._bindlessIndexCheck >= BindlessIndexCheck::DeadIndex; // 배포본은 상수 기본값(끔)이라 검사가 접힌다
     }
 
     bool BindlessIndexValidator::isTracingAbsent()
     {
-        return build::kShipping == false && gv_validateBindlessIndex >= BindlessIndexValidatorInternal::kLevelTraceAbsent;
+        return RenderDiagnostics::get()._bindlessIndexCheck >= BindlessIndexCheck::TraceAbsent;
     }
 
     bool BindlessIndexValidator::validate( const BindlessIndexCheckSite& site, RHIBindlessIndexSpace space, RHIDescriptorIndex index,

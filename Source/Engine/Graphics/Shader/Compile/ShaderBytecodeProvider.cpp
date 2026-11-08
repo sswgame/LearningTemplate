@@ -89,7 +89,7 @@ namespace sw
 
     ShaderCompileResult LiveShaderBytecodeProvider::load( const ShaderCompileDesc& desc ) const
     {
-        // 컴파일러가 이 기계의 셰이더 DDC(`Saved/ShaderCompileCache`)를 먼저 본다(언리얼 에디터의 DDC). 코드젠은 `gv_shaderDebugCodegen` 이 정한다(makeLiveCompileDesc).
+        // 컴파일러가 이 기계의 셰이더 DDC(`Saved/ShaderCompileCache`)를 먼저 본다(언리얼 에디터의 DDC). 코드젠은 진단 정책이 정한다(makeLiveCompileDesc).
         return ShaderCompiler::compileHLSL( ShaderCache::makeLiveCompileDesc( desc ) );
     }
 
