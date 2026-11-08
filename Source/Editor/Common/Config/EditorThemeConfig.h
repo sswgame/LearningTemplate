@@ -21,7 +21,7 @@ namespace sw
 
 namespace sw::editor
 {
-    struct EditorConfig;
+    struct EditorAppearanceConfig;
 
     /**
      * @brief 해석한 테마 값입니다. 토큰 파일의 표 둘(`_color` · `_metric`)을 키(`Namespace.Key`) → 값으로 듭니다.
@@ -61,7 +61,7 @@ namespace sw::editor
          * @brief 환경설정(@p saved)이 고른 벌에 저장된 덮어쓰기를 얹어 @p outTheme 에 씁니다. 그 이름의 벌이 없으면 false 이고 @p outTheme 는 그대로입니다 — 다른 벌로 대신하지 않습니다.
          * @details 강조색은 세 채널이 모두 있어야 덮어쓴다. 둥글기는 슬라이더마다 따로 본다 — 음수인 칸은 토큰 값을 쓴다.
          */
-        [[nodiscard]] static bool buildFromSaved( const vector<EditorThemeConfig>& listTheme, const EditorConfig& saved, EditorThemeConfig& outTheme );
+        [[nodiscard]] static bool buildFromSaved( const vector<EditorThemeConfig>& listTheme, const EditorAppearanceConfig& saved, EditorThemeConfig& outTheme );
 
         /** @brief 강조색을 덮어씁니다. */
         static void overrideAccent( const Color& accent, EditorThemeConfig& inoutTheme );
@@ -72,8 +72,8 @@ namespace sw::editor
          */
         static void overrideRadius( float32 window, float32 frame, float32 tab, EditorThemeConfig& inoutTheme );
 
-        /** @brief @p theme 의 이름과 덮어쓴 값을 환경설정 칸에 씁니다. 덮어쓰지 않은 값은 `EditorConfig::kNotOverridden` 이라, 토큰 파일이 바뀌면 그 값을 따릅니다. */
-        static void writeSaved( const EditorThemeConfig& theme, EditorConfig& outSaved );
+        /** @brief @p theme 의 이름과 덮어쓴 값을 환경설정 칸에 씁니다. 덮어쓰지 않은 값은 `EditorAppearanceConfig::kNotOverridden` 이라, 토큰 파일이 바뀌면 그 값을 따릅니다. */
+        static void writeSaved( const EditorThemeConfig& theme, EditorAppearanceConfig& outSaved );
     };
 } // namespace sw::editor
 

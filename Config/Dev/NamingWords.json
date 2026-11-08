@@ -111,7 +111,8 @@
         "YawUtil::fromRotation": "OrientationUtil::computeYawFromRotation",
         "AnimationNotifyHandlerUtil": "AnimationNotifyHandlerRegistry::registerBuiltInHandlers(주인 형식의 static 멤버)",
         "RayMath": "Ray(광선 판정 static 멤버) · OrientationUtil(방향 · 원뿔 판정)",
-        "EditorUtil": "EditorExternalToolJob::makePythonScriptCommand · 계층 창 뱃지는 HierarchyPanel 안(잡동사니 Util 금지)"
+        "EditorUtil": "EditorExternalToolJob::makePythonScriptCommand · 계층 창 뱃지는 HierarchyPanel 안(잡동사니 Util 금지)",
+        "EditorConfig": "EditorAppearanceConfig(테마 · 모양 — Editor/Appearance 섹션)"
     },
     "_keep": {
         "MailboxOutcome": "우편 업무 값과 전송 공통 범주를 두 층으로 가른 온라인 키트의 업무 층",

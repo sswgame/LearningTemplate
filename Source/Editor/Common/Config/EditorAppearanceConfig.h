@@ -1,7 +1,7 @@
 /**
- * @file EditorConfig.h
+ * @file EditorAppearanceConfig.h
  * @brief 에디터 테마입니다. 환경설정 섹션 "Editor/Appearance" 로 등록되어 `Saved/Editor/EditorPreferences.json` 에 기본과 다른 값만 저장됩니다.
- *        값은 등록 줄이 가리키는 인스턴스 하나이고 `getPreferences<EditorConfig>()` 로 읽습니다(따로 든 활성 사본을 두지 않는다).
+ *        값은 등록 줄이 가리키는 인스턴스 하나이고 `getPreferences<EditorAppearanceConfig>()` 로 읽습니다(따로 든 활성 사본을 두지 않는다).
  *
  * @details 저장 파일은 앱이 통째로 다시 씁니다. 손으로 적은 것(주석 · 순서)은 남지 않으므로, 사람이 커밋하는 설정은
  *          `EditorToolDefaults`(editortooldefaults.json)에 둡니다.
@@ -22,7 +22,7 @@ namespace sw::editor
      *          것은 `EditorToolDefaults` 에 둡니다.
      */
     REFLECT()
-    struct EditorConfig : IConfig
+    struct EditorAppearanceConfig : IConfig
     {
         REFLECT_BODY();
 
