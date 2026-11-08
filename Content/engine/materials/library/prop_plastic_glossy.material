@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 광택 플라스틱 — 매끈한 유전체. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="PlasticGlossy" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.75 0.08 0.06 1"/>
+		<item name="_roughness" defaultValue="0.15"/>
+		<item name="_porosity" defaultValue="0"/>
+	</_properties>
+</MaterialDef>

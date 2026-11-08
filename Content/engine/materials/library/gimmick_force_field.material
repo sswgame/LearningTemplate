@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 역장 — 반투명 육각 격자, 가장자리가 밝은 프레넬, 흐르는 물결. 부모(gimmicksurface_translucent.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="ForceField" _base="engine/materials/gimmicksurface_translucent.material">
+	<_properties>
+		<item name="_effect" defaultValue="4"/>
+		<item name="_baseColor" defaultValue="0.3 0.6 1 0.2"/>
+		<item name="_emissiveColor" defaultValue="0.3 0.6 1 1"/>
+		<item name="_emissiveStrength" defaultValue="2"/>
+		<item name="_fresnelPower" defaultValue="3"/>
+		<item name="_patternScale" defaultValue="0.25 0 0.06 0"/>
+		<item name="_flowSpeed" defaultValue="0.5"/>
+	</_properties>
+</MaterialDef>

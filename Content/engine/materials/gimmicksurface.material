@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 장치 · 기믹 표면 마스터 머티리얼(gimmick_surface.hlsl) — 불투명. 프리셋은 engine/materials/library/gimmick_*.material 이 값만 바꾼다.
+     효과(_effect): 0 발광(네온) · 1 상호작용 강조(프레넬 맥동) · 2 녹아 사라짐(gimmicksurface_dissolve 부모) · 3 홀로그램 · 4 역장(gimmicksurface_translucent 부모) · 5 용암 · 6 얼음 · 7 켜진 화면.
+     _patternScale 은 효과마다 뜻이 다르다(셰이더 evaluateGimmick 의 주석). 자체 발광이 G버퍼에 칸이 없어 MATERIAL_FORWARD_ONLY 를 빼지 않는다(툰과 같다). -->
+<MaterialDef formatVersion="0" name="GimmickSurface" shaderPath="engine/shaders/gimmick_surface.hlsl" alphaMode="Opaque">
+	<_properties>
+		<item name="_baseColor" type="Color" defaultValue="0.5 0.5 0.5 1" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
+		<item name="_emissiveColor" type="Color" defaultValue="1 1 1 1" displayName="Emissive Color" group="Emission" bHdr="1" bSrgb="1"/>
+		<item name="_patternScale" type="Vector4" defaultValue="0.25 0 0.05 0" displayName="Pattern Size, Second Size, Edge Width, Reserved" group="Effect"/>
+		<item name="_effect" type="Range" defaultValue="0" min="0.0" max="7.0" displayName="Effect (0 emissive, 1 highlight, 2 dissolve, 3 hologram, 4 force field, 5 lava, 6 ice, 7 screen)" group="Effect"/>
+		<item name="_emissiveStrength" type="Range" defaultValue="1" min="0.0" max="16.0" displayName="Emissive Strength" group="Emission"/>
+		<item name="_roughness" type="Range" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
+		<item name="_metallic" type="Range" defaultValue="0" min="0.0" max="1.0" group="Surface"/>
+		<item name="_fresnelPower" type="Range" defaultValue="3" min="0.1" max="16.0" displayName="Fresnel Power" group="Effect"/>
+		<item name="_pulseSpeed" type="Range" defaultValue="2" min="0.0" max="20.0" displayName="Pulse Speed (rad/s)" group="Effect"/>
+		<item name="_flowSpeed" type="Range" defaultValue="0.5" min="-10.0" max="10.0" displayName="Flow / Scan Speed" group="Effect"/>
+		<item name="_dissolve" type="Range" defaultValue="0" min="0.0" max="1.0" displayName="Dissolve (0 visible, 1 gone)" group="Effect"/>
+		<item name="_alphaCutoff" type="Range" defaultValue="0.5" min="0.0" max="1.0" displayName="Alpha Cutoff" group="Surface"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

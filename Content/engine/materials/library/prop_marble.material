@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 대리석 — 노이즈로 휜 결, 연마 코트. 부모(environmentsurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="Marble" _base="engine/materials/environmentsurface.material">
+	<_properties>
+		<item name="_baseColor" defaultValue="0.92 0.91 0.88 1"/>
+		<item name="_roughness" defaultValue="0.12"/>
+		<item name="_secondaryColor" defaultValue="0.25 0.25 0.27 1"/>
+		<item name="_secondaryRoughness" defaultValue="0.15"/>
+		<item name="_patternScale" defaultValue="0.4 8 0 0"/>
+		<item name="_patternShape" defaultValue="3 0 0 1"/>
+		<item name="_clearCoat" defaultValue="0.6"/>
+		<item name="_porosity" defaultValue="0.1"/>
+	</_properties>
+</MaterialDef>
