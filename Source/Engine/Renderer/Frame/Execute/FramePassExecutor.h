@@ -385,6 +385,12 @@ namespace sw
         bool drawParticleRun( FramePassContext& context, vector_reference<const GPUTransparentParticleSlot> listSlot, uint32& inOutCursor, uint32 position );
         /** @brief 새로 칸을 받은 쿠키를 아틀라스 칸에 그립니다(프레임 프리패스 리스트, `submitGraph`). 그릴 칸이 없으면 아무것도 하지 않습니다. */
         void drawLight2DCookieAtlas();
+        /**
+         * @brief 텍스처 캐시에 맡겨 둔 UV 공간 층 굽기(`TextureLayerBakeRequest`)를 그립니다(프레임 프리패스 리스트 — 장면 뷰가 구운 텍스처를 읽기 전에 끝난다).
+         * @details 층마다 전체 화면 한 번 — 아래 결과를 읽어 섞고 결과 · 작업 타깃 두 벌을 번갈아 쓴다. 짚는 텍스처가 아직 준비되지 않았으면 그 굽기는 다음 프레임으로 미루고
+         *          (`TextureCache::deferLayerBake`), 결과 타깃이 없으면(요청한 쪽이 놓았다) 버린다.
+         */
+        void drawTextureLayerBakes();
         /** @brief 씬 배치를 멀티 드로우로 묶을지 반환합니다. `setDrawMergeEnabled` 로 받은 값을 쓰고, 없으면 전역 `gv_drawMerge` 를 씁니다. */
         bool isDrawMergeEnabled() const;
 

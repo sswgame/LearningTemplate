@@ -135,6 +135,8 @@ namespace sw
         vector<RegionUpdate>                    _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
         vector<RegionUpdate>                    _listFlushingRegion; ///< 렌더 스레드만 쓰는 맞바꾸기 자리(저장소를 재사용한다)
         mutex                                   _regionMutex;
+        vector<TextureLayerBakeRequest>         _listPendingBake; ///< 게임 스레드가 쌓고 렌더 스레드가 가져간다(`_bakeMutex`) — 결과 타깃마다 하나
+        mutex                                   _bakeMutex;
         unordered_map<string, RenderTargetSize> _mapRenderTargetSize; ///< `declareRenderTarget` 이 알린 크기
         shared_mutex                            _mutex;
         /// @brief 항목의 `_bLoading` 이 내려갈 때 깨운다. 태스크 대기가 아니다 — 맵 잠금 아래의 항목 상태를 기다리고, 올리는 쪽(`reload` · `resizeRenderTarget`)은 태스크 없이 디바이스 스레드에서 돈다.
@@ -926,6 +928,44 @@ namespace sw
         }
         return uploadedCount;
     }
+    void TextureCache::requestLayerBake( TextureLayerBakeRequest request )
+    {
+        if ( _impl == nullptr || request._albedoTarget.empty() )
+            return;
+        ScopedLock<mutex> lock{ _impl->_bakeMutex };
+        for ( TextureLayerBakeRequest& pending : _impl->_listPendingBake )
+        {
+            if ( pending._albedoTarget == request._albedoTarget )
+            {
+                pending = std::move( request ); // 같은 결과의 앞 요청은 낡았다
+                return;
+            }
+        }
+        _impl->_listPendingBake.push_back( std::move( request ) );
+    }
+
+    void TextureCache::deferLayerBake( TextureLayerBakeRequest request )
+    {
+        if ( _impl == nullptr || request._albedoTarget.empty() )
+            return;
+        ScopedLock<mutex> lock{ _impl->_bakeMutex };
+        for ( const TextureLayerBakeRequest& pending : _impl->_listPendingBake )
+        {
+            if ( pending._albedoTarget == request._albedoTarget )
+                return; // 그 사이 게임 스레드가 새 요청을 냈다 — 미룬 옛 요청은 버린다
+        }
+        _impl->_listPendingBake.push_back( std::move( request ) );
+    }
+
+    void TextureCache::takeLayerBakes( vector<TextureLayerBakeRequest>& outListRequest )
+    {
+        outListRequest.clear();
+        if ( _impl == nullptr )
+            return;
+        ScopedLock<mutex> lock{ _impl->_bakeMutex };
+        outListRequest.swap( _impl->_listPendingBake );
+    }
+
     void TextureCache::release( string_view relativePath )
     {
         if ( relativePath.empty() || _impl == nullptr )

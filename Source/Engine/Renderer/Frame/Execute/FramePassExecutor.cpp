@@ -20,6 +20,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/formatString.h"
 
+#include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
@@ -41,6 +42,8 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
+#include "Engine/Graphics/Texture/TextureLayerBake.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -315,6 +318,8 @@ namespace sw
         _state._canvasRenderer.drawTargets( *_pCmd, *pDevice, _state._canvasFrame, _psoManager.getCache() );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
         drawLight2DCookieAtlas();
+        // UV 공간 층 굽기(피부 화장 · 문신 · 번짐) — 구운 텍스처를 머티리얼이 읽기 전에 같은 프리패스 리스트에서 끝난다.
+        drawTextureLayerBakes();
 
 #if SW_PROFILE_COMPILED
         if ( bWriteGPUTime )
@@ -2841,6 +2846,122 @@ namespace sw
         _pCmd->endRenderPass();
         _pCmd->prepareTextureForShaderRead( pAtlas->getHandle() );
         _state._cookieAtlas.clearPendingDraws();
+    }
+
+    void FramePassExecutor::drawTextureLayerBakes()
+    {
+        if ( _pDevice == nullptr || _pCmd == nullptr || engine::areEngineServicesBound() == false )
+            return;
+        TextureCache&                   textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
+        vector<TextureLayerBakeRequest> listRequest;
+        textures.takeLayerBakes( listRequest );
+        if ( listRequest.empty() )
+            return;
+        SW_PROFILE_SCOPE( "RT.LayerBake" );
+        const bool bNativeBindless = _pDevice->supportsNativeBindlessSampling();
+        // 텍스처 칸을 루트 상수로 채운다 — 네이티브 bindless 는 전역 번호, 에뮬 백엔드는 머티리얼 칸 t16.. 에 서수로 걸고 그 서수(캔버스와 같은 길).
+        const auto bindTexture = [this, bNativeBindless]( const Texture2D* pTexture, uint32 slot, uint32& outRoot )
+        {
+            if ( pTexture == nullptr )
+            {
+                outRoot = constant::invalid_index::kUint32;
+                return;
+            }
+            if ( bNativeBindless )
+            {
+                outRoot = pTexture->getSRV();
+                return;
+            }
+            _pCmd->bindShaderResource( pTexture->getSRV(), shaderslot::kMaterialTexture0 + slot );
+            outRoot = slot;
+        };
+        const auto findReady = [&textures]( const string& path ) -> const Texture2D*
+        {
+            const Texture2D* pTexture = path.empty() ? nullptr : textures.find( path );
+            return pTexture != nullptr && pTexture->isRHIValid() ? pTexture : nullptr;
+        };
+
+        for ( TextureLayerBakeRequest& request : listRequest )
+        {
+            if ( textures.find( request._albedoTarget ) == nullptr )
+                continue; // 요청한 쪽이 결과를 놓았다 — 그릴 곳이 없다
+            // [0] 작업 타깃 · [1] 결과 타깃, 각 (알베도, 표면).
+            const Texture2D* arrTarget[2][2] = {
+                {findReady( request._albedoScratch ), findReady( request._surfaceScratch )},
+                { findReady( request._albedoTarget ),  findReady( request._surfaceTarget )}
+            };
+            const Texture2D* pBase        = findReady( request._base );
+            bool             bInputsReady = pBase != nullptr && arrTarget[1][0] != nullptr && arrTarget[1][1] != nullptr;
+            bInputsReady                  = bInputsReady && ( request.getDrawCount() < 2u || ( arrTarget[0][0] != nullptr && arrTarget[0][1] != nullptr ) );
+            for ( const TextureLayerBakeLayer& layer : request._listLayer )
+            {
+                bInputsReady = bInputsReady && findReady( layer._mask ) != nullptr && ( layer._smear.empty() || findReady( layer._smear ) != nullptr );
+            }
+            if ( bInputsReady == false )
+            {
+                textures.deferLayerBake( std::move( request ) ); // 읽는 중이거나 디바이스 교체로 다시 만드는 중 — 다음 프레임에 다시
+                continue;
+            }
+            const RHIPipelineStateHandle pso = _psoManager.findOrCreateLayerBakePSO( arrTarget[1][0]->getFormat() );
+            if ( pso == 0 )
+                continue; // 못 만든 까닭은 PSO 관리자가 남겼다
+
+            const uint32     width          = arrTarget[1][0]->getWidth();
+            const uint32     height         = arrTarget[1][0]->getHeight();
+            const Texture2D* pSourceAlbedo  = pBase;
+            const Texture2D* pSourceSurface = nullptr;
+            for ( uint32 drawIndex = 0; drawIndex < request.getDrawCount(); ++drawIndex )
+            {
+                const uint32                 targetSet = request.writesResult( drawIndex ) ? 1u : 0u;
+                const TextureLayerBakeLayer* pLayer    = request._listLayer.empty() ? nullptr : &request._listLayer[drawIndex];
+                const Texture2D*             pMask     = pLayer != nullptr ? findReady( pLayer->_mask ) : nullptr;
+                const Texture2D*             pSmear    = pLayer != nullptr ? findReady( pLayer->_smear ) : nullptr;
+                // 상태 전이는 렌더 패스 밖에서 — 읽는 것은 읽기, 이번 타깃은 그리기.
+                const Texture2D* const arrRead[TextureLayerBakeConstants::kTextureCount] = { pSourceAlbedo, pSourceSurface, pMask, pSmear };
+                for ( const Texture2D* pRead : arrRead )
+                {
+                    if ( pRead != nullptr )
+                        _pCmd->prepareTextureForShaderRead( pRead->getHandle() );
+                }
+                _pCmd->prepareTextureForRenderTarget( arrTarget[targetSet][0]->getHandle() );
+                _pCmd->prepareTextureForRenderTarget( arrTarget[targetSet][1]->getHandle() );
+
+                RHIRenderPassBeginInfo beginInfo{};
+                beginInfo._bBindColor        = SW_TRUE;
+                beginInfo._colorTargetCount  = 2;
+                beginInfo._arrColorTarget[0] = arrTarget[targetSet][0]->getHandle();
+                beginInfo._arrColorTarget[1] = arrTarget[targetSet][1]->getHandle();
+                beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::DontCare; // 전체 화면이 모든 픽셀을 덮는다
+                beginInfo._arrLoadOp[1]      = RHIRenderPassLoadOp::DontCare;
+                beginInfo._depthTarget       = 0;
+                beginInfo._depthLoadOp       = RHIRenderPassLoadOp::DontCare;
+                beginInfo._width             = width;
+                beginInfo._height            = height;
+                _pCmd->beginRenderPass( beginInfo );
+                RHIViewport viewport{};
+                viewport._width  = static_cast<float32>( width );
+                viewport._height = static_cast<float32>( height );
+                _pCmd->setViewport( viewport );
+                _pCmd->setScissorRect( RHIScissorRect{ 0, 0, width, height } );
+                _pCmd->setPipelineState( pso );
+                // setPipelineState 가 슬롯 상태를 비운다 — 텍스처는 PSO 뒤에 건다.
+                TextureLayerBakeConstants constants{};
+                if ( pLayer != nullptr )
+                    constants.packLayer( *pLayer );
+                for ( uint32 slot = 0; slot < TextureLayerBakeConstants::kTextureCount; ++slot )
+                {
+                    bindTexture( arrRead[slot], slot, constants._arrDword[TextureLayerBakeConstants::kRootSourceAlbedo + slot] );
+                }
+                _pCmd->setGraphicsRootConstants( 0, TextureLayerBakeConstants::kRootDwordCount, constants._arrDword );
+                _pCmd->draw( 3, 0 );
+                _pCmd->endRenderPass();
+                pSourceAlbedo  = arrTarget[targetSet][0];
+                pSourceSurface = arrTarget[targetSet][1];
+            }
+            // 결과는 머티리얼이 읽는다 — 읽기 상태로 둔다.
+            _pCmd->prepareTextureForShaderRead( arrTarget[1][0]->getHandle() );
+            _pCmd->prepareTextureForShaderRead( arrTarget[1][1]->getHandle() );
+        }
     }
 
     void FramePassExecutor::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso )

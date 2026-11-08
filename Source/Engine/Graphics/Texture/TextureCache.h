@@ -16,6 +16,7 @@
 #include "Engine/Foundation/RenderTargetDeclaration.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Texture/Texture2D.h"
+#include "Engine/Graphics/Texture/TextureLayerBake.h"
 
 namespace sw
 {
@@ -195,6 +196,16 @@ namespace sw
          * @return 반영한 구간 수입니다(원본만 고친 것과 받아들여진 제출).
          */
         uint32 flushRegionUpdates( IRHIDevice* pDevice );
+        /**
+         * @brief UV 공간 층 굽기를 맡깁니다(게임 스레드). 렌더 스레드가 다음 프레임 프리패스에서 그린다(`takeLayerBakes`). 같은 결과 타깃(`_albedoTarget`)의 앞 요청은 대체한다.
+         * @details 요청이 짚는 텍스처(밑 · 마스크 · 번짐 · 타깃)는 부르는 쪽이 핸들로 쥐고 있어야 한다 — 렌더 스레드는 `find` 로 읽고, 아직 없으면 다음 프레임으로 미룬다(`deferLayerBake`).
+         *          구간 갱신(`requestRegionUpdate`)과 같은 맡김 줄이다 — 렌더 타깃의 내용을 바꾸는 주인이 경로 공간의 주인(이 캐시)이다.
+         */
+        void requestLayerBake( TextureLayerBakeRequest request );
+        /** @brief 그리지 못한 굽기를 다음 프레임으로 돌려놓습니다(렌더 스레드). 그 사이 같은 결과의 새 요청이 들어왔으면 버립니다. */
+        void deferLayerBake( TextureLayerBakeRequest request );
+        /** @brief 맡겨 둔 굽기를 모두 가져갑니다(렌더 스레드, 프레임 프리패스). @p outListRequest 는 비우고 채운다. */
+        void takeLayerBakes( vector<TextureLayerBakeRequest>& outListRequest );
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다(붙은 디바이스에서). */
         void release( string_view relativePath );
         /** @brief 그 경로를 지금 캐시가 보관하고 있는지 반환합니다(`MaterialCache::isCached` 와 같은 뜻). */

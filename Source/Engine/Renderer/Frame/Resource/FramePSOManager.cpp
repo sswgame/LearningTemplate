@@ -221,6 +221,22 @@ namespace sw
             return desc;
         }
 
+        /** @brief UV 공간 층 굽기 PSO 의 desc 입니다 — 층 굽기 셰이더, 타깃 둘(알베도 · 표면 덮어쓰기)을 같은 포맷으로(`findOrCreateLayerBakePSO` · 셋업의 셰이더 데우기). */
+        RHIPipelineStateDesc makeLayerBakePSODesc( const string& shaderPath, RHIFormat targetFormat )
+        {
+            RHIPipelineStateDesc desc{};
+            desc._vertexShaderPath               = shaderPath;
+            desc._pixelShaderPath                = shaderPath;
+            desc._vertexEntryPoint               = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
+            desc._pixelEntryPoint                = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
+            desc._numRenderTargets               = 2;
+            desc._arrRTVFormat[0]                = targetFormat;
+            desc._arrRTVFormat[1]                = targetFormat;
+            desc._depthStencilFormat             = RHIFormat::Unknown;
+            desc._renderState._bEnableDepthWrite = SW_FALSE;
+            return desc;
+        }
+
         /** @brief PSO 를 동기로 만듭니다(셰이더 컴파일 · 드라이버 생성을 렌더 스레드가 기다리는 시간을 `RT.PSO.create` 로 잰다). */
         [[nodiscard]] RHIPipelineStateHandle createPipelineStateTimed( IRHIDevice& device, const RHIPipelineStateDesc& desc )
         {
@@ -352,6 +368,7 @@ namespace sw
         {
             // 아틀라스 포맷은 셰이더 바이트코드에 들지 않는다(RT 수만 든다 — `RHIShaderRequest::resolveGraphics`) — 아틀라스와 같은 RGBA8 로 데운다.
             appendShaderWarm( makeCookieAtlasPSODesc( engineDefaultAssets._shaderFullscreenBlit.get(), RHIFormat::R8G8B8A8_UNORM ), listShader );
+            appendShaderWarm( makeLayerBakePSODesc( engineDefaultAssets._shaderLayerBake.get(), constant::render::kOffscreenColorFormat ), listShader );
         }
         const ShaderTargetFormat targetFormat = RHI::getShaderTargetFormat( _pDevice->getBackendType() );
         for ( const ComputePSOJob& computeJob : listComputeJob )
@@ -620,6 +637,27 @@ namespace sw
             const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
             if ( handle == 0 )
                 SW_LOG_ERROR_ID( "FramePSOManager.DLightCookieAtlas", "The 2D light cookie atlas PSO could not be created from '%#' - cookie lights draw without cookies", shaderPath );
+            else
+                registerLayout( handle, desc );
+            _pCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry::ready( handle, true ) );
+        }
+        return _pCache->findMaterialPSO( psoKey );
+    }
+
+    RHIPipelineStateHandle FramePSOManager::findOrCreateLayerBakePSO( RHIFormat targetFormat )
+    {
+        if ( _pDevice == nullptr )
+            return 0;
+        // 쿠키 아틀라스 PSO 와 같은 길 — 머티리얼 변형 저장소의 키 공간을 빌려 저장소가 소유한다(디바이스를 바꾸면 저장소가 비고 여기서 다시 만든다).
+        const string& shaderPath = engine::getSubsystem<EngineDefaultAssets>()._shaderLayerBake.get();
+        const uint64  psoKey     = RenderPSOCache::materialPSOKey( 0, HashUtil::combine( hashed_string( shaderPath ).getHash(), FourCCUtil::make( "LBAK" ) + static_cast<uint32>( targetFormat ) ),
+                                                                   RenderViewMode::Lit, false, RHIMeshVertexFormat::Packed );
+        if ( _pCache->hasMaterialPSO( psoKey ) == false )
+        {
+            const RHIPipelineStateDesc   desc   = makeLayerBakePSODesc( shaderPath, targetFormat );
+            const RHIPipelineStateHandle handle = _pDevice->getResourceFactory()->createPipelineState( desc );
+            if ( handle == 0 )
+                SW_LOG_ERROR_ID( "FramePSOManager.LayerBakePSO", "The UV layer bake PSO could not be created from '%#' - skin layers are not baked", shaderPath );
             else
                 registerLayout( handle, desc );
             _pCache->setMaterialPSO( psoKey, RenderPSOCache::MaterialPSOEntry::ready( handle, true ) );
