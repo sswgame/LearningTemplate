@@ -27,6 +27,7 @@ namespace sw
     LightComponent::LightComponent( uint32 lightType, const float3& defaultColor, float32 defaultIntensity )
         : _color{ defaultColor }
         , _intensity{ defaultIntensity }
+        , _lensFlarePath{}
         , _lightType{ lightType }
     {
     }

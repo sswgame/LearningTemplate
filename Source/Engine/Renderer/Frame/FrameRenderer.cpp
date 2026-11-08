@@ -359,6 +359,7 @@ namespace sw
         // 비어 있으면 셰이더는 앰비언트만 더한다 — 라이트 컴포넌트가 없는 씬은 어둡다(키 라이트로 대신 비추지 않는다).
         _state._cookieAtlas.assignCells( pDevice, packet._listLightCookie, packet._listLight );
         _state._listFrameRealtimeProbe = packet._listRealtimeProbe;
+        _state._listFrameLensFlare     = packet._listLensFlare;
         _state._lightBuffer.populate( packet._listLight, _state._frameShadow._listTileElement, packet._pLightProbe, _state._listFrameRealtimeProbe.empty() == false );
 
         ensurePassResources();
@@ -369,6 +370,11 @@ namespace sw
         // 빠지기 쉽다. 뷰-투영은 패킷의 주 시점이다(역행렬과 절두체도 함께 갱신된다).
         updatePassConstants( _state._frameContext, packet._viewProj );
         _state.view( RenderViewType::Main )._position = packet._cameraPos;
+        // 렌즈 플레어 스프라이트는 주 시점(패킷의 뷰-투영 · 화면비)으로 펼쳐 기록 전에 올린다. 추가 뷰는 플레어를 그리지 않는다. 빈 화면(높이 0)은 그릴 것이 없다.
+        if ( packet._viewportHeight > 0 )
+            _state._lensFlare.prepare( pDevice, _state._listFrameLensFlare, packet._viewProj, static_cast<float32>( packet._viewportWidth ) / static_cast<float32>( packet._viewportHeight ) );
+        else
+            _state._lensFlare.prepare( pDevice, {}, packet._viewProj, 1.0f );
         // 추가 뷰의 풀, 텍스처, 컬링 슬롯을 업로드 전에 맞춘다(기록 중에는 만들 수 없다).
         prepareExtraViews( packet._listView );
         // 값 업로드와 바인딩은 드로우 직전에 ShaderParameterBinder 가 한다. 여기서는 시드만 채운다.
@@ -721,6 +727,7 @@ namespace sw
         _state._lightBuffer.release( _pDevice );
         _fog.release();
         _state._probeUpdater.release( _pDevice );
+        _state._lensFlare.release( _pDevice );
         _state._cookieAtlas.release( _pDevice );
         // HDRI 텍스처의 참조를 놓는다 — 다음 프레임의 하늘이 새 디바이스에 다시 청한다(경로를 비워 다르게 본다).
         _state._skyHdriLoad  = TextureHandle{};

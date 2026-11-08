@@ -3,6 +3,7 @@
  * @brief 빛 종류들의 공통 기반입니다. 색 · 세기 · 위치 · 방향 규약 · 레지스트리 등록을 한 곳에 둡니다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -87,6 +88,11 @@ namespace sw
          * @details 렌더러가 프레임마다 모아(`collectSceneLights` 의 쿠키 목록) 쿠키 아틀라스(`Light2DCookieAtlas`)의 칸에 그리고, 빛 원소의 `_extra.w` 에 칸 번호를 적는다.
          */
         virtual hashed_string getCookieTexturePath() const { return {}; }
+        /**
+         * @brief 렌즈 플레어 파일(`LensFlareAsset`, `*.lensflare.xml`)의 경로입니다. 비면 플레어가 없습니다. 3D 빛(방향광 · 점광 · 스폿)만 그린다.
+         * @details 렌더 수집기가 빛마다 읽어 패킷에 싣고(`RenderPacketSceneCollector::collectLensFlares`) 렌즈 플레어 패스가 그린다. 못 읽으면 오류를 한 번 남기고 그 빛은 플레어가 없다.
+         */
+        const string& getLensFlarePath() const { return _lensFlarePath; }
 
         /** @brief 씬에 붙을 때 빛 레지스트리의 자기 종류 칸에 자기를 등록합니다. */
         void onRegister( GameObjectManager& manager ) override;
@@ -119,6 +125,8 @@ namespace sw
         float3 _color;
         PROPERTY( Category = "Light", DisplayName = "Intensity", Min = 0.0, Tooltip = "Light intensity" )
         float32 _intensity;
-        uint32  _lightType; ///< `shaderslot::kLightType*`. 만들 때 파생이 정하고 바뀌지 않습니다
+        PROPERTY( Category = "Light", DisplayName = "Lens Flare", Tooltip = "Lens flare data (.lensflare.xml) drawn for this 3D light - empty draws none" )
+        string _lensFlarePath;
+        uint32 _lightType; ///< `shaderslot::kLightType*`. 만들 때 파생이 정하고 바뀌지 않습니다
     };
 } // namespace sw

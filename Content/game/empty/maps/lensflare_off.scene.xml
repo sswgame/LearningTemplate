@@ -1,0 +1,57 @@
+<Scene formatVersion="2" name="LensFlareOff">
+	<!-- 시나리오 automation/lensflare 의 대조 무대 — lensflare.scene.xml 과 같고 두 점광에 렌즈 플레어(_lensFlarePath)가 없다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1,-2" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.9" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,6" _localRotation="0,0,0" _localScale="20,1,20" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="15" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Occluder">
+			<GameObject _schemaVersion="0" _name="Occluder" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-1.6,1.2,4" _localRotation="0,0,0" _localScale="1.2,2.4,0.4" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="VisibleLight">
+			<GameObject _schemaVersion="0" _name="VisibleLight" _bActive="true">
+				<_listComponent>
+					<PointLightComponent _localPosition="1.6,1.6,8"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachComponent="None"
+					                     _color="1,0.85,0.6"
+					                     _intensity="6"
+					                     _radius="10" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="HiddenLight">
+			<GameObject _schemaVersion="0" _name="HiddenLight" _bActive="true">
+				<_listComponent>
+					<PointLightComponent _localPosition="-1.6,1.2,6"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachComponent="None"
+					                     _color="0.6,0.8,1"
+					                     _intensity="6"
+					                     _radius="10" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

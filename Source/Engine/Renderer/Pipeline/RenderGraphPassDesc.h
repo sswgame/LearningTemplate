@@ -112,6 +112,12 @@ namespace sw
          *        출력(조명 첨부)을 여러 패스가 쓰므로 뷰마다 건너뛰는 효과가 아니다 — 켜고 끄는 것은 파이프라인 XML 이다(engine/pipeline/deferredpipeline_gi.xml). SceneColorCopy 뒤 · 반투명 앞에 둔다.
          */
         ScreenSpaceGI,
+        /**
+         * @brief 빛마다의 렌즈 플레어 스프라이트입니다(lens_flare.hlsl). 플레어를 단 빛(`LightComponent::_lensFlarePath`)을 주 시점에 투영해 데이터(`LensFlareAsset`)의 원소를
+         *        빛 → 화면 가운데 축 위에 그리고, 빛 자리 둘레의 장면 깊이로 가림을, 화면 가장자리로 감쇠를 곱한다(`LensFlareSpriteBuffer`). 선언한 HDR 컬러 출력에 가산 블렌드로 더한다
+         *        (XML `_blendPreset="Additive"`) — 톤맵 · 블룸 앞에 둔다. 블룸에서 고스트를 뽑는 화면 효과와 별개다. 플레어를 단 빛이 없으면 그리지 않는다(출력 그대로). 주 시점만 그린다.
+         */
+        LensFlare,
 
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,

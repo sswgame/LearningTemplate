@@ -231,6 +231,8 @@ namespace sw
         void executeSkyPass( const PassExecuteInput& input );
         /** @brief 안개 패스(`RenderPassType::Fog`)를 실행합니다. 안개가 없거나 표면 값 보기에서는 그리지 않습니다. 안개 상수 · 볼륨 버퍼는 `FrameFog` 가 정해 둔 것을 읽습니다. */
         void executeFogPass( const PassExecuteInput& input );
+        /** @brief 렌즈 플레어 패스(`RenderPassType::LensFlare`)를 실행합니다. 주 시점이 아니거나 스프라이트가 없으면 그리지 않습니다. 스프라이트는 `LensFlareSpriteBuffer` 가 기록 전에 올렸다. */
+        void executeLensFlarePass( const PassExecuteInput& input );
         /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */
         void executeTAAPass( const PassExecuteInput& input );
         /** @brief 최종 출력(백버퍼 · 캡처 · 렌더 텍스처)으로의 블릿입니다. 화면 사각형 · 정수 업스케일 뷰포트를 적용합니다. */

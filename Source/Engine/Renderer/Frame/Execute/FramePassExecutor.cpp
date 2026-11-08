@@ -1001,6 +1001,11 @@ namespace sw
                     executeFogPass( input );
                     break;
                 }
+                case RenderPassType::LensFlare:
+                {
+                    executeLensFlarePass( input );
+                    break;
+                }
                 case RenderPassType::TAA:
                 {
                     executeTAAPass( input );
@@ -1358,6 +1363,32 @@ namespace sw
         if ( bVolume )
             context._pCmd->bindStructuredBuffer( _fog.getFogVolumeBuffer()._srv, shaderslot::kPassBuffer );
         context._pCmd->draw( 3, 0 );
+        context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executeLensFlarePass( const PassExecuteInput& input )
+    {
+        // 스프라이트는 주 시점의 투영으로 펼쳤다 — 추가 뷰 · 표면 값 보기에서는 그리지 않는다(값 위를 덮는다). 출력 위에 더하므로 "그리지 않음" 은 아무것도 하지 않는 것이다.
+        const RenderViewModeInfo&    viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+        const RHIPipelineStateHandle pso          = _psoManager.getEnginePSO( RenderPassType::LensFlare );
+        const LensFlareSpriteBuffer& sprites      = _state._lensFlare;
+        const bool                   bDraws       = pso != 0 && sprites.getSpriteCount() > 0 && _pActiveView == &_state._mainView && viewModeInfo._bShowsBuffer == false && viewModeInfo._bWireframe == false;
+        if ( bDraws == false )
+            return;
+
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
+        registerDeclaredInputs( context, input._passDesc );
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+            return;
+        // drawFullscreen 과 같은 순서다. 스프라이트 버퍼는 PSO 와 공통 바인딩(bindForDraw) 뒤에 건다 — setPipelineState 가 슬롯 상태를 비운다(안개 패스와 같다).
+        setIdentityWorld( context );
+        commitBindlessTextureBindings( context );
+        context._pCmd->setPipelineState( pso );
+        bindForDraw( context, pso, kInvalidDescriptorIndex );
+        context._pCmd->bindStructuredBuffer( sprites.getBuffer()._srv, shaderslot::kPassBuffer );
+        // 스프라이트 하나 = 모서리 여섯(정점 버퍼 없이 SV_VertexID 로 만든다 — lens_flare.hlsl).
+        context._pCmd->draw( sprites.getSpriteCount() * 6u, 0 );
         context._pCmd->endRenderPass();
     }
 

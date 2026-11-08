@@ -111,6 +111,12 @@
 - `_type="ScreenSpaceGI"`(ssgi.hlsl)는 입력 넷(SceneColorCopy · SceneDepth · GBufferNormal · GBufferAlbedo)을 읽어 조명 첨부에 `_blendPreset="Additive"` 로 더한다. 출력을 여러 패스가 쓰므로 뷰마다 건너뛰지 않는다(`_minPostQuality="0"`) — 켜고 끄는 것은 파이프라인이다. 값은 `SW_SSGI_RADIUS` · `SW_SSGI_DIRECTIONS` · `SW_SSGI_STEPS` · `SW_SSGI_INTENSITY`.
 - 예: `engine/pipeline/deferredpipeline_gi.xml`(기본 디퍼드는 그대로).
 
+## 렌즈 플레어
+
+- `_type="LensFlare"`(lens_flare.hlsl)는 입력 SceneDepth 하나와 HDR 컬러 출력 하나, `_blendPreset="Additive"` 다. 기본 포워드 · 디퍼드 파이프라인이 안개 뒤 · 블룸(포워드는 피사계 심도) 앞에 둔다. 2D 파이프라인은 뺀다.
+- 그릴 것은 데이터다: 빛 컴포넌트의 `_lensFlarePath` 가 `*.lensflare.xml`(`LensFlareAsset` — 원소의 축 위 자리 · 크기 · 색 · 모양, 가장자리 감쇠 폭, 가림 표본 반지름)을 가리킨다. 렌더 스레드가 주 시점에 투영해 스프라이트 버퍼(패스 버퍼 슬롯)를 채우고(`LensFlareSpriteBuffer`), 픽셀 셰이더가 빛 자리 둘레 깊이 표본 아홉으로 가린다. 플레어를 단 빛이 없으면 그리지 않는다.
+- 블룸에서 고스트를 뽑는 화면 효과와 별개의 패스다(빛마다의 데이터 기반 — 유니티 SRP Lens Flare 자리).
+
 ## 고칠 때
 
 렌더 상태 칸을 더할 곳은 `RHIRenderState.h` 하나와 네 백엔드의 읽기다 — XML 읽기 · 쓰기는 리플렉션이, 패스 · 머티리얼 합치기와 해시 · 비교는 바이트가 따라온다(패딩이 생기면 `static_assert` 가 멈춘다). 조합 규칙은 `findInvalidReason`, 머티리얼에게 내주지 않을 칸은 `RHIRenderStateOverride::applyTo` 에 적는다. RHI ABI 번호를 올린다.

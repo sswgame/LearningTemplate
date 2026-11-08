@@ -270,6 +270,14 @@ namespace sw
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kRequiresPassDesc;
                         break;
                     }
+                    case RenderPassType::LensFlare:
+                    {
+                        // 스프라이트 버퍼(패스 버퍼 슬롯)를 읽어 선언한 컬러 출력에 더한다 — 전용 실행(`FramePassExecutor::executeLensFlarePass`). 가림은 장면 깊이를 읽는다.
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderLensFlare;
+                        info._inputContract  = makeContract( { Role::SceneDepth }, {} );
+                        info._flags          = Flag::kBlend | Flag::kHasInputContract | Flag::kDrawsDeclaredColor | Flag::kRequiresPassDesc;
+                        break;
+                    }
                     case RenderPassType::Compute:
                     {
                         // 셰이더는 XML 이 고른다 — 표의 기본값이 없고, 첨부를 RW 텍스처로 묶는 전용 실행이다(`FramePassExecutor::executeComputePass`).

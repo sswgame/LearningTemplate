@@ -260,6 +260,23 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 빛마다의 렌즈 플레어(LightComponent::_lensFlarePath · lens_flare.hlsl) — 플레어를 단 빛이 없으면 그리지 않는다. 톤맵 · 블룸 앞의 HDR 색에 더한다. 블룸 고스트와 별개다. -->
+		<RenderGraphPassDesc _name="LensFlare"
+		                     _type="LensFlare"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _blendPreset="Additive">
+			<_listInput>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>LitColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="BloomDownsample"
 		                     _type="BloomDownsample"
 		                     _vertexEntryPoint="VSMain"

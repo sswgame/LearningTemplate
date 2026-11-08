@@ -16,6 +16,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
+#include "Engine/Renderer/Lighting/LensFlareSpriteBuffer.h"
 
 namespace sw
 {
@@ -86,6 +87,11 @@ namespace sw
         /** @brief 주 시점 카메라에 매인 씬 내용입니다 — 안개(카메라가 물속이면 물의 안개)와 투명 정렬 축(render2d.xml). */
         void applyMainCamera( RenderFramePacket& packet, Scene& activeScene, CameraComponent& camera );
         /**
+         * @brief 렌즈 플레어를 단 3D 빛(`LightComponent::getLensFlarePath`)마다 요청을 패킷에 싣습니다. 플레어 파일은 경로마다 한 번 읽어 둔다(`_listLensFlareAsset`).
+         * @details 못 읽은 파일은 오류를 한 번 남기고 그 빛은 플레어가 없다 — 다른 플레어로 대신하지 않는다. shortcut: 파일을 고쳐도 다시 읽지 않는다 — 핫 리로드가 필요해지면 경로의 수정 세대를 열쇠에 더한다.
+         */
+        void collectLensFlares( RenderFramePacket& packet, const Scene& activeScene );
+        /**
          * @brief 그림자 배치(아틀라스 칸 · 캐스케이드 · 점광 · 스폿 타일)를 만듭니다. 카메라가 정해진 **뒤에** 부릅니다 — `_shadowViewDistance` 를 준 빛은 볼륨을 카메라가 보는 곳에 맞춘다.
          * @details 텍셀 스냅 · 바이어스는 렌더 스레드가 그릴 캐스케이드 칸과 같은 해상도로 측정한다.
          */
@@ -121,6 +127,8 @@ namespace sw
         vector<uint32> _listShadowLightIndex;
         /** @brief 프로브 버퍼 원소 묶음입니다(`collectSceneLights`). 내용이 그대로면 지난 묶음을 다시 주도록 프레임을 넘어 유지합니다. */
         LightProbeElementBuilder _lightProbeElement;
+        /** @brief 읽은 렌즈 플레어 파일(경로 → 데이터, 못 읽은 경로는 nullptr)입니다. 프레임을 넘어 유지한다. */
+        vector<pair<string, shared_ptr<const LensFlareAsset>>> _listLensFlareAsset;
         /** @brief 디바이스가 GPU 컬링 컴퓨트를 돌릴 수 있어 인스턴스 LOD 를 GPU 가 고를 수 있는지입니다(`initialize` 가 정한다). `fillSceneView` 는 쓰지 않는다. */
         uint8 _bGPUInstanceLODCapable : 1;
     };
