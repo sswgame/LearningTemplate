@@ -1342,7 +1342,7 @@ namespace sw
     {
     }
 
-    bool PrefabLoadOperation::runLoad( string& outError )
+    expected<void> PrefabLoadOperation::runLoad()
     {
         _pAsset = _pCache->loadAndCache( getPath() );
         {
@@ -1355,10 +1355,9 @@ namespace sw
         }
         if ( _pAsset == nullptr )
         {
-            outError = "the prefab could not be loaded (the loader logged why)";
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the prefab could not be loaded (the loader logged why)", getPath() } );
         }
-        return true;
+        return {};
     }
 
     PrefabHandle PrefabCache::request( string_view assetRelativePath )

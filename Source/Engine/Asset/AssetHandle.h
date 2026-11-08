@@ -16,6 +16,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -33,12 +34,11 @@ namespace sw
 
     /**
      * @brief 완료 단계 한 걸음의 결과입니다(`AssetLoadOperation::beginCompletion` · `pollCompletion`).
-     * @details GPU 업로드처럼 제출과 끝남 확인이 갈리는 종류만 `Submitted` · `Busy` 를 쓴다. 한 번에 끝나는 종류는 `Done` · `Failed` 만 돌려준다.
+     * @details GPU 업로드처럼 제출과 끝남 확인이 갈리는 종류만 `Submitted` · `Busy` 를 쓴다. 한 번에 끝나는 종류는 `Done` 이나 오류만 돌려준다.
      */
     enum class AssetCompletionStep : uint8
     {
-        Done = 0,  ///< 끝났다. 로드 작업이 `Ready` 가 된다
-        Failed,    ///< 실패했다. 이유를 @p outError 에 적었다
+        Done = 0,  ///< 끝났다. 로드 작업이 `Ready` 가 된다(실패는 단계가 아니라 결과의 오류다 — `expected<AssetCompletionStep>`)
         Submitted, ///< 일을 냈고 끝났는지는 `pollCompletion` 이 본다(업로드 중 단계 — 로드 작업은 `Loading` 으로 남는다)
         Busy,      ///< 지금은 낼 수 없다. 완료를 다시 기다리는 단계로 돌아가 다음 펌프에서 다시 낸다
     };
@@ -121,20 +121,20 @@ namespace sw
     protected:
         /**
          * @brief 로드 단계 본문입니다(디스크 읽기 · 디코드). 어느 스레드에서든 불립니다.
-         * @return 성공하면 true. 실패하면 @p outError 에 이유를 적고 false 를 반환합니다.
+         * @return 성공이나 실패 이유입니다.
          */
-        [[nodiscard]] virtual bool runLoad( string& outError ) = 0;
+        [[nodiscard]] virtual expected<void> runLoad() = 0;
         /** @brief 완료 단계가 있는 종류면 true 입니다. 기본은 없음입니다. */
         virtual bool hasCompletion() const { return false; }
         /** @brief 완료 단계 본문입니다(정해진 스레드). 완료가 있는 종류만 덮어씁니다. */
-        [[nodiscard]] virtual bool runCompletion( string& outError );
+        [[nodiscard]] virtual expected<void> runCompletion();
         /**
-         * @brief 완료 단계의 첫 걸음입니다. 기본은 `runCompletion` 을 한 번에 실행해 `Done` · `Failed` 로 끝냅니다. 제출과 확인이 갈리는 종류가 덮어씁니다.
-         * @param bBlocking `wait()` 가 부른 경우 true 입니다 — 끝날 때까지 기다리고 `Done` · `Failed` 만 돌려줍니다(`Submitted` · `Busy` 를 돌려주지 않는다). 펌프는 false 입니다.
+         * @brief 완료 단계의 첫 걸음입니다. 기본은 `runCompletion` 을 한 번에 실행해 `Done` 이나 오류로 끝냅니다. 제출과 확인이 갈리는 종류가 덮어씁니다.
+         * @param bBlocking `wait()` 가 부른 경우 true 입니다 — 끝날 때까지 기다리고 `Done` 이나 오류만 돌려줍니다(`Submitted` · `Busy` 를 돌려주지 않는다). 펌프는 false 입니다.
          */
-        [[nodiscard]] virtual AssetCompletionStep beginCompletion( bool bBlocking, string& outError );
+        [[nodiscard]] virtual expected<AssetCompletionStep> beginCompletion( bool bBlocking );
         /** @brief `Submitted` 뒤의 끝남 확인입니다(업로드 중 단계에서 집은 스레드가 부른다). `bBlocking` 이면 끝날 때까지 기다립니다. 기본은 늘 `Done` 입니다. */
-        [[nodiscard]] virtual AssetCompletionStep pollCompletion( bool bBlocking, string& outError );
+        [[nodiscard]] virtual expected<AssetCompletionStep> pollCompletion( bool bBlocking );
         /** @brief 완료 단계가 `Submitted` 로 끝나 업로드 중이 된 순간 불립니다(펌프 목록에 넣을 때). 잠금 안에서 `isUploading()` 을 확인하고 넣습니다. */
         virtual void onUploadSubmitted() {}
         /** @brief 업로드 중(완료를 냈고 끝남 확인을 아무도 집지 않은) 단계면 true 입니다. */
@@ -172,9 +172,11 @@ namespace sw
         /** @brief 집은 업로드 중 단계의 끝남 확인을 한 걸음 실행하고 결과를 반영합니다. */
         void executeUploadPoll( bool bBlocking );
         /** @brief 완료 단계 한 걸음의 결과를 단계 워드에 반영합니다. */
-        void settleCompletionStep( AssetCompletionStep step, string error );
+        void settleCompletionStep( const expected<AssetCompletionStep>& step );
         /** @brief 결과를 적고 `Done` 으로 넘긴 뒤 기다리는 쪽을 깨웁니다. */
         void finish( bool bSucceeded, string error );
+        /** @brief 실패 이유 @p error 를 글(`문장 (대상)`)로 적어 실패로 끝냅니다. */
+        void finishFailed( const Error& error );
 
     private:
         string                 _path;

@@ -120,20 +120,18 @@ namespace sw
         } ) );
     }
 
-    bool AssetLoadOperation::runCompletion( string& outError )
+    expected<void> AssetLoadOperation::runCompletion()
     {
-        utf8 arrBuffer[constant::buffer::kMax1024];
-        formatstring( arrBuffer, constant::buffer::kMax1024, "%# '%#' has no completion step", _pKindName, _path.c_str() );
-        outError = arrBuffer;
-        return false;
+        return unexpected( Error{ ErrorKind::Unsupported, "the asset kind has no completion step", _pKindName }.appendDetail( " " ).appendDetail( _path ) );
     }
 
-    AssetCompletionStep AssetLoadOperation::beginCompletion( bool /*bBlocking*/, string& outError )
+    expected<AssetCompletionStep> AssetLoadOperation::beginCompletion( bool /*bBlocking*/ )
     {
-        return runCompletion( outError ) ? AssetCompletionStep::Done : AssetCompletionStep::Failed;
+        return runCompletion().transform( []()
+        { return AssetCompletionStep::Done; } );
     }
 
-    AssetCompletionStep AssetLoadOperation::pollCompletion( bool /*bBlocking*/, string& /*outError*/ )
+    expected<AssetCompletionStep> AssetLoadOperation::pollCompletion( bool /*bBlocking*/ )
     {
         return AssetCompletionStep::Done;
     }
@@ -153,11 +151,10 @@ namespace sw
     void AssetLoadOperation::executeLoad()
     {
         const ScopedMemoryTag memoryScope{ _memoryTag };
-        string                error;
-        const bool            bLoaded = runLoad( error );
-        if ( bLoaded == false )
+        const expected<void>  loaded = runLoad();
+        if ( loaded.has_value() == false )
         {
-            finish( false, std::move( error ) );
+            finishFailed( loaded.error() );
             return;
         }
         if ( hasCompletion() == false )
@@ -172,32 +169,28 @@ namespace sw
 
     void AssetLoadOperation::executeCompletion( bool bBlocking )
     {
-        const ScopedMemoryTag     memoryScope{ _memoryTag };
-        string                    error;
-        const AssetCompletionStep step = beginCompletion( bBlocking, error );
-        settleCompletionStep( step, std::move( error ) );
+        const ScopedMemoryTag memoryScope{ _memoryTag };
+        settleCompletionStep( beginCompletion( bBlocking ) );
     }
 
     void AssetLoadOperation::executeUploadPoll( bool bBlocking )
     {
-        const ScopedMemoryTag     memoryScope{ _memoryTag };
-        string                    error;
-        const AssetCompletionStep step = pollCompletion( bBlocking, error );
-        settleCompletionStep( step, std::move( error ) );
+        const ScopedMemoryTag memoryScope{ _memoryTag };
+        settleCompletionStep( pollCompletion( bBlocking ) );
     }
 
-    void AssetLoadOperation::settleCompletionStep( AssetCompletionStep step, string error )
+    void AssetLoadOperation::settleCompletionStep( const expected<AssetCompletionStep>& step )
     {
-        switch ( step )
+        if ( step.has_value() == false )
+        {
+            finishFailed( step.error() );
+            return;
+        }
+        switch ( *step )
         {
             case AssetCompletionStep::Done:
             {
                 finish( true, string{} );
-                return;
-            }
-            case AssetCompletionStep::Failed:
-            {
-                finish( false, std::move( error ) );
                 return;
             }
             case AssetCompletionStep::Submitted:
@@ -230,6 +223,16 @@ namespace sw
         _state.store( bSucceeded ? AssetLoadState::Ready : AssetLoadState::Failed, std::memory_order_release );
         _phase.store( kPhaseDone, std::memory_order_release );
         Futex::wakeAll( _phase );
+    }
+
+    void AssetLoadOperation::finishFailed( const Error& error )
+    {
+        const string_view message = error.message();
+        const string_view detail  = error.detail();
+        string            text( message.data(), message.size() );
+        if ( detail.empty() == false )
+            text += " (" + string( detail.data(), detail.size() ) + ")";
+        finish( false, std::move( text ) );
     }
 } // namespace sw
 

@@ -40,12 +40,12 @@ namespace sw
     {
     }
 
-    bool ShaderLoadOperation::runLoad( string& outError )
+    expected<void> ShaderLoadOperation::runLoad()
     {
         shared_ptr<ShaderCompileResult> pResult = sw::make_shared<ShaderCompileResult>( _pCache->loadOrCompile( _desc, _cacheKey ) );
-        const bool                      bLoaded = pResult->_bSuccess;
-        if ( bLoaded == false )
-            outError = pResult->_errorMessage.empty() ? string( "the shader could not be compiled or found" ) : pResult->_errorMessage;
+        expected<void>                  loaded  = {};
+        if ( pResult->_bSuccess == false )
+            loaded = unexpected( Error{ ErrorKind::ExternalFailure, "the shader could not be compiled or found", pResult->_errorMessage } ); // 컴파일러 글은 대상(앞 159 바이트)
         _pResult = std::move( pResult );
         {
             // 이 로드 작업의 칸일 때만 뺀다(캐시를 비운 뒤 같은 요청이 새 로드 작업을 넣었을 수 있다).
@@ -54,7 +54,7 @@ namespace sw
             if ( it != _pCache->_mapLoading.end() && ( it->second.expired() || it->second.lock().get() == this ) )
                 _pCache->_mapLoading.erase( it );
         }
-        return bLoaded;
+        return loaded;
     }
 
     ShaderCache::ShaderCache()

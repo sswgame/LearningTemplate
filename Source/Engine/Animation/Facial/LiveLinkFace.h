@@ -10,6 +10,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -129,9 +130,9 @@ namespace sw
 
         // 패킷 해석입니다(파일 머리말의 형식). */
         /**
-         * @brief @p pData(@p size 바이트)를 @p layout 대로 풉니다. 판 번호 · 채널 수가 다르거나 길이가 모자라거나 남으면 @p outError 에 까닭을 적고 false 입니다.
+         * @brief @p pData(@p size 바이트)를 @p layout 대로 푼 프레임입니다. 판 번호 · 채널 수가 다르거나 길이가 모자라거나 남으면 그 까닭(`InvalidArgument`)입니다.
          */
-        [[nodiscard]] static bool parse( const uint8* pData, size_t size, const LiveLinkFaceLayout& layout, LiveLinkFaceFrame& outFrame, string& outError );
+        [[nodiscard]] static expected<LiveLinkFaceFrame> parse( const uint8* pData, size_t size, const LiveLinkFaceLayout& layout );
         /** @brief @p frame 을 같은 형식으로 씁니다(테스트 · 송신 흉내). 채널 수는 @p frame 의 값 수입니다. */
         static void write( const LiveLinkFaceFrame& frame, uint8 version, vector<uint8>& outBytes );
     };

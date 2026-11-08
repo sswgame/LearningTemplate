@@ -252,7 +252,7 @@ namespace sw
         const shared_ptr<const PrefabAsset>& getAsset() const { return _pAsset; }
 
     protected:
-        [[nodiscard]] bool runLoad( string& outError ) override;
+        [[nodiscard]] expected<void> runLoad() override;
 
     private:
         friend class PrefabCache;

@@ -21,23 +21,22 @@ namespace
         using AssetType = int32;
 
         // 대본 — 테스트가 직접 채운다.
-        vector<AssetCompletionStep> _listBeginStep;
-        vector<AssetCompletionStep> _listPollStep;
-        shared_ptr<int32>           _pAsset;
-        string                      _loadError;
-        string                      _completionError;
-        int32*                      _pDestroyCount;
-        atomic<bool>*               _pLoadEntered;
-        atomic<bool>*               _pLoadRelease;
-        uint32                      _loadCount;
-        uint32                      _beginCount;
-        uint32                      _pollCount;
-        uint32                      _awaitingCount;
-        uint32                      _submittedCount;
-        uint8                       _bHasCompletion     : 1;
-        uint8                       _bUseBaseCompletion : 1;
-        uint8                       _bLastBeginBlocking : 1;
-        uint8                       _bLastPollBlocking  : 1;
+        vector<expected<AssetCompletionStep>> _listBeginStep; ///< 걸음마다 낼 결과(목록이 끝나면 `Done`)
+        vector<expected<AssetCompletionStep>> _listPollStep;
+        shared_ptr<int32>                     _pAsset;
+        string                                _loadError;
+        int32*                                _pDestroyCount;
+        atomic<bool>*                         _pLoadEntered;
+        atomic<bool>*                         _pLoadRelease;
+        uint32                                _loadCount;
+        uint32                                _beginCount;
+        uint32                                _pollCount;
+        uint32                                _awaitingCount;
+        uint32                                _submittedCount;
+        uint8                                 _bHasCompletion     : 1;
+        uint8                                 _bUseBaseCompletion : 1;
+        uint8                                 _bLastBeginBlocking : 1;
+        uint8                                 _bLastPollBlocking  : 1;
 
         explicit FakeAssetLoadOperation( string_view path = "fake/path" )
             : AssetLoadOperation{ "Fake", path, MemoryTag::EngineMisc }
@@ -45,7 +44,6 @@ namespace
             , _listPollStep{}
             , _pAsset{}
             , _loadError{}
-            , _completionError{}
             , _pDestroyCount{ nullptr }
             , _pLoadEntered{ nullptr }
             , _pLoadRelease{ nullptr }
@@ -74,7 +72,7 @@ namespace
         [[nodiscard]] bool exposeIsAwaitingCompletion() const { return isAwaitingCompletion(); }
 
     protected:
-        bool runLoad( string& outError ) override
+        expected<void> runLoad() override
         {
             ++_loadCount;
             if ( _pLoadEntered != nullptr )
@@ -83,25 +81,30 @@ namespace
             {
                 ThreadUtil::yield();
             }
-            outError = _loadError;
-            return _loadError.empty();
+            if ( _loadError.empty() == false )
+                return sw::unexpected( Error{ ErrorKind::ExternalFailure, "fake load failed", _loadError } ); // 글은 "fake load failed (<이유>)"
+            return {};
         }
-        bool                hasCompletion() const override { return _bHasCompletion != SW_FALSE; }
-        AssetCompletionStep beginCompletion( bool bBlocking, string& outError ) override
+        bool                          hasCompletion() const override { return _bHasCompletion != SW_FALSE; }
+        expected<AssetCompletionStep> beginCompletion( bool bBlocking ) override
         {
             if ( _bUseBaseCompletion != SW_FALSE )
-                return AssetLoadOperation::beginCompletion( bBlocking, outError );
+                return AssetLoadOperation::beginCompletion( bBlocking );
             _bLastBeginBlocking = bBlocking ? SW_TRUE : SW_FALSE;
-            const uint32 index  = _beginCount++;
-            outError            = _completionError;
-            return index < _listBeginStep.size() ? _listBeginStep[index] : AssetCompletionStep::Done;
+            return takeStep( _listBeginStep, _beginCount );
         }
-        AssetCompletionStep pollCompletion( bool bBlocking, string& outError ) override
+        expected<AssetCompletionStep> pollCompletion( bool bBlocking ) override
         {
             _bLastPollBlocking = bBlocking ? SW_TRUE : SW_FALSE;
-            const uint32 index = _pollCount++;
-            outError           = _completionError;
-            return index < _listPollStep.size() ? _listPollStep[index] : AssetCompletionStep::Done;
+            return takeStep( _listPollStep, _pollCount );
+        }
+        /** @brief 목록의 다음 결과입니다. 목록이 끝났으면 `Done` 입니다. */
+        static expected<AssetCompletionStep> takeStep( const vector<expected<AssetCompletionStep>>& listStep, uint32& inoutCount )
+        {
+            const uint32 index = inoutCount++;
+            if ( index < listStep.size() )
+                return listStep[index];
+            return AssetCompletionStep::Done;
         }
         void onAwaitingCompletion() override { ++_awaitingCount; }
         void onUploadSubmitted() override { ++_submittedCount; }
@@ -196,7 +199,7 @@ SW_TEST_CASE( AssetHandleTest, LoadFailureCarriesTheReason )
     SW_EXPECT_NULL( handle.wait() );
     SW_EXPECT_TRUE( handle.hasFailed() );
     SW_EXPECT_EQUAL( AssetLoadState::Failed, handle.getState() );
-    SW_EXPECT_TRUE( handle.getError() == "disk read failed" );
+    SW_EXPECT_TRUE( handle.getError() == "fake load failed (disk read failed)" );
     SW_EXPECT_NULL( handle.get() );
     SW_EXPECT_EQUAL( 0u, pOperation->_beginCount );
     SW_EXPECT_EQUAL( 0u, pOperation->_awaitingCount );
@@ -279,8 +282,7 @@ SW_TEST_CASE( AssetHandleTest, WaitRunsTheCompletionBlocking )
 SW_TEST_CASE( AssetHandleTest, CompletionFailureCarriesTheReason )
 {
     shared_ptr<FakeAssetLoadOperation> pOperation = Util::makeLoadedWithCompletion();
-    pOperation->_listBeginStep.push_back( AssetCompletionStep::Failed );
-    pOperation->_completionError = "upload failed";
+    pOperation->_listBeginStep.push_back( sw::unexpected( Error{ ErrorKind::ExternalFailure, "upload failed" } ) );
     SW_EXPECT_TRUE( pOperation->runCompletionIfPending() );
     SW_EXPECT_EQUAL( AssetLoadState::Failed, pOperation->getState() );
     SW_EXPECT_TRUE( pOperation->getError() == "upload failed" );
@@ -351,8 +353,7 @@ SW_TEST_CASE( AssetHandleTest, WaitPicksUpAnUploadInProgress )
 
     shared_ptr<FakeAssetLoadOperation> pFailed = Util::makeLoadedWithCompletion();
     pFailed->_listBeginStep.push_back( AssetCompletionStep::Submitted );
-    pFailed->_listPollStep.push_back( AssetCompletionStep::Failed );
-    pFailed->_completionError = "device lost";
+    pFailed->_listPollStep.push_back( sw::unexpected( Error{ ErrorKind::ExternalFailure, "device lost" } ) );
     SW_REQUIRE_TRUE( pFailed->runCompletionIfPending() );
     pFailed->wait();
     SW_EXPECT_EQUAL( AssetLoadState::Failed, pFailed->getState() );

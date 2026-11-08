@@ -1018,11 +1018,11 @@ namespace sw
         return shared_ptr<Texture2D>( shared_from_this(), _pTexture );
     }
 
-    bool TextureLoadOperation::runLoad( string& /*outError*/ )
+    expected<void> TextureLoadOperation::runLoad()
     {
         // 렌더 타깃 · CPU 텍스처는 읽을 파일이 없다 — 업로드 단계만 있다.
         if ( _source != Source::File )
-            return true;
+            return {};
         // 읽기와 머리 풀기는 한 함수라 `IO` 하나에 적는다(`AssetLoadPhase` 규칙). 올리기는 완료 단계의 따로 된 기록(`TextureUpload`)이다.
         AssetLoadScope loadScope( "Texture", getPath() );
         _pImage = make_unique<DDSImageData>();
@@ -1037,7 +1037,7 @@ namespace sw
             loadScope.setSucceeded();
         }
         // 실패도 완료 단계로 넘긴다 — 진행 중 표시는 완료 단계 하나가 내린다(헤더).
-        return true;
+        return {};
     }
 
     void TextureLoadOperation::onAwaitingCompletion()
@@ -1092,7 +1092,7 @@ namespace sw
         }
     }
 
-    AssetCompletionStep TextureLoadOperation::concludeCompletion( TextureCache::Impl& cache, bool bReady, string& outError )
+    expected<AssetCompletionStep> TextureLoadOperation::concludeCompletion( TextureCache::Impl& cache, bool bReady )
     {
         removeFromPumpLists( cache );
         if ( bReady == false && _loadError.empty() )
@@ -1105,24 +1105,22 @@ namespace sw
         cache.finishLoad( getPath(), bReady );
         if ( bReady == false )
         {
-            outError = _loadError;
-            return AssetCompletionStep::Failed;
+            return unexpected( Error{ ErrorKind::ExternalFailure, "the texture could not be loaded", _loadError } );
         }
         _bHoldsReference = SW_TRUE;
         return AssetCompletionStep::Done;
     }
 
-    AssetCompletionStep TextureLoadOperation::beginCompletion( bool bBlocking, string& outError )
+    expected<AssetCompletionStep> TextureLoadOperation::beginCompletion( bool bBlocking )
     {
         const shared_ptr<TextureCache::Impl> pCache = _pCache.lock();
         if ( pCache == nullptr )
         {
-            outError = "the texture cache was shut down before the upload";
-            return AssetCompletionStep::Failed;
+            return unexpected( Error{ ErrorKind::NotFound, "the texture cache was shut down before the upload" } );
         }
         removeFromPumpLists( *pCache );
         if ( _loadError.empty() == false )
-            return concludeCompletion( *pCache, false, outError );
+            return concludeCompletion( *pCache, false );
 
         IRHIDevice* const pDevice = _pDevice.load( std::memory_order_acquire );
         switch ( _source )
@@ -1135,9 +1133,9 @@ namespace sw
                 if ( step == Texture2DUploadStep::Busy )
                     return AssetCompletionStep::Busy; // 다음 프레임에 다시 제출한다(텍스처는 지웠다)
                 if ( step == Texture2DUploadStep::Failed )
-                    return concludeCompletion( *pCache, false, outError );
+                    return concludeCompletion( *pCache, false );
                 if ( bBlocking )
-                    return pollCompletion( true, outError );
+                    return pollCompletion( true );
                 return AssetCompletionStep::Submitted;
             }
             case Source::File:
@@ -1145,7 +1143,7 @@ namespace sw
             {
                 const bool bAlreadyResident = _source == Source::CPUBytes && _pTexture->isRHIValid();
                 if ( bAlreadyResident )
-                    return concludeCompletion( *pCache, true, outError );
+                    return concludeCompletion( *pCache, true );
                 // 제출 CPU 시간(장치 자원 만들기 · 스테이징 복사 · 전송 제출). GPU 전송 완료까지는 아니다(이후 프레임의 폴링). `Busy`(스테이징이 참)는 실패 수로 보인다.
                 AssetLoadScope uploadScope( "TextureUpload", getPath() );
                 uploadScope.beginPhase( AssetLoadPhase::Upload );
@@ -1158,30 +1156,28 @@ namespace sw
                 if ( step == Texture2DUploadStep::Busy )
                     return AssetCompletionStep::Busy; // 다음 프레임에 다시 제출한다(텍스처는 지웠다)
                 if ( step == Texture2DUploadStep::Failed )
-                    return concludeCompletion( *pCache, false, outError );
+                    return concludeCompletion( *pCache, false );
                 // 제출했다. 블로킹이면 곧바로 끝까지 기다린다(`beginUpload → 대기 → finishUpload`) — 아니면 이후 프레임의 펌프가 끝낸다.
                 if ( bBlocking )
-                    return pollCompletion( true, outError );
+                    return pollCompletion( true );
                 return AssetCompletionStep::Submitted;
             }
         }
-        outError = "unknown texture source";
-        return AssetCompletionStep::Failed;
+        return unexpected( Error{ ErrorKind::Unsupported, "unknown texture source" } );
     }
 
-    AssetCompletionStep TextureLoadOperation::pollCompletion( bool bBlocking, string& outError )
+    expected<AssetCompletionStep> TextureLoadOperation::pollCompletion( bool bBlocking )
     {
         const shared_ptr<TextureCache::Impl> pCache = _pCache.lock();
         if ( pCache == nullptr )
         {
-            outError = "the texture cache was shut down before the upload";
-            return AssetCompletionStep::Failed;
+            return unexpected( Error{ ErrorKind::NotFound, "the texture cache was shut down before the upload" } );
         }
         IRHIDevice* const           pDevice = _pDevice.load( std::memory_order_acquire );
         const Texture2DUploadStatus status  = _pTexture->finishUpload( pDevice, bBlocking );
         if ( status == Texture2DUploadStatus::Pending )
             return AssetCompletionStep::Submitted;
-        return concludeCompletion( *pCache, status == Texture2DUploadStatus::Ready, outError );
+        return concludeCompletion( *pCache, status == Texture2DUploadStatus::Ready );
     }
 } // namespace sw
 
