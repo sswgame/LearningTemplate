@@ -837,22 +837,27 @@ namespace sw
         const ResolvedAppearance& resolved = _state.getResolved();
         _bodyProportion.clear();
         _listShapeMorph.clear();
-        _bodyShapeSet = nullptr;
-        vector<BodyShapeValue> listValue;
-        for ( const ResolvedBoneProportion& proportion : resolved._listBoneProportion )
-        {
-            if ( proportion._owner.empty() ) // 다른 주인(장비)의 본 비율은 그 주인의 부품이 다룬다
-                listValue.push_back( BodyShapeValue{ proportion._name, proportion._value } );
-        }
-        const ResolvedPart* pBodyPart = _bodyPart >= 0 ? &resolved._listPart[static_cast<size_t>( _bodyPart )] : nullptr;
-        if ( pBodyPart != nullptr && pBodyPart->_bodyShapes.empty() == false )
+        _bodyShapeSet                  = nullptr;
+        const ResolvedPart* pBodyPart  = _bodyPart >= 0 ? &resolved._listPart[static_cast<size_t>( _bodyPart )] : nullptr;
+        const bool          bHasShapes = pBodyPart != nullptr && pBodyPart->_bodyShapes.empty() == false;
+        if ( bHasShapes )
         {
             _bodyShapeSet = SharedAssetCache<BodyShapeSet>::acquire( pBodyPart->_bodyShapes.c_str() );
             _shapeReload.markSeen();
             if ( _bodyShapeSet == nullptr )
                 SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceBodyShapesCould", "Appearance '%#' body shapes '%#' could not be read - the body keeps its proportions", _presetID.c_str(), pBodyPart->_bodyShapes.c_str() );
         }
-        else if ( listValue.empty() == false )
+        vector<BodyShapeValue> listValue;
+        for ( const ResolvedBoneProportion& proportion : resolved._listBoneProportion )
+        {
+            if ( proportion._owner.empty() == false )
+                continue; // 다른 주인(장비)의 본 비율은 그 주인의 부품이 다룬다
+            // 부품 머티리얼이 받은 채널(`<ChannelMaterial>` — 머리카락 길이)은 이 스켈레톤이 축으로 적지 않았으면 몸 축이 아니다 — 체형 축 데이터 없이도 닿는다.
+            const bool bMaterialOnly = VectorUtil::contains( resolved._listMaterialChannel, proportion._name ) && ( _bodyShapeSet == nullptr || _bodyShapeSet->findAxis( proportion._name ) == nullptr );
+            if ( bMaterialOnly == false )
+                listValue.push_back( BodyShapeValue{ proportion._name, proportion._value } );
+        }
+        if ( bHasShapes == false && listValue.empty() == false )
         {
             SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceDrivesBodyShape", "Appearance '%#' drives %# body shape axes but its body part has no 'bodyShapes' - the sliders do nothing", _presetID.c_str(), static_cast<uint32>( listValue.size() ) );
         }

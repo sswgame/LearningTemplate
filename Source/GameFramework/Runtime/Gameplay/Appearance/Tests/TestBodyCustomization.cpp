@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Object/Component/TagSystem.h"
@@ -284,4 +285,88 @@ SW_TEST_CASE( BodyProfileTest, FluidPathSamplesByDistance )
     SW_EXPECT_NEAR( 0.45f, fluid.samplePath( 0.05f )._y, 1e-6f );
     SW_EXPECT_NEAR( 0.45f, fluid.samplePath( 0.15f )._x, 1e-6f );
     SW_EXPECT_NEAR( 0.5f, fluid.samplePath( 1.0f )._x, 1e-6f );
+}
+
+/**
+ * @brief [BodyCustomizationTest] 머리카락: 몸 채널 `Hair.Length` 를 고른 머리 부품의 `<ChannelMaterial>` 이 `_length` 로 옮기고(장비 층이 슬라이더 위에 얹힌다), 몸 스키마 색은
+ *        `owner="Hair"` 로 머리 부품에 닿으며, 머티리얼만 받는 채널로 적힌다(체형 축 데이터가 없어도 오류가 아니다)
+ */
+SW_TEST_CASE( BodyCustomizationLoadTest, HairChannelDrivesHairMaterial )
+{
+    AppearanceDatabase database;
+    SW_REQUIRE_TRUE( database.loadSectionFromXMLText( kSlotsXML, "test" ) );
+    SW_REQUIRE_TRUE( database.loadSectionFromXMLText( R"(<ItemVisualCatalog>
+        <ItemVisual id="body"><Part name="Body" kind="Skinned" mesh="body.mesh" material="body.material"/></ItemVisual>
+        <ItemVisual id="hair_long"><Part name="Hair" kind="Skinned" mesh="hair.mesh" material="hair.material">
+          <ChannelMaterial channel="Hair.Length" name="_length" channelMin="-1" channelMax="0" valueMin="0.4" valueMax="1"/></Part></ItemVisual>
+        <ItemVisual id="cap"><Part name="Cap" kind="SocketPrefab" prefab="cap.prefab" socket="Head"/><BodyChannel name="Hair.Length" value="-0.5" blend="Additive"/></ItemVisual>
+    </ItemVisualCatalog>)",
+                                                      "test" ) );
+    SW_REQUIRE_TRUE( database.loadSectionFromXMLText( R"(<CustomizationSchemaCatalog><Schema id="Folk">
+        <Choice name="Hair" default="Long"><Option name="Long" visual="hair_long"/></Choice>
+        <Slider name="HairLength" min="-1" max="0" default="0"><Drive kind="BoneProportion" target="Hair.Length"/></Slider>
+        <Color name="HairRoot" default="1 1 1 1"><Drive kind="MaterialColor" target="_rootColor" owner="Hair"/></Color>
+    </Schema></CustomizationSchemaCatalog>)",
+                                                      "test" ) );
+    SW_REQUIRE_TRUE( database.finishLoad( nullptr ) );
+
+    CharacterAppearanceSpec spec;
+    spec._bodyVisual = hashed_string( "body" );
+    spec._schema     = hashed_string( "Folk" );
+    spec._customization.setNumber( hashed_string( "HairLength" ), -0.25f );
+    spec._customization.setColor( hashed_string( "HairRoot" ), float4{ 0.5f, 0.25f, 0.1f, 1.0f } );
+    const auto findValue = []( const ResolvedAppearance& resolved, const utf8* pName ) -> const ResolvedMaterialValue*
+    {
+        for ( const ResolvedMaterialValue& value : resolved._listMaterialValue )
+        {
+            if ( value._name == hashed_string( pName ) )
+                return &value;
+        }
+        return nullptr;
+    };
+
+    ResolvedAppearance resolved;
+    ResolvedAppearance::resolve( database, spec, resolved );
+    const ResolvedMaterialValue* pLength = findValue( resolved, "_length" );
+    SW_REQUIRE_NOT_NULL( pLength );
+    SW_EXPECT_TRUE( pLength->_owner == hashed_string( "Hair" ) );
+    SW_EXPECT_TRUE( pLength->_part == hashed_string( "Hair" ) );
+    SW_EXPECT_TRUE( pLength->_shape == ResolvedMaterialShape::Scalar );
+    SW_EXPECT_NEAR( 0.85f, pLength->_value._x, 1e-5f ); // -0.25 → 0.4 + 0.6 × 0.75
+    SW_EXPECT_TRUE( VectorUtil::contains( resolved._listMaterialChannel, hashed_string( "Hair.Length" ) ) );
+    const ResolvedMaterialValue* pRoot = findValue( resolved, "_rootColor" );
+    SW_REQUIRE_NOT_NULL( pRoot );
+    SW_EXPECT_TRUE( pRoot->_owner == hashed_string( "Hair" ) );
+
+    // 모자 층(-0.5 더하기)이 슬라이더 위에 얹혀 -0.75 → 0.55, 범위 밖(-1 아래)은 가장 짧은 값에서 멈춘다.
+    AppearanceSlotRequest request;
+    request._slot          = hashed_string( "Head" );
+    request._itemID        = hashed_string( "cap" );
+    request._visibleVisual = hashed_string( "cap" );
+    spec._listSlot.push_back( request );
+    ResolvedAppearance::resolve( database, spec, resolved );
+    pLength = findValue( resolved, "_length" );
+    SW_REQUIRE_NOT_NULL( pLength );
+    SW_EXPECT_NEAR( 0.55f, pLength->_value._x, 1e-5f );
+    spec._customization.setNumber( hashed_string( "HairLength" ), -1.0f );
+    ResolvedAppearance::resolve( database, spec, resolved );
+    pLength = findValue( resolved, "_length" );
+    SW_REQUIRE_NOT_NULL( pLength );
+    SW_EXPECT_NEAR( 0.4f, pLength->_value._x, 1e-5f );
+}
+
+/**
+ * @brief [BodyCustomizationTest] 드라이브의 `owner` 는 같은 스키마의 고르기여야 하고, 머티리얼 드라이브에만 적는다
+ */
+SW_TEST_CASE( BodyCustomizationLoadTest, DriveOwnerMustBeChoice )
+{
+    AppearanceDatabase database;
+    SW_EXPECT_LOG( "Appearance.DriveOwnerInvalid" ); // 슬라이더(본 비율에 주인)는 읽기에서, 색(고르기가 아닌 주인)은 스키마를 다 읽은 뒤에
+    SW_REQUIRE_TRUE( database.loadSectionFromXMLText( kSlotsXML, "test" ) );
+    (void)database.loadSectionFromXMLText( R"(<CustomizationSchemaCatalog><Schema id="Folk">
+        <Color name="HairRoot" default="1 1 1 1"><Drive kind="MaterialColor" target="_rootColor" owner="Hair"/></Color>
+        <Slider name="HairLength" min="-1" max="0" default="0"><Drive kind="BoneProportion" target="Hair.Length" owner="Hair"/></Slider>
+    </Schema></CustomizationSchemaCatalog>)",
+                                           "test" );
+    SW_EXPECT_FALSE( database.finishLoad( nullptr ) );
 }

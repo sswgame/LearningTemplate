@@ -86,6 +86,37 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 몸 채널이 부품 머티리얼 스칼라를 움직이는 대응 하나입니다(`<ChannelMaterial channel name channelMin channelMax valueMin valueMax/>`).
+     * @details 머리카락 길이(`Hair.Length` → `_length`)처럼 뼈가 아니라 셰이더가 받는 몸 채널을 부품이 읽는다 — 장비 층(두건이 머리를 누른다) · 프리셋 · 슬라이더가
+     *          모은 같은 채널 값이 그대로 닿는다(언리얼의 커브 → 머티리얼 매개변수 자리). 채널 값을 [channelMin, channelMax] 에서 잘라 [valueMin, valueMax] 로 옮긴다.
+     *          모은 값에 없는 채널은 중립 0 이다(`BodyChannel.h`).
+     */
+    REFLECT()
+    struct SW_GF_API AppearanceChannelMaterialDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _channel{};
+        PROPERTY( Required )
+        hashed_string _name{}; ///< 머티리얼 스칼라 매개변수 이름
+        PROPERTY( Required )
+        float32 _channelMin{ -1.0f };
+        PROPERTY( Required )
+        float32 _channelMax{ 1.0f };
+        PROPERTY( Required )
+        float32 _valueMin{ 0.0f };
+        PROPERTY( Required )
+        float32 _valueMax{ 1.0f };
+
+        /** @brief 채널 값 @p channelValue 를 머티리얼 값으로 옮깁니다(범위 밖은 끝에서 자른다). */
+        float32 computeValue( float32 channelValue ) const;
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @brief 이름 붙은 변형입니다. 메시(또는 스프라이트) · 머티리얼 · 스켈레톤 · 구간 머티리얼 · 머티리얼 값을 바꿉니다. 비워 둔 항목은 기본값을 씁니다. */
     REFLECT()
     struct AppearancePartVariantDef
@@ -143,12 +174,13 @@ namespace sw
          *          `MeshSectionComponent` 가 나머지를 그린다(임포터의 구간 프리팹과 같은 모양). 부품의 `material` 과 함께 쓸 수 없다(어느 구간의 것인지 모른다).
          *          변형(`<Variant>` · `<MaterialVariant>` 의 `<Section>`)과 규칙(`<SwapMaterial section>`)이 구간 이름으로 머티리얼을 바꾸고, 머티리얼 값(`section`)이 구간 하나에만 걸린다.
          */
-        vector<AppearanceSectionDef>       _listSection{};
-        vector<AppearanceMorphDef>         _listMorph{};         ///< 몸 수정: 몸에 적용하는 모프
-        vector<AppearanceMaterialValueDef> _listMaterialValue{}; ///< 몸 수정: 몸 머티리얼 값
-        vector<hashed_string>              _listHiddenRegion{};  ///< 몸 수정: 숨길 몸 영역
-        AppearancePlacement                _placement{};         ///< 소켓 부착과 스프라이트의 기본 배치
-        float3                             _breakImpulse{};      ///< 떨어져 나갈 때의 충격 힌트(부품 로컬)
+        vector<AppearanceSectionDef>         _listSection{};
+        vector<AppearanceMorphDef>           _listMorph{};           ///< 몸 수정: 몸에 적용하는 모프
+        vector<AppearanceMaterialValueDef>   _listMaterialValue{};   ///< 몸 수정: 몸 머티리얼 값
+        vector<AppearanceChannelMaterialDef> _listChannelMaterial{}; ///< 몸 채널이 이 부품 머티리얼에 거는 스칼라(`<ChannelMaterial>` — 머리카락 길이)
+        vector<hashed_string>                _listHiddenRegion{};    ///< 몸 수정: 숨길 몸 영역
+        AppearancePlacement                  _placement{};           ///< 소켓 부착과 스프라이트의 기본 배치
+        float3                               _breakImpulse{};        ///< 떨어져 나갈 때의 충격 힌트(부품 로컬)
         PROPERTY( Required )
         hashed_string _name{};
         /** @brief 부품 종류가 고르는 에셋 칸입니다 — `Skinned` 는 `mesh`, `SocketPrefab` 은 `prefab`, `Sprite` 는 `sprite` 하나만 적는다. 읽기가 그중 하나를 `_asset` 으로 고른다. */

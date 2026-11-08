@@ -257,11 +257,16 @@ namespace sw
              * @brief 머티리얼 드라이브의 값을 겁니다. 구간을 고르지 않는 드라이브는 주인 전체(부품 · 구간 빈 값)에 하나, 고르는 드라이브(`include` · `exclude` · 염색 제외 구간)는 맞는 구간마다 하나다.
              * @details 구간 별칭은 로드가 외형에 있는지 봤다(`Appearance.SectionTagUnknown`). 별칭이 하나도 맞지 않으면 아무 값도 걸지 않는다(그게 데이터의 뜻이다).
              */
-            static void addDriveMaterialValue( ResolvedAppearance& out, const hashed_string& owner, const ItemVisualDef* pVisual, const CustomizationDriveDef& drive, const float4& value, ResolvedMaterialTarget target,
-                                               ResolvedMaterialShape shape )
+            static void addDriveMaterialValue( ResolvedAppearance& out, const hashed_string& schemaOwner, const ItemVisualDef* pSchemaVisual, const vector<Entry>& listEntry,
+                                               const CustomizationDriveDef& drive, const float4& value, ResolvedMaterialTarget target, ResolvedMaterialShape shape )
             {
-                const int32 channel         = target == ResolvedMaterialTarget::DyeChannel ? drive._channel : 0;
-                const bool  bSplitBySection = pVisual != nullptr && ( drive.isSectionTargeted() || ( drive._kind == CustomizationDriveKind::DyeChannel && hasUndyeableSection( *pVisual ) ) );
+                // 드라이브가 주인을 적으면(`owner="Hair"`) 몸 스키마의 고르기가 낸 항목이 받는다. 구간 고르기는 그 항목의 외형으로 한다 — 아직 없으면(뒤에 선언한 고르기) 주인 전체다.
+                const bool           bDriveOwner     = drive._owner.empty() == false;
+                const hashed_string& owner           = bDriveOwner ? drive._owner : schemaOwner;
+                const int32          ownerEntry      = bDriveOwner ? findEntry( listEntry, drive._owner, false ) : constant::invalid_index::kInt32;
+                const ItemVisualDef* pVisual         = bDriveOwner ? findOwnerVisual( listEntry, ownerEntry ) : pSchemaVisual;
+                const int32          channel         = target == ResolvedMaterialTarget::DyeChannel ? drive._channel : 0;
+                const bool           bSplitBySection = pVisual != nullptr && ( drive.isSectionTargeted() || ( drive._kind == CustomizationDriveKind::DyeChannel && hasUndyeableSection( *pVisual ) ) );
                 if ( bSplitBySection == false )
                 {
                     addMaterialValue( out, owner, hashed_string{}, hashed_string{}, drive._target, value, target, channel, shape );
@@ -398,18 +403,18 @@ namespace sw
                                     }
                                     case CustomizationDriveKind::MaterialScalar:
                                     {
-                                        addDriveMaterialValue( out, owner, findOwnerVisual( inoutListEntry, ownerIndex ), drive, float4( driven, 0.0f, 0.0f, 0.0f ), ResolvedMaterialTarget::Parameter,
+                                        addDriveMaterialValue( out, owner, findOwnerVisual( inoutListEntry, ownerIndex ), inoutListEntry, drive, float4( driven, 0.0f, 0.0f, 0.0f ), ResolvedMaterialTarget::Parameter,
                                                                ResolvedMaterialShape::Scalar );
                                         break;
                                     }
                                     case CustomizationDriveKind::MaterialColor:
                                     {
-                                        addDriveMaterialValue( out, owner, findOwnerVisual( inoutListEntry, ownerIndex ), drive, pValue->_number, ResolvedMaterialTarget::Parameter, ResolvedMaterialShape::Vector );
+                                        addDriveMaterialValue( out, owner, findOwnerVisual( inoutListEntry, ownerIndex ), inoutListEntry, drive, pValue->_number, ResolvedMaterialTarget::Parameter, ResolvedMaterialShape::Vector );
                                         break;
                                     }
                                     case CustomizationDriveKind::DyeChannel:
                                     {
-                                        addDriveMaterialValue( out, owner, findOwnerVisual( inoutListEntry, ownerIndex ), drive, pValue->_number, ResolvedMaterialTarget::DyeChannel, ResolvedMaterialShape::Vector );
+                                        addDriveMaterialValue( out, owner, findOwnerVisual( inoutListEntry, ownerIndex ), inoutListEntry, drive, pValue->_number, ResolvedMaterialTarget::DyeChannel, ResolvedMaterialShape::Vector );
                                         break;
                                     }
                                     case CustomizationDriveKind::PaletteSwap:
@@ -683,6 +688,44 @@ namespace sw
                     return false;
                 pSection->_material = material;
                 return true;
+            }
+
+            /**
+             * @brief 모은 몸 채널 값으로 부품 머티리얼 스칼라(`<ChannelMaterial>`)를 겁니다. 몸 채널을 모은 뒤(`applyBodyChannels`) 부른다 — 장비 층까지 얹은 값이 닿는다.
+             * @details 나온 부품(`_listPart`)에만 건다 — 숨긴 부품 · 숨긴 항목은 값을 받지 않는다. 모은 값에 없는 채널은 중립 0 이다.
+             */
+            static void applyChannelMaterials( const vector<Entry>& listEntry, ResolvedAppearance& out )
+            {
+                for ( const Entry& entry : listEntry )
+                {
+                    if ( entry._bHidden == SW_TRUE || entry._pVisual == nullptr )
+                        continue;
+                    for ( const AppearancePartDef& part : entry._pVisual->_listPart )
+                    {
+                        if ( part._listChannelMaterial.empty() )
+                            continue;
+                        const bool bEmitted = std::any_of( out._listPart.begin(), out._listPart.end(), [&]( const ResolvedPart& resolved )
+                        { return resolved._owner == entry._owner && resolved._partName == part._name; } );
+                        if ( bEmitted == false )
+                            continue;
+                        for ( const AppearanceChannelMaterialDef& channelMaterial : part._listChannelMaterial )
+                        {
+                            float32 channelValue = 0.0f;
+                            for ( const ResolvedBoneProportion& proportion : out._listBoneProportion )
+                            {
+                                if ( proportion._owner.empty() && proportion._name == channelMaterial._channel )
+                                    channelValue = proportion._value;
+                            }
+                            if ( VectorUtil::contains( out._listMaterialChannel, channelMaterial._channel ) == false )
+                                out._listMaterialChannel.push_back( channelMaterial._channel );
+                            const float32 value = channelMaterial.computeValue( channelValue );
+                            addMaterialValue( out, entry._owner, part._name, hashed_string{}, channelMaterial._name, float4( value, 0.0f, 0.0f, 0.0f ), ResolvedMaterialTarget::Parameter, 0,
+                                              ResolvedMaterialShape::Scalar );
+                            addTrace( out, AppearanceTraceStep::Output, entry._owner, "body channel '%#' = %# sets '%#' of part '%#' to %#", channelMaterial._channel.c_str(), channelValue,
+                                      channelMaterial._name.c_str(), part._name.c_str(), value );
+                        }
+                    }
+                }
             }
 
             static void emitParts( const ItemVisualDef& visual, const Entry& entry, int32 stageIndex, const vector<Decision>& listDecision, ResolvedAppearance& out )
@@ -1067,6 +1110,7 @@ namespace sw
         }
         Internal::emitDecisions( spec, listDecision, outResolved );
         Internal::applyBodyChannels( database, spec, listEntry, outResolved );
+        Internal::applyChannelMaterials( listEntry, outResolved );
         Internal::emitSkinLayers( database, spec, outResolved );
         Internal::removeRepeatedHiddenRegions( outResolved );
         outResolved._meshHash = computeMeshHash( outResolved );

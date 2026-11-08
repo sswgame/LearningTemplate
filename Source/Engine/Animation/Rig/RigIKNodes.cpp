@@ -441,6 +441,7 @@ namespace sw
                 const float4x4 modelFromWorld = context._worldFromModel.invert();
                 // 출력 사본은 게임 스레드에서만 쓴다 — 지난 평가의 골반 · 발 높이(`getOutputValue`).
                 _outputPelvisOffset = _pelvisOffset;
+                _outputFootLift     = _footLift;
                 _outputHitCount     = 0;
                 for ( Foot& foot : _listFoot )
                 {
@@ -478,12 +479,16 @@ namespace sw
                 const float32 pelvisGoal = MathUtil::max( lowest, -_params._maxPelvisDrop );
                 _pelvisOffset            = _bPelvisInitialized == SW_TRUE ? MathUtil::lerp( _pelvisOffset, pelvisGoal, blend ) : pelvisGoal;
                 _bPelvisInitialized      = SW_TRUE;
-                pose.setModelPosition( _pelvis, pose.getModelPosition( _pelvis ) + float3{ 0.0f, _pelvisOffset, 0.0f } );
+                // 굽 높이(발 들림)는 골반과 발 목표를 함께 올린다 — 다리 길이는 그대로라 IK 가 같은 자세를 풀고 발바닥이 땅 + 굽에 선다(언리얼 Leg IK 의 발 높이 보정).
+                // 굽은 장비가 바꿀 때만 바뀌므로 부드럽게 따라가지 않고 바로 건다.
+                const float32 lift = context._pInstance->getBodyInput().getFootLift();
+                _footLift          = lift;
+                pose.setModelPosition( _pelvis, pose.getModelPosition( _pelvis ) + float3{ 0.0f, _pelvisOffset + lift, 0.0f } );
 
                 for ( const Foot& foot : _listFoot )
                 {
                     const quaternion footRotation = pose.getModelRotation( foot._end );
-                    const float3     goal         = foot._animatedModel + float3{ 0.0f, foot._offset, 0.0f };
+                    const float3     goal         = foot._animatedModel + float3{ 0.0f, foot._offset + lift, 0.0f };
                     (void)RigIKSolver::solveTwoBone( pose, foot._root, foot._mid, foot._end, goal, nullptr, *context._pSpace );
                     quaternion aligned = footRotation;
                     if ( _params._bAlignToNormal && foot._bHit == SW_TRUE )
@@ -518,7 +523,10 @@ namespace sw
                 }
             }
 
-            /** @brief 출력: `pelvis_offset`(골반을 옮긴 높이, 미터 · 음수면 내림), `foot_offset_<번호>`(`feet` 순서의 발 높이 보정), `ground_hits`(땅에 닿은 발 수). */
+            /**
+             * @brief 출력: `pelvis_offset`(땅 보정으로 골반을 옮긴 높이, 미터 · 음수면 내림 · 굽 제외), `foot_lift`(골반 · 발에 더 올린 굽 높이, 미터),
+             *        `foot_offset_<번호>`(`feet` 순서의 발 높이 보정), `ground_hits`(땅에 닿은 발 수).
+             */
             [[nodiscard]] bool getOutputValue( const hashed_string& output, float32& outValue ) const override
             {
                 static constexpr string_view kFootPrefix = "foot_offset_";
@@ -526,6 +534,11 @@ namespace sw
                 if ( name == "pelvis_offset" )
                 {
                     outValue = _outputPelvisOffset;
+                    return true;
+                }
+                if ( name == "foot_lift" )
+                {
+                    outValue = _outputFootLift;
                     return true;
                 }
                 if ( name == "ground_hits" )
@@ -565,6 +578,8 @@ namespace sw
             float32      _maxAlignAngle{ 0.5f };
             float32      _pelvisOffset{ 0.0f };
             float32      _outputPelvisOffset{ 0.0f }; ///< 게임 스레드 사본(준비 단계가 `_pelvisOffset` 에서 옮긴다)
+            float32      _footLift{ 0.0f };           ///< 지난 평가가 건 굽 높이(몸 입력의 발 들림)
+            float32      _outputFootLift{ 0.0f };     ///< 게임 스레드 사본(준비 단계가 `_footLift` 에서 옮긴다)
             uint32       _outputHitCount{ 0 };        ///< 지난 준비 단계에서 땅에 닿은 발 수
             uint32       _pelvis{ 0 };
             uint8        _bPelvisInitialized{ SW_FALSE };

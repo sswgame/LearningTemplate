@@ -15,6 +15,9 @@
 
 	<!-- ① 굽 높이 -->
 	<Expect watch="Body.FootLift" target="Dancer" near="0.08" tolerance="0.001"/>
+	<!-- 발 디딤 IK 가 그 굽을 골반 · 발 목표에 건다(리그 skeleton_bodydemo 의 Feet) -->
+	<Expect watch="Rig.Output" target="Dancer" key="Feet.foot_lift" near="0.08" tolerance="0.001"/>
+	<WaitUntil watch="Rig.Output" target="Dancer" key="Feet.ground_hits" near="2" tolerance="0.01" timeoutFrames="300"/>
 
 	<!-- ② 동공 — 맑음 · 열린 하늘 -->
 	<DevCommand line="cheat.weather clear"/>

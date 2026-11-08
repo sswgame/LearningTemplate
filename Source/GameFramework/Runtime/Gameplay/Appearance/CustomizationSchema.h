@@ -59,6 +59,13 @@ namespace sw
         PROPERTY( Required )
         CustomizationDriveKind _kind{ CustomizationDriveKind::Morph };
         /**
+         * @brief 머티리얼 드라이브가 값을 거는 주인입니다(`owner="Hair"` — 몸 스키마의 고르기 매개변수 이름). 비어 있으면 스키마의 주인(몸이면 몸 부품)이다.
+         * @details 몸 꾸미기의 고르기(`<Choice name="Hair">`)가 낸 부품은 그 매개변수 이름을 주인으로 가진다 — 머리카락 뿌리 · 끝 색처럼 몸 스키마의 색이
+         *          고른 머리 부품의 머티리얼에 닿으려면 이 칸으로 짚는다(몸 머티리얼에 없는 이름을 걸어 아무 데도 닿지 않던 모양을 막는다).
+         */
+        PROPERTY()
+        hashed_string _owner{};
+        /**
          * @brief 머티리얼 드라이브(`MaterialScalar` · `MaterialColor` · `DyeChannel`)가 건드릴 구간입니다(`include="cloth" exclude="buckle"` — 구간의 날 이름 · 별칭 · 묶음). 손으로 읽는다.
          * @details 둘 다 비어 있으면 주인의 모든 구간이다. 염색은 `dyeable="false"` 구간을 늘 건너뛴다. 외형에 없는 이름은 로드 오류다(`Appearance.SectionTagUnknown`).
          *          한 구간 안의 마스크 염색 채널(`channel`)은 그대로 쓴다 — 별칭은 어느 구간에 채널을 거는지만 고른다(오른눈 · 왼눈 홍채를 따로 칠하는 이색증도 이 길이다).

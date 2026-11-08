@@ -104,6 +104,7 @@
 					<Field name="Section" key="name"/>
 				</Field>
 				<Field name="Section" key="name"/>
+				<Field name="ChannelMaterial" key="name"/>
 			</Field>
 			<Field name="State" key="name"/>
 			<Field name="DamageStage" key="name"/>
