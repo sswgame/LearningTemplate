@@ -4,7 +4,7 @@
 
 ## MVVM: View, ViewModel, model
 
-A panel is split so that the ImGui frame can later leave the game (main) thread (`docs/DesignBacklog.md` "에디터 UI 스레드 분리 검토" · "에디터 MVVM 계약"). Immediate-mode UI redraws every frame, so there is no data binding or change notification (Unreal UMG MVVM and Unity UI Toolkit bindings exist for retained UI).
+A panel is split so that the ImGui frame can later leave the game (main) thread (`docs/DesignBacklog.md` "에디터 UI 스레드 분리 검토"). Immediate-mode UI redraws every frame, so there is no data binding or change notification (Unreal UMG MVVM and Unity UI Toolkit bindings exist for retained UI).
 
 | Layer | Where | Does | Must not |
 | --- | --- | --- | --- |

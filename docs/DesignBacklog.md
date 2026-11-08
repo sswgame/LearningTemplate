@@ -59,7 +59,6 @@
 | 우선순위 | 코드에서 확인한 내용 | 다음 작업과 완료 조건 |
 |---|---|---|
 | 높음 | **게임별 설정 일부는 이미 데이터로 편집할 수 있다.** [`WildWestGameModeComponent`](../Source/Games/WildWest/WildWestGameModeComponent.h)의 기온·하루 길이·목격 범위·경고 기준·시작 돈은 `PROPERTY`이고, [`MeadowFarmGameModeComponent`](../Source/Games/MeadowVillage/MeadowFarmGameModeComponent.h)의 시작 돈·시간 배율·색·간격도 `PROPERTY`다. 생성자 기본값만 보고 이를 코드 하드코딩 결함으로 세지 않는다. | 인스턴스/프리팹 데이터로 덮어쓸 수 있는지, 기본값이 실제 게임 데이터에서 설정되는지 확인한다. 조절할 필요가 있는 값은 `PROPERTY`·게임 설정/카탈로그·에셋 중 소유권에 맞는 하나로 둔다. |
-| 높음(데이터 모델 검토) | **Meadow 밭 크기는 코드 상수다.** [`MeadowFarmGameModeComponent`](../Source/Games/MeadowVillage/MeadowFarmGameModeComponent.h)의 `kFieldWidth=4`·`kFieldHeight=2`가 새 판 생성, 복원 전 밭 초기화, 칸 생성 반복에 함께 쓰인다([`MeadowFarmGameModeComponent.cpp`](../Source/Games/MeadowVillage/MeadowFarmGameModeComponent.cpp)). 현재 크기를 게임 규칙으로 고정할 의도라면 정당한 상수지만, 레벨별 크기가 요구되면 인스턴스/에셋 데이터만 노출해서는 저장 상태 복원이 안전하지 않다. | 크기 변경이 요구되는지 먼저 확인한다. 요구되면 저장 데이터에 크기/형상을 싣고 기존 `FFLD` 상태를 읽는 버전 변환·검증을 추가해 편집 값과 복원 값이 같게 한다. 불필요하면 소유 타입의 상수로 유지한다. |
 
 상수 위치와 이름의 규칙은 [Constants.md](agents/Constants.md)가 정본이다. 특히 튜닝 값은 일반 상수가 아니며, sentinel은 `-1`이라는 표기 자체가 아니라 그 값의 도메인 의미와 저장/통신 호환성을 기준으로 정리한다.
 
@@ -129,7 +128,6 @@
 
 | 우선순위 | 코드에서 확인한 경계 | 고도화 방향과 완료 조건 |
 |---|---|---|
-| 중간(게임 규칙의 데이터 소유권) | Shooter3D의 탄착 행은 [`projectiles.xml`](../Content/game/shooter3d/data/projectiles.xml)에 있지만, [`Shooter3DGame::checkImpacts`](../Source/Games/Shooter3D/Shooter3DGame.cpp)는 `Body`·`Cover`를 코드에 열거해 각 탄의 탄착 행을 검사한다. | 표면 종류가 게임 콘텐츠에 따라 바뀌어야 한다는 요구가 있을 때만 필수 표면 목록을 게임 설정/카탈로그 데이터로 옮긴다. 현재 고정 규칙이면 코드 상수로 유지한다. |
 | 검토 후 제외(자동 생성 의도) | [`CropCatalog::fillItemCatalog`](../Source/GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.cpp)는 작물의 씨앗/생산물 ID에 대응하는 아이템이 없으면 기본 아이템 정의를 만든다. 이를 일반적인 미검증 참조로 분류하면 안 된다. | 자동 생성이 콘텐츠 계약인지 확인하고 그 계약을 유지한다. 기존 ID가 있으면 재사용하는 동작을 검사하며, 데이터 소유권 변경 없이는 이 동작을 오류로 바꾸지 않는다. |
 
 **엄격도 계약(2026-11-08 정함 — S2 · T6):**
@@ -184,7 +182,7 @@ Graphify로 시스템 간 관계를 찾고 실제 호출 경로와 동기화 경
 |---|---|---|
 | 이미 분리된 렌더 실행 | [`RenderThread`](../Source/Engine/Renderer/RenderThread.h)는 게임 스레드에서 받은 패킷을 전용 스레드에서 실행한다. 렌더 그래프는 독립 패스의 커맨드 기록을 이미 병렬화하지만, 레벨 경계에서 합류하고 GPU 제출을 순서대로 진행한다([`RenderGraph::executeParallel`](../Source/Engine/Renderer/Graph/RenderGraph.cpp)). 현재 Unreal RHI Thread와 같은 별도 RHI 명령 소비 스레드는 확인되지 않았다. | RT CPU의 드라이버 호출·커맨드 제출이 병목이면 전용 업로드 스레드보다, RHI 명령 수집과 실행을 분리하는 RHI Thread형 구조가 비교 대상이다. 이는 모든 프레임 명령의 소유권·순서·자원 수명을 바꾸는 큰 변경이므로 프로파일에서 RT CPU 병목과 GT/RT 겹침 부족이 입증되어야 한다. |
 | 메시 GPU 생성 | [`GPUUploadQueue::flush`](../Source/Engine/Graphics/Upload/GPUUploadQueue.cpp)는 이번 스냅샷에 보이는 메시의 RHI 생성을 `TaskManager::runParallel`로 나누지만 포크-조인으로 호출 스레드가 완료를 기다린다. 이는 전용 스레드가 아니며, 대기 구간은 `GT.GPUUpload.flush`로 계측된다. 완료 후 스냅샷을 내보내므로 같은 프레임 렌더에서 메시가 빠지는 것을 막는다([`RenderPacketSceneCollector::buildSnapshot`](../Source/Engine/Renderer/Frame/Packet/RenderPacketSceneCollector.cpp)). | `GT.GPUUpload.flush`가 실제 GT 임계 경로라면 먼저 워커 풀의 점유·작업시간과 메시 수를 측정한다. 대기를 없애려면 보이는 즉시 사용 가능한 메시를 보장하는 현재 계약을 바꾸어야 한다(예: 이전 프레임 선요청 또는 준비 전 메시를 잠시 제외). 완료 전에 RT로 넘기거나 임의의 새 스레드에서 같은 Mesh를 만들면 팝인·중복 생성·RHI 수명 경쟁을 일으킬 수 있다. |
-| 텍스처 에셋 로드 | 텍스처 파일 읽기·디코드는 로드 작업에서 수행한다. 이후 [`TextureCache::completePendingLoads`](../Source/Engine/Graphics/Texture/TextureCache.h)는 렌더 스레드에서 장치 자원을 만들고 업로드를 제출하며, 제출 수를 프레임 예산으로 제한하고 이미 제출한 업로드는 뒤 프레임에서 티켓으로 폴링한다([`FrameRenderer::executePacket`](../Source/Engine/Renderer/Frame/FrameRenderer.cpp), [`Texture2D::finishUpload`](../Source/Engine/Graphics/Texture/Texture2D.cpp)). 블로킹 acquire·결정적 테스트 경로는 별도로 끝날 때까지 기다린다. | 비동기 IO→디코드→제출→폴링 파이프라인은 이미 있어 “모든 텍스처를 새 스레드로 옮기기”는 중복이다. `AssetLoadProfiler`는 단계별 시간 구조를 제공하지만 [`TextureLoadOperation`](../Source/Engine/Graphics/Texture/TextureCache.cpp)은 현재 `AssetLoadScope`를 열지 않는다. `RT.TextureRegionUpdates`도 구간 갱신·신규 업로드·밉 스트리밍을 한 범위로 묶으므로, 업로드 전용 계측(제출 CPU 시간·바이트·건수·프레임당 대기 수)을 먼저 넣고 RT의 staging 복사나 API 호출이 실제 병목인지 확인한다. OpenGL 컨텍스트 점유와 DX11 즉시 컨텍스트 잠금은 예외·직렬화 경로로 남겨야 한다. |
+| 텍스처 에셋 로드 | 텍스처 파일 읽기·디코드는 로드 작업에서 수행한다. 이후 [`TextureCache::completePendingLoads`](../Source/Engine/Graphics/Texture/TextureCache.h)는 렌더 스레드에서 장치 자원을 만들고 업로드를 제출하며, 제출 수를 프레임 예산으로 제한하고 이미 제출한 업로드는 뒤 프레임에서 티켓으로 폴링한다([`FrameRenderer::executePacket`](../Source/Engine/Renderer/Frame/FrameRenderer.cpp), [`Texture2D::finishUpload`](../Source/Engine/Graphics/Texture/Texture2D.cpp)). 블로킹 acquire·결정적 테스트 경로는 별도로 끝날 때까지 기다린다. 로드 · 업로드 단계 계측(`AssetLoadScope` 의 `Texture` · `TextureUpload`, `RT.TextureUpload.pump` · 제출 · 폴링 · 대기 수)은 들어갔고 값은 S8 측정 표가 채운다. | 비동기 IO→디코드→제출→폴링 파이프라인은 이미 있어 “모든 텍스처를 새 스레드로 옮기기”는 중복이다. S8 값으로 RT의 staging 복사나 API 호출이 실제 병목인지 확인한다. OpenGL 컨텍스트 점유와 DX11 즉시 컨텍스트 잠금은 예외·직렬화 경로로 남겨야 한다. |
 | GPU 전송 실행 | 업로드 API는 요청 스레드가 스테이징에 데이터를 복사해 전송을 제출하고, 기다리지 않는 경로는 티켓으로 완료를 확인한다. DX12는 전송 전용 펜스를 쓰지만 제출된 복사 리스트는 디바이스의 `_commandQueue`로 실행한다. Vulkan도 전송 커맨드 버퍼를 만들지만 `vkQueueSubmit` 대상은 `_graphicsQueue`다. 따라서 현재 코드에서 전용 CPU 업로드 스레드나 별도 GPU copy queue가 일반 경로로 동작한다고 볼 근거는 없다. | CPU 스테이징 준비와 GPU 전송은 다른 병목이다. CPU 제출을 다른 스레드로 옮겨도 GPU 복사 시간·대역폭은 줄지 않으며, 별도 GPU copy queue를 추가하려면 백엔드별 큐 선택·소유권 이전·동기화·자원 상태 전이와 fallback을 별도로 구현해야 한다. GPU copy/graphics 중첩이 필요한 측정 근거가 없으면 그 작업은 보류한다. |
 
 **결론:** 지금 당장 전용 업로드 스레드를 추가할 근거는 없다. 이미 공유 워커 풀을 이용한 메시 생성과 비동기 텍스처 전송이 있고, 문제 후보는 메시 생성에서 GT가 기다리는 비용 또는 텍스처 제출 중 RT의 CPU 비용으로 서로 다르다. A/B에서는 `gv_gpuUploadQueue`를 켠/끈 경우의 GT/RT 프레임 시간, 메시 생성 수·대기 시간, 텍스처 `IO/Decode/Upload` 비용·대기 텍스처 수를 DX12·Vulkan과 OpenGL에서 비교한다. RT의 RHI 실행이 실제 병목이면 업로드 전용 스레드가 아니라 프레임 명령 순서와 CPU 소유권을 보존하는 RHI Thread형 설계의 작은 프로토타입을 별도 검토한다. 측정 전에는 성능 이득으로 확정하지 않는다.
@@ -204,21 +202,9 @@ Graphify로 호출 관계를 좁힌 뒤 앱 루프, 에디터 ABI, ImGui 플랫�
 **결론과 진행 순서:** 에디터 UI를 별도 스레드로 분리하는 것은 이론상 가능하지만 현재 구조에서는 안전한 즉시 최적화가 아니다. 렌더와의 병렬화는 이미 draw-data 스냅숏으로 이루어지고, `updateUI`를 그대로 옮기면 동기 이벤트 포착·라이브 씬 편집·뷰 렌더 타깃 갱신·프레임 출력의 소유권이 충돌한다. 우선 기존 계측으로 UI 계산과 렌더 대기를 구분하고, 비용이 확인된 순수 계산/IO만 기존 백그라운드 작업 경로로 옮긴다. 전용 UI 스레드는 불변 입력/출력 경계와 명시적인 프레임 지연이 필요하다는 점을 감수할 만큼의 메인 스레드 병목이 입증될 때만 검토한다. 이 문제는 UI 함수 하나가 아니라 에디터가 라이브 엔진 상태를 직접 편집하는 구조에서 비롯되므로, 같은 공유 경계는 새 비동기 패널 작업에도 적용해 점검한다.
 
 **갱신(사용자 2026-11-08 — 렌더가 아니라 게임(메인) 스레드와의 분리가 목표):** 게임이 멈추거나 긴 프레임에 걸려도 에디터가 반응하고, 에디터 UI 비용이 게임 프레임을 늦추지 않게 한다(언리얼 Slate · 유니티 · Godot 에디터는 게임 스레드에서 돈다 — 그보다 앞서는 방향). 측정을 기다리지 않고 선결 구조부터 넣는다:
-1. **에디터 MVVM**(아래 "에디터 MVVM 계약") — ViewModel 의 `gather`(메인 스레드, 동기화 지점)가 값만 담은 ViewState 를 만들고, View 는 그것만 읽으며, 사용자 의도는 명령으로 큐에 쌓여 메인 스레드가 프레임 시작에 실행한다(문서 데이터는 커맨드 스택). View 가 모델 · 씬 헤더를 include 하면 컴파일이 멈춘다(모델 층의 ImGui 금지 `#error` 를 반대 방향으로).
+1. **에디터 MVVM**(계약 정본은 [EditorUI.md](agents/EditorUI.md) "MVVM" 절, 남은 View 이전은 NEXT) — ViewModel 의 `gather`(메인 스레드, 동기화 지점)가 값만 담은 ViewState 를 만들고, View 는 그것만 읽으며, 사용자 의도는 명령으로 큐에 쌓여 메인 스레드가 프레임 시작에 실행한다(문서 데이터는 커맨드 스택). View 가 모델 · 씬 헤더를 include 하면 컴파일이 멈춘다(모델 층의 ImGui 금지 `#error` 를 반대 방향으로).
 2. **입력 큐** — 창과 ImGui 는 UI 스레드가 소유하고, 게임 뷰 입력은 프레임 번호가 붙은 큐로 넘긴다(게임 입력 한 프레임 지연, 자동화 가상 입력도 같은 큐).
 3. **출력 계약** — 뷰 크기 · Play/Pause/Step 도 명령으로 넘기고 한 프레임 지연을 계약으로 적는다. 그 뒤 ImGui 프레임만 UI 스레드로 옮긴다.
-
-### 에디터 MVVM 계약 (2026-11-08)
-
-즉시 모드 GUI 라 WPF 식 데이터 바인딩 · 변경 알림은 두지 않는다(매 프레임 다시 그린다 — 언리얼 UMG MVVM · 유니티 UI Toolkit 바인딩은 유지형 UI 때문에 있다). 지금 패널 32 개 중 30 개가 ImGui 없는 `Model` 폴더를 갖고(코드 49 %), 그 70 개 클래스가 사실상 ViewModel 이다. 빈 곳은 반대 방향이다 — View 136 파일 중 85 개가 모델 · 씬 헤더를 직접 include 한다(393 곳: 작업 공간 209 · 커맨드 50 · GameObject 46).
-
-| 층 | 맡는 일 |
-|---|---|
-| Model | 엔진 씬 · 에셋 · 에디터 커맨드 · 작업 공간(지금 그대로) |
-| ViewModel(`Panels/<패널>/Model/<이름>ViewModel`) | 헤드리스. 모델 접근을 혼자 맡는다 — `gather()` 가 값만 담은 ViewState(포인터 · 참조 없음)를 만들고, 의도는 명령 메서드로 받는다. 문서 데이터를 바꾸는 명령은 커맨드 스택(되돌리기)을 거치고, 보기만 바꾸는 것(편집 중 숨김)은 그 까닭을 적는다. 단위 테스트한다 |
-| View | ImGui 호출과 ViewState 읽기 · 명령 호출만. 모델 헤더를 include 하지 않는다 |
-
-옮기는 동안은 옮긴 패널 목록(데이터)을 린트가 보고, 다 옮기면 View 타깃에 모델 헤더 `#error` 껍데기를 걸고 목록을 지운다. 첫 패널은 DataLayers — 거기서 씬 설정(`_bInitiallyActive`)을 되돌리기 없이 직접 고치던 결함을 함께 고친다.
 
 ### 병렬 · 비동기 전수 조사 (2026-11-08)
 
