@@ -9,7 +9,7 @@
 
 #include "Editor/Common/Config/EditorUserFile.h"
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
+#include "Editor/Common/EditorExtensionRegistry.h"
 
 #include "Engine/Reflection/TextAddress.h"
 

@@ -15,7 +15,7 @@
 
 #include "Editor/Common/Config/EditorIconName.h"
 #include "Editor/Common/EditorColor.h"
-#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
+#include "Editor/Common/EditorExtensionRegistry.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
 

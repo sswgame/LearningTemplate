@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
+#include "Editor/Common/EditorExtensionRegistry.h"
 
 namespace sw::editor
 {

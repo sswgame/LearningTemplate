@@ -2,11 +2,11 @@
 
 #include "Editor/EditorModuleUnloadListener.h"
 
+#include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorDefaultObjects.h"
-#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/EditorSubsystemSet.h"
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"

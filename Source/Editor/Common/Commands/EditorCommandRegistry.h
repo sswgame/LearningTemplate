@@ -14,8 +14,8 @@
 #include "Editor/Common/Commands/EditorCommandTarget.h"
 #include "Editor/Common/Commands/EditorCommandText.h"
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
 
 namespace sw::editor
 {

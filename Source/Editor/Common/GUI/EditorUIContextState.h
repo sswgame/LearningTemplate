@@ -6,7 +6,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/EditorExports.h"
-#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
+#include "Editor/Common/EditorExtensionRegistry.h"
 
 namespace sw::editor
 {

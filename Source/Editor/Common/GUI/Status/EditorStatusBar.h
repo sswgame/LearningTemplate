@@ -3,7 +3,7 @@
  * @brief 메뉴 막대 오른쪽 상태 영역에 항목 하나를 더하는 등록 줄(`SW_EDITOR_STATUS_BAR_ITEM`)입니다.
  */
 #pragma once
-#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
+#include "Editor/Common/EditorExtensionRegistry.h"
 
 namespace sw::editor
 {

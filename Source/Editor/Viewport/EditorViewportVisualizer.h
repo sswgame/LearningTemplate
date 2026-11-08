@@ -8,7 +8,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Config/EditorIconName.h"
-#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
+#include "Editor/Common/EditorExtensionRegistry.h"
 #include "Editor/Viewport/EditorVisualizerStats.h"
 #include "Editor/Viewport/Model/EditorVisualizerToggles.h"
 
