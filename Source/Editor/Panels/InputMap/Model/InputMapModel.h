@@ -26,6 +26,8 @@ namespace sw::editor
 {
     class EditorListFilter;
 
+    struct ViewportInputOverlay;
+
     /** @brief 키 잡기가 한 프레임에 본 키보드 입력입니다. 읽기는 패널이(ImGui), 판단은 문서가 한다. */
     struct InputMapCaptureFrame
     {
@@ -128,6 +130,10 @@ namespace sw::editor
          * @details 2D 합성 · 스틱 · 마우스 축 · 가상 조이스틱 · AnyKey 는 매 프레임 읽는 값이라 형식에 이 칸이 없다(`InputMapXML`). 고치게 두면 저장 뒤 말없이 사라진다.
          */
         static bool savesTriggerFields( BindingKind kind );
+        /** @brief 에디터 범위의 입력 관리자입니다(없으면 멈춘다). View 가 서비스 창구(`EditorService.h`)를 보지 않게 여기서 찾는다. */
+        static InputManager& getInputManager();
+        /** @brief 뷰포트 입력 오버레이 설정입니다(창이 바로 고친다 — 보기 설정이라 되돌리기에 남기지 않는다). 없으면 멈춘다. */
+        static ViewportInputOverlay& getViewportOverlay();
 
         const string& getSelectedAction() const { return _selectedAction; }
         void          selectAction( string_view action ) { _selectedAction = action; }

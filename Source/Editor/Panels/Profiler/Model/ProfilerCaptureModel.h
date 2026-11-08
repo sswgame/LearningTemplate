@@ -56,6 +56,8 @@ namespace sw::editor
         bool loadCapture();
         /** @brief 캡처 파일 경로(`Saved/Profiler/ProfilerCapture.txt`)입니다. */
         static string getCaptureFilePath();
+        /** @brief 에디터 범위의 엔진 프로파일러입니다. 없으면(에디터 밖) nullptr 입니다. View · 감시 값이 서비스 창구(`EditorService.h`)를 보지 않게 여기서 찾는다. */
+        static FrameProfiler* findFrameProfiler();
 
         /** @brief 테이블의 "Last" 열이 보여 줄 프레임입니다. 0 이 가장 최근입니다. */
         uint32 getSelectedFrameOffset() const { return _rowQuery._frameOffset; }

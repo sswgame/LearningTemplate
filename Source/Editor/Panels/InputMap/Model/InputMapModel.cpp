@@ -8,6 +8,7 @@
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Viewport/ViewportInputOverlay.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetPaths.h"
@@ -536,5 +537,15 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "InputMapModel.CouldNotLoadInput", "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
         else if ( _replay.loadFromFile( diskPath->str() ) == false )
             SW_LOG_ERROR_ID( "InputMapModel.CouldNotLoadInput2", "Could not load input replay '%#' from '%#'", _replayFilePath.c_str(), diskPath->c_str() );
+    }
+
+    InputManager& InputMapModel::getInputManager()
+    {
+        return editor::getSubsystem<InputManager>();
+    }
+
+    ViewportInputOverlay& InputMapModel::getViewportOverlay()
+    {
+        return editor::getSubsystem<ViewportInputOverlaySettings>()._overlay;
     }
 } // namespace sw::editor

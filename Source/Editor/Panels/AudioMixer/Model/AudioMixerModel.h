@@ -15,6 +15,7 @@
 namespace sw
 {
     class AudioEngine;
+    class IAudioService;
 } // namespace sw
 
 namespace sw::editor
@@ -61,6 +62,8 @@ namespace sw::editor
 
         /** @brief 감시 값이 읽는 지난 프레임의 값입니다. */
         static const AudioMixerProbe& getProbe();
+        /** @brief 에디터의 오디오 서비스입니다(에디터는 오디오를 짓는 구성이라 늘 있다 — 전용 서버 구성만 오디오를 짓지 않는다). View 가 서비스 창구(`EditorService.h`)를 보지 않게 여기서 찾는다. */
+        static IAudioService& getAudioService();
 
     private:
         vector<AudioBusStatus> _listBusStatus;
