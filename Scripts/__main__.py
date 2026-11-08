@@ -61,7 +61,7 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("platform-chains", "lint.PlatformChains", "플랫폼 #if 사슬이 빠진 플랫폼을 컴파일 오류로 내는지 본다(--self-check)"),
     Subcommand("client-only-types", "generate.ClientOnlyTypes", "전용 서버가 짓지 않는 소스의 리플렉션 형식 이름 표를 쓴다(--check 는 낡았는지만 본다)"),
     Subcommand("dev-only-variables", "lint.DevOnlyVariables", "테스트용 전역 변수가 개발 전용 자리(Dev/ · Tests/ · DevTools · Editor · 자동화 실행기) 밖에 선언됐는지 본다(--self-check)"),
-    Subcommand("function-statics", "lint.FunctionStatics", "함수 정적 가변 변수가 정적 등록 두 틀(SW_DEFINE_REGISTRATION_LIST · SLOT) 밖에 있는지 본다 — 나머지는 서브시스템(--self-check)"),
+    Subcommand("mutable-statics", "lint.MutableStatics", "가변 정적 저장소(함수 정적 · 이름공간 범위 · 클래스 static 데이터 멤버)가 정적 등록 두 틀과 예외 표 밖에 있는지 본다 — 나머지는 주인 객체의 멤버(--self-check)"),
     Subcommand("server-ui", "lint.ServerUIIncludes", "서버도 짓는 게임 코드가 클라이언트 전용 기능(UI · 오디오 · 렌더러 · Client/)을 직접 부르는지 본다(--self-check)"),
     Subcommand("editor-view-includes", "lint.EditorViewIncludes", "MVVM 으로 옮긴 에디터 패널 View 가 모델 · 씬 헤더를 include 하는지 본다(--self-check)"),
     Subcommand("common-shapes", "lint.CommonShapes", "공통 기반을 두고 손으로 적은 모양 검사(--self-check)"),
