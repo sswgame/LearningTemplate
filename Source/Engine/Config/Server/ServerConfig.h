@@ -75,7 +75,7 @@ namespace sw
         /**
          * @brief 게임(UDP) 포트입니다. 전용 서버의 게임 인스턴스가 늘 이 포트를 엽니다(`GameNetSession::makeServerParams`, 받는 주소는 `_listenAddress`).
          * @details 0 이면 운영체제가 고른 포트입니다 — 한 기계에서 서버를 여럿 띄우는 테스트용이고, 연 포트는 로그 `Net session listening on UDP port N` 에 남는다.
-         *          개발 빌드에서는 `-gv_netListenPort` 가 이 값보다 우선한다.
+         *          개발 빌드에서는 개발 도구의 리슨 덮어쓰기(`-gv_netListenPort`, `GameNetSession::setLaunchOverride`)가 이 값보다 우선한다.
          */
         PROPERTY( Min = 0, Max = 65535 )
         int32 _gamePort{ 7777 };

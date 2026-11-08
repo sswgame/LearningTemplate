@@ -15,6 +15,7 @@
 #include "DevTools/DevToolsClientPart.h"
 #include "DevTools/Maintenance/SavedRetentionSubsystem.h"
 #include "DevTools/Net/NetLineEmulation.h"
+#include "DevTools/Net/NetListenLaunch.h"
 #include "DevTools/Profiling/FrameStall.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 #include "DevTools/ServerPose/ServerPoseOverlay.h"
@@ -94,8 +95,12 @@ namespace sw
             (void)startup.emplaceSubsystem<ConfigReloadSubsystem>( *parts._pConfigManager );
         }
         // 회선 흉내 — 세션이 열기 전에 샤드 전송 데코레이터를 건다(실행 중 조건은 `net.emulation`).
+        // 리슨 포트 덮어쓰기(`-gv_netListenPort`) — 세션이 기동 역할을 정하기 전에 건다.
         if ( parts._pNetSession != nullptr )
+        {
             (void)startup.emplaceSubsystem<NetLineEmulationSubsystem>( *parts._pNetSession );
+            (void)startup.emplaceSubsystem<NetListenLaunchSubsystem>( *parts._pNetSession );
+        }
         // 서버 포즈 고스트 — 서버가 가진 위치를 클라이언트 씬에 겹친다(`-gv_serverPoseOverlayPort` 가 0 이면 아무 일도 없다, 서버 디버깅 S6).
         (void)startup.emplaceSubsystem<ServerPoseOverlay>();
         // 디버그 HUD 설정 — 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다(설정 매니저는 아직 초기화 전이다).
