@@ -10,6 +10,15 @@
 #include "Engine/Text/TextLayout.h"
 #include "Engine/Text/TextMeasureCache.h"
 
+namespace sw
+{
+    /** @brief 해시를 직접 정한 키를 만듭니다 — 부딪힘을 일부러 만드는 케이스의 자리입니다(`TextMeasureKey` 의 friend). */
+    struct TextMeasureKeyTestAccess
+    {
+        static TextMeasureKey makeWithHash( uint64 hash, string_view text, uint64 contextHash ) { return TextMeasureKey{ hash, text, contextHash }; }
+    };
+} // namespace sw
+
 namespace
 {
     struct TextMeasureCacheTestInternal
@@ -29,7 +38,7 @@ namespace
             {
             }
 
-            sw::TextMeasureKey get() const { return sw::TextMeasureKey::fromHashForTest( _number, _text, 0 ); }
+            sw::TextMeasureKey get() const { return sw::TextMeasureKeyTestAccess::makeWithHash( _number, _text, 0 ); }
         };
 
         static OwnedKey makeKey( uint64 number ) { return OwnedKey{ number }; }
@@ -173,21 +182,21 @@ SW_TEST_CASE( TextMeasureCacheTest, CollidingHashWithDifferentTextIsAMiss )
     const sw::float2     sizeA{ 10.0f, 1.0f };
     const sw::float2     sizeB{ 20.0f, 2.0f };
 
-    cache.insert( sw::TextMeasureKey::fromHashForTest( kSharedHash, "alpha", 7 ), sizeA );
-    const sw::float2* pSame = cache.find( sw::TextMeasureKey::fromHashForTest( kSharedHash, "alpha", 7 ) );
+    cache.insert( sw::TextMeasureKeyTestAccess::makeWithHash( kSharedHash, "alpha", 7 ), sizeA );
+    const sw::float2* pSame = cache.find( sw::TextMeasureKeyTestAccess::makeWithHash( kSharedHash, "alpha", 7 ) );
     SW_REQUIRE_NOT_NULL( pSame );
     SW_EXPECT_EQUAL( sizeA._x, pSame->_x );
 
-    SW_EXPECT_NULL( cache.find( sw::TextMeasureKey::fromHashForTest( kSharedHash, "beta", 7 ) ) );  // 해시는 같고 글이 다르다
-    SW_EXPECT_NULL( cache.find( sw::TextMeasureKey::fromHashForTest( kSharedHash, "alpha", 8 ) ) ); // 해시 · 글은 같고 문맥이 다르다
+    SW_EXPECT_NULL( cache.find( sw::TextMeasureKeyTestAccess::makeWithHash( kSharedHash, "beta", 7 ) ) );  // 해시는 같고 글이 다르다
+    SW_EXPECT_NULL( cache.find( sw::TextMeasureKeyTestAccess::makeWithHash( kSharedHash, "alpha", 8 ) ) ); // 해시 · 글은 같고 문맥이 다르다
     const sw::CacheStatsSnapshot afterMiss = TextMeasureCacheTestInternal::readSnapshot( kName );
     SW_EXPECT_EQUAL( before._hitCount + 1, afterMiss._hitCount );
     SW_EXPECT_EQUAL( before._missCount + 2, afterMiss._missCount );
 
-    cache.insert( sw::TextMeasureKey::fromHashForTest( kSharedHash, "beta", 7 ), sizeB ); // 같은 해시의 칸을 덮어쓴다
+    cache.insert( sw::TextMeasureKeyTestAccess::makeWithHash( kSharedHash, "beta", 7 ), sizeB ); // 같은 해시의 칸을 덮어쓴다
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), cache.getCount() );
-    SW_EXPECT_NULL( cache.find( sw::TextMeasureKey::fromHashForTest( kSharedHash, "alpha", 7 ) ) );
-    const sw::float2* pBeta = cache.find( sw::TextMeasureKey::fromHashForTest( kSharedHash, "beta", 7 ) );
+    SW_EXPECT_NULL( cache.find( sw::TextMeasureKeyTestAccess::makeWithHash( kSharedHash, "alpha", 7 ) ) );
+    const sw::float2* pBeta = cache.find( sw::TextMeasureKeyTestAccess::makeWithHash( kSharedHash, "beta", 7 ) );
     SW_REQUIRE_NOT_NULL( pBeta );
     SW_EXPECT_EQUAL( sizeB._x, pBeta->_x );
 }

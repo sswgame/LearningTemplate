@@ -51,16 +51,14 @@ namespace sw
         {
         }
 
-        /**
-         * @brief 해시를 직접 정합니다 — 부딪힘을 일부러 만드는 테스트의 자리입니다. 생산 코드는 위 생성자를 씁니다.
-         */
-        static TextMeasureKey fromHashForTest( uint64 hash, string_view text, uint64 contextHash ) { return TextMeasureKey{ hash, text, contextHash }; }
-
         uint64      getHash() const { return _hash; }
         string_view getText() const { return _text; }
         uint64      getContextHash() const { return _contextHash; }
 
     private:
+        /// 해시 부딪힘(64 비트라 실제 글로는 만들 수 없다)을 일부러 만드는 테스트가 아래 생성자를 쓴다 — 접근 구조체는 테스트 폴더에만 정의되고 배포 코드에는 창구가 없다(Google Test `FRIEND_TEST` 자리).
+        friend struct TextMeasureKeyTestAccess;
+
         TextMeasureKey( uint64 hash, string_view text, uint64 contextHash )
             : _hash{ hash }
             , _text{ text }
