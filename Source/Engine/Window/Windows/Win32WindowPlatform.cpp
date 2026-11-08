@@ -4,8 +4,6 @@
 #include "Engine/Window/Windows/Win32SplashWindow.h"
 #include "Engine/Window/Windows/Win32Window.h"
 
-#if defined( SW_PLATFORM_WINDOWS )
-
 namespace sw
 {
     namespace
@@ -20,5 +18,3 @@ namespace sw
         const WindowPlatform::Registrar s_win32WindowRegistrar{ s_win32WindowFactory };
     } // namespace
 } // namespace sw
-
-#endif

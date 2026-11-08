@@ -32,14 +32,13 @@ namespace sw
     }
 } // namespace sw
 
-#if defined( SW_PLATFORM_LINUX )
-    #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
 
-    #include <cerrno>
-    #include <fcntl.h>
-    #include <linux/input.h>
-    #include <linux/joystick.h>
-    #include <sys/ioctl.h>
+#include <cerrno>
+#include <fcntl.h>
+#include <linux/input.h>
+#include <linux/joystick.h>
+#include <sys/ioctl.h>
 
 namespace sw
 {
@@ -445,5 +444,3 @@ namespace sw
         _bHasForceFeedback = SW_FALSE;
     }
 } // namespace sw
-
-#endif

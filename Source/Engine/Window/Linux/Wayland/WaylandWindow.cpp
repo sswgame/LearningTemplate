@@ -12,7 +12,7 @@
 #include "Engine/Window/WindowMonitor.h"
 #include "Engine/Window/WindowTextInput.h"
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
+#if defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
     #include <fcntl.h>
     #include <linux/input-event-codes.h>
     #include <poll.h>
@@ -39,7 +39,7 @@ namespace sw
 {
 } // namespace sw
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
+#if defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
 namespace sw
 {
     /** @brief 바인드한 `wl_output` 하나와 그 값입니다(`IWindow::tryGetMonitors`). `_bEntered` 는 창(wl_surface)이 이 출력에 걸쳐 있는지입니다. */

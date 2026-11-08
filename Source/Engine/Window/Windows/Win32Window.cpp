@@ -8,9 +8,9 @@
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/WindowMonitor.h"
 
-#if defined( SW_PLATFORM_WINDOWS )
-    #include <imm.h>
-    #pragma comment( lib, "imm32.lib" )
+#include <imm.h>
+
+#pragma comment( lib, "imm32.lib" )
 
 namespace sw
 {
@@ -513,4 +513,3 @@ namespace sw
         return DefWindowProcW( hWnd, msg, wParam, lParam );
     }
 } // namespace sw
-#endif

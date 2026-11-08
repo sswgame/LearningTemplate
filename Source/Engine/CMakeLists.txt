@@ -31,6 +31,11 @@ foreach(exPattern IN LISTS coreExclude)
 	list(FILTER ENGINE_SOURCES EXCLUDE REGEX "${exPattern}")
 endforeach()
 
+# 플랫폼 폴더(`Windows/` · `Linux/` · `Android/` · `Web/`)는 그 플랫폼에서만 짓는다(Core · DevTools 와 같은 규칙) — 파일 안 플랫폼 `#if` 로 빈 TU 를
+# 모든 플랫폼에서 컴파일하지 않는다(언리얼 UBT 가 `Windows/` · `Linux/` 폴더를 플랫폼마다 고르는 것과 같다). 전용 서버의 차이는 폴더(`SW_UNBUILT_ENGINE_FOLDERS`)와
+# 서버도 짓는 창 · 입력 플랫폼 파일 안의 `SW_WITH_CLIENT_CODE` 가 맡는다.
+sw_filterPlatformSources(ENGINE_SOURCES)
+
 # RHI 백엔드 장치 소스는 Engine 이 짓지 않는다 — Dev 는 RHI_* 모듈이, Shipping 은 아래 5) 가 고른 하나를 가져간다.
 sw_getAllRHIBackendSources(listRHIBackendSource)
 list(REMOVE_ITEM ENGINE_SOURCES ${listRHIBackendSource})

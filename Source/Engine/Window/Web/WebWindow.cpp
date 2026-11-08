@@ -9,8 +9,7 @@
 
 #include "Engine/Window/WindowPlatform.h"
 
-#if defined( SW_PLATFORM_WEB )
-    #include <emscripten/emscripten.h>
+#include <emscripten/emscripten.h>
 
 namespace sw
 {
@@ -260,5 +259,3 @@ namespace sw
         return EM_FALSE;
     }
 } // namespace sw
-
-#endif

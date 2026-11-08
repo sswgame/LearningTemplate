@@ -1,9 +1,7 @@
 #include "pch.h"
 
+#include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Window/NativeWindowEvent.h"
-
-#if defined( SW_PLATFORM_WINDOWS )
-    #include "Engine/Foundation/EnginePlatformHeaders.h"
 
 namespace sw
 {
@@ -33,5 +31,3 @@ namespace sw
         return false;
     }
 } // namespace sw
-
-#endif

@@ -7,12 +7,11 @@
 
 #include "Engine/Window/WindowPlatform.h"
 
-#if defined( SW_PLATFORM_ANDROID )
-    #include <android/configuration.h>
-    #include <android/input.h>
-    #include <android/native_window.h>
-    #include <android_native_app_glue.h>
-    #include <jni.h>
+#include <android/configuration.h>
+#include <android/input.h>
+#include <android/native_window.h>
+#include <android_native_app_glue.h>
+#include <jni.h>
 
 namespace sw
 {
@@ -445,5 +444,3 @@ namespace sw
         return 1;
     }
 } // namespace sw
-
-#endif
