@@ -178,7 +178,8 @@ namespace sw
     {
         // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
         // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.
-        return gv_gpuCulling && _psoManager.getEnginePSO( RenderPassType::GPUCull ) != 0;
+        // 개수를 되돌리는 커널이 없으면 컴퓨트가 센 개수가 프레임마다 쌓인다(N, 2N ...) — 둘이 다 있어야 GPU 가 개수를 맡는다.
+        return gv_gpuCulling && _psoManager.getEnginePSO( RenderPassType::GPUCull ) != 0 && _psoManager.getEnginePSO( RenderPassType::IndirectArgsReset ) != 0;
     }
 
     void FrameGraphExecutor::dispatchInstanceAnimation( uint32 instanceCount )
@@ -476,12 +477,15 @@ namespace sw
         // FInstanceCullingContext 를 두는 것과 같은 이유다. 이번 프레임에 그리는 추가 뷰(CCTV, PiP)도 자기 슬롯을 돈다.
         if ( _state._gpuScene.isUploaded() == false || _state._gpuScene.areIndirectCountsGPUFilled() == false )
             return;
-        const bool bCullingUnavailable = _psoManager.getEnginePSO( RenderPassType::GPUCull ) == 0 || _state._gpuScene.getInstanceSRV() == kInvalidDescriptorIndex ||
+        const bool bCullingUnavailable = _psoManager.getEnginePSO( RenderPassType::GPUCull ) == 0 || _psoManager.getEnginePSO( RenderPassType::IndirectArgsReset ) == 0 ||
+                                         _state._gpuScene.getInstanceSRV() == kInvalidDescriptorIndex ||
                                          _state._gpuScene.getBatchInfoSRV() == kInvalidDescriptorIndex;
         if ( bCullingUnavailable )
             return;
 
         computeLODFadeStep();
+        // 1) 돌릴 슬롯을 모은다. 돌 수 있는지는 디스패치 전에 정해진다(isCullViewReady) — 그래서 추가 뷰의 그림자 슬롯 조건도 여기서 가린다.
+        _listCullJob.clear();
         bool bAllViewsCulled = true;
         // 캐스케이드가 각자 슬롯을 돌고 점광 · 스폿 타일이 없으면 합친 칸(주 시점 그림자 슬롯)은 아무 패스도 읽지 않는다 — 돌리지 않는다.
         const bool bMainShadowSlotUnused = _state._cascadeCullCount > 0 && _state._frameShadow._listLocalTile.empty();
@@ -489,7 +493,7 @@ namespace sw
         {
             if ( bMainShadowSlotUnused && viewIndex == static_cast<uint32>( RenderViewType::Shadow ) )
                 continue;
-            bAllViewsCulled = dispatchCullView( viewIndex, _state._arrView[viewIndex], instanceCount, nullptr ) && bAllViewsCulled;
+            bAllViewsCulled = enqueueCullView( viewIndex, _state._arrView[viewIndex], nullptr ) && bAllViewsCulled;
         }
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
@@ -497,18 +501,49 @@ namespace sw
             // 그림자 패스도 이 뷰의 그림자 볼륨으로 따로 거른다 — 주 시점의 그림자 슬롯을 쓰면 이 뷰만 보는 곳의 가리는 물체가 빠진다.
             if ( pView->_bRenderThisFrame == SW_FALSE )
                 continue;
-            const bool bViewCulled   = dispatchCullView( pView->_cullSlot, pView->_cullInput, instanceCount, pView.get() );
-            const bool bShadowCulled = bViewCulled && dispatchCullView( pView->_shadowCullSlot, pView->_shadowCullInput, instanceCount, nullptr );
-            if ( bShadowCulled == false )
+            const bool bBothReady = isCullViewReady( pView->_cullSlot, pView->_cullInput ) && isCullViewReady( pView->_shadowCullSlot, pView->_shadowCullInput );
+            if ( bBothReady == false )
+            {
                 pView->_bRenderThisFrame = SW_FALSE;
+                continue;
+            }
+            std::ignore = enqueueCullView( pView->_cullSlot, pView->_cullInput, pView.get() );
+            std::ignore = enqueueCullView( pView->_shadowCullSlot, pView->_shadowCullInput, nullptr );
         }
         // 주 시점 캐스케이드마다 자기 절두체(그 캐스케이드의 그림자 행렬)로 거른다. 정렬은 그림자에 필요 없어 상수 버퍼가 없다(dispatchCullView 가 건너뛴다).
         for ( uint32 cascadeIndex = 0; cascadeIndex < _state._cascadeCullCount; ++cascadeIndex )
         {
             RenderView& cascadeInput = _state._arrCascadeCullInput[cascadeIndex];
             cascadeInput.setViewProjection( _state._mainView._shadow._arrCascadeTile[cascadeIndex]._viewProj );
-            bAllViewsCulled = dispatchCullView( _state._cascadeCullSlotBase + cascadeIndex, cascadeInput, instanceCount, nullptr ) && bAllViewsCulled;
+            bAllViewsCulled = enqueueCullView( _state._cascadeCullSlotBase + cascadeIndex, cascadeInput, nullptr ) && bAllViewsCulled;
         }
+
+        // 2) 모든 슬롯의 버퍼를 UAV 로 — 한 번에 낸다. 간접 인자는 직전 프레임에 IndirectArgument 로, 가시 목록은 ShaderResource 로 두고 끝냈다.
+        //    슬롯마다 버퍼가 따로라 앞 슬롯의 디스패치와 뒤 슬롯의 전이 사이에 지켜야 할 순서가 없다.
+        for ( const CullJob& job : _listCullJob )
+        {
+            const GPUCullViewResources& view = _state._gpuScene.getCullView( job._cullViewIndex );
+            _bufferTransitions.add( view._indirectArgs._buffer, RHIBufferState::UnorderedAccess );
+            _bufferTransitions.add( view._visibleInstances._buffer, RHIBufferState::UnorderedAccess );
+            if ( _state._gpuScene.hasLODState( job._cullViewIndex ) )
+                _bufferTransitions.add( view._lodState._buffer, RHIBufferState::UnorderedAccess );
+        }
+        _bufferTransitions.flush( *_pCmd );
+
+        // 3) 슬롯마다 컬링 + 정렬.
+        for ( const CullJob& job : _listCullJob )
+        {
+            dispatchCullView( job._cullViewIndex, *job._pRenderView, instanceCount, job._pExtraView );
+        }
+
+        // 4) 그리는 쪽이 읽는 상태로 — 한 번에 낸다.
+        for ( const CullJob& job : _listCullJob )
+        {
+            const GPUCullViewResources& view = _state._gpuScene.getCullView( job._cullViewIndex );
+            _bufferTransitions.add( view._indirectArgs._buffer, RHIBufferState::IndirectArgument );
+            _bufferTransitions.add( view._visibleInstances._buffer, RHIBufferState::ShaderResource );
+        }
+        _bufferTransitions.flush( *_pCmd );
         _bGPUCullingActive = bAllViewsCulled ? 1u : 0u;
     }
 
@@ -648,14 +683,25 @@ namespace sw
         return input;
     }
 
-    bool FrameGraphExecutor::dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView )
+    bool FrameGraphExecutor::isCullViewReady( uint32 cullViewIndex, const RenderView& renderView ) const
     {
         if ( cullViewIndex >= _state._gpuScene.getCullViewCount() )
             return false;
-        const GPUCullViewResources& view              = _state._gpuScene.getCullView( cullViewIndex );
-        const bool                  bCullViewNotReady = view._indirectArgs._uav == kInvalidDescriptorIndex || view._visibleInstances._uav == kInvalidDescriptorIndex || renderView.isReadyForCulling() == false;
-        if ( bCullViewNotReady )
+        const GPUCullViewResources& view = _state._gpuScene.getCullView( cullViewIndex );
+        return view._indirectArgs._uav != kInvalidDescriptorIndex && view._visibleInstances._uav != kInvalidDescriptorIndex && renderView.isReadyForCulling();
+    }
+
+    bool FrameGraphExecutor::enqueueCullView( uint32 cullViewIndex, const RenderView& renderView, const FrameViewTarget* pExtraView )
+    {
+        if ( isCullViewReady( cullViewIndex, renderView ) == false )
             return false;
+        _listCullJob.push_back( CullJob{ cullViewIndex, &renderView, pExtraView } );
+        return true;
+    }
+
+    void FrameGraphExecutor::dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView )
+    {
+        const GPUCullViewResources& view = _state._gpuScene.getCullView( cullViewIndex );
 
         FrameRendererUtil::GPUCullParams cullParams{};
         // 절두체는 **뷰가 이미 가지고 있다.** setViewProjection 이 행렬과 함께 갱신한다.
@@ -688,10 +734,15 @@ namespace sw
         // 상수 버퍼는 **뷰마다 자기 것**이다. 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치가 읽을 내용을 덮어쓴다.
         renderView._cullCb.update( *_pCmd, &cullParams, sizeof( cullParams ) );
 
-        // 컬링이 쓰는 두 버퍼는 UAV 상태여야 한다. 간접 인자는 직전 프레임에 IndirectArgument 로,
-        // 가시 목록은 ShaderResource 로 두고 끝냈다.
-        _pCmd->transitionBuffer( view._indirectArgs._buffer, RHIBufferState::UnorderedAccess );
-        _pCmd->transitionBuffer( view._visibleInstances._buffer, RHIBufferState::UnorderedAccess );
+        // 컬링이 쓰는 버퍼(인자 · 가시 목록 · 전환 상태)는 dispatchCullAndSort 가 모든 슬롯을 묶어 UAV 로 옮겨 두었다.
+        // 개수를 GPU 에서 되돌린다 — 배치마다 0(압축을 포기한 배치는 CPU 개수). 예전에는 CPU 가 프레임마다 모든 뷰의 인자 전체를 다시 올렸다.
+        // 나머지 칸(인덱스 수 · 시작 · 정점 시작 · 인스턴스 시작)은 배치 표가 바뀔 때만 CPU 가 올린다. 바인딩은 컬링과 같은 자리(b0 · t1 · u0)라 그대로 이어 쓴다.
+        _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::IndirectArgsReset ) );
+        _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
+        _pCmd->bindComputeShaderResource( _state._gpuScene.getBatchInfoSRV(), 1 );
+        _pCmd->bindComputeUAV( view._indirectArgs._uav, 0 );
+        _pCmd->dispatchThreads( cullParams._batchCount, 1, 1, FrameRendererUtil::kLinearThreadGroupSize, 1, 1 );
+        _pCmd->uavBarrier( view._indirectArgs._buffer ); // 되돌린 개수 위에서 컬링이 InterlockedAdd 로 센다
         // PSO 와 바인딩은 **뷰마다** 다시 설정한다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
         _pCmd->setComputePipelineState( _psoManager.getEnginePSO( RenderPassType::GPUCull ) );
         // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_OcclusionTiles(t2) / g_IndirectArgs(u0) / g_VisibleInstanceIDs(u1).
@@ -706,7 +757,6 @@ namespace sw
         // 전환 상태(u2)는 크로스페이드가 켜졌을 때만 읽고 쓴다. 없으면 자리만 채운다 — 셰이더가 진행량 0 이면 건드리지 않는다.
         if ( bHasLODState )
         {
-            _pCmd->transitionBuffer( view._lodState._buffer, RHIBufferState::UnorderedAccess );
             _pCmd->bindComputeUAV( view._lodState._uav, 2 );
         }
         else
@@ -755,10 +805,6 @@ namespace sw
             // 배치마다 워크그룹 하나를 쓴다. 그 배치의 목록을 그룹 공유 메모리 안에서 정렬한다.
             _pCmd->dispatchCompute( cullParams._batchCount, 1, 1 );
         }
-
-        _pCmd->transitionBuffer( view._indirectArgs._buffer, RHIBufferState::IndirectArgument );
-        _pCmd->transitionBuffer( view._visibleInstances._buffer, RHIBufferState::ShaderResource );
-        return true;
     }
 
     void FrameGraphExecutor::dispatchRealtimeProbes()

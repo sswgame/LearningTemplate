@@ -39,6 +39,7 @@
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
+#include "Engine/Renderer/Scene/GPUTransparentSorter.h"
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -519,7 +520,7 @@ namespace sw
         _lastPendingPSOBatchCount  = _passExecutor.getPendingPSOBatchCount();
         // 타임스탬프 슬롯은 디바이스에 하나다 — 미리보기 렌더러가 읽고 켜고 끄면 주 렌더러의 GPU 시간이 흔들린다.
         if ( _host._pProfiler != nullptr )
-            _state._gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass() );
+            _state._gpuPassTimeline.readAndReport( pDevice, _pipelineResource.getGraphPass(), _pipelineResource.getFramePass() );
         return bOk;
     }
 
@@ -1165,7 +1166,7 @@ namespace sw
         // 그래서 둘 다 이 뷰의 것을 쓰거나 둘 다 주 시점의 것을 쓴다. 빌더는 입자마다 자리를 싣는다(`computeViewTransparentOrders`) — 수가 다르면 계약 위반이다.
         const bool bParticleSlotsComplete = pOrder != nullptr && pOrder->_listParticleSlot.size() == _state._gpuScene.getParticleBatches().size();
         SW_ASSERT( pOrder == nullptr || bParticleSlotsComplete );
-        const bool bUsable = bParticleSlotsComplete && pOrder->_pListRank != nullptr && pOrder->_pListTailSlot != nullptr &&
+        const bool bUsable = bParticleSlotsComplete && pOrder->_pListRank != nullptr &&
                              pOrder->_listBatchOrder.size() == _state._gpuScene.getTransparentBatches().size() &&
                              pOrder->_tailBase + pOrder->_pListRank->size() == _state._gpuScene.getInstances().size();
         // 메시 투명이 없으면 입자 자리만 이 뷰의 것이다(배치 순서가 비어 짝이 될 것이 없다).
@@ -1190,11 +1191,13 @@ namespace sw
             view._bHasTransparentRank = SW_TRUE;
             return;
         }
-        // 컬링이 없는 백엔드는 인스턴스 슬롯 스트림이 곧 그리는 순서다. 앞(불투명)은 항등, 꼬리는 배치 안을 뷰 순서로 다시 놓는다.
+        // 컬링이 없는 백엔드는 인스턴스 슬롯 스트림이 곧 그리는 순서다. 앞(불투명)은 항등, 꼬리는 배치 안을 뷰 순서로 다시 놓는다 — 컬링이 돌면 GPU 정렬이 하는 일이라
+        // 여기(컬링 없음)에서만 CPU 로 한다(`GPUTransparentSorter::buildViewTailSlots`).
         // 내용이 지난 프레임과 같으면 버퍼를 그대로 쓴다(뷰 카메라 · 투명 물체가 서 있으면 순서가 같다).
+        GPUTransparentSorter::buildViewTailSlots( vector_reference<const uint32>( *pOrder->_pListRank ), pOrder->_tailBase, _state._gpuScene.getTransparentBatches(), _listScratchTailSlot );
         const uint32 instanceCount = pOrder->_tailBase + tailCount;
         const bool   bSameContent  = view._instanceSlotStream != 0 && view._listInstanceSlot.size() == instanceCount &&
-                                  Memory::compare( view._listInstanceSlot.data() + pOrder->_tailBase, pOrder->_pListTailSlot->data(), tailCount * sizeof( uint32 ) ) == 0;
+                                  Memory::compare( view._listInstanceSlot.data() + pOrder->_tailBase, _listScratchTailSlot.data(), tailCount * sizeof( uint32 ) ) == 0;
         if ( bSameContent == false )
         {
             view._listInstanceSlot.resize( instanceCount );
@@ -1202,7 +1205,7 @@ namespace sw
             {
                 view._listInstanceSlot[slot] = slot;
             }
-            Memory::copy( view._listInstanceSlot.data() + pOrder->_tailBase, pOrder->_pListTailSlot->data(), tailCount * sizeof( uint32 ) );
+            Memory::copy( view._listInstanceSlot.data() + pOrder->_tailBase, _listScratchTailSlot.data(), tailCount * sizeof( uint32 ) );
             // 지난 프레임 기록이 이 버퍼를 읽었을 수 있다 — 반환은 디바이스가 미룬다(releaseHandle).
             if ( view._instanceSlotStream != 0 )
                 _pDevice->releaseHandle( RHIHandleKind::Buffer, view._instanceSlotStream );

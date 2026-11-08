@@ -42,7 +42,7 @@ namespace sw
         uint8 _bWireframeFill{ SW_FALSE };
         /**
          * @brief GPU 브레드크럼을 쓸 수 있는지입니다 — 패스마다 GPU 가 닿은 자리를 표지로 남겨 디바이스 소실 뒤에 읽는다(`IRHICommandList::writeBreadcrumb` · `IRHIDevice::readLastBreadcrumbs`).
-         * @details DX12 는 기록 가능한 읽기 힙 버퍼가 만들어졌을 때, Vulkan 은 `VK_NV_device_diagnostic_checkpoints` 가 켜졌을 때만 참이다(`-gv_gpuBreadcrumbs` 를 끄면 둘 다 거짓).
+         * @details DX12 는 기록 가능한 읽기 힙 버퍼가 만들어졌을 때, Vulkan 은 `VK_NV_device_diagnostic_checkpoints` 나 `VK_AMD_buffer_marker` 가 켜졌을 때만 참이다(`-gv_gpuBreadcrumbs` 를 끄면 둘 다 거짓).
          *          DX11 · OpenGL 은 GPU 쪽 표지 수단이 없어 늘 거짓이고, 소실 보고는 CPU 가 마지막으로 기록한 패스만 싣는다(`GPUBreadcrumbs::reportDeviceLost`).
          */
         uint8 _bGPUBreadcrumbs{ SW_FALSE };

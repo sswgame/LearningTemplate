@@ -84,6 +84,7 @@ namespace sw
         void                     endRenderPassNative() override;
         void                     setIndexBuffer( RHIBufferHandle buffer, uint32 indexStride = 4, uint32 offset = 0 ) override;
         void                     transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
+        void                     transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count ) override;
         void                     copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
         void                     uavBarrierNative( RHIBufferHandle buffer ) override;
 

@@ -438,6 +438,8 @@ namespace sw
         vector<float4x4> _listScratchGridViewProj;  ///< 라이트 그리드를 만들 뷰의 뷰-투영(프레임마다 다시 쓴다)
         /// @brief GPU 방출기의 파티클 라이트 슬롯 범위입니다. 라이트 버퍼의 GPU 구간 크기를 정하는 데만 쓴다(범위는 시뮬레이션이 같은 함수로 다시 얻는다).
         vector<VFXGPULightRange> _listScratchGPULightRange;
+        /// @brief 컬링이 없는 백엔드에서 추가 뷰의 꼬리 슬롯을 만드는 임시 배열입니다(`applyViewTransparentOrder`, 뷰마다 다시 쓴다).
+        vector<uint32> _listScratchTailSlot;
 
         /// @brief 캡처 · 되읽기입니다. Present 결과 텍스처(`-gv_screenshot`, 크기는 주 출력)를 소유하고 `_pDevice` · 주 시점 풀 · 파이프라인을 빌려 씁니다(그래서 그 셋보다 뒤에 선언한다).
         FrameCapture _capture;

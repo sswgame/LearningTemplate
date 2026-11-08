@@ -277,7 +277,7 @@ namespace sw
         /** @brief 슬롯 하나를 기록했다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
         void markTimestampWritten( uint32 slotIndex )
         {
-            _timestampWrittenMask.fetch_or( makeGPUTimestampSlotBit( slotIndex ), std::memory_order_relaxed );
+            _timestampWrittenMask.set( slotIndex );
         }
         void                         resizeInternal( uint32 width, uint32 height ) override;
         [[nodiscard]] IRHISwapChain* createSwapChainInternal( const RHISwapChainDesc& desc ) override;
@@ -773,7 +773,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12Resource>  _timestampReadback;
         uint64                                  _timestampFrequency;
         /// @brief 이번 프레임에 실제로 기록된 슬롯 비트입니다. 패스가 병렬로 기록하므로 atomic 입니다.
-        atomic<GPUTimestampSlotMask> _timestampWrittenMask;
+        GPUTimestampSlotAtomicMask _timestampWrittenMask;
         /// @brief 링 슬롯별로 확정한 비트입니다. 그 슬롯이 다시 돌아왔을 때 어느 슬롯이 진짜 값인지 가립니다.
         GPUTimestampSlotMask _arrTimestampMask[constant::render::kMaxFrameCountInFlight];
         RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽은 프레임(`readTimestamps`)

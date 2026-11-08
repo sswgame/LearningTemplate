@@ -954,8 +954,19 @@ namespace sw
         if ( bPassListed == false || pCmd == nullptr )
             return;
         const RenderGraphPassDesc& passDesc = listFramePass[iter->second];
-        // 이벤트 표시 + 브레드크럼(시작 · 끝) 한 벌 — 캡처와 장치 손실 보고에 프레임 패스 이름(XML 의 `_name`)이 남는다.
-        const GPUPassScope scope{ *pCmd, passDesc._name };
+        // 프레임 패스마다 GPU 시간(`GPU.<프레임 패스>` — gpu.timings · 감시 값 GPU.PassMs)을 고정 칸 쌍에 쓴다. 게이트는 뷰 패스와 같다(계측 스위치 · 칸 수).
+        // shortcut: 비동기 컴퓨트 큐 리스트(pCmd != _pCmd)는 재지 않는다 — 큐 사이의 쿼리 해석 순서 · 시계를 아직 대조하지 않았다. 컴퓨트 큐 패스를 재야 할 때 백엔드별로 확인하고 연다.
+        uint32 timestampBeginSlot = GPUPassScope::kNoTimestamp;
+#if SW_PROFILE_COMPILED
+        const IRHITimestampProvider* pTimestamps   = _pDevice != nullptr ? _pDevice->findTimestampProvider() : nullptr;
+        const uint32                 frameSlot     = FrameRendererUtil::findFramePassTimestampSlot( iter->second );
+        const bool                   bWriteGPUTime = pTimestamps != nullptr && pCmd == _pCmd && _state._gpuPassTimeline.isRecording() && frameSlot != constant::invalid_index::kUint32 &&
+                                   ( frameSlot + 1u ) < pTimestamps->getTimestampSlotCount();
+        if ( bWriteGPUTime )
+            timestampBeginSlot = frameSlot;
+#endif
+        // 이벤트 표시 + 브레드크럼(시작 · 끝) + GPU 시간 한 벌 — 캡처 · 장치 손실 보고 · 프레임 프로파일러에 프레임 패스 이름(XML 의 `_name`)이 남는다.
+        const GPUPassScope scope{ *pCmd, passDesc._name, timestampBeginSlot };
         _frameGraphExecutor.executePass( passDesc._type, *pCmd );
     }
 
@@ -1318,6 +1329,7 @@ namespace sw
                 case RenderPassType::CanvasMarker:
                 case RenderPassType::ShadowCacheRestore:
                 case RenderPassType::NanCheck:
+                case RenderPassType::IndirectArgsReset:
                 case RenderPassType::ProbeUpdate:
                 {
                     SW_LOG_WARNING_ID( "FramePassExecutor.UnknownPassType", "Unknown pass type '%#' in '%#'", passType, passName );

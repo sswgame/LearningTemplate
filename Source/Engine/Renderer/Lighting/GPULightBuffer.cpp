@@ -396,7 +396,7 @@ namespace sw
         }
         _listUploadScratch.insert( _listUploadScratch.end(), _listTileScratch.begin(), _listTileScratch.end() );
 
-        const GPULight* pUpload    = _listUploadScratch.data();
+        const GPULight* pUpload    = _listUploadScratch.data(); // 만들 때의 초기 내용 — 아래 uploadChangedLights 가 새 버퍼면 통째로 다시 올린다
         const uint32    totalCount = static_cast<uint32>( _listUploadScratch.size() );
         const bool      bNeedsUAV  = _gpuLightCount > 0;
         const uint32    stride     = static_cast<uint32>( sizeof( GPULight ) );
@@ -417,8 +417,39 @@ namespace sw
             _bUAVDenied = SW_TRUE;
             SW_LOG_ERROR_ID( "GPULightBuffer.LightBufferNoUAV", "Light buffer has no UAV - GPU particle lights stay dead" );
         }
-        _buffer.upload( pDevice, pUpload, totalCount * stride );
+        uploadChangedLights( pDevice, cpuCount );
         return true;
+    }
+
+    void GPULightBuffer::uploadChangedLights( IRHIDevice* pDevice, uint32 cpuCount )
+    {
+        // 바뀐 구간만 올린다(인스턴스 버퍼와 같다). 통째로 올리는 때: 버퍼가 새것이거나 구간 배치([CPU][GPU 구간][타일])가 바뀌었을 때 — 같은 칸이 다른 원소가 된다.
+        // GPU 구간은 컴퓨트(파티클 라이트)가 프레임마다 덮어써서 지난 내용과 견줄 수 없다 — 죽은 라이트로 늘 다시 깐다(쓰지 못한 슬롯이 낡은 값으로 남지 않게).
+        constexpr uint32 kStride          = static_cast<uint32>( sizeof( GPULight ) );
+        constexpr uint32 kMergeGapLights  = 4; // 사이가 이만큼 이하인 두 구간은 한 조각으로 — 조각마다 복사 명령이 하나 더 나간다
+        const uint32     totalCount       = static_cast<uint32>( _listUploadScratch.size() );
+        const bool       bLayoutUnchanged = _uploadedLightBuffer == _buffer._buffer && _uploadedCPUCount == cpuCount && _uploadedGPULightCount == _gpuLightCount &&
+                                      _listUploadedLight.size() == totalCount;
+        [[maybe_unused]] uint32 uploadedBytes = 0;
+        if ( bLayoutUnchanged == false )
+        {
+            _buffer.upload( pDevice, _listUploadScratch.data(), totalCount * kStride );
+            uploadedBytes = totalCount * kStride;
+        }
+        else
+        {
+            RHIStructuredBuffer::collectChangedRegions( _listUploadedLight.data(), static_cast<uint32>( _listUploadedLight.size() ), _listUploadScratch.data(), totalCount, kStride,
+                                                        kMergeGapLights, _listScratchRegion );
+            // 죽은 라이트 칸은 두 배열에서 같은 값이라 위 비교가 고르지 않는다 — 겹치지 않는 조각으로 따로 더한다.
+            if ( _gpuLightCount > 0 )
+                _listScratchRegion.push_back( RHIBufferCopyRegion{ cpuCount * kStride, cpuCount * kStride, _gpuLightCount * kStride } );
+            uploadedBytes = _buffer.uploadRegions( pDevice, _listUploadScratch.data(), _listScratchRegion );
+        }
+        SW_PROFILE_COUNT( "RT.Light.uploadBytes", uploadedBytes );
+        _listUploadedLight.swap( _listUploadScratch );
+        _uploadedLightBuffer   = _buffer._buffer;
+        _uploadedCPUCount      = cpuCount;
+        _uploadedGPULightCount = _gpuLightCount;
     }
 
     void GPULightBuffer::uploadProbeElements( IRHIDevice* pDevice )
@@ -437,6 +468,19 @@ namespace sw
         if ( bWritable == false && _pUploadedProbeElements == _pProbeElements && _probeBuffer.isValid() )
         {
             _probeElementCount = probeElementCount;
+            return;
+        }
+        // 컴퓨트가 쓰지 않는 버퍼는 지난 묶음과 견주어 바뀐 구간만 올린다(같은 버퍼 · 같은 원소 수일 때). 컴퓨트가 쓰는 버퍼는 GPU 가 덮어써 견줄 수 없다.
+        const bool bComparable = bWritable == false && _pUploadedProbeElements != nullptr && _pUploadedProbeElements->size() == listProbeElement.size() && _probeBuffer.isValid();
+        if ( bComparable )
+        {
+            constexpr uint32 kMergeGapProbeElements = 16; // SH9 프로브 하나가 원소 아홉이다 — 이웃 프로브 하나 정도의 사이는 붙인다
+            RHIStructuredBuffer::collectChangedRegions( _pUploadedProbeElements->data(), probeElementCount, listProbeElement.data(), probeElementCount, probeStride,
+                                                        kMergeGapProbeElements, _listScratchRegion );
+            [[maybe_unused]] const uint32 uploadedBytes = _probeBuffer.uploadRegions( pDevice, listProbeElement.data(), _listScratchRegion );
+            SW_PROFILE_COUNT( "RT.LightProbe.uploadBytes", uploadedBytes );
+            _probeElementCount      = probeElementCount;
+            _pUploadedProbeElements = _pProbeElements;
             return;
         }
         _pUploadedProbeElements.reset();

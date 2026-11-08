@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/RHI/RHIBufferTransitionBatch.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Renderer/Frame/Execute/OcclusionTiles.h"
@@ -103,11 +104,18 @@ namespace sw
          * @details 컬링 결과는 절두체에 종속되므로 뷰(메인, 그림자)마다 자기 인자와 목록을 따로 만든다.
          */
         void dispatchCullAndSort( uint32 instanceCount );
+        /** @brief 컬링 슬롯 @p cullViewIndex 를 @p renderView 로 돌릴 수 있으면 true 입니다(슬롯 · 인자 · 가시 목록 UAV · 컬링 상수 버퍼가 있다). */
+        bool isCullViewReady( uint32 cullViewIndex, const RenderView& renderView ) const;
         /**
-         * @brief 컬링 슬롯 하나를 컬링하고 정렬합니다. 그 뷰의 절두체와 자기 상수 버퍼를 씁니다. 디스패치를 돌렸으면 true 입니다.
+         * @brief 돌 수 있는 컬링 슬롯이면 일감 목록(`_listCullJob`)에 넣고 true 입니다. 디스패치 · 배리어는 `dispatchCullAndSort` 가 목록을 모은 뒤 한꺼번에 낸다.
          * @param pExtraView 추가 뷰면 그 뷰(투명 순번 테이블을 정렬에 바인딩합니다), 고정 뷰(주 시점, 그림자)면 nullptr 입니다.
          */
-        bool dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView );
+        bool enqueueCullView( uint32 cullViewIndex, const RenderView& renderView, const FrameViewTarget* pExtraView );
+        /**
+         * @brief 컬링 슬롯 하나를 컬링하고 정렬합니다. 그 뷰의 절두체와 자기 상수 버퍼를 씁니다. 버퍼는 이미 UAV 상태다 — 앞 · 뒤 전이는 부르는 쪽이 모든 슬롯을 묶어 낸다.
+         * @param pExtraView 추가 뷰면 그 뷰(투명 순번 테이블을 정렬에 바인딩합니다), 고정 뷰(주 시점, 그림자)면 nullptr 입니다.
+         */
+        void dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView );
         /** @brief 이번 프레임의 LOD 전환 진행량(`_lodFadeStep`)을 렌더 프레임 간격에서 정합니다. 컬링 디스패치 앞에서 한 번 부른다. */
         void computeLODFadeStep();
         /** @brief GPU 생산자로 뷰마다의 라이트 그리드를 채웁니다(light_grid.hlsl, 그룹 하나 = 뷰 하나). 생산자가 GPU 가 아니면 아무것도 하지 않습니다. */
@@ -141,6 +149,17 @@ namespace sw
         uint32 _lodFadeStep{ 0 };
         /// @brief 지난 컬링 프레임의 시각(나노초)입니다. 전환 진행량의 프레임 간격을 잰다(0 이면 아직 없다).
         int64 _lodFadePreviousNanoseconds{ 0 };
+        /** @brief 이번 프레임에 돌릴 컬링 슬롯 하나입니다(`dispatchCullAndSort` 가 모으고 한꺼번에 전이 · 디스패치한다). */
+        struct CullJob
+        {
+            uint32                 _cullViewIndex{ 0 };
+            const RenderView*      _pRenderView{ nullptr };
+            const FrameViewTarget* _pExtraView{ nullptr };
+        };
+        /// @brief 이번 프레임의 컬링 일감입니다. 프레임마다 다시 쓰고 용량은 지닌다.
+        vector<CullJob> _listCullJob;
+        /// @brief 컬링 슬롯 모두의 앞 · 뒤 버퍼 전이를 한 번씩 내는 묶음입니다(슬롯마다 넷을 따로 내지 않는다).
+        RHIBufferTransitionBatch _bufferTransitions;
         /// @brief 이번 프레임에 컬링 컴퓨트가 실제로 돌았는지입니다(`isGPUCullingActive`).
         uint8 _bGPUCullingActive{ 0 };
     };

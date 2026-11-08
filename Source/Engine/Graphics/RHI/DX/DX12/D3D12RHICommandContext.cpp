@@ -1030,39 +1030,56 @@ namespace sw
 
     void D3D12RHICommandContext::transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState )
     {
-        if ( _pCmdList == nullptr || buffer == 0 )
-            return;
+        const RHIBufferTransition transition{ buffer, newState };
+        transitionBuffersNative( &transition, 1 );
+    }
 
-        ID3D12Resource* pResource = _pDevice->resolveBuffer( buffer );
-        if ( pResource == nullptr )
+    void D3D12RHICommandContext::transitionBuffersNative( const RHIBufferTransition* pTransition, uint32 count )
+    {
+        if ( _pCmdList == nullptr )
             return;
-
-        const D3D12_RESOURCE_STATES stateAfter = toQueueState( toD3D12BufferState( newState ) );
-        D3D12_RESOURCE_STATES       stateBefore;
+        // 모은 전이를 ResourceBarrier 한 번에 낸다 — 배리어마다 부르면 드라이버가 그때마다 캐시 플러시 · 대기를 따로 푼다.
+        // https://learn.microsoft.com/en-us/windows/win32/direct3d12/using-resource-barriers-to-synchronize-resource-states-in-direct3d-12 (배리어는 묶어 내라)
+        constexpr uint32       kMaxBarrierPerCall = 16;
+        D3D12_RESOURCE_BARRIER arrBarrier[kMaxBarrierPerCall]{};
+        uint32                 barrierCount = 0;
+        for ( uint32 index = 0; index < count; ++index )
         {
-            ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
-            auto              stateIt = _pDevice->_mapStructuredBufferState.find( buffer );
-            if ( stateIt == _pDevice->_mapStructuredBufferState.end() )
-                return;
-            if ( stateIt->second == stateAfter )
-                return;
-            stateBefore     = stateIt->second;
-            stateIt->second = stateAfter;
+            const RHIBufferHandle buffer    = pTransition[index]._buffer;
+            ID3D12Resource*       pResource = buffer != 0 ? _pDevice->resolveBuffer( buffer ) : nullptr;
+            if ( pResource == nullptr )
+                continue;
+            const D3D12_RESOURCE_STATES stateAfter = toQueueState( toD3D12BufferState( pTransition[index]._state ) );
+            D3D12_RESOURCE_STATES       stateBefore;
+            {
+                ScopedLock<mutex> lock{ _pDevice->_resourceStateMutex };
+                auto              stateIt = _pDevice->_mapStructuredBufferState.find( buffer );
+                if ( stateIt == _pDevice->_mapStructuredBufferState.end() || stateIt->second == stateAfter )
+                    continue;
+                stateBefore     = stateIt->second;
+                stateIt->second = stateAfter;
+            }
+            // 컴퓨트 큐 리스트는 따로 낸 ExecuteCommandLists 라 버퍼가 COMMON 으로 감쇠해 들어온다. 기록한 상태에 그래픽스 전용 비트가 있으면 COMMON 을 앞 상태로 쓴다
+            // (COMMON 또는 승격 가능한 상태를 앞 상태로 쓰는 것이 문서의 허용 범위다 — 그래픽스 전용 비트는 COMPUTE 리스트의 배리어에 적을 수 없다).
+            if ( _bComputeQueueList != SW_FALSE && toQueueState( stateBefore ) != stateBefore )
+                stateBefore = D3D12_RESOURCE_STATE_COMMON;
+            if ( stateBefore == stateAfter )
+                continue;
+            D3D12_RESOURCE_BARRIER& barrier = arrBarrier[barrierCount++];
+            barrier.Type                    = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Flags                   = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            barrier.Transition.pResource    = pResource;
+            barrier.Transition.StateBefore  = stateBefore;
+            barrier.Transition.StateAfter   = stateAfter;
+            barrier.Transition.Subresource  = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+            if ( barrierCount == kMaxBarrierPerCall )
+            {
+                commandListForRecord()->ResourceBarrier( barrierCount, arrBarrier );
+                barrierCount = 0;
+            }
         }
-        // 컴퓨트 큐 리스트는 따로 낸 ExecuteCommandLists 라 버퍼가 COMMON 으로 감쇠해 들어온다. 기록한 상태에 그래픽스 전용 비트가 있으면 COMMON 을 앞 상태로 쓴다
-        // (COMMON 또는 승격 가능한 상태를 앞 상태로 쓰는 것이 문서의 허용 범위다 — 그래픽스 전용 비트는 COMPUTE 리스트의 배리어에 적을 수 없다).
-        if ( _bComputeQueueList != SW_FALSE && toQueueState( stateBefore ) != stateBefore )
-            stateBefore = D3D12_RESOURCE_STATE_COMMON;
-        if ( stateBefore == stateAfter )
-            return;
-
-        D3D12_RESOURCE_BARRIER barrier{};
-        barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Transition.pResource   = pResource;
-        barrier.Transition.StateBefore = stateBefore;
-        barrier.Transition.StateAfter  = stateAfter;
-        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-        commandListForRecord()->ResourceBarrier( 1, &barrier );
+        if ( barrierCount > 0 )
+            commandListForRecord()->ResourceBarrier( barrierCount, arrBarrier );
     }
 
     void D3D12RHICommandContext::copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes )

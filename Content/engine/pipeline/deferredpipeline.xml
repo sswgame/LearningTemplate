@@ -381,7 +381,8 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 후처리 품질 medium 부터 돈다 — low 면 원본(LitColor)을 그대로 넘긴다(블룸 · AO 적용 없음). -->
+		<!-- 후처리 품질 medium 부터 돈다 — low 면 원본(LitColor)을 그대로 넘긴다(블룸 · AO 적용 없음).
+		     블룸 · 외곽선 · 톤맵을 후처리 체인(post_chain.hlsl, 포워드의 Present) 한 패스로 합치지 않는 까닭은 RenderPipelineXml.md "후처리 체인과 디퍼드" 절 — 그림이 같지 않다. -->
 		<RenderGraphPassDesc _name="PostBloom"
 		                     _type="Bloom"
 		                     _vertexEntryPoint="VSMain"

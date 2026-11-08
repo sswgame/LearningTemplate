@@ -30,6 +30,8 @@ namespace sw::test
         uint32        _endCount{ 0 };                                                                 /**< `endCommandList` 횟수 */
         bool          _bOpen{ false }; /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */ ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
         hashed_string _passName;                                                                      /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
+        uint32        _transitionBatchCount{ 0 };                                                     /**< `transitionBuffers` 호출 수 */
+        uint32        _transitionCount{ 0 };                                                          /**< `transitionBuffers` 로 받은 전이 수의 합 */
         /** @brief 디바이스가 몇 번째로 만든 리스트인지와 함께 만듭니다. */
         explicit FakeRHICommandList( uint32 creationIndex )
             : _creationIndex{ creationIndex }
@@ -75,6 +77,11 @@ namespace sw::test
         void drawIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
         void dispatchIndirect( RHIBufferHandle, uint32 ) override {}
         void transitionBuffer( RHIBufferHandle, RHIBufferState ) override {}
+        void transitionBuffers( const RHIBufferTransition*, uint32 count ) override
+        {
+            ++_transitionBatchCount;
+            _transitionCount += count;
+        }
         void copyBufferToReadback( RHIBufferHandle, RHIBufferHandle, uint32 ) override {}
         void uavBarrier( RHIBufferHandle ) override {}
         void drawIndexedIndirect( RHIBufferHandle, uint32, uint32, RHIBufferHandle, uint32 ) override {}
