@@ -17,11 +17,19 @@
 
 namespace sw
 {
-    /** @brief HUD 섹션 한 줄입니다(이름 · 값). */
+    /** @brief HUD 줄 값의 색 갈래입니다. 상태만 색을 갖는다 — 보통 값은 중립이고 실패 · 경고만 경고색이다(앱 화면 규칙: 강조색은 데이터 · 상태에만). */
+    enum class DebugHUDLineStyle : uint8
+    {
+        Neutral,
+        Warning
+    };
+
+    /** @brief HUD 섹션 한 줄입니다(이름 · 값 · 값의 색 갈래). */
     struct DebugHUDLine
     {
-        string _label;
-        string _value;
+        string            _label;
+        string            _value;
+        DebugHUDLineStyle _style{ DebugHUDLineStyle::Neutral };
     };
 } // namespace sw
 
@@ -42,8 +50,8 @@ namespace sw
 
         /** @brief 줄 · 그래프를 비웁니다(칸은 남긴다). */
         void reset();
-        /** @brief 줄 하나를 더합니다. */
-        void addLine( string_view label, string_view value );
+        /** @brief 줄 하나를 더합니다. @p style 이 `Warning` 이면 HUD 가 값을 경고색으로 그린다(실패 · 경고 상태에만). */
+        void addLine( string_view label, string_view value, DebugHUDLineStyle style = DebugHUDLineStyle::Neutral );
         /**
          * @brief 값을 printf 형식(`formatstring` — `%.1f` · `%#`)으로 적은 줄 하나를 더합니다. 128 바이트에서 자릅니다.
          * @details 정의는 `Engine/Console/DebugHUDSectionFormat.h` 에 있다(이 헤더가 서식 헤더를 끌어오지 않게) — 부르는 .cpp 가 그것을 include 한다.
@@ -87,6 +95,11 @@ namespace sw
         static constexpr uint8 kNone              = 0;
         static constexpr uint8 kDefaultOn         = 1u << 0; ///< 사용자 설정이 없으면 켜진 섹션
         static constexpr uint8 kUsesFrameProfiler = 1u << 1; ///< `FrameProfiler` 구간 · 카운터를 읽는다 — 보이는 동안 HUD 가 프로파일러를 켠다
+        /**
+         * 자동화 실행 상태 섹션 — 창이 보이는 시나리오 실행 동안 HUD 가 사용자 켜짐(`debug.hud` · `debug.hudSections`)과 무관하게 그리고, 그 밖에는 그리지 않는다.
+         * 사용자 설정 파일에 아무것도 쓰지 않는다(실행 중에만 켜진다). 이 섹션만 보이는 동안 HUD 는 다른 섹션을 그리지 않는다(프로파일러를 켜지 않는다).
+         */
+        static constexpr uint8 kAutomationRun = 1u << 2;
     };
 } // namespace sw
 
@@ -100,6 +113,11 @@ namespace sw
         DebugHUDSectionFunc _pFunc;
         int32               _order; ///< 작을수록 위(같으면 이름순)
         uint8               _flags; ///< `DebugHUDSectionFlag`
+
+        /** @brief `DebugHUDSectionFlag` 의 @p flag 가 켜져 있으면 true 입니다. */
+        bool hasFlag( uint8 flag ) const { return ( _flags & flag ) != 0; }
+        /** @brief 사용자가 켜고 끄는 섹션이면 true 입니다(자동화 실행 상태 섹션은 실행이 켠다 — 명령 · 설정 창 · 씬 뷰 HUD 의 목록에 넣지 않는다). */
+        bool isUserSection() const { return hasFlag( DebugHUDSectionFlag::kAutomationRun ) == false; }
     };
 } // namespace sw
 
