@@ -11,7 +11,7 @@
  *          그림자 · SSAO 와 어긋난다(필요해지면 패스 종류 표에 MATERIAL_HAIR_FRINGE 를 요구하는 메시 패스로 더한다).
  *
  *          **꾸미기(외형이 머티리얼 값으로 건다):** `_length`(0..1 가닥 좌표에서 자르기 — 그 뒤는 알파 0 이라 모든 패스 · 모든 LOD 가 UV 로 같은 자리를 자른다),
- *          `_rootColor` · `_tipColor` · `_gradientPosition` · `_gradientWidth`(뿌리 → 끝 색 그라데이션), `_highlightColor`(a = 세기) · `_highlightMap`(r = 마스크).
+ *          `_rootColor` · `_tipColor` · `_gradientPosition` · `_gradientWidth`(뿌리 → 끝 색 그라데이션), `_highlightColor`(a = 세기) · `_highlightAmount`(세기 배율) · `_highlightMap`(r = 마스크).
  *          색은 기본 텍스처 rgb 에 곱한다 — 색을 온전히 바꾸려면 회색 텍스처를 쓴다.
  *
  *          머티리얼 define: `MATERIAL_ALPHA_CUTOFF`(alphaMode="Mask" — 늘 켠다) · `MATERIAL_TWO_SIDED`(카드는 양면). `MATERIAL_FORWARD_ONLY` 는 늘 있어야 한다 —
@@ -41,8 +41,7 @@ SW_MATERIAL_BEGIN
     float  _coverageDither;   // 1 이면 화면 노이즈 문턱으로 버린다(정렬 없는 부드러운 가장자리 — TAA 가 모은다)
     uint   _albedoMap;        // 기본 텍스처(rgb 색 · a 덮임)
     uint   _highlightMap;     // 하이라이트 마스크(r)
-    // 원소 크기를 16 의 배수로 — DX 의 촘촘한 간격과 GL std430 배열 간격이 같아야 한다(ShaderBindingValidator::checkStructuredElementLayouts). 머티리얼 속성이 아니다
-    uint _swPad0;
+    float  _highlightAmount;  // 하이라이트 세기 배율(꾸미기 슬라이더) — 원소 크기를 16 의 배수로 지키는 자리이기도 하다(ShaderBindingValidator::checkStructuredElementLayouts)
 }
 SW_MATERIAL_END
 
@@ -79,7 +78,7 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     const float        strand    = computeStrandCoordinate( material, context._uv );
     const float        halfWidth = max( material._gradientWidth * 0.5f, 1e-4f );
     const float3       gradient  = lerp( material._rootColor.rgb, material._tipColor.rgb, smoothstep( material._gradientPosition - halfWidth, material._gradientPosition + halfWidth, strand ) );
-    const float        highlight = MaterialTexture::sampleIndex( material._highlightMap, context._uv ).r * material._highlightColor.a;
+    const float        highlight = MaterialTexture::sampleIndex( material._highlightMap, context._uv ).r * material._highlightColor.a * material._highlightAmount;
 
     MaterialSurface surface;
     surface._albedo.rgb = lerp( context._color.rgb * material._baseColor.rgb * texel.rgb * gradient, material._highlightColor.rgb, saturate( highlight ) );

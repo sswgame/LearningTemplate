@@ -214,6 +214,7 @@ namespace sw
         vector<ResolvedDetachedPart>     _listDetachedPart{};
         vector<ResolvedSkinLayer>        _listSkinLayer{}; ///< 그릴 피부 층(숨긴 층 · 모르는 층은 빠진다) — 굽기 순서
         vector<hashed_string>            _listHiddenRegion{};
+        vector<hashed_string>            _listMaterialChannel{}; ///< 나온 부품의 머티리얼이 받은 몸 채널(`<ChannelMaterial>`) — 체형 축 데이터가 모르는 채널이어도 오류가 아니다
         vector<AppearanceTraceEntry>     _listTrace{};
         hashed_string                    _presetID{};
         hashed_string                    _bodyType{};

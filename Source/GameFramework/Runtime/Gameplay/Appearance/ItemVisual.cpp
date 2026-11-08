@@ -195,6 +195,17 @@ namespace sw
                 {
                     inoutPart._listMaterialValue.push_back( readMaterialValue( child, report, sourceName ) );
                 }
+                else if ( StringUtil::equals( pName, "ChannelMaterial" ) && bModification == false )
+                {
+                    AppearanceChannelMaterialDef channelMaterial;
+                    if ( AppearanceXMLUtil::readFields( child, channelMaterial, report, sourceName, {} ) == false )
+                        return; // 빠진 칸은 위 읽기가 보고서에 남겼다
+                    if ( channelMaterial._channelMax <= channelMaterial._channelMin )
+                        report.addErrorWithID( "Appearance.ChannelMaterialRange", "%#: visual '%#' part '%#' <ChannelMaterial channel='%#'> needs channelMax > channelMin", sourceName, visualID.c_str(),
+                                               inoutPart._name.c_str(), channelMaterial._channel.c_str() );
+                    else
+                        inoutPart._listChannelMaterial.push_back( channelMaterial );
+                }
                 else if ( StringUtil::equals( pName, "HideRegion" ) && bModification )
                 {
                     (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrRegionAttribute, report, sourceName );
@@ -446,6 +457,12 @@ namespace sw
     bool AppearanceSectionDef::matchesTag( const hashed_string& tag ) const
     {
         return _name == tag || ( _alias.empty() == false && _alias == tag ) || VectorUtil::contains( _listGroup, tag );
+    }
+
+    float32 AppearanceChannelMaterialDef::computeValue( float32 channelValue ) const
+    {
+        const float32 t = MathUtil::saturate( ( channelValue - _channelMin ) / ( _channelMax - _channelMin ) ); // 읽기가 channelMax > channelMin 을 지켰다
+        return MathUtil::lerp( _valueMin, _valueMax, t );
     }
 
     bool ItemVisualDef::hasSectionTag( const hashed_string& tag ) const

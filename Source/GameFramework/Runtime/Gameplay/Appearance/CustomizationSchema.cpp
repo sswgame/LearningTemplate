@@ -68,6 +68,12 @@ namespace sw
                                            inoutParam._name.c_str(), getEnumName( drive._kind ) );
                     return;
                 }
+                if ( drive._owner.empty() == false && drive.isMaterialDrive() == false )
+                {
+                    report.addErrorWithID( "Appearance.DriveOwnerInvalid", "%#: schema '%#' parameter '%#' drive %# cannot name an owner (owner is for material drives)", sourceName, schemaID.c_str(),
+                                           inoutParam._name.c_str(), getEnumName( drive._kind ) );
+                    return;
+                }
                 const bool bSliderDrive = isSliderDrive( drive._kind );
                 const bool bFits        = ( inoutParam._kind == CustomizationKind::Slider && bSliderDrive ) || ( inoutParam._kind == CustomizationKind::Color && bSliderDrive == false );
                 if ( bFits == false || drive._target.empty() )
@@ -328,6 +334,16 @@ namespace sw
         {
             for ( CustomizationParamDef& param : schema._listParameter )
             {
+                // 드라이브의 주인은 같은 스키마의 고르기여야 한다 — 그 고르기가 낸 부품만 그 이름을 주인으로 가진다.
+                for ( const CustomizationDriveDef& drive : param._listDrive )
+                {
+                    if ( drive._owner.empty() )
+                        continue;
+                    const CustomizationParamDef* pOwner = schema.findParameter( drive._owner );
+                    if ( pOwner == nullptr || pOwner->_kind != CustomizationKind::Choice )
+                        report.addErrorWithID( "Appearance.DriveOwnerInvalid", "%#: schema '%#' parameter '%#' drive owner '%#' is not a <Choice> of the schema", sourceName, schema._id.c_str(),
+                                               param._name.c_str(), drive._owner.c_str() );
+                }
                 if ( param._palette.empty() )
                     continue;
                 const Palette* pPalette = findPalette( param._palette );

@@ -2,7 +2,7 @@
 <!-- 머리카락 카드 머티리얼(hair.hlsl — 셰이딩 모델 Hair: Marschner 근사 R · TT · TRT). 프로퍼티 이름 · 타입은 hair.hlsl 의 SW_MATERIAL 구조체와 같다.
      alphaMode="Mask" 는 빼지 않는다 — 카드 덮임 · 길이 자르기 · 디더가 모두 알파 컷오프 길로 버린다(깊이 · 그림자 · 본 패스가 같은 픽셀). 카드는 양면이다.
      _alwaysDefines 의 MATERIAL_FORWARD_ONLY 는 빼지 않는다 — G버퍼에 머리카락 칸이 없어 디퍼드는 ForwardOnlyOpaque 패스가 포워드로 그린다.
-     꾸미기(외형이 머티리얼 값으로 건다): _length · _rootColor · _tipColor · _gradientPosition · _gradientWidth · _highlightColor(a 세기) · _highlightMap(r 마스크). -->
+     꾸미기(외형이 머티리얼 값으로 건다): _length · _rootColor · _tipColor · _gradientPosition · _gradientWidth · _highlightColor(a 세기) · _highlightAmount(세기 배율) · _highlightMap(r 마스크). -->
 <MaterialDef formatVersion="0" name="Hair" shaderPath="engine/shaders/hair.hlsl" alphaMode="Mask" cullMode="None" twoSidedLighting="true">
 	<_properties>
 		<item name="_baseColor" type="Color" defaultValue="1 1 1 1" displayName="Base Color" group="Color" bHdr="0" bSrgb="1"/>
@@ -24,6 +24,7 @@
 		<item name="_coverageDither" type="Range" defaultValue="1" min="0.0" max="1.0" displayName="Dithered Coverage (0 cutoff, 1 dither)" group="Coverage"/>
 		<item name="_albedoMap" type="Texture2D" displayName="Albedo (a = coverage)" group="Color" bSrgb="1"/>
 		<item name="_highlightMap" type="Texture2D" displayName="Highlight Mask (r)" group="Color" bSrgb="0"/>
+		<item name="_highlightAmount" type="Range" defaultValue="1" min="0.0" max="1.0" displayName="Highlight Amount" group="Color"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>
