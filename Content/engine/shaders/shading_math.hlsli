@@ -232,17 +232,17 @@ namespace sw::shadermath
     SW_SHADING_MATH_DEFINITION float ShadingMath::computePupilDistance( float shape, float x, float y, float minRadius, float maxRadius, float dilation )
     {
         // 모양마다 확장이 여는 축이 다르다 — 틈 · 막대 · W 자는 짧은 축(두께)만 열리고 긴 축은 maxRadius 를 따른다(고양이 눈은 밝으면 세로 실이 된다).
-        const float openness   = saturate( dilation );
-        const float longRadius = max( maxRadius, kShadingMathEpsilon );
-        const float slitWidth  = kPupilShapeSlitMinWidth * longRadius;
-        float       distance   = sqrt( x * x + y * y ) - ShadingMath::computePupilRadius( minRadius, maxRadius, openness );
+        const float openness       = saturate( dilation );
+        const float longRadius     = max( maxRadius, kShadingMathEpsilon );
+        const float slitWidth      = kPupilShapeSlitMinWidth * longRadius;
+        float       signedDistance = sqrt( x * x + y * y ) - ShadingMath::computePupilRadius( minRadius, maxRadius, openness );
         if ( abs( shape - kPupilShapeVerticalSlit ) < 0.5f )
         {
             // 세로 타원: 반높이는 긴 축, 반폭은 좁은 틈에서 원까지.
             const float halfHeight = longRadius;
             const float halfWidth  = lerp( slitWidth, halfHeight, openness * openness );
             const float scaled     = sqrt( ( x / halfWidth ) * ( x / halfWidth ) + ( y / halfHeight ) * ( y / halfHeight ) );
-            distance               = ( scaled - 1.0f ) * halfWidth;
+            signedDistance         = ( scaled - 1.0f ) * halfWidth;
         }
         else if ( abs( shape - kPupilShapeHorizontalBar ) < 0.5f )
         {
@@ -254,7 +254,7 @@ namespace sw::shadermath
             const float edgeY      = abs( y ) - ( halfHeight - corner );
             const float outsideX   = max( edgeX, 0.0f );
             const float outsideY   = max( edgeY, 0.0f );
-            distance               = sqrt( outsideX * outsideX + outsideY * outsideY ) + min( max( edgeX, edgeY ), 0.0f ) - corner;
+            signedDistance         = sqrt( outsideX * outsideX + outsideY * outsideY ) + min( max( edgeX, edgeY ), 0.0f ) - corner;
         }
         else if ( abs( shape - kPupilShapeCephalopod ) < 0.5f )
         {
@@ -265,9 +265,9 @@ namespace sw::shadermath
             const float curveY     = kPupilShapeCephalopodCurve * ( fromValley * fromValley - 0.125f * halfWidth * halfWidth );
             const float slope      = 2.0f * kPupilShapeCephalopodCurve * fromValley;
             const float band       = abs( y - curveY ) / sqrt( 1.0f + slope * slope ) - thickness;
-            distance               = max( band, abs( x ) - halfWidth );
+            signedDistance         = max( band, abs( x ) - halfWidth );
         }
-        return distance;
+        return signedDistance;
     }
 
 #if defined( __cplusplus )

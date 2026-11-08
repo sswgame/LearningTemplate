@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 천 — Charlie 시엔(언리얼 Cloth) + 직조 무늬. 면 · 울 · 벨벳 · 데님. -->
+<MaterialDef formatVersion="0" name="AppearanceCloth" _base="engine/materials/library/appearance.material">
+	<_properties>
+		<item name="_sheenWeight" defaultValue="0.85" />
+		<item name="_sheenColor" defaultValue="0.25 0.25 0.25 1" />
+		<item name="_sheenRoughness" defaultValue="0.6" />
+		<item name="_roughness" defaultValue="0.8" />
+		<item name="_specular" defaultValue="0.4" />
+		<item name="_patternScale" defaultValue="96" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_LOBE_SHEEN</item>
+			<item>MATERIAL_PATTERN_WEAVE</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

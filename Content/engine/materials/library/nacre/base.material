@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 진주층 — 아라고나이트 박막 간섭(Belcour · Barla 의 값싼 판, 언리얼 Substrate Thin Film). -->
+<MaterialDef formatVersion="0" name="AppearanceNacre" _base="engine/materials/library/appearance.material">
+	<_properties>
+		<item name="_color" defaultValue="0.85 0.84 0.82 1" />
+		<item name="_roughness" defaultValue="0.2" />
+		<item name="_filmThickness" defaultValue="420" />
+		<item name="_filmIor" defaultValue="1.53" />
+		<item name="_filmWeight" defaultValue="1" />
+		<item name="_ior" defaultValue="1.68" />
+		<item name="_coatWeight" defaultValue="0.4" />
+		<item name="_coatRoughness" defaultValue="0.05" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_LOBE_THIN_FILM</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(eye): 염소 — 가로 막대 · 노란 홍채. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="EyeGoat" _base="engine/materials/library/eye/base.material">
+	<_properties>
+		<item name="_layerColor" defaultValue="0.75 0.6 0.2 1" />
+		<item name="_pupilShape" defaultValue="2" />
+		<item name="_pupilMinRadius" defaultValue="0.15" />
+		<item name="_pupilMaxRadius" defaultValue="0.7" />
+		<item name="_irisRadius" defaultValue="0.8" />
+		<item name="_glowColor" defaultValue="0.3 0.5 0.8 1" />
+	</_properties>
+</MaterialDef>

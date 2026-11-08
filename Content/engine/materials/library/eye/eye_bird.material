@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(eye): 새 — 둥근 동공 · 주황 홍채. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="EyeBird" _base="engine/materials/library/eye/base.material">
+	<_properties>
+		<item name="_layerColor" defaultValue="0.9 0.5 0.1 1" />
+		<item name="_irisRadius" defaultValue="0.7" />
+		<item name="_pupilMinRadius" defaultValue="0.3" />
+		<item name="_pupilMaxRadius" defaultValue="0.55" />
+		<item name="_limbalWidth" defaultValue="0.03" />
+	</_properties>
+</MaterialDef>
