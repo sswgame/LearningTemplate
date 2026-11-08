@@ -19,13 +19,18 @@ namespace sw
 {
     namespace
     {
+        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
+        atomic<uint32> s_surfaceDeformSerial{ 0 };
+    } // namespace
+
+    namespace
+    {
         struct SurfaceDeformSystemInternal
         {
             /** @brief 매니저마다 다른 CPU 텍스처 경로입니다(에디터 미리보기 씬과 게임 씬이 한 캐시를 나눈다). */
             static string makeTexturePath()
             {
-                static atomic<uint32> s_serial{ 0 };
-                return string{ TextureCache::kCPUTexturePrefix } + "surface/deform" + to_string( s_serial.fetch_add( 1u, std::memory_order_relaxed ) );
+                return string{ TextureCache::kCPUTexturePrefix } + "surface/deform" + to_string( s_surfaceDeformSerial.fetch_add( 1u, std::memory_order_relaxed ) );
             }
 
             static const SurfaceDeformSystem* findSystem( const AutomationWatchQuery& query )

@@ -19,6 +19,12 @@ namespace sw
 {
     namespace
     {
+        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
+        atomic<uint32> s_sceneCaptureNextKey{ 1 };
+    } // namespace
+
+    namespace
+    {
         struct SceneCaptureInternal
         {
             /** @brief 캡처 씬 키의 표시 비트입니다. 미리보기 씬 키(`SceneManager::getPreviewSceneKey` — 1 부터 센다)와 겹치지 않는 공간이다. */
@@ -27,8 +33,7 @@ namespace sw
             /** @brief 캡처마다 새 씬 키를 냅니다(하위 렌더러를 캡처끼리 나누지 않는다 — 씬이 다르다). */
             static uint32 allocateSceneKey()
             {
-                static atomic<uint32> s_nextKey{ 1 };
-                return kCaptureSceneKeyBit | ( s_nextKey.fetch_add( 1, std::memory_order_relaxed ) & ~kCaptureSceneKeyBit );
+                return kCaptureSceneKeyBit | ( s_sceneCaptureNextKey.fetch_add( 1, std::memory_order_relaxed ) & ~kCaptureSceneKeyBit );
             }
 
             /** @brief 다 그려진 장을 기다리는 시한(초)입니다. 첫 실행의 셰이더 캐시 없는 빌드(DX11 머티리얼 변형 하나에 수백 ms)와 텍스처 읽기보다 넉넉하다. */

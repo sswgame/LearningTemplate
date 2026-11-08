@@ -8,11 +8,16 @@ namespace sw
 {
     namespace
     {
+        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
+        atomic<uint64> s_vfxGPUEmitterNextRunID{ 1 };
+    } // namespace
+
+    namespace
+    {
         /** @brief 다음 재생 번호입니다(0 은 "재생 없음"). 프로세스 안에서 다시 쓰지 않는다 — 렌더 스레드의 GPU 상태 열쇠다. */
         [[nodiscard]] uint64 allocateRunID()
         {
-            static atomic<uint64> s_nextRunID{ 1 };
-            return s_nextRunID.fetch_add( 1, std::memory_order_relaxed );
+            return s_vfxGPUEmitterNextRunID.fetch_add( 1, std::memory_order_relaxed );
         }
     } // namespace
 } // namespace sw

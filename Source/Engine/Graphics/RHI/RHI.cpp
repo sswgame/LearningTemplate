@@ -17,6 +17,11 @@
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
+        atomic<uint32> s_rhiLastGeneration{ 0 };
+    } // namespace
 
     namespace
     {
@@ -216,8 +221,7 @@ namespace sw
     uint32 allocateRHIDeviceGeneration()
     {
         // 0 은 "세대 없음" 이라 첫 값이 1 이다. 함수 안의 정적 원자는 상수 초기화라 첫 호출 경쟁이 없다.
-        static atomic<uint32> s_lastGeneration{ 0 };
-        return s_lastGeneration.fetch_add( 1 ) + 1;
+        return s_rhiLastGeneration.fetch_add( 1 ) + 1;
     }
 
     bool RHI::findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend )

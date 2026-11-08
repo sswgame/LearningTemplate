@@ -24,6 +24,12 @@ namespace sw
 {
     namespace
     {
+        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
+        atomic<uint32> s_gameObjectStoreFallback{ 0 };
+    } // namespace
+
+    namespace
+    {
         struct GameObjectStoreInternal
         {
             /** @brief 이 스레드가 들어가 있는 `forEachGameObject` 의 깊이입니다(`WalkScope`). Engine 의 이 TU 하나에만 있습니다. */
@@ -704,11 +710,10 @@ namespace sw
             // 번호를 붙여 만든 이름이 아니라 사라져도 번호로 돌아오지 않는다.
         }
 
-        static atomic<uint32> s_fallback{ 0 };
         for ( uint32 fallbackIndex = 0; fallbackIndex < 1024; ++fallbackIndex )
         {
             sb.clear();
-            sb.append( baseView ).append( "_x" ).append( s_fallback.fetch_add( 1 ) );
+            sb.append( baseView ).append( "_x" ).append( s_gameObjectStoreFallback.fetch_add( 1 ) );
             const hashed_string fallback( sb.c_str(), sb.size() );
             if ( isNameTakenUnlocked( fallback ) == false )
             {
@@ -720,7 +725,7 @@ namespace sw
 
         SW_LOG_ERROR_ID( "GameObjectStore.FailedUniquifyCreatingUnnamed", "Failed to uniquify '%#' — creating unnamed object", requested.c_str() );
         sb.clear();
-        sb.append( "GameObject_anon_" ).append( s_fallback.fetch_add( 1 ) );
+        sb.append( "GameObject_anon_" ).append( s_gameObjectStoreFallback.fetch_add( 1 ) );
         return hashed_string( sb.c_str(), sb.size() );
     }
 

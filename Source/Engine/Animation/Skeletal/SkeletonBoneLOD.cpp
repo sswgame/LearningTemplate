@@ -23,13 +23,18 @@ namespace sw
 {
     namespace
     {
+        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
+        atomic<uint64> s_skeletonBoneLODNextRevision{ 1 };
+    } // namespace
+
+    namespace
+    {
         struct SkeletonBoneLODInternal
         {
             /** @brief 프로세스 전역 내용 번호입니다(0 은 쓰지 않는다). */
             static uint64 allocateRevision()
             {
-                static atomic<uint64> s_nextRevision{ 1 };
-                return s_nextRevision.fetch_add( 1, std::memory_order_relaxed );
+                return s_skeletonBoneLODNextRevision.fetch_add( 1, std::memory_order_relaxed );
             }
 
             /** @brief 남는 본의 부모 사슬을 남깁니다 — 자식이 뒤에 있으므로 뒤에서 앞으로 한 번 훑는다. */

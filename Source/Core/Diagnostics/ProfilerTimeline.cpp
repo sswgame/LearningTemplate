@@ -19,6 +19,12 @@ namespace sw
 {
     namespace
     {
+        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
+        atomic<uint32> s_profilerTimelineNextGeneration{ 1 };
+    } // namespace
+
+    namespace
+    {
         struct ProfilerTimelineInternal
         {
             /** @brief 사건 칸의 슬롯 · 깊이를 한 칸에 담을 때 깊이를 올리는 비트 수입니다. */
@@ -27,8 +33,7 @@ namespace sw
             /** @brief 타임라인마다 고유 번호를 나눠 줍니다(0 은 "캐시 없음"). */
             static uint32 allocateGeneration()
             {
-                static atomic<uint32> s_nextGeneration{ 1 };
-                return s_nextGeneration.fetch_add( 1, std::memory_order_relaxed );
+                return s_profilerTimelineNextGeneration.fetch_add( 1, std::memory_order_relaxed );
             }
         };
 

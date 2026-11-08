@@ -29,6 +29,12 @@ namespace sw
 {
     namespace
     {
+        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
+        atomic<uint32> s_terrainSerial{ 0 };
+    } // namespace
+
+    namespace
+    {
         struct TerrainComponentInternal
         {
             /**
@@ -47,8 +53,7 @@ namespace sw
             /** @brief 지형마다의 스플랫 텍스처 경로(`cpu/terrain/<번호>`)를 새로 냅니다. 놓인 경로를 다시 쓰지 않도록 번호는 프로세스 안에서 늘기만 한다. */
             static string makeCPUSplatPath()
             {
-                static atomic<uint32> s_serial{ 0 };
-                return string{ TextureCache::kCPUTexturePrefix } + "terrain/splat" + to_string( s_serial.fetch_add( 1u, std::memory_order_relaxed ) );
+                return string{ TextureCache::kCPUTexturePrefix } + "terrain/splat" + to_string( s_terrainSerial.fetch_add( 1u, std::memory_order_relaxed ) );
             }
 
             static const hashed_string& getLayerColorName( uint32 layerIndex )
