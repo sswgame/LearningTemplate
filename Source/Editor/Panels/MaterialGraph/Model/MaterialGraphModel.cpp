@@ -144,8 +144,8 @@ namespace sw::editor
         inoutListSeen[fromIndex] = 1;
         for ( const MaterialGraphLink& link : _graph._listNode[fromIndex]._listLink )
         {
-            const int32 upstream = _graph.findNodeIndex( link._fromNode );
-            if ( upstream >= 0 && readsNode( static_cast<uint32>( upstream ), targetIndex, inoutListSeen ) )
+            const optional<uint32> upstream = _graph.findNodeIndex( link._fromNode );
+            if ( upstream.has_value() && readsNode( *upstream, targetIndex, inoutListSeen ) )
                 return true;
         }
         return false;
@@ -210,7 +210,7 @@ namespace sw::editor
         {
             fixed_string<constant::buffer::kMax64> name;
             formatstring( name.data(), name.capacity(), "%#%#", kindName, number );
-            if ( _graph.findNodeIndex( name.c_str() ) < 0 )
+            if ( _graph.findNodeIndex( name.c_str() ).has_value() == false )
                 node._name = name.c_str();
         }
         _graph._listNode.push_back( std::move( node ) );

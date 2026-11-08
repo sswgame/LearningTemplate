@@ -185,7 +185,9 @@ namespace sw::editor
     bool RetargetPanel::saveDocument()
     {
         // 묶이지 않는 프로필은 런타임이 쓸 수 없다 — 저장하지 않는다.
-        if ( RetargetProfileInspection::inspect( _profile, _inspection, _inspectionError ) == false )
+        const expected<void> inspected = RetargetProfileInspection::inspect( _profile, _inspection );
+        _inspectionError               = inspected.has_value() ? string{} : EditorWidgets::makeStatusText( inspected.error() );
+        if ( inspected.has_value() == false )
         {
             _status = "Not saved: " + _inspectionError;
             return false;
@@ -274,7 +276,8 @@ namespace sw::editor
         else
             _preview.rebuildPoses( _profile );
         // 실패는 점검 칸이 보인다
-        (void)RetargetProfileInspection::inspect( _profile, _preview.isSourceReady() ? &_preview.getSourceSkeleton() : nullptr, _preview.isTargetReady() ? &_preview.getTargetSkeleton() : nullptr, _inspection, _inspectionError );
+        const expected<void> inspected = RetargetProfileInspection::inspect( _profile, _preview.isSourceReady() ? &_preview.getSourceSkeleton() : nullptr, _preview.isTargetReady() ? &_preview.getTargetSkeleton() : nullptr, _inspection );
+        _inspectionError               = inspected.has_value() ? string{} : EditorWidgets::makeStatusText( inspected.error() );
     }
 
     void RetargetPanel::markEdited( const utf8* pLabel )

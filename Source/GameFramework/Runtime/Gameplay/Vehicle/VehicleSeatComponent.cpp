@@ -15,6 +15,7 @@
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
+#include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatSystem.h"
 
 namespace sw
 {
@@ -76,6 +77,7 @@ namespace sw
         , _rideSampleCount{ 0 }
         , _bFieldOfViewKickArmed{ 1 }
         , _bBumpArmed{ 1 }
+        , _bRidePending{ 0 }
         , _reservedRideFlags{ 0 }
     {
         setCanEverTick( true );
@@ -85,6 +87,7 @@ namespace sw
     {
         Component::onRegister( manager );
         manager.getComponentRegistry().add<VehicleSeatComponent>( this ); // 빈 좌석 찾기와 탑승자의 좌석 찾기가 씬을 순회하지 않게 된다
+        (void)VehicleSeatSystem::ensureFor( manager );
     }
 
     void VehicleSeatComponent::onUnregister( GameObjectManager& manager )
@@ -99,6 +102,7 @@ namespace sw
         _occupantController        = TComponentHandle<ControllerComponent>{};
         _previousVehicleController = TComponentHandle<ControllerComponent>{};
         manager.getComponentRegistry().remove<VehicleSeatComponent>( this );
+        VehicleSeatSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }
 
@@ -120,6 +124,7 @@ namespace sw
             _rideSampleCount  = 0;
             _rideAcceleration = float3{};
             _riderLean        = float2{};
+            _bRidePending     = 0;
             return;
         }
 
@@ -140,7 +145,6 @@ namespace sw
         _rideSampleCount  = MathUtil::min( _rideSampleCount + 1, 2 );
 
         _riderLean = _rideFeel.computeLean( _rideAcceleration );
-        applyRiderLean( *pManager );
 
         // 카메라는 문턱을 넘는 순간 한 번씩(다시 내려가야 다음) — 매끄럽게 한 앞 가속(부스트 · 급가속)과 날것의 수직 가속(착지 · 턱).
         const bool bKick = _rideFeel._fieldOfViewKickAcceleration > 0.0f && _rideAcceleration._z >= _rideFeel._fieldOfViewKickAcceleration;
@@ -155,8 +159,17 @@ namespace sw
 
         _pendingFeedbackSpeed = MathUtil::sqrt( velocity.dot( velocity ) );
         _pendingFeedbackSlip  = MathUtil::abs( _rideAcceleration._x );
-        pManager->executeOrDeferPostTickOnComponent( *this, []( VehicleSeatComponent& seat )
-        { seat.applyRideFeedback( seat._pendingFeedbackSpeed, seat._pendingFeedbackSlip ); } );
+        // 탑승자 기울임 · 카메라 · 소리는 남의 오브젝트 · 게임 스레드 일이다 — 틱은 깃발만 세우고 `VehicleSeatSystem` 이 다음 `ApplyPrePhysics` 맨 앞에서 건다.
+        _bRidePending = 1;
+    }
+
+    void VehicleSeatComponent::applyPendingRide( GameObjectManager& manager )
+    {
+        if ( _bRidePending == 0 )
+            return;
+        _bRidePending = 0;
+        applyRiderLean( manager );
+        applyRideFeedback();
     }
 
     void VehicleSeatComponent::applyRiderLean( GameObjectManager& manager )
@@ -177,7 +190,7 @@ namespace sw
             pAnimator->getParameters().setFloat( _rideFeel._leanSideParameter, -_riderLean._y / _rideFeel._maxLean );
     }
 
-    void VehicleSeatComponent::applyRideFeedback( float32 speed, float32 slip )
+    void VehicleSeatComponent::applyRideFeedback()
     {
         using Internal              = VehicleSeatComponentInternal;
         GameObject*        pVehicle = getOwner();
@@ -185,9 +198,9 @@ namespace sw
         if ( pManager == nullptr )
             return;
         if ( _rideFeel._speedSoundParameter.empty() == false )
-            GameSound::setObjectParameter( *pVehicle, _rideFeel._speedSoundParameter, speed );
+            GameSound::setObjectParameter( *pVehicle, _rideFeel._speedSoundParameter, _pendingFeedbackSpeed );
         if ( _rideFeel._slipSoundParameter.empty() == false )
-            GameSound::setObjectParameter( *pVehicle, _rideFeel._slipSoundParameter, slip );
+            GameSound::setObjectParameter( *pVehicle, _rideFeel._slipSoundParameter, _pendingFeedbackSlip );
         if ( _pendingFieldOfViewKick == 0.0f && _pendingBumpShake <= 0.0f )
             return;
 

@@ -117,8 +117,9 @@ namespace sw
 
     bool PairedAnimationSession::isRolePlaying( const hashed_string& roleName ) const
     {
-        const uint32 roleIndex = _def->findRoleIndex( roleName );
-        return roleIndex < _listRole.size() && _listRole[roleIndex]._stage == PairedAnimationRoleStage::Playing;
+        // 묻는 함수다 — 없는 역할은 "재생 중 아님" 이 답이다.
+        const optional<uint32> roleIndex = _def->findRoleIndex( roleName );
+        return roleIndex.has_value() && *roleIndex < _listRole.size() && _listRole[*roleIndex]._stage == PairedAnimationRoleStage::Playing;
     }
 
     bool PairedAnimationSession::tryComputeAlignTarget( GameObjectManager& manager, const PairedAnimationRoleDef& roleDef, float3& outPosition, float32& outYaw ) const
@@ -150,12 +151,13 @@ namespace sw
         const PairedAnimationDef& def = *_def;
         for ( const PairedAnimationBinding& binding : listBinding )
         {
-            const uint32 roleIndex = def.findRoleIndex( binding._role );
-            if ( roleIndex == constant::invalid_index::kUint32 )
+            const optional<uint32> foundRoleIndex = def.findRoleIndex( binding._role );
+            if ( foundRoleIndex.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationBindsUnknown", "Paired animation binds unknown role '%#'", binding._role.c_str() );
                 return PairedAnimationStartResult::InvalidBinding;
             }
+            const uint32 roleIndex = *foundRoleIndex;
             if ( _listRole[roleIndex]._animator.isValid() )
             {
                 SW_LOG_ERROR_ID( "PairedAnimation.PairedAnimationBindsRole", "Paired animation binds role '%#' twice", binding._role.c_str() );
@@ -239,7 +241,14 @@ namespace sw
     {
         for ( const PairedAnimationNotifyDef& notify : _def->getNotifies() )
         {
-            const RoleState& role = _listRole[_def->findRoleIndex( notify._role )];
+            // 읽기 검증이 알림 역할을 이미 걸렀다(`Character.PairedNotifyRoleUnknown`) — 그래도 없으면 알리고 시작하지 않는다.
+            const optional<uint32> roleIndex = _def->findRoleIndex( notify._role );
+            if ( roleIndex.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "PairedAnimation.NotifyRoleUnknown", "Paired animation notify '%#' names unknown role '%#'", notify._name.c_str(), notify._role.c_str() );
+                return PairedAnimationStartResult::NotifyTargetMissing;
+            }
+            const RoleState& role = _listRole[*roleIndex];
             if ( role._stage == PairedAnimationRoleStage::Unbound )
                 continue;
             const SkeletalAnimatorComponent* pAnimator = resolveAnimator( manager, role );
@@ -534,8 +543,14 @@ namespace sw
 
     void PairedAnimationSession::fireNotify( GameObjectManager& manager, uint32 notifyIndex )
     {
-        const PairedAnimationNotifyDef&  notify    = _def->getNotifies()[notifyIndex];
-        const RoleState&                 role      = _listRole[_def->findRoleIndex( notify._role )];
+        const PairedAnimationNotifyDef& notify    = _def->getNotifies()[notifyIndex];
+        const optional<uint32>          roleIndex = _def->findRoleIndex( notify._role );
+        if ( roleIndex.has_value() == false ) // 시작 전 `validateNotifyTargets` 가 알리고 멈췄다 — 여기 닿으면 정의가 바뀐 것이다
+        {
+            SW_LOG_ERROR_ID( "PairedAnimation.NotifyRoleUnknown", "Paired animation notify '%#' names unknown role '%#'", notify._name.c_str(), notify._role.c_str() );
+            return;
+        }
+        const RoleState&                 role      = _listRole[*roleIndex];
         const bool                       bBound    = role._stage == PairedAnimationRoleStage::Waiting || role._stage == PairedAnimationRoleStage::Playing;
         const SkeletalAnimatorComponent* pAnimator = bBound ? resolveAnimator( manager, role ) : nullptr;
         AnimationNotifyComponent*        pNotify   = pAnimator != nullptr ? PairedAnimationSessionInternal::findSibling<AnimationNotifyComponent>( *pAnimator ) : nullptr;

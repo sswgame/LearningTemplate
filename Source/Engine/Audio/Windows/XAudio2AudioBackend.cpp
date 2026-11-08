@@ -7,10 +7,8 @@
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioPCM.h"
-
-#if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
-    #include "Engine/Foundation/EnginePlatformHeaders.h"
-    #include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/EnginePlatformHeaders.h"
 
 namespace sw
 {
@@ -460,4 +458,3 @@ namespace sw
 
     SW_REGISTER_AUDIO_BACKEND( XAudio2AudioBackend ); // Windows 클라이언트의 장치 백엔드(`IAudioService::create` 가 등록표에서 고른다)
 } // namespace sw
-#endif

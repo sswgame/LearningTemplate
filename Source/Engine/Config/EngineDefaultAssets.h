@@ -187,6 +187,14 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderSSAO; ///< SSAO
         PROPERTY( Required )
+        DataPath _shaderShadowCacheRestore; ///< 그림자 캐시 복원(풀스크린, 픽셀 깊이) — 캐시 층의 정적 메시 깊이를 점광 · 스폿 칸에 옮긴다
+        PROPERTY( Required )
+        DataPath _shaderContactShadow; ///< 접촉 그림자(풀스크린) — 장면 깊이에서 접촉 그림자를 켠 빛 쪽으로 화면 공간에서 걷는다(채널 = 빛)
+        PROPERTY( Required )
+        DataPath _shaderScreenSpaceGI; ///< 화면 공간 간접 확산광(SSGI) — 장면 색 사본을 반구로 걸어 가까운 튐을 조명 첨부에 더한다
+        PROPERTY( Required )
+        DataPath _shaderLensFlare; ///< 빛마다의 렌즈 플레어 스프라이트(가림 · 가장자리 감쇠)
+        PROPERTY( Required )
         DataPath _shaderTAA; ///< TAA
         PROPERTY( Required )
         DataPath _shaderSceneDepthCopy; ///< 반투명 앞의 장면 깊이 사본(풀스크린) — 물의 화면 공간 두께가 읽는다
@@ -200,6 +208,12 @@ namespace sw
         DataPath _shaderSky; ///< 하늘 그러데이션(스카이 패스) — 깊이 1 의 풀스크린 삼각형
         PROPERTY( Required )
         DataPath _shaderFog; ///< 높이 · 거리 지수 안개(안개 패스) — 장면 깊이로 광학 두께를 구해 장면 색 위에 블렌드한다
+        PROPERTY( Required )
+        DataPath _shaderDistortion; ///< 화면 왜곡 머티리얼 셰이더 — 왜곡 누적 패스의 기본 셰이더이기도 하다(배치는 자기 머티리얼 셰이더로 그린다)
+        PROPERTY( Required )
+        DataPath _shaderDistortionApply; ///< 화면 왜곡 적용(풀스크린) — 장면 색 사본을 왜곡 오프셋만큼 비껴 읽는다
+        PROPERTY( Required )
+        DataPath _shaderScreenSpaceReflection; ///< 화면 공간 반사(디퍼드) — G버퍼 노멀로 반사한 광선을 장면 깊이에 대고 나아가 장면 색 위에 블렌드한다
         PROPERTY( Required )
         DataPath _shaderVolumetricFog; ///< 볼륨 안개(컴퓨트) — froxel 마다 라이트 산란을 구해 깊이 방향으로 누적한다
         PROPERTY( Required )

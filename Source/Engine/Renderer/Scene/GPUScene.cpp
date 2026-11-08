@@ -2,6 +2,7 @@
 
 #include "Engine/Renderer/Scene/GPUScene.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
 
@@ -13,6 +14,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
 #include "Engine/Renderer/Scene/GPUVertexAnimationPool.h"
 
@@ -62,6 +64,10 @@ namespace sw
         resetBatchBindings();
         _indirectCommandCount = 0;
         _bBatchTablesDirty    = SW_TRUE;
+        // 씬을 비우면 움직임 기록도 버린다 — 다음 씬의 첫 프레임은 카메라 움직임뿐이다.
+        _motionHistory.reset();
+        _bObjectMotion      = SW_FALSE;
+        _bDistortionBatches = SW_FALSE;
     }
 
     void GPUScene::setVertexPoolEnabled( bool bEnabled )
@@ -133,6 +139,8 @@ namespace sw
         // 머티리얼 데이터 구조버퍼(셰이더 타입별). 값이 프레임마다 바뀔 수 있어 스냅샷 dirty 와 무관하게 매번 본다(바이트가 같으면 올리지 않는다).
         uploadMaterialGroups( pDevice );
         // 불투명 · 투명 배치는 같은 목록의 구간 뷰라(GPUSceneSnapshot) 렌더 쪽 값(`_listBatchBinding`)도 한 벌이다.
+        // 움직임 기록은 스냅샷이 그대로인 프레임에도 나아간다(멈춘 물체의 지난 행렬이 이번 것이 되어야 속도가 0 이다).
+        updateMotionHistory( pDevice );
 
         // CPU 스냅샷이 그대로면 인스턴스 버퍼 재업로드를 생략한다. **간접 인자는 예외다.**
         // 컬링 컴퓨트가 개수를 InterlockedAdd 로 만드는 동안에는 매 프레임 0 으로 되돌려 놓아야 한다.
@@ -151,7 +159,10 @@ namespace sw
         const uint32 instanceCount = static_cast<uint32>( _snapshot.getInstances().size() );
         const uint32 argsCount     = static_cast<uint32>( _snapshot.getAllBatches().size() );
         if ( bCPUDirty )
+        {
             uploadInstanceAndVisibleBuffers( pDevice, instanceCount );
+            refreshDistortionBatches();
+        }
 
         SW_PROFILE_SCOPE( "RT.GPUScene.batchTables" );
         uploadBatchTable( pDevice, argsCount );
@@ -321,6 +332,44 @@ namespace sw
             return false;
         view._lodStateLayoutGeneration = _snapshot._instanceLayoutGeneration;
         return true;
+    }
+
+    void GPUScene::refreshDistortionBatches()
+    {
+        const string distortionDefine{ kMaterialDistortionDefine };
+        _bDistortionBatches = SW_FALSE;
+        for ( const GPUMeshBatch& batch : _snapshot.getAllBatches() )
+        {
+            const GPUShaderPermutation* pPermutation = batch._shaderPermutation == kInvalidShaderPermutation ? nullptr : findShaderPermutation( batch._shaderPermutation );
+            if ( pPermutation != nullptr && VectorUtil::contains( pPermutation->_listDefine, distortionDefine ) )
+            {
+                _bDistortionBatches = SW_TRUE;
+                return;
+            }
+        }
+    }
+
+    void GPUScene::updateMotionHistory( IRHIDevice* pDevice )
+    {
+        SW_PROFILE_SCOPE( "RT.GPUScene.motionHistory" );
+        // shortcut: 움직이는 프레임마다 인스턴스 수만큼 열쇠를 찾고 버퍼 전체(인스턴스당 64 바이트)를 올린다 — 인스턴스가 수만을 넘어 이 구간이 측정에 드러나면 바뀐 구간만 올린다.
+        _bObjectMotion                           = _motionHistory.update( _snapshot.getInstances(), _listScratchPrevWorld ) ? SW_TRUE : SW_FALSE;
+        constexpr RHIBufferUsage kPrevWorldUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
+        const uint32             count           = static_cast<uint32>( _listScratchPrevWorld.size() );
+        const RHIBufferHandle    bufferBefore    = _prevInstanceWorlds._buffer;
+        if ( _prevInstanceWorlds.ensureCapacity( pDevice, static_cast<uint32>( sizeof( float4x4 ) ), count, kPrevWorldUsage, true, false, _listScratchPrevWorld.data() ) == false )
+        {
+            if ( count > 0 )
+                SW_LOG_ERROR_ONCE_ID( "GPUScene.FailedCreatePrevInstanceWorld", "Failed to create the previous instance world buffer (%# instances) - objects get camera-only velocity", count );
+            _listUploadedPrevWorld.clear();
+            return;
+        }
+        const bool bSameAsUploaded = _prevInstanceWorlds._buffer == bufferBefore && _listUploadedPrevWorld.size() == _listScratchPrevWorld.size() &&
+                                     Memory::compare( _listUploadedPrevWorld.data(), _listScratchPrevWorld.data(), _listScratchPrevWorld.size() * sizeof( float4x4 ) ) == 0;
+        if ( bSameAsUploaded )
+            return;
+        _prevInstanceWorlds.upload( pDevice, _listScratchPrevWorld.data(), count * static_cast<uint32>( sizeof( float4x4 ) ) );
+        _listUploadedPrevWorld.swap( _listScratchPrevWorld );
     }
 
     void GPUScene::uploadDirtyInstanceRanges( IRHIDevice* pDevice, uint32 instanceCount )
@@ -530,6 +579,8 @@ namespace sw
         // 슬롯이 뷰 등록 해제와 버퍼 파괴를 순서까지 맞춰 처리한다. 손으로 풀어 쓰면 뷰 하나를 빠뜨려도 컴파일은 통과한다.
         _instances.release( pDevice );
         _batchInfo.release( pDevice );
+        _prevInstanceWorlds.release( pDevice );
+        _listUploadedPrevWorld.clear(); // 버퍼를 다시 만들면 내용을 다시 올린다
         for ( GPUMeshVertexPool& pool : _arrVertexPool )
         {
             pool.release( pDevice );

@@ -1,7 +1,4 @@
-<TileMap>
-	<name>Pixel Town</name>
-	<width>20</width>
-	<height>12</height>
+<TileMap name="Pixel Town" width="20" height="12">
 	<spawn x="7" y="7" />
 	<tiles />
 	<warps />

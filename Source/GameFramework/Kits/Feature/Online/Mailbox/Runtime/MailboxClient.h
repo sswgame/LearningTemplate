@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Event/ConsumerGate.h"
 #include "Core/Event/EventBuffer.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -53,7 +54,7 @@ namespace sw
 
     private:
         /** @brief 캐시에서 그 키의 우편 번호입니다. 없으면 음수입니다. */
-        int32 findMailIndex( const string& mailKey ) const;
+        [[nodiscard]] optional<int32> findMailIndex( const string& mailKey ) const;
 
     private:
         vector<MailView>            _listMail;

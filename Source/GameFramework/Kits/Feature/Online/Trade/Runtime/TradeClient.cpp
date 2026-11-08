@@ -48,9 +48,9 @@ namespace sw
 
     uint64 TradeClient::confirm( uint64 tradeID, const NetIdempotencyKey& key )
     {
-        const int32  sideIndex    = _snapshot._tradeID == tradeID ? _snapshot.findSideIndex( _accountID ) : constant::invalid_index::kInt32;
-        const uint32 ownRevision  = sideIndex >= 0 ? _snapshot._arrSide[sideIndex]._offerRevision : 0;
-        const uint32 peerRevision = sideIndex >= 0 ? _snapshot._arrSide[1 - sideIndex]._offerRevision : 0;
+        const optional<int32> sideIndex    = _snapshot._tradeID == tradeID ? _snapshot.findSideIndex( _accountID ) : optional<int32>{};
+        const uint32          ownRevision  = sideIndex.has_value() ? _snapshot._arrSide[*sideIndex]._offerRevision : 0;
+        const uint32          peerRevision = sideIndex.has_value() ? _snapshot._arrSide[1 - *sideIndex]._offerRevision : 0;
         return confirmSeen( tradeID, ownRevision, peerRevision, key );
     }
 

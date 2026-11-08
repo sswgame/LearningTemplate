@@ -9,6 +9,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
+#include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -298,6 +299,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesLoad )
     {
         if ( pass._type == RenderPassType::Transparent )
             SW_EXPECT_TRUE( pass._resolvedRenderState.isAnyBlendEnabled() );
+        // 디퍼드 조명은 G버퍼 패스가 장면 색에 먼저 적은 자체 발광 위에 더한다(G버퍼 명세 판 3).
+        if ( pass._type == RenderPassType::Lighting )
+            SW_EXPECT_TRUE( pass._resolvedRenderState.isAnyBlendEnabled() );
     }
 }
 
@@ -454,4 +458,306 @@ SW_TEST_CASE( RenderPipelineAssetTest, DiscardedAttachmentCannotBeRead )
     string xml = Util::makeXML( passAttributes, "", "", "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _storeOp=\"DontCare\"/>" );
     xml.insert( xml.find( "</_listPass>" ), string( "<RenderGraphPassDesc _name=\"Second\" " ) + passAttributes + "><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>" );
     SW_EXPECT_FALSE( Util::load( asset, xml ) );
+}
+
+namespace
+{
+    struct VelocityTestUtil
+    {
+        /** @brief 패스 하나가 @p outputs 를 컬러 · 깊이 출력으로 쓰는 파이프라인입니다. 속도 첨부의 포맷은 @p velocityFormat 입니다. */
+        static string makeXML( string_view passType, string_view outputs, string_view velocityFormat = "R16G16_FLOAT", string_view passState = RenderPipelineTestUtil::kOpaqueState )
+        {
+            string xml = "<RenderPipelineDesc _name=\"Velocity\"><_listAttachment>"
+                         "<RenderPassAttachment _name=\"SceneColor\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                         "<RenderPassAttachment _name=\"SceneVelocity\" _format=\"";
+            xml.append( velocityFormat );
+            xml += "\" _clearColor=\"0,0,0,0\" _loadOp=\"Clear\"/>"
+                   "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
+                   "</_listAttachment><_listPass><RenderGraphPassDesc _name=\"Pass\" _type=\"";
+            xml.append( passType );
+            xml += "\" _depthAttachment=\"SceneDepth\" ";
+            xml.append( passState );
+            xml += "><_listOutput>";
+            xml.append( outputs );
+            xml += "</_listOutput></RenderGraphPassDesc></_listPass></RenderPipelineDesc>";
+            return xml;
+        }
+    };
+} // namespace
+
+/** @brief [RenderPipelineAssetTest] 화면 속도 출력은 데이터가 정한다 — 선언한 불투명 패스만 속도 define 을 받고, 내부 슬롯은 대신 그리는 패스의 선언을 따른다 */
+SW_TEST_CASE( RenderPipelineAssetTest, VelocityOutputIsDeclaredByThePipeline )
+{
+    const string        kVelocityDefine{ kPassVelocityDefine };
+    RenderPipelineAsset asset;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, VelocityTestUtil::makeXML( "ForwardOpaque", "<item>SceneColor</item><item>SceneVelocity</item><item>SceneDepth</item>" ) ) );
+    const RenderGraphPassDesc& pass = asset.getGraphPass()[0];
+    SW_EXPECT_TRUE( passWritesVelocity( RenderPassType::ForwardOpaque, &pass ) );
+    SW_EXPECT_TRUE( passWritesVelocity( RenderPassType::ForwardOpaqueNoDepthWrite, &pass ) ); // 내부 슬롯은 ForwardOpaque 의 선언을 본다
+    SW_EXPECT_FALSE( passWritesVelocity( RenderPassType::Transparent, &pass ) );              // 반투명은 속도를 쓰지 않는다
+    SW_EXPECT_FALSE( passWritesVelocity( RenderPassType::ForwardOpaque, nullptr ) );
+    const EngineDefaultAssets& assets = engine::getSubsystem<EngineDefaultAssets>();
+    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassType::ForwardOpaque, &pass, &pass, assets )._listDefine, kVelocityDefine ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassType::ForwardOpaqueNoDepthWrite, nullptr, &pass, assets )._listDefine, kVelocityDefine ) );
+    SW_EXPECT_FALSE( VectorUtil::contains( selectRenderPassShader( RenderPassType::ForwardOpaqueNoDepthWrite, nullptr, nullptr, assets )._listDefine, kVelocityDefine ) );
+
+    // 속도를 선언하지 않은 파이프라인은 첨부도 define 도 없다.
+    RenderPipelineAsset withoutVelocity;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( withoutVelocity, VelocityTestUtil::makeXML( "ForwardOpaque", "<item>SceneColor</item><item>SceneDepth</item>" ) ) );
+    SW_EXPECT_FALSE( passWritesVelocity( RenderPassType::ForwardOpaque, &withoutVelocity.getGraphPass()[0] ) );
+}
+
+/** @brief [RenderPipelineAssetTest] 화면 속도 출력은 깊이를 쓰는 불투명 패스의 둘째 컬러 출력이고 명세의 포맷이다 — 어기면 읽기 오류다 */
+SW_TEST_CASE( RenderPipelineAssetTest, VelocityOutputFollowsTheRules )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.VelocityWriterType" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.VelocityFormat" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.VelocityOutputSlot" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    RenderPipelineAsset asset;
+    // 반투명은 깊이를 쓰지 않는다 — 속도가 깊이와 짝이 아니다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, VelocityTestUtil::makeXML( "Transparent", "<item>SceneColor</item><item>SceneVelocity</item>", "R16G16_FLOAT",
+                                                                                     "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"false\" _cullMode=\"Back\" _blendPreset=\"Transparent\"" ) ) );
+    // 포맷이 명세(R16G16 실수)와 다르다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, VelocityTestUtil::makeXML( "ForwardOpaque", "<item>SceneColor</item><item>SceneVelocity</item><item>SceneDepth</item>", "R16G16B16A16_FLOAT" ) ) );
+    // 셰이더는 속도를 SV_TARGET1 에 쓴다 — 첫 출력이면 안 된다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, VelocityTestUtil::makeXML( "ForwardOpaque", "<item>SceneVelocity</item><item>SceneColor</item><item>SceneDepth</item>" ) ) );
+}
+
+/** @brief [RenderPipelineAssetTest] 엔진 파이프라인의 불투명 패스는 화면 속도를 쓰고 TAA · 모션 블러가 그것을 읽는다(2D 는 모션 블러가 없어 쓰지 않는다) */
+SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesWireVelocity )
+{
+    struct PipelineCase
+    {
+        const utf8* _pPath;
+        bool        _bWritesVelocity;
+    };
+    for ( const PipelineCase& expectation : {
+              PipelineCase{   "engine/pipeline/deferredpipeline.xml",  true},
+              PipelineCase{    "engine/pipeline/forwardpipeline.xml",  true},
+              PipelineCase{"engine/pipeline/forwardtoonpipeline.xml",  true},
+              PipelineCase{  "engine/pipeline/forward2dpipeline.xml", false}
+    } )
+    {
+        RenderPipelineAsset asset;
+        SW_REQUIRE_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( expectation._pPath ) } ), expectation._pPath );
+        bool bAnyWriter = false;
+        for ( const RenderGraphPassDesc& pass : asset.getGraphPass() )
+        {
+            bAnyWriter         = bAnyWriter || passWritesVelocity( pass._type, &pass );
+            const bool bReader = pass._type == RenderPassType::TAA || pass._type == RenderPassType::MotionBlur;
+            if ( bReader == false )
+                continue;
+            const bool bReadsVelocity = VectorUtil::containsIf( pass._listResolvedInput, []( const RenderGraphPassDesc::ResolvedAttachment& input )
+            { return static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::Velocity; } );
+            SW_EXPECT_TRUE_MSG( bReadsVelocity, pass._name.c_str() );
+        }
+        SW_EXPECT_TRUE_MSG( bAnyWriter == expectation._bWritesVelocity, expectation._pPath );
+    }
+}
+
+/** @brief [RenderPipelineAssetTest] 화면 왜곡 누적은 왜곡 머티리얼(MATERIAL_DISTORTION)의 반투명 배치만 왜곡 퍼뮤테이션으로 그리고, 적용은 사본 · 왜곡 · 깊이를 읽는다 */
+SW_TEST_CASE( RenderPipelineAssetTest, DistortionPassTypesFollowTheTable )
+{
+    SW_EXPECT_TRUE( isPipelinePassType( RenderPassType::Distortion ) );
+    SW_EXPECT_TRUE( isPipelinePassType( RenderPassType::DistortionApply ) );
+    const RenderPassTypeInfo& accumulate = getRenderPassTypeInfo( RenderPassType::Distortion );
+    SW_EXPECT_TRUE( accumulate.hasFlag( RenderPassTraitFlag::kDrawsTransparentBatch ) );
+    SW_EXPECT_FALSE( accumulate.hasFlag( RenderPassTraitFlag::kDepthWrite ) );
+    const vector<string> listDistortion{ string( kMaterialDistortionDefine ), string( "MATERIAL_BLEND_TRANSLUCENT" ) };
+    const vector<string> listPlain{ string( "MATERIAL_BLEND_TRANSLUCENT" ) };
+    SW_EXPECT_TRUE( FrameRendererUtil::drawsMaterialInPass( RenderPassType::Distortion, &listDistortion ) );
+    SW_EXPECT_FALSE( FrameRendererUtil::drawsMaterialInPass( RenderPassType::Distortion, &listPlain ) );
+    SW_EXPECT_FALSE( FrameRendererUtil::drawsMaterialInPass( RenderPassType::Distortion, nullptr ) ); // 머티리얼 없는 배치는 왜곡이 없다
+    const EngineDefaultAssets& assets = engine::getSubsystem<EngineDefaultAssets>();
+    SW_EXPECT_TRUE( VectorUtil::contains( selectRenderPassShader( RenderPassType::Distortion, nullptr, nullptr, assets )._listDefine, string( kPassDistortionDefine ) ) );
+    const RenderPassInputSignature* pApply = findRenderPassInputSignature( RenderPassType::DistortionApply );
+    SW_REQUIRE_TRUE( pApply != nullptr );
+    SW_EXPECT_TRUE( pApply->reads( RenderPassInputRole::SceneColorCopy ) );
+    SW_EXPECT_TRUE( pApply->reads( RenderPassInputRole::Distortion ) );
+    SW_EXPECT_TRUE( pApply->reads( RenderPassInputRole::SceneDepth ) );
+    SW_EXPECT_TRUE( resolveRenderPassInputRole( "SceneDistortion", false, "" ) == RenderPassInputRole::Distortion );
+}
+
+/** @brief [RenderPipelineAssetTest] 엔진 포워드 · 디퍼드는 반투명 앞에서 왜곡을 누적하고 적용한다 — 적용 패스는 누적 패스 뒤, 반투명 앞이고 장면 색에 쓴다 */
+SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesWireDistortion )
+{
+    for ( const utf8* pPath : { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" } )
+    {
+        RenderPipelineAsset asset;
+        SW_REQUIRE_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( pPath ) } ), pPath );
+        const vector<RenderGraphPassDesc>& listPass         = asset.getGraphPass();
+        size_t                             accumulateIndex  = listPass.size();
+        size_t                             applyIndex       = listPass.size();
+        size_t                             transparentIndex = listPass.size();
+        for ( size_t index = 0; index < listPass.size(); ++index )
+        {
+            accumulateIndex  = listPass[index]._type == RenderPassType::Distortion ? index : accumulateIndex;
+            applyIndex       = listPass[index]._type == RenderPassType::DistortionApply ? index : applyIndex;
+            transparentIndex = listPass[index]._type == RenderPassType::Transparent ? index : transparentIndex;
+        }
+        SW_REQUIRE_TRUE_MSG( accumulateIndex < applyIndex && applyIndex < transparentIndex, pPath );
+        const RenderGraphPassDesc& accumulate = listPass[accumulateIndex];
+        SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( accumulate._listResolvedColorOutput.size() ) );
+        SW_EXPECT_TRUE( static_cast<RenderPassInputRole>( accumulate._listResolvedColorOutput[0]._role ) == RenderPassInputRole::Distortion );
+        SW_EXPECT_TRUE( accumulate._resolvedRenderState.isAnyBlendEnabled() ); // 겹친 왜곡이 합쳐진다(가산)
+    }
+}
+
+/** @brief [RenderPipelineAssetTest] 왜곡 적용이 왜곡 입력을 적지 않으면 읽기 오류다(입력 계약) */
+SW_TEST_CASE( RenderPipelineAssetTest, DistortionApplyNeedsItsInputs )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassRequiredInputRole" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    const string        xml = "<RenderPipelineDesc _name=\"DistortionApply\"><_listAttachment>"
+                              "<RenderPassAttachment _name=\"SceneColor\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                              "<RenderPassAttachment _name=\"SceneColorCopy\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>"
+                              "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
+                              "</_listAttachment><_listPass>"
+                              "<RenderGraphPassDesc _name=\"Apply\" _type=\"DistortionApply\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\">"
+                              "<_listInput><item>SceneColorCopy</item><item>SceneDepth</item></_listInput><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>"
+                              "</_listPass></RenderPipelineDesc>";
+    RenderPipelineAsset asset;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, xml ) );
+    struct FrameGraphTestUtil
+    {
+        /** @brief 메시 패스 하나에 프레임 자원 · 프레임 패스를 더한 파이프라인 XML 입니다. @p resources · @p framePasses 는 목록 안에 그대로 넣습니다. */
+        static string makeXML( string_view resources, string_view framePasses )
+        {
+            string extra = "<_listResource>";
+            extra.append( resources );
+            extra += "</_listResource><_listFramePass>";
+            extra.append( framePasses );
+            extra += "</_listFramePass>";
+            const string passAttributes = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState;
+            return RenderPipelineTestUtil::makeXML( passAttributes, "", extra );
+        }
+
+        static constexpr const utf8* kResources = "<RenderGraphResourceDesc _name=\"InstanceBuffer\" _kind=\"External\"/>"
+                                                  "<RenderGraphResourceDesc _name=\"CullResults\" _kind=\"External\"/>"
+                                                  "<RenderGraphResourceDesc _name=\"OcclusionTiles\" _kind=\"Persistent\"/>";
+        static constexpr const utf8* kCullPass  = "<RenderGraphPassDesc _name=\"GPUCull\" _type=\"GPUCull\"><_listInput><item>InstanceBuffer</item><item>OcclusionTiles</item></_listInput>"
+                                                  "<_listOutput><item>CullResults</item></_listOutput></RenderGraphPassDesc>";
+    };
+} // namespace
+
+/**
+ * @brief [RenderPipelineAssetTest] 프레임 자원 · 프레임 패스를 읽는다 — 종류(Persistent · External)와 입출력이 그대로 오고, 선언한 종류만 "선언함" 이다
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, FrameGraphDeclarationsLoad )
+{
+    using Util = FrameGraphTestUtil;
+    RenderPipelineAsset asset;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, Util::kCullPass ) ) );
+    SW_REQUIRE_EQUAL( size_t( 3 ), asset.getResources().size() );
+    SW_EXPECT_TRUE( asset.getResources()[2]._kind == RenderGraphResourceKind::Persistent );
+    SW_REQUIRE_EQUAL( size_t( 1 ), asset.getFramePass().size() );
+    SW_EXPECT_TRUE( asset.getFramePass()[0]._type == RenderPassType::GPUCull );
+    SW_EXPECT_EQUAL( size_t( 2 ), asset.getFramePass()[0]._listInput.size() );
+    SW_EXPECT_TRUE( asset.hasFramePass( RenderPassType::GPUCull ) );
+    SW_EXPECT_FALSE( asset.hasFramePass( RenderPassType::LightGrid ) );
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 프레임 그래프가 실행과 맞지 않으면 읽기 오류다 — 뷰 패스 종류 · 첨부 이름 입력 · 셰이더 칸 · 같은 종류 둘 · Transient 자원 · 뷰 목록의 프레임 종류
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, FrameGraphRejectsWhatTheExecutorCannotRun )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.FramePassType" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.FramePassInputNotResource" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.FramePassShader" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.FramePassTypeDuplicated" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.FrameResourceTransient" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.FrameResourceIsAttachment" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassUnknownTypeNot" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    using Util = FrameGraphTestUtil;
+    RenderPipelineAsset asset;
+    // 뷰 패스 종류는 프레임 목록에 올 수 없다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"Sky\" _type=\"Sky\"/>" ) ) );
+    // 입력은 선언한 자원이어야 한다(첨부 이름 SceneColor 는 자원이 아니다).
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load(
+        asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"LightGrid\" _type=\"LightGrid\"><_listInput><item>SceneColor</item></_listInput></RenderGraphPassDesc>" ) ) );
+    // 셰이더는 표의 것이다 — 적으면 실행이 읽지 않는 칸이다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"MeshSkin\" _type=\"MeshSkin\" _shaderPath=\"engine/shaders/mesh_skin.hlsl\"/>" ) ) );
+    // 같은 종류를 둘 — 컬링은 한 번에 모든 뷰를 돈다.
+    string twoCulls = string( Util::kCullPass ) + "<RenderGraphPassDesc _name=\"GPUCull2\" _type=\"GPUCull\"/>";
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, twoCulls ) ) );
+    // 자원은 Transient 일 수 없다(첨부의 몫).
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( "<RenderGraphResourceDesc _name=\"Scratch\" _kind=\"Transient\"/>", "" ) ) );
+    // 자원 이름이 첨부와 겹친다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( "<RenderGraphResourceDesc _name=\"SceneColor\" _kind=\"External\"/>", "" ) ) );
+    // 프레임 종류는 뷰 목록(_listPass)에 올 수 없다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( "_type=\"LightGrid\" _cullMode=\"None\"" ) ) );
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] `_queue` — 프레임 컴퓨트 패스는 AsyncCompute 를 받고 읽은 값이 그대로 오며, 드로우 패스(깊이 히스토리)와 뷰 패스는 받지 않는다
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, QueueAttributeIsForFrameComputePasses )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.FramePassAsyncNotCompute" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassAsyncNotFramePass" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    using Util = FrameGraphTestUtil;
+    RenderPipelineAsset asset;
+    const string        asyncGrid = "<RenderGraphPassDesc _name=\"LightGrid\" _type=\"LightGrid\" _queue=\"AsyncCompute\"><_listOutput><item>CullResults</item></_listOutput></RenderGraphPassDesc>";
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, asyncGrid ) ) );
+    SW_EXPECT_TRUE( asset.getFramePass()[0]._queue == RHIQueueType::AsyncCompute );
+    // 깊이 히스토리는 풀스크린 드로우다 — 컴퓨트 큐는 렌더 타깃을 모른다.
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kResources, "<RenderGraphPassDesc _name=\"DepthHistory\" _type=\"DepthHistory\" _queue=\"AsyncCompute\"/>" ) ) );
+    // 뷰 패스는 뷰마다 다시 돌아 포크 · 조인 자리가 없다.
+    const string viewAsync = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _queue=\"AsyncCompute\" " ) + RenderPipelineTestUtil::kOpaqueState;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( viewAsync ) ) );
+}
+
+/** @brief [RenderPipelineAssetTest] 엔진 파이프라인은 모두 프레임 패스 한 벌(framecomputerenderpass.xml)을 합쳐 컬링 · 그리드 · 스킨을 선언한다 */
+SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesDeclareFramePasses )
+{
+    for ( const utf8* pPath : { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/forwardpipelinestaged.xml", "engine/pipeline/forwardprepasspipeline.xml", "engine/pipeline/forwardtoonpipeline.xml",
+                                "engine/pipeline/forward2dpipeline.xml", "engine/pipeline/deferredpipeline.xml" } )
+    {
+        RenderPipelineAsset asset;
+        SW_REQUIRE_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( pPath ) } ), pPath );
+        for ( const RenderPassType type : { RenderPassType::DepthHistory, RenderPassType::OcclusionTiles, RenderPassType::VFXSimulation, RenderPassType::InstanceAnimation, RenderPassType::MeshMorph,
+                                            RenderPassType::MeshSkin, RenderPassType::GPUCull, RenderPassType::LightGrid, RenderPassType::VolumetricFog, RenderPassType::ProbeUpdate,
+                                            RenderPassType::CanvasMarker } )
+        {
+            SW_EXPECT_TRUE_MSG( asset.hasFramePass( type ), pPath );
+        }
+    }
+}
+
+/**
+ * @brief [RenderPipelineAssetTest] 컴퓨트 구현 — 표가 가진 종류(블룸 다운샘플 · 피사계 심도)만 고를 수 있고, 셰이더는 같은 파일에 컴퓨트 define 을 더한 것이며, 없는 종류에 적으면 읽기 오류다
+ */
+SW_TEST_CASE( RenderPipelineAssetTest, ComputeImplementationIsATableChoice )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassNoComputeImplementation" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::BloomDownsample ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::DepthOfField ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
+    SW_EXPECT_FALSE( getRenderPassTypeInfo( RenderPassType::Bloom ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) );
+
+    // 셰이더는 픽셀 구현과 같은 파일 · define 에 컴퓨트 define 하나를 더한다 — 쿠커와 런타임이 같은 함수를 부른다.
+    RenderGraphPassDesc downsample{};
+    downsample._type                        = RenderPassType::BloomDownsample;
+    downsample._implementation              = RenderPassExecutionMode::Compute;
+    const EngineDefaultAssets&      assets  = engine::getSubsystem<EngineDefaultAssets>();
+    const RenderPassShaderSelection pixel   = selectRenderPassShader( RenderPassType::BloomDownsample, &downsample, assets );
+    const RenderPassShaderSelection compute = selectRenderPassComputeShader( downsample, assets );
+    SW_EXPECT_EQUAL( pixel._shaderPath, compute._shaderPath );
+    SW_EXPECT_TRUE( VectorUtil::contains( compute._listDefine, string( kPassComputeImplementationDefine ) ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( compute._listDefine, string( kPassBloomDownsampleDefine ) ) );
+    SW_EXPECT_FALSE( VectorUtil::contains( pixel._listDefine, string( kPassComputeImplementationDefine ) ) );
+
+    // 컴퓨트 구현이 없는 종류에 적으면 실행이 읽지 않는 칸이다.
+    RenderPipelineAsset asset;
+    const string        opaqueCompute = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _implementation=\"Compute\" " ) + RenderPipelineTestUtil::kOpaqueState;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( opaqueCompute ) ) );
 }

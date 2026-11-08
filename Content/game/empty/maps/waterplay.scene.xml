@@ -23,8 +23,6 @@
 					                  _heightMin="0"
 					                  _heightMax="40"
 					                  _detailTiling="0.25"
-					                  _cliffStart="0.7"
-					                  _cliffLayer="-1"
 					                  _chunkCells="32"
 					                  _lodDistance="48">
 						<_listLayer>

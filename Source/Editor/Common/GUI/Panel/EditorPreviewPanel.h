@@ -8,8 +8,6 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/GUI/Panel/EditorPreviewViewport.h"
-#include "Editor/Common/Workspace/EditorSelection.h"
-#include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 #include "Engine/Foundation/GameObjectHandle.h"
 
@@ -17,11 +15,14 @@ namespace sw
 {
     struct ObjectSnapshot;
 
+    class CommandStack;
     class GameObject;
 } // namespace sw
 
 namespace sw::editor
 {
+    class EditorSelection;
+
     /**
      * @class EditorPreviewPanel
      * @brief 문서 패널(`EditorDocumentPanel`)에 미리보기 씬 뷰포트와 창 범위의 선택, Undo 를 더한 기반 클래스입니다.
@@ -55,10 +56,10 @@ namespace sw::editor
         EditorPreviewViewport&       getPreviewViewport() { return _viewport; }
         const EditorPreviewViewport& getPreviewViewport() const { return _viewport; }
         /** @brief 창 범위 Undo 스택입니다. */
-        CommandStack& getPreviewCommandStack() { return _commandStack; }
+        CommandStack& getPreviewCommandStack() { return *_pCommandStack; }
         /** @brief 미리보기 씬과 창의 스택에 묶인 창 범위 선택입니다. 씬을 만들기 전에는 묶이지 않은 빈 선택입니다. */
-        EditorSelection&       getPreviewSelection() { return _selection; }
-        const EditorSelection& getPreviewSelection() const { return _selection; }
+        EditorSelection&       getPreviewSelection() { return *_pSelection; }
+        const EditorSelection& getPreviewSelection() const { return *_pSelection; }
 
         /**
          * @brief 미리보기 씬 오브젝트 @p obj 의 수정 전후 상태를 **창의 스택**에 남깁니다. 명령은 그 씬의 키를 기억하므로 활성 씬이 바뀌어도 이 씬에서 되돌린다.
@@ -96,7 +97,7 @@ namespace sw::editor
         /** @brief 그리기 앞부분에서 부릅니다. 처음이면 씬을 만들고, 창 포커스에 따라 초점 씬과 Undo 스택을 등록하거나 해제합니다. */
         void beginPreviewFrame();
         /** @brief 창 Undo 스택의 지금 길이까지를 "저장했거나 버린 편집"으로 삼습니다. 파생 창이 저장에 성공한 직후 부르며, 그 뒤의 편집만 다시 dirty 로 만듭니다. */
-        void acknowledgePreviewEdits() { _seenCommandCount = _commandStack.getCommandCount(); }
+        void acknowledgePreviewEdits();
         /** @brief 창 Undo 스택을 비우고 편집 기록을 처음으로 돌립니다. 파생 창이 문서를 다시 만들 때 부릅니다. */
         void resetPreviewEdits();
         /**
@@ -135,16 +136,16 @@ namespace sw::editor
         void onPanelClosed() override { applyWindowFocus( false ); }
 
     private:
-        EditorPreviewViewport _viewport;
-        CommandStack          _commandStack;
-        EditorSelection       _selection;
-        uint8                 _bFocusApplied  : 1; ///< 이 창이 초점 씬과 스택을 등록해 두었다
-        uint8                 _bPreviewPaused : 1; ///< 재생 막대의 멈춤
-        uint8                 _bFloorShown    : 1; ///< 바닥을 보인다
-        uint8                 _bAxesShown     : 1; ///< 축 방향 표시를 그린다
-        size_t                _seenCommandCount;   ///< 지난 그리기의 창 Undo 스택 길이. 달라지면 문서를 고친 것이다
-        float2                _previewBarSize;     ///< 앞 프레임 재생 막대 크기
-        uint32                _speedIndex;         ///< 재생 속도 칸(`kArrPreviewSpeed` 의 번호)
-        uint32                _stepFramesLeft;     ///< 멈춘 채 한 프레임 나아가기 — 남은 프레임만큼 속도로 돈다
+        EditorPreviewViewport       _viewport;
+        unique_ptr<CommandStack>    _pCommandStack; ///< 작업 공간 형식이라 GUI 헤더는 앞 선언만 본다(View 가 Workspace 헤더에 닿지 않게)
+        unique_ptr<EditorSelection> _pSelection;
+        uint8                       _bFocusApplied  : 1; ///< 이 창이 초점 씬과 스택을 등록해 두었다
+        uint8                       _bPreviewPaused : 1; ///< 재생 막대의 멈춤
+        uint8                       _bFloorShown    : 1; ///< 바닥을 보인다
+        uint8                       _bAxesShown     : 1; ///< 축 방향 표시를 그린다
+        size_t                      _seenCommandCount;   ///< 지난 그리기의 창 Undo 스택 길이. 달라지면 문서를 고친 것이다
+        float2                      _previewBarSize;     ///< 앞 프레임 재생 막대 크기
+        uint32                      _speedIndex;         ///< 재생 속도 칸(`kArrPreviewSpeed` 의 번호)
+        uint32                      _stepFramesLeft;     ///< 멈춘 채 한 프레임 나아가기 — 남은 프레임만큼 속도로 돈다
     };
 } // namespace sw::editor

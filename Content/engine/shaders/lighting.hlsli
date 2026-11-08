@@ -19,6 +19,8 @@
 
 // 씬 라이트 한 개(LightData)의 정의는 light_data.hlsli 하나다 — 컴퓨트(light_grid.hlsl)도 같은 파일을 쓴다. float4 로만 채운 이유는 그 파일 머리 주석.
 #include "light_data.hlsli"
+// 셰이딩 모델의 스칼라 식(GGX · 프레넬 · 시엔 …) 한 벌 — C++ 단위 테스트도 같은 파일을 읽는다(Engine/Graphics/Lighting/ShadingMath.h).
+#include "shading_math.hlsli"
 
 SW_DECLARE_STRUCTURED_BUFFER( LightData, g_SwLights, SW_SLOT_LIGHT_SRV );
 // 라이트 프로브의 SH9(프로브 하나가 float4 일곱 개). 볼륨 원소(SW_LIGHT_TYPE_PROBE_VOLUME)가 첫 프로브 번호를 싣는다 — 읽는 함수는 LightProbe::load 하나다.
@@ -29,6 +31,10 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwLightProbes, SW_SLOT_LIGHT_PROBE_SRV )
 struct Shadow
 {
     static float filterAtlas( float2 uv, float depth, float texelUv, bool bClamp, float2 clampMin, float2 clampMax );
+    static bool usesSoftFilter();
+    static float findBlockerDepth( float2 uv, float depth, float texelUv, float2 clampMin, float2 clampMax, float searchTexels, out bool outFound );
+    static float filterDisk( float2 uv, float depth, float texelUv, float2 clampMin, float2 clampMax, float radiusTexels );
+    static float linearizePerspectiveDepth( float ndcDepth, float nearPlane, float farPlane );
     static float4 loadCascade( uint cascadeIndex );
     static float sampleCascade( uint cascadeIndex, float3 worldPosition, float3 worldNormal, out bool outInside );
     static float sampleAtWorld( float3 worldPosition, float3 worldNormal );
@@ -75,6 +81,59 @@ static float Shadow::filterAtlas( float2 uv, float depth, float texelUv, bool bC
     return lit * ( 1.0f / 9.0f );
 }
 
+/** @brief 그림자 필터 품질이 PCSS 인지입니다(g_ShadowFilter.x — C++ ShadowFilter::getActiveMode). 0 이면 위의 3x3 PCF 그대로다. */
+static bool Shadow::usesSoftFilter()
+{
+    return g_ShadowFilter.x > 0.5f;
+}
+
+/**
+ * @brief PCSS 1 단계 — 반지름 @p searchTexels 안에서 받는 점보다 빛에 가까운 깊이(가리개)의 평균 NDC 깊이를 찾습니다. 탭은 4x4 격자이고 원본 깊이를 텍셀 그대로 읽는다(비교 샘플러가 아니다).
+ * @param outFound 가리개가 하나도 없으면 false — 그 점은 다 빛을 받으므로 필터를 건너뛴다.
+ */
+static float Shadow::findBlockerDepth( float2 uv, float depth, float texelUv, float2 clampMin, float2 clampMax, float searchTexels, out bool outFound )
+{
+    float blockerSum   = 0.0f;
+    float blockerCount = 0.0f;
+    SW_UNROLL for ( int offsetY = 0; offsetY < 4; ++offsetY )
+    {
+        SW_UNROLL for ( int offsetX = 0; offsetX < 4; ++offsetX )
+        {
+            const float2 offset = ( float2( offsetX, offsetY ) - 1.5f ) * ( searchTexels / 1.5f );
+            const float2 tapUv  = clamp( uv + offset * texelUv, clampMin, clampMax );
+            const float  stored = Bindless::loadEngineTexel( g_ShadowMapIndex, SW_EMU_SLOT_ShadowMap, int2( tapUv / texelUv ) ).r;
+            if ( stored < depth )
+            {
+                blockerSum += stored;
+                blockerCount += 1.0f;
+            }
+        }
+    }
+    outFound = g_ShadowMapIndex != kInvalidIndex && blockerCount > 0.0f;
+    return outFound ? blockerSum / blockerCount : depth;
+}
+
+/** @brief PCSS 2 단계 — 반지름 @p radiusTexels 의 4x4 격자 비교 탭(탭 하나가 2x2 쌍선형 비교)입니다. 탭은 칸 사각형 안으로 자른다. */
+static float Shadow::filterDisk( float2 uv, float depth, float texelUv, float2 clampMin, float2 clampMax, float radiusTexels )
+{
+    float lit = 0.0f;
+    SW_UNROLL for ( int offsetY = 0; offsetY < 4; ++offsetY )
+    {
+        SW_UNROLL for ( int offsetX = 0; offsetX < 4; ++offsetX )
+        {
+            const float2 offset = ( float2( offsetX, offsetY ) - 1.5f ) * ( radiusTexels / 1.5f );
+            lit += Bindless::sampleShadowComparison( g_ShadowMapIndex, clamp( uv + offset * texelUv, clampMin, clampMax ), depth );
+        }
+    }
+    return lit * ( 1.0f / 16.0f );
+}
+
+/** @brief 원근 그림자의 NDC 깊이(D3D 0 ~ 1)를 시선 깊이(m)로 되돌린다 — C++ ShadowFilter::linearizePerspectiveDepth 와 같은 식이다. */
+static float Shadow::linearizePerspectiveDepth( float ndcDepth, float nearPlane, float farPlane )
+{
+    return nearPlane * farPlane / max( farPlane - ndcDepth * ( farPlane - nearPlane ), 1e-6f );
+}
+
 /** @brief 캐스케이드 c 의 상수(배율, 이동 x, 이동 y, 깊이 끝)입니다. */
 static float4 Shadow::loadCascade( uint cascadeIndex )
 {
@@ -107,7 +166,22 @@ static float Shadow::sampleCascade( uint cascadeIndex, float3 worldPosition, flo
     const bool   bClamp   = tileScale < 1.0f;
     const float2 clampMin = tileOrigin + 0.5f * texelUv;
     const float2 clampMax = tileOrigin + tileScale - 0.5f * texelUv;
-    const float  lit      = outInside ? Shadow::filterAtlas( uv, ndc.z - g_ShadowParams.x / scale, texelUv, bClamp, clampMin, clampMax ) : 1.0f;
+    const float  depth    = ndc.z - g_ShadowParams.x / scale;
+    float        lit      = 1.0f;
+    if ( outInside && Shadow::usesSoftFilter() )
+    {
+        // PCSS — 반그림자 폭은 NDC 깊이 차 × g_ShadowFilter.y(기준 볼륨 텍셀) × 캐스케이드 배율이다(C++ ShadowFilter::computeDirectionalKernelRadius 와 같은 식).
+        // 가리개 찾기 반지름은 이 점이 가질 수 있는 가장 넓은 반그림자(가리개가 깊이 0)다.
+        const float searchTexels = clamp( 0.5f * depth * g_ShadowFilter.y * scale, g_ShadowFilter.w, g_ShadowFilter.z );
+        bool        bBlocked     = false;
+        const float blocker      = Shadow::findBlockerDepth( uv, depth, texelUv, clampMin, clampMax, searchTexels, bBlocked );
+        const float radius       = clamp( 0.5f * max( depth - blocker, 0.0f ) * g_ShadowFilter.y * scale, g_ShadowFilter.w, g_ShadowFilter.z );
+        lit                      = bBlocked ? Shadow::filterDisk( uv, depth, texelUv, clampMin, clampMax, radius ) : 1.0f;
+    }
+    else if ( outInside )
+    {
+        lit = Shadow::filterAtlas( uv, depth, texelUv, bClamp, clampMin, clampMax );
+    }
     // 세기는 g_ShadowParams.y — 완전한 검정이 아니라 "얼마나 어두워지는가" 다.
     return lerp( 1.0f - g_ShadowParams.y, 1.0f, saturate( lit ) );
 }
@@ -122,6 +196,7 @@ static float Shadow::sampleCascade( uint cascadeIndex, float3 worldPosition, flo
  *
  *          캐스케이드는 카메라 뷰 깊이(`g_ViewProj` 의 클립 w — 원근에서 뷰 z, 직교에서 1)로 고른다. 끝에서 `g_ShadowCascadeLayout.z` 만큼은
  *          다음 캐스케이드와 섞어 경계가 줄로 보이지 않게 한다(유니티 URP Cascade Blend). 고른 캐스케이드 볼륨 밖이면 다음 캐스케이드를 읽는다.
+ *          그림자 거리 끝은 `g_ShadowCascadeLayout.w` 부터 옅어진다(빛의 Distance Fade, 기본 0 — 칼로 자른 끝).
  * @note 맵 밖은 1(가려지지 않음)이다. 0 으로 두면 그림자 볼륨 밖이 통째로 검게 죽는다. early-return 이 없다(GL 드라이버 함정, binding.hlsli MorphPool::computeElement).
  */
 static float Shadow::sampleAtWorld( float3 worldPosition, float3 worldNormal )
@@ -154,6 +229,11 @@ static float Shadow::sampleAtWorld( float3 worldPosition, float3 worldNormal )
                 const float second      = Shadow::sampleCascade( nextIndex, worldPosition, worldNormal, bNextInside );
                 result                  = ( bInside == false ) ? second : lerp( first, second, bNextInside ? blend : 0.0f );
             }
+            // 그림자 거리 끝 — g_ShadowCascadeLayout.w 에서 마지막 캐스케이드 끝까지 1 로 옅어진다(언리얼 ShadowDistanceFadeoutFraction). 1e30 이면 옅어지지 않는다.
+            const float fadeStart = g_ShadowCascadeLayout.w;
+            const float shadowEnd = Shadow::loadCascade( cascadeCount - 1u ).w;
+            const float fade      = saturate( ( viewDepth - fadeStart ) / max( shadowEnd - fadeStart, 1e-4f ) );
+            result                = lerp( result, 1.0f, fade );
         }
     }
     return result;
@@ -193,7 +273,25 @@ float LightData::sampleLocalShadow( float3 worldPosition, float3 worldNormal )
     const float2 uv             = ndc.xy * float2( 0.5f, -0.5f ) + 0.5f;
     const bool   bInside        = lightClip.w > 0.0f && ndc.z >= 0.0f && ndc.z <= 1.0f && uv.x >= info._positionRadius.x && uv.x <= info._positionRadius.z &&
                          uv.y >= info._positionRadius.y && uv.y <= info._positionRadius.w;
-    const float lit = bInside ? Shadow::filterAtlas( uv, ndc.z, info._colorIntensity.z, true, info._positionRadius.xy, info._positionRadius.zw ) : 1.0f;
+    const float texelUv = info._colorIntensity.z;
+    float       lit     = 1.0f;
+    if ( bInside && Shadow::usesSoftFilter() )
+    {
+        // PCSS — info._directionType 은 (가까운 면, 먼 면, 거리 1 m 의 텍셀 길이, 원천 반지름)이다(C++ FrameShadowData::populateLocalShadows).
+        // 반그림자 반지름(텍셀) = 원천 반지름 × (받는 깊이 − 가리개 깊이) / 가리개 깊이 ÷ (텍셀 길이 × 받는 깊이) — C++ ShadowFilter::computeLocalKernelRadius 와 같은 식.
+        const float4 soft          = info._directionType;
+        const float  receiverDepth = Shadow::linearizePerspectiveDepth( ndc.z, soft.x, soft.y );
+        bool         bBlocked      = false;
+        const float  blockerNdc    = Shadow::findBlockerDepth( uv, ndc.z, texelUv, info._positionRadius.xy, info._positionRadius.zw, g_ShadowFilter.z, bBlocked );
+        const float  blockerDepth  = max( Shadow::linearizePerspectiveDepth( blockerNdc, soft.x, soft.y ), 1e-4f );
+        const float  penumbra      = soft.w * max( receiverDepth - blockerDepth, 0.0f ) / blockerDepth / max( soft.z * receiverDepth, 1e-6f );
+        const float  radius        = clamp( penumbra, g_ShadowFilter.w, g_ShadowFilter.z );
+        lit                        = bBlocked ? Shadow::filterDisk( uv, ndc.z, texelUv, info._positionRadius.xy, info._positionRadius.zw, radius ) : 1.0f;
+    }
+    else if ( bInside )
+    {
+        lit = Shadow::filterAtlas( uv, ndc.z, texelUv, true, info._positionRadius.xy, info._positionRadius.zw );
+    }
     return lerp( 1.0f - info._colorIntensity.w, 1.0f, saturate( lit ) );
 }
 
@@ -207,6 +305,21 @@ float LightData::computeShadow( float3 worldPosition, float3 worldNormal, float 
     float      shadow    = 1.0f;
     if ( _params.x > 0.5f )
         shadow = ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? directionalShadow : sampleLocalShadow( worldPosition, worldNormal );
+    // 접촉 그림자 — 채널(_extra.z = 채널 + 1, C++ FrameShadowData::populateContactShadows)을 받은 3D 빛만 그 마스크 채널을 읽는다. 화면 자리는 월드 점을 투영해 구한다
+    // (포워드 · 디퍼드가 같은 식). 패스가 마스크를 걸지 않았으면 1 이다. 방향광은 그림자 맵과 같은 세기(g_ShadowParams.y)로 어두워진다. 2D 빛의 _extra.z 는 다른 뜻이라 보지 않는다.
+    const uint channel  = (uint)( _extra.z + 0.5f );
+    const bool b3DLight = lightType == SW_LIGHT_TYPE_DIRECTIONAL || lightType == SW_LIGHT_TYPE_POINT || lightType == SW_LIGHT_TYPE_SPOT;
+    if ( b3DLight && channel > 0u )
+    {
+        const float4 clip     = mul( float4( worldPosition, 1.0f ), g_ViewProj );
+        const float2 screenUv = clip.xy / max( clip.w, 1e-4f ) * float2( 0.5f, -0.5f ) + 0.5f;
+        const float4 mask     = PassTexture::sampleContactShadow( screenUv );
+        const float  contact  = ( channel == 1u ) ? mask.x : ( channel == 2u ) ? mask.y
+                                                       : ( channel == 3u )     ? mask.z
+                                                                               : mask.w;
+        const float  strength = ( lightType == SW_LIGHT_TYPE_DIRECTIONAL ) ? g_ShadowParams.y : 1.0f;
+        shadow                = min( shadow, lerp( 1.0f - strength, 1.0f, contact ) );
+    }
     return shadow;
 }
 
@@ -302,8 +415,9 @@ static float3 LightProbe::evaluateSphericalHarmonics( uint probeIndex, float3 no
  * @brief 프로브 볼륨 원소 하나(binding_slots.hlsli 8 절의 SW_LIGHT_TYPE_PROBE_VOLUME 배치)에서 이 위치의 간접광을 구합니다.
  * @return rgb = 조도 / π(이웃 프로브 여덟의 삼선형 보간), a = 가중치 — 상자 안이면 1, 밖이면 0 이다. 상자 밖을 가장 가까운 프로브로 자르지 않는다
  *         (IndirectLighting.md P3 계약 — 볼륨이 없는 곳은 볼륨의 빛을 받지 않는다). 프로브 버퍼가 안 걸렸으면 0 이다.
+ * @param outSkyVisibility 반사 앰비언트에 곱할 하늘 보임 — lerp( 1, 프로브 하늘 보임(원소 6 의 w), 볼륨의 하늘 가림 세기 colorIntensity.w ). 세기가 0(베이크 · 기본)이거나 상자 밖이면 1 이다.
  */
-float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal )
+float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal, out float outSkyVisibility )
 {
     const float3 origin    = _colorIntensity.xyz;
     const float3 spacing   = max( _directionType.xyz, 1e-4f );
@@ -312,26 +426,31 @@ float4 LightData::sampleProbeVolume( float3 worldPosition, float3 normal )
     const float3 lastCell  = float3( max( count, 1u ) - 1u );
     const float3 local     = ( worldPosition - origin ) / spacing;
     // 프로브가 하나뿐인 축은 그 축의 두께가 0 이다 — 간격 반 안을 안으로 본다.
-    const float3 multiAxis  = float3( count > 1u ); // 1 이면 그 축에 프로브가 둘 이상
-    const float3 lowBound   = multiAxis * 0.5f - 0.5f;
-    const float3 highBound  = lerp( float3( 0.5f, 0.5f, 0.5f ), lastCell, multiAxis );
-    const bool   bInside    = all( local >= lowBound ) && all( local <= highBound ) && g_SwLightProbesIndex != kInvalidIndex;
-    const float3 clamped    = clamp( local, 0.0f, lastCell );
-    const uint3  cell       = min( uint3( clamped ), uint3( max( lastCell - 1.0f, 0.0f ) ) );
-    const float3 blend      = saturate( clamped - float3( cell ) ) * multiAxis;
-    const uint3  nextOffset = uint3( count > 1u );
-    float3       result     = float3( 0.0f, 0.0f, 0.0f );
+    const float3 multiAxis     = float3( count > 1u ); // 1 이면 그 축에 프로브가 둘 이상
+    const float3 lowBound      = multiAxis * 0.5f - 0.5f;
+    const float3 highBound     = lerp( float3( 0.5f, 0.5f, 0.5f ), lastCell, multiAxis );
+    const bool   bInside       = all( local >= lowBound ) && all( local <= highBound ) && g_SwLightProbesIndex != kInvalidIndex;
+    const float3 clamped       = clamp( local, 0.0f, lastCell );
+    const uint3  cell          = min( uint3( clamped ), uint3( max( lastCell - 1.0f, 0.0f ) ) );
+    const float3 blend         = saturate( clamped - float3( cell ) ) * multiAxis;
+    const uint3  nextOffset    = uint3( count > 1u );
+    const float  skyOcclusion  = saturate( _colorIntensity.w );
+    float3       result        = float3( 0.0f, 0.0f, 0.0f );
+    float        skyVisibility = 0.0f;
     if ( bInside )
     {
         SW_UNROLL for ( uint corner = 0u; corner < 8u; ++corner )
         {
-            const uint3  pick       = uint3( corner & 1u, ( corner >> 1u ) & 1u, ( corner >> 2u ) & 1u );
-            const uint3  probeCell  = cell + pick * nextOffset;
-            const float3 axisWeight = lerp( 1.0f - blend, blend, float3( pick ) );
-            const uint   probeIndex = probeBase + ( probeCell.z * count.y + probeCell.y ) * count.x + probeCell.x;
-            result += LightProbe::evaluateSphericalHarmonics( probeIndex, normal ) * ( axisWeight.x * axisWeight.y * axisWeight.z );
+            const uint3  pick         = uint3( corner & 1u, ( corner >> 1u ) & 1u, ( corner >> 2u ) & 1u );
+            const uint3  probeCell    = cell + pick * nextOffset;
+            const float3 axisWeight   = lerp( 1.0f - blend, blend, float3( pick ) );
+            const uint   probeIndex   = probeBase + ( probeCell.z * count.y + probeCell.y ) * count.x + probeCell.x;
+            const float  cornerWeight = axisWeight.x * axisWeight.y * axisWeight.z;
+            result += LightProbe::evaluateSphericalHarmonics( probeIndex, normal ) * cornerWeight;
+            skyVisibility += LightProbe::load( probeIndex, 6u ).w * cornerWeight;
         }
     }
+    outSkyVisibility = bInside ? lerp( 1.0f, saturate( skyVisibility ), skyOcclusion ) : 1.0f;
     return float4( result, bInside ? 1.0f : 0.0f );
 }
 
@@ -527,16 +646,10 @@ float3 SurfacePBR::evaluateSpecular( float3 normal, float3 toView, float3 toLigh
     const float3 halfway       = normalize( toView + toLight );
     const float  normalDotHalf = saturate( dot( normal, halfway ) );
     const float  viewDotHalf   = saturate( dot( toView, halfway ) );
-    const float  alphaSquared  = _alpha * _alpha;
-    const float  denominator   = normalDotHalf * normalDotHalf * ( alphaSquared - 1.0f ) + 1.0f;
-    // D · π — 분포의 1/π 와 엔진 단위의 π 가 지워진다.
-    const float  distributionTimesPi = alphaSquared / max( denominator * denominator, 1e-8f );
-    const float  visibility          = 0.5f / max( normalDotLight * ( normalDotView * ( 1.0f - _alpha ) + _alpha ) +
-                                                       normalDotView * ( normalDotLight * ( 1.0f - _alpha ) + _alpha ),
-                                                   1e-5f );
-    const float  oneMinusViewDotHalf = 1.0f - viewDotHalf;
-    const float  fresnelSquared      = oneMinusViewDotHalf * oneMinusViewDotHalf;
-    const float  fresnelWeight       = fresnelSquared * fresnelSquared * oneMinusViewDotHalf; // pow 는 DXC 가 log · exp 로 낸다
+    // D · π — 분포의 1/π 와 엔진 단위의 π 가 지워진다. 식은 shading_math.hlsli 한 벌이다(셰이딩 모델의 다른 엽도 같은 식을 부른다).
+    const float  distributionTimesPi = ShadingMath::computeDistributionGGXTimesPi( normalDotHalf, _alpha );
+    const float  visibility          = ShadingMath::computeVisibilitySmithGGX( normalDotLight, normalDotView, _alpha );
+    const float  fresnelWeight       = ShadingMath::computeSchlickWeight( viewDotHalf );
     const float3 fresnel             = _specularColor + ( 1.0f - _specularColor ) * fresnelWeight;
     return distributionTimesPi * visibility * fresnel * normalDotLight;
 }
@@ -567,32 +680,89 @@ static float3 Lighting::computeRimLight( float3 normal )
     return rim * g_KeyLightColor.rgb;
 }
 
+// ------------------------------------------------------------------------------
+// 표면 BRDF — 빛 하나의 응답과 앰비언트 · 반사 프로브의 가중을 내는 형식. 빛을 도는 고리(SurfaceBRDF::shadeLights)는 아래 한 벌이고,
+// 셰이딩 모델(SW_SHADING_MODEL_LAYERED — shading_model.hlsli)은 같은 이름 · 같은 멤버의 형식을 대신 둔다(코트 · 시엔 · 피부 · 비등방 · 박막 · 머리결 · 투과 엽).
+// 언리얼이 셰이딩 모델마다 BxDF 를 고르고 빛 고리는 하나인 것과 같은 자리다(기억에 의존한 비교). 기본은 금속도 · 거칠기 PBR 그대로다.
+// ------------------------------------------------------------------------------
+#if defined( SW_SHADING_MODEL_LAYERED )
+    #include "shading_model.hlsli"
+#else
+/** @brief 기본 표면 BRDF — 금속도 · 거칠기 PBR(SurfacePBR). */
+struct SurfaceBRDF
+{
+    SurfacePBR _pbr;
+    float3     _normal; ///< 월드 노멀(정규화)
+    float3     _toView;
+    float      _normalDotView;
+    float      _occlusion; ///< 머티리얼 가림 — 앰비언트 · 프로브 빛에만 곱한다(직접광은 그림자가 가린다). 기본 1
+
+    static SurfaceBRDF makePBR( float3 albedo, float3 worldPosition, float3 normal, float roughness, float metallic );
+    bool receivesLight( float normalDotLight );                   // 이 N·L(자르지 않은 값)의 빛이 응답을 내는지
+    float3 evaluateLight( float3 toLight, float normalDotLight ); // 빛 하나의 응답(빛 색 · 감쇠 · 그림자를 곱하기 전)
+    float3 getAmbientDiffuseColor();                              // 앰비언트 · 라이트 프로브가 곱하는 확산색
+    float3 computeEnvironmentSpecular();                          // 앰비언트 · 반사 프로브가 곱하는 반사 비율
+    float getReflectionRoughness();                               // 반사 프로브 단계를 고르는 거칠기
+    float3 shadeLights( float3 worldPosition, float shadow );     // 모든 빛 — 아래 한 벌
+};
+
+static SurfaceBRDF SurfaceBRDF::makePBR( float3 albedo, float3 worldPosition, float3 normal, float roughness, float metallic )
+{
+    SurfaceBRDF brdf;
+    brdf._pbr           = SurfacePBR::make( albedo, roughness, metallic );
+    brdf._normal        = normal;
+    brdf._toView        = View::computeToView( worldPosition );
+    brdf._normalDotView = max( saturate( dot( normal, brdf._toView ) ), 1e-4f );
+    brdf._occlusion     = 1.0f;
+    return brdf;
+}
+
+bool SurfaceBRDF::receivesLight( float normalDotLight )
+{
+    return normalDotLight > 0.0f;
+}
+
+float3 SurfaceBRDF::evaluateLight( float3 toLight, float normalDotLight )
+{
+    const float clampedNormalDotLight = saturate( normalDotLight );
+    return _pbr._diffuseColor * clampedNormalDotLight + _pbr.evaluateSpecular( _normal, _toView, toLight, clampedNormalDotLight, _normalDotView );
+}
+
+float3 SurfaceBRDF::getAmbientDiffuseColor()
+{
+    return _pbr._diffuseColor;
+}
+
+float3 SurfaceBRDF::computeEnvironmentSpecular()
+{
+    return _pbr.computeEnvironmentSpecular( _normalDotView );
+}
+
+float SurfaceBRDF::getReflectionRoughness()
+{
+    return _pbr._roughness;
+}
+#endif
+
 /**
- * @brief 이 표면을 이 위치를 비추는 **모든 라이트**로 셰이딩합니다(금속도 · 거칠기 PBR).
- * @param albedo   기본 색(언리얼 BaseColor) — 금속도가 확산색과 F0 로 나눈다
- * @param worldPosition 월드 위치 — 점광의 거리 감쇠와 시선 방향에 쓴다
- * @param normal   월드 노멀 (정규화되어 있어야 한다)
- * @param shadow   `Shadow::sampleAtWorld` 가 준 방향광 값 — `params.x` 가 켜진 방향광에만 곱한다(점광 · 스폿은 `LightData::computeShadow` 가 자기 타일을 읽는다)
- * @param roughness · metallic 머티리얼 칸(포워드) 또는 G버퍼 머티리얼 칸(디퍼드)의 값. 기본값을 두지 않는다 — 셰이더마다 자기 값을 넘긴다
+ * @brief 이 표면을 이 위치를 비추는 **모든 라이트**로 셰이딩합니다. 빛 하나의 응답은 표면 BRDF(기본 PBR 또는 셰이딩 모델)가 낸다.
+ * @param shadow `Shadow::sampleAtWorld` 가 준 방향광 값 — `params.x` 가 켜진 방향광에만 곱한다(점광 · 스폿은 `LightData::computeShadow` 가 자기 타일을 읽는다)
  * @details 3D 라이트가 하나도 없으면 앰비언트만 남습니다. 키 라이트로 대신 비추지 않습니다. 3D 씬은 방향광이나 스카이를 데이터로 가집니다(결정 기록 5-12 D2-13).
  *          이 위치를 덮는 라이트 프로브 볼륨(커서가 도는 SW_LIGHT_TYPE_PROBE_VOLUME 원소)이 있으면 확산 앰비언트 대신 그 볼륨들의 SH 를 가중 평균해 쓴다
  *          (IndirectLighting.md P3). 볼륨이 없는 곳은 지금까지의 앰비언트 그대로다. 이 위치를 덮는 반사 프로브(SW_LIGHT_TYPE_REFLECTION_PROBE 원소)가 있으면
  *          반사 앰비언트를 그 프로브가 찍어 거른 빛으로 바꾼다(P4 — 거칠기로 단계를 고르고 반사 방향으로 읽는다). 프로브가 없는 곳은 앰비언트 색 그대로다.
  */
-static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow, float roughness, float metallic )
+float3 SurfaceBRDF::shadeLights( float3 worldPosition, float shadow )
 {
-    // 보기 모드 LightingOnly 는 포워드 셰이더의 표면 색을 회색으로 바꾼다(ViewMode::overrideLightingAlbedo — binding.hlsli).
-    albedo                         = ViewMode::overrideLightingAlbedo( albedo );
-    const SurfacePBR surface       = SurfacePBR::make( albedo, roughness, metallic );
-    const float3     toView        = View::computeToView( worldPosition );
-    const float      normalDotView = max( saturate( dot( normal, toView ) ), 1e-4f );
     // 앰비언트는 빛 목록과 무관하게 **한 번만** 더한다 — 라이트마다 더하면 빛을 늘릴수록 화면이 바랜다.
     const float3 ambient             = g_KeyLightColor.rgb * g_KeyLightColor.a;
-    const float3 environmentSpecular = surface.computeEnvironmentSpecular( normalDotView );
-    const float3 reflectDirection    = reflect( -toView, normal );
-    float3       lit                 = ( surface._diffuseColor + environmentSpecular ) * ambient;
+    const float3 diffuseColor        = getAmbientDiffuseColor();
+    const float3 environmentSpecular = computeEnvironmentSpecular();
+    const float3 reflectDirection    = reflect( -_toView, _normal );
+    float3       lit                 = ( diffuseColor + environmentSpecular ) * ambient * _occlusion;
     float3       probeSum            = float3( 0.0f, 0.0f, 0.0f );
     float        probeWeight         = 0.0f;
+    float        skyVisibilitySum    = 0.0f;
     float3       reflectionSum       = float3( 0.0f, 0.0f, 0.0f );
     float        reflectionWeight    = 0.0f;
 
@@ -603,14 +773,16 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
         const uint lightType = (uint)( light._directionType.w + 0.5f );
         if ( lightType == SW_LIGHT_TYPE_PROBE_VOLUME )
         {
-            const float4 probe = light.sampleProbeVolume( worldPosition, normal );
+            float        probeSkyVisibility;
+            const float4 probe = light.sampleProbeVolume( worldPosition, _normal, probeSkyVisibility );
             probeSum += probe.rgb * probe.a;
             probeWeight += probe.a;
+            skyVisibilitySum += probeSkyVisibility * probe.a;
             continue;
         }
         if ( lightType == SW_LIGHT_TYPE_REFLECTION_PROBE )
         {
-            const float4 reflection = light.sampleReflectionProbe( worldPosition, reflectDirection, surface._roughness );
+            const float4 reflection = light.sampleReflectionProbe( worldPosition, reflectDirection, getReflectionRoughness() );
             reflectionSum += reflection.rgb * reflection.a;
             reflectionWeight += reflection.a;
             continue;
@@ -620,25 +792,48 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
         if ( light.computeIncidence( worldPosition, toLight, attenuation ) == false )
             continue;
 
-        const float normalDotLight = saturate( dot( normal, toLight ) );
-        if ( normalDotLight * attenuation <= 0.0f )
+        // 기본 PBR 은 N·L > 0 만 받는다. 감싼 확산 · 투과 엽은 뒤에서 오는 빛도 받는다(receivesLight).
+        const float normalDotLight = dot( _normal, toLight );
+        if ( receivesLight( normalDotLight ) == false || attenuation <= 0.0f )
             continue;
 
-        const float  shadowTerm = light.computeShadow( worldPosition, normal, shadow );
-        const float3 response   = surface._diffuseColor * normalDotLight + surface.evaluateSpecular( normal, toView, toLight, normalDotLight, normalDotView );
-        lit += response * attenuation * light._colorIntensity.a * light._colorIntensity.rgb * shadowTerm;
+        const float shadowTerm = light.computeShadow( worldPosition, _normal, shadow );
+        lit += evaluateLight( toLight, normalDotLight ) * attenuation * light._colorIntensity.a * light._colorIntensity.rgb * shadowTerm;
     }
     // 볼륨이 덮는 곳은 확산 앰비언트를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.
+    // 하늘 가림(실시간 볼륨의 세기)은 반사 앰비언트만 가린다 — 확산은 프로브 SH 가 이미 복셀로 가렸다. 세기 0 이면 하늘 보임 1 이라 이전 그림과 같다.
+    const float skyVisibility = probeWeight > 0.0f ? skyVisibilitySum / probeWeight : 1.0f;
     if ( probeWeight > 0.0f )
-        lit += surface._diffuseColor * ( probeSum / probeWeight - ambient );
+    {
+        lit += diffuseColor * ( probeSum / probeWeight - ambient ) * _occlusion;
+        lit -= environmentSpecular * ambient * ( 1.0f - skyVisibility ) * _occlusion;
+    }
     // 반사 프로브가 덮는 곳은 반사 앰비언트를 프로브의 빛으로 바꾼다(IndirectLighting.md P4). 겹친 프로브는 가중 평균이고, 가중치 합이 1 보다 작은 경계는
     // 모자란 몫을 앰비언트로 채워 상자 밖과 이어진다. 덮지 않으면 아무 연산도 더하지 않는다.
     if ( reflectionWeight > 0.0f )
     {
-        const float3 environment = ( reflectionSum + ambient * max( 1.0f - reflectionWeight, 0.0f ) ) / max( reflectionWeight, 1.0f );
-        lit += environmentSpecular * ( environment - ambient );
+        const float3 occludedAmbient = ambient * skyVisibility;
+        const float3 environment     = ( reflectionSum + occludedAmbient * max( 1.0f - reflectionWeight, 0.0f ) ) / max( reflectionWeight, 1.0f );
+        lit += environmentSpecular * ( environment - occludedAmbient ) * _occlusion;
     }
     return lit;
+}
+
+/**
+ * @brief 이 표면을 이 위치를 비추는 **모든 라이트**로 셰이딩합니다(금속도 · 거칠기 PBR).
+ * @param albedo   기본 색(언리얼 BaseColor) — 금속도가 확산색과 F0 로 나눈다
+ * @param worldPosition 월드 위치 — 점광의 거리 감쇠와 시선 방향에 쓴다
+ * @param normal   월드 노멀 (정규화되어 있어야 한다)
+ * @param shadow   `Shadow::sampleAtWorld` 가 준 방향광 값
+ * @param roughness · metallic 머티리얼 칸(포워드) 또는 G버퍼 머티리얼 칸(디퍼드)의 값. 기본값을 두지 않는다 — 셰이더마다 자기 값을 넘긴다
+ * @details 셰이딩 모델 셰이더(SW_SHADING_MODEL_LAYERED)에서 불러도 엽이 모두 꺼진 PBR 이다(makePBR).
+ */
+static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3 normal, float shadow, float roughness, float metallic )
+{
+    // 보기 모드 LightingOnly 는 포워드 셰이더의 표면 색을 회색으로 바꾼다(ViewMode::overrideLightingAlbedo — binding.hlsli).
+    albedo                 = ViewMode::overrideLightingAlbedo( albedo );
+    const SurfaceBRDF brdf = SurfaceBRDF::makePBR( albedo, worldPosition, normal, roughness, metallic );
+    return brdf.shadeLights( worldPosition, shadow );
 }
 
 #endif // SW_ENGINE_LIGHTING_HLSLI

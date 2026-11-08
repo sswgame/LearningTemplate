@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerExpedition.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -20,7 +21,7 @@ namespace sw
     {
         uint32 makeDaySeed( uint32 seed, int32 dayIndex, uint32 salt )
         {
-            return GameHash::hashCoord( dayIndex, static_cast<int32>( salt ), seed );
+            return HashUtil::hashCoord( dayIndex, static_cast<int32>( salt ), seed );
         }
     } // namespace
 } // namespace sw

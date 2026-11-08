@@ -20,6 +20,7 @@
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneManager.h"
 #include "Engine/Visual/Component/DirectionalLightComponent.h"
 #include "Engine/Visual/Component/MeshComponent.h"
 

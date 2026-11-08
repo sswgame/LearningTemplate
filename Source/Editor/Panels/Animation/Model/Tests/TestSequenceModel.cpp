@@ -637,3 +637,181 @@ SW_TEST_CASE( SequenceModelTest, LensFieldOfViewShowsDegrees )
     SW_EXPECT_TRUE( SequenceModel::setChannelDisplayValue( lens, 0, 0.0f, 45.0f ) );
     SW_EXPECT_NEAR( MathUtil::toRadian( 45.0f ), lens.evaluateChannel( 0, 0.0f ).value(), 1e-4f );
 }
+
+// 트랙 재정렬: 고른 트랙 · 커브 편집기 · 고른 키가 옮긴 뒤에도 같은 트랙을 가리킨다.
+SW_TEST_CASE( SequenceModelTest, MoveTrackKeepsSelectionOnTheSameTrack )
+{
+    SequenceModel document = SequenceModelTestUtil::makeDocument();
+    SW_REQUIRE_TRUE( document.addTrack( SequenceTrackKind::Transform ) );
+    SW_REQUIRE_TRUE( document.addTrack( SequenceTrackKind::Property ) );
+    SW_REQUIRE_TRUE( document.addTrack( SequenceTrackKind::CameraLens ) );
+    document._selectedTrack = 2;
+    document._curveTrack    = 0;
+    document.selectKey( 1, 5.0f, false );
+
+    SW_EXPECT_TRUE( document.moveTrack( 2, 0 ) );
+    SW_EXPECT_TRUE( document._asset._listTrack[0]._kind == SequenceTrackKind::CameraLens );
+    SW_EXPECT_TRUE( document._asset._listTrack[1]._kind == SequenceTrackKind::Transform );
+    SW_EXPECT_EQUAL( 0, document._selectedTrack );
+    SW_EXPECT_EQUAL( 1, document._curveTrack );
+    SW_EXPECT_TRUE( document.isKeySelected( 2, 5.0f ) );
+
+    SW_EXPECT_TRUE( document.moveTrack( 0, 2 ) );
+    SW_EXPECT_TRUE( document._asset._listTrack[2]._kind == SequenceTrackKind::CameraLens );
+    SW_EXPECT_EQUAL( 2, document._selectedTrack );
+    SW_EXPECT_FALSE( document.moveTrack( 1, 1 ) );
+    SW_EXPECT_FALSE( document.moveTrack( 0, 3 ) );
+}
+
+// 키 복사 · 붙여넣기: 여러 트랙의 키를 맨 위 트랙 · 맨 앞 프레임 기준 거리로 붙이고, 채널 수가 다른 트랙에는 붙이지 않는다.
+SW_TEST_CASE( SequenceModelTest, PasteKeysKeepsTrackAndFrameOffsets )
+{
+    SequenceModel document    = SequenceModelTestUtil::makeDocument();
+    document._asset._frameMax = 100;
+    SW_REQUIRE_TRUE( document.addTrack( SequenceTrackKind::Property ) );
+    SW_REQUIRE_TRUE( document.addTrack( SequenceTrackKind::Property ) );
+    SW_REQUIRE_TRUE( document.addTrack( SequenceTrackKind::Transform ) );
+    (void)document._asset._listTrack[0].setChannelKey( 0, 10.0f, 1.0f );
+    (void)document._asset._listTrack[1].setChannelKey( 0, 14.0f, 2.0f );
+    document.selectKey( 0, 10.0f, false );
+    document.selectKey( 1, 14.0f, true );
+    SW_REQUIRE_EQUAL( 2u, document.copySelectedKeys() );
+    SW_EXPECT_TRUE( document.hasCopiedKeys() );
+
+    document._selectedTrack = 0;
+    SW_EXPECT_EQUAL( 2u, document.pasteKeys( 50 ) );
+    SW_EXPECT_NEAR( 1.0f, document._asset._listTrack[0].evaluateChannel( 0, 50.0f ).value(), 1e-5f );
+    SW_EXPECT_NEAR( 2.0f, document._asset._listTrack[1].evaluateChannel( 0, 54.0f ).value(), 1e-5f );
+    SW_EXPECT_EQUAL( size_t{ 2 }, document.getSelectedKeys().size() );
+
+    // 둘째 키는 트랜스폼 트랙(채널 9)으로 가므로 건너뛴다. 타임라인 밖도 건너뛴다.
+    document._selectedTrack = 1;
+    SW_EXPECT_EQUAL( 1u, document.pasteKeys( 20 ) );
+    SW_EXPECT_TRUE( document._asset._listTrack[2]._listChannel[0]._listKey.empty() );
+    document._selectedTrack = 0;
+    SW_EXPECT_EQUAL( 0u, document.pasteKeys( 200 ) );
+}
+
+// 항목 복사 · 붙여넣기: 길이를 지키고 새 이름으로 붙인다. 스폰은 바인딩을 둘이 채울 수 없어 붙이지 않는다.
+SW_TEST_CASE( SequenceModelTest, PasteItemShiftsTheSpanAndRenames )
+{
+    SequenceModel document    = SequenceModelTestUtil::makeDocument();
+    document._asset._frameMax = 100;
+    SequenceTrackItem clip    = SequenceModelTestUtil::makeFilledItem( SequenceItemKind::Clip );
+    clip._name                = "Walk";
+    clip._start               = 0;
+    clip._end                 = 20;
+    document._asset._listItem.push_back( clip );
+    SW_EXPECT_FALSE( document.copySelectedItem() );
+    document._selectedItem = 0;
+    SW_REQUIRE_TRUE( document.copySelectedItem() );
+    SW_REQUIRE_EQUAL( 1, document.pasteItem( 90 ) );
+    const SequenceTrackItem& copy = document._asset._listItem[1];
+    SW_EXPECT_EQUAL( 90, copy._start );
+    SW_EXPECT_EQUAL( 100, copy._end ); // 끝은 타임라인 안으로 자른다
+    SW_EXPECT_TRUE( copy._name != "Walk" );
+    SW_EXPECT_EQUAL( 1, document._selectedItem );
+    SW_EXPECT_EQUAL( -1, document.pasteItem( 150 ) );
+
+    document._asset._listItem.push_back( SequenceModelTestUtil::makeFilledItem( SequenceItemKind::Spawn ) );
+    document._selectedItem = 2;
+    SW_REQUIRE_TRUE( document.copySelectedItem() );
+    SW_EXPECT_EQUAL( -1, document.pasteItem( 10 ) );
+}
+
+// 보기 확대 · 스크롤: 포인터 자리의 프레임이 남고, 타임라인 밖을 보이지 않으며, 전체에 닿으면 맞춘 상태로 돌아간다.
+SW_TEST_CASE( SequenceModelTest, ZoomKeepsTheAnchorFrameAndStaysInside )
+{
+    SequenceModel document    = SequenceModelTestUtil::makeDocument();
+    document._asset._frameMin = 0;
+    document._asset._frameMax = 100;
+    SW_EXPECT_TRUE( document.isViewFitted() );
+    document.zoomView( 0.5f, 0.5f );
+    SW_EXPECT_FALSE( document.isViewFitted() );
+    SW_EXPECT_EQUAL( 50, document.getViewFrameSpan() );
+    SW_EXPECT_EQUAL( 25, document.getViewFirstFrame() );
+    SW_EXPECT_EQUAL( 50, document.findFrameAtRatio( 0.5f ) ); // 가운데 프레임이 그대로
+    SW_EXPECT_NEAR( 0.5f, document.computeRatioAtFrame( 50.0f ), 1e-5f );
+    SW_EXPECT_EQUAL( 1, document.computeFrameDelta( 10.0f, 500.0f ) ); // 500 px 에 50 프레임
+
+    document.scrollView( 1000 );
+    SW_EXPECT_EQUAL( 50, document.getViewFirstFrame() ); // 끝에서 멈춘다
+    document.scrollView( -1000 );
+    SW_EXPECT_EQUAL( 0, document.getViewFirstFrame() );
+
+    document.zoomView( 0.01f, 0.0f );
+    SW_EXPECT_EQUAL( SequenceModel::kMinViewFrameSpan, document.getViewFrameSpan() );
+
+    document.zoomView( 1000.0f, 0.5f );
+    SW_EXPECT_TRUE( document.isViewFitted() );
+    SW_EXPECT_EQUAL( 0, document.getViewFirstFrame() );
+
+    // 타임라인이 줄면 보이는 범위가 따라 줄어든다.
+    document.zoomView( 0.5f, 1.0f );
+    document._asset._frameMax = 10;
+    SW_EXPECT_TRUE( document.getViewFirstFrame() + document.getViewFrameSpan() <= 10 );
+}
+
+// 오류 배지: 파일이 거절하는 것(바인딩 · 채널 수)부터, 그다음 재생이 닿지 않는 것(빈 대상 경로 · 타임라인 밖 키)을 알린다.
+SW_TEST_CASE( SequenceModelTest, TrackIssuesFollowTheKindTable )
+{
+    SequenceModel document    = SequenceModelTestUtil::makeDocument();
+    document._asset._frameMax = 100;
+    SW_REQUIRE_TRUE( document.addTrack( SequenceTrackKind::Transform ) );
+    SW_REQUIRE_TRUE( document.addTrack( SequenceTrackKind::Property ) );
+    SW_EXPECT_TRUE( document.findTrackIssue( 0 ) == SequenceTrackIssue::None );
+    SW_EXPECT_TRUE( document.findTrackIssue( 1 ) == SequenceTrackIssue::MissingPropertyPath );
+    document._asset._listTrack[1]._propertyPath = "LightComponent._intensity";
+    SW_EXPECT_TRUE( document.findTrackIssue( 1 ) == SequenceTrackIssue::None );
+    SW_EXPECT_EQUAL( 0u, document.countTrackIssues() );
+
+    (void)document._asset._listTrack[0].setChannelKey( 0, 150.0f, 1.0f );
+    SW_EXPECT_TRUE( document.findTrackIssue( 0 ) == SequenceTrackIssue::KeysOutsideTimeline );
+    document._asset._listTrack[0]._listChannel.pop_back();
+    SW_EXPECT_TRUE( document.findTrackIssue( 0 ) == SequenceTrackIssue::ChannelCount );
+    document._asset._listTrack[1]._binding = 99;
+    SW_EXPECT_TRUE( document.findTrackIssue( 1 ) == SequenceTrackIssue::MissingBinding );
+    SW_EXPECT_EQUAL( 2u, document.countTrackIssues() );
+    SW_EXPECT_TRUE( document.findTrackIssue( 5 ) == SequenceTrackIssue::None );
+
+    // 종류 표의 줄마다 채널 수가 `getChannelCount` 와 같다(새 종류는 표 한 줄).
+    for ( int32 kindIndex = 0; kindIndex < static_cast<int32>( SequenceTrackKind::Count ); ++kindIndex )
+    {
+        const SequenceTrackKindInfo* pInfo = SequenceAsset::findTrackKindInfo( static_cast<SequenceTrackKind>( kindIndex ) );
+        SW_REQUIRE_TRUE( pInfo != nullptr );
+        SW_EXPECT_EQUAL( pInfo->_channelCount, SequenceKeyTrack::getChannelCount( pInfo->_kind ) );
+    }
+    SW_EXPECT_TRUE( SequenceAsset::findTrackKindInfo( SequenceTrackKind::Count ) == nullptr );
+}
+
+// 쇼트 구성: 컷을 나누면 같은 카메라의 두 조각, 지우면 앞 컷이 빈 자리를 덮는다, 카메라를 바꿀 수 있다.
+SW_TEST_CASE( SequenceModelTest, ShotToolsSplitRemoveAndRebindCuts )
+{
+    SequenceModel document    = SequenceModelTestUtil::makeDocument();
+    document._asset._frameMin = 0;
+    document._asset._frameMax = 100;
+    SW_REQUIRE_EQUAL( 0, document.addCameraCut( 0 ) );
+    const uint32 secondCamera = document.addBinding( "CamB" );
+    SW_REQUIRE_EQUAL( 1, document.addCameraCut( 60 ) );
+
+    SW_REQUIRE_EQUAL( 2, document.splitCameraCut( 30 ) );
+    SW_EXPECT_EQUAL( 29, document._asset._listItem[0]._end );
+    SW_EXPECT_EQUAL( 30, document._asset._listItem[2]._start );
+    SW_EXPECT_EQUAL( 59, document._asset._listItem[2]._end );
+    SW_EXPECT_EQUAL( document._asset._listItem[0]._binding, document._asset._listItem[2]._binding );
+    SW_EXPECT_EQUAL( -1, document.splitCameraCut( 30 ) ); // 컷의 첫 프레임 — 나눌 것이 없다
+
+    SW_EXPECT_TRUE( document.setCutCamera( 2, secondCamera ) );
+    SW_EXPECT_EQUAL( secondCamera, document._asset._listItem[2]._binding );
+    SW_EXPECT_FALSE( document.setCutCamera( 2, 99 ) );
+
+    SW_EXPECT_TRUE( document.removeCameraCut( 2 ) );
+    SW_EXPECT_EQUAL( size_t{ 2 }, document._asset._listItem.size() );
+    SW_EXPECT_EQUAL( 59, document._asset._listItem[0]._end ); // 앞 컷이 빈 자리를 덮는다
+
+    document._asset._listItem.push_back( SequenceModelTestUtil::makeFilledItem( SequenceItemKind::Event ) );
+    SW_EXPECT_FALSE( document.removeCameraCut( 2 ) ); // 컷이 아니다
+    SW_EXPECT_FALSE( document.setCutCamera( 2, secondCamera ) );
+    SequenceAsset readBack;
+    SW_EXPECT_TRUE( readBack.loadFromXMLText( document._asset.toXML() ) );
+}

@@ -78,6 +78,7 @@ namespace sw
         , _thirdPersonHandsSlot{}
         , _listFirstPersonHiddenSlot{}
         , _strideNode{ "Stride" }
+        , _lookSourceObject{ "LookSource" }
         , _locomotion{ 0.25f }
         , _mapClipFootSpeed{}
         , _aimWeight{ 0.0f }
@@ -100,6 +101,15 @@ namespace sw
         // 플레이어(DuringPhysics)가 움직인 뒤에 읽는다.
         setTickGroup( TickGroup::PostPhysics );
         _mapClipFootSpeed.clear(); // 클립을 다시 읽었을 수 있다(핫 리로드)
+    }
+
+    void ShooterAvatarComponent::setPlayer( GameObject* pPlayer )
+    {
+        _player                       = pPlayer != nullptr ? pPlayer->getHandle() : GameObjectHandle{};
+        GameObject*            pOwner = getOwner();
+        PoseModifierComponent* pRig   = pOwner != nullptr ? pOwner->getComponent<PoseModifierComponent>() : nullptr;
+        if ( pRig != nullptr && _lookSourceObject.empty() == false )
+            pRig->bindObject( _lookSourceObject, pPlayer );
     }
 
     void ShooterAvatarComponent::setFirstPerson( bool bFirstPerson )

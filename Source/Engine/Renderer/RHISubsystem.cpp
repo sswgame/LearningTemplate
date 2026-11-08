@@ -136,6 +136,17 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `RHI.MaterialTessellation` 입니다. 변위 머티리얼을 그리는 장치면 1 입니다(`RHICapabilities::_bMaterialTessellation` — OpenGL · WebGPU 는 0). */
+            [[nodiscard]] static bool readMaterialTessellation( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const RHISubsystem* const pSubsystem = engine::findSubsystem<RHISubsystem>();
+                const RHI* const          pRHI       = pSubsystem != nullptr ? pSubsystem->findRHI() : nullptr;
+                if ( pRHI == nullptr || pRHI->hasDevice() == false )
+                    return false;
+                outValue = pRHI->getDevice().getCapabilities()._bMaterialTessellation != SW_FALSE ? 1.0 : 0.0;
+                return true;
+            }
+
             /** @brief 감시 값 `Texture.FormatVariantActive` 입니다. 이 장치가 임포트한 DDS 가 아닌 쿠킹 변형을 읽으면 1 입니다(데스크톱 대상은 0 — 그림이 바뀌지 않는다는 뜻이다). */
             [[nodiscard]] static bool readFormatVariantActive( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -149,6 +160,8 @@ namespace sw
 
     SW_AUTOMATION_WATCH( rhiGPUIdleWaits, "RHI.GPUIdleWaits", "Times waitIdle stalled for the whole GPU (cumulative) - scene activation and asset hot reload must not raise it", &RHISubsystemInternal::readGPUIdleWaits );
     SW_AUTOMATION_WATCH( rhiSupportsBC7, "RHI.SupportsBC7", "1 when this device can sample BC7 textures", &RHISubsystemInternal::readSupportsBC7 );
+    SW_AUTOMATION_WATCH( rhiMaterialTessellation, "RHI.MaterialTessellation", "1 when this device draws displaced materials (hull and domain stages on material shaders) - 0 on OpenGL and WebGPU",
+                         &RHISubsystemInternal::readMaterialTessellation );
     SW_AUTOMATION_WATCH( textureFormatVariantActive, "Texture.FormatVariantActive", "1 when textures read a cooked format variant instead of the imported DDS (0 on the desktop target)", &RHISubsystemInternal::readFormatVariantActive );
 } // namespace sw
 

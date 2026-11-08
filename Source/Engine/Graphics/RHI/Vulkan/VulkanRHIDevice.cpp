@@ -58,6 +58,7 @@ namespace sw
         , _device{ nullptr }
         , _graphicsQueue{ nullptr }
         , _graphicsQueueFamilyIndex{ 0 }
+        , _asyncComputeQueue{ nullptr }
         , _currentFrame{ 0 }
         , _swapChain{}
         , _renderPass{ nullptr }
@@ -80,6 +81,11 @@ namespace sw
         , _listWindowSwapChain{}
         , _listFrameSwapChain{}
         , _listPendingAcquireWait{}
+        , _listPendingComputeWait{}
+        , _listAsyncSignal{}
+        , _listAsyncSignalWaited{}
+        , _listAsyncSemaphorePool{}
+        , _asyncSemaphoreCursor{ 0 }
         , _listRingFrameNumber{}
         , _pHWnd{ nullptr }
         , _pDisplayHandle{ nullptr }
@@ -109,6 +115,7 @@ namespace sw
         , _bMemoryBudget{ SW_FALSE }
         , _bSurfaceLost{ SW_FALSE }
         , _bDeviceFault{ SW_FALSE }
+        , _bFragmentStores{ SW_FALSE }
         , _bSwapChainRecreateFailing{ SW_FALSE }
         , _bCheckpoints{ SW_FALSE }
         , _pCmdSetCheckpoint{ nullptr }
@@ -363,6 +370,15 @@ namespace sw
         {
             // 전송을 기다리던 해제는 프레임 해제 큐로 넘어가므로 아래의 `_releaseQueue.flushAll` 보다 먼저 놓는다.
             shutdownTransfers();
+            for ( vector<VkSemaphore>& listPool : _listAsyncSemaphorePool )
+            {
+                for ( VkSemaphore semaphore : listPool )
+                {
+                    vkDestroySemaphore( _device, semaphore, nullptr );
+                }
+                listPool.clear();
+            }
+            _asyncComputeQueue = VK_NULL_HANDLE;
             if ( _commandPool )
             {
                 vkDestroyCommandPool( _device, _commandPool, nullptr );
@@ -1166,12 +1182,19 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 기능 확인 · 큐 · 확장 · 생성의 순서가 곧 의미라 나누지 않는다.
     bool VulkanRHIDevice::createLogicalDevice()
     {
+        // 비동기 컴퓨트는 그래픽스 패밀리의 두 번째 큐다(같은 패밀리라 소유권 이전이 없다). 큐가 하나뿐인 패밀리(일부 AMD · 모바일)는 능력이 거짓이다.
+        uint32 familyCount{ 0 };
+        vkGetPhysicalDeviceQueueFamilyProperties( _physicalDevice, &familyCount, nullptr );
+        vector<VkQueueFamilyProperties> listFamily( familyCount );
+        vkGetPhysicalDeviceQueueFamilyProperties( _physicalDevice, &familyCount, listFamily.data() );
+        const bool              bFamilyKnown       = _graphicsQueueFamilyIndex < familyCount;
+        const bool              bSecondQueue       = bFamilyKnown && listFamily[_graphicsQueueFamilyIndex].queueCount >= 2 && ( listFamily[_graphicsQueueFamilyIndex].queueFlags & VK_QUEUE_COMPUTE_BIT ) != 0;
+        const float32           arrQueuePriority[] = { 1.0f, 1.0f };
         VkDeviceQueueCreateInfo queueCreateInfo{};
         queueCreateInfo.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queueCreateInfo.queueFamilyIndex = _graphicsQueueFamilyIndex;
-        queueCreateInfo.queueCount       = 1;
-        float32 queuePriority{ 1.0f };
-        queueCreateInfo.pQueuePriorities = &queuePriority;
+        queueCreateInfo.queueCount       = bSecondQueue ? 2u : 1u;
+        queueCreateInfo.pQueuePriorities = arrQueuePriority;
 
         VkPhysicalDeviceFeatures availableFeatures{};
         vkGetPhysicalDeviceFeatures( _physicalDevice, &availableFeatures );
@@ -1194,6 +1217,9 @@ namespace sw
         deviceFeatures.depthClamp = availableFeatures.depthClamp;
         // 렌더 타깃마다 다른 블렌드 · 쓰기 마스크(RHIRenderState::_arrBlendTarget). 켜지 않으면 첨부 상태가 모두 같아야 한다.
         deviceFeatures.independentBlend = availableFeatures.independentBlend;
+        // 프래그먼트 셰이더의 스토리지 버퍼 쓰기 · 원자 연산 — 셰이더 메시지 채널(`SW_GPU_PRINT`)이 픽셀 셰이더에서 쓴다. 없으면 능력이 거짓이고 메시지를 요구한 실행이 멈춘다.
+        // https://docs.vulkan.org/refpages/latest/refpages/source/VkPhysicalDeviceFeatures.html — 꺼져 있으면 프래그먼트 단계의 스토리지 자원은 읽기 전용이어야 한다.
+        deviceFeatures.fragmentStoresAndAtomics = availableFeatures.fragmentStoresAndAtomics;
         // 파이프라인 XML 이 고르는 선택 스테이지다. 없는 장치에서 그런 패스의 PSO 는 오류로 만들어지지 않는다.
         deviceFeatures.geometryShader     = availableFeatures.geometryShader;
         deviceFeatures.tessellationShader = availableFeatures.tessellationShader;
@@ -1211,6 +1237,7 @@ namespace sw
         _bSamplerAnisotropy                                    = availableFeatures.samplerAnisotropy ? 1 : 0;
         _bFillModeNonSolid                                     = availableFeatures.fillModeNonSolid ? 1 : 0;
         _bDepthClamp                                           = availableFeatures.depthClamp ? 1 : 0;
+        _bFragmentStores                                       = availableFeatures.fragmentStoresAndAtomics ? 1 : 0;
 
         // pickPhysicalDevice 가 요구 판(1.2) 미만 디바이스를 건너뛰므로 1.2 기능 구조체는 늘 체인에 넣을 수 있다.
         VkPhysicalDeviceVulkan12Features available12{};
@@ -1308,6 +1335,12 @@ namespace sw
             return false;
 
         vkGetDeviceQueue( _device, _graphicsQueueFamilyIndex, 0, &_graphicsQueue );
+        _asyncComputeQueue = VK_NULL_HANDLE;
+        if ( bSecondQueue )
+            vkGetDeviceQueue( _device, _graphicsQueueFamilyIndex, 1, &_asyncComputeQueue );
+        else
+            SW_LOG_INFO_ID( "Vulkan.AsyncComputeQueueUnavailable", "The graphics queue family has one queue - AsyncCompute passes run on the graphics queue" );
+        _listAsyncSemaphorePool.assign( constant::render::kMaxFrameCountInFlight, vector<VkSemaphore>{} );
         if ( _bCheckpoints != SW_FALSE )
         {
             _pCmdSetCheckpoint  = reinterpret_cast<void*>( vkGetDeviceProcAddr( _device, "vkCmdSetCheckpointNV" ) );
@@ -2076,6 +2109,11 @@ namespace sw
 
         // 이 셋은 메모리 부족으로만 실패한다(장치 분실은 돌려주지 않는다). 실패한 버퍼에 기록하면 제출이 검증 오류 · 크래시라 멈춘다.
         requireVk( vkResetFences( _device, 1, &_listInFlightFence[_currentFrame] ), "beginFrame: vkResetFences" );
+        // 이 슬롯의 지난 프레임이 끝났다 — 그 프레임이 빌린 비동기 컴퓨트 세마포어는 모두 신호되고 기다려졌다(endFrame 이 남은 것을 기다린다).
+        _asyncSemaphoreCursor = 0;
+        _listAsyncSignal.clear();
+        _listAsyncSignalWaited.clear();
+        _listPendingComputeWait.clear();
         requireVk( vkResetCommandBuffer( _listCommandBuffer[_currentFrame], 0 ), "beginFrame: vkResetCommandBuffer" );
 
         VkCommandBufferBeginInfo beginInfo{};
@@ -2140,10 +2178,21 @@ namespace sw
         VkSubmitInfo submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
+        // 기다리지 않은 비동기 컴퓨트 신호를 이 마지막 제출이 모두 기다린다 — 이진 세마포어는 신호마다 한 번 기다려야 하고, 프레임 펜스 하나가 두 큐의 끝을 덮는다.
+        for ( size_t signalIndex = 0; signalIndex < _listAsyncSignal.size(); ++signalIndex )
+        {
+            if ( _listAsyncSignalWaited[signalIndex] == SW_FALSE )
+                _listPendingComputeWait.push_back( _listAsyncSignal[signalIndex] );
+            _listAsyncSignalWaited[signalIndex] = SW_TRUE;
+        }
         // acquire 대기는 이미지마다 한 번뿐이다. 즉시 모드에서 앞선 제출이 이미 소비했으면 남은 것만 기다린다.
-        const vector<VkPipelineStageFlags> listWaitStage( _listPendingAcquireWait.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT );
-        submitInfo.waitSemaphoreCount = static_cast<uint32>( _listPendingAcquireWait.size() );
-        submitInfo.pWaitSemaphores    = _listPendingAcquireWait.data();
+        vector<VkSemaphore>          listWaitSemaphore = _listPendingAcquireWait;
+        vector<VkPipelineStageFlags> listWaitStage( _listPendingAcquireWait.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT );
+        listWaitSemaphore.insert( listWaitSemaphore.end(), _listPendingComputeWait.begin(), _listPendingComputeWait.end() );
+        listWaitStage.insert( listWaitStage.end(), _listPendingComputeWait.size(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT );
+        _listPendingComputeWait.clear();
+        submitInfo.waitSemaphoreCount = static_cast<uint32>( listWaitSemaphore.size() );
+        submitInfo.pWaitSemaphores    = listWaitSemaphore.data();
         submitInfo.pWaitDstStageMask  = listWaitStage.data();
 
         // 프레임 세그먼트와 리스트 버퍼를 기록 순서 그대로 한 번에 제출한다. 같은 큐에 대한
@@ -2395,25 +2444,124 @@ namespace sw
         // 즉시 모드: 여기서 바로 내보낸다. acquire 세마포어 대기는 '이 프레임의 첫 제출'에만 걸고,
         // renderFinished 신호와 인플라이트 펜스는 endFrame 의 마지막 제출이 담당한다.
         if ( _bImmediateSubmit )
-        {
-            VkSubmitInfo         flushInfo{};
-            VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-            flushInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            flushInfo.commandBufferCount   = static_cast<uint32>( _listPendingSubmit.size() );
-            flushInfo.pCommandBuffers      = _listPendingSubmit.data();
-            const vector<VkPipelineStageFlags> listWaitStage( _listPendingAcquireWait.size(), waitStage );
-            flushInfo.waitSemaphoreCount = static_cast<uint32>( _listPendingAcquireWait.size() );
-            flushInfo.pWaitSemaphores    = _listPendingAcquireWait.data();
-            flushInfo.pWaitDstStageMask  = listWaitStage.data();
-            {
-                ScopedLock<mutex> queueLock{ _queueMutex };
-                const VkResult    flushResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
-                reportQueueResult( static_cast<int32>( flushResult ), "executeCommandList: vkQueueSubmit (immediate)" );
-            }
-            _listPendingAcquireWait.clear();
-            _listPendingSubmit.clear();
-        }
+            submitPendingGraphics( VK_NULL_HANDLE );
+        openNextFrameSegment();
+    }
 
+    void VulkanRHIDevice::submitPendingGraphics( VkSemaphore signal )
+    {
+        // acquire 대기는 색 출력 단계에서, 비동기 컴퓨트 대기는 모든 단계에서 기다린다(컴퓨트 결과를 정점 · 간접 인자 단계부터 읽는다).
+        vector<VkSemaphore>          listWaitSemaphore = _listPendingAcquireWait;
+        vector<VkPipelineStageFlags> listWaitStage( _listPendingAcquireWait.size(), VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT );
+        listWaitSemaphore.insert( listWaitSemaphore.end(), _listPendingComputeWait.begin(), _listPendingComputeWait.end() );
+        listWaitStage.insert( listWaitStage.end(), _listPendingComputeWait.size(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT );
+        VkSubmitInfo flushInfo{};
+        flushInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        flushInfo.commandBufferCount   = static_cast<uint32>( _listPendingSubmit.size() );
+        flushInfo.pCommandBuffers      = _listPendingSubmit.data();
+        flushInfo.waitSemaphoreCount   = static_cast<uint32>( listWaitSemaphore.size() );
+        flushInfo.pWaitSemaphores      = listWaitSemaphore.data();
+        flushInfo.pWaitDstStageMask    = listWaitStage.data();
+        flushInfo.signalSemaphoreCount = signal != VK_NULL_HANDLE ? 1u : 0u;
+        flushInfo.pSignalSemaphores    = &signal;
+        {
+            ScopedLock<mutex> queueLock{ _queueMutex };
+            const VkResult    flushResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _graphicsQueue, 1, &flushInfo, VK_NULL_HANDLE );
+            reportQueueResult( static_cast<int32>( flushResult ), "vkQueueSubmit (pending graphics)" );
+        }
+        _listPendingAcquireWait.clear();
+        _listPendingComputeWait.clear();
+        _listPendingSubmit.clear();
+    }
+
+    void VulkanRHIDevice::submitFrameWorkNow( VkSemaphore signal )
+    {
+        if ( _bFrameStarted == SW_FALSE || _activeFrameBuffer == VK_NULL_HANDLE )
+            return;
+        // 세그먼트가 비어 있어도 닫아 넣는다(빈 버퍼 하나의 비용) — 신호는 그 앞의 모든 그래픽스 일을 덮어야 한다.
+        _frameStreamContext->endRenderPass();
+        requireVk( vkEndCommandBuffer( _activeFrameBuffer ), "submitFrameWorkNow: vkEndCommandBuffer" );
+        _listPendingSubmit.push_back( _activeFrameBuffer );
+        submitPendingGraphics( signal );
+        openNextFrameSegment();
+    }
+
+    VkSemaphore VulkanRHIDevice::acquireAsyncSemaphore()
+    {
+        vector<VkSemaphore>& listPool = _listAsyncSemaphorePool[_currentFrame];
+        if ( _asyncSemaphoreCursor < listPool.size() )
+            return listPool[_asyncSemaphoreCursor++];
+        VkSemaphoreCreateInfo createInfo{};
+        createInfo.sType      = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        VkSemaphore semaphore = VK_NULL_HANDLE;
+        requireVk( vkCreateSemaphore( _device, &createInfo, nullptr, &semaphore ), "vkCreateSemaphore (async compute)" );
+        listPool.push_back( semaphore );
+        ++_asyncSemaphoreCursor;
+        return semaphore;
+    }
+
+    unique_ptr<IRHICommandList> VulkanRHIDevice::createAsyncComputeCommandList()
+    {
+        if ( _asyncComputeQueue == VK_NULL_HANDLE )
+            return IRHIDevice::createAsyncComputeCommandList(); // 능력이 거짓인 길 — 오류를 남기고 nullptr
+        // 같은 패밀리라 일반 리스트(같은 패밀리의 풀 · 같은 바인딩)를 그대로 두 번째 큐에 낸다.
+        return make_unique<VulkanRHICommandList>( this );
+    }
+
+    RHIQueueSyncPoint VulkanRHIDevice::submitAsyncCompute( IRHICommandList* pCmdList )
+    {
+        if ( _asyncComputeQueue == VK_NULL_HANDLE )
+            return IRHIDevice::submitAsyncCompute( pCmdList );
+        VulkanRHICommandList* pList = static_cast<VulkanRHICommandList*>( pCmdList );
+        if ( pList == nullptr || pList->nativeCommandBuffer() == VK_NULL_HANDLE || _bFrameStarted == SW_FALSE )
+            return RHIQueueSyncPoint{};
+        // 포크: 지금까지의 그래픽스 일을 내며 신호하고, 두 번째 큐가 그 신호를 기다린 뒤 이 리스트를 실행하고 다른 세마포어를 신호한다.
+        const VkSemaphore graphicsDone = acquireAsyncSemaphore();
+        const VkSemaphore computeDone  = acquireAsyncSemaphore();
+        submitFrameWorkNow( graphicsDone );
+        const VkCommandBuffer      listBuffer = pList->nativeCommandBuffer();
+        const VkPipelineStageFlags waitStage  = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        VkSubmitInfo               submitInfo{};
+        submitInfo.sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.waitSemaphoreCount   = 1;
+        submitInfo.pWaitSemaphores      = &graphicsDone;
+        submitInfo.pWaitDstStageMask    = &waitStage;
+        submitInfo.commandBufferCount   = 1;
+        submitInfo.pCommandBuffers      = &listBuffer;
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores    = &computeDone;
+        recordSubmittedEventMarker( pList->getLastEventMarker() );
+        {
+            ScopedLock<mutex> queueLock{ _queueMutex };
+            const VkResult    submitResult = isDeviceLost() ? VK_ERROR_DEVICE_LOST : vkQueueSubmit( _asyncComputeQueue, 1, &submitInfo, VK_NULL_HANDLE );
+            reportQueueResult( static_cast<int32>( submitResult ), "submitAsyncCompute: vkQueueSubmit" );
+        }
+        _listAsyncSignal.push_back( computeDone );
+        _listAsyncSignalWaited.push_back( SW_FALSE );
+        return RHIQueueSyncPoint{ static_cast<uint64>( _listAsyncSignal.size() ) };
+    }
+
+    void VulkanRHIDevice::waitForAsyncCompute( RHIQueueSyncPoint point )
+    {
+        if ( _asyncComputeQueue == VK_NULL_HANDLE )
+        {
+            IRHIDevice::waitForAsyncCompute( point );
+            return;
+        }
+        const bool bKnown = point.isValid() && point._value <= _listAsyncSignal.size();
+        if ( bKnown == false )
+            return;
+        const size_t signalIndex = static_cast<size_t>( point._value - 1 );
+        if ( _listAsyncSignalWaited[signalIndex] != SW_FALSE )
+            return;
+        // 조인: 그 전 그래픽스 일은 기다리지 않게 먼저 큐에 낸다(포크와 조인 사이가 겹친다). 이 신호는 다음 그래픽스 제출이 기다린다.
+        submitFrameWorkNow( VK_NULL_HANDLE );
+        _listPendingComputeWait.push_back( _listAsyncSignal[signalIndex] );
+        _listAsyncSignalWaited[signalIndex] = SW_TRUE;
+    }
+
+    void VulkanRHIDevice::openNextFrameSegment()
+    {
         // 이어서 기록할 새 세그먼트를 연다. 새 버퍼이므로 바인딩 캐시는 무효다.
         VkCommandBuffer nextSegment = beginNextFrameSegment();
         if ( nextSegment == VK_NULL_HANDLE )

@@ -8,7 +8,7 @@
 
 #include "Engine/Foundation/GameObjectHandle.h"
 #include "Engine/Graphics/View/CameraDepthOfFieldValues.h"
-#include "Engine/Graphics/View/CameraPostProcessValues.h"
+#include "Engine/Graphics/View/PostProcessValues.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -202,9 +202,9 @@ namespace sw
         void setRenderOutput( const CameraRenderOutput& output );
 
         /** @brief 이 카메라의 후처리 값(노출 · 블룸 배율 · 비네트 · 채도 · 대비 · 레터박스)입니다. 렌더 뷰가 이 값을 렌더러로 나릅니다. */
-        const CameraPostProcessValues& getPostProcess() const { return _postProcess; }
+        const PostProcessValues& getPostProcess() const { return _postProcess; }
         /** @brief 후처리 값을 바꿉니다. 카메라 프리셋 · 블렌드를 쓰는 게임은 포즈가 매 프레임 씁니다(`CameraPose::applyToCamera`). */
-        void setPostProcess( const CameraPostProcessValues& values ) { _postProcess = values; }
+        void setPostProcess( const PostProcessValues& values ) { _postProcess = values; }
 
         /** @brief 이 카메라의 피사계 심도 렌즈 값(초점 거리 · 조리개)입니다. 렌더 뷰가 이 값을 렌더러로 나릅니다. */
         const CameraDepthOfFieldValues& getDepthOfField() const { return _depthOfField; }
@@ -257,7 +257,7 @@ namespace sw
         PROPERTY( Category = "Output", DisplayName = "Render Output", Tooltip = "Render texture / screen rectangle, update rate and feature switches" )
         CameraRenderOutput _renderOutput;
         PROPERTY( Category = "Post Process", DisplayName = "Post Process", Tooltip = "Per-camera exposure, bloom, vignette, saturation, contrast and letterbox" )
-        CameraPostProcessValues _postProcess;
+        PostProcessValues _postProcess;
         PROPERTY( Category = "Lens", DisplayName = "Depth Of Field", Tooltip = "Focus distance and aperture read by depth of field" )
         CameraDepthOfFieldValues _depthOfField;
         PROPERTY( Category = "Lens", DisplayName = "Lens Shift", Tooltip = "Projection centre shift as a fraction of the screen; +x moves the view right, +y up" )

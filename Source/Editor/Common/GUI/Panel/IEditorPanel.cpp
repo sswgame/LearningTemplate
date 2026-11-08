@@ -6,6 +6,9 @@
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorRenderViews.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include <imgui.h>
 
@@ -60,5 +63,10 @@ namespace sw::editor
         if ( pDocument != nullptr && pDocument->beginCloseConfirmIfNeeded() )
             return;
         closeNow();
+    }
+
+    void IEditorPanel::requestAnimationFrame()
+    {
+        editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().requestAnimationFrame();
     }
 } // namespace sw::editor

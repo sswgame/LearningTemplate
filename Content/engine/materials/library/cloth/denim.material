@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(cloth): 데님(인디고 날실 · 흰 씨실 능직). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="Denim" _base="engine/materials/library/cloth/base.material">
+	<_properties>
+		<item name="_color" defaultValue="0.1 0.16 0.33 1" />
+		<item name="_secondaryColor" defaultValue="0.75 0.75 0.72 1" />
+		<item name="_patternAmount" defaultValue="1" />
+		<item name="_patternScale" defaultValue="120" />
+		<item name="_roughness" defaultValue="0.85" />
+	</_properties>
+</MaterialDef>

@@ -12,6 +12,8 @@
  * 광선은 점유 복셀(SceneVoxelGrid — traceVoxelRay 가 C++ SceneVoxelGrid::traceRay 와 같은 식)을 걷는다. 닿으면 그 면이 받는 직접광(방향광 · 점광 · 스폿 — 라이트 버퍼의 앞 몇 개,
  * 감쇠는 LightProbeBaker::computeLightIncidence 와 같다, 가림은 같은 복셀로 본다) × 볼륨의 반사율이 그 방향의 복사휘도다. 닿지 않으면 하늘 SH 를 읽는다 — 베이커와 같은 규칙(한 번 튐 + 하늘).
  * 방향은 프로브 · 프레임마다 회전한 피보나치 구라서 갱신마다 달라 기록과 섞이며 잡음이 평균된다.
+ * 닿은 칸이 발광 칸(SceneVoxelGrid::_listEmission, RGB9E5)이면 그 빛 × 볼륨의 발광 배율을 더한다(배율 0 이면 읽지 않는다 — 이전 그림).
+ * 하늘로 나간 광선의 몫(하늘 보임)을 기록의 남는 칸(원시 계수 뒤 28 번째)에 함께 섞고 프로브 원소 6 의 w 에 싣는다 — 소비 셰이더가 볼륨의 하늘 가림 세기로 반사 앰비언트를 가린다.
  *
  * 바인딩 계약: 읽기 t0 라이트(g_SwLights 와 같은 버퍼) · t1 입력 행(g_ProbeParams) · t2 복셀 단어(볼륨들의 비트 격자를 이어 붙임), 쓰기 u0 기록(float4, 프로브마다 일곱) · u1 프로브 버퍼.
  * 입력 행 배치는 아래 kRow*, C++: FrameRenderer::dispatchProbeUpdate(RealtimeProbeUpdater) — dispatchCompute( ceil(총 프로브 수 / 64), 1, 1 ).
@@ -28,13 +30,14 @@ static const uint kRowHeader      = 0u; // asuint( 볼륨 수, 프레임 번호,
 static const uint kRowSky         = 1u; // 하늘 SH 의 원시 계수 27 개를 float4 일곱에(1..7)
 static const uint kRowFirstVolume = 8u;
 static const uint kVolumeRowCount = 7u;
-static const uint kVolOrigin      = 0u; // 프로브 시작점 xyz, 반사율
-static const uint kVolSpacing     = 1u; // 프로브 간격 xyz, 새 값 섞는 비율
-static const uint kVolCounts      = 2u; // asuint( 프로브 수 X, Y, Z, 프로브 버퍼 안의 첫 float4 번호 )
-static const uint kVolVoxelOrigin = 3u; // 복셀 시작점 xyz, 칸 크기
-static const uint kVolVoxelDim    = 4u; // asuint( 복셀 칸 수 X, Y, Z, 복셀 단어 버퍼 안의 첫 단어 )
-static const uint kVolHistory     = 5u; // asuint( 기록의 첫 float4 번호, 첫 스레드 번호, 프로브 수, 광선 수 )
-static const uint kVolSchedule    = 6u; // asuint( 갱신 주기, 기록이 쌓인 프레임 수, 0, 0 )
+static const uint kVolOrigin      = 0u;          // 프로브 시작점 xyz, 반사율
+static const uint kVolSpacing     = 1u;          // 프로브 간격 xyz, 새 값 섞는 비율
+static const uint kVolCounts      = 2u;          // asuint( 프로브 수 X, Y, Z, 프로브 버퍼 안의 첫 float4 번호 )
+static const uint kVolVoxelOrigin = 3u;          // 복셀 시작점 xyz, 칸 크기
+static const uint kVolVoxelDim    = 4u;          // asuint( 복셀 칸 수 X, Y, Z, 복셀 단어 버퍼 안의 첫 단어 )
+static const uint kVolHistory     = 5u;          // asuint( 기록의 첫 float4 번호, 첫 스레드 번호, 프로브 수, 광선 수 )
+static const uint kVolSchedule    = 6u;          // asuint( 갱신 주기, 기록이 쌓인 프레임 수, 발광 단어의 첫 단어(없으면 kNoEmission), asuint( 발광 배율 ) )
+static const uint kNoEmission     = 0xFFFFFFFFu; // RealtimeProbeUpdater::kNoEmission 과 같다
 
 static const uint kProbeFloat4Count = 7u; // SW_LIGHT_PROBE_FLOAT4_COUNT 와 같다
 static const uint kMaxDirectLights  = 8u; // 닿은 면을 비추는 라이트의 상한(앞에서부터)
@@ -187,6 +190,29 @@ bool traceVoxelRay( VoxelGrid grid, float3 origin, float3 direction, float maxDi
     return bHit;
 }
 
+/** @brief 공유 지수 32 비트(R9G9B9E5)를 복사휘도로 풉니다. C++ SceneVoxelGrid::unpackEmission 과 같은 식이다. */
+float3 unpackEmission( uint packed )
+{
+    const float scale = exp2( (float)( (int)( packed >> 27u ) - 15 - 9 ) );
+    return float3( (float)( packed & 511u ), (float)( ( packed >> 9u ) & 511u ), (float)( ( packed >> 18u ) & 511u ) ) * scale;
+}
+
+/** @brief 닿은 칸(면 바로 안쪽 점 @p insidePoint)의 발광입니다. 발광 칸이 없는 볼륨은 0 이다. */
+float3 findEmission( VoxelGrid grid, uint emissionOffset, float3 insidePoint )
+{
+    float3 emission = float3( 0.0f, 0.0f, 0.0f );
+    if ( emissionOffset != kNoEmission )
+    {
+        const int3 cell = (int3)floor( ( insidePoint - grid._origin ) / grid._cellSize );
+        if ( all( cell >= int3( 0, 0, 0 ) ) && all( cell < (int3)grid._dimension ) )
+        {
+            const uint index = ( (uint)cell.z * grid._dimension.y + (uint)cell.y ) * grid._dimension.x + (uint)cell.x;
+            emission         = unpackEmission( g_ProbeVoxels[emissionOffset + index] );
+        }
+    }
+    return emission;
+}
+
 /** @brief 방향의 SH9 기저 아홉 개입니다(SH9Color::computeBasis 와 같다). */
 void computeBasis( float3 direction, out float outBasis[9] )
 {
@@ -283,7 +309,8 @@ void packProbeElement( float coefficient[28], out float4 outElement[7] )
         outElement[3u + channel] = float4( coefficient[12u + channel] * kPackCross, coefficient[15u + channel] * kPackCross, coefficient[18u + channel] * kPackZonal * 3.0f,
                                            coefficient[21u + channel] * kPackCross );
     }
-    outElement[6] = float4( coefficient[24] * kPackSquare, coefficient[25] * kPackSquare, coefficient[26] * kPackSquare, 0.0f );
+    // w 는 하늘 보임(원시 칸 27) — 조도 배치와 무관한 0 ~ 1 값이다(베이크 원소는 0, 볼륨의 하늘 가림 세기가 0 이면 소비 셰이더가 읽지 않는다).
+    outElement[6] = float4( coefficient[24] * kPackSquare, coefficient[25] * kPackSquare, coefficient[26] * kPackSquare, coefficient[27] );
 }
 
 SW_NUMTHREADS( 64, 1, 1 )
@@ -343,13 +370,16 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
         grid._dimension  = voxelDim.xyz;
         grid._wordOffset = voxelDim.w;
 
-        const uint   probeX   = probe % counts.x;
-        const uint   probeY   = ( probe / counts.x ) % counts.y;
-        const uint   probeZ   = probe / ( counts.x * counts.y );
-        const float3 position = originAlbedo.xyz + spacingBlend.xyz * float3( (float)probeX, (float)probeY, (float)probeZ );
-        const float  albedo   = originAlbedo.w;
-        const uint   rayCount = max( history.w, 1u );
-        const float  weight   = 4.0f * kPi / (float)rayCount;
+        const uint   probeX            = probe % counts.x;
+        const uint   probeY            = ( probe / counts.x ) % counts.y;
+        const uint   probeZ            = probe / ( counts.x * counts.y );
+        const float3 position          = originAlbedo.xyz + spacingBlend.xyz * float3( (float)probeX, (float)probeY, (float)probeZ );
+        const float  albedo            = originAlbedo.w;
+        const uint   rayCount          = max( history.w, 1u );
+        const float  weight            = 4.0f * kPi / (float)rayCount;
+        const uint   emissionOffset    = schedule.z;
+        const float  emissiveIntensity = asfloat( schedule.w );
+        float        escapedRays       = 0.0f;
 
         // 방향 수열: 피보나치 구를 프로브 · 갱신 횟수마다 회전한다(Cranley-Patterson). 갱신마다 방향이 달라 기록과 섞이며 평균된다.
         const uint  seed       = hashUint( dispatchID.x * 747796405u + ( frameIndex / period ) * 2891336453u );
@@ -375,10 +405,13 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
             {
                 const float3 surface = position + direction * hitDistance + hitNormal * ( grid._cellSize * kSurfaceOffset );
                 radiance             = computeDirectLight( grid, lightCount, surface, hitNormal ) * albedo;
+                if ( emissiveIntensity > 0.0f )
+                    radiance += findEmission( grid, emissionOffset, position + direction * hitDistance - hitNormal * ( grid._cellSize * 0.5f ) ) * emissiveIntensity;
             }
             else
             {
                 radiance = evaluateSkyRadiance( direction );
+                escapedRays += 1.0f;
             }
 
             float arrBasisWeight[9];
@@ -393,8 +426,9 @@ void CSMain( uint3 dispatchID : SV_DispatchThreadID )
         }
 
         // 기록이 막 생겼으면(쌓인 프레임 수 0) 새 값으로 바로 바꾼다. 쌓일수록 설정한 비율로 섞는다 - 1 / (쌓인 프레임 + 1) 이 더 크면 그 비율(처음 몇 번을 빨리 채운다).
+        arrFresh[27]      = escapedRays / (float)rayCount; // 하늘 보임
         const float blend = max( spacingBlend.w, 1.0f / ( (float)schedule.y + 1.0f ) );
-        SW_UNROLL for ( uint mixIndex = 0u; mixIndex < 27u; ++mixIndex )
+        SW_UNROLL for ( uint mixIndex = 0u; mixIndex < 28u; ++mixIndex )
         {
             arrCoefficient[mixIndex] = lerp( arrCoefficient[mixIndex], arrFresh[mixIndex], blend );
         }

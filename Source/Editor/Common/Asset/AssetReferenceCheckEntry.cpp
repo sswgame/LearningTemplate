@@ -1,7 +1,7 @@
 /**
  * @file AssetReferenceCheckEntry.cpp
  * @brief 에디터 모듈의 헤드리스 에셋 참조 검사 진입점(`checkEditorAssetReferences`)입니다. `App --check-asset-refs`(ctest `ToolCheckAssetRefs`)가 부릅니다.
- * @details 두 가지를 본다. 1) 리플렉션 `AssetPath` 프로퍼티가 모두 칸 목록(`Config/Dev/AssetReferenceFields.json`)에 있는지 — 새 경로 칸이 목록을 비켜 가면
+ * @details 두 가지를 본다. 1) 리플렉션 `AssetPath` 프로퍼티가 모두 칸 목록(`Config/Dev/AssetReferenceFields.generated.json`)에 있는지 — 새 경로 칸이 목록을 비켜 가면
  *          그 칸의 끊긴 경로를 아무도 못 잡는다. 2) `Content/` 의 글 에셋과 테스트 CMake 의 경로 칸이 모두 있는 것을 가리키는지(임포트 산출물은 원본이 있으면 있다).
  *          커밋 전 검사(`Scripts/lint/AssetReferences.py`)와 같은 칸 목록 · 같은 규칙이다 — 그쪽은 스테이지만, 이쪽은 디스크의 트리(임포트 산출물 포함)를 본다.
  *          개발 도구라 에디터 모듈에 둔다(배포 엔진에는 검증 코드가 없다 — 언리얼 Data Validation 이 에디터 모듈인 것과 같다).
@@ -110,7 +110,7 @@ namespace sw::editor
                     problemCount += checkFile( params, assets, cmakeFile, text, AssetReferenceSyntax::CMake );
                     ++scannedCount;
                 }
-                SW_LOG_INFO_ID( "AssetReferenceCheck.Summary", "Asset reference check: %# files, %# problems (fields: %#)", scannedCount, problemCount, AssetReferenceFields::kConfigFile );
+                SW_LOG_INFO_ID( "AssetReferenceCheck.Summary", "Asset reference check: %# files, %# problems (fields: %#)", scannedCount, problemCount, AssetReferenceFields::kGeneratedFile );
                 return static_cast<int32>( problemCount );
             }
         };

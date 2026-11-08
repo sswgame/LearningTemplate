@@ -36,11 +36,11 @@ namespace sw
                 {
                     if ( pSystem == nullptr || pSystem->getNPCCount() == 0 )
                         continue;
-                    const int32 namedIndex = GameplayDebugTarget::getTargetName().empty() ? -1 : pSystem->findNPCIndex( wanted );
-                    if ( namedIndex >= 0 )
+                    const optional<int32> namedIndex = GameplayDebugTarget::getTargetName().empty() ? optional<int32>{} : pSystem->findNPCIndex( wanted );
+                    if ( namedIndex.has_value() )
                     {
                         pFound   = pSystem;
-                        npcIndex = namedIndex;
+                        npcIndex = *namedIndex;
                         break;
                     }
                     if ( pFound == nullptr )

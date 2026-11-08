@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 텍스처 PBR 머티리얼 견본(pbr_lit.hlsl) — glTF 금속도 · 거칠기 머티리얼과 1:1. 모델 임포트가 이 견본에 텍스처 경로와 값을 채워 모델 옆에 머티리얼을 쓴다.
      ORM 맵은 glTF 배치(R 가림 · G 거칠기 · B 금속도), 노멀 맵은 OpenGL 방향(+Y 위)이다. 거칠기 · 금속도 값은 맵에 곱한다(glTF factor).
-     glTF alphaMode MASK 는 alphaMode="Mask"(알파가 _alphaCutoff 보다 작으면 버린다), doubleSided 는 cullMode="None" twoSidedLighting="true" 다. 임포트가 머티리얼마다 적는다. -->
+     glTF alphaMode MASK 는 alphaMode="Mask"(알파가 _alphaCutoff 보다 작으면 버린다), doubleSided 는 cullMode="None" twoSidedLighting="true" 다. 임포트가 머티리얼마다 적는다.
+     Displacement 칸은 _alwaysDefines 에 MATERIAL_DISPLACEMENT 를 적은 자식만 읽는다(헐 · 도메인 변형 — material_displacement.hlsli). -->
 <MaterialDef formatVersion="0" name="PBRMaterial" shaderPath="engine/shaders/pbr_lit.hlsl" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1 1 1 1" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
@@ -14,6 +15,11 @@
 		<item name="_albedoMap" type="Texture2D" displayName="Albedo" group="Surface" bSrgb="1"/>
 		<item name="_normalMap" type="Texture2D" displayName="Normal" group="Surface" bSrgb="0"/>
 		<item name="_ormMap" type="Texture2D" displayName="Occlusion Roughness Metallic" group="Surface" bSrgb="0"/>
+		<item name="_displacementMap" type="Texture2D" displayName="Displacement (R height)" group="Displacement" bSrgb="0"/>
+		<item name="_displacementScale" type="Float" defaultValue="0" displayName="Displacement Scale (m)" group="Displacement"/>
+		<item name="_displacementMidLevel" type="Range" defaultValue="0.5" min="0.0" max="1.0" displayName="Displacement Mid Level" group="Displacement"/>
+		<item name="_tessellationDensity" type="Float" defaultValue="200" displayName="Tessellation Density (splits per rad)" group="Displacement"/>
+		<item name="_tessellationMaxFactor" type="Range" defaultValue="32" min="1.0" max="64.0" displayName="Tessellation Max Factor" group="Displacement"/>
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>

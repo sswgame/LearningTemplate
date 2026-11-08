@@ -131,8 +131,54 @@ namespace sw
         };
 
         /** @brief 트레이스를 읽을 때 들고 가는 상태입니다 — 스레드 키(pid, tid) 목록과 프로세스 이름 목록. 스레드 번호는 `ProfilerLoadedTrace::_listThread` 와 같은 순서다. */
-        struct TraceParseState
+        class TraceParseState
         {
+        public:
+            /** @brief (pid, tid) 의 스레드 번호를 찾고, 없으면 `tid N` 이름으로 새로 더합니다. */
+            size_t findThread( ProfilerLoadedTrace& inoutTrace, int64 pid, int64 tid )
+            {
+                for ( size_t index = 0; index < _listKey.size(); ++index )
+                {
+                    if ( _listKey[index]._pid == pid && _listKey[index]._tid == tid )
+                        return index;
+                }
+                _listKey.push_back( { pid, tid } );
+                ProfilerTimelineThread                   thread;
+                StringBuilder<constant::buffer::kMax256> nameBuilder;
+                nameBuilder.appendFormat( "tid %#", tid );
+                thread._name = string( nameBuilder.view() );
+                inoutTrace._listThread.push_back( thread );
+                return _listKey.size() - 1;
+            }
+
+            /** @brief 프로세스 이름 사건(`process_name`) 하나를 적어 둡니다. 합친 파일이면 스레드 줄 앞에 붙인다(`prefixProcessNames`). */
+            void addProcessName( int64 pid, string name ) { _listProcessName.push_back( { pid, std::move( name ) } ); }
+
+            /** @brief 여러 프로세스를 합친 파일이면 같은 스레드 이름("Game Thread")이 프로세스마다 있으니 줄 이름 앞에 프로세스를 붙입니다. */
+            void prefixProcessNames( ProfilerLoadedTrace& inoutTrace ) const
+            {
+                bool bMultiProcess = false;
+                for ( const ThreadKey& key : _listKey )
+                {
+                    bMultiProcess = bMultiProcess || key._pid != _listKey[0]._pid;
+                }
+                if ( bMultiProcess == false )
+                    return;
+                for ( size_t index = 0; index < _listKey.size(); ++index )
+                {
+                    StringBuilder<constant::buffer::kMax256> processNameBuilder;
+                    processNameBuilder.appendFormat( "pid %#", _listKey[index]._pid );
+                    string processName{ processNameBuilder.view() };
+                    for ( const ProcessName& entry : _listProcessName )
+                    {
+                        if ( entry._pid == _listKey[index]._pid )
+                            processName = entry._name;
+                    }
+                    inoutTrace._listThread[index]._name = processName + " / " + inoutTrace._listThread[index]._name;
+                }
+            }
+
+        private:
             struct ThreadKey
             {
                 int64 _pid;
@@ -162,23 +208,6 @@ namespace sw
                 if ( bMetaRead == false )
                     return unexpected( Error{ ErrorKind::InvalidArgument, "otherData has a value of the wrong type" } );
                 return {};
-            }
-
-            /** @brief (pid, tid) 의 스레드 번호를 찾고, 없으면 `tid N` 이름으로 새로 더합니다. */
-            static size_t findThread( TraceParseState& inoutState, ProfilerLoadedTrace& inoutTrace, int64 pid, int64 tid )
-            {
-                for ( size_t index = 0; index < inoutState._listKey.size(); ++index )
-                {
-                    if ( inoutState._listKey[index]._pid == pid && inoutState._listKey[index]._tid == tid )
-                        return index;
-                }
-                inoutState._listKey.push_back( { pid, tid } );
-                ProfilerTimelineThread                   thread;
-                StringBuilder<constant::buffer::kMax256> nameBuilder;
-                nameBuilder.appendFormat( "tid %#", tid );
-                thread._name = string( nameBuilder.view() );
-                inoutTrace._listThread.push_back( thread );
-                return inoutState._listKey.size() - 1;
             }
 
             /** @brief 구간 이름의 슬롯 번호를 찾고, 없으면 이름 표에 더합니다. */
@@ -219,16 +248,16 @@ namespace sw
                         loaded._beginNanos = static_cast<uint64>( *begin * constant::time::kNanosecondsPerMicrosecond + 0.5 );
                         loaded._endNanos   = loaded._beginNanos + static_cast<uint64>( *duration * constant::time::kNanosecondsPerMicrosecond + 0.5 );
                         loaded._slot       = findSlot( inoutTrace, event.get( "name" ).asString() );
-                        inoutTrace._listThread[findThread( inoutState, inoutTrace, pid, tid )]._listEvent.push_back( loaded );
+                        inoutTrace._listThread[inoutState.findThread( inoutTrace, pid, tid )]._listEvent.push_back( loaded );
                         ++eventCount;
                     }
                     else if ( phase == "M" && event.get( "name" ).asString() == "thread_name" )
                     {
-                        inoutTrace._listThread[findThread( inoutState, inoutTrace, pid, tid )]._name = event.get( "args" ).get( "name" ).asString();
+                        inoutTrace._listThread[inoutState.findThread( inoutTrace, pid, tid )]._name = event.get( "args" ).get( "name" ).asString();
                     }
                     else if ( phase == "M" && event.get( "name" ).asString() == "process_name" )
                     {
-                        inoutState._listProcessName.push_back( { pid, event.get( "args" ).get( "name" ).asString() } );
+                        inoutState.addProcessName( pid, event.get( "args" ).get( "name" ).asString() );
                     }
                     else if ( phase == "i" && event.get( "name" ).asString() == "Frame" )
                     {
@@ -241,30 +270,6 @@ namespace sw
                 if ( eventCount == 0 )
                     return unexpected( Error{ ErrorKind::NotFound, "no complete events (ph=X) in the file" } );
                 return {};
-            }
-
-            /** @brief 여러 프로세스를 합친 파일이면 같은 스레드 이름("Game Thread")이 프로세스마다 있으니 줄 이름 앞에 프로세스를 붙입니다. */
-            static void prefixProcessNames( const TraceParseState& state, ProfilerLoadedTrace& inoutTrace )
-            {
-                bool bMultiProcess = false;
-                for ( const TraceParseState::ThreadKey& key : state._listKey )
-                {
-                    bMultiProcess = bMultiProcess || key._pid != state._listKey[0]._pid;
-                }
-                if ( bMultiProcess == false )
-                    return;
-                for ( size_t index = 0; index < state._listKey.size(); ++index )
-                {
-                    StringBuilder<constant::buffer::kMax256> processNameBuilder;
-                    processNameBuilder.appendFormat( "pid %#", state._listKey[index]._pid );
-                    string processName{ processNameBuilder.view() };
-                    for ( const TraceParseState::ProcessName& entry : state._listProcessName )
-                    {
-                        if ( entry._pid == state._listKey[index]._pid )
-                            processName = entry._name;
-                    }
-                    inoutTrace._listThread[index]._name = processName + " / " + inoutTrace._listThread[index]._name;
-                }
             }
 
             /** @brief 스레드마다 구간을 시작 시각 순으로 세우고 깊이(아직 안 끝난 바깥 구간 수)를 정하며, 전체 시작 · 끝 시각을 채웁니다. */
@@ -298,24 +303,18 @@ namespace sw
                 return nanos <= 0.0 ? 0 : static_cast<uint64>( nanos + 0.5 );
             }
 
-            /** @brief 합칠 파일 하나를 읽습니다 — 이벤트 배열, 시계 머리말, 표시 이름, 원래 pid. 틀리면 이유를 @p outReport 에 적고 false 입니다. */
-            [[nodiscard]] static bool readMergeSource( const ProfilerTraceMergeInput& input, size_t index, MergeSource& outSource, string& outReport )
+            /** @brief 합칠 파일 하나를 읽습니다 — 이벤트 배열, 시계 머리말, 표시 이름, 원래 pid. 틀리면 그 이유입니다(대상은 파서의 오류 글). */
+            [[nodiscard]] static expected<void> readMergeSource( const ProfilerTraceMergeInput& input, size_t index, MergeSource& outSource )
             {
                 if ( outSource._document.parse( input._json ) == false )
                 {
-                    StringBuilder<constant::buffer::kMax256> reportBuilder;
-                    reportBuilder.appendFormat( "input %# is not valid JSON: %#", index, outSource._document.getLastError() );
-                    outReport = string( reportBuilder.view() );
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "is not valid JSON", outSource._document.getLastError() } );
                 }
                 const JSONValue root = outSource._document.getRoot();
                 outSource._listEvent = root.isArray() ? root : root.get( "traceEvents" );
                 if ( outSource._listEvent.isArray() == false )
                 {
-                    StringBuilder<constant::buffer::kMax256> reportBuilder;
-                    reportBuilder.appendFormat( "input %# has no traceEvents array", index );
-                    outReport = string( reportBuilder.view() );
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "has no traceEvents array" } );
                 }
                 const JSONValue other         = root.isObject() ? root.get( "otherData" ) : JSONValue{};
                 const bool      bHasClockData = other.isObject() && other.has( "wallUnixMilliseconds" ) && other.has( "monotonicNanoseconds" );
@@ -325,10 +324,7 @@ namespace sw
                     const optional<int64> monotonicNanoseconds = other.readRequired<int64>( "monotonicNanoseconds" );
                     if ( wallMilliseconds.has_value() == false || monotonicNanoseconds.has_value() == false )
                     {
-                        StringBuilder<constant::buffer::kMax256> reportBuilder;
-                        reportBuilder.appendFormat( "input %# has a clock header that is not integers", index );
-                        outReport = string( reportBuilder.view() );
-                        return false;
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "has a clock header that is not integers" } );
                     }
                     outSource._bHasClock            = true;
                     outSource._hostName             = other.get( "hostName" ).asString();
@@ -352,16 +348,13 @@ namespace sw
                         const optional<int64> sourcePID = pid.read<int64>();
                         if ( sourcePID.has_value() == false )
                         {
-                            StringBuilder<constant::buffer::kMax256> reportBuilder;
-                            reportBuilder.appendFormat( "input %# has a pid that is not an integer", index );
-                            outReport = string( reportBuilder.view() );
-                            return false;
+                            return unexpected( Error{ ErrorKind::InvalidArgument, "has a pid that is not an integer" } );
                         }
                         outSource._sourcePID = *sourcePID;
                         break;
                     }
                 }
-                return true;
+                return {};
             }
 
             /** @brief 시간을 맞춥니다 — 첫 파일이 기준이다. 같은 기계는 단조 시계가 같으니 그대로, 다른 기계는 벽시계 − 단조 시계 차이만큼 옮긴다. */
@@ -782,7 +775,7 @@ namespace sw
         { return Internal::readEvents( events, state, trace ); } );
         if ( read.has_value() == false )
             return unexpected( read.error() );
-        Internal::prefixProcessNames( state, trace );
+        state.prefixProcessNames( trace );
         Internal::assignDepthsAndRange( trace );
         VectorUtil::sort( trace._listFrameBegin );
         return trace;
@@ -1054,8 +1047,15 @@ namespace sw
         for ( size_t index = 0; index < listInput.size(); ++index )
         {
             unique_ptr<MergeSource> pSource = make_unique<MergeSource>();
-            if ( Internal::readMergeSource( listInput[index], index, *pSource, outReport ) == false )
+            if ( const expected<void> read = Internal::readMergeSource( listInput[index], index, *pSource ); read.has_value() == false )
+            {
+                StringBuilder<constant::buffer::kMax256> reportBuilder;
+                reportBuilder.appendFormat( "input %# %#", index, read.error().message() );
+                if ( read.error().detail().empty() == false )
+                    reportBuilder.appendFormat( ": %#", read.error().detail() );
+                outReport = string( reportBuilder.view() );
                 return false;
+            }
             listSource.push_back( std::move( pSource ) );
         }
         Internal::alignSources( listSource );

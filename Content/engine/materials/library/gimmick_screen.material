@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 켜진 화면 — 화소 격자(줄 무늬)와 흐르는 주사선, 낮은 거칠기의 유리 앞판. 부모(gimmicksurface.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="EmissiveScreen" _base="engine/materials/gimmicksurface.material">
+	<_properties>
+		<item name="_effect" defaultValue="7"/>
+		<item name="_baseColor" defaultValue="0.02 0.02 0.03 1"/>
+		<item name="_emissiveColor" defaultValue="0.3 0.7 1 1"/>
+		<item name="_emissiveStrength" defaultValue="3"/>
+		<item name="_roughness" defaultValue="0.05"/>
+		<item name="_patternScale" defaultValue="0.004 120 0 0"/>
+		<item name="_flowSpeed" defaultValue="0.3"/>
+	</_properties>
+</MaterialDef>

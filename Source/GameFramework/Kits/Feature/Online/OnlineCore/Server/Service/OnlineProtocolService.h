@@ -20,6 +20,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Serialization/BitStream.h"
@@ -124,11 +125,13 @@ namespace sw
         /** @brief @p callID 가 아직 응답을 기다리면 true 입니다. 로그를 남기지 않습니다. */
         [[nodiscard]] bool isOpen( uint64 callID ) const { return _mapCall.find( callID ) != _mapCall.end(); }
 
-        /** @brief 아직 응답을 기다리는 @p callID 의 메서드 번호(0부터, 열거자 순서)입니다. 없으면 -1 이고 로그를 남기지 않습니다. */
-        [[nodiscard]] int32 findMethodIndex( uint64 callID ) const
+        /** @brief 아직 응답을 기다리는 @p callID 의 메서드 번호(0부터, 열거자 순서)입니다. 없으면 비어 있고 로그를 남기지 않습니다. */
+        [[nodiscard]] optional<int32> findMethodIndex( uint64 callID ) const
         {
             const auto found = _mapCall.find( callID );
-            return found != _mapCall.end() ? found->second._methodIndex : constant::invalid_index::kInt32;
+            if ( found == _mapCall.end() )
+                return nullopt;
+            return found->second._methodIndex;
         }
 
         /** @brief 기다리는 호출 수를 지표 `service_store_pending` 에 씁니다. 서비스가 틱마다 부릅니다. */
@@ -300,9 +303,10 @@ namespace sw
         template <typename TCompletion>
         bool completeByMethod( uint64 callID, TCompletion& completion )
         {
-            const int32 methodIndex = _calls.findMethodIndex( callID );
-            if ( methodIndex < 0 )
+            const optional<int32> foundMethod = _calls.findMethodIndex( callID );
+            if ( foundMethod.has_value() == false )
                 return false;
+            const int32 methodIndex = *foundMethod;
             if ( completion._result.isFailed() )
                 return failCall( callID, completion._result._errorCode );
             CompletionVisitor<TCompletion> visitor{ *this, completion, callID, SW_FALSE };

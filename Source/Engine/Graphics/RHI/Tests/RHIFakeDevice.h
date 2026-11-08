@@ -61,6 +61,7 @@ namespace sw::test
         void setComputeRootConstants( uint32, uint32, const void*, uint32 ) override {}
         void setGraphicsRootConstants( uint32, uint32, const void*, uint32 ) override {}
         void bindComputeUAV( RHIDescriptorIndex, uint32 ) override {}
+        void bindGraphicsUAV( RHIDescriptorIndex, uint32 ) override {}
         void bindShaderResource( RHIDescriptorIndex, uint32 ) override {}
         void bindConstantBuffer( RHIDescriptorIndex, uint32 ) override {}
         void updateConstantBuffer( RHIBufferHandle, const void*, uint32 ) override {}
@@ -104,6 +105,16 @@ namespace sw::test
         vector<RHIDescriptorIndex>         _listLiveTextureIndex;        /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
         vector<RHIDescriptorIndex>         _listLiveBufferIndex;         /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
         vector<RHIFormat>                  _listUnsupportedFormat;       /**< `supportsTextureFormat` 이 거짓으로 답할 형식(나머지는 참) */
+        uint8                              _bAsyncCompute{ SW_FALSE };   /**< 능력 `_bAsyncCompute` 로 답할 값 */
+        /** @brief 큐 사건 하나입니다 — 'G'(그래픽스 리스트 제출) · 'F'(값 번째 비동기 제출 = 포크) · 'J'(그 값의 조인). */
+        struct QueueEvent
+        {
+            utf8   _kind;
+            uint64 _value;
+        };
+        /** @brief 큐 사건의 순서입니다. 큐 계획의 실행 테스트가 본다. */
+        vector<QueueEvent> _listQueueEvent;
+        uint64             _asyncSubmitCount{ 0 }; /**< 지금까지 낸 비동기 제출 수(포크 번호) */
 
         [[nodiscard]] bool   initializeInternal( const RHISwapChainDesc& ) override { return true; }
         void                 shutdownInternal() override { _listShutdownStep.push_back( "shutdownInternal" ); }
@@ -125,6 +136,7 @@ namespace sw::test
             RHICapabilities caps{};
             caps._bParallelCommandRecording = SW_TRUE;
             caps._bWireframeFill            = SW_TRUE; // 그리지 않으므로 모든 보기 모드를 받는다
+            caps._bAsyncCompute             = _bAsyncCompute;
             return caps;
         }
 
@@ -140,7 +152,22 @@ namespace sw::test
             return make_unique<FakeRHICommandList>( _createdCount++ );
         }
 
-        void executeCommandList( IRHICommandList* pCmdList ) override { _listExecuted.push_back( static_cast<FakeRHICommandList*>( pCmdList ) ); }
+        void executeCommandList( IRHICommandList* pCmdList ) override
+        {
+            _listExecuted.push_back( static_cast<FakeRHICommandList*>( pCmdList ) );
+            _listQueueEvent.push_back( QueueEvent{ 'G', 0 } );
+        }
+
+        unique_ptr<IRHICommandList> createAsyncComputeCommandList() override { return createCommandList(); }
+
+        RHIQueueSyncPoint submitAsyncCompute( IRHICommandList* ) override
+        {
+            const uint64 value = ++_asyncSubmitCount;
+            _listQueueEvent.push_back( QueueEvent{ 'F', value } );
+            return RHIQueueSyncPoint{ value };
+        }
+
+        void waitForAsyncCompute( RHIQueueSyncPoint point ) override { _listQueueEvent.push_back( QueueEvent{ 'J', point._value } ); }
 
         /** @brief 부르지 않고 쌓기만 합니다. 테스트가 "GPU 가 그 프레임을 끝냈다" 를 흉내 내어 `_listGPURelease` 를 부릅니다. */
         void   enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override { _listGPURelease.push_back( releaseDelegate ); }

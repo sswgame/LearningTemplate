@@ -82,13 +82,13 @@ namespace sw
         return ReflectedXMLFile::saveDescAsChild( absPath, *this, baseID );
     }
 
-    int32 MaterialGraphDef::findNodeIndex( string_view name ) const
+    optional<uint32> MaterialGraphDef::findNodeIndex( string_view name ) const
     {
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
             if ( _listNode[nodeIndex]._name == name )
-                return static_cast<int32>( nodeIndex );
+                return static_cast<uint32>( nodeIndex );
         }
-        return -1;
+        return nullopt;
     }
 } // namespace sw

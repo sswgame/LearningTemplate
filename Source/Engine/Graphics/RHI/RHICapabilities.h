@@ -46,6 +46,27 @@ namespace sw
          *          DX11 · OpenGL 은 GPU 쪽 표지 수단이 없어 늘 거짓이고, 소실 보고는 CPU 가 마지막으로 기록한 패스만 싣는다(`GPUBreadcrumbs::reportDeviceLost`).
          */
         uint8 _bGPUBreadcrumbs{ SW_FALSE };
+        /**
+         * @brief 머티리얼 셰이더에 헐 · 도메인 스테이지를 붙인 변형(변위 머티리얼 `MATERIAL_DISPLACEMENT`)을 그릴 수 있는지입니다.
+         * @details 패스 XML 의 선택 스테이지(`_hullEntryPoint`)와 달리 헐 · 도메인이 머티리얼 버퍼 · 머티리얼 텍스처 · 패스 상수를 읽는다.
+         *          DX11 · DX12 는 참, Vulkan 은 장치 기능 `tessellationShader` 가 있을 때 참이다. OpenGL 은 거짓이다 — 구조 버퍼를 두 스테이지가 함께 읽으면
+         *          ARB_gl_spirv 드라이버가 링크를 거절한다(binding.hlsli 9 절). WebGPU 는 테셀레이션이 없다. 거짓이면 변형을 만들지 않고 오류를 남긴다
+         *          (`FramePSOManager.DisplacementUnsupported`) — 평면으로 대신 그리지 않는다(언리얼도 테셀레이션 없는 플랫폼에서 변위를 빼지만 여기서는 빠진 그림을 숨기지 않는다).
+         */
+        uint8 _bMaterialTessellation{ SW_FALSE };
+        /**
+         * @brief 그래픽스 큐와 나란히 도는 비동기 컴퓨트 큐가 있는지입니다(`IRHIDevice::createAsyncComputeCommandList` · `submitAsyncCompute` · `waitForAsyncCompute`).
+         * @details DX12 는 COMPUTE 큐와 펜스 둘, Vulkan 은 그래픽스 큐 패밀리의 두 번째 큐(패밀리가 같아 소유권 이전이 없다)와 이진 세마포어로 잇는다 — 그 패밀리에 큐가 하나뿐인
+         *          장치는 거짓이다. DX11 · GL · WebGPU 는 API 에 큐가 하나라 늘 거짓이다. 거짓이면 `_queue="AsyncCompute"` 패스는 그래픽스 큐에서 같은 순서로 돈다 —
+         *          능력 표가 정한 길이지 실패를 덮는 대체가 아니다(언리얼 `GSupportsEfficientAsyncCompute` 가 거짓이면 RDG 가 AsyncCompute 패스를 그래픽스로 돌리는 것과 같다).
+         */
+        uint8 _bAsyncCompute{ SW_FALSE };
+        /**
+         * @brief 픽셀 셰이더가 쓰기 버퍼(UAV · 스토리지 버퍼)에 쓸 수 있는지입니다(`IRHICommandList::bindGraphicsUAV`) — 셰이더 메시지 채널(`GPUMessageChannel`)이 그래픽스 단계에서 쓴다.
+         * @details DX11(기능 수준 11) · DX12 · OpenGL 4.3+ 은 늘 참이고, Vulkan 은 디바이스 기능 `fragmentStoresAndAtomics` 가 있어야 참이다. 거짓이면 메시지 채널을 요구한 실행이 초기화에서 멈춘다
+         *          (메시지 변형 PSO 를 버퍼 없이 돌리지 않는다).
+         */
+        uint8 _bGraphicsShaderWrites{ SW_FALSE };
 
         /** @brief 기본값(컴퓨트만 켠 보수적 기본)으로 만듭니다. */
         RHICapabilities() noexcept = default;

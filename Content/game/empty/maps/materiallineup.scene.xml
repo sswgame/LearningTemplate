@@ -1,0 +1,232 @@
+<Scene formatVersion="2" name="MaterialLineup">
+	<!-- 머티리얼 라이브러리 줄 세우기(시나리오 automation/surfacelibrary) — 줄 0 일상 물건 · 줄 1 소품 · 줄 2 배경 · 줄 3 기믹. 바닥은 콘크리트 프리셋이라 날씨(engine/materials/weather.matparams.xml)를 바꾸면 웅덩이 · 눈이 함께 보인다. 프리셋은 engine/materials/library/. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,6.5,-6.5" _localRotation="0.56,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.9" _nearZ="0.1" _farZ="80" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.85,0.5,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,0.95,0.88" _intensity="1.4" _ambient="0.45" _shadowExtent="14" _shadowDistance="30" _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,3" _localRotation="0,0,0" _localScale="20,1,20" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/library/background_concrete.material" _boundsRadius="16" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="EverydayPorcelainTeacup">
+			<GameObject _schemaVersion="0" _name="EverydayPorcelainTeacup" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-6.30,0.6,0.00" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/everyday_porcelain_teacup.material" _boundsRadius="0.7" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="EverydayPorcelainCrackle">
+			<GameObject _schemaVersion="0" _name="EverydayPorcelainCrackle" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-4.50,0.55,0.00" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/everyday_porcelain_crackle.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="EverydayStainlessFork">
+			<GameObject _schemaVersion="0" _name="EverydayStainlessFork" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-2.70,0.6,0.00" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/everyday_stainless_fork.material" _boundsRadius="0.7" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="EverydaySilverTarnish">
+			<GameObject _schemaVersion="0" _name="EverydaySilverTarnish" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-0.90,0.6,0.00" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/everyday_silver_tarnish.material" _boundsRadius="0.7" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="EverydayBrushedMetal">
+			<GameObject _schemaVersion="0" _name="EverydayBrushedMetal" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0.90,0.6,0.00" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/everyday_brushed_metal.material" _boundsRadius="0.7" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="PropPlasticGlossy">
+			<GameObject _schemaVersion="0" _name="PropPlasticGlossy" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.70,0.6,0.00" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/prop_plastic_glossy.material" _boundsRadius="0.7" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="PropPlasticMatte">
+			<GameObject _schemaVersion="0" _name="PropPlasticMatte" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="4.50,0.6,0.00" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/prop_plastic_matte.material" _boundsRadius="0.7" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="11" name="PropRubber">
+			<GameObject _schemaVersion="0" _name="PropRubber" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="6.30,0.6,0.00" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/prop_rubber.material" _boundsRadius="0.7" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="12" name="PropCardboard">
+			<GameObject _schemaVersion="0" _name="PropCardboard" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-5.40,0.55,2.20" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/prop_cardboard.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="13" name="PropRope">
+			<GameObject _schemaVersion="0" _name="PropRope" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-3.60,0.6,2.20" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="None" _meshID="Capsule" _materialPath="engine/materials/library/prop_rope.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="14" name="PropCeramicTiles">
+			<GameObject _schemaVersion="0" _name="PropCeramicTiles" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-1.80,0.55,2.20" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/prop_ceramic_tiles.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="15" name="PropMarble">
+			<GameObject _schemaVersion="0" _name="PropMarble" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0.00,0.55,2.20" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/prop_marble.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="16" name="PropWoodFloorPolished">
+			<GameObject _schemaVersion="0" _name="PropWoodFloorPolished" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.80,0.55,2.20" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/prop_wood_floor_polished.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="17" name="PropPaintedMetalChipped">
+			<GameObject _schemaVersion="0" _name="PropPaintedMetalChipped" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="3.60,0.6,2.20" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/prop_painted_metal_chipped.material" _boundsRadius="0.7" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="18" name="PropRustyPipe">
+			<GameObject _schemaVersion="0" _name="PropRustyPipe" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="5.40,0.6,2.20" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="None" _meshID="Capsule" _materialPath="engine/materials/library/prop_rusty_pipe.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="19" name="BackgroundBrick">
+			<GameObject _schemaVersion="0" _name="BackgroundBrick" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-4.50,0.55,4.40" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/background_brick.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="20" name="BackgroundConcrete">
+			<GameObject _schemaVersion="0" _name="BackgroundConcrete" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-2.70,0.55,4.40" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/background_concrete.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="21" name="BackgroundPlaster">
+			<GameObject _schemaVersion="0" _name="BackgroundPlaster" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-0.90,0.55,4.40" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/background_plaster.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="22" name="BackgroundRoofTiles">
+			<GameObject _schemaVersion="0" _name="BackgroundRoofTiles" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0.90,0.55,4.40" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/background_roof_tiles.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="23" name="BackgroundStoneWall">
+			<GameObject _schemaVersion="0" _name="BackgroundStoneWall" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.70,0.55,4.40" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/background_stone_wall.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="24" name="BackgroundWetAsphalt">
+			<GameObject _schemaVersion="0" _name="BackgroundWetAsphalt" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="4.50,0.55,4.40" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/background_wet_asphalt.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="25" name="GimmickInteractHighlight">
+			<GameObject _schemaVersion="0" _name="GimmickInteractHighlight" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-6.30,0.6,6.60" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/gimmick_interact_highlight.material" _boundsRadius="0.7" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="26" name="GimmickNeon">
+			<GameObject _schemaVersion="0" _name="GimmickNeon" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-4.50,0.6,6.60" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="None" _meshID="Capsule" _materialPath="engine/materials/library/gimmick_neon.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="27" name="GimmickScreen">
+			<GameObject _schemaVersion="0" _name="GimmickScreen" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-2.70,0.55,6.60" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/gimmick_screen.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="28" name="GimmickLava">
+			<GameObject _schemaVersion="0" _name="GimmickLava" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-0.90,0.55,6.60" _localRotation="0,0.6,0" _localScale="1.1,1.1,1.1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/library/gimmick_lava.material" _boundsRadius="1" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="29" name="GimmickIce">
+			<GameObject _schemaVersion="0" _name="GimmickIce" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0.90,0.6,6.60" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/gimmick_ice.material" _boundsRadius="0.7" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="30" name="GimmickHologram">
+			<GameObject _schemaVersion="0" _name="GimmickHologram" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2.70,0.6,6.60" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/gimmick_hologram.material" _boundsRadius="0.7" _blendMode="Transparent" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="31" name="GimmickForceField">
+			<GameObject _schemaVersion="0" _name="GimmickForceField" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="4.50,0.6,6.60" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/gimmick_force_field.material" _boundsRadius="0.7" _blendMode="Transparent" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="32" name="GimmickDissolve">
+			<GameObject _schemaVersion="0" _name="GimmickDissolve" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="6.30,0.6,6.60" _localRotation="0,0,0" _localScale="1.2,1.2,1.2" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="engine/materials/library/gimmick_dissolve.material" _boundsRadius="0.7" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

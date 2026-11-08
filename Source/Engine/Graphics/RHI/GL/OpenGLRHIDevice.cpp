@@ -460,6 +460,16 @@ namespace sw
             GLint       maxFragmentTextureUnit{ 0 };
             const GLint requiredTextureUnit = static_cast<GLint>( shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
             glGetIntegerv( GL_MAX_TEXTURE_IMAGE_UNITS, &maxFragmentTextureUnit );
+            GLint       maxCombinedTextureUnit{ 0 };
+            const GLint requiredCombinedUnit = static_cast<GLint>( shaderslot::kEngineTexture0 + shaderslot::kEngineTextureCount );
+            glGetIntegerv( GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &maxCombinedTextureUnit );
+            if ( maxCombinedTextureUnit < requiredCombinedUnit )
+            {
+                SW_LOG_WARNING_ID( "OpenGL.OpenGLBackendUnusableCombined", "The OpenGL backend is unusable - %# combined texture units, but engine texture slots need %#.",
+                                   static_cast<int32>( maxCombinedTextureUnit ), static_cast<int32>( requiredCombinedUnit ) );
+                _initResult = RHIInitResult::DriverUnsupported;
+                return false;
+            }
             if ( maxFragmentTextureUnit < requiredTextureUnit )
             {
                 SW_LOG_WARNING_ID( "OpenGL.OpenGLBackendUnusableFragment", "The OpenGL backend is unusable - %# fragment texture units, but %# are needed for material texture slots.",
@@ -541,11 +551,11 @@ namespace sw
             glSamplerParameteri( engineSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
             glSamplerParameteri( engineSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
             glSamplerParameteri( engineSampler, GL_TEXTURE_COMPARE_MODE, GL_NONE );
-            for ( uint32 unit = 0; unit < 64; ++unit )
+            for ( uint32 unit = 0; unit < shaderslot::gl::kTextureUnitLimit; ++unit )
             {
                 const bool bMaterialUnit = ( shaderslot::kMaterialTexture0 <= unit && unit < shaderslot::kMaterialTexture0 + shaderslot::kMaterialTextureCount );
-                // 엔진 텍스처 칸의 GL 유닛은 칸 번호(0..kEngineTextureCount-1)다 — shaderslot::emulated::getGlTextureUnit.
-                const bool bEngineUnit = unit < shaderslot::kEngineTextureCount;
+                // 엔진 텍스처 칸의 GL 유닛은 레지스터 번호 그대로다(t32..).
+                const bool bEngineUnit = ( shaderslot::kEngineTexture0 <= unit && unit < shaderslot::kEngineTexture0 + shaderslot::kEngineTextureCount );
                 glBindTextureUnit( unit, defaultTex );
                 if ( bMaterialUnit )
                     glBindSampler( unit, materialSampler );
@@ -721,7 +731,7 @@ namespace sw
 
         if ( _defaultSampler )
         {
-            for ( uint32 unit = 0; unit < 64; ++unit )
+            for ( uint32 unit = 0; unit < shaderslot::gl::kTextureUnitLimit; ++unit )
             {
                 glBindSampler( unit, 0 );
                 glBindTextureUnit( unit, 0 );

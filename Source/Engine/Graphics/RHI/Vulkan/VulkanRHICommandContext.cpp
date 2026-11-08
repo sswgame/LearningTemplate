@@ -612,6 +612,17 @@ namespace sw
         setSlot( true, shaderslot::vk::kUShift + slot, index, true, false );
     }
 
+    void VulkanRHICommandContext::bindGraphicsUAV( RHIDescriptorIndex index, uint32 slot )
+    {
+        // 그래픽스 u# → 그래픽스 슬롯 세트의 u 범위. 세트 레이아웃은 모든 단계에 보이고, 프래그먼트 쓰기는 fragmentStoresAndAtomics 가 켠다(능력 `_bGraphicsShaderWrites`).
+        if ( _pDevice->_bFragmentStores == 0 )
+            return;
+        slot = toRegister( slot, shaderslot::vk::kUShift );
+        if ( slot >= shaderslot::kComputeUAVSlotCount )
+            return;
+        setSlot( false, shaderslot::vk::kUShift + slot, index, true, false );
+    }
+
     void VulkanRHICommandContext::bindComputeShaderResource( RHIDescriptorIndex index, uint32 slot )
     {
         slot = toRegister( slot, shaderslot::vk::kTShift );

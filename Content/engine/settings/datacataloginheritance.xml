@@ -2,7 +2,7 @@
 <!--
   항목 · 파일 상속의 합치기 규칙 표입니다(`DataCatalogInheritance`). 팩 쿠킹은 게임 모듈을 올리기 전에 돌아 코드 옆 등록을 보지 못하고, 배포 런타임은 덮어쓰기 층을 얹을 때 이 표를 읽어 엔진 팩에 담깁니다.
   <Document> 는 한 문서 형식의 칸 규칙(리플렉션 형식 줄은 ResourceComposerTest.DocumentTableMatchesReflection 이 코드와 대조합니다), <Catalog> 는 항목이 되풀이되는 카탈로그입니다.
-  <Field name key> · <Entry name key> 의 key 는 목록 원소의 열쇠 칸입니다. key 가 없으면 구조체 칸입니다.
+  <Field name key> · <Entry name key> 의 key 는 목록 원소의 열쇠 칸입니다. key 가 없으면 구조체 칸입니다. <Catalog> 바로 아래의 <Field> 는 항목(`_base` 를 받는 것)이 아닌 루트 칸입니다.
 -->
 <DataCatalogInheritanceTable>
 	<Document root="AudioEventLibrary">
@@ -56,6 +56,8 @@
 	<Document root="RenderPipelineDesc">
 		<Field name="_listAttachment" key="_name"/>
 		<Field name="_listPass" key="_name"/>
+		<Field name="_listResource" key="_name"/>
+		<Field name="_listFramePass" key="_name"/>
 	</Document>
 	<Document root="SpriteLibrary">
 		<Field name="_listCategory" key="_name">
@@ -105,7 +107,23 @@
 			</Field>
 			<Field name="State" key="name"/>
 			<Field name="DamageStage" key="name"/>
+			<Field name="BodyChannel" key="name"/>
 		</Entry>
+	</Catalog>
+	<Catalog root="BodyProfileCatalog">
+		<Entry name="BodyProfile" key="id">
+			<Field name="BodyChannel" key="name"/>
+			<Field name="Jiggle" key="group"/>
+			<Field name="ActionScale" key="tag"/>
+			<Field name="Wrinkle" key="region">
+				<Field name="Source" key="expression"/>
+			</Field>
+			<Field name="Pupil"/>
+			<Field name="Fluid" key="name"/>
+		</Entry>
+	</Catalog>
+	<Catalog root="SkinLayerCatalog">
+		<Entry name="SkinLayer" key="id"/>
 	</Catalog>
 	<Catalog root="EquipmentSetCatalog">
 		<Entry name="Set" key="id"/>
@@ -149,6 +167,16 @@
 			<Field name="Dolly"/>
 			<Field name="PostProcess"/>
 		</Entry>
+	</Catalog>
+	<!-- 입력 맵: 레이어 정의(<layers><layer name>)는 이름으로 합치고, 액션을 담는 레이어 · 루트 액션은 이름이 열쇠인 항목이다(언리얼 Enhanced Input 매핑 컨텍스트를 우선순위로 쌓는 자리를 파일 상속으로). 바인딩 원소는 열쇠가 없어 종류째 바뀐다. -->
+	<Catalog root="InputMap">
+		<Field name="layers">
+			<Field name="layer" key="name"/>
+		</Field>
+		<Entry name="layer" key="name">
+			<Field name="action" key="name"/>
+		</Entry>
+		<Entry name="action" key="name"/>
 	</Catalog>
 	<Catalog root="SocketSet">
 		<Entry name="Socket" key="name"/>

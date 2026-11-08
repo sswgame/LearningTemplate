@@ -32,14 +32,14 @@ namespace sw
         return unreadCount;
     }
 
-    int32 MailboxClient::findMailIndex( const string& mailKey ) const
+    optional<int32> MailboxClient::findMailIndex( const string& mailKey ) const
     {
         for ( size_t mailIndex = 0; mailIndex < _listMail.size(); ++mailIndex )
         {
             if ( _listMail[mailIndex]._mailKey == mailKey )
                 return static_cast<int32>( mailIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     void MailboxClient::onCallSucceeded( MailboxMethod::List, const MailboxListRequest& request, const MailboxListReply& reply )
@@ -53,10 +53,10 @@ namespace sw
     void MailboxClient::onCallSucceeded( MailboxMethod::MarkRead, const MailboxMailRequest& request, const MailboxResultReply& reply )
     {
         (void)reply;
-        const int32 mailIndex = findMailIndex( request._mailKey );
-        if ( mailIndex < 0 )
+        const optional<int32> mailIndex = findMailIndex( request._mailKey );
+        if ( mailIndex.has_value() == false )
             return;
-        MailView& mail = _listMail[static_cast<size_t>( mailIndex )];
+        MailView& mail = _listMail[static_cast<size_t>( *mailIndex )];
         if ( mail._state == ServiceMailState::Unread )
             mail._state = ServiceMailState::Read;
         ++_revision;
@@ -65,12 +65,12 @@ namespace sw
     void MailboxClient::onCallSucceeded( MailboxMethod::Claim, const MailboxMailRequest& request, const MailboxClaimReply& reply )
     {
         (void)reply;
-        const int32 mailIndex = findMailIndex( request._mailKey );
-        if ( mailIndex < 0 )
+        const optional<int32> mailIndex = findMailIndex( request._mailKey );
+        if ( mailIndex.has_value() == false )
             return;
-        MailView& mail = _listMail[static_cast<size_t>( mailIndex )];
+        MailView& mail = _listMail[static_cast<size_t>( *mailIndex )];
         if ( mail._bCampaign == SW_TRUE )
-            _listMail.erase( _listMail.begin() + static_cast<ptrdiff_t>( mailIndex ) ); // 받은 캠페인은 목록에서 뺀다
+            _listMail.erase( _listMail.begin() + static_cast<ptrdiff_t>( *mailIndex ) ); // 받은 캠페인은 목록에서 뺀다
         else
             mail._state = ServiceMailState::Claimed;
         ++_revision;
@@ -79,10 +79,10 @@ namespace sw
     void MailboxClient::onCallSucceeded( MailboxMethod::Delete, const MailboxMailRequest& request, const MailboxResultReply& reply )
     {
         (void)reply;
-        const int32 mailIndex = findMailIndex( request._mailKey );
-        if ( mailIndex < 0 )
+        const optional<int32> mailIndex = findMailIndex( request._mailKey );
+        if ( mailIndex.has_value() == false )
             return;
-        _listMail.erase( _listMail.begin() + static_cast<ptrdiff_t>( mailIndex ) );
+        _listMail.erase( _listMail.begin() + static_cast<ptrdiff_t>( *mailIndex ) );
         ++_revision;
     }
 } // namespace sw

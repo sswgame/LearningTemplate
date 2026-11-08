@@ -4,8 +4,10 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
@@ -85,45 +87,43 @@ namespace sw::editor
         return EditorAssetFileCommands::duplicateAsset( sourceAbs, outAssetAbs );
     }
 
-    bool ContentBrowserFileActions::collectMovesToFolder( string_view sourceAbs, string_view folderAbs, vector<EditorAssetMove>& outListMove, string& outFailure )
+    expected<vector<EditorAssetMove>> ContentBrowserFileActions::collectMovesToFolder( string_view sourceAbs, string_view folderAbs )
     {
-        outListMove.clear();
         if ( FileUtil::isDirectory( sourceAbs ) )
-            return EditorAssetFileCommands::collectFolderMoves( sourceAbs, folderAbs, outListMove, outFailure );
+            return EditorAssetFileCommands::collectFolderMoves( sourceAbs, folderAbs );
         const string destinationAbs = FileUtil::joinPath( folderAbs, FileUtil::getFileNamePart( sourceAbs ) );
         if ( FileUtil::pathsEqualNormalized( destinationAbs, sourceAbs ) )
-        {
-            outFailure = "it is already in that folder";
-            return false;
-        }
-        outListMove.push_back( EditorAssetMove{ string( sourceAbs ), destinationAbs } );
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "it is already in that folder", FileUtil::getFileNamePart( sourceAbs ) } );
+        return vector<EditorAssetMove>{
+            EditorAssetMove{ string( sourceAbs ), destinationAbs }
+        };
     }
 
     bool ContentBrowserFileActions::planMoveToFolder( string_view sourceAbs, string_view folderAbs, const EditorReferenceIndex& index, EditorAssetMovePlan& outPlan )
     {
-        vector<EditorAssetMove> listMove;
-        string                  failure;
-        if ( collectMovesToFolder( sourceAbs, folderAbs, listMove, failure ) == false )
+        const expected<vector<EditorAssetMove>> listMove = collectMovesToFolder( sourceAbs, folderAbs );
+        if ( listMove.has_value() == false )
         {
-            outPlan          = EditorAssetMovePlan{};
-            outPlan._failure = failure;
+            outPlan = EditorAssetMovePlan{};
+            StringBuilder<constant::buffer::kMax256> failureBuilder;
+            failureBuilder.appendFormat( "%# '%#'", listMove.error().message(), listMove.error().detail() );
+            outPlan._failure = string( failureBuilder.view() );
             return false;
         }
-        return EditorAssetFileCommands::planAssetMoves( listMove, index, outPlan );
+        return EditorAssetFileCommands::planAssetMoves( *listMove, index, outPlan );
     }
 
     bool ContentBrowserFileActions::moveAssetToFolder( string_view sourceAbs, string_view folderAbs, EditorReferenceIndex& inoutIndex, string& outDestinationAbs )
     {
-        vector<EditorAssetMove> listMove;
-        string                  failure;
-        if ( collectMovesToFolder( sourceAbs, folderAbs, listMove, failure ) == false )
+        const expected<vector<EditorAssetMove>> collected = collectMovesToFolder( sourceAbs, folderAbs );
+        if ( collected.has_value() == false )
         {
-            SW_LOG_WARNING_ID( "ContentBrowserFileActions.NothingMoved", "Nothing was moved - %#", failure );
+            SW_LOG_WARNING_ID( "ContentBrowserFileActions.NothingMoved", "Nothing was moved - %# '%#'", collected.error().message(), collected.error().detail() );
             return false;
         }
-        const bool          bFolder = FileUtil::isDirectory( sourceAbs );
-        EditorAssetMovePlan plan;
+        const vector<EditorAssetMove>& listMove = *collected;
+        const bool                     bFolder  = FileUtil::isDirectory( sourceAbs );
+        EditorAssetMovePlan            plan;
         if ( EditorAssetFileCommands::applyAssetMoves( listMove, inoutIndex, plan ) == false )
             return false; // 이유와 되돌림은 applyAssetMoves 가 알렸다
         outDestinationAbs = bFolder ? FileUtil::joinPath( folderAbs, FileUtil::getFileNamePart( sourceAbs ) ) : listMove.front()._destinationAbs;

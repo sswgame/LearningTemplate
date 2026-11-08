@@ -50,7 +50,7 @@ namespace sw
         /**
          * @brief 이미 읽은 타임스탬프 한 프레임을 프로파일러의 `GPU.<패스>`, `GPU.Compute`, `GPU.Frame` 구간으로 넣습니다. GPU 없이 부를 수 있습니다.
          * @details 음수 슬롯은 그 프레임에 기록되지 않았다는 표시입니다(패스를 건너뛰었거나 첫 사이클). 한쪽만 음수여도 구간이 성립하지 않습니다.
-         *          `GPU.Frame` 은 프레임의 첫 명령부터 마지막 패스 끝까지이고, 패스 합과의 차이가 컴퓨트 프리패스, 업로드, 배리어입니다.
+         *          `GPU.Frame` 은 프레임의 첫 명령부터 마지막 패스 끝까지이고, 패스 합과의 차이가 프레임 그래프, 업로드, 배리어입니다.
          */
         void reportFrame( const RHITimestampFrame& frame, const vector<RenderGraphPassDesc>& listPass );
         /** @brief 디바이스를 잊습니다. 다음 디바이스(백엔드 교체)는 새 GPU 컨텍스트를 엽니다. 같은 주소에 새 디바이스가 생겨도 옛 시계 기준을 쓰지 않습니다. */

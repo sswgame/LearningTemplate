@@ -12,20 +12,25 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Graphics/Debug/GPUMessage.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Renderer/Frame/FrameMeshDeformState.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
+#include "Engine/Renderer/Frame/PostProcess/FramePostProcessTextureSet.h"
 #include "Engine/Renderer/Frame/Resource/PassConstantRing.h"
 #include "Engine/Renderer/Frame/Timeline/GPUPassTimeline.h"
 #include "Engine/Renderer/Frame/View/FrameViewTarget.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
+#include "Engine/Renderer/Graph/RenderGraphAliasPlan.h"
 #include "Engine/Renderer/Lighting/GPULightBuffer.h"
+#include "Engine/Renderer/Lighting/LensFlareSpriteBuffer.h"
 #include "Engine/Renderer/Lighting/Light2DCookieAtlas.h"
 #include "Engine/Renderer/Lighting/RealtimeProbeUpdater.h"
+#include "Engine/Renderer/Lighting/ShadowCache.h"
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
 #include "Engine/Renderer/Scene/GPUScene.h"
 #include "Engine/Renderer/VFX/VFXParticleRenderer.h"
@@ -71,8 +76,17 @@ namespace sw
     struct FrameRenderState
     {
         GPUScene _gpuScene{};
-        /** @brief 파이프라인 XML 로 만든 렌더 그래프입니다. 렌더러가 다시 만들고(`loadPipeline`) 패스 실행이 콜백을 묶고 돌립니다. */
+        /** @brief 파이프라인 XML 의 `_listPass` 로 만든 뷰 그래프입니다. 뷰마다 다시 돈다. 렌더러가 다시 만들고(`loadPipeline`) 패스 실행이 콜백을 묶고 돌립니다. */
         RenderGraph _graph{};
+        /** @brief 파이프라인 XML 의 `_listFramePass` 로 만든 프레임 그래프입니다. 프레임에 한 번, 뷰 그래프보다 먼저 돈다(`FramePassExecutor::recordFrameGraph`). */
+        RenderGraph _frameGraph{};
+        /**
+         * @brief 뷰 그래프의 트랜지언트 앨리어싱 계획입니다(레벨 수명이 겹치지 않고 서술이 같은 첨부가 텍스처 하나를 나눈다 — `RenderGraphAliasPlan::build`).
+         * @details 콜백을 묶을 때(`FramePassExecutor::bindPassCallbacks`) 세우고 세대를 올린다. 뷰 풀은 세대가 다르면 다시 만든다(`FrameViewResources::updateViewTransients`).
+         *          파이프라인을 다시 읽으면 비우고 세대를 올린다 — 새 파이프라인의 첫 프레임은 앨리어싱 없이 만든다.
+         */
+        RenderGraphAliasPlan _transientAliasPlan{};
+        uint32               _transientAliasGeneration{ 0 };
         /// @brief 주 시점입니다. 파이프라인이 선언한 첨부(창 크기로 만들고 구성이 바뀔 때만 다시 만든다), TAA 히스토리, 직렬 리스트, 출력 사각형을 가집니다.
         FrameViewTarget _mainView{};
         /// @brief 추가 뷰들입니다. 카메라 id 순서가 아니라 처음 본 순서로 쌓습니다. 뷰마다 자기 풀과 컬링 슬롯을 가집니다.
@@ -108,14 +122,21 @@ namespace sw
          * @details 패킷 경로는 패킷과 맞바꾸기로 받고, 씬 직접 경로는 여기에 바로 채운다. 기록 중에는 읽기만 한다.
          */
         FrameShadowData _frameShadow{};
+        /// @brief 서 있는 점광 · 스폿의 그림자 캐시(규칙 · 캐시 층)입니다. `FrameRenderer::applyFrameShadow` 가 프레임마다 정하고 그림자 패스가 그린다(`gv_shadowCache`).
+        ShadowCache _shadowCache{};
         /// @brief 이번 프레임 실시간 프로브 갱신 요청입니다(패킷 경로도 여기에 받는다). 기록은 읽기만 합니다.
         vector<RealtimeProbeRequest> _listFrameRealtimeProbe{};
-        RealtimeProbeUpdater         _probeUpdater{};   ///< 실시간 프로브 갱신의 버퍼와 컴퓨트 기록(`FrameRenderer::prepareRealtimeProbes` · `FramePassExecutor::dispatchRealtimeProbes`)
-        SkyGradient                  _frameSkySource{}; ///< 이번 프레임 하늘의 원본 값입니다(실시간 프로브 갱신이 하늘 SH 를 투영한다). `_bHasFrameSky` 가 0 이면 기본값
-        hashed_string                _skyHdriPath{};    ///< 지금 쥔 HDRI 하늘 텍스처의 경로입니다(`FrameRenderer::applyFrameSky`). 비었으면 쥔 것이 없다
-        TextureHandle                _skyHdriLoad{};    ///< HDRI 하늘 텍스처의 로드 핸들입니다(참조를 쥔다). 스카이 패스가 준비된 것만 읽는다
+        RealtimeProbeUpdater         _probeUpdater{}; ///< 실시간 프로브 갱신의 버퍼와 컴퓨트 기록(`FrameRenderer::prepareRealtimeProbes` · `FramePassExecutor::dispatchRealtimeProbes`)
+        /// @brief 이번 프레임 렌즈 플레어를 단 빛들입니다(패킷 경로가 받는다). 기록은 읽기만 합니다.
+        vector<LensFlareRequest> _listFrameLensFlare{};
+        LensFlareSpriteBuffer    _lensFlare{};      ///< 주 시점 렌즈 플레어 스프라이트의 버퍼(`FrameRenderer` 가 기록 전에 채우고 `FramePassExecutor::executeLensFlarePass` 가 그린다)
+        SkyGradient              _frameSkySource{}; ///< 이번 프레임 하늘의 원본 값입니다(실시간 프로브 갱신이 하늘 SH 를 투영한다). `_bHasFrameSky` 가 0 이면 기본값
+        hashed_string            _skyHdriPath{};    ///< 지금 쥔 HDRI 하늘 텍스처의 경로입니다(`FrameRenderer::applyFrameSky`). 비었으면 쥔 것이 없다
+        TextureHandle            _skyHdriLoad{};    ///< HDRI 하늘 텍스처의 로드 핸들입니다(참조를 쥔다). 스카이 패스가 준비된 것만 읽는다
         /** @brief 2D 빛 쿠키 아틀라스입니다(칸 나누기 · 쿠키 텍스처 수명 · 아틀라스 렌더 타깃). */
         Light2DCookieAtlas _cookieAtlas{};
+        /** @brief 뷰의 후처리 값이 가리키는 텍스처(컬러 그레이딩 LUT · 블룸 먼지 마스크)의 로드 핸들입니다. 셋업이 뷰마다 묻고 프레임 시작에 안 쓰인 것을 놓는다. */
+        FramePostProcessTextureSet _postProcessTextures{};
         /// @brief 캔버스(화면 2D) 렌더러입니다. 아틀라스 사본, 사각형 버퍼, 일괄 드로우, 렌더 텍스처 대상(월드 공간 UI)을 렌더 스레드에서 처리합니다.
         CanvasRenderer _canvasRenderer{};
         /// @brief 파티클 렌더러입니다. 입자 버퍼와 입자 텍스처를 렌더 스레드에서 처리하고, 투명 패스가 방출기마다 빌보드를 그립니다.
@@ -129,6 +150,12 @@ namespace sw
          *          차이로 구해야 한다. 그런 추측(클리어, 포맷 비용 등)은 쉽게 틀린다.
          */
         GPUPassTimeline _gpuPassTimeline{};
+        /**
+         * @brief 셰이더 메시지 링(`-gv_gpuMessages`)입니다. 컴퓨트 프리패스(`FramePrepass` — 컬링 · 모프 · 마커)와 그래프의 그래픽스 패스(`FramePassExecutor::bindForDraw`)가 함께 u4 로 쓴다.
+         * @details 프리패스가 프레임 앞에서 선택을 올리고(`updateControl`) 앞 프레임들의 기록을 로그로 내며(`poll`), 프리패스 끝에서 되읽기를 요청한다 — 그래픽스 패스의 기록은 다음 프레임의 사본에 실린다(누적 카운터라 잃지 않는다).
+         *          꺼져 있으면 비어 있다.
+         */
+        GPUMessageChannel _gpuMessages{};
         /// @brief 병렬 기록(`RenderGraph::executeParallel`)이 쓰는 태스크 매니저입니다. 없으면 직렬로 기록합니다.
         TaskManager*     _pTaskManager{ nullptr };
         RHITextureHandle _outputRenderTarget{ 0 }; ///< 주 출력 RT(에디터 게임 뷰). 0 이면 백버퍼

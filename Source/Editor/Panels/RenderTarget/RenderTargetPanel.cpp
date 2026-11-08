@@ -184,7 +184,7 @@ namespace sw::editor
     {
         RenderTargetRegistry&   registry           = editor::getSubsystem<RenderTargetRegistry>();
         const RenderTargetInfo* pSelected          = findByName( _listTarget, _selectedName );
-        const bool              bTargetNotReadable = pSelected == nullptr || RenderTargetViewSettings::isDecodableFormat( pSelected->_format, pSelected->_bDepth != SW_FALSE ) == false;
+        const bool              bTargetNotReadable = pSelected == nullptr || RenderTargetReadback::isDecodableFormat( pSelected->_format, pSelected->_bDepth != SW_FALSE ) == false;
         if ( bTargetNotReadable )
             return;
 
@@ -393,8 +393,8 @@ namespace sw::editor
             return;
         float4     value{};
         const bool bDepth = selected._bDepth != SW_FALSE;
-        if ( RenderTargetViewSettings::readPixel( _snapshot._byte, _snapshot._layout, selected._format, bDepth, static_cast<uint32>( texel._x ),
-                                                  static_cast<uint32>( texel._y ), value ) == false )
+        if ( RenderTargetReadback::readPixel( _snapshot._byte, _snapshot._layout, selected._format, bDepth, static_cast<uint32>( texel._x ),
+                                              static_cast<uint32>( texel._y ), value ) == false )
             return;
         _probedPixel  = value;
         _probedTexel  = texel;
@@ -412,7 +412,7 @@ namespace sw::editor
         {
             // G버퍼 첨부면 명세(`GBufferAttachmentSpec`)의 뜻으로 채널을 이름 짓고 값을 푼다(노멀은 옥타헤드럴을 풀어 단위 벡터) — 셰이더 읽기와 같은 식이다.
             const GBufferAttachmentSpec* pSpec        = GBufferLayout::findAttachment( selected._name );
-            const uint32                 channelCount = RenderTargetViewSettings::getChannelCount( selected._format, false );
+            const uint32                 channelCount = RenderTargetReadback::getChannelCount( selected._format, false );
             const float32                arrValue[4]{ value._x, value._y, value._z, value._w };
             const utf8*                  arrLabel[4]{ "R", "G", "B", "A" };
             for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
@@ -472,7 +472,7 @@ namespace sw::editor
                                        .c_str() );
 
         const bool bDepth     = pSelected->_bDepth != SW_FALSE;
-        const bool bDecodable = RenderTargetViewSettings::isDecodableFormat( pSelected->_format, bDepth );
+        const bool bDecodable = RenderTargetReadback::isDecodableFormat( pSelected->_format, bDepth );
         if ( bDecodable )
             drawViewControls( *pSelected );
 

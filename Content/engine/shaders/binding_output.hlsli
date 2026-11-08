@@ -13,22 +13,64 @@
 //     언리얼이 같은 머티리얼을 패스별 셰이더 **타입**으로 감싸는 것에 해당한다. 여기서는 패스가 define 을
 //     추가하고(SW_PASS_GBUFFER), 출력 서명이 그 define 을 따라간다.
 // ------------------------------------------------------------------------------
+// 화면 속도(이번 UV - 지난 UV) — 깊이를 쓰는 불투명 지오메트리 패스가 함께 쓴다. G버퍼는 명세(C++ GBufferLayout 판 2)의 넷째 MRT, 포워드는 출력을 선언한 패스만
+// SW_PASS_VELOCITY 로 둘째 타깃이다(C++ kPassVelocityDefine). 값은 픽셀 단계가 보간한 이번 · 지난 클립 위치로 구해 여기 둔다(PixelContext::make → MaterialInterpolants::storeSurfaceVelocity).
+// 언리얼 베이스 패스의 속도 출력(r.VelocityOutputPass=1)과 같은 자리다 — 속도만 따로 그리는 패스를 두지 않는다.
+#if defined( SW_PASS_GBUFFER ) || defined( SW_PASS_VELOCITY )
+    #define SW_WRITES_VELOCITY 1
+#else
+    #define SW_WRITES_VELOCITY 0
+#endif
+static float2 g_SurfaceVelocity = float2( 0.0f, 0.0f );
+// 화면 왜곡 오프셋(화면 UV) — 왜곡 누적 패스(SW_PASS_DISTORTION)가 머티리얼의 왜곡 훅으로 정해(PixelContext::storeSurface) 단일 타깃에 낸다(가산 블렌드).
+static float2 g_SurfaceDistortion = float2( 0.0f, 0.0f );
+
 // 양쪽 다 **구조체**다. 포워드 쪽을 `float4` 로 두면 `SurfaceOutput PSMain(...)` 에 반환
 // 시맨틱이 사라져 DXC 가 "Semantic must be defined for all outputs" 로 거절한다 — 그러면 머티리얼
 // 셰이더가 통째로 컴파일되지 않아 화면이 빈다(실제로 한 번 그랬다).
+#include "shading_model_ids.hlsli"
+
+/**
+ * @brief G버퍼에 싣는 셰이딩 값 — 셰이딩 모델 번호 · 반사율 · 가림 · 사용자 칸 · 자체 발광(G버퍼 명세 판 3). 포워드 출력은 읽지 않는다.
+ * @details 사용자 칸의 뜻은 번호마다 다르다(shading_model_ids.hlsli 표). 자체 발광은 G버퍼 패스가 장면 색(LitColor)에 미리 적고 디퍼드 조명이 그 위에 더한다
+ *          — 그래서 발광 머티리얼도 디퍼드로 그린다(언리얼이 베이스 패스에서 발광을 장면 색에 쓰는 것과 같다).
+ */
+struct SurfaceShading
+{
+    uint   _shadingModel; ///< SW_SHADING_MODEL_ID_*
+    float  _specular;     ///< 유전체 반사율(언리얼 Specular — 0.5 가 F0 0.04, 피부 · 물 · 보석은 다르다)
+    float  _occlusion;    ///< 머티리얼 가림(SSAO 와 곱한다)
+    float4 _customData;   ///< 번호마다의 사용자 칸(0..1)
+    float3 _emissive;     ///< 자체 발광(HDR)
+
+    static SurfaceShading make( uint shadingModel );
+    static uint resolveViewMode( uint shadingModel ); // 보기 모드가 조명을 끄면 Unlit
+};
+
 struct SurfaceOutput
 {
 #if defined( SW_PASS_GBUFFER )
-    float4 _albedo : SV_TARGET0;
-    float2 _normal : SV_TARGET1;   // R16G16_SNORM — Octahedral::encode(월드 노멀)
-    float4 _material : SV_TARGET2; // SurfaceOutput::encodeGbufferMaterial
+    // MRT 순서는 C++ GBufferLayout::kArrAttachment 와 같다(판 3 — 여섯 장).
+    float4 _albedo : SV_TARGET0;     // rgb 알베도, a 셰이딩 모델 번호(SurfaceOutput::encodeShadingModel)
+    float2 _normal : SV_TARGET1;     // R16G16_SNORM — Octahedral::encode(월드 노멀)
+    float4 _material : SV_TARGET2;   // SurfaceOutput::encodeGbufferMaterial
+    float2 _velocity : SV_TARGET3;   // R16G16 실수 — 이번 UV - 지난 UV(g_SurfaceVelocity)
+    float4 _customData : SV_TARGET4; // 번호마다의 사용자 칸
+    float4 _sceneColor : SV_TARGET5; // 자체 발광 — 장면 색(LitColor)에 미리 적는다. 디퍼드 조명이 더한다
+#elif defined( SW_PASS_VELOCITY )
+    float4 _color : SV_TARGET0;
+    float2 _velocity : SV_TARGET1; // R16G16 실수 — 이번 UV - 지난 UV(g_SurfaceVelocity)
+#elif defined( SW_PASS_DISTORTION )
+    float4 _distortion : SV_TARGET0; // R16G16 실수 — rg 화면 UV 오프셋(g_SurfaceDistortion), a 1(가산 블렌드의 SrcAlpha)
 #else
     float4 _color : SV_TARGET0;
 #endif
 
-    static SurfaceOutput store( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic );
-    static SurfaceOutput pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic ); // 패스의 출력 서명대로 담는다
-    static float4 encodeGbufferMaterial( float roughness, float metallic );
+    static SurfaceOutput store( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic, SurfaceShading shading );
+    static SurfaceOutput pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic, SurfaceShading shading ); // 패스의 출력 서명대로 담는다
+    static float4 encodeGbufferMaterial( float roughness, float metallic, float specular, float occlusion );
+    static float encodeShadingModel( uint shadingModel );
+    static uint decodeShadingModel( float encoded );
 };
 
 // ------------------------------------------------------------------------------
@@ -280,27 +322,53 @@ static void ViewMode::applyToSurface( inout float4 inoutLitColor, inout float4 i
 }
 #endif
 
-// G버퍼 알베도의 알파는 **셰이딩 모델**이다 — 1 은 조명, 0 은 조명 없이 알베도 그대로(deferred_lighting 이 읽는다).
+// G버퍼 알베도의 알파는 **셰이딩 모델 번호**다(shading_model_ids.hlsli — 0 은 클리어: 그리지 않았다). 디퍼드 조명이 번호마다 사용자 칸을 푼다.
 // 디퍼드 조명 패스는 머티리얼 PSO 가 아니라 뷰 모드를 모르므로, 뷰 모드를 받는 G버퍼 패스가 픽셀마다 적어 넘긴다(언리얼 G버퍼의 ShadingModelID 와 같은 자리).
 // G버퍼 명세의 판이다 — C++ `GBufferLayout::kVersion`(Renderer/Pipeline/GBufferLayout.h)과 같아야 한다(단위 테스트 GBufferLayoutTest 가 맞춘다).
-// 첨부 · 채널 · 인코딩(아래 셰이딩 모델 · 그려짐 · 옥타헤드럴 노멀)을 바꾸면 두 곳을 함께 올린다.
-#define SW_GBUFFER_LAYOUT_VERSION 1
-#define SW_GBUFFER_SHADING_LIT    1.0f
-#define SW_GBUFFER_SHADING_UNLIT  0.0f
+// 첨부 · 채널 · 인코딩을 바꾸면 두 곳을 함께 올린다. 판 3: 번호 · 반사율 · 가림 · 화면 속도 · 사용자 칸 · 발광.
+#define SW_GBUFFER_LAYOUT_VERSION 3
+
+static SurfaceShading SurfaceShading::make( uint shadingModel )
+{
+    SurfaceShading shading;
+    shading._shadingModel = shadingModel;
+    shading._specular     = 0.5f;
+    shading._occlusion    = 1.0f;
+    shading._customData   = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    shading._emissive     = float3( 0.0f, 0.0f, 0.0f );
+    return shading;
+}
+
 #if SW_VIEWMODE_SKIPS_LIGHTING
-    #define SW_GBUFFER_SHADING SW_GBUFFER_SHADING_UNLIT
+static uint SurfaceShading::resolveViewMode( uint shadingModel )
+{
+    return SW_SHADING_MODEL_ID_UNLIT;
+}
 #else
-    #define SW_GBUFFER_SHADING SW_GBUFFER_SHADING_LIT
+static uint SurfaceShading::resolveViewMode( uint shadingModel )
+{
+    return shadingModel;
+}
 #endif
 
-/**
- * @brief G버퍼 머티리얼 칸(첨부 GBufferMaterial, R8G8B8A8_UNORM)에 적을 값 — r 금속도, g 거칠기(지각 거칠기, 제곱 전), b 는 쓰지 않는다(0), a 는 "그려졌다" 표시(1).
- * @details 읽는 쪽은 11-3 절 PassTexture::loadGbufferMaterial 하나다. 셰이딩 모델은 알베도 칸의 알파(SW_GBUFFER_SHADING)에 그대로 둔다.
- *          클리어 값 0 과 갈라지는 알파가 "이 픽셀을 G버퍼 패스가 그렸다" 를 싣는다(노멀 칸은 옥타헤드럴 두 채널이라 알파가 없다).
- */
-static float4 SurfaceOutput::encodeGbufferMaterial( float roughness, float metallic )
+/** @brief 셰이딩 모델 번호를 8 비트 UNORM 칸 값으로(번호 / 255). 읽는 쪽은 decodeShadingModel 하나다 — C++ GBufferLayout::encodeShadingModel 과 같은 식. */
+static float SurfaceOutput::encodeShadingModel( uint shadingModel )
 {
-    return float4( saturate( metallic ), saturate( roughness ), 0.0f, 1.0f );
+    return (float)shadingModel / SW_SHADING_MODEL_ID_SCALE;
+}
+
+static uint SurfaceOutput::decodeShadingModel( float encoded )
+{
+    return (uint)( saturate( encoded ) * SW_SHADING_MODEL_ID_SCALE + 0.5f );
+}
+
+/**
+ * @brief G버퍼 머티리얼 칸(첨부 GBufferMaterial, R8G8B8A8_UNORM)에 적을 값 — r 금속도, g 거칠기(지각 거칠기, 제곱 전), b 반사율(Specular), a 머티리얼 가림.
+ * @details 읽는 쪽은 11-3 절 PassTexture::loadGbufferMaterial 하나다. "그려졌다" 는 알베도 알파의 번호가 0 이 아닌 것이다(판 1 의 a 표시는 번호와 겹쳐 뺐다).
+ */
+static float4 SurfaceOutput::encodeGbufferMaterial( float roughness, float metallic, float specular, float occlusion )
+{
+    return float4( saturate( metallic ), saturate( roughness ), saturate( specular ), saturate( occlusion ) );
 }
 
 /**
@@ -311,23 +379,41 @@ static float4 SurfaceOutput::encodeGbufferMaterial( float roughness, float metal
  *          보기 모드(Unlit · Normals · Depth · Overdraw)의 색도 여기서 바꾼다. G버퍼는 그 색을 알베도 칸에 셰이딩 모델 Unlit 으로 적어
  *          디퍼드 조명 패스가 그대로 낸다 — 조명 패스는 보기 모드 변형이 없다.
  */
-static SurfaceOutput SurfaceOutput::store( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic )
+static SurfaceOutput SurfaceOutput::store( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition, float roughness, float metallic, SurfaceShading shading )
 {
     ViewMode::applyToSurface( litColor, albedo, worldNormal, worldPosition, roughness, metallic );
-    return SurfaceOutput::pack( litColor, albedo, worldNormal, roughness, metallic );
+    return SurfaceOutput::pack( litColor, albedo, worldNormal, roughness, metallic, shading );
 }
 
 #if defined( SW_PASS_GBUFFER )
-static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic )
+static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic, SurfaceShading shading )
 {
     SurfaceOutput output;
-    output._albedo   = float4( albedo.rgb, SW_GBUFFER_SHADING );
-    output._normal   = Octahedral::encode( normalize( worldNormal ) );
-    output._material = SurfaceOutput::encodeGbufferMaterial( roughness, metallic );
+    output._albedo     = float4( albedo.rgb, SurfaceOutput::encodeShadingModel( SurfaceShading::resolveViewMode( shading._shadingModel ) ) );
+    output._normal     = Octahedral::encode( normalize( worldNormal ) );
+    output._material   = SurfaceOutput::encodeGbufferMaterial( roughness, metallic, shading._specular, shading._occlusion );
+    output._velocity   = g_SurfaceVelocity;
+    output._customData = saturate( shading._customData );
+    output._sceneColor = float4( shading._emissive, 1.0f );
+    return output;
+}
+#elif defined( SW_PASS_VELOCITY )
+static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic, SurfaceShading shading )
+{
+    SurfaceOutput output;
+    output._color    = litColor;
+    output._velocity = g_SurfaceVelocity;
+    return output;
+}
+#elif defined( SW_PASS_DISTORTION )
+static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic, SurfaceShading shading )
+{
+    SurfaceOutput output;
+    output._distortion = float4( g_SurfaceDistortion, 0.0f, 1.0f );
     return output;
 }
 #else
-static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic )
+static SurfaceOutput SurfaceOutput::pack( float4 litColor, float4 albedo, float3 worldNormal, float roughness, float metallic, SurfaceShading shading )
 {
     SurfaceOutput output;
     output._color = litColor;

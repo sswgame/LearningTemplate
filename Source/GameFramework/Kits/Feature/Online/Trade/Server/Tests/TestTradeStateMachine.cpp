@@ -42,7 +42,7 @@ namespace
 
     TradeCommand makeConfirm( const TradeSnapshot& trade, AccountID actorID )
     {
-        const int32  sideIndex    = trade.findSideIndex( actorID );
+        const int32  sideIndex    = trade.findSideIndex( actorID ).value();
         TradeCommand command      = makeCommand( TradeCommandKind::Confirm, actorID );
         command._seenOwnRevision  = trade._arrSide[sideIndex]._offerRevision;
         command._seenPeerRevision = trade._arrSide[1 - sideIndex]._offerRevision;

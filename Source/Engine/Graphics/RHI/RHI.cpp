@@ -414,7 +414,10 @@ namespace sw
 
     ShaderTargetFormat RHI::getShaderTargetFormat( RHIBackend backend )
     {
+        // 모르는 백엔드에 아무 타깃이나 돌려주면 다른 바이트코드를 읽어 엉뚱한 자리에서 깨진다 — 열거 범위 밖 값은 부른 쪽 결함이라 멈춘다(언리얼 `GetMaxSupportedFeatureLevel` 의 `checkNoEntry` 자리).
         const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
-        return pInfo != nullptr ? pInfo->_shaderTarget : ShaderTargetFormat::DXIL_D3D12;
+        if ( pInfo == nullptr )
+            SW_FATAL( "RHI::getShaderTargetFormat: unknown RHI backend %#", static_cast<uint32>( backend ) );
+        return pInfo->_shaderTarget;
     }
 } // namespace sw

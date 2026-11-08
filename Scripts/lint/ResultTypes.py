@@ -4,13 +4,16 @@
 Scripts/lint/ResultTypes.py
 
 결과 형식 래칫. 값 또는 실패 이유는 `sw::expected<T, E>` 한 벌(`Core/Foundation/Expected.h`, "없음이 정상" 은 `sw::optional<T>`)로 돌려준다 —
-규칙은 `docs/agents/Errors.md`. 이 검사는 옛 모양 둘을 센다:
+규칙은 `docs/agents/Errors.md`. 이 검사는 옛 모양 넷을 센다:
 
 - `std-optional`: `std::optional` · `std::nullopt` 직접 사용(주석 · 문자열 · 전처리 줄은 세지 않는다).
 - `out-error`: `string& outError` · `string& outReason`(`sw::string&` · `outErrorText` 처럼 이름이 이어져도) 출력 인자 모양.
+- `out-error-pointer`: 같은 결함의 포인터 철자 `string* pOutError` · `pOutReason` · `pOutMessage`(널이면 이유를 버린다 — 2026-11-09, 참조형만 세던 사이 남은 자리).
+- `out-text-on-failure`: 이름은 달라도(`outReply` · `outUnknown` · `outFailureText` …) 실패 갈래에서만 쓰는 글 출력 인자 — 함수 본문의 모든 쓰기 바로 뒤가
+  `return false` · `nullptr` · `nullopt` · `unexpected` 이고 그 인자를 다른 함수에 넘기지 않는 정의만 센다(넘기면 성공 쪽 쓰기를 볼 수 없어 세지 않는다).
 
 **왜 래칫인가.** 형식(`sw::expected`)은 새 함수가 옛 모양을 쓰지 못하게 막지 못한다 — `std::optional` 도 `string&` 도 언어가 준다. 그래서:
-- `Source/Core/` 는 **0** 이어야 한다(옮김이 끝났다). 예외는 이전 동안 `std::optional` 로 넘기는 변환을 둔 `Expected.h` 하나다.
+- `Source/Core/` 는 **0** 이어야 한다(옮김이 끝났다). 예외는 기준선 파일의 `_coreExemptions`(`경로` → `종류` → 까닭)에만 둔다.
 - 그 밖은 파일마다 종류별 수를 기준선(`Config/Dev/ResultTypeBaseline.json`)에 두고, **늘면** 커밋이 멈추고 **줄면** `--ratchet` 으로 함께 낮춘다
   (`MagicLiterals.py` 와 같은 모양). 올리는 길은 `--accept <파일…>` 하나(통합에서 규칙 전 코드를 합칠 때).
 
@@ -34,32 +37,62 @@ from typing import Iterable, Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
 
 from common.ExitCode import ExitCode  # noqa: E402
-from lint.CppShape import stripCode  # noqa: E402
+from lint.CppShape import findParamListEnd, kBodyOpen, matchBrace, stripCode  # noqa: E402
 from lint.Format import getModifiedCppFiles  # noqa: E402
 from lint.MagicLiterals import isSourceFile, listSourceFiles, readStagedRenames  # noqa: E402
 
 
 kBaselinePath = "Config/Dev/ResultTypeBaseline.json"
-kKinds = ("std-optional", "out-error")
+kKinds = ("std-optional", "out-error", "out-error-pointer", "out-text-on-failure")
 kPattern = {
     "std-optional": re.compile(r"\bstd\s*::\s*(?:optional\b|nullopt\b|nullopt_t\b)"),
     "out-error": re.compile(r"\b(?:sw\s*::\s*)?string\s*&\s*out\w*(?:Error|Reason)\w*\b"),
+    "out-error-pointer": re.compile(r"\b(?:sw\s*::\s*)?string\s*\*\s*pOut\w*(?:Error|Reason|Message)\w*\b"),
 }
-# 0 이어야 하는 폴더(옮김이 끝난 곳)와 그 안의 예외(이유)
+# out-text-on-failure: 이름이 이유를 말하지 않는 `string& outX` 정의(이유 이름은 위 out-error 가 센다)
+kOutTextParam = re.compile(r"\b(?:sw\s*::\s*)?string\s*&\s*(out\w+)\s*(?=[,)])")
+kReasonName = re.compile(r"Error|Reason|Message")
+kFailureReturn = re.compile(r"\s*return\s+(?:false\b|nullptr\b|(?:std\s*::\s*|sw\s*::\s*)?nullopt\b|(?:sw\s*::\s*)?unexpected\b)")
+# 0 이어야 하는 폴더(옮김이 끝난 곳). 그 안의 예외는 기준선 파일의 `_coreExemptions` 데이터다.
 kStrictPrefix = "Source/Core/"
-kStrictExemption = {
-    "Source/Core/Foundation/Expected.h": "이전 동안 Core 밖 std::optional 자리로 넘기는 변환 연산자 — 기준선이 0 이 되면 변환과 함께 지운다",
-}
 kAdvice = {
     "std-optional": "`sw::optional<T>`(없음이 정상) 이나 `sw::expected<T, E>`(이유가 둘 이상)로 — docs/agents/Errors.md",
     "out-error": "`bool f( …, string& outError )` 대신 `sw::expected<T>` · `sw::expected<void>` 를 돌려준다 — docs/agents/Errors.md",
+    "out-error-pointer": "`bool f( …, string* pOutError = nullptr )` 도 같은 결함이다 — `sw::expected<T>` 를 돌려주고 부르는 쪽이 버릴지 정한다(docs/agents/Errors.md)",
+    "out-text-on-failure": "실패 때만 쓰는 글 출력 인자는 이유다 — `sw::expected<T>`(또는 `expected<T, DomainError>`)의 오류로 돌려준다(docs/agents/Errors.md)",
 }
+
+
+def isFailureOnlyWrite(body: str, write: re.Match[str]) -> bool:
+    """쓰기 문장 바로 다음 문장이 실패 반환인지 봅니다."""
+    semicolon = body.find(";", write.end())
+    return semicolon >= 0 and kFailureReturn.match(body, semicolon + 1) is not None
+
+
+def countFailureOnlyText(code: str) -> int:
+    """`string& outX` 인자를 실패 갈래에서만 쓰는 함수 정의 수입니다(선언 · 쓰지 않는 정의 · 다른 함수에 넘기는 정의는 세지 않는다)."""
+    count = 0
+    for match in kOutTextParam.finditer(code):
+        name = match.group(1)
+        if kReasonName.search(name):
+            continue
+        opening = kBodyOpen.match(code, findParamListEnd(code, match.end()) + 1)
+        if opening is None:
+            continue
+        body = code[opening.end() - 1:matchBrace(code, opening.end() - 1)]
+        listWrite = list(re.finditer(r"(?<![\w.>])" + name + r"\s*(?:=(?!=)|\+=|\.\s*(?:append|assign|push_back)\s*\()", body))
+        if not listWrite or re.search(r"[(,]\s*" + name + r"\s*[,)]", body):
+            continue
+        if all(isFailureOnlyWrite(body, write) for write in listWrite):
+            count += 1
+    return count
 
 
 def countText(text: str) -> dict[str, int]:
     """주석 · 문자열을 지운 코드에서 종류별 수입니다(0 인 종류는 적지 않는다)."""
     code = stripCode(text)
     counts = {kind: len(pattern.findall(code)) for kind, pattern in kPattern.items()}
+    counts["out-text-on-failure"] = countFailureOnlyText(code)
     return {kind: count for kind, count in counts.items() if count > 0}
 
 
@@ -77,24 +110,33 @@ def readBaseline(projectRoot: Path) -> dict[str, dict[str, int]]:
     return json.loads((projectRoot / kBaselinePath).read_text(encoding="utf-8"))["_files"]
 
 
+def readCoreExemptions(projectRoot: Path) -> dict[str, dict[str, str]]:
+    """Core 0 규칙의 예외 `경로` → `종류` → 까닭입니다. 칸이 없으면 오류로 멈춘다."""
+    return json.loads((projectRoot / kBaselinePath).read_text(encoding="utf-8"))["_coreExemptions"]
+
+
 def writeBaseline(projectRoot: Path, baseline: dict[str, dict[str, int]]) -> None:
-    comment = ("결과 형식 래칫 기준선(Scripts/lint/ResultTypes.py). Core 밖 파일마다 std::optional · string& outError 모양의 수 — 늘면 커밋이 멈추고, 줄면 "
-               "`py -3 -m Scripts result-types --ratchet` 로 낮춘다. 손으로 올리지 않는다(올리는 길은 --accept 하나, docs/agents/Errors.md).")
+    comment = ("결과 형식 래칫 기준선(Scripts/lint/ResultTypes.py). Core 밖 파일마다 std::optional · string& outError · string* pOutError · 실패 때만 쓰는 글 출력 인자의 수 — "
+               "늘면 커밋이 멈추고, 줄면 `py -3 -m Scripts result-types --ratchet` 로 낮춘다. 손으로 올리지 않는다(올리는 길은 --accept 하나, docs/agents/Errors.md). "
+               "_coreExemptions 는 Core 0 규칙의 예외(경로 → 종류 → 까닭)다.")
+    exemptions = readCoreExemptions(projectRoot)
+    listExemption = [f"    {json.dumps(path)}: {json.dumps(exemptions[path], ensure_ascii=False)}" for path in sorted(exemptions)]
     listLine = [f"    {json.dumps(path)}: {json.dumps(baseline[path])}" for path in sorted(baseline) if baseline[path]]
     text = (f"{{\n  \"_comment\": {json.dumps(comment, ensure_ascii=False)},\n"
+            "  \"_coreExemptions\": {\n" + ",\n".join(listExemption) + "\n  },\n"
             "  \"_files\": {\n" + ",\n".join(listLine) + "\n  }\n}\n")
     (projectRoot / kBaselinePath).write_text(text, encoding="utf-8", newline="\n")
 
 
-def findProblems(actual: dict[str, dict[str, int]], baseline: dict[str, dict[str, int]], listPath: Iterable[str], mapOld: dict[str, str]) -> list[str]:
-    """`listPath` 파일마다: Core 는 0, 그 밖은 기준선과 같아야 한다(늘면 옮기기, 줄면 기준선 낮추기)."""
+def findProblems(actual: dict[str, dict[str, int]], baseline: dict[str, dict[str, int]], listPath: Iterable[str], mapOld: dict[str, str],
+                 coreExemptions: dict[str, dict[str, str]]) -> list[str]:
+    """`listPath` 파일마다: Core 는 0(예외 종류 말고), 그 밖은 기준선과 같아야 한다(늘면 옮기기, 줄면 기준선 낮추기)."""
     listProblem: list[str] = []
     for path in sorted(set(listPath)):
         have = actual.get(path, {})
         if path.startswith(kStrictPrefix):
-            if path in kStrictExemption:
-                continue
-            listProblem += [f"{path}: {kind} {count} — Core 는 0 이어야 한다: {kAdvice[kind]}" for kind, count in have.items()]
+            exempt = coreExemptions.get(path, {})
+            listProblem += [f"{path}: {kind} {count} — Core 는 0 이어야 한다: {kAdvice[kind]}" for kind, count in have.items() if kind not in exempt]
             continue
         allowed = baseline.get(path, baseline.get(mapOld.get(path, ""), {}))
         for kind in kKinds:
@@ -112,7 +154,8 @@ def checkResultTypes(projectRoot: Path, listFile: Sequence[Path]) -> list[str]:
     if not listSource:
         return []
     actual = countFiles(projectRoot, listSource)
-    return findProblems(actual, readBaseline(projectRoot), [path.relative_to(projectRoot).as_posix() for path in listSource], readStagedRenames(projectRoot))
+    return findProblems(actual, readBaseline(projectRoot), [path.relative_to(projectRoot).as_posix() for path in listSource], readStagedRenames(projectRoot),
+                        readCoreExemptions(projectRoot))
 
 
 def lowerBaseline(baseline: dict[str, dict[str, int]], actual: dict[str, dict[str, int]], listExisting: set[str]) -> dict[str, dict[str, int]]:
@@ -156,14 +199,27 @@ def runSelfCheck() -> int:
     expect(countText("bool gate( sw::string_view path, sw::string& outReason );") == {"out-error": 1}, "sw::string& outReason is counted")
     expect(countText("bool take( StreamCloseReason& outReason );") == {}, "an enum out parameter is not counted")
     expect(countText("void f( string& outText );") == {}, "other string outputs are not counted")
+    expect(countText("bool load( string_view text, string* pOutError = nullptr );") == {"out-error-pointer": 1}, "string* pOutError is counted")
+    expect(countText("bool decode( sw::string* pOutReason ); void g( string* pOutMessage );") == {"out-error-pointer": 2}, "pOutReason · pOutMessage are counted")
+    expect(countText("bool resolve( string* pOutAbsPath );") == {}, "a pointer to a value output is not counted")
+    failureOnly = "bool find( int32 id, string& outReply )\n{\n    if ( id < 0 )\n    {\n        outReply = \"bad id\";\n        return false;\n    }\n    return true;\n}\n"
+    expect(countText(failureOnly) == {"out-text-on-failure": 1}, "a text output written only before `return false` is counted")
+    expect(countText("Item* pick( string& outUnknown ) { if ( a ) { outUnknown = name; return nullptr; } return p; }") == {"out-text-on-failure": 1}, "`return nullptr` is a failure return")
+    bothSides = "bool run( string& outReply )\n{\n    if ( a )\n    {\n        outReply = \"no\";\n        return false;\n    }\n    outReply = \"done\";\n    return true;\n}\n"
+    expect(countText(bothSides) == {}, "a text output also written on success is not counted")
+    expect(countText("bool run( string& outReply ) { if ( a ) { outReply = \"no\"; return false; } return inner( outReply ); }") == {}, "a text output passed on is not counted")
+    expect(countText("bool run( string& outReply );") == {}, "a declaration is not counted")
     baseline = {"Source/Engine/A.cpp": {"std-optional": 2}, "Source/Engine/Old.cpp": {"out-error": 1}}
-    expect(findProblems({"Source/Engine/A.cpp": {"std-optional": 2}}, baseline, ["Source/Engine/A.cpp"], {}) == [], "equal counts pass")
-    expect(len(findProblems({"Source/Engine/A.cpp": {"std-optional": 3}}, baseline, ["Source/Engine/A.cpp"], {})) == 1, "a grown count fails")
-    expect(len(findProblems({"Source/Engine/A.cpp": {"std-optional": 1}}, baseline, ["Source/Engine/A.cpp"], {})) == 1, "a shrunk count asks to lower the baseline")
-    expect(len(findProblems({"Source/Engine/New.cpp": {"out-error": 1}}, baseline, ["Source/Engine/New.cpp"], {})) == 1, "a new file starts at zero")
-    expect(findProblems({"Source/Engine/Moved.cpp": {"out-error": 1}}, baseline, ["Source/Engine/Moved.cpp"], {"Source/Engine/Moved.cpp": "Source/Engine/Old.cpp"}) == [], "a moved file keeps its baseline")
-    expect(len(findProblems({"Source/Core/X.h": {"std-optional": 1}}, {"Source/Core/X.h": {"std-optional": 1}}, ["Source/Core/X.h"], {})) == 1, "Core must be zero even with a baseline")
-    expect(findProblems({"Source/Core/Foundation/Expected.h": {"std-optional": 4}}, {}, ["Source/Core/Foundation/Expected.h"], {}) == [], "the bridge in Expected.h is exempt")
+    coreExemptions = {"Source/Core/Foundation/Expected.h": {"std-optional": "bridge"}}
+    expect(findProblems({"Source/Engine/A.cpp": {"std-optional": 2}}, baseline, ["Source/Engine/A.cpp"], {}, coreExemptions) == [], "equal counts pass")
+    expect(len(findProblems({"Source/Engine/A.cpp": {"std-optional": 3}}, baseline, ["Source/Engine/A.cpp"], {}, coreExemptions)) == 1, "a grown count fails")
+    expect(len(findProblems({"Source/Engine/A.cpp": {"std-optional": 1}}, baseline, ["Source/Engine/A.cpp"], {}, coreExemptions)) == 1, "a shrunk count asks to lower the baseline")
+    expect(len(findProblems({"Source/Engine/New.cpp": {"out-error": 1}}, baseline, ["Source/Engine/New.cpp"], {}, coreExemptions)) == 1, "a new file starts at zero")
+    expect(len(findProblems({"Source/Engine/A.cpp": {"std-optional": 2, "out-error-pointer": 1}}, baseline, ["Source/Engine/A.cpp"], {}, coreExemptions)) == 1, "a new pointer out-error fails")
+    expect(findProblems({"Source/Engine/Moved.cpp": {"out-error": 1}}, baseline, ["Source/Engine/Moved.cpp"], {"Source/Engine/Moved.cpp": "Source/Engine/Old.cpp"}, coreExemptions) == [], "a moved file keeps its baseline")
+    expect(len(findProblems({"Source/Core/X.h": {"std-optional": 1}}, {"Source/Core/X.h": {"std-optional": 1}}, ["Source/Core/X.h"], {}, coreExemptions)) == 1, "Core must be zero even with a baseline")
+    expect(findProblems({"Source/Core/Foundation/Expected.h": {"std-optional": 4}}, {}, ["Source/Core/Foundation/Expected.h"], {}, coreExemptions) == [], "an exempt kind in Core passes")
+    expect(len(findProblems({"Source/Core/Foundation/Expected.h": {"out-error": 1}}, {}, ["Source/Core/Foundation/Expected.h"], {}, coreExemptions)) == 1, "a Core exemption covers only its kind")
     lowered = lowerBaseline({"Source/Engine/A.cpp": {"std-optional": 2, "out-error": 1}, "Source/Engine/Gone.cpp": {"out-error": 1}}, {"Source/Engine/A.cpp": {"std-optional": 3}}, {"Source/Engine/A.cpp"})
     expect(lowered == {"Source/Engine/A.cpp": {"std-optional": 2}}, f"--ratchet lowers only and drops missing files: {lowered}")
     print(f"[ResultTypes] self-check {'OK' if failures == 0 else 'FAIL'}")
@@ -171,7 +227,7 @@ def runSelfCheck() -> int:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="결과 형식 래칫: std::optional · string& outError 모양이 Core 에 없고 그 밖에서 늘지 않게")
+    parser = argparse.ArgumentParser(description="결과 형식 래칫: std::optional · string& outError · string* pOutError · 실패 때만 쓰는 글 출력 인자 모양이 Core 에 없고 그 밖에서 늘지 않게")
     parser.add_argument("--check", action="store_true", help="수정된 C++ 파일(작업 트리 대 HEAD)을 검사한다(--all 은 모든 파일)")
     parser.add_argument("--all", action="store_true", help="--check 와 함께: 모든 Source 파일")
     parser.add_argument("--ratchet", action="store_true", help="줄어든 파일의 기준선을 낮추고 없어진 파일을 지운다(올리지 않는다)")
@@ -188,7 +244,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         listRelative = [path.relative_to(projectRoot).as_posix() for path in listFile]
         listSource = [path for path, relative in zip(listFile, listRelative) if isSourceFile(relative)]
         baseline = readBaseline(projectRoot)
-        listProblem = findProblems(countFiles(projectRoot, listSource), baseline, [relative for relative in listRelative if isSourceFile(relative)], {})
+        listProblem = findProblems(countFiles(projectRoot, listSource), baseline, [relative for relative in listRelative if isSourceFile(relative)], {}, readCoreExemptions(projectRoot))
         if args.all:
             setExisting = set(listRelative)
             listProblem += [f"{path}: 없는 파일의 기준선 — `--ratchet` 으로 지운다" for path in sorted(baseline) if path not in setExisting]

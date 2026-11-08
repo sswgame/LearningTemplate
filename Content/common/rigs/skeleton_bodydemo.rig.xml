@@ -1,0 +1,12 @@
+<!-- 몸 동작 무대의 해골 리그 — 몸통 지글(가슴 → 머리 사슬, 묶음 Torso). 물성은 몸 프로필(bodyprofiles.xml 의 <Jiggle group="Torso">)이 정한다 — 리그는 본만 적는다.
+     weight_curve 를 적으면 클립 커브가 흔들림을 키운다(달리기 클립의 Jiggle.Scale). 해골에는 가슴 · 배 살이 없어 몸통으로 반응을 보인다. -->
+<RigAsset>
+	<nodes>
+		<item type="Jiggle" name="TorsoJiggle" group="Torso" use_shared_colliders="false">
+			<bones>
+				<item>chest</item>
+				<item>head</item>
+			</bones>
+		</item>
+	</nodes>
+</RigAsset>

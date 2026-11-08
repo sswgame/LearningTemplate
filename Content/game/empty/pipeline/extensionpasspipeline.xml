@@ -7,6 +7,8 @@
 <RenderPipelineDesc _base="engine/pipeline/forwardpipeline.xml" _name="ModulePassPipeline">
 	<_listPass>
 		<RenderGraphPassDesc _name="Fog" _op="Remove" />
+		<RenderGraphPassDesc _name="DistortionApply" _op="Remove" />
+		<RenderGraphPassDesc _name="Distortion" _op="Remove" />
 		<RenderGraphPassDesc _name="SceneDepthCopy" _op="Remove" />
 		<RenderGraphPassDesc _name="SceneColorCopy" _op="Remove" />
 		<RenderGraphPassDesc _name="Transparent">
@@ -18,6 +20,7 @@
 	</_listPass>
 	<_listRenderPassRef>
 		<item>engine/renderpass/defaultrenderpass.xml</item>
+		<item>engine/renderpass/framecomputerenderpass.xml</item>
 		<item>engine/renderpass/forwardcolorrenderpass.xml</item>
 	</_listRenderPassRef>
 	<_listExtensionShader>

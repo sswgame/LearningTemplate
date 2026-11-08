@@ -291,6 +291,48 @@ SW_TEST_CASE( DataCatalogInheritance, RuleTableAndPassThrough )
     SW_EXPECT_EQUAL( string( "n" ), string( Util::findEntry( doc, "Item", "b" ).getAttributeText( "name" ) ) );
 }
 
+/**
+ * @brief [DataCatalogInheritance] 입력 맵은 표의 줄로 파일 상속을 받는다 — 레이어 정의는 이름으로 합치고(우선순위만 고침 · 지움), 루트 액션은 이름이 열쇠다
+ * @details 레이어 정의는 래퍼(`<layers>`) 안의 목록이라 항목이 아닌 루트 칸(`<Catalog>` 아래 `<Field>`)이다.
+ */
+SW_TEST_CASE( DataCatalogInheritance, InputMapLayersMergeByName )
+{
+    DataInheritanceSchema schema{ "x" };
+    bool                  bListed = false;
+    SW_REQUIRE_TRUE( DataCatalogInheritance::loadSchema( "InputMap", schema, bListed ) );
+    SW_REQUIRE_TRUE( bListed );
+    const DataInheritanceSchema* pLayers = schema.findField( "layers" );
+    SW_REQUIRE_TRUE( pLayers != nullptr );
+    SW_EXPECT_TRUE( pLayers->_keyAttribute.empty() );
+
+    DataCatalogTestSource source;
+    source.add( "common/input/base.input.xml", R"(<InputMap>
+        <layers><layer name="Movement" priority="1" /><layer name="Menu" enabled="0" /></layers>
+        <action name="Move" layer="Movement"><key key="W" /></action>
+        <action name="Jump" layer="Movement"><key key="Space" /></action>
+    </InputMap>)" );
+    string flatText;
+    SW_REQUIRE_TRUE( DataCatalogInheritance::flatten( R"(<InputMap _base="common/input/base.input.xml">
+        <layers><layer name="Movement" priority="5" /><layer name="Menu" _op="Remove" /></layers>
+        <action name="Jump" _op="Remove" />
+    </InputMap>)",
+                                                      "child.input.xml", schema, source, flatText ) );
+    XMLDocument doc;
+    SW_REQUIRE_TRUE( doc.parse( flatText ) );
+    const XMLNode layers = doc.getRoot().findChild( "layers" );
+    SW_REQUIRE_TRUE( layers.isValid() );
+    const XMLNode movement = layers.findChild( "layer" );
+    SW_REQUIRE_TRUE( movement.isValid() );
+    SW_EXPECT_EQUAL( string( "Movement" ), string( movement.getAttributeText( "name" ) ) );
+    SW_EXPECT_EQUAL( string( "5" ), string( movement.getAttributeText( "priority" ) ) );
+    SW_EXPECT_FALSE( movement.findNextSibling( "layer" ).isValid() ); // Menu 는 지웠다
+    const XMLNode move = doc.getRoot().findChild( "action" );
+    SW_REQUIRE_TRUE( move.isValid() );
+    SW_EXPECT_EQUAL( string( "Move" ), string( move.getAttributeText( "name" ) ) );
+    SW_EXPECT_TRUE( move.findChild( "key" ).isValid() );
+    SW_EXPECT_FALSE( move.findNextSibling( "action" ).isValid() ); // Jump 는 지웠다
+}
+
 /** @brief [DataCatalogInheritance] 문서 읽기(`parseData`)가 펼친다 - 카탈로그 코드가 상속을 모르고, 저장본의 차이 글에서 다시 읽어도 같다 */
 SW_TEST_CASE( DataCatalogInheritance, DocumentReadFlattens )
 {

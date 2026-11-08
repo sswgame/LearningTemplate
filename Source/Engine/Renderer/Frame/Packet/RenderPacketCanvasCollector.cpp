@@ -63,7 +63,7 @@ namespace sw
             engine::getSubsystem<UIWidgetComponentService>().appendWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
             engine::getSubsystem<UIOffscreenScreens>().appendCanvases( packet._canvas._listTarget );            // 화면 스택 밖 화면(에디터 UI 미리보기)
         }
-        // 개발 겹치기(디버그 드로우 · 테스트 그림 — 개발 도구가 `SW_CANVAS_OVERLAY` 로 등록한다)를 UI 위에 칠한다. 등록이 없으면(배포본) 값도 만들지 않는다.
+        // 개발 겹치기(디버그 드로우 · 테스트 그림 — 개발 도구가 `SW_CANVAS_OVERLAY` 로 등록한다)를 등록이 밝힌 층(주 출력 UI 위 · 개발 겹치기 층)에 칠한다. 등록이 없으면(배포본) 값도 만들지 않는다.
         // 글리프 캐시의 프레임 시계다(프로파일러 프레임 수는 꺼지면 늘 0 이라 래스터화 예산이 되살아나지 않는다). 캐시가 없으면 글리프를 그리지 않으므로 값이 쓰이지 않는다.
         const bool bPaintOverlays = bSceneMain == false && CanvasOverlays::getCount() > 0 && pRHI != nullptr && pRHI->hasDevice();
         if ( bPaintOverlays )
@@ -75,7 +75,7 @@ namespace sw
             context._targetSize      = float2{ static_cast<float32>( canvasWidth ), static_cast<float32>( canvasHeight ) };
             context._pFontService    = pFontService;
             context._glyphFrameIndex = pFontService != nullptr && pFontService->isInitialized() ? pFontService->getGlyphCache().getFrameIndex() : 0;
-            CanvasOverlayTarget target{ packet._canvas, context._targetSize };
+            CanvasOverlayTarget target{ packet._canvas, context._targetSize, packet._outputRenderTarget != 0 };
             CanvasOverlays::paintAll( context, target );
         }
         if ( pFontService != nullptr && pFontService->isInitialized() )

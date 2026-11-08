@@ -31,6 +31,11 @@ foreach(exPattern IN LISTS coreExclude)
 	list(FILTER ENGINE_SOURCES EXCLUDE REGEX "${exPattern}")
 endforeach()
 
+# 플랫폼 폴더(`Windows/` · `Linux/` · `Android/` · `Web/`)는 그 플랫폼에서만 짓는다(Core · DevTools 와 같은 규칙) — 파일 안 플랫폼 `#if` 로 빈 TU 를
+# 모든 플랫폼에서 컴파일하지 않는다(언리얼 UBT 가 `Windows/` · `Linux/` 폴더를 플랫폼마다 고르는 것과 같다). 전용 서버의 차이는 폴더(`SW_UNBUILT_ENGINE_FOLDERS`)와
+# 서버도 짓는 창 · 입력 플랫폼 파일 안의 `SW_WITH_CLIENT_CODE` 가 맡는다.
+sw_filterPlatformSources(ENGINE_SOURCES)
+
 # RHI 백엔드 장치 소스는 Engine 이 짓지 않는다 — Dev 는 RHI_* 모듈이, Shipping 은 아래 5) 가 고른 하나를 가져간다.
 sw_getAllRHIBackendSources(listRHIBackendSource)
 list(REMOVE_ITEM ENGINE_SOURCES ${listRHIBackendSource})
@@ -180,35 +185,7 @@ endif()
 # Box2D 는 BOX2D_DLL 정의 하나뿐이라 그대로 PRIVATE 로 링크한다. 둘 다 DLL 이고(x64-windows) Bin 에는 vcpkg applocal 이 옮긴다.
 target_link_libraries(Engine PRIVATE $<LINK_ONLY:joltphysics> box2d)
 
-# Tracy — 엔진 프로파일러의 두 번째 출력(Profiling). 헤더는 Profiling/Tracy 에서만 include 한다.
-# Shipping 은 링크하지 않는다(SW_ENABLE_TRACY 를 무시). 클라이언트는 프로세스에 하나 — Engine 만 링크하고, RHI 백엔드 · 모듈은 엔진
-# 인터페이스(IProfilerBackend)만 본다. GPU 구간은 엔진이 이미 모으는 타임스탬프를 넘기므로 백엔드 DLL 이 Tracy 를 알 필요가 없다.
-# 임포트 타깃의 정의(TRACY_ENABLE · TRACY_IMPORTS …) · include 경로는 Tracy 구현 소스에만 붙인다(Jolt 와 같은 방식).
-# 링크하지 않는다 — Windows 는 `-gv_tracy` 로 켤 때 TracyClient.dll 을 올려 C API 함수 표를 채운다(`TracyProfilerBackend::loadClient`). 리눅스는 링크한다.
-if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
-	if(sw_platform_name STREQUAL "Windows")
-		# 링크하지 않는다(위 — 지연 로드).
-	elseif(sw_platform_name STREQUAL "Linux")
-		target_link_libraries(Engine PRIVATE $<LINK_ONLY:tracy>)
-	else()
-		message(FATAL_ERROR "[Engine] Tracy link mode for platform '${sw_platform_name}' is not decided - name it here (SW_ENABLE_TRACY=OFF meanwhile)")
-	endif()
-	target_compile_definitions(Engine PRIVATE SW_PROFILER_TRACY)
-	file(GLOB swTracyBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Tracy/*.cpp")
-	# include 경로는 시스템 경로로 준다 — Tracy C API 의 `___tracy_*` 이름이 -Wreserved-identifier 경고를 낸다.
-	get_target_property(swTracyIncludeDir Tracy::TracyClient INTERFACE_INCLUDE_DIRECTORIES)
-	if(MSVC)
-		set(swTracyIncludeOption "/external:I${swTracyIncludeDir}")
-	else()
-		set(swTracyIncludeOption "-isystem${swTracyIncludeDir}")
-	endif()
-	set_source_files_properties(${swTracyBackendSources} PROPERTIES
-		COMPILE_DEFINITIONS "$<TARGET_PROPERTY:Tracy::TracyClient,INTERFACE_COMPILE_DEFINITIONS>"
-		COMPILE_OPTIONS "${swTracyIncludeOption}"
-		SKIP_PRECOMPILE_HEADERS ON
-	)
-	message(STATUS "[Engine] Tracy profiler client enabled (loaded on demand on Windows)")
-endif()
+# Tracy 는 개발 도구(DevTools.dll)가 링크한다 — 엔진은 출력 인터페이스(`IProfilerBackend`)만 안다(Source/DevTools/CMakeLists.txt).
 
 # 내비메시 백엔드 — Recast & Detour(정적 라이브러리, 굽기 · 질의 · 군중). 헤더는 Navigation/Recast 에서만 include 한다(INavMesh · INavCrowd 뒤).
 target_link_libraries(Engine PRIVATE recastnavigation)

@@ -118,6 +118,8 @@ namespace sw
         void onBeginPlay() override;
         /** @brief 앉은 쪽이 있으면 좌석 가속도를 재고 탑승 가속감을 냅니다. 비어 있으면 잰 값을 비웁니다. */
         void onTick( float32 deltaTime ) override;
+        /** @brief 지난 틱이 잰 탑승 반응(탑승자 기울임 · 카메라 킥 · 소리)을 겁니다. 깃발이 없으면 아무것도 하지 않습니다. 게임 스레드, 틱 밖(`VehicleSeatSystem`). */
+        void applyPendingRide( GameObjectManager& manager );
 
         /** @brief 앉은 탑승자의 오브젝트입니다. 비어 있으면 무효 핸들입니다. */
         const GameObjectHandle& getOccupant() const { return _occupant; }
@@ -166,15 +168,16 @@ namespace sw
         float2                                _riderLean;                 ///< 지금 탑승자 기울임
         float32                               _pendingFieldOfViewKick;    ///< 틱 뒤 카메라에 걸 시야각 킥(0 이면 없음)
         float32                               _pendingBumpShake;          ///< 틱 뒤 카메라에 걸 충격 크기(0 이면 없음)
-        float32                               _pendingFeedbackSpeed;      ///< 틱 뒤 소리에 넘길 탈것 속력(m/s) — 틱 뒤 작업은 캡처하지 않으므로 칸에 둔다
+        float32                               _pendingFeedbackSpeed;      ///< 틱 뒤 소리에 넘길 탈것 속력(m/s)
         float32                               _pendingFeedbackSlip;       ///< 틱 뒤 소리에 넘길 옆 미끄럼 가속(m/s²)
         int32                                 _rideSampleCount;           ///< 잰 걸음 수(0..2). 위치 · 속도가 모두 있어야 가속도를 낸다
         uint8                                 _bFieldOfViewKickArmed : 1; ///< 앞 가속이 문턱 아래로 내려가야 다음 킥을 건다
         uint8                                 _bBumpArmed            : 1; ///< 수직 가속이 문턱 아래로 내려가야 다음 충격을 건다
-        [[maybe_unused]] uint8                _reservedRideFlags     : 6;
+        uint8                                 _bRidePending          : 1; ///< 틱이 반응을 쟀고 `VehicleSeatSystem` 이 아직 걸지 않았다
+        [[maybe_unused]] uint8                _reservedRideFlags     : 5;
 
-        /** @brief 틱 뒤 게임 스레드에서 카메라 킥 · 충격과 소리 파라미터를 겁니다(오디오 · 카메라 디렉터는 게임 스레드에서만 부른다). */
-        void applyRideFeedback( float32 speed, float32 slip );
+        /** @brief 카메라 킥 · 충격과 소리 파라미터를 겁니다(오디오 · 카메라 디렉터는 게임 스레드에서만 부른다). */
+        void applyRideFeedback();
         /** @brief 탑승자의 소켓 변환에 기울임을 얹고 애니메이터 파라미터를 씁니다. */
         void applyRiderLean( GameObjectManager& manager );
     };

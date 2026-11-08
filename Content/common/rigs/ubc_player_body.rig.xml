@@ -1,5 +1,9 @@
+<!-- Shooter3D 플레이어 몸(Quaternius UBC). 보폭 워핑 뒤 발 디딤이 발을 땅(물리 광선, 제 몸 바디는 거른다)에 올리고, 시선은 등뼈 · 목 · 머리가 나눠 카메라 앞 10 m 를 본다.
+     LookSource 는 ShooterPlayerComponent 가 몸을 세울 때 bindObject 로 플레이어 오브젝트(1인칭 카메라가 주 장면 컴포넌트)를 건다 — 이름이 같은 다른 오브젝트를 찾지 않게 명시로 건다.
+     UBC 뼈의 로컬 축을 가정하지 않으려고 조준 축은 모델 공간(+Z 앞, aim_axis_in_model)으로 적는다. -->
 <RigAsset>
 	<targets>
+		<item name="LookTarget" object="LookSource" translation="0,0,10" />
 		<item name="Grip" skeletalMesh="MainHand" socket="SupportHand" space="hand_r" />
 		<item name="ViewGrip" skeletalMesh="ViewWeapon" socket="Grip" />
 		<item name="ViewSupport" skeletalMesh="ViewWeapon" socket="SupportHand" />
@@ -10,6 +14,27 @@
 				<item root="thigh_l" mid="calf_l" end="foot_l" />
 				<item root="thigh_r" mid="calf_r" end="foot_r" />
 			</feet>
+		</item>
+		<item type="FootPlacement"
+		      name="Feet"
+		      pelvis="pelvis"
+		      trace_up="0.5"
+		      trace_down="0.5"
+		      max_pelvis_drop="0.3"
+		      max_raise="0.35"
+		      interp_speed="12"
+		      max_align_degrees="25"
+		      max_lod="1">
+			<feet>
+				<item root="thigh_l" mid="calf_l" end="foot_l" />
+				<item root="thigh_r" mid="calf_r" end="foot_r" />
+			</feet>
+		</item>
+		<item type="Aim" name="LookAt" bone="Head" target="LookTarget" aim_axis="0,0,1" aim_axis_in_model="true" max_degrees="70" max_lod="1">
+			<chain>
+				<item bone="spine_03" weight="0.2" max_degrees="15" />
+				<item bone="neck_01" weight="0.35" max_degrees="30" />
+			</chain>
 		</item>
 		<item type="TwoBoneIK" name="LeftHandGrip" root="upperarm_l" mid="lowerarm_l" end="hand_l" target="Grip" weight_slot="ThirdPersonHands" />
 		<item type="TwoBoneIK" name="RightHandView" root="upperarm_r" mid="lowerarm_r" end="hand_r" target="ViewGrip" weight_slot="FirstPersonHands" />

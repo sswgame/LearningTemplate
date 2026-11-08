@@ -11,7 +11,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Graphics/View/IEngineRenderDriver.h"
+#include "Engine/Graphics/RHI/RHIInitResult.h"
+#include "Engine/Graphics/RHI/RHIWaitIdleReason.h"
+#include "Engine/Graphics/View/FrameViewports.h"
+#include "Engine/Presentation/IEngineRenderDriver.h"
 
 namespace sw
 {

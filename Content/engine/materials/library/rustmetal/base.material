@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 녹슨 금속 — 녹 덩어리(금속도 0 · 거칠다) + 모서리 닳음(밝은 금속). -->
+<MaterialDef formatVersion="0" name="AppearanceRustMetal" _base="engine/materials/library/appearance.material">
+	<_properties>
+		<item name="_metallic" defaultValue="1" />
+		<item name="_roughness" defaultValue="0.45" />
+		<item name="_color" defaultValue="0.45 0.45 0.46 1" />
+		<item name="_secondaryColor" defaultValue="0.7 0.7 0.72 1" />
+		<item name="_layerColor" defaultValue="0.42 0.18 0.07 1" />
+		<item name="_layerRoughness" defaultValue="0.9" />
+		<item name="_patternScale" defaultValue="6" />
+		<item name="_patternAmount" defaultValue="0.6" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_PATTERN_RUST</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

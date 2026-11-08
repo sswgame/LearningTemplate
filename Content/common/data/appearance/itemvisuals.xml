@@ -31,6 +31,10 @@
   <ItemVisual id="body_skeleton_warrior" _base="body_skeleton_minion">
     <Part name="Body" mesh="common/models/kaykit/skeleton_warrior.mesh" skeleton="common/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.xml"/>
   </ItemVisual>
+  <!-- 몸 동작 무대(maps/bodycustomization)의 해골 — 전사 몸에 몸 채널 매핑(굽 높이 · 어깨 · 허리)을 단다. 다른 전사는 매핑 없이 그대로다. -->
+  <ItemVisual id="body_skeleton_bodydemo" _base="body_skeleton_warrior">
+    <Part name="Body" bodyShapes="common/characters/skeleton_warrior/skeleton_warrior.bodyshape.xml"/>
+  </ItemVisual>
   <ItemVisual id="body_skeleton_rogue" _base="body_skeleton_minion">
     <Part name="Body" mesh="common/models/kaykit/skeleton_rogue.mesh" skeleton="common/models/kaykit/skeleton_rogue/skeleton_rogue.skeleton.xml"/>
   </ItemVisual>
@@ -128,24 +132,24 @@
     </Part>
   </ItemVisual>
   <ItemVisual id="hair_simpleparted">
-    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_simpleparted.mesh" material="common/models/quaternius/hair/hair_simpleparted/materials/mi_hair_1.material"/>
+    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_simpleparted.mesh" material="common/materials/quaternius/hair_1.material"/>
     <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_regular.mesh" material="common/models/quaternius/hair/eyebrows_regular/materials/mi_hair_1.material"/>
   </ItemVisual>
   <ItemVisual id="hair_buzzed" _base="hair_simpleparted">
-    <Part name="Hair" mesh="common/models/quaternius/hair/hair_buzzed.mesh" material="common/models/quaternius/hair/hair_buzzed/materials/mi_hair_1.material"/>
+    <Part name="Hair" mesh="common/models/quaternius/hair/hair_buzzed.mesh" material="common/materials/quaternius/hair_1.material"/>
   </ItemVisual>
   <ItemVisual id="hair_bearded" _base="hair_buzzed">
-    <Part name="Beard" kind="Skinned" mesh="common/models/quaternius/hair/hair_beard.mesh" material="common/models/quaternius/hair/hair_beard/materials/mi_hair_1.material" _before="Brows"/>
+    <Part name="Beard" kind="Skinned" mesh="common/models/quaternius/hair/hair_beard.mesh" material="common/materials/quaternius/hair_1.material" _before="Brows"/>
   </ItemVisual>
   <ItemVisual id="hair_long">
-    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_long.mesh" material="common/models/quaternius/hair/hair_long/materials/mi_hair_2.material"/>
+    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_long.mesh" material="common/materials/quaternius/hair_2.material"/>
     <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_female.mesh" material="common/models/quaternius/hair/eyebrows_female/materials/mi_hair_2.material"/>
   </ItemVisual>
   <ItemVisual id="hair_buns" _base="hair_long">
-    <Part name="Hair" mesh="common/models/quaternius/hair/hair_buns.mesh" material="common/models/quaternius/hair/hair_buns/materials/mi_hair_2.material"/>
+    <Part name="Hair" mesh="common/models/quaternius/hair/hair_buns.mesh" material="common/materials/quaternius/hair_2.material"/>
   </ItemVisual>
   <ItemVisual id="hair_buzzed_female" _base="hair_long">
-    <Part name="Hair" mesh="common/models/quaternius/hair/hair_buzzedfemale.mesh" material="common/models/quaternius/hair/hair_buzzedfemale/materials/mi_hair_1.material"/>
+    <Part name="Hair" mesh="common/models/quaternius/hair/hair_buzzedfemale.mesh" material="common/materials/quaternius/hair_1.material"/>
   </ItemVisual>  <ItemVisual id="outfit_peasant_male" tags="Outfit.Peasant">
     <Part name="Arms" kind="Skinned" mesh="common/models/quaternius/outfits/male_peasant_arms.mesh" fit="common/characters/ubc/outfits/male_peasant_arms.partfit.xml">
       <Section name="mi_peasant" material="common/models/quaternius/outfits/male_peasant_arms/materials/mi_peasant.material"/>

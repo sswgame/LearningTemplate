@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
@@ -202,12 +203,11 @@ namespace sw::editor
 
         /** @brief 상태 줄입니다. 비면 보일 것이 없습니다. */
         const string& getStatus() const { return _status; }
-        /** @brief 편집 모델의 명령이 실패 이유를 쓰는 상태 줄입니다(`SocketEditModel::setParent( …, error )`). */
-        string& editStatus() { return _status; }
-        void    setStatus( string_view status ) { _status = string{ status }; }
-        void    clearStatus() { _status.clear(); }
-        /** @brief 모델 편집 결과를 상태 줄에 보입니다. 실패하면 이유가 남고, 성공하면 줄을 비웁니다. */
-        void reportEdit( bool bSucceeded );
+        void          setStatus( string_view status ) { _status = string{ status }; }
+        void          clearStatus() { _status.clear(); }
+        /** @brief 모델 편집 결과를 상태 줄에 보입니다. 실패하면 이유를 적고, 성공하면(값이 같아 그대로여도) 줄을 비웁니다. */
+        void reportEdit( const expected<void>& result );
+        void reportEdit( const expected<bool>& result );
 
         CharacterEditorPaths&            editPaths() { return _paths; }
         const CharacterEditorPaths&      getPaths() const { return _paths; }

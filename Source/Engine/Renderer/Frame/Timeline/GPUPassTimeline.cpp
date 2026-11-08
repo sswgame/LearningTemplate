@@ -123,7 +123,7 @@ namespace sw
         }
 
         // 패스 밖의 GPU 시간. `GPU.Frame` 은 프레임의 첫 명령부터 마지막 패스 끝까지다. 패스 합과의
-        // 차이가 컴퓨트 프리패스, 업로드, 배리어다. 이것이 없으면 "패스는 270µs 인데 펜스는 왜 400µs 를
+        // 차이가 프레임 그래프, 업로드, 배리어다. 이것이 없으면 "패스는 270µs 인데 펜스는 왜 400µs 를
         // 기다리나" 에 답할 수 없다(프레임 사이 유휴는 여기 잡히지 않는다. 그건 CPU 쪽 RT.Frame 과의 차이다).
         if ( _computeScopeSlot == FrameProfiler::kInvalidSlot )
             _computeScopeSlot = profiler.registerScope( "GPU.Compute" );

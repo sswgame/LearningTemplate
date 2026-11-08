@@ -11,6 +11,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Task/TaskManager.h"
 
+#include "DevTools/Profiling/Tracy/TracyProfilerBackend.h"
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 
 #include "Editor/Common/Commands/Diagnostics/EditorTracyLauncher.h"
@@ -408,14 +409,14 @@ namespace sw::editor
         // Tracy. 시간축 분석은 외부 뷰어가 한다. 상태 한 줄과 여는 버튼을 둔다.
         EditorWidgets::drawToolbarSeparator();
         const IProfilerBackend* pBackend = ProfilerBackend::getActiveBackend();
-        if ( ProfilerBackend::isTracyCompiled() == false )
+        if ( TracyProfilerBackend::isCompiled() == false )
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "TracyNotInThisBuild" ) );
         else if ( pBackend == nullptr )
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "TracyOff" ) );
         else
-            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "TracyOnPortViewer", TextArgumentList().addInteger( "tracyPort", static_cast<int64>( ProfilerBackend::getTracyPort() ) ).addText( "viewerConnected", pBackend->isViewerConnected() ? "connected" : "waiting" ) ).c_str() );
+            ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "TracyOnPortViewer", TextArgumentList().addInteger( "tracyPort", static_cast<int64>( TracyProfilerBackend::getDataPort() ) ).addText( "viewerConnected", pBackend->isViewerConnected() ? "connected" : "waiting" ) ).c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "OpenTracy" ) ) );
-        ImGui::BeginDisabled( ProfilerBackend::isTracyCompiled() == false );
+        ImGui::BeginDisabled( TracyProfilerBackend::isCompiled() == false );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "OpenTracy" ) ) )
         {
             _lastTracyResult = EditorTracyLauncher::openViewer();

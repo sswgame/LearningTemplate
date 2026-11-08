@@ -48,20 +48,14 @@
 - 디렉터 컴포넌트의 카탈로그 읽기는 컴포넌트 칸의 경로로 씬마다 다른 데이터라 게임 범위 `loadRequiredCatalog` 로 옮기지 않고 실패 등급만 ERROR 로. 파일 글 되돌리기 둘(프리팹은 캐시를 바로, 리그는 파일 감시가 다시 읽는다)은 뒤따르는 일이 달라 합치지 않는다.
 
 ### T8 구성 차이
-- 플랫폼 백엔드 파일(오디오 · 접근성) 안의 파일 전체 `#if` 는 남긴다 — Engine 은 아직 `sw_filterPlatformSources` 를 쓰지 않고 서버 타깃(클라이언트 코드 없음)도 같은 매크로로 가른다. Engine 에 폴더 규칙을 켤 때 함께 지운다.
+- 플랫폼 폴더는 CMake 가 고른다(`sw_filterPlatformSources` — Core · Engine · DevTools). 플랫폼 폴더 `.cpp` 에 파일 전체 플랫폼 `#if` 를 두지 않는다(언리얼 UBT 의 플랫폼 폴더 규칙). 전용 서버가 짓지 않는 폴더(오디오 · UI)의 플랫폼 파일에는 `SW_WITH_CLIENT_CODE` 도 없다. 서버도 짓는 창 · 입력 플랫폼 파일(`Window/Linux` · `Input/Linux`)은 `SW_WITH_CLIENT_CODE` 를 남긴다 — 리눅스 서버에는 X11 이 없고 클립보드 빈 구현이 그 파일의 `#else` 다. 옮기려면 서버의 창 · 입력 · 클립보드 선택을 Headless 쪽 파일로 떼어야 한다.
 - Engine 의 `SW_SHIPPING` 은 리플렉션 메타데이터(툴팁 · 문서 필드)를 배포에서 빼는 자리와 배포 전용 정의 몇 곳뿐이다. 언리얼 `WITH_METADATA` · `WITH_EDITORONLY_DATA` 와 같은 자리라 유지한다(데이터 배치가 구성마다 다르다 — 빌드 단위로 가를 것이 아니다).
 - **남긴 구성 분기와 이유**:
   - Reflection 메타데이터(`ReflectionMetadata.h` · `Reflection.cpp` · `ReflectionTypes.h` · `ReflectionDocWriter.cpp`, 24) — 구조체 배치가 구성마다 다른 에디터 전용 데이터라 빌드 단위로 가를 수 없다(언리얼 `WITH_METADATA` · `WITH_EDITORONLY_DATA` 도 `#if`). 옮기려면 메타데이터를 옆 표로 떼고 생성기(ReflectionParser 템플릿)가 개발 전용 `.gen` 단위를 따로 내야 한다 — 생성기 · 에디터 읽는 쪽 전부를 바꾸는 일이라 따로 한다.
   - `GameObjectManager::resolveComponent` 의 타입 확인 — 뜨거운 길의 검사(언리얼 `DO_CHECK` 자리)라 함수 호출로 바꾸면 비용이 는다.
   - `LocalizationManager` 의 가짜 언어 숨김 둘 · `UIBindingSet` 의 배포 전용 경고 · `SplashWindow`(에디터 도메인 에셋) · `DiagnosticsSubsystem`(Core 할당 헤더 스위치를 따른다) — 모두 `build::kShipping` 으로 옮겼다(가짜 언어 · 스플래시 · 진단 · 모듈 구성 · UI 폴 경고 · 배포 평문 포트).
   - `GameNetSession` 의 배포 평문 공개 포트 거절 — 개발 허용은 `DevOnlineExtension` 에 올릴 개발 대체물이다(키트 등록표 차례에 함께).
-  - 스위치를 정의하는 자리(`ContentSource.h` · `AnimationRewind.h` · `ProfilerBackend.h` · `ModuleCatalog::getCurrentConfiguration`)와 플랫폼 백엔드 파일의 `SW_WITH_CLIENT_CODE`(Engine 이 `sw_filterPlatformSources` 를 쓰지 않는다 — 위 결정)는 대상이 아니다. `SW_PROFILER_TRACE_ENABLED`(ServerApp 1)는 그대로다.
-
-### T9 생성 계약
-- `ReflectionSchema`: `ReflectionSchema` 는 include 경로로 막지 못한다(Core 가 `Source` 루트를 준다) — 목록 밖 Engine 헤더 include 를 막으려면 루트를 층별로 나눠야 한다.
-
-### T10 폴백 — 남은 것
-- `RHI::getShaderTargetFormat` 이 모르는 백엔드에 DXIL 을 돌려준다.
+  - 스위치를 정의하는 자리(`ContentSource.h` · `AnimationRewind.h` · `ProfilerBackend.h` · `ModuleCatalog::getCurrentConfiguration`)와 창 · 입력 플랫폼 파일의 `SW_WITH_CLIENT_CODE`(위 결정)는 대상이 아니다. `SW_PROFILER_TRACE_ENABLED`(ServerApp 1)는 그대로다.
 
 ## 5. 남은 확인
 

@@ -2,8 +2,35 @@
 <!-- 꾸미기 스키마. 캐릭터(Adventurer · Skeleton)와 아이템(Gun)이 같은 형식이다.
      Slider → Drive(Morph · BoneProportion · MaterialScalar), Color → Drive(MaterialColor · DyeChannel · PaletteSwap), Choice → Option(visual · variant ·
      materialVariant), Attachment → Option(prefab · sprite) 를 주인의 socket 에 단다. category 는 부분 프리셋(머리만 · 얼굴만 · 염색만)이 고르는 묶음,
-     Condition 은 앞에 선언한 매개변수에만 걸 수 있다. KayKit 몸은 아틀라스 한 장이라 염색은 머티리얼의 _color 를 곱하는 MaterialColor 다. -->
+     Condition 은 앞에 선언한 매개변수에만 걸 수 있다. KayKit 몸은 아틀라스 한 장이라 염색은 머티리얼의 _color 를 곱하는 MaterialColor 다.
+     Palette 는 색 매개변수 · 피부 층이 고를 수 있는 견본 묶음이다(palette="…" — 정규화가 가장 가까운 견본으로 맞춘다).
+     머티리얼 드라이브의 include/exclude 는 외형 구간의 별칭 · 묶음(<Section alias groups dyeable>)으로 칠할 구간을 고른다 — 없는 별칭은 로드 오류다. -->
 <CustomizationSchemaCatalog>
+  <Palette id="MakeupDark"><Swatch name="Black" color="0.05 0.04 0.04 1"/><Swatch name="Brown" color="0.25 0.15 0.1 1"/><Swatch name="Navy" color="0.08 0.1 0.25 1"/></Palette>
+  <Palette id="MakeupWarm"><Swatch name="Rose" color="0.85 0.4 0.45 1"/><Swatch name="Coral" color="0.95 0.5 0.4 1"/><Swatch name="Crimson" color="0.7 0.08 0.12 1"/><Swatch name="Nude" color="0.75 0.5 0.45 1"/></Palette>
+  <Palette id="InkTattoo"><Swatch name="Black" color="0.08 0.08 0.1 1"/><Swatch name="Blue" color="0.1 0.2 0.6 1"/><Swatch name="Red" color="0.6 0.1 0.1 1"/></Palette>
+  <Palette id="Iris"><Swatch name="Brown" color="0.35 0.2 0.1 1"/><Swatch name="Hazel" color="0.5 0.4 0.2 1"/><Swatch name="Green" color="0.25 0.5 0.25 1"/><Swatch name="Blue" color="0.25 0.45 0.8 1"/><Swatch name="Grey" color="0.55 0.6 0.65 1"/><Swatch name="Amber" color="0.85 0.55 0.1 1"/><Swatch name="Red" color="0.7 0.1 0.1 1"/></Palette>
+  <Palette id="Hair"><Swatch name="Black" color="0.04 0.03 0.03 1"/><Swatch name="DarkBrown" color="0.18 0.1 0.06 1"/><Swatch name="Auburn" color="0.45 0.15 0.08 1"/><Swatch name="Blonde" color="0.85 0.7 0.45 1"/><Swatch name="Silver" color="0.8 0.8 0.82 1"/><Swatch name="Pink" color="0.9 0.5 0.65 1"/></Palette>
+  <!-- 사람형 꾸미기 묶음(눈 · 머리카락 · 몸 채널) — 눈 셰이딩 기능(머티리얼 작업)의 매개변수 이름(_irisColor · _irisColorRight · _pupilShape · _pupilSize · _eyeShine)을 쓴다.
+       눈 크기 · 간격 · 머리 길이 · 체형은 몸 채널(BoneProportion 대상 = 체형 축 이름)이라 스켈레톤마다 *.bodyshape.xml 이 본으로 옮긴다. 이색증은 오른눈 구간 별칭(eye_r)만 칠한다.
+       동공 모양은 0 둥근 · 1 세로 슬릿 · 2 가로 막대 · 3 W(갑오징어) · 4 물고기 — 셰이더가 정수로 반올림한다. -->
+  <Schema id="HumanoidCustom">
+    <Color name="IrisColor" category="Eyes" palette="Iris" default="0.35 0.2 0.1 1"><Drive kind="MaterialColor" target="_irisColor"/></Color>
+    <Choice name="Heterochromia" category="Eyes" default="Off"><Option name="Off"/><Option name="On"/></Choice>
+    <Color name="IrisColorRight" category="Eyes" palette="Iris" default="0.25 0.45 0.8 1"><Condition parameter="Heterochromia" options="On"/><Drive kind="MaterialColor" target="_irisColorRight" include="eye_r"/></Color>
+    <Slider name="PupilShape" category="Eyes" min="0" max="4" default="0"><Drive kind="MaterialScalar" target="_pupilShape"/></Slider>
+    <Slider name="PupilSize" category="Eyes" min="0" max="1" default="0.5"><Drive kind="MaterialScalar" target="_pupilSize"/></Slider>
+    <Slider name="EyeShine" category="Eyes" min="0" max="1" default="0.6"><Drive kind="MaterialScalar" target="_eyeShine"/></Slider>
+    <Slider name="EyeScale" category="Eyes" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Eye.Scale"/></Slider>
+    <Slider name="EyeSpacing" category="Eyes" min="-1" max="1" default="0" symmetry="Eyes"><Drive kind="BoneProportion" target="Eye.Spacing"/></Slider>
+    <Slider name="HairLength" category="Hair" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Hair.Length"/></Slider>
+    <Color name="HairRoot" category="Hair" palette="Hair" default="0.18 0.1 0.06 1"><Drive kind="MaterialColor" target="_hairRootColor"/></Color>
+    <Color name="HairTip" category="Hair" palette="Hair" default="0.18 0.1 0.06 1"><Drive kind="MaterialColor" target="_hairTipColor"/></Color>
+    <Color name="HairHighlight" category="Hair" palette="Hair" default="0.85 0.7 0.45 1"><Drive kind="MaterialColor" target="_hairHighlightColor"/></Color>
+    <Slider name="HairHighlightAmount" category="Hair" min="0" max="1" default="0"><Drive kind="MaterialScalar" target="_hairHighlightAmount"/></Slider>
+    <Slider name="ShoulderWidth" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Shoulder.Width"/></Slider>
+    <Slider name="WaistWidth" category="Body" min="-1" max="1" default="0"><Drive kind="BoneProportion" target="Waist.Width"/></Slider>
+  </Schema>
   <Schema id="Adventurer">
     <Color name="OutfitDye" category="Dye" default="1 1 1 1"><Drive kind="MaterialColor" target="_color"/></Color>
     <!-- 캐릭터 편집 창의 슬라이더 칸(시나리오 editor.charactereditor)이 누르는 슬라이더다. 기본 0.5 는 머티리얼의 기본 _roughness 와 같아 외형이 바뀌지 않는다. -->

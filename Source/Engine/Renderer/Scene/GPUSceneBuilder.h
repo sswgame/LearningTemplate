@@ -278,11 +278,15 @@ namespace sw
              *          메시만 바뀐 교체(`hasSameBatchKeyExceptMesh`)는 그룹을 받지 않는다 — 단계 배치가 메시의 정점 구간을 굳히기 때문이다.
              */
             IdentityToken _lodContentID{};
+            /// @brief 움직임 기록 열쇠입니다(`MeshComponent::getMotionHistoryKey`, 인스턴스 배치 항목은 0). GPUInstance::_motionKey 로 전달됩니다(배치 키가 아니라 내용).
+            uint64 _motionKey{ 0 };
             /**
              * @brief 월드 행렬식이 음수(거울 변환)인지 나타냅니다. 배치 키이며 `GPUMeshBatch::_bReverseCulling` 으로 전달됩니다.
              * @details 월드 행렬에서 나오는 값이라 트랜스폼만 바뀐 프레임에도 다시 구한다(`copyCandidateTransforms`). 부호가 바뀌면 배치를 다시 나눈다.
              */
             uint8 _bReverseCulling{ SW_FALSE };
+            /** @brief 정적 메시(`MeshComponent::isStatic`)의 후보인지 나타냅니다. 배치 키이며 `GPUMeshBatch::_bStaticShadowCaster` 로 전달됩니다(그림자 캐시가 배치를 가른다). */
+            uint8 _bStaticShadowCaster{ SW_FALSE };
             /**
              * @brief LOD 그룹 후보를 디더 변형으로 그리는지입니다(`usesAppearanceDither`) — 크로스페이드가 켜져 있으면 그룹의 모든 인스턴스가 그 변형이다(전환 중에만 픽셀을 버리고 평소에는 하나도 버리지 않는다).
              * @details 퍼뮤테이션 해시가 달라지므로 배치 키에 이미 들어 있다.
@@ -313,10 +317,11 @@ namespace sw
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
                        _sectionFirstIndex == other._sectionFirstIndex && _sectionIndexCount == other._sectionIndexCount &&
                        _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite && _customData == other._customData && _highlight == other._highlight && _skinSlot == other._skinSlot &&
+                       _motionKey == other._motionKey &&
                        Memory::compare( &_vertexAnimationPhase, &other._vertexAnimationPhase, sizeof( _vertexAnimationPhase ) ) == 0 &&
                        Memory::compare( &_appearance, &other._appearance, sizeof( _appearance ) ) == 0 &&
                        _permutationHash == other._permutationHash && _lodContentID == other._lodContentID && _bLODDither == other._bLODDither && _sortKey == other._sortKey &&
-                       _bReverseCulling == other._bReverseCulling &&
+                       _bReverseCulling == other._bReverseCulling && _bStaticShadowCaster == other._bStaticShadowCaster &&
                        Memory::compare( &_world, &other._world, sizeof( _world ) ) == 0 &&
                        Memory::compare( &_boundsCenter, &other._boundsCenter, sizeof( _boundsCenter ) ) == 0 &&
                        Memory::compare( &_boundsRadius, &other._boundsRadius, sizeof( _boundsRadius ) ) == 0;
@@ -340,13 +345,13 @@ namespace sw
             {
                 return _material == other._material && _instance == other._instance && _sectionFirstIndex == other._sectionFirstIndex &&
                        _sectionIndexCount == other._sectionIndexCount && _blendMode == other._blendMode && _permutationHash == other._permutationHash &&
-                       _lodContentID == other._lodContentID && _bReverseCulling == other._bReverseCulling;
+                       _lodContentID == other._lodContentID && _bReverseCulling == other._bReverseCulling && _bStaticShadowCaster == other._bStaticShadowCaster;
             }
         };
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역폭입니다. 필드 크기의 합을 정렬 단위로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 빌드를 멈춥니다.
         static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) * 2 + sizeof( float32 ) * 2 + sizeof( uint32 ) * 7 +
-                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( InstanceCustomData ) + sizeof( uint64 ) + sizeof( IdentityToken ) +
-                                                    sizeof( uint8 ) * 2 + sizeof( float32 ) * 2 + alignof( DrawCandidate ) - 1 ) /
+                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( InstanceCustomData ) + sizeof( uint64 ) * 2 +
+                                                    sizeof( uint8 ) * 3 + sizeof( float32 ) * 2 + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),
                        "DrawCandidate has padding between fields (or a field was added without adding its size here)" );
 
@@ -405,6 +410,8 @@ namespace sw
             uint64 _permutationHash{ 0 };
             /** @brief 컬 모드를 뒤집어 그리는지(거울 변환) 나타냅니다. 퍼뮤테이션과 함께 PSO 를 정하므로 키입니다. */
             uint8 _bReverseCulling{ SW_FALSE };
+            /** @brief 정적 메시의 배치인지 나타냅니다. 그림자 캐시가 정적과 움직이는 배치를 가르므로 키입니다. */
+            uint8 _bStaticShadowCaster{ SW_FALSE };
             /** @brief 그리기 순서입니다. 불투명 정렬의 첫 키이고(스텐실 마스크는 받는 쪽보다 먼저 그려야 한다), 값이 같은 퍼뮤테이션 안에서 하나라 비교에는 넣지 않는다. */
             int32 _renderQueue{ 0 };
             /** @brief 메시, 머티리얼, 인스턴스, 퍼뮤테이션, 컬 반전이 같은지 비교합니다. */
@@ -412,7 +419,7 @@ namespace sw
             {
                 return _pMesh == other._pMesh && _sectionFirstIndex == other._sectionFirstIndex && _sectionIndexCount == other._sectionIndexCount &&
                        _pMaterial == other._pMaterial && _pInstance == other._pInstance && _permutationHash == other._permutationHash &&
-                       _bReverseCulling == other._bReverseCulling;
+                       _bReverseCulling == other._bReverseCulling && _bStaticShadowCaster == other._bStaticShadowCaster;
             }
         };
 
@@ -626,6 +633,11 @@ namespace sw
          */
         [[nodiscard]] bool copyCandidateTransforms( const PrimitiveRegistry& primitives );
         /**
+         * @brief 정적 그림자 세대(`GPUSceneSnapshot::_staticShadowGeneration`)를 올릴지 정합니다. 이번 수집의 더티 슬롯(렌더 상태 · 월드 행렬) 중 정적 메시가 있거나,
+         *        집합이 바뀌어(@p bSetChanged) 정적 메시의 수 · 포인터 지문이 달라졌으면 올린다. `consumeDirty` 바로 뒤에 부른다.
+         */
+        void updateStaticShadowGeneration( const PrimitiveRegistry& primitives, bool bSetChanged );
+        /**
          * @brief 월드 행렬만 바뀐 항목 가운데 지난 프레임 후보에 없는 것(메시가 아직 없었거나 인스턴스 항목)을 렌더 상태 목록으로 넘깁니다.
          * @details 그런 항목은 다시 모아야 후보에 실릴지 알 수 있다. 남은 것만 `copyCandidateTransforms` 가 행렬을 옮긴다. 부분 수집 안에서만 부른다.
          */
@@ -754,6 +766,8 @@ namespace sw
 
         /** @brief 마지막으로 반영한 프리미티브 집합 세대입니다. 달라졌으면 레지스트리가 바뀐 것입니다. */
         uint64 _lastPrimitiveSetGeneration{ 0 };
+        uint64 _staticShadowSignature{ 0 }; ///< 정적 메시 집합의 지문(포인터 섞은 값의 합 — 순서와 무관하다). `updateStaticShadowGeneration`
+        uint32 _staticShadowCount{ 0 };     ///< 정적 메시 수. 지문과 함께 집합이 바뀌었는지 본다
         float3 _lastCameraPos{};
         /** @brief 마지막 빌드가 쓴 깊이 축입니다(`GPUTransparentSorter::getAxis`). 다르면 정렬을 다시 합니다. */
         float3 _lastTransparentSortAxis{};

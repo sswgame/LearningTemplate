@@ -333,6 +333,9 @@ namespace sw
             // 스킨 칸 표 t14 (네 백엔드 공통): 정점 셰이더가 인스턴스의 스킨 칸으로 결과 시작을 읽는다(binding.hlsli MorphPool::loadSkinResultOffset).
             addReserved( list, shaderslot::resname::kSkinResultOffsets, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kSkinResultOffsetBuffer ), slotAt( 0, shaderslot::kSkinResultOffsetBuffer ),
                          slotAt( vk::kTShift, shaderslot::kSkinResultOffsetBuffer ), slotAt( 0, shaderslot::kSkinResultOffsetBuffer ) );
+            // 지난 월드 행렬 t15 (네 백엔드 공통): 화면 속도를 쓰는 지오메트리 패스의 정점 셰이더가 인스턴스 번호로 읽는다(binding.hlsli InstanceData::loadPreviousWorld).
+            addReserved( list, shaderslot::resname::kPrevInstanceWorlds, ShaderBindingKind::StructuredBuffer, slotAt( 0, shaderslot::kPrevInstanceWorldBuffer ),
+                         slotAt( 0, shaderslot::kPrevInstanceWorldBuffer ), slotAt( vk::kTShift, shaderslot::kPrevInstanceWorldBuffer ), slotAt( 0, shaderslot::kPrevInstanceWorldBuffer ) );
             // light_grid 컴퓨트: 라이트 t0 · 뷰 정보 t1 읽기, 그리드 u0 쓰기. GL 의 u# 은 SSBO SW_GL_UAV_BINDING0 + #.
             addReserved( list, shaderslot::resname::kLightGridLights, ShaderBindingKind::StructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kTShift, 0 ), slotAt( 0, 0 ) );
             addReserved( list, shaderslot::resname::kLightGridViews, ShaderBindingKind::StructuredBuffer, slotAt( 0, 1 ), slotAt( 0, 1 ), slotAt( vk::kTShift, 1 ), slotAt( 0, 1 ) );
@@ -346,13 +349,13 @@ namespace sw
             // instance_animation 컴퓨트: 인스턴스 버퍼를 u0 으로 고쳐 쓴다.
             addReserved( list, shaderslot::resname::kAnimationInstancesRw, ShaderBindingKind::RwStructuredBuffer, slotAt( 0, 0 ), slotAt( 0, 0 ), slotAt( vk::kUShift, 0 ), slotAt( 0, shaderslot::gl::kUAVBinding0 ) );
             // 엔진 텍스처 칸 t32.. / 머티리얼 텍스처 t16..t31: 에뮬 백엔드(DX11 · GL)만. Vulkan · DX12 는 선언 자체가 없어야 한다.
-            // 엔진 텍스처 칸의 GL binding 은 칸 번호다(레지스터와 다르다 — shaderslot::emulated::getGlTextureUnit). 짝 샘플러는 계약에 없다 —
+            // 엔진 텍스처 칸의 GL binding 은 레지스터 번호 그대로다(머티리얼 칸과 같다). 짝 샘플러는 계약에 없다 —
             // DX11 은 정적 세트로 읽고, GL 은 결합 샘플러라 리플렉션에 샘플러 이름이 따로 나오지 않는다(binding.hlsli).
             for ( uint32 slotIndex = 0; slotIndex < shaderslot::kEngineTextureCount; ++slotIndex )
             {
                 const uint32 reg = shaderslot::kEngineTexture0 + slotIndex;
                 addReserved( list, string( shaderslot::resname::kEngineTexture ) + to_string( slotIndex ), ShaderBindingKind::Texture, slotAt( 0, reg ), none(), none(),
-                             slotAt( 0, shaderslot::emulated::getGlTextureUnit( reg ) ) );
+                             slotAt( 0, reg ) );
             }
             for ( uint32 slotIndex = 0; slotIndex < shaderslot::kMaterialTextureCount; ++slotIndex )
             {
@@ -607,26 +610,26 @@ namespace sw
                         report( reflectedA._name, string( "OpenGL 은 descriptor set 을 무시하는데 set " ) + to_string( reflectedA._space ) + " 로 선언돼 있습니다 — binding " +
                                                       string( textBuilder.view() ) );
                     }
-                    checkAssertSlot( reflectedA );
+                    checkMessageSlot( reflectedA );
                     checkCollisionsAfter( listReflected, indexA );
                 }
             }
 
             /**
-             * @brief 컴퓨트 쓰기 슬롯 u4 는 셰이더 assert 링(g_GPUAssertRW) 전용이고, 그 링은 u4 에만 놓인다.
+             * @brief 쓰기 슬롯 u4 는 셰이더 메시지 링(g_GPUMessageRW) 전용이고, 그 링은 u4 에만 놓인다(컴퓨트 · 그래픽스 단계 모두).
              * @details SPIR-V 는 RW 구조버퍼도 StorageBuffer(읽기 구조버퍼와 같은 종류)로 보고하므로 종류로 거르면 Vulkan · GL 에서 이 검사가 돌지 않는다 — 스토리지 버퍼는 모두 본다.
              */
-            void checkAssertSlot( const Internal::ReflectedBinding& reflected )
+            void checkMessageSlot( const Internal::ReflectedBinding& reflected )
             {
                 const bool bWritableKind = Internal::registerClassOf( reflected._kind ) == Internal::RegisterClass::UnorderedAccess ||
                                            ( Internal::isSPIRV( _targetFormat ) && reflected._kind == ShaderBindingKind::StructuredBuffer );
                 if ( reflected._space != 0 || bWritableKind == false )
                     return;
-                const uint32 bindOffset  = _bVulkan ? shaderslot::vk::kUShift : ( _bOpenGl ? shaderslot::gl::kUAVBinding0 : 0u );
-                const bool   bAssertName = reflected._name == shaderslot::resname::kGPUAssertRing;
-                const bool   bAssertSlot = reflected._bindPoint == bindOffset + shaderslot::kComputeAssertUAV;
-                if ( bAssertName != bAssertSlot )
-                    report( reflected._name, "컴퓨트 쓰기 슬롯 u4 는 셰이더 assert 링(g_GPUAssertRW) 전용이고 그 링은 u4 에만 놓입니다" );
+                const uint32 bindOffset   = _bVulkan ? shaderslot::vk::kUShift : ( _bOpenGl ? shaderslot::gl::kUAVBinding0 : 0u );
+                const bool   bMessageName = reflected._name == shaderslot::resname::kGPUMessageRing;
+                const bool   bMessageSlot = reflected._bindPoint == bindOffset + shaderslot::kGPUMessageUAV;
+                if ( bMessageName != bMessageSlot )
+                    report( reflected._name, "쓰기 슬롯 u4 는 셰이더 메시지 링(g_GPUMessageRW) 전용이고 그 링은 u4 에만 놓입니다" );
             }
 
             /**

@@ -50,7 +50,8 @@
 			                        _hitPause="0.45"
 			                        _firstPersonHeadSlot="FirstPersonHead"
 			                        _firstPersonHandsSlot="FirstPersonHands"
-			                        _thirdPersonHandsSlot="ThirdPersonHands">
+			                        _thirdPersonHandsSlot="ThirdPersonHands"
+			                        _lookSourceObject="LookSource">
 				<_listFirstPersonHiddenSlot>
 					<item>Head</item>
 					<item>MainHand</item>

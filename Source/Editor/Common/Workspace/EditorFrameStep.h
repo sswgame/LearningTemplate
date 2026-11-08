@@ -3,7 +3,7 @@
  * @brief 에디터 UI 프레임 안에서 순서대로 도는 단계(`SW_EDITOR_FRAME_STEP`)의 등록 줄입니다.
  */
 #pragma once
-#include "Editor/Common/Workspace/EditorExtensionRegistry.h"
+#include "Editor/Common/EditorExtensionRegistry.h"
 
 namespace sw::editor
 {

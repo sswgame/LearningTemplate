@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 시나리오 automation/displacement 의 대조 머티리얼 — 변위 칸은 적었지만 MATERIAL_DISPLACEMENT 가 없어 평면 그대로다. 자식 displacement_checker 가 define 만 더한다. -->
+<MaterialDef formatVersion="0" name="displacement_flat" _base="engine/materials/pbrmaterial.material">
+	<_properties>
+		<item name="_color" defaultValue="0.85 0.8 0.7 1" />
+		<item name="_roughness" defaultValue="0.8" />
+		<item name="_metallic" defaultValue="0" />
+		<item name="_displacementMap" assetPath="engine/textures/test/checker.dds" />
+		<item name="_displacementScale" defaultValue="0.35" />
+		<item name="_displacementMidLevel" defaultValue="0" />
+		<item name="_tessellationDensity" defaultValue="200" />
+		<item name="_tessellationMaxFactor" defaultValue="64" />
+	</_properties>
+</MaterialDef>

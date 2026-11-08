@@ -16,6 +16,10 @@
  *            <Axis name="Height" min="-1" max="1">
  *              <Positive><Bone name="pelvis" offset="0 0.08 0"/></Positive>
  *            </Axis>
+ *            <Axis name="Heel.Height" min="0" max="0.12">
+ *              <Positive><Bone name="foot_l" rotation="0 -25 0"/><Bone name="pelvis" offset="0 0.12 0"/></Positive>
+ *            </Axis>
+ *            <Unsupported name="Tail.Length"/>
  *          </BodyShapeSet>
  *          @endcode
  */
@@ -53,6 +57,9 @@ namespace sw
         float3 _scale{ 1.0f };
         PROPERTY( Units = m )
         float3 _offset{};
+        /** @brief 로컬 회전에 더하는 회전(도, `makeFromYawPitchRoll` 순서)입니다. 하이힐의 발목 · 발가락 각처럼 채널이 관절을 굽힐 때 쓴다. 겹칠 때는 가중치만큼 각을 더한다. */
+        PROPERTY( Units = deg )
+        float3 _rotation{};
     };
 } // namespace sw
 
@@ -64,8 +71,10 @@ namespace sw
     public:
         /** @brief 본 하나의 보정을 정합니다(있으면 바꿈). */
         void setBone( const hashed_string& bone, const float3& scale, const float3& offset );
-        /** @brief 보정을 @p weight 만큼 겹칩니다. 스케일은 lerp(1, s, w) 를 곱하고, 오프셋은 o × w 를 더합니다. */
+        /** @brief 보정을 @p weight 만큼 겹칩니다. 스케일은 lerp(1, s, w) 를 곱하고, 오프셋은 o × w, 회전 각은 r × w 를 더합니다. */
         void accumulate( const BoneProportionEntry& entry, float32 weight );
+        /** @brief 보정의 회전 각(도)을 쿼터니언으로 바꿉니다. 적용은 지금 로컬 회전 뒤(본 자기 축)에 곱한다. */
+        static quaternion makeRotation( const BoneProportionEntry& entry );
         /** @brief 본의 보정입니다. 없으면 nullptr 입니다. */
         const BoneProportionEntry* findBone( const hashed_string& bone ) const;
         /** @brief 보정들입니다. */
@@ -125,6 +134,23 @@ namespace sw
         float32 _max{ 1.0f };
         PROPERTY()
         float32 _default{ 0.0f };
+        /** @brief 응답 곡선의 지수입니다. 끝 쪽 가중치 = (|값| / 범위)^response — 1 이면 선형, 1 보다 크면 끝에서 빨리 커진다(조임 · 처짐 채널의 비선형 반응). */
+        PROPERTY( Min = 0.01 )
+        float32 _response{ 1.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 체형 축 데이터 루트(`<BodyShapeSet>`)의 칸입니다. */
+    REFLECT()
+    struct SW_API BodyShapeSetParams
+    {
+        REFLECT_BODY();
+
+        /** @brief 발 들림(굽 높이, m)으로 읽는 축 이름입니다. 발 디딤 IK 가 이 값만큼 발바닥을 땅 위로 둔다(`RigInstance::setFootLift`). 비어 있으면 발 들림이 없다. */
+        PROPERTY()
+        hashed_string _footLiftAxis{};
     };
 } // namespace sw
 
@@ -163,6 +189,17 @@ namespace sw
         /** @brief 축들입니다. */
         const vector<BodyShapeAxis>& getAxes() const { return _listAxis; }
         /**
+         * @brief 이 스켈레톤이 **일부러** 받지 않는 채널(`<Unsupported name/>`)인지 반환합니다. 이런 채널 값은 `evaluate` 가 오류 없이 버린다.
+         * @details 아이템은 뼈가 아니라 채널 이름(`Bust.Compression`)에 값을 적는다. 채널을 본 · 모프로 옮기는 매핑은 스켈레톤마다 이 파일이 가진다 —
+         *          같은 아이템이 사람 · 작은 몸 · 짐승 스켈레톤에 그대로 맞는다. 매핑도 선언도 없는 채널은 오류다(조용히 건너뛰지 않는다).
+         */
+        bool                         isUnsupported( const hashed_string& axis ) const;
+        const vector<hashed_string>& getUnsupported() const { return _listUnsupported; }
+        /** @brief 발 들림 축 이름입니다(`footLiftAxis`). 비어 있으면 없다. */
+        const hashed_string& getFootLiftAxis() const { return _params._footLiftAxis; }
+        /** @brief 축 값들에서 발 들림(m)을 구합니다. 발 들림 축이 없으면 0, 값이 없으면 그 축의 기본값이고 범위로 묶습니다. */
+        float32 computeFootLift( vector_reference<const BodyShapeValue> listValue ) const;
+        /**
          * @brief 축이 적은 모프 이름과 본 이름이 몸 형상(@p pBody)과 본 배열(@p pBones)에 있는지 검사합니다(널이면 그쪽은 건너뜁니다).
          * @return 없는 이름이 있으면 오류 문장을 추가하고 false 를 반환합니다.
          */
@@ -182,5 +219,6 @@ namespace sw
 
     private:
         vector<BodyShapeAxis> _listAxis;
-    };
-} // namespace sw
+        vector<hashed_string> _listUnsupported; ///< 이 스켈레톤이 받지 않는다고 선언한 채널
+        BodyShapeSetParams    _params;
+    } // namespace sw

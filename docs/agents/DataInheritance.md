@@ -94,7 +94,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 그 밖에 형식마다 해야 할 일은 둘이다.
 
-- `Config/Dev/AssetReferenceFields.json` 에는 `_base` 가 이미 있어 참조 색인 · 린트가 따라간다. 핫 리로드가 있는 종류면 표의 칸을 `AssetReferenceUse::InlinedAtLoad` 로 둔다 — 부모가 바뀌면 `AssetReloadCascade` 가 자식을 의존 순서로 다시 읽는다. 따라가는 것은 `_base` 칸뿐이고(`EditorAssetReference::_bInlined`) 같은 파일의 다른 경로 칸은 연쇄하지 않는다.
+- 참조 칸 표(`Config/Dev/AssetReferenceFields.generated.json`)에는 `_base` 가 이미 있어 참조 색인 · 린트가 따라간다. 핫 리로드가 있는 종류면 표의 칸을 `AssetReferenceUse::InlinedAtLoad` 로 둔다 — 부모가 바뀌면 `AssetReloadCascade` 가 자식을 의존 순서로 다시 읽는다. 따라가는 것은 `_base` 칸뿐이고(`EditorAssetReference::_bInlined`) 같은 파일의 다른 경로 칸은 연쇄하지 않는다.
 - 저장이 있으면 `ReflectedXMLFile::saveDescAsChild`(부모와 다른 칸만) · `saveDesc`(형식 기본값과 다른 칸만)를 쓴다. 손 형식은 `ResourceComposer::saveDelta`(차이 · 다시 읽어 대조 · 쓰기 한 벌), 카탈로그 형식은 `DataCatalogInheritance::makeFileDelta` + `ResourceComposer::checkDeltaReadsBack` 이다. 두 글은 같은 직렬화기가 쓴 것이어야 한다.
   읽은 형식이 부모 id 를 들고(읽을 때 `DataInheritance::findBasePath`) 저장이 그 부모와의 차이로 쓴다 — 에디터가 펼친 한 벌을 쓰면 `_base` 가 끊긴다. 손 형식은 차이를 다시 읽어 같은 값이 나올 때만 쓴다(부모가 적은 칸을 자식이 지운 편집은 차이로 적을 수 없어 오류다). 본보기: `SocketSet::saveToFile` · `RetargetProfile::saveToFile` · `PhysicsAsset::saveToFile` · `AnimationGraphAsset::saveToFile` · `BehaviorTreeEditModel::makeSaveText` · `AudioGraphDef::saveToAsset`, 이벤트 프리셋은 `AudioEventLibrary::saveToXMLText`. 차이로 적을 수 없을 때 부모 없는 한 벌로 쓰는 대체는 두지 않는다. 글을 그대로 고쳐 쓰는 저장(리그 `RigSaveParams` · 카탈로그 창)은 `_base` 가 남고, 물려받은 줄을 고치면 열쇠 이름의 덮어쓰기 줄을 더한다. 되돌리기는 펼친 글로 복원하므로 복원한 값에 문서의 부모를 다시 단다.
 
@@ -168,7 +168,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 오류는 파일 상속과 같다: 순환, 없는 부모, 깊이 초과. 더해서 규칙에 없는 종류의 `_base`(`DataCatalogInheritance.KindNotListed`), 구조체 칸을 두 번 적음(`FieldRepeated`). 오류면 그 파일을 읽지 못한다.
 
-규칙은 코드가 아니라 `Content/engine/settings/datacataloginheritance.xml` 에 있다. 팩 쿠킹은 게임 모듈을 올리기 전에 돌기(`HeadlessSubsystem::runCookTask`) 때문에 `GameFramework` 나 키트의 정적 등록을 볼 수 없다. 새 카탈로그는 이 표에 한 줄을 더하면 된다. 읽는 코드는 고치지 않는다.
+규칙은 코드가 아니라 `Content/engine/settings/datacataloginheritance.xml` 에 있다(`<Entry name key>` 가 항목 종류, 줄 바로 아래 `<Field>` 는 항목이 아닌 루트 칸 — 입력 맵의 `<layers>` 래퍼). 팩 쿠킹은 게임 모듈을 올리기 전에 돌기(`HeadlessSubsystem::runCookTask`) 때문에 `GameFramework` 나 키트의 정적 등록을 볼 수 없다. 새 카탈로그는 이 표에 한 줄을 더하면 된다. 읽는 코드는 고치지 않는다.
 
 읽기는 `XMLDocument::loadResource` · `parseData` 가 `ResourceComposer` 로 펼친다. 그래서 `XMLCatalog` · `AppearanceDatabase` · 데이터 종류 검증이 모두 펼친 결과만 본다. 항목 id 를 바꾸지 않으므로 세이브는 그대로다. 팩 쿠커도 같은 함수로 펼쳐 담는다. 쿠킹본에 `_base` 가 남으면 읽기가 모르는 칸 오류를 낸다.
 
@@ -235,7 +235,6 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 - **저장:** 멤버는 엔티티로 적지 않고, 내부 씬을 임시로 지어 쓴 상태와의 차이를 앵커의 `<Part>` 로 적는다. 상속 씬은 부모를 지어 쓴 글과의 차이로 적는다(`saveXMLDelta`). 끈 레이어의 엔티티는 읽은 그대로 다시 적는다.
 - **지우기:** 멤버는 지울 수 없다. 프리팹 부품과 같다 — 지워도 다음 로드에 돌아온다.
 - **켜고 끄기:** `SceneDataLayerSubsystem::setLayerActive`, 개발 명령 `scene.layer <이름> on|off`, 에디터 Data Layers 창. 편집 중에 끄면 내리지 않고 숨기기만 한다. 시나리오: `game/empty/automation/datalayer`.
-- **판:** 없어도 되는 칸이라 씬 형식 판은 2 그대로이고 이미 있는 씬은 그대로 읽힌다. 쿠킹본(SCN1)만 판 6 으로 올랐다(다시 굽는다).
 
 ## 기본값을 쓰지 않는 저장
 
@@ -252,10 +251,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 | JSON 형식 | 설정은 층(`ConfigManager`)으로 겹친다. 프리팹 JSON 은 변형을 읽고 쓰지만 기본값은 빼지 않는다. 에디터 테마 토큰(`*.tokens.json`)은 파일이 자기 부모를 고르므로 `_base` 를 적고 키 표를 덮는다(`EditorThemeTokens`) |
 | 오디오 이벤트의 `_parentEvent` | 이벤트가 `_listEvent` 래퍼 안에 있어 카탈로그 규칙(루트 바로 아래 되풀이)에 맞지 않는다. 합치기는 `DataInheritance` 그대로이고 이벤트 하나를 가상의 문서로 넘긴다. 파일 합치기가 목록 원소의 `_base` 를 지우므로 이름이 다르다 |
 | `AudioEffectDef` 목록 | 이름이 비면 종류 이름을 쓰는 규칙이라 열쇠가 비는 원소가 있다. 적으면 통째로 바뀐다 |
-
 | `SkeletonVariant` 의 칸 | 뼈 비율은 곱해지고 클립 규칙은 쌓이며 본은 뒤에 붙는다. 덮어쓰면 변형의 변형이 다른 값이 된다. 사슬(순환 · 깊이 · 없는 부모)만 공통이고 칸은 `Skeleton::mergeVariantText` 가 얹어 평평한 `<Skeleton>` 글을 낸다(쿠킹본에 `_base` 가 남지 않는다). 부모 본 번호를 바꾸지 않는지는 합친 뒤에 본다 |
-
-머티리얼의 `parent` 는 합쳤다(`_base`).
 
 ## 상용 엔진과 비교
 

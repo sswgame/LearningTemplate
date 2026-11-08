@@ -5,9 +5,9 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Graphics/View/IEngineRenderDriver.h"
 #include "Engine/Graphics/View/ScreenshotRequestQueue.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Presentation/IEngineRenderDriver.h"
 #include "Engine/Scene/SceneManager.h"
 
 namespace sw

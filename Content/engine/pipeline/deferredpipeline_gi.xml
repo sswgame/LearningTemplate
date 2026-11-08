@@ -1,0 +1,47 @@
+<!--
+	디퍼드 파이프라인 + 화면 공간 GI 두 가지 — 기본 디퍼드(deferredpipeline.xml)는 그대로이고, 이 파이프라인을 고르면 켜진다.
+	  SSAO 패스의 셰이더를 GTAO(gtao.hlsl — 지평선 기반 가림 + 굽은 노멀, 같은 AOColor 출력)로 바꾼다.
+	  ScreenSpaceGI 패스(ssgi.hlsl)가 장면 색 사본을 반구로 걸어 가까운 면이 튕긴 빛을 조명 첨부에 더한다(가산). 먼 빛은 조명 패스의 프로브 GI 가 이미 그렸다.
+	값(반경 · 조각 · 걸음 · 세기)은 아래 퍼뮤테이션이 정본이다 — 셰이더에 기본값이 없다.
+	고르는 법: `-gv_renderPipeline=engine/pipeline/deferredpipeline_gi.xml`. 시나리오: game/empty/automation/screenspacegi.
+-->
+<RenderPipelineDesc _base="engine/pipeline/deferredpipeline.xml" _name="DeferredPipelineGI">
+	<_listPass>
+		<RenderGraphPassDesc _name="SSAO" _shaderPath="engine/shaders/gtao.hlsl">
+			<_listPermutation>
+				<item>SW_GTAO_RADIUS=0.6</item>
+				<item>SW_GTAO_SLICES=3</item>
+				<item>SW_GTAO_STEPS=6</item>
+				<item>SW_GTAO_INTENSITY=1.2</item>
+			</_listPermutation>
+		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="ScreenSpaceGI"
+		                     _after="SceneDepthCopy"
+		                     _type="ScreenSpaceGI"
+		                     _depthAttachment=""
+		                     _shaderPath="engine/shaders/ssgi.hlsl"
+		                     _vertexEntryPoint="VSMain"
+		                     _pixelEntryPoint="PSMain"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false"
+		                     _blendPreset="Additive"
+		                     _minPostQuality="0">
+			<_listInput>
+				<item>SceneColorCopy</item>
+				<item>SceneDepth</item>
+				<item>GBufferNormal</item>
+				<item>GBufferAlbedo</item>
+			</_listInput>
+			<_listOutput>
+				<item>LitColor</item>
+			</_listOutput>
+			<_listPermutation>
+				<item>SW_SSGI_RADIUS=1.5</item>
+				<item>SW_SSGI_DIRECTIONS=4</item>
+				<item>SW_SSGI_STEPS=6</item>
+				<item>SW_SSGI_INTENSITY=1.0</item>
+			</_listPermutation>
+		</RenderGraphPassDesc>
+	</_listPass>
+</RenderPipelineDesc>

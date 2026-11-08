@@ -3,6 +3,7 @@
 #include "Engine/Character/Hit/RagdollComponent.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
@@ -312,13 +313,18 @@ namespace sw
         }
     }
 
-    const PhysicsHitZoneDef* RagdollComponent::findHitZone( PhysicsBodyHandle body, int32& outBodyIndex ) const
+    optional<uint32> RagdollComponent::findHitBodyIndex( const HitInfo& hit ) const
     {
-        outBodyIndex          = _ragdoll.findBodyIndex( body );
-        const bool bNoHitZone = outBodyIndex < 0 || _asset == nullptr || static_cast<size_t>( outBodyIndex ) >= _asset->_listBody.size();
-        if ( bNoHitZone )
+        if ( hit._bodyIndex >= 0 )
+            return static_cast<uint32>( hit._bodyIndex );
+        return _ragdoll.findBodyIndex( hit._body );
+    }
+
+    const PhysicsHitZoneDef* RagdollComponent::findHitZone( uint32 bodyIndex ) const
+    {
+        if ( _asset == nullptr || bodyIndex >= _asset->_listBody.size() )
             return nullptr;
-        const PhysicsHitZoneDef& zone = _asset->_listBody[static_cast<size_t>( outBodyIndex )]._hitZone;
+        const PhysicsHitZoneDef& zone = _asset->_listBody[bodyIndex]._hitZone;
         return zone._name.empty() ? nullptr : &zone;
     }
 
@@ -347,9 +353,8 @@ namespace sw
     {
         if ( _state == RagdollState::Ragdoll || _pUnit == nullptr )
             return;
-        const int32 boneIndex = _pUnit->getSkeleton().findBoneIndex( _partialRootBone );
-        const int32 bodyIndex =
-            ( boneIndex >= 0 && static_cast<size_t>( boneIndex ) < _ragdoll._listBodyOfBone.size() ) ? _ragdoll._listBodyOfBone[static_cast<size_t>( boneIndex )] : -1;
+        const optional<uint32> boneIndex = _pUnit->getSkeleton().findBoneIndex( _partialRootBone );
+        const int32            bodyIndex = ( boneIndex.has_value() && *boneIndex < _ragdoll._listBodyOfBone.size() ) ? _ragdoll._listBodyOfBone[*boneIndex] : constant::invalid_index::kInt32;
         if ( bodyIndex < 0 )
         {
             SW_LOG_WARNING_ID( "Ragdoll.PartialRagdollRootBone", "'%#': partial ragdoll root bone '%#' has no body", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)",
@@ -395,10 +400,10 @@ namespace sw
     void RagdollComponent::onHitReceived( const HitInfo& hit )
     {
         PhysicsComponent::onHitReceived( hit );
-        int32 bodyIndex = hit._bodyIndex;
-        if ( bodyIndex < 0 )
-            (void)findHitZone( hit._body, bodyIndex ); // 못 찾으면 bodyIndex 가 -1 로 남는다
-        const float3 impulse = hit._direction * hit._impulse;
+        // 맞은 바디를 모르면 아래 두 함수의 "바디 없음"(-1, 부분 반응 · 충격 없이) 규약으로 넘긴다 — 그 int32 규약은 `HitInfo::_bodyIndex` 와 함께 옮길 몫이다.
+        const optional<uint32> hitBody   = findHitBodyIndex( hit );
+        const int32            bodyIndex = hitBody.has_value() ? static_cast<int32>( *hitBody ) : constant::invalid_index::kInt32;
+        const float3           impulse   = hit._direction * hit._impulse;
         if ( hit._bFatal && _bRagdollOnFatalHit )
         {
             startRagdoll( impulse, bodyIndex );
@@ -572,12 +577,12 @@ namespace sw
             if ( _ragdoll._listParentBody[body] < 0 )
                 pelvisBone = _ragdoll._listBoneIndex[body];
         }
-        const int32 upperBone = skeleton.findBoneIndex( _partialRootBone );
-        if ( pelvisBone < 0 || upperBone < 0 )
+        const optional<uint32> upperBone = skeleton.findBoneIndex( _partialRootBone );
+        if ( pelvisBone < 0 || upperBone.has_value() == false )
             return false;
         const float4x4      oldUnitWorld  = _pUnit->getWorldMatrix();
         const float4x4      pelvisWorld   = _listPhysicsModel[static_cast<size_t>( pelvisBone )] * oldUnitWorld;
-        const float4x4      upperWorld    = _listPhysicsModel[static_cast<size_t>( upperBone )] * oldUnitWorld;
+        const float4x4      upperWorld    = _listPhysicsModel[*upperBone] * oldUnitWorld;
         const float3        pelvisForward = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pelvisWorld );
         const bool          bFaceUp       = pelvisForward._y >= 0.0f;
         const hashed_string clipName      = ( bFaceUp || _getUpClipFaceDown.empty() ) ? _getUpClipFaceUp : _getUpClipFaceDown;

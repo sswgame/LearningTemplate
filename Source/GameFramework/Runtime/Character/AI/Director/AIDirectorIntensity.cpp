@@ -46,16 +46,16 @@ namespace sw
         _calmSeconds = AIDirectorIntensityInternal::kNeverFought;
     }
 
-    int32 AIDirectorIntensityModel::findSignalIndex( const hashed_string& signalID ) const
+    optional<int32> AIDirectorIntensityModel::findSignalIndex( const hashed_string& signalID ) const
     {
         if ( _pDef == nullptr )
-            return -1;
+            return nullopt;
         for ( size_t index = 0; index < _pDef->_listSignal.size(); ++index )
         {
             if ( _pDef->_listSignal[index]._id == signalID )
                 return static_cast<int32>( index );
         }
-        return -1;
+        return nullopt;
     }
 
     void AIDirectorIntensityModel::recordCombat()
@@ -65,10 +65,11 @@ namespace sw
 
     bool AIDirectorIntensityModel::addSignal( const hashed_string& signalID, float32 amount )
     {
-        const int32 signalIndex = findSignalIndex( signalID );
-        if ( signalIndex < 0 )
+        const optional<int32> foundSignal = findSignalIndex( signalID );
+        if ( foundSignal.has_value() == false )
             return false;
-        const AIDirectorSignalDef& signal = _pDef->_listSignal[static_cast<size_t>( signalIndex )];
+        const int32                signalIndex = *foundSignal;
+        const AIDirectorSignalDef& signal      = _pDef->_listSignal[static_cast<size_t>( signalIndex )];
         if ( signal._kind != AIDirectorSignalKind::Impulse )
             return false;
         _listSignalValue[static_cast<size_t>( signalIndex )] = amount;
@@ -81,10 +82,11 @@ namespace sw
 
     bool AIDirectorIntensityModel::setSignal( const hashed_string& signalID, float32 value )
     {
-        const int32 signalIndex = findSignalIndex( signalID );
-        if ( signalIndex < 0 )
+        const optional<int32> foundSignal = findSignalIndex( signalID );
+        if ( foundSignal.has_value() == false )
             return false;
-        const AIDirectorSignalDef& signal = _pDef->_listSignal[static_cast<size_t>( signalIndex )];
+        const int32                signalIndex = *foundSignal;
+        const AIDirectorSignalDef& signal      = _pDef->_listSignal[static_cast<size_t>( signalIndex )];
         if ( signal._kind == AIDirectorSignalKind::Impulse )
             return false;
         _listSignalValue[static_cast<size_t>( signalIndex )] = value;
@@ -136,8 +138,8 @@ namespace sw
 
     float32 AIDirectorIntensityModel::getSignal( const hashed_string& signalID ) const
     {
-        const int32 signalIndex = findSignalIndex( signalID );
-        return signalIndex >= 0 ? _listSignalValue[static_cast<size_t>( signalIndex )] : 0.0f;
+        const optional<int32> signalIndex = findSignalIndex( signalID );
+        return signalIndex.has_value() ? _listSignalValue[static_cast<size_t>( *signalIndex )] : 0.0f;
     }
 
     void AIDirectorIntensityModel::serializeState( StateIO& io )

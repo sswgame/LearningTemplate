@@ -28,19 +28,20 @@ namespace sw
     {
         struct Attachment
         {
-            static constexpr auto kSwapchain        = "Swapchain";
-            static constexpr auto kSceneColor       = "SceneColor";
-            static constexpr auto kSceneDepth       = "SceneDepth";
-            static constexpr auto kShadowMap        = "ShadowMap";
-            static constexpr auto kGBufferAlbedo    = "GBufferAlbedo";
-            static constexpr auto kGBufferNormal    = "GBufferNormal";
-            static constexpr auto kGBufferMaterial  = "GBufferMaterial";
-            static constexpr auto kLitColor         = "LitColor";
-            static constexpr auto kBloomColor       = "BloomColor";
-            static constexpr auto kBloomBright      = "BloomBright";
-            static constexpr auto kOutlineColor     = "OutlineColor";
-            static constexpr auto kTransparentColor = "TransparentColor";
-            static constexpr auto kTAAColor         = "TAAColor";
+            static constexpr auto kSwapchain         = "Swapchain";
+            static constexpr auto kSceneColor        = "SceneColor";
+            static constexpr auto kSceneDepth        = "SceneDepth";
+            static constexpr auto kShadowMap         = "ShadowMap";
+            static constexpr auto kGBufferAlbedo     = "GBufferAlbedo";
+            static constexpr auto kGBufferNormal     = "GBufferNormal";
+            static constexpr auto kGBufferMaterial   = "GBufferMaterial";
+            static constexpr auto kGBufferCustomData = "GBufferCustomData";
+            static constexpr auto kLitColor          = "LitColor";
+            static constexpr auto kBloomColor        = "BloomColor";
+            static constexpr auto kBloomBright       = "BloomBright";
+            static constexpr auto kOutlineColor      = "OutlineColor";
+            static constexpr auto kTransparentColor  = "TransparentColor";
+            static constexpr auto kTAAColor          = "TAAColor";
         };
 
         static constexpr uint32 kDefaultTransientSize = 1280;
@@ -48,7 +49,7 @@ namespace sw
         /**
          * @brief GPU 타임스탬프 슬롯 배치입니다. 슬롯은 `constant::render::kMaxGPUTimestampSlot`(64)개입니다.
          * @details 패스는 앞에서부터 인덱스 × 2 쌍을 쓴다(병렬 기록이라 흐르는 카운터가 아니라 고정 슬롯).
-         *          프레임 전체와 컴퓨트 프리패스는 **뒤쪽 세 슬롯**을 쓴다. 그래서 패스는 30개까지다.
+         *          프레임 전체와 프레임 그래프는 **뒤쪽 세 슬롯**을 쓴다. 그래서 패스는 30개까지다.
          *          백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 슬롯이 먼저 기록되어도 값이 잘리지 않는다.
          */
         static constexpr uint32 kGPUTimestampSlotComputeBegin = constant::render::kMaxGPUTimestampSlot - 3u;
@@ -159,6 +160,8 @@ namespace sw
         static constexpr uint32 kOcclusionTileSize = 16;
         /** @brief @p value 를 @p divisor 칸으로 나눈 칸 수(올림)입니다. 가림 타일 격자와 그 디스패치 그룹 수가 쓴다. */
         static constexpr uint32 divideRoundUp( uint32 value, uint32 divisor ) { return ( value + divisor - 1u ) / divisor; }
+        /// @brief 한 줄로 스레드를 펴는 프리패스 컴퓨트의 그룹 크기입니다 — instance_animation · mesh_morph · mesh_skin · gpu_cull 의 `SW_NUMTHREADS( 64, 1, 1 )` 와 같아야 한다(`IRHICommandList::dispatchThreads`).
+        static constexpr uint32 kLinearThreadGroupSize = 64;
         /** @brief 인스턴스 애니메이션 디스패치 상수(instance_animation.hlsl `AnimationParams`, b0)입니다. */
         struct GPUAnimationParams
         {
@@ -387,9 +390,22 @@ namespace sw
             const bool bShadowPass = passType == RenderPassType::Shadow;
             if ( bShadowPass && hasMaterialDefine( pListMaterialDefine, kMaterialShadowCastOffDefine ) )
                 return false;
-            if ( hasMaterialDefine( pListMaterialDefine, kMaterialAlphaCutoffDefine ) )
+            // 변위는 두 깊이 패스 모두 갈아탄다 — 윤곽이 바뀌므로 깊이 프리패스도 같은 자리를 써야 본 패스의 깊이 비교를 통과한다.
+            if ( hasMaterialDefine( pListMaterialDefine, kMaterialAlphaCutoffDefine ) || hasMaterialDefine( pListMaterialDefine, kMaterialDisplacementDefine ) )
                 return true;
             return bShadowPass && hasMaterialDefine( pListMaterialDefine, kMaterialVertexDeformDefine );
+        }
+
+        /**
+         * @brief 이 패스가 이 머티리얼의 배치를 헐 · 도메인 스테이지(머티리얼 셰이더의 `HSMain` · `DSMain`)를 붙여 그리는지 반환합니다.
+         * @details 머티리얼 셰이더로 그리는 패스(본 · G버퍼 · 외곽선)와 머티리얼 셰이더로 갈아탄 깊이 패스가 변위 머티리얼(`MATERIAL_DISPLACEMENT`)을 그릴 때다.
+         *          패스 셰이더로 그리는 배치는 머티리얼의 헐 · 도메인을 모른다. 런타임 PSO 변형(`FramePSOManager::createMaterialPSOVariant`)과 셰이더 쿠커가 같은 함수를 부른다.
+         */
+        static bool tessellatesMaterial( RenderPassType passType, const vector<string>* pListMaterialDefine )
+        {
+            if ( hasMaterialDefine( pListMaterialDefine, kMaterialDisplacementDefine ) == false )
+                return false;
+            return usesMaterialShader( passType ) || drawsDepthWithMaterialShader( passType, pListMaterialDefine );
         }
 
         /**
@@ -481,6 +497,7 @@ namespace sw
         hashed_string _gbufferAlbedo{ FrameRendererUtil::Attachment::kGBufferAlbedo };
         hashed_string _gbufferNormal{ FrameRendererUtil::Attachment::kGBufferNormal };
         hashed_string _gbufferMaterial{ FrameRendererUtil::Attachment::kGBufferMaterial };
+        hashed_string _gbufferCustomData{ FrameRendererUtil::Attachment::kGBufferCustomData };
         hashed_string _litColor{ FrameRendererUtil::Attachment::kLitColor };
         hashed_string _bloomColor{ FrameRendererUtil::Attachment::kBloomColor };
         hashed_string _outlineColor{ FrameRendererUtil::Attachment::kOutlineColor };
@@ -496,10 +513,20 @@ namespace sw
         hashed_string _sceneColorCopy{ "SceneColorCopy" };
         /// 반투명 앞에 떠 둔 장면 깊이 사본(SceneDepthCopy 패스의 출력, R32 실수) — 반투명 패스가 선언한 입력을 역할로 건다(물의 화면 공간 두께).
         hashed_string _sceneDepthCopy{ "SceneDepthCopy" };
+        /// 화면 속도(SceneVelocity — 불투명 지오메트리 패스의 출력) — TAA · 모션 블러가 선언한 입력을 역할로 건다(`g_VelocityIndex`).
+        hashed_string _velocity{ "Velocity" };
+        /// 화면 왜곡 오프셋(SceneDistortion — 왜곡 누적 패스의 출력) — 왜곡 적용 패스가 선언한 입력을 역할로 건다(`g_DistortionIndex`).
+        hashed_string _distortion{ "Distortion" };
+        /// 접촉 그림자 마스크(ContactShadow 패스의 출력, 채널 넷) — 조명 · 포워드 불투명 패스가 선언한 입력을 역할로 건다(`g_ContactShadowIndex`).
+        hashed_string _contactShadow{ "ContactShadow" };
         /// 2D 빛 쿠키 아틀라스(Light2DCookieAtlas) — 파이프라인 첨부가 아니라 렌더러가 소유한 텍스처를 역할 이름으로 건다.
         hashed_string _light2DCookieAtlas{ "Light2DCookieAtlas" };
         /// 자동 노출의 이번 프레임 EV(1x1, 뷰의 `_arrAutoExposure`) — 톤맵하는 패스가 `g_AutoExposureIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
         hashed_string _autoExposure{ "AutoExposure" };
+        /// 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUT`, `FramePostProcessTextureSet`) — 톤맵하는 패스가 `g_ColorGradingLUTIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
+        hashed_string _colorGradingLUT{ "ColorGradingLUT" };
+        /// 블룸 먼지 마스크(뷰의 후처리 값 `_bloomDirtMask`) — 블룸을 더하는 패스가 `g_BloomDirtMaskIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
+        hashed_string _bloomDirtMask{ "BloomDirtMask" };
     };
 } // namespace sw
 
@@ -550,18 +577,43 @@ namespace sw
         /// @brief 안개 패스의 진단 보기입니다(`FrameFog::makeDebugParams`, fog.hlsl).
         hashed_string _fogDebugParams{ "g_FogDebugParams" };
         hashed_string _shadowParams{ "g_ShadowParams" };
-        /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭. `ViewShadowData::_cascadeLayout`.
+        /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭, w 거리 끝에서 옅어지기 시작하는 깊이. `ViewShadowData::_cascadeLayout`.
         hashed_string _shadowCascadeLayout{ "g_ShadowCascadeLayout" };
         /// @brief 캐스케이드마다 (배율, 이동 x, 이동 y, 깊이 끝)입니다. 이름이 넷인 까닭: 배열 멤버의 리플렉션 이름이 백엔드마다 다르다(GL 은 `[0]` 이 붙는다).
         hashed_string _arrShadowCascade[shaderslot::kShadowCascadeMax]{ hashed_string{ "g_ShadowCascade0" }, hashed_string{ "g_ShadowCascade1" },
                                                                         hashed_string{ "g_ShadowCascade2" }, hashed_string{ "g_ShadowCascade3" } };
+        /// @brief 그림자 필터입니다 — x 품질(0 PCF 3x3, 1 PCSS), y 방향광 반그림자 배율, z · w 커널 반지름 상한 · 하한(텍셀). `ShadowFilter::makeShaderParams`.
+        hashed_string _shadowFilter{ "g_ShadowFilter" };
+        /// @brief 접촉 그림자 채널 넷의 빛 원소 번호입니다(-1 = 빈 채널). `FrameShadowData::_contactShadowLights`, contact_shadow.hlsl.
+        hashed_string _contactShadowLights{ "g_ContactShadowLights" };
         hashed_string _bloomParams{ "g_BloomParams" };
-        /// @brief 카메라별 색 보정입니다 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기. `CameraPostProcessValues`, post_grade.hlsli.
+        /// @brief 카메라별 색 보정입니다 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기. `PostProcessValues`, post_grade.hlsli.
         hashed_string _cameraGrade{ "g_CameraGrade" };
         /// @brief 카메라별 화면 틀입니다 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(화면 출력 뷰만, 렌더 텍스처는 0). post_grade.hlsli.
         hashed_string _cameraFrame{ "g_CameraFrame" };
         /// @brief 카메라별 피사계 심도입니다 — x 초점 거리(m), y 착란원 반지름 배율(px), z 반지름 상한(px), w 켬(1) · 끔(0, 끈 뷰는 패스를 기록하지 않아 셰이더는 읽지 않는다). depth_of_field.hlsl.
         hashed_string _cameraLens{ "g_CameraLens" };
+        /// @brief 컬러 그레이딩 화이트 밸런스 행 셋입니다(`PostGradeConstants::_arrWhiteBalance`, post_grade.hlsli).
+        hashed_string _arrGradeWhiteBalance[3]{ hashed_string{ "g_GradeWhiteBalance0" }, hashed_string{ "g_GradeWhiteBalance1" }, hashed_string{ "g_GradeWhiteBalance2" } };
+        /// @brief 컬러 그레이딩 범위 상수입니다 — 범위(그림자 · 중간 · 밝은 부분)마다 채도 · 대비 · 감마 · 게인 · 오프셋(`PostGradeConstants::_arrRange` 와 같은 차례).
+        /// @brief 컬러 그레이딩 범위 상수의 수입니다(`PostGradeConstants::kRangeCount * kRangeFieldCount`, FramePassExecutor 가 static_assert 로 맞춘다).
+        static constexpr uint32 kGradeRangeConstantCount = 15;
+        hashed_string           _arrGradeRange[kGradeRangeConstantCount]{ hashed_string{ "g_GradeShadowsSaturation" }, hashed_string{ "g_GradeShadowsContrast" }, hashed_string{ "g_GradeShadowsGamma" },
+                                                                          hashed_string{ "g_GradeShadowsGain" }, hashed_string{ "g_GradeShadowsOffset" }, hashed_string{ "g_GradeMidtonesSaturation" },
+                                                                          hashed_string{ "g_GradeMidtonesContrast" }, hashed_string{ "g_GradeMidtonesGamma" }, hashed_string{ "g_GradeMidtonesGain" },
+                                                                          hashed_string{ "g_GradeMidtonesOffset" }, hashed_string{ "g_GradeHighlightsSaturation" }, hashed_string{ "g_GradeHighlightsContrast" },
+                                                                          hashed_string{ "g_GradeHighlightsGamma" }, hashed_string{ "g_GradeHighlightsGain" }, hashed_string{ "g_GradeHighlightsOffset" } };
+        /// @brief 컬러 그레이딩 범위 경계 · 켬(`PostGradeConstants::_params`)과 LUT 크기 · 세기(`_lut`)입니다.
+        hashed_string _gradeParams{ "g_GradeParams" };
+        hashed_string _gradeLUT{ "g_GradeLUT" };
+        /// @brief 렌즈 효과(색수차 세기 · 시작 반경 · 렌즈 왜곡 · 선명화)와 필름 그레인(세기 · 크기 px)입니다. post_grade.hlsli 의 `CameraGrade::applyLens` · `applyFilmGrain`.
+        hashed_string _lensParams{ "g_LensParams" };
+        hashed_string _grainParams{ "g_GrainParams" };
+        /// @brief 블룸 렌즈(먼지 마스크 세기 · 플레어 세기 · 고스트 간격 · 헤일로 반지름)와 플레어 색입니다. post_bloom.hlsli 의 `Bloom::computeLensFlare` · `applyDirt`.
+        hashed_string _bloomLens{ "g_BloomLens" };
+        hashed_string _flareTint{ "g_FlareTint" };
+        /// @brief 화면 공간 반사(세기 · 최대 거리 · 두께 · 최대 거칠기)입니다. screen_space_reflection.hlsl.
+        hashed_string _ssrParams{ "g_SSRParams" };
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };
         hashed_string _sourceTexel{ "g_SourceTexel" };
@@ -581,6 +633,14 @@ namespace sw
         hashed_string _swSkinResultOffsets{ "SwSkinResultOffsets" };
         /// @brief 그 표의 칸 수입니다. PassCB g_SwSkinResultOffsetCount 에 대응합니다.
         hashed_string _swSkinResultOffsetCount{ "g_SwSkinResultOffsetCount" };
+        /// @brief 스킨 결과의 이번 벌 이동(정점)입니다. PassCB g_SwSkinResultShift 에 대응합니다(`GPUMeshMorphPool::getSkinCurrentShift`).
+        hashed_string _swSkinResultShift{ "g_SwSkinResultShift" };
+        /// @brief 지난 프레임 스킨 결과가 든 벌의 이동(정점, 없으면 무효)입니다. PassCB g_SwSkinPreviousShift 에 대응합니다.
+        hashed_string _swSkinPreviousShift{ "g_SwSkinPreviousShift" };
+        /// @brief 인스턴스마다의 지난 월드 행렬입니다. binding.hlsli 의 g_SwPrevInstanceWorlds(t15)와 PassCB g_SwPrevInstanceWorldsIndex 에 대응합니다.
+        hashed_string _swPrevInstanceWorlds{ "SwPrevInstanceWorlds" };
+        /// @brief 그 버퍼의 원소 수입니다. PassCB g_SwPrevInstanceWorldCount 에 대응합니다.
+        hashed_string _swPrevInstanceWorldCount{ "g_SwPrevInstanceWorldCount" };
         /// @brief 컬링이 만든 가시 인스턴스 ID 목록입니다. binding.hlsli g_SwVisibleInstanceIDs 와 "SwVisibleInstanceIDs" 에 대응합니다.
         hashed_string _swVisibleInstanceIDs{ "SwVisibleInstanceIDs" };
         /// @brief 배치의 머티리얼 데이터 구조 버퍼입니다. binding.hlsli g_SwMaterials 와 "SwMaterials" 에 대응하며, 배치마다 등록합니다.

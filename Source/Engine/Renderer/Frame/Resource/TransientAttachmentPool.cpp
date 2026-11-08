@@ -59,10 +59,26 @@ namespace sw
             SW_LOG_WARNING_ID( "TransientAttachmentPool.FailedAllocateTransient", "Failed to allocate transient '%#'", name.c_str() );
             return false;
         }
+        pDevice->getResourceFactory()->setTextureDebugName( handle, name.c_str() ); // 캡처 · DRED 가 파이프라인 XML 의 첨부 이름으로 보인다
         const RHIDescriptorIndex srv = pDevice->getResourceFactory()->registerBindlessTexture( handle );
         const RHIDescriptorIndex uav = bUnorderedAccess ? pDevice->getResourceFactory()->registerBindlessTextureUAV( handle ) : kInvalidDescriptorIndex;
         _mapAttachment.emplace( name, Attachment{ handle, srv, uav, desc._width, desc._height, format, ops } );
         SW_PROFILE_COUNT( "RT.Frame.transientAllocations", 1 ); // 새 첨부를 만들었다 — 풀이 재사용하지 못한 횟수
+        return true;
+    }
+
+    bool TransientAttachmentPool::allocateAlias( const hashed_string& name, const hashed_string& owner, const RHIAttachmentOps& ops )
+    {
+        if ( _mapAttachment.find( name ) != _mapAttachment.end() )
+            return true;
+        const auto ownerIt = _mapAttachment.find( owner );
+        if ( ownerIt == _mapAttachment.end() || ownerIt->second._aliasOwner.empty() == false )
+            return false;
+        Attachment alias  = ownerIt->second;
+        alias._ops        = ops;
+        alias._idleFrames = 0;
+        alias._aliasOwner = owner;
+        _mapAttachment.emplace( name, alias );
         return true;
     }
 
@@ -71,6 +87,17 @@ namespace sw
         const auto it = _mapAttachment.find( name );
         if ( it == _mapAttachment.end() || advanceIdleFrames( it->second._idleFrames, bUsedThisFrame ) == false )
             return false;
+        // 별칭은 텍스처를 빌렸을 뿐이다 — 이름만 지운다. 주인은 빌린 별칭이 남아 있으면 놓지 않는다(별칭이 아직 그 텍스처를 쓴다).
+        if ( it->second._aliasOwner.empty() == false )
+        {
+            _mapAttachment.erase( it );
+            return true;
+        }
+        for ( const auto& [otherName, other] : _mapAttachment )
+        {
+            if ( other._aliasOwner == name )
+                return false;
+        }
         // 앞 프레임들이 아직 GPU 에서 이 타깃을 읽을 수 있다 — 백엔드의 해제 큐가 그 프레임들이 끝난 뒤에 지운다(release 와 같은 순서: SRV 먼저).
         if ( pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
         {
@@ -146,6 +173,9 @@ namespace sw
         {
             for ( auto& [name, attachment] : _mapAttachment )
             {
+                // 별칭은 주인의 텍스처 · SRV 를 빌렸다 — 주인이 한 번만 놓는다.
+                if ( attachment._aliasOwner.empty() == false )
+                    continue;
                 // 텍스처 SRV 인덱스다. 주의: 버퍼용 해제로 넘기면 버퍼 프리리스트가 오염되고, 그 자리를 다른 구조버퍼가
                 // 차지해 살아 있는 패스 CB 슬롯이 STORAGE 세트로 바뀐다(Vulkan 검증 에러).
                 if ( attachment._uav != kInvalidDescriptorIndex )

@@ -56,7 +56,8 @@ namespace sw
              */
             [[nodiscard]] static bool readRangeNumber( const hashed_string& typeName, const ValueAddress value, float64& outValue )
             {
-                return ReflectedValueUtil::readNumber( ReflectedValueUtil::findBuiltinIndex( typeName ), value.get(), outValue );
+                const optional<int32> builtinIndex = ReflectedValueUtil::findBuiltinIndex( typeName );
+                return builtinIndex.has_value() && ReflectedValueUtil::readNumber( *builtinIndex, value.get(), outValue );
             }
 
             /** @brief @p value 가 @p range 밖이면 "경로 = 값 is outside [아래, 위]" 한 줄을 더합니다. */
@@ -1037,19 +1038,19 @@ namespace sw
         return nullptr;
     }
 
-    size_t SerializerUtil::findPropertyIndexByNameHash( const vector<PropertyInfo>& listProp, uint32 nameHash )
+    optional<uint32> SerializerUtil::findPropertyIndexByNameHash( const vector<PropertyInfo>& listProp, uint32 nameHash )
     {
         for ( size_t propIndex = 0; propIndex < listProp.size(); ++propIndex )
         {
             if ( listProp[propIndex].getNameHash() == nameHash )
-                return propIndex;
+                return static_cast<uint32>( propIndex );
         }
         for ( size_t propIndex = 0; propIndex < listProp.size(); ++propIndex )
         {
             if ( listProp[propIndex].matchesRedirectHash( nameHash ) )
-                return propIndex;
+                return static_cast<uint32>( propIndex );
         }
-        return listProp.size();
+        return nullopt;
     }
 
     void SerializerUtil::collectRangeErrors( const TypeInfo& typeInfo, const ObjectAddress instance, const string& prefix, vector<string>& outListError )

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  자동 노출 적응(CameraPostProcessValues._autoExposureMinEv · MaxEv, auto_exposure.hlsl) — 어두운 곳에서 밝은 곳으로 바뀐 직후의 화면은 하얗게 날아가고, 시간이 지나면 노출이 내려가 다른 그림이 되며, 다 적응하면 그림이 멈춘다.
+  자동 노출 적응(PostProcessValues._autoExposureMinEv · MaxEv, auto_exposure.hlsl) — 어두운 곳에서 밝은 곳으로 바뀐 직후의 화면은 하얗게 날아가고, 시간이 지나면 노출이 내려가 다른 그림이 되며, 다 적응하면 그림이 멈춘다.
   적응이 돌지 않으면(노출 고정 · 측정 없음) 첫 두 장이 같아서 진다. 적응이 끝나지 않고 떨리면 셋째 판정이 진다. 골든이 아니라 같은 실행의 세 장이다.
   적응 시계는 씬의 게임 시계라(FramePassExecutor 가 getVertexAnimationTime 을 넘긴다) 고정 프레임 시간이면 같은 프레임이 같은 노출이다.
   실행: App -scenario=game/empty/automation/autoexposure.scenario.xml -unattended (체인: ctest -R Scenario.empty)

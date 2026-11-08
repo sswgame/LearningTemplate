@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 어느 면에나 얹는 기름 · 젖음 막(코트 엽) — 기름진 음식 · 젖은 면 · 니스. 뿌리와 같은 셰이더 변형이다. -->
+<MaterialDef formatVersion="0" name="AppearanceCoated" _base="engine/materials/library/appearance.material">
+	<_properties>
+		<item name="_coatWeight" defaultValue="0.8" />
+		<item name="_coatRoughness" defaultValue="0.08" />
+	</_properties>
+</MaterialDef>

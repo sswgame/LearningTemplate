@@ -167,6 +167,11 @@ namespace sw::editor
         void selectAsset( const AssetEntry& entry );
         /** @brief 지금 목록에 있는 @p absolutePath 항목을 고릅니다. 목록에 없으면 아무 일도 없습니다. */
         void selectAssetPath( string_view absolutePath );
+        /**
+         * @brief 리소스 id @p assetID 의 폴더로 가서 그 애셋을 고릅니다(언리얼 "Browse to Asset" · Ctrl+B). 메인 씬에서 고른 오브젝트의 애셋(`EditorSelectionSync`)을 찾아갈 때 쓴다.
+         * @return 디스크에 없는 애셋(쿠킹 묶음에만 있다)이면 false 이고 아무것도 바꾸지 않는다.
+         */
+        [[nodiscard]] bool revealAsset( string_view assetID );
         /** @brief 폴더면 들어가고, 파일이면 고르고 엽니다(`EditorAssetCommands::openPath`). */
         void openAsset( const AssetEntry& entry );
         /** @brief 항목이 고른 것이면 true 입니다. @p bFolderToo 면 지금 폴더인 폴더 항목도 고른 것으로 칩니다(타일 보기). */

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 홀로그램 — 반투명 가산, 흐르는 주사선 · 프레넬 테두리 · 깜박임. 부모(gimmicksurface_translucent.material)의 값만 바꾼 프리셋이다. -->
+<MaterialDef formatVersion="0" name="Hologram" _base="engine/materials/gimmicksurface_translucent.material">
+	<_properties>
+		<item name="_effect" defaultValue="3"/>
+		<item name="_baseColor" defaultValue="0.2 0.8 1 0.35"/>
+		<item name="_emissiveColor" defaultValue="0.2 0.8 1 1"/>
+		<item name="_emissiveStrength" defaultValue="2.5"/>
+		<item name="_fresnelPower" defaultValue="2"/>
+		<item name="_patternScale" defaultValue="40 0 0 0"/>
+		<item name="_flowSpeed" defaultValue="1.5"/>
+	</_properties>
+</MaterialDef>

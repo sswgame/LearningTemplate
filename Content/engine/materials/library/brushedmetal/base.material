@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 솔질 금속 · 칼날 — 비등방 GGX(갈린 방향 = UV u). -->
+<MaterialDef formatVersion="0" name="AppearanceBrushedMetal" _base="engine/materials/library/appearance.material">
+	<_properties>
+		<item name="_metallic" defaultValue="1" />
+		<item name="_roughness" defaultValue="0.3" />
+		<item name="_anisotropy" defaultValue="0.8" />
+		<item name="_color" defaultValue="0.6 0.6 0.62 1" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_LOBE_ANISOTROPY</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

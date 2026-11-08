@@ -1,6 +1,6 @@
 /**
  * @file ZoneWatches.cpp
- * @brief 지역 효과의 감시 값과 진단 HUD 섹션 `zone` 입니다 — 대상이 든 지역(출처) · 위치 값 · 반응(내린 깊이 · 탈출 수) · 이동 방식 · 물리 필드.
+ * @brief 지역 효과의 감시 값과 진단 HUD 섹션 `zone` 입니다 — 대상이 든 지역(출처) · 위치 값 · 반응(내린 깊이 · 탈출 수 · 화면 가중치) · 이동 방식 · 물리 필드.
  * @details 값 시나리오(늪 · 모래 · 용암 · 바다 · 유황 · 버프 샘 · 스킬 영역 · 즉사 · 무중력 · 빙판 · 가시덩굴)가 이 값으로 판정한다(골든 없음). 읽기만 하고 상태를 바꾸지 않는다.
  */
 #include "pch.h"
@@ -20,6 +20,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameplayDebugTarget.h"
 #include "GameFramework/Runtime/Gameplay/Zone/JumpEscapeReactionComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ScreenReactionComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/VisualSinkReactionComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneContactComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneVolumeComponent.h"
@@ -191,6 +192,20 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `Zone.ScreenWeight` 입니다. 대상의 화면 반응 가중치(0..1)입니다. */
+            [[nodiscard]] static bool readScreenWeight( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject*              pTarget   = query.findTargetObject();
+                const ScreenReactionComponent* pReaction = pTarget != nullptr ? pTarget->getComponent<ScreenReactionComponent>() : nullptr;
+                if ( pReaction == nullptr )
+                {
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "ScreenReactionComponent" ) );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( pReaction->getWeight() ) );
+                return true;
+            }
+
             /** @brief 감시 값 `Zone.EscapeCount` 입니다. 대상이 뛰어서 스택을 줄인 수입니다. */
             [[nodiscard]] static bool readEscapeCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -291,6 +306,8 @@ namespace sw
                                true, false );
     SW_AUTOMATION_QUERY_WATCH( zoneParam, "Zone.Param", "Text of a module parameter the target zone volume runs (key = <module>.<parameter>)", &ZoneWatchesInternal::readParam, true, true );
     SW_AUTOMATION_QUERY_WATCH( zoneSinkVisual, "Zone.SinkVisual", "Metres the target's look is lowered by its VisualSinkReactionComponent", &ZoneWatchesInternal::readSinkVisual, true, false );
+    SW_AUTOMATION_QUERY_WATCH( zoneScreenWeight, "Zone.ScreenWeight", "Weight (0..1) of the post-process look the target's ScreenReactionComponent blends into cameras following it",
+                               &ZoneWatchesInternal::readScreenWeight, true, false );
     SW_AUTOMATION_QUERY_WATCH( zoneEscapeCount, "Zone.EscapeCount", "Jumps that removed stacks through the target's JumpEscapeReactionComponent", &ZoneWatchesInternal::readEscapeCount, true, false );
     SW_AUTOMATION_QUERY_WATCH( characterMovementMode, "Character.MovementMode", "Movement mode the target's character controller picked from its physics field (Walking, Falling, Swimming, Floating)",
                                &ZoneWatchesInternal::readMovementMode, true, false );

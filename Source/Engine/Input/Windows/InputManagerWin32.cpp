@@ -1,29 +1,27 @@
 #include "pch.h"
 
+#include "Core/Concurrency/atomic.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Input/Devices/GamepadDevice.h"
+#include "Engine/Input/Devices/KeyboardDevice.h"
+#include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/InputKeyTable.h"
+#include "Engine/Input/RawInputEvent.h"
+#include "Engine/Input/Windows/XInputGamepadDevice.h"
+#include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
+#include "Engine/Window/NativeWindowEvent.h"
 
-#if defined( SW_PLATFORM_WINDOWS )
-    #include "Core/Foundation/Constants.h"
-    #include "Core/Concurrency/atomic.h"
-    #include "Core/String/StringUtil.h"
-    #include "Core/String/fixed_string.h"
+#include <imm.h>
 
-    #include "Engine/Input/Devices/GamepadDevice.h"
-    #include "Engine/Input/Devices/KeyboardDevice.h"
-    #include "Engine/Input/Devices/MouseDevice.h"
-    #include "Engine/Input/RawInputEvent.h"
-    #include "Engine/Input/Map/InputKeyTable.h"
-    #include "Engine/Input/Windows/XInputGamepadDevice.h"
-    #include "Engine/Window/IWindow.h"
-    #include "Engine/Window/NativeWindowEvent.h"
-
-    #include <imm.h>
-    #pragma comment( lib, "imm32.lib" )
+#pragma comment( lib, "imm32.lib" )
 
 namespace sw
 {
@@ -607,5 +605,3 @@ namespace sw
         _bAccessibilityShortcutsDisabled = SW_FALSE;
     }
 } // namespace sw
-
-#endif

@@ -12,6 +12,7 @@
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -235,17 +236,17 @@ namespace sw
         /** @brief 거점을 잃어 일꾼이 모자라면 뒤에 지은 건물부터 모자란 만큼 일꾼을 뺍니다. */
         void releaseExcessWorkers();
         /** @brief 읽은 상태 전체가 서로 맞는지입니다(건물 슬롯 · 일꾼 · 병사 번호 · 음수 자원 · 지휘관). 칸 하나로 볼 수 없는 것을 여기서 봅니다. */
-        [[nodiscard]] bool isStateConsistent() const;
-        void               refreshOutcome();
-        Target             findNearestTarget( ConquestTeam team, float32 x, float32 maxDistance, bool bUnits, bool bStructures ) const;
-        float32            computeGateX( const ConquestSite& site, ConquestTeam attacker ) const;
-        bool               isLaddered( int32 siteIndex, ConquestTeam attacker ) const;
-        float32            clampMove( ConquestTeam team, float32 fromX, float32 toX ) const;
-        float32            computeFormationX( const ConquestUnit& unit ) const;
-        float32            computeMoraleScale( ConquestTeam team, float32 x ) const;
-        void               applyAttack( ConquestTeam attacker, float32 baseDamage, float32 structureScale, const Target& target, float32& inoutDealt );
-        int32              findHomeSiteIndex() const;
-        void               pushEvent( ConquestEvent::Kind kind, const hashed_string& id, int32 value = 0, ConquestTeam team = ConquestTeam::Neutral );
+        [[nodiscard]] bool            isStateConsistent() const;
+        void                          refreshOutcome();
+        Target                        findNearestTarget( ConquestTeam team, float32 x, float32 maxDistance, bool bUnits, bool bStructures ) const;
+        float32                       computeGateX( const ConquestSite& site, ConquestTeam attacker ) const;
+        bool                          isLaddered( int32 siteIndex, ConquestTeam attacker ) const;
+        float32                       clampMove( ConquestTeam team, float32 fromX, float32 toX ) const;
+        float32                       computeFormationX( const ConquestUnit& unit ) const;
+        float32                       computeMoraleScale( ConquestTeam team, float32 x ) const;
+        void                          applyAttack( ConquestTeam attacker, float32 baseDamage, float32 structureScale, const Target& target, float32& inoutDealt );
+        [[nodiscard]] optional<int32> findHomeSiteIndex() const;
+        void                          pushEvent( ConquestEvent::Kind kind, const hashed_string& id, int32 value = 0, ConquestTeam team = ConquestTeam::Neutral );
 
     private:
         vector<ConquestSite>       _listSite;

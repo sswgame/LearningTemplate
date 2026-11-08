@@ -34,6 +34,19 @@ namespace sw
         Bone = 0, ///< 본이다. 자기 유닛이면 현재 작업 포즈를, 다른 유닛이면 그 유닛의 이번 프레임 포즈를 쓴다.
         Socket,   ///< 소켓(부모 본 + 로컬 변환)이다. 자기 유닛이면 본과 같고, 다른 유닛이면 그 유닛의 소켓 테이블로 찾는다.
         Object,   ///< 다른 GameObject 의 월드 변환이다(게임 스레드에서 프레임 시작에 기록한다).
+        Trace,    ///< 접촉점이다. 준비 단계가 자기 본(`trace_from`)에서 광선을 쏘아 닿은 면(+ 법선 × `surface_offset`)이 대상이다(손을 벽 · 난간에).
+    };
+
+    /**
+     * @brief 접촉 대상(`RigTargetKind::Trace`)의 광선입니다. 방향은 유닛 모델 공간이고, 닿지 않으면 가중치가 `blend_speed`(초당) 로 0 까지 내려간다.
+     * @details 언리얼에서 Control Rig 트레이스로 IK 목표를 만드는 자리를 대상 하나로 둔다 — 어느 IK 노드든 같은 대상 이름으로 접촉점을 받는다.
+     */
+    struct RigTraceSpec
+    {
+        float3  _direction{ 0.0f, 0.0f, 1.0f };
+        float32 _distance{ 0.0f };
+        float32 _surfaceOffset{ 0.0f };
+        float32 _blendSpeed{ 0.0f }; ///< 0 이면 닿는 순간 1, 놓는 순간 0 이다.
     };
 
     /**
@@ -51,6 +64,7 @@ namespace sw
         hashed_string _skeletalMesh{};
         hashed_string _space{};
         BoneTransform _offset{};
+        RigTraceSpec  _trace{}; ///< `RigTargetKind::Trace` 일 때만 쓴다. 광선을 쏘는 본은 `_bone` 이다
         RigTargetKind _kind{ RigTargetKind::Bone };
 
         /** @brief 다른 유닛이나 오브젝트를 따라가므로 호스트가 값을 넣어야 하는 대상인지 반환합니다. */
@@ -289,6 +303,17 @@ namespace sw
         {
             (void)control;
             (void)value;
+            return false;
+        }
+        /**
+         * @brief 이름 붙은 출력 값을 읽습니다(마지막 평가의 상태 — 발 디딤의 골반 · 발 높이 등). 모르는 출력이면 false 입니다.
+         * @details 시나리오 감시 · 진단이 게임 스레드에서 읽는다. 평가는 워커에서 돌므로 노드는 출력 값을 게임 스레드 준비 단계(`prepare`)에서 지난 평가의 상태로부터
+         *          옮겨 두고 그 사본만 돌려준다 — 워커가 쓰는 칸을 게임 스레드가 직접 읽지 않는다.
+         */
+        [[nodiscard]] virtual bool getOutputValue( const hashed_string& output, float32& outValue ) const
+        {
+            (void)output;
+            (void)outValue;
             return false;
         }
 

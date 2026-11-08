@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/SubscriptionList.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -332,10 +333,11 @@ namespace sw
          * @brief 설정의 지금 선택지를 모읍니다. 공급자가 있으면 공급자 것, 비었으면 고정 `<Option>` 이 대체합니다.
          * @details 공급자와 고정 선택지를 함께 적은 설정(해상도)은 기본값과 지금 값이 목록에 없으면 뒤에 붙인다. 모니터를 바꿔도 현재 선택이 목록에서 사라지지 않게 하기 위해서다.
          */
-        void   collectOptionsOf( const UserSettingDef& def, vector<UserSettingOption>& outListOption ) const;
-        uint32 findIndex( const hashed_string& settingID ) const;
-        /** @brief `resolveKey` 의 본문입니다. 없거나 타입이 다르면 오류를 남기고 `constant::invalid_index::kUint32` 입니다. */
-        uint32 resolveKeyIndex( const hashed_string& settingID, UserSettingType expectedType ) const;
+        void collectOptionsOf( const UserSettingDef& def, vector<UserSettingOption>& outListOption ) const;
+        /** @brief 설정의 순번입니다. 스키마에 없거나 상태가 아직 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findIndex( const hashed_string& settingID ) const;
+        /** @brief `resolveKey` 의 본문입니다. 없거나 타입이 다르면 오류를 남기고 비어 있습니다. */
+        [[nodiscard]] optional<uint32> resolveKeyIndex( const hashed_string& settingID, UserSettingType expectedType ) const;
         /** @brief 핸들이 가리키는 지금 값입니다. 다른 스키마에서 푼 핸들이면 단언으로 멈춥니다. */
         const string&        getKeyValue( const hashed_string& settingID, uint32 settingIndex ) const;
         const string&        getEffectiveValue( uint32 settingIndex ) const;
@@ -375,9 +377,9 @@ namespace sw
     optional<UserSettingKey<T>> UserSettingsManager::resolveKey( const hashed_string& settingID ) const
     {
         constexpr UserSettingType kExpectedType = std::is_same_v<T, bool> ? UserSettingType::Bool : ( std::is_same_v<T, int32> ? UserSettingType::Int : UserSettingType::Float );
-        const uint32              settingIndex  = resolveKeyIndex( settingID, kExpectedType );
-        if ( settingIndex == constant::invalid_index::kUint32 )
+        const optional<uint32>    settingIndex  = resolveKeyIndex( settingID, kExpectedType );
+        if ( settingIndex.has_value() == false )
             return nullopt;
-        return UserSettingKey<T>( settingID, settingIndex );
+        return UserSettingKey<T>( settingID, *settingIndex );
     }
 } // namespace sw

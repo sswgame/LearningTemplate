@@ -104,7 +104,7 @@ namespace sw
         if ( _listScratchSpan.empty() )
             return 0;
 
-        // 2) 시작 순으로 정렬한다(패스 번호 순이 곧 시간 순은 아니다. 컴퓨트 프리패스가 앞에 선다). 패스는 열몇 개라 삽입 정렬이면 된다.
+        // 2) 시작 순으로 정렬한다(패스 번호 순이 곧 시간 순은 아니다. 프레임 그래프가 앞에 선다). 패스는 열몇 개라 삽입 정렬이면 된다.
         for ( size_t index = 1; index < _listScratchSpan.size(); ++index )
         {
             const Span moving = _listScratchSpan[index];

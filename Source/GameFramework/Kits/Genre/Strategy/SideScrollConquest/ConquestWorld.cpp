@@ -99,10 +99,10 @@ namespace sw
                 }
             }
         }
-        _commander         = ConquestCommander{};
-        _commander._health = rules._commanderHealth;
-        const int32 home   = findHomeSiteIndex();
-        _commander._x      = home >= 0 ? _listSite[static_cast<size_t>( home )]._pDef->_x : 0.0f;
+        _commander                 = ConquestCommander{};
+        _commander._health         = rules._commanderHealth;
+        const optional<int32> home = findHomeSiteIndex();
+        _commander._x              = home.has_value() ? _listSite[static_cast<size_t>( *home )]._pDef->_x : 0.0f;
     }
 
     void ConquestWorld::update( float32 deltaTime )
@@ -498,12 +498,12 @@ namespace sw
         if ( _commander._bAlive == SW_FALSE )
         {
             _commander._respawnTimer.update( deltaTime );
-            const int32 home = findHomeSiteIndex();
-            if ( _commander._respawnTimer.isActive() || home < 0 )
+            const optional<int32> home = findHomeSiteIndex();
+            if ( _commander._respawnTimer.isActive() || home.has_value() == false )
                 return;
             _commander._bAlive = SW_TRUE;
             _commander._health = rules._commanderHealth;
-            _commander._x      = _listSite[static_cast<size_t>( home )]._pDef->_x;
+            _commander._x      = _listSite[static_cast<size_t>( *home )]._pDef->_x;
             _commander._attackCooldown.clear();
             pushEvent( ConquestEvent::Kind::CommanderRespawned, hashed_string(), 0, ConquestTeam::Player );
             return;
@@ -972,13 +972,13 @@ namespace sw
         }
     }
 
-    int32 ConquestWorld::findHomeSiteIndex() const
+    optional<int32> ConquestWorld::findHomeSiteIndex() const
     {
-        int32 home = constant::invalid_index::kInt32;
+        optional<int32> home;
         for ( int32 siteIndex = 0; siteIndex < static_cast<int32>( _listSite.size() ); ++siteIndex )
         {
             const ConquestSite& site = _listSite[static_cast<size_t>( siteIndex )];
-            if ( site._owner == ConquestTeam::Player && ( home < 0 || site._pDef->_x < _listSite[static_cast<size_t>( home )]._pDef->_x ) )
+            if ( site._owner == ConquestTeam::Player && ( home.has_value() == false || site._pDef->_x < _listSite[static_cast<size_t>( *home )]._pDef->_x ) )
                 home = siteIndex;
         }
         return home;

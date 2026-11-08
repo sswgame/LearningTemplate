@@ -156,6 +156,17 @@ namespace sw
         /** @brief 2D 텍스처(렌더 타깃 포함)를 만듭니다. */
         virtual RHITextureHandle createTexture2D( const RHITextureDesc& desc ) = 0;
 
+        /**
+         * @brief 텍스처에 디버그 이름을 붙입니다 — RenderDoc · PIX 캡처, DRED 페이지 폴트, 검증 레이어 메시지가 이 이름으로 리소스를 보여 준다(파이프라인 XML 의 첨부 이름).
+         * @details DX12 `ID3D12Object::SetName`, DX11 `SetPrivateData( WKPDID_D3DDebugObjectName )`, Vulkan `vkSetDebugUtilsObjectNameEXT`(VK_EXT_debug_utils 가 있을 때), GL `glObjectLabel`.
+         *          이름은 진단용이라 붙일 수단이 없는 백엔드(WebGPU · 테스트 목)는 아무것도 하지 않는다 — 기본 구현이 그것이다. 텍스처를 만든 스레드에서 부른다.
+         */
+        virtual void setTextureDebugName( RHITextureHandle texture, const utf8* pName )
+        {
+            (void)texture;
+            (void)pName;
+        }
+
         /** @brief GPU 텍스처 리소스를 삭제합니다. */
         virtual void destroyTexture( RHITextureHandle texture ) = 0;
 

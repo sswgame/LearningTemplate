@@ -158,6 +158,11 @@ namespace sw
         float32 getSlotWeight( const hashed_string& slotName ) const { return _instance.getSlotWeight( slotName ); }
         /** @brief 노드 조절 값(부모 바꾸기의 `parent` 등)을 정합니다. 노드나 조절이 없으면 false 를 반환합니다. */
         bool setNodeControl( const hashed_string& nodeName, const hashed_string& control, float32 value ) { return _instance.setNodeControl( nodeName, control, value ); }
+        /** @brief 리그 노드의 출력 값을 읽습니다(지난 평가 — `RigNode::getOutputValue`). 리그가 묶이지 않았거나 노드 · 출력이 없으면 false 입니다. */
+        [[nodiscard]] bool getNodeOutputValue( const hashed_string& nodeName, const hashed_string& output, float32& outValue ) const
+        {
+            return _instance.getNodeOutputValue( nodeName, output, outValue );
+        }
         /** @brief 땅 질의를 바꿉니다(빌림, nullptr 이면 씬 물리). */
         void setGroundQuery( const IRigGroundQuery* pQuery ) { _pGroundQueryOverride = pQuery; }
         /** @brief 켜고 끕니다. 끄면 쉬는 유닛처럼 비용이 없습니다. */

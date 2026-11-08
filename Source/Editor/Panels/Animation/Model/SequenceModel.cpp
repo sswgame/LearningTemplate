@@ -16,6 +16,8 @@ namespace sw::editor
         {
             /** @brief 새 항목의 길이(프레임)입니다. 타임라인이 더 짧으면 타임라인 끝까지입니다. */
             static constexpr int32 kNewItemFrameLength = 10;
+            /** @brief 항목 번호를 돌려주는 명령이 "만들지 않았다" 를 알리는 값입니다. */
+            static constexpr int32 kNoItem = -1;
 
             /** @brief 목록에 @p name 이 있으면 true 입니다(항목 · 트랙은 둘 다 `_name` 을 듭니다). */
             template <typename TEntry>
@@ -55,23 +57,45 @@ namespace sw::editor
                 return SequenceModel::isRotationChannel( track, channelIndex ) ? MathUtil::kRadianToDegree : 1.0f;
             }
 
-            /** @brief 트랙 종류의 새 이름 머리입니다. */
+            /** @brief 트랙 종류의 새 이름 머리입니다(종류 표의 줄). */
             [[nodiscard]] static const utf8* getTrackNamePrefix( SequenceTrackKind kind )
             {
-                switch ( kind )
+                const SequenceTrackKindInfo* pInfo = SequenceAsset::findTrackKindInfo( kind );
+                return pInfo != nullptr ? pInfo->_pNamePrefix : "Track";
+            }
+
+            /** @brief 목록에서 @p fromIndex 를 @p toIndex 로 옮긴 뒤 번호 @p index 가 가리킬 새 번호입니다(-1 은 그대로). */
+            [[nodiscard]] static int32 remapMovedIndex( int32 index, int32 fromIndex, int32 toIndex )
+            {
+                if ( index < 0 )
+                    return index;
+                if ( index == fromIndex )
+                    return toIndex;
+                if ( fromIndex < toIndex && index > fromIndex && index <= toIndex )
+                    return index - 1;
+                if ( toIndex < fromIndex && index >= toIndex && index < fromIndex )
+                    return index + 1;
+                return index;
+            }
+
+            /** @brief 채널 @p channel 의 @p frame 자리에 키 @p key 를 놓습니다(그 자리의 키는 덮는다). 시각은 @p frame 으로 바꾼다. */
+            static void placeChannelKey( FloatCurve& channel, float32 frame, const FloatCurveKey& key )
+            {
+                FloatCurveKey placed = key;
+                placed._time         = frame;
+                bool bReplaced       = false;
+                for ( FloatCurveKey& existing : channel._listKey )
                 {
-                    case SequenceTrackKind::Transform:
-                        return "Transform";
-                    case SequenceTrackKind::Property:
-                        return "Property";
-                    case SequenceTrackKind::RigSlot:
-                        return "Rig Slot";
-                    case SequenceTrackKind::CameraLens:
-                        return "Lens";
-                    case SequenceTrackKind::Count:
-                        return "Track";
+                    if ( MathUtil::abs( existing._time - frame ) < kSequenceKeyFrameTolerance )
+                    {
+                        existing  = placed;
+                        bReplaced = true;
+                        break;
+                    }
                 }
-                return "Track";
+                if ( bReplaced == false )
+                    channel._listKey.push_back( placed );
+                channel.sortAndComputeAutoTangents();
             }
 
             /** @brief 두 키 프레임이 같은 키인지입니다(반 프레임 안). */
@@ -91,7 +115,12 @@ namespace sw::editor
         , _curveChannel{ 0 }
         , _selectedBinding{ kSequenceNoBinding }
         , _listSelectedKey{}
+        , _listCopiedKey{}
+        , _copiedItem{}
+        , _viewFirstFrame{ 0 }
+        , _viewFrameSpan{ 0 }
         , _bItemDraft{ SW_FALSE }
+        , _bItemCopied{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -117,6 +146,7 @@ namespace sw::editor
         _selectedBinding = _asset._listBinding.empty() ? kSequenceNoBinding : _asset._listBinding[0]._id;
         _bItemDraft      = SW_FALSE;
         _listSelectedKey.clear();
+        fitView(); // 새 문서는 전체를 본다
     }
 
     uint32 SequenceModel::addBinding( string_view name )
@@ -469,19 +499,271 @@ namespace sw::editor
     int32 SequenceModel::findFrameAtRatio( float32 ratio ) const
     {
         const float32 clamped = MathUtil::clamp( ratio, 0.0f, 1.0f );
-        return _asset._frameMin + static_cast<int32>( MathUtil::round( clamped * static_cast<float32>( getFrameSpan() ) ) );
+        return getViewFirstFrame() + static_cast<int32>( MathUtil::round( clamped * static_cast<float32>( getViewFrameSpan() ) ) );
     }
 
     float32 SequenceModel::computeRatioAtFrame( float32 frame ) const
     {
-        return ( frame - static_cast<float32>( _asset._frameMin ) ) / static_cast<float32>( getFrameSpan() );
+        return ( frame - static_cast<float32>( getViewFirstFrame() ) ) / static_cast<float32>( getViewFrameSpan() );
     }
 
     int32 SequenceModel::computeFrameDelta( float32 pixelDelta, float32 stripWidth ) const
     {
         if ( stripWidth <= 0.0f )
             return 0;
-        return static_cast<int32>( MathUtil::round( pixelDelta / stripWidth * static_cast<float32>( getFrameSpan() ) ) );
+        return static_cast<int32>( MathUtil::round( pixelDelta / stripWidth * static_cast<float32>( getViewFrameSpan() ) ) );
+    }
+
+    int32 SequenceModel::getViewFrameSpan() const
+    {
+        const int32 timelineSpan = getFrameSpan();
+        if ( isViewFitted() )
+            return timelineSpan;
+        return MathUtil::clamp( _viewFrameSpan, MathUtil::min( kMinViewFrameSpan, timelineSpan ), timelineSpan );
+    }
+
+    int32 SequenceModel::getViewFirstFrame() const
+    {
+        if ( isViewFitted() )
+            return _asset._frameMin;
+        // 타임라인이 줄어도(되돌리기 · 다른 문서) 보이는 범위가 타임라인 밖을 가리키지 않는다.
+        return MathUtil::clamp( _viewFirstFrame, _asset._frameMin, _asset._frameMin + getFrameSpan() - getViewFrameSpan() );
+    }
+
+    void SequenceModel::zoomView( float32 factor, float32 anchorRatio )
+    {
+        if ( factor <= 0.0f )
+            return;
+        const int32   oldSpan     = getViewFrameSpan();
+        const float32 anchor      = MathUtil::clamp( anchorRatio, 0.0f, 1.0f );
+        const float32 anchorFrame = static_cast<float32>( getViewFirstFrame() ) + anchor * static_cast<float32>( oldSpan );
+        const int32   timeline    = getFrameSpan();
+        const int32   scaled      = static_cast<int32>( MathUtil::round( static_cast<float32>( oldSpan ) * factor ) );
+        const int32   newSpan     = MathUtil::clamp( scaled, MathUtil::min( kMinViewFrameSpan, timeline ), timeline );
+        if ( newSpan >= timeline )
+        {
+            fitView();
+            return;
+        }
+        _viewFrameSpan  = newSpan;
+        _viewFirstFrame = static_cast<int32>( MathUtil::round( anchorFrame - anchor * static_cast<float32>( newSpan ) ) );
+        _viewFirstFrame = getViewFirstFrame(); // 타임라인 안으로 자른 값을 남긴다
+    }
+
+    void SequenceModel::scrollView( int32 frameDelta )
+    {
+        setViewFirstFrame( getViewFirstFrame() + frameDelta );
+    }
+
+    void SequenceModel::setViewFirstFrame( int32 frame )
+    {
+        if ( isViewFitted() )
+            return;
+        _viewFirstFrame = frame;
+        _viewFirstFrame = getViewFirstFrame();
+    }
+
+    int32 SequenceModel::splitCameraCut( int32 frame )
+    {
+        for ( int32 itemIndex = 0; itemIndex < static_cast<int32>( _asset._listItem.size() ); ++itemIndex )
+        {
+            SequenceTrackItem&          cut   = _asset._listItem[static_cast<size_t>( itemIndex )];
+            const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( cut._kind );
+            const bool                  bHit  = pInfo != nullptr && pInfo->_bCutsCamera && cut._start < frame && frame <= cut._end;
+            if ( bHit == false )
+                continue;
+            SequenceTrackItem tail = cut;
+            tail._start            = frame;
+            tail._name             = SequenceModelInternal::makeNumberedName( _asset._listItem, "Cut" );
+            cut._end               = frame - 1;
+            _asset._listItem.push_back( std::move( tail ) );
+            _selectedItem = static_cast<int32>( _asset._listItem.size() ) - 1;
+            return _selectedItem;
+        }
+        return SequenceModelInternal::kNoItem;
+    }
+
+    bool SequenceModel::removeCameraCut( int32 itemIndex )
+    {
+        const bool bInRange = 0 <= itemIndex && itemIndex < static_cast<int32>( _asset._listItem.size() );
+        if ( bInRange == false )
+            return false;
+        const SequenceTrackItem     removed = _asset._listItem[static_cast<size_t>( itemIndex )];
+        const SequenceItemKindInfo* pInfo   = SequenceAsset::findItemKindInfo( removed._kind );
+        if ( pInfo == nullptr || pInfo->_bCutsCamera == false )
+            return false;
+        // 바로 앞에 붙어 있던 컷이 빈 자리를 덮는다 — 앞 컷이 없으면(첫 컷) 다음 컷이 앞으로 늘지 않는다(그 구간은 게임 카메라다).
+        vector<int32> listCut;
+        collectCutLane( listCut );
+        for ( const int32 cutIndex : listCut )
+        {
+            SequenceTrackItem& cut = _asset._listItem[static_cast<size_t>( cutIndex )];
+            if ( cutIndex != itemIndex && cut._end == removed._start - 1 )
+                cut._end = removed._end;
+        }
+        return removeItem( itemIndex );
+    }
+
+    bool SequenceModel::setCutCamera( int32 itemIndex, uint32 bindingID )
+    {
+        const bool bInRange = 0 <= itemIndex && itemIndex < static_cast<int32>( _asset._listItem.size() );
+        if ( bInRange == false || _asset.findBinding( bindingID ) == nullptr )
+            return false;
+        SequenceTrackItem&          cut   = _asset._listItem[static_cast<size_t>( itemIndex )];
+        const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( cut._kind );
+        if ( pInfo == nullptr || pInfo->_bCutsCamera == false )
+            return false;
+        cut._binding = bindingID;
+        return true;
+    }
+
+    bool SequenceModel::moveTrack( int32 fromIndex, int32 toIndex )
+    {
+        const int32 count  = static_cast<int32>( _asset._listTrack.size() );
+        const bool  bValid = 0 <= fromIndex && fromIndex < count && 0 <= toIndex && toIndex < count && fromIndex != toIndex;
+        if ( bValid == false )
+            return false;
+        SequenceKeyTrack moved = std::move( _asset._listTrack[static_cast<size_t>( fromIndex )] );
+        _asset._listTrack.erase( _asset._listTrack.begin() + fromIndex );
+        _asset._listTrack.insert( _asset._listTrack.begin() + toIndex, std::move( moved ) );
+        _selectedTrack = SequenceModelInternal::remapMovedIndex( _selectedTrack, fromIndex, toIndex );
+        _curveTrack    = SequenceModelInternal::remapMovedIndex( _curveTrack, fromIndex, toIndex );
+        for ( SequenceKeyRef& key : _listSelectedKey )
+        {
+            key._track = SequenceModelInternal::remapMovedIndex( key._track, fromIndex, toIndex );
+        }
+        return true;
+    }
+
+    SequenceTrackIssue SequenceModel::findTrackIssue( int32 trackIndex ) const
+    {
+        const bool bInRange = 0 <= trackIndex && trackIndex < static_cast<int32>( _asset._listTrack.size() );
+        if ( bInRange == false )
+            return SequenceTrackIssue::None;
+        const SequenceKeyTrack&      track = _asset._listTrack[static_cast<size_t>( trackIndex )];
+        const SequenceTrackKindInfo* pInfo = SequenceAsset::findTrackKindInfo( track._kind );
+        // 파일 읽기(`SequenceAsset::validateFile`)가 거절하는 것부터 — 저장하면 다시 열리지 않는다.
+        if ( pInfo == nullptr )
+            return SequenceTrackIssue::UnknownKind;
+        if ( track._listChannel.size() != pInfo->_channelCount )
+            return SequenceTrackIssue::ChannelCount;
+        if ( _asset.findBinding( track._binding ) == nullptr )
+            return SequenceTrackIssue::MissingBinding;
+        if ( pInfo->_bUsesPropertyPath && track._propertyPath.empty() )
+            return SequenceTrackIssue::MissingPropertyPath;
+        for ( const FloatCurve& channel : track._listChannel )
+        {
+            for ( const FloatCurveKey& key : channel._listKey )
+            {
+                if ( findTimelineFrame( key._time ).has_value() == false )
+                    return SequenceTrackIssue::KeysOutsideTimeline;
+            }
+        }
+        return SequenceTrackIssue::None;
+    }
+
+    uint32 SequenceModel::countTrackIssues() const
+    {
+        uint32 count = 0;
+        for ( int32 trackIndex = 0; trackIndex < static_cast<int32>( _asset._listTrack.size() ); ++trackIndex )
+        {
+            if ( findTrackIssue( trackIndex ) != SequenceTrackIssue::None )
+                ++count;
+        }
+        return count;
+    }
+
+    uint32 SequenceModel::copySelectedKeys()
+    {
+        if ( _listSelectedKey.empty() )
+            return 0;
+        int32 topTrack   = _listSelectedKey[0]._track;
+        int32 firstFrame = static_cast<int32>( MathUtil::round( _listSelectedKey[0]._frame ) );
+        for ( const SequenceKeyRef& key : _listSelectedKey )
+        {
+            topTrack   = MathUtil::min( topTrack, key._track );
+            firstFrame = MathUtil::min( firstFrame, static_cast<int32>( MathUtil::round( key._frame ) ) );
+        }
+        _listCopiedKey.clear();
+        for ( const SequenceKeyRef& key : _listSelectedKey )
+        {
+            const bool bValidTrack = 0 <= key._track && key._track < static_cast<int32>( _asset._listTrack.size() );
+            if ( bValidTrack == false )
+                continue;
+            const SequenceKeyTrack& track = _asset._listTrack[static_cast<size_t>( key._track )];
+            SequenceCopiedKey       copied{};
+            copied._trackOffset  = key._track - topTrack;
+            copied._frameOffset  = static_cast<int32>( MathUtil::round( key._frame ) ) - firstFrame;
+            copied._channelCount = static_cast<uint32>( track._listChannel.size() );
+            for ( uint32 channelIndex = 0; channelIndex < copied._channelCount && channelIndex < kSequenceMaxChannelCount; ++channelIndex )
+            {
+                const uint32 keyIndex = track.findChannelKey( channelIndex, key._frame );
+                if ( keyIndex == constant::invalid_index::kUint32 )
+                    continue;
+                copied._arrChannelKey[channelIndex] = track._listChannel[channelIndex]._listKey[keyIndex];
+                copied._channelMask |= 1u << channelIndex;
+            }
+            if ( copied._channelMask != 0 )
+                _listCopiedKey.push_back( copied );
+        }
+        return static_cast<uint32>( _listCopiedKey.size() );
+    }
+
+    uint32 SequenceModel::pasteKeys( int32 frame )
+    {
+        if ( findSelectedTrack() == nullptr || _listCopiedKey.empty() )
+            return 0;
+        _listSelectedKey.clear();
+        uint32 pastedCount = 0;
+        for ( const SequenceCopiedKey& copied : _listCopiedKey )
+        {
+            const int32 trackIndex = _selectedTrack + copied._trackOffset;
+            const int32 target     = frame + copied._frameOffset;
+            const bool  bTrack     = trackIndex < static_cast<int32>( _asset._listTrack.size() );
+            if ( bTrack == false || findTimelineFrame( static_cast<float32>( target ) ).has_value() == false )
+                continue;
+            SequenceKeyTrack& track = _asset._listTrack[static_cast<size_t>( trackIndex )];
+            if ( track._listChannel.size() != copied._channelCount )
+                continue; // 채널 수가 다른 종류에 붙이면 값의 뜻이 바뀐다(이동 X 가 화각이 된다)
+            for ( uint32 channelIndex = 0; channelIndex < copied._channelCount && channelIndex < kSequenceMaxChannelCount; ++channelIndex )
+            {
+                if ( ( copied._channelMask & ( 1u << channelIndex ) ) != 0 )
+                    SequenceModelInternal::placeChannelKey( track._listChannel[channelIndex], static_cast<float32>( target ), copied._arrChannelKey[channelIndex] );
+            }
+            _listSelectedKey.push_back( SequenceKeyRef{ trackIndex, static_cast<float32>( target ) } );
+            ++pastedCount;
+        }
+        return pastedCount;
+    }
+
+    bool SequenceModel::copySelectedItem()
+    {
+        if ( hasSelectedItem() == false )
+            return false;
+        _copiedItem  = _asset._listItem[static_cast<size_t>( _selectedItem )];
+        _bItemCopied = SW_TRUE;
+        return true;
+    }
+
+    int32 SequenceModel::pasteItem( int32 frame )
+    {
+        const bool bOutside = frame < _asset._frameMin || frame > _asset._frameMax;
+        if ( hasCopiedItem() == false || bOutside )
+            return SequenceModelInternal::kNoItem;
+        const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( _copiedItem._kind );
+        if ( pInfo == nullptr || pInfo->_bSpawns )
+            return SequenceModelInternal::kNoItem; // 두 스폰이 한 바인딩을 채우면 파일이 읽히지 않는다(`duplicateItem` 과 같다)
+        SequenceTrackItem pasted = _copiedItem;
+        const int32       length = pasted._end - pasted._start;
+        pasted._start            = frame;
+        pasted._end              = MathUtil::min( frame + length, _asset._frameMax );
+        if ( SequenceModelInternal::isNameTaken( _asset._listItem, pasted._name ) )
+            pasted._name = SequenceModelInternal::makeNumberedName( _asset._listItem, pasted._name );
+        if ( isItemAcceptable( pasted ) == false )
+            return SequenceModelInternal::kNoItem; // 복사한 뒤 바인딩을 지웠으면 대상이 없다
+        _asset._listItem.push_back( std::move( pasted ) );
+        _selectedItem = static_cast<int32>( _asset._listItem.size() ) - 1;
+        return _selectedItem;
     }
 
     bool SequenceModel::isRotationChannel( const SequenceKeyTrack& track, uint32 channelIndex )

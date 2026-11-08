@@ -6,6 +6,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/String/StringUtil.h"
 
+#include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Task/EditorExternalToolJob.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -158,5 +159,10 @@ namespace sw::editor
             SW_LOG_INFO_ID( "Packaging.Done", "Packaging done: %# (%# bytes)", _progress._outputFolder, _progress._byteCount );
         else
             SW_LOG_WARNING_ID( "PackagingPanel.PackagingFailed", "Packaging failed at '%#': %#", _progress._stepName, _progress._failure );
+    }
+
+    bool PackagingModel::openOutputFolder() const
+    {
+        return EditorAssetFileCommands::showInFileExplorer( _progress._outputFolder );
     }
 } // namespace sw::editor

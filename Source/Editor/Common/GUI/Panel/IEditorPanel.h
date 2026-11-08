@@ -156,6 +156,12 @@ namespace sw::editor
          */
         virtual EditorTextExtent getInitialPanelSize() const { return EditorTextExtent::ofText( 85.0f, 22.0f ); }
 
+        /**
+         * @brief 다음 프레임을 곧 그리게 합니다(`EditorRenderViews::requestAnimationFrame`) — 재생 · 애니메이션 중인 창이 에디터 유휴로 들지 않게 한다.
+         * @details 패널 View 가 작업 공간 헤더(`EditorContext` · `EditorRenderViews`)를 보지 않게 기반이 창구를 둔다(`docs/agents/EditorUI.md` MVVM 계약). 에디터가 서 있을 때(그리기)만 부른다.
+         */
+        static void requestAnimationFrame();
+
         /** @brief 열림 표시를 끄고 `onPanelClosed` 를 부릅니다. 패널을 닫는 유일한 위치입니다(문서 쪽 닫기 확인도 이것으로 닫는다). */
         void closeNow()
         {

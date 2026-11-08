@@ -8,12 +8,10 @@
  *          시간 정책은 FixedTimestep, 백엔드 교체는 RHIBackendSwitcher(개발 구성만 — `App/Dev/`), 모듈 수명은 EditorModuleManager(공통 GameModuleManager 위의 App 전용 층),
  *          핫 리로드 · 개발 콘솔 · 표준 입력 명령은 개발 계층(`IHostDevLayer` — Server 와 같이 쓴다, 배포에는 없다), 헤드리스 작업은 AppHeadlessTasks 가 각자 맡습니다.
  *          자동화가 찾아야 하는 호스트 객체(교체기 · 리로드 구동기)는 정적 포인터가 아니라 호스트 범위(`HostLaunch::getHostScope`)에 걸고 `engine::findSubsystem<T>()` 로 찾게 합니다.
- *          런타임 UI 에 끼우는 것(일시정지 메뉴의 "끝내기", 운영체제 클립보드, 스크린 리더)은 협력 객체 `RuntimeUIHost` 가 맡습니다.
+ *          런타임 UI 에 끼우는 것(일시정지 메뉴의 "끝내기", 운영체제 클립보드, 스크린 리더)은 엔진의 `UIPlatformBinding` 이 맡습니다.
  */
 #pragma once
 #include "App/Dev/RHIBackendSwitcher.h"
-#include "App/RuntimeUIHost.h"
-#include "App/UserSettingsHost.h"
 
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
@@ -22,6 +20,8 @@
 
 #include "Engine/Engine.h"
 #include "Engine/HostServiceSet.h"
+#include "Engine/UI/UIPlatformBinding.h"
+#include "Engine/UserSettings/UserSettingsHost.h"
 
 #include "ModuleManager/Host/HostLaunch.h"
 
@@ -154,7 +154,7 @@ namespace sw
         unique_ptr<RHIBackendSwitcher> _pBackendSwitcher;
         UserSettingsHost               _userSettingsHost;
         /** @brief 런타임 UI 의 호스트 훅(클립보드 · 스크린 리더 · 끝내기)입니다. 호스트 서비스 `RuntimeUIHooks` 가 세우고 내린다. */
-        RuntimeUIHost _runtimeUIHost;
+        UIPlatformBinding _uiPlatformBinding;
 
         // 프레임마다 다시 만들 이유가 없는 델리게이트다. bindHostCallbacks 에서 한 번 묶는다.
         /** @brief 에디터 모드에서만 연결됩니다. 비어 있으면 Engine 가 씬 카메라를 씁니다. */

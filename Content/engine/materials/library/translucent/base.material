@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 얇은 반투명(커튼 · 얇은 천) — 알파 블렌드 + 투과(언리얼 Thin Translucent). renderQueue 0 — 유리(-100) 뒤에 그려 굴절 위에 얹힌다. -->
+<MaterialDef formatVersion="0" name="AppearanceTranslucent" _base="engine/materials/library/appearance.material" alphaMode="Blend" cullMode="None" twoSidedLighting="true">
+	<_properties>
+		<item name="_color" defaultValue="0.9 0.88 0.82 0.55" />
+		<item name="_subsurfaceColor" defaultValue="1 0.95 0.85 1" />
+		<item name="_transmission" defaultValue="0.8" />
+		<item name="_subsurfaceRadius" defaultValue="0.5" />
+		<item name="_roughness" defaultValue="0.8" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_LOBE_TRANSMISSION</item>
+			<item>MATERIAL_BLEND_TRANSLUCENT</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

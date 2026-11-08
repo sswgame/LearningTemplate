@@ -35,6 +35,12 @@ namespace sw
         : _device{ nullptr }
         , _memoryAdapter{ nullptr }
         , _commandQueue{ nullptr }
+        , _computeQueue{ nullptr }
+        , _queueSyncFence{ nullptr }
+        , _computeFence{ nullptr }
+        , _queueSyncValue{ 0 }
+        , _computeFenceValue{ 0 }
+        , _computeWaitedValue{ 0 }
         , _rtvHeap{ nullptr }
         , _dsvHeap{ nullptr }
         , _cbvHeap{ nullptr }
@@ -48,6 +54,7 @@ namespace sw
         , _pActiveFrameList{ nullptr }
         , _cmdListPoolMutex{}
         , _listFreeCmdListEntry{}
+        , _listFreeComputeCmdListEntry{}
         , _onlineBlockMutex{}
         , _freeOnlineBlock{}
         , _frameRing{}
@@ -633,6 +640,23 @@ namespace sw
         queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
         if ( isHrSuccess( _device->CreateCommandQueue( &queueDesc, IID_PPV_ARGS( _commandQueue.GetAddressOf() ) ), "CreateCommandQueue" ) == false )
             return false;
+        // 비동기 컴퓨트 큐와 두 큐를 잇는 펜스 둘이다. 셋 중 하나라도 없으면 능력이 거짓이다 — 렌더 그래프가 AsyncCompute 패스를 그래픽스 큐에서 돌린다(장치를 실패로 보지 않는다).
+        D3D12_COMMAND_QUEUE_DESC computeQueueDesc{};
+        computeQueueDesc.Type         = D3D12_COMMAND_LIST_TYPE_COMPUTE;
+        computeQueueDesc.Flags        = D3D12_COMMAND_QUEUE_FLAG_NONE;
+        const bool bAsyncComputeReady = isHrSuccess( _device->CreateCommandQueue( &computeQueueDesc, IID_PPV_ARGS( _computeQueue.GetAddressOf() ) ), "CreateCommandQueue (compute)" ) &&
+                                        isHrSuccess( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _queueSyncFence.GetAddressOf() ) ), "CreateFence (queue sync)" ) &&
+                                        isHrSuccess( _device->CreateFence( 0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS( _computeFence.GetAddressOf() ) ), "CreateFence (compute)" );
+        if ( bAsyncComputeReady == false )
+        {
+            _computeQueue.Reset();
+            _queueSyncFence.Reset();
+            _computeFence.Reset();
+            SW_LOG_WARNING_ID( "D3D12.AsyncComputeQueueUnavailable", "D3D12 async compute queue could not be created - AsyncCompute passes run on the graphics queue" );
+        }
+        _queueSyncValue     = 0;
+        _computeFenceValue  = 0;
+        _computeWaitedValue = 0;
 
         _swapChain.setBarrierWatcher( this );
         if ( _swapChain.initialize( factory.Get(), _commandQueue.Get(), desc ) == false )
@@ -769,9 +793,9 @@ namespace sw
     {
         if ( GPUBreadcrumbs::isEnabled() == false || _device == nullptr )
             return;
-        // 읽기 힙(CPU 가 읽는 시스템 메모리) 4 바이트 - GPU 가 소실 중에 쓴 값이 소실 뒤에도 CPU 에서 읽힌다. 읽기 힙 버퍼의 상태는 COPY_DEST 로 고정이다.
+        // 읽기 힙(CPU 가 읽는 시스템 메모리) uint32 둘 — [0] 시작 표지 · [1] 끝 표지. GPU 가 소실 중에 쓴 값이 소실 뒤에도 CPU 에서 읽힌다. 읽기 힙 버퍼의 상태는 COPY_DEST 로 고정이다.
         const D3D12_HEAP_PROPERTIES heapProperties = D3D12RHIResourcePreset::heapProperties( D3D12_HEAP_TYPE_READBACK );
-        const D3D12_RESOURCE_DESC   bufferDesc     = D3D12RHIResourcePreset::bufferDesc( sizeof( uint32 ) );
+        const D3D12_RESOURCE_DESC   bufferDesc     = D3D12RHIResourcePreset::bufferDesc( sizeof( uint32 ) * kBreadcrumbSlotCount );
         if ( isHrSuccess( _device->CreateCommittedResource( &heapProperties, D3D12_HEAP_FLAG_NONE, &bufferDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
                                                             IID_PPV_ARGS( _breadcrumbBuffer.GetAddressOf() ) ),
                           "CreateCommittedResource(breadcrumb)" ) == false )
@@ -786,9 +810,10 @@ namespace sw
             _breadcrumbBuffer.Reset();
             return;
         }
-        *static_cast<uint32*>( pMapped ) = 0;
-        _pBreadcrumbMapped               = static_cast<const volatile uint32*>( pMapped );
-        _breadcrumbAddress               = _breadcrumbBuffer->GetGPUVirtualAddress();
+        static_cast<uint32*>( pMapped )[0] = 0;
+        static_cast<uint32*>( pMapped )[1] = 0;
+        _pBreadcrumbMapped                 = static_cast<const volatile uint32*>( pMapped );
+        _breadcrumbAddress                 = _breadcrumbBuffer->GetGPUVirtualAddress();
         SW_LOG_INFO_ID( "D3D12.D3D12GPUBreadcrumbsEnabled", "D3D12 GPU breadcrumbs enabled (WriteBufferImmediate markers)" );
     }
 
@@ -796,11 +821,15 @@ namespace sw
     {
         if ( _pBreadcrumbMapped == nullptr || pOutID == nullptr || capacity == 0 )
             return 0;
-        const uint32 marker = *_pBreadcrumbMapped;
-        if ( marker == 0 )
-            return 0;
-        pOutID[0] = marker;
-        return 1;
+        // [0] 시작 표지 · [1] 끝 표지 — 0 인 칸(아직 쓰지 않음)은 싣지 않는다. 푸는 일은 GPUBreadcrumbs::parse 가 한다.
+        uint32 filled = 0;
+        for ( uint32 slot = 0; slot < kBreadcrumbSlotCount && filled < capacity; ++slot )
+        {
+            const uint32 marker = _pBreadcrumbMapped[slot];
+            if ( marker != 0 )
+                pOutID[filled++] = marker;
+        }
+        return filled;
     }
 
     void D3D12RHIDevice::shutdownInternal()
@@ -853,6 +882,7 @@ namespace sw
         {
             ScopedLock<mutex> lock{ _cmdListPoolMutex };
             _listFreeCmdListEntry.clear();
+            _listFreeComputeCmdListEntry.clear();
         }
         _frameStreamState._bRecording = SW_FALSE;
         _bBindlessRootSignature       = SW_FALSE;
@@ -860,6 +890,9 @@ namespace sw
         shutdownTransfers();
         _fence.Reset();
         _transferFence.Reset();
+        _queueSyncFence.Reset();
+        _computeFence.Reset();
+        _computeQueue.Reset();
         _commandQueue.Reset();
         _memoryAdapter.Reset();
         Microsoft::WRL::ComPtr<ID3D12InfoQueue1> infoQueue1;
@@ -980,6 +1013,9 @@ namespace sw
         // 다른 스레드가 렌더 스레드를 `waitIdle` 로 세운 채 부른다(`Engine::onMainWindowResize`) — 그동안 프레임 진행 상태는 이 스레드가 빌려 만진다.
         ScopedThreadRoleBorrow borrow{ _swapChain.getRenderThreadRole() };
         waitForPreviousFrame();
+        // 프레임 안에서 낸 비동기 컴퓨트 일은 프레임 펜스가 덮지만, 프레임 도중에 세웠으면 아직 돌 수 있다 — 이벤트 없이(null) 끝날 때까지 기다린다.
+        if ( _computeFence != nullptr && _computeFence->GetCompletedValue() < _computeFenceValue )
+            requireHr( _computeFence->SetEventOnCompletion( _computeFenceValue, nullptr ), "ID3D12Fence::SetEventOnCompletion (compute idle)" );
         // 전송은 같은 큐에서 프레임 펜스보다 먼저 끝났다 — 워터마크를 올려야 전송을 기다리던 텍스처 해제가 `_releaseQueue` 로 넘어와 아래 비우기에 든다.
         retireCompletedTransfers();
         _releaseQueue.flushAll();
@@ -1084,7 +1120,11 @@ namespace sw
         _listPendingSubmit.push_back( _pActiveFrameList );
         _listPendingSubmit.push_back( pList );
         submitPendingIfImmediate();
+        openNextFrameSegment();
+    }
 
+    void D3D12RHIDevice::openNextFrameSegment()
+    {
         ID3D12GraphicsCommandList* pNextSegment = beginNextFrameSegment();
         _pActiveFrameList                       = pNextSegment;
         if ( pNextSegment == nullptr )
@@ -1120,6 +1160,79 @@ namespace sw
         flushPendingUploads( false );
         _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
         _listPendingSubmit.clear();
+    }
+
+    void D3D12RHIDevice::submitFrameWorkNow()
+    {
+        if ( _commandQueue == nullptr || _pActiveFrameList == nullptr )
+            return;
+        // 조각에 기록한 것이 있으면 닫아 대기열 끝에 넣고 새 조각을 연다(빈 조각은 그대로 둔다 — `executeCommandList` 와 같은 규칙).
+        const bool bSegmentHasWork = _frameStreamState._bRecordedAny != SW_FALSE;
+        if ( bSegmentHasWork )
+        {
+            _frameStreamContext->endRenderPass();
+            requireHr( _pActiveFrameList->Close(), "ID3D12GraphicsCommandList::Close (frame segment, queue sync)" );
+            releaseOnlineBlocksDeferred( _frameStreamState );
+            _listPendingSubmit.push_back( _pActiveFrameList );
+        }
+        // 구조 버퍼 복사가 앞에 끼고, 실행까지 업로드 락을 쥔다(submitPendingIfImmediate 와 같은 이유).
+        {
+            ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
+            flushPendingUploads( false );
+            if ( _listPendingSubmit.empty() == false )
+                _commandQueue->ExecuteCommandLists( static_cast<UINT>( _listPendingSubmit.size() ), _listPendingSubmit.data() );
+            _listPendingSubmit.clear();
+        }
+        if ( bSegmentHasWork )
+            openNextFrameSegment();
+    }
+
+    unique_ptr<IRHICommandList> D3D12RHIDevice::createAsyncComputeCommandList()
+    {
+        if ( _computeQueue == nullptr )
+            return IRHIDevice::createAsyncComputeCommandList(); // 능력이 거짓인 길 — 오류를 남기고 nullptr
+        unique_ptr<D3D12RHICommandList> list = make_unique<D3D12RHICommandList>( this, D3D12_COMMAND_LIST_TYPE_COMPUTE );
+        if ( list->isValid() == false )
+        {
+            SW_LOG_ERROR_ONCE_ID( "D3D12.CreateAsyncComputeListFailed", "D3D12RHIDevice::createAsyncComputeCommandList: failed to create the native compute command list." );
+            return nullptr;
+        }
+        return list;
+    }
+
+    RHIQueueSyncPoint D3D12RHIDevice::submitAsyncCompute( IRHICommandList* pCmdList )
+    {
+        auto* pNative = static_cast<D3D12RHICommandList*>( pCmdList );
+        if ( _computeQueue == nullptr )
+            return IRHIDevice::submitAsyncCompute( pCmdList );
+        if ( pNative == nullptr || pNative->getNativeCommandList() == nullptr )
+            return RHIQueueSyncPoint{};
+        // 포크: 지금까지 넘긴 그래픽스 일(프레임 스트림 · 리스트 · 구조 버퍼 복사)을 큐에 내고 그 끝을 신호한다. 컴퓨트 큐는 그 신호를 기다린 뒤 이 리스트를 실행한다.
+        // 버퍼는 ExecuteCommandLists 경계에서 COMMON 으로 돌아가므로(상태 감쇠) 큐 사이 소유권 이전이 따로 없다 — 텍스처는 생산자가 컴퓨트에서 쓸 상태로 넘겨 둔다.
+        submitFrameWorkNow();
+        ++_queueSyncValue;
+        requireHr( _commandQueue->Signal( _queueSyncFence.Get(), _queueSyncValue ), "ID3D12CommandQueue::Signal (fork)" );
+        requireHr( _computeQueue->Wait( _queueSyncFence.Get(), _queueSyncValue ), "ID3D12CommandQueue::Wait (fork)" );
+        ID3D12CommandList* arrList[] = { pNative->getNativeCommandList() };
+        _computeQueue->ExecuteCommandLists( 1, arrList );
+        ++_computeFenceValue;
+        requireHr( _computeQueue->Signal( _computeFence.Get(), _computeFenceValue ), "ID3D12CommandQueue::Signal (compute)" );
+        return RHIQueueSyncPoint{ _computeFenceValue };
+    }
+
+    void D3D12RHIDevice::waitForAsyncCompute( RHIQueueSyncPoint point )
+    {
+        if ( _computeQueue == nullptr )
+        {
+            IRHIDevice::waitForAsyncCompute( point );
+            return;
+        }
+        if ( point.isValid() == false || point._value <= _computeWaitedValue )
+            return;
+        // 조인: 그 전 그래픽스 일은 기다리지 않게 먼저 큐에 낸다 — 포크와 조인 사이의 그래픽스 일이 컴퓨트와 겹친다.
+        submitFrameWorkNow();
+        requireHr( _commandQueue->Wait( _computeFence.Get(), point._value ), "ID3D12CommandQueue::Wait (join)" );
+        _computeWaitedValue = point._value;
     }
 
     void D3D12RHIDevice::flushPendingUploads( bool bExecuteNow )
@@ -1306,17 +1419,19 @@ namespace sw
         return _arrCommandAllocator[_frameRing.currentIndex()].Get();
     }
 
-    D3D12CommandListEntry D3D12RHIDevice::acquireCommandListEntry()
+    D3D12CommandListEntry D3D12RHIDevice::acquireCommandListEntry( D3D12_COMMAND_LIST_TYPE type )
     {
         // 반환 대상은 이 하나다. 이름 있는 반환 객체가 여럿이면 NRVO 가 걸리지 않아
         // 반환할 때마다 엔트리(ComPtr 두 개)가 복사된다.
         D3D12CommandListEntry entry;
+        entry._type = type;
         {
-            ScopedLock<mutex> lock{ _cmdListPoolMutex };
-            if ( _listFreeCmdListEntry.empty() == false )
+            ScopedLock<mutex>              lock{ _cmdListPoolMutex };
+            vector<D3D12CommandListEntry>& listFree = ( type == D3D12_COMMAND_LIST_TYPE_COMPUTE ) ? _listFreeComputeCmdListEntry : _listFreeCmdListEntry;
+            if ( listFree.empty() == false )
             {
-                entry = std::move( _listFreeCmdListEntry.back() );
-                _listFreeCmdListEntry.pop_back();
+                entry = std::move( listFree.back() );
+                listFree.pop_back();
                 return entry;
             }
         }
@@ -1327,7 +1442,7 @@ namespace sw
             return entry;
 
         // HRESULT 를 여기서 남긴다. 부르는 쪽은 "생성 실패" 한 줄만 남기므로 원인(메모리 부족인지 디바이스 제거인지)은 여기서만 보인다.
-        const HRESULT allocHr = _device->CreateCommandAllocator( D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS( entry._allocator.GetAddressOf() ) );
+        const HRESULT allocHr = _device->CreateCommandAllocator( type, IID_PPV_ARGS( entry._allocator.GetAddressOf() ) );
         if ( FAILED( allocHr ) )
         {
             if ( _bDeviceRemovedLogged.load( std::memory_order_relaxed ) == SW_FALSE )
@@ -1339,7 +1454,7 @@ namespace sw
             entry = D3D12CommandListEntry{};
             return entry;
         }
-        const HRESULT listHr = _device->CreateCommandList( 0, D3D12_COMMAND_LIST_TYPE_DIRECT, entry._allocator.Get(), nullptr,
+        const HRESULT listHr = _device->CreateCommandList( 0, type, entry._allocator.Get(), nullptr,
                                                            IID_PPV_ARGS( entry._list.GetAddressOf() ) );
         if ( FAILED( listHr ) )
         {
@@ -1371,10 +1486,14 @@ namespace sw
         // 제출 직후 리스트 객체가 사라져도 GPU 는 아직 이 얼로케이터의 커맨드 메모리를 읽고 있다.
         // 해제 큐에 실어 현재 펜스가 통과한 뒤에야 재사용 풀로 돌려보낸다. 그래야 다음 사용자가
         // Reset 해도 안전하다.
+        // 컴퓨트 큐 쌍도 같은 프레임 펜스를 기다린다 — 프레임 끝이 컴퓨트 큐의 일을 모두 기다린 뒤 프레임 펜스를 신호한다(`endFrameInternal`).
         auto recycleCb = [this, entry]()
         {
             ScopedLock<mutex> lock{ _cmdListPoolMutex };
-            _listFreeCmdListEntry.push_back( entry );
+            if ( entry._type == D3D12_COMMAND_LIST_TYPE_COMPUTE )
+                _listFreeComputeCmdListEntry.push_back( entry );
+            else
+                _listFreeCmdListEntry.push_back( entry );
         };
         _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _fenceValue );
     }
@@ -1595,6 +1714,13 @@ namespace sw
             // 열어 둔 구조 버퍼 갱신 복사 리스트를 프레임 리스트 앞에 끼우고 한 번에 제출한다. **실행까지 업로드 락을 쥔다** — 닫아서 대기열에 넣은 복사
             // 리스트를 실행 전에 다른 스레드의 갱신이 `Reset` 하면 GPUScene 복사가 사라진다(submitPendingIfImmediate 와 같은 이유).
             // 텍스처 전송은 제출 때 이미 큐에 나갔다 — 이 프레임 리스트들보다 먼저 실행된다(계약 3).
+            // 아직 기다리지 않은 비동기 컴퓨트 일이 있으면 마지막 그래픽스 일 앞에서 기다린다 — 뒤의 프레임 펜스 하나가 두 큐의 끝을 덮어야
+            // 컴퓨트 리스트 얼로케이터와 지연 해제가 프레임 펜스로 충분하다.
+            if ( _computeQueue != nullptr && _computeFenceValue > _computeWaitedValue )
+            {
+                requireHr( _commandQueue->Wait( _computeFence.Get(), _computeFenceValue ), "ID3D12CommandQueue::Wait (end of frame)" );
+                _computeWaitedValue = _computeFenceValue;
+            }
             {
                 ScopedLock<mutex> uploadLock{ _uploadSlotMutex };
                 flushPendingUploads( false );
@@ -1677,6 +1803,18 @@ namespace sw
         pList->SetGraphicsRootDescriptorTable( kBindlessTextureTableParam, heapStart );
         pList->SetComputeRootSignature( _rootSignature.Get() );
         pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, heapStart );
+    }
+
+    void D3D12RHIDevice::bindBindlessComputeRootState( ID3D12GraphicsCommandList* pList )
+    {
+        if ( pList == nullptr || _cbvHeap == nullptr )
+            return;
+        ID3D12DescriptorHeap* heaps[] = { _cbvHeap.Get() };
+        pList->SetDescriptorHeaps( 1, heaps );
+        if ( _rootSignature == nullptr )
+            return;
+        pList->SetComputeRootSignature( _rootSignature.Get() );
+        pList->SetComputeRootDescriptorTable( kBindlessTextureTableParam, _cbvHeap->GetGPUDescriptorHandleForHeapStart() );
     }
 
     void D3D12RHIDevice::refreshConstantBufferViews()

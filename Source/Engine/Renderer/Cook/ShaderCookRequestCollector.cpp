@@ -74,21 +74,28 @@ namespace sw
                 bool           _bHasPixelStage{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
-            /** @brief 메시 패스 하나가 그리는 변형 하나입니다 — 셰이더 경로, define, 픽셀 스테이지 유무(깊이 패스의 알파 컷오프는 패스와 달리 PS 가 있다). */
+            /** @brief 메시 패스 하나가 그리는 변형 하나입니다 — 셰이더 경로, define, 픽셀 스테이지 유무(깊이 패스의 알파 컷오프는 패스와 달리 PS 가 있다), 헐 · 도메인 유무(변위 머티리얼). */
             struct MeshDrawVariant
             {
                 string         _shaderPath;
                 vector<string> _listDefine;
                 bool           _bHasPixelStage{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool           _bTessellates{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
-            /** @brief 메시 패스 하나가 이 변형으로 그릴 때의 VS(그리고 픽셀 스테이지가 있으면 PS) 요청을 더합니다. */
+            /** @brief 메시 패스 하나가 이 변형으로 그릴 때의 VS(그리고 픽셀 스테이지가 있으면 PS, 변위 머티리얼이면 HS · DS) 요청을 더합니다. */
             static void appendMeshPassRequest( vector<ShaderCookRequest>& outListRequest, const MeshPassInfo& passInfo, const MeshDrawVariant& drawVariant,
                                                const vector<string>& listDefine )
             {
                 appendRequestUnique( outListRequest, drawVariant._shaderPath, passInfo._vertexEntryPoint, ShaderStage::Vertex, listDefine );
                 if ( drawVariant._bHasPixelStage )
                     appendRequestUnique( outListRequest, drawVariant._shaderPath, passInfo._pixelEntryPoint, ShaderStage::Pixel, listDefine );
+                // 진입점은 런타임 변형(`FramePSOManager::createMaterialPSOVariant`)과 같은 스테이지 기본값이다.
+                if ( drawVariant._bTessellates )
+                {
+                    appendRequestUnique( outListRequest, drawVariant._shaderPath, getShaderStageInfo( ShaderStage::Hull )._pEntryPoint, ShaderStage::Hull, listDefine );
+                    appendRequestUnique( outListRequest, drawVariant._shaderPath, getShaderStageInfo( ShaderStage::Domain )._pEntryPoint, ShaderStage::Domain, listDefine );
+                }
             }
 
             /** @brief 머티리얼 하나가 요구하는 셰이더 경로와 **런타임과 같은** define 목록입니다. */
@@ -160,13 +167,19 @@ namespace sw
             }
 
             /** @brief 파이프라인 패스 하나의 스테이지 요청(컴퓨트, 또는 VS · PS · GS · HS · DS)을 더합니다. 진입점은 런타임 `makePassPSODesc` 와 같게 XML 값(비면 스테이지 기본값)이다. */
-            static void appendPipelinePassStages( vector<ShaderCookRequest>& outListRequest, const RenderGraphPassDesc& pass, const RenderPipelineAsset& pipeline,
+            static void appendPipelinePassStages( vector<ShaderCookRequest>& outListRequest, const RenderGraphPassDesc& pass, const RenderPipelineAsset& pipeline, const EngineDefaultAssets& engineDefaultAssets,
                                                   const string& shaderPath, const vector<string>& listPassDefine )
             {
                 if ( pass._type == RenderPassType::Compute )
                 {
                     appendRequestUnique( outListRequest, shaderPath, string( resolveEntryPoint( pass._computeEntryPoint, ShaderStage::Compute ) ), ShaderStage::Compute, listPassDefine );
                     return;
+                }
+                // 컴퓨트 구현(`_implementation="Compute"`)도 굽는다 — 런타임과 같은 함수(`selectRenderPassComputeShader`)의 define 이다. 픽셀 구현(아래)은 에뮬 백엔드가 쓰므로 함께 굽는다.
+                if ( pass._implementation == RenderPassExecutionMode::Compute )
+                {
+                    const RenderPassShaderSelection computeShader = selectRenderPassComputeShader( pass, engineDefaultAssets );
+                    appendRequestUnique( outListRequest, computeShader._shaderPath, getShaderStageInfo( ShaderStage::Compute )._pEntryPoint, ShaderStage::Compute, computeShader._listDefine );
                 }
                 const string vsEntry = string( resolveEntryPoint( pass._vertexEntryPoint, ShaderStage::Vertex ) );
                 appendRequestUnique( outListRequest, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine );
@@ -212,7 +225,7 @@ namespace sw
                         // 셰이더 경로와 define 은 런타임 PSO 생성(createPSOForPassType)과 **같은 함수**로 정한다. 경로는 XML 의
                         // `_shaderPath`, 비어 있으면 패스 종류 표의 기본 셰이더다. define 은 XML 퍼뮤테이션 + 패스 define(G버퍼의
                         // `SW_PASS_GBUFFER=1` 처럼 C++ 이 얹는 것)이다. 패스 종류는 로드 때 enum 으로 해석한 값을 본다.
-                        const RenderPassShaderSelection passShader = selectRenderPassShader( pass._type, &pass, engineDefaultAssets );
+                        const RenderPassShaderSelection passShader = selectRenderPassShader( pass._type, &pass, &pass, engineDefaultAssets );
                         if ( passShader._shaderPath.empty() )
                             continue;
 
@@ -230,7 +243,8 @@ namespace sw
                             passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( pass, pipelineResource.getDesc()._listAttachment );
                             outListMeshPass.push_back( std::move( passInfo ) );
                         }
-                        appendPipelinePassStages( outListRequest, pass, pipelineResource, passShader._shaderPath, passShader._listDefine );
+                        appendPipelinePassStages( outListRequest, pass, pipelineResource, engineDefaultAssets, passShader._shaderPath, passShader._listDefine );
+                        appendInternalSlotMeshPasses( pass, engineDefaultAssets, outListMeshPass, outListRequest );
                     }
                     // 모듈 확장 패스의 프로그램(ExtensionRenderPass) — 모듈이 런타임에 고르는 셰이더라 파이프라인 XML 이 `_listExtensionShader` 로 선언한다. 진입점 · define 은 기본 한 벌이다.
                     for ( const string& moduleShader : pipelineResource.getDesc()._listExtensionShader )
@@ -240,6 +254,36 @@ namespace sw
                     }
                 }
                 return true;
+            }
+
+            /**
+             * @brief 1-1) 파이프라인 패스 @p pass 를 대신 그리는 내부 슬롯(`_targetSourceType` 이 그 종류 — 깊이 프리패스 뒤의 `ForwardOpaqueNoDepthWrite`)의 메시 패스입니다.
+             * @details 내부 슬롯은 서술 없이 표로 셰이더를 고르지만 화면 속도 쓰기는 대신 그리는 패스의 출력 선언이 정한다(`selectRenderPassShader` 의 대상 서술).
+             *          런타임(`FramePSOManager::makePassPSODesc`)이 같은 대상 서술로 고르므로, 그 선언이 속도를 쓸 때의 define 조합을 여기서 더한다 — 표 단계(2)는 속도 없는 조합을 낸다.
+             */
+            static void appendInternalSlotMeshPasses( const RenderGraphPassDesc& pass, const EngineDefaultAssets& engineDefaultAssets, vector<MeshPassInfo>& outListMeshPass,
+                                                      vector<ShaderCookRequest>& outListRequest )
+            {
+                for ( uint32 typeIndex = 0; typeIndex < kRenderPassTypeCount; ++typeIndex )
+                {
+                    const RenderPassType      slotType = static_cast<RenderPassType>( typeIndex );
+                    const RenderPassTypeInfo& slotInfo = getRenderPassTypeInfo( slotType );
+                    if ( slotInfo._targetSourceType != pass._type || passWritesVelocity( slotType, &pass ) == false || slotInfo._pDefaultShader == nullptr )
+                        continue;
+                    const RenderPassShaderSelection slotShader = selectRenderPassShader( slotType, nullptr, &pass, engineDefaultAssets );
+                    MeshPassInfo                    passInfo;
+                    passInfo._shaderPath          = slotShader._shaderPath;
+                    passInfo._vertexEntryPoint    = getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint;
+                    passInfo._pixelEntryPoint     = getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint;
+                    passInfo._listPermutation     = slotShader._listDefine;
+                    passInfo._passType            = slotType;
+                    passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( slotType );
+                    passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( slotType );
+                    passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( slotType );
+                    outListMeshPass.push_back( std::move( passInfo ) );
+                    appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, slotShader._listDefine );
+                    appendRequestUnique( outListRequest, slotShader._shaderPath, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, slotShader._listDefine );
+                }
             }
 
             /**
@@ -267,7 +311,7 @@ namespace sw
                     }
                     if ( FrameRendererUtil::drawsSceneMeshes( passType ) )
                     {
-                        const RenderPassShaderSelection passShader = selectRenderPassShader( passType, nullptr, engineDefaultAssets );
+                        const RenderPassShaderSelection passShader = selectRenderPassShader( passType, nullptr, nullptr, engineDefaultAssets );
                         MeshPassInfo                    passInfo;
                         passInfo._shaderPath          = passShader._shaderPath;
                         passInfo._vertexEntryPoint    = getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint;
@@ -281,7 +325,7 @@ namespace sw
                     }
                     // define 은 런타임이 서술 없이 만드는 엔진 PSO 와 같은 함수(selectRenderPassShader — 표의 패스 define 포함)로 정한다. 빈 목록으로 쿠킹하면
                     // 패스 define 이 있는 종류(FSR 의 RCAS 등)는 런타임이 찾는 해시를 아무도 쿠킹하지 않아 Shipping 에서 PSO 가 없다.
-                    const RenderPassShaderSelection tableShader = selectRenderPassShader( passType, nullptr, engineDefaultAssets );
+                    const RenderPassShaderSelection tableShader = selectRenderPassShader( passType, nullptr, nullptr, engineDefaultAssets );
                     appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Vertex )._pEntryPoint, ShaderStage::Vertex, tableShader._listDefine );
                     appendRequestUnique( outListRequest, defaultShader, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, tableShader._listDefine );
                 }
@@ -374,7 +418,7 @@ namespace sw
                 for ( const MeshPassInfo& passInfo : listMeshPass )
                 {
                     vector<MeshDrawVariant> listDrawVariant;
-                    listDrawVariant.push_back( MeshDrawVariant{ passInfo._shaderPath, passInfo._listPermutation, passInfo._bHasPixelStage } );
+                    listDrawVariant.push_back( MeshDrawVariant{ passInfo._shaderPath, passInfo._listPermutation, passInfo._bHasPixelStage, false } );
                     for ( const MaterialVariantInfo& variant : listMaterialVariant )
                     {
                         // 패스가 그리지 않는 머티리얼(외곽선 패스 · 외곽선을 켜지 않은 머티리얼)은 런타임도 변형을 만들지 않는다.
@@ -387,7 +431,8 @@ namespace sw
                         const bool    bHasPixelStage =
                             bMaterialDepthShader ? FrameRendererUtil::hasMaterialDepthPixelStage( passInfo._passType, &variant._listDefine )
                                                     : ( passInfo._bHasPixelStage || FrameRendererUtil::addsAppearanceDitherPixelStage( passInfo._passType, &variant._listDefine ) );
-                        listDrawVariant.push_back( MeshDrawVariant{ shaderPath, mergeDefines( passInfo._listPermutation, variant._listDefine ), bHasPixelStage } );
+                        const bool bTessellates = FrameRendererUtil::tessellatesMaterial( passInfo._passType, &variant._listDefine );
+                        listDrawVariant.push_back( MeshDrawVariant{ shaderPath, mergeDefines( passInfo._listPermutation, variant._listDefine ), bHasPixelStage, bTessellates } );
                     }
 
                     for ( const MeshDrawVariant& drawVariant : listDrawVariant )

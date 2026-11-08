@@ -174,15 +174,15 @@ namespace sw
         const float3            characterUp{ 0.0f, 1.0f, 0.0f };
         for ( const LocomotionOrientationBone& entry : _listOrientationBone )
         {
-            const int32 boneIndex = skeleton.findBoneIndex( entry._bone );
-            if ( boneIndex < 0 || static_cast<size_t>( boneIndex ) >= listModel.size() )
+            const optional<uint32> boneIndex = skeleton.findBoneIndex( entry._bone );
+            if ( boneIndex.has_value() == false || *boneIndex >= listModel.size() )
                 continue;
             // 캐릭터 위 축을 부모 공간으로 옮겨 그 축으로 돌린다(뼈 자리는 그대로) — 위 축 둘레 회전은 위 축을 바꾸지 않아 사슬 아래 뼈도 같은 축을 쓴다.
-            const int32      parentIndex = skeleton.getBone( static_cast<uint32>( boneIndex ) )._parentIndex;
+            const int32      parentIndex = skeleton.getBone( *boneIndex )._parentIndex;
             const float4x4   parentModel = parentIndex >= 0 ? listModel[static_cast<size_t>( parentIndex )] : float4x4::Identity;
             const float3     axis        = float3::transformVector( characterUp, parentModel.invert() ).normalize();
             const quaternion turn        = quaternion::makeFromAxisAngle( axis, _orientationAngle * entry._weight );
-            BoneTransform    local       = pose.getBoneTransform( static_cast<uint32>( boneIndex ) );
+            BoneTransform    local       = pose.getBoneTransform( *boneIndex );
             float4x4         rotation    = float4x4::makeTrs( float3{}, local._rotation, float3{ 1.0f, 1.0f, 1.0f } ) *
                                 float4x4::makeTrs( float3{}, turn, float3{ 1.0f, 1.0f, 1.0f } );
             float3     scale{};

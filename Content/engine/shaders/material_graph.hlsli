@@ -2,14 +2,23 @@
  * material_graph.hlsli — 머티리얼 그래프가 낸 셰이더의 1단: 뼈대 선택과 그래프 출력 형식. 생성된 셰이더는 칸 선언 뒤에 이 파일을, 평가 함수 뒤에 material_graph_main.hlsli 를 include 한다.
  *
  * 조명은 pbr_lit 과 같은 코드다(기본 PBR — material_shader_main.hlsli 의 `computeSelectedLighting`). 그래프가 적는 것은 표면 값뿐이고 패스 · 깊이 · 순열은 뼈대가 정한다.
- * 스위치: SW_MATERIAL_GRAPH_EMISSIVE — 자체 발광을 쓴다. G버퍼에 칸이 없어 생성된 머티리얼이 MATERIAL_FORWARD_ONLY 를 함께 적는다.
+ * 스위치: SW_MATERIAL_GRAPH_EMISSIVE — 자체 발광을 쓴다. 디퍼드에서는 G버퍼 패스가 장면 색에 미리 적는다(G버퍼 명세 판 3 — 포워드 전용이 아니다).
+ *         SW_MATERIAL_GRAPH_HAIR — 출력 노드의 셰이딩 모델이 Hair 다(hair_shading.hlsli — Marschner 근사). 컴파일러가 칸 `_hairShift` · `_hairScatter` · `_hairStrandAxis`
+ *         를 덧붙이고 MATERIAL_FORWARD_ONLY 를 적는다. 거칠기 핀이 세로 거칠기, 기본색 핀이 흡수 색이고 금속도는 쓰지 않는다. 가닥 방향은 정점 탄젠트(축 0) · 바이탄젠트(축 1)다.
  */
 
 #ifndef SW_ENGINE_MATERIALGRAPH_HLSLI
 #define SW_ENGINE_MATERIALGRAPH_HLSLI
 
-#define SW_MATERIAL_DEFAULT_LIGHTING
-#define SW_MATERIAL_RIM_LIGHT
+#if defined( SW_MATERIAL_GRAPH_HAIR )
+    #if defined( SW_PASS_GBUFFER )
+        #error "a Hair shading model graph is forward-only: the generated material must list MATERIAL_FORWARD_ONLY"
+    #endif
+    #define SW_MATERIAL_CUSTOM_LIGHTING
+#else
+    #define SW_MATERIAL_DEFAULT_LIGHTING
+    #define SW_MATERIAL_RIM_LIGHT
+#endif
 #define SW_MATERIAL_DEFAULT_VARYINGS
 #if !defined( SW_PASS_SHADOW ) && !defined( SW_PASS_DEPTH_PREPASS )
     #define SW_MATERIAL_USES_TANGENT
@@ -19,6 +28,7 @@
 #endif
 #include "material_shader.hlsli"
 #include "normal_map.hlsli"
+#include "material_functions.hlsli" // 함수 묶음 노드(SurfaceFunction::*) — MaterialGraphNodes.cpp 의 "Surface Function" 묶음
 
 // 알파 컷오프의 깊이 패스에는 탄젠트 칸이 없다 — 그 패스는 표면의 알파만 읽어 이 값의 영향을 받지 않는다.
 #if defined( SW_MATERIAL_USES_TANGENT )

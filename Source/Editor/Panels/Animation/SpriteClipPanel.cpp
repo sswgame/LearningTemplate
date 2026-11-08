@@ -13,9 +13,6 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorRenderViews.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
@@ -37,10 +34,10 @@ namespace sw::editor
             /** @brief 문서를 읽은 열린 스프라이트 클립 창입니다. 닫혔거나 문서가 없으면 nullptr 입니다. */
             [[nodiscard]] static const SpriteClipPanel* findLoadedPanel()
             {
-                EditorContext* pContext = editor::findSubsystem<EditorContext>();
-                if ( pContext == nullptr )
+                const EditorPanelManager* pPanels = EditorPanelManager::findInEditorContext();
+                if ( pPanels == nullptr )
                     return nullptr;
-                const SpriteClipPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<SpriteClipPanel>();
+                const SpriteClipPanel* pPanel = pPanels->findPanel<SpriteClipPanel>();
                 return pPanel != nullptr && pPanel->isOpen() && pPanel->isClipDocumentLoaded() ? pPanel : nullptr;
             }
 
@@ -254,7 +251,7 @@ namespace sw::editor
         if ( _model.isPreviewPlaying() )
         {
             _model.advancePreview( ImGui::GetIO().DeltaTime );
-            editor::getSubsystem<EditorContext>().getSubsystem<EditorRenderViews>().requestAnimationFrame(); // 재생하는 동안 에디터 유휴로 들지 않는다
+            requestAnimationFrame(); // 재생하는 동안 에디터 유휴로 들지 않는다
         }
 
         const int32 frameIndex = _model.getPreviewFrame();

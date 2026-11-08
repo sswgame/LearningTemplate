@@ -54,7 +54,7 @@ namespace sw
             }
             for ( const hashed_string& input : node._listInput )
             {
-                if ( input == node._name || def.findNodeIndex( input ) < 0 )
+                if ( input == node._name || def.findNodeIndex( input ).has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "AudioGraphDef.NodeReadsWhichNot", "%#: node '%#' reads '%#', which is not another node of the graph", sourceName, pName, input.c_str() );
                     bValid = false;
@@ -68,7 +68,7 @@ namespace sw
             for ( size_t parameterIndex = 0; parameterIndex < node._listParameter.size(); ++parameterIndex )
             {
                 const AudioGraphParameterDef& parameter = node._listParameter[parameterIndex];
-                if ( AudioGraphRegistry::findParameterIndex( typeInfo, parameter._name ) < 0 )
+                if ( AudioGraphRegistry::findParameterIndex( typeInfo, parameter._name ).has_value() == false )
                 {
                     SW_LOG_ERROR_ID( "AudioGraphDef.NodeNoValueNamed", "%#: node '%#' (%#) has no value named '%#'", sourceName, pName, typeInfo._pName, parameter._name.c_str() );
                     bValid = false;
@@ -147,7 +147,7 @@ namespace sw
             if ( validateAudioGraphNode( *this, nodeIndex, sourceName ) == false )
                 bValid = false;
         }
-        if ( findNodeIndex( _output ) < 0 )
+        if ( findNodeIndex( _output ).has_value() == false )
         {
             SW_LOG_ERROR_ID( "AudioGraphDef.GraphOutputNotNode", "%#: graph output '%#' is not a node of the graph", sourceName, _output.c_str() );
             bValid = false;
@@ -204,7 +204,7 @@ namespace sw
         {
             for ( const hashed_string& input : node._listInput )
             {
-                if ( findNodeIndex( input ) < 0 )
+                if ( findNodeIndex( input ).has_value() == false )
                     return false;
             }
         }
@@ -222,21 +222,21 @@ namespace sw
         {
             for ( const hashed_string& input : _listNode[nodeIndex]._listInput )
             {
-                const int32 inputIndex = findNodeIndex( input );
-                if ( inputIndex >= 0 )
-                    graph.addDependency( static_cast<uint32>( nodeIndex ), static_cast<uint32>( inputIndex ) );
+                const optional<uint32> inputIndex = findNodeIndex( input );
+                if ( inputIndex.has_value() )
+                    graph.addDependency( static_cast<uint32>( nodeIndex ), *inputIndex );
             }
         }
         return graph;
     }
 
-    int32 AudioGraphDef::findNodeIndex( const hashed_string& name ) const
+    optional<uint32> AudioGraphDef::findNodeIndex( const hashed_string& name ) const
     {
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
             if ( _listNode[nodeIndex]._name == name )
-                return static_cast<int32>( nodeIndex );
+                return static_cast<uint32>( nodeIndex );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 } // namespace sw

@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGProgress.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Hash/HashUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"

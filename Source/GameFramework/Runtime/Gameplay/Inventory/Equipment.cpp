@@ -55,14 +55,14 @@ namespace sw
         ++_revision;
     }
 
-    int32 Equipment::findSlotIndex( const hashed_string& slot ) const
+    optional<int32> Equipment::findSlotIndex( const hashed_string& slot ) const
     {
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
             if ( _listSlot[index]._name == slot )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     bool Equipment::areConditionsMet( const ItemDef& def, const vector<EquipmentSlot>& listSlot, int32 slotIndex ) const
@@ -125,12 +125,13 @@ namespace sw
         return EquipResult::Ok;
     }
 
-    EquipResult Equipment::makeTrialEquip( int32 slotIndex, const InventorySlot& item, vector<EquipmentSlot>& outListSlot, vector<InventorySlot>& outListRemoved ) const
+    EquipResult Equipment::makeTrialEquip( const optional<int32>& foundSlot, const InventorySlot& item, vector<EquipmentSlot>& outListSlot, vector<InventorySlot>& outListRemoved ) const
     {
         outListRemoved.clear();
-        if ( slotIndex < 0 )
+        if ( foundSlot.has_value() == false )
             return EquipResult::UnknownSlot;
-        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->find( item._itemID ) : nullptr;
+        const int32    slotIndex = *foundSlot;
+        const ItemDef* pDef      = _pCatalog != nullptr ? _pCatalog->find( item._itemID ) : nullptr;
         if ( pDef == nullptr || item.isEmpty() )
             return EquipResult::UnknownItem;
         if ( pDef->_equipSlot != _listSlot[static_cast<size_t>( slotIndex )]._accept )
@@ -216,9 +217,10 @@ namespace sw
     EquipResult Equipment::unequip( const hashed_string& slot, vector<InventorySlot>& outListRemoved )
     {
         outListRemoved.clear();
-        const int32 slotIndex = findSlotIndex( slot );
-        if ( slotIndex < 0 )
+        const optional<int32> foundSlot = findSlotIndex( slot );
+        if ( foundSlot.has_value() == false )
             return EquipResult::UnknownSlot;
+        const int32 slotIndex = *foundSlot;
         if ( _listSlot[static_cast<size_t>( slotIndex )]._item.isEmpty() )
             return EquipResult::EmptySlot;
         vector<EquipmentSlot> listTrial = _listSlot;
@@ -291,9 +293,10 @@ namespace sw
 
     bool Equipment::setEquippedInstance( const hashed_string& slot, const InventorySlot& item )
     {
-        const int32 slotIndex = findSlotIndex( slot );
-        if ( slotIndex < 0 || _listSlot[static_cast<size_t>( slotIndex )]._item.isEmpty() )
+        const optional<int32> foundSlot = findSlotIndex( slot );
+        if ( foundSlot.has_value() == false || _listSlot[static_cast<size_t>( *foundSlot )]._item.isEmpty() )
             return false;
+        const int32           slotIndex = *foundSlot;
         vector<EquipmentSlot> listTrial = _listSlot;
         InventorySlot&        target    = listTrial[static_cast<size_t>( slotIndex )]._item;
         target._customization           = item._customization;
@@ -306,17 +309,17 @@ namespace sw
 
     const InventorySlot* Equipment::findEquipped( const hashed_string& slot ) const
     {
-        const int32 slotIndex = findSlotIndex( slot );
-        if ( slotIndex < 0 )
+        const optional<int32> slotIndex = findSlotIndex( slot );
+        if ( slotIndex.has_value() == false )
             return nullptr;
-        const EquipmentSlot& equipSlot = _listSlot[static_cast<size_t>( slotIndex )];
+        const EquipmentSlot& equipSlot = _listSlot[static_cast<size_t>( *slotIndex )];
         return equipSlot._item.isEmpty() ? nullptr : &equipSlot._item;
     }
 
     bool Equipment::isSuppressed( const hashed_string& slot ) const
     {
-        const int32 slotIndex = findSlotIndex( slot );
-        return slotIndex >= 0 && _listSlot[static_cast<size_t>( slotIndex )]._bSuppressed == SW_TRUE;
+        const optional<int32> slotIndex = findSlotIndex( slot );
+        return slotIndex.has_value() && _listSlot[static_cast<size_t>( *slotIndex )]._bSuppressed == SW_TRUE;
     }
 
     void Equipment::computeStats( StatBlock& outStats ) const

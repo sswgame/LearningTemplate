@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw::editor
@@ -88,9 +89,9 @@ namespace sw::editor
         [[nodiscard]] static bool applyAssetMoves( const vector<EditorAssetMove>& listMove, EditorReferenceIndex& inoutIndex, EditorAssetMovePlan& outPlan );
         /**
          * @brief 폴더 @p sourceFolderAbs 를 @p destinationParentAbs 아래로 옮기는 파일 옮기기 목록을 만듭니다(폴더 안 모든 파일, 하위 폴더 구조 그대로).
-         * @return 자기 안으로 옮기기 · 이미 있는 대상 · 빈 폴더면 false 이고 @p outFailure 에 이유입니다. 옮긴 뒤 빈 원본 폴더 지우기는 부른 쪽이 한다.
+         * @return 옮기기 목록입니다. 폴더가 아니거나 · 자기 안으로 옮기기 · 이미 있는 대상 · 빈 폴더면 그 이유입니다. 옮긴 뒤 빈 원본 폴더 지우기는 부른 쪽이 한다.
          */
-        [[nodiscard]] static bool collectFolderMoves( string_view sourceFolderAbs, string_view destinationParentAbs, vector<EditorAssetMove>& outListMove, string& outFailure );
+        [[nodiscard]] static expected<vector<EditorAssetMove>> collectFolderMoves( string_view sourceFolderAbs, string_view destinationParentAbs );
         /** @brief 에셋을 OS 휴지통으로 보냅니다. 휴지통이 없는 플랫폼은 지웁니다. */
         [[nodiscard]] static bool moveToTrash( string_view absolutePath );
         /** @brief 에셋 파일을 삭제합니다. */
