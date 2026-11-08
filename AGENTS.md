@@ -16,6 +16,7 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 | write CMake, Python or a shader, or add a resource asset | [NamingScripts](docs/agents/NamingScripts.md) | CMake · Python · HLSL · Resource Assets |
 | add a file, a header or an include | [Includes](docs/agents/Includes.md) | include order, Core tiers, locks, subsystems, ownership |
 | place, move or merge a file or folder | [FolderLayout](docs/agents/FolderLayout.md) | what each folder holds, no Util folders, DevTools vs Dev/, remaining moves in [FolderMoves](docs/FolderMoves.md) |
+| write a function that can fail or return "nothing" | [Errors](docs/agents/Errors.md) | `sw::expected` · `sw::optional` (one type), `sw::Error`, no `string& outError`, no `std::optional`, compared with Unreal `TValueOrError` · `TOptional` |
 | add or move a constant or tuning value | [Constants](docs/agents/Constants.md) | where a constant lives |
 | add a helper or a TU-private type | [Helpers](docs/agents/Helpers.md) | owner type first; ownerless → `Util` / `Internal`, one anonymous namespace per file |
 | write C++ bodies or code that runs in parallel | [CppStyle](docs/agents/CppStyle.md) | branches, loops, types, parallel-safe code, which parallel or async tool (parallel for, stage, `whenAll`, own thread) |

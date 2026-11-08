@@ -1,0 +1,46 @@
+> 질문: 값을 못 줄 수 있는 함수는 무엇을 돌려주는가?
+> 독자: 실패하거나 "없음" 을 돌려줄 수 있는 함수를 새로 쓰거나 고치는 사람.
+> 결론: 한 벌 `sw::expected<T, E>`(`Core/Foundation/Expected.h`)다. 이유가 하나("없다")뿐이면 별칭 `sw::optional<T>`, 둘 이상이면 `expected<T>`(기본 오류 `sw::Error`), 값 없는 성공은 `expected<void>`. `bool f( …, string& outError )` 출력 인자와 `std::optional` 은 쓰지 않는다(Core 0, 그 밖은 커밋 훅 래칫).
+
+## Errors — what a fallible function returns
+
+One result type for the whole codebase (user decision 2026-11-08: "absent" is a failure with exactly one reason, so it is the same type). C++17 has no `std::expected`; `sw::expected` has the same interface: `has_value` · `operator bool` · `value` · `error` · `value_or` · `operator*` · `operator->` · `and_then` · `transform` · `or_else` · `unexpected<E>`. The type is `[[nodiscard]]`, so a dropped result is a compile error.
+
+| The function can fail because … | Return | Build a failure with |
+| --- | --- | --- |
+| the thing is not there (lookup, parse of an optional field, "not yet") — one reason, the caller does not branch on why | `sw::optional<T>` (= `expected<T, Absent>`) | `return nullopt;` |
+| several reasons, or the caller must report why | `sw::expected<T>` (error `sw::Error`) | `return unexpected( Error{ ErrorKind::InvalidArgument, "not a boolean", value } );` |
+| several reasons and no value | `sw::expected<void>` | success `return {};` |
+| the reason carries data the caller needs (indices, a list, a nested report) | `sw::expected<T, DomainError>` with a domain struct | `return unexpected( DomainError{ … } );` |
+
+### `sw::Error`
+
+- `kind()` (`ErrorKind`: `InvalidArgument` · `NotFound` · `AlreadyExists` · `Cycle` · `Unsupported` · `ExternalFailure`) — what the caller branches on, never the text.
+- `message()` — a string literal (static storage), fixed English like a log id's text.
+- `detail()` — what was wrong (the key, the value, the name), copied into the error (`Error::kDetailCapacity` bytes, truncated). No heap on the failure path; the error outlives the input it describes.
+- The caller turns it into text where it logs: `SW_LOG_ERROR_ID( "Area.Event", "%#: %# (%#)", key, error.message(), error.detail() )`.
+
+### Rules
+
+- **No output parameter for the reason.** `bool f( …, string& outError )` / `outReason` is gone: the reason is the return value. Other output parameters (filling a list the caller owns) stay.
+- **No `std::optional`.** Use `sw::optional<T>`. A default-constructed `sw::optional` is empty; `sw::expected<T, E>` has no default constructor (a result is a value or a reason, never "nothing yet" — Unreal `TValueOrError` is the same).
+- **No fallback through `value_or`** for a required value — a missing required value is an error (Constants.md). `value_or` is for "absent is normal" lookups that pick a default by design.
+- **Wrong-side access stops the process.** `value()` on an error and `error()` on a value call `SW_LOW_LEVEL_FATAL` (no exceptions in the engine); `operator*` / `operator->` assert in Debug, like `std`.
+- **Name collision with the C runtime:** MSVC's `<eh.h>` declares a global `unexpected()`. Inside `namespace sw` write `unexpected( … )`; in a file that only has `using namespace sw;` (tests) write `sw::unexpected( … )`.
+
+### Compared with the engines
+
+| | Unreal | This codebase |
+| --- | --- | --- |
+| Value or reason | `TValueOrError<T, E>` (`MakeValue` · `MakeError`, `HasValue` · `GetValue` · `GetError`) | `sw::expected<T, E>` (`return value;` · `return unexpected( e );`) |
+| Value or nothing | `TOptional<T>` (a second type) | `sw::optional<T>` = `expected<T, Absent>` — the same type, so chaining (`and_then` · `transform`) and the rules are one set |
+| Error payload | often `FText` / `FString` (allocates) | `sw::Error`: kind + literal + fixed inline detail (no allocation) |
+| Void success | `TValueOrError<void, E>` | `expected<void, E>` |
+
+Godot returns `Error` codes plus out parameters; Unity (C#) uses exceptions or `bool TryX( out T )`. Both are the shapes this rule removes.
+
+### Migration state
+
+- `Source/Core` is migrated: no `std::optional`, no `string& outError` (enforced as 0 by `py -3 -m Scripts result-types`, run by the commit hook). The one exemption is `Expected.h` itself.
+- Outside Core the remaining count per file is in `Config/Dev/ResultTypeBaseline.json`: it may only go down. When a file drops, run `py -3 -m Scripts result-types --ratchet` and commit the baseline with it.
+- Until the baseline is empty, `sw::optional<T>` converts implicitly to `std::optional<T>` so a Core result can reach a not-yet-migrated `std::optional` parameter, return or member. Delete that conversion (marked `shortcut:` in `Expected.h`) with the last baseline entry.

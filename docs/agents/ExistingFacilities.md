@@ -9,6 +9,7 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Need | Use (header · API) | Do not use |
 | --- | --- | --- |
 | Log a line | `Core/Log/Logger.h` `SW_LOG_ERROR_ID` · `SW_LOG_WARNING_ID` · `SW_LOG_INFO_ID` · `SW_LOG_TRACE_ID` (every line has an `"Area.Event"` id — there is no id-less macro); once per scope: `Core/Log/LogOnce.h` `SW_LOG_ERROR_ONCE_ID` | `printf` · `fprintf` · `puts` · `std::cout` · `std::cerr` |
+| Return a value or why it failed / a lookup that may find nothing | `Core/Foundation/Expected.h` `sw::expected<T>` · `sw::expected<void>` · `sw::optional<T>` · `sw::Error` ([Errors](Errors.md)) | `std::optional` · `bool f( …, string& outError )` |
 | Report below the Log tier or before the logger starts | `Core/Foundation/Macros.h` `SW_LOW_LEVEL_ERROR` · `SW_LOW_LEVEL_WARNING` (stderr until the logger registers) | `fprintf( stderr, … )` |
 | Command-line output (help text, lists) | `Core/Process/StandardOutput.h` `StandardOutput::write` | `fputs( …, stdout )` · `std::cout` |
 | Assert | `Core/Foundation/Macros.h` `SW_ASSERT`; with a message and a log line in every build: `Core/Log/Logger.h` `SW_LOG_ASSERT` | `assert` |
