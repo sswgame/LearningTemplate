@@ -11,6 +11,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Automation/Runner/AutomationExitCode.h"
+#include "Engine/Automation/Runner/AutomationLogPolicy.h"
 #include "Engine/Automation/Runner/AutomationPerBackend.h"
 #include "Engine/Automation/Runner/AutomationRunner.h"
 #include "Engine/Automation/Runner/AutomationScenarioChain.h"
@@ -54,7 +55,8 @@ namespace sw
     SW_GLOBAL_VARIABLE( int32, gv_scenarioPresentInterval, 1, "Watched scenario runs present one of every N drawn frames (1 = every frame) - scenario fast-forward" );
 
     AutomationSession::AutomationSession()
-        : _pRunner{ nullptr }
+        : _pLogPolicy{ make_shared<AutomationLogPolicy>() }
+        , _pRunner{ nullptr }
         , _pChain{ nullptr }
         , _recorder{}
         , _listRecordWatch{}
@@ -235,7 +237,7 @@ namespace sw
             SW_LOG_INFO_ID( "AutomationSession.StageResetTookMs", "[Scenario] stage reset took %#ms", static_cast<uint32>( ( static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 - resetStartSeconds ) * 1000.0 ) );
         }
 
-        _pRunner = make_unique<AutomationRunner>();
+        _pRunner = make_unique<AutomationRunner>( _pLogPolicy );
         _pRunner->setReproduceInput( _reproduceInput );
         _pRunner->armHangWatchdog(); // 실제 프로세스를 구동하는 세션만 행 감시를 켠다(상한 + 유예 뒤 보고를 쓰고 종료 코드 12 로 끝낸다)
         _pRunner->startFromPath( AssetID{ _pChain->getCurrentPath() }, AutomationScenarioChain::makeStageReportPath( _reportPath, _pChain->getStageIndex(), _pChain->getStageCount() ) );
@@ -467,7 +469,7 @@ namespace sw
         // 늘 붙인다 — 녹화(`-scenario-record`)만 도는 실행도 프레임을 본다. 쉬는 세션의 프레임 훅은 아무것도 하지 않는다.
         _frameSubscription = engine.getFrameHooks().add( _owner.makeFrameHooks() );
         // 기본 재생기는 세션과 따로 선 객체다 — 자기 프레임 훅을 들고, 호스트 범위에 인터페이스로 건다(`ScenarioPlayback` 이 범위에서 찾는다, 정적 칸을 두지 않는다).
-        _pPlayer                = make_unique<ScenarioPlayer>( engine.getFrameHooks() );
+        _pPlayer                = make_unique<ScenarioPlayer>( engine.getFrameHooks(), _owner._pLogPolicy );
         const bool bPlayerBound = host.bind<IScenarioPlayer>( _pPlayer.get() );
         SW_ASSERT( bPlayerBound );
         (void)bPlayerBound;

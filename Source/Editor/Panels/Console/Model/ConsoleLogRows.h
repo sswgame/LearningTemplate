@@ -12,8 +12,8 @@ namespace sw::editor
 {
     /**
      * @brief Output Log 가 보관하는 줄 — 받은 로그 줄에 콘솔이 판단한 표시를 더한다.
-     * @details 예상된 줄은 에디터 안에서 도는 단위 테스트(`editor.unitTests`)가 `SW_EXPECT_LOG` 로 선언한 줄이다. 받는 순간 테스트 틀에 묻는다(`test::isExpectedLog` —
-     *          선언은 케이스 동안만 산다). 로그 줄 자체(`LogEntry` · 파일 형식)는 바꾸지 않는다 — 테스트가 배포 코드의 모양을 정하지 않게, 표시는 보는 쪽이 정한다.
+     * @details 예상된 줄은 에디터 안에서 도는 단위 테스트(`editor.unitTests`)가 `SW_EXPECT_LOG` 로 선언한 줄과 지금 시나리오 단계가 `<ExpectLog id>` 로 선언한 줄이다.
+     *          받는 순간 테스트 틀(`test::isExpectedLog` — 선언은 케이스 동안만 산다)과 세션의 로그 판정(`AutomationLogPolicy::classify` — 단계 동안만 산다)에 묻는다. 로그 줄 자체(`LogEntry` · 파일 형식)는 바꾸지 않는다 — 테스트가 배포 코드의 모양을 정하지 않게, 표시는 보는 쪽이 정한다.
      */
     struct ConsoleLogEntry : LogEntry
     {

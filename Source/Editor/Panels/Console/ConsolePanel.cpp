@@ -25,6 +25,8 @@
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/Runner/AutomationLogPolicy.h"
+#include "Engine/Automation/Runner/AutomationSession.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Input/RawInputEvent.h"
@@ -224,6 +226,7 @@ namespace sw::editor
         , _tagFilter{}
         , _cachedTagRevision{ 0 }
         , _entriesMutex{}
+        , _pScenarioLogPolicy{}
         , _logListenerSubscription{}
         , _errorSerial{ 0 }
         , _entrySerial{ 0 }
@@ -246,6 +249,9 @@ namespace sw::editor
         , _bRowsChanged{ SW_FALSE }
         , _reservedFlags{ 0 }
     {
+        // 세션이 없는 실행(자동화 실행기를 짓지 않은 구성 · 에디터 서비스 없이 세운 테스트)은 시나리오 선언이 없다 — 단위 테스트 선언만 본다.
+        if ( const AutomationSession* const pSession = findSubsystem<AutomationSession>() )
+            _pScenarioLogPolicy = pSession->getLogPolicy();
         _logListenerSubscription = Logger::registerGlobalListener(
             SW_DELEGATE_METHOD( LogWrittenDelegate, &ConsolePanel::onLogWritten, this ) );
     }
@@ -764,8 +770,11 @@ namespace sw::editor
         SW_MEMORY_SCOPE( Editor );
         ConsoleLogEntry consoleEntry;
         static_cast<LogEntry&>( consoleEntry ) = entry;
-        // 받는 순간 묻는다 — 선언은 케이스가 도는 동안만 살고, 로그는 부른 스레드에서 바로 온다.
-        consoleEntry._bExpected = ( entry._level == LogLevel::Error || entry._level == LogLevel::Warning ) && test::isExpectedLog( entry._pID );
+        // 받는 순간 묻는다 — 선언은 케이스 · 시나리오 단계가 도는 동안만 살고, 로그는 부른 스레드에서 바로 온다. 시나리오는 로그 게이트와 같은 판정(`classify`)을 읽는다
+        // (`<AllowLog>` 는 나와도 되는 줄일 뿐 기대한 줄이 아니라 경고색 그대로다). 언리얼 Automation 의 `AddExpectedError` 도 기대 오류를 로그 출력에서 따로 표시한다.
+        const bool bScenarioDeclared = _pScenarioLogPolicy != nullptr &&
+                                       _pScenarioLogPolicy->classify( entry._level, entry._pID != nullptr ? string_view{ entry._pID } : string_view{}, entry._message ) == AutomationLogResult::Declared;
+        consoleEntry._bExpected = bScenarioDeclared || ( AutomationLogPolicy::isGatedLevel( entry._level ) && test::isExpectedLog( entry._pID ) );
         ScopedLock<mutex> lock{ _entriesMutex };
         if ( entry._level == LogLevel::Error && consoleEntry._bExpected == false )
             ++_errorSerial; // 오류 때 멈춤은 진짜 오류에만

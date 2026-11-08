@@ -43,9 +43,9 @@
 
 namespace sw
 {
-    AutomationJudge::AutomationJudge()
+    AutomationJudge::AutomationJudge( shared_ptr<AutomationLogPolicy> pLogPolicy )
         : _logCapture{}
-        , _logPolicy{}
+        , _pLogPolicy{ std::move( pLogPolicy ) }
         , _listFailure{}
         , _listUpdatedGolden{}
         , _goldenFolderID{}
@@ -57,6 +57,12 @@ namespace sw
         , _listWatch{}
         , _listRemembered{}
     {
+        SW_ASSERT( _pLogPolicy != nullptr );
+    }
+
+    AutomationJudge::~AutomationJudge()
+    {
+        _pLogPolicy->clear();
     }
 
     void AutomationJudge::runExpect( AutomationStepContext& context, const AutomationStep& step )
@@ -477,7 +483,7 @@ namespace sw
 
     void AutomationJudge::applyLogGate( AutomationResult& inOutResult, string& outReason )
     {
-        AutomationLogJudgement judgement = _logCapture.judgeLines( _logPolicy );
+        AutomationLogJudgement judgement = _logCapture.judgeLines( *_pLogPolicy );
         if ( engine::areEngineServicesBound() )
         {
             for ( const string& key : engine::getSubsystem<LocalizationManager>().getMissingKeys() )
@@ -485,7 +491,7 @@ namespace sw
                 const string line         = "Missing localized text for key '" + key + "'";
                 const bool   bAlreadySeen = _logCapture.containsLine( line ); // 시나리오 구간에 남은 경고 줄은 위에서 이미 셌다
                 // 시나리오 앞에 남은 같은 사건(`LocalizationManager` 의 `Localization.MissingKey` 줄)이다 — 같은 id 로 판정한다
-                const AutomationLogResult result = _logPolicy.classify( LogLevel::Warning, "Localization.MissingKey", line );
+                const AutomationLogResult result = _pLogPolicy->classify( LogLevel::Warning, "Localization.MissingKey", line );
                 if ( bAlreadySeen || result == AutomationLogResult::Declared || result == AutomationLogResult::Allowed )
                     continue;
                 ++judgement._notAllowedCount;
@@ -519,22 +525,7 @@ namespace sw
     bool AutomationJudge::prepare( const AutomationScenario& scenario, string& outError )
     {
         (void)outError; // 읽기는 시나리오 파일을 읽을 때 끝났다 — 허용은 그 파일의 `<AllowLog>` 다
-        _logPolicy.clear();
-        for ( const AutomationAttribute& allowed : scenario.getTestOptions()._listAllowedLog )
-        {
-            _logPolicy.allowID( allowed._name );
-        }
-        for ( const AutomationStep& step : scenario.getSteps() )
-        {
-            if ( step._kind != "ExpectLog" )
-                continue;
-            AutomationExpectLogParams params;
-            string                    readError;
-            const bool                bAbsent = step.readFields( params, readError ) && params._count == 0;
-            if ( bAbsent )
-                continue;                                                // count="0" 은 "이 줄이 없어야 한다" 는 단언이지 선언이 아니다 — 그 줄이 나오면 단언과 로그 게이트가 모두 진다
-            _logPolicy.declareExpectedID( *step.findAttribute( "id" ) ); // 검사 함수가 id 를 요구했다
-        }
+        _pLogPolicy->prepare( scenario );
         prepareWatches( scenario );
         _listRemembered.clear();
         _listUpdatedGolden.clear();

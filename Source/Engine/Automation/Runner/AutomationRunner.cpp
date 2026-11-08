@@ -136,10 +136,10 @@ namespace sw
 
 namespace sw
 {
-    AutomationRunner::AutomationRunner()
+    AutomationRunner::AutomationRunner( shared_ptr<AutomationLogPolicy> pLogPolicy )
         : _scenario{}
         , _inputScript{}
-        , _judge{}
+        , _judge{ std::move( pLogPolicy ) }
         , _run{}
         , _reportWriter{}
         , _wallProfile{}
