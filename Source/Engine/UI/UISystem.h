@@ -292,7 +292,7 @@ namespace sw
         const UIScaleSettings& getScaleSettings() const { return _scaleSettings; }
         void                   setScaleSettings( const UIScaleSettings& settings ) { _scaleSettings = settings; }
         /**
-         * @brief 물리 화면 크기로 이번 프레임의 UI 뷰포트를 만듭니다. 배율은 규칙 × gv_uiScale(설정이 켜면 × 창 배율)이고, 안전 영역은 gv_uiDebugSafeZone 입니다.
+         * @brief 물리 화면 크기로 이번 프레임의 UI 뷰포트를 만듭니다. 배율은 규칙 × gv_uiScale(설정이 켜면 × 창 배율)이고, 안전 영역은 gv_uiSafeZone 입니다.
          * @param contentScale 창의 OS 배율입니다(`IWindow::getContentScale`).
          */
         UIViewport computeViewport( const float2& physicalSize, float32 contentScale, const float4& platformSafeInsets ) const;

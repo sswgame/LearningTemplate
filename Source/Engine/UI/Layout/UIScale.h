@@ -13,8 +13,11 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
-/** @brief 안전 영역 흉내(0..0.1)입니다. 각 변을 물리 크기의 이 비율만큼 안쪽으로 밉니다(언리얼 r.DebugSafeZone.TitleRatio). 테스트와 미리보기용입니다. */
-SW_EXTERN_TEST_GLOBAL_VARIABLE( float32, gv_uiDebugSafeZone );
+/**
+ * @brief UI 안전 영역 비율(0..0.1)입니다. 각 변을 물리 크기의 이 비율만큼 안쪽으로 밉니다 — TV 가장자리 잘림(오버스캔)에 맞추는 화면 설정이고, 휴대 기기 노치 흉내 · 미리보기에도 쓴다.
+ * @details 배포본에도 둔다 — 플레이어가 맞추는 "안전 영역" 화면 설정이다(Lyra 의 Safe Zone 보정 화면 · `ULyraSettingsLocal::SafeZoneScale`). 언리얼 `r.DebugSafeZone.TitleRatio` 는 같은 겹침을 흉내만 낸다.
+ */
+SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiSafeZone );
 
 namespace sw
 {
@@ -84,9 +87,9 @@ namespace sw
          * @param userScale 사용자 UI 배율입니다(gv_uiScale).
          * @param contentScale 창의 OS 배율입니다(`IWindow::getContentScale`). 설정이 켜져 있을 때만 곱합니다.
          * @param platformSafeInsets 플랫폼이 알린 안전 여백(왼쪽, 위, 오른쪽, 아래, 물리 픽셀 — 노치 · 시스템 바, `IWindow::getSafeAreaInsets`)입니다.
-         * @param debugSafeZoneRatio 각 변을 물리 크기의 이 비율만큼 안쪽으로 미는 흉내입니다(gv_uiDebugSafeZone). 변마다 둘 중 큰 것이 이긴다(언리얼 `r.DebugSafeZone` 과 같은 겹침, 기억).
+         * @param safeZoneRatio 각 변을 물리 크기의 이 비율만큼 안쪽으로 미는 안전 영역 설정입니다(gv_uiSafeZone). 변마다 둘 중 큰 것이 이긴다(언리얼 `r.DebugSafeZone` 과 같은 겹침, 기억).
          */
         static UIViewport makeViewport( const UIScaleSettings& settings, const float2& physicalSize, float32 userScale, float32 contentScale, const float4& platformSafeInsets,
-                                        float32 debugSafeZoneRatio );
+                                        float32 safeZoneRatio );
     };
 } // namespace sw

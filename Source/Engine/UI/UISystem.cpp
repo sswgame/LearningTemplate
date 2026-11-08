@@ -1081,7 +1081,7 @@ namespace sw
 
     UIViewport UISystem::computeViewport( const float2& physicalSize, float32 contentScale, const float4& platformSafeInsets ) const
     {
-        return UIScaleSettings::makeViewport( _scaleSettings, physicalSize, gv_uiScale, contentScale, platformSafeInsets, gv_uiDebugSafeZone );
+        return UIScaleSettings::makeViewport( _scaleSettings, physicalSize, gv_uiScale, contentScale, platformSafeInsets, gv_uiSafeZone );
     }
 
     UILayoutContext UISystem::makeLayoutContext() const
