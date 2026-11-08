@@ -48,7 +48,7 @@ namespace sw
      *        새 타깃으로 블렌드합니다(`CameraPoseBlender`). 블렌드 도중 다시 바꾸면 그 순간의 섞인 포즈에서 이어 갑니다. 충격(`addImpulse`)은 마지막에 더합니다.
      * @details 뷰 타깃은 다른 오브젝트의 `CameraComponent` 입니다. 그 카메라는 자기 컴포넌트(디렉터, 리그, 1인칭)가 움직이고, 매니저는 읽기만 합니다.
      *          그래서 타깃 카메라는 보통 보조(`CameraRole::Custom`)라 직접 뽑히지 않고, 매니저의 카메라가 플레이어 시점(우선순위가 가장 높은
-     *          `Game`)입니다. 틱(`PostUpdate`)에서 일을 틱 뒤로 미뤄, 같은 프레임에 타깃을 움직인 디렉터(`PostPhysics` 에서 미룸) 다음에 읽는다.
+     *          `Game`)입니다. 틱(`PostUpdate`)이 미룬 계산은 카메라 시스템(`CameraSystem`)이 늦은 틱 뒤에, 같은 프레임에 타깃을 움직인 디렉터 다음에 푼다.
      *          블렌드 없는 전환 · 타깃 카메라의 컷은 이 카메라에 컷 표시를 넣습니다.
      */
     REFLECT( Category = "Camera", DisplayName = "Camera Manager", Tooltip = "Per-player view target with blends (SetViewTargetWithBlend)" )
@@ -60,6 +60,10 @@ namespace sw
         CameraManagerComponent();
         virtual ~CameraManagerComponent() override = default;
 
+        /** @brief 씬의 컴포넌트 레지스트리에 오르고 카메라 시스템(`CameraSystem`)을 붙입니다. */
+        void onRegister( GameObjectManager& manager ) override;
+        /** @brief 레지스트리에서 내리고, 마지막 카메라 컴포넌트면 시스템을 뗍니다. */
+        void onUnregister( GameObjectManager& manager ) override;
         void onBeginPlay() override;
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
@@ -98,11 +102,15 @@ namespace sw
         /** @brief 어느 플레이어의 매니저든 @p object 를 뷰 타깃으로 보고 있으면 true 입니다. 화면 시점을 모는 디렉터가 Custom 카메라에 있을 때(뷰 타깃) 그것을 찾는 쪽(사진 모드)이 씁니다. */
         static bool isViewTarget( const GameObjectManager& manager, const GameObjectHandle& object );
 
-        /** @brief 시간을 흘려 이번 포즈를 쓰도록 합니다(틱 안이면 틱 뒤로 미루고, 틱 밖이면 바로 쓴다). */
+        /** @brief 시간을 흘려 이번 포즈를 쓰도록 합니다(틱 안이면 카메라 시스템이 늦은 틱 뒤에 쓰고, 틱 밖이면 바로 쓴다). */
         void updateCamera( float32 deltaTime );
+        /** @brief 틱 안에서 미룬 블렌드 · 쓰기가 있으면 합니다(`CameraSystem` 이 디렉터 다음에 부른다, 테스트도 부른다). */
+        void resolvePendingCamera();
+        /** @brief 틱 안에서 미룬 계산이 남아 있으면 true 입니다. */
+        bool isResolvePending() const { return _bResolvePending; }
 
     private:
-        /** @brief 미뤄 둔 블렌드 · 쓰기입니다(틱 뒤 게임 스레드). */
+        /** @brief 블렌드 · 쓰기입니다(게임 스레드, 틱 밖). */
         void resolveCamera();
         /** @brief 대기 뷰의 카메라를 애니메이션 LOD · 메시 LOD 의 대기 뷰로 넣거나(있을 때) 지웁니다(틱 뒤 게임 스레드, `resolveCamera` 끝). */
         void updatePendingLODView();
@@ -130,5 +138,6 @@ namespace sw
         CameraImpulseListener                               _impulseListener;
         Subscription                                        _shakeSubscription; ///< 알림의 카메라 흔들림 요청 구독(플레이 동안)
         float32                                             _pendingDeltaTime;
+        bool                                                _bResolvePending; ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
     };
 } // namespace sw

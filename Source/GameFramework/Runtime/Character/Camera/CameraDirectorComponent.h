@@ -148,8 +148,12 @@ namespace sw
         /** @brief 프리셋 카탈로그입니다(공유 캐시의 한 벌, 경로가 없거나 읽지 못했으면 빈 표). */
         const CameraPresetCatalog& getCatalog() const { return *_pCatalog; }
 
-        /** @brief 시간을 흘려 포즈를 구하고 같은 오브젝트의 카메라에 씁니다. 틱 안이면 틱 뒤로 미루고, 틱 밖이면 바로 보입니다. */
+        /** @brief 시간을 흘려 포즈를 구하고 같은 오브젝트의 카메라에 씁니다. 틱 안이면 카메라 시스템(`CameraSystem`)이 늦은 틱 뒤에 한 번 쓰고, 틱 밖이면 바로 보입니다. */
         void updateCamera( float32 deltaTime );
+        /** @brief 틱 안에서 미룬 포즈 계산이 있으면 합니다(`CameraSystem` 이 늦은 틱 뒤 게임 스레드에서 부른다, 테스트도 부른다). */
+        void resolvePendingCamera();
+        /** @brief 틱 안에서 미룬 포즈 계산이 남아 있으면 true 입니다. */
+        bool isResolvePending() const { return _bResolvePending; }
 
     private:
         CameraTarget computeTarget() const;
@@ -164,7 +168,7 @@ namespace sw
         void gatherPhotoModeInput( float32 unscaledDeltaTime );
         /** @brief 포토 모드가 건 UI 레이어 숨김 요청을 풉니다(건 적 없으면 아무 일도 하지 않습니다). */
         void releasePhotoModeUILayers();
-        /** @brief 미뤄 둔 포즈 계산과 쓰기를 합니다. 틱 뒤 게임 스레드에서 돕니다. */
+        /** @brief 포즈 계산과 쓰기를 합니다(게임 스레드, 틱 밖 — 암 충돌이 물리를 쓸어 본다). */
         void resolveCamera();
         /** @brief 시작 프리셋을 고릅니다. `_initialPreset`, 그것도 아니면 첫 프리셋을 씁니다. */
         hashed_string resolveStartPreset() const;
@@ -234,5 +238,6 @@ namespace sw
         const ICameraCollisionProbe*          _pExternalProbe;
         hashed_string                         _inputCheckedPresetID; ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)
         float32                               _pendingDeltaTime;     ///< 틱이 모은 시간. 미룬 계산이 쓴다
+        bool                                  _bResolvePending;      ///< 틱 안에서 계산을 미뤘다 — 카메라 시스템이 늦은 틱 뒤에 푼다
     };
 } // namespace sw
