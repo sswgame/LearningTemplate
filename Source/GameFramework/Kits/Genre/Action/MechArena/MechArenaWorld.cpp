@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaWorld.h"
 
 #include "Core/Foundation/Constants.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Ray.h"
 #include "Core/Serialization/BitStream.h"
