@@ -106,7 +106,6 @@ if(MSVC)
 		$<$<AND:$<CONFIG:Release>,$<STREQUAL:${SW_RELEASE_DEBUG_INFO},lines>>:-gline-tables-only>
 
 		$<$<CONFIG:Release>:/O2>
-		$<$<CONFIG:Release>:/arch:AVX2> # AVX2 256비트 SIMD
 		$<$<CONFIG:Release>:-clang:-fno-math-errno> # 수학 함수의 errno 설정 오버헤드 제거
 		$<$<CONFIG:Release>:-clang:-fno-trapping-math> # 부동소수점 예외 트랩 비활성화
 	)
@@ -130,7 +129,6 @@ else()
 		$<$<AND:$<CONFIG:Release>,$<NOT:$<STREQUAL:${SW_RELEASE_DEBUG_INFO},none>>>:-gz=zlib>
 
 		$<$<CONFIG:Release>:-O3>
-		$<$<CONFIG:Release>:-mavx2> # AVX2 256비트 SIMD
 		$<$<CONFIG:Release>:-fno-math-errno> # 수학 함수의 errno 설정 오버헤드 제거
 		$<$<CONFIG:Release>:-fno-trapping-math> # 부동소수점 예외 트랩 비활성화
 	)

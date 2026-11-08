@@ -33,13 +33,13 @@
     #include <wrl/client.h>
 
 // ------------------------------------------------------------------------------
-// 2) POSIX — Linux
+// 2) POSIX — Linux · Android · 웹(Emscripten). 셋이 같이 가진 헤더를 한 번에, 다른 것만 갈래로 둔다.
 // ------------------------------------------------------------------------------
-#elif defined( SW_PLATFORM_LINUX )
+#elif defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
     #include <cxxabi.h>
     #include <dirent.h>
     #include <dlfcn.h>
-    #include <execinfo.h>
+    #include <fcntl.h>
     #include <pthread.h>
     #include <sched.h>
     #include <sys/mman.h>
@@ -50,8 +50,15 @@
     #include <sys/wait.h>
     #include <unistd.h>
 
-    #include <sys/eventfd.h>
-    #include <sys/inotify.h>
+    // glibc 만 backtrace(execinfo) 가 있다 — Android(bionic API 33 미만) · 웹은 없다(호출 스택은 갈래마다 따로 잡는다).
+    #if defined( SW_PLATFORM_LINUX )
+        #include <execinfo.h>
+    #endif
+    // 커널 eventfd · inotify — 웹(브라우저)에는 없다.
+    #if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID )
+        #include <sys/eventfd.h>
+        #include <sys/inotify.h>
+    #endif
 #else
     #error "NOT SUPPORTED PLATFORM"
 #endif

@@ -283,6 +283,16 @@ endif()
 # (한 preset의 clean이 Debug/Release/Shipping 패키지를 전부 지움)
 # overlay ports는 install 게이트 전에 보여야 함
 # ------------------------------------------------------------------------------
+# 교차 툴체인 환경(EMSDK · ANDROID_NDK_HOME) — 프리셋의 environment 는 `cmake --preset` 에만 실리고, 빌드 중 재구성(ninja 가 부르는 cmake)에는 없다.
+# 그러면 vcpkg 포트 툴체인(scripts/toolchains/android.cmake · emscripten.cmake)이 NDK · emsdk 를 못 찾아 재구성이 선다 — 구성 때 값을 캐시에 남기고 재구성에서 되살린다.
+foreach(swCrossEnv IN ITEMS EMSDK ANDROID_NDK_HOME)
+    if(DEFINED ENV{${swCrossEnv}} AND NOT "$ENV{${swCrossEnv}}" STREQUAL "")
+        set(SW_CROSS_ENV_${swCrossEnv} "$ENV{${swCrossEnv}}" CACHE INTERNAL "configure-time ${swCrossEnv} (restored on regeneration)")
+    elseif(DEFINED SW_CROSS_ENV_${swCrossEnv})
+        set(ENV{${swCrossEnv}} "${SW_CROSS_ENV_${swCrossEnv}}")
+    endif()
+endforeach()
+
 if(NOT DEFINED VCPKG_TARGET_TRIPLET OR VCPKG_TARGET_TRIPLET STREQUAL "")
     # 이 파일은 project() **앞**에서 include 되므로 CMAKE_SYSTEM_PROCESSOR 가 아직 비어 있다.
     # 그 상태로 매치를 돌리면 언제나 마지막 else() 로 떨어져 **호스트가 무엇이든 x64** 가 됐다 —

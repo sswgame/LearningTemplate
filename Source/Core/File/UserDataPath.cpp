@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#if defined( SW_PLATFORM_LINUX )
+#if defined( SW_PLATFORM_LINUX ) || defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
     #include "Core/Foundation/PlatformOSHeaders.h"
 #endif
 #include "Core/File/UserDataPath.h"
@@ -62,6 +62,10 @@ namespace sw
         const string directory = Internal::makeUnderEnvironment( "LOCALAPPDATA", nullptr, "SWEngine", gameName );
 #elif defined( SW_PLATFORM_LINUX )
         const string directory = Internal::makeUnderEnvironment( "XDG_DATA_HOME", ".local/share", "swengine", gameName );
+#elif defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+        // 샌드박스 플랫폼은 사용자 폴더 규칙이 없다 — 플랫폼 부팅이 `kUserDataRootVariable` 을 앱 폴더로 정한다(Android `internalDataPath`, 웹 영속 마운트).
+        // 위 덮어쓰기가 이미 답했어야 한다. 여기 닿았으면 부팅이 정하지 않은 것이다.
+        const string directory{};
 #else
     #error "Unsupported platform"
 #endif
@@ -79,6 +83,10 @@ namespace sw
         const string directory = Internal::makeUnderEnvironment( "LOCALAPPDATA", nullptr, "SWEngine", gameName );
 #elif defined( SW_PLATFORM_LINUX )
         const string directory = Internal::makeUnderEnvironment( "XDG_CONFIG_HOME", ".config", "swengine", gameName );
+#elif defined( SW_PLATFORM_ANDROID ) || defined( SW_PLATFORM_WEB )
+        // 샌드박스 플랫폼은 사용자 폴더 규칙이 없다 — 플랫폼 부팅이 `kUserDataRootVariable` 을 앱 폴더로 정한다(Android `internalDataPath`, 웹 영속 마운트).
+        // 위 덮어쓰기가 이미 답했어야 한다. 여기 닿았으면 부팅이 정하지 않은 것이다.
+        const string directory{};
 #else
     #error "Unsupported platform"
 #endif

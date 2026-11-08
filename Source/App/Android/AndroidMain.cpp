@@ -9,17 +9,21 @@
 #include "App/AppEntry.h"
 
 #if defined( SW_PLATFORM_ANDROID )
+    #include "Core/File/UserDataPath.h"
     #include "Core/String/StringUtil.h"
     #include "Core/Container/vector.h"
 
     #include "Engine/Window/Android/AndroidWindow.h"
 
     #include <android_native_app_glue.h>
+    #include <stdlib.h>
 
 // NOLINTNEXTLINE(readability-identifier-naming): NDK 글루가 부르는 이름이다
 extern "C" void android_main( android_app* pApp )
 {
     sw::AndroidWindow::setApplication( pApp );
+    // 세이브 · 설정 자리 — 앱 샌드박스의 내부 저장소(유니티 persistentDataPath 와 같은 자리). 사용자 폴더 규칙이 없는 플랫폼이라 부팅이 정한다(UserDataPath).
+    (void)::setenv( sw::kUserDataRootVariable, pApp->activity->internalDataPath, 1 );
     if ( sw::AndroidWindow::waitForInitialSurface() == false )
         return; // 표면이 생기기 전에 액티비티가 닫혔다
     // argv 는 C 와 같은 모양이다 — 첫 칸이 프로그램 이름이고 끝은 nullptr 이다. 글은 이 함수가 끝날 때까지 산다(AppEntry::run 이 그 안에서 돈다).

@@ -23,6 +23,7 @@ target_link_options(sw_platform_web INTERFACE
 	-sJSPI=1
 	# 콘텐츠: 쿠킹한 팩을 가상 파일 시스템에 얹는다(--preload-file 은 패키징 스크립트가 붙인다 — Scripts/package).
 	-sFORCE_FILESYSTEM=1
+	-lidbfs.js # 세이브 · 설정의 영속 폴더(App/AppEntry.cpp 의 IDBFS 마운트)
 	-sEXIT_RUNTIME=1
 )
 list(APPEND sw_flag_libraries sw_platform_web)

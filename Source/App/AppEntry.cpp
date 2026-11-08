@@ -5,7 +5,29 @@
 #include "App/App.h"
 
 #if defined( SW_PLATFORM_WEB )
+    #include "Core/File/UserDataPath.h"
+
     #include <emscripten/emscripten.h>
+    #include <stdlib.h>
+
+namespace
+{
+    /** @brief 웹 영속 폴더입니다 — IndexedDB 를 비추는 IDBFS 마운트(유니티 WebGL 의 /idbfs 와 같은 모양). */
+    constexpr const char* kWebPersistentRoot = "/persistent";
+} // namespace
+
+// IDBFS 를 붙이고 지난 세션의 파일을 IndexedDB 에서 읽어 올 때까지 기다린다(JSPI — 부팅 전에 끝나야 세이브 · 설정이 보인다).
+// 쓰기는 페이지가 숨거나 닫힐 때 IndexedDB 로 내린다(브라우저는 닫기 전에 비동기 일을 기다려 주지 않으므로 숨김 때 먼저 내린다).
+// NOLINTNEXTLINE(readability-identifier-naming): Emscripten 매크로가 만드는 JS 연결 함수다
+EM_ASYNC_JS( void, swMountWebPersistentRoot, ( const char* pRoot ), {
+    const root = UTF8ToString( pRoot );
+    FS.mkdirTree( root );
+    FS.mount( IDBFS, {}, root );
+    await new Promise( ( resolve ) = > FS.syncfs( true, ( error ) = > { if ( error ) console.error( "IDBFS load failed", error ); resolve(); } ) );
+    const flush = () = > FS.syncfs( false, ( error ) = > { if ( error ) console.error( "IDBFS save failed", error ); } );
+    document.addEventListener( "visibilitychange", () = > { if ( document.visibilityState === "hidden" ) flush(); } );
+    window.addEventListener( "pagehide", flush );
+} );
 #endif
 
 namespace sw
@@ -13,6 +35,9 @@ namespace sw
     int32 AppEntry::run( int32 argc, utf8* pArgv[] )
     {
 #if defined( SW_PLATFORM_WEB )
+        // 세이브 · 설정 자리 — 브라우저에는 사용자 폴더가 없어 부팅이 영속 마운트를 정한다(UserDataPath).
+        swMountWebPersistentRoot( kWebPersistentRoot );
+        (void)::setenv( kUserDataRootVariable, kWebPersistentRoot, 1 );
         // 브라우저는 `main` 이 돌아와야 화면을 그린다 — 앱은 힙에 두고 프레임 콜백이 루프를 돈다(emscripten_set_main_loop, 언리얼 HTML5 와 같은 모양, 기억).
         unique_ptr<App>& app = getWebApp();
         app                  = make_unique<App>();
