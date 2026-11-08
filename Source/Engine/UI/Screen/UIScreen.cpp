@@ -18,6 +18,7 @@ namespace sw
         : _tree{}
         , _desc{ desc }
         , _documentPath{}
+        , _resourceTagOverride{}
         , _listBinding{}
         , _listStyleSheet{}
         , _styleSet{}

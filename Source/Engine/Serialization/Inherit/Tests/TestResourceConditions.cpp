@@ -544,3 +544,47 @@ SW_TEST_CASE( ResourceDigestComparerTest, LinesPerPeerAreBounded )
     SW_EXPECT_FALSE( comparer.addPeerLine( 1, ResourceDigestEntry{ "testproject/flood/over", 1u }, 0 ) );
     SW_EXPECT_TRUE( comparer.addPeerLine( 2, ResourceDigestEntry{ "testproject/flood/over", 1u }, 0 ) );
 }
+
+/** @brief [ResourceConditionTest] 바꿔 끼운 태그(미리보기 문맥)로 합치면 그 축의 변형을 고르고, 엔진 태그는 그대로이며 다시 읽기 · 접속 대조 기록에 남지 않는다 */
+SW_TEST_CASE( ResourceConditionTest, TagOverridePicksVariantWithoutTouchingEngineTags )
+{
+    const XTestTagScope   scope{ XTestUtil::makeTags( { "screen.regular", "orientation.landscape" } ) };
+    const AssetID         id{ "testproject/ui/override.ui.xml" };
+    constexpr const utf8* kText       = R"(<Doc a="wide"><_when _if="screen.compact" a="narrow" /></Doc>)";
+    const ResourceTagSet  tagOverride = XTestUtil::makeTags( { "screen.compact" } );
+    string                flatText;
+    bool                  bComposed = false;
+    SW_REQUIRE_TRUE( ResourceComposer::compose( kText, id.view(), ResourceContext::forDocument().withAsset( id ).withTagOverride( tagOverride ), flatText, bComposed ) );
+    SW_REQUIRE_TRUE( bComposed );
+    SW_EXPECT_TRUE( flatText.find( "narrow" ) != string::npos );
+
+    const ResourceTagSet engineTags = engine::getSubsystem<ResourceTags>().capture();
+    SW_EXPECT_TRUE( engineTags.contains( "screen.regular" ) );
+    SW_EXPECT_FALSE( engineTags.contains( "screen.compact" ) );
+    // 기록에 없으면 대조하지 않는다(어긋남 아님) — 바꿔 끼운 합성은 엔진 판의 기록이 아니다.
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceComposition>().isDigestMismatch( ResourceDigestEntry{ id.str(), 1u } ) );
+
+    SW_REQUIRE_TRUE( ResourceComposer::compose( kText, id.view(), ResourceContext::forDocument().withAsset( id ), flatText, bComposed ) );
+    SW_EXPECT_TRUE( flatText.find( "wide" ) != string::npos );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceComposition>().isDigestMismatch( ResourceDigestEntry{ id.str(), 1u } ) );
+}
+
+/** @brief [ResourceTagsTest] 축 바꿔 끼우기는 그 축의 값만 바꾸고(`overrideAxes`), 엔진 값 넣기(`setAxisTags`)는 값 하나 축 · 닫힌 목록만 받는다 */
+SW_TEST_CASE( ResourceTagsTest, AxisOverrideReplacesOnlyItsAxes )
+{
+    const XTestTagScope  scope{ XTestUtil::makeTags( { "screen.regular", "quality.low" } ) };
+    const ResourceTagSet tags = engine::getSubsystem<ResourceTags>().captureWith( XTestUtil::makeTags( { "screen.compact", "orientation.portrait" } ) );
+    SW_EXPECT_TRUE( tags.contains( "screen.compact" ) );
+    SW_EXPECT_FALSE( tags.contains( "screen.regular" ) );
+    SW_EXPECT_TRUE( tags.contains( "orientation.portrait" ) );
+    SW_EXPECT_TRUE( tags.contains( "quality.low" ) );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceTags>().capture().contains( "screen.regular" ) );
+
+    SW_REQUIRE_TRUE( engine::getSubsystem<ResourceTags>().setAxisTags( XTestUtil::makeTags( { "screen.compact" } ) ) );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceTags>().capture().contains( "screen.compact" ) );
+    SW_EXPECT_LOG( "ResourceTags.InvalidValue4" );
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceTags>().setAxisTags( XTestUtil::makeTags( { "screen.tiny" } ) ) );
+    SW_EXPECT_LOG( "ResourceTags.WrongArity" );
+    SW_EXPECT_FALSE( engine::getSubsystem<ResourceTags>().setAxisTags( XTestUtil::makeTags( { "layer.night" } ) ) );
+    SW_EXPECT_TRUE( engine::getSubsystem<ResourceTags>().capture().contains( "screen.compact" ) );
+}

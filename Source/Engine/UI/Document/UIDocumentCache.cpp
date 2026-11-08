@@ -12,10 +12,10 @@ namespace sw
 {
     namespace
     {
-        expected<shared_ptr<const void>> parseDocument( string_view text, string_view path )
+        expected<shared_ptr<const void>> parseDocument( string_view text, string_view path, const ResourceContext& context )
         {
             shared_ptr<UIDocumentAsset> document = make_shared<UIDocumentAsset>();
-            if ( expected<void> parsed = UIDocumentLoader::parse( text, path, *document ); parsed.has_value() == false )
+            if ( expected<void> parsed = UIDocumentLoader::parse( text, path, context, *document ); parsed.has_value() == false )
                 return unexpected( parsed.error() );
             return shared_ptr<const void>( std::move( document ) );
         }
@@ -53,7 +53,12 @@ namespace sw
 
     expected<shared_ptr<const UIDocumentAsset>> UIDocumentCache::findOrLoad( string_view path )
     {
-        return _cache.findOrLoadAsset( path ).transform( []( const shared_ptr<const void>& pAsset )
+        return findOrLoad( path, ResourceTagSet{} );
+    }
+
+    expected<shared_ptr<const UIDocumentAsset>> UIDocumentCache::findOrLoad( string_view path, const ResourceTagSet& tagOverride )
+    {
+        return _cache.findOrLoadAsset( path, tagOverride ).transform( []( const shared_ptr<const void>& pAsset )
         { return std::static_pointer_cast<const UIDocumentAsset>( pAsset ); } );
     }
 } // namespace sw

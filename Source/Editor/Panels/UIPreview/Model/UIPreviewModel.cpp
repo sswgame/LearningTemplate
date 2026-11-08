@@ -2,7 +2,6 @@
 
 #include "Editor/Panels/UIPreview/Model/UIPreviewModel.h"
 
-#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/formatString.h"
@@ -19,6 +18,7 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
@@ -392,7 +392,8 @@ namespace sw::editor
             return false;
         }
         const optional<AbsolutePath> path = editor::getSubsystem<AssetPaths>().toDiskPath( _openedDocument );
-        if ( path.has_value() == false || FileUtil::writeTextFile( path->str(), *text ) == false )
+        // 미리보기 사본은 기기 견본의 태그로 합친 변형이다 — 그 태그로 원본의 조건(`_when`)을 되돌려 쓴다(FileUtil 로 바로 쓰면 푼 변형이 파일에 박힌다).
+        if ( path.has_value() == false || ResourceComposer::saveText( path->str(), *text, &pScreen->getResourceTagOverride() ) == false )
         {
             SW_LOG_ERROR_ID( "UIPreviewModel.UIPreviewCouldNot", "UI Preview: '%#' could not be written", _openedDocument.c_str() );
             return false;

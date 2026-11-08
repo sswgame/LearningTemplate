@@ -121,6 +121,17 @@ namespace sw
         { return existing.size() > axisName.size() && StringUtil::startsWith( existing, axisName ) && existing[axisName.size()] == ResourceTags::kSeparator; } );
     }
 
+    void ResourceTagSet::overrideAxes( const ResourceTagSet& overrideTags )
+    {
+        for ( const string& tag : overrideTags._listTag )
+        {
+            const size_t separator = tag.find( ResourceTags::kSeparator );
+            SW_ASSERT( separator != string::npos && "a resource tag is axis.value" );
+            removeAxis( string_view( tag ).substr( 0, separator ) );
+            add( tag );
+        }
+    }
+
     bool ResourceTagTest::evaluate( const ResourceTagSet& tags ) const
     {
         GameplayContext context;
@@ -220,10 +231,40 @@ namespace sw
     {
     }
 
+    bool ResourceTags::setAxisTags( const ResourceTagSet& tags )
+    {
+        for ( const string& tag : tags.getTags() )
+        {
+            const size_t separator = tag.find( kSeparator );
+            if ( separator == string::npos )
+            {
+                SW_LOG_ERROR_ID( "ResourceTags.NotATag", "Resource tag '%#' is not axis.value - tags not set", tag );
+                return false;
+            }
+            const ResourceTagAxis* pAxis = ResourceTagsInternal::findAxisFor( string_view( tag ).substr( 0, separator ), ResourceTagArity::Single );
+            if ( pAxis == nullptr )
+                return false;
+            if ( const expected<void> valid = ResourceTagsInternal::isValidValue( *pAxis, string_view( tag ).substr( separator + 1 ) ); valid.has_value() == false )
+            {
+                SW_LOG_ERROR_ID( "ResourceTags.InvalidValue4", "Resource tags not set: %# '%#'", valid.error().message(), valid.error().detail() );
+                return false;
+            }
+        }
+        replace( captureWith( tags ), nullptr );
+        return true;
+    }
+
     ResourceTagSet ResourceTags::capture() const
     {
         ScopedLock<mutex> lock{ _mutex };
         return _tags;
+    }
+
+    ResourceTagSet ResourceTags::captureWith( const ResourceTagSet& overrideTags ) const
+    {
+        ResourceTagSet tags = capture();
+        tags.overrideAxes( overrideTags );
+        return tags;
     }
 
     ResourceTagSet ResourceTags::exchange( const ResourceTagSet& tags )

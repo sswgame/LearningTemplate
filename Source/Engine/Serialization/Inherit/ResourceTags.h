@@ -73,6 +73,14 @@ namespace sw
         void remove( string_view tag );
         /** @brief 축 @p axisName 의 태그를 모두 끕니다. */
         void removeAxis( string_view axisName );
+        /**
+         * @brief @p overrideTags 의 태그마다 그 축의 태그를 끄고 그 태그를 켭니다(값 하나 축을 바꿔 끼운다).
+         * @details 미리보기 문맥(에디터 UI 미리보기의 기기 견본)이 엔진 값에서 몇 축만 바꿔 합칠 때 쓴다(`ResourceContext::withTagOverride`).
+         */
+        void overrideAxes( const ResourceTagSet& overrideTags );
+        /** @brief 켜진 태그가 모두 같으면 true 입니다. */
+        bool operator==( const ResourceTagSet& other ) const { return _listTag == other._listTag; }
+        bool operator!=( const ResourceTagSet& other ) const { return ( *this == other ) == false; }
         /** @brief 켜진 태그입니다(이름 순). */
         const vector<string>& getTags() const { return _listTag; }
 
@@ -133,8 +141,15 @@ namespace sw
         [[nodiscard]] bool setAxisValues( string_view axisName, const vector<string>& listValue );
         /** @brief 여러 값 축 @p axisName 의 값 @p value 를 켜거나 끕니다. 틀리면 `setAxisValue` 처럼 false 입니다. */
         [[nodiscard]] bool setTagActive( string_view axisName, string_view value, bool bActive );
+        /**
+         * @brief 값 하나 축들의 값을 한 번에 바꿉니다 — @p tags 의 태그(`축.값`)마다 그 축을 그 값으로 둡니다(알림은 한 번).
+         * @return 모양이 틀렸거나 · 모르는 축 · 여러 값 축 · 닫힌 목록 밖의 값이면 오류를 남기고 false 입니다(값을 바꾸지 않는다).
+         */
+        [[nodiscard]] bool setAxisTags( const ResourceTagSet& tags );
         /** @brief 지금 켜진 태그의 사본입니다. */
         [[nodiscard]] ResourceTagSet capture() const;
+        /** @brief 지금 켜진 태그에 @p overrideTags 의 축을 바꿔 끼운 사본입니다(`ResourceTagSet::overrideAxes`). 엔진 값은 그대로입니다. */
+        [[nodiscard]] ResourceTagSet captureWith( const ResourceTagSet& overrideTags ) const;
         /** @brief 태그 집합을 통째로 바꾸고 앞의 것을 돌려줍니다. 테스트가 문맥을 세우고 되돌릴 때 씁니다 — 바뀐 태그를 쓴 리소스는 다시 읽을 목록에 오른다. */
         ResourceTagSet exchange( const ResourceTagSet& tags );
 
