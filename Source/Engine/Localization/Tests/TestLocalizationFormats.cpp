@@ -108,9 +108,10 @@ SW_TEST_CASE( SelectOrdinalTest, OrdinalRuleIsSeparateFromPlural )
     SW_EXPECT_EQUAL( sw::string( "2e" ), Internal::ordinal( "fr", "{n, selectordinal, one {#er} other {#e}}", 2 ) );
     SW_EXPECT_EQUAL( sw::string( "3번째" ), Internal::ordinal( "ko", "{n, selectordinal, other {#번째}}", 3 ) );
     SW_EXPECT_EQUAL( sw::string( "1." ), Internal::ordinal( "de", "{n, selectordinal, one {#st} other {#.}}", 1 ) );
-    // 스페인어 서수(CLDR ordinals.xml): 1 · 3 · 21 · 23 이 one(1.er · 3.er), 11 · 13 은 other
+    // 스페인어 서수(CLDR ordinals.xml `n % 10 = 1,3 and n % 100 != 11`): 1 · 3 · 13 · 21 이 one(13.er = decimotercero), 11 만 other
     SW_EXPECT_EQUAL( sw::string( "3.er" ), Internal::ordinal( "es", "{n, selectordinal, one {#.er} other {#.º}}", 3 ) );
-    SW_EXPECT_EQUAL( sw::string( "13.º" ), Internal::ordinal( "es", "{n, selectordinal, one {#.er} other {#.º}}", 13 ) );
+    SW_EXPECT_EQUAL( sw::string( "13.er" ), Internal::ordinal( "es", "{n, selectordinal, one {#.er} other {#.º}}", 13 ) );
+    SW_EXPECT_EQUAL( sw::string( "11.º" ), Internal::ordinal( "es", "{n, selectordinal, one {#.er} other {#.º}}", 11 ) );
 }
 
 /**

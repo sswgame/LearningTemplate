@@ -306,7 +306,7 @@ SW_TEST_CASE( RHITransferTest, FenceQueueRaisesWatermarkOnlyOverAContiguousPrefi
         bool _bDone;
     };
 
-    RHITransferSerials               serials;
+    RHITransferSerials               serials{ 1u }; // 장치 세대 — 시험 장치 하나
     RHITransferFenceQueue<FakeProbe> queue{ serials };
     const uint64                     first  = queue.enqueue( FakeProbe{ false } );
     const uint64                     second = queue.enqueue( FakeProbe{ true } ); // 뒤의 제출이 먼저 끝났다

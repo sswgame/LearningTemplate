@@ -118,8 +118,8 @@ SW_TEST_CASE( PathRequestQueueTest, ReusedSlotRejectsOldHandle )
     const sw::PathRequestHandle first = queue.request( makeJob( 3 ) );
     queue.cancel( first );
     const sw::PathRequestHandle second = queue.request( makeJob( 4 ) );
-    SW_EXPECT_EQUAL( first._slot, second._slot ); // 같은 칸을 다시 쓴다
-    SW_EXPECT_TRUE( first._generation != second._generation );
+    SW_EXPECT_EQUAL( first.index(), second.index() ); // 같은 칸을 다시 쓴다
+    SW_EXPECT_TRUE( first.generation() != second.generation() );
 
     queue.launch( "Test", nullptr );
     (void)queue.complete();

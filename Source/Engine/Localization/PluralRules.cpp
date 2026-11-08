@@ -392,7 +392,7 @@ namespace sw
                 const expected<void> samplesRead = Internal::readSamples( samples, listSample );
                 if ( samplesRead.has_value() == false )
                 {
-                    outError = string( samplesRead.error().message() ) + " '" + string( samplesRead.error().detail() ) + "'";
+                    outError = string( samplesRead.error().message().data(), samplesRead.error().message().size() ) + " '" + string( samplesRead.error().detail().data(), samplesRead.error().detail().size() ) + "'";
                     bRead    = false;
                 }
             }

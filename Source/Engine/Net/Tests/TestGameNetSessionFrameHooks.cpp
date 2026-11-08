@@ -4,7 +4,9 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/EngineFrameHooks.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Net/GameNetSession.h"
+#include "Engine/Serialization/Inherit/ResourceComposition.h"
 
 using namespace sw;
 
@@ -36,7 +38,7 @@ SW_TEST_CASE( GameNetSessionFrameHooksTest, ListenHostShowsTheFrameClock )
     using Util = GameNetSessionFrameHooksTestUtil;
     Logger::clearClockNumber();
 
-    GameNetSession         session;
+    GameNetSession         session{ engine::getSubsystem<ResourceComposition>() };
     const EngineFrameHooks hooks = session.makeClientHostFrameHooks();
     EngineFrameContext     context{};
 
@@ -62,7 +64,7 @@ SW_TEST_CASE( GameNetSessionFrameHooksTest, ListenHostShowsTheFrameClock )
 /** @brief [GameNetSessionFrameHooksTest] 프레임 끝 훅은 종료 코드를 정하지 않고, 서버 틱을 모르는 세션에서는 상태 해시를 남기지 않는다 */
 SW_TEST_CASE( GameNetSessionFrameHooksTest, FrameEndDoesNotAskToQuit )
 {
-    GameNetSession         session;
+    GameNetSession         session{ engine::getSubsystem<ResourceComposition>() };
     const EngineFrameHooks hooks = session.makeClientHostFrameHooks();
     EngineFrameContext     context{};
     SW_EXPECT_FALSE( hooks._onFrameEnd( context ).has_value() ); // 종료 코드를 내지 않는다(kEngineFrameRunning)

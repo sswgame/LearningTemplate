@@ -191,7 +191,7 @@ namespace sw
                 const expected<void> samplesMatch = ruleSet.verifySamples();
                 if ( samplesMatch.has_value() == false )
                 {
-                    outError = string( pElementName ) + ": " + samplesMatch.error().message() + " (" + string( samplesMatch.error().detail() ) + ")";
+                    outError = string( pElementName ) + ": " + string( samplesMatch.error().message().data(), samplesMatch.error().message().size() ) + " (" + string( samplesMatch.error().detail().data(), samplesMatch.error().detail().size() ) + ")";
                     return false;
                 }
                 outRules = std::move( ruleSet );

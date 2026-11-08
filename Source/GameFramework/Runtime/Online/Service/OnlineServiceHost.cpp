@@ -182,13 +182,13 @@ namespace sw
 
         StreamConnectionHandle makeOuterHandle( uint32 listener, StreamConnectionHandle inner ) const
         {
-            SW_ASSERT( inner._index <= ( constant::invalid_index::kUint32 - listener ) / _listenerCount );
-            return StreamConnectionHandle::make( inner._index * _listenerCount + listener, inner._generation );
+            SW_ASSERT( inner.index() <= ( constant::invalid_index::kUint32 - listener ) / _listenerCount );
+            return StreamConnectionHandle::make( inner.index() * _listenerCount + listener, inner.generation() );
         }
 
-        StreamConnectionHandle makeInnerHandle( StreamConnectionHandle outer ) const { return StreamConnectionHandle::make( outer._index / _listenerCount, outer._generation ); }
+        StreamConnectionHandle makeInnerHandle( StreamConnectionHandle outer ) const { return StreamConnectionHandle::make( outer.index() / _listenerCount, outer.generation() ); }
 
-        IStreamTransport& getTransport( StreamConnectionHandle outer ) const { return *_arrTransport[outer._index % _listenerCount]; }
+        IStreamTransport& getTransport( StreamConnectionHandle outer ) const { return *_arrTransport[outer.index() % _listenerCount]; }
 
     private:
         ChildHandler      _arrHandler[kMaxListener];
