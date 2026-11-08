@@ -112,7 +112,7 @@ namespace sw
                     reader.addError( "Character.FitRegionSourceInvalid", child, "needs exactly one of 'bones' (bone weights) or 'group' (painted vertex group)" );
                 if ( region._name.empty() )
                     continue;
-                if ( findRegionIndex( region._name ) >= 0 )
+                if ( findRegionIndex( region._name ).has_value() )
                     reader.addError( "Character.FitRegionRepeated", child, string( "repeats region '" ) + region._name.c_str() + "'" );
                 else
                     _listRegion.push_back( std::move( region ) );
@@ -198,14 +198,14 @@ namespace sw
         return VectorUtil::findBy<&FitLayerDef::_name>( _listLayer, name );
     }
 
-    int32 FitTables::findRegionIndex( const hashed_string& name ) const
+    optional<uint32> FitTables::findRegionIndex( const hashed_string& name ) const
     {
         for ( size_t regionIndex = 0; regionIndex < _listRegion.size(); ++regionIndex )
         {
             if ( _listRegion[regionIndex]._name == name )
-                return static_cast<int32>( regionIndex );
+                return static_cast<uint32>( regionIndex );
         }
-        return -1;
+        return nullopt;
     }
 
     const FitProfileDef* FitTables::findProfile( const hashed_string& name ) const

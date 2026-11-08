@@ -128,7 +128,7 @@ namespace sw
         }
         for ( const hashed_string& region : _listHiddenRegion )
         {
-            if ( tables.findRegionIndex( region ) >= 0 )
+            if ( tables.findRegionIndex( region ).has_value() )
                 continue;
             bValid = false;
             FitPartDefInternal::appendNameError( pOutError, "region", region );
