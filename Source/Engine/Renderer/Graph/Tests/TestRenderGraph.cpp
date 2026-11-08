@@ -212,7 +212,7 @@ SW_TEST_CASE( RenderGraphTest, CycleNamesThePassesThatWaitOnEachOther )
 }
 
 /**
- * @brief [RenderGraphTest] 컴파일된 순서를 레벨 · 패스 · 읽고 쓰는 자원으로 적는다(`-gv_dumpRenderGraph` 가 로그로 남기는 글)
+ * @brief [RenderGraphTest] 컴파일된 순서를 레벨 · 패스 · 읽고 쓰는 자원으로 적는다(개발 명령 `render.graph` 가 답하는 글)
  */
 SW_TEST_CASE( RenderGraphTest, DescribeCompiledOrderListsLevelsAndResources )
 {

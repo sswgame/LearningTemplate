@@ -597,12 +597,6 @@ namespace sw
         pDevice->executeCommandList( pCmd );
     }
 
-    /**
-     * @brief `-gv_dumpRenderGraph=1` 이면 파이프라인을 연결할 때마다(시작, 파이프라인 교체) 컴파일된 레벨 순서를 로그로 남깁니다.
-     * @details 레벨, 패스, 읽고 쓰는 자원, 컬링된 패스를 보여 준다(`RenderGraph::describeCompiledOrder`). "왜 이 패스가 저것보다 먼저 도나", "왜 안 도나" 에 답한다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_dumpRenderGraph, false, "렌더 그래프를 컴파일할 때마다 레벨 · 패스 · 읽고 쓰는 자원을 로그로 남긴다" );
-
     bool FramePassExecutor::bindPassCallbacks()
     {
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
@@ -712,8 +706,6 @@ namespace sw
             SW_LOG_ERROR_ID( "FramePassExecutor.CallbackBindCompileFailed", "Callback bind compile failed" );
             return false;
         }
-        if ( gv_dumpRenderGraph )
-            SW_LOG_INFO_ID( "FramePassExecutor.RenderGraphDump", "[gv_dumpRenderGraph]\n%#", _state._graph.describeCompiledOrder().c_str() );
         return true;
     }
 
