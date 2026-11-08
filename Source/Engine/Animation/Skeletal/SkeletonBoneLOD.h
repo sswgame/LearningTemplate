@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
@@ -71,8 +72,8 @@ namespace sw
         /** @brief XML 을 읽습니다. `_base` 의 부모는 @p source 에서 읽습니다(테스트 · 쿠커). */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel, IDataInheritanceSource& source );
 
-        /** @brief 내용 번호입니다. 읽을 때마다 새 번호가 되므로(핫 리로드는 제자리에서 다시 읽습니다) 마스크를 만든 쪽이 변경을 알아챕니다. */
-        uint64 getRevision() const { return _revision; }
+        /** @brief 내용 토큰입니다(`IdentityToken`). 읽을 때마다 새 토큰이 되므로(핫 리로드는 제자리에서 다시 읽습니다) 마스크를 만든 쪽이 토큰을 들고 비교해 변경을 알아챕니다. */
+        const IdentityToken& getRevision() const { return _revision; }
         /** @brief 손으로 쓴 단계 수입니다(0 이면 메시 LOD 에서 자동으로 만든다). */
         uint32 getLevelCount() const { return static_cast<uint32>( _listLevel.size() ); }
         /** @brief 단계 하나입니다. */
@@ -123,6 +124,6 @@ namespace sw
     private:
         vector<SkeletonBoneLODLevel> _listLevel;
         vector<hashed_string>        _listCoreBone;
-        uint64                       _revision{ 0 };
+        IdentityToken                _revision;
     };
 } // namespace sw

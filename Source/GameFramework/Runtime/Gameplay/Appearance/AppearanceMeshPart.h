@@ -11,6 +11,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
@@ -51,7 +52,7 @@ namespace sw
 {
     /**
      * @struct AppearanceBakedMeshCache
-     * @brief 같은 차림(키 — 해석의 메시 해시 · 부품 · 원본 내용 번호 · 데이터 판)의 베이크한 메시를 나눠 줍니다. 약한 참조라 그 메시를 그리는 유닛이 없으면 사라집니다.
+     * @brief 같은 차림(키 — 해석의 메시 해시 · 부품 · 원본 내용 토큰의 키 · 데이터 판)의 베이크한 메시를 나눠 줍니다. 약한 참조라 그 메시를 그리는 유닛이 없으면 사라집니다.
      * @details 같은 차림의 NPC 가 한 번 베이크한 메시를 같이 그린다 — 베이크하는 비용이 한 번이고, 스킨 원본이 같은 객체라 군중 포즈 묶음도 나눌 수 있다(언리얼 Mutable 의 결과 캐시).
      *          표는 GameFramework 의 모듈 서브시스템이 갖는다(`AppearanceBakedMeshTable` — 게임 서비스가 없는 실행에는 없어 매번 굽는다). 게임 스레드에서 부른다.
      */
@@ -59,7 +60,10 @@ namespace sw
     {
         /** @brief 키의 메시들이 모두 살아 있으면 @p outListMesh 에 채우고 true 입니다(원본을 그리는 부품은 nullptr). */
         [[nodiscard]] static bool tryGet( uint64 key, vector<shared_ptr<Mesh>>& outListMesh );
-        /** @brief 키의 베이크한 메시들을 남깁니다. 사라진 항목은 이때 치웁니다. */
-        static void store( uint64 key, const vector<shared_ptr<Mesh>>& listMesh );
+        /**
+         * @brief 키의 베이크한 메시들을 남깁니다. 사라진 항목은 이때 치웁니다.
+         * @param listSourceContent 키에 섞은 원본 내용 토큰들 — 항목이 들고 있어, 원본이 지워져도 그 토큰 주소가 다른 원본의 키로 다시 쓰여 낡은 베이크를 내주지 않는다.
+         */
+        static void store( uint64 key, const vector<shared_ptr<Mesh>>& listMesh, const vector<IdentityToken>& listSourceContent );
     };
 } // namespace sw

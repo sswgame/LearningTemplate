@@ -946,7 +946,7 @@ namespace sw::editor
         for ( const uint32 ordinal : _listTreeRow )
         {
             const UIPreviewWidgetRow& row = listRow[ordinal];
-            ImGui::PushID( static_cast<int32>( row._widget ) );
+            ImGui::PushID( reinterpret_cast<const void*>( static_cast<uintptr_t>( row._widget.getKey() ) ) ); // 위젯 토큰 키 — 줄이 토큰을 들고 있어 유일하다
             ImGui::Indent( Internal::kIndentPerLevel * static_cast<float32>( row._depth ) + 0.001f );
             if ( ImGui::Selectable( row._label.c_str(), row._widget == _model.getSelected() ) )
                 _model.select( row._widget, ordinal );

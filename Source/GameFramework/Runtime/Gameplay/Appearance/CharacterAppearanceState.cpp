@@ -11,7 +11,7 @@ namespace sw
         : _spec{}
         , _resolved{}
         , _listPendingEvent{}
-        , _databaseID{ 0 }
+        , _databaseID{}
         , _pLastEquipment{ nullptr }
         , _specRevision{ 1 }
         , _resolvedSpecRevision{ 0 }
@@ -23,7 +23,7 @@ namespace sw
 
     bool CharacterAppearanceState::usesDatabase( const AppearanceDatabase& database ) const
     {
-        return _databaseID != 0 && _databaseID == database.getInstanceID();
+        return _databaseID.isValid() && _databaseID == database.getInstanceID();
     }
 
     void CharacterAppearanceState::initialize( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec )

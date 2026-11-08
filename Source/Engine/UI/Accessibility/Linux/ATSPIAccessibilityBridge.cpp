@@ -58,11 +58,11 @@ namespace sw
 
             string makeNodePath( const AccessibleNode& node )
             {
-                return formatToString( "%#/n%#_%#", string( kPathPrefix ), node._screen, node._widget );
+                return formatToString( "%#/n%#_%#", string( kPathPrefix ), node._screen, node._widget.getKey() );
             }
 
-            /** @brief `/org/a11y/atspi/accessible/n<화면>_<위젯>` 에서 두 번호를 읽습니다. 모양이 다르면 false. */
-            [[nodiscard]] bool parseNodePath( const utf8* pPath, uint32& outScreen, uint32& outWidget )
+            /** @brief `/org/a11y/atspi/accessible/n<화면>_<위젯 키>` 에서 화면 번호와 위젯 토큰 키(`WidgetID::getKey`)를 읽습니다. 모양이 다르면 false. */
+            [[nodiscard]] bool parseNodePath( const utf8* pPath, uint32& outScreen, uint64& outWidgetKey )
             {
                 const string prefix = string( kPathPrefix ) + "/n";
                 const string path( pPath );
@@ -93,8 +93,8 @@ namespace sw
                 }
                 if ( part != 1 || bDigit == false )
                     return false;
-                outScreen = static_cast<uint32>( arrNumber[0] );
-                outWidget = static_cast<uint32>( arrNumber[1] );
+                outScreen    = static_cast<uint32>( arrNumber[0] );
+                outWidgetKey = arrNumber[1];
                 return true;
             }
 
@@ -432,12 +432,12 @@ namespace sw
                     outTarget._bRoot = SW_TRUE;
                     return true;
                 }
-                uint32 screen = 0;
-                uint32 widget = 0;
-                if ( ATSPIInternal::parseNodePath( pPath, screen, widget ) == false )
+                uint32 screen    = 0;
+                uint64 widgetKey = 0;
+                if ( ATSPIInternal::parseNodePath( pPath, screen, widgetKey ) == false )
                     return false;
                 const UIAccessibilitySnapshot* pSnapshot = findSnapshot();
-                const int32                    index     = pSnapshot->findNode( screen, widget );
+                const int32                    index     = pSnapshot->findNodeByWidgetKey( screen, widgetKey );
                 if ( index < 0 )
                     return false;
                 outTarget._bRoot = SW_FALSE;

@@ -6,7 +6,6 @@
 
 #include "GameFramework/Plugin/Editor/MeshModifiers/Stack/MeshModifier.h"
 
-#include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Task/TaskManager.h"
 
@@ -14,20 +13,8 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
-        atomic<uint64> s_meshModifierNextInstanceID{ 1 };
-    } // namespace
-
-    namespace
-    {
         struct MeshModifierInternal
         {
-            /** @brief 다음 인스턴스 번호입니다(0 은 "없음"). 프로세스 안에서 다시 쓰지 않는다. */
-            static uint64 allocateInstanceID()
-            {
-                return s_meshModifierNextInstanceID.fetch_add( 1, std::memory_order_relaxed );
-            }
-
             /** @brief [0, count) 를 작업 관리자로 나눠 돌립니다. 관리자가 없으면 현재 스레드가 한 번에 돕니다(`engine::runParallel` 과 같은 규칙). */
             static void runBlocks( TaskManager* pTaskManager, uint32 count, uint32 serialThreshold, const ParallelBlockDelegate& body )
             {
@@ -279,7 +266,7 @@ namespace sw::editor
         , _name{}
         , _spaceReference{}
         , _gizmo{}
-        , _instanceID{ MeshModifierInternal::allocateInstanceID() }
+        , _instanceID{ IdentityToken::make() }
         , _bEnabled{ SW_TRUE }
         , _bWorldSpace{ SW_FALSE }
     {

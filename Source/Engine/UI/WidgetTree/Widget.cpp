@@ -2,7 +2,6 @@
 
 #include "Engine/UI/WidgetTree/Widget.h"
 
-#include "Core/Concurrency/atomic.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/ReflectionCast.h"
@@ -14,15 +13,6 @@
 #include "Engine/UI/Style/WidgetStyle.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
-
-namespace sw
-{
-    namespace
-    {
-        /** @brief 위젯 번호를 주는 프로세스 전역 카운터입니다(Engine.dll 안이라 모듈 핫 리로드에도 이어진다). 0 은 무효 번호라 1 부터. */
-        atomic<uint32> s_nextWidgetID{ 1 };
-    } // namespace
-} // namespace sw
 
 namespace sw
 {
@@ -47,7 +37,7 @@ namespace sw
         , _lastSlotSize{}
         , _pParent{ nullptr }
         , _pTree{ nullptr }
-        , _id{ s_nextWidgetID.fetch_add( 1, std::memory_order_relaxed ) }
+        , _id{ IdentityToken::make() } // 번호 발급기 대신 정체성 토큰(`WidgetID`)
         , _dirtyFlags{ WidgetDirty::kLayout | WidgetDirty::kPaint | WidgetDirty::kStyle }
         , _layoutSerial{ 0 }
         , _paintAnchor{ constant::invalid_index::kUint32 }

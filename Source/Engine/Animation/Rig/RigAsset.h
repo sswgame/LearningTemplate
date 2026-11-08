@@ -7,6 +7,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 #include "Core/Registry/RegistrationList.h"
@@ -107,8 +108,8 @@ namespace sw
 
         const vector<RigTargetDef>&        getTargets() const { return _listTarget; }
         const vector<unique_ptr<RigNode>>& getNodes() const { return _listNode; }
-        /** @brief 내용 번호입니다. 읽을 때마다 프로세스 고유의 새 번호를 받습니다(핫 리로드 감지). */
-        uint64 getContentID() const { return _contentID; }
+        /** @brief 내용 토큰입니다(`IdentityToken`). 읽을 때마다 새 토큰을 받습니다(핫 리로드 감지 — 쓰는 쪽이 토큰을 들고 비교한다). 읽지 않았으면 빈 토큰입니다. */
+        const IdentityToken& getContentID() const { return _contentID; }
         /** @brief 2D(평면) 리그인지입니다. */
         bool isPlanar() const { return _bPlanar == SW_TRUE; }
         /** @brief 이름의 대상 번호입니다. 없으면 -1 입니다. */
@@ -126,7 +127,7 @@ namespace sw
     private:
         vector<RigTargetDef>        _listTarget;
         vector<unique_ptr<RigNode>> _listNode;
-        uint64                      _contentID;
+        IdentityToken               _contentID;
         uint8                       _bPlanar;
     };
 } // namespace sw

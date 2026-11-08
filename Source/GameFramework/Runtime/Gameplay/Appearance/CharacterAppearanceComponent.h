@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
@@ -263,8 +264,8 @@ namespace sw
         struct MeshAssemblyLoad
         {
             MeshHandle                    _mesh{};
-            SharedAssetHandle<FitPartDef> _fit{};                ///< 피팅 데이터가 없는 부품이면 요청이 없다
-            uint64                        _sourceContentID{ 0 }; ///< 구울 때의 원본 내용 번호. 바뀌면(메시 핫 리로드) 다시 조립한다
+            SharedAssetHandle<FitPartDef> _fit{};             ///< 피팅 데이터가 없는 부품이면 요청이 없다
+            IdentityToken                 _sourceContentID{}; ///< 구울 때의 원본 내용 토큰. 바뀌면(메시 핫 리로드) 다시 조립한다
             uint32                        _partIndex{ 0 };
         };
 

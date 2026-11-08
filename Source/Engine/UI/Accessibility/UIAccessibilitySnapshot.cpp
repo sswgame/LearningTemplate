@@ -118,6 +118,16 @@ namespace sw
         return constant::invalid_index::kInt32;
     }
 
+    int32 UIAccessibilitySnapshot::findNodeByWidgetKey( uint32 screen, uint64 widgetKey ) const
+    {
+        for ( size_t index = 0; index < _listNode.size(); ++index )
+        {
+            if ( _listNode[index]._screen == screen && _listNode[index]._widget.isValid() && _listNode[index]._widget.getKey() == widgetKey )
+                return static_cast<int32>( index );
+        }
+        return constant::invalid_index::kInt32;
+    }
+
     void UIAccessibilitySnapshot::appendTree( const WidgetTree& tree, uint32 screen, WidgetID focusedWidget, UIAccessibilitySnapshot& inoutSnapshot )
     {
         Widget* pRoot = tree.getRoot();

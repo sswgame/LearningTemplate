@@ -364,11 +364,14 @@ namespace sw
                     *ppOutRuntimeID = nullptr;
                     if ( _bRoot )
                         return S_OK; // 루트의 번호는 호스트(창)가 갖는다
-                    const int32 arrID[3] = { UiaAppendRuntimeId, static_cast<int32>( _screen ), static_cast<int32>( _widget ) };
-                    SAFEARRAY*  pArray   = SafeArrayCreateVector( VT_I4, 0, 3 );
+                    // 위젯 토큰의 키(64 비트 — 요소가 토큰을 들고 있어 살아 있는 동안 유일하다)를 아래 · 위 32 비트 두 칸으로 싣는다.
+                    const uint64 widgetKey = _widget.getKey();
+                    const int32  arrID[4]  = { UiaAppendRuntimeId, static_cast<int32>( _screen ), static_cast<int32>( static_cast<uint32>( widgetKey ) ),
+                                               static_cast<int32>( static_cast<uint32>( widgetKey >> 32 ) ) };
+                    SAFEARRAY*   pArray    = SafeArrayCreateVector( VT_I4, 0, 4 );
                     if ( pArray == nullptr )
                         return E_OUTOFMEMORY;
-                    for ( LONG index = 0; index < 3; ++index )
+                    for ( LONG index = 0; index < 4; ++index )
                     {
                         (void)SafeArrayPutElement( pArray, &index, const_cast<int32*>( &arrID[index] ) );
                     }

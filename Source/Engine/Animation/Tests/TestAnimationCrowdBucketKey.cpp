@@ -12,7 +12,7 @@ using namespace sw;
 SW_TEST_CASE( AnimationCrowdBucketKeyTest, SkinningMethodSplitsBuckets )
 {
     AnimationCrowdBucketKey linear{};
-    linear._skinDataID         = 7;
+    linear._skinDataID         = IdentityToken::make();
     linear._playRate           = 1.0f;
     AnimationCrowdBucketKey dq = linear;
     dq._skinningMethod         = SkinningMethod::DualQuaternion;

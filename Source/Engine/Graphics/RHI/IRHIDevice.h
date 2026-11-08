@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/RHIBackendType.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIInitPhaseTimings.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
@@ -363,6 +364,8 @@ namespace sw
 
         /** @brief 백엔드 이름 문자열을 반환합니다. */
         virtual const utf8* getBackendName() const = 0;
+        /** @brief 이 디바이스의 드로우 기록 진단입니다(잘못된 바인딩 알림과 그 횟수 — 문맥 · 지오메트리 바인딩이 여기로 알린다). */
+        const RHIDrawDiagnostics& getDrawDiagnostics() const { return _drawDiagnostics; }
 
         // ------------------------------------------------------------------------------
         // 3) 네이티브 핸들: 디바이스, 컨텍스트, 스왑체인, 큐
@@ -657,5 +660,7 @@ namespace sw
         unique_ptr<BindlessIndexReportLog> _pBindlessIndexReportLog;
         /// @brief 마지막 `initialize` 의 단계별 시간입니다(`markInitPhase`).
         RHIInitPhaseTimings _initPhaseTimings;
+        /// @brief 드로우 기록 진단입니다(`getDrawDiagnostics`). 장치와 함께 생기고 사라진다 — 백엔드를 바꾸면 횟수가 다시 시작한다.
+        RHIDrawDiagnostics _drawDiagnostics;
     };
 } // namespace sw

@@ -10,6 +10,11 @@
 
 namespace sw
 {
+    IRHIDevice& WebGPURHICommandContext::getContextDevice() const
+    {
+        return *_pDevice;
+    }
+
     namespace
     {
         struct WebGPURHICommandContextInternal
@@ -505,7 +510,7 @@ namespace sw
             wgpuRenderPassEncoderSetStencilReference( _state._renderPass, pPipeline->_stencilRef );
             _state._boundRenderPSO = _state._graphicsPSO;
         }
-        const bool bBound = _state._geometry.bindVertexBuffersForDraw( "WebGPU", pPipeline->_vertexLayout, [this]( uint32 slot, const RHIBufferBinding& binding )
+        const bool bBound = _state._geometry.bindVertexBuffersForDraw( _pDevice->getDrawDiagnostics(), pPipeline->_vertexLayout, [this]( uint32 slot, const RHIBufferBinding& binding )
         {
             const WebGPUBufferRecord* pBuffer = _pDevice->findBuffer( binding._buffer );
             if ( pBuffer == nullptr )
@@ -523,7 +528,7 @@ namespace sw
 
     bool WebGPURHICommandContext::prepareIndexBuffer()
     {
-        return _state._geometry.bindIndexBufferForDraw( "WebGPU", [this]( const RHIBufferBinding& binding )
+        return _state._geometry.bindIndexBufferForDraw( _pDevice->getDrawDiagnostics(), [this]( const RHIBufferBinding& binding )
         {
             const WebGPUBufferRecord* pBuffer = _pDevice->findBuffer( binding._buffer );
             if ( pBuffer == nullptr )

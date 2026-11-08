@@ -172,14 +172,16 @@ namespace sw
     }
 
     GameObjectManager::GameObjectManager( const SceneEngineServices& services )
-        : _structuralChangeBuffer{}
+        : _pOwnedObjectIDSpace{ services._pObjectIDSpace == nullptr ? make_unique<ObjectIDSpace>() : nullptr } // 엔진 범위가 없으면 이 매니저가 번호 공간의 주인이다
+        , _pObjectIDSpace{ services._pObjectIDSpace != nullptr ? services._pObjectIDSpace : _pOwnedObjectIDSpace.get() }
+        , _structuralChangeBuffer{}
         , _transformHierarchy{}
         , _primitiveRegistry{}
         , _componentRegistry{}
         , _cameraRegistry{}
         , _tagIndex{}
         , _tickScheduler{ *this, _transformHierarchy, _primitiveRegistry, _structuralChangeBuffer }
-        , _store{ *this, _tickScheduler, _structuralChangeBuffer }
+        , _store{ *this, _tickScheduler, _structuralChangeBuffer, *_pObjectIDSpace }
         , _sceneScope{ services._pEngineSubsystems }
         , _listSceneService{}
         , _pFrameCamera{ nullptr }

@@ -109,7 +109,7 @@ SW_TEST_CASE( UIDocumentTest, InstantiatesWidgets )
     SW_REQUIRE_TRUE( pTitle != nullptr );
     SW_EXPECT_EQUAL( string( "Hello" ), pTitle->getText() );
     SW_REQUIRE_EQUAL( size_t( 1 ), listBinding.size() );
-    SW_EXPECT_EQUAL( root->getChildren()[1]->getID(), listBinding[0]._widget );
+    SW_EXPECT_TRUE( root->getChildren()[1]->getID() == listBinding[0]._widget );
 
     unique_ptr<Widget> second = UIDocumentLoader::instantiate( asset, cache, listBinding, error );
     SW_REQUIRE_TRUE( second != nullptr );

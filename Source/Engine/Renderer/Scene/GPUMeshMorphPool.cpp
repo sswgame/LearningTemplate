@@ -90,7 +90,7 @@ namespace sw
         update( pDevice, listMesh, vector<Mesh*>{}, vector<uint32>{}, vector<uint32>{} );
     }
 
-    bool GPUMeshMorphPool::isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentID )
+    bool GPUMeshMorphPool::isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<IdentityToken>& listBuiltContentID )
     {
         // 포인터와 **내용 번호**를 함께 본다(GPUMeshVertexPool::update 와 같은 이유 — 지워진 자리에 새 메시가 생기거나 정점을 바꾼 메시).
         if ( listBuilt.size() != listMesh.size() )
@@ -118,8 +118,8 @@ namespace sw
             const bool bSkipSkinMesh = pMesh == nullptr || pMesh->hasSkin() == false || pMesh->getVertexCount() == 0;
             if ( bSkipSkinMesh )
                 continue;
-            const uint64 dataID = pMesh->getSkinDataID();
-            const auto   it     = _mapSkinSource.find( dataID );
+            const IdentityToken& dataID = pMesh->getSkinDataID();
+            const auto           it     = _mapSkinSource.find( dataID );
             if ( it != _mapSkinSource.end() )
             {
                 it->second._pMesh     = pMesh;
@@ -143,7 +143,7 @@ namespace sw
             if ( source._seenStamp != _updateCount )
                 _listScratchSkinRemoved.push_back( dataID );
         }
-        for ( const uint64 dataID : _listScratchSkinRemoved )
+        for ( const IdentityToken& dataID : _listScratchSkinRemoved )
         {
             const SkinSource& source = _mapSkinSource.find( dataID )->second;
             if ( source._restBase != kInvalidBase )
@@ -421,7 +421,7 @@ namespace sw
         _listBuiltSkinContentID.clear();
         for ( const Mesh* pMesh : listSkinMesh )
         {
-            _listBuiltSkinContentID.push_back( pMesh != nullptr ? pMesh->getContentID() : 0u );
+            _listBuiltSkinContentID.push_back( pMesh != nullptr ? pMesh->getContentID() : IdentityToken{} );
         }
 
         // 스킨 구간은 모프 **용량** 뒤에서 시작한다 — 모프 메시가 들고 나도 용량이 그대로면 스킨 인스턴스의 시작이 그대로다.
@@ -591,9 +591,9 @@ namespace sw
         {
             if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
                 continue;
-            const uint64 contentID = pMesh->getContentID();
-            const uint32 count     = pMesh->getVertexCount();
-            const auto   it        = _mapMorphEntry.find( pMesh );
+            const IdentityToken& contentID = pMesh->getContentID();
+            const uint32         count     = pMesh->getVertexCount();
+            const auto           it        = _mapMorphEntry.find( pMesh );
             if ( it == _mapMorphEntry.end() )
             {
                 _mapMorphEntry.emplace( pMesh, MorphEntry{ contentID, _updateCount, kInvalidBase, count, kInvalidBase } );

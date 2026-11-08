@@ -14,7 +14,7 @@ namespace sw
 {
     Component::Component()
         : _pOwner{ nullptr }
-        , _componentID{ _s_nextComponentID.fetch_add( 1, std::memory_order_relaxed ) }
+        , _componentID{ 0 } // 붙을 때 매니저의 번호 공간이 준다(`GameObject::attachCreatedComponent`)
         , _componentName{}
         , _pTypeInfo{ nullptr }
         , _pPoolEntry{ nullptr }
@@ -374,7 +374,5 @@ namespace sw
             return false;
         return _pOwner == nullptr || _pOwner->isActiveInHierarchy();
     }
-
-    atomic<uint64> Component::_s_nextComponentID = 1;
 
 } // namespace sw

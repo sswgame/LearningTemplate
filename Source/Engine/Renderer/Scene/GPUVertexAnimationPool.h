@@ -12,6 +12,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/IdentityToken.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 
@@ -66,11 +67,11 @@ namespace sw
             uint32 _wordCount{ 0 };
             uint32 _refCount{ 0 };
         };
-        /// @brief 메시 하나가 어느 테이블을 어느 내용 번호로 올렸는지입니다(내용 번호가 달라지면 새 테이블로 본다).
+        /// @brief 메시 하나가 어느 테이블을 어느 내용 토큰으로 올렸는지입니다(토큰이 달라지면 새 테이블로 본다).
         struct MeshRecord
         {
             const MeshVertexAnimation* _pAnimation{ nullptr };
-            uint64                     _contentID{ 0 };
+            IdentityToken              _contentID{}; ///< 들고 있어 지운 메시의 주소가 새 메시와 같아 보이지 않는다
         };
 
         /// @brief 이번 목록에서 VAT 가 있는 메시 하나입니다.
@@ -78,7 +79,7 @@ namespace sw
         {
             const Mesh*                _pMesh{ nullptr };
             const MeshVertexAnimation* _pAnimation{ nullptr };
-            uint64                     _contentID{ 0 };
+            IdentityToken              _contentID{};
         };
 
         /** @brief 테이블 하나(머리 단어 + 원소)를 @p base 에 올립니다. */
@@ -100,7 +101,7 @@ namespace sw
         unordered_map<const Mesh*, MeshRecord>           _mapRecord;
         unordered_map<const Mesh*, uint32>               _mapBase;
         vector<const Mesh*>                              _listBuilt;
-        vector<uint64>                                   _listBuiltContentID;
+        vector<IdentityToken>                            _listBuiltContentID;
         uint64                                           _rebuildSerial{ 0 };
         uint32                                           _wordCount{ 0 }; ///< 버퍼가 담는 단어 수(구간 할당기 용량)입니다. 셰이더 범위 검사 값이다
     };

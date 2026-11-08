@@ -51,6 +51,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/OctahedralNormal.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
@@ -249,11 +250,11 @@ namespace sw
         /** @brief 모프 구간에 든 메시 하나의 기록입니다. */
         struct MorphEntry
         {
-            uint64 _contentID{ 0 };
-            uint64 _seenStamp{ 0 };       ///< 이 메시를 마지막으로 본 `update` 의 번호
-            uint32 _base{ kInvalidBase }; ///< 구간 시작. 못 들어갔으면 kInvalidBase
-            uint32 _count{ 0 };
-            uint32 _slot{ kInvalidBase }; ///< 칸 번호(`_listPoolMorph` 의 자리). 레스트 노멀의 w 가 이 번호 + 1 이다
+            IdentityToken _contentID{};          ///< 올린 내용의 토큰(들고 있어 지운 메시의 주소가 새 메시와 같아 보이지 않는다)
+            uint64        _seenStamp{ 0 };       ///< 이 메시를 마지막으로 본 `update` 의 번호
+            uint32        _base{ kInvalidBase }; ///< 구간 시작. 못 들어갔으면 kInvalidBase
+            uint32        _count{ 0 };
+            uint32        _slot{ kInvalidBase }; ///< 칸 번호(`_listPoolMorph` 의 자리). 레스트 노멀의 w 가 이 번호 + 1 이다
         };
 
         /// @brief 스킨 원본 하나의 기록입니다(스킨 데이터 번호가 키). 같은 원본을 쓰는 인스턴스는 한 구간을 나눠 쓴다.
@@ -278,7 +279,7 @@ namespace sw
         static constexpr uint32 kMinSkinSourceElements = 4u * 1024u;
 
         /** @brief 목록이 지난 update 와 같은지(포인터와 내용 번호) 확인합니다. */
-        static bool isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentID );
+        static bool isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<IdentityToken>& listBuiltContentID );
         /** @brief 스킨 원본 집합을 맞춥니다. 새로 들어온 원본의 구간만 올리고, 나간 원본의 구간은 미뤄 돌려받습니다. */
         void rebuildSkinSources( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh );
         /** @brief 새 원본에 레스트 · 차이 · 가중치 구간을 줍니다. @return 자리가 모자라거나 상한을 넘으면 false 입니다(호출자가 다시 채웁니다). */
@@ -337,21 +338,21 @@ namespace sw
         /// @brief 스킨 칸 → 결과 시작 · 단계 첫 정점입니다. 칸 번호가 자리이고 결과가 없는 칸은 시작이 `kInvalidBase` 다. `_skinResultOffsets` 에 그대로 올린다. 모프 메시는 `_mapMorphEntry` 에 있습니다.
         vector<GPUSkinResultOffset> _listSkinResultOffset;
         /// @brief 지난 update 의 스킨 메시 · 칸 목록과 내용 번호입니다(받은 그대로이며 풀에 들어가지 못한 것도 포함합니다).
-        vector<const Mesh*> _listBuiltSkin;
-        vector<uint32>      _listBuiltSkinSlot;
-        vector<uint32>      _listBuiltSkinLOD;
-        vector<uint64>      _listBuiltSkinContentID;
+        vector<const Mesh*>   _listBuiltSkin;
+        vector<uint32>        _listBuiltSkinSlot;
+        vector<uint32>        _listBuiltSkinLOD;
+        vector<IdentityToken> _listBuiltSkinContentID;
         /// @brief 결과 구간을 받은 스킨 인스턴스(풀 순서)의 메시 · 칸과 그 테이블 줄입니다.
         vector<const Mesh*>        _listSkinMesh;
         vector<uint32>             _listSkinSlot;
         vector<GPUSkinInstanceRow> _listSkinRow;
         /// @brief 풀에 든 스킨 원본(스킨 데이터 번호 → 기록)과 구간 할당기(레스트 버퍼 · 가중치 버퍼, 단위 = 원소 하나)입니다.
-        unordered_map<uint64, SkinSource> _mapSkinSource;
-        SpanAllocator                     _skinRestAllocator;
-        SpanAllocator                     _skinWeightAllocator;
+        unordered_map<IdentityToken, SkinSource> _mapSkinSource; ///< 키가 원본 토큰을 들어 나간 원본의 주소가 새 원본의 키로 다시 쓰이지 않는다
+        SpanAllocator                            _skinRestAllocator;
+        SpanAllocator                            _skinWeightAllocator;
         /// @brief 이번 update 에서 새로 들어온 원본, 올릴 데이터와 조각입니다(프레임마다 할당하지 않습니다).
-        vector<uint64>              _listScratchSkinAdded;
-        vector<uint64>              _listScratchSkinRemoved;
+        vector<IdentityToken>       _listScratchSkinAdded;
+        vector<IdentityToken>       _listScratchSkinRemoved;
         vector<GPUMorphVertex>      _listScratchSkinRest;
         vector<float4>              _listScratchSkinWeight;
         vector<RHIBufferCopyRegion> _listScratchSkinRestRegion;

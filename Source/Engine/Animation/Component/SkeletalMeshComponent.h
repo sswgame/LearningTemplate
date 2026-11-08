@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
@@ -324,7 +325,7 @@ namespace sw
         shared_ptr<const Skeleton> _skeleton;
         /// @brief 스킨드 메시의 공유 원본입니다. 동일성 확인과 핫 리로드 대조에 씁니다. 이 컴포넌트의 메시는 그 복사본입니다.
         shared_ptr<Mesh>                                _skinSourceMesh;
-        uint64                                          _skinSourceContentID;
+        IdentityToken                                   _skinSourceContentID; ///< 스킨 원본 메시의 내용 토큰(들고 있어 지운 원본의 주소가 새 메시와 같아 보이지 않는다)
         Pose                                            _localPose;
         vector<float4x4>                                _listModelSpace;
         vector<float4x4>                                _listSkinPalette;
@@ -334,7 +335,7 @@ namespace sw
         vector<int32>                                   _listLeaderBone;         ///< 내 본에서 리더 본으로 가는 인덱스다(-1 이면 없음)
         TComponentHandle<SkeletalMeshComponent>         _leader;
         const Skeleton*                                 _pLeaderSkeletonForMap; ///< `_listLeaderBone` 을 만든 리더 스켈레톤이다(동일성만 확인한다)
-        uint64                                          _skinBindingContentID;  ///< `refreshSkinBinding` 이 마지막으로 본 스킨 메시의 내용 번호
+        IdentityToken                                   _skinBindingContentID;  ///< `refreshSkinBinding` 이 마지막으로 본 스킨 메시의 내용 토큰
         const Skeleton*                                 _pSkinBindingSkeleton;  ///< `refreshSkinBinding` 이 마지막으로 본 스켈레톤이다(동일성만 확인한다)
         AnimationSystem*                                _pAnimationSystem;
         AnimationFrameContext                           _frameContext;
@@ -343,9 +344,9 @@ namespace sw
         AnimationLODState                               _lodState;
         shared_ptr<const SkeletonBoneLOD>               _boneLOD;
         vector<vector<uint8>>                           _listBoneLODMask;      ///< 본 LOD 단계 n + 1 의 본 마스크
-        uint64                                          _boneLODRevision;      ///< 마스크를 만든 본 LOD 내용 번호다(0 이면 다시 만든다)
+        IdentityToken                                   _boneLODRevision;      ///< 마스크를 만든 본 LOD 내용 토큰이다(비면 다시 만든다)
         const Skeleton*                                 _pBoneLODMaskSkeleton; ///< 마스크를 만든 스켈레톤이다(동일성만 확인한다)
-        uint64                                          _boneLODMeshContentID; ///< 마스크를 만든 스킨 원본 메시의 내용 번호다
+        IdentityToken                                   _boneLODMeshContentID; ///< 마스크를 만든 스킨 원본 메시의 내용 토큰이다
         vector<uint32>                                  _listBoneLODMaskCount; ///< 마스크마다 남는 본 수(`getEvaluatedBoneCount`)
         vector<BoneRequirement>                         _listBoneRequirement;  ///< 사용처가 알린 핵심 본(`requireBones`)
         SubscriptionList                                _boneRequirementSubscriptions;

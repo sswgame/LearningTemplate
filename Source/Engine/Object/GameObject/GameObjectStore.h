@@ -33,6 +33,7 @@ namespace sw
 {
     class Component;
     class GameObjectManager;
+    class ObjectIDSpace;
     class SceneTickScheduler;
     class StructuralChangeBuffer;
     class TickRegistry;
@@ -98,8 +99,9 @@ namespace sw
          * @brief 매니저의 다른 단위를 받아 만듭니다. 받은 참조는 매니저가 함께 소유하므로 이 타입보다 오래 삽니다.
          * @param manager 만든 오브젝트의 소유 매니저이자, 컴포넌트 등록 해제(`onUnregister`)가 받는 매니저
          * @param tickScheduler 지운 컴포넌트와 오브젝트를 알릴 틱 레지스트리의 주인(이미 만들어져 있어야 한다)
+         * @param idSpace 오브젝트 id 를 내는 번호 공간(엔진 범위 또는 엔진 없는 매니저의 것 — 매니저가 이 저장소보다 먼저 만든다)
          */
-        GameObjectStore( GameObjectManager& manager, SceneTickScheduler& tickScheduler, const StructuralChangeBuffer& structuralChangeBuffer );
+        GameObjectStore( GameObjectManager& manager, SceneTickScheduler& tickScheduler, const StructuralChangeBuffer& structuralChangeBuffer, ObjectIDSpace& idSpace );
         /** @brief 남은 오브젝트는 매니저의 `clear` 가 이미 지웠으므로 여기서는 아무것도 하지 않습니다. */
         ~GameObjectStore() = default;
 
@@ -131,8 +133,8 @@ namespace sw
 
         /**
          * @brief 구조 세대입니다(`GameObjectManager::getStructureGeneration`). 읽기는 잠금이 없습니다.
-         * @details 시작 값은 저장소마다 한 번 받는 오브젝트 id 를 위 비트(`kStructureGenerationShift`)에 둔 값이다. id 는 프로세스 전체에서 한 번만 나오므로
-         *          저장소끼리 세대가 겹치지 않는다(전역 카운터를 새로 두지 않는다). 한 저장소가 2^24 번 넘게 올려야 다른 저장소의 범위에 닿고,
+         * @details 시작 값은 저장소마다 한 번 받는 오브젝트 id 를 위 비트(`kStructureGenerationShift`)에 둔 값이다. id 는 번호 공간(`ObjectIDSpace` — 엔진 범위)에서 한 번만 나오므로
+         *          같은 엔진의 저장소끼리 세대가 겹치지 않는다(카운터를 새로 두지 않는다). 한 저장소가 2^24 번 넘게 올려야 다른 저장소의 범위에 닿고,
          *          그래도 캐시가 틀리려면 그 저장소가 같은 주소에 있어야 한다.
          */
         uint64 getStructureGeneration() const { return _structureGeneration.load( std::memory_order_relaxed ); }
@@ -317,18 +319,11 @@ namespace sw
             SlotArray      _listSlot;
             atomic<uint64> _compareFromID{ kObjectSlotCount }; ///< 이 값 이상의 id 를 물으면 슬롯의 오브젝트 id 와 비교한다. 슬롯 수를 넘은 id 가 들어오면 0 이 되고, `clear` 가 되돌린다
         };
-        /**
-         * @brief 오브젝트 id 발급 카운터입니다. **프로세스 전체에서 하나**입니다(컴포넌트 id `Component::_s_nextComponentID` 와 같은 규칙).
-         * @details 씬을 넘어 옮긴 오브젝트(`SceneManager::markPersistent`)가 같은 id 를 유지하려면 다른 매니저의 발급과 겹치지 않아야 한다.
-         *          겹치면 새 id 를 받고 그 오브젝트를 가리키던 핸들이 끊긴다. 유니티의 인스턴스 id 도 프로세스 전체에서 하나다.
-         */
-        static atomic<uint64> _s_nextObjectID;
-
         /** @brief 구조 세대의 시작 값에서 오브젝트 id 를 올려 둘 비트 수입니다(`getStructureGeneration`). */
         static constexpr uint32 kStructureGenerationShift = 24;
 
-        /** @brief 새 ObjectID 를 발급합니다. */
-        static uint64 allocateID();
+        /** @brief 새 ObjectID 를 발급합니다(번호 공간 `ObjectIDSpace` — 씬을 넘어 옮긴 오브젝트가 같은 id 를 유지하도록 엔진의 매니저들이 한 공간을 나눈다). */
+        uint64 allocateID();
         /** @brief `_mutex` 를 쥔 채 @p objectID 로 오브젝트를 만들어 이름 맵, id 테이블, 병합 대기 목록에 올립니다. */
         GameObject* createGameObjectUnlocked( hashed_string name, uint64 objectID );
         /**
@@ -354,6 +349,7 @@ namespace sw
 
     private:
         GameObjectManager*                             _pManager;                ///< 만든 오브젝트의 소유 매니저(`GameObject::_pOwnerManager`)
+        ObjectIDSpace*                                 _pIDSpace;                ///< 오브젝트 id 를 내는 번호 공간(매니저가 든다 — 엔진 범위 또는 자기 것)
         TickRegistry*                                  _pTickRegistry;           ///< 지운 컴포넌트와 오브젝트를 틱 레지스트리에 알린다
         [[maybe_unused]] const StructuralChangeBuffer* _pStructuralChangeBuffer; ///< 틱 중인지만 읽는다. 해체 단언에 쓰며, 단언이 빠지는 Release 와 Shipping 에서는 읽는 곳이 없다
 

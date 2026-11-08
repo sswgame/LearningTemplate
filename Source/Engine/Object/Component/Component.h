@@ -551,7 +551,7 @@ namespace sw
          */
         bool isSceneComponent() const { return _bIsSceneComponent == SW_TRUE; }
 
-        /** @brief 컴포넌트 고유 ID 를 반환합니다. */
+        /** @brief 컴포넌트 고유 ID 를 반환합니다. 붙을 때(`GameObject::attachCreatedComponent`) 매니저의 번호 공간(`ObjectIDSpace` — 엔진 범위)이 준다 — 붙기 전에는 0 입니다. */
         uint64 getComponentID() const { return _componentID; }
 
         /** @brief 삭제 예정(묘비) 표시를 합니다. */
@@ -589,8 +589,7 @@ namespace sw
          */
         virtual void bindToManager( GameObjectManager& manager ) { (void)manager; }
         /** @brief `bindToManager` 의 짝입니다(해체 한 곳 `GameObjectStore` 가 `dispatchUnregister` 뒤에 부른다). */
-        virtual void          unbindFromManager( GameObjectManager& manager ) { (void)manager; }
-        static atomic<uint64> _s_nextComponentID; ///< ID 생성 카운터
+        virtual void unbindFromManager( GameObjectManager& manager ) { (void)manager; }
 
     protected:
         GameObject* _pOwner;      ///< 소유자 GameObject

@@ -2,32 +2,26 @@
 
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 
-#include "Core/Concurrency/atomic.h"
 #include "Core/Hash/HashUtil.h"
 
 #include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Material/MaterialXML.h"
 #include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
-    namespace
-    {
-        /// @brief MaterialPermutation::getPermutationGeneration 참고. 정지한 씬이 퍼뮤테이션 변경을 알아채는 유일한 신호입니다.
-        atomic<uint64> s_permutationGeneration{ 1 };
-    } // namespace
-} // namespace sw
-
-namespace sw
-{
     uint64 MaterialPermutation::getPermutationGeneration()
     {
-        return s_permutationGeneration.load( std::memory_order_relaxed );
+        const MaterialCache* const pCache = MaterialCache::findBound();
+        return pCache != nullptr ? pCache->getPermutationGeneration() : 0u; // 0 = 모름(세대는 1 부터)
     }
 
     void MaterialPermutation::bumpPermutationGeneration()
     {
-        s_permutationGeneration.fetch_add( 1, std::memory_order_relaxed );
+        MaterialCache* const pCache = MaterialCache::findBound();
+        if ( pCache != nullptr )
+            pCache->bumpPermutationGeneration(); // 엔진 없이 만든 머티리얼은 읽는 쪽도 "모름" 이라 올릴 곳이 없다
     }
 
     void MaterialPermutation::appendUniqueDefine( vector<string>& outListDefine, string_view define )

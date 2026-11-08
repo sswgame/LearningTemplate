@@ -3,7 +3,6 @@
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 
 #include "Core/Algorithm/VectorUtil.h"
-#include "Core/Concurrency/atomic.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -23,20 +22,8 @@ namespace sw
 {
     namespace
     {
-        /** @brief 프로세스 고유 번호 발급기 — 상태가 아니라 번호 공간이다(상수 초기화라 정적 초기화 순서와 무관하다). 함수 정적에 숨기지 않고 파일 범위에 둔다. */
-        atomic<uint64> s_skeletonBoneLODNextRevision{ 1 };
-    } // namespace
-
-    namespace
-    {
         struct SkeletonBoneLODInternal
         {
-            /** @brief 프로세스 전역 내용 번호입니다(0 은 쓰지 않는다). */
-            static uint64 allocateRevision()
-            {
-                return s_skeletonBoneLODNextRevision.fetch_add( 1, std::memory_order_relaxed );
-            }
-
             /** @brief 남는 본의 부모 사슬을 남깁니다 — 자식이 뒤에 있으므로 뒤에서 앞으로 한 번 훑는다. */
             static void keepAncestors( const Skeleton& skeleton, vector<uint8>& inoutMask )
             {
@@ -90,7 +77,7 @@ namespace sw
         }
         if ( parseRoot( root, sourceLabel ) )
         {
-            _revision = SkeletonBoneLODInternal::allocateRevision();
+            _revision = IdentityToken::make(); // 번호 발급기 대신 정체성 토큰 — 마스크를 만든 쪽이 들고 비교한다
             return true;
         }
         _listLevel.clear();

@@ -8,6 +8,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
@@ -87,10 +88,10 @@ namespace sw
         const AppearanceLoadReport&       getReport() const { return _report; }
         uint32                            getRevision() const { return _revision; }
         /**
-         * @brief 이 객체의 번호입니다(만들 때마다 새 번호 — 주소가 재사용돼도 겹치지 않는다).
-         * @details 외형 상태(`CharacterAppearanceState`)는 데이터베이스를 포인터로 들지 않고 이 번호만 기억해 "같은 데이터인가" 를 알아본다. 서비스가 먼저 내려가도 허공을 가리키는 포인터가 남지 않는다.
+         * @brief 이 객체의 정체성 토큰입니다(`IdentityToken` — 만들 때마다 새 토큰, 든 쪽이 있는 동안 주소가 다른 객체에 다시 쓰이지 않는다).
+         * @details 외형 상태(`CharacterAppearanceState`)는 데이터베이스를 포인터로 들지 않고 이 토큰만 들어 "같은 데이터인가" 를 알아본다. 서비스가 먼저 내려가도 허공을 가리키는 포인터가 남지 않는다.
          */
-        uint64 getInstanceID() const { return _instanceID; }
+        const IdentityToken& getInstanceID() const { return _instanceID; }
 
         /** @brief 아이템의 외형입니다. 형상 변경이 없을 때의 외형이며, 없으면 nullptr 입니다. */
         const ItemVisualDef* findItemVisual( const hashed_string& itemID ) const;
@@ -128,6 +129,6 @@ namespace sw
         const ItemCatalog*         _pItemCatalog;
         MulticastDelegate<void()>  _reloadedMulticast;
         uint32                     _revision;
-        uint64                     _instanceID;
+        IdentityToken              _instanceID;
     };
 } // namespace sw

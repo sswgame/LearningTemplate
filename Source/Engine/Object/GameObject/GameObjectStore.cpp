@@ -15,6 +15,7 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/ObjectIDSpace.h"
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
 #include "Engine/Object/GameObject/Tick/TickRegistry.h"
@@ -34,10 +35,9 @@ namespace sw
 
 namespace sw
 {
-    atomic<uint64> GameObjectStore::_s_nextObjectID = 1;
-
-    GameObjectStore::GameObjectStore( GameObjectManager& manager, SceneTickScheduler& tickScheduler, const StructuralChangeBuffer& structuralChangeBuffer )
+    GameObjectStore::GameObjectStore( GameObjectManager& manager, SceneTickScheduler& tickScheduler, const StructuralChangeBuffer& structuralChangeBuffer, ObjectIDSpace& idSpace )
         : _pManager{ &manager }
+        , _pIDSpace{ &idSpace }
         , _pTickRegistry{ &tickScheduler.getTickRegistry() }
         , _pStructuralChangeBuffer{ &structuralChangeBuffer }
         , _poolGameObject{ 256, true }
@@ -104,8 +104,7 @@ namespace sw
             return pRenamed;
         }
 
-        _s_nextObjectID.fetch_max( objectID + 1, std::memory_order_relaxed );
-        return createGameObjectUnlocked( name, objectID );
+        return createGameObjectUnlocked( name, _pIDSpace->reserveObjectID( objectID ) );
     }
 
     GameObject* GameObjectStore::createGameObjectUnlocked( hashed_string name, uint64 objectID )
@@ -643,7 +642,7 @@ namespace sw
 
     uint64 GameObjectStore::allocateID()
     {
-        return _s_nextObjectID.fetch_add( 1, std::memory_order_relaxed );
+        return _pIDSpace->allocateObjectID();
     }
 
     bool GameObjectStore::isNameTakenUnlocked( hashed_string name ) const

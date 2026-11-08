@@ -4,12 +4,13 @@
  *        워프 정의 내보내기 경로, 끌기 한 번을 되돌리기 한 줄로 묶는 편집 상태. ImGui 를 모릅니다.
  * @details 스택 · 되돌리기 · 미리보기는 세션(`MeshModifierSession`, 에디터 서브시스템)이 들고, 패널(`MeshModifiersPanel`)은 그리기와 곡선 편집기 화면 상태(`EditorCurveEditorState`)만 든다 —
  *          카메라 프리셋 `Model/` 과 같은 선이다(언리얼 모디파이어 스택 디테일 커스터마이즈의 상태와 Slate 행이 나뉜 것과 같다).
- *          프레임을 넘어 "그 모디파이어" 를 기억하는 자리는 주소가 아니라 `MeshModifier::getInstanceID` 로 비교한다 — 되돌리기는 스택을 새 인스턴스로 다시 짓는다.
+ *          프레임을 넘어 "그 모디파이어" 를 기억하는 자리는 주소가 아니라 `MeshModifier::getInstanceID`(정체성 토큰 — 들고 있어 주소 재사용이 없다)로 비교한다 — 되돌리기는 스택을 새 인스턴스로 다시 짓는다.
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Memory/IdentityToken.h"
 
 namespace sw::editor
 {
@@ -62,7 +63,7 @@ namespace sw::editor
         /** @brief 열린 팝업이 그 자리의 것이면 true 입니다. 되돌리기로 다시 지은 같은 주소의 다른 모디파이어는 아니다. */
         bool isCurvePopupFor( const MeshModifier& modifier, uint32 paramIndex, int32 itemIndex ) const;
         /** @brief 항목 번호가 바뀌었다 — 열린 팝업은 다음 그리기에 닫힌다. */
-        void closeCurvePopup() { _curveModifierID = 0; }
+        void closeCurvePopup() { _curveModifierID.reset(); }
 
         // ------------------------------------------------------------------------------
         // 3) 추가 메뉴 · 워프 내보내기 · 편집 묶기
@@ -84,12 +85,12 @@ namespace sw::editor
 
     private:
         vector<int32> _listNestedPath;      ///< 묶음의 하위 스택에서 들어간 묶음들의 번호 경로(비면 고른 묶음 자신의 하위 스택)
-        uint64        _nestedRootID;        ///< 하위 스택 편집을 연 묶음의 인스턴스 번호(0 이면 없음)
+        IdentityToken _nestedRootID;        ///< 하위 스택 편집을 연 묶음의 인스턴스 토큰(비면 없음)
         int32         _nestedSelectedIndex; ///< 보이는 하위 스택에서 고른 번호(-1 이면 없음)
         int32         _enterRequest;        ///< 이번 프레임 끝에 들어갈 묶음 번호(-1 이면 없음)
         uint8         _bLeaveRequested : 1; ///< 이번 프레임 끝에 한 단계 나온다
         uint8         _bEditing        : 1; ///< 끌기 중인 입력칸이 이미 되돌리기 기록을 남겼다
-        uint64        _curveModifierID;     ///< 곡선 팝업을 연 모디파이어의 인스턴스 번호(0 이면 없음)
+        IdentityToken _curveModifierID;     ///< 곡선 팝업을 연 모디파이어의 인스턴스 토큰(비면 없음)
         uint32        _curveParamIndex;     ///< 곡선 팝업을 연 매개변수 번호
         int32         _curveItemIndex;      ///< 곡선 팝업을 연 목록 항목 번호(단일 곡선이면 -1)
         string        _descriptionID;       ///< 설명을 만들어 둔 등록 id

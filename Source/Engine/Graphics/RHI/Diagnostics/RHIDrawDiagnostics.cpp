@@ -2,76 +2,72 @@
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 
-#include "Core/Concurrency/mutex.h"
-#include "Core/Container/string.h"
-#include "Core/Container/unordered_map.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Graphics/RHI/RHIGeometryBindings.h"
 
 namespace sw
 {
-    namespace
+    RHIDrawDiagnostics::RHIDrawDiagnostics( const IRHIDevice& owner )
+        : _pOwner{ &owner }
+        , _reportCount{ 0 }
     {
-        struct RHIDrawDiagnosticsInternal
-        {
-            /** @brief 백엔드 이름마다 이미 센 횟수의 맵입니다. 기록 스레드가 여럿이라 잠급니다(잘못된 드로우를 만난 경로에서만 부릅니다). */
-            static inline mutex                         s_mutex;
-            static inline unordered_map<string, uint32> s_mapBackendToCount;
-
-            /** @brief 그 백엔드의 횟수를 1 증가시키고 증가 전 값을 돌려줍니다. */
-            static uint32 countReport( const utf8* pBackendName )
-            {
-                ScopedLock<mutex> lock{ s_mutex };
-                uint32&           count = s_mapBackendToCount[string( pBackendName )];
-                return count++;
-            }
-        };
-    } // namespace
-
-    void RHIDrawDiagnostics::reportDestroyedVertexBuffer( const utf8* pBackendName, RHIBufferHandle handle )
-    {
-        const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
-        if ( count < kMaxReportedDraw )
-            SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexBufferDestroyed", "%# draw skipped: its vertex buffer (handle %#) was destroyed while bound - rebind before drawing", pBackendName, handle );
     }
 
-    void RHIDrawDiagnostics::reportDrawWithoutRenderPass( const utf8* pBackendName )
+    uint32 RHIDrawDiagnostics::countReport() const
     {
-        const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
-        if ( count < kMaxReportedDraw )
-            SW_LOG_ERROR_ID( "RHI.DrawSkippedNoRenderPass", "%# draw skipped: no render pass is open - something ended the pass (a buffer update inside it?) or the draw was recorded before beginRenderPass", pBackendName );
+        return _reportCount.fetch_add( 1u, std::memory_order_relaxed );
     }
 
-    void RHIDrawDiagnostics::reportBufferUpdateInsideRenderPass( const utf8* pBackendName, const utf8* pWhat )
+    const utf8* RHIDrawDiagnostics::getBackendName() const
     {
-        const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
+        return _pOwner->getBackendName();
+    }
+
+    void RHIDrawDiagnostics::reportDestroyedVertexBuffer( RHIBufferHandle handle ) const
+    {
+        const uint32 count = countReport();
+        if ( count < kMaxReportedDraw )
+            SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexBufferDestroyed", "%# draw skipped: its vertex buffer (handle %#) was destroyed while bound - rebind before drawing", getBackendName(), handle );
+    }
+
+    void RHIDrawDiagnostics::reportDrawWithoutRenderPass() const
+    {
+        const uint32 count = countReport();
+        if ( count < kMaxReportedDraw )
+            SW_LOG_ERROR_ID( "RHI.DrawSkippedNoRenderPass", "%# draw skipped: no render pass is open - something ended the pass (a buffer update inside it?) or the draw was recorded before beginRenderPass", getBackendName() );
+    }
+
+    void RHIDrawDiagnostics::reportBufferUpdateInsideRenderPass( const utf8* pWhat ) const
+    {
+        const uint32 count = countReport();
         if ( count >= kMaxReportedDraw )
             return;
         // 부른 자리를 함께 남긴다 — 업로드를 패스 앞으로 옮길 곳이 곧 그 호출자다.
         CallStack stack{};
         CallStackCapture::capture( stack, 2 );
         SW_LOG_ERROR_ID( "RHI.BufferUpdateInsideRenderPass", "%# %#: a buffer update inside an open render pass - the pass is ended and draws after it in that pass are dropped. Upload before beginRenderPass\n%#",
-                         pBackendName, pWhat, CallStackCapture::symbolize( stack ).c_str() );
+                         getBackendName(), pWhat, CallStackCapture::symbolize( stack ).c_str() );
     }
 
-    void RHIDrawDiagnostics::reportIndexBufferUnbound( const utf8* pBackendName )
+    void RHIDrawDiagnostics::reportIndexBufferUnbound() const
     {
-        const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
+        const uint32 count = countReport();
         if ( count < kMaxReportedDraw )
-            SW_LOG_ERROR_ID( "RHI.DrawSkippedIndexBufferUnbound", "%# indexed draw skipped: no index buffer is bound - call setIndexBuffer before an indexed draw", pBackendName );
+            SW_LOG_ERROR_ID( "RHI.DrawSkippedIndexBufferUnbound", "%# indexed draw skipped: no index buffer is bound - call setIndexBuffer before an indexed draw", getBackendName() );
     }
 
-    void RHIDrawDiagnostics::reportDestroyedIndexBuffer( const utf8* pBackendName, RHIBufferHandle handle )
+    void RHIDrawDiagnostics::reportDestroyedIndexBuffer( RHIBufferHandle handle ) const
     {
-        const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
+        const uint32 count = countReport();
         if ( count < kMaxReportedDraw )
-            SW_LOG_ERROR_ID( "RHI.DrawSkippedIndexBufferDestroyed", "%# indexed draw skipped: its index buffer (handle %#) was destroyed while bound - rebind before drawing", pBackendName, handle );
+            SW_LOG_ERROR_ID( "RHI.DrawSkippedIndexBufferDestroyed", "%# indexed draw skipped: its index buffer (handle %#) was destroyed while bound - rebind before drawing", getBackendName(), handle );
     }
 
-    bool RHIDrawDiagnostics::checkVertexSlotsBound( const utf8* pBackendName, const RHIVertexLayout& input, const RHIGeometryBindings& bindings )
+    bool RHIDrawDiagnostics::checkVertexSlotsBound( const RHIVertexLayout& input, const RHIGeometryBindings& bindings ) const
     {
         const uint32              vertexSlotMask   = input._slotMask;
         const RHIMeshVertexFormat meshVertexFormat = input._format;
@@ -83,17 +79,17 @@ namespace sw
             const uint32            expectedStride = constant::render::getVertexSlotStride( meshVertexFormat, slot );
             if ( binding._buffer != 0 && binding._stride == expectedStride )
                 continue;
-            const uint32 count = RHIDrawDiagnosticsInternal::countReport( pBackendName );
+            const uint32 count = countReport();
             if ( count >= kMaxReportedDraw )
                 return false;
             if ( binding._buffer == 0 )
                 SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexSlotUnbound",
                                  "%# draw skipped: its vertex shader reads vertex buffer slot %# but no buffer is bound - bind the mesh streams (slots 0 and 2) or instance slot stream (slot 1), or drop VertexInput from a shader that builds its vertices",
-                                 pBackendName, slot );
+                                 getBackendName(), slot );
             else
                 SW_LOG_ERROR_ID( "RHI.DrawSkippedVertexStrideMismatch",
                                  "%# draw skipped: vertex buffer slot %# has %#-byte elements but the PSO's mesh vertex format (%#) reads %#-byte elements - build the PSO with the mesh's vertex format",
-                                 pBackendName, slot, binding._stride, static_cast<uint32>( meshVertexFormat ), expectedStride );
+                                 getBackendName(), slot, binding._stride, static_cast<uint32>( meshVertexFormat ), expectedStride );
             return false;
         }
         return true;

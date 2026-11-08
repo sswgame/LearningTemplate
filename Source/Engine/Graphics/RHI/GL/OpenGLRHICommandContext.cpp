@@ -11,6 +11,11 @@
 
 namespace sw
 {
+    IRHIDevice& OpenGLRHICommandContext::getContextDevice() const
+    {
+        return *_pDevice;
+    }
+
     namespace
     {
         /** @brief PSO 의 렌더 상태를 GL 상태로 겁니다. GL 은 PSO 가 없어 상태를 모두 다시 건다 — 앞 PSO 의 값이 다음 드로우로 새지 않게 칸을 빠뜨리지 않는다. */
@@ -664,7 +669,7 @@ namespace sw
         const RHIVertexLayout                             input = pPSO != nullptr ? pPSO->_vertexLayout : RHIVertexLayout{}; // 없는 PSO 는 resolveDrawProgram 이 멈췄다
         // GL 은 슬롯마다 버퍼를 걸지 않고 속성마다 포인터를 건다 — 순회는 슬롯의 GL 버퍼만 풀어 두고, 속성은 아래 공용 표로 건다.
         GLuint     arrBuffer[constant::render::kVertexBufferSlotCount]{};
-        const bool bResolved = _pState->_geometry.bindVertexBuffersForDraw( "OpenGL", input, [this, &arrBuffer]( uint32 slot, const RHIBufferBinding& binding )
+        const bool bResolved = _pState->_geometry.bindVertexBuffersForDraw( _pDevice->getDrawDiagnostics(), input, [this, &arrBuffer]( uint32 slot, const RHIBufferBinding& binding )
         {
             arrBuffer[slot] = _pDevice->resolveGlBuffer( binding._buffer );
             return arrBuffer[slot] != 0;
@@ -960,7 +965,7 @@ namespace sw
         // 정점 슬롯은 PSO 가 읽는 것만 건다(다른 드로우 진입점 · 세 백엔드와 같다). 인덱스 버퍼는 VAO 상태라 VAO 를 건 뒤에 건다.
         if ( bindVertexInputsForDraw() == false )
             return false;
-        const bool bIndexBound = _pState->_geometry.bindIndexBufferForDraw( "OpenGL", [this]( const RHIBufferBinding& binding )
+        const bool bIndexBound = _pState->_geometry.bindIndexBufferForDraw( _pDevice->getDrawDiagnostics(), [this]( const RHIBufferBinding& binding )
         {
             const GLuint ibo = _pDevice->resolveGlBuffer( binding._buffer );
             if ( ibo == 0 )

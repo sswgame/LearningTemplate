@@ -3,6 +3,7 @@
  * @brief 경로를 키로 Material 소유권을 관리합니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -120,6 +121,22 @@ namespace sw
          */
         void takePSOWarmEntries( vector<MaterialPSOWarmEntry>& outListEntry );
 
+        /**
+         * @brief 엔진에 묶인 머티리얼 캐시입니다. 엔진 서비스가 묶이지 않았으면(엔진 없는 도구 · 테스트) nullptr 입니다.
+         * @details 세대를 읽는 쪽(`MaterialRenderInputs::capture` · 장면 빌더)도 같은 캐시를 보므로, 없을 때 올리지 않은 변경은 읽는 쪽도 "모름" 으로 다룬다.
+         */
+        [[nodiscard]] static MaterialCache* findBound();
+        /**
+         * @brief 렌더 값 세대입니다(`MaterialRenderVersion::bump` 가 올린다). 같으면 어느 머티리얼 · 인스턴스 · 묶음의 렌더 값도 바뀌지 않았다.
+         * @details 머티리얼 틱(물 · 식생)이 워커에서 값을 넣을 수 있어 원자값이다. 세대는 1 부터라 0 은 "모름" 이다. 프로세스 정적 칸이 아니라 이 캐시(엔진 범위)의 칸이다 —
+         *          엔진을 다시 세우면 새로 시작한다(언리얼은 머티리얼 인스턴스가 바뀌면 렌더 쪽 유니폼 표현을 무효화해 그 프레임에만 다시 모은다 — 기억에 의존).
+         */
+        uint64 getRenderValueGeneration() const { return _renderValueGeneration.load( std::memory_order_relaxed ); }
+        void   bumpRenderValueGeneration() { _renderValueGeneration.fetch_add( 1u, std::memory_order_relaxed ); }
+        /** @brief 퍼뮤테이션 세대입니다(`MaterialPermutation::bumpPermutationGeneration` 이 올린다). 1 부터라 0 은 "모름" 이다. */
+        uint64 getPermutationGeneration() const { return _permutationGeneration.load( std::memory_order_relaxed ); }
+        void   bumpPermutationGeneration() { _permutationGeneration.fetch_add( 1u, std::memory_order_relaxed ); }
+
     private:
         struct Impl;
         /** @brief 초기화를 마친 고정 머티리얼의 PSO 미리 만들기 값을 만들어 렌더 스레드가 꺼낼 줄로 옮깁니다(게임 스레드, `initializePending`). */
@@ -127,6 +144,8 @@ namespace sw
 
     private:
         unique_ptr<Impl> _impl;
+        atomic<uint64>   _renderValueGeneration; ///< `getRenderValueGeneration`
+        atomic<uint64>   _permutationGeneration; ///< `getPermutationGeneration`
     };
 } // namespace sw
 

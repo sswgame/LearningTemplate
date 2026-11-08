@@ -3,6 +3,7 @@
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
+#include "Engine/Graphics/RHI/IRHIDevice.h"
 
 namespace sw
 {
@@ -33,7 +34,7 @@ namespace sw
         if ( _bRenderPassOpen )
             return true;
         if ( _bRenderPassNoBackBuffer == false )
-            RHIDrawDiagnostics::reportDrawWithoutRenderPass( getContextBackendName() );
+            getContextDevice().getDrawDiagnostics().reportDrawWithoutRenderPass();
         return false;
     }
 

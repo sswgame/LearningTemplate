@@ -7,16 +7,21 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/IdentityToken.h"
 
 #include "Engine/Presentation/WidgetVisibility.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
-    /** @brief 트리 안에서 위젯을 가리키는 번호입니다. 프로세스 안에서 다시 쓰지 않으며, 포커스, 포인터 캡처, 호버는 포인터가 아니라 이 번호를 보관합니다. */
-    using WidgetID = uint32;
-    /** @brief 위젯이 없음을 뜻하는 번호입니다(위젯 번호는 1 부터 시작합니다). */
-    inline constexpr WidgetID kInvalidWidgetID = 0;
+    /**
+     * @brief 위젯을 가리키는 정체성 토큰입니다(`IdentityToken`). 포커스, 포인터 캡처, 호버, 바인딩은 포인터가 아니라 이것을 보관하고 `WidgetTree::findWidgetByID` 로 찾습니다.
+     * @details 위젯이 만들 때 받는다(트리에 붙기 전에도 있다 — 문서 로더 · HUD 가 붙이기 전에 번호를 적는다). 보관한 쪽이 토큰을 들고 있어 지운 위젯의 주소가 새 위젯에
+     *          다시 쓰이지 않는다 — 프로세스 번호 발급기(정적 원자 칸)를 두지 않는다(언리얼 `FObjectKey` 와 같은 자리, `IdentityToken` 머리말).
+     */
+    using WidgetID = IdentityToken;
+    /** @brief 위젯이 없음을 뜻하는 빈 토큰입니다. */
+    inline const WidgetID kInvalidWidgetID{};
 
     // `WidgetVisibility` 는 표현 폴더에 있다(`Engine/Presentation/WidgetVisibility.h` — 게임의 뷰모델이 칸으로 든다).
 } // namespace sw

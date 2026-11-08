@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Name/hashed_string.h"
 
@@ -268,7 +269,7 @@ namespace sw
         const SkeletalAnimatorComponent*                _pFrameAnimator; ///< 이번 프레임의 같은 유닛 애니메이터(커브 출처, 프레임 시작에 찾음)
         SkeletalMeshComponent*                          _pSkeletalMesh;
         const Skeleton*                                 _pBoundSkeleton; ///< 마지막으로 묶으려 한 유닛 스켈레톤(바뀌면 프레임 준비가 다시 묶는다)
-        uint64                                          _boundContentID;
+        IdentityToken                                   _boundContentID; ///< 마지막으로 묶은 리그의 내용 토큰(들고 있어 지운 리그의 주소가 새 리그와 같아 보이지 않는다)
         PROPERTY( Category = "Rig", DisplayName = "Enabled", Tooltip = "Evaluate the rig; disabled rigs cost nothing" )
         uint8                  _bRigEnabled : 1;
         [[maybe_unused]] uint8 _reserved    : 7;

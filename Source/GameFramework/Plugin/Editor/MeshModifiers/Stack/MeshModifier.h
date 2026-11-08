@@ -20,6 +20,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/IdentityToken.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -425,11 +426,11 @@ namespace sw::editor
         const string& getName() const { return _name; }
         void          setName( string_view name ) { _name = string( name ); }
         /**
-         * @brief 이 인스턴스의 번호입니다. 만들 때 정하고 프로세스 안에서 다시 쓰지 않는다(0 은 "없음").
+         * @brief 이 인스턴스의 정체성 토큰입니다(`IdentityToken`). 만들 때 정한다 — 기억하는 쪽이 토큰을 들어 같은 주소가 다른 인스턴스에 다시 쓰이지 않는다.
          * @details 되돌리기 · 다시 읽기는 스택을 새 인스턴스로 다시 짓고 지운 자리는 같은 주소에 새 모디파이어가 올 수 있다 — 프레임을 넘어 "그 모디파이어" 를
-         *          기억하는 쪽(패널의 곡선 팝업 · 하위 스택 경로)은 주소가 아니라 이 번호로 비교한다.
+         *          기억하는 쪽(패널의 곡선 팝업 · 하위 스택 경로)은 주소가 아니라 이 토큰으로 비교한다(프로세스 번호 발급기를 두지 않는다).
          */
-        uint64                   getInstanceID() const { return _instanceID; }
+        const IdentityToken&     getInstanceID() const { return _instanceID; }
         bool                     isEnabled() const { return _bEnabled; }
         void                     setEnabled( bool bEnabled ) { _bEnabled = bEnabled; }
         MeshModifierGizmo&       getGizmo() { return _gizmo; }
@@ -453,7 +454,7 @@ namespace sw::editor
         string                         _name;
         string                         _spaceReference; ///< 월드 공간일 때 기준 오브젝트 이름(비면 월드 원점)
         MeshModifierGizmo              _gizmo;
-        uint64                         _instanceID; ///< `getInstanceID`. 만들 때 정한다
+        IdentityToken                  _instanceID; ///< `getInstanceID`. 만들 때 정한다
         uint8                          _bEnabled    : 1;
         uint8                          _bWorldSpace : 1;
     };

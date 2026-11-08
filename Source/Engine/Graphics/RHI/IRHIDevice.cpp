@@ -138,7 +138,7 @@ namespace sw
         IRHICommandContext* const pFrameStream = getFrameStreamContext();
         if ( pFrameStream == nullptr || pFrameStream->isRenderPassOpen() == false )
             return;
-        RHIDrawDiagnostics::reportBufferUpdateInsideRenderPass( getBackendName(), pWhat );
+        _drawDiagnostics.reportBufferUpdateInsideRenderPass( pWhat );
         pFrameStream->endRenderPass();
     }
 
@@ -380,6 +380,7 @@ namespace sw
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
         , _pBindlessIndexReportLog{ make_unique<BindlessIndexReportLog>() }
         , _initPhaseTimings{}
+        , _drawDiagnostics{ *this }
     {
     }
 

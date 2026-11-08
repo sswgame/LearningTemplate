@@ -14,6 +14,11 @@
 
 namespace sw
 {
+    IRHIDevice& VulkanRHICommandContext::getContextDevice() const
+    {
+        return *_pDevice;
+    }
+
     namespace
     {
         /**
@@ -752,7 +757,7 @@ namespace sw
         // 건 뒤에 부서진 버퍼(세대가 달라 풀리지 않는다)면 드로우를 버린다.
         const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
         const RHIVertexLayout                             input   = pRecord != nullptr ? pRecord->_vertexLayout : RHIVertexLayout{}; // 없는 PSO 는 bindActiveGraphicsPipeline 이 멈췄다
-        return _pState->_geometry.bindVertexBuffersForDraw( "Vulkan", input, [this, cmd]( uint32 slot, const RHIBufferBinding& binding )
+        return _pState->_geometry.bindVertexBuffersForDraw( _pDevice->getDrawDiagnostics(), input, [this, cmd]( uint32 slot, const RHIBufferBinding& binding )
         {
             const VulkanRHIDevice::VulkanBufferRecord* pBuffer = _pDevice->resolveAllocatedBuffer( binding._buffer );
             if ( pBuffer == nullptr || pBuffer->_buffer == VK_NULL_HANDLE )
@@ -771,7 +776,7 @@ namespace sw
             return false;
         if ( _pState->_bRenderPassActive == SW_FALSE )
         {
-            RHIDrawDiagnostics::reportDrawWithoutRenderPass( "Vulkan" );
+            _pDevice->getDrawDiagnostics().reportDrawWithoutRenderPass();
             return false;
         }
 
@@ -933,7 +938,7 @@ namespace sw
         // 파이프라인이 늘 선언하는 바인딩 1 이 이 커맨드 버퍼에서 한 번도 안 걸렸을 때 정의되지 않은 값을 읽는다.
         if ( bindMeshVertexBufferForDraw() == false )
             return false;
-        return _pState->_geometry.bindIndexBufferForDraw( "Vulkan", [this, cmd]( const RHIBufferBinding& binding )
+        return _pState->_geometry.bindIndexBufferForDraw( _pDevice->getDrawDiagnostics(), [this, cmd]( const RHIBufferBinding& binding )
         {
             const VulkanRHIDevice::VulkanBufferRecord* pIb = _pDevice->resolveAllocatedBuffer( binding._buffer );
             if ( pIb == nullptr || pIb->_buffer == VK_NULL_HANDLE )
