@@ -27,6 +27,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -297,9 +298,9 @@ namespace sw::engine
 
         /**
          * @brief @p stage 의 공장을 만드는 순서로 늘어놓습니다(선언한 먼저 만들 타입으로 위상 정렬, 동점은 이름 순).
-         * @return 같은 타입 둘 · 모르는 타입 · 다른 단계의 타입 · 순환이면 false 이고 @p outError 에 무엇인지 적습니다.
+         * @return 같은 타입 둘 · 모르는 타입 · 다른 단계의 타입 · 순환이면 무엇인지입니다.
          */
-        [[nodiscard]] bool orderSubsystems( EngineSubsystemStage stage, vector<const EngineSubsystemRecord*>& outListOrder, string& outError ) const;
+        [[nodiscard]] expected<void> orderSubsystems( EngineSubsystemStage stage, vector<const EngineSubsystemRecord*>& outListOrder ) const;
         /**
          * @brief @p stage 의 공장을 만드는 순서로 부릅니다. 순서를 정하지 못하거나 수명 의존이 만드는 순서와 어긋나면(`findLifetimeMismatch`) 이유를 남기고 멈춘다 — 폴백이 없다.
          */
@@ -309,10 +310,9 @@ namespace sw::engine
          * @brief 만드는 순서와 수명 의존이 어긋난 곳을 찾습니다. @p listBuilt 는 공장마다 그 공장이 @p collection 에 더한 서브시스템 번호입니다(`orderSubsystems` 의 순서).
          * @details 공장 A 가 먼저 만들 타입 B 를 받았으면, A 가 만든 서브시스템은 B 가 만든 서브시스템에 선언한 의존(`getSubsystemDependencies` · 상대의 `getSubsystemDependents`)으로
          *          닿아야 한다 — 받은 것이 먼저 서고 늦게 내려야 들고 있는 참조가 산다. 서브시스템이 아닌 것을 건 공장(인터페이스만 거는 줄)은 볼 것이 없다.
-         * @return 어긋난 곳이 없으면 true 입니다. 있으면 false 이고 @p outError 에 두 이름을 적습니다.
+         * @return 어긋난 곳이 있으면 그 두 이름(대상)입니다.
          */
-        [[nodiscard]] static bool findLifetimeMismatch( const vector<const EngineSubsystemRecord*>& listOrder, const vector<vector<uint32>>& listBuilt, const SubsystemCollection& collection,
-                                                        string& outError );
+        [[nodiscard]] static expected<void> findLifetimeMismatch( const vector<const EngineSubsystemRecord*>& listOrder, const vector<vector<uint32>>& listBuilt, const SubsystemCollection& collection );
 
     private:
         friend struct EngineServiceRecord;

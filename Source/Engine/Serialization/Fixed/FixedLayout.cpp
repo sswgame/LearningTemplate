@@ -35,20 +35,17 @@ namespace sw
             }
 
             /**
-             * @brief 의존 코덱이 모두 적격인지 따라 내려가 봅니다. 아니면 @p outReason 에 경로와 이유를 적습니다.
+             * @brief 의존 코덱이 모두 적격인지 따라 내려가 봅니다. 아니면 그 이유(대상은 `필드 (타입): 깊은 쪽 까닭` 경로)입니다.
              * @param listVisited 지금 확인 중인 코덱들입니다. 서로를 담는 타입이 다시 나오면 이미 확인 중이므로 통과합니다.
              */
-            static bool areDependenciesValid( const FixedCodec& codec, vector<const FixedCodec*>& listVisited, string& outReason )
+            static expected<void> areDependenciesValid( const FixedCodec& codec, vector<const FixedCodec*>& listVisited )
             {
                 if ( codec._dependencyState.load( std::memory_order_acquire ) == FixedDependencyState::Valid )
-                    return true;
+                    return {};
                 if ( VectorUtil::contains( listVisited, &codec ) )
-                    return true;
+                    return {};
                 if ( static_cast<int32>( listVisited.size() ) >= kMaxDependencyDepth )
-                {
-                    outReason = "fixed layout dependencies nest too deeply";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::Unsupported, "fixed layout dependencies nest too deeply" } );
                 listVisited.push_back( &codec );
 
                 TypeRegistry& registry = engine::getSubsystem<TypeRegistry>();
@@ -57,22 +54,28 @@ namespace sw
                     const FixedCodec::Dependency& dependency = codec._pDependency[index];
                     const TypeInfo*               pType      = registry.findType( hashed_string( dependency._pTypeFqn ) );
                     const FixedCodec*             pNested    = pType != nullptr ? pType->_pFixedCodec : nullptr;
-                    string                        nestedReason;
+                    string_view                   nestedReason;
+                    expected<void>                nested{};
                     if ( pType == nullptr )
                         nestedReason = "type is not registered";
                     else if ( pNested == nullptr )
                         nestedReason = "type has no generated fixed layout codec";
                     else if ( pNested->isEligible() == false )
                         nestedReason = pNested->_pIneligibleReason;
-                    else if ( areDependenciesValid( *pNested, listVisited, nestedReason ) )
+                    else if ( ( nested = areDependenciesValid( *pNested, listVisited ) ).has_value() )
                         continue;
 
-                    outReason = string( "field '" ) + dependency._pFieldName + "' of type '" + dependency._pTypeFqn + "': " + nestedReason;
                     listVisited.pop_back();
-                    return false;
+                    Error error{ ErrorKind::Unsupported, "a field's type is not fixed layout eligible", dependency._pFieldName };
+                    error.appendDetail( " (" ).appendDetail( dependency._pTypeFqn ).appendDetail( "): " );
+                    if ( nested.has_value() )
+                        error.appendDetail( nestedReason );
+                    else
+                        error.appendDetail( nested.error().detail() );
+                    return unexpected( error );
                 }
                 listVisited.pop_back();
-                return true;
+                return {};
             }
 
             static bool isQuantizedRangeValid( const float32 minValue, const float32 maxValue, const float32 step ) noexcept
@@ -320,25 +323,19 @@ namespace sw
 
 namespace sw
 {
-    const FixedCodec* FixedLayout::findCodec( const TypeInfo& type, string& outReason )
+    expected<const FixedCodec*> FixedLayout::findCodec( const TypeInfo& type )
     {
         const FixedCodec* pCodec = type._pFixedCodec;
         if ( pCodec == nullptr )
-        {
-            outReason = "type has no generated fixed layout codec";
-            return nullptr;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "type has no generated fixed layout codec", type._name.c_str() } );
         if ( pCodec->isEligible() == false )
-        {
-            outReason = pCodec->_pIneligibleReason;
-            return nullptr;
-        }
+            return unexpected( Error{ ErrorKind::Unsupported, "type is not fixed layout eligible", pCodec->_pIneligibleReason } );
         if ( pCodec->_dependencyState.load( std::memory_order_acquire ) == FixedDependencyState::Valid )
             return pCodec;
 
         vector<const FixedCodec*> listVisited;
-        if ( FixedLayoutInternal::areDependenciesValid( *pCodec, listVisited, outReason ) == false )
-            return nullptr;
+        if ( expected<void> dependencies = FixedLayoutInternal::areDependenciesValid( *pCodec, listVisited ); dependencies.has_value() == false )
+            return unexpected( dependencies.error() );
         pCodec->_dependencyState.store( FixedDependencyState::Valid, std::memory_order_release );
         return pCodec;
     }
@@ -394,10 +391,10 @@ namespace sw
         return "Unknown";
     }
 
-    void FixedLayout::stopForMissingCodec( const hashed_string& fqn, const string& reason )
+    void FixedLayout::stopForMissingCodec( const hashed_string& fqn, string_view reason, string_view detail )
     {
         // 대체 값(0 해시, 빈 결과)을 돌려주면 그 값이 핸드셰이크 해시나 롤백 상태에 섞입니다. 고칠 곳은 선언이므로 멈춥니다.
-        SW_FATAL( "'%#' has no fixed layout codec: %#", fqn.c_str(), reason );
+        SW_FATAL( "'%#' has no fixed layout codec: %# (%#)", fqn.c_str(), reason, detail );
     }
 
     bool FixedLayout::writeWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer )

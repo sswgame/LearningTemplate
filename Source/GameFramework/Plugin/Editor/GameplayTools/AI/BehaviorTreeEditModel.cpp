@@ -272,11 +272,10 @@ namespace sw::editor
             const auto addConditionIssue = [&]( const string& text )
             {
                 ConditionExpr expr;
-                string        error;
                 if ( text.empty() )
                     outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "Write a condition" } );
-                else if ( ConditionExpr::tryCompile( text, expr, error ) == false )
-                    outListIssue.push_back( BehaviorTreeEditIssue{ node._id, error } );
+                else if ( const expected<void> compiled = ConditionExpr::tryCompile( text, expr ); compiled.has_value() == false )
+                    outListIssue.push_back( BehaviorTreeEditIssue{ node._id, string( compiled.error().detail().data(), compiled.error().detail().size() ) } );
             };
             if ( const BehaviorActionParams* pAction = node._params.find<BehaviorActionParams>(); pAction != nullptr )
             {
@@ -419,16 +418,16 @@ namespace sw::editor
             outError = "The base tree '" + _baseID + "' could not be read - not saved";
             return false;
         }
-        string deltaText;
-        string deltaError;
-        if ( ResourceComposer::makeCheckedDelta( fullText, parent.write(), BehaviorTreeSchema::make(), _baseID, []( const string& text )
+        string               deltaText;
+        const expected<void> delta = ResourceComposer::makeCheckedDelta( fullText, parent.write(), BehaviorTreeSchema::make(), _baseID, []( const string& text )
         {
             BehaviorTreeEditModel reread;
             string                rereadError;
             return reread.parse( text, rereadError ) ? reread.write() : string{};
-        }, deltaText, deltaError ) == false )
+        }, deltaText );
+        if ( delta.has_value() == false )
         {
-            outError = "Not saved: " + deltaError + " (or a node without an id changed)";
+            outError = "Not saved: " + string( delta.error().message().data(), delta.error().message().size() ) + " (or a node without an id changed)";
             return false;
         }
         outText = std::move( deltaText );

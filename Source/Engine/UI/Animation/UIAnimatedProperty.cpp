@@ -107,16 +107,15 @@ namespace sw
         return result;
     }
 
-    bool UIAnimatedProperty::resolve( const TypeInfo& type, string_view path, UIAnimatedProperty& outProperty, string& outError )
+    expected<void> UIAnimatedProperty::resolve( const TypeInfo& type, string_view path, UIAnimatedProperty& outProperty )
     {
         outProperty = UIAnimatedProperty{};
-        if ( UIBindingValue::resolvePath( type, path, outProperty._path, outError ) == false )
-            return false;
+        if ( expected<void> resolved = UIBindingValue::resolvePath( type, path, outProperty._path ); resolved.has_value() == false )
+            return resolved;
         if ( outProperty._path.getLeafProperty()._bIsContainer == SW_TRUE )
         {
-            outError    = "'" + string( path ) + "' is a container";
             outProperty = UIAnimatedProperty{};
-            return false;
+            return unexpected( Error{ ErrorKind::Unsupported, "an animated property cannot be a container", path } );
         }
         const PropertyInfo& leaf         = outProperty._path.getLeafProperty();
         const int32         builtinIndex = ReflectedValueUtil::findBuiltinIndex( leaf._typeName );
@@ -124,7 +123,7 @@ namespace sw
         outProperty._kind                = count > 0 ? UIAnimatedValueKind::Float : UIAnimatedValueKind::Discrete;
         outProperty._componentCount      = count;
         outProperty._builtinIndex        = count > 0 ? static_cast<uint8>( builtinIndex ) : 0;
-        return true;
+        return {};
     }
 
     bool UIAnimatedProperty::parseValue( string_view text, UIAnimatedValue& outValue ) const

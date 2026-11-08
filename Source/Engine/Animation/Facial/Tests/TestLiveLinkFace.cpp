@@ -44,11 +44,10 @@ namespace
 /** @brief [LiveLinkFaceTest] 쓴 패킷을 그대로 읽는다 — 빅 엔디언 값과 문자열 포함 */
 SW_TEST_CASE( LiveLinkFaceTest, PacketRoundTrip )
 {
-    const vector<uint8> listByte = Util::makeBytes( Util::makeFrame() );
-    LiveLinkFaceFrame   frame{};
-    string              error;
-    SW_REQUIRE_TRUE( LiveLinkFaceFrame::parse( listByte.data(), listByte.size(), Util::makeLayout(), frame, error ) );
-    SW_EXPECT_TRUE( error.empty() );
+    const vector<uint8>               listByte = Util::makeBytes( Util::makeFrame() );
+    const expected<LiveLinkFaceFrame> parsed   = LiveLinkFaceFrame::parse( listByte.data(), listByte.size(), Util::makeLayout() );
+    SW_REQUIRE_TRUE( parsed.has_value() );
+    const LiveLinkFaceFrame& frame = *parsed;
     SW_EXPECT_TRUE( frame._deviceID == "iPhone" );
     SW_EXPECT_TRUE( frame._subjectName == "Actor" );
     SW_EXPECT_EQUAL( 42, frame._frameNumber );
@@ -72,10 +71,7 @@ SW_TEST_CASE( LiveLinkFaceTest, ValuesAreBigEndian )
 SW_TEST_CASE( LiveLinkFaceTest, OtherVersionIsRejected )
 {
     const vector<uint8> listByte = Util::makeBytes( Util::makeFrame(), Util::kVersion + 1 );
-    LiveLinkFaceFrame   frame{};
-    string              error;
-    SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( listByte.data(), listByte.size(), Util::makeLayout(), frame, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( listByte.data(), listByte.size(), Util::makeLayout() ).has_value() );
 }
 
 /** @brief [LiveLinkFaceTest] 채널 수가 배치 표와 다르면 오류이고, 푼 앞부분을 남기지 않는다 */
@@ -84,12 +80,7 @@ SW_TEST_CASE( LiveLinkFaceTest, ChannelCountMismatchLeavesNoPartialFrame )
     LiveLinkFaceFrame source  = Util::makeFrame();
     source._listValue         = { 0.25f, 0.5f };
     const vector<uint8> bytes = Util::makeBytes( source );
-    LiveLinkFaceFrame   frame{};
-    string              error;
-    SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( bytes.data(), bytes.size(), Util::makeLayout(), frame, error ) );
-    SW_EXPECT_FALSE( error.empty() );
-    SW_EXPECT_TRUE( frame._deviceID.empty() );
-    SW_EXPECT_TRUE( frame._listValue.empty() );
+    SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( bytes.data(), bytes.size(), Util::makeLayout() ).has_value() );
 }
 
 /** @brief [LiveLinkFaceTest] 망에서 온 값이다 — 어느 자리에서 잘려도 범위 밖을 읽지 않고 오류다 */
@@ -99,11 +90,7 @@ SW_TEST_CASE( LiveLinkFaceTest, EveryTruncationIsRejected )
     const LiveLinkFaceLayout layout   = Util::makeLayout();
     for ( size_t size = 0; size < listByte.size(); ++size )
     {
-        LiveLinkFaceFrame frame{};
-        string            error;
-        SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( listByte.data(), size, layout, frame, error ) );
-        SW_EXPECT_FALSE( error.empty() );
-        SW_EXPECT_TRUE( frame._listValue.empty() );
+        SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( listByte.data(), size, layout ).has_value() );
     }
 }
 
@@ -112,10 +99,7 @@ SW_TEST_CASE( LiveLinkFaceTest, TrailingBytesAreRejected )
 {
     vector<uint8> listByte = Util::makeBytes( Util::makeFrame() );
     listByte.push_back( 0 );
-    LiveLinkFaceFrame frame{};
-    string            error;
-    SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( listByte.data(), listByte.size(), Util::makeLayout(), frame, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( listByte.data(), listByte.size(), Util::makeLayout() ).has_value() );
 }
 
 /** @brief [LiveLinkFaceTest] 문자열 길이가 음수(UTF-16)거나 패킷보다 길면 오류다 */
@@ -126,20 +110,14 @@ SW_TEST_CASE( LiveLinkFaceTest, BadStringLengthIsRejected )
     {
         vector<uint8> listByte = Util::makeBytes( Util::makeFrame() );
         listByte[1]            = firstLengthByte; // 판 번호 뒤 장치 id 의 길이 맨 앞 바이트
-        LiveLinkFaceFrame frame{};
-        string            error;
-        SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( listByte.data(), listByte.size(), layout, frame, error ) );
-        SW_EXPECT_FALSE( error.empty() );
+        SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( listByte.data(), listByte.size(), layout ).has_value() );
     }
 }
 
 /** @brief [LiveLinkFaceTest] 널 포인터는 오류다 */
 SW_TEST_CASE( LiveLinkFaceTest, NullDataIsRejected )
 {
-    LiveLinkFaceFrame frame{};
-    string            error;
-    SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( nullptr, 0, Util::makeLayout(), frame, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( LiveLinkFaceFrame::parse( nullptr, 0, Util::makeLayout() ).has_value() );
 }
 
 /** @brief [LiveLinkFaceTest] 표정은 연결된 채널의 값 x 배율 합이다. 받은 패킷이 없으면 어떤 채널도 내지 않는다 */

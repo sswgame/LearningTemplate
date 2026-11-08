@@ -88,7 +88,7 @@ namespace sw
     {
     }
 
-    bool MeshLoadOperation::runLoad( string& outError )
+    expected<void> MeshLoadOperation::runLoad()
     {
         const string_view path = getPath();
         const string      key  = MeshCacheInternal::makeKey( path );
@@ -125,10 +125,9 @@ namespace sw
         if ( bLoaded == false )
         {
             MeshCacheInternal::warnLoadFailureOnce( path );
-            outError = "the mesh asset could not be read";
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the mesh asset could not be read", path } );
         }
-        return true;
+        return {};
     }
 } // namespace sw
 

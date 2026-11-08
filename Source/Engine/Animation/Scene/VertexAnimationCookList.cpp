@@ -148,11 +148,11 @@ namespace sw
     {
         uint32 writtenCount = 0;
         // 쿠킹 폴더가 비었으면 메시 파일 곁에 쓴다 — 상대 키인 메시는 읽기가 검색 순서로 고른 그 파일이다.
-        const std::optional<AbsolutePath> meshPath = cookedDir.empty() ? engine::getSubsystem<AssetPaths>().toDiskPath( list._meshPath ) : std::nullopt;
+        const optional<AbsolutePath> meshPath = cookedDir.empty() ? engine::getSubsystem<AssetPaths>().toDiskPath( list._meshPath ) : nullopt;
         for ( const hashed_string& clipName : list._listClip )
         {
-            const string                cookedPath = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
-            std::optional<AbsolutePath> outputPath;
+            const string           cookedPath = MeshVertexAnimation::makeCookedPath( list._meshPath, clipName );
+            optional<AbsolutePath> outputPath;
             if ( cookedDir.empty() == false )
                 outputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( cookedDir, cookedPath ) );
             else if ( meshPath.has_value() )

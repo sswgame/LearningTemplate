@@ -36,14 +36,14 @@ namespace sw
     namespace
     {
         /** @brief 열거형 선택지의 순번입니다(전역 변수에 넘길 기본 글). */
-        uint32 findOptionIndex( const UserSettingDef& def, string_view value )
+        optional<uint32> findOptionIndex( const UserSettingDef& def, string_view value )
         {
             for ( uint32 optionIndex = 0; optionIndex < static_cast<uint32>( def._listOption.size() ); ++optionIndex )
             {
                 if ( StringUtil::equals( def._listOption[optionIndex]._value, value ) )
                     return optionIndex;
             }
-            return constant::invalid_index::kUint32;
+            return nullopt;
         }
 
         /**
@@ -841,8 +841,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     uint32 UserSettingsManager::findIndex( const hashed_string& settingID ) const
     {
-        const uint32 settingIndex = _schema.findSettingIndex( settingID );
-        return settingIndex < static_cast<uint32>( _listState.size() ) ? settingIndex : constant::invalid_index::kUint32;
+        const optional<uint32> settingIndex = _schema.findSettingIndex( settingID );
+        return settingIndex.has_value() && *settingIndex < static_cast<uint32>( _listState.size() ) ? *settingIndex : constant::invalid_index::kUint32;
     }
 
     uint32 UserSettingsManager::resolveKeyIndex( const hashed_string& settingID, UserSettingType expectedType ) const
@@ -925,13 +925,13 @@ namespace sw
                     return pVariable->setValueFromString( value );
 
                 // 열거형은 선택지의 `targetValue`, 없으면 선택지 순번을 넘긴다. 문자열 변수면 선택지 이름 그대로다.
-                const uint32 optionIndex = findOptionIndex( def, value );
-                if ( pVariable->isTextType() || optionIndex == constant::invalid_index::kUint32 )
+                const optional<uint32> optionIndex = findOptionIndex( def, value );
+                if ( pVariable->isTextType() || optionIndex.has_value() == false )
                     return pVariable->setValueFromString( value );
-                const UserSettingOption& option = def._listOption[optionIndex];
+                const UserSettingOption& option = def._listOption[*optionIndex];
                 if ( option._targetValue.empty() == false )
                     return pVariable->setValueFromString( option._targetValue );
-                return pVariable->setValueAsInt( static_cast<int32>( optionIndex ) );
+                return pVariable->setValueAsInt( static_cast<int32>( *optionIndex ) );
             }
             case UserSettingTargetKind::Handler:
             {

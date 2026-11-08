@@ -227,15 +227,17 @@ namespace sw
 
     const DestructionGroup* DestructionState::findGroup( uint32 groupID ) const
     {
-        const int32 index = findGroupIndex( groupID );
-        return index >= 0 ? &_listGroup[static_cast<size_t>( index )] : nullptr;
+        const optional<uint32> index = findGroupIndex( groupID );
+        return index.has_value() ? &_listGroup[*index] : nullptr;
     }
 
-    int32 DestructionState::findGroupIndex( uint32 groupID ) const
+    optional<uint32> DestructionState::findGroupIndex( uint32 groupID ) const
     {
         const auto found = std::lower_bound( _listGroup.begin(), _listGroup.end(), groupID, []( const auto& group, uint32 id )
         { return group._id < id; } );
-        return ( found != _listGroup.end() && found->_id == groupID ) ? static_cast<int32>( found - _listGroup.begin() ) : -1;
+        if ( found == _listGroup.end() || found->_id != groupID )
+            return nullopt;
+        return static_cast<uint32>( found - _listGroup.begin() );
     }
 
     bool DestructionState::hasAnchoredLeaf( uint32 node ) const
@@ -263,10 +265,10 @@ namespace sw
             }
         }
         // 그 그룹의 노드 목록에서 갈라진 노드를 자식들로 바꾼다.
-        const int32 groupIndex = findGroupIndex( _listLeafGroup[graph._listNode[node]._firstLeaf] );
-        if ( groupIndex < 0 )
+        const optional<uint32> groupIndex = findGroupIndex( _listLeafGroup[graph._listNode[node]._firstLeaf] );
+        if ( groupIndex.has_value() == false )
             return;
-        vector<uint32>& listNode = _listGroup[static_cast<size_t>( groupIndex )]._listNode;
+        vector<uint32>& listNode = _listGroup[*groupIndex]._listNode;
         const auto      iter     = std::lower_bound( listNode.begin(), listNode.end(), node );
         if ( iter != listNode.end() && *iter == node )
             listNode.erase( iter );
@@ -513,10 +515,10 @@ namespace sw
         vector<DestructionGroup> listNewGroup;
         for ( const uint32 groupID : inoutListDirtyGroupID )
         {
-            const int32 groupIndex = findGroupIndex( groupID );
-            if ( groupIndex < 0 )
+            const optional<uint32> groupIndex = findGroupIndex( groupID );
+            if ( groupIndex.has_value() == false )
                 continue;
-            const DestructionGroup old = _listGroup[static_cast<size_t>( groupIndex )];
+            const DestructionGroup old = _listGroup[*groupIndex];
             vector<vector<uint32>> listComponent;
             splitComponents( old._listNode, listComponent );
             // 붙은 덩어리는 무게로 끊길 수 있다. 끊기면 다시 나누고 지지를 다시 계산한다. 나누기가 끊은 뒤에 오므로 상한에 닿은 회차의 끊김도 그룹에 반영된다.

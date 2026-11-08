@@ -89,12 +89,12 @@ namespace sw
         /** @brief 등록 줄 @p entry 를 부르는 명령을 더합니다. 인자는 지금 읽어 들고 있습니다. */
         void emitCall( const ConditionEntry& entry, const vector<string_view>& listToken )
         {
-            InstancedStruct args( *entry._pArgsOps );
-            string          argsError;
-            if ( InstancedStructText::read( args.getInstance(), *args.getType(), listToken, argsError ) == false )
+            InstancedStruct      args( *entry._pArgsOps );
+            const expected<void> read = InstancedStructText::read( args.getInstance(), *args.getType(), listToken );
+            if ( read.has_value() == false )
             {
                 StringBuilder<constant::buffer::kMax256> textBuilder;
-                textBuilder.appendFormat( "'%#': %#", entry._pName, argsError.c_str() );
+                textBuilder.appendFormat( "'%#': %# (%#)", entry._pName, read.error().message(), read.error().detail() );
                 fail( textBuilder.view() );
                 return;
             }
@@ -507,7 +507,7 @@ namespace sw
     {
     }
 
-    bool ConditionExpr::tryCompile( string_view text, ConditionExpr& outExpr, string& outError, const utf8* pBareCondition )
+    expected<void> ConditionExpr::tryCompile( string_view text, ConditionExpr& outExpr, const utf8* pBareCondition )
     {
         outExpr = ConditionExpr{};
         ConditionExpr         built;
@@ -516,28 +516,25 @@ namespace sw
         parser._pBareCondition = pBareCondition;
         parser._pExpr          = &built;
         if ( parser.isAtEnd() )
-            return true; // 조건 없음
+            return {}; // 조건 없음
         parser.parseOr();
         if ( parser.hasError() == false && parser.isAtEnd() == false )
             parser.fail( "unexpected text after the expression" );
         if ( parser.hasError() == false && ConditionExprInternal::fitsStack( built ) == false )
             parser.fail( "the expression is too large" );
         if ( parser.hasError() )
-        {
-            outError = parser._error;
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "invalid condition expression", parser._error } );
         built._text = string( text );
         outExpr     = std::move( built );
-        return true;
+        return {};
     }
 
     bool ConditionExpr::compile( string_view text, string_view sourceName, ConditionExpr& outExpr, const utf8* pBareCondition )
     {
-        string error;
-        if ( tryCompile( text, outExpr, error, pBareCondition ) )
+        const expected<void> compiled = tryCompile( text, outExpr, pBareCondition );
+        if ( compiled.has_value() )
             return true;
-        SW_LOG_ERROR_ID( "ConditionExpr.Invalid", "%#: invalid condition '%#': %#", sourceName, text, error.c_str() );
+        SW_LOG_ERROR_ID( "ConditionExpr.Invalid", "%#: invalid condition '%#': %#", sourceName, text, compiled.error().detail() );
         return false;
     }
 

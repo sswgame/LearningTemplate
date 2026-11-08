@@ -87,9 +87,9 @@ namespace sw::editor
                         return false;
                     const std::optional<float32> time          = pair.at( 0 ).read<float32>();
                     const std::optional<float32> value         = pair.at( 1 ).read<float32>();
-                    const std::optional<uint32>  interpolation = pair.size() >= 3 ? pair.at( 2 ).read<uint32>() : std::optional<uint32>{ 0u };
-                    const std::optional<float32> arrive        = pair.size() == 5 ? pair.at( 3 ).read<float32>() : std::optional<float32>{ 0.0f };
-                    const std::optional<float32> leave         = pair.size() == 5 ? pair.at( 4 ).read<float32>() : std::optional<float32>{ 0.0f };
+                    const optional<uint32>       interpolation = pair.size() >= 3 ? pair.at( 2 ).read<uint32>() : optional<uint32>{ 0u };
+                    const optional<float32>      arrive        = pair.size() == 5 ? pair.at( 3 ).read<float32>() : optional<float32>{ 0.0f };
+                    const optional<float32>      leave         = pair.size() == 5 ? pair.at( 4 ).read<float32>() : optional<float32>{ 0.0f };
                     const bool                   bRead         = time.has_value() && value.has_value() && interpolation.has_value() && arrive.has_value() && leave.has_value();
                     if ( bRead == false || *interpolation > static_cast<uint32>( CurveInterpolation::Cubic ) )
                         return false;
@@ -182,8 +182,8 @@ namespace sw::editor
                     case MeshModifierParamKind::Bool:
                     case MeshModifierParamKind::Axis:
                     {
-                        const std::optional<bool>    flag   = source.isBool() ? source.read<bool>() : std::nullopt;
-                        const std::optional<float32> number = source.isNumber() ? source.read<float32>() : std::nullopt;
+                        const optional<bool>    flag   = source.isBool() ? source.read<bool>() : nullopt;
+                        const optional<float32> number = source.isNumber() ? source.read<float32>() : nullopt;
                         if ( flag.has_value() == false && number.has_value() == false )
                             return false;
                         modifier.setScalar( paramIndex, flag.has_value() ? ( *flag ? 1.0f : 0.0f ) : *number );
@@ -477,8 +477,8 @@ namespace sw::editor
         JSONDocument document;
         if ( document.parse( jsonText, "modifiers.json" ) == false )
             return false;
-        const JSONValue             root    = document.getRoot();
-        const std::optional<uint32> version = root.isObject() ? root.readRequired<uint32>( "version" ) : std::nullopt;
+        const JSONValue        root    = document.getRoot();
+        const optional<uint32> version = root.isObject() ? root.readRequired<uint32>( "version" ) : nullopt;
         if ( version.has_value() == false || *version != kVersion )
             return false;
         bool            bRecomputeNormals = false; // 없으면 스택의 초기값(다시 세지 않음)이다

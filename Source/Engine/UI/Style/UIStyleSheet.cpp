@@ -63,7 +63,6 @@ namespace sw
                 string_view        _path;
                 vector<Variable>   _listVariable;
                 UIStyleSheetAsset* _pSheet;
-                string*            _pError;
                 bool               _bFlattened; ///< 부모를 합친 글을 읽었다 — 노드의 위치가 @p _text 의 위치가 아니라 줄 번호를 적지 않는다 NOLINT(sw-bool-flag): 집합체 초기화로 만드는 지역 문맥이다
 
                 uint32 findLine( const XMLNode& node ) const
@@ -71,19 +70,19 @@ namespace sw
                     return _bFlattened ? 0u : XMLDocument::computeLineNumber( _text, node.getSourceOffset() );
                 }
 
-                bool fail( const XMLNode& node, string_view message ) const
+                /** @brief 읽기 오류입니다. 문장은 하나이고 대상이 `경로:줄: 까닭` 이다(대상 길이에서 잘린다). */
+                unexpected<Error> fail( const XMLNode& node, string_view message ) const
                 {
-                    *_pError = makeError( _path, findLine( node ), message );
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the UI style sheet is invalid", makeError( _path, findLine( node ), message ) } );
                 }
 
                 /**
                  * @brief 형식 변형 하나를 규칙으로 풉니다. @p baseClass 를 쓰는 모든 규칙(`:hover` 같은 상태와 자손 선택자 포함)을 @p variationClass 로 바꿔 복제해 시트 맨 앞에 둡니다.
                  * @details 맨 앞이라 같은 특정도에서 시트에 적은 변형 자신의 규칙이 이긴다 — 차이만 적으면 된다(Godot Theme Type Variation 의 base type, USS 는 이 기능이 없어 클래스를 둘 다 적는다).
                  *          읽을 때 끝나므로 선택자 비교 · 위젯 쪽 코드가 변형을 모른다. 앞서 푼 변형의 복제도 다시 보므로 변형의 변형은 선언 순서대로 적는다.
-                 * @return 부모 클래스를 쓰는 규칙이 없으면(철자 오류) 오류이고 false 입니다.
+                 * @return 부모 클래스를 쓰는 규칙이 없으면(철자 오류) 그 오류입니다.
                  */
-                [[nodiscard]] bool expandTypeVariation( const XMLNode& element )
+                [[nodiscard]] expected<void> expandTypeVariation( const XMLNode& element )
                 {
                     const utf8* pName    = element.findAttribute( kNameAttribute );
                     const utf8* pExtends = element.findAttribute( kExtendsAttribute );
@@ -117,7 +116,7 @@ namespace sw
                         listRule.push_back( std::move( rule ) );
                     }
                     _pSheet->_listRule = std::move( listRule );
-                    return true;
+                    return {};
                 }
 
                 /** @brief 값 텍스트의 `$변수` 를 해석합니다. 모르는 변수면 false 입니다. */
@@ -141,8 +140,8 @@ namespace sw
                 }
 
                 /** @brief 필드 하나를 만들고 값이 그 타입으로 읽히는지 확인합니다(빈 스타일에 써 봅니다). */
-                [[nodiscard]] bool addAssignment( const XMLNode& node, UIStyleRule& inoutRule, UIStyleField field,
-                                                  const PropertyInfo& property, const PropertyInfo* pNested, const utf8* pName, const utf8* pValue ) const
+                [[nodiscard]] expected<void> addAssignment( const XMLNode& node, UIStyleRule& inoutRule, UIStyleField field, const PropertyInfo& property, const PropertyInfo* pNested,
+                                                            const utf8* pName, const utf8* pValue ) const
                 {
                     UIStyleAssignment assignment{};
                     assignment._field           = field;
@@ -158,25 +157,25 @@ namespace sw
                     if ( field == UIStyleField::Transition )
                     {
                         UIStyleTransitionSpec spec{};
-                        string                transitionError;
-                        if ( UIStyleTransitionSpec::parse( assignment._text, spec, transitionError ) == false )
-                            return fail( node, "Rule _transition: " + transitionError );
+                        if ( const expected<void> transition = UIStyleTransitionSpec::parse( assignment._text, spec ); transition.has_value() == false )
+                            return fail( node, "Rule _transition: " + string( transition.error().message().data(), transition.error().message().size() ) + " '" +
+                                                   string( transition.error().detail().data(), transition.error().detail().size() ) + "'" );
                     }
                     inoutRule._listAssignment.push_back( std::move( assignment ) );
-                    return true;
+                    return {};
                 }
 
                 /** @brief 규칙 원소 하나를 읽습니다. */
-                [[nodiscard]] bool parseRule( const XMLNode& element )
+                [[nodiscard]] expected<void> parseRule( const XMLNode& element )
                 {
                     UIStyleRule rule{};
                     rule._sourceLine      = findLine( element );
                     const utf8* pSelector = element.findAttribute( kSelectorKey );
                     if ( StringUtil::isNullOrEmpty( pSelector ) )
                         return fail( element, "Rule needs _selector" );
-                    string selectorError;
-                    if ( UIStyleSelector::parse( pSelector, rule._selector, selectorError ) == false )
-                        return fail( element, selectorError );
+                    if ( const expected<void> selector = UIStyleSelector::parse( pSelector, rule._selector ); selector.has_value() == false )
+                        return fail( element, string( selector.error().message().data(), selector.error().message().size() ) + " '" +
+                                                  string( selector.error().detail().data(), selector.error().detail().size() ) + "'" );
 
                     const TypeInfo& styleType = *WidgetStyle::StaticType();
                     for ( XMLAttribute attribute = element.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
@@ -188,8 +187,8 @@ namespace sw
                         const PropertyInfo* pProperty = findProperty( styleType, pName );
                         if ( pProperty == nullptr || UIStyleFieldTable::tryFindField( pName, field ) == false )
                             return fail( element, string( "Rule has unknown style property '" ) + pName + "'" );
-                        if ( addAssignment( element, rule, field, *pProperty, nullptr, pName, attribute.getValue() ) == false )
-                            return false;
+                        if ( expected<void> added = addAssignment( element, rule, field, *pProperty, nullptr, pName, attribute.getValue() ); added.has_value() == false )
+                            return added;
                     }
                     for ( XMLNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
                     {
@@ -204,12 +203,12 @@ namespace sw
                             const PropertyInfo* pInner = findProperty( *pNested, attribute.getName() );
                             if ( pInner == nullptr )
                                 return fail( child, string( "<" ) + pName + "> has unknown attribute '" + attribute.getName() + "'" );
-                            if ( addAssignment( child, rule, field, *pProperty, pInner, attribute.getName(), attribute.getValue() ) == false )
-                                return false;
+                            if ( expected<void> added = addAssignment( child, rule, field, *pProperty, pInner, attribute.getName(), attribute.getValue() ); added.has_value() == false )
+                                return added;
                         }
                     }
                     _pSheet->_listRule.push_back( std::move( rule ) );
-                    return true;
+                    return {};
                 }
             };
 
@@ -227,7 +226,7 @@ namespace sw
             }
 
             /** @brief 복합 선택자 하나를 읽습니다. */
-            [[nodiscard]] static bool parsePart( string_view text, UIStyleSelectorPart& outPart, uint32& inoutSpecificity, string& outError )
+            [[nodiscard]] static expected<void> parsePart( string_view text, UIStyleSelectorPart& outPart, uint32& inoutSpecificity )
             {
                 size_t position = 0;
                 if ( text.empty() == false && std::isalpha( static_cast<uint8>( text[0] ) ) != 0 )
@@ -240,10 +239,7 @@ namespace sw
                     const utf8        marker     = text[position++];
                     const string_view identifier = readIdentifier( text, position );
                     if ( identifier.empty() || ( marker != '.' && marker != '#' && marker != ':' ) )
-                    {
-                        outError = "selector '" + string( text ) + "' has unsupported syntax at '" + string( text.substr( position - 1 ) ) + "'";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a selector has unsupported syntax", text } );
                     if ( marker == '.' )
                     {
                         outPart._listClass.push_back( hashed_string( identifier ) );
@@ -252,10 +248,7 @@ namespace sw
                     else if ( marker == '#' )
                     {
                         if ( outPart._name.empty() == false )
-                        {
-                            outError = "selector '" + string( text ) + "' has two names";
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::InvalidArgument, "a selector has two names", text } );
                         outPart._name = hashed_string( identifier );
                         inoutSpecificity += 1u << kNameShift;
                     }
@@ -268,15 +261,12 @@ namespace sw
                                 bit = state._bit;
                         }
                         if ( bit == 0 )
-                        {
-                            outError = "selector '" + string( text ) + "' has unknown state ':" + string( identifier ) + "'";
-                            return false;
-                        }
+                            return unexpected( Error{ ErrorKind::NotFound, "a selector has an unknown state", text }.appendDetail( " :" ).appendDetail( identifier ) );
                         outPart._stateMask |= bit;
                         inoutSpecificity += 1u << kClassShift;
                     }
                 }
-                return true;
+                return {};
             }
 
             /** @brief 위젯의 스타일 클래스(공백으로 나눈 이름들)에 @p className 이 있으면 true 입니다. */
@@ -331,7 +321,7 @@ namespace sw
 
 namespace sw
 {
-    bool UIStyleSelector::parse( string_view text, UIStyleSelector& outSelector, string& outError )
+    expected<void> UIStyleSelector::parse( string_view text, UIStyleSelector& outSelector )
     {
         outSelector     = UIStyleSelector{};
         size_t position = 0;
@@ -349,16 +339,13 @@ namespace sw
             if ( position == start )
                 break;
             UIStyleSelectorPart part{};
-            if ( UIStyleSheetInternal::parsePart( text.substr( start, position - start ), part, outSelector._specificity, outError ) == false )
-                return false;
+            if ( expected<void> parsed = UIStyleSheetInternal::parsePart( text.substr( start, position - start ), part, outSelector._specificity ); parsed.has_value() == false )
+                return parsed;
             outSelector._listPart.push_back( std::move( part ) );
         }
         if ( outSelector._listPart.empty() )
-        {
-            outError = "selector is empty";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "selector is empty" } );
+        return {};
     }
 
     bool UIStyleSelector::matchesPart( const UIStyleSelectorPart& part, const Widget& widget, bool bNavigationMode )
@@ -403,7 +390,7 @@ namespace sw
         return true;
     }
 
-    bool UIStyleSheetAsset::parse( string_view text, string_view path, UIStyleSheetAsset& outSheet, string& outError )
+    expected<void> UIStyleSheetAsset::parse( string_view text, string_view path, UIStyleSheetAsset& outSheet )
     {
         using Internal = UIStyleSheetInternal;
         UIStyleSheetAsset sheet{};
@@ -411,17 +398,11 @@ namespace sw
         XMLDocument document;
         // 부모(`_base`)는 데이터 읽기가 펼친다 — 규칙은 `Content/engine/settings/datacataloginheritance.xml` 한 줄이고 합치기 코드는 여기 없다.
         if ( document.parseData( text, path ) == false )
-        {
-            outError = document.getLastError();
-            return false;
-        }
-        Internal::ParseContext context{ text, path, {}, &sheet, &outError, text.find( DataInheritance::kBaseAttribute ) != string_view::npos };
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI style sheet is not well-formed XML", document.getLastError() } );
+        Internal::ParseContext context{ text, path, {}, &sheet, text.find( DataInheritance::kBaseAttribute ) != string_view::npos };
         const XMLNode          root = document.getRoot();
         if ( root.isValid() == false || StringUtil::equals( root.getName(), UIStyleSheetAsset::kRootElementName ) == false )
-        {
-            outError = Internal::makeError( path, 1, "the root element must be <UIStyleSheet>" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI style sheet is invalid", Internal::makeError( path, 1, "the root element must be <UIStyleSheet>" ) } );
         bool bVersioned{ false };
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
@@ -455,17 +436,17 @@ namespace sw
                 continue;
             if ( StringUtil::equals( pName, Internal::kRuleElement ) == false )
                 return context.fail( child, string( "UIStyleSheet has unknown element <" ) + pName + ">" );
-            if ( context.parseRule( child ) == false )
-                return false;
+            if ( expected<void> parsed = context.parseRule( child ); parsed.has_value() == false )
+                return parsed;
         }
         // 변형은 시트의 규칙이 다 모인 뒤에 푼다 — 시트 어디에 적든 같다.
         for ( XMLNode child = root.findChild( Internal::kVariationElement ); child.isValid(); child = child.findNextSibling( Internal::kVariationElement ) )
         {
-            if ( context.expandTypeVariation( child ) == false )
-                return false;
+            if ( expected<void> expanded = context.expandTypeVariation( child ); expanded.has_value() == false )
+                return expanded;
         }
         outSheet = std::move( sheet );
-        return true;
+        return {};
     }
 
     void UIStyleSheetAsset::applyAssignment( const UIStyleAssignment& assignment, WidgetStyle& inoutStyle )

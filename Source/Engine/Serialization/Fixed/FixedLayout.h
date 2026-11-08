@@ -19,6 +19,7 @@
  *          값 하나(0 해시, 빈 결과)를 대신 돌려주면 핸드셰이크 해시에 그 값이 섞이므로 대체 값을 두지 않습니다.
  */
 #pragma once
+#include "Core/Foundation/Expected.h"
 #include "Core/Serialization/BitStream.h"
 
 #include "Engine/EngineMinimal.h"
@@ -329,21 +330,18 @@ namespace sw
             return requireCodec<T>()._pComputeSchemaHash();
         }
 
-        /** @brief 코덱을 찾습니다. 없거나 의존 타입이 적격이 아니면 nullptr 이고 @p outReason 에 필드와 이유를 적습니다(등록 API 의 기동 확인). */
+        /** @brief 코덱을 찾습니다. 없거나 의존 타입이 적격이 아니면 그 필드와 이유입니다(등록 API 의 기동 확인). */
         template <typename T>
-        [[nodiscard]] static const FixedCodec* findCodec( string& outReason )
+        [[nodiscard]] static expected<const FixedCodec*> findCodec()
         {
             // 레지스트리를 이름으로 바로 찾는다 — `StaticType()` 은 DLL 밖으로 내보내지 않은 키트 타입에서 링크가 깨지고, 함수 정적 캐시는 감춘 싱글턴이다.
             const TypeInfo* pType = TypeLookupCache{}.find( typeFqn<T>() );
             if ( pType == nullptr )
-            {
-                outReason = "type is not registered";
-                return nullptr;
-            }
-            return findCodec( *pType, outReason );
+                return unexpected( Error{ ErrorKind::NotFound, "type is not registered", typeFqn<T>().c_str() } );
+            return findCodec( *pType );
         }
 
-        [[nodiscard]] static const FixedCodec* findCodec( const TypeInfo& type, string& outReason );
+        [[nodiscard]] static expected<const FixedCodec*> findCodec( const TypeInfo& type );
 
         // ------------------------------------------------------------------------------
         // 2) 생성 코드가 부르는 것
@@ -365,15 +363,14 @@ namespace sw
         template <typename T>
         static const FixedCodec& requireCodec()
         {
-            string            reason;
-            const FixedCodec* pCodec = findCodec<T>( reason );
-            if ( pCodec == nullptr )
-                stopForMissingCodec( typeFqn<T>(), reason );
-            return *pCodec;
+            const expected<const FixedCodec*> codec = findCodec<T>();
+            if ( codec.has_value() == false )
+                stopForMissingCodec( typeFqn<T>(), codec.error().message(), codec.error().detail() );
+            return **codec;
         }
 
         /** @brief 코덱이 없다는 오류를 남기고 프로세스를 멈춥니다. 모든 구성에서 돌아오지 않습니다. */
-        [[noreturn]] static void             stopForMissingCodec( const hashed_string& fqn, const string& reason );
+        [[noreturn]] static void             stopForMissingCodec( const hashed_string& fqn, string_view reason, string_view detail = {} );
         [[nodiscard]] static bool            writeWithCodec( const FixedCodec& codec, const void* pObject, BitWriter& writer );
         [[nodiscard]] static FixedReadResult readWithCodec( const FixedCodec& codec, BitReader& reader, void* pObject );
 

@@ -41,17 +41,16 @@ namespace sw
                 string_view      _text;
                 string_view      _path;
                 UIDocumentAsset* _pAsset;
-                string*          _pError;
 
                 uint32 findLine( const XMLNode& node ) const
                 {
                     return XMLDocument::computeLineNumber( _text, node.getSourceOffset() );
                 }
 
-                bool fail( const XMLNode& node, string_view message ) const
+                /** @brief 읽기 오류입니다. 문장은 하나이고 대상이 `경로:줄: 까닭` 이다(대상 길이에서 잘린다). */
+                unexpected<Error> fail( const XMLNode& node, string_view message ) const
                 {
-                    *_pError = makeError( _path, findLine( node ), message );
-                    return false;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document is invalid", makeError( _path, findLine( node ), message ) } );
                 }
 
                 /** @brief 구조체나 컨테이너 필드 요소 @p source 를 @p destinationParent 아래로 옮겨 적고, 그 안의 바인딩 속성은 분리해 @p inoutNode 에 모읍니다. */
@@ -79,7 +78,7 @@ namespace sw
                 }
 
                 /** @brief 위젯 요소 @p element 를 노드로 파싱해 문서 끝에 붙이고(자식은 그 뒤에), 그 인덱스를 @p outIndex 에 적습니다. */
-                [[nodiscard]] bool parseWidget( const XMLNode& element, uint32& outIndex ) const
+                [[nodiscard]] expected<void> parseWidget( const XMLNode& element, uint32& outIndex ) const
                 {
                     const utf8*     pTag  = element.getName();
                     const TypeInfo* pType = findWidgetType( pTag );
@@ -141,15 +140,15 @@ namespace sw
                     for ( const XMLNode& child : listChildWidget )
                     {
                         uint32 childIndex{ 0 };
-                        if ( parseWidget( child, childIndex ) == false )
-                            return false;
+                        if ( expected<void> parsed = parseWidget( child, childIndex ); parsed.has_value() == false )
+                            return parsed;
                         _pAsset->_listNode[outIndex]._listChildIndex.push_back( childIndex );
                     }
-                    return true;
+                    return {};
                 }
 
                 /** @brief 화면 서술 요소를 읽습니다. 모르는 속성이나 읽지 못한 값은 오류입니다. */
-                [[nodiscard]] bool parseScreenDesc( const XMLNode& element ) const
+                [[nodiscard]] expected<void> parseScreenDesc( const XMLNode& element ) const
                 {
                     vector<SchemaOrphanValue> listOrphan;
                     const SoftReadResult      result = XMLSerializer::deserializeSoft( &_pAsset->_screenDesc, *UIScreenDef::StaticType(), element.toString(), &listOrphan );
@@ -157,7 +156,7 @@ namespace sw
                 }
 
                 /** @brief 스타일 시트 목록(`<item>경로</item>`)을 읽습니다. */
-                [[nodiscard]] bool parseStyleSheetList( const XMLNode& element ) const
+                [[nodiscard]] expected<void> parseStyleSheetList( const XMLNode& element ) const
                 {
                     for ( XMLNode item = element.findChild(); item.isValid(); item = item.findNextSibling() )
                     {
@@ -168,18 +167,18 @@ namespace sw
                             return fail( item, "_listStyleSheet has an empty item" );
                         _pAsset->_listStyleSheet.push_back( normalizeDocumentPath( pPath ) );
                     }
-                    return true;
+                    return {};
                 }
 
                 /** @brief 애니메이션 목록(`<UIAnimation>` 요소들)을 읽습니다. 모르는 필드, 읽지 못한 값, 이름 없음, 겹친 이름은 오류입니다. */
-                [[nodiscard]] bool parseAnimationList( const XMLNode& element ) const
+                [[nodiscard]] expected<void> parseAnimationList( const XMLNode& element ) const
                 {
                     UIAnimationList           list{};
                     vector<SchemaOrphanValue> listOrphan;
                     const string              text   = string( "<UIAnimationList>" ) + element.toString() + "</UIAnimationList>";
                     const SoftReadResult      result = XMLSerializer::deserializeSoft( &list, *UIAnimationList::StaticType(), text, &listOrphan );
-                    if ( acceptSoftRead( element, "_listAnimation", result, listOrphan ) == false )
-                        return false;
+                    if ( expected<void> accepted = acceptSoftRead( element, "_listAnimation", result, listOrphan ); accepted.has_value() == false )
+                        return accepted;
                     vector<UIAnimation>& listAnimation = _pAsset->_listAnimation;
                     for ( UIAnimation& animation : list._listAnimation )
                     {
@@ -192,15 +191,16 @@ namespace sw
                         }
                         listAnimation.push_back( std::move( animation ) );
                     }
-                    return true;
+                    return {};
                 }
 
-                /** @brief 소프트 읽기에 문제가 없으면 true 입니다. 있으면 모두 적어 실패로 남기고 false 입니다(`describeSoftReadProblem`). */
-                [[nodiscard]] bool acceptSoftRead( const XMLNode& element, const string_view what, const SoftReadResult result,
-                                                   const vector<SchemaOrphanValue>& listOrphan ) const
+                /** @brief 소프트 읽기에 문제가 없는지 봅니다. 있으면 모두 적은 실패입니다(`describeSoftReadProblem`). */
+                [[nodiscard]] expected<void> acceptSoftRead( const XMLNode& element, const string_view what, const SoftReadResult result, const vector<SchemaOrphanValue>& listOrphan ) const
                 {
                     const string problem = describeSoftReadProblem( what, result, listOrphan );
-                    return problem.empty() || fail( element, problem );
+                    if ( problem.empty() )
+                        return {};
+                    return fail( element, problem );
                 }
             };
 
@@ -284,13 +284,13 @@ namespace sw
                             widget = failInstantiate( document, node, ( bRecursive ? "fragment includes itself: " : "fragments nest too deep: " ) + chain );
                             return widget;
                         }
-                        string                                  fragmentError;
-                        const shared_ptr<const UIDocumentAsset> fragment = _pCache->findOrLoad( node._fragment, fragmentError );
-                        if ( fragment == nullptr )
+                        const expected<shared_ptr<const UIDocumentAsset>> loaded = _pCache->findOrLoad( node._fragment );
+                        if ( loaded.has_value() == false )
                         {
-                            widget = failInstantiate( document, node, "fragment '" + node._fragment + "' is not loaded: " + fragmentError );
+                            widget = failInstantiate( document, node, "fragment '" + node._fragment + "' is not loaded: " + string( loaded.error().message().data(), loaded.error().message().size() ) + ": " + string( loaded.error().detail().data(), loaded.error().detail().size() ) );
                             return widget;
                         }
+                        const shared_ptr<const UIDocumentAsset>& fragment = *loaded;
                         // 조각 안의 이름은 이 위젯의 (감싼) 이름으로 감싼다. 이름 없는 조각은 바깥 접두를 그대로 넘긴다.
                         string childPrefix = namePrefix;
                         if ( widget->getName().empty() == false )
@@ -404,7 +404,7 @@ namespace sw
 
 namespace sw
 {
-    bool UIDocumentLoader::parse( string_view text, string_view path, UIDocumentAsset& outAsset, string& outError )
+    expected<void> UIDocumentLoader::parse( string_view text, string_view path, UIDocumentAsset& outAsset )
     {
         using Internal = UIDocumentLoaderInternal;
         UIDocumentAsset asset{};
@@ -412,17 +412,11 @@ namespace sw
 
         XMLDocument document;
         if ( document.parse( text, path ) == false )
-        {
-            outError = document.getLastError();
-            return false;
-        }
-        const Internal::ParseContext context{ text, path, &asset, &outError };
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document is not well-formed XML", document.getLastError() } );
+        const Internal::ParseContext context{ text, path, &asset };
         const XMLNode                root = document.getRoot();
         if ( root.isValid() == false || StringUtil::equals( root.getName(), UIDocumentAsset::kRootElementName ) == false )
-        {
-            outError = Internal::makeError( path, 1, "the root element must be <UIDocument>" );
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document is invalid", Internal::makeError( path, 1, "the root element must be <UIDocument>" ) } );
 
         // 루트 속성은 버전 번호 하나뿐이다. 이전 형식 리더는 없다.
         bool bVersioned{ false };
@@ -452,20 +446,20 @@ namespace sw
                 if ( bScreenDesc )
                     return context.fail( child, "UIDocument has more than one UIScreenDef" );
                 bScreenDesc = true;
-                if ( context.parseScreenDesc( child ) == false )
-                    return false;
+                if ( expected<void> parsed = context.parseScreenDesc( child ); parsed.has_value() == false )
+                    return parsed;
                 continue;
             }
             if ( StringUtil::equals( pName, Internal::kStyleSheetListElement ) )
             {
-                if ( context.parseStyleSheetList( child ) == false )
-                    return false;
+                if ( expected<void> parsed = context.parseStyleSheetList( child ); parsed.has_value() == false )
+                    return parsed;
                 continue;
             }
             if ( StringUtil::equals( pName, Internal::kAnimationListElement ) )
             {
-                if ( context.parseAnimationList( child ) == false )
-                    return false;
+                if ( expected<void> parsed = context.parseAnimationList( child ); parsed.has_value() == false )
+                    return parsed;
                 continue;
             }
             if ( Internal::findWidgetType( pName ) == nullptr )
@@ -474,14 +468,14 @@ namespace sw
                 return context.fail( child, "UIDocument has more than one root widget" );
             bRootWidget = true;
             uint32 rootIndex{ 0 };
-            if ( context.parseWidget( child, rootIndex ) == false )
-                return false;
+            if ( expected<void> parsed = context.parseWidget( child, rootIndex ); parsed.has_value() == false )
+                return parsed;
         }
         if ( bRootWidget == false )
             return context.fail( root, "UIDocument has no root widget" );
 
         outAsset = std::move( asset );
-        return true;
+        return {};
     }
 
     unique_ptr<Widget> UIDocumentLoader::createWidget( const TypeInfo& type )
@@ -502,19 +496,19 @@ namespace sw
         return unique_ptr<Widget>( static_cast<Widget*>( block.release() ) );
     }
 
-    unique_ptr<Widget> UIDocumentLoader::instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, vector<UIBindingDef>& outListBinding,
-                                                      string& outError )
+    expected<unique_ptr<Widget>> UIDocumentLoader::instantiate( const UIDocumentAsset& document, UIDocumentCache& cache, vector<UIBindingDef>& outListBinding )
     {
         if ( document._listNode.empty() )
-        {
-            outError = UIDocumentLoaderInternal::makeError( document._path, 0, "document has no root widget" );
-            return {};
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document cannot be built", UIDocumentLoaderInternal::makeError( document._path, 0, "document has no root widget" ) } );
         const size_t                                 bindingStart = outListBinding.size();
-        UIDocumentLoaderInternal::InstantiateContext context{ &cache, vector<string>{ document._path }, &outListBinding, &outError };
+        string                                       reason; // 위젯을 만드는 깊은 곳(조각 · 필드 읽기)이 `경로:줄: 까닭` 을 적는다
+        UIDocumentLoaderInternal::InstantiateContext context{ &cache, vector<string>{ document._path }, &outListBinding, &reason };
         unique_ptr<Widget>                           root = context.instantiateNode( document, 0, string{} );
         if ( root == nullptr )
+        {
             outListBinding.resize( bindingStart );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the UI document cannot be built", reason } );
+        }
         return root;
     }
 } // namespace sw

@@ -26,12 +26,16 @@ namespace sw
         class OnlineServerService final : public IServerService
         {
         public:
-            [[nodiscard]] bool initialize( const ServerServiceContext& context, string& outError ) override;
-            void               shutdown() override { _runtime.shutdown(); }
-            void               update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
-            int32              getConnectionCount() const override { return _runtime.getConnectionCount(); }
-            int32              getOpenWorkCount() const override { return _runtime.getOpenWorkCount(); }
-            void               beginShutdown( const ServerShutdownNotice& notice ) override { _runtime.beginShutdown( notice ); }
+            [[nodiscard]] expected<void> initialize( const ServerServiceContext& context ) override;
+            void                         shutdown() override { _runtime.shutdown(); }
+            void                         update( UnixMilliseconds nowMs ) override { _runtime.update( nowMs ); }
+            int32                        getConnectionCount() const override { return _runtime.getConnectionCount(); }
+            int32                        getOpenWorkCount() const override { return _runtime.getOpenWorkCount(); }
+            void                         beginShutdown( const ServerShutdownNotice& notice ) override { _runtime.beginShutdown( notice ); }
+
+        private:
+            /** @brief `initialize` 의 몸통입니다. shortcut: 런타임 쪽 함수가 아직 `string& outError` 라 그 모양으로 남겼다 — GameFramework 이전(EX-G)이 런타임을 옮기면 `initialize` 에 합친다. */
+            [[nodiscard]] bool start( const ServerServiceContext& context, string& outError );
 
         private:
             SystemMonotonicClock _clock; ///< 런타임이 빌린다(메모리 캐시 만료 · 외부 HTTP 시한). 런타임보다 먼저 선언한다
@@ -42,7 +46,15 @@ namespace sw
 
 namespace sw
 {
-    bool OnlineServerService::initialize( const ServerServiceContext& context, string& outError )
+    expected<void> OnlineServerService::initialize( const ServerServiceContext& context )
+    {
+        string reason;
+        if ( start( context, reason ) == false )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "online services could not start", reason } );
+        return {};
+    }
+
+    bool OnlineServerService::start( const ServerServiceContext& context, string& outError )
     {
         const bool bNoServerConfig = context._pServerConfig == nullptr || context._serverConfigPath.empty();
         if ( bNoServerConfig )

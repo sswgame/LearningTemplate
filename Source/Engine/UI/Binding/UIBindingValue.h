@@ -5,6 +5,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -77,7 +78,7 @@ namespace sw
          * @brief @p type(기반 타입 포함) 기준으로 경로 @p path 를 해석합니다. 중간은 리플렉션 구조체여야 하고 컨테이너는 받지 않습니다(잎의 `vector<string>` 은 받습니다).
          * @return 모르는 이름이면 false 이고 @p outError 에 이유(영어)를 둡니다.
          */
-        [[nodiscard]] static bool resolvePath( const TypeInfo& type, string_view path, UIPropertyPath& outPath, string& outError );
+        [[nodiscard]] static expected<void> resolvePath( const TypeInfo& type, string_view path, UIPropertyPath& outPath );
 
         /** @brief 경로 값을 읽습니다. Other 는 리플렉션 텍스트 표기를 Text 로 둡니다. 컨테이너는 None 입니다. */
         static UIBindingValue readValue( const UIPropertyPath& path, const void* pRoot );

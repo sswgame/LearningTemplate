@@ -36,123 +36,99 @@ namespace sw
              */
             [[nodiscard]] static string describeReadFailure( string_view path )
             {
-                const std::optional<AbsolutePath> looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( path );
-                const string                      loosePath = looseFile.has_value() ? looseFile->str() : string{};
-                const bool                        bPackOnly = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
+                const optional<AbsolutePath> looseFile = engine::getSubsystem<AssetPaths>().findLooseFile( path );
+                const string                 loosePath = looseFile.has_value() ? looseFile->str() : string{};
+                const bool                   bPackOnly = engine::areEngineServicesBound() && engine::getSubsystem<AssetManager>().getPackManager().isAllowLooseFiles() == false;
                 return "[read] not found (content root '" + engine::getSubsystem<AssetPaths>().getRootFolderPath() + "', working folder '" + FileUtil::getCurrentPath() + "', " +
                        ( loosePath.empty() ? string( "loose file unresolved" ) : "loose file '" + loosePath + "' is not a file" ) +
                        ( bPackOnly ? ", this build reads packs only and the id is in none of them)" : ", the id is in none of the mounted packs)" );
             }
 
-            /** @brief 음이 아닌 정수 속성을 읽습니다. 형식이 틀리면 false 와 이유. */
-            [[nodiscard]] static bool readUint( const utf8* pValue, const utf8* pName, uint32& outValue, string& outReason )
+            /** @brief 속성 값이 틀렸다는 오류입니다. 대상은 `이름='값'` 입니다. */
+            [[nodiscard]] static Error makeValueError( const utf8* pMessage, string_view name, string_view value )
+            {
+                return Error{ ErrorKind::InvalidArgument, pMessage, name }.appendDetail( "='" ).appendDetail( value ).appendDetail( "'" );
+            }
+
+            /** @brief 음이 아닌 정수 속성을 읽습니다. 형식이 틀리면 그 이유입니다. */
+            [[nodiscard]] static expected<uint32> readUint( const utf8* pValue, const utf8* pName )
             {
                 int32 value = 0;
                 if ( StringUtil::parseInt( string_view{ pValue }, value ) == false || value < 0 )
-                {
-                    outReason = string( pName ) + " must be a non-negative integer, got '" + pValue + "'";
-                    return false;
-                }
-                outValue = static_cast<uint32>( value );
-                return true;
+                    return unexpected( makeValueError( "must be a non-negative integer", pName, pValue ) );
+                return static_cast<uint32>( value );
             }
 
-            /** @brief 불리언 속성을 읽습니다(철자 표는 `StringUtil::tryParseBool`). 읽지 못하면 false 와 이유(값은 false 로 둔다). */
-            [[nodiscard]] static bool readBool( const utf8* pName, const utf8* pValue, bool& outValue, string& outReason )
+            /** @brief 불리언 속성을 읽습니다(철자 표는 `StringUtil::tryParseBool`). 읽지 못하면 그 이유입니다. */
+            [[nodiscard]] static expected<bool> readBool( const utf8* pName, const utf8* pValue )
             {
-                outValue       = false;
-                const bool bOk = StringUtil::tryParseBool( string_view{ pValue }, outValue );
-                if ( bOk == false )
-                    outReason = string( pName ) + " must be a boolean (true or false), got '" + pValue + "'";
-                return bOk;
+                bool value = false;
+                if ( StringUtil::tryParseBool( string_view{ pValue }, value ) == false )
+                    return unexpected( makeValueError( "must be a boolean (true or false)", pName, pValue ) );
+                return value;
             }
 
-            /** @brief 음이 아닌 초를 프레임으로 바꿉니다(고정 프레임 시간으로 반올림). 형식이 틀리면 false 와 이유. */
-            [[nodiscard]] static bool readSeconds( const utf8* pValue, const utf8* pName, float32 fixedDelta, uint32& outFrames, string& outReason )
+            /** @brief 음이 아닌 초를 프레임으로 바꿉니다(고정 프레임 시간으로 반올림). 형식이 틀리면 그 이유입니다. */
+            [[nodiscard]] static expected<uint32> readSeconds( const utf8* pValue, const utf8* pName, float32 fixedDelta )
             {
                 float32 seconds = 0.0f;
                 if ( StringUtil::parseFloat( string_view{ pValue }, seconds ) == false || seconds < 0.0f )
-                {
-                    outReason = string( pName ) + " must be a non-negative number of seconds, got '" + pValue + "'";
-                    return false;
-                }
-                outFrames = static_cast<uint32>( seconds / fixedDelta + 0.5f );
-                return true;
+                    return unexpected( makeValueError( "must be a non-negative number of seconds", pName, pValue ) );
+                return static_cast<uint32>( seconds / fixedDelta + 0.5f );
             }
 
             /**
              * @brief `<Wait frames="N"/>` · `<Wait seconds="S"/>` 의 프레임 수입니다(초는 고정 프레임 시간으로 바꾼다). 둘 가운데 정확히 하나여야 합니다.
              * @details 시간은 이것만 흘린다 — 단계는 적은 순서대로 지금 프레임에 돈다. 조건을 기다리는 것은 `<WaitUntil>` 이다(그동안 시계가 서 있다).
              */
-            [[nodiscard]] static bool readWait( const XMLNode& waitNode, float32 fixedDelta, uint32& outFrames, string& outReason )
+            [[nodiscard]] static expected<uint32> readWait( const XMLNode& waitNode, float32 fixedDelta )
             {
                 uint32 timingCount = 0;
+                uint32 frames      = 0;
                 for ( XMLAttribute attribute = waitNode.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
                     const string_view name  = attribute.getName();
                     const utf8*       pText = attribute.getValue();
-                    bool              bOk   = true;
-                    if ( name == "frames" )
-                        bOk = readUint( pText, "frames", outFrames, outReason );
-                    else if ( name == "seconds" )
-                        bOk = readSeconds( pText, "seconds", fixedDelta, outFrames, outReason );
-                    else
-                    {
-                        outReason = "unknown <Wait> attribute '" + string( name ) + "' (frames · seconds)";
-                        return false;
-                    }
-                    if ( bOk == false )
-                        return false;
+                    if ( name != "frames" && name != "seconds" )
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "unknown <Wait> attribute (frames · seconds)", name } );
+                    const expected<uint32> read = name == "frames" ? readUint( pText, "frames" ) : readSeconds( pText, "seconds", fixedDelta );
+                    if ( read.has_value() == false )
+                        return read;
+                    frames = *read;
                     ++timingCount;
                 }
-                if ( timingCount != 1 || outFrames == 0 )
-                {
-                    outReason = "<Wait> needs exactly one of frames=\"N\" · seconds=\"S\" and more than zero frames";
-                    return false;
-                }
-                return true;
+                if ( timingCount != 1 || frames == 0 )
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "<Wait> needs exactly one of frames=\"N\" · seconds=\"S\" and more than zero frames" } );
+                return frames;
             }
 
             /**
              * @brief `<Launch variable="gv_…" value="…"/>` 하나를 읽어 @p inoutList 에 더합니다.
              * @details 값은 명령줄 토큰 하나가 되므로 공백 · 따옴표를 받지 않는다. 같은 변수를 두 번 적으면 어느 쪽이 이기는지 모호하므로 오류다.
              */
-            [[nodiscard]] static bool readLaunchVariable( const XMLNode& node, vector<AutomationAttribute>& inoutList, string& outReason )
+            [[nodiscard]] static expected<void> readLaunchVariable( const XMLNode& node, vector<AutomationAttribute>& inoutList )
             {
                 AutomationAttribute entry{};
                 for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
                     const string_view name = attribute.getName();
                     if ( name == "variable" )
-                    {
                         entry._name = attribute.getValue();
-                    }
                     else if ( name == "value" )
-                    {
                         entry._value = attribute.getValue();
-                    }
                     else
-                    {
-                        outReason = "unknown attribute '" + string( name ) + "' (variable · value)";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "<Launch> has an unknown attribute (variable · value)", name } );
                 }
-                const bool bWellFormed = StringUtil::startsWith( entry._name, "gv_" ) && entry._value.empty() == false && entry._value.find_first_of( " \t\"'" ) == string::npos;
+                const bool bWellFormed = StringUtil::startsWith( entry._name, "gv_" ) && entry._value.empty() == false && entry._value.find_first_of( " 	\"'" ) == string::npos;
                 if ( bWellFormed == false )
-                {
-                    outReason = "needs variable=\"gv_…\" and a value without spaces or quotes, got variable='" + entry._name + "' value='" + entry._value + "'";
-                    return false;
-                }
+                    return unexpected( makeValueError( "<Launch> needs variable=\"gv_…\" and a value without spaces or quotes", entry._name, entry._value ) );
                 for ( const AutomationAttribute& declared : inoutList )
                 {
                     if ( declared._name == entry._name )
-                    {
-                        outReason = entry._name + " is declared twice";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::AlreadyExists, "<Launch> declares the variable twice", entry._name } );
                 }
                 inoutList.push_back( std::move( entry ) );
-                return true;
+                return {};
             }
         };
     } // namespace
@@ -293,44 +269,44 @@ namespace sw
         }
     }
 
-    bool AutomationScenario::loadFromPath( const AssetID& assetID, string& outError )
+    expected<void> AutomationScenario::loadFromPath( const AssetID& assetID )
     {
         const string_view path = assetID.view();
         XMLDocument       doc;
         if ( doc.loadResource( assetID ) == false )
         {
-            // 단계를 가른다 — 읽기(`[read]`, 리소스 ID 가 안 풀린다)와 XML 문법(`[xml]`)은 고치는 곳이 다르다. 형식 검사(`parse`)의 오류는 `[scenario]` 로 붙는다.
-            const bool bReadable = AssetIO::hasAsset( assetID );
-            outError             = bReadable ? "[xml] " + doc.getLastError() : AutomationScenarioInternal::describeReadFailure( path );
-            return false;
+            // 단계를 가른다 — 읽기(`[read]`, 리소스 ID 가 안 풀린다)와 XML 문법(`[xml]`)은 고치는 곳이 다르다. 형식 검사(`parse`)의 오류는 그 문장이 말한다.
+            if ( AssetIO::hasAsset( assetID ) )
+                return unexpected( Error{ ErrorKind::InvalidArgument, "[xml] the scenario is not well-formed XML", doc.getLastError() } );
+            return unexpected( Error{ ErrorKind::NotFound, "[read] the scenario file was not found", AutomationScenarioInternal::describeReadFailure( path ) } );
         }
-        if ( parse( doc.saveToString(), path, outError ) == false )
-        {
-            outError = "[scenario] " + outError;
-            return false;
-        }
-        return true;
+        return parse( doc.saveToString(), path );
     }
 
-    bool AutomationScenario::parseRootAttribute( string_view name, const utf8* pText, string& outReason )
+    expected<void> AutomationScenario::parseRootAttribute( string_view name, const utf8* pText )
     {
         using Internal = AutomationScenarioInternal;
         if ( name == "name" )
         {
             _name = pText;
-            return true;
+            return {};
         }
         if ( name == "fixedDelta" )
         {
             const bool bOk = StringUtil::parseFloat( string_view{ pText }, _fixedDelta ) && _fixedDelta > 0.0f;
             if ( bOk == false )
-                outReason = string( "fixedDelta must be a positive number, got '" ) + pText + "'";
-            return bOk;
+                return unexpected( Internal::makeValueError( "must be a positive number", name, pText ) );
+            return {};
         }
-        if ( name == "timeoutFrames" )
-            return Internal::readUint( pText, "timeoutFrames", _timeoutFrames, outReason );
-        if ( name == "startTimeoutFrames" )
-            return Internal::readUint( pText, "startTimeoutFrames", _startTimeoutFrames, outReason );
+        if ( name == "timeoutFrames" || name == "startTimeoutFrames" )
+        {
+            uint32&                target = name == "timeoutFrames" ? _timeoutFrames : _startTimeoutFrames;
+            const expected<uint32> read   = Internal::readUint( pText, name == "timeoutFrames" ? "timeoutFrames" : "startTimeoutFrames" );
+            if ( read.has_value() == false )
+                return unexpected( read.error() );
+            target = *read;
+            return {};
+        }
         if ( name == "wallTimeoutSeconds" )
         {
             // 0 이나 음수로 상한을 끄지 못한다 — 끝나지 않는 시나리오가 테스트의 프로세스 시한(보고 없는 kill)까지 가는 것이 이 값이 막는 결함이다.
@@ -338,9 +314,8 @@ namespace sw
             const bool bParsed  = StringUtil::parseFloat( string_view{ pText }, _wallTimeoutSeconds );
             const bool bInRange = bParsed && _wallTimeoutSeconds > 0.0f && static_cast<float64>( _wallTimeoutSeconds ) < AutomationTimeLimits::kClockHoldTimeoutSeconds;
             if ( bInRange == false )
-                outReason = string( "wallTimeoutSeconds must be a positive number of seconds below " ) + to_string( static_cast<uint32>( AutomationTimeLimits::kClockHoldTimeoutSeconds ) ) +
-                            " (the clock-hold timeout), got '" + pText + "'";
-            return bInRange;
+                return unexpected( Internal::makeValueError( "must be a positive number of seconds below the clock-hold timeout (AutomationTimeLimits::kClockHoldTimeoutSeconds)", name, pText ) );
+            return {};
         }
         if ( name == "startAfter" )
         {
@@ -350,18 +325,21 @@ namespace sw
             else if ( value == "Immediately" )
                 _startCondition = AutomationStartCondition::Immediately;
             else
-            {
-                outReason = string( "unknown startAfter '" ) + pText + "' (ScenePlaying | Immediately)";
-                return false;
-            }
-            return true;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "unknown startAfter (ScenePlaying | Immediately)", value } );
+            return {};
         }
-        if ( name == "requireForeground" )
-            return Internal::readBool( "requireForeground", pText, _testOptions._bRequiresForeground, outReason );
-        if ( name == "editor" )
-            return Internal::readBool( "editor", pText, _testOptions._bRequiresEditor, outReason );
-        if ( name == "present" )
-            return Internal::readBool( "present", pText, _testOptions._bPresents, outReason );
+        if ( name == "requireForeground" || name == "editor" || name == "present" )
+        {
+            bool&                target = name == "requireForeground" ? _testOptions._bRequiresForeground : name == "editor" ? _testOptions._bRequiresEditor
+                                                                                                                             : _testOptions._bPresents;
+            const expected<bool> read   = Internal::readBool( name == "requireForeground" ? "requireForeground" : name == "editor" ? "editor"
+                                                                                                                                   : "present",
+                                                            pText );
+            if ( read.has_value() == false )
+                return unexpected( read.error() );
+            target = *read;
+            return {};
+        }
         if ( name == "requiresModule" )
         {
             _testOptions._listRequiredModule.clear();
@@ -370,11 +348,8 @@ namespace sw
                 _testOptions._listRequiredModule.emplace_back( moduleName );
             }
             if ( _testOptions._listRequiredModule.empty() )
-            {
-                outReason = "requiresModule needs at least one module name (comma separated)";
-                return false;
-            }
-            return true;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "requiresModule needs at least one module name (comma separated)" } );
+            return {};
         }
         if ( name == "input" )
         {
@@ -384,29 +359,19 @@ namespace sw
             else if ( value == "mixed" )
                 _inputMode = VirtualInputMode::Mixed;
             else
-            {
-                outReason = string( "unknown input mode '" ) + pText + "' (exclusive | mixed)";
-                return false;
-            }
-            return true;
+                return unexpected( Error{ ErrorKind::InvalidArgument, "unknown input mode (exclusive | mixed)", value } );
+            return {};
         }
-        outReason = "unknown <Scenario> attribute '" + string( name ) + "'";
-        return false;
+        return unexpected( Error{ ErrorKind::InvalidArgument, "unknown <Scenario> attribute", name } );
     }
 
-    bool AutomationScenario::parseStepNode( const XMLNode& stepNode, uint32 frameIndex, uint32& inoutOrderInFile, string& outError )
+    expected<void> AutomationScenario::parseStepNode( const XMLNode& stepNode, uint32 frameIndex, uint32& inoutOrderInFile )
     {
         const string_view kind = stepNode.getName();
         if ( kind.empty() )
-        {
-            outError = _sourcePath + ": <Scenario> holds text — only step elements may sit there";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "<Scenario> holds text - only step elements may sit there", _sourcePath } );
         if ( stepNode.findChild().isValid() )
-        {
-            outError = _sourcePath + ": <" + string( kind ) + "> has child elements — steps are flat, written in the order they run";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a step has child elements - steps are flat, written in the order they run", kind } );
         AutomationStep step{};
         step._kind        = string( kind );
         step._frameIndex  = frameIndex;
@@ -419,13 +384,12 @@ namespace sw
             step._listAttribute.push_back( std::move( value ) );
         }
         _listStep.push_back( std::move( step ) );
-        return true;
+        return {};
     }
 
-    bool AutomationScenario::parseChildren( const XMLNode& root, string& outError )
+    expected<void> AutomationScenario::parseChildren( const XMLNode& root )
     {
-        using Internal = AutomationScenarioInternal;
-        string reason;
+        using Internal          = AutomationScenarioInternal;
         uint32 orderInFile      = 0;
         uint32 frameCursor      = 0;     ///< 지금까지 `<Wait>` 가 흘린 프레임 — 단계는 적은 순서대로 이 프레임에 돈다
         bool   bCursorFrameUsed = false; ///< 지금 프레임에 이미 단계가 있다
@@ -435,15 +399,9 @@ namespace sw
             if ( elementName == "Load" )
             {
                 if ( _testOptions._load._bDeclared )
-                {
-                    outError = _sourcePath + ": only one <Load> may sit under <Scenario>";
-                    return false;
-                }
-                if ( parseLoad( atNode, reason ) == false )
-                {
-                    outError = _sourcePath + ": <Load> " + reason;
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::AlreadyExists, "only one <Load> may sit under <Scenario>", _sourcePath } );
+                if ( expected<void> loaded = parseLoad( atNode ); loaded.has_value() == false )
+                    return loaded;
                 continue;
             }
             if ( elementName == "Scratch" )
@@ -451,18 +409,12 @@ namespace sw
                 // 칸은 리플렉션 구조체가 정한다 — 원본 폴더는 경로 칸이라 참조 검사 · 옮기기가 따라간다(`AssetPath`).
                 AutomationScratchParams params;
                 if ( XMLFields::readFields( atNode, params, _sourcePath ) == false )
-                {
-                    outError = _sourcePath + ": <Scratch> needs from=\"<source folder>\" and as=\"scratch/<folder>\"";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "<Scratch> needs from=\"<source folder>\" and as=\"scratch/<folder>\"", _sourcePath } );
                 AutomationScratchFolder folder;
                 folder._sourceID  = std::move( params._from );
                 folder._scratchID = std::move( params._as );
-                if ( AutomationScratch::isValidFolder( folder, reason ) == false )
-                {
-                    outError = _sourcePath + ": " + reason;
-                    return false;
-                }
+                if ( expected<void> valid = AutomationScratch::isValidFolder( folder ); valid.has_value() == false )
+                    return valid;
                 _testOptions._listScratchFolder.push_back( std::move( folder ) );
                 continue;
             }
@@ -475,37 +427,26 @@ namespace sw
                                     atNode.getFirstAttribute().isValid() && atNode.getFirstAttribute().getNext().isValid() &&
                                     atNode.getFirstAttribute().getNext().getNext().isValid() == false;
                 if ( bValid == false )
-                {
-                    outError = _sourcePath + ": <AllowLog> needs exactly id=\"<log id>\" and reason=\"<why it is allowed>\" (no wildcard)";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "<AllowLog> needs exactly id=\"<log id>\" and reason=\"<why it is allowed>\" (no wildcard)", id } );
                 _testOptions._listAllowedLog.push_back( AutomationAttribute{ string( id ), string( reason ) } );
                 continue;
             }
             if ( elementName == "Launch" )
             {
-                if ( Internal::readLaunchVariable( atNode, _testOptions._listLaunchVariable, reason ) == false )
-                {
-                    outError = _sourcePath + ": <Launch> " + reason;
-                    return false;
-                }
+                if ( expected<void> launch = Internal::readLaunchVariable( atNode, _testOptions._listLaunchVariable ); launch.has_value() == false )
+                    return launch;
                 continue;
             }
             if ( elementName == "At" )
-            {
-                outError = _sourcePath + ": <At frame> is gone — write the steps in the order they run and put <Wait frames=\"N\"/> where time must pass "
-                                         "(<WaitUntil> waits for a condition)";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::Unsupported,
+                                          "<At frame> is gone - write the steps in the order they run and put <Wait frames=\"N\"/> where time must pass (<WaitUntil> waits for a condition)",
+                                          _sourcePath } );
             if ( elementName == "Wait" )
             {
-                uint32 frames = 0;
-                if ( Internal::readWait( atNode, _fixedDelta, frames, reason ) == false )
-                {
-                    outError = _sourcePath + ": " + reason;
-                    return false;
-                }
-                frameCursor += frames;
+                const expected<uint32> frames = Internal::readWait( atNode, _fixedDelta );
+                if ( frames.has_value() == false )
+                    return unexpected( frames.error() );
+                frameCursor += *frames;
                 bCursorFrameUsed = false;
                 continue;
             }
@@ -516,8 +457,8 @@ namespace sw
             const bool                        bWaitUntil    = pRegistration != nullptr && pRegistration->isWaitOnly();
             if ( bWaitUntil && bCursorFrameUsed )
                 ++frameCursor;
-            if ( parseStepNode( atNode, frameCursor, orderInFile, outError ) == false )
-                return false;
+            if ( expected<void> parsed = parseStepNode( atNode, frameCursor, orderInFile ); parsed.has_value() == false )
+                return parsed;
             bCursorFrameUsed = true;
             if ( bWaitUntil )
             {
@@ -525,45 +466,32 @@ namespace sw
                 bCursorFrameUsed = false;
             }
         }
-        return true;
+        return {};
     }
 
-    bool AutomationScenario::parse( string_view xmlText, string_view sourceName, string& outError )
+    expected<void> AutomationScenario::parse( string_view xmlText, string_view sourceName )
     {
         *this       = AutomationScenario{};
         _sourcePath = sourceName.empty() ? string( "<memory>" ) : string( sourceName );
 
         XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
-        {
-            outError = doc.getLastError();
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "[xml] the scenario is not well-formed XML", doc.getLastError() } );
         const XMLNode root = doc.getRoot( nullptr );
         if ( root.isValid() == false || string_view{ root.getName() } != "Scenario" )
-        {
-            outError = _sourcePath + ": the root element must be <Scenario>";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the root element must be <Scenario>", _sourcePath } );
 
         // 루트 속성: 모르는 속성은 읽기 오류다(오타가 기본값으로 조용히 바뀌지 않게 한다).
-        string reason;
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
-            if ( parseRootAttribute( attribute.getName(), attribute.getValue(), reason ) == false )
-            {
-                outError = _sourcePath + ": " + reason;
-                return false;
-            }
+            if ( expected<void> read = parseRootAttribute( attribute.getName(), attribute.getValue() ); read.has_value() == false )
+                return read;
         }
         if ( _name.empty() )
-        {
-            outError = _sourcePath + ": <Scenario> needs a name";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "<Scenario> needs a name", _sourcePath } );
 
-        if ( parseChildren( root, outError ) == false )
-            return false;
+        if ( expected<void> children = parseChildren( root ); children.has_value() == false )
+            return children;
         // 프레임 순이다(같은 프레임은 파일 순이며 안정 정렬이다).
         VectorUtil::stableSort( _listStep, []( const AutomationStep& lhs, const AutomationStep& rhs )
         {
@@ -576,27 +504,25 @@ namespace sw
             for ( const AutomationAttribute& attribute : step._listAttribute )
             {
                 if ( attribute._value.find( outputFolderText ) != string::npos )
-                {
-                    outError = _sourcePath + ": " + step.describe() + ": write the run's output folder as " + kAutomationOutputToken + " instead of '" + outputFolderText +
-                               "...' - a literal path has no process suffix, so runs side by side (one per backend) overwrite each other's files";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument,
+                                              "write the run's output folder as {out} (kAutomationOutputToken) - a literal path has no process suffix, so runs side by side (one per backend) "
+                                              "overwrite each other's files",
+                                              step.describe() } );
             }
             if ( _testOptions._load._bDeclared && step._kind == "Pass" )
-            {
-                outError = _sourcePath + ": " + step.describe() + ": a scenario with <Load> ends when its measurement window closes - remove <Pass/>";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a scenario with <Load> ends when its measurement window closes - remove <Pass/>", step.describe() } );
         }
         // 프레임 시한은 적은 프레임(고정 대기 · 단계)만 센다 — 붙잡는 대기는 저마다 제 시한이 있다. 그래서 마지막 단계가 시한 밖이면 실행 전에 늘 지는 파일이다.
         const bool bLastStepPastTimeout = _testOptions._load._bDeclared == false && _listStep.empty() == false && _listStep.back()._frameIndex > _timeoutFrames;
         if ( bLastStepPastTimeout )
         {
-            outError = _sourcePath + ": " + _listStep.back().describe() + " is at scenario frame " + to_string( _listStep.back()._frameIndex ) + ", past timeoutFrames " +
-                       to_string( _timeoutFrames ) + " (the limit counts written frames - fixed waits and steps; each held wait keeps its own limit)";
-            return false;
+            utf8 arrFrames[constant::buffer::kMax64]{};
+            formatstring( arrFrames, constant::buffer::kMax64, " at frame %#, timeoutFrames %#", _listStep.back()._frameIndex, _timeoutFrames );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the last step is past timeoutFrames (the limit counts written frames - fixed waits and steps; each held wait keeps its own limit)",
+                                      _listStep.back().describe() }
+                                   .appendDetail( arrFrames ) );
         }
-        return true;
+        return {};
     }
 
     string AutomationTestOptions::makeLaunchArguments() const
@@ -609,7 +535,7 @@ namespace sw
         return arguments;
     }
 
-    bool AutomationScenario::parseLoad( const XMLNode& node, string& outReason )
+    expected<void> AutomationScenario::parseLoad( const XMLNode& node )
     {
         using Internal                = AutomationScenarioInternal;
         _testOptions._load._bDeclared = true;
@@ -619,55 +545,46 @@ namespace sw
             const utf8*       pText = attribute.getValue();
             if ( name == "clients" )
             {
-                if ( Internal::readUint( pText, "clients", _testOptions._load._clientCount, outReason ) == false )
-                    return false;
+                const expected<uint32> read = Internal::readUint( pText, "clients" );
+                if ( read.has_value() == false )
+                    return unexpected( read.error() );
+                _testOptions._load._clientCount = *read;
             }
             else if ( name == "meshes" )
             {
-                if ( Internal::readUint( pText, "meshes", _testOptions._load._meshCount, outReason ) == false )
-                    return false;
+                const expected<uint32> read = Internal::readUint( pText, "meshes" );
+                if ( read.has_value() == false )
+                    return unexpected( read.error() );
+                _testOptions._load._meshCount = *read;
             }
             else if ( name == "movers" )
             {
-                if ( Internal::readUint( pText, "movers", _testOptions._load._moverCount, outReason ) == false )
-                    return false;
+                const expected<uint32> read = Internal::readUint( pText, "movers" );
+                if ( read.has_value() == false )
+                    return unexpected( read.error() );
+                _testOptions._load._moverCount = *read;
             }
             else if ( name == "durationSeconds" || name == "rampUpSeconds" )
             {
                 float32& outSeconds = name == "durationSeconds" ? _testOptions._load._durationSeconds : _testOptions._load._rampUpSeconds;
                 if ( StringUtil::parseFloat( string_view{ pText }, outSeconds ) == false || outSeconds < 0.0f )
-                {
-                    outReason = string( name ) + " must be a non-negative number, got '" + pText + "'";
-                    return false;
-                }
+                    return unexpected( Internal::makeValueError( "<Load> needs a non-negative number", name, pText ) );
             }
             else if ( name == "network" )
             {
                 NetEmulationPresetTable presetTable;
                 const DataPath&         presetPath = engine::getSubsystem<EngineDefaultAssets>()._netEmulationPresets;
                 if ( presetTable.loadFromAsset( AssetID{ presetPath.get() } ) == false )
-                {
-                    outReason = string( "network presets could not be read (" ) + presetPath.get() + ")";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "<Load network> presets could not be read", presetPath.get() } );
                 if ( presetTable.findPreset( pText ) == nullptr )
-                {
-                    outReason = string( "unknown network preset '" ) + pText + "' (" + presetTable.makePresetNames() + ")";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "<Load> names an unknown network preset", pText }.appendDetail( " (" ).appendDetail( presetTable.makePresetNames() ).appendDetail( ")" ) );
                 _testOptions._load._network = pText;
             }
             else
-            {
-                outReason = "unknown attribute '" + string( name ) + "'";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "<Load> has an unknown attribute", name } );
         }
         if ( _testOptions._load._durationSeconds <= 0.0f )
-        {
-            outReason = "needs durationSeconds > 0 (the measurement window)";
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "<Load> needs durationSeconds > 0 (the measurement window)" } );
+        return {};
     }
 } // namespace sw

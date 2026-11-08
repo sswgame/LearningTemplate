@@ -25,15 +25,14 @@ namespace sw
             [[nodiscard]] static bool readManifest( const string& manifestPath, ModuleManifest& outManifest )
             {
                 string text;
-                string error;
                 if ( FileUtil::readTextFile( manifestPath, text ) == false )
                 {
                     SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalogCannotRead", "Module catalog: cannot read %#", manifestPath.c_str() );
                     return false;
                 }
-                if ( ModuleCatalog::parseManifest( text, manifestPath, outManifest, error ) == false )
+                if ( const expected<void> parsed = ModuleCatalog::parseManifest( text, manifestPath, outManifest ); parsed.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalog", "Module catalog: %#", error.c_str() );
+                    SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalog", "Module catalog: %# (%#)", parsed.error().message(), parsed.error().detail() );
                     return false;
                 }
                 return true;
@@ -213,12 +212,11 @@ namespace sw
         vector<ModuleInactiveEntry> listRemoved;
         removeUnreachedGamePackKits( listManifest, listGamePackProject, GameSelection::getName(), listRemoved );
 
-        string moduleError;
         for ( ModuleManifest& manifest : listManifest )
         {
-            if ( outCatalog.addManifest( std::move( manifest ), moduleError ) == false )
+            if ( const expected<void> added = outCatalog.addManifest( std::move( manifest ) ); added.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalog", "Module catalog: %#", moduleError.c_str() );
+                SW_LOG_ERROR_ID( "ModuleCatalog.ModuleCatalog", "Module catalog: %# (%#)", added.error().message(), added.error().detail() );
                 return false;
             }
         }
@@ -226,9 +224,9 @@ namespace sw
         resolveContext._platform      = ModuleCatalog::getCurrentPlatform();
         resolveContext._configuration = ModuleCatalog::getCurrentConfiguration();
         resolveContext._targetMask    = targetMask;
-        if ( outCatalog.resolve( resolveContext, outResolution, moduleError ) == false )
+        if ( const expected<void> resolved = outCatalog.resolve( resolveContext, outResolution ); resolved.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ModuleCatalog.ModuleManifests", "Module manifests: %#", moduleError.c_str() );
+            SW_LOG_ERROR_ID( "ModuleCatalog.ModuleManifests", "Module manifests: %# (%#)", resolved.error().message(), resolved.error().detail() );
             return false;
         }
         for ( ModuleInactiveEntry& removed : listRemoved )

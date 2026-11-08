@@ -414,8 +414,8 @@ namespace sw
         for ( const string& folder : listFolder )
         {
             // 매니페스트를 읽지 못한 묶음은 가장 오래된 것으로 쳐 먼저 지운다(보낼 수 없는 묶음이다).
-            JSONDocument                manifest;
-            const std::optional<uint64> crashTime = Internal::loadManifest( folder, manifest ) ? manifest.getRoot().readRequired<uint64>( "crashTime" ) : std::nullopt;
+            JSONDocument           manifest;
+            const optional<uint64> crashTime = Internal::loadManifest( folder, manifest ) ? manifest.getRoot().readRequired<uint64>( "crashTime" ) : nullopt;
             listByTime.push_back( { crashTime.has_value() ? *crashTime : 0u, folder } );
         }
         VectorUtil::sort( listByTime );
@@ -436,9 +436,9 @@ namespace sw
             JSONDocument manifest;
             if ( Internal::loadManifest( folder, manifest ) == false )
                 continue;
-            const JSONValue             root      = manifest.getRoot();
-            const std::optional<uint64> crashTime = root.readRequired<uint64>( "crashTime" );
-            const std::optional<uint32> attempts  = root.readRequired<uint32>( "attempts" );
+            const JSONValue        root      = manifest.getRoot();
+            const optional<uint64> crashTime = root.readRequired<uint64>( "crashTime" );
+            const optional<uint32> attempts  = root.readRequired<uint32>( "attempts" );
             if ( crashTime.has_value() == false || attempts.has_value() == false )
                 continue; // 깨진 매니페스트 — 읽기가 키와 함께 알렸다
             CrashReportSummary summary;
@@ -499,8 +499,8 @@ namespace sw
             JSONDocument manifest;
             if ( Internal::loadManifest( folder, manifest ) == false || Internal::getState( manifest ) != CrashReportState::Queued )
                 continue;
-            const JSONValue             root     = manifest.getRoot();
-            const std::optional<uint64> attempts = root.readRequired<uint64>( "attempts" );
+            const JSONValue        root     = manifest.getRoot();
+            const optional<uint64> attempts = root.readRequired<uint64>( "attempts" );
             if ( attempts.has_value() == false || *attempts >= kMaxAttempts )
                 continue; // 깨진 매니페스트는 보내지 않는다(읽기가 알렸다)
             CrashReportUploadBundle bundle;

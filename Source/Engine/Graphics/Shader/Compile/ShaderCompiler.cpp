@@ -77,8 +77,8 @@ namespace sw
                     if ( bInvalidIncludeArguments )
                         return E_FAIL;
 
-                    vector<uint8>                     bytes;
-                    const std::optional<AbsolutePath> found = _resolver.findInclude( _input, pFileName, bytes, _listIncludedFile ); // 앞자리의 없던 후보도 의존이다(가림)
+                    vector<uint8>                bytes;
+                    const optional<AbsolutePath> found = _resolver.findInclude( _input, pFileName, bytes, _listIncludedFile ); // 앞자리의 없던 후보도 의존이다(가림)
                     if ( found.has_value() == false || bytes.empty() )
                         return E_FAIL;
 
@@ -326,9 +326,9 @@ namespace sw
                         return E_FAIL;
                     *ppIncludeSource = nullptr;
                     // DXC 는 include 폴더마다 후보 이름을 물어본다 - 없는 후보는 오류 로그 없이 실패로 돌려줘 다음 폴더로 넘어가게 한다.
-                    vector<uint8>                     bytes;
-                    const string                      candidate = FileUtil::normalizeSeparators( StringUtil::utf16ToUTF8( pFilename ) );
-                    const std::optional<AbsolutePath> found     = _resolver.readInclude( candidate, bytes );
+                    vector<uint8>                bytes;
+                    const string                 candidate = FileUtil::normalizeSeparators( StringUtil::utf16ToUTF8( pFilename ) );
+                    const optional<AbsolutePath> found     = _resolver.readInclude( candidate, bytes );
                     if ( found.has_value() == false )
                     {
                         // 없던 후보도 의존이다 — 검색 순서의 앞자리에 같은 이름이 생기면 다음 컴파일은 그것을 연다(가림). 쿠킹 스탬프가 "없어야 한다" 로 적는다.
@@ -475,11 +475,10 @@ namespace sw
             }
 
             /** @brief GL 패치를 후처리 표의 모양(실패를 알리는 함수)으로 부릅니다. 패치는 실패하지 않는다. */
-            static bool applyOpenGLPatch( vector<uint8>& inoutBytecode, string& outError )
+            static expected<void> applyOpenGLPatch( vector<uint8>& inoutBytecode )
             {
-                (void)outError;
                 SPIRVOpenGLPatch::apply( inoutBytecode );
-                return true;
+                return {};
             }
 
             /**
@@ -487,7 +486,7 @@ namespace sw
              * @details Tint 를 라이브러리로 링크하지 않는다 — Dawn 은 새 의존성이라 아직 붙이지 않았다(docs/PlatformTargets.md). 실행 파일이 없으면 오류로 멈춘다(WGSL 없이 구울 수 없다).
              *          임시 파일은 시스템 임시 폴더에 둔다 — 병렬 쿠킹이 같은 파일을 쓰지 않게 바이트 해시를 이름에 넣는다(같은 바이트면 같은 결과라 겹쳐도 된다).
              */
-            static bool convertSpirvToWgsl( vector<uint8>& inoutBytecode, string& outError )
+            static expected<void> convertSpirvToWgsl( vector<uint8>& inoutBytecode )
             {
     #if defined( SW_PLATFORM_WINDOWS )
                 constexpr const utf8* kTintName = "tint.exe";
@@ -499,19 +498,13 @@ namespace sw
                 const string                 tintText = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ), kTintName );
                 const optional<AbsolutePath> tintPath = AbsolutePath::tryMake( tintText );
                 if ( tintPath.has_value() == false || FileUtil::isRegularFile( tintText ) == false )
-                {
-                    outError = "Tint (SPIR-V -> WGSL) is not next to the executable: " + tintText + " - the WebGPU shader target needs it (docs/PlatformTargets.md)";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "Tint (SPIR-V -> WGSL) is not next to the executable - the WebGPU shader target needs it (docs/PlatformTargets.md)", tintText } );
                 const uint64 hash      = HashUtil::appendBytes64( HashUtil::kFNVOffset64, inoutBytecode.data(), inoutBytecode.size() );
                 const string stem      = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_tint_" + to_string( hash ) );
                 const string spirvPath = stem + ".spv";
                 const string wgslPath  = stem + ".wgsl";
                 if ( FileUtil::writeFile( spirvPath, inoutBytecode.data(), inoutBytecode.size() ) == false )
-                {
-                    outError = "could not write the SPIR-V for Tint: " + spirvPath;
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "could not write the SPIR-V for Tint", spirvPath } );
                 string        toolOutput;
                 const auto    onOutput = SW_DELEGATE_LAMBDA( ProcessOutputDelegate, [&toolOutput]( string_view line )
                    {
@@ -524,25 +517,22 @@ namespace sw
                 (void)FileUtil::removeFile( spirvPath );
                 (void)FileUtil::removeFile( wgslPath );
                 if ( bRead == false )
-                {
-                    outError = "Tint failed (exit " + to_string( exitCode ) + "): " + toolOutput;
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::ExternalFailure, "Tint failed", "exit " + to_string( exitCode ) + ": " + toolOutput } );
                 vector<uint8> container;
                 WebGPUShaderContainer::pack( inoutBytecode, string_view( reinterpret_cast<const utf8*>( wgslBytes.data() ), wgslBytes.size() ), container );
                 inoutBytecode = std::move( container );
-                return true;
+                return {};
             }
 
             /** @brief 대상 형식 하나의 DXC 쪽 일입니다. 행 순서는 `ShaderTargetFormat` 과 같습니다. 새 대상은 이 표와 `ShaderTargetFormatInfo` 에 한 줄씩이고, 후처리(GL 패치 · 앞으로의 Tint)도 여기에 적습니다. */
             struct DxcTargetRow
             {
                 ShaderTargetFormat _format;
-                LPCWSTR            _pBackendDefine;                                          ///< 셰이더가 백엔드를 가르는 매크로
-                void ( *_pfnAppendArguments )( vector<LPCWSTR>& listArgument );              ///< 형식별 인자. 없으면 nullptr
-                bool ( *_pfnPostProcess )( vector<uint8>& inoutBytecode, string& outError ); ///< 나온 바이트코드 후처리. 없으면 nullptr. 실패하면 이유를 남기고 false
-                const utf8* _pLogName;                                                       ///< 로그 이름
-                uint8       _bNativeBindless : 1;                                            ///< 네이티브 bindless 텍스처 배열을 쓴다(common.hlsli SW_NATIVE_BINDLESS). DX12 는 t0 space1 무제한 배열(버퍼는 space0 슬롯), Vulkan 은 세트 1 배열(버퍼는 세트 0 의 시프트된 binding)
+                LPCWSTR            _pBackendDefine;                                  ///< 셰이더가 백엔드를 가르는 매크로
+                void ( *_pfnAppendArguments )( vector<LPCWSTR>& listArgument );      ///< 형식별 인자. 없으면 nullptr
+                expected<void> ( *_pfnPostProcess )( vector<uint8>& inoutBytecode ); ///< 나온 바이트코드 후처리. 없으면 nullptr. 실패하면 그 이유
+                const utf8* _pLogName;                                               ///< 로그 이름
+                uint8       _bNativeBindless : 1;                                    ///< 네이티브 bindless 텍스처 배열을 쓴다(common.hlsli SW_NATIVE_BINDLESS). DX12 는 t0 space1 무제한 배열(버퍼는 space0 슬롯), Vulkan 은 세트 1 배열(버퍼는 세트 0 의 시프트된 binding)
             };
 
             static const DxcTargetRow& getDxcTargetRow( ShaderTargetFormat format )
@@ -711,9 +701,12 @@ namespace sw
 
                 const uint8* pData = static_cast<const uint8*>( shaderBlob->GetBufferPointer() );
                 outResult._bytecode.assign( pData, pData + shaderBlob->GetBufferSize() );
-                const auto pfnPostProcess = getDxcTargetRow( desc._targetFormat )._pfnPostProcess;
-                if ( pfnPostProcess != nullptr && pfnPostProcess( outResult._bytecode, outResult._errorMessage ) == false )
+                const auto           pfnPostProcess = getDxcTargetRow( desc._targetFormat )._pfnPostProcess;
+                const expected<void> postProcessed  = pfnPostProcess != nullptr ? pfnPostProcess( outResult._bytecode ) : expected<void>{};
+                if ( postProcessed.has_value() == false )
                 {
+                    outResult._errorMessage = string( postProcessed.error().message().data(), postProcessed.error().message().size() ) + ": " +
+                                              string( postProcessed.error().detail().data(), postProcessed.error().detail().size() );
                     SW_LOG_ERROR_ID( "ShaderCompiler.PostProcessFailed", "%# (%#)", outResult._errorMessage.c_str(), desc._source.c_str() );
                     outResult._bytecode.clear();
                     return DxcResult::Rejected;
@@ -772,15 +765,16 @@ namespace sw
         result._bytecode.reserve( 4096 );
 
         // 소스는 리소스 경로 하나로 푼다(`ShaderSourceResolver`) - 절대 경로 · 작업 폴더로 추측하지 않는다.
-        const std::optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( engine::getSubsystem<AssetPaths>() );
+        const optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( engine::getSubsystem<AssetPaths>() );
         if ( resolver.has_value() == false )
         {
             result._errorMessage = "Shader include domains cannot be found (see the _listResourcePriority error above).";
             return result;
         }
-        const std::optional<ShaderCompileInput> input = resolver->resolve( desc._source, result._errorMessage );
+        const expected<ShaderCompileInput> input = resolver->resolve( desc._source );
         if ( input.has_value() == false )
         {
+            result._errorMessage = string( input.error().message().data(), input.error().message().size() ) + ": " + string( input.error().detail().data(), input.error().detail().size() );
             SW_LOG_ERROR_ID( "ShaderCompiler.SourceUnresolved", "%#", result._errorMessage );
             return result;
         }

@@ -597,10 +597,13 @@ namespace sw::editor
             outError = "the preview has no widget tree";
             return false;
         }
-        const shared_ptr<const UIDocumentAsset> document = documents.findOrLoad( documentPath, outError );
-        if ( document == nullptr )
+        const expected<shared_ptr<const UIDocumentAsset>> document = documents.findOrLoad( documentPath );
+        if ( document.has_value() == false )
+        {
+            outError = string( document.error().message().data(), document.error().message().size() ) + ": " + string( document.error().detail().data(), document.error().detail().size() );
             return false;
-        outText = UIDocumentWriter::write( screen.getDesc(), document->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );
+        }
+        outText = UIDocumentWriter::write( screen.getDesc(), ( *document )->_listStyleSheet, *pRoot, screen.getBindings(), screen.getAnimationPlayer().getAnimations() );
         return true;
     }
 

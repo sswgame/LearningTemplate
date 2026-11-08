@@ -325,10 +325,10 @@ namespace sw
             toDay = 0;
 
         // 호감도(관계 단계) 범위 — 한쪽만 적어도 된다. 적지 않은 쪽은 제한이 없다.
-        bool                   bValid = true;
-        std::optional<int32>   minAffinity;
-        std::optional<int32>   maxAffinity;
-        std::optional<float32> chance;
+        bool              bValid = true;
+        optional<int32>   minAffinity;
+        optional<int32>   maxAffinity;
+        optional<float32> chance;
         bValid = node.readOptionalAttribute( "minAffinity", minAffinity ) && bValid;
         bValid = node.readOptionalAttribute( "maxAffinity", maxAffinity ) && bValid;
         bValid = node.readOptionalAttribute( "chance", chance ) && bValid;

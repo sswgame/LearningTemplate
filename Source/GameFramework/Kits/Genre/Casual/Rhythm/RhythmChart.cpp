@@ -62,12 +62,12 @@ namespace sw
              */
             [[nodiscard]] static bool readNote( const XMLNode& node, string_view sourceName, int32 laneCount, vector<RhythmNote>& outListNote )
             {
-                RhythmNoteDef          noteDef;
-                std::optional<float32> endBeat;
-                const bool             bFields = XMLFields::readFields( node, noteDef, sourceName, { "endBeat" } );
-                const bool             bEnd    = node.readOptionalAttribute( "endBeat", endBeat );
-                const bool             bLane   = noteDef._lane < laneCount;
-                const bool             bOrder  = endBeat.has_value() == false || *endBeat >= noteDef._beat;
+                RhythmNoteDef     noteDef;
+                optional<float32> endBeat;
+                const bool        bFields = XMLFields::readFields( node, noteDef, sourceName, { "endBeat" } );
+                const bool        bEnd    = node.readOptionalAttribute( "endBeat", endBeat );
+                const bool        bLane   = noteDef._lane < laneCount;
+                const bool        bOrder  = endBeat.has_value() == false || *endBeat >= noteDef._beat;
                 if ( bLane == false )
                     SW_LOG_ERROR_ID( "RhythmChart.InvalidNote", "%#: note at beat %# is on lane %# outside 0..%#", sourceName, noteDef._beat, noteDef._lane, laneCount - 1 );
                 if ( bOrder == false )
@@ -225,8 +225,8 @@ namespace sw
         }
         makeTimingPoints( listBpmChange, listStop );
         // 스크롤 기준 BPM 은 적지 않으면 0 박의 BPM 이다(곡의 첫 빠르기를 기준으로 흐른다).
-        std::optional<float32> baseBpm;
-        const bool             bBaseBpm = root.readOptionalAttribute( "baseBpm", baseBpm ) && ( baseBpm.has_value() == false || *baseBpm >= 1.0f );
+        optional<float32> baseBpm;
+        const bool        bBaseBpm = root.readOptionalAttribute( "baseBpm", baseBpm ) && ( baseBpm.has_value() == false || *baseBpm >= 1.0f );
         if ( bBaseBpm == false )
         {
             SW_LOG_ERROR_ID( "RhythmChart.InvalidBaseBpm", "%#: <Chart baseBpm=\"%#\"> needs a number of 1 or more", sourceName, root.getAttributeText( "baseBpm" ) );

@@ -29,8 +29,7 @@ namespace
 
         static void add( ModuleCatalog& catalog, ModuleManifest manifest )
         {
-            string error;
-            SW_REQUIRE_TRUE( catalog.addManifest( std::move( manifest ), error ) );
+            SW_REQUIRE_TRUE( catalog.addManifest( std::move( manifest ) ).has_value() );
         }
 
         static ModuleResolveContext makeContext( const utf8* pProject = "Game" )
@@ -61,11 +60,18 @@ namespace
             return {};
         }
 
+        /** @brief 오류를 `문장 (대상)` 글로 잇습니다(문장 · 대상 어느 쪽의 낱말이든 찾게). */
+        static string describe( const Error& error ) { return string( error.message().data(), error.message().size() ) + " (" + string( error.detail().data(), error.detail().size() ) + ")"; }
+
+        /** @brief 실패한 결과의 글입니다. 성공이면 빈 글입니다. */
+        static string describe( const expected<void>& result ) { return result.has_value() ? string() : describe( result.error() ); }
+
         static void expectParseError( string_view json, const utf8* pExpected )
         {
-            ModuleManifest manifest;
-            string         error;
-            SW_EXPECT_FALSE( ModuleCatalog::parseManifest( json, {}, manifest, error ) );
+            ModuleManifest       manifest;
+            const expected<void> parsed = ModuleCatalog::parseManifest( json, {}, manifest );
+            SW_EXPECT_FALSE( parsed.has_value() );
+            const string error = describe( parsed );
             SW_EXPECT_TRUE_MSG( error.find( pExpected ) != string::npos, error.c_str() );
         }
 
@@ -110,8 +116,7 @@ SW_TEST_CASE( ModuleVersionTest, ComparesMajorThenMinorThenPatch )
 SW_TEST_CASE( ModuleCatalogTest, ParsesAManifest )
 {
     ModuleManifest manifest;
-    string         error;
-    SW_REQUIRE_TRUE( ModuleCatalog::parseManifest( Util::kValid, {}, manifest, error ) );
+    SW_REQUIRE_TRUE( ModuleCatalog::parseManifest( Util::kValid, {}, manifest ).has_value() );
     SW_EXPECT_TRUE( manifest._name == "GF_Kit" );
     SW_EXPECT_TRUE( manifest._kind == ModuleKind::Kit );
     SW_EXPECT_EQUAL( 2u, manifest._version._minor );
@@ -125,9 +130,8 @@ SW_TEST_CASE( ModuleCatalogTest, ParsesAManifest )
 SW_TEST_CASE( ModuleCatalogTest, FileNameMustMatchTheModuleName )
 {
     ModuleManifest manifest;
-    string         error;
-    SW_EXPECT_TRUE( ModuleCatalog::parseManifest( Util::kValid, "D:/x/GF_Kit.module.json", manifest, error ) );
-    SW_EXPECT_FALSE( ModuleCatalog::parseManifest( Util::kValid, "D:/x/Other.module.json", manifest, error ) );
+    SW_EXPECT_TRUE( ModuleCatalog::parseManifest( Util::kValid, "D:/x/GF_Kit.module.json", manifest ).has_value() );
+    const string error = Util::describe( ModuleCatalog::parseManifest( Util::kValid, "D:/x/Other.module.json", manifest ) );
     SW_EXPECT_TRUE( error.find( "must be named" ) != string::npos );
 }
 
@@ -157,9 +161,9 @@ SW_TEST_CASE( ModuleCatalogTest, PlatformMaskIsEveryPlatformMinusExcluded )
 {
     const auto parseMask = []( const string& text )
     {
-        ModuleManifest manifest;
-        string         error;
-        SW_EXPECT_TRUE_MSG( ModuleCatalog::parseManifest( text, {}, manifest, error ), error.c_str() );
+        ModuleManifest       manifest;
+        const expected<void> parsed = ModuleCatalog::parseManifest( text, {}, manifest );
+        SW_EXPECT_TRUE_MSG( parsed.has_value(), Util::describe( parsed ).c_str() );
         return static_cast<int32>( manifest._platformMask );
     };
     const string common   = R"("_version": "1.0.0", "_listConfiguration": ["Dev"], "_listTarget": ["Client"])";
@@ -183,8 +187,7 @@ SW_TEST_CASE( ModuleCatalogTest, DuplicateNamesAreRefused )
 {
     ModuleCatalog catalog;
     Util::add( catalog, Util::makeManifest( "A" ) );
-    string error;
-    SW_EXPECT_FALSE( catalog.addManifest( Util::makeManifest( "A" ), error ) );
+    const string error = Util::describe( catalog.addManifest( Util::makeManifest( "A" ) ) );
     SW_EXPECT_TRUE( error.find( "declared twice" ) != string::npos );
     SW_EXPECT_EQUAL( size_t{ 1 }, catalog.getManifestCount() );
     SW_EXPECT_TRUE( catalog.findManifest( "A" ) != nullptr );
@@ -200,8 +203,7 @@ SW_TEST_CASE( ModuleCatalogTest, LoadOrderPutsDependenciesFirst )
     Util::add( catalog, Util::makeManifest( "KitB", ModuleKind::Kit, { "KitA" } ) );
     Util::add( catalog, Util::makeManifest( "KitA" ) );
     ModuleResolution resolution;
-    string           error;
-    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution, error ) );
+    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution ).has_value() );
     SW_EXPECT_TRUE( Util::indexOf( resolution, "KitA" ) < Util::indexOf( resolution, "KitB" ) );
     SW_EXPECT_TRUE( Util::indexOf( resolution, "KitB" ) < Util::indexOf( resolution, "Game" ) );
     SW_EXPECT_TRUE( resolution.isActive( "Game" ) );
@@ -215,7 +217,8 @@ SW_TEST_CASE( ModuleCatalogTest, CycleIsReportedWithItsPath )
     Util::add( catalog, Util::makeManifest( "B", ModuleKind::Kit, { "A" } ) );
     ModuleResolution resolution;
     string           error;
-    SW_EXPECT_FALSE( catalog.resolve( Util::makeContext(), resolution, error ) );
+    error = Util::describe( catalog.resolve( Util::makeContext(), resolution ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "cycle" ) != string::npos );
     SW_EXPECT_TRUE( error.find( "A" ) != string::npos && error.find( "B" ) != string::npos );
 }
@@ -227,7 +230,8 @@ SW_TEST_CASE( ModuleCatalogTest, DependencyProblemsAreErrors )
 
     ModuleCatalog missing;
     Util::add( missing, Util::makeManifest( "A", ModuleKind::Kit, { "Ghost" } ) );
-    SW_EXPECT_FALSE( missing.resolve( Util::makeContext(), resolution, error ) );
+    error = Util::describe( missing.resolve( Util::makeContext(), resolution ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "missing module" ) != string::npos );
 
     ModuleCatalog  tooOld;
@@ -239,7 +243,8 @@ SW_TEST_CASE( ModuleCatalogTest, DependencyProblemsAreErrors )
     ModuleManifest old = Util::makeManifest( "B" );
     old._version       = ModuleVersion{ 1, 0, 0 };
     Util::add( tooOld, std::move( old ) );
-    SW_EXPECT_FALSE( tooOld.resolve( Util::makeContext(), resolution, error ) );
+    error = Util::describe( tooOld.resolve( Util::makeContext(), resolution ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "2.0.0 or later" ) != string::npos );
 
     ModuleCatalog disabled;
@@ -247,7 +252,8 @@ SW_TEST_CASE( ModuleCatalogTest, DependencyProblemsAreErrors )
     ModuleManifest off     = Util::makeManifest( "B" );
     off._bEnabledByDefault = false;
     Util::add( disabled, std::move( off ) );
-    SW_EXPECT_FALSE( disabled.resolve( Util::makeContext(), resolution, error ) );
+    error = Util::describe( disabled.resolve( Util::makeContext(), resolution ) );
+    SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( error.find( "disabled by default" ) != string::npos );
 }
 
@@ -268,8 +274,7 @@ SW_TEST_CASE( ModuleCatalogTest, UnavailableModulesAreInactiveWithAReason )
     Util::add( catalog, std::move( defaultOff ) );
 
     ModuleResolution resolution;
-    string           error;
-    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution, error ) );
+    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution ).has_value() );
     SW_EXPECT_TRUE( resolution._listLoadOrder.empty() );
     SW_REQUIRE_EQUAL( size_t{ 4 }, resolution._listInactive.size() );
     SW_EXPECT_TRUE( Util::findReason( resolution, "LinuxOnly" ) == "not available on Windows" );
@@ -294,8 +299,7 @@ SW_TEST_CASE( ModuleCatalogTest, ProjectOverridesWinOverDefaults )
     SW_EXPECT_FALSE( catalog.setProjectOverride( "NoProject", "On", false ) );
 
     ModuleResolution resolution;
-    string           error;
-    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution, error ) );
+    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution ).has_value() );
     SW_EXPECT_FALSE( resolution.isActive( "On" ) );
     SW_EXPECT_TRUE( Util::findReason( resolution, "On" ) == "disabled by the project" );
     SW_EXPECT_TRUE( resolution.isActive( "Off" ) );
@@ -309,8 +313,9 @@ SW_TEST_CASE( ModuleCatalogTest, OverrideOfAnUnknownModuleIsAnError )
     SW_REQUIRE_TRUE( catalog.setProjectOverride( "Game", "Typo", false ) );
     ModuleResolution resolution;
     string           error;
-    SW_EXPECT_FALSE( catalog.resolve( Util::makeContext(), resolution, error ) );
-    SW_EXPECT_TRUE( error.find( "unknown module 'Typo'" ) != string::npos );
+    error = Util::describe( catalog.resolve( Util::makeContext(), resolution ) );
+    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_TRUE( error.find( "unknown module" ) != string::npos && error.find( "Typo" ) != string::npos );
 }
 
 // 프로젝트는 기본값으로 꺼져 있어도 켜져 있다.
@@ -321,8 +326,7 @@ SW_TEST_CASE( ModuleCatalogTest, TheProjectIsAlwaysOn )
     game._bEnabledByDefault = false;
     Util::add( catalog, std::move( game ) );
     ModuleResolution resolution;
-    string           error;
-    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution, error ) );
+    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution ).has_value() );
     SW_EXPECT_TRUE( resolution.isActive( "Game" ) );
 }
 
@@ -335,8 +339,7 @@ SW_TEST_CASE( ModuleCatalogTest, EditorExtensionFollowsItsDependency )
     Util::add( catalog, std::move( kit ) );
     Util::add( catalog, Util::makeManifest( "Ext", ModuleKind::EditorExtension, { "KitOff" } ) );
     ModuleResolution resolution;
-    string           error;
-    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution, error ) );
+    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution ).has_value() );
     SW_EXPECT_FALSE( resolution.isActive( "Ext" ) );
     SW_EXPECT_TRUE( Util::findReason( resolution, "Ext" ).find( "needs KitOff" ) != string::npos );
 }
@@ -351,8 +354,7 @@ SW_TEST_CASE( ModuleCatalogTest, EditorExtensionChainFollowsWhateverTheOrder )
     Util::add( catalog, Util::makeManifest( "ExtSecond", ModuleKind::EditorExtension, { "KitOff" } ) );
     Util::add( catalog, std::move( kit ) );
     ModuleResolution resolution;
-    string           error;
-    SW_REQUIRE_TRUE_MSG( catalog.resolve( Util::makeContext(), resolution, error ), error.c_str() );
+    SW_REQUIRE_TRUE( catalog.resolve( Util::makeContext(), resolution ).has_value() );
     SW_EXPECT_FALSE( resolution.isActive( "ExtFirst" ) );
     SW_EXPECT_FALSE( resolution.isActive( "ExtSecond" ) );
 }
@@ -360,7 +362,6 @@ SW_TEST_CASE( ModuleCatalogTest, EditorExtensionChainFollowsWhateverTheOrder )
 SW_TEST_CASE( ModuleCatalogTest, MissingFolderIsAnError )
 {
     ModuleCatalog catalog;
-    string        error;
-    SW_EXPECT_FALSE( catalog.loadDirectory( test::makeScratchPath( "SwNoSuchModuleFolder" ), error ) );
+    const string  error = Util::describe( catalog.loadDirectory( test::makeScratchPath( "SwNoSuchModuleFolder" ) ) );
     SW_EXPECT_TRUE( error.find( "does not exist" ) != string::npos );
 }

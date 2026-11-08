@@ -6,12 +6,11 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Content/AssetID.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -77,13 +76,13 @@ namespace sw
          *        값을 적어 오류를 남기고 nullopt 입니다.
          * @details 폴백을 받던 `asInt( fallback )` · `asFloat( fallback )` · `asBool( fallback )` 를 대신한다(데이터 주도 계획 D9). 없음을 어떻게 다룰지는
          *          부르는 쪽이 정한다. 타입으로 가지를 칠 때는 `isNumber()` 같은 검사를 먼저 쓴다. T 는 `readRequired` 와 같다.
-         *          `std::optional<bool>` 은 조건식에서 "값이 있다"로 읽히므로 `if ( value.read<bool>() )` 로 쓰지 말고 `== true` 로 비교한다.
+         *          `optional<bool>` 은 조건식에서 "값이 있다"로 읽히므로 `if ( value.read<bool>() )` 로 쓰지 말고 `== true` 로 비교한다.
          */
         template <typename T>
-        [[nodiscard]] std::optional<T> read() const
+        [[nodiscard]] optional<T> read() const
         {
             T value{};
-            return parseSelf( value ) == JSONValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+            return parseSelf( value ) == JSONValueRead::Read ? optional<T>{ value } : nullopt;
         }
 
         /** @brief 객체 멤버 수 또는 배열 원소 수를 반환합니다. */
@@ -117,21 +116,21 @@ namespace sw
          * @details 폴백 인자를 받지 않는다. T 는 int32 · uint32 · int64 · uint64 · float32 · float64 · bool · string 입니다.
          */
         template <typename T>
-        [[nodiscard]] std::optional<T> readRequired( string_view key ) const
+        [[nodiscard]] optional<T> readRequired( string_view key ) const
         {
             T                   value{};
             const JSONValueRead read = parseMember( key, value );
             if ( read == JSONValueRead::Absent )
                 reportMissing( key );
-            return read == JSONValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+            return read == JSONValueRead::Read ? optional<T>{ value } : nullopt;
         }
         /** @brief 없어도 되는 객체 멤버 @p key 를 읽습니다. 없으면(또는 null) @p outValue 를 비우고 true, 타입이 다르면 오류와 false 입니다. */
         template <typename T>
-        [[nodiscard]] bool readOptional( string_view key, std::optional<T>& outValue ) const
+        [[nodiscard]] bool readOptional( string_view key, optional<T>& outValue ) const
         {
             T                   value{};
             const JSONValueRead read = parseMember( key, value );
-            outValue                 = read == JSONValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+            outValue                 = read == JSONValueRead::Read ? optional<T>{ value } : nullopt;
             return read != JSONValueRead::Invalid;
         }
         /**

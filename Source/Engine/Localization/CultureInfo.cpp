@@ -110,13 +110,10 @@ namespace sw
             }
 
             /** @brief 패턴 모음(`<datePatterns short="…" medium="…" long="…" />`)을 읽습니다. 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static bool readPatternGroup( const XMLNode& group, string* pShort, string* pMedium, string* pLong, string& outError )
+            [[nodiscard]] static expected<void> readPatternGroup( const XMLNode& group, string* pShort, string* pMedium, string* pLong )
             {
                 if ( group.findChild().isValid() )
-                {
-                    outError = "patterns take attributes only";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "patterns take attributes only", group.getName() } );
                 for ( XMLAttribute attribute = group.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
                     const string_view styleName{ attribute.getName() };
@@ -128,13 +125,10 @@ namespace sw
                     else if ( styleName == "long" )
                         pTarget = pLong;
                     if ( pTarget == nullptr )
-                    {
-                        outError = "unknown pattern style '" + string( styleName ) + "'";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "unknown pattern style", styleName } );
                     *pTarget = string{ attribute.getValue() };
                 }
-                return true;
+                return {};
             }
 
             /** @brief 문자열 필드 하나(적힌 것만)를 덮어씁니다. */
@@ -149,63 +143,47 @@ namespace sw
              * @details 속성 이름이 범주 키워드이고 값이 CLDR 규칙 글(보기 `@integer` · `@decimal` 까지, other 는 보기만)이다. 빈 요소는 "모든 수가 other" 다.
              *          모르는 범주 · 틀린 글 · 보기 없는 규칙 · other 가 빠진 묶음 · 보기와 어긋난 규칙(CLDR 과 다르게 고친 글)이면 false 입니다.
              */
-            [[nodiscard]] static bool applyRuleSet( const XMLNode& entry, const utf8* pElementName, PluralRuleSet& outRules, string& outError )
+            [[nodiscard]] static expected<void> applyRuleSet( const XMLNode& entry, const utf8* pElementName, PluralRuleSet& outRules )
             {
                 const XMLNode rules = entry.findChild( pElementName );
                 if ( rules.isValid() == false )
-                    return true;
+                    return {};
                 if ( rules.findChild().isValid() )
-                {
-                    outError = string( pElementName ) + " take attributes only";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "plural rule elements take attributes only", pElementName } );
                 PluralRuleSet ruleSet;
                 bool          bAnyRule  = false;
                 bool          bHasOther = false;
                 for ( XMLAttribute attribute = rules.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
-                    if ( ruleSet.compileRule( attribute.getName(), attribute.getValue(), outError ) == false )
-                    {
-                        outError = string( pElementName ) + ": " + outError;
-                        return false;
-                    }
+                    if ( const expected<void> compiled = ruleSet.compileRule( attribute.getName(), attribute.getValue() ); compiled.has_value() == false )
+                        return unexpected( Error{ compiled.error().kind(), compiled.error().message().data(), pElementName }.appendDetail( ": " ).appendDetail( compiled.error().detail() ) );
                     // 규칙 글은 CLDR 글을 보기째 붙여 넣은 것이어야 한다 — 보기가 규칙과 CLDR plurals.xml 의 대조다(`PluralRuleSet::verifySamples`).
                     PluralCategory category = PluralCategory::Other;
                     const bool     bKnown   = CultureInfo::tryParsePluralKeyword( attribute.getName(), category );
                     SW_ASSERT( bKnown ); // `compileRule` 이 모르는 범주를 거절했다
                     (void)bKnown;
                     if ( ruleSet.countSamples( category ) == 0 )
-                    {
-                        outError = string( pElementName ) + ": " + attribute.getName() + " has no @integer / @decimal samples - paste the whole CLDR rule text";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a category has no @integer / @decimal samples - paste the whole CLDR rule text", pElementName }
+                                               .appendDetail( ": " )
+                                               .appendDetail( attribute.getName() ) );
                     bAnyRule  = true;
                     bHasOther = bHasOther || category == PluralCategory::Other;
                 }
                 if ( bAnyRule && bHasOther == false )
-                {
-                    outError = string( pElementName ) + ": other samples are missing - paste every category of the CLDR rules, other included";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "other samples are missing - paste every category of the CLDR rules, other included", pElementName } );
                 const expected<void> samplesMatch = ruleSet.verifySamples();
                 if ( samplesMatch.has_value() == false )
-                {
-                    outError = string( pElementName ) + ": " + string( samplesMatch.error().message().data(), samplesMatch.error().message().size() ) + " (" + string( samplesMatch.error().detail().data(), samplesMatch.error().detail().size() ) + ")";
-                    return false;
-                }
+                    return unexpected( Error{ samplesMatch.error().kind(), samplesMatch.error().message().data(), pElementName }.appendDetail( ": " ).appendDetail( samplesMatch.error().detail() ) );
                 outRules = std::move( ruleSet );
-                return true;
+                return {};
             }
 
             /** @brief 글쓰기 방향 · 숫자 체계(@p mapNumberingSystem 의 id) · 의사 로케일을 덮어씁니다. 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static bool applyScriptFields( const XMLNode& entry, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo, string& outError )
+            [[nodiscard]] static expected<void> applyScriptFields( const XMLNode& entry, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo )
             {
-                std::optional<bool> bRightToLeft;
+                optional<bool> bRightToLeft;
                 if ( entry.readOptionalAttribute( "rightToLeft", bRightToLeft ) == false )
-                {
-                    outError = "rightToLeft must be true or false";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "rightToLeft must be true or false", entry.getAttributeText( "rightToLeft" ) } );
                 if ( bRightToLeft.has_value() )
                     inoutInfo._bRightToLeft = *bRightToLeft;
                 if ( entry.findAttribute( "digits" ) != nullptr )
@@ -213,10 +191,7 @@ namespace sw
                     const string digitsName{ entry.getAttributeText( "digits" ) };
                     const auto   systemIt = mapNumberingSystem.find( digitsName );
                     if ( systemIt == mapNumberingSystem.end() )
-                    {
-                        outError = "unknown digits '" + digitsName + "' (declare it in <numberingSystems>)";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::NotFound, "unknown digits (declare it in <numberingSystems>)", digitsName } );
                     inoutInfo._numberingSystem = digitsName;
                     inoutInfo._listDigit       = systemIt->second;
                 }
@@ -228,12 +203,9 @@ namespace sw
                     else if ( pseudoName == "mirrored" )
                         inoutInfo._pseudoMode = PseudoLocaleMode::Mirrored;
                     else
-                    {
-                        outError = "unknown pseudo '" + pseudoName + "' (accented, mirrored)";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "unknown pseudo (accented, mirrored)", pseudoName } );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 문자열 목록 필드 한 칸의 규칙입니다. `_expectedCount` 가 0 이 아니면 그 개수여야 합니다. */
@@ -253,14 +225,20 @@ namespace sw
             };
 
             /** @brief 날짜 · 시간 패턴 모음과 문자열 목록 필드를 덮어씁니다. 모양이 틀리면 false 입니다. */
-            [[nodiscard]] static bool applyPatternAndListFields( const XMLNode& entry, CultureInfo& inoutInfo, string& outError )
+            [[nodiscard]] static expected<void> applyPatternAndListFields( const XMLNode& entry, CultureInfo& inoutInfo )
             {
                 const XMLNode datePatterns = entry.findChild( "datePatterns" );
-                if ( datePatterns.isValid() && readPatternGroup( datePatterns, &inoutInfo._dateShort, &inoutInfo._dateMedium, &inoutInfo._dateLong, outError ) == false )
-                    return false;
+                if ( datePatterns.isValid() )
+                {
+                    if ( expected<void> read = readPatternGroup( datePatterns, &inoutInfo._dateShort, &inoutInfo._dateMedium, &inoutInfo._dateLong ); read.has_value() == false )
+                        return read;
+                }
                 const XMLNode timePatterns = entry.findChild( "timePatterns" );
-                if ( timePatterns.isValid() && readPatternGroup( timePatterns, &inoutInfo._timeShort, &inoutInfo._timeMedium, nullptr, outError ) == false )
-                    return false;
+                if ( timePatterns.isValid() )
+                {
+                    if ( expected<void> read = readPatternGroup( timePatterns, &inoutInfo._timeShort, &inoutInfo._timeMedium, nullptr ); read.has_value() == false )
+                        return read;
+                }
                 for ( const ListFieldRow& row : kArrListField )
                 {
                     const XMLNode field = entry.findChild( row._pName );
@@ -269,62 +247,50 @@ namespace sw
                     vector<string>& list      = inoutInfo.*( row._pMember );
                     const bool      bBadField = readStringArray( field, list ) == false || ( row._expectedCount != 0 && list.size() != row._expectedCount );
                     if ( bBadField )
-                    {
-                        outError = row._pError;
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, row._pError, row._pName } );
                 }
-                return true;
+                return {};
             }
 
             /** @brief 한 문화권 요소의 필드를 @p inoutInfo 에 덮어씁니다(적힌 필드만). */
-            [[nodiscard]] static bool applyFields( const XMLNode& entry, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo, string& outError )
+            [[nodiscard]] static expected<void> applyFields( const XMLNode& entry, const map<string, vector<string>>& mapNumberingSystem, CultureInfo& inoutInfo )
             {
                 string unknownName;
                 if ( findUnknownName( entry, unknownName ) )
-                {
-                    outError = "unknown field '" + unknownName + "'";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "unknown field", unknownName } );
 
                 applyStringField( entry, "nativeName", inoutInfo._nativeName );
-                if ( applyRuleSet( entry, "pluralRules", inoutInfo._pluralRules, outError ) == false )
-                    return false;
-                if ( applyRuleSet( entry, "ordinalRules", inoutInfo._ordinalRules, outError ) == false )
-                    return false;
-                if ( applyScriptFields( entry, mapNumberingSystem, inoutInfo, outError ) == false )
-                    return false;
+                if ( expected<void> applied = applyRuleSet( entry, "pluralRules", inoutInfo._pluralRules ); applied.has_value() == false )
+                    return applied;
+                if ( expected<void> applied = applyRuleSet( entry, "ordinalRules", inoutInfo._ordinalRules ); applied.has_value() == false )
+                    return applied;
+                if ( expected<void> applied = applyScriptFields( entry, mapNumberingSystem, inoutInfo ); applied.has_value() == false )
+                    return applied;
                 applyStringField( entry, "decimalSeparator", inoutInfo._decimalSeparator );
                 applyStringField( entry, "groupSeparator", inoutInfo._groupSeparator );
                 applyStringField( entry, "percentPattern", inoutInfo._percentPattern );
                 applyStringField( entry, "currencyCode", inoutInfo._currencyCode );
                 applyStringField( entry, "currencyPattern", inoutInfo._currencyPattern );
-                return applyPatternAndListFields( entry, inoutInfo, outError );
+                return applyPatternAndListFields( entry, inoutInfo );
             }
 
             /**
              * @brief `<numberingSystems><numberingSystem id="arab" digits="٠١٢٣٤٥٦٧٨٩"/></numberingSystems>` 를 @p inoutMap 에 얹습니다(같은 id 는 바꾼다). 요소가 없으면 그대로 true 입니다.
              * @details CLDR numberingSystems.xml 의 numeric 체계 모양이다. 글자는 꼭 10 개(0 ~ 9 순서)이고, 한 글자가 여러 바이트여도 된다(UTF-8).
              */
-            [[nodiscard]] static bool readNumberingSystems( const XMLNode& systems, map<string, vector<string>>& inoutMap, string& outError )
+            [[nodiscard]] static expected<void> readNumberingSystems( const XMLNode& systems, map<string, vector<string>>& inoutMap )
             {
                 if ( systems.isValid() == false )
-                    return true;
+                    return {};
                 vector<string> listFileID;
                 for ( XMLNode system = systems.findChild(); system.isValid(); system = system.findNextSibling() )
                 {
                     const string id{ system.getAttributeText( "id" ) };
                     const string digits{ system.getAttributeText( "digits" ) };
                     if ( string_view{ system.getName() } != "numberingSystem" || id.empty() )
-                    {
-                        outError = "<numberingSystems> holds only <numberingSystem id=\"…\" digits=\"…\"> elements";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "<numberingSystems> holds only <numberingSystem id=\"…\" digits=\"…\"> elements", system.getName() } );
                     if ( VectorUtil::contains( listFileID, id ) )
-                    {
-                        outError = "numbering system '" + id + "' is written twice";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::AlreadyExists, "a numbering system is written twice", id } );
                     listFileID.push_back( id );
                     vector<string> listDigit;
                     size_t         offset = 0;
@@ -335,39 +301,30 @@ namespace sw
                         listDigit.push_back( digits.substr( start, offset - start ) );
                     }
                     if ( listDigit.size() != CultureInfo::kDigitCount )
-                    {
-                        outError = "numbering system '" + id + "' must have exactly 10 digits";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "a numbering system must have exactly 10 digits", id } );
                     inoutMap[id] = std::move( listDigit );
                 }
-                return true;
+                return {};
             }
 
             /** @brief `<currencies><currency code="KRW" symbol="₩" digits="0"/></currencies>` 를 @p inoutList 에 얹습니다(같은 코드는 바꾼다). 세 속성은 모두 필수입니다. */
-            [[nodiscard]] static bool readCurrencies( const XMLNode& currencies, vector<CurrencyInfo>& inoutList, string& outError )
+            [[nodiscard]] static expected<void> readCurrencies( const XMLNode& currencies, vector<CurrencyInfo>& inoutList )
             {
                 if ( currencies.isValid() == false )
-                    return true;
+                    return {};
                 vector<string> listFileCode;
                 for ( XMLNode entry = currencies.findChild(); entry.isValid(); entry = entry.findNextSibling() )
                 {
                     CurrencyInfo currency;
                     currency._code   = string{ entry.getAttributeText( "code" ) };
                     currency._symbol = string{ entry.getAttributeText( "symbol" ) };
-                    std::optional<int32> digits;
-                    const bool           bShape = string_view{ entry.getName() } == "currency" && currency._code.empty() == false && currency._symbol.empty() == false &&
+                    optional<int32> digits;
+                    const bool      bShape = string_view{ entry.getName() } == "currency" && currency._code.empty() == false && currency._symbol.empty() == false &&
                                         entry.readOptionalAttribute( "digits", digits ) && digits.has_value() && 0 <= *digits && *digits <= 4;
                     if ( bShape == false )
-                    {
-                        outError = "<currencies> holds only <currency code=\"…\" symbol=\"…\" digits=\"0..4\"> elements";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "<currencies> holds only <currency code=\"…\" symbol=\"…\" digits=\"0..4\"> elements", currency._code } );
                     if ( VectorUtil::contains( listFileCode, currency._code ) )
-                    {
-                        outError = "currency '" + currency._code + "' is written twice";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::AlreadyExists, "a currency is written twice", currency._code } );
                     listFileCode.push_back( currency._code );
                     currency._minorDigitCount = static_cast<uint8>( *digits );
                     bool bReplaced            = false;
@@ -382,53 +339,43 @@ namespace sw
                     if ( bReplaced == false )
                         inoutList.push_back( std::move( currency ) );
                 }
-                return true;
+                return {};
             }
 
-            /** @brief 문화권 요소 하나를 풀어 본 결과입니다. */
+            /** @brief 문화권 요소 하나를 풀어 본 결과입니다(실패는 결과의 오류다). */
             enum class ResolveResult : uint8
             {
                 Resolved, ///< @p inoutMapResolved 에 더했다.
                 Deferred, ///< 부모가 아직 풀리지 않았다. 다음 바퀴에서 다시 본다.
-                Failed,   ///< 오류를 @p outError 에 적었다.
             };
 
-            /** @brief `<cultures>` 의 자식을 모읍니다. 요소 이름이나 코드가 틀렸거나 코드가 겹치면 @p outError 에 적고 false 입니다. */
-            [[nodiscard]] static bool collectEntries( const XMLNode& cultures, vector<XMLNode>& outListPending, vector<string>& outListFileCode, string& outError )
+            /** @brief `<cultures>` 의 자식을 모읍니다. 요소 이름이나 코드가 틀렸거나 코드가 겹치면 그 까닭입니다. */
+            [[nodiscard]] static expected<void> collectEntries( const XMLNode& cultures, vector<XMLNode>& outListPending, vector<string>& outListFileCode )
             {
                 for ( XMLNode entry = cultures.findChild(); entry.isValid(); entry = entry.findNextSibling() )
                 {
                     const string rawCode{ entry.getAttributeText( "code" ) };
                     if ( string_view{ entry.getName() } != "culture" || rawCode.empty() )
-                    {
-                        outError = "<cultures> holds only <culture code=\"…\"> elements";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::InvalidArgument, "<cultures> holds only <culture code=\"…\"> elements", entry.getName() } );
                     if ( VectorUtil::contains( outListFileCode, rawCode ) )
-                    {
-                        outError = "culture '" + rawCode + "' is written twice";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::AlreadyExists, "a culture is written twice", rawCode } );
                     outListFileCode.push_back( rawCode );
                     outListPending.push_back( entry );
                 }
-                return true;
+                return {};
             }
 
             /**
              * @brief 문화권 요소 하나를 부모의 값 위에 얹어 풀고 @p inoutMapResolved 에 더합니다.
              * @param mapExisting 이미 테이블에 있는 문화권입니다. 부모가 이 파일 안에 없을 때만 부모로 씁니다.
              */
-            [[nodiscard]] static ResolveResult resolveEntry( const XMLNode& entry, const vector<string>& listFileCode, const map<string, CultureInfo>& mapExisting,
-                                                             const map<string, vector<string>>& mapNumberingSystem, map<string, CultureInfo>& inoutMapResolved, string& outError )
+            [[nodiscard]] static expected<ResolveResult> resolveEntry( const XMLNode& entry, const vector<string>& listFileCode, const map<string, CultureInfo>& mapExisting,
+                                                                       const map<string, vector<string>>& mapNumberingSystem, map<string, CultureInfo>& inoutMapResolved )
             {
                 const string rawCode{ entry.getAttributeText( "code" ) };
                 const string code = CultureTable::normalizeCode( rawCode );
                 if ( code != rawCode )
-                {
-                    outError = "culture code '" + rawCode + "' must be written as '" + code + "'";
-                    return ResolveResult::Failed;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a culture code must be written in its normalized form", rawCode }.appendDetail( " -> " ).appendDetail( code ) );
                 const string parentCode = CultureTable::normalizeCode( entry.getAttributeText( "parent" ) );
                 CultureInfo  info;
                 if ( parentCode.empty() == false )
@@ -444,52 +391,42 @@ namespace sw
                         return ResolveResult::Deferred;
                 }
                 else if ( entry.findChild( "pluralRules" ).isValid() == false || entry.findAttribute( "digits" ) == nullptr )
-                {
-                    outError = "culture '" + rawCode + "' has no parent, so it needs <pluralRules> (empty when every number is other) and digits";
-                    return ResolveResult::Failed;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "a culture without a parent needs <pluralRules> (empty when every number is other) and digits", rawCode } );
                 info._code       = code;
                 info._parentCode = parentCode;
                 info._nativeName.clear();
                 if ( info._pseudoMode != PseudoLocaleMode::None && entry.findAttribute( "pseudo" ) == nullptr )
                     info._pseudoMode = PseudoLocaleMode::None; // 의사 방식은 물려받지 않는다. `qps_ploc` 을 부모로 둔 실제 문화권이 의사 문화권이 되면 안 된다
-                string fieldError;
-                if ( applyFields( entry, mapNumberingSystem, info, fieldError ) == false )
-                {
-                    outError = "culture '" + rawCode + "': " + fieldError;
-                    return ResolveResult::Failed;
-                }
+                if ( const expected<void> applied = applyFields( entry, mapNumberingSystem, info ); applied.has_value() == false )
+                    return unexpected( Error{ applied.error().kind(), applied.error().message().data(), rawCode }.appendDetail( ": " ).appendDetail( applied.error().detail() ) );
                 inoutMapResolved[code] = std::move( info );
                 return ResolveResult::Resolved;
             }
 
             /** @brief @p cultures 의 문화권을 모두 풉니다. 부모가 먼저 해석되도록 몇 바퀴 돕니다. 한 바퀴에 아무것도 해석하지 못하면 남은 것은 없는 부모이거나 순환입니다. */
-            [[nodiscard]] static bool resolveAll( const XMLNode& cultures, const map<string, CultureInfo>& mapExisting, const map<string, vector<string>>& mapNumberingSystem,
-                                                  map<string, CultureInfo>& outMapResolved, string& outError )
+            [[nodiscard]] static expected<void> resolveAll( const XMLNode& cultures, const map<string, CultureInfo>& mapExisting, const map<string, vector<string>>& mapNumberingSystem,
+                                                            map<string, CultureInfo>& outMapResolved )
             {
                 vector<XMLNode> listPending;
                 vector<string>  listFileCode; // 파일에 적힌 코드(부모가 이 파일 안에 있는지 판정한다)
-                if ( collectEntries( cultures, listPending, listFileCode, outError ) == false )
-                    return false;
+                if ( expected<void> collected = collectEntries( cultures, listPending, listFileCode ); collected.has_value() == false )
+                    return collected;
                 while ( listPending.empty() == false )
                 {
                     vector<XMLNode> listNext;
                     for ( const XMLNode& entry : listPending )
                     {
-                        const ResolveResult result = resolveEntry( entry, listFileCode, mapExisting, mapNumberingSystem, outMapResolved, outError );
-                        if ( result == ResolveResult::Failed )
-                            return false;
-                        if ( result == ResolveResult::Deferred )
+                        const expected<ResolveResult> result = resolveEntry( entry, listFileCode, mapExisting, mapNumberingSystem, outMapResolved );
+                        if ( result.has_value() == false )
+                            return unexpected( result.error() );
+                        if ( *result == ResolveResult::Deferred )
                             listNext.push_back( entry );
                     }
                     if ( listNext.size() == listPending.size() )
-                    {
-                        outError = "culture '" + string{ listNext.front().getAttributeText( "code" ) } + "' has an unknown parent or a parent cycle";
-                        return false;
-                    }
+                        return unexpected( Error{ ErrorKind::Cycle, "a culture has an unknown parent or a parent cycle", listNext.front().getAttributeText( "code" ) } );
                     listPending = std::move( listNext );
                 }
-                return true;
+                return {};
             }
         };
     } // namespace
@@ -832,7 +769,6 @@ namespace sw
 
     bool CultureTable::loadFromXMLText( string_view xmlText, string_view sourceName, string* pOutError )
     {
-        string      error;
         XMLDocument document;
         XMLNode     root;
         if ( XMLReadUtil::parseRoot( document, FileUtil::skipUTF8Bom( xmlText ), sourceName, "CultureTable", root ) != XMLRootStatus::Found )
@@ -865,13 +801,16 @@ namespace sw
         map<string, vector<string>> mapNumberingSystem = _mapNumberingSystem;
         vector<CurrencyInfo>        listCurrency       = _pCurrencyList != nullptr ? *_pCurrencyList : vector<CurrencyInfo>{};
         map<string, CultureInfo>    mapResolved;
-        const bool                  bRead = CultureInfoInternal::readNumberingSystems( root.findChild( "numberingSystems" ), mapNumberingSystem, error ) &&
-                           CultureInfoInternal::readCurrencies( root.findChild( "currencies" ), listCurrency, error ) &&
-                           CultureInfoInternal::resolveAll( cultures, _mapCulture, mapNumberingSystem, mapResolved, error );
-        if ( bRead == false )
+        expected<void>              read = CultureInfoInternal::readNumberingSystems( root.findChild( "numberingSystems" ), mapNumberingSystem );
+        if ( read.has_value() )
+            read = CultureInfoInternal::readCurrencies( root.findChild( "currencies" ), listCurrency );
+        if ( read.has_value() )
+            read = CultureInfoInternal::resolveAll( cultures, _mapCulture, mapNumberingSystem, mapResolved );
+        if ( read.has_value() == false )
         {
             if ( pOutError != nullptr )
-                *pOutError = string( sourceName ) + ": " + error;
+                *pOutError = string( sourceName ) + ": " + string( read.error().message().data(), read.error().message().size() ) + " (" +
+                             string( read.error().detail().data(), read.error().detail().size() ) + ")";
             return false;
         }
         _mapNumberingSystem = std::move( mapNumberingSystem );

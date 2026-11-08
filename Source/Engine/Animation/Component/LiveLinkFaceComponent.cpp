@@ -65,21 +65,20 @@ namespace sw
         (void)deltaTime;
         if ( _transport == nullptr )
             return;
-        NetAddress        from{};
-        string            error;
-        LiveLinkFaceFrame parsed;
-        bool              bApplied = false;
+        NetAddress from{};
+        bool       bApplied = false;
         // 늦게 읽어 쌓였으면 마지막 패킷이 지금 얼굴이다 — 모두 풀되 마지막 성공 하나만 옮긴다.
         while ( _transport->receive( from, _listReceive ) )
         {
-            if ( LiveLinkFaceFrame::parse( _listReceive.data(), _listReceive.size(), _layout, parsed, error ) )
+            expected<LiveLinkFaceFrame> parsed = LiveLinkFaceFrame::parse( _listReceive.data(), _listReceive.size(), _layout );
+            if ( parsed.has_value() )
             {
-                _frame   = std::move( parsed );
+                _frame   = std::move( *parsed );
                 bApplied = true;
                 continue;
             }
             if ( _bReportedError == SW_FALSE )
-                SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFacePacket", "Live Link Face packet rejected (further rejections are not logged): %#", error.c_str() );
+                SW_LOG_ERROR_ID( "LiveLinkFace.LiveLinkFacePacket", "Live Link Face packet rejected (further rejections are not logged): %# (%#)", parsed.error().message(), parsed.error().detail() );
             _bReportedError = SW_TRUE;
         }
         if ( bApplied == false )

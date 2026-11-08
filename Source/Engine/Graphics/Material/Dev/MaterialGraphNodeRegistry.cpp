@@ -121,14 +121,14 @@ namespace sw
         (void)MaterialGraphNodeRegistryInternal::getList().remove( this ); // 등록을 거절당한 종류는 빠질 것이 없다
     }
 
-    int32 MaterialGraphNodeKind::findInputIndex( string_view name ) const
+    optional<uint32> MaterialGraphNodeKind::findInputIndex( string_view name ) const
     {
         for ( uint32 index = 0; index < _inputCount; ++index )
         {
             if ( _arrInput[index]._name == name )
-                return static_cast<int32>( index );
+                return index;
         }
-        return -1;
+        return nullopt;
     }
 
     const MaterialGraphSettingDecl* MaterialGraphNodeKind::findSetting( string_view name ) const

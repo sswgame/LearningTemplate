@@ -6,10 +6,10 @@
 
 namespace sw
 {
-    std::optional<float32> AudioCurvePoint::evaluate( const vector<AudioCurvePoint>& listPoint, float32 x )
+    optional<float32> AudioCurvePoint::evaluate( const vector<AudioCurvePoint>& listPoint, float32 x )
     {
         if ( listPoint.empty() )
-            return std::nullopt;
+            return nullopt;
         if ( x <= listPoint.front()._x )
             return listPoint.front()._y;
         if ( x >= listPoint.back()._x )

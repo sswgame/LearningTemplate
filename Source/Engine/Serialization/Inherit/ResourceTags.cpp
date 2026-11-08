@@ -50,27 +50,19 @@ namespace sw
                 return tag;
             }
 
-            /** @brief @p value 가 @p axis 의 값으로 쓸 수 있으면 true 입니다. 아니면 까닭을 @p outError 에 적습니다. */
-            static bool isValidValue( const ResourceTagAxis& axis, string_view value, string& outError )
+            /** @brief @p value 가 @p axis 의 값으로 쓸 수 있는지 봅니다. 아니면 그 까닭(대상은 `축.값`)입니다. */
+            static expected<void> isValidValue( const ResourceTagAxis& axis, string_view value )
             {
                 if ( value.empty() || value.find( ResourceTags::kSeparator ) != string_view::npos )
-                {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "'%#' is not a value of axis '%#' (empty, or it has '%#')", value, axis._pName, ResourceTags::kSeparator );
-                    outError = string( errorBuilder.view() );
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "not a value of the axis (empty, or it has the tag separator)", axis._pName }.appendDetail( "." ).appendDetail( value ) );
                 if ( axis._ppValue == nullptr )
-                    return true;
+                    return {};
                 for ( uint32 index = 0; index < axis._valueCount; ++index )
                 {
                     if ( value == axis._ppValue[index] )
-                        return true;
+                        return {};
                 }
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "'%#' is not one of the values of axis '%#'", value, axis._pName );
-                outError = string( errorBuilder.view() );
-                return false;
+                return unexpected( Error{ ErrorKind::NotFound, "not one of the values of the axis", axis._pName }.appendDetail( "." ).appendDetail( value ) );
             }
 
             /** @brief 축을 찾고 값 수가 @p arity 인지 봅니다. 틀리면 오류를 남기고 nullptr 입니다. */
@@ -167,10 +159,10 @@ namespace sw
         const ResourceTagAxis* pAxis = ResourceTagsInternal::findAxisFor( axisName, ResourceTagArity::Single );
         if ( pAxis == nullptr )
             return false;
-        string error;
-        if ( value.empty() == false && ResourceTagsInternal::isValidValue( *pAxis, value, error ) == false )
+        const expected<void> valid = value.empty() ? expected<void>{} : ResourceTagsInternal::isValidValue( *pAxis, value );
+        if ( valid.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ResourceTags.InvalidValue", "Resource tag not set: %#", error );
+            SW_LOG_ERROR_ID( "ResourceTags.InvalidValue", "Resource tag not set: %# '%#'", valid.error().message(), valid.error().detail() );
             return false;
         }
         ResourceTagSet next = capture();
@@ -190,10 +182,9 @@ namespace sw
         next.removeAxis( axisName );
         for ( const string& value : listValue )
         {
-            string error;
-            if ( ResourceTagsInternal::isValidValue( *pAxis, value, error ) == false )
+            if ( const expected<void> valid = ResourceTagsInternal::isValidValue( *pAxis, value ); valid.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "ResourceTags.InvalidValue2", "Resource tags not set: %#", error );
+                SW_LOG_ERROR_ID( "ResourceTags.InvalidValue2", "Resource tags not set: %# '%#'", valid.error().message(), valid.error().detail() );
                 return false;
             }
             next.add( ResourceTagsInternal::makeTag( axisName, value ) );
@@ -207,10 +198,9 @@ namespace sw
         const ResourceTagAxis* pAxis = ResourceTagsInternal::findAxisFor( axisName, ResourceTagArity::Multi );
         if ( pAxis == nullptr )
             return false;
-        string error;
-        if ( ResourceTagsInternal::isValidValue( *pAxis, value, error ) == false )
+        if ( const expected<void> valid = ResourceTagsInternal::isValidValue( *pAxis, value ); valid.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ResourceTags.InvalidValue3", "Resource tag not set: %#", error );
+            SW_LOG_ERROR_ID( "ResourceTags.InvalidValue3", "Resource tag not set: %# '%#'", valid.error().message(), valid.error().detail() );
             return false;
         }
         ResourceTagSet next = capture();
@@ -309,8 +299,11 @@ namespace sw
                 error = string( errorBuilder.view() );
                 return;
             }
-            if ( ResourceTagsInternal::isValidValue( *pAxis, tag.substr( string_view( pAxis->_pName ).size() + 1 ), error ) == false )
+            if ( const expected<void> valid = ResourceTagsInternal::isValidValue( *pAxis, tag.substr( string_view( pAxis->_pName ).size() + 1 ) ); valid.has_value() == false )
+            {
+                error = string( valid.error().message().data(), valid.error().message().size() ) + " '" + string( valid.error().detail().data(), valid.error().detail().size() ) + "'";
                 return;
+            }
             if ( pAxis->_timing == ResourceTagTiming::Load )
             {
                 compiled._timing = ResourceTagTiming::Load;

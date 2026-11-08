@@ -300,7 +300,7 @@ namespace sw
 
     bool XMLReadUtil::readOptionalBool( const XMLNode& node, const utf8* pAttribute, bool& inoutValue )
     {
-        std::optional<bool> value;
+        optional<bool> value;
         if ( node.readOptionalAttribute( pAttribute, value ) == false )
             return false;
         if ( value.has_value() )

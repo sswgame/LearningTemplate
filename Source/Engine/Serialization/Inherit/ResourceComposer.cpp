@@ -837,30 +837,27 @@ namespace sw
         return FileUtil::writeTextFile( absPath, restoredText );
     }
 
-    bool ResourceComposer::checkDeltaReadsBack( const string& deltaText, const string_view fullText, const string_view baseID, const ResourceRereadFunction& reread, string& outError )
+    expected<void> ResourceComposer::checkDeltaReadsBack( const string& deltaText, const string_view fullText, const string_view baseID, const ResourceRereadFunction& reread )
     {
         if ( reread.isBound() == false || string_view{ reread( deltaText ) } == fullText )
-            return true;
-        outError = "the difference from base '" + string{ baseID } + "' does not read back the same (a value the base writes cannot be reset to the default by a variant)";
-        return false;
+            return {};
+        return unexpected( Error{ ErrorKind::Unsupported, "the difference from base does not read back the same (a value the base writes cannot be reset to the default by a variant)", baseID } );
     }
 
-    bool ResourceComposer::makeCheckedDelta( const string_view fullText, const string_view parentFullText, const DataInheritanceSchema& schema, const string_view baseID, const ResourceRereadFunction& reread, string& outDeltaText,
-                                             string& outError )
+    expected<void> ResourceComposer::makeCheckedDelta( const string_view fullText, const string_view parentFullText, const DataInheritanceSchema& schema, const string_view baseID, const ResourceRereadFunction& reread,
+                                                       string& outDeltaText )
     {
         if ( DataInheritance::makeDelta( fullText, parentFullText, schema, baseID, outDeltaText ) )
-            return checkDeltaReadsBack( outDeltaText, fullText, baseID, reread, outError );
-        outError = "the difference from base '" + string{ baseID } + "' could not be made (see the log)";
-        return false;
+            return checkDeltaReadsBack( outDeltaText, fullText, baseID, reread );
+        return unexpected( Error{ ErrorKind::InvalidArgument, "the difference from base could not be made (see the log)", baseID } );
     }
 
     bool ResourceComposer::saveDelta( const string_view absPath, const string_view fullText, const string_view parentFullText, const DataInheritanceSchema& schema, const string_view baseID, const ResourceRereadFunction& reread )
     {
         string deltaText;
-        string error;
-        if ( makeCheckedDelta( fullText, parentFullText, schema, baseID, reread, deltaText, error ) == false )
+        if ( const expected<void> delta = makeCheckedDelta( fullText, parentFullText, schema, baseID, reread, deltaText ); delta.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "ResourceSave.DeltaNotSaved", "'%#': %# - not saved", string{ absPath }.c_str(), error.c_str() );
+            SW_LOG_ERROR_ID( "ResourceSave.DeltaNotSaved", "'%#': %# '%#' - not saved", string{ absPath }.c_str(), delta.error().message(), delta.error().detail() );
             return false;
         }
         if ( saveText( absPath, deltaText ) )

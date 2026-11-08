@@ -222,8 +222,7 @@ SW_TEST_CASE( CultureDataTest, PluralSampleTextKeepsVisibleDigits )
     SW_EXPECT_FALSE( sw::PluralOperands::parseSample( "", operands ) );
 
     sw::PluralRuleSet rules;
-    sw::string        error;
-    SW_REQUIRE_TRUE_MSG( rules.compileRule( "one", "i = 0..1 @integer 0, 1 @decimal 0.0~1.5", error ), error.c_str() );
+    SW_REQUIRE_TRUE( rules.compileRule( "one", "i = 0..1 @integer 0, 1 @decimal 0.0~1.5" ).has_value() );
     SW_EXPECT_EQUAL( size_t( 18 ), rules.countSamples( sw::PluralCategory::One ) ); // 0, 1 과 0.0 ~ 1.5 의 16 개
     SW_EXPECT_TRUE( rules.verifySamples().has_value() );
 }

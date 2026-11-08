@@ -307,7 +307,7 @@ namespace sw
 
         // 프레임 밖이면 일회성 커맨드버퍼를 쓴다. **해제는 소멸자가 하므로** 나중에 이 사이에 검사가
         // 하나 더 생겨도 커맨드 버퍼가 새지 않는다.
-        std::optional<VulkanOneShotCommands> oneShot;
+        optional<VulkanOneShotCommands> oneShot;
         if ( bOneShot )
         {
             if ( _pDevice->_oneShotCommandPool == VK_NULL_HANDLE )

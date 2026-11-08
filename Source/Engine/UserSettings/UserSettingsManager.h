@@ -246,7 +246,7 @@ namespace sw
          * @details bool 은 `Bool`, int32 는 `Int`, float32 는 `Float` 설정만 받는다. 열거형 · 키 바인딩 · 글은 `getValue` 로 읽는다.
          */
         template <typename T>
-        [[nodiscard]] std::optional<UserSettingKey<T>> resolveKey( const hashed_string& settingID ) const;
+        [[nodiscard]] optional<UserSettingKey<T>> resolveKey( const hashed_string& settingID ) const;
         /** @brief 메뉴가 보일 값(보류 값이 있으면 그것)입니다. 값은 정규화를 거쳐 들어오므로 해석은 실패하지 않습니다. */
         bool    getBoolValue( const UserSettingKey<bool>& key ) const;
         int32   getIntValue( const UserSettingKey<int32>& key ) const;
@@ -372,12 +372,12 @@ namespace sw
     SW_SERVICE_SLOT( UserSettingsManager, Required );
 
     template <typename T>
-    std::optional<UserSettingKey<T>> UserSettingsManager::resolveKey( const hashed_string& settingID ) const
+    optional<UserSettingKey<T>> UserSettingsManager::resolveKey( const hashed_string& settingID ) const
     {
         constexpr UserSettingType kExpectedType = std::is_same_v<T, bool> ? UserSettingType::Bool : ( std::is_same_v<T, int32> ? UserSettingType::Int : UserSettingType::Float );
         const uint32              settingIndex  = resolveKeyIndex( settingID, kExpectedType );
         if ( settingIndex == constant::invalid_index::kUint32 )
-            return std::nullopt;
+            return nullopt;
         return UserSettingKey<T>( settingID, settingIndex );
     }
 } // namespace sw

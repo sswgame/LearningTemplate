@@ -13,7 +13,7 @@ namespace
     /** @brief @p sourceID 의 DX12 바이너리 폴더입니다. `shaders` 칸이 없으면 빈 글입니다. */
     string makeDX12BinDirectory( string_view sourceID )
     {
-        const std::optional<ShaderBinaryLocation> location = ShaderBinaryLocation::make( ShaderSourceID{ sourceID }, ShaderTargetFormat::DXIL_D3D12 );
+        const optional<ShaderBinaryLocation> location = ShaderBinaryLocation::make( ShaderSourceID{ sourceID }, ShaderTargetFormat::DXIL_D3D12 );
         return location.has_value() ? location->_binDirectory : string{};
     }
 } // namespace

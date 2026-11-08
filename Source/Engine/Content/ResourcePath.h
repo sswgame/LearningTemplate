@@ -8,9 +8,8 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -22,7 +21,7 @@ namespace sw
     {
     public:
         /** @brief 도메인 이름 @p domain(비울 수 있다)과 상대 경로 @p relative 로 만듭니다. 상대 경로가 비었거나 `..` · 절대 · 드라이브 표기면 빈 값입니다. */
-        [[nodiscard]] static std::optional<ResourcePath> tryMake( string_view domain, string_view relative );
+        [[nodiscard]] static optional<ResourcePath> tryMake( string_view domain, string_view relative );
 
         /** @brief 도메인입니다. 비었으면 우선순위로 찾는다. */
         [[nodiscard]] const string& domain() const { return _domain; }
@@ -84,7 +83,7 @@ namespace sw
          * @brief 한 줄 참조 @p reference(`common/x.mat`)를 등록된 도메인 이름의 **최장 일치**(구간 경계 기준)로 가릅니다.
          * @return 도메인이 맞으면 `{도메인, 나머지}`, 어느 도메인도 아니면 도메인 없는 `{상대}` 입니다. 참조가 잘못됐거나(`..` · 절대) 도메인 이름뿐이면 빈 값입니다.
          */
-        [[nodiscard]] std::optional<ResourcePath> split( string_view reference ) const;
+        [[nodiscard]] optional<ResourcePath> split( string_view reference ) const;
 
     private:
         vector<Entry> _listEntry;

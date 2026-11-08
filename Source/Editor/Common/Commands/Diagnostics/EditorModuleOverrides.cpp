@@ -58,8 +58,11 @@ namespace sw::editor
         outListNewlyInactive.clear();
         outListNewlyActive.clear();
         ModuleResolution before;
-        if ( catalog.resolve( context, before, outError ) == false )
+        if ( const expected<void> resolved = catalog.resolve( context, before ); resolved.has_value() == false )
+        {
+            outError = string( resolved.error().message().data(), resolved.error().message().size() ) + " (" + string( resolved.error().detail().data(), resolved.error().detail().size() ) + ")";
             return false;
+        }
         ModuleCatalog changed = catalog;
         if ( changed.setProjectOverride( context._projectModule, moduleName, bEnabled ) == false )
         {
@@ -67,8 +70,11 @@ namespace sw::editor
             return false;
         }
         ModuleResolution after;
-        if ( changed.resolve( context, after, outError ) == false )
+        if ( const expected<void> resolved = changed.resolve( context, after ); resolved.has_value() == false )
+        {
+            outError = string( resolved.error().message().data(), resolved.error().message().size() ) + " (" + string( resolved.error().detail().data(), resolved.error().detail().size() ) + ")";
             return false;
+        }
         for ( const ModuleInactiveEntry& entry : after._listInactive )
         {
             if ( before.isActive( entry._name ) )

@@ -41,7 +41,7 @@ namespace sw
         SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 
         /** @brief 시트를 나눠 받습니다. 처음이면 읽고 파싱합니다. 실패하면 nullptr 과 @p outError(`<경로>:<줄>: <이유>`)입니다. */
-        shared_ptr<const UIStyleSheetAsset> findOrLoad( string_view path, string& outError );
+        expected<shared_ptr<const UIStyleSheetAsset>> findOrLoad( string_view path );
         /** @brief 파일 대신 읽을 시트 글을 경로에 겁니다(테스트). 이미 읽어 둔 그 경로는 버립니다. */
         void registerMemorySheet( string_view path, string_view text ) { _cache.registerMemoryText( path, text ); }
         /** @brief 다시 읽어 바꾼 시트를 알리는 칸입니다(`UITextAssetCache::onReloaded`). */

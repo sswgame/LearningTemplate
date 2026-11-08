@@ -7,11 +7,10 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 
 #include "sw/config/ProcessExitCodes.gen.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -35,9 +34,9 @@ namespace sw
 namespace sw
 {
     /** @brief 종료 코드 칸의 답입니다. 값이 있으면 그 코드(표 `ProcessExitCode` 만)로 끝내 달라는 것이고, 없으면 끝내지 않는다 — 숫자 표식(-1)이 아니라 형식이라 표 밖의 코드를 낼 수 없다. */
-    using EngineFrameExit = std::optional<ProcessExitCode>;
+    using EngineFrameExit = optional<ProcessExitCode>;
     /** @brief 종료 코드 칸이 "아직 끝나지 않았다(종료를 요청하지 않는다)" 를 알리는 값입니다. */
-    inline constexpr EngineFrameExit kEngineFrameRunning = std::nullopt;
+    inline const EngineFrameExit kEngineFrameRunning{}; // sw::optional 은 constexpr 가 아니다 — 빈 값 상수
 
     /** @brief 프레임 시점 하나에 붙는 훅입니다. */
     using EngineFrameDelegate = Delegate<void( const EngineFrameContext& )>;

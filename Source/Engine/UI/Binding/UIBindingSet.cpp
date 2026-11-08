@@ -53,8 +53,7 @@ namespace sw
             static UIPropertyPath findOptionalPath( const TypeInfo& type, const utf8* pName )
             {
                 UIPropertyPath path{};
-                string         ignored;
-                if ( UIBindingValue::resolvePath( type, pName, path, ignored ) == false )
+                if ( UIBindingValue::resolvePath( type, pName, path ).has_value() == false )
                     path = UIPropertyPath{};
                 return path;
             }
@@ -207,13 +206,13 @@ namespace sw
         _bSettingsChanged = SW_FALSE;
         for ( const UIBindingDef& desc : listBinding )
         {
-            string error;
-            if ( bindOne( desc, context, error ) )
+            const expected<void> bound = bindOne( desc, context );
+            if ( bound.has_value() )
                 continue;
             const string&                            documentPath = _pScreen->getDocumentPath();
             string                                   message      = documentPath.empty() ? string( "(code)" ) : documentPath;
             StringBuilder<constant::buffer::kMax256> messagePart;
-            messagePart.appendFormat( ":%#: binding '%#' on %#: %#", desc._sourceLine, desc._expression, desc._propertyPath, error );
+            messagePart.appendFormat( ":%#: binding '%#' on %#: %# '%#'", desc._sourceLine, desc._expression, desc._propertyPath, bound.error().message(), bound.error().detail() );
             message += messagePart.c_str();
             SW_LOG_ERROR_ID( "UIBindingSet.BindingInvalid", "[UI] %#", message.c_str() );
             _listError.push_back( std::move( message ) );
@@ -227,37 +226,34 @@ namespace sw
         _bBound = SW_TRUE;
     }
 
-    bool UIBindingSet::bindOne( const UIBindingDef& desc, const UIBindingContext& context, string& outError )
+    expected<void> UIBindingSet::bindOne( const UIBindingDef& desc, const UIBindingContext& context )
     {
         ActiveBinding binding{};
         binding._widget     = desc._widget;
         binding._skipSerial = 0;
         binding._bPollKnown = false;
         binding._bDirty     = SW_FALSE;
-        if ( UIBindingExpression::parse( desc._expression, binding._expression, outError ) == false )
-            return false;
+        if ( expected<void> parsed = UIBindingExpression::parse( desc._expression, binding._expression ); parsed.has_value() == false )
+            return parsed;
         const Widget* pWidget = _pScreen->getTree().findWidgetByID( desc._widget );
         if ( pWidget == nullptr || pWidget->getTypeInfo() == nullptr )
-        {
-            outError = "the widget is not in the screen";
-            return false;
-        }
-        if ( UIBindingValue::resolvePath( *pWidget->getTypeInfo(), desc._propertyPath, binding._target, outError ) == false )
-            return false;
+            return unexpected( Error{ ErrorKind::NotFound, "the widget is not in the screen" } );
+        if ( expected<void> resolved = UIBindingValue::resolvePath( *pWidget->getTypeInfo(), desc._propertyPath, binding._target ); resolved.has_value() == false )
+            return resolved;
         UIBindingValueKind sourceKind     = UIBindingValueKind::None;
         hashed_string      sourceTypeName = {};
         if ( binding._expression._source == UIBindingSource::Setting )
         {
-            if ( bindSetting( binding, *pWidget, context, sourceKind, outError ) == false )
-                return false;
+            if ( expected<void> setting = bindSetting( binding, *pWidget, context, sourceKind ); setting.has_value() == false )
+                return setting;
         }
         else
         {
             // 뷰모델 소스는 뷰모델이 없으면 쉰다(오류가 아니며, `setViewModel` 이 다시 연결한다).
             if ( _pViewModel == nullptr || _pViewModel->getTypeInfo() == nullptr )
-                return true;
-            if ( UIBindingValue::resolvePath( *_pViewModel->getTypeInfo(), binding._expression._path, binding._source, outError ) == false )
-                return false;
+                return {};
+            if ( expected<void> resolved = UIBindingValue::resolvePath( *_pViewModel->getTypeInfo(), binding._expression._path, binding._source ); resolved.has_value() == false )
+                return resolved;
             binding._sourceField = binding._source.getRootProperty()._name;
             sourceKind           = binding._source._kind;
             sourceTypeName       = binding._source.getLeafTypeName();
@@ -267,27 +263,27 @@ namespace sw
         {
             const UIBindingConverter* pConverter = context._pConverters != nullptr ? context._pConverters->findConverter( binding._expression._converter ) : nullptr;
             if ( pConverter == nullptr )
-            {
-                outError = "unknown converter '" + string( binding._expression._converter.c_str() ) + "'";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::NotFound, "unknown converter", binding._expression._converter.c_str() } );
             if ( UIBindingValue::canConvert( sourceKind, pConverter->_inputKind ) == false )
-            {
-                outError = "converter '" + string( pConverter->_name.c_str() ) + "' takes " + UIBindingValue::getKindName( pConverter->_inputKind ) + ", the source is " +
-                           UIBindingValue::getKindName( sourceKind );
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "the converter does not take the source kind", pConverter->_name.c_str() }
+                                       .appendDetail( " takes " )
+                                       .appendDetail( UIBindingValue::getKindName( pConverter->_inputKind ) )
+                                       .appendDetail( ", the source is " )
+                                       .appendDetail( UIBindingValue::getKindName( sourceKind ) ) );
             binding._converter = *pConverter;
             sourceKind         = pConverter->_outputKind;
         }
         if ( binding._expression._format.empty() == false )
             sourceKind = UIBindingValueKind::Text;
         if ( UIBindingSetInternal::canBind( sourceKind, sourceTypeName, binding._target ) == false )
-        {
-            outError = string( "cannot bind " ) + UIBindingValue::getKindName( sourceKind ) + " '" + sourceTypeName.c_str() + "' to " +
-                       UIBindingValue::getKindName( binding._target._kind ) + " '" + binding._target.getLeafTypeName().c_str() + "' without a converter";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "cannot bind the source to the field without a converter", UIBindingValue::getKindName( sourceKind ) }
+                                   .appendDetail( " '" )
+                                   .appendDetail( sourceTypeName.c_str() )
+                                   .appendDetail( "' to " )
+                                   .appendDetail( UIBindingValue::getKindName( binding._target._kind ) )
+                                   .appendDetail( " '" )
+                                   .appendDetail( binding._target.getLeafTypeName().c_str() )
+                                   .appendDetail( "'" ) );
         if ( binding._expression._mode == UIBindingMode::TwoWay )
         {
             const bool bTransformed  = binding._converter._pConvert != nullptr || binding._expression._format.empty() == false;
@@ -295,16 +291,13 @@ namespace sw
                                          ? UIBindingValue::canConvert( binding._target._kind, sourceKind )
                                          : UIBindingSetInternal::canBind( binding._target._kind, binding._target.getLeafTypeName(), binding._source );
             if ( bTransformed || bConvertsBack == false )
-            {
-                outError = "a TwoWay binding needs a field the widget value converts back to (no converter or format)";
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a TwoWay binding needs a field the widget value converts back to (no converter or format)" } );
         }
         if ( build::kShipping && binding._expression._source == UIBindingSource::Poll )
             SW_LOG_WARNING_ID( "UIBindingSet.PollBindingShippedBuild", "[UI] %#:%#: poll binding '%#' in a shipped build - use {bind:} with field notification", _pScreen->getDocumentPath().c_str(),
                                desc._sourceLine, desc._expression.c_str() );
         _listBinding.push_back( std::move( binding ) );
-        return true;
+        return {};
     }
 
     bool UIBindingSet::transform( const ActiveBinding& binding, const UIBindingContext& context, UIBindingValue& inoutValue ) const
@@ -328,21 +321,14 @@ namespace sw
         return true;
     }
 
-    bool UIBindingSet::bindSetting( ActiveBinding& binding, const Widget& widget, const UIBindingContext& context, UIBindingValueKind& outSourceKind,
-                                    string& outError ) const
+    expected<void> UIBindingSet::bindSetting( ActiveBinding& binding, const Widget& widget, const UIBindingContext& context, UIBindingValueKind& outSourceKind ) const
     {
         if ( context._pSettings == nullptr )
-        {
-            outError = "no user settings service";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "no user settings service" } );
         binding._sourceField       = hashed_string( binding._expression._path );
         const UserSettingDef* pDef = context._pSettings->findSetting( binding._sourceField );
         if ( pDef == nullptr )
-        {
-            outError = "unknown setting '" + binding._expression._path + "'";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "unknown setting", binding._expression._path } );
         const hashed_string& leafName = binding._target.getLeafProperty()._name;
         const TypeInfo&      type     = *widget.getTypeInfo();
         switch ( pDef->_type )
@@ -381,7 +367,7 @@ namespace sw
                 break;
             }
         }
-        return true;
+        return {};
     }
 
     UIBindingValue UIBindingSet::readSetting( const ActiveBinding& binding, Widget& widget, const UIBindingContext& context )

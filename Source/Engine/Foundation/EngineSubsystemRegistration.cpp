@@ -177,10 +177,9 @@ namespace sw::engine
         }
     }
 
-    bool EngineRegistrationList::orderSubsystems( EngineSubsystemStage stage, vector<const EngineSubsystemRecord*>& outListOrder, string& outError ) const
+    expected<void> EngineRegistrationList::orderSubsystems( EngineSubsystemStage stage, vector<const EngineSubsystemRecord*>& outListOrder ) const
     {
         outListOrder.clear();
-        outError.clear();
         vector<const EngineSubsystemRecord*> listRecord;
         for ( const EngineSubsystemRecord* pRecord = _pSubsystemHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
@@ -196,15 +195,13 @@ namespace sw::engine
             {
                 const EngineSubsystemRecord* const pAfter = EngineRegistrationListInternal::findSubsystem( _pSubsystemHead, afterHash );
                 if ( pAfter == nullptr )
-                {
-                    outError = string( "Engine subsystem '" ) + record._pTypeName + "' is built after " + record._pAfterNames + ", but one of them has no registration (SW_ENGINE_SUBSYSTEM)";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "an engine subsystem is built after a type that has no registration (SW_ENGINE_SUBSYSTEM)", record._pTypeName }
+                                           .appendDetail( " after " )
+                                           .appendDetail( record._pAfterNames ) );
                 if ( pAfter->_stage != stage )
-                {
-                    outError = string( "Engine subsystem '" ) + record._pTypeName + "' is built after '" + pAfter->_pTypeName + "', which is built in another stage - list only same-stage types";
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "an engine subsystem is built after a type built in another stage - list only same-stage types", record._pTypeName }
+                                           .appendDetail( " after " )
+                                           .appendDetail( pAfter->_pTypeName ) );
                 listDependencyName[recordIndex].push_back( pAfter->_pTypeName );
             }
         }
@@ -216,24 +213,17 @@ namespace sw::engine
         }
         const expected<SubsystemGraph> graph = SubsystemCollection::computeGraph( listNode );
         if ( graph.has_value() == false )
-        {
-            StringBuilder<constant::buffer::kMax256> errorBuilder;
-            errorBuilder.appendFormat( "Engine subsystem build order: %#: %#", graph.error().message(), graph.error().detail() );
-            outError = string( errorBuilder.view() );
-            return false;
-        }
+            return unexpected( graph.error() ); // 정렬 · 같은 이름 · 순환의 문장은 서브시스템 목록과 같다
         outListOrder.reserve( graph->_listOrder.size() );
         for ( const uint32 nodeIndex : graph->_listOrder )
         {
             outListOrder.push_back( listRecord[nodeIndex] );
         }
-        return true;
+        return {};
     }
 
-    bool EngineRegistrationList::findLifetimeMismatch( const vector<const EngineSubsystemRecord*>& listOrder, const vector<vector<uint32>>& listBuilt, const SubsystemCollection& collection,
-                                                       string& outError )
+    expected<void> EngineRegistrationList::findLifetimeMismatch( const vector<const EngineSubsystemRecord*>& listOrder, const vector<vector<uint32>>& listBuilt, const SubsystemCollection& collection )
     {
-        outError.clear();
         // 수명 의존 그래프 — 이름으로 잇는다(서브시스템 목록의 정렬과 같은 규칙: 내 의존 칸, 그리고 상대가 나를 적은 의존자 칸).
         const uint32           subsystemCount = collection.getSubsystemCount();
         vector<vector<uint32>> listEdge( subsystemCount );
@@ -274,23 +264,26 @@ namespace sw::engine
                     {
                         if ( EngineRegistrationListInternal::isReachable( listEdge, builtIndex, requiredIndex ) )
                             continue;
-                        outError = string( "Engine subsystem '" ) + collection.getSubsystem( builtIndex ).getSubsystemName() + "' is built from '" +
-                                   collection.getSubsystem( requiredIndex ).getSubsystemName() + "' (after list of " + record._pTypeName +
-                                   ") but does not depend on it - list it in getSubsystemDependencies so it starts first and shuts down last";
-                        return false;
+                        return unexpected( Error{ ErrorKind::InvalidArgument,
+                                                  "an engine subsystem is built from another but does not depend on it - list it in getSubsystemDependencies so it starts first and shuts down last",
+                                                  collection.getSubsystem( builtIndex ).getSubsystemName() }
+                                               .appendDetail( " from " )
+                                               .appendDetail( collection.getSubsystem( requiredIndex ).getSubsystemName() )
+                                               .appendDetail( " (after list of " )
+                                               .appendDetail( record._pTypeName )
+                                               .appendDetail( ")" ) );
                     }
                 }
             }
         }
-        return true;
+        return {};
     }
 
     void EngineRegistrationList::buildSubsystems( EngineSubsystemStage stage, SubsystemScope& scope, EngineSubsystemBuild& build ) const
     {
         vector<const EngineSubsystemRecord*> listOrder;
-        string                               error;
-        if ( orderSubsystems( stage, listOrder, error ) == false )
-            SW_FATAL( "%#", error.c_str() );
+        if ( const expected<void> ordered = orderSubsystems( stage, listOrder ); ordered.has_value() == false )
+            SW_FATAL( "Engine subsystem build order: %# (%#)", ordered.error().message(), ordered.error().detail() );
         // 공장마다 그 공장이 더한 서브시스템 번호 — 수명 의존 대조(`findLifetimeMismatch`)가 쓴다.
         vector<vector<uint32>> listBuilt( listOrder.size() );
         for ( size_t recordIndex = 0; recordIndex < listOrder.size(); ++recordIndex )
@@ -304,7 +297,7 @@ namespace sw::engine
                 listBuilt[recordIndex].push_back( index );
             }
         }
-        if ( findLifetimeMismatch( listOrder, listBuilt, scope.getCollection(), error ) == false )
-            SW_FATAL( "%#", error.c_str() );
+        if ( const expected<void> lifetime = findLifetimeMismatch( listOrder, listBuilt, scope.getCollection() ); lifetime.has_value() == false )
+            SW_FATAL( "Engine subsystem lifetime: %# (%#)", lifetime.error().message(), lifetime.error().detail() );
     }
 } // namespace sw::engine

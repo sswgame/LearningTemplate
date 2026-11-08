@@ -39,7 +39,7 @@ namespace sw
         const shared_ptr<const ShaderCompileResult>& getResult() const { return _pResult; }
 
     protected:
-        [[nodiscard]] bool runLoad( string& outError ) override;
+        [[nodiscard]] expected<void> runLoad() override;
 
     private:
         friend class ShaderCache;

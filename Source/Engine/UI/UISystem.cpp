@@ -427,35 +427,35 @@ namespace sw
     unique_ptr<Widget> UISystem::instantiateDocument( string_view documentPath, UIScreenDef& outDesc, vector<UIBindingDef>& outListBinding,
                                                       vector<string>& outListStyleSheet )
     {
-        string                                  error;
-        unique_ptr<Widget>                      root;
-        const shared_ptr<const UIDocumentAsset> document = _pDocumentCache->findOrLoad( documentPath, error );
-        if ( document == nullptr )
+        unique_ptr<Widget>                                root;
+        const expected<shared_ptr<const UIDocumentAsset>> loaded = _pDocumentCache->findOrLoad( documentPath );
+        if ( loaded.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "UISystem.ScreenDocumentNotLoaded", "[UI] Screen document is not loaded: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "UISystem.ScreenDocumentNotLoaded", "[UI] Screen document is not loaded: %# (%#)", loaded.error().message(), loaded.error().detail() );
             return root;
         }
-        root = UIDocumentLoader::instantiate( *document, *_pDocumentCache, outListBinding, error );
-        if ( root == nullptr )
+        const shared_ptr<const UIDocumentAsset>& document = *loaded;
+        expected<unique_ptr<Widget>>             built    = UIDocumentLoader::instantiate( *document, *_pDocumentCache, outListBinding );
+        if ( built.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "UISystem.ScreenDocumentCannotBuilt", "[UI] Screen document cannot be built: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "UISystem.ScreenDocumentCannotBuilt", "[UI] Screen document cannot be built: %# (%#)", built.error().message(), built.error().detail() );
             return root;
         }
+        root    = std::move( *built );
         outDesc = document->_screenDesc;
         // 스타일 시트: 문서의 것 다음에 조각의 것(너비 우선, 이미 본 문서와 시트는 건너뛴다). 조각은 생성 단계에서 이미 캐시에 올라가 있다.
         vector<string> listDocument{ document->_path };
         for ( size_t index = 0; index < listDocument.size(); ++index )
         {
-            string                                  fragmentError;
-            const shared_ptr<const UIDocumentAsset> current = _pDocumentCache->findOrLoad( listDocument[index], fragmentError );
-            if ( current == nullptr )
+            const expected<shared_ptr<const UIDocumentAsset>> current = _pDocumentCache->findOrLoad( listDocument[index] );
+            if ( current.has_value() == false )
                 continue;
-            for ( const string& sheet : current->_listStyleSheet )
+            for ( const string& sheet : ( *current )->_listStyleSheet )
             {
                 if ( VectorUtil::contains( outListStyleSheet, sheet ) == false )
                     outListStyleSheet.push_back( sheet );
             }
-            for ( const string& fragment : current->_listFragment )
+            for ( const string& fragment : ( *current )->_listFragment )
             {
                 if ( VectorUtil::contains( listDocument, fragment ) == false )
                     listDocument.push_back( fragment );
@@ -477,9 +477,8 @@ namespace sw
     {
         // 애니메이션은 문서의 것을 쓴다(방금 만들었으므로 캐시에 이미 있다).
         screen._animationPlayer.stopAll();
-        string                                  error;
-        const shared_ptr<const UIDocumentAsset> document = _pDocumentCache->findOrLoad( screen._documentPath, error );
-        screen._animationPlayer.setAnimations( document != nullptr ? document->_listAnimation : vector<UIAnimation>{} );
+        const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->findOrLoad( screen._documentPath );
+        screen._animationPlayer.setAnimations( document.has_value() ? ( *document )->_listAnimation : vector<UIAnimation>{} );
     }
 
     void UISystem::onDocumentReloaded( string_view documentPath )
@@ -538,11 +537,10 @@ namespace sw
         {
             if ( listDocument[index] == usedPath )
                 return true;
-            string                                  error;
-            const shared_ptr<const UIDocumentAsset> document = _pDocumentCache->findOrLoad( listDocument[index], error );
-            if ( document == nullptr )
+            const expected<shared_ptr<const UIDocumentAsset>> document = _pDocumentCache->findOrLoad( listDocument[index] );
+            if ( document.has_value() == false )
                 continue;
-            for ( const string& fragment : document->_listFragment )
+            for ( const string& fragment : ( *document )->_listFragment )
             {
                 if ( VectorUtil::contains( listDocument, fragment ) == false )
                     listDocument.push_back( fragment );

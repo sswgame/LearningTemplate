@@ -154,12 +154,11 @@ namespace sw
         const shared_ptr<const TAsset>& getAsset() const { return _pAsset; }
 
     protected:
-        [[nodiscard]] bool runLoad( string& outError ) override
+        [[nodiscard]] expected<void> runLoad() override
         {
             if ( SharedAssetCache<TAsset>::loadIntoTable( getPath(), _pAsset ) )
-                return true;
-            outError = "the asset could not be read (the loader logged why)";
-            return false;
+                return {};
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the asset could not be read (the loader logged why)", getPath() } );
         }
 
     private:

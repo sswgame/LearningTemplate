@@ -120,6 +120,9 @@ namespace
         static constexpr engine::EngineSubsystemStage kStartup  = engine::EngineSubsystemStage::Startup;
         static constexpr engine::EngineSubsystemStage kServices = engine::EngineSubsystemStage::Services;
 
+        /** @brief 오류를 `문장 (대상)` 글로 잇습니다(문장 · 대상 어느 쪽의 낱말이든 찾게). */
+        static string describe( const Error& error ) { return string( error.message().data(), error.message().size() ) + " (" + string( error.detail().data(), error.detail().size() ) + ")"; }
+
         /** @brief 순서대로 놓인 공장의 이름을 공백으로 잇습니다. */
         static string joinNames( const vector<const engine::EngineSubsystemRecord*>& listRecord )
         {
@@ -243,10 +246,9 @@ SW_TEST_CASE( EngineRegistrationTest, BuildOrderFollowsDeclaredDependenciesThenN
     const TestSubsystemRecord<Alpha>             alphaRecord{ list, Util::kStartup };
     const TestSubsystemRecord<Bravo>             bravoRecord{ list, Util::kServices }; // 다른 단계는 끼지 않는다
     vector<const engine::EngineSubsystemRecord*> listOrder;
-    string                                       error;
-    SW_REQUIRE_TRUE_MSG( list.orderSubsystems( Util::kStartup, listOrder, error ), error );
+    SW_REQUIRE_TRUE( list.orderSubsystems( Util::kStartup, listOrder ).has_value() );
     SW_EXPECT_EQUAL( string( "Alpha Charlie Delta Echo" ), Util::joinNames( listOrder ) );
-    SW_REQUIRE_TRUE_MSG( list.orderSubsystems( Util::kServices, listOrder, error ), error );
+    SW_REQUIRE_TRUE( list.orderSubsystems( Util::kServices, listOrder ).has_value() );
     SW_EXPECT_EQUAL( string( "Bravo" ), Util::joinNames( listOrder ) );
 
     // 공장이 그 순서로 불려 범위에 더해진다.
@@ -265,8 +267,9 @@ SW_TEST_CASE( EngineRegistrationTest, BuildOrderRejectsCycleUnknownAndOtherStage
         const TestSubsystemRecord<Alpha, Bravo>      alphaRecord{ list, Util::kStartup };
         const TestSubsystemRecord<Bravo, Alpha>      bravoRecord{ list, Util::kStartup };
         vector<const engine::EngineSubsystemRecord*> listOrder;
-        string                                       error;
-        SW_EXPECT_FALSE( list.orderSubsystems( Util::kStartup, listOrder, error ) );
+        const expected<void>                         ordered = list.orderSubsystems( Util::kStartup, listOrder );
+        SW_REQUIRE_FALSE( ordered.has_value() );
+        const string error = Util::describe( ordered.error() );
         SW_EXPECT_TRUE_MSG( error.find( "cycle" ) != string::npos, error );
         SW_EXPECT_TRUE( listOrder.empty() );
     }
@@ -274,8 +277,9 @@ SW_TEST_CASE( EngineRegistrationTest, BuildOrderRejectsCycleUnknownAndOtherStage
         engine::EngineRegistrationList               list;
         const TestSubsystemRecord<Alpha, Charlie>    alphaRecord{ list, Util::kStartup }; // Charlie 는 등록이 없다
         vector<const engine::EngineSubsystemRecord*> listOrder;
-        string                                       error;
-        SW_EXPECT_FALSE( list.orderSubsystems( Util::kStartup, listOrder, error ) );
+        const expected<void>                         ordered = list.orderSubsystems( Util::kStartup, listOrder );
+        SW_REQUIRE_FALSE( ordered.has_value() );
+        const string error = Util::describe( ordered.error() );
         SW_EXPECT_TRUE_MSG( error.find( "no registration" ) != string::npos, error );
     }
     {
@@ -283,8 +287,9 @@ SW_TEST_CASE( EngineRegistrationTest, BuildOrderRejectsCycleUnknownAndOtherStage
         const TestSubsystemRecord<Alpha, Bravo>      alphaRecord{ list, Util::kStartup };
         const TestSubsystemRecord<Bravo>             bravoRecord{ list, Util::kServices }; // 범위가 다르면 공장이 찾지 못한다
         vector<const engine::EngineSubsystemRecord*> listOrder;
-        string                                       error;
-        SW_EXPECT_FALSE( list.orderSubsystems( Util::kStartup, listOrder, error ) );
+        const expected<void>                         ordered = list.orderSubsystems( Util::kStartup, listOrder );
+        SW_REQUIRE_FALSE( ordered.has_value() );
+        const string error = Util::describe( ordered.error() );
         SW_EXPECT_TRUE_MSG( error.find( "another stage" ) != string::npos, error );
     }
 }
@@ -360,18 +365,19 @@ SW_TEST_CASE( EngineRegistrationTest, LifetimeDependencyMustFollowTheAfterList )
     (void)scope.emplaceSubsystem<Delta>();
     (void)scope.emplaceSubsystem<Echo>();
     (void)scope.emplaceSubsystem<Foxtrot>();
-    string error;
 
     const vector<const engine::EngineSubsystemRecord*> listGood{ &alphaRecord, &deltaRecord, &echoRecord };
     const vector<vector<uint32>>                       listGoodBuilt{ { 0 }, { 1 }, { 2 } };
-    SW_EXPECT_TRUE_MSG( engine::EngineRegistrationList::findLifetimeMismatch( listGood, listGoodBuilt, scope.getCollection(), error ), error );
+    SW_EXPECT_TRUE( engine::EngineRegistrationList::findLifetimeMismatch( listGood, listGoodBuilt, scope.getCollection() ).has_value() );
 
     const vector<const engine::EngineSubsystemRecord*> listBad{ &alphaRecord, &foxtrotRecord };
     const vector<vector<uint32>>                       listBadBuilt{ { 0 }, { 3 } };
-    SW_EXPECT_FALSE( engine::EngineRegistrationList::findLifetimeMismatch( listBad, listBadBuilt, scope.getCollection(), error ) );
+    const expected<void>                               mismatch = engine::EngineRegistrationList::findLifetimeMismatch( listBad, listBadBuilt, scope.getCollection() );
+    SW_REQUIRE_FALSE( mismatch.has_value() );
+    const string error = Util::describe( mismatch.error() );
     SW_EXPECT_TRUE_MSG( error.find( "Foxtrot" ) != string::npos && error.find( "Alpha" ) != string::npos && error.find( "does not depend" ) != string::npos, error );
 
     // 서브시스템이 아닌 것만 건 공장(인터페이스 줄)은 대조할 것이 없다.
     const vector<vector<uint32>> listNothingBuilt{ { 0 }, {} };
-    SW_EXPECT_TRUE_MSG( engine::EngineRegistrationList::findLifetimeMismatch( listBad, listNothingBuilt, scope.getCollection(), error ), error );
+    SW_EXPECT_TRUE( engine::EngineRegistrationList::findLifetimeMismatch( listBad, listNothingBuilt, scope.getCollection() ).has_value() );
 }

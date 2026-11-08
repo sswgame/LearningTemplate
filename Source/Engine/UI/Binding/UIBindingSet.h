@@ -113,11 +113,10 @@ namespace sw
 
         /** @brief 식을 모두 해석해 연결합니다. 오류는 `_listError` 와 로그에 남깁니다. */
         void bind( const vector<UIBindingDef>& listBinding, const UIBindingContext& context );
-        /** @brief 식 하나를 해석해 연결합니다. 연결할 수 없으면 false 이고 @p outError 에 이유가 있습니다. 뷰모델이 없어 쉬는 식은 true 이며 연결하지 않습니다. */
-        [[nodiscard]] bool bindOne( const UIBindingDef& desc, const UIBindingContext& context, string& outError );
-        /** @brief 설정 바인딩의 소스 종류를 정하고 범위와 선택지 필드를 찾습니다. 설정이 없으면 false 입니다. */
-        [[nodiscard]] bool bindSetting( ActiveBinding& binding, const Widget& widget, const UIBindingContext& context, UIBindingValueKind& outSourceKind,
-                                        string& outError ) const;
+        /** @brief 식 하나를 해석해 연결합니다. 연결할 수 없으면 그 이유입니다. 뷰모델이 없어 쉬는 식은 성공이며 연결하지 않습니다. */
+        [[nodiscard]] expected<void> bindOne( const UIBindingDef& desc, const UIBindingContext& context );
+        /** @brief 설정 바인딩의 소스 종류를 정하고 범위와 선택지 필드를 찾습니다. 설정이 없으면 그 이유입니다. */
+        [[nodiscard]] expected<void> bindSetting( ActiveBinding& binding, const Widget& widget, const UIBindingContext& context, UIBindingValueKind& outSourceKind ) const;
         /** @brief 설정 바인딩의 값을 읽고 범위, 선택지, 사용 가능 여부를 위젯에 씁니다(범위가 값을 제한하므로 값 필드보다 먼저 씁니다). */
         UIBindingValue readSetting( const ActiveBinding& binding, Widget& widget, const UIBindingContext& context );
         /** @brief 사용자 입력을 설정의 보류 값으로 넣습니다. */

@@ -36,16 +36,13 @@ namespace sw
         return true;
     }
 
-    bool XTestInputInjector::open( string& outReason )
+    expected<void> XTestInputInjector::open()
     {
         if ( _pDisplay != nullptr )
-            return true;
+            return {};
         Display* const pDisplay = XOpenDisplay( nullptr );
         if ( pDisplay == nullptr )
-        {
-            outReason = "cannot open the X display (DISPLAY not set or the server is not reachable)";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::ExternalFailure, "cannot open the X display (DISPLAY not set or the server is not reachable)" } );
         int eventBase = 0;
         int errorBase = 0;
         int major     = 0;
@@ -53,11 +50,10 @@ namespace sw
         if ( XTestQueryExtension( pDisplay, &eventBase, &errorBase, &major, &minor ) == 0 )
         {
             XCloseDisplay( pDisplay );
-            outReason = "the X server has no XTest extension";
-            return false;
+            return unexpected( Error{ ErrorKind::Unsupported, "the X server has no XTest extension" } );
         }
         _pDisplay = pDisplay;
-        return true;
+        return {};
     }
 
     bool XTestInputInjector::moveTo( int32 screenX, int32 screenY )
@@ -113,10 +109,9 @@ namespace sw
     {
         return false;
     }
-    bool XTestInputInjector::open( string& outReason )
+    expected<void> XTestInputInjector::open()
     {
-        outReason = "XTest injector not built (SW_ENABLE_XTEST=OFF or libxtst missing)";
-        return false;
+        return unexpected( Error{ ErrorKind::Unsupported, "XTest injector not built (SW_ENABLE_XTEST=OFF or libxtst missing)" } );
     }
     bool XTestInputInjector::moveTo( int32, int32 )
     {
@@ -196,10 +191,9 @@ namespace sw
                 return true;
             }
             XTestInputInjector& injector = *pInjector;
-            string              reason;
-            if ( injector.open( reason ) == false )
+            if ( const expected<void> opened = injector.open(); opened.has_value() == false )
             {
-                outReply = "XTest unavailable: " + reason;
+                outReply = "XTest unavailable: " + string( opened.error().message().data(), opened.error().message().size() );
                 return true;
             }
 

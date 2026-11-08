@@ -6,13 +6,12 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Content/AssetID.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -111,40 +110,40 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 반드시 있어야 하는 속성을 읽습니다. */
         template <typename T>
-        [[nodiscard]] std::optional<T> readRequiredAttribute( const utf8* pName ) const
+        [[nodiscard]] optional<T> readRequiredAttribute( const utf8* pName ) const
         {
             T                  value{};
             const XMLValueRead read = parseAttributeValue( pName, value );
             if ( read == XMLValueRead::Absent )
                 reportMissing( "attribute", pName );
-            return read == XMLValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+            return read == XMLValueRead::Read ? optional<T>{ value } : nullopt;
         }
         /** @brief 없어도 되는 속성을 읽습니다. 없으면 @p outValue 를 비우고 true, 깨졌으면 false 입니다. */
         template <typename T>
-        [[nodiscard]] bool readOptionalAttribute( const utf8* pName, std::optional<T>& outValue ) const
+        [[nodiscard]] bool readOptionalAttribute( const utf8* pName, optional<T>& outValue ) const
         {
             T                  value{};
             const XMLValueRead read = parseAttributeValue( pName, value );
-            outValue                = read == XMLValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+            outValue                = read == XMLValueRead::Read ? optional<T>{ value } : nullopt;
             return read != XMLValueRead::Invalid;
         }
         /** @brief 반드시 있어야 하는 자식 원소의 글을 읽습니다. */
         template <typename T>
-        [[nodiscard]] std::optional<T> readRequiredChild( const utf8* pName ) const
+        [[nodiscard]] optional<T> readRequiredChild( const utf8* pName ) const
         {
             T                  value{};
             const XMLValueRead read = parseChildValue( pName, value );
             if ( read == XMLValueRead::Absent )
                 reportMissing( "child", pName );
-            return read == XMLValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+            return read == XMLValueRead::Read ? optional<T>{ value } : nullopt;
         }
         /** @brief 없어도 되는 자식 원소의 글을 읽습니다. 없으면 @p outValue 를 비우고 true, 깨졌으면 false 입니다. */
         template <typename T>
-        [[nodiscard]] bool readOptionalChild( const utf8* pName, std::optional<T>& outValue ) const
+        [[nodiscard]] bool readOptionalChild( const utf8* pName, optional<T>& outValue ) const
         {
             T                  value{};
             const XMLValueRead read = parseChildValue( pName, value );
-            outValue                = read == XMLValueRead::Read ? std::optional<T>{ value } : std::nullopt;
+            outValue                = read == XMLValueRead::Read ? optional<T>{ value } : nullopt;
             return read != XMLValueRead::Invalid;
         }
         /**

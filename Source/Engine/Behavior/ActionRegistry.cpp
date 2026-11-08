@@ -118,31 +118,25 @@ namespace sw
         return name;
     }
 
-    bool GameActionCall::tryReadFields( string_view text, const ActionEntry*& outEntry, InstancedStruct& outParams, string& outError )
+    expected<void> GameActionCall::tryReadFields( string_view text, const ActionEntry*& outEntry, InstancedStruct& outParams )
     {
         outEntry  = nullptr;
         outParams = InstancedStruct{};
         string_view name;
         string_view arguments;
         if ( ActionRegistryInternal::splitCall( text, name, arguments ) == false )
-        {
-            outError = "a call has no closing parenthesis";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a call has no closing parenthesis", text } );
         const ActionEntry* pEntry = ActionRegistry::find( name );
         if ( pEntry == nullptr )
-        {
-            outError = "unknown action '" + string( name ) + "' (registered: " + ActionRegistry::joinNames() + ")";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "unknown action", name }.appendDetail( " (registered: " ).appendDetail( ActionRegistry::joinNames() ).appendDetail( ")" ) );
         InstancedStruct     params( *pEntry->_pParamsOps );
         vector<string_view> listToken;
         InstancedStructText::splitArguments( arguments, listToken );
-        if ( InstancedStructText::read( params.getInstance(), *params.getType(), listToken, outError ) == false )
-            return false;
+        if ( expected<void> read = InstancedStructText::read( params.getInstance(), *params.getType(), listToken ); read.has_value() == false )
+            return read;
         outEntry  = pEntry;
         outParams = std::move( params );
-        return true;
+        return {};
     }
 
     string GameActionCall::formatText( const ActionEntry& entry, const InstancedStruct& params )
@@ -155,24 +149,24 @@ namespace sw
         return text;
     }
 
-    bool GameActionCall::tryCompileText( string_view text, GameActionCall& outCall, string& outError )
+    expected<void> GameActionCall::tryCompileText( string_view text, GameActionCall& outCall )
     {
         outCall                   = GameActionCall{};
         const ActionEntry* pEntry = nullptr;
         InstancedStruct    params;
-        if ( tryReadFields( text, pEntry, params, outError ) == false )
-            return false;
+        if ( expected<void> read = tryReadFields( text, pEntry, params ); read.has_value() == false )
+            return read;
         outCall._pEntry  = pEntry;
         outCall._pParams = params.share();
-        return true;
+        return {};
     }
 
     bool GameActionCall::compileText( string_view text, string_view sourceName, GameActionCall& outCall )
     {
-        string error;
-        if ( tryCompileText( text, outCall, error ) )
+        const expected<void> compiled = tryCompileText( text, outCall );
+        if ( compiled.has_value() )
             return true;
-        SW_LOG_ERROR_ID( "GameAction.Invalid", "%#: invalid action '%#': %#", sourceName, text, error.c_str() );
+        SW_LOG_ERROR_ID( "GameAction.Invalid", "%#: invalid action '%#': %# (%#)", sourceName, text, compiled.error().message(), compiled.error().detail() );
         return false;
     }
 

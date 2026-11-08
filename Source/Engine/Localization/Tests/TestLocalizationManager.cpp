@@ -457,14 +457,12 @@ SW_TEST_CASE( LocalizationManagerTest, UnstagedTranslationTablesAreListedForPack
     LocalizationTestUtil::writeTranslation( folder, "ja", R"("ui.quit": { "text": "終了" })" );
 
     sw::vector<sw::string> listExcluded;
-    sw::string             error;
-    SW_REQUIRE_TRUE( sw::LocalizationProject::collectUnstagedTranslationTables( folder, listExcluded, error ) );
+    SW_REQUIRE_TRUE( sw::LocalizationProject::collectUnstagedTranslationTables( folder, listExcluded ).has_value() );
     SW_REQUIRE_EQUAL( size_t{ 1 }, listExcluded.size() );
     SW_EXPECT_TRUE( sw::StringUtil::endsWith( listExcluded[0], "ja.translation.xml", true ) );
 
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( sw::FileUtil::joinPath( folder, "test.locproject.xml" ), "<LocalizationProject name=\"broken\"" ) );
     listExcluded.clear();
     SW_EXPECT_LOG( "Xml.ParseError" );
-    SW_EXPECT_FALSE( sw::LocalizationProject::collectUnstagedTranslationTables( folder, listExcluded, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SW_EXPECT_FALSE( sw::LocalizationProject::collectUnstagedTranslationTables( folder, listExcluded ).has_value() );
 }

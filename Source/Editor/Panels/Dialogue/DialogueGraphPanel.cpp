@@ -609,8 +609,11 @@ namespace sw::editor
         {
             _actionFieldsText = node._actionCommand;
             _actionError.clear();
-            if ( GameActionCall::tryReadFields( node._actionCommand, _pActionEntry, _actionFields, _actionError ) == false )
+            if ( const expected<void> read = GameActionCall::tryReadFields( node._actionCommand, _pActionEntry, _actionFields ); read.has_value() == false )
+            {
+                _actionError  = string( read.error().message().data(), read.error().message().size() ) + ": " + string( read.error().detail().data(), read.error().detail().size() );
                 _pActionEntry = nullptr;
+            }
         }
 
         // 고르기 목록은 등록에서 온다 — 동작을 더하면 코드 한 줄로 여기에 나타난다.

@@ -29,7 +29,7 @@ SW_TEST_CASE( ScenarioFilesTest, ScreenshotFileTakenTwiceIsRejected )
     const string       kText = "<Scenario name=\"test.screenshots\"><Screenshot file=\"a.ppm\"/><Screenshot file=\"b.ppm\"/><Screenshot file=\"a.ppm\"/><Pass/></Scenario>";
     AutomationScenario scenario;
     string             error;
-    SW_REQUIRE_TRUE( scenario.parse( kText, "test.scenario.xml", error ) );
+    SW_REQUIRE_TRUE( scenario.parse( kText, "test.scenario.xml" ).has_value() );
     SW_EXPECT_FALSE( AutomationStepValidation::validateScreenshotFiles( scenario, error ) );
     SW_EXPECT_TRUE( error.find( "a.ppm" ) != string::npos );
 }
@@ -39,10 +39,11 @@ SW_TEST_CASE( ScenarioFilesTest, InputBelowJudgeInSameFrameIsRejected )
 {
     AutomationScenario scenario;
     string             error;
-    SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.phase\"><Expect watch=\"Scene.Transitioning\" equals=\"0\"/><Press slot=\"Key.D\"/><Pass/></Scenario>", "test.scenario.xml", error ) );
+    SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.phase\"><Expect watch=\"Scene.Transitioning\" equals=\"0\"/><Press slot=\"Key.D\"/><Pass/></Scenario>", "test.scenario.xml" ).has_value() );
     SW_EXPECT_FALSE( AutomationStepValidation::validateStepPhaseOrder( scenario, error ) );
     SW_EXPECT_TRUE( error.find( "<Press>" ) != string::npos );
     SW_REQUIRE_TRUE( scenario.parse( "<Scenario name=\"test.phase\"><Expect watch=\"Scene.Transitioning\" equals=\"0\"/><Wait frames=\"1\"/><Press slot=\"Key.D\"/><Pass/></Scenario>",
-                                     "test.scenario.xml", error ) );
+                                     "test.scenario.xml" )
+                         .has_value() );
     SW_EXPECT_TRUE( AutomationStepValidation::validateStepPhaseOrder( scenario, error ) );
 }

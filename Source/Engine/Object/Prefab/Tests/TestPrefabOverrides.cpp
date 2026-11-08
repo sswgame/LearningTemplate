@@ -23,8 +23,7 @@ namespace
         static string makeOverrides( string_view instance, string_view base )
         {
             string overrides;
-            string error;
-            SW_EXPECT_TRUE_MSG( PrefabOverrides::computeOverrides( instance, base, overrides, error ), error.c_str() );
+            SW_EXPECT_TRUE( PrefabOverrides::computeOverrides( instance, base, overrides ).has_value() );
             return overrides;
         }
 
@@ -78,12 +77,13 @@ SW_TEST_CASE( PrefabOverridesTest, NameAndSchemaAreNotOverrides )
 SW_TEST_CASE( PrefabOverridesTest, BrokenInputsAreRefused )
 {
     SW_EXPECT_LOG( "Xml.ParseError" );
-    string overrides;
-    string error;
-    SW_EXPECT_FALSE( PrefabOverrides::computeOverrides( "<a", Util::kBase, overrides, error ) );
-    SW_EXPECT_TRUE( error.find( "instance state" ) != string::npos );
-    SW_EXPECT_FALSE( PrefabOverrides::computeOverrides( Util::kBase, "<a", overrides, error ) );
-    SW_EXPECT_TRUE( error.find( "base state" ) != string::npos );
+    string               overrides;
+    const expected<void> badInstance = PrefabOverrides::computeOverrides( "<a", Util::kBase, overrides );
+    SW_REQUIRE_FALSE( badInstance.has_value() );
+    SW_EXPECT_TRUE( badInstance.error().message().find( "instance state" ) != string_view::npos );
+    const expected<void> badBase = PrefabOverrides::computeOverrides( Util::kBase, "<a", overrides );
+    SW_REQUIRE_FALSE( badBase.has_value() );
+    SW_EXPECT_TRUE( badBase.error().message().find( "base state" ) != string_view::npos );
     string state;
     SW_EXPECT_FALSE( PrefabOverrides::makeInstanceState( "<a", "", "x", state ) );
     SW_EXPECT_FALSE( PrefabOverrides::makeInstanceState( Util::kBase, "<a", "x", state ) );

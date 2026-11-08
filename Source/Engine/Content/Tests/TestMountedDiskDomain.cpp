@@ -32,7 +32,7 @@ namespace
         ScopedContentSource& operator=( const ScopedContentSource& ) = delete;
     };
 
-    std::optional<AbsolutePath> findLoose( string_view id )
+    optional<AbsolutePath> findLoose( string_view id )
     {
         return engine::getSubsystem<AssetPaths>().findLooseFile( id );
     }
@@ -53,8 +53,8 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
     SW_REQUIRE_TRUE( diskID.empty() == false );
 
     // 소문자 id: 있는 폴더 둘은 디스크 표기이고 아직 없는 파일 이름은 id 의 표기다.
-    const string                      lowerID   = FileUtil::normalizePath( diskID );
-    const std::optional<AbsolutePath> writePath = paths.toDiskPath( lowerID );
+    const string                 lowerID   = FileUtil::normalizePath( diskID );
+    const optional<AbsolutePath> writePath = paths.toDiskPath( lowerID );
     SW_REQUIRE_TRUE( writePath.has_value() );
     SW_EXPECT_TRUE( FileUtil::pathsEqualNormalized( diskFile, writePath->str() ) );
 #if defined( SW_PLATFORM_LINUX )
@@ -62,13 +62,13 @@ SW_TEST_CASE( MountedDiskDomainTest, WritePathKeepsTheDiskSpellingOfExistingFold
 #endif
 
     // 없는 폴더부터는 id 의 표기를 쓴다(소문자로 바꾸지 않는다). Windows 는 소문자로 잇는다 — 같은 폴더다.
-    const std::optional<AbsolutePath> freshPath = paths.toDiskPath( ScopedScratchDomain::makeID( "Saved/Fresh/Deep/New.txt" ).str() );
+    const optional<AbsolutePath> freshPath = paths.toDiskPath( ScopedScratchDomain::makeID( "Saved/Fresh/Deep/New.txt" ).str() );
     SW_REQUIRE_TRUE( freshPath.has_value() );
     SW_EXPECT_TRUE( FileUtil::pathsEqualNormalized( directory + "/Saved/Fresh/Deep/New.txt", freshPath->str() ) );
 
     // 쓴 뒤에는 같은 id 를 대소문자만 다르게 물어도 같은 파일이다(둘째 쓰기가 옆 폴더를 만들지 않는다).
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( writePath->str(), "first" ) );
-    const std::optional<AbsolutePath> again = paths.toDiskPath( diskID );
+    const optional<AbsolutePath> again = paths.toDiskPath( diskID );
     SW_REQUIRE_TRUE( again.has_value() );
     SW_EXPECT_TRUE( FileUtil::pathsEqualNormalized( writePath->str(), again->str() ) );
 }

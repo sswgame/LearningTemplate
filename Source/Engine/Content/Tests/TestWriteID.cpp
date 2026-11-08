@@ -13,7 +13,7 @@ using namespace sw;
 
 SW_TEST_CASE( WriteIDTest, GlobalIDKeepsItsDomain )
 {
-    const std::optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "common/materials/new_not_yet.material" );
+    const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "common/materials/new_not_yet.material" );
     SW_REQUIRE_TRUE( path.has_value() );
     SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "common/materials/new_not_yet.material" ) );
 }
@@ -21,7 +21,7 @@ SW_TEST_CASE( WriteIDTest, GlobalIDKeepsItsDomain )
 SW_TEST_CASE( WriteIDTest, RelativeKeyWritesTheFileReadingPicked )
 {
     // engine 에만 있는 상대 키 — 읽기가 고른 그 파일에 쓴다(검색 순서의 앞 도메인에 새로 만들지 않는다).
-    const std::optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "shaders/forward_lit.hlsl" );
+    const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "shaders/forward_lit.hlsl" );
     SW_REQUIRE_TRUE( path.has_value() );
     SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "engine/shaders/forward_lit.hlsl" ) );
 }
@@ -29,7 +29,7 @@ SW_TEST_CASE( WriteIDTest, RelativeKeyWritesTheFileReadingPicked )
 // 작업 도메인은 폴더가 아직 없어도 도메인이다(빈 트리의 첫 쓰기) — 상대 키로 거절하지 않는다.
 SW_TEST_CASE( WriteIDTest, ScratchDomainNeedsNoFolderYet )
 {
-    const std::optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "scratch/write_id_test_not_yet/new.appearance.xml" );
+    const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "scratch/write_id_test_not_yet/new.appearance.xml" );
     SW_REQUIRE_TRUE( path.has_value() );
     SW_EXPECT_EQUAL( engine::getSubsystem<AssetPaths>().toAssetID( path->str() ), string( "scratch/write_id_test_not_yet/new.appearance.xml" ) );
 }
@@ -57,7 +57,7 @@ SW_TEST_CASE( WriteIDTest, DiskPathIsNotAResourceID )
 SW_TEST_CASE( WriteIDTest, BareDomainIsTheDomainRoot )
 {
     // 도메인 이름만인 id 는 그 도메인 루트다(에디터의 도메인 폴더 - 콘텐츠 브라우저 루트). `game` 은 팩 이름까지가 도메인이다.
-    const std::optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "engine" );
+    const optional<AbsolutePath> path = engine::getSubsystem<AssetPaths>().toDiskPath( "engine" );
     SW_REQUIRE_TRUE( path.has_value() );
     SW_EXPECT_TRUE( FileUtil::isDirectory( path->str() ) );
     SW_EXPECT_EQUAL( FileUtil::joinPath( ProcessRoots::get()._content.str(), "engine" ), path->str() );

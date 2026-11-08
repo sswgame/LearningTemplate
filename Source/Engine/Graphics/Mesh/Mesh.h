@@ -6,6 +6,7 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
@@ -389,8 +390,8 @@ namespace sw
         uint32 getDrawIndexCount() const { return static_cast<uint32>( _listIndex.size() + _listLODIndex.size() ); }
         /** @brief 화면 크기 @p screenSize 에 맞는 LOD 단계입니다 — 임계값이 화면 크기보다 큰 단계의 수(0 이면 LOD 0)입니다. */
         uint32 selectLOD( float32 screenSize ) const;
-        /** @brief 이름의 구간 번호입니다. 없으면 -1 입니다. */
-        int32 findSectionIndex( const hashed_string& name ) const;
+        /** @brief 이름의 구간 번호입니다. 없으면 비어 있습니다. */
+        [[nodiscard]] optional<uint32> findSectionIndex( const hashed_string& name ) const;
         /** @brief 모프 타깃들입니다. */
         const vector<MeshMorphTarget>& getMorphTargets() const { return _listMorphTarget; }
         /** @brief 모프 타깃 수입니다. */

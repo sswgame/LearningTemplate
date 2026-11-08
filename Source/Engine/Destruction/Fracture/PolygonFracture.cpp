@@ -330,18 +330,16 @@ namespace sw
         return MathUtil::abs( twiceArea ) * 0.5f;
     }
 
-    bool PolygonFractureUtil::fracture( vector_reference<const float2> listBorder, const FractureSettings& settings, FractureAsset& outAsset, string& outError )
+    expected<void> PolygonFractureUtil::fracture( vector_reference<const float2> listBorder, const FractureSettings& settings, FractureAsset& outAsset )
     {
         using Internal = PolygonFractureInternal;
         using Corner   = Internal::Corner;
         outAsset.clear();
-        outError.clear();
         vector<float2> listShape( listBorder.begin(), listBorder.end() );
         float2         centroid{};
         if ( listShape.size() < 3 || computeArea( listShape, centroid ) <= 0.0f )
         {
-            outError = "the outline needs at least three points and an area";
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "the outline needs at least three points and an area" } );
         }
         vector<uint32> listOrder( listShape.size() );
         for ( uint32 index = 0; index < static_cast<uint32>( listOrder.size() ); ++index )
@@ -374,8 +372,7 @@ namespace sw
         Internal::numberPieces( listCell, pieces );
         if ( pieces._listSiteOfPiece.empty() )
         {
-            outError = "no piece has area";
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "no piece has area" } );
         }
         Internal::linkPieces( listCell, pieces );
         vector<uint32> listLeafOrder;
@@ -399,10 +396,9 @@ namespace sw
         string validation;
         if ( outAsset.isValid( &validation ) == false )
         {
-            outError = string( "polygon fracture produced an invalid asset: " ) + validation;
             outAsset.clear();
-            return false;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "polygon fracture produced an invalid asset", validation } );
         }
-        return true;
+        return {};
     }
 } // namespace sw

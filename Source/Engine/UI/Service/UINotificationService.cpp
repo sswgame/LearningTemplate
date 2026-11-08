@@ -249,14 +249,13 @@ namespace sw
             SW_LOG_ERROR_ID( "UINotificationService.NotificationDocumentNoPanel", "[UI] Notification document %# has no '%#' panel", _pUI->getEngineDocuments()._notifications.c_str(), Internal::kStackName );
             return;
         }
-        UIDocumentCache&                        documents = engine::getSubsystem<UIDocumentCache>();
-        string                                  error;
-        const shared_ptr<const UIDocumentAsset> document = documents.findOrLoad( _pUI->getEngineDocuments()._notificationEntry, error );
-        vector<UIBindingDef>                    listBinding;
-        unique_ptr<Widget>                      widget = document != nullptr ? UIDocumentLoader::instantiate( *document, documents, listBinding, error ) : nullptr;
-        if ( widget == nullptr )
+        UIDocumentCache&                                  documents = engine::getSubsystem<UIDocumentCache>();
+        const expected<shared_ptr<const UIDocumentAsset>> document  = documents.findOrLoad( _pUI->getEngineDocuments()._notificationEntry );
+        vector<UIBindingDef>                              listBinding;
+        expected<unique_ptr<Widget>>                      built = document.has_value() ? UIDocumentLoader::instantiate( **document, documents, listBinding ) : unexpected( document.error() );
+        if ( built.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "UINotificationService.NotificationEntryFailed", "[UI] Notification entry failed: %#", error.c_str() );
+            SW_LOG_ERROR_ID( "UINotificationService.NotificationEntryFailed", "[UI] Notification entry failed: %# (%#)", built.error().message(), built.error().detail() );
             return;
         }
         widget->setStyleClass( Internal::getKindClass( entry._desc._kind ) );

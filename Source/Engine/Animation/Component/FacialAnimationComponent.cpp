@@ -247,10 +247,10 @@ namespace sw
 
     bool FacialAnimationComponent::setExpressionWeight( const hashed_string& expressionName, float32 weight )
     {
-        const int32 expressionIndex = getFacialRig().findExpressionIndex( expressionName );
-        if ( expressionIndex < 0 )
+        const optional<uint32> expressionIndex = getFacialRig().findExpressionIndex( expressionName );
+        if ( expressionIndex.has_value() == false )
             return false;
-        _listExpressionWeight[static_cast<size_t>( expressionIndex )] = weight;
+        _listExpressionWeight[*expressionIndex] = weight;
         if ( _pSkeletalMesh != nullptr )
             _pSkeletalMesh->markPoseDirty();
         return true;

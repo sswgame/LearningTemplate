@@ -243,57 +243,42 @@ namespace sw
         return loadComposed( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ), outLayout );
     }
 
-    bool LiveLinkFaceFrame::parse( const uint8* pData, size_t size, const LiveLinkFaceLayout& layout, LiveLinkFaceFrame& outFrame, string& outError )
+    expected<LiveLinkFaceFrame> LiveLinkFaceFrame::parse( const uint8* pData, size_t size, const LiveLinkFaceLayout& layout )
     {
-        outFrame = LiveLinkFaceFrame{};
-        outError.clear();
         if ( pData == nullptr )
-        {
-            outError = "empty packet";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "empty packet" } );
+        LiveLinkFaceFrame            frame{};
         LiveLinkFaceInternal::Reader reader( pData, size );
         const uint8                  version = reader.readUint8();
-        utf8                         arrMessage[constant::buffer::kMax256]{};
+        utf8                         arrDetail[constant::buffer::kMax64]{};
         if ( reader.hasFailed() == false && static_cast<int32>( version ) != layout._packetVersion )
         {
-            formatstring( arrMessage, constant::buffer::kMax256, "packet version %# but the layout reads version %#", static_cast<uint32>( version ), layout._packetVersion );
-            outError = arrMessage;
-            return false;
+            formatstring( arrDetail, constant::buffer::kMax64, "packet %#, layout %#", static_cast<uint32>( version ), layout._packetVersion );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "packet version differs from the layout", arrDetail } );
         }
-        outFrame._deviceID    = reader.takeString();
-        outFrame._subjectName = reader.takeString();
-        outFrame._frameNumber = reader.readInt32();
+        frame._deviceID    = reader.takeString();
+        frame._subjectName = reader.takeString();
+        frame._frameNumber = reader.readInt32();
         reader.skipBytes( sizeof( float32 ) + 2 * sizeof( int32 ) ); // 서브프레임 · 프레임 속도(분자 · 분모) — 얼굴 값만 쓴다
         const uint8 channelCount = reader.readUint8();
         if ( reader.hasFailed() == false && channelCount != layout._listChannel.size() )
         {
-            formatstring( arrMessage, constant::buffer::kMax256, "packet carries %# channels but the layout has %#", static_cast<uint32>( channelCount ),
-                          static_cast<uint32>( layout._listChannel.size() ) );
-            outError = arrMessage;
-            outFrame = LiveLinkFaceFrame{};
-            return false;
+            formatstring( arrDetail, constant::buffer::kMax64, "packet %#, layout %#", static_cast<uint32>( channelCount ), static_cast<uint32>( layout._listChannel.size() ) );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "packet channel count differs from the layout", arrDetail } );
         }
-        outFrame._listValue.resize( channelCount );
-        for ( float32& value : outFrame._listValue )
+        frame._listValue.resize( channelCount );
+        for ( float32& value : frame._listValue )
         {
             value = reader.readFloat32();
         }
-        if ( reader.hasFailed() || reader.getRemaining() != 0 )
+        if ( reader.hasFailed() )
+            return unexpected( Error{ ErrorKind::InvalidArgument, "packet is shorter than its fields" } );
+        if ( reader.getRemaining() != 0 )
         {
-            if ( reader.hasFailed() )
-            {
-                outError = "packet is shorter than its fields";
-            }
-            else
-            {
-                formatstring( arrMessage, constant::buffer::kMax256, "packet has %# bytes past its last channel", static_cast<uint64>( reader.getRemaining() ) );
-                outError = arrMessage;
-            }
-            outFrame = LiveLinkFaceFrame{};
-            return false;
+            formatstring( arrDetail, constant::buffer::kMax64, "%# bytes", static_cast<uint64>( reader.getRemaining() ) );
+            return unexpected( Error{ ErrorKind::InvalidArgument, "packet has bytes past its last channel", arrDetail } );
         }
-        return true;
+        return frame;
     }
 
     void LiveLinkFaceFrame::write( const LiveLinkFaceFrame& frame, uint8 version, vector<uint8>& outBytes )

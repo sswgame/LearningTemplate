@@ -21,6 +21,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -28,8 +29,6 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -125,7 +124,7 @@ namespace sw
         vector<FitArgument> _listArgument{};
 
         /** @brief 인자 값입니다. 이 상호작용이 적지 않은 인자면 비어 있습니다(연산자가 프로필 값으로 대신한다). */
-        [[nodiscard]] std::optional<float32> findArgument( const hashed_string& name ) const;
+        [[nodiscard]] optional<float32> findArgument( const hashed_string& name ) const;
     };
 } // namespace sw
 

@@ -89,8 +89,8 @@ namespace sw
         return false;
     }
 
-    void NetMessageChannel::logMissingCodec( const hashed_string& typeFqn, const string& reason )
+    void NetMessageChannel::logMissingCodec( const hashed_string& typeFqn, const Error& reason )
     {
-        SW_LOG_ERROR_ID( "NetMessageChannel.NoFixedLayoutCodec", "%# has no fixed layout codec (%#) - it cannot be registered on a net channel", typeFqn.c_str(), reason.c_str() );
+        SW_LOG_ERROR_ID( "NetMessageChannel.NoFixedLayoutCodec", "%# has no fixed layout codec (%#: %#) - it cannot be registered on a net channel", typeFqn.c_str(), reason.message(), reason.detail() );
     }
 } // namespace sw

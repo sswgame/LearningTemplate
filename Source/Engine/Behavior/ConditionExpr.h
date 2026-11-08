@@ -18,6 +18,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -171,8 +172,8 @@ namespace sw
          * @param pBareCondition 그냥 이름을 넘길 조건입니다. `_when` 은 문맥 태그 조건을 넘긴다. nullptr 이면 그냥 이름은 오류입니다.
          */
         [[nodiscard]] static bool compile( string_view text, string_view sourceName, ConditionExpr& outExpr, const utf8* pBareCondition = kBareFlag );
-        /** @brief 로그를 남기지 않는 `compile` 입니다. 틀리면 까닭을 @p outError 에 적습니다. 편집기가 칸을 고칠 때마다 부릅니다. */
-        [[nodiscard]] static bool tryCompile( string_view text, ConditionExpr& outExpr, string& outError, const utf8* pBareCondition = kBareFlag );
+        /** @brief 로그를 남기지 않는 `compile` 입니다. 틀리면 그 까닭입니다. 편집기가 칸을 고칠 때마다 부릅니다. */
+        [[nodiscard]] static expected<void> tryCompile( string_view text, ConditionExpr& outExpr, const utf8* pBareCondition = kBareFlag );
 
         /** @brief 평가합니다. 빈 식은 참입니다. */
         bool evaluate( const GameplayContext& context ) const;

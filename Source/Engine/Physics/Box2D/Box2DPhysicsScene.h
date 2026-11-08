@@ -19,6 +19,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -164,8 +165,8 @@ namespace sw
         [[nodiscard]] bool attachChain( BodyRecord& record, const PhysicsShapeDesc2D& shape, const PhysicsMaterialDef& material, PhysicsBodyHandle handle );
         /** @brief 재질 이름을 풉니다. 이름을 적지 않았으면 첫 재질이고, 적은 이름이 설정에 없으면 오류를 남기고 nullptr 입니다(다른 재질로 만들지 않는다). */
         [[nodiscard]] const PhysicsMaterialDef* resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const;
-        /** @brief 재질 이름의 설정 테이블 번호를 반환합니다(셰이프의 `userMaterialId` 이며, 질의가 이름으로 되돌립니다). 없으면 0 입니다. */
-        int32 findMaterialIndex( const hashed_string& name ) const;
+        /** @brief 재질 이름의 설정 테이블 번호를 반환합니다(셰이프의 `userMaterialId` 이며, 질의가 이름으로 되돌립니다). 없으면 비어 있습니다(첫 재질로 바꾸지 않는다 — 부르는 쪽이 오류로 멈춘다). */
+        [[nodiscard]] optional<int32> findMaterialIndex( const hashed_string& name ) const;
         /** @brief 설정 테이블 번호의 재질 이름을 반환합니다. 범위 밖이면 빈 이름입니다. */
         hashed_string findMaterialName( int32 materialIndex ) const;
         /**

@@ -146,10 +146,9 @@ SW_TEST_CASE_F( ModulesModelTest, ApplyWritesOnlyNonDefaultOverrides )
     SW_EXPECT_TRUE( _model.hasChangedSinceStart() );
 
     string         text;
-    string         error;
     ModuleManifest manifest;
     SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
-    SW_REQUIRE_TRUE_MSG( ModuleCatalog::parseManifest( text, {}, manifest, error ), error.c_str() );
+    SW_REQUIRE_TRUE( ModuleCatalog::parseManifest( text, {}, manifest ).has_value() );
     SW_REQUIRE_EQUAL( size_t{ 1 }, manifest._listModuleOverride.size() );
     SW_EXPECT_TRUE( manifest._listModuleOverride[0]._name == "GF_Child" );
     SW_EXPECT_FALSE( manifest._listModuleOverride[0]._bEnabled );
@@ -157,7 +156,7 @@ SW_TEST_CASE_F( ModulesModelTest, ApplyWritesOnlyNonDefaultOverrides )
     SW_REQUIRE_TRUE( _model.requestToggle( "GF_Child", true ) ); // 기본과 같아지면 줄을 지운다
     _model.applyPendingTo( path );
     SW_REQUIRE_TRUE( FileUtil::readTextFile( path, text ) );
-    SW_REQUIRE_TRUE_MSG( ModuleCatalog::parseManifest( text, {}, manifest, error ), error.c_str() );
+    SW_REQUIRE_TRUE( ModuleCatalog::parseManifest( text, {}, manifest ).has_value() );
     SW_EXPECT_TRUE( manifest._listModuleOverride.empty() );
 }
 

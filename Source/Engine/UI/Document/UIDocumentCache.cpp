@@ -12,12 +12,12 @@ namespace sw
 {
     namespace
     {
-        shared_ptr<const void> parseDocument( string_view text, string_view path, string& outError )
+        expected<shared_ptr<const void>> parseDocument( string_view text, string_view path )
         {
             shared_ptr<UIDocumentAsset> document = make_shared<UIDocumentAsset>();
-            if ( UIDocumentLoader::parse( text, path, *document, outError ) == false )
-                return {};
-            return document;
+            if ( expected<void> parsed = UIDocumentLoader::parse( text, path, *document ); parsed.has_value() == false )
+                return unexpected( parsed.error() );
+            return shared_ptr<const void>( std::move( document ) );
         }
     } // namespace
 } // namespace sw
@@ -51,9 +51,10 @@ namespace sw
         return kArrDependency;
     }
 
-    shared_ptr<const UIDocumentAsset> UIDocumentCache::findOrLoad( string_view path, string& outError )
+    expected<shared_ptr<const UIDocumentAsset>> UIDocumentCache::findOrLoad( string_view path )
     {
-        return std::static_pointer_cast<const UIDocumentAsset>( _cache.findOrLoadAsset( path, outError ) );
+        return _cache.findOrLoadAsset( path ).transform( []( const shared_ptr<const void>& pAsset )
+        { return std::static_pointer_cast<const UIDocumentAsset>( pAsset ); } );
     }
 } // namespace sw
 

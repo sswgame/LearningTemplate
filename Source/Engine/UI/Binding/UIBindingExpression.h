@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Name/hashed_string.h"
@@ -46,6 +47,6 @@ namespace sw
          * @brief 식 @p text 를 해석합니다.
          * @return 형식이 틀리면(중괄호, 모르는 종류, 빈 경로, 모르는 키, 모르는 mode) false 이고 @p outError 에 이유(영어)를 둡니다.
          */
-        [[nodiscard]] static bool parse( string_view text, UIBindingExpression& outExpression, string& outError );
+        [[nodiscard]] static expected<void> parse( string_view text, UIBindingExpression& outExpression );
     };
 } // namespace sw

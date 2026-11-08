@@ -92,7 +92,7 @@ namespace sw
         for ( XMLNode window = node.findChild( "Window" ); window; window = window.findNextSibling( "Window" ) )
         {
             const std::optional<string> grade = window.readRequiredAttribute<string>( "grade" );
-            std::optional<float32>      bonus;
+            optional<float32>           bonus;
             const bool                  bBonus = window.readOptionalAttribute( "bonus", bonus );
             if ( grade.has_value() == false || bBonus == false )
             {

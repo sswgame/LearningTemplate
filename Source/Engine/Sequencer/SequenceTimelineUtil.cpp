@@ -74,7 +74,7 @@ namespace sw
                 for ( uint32 channelIndex = 0; channelIndex < kSequenceTransformChannelCount; ++channelIndex )
                 {
                     // 키가 없는 채널은 지금 값을 둔다.
-                    const std::optional<float32> value = track._listChannel[channelIndex].evaluate( frame );
+                    const optional<float32> value = track._listChannel[channelIndex].evaluate( frame );
                     if ( value.has_value() == false )
                         continue;
                     const uint32 groupIndex                          = channelIndex / 3;
@@ -153,10 +153,10 @@ namespace sw
                 bool    bAnyKey = false;
                 for ( uint32 channelIndex = 0; channelIndex < kSequenceLensChannelCount; ++channelIndex )
                 {
-                    const std::optional<float32> value = track._listChannel[channelIndex].evaluate( frame );
-                    arrKeyed[channelIndex]             = value.has_value();
-                    arrValue[channelIndex]             = value.value_or( 0.0f );
-                    bAnyKey                            = bAnyKey || value.has_value();
+                    const optional<float32> value = track._listChannel[channelIndex].evaluate( frame );
+                    arrKeyed[channelIndex]        = value.has_value();
+                    arrValue[channelIndex]        = value.value_or( 0.0f );
+                    bAnyKey                       = bAnyKey || value.has_value();
                 }
                 if ( bAnyKey )
                     writeLens( *pCamera, arrValue, arrKeyed );
@@ -603,7 +603,7 @@ namespace sw
     float32 SequenceTimelineUtil::sampleRigSlotWeight( const SequenceKeyTrack& track, float32 frame )
     {
         // 무게 트랙에 키가 없으면 슬롯을 다 건다(1) — 무게 트랙의 계약이다.
-        const std::optional<float32> weight = track.evaluateChannel( 0, frame );
+        const optional<float32> weight = track.evaluateChannel( 0, frame );
         return weight.has_value() ? MathUtil::saturate( *weight ) : 1.0f;
     }
 

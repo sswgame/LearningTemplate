@@ -196,10 +196,10 @@ namespace sw
             SW_LOG_ERROR_ID( "UIAnimationPlayer.AnimationNoWidgetNamed", "[UI] Animation '%#': no widget named '%#' — the track is skipped", animation._name.c_str(), track._widget.c_str() );
             return false;
         }
-        string error;
-        if ( UIAnimatedProperty::resolve( *pWidget->getTypeInfo(), track._property, outTrack._property, error ) == false )
+        if ( const expected<void> resolved = UIAnimatedProperty::resolve( *pWidget->getTypeInfo(), track._property, outTrack._property ); resolved.has_value() == false )
         {
-            SW_LOG_WARNING_ID( "UIAnimationPlayer.AnimationTrackSkipped", "[UI] Animation '%#': %# — the track is skipped", animation._name.c_str(), error.c_str() );
+            SW_LOG_WARNING_ID( "UIAnimationPlayer.AnimationTrackSkipped", "[UI] Animation '%#': %# '%#' — the track is skipped", animation._name.c_str(), resolved.error().message(),
+                               resolved.error().detail() );
             return false;
         }
         // 곡선 위 사건은 실수 성분을 본다. 볼 성분이 없는 트랙의 사건은 조용히 안 보내지 않고 트랙째 뺀다(문서가 틀렸다는 뜻이다).
@@ -245,10 +245,9 @@ namespace sw
             return false;
         }
         ActiveTween tween{};
-        string      error;
-        if ( UIAnimatedProperty::resolve( *pWidget->getTypeInfo(), propertyPath, tween._property, error ) == false )
+        if ( const expected<void> resolved = UIAnimatedProperty::resolve( *pWidget->getTypeInfo(), propertyPath, tween._property ); resolved.has_value() == false )
         {
-            SW_LOG_WARNING_ID( "UIAnimationPlayer.Tween", "[UI] Tween: %#", error.c_str() );
+            SW_LOG_WARNING_ID( "UIAnimationPlayer.Tween", "[UI] Tween: %# '%#'", resolved.error().message(), resolved.error().detail() );
             return false;
         }
         if ( tween._property.parseValue( endValue, tween._to ) == false )

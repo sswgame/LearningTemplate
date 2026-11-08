@@ -58,9 +58,8 @@ namespace sw
         [[nodiscard]] static bool encode( const uint32 version, const T& record, vector<uint8>& outBytes )
         {
             outBytes.clear();
-            string     reason;
             BitWriter  scratch;
-            const bool bInRange = FixedLayout::findCodec<T>( reason ) == nullptr || FixedLayout::write( record, scratch );
+            const bool bInRange = FixedLayout::findCodec<T>().has_value() == false || FixedLayout::write( record, scratch );
             bool       bWritten = false;
             // 모르는 칸을 드는 레코드는 읽을 때 담은 칸을 받은 그대로 뒤에 싣는다(옛 빌드가 고쳐 써도 새 빌드의 값이 남는다).
             if constexpr ( ServiceRecordKeepsUnknown<T>::value )
@@ -153,8 +152,7 @@ namespace sw
         template <typename T>
         [[nodiscard]] static bool isWithinDeclaredRange( const T& record )
         {
-            string reason;
-            if ( FixedLayout::findCodec<T>( reason ) == nullptr )
+            if ( FixedLayout::findCodec<T>().has_value() == false )
                 return true;
             // 범위 확인은 고정 배치형 코덱의 쓰기 검사가 맡으므로 범위의 원본은 PROPERTY 선언 하나다
             BitWriter scratch;

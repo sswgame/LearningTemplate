@@ -9,6 +9,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
 
@@ -35,8 +36,8 @@ namespace sw
         /** @brief 이 빌드에 XTest 가 들어 있는지(`SW_WITH_XTEST`)입니다. */
         [[nodiscard]] static bool isCompiledIn();
 
-        /** @brief X 서버에 연결하고 XTest 확장이 있는지 확인합니다. 실패 이유는 @p outReason 에 적습니다. */
-        [[nodiscard]] bool open( string& outReason );
+        /** @brief X 서버에 연결하고 XTest 확장이 있는지 확인합니다. 실패하면 그 이유입니다. */
+        [[nodiscard]] expected<void> open();
 
         /** @brief 포인터를 화면 좌표로 옮깁니다. */
         [[nodiscard]] bool moveTo( int32 screenX, int32 screenY );

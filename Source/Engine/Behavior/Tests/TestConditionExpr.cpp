@@ -145,17 +145,17 @@ SW_TEST_CASE( ConditionExprTest, InvalidTextFailsToCompile )
         SW_EXPECT_TRUE( expr.isEmpty() );
     }
 
-    string        error;
-    ConditionExpr expr;
-    SW_EXPECT_FALSE( ConditionExpr::tryCompile( "name", expr, error, nullptr ) ); // 그냥 이름을 넘길 조건이 없다
-    SW_EXPECT_FALSE( error.empty() );
+    ConditionExpr        expr;
+    const expected<void> bare = ConditionExpr::tryCompile( "name", expr, nullptr ); // 그냥 이름을 넘길 조건이 없다
+    SW_EXPECT_FALSE( bare.has_value() );
+    SW_EXPECT_FALSE( bare.has_value() == false && bare.error().detail().empty() );
 
     string deep( static_cast<size_t>( ConditionExpr::kMaxDepth ) + 1, '!' );
     deep += "x";
-    SW_EXPECT_FALSE( ConditionExpr::tryCompile( deep, expr, error, "testName" ) );
+    SW_EXPECT_FALSE( ConditionExpr::tryCompile( deep, expr, "testName" ).has_value() );
     string notTooDeep( static_cast<size_t>( ConditionExpr::kMaxDepth ) - 2, '!' );
     notTooDeep += "x";
-    SW_EXPECT_TRUE( ConditionExpr::tryCompile( notTooDeep, expr, error, "testName" ) );
+    SW_EXPECT_TRUE( ConditionExpr::tryCompile( notTooDeep, expr, "testName" ).has_value() );
 }
 
 /** @brief [ConditionExprTest] 동작은 이름으로 찾아 칸을 읽어 부른다. 모르는 이름은 읽기 오류이고, 칸 없는 동작은 글로 돌아온다 */
@@ -178,8 +178,7 @@ SW_TEST_CASE( ConditionExprTest, ActionCallsByName )
 
     const ActionEntry* pEntry = nullptr;
     InstancedStruct    fields;
-    string             error;
-    SW_REQUIRE_TRUE( GameActionCall::tryReadFields( "test.count()", pEntry, fields, error ) );
+    SW_REQUIRE_TRUE( GameActionCall::tryReadFields( "test.count()", pEntry, fields ).has_value() );
     SW_EXPECT_EQUAL( string( "test.count" ), GameActionCall::formatText( *pEntry, fields ) );
 }
 

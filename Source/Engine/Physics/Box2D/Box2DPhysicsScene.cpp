@@ -446,14 +446,14 @@ namespace sw
         }
     }
 
-    int32 Box2DPhysicsScene::findMaterialIndex( const hashed_string& name ) const
+    optional<int32> Box2DPhysicsScene::findMaterialIndex( const hashed_string& name ) const
     {
         for ( size_t materialIndex = 0; materialIndex < _settings._listMaterial.size(); ++materialIndex )
         {
             if ( _settings._listMaterial[materialIndex]._name == name )
                 return static_cast<int32>( materialIndex );
         }
-        return 0;
+        return nullopt;
     }
 
     hashed_string Box2DPhysicsScene::findMaterialName( int32 materialIndex ) const
@@ -479,10 +479,17 @@ namespace sw
         {
             listPoint.push_back( b2TransformPoint( b2Transform{ center, rotation }, Box2DUtil::toBox2D( point ) ) );
         }
+        // 재질은 `resolveMaterial` 이 설정 표에서 골랐다 — 번호가 없으면 표와 어긋난 결함이라 첫 재질로 바꾸지 않고 멈춘다(폴백 없음).
+        const optional<int32> materialIndex = findMaterialIndex( material._name );
+        if ( materialIndex.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.MaterialNotInTable", "Physics material '%#' is not in the 2D physics settings table", material._name.c_str() );
+            return false;
+        }
         b2SurfaceMaterial surface   = b2DefaultSurfaceMaterial();
         surface.friction            = material._friction;
         surface.restitution         = material._restitution;
-        surface.userMaterialId      = findMaterialIndex( material._name );
+        surface.userMaterialId      = *materialIndex;
         b2ChainDef chainDef         = b2DefaultChainDef();
         chainDef.points             = listPoint.data();
         chainDef.count              = static_cast<int32>( listPoint.size() );
@@ -518,11 +525,17 @@ namespace sw
         if ( shape._type == PhysicsShapeType2D::Chain )
             return attachChain( record, shape, material, handle );
 
+        const optional<int32> materialIndex = findMaterialIndex( material._name ); // `attachChain` 과 같은 까닭으로 없으면 멈춘다
+        if ( materialIndex.has_value() == false )
+        {
+            SW_LOG_ERROR_ID( "Box2DPhysicsScene.MaterialNotInTable", "Physics material '%#' is not in the 2D physics settings table", material._name.c_str() );
+            return false;
+        }
         b2ShapeDef shapeDef              = b2DefaultShapeDef();
         shapeDef.userData                = pUserData;
         shapeDef.material.friction       = material._friction;
         shapeDef.material.restitution    = material._restitution;
-        shapeDef.material.userMaterialId = findMaterialIndex( material._name );
+        shapeDef.material.userMaterialId = *materialIndex;
         shapeDef.density                 = material._density;
         shapeDef.filter                  = makeFilter( record._layer, record.isSensor() );
         shapeDef.isSensor                = record.isSensor();

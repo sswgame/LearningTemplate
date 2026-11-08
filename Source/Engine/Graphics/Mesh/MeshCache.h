@@ -34,7 +34,7 @@ namespace sw
         const shared_ptr<Mesh>& getAsset() const { return _pMesh; }
 
     private:
-        [[nodiscard]] bool runLoad( string& outError ) override;
+        [[nodiscard]] expected<void> runLoad() override;
 
     private:
         friend class MeshCache; // 캐시 적중은 읽지 않고 메시를 채워 `Ready` 로 만든다

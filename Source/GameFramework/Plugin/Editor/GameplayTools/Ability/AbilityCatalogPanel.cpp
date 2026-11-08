@@ -197,9 +197,9 @@ namespace sw::editor
 
     void AbilityCatalogPanel::openFile()
     {
-        const string_view                 path         = _path.c_str();
-        const std::optional<AbsolutePath> absolutePath = path.empty() ? std::nullopt : editor::getSubsystem<AssetPaths>().findLooseFile( path );
-        string                            text;
+        const string_view            path         = _path.c_str();
+        const optional<AbsolutePath> absolutePath = path.empty() ? nullopt : editor::getSubsystem<AssetPaths>().findLooseFile( path );
+        string                       text;
         // 읽지 못하면 앞 파일을 그대로 둔다 — 앞 파일의 글을 이 경로에 저장하지 않는다.
         if ( absolutePath.has_value() == false || FileUtil::readTextFile( absolutePath->str(), text ) == false )
         {

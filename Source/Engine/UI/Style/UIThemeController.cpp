@@ -54,14 +54,13 @@ namespace sw
         {
             for ( const string& path : listPath )
             {
-                string                                    error;
-                const shared_ptr<const UIStyleSheetAsset> sheet = styleSheetCache.findOrLoad( path, error );
-                if ( sheet == nullptr )
+                const expected<shared_ptr<const UIStyleSheetAsset>> sheet = styleSheetCache.findOrLoad( path );
+                if ( sheet.has_value() == false )
                 {
-                    SW_LOG_ERROR_ID( "UIThemeController.StyleSheetNotLoaded", "[UI] Style sheet is not loaded: %#", error.c_str() );
+                    SW_LOG_ERROR_ID( "UIThemeController.StyleSheetNotLoaded", "[UI] Style sheet is not loaded: %# (%#)", sheet.error().message(), sheet.error().detail() );
                     continue;
                 }
-                inoutListSheet.push_back( sheet );
+                inoutListSheet.push_back( *sheet );
             }
         }
     } // namespace

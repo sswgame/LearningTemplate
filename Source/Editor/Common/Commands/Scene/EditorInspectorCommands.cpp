@@ -102,10 +102,10 @@ namespace sw::editor
                 const string instanceState = ObjectStateSerializer::saveToXMLString( pInstance, ObjectSaveOptions{ SerializePurpose::Authoring } );
                 string       overrideXML;
                 string       newInstanceState;
-                string       overridesError;
-                if ( PrefabOverrides::computeOverrides( instanceState, oldBaseStateXML, overrideXML, overridesError ) == false )
+                if ( const expected<void> overrides = PrefabOverrides::computeOverrides( instanceState, oldBaseStateXML, overrideXML ); overrides.has_value() == false )
                 {
-                    SW_LOG_WARNING_ID( "EditorInspectorCommands.PrefabInstanceCouldNot", "Prefab instance '%#' could not be refreshed: %#", pInstance->getName().c_str(), overridesError.c_str() );
+                    SW_LOG_WARNING_ID( "EditorInspectorCommands.PrefabInstanceCouldNot", "Prefab instance '%#' could not be refreshed: %# (%#)", pInstance->getName().c_str(), overrides.error().message(),
+                                       overrides.error().detail() );
                     return false;
                 }
                 if ( PrefabOverrides::makeInstanceState( newBaseState, overrideXML, pInstance->getName().c_str(), newInstanceState ) == false )

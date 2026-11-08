@@ -265,18 +265,18 @@ namespace sw
         Texture2D* getTexture() const { return _pTexture; }
 
     private:
-        [[nodiscard]] bool runLoad( string& outError ) override;
-        bool               hasCompletion() const override { return true; }
+        [[nodiscard]] expected<void> runLoad() override;
+        bool                         hasCompletion() const override { return true; }
         /** @brief 완료 1단계 — 텍스처를 만들고 업로드를 제출합니다(`Texture2D::beginUploadFromImage`). 블로킹이면 이어서 끝까지 기다립니다. */
-        [[nodiscard]] AssetCompletionStep beginCompletion( bool bBlocking, string& outError ) override;
+        [[nodiscard]] expected<AssetCompletionStep> beginCompletion( bool bBlocking ) override;
         /** @brief 완료 2단계 — 업로드가 끝났는지 보고 bindless 에 등록해 항목을 공개합니다(`Texture2D::finishUpload`). */
-        [[nodiscard]] AssetCompletionStep pollCompletion( bool bBlocking, string& outError ) override;
-        void                              onAwaitingCompletion() override;
-        void                              onUploadSubmitted() override;
+        [[nodiscard]] expected<AssetCompletionStep> pollCompletion( bool bBlocking ) override;
+        void                                        onAwaitingCompletion() override;
+        void                                        onUploadSubmitted() override;
         /** @brief 두 대기 목록에서 이 로드 작업을 뺍니다(다른 스레드가 먼저 집었거나 끝났을 때). */
         void removeFromPumpLists( TextureCache::Impl& cache );
         /** @brief 업로드가 끝난(또는 실패한) 뒤의 마무리입니다 — 항목을 공개하고 결과를 단계 결과로 바꿉니다. */
-        [[nodiscard]] AssetCompletionStep concludeCompletion( TextureCache::Impl& cache, bool bReady, string& outError );
+        [[nodiscard]] expected<AssetCompletionStep> concludeCompletion( TextureCache::Impl& cache, bool bReady );
 
     private:
         friend class TextureCache;               // 캐시 적중은 단계를 거치지 않고 참조를 쥔 `Ready` 로 만든다 · 렌더 타깃 크기를 적는다

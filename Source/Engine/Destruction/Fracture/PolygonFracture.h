@@ -12,6 +12,7 @@
 #include "Core/Container/span.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -26,9 +27,9 @@ namespace sw
     {
         /**
          * @brief 다각형 @p listBorder(반시계, 시계면 뒤집는다)를 쪼개 @p outAsset 을 채웁니다.
-         * @return 점이 3 개 미만이거나 넓이가 0 이거나 조각이 남지 않으면 false 를 반환하고 @p outError 에 이유를 씁니다.
+         * @return 점이 3 개 미만이거나 넓이가 0 이거나 조각이 남지 않으면 그 이유입니다.
          */
-        [[nodiscard]] static bool fracture( vector_reference<const float2> listBorder, const FractureSettings& settings, FractureAsset& outAsset, string& outError );
+        [[nodiscard]] static expected<void> fracture( vector_reference<const float2> listBorder, const FractureSettings& settings, FractureAsset& outAsset );
         /** @brief 다각형의 넓이(부호 없음)와 무게 중심을 반환합니다. */
         static float32 computeArea( vector_reference<const float2> listPolygon, float2& outCentroid );
     };

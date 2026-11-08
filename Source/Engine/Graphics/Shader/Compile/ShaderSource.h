@@ -8,13 +8,12 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -50,7 +49,7 @@ namespace sw
          * @brief 소스가 든 `shaders` 폴더의 리소스 경로입니다(`engine/shaders/sub/x.hlsl` → `engine/shaders`). 첫 `shaders` 폴더 칸까지이고 대소문자는 가리지 않습니다.
          * @return `shaders` 칸이 없거나 맨 앞(도메인 없음)이거나 그 뒤에 파일이 없으면 빈 값입니다 — 부르는 쪽이 오류로 멈춘다.
          */
-        [[nodiscard]] std::optional<string_view> getShadersFolder() const;
+        [[nodiscard]] optional<string_view> getShadersFolder() const;
         /** @brief 파일 이름의 스템을 소문자로 반환합니다(쿠킹된 바이너리 이름의 앞부분, `ShaderCooker::computeBinaryFileName` 의 입력). */
         [[nodiscard]] string getStemLower() const;
 
@@ -71,7 +70,7 @@ namespace sw
         string _binDirectory; ///< `engine/shaders/bin/dx12` 같은 리소스 경로(끝에 `/` 없음)
 
         /** @brief @p source 의 @p format 바이너리 폴더입니다. 입력만으로 정해진다. @p source 에 `shaders` 폴더 칸이 없으면 빈 값입니다. */
-        [[nodiscard]] static std::optional<ShaderBinaryLocation> make( const ShaderSourceID& source, ShaderTargetFormat format );
+        [[nodiscard]] static optional<ShaderBinaryLocation> make( const ShaderSourceID& source, ShaderTargetFormat format );
         /** @brief 도메인 @p domain 의 `shaders` 폴더(`<domain>/shaders` — `ShaderSourceResolver::findDomainShadersFolder` 와 같은 자리) @p format 바이너리 폴더입니다. 쿠킹 판정이 도메인마다 부른다. */
         [[nodiscard]] static ShaderBinaryLocation makeForDomain( string_view domain, ShaderTargetFormat format );
         /** @brief 폴더 안 파일 @p fileName 의 리소스 id 입니다. */
@@ -124,13 +123,13 @@ namespace sw
          * @brief 이름 그대로 적힌 include @p includeName 을 @p input 의 검색 순서로 찾아 읽습니다(FXC — 이름만 준다). 못 찾으면 빈 값입니다.
          * @param outListAbsentCandidate 찾은 자리보다 앞에서 찾아봤지만 없던 후보(절대 경로)를 뒤에 붙입니다 — 거기에 헤더가 생기면 가려지므로 의존이다(`ShaderCompileResult::_listIncludedFile`).
          */
-        [[nodiscard]] std::optional<AbsolutePath> findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes, vector<string>& outListAbsentCandidate ) const;
+        [[nodiscard]] optional<AbsolutePath> findInclude( const ShaderCompileInput& input, string_view includeName, vector<uint8>& outBytes, vector<string>& outListAbsentCandidate ) const;
         /** @brief @p candidatePath 가 없는 자리를 가리키는 절대 경로이면 true 입니다(include 처리기가 없던 후보를 의존으로 적을지 정한다). */
         [[nodiscard]] static bool isAbsentCandidate( string_view candidatePath );
         /**
          * @brief 컴파일러가 고른 후보 경로 @p candidatePath 를 읽습니다(DXC — 검색 폴더마다 후보를 묻는다). 엄격한 절대 경로인 정규 파일만 받습니다. 없는 후보는 로그 없이 빈 값입니다(다음 폴더로 넘어간다).
          */
-        [[nodiscard]] std::optional<AbsolutePath> readInclude( string_view candidatePath, vector<uint8>& outBytes ) const;
+        [[nodiscard]] optional<AbsolutePath> readInclude( string_view candidatePath, vector<uint8>& outBytes ) const;
 
     private:
         vector<ShaderIncludeRootDomain> _listRootDomain;
@@ -145,14 +144,14 @@ namespace sw
     {
     public:
         /** @brief @p assetPaths 의 우선순위 설정에서 include 루트 도메인(engine · common)의 `shaders` 폴더를 풉니다. 설정에 없거나 폴더가 없으면 오류를 남기고 빈 값입니다. */
-        [[nodiscard]] static std::optional<ShaderSourceResolver> make( const AssetPaths& assetPaths );
+        [[nodiscard]] static optional<ShaderSourceResolver> make( const AssetPaths& assetPaths );
 
         /** @brief include 규칙입니다. */
         [[nodiscard]] const ShaderIncludeResolver& getIncludeResolver() const { return _includeResolver; }
         /** @brief @p source 를 풉니다. `shaders` 칸이 없거나 파일이 없거나 소스가 자기 `shaders` 폴더 밖으로 풀리면 @p outError 에 까닭을 담고 빈 값입니다. */
-        [[nodiscard]] std::optional<ShaderCompileInput> resolve( const ShaderSourceID& source, string& outError ) const;
+        [[nodiscard]] expected<ShaderCompileInput> resolve( const ShaderSourceID& source ) const;
         /** @brief 도메인 @p domain 의 `shaders` 폴더입니다(있는 폴더만). */
-        [[nodiscard]] std::optional<AbsolutePath> findDomainShadersFolder( string_view domain ) const;
+        [[nodiscard]] optional<AbsolutePath> findDomainShadersFolder( string_view domain ) const;
 
     private:
         ShaderSourceResolver( const AssetPaths& assetPaths, ShaderIncludeResolver includeResolver );

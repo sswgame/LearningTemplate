@@ -6,6 +6,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -171,7 +172,7 @@ namespace sw
          * @details 구간 있는 메시는 구간마다 한 번씩(이름 · 머티리얼 필수, 겹침 없음) 적어야 하고, 구간 없는 메시는 목록이 비어야 한다(레이어 머티리얼로 그린다).
          *          빠뜨린 구간을 그리지 않고 넘어가면 잎 없는 나무가 조용히 남는다 — 그래서 모두 적게 한다.
          */
-        [[nodiscard]] static bool validateMeshSections( const FoliageMesh& foliageMesh, const Mesh& mesh, string& outError );
+        [[nodiscard]] static expected<void> validateMeshSections( const FoliageMesh& foliageMesh, const Mesh& mesh );
 
         void setLayers( const vector<FoliageLayer>& listLayer ) { _listLayer = listLayer; }
         /** @brief 레이어 수입니다. */

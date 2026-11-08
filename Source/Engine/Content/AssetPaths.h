@@ -18,13 +18,12 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Subsystem/ServiceSlot.h"
-
-#include <optional>
 
 namespace sw
 {
@@ -95,7 +94,7 @@ namespace sw
          *         없는 파일의 자리(만들 곳)는 `toDiskPath` 다.
          * @note 소문자 키로 먼저 찾고, 못 찾으면 원래 표기로 한 번 더 찾습니다(대소문자를 가리는 파일시스템).
          */
-        [[nodiscard]] std::optional<AbsolutePath> findLooseFile( string_view resourceID ) const;
+        [[nodiscard]] optional<AbsolutePath> findLooseFile( string_view resourceID ) const;
 
         /**
          * @brief 리소스 폴더 id 에 맞는 **디스크 폴더 전부**를 검색 순서로 모읍니다(폴더 나열 `AssetIO::collectAssets` 용).
@@ -114,7 +113,7 @@ namespace sw
          *          **대소문자.** 리소스 id 는 소문자인데 붙인 디스크 도메인의 폴더는 대소문자가 섞일 수 있다. 대소문자를 구분하는 파일 시스템(Linux)에서는 이미 있는 폴더
          *          성분은 디스크 표기를 쓰고, 없는 성분부터는 id 의 표기를 씁니다. 리소스 트리의 도메인은 소문자 규칙이라 모든 플랫폼에서 소문자로 잇습니다.
          */
-        [[nodiscard]] std::optional<AbsolutePath> toDiskPath( string_view resourceID ) const;
+        [[nodiscard]] optional<AbsolutePath> toDiskPath( string_view resourceID ) const;
 
         /**
          * @brief **디스크 경로**를 리소스 id(전역 id. 예: `game/empty/maps/x.scene.xml`, 소문자와 `/`)로 바꿉니다.

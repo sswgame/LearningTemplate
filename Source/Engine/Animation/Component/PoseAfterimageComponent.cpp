@@ -145,7 +145,7 @@ namespace sw
 
     float32 PoseAfterimageComponent::computeOpacity( const FloatCurve& opacityOverLife, float32 ageRatio, float32 baseAlpha )
     {
-        const std::optional<float32> curve = opacityOverLife.evaluate( MathUtil::saturate( ageRatio ) );
+        const optional<float32> curve = opacityOverLife.evaluate( MathUtil::saturate( ageRatio ) );
         return MathUtil::saturate( curve.value_or( 0.0f ) * baseAlpha );
     }
 
