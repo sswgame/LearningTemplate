@@ -235,7 +235,6 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 - **저장:** 멤버는 엔티티로 적지 않고, 내부 씬을 임시로 지어 쓴 상태와의 차이를 앵커의 `<Part>` 로 적는다. 상속 씬은 부모를 지어 쓴 글과의 차이로 적는다(`saveXMLDelta`). 끈 레이어의 엔티티는 읽은 그대로 다시 적는다.
 - **지우기:** 멤버는 지울 수 없다. 프리팹 부품과 같다 — 지워도 다음 로드에 돌아온다.
 - **켜고 끄기:** `SceneDataLayerSubsystem::setLayerActive`, 개발 명령 `scene.layer <이름> on|off`, 에디터 Data Layers 창. 편집 중에 끄면 내리지 않고 숨기기만 한다. 시나리오: `game/empty/automation/datalayer`.
-- **판:** 없어도 되는 칸이라 씬 형식 판은 2 그대로이고 이미 있는 씬은 그대로 읽힌다. 쿠킹본(SCN1)만 판 6 으로 올랐다(다시 굽는다).
 
 ## 기본값을 쓰지 않는 저장
 
@@ -252,10 +251,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 | JSON 형식 | 설정은 층(`ConfigManager`)으로 겹친다. 프리팹 JSON 은 변형을 읽고 쓰지만 기본값은 빼지 않는다. 에디터 테마 토큰(`*.tokens.json`)은 파일이 자기 부모를 고르므로 `_base` 를 적고 키 표를 덮는다(`EditorThemeTokens`) |
 | 오디오 이벤트의 `_parentEvent` | 이벤트가 `_listEvent` 래퍼 안에 있어 카탈로그 규칙(루트 바로 아래 되풀이)에 맞지 않는다. 합치기는 `DataInheritance` 그대로이고 이벤트 하나를 가상의 문서로 넘긴다. 파일 합치기가 목록 원소의 `_base` 를 지우므로 이름이 다르다 |
 | `AudioEffectDef` 목록 | 이름이 비면 종류 이름을 쓰는 규칙이라 열쇠가 비는 원소가 있다. 적으면 통째로 바뀐다 |
-
 | `SkeletonVariant` 의 칸 | 뼈 비율은 곱해지고 클립 규칙은 쌓이며 본은 뒤에 붙는다. 덮어쓰면 변형의 변형이 다른 값이 된다. 사슬(순환 · 깊이 · 없는 부모)만 공통이고 칸은 `Skeleton::mergeVariantText` 가 얹어 평평한 `<Skeleton>` 글을 낸다(쿠킹본에 `_base` 가 남지 않는다). 부모 본 번호를 바꾸지 않는지는 합친 뒤에 본다 |
-
-머티리얼의 `parent` 는 합쳤다(`_base`).
 
 ## 상용 엔진과 비교
 
