@@ -9,8 +9,6 @@
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
-#include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -26,8 +24,7 @@ namespace sw::editor
         {
             static void openPanel()
             {
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<PreferencesPanel>( true ); // 패널은 이 파일에 등록되어 있다
+                (void)EditorPanelManager::getInEditorContext().setPanelOpen<PreferencesPanel>( true ); // 패널은 이 파일에 등록되어 있다
             }
         };
     } // namespace
@@ -110,8 +107,8 @@ namespace sw::editor
 
     uint32 PreferencesPanel::getVisibleSectionCount()
     {
-        const PreferencesPanel* pPanel = editor::getSubsystem<EditorPanelManager>().findPanel<PreferencesPanel>(); // 필수 서비스: 없으면 버그(getSubsystem 이 멈춘다)
-        return pPanel != nullptr ? pPanel->_model.getVisibleSectionCount() : 0u;                                   // 패널이 없으면 보인 섹션도 없다
+        const PreferencesPanel* pPanel = EditorPanelManager::getInEditorContext().findPanel<PreferencesPanel>(); // 필수 서비스: 없으면 버그(getInEditorContext 가 멈춘다)
+        return pPanel != nullptr ? pPanel->_model.getVisibleSectionCount() : 0u;                                 // 패널이 없으면 보인 섹션도 없다
     }
 
     void PreferencesPanel::onPropertyEdited( const PropertyInfo& /*prop*/ )

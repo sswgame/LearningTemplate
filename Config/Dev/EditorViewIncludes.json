@@ -32,6 +32,12 @@
         "Source/Editor/Panels/Settings/GlobalVariablesPanelWatches",
         "Source/Editor/Panels/MaterialGraph/MaterialGraphPanel",
         "Source/Editor/Panels/Scene/DataLayersPanel",
-        "Source/Editor/Panels/TileSet/TileSetPanel"
+        "Source/Editor/Panels/TileSet/TileSetPanel",
+        "Source/Editor/Panels/Settings/PreferencesPanel",
+        "Source/Editor/Panels/Settings/ShortcutsPanel",
+        "Source/Editor/Panels/Settings/SettingsWatches",
+        "Source/Editor/Panels/Scene/EditorSceneViewUtil",
+        "Source/Editor/Panels/Inspector/IInspectorProperty",
+        "Source/Editor/Panels/Multiplayer/MultiplayerTab"
     ]
 }
