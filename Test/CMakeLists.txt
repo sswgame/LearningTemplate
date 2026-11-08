@@ -42,8 +42,20 @@ if(SW_UNIT_TEST_SHARDS LESS_EQUAL 1)
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Testing")
 	set_tests_properties(UnitTests.OtherWorkingFolder PROPERTIES LABELS nogpu TIMEOUT 300)
 
+	# 작업 폴더를 바꿔도 같은 자리를 가리키는 상대 경로 인자의 산출물은 같은 자리에 생기고, 빈 작업 폴더에는 아무것도 생기지 않는다(R5 — 스크립트 머리말).
+	add_test(NAME CommandLine.WorkingFolderPair
+		COMMAND ${CMAKE_COMMAND} -DAPP=$<TARGET_FILE:App> "-DBIN_DIR=${CMAKE_BINARY_DIR}/Bin" "-DOTHER_DIR=${CMAKE_BINARY_DIR}/Testing/WorkingFolder/Empty"
+			"-DOUT_DIR=${CMAKE_BINARY_DIR}/Testing/WorkingFolder/Out" "-DFILTER=FileSystemTest.*,AbsolutePathTest.*"
+			-P "${CMAKE_CURRENT_SOURCE_DIR}/CommandLine/RunWorkingFolderPair.cmake")
+	set_tests_properties(CommandLine.WorkingFolderPair PROPERTIES LABELS nogpu TIMEOUT 300)
+
 	# 틀린 명령줄은 기동을 멈춘다(값을 0 · false 로 바꿔 계속하던 폴백을 없앴다) — 모르는 인자 · 정수 아닌 정수 · 빈 경로.
-	foreach(swBadArgument IN ITEMS "--no-such-argument" "-W=abc" "-log-file=")
+	# Windows 의 드라이브 상대(`C:foo`) · 루트 상대(`\foo`) 경로는 절대도 상대도 아니라 디스크 경로 인자가 거절한다(`AbsolutePath::tryResolve`). POSIX 에서 `\foo` 는 이름일 뿐이다.
+	set(listBadArgument "--no-such-argument" "-W=abc" "-log-file=")
+	if(WIN32)
+		list(APPEND listBadArgument "--test-report=C:foo.json" "--test-report=\\foo.json")
+	endif()
+	foreach(swBadArgument IN LISTS listBadArgument)
 		string(MAKE_C_IDENTIFIER "${swBadArgument}" swBadArgumentName)
 		add_test(NAME CommandLine.Rejects${swBadArgumentName}
 			COMMAND $<TARGET_FILE:App> --test -unattended ${swBadArgument}
