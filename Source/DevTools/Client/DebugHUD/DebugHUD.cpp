@@ -224,7 +224,7 @@ namespace sw
             {
                 (void)pManager;
                 const DebugHUD* pHUD = DebugHUDInternal::findEngineHUD();
-                outValue             = pHUD != nullptr && pHUD->isScreenOpen() ? 1.0 : 0.0;
+                outValue             = pHUD != nullptr && pHUD->isScreenOpen() && pHUD->isShown() ? 1.0 : 0.0; // 사용자 HUD 만 — 실행 상태 섹션으로 열린 화면(보이는 시나리오 실행)은 세지 않는다
                 return pHUD != nullptr;
             }
 
