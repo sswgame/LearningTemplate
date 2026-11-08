@@ -138,6 +138,8 @@ namespace sw
          * @brief 2 본 IK(팔, 다리, 손 IK)입니다. 키는 `root`, `mid`, `end`, `target`, `pole`(대상, 선택), `match_rotation`(끝 본 회전을 대상 회전으로 맞춤),
          *        `keep_end_rotation`(기본 true, 끝 본의 모델 회전을 애니메이션 값으로 유지)입니다.
          * @details 왼손을 무기 손잡이 소켓에 붙이려면 `target` 을 무기 유닛의 `Grip` 소켓(space = 오른손)으로 두고 `match_rotation` 을 켠다. 그러면 손이 손잡이 방향으로 돈다.
+         *          손을 벽 · 난간에 짚게 하려면 `target` 을 접촉 대상(`trace_from` — `RigTargetKind::Trace`)으로 둔다. 대상 가중치(닿고 놓을 때 `blend_speed` 로 오르내린다)만큼
+         *          목표가 애니메이션 손 자리에서 접촉점으로 옮겨 가므로 손이 튀지 않는다.
          */
         class RigTwoBoneIKNode final : public RigNode
         {
@@ -172,6 +174,13 @@ namespace sw
                 quaternion     targetRotation{};
                 if ( context._pInstance->resolveTarget( _target, pose, targetPosition, targetRotation ) == false )
                     return;
+                const float32 targetWeight = context._pInstance->getTargetWeight( _target );
+                if ( targetWeight < 1.0f )
+                {
+                    const quaternion endAnimated = pose.getModelRotation( _end );
+                    targetPosition               = float3::lerp( pose.getModelPosition( _end ), targetPosition, targetWeight );
+                    targetRotation               = quaternion::slerp( endAnimated, targetRotation, targetWeight );
+                }
                 float3           polePosition{};
                 quaternion       poleRotation{};
                 const bool       bPole     = _pole != MathUtil::kMaxUInt32 && context._pInstance->resolveTarget( _pole, pose, polePosition, poleRotation );

@@ -49,6 +49,16 @@ namespace sw
         float3 _translation{};
         PROPERTY( Name = "rotation", Units = deg )
         float3 _rotation{};
+        PROPERTY( Name = "trace_from" )
+        hashed_string _traceFrom{};
+        PROPERTY( Name = "trace_direction" )
+        float3 _traceDirection{};
+        PROPERTY( Name = "trace_distance", Min = 0.0, Units = m )
+        float32 _traceDistance{ 0.0f };
+        PROPERTY( Name = "surface_offset", Units = m )
+        float32 _surfaceOffset{ 0.0f };
+        PROPERTY( Name = "blend_speed", Min = 0.0 )
+        float32 _blendSpeed{ 0.0f };
     };
 
     /** @brief 모든 노드가 받는 공통 키입니다(`RigNode::parseCommon`). `type` 은 에셋이 노드를 만들 때 따로 읽는다. */

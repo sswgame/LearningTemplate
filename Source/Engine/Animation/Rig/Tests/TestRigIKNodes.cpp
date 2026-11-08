@@ -58,6 +58,26 @@ namespace
         }
     };
 
+    /** @brief z = @p _wallZ 에 선 벽입니다(법선 -Z). +Z 로 쏜 광선만 닿습니다. */
+    class FakeRigWallQuery final : public IRigGroundQuery
+    {
+    public:
+        float32 _wallZ{ 0.5f };
+        uint8   _bHasWall{ SW_TRUE };
+
+        bool raycastGround( const float3& origin, const float3& direction, float32 maxDistance, RigGroundHit& outHit ) const override
+        {
+            if ( _bHasWall == SW_FALSE || direction._z < 1.0e-4f )
+                return false;
+            const float32 distance = ( _wallZ - origin._z ) / direction._z;
+            if ( distance < 0.0f || distance > maxDistance )
+                return false;
+            outHit._position = origin + direction * distance;
+            outHit._normal   = float3{ 0.0f, 0.0f, -1.0f };
+            return true;
+        }
+    };
+
     /** @brief 두 다리와 네 마디 팔을 가진 몸에 리그 노드 한 줄을 묶어 돌립니다. 대상은 `Goal` · `Pole` · `Anchor` 입니다. */
     struct RigIKTest
     {
@@ -98,9 +118,10 @@ namespace
         }
 
         /** @brief 노드 한 줄을 읽어 묶습니다. 읽기나 묶기가 실패하면 false 입니다. */
-        [[nodiscard]] bool load( const string& nodeLine )
+        [[nodiscard]] bool load( const string& nodeLine, const string& extraTargets = string{} )
         {
-            const string         xml   = string( R"(<RigAsset><targets><item name="Goal" bone="goal" /><item name="Pole" bone="pole" /><item name="Anchor" bone="anchor" /></targets><nodes>)" ) + nodeLine + "</nodes></RigAsset>";
+            const string xml = string( R"(<RigAsset><targets><item name="Goal" bone="goal" /><item name="Pole" bone="pole" /><item name="Anchor" bone="anchor" />)" ) + extraTargets +
+                               "</targets><nodes>" + nodeLine + "</nodes></RigAsset>";
             shared_ptr<RigAsset> asset = make_shared<RigAsset>();
             if ( asset->loadFromXMLText( xml, "test.rig.xml" ) == false )
                 return false;
@@ -408,6 +429,41 @@ SW_TEST_CASE_F( RigIKTest, FootPlacementPublishesOffsetsAfterThePrepare )
     SW_EXPECT_FALSE( _instance.getNodeOutputValue( hashed_string( "Nobody" ), hashed_string( "pelvis_offset" ), value ) );
 }
 
+// 접촉 대상 + 2 본 IK: 엉덩이에서 +Z 로 쏜 광선이 벽에 닿으면 발이 벽 앞(법선 × surface_offset)에 붙는다. 닿지 않으면 애니메이션 그대로다.
+SW_TEST_CASE_F( RigIKTest, ContactTargetPutsTheEndOnTheSurface )
+{
+    const string wallTarget = R"(<item name="Wall" trace_from="hip.l" trace_direction="0,0,1" trace_distance="1" surface_offset="0.05" />)";
+    SW_REQUIRE_TRUE( load( R"(<item type="TwoBoneIK" name="Touch" root="hip.l" mid="knee.l" end="foot.l" target="Wall" />)", wallTarget ) );
+    FakeRigWallQuery wall;
+    wall._wallZ = 0.5f;
+    run( &wall );
+    SW_EXPECT_NEAR( ( position( kFootL ) - float3{ -0.2f, 1.0f, 0.45f } ).getLength(), 0.0f, 2.0e-3f );
+
+    RigIKTest        missing;
+    FakeRigWallQuery noWall;
+    noWall._bHasWall = SW_FALSE;
+    SW_REQUIRE_TRUE( missing.load( R"(<item type="TwoBoneIK" name="Touch" root="hip.l" mid="knee.l" end="foot.l" target="Wall" />)", wallTarget ) );
+    missing.run( &noWall );
+    SW_EXPECT_NEAR( ( missing.position( kFootL ) - float3{ -0.2f, 0.1f, 0.0f } ).getLength(), 0.0f, 1.0e-4f );
+}
+
+// 접촉 가중치는 blend_speed 로 오른다: 첫 준비(0.1 초, 초당 5)에 0.5 라 발은 애니메이션 자리와 접촉점의 가운데로 간다. 놓으면 같은 속도로 내린다.
+SW_TEST_CASE_F( RigIKTest, ContactTargetBlendsInAndOut )
+{
+    const string wallTarget = R"(<item name="Wall" trace_from="hip.l" trace_direction="0,0,1" trace_distance="1" surface_offset="0.05" blend_speed="5" />)";
+    SW_REQUIRE_TRUE( load( R"(<item type="TwoBoneIK" name="Touch" root="hip.l" mid="knee.l" end="foot.l" target="Wall" />)", wallTarget ) );
+    FakeRigWallQuery wall;
+    run( &wall, 0.1f );
+    SW_EXPECT_NEAR( _instance.getTargetWeight( 3 ), 0.5f, 1.0e-4f );
+    SW_EXPECT_NEAR( ( position( kFootL ) - float3{ -0.2f, 0.55f, 0.225f } ).getLength(), 0.0f, 2.0e-3f );
+
+    wall._bHasWall = SW_FALSE;
+    _pose.setToReference( _skeleton );
+    run( &wall, 0.06f );
+    SW_EXPECT_NEAR( _instance.getTargetWeight( 3 ), 0.2f, 1.0e-4f ); // 마지막 접촉점으로 줄어든다
+    SW_EXPECT_NEAR( _instance.getTargetWeight( 0 ), 1.0f, 1.0e-6f ); // 본 대상은 늘 1
+}
+
 // 발 디딤: 낮은 쪽만큼 골반이 내려가고 양발이 땅 높이를 따른다. 광선은 발 위에서 아래로 쏜다.
 SW_TEST_CASE_F( RigIKTest, FootPlacementFollowsTheGround )
 {
@@ -640,4 +696,21 @@ SW_TEST_CASE( RigIKChainTest, ParseRefusesBadShapes )
     SW_EXPECT_FALSE( parses( R"(<item type="Aim" name="A" bone="hand" target="Goal" aim_axis="0,0,0" />)" ) );
     SW_EXPECT_FALSE( parses( R"(<item type="Aim" name="A" bone="hand" target="Goal"><chain><item bone="arm" weight="2" /></chain></item>)" ) );
     SW_EXPECT_FALSE( parses( R"(<item type="FullBodyIK" name="A" pelvis="pelvis" max_pelvis_offset="1"><chains /></item>)" ) );
+}
+
+// 접촉 대상 읽기 오류: 광선 길이 · 방향은 필수이고, 출처는 하나이며, 광선 칸만 적은 대상은 오류다.
+SW_TEST_CASE( RigIKChainTest, ContactTargetParseRefusesBadShapes )
+{
+    SW_EXPECT_LOG( "RigAsset.RigTraceTargetInvalid" );
+    SW_EXPECT_LOG( "RigAsset.RigTargetMustName" );
+    const auto loadTarget = []( const string& target )
+    {
+        RigIKTest rig;
+        return rig.load( R"(<item type="TwoBoneIK" name="T" root="hip.l" mid="knee.l" end="foot.l" target="Wall" />)", target );
+    };
+    SW_EXPECT_FALSE( loadTarget( R"(<item name="Wall" trace_from="hip.l" trace_direction="0,0,1" />)" ) );                                 // 길이 없음
+    SW_EXPECT_FALSE( loadTarget( R"(<item name="Wall" trace_from="hip.l" trace_distance="1" />)" ) );                                      // 방향 없음
+    SW_EXPECT_FALSE( loadTarget( R"(<item name="Wall" trace_from="hip.l" bone="hip.l" trace_direction="0,0,1" trace_distance="1" />)" ) ); // 출처 둘
+    SW_EXPECT_FALSE( loadTarget( R"(<item name="Wall" bone="hip.l" trace_distance="1" />)" ) );                                            // 광선 칸만
+    SW_EXPECT_TRUE( loadTarget( R"(<item name="Wall" trace_from="hip.l" trace_direction="0,0,1" trace_distance="1" />)" ) );
 }
