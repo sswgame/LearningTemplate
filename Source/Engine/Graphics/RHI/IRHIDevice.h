@@ -34,6 +34,18 @@ namespace sw
     class BindlessIndexReportLog;
 
     /** @brief `IRHIDevice::releaseHandle` 이 해제하는 핸들의 종류입니다. 종류마다 해제에 쓰는 팩터리 함수가 다릅니다. */
+    /**
+     * @struct RHIQueueSyncPoint
+     * @brief 비동기 컴퓨트 큐에 낸 일 하나의 완료 지점입니다(`IRHIDevice::submitAsyncCompute` 가 주고 `waitForAsyncCompute` 가 받는다). 0 은 "없음" 이다.
+     * @details DX12 는 컴퓨트 펜스 값, Vulkan 은 이번 프레임 신호 세마포어의 번호다. 프레임을 넘겨 쓰지 않는다.
+     */
+    struct RHIQueueSyncPoint
+    {
+        uint64 _value{ 0 };
+
+        bool isValid() const { return _value != 0; }
+    };
+
     enum class RHIHandleKind : uint8
     {
         BindlessResource = 0, ///< `registerBindlessBufferSRV` 가 돌려준 인덱스이며 `unregisterBindlessResource` 로 해제한다.
@@ -467,6 +479,24 @@ namespace sw
          *          기본 구현은 executeCommandList 로 넘긴다(DX11/GL 처럼 기록이 곧 실행인 백엔드).
          */
         virtual void executeCommandListImmediate( IRHICommandList* pCmdList ) { executeCommandList( pCmdList ); }
+
+        /**
+         * @brief 비동기 컴퓨트 큐에 낼 커맨드 리스트를 만듭니다. 컴퓨트 명령(디스패치 · 버퍼 배리어 · 복사)만 기록합니다.
+         * @details 능력 `_bAsyncCompute` 가 거짓인 백엔드(DX11 · GL · WebGPU · 큐가 하나인 Vulkan 장치)는 nullptr 이고 오류를 남긴다 — 부르는 쪽이 능력을 먼저 묻는다(렌더 그래프는
+         *          능력이 없으면 AsyncCompute 패스를 그래픽스 큐로 돌린다). 리스트 객체는 프레임 안에서 여러 번 begin 해도 된다(얼로케이터 쌍을 바꾼다).
+         */
+        virtual unique_ptr<IRHICommandList> createAsyncComputeCommandList();
+        /**
+         * @brief 닫은 비동기 컴퓨트 리스트를 컴퓨트 큐에 냅니다(포크). 지금까지 `executeCommandList` 로 넘긴 그래픽스 일이 끝난 뒤에 시작한다.
+         * @details 그래픽스 대기열과 프레임 스트림을 먼저 큐에 내고 그래픽스 큐가 신호한 값을 컴퓨트 큐가 기다린다. 돌려준 값은 `waitForAsyncCompute` 에 넘긴다.
+         *          프레임 끝(`endFrame`)은 기다리지 않은 값을 모두 기다린 뒤 프레임 펜스를 신호한다 — 리스트 얼로케이터 · 지연 해제가 프레임 펜스 하나로 충분하다.
+         */
+        virtual RHIQueueSyncPoint submitAsyncCompute( IRHICommandList* pCmdList );
+        /**
+         * @brief 그래픽스 큐가 @p point 까지의 비동기 컴퓨트 일을 기다리게 합니다(조인). 이 뒤에 넘기는 그래픽스 리스트부터 기다린다.
+         * @details 그 전까지 넘긴 그래픽스 리스트는 기다리지 않도록 먼저 큐에 낸다 — 포크와 조인 사이의 그래픽스 일이 컴퓨트와 겹치는 자리다.
+         */
+        virtual void waitForAsyncCompute( RHIQueueSyncPoint point );
 
         /**
          * @brief 커맨드 리스트가 제출될 때마다 프레임 스트림을 **곧바로** 큐로 내보낼지 정합니다.

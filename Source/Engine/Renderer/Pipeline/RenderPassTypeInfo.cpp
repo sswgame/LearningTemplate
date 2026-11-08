@@ -142,7 +142,7 @@ namespace sw
                         info._pDefaultShader = &EngineDefaultAssets::_shaderPostBloom;
                         info._pPassDefine    = kPassBloomDownsampleDefine;
                         info._inputContract  = makeContract( { Role::SourceColor }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kComputeImplementation;
                         break;
                     }
                     case RenderPassType::Outline:
@@ -221,7 +221,8 @@ namespace sw
                         // 효과 패스다 — 렌즈가 핀홀(조리개 0) · 직교 · 후처리를 끈 뷰는 패스를 기록하지 않고 출력이 원본을 가리킨다(kBypassesToSource).
                         info._pDefaultShader = &EngineDefaultAssets::_shaderDepthOfField;
                         info._inputContract  = makeContract( { Role::SourceColor, Role::SceneDepth }, {} );
-                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
+                        info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource |
+                                      Flag::kComputeImplementation;
                         break;
                     }
                     case RenderPassType::HighlightOutline:
@@ -514,14 +515,20 @@ namespace sw
                     const bool bOmitted  = row.hasFlag( Flag::kOmittedWhenOff );
                     if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) != ( bBypasses || bOmitted ) || ( bBypasses && bOmitted ) )
                         return false;
-                    // 컴퓨트 패스는 파이프라인 XML 에 나오지 않고 그래픽스 성질을 갖지 않는다.
-                    if ( row.hasFlag( Flag::kCompute ) && ( isPipelinePassType( row._type ) || row.hasFlag( Flag::kDrawsSceneMeshes | Flag::kGenericFullscreen ) ) )
+                    // 표의 컴퓨트 패스는 뷰 패스가 아니고(프레임 패스 · 내부 슬롯) 그래픽스 성질을 갖지 않는다.
+                    if ( row.hasFlag( Flag::kCompute ) && ( isViewPassType( row._type ) || row.hasFlag( Flag::kDrawsSceneMeshes | Flag::kGenericFullscreen ) ) )
+                        return false;
+                    // 프레임 패스는 표의 셰이더로 돈다(XML 이 셰이더 칸을 비운다 — 검증). 기본 셰이더가 없으면 PSO 도 실행도 없다.
+                    if ( isFramePassType( row._type ) && row._pDefaultShader == nullptr )
                         return false;
                     if ( row.hasFlag( Flag::kRequiresGPUCulling ) && row.hasFlag( Flag::kCompute ) == false )
                         return false;
                     // 화면 속도는 깊이와 같은 픽셀의 값이다 — 깊이를 쓰는 불투명 패스(내부 슬롯은 대신 그리는 패스가 깊이를 쓴다)만 쓴다.
                     const bool bDepthOwner = row.hasFlag( Flag::kDepthWrite ) || row._targetSourceType != RenderPassType::Invalid;
                     if ( row.hasFlag( Flag::kWritesVelocity ) && ( bDepthOwner == false || row.hasFlag( Flag::kDrawsTransparentBatch ) ) )
+                        return false;
+                    // 컴퓨트 구현은 일반 풀스크린 패스의 다른 실행이다 — 같은 입력 계약 · 같은 셰이더 파일을 쓴다.
+                    if ( row.hasFlag( Flag::kComputeImplementation ) && ( row.hasFlag( Flag::kGenericFullscreen ) == false || row._pDefaultShader == nullptr ) )
                         return false;
                 }
                 return true;
@@ -572,6 +579,15 @@ namespace sw
         // 셰이더 assert 변형 — 요구되지 않으면(Shipping 은 늘) define 도 PSO 변형도 없다.
         if ( info.hasFlag( RenderPassTraitFlag::kGPUAssertTarget ) && GPUAssertMonitor::isRequested() )
             selection._listDefine.push_back( kGPUAssertDefine );
+        return selection;
+    }
+
+    RenderPassShaderSelection selectRenderPassComputeShader( const RenderGraphPassDesc& passDesc, const EngineDefaultAssets& engineDefaultAssets )
+    {
+        RenderPassShaderSelection selection = selectRenderPassShader( passDesc._type, &passDesc, engineDefaultAssets );
+        const string              computeDefine{ kPassComputeImplementationDefine };
+        if ( VectorUtil::contains( selection._listDefine, computeDefine ) == false )
+            selection._listDefine.push_back( computeDefine );
         return selection;
     }
 

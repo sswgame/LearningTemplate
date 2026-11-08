@@ -56,6 +56,8 @@
 	<Document root="RenderPipelineDesc">
 		<Field name="_listAttachment" key="_name"/>
 		<Field name="_listPass" key="_name"/>
+		<Field name="_listResource" key="_name"/>
+		<Field name="_listFramePass" key="_name"/>
 	</Document>
 	<Document root="SpriteLibrary">
 		<Field name="_listCategory" key="_name">

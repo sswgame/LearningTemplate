@@ -8,14 +8,16 @@
 
 namespace sw
 {
-    D3D12RHICommandList::D3D12RHICommandList( D3D12RHIDevice* pDevice )
+    D3D12RHICommandList::D3D12RHICommandList( D3D12RHIDevice* pDevice, D3D12_COMMAND_LIST_TYPE type )
         : _pDevice{ pDevice }
-        , _entry{ pDevice != nullptr ? pDevice->acquireCommandListEntry() : D3D12CommandListEntry{} }
+        , _type{ type }
+        , _entry{ pDevice != nullptr ? pDevice->acquireCommandListEntry( type ) : D3D12CommandListEntry{} }
         , _bEntryDirty{ SW_FALSE }
         , _state{}
         , _context{ pDevice, _entry._list.Get(), &_state }
     {
         _pContext = &_context;
+        _context.setComputeQueueList( type == D3D12_COMMAND_LIST_TYPE_COMPUTE );
         if ( _pDevice != nullptr )
             _pDevice->registerCommandList( this );
     }
@@ -66,7 +68,7 @@ namespace sw
         if ( _bEntryDirty != SW_FALSE )
         {
             _pDevice->recycleCommandListEntryDeferred( _entry );
-            _entry = _pDevice->acquireCommandListEntry();
+            _entry = _pDevice->acquireCommandListEntry( _type );
             _context.rebindCommandList( _entry._list.Get() );
             _bEntryDirty = SW_FALSE;
         }
@@ -82,8 +84,11 @@ namespace sw
 
         _bEntryDirty       = SW_TRUE;
         _state._bRecording = SW_TRUE;
-        // 힙, 루트 시그니처, bindless 테이블은 리스트마다 한 번 바인딩한다. 이후에는 루트 CBV, 슬롯 테이블, 루트 상수만 바꾼다.
-        _pDevice->bindBindlessRootState( _entry._list.Get() );
+        // 힙, 루트 시그니처, bindless 테이블은 리스트마다 한 번 바인딩한다. 이후에는 루트 CBV, 슬롯 테이블, 루트 상수만 바꾼다. 컴퓨트 큐 리스트는 컴퓨트 루트만 받는다.
+        if ( _type == D3D12_COMMAND_LIST_TYPE_COMPUTE )
+            _pDevice->bindBindlessComputeRootState( _entry._list.Get() );
+        else
+            _pDevice->bindBindlessRootState( _entry._list.Get() );
     }
 
     void D3D12RHICommandList::endCommandList()

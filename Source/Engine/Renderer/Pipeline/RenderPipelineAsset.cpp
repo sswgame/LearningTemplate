@@ -38,7 +38,7 @@ namespace sw
 
     bool RenderPipelineAsset::finishLoad( string_view sourcePath )
     {
-        if ( mergeRenderPassAttachments( sourcePath ) == false )
+        if ( mergeRenderPassRefs( sourcePath ) == false )
             return false;
         // 검증 오류가 하나라도 있으면 로드 실패다. 선언하지 않은 첨부 · 모르는 패스 타입이 렌더러까지 가면 렌더러가 코드의 이름 · 포맷으로 짐작해야 한다.
         const uint32 issueCount = validate( sourcePath );
@@ -52,9 +52,22 @@ namespace sw
         return true;
     }
 
-    bool RenderPipelineAsset::mergeRenderPassAttachments( string_view sourcePath )
+    bool RenderPipelineAsset::hasFramePass( RenderPassType type ) const
     {
-        vector<RenderPassAttachment> listMerged;
+        for ( const RenderGraphPassDesc& pass : _desc._listFramePass )
+        {
+            if ( pass._type == type )
+                return true;
+        }
+        return false;
+    }
+
+    bool RenderPipelineAsset::mergeRenderPassRefs( string_view sourcePath )
+    {
+        // 묶음의 원소가 앞, 이 파이프라인의 원소가 뒤다 — 세 목록이 같은 규칙이다. 이름이 겹치면 덮어쓰지 않고 검증이 알린다.
+        vector<RenderPassAttachment>    listAttachment;
+        vector<RenderGraphResourceDesc> listResource;
+        vector<RenderGraphPassDesc>     listFramePass;
         for ( const string& passRef : _desc._listRenderPassRef )
         {
             RenderPassAsset renderPass;
@@ -63,16 +76,17 @@ namespace sw
                 SW_LOG_ERROR_ID( "RenderPipelineAsset.RenderPassRefNotLoaded", "[%#] render pass '%#' could not be loaded", sourcePath, passRef );
                 return false;
             }
-            for ( const RenderPassAttachment& attachment : renderPass.getDesc()._listAttachment )
-            {
-                listMerged.push_back( attachment );
-            }
+            const RenderPassDesc& refDesc = renderPass.getDesc();
+            listAttachment.insert( listAttachment.end(), refDesc._listAttachment.begin(), refDesc._listAttachment.end() );
+            listResource.insert( listResource.end(), refDesc._listResource.begin(), refDesc._listResource.end() );
+            listFramePass.insert( listFramePass.end(), refDesc._listFramePass.begin(), refDesc._listFramePass.end() );
         }
-        for ( RenderPassAttachment& attachment : _desc._listAttachment )
-        {
-            listMerged.push_back( std::move( attachment ) );
-        }
-        _desc._listAttachment = std::move( listMerged );
+        listAttachment.insert( listAttachment.end(), std::make_move_iterator( _desc._listAttachment.begin() ), std::make_move_iterator( _desc._listAttachment.end() ) );
+        listResource.insert( listResource.end(), std::make_move_iterator( _desc._listResource.begin() ), std::make_move_iterator( _desc._listResource.end() ) );
+        listFramePass.insert( listFramePass.end(), std::make_move_iterator( _desc._listFramePass.begin() ), std::make_move_iterator( _desc._listFramePass.end() ) );
+        _desc._listAttachment = std::move( listAttachment );
+        _desc._listResource   = std::move( listResource );
+        _desc._listFramePass  = std::move( listFramePass );
         return true;
     }
 
@@ -292,6 +306,92 @@ namespace sw
                 return issueCount;
             }
 
+            static const RenderGraphResourceDesc* findResource( const RenderPipelineDesc& desc, string_view name )
+            {
+                for ( const RenderGraphResourceDesc& resource : desc._listResource )
+                {
+                    if ( StringUtil::equals( resource._name, name, true ) )
+                        return &resource;
+                }
+                return nullptr;
+            }
+
+            /**
+             * @brief 프레임 그래프(`_listResource` · `_listFramePass`)가 실행과 맞는가.
+             * @details 자원: 이름이 겹치지 않고 첨부와도 겹치지 않으며 종류가 Persistent · External 이다(Transient 는 첨부다).
+             *          패스: 타입이 프레임 패스이고 한 번만 나오며(실행이 종류마다 한 번 모든 뷰를 돈다), 입출력이 선언한 자원이고, 이름이 뷰 패스와 겹치지 않는다.
+             *          셰이더 · 진입점 · 퍼뮤테이션 · 깊이 첨부 칸은 비어 있어야 한다 — 셰이더는 표(`RenderPassTypeInfo`)의 것이고 쿠커 · 엔진 PSO 가 같은 표를 본다. 적어도 실행이 읽지 않으면 XML 이 거짓말을 한다.
+             */
+            static uint32 checkFrameGraph( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32     issueCount{ 0 };
+                const auto report = [&]( const utf8* pID, string_view name, const utf8* pReason )
+                {
+                    fixed_string<constant::buffer::kMax512> text;
+                    formatstring( text.data(), text.capacity(), "[%#] frame graph '%#': %#", sourcePath, name, pReason );
+                    Logger::writeLogGlobal( LogLevel::Error, SW_LOG_TAG, text.c_str(), __FILE__, __LINE__, pID );
+                    ++issueCount;
+                };
+                for ( size_t resourceIndex = 0; resourceIndex < desc._listResource.size(); ++resourceIndex )
+                {
+                    const RenderGraphResourceDesc& resource = desc._listResource[resourceIndex];
+                    if ( resource._name.empty() )
+                        report( "RenderPipelineAsset.FrameResourceNoName", resource._name, "a resource needs a _name" );
+                    if ( resource._kind == RenderGraphResourceKind::Transient )
+                        report( "RenderPipelineAsset.FrameResourceTransient", resource._name, "_kind must be Persistent or External - transient images are attachments" );
+                    if ( findAttachment( desc, resource._name ) != nullptr )
+                        report( "RenderPipelineAsset.FrameResourceIsAttachment", resource._name, "the name is also an attachment" );
+                    for ( size_t otherIndex = 0; otherIndex < resourceIndex; ++otherIndex )
+                    {
+                        if ( StringUtil::equals( desc._listResource[otherIndex]._name, resource._name, true ) )
+                        {
+                            report( "RenderPipelineAsset.FrameResourceDuplicated", resource._name, "the resource is declared twice" );
+                            break;
+                        }
+                    }
+                }
+                for ( size_t passIndex = 0; passIndex < desc._listFramePass.size(); ++passIndex )
+                {
+                    const RenderGraphPassDesc& pass = desc._listFramePass[passIndex];
+                    if ( isFramePassType( pass._type ) == false )
+                        report( "RenderPipelineAsset.FramePassType", pass._name, "_type must be a frame pass type (DepthHistory, OcclusionTiles, VFXSimulation, InstanceAnimation, MeshMorph, MeshSkin, "
+                                                                                 "GPUCull, LightGrid, VolumetricFog, ProbeUpdate, CanvasMarker)" );
+                    const bool bTableOwnsShader = pass._shaderPath.empty() && pass._vertexEntryPoint.empty() && pass._pixelEntryPoint.empty() && pass._computeEntryPoint.empty() &&
+                                                  pass._geometryEntryPoint.empty() && pass._hullEntryPoint.empty() && pass._domainEntryPoint.empty() && pass._listPermutation.empty();
+                    if ( bTableOwnsShader == false )
+                        report( "RenderPipelineAsset.FramePassShader", pass._name, "a frame pass takes its shader from the pass type table - leave shader, entry point and permutation fields empty" );
+                    if ( pass._depthAttachment.empty() == false || pass._minPostQuality != 0 )
+                        report( "RenderPipelineAsset.FramePassViewField", pass._name, "_depthAttachment and _minPostQuality are view pass fields" );
+                    // 컴퓨트 큐는 드로우 · 렌더 타깃 상태를 모른다 — 표의 컴퓨트 종류만 비동기 큐에 둘 수 있다(깊이 히스토리는 풀스크린 드로우다).
+                    if ( pass._queue == RHIQueueType::AsyncCompute && getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kCompute ) == false )
+                        report( "RenderPipelineAsset.FramePassAsyncNotCompute", pass._name, "_queue AsyncCompute needs a compute pass type - this type draws on the graphics queue" );
+                    for ( const string& name : pass._listInput )
+                    {
+                        if ( findResource( desc, name ) == nullptr )
+                            report( "RenderPipelineAsset.FramePassInputNotResource", pass._name, "an input is not in _listResource" );
+                    }
+                    for ( const string& name : pass._listOutput )
+                    {
+                        if ( findResource( desc, name ) == nullptr )
+                            report( "RenderPipelineAsset.FramePassOutputNotResource", pass._name, "an output is not in _listResource" );
+                    }
+                    for ( size_t otherIndex = 0; otherIndex < passIndex; ++otherIndex )
+                    {
+                        const RenderGraphPassDesc& other = desc._listFramePass[otherIndex];
+                        if ( other._name == pass._name )
+                            report( "RenderPipelineAsset.FramePassNameDuplicated", pass._name, "the frame pass is declared twice" );
+                        else if ( other._type == pass._type )
+                            report( "RenderPipelineAsset.FramePassTypeDuplicated", pass._name, "the pass type is declared twice - a frame pass already covers every view" );
+                    }
+                    for ( const RenderGraphPassDesc& viewPass : desc._listPass )
+                    {
+                        if ( viewPass._name == pass._name )
+                            report( "RenderPipelineAsset.FramePassNameIsViewPass", pass._name, "a view pass has the same name" );
+                    }
+                }
+                return issueCount;
+            }
+
             /** @brief 선택 스테이지 칸과 컴퓨트 패스의 선언이 실행과 맞는가. 컬러 출력 하나, 깊이 형식이 아닌 입력 최대 둘(RW 슬롯 — 에뮬 백엔드의 슬롯이 셋이다), 고른 셰이더, 블렌드 없음. 진입점 칸은 컴퓨트 패스만 쓴다. */
             static uint32 checkComputePasses( const RenderPipelineDesc& desc, string_view sourcePath )
             {
@@ -391,10 +491,23 @@ namespace sw
             static uint32 checkPassTypeAndAttachments( const RenderPipelineDesc& desc, const RenderGraphPassDesc& pass, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
-                if ( isPipelinePassType( pass._type ) == false )
+                if ( isViewPassType( pass._type ) == false )
                 {
-                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassUnknownTypeNot", "[%#] pass '%#': type '%#' cannot be used in a pipeline - write a RenderPassType that is not an internal slot",
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassUnknownTypeNot", "[%#] pass '%#': type '%#' cannot be a view pass - write a view RenderPassType (frame pass types go in _listFramePass, internal slots nowhere)",
                                      sourcePath, pass._name, getEnumName( pass._type ) );
+                    ++issueCount;
+                }
+                // 컴퓨트 구현은 표가 가진 종류만 고를 수 있다 — 없는 구현을 적으면 실행이 읽지 않는 칸이다.
+                if ( pass._implementation == RenderPassExecutionMode::Compute && getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kComputeImplementation ) == false )
+                {
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassNoComputeImplementation", "[%#] pass '%#': type '%#' has no compute implementation - _implementation must be Pixel", sourcePath, pass._name,
+                                     getEnumName( pass._type ) );
+                    ++issueCount;
+                }
+                // 뷰 그래프는 뷰마다 다시 돌고 병렬로 기록한다 — 비동기 큐는 프레임 패스만 받는다(포크 · 조인을 뷰마다 되풀이할 자리가 없다).
+                if ( pass._queue != RHIQueueType::Graphics )
+                {
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassAsyncNotFramePass", "[%#] pass '%#': _queue AsyncCompute is only for frame passes (_listFramePass)", sourcePath, pass._name );
                     ++issueCount;
                 }
                 for ( const string& inputName : pass._listInput )
@@ -575,7 +688,7 @@ namespace sw
                 {
                     // 컬러를 그리는 패스(표의 kDrawsDeclaredColor — 지오메트리 · 하늘 · 외곽선 껍질 · TAA · 일반 풀스크린)는 선언한 컬러 출력에 그린다.
                     // 실행은 이름으로 타깃을 짐작하지 않으므로 선언이 없으면 그릴 곳이 없다(옛 짐작은 없는 첨부의 핸들 0 — 백버퍼 — 를 열었다).
-                    const bool bDrawsColor = isPipelinePassType( pass._type ) &&
+                    const bool bDrawsColor = isViewPassType( pass._type ) &&
                                              getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kDrawsDeclaredColor );
                     if ( bDrawsColor && pass._listResolvedColorOutput.empty() )
                     {
@@ -912,6 +1025,7 @@ namespace sw
         issueCount += Internal::resolveAndCheckPassAttachments( _desc, sourcePath );
         issueCount += Internal::checkPassRenderState( _desc, sourcePath );
         issueCount += Internal::checkComputePasses( _desc, sourcePath );
+        issueCount += Internal::checkFrameGraph( _desc, sourcePath );
         issueCount += Internal::checkModuleShaderList( _desc, sourcePath );
         issueCount += Internal::checkColorOutputLimit( _desc, sourcePath );
         issueCount += Internal::checkOutputDivisors( _desc, sourcePath );

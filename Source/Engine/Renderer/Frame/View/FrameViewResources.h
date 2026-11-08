@@ -11,6 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 
+#include "Engine/Renderer/Graph/RenderGraphAliasPlan.h"
+
 namespace sw
 {
     struct FrameViewTarget;
@@ -49,7 +51,7 @@ namespace sw
          * @brief 뷰 하나의 트랜지언트를 이 크기로 맞춥니다. 크기 · 그림자 품질이 같으면 그대로 두고, 다시 만들었으면 true 입니다.
          * @details 다시 만들면 TAA · 깊이 히스토리, 가림 타일, 자동 노출 기록도 새로 만든다. 새것이라 시간 누적 기록은 첫 프레임에 버린다(`_bHasHistory` 를 내린다).
          */
-        [[nodiscard]] bool updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height );
+        [[nodiscard]] bool updateViewTransients( FrameViewTarget& view, uint32 width, uint32 height, const RenderGraphAliasPlan& aliasPlan, uint32 aliasGeneration );
         /** @brief 뷰 하나의 트랜지언트 · 히스토리 · 가림 타일 · 후처리 기록을 놓습니다. 디바이스가 없으면 핸들만 잊습니다. */
         void releaseViewTransients( FrameViewTarget& view );
         /**

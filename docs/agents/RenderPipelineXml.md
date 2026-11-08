@@ -9,7 +9,7 @@
 | 파일 | 하는 일 |
 |---|---|
 | `<도메인>/pipeline/*.xml` (`RenderPipelineDesc`) | 첨부, 패스 그래프, 패스별 PSO 설정. 고르는 법은 `-gv_renderPipeline=` 또는 팩 설정 |
-| `engine/renderpass/*.xml` (`RenderPassDesc`) | 여러 파이프라인이 함께 쓰는 첨부 묶음. `_listRenderPassRef` 로 가져오면 읽을 때 `_listAttachment` 앞에 합쳐진다 |
+| `engine/renderpass/*.xml` (`RenderPassDesc`) | 여러 파이프라인이 함께 쓰는 묶음(첨부 · 프레임 자원 · 프레임 패스). `_listRenderPassRef` 로 가져오면 읽을 때 같은 목록 앞에 합쳐진다. 프레임 패스 한 벌은 `framecomputerenderpass.xml` |
 | `engine/renderstate/blendpresets.xml` (`RenderBlendPresetTable`) | 블렌드 프리셋(Opaque · Transparent · Additive · Multiply · Premultiplied). 줄을 더하면 코드 없이 새 프리셋이다 |
 | `*.material` (`MaterialDef`) | 머티리얼. 렌더 상태 칸은 패스와 같은 형식이다(아래 머티리얼 칸) |
 
@@ -129,6 +129,49 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 블룸 먼지 마스크 · 렌즈 플레어는 블룸을 더하는 함수(`post_bloom.hlsli`) 안이다 — 전용 Bloom 패스와 후처리 체인이 같은 코드를 쓴다. 플레어는 밝은 부분을 화면 가운데에 대해 뒤집은 선 위의 고스트 넷과 헤일로 고리에서 다시 읽는다(반해상도 밝은 부분 `BloomBright` 가 있으면 그것을, 없으면 원본에서 구한다). 언리얼처럼 블룸 다운샘플 사슬의 여러 단을 쓰지 않는다 — 단이 하나라 고스트가 덜 흐리다.
 
 화면 공간 반사(`ScreenSpaceReflection`, 디퍼드)는 안개와 같은 모양이다 — 장면 색 사본 · 깊이 · G버퍼 노멀을 읽어 장면 색 **위에 블렌드**하고, 세기 0 · 후처리를 끈 뷰에서는 그리지 않는다(전용 실행). 꺼진 효과의 다른 길(`kBypassesToSource` — 출력 이름이 원본을 가리킴)은 출력을 그 패스만 써야 해서(로드 검증) 반투명이 같은 장면 색에 그리는 자리에는 쓸 수 없다. HZB 가 없어 광선은 같은 걸음으로 나아간다(언리얼은 HZB 로 빈 칸을 건너뛴다) — HZB 를 더하면 `classifyRayPoint` 의 걸음을 밉 단으로 바꾼다.
+## 프레임 그래프
+
+뷰 그래프(`_listPass`)는 뷰(주 시점 · 추가 뷰)마다 다시 돈다. 프레임에 한 번 모든 뷰의 몫을 기록하는 일(깊이 히스토리 · 가림 타일 · 입자 · 인스턴스 애니메이션 · 모프 · 스킨 · 컬링 · 라이트 그리드 · 볼륨 안개 · 프로브 · 마커)은 프레임 그래프다 — 뷰 그래프보다 먼저 큐에 낸다(`FrameGraphExecutor`). 언리얼 RDG 는 한 그래프에 둘을 넣지만 이 엔진의 뷰 그래프는 뷰마다 다시 돌아 범위를 가른다.
+
+| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
+|---|---|---|
+| `_listResource` 의 `RenderGraphResourceDesc` | 프레임 패스가 읽고 쓰는 자원 이름과 `_kind`. 그래프는 버퍼를 만들지 않고 순서만 정한다(주인은 서브시스템) | 이름이 겹침 · 첨부와 겹침. `_kind="Transient"`(첨부의 몫) |
+| `_kind="Persistent"` | 프레임을 넘는 히스토리(깊이 히스토리 · 가림 타일 · 입자 상태 · 프로브). 앞선 쓰기 없이 읽으면 지난 프레임 값이고, 이번 프레임 첫 쓰기보다 앞에 온다 | |
+| `_kind="External"` | 서브시스템이 프레임마다 채우는 버퍼(인스턴스 · 라이트 · 컬링 결과 · 그리드). "쓰지 않고 읽는다" 경고가 없다 | |
+| `_listFramePass` 의 패스 | `_type` 은 프레임 패스 종류(`isFramePassType`). 입출력은 `_listResource` 이름 | 뷰 패스 종류 · 같은 종류 둘 · 자원이 아닌 이름 · 셰이더 · 진입점 · 퍼뮤테이션 칸(셰이더는 표의 것) · `_depthAttachment` · `_minPostQuality` · 뷰 패스와 같은 이름 |
+
+- 선언하지 않은 종류는 PSO 도 없고 돌지 않는다. 그 종류가 채우는 버퍼를 준비하는 쪽(간접 인자를 컬링에 맡김 · GPU 라이트 그리드 · 볼륨 안개 · 프로브 · 스킨 풀)도 PSO 가 없으니 준비하지 않는다(`FramePSOManager::getEnginePSO` 가 선언을 본다).
+- 각 패스는 자기 버퍼의 배리어를 스스로 건다. 깊이 히스토리 패스는 끝에 히스토리를 RW 텍스처 상태로 넘겨 둔다(읽는 쪽 둘 다 RW 텍스처로 읽고, 비동기 컴퓨트 큐는 렌더 타깃 상태를 옮길 수 없다).
+- 뷰 그래프의 패스는 프레임 그래프 결과(컬링 결과 · 그리드)를 입력으로 적지 않는다 — 프레임 그래프가 통째로 앞이다.
+
+### 비동기 컴퓨트 큐(`_queue`)
+
+| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
+|---|---|---|
+| `_queue` | `Graphics`(기본) · `AsyncCompute`. 언리얼 `ERDGPassFlags::AsyncCompute` 자리 | 뷰 패스의 `AsyncCompute`. 컴퓨트가 아닌 프레임 패스(깊이 히스토리)의 `AsyncCompute` |
+
+- 규칙: 능력 `RHICapabilities::_bAsyncCompute` 가 참인 백엔드(DX12 — COMPUTE 큐와 펜스 둘, Vulkan — 그래픽스 패밀리에 큐가 둘인 장치의 두 번째 큐와 이진 세마포어)에서만 따로 돈다. DX11 · GL · WebGPU · 큐가 하나인 Vulkan 장치는 그래픽스 큐에서 같은 순서로 돈다 — 능력 표가 정한 길이지 실패의 대체가 아니다. `-gv_asyncCompute=0` 은 측정용으로 모두 그래픽스 큐에 둔다.
+- 포크 · 조인은 그래프가 간선으로 정한다(`RenderGraph::getQueueSteps`): 실행 순서에서 이어진 AsyncCompute 패스가 한 묶음(컴퓨트 리스트 하나)이고 그 앞의 그래픽스 일 뒤에 시작한다. 그래픽스 패스는 자기가 읽는 묶음만 앞에서 기다리고, 아무도 읽지 않은 묶음은 프레임 그래프 끝에서 기다린다. 프레임 끝(`endFrame`)은 남은 컴퓨트 일을 모두 기다린 뒤 프레임 펜스를 신호한다.
+- 큐 사이 자원: 버퍼는 D3D12 에서 큐 경계마다 COMMON 으로 감쇠해 이전이 따로 없고, Vulkan 은 같은 패밀리라 소유권 이전이 없다. 텍스처는 생산자가 컴퓨트가 아는 상태로 넘겨 둔다(깊이 히스토리 → RW). 컴퓨트 큐 리스트의 배리어는 픽셀 셰이더 상태를 쓰지 않는다(`D3D12RHICommandContext::toQueueState`).
+- 후보: 가림 타일 · 입자 · 라이트 그리드 · 프로브(`framecomputerenderpass.xml`). 이득이 없으면 그 패스의 `_queue` 한 줄을 지운다.
+
+## 컴퓨트 구현(`_implementation`)
+
+| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
+|---|---|---|
+| `_implementation` | `Pixel`(기본, 풀스크린 삼각형) · `Compute`(같은 셰이더 파일의 `CSMain` — define `SW_PASS_COMPUTE`, 8x8 그룹 공유 타일) | 표에 컴퓨트 구현이 없는 종류(`kComputeImplementation` — 지금은 BloomDownsample · DepthOfField 만) |
+
+- 규칙: 컴퓨트 구현은 입력을 bindless SRV 번호로 읽어 네이티브 bindless(DX12 · Vulkan)에서만 돈다. DX11 · GL · WebGPU 는 픽셀 구현이 돈다(능력이 정한 길 — 쿠커는 두 구현을 다 굽는다).
+- 효과의 값(블룸 문턱 · 렌즈 · 역뷰-투영 4 열)은 루트 상수로 간다(`post_compute.hlsli`) — 컴퓨트 PSO 에는 PassCB 가 묶이지 않는다.
+- 어느 쪽을 낼지는 측정이 정한다. 바꾸는 법은 한 줄이다: `deferredpipeline.xml` 의 `BloomDownsample` 패스, `deferredpipeline.xml` · `forwardpipeline.xml` 의 `DepthOfField` 패스에 `_implementation="Compute"` 를 적는다(자식 파이프라인은 물려받는다).
+
+## 트랜지언트 앨리어싱
+
+뷰 그래프의 첨부 중 레벨 수명이 겹치지 않고 서술(형식 · 나눗수 · RW 용도 · 클리어 값)이 같은 것은 텍스처 하나를 나눠 쓴다(`RenderGraphAliasPlan::build`, 계획은 `FramePassExecutor::buildTransientAliasPlan`). XML 에 적을 칸은 없다 — 수명은 패스의 입출력 선언이 정한다.
+
+- 나누지 않는 것: 깊이 형식(장면 깊이는 다음 프레임의 깊이 히스토리가 읽는다 · 그림자 맵), `_loadOp="Load"`(프레임을 넘어 잇는다), TAA 출력, 처음 쓸 때 만드는 효과 출력(그 주인 · 별칭은 자기 텍스처다).
+- 꺼지면 원본을 가리키는 효과(`kBypassesToSource`)는 원본과 출력을 한 구간으로 묶는다. NaN 감시(`-gv_nanCheck`)를 켠 실행은 나누지 않는다. 비교는 `-gv_transientAliasing=0`.
+- 서술이 다른 첨부를 한 힙에 겹치는 앨리어싱(DX12 placed resource · Vulkan 메모리 공유)은 아직 없다 — 이 계획의 주인 · 별칭 묶음을 받아 쓰는 다음 층이다.
 
 ## 선택 스테이지를 쓰는 셰이더
 

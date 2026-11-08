@@ -13,7 +13,10 @@
 
 namespace sw
 {
-    /** @brief 첨부 묶음 서술입니다. 파이프라인이 `_listRenderPassRef` 로 가져옵니다. 프레임 구성(패스 그래프)은 RenderPipelineDesc 가 담당합니다. */
+    /**
+     * @brief 여러 파이프라인이 함께 쓰는 묶음 서술입니다(첨부 · 프레임 자원 · 프레임 패스). 파이프라인이 `_listRenderPassRef` 로 가져옵니다.
+     * @details 뷰 그래프(`_listPass`)는 RenderPipelineDesc 가 담당한다. 프레임 패스는 셰이딩 방식과 무관해 포워드 · 디퍼드가 한 벌을 나눈다(`framecomputerenderpass.xml`).
+     */
     REFLECT()
     struct RenderPassDesc
     {
@@ -21,8 +24,14 @@ namespace sw
         PROPERTY()
         string _name = "DefaultMainPass";
 
-        PROPERTY()
+        PROPERTY( SkipIfEmpty )
         vector<RenderPassAttachment> _listAttachment;
+
+        PROPERTY( SkipIfEmpty )
+        vector<RenderGraphResourceDesc> _listResource;
+
+        PROPERTY( SkipIfEmpty )
+        vector<RenderGraphPassDesc> _listFramePass;
     };
 } // namespace sw
 

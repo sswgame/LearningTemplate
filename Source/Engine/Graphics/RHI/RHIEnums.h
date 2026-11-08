@@ -64,6 +64,18 @@ namespace sw
     };
 
     /**
+     * @enum RHIQueueType
+     * @brief 패스가 도는 GPU 큐입니다. 파이프라인 XML 의 `_queue` 가 이 이름을 적습니다(언리얼 `ERDGPassFlags::AsyncCompute` 자리).
+     * @details AsyncCompute 는 능력 `RHICapabilities::_bAsyncCompute` 가 있는 백엔드에서만 따로 돈다. 없으면 그래픽스 큐에서 같은 순서로 돈다(능력 표가 정한 길).
+     */
+    ENUM()
+    enum class RHIQueueType : uint8
+    {
+        Graphics,     ///< 그래픽스(DIRECT) 큐입니다. 기본값입니다.
+        AsyncCompute, ///< 비동기 컴퓨트 큐입니다. 컴퓨트만 기록할 수 있습니다(드로우 · 렌더 타깃 상태 없음).
+    };
+
+    /**
      * @enum RHIBufferUsage
      * @brief 범용 GPU 버퍼의 용도 플래그입니다(createBuffer).
      */

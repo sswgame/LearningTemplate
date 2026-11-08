@@ -239,6 +239,7 @@ namespace sw
             caps._bWireframeFill        = _bFillModeNonSolid;
             caps._bMaterialTessellation = _bTessellationShader != 0 ? SW_TRUE : SW_FALSE;
             caps._bGPUBreadcrumbs       = _bCheckpoints != SW_FALSE ? SW_TRUE : SW_FALSE;
+            caps._bAsyncCompute         = _asyncComputeQueue != VK_NULL_HANDLE ? SW_TRUE : SW_FALSE;
             return caps;
         }
 
@@ -263,6 +264,12 @@ namespace sw
         /** @brief 커맨드 리스트를 프레임 스트림의 제출 순서에 연결합니다. 즉시 모드면 바로 제출합니다. */
         void executeCommandList( IRHICommandList* pCmdList ) override;
         void executeCommandListImmediate( IRHICommandList* pCmdList ) override;
+        /** @brief 그래픽스 패밀리의 두 번째 큐에 낼 리스트를 만듭니다(패밀리가 같아 일반 리스트와 같은 풀 · 같은 바인딩이다). 그 큐가 없으면 오류를 남기고 nullptr 입니다. */
+        unique_ptr<IRHICommandList> createAsyncComputeCommandList() override;
+        /** @brief 그래픽스 일을 큐에 내며 세마포어를 신호하고, 두 번째 큐가 그것을 기다려 리스트를 실행한 뒤 다른 세마포어를 신호합니다. 그 세마포어의 번호를 돌려준다. */
+        RHIQueueSyncPoint submitAsyncCompute( IRHICommandList* pCmdList ) override;
+        /** @brief 그 전 그래픽스 일을 큐에 낸 뒤, 다음 그래픽스 제출이 그 세마포어를 기다리게 합니다. */
+        void waitForAsyncCompute( RHIQueueSyncPoint point ) override;
 
         /** @brief 서피스 제약으로 계약 포맷을 낼 수 없는 경우가 있으므로 실제로 채택한 포맷을 보고합니다. */
         RHIFormat getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
@@ -630,6 +637,17 @@ namespace sw
         void unregisterCommandList( VulkanRHICommandList* pCmdList );
         /** @brief 프레임 스트림의 다음 세그먼트 버퍼를 얻어 기록을 시작합니다. */
         VkCommandBuffer beginNextFrameSegment();
+        /** @brief 프레임 스트림의 새 세그먼트를 열고 기록 상태 · 뷰포트 · 시저를 다시 깝니다(`executeCommandList` · `submitFrameWorkNow` 가 함께 쓴다). 못 열면 프레임을 멈춘다. */
+        void openNextFrameSegment();
+        /**
+         * @brief 대기 중인 그래픽스 버퍼(`_listPendingSubmit`)를 곧바로 그래픽스 큐에 냅니다. 남은 acquire 대기와 비동기 컴퓨트 대기를 이 제출이 기다리고, @p signal 이 있으면 신호합니다.
+         * @details 즉시 모드 비우기 · 포크 · 조인이 함께 쓴다. 부르는 쪽이 큐 락을 쥐지 않는다.
+         */
+        void submitPendingGraphics( VkSemaphore signal );
+        /** @brief 지금 세그먼트를 닫아 대기열에 넣고 대기열을 곧바로 큐에 낸 뒤 새 세그먼트를 엽니다. @p signal 은 `submitPendingGraphics` 와 같다. */
+        void submitFrameWorkNow( VkSemaphore signal );
+        /** @brief 이번 프레임 슬롯의 이진 세마포어를 하나 빌립니다(슬롯의 펜스가 지나면 다시 쓴다). 만들지 못하면 멈춘다. */
+        VkSemaphore acquireAsyncSemaphore();
 
         /** @brief 이미지 레이아웃을 배리어로 전환합니다. */
         bool transitionImageLayout( VkCommandBuffer cmd, VkImage image, uint32 oldLayout, uint32 newLayout, uint32 aspect );
@@ -714,6 +732,12 @@ namespace sw
         VkDevice                 _device;
         VkQueue                  _graphicsQueue;
         uint32                   _graphicsQueueFamilyIndex;
+        /**
+         * @brief 그래픽스 큐 패밀리의 두 번째 큐(비동기 컴퓨트)입니다. 패밀리에 큐가 하나뿐이거나 컴퓨트 비트가 없으면 비어 있고 능력이 거짓이다.
+         * @details 같은 패밀리라 큐 패밀리 소유권 이전(release/acquire 배리어)이 없다 — 다른 패밀리의 전용 컴퓨트 큐를 쓰려면 버퍼마다 이전이 필요하다(지금 길이 아니다).
+         *          제출은 `_queueMutex` 로 그래픽스 큐와 같이 직렬화한다.
+         */
+        VkQueue _asyncComputeQueue;
         /// @brief 인플라이트 프레임 슬롯(0..kMaxFrameCountInFlight-1)입니다. 스왑체인 이미지 인덱스와 **다른 값**입니다.
         ///        이미지 인덱스는 스왑체인이 acquire 로 받아 가지고 있습니다(`_swapChain.getImageIndex()`).
         ///        렌더 스레드만 넘기고(`endFrame`), 다른 스레드의 `updateConstantBuffer` 도 칸을 고르려 읽으므로 atomic 입니다.
@@ -786,6 +810,15 @@ namespace sw
         vector<VulkanRHISwapChain*> _listFrameSwapChain;
         /// @brief 이 프레임에 새로 획득한 이미지의 acquire 세마포어입니다. 이 프레임의 첫 제출(즉시 모드 비우기 · `endFrame`)이 모두 기다리고 비운다.
         vector<VkSemaphore> _listPendingAcquireWait;
+        /// @brief 조인이 남긴 컴퓨트 신호 세마포어입니다. 다음 그래픽스 제출(포크 · 조인의 비우기 · 즉시 모드 · `endFrame`)이 모두 기다리고 비운다.
+        vector<VkSemaphore> _listPendingComputeWait;
+        /// @brief 이번 프레임에 비동기 컴퓨트 제출이 신호한 세마포어입니다(번호 = 순번 + 1 이 `RHIQueueSyncPoint`). `endFrame` 이 아직 기다리지 않은 것을 모두 기다린다.
+        vector<VkSemaphore> _listAsyncSignal;
+        /// @brief `_listAsyncSignal` 마다 그래픽스가 이미 기다렸는지입니다(이진 세마포어는 신호 한 번에 대기 한 번이다).
+        vector<uint8> _listAsyncSignalWaited;
+        /// @brief 프레임 슬롯마다의 이진 세마포어 풀입니다. 슬롯의 펜스를 기다린 뒤(beginFrame) 커서를 0 으로 돌려 다시 쓴다.
+        vector<vector<VkSemaphore>> _listAsyncSemaphorePool;
+        uint32                      _asyncSemaphoreCursor; ///< 이번 프레임 슬롯 풀에서 다음에 빌릴 칸
         /// @brief 링 슬롯마다 마지막 제출에 매긴 _frameFenceCounter 값입니다. beginFrame 이 그 슬롯의 펜스를
         ///        기다린 뒤 _releaseQueue.tickCompleted(이 값)을 불러 실제 GPU 완료를 확인하고 해제합니다.
         vector<uint64> _listRingFrameNumber;

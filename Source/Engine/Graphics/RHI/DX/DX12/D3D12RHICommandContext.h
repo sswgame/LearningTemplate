@@ -25,6 +25,7 @@ namespace sw
             : _pDevice{ pDevice }
             , _pCmdList{ pCmdList }
             , _pState{ pState }
+            , _bComputeQueueList{ SW_FALSE }
         {
         }
         ~D3D12RHICommandContext() override = default;
@@ -35,6 +36,8 @@ namespace sw
         ID3D12GraphicsCommandList* getNativeCommandList() const { return _pCmdList; }
         /** @brief 기록 대상 네이티브 리스트를 교체합니다(소유자가 얼로케이터 쌍을 바꿀 때). */
         void rebindCommandList( ID3D12GraphicsCommandList* pCmdList ) { _pCmdList = pCmdList; }
+        /** @brief 이 컨텍스트가 비동기 컴퓨트 큐(COMPUTE) 리스트에 기록하는지 정합니다. 그 리스트의 배리어는 컴퓨트가 아는 상태만 쓴다(toQueueState). */
+        void setComputeQueueList( bool bComputeQueue ) { _bComputeQueueList = bComputeQueue ? SW_TRUE : SW_FALSE; }
         /**
          * @brief 명령을 기록할 네이티브 리스트를 반환합니다. 부르는 것 자체가 "이 리스트에 뭔가 적었다" 는 표시입니다.
          * @details 모든 기록 호출이 이 함수를 지납니다(`_pCmdList->` 직접 접근은 널 검사와 루트 상태 바인딩뿐입니다). 프레임 스트림
@@ -121,11 +124,18 @@ namespace sw
         /** @brief 건 인덱스 버퍼를 겁니다. 걸지 않았거나 부서졌으면 알리고 false 이며 부르는 쪽은 드로우를 버립니다(네 백엔드가 같다 — `RHIBufferBinding::bindForDraw`). */
         [[nodiscard]] bool bindIndexBufferForDraw();
         void               transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );
+        /**
+         * @brief 컴퓨트 큐 리스트면 그래픽스 전용 상태(PIXEL_SHADER_RESOURCE)를 빼고 NON_PIXEL 로 둡니다. 그래픽스 리스트면 그대로입니다.
+         * @details D3D12 COMPUTE 리스트의 배리어는 픽셀 셰이더 · 렌더 타깃 · 깊이 상태를 쓸 수 없다. 나중에 그래픽스가 픽셀 셰이더로 읽는 버퍼는 큐 경계에서 COMMON 으로 감쇠하고
+         *          거기서 암묵 승격된다(버퍼 규칙). 텍스처는 감쇠하지 않으므로 컴퓨트 큐에서 읽을 텍스처는 생산자(그래픽스)가 컴퓨트가 아는 상태(RW · NON_PIXEL)로 넘겨 둔다.
+         */
+        D3D12_RESOURCE_STATES toQueueState( D3D12_RESOURCE_STATES state ) const;
 
     private:
         D3D12RHIDevice*            _pDevice;
         ID3D12GraphicsCommandList* _pCmdList;
         D3D12RecordingState*       _pState;
+        uint8                      _bComputeQueueList; ///< COMPUTE 리스트에 기록하는가(setComputeQueueList)
     };
 } // namespace sw
 #endif

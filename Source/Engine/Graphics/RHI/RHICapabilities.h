@@ -54,6 +54,13 @@ namespace sw
          *          (`FramePSOManager.DisplacementUnsupported`) — 평면으로 대신 그리지 않는다(언리얼도 테셀레이션 없는 플랫폼에서 변위를 빼지만 여기서는 빠진 그림을 숨기지 않는다).
          */
         uint8 _bMaterialTessellation{ SW_FALSE };
+        /**
+         * @brief 그래픽스 큐와 나란히 도는 비동기 컴퓨트 큐가 있는지입니다(`IRHIDevice::createAsyncComputeCommandList` · `submitAsyncCompute` · `waitForAsyncCompute`).
+         * @details DX12 는 COMPUTE 큐와 펜스 둘, Vulkan 은 그래픽스 큐 패밀리의 두 번째 큐(패밀리가 같아 소유권 이전이 없다)와 이진 세마포어로 잇는다 — 그 패밀리에 큐가 하나뿐인
+         *          장치는 거짓이다. DX11 · GL · WebGPU 는 API 에 큐가 하나라 늘 거짓이다. 거짓이면 `_queue="AsyncCompute"` 패스는 그래픽스 큐에서 같은 순서로 돈다 —
+         *          능력 표가 정한 길이지 실패를 덮는 대체가 아니다(언리얼 `GSupportsEfficientAsyncCompute` 가 거짓이면 RDG 가 AsyncCompute 패스를 그래픽스로 돌리는 것과 같다).
+         */
+        uint8 _bAsyncCompute{ SW_FALSE };
 
         /** @brief 기본값(컴퓨트만 켠 보수적 기본)으로 만듭니다. */
         RHICapabilities() noexcept = default;

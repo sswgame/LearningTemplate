@@ -13,6 +13,7 @@
 struct Bloom
 {
     static float3 computeBrightFromBlur( float3 blur );
+    static float3 computeBrightFromBlurWith( float3 blur, float3 params ); // 값을 인자로 받는다 — PassCB 가 없는 컴퓨트 구현(post_bloom.hlsl)이 루트 상수로 넘긴다
     static float3 computeBright( float2 uv, float2 texel );
     static float3 computeBrightDownsampled( float2 uv, float2 sourceTexel );
     static float3 apply( float2 uv, float2 texel, float3 color );
@@ -31,9 +32,15 @@ static const int kLensFlareGhostCount = 4;
  */
 static float3 Bloom::computeBrightFromBlur( float3 blur )
 {
+    return Bloom::computeBrightFromBlurWith( blur, g_BloomParams.xyz );
+}
+
+/** @brief 문턱(x) · 세기(y) · 무릎(z)을 인자로 받는 같은 식입니다. 픽셀 · 컴퓨트 구현이 한 식을 쓴다. */
+static float3 Bloom::computeBrightFromBlurWith( float3 blur, float3 params )
+{
     float peakChannel = max( max( blur.r, blur.g ), blur.b );
-    float soft        = saturate( ( peakChannel - g_BloomParams.x + g_BloomParams.z ) / max( g_BloomParams.z, 1e-4 ) );
-    return blur * soft * soft * g_BloomParams.y;
+    float soft        = saturate( ( peakChannel - params.x + params.z ) / max( params.z, 1e-4 ) );
+    return blur * soft * soft * params.y;
 }
 
 /**

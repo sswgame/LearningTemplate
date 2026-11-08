@@ -67,6 +67,8 @@ namespace sw
      *          VFX 메시 입자는 방출기의 메시 머티리얼이 이 머티리얼이면 같은 길로 왜곡을 그린다.
      */
     inline constexpr const utf8* kMaterialDistortionDefine = "MATERIAL_DISTORTION";
+    /** @brief 컴퓨트 구현(`RenderPassExecutionMode::Compute`)이 패스 셰이더에 추가하는 define 입니다. 같은 파일의 `CSMain` 이 이 define 아래에 있다. */
+    inline constexpr const utf8* kPassComputeImplementationDefine = "SW_PASS_COMPUTE=1";
 
     /** @brief FSR 1 의 RCAS 단계가 fsr1.hlsl 에 추가하는 define 입니다. 없으면 같은 파일이 EASU 단계입니다. */
     inline constexpr const utf8* kPassFSRRcasDefine = "SW_PASS_FSR_RCAS=1";
@@ -205,9 +207,18 @@ namespace sw
          * @details 속도는 깊이와 같은 픽셀의 것이어야 TAA · 모션 블러가 깊이와 짝지어 읽는다 — 깊이를 쓰지 않는 반투명 · 외곽선은 쓰지 않는다(언리얼 기본값도 반투명은 속도를 쓰지 않는다).
          *          G버퍼는 명세가 속도를 넷째 MRT 로 늘 가지고, 포워드는 출력 선언이 있을 때만 `kPassVelocityDefine` 으로 둘째 타깃에 쓴다.
          */
-        static constexpr uint32                kWritesVelocity = SW_BIT( 26 );
-        *@brief 컬러 출력 없이 픽셀 스테이지가 깊이( SV_Depth ) 를 쓰는 내부 패스다( 그림자 캐시 복원 ).컬러가 없는 패스는 픽셀 스테이지를 떼는데(`FramePSOManager::makePassPSODesc`) * 이 패스만 남긴다.쿠커는 내부 슬롯의 VS · PS 를 늘 굽는다.*/
-            static constexpr uint32 kWritesPixelDepth = SW_BIT( 27 );
+        static constexpr uint32 kWritesVelocity = SW_BIT( 26 );
+        /**
+         * @brief 컬러 출력 없이 픽셀 스테이지가 깊이(SV_Depth)를 쓰는 내부 패스다(그림자 캐시 복원). 컬러가 없는 패스는 픽셀 스테이지를 떼는데(`FramePSOManager::makePassPSODesc`)
+         *        이 패스만 남긴다. 쿠커는 내부 슬롯의 VS · PS 를 늘 굽는다.
+         */
+        static constexpr uint32 kWritesPixelDepth = SW_BIT( 27 );
+        /**
+         * @brief 일반 풀스크린 패스지만 컴퓨트 구현(같은 셰이더 파일의 `CSMain`, define `SW_PASS_COMPUTE`)도 있어 XML 의 `_implementation="Compute"` 로 고를 수 있다(블룸 다운샘플 · 피사계 심도).
+         * @details 컴퓨트 구현은 입력을 bindless 번호로 직접 읽어 네이티브 bindless(DX12 · Vulkan)에서만 돈다 — 에뮬 백엔드(DX11 · GL · WebGPU)는 픽셀 구현이 돈다(능력이 정한 길).
+         *          어느 쪽이 나은지는 측정으로 정한다(언리얼 블룸 · DOF 의 r.*.Compute 스위치 자리). 비트 27 — W10 이 더한 kWritesVelocity 와 겹치지 않게 26 을 비워 둔다.
+         */
+        static constexpr uint32 kComputeImplementation = SW_BIT( 28 );
     };
 } // namespace sw
 
@@ -284,6 +295,12 @@ namespace sw
      * @param pTargetDesc 컬러 타깃을 정하는 서술입니다. 파이프라인 패스는 자기 서술, 내부 슬롯(`ForwardOpaqueNoDepthWrite`)은 대신 그리는 패스(`_targetSourceType`)의 서술입니다. nullptr 이면 false 입니다.
      */
     SW_API bool passWritesVelocity( RenderPassType type, const RenderGraphPassDesc* pTargetDesc );
+
+    /**
+     * @brief 패스 @p passDesc 의 컴퓨트 구현(`_implementation="Compute"`)이 컴파일할 셰이더 경로와 define 입니다 — 픽셀 구현과 같은 파일 · define 에 `kPassComputeImplementationDefine` 을 더한다.
+     * @details 런타임 PSO(`FramePSOManager`)와 쿠커가 함께 부른다. 진입점은 컴퓨트 스테이지 기본값(`CSMain`)이다.
+     */
+    SW_API RenderPassShaderSelection selectRenderPassComputeShader( const RenderGraphPassDesc& passDesc, const EngineDefaultAssets& engineDefaultAssets );
 
     /** @brief `kDiagnostic` 패스가 이 실행에서 요청됐는지 반환합니다(NanCheck 는 `-gv_nanCheck`). 진단 패스가 아니면 false 입니다. */
     SW_API bool isDiagnosticPassRequested( RenderPassType type );

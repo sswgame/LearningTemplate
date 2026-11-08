@@ -42,6 +42,7 @@ namespace sw
             RHIFormat          _format{ RHIFormat::Unknown }; ///< 만들 때의 포맷(파이프라인 XML 의 선언)
             RHIAttachmentOps   _ops{};                        ///< 초기값 · 로드 · 저장 동작 — 파이프라인 XML 의 선언
             uint32             _idleFrames{ 0 };              ///< 쓰는 패스가 이어서 돌지 않은 프레임 수(`releaseIfIdle`)
+            hashed_string      _aliasOwner{};                 ///< 텍스처를 빌린 별칭이면 주인 첨부 이름(`allocateAlias`). 비면 자기 텍스처다
         };
 
         /**
@@ -92,6 +93,13 @@ namespace sw
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
          */
         bool allocateSized( IRHIDevice* pDevice, const hashed_string& name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width, uint32 height, bool bUnorderedAccess = false );
+        /**
+         * @brief 이미 만든 첨부 @p owner 의 텍스처를 @p name 이 함께 씁니다(앨리어싱 — 레벨 수명이 겹치지 않고 서술이 같은 첨부, `RenderGraphAliasPlan::build`).
+         * @details 별칭은 자기 로드 · 저장 · 클리어 값(@p ops)과 자기 클리어 기록(`markCleared` 의 이름 키)을 가진다 — 처음 쓰는 패스가 자기 값으로 지운다. 텍스처 · SRV · RW 는
+         *          주인 것이라 별칭을 지워도 놓지 않는다. 주인은 별칭이 있는 동안 쉬어도 놓지 않는다(`releaseIfIdle`).
+         * @return 주인이 없으면 false 이고 아무것도 하지 않는다(부르는 쪽이 자기 텍스처로 만든다). 이미 있으면 true 다.
+         */
+        bool allocateAlias( const hashed_string& name, const hashed_string& owner, const RHIAttachmentOps& ops );
         /** @brief 이름의 첨부(텍스처 + SRV)입니다. 원본을 가리키는 이름(`forward`)은 원본의 첨부입니다. 없으면 빈 값입니다. */
         Attachment find( const hashed_string& name ) const;
         /** @brief 이름의 텍스처 핸들입니다. 원본을 가리키는 이름은 원본의 핸들입니다. 없으면 0 입니다. */

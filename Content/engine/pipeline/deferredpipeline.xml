@@ -512,5 +512,6 @@
 	<_listRenderPassRef>
 		<item>engine/renderpass/defaultrenderpass.xml</item>
 		<item>engine/renderpass/scenecopyrenderpass.xml</item>
+		<item>engine/renderpass/framecomputerenderpass.xml</item>
 	</_listRenderPassRef>
 </RenderPipelineDesc>

@@ -48,7 +48,7 @@ namespace sw
         /**
          * @brief GPU 타임스탬프 슬롯 배치입니다. 슬롯은 `constant::render::kMaxGPUTimestampSlot`(64)개입니다.
          * @details 패스는 앞에서부터 인덱스 × 2 쌍을 쓴다(병렬 기록이라 흐르는 카운터가 아니라 고정 슬롯).
-         *          프레임 전체와 컴퓨트 프리패스는 **뒤쪽 세 슬롯**을 쓴다. 그래서 패스는 30개까지다.
+         *          프레임 전체와 프레임 그래프는 **뒤쪽 세 슬롯**을 쓴다. 그래서 패스는 30개까지다.
          *          백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 슬롯이 먼저 기록되어도 값이 잘리지 않는다.
          */
         static constexpr uint32 kGPUTimestampSlotComputeBegin = constant::render::kMaxGPUTimestampSlot - 3u;
