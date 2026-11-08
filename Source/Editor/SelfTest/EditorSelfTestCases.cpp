@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
-#include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Panel/EditorPanelText.h"
@@ -150,7 +150,7 @@ namespace sw::editor
                 const EditorThemeConfig savedTheme = EditorThemeUtil::getActiveTheme();
                 const float32           savedScale = EditorThemeUtil::getDPIScale();
                 const float32           probeScale = savedScale + 0.5f; // 배율 1 은 ScaleAllSizes 를 건너뛰어 거듭 곱해지는지 볼 수 없다. 그래서 모니터 배율과 무관하게 1 이 아닌 값을 쓴다
-                (void)context.expect( EditorThemeUtil::applyThemeByName( EditorConfig{}._themeName ), "the default theme token set is missing" );
+                (void)context.expect( EditorThemeUtil::applyThemeByName( EditorAppearanceConfig{}._themeName ), "the default theme token set is missing" );
                 EditorThemeUtil::setDPIScale( probeScale );
                 const EditorThemeConfig probeTheme = EditorThemeUtil::getActiveTheme();
                 for ( uint32 applyIndex = 0; applyIndex < 3; ++applyIndex )

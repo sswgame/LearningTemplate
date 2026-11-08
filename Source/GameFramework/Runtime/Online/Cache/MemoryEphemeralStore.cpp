@@ -2,8 +2,8 @@
 
 #include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
 
-#include "Core/Container/CompareUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include <algorithm>

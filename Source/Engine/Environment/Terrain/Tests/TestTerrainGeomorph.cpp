@@ -65,8 +65,8 @@ namespace
         /** @brief 정점의 UV 가 돌려주는 샘플 좌표입니다. */
         static void findSample( const RHIVertex& vertex, float32 last, uint32& outSampleX, uint32& outSampleZ )
         {
-            outSampleX = static_cast<uint32>( MathUtil::round( vertex._arrUv[0] * last ) );
-            outSampleZ = static_cast<uint32>( MathUtil::round( vertex._arrUv[1] * last ) );
+            outSampleX = static_cast<uint32>( MathUtil::round( vertex._arrUV[0] * last ) );
+            outSampleZ = static_cast<uint32>( MathUtil::round( vertex._arrUV[1] * last ) );
         }
     };
 } // namespace

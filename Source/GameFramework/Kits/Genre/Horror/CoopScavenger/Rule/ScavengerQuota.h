@@ -3,9 +3,9 @@
  * @brief 할당량 주기를 구현합니다. 마감까지 남은 날, 이번 할당량, 채운 양을 관리하고 마감을 판정합니다(채우면 다음 할당량과 보너스, 못 채우면 게임 오버).
  */
 #pragma once
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -33,7 +33,7 @@ namespace sw
     class SW_KIT_API ScavengerQuota
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "SCQT" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "SCQT" );
         static constexpr uint32 kStateVersion = 1;
 
         ScavengerQuota();

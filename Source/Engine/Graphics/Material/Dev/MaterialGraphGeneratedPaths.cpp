@@ -2,12 +2,12 @@
 
 #include "Engine/Graphics/Material/Dev/MaterialGraphGeneratedPaths.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"

@@ -13,8 +13,8 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/hashed_string.h"
 
 #include "Editor/Panels/Animation/Model/BoneMaskHierarchy.h"
 

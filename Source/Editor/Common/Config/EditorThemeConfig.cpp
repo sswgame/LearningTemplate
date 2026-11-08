@@ -2,10 +2,10 @@
 
 #include "Editor/Common/Config/EditorThemeConfig.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
-#include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorAppearanceConfig.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 namespace sw::editor
@@ -53,7 +53,7 @@ namespace sw::editor
             static float32 readSavedRadius( const EditorThemeConfig& theme, const hashed_string& key )
             {
                 const float32* pValue = theme._bRadiusOverridden == SW_TRUE ? theme.findMetric( key ) : nullptr;
-                return pValue != nullptr ? *pValue : EditorConfig::kNotOverridden;
+                return pValue != nullptr ? *pValue : EditorAppearanceConfig::kNotOverridden;
             }
         };
     } // namespace
@@ -71,7 +71,7 @@ namespace sw::editor
         return nullptr;
     }
 
-    bool EditorThemeConfig::buildFromSaved( const vector<EditorThemeConfig>& listTheme, const EditorConfig& saved, EditorThemeConfig& outTheme )
+    bool EditorThemeConfig::buildFromSaved( const vector<EditorThemeConfig>& listTheme, const EditorAppearanceConfig& saved, EditorThemeConfig& outTheme )
     {
         const EditorThemeConfig* pTheme = findByName( listTheme, saved._themeName );
         if ( pTheme == nullptr )
@@ -113,15 +113,15 @@ namespace sw::editor
         inoutTheme._bRadiusOverridden                                   = SW_TRUE;
     }
 
-    void EditorThemeConfig::writeSaved( const EditorThemeConfig& theme, EditorConfig& outSaved )
+    void EditorThemeConfig::writeSaved( const EditorThemeConfig& theme, EditorAppearanceConfig& outSaved )
     {
         outSaved._themeName = theme._name;
 
         // 덮어쓰면 강조색 키는 늘 표에 있다(`overrideAccent`).
         const Color* pAccent   = theme._bAccentOverridden == SW_TRUE ? theme.findColor( EditorThemeConfigInternal::kAccentKey ) : nullptr;
-        outSaved._themeAccentR = pAccent != nullptr ? pAccent->_r : EditorConfig::kNotOverridden;
-        outSaved._themeAccentG = pAccent != nullptr ? pAccent->_g : EditorConfig::kNotOverridden;
-        outSaved._themeAccentB = pAccent != nullptr ? pAccent->_b : EditorConfig::kNotOverridden;
+        outSaved._themeAccentR = pAccent != nullptr ? pAccent->_r : EditorAppearanceConfig::kNotOverridden;
+        outSaved._themeAccentG = pAccent != nullptr ? pAccent->_g : EditorAppearanceConfig::kNotOverridden;
+        outSaved._themeAccentB = pAccent != nullptr ? pAccent->_b : EditorAppearanceConfig::kNotOverridden;
 
         outSaved._themeWindowRounding = EditorThemeConfigInternal::readSavedRadius( theme, EditorThemeConfigInternal::kRadiusWindowKey );
         outSaved._themeFrameRounding  = EditorThemeConfigInternal::readSavedRadius( theme, EditorThemeConfigInternal::kRadiusFrameKey );

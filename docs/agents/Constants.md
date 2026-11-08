@@ -19,7 +19,7 @@ One meaning, one definition. A second copy of a value compiles, passes tests, an
 | π family, √2, e | `MathUtil` (shaders: `common.hlsli`) |
 | Gravity | `PhysicsSystem::getConfiguredGravity(Magnitude)` |
 | Golden ratio, splitmix64, FNV-1a | `HashUtil` |
-| Four-character tags | `FourCcUtil::make( "SWHF" )` |
+| Four-character tags | `FourCCUtil::make( "SWHF" )` |
 | Time and byte units | `constant::time::` (`kNanosecondsPerSecond`, `kMillisecondsPerSecond` ...) · `constant::memory::` (`kBytesPerMegabyte` ...); never `1e9`, `1024 * 1024`, a local `kKilobyte` or `kMillisecondsPerSecond` |
 | Default fixed simulation step | `constant::time::kDefaultFixedStepSeconds` (60 Hz); never a retyped `1.0f / 60.0f` |
 | Default per-frame catch-up limit of a fixed-step world | `constant::time::kDefaultMaxFrameSeconds` (`FixedStepTimer` second argument); a world that must take more (fast-forward) passes its own named value |

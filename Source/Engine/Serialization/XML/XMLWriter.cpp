@@ -2,7 +2,7 @@
 
 #include "Engine/Serialization/XML/XMLWriter.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include <charconv>
 

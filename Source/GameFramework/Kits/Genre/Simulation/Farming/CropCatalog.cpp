@@ -2,8 +2,8 @@
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"

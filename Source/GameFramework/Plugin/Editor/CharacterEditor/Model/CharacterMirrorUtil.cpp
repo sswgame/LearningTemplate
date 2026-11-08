@@ -2,7 +2,7 @@
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterMirrorUtil.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Serialization/XML/XMLDocument.h"

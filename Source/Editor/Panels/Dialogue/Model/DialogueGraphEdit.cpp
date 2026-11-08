@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Dialogue/Model/DialogueGraphEdit.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 

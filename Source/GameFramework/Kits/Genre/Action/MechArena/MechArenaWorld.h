@@ -13,13 +13,13 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 #include "Core/Time/FixedStepTimer.h"
 
@@ -228,7 +228,7 @@ namespace sw
         friend class MechArenaProjectileQuery;
 
     public:
-        static constexpr uint32 kStateTag       = FourCcUtil::make( "MCHA" );
+        static constexpr uint32 kStateTag       = FourCCUtil::make( "MCHA" );
         static constexpr uint32 kStateVersion   = 3;
         static constexpr uint32 kSlotStride     = 256; ///< 탄의 반응 번호에서 기체 번호와 슬롯을 가르는 폭(한 기체의 슬롯 수 상한)
         static constexpr int32  kUnlimitedGauge = -1;  ///< 비용을 무시하는 팀의 `getTeamGauge`(게이지 상한 없음)

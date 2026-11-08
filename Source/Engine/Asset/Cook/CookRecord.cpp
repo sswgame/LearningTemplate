@@ -2,12 +2,12 @@
 
 #include "Engine/Asset/Cook/CookRecord.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Constants.h"
-#include "Core/String/HexUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"

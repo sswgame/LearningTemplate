@@ -10,7 +10,7 @@
 using namespace sw;
 
 /** @brief [FrameProfileReportTest] 쓴 JSON 을 다시 읽으면 메타데이터 · 히치 · 할당 · 구간 표가 그대로 온다. 칸 이름은 스크립트가 읽는 계약이다 */
-SW_TEST_CASE( FrameProfileReportTest, JsonRoundTrips )
+SW_TEST_CASE( FrameProfileReportTest, JSONRoundTrips )
 {
     FrameProfileReport report;
     report._build                  = "Debug";

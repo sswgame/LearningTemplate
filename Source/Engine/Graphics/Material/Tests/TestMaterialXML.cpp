@@ -44,7 +44,7 @@ namespace
 /**
  * @brief [MaterialXMLTest] 실제 머티리얼의 bSrgb="0" · bHdr="1" 이 그대로 읽힌다
  */
-SW_TEST_CASE( MaterialXMLTest, ReadsSrgbAndHdrFlagsOfRealMaterials )
+SW_TEST_CASE( MaterialXMLTest, ReadsSrgbAndHDRFlagsOfRealMaterials )
 {
     sw::MaterialProperty splat{};
     SW_REQUIRE_TRUE( findProperty( "Content/engine/materials/terrain.material", "_splatMap", splat ) );

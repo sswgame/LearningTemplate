@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/World/Overworld/TileMap.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/TileMap/TileGridUtil.h"

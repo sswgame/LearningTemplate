@@ -2,11 +2,11 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.h"
 
-#include "Core/Container/LittleEndianUtil.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Hash/SecureUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/LoginTypes.h"
 

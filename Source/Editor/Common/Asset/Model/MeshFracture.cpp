@@ -2,13 +2,14 @@
 
 #include "Editor/Common/Asset/Model/MeshFracture.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/pair.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Spatial/PolygonTriangulation.h"
 #include "Core/Spatial/PositionWelder.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
@@ -16,7 +17,6 @@
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
 #include "Engine/Destruction/Fracture/FractureSiteUtil.h"
-#include "Engine/Destruction/Fracture/PolygonTriangulation.h"
 
 namespace sw::editor
 {
@@ -106,7 +106,7 @@ namespace sw::editor
                 }
                 for ( uint32 axis = 0; axis < 2; ++axis )
                 {
-                    result._arrUv[axis] = from._arrUv[axis] + ( to._arrUv[axis] - from._arrUv[axis] ) * t;
+                    result._arrUV[axis] = from._arrUV[axis] + ( to._arrUV[axis] - from._arrUV[axis] ) * t;
                 }
                 for ( uint32 axis = 0; axis < 4; ++axis )
                 {
@@ -323,8 +323,8 @@ namespace sw::editor
                         vertex._arrNormal[0]     = normal._x;
                         vertex._arrNormal[1]     = normal._y;
                         vertex._arrNormal[2]     = normal._z;
-                        vertex._arrUv[0]         = listPoint2[pointIndex]._x * settings._interiorUvScale;
-                        vertex._arrUv[1]         = listPoint2[pointIndex]._y * settings._interiorUvScale;
+                        vertex._arrUV[0]         = listPoint2[pointIndex]._x * settings._interiorUvScale;
+                        vertex._arrUV[1]         = listPoint2[pointIndex]._y * settings._interiorUvScale;
                         vertex._arrColor[0]      = settings._interiorColor._x;
                         vertex._arrColor[1]      = settings._interiorColor._y;
                         vertex._arrColor[2]      = settings._interiorColor._z;
@@ -875,8 +875,8 @@ namespace sw::editor
                         RHIVertex&   vertex     = cap._arrVertex[corner];
                         vertex                  = sample._arrVertex[0];
                         setPosition( vertex, listPoint3[pointIndex] );
-                        vertex._arrUv[0] = listPoint2[pointIndex]._x * settings._interiorUvScale;
-                        vertex._arrUv[1] = listPoint2[pointIndex]._y * settings._interiorUvScale;
+                        vertex._arrUV[0] = listPoint2[pointIndex]._x * settings._interiorUvScale;
+                        vertex._arrUV[1] = listPoint2[pointIndex]._y * settings._interiorUvScale;
                     }
                     if ( hasDistinctCorners( cap ) )
                         inoutListNew.push_back( cap );
@@ -1378,14 +1378,14 @@ namespace sw::editor
         AppearanceGeometry geometry;
         geometry._listPosition.reserve( listVertex.size() );
         geometry._listNormal.reserve( listVertex.size() );
-        geometry._listUv.reserve( listVertex.size() );
+        geometry._listUV.reserve( listVertex.size() );
         geometry._listIndex.reserve( listVertex.size() );
         for ( const RHIVertex& vertex : listVertex )
         {
             geometry._listIndex.push_back( static_cast<uint32>( geometry._listPosition.size() ) );
             geometry._listPosition.push_back( MeshFractureInternal::getPosition( vertex ) );
             geometry._listNormal.push_back( float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] } );
-            geometry._listUv.push_back( float2{ vertex._arrUv[0], vertex._arrUv[1] } );
+            geometry._listUV.push_back( float2{ vertex._arrUV[0], vertex._arrUV[1] } );
         }
         return geometry.getTriangleCount() > 0 && AppearanceGeometry::isClosed( geometry );
     }

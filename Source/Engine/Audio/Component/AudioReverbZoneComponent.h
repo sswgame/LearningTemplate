@@ -8,7 +8,7 @@
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Audio/AudioSpatial.h"
 #include "Engine/Object/Component/SceneComponent.h"

@@ -49,7 +49,7 @@ SW_TEST_CASE( SurfaceLayerWeightsTest, GetSetAndNormalize )
  * @brief [TerrainLayersTest] 스플랫 평면 뽑기는 텍셀의 레이어 여덟 바이트를 RGBA 두 장으로 나눈다 - 평면 0 은 레이어 0..3, 평면 1 은 4..7 · 사각형은 그 안만 뽑는다
  * @details 변이: 평면 1 이 레이어 4..7 대신 0..3 을 뽑으면(오프셋 누락) 높은 평면의 첫 비교가 진다. 텍셀 간격을 넷으로 두면 둘째 텍셀부터 어긋난다.
  */
-SW_TEST_CASE( TerrainLayersTest, SplatPlanesSplitLayersIntoTwoRgbaTextures )
+SW_TEST_CASE( TerrainLayersTest, SplatPlanesSplitLayersIntoTwoRGBATextures )
 {
     HeightfieldAsset data;
     data._resolution = 3;

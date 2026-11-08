@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

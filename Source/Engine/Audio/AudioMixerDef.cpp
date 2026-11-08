@@ -2,8 +2,8 @@
 
 #include "Engine/Audio/AudioMixerDef.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/DependencyGraph.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Audio/DSP/AudioEffect.h"

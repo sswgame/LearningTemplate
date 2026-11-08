@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Rule/MonsterHuntMutagens.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"

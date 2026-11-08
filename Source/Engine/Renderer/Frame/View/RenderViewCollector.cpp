@@ -2,7 +2,7 @@
 
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
@@ -15,8 +15,8 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/View/OcclusionTileSnapshot.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw
 {

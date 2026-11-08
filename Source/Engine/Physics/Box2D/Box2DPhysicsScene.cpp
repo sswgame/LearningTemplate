@@ -2,7 +2,7 @@
 
 #include "Engine/Physics/Box2D/Box2DPhysicsScene.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 

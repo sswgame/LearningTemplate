@@ -2,7 +2,7 @@
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
@@ -17,8 +17,8 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Rendering/MeshLODSettings.h"
-#include "Engine/Rendering/MeshSectionComponent.h"
+#include "Engine/Visual/Component/MeshSectionComponent.h"
+#include "Engine/Visual/MeshLODSettings.h"
 
 namespace sw
 {

@@ -2,13 +2,13 @@
 
 #include "Core/Log/Sink/FileLogOutput.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Process/ProcessSession.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 namespace sw
 {

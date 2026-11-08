@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/Shader/Binding/ShaderBindingLayoutCache.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Foundation/EngineServices.h"

@@ -2,10 +2,10 @@
 
 #include "Engine/Renderer/Lighting/ShadowSetup.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Rendering/DirectionalLightComponent.h"
+#include "Engine/Visual/Component/DirectionalLightComponent.h"
 
 namespace sw
 {

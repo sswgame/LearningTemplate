@@ -4,7 +4,6 @@
 
 #include "Core/Concurrency/ThreadName.h"
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Log/ParsedLogLine.h"
@@ -14,6 +13,7 @@
 #include "Core/Log/Sink/JSONLinesLogOutput.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Process/ThreadCrashStack.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"

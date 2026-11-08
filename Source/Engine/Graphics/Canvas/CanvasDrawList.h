@@ -14,7 +14,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Graphics/RHI/RHIScissorRect.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"

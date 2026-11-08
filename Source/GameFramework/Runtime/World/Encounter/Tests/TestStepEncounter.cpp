@@ -3,7 +3,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/World/Encounter/StepEncounter.h"
 
 // StepEncounterTest — 걸음 조우 한 벌(`StepEncounterCounter`): 주기 방식의 판정(0 이하 끔 · 1 이상 매 걸음 · 1/rate 내림의 배수), 조우 뒤 유예(난수를 쓰지 않음),

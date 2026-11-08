@@ -2,8 +2,8 @@
 
 #include "Core/Subsystem/SubsystemCollection.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/DependencyGraph.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 
 namespace sw

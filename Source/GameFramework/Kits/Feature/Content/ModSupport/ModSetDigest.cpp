@@ -2,10 +2,10 @@
 
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModSetDigest.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Net/GameNetSession.h"
 

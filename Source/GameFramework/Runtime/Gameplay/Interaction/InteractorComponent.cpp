@@ -5,8 +5,8 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Animation/Component/MotionWarpingComponent.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
-#include "Engine/Animation/Scene/MotionWarpingComponent.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSystem.h"

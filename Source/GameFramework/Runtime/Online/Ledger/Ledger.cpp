@@ -2,12 +2,12 @@
 
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
 
-#include "Core/Container/CompareUtil.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/CompareUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Ledger/LedgerItemInstance.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"

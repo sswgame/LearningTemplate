@@ -6,7 +6,7 @@
 
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionTypes.h"

@@ -2,7 +2,7 @@
 
 #include "Engine/Window/WindowPlatform.h"
 
-#include "Core/String/RegistrationSlot.h"
+#include "Core/Registry/RegistrationSlot.h"
 
 namespace sw
 {

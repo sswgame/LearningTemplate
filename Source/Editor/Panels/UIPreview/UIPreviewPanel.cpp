@@ -2,10 +2,10 @@
 
 #include "Editor/Panels/UIPreview/UIPreviewPanel.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Backend/ImGuiRenderer.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"

@@ -6,10 +6,10 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternOutlaw.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 // WesternOutlawTest — 행동 하나가 명예 · 법 · 생존 · 사냥으로 나뉘는 길, 시계로 흐르는 코어 · 현상금, 상태 왕복. 씬 없이 돈다. 키트 GF_OpenWorldWestern(nogpu).
 

@@ -23,7 +23,7 @@
  * `&ax::NodeEditor::SetCurrentEditor` 를 생성자로 넘긴다(`NodeEditorBindFunction`). 그 주소가 곧 그 모듈의 사본이다.
  */
 #pragma once
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"

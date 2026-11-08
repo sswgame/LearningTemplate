@@ -71,7 +71,7 @@ namespace sw
         static int32 onInputEvent( android_app* pApp, AInputEvent* pEvent );
 
     private:
-        int32  _arrGamepadDeviceId[kPlatformGamepadSlotCount]; ///< 칸마다 붙은 입력 장치 번호(-1 이면 빈 칸)
+        int32  _arrGamepadDeviceID[kPlatformGamepadSlotCount]; ///< 칸마다 붙은 입력 장치 번호(-1 이면 빈 칸)
         uint32 _gamepadScanCountdown;                          ///< 다음 장치 대조까지 남은 메시지 처리 수
     };
 } // namespace sw

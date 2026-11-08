@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Feature/World/Overworld/ZoneTracker.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {

@@ -9,7 +9,7 @@
 #include "App/AppEntry.h"
 
 #if defined( SW_PLATFORM_ANDROID )
-    #include "Core/Container/StringUtil.h"
+    #include "Core/String/StringUtil.h"
     #include "Core/Container/vector.h"
 
     #include "Engine/Window/Android/AndroidWindow.h"

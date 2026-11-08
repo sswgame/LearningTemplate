@@ -2,9 +2,9 @@
 
 #include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"

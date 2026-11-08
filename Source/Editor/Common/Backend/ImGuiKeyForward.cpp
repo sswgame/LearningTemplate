@@ -5,7 +5,7 @@
 
 #include "Editor/Common/Backend/ImGuiKeyForward.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Container/string.h"
 
 #include <imgui.h>

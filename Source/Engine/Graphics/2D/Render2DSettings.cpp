@@ -2,9 +2,9 @@
 
 #include "Engine/Graphics/2D/Render2DSettings.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"

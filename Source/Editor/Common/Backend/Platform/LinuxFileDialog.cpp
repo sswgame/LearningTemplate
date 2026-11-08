@@ -2,7 +2,6 @@
 
 #include "Editor/Common/Backend/Platform/LinuxFileDialog.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -10,6 +9,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 #include "Core/Process/ProcessEnvironment.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Backend/FileDialog.h"
 

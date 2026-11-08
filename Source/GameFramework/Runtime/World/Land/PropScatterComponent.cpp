@@ -11,8 +11,8 @@
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Rendering/MeshComponent.h"
-#include "Engine/Rendering/MeshSectionComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
+#include "Engine/Visual/Component/MeshSectionComponent.h"
 
 namespace sw
 {

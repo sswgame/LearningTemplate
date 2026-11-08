@@ -1,0 +1,122 @@
+#include "pch.h"
+
+#include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
+#include "Core/Memory/MemoryBlock.h"
+
+#include "Engine/Compression/EngineCompressionCodecs.h"
+
+#include <lz4.h>
+#include <lz4hc.h>
+
+namespace sw
+{
+    CompressionCodecType LZ4CompressionCodec::getCodecType() const
+    {
+        return CompressionCodecType::LZ4;
+    }
+
+    const utf8* LZ4CompressionCodec::getCodecName() const
+    {
+        return "LZ4";
+    }
+
+    size_t LZ4CompressionCodec::compressBound( size_t uncompressedSize ) const
+    {
+        // LZ4 는 int32 크기까지만 다룬다. 넘으면 0 을 돌려주므로 그대로 전달한다.
+        if ( uncompressedSize > static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) )
+            return 0;
+        return static_cast<size_t>( LZ4_compressBound( static_cast<int32>( uncompressedSize ) ) );
+    }
+
+    size_t LZ4CompressionCodec::decompressBound( size_t compressedSize ) const
+    {
+        // LZ4 블록에서 가장 많이 불어나는 것은 매치 길이의 덧붙임 바이트로, 한 바이트가 255 바이트를 더한다. 토큰 · 오프셋(3 바이트)은
+        // 최대 19 바이트, 리터럴은 1 대 1 이므로 어느 바이트도 255 배를 넘지 못한다.
+        constexpr size_t kMaxExpansionRatio = 255;
+        return compressedSize * kMaxExpansionRatio;
+    }
+
+    bool LZ4CompressionCodec::compress( const void* pSrc,
+                                        size_t      srcSize,
+                                        void*       pDst,
+                                        size_t      dstCapacity,
+                                        size_t&     outCompressedSize,
+                                        int32       compressionLevel )
+    {
+        outCompressedSize                = 0;
+        const bool bInvalidCompressInput = pSrc == nullptr || pDst == nullptr || srcSize == 0;
+        if ( bInvalidCompressInput )
+            return false;
+        if ( srcSize > static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) )
+        {
+            SW_LOG_ERROR_ID( "Lz4Codec.LZ4InputExceedsLimit", "LZ4 input exceeds the limit (%# bytes > %# ).",
+                             static_cast<uint64>( srcSize ), static_cast<uint64>( LZ4_MAX_INPUT_SIZE ) );
+            return false;
+        }
+
+        // 대상 용량은 한계까지만 알려 준다(위 decompress 와 같은 이유다).
+        const utf8* pSrcBytes = static_cast<const utf8*>( pSrc );
+        utf8*       pDstBytes = static_cast<utf8*>( pDst );
+        const int32 srcBytes  = static_cast<int32>( srcSize );
+        const int32 dstBytes  = static_cast<int32>( MathUtil::min( dstCapacity, static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) ) );
+
+        // level 0 = 기본 속도 경로, 1 이상 = HC(고압축). 해제 속도는 둘이 같다.
+        int32 written{ 0 };
+        if ( compressionLevel > 0 )
+        {
+            // HC 는 상태(~256 KB)를 힙에 둔다. LZ4_compress_HC 는 그것을 CRT malloc 으로 잡으므로 상태를 sw 할당자로 잡아 넘긴다.
+            const MemoryBlock state = MemoryBlock::allocate( static_cast<size_t>( LZ4_sizeofStateHC() ) );
+            if ( state.isValid() == false )
+                return false;
+            written = LZ4_compress_HC_extStateHC( state.get(), pSrcBytes, pDstBytes, srcBytes, dstBytes, compressionLevel );
+        }
+        else
+            written = LZ4_compress_default( pSrcBytes, pDstBytes, srcBytes, dstBytes );
+
+        if ( written <= 0 )
+            return false;
+
+        outCompressedSize = static_cast<size_t>( written );
+        return true;
+    }
+
+    bool LZ4CompressionCodec::decompress( const void* pSrc,
+                                          size_t      srcSize,
+                                          void*       pDst,
+                                          size_t      dstCapacity,
+                                          size_t&     outUncompressedSize )
+    {
+        outUncompressedSize                = 0;
+        const bool bInvalidDecompressInput = pSrc == nullptr || pDst == nullptr || srcSize == 0;
+        if ( bInvalidDecompressInput )
+            return false;
+
+        // 입력 크기를 **여기서도** 본다. 외부에서 온 바이트를 먹는 쪽은 이쪽이다. 2GB 를 넘는 값을 int32 로 캐스팅하면 음수가 되어 LZ4 에 그대로
+        // 들어가고, 그때 동작은 정의되어 있지 않다. (대상 용량은 아래에서 좁은 쪽으로 자른다.)
+        if ( srcSize > static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) )
+        {
+            SW_LOG_ERROR_ID( "Lz4Codec.LZ4DecompressionInputExceeds", "LZ4 decompression input exceeds the limit (%# bytes > %#).",
+                             static_cast<uint64>( srcSize ), static_cast<uint64>( LZ4_MAX_INPUT_SIZE ) );
+            return false;
+        }
+
+        // **`_safe` 를 쓴다.** 입력 크기를 믿고 읽는 변형(`LZ4_decompress_fast`)은 손상된 데이터에
+        // 대해 대상 버퍼 밖으로 쓴다. 팩 · 세이브는 외부에서 오는 바이트다.
+        // 대상 용량은 한계까지만 알려 준다. 실제 버퍼보다 좁게 보는 것은 안전한 방향이다
+        // (넘치면 LZ4 가 실패로 끝낸다). 그냥 캐스팅하면 음수가 될 수 있다.
+        const int32 dstBytes = static_cast<int32>( MathUtil::min( dstCapacity, static_cast<size_t>( LZ4_MAX_INPUT_SIZE ) ) );
+        const int32 written  = LZ4_decompress_safe( static_cast<const utf8*>( pSrc ), static_cast<utf8*>( pDst ),
+                                                    static_cast<int32>( srcSize ), dstBytes );
+        if ( written < 0 )
+        {
+            SW_LOG_ERROR_ID( "Lz4Codec.LZ4DecompressionFailedSrc", "LZ4 decompression failed (src %# -> dst %# bytes).",
+                             static_cast<uint64>( srcSize ), static_cast<uint64>( dstCapacity ) );
+            return false;
+        }
+
+        outUncompressedSize = static_cast<size_t>( written );
+        return true;
+    }
+} // namespace sw

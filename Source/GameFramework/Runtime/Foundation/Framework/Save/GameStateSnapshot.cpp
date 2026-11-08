@@ -2,8 +2,8 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameStateSnapshot.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -22,7 +22,7 @@ namespace sw
     {
         struct StateEnvelopeInternal
         {
-            static constexpr uint32 kMagic = FourCcUtil::make( "SWST" );
+            static constexpr uint32 kMagic = FourCCUtil::make( "SWST" );
             /**
              * @brief 스냅샷 봉투의 버전입니다. 읽을 때도 이 버전만 받습니다.
              * @details 봉투 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실린다.

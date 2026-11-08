@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CallStackCapture.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Diagnostics/CrashHandlerProcessHook.h"
@@ -9,6 +8,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 
 #include <cstdio>
 

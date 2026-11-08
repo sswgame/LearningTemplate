@@ -6,7 +6,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"
-#include "Engine/Navigation/Component/SceneNavigation.h"
+#include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 

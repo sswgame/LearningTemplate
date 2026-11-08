@@ -15,9 +15,9 @@ namespace sw
     struct NetSecurityConstant
     {
         static constexpr int32 kX25519KeySize = 32;
-        static constexpr int32 kAeadKeySize   = 32; ///< AES-256-GCM과 ChaCha20-Poly1305 모두 32.
-        static constexpr int32 kAeadNonceSize = 12;
-        static constexpr int32 kAeadTagSize   = 16;
+        static constexpr int32 kAEADKeySize   = 32; ///< AES-256-GCM과 ChaCha20-Poly1305 모두 32.
+        static constexpr int32 kAEADNonceSize = 12;
+        static constexpr int32 kAEADTagSize   = 16;
         static constexpr int32 kSHA256Size    = 32;
         static constexpr int32 kMaxTokenSize  = 64; ///< UDP 연결 때 제시하는 세션 토큰의 상한.
     };
@@ -26,7 +26,7 @@ namespace sw
 namespace sw
 {
     /** @brief AEAD 알고리즘입니다. 양쪽이 같아야 하며 협상하지 않습니다. */
-    enum class NetAeadAlgorithm : uint8
+    enum class NetAEADAlgorithm : uint8
     {
         AES256Gcm = 0,   ///< AES-NI 가 있는 x64 의 기본값.
         ChaCha20Poly1305 ///< AES 가속이 없는 장치.

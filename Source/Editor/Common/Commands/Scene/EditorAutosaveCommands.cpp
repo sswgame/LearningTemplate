@@ -2,13 +2,13 @@
 
 #include "Editor/Common/Commands/Scene/EditorAutosaveCommands.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"

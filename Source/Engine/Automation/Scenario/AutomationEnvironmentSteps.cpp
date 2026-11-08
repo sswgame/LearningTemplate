@@ -8,7 +8,7 @@
 
 #include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"

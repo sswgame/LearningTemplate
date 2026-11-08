@@ -3,8 +3,8 @@
 #include "pch.h"
 
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CacheStats.h"
+#include "Core/String/formatString.h"
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

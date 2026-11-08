@@ -111,7 +111,7 @@ namespace sw
         const int32   maxZ   = MathUtil::min( toWorldCell( centerZ + reach ) - _originCellZ + 1, extent );
         if ( minX >= maxX || minZ >= maxZ )
             return;
-        // 요 규칙(YawUtil): 앞 = (sin, 0, cos), 오른쪽 = (cos, 0, -sin).
+        // 요 규칙(OrientationUtil): 앞 = (sin, 0, cos), 오른쪽 = (cos, 0, -sin).
         const float32 sinYaw  = MathUtil::sin( yaw );
         const float32 cosYaw  = MathUtil::cos( yaw );
         const float2  origin  = getOrigin();

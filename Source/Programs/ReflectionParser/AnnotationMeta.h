@@ -49,7 +49,6 @@ namespace sw
         outKind = AnnotationBinding::Kind::Name; \
         return true;                             \
     }
-#include "Core/Predefined/PredefinedAnnotationKind.xxx"
 #undef REGISTER_ANNOTATION_KIND
         return false;
     }
@@ -62,7 +61,6 @@ namespace sw
 #define REGISTER_ANNOTATION_KIND( Name, Token ) \
     case AnnotationBinding::Kind::Name:         \
         return #Token;
-#include "Core/Predefined/PredefinedAnnotationKind.xxx"
 #undef REGISTER_ANNOTATION_KIND
         }
         return "?";

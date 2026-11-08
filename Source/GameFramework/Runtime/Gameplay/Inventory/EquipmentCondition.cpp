@@ -3,14 +3,14 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/EquipmentCondition.h"
 
 #include "Core/Container/DependencyGraph.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/String/FourCcUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
 
+#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 namespace sw
 {
@@ -29,7 +29,7 @@ namespace sw
         struct EquipmentConditionSlot
         {
             using Type                      = const EquipmentConditionState;
-            static constexpr uint32 kSlotID = FourCcUtil::make( "EQUP" );
+            static constexpr uint32 kSlotID = FourCCUtil::make( "EQUP" );
         };
 
         struct EquipmentConditionInternal

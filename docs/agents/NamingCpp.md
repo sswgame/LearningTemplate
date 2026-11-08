@@ -112,7 +112,7 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 - Functions, variables, members: capitals in the middle or at the end (`updateUI`, `entityID`, `pUISystem`), all lower case as the first word (`uiSystem`, `_gpuScene`).
 - Two capital acronyms never touch (`RHIUI…`): spell one out or put a word between.
 - Lower-case extensions and resource paths, `gv_` prefixes and third-party names keep their spelling.
-- A new acronym is added to the acronym list and rewritten everywhere in one commit.
+- A new acronym is added to the acronym list (`Config/Dev/Acronyms.json`, checked by the `acronyms` lint) and rewritten everywhere in one commit. Third-party spellings and serialized keys go to its `_keep` with a reason.
 
 #### Type suffixes
 
@@ -164,7 +164,7 @@ A reader who knows one of these names must be able to guess the rest. Use a bann
 | 정적 함수만 있는 타입은 대상을 인자로 받는 상태 없는 라이브러리면 도메인 이름 그대로. 고칠 것은 서브시스템 상태 위의 정적 파사드뿐(`EditorPlaySession` 이 서브시스템) | 언리얼 FJsonSerializer · FPaths |
 | 낮은 층 · 높은 층이 서로 알아야 하면 위가 아래에 건다: 팩 매니저(엔진 범위에 건 `PackManager`), 메시 무효화(엔진 범위의 `IMeshDerivedCache`), 서브시스템 순서(위 층의 의존 칸) | 언리얼 FPlatformFileManager · 모듈 등록 |
 | 키트 하나의 에디터 확장은 그 키트 폴더의 `Editor/`(런타임 · 서버로 나뉜 키트는 `<기능>/Editor/`). `Plugin/Editor` 에는 GameFramework 자체와 여러 키트를 잇는 확장만 | 언리얼 플러그인의 <X>Editor 모듈 |
-| 폴더 · 파일 이름은 내용으로: `Engine/Content`(층 1 콘텐츠 주소 · 읽기 — 리소스 id · 팩 · 쿠킹 읽기, `Core/File` 은 OS 파일) · `Engine/Foundation` · `Core/{Foundation,Hash}` · `Engine/2D`(층 6, 언리얼 Paper2D) · `Graphics/LOD` · `RHI/{Backend,Transfer,Diagnostics}` · 에셋 파일 `*Asset` · XML 정의 `*Def` | |
+| 폴더 · 파일 이름은 내용으로: `Engine/Content`(층 1 콘텐츠 주소 · 읽기 — 리소스 id · 팩 · 쿠킹 읽기, `Core/File` 은 OS 파일) · `Engine/Foundation` · `Core/{Foundation,Hash}` · `Engine/Visual`(층 6, 옛 Rendering + 2D — 렌더용 씬 컴포넌트, 언리얼 UPrimitiveComponent · Paper2D) · `Graphics/LOD` · `RHI/{Backend,Transfer,Diagnostics}` · 에셋 파일 `*Asset` · XML 정의 `*Def` | |
 | 콘텐츠(씬 · 프리팹)가 쓰는 형식의 모듈은 그 도메인이 가진 것이다 — `game/<팩>` 은 그 게임 매니페스트 의존, `common/` 은 모든 게임이 가진 것, `editor/` 는 엔진 · EditorModule, `engine/` 은 엔진만. configure 가 맞대고 멈춘다(`Scripts/generate/ContentModules.py`, 씬을 고친 뒤에는 다음 configure 가 본다) | 언리얼 .uproject Plugins |
 | 게임 한 판의 규칙 · 상태 컴포넌트는 `GameMode`(`<게임>GameModeComponent`). `Director` 는 페이싱 감독(AI Director) · 카메라 연출에만. 오브젝트 위의 차지할 수 있는 슬롯은 `SmartObject`, 장비는 `Equipment`(동사 `equip` 은 그대로) | 언리얼 AGameModeBase · Smart Objects, Lyra Equipment |
 | 데이터 묶음: Def 여러 개를 담은 파일은 `<X>Catalog` 이고 XML 루트도 클래스 이름이다. `Table` 은 가중 추첨 · 구간 표와 StringTable 에만, `Set` 은 GAS 이름과 한 에셋 안의 이름 → 항목 묶음에만, 코드 등록 표는 `Registry` | 한 이름 |

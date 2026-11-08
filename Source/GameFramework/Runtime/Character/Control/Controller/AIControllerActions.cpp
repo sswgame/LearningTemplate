@@ -4,8 +4,8 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Gameplay/ActionRegistry.h"
-#include "Engine/Gameplay/ConditionExpr.h"
+#include "Engine/Behavior/ActionRegistry.h"
+#include "Engine/Behavior/ConditionExpr.h"
 
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"

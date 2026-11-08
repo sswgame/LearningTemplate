@@ -14,7 +14,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryBlock.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionContainers.h"

@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/RemoteCall.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Network/Connection/NetEndpoint.h"
 #include "Core/Serialization/BitStream.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Reflection/ReflectionInvoke.h"
 #include "Engine/Reflection/ReflectionMetadata.h"

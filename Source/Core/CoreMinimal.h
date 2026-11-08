@@ -3,10 +3,8 @@
  * @brief Core 를 쓰는 TU 가 먼저 포함하는 묶음입니다 — 기본 타입 · 컨테이너 · 문자열 · 로그 · 메모리 · 수학 · 파일.
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/array.h"
 #include "Core/Container/deque.h"
-#include "Core/Container/formatString.h"
 #include "Core/Container/list.h"
 #include "Core/Container/map.h"
 #include "Core/Container/pair.h"
@@ -25,7 +23,9 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/hashed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/String/string_splitter.h"

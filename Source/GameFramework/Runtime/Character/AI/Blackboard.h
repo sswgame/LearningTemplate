@@ -6,11 +6,11 @@
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -53,14 +53,14 @@ namespace sw
     struct BlackboardSlot
     {
         using Type                      = const Blackboard;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "BBRD" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "BBRD" );
     };
 
     /** @brief 동작이 쓰는 칸입니다. */
     struct BlackboardWriteSlot
     {
         using Type                      = Blackboard;
-        static constexpr uint32 kSlotID = FourCcUtil::make( "BBWR" );
+        static constexpr uint32 kSlotID = FourCCUtil::make( "BBWR" );
     };
 
     /**

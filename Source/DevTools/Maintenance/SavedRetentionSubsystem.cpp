@@ -2,12 +2,12 @@
 
 #include "DevTools/Maintenance/SavedRetentionSubsystem.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/StopToken.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Process/Process.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"

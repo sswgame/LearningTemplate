@@ -2,14 +2,14 @@
 
 #include "Core/Network/Connection/NetFlowLog.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #if !defined( SW_SHIPPING )
 
     #include "Core/Hash/HashUtil.h"
     #include "Core/Foundation/StdHeaders.h"
     #include "Core/Concurrency/atomic.h"
-    #include "Core/Container/CompareUtil.h"
+    #include "Core/Algorithm/CompareUtil.h"
     #include "Core/Time/MonotonicClock.h"
 
 namespace sw

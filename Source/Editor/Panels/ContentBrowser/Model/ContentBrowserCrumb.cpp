@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserCrumb.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 

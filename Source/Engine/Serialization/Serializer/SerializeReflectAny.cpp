@@ -1,8 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Serializer/SerializeReflectAny.h"
-
-#include "Core/String/HexUtil.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/ReflectedAny.h"

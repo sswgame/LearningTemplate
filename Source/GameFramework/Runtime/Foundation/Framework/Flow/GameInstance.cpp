@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"

@@ -2,9 +2,9 @@
 // 환불 보고의 거름 · 중복 · 조회 구간, 종료. 실제 HTTP 클라이언트가 루프백 망의 가짜 스팀(`HTTPServer`)과 말한다 — 바깥 서비스는 없다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamTypes.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 

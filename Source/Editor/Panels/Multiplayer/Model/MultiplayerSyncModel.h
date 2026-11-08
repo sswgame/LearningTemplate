@@ -9,8 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Workspace/EditorStateHashCompare.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
+#include "Editor/Common/Workspace/NetPlay/EditorStateHashCompare.h"
 
 namespace sw::editor
 {

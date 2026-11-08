@@ -2,8 +2,8 @@
 // 배치(`TextLayoutEngine`)가 줄마다 뒤집고 괄호를 거울 글리프로 그리는지는 가짜 래스터라이저로 본다 — 글자 0.5 em · 공백 0.25 em, 크기 10 이면 글자 5 · 공백 2.5.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Localization/PseudoLocalizer.h"

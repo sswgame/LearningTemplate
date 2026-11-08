@@ -2,7 +2,7 @@
 
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/SceneTransformStorage.h"

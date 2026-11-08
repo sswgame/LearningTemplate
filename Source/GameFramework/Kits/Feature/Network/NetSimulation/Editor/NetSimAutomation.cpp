@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
 

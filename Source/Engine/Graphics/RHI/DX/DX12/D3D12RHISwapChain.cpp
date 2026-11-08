@@ -5,8 +5,8 @@
 #include "Engine/Graphics/RHI/DX/RHIDxResultCheck.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
-    #include "Engine/Graphics/RHI/DX/RHIDxgiTearing.h"
+    #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
+    #include "Engine/Graphics/RHI/DX/DXGITearing.h"
 
 namespace sw
 {
@@ -57,14 +57,14 @@ namespace sw
         // VSync 를 끄려면 티어링 허용 스왑체인이어야 한다. 동기화 간격 0 만으로는 DWM 합성이
         // vblank 에 맞춰 넘겨 주므로 화면 주사율에 그대로 붙는다(RHIDxgiTearing.h). VSync 는 실행 중에도 바뀌므로(`IRHIDevice::setVSync`)
         // 지원하면 항상 티어링 허용으로 만든다. 켜진 VSync 는 Present( 1, 0 ) 이라 이 플래그와 상관없다.
-        _bAllowTearing  = queryDxgiAllowTearing();
+        _bAllowTearing  = queryDXGIAllowTearing();
         _swapChainFlags = _bAllowTearing ? static_cast<uint32>( DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING ) : 0u;
 
         DXGI_SWAP_CHAIN_DESC1 scDesc{};
         scDesc.BufferCount      = _bufferCount;
         scDesc.Width            = _width;
         scDesc.Height           = _height;
-        scDesc.Format           = toDxgiFormat( desc._format );
+        scDesc.Format           = toDXGIFormat( desc._format );
         scDesc.BufferUsage      = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         scDesc.SwapEffect       = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         scDesc.SampleDesc.Count = 1;

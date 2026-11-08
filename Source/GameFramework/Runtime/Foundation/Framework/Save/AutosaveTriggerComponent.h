@@ -3,8 +3,8 @@
  * @brief 닿으면 자동 저장을 부르는 볼륨입니다. 레벨 디자이너가 체크포인트, 보스 방 앞, 지역 경계에 배치합니다.
  */
 #pragma once
-#include "Core/String/TagID.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/TagID.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 

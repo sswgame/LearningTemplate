@@ -3,13 +3,13 @@
 #include "Engine/UserSettings/HardwareDetectionResult.h"
 
 #include "Core/Concurrency/thread.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 #include "Engine/Graphics/RHI/RHIBackendInfo.h"

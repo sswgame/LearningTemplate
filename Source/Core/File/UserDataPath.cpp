@@ -5,7 +5,7 @@
 #endif
 #include "Core/File/UserDataPath.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Process/ProcessEnvironment.h"

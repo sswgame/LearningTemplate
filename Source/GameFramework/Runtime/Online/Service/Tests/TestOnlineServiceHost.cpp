@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Core/Container/LittleEndianUtil.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Network/Message/StreamMessageEndpoint.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
+#include "Core/Serialization/LittleEndianUtil.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 

@@ -3,12 +3,12 @@
 #include "Engine/Config/GameSelection.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "sw/config/ConfigConstants.h"
 

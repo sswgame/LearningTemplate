@@ -10,8 +10,8 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/GridOpenEntry.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Runtime/Foundation/Grid/GridOpenEntry.h"
+#include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 
 namespace sw
 {

@@ -5,13 +5,13 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/DynamicBitset.h"
 #include "Core/Container/SlotHandle.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/PackedTypes.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Name/TagID.h"
 #include "Core/Serialization/ByteStream.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/TagID.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/ComponentHandle.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -20,7 +20,6 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/AssetRefBase.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
-#include "Engine/Serialization/Serializer/SerializeReflectAny.h"
 
 #include <cmath>
 
@@ -558,7 +557,6 @@ namespace sw
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) SW_BUILTIN_TEXT_##TextConv( Canon, CppType )
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
-#include "Engine/Reflection/ReflectBuiltins.xxx"
 
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER

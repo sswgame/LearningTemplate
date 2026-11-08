@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/MapCheck/Model/MapCheckCounts.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"

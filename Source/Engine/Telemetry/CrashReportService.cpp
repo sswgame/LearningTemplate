@@ -2,13 +2,13 @@
 
 #include "Engine/Telemetry/CrashReportService.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/pair.h"
 #include "Core/Diagnostics/CrashContext.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"

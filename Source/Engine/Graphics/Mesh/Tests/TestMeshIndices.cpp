@@ -24,8 +24,8 @@ namespace
             listVertex[index]._arrPosition[0] = arrPosition[index][0];
             listVertex[index]._arrPosition[1] = arrPosition[index][1];
             listVertex[index]._arrNormal[2]   = 1.0f;
-            listVertex[index]._arrUv[0]       = arrPosition[index][0];
-            listVertex[index]._arrUv[1]       = 1.0f - arrPosition[index][1];
+            listVertex[index]._arrUV[0]       = arrPosition[index][0];
+            listVertex[index]._arrUV[1]       = 1.0f - arrPosition[index][1];
             listVertex[index]._arrColor[3]    = 1.0f;
         }
         return listVertex;
@@ -123,7 +123,7 @@ SW_TEST_CASE( MeshIndicesTest, WeldTriangleListMergesOnlyBitIdenticalVertices )
     // 사각형 두 삼각형 (0, 1, 2) · (0, 2, 3) 을 풀어 쓴 것 — 마지막 모서리만 UV 를 조금 바꿔 다른 정점으로 둔다.
     const sw::vector<sw::RHIVertex> listQuad = makeQuadVertices();
     sw::vector<sw::RHIVertex>       listTriangle{ listQuad[0], listQuad[1], listQuad[2], listQuad[0], listQuad[2], listQuad[3] };
-    listTriangle[4]._arrUv[0] += 0.25f;
+    listTriangle[4]._arrUV[0] += 0.25f;
     sw::vector<sw::RHIVertex> listVertex;
     sw::vector<uint32>        listIndex;
     sw::Mesh::weldTriangleList( listTriangle, listVertex, listIndex );

@@ -2,7 +2,7 @@
 
 #include "Engine/Character/Hit/MeleeHitWindow.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/Hit/MeleeSweepHistory.h"

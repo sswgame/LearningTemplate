@@ -1,7 +1,7 @@
 #include "pch.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/Memory/LinearAllocator.h"
 #include "Core/Memory/Memory.h"

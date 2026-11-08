@@ -2,7 +2,7 @@
 
 #include "Engine/Physics/Jolt/JoltPhysicsScene.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 

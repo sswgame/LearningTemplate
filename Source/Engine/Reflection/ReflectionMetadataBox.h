@@ -3,9 +3,9 @@
  * @brief 리플렉션 메타데이터를 정의 없이 값처럼 드는 상자와 생성 코드의 함수 형식입니다. 메타데이터 정의는 `ReflectionMetadata.h` 에 있습니다.
  */
 #pragma once
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"

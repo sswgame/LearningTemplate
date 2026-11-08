@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimGameRegistry.h"
 
-#include "Core/String/RegistrationList.h"
+#include "Core/Registry/RegistrationList.h"
 
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 

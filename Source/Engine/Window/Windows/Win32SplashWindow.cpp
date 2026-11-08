@@ -2,8 +2,8 @@
 
 #include "Engine/Window/Windows/Win32SplashWindow.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Window/Windows/Win32Window.h"
 

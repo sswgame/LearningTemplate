@@ -2,7 +2,7 @@
 
 #include "Engine/Window/WindowMonitor.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include <utility>
@@ -54,13 +54,13 @@ namespace sw
         };
     }
 
-    void WindowMonitor::appendModeResolutions( const vector<WindowMonitorMode>& listMode, const vector<uint64>& listModeId, bool bSwapAxes )
+    void WindowMonitor::appendModeResolutions( const vector<WindowMonitorMode>& listMode, const vector<uint64>& listModeID, bool bSwapAxes )
     {
-        for ( const uint64 modeId : listModeId )
+        for ( const uint64 modeID : listModeID )
         {
             for ( const WindowMonitorMode& mode : listMode )
             {
-                if ( mode._id == modeId )
+                if ( mode._id == modeID )
                     _listResolution.push_back( bSwapAxes ? int2{ mode._size._y, mode._size._x } : mode._size );
             }
         }

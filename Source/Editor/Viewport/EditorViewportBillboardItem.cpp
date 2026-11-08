@@ -2,8 +2,8 @@
 
 #include "Editor/Viewport/EditorViewportBillboardItem.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
@@ -26,7 +26,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/Rendering/LightComponent.h"
+#include "Engine/Visual/Component/LightComponent.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>

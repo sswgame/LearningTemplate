@@ -57,6 +57,8 @@ _kSubcommand: tuple[Subcommand, ...] = (
     Subcommand("catalog-root", "lint.CatalogRootShape", "게임 데이터 루트의 원소를 손으로 고르는 모양 검사(--files · --all · --self-check)"),
     Subcommand("cpp-shape", "lint.CppShape", "C++ 모양 규칙 검사 — 선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선(--files · --all · --summary)"),
     Subcommand("naming-words", "lint.NamingWords", "함수 앞 단어 · 형식 끝 단어를 허용 표와 대조한다"),
+    Subcommand("acronyms", "lint.Acronyms", "약어 표기 검사 — 식별자 · 파일 · 폴더의 약어는 모두 대문자(Config/Dev/Acronyms.json, --self-check)"),
+    Subcommand("folder-layout", "lint.FolderLayout", "파일 자리 검사 — 잡동사니 폴더 · 엔진 쪽 Dev/ · Component 폴더(Config/Dev/FolderLayout.json)"),
     Subcommand("new-names", "lint.NewNames", "묶음이 새로 들인 함수 이름을 검토 목록으로 낸다(--base <묶음 시작> [브랜치 …]) — 통합 검토용"),
     Subcommand("platform-chains", "lint.PlatformChains", "플랫폼 #if 사슬이 빠진 플랫폼을 컴파일 오류로 내는지 본다(--self-check)"),
     Subcommand("client-only-types", "generate.ClientOnlyTypes", "전용 서버가 짓지 않는 소스의 리플렉션 형식 이름 표를 쓴다(--check 는 낡았는지만 본다)"),

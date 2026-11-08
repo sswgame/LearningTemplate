@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/Animation/SpriteClipPanel.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -111,7 +111,7 @@ namespace sw::editor
         : EditorDocumentPanel{ EditorAssetType{ SpriteClipAsset::kAssetType }, false }
         , _model{}
         , _atlasThumbnail{}
-        , _dragStartUv{}
+        , _dragStartUV{}
         , _dragEdge{ -1 }
         , _bAtlasPress{ SW_FALSE }
         , _bEdgeMoved{ SW_FALSE }
@@ -424,7 +424,7 @@ namespace sw::editor
         {
             _bAtlasPress = SW_TRUE;
             _bEdgeMoved  = SW_FALSE;
-            _dragStartUv = uv;
+            _dragStartUV = uv;
             _dragEdge    = nearEdge;
         }
         if ( _bAtlasPress == SW_FALSE )
@@ -439,8 +439,8 @@ namespace sw::editor
         else if ( bDragging )
         {
             // 끄는 사각형은 선택이라 강조색 틀이다(뗄 때 프레임이 된다).
-            const float32 fromX = imageMin._x + MathUtil::saturate( _dragStartUv._x ) * side;
-            const float32 fromY = imageMin._y + MathUtil::saturate( _dragStartUv._y ) * side;
+            const float32 fromX = imageMin._x + MathUtil::saturate( _dragStartUV._x ) * side;
+            const float32 fromY = imageMin._y + MathUtil::saturate( _dragStartUV._y ) * side;
             const float32 toX   = imageMin._x + MathUtil::saturate( uv._x ) * side;
             const float32 toY   = imageMin._y + MathUtil::saturate( uv._y ) * side;
             ImGui::GetWindowDrawList()->AddRect( ImVec2( MathUtil::min( fromX, toX ), MathUtil::min( fromY, toY ) ), ImVec2( MathUtil::max( fromX, toX ), MathUtil::max( fromY, toY ) ),
@@ -456,7 +456,7 @@ namespace sw::editor
         }
         else if ( pointer.wasClickedWithoutDrag( EditorMouseButton::Left ) )
         {
-            const SpriteClipModel::AtlasPickResult result = _model.pickAtlasCell( _dragStartUv._x, _dragStartUv._y, bAdd );
+            const SpriteClipModel::AtlasPickResult result = _model.pickAtlasCell( _dragStartUV._x, _dragStartUV._y, bAdd );
             if ( result == SpriteClipModel::AtlasPickResult::AddedFrame )
                 notifyDocumentEdited( "Add Sprite Frame" );
             else if ( result == SpriteClipModel::AtlasPickResult::EditedFrame )
@@ -464,7 +464,7 @@ namespace sw::editor
         }
         else if ( _dragEdge < 0 )
         {
-            const SpriteClipModel::AtlasPickResult result = _model.setFrameRegion( _dragStartUv, uv, bAdd );
+            const SpriteClipModel::AtlasPickResult result = _model.setFrameRegion( _dragStartUV, uv, bAdd );
             if ( result == SpriteClipModel::AtlasPickResult::AddedFrame )
                 notifyDocumentEdited( "Add Sprite Frame" );
             else if ( result == SpriteClipModel::AtlasPickResult::EditedFrame )

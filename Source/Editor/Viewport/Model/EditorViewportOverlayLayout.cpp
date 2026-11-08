@@ -2,9 +2,9 @@
 
 #include "Editor/Viewport/Model/EditorViewportOverlayLayout.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Serialization/Format/JSONSerializer.h"
 

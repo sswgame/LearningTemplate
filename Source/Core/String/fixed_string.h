@@ -3,15 +3,15 @@
  * @brief 고정 용량 문자열(basic_fixed_string)입니다. 힙을 쓰지 않습니다.
  */
 #pragma once
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/UTF8Util.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Foundation/Macros.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Log/Logger.h"
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/UTF8Util.h"
 
 namespace sw
 {
@@ -353,7 +353,7 @@ namespace sw
 
             const FixedStringWarningGuard guard;
             if ( guard )
-                SW_LOG_WARNING_ID( "FixedString.Truncated", "basic_fixed_string capacity %# exceeded by length %# - truncated", N, static_cast<uint32>( length ) );
+                SW_LOW_LEVEL_WARNING_ID( "FixedString.Truncated", "basic_fixed_string capacity %u exceeded by length %u - truncated", static_cast<uint32>( N ), static_cast<uint32>( length ) );
             return backOffToCharacterStart( pSource, N );
         }
 
@@ -367,8 +367,8 @@ namespace sw
             const FixedStringWarningGuard guard;
             if ( guard )
             {
-                SW_LOG_WARNING_ID( "FixedString.Truncated", "basic_fixed_string capacity %# exceeded - %# of %# characters truncated", N, static_cast<uint32>( length - remaining ),
-                                   static_cast<uint32>( length ) );
+                SW_LOW_LEVEL_WARNING_ID( "FixedString.Truncated", "basic_fixed_string capacity %u exceeded - %u of %u characters truncated", static_cast<uint32>( N ), static_cast<uint32>( length - remaining ),
+                                         static_cast<uint32>( length ) );
             }
             return backOffToCharacterStart( pSource, static_cast<uint32>( remaining ) );
         }
@@ -506,56 +506,56 @@ namespace sw
     template <typename T, uint32 N>
     typename basic_fixed_string<T, N>::reference basic_fixed_string<T, N>::operator[]( uint32 pos )
     {
-        SW_LOG_ASSERT( pos < N, "basic_fixed_string::operator[] - position out of range" );
+        SW_LOW_LEVEL_ASSERT( pos < N, "basic_fixed_string::operator[] - position out of range" );
         return _arrData[pos];
     }
 
     template <typename T, uint32 N>
     typename basic_fixed_string<T, N>::const_reference basic_fixed_string<T, N>::operator[]( uint32 pos ) const
     {
-        SW_LOG_ASSERT( pos < N, "basic_fixed_string::operator[] - position out of range" );
+        SW_LOW_LEVEL_ASSERT( pos < N, "basic_fixed_string::operator[] - position out of range" );
         return _arrData[pos];
     }
 
     template <typename T, uint32 N>
     typename basic_fixed_string<T, N>::reference basic_fixed_string<T, N>::at( uint32 pos )
     {
-        SW_LOG_ASSERT( pos < size(), "basic_fixed_string::at - position out of range" );
+        SW_LOW_LEVEL_ASSERT( pos < size(), "basic_fixed_string::at - position out of range" );
         return _arrData[pos];
     }
 
     template <typename T, uint32 N>
     typename basic_fixed_string<T, N>::const_reference basic_fixed_string<T, N>::at( uint32 pos ) const
     {
-        SW_LOG_ASSERT( pos < size(), "basic_fixed_string::at - position out of range" );
+        SW_LOW_LEVEL_ASSERT( pos < size(), "basic_fixed_string::at - position out of range" );
         return _arrData[pos];
     }
 
     template <typename T, uint32 N>
     typename basic_fixed_string<T, N>::reference basic_fixed_string<T, N>::front()
     {
-        SW_LOG_ASSERT( empty() == false, "basic_fixed_string::front on empty string" );
+        SW_LOW_LEVEL_ASSERT( empty() == false, "basic_fixed_string::front on empty string" );
         return _arrData[0];
     }
 
     template <typename T, uint32 N>
     typename basic_fixed_string<T, N>::const_reference basic_fixed_string<T, N>::front() const
     {
-        SW_LOG_ASSERT( empty() == false, "basic_fixed_string::front on empty string" );
+        SW_LOW_LEVEL_ASSERT( empty() == false, "basic_fixed_string::front on empty string" );
         return _arrData[0];
     }
 
     template <typename T, uint32 N>
     typename basic_fixed_string<T, N>::reference basic_fixed_string<T, N>::back()
     {
-        SW_LOG_ASSERT( empty() == false, "basic_fixed_string::back on empty string" );
+        SW_LOW_LEVEL_ASSERT( empty() == false, "basic_fixed_string::back on empty string" );
         return _arrData[size() - 1];
     }
 
     template <typename T, uint32 N>
     typename basic_fixed_string<T, N>::const_reference basic_fixed_string<T, N>::back() const
     {
-        SW_LOG_ASSERT( empty() == false, "basic_fixed_string::back on empty string" );
+        SW_LOW_LEVEL_ASSERT( empty() == false, "basic_fixed_string::back on empty string" );
         return _arrData[size() - 1];
     }
 
@@ -576,7 +576,7 @@ namespace sw
             return *this;
 
         const uint32 currentSize = size();
-        SW_LOG_ASSERT( pos <= currentSize, "Insert position out of range" );
+        SW_LOW_LEVEL_ASSERT( pos <= currentSize, "Insert position out of range" );
         if ( pos > currentSize )
             return *this;
 
@@ -604,7 +604,7 @@ namespace sw
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::erase( uint32 pos, uint32 length )
     {
         const uint32 currentSize = size();
-        SW_LOG_ASSERT( pos <= currentSize, "basic_fixed_string::erase position out of range" );
+        SW_LOW_LEVEL_ASSERT( pos <= currentSize, "basic_fixed_string::erase position out of range" );
 
         if ( pos >= currentSize )
             return *this;
@@ -633,7 +633,7 @@ namespace sw
         {
             const FixedStringWarningGuard guard;
             if ( guard )
-                SW_LOG_WARNING_ID( "FixedString.Truncated", "basic_fixed_string capacity %# exceeded - push_back dropped", N );
+                SW_LOW_LEVEL_WARNING_ID( "FixedString.Truncated", "basic_fixed_string capacity %u exceeded - push_back dropped", static_cast<uint32>( N ) );
             return;
         }
 
@@ -744,7 +744,7 @@ namespace sw
     basic_fixed_string<T, N> basic_fixed_string<T, N>::substr( uint32 pos, uint32 length ) const
     {
         const uint32 currentSize = size();
-        SW_LOG_ASSERT( pos <= currentSize, "basic_fixed_string::substr out of range" );
+        SW_LOW_LEVEL_ASSERT( pos <= currentSize, "basic_fixed_string::substr out of range" );
 
         if ( pos >= currentSize )
             return basic_fixed_string{};

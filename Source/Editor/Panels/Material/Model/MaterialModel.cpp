@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/Material/Model/MaterialModel.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -13,8 +13,8 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw::editor
 {

@@ -39,7 +39,7 @@ namespace sw
             {
                 RHIHighPrecisionMeshAttributes attributes{};
                 Memory::copy( attributes._arrNormal, vertex._arrNormal, sizeof( attributes._arrNormal ) );
-                Memory::copy( attributes._arrUv, vertex._arrUv, sizeof( attributes._arrUv ) );
+                Memory::copy( attributes._arrUV, vertex._arrUV, sizeof( attributes._arrUV ) );
                 Memory::copy( attributes._arrColor, vertex._arrColor, sizeof( attributes._arrColor ) );
                 Memory::copy( attributes._arrTangent, vertex._arrTangent, sizeof( attributes._arrTangent ) );
                 Memory::copy( pOutAttribute + static_cast<size_t>( vertexIndex ) * sizeof( RHIHighPrecisionMeshAttributes ), &attributes, sizeof( attributes ) );
@@ -52,7 +52,7 @@ namespace sw
                 attributes._arrTangent[axis] = packSnorm8( vertex._arrTangent[axis] );
             }
             attributes._arrTangent[3] = vertex._arrTangent[3] < 0.0f ? int8{ -127 } : int8{ 127 }; // 바이탄젠트 부호 — 0 은 +로 둔다(MikkTSpace 가 0 을 내지 않는다)
-            Memory::copy( attributes._arrUv, vertex._arrUv, sizeof( attributes._arrUv ) );
+            Memory::copy( attributes._arrUV, vertex._arrUV, sizeof( attributes._arrUV ) );
             Memory::copy( attributes._arrColor, vertex._arrColor, sizeof( attributes._arrColor ) );
             Memory::copy( pOutAttribute + static_cast<size_t>( vertexIndex ) * sizeof( RHIPackedMeshAttributes ), &attributes, sizeof( attributes ) );
         }

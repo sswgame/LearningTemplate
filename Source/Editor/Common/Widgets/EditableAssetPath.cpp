@@ -2,9 +2,9 @@
 
 #include "Editor/Common/Widgets/EditableAssetPath.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Widgets/EditorWidgets.h"
 

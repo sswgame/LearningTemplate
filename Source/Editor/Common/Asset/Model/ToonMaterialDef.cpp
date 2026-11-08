@@ -2,11 +2,11 @@
 
 #include "Editor/Common/Asset/Model/ToonMaterialDef.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 
@@ -50,9 +50,9 @@ namespace sw::editor
                 Vrm0OutlineColorMode,
                 Vrm0OutlineLightingMix,
                 Vrm0BumpScale,
-                Vrm0UvAnimScrollX,
-                Vrm0UvAnimScrollY,
-                Vrm0UvAnimRotation,
+                Vrm0UVAnimScrollX,
+                Vrm0UVAnimScrollY,
+                Vrm0UVAnimRotation,
                 Vrm0FloatCount,
             };
             /** @brief 0.x 에서 옮기는 실수 키와 그 기본값입니다. 기본값의 원본은 이 테이블 하나다(읽는 코드에 폴백을 적지 않는다). */
@@ -534,9 +534,9 @@ namespace sw::editor
                 inoutDesc._normalScale            = arrFloat[Vrm0BumpScale];
                 // UV 애니메이션 — UniVRM 의 0.x → 1.0 이관(VRM10 MigrationMToonMaterial)과 같다: 스크롤 y 는 부호를 뒤집고, 회전은 초당 바퀴 수 × 2π(라디안)이며
                 // 방향은 그대로다. three-vrm 의 VRMMaterialsV0CompatPlugin 도 스크롤 y 만 뒤집는다(회전 배율은 UniVRM 을 따른다).
-                inoutDesc._uvAnimationScrollXSpeed  = arrFloat[Vrm0UvAnimScrollX];
-                inoutDesc._uvAnimationScrollYSpeed  = -arrFloat[Vrm0UvAnimScrollY];
-                inoutDesc._uvAnimationRotationSpeed = arrFloat[Vrm0UvAnimRotation] * MathUtil::kTwoPi;
+                inoutDesc._uvAnimationScrollXSpeed  = arrFloat[Vrm0UVAnimScrollX];
+                inoutDesc._uvAnimationScrollYSpeed  = -arrFloat[Vrm0UVAnimScrollY];
+                inoutDesc._uvAnimationRotationSpeed = arrFloat[Vrm0UVAnimRotation] * MathUtil::kTwoPi;
 
                 if ( applyVrm0BlendAndCull( arrFloat, context, inoutDesc, outError ) == false )
                     return false;

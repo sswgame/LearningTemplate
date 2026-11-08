@@ -6,9 +6,9 @@
 
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 #include "Engine/Environment/Placement/PlacementRule.h"
-#include "Engine/Navigation/Component/NavGeometryContributor.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavigationTypes.h"
+#include "Engine/Navigation/Scene/NavGeometryContributor.h"
 #include "Engine/Reflection/ReflectionCast.h"
 
 namespace sw

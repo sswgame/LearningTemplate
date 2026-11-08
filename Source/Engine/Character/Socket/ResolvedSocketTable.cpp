@@ -2,7 +2,7 @@
 
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/SurfaceBVH.h"

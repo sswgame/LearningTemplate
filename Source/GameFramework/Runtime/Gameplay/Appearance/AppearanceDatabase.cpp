@@ -2,11 +2,11 @@
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Concurrency/atomic.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitTables.h"

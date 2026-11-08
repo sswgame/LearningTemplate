@@ -5,10 +5,10 @@
  *          리소스 헬퍼(`Content/AssetIO.h` · `Content/AssetPaths.h`)는 쓰는 파일이 직접 include 합니다.
  */
 #pragma once
-#include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/Math.h"
 #include "Core/String/fixed_string.h"
+#include "Core/String/formatString.h"
 #include "Core/String/string_splitter.h"
 #include "Core/Time/GameTimer.h"
 

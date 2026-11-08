@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Profiler/Model/ProfilerCallNode.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include <algorithm>

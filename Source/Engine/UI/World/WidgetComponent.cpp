@@ -8,7 +8,6 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/2D/SpriteRenderUtil.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -18,15 +17,16 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Render/UIPaintContext.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/World/UIWidgetComponentService.h"
+#include "Engine/Visual/2D/SpriteRenderUtil.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw
 {

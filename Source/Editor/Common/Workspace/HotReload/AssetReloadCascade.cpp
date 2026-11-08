@@ -2,8 +2,8 @@
 
 #include "Editor/Common/Workspace/HotReload/AssetReloadCascade.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/DependencyGraph.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"

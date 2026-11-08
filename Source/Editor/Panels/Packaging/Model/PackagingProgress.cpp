@@ -2,8 +2,8 @@
 
 #include "Editor/Panels/Packaging/Model/PackagingProgress.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw::editor
 {

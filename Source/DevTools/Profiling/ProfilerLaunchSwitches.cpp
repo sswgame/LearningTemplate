@@ -6,11 +6,12 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "DevTools/Profiling/ProfilerTraceExport.h"
+
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
-#include "Engine/Profiling/ProfilerTraceExport.h"
 
 namespace sw
 {

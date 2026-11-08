@@ -2,7 +2,7 @@
 
 #include "Engine/UI/Document/UIDocumentWriter.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectionCast.h"

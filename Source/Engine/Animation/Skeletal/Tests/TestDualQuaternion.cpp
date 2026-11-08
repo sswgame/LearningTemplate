@@ -1,10 +1,9 @@
 #include "pch.h"
 
+#include "Core/Math/DualQuaternion.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Testing/TestFramework.h"
-
-#include "Engine/Animation/Skeletal/DualQuaternion.h"
 
 using namespace sw;
 

@@ -40,10 +40,10 @@ namespace
     };
 
     /** @brief 키 · nonce · AAD · 암호문을 섞은 값을 태그로 쓰는 가짜 AEAD 입니다. 평문은 키 첫 바이트와 XOR 합니다. */
-    class MixingAead final : public INetAead
+    class MixingAEAD final : public INetAEAD
     {
     public:
-        explicit MixingAead( const uint8* pKey ) { std::memcpy( _arrKey, pKey, sizeof( _arrKey ) ); }
+        explicit MixingAEAD( const uint8* pKey ) { std::memcpy( _arrKey, pKey, sizeof( _arrKey ) ); }
 
         [[nodiscard]] bool seal( const uint8* pNonce, const uint8* pAad, int32 aadSize, const uint8* pPlain, int32 plainSize, uint8* pOut ) override
         {
@@ -57,10 +57,10 @@ namespace
 
         [[nodiscard]] bool open( const uint8* pNonce, const uint8* pAad, int32 aadSize, const uint8* pCipher, int32 cipherSize, uint8* pOut ) override
         {
-            const int32 plainSize = cipherSize - NetSecurityConstant::kAeadTagSize;
+            const int32 plainSize = cipherSize - NetSecurityConstant::kAEADTagSize;
             if ( plainSize < 0 )
                 return false;
-            uint8 arrTag[NetSecurityConstant::kAeadTagSize];
+            uint8 arrTag[NetSecurityConstant::kAEADTagSize];
             computeTag( pNonce, pAad, aadSize, pCipher, plainSize, arrTag );
             if ( std::memcmp( arrTag, pCipher + plainSize, sizeof( arrTag ) ) != 0 )
                 return false;
@@ -76,14 +76,14 @@ namespace
         {
             uint64 hash = HashUtil::kFNVOffset64;
             ByteMixer::mix( hash, _arrKey, static_cast<int32>( sizeof( _arrKey ) ) );
-            ByteMixer::mix( hash, pNonce, NetSecurityConstant::kAeadNonceSize );
+            ByteMixer::mix( hash, pNonce, NetSecurityConstant::kAEADNonceSize );
             ByteMixer::mix( hash, pAad, aadSize );
             ByteMixer::mix( hash, pCipher, cipherSize );
-            ByteMixer::spread( hash, pOutTag, NetSecurityConstant::kAeadTagSize );
+            ByteMixer::spread( hash, pOutTag, NetSecurityConstant::kAEADTagSize );
         }
 
     private:
-        uint8 _arrKey[NetSecurityConstant::kAeadKeySize]{};
+        uint8 _arrKey[NetSecurityConstant::kAEADKeySize]{};
     };
 
     /** @brief 가짜 키 교환 · HKDF · AEAD 만 하는 제공자입니다. 나머지 연산은 쓰이지 않는다. */
@@ -117,7 +117,7 @@ namespace
             }
             return true;
         }
-        bool computeHkdfSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize, uint8* pOut,
+        bool computeHKDFSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize, uint8* pOut,
                                 int32 outSize ) override
         {
             uint64 hash = HashUtil::kFNVOffset64;
@@ -139,10 +139,10 @@ namespace
             (void)outSize;
             return false;
         }
-        unique_ptr<INetAead> createAead( NetAeadAlgorithm algorithm, const uint8* pKey ) override
+        unique_ptr<INetAEAD> createAEAD( NetAEADAlgorithm algorithm, const uint8* pKey ) override
         {
             (void)algorithm;
-            return make_unique<MixingAead>( pKey );
+            return make_unique<MixingAEAD>( pKey );
         }
         expected<unique_ptr<ITLSContext>> createTLSContext( const TLSContextConfig& settings ) override
         {
@@ -208,10 +208,10 @@ namespace
         {
             if ( provider.makeX25519KeyPair( outClient._keyPair ) == false )
                 return false;
-            if ( NetPacketSealer::deriveServerKeys( provider, NetAeadAlgorithm::AES256Gcm, outClient._keyPair._arrPublicKey, nullptr, kClientSalt, kServerSalt, kProtocolID,
+            if ( NetPacketSealer::deriveServerKeys( provider, NetAEADAlgorithm::AES256Gcm, outClient._keyPair._arrPublicKey, nullptr, kClientSalt, kServerSalt, kProtocolID,
                                                     outServer ) == false )
                 return false;
-            return NetPacketSealer::deriveClientKeys( provider, NetAeadAlgorithm::AES256Gcm, outServer._keyPair._arrPublicKey, nullptr, kClientSalt, kServerSalt, kProtocolID,
+            return NetPacketSealer::deriveClientKeys( provider, NetAEADAlgorithm::AES256Gcm, outServer._keyPair._arrPublicKey, nullptr, kClientSalt, kServerSalt, kProtocolID,
                                                       outClient );
         }
     };
@@ -232,7 +232,7 @@ SW_TEST_CASE( NetPacketSealerTest, SealedBodyOpensOnceWithTheOppositeKey )
     BitWriter       writer;
     const uint8     arrPlain[] = { 10, 20, 30, 40, 50 };
     SW_REQUIRE_TRUE( clientSealer.seal( client, 5, 0xCAFEBABEu, NetPacketSealerTestInternal::kProtocolID, false, arrPlain, 5, writer ) );
-    SW_EXPECT_EQUAL( NetPacketSealer::kSecureHeadSize + 5 + NetSecurityConstant::kAeadTagSize, writer.getByteCount() );
+    SW_EXPECT_EQUAL( NetPacketSealer::kSecureHeadSize + 5 + NetSecurityConstant::kAEADTagSize, writer.getByteCount() );
     const vector<uint8> body( writer.getBytes().begin(), writer.getBytes().begin() + writer.getByteCount() );
     SW_EXPECT_EQUAL( 5, static_cast<int32>( body[0] ) );    // 종류
     SW_EXPECT_EQUAL( 0xBE, static_cast<int32>( body[1] ) ); // 연결 값은 리틀 엔디언
@@ -303,15 +303,15 @@ SW_TEST_CASE( NetPacketSealerTest, ProofTagBindsSecretSaltsKeyAndToken )
     arrPublic[0] = 9;
     uint8 arrToken[NetSecurityConstant::kMaxTokenSize]{};
     arrToken[0] = 0x42;
-    uint8 arrTag[NetSecurityConstant::kAeadTagSize]{};
-    SW_REQUIRE_TRUE( NetPacketSealer::computeProofTag( provider, NetAeadAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, 8, arrTag ) );
-    SW_EXPECT_TRUE( NetPacketSealer::isProofTagValid( provider, NetAeadAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, 8, arrTag ) );
-    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAeadAlgorithm::AES256Gcm, secret, 1, 3, arrPublic, arrToken, 8, arrTag ) );
-    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAeadAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, 7, arrTag ) );
+    uint8 arrTag[NetSecurityConstant::kAEADTagSize]{};
+    SW_REQUIRE_TRUE( NetPacketSealer::computeProofTag( provider, NetAEADAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, 8, arrTag ) );
+    SW_EXPECT_TRUE( NetPacketSealer::isProofTagValid( provider, NetAEADAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, 8, arrTag ) );
+    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAEADAlgorithm::AES256Gcm, secret, 1, 3, arrPublic, arrToken, 8, arrTag ) );
+    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAEADAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, 7, arrTag ) );
     NetSessionSecret otherSecret = secret;
     otherSecret._arrByte[0] ^= 0x01u;
-    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAeadAlgorithm::AES256Gcm, otherSecret, 1, 2, arrPublic, arrToken, 8, arrTag ) );
+    SW_EXPECT_FALSE( NetPacketSealer::isProofTagValid( provider, NetAEADAlgorithm::AES256Gcm, otherSecret, 1, 2, arrPublic, arrToken, 8, arrTag ) );
     // 상한을 넘는 토큰은 AAD 를 만들지 않고 거절한다(스택 버퍼를 넘지 않는다).
-    SW_EXPECT_FALSE( NetPacketSealer::computeProofTag( provider, NetAeadAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, NetSecurityConstant::kMaxTokenSize + 1,
+    SW_EXPECT_FALSE( NetPacketSealer::computeProofTag( provider, NetAEADAlgorithm::AES256Gcm, secret, 1, 2, arrPublic, arrToken, NetSecurityConstant::kMaxTokenSize + 1,
                                                        arrTag ) );
 }

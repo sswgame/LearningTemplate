@@ -4,10 +4,10 @@
 
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/ICompressionCodec.h"
-#include "Core/Container/LittleEndianUtil.h"
-#include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/Serialization/LittleEndianUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include <cstring>
 
@@ -52,7 +52,7 @@ namespace sw
             }
 
             /** @brief 장치 키에서 봉인 키 · 키 표시를 가릅니다. 보안 제공자나 키 제공자가 없으면 Invalid. */
-            static LocalStoreResult deriveKeys( const LocalSealContext& context, uint8 ( &outSealKey )[NetSecurityConstant::kAeadKeySize], uint64& outKeyID )
+            static LocalStoreResult deriveKeys( const LocalSealContext& context, uint8 ( &outSealKey )[NetSecurityConstant::kAEADKeySize], uint64& outKeyID )
             {
                 if ( context._pSecurityProvider == nullptr || context._pKeyProvider == nullptr )
                     return LocalStoreResult::Invalid;
@@ -60,10 +60,10 @@ namespace sw
                 if ( context._pKeyProvider->getSealKey( arrDeviceKey ) == false )
                     return LocalStoreResult::IOError;
                 uint8      arrKeyID[kKeyIDSize] = {};
-                const bool bDerived             = context._pSecurityProvider->computeHkdfSHA256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
+                const bool bDerived             = context._pSecurityProvider->computeHKDFSHA256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
                                                                                                  reinterpret_cast<const uint8*>( kSealInfo ), sizeof( kSealInfo ) - 1, outSealKey,
-                                                                                                 NetSecurityConstant::kAeadKeySize ) &&
-                                      context._pSecurityProvider->computeHkdfSHA256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
+                                                                                                 NetSecurityConstant::kAEADKeySize ) &&
+                                      context._pSecurityProvider->computeHKDFSHA256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
                                                                                      reinterpret_cast<const uint8*>( kKeyIDInfo ), sizeof( kKeyIDInfo ) - 1, arrKeyID,
                                                                                      static_cast<int32>( kKeyIDSize ) );
                 std::memset( arrDeviceKey, 0, sizeof( arrDeviceKey ) );
@@ -138,7 +138,7 @@ namespace sw
         header._formatVersion                               = options._formatVersion;
         header._originalSize                                = bodySize;
         header._seal                                        = options._seal;
-        uint8 arrSealKey[NetSecurityConstant::kAeadKeySize] = {};
+        uint8 arrSealKey[NetSecurityConstant::kAEADKeySize] = {};
         if ( options._seal != LocalStoreSeal::None )
         {
             const LocalStoreResult keyResult = Internal::deriveKeys( context, arrSealKey, header._keyID );
@@ -162,25 +162,25 @@ namespace sw
             return LocalStoreResult::Ok;
         }
 
-        unique_ptr<INetAead> aead = context._pSecurityProvider->createAead( NetAeadAlgorithm::AES256Gcm, arrSealKey );
+        unique_ptr<INetAEAD> aead = context._pSecurityProvider->createAEAD( NetAEADAlgorithm::AES256Gcm, arrSealKey );
         std::memset( arrSealKey, 0, sizeof( arrSealKey ) );
-        uint8 arrNonce[NetSecurityConstant::kAeadNonceSize] = {};
-        if ( aead == nullptr || context._pSecurityProvider->fillRandomBytes( arrNonce, NetSecurityConstant::kAeadNonceSize ) == false )
+        uint8 arrNonce[NetSecurityConstant::kAEADNonceSize] = {};
+        if ( aead == nullptr || context._pSecurityProvider->fillRandomBytes( arrNonce, NetSecurityConstant::kAEADNonceSize ) == false )
             return LocalStoreResult::IOError;
         if ( options._seal == LocalStoreSeal::Authenticated )
         {
             outEnvelopeBytes.insert( outEnvelopeBytes.end(), storedBody.begin(), storedBody.end() );
             const size_t authenticatedSize = outEnvelopeBytes.size();
-            outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrNonce, arrNonce + NetSecurityConstant::kAeadNonceSize );
-            uint8 arrTag[NetSecurityConstant::kAeadTagSize] = {};
+            outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrNonce, arrNonce + NetSecurityConstant::kAEADNonceSize );
+            uint8 arrTag[NetSecurityConstant::kAEADTagSize] = {};
             if ( aead->seal( arrNonce, outEnvelopeBytes.data(), static_cast<int32>( authenticatedSize ), nullptr, 0, arrTag ) == false )
                 return LocalStoreResult::IOError;
-            outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrTag, arrTag + NetSecurityConstant::kAeadTagSize );
+            outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrTag, arrTag + NetSecurityConstant::kAEADTagSize );
             return LocalStoreResult::Ok;
         }
-        outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrNonce, arrNonce + NetSecurityConstant::kAeadNonceSize );
+        outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrNonce, arrNonce + NetSecurityConstant::kAEADNonceSize );
         const size_t cipherOffset = outEnvelopeBytes.size();
-        outEnvelopeBytes.resize( cipherOffset + storedBody.size() + NetSecurityConstant::kAeadTagSize );
+        outEnvelopeBytes.resize( cipherOffset + storedBody.size() + NetSecurityConstant::kAEADTagSize );
         if ( aead->seal( arrNonce, outEnvelopeBytes.data(), static_cast<int32>( kHeaderSize ), storedBody.data(), static_cast<int32>( storedBody.size() ),
                          outEnvelopeBytes.data() + cipherOffset ) == false )
             return LocalStoreResult::IOError;
@@ -225,10 +225,10 @@ namespace sw
             case LocalStoreSeal::Authenticated:
             case LocalStoreSeal::Encrypted:
             {
-                const size_t expectedSize = kHeaderSize + bodySize + NetSecurityConstant::kAeadNonceSize + NetSecurityConstant::kAeadTagSize;
+                const size_t expectedSize = kHeaderSize + bodySize + NetSecurityConstant::kAEADNonceSize + NetSecurityConstant::kAEADTagSize;
                 if ( envelopeByteCount != expectedSize )
                     return LocalStoreResult::Corrupt;
-                uint8                  arrSealKey[NetSecurityConstant::kAeadKeySize] = {};
+                uint8                  arrSealKey[NetSecurityConstant::kAEADKeySize] = {};
                 uint64                 keyID                                         = 0;
                 const LocalStoreResult keyResult                                     = Internal::deriveKeys( context, arrSealKey, keyID );
                 if ( keyResult != LocalStoreResult::Ok )
@@ -238,24 +238,24 @@ namespace sw
                     std::memset( arrSealKey, 0, sizeof( arrSealKey ) );
                     return LocalStoreResult::WrongKey;
                 }
-                unique_ptr<INetAead> aead = context._pSecurityProvider->createAead( NetAeadAlgorithm::AES256Gcm, arrSealKey );
+                unique_ptr<INetAEAD> aead = context._pSecurityProvider->createAEAD( NetAEADAlgorithm::AES256Gcm, arrSealKey );
                 std::memset( arrSealKey, 0, sizeof( arrSealKey ) );
                 if ( aead == nullptr )
                     return LocalStoreResult::IOError;
                 if ( header._seal == LocalStoreSeal::Authenticated )
                 {
                     const uint8* pNonce      = pEnvelopeBytes + kHeaderSize + bodySize;
-                    const uint8* pTag        = pNonce + NetSecurityConstant::kAeadNonceSize;
+                    const uint8* pTag        = pNonce + NetSecurityConstant::kAEADNonceSize;
                     uint8        arrEmpty[1] = {};
-                    if ( aead->open( pNonce, pEnvelopeBytes, static_cast<int32>( kHeaderSize + bodySize ), pTag, NetSecurityConstant::kAeadTagSize, arrEmpty ) == false )
+                    if ( aead->open( pNonce, pEnvelopeBytes, static_cast<int32>( kHeaderSize + bodySize ), pTag, NetSecurityConstant::kAEADTagSize, arrEmpty ) == false )
                         return LocalStoreResult::Corrupt;
                     pBody = pEnvelopeBytes + kHeaderSize;
                     break;
                 }
                 const uint8* pNonce  = pEnvelopeBytes + kHeaderSize;
-                const uint8* pCipher = pNonce + NetSecurityConstant::kAeadNonceSize;
+                const uint8* pCipher = pNonce + NetSecurityConstant::kAEADNonceSize;
                 plainBody.resize( bodySize );
-                if ( aead->open( pNonce, pEnvelopeBytes, static_cast<int32>( kHeaderSize ), pCipher, static_cast<int32>( bodySize + NetSecurityConstant::kAeadTagSize ),
+                if ( aead->open( pNonce, pEnvelopeBytes, static_cast<int32>( kHeaderSize ), pCipher, static_cast<int32>( bodySize + NetSecurityConstant::kAEADTagSize ),
                                  plainBody.data() ) == false )
                     return LocalStoreResult::Corrupt;
                 pBody = plainBody.data();

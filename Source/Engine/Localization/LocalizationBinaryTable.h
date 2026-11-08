@@ -16,9 +16,9 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Content/AssetTypeRegistry.h"
 
@@ -31,7 +31,7 @@ namespace sw
     class SW_API LocalizationBinaryTable
     {
     public:
-        static constexpr uint32      kMagic     = FourCcUtil::make( "SWLR" );
+        static constexpr uint32      kMagic     = FourCCUtil::make( "SWLR" );
         static constexpr uint32      kVersion   = 1;
         static constexpr const utf8* kExtension = ".locres";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */

@@ -17,9 +17,9 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
-#include "Engine/Rendering/DirectionalLightComponent.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Visual/Component/DirectionalLightComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw
 {

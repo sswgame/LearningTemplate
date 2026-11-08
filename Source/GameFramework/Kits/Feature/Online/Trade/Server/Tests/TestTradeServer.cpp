@@ -3,7 +3,7 @@
 // 디렉터리 · 접속 상태는 가짜다. 상태 기계 표는 TradeStateMachineTest, 저장 규칙은 TradeServiceTest 가 본다. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"

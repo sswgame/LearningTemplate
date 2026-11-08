@@ -2,9 +2,9 @@
 
 #include "Editor/Common/Commands/Play/EditorNetConditions.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/Transport/NetEmulation.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw::editor
 {

@@ -2,7 +2,7 @@
 
 #include "Engine/Animation/Facial/IVoiceDecoder.h"
 
-#include "Core/String/RegistrationSlot.h"
+#include "Core/Registry/RegistrationSlot.h"
 
 namespace sw
 {

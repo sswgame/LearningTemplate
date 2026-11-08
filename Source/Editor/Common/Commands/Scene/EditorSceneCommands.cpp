@@ -2,12 +2,12 @@
 
 #include "Editor/Common/Commands/Scene/EditorSceneCommands.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/AABB.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Name/TagID.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/String/TagID.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
@@ -25,9 +25,9 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw::editor
 {

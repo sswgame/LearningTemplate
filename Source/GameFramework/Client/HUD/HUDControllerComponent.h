@@ -7,7 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"

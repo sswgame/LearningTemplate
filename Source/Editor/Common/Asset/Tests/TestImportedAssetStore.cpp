@@ -1,8 +1,8 @@
 // 임포트 결과 공유 — 합치기 판단(내용 + 설정), 값 차이만 적기, 슬롯 왕복, 안 쓰는 파일 지우기.
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/ImportedAssetStore.h"

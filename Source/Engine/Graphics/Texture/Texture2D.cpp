@@ -62,7 +62,7 @@ namespace sw
             SW_LOG_WARNING_ID( "Texture.DestroyedWhileLive", "Texture2D '%#' destroyed with a live GPU texture — call releaseRHI first.", _path.c_str() );
     }
 
-    RHIFormat Texture2D::toRHIFormatFromDxgi( uint32 dxgiFormat )
+    RHIFormat Texture2D::toRHIFormatFromDXGI( uint32 dxgiFormat )
     {
         // DDSLoader 가 쓰는 DXGI 번호(DirectX 헤더 없이 상수로 둔다). 여기 없는 번호는 Unknown.
         switch ( dxgiFormat )
@@ -104,13 +104,13 @@ namespace sw
             case 98: // DXGI_FORMAT_BC7_UNORM
             case 99:
                 return RHIFormat::BC7_UNORM;
-            case DDSFormat::kDxgiASTC4x4Unorm: // 쿠킹한 형식 변형(`TextureFormatFamily`)
+            case DDSFormat::kDXGIASTC4x4Unorm: // 쿠킹한 형식 변형(`TextureFormatFamily`)
                 return RHIFormat::ASTC_4x4_UNORM;
-            case DDSFormat::kEngineDxgiETC2RGBA8:
+            case DDSFormat::kEngineDXGIETC2RGBA8:
                 return RHIFormat::ETC2_RGBA8_UNORM;
-            case DDSFormat::kEngineDxgiEACR11:
+            case DDSFormat::kEngineDXGIEACR11:
                 return RHIFormat::EAC_R11_UNORM;
-            case DDSFormat::kEngineDxgiEACRG11:
+            case DDSFormat::kEngineDXGIEACRG11:
                 return RHIFormat::EAC_RG11_UNORM;
             default:
                 return RHIFormat::Unknown;
@@ -121,13 +121,13 @@ namespace sw
     {
         constexpr uint32 kSourceTexelBytes = 12;
         constexpr uint32 kTargetTexelBytes = 16;
-        constexpr uint32 kDxgiR32G32B32A32 = 2;
-        if ( toRHIFormatFromDxgi( image._dxgiFormat ) != RHIFormat::R32G32B32_FLOAT || image._bytes.size() % kSourceTexelBytes != 0 )
+        constexpr uint32 kDXGIR32G32B32A32 = 2;
+        if ( toRHIFormatFromDXGI( image._dxgiFormat ) != RHIFormat::R32G32B32_FLOAT || image._bytes.size() % kSourceTexelBytes != 0 )
             return false;
         const size_t      texelCount = image._bytes.size() / kSourceTexelBytes;
         constexpr float32 kOne       = 1.0f;
         DDSImageData      expanded   = image;
-        expanded._dxgiFormat         = kDxgiR32G32B32A32;
+        expanded._dxgiFormat         = kDXGIR32G32B32A32;
         expanded._bytes.resize( texelCount * kTargetTexelBytes );
         for ( size_t texel = 0; texel < texelCount; ++texel )
         {
@@ -140,7 +140,7 @@ namespace sw
 
     const DDSImageData& Texture2D::selectDeviceImage( const IRHIDevice& device, const DDSImageData& image, DDSImageData& outExpanded )
     {
-        const bool bNeedsExpansion = toRHIFormatFromDxgi( image._dxgiFormat ) == RHIFormat::R32G32B32_FLOAT && device.supportsTextureFormat( RHIFormat::R32G32B32_FLOAT ) == false;
+        const bool bNeedsExpansion = toRHIFormatFromDXGI( image._dxgiFormat ) == RHIFormat::R32G32B32_FLOAT && device.supportsTextureFormat( RHIFormat::R32G32B32_FLOAT ) == false;
         return bNeedsExpansion && expandToFourChannels( image, outExpanded ) ? outExpanded : image;
     }
 
@@ -189,7 +189,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Texture.LoadFailed", "Texture2D: failed to load '%#'", relativePath );
             return false;
         }
-        if ( toRHIFormatFromDxgi( outImage._dxgiFormat ) == RHIFormat::Unknown )
+        if ( toRHIFormatFromDXGI( outImage._dxgiFormat ) == RHIFormat::Unknown )
         {
             SW_LOG_ERROR_ID( "Texture.UnsupportedFormat", "Texture2D: '%#' uses DXGI format %# which RHIFormat does not cover yet", relativePath, outImage._dxgiFormat );
             return false;
@@ -222,7 +222,7 @@ namespace sw
         DDSImageData        expandedImage;
         const DDSImageData& image = selectDeviceImage( *pDevice, sourceImage, expandedImage );
 
-        const RHIFormat format = toRHIFormatFromDxgi( image._dxgiFormat );
+        const RHIFormat format = toRHIFormatFromDXGI( image._dxgiFormat );
         SW_ASSERT( format != RHIFormat::Unknown ); // `readImage` 가 거른다
         // 텍스처 품질(gv_textureMipDrop) — DDS 페이로드는 밉 0 부터 이어지므로 버린 밉의 바이트를 건너뛰고 남은 밉 사슬을 업로드한다.
         // 스트리밍 기반(`StreamingBase`)은 같은 규칙으로 버릴 수 있는 만큼 버린다 — 품질이 버리는 밉보다 늘 많거나 같다(같은 식에 더 큰 요청).
@@ -337,7 +337,7 @@ namespace sw
             return Texture2DUploadStep::Failed;
         DDSImageData        expandedImage;
         const DDSImageData& image  = selectDeviceImage( *pDevice, sourceImage, expandedImage );
-        const RHIFormat     format = toRHIFormatFromDxgi( image._dxgiFormat );
+        const RHIFormat     format = toRHIFormatFromDXGI( image._dxgiFormat );
         SW_ASSERT( format == _format ); // 같은 파일의 같은 이미지다(`TextureCache` 가 로드 단계의 이미지를 보관했다)
         const uint32              fileMipCount = image._mipCount > 0 ? image._mipCount : 1;
         const Texture2DMipDrop    qualityDrop  = computeMipDrop( format, image._width, image._height, fileMipCount, static_cast<int32>( gv_textureMipDrop ) );

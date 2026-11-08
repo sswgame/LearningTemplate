@@ -38,7 +38,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "HPLT" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "HPLT" );
         static constexpr uint32 kStateVersion = 1;
 
         HousingPlotComponent();

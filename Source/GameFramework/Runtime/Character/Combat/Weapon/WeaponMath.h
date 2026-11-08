@@ -1,16 +1,16 @@
 /**
  * @file WeaponMath.h
- * @brief 슈터의 수학입니다. 탄 퍼짐 원뿔을 둡니다. 광선 판정, 1인칭 시점, 결정적 난수는 장르를 가리지 않아 기반(`Utility/RayMath.h`,
- *        `Input/FirstPersonLook.h`, `Utility/GameRandom.h`)에 있습니다.
+ * @brief 슈터의 수학입니다. 탄 퍼짐 원뿔을 둡니다. 광선 판정, 1인칭 시점, 결정적 난수는 장르를 가리지 않아 기반(`Core/Math/Ray.h`,
+ *        `Input/FirstPersonLook.h`, `Foundation/Random/GameRandom.h`)에 있습니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Math/Ray.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
 {

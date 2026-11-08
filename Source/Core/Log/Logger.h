@@ -9,7 +9,6 @@
  * 글자 상수 id 를 붙인다(`LogEntry::_pID`, 테스트는 `ScopedLogCollector::countWithID`). 감싸는 싱크(`ILogSink::writeLogWithID`)는 id 를 그대로 넘겨야 한다.
  */
 #pragma once
-#include "Core/Container/formatString.h"
 #include "Core/Container/string.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Constants.h"
@@ -18,6 +17,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Log/LogTypes.h"
+#include "Core/String/formatString.h"
 
 #if !defined( SW_LOG_TAG )
     /** @brief 호출하는 모듈의 태그입니다. 모듈 헤드에서 재정의합니다. */

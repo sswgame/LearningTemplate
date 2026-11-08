@@ -2,10 +2,10 @@
 
 #include "Editor/Panels/Scene/HierarchyPanel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
-#include "Core/String/TagID.h"
+#include "Core/Name/TagID.h"
+#include "Core/String/StringUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetCommands.h"
@@ -14,7 +14,6 @@
 #include "Editor/Common/Commands/Scene/EditorSceneObjectCommands.h"
 #include "Editor/Common/Commands/Scene/EditorSiblingOrder.h"
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
-#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorCompactControls.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -58,6 +57,30 @@ namespace sw::editor
         struct HierarchyPanelInternal
         {
             static constexpr Color kPrefabInstanceText{ 0.45f, 0.70f, 1.0f, 1.0f };
+
+            /**
+             * @brief 계층 라벨에 붙일 `[Category]` 뱃지를 덧붙입니다(예전 EditorUtil — 이 창만 쓴다).
+             * @param category 컴포넌트 타입의 리플렉션 Category (`TypeInfo::getCategory`).
+             * @param inoutBadge 누적 중인 뱃지 문자열. 비어 있지 않으면 앞에 공백이 붙습니다. 줄마다 프레임마다 만들어 힙을 쓰지 않는 고정 버퍼다(넘치면 자른다).
+             * @details 타입 이름이 아니라 Category 로 고르므로 게임이 넣은 컴포넌트도 뱃지가 붙고, 엔진이 컴포넌트를 늘려도 패널을
+             *          고칠 필요가 없습니다("컴포넌트 추가" 메뉴와 같은 기준). 같은 Category 는 한 번만 넣습니다.
+             */
+            static void appendCategoryBadge( string_view category, fixed_string<constant::buffer::kMax256>& inoutBadge )
+            {
+                if ( category.empty() )
+                    return;
+
+                // 같은 Category 의 컴포넌트가 여럿 붙어 있으면 뱃지도 여럿이 된다. 그래서 한 번만 넣는다.
+                fixed_string<constant::buffer::kMax256> token{ "[" };
+                token.append( category );
+                token.append( "]" );
+                if ( inoutBadge.view().find( token.view() ) != string_view::npos )
+                    return;
+
+                if ( inoutBadge.empty() == false )
+                    inoutBadge.append( " " );
+                inoutBadge.append( token );
+            }
 
             // 이 창만의 액션(행 목록을 아는 것). 키는 `editor.input.xml` 의 `Editor.Panel.hierarchy` 레이어가 정한다.
             static constexpr string_view kActionSelectAll      = "hierarchy.selectAll";
@@ -339,7 +362,7 @@ namespace sw::editor
                     const TypeInfo* pTypeInfo = pComp->getTypeInfo();
                     if ( pTypeInfo == nullptr )
                         continue;
-                    EditorUtil::appendCategoryBadge( pTypeInfo->getCategory(), badgeStr );
+                    HierarchyPanelInternal::appendCategoryBadge( pTypeInfo->getCategory(), badgeStr );
                 }
 
                 // 오브젝트 아이콘은 빌보드 종류 컴포넌트(라이트, 카메라, 오디오)가 있으면 그 아이콘이고, 없으면 기본 오브젝트 아이콘이다.

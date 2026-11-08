@@ -2,7 +2,7 @@
 
 #include "Engine/Environment/Foliage/FoliageComponent.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -25,7 +25,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Rendering/MeshInstanceBatch.h"
+#include "Engine/Visual/MeshInstanceBatch.h"
 
 namespace sw
 {

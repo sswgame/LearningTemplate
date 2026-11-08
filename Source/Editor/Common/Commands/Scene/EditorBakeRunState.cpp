@@ -1,7 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/Scene/EditorBakeRunState.h"
-
+#include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 

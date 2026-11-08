@@ -573,7 +573,7 @@ namespace sw::editor
             ImGui::PushID( brushIndex );
             if ( pAtlasTexture != nullptr && brush._defaultVisual._listFrameCell.empty() == false )
             {
-                const float4 uvRect = tileSet.computeCellUvRect( brush._defaultVisual._listFrameCell.front() );
+                const float4 uvRect = tileSet.computeCellUVRect( brush._defaultVisual._listFrameCell.front() );
                 ImGui::Image( reinterpret_cast<ImTextureID>( pAtlasTexture ), ImVec2( swatchSide, swatchSide ), ImVec2( uvRect._x, uvRect._y ),
                               ImVec2( uvRect._x + uvRect._z, uvRect._y + uvRect._w ) );
                 ImGui::SameLine();
@@ -596,7 +596,7 @@ namespace sw::editor
         if ( pAtlasTexture != nullptr )
         {
             // 규칙이 고른 셀의 이미지 — 이웃을 칠하면 이미지가 따라 바뀌는 것이 규칙 타일이 일하는 모습이다.
-            const float4 uvRect = tileSet.computeCellUvRect( pVisual->computeCellAt( 0.0f ) );
+            const float4 uvRect = tileSet.computeCellUVRect( pVisual->computeCellAt( 0.0f ) );
             pDrawList->AddImage( reinterpret_cast<ImTextureID>( pAtlasTexture ), cellMin, cellMax, ImVec2( uvRect._x, uvRect._y ),
                                  ImVec2( uvRect._x + uvRect._z, uvRect._y + uvRect._w ) );
             return;

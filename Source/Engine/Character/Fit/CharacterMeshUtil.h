@@ -12,7 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 namespace sw
 {
@@ -85,7 +85,7 @@ namespace sw
          * @details 부품은 조각으로 편다 — 구간 없는 부품은 메시 전체가, 구간 있는 부품은 고른 구간(`MeshMergePart::_listSection`)마다 조각 하나다(언리얼 Skeletal Mesh Merge 가
          *          부품의 섹션마다 머티리얼 섹션을 내는 것과 같다). 합친 구간은 머티리얼 그룹마다 하나다. 그룹은 훅이 조각마다 고르고(`IMeshMergeHooks::getMaterialGroup` — 아틀라스
          *          하나가 그룹 하나, 훅이 없으면 조각 이름), 같은 그룹의 조각은 구간 안에서 입력 순서로 이어 붙는다. 구간의 시점 가시성은 원본 구간의 것이다.
-         *          훅이 UV 를 옮기면(`remapUv`) 탄젠트를 다시 구한다. 훅은 조각의 이름 · 머티리얼만 본다(`MeshMergeSource::_pGeometry` 는 nullptr).
+         *          훅이 UV 를 옮기면(`remapUV`) 탄젠트를 다시 구한다. 훅은 조각의 이름 · 머티리얼만 본다(`MeshMergeSource::_pGeometry` 는 nullptr).
          *          조각이 쓰는 정점만 처음 쓰인 순서로 싣고 스킨 · 모프 타깃(이름으로 합치고 없는 부품은 0)이 따라온다. 낮은 상세 단계(LOD)는 합치지 않는다(병합 결과는 LOD 0 만 가진다).
          *          정점이 0 인 조각(덮인 삼각형을 모두 뺀 옷)은 빈 구간으로 남는다.
          * @return 부품이 없거나, 메시가 nullptr 이거나, 정점 애니메이션을 가졌거나, 고른 구간이 메시에 없거나, 훅 없이 조각 이름이 겹쳤거나, 한 그룹에 시점 가시성이 섞였거나, 스킨 유무 · 본 수가 섞였거나,

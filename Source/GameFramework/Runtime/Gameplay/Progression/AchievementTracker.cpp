@@ -2,8 +2,8 @@
 
 #include "GameFramework/Runtime/Gameplay/Progression/AchievementTracker.h"
 
-#include "Core/Container/VectorUtil.h"
-#include "Core/String/FourCcUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 
 #include "GameFramework/Runtime/Gameplay/Progression/PlayerStats.h"
 #include "GameFramework/Runtime/Online/Platform/PlatformServices.h"
@@ -14,7 +14,7 @@ namespace sw
     {
         struct AchievementTrackerInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "ACHV" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "ACHV" );
             static constexpr uint32 kStateVersion = 1;
 
             /** @brief @p value 가 그 통계 종류로 문턱에 닿았는가입니다. 최소 통계는 작을수록 좋은 기록이라 문턱 이하다. */

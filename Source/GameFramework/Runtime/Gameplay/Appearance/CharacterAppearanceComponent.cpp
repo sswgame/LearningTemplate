@@ -2,14 +2,14 @@
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/String/formatString.h"
 
-#include "Engine/2D/SpriteComponent.h"
+#include "Engine/Animation/Component/PoseModifierComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Character/CharacterDataCache.h"
@@ -20,7 +20,6 @@
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
-#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Character/Socket/SocketPartPool.h"
@@ -34,8 +33,9 @@
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Rendering/MeshComponent.h"
-#include "Engine/Rendering/MeshSectionComponent.h"
+#include "Engine/Visual/2D/SpriteComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
+#include "Engine/Visual/Component/MeshSectionComponent.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"

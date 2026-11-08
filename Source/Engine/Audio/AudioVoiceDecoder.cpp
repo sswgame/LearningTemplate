@@ -2,7 +2,7 @@
 
 #include "Engine/Animation/Facial/IVoiceDecoder.h"
 #include "Engine/Audio/AudioClip.h"
-#include "Engine/Audio/AudioPcm.h"
+#include "Engine/Audio/AudioPCM.h"
 #include "Engine/Content/AssetIO.h"
 
 namespace sw
@@ -19,10 +19,10 @@ namespace sw
             bool decodeMono( const AssetID& assetID, vector<float32>& outListSample, uint32& outSampleRate ) override
             {
                 vector<uint8> bytes;
-                AudioPcm      pcm;
+                AudioPCM      pcm;
                 AudioClipData clip;
-                if ( AssetIO::readBinaryAsset( assetID, bytes ) == false || AudioPcm::decode( assetID.view(), bytes.data(), bytes.size(), pcm ) == false ||
-                     AudioClipData::convertPcm( pcm, clip ) == false )
+                if ( AssetIO::readBinaryAsset( assetID, bytes ) == false || AudioPCM::decode( assetID.view(), bytes.data(), bytes.size(), pcm ) == false ||
+                     AudioClipData::convertPCM( pcm, clip ) == false )
                     return false;
                 clip.copyMonoSamples( outListSample );
                 outSampleRate = clip._sampleRate;

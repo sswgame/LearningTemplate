@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/RHIBackendRegistry.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
@@ -162,7 +162,7 @@ namespace sw
         if ( pModuleHandle == nullptr )
             return false;
 
-        PFN_GetRHIModuleAbiVersion pfnVersion = reinterpret_cast<PFN_GetRHIModuleAbiVersion>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIVersion" ) );
+        PFN_GetRHIModuleABIVersion pfnVersion = reinterpret_cast<PFN_GetRHIModuleABIVersion>( ModuleLibraryUtil::getDynamicSymbol( pModuleHandle, "getRHIModuleABIVersion" ) );
         if ( pfnVersion == nullptr || pfnVersion() != kRHIModuleABIVersion )
         {
             SW_LOG_ERROR_ID( "RHIBackendRegistry.RHIMODULEABIVersion", "RHI MODULE ABI version mismatch or missing getRHIModuleABIVersion (%#)", modulePath );

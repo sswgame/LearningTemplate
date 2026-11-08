@@ -2,8 +2,8 @@
 
 #include "Engine/Graphics/RHI/Diagnostics/RHIInitPhaseTimings.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/String/formatString.h"
 #include "Core/Time/MonotonicClock.h"
 
 namespace sw

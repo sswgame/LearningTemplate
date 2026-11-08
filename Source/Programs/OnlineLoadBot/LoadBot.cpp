@@ -2,10 +2,10 @@
 
 #include "Programs/OnlineLoadBot/LoadBot.h"
 
-#include "Core/Container/formatString.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/formatString.h"
 
 #include "Programs/OnlineLoadBot/LoadBotRunner.h"
 

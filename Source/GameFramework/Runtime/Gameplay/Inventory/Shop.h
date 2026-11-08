@@ -8,15 +8,15 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 
@@ -60,7 +60,7 @@ namespace sw
     class SW_GF_API Wallet
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "WALT" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "WALT" );
         static constexpr uint32 kStateVersion = 1;
 
         /** @brief 통화를 적지 않으면 쓰는 기본 통화 "Gold" 입니다. */

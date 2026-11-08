@@ -3,13 +3,13 @@
 // 지급(서비스 → 원장)은 `TestEconomyReceipts.cpp` 가 본다(nogpu).
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/Encoding/Base64Util.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Network/Transport/StreamTypes.h"
-#include "Core/String/Base64Util.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/Clock.h"
 #include "Core/Time/WallClock.h"

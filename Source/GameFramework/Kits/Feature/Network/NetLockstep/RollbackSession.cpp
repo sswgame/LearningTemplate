@@ -12,7 +12,7 @@
 #include "Engine/Foundation/StateHashBuilder.h"
 
 #include "GameFramework/Kits/Feature/Network/NetLockstep/LockstepSession.h"
-#include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 
 namespace sw
 {

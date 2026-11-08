@@ -3,14 +3,13 @@
 #include "Games/Shooter3D/ShooterAutoAimControllerComponent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OrientationUtil.h"
 #include "Core/Math/Ray.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
 
 #include "Games/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
@@ -37,7 +36,7 @@ namespace sw
                 for ( const ShooterArenaBox& box : listBox )
                 {
                     float32 hitDistance = 0.0f;
-                    if ( RayMath::intersectAABB( ray, box._min, box._max, distance, hitDistance ) && hitDistance < distance )
+                    if ( Ray::intersectAABB( ray, box._min, box._max, distance, hitDistance ) && hitDistance < distance )
                         return false;
                 }
                 return true;

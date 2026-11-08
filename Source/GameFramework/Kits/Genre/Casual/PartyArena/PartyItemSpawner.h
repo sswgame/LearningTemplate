@@ -6,13 +6,13 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Event/EventBuffer.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -24,7 +24,7 @@
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
 {
@@ -114,7 +114,7 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `PartyItemSpawner.cpp` 의 줄이 로더를 더한다). */
         static constexpr AssetTypeDef kAssetType{ "PartyItemSpawner", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "PISP" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "PISP" );
         static constexpr uint32 kStateVersion = 1;
 
         PartyItemSpawner();

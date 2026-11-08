@@ -1,9 +1,9 @@
 /**
  * @file Engine/Config/IGameAutoplayQuery.h
- * @brief 개발 스위치가 게임의 자동 플레이를 켰는지 묻는 창구입니다 — 게임 모드는 개발 장치(`Engine/Config/Dev/GameAutoplay.h`)를 모르고 이 칸만 읽습니다.
- * @details 구현은 개발 구성에만 있는 `GameAutoplaySubsystem`(Dev/ — 배포 구성이 짓지 않는다)이고, 배포본에서는 칸이 비어 게임 모드는 씬 데이터(`_bAutoPlay`)만 봅니다.
+ * @brief 개발 스위치가 게임의 자동 플레이를 켰는지 묻는 창구입니다 — 게임 모드는 개발 장치(`Engine/Config/GameAutoplay.h`)를 모르고 이 칸만 읽습니다.
+ * @details 구현은 개발 구성에만 있는 `GameAutoplaySubsystem`(DevTools/Diagnostics/GameAutoplaySwitch — 배포 구성이 짓지 않는다)이고, 배포본에서는 칸이 비어 게임 모드는 씬 데이터(`_bAutoPlay`)만 봅니다.
  *          언리얼에서 치트 매니저(`UCheatManager`, 배포본에 없음)가 게임 상태를 바꾸고 게임 코드는 그 값만 읽는 갈림과 같은 자리입니다.
- *          서비스 칸의 정의는 이 폴더에 있어 Dev/ 를 짓지 않는 구성에서도 칸을 읽는 쪽이 링크됩니다.
+ *          서비스 칸의 정의는 이 폴더에 있어 DevTools 를 짓지 않는 구성에서도 칸을 읽는 쪽이 링크됩니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

@@ -14,8 +14,8 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
-#include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/PhysicsDebugDraw.h"
+#include "Engine/Physics/Scene/ScenePhysics.h"
 
 namespace sw::editor
 {

@@ -4,7 +4,7 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorPanelID.h"

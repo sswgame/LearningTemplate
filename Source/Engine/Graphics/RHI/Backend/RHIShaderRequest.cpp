@@ -2,7 +2,7 @@
 
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"

@@ -2,8 +2,8 @@
 
 #include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/IndexFreeList.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 

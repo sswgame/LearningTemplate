@@ -91,7 +91,7 @@ namespace sw
                 outGeometry._listTrianglePart.push_back( source._listTrianglePart[triangle] );
         }
         const bool bHasNormal = source._listNormal.size() == vertexCount;
-        const bool bHasUv     = source._listUv.size() == vertexCount;
+        const bool bHasUV     = source._listUV.size() == vertexCount;
         const bool bHasSkin   = source._listSkin.size() == vertexCount;
         const bool bHasGroup  = source._listVertexGroup.size() == vertexCount;
         for ( const uint32 vertex : listKeptVertex )
@@ -99,8 +99,8 @@ namespace sw
             outGeometry._listPosition.push_back( source._listPosition[vertex] );
             if ( bHasNormal )
                 outGeometry._listNormal.push_back( source._listNormal[vertex] );
-            if ( bHasUv )
-                outGeometry._listUv.push_back( source._listUv[vertex] );
+            if ( bHasUV )
+                outGeometry._listUV.push_back( source._listUV[vertex] );
             if ( bHasSkin )
                 outGeometry._listSkin.push_back( source._listSkin[vertex] );
             if ( bHasGroup )
@@ -147,13 +147,13 @@ namespace sw
         const uint32 targetTriangles   = inoutTarget.getTriangleCount();
         // 선택 필드는 한쪽에만 있어도 맞춰 채운다(없는 쪽은 기본값).
         const bool bAnyNormal = inoutTarget._listNormal.empty() == false || source._listNormal.empty() == false;
-        const bool bAnyUv     = inoutTarget._listUv.empty() == false || source._listUv.empty() == false;
+        const bool bAnyUV     = inoutTarget._listUV.empty() == false || source._listUV.empty() == false;
         const bool bAnySkin   = inoutTarget._listSkin.empty() == false || source._listSkin.empty() == false;
         const bool bAnyGroup  = inoutTarget._listVertexGroup.empty() == false || source._listVertexGroup.empty() == false;
         if ( bAnyNormal )
             inoutTarget._listNormal.resize( baseVertex, float3::UnitY );
-        if ( bAnyUv )
-            inoutTarget._listUv.resize( baseVertex, float2::Zero );
+        if ( bAnyUV )
+            inoutTarget._listUV.resize( baseVertex, float2::Zero );
         if ( bAnySkin )
             inoutTarget._listSkin.resize( baseVertex, SkinInfluence{} );
         if ( bAnyGroup )
@@ -168,8 +168,8 @@ namespace sw
             inoutTarget._listPosition.push_back( source._listPosition[vertex] );
             if ( bAnyNormal )
                 inoutTarget._listNormal.push_back( source._listNormal.size() == sourceVertexCount ? source._listNormal[vertex] : float3::UnitY );
-            if ( bAnyUv )
-                inoutTarget._listUv.push_back( source._listUv.size() == sourceVertexCount ? source._listUv[vertex] : float2::Zero );
+            if ( bAnyUV )
+                inoutTarget._listUV.push_back( source._listUV.size() == sourceVertexCount ? source._listUV[vertex] : float2::Zero );
             if ( bAnySkin )
                 inoutTarget._listSkin.push_back( source._listSkin.size() == sourceVertexCount ? source._listSkin[vertex] : SkinInfluence{} );
             if ( bAnyGroup )
@@ -340,7 +340,7 @@ namespace sw
             const uint32  baseVertex = outCap.getVertexCount();
             outCap._listPosition.push_back( center );
             outCap._listNormal.push_back( capNormal );
-            outCap._listUv.push_back( float2( 0.5f, 0.5f ) );
+            outCap._listUV.push_back( float2( 0.5f, 0.5f ) );
             if ( bHasSkin )
                 outCap._listSkin.push_back( geometry._listSkin[loop.front()] );
             for ( const uint32 vertex : loop )
@@ -348,7 +348,7 @@ namespace sw
                 const float3 offset = geometry._listPosition[vertex] - center;
                 outCap._listPosition.push_back( geometry._listPosition[vertex] );
                 outCap._listNormal.push_back( capNormal );
-                outCap._listUv.push_back( float2( 0.5f + offset.dot( tangent ) * uvScale, 0.5f + offset.dot( bitangent ) * uvScale ) );
+                outCap._listUV.push_back( float2( 0.5f + offset.dot( tangent ) * uvScale, 0.5f + offset.dot( bitangent ) * uvScale ) );
                 if ( bHasSkin )
                     outCap._listSkin.push_back( geometry._listSkin[vertex] );
             }

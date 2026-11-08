@@ -2,8 +2,8 @@
 
 #include "Games/VoxelCraft/VoxelPlayerComponent.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -28,7 +28,7 @@ namespace sw
     {
         struct VoxelPlayerComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "PLYR" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "PLYR" );
             static constexpr uint32 kStateVersion = 1;
 
             // 사운드 이벤트 이름입니다. 클립, 범위, 동시 재생 상한은 voxelcraft.audioevents.xml 이 정합니다.

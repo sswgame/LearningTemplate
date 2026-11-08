@@ -9,7 +9,7 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
 #include "Engine/Localization/LocText.h"
-#include "Engine/Navigation/Component/SceneNavigation.h"
+#include "Engine/Navigation/Scene/SceneNavigation.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 namespace sw::editor

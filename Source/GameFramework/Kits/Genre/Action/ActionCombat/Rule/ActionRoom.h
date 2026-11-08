@@ -5,11 +5,11 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/AABB.h"
-#include "Core/String/FourCcUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Physics/Collision/CollisionLayers.h"
@@ -19,7 +19,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/FacingDir.h"
+#include "GameFramework/Runtime/Foundation/Grid/FacingDir.h"
 
 namespace sw
 {
@@ -153,7 +153,7 @@ namespace sw
     class SW_KIT_API ActionRoom
     {
     public:
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "AROM" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "AROM" );
         static constexpr uint32 kStateVersion = 3; ///< 3: 탄의 정의 이름이 탄 정의 id 다(2 는 비어 있었다)
 
         /** @brief 비활성(None)과 게이트 닫힘 상태로 시작합니다. */

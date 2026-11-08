@@ -668,7 +668,6 @@ namespace sw
     {
         static constexpr const utf8* kArrName[] = {
 #define SW_SCENE_FRAME_STEP( Name ) #Name,
-#include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
 #undef SW_SCENE_FRAME_STEP
         };
         const uint32 index = static_cast<uint32>( step );

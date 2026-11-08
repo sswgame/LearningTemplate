@@ -2,7 +2,7 @@
 
 #include "Engine/Physics/Collision/PhysicsPairFilter.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 namespace sw
 {

@@ -17,7 +17,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Time/Clock.h"
 
-#include "Engine/Telemetry/HTTPClient.h"
+#include "Engine/Net/HTTPClient.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Online/HTTP/OwnedHTTPClient.h"

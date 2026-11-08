@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/NetPlay/EditorNetProfilerHistory.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"

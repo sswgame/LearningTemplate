@@ -486,7 +486,7 @@ SW_TEST_CASE( GimmickCircuitTest, ChangedNodeKindIsAMismatch )
     SW_EXPECT_EQUAL( circuit.findNode( hashed_string( "g" ) ), result._changedNode );
 }
 
-SW_TEST_CASE( GimmickCircuitTest, DuplicateSavedIdIsAMismatch )
+SW_TEST_CASE( GimmickCircuitTest, DuplicateSavedIDIsAMismatch )
 {
     GimmickFixture rig;
     rig.build();

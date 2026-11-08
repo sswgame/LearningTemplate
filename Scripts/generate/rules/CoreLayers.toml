@@ -1,4 +1,4 @@
-# Core 폴더 티어 표 — `Source/Core/CMakeLists.txt`(Log 아래 · 위를 빌드로 가른다)와 커밋 린트 `Scripts/lint/CoreTiers.py`(높은 티어끼리의 역류)가 읽는다.
+# Core 폴더 티어 표 — `Source/Core/CMakeLists.txt`(Log 아래 · 위를 빌드로 가른다)와 커밋 린트 `Scripts/lint/CoreTiers.py`(모든 티어의 역류 — 하위 폴더 티어 `[subtier]` 포함)가 읽는다.
 
 # 폴더 → 티어. 숫자가 큰 쪽이 위다.
 # 새 폴더는 티어를 정해 여기에 넣는다(표에 없는 폴더는 구성이 선다).
@@ -11,7 +11,10 @@ Predefined = 0      # 인자 · 이름 표(.xxx) — 아무것도 include 하지
 Concurrency = 1     # 원시 동기화(atomic · mutex · SpinLock · Futex)와 경합 검출 훅
 Math = 1
 Memory = 2          # 할당기 · 메모리 태그 · 할당 기록기 인터페이스
-Container = 3       # 컨테이너 · 문자열 타입과 StringUtil · formatString · 동시 큐
+Algorithm = 2       # 컨테이너 형식에 묶이지 않은 알고리즘(VectorUtil · CompareUtil · UnionFindUtil) — 언리얼 Core/Algo
+Container = 3       # 컨테이너 · 핸들 표 · 슬롯 · 링 · 그래프 자료 구조와 std 래퍼(string.h 포함 — 언리얼 Containers)
+String = 4          # 로그 없는 글자 도구(UTF 변환 · 분할 · 포맷 · 빌더 · 이스케이프 · 고정 문자열) — 언리얼 Core/String, Godot core/string
+Encoding = 4        # 바이트 ↔ 글자 인코딩(Base64 · Hex · FourCC) — 언리얼 Misc/Base64 · String/BytesToHex
 Delegate = 4
 Path = 4            # 경로 값 형식(AbsolutePath) — 로그 · 파일을 쓰지 않는다. 프로세스(ProcessCommand) · 파일 · 모듈이 함께 쓴다
 UUID = 4
@@ -22,7 +25,8 @@ Log = 5             # 로그 매크로와 전역 창구(Logger) · 싱크 포트
 CommandLine = 6
 Compression = 6
 Process = 6         # 프로세스 · 종료 신호 · 스레드 크래시 스택
-String = 6          # 이름(hashed_string · TagID) · 고정 문자열 — 로그 매크로를 쓴다
+Name = 6            # intern 이름(hashed_string · TagID) — 이름 풀 · 로그를 쓴다(언리얼 FName, Godot StringName)
+Registry = 6        # 레지스트리 공통 틀(RegistrationList · RegistrationSlot · NameRegistry) — Delegate · 이름 · 로그를 쓴다
 Time = 6
 Spatial = 4         # 공간 인덱스(해시 그리드 · 쿼드/옥트리 · BVH) — Math 의 AABB · Frustum 과 컨테이너, 단언을 쓴다(로그 매크로는 안 쓴다)
 GlobalVariable = 7
@@ -33,6 +37,12 @@ Module = 9
 Diagnostics = 10    # 호출 스택 · 크래시 보고 · 메모리 프로파일러 · 교착 검출기 · 경합 보고기
 Event = 10
 Testing = 10        # 엔진 안 단위 테스트 틀(등록 · 단언 · 실행기) — 파일 · 로그 · 프로세스를 쓴다. 배포 구성은 짓지 않는다
+
+# 하위 폴더 티어 — 바깥 폴더와 다른 티어에 서는 하위 폴더. 린트(`CoreTiers.py`)만 읽는다(빌드의 Log 아래 · 위 가르기는 바깥 폴더 티어를 따른다 — 둘 다 같은 쪽이어야 한다).
+# 키를 따옴표로 감싸 CMake 의 `폴더 = 숫자` 줄 읽기에 걸리지 않게 한다.
+[subtier]
+"Concurrency/Queue" = 3   # 스레드 사이에서 나눠 쓰는 자료 구조(ConcurrentQueue · WorkStealingDeque · SpscQueue · LockedSwapQueue · SharedVectorPool) — vector 를 써서 Container 위
+"Log/Sink" = 11           # 기본 싱크 AsyncLogSink 와 출력 장치 — 파일 · 프로세스 · 진단을 써서 맨 위(포트는 아래, 구현은 위)
 
 # Log 보다 아래 티어에서 pch 로 로그 매크로를 쓰는 파일 → 이유. 지금은 없다 — 아래 티어는 `SW_LOW_LEVEL_REPORT` · `SW_LOW_LEVEL_ASSERT`
 # (`Core/Foundation/Macros.h`, 로그가 기동 때 보고자를 건다)로 보고한다. 새로 늘리지 않는다.

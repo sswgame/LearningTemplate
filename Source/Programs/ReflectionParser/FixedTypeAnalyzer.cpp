@@ -2,7 +2,7 @@
 
 #include "Programs/ReflectionParser/FixedTypeAnalyzer.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Programs/ReflectionParser/AnnotationApply.h"
 #include "Programs/ReflectionParser/AnnotationLookup.h"

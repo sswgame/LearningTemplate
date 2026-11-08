@@ -61,8 +61,8 @@ namespace sw
                 vertex._arrNormal[0]   = normal._x;
                 vertex._arrNormal[1]   = normal._y;
                 vertex._arrNormal[2]   = normal._z;
-                vertex._arrUv[0]       = static_cast<float32>( sampleX ) / last;
-                vertex._arrUv[1]       = static_cast<float32>( sampleZ ) / last;
+                vertex._arrUV[0]       = static_cast<float32>( sampleX ) / last;
+                vertex._arrUV[1]       = static_cast<float32>( sampleZ ) / last;
                 vertex._arrColor[0]    = 1.0f;
                 vertex._arrColor[1]    = 1.0f;
                 vertex._arrColor[2]    = 1.0f;
@@ -252,8 +252,8 @@ namespace sw
         const float32 groundHeight   = heightfield.getSampleHeight( static_cast<int32>( baseX + cells / 2 ), static_cast<int32>( baseZ + cells / 2 ) );
         for ( RHIVertex& vertex : inoutListVertex )
         {
-            const uint32  sampleX = static_cast<uint32>( MathUtil::round( vertex._arrUv[0] * last ) );
-            const uint32  sampleZ = static_cast<uint32>( MathUtil::round( vertex._arrUv[1] * last ) );
+            const uint32  sampleX = static_cast<uint32>( MathUtil::round( vertex._arrUV[0] * last ) );
+            const uint32  sampleZ = static_cast<uint32>( MathUtil::round( vertex._arrUV[1] * last ) );
             const float32 delta   = bHasCoarser ? Internal::computeCoarseHeightDelta( heightfield, sampleX, sampleZ, step ) : 0.0f;
             vertex._arrColor[0]   = delta;
             vertex._arrColor[1]   = morphStart;

@@ -3,7 +3,7 @@
  * @brief 콘텐츠 브라우저의 상태와 동작입니다 — 루트, 지금 폴더와 목록, 이력, 선택, 이름 바꾸기 · 삭제 대기, 임포트, 참조 역색인, 종류 필터(ImGui 없음).
  */
 #pragma once
-#include "Core/Concurrency/LockedSwapQueue.h"
+#include "Core/Concurrency/Queue/LockedSwapQueue.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"

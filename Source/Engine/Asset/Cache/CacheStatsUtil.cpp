@@ -2,12 +2,12 @@
 
 #include "Engine/Asset/Cache/CacheStatsUtil.h"
 
-#include "Core/Container/VectorUtil.h"
-#include "Core/Container/formatString.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Log/Logger.h"
+#include "Core/String/formatString.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"

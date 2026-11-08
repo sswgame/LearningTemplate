@@ -2,10 +2,10 @@
 
 #include "Editor/Panels/Settings/UserSettingsPanel.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/formatString.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
+#include "Core/String/formatString.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"

@@ -2,7 +2,8 @@
 
 #include "Engine/Window/Linux/XTestInputInjector.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/Memory/LifetimeScope.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"

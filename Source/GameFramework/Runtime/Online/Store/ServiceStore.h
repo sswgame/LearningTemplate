@@ -22,7 +22,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/LogContext.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Name/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

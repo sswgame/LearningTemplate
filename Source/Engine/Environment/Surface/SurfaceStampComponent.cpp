@@ -3,7 +3,7 @@
 #include "Engine/Environment/Surface/SurfaceStampComponent.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/YawUtil.h"
+#include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Environment/Surface/SurfaceDeformSystem.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -74,7 +74,7 @@ namespace sw
         if ( _bValidStamp == SW_FALSE )
             return;
         const float3         point  = pScene->getWorldPosition();
-        const float32        yaw    = YawUtil::fromWorld( pScene->getWorldMatrix() );
+        const float32        yaw    = OrientationUtil::computeYawFromWorld( pScene->getWorldMatrix() );
         SurfaceDeformSystem& deform = manager.getSubsystem<SurfaceDeformSystem>();
         if ( _mode == SurfaceStampMode::Hold )
         {

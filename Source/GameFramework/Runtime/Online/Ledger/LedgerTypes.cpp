@@ -2,8 +2,8 @@
 
 #include "GameFramework/Runtime/Online/Ledger/LedgerTypes.h"
 
+#include "Core/Encoding/HexUtil.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/String/HexUtil.h"
 
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 

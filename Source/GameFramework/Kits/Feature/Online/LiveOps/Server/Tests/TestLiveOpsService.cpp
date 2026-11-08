@@ -281,7 +281,7 @@ SW_TEST_CASE( LiveOpsServiceTest, KillSwitchHidesEverything )
 }
 
 /** @brief [LiveOpsServiceTest] JSON 입구: 같은 규칙으로 저장하고 내보낸 JSON 을 다시 넣어도 같다. 깨진 JSON 은 Invalid 다 */
-SW_TEST_CASE( LiveOpsServiceTest, JsonRoundTrip )
+SW_TEST_CASE( LiveOpsServiceTest, JSONRoundTrip )
 {
     SW_EXPECT_LOG( "JSON.ParseError" );
     LiveOpsFixture rig;

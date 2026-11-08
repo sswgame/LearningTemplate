@@ -2,8 +2,8 @@
 // 해시가 부딪힌 다른 글은 적중이 아니다. `TextLayoutEngine::measure` 가 이 캐시를 쓰는지는 가짜 래스터라이저로 본다(nogpu).
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CacheStats.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Text/Tests/FakeFontRasterizer.h"

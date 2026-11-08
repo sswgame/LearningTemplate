@@ -2,7 +2,7 @@
 
 #include "Engine/Object/Component/Component.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/ComponentDefaults.h"

@@ -2,9 +2,9 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/API/EconomyMirror.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
-#include "Core/String/hashed_string.h"
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Name/hashed_string.h"
+#include "Core/String/StringUtil.h"
 
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"

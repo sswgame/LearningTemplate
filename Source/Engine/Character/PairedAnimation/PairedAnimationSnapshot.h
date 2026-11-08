@@ -8,9 +8,9 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/String/FourCcUtil.h"
 
 namespace sw
 {
@@ -47,7 +47,7 @@ namespace sw
      */
     struct SW_API PairedAnimationSessionSnapshot
     {
-        static constexpr uint32 kMagic = FourCcUtil::make( "SWPA" );
+        static constexpr uint32 kMagic = FourCCUtil::make( "SWPA" );
 
         /** @brief 바이트를 읽은 결과입니다. `Success` 밖은 출력 스냅샷을 비웁니다. */
         enum class ReadResult : uint8

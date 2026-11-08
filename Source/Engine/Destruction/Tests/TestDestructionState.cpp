@@ -1,7 +1,7 @@
 #include "pch.h"
 
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Serialization/BitStream.h"
-#include "Core/String/FourCcUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Destruction/DestructionDamage.h"
@@ -115,7 +115,7 @@ namespace
         static vector<uint8> forgeSnapshot( const FractureGraph& graph, uint32 nextGroupID, const vector<ForgedGroup>& listGroup, float32 nodeStrain = 0.0f )
         {
             BitWriter writer;
-            writer.writeUint32( FourCcUtil::make( "SWDS" ) );
+            writer.writeUint32( FourCCUtil::make( "SWDS" ) );
             writer.writeVarUint( 1 );
             writer.writeVarUint( graph._listNode.size() );
             writer.writeVarUint( graph._listLink.size() );

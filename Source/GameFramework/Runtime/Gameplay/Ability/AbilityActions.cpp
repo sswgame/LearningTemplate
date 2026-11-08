@@ -2,12 +2,12 @@
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityActions.h"
 
-#include "Engine/Gameplay/ActionRegistry.h"
+#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
-#include "GameFramework/Runtime/World/Query/GameConditions.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
 
 namespace sw
 {

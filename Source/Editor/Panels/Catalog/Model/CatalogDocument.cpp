@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 

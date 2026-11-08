@@ -4,9 +4,9 @@
  */
 #pragma once
 #include "Core/Container/vector.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/DeterministicRandom.h"
-#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -14,6 +14,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
@@ -21,7 +22,6 @@
 #include "GameFramework/Runtime/World/Environment/WeatherSystem.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 #include "GameFramework/Runtime/World/Land/LandRegistry.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 namespace sw
 {
@@ -96,7 +96,7 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        static constexpr uint32 kStateTag     = FourCcUtil::make( "GTST" );
+        static constexpr uint32 kStateTag     = FourCCUtil::make( "GTST" );
         static constexpr uint32 kStateVersion = 1;
 
         SessionStateComponent();

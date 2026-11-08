@@ -2,11 +2,11 @@
 
 #include "Editor/Common/Localization/TextGatherer.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/set.h"
 #include "Core/Foundation/HexDigitUtil.h"
 #include "Core/String/StringBuilder.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
 

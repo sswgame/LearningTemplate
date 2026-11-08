@@ -1,6 +1,6 @@
 /**
  * @file EditorPreferences.h
- * @brief 에디터 환경설정 섹션의 값 형식입니다(General, Viewport, Play, Content Browser, Diagnostics, Multiplayer Sync). 테마(Appearance)는 `EditorConfig` 입니다.
+ * @brief 에디터 환경설정 섹션의 값 형식입니다(General, Viewport, Play, Content Browser, Diagnostics, Multiplayer Sync). 테마(Appearance)는 `EditorAppearanceConfig` 입니다.
  * @details 기본 섹션의 등록은 `EditorPreferences.cpp`, Diagnostics 는 값을 Core 에 입히는 `EditorAssertControl.cpp`, Multiplayer Sync 의 등록은 그 탭(`MultiplayerSyncTab.cpp`)이
  *          `SW_EDITOR_SETTINGS` 로 한다.
  */

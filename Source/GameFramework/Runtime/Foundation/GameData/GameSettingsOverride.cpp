@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Foundation/GameData/GameSettingsOverride.h"
 
-#include "Core/String/RegistrationSlot.h"
+#include "Core/Registry/RegistrationSlot.h"
 
 namespace sw
 {

@@ -2,9 +2,9 @@
 
 #include "Engine/Asset/AssetManager.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"

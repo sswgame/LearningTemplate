@@ -20,7 +20,7 @@ namespace
         vertex._arrPosition[1] = 2.0f;
         vertex._arrPosition[2] = 3.0f;
         vertex._arrNormal[1]   = normalY;
-        vertex._arrUv[0]       = 1024.5f; // 물은 월드 좌표를 UV 로 싣는다 — 줄이지 않는다
+        vertex._arrUV[0]       = 1024.5f; // 물은 월드 좌표를 UV 로 싣는다 — 줄이지 않는다
         vertex._arrColor[0]    = 16.0f;   // 지형은 색에 데이터를 싣는다 — 줄이지 않는다
         vertex._arrTangent[0]  = dataInTangent;
         vertex._arrTangent[3]  = tangentW;
@@ -56,7 +56,7 @@ SW_TEST_CASE( RHIMeshVertexStreamsTest, PackedSplitsPositionAndAttributes )
     SW_EXPECT_EQUAL( int8{ -127 }, pAttributes[1]._arrNormal[1] );
     SW_EXPECT_EQUAL( int8{ -127 }, pAttributes[0]._arrTangent[3] ); // 바이탄젠트 부호
     SW_EXPECT_EQUAL( int8{ 127 }, pAttributes[1]._arrTangent[3] );
-    SW_EXPECT_NEAR( 1024.5f, pAttributes[0]._arrUv[0], 0.0f );
+    SW_EXPECT_NEAR( 1024.5f, pAttributes[0]._arrUV[0], 0.0f );
     SW_EXPECT_NEAR( 16.0f, pAttributes[0]._arrColor[0], 0.0f );
 }
 

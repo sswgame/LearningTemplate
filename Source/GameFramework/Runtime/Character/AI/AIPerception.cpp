@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Character/AI/AIPerception.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Runtime/Character/Navigation/NavGrid.h"

@@ -2,10 +2,10 @@
 
 #include "Core/Log/Sink/JSONLinesLogOutput.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/Encoding/HexUtil.h"
 #include "Core/Foundation/StdHeaders.h"
-#include "Core/String/HexUtil.h"
 #include "Core/String/JSONStringUtil.h"
+#include "Core/String/StringUtil.h"
 
 namespace sw
 {

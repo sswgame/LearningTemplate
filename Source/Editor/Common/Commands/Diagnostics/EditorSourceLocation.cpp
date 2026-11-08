@@ -2,10 +2,10 @@
 
 #include "Editor/Common/Commands/Diagnostics/EditorSourceLocation.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/Process.h"
+#include "Core/String/StringUtil.h"
 
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"

@@ -5,8 +5,8 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Animation/Notify/AnimationNotifyTable.h"
 #include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
-#include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/FitPartDef.h"
 #include "Engine/Character/Fit/FitSolver.h"

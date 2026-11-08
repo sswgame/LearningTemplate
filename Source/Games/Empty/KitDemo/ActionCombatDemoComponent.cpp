@@ -2,7 +2,7 @@
 
 #include "Games/Empty/KitDemo/ActionCombatDemoComponent.h"
 
-#include "Core/String/FourCcUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -11,7 +11,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
+#include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 
 namespace sw
 {
@@ -19,7 +19,7 @@ namespace sw
     {
         struct ActionCombatDemoComponentInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "KDAC" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "KDAC" );
             static constexpr uint32 kStateVersion = 1;
 
             static constexpr const utf8* kAttackAction = "KitDemo.Attack";

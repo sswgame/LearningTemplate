@@ -24,7 +24,7 @@ Profiling = 1
 Observability = 1
 Content = 1                          # 리소스 id · 경로 · 낱개 파일 · 팩 · 쿠킹 읽기 기록 — 직렬화 · 설정이 읽는다. 팩 매니저는 에셋 층이 건다(AssetIO::bindPackManager)
 CoreServices = 1
-Gameplay = 1                         # 행동 어휘: 조건식 · 동작 등록 — 행동 트리 · 스케줄 · 대화가 함께 쓰고, 리소스 조건(_when)도 같은 문법이라 아래층에 둔다
+Behavior = 1                         # 행동 어휘(옛 Engine/Gameplay — GameFramework Runtime/Gameplay 와 이름이 겹쳐 바꿨다): 조건식 · 동작 등록 — 행동 트리 · 스케줄 · 대화가 함께 쓰고, 리소스 조건(_when)도 같은 문법이라 아래층에 둔다
 Console = 1
 "Module/ModuleTypeRegistry.h" = 1    # 모듈 이미지의 타입 등록 선언(Core 만) — 구현(.cpp)은 리로드 때 씬을 다시 묶어 맨 위 층이다
 "Module/ModuleObjectRegistrar.h" = 1   # 모듈 이미지의 정적 등록자 바탕(Core 만) — 낮은 층의 레지스트리(일괄 틱 · 5 층)가 상속해 E1 사전 등록 사슬에 단다
@@ -45,7 +45,7 @@ Object = 5
 Scene = 5
 "Automation/Watch" = 5               # 감시 값은 대상 객체를 찾아 읽는다 — 기능(6)이 자기 폴더에서 등록한다
 # 6 — 기능: 각자 자기 컴포넌트 · 씬 서비스를 든다
-Rendering = 6                        # 메시 · 빛 · 프로브 컴포넌트와 LOD · 스트리밍 시스템 — 월드 코어(5)는 이것을 모른다(언리얼 UPrimitiveComponent 는 Engine, 그리는 쪽은 Renderer 로 갈린다). 렌더러(7)가 이것을 읽는다
+Visual = 6                           # 렌더용 씬 컴포넌트(옛 Rendering + 2D): 메시 · 빛 · 프로브 컴포넌트와 LOD · 스트리밍 시스템 — 월드 코어(5)는 이것을 모른다(언리얼 UPrimitiveComponent 는 Engine, 그리는 쪽은 Renderer 로 갈린다). 렌더러(7)가 이것을 읽는다. 2D(스프라이트 · 2D 라이트 · 패럴랙스, 언리얼 Paper2D)는 Visual/2D
 Physics = 6
 Audio = 6
 Animation = 6
@@ -62,7 +62,6 @@ UI = 6
 Net = 6
 UserSettings = 6
 "Automation/Scenario" = 6
-"2D" = 6                             # 2D 컴포넌트(스프라이트 · 2D 라이트 · 그림자 · 패럴랙스 · 픽셀 퍼펙트 카메라) — 스프라이트 클립 · 타일맵을 쓴다(언리얼 Paper2D)
 Telemetry = 6                        # 크래시 · 원격 측정은 엔진 전체(사용자 설정 · 하드웨어 · 팩 설정)를 보고한다 — 엔진 루프(8)만 include 한다
 # 7 — 렌더러(렌더 스레드 · GPU 파이프라인, 전용 서버는 짓지 않는다)
 Renderer = 7

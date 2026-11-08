@@ -1,11 +1,11 @@
 // PackEntryIDFieldsTest — 쓰는 것만 담는 쿠킹의 항목 id 칸 표(`PackConfig::_cookRules._listEntryIDField`)를 저장소의 데이터와 대조한다(nogpu).
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
+#include "Core/String/StringUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Config/ConfigManager.h"

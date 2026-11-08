@@ -2,10 +2,10 @@
 
 #include "GameFramework/Runtime/Gameplay/Progression/PlayerStats.h"
 
-#include "Core/Container/StringUtil.h"
+#include "Core/Encoding/FourCCUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/String/FourCcUtil.h"
+#include "Core/String/StringUtil.h"
 
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
@@ -23,7 +23,7 @@ namespace sw
     {
         struct PlayerStatsInternal
         {
-            static constexpr uint32 kStateTag     = FourCcUtil::make( "STAT" );
+            static constexpr uint32 kStateTag     = FourCCUtil::make( "STAT" );
             static constexpr uint32 kStateVersion = 1;
         };
     } // namespace

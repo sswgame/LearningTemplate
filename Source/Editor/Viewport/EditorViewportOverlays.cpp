@@ -2,7 +2,7 @@
 
 #include "Editor/Viewport/EditorViewportOverlays.h"
 
-#include "Core/Container/VectorUtil.h"
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
