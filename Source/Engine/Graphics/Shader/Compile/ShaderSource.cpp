@@ -127,36 +127,26 @@ namespace sw
         return ShaderSourceResolver{ assetPaths, ShaderIncludeResolver{ std::move( listRootDomain ) } };
     }
 
-    optional<ShaderCompileInput> ShaderSourceResolver::resolve( const ShaderSourceID& source, string& outError ) const
+    expected<ShaderCompileInput> ShaderSourceResolver::resolve( const ShaderSourceID& source ) const
     {
         const optional<string_view> shadersFolderID = source.getShadersFolder();
         if ( shadersFolderID.has_value() == false )
-        {
-            outError = "Shader source id has no domain 'shaders' folder: " + source.str();
-            return nullopt;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Shader source id has no domain 'shaders' folder", source.str() } );
         const optional<AbsolutePath> sourceFile = _pAssetPaths->findLooseFile( source.str() );
         if ( sourceFile.has_value() == false || FileUtil::isRegularFile( sourceFile->str() ) == false )
-        {
-            outError = "Shader source file not found: " + source.str();
-            return nullopt;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "Shader source file not found", source.str() } );
         const optional<AbsolutePath> shadersFolder = _pAssetPaths->toDiskPath( *shadersFolderID );
         const bool                   bInsideFolder = shadersFolder.has_value() &&
                                    FileUtil::startsWithPathComponent( StringUtil::toLower( sourceFile->c_str() ), StringUtil::toLower( shadersFolder->c_str() ) );
         if ( bInsideFolder == false )
         {
             // 스탬프 키와 가림 검사는 소스가 자기 `shaders` 폴더 아래라는 데 기댄다 - 다른 자리로 풀린 소스(덮어쓴 도메인)를 고르지 않고 멈춘다.
-            outError = "Shader source '" + source.str() + "' resolves to '" + sourceFile->str() + "', outside its 'shaders' folder";
-            return nullopt;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Shader source resolves outside its 'shaders' folder", sourceFile->str() } );
         }
 
         const optional<AbsolutePath> sourceDir = AbsolutePath::tryMake( FileUtil::getDirectoryPart( sourceFile->str() ) );
         if ( sourceDir.has_value() == false )
-        {
-            outError = "Shader source folder cannot be resolved: " + sourceFile->str();
-            return nullopt;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "Shader source folder cannot be resolved", sourceFile->str() } );
         vector<AbsolutePath> listIncludeRoot{ *sourceDir };
         for ( const ShaderIncludeRootDomain& rootDomain : _includeResolver.getRootDomains() )
         {

@@ -191,12 +191,11 @@ namespace sw
             {
                 // 소스는 컴파일러와 같은 해석기로 푼다. 출력은 쿠킹 스테이징의 같은 상대 자리다 — 런타임이 팩에서 읽는 자리와 같은 규칙 하나(`ShaderBinaryLocation`)로 정한다.
                 const ShaderSourceID               source{ request._shaderPath };
-                string                             error;
-                const optional<ShaderCompileInput> input = ioState._resolver->resolve( source, error );
+                const expected<ShaderCompileInput> input = ioState._resolver->resolve( source );
                 if ( input.has_value() == false )
                 {
                     ++ioState._summary._failedCount;
-                    SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookRequestCannot", "Shader cook request cannot be resolved (%#): %#", request._entryPoint, error );
+                    SW_LOG_ERROR_ID( "ShaderCooker.ShaderCookRequestCannot", "Shader cook request cannot be resolved (%#): %# (%#)", request._entryPoint, input.error().message(), input.error().detail() );
                     return;
                 }
                 const string stemLower = source.getStemLower();

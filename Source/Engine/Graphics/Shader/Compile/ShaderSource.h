@@ -149,7 +149,7 @@ namespace sw
         /** @brief include 규칙입니다. */
         [[nodiscard]] const ShaderIncludeResolver& getIncludeResolver() const { return _includeResolver; }
         /** @brief @p source 를 풉니다. `shaders` 칸이 없거나 파일이 없거나 소스가 자기 `shaders` 폴더 밖으로 풀리면 @p outError 에 까닭을 담고 빈 값입니다. */
-        [[nodiscard]] optional<ShaderCompileInput> resolve( const ShaderSourceID& source, string& outError ) const;
+        [[nodiscard]] expected<ShaderCompileInput> resolve( const ShaderSourceID& source ) const;
         /** @brief 도메인 @p domain 의 `shaders` 폴더입니다(있는 폴더만). */
         [[nodiscard]] optional<AbsolutePath> findDomainShadersFolder( string_view domain ) const;
 

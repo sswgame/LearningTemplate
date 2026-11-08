@@ -201,28 +201,23 @@ namespace sw
             static constexpr string_view kLayerMaskField  = "_layerMask";
             static constexpr string_view kMaskChannels    = "RGBA";
 
-            /** @brief 층 상한을 읽습니다. 파일 · 칸이 없거나 0 이면 @p outError 에 까닭을 적고 false 입니다(폴백 없음). */
-            [[nodiscard]] static bool loadLayerLimits( LayerLimits& outLimits, string& outError )
+            /** @brief 층 상한을 읽습니다. 파일 · 칸이 없거나 0 이면 그 까닭입니다(폴백 없음). */
+            [[nodiscard]] static expected<LayerLimits> loadLayerLimits()
             {
                 const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kLayerLimitsPath );
                 string       text;
                 JSONDocument doc;
                 if ( FileUtil::readTextFile( path, text ) == false || doc.parse( text, kLayerLimitsPath ) == false )
-                {
-                    outError = string{ kLayerLimitsPath }.append( " cannot be read" );
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "the layer limits file cannot be read", kLayerLimitsPath } );
                 const optional<uint32> maxLayerCount       = doc.getRoot().get( "_maxLayerCount" ).read<uint32>();
                 const optional<uint32> maxMaskChannelCount = doc.getRoot().get( "_maxMaskChannelCount" ).read<uint32>();
                 const bool             bValid              = maxLayerCount.has_value() && *maxLayerCount > 0 && maxMaskChannelCount.has_value() && *maxMaskChannelCount > 0 && *maxMaskChannelCount <= kMaskChannels.size();
                 if ( bValid == false )
-                {
-                    outError = string{ kLayerLimitsPath }.append( " needs _maxLayerCount (1 or more) and _maxMaskChannelCount (1 to 4)" );
-                    return false;
-                }
-                outLimits._maxLayerCount       = *maxLayerCount;
-                outLimits._maxMaskChannelCount = *maxMaskChannelCount;
-                return true;
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "the layer limits file needs _maxLayerCount (1 or more) and _maxMaskChannelCount (1 to 4)", kLayerLimitsPath } );
+                LayerLimits limits;
+                limits._maxLayerCount       = *maxLayerCount;
+                limits._maxMaskChannelCount = *maxMaskChannelCount;
+                return limits;
             }
 
             /** @brief 컴파일 한 번의 상태와 단계입니다. */
@@ -816,12 +811,14 @@ namespace sw
                         report( scope, graph._listNode[listLayer.front()]._name, "LayerOutsideMaterial", "a Layer node belongs in a material graph, not in a subgraph or a layer" );
                         return false;
                     }
-                    string error;
-                    if ( loadLayerLimits( _layerLimits, error ) == false )
+                    const expected<LayerLimits> limits = loadLayerLimits();
+                    if ( limits.has_value() == false )
                     {
-                        report( scope, "(graph)", "LayerLimitsUnreadable", std::move( error ) );
+                        report( scope, "(graph)", "LayerLimitsUnreadable",
+                                string( limits.error().message().data(), limits.error().message().size() ) + " (" + string( limits.error().detail().data(), limits.error().detail().size() ) + ")" );
                         return false;
                     }
+                    _layerLimits = *limits;
                     if ( listLayer.size() > _layerLimits._maxLayerCount )
                     {
                         string message{ "the material has more layers than _maxLayerCount in " };
