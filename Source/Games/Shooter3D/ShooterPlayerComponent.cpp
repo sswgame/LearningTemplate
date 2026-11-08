@@ -1110,7 +1110,7 @@ namespace sw
                 pManager->destroyGameObject( pBody );
             return;
         }
-        pAvatar->setPlayer( pOwner->getHandle() );
+        pAvatar->setPlayer( pOwner );
         CharacterAppearanceComponent* pAppearance = pBody->getComponent<CharacterAppearanceComponent>();
         if ( pAppearance != nullptr )
             pAppearance->setSlotItem( hashed_string( "MainHand" ), getWeaponItem( _weaponIndex ) );

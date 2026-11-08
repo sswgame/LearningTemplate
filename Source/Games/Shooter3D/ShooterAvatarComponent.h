@@ -19,6 +19,7 @@
 namespace sw
 {
     class AnimationClip;
+    class GameObject;
     class SkeletalAnimatorComponent;
 
     /**
@@ -47,8 +48,11 @@ namespace sw
         void onBeginPlay() override;
         void onTick( float32 deltaTime ) override;
 
-        /** @brief 따라갈 플레이어(`ShooterPlayerComponent` 를 가진 오브젝트)입니다. */
-        void setPlayer( GameObjectHandle player ) { _player = player; }
+        /**
+         * @brief 따라갈 플레이어(`ShooterPlayerComponent` 를 가진 오브젝트)입니다. 몸 리그의 시선 원천(`_lookSourceObject` — 리그 대상의 `object`)에도 그 오브젝트를 겁니다.
+         * @details 플레이어의 주 장면 컴포넌트가 1인칭 카메라라 리그 대상의 오프셋(카메라 앞)이 보는 곳이다. 리그가 없으면 걸지 않는다(시선 없이 몸만 따른다).
+         */
+        void setPlayer( GameObject* pPlayer );
         /**
          * @brief 1인칭이면 몸은 보이고 머리만 숨깁니다 — 같은 오브젝트의 리그(`PoseModifierComponent`)의 슬롯 `_firstPersonHeadSlot`(머리 `ScaleBone`)을 켜고,
          *        외형의 칸 `_listFirstPersonHiddenSlot`(머리 장비 · 손 무기) 부품을 숨깁니다. 3인칭이면 둘 다 되돌립니다.
@@ -102,6 +106,8 @@ namespace sw
         vector<hashed_string> _listFirstPersonHiddenSlot;
         PROPERTY( Category = "Avatar", DisplayName = "Stride Node", Tooltip = "StrideWarping node of this body's pose modifier rig that takes the rest of the speed matching" )
         string _strideNode;
+        PROPERTY( Category = "Avatar", DisplayName = "Look Source Object", Tooltip = "Object name of the rig target the player object is bound to (its camera drives the look-at)" )
+        hashed_string _lookSourceObject;
 
         LocomotionDirectionFilter                    _locomotion;
         unordered_map<const AnimationClip*, float32> _mapClipFootSpeed; ///< 클립마다 한 번 측정한 발 속도(m/s)

@@ -315,6 +315,13 @@ namespace sw
             {
                 if ( context.findBone( _params._bone, _bone ) == false || context.findTarget( _params._target, _target ) == false )
                     return false;
+                if ( _params._bAimAxisInModel )
+                {
+                    // 모델 공간 축을 레퍼런스 포즈의 본 로컬 축으로 바꾼다. 원형(`_params`)의 축은 그대로 두어 다시 묶어도 같은 값이다.
+                    vector<float4x4> listReference;
+                    RigIKNodesInternal::computeReferenceModel( *context._pSkeleton, listReference );
+                    _aimAxis = float3::transform( _params._aimAxis.normalize(), RigIKSolver::makeInverse( listReference[_bone].getRotation() ) ).normalize();
+                }
                 for ( ChainEntry& entry : _listChain )
                 {
                     if ( context.findBone( entry._name, entry._bone ) == false )

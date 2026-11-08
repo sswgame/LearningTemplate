@@ -299,6 +299,9 @@ namespace sw
         float3 _aimAxis{ 0.0f, 0.0f, 1.0f };
         PROPERTY( Name = "max_degrees", Min = 0.0, Max = 180.0, Units = deg )
         float32 _maxDegrees{ 180.0f };
+        /** @brief 켜면 `aim_axis` 는 레퍼런스 포즈의 모델 공간 방향이다(캐릭터 앞 +Z) — 본 로컬 축을 모르는 임포트 리그(UBC · Mixamo)도 같은 데이터로 쓴다. 묶을 때 본 로컬로 바꾼다. */
+        PROPERTY( Name = "aim_axis_in_model" )
+        bool _bAimAxisInModel{ false };
     };
 
     /** @brief 다리 하나(`<feet><item root mid end/>`)의 칸입니다 — 발 디딤 · 보폭 워핑이 함께 쓴다. */

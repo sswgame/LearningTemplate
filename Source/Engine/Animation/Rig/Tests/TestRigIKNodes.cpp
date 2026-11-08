@@ -405,6 +405,24 @@ SW_TEST_CASE_F( RigIKTest, AimChainBoneStopsAtItsOwnLimit )
     SW_EXPECT_TRUE( angleToDirection( rotation( kHand ), float3{ 0.0f, 0.0f, 1.0f }, toGoal ) < 1.0f );
 }
 
+// 모델 공간 조준 축: 레퍼런스에서 요 90 도 돈 본도 데이터의 +Z(모델 앞)를 본 로컬로 바꿔 쓴다 — 조준 뒤 그 축이 목표(+X)를 향한다.
+SW_TEST_CASE_F( RigIKTest, AimAxisInModelSpaceFollowsTheReferencePose )
+{
+    BoneTransform turned{};
+    turned._translation  = float3{ 0.0f, 1.5f, 0.0f };
+    turned._rotation     = quaternion::makeFromYawPitchRoll( float3{ 0.0f, MathUtil::kPi * 0.5f, 0.0f } );
+    const uint32 kTurned = static_cast<uint32>( _skeleton.getBoneCount() );
+    (void)_skeleton.addBone( hashed_string( "turned" ), kRoot, turned );
+    _pose.setToReference( _skeleton );
+    refreshModel();
+    SW_REQUIRE_TRUE( load( R"(<item type="Aim" name="Look" bone="turned" target="Goal" aim_axis="0,0,1" aim_axis_in_model="true" />)" ) );
+    setBone( kGoal, position( kTurned ) + float3{ 1.0f, 0.0f, 0.0f } );
+    run();
+
+    const float3 localAxis = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, RigIKSolver::makeInverse( turned._rotation ) );
+    SW_EXPECT_TRUE( angleToDirection( rotation( kTurned ), localAxis, float3{ 1.0f, 0.0f, 0.0f } ) < 0.5f );
+}
+
 // 발 디딤의 출력: 준비 단계가 지난 평가의 골반 · 발 높이를 옮겨 둔다(첫 준비 전에는 0, 다음 준비부터 값). 모르는 출력 · 범위 밖 발은 false 다.
 SW_TEST_CASE_F( RigIKTest, FootPlacementPublishesOffsetsAfterThePrepare )
 {
