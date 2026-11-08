@@ -9,6 +9,7 @@
 	<Variable name="gv_wildWestAutoPlay" value="0"/>
 	<Wait frames="30"/>
 	<Expect watch="Grab.Held" target="Player" is="none"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<Press slot="Key.R"/>
 	<Wait frames="2"/>
 	<Release slot="Key.R"/>

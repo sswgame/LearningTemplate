@@ -22,6 +22,7 @@
 	<Expect watch="Velmora.Region" is="fernwood"/>
 	<Expect watch="Velmora.PlayerX" near="12" tolerance="0.2"/>
 	<!-- 봉화(20,4)에서 불을 켠다 -->
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" x="1" seconds="1.3333"/>
 	<Wait seconds="1.45"/>
 	<ActionAxis name="Move" y="1" seconds="0.6667"/>
@@ -33,6 +34,7 @@
 	<Wait frames="2"/>
 	<ExpectLog id="Velmora.BeaconLit" count="1"/>
 	<!-- 야영지(20,-4)에서 쉰다 — 일어설 지역이 고사리숲이 되고 자동 저장 체크포인트가 된다 -->
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" y="-1" seconds="1.3333"/>
 	<Wait seconds="1.45"/>
 	<Expect watch="Velmora.PlayerZ" near="-4" tolerance="0.2"/>

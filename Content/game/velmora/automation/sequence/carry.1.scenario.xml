@@ -16,6 +16,7 @@
 	<Action name="Velmora.Use"/>
 	<Wait frames="2"/>
 	<ExpectLog id="Velmora.BeaconLit" count="1"/>
+	<Wait frames="1"/> <!-- 위 판정은 이 프레임 끝에 본다 — 입력은 다음 프레임 머리에 -->
 	<ActionAxis name="Move" y="-1" seconds="0.6667"/>
 	<Wait seconds="0.8"/>
 	<ActionAxis name="Move" x="1" seconds="1.75"/>
