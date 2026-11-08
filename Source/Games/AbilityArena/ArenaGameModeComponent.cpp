@@ -3,13 +3,11 @@
 #include "Games/AbilityArena/ArenaGameModeComponent.h"
 
 #include "Core/Container/VectorUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
-#include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -156,13 +154,6 @@ namespace sw
         float32                      _unitRadius;
         float32                      _boundsHalfSize;
     };
-
-    /**
-     * @brief `-gv_arenaAutoPlay=1`: 디렉터의 자동 전투를 켭니다(씬의 `_bAutoPlay` 가 꺼져 있어도 켭니다). 플레이어도 AI 가 움직입니다.
-     * @details 배포본 실행 파일로도 돌릴 수 있게 남겨 둔다. `App -gv_arenaAutoPlay=1 -gv_profileFrames=1200` 처럼 쓴다.
-     */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_arenaAutoPlay, 0, "AbilityArena: 플레이어도 AI 가 조종 (1=켜기)" );
-    SW_GAME_AUTOPLAY( gv_arenaAutoPlay, "AbilityArena", "The auto battle AI controller possesses the player" );
 
     SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerX, "Arena.PlayerX", "World X of the arena player", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readPlayerX );
     SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerZ, "Arena.PlayerZ", "World Z of the arena player", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readPlayerZ );

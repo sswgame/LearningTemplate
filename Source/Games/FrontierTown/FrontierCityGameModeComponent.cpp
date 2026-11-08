@@ -2,9 +2,6 @@
 
 #include "Games/FrontierTown/FrontierCityGameModeComponent.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-
-#include "Engine/Config/GameAutoplay.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -18,12 +15,6 @@
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 #include "Games/FrontierTown/FrontierTownData.h"
-
-namespace sw
-{
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_frontierAutoPlay, 0, "FrontierTown: 시계를 빨리 감아 달 결산과 RTS 를 스스로 돌린다 (1=켜기)" );
-    SW_GAME_AUTOPLAY( gv_frontierAutoPlay, "FrontierTown", "The town runs at the fast time scale" );
-} // namespace sw
 
 namespace sw
 {

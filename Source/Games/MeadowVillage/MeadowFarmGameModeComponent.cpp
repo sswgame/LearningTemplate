@@ -2,9 +2,6 @@
 
 #include "Games/MeadowVillage/MeadowFarmGameModeComponent.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
-
-#include "Engine/Config/GameAutoplay.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -32,9 +29,6 @@ namespace sw
             return tile._bTilled != SW_FALSE ? tilledColor : grassColor;
         }
     } // namespace
-
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_meadowAutoPlay, 0, "MeadowVillage: 시계를 8 배로 흘려 날을 넘긴다 (1=켜기)" );
-    SW_GAME_AUTOPLAY( gv_meadowAutoPlay, "MeadowVillage", "The village runs at 8x speed" );
 } // namespace sw
 
 namespace sw

@@ -40,7 +40,7 @@
 #include "Editor/Viewport/Model/EditorGridLevel.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
-#include "Engine/Config/GameAutoplay.h"
+#include "Engine/Config/Dev/GameAutoplay.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"

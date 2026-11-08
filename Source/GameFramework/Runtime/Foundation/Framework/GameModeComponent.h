@@ -42,7 +42,7 @@ namespace sw
      *            이때 쌓인 소리(`getSoundQueue`)도 낸다.
      *            뷰 오브젝트가 정리돼 있으면 다음 틱이 스스로 플러시를 예약하고, `onFlush` 가 다시 스폰한다.
      *          - **스폰한 오브젝트**: `spawnPrefab` 이 핸들을 보관하고, `despawnViews` 가 모두 정리한다(상태 저장 전과 플레이 끝). 스스로 사라지는 오브젝트의 핸들은 플러시가 가끔 정리한다.
-     *          - **자동 플레이**: PROPERTY `_bAutoPlay` 나, 게임이 `SW_GAME_AUTOPLAY` 로 등록한 전역 변수로 켠다.
+     *          - **자동 플레이**: PROPERTY `_bAutoPlay` 로 켠다. 개발 구성에서는 게임이 `Dev/` 에서 `SW_GAME_AUTOPLAY` 로 등록한 전역 변수도 켠다(런타임 칸 `IGameAutoplayQuery` 로 읽는다 — 배포본에는 없다).
      *          - **다른 오브젝트 디렉터 뒤에 돌리기**: 키트 디렉터 사이의 순서는 보통 한 오브젝트에 붙인 순서이다(`SessionStateComponent`).
      *            씬을 나눠 디렉터를 다른 오브젝트에 두면 PROPERTY `_tickAfter` 로 그 오브젝트의 첫 디렉터 뒤에 규칙을 돌린다.
      *            주 틱은 선행 조건을 받지 못하므로 그때만 규칙을 서브틱(`kRuleSubTick`)으로 옮기고, 그 디렉터의 규칙 틱(`getRuleTickHandle`)을 선행 조건으로 등록한다.
@@ -115,7 +115,7 @@ namespace sw
 
         /** @brief 판이 열렸으면(`startGame` 이 성공) true 입니다. */
         bool isStarted() const { return _bStarted == SW_TRUE; }
-        /** @brief 게임이 스스로 돌면 true 입니다(`_bAutoPlay` 또는 게임의 `-gv_<게임>AutoPlay=1`). */
+        /** @brief 게임이 스스로 돌면 true 입니다(`_bAutoPlay`, 또는 개발 구성에서 게임의 `-gv_<게임>AutoPlay=1`). */
         bool isAutoPlayOn() const;
 
         /**

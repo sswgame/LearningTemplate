@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Config/GameAutoplay.h"
+#include "Engine/Config/IGameAutoplayQuery.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/GameInputView.h"
@@ -146,7 +146,11 @@ namespace sw
 
     bool GameModeComponent::isAutoPlayOn() const
     {
-        return _bAutoPlay || GameAutoplay::isOn();
+        if ( _bAutoPlay )
+            return true;
+        // 개발 스위치는 개발 구성에만 있다(Dev/ 의 서브시스템이 칸을 채운다) — 배포본은 칸이 비어 씬 데이터만 본다.
+        const IGameAutoplayQuery* pDevSwitch = game::findSubsystem<IGameAutoplayQuery>();
+        return pDevSwitch != nullptr && pDevSwitch->isGameAutoplayOn();
     }
 
     void GameModeComponent::applyPendingState()

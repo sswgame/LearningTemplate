@@ -2,12 +2,10 @@
 
 #include "Games/ThemeParkTycoon/ParkGameModeComponent.h"
 
-#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
-#include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
@@ -64,10 +62,6 @@ namespace sw
             }
         };
     } // namespace
-
-    /** @brief `-gv_parkAutoBuild=1`: 디렉터의 자동 건설을 켭니다(씬의 `_bAutoBuild` 가 꺼져 있어도 켭니다). 배포본 실행으로 입력 없이 공원이 커지는지 확인합니다. */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_parkAutoBuild, 0, "ThemeParkTycoon: 돈이 모이면 자동으로 짓기 (1=켜기)" );
-    SW_GAME_AUTOPLAY( gv_parkAutoBuild, "ThemeParkTycoon", "Build the next ride whenever cash allows" );
 } // namespace sw
 
 namespace sw

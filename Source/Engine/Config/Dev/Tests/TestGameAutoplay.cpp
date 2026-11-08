@@ -7,7 +7,7 @@
 #include "Core/String/RegistrationList.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Config/GameAutoplay.h"
+#include "Engine/Config/Dev/GameAutoplay.h"
 #include "Engine/Foundation/EngineServices.h"
 
 using namespace sw;
