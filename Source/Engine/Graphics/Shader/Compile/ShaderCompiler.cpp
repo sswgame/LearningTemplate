@@ -115,7 +115,7 @@ namespace sw
             static const utf8* getTargetProfile( ShaderStage stage, ShaderTargetFormat targetFormat )
             {
                 const ShaderStageInfo&              info    = getShaderStageInfo( stage );
-                const ShaderTargetFormatInfo* const pFormat = ShaderTargetFormatInfo::find( targetFormat );
+                const ShaderTargetFormatInfo* const pFormat = ShaderTargetFormatTable::find( targetFormat );
                 if ( pFormat != nullptr && pFormat->_tool == ShaderCompilerTool::Fxc )
                     return info._pProfileSm5 != nullptr ? info._pProfileSm5 : getShaderStageInfo( ShaderStage::Vertex )._pProfileSm5;
                 return info._pProfileSm6;
@@ -821,7 +821,7 @@ namespace sw
 
         const string profile = Internal::getTargetProfile( desc._stage, desc._targetFormat );
 
-        const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatInfo::find( desc._targetFormat );
+        const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatTable::find( desc._targetFormat );
         const bool                          bFxcTarget  = pTargetInfo != nullptr && pTargetInfo->_tool == ShaderCompilerTool::Fxc;
 #if defined( SW_PLATFORM_WINDOWS )
         if ( bFxcTarget )

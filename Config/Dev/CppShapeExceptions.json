@@ -9,6 +9,10 @@
         "Source/Engine/Profiling/IProfilerBackend.h|IProfilerBackend": "역할 인터페이스(메모리 출력 · GPU 타임라인)를 묶은 순수 인터페이스 — RHI 는 GPU 타임라인 역할만 받는다"
     },
     "staticOwner": {
+        "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.h|ShaderTargetFormatTable": "행 타입의 constexpr 표 — 행 타입 안에는 자기 타입 배열을 constexpr 로 둘 수 없다(RHIFormatInfoTable 과 같은 까닭)",
+        "Source/Engine/Graphics/RHI/RHIBackendInfo.h|RHIBackendInfoTable": "행 타입의 constexpr 표 — 행 타입 안에는 자기 타입 배열을 constexpr 로 둘 수 없다(RHIFormatInfoTable 과 같은 까닭)",
+        "Source/Engine/Renderer/Pipeline/GBufferLayout.h|GBufferLayout": "행 타입(GBufferAttachmentSpec)의 constexpr 표와 그 조회 · 해독 — 행 타입 안에는 자기 타입 배열을 constexpr 로 둘 수 없다",
+        "Source/Engine/Graphics/RHI/RHIFormatInfo.h|RHIFormatInfoTable": "행 타입의 constexpr 표 — 행 타입 안에 자기 타입 배열을 constexpr 로 둘 수 없다(클래스 안에서는 불완전 형식). 표와 조회를 함께 든 타입이 표의 주인이다(언리얼 GPixelFormats 와 같은 자리)",
         "Source/Editor/Common/Asset/OutfitAtlas.h|OutfitAtlasLayout": "빈 칸 채우기 알고리즘 — 원본 크기 목록(OutfitAtlasSource)에서 사각형 목록(OutfitAtlasRect)을 짓는 두 타입에 걸친 계산이고 어느 한쪽의 값을 다루지 않는다(언리얼 FBinPacker 와 같은 자리)",
         "Source/Editor/Common/Asset/OutfitAtlas.h|OutfitAtlasComposer": "픽셀 버퍼(vector<uint8>) 합성 — 사각형은 놓을 자리 인자 하나이고 함수가 다루는 값은 아틀라스 픽셀이다",
         "Source/GameFramework/Runtime/Online/Audit/ServiceAuditLog.h|ServiceAuditLog": "DB 표 창구 — 표 이름 · 행 키 · 레코드 읽기처럼 표(여러 행)와 DB 연결을 다루고 행 타입 하나의 일이 아니다(언리얼 · 유니티의 저장소 계층과 같은 자리)",

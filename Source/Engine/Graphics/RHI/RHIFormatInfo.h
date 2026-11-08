@@ -25,7 +25,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief RHIFormat 하나의 공통 사실입니다. `RHIFormatInfo` 이 유일한 원본입니다. */
+    /** @brief RHIFormat 하나의 공통 사실입니다. `RHIFormatInfoTable` 이 유일한 원본입니다. */
     struct RHIFormatInfo
     {
         RHIFormat          _format;
@@ -33,8 +33,31 @@ namespace sw
         uint8              _bRenderable : 1; ///< 렌더 타깃 · 깊이 첨부로 만들 수 있다. 네 백엔드가 모두 보장하는 포맷만이다(블록 압축 · Unknown 은 안 된다. R32G32B32_FLOAT 는 D3D11 · D3D12 · Vulkan 모두 선택 사항이라 뺀다)
         uint8              _bDepth      : 1; ///< 깊이 포맷이다
         uint8              _bFloatTexel : 1; ///< 텍셀이 비압축 실수다(NaN 검사가 훑을 수 있다)
+    };
+} // namespace sw
 
-        // 형식 공통 표입니다. 값 번호가 곧 행 번호입니다(`RHIFormat` 은 기존 번호를 바꾸지 않는다). */
+namespace sw
+{
+    /** @brief RHIFormat 열거자 수입니다. 새 포맷은 맨 뒤에 잇고 이 값을 함께 올린다 — 공통 · 백엔드 표의 대조가 모두 이 값을 본다. */
+    inline constexpr size_t kRHIFormatCount = static_cast<size_t>( RHIFormat::R32G32B32A32_FLOAT ) + 1;
+
+    /** @brief 형식 표 @p arrRow(`_format` 칸을 가진 행)가 RHIFormat 열거자를 빠짐없이 열거 순서로 적었는지 봅니다. 백엔드 표는 이것을 `static_assert` 로 건다. */
+    template <typename TRow, size_t kRowCount>
+    constexpr bool isRHIFormatTableInOrder( const TRow ( &arrRow )[kRowCount] )
+    {
+        if ( kRowCount != kRHIFormatCount )
+            return false;
+        for ( size_t index = 0; index < kRowCount; ++index )
+        {
+            if ( static_cast<size_t>( arrRow[index]._format ) != index )
+                return false;
+        }
+        return true;
+    }
+
+    /** @brief 형식 공통 표입니다. 값 번호가 곧 행 번호입니다(`RHIFormat` 은 기존 번호를 바꾸지 않는다). */
+    struct RHIFormatInfoTable
+    {
         static constexpr RHIFormatInfo kArrRow[] = {
             {    RHIFormat::R8G8B8A8_UNORM,  { 1, 1, 4 }, 1, 0, 0},
             {    RHIFormat::B8G8R8A8_UNORM,  { 1, 1, 4 }, 1, 0, 0},
@@ -67,33 +90,12 @@ namespace sw
             return index < kRHIFormatCount ? kArrRow[index] : kArrRow[static_cast<size_t>( RHIFormat::Unknown )];
         }
     };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief RHIFormat 열거자 수입니다. 새 포맷은 맨 뒤에 잇고 이 값을 함께 올린다 — 공통 · 백엔드 표의 대조가 모두 이 값을 본다. */
-    inline constexpr size_t kRHIFormatCount = static_cast<size_t>( RHIFormat::R32G32B32A32_FLOAT ) + 1;
-
-    /** @brief 형식 표 @p arrRow(`_format` 칸을 가진 행)가 RHIFormat 열거자를 빠짐없이 열거 순서로 적었는지 봅니다. 백엔드 표는 이것을 `static_assert` 로 건다. */
-    template <typename TRow, size_t kRowCount>
-    constexpr bool isRHIFormatTableInOrder( const TRow ( &arrRow )[kRowCount] )
-    {
-        if ( kRowCount != kRHIFormatCount )
-            return false;
-        for ( size_t index = 0; index < kRowCount; ++index )
-        {
-            if ( static_cast<size_t>( arrRow[index]._format ) != index )
-                return false;
-        }
-        return true;
-    }
-
-    static_assert( isRHIFormatTableInOrder( RHIFormatInfo::kArrRow ), "RHIFormatInfoTable::kArrRow needs one row per RHIFormat, in enumerator order" );
+    static_assert( isRHIFormatTableInOrder( RHIFormatInfoTable::kArrRow ), "RHIFormatInfoTable::kArrRow needs one row per RHIFormat, in enumerator order" );
 
     /** @brief 포맷의 블록 정보를 반환합니다. 네 백엔드가 밉 크기와 행 바이트를 같은 규칙으로 계산하게 하는 유일한 원본입니다. */
     inline constexpr RHIFormatBlockInfo getRHIFormatBlockInfo( RHIFormat format )
     {
-        return RHIFormatInfo::find( format )._block;
+        return RHIFormatInfoTable::find( format )._block;
     }
 
     /** @brief 블록 압축 포맷인지 확인합니다. */
@@ -105,19 +107,19 @@ namespace sw
     /** @brief 렌더 타깃(컬러 첨부) 또는 깊이 첨부로 만들 수 있는 포맷인지 확인합니다. 네 백엔드가 모두 보장하는 포맷만 true 입니다. */
     inline constexpr bool isRHIFormatRenderable( RHIFormat format )
     {
-        return RHIFormatInfo::find( format )._bRenderable != 0;
+        return RHIFormatInfoTable::find( format )._bRenderable != 0;
     }
 
     /** @brief 깊이 포맷인지 확인합니다. */
     inline constexpr bool isRHIFormatDepth( RHIFormat format )
     {
-        return RHIFormatInfo::find( format )._bDepth != 0;
+        return RHIFormatInfoTable::find( format )._bDepth != 0;
     }
 
     /** @brief 텍셀이 비압축 실수인 포맷인지 확인합니다. */
     inline constexpr bool isRHIFormatFloatTexel( RHIFormat format )
     {
-        return RHIFormatInfo::find( format )._bFloatTexel != 0;
+        return RHIFormatInfoTable::find( format )._bFloatTexel != 0;
     }
 
     /** @brief 비압축 컬러 포맷의 픽셀당 바이트를 반환합니다. 압축, 깊이, Unknown 은 0 입니다. */

@@ -4,7 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Renderer/Pipeline/GBufferAttachmentSpec.h"
+#include "Engine/Renderer/Pipeline/GBufferLayout.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
 // G버퍼 명세 한 벌 — 셰이더 판 번호 · PSO 포맷 · 값 풀이가 같은 표를 본다.
@@ -26,7 +26,7 @@ SW_TEST_CASE( GBufferLayoutTest, ShaderVersionMatchesTheLayout )
     number               = StringUtil::trim( number );
     int32 version{ 0 };
     SW_REQUIRE_TRUE( StringUtil::parseInt( number, version ) );
-    SW_EXPECT_EQUAL( static_cast<int32>( GBufferAttachmentSpec::kVersion ), version );
+    SW_EXPECT_EQUAL( static_cast<int32>( GBufferLayout::kVersion ), version );
 }
 
 /**
@@ -35,13 +35,13 @@ SW_TEST_CASE( GBufferLayoutTest, ShaderVersionMatchesTheLayout )
 SW_TEST_CASE( GBufferLayoutTest, PassFormatsComeFromTheLayout )
 {
     const RenderPassTypeInfo& info = getRenderPassTypeInfo( RenderPassType::GBuffer );
-    SW_REQUIRE_EQUAL( GBufferAttachmentSpec::kAttachmentCount, info._colorTargetCount );
-    for ( uint32 slot = 0; slot < GBufferAttachmentSpec::kAttachmentCount; ++slot )
+    SW_REQUIRE_EQUAL( GBufferLayout::kAttachmentCount, info._colorTargetCount );
+    for ( uint32 slot = 0; slot < GBufferLayout::kAttachmentCount; ++slot )
     {
-        SW_EXPECT_TRUE( info._pColorFormat[slot] == GBufferAttachmentSpec::kArrAttachment[slot]._format );
-        SW_EXPECT_TRUE( GBufferAttachmentSpec::findAttachment( GBufferAttachmentSpec::kArrAttachment[slot]._pName ) == &GBufferAttachmentSpec::kArrAttachment[slot] );
+        SW_EXPECT_TRUE( info._pColorFormat[slot] == GBufferLayout::kArrAttachment[slot]._format );
+        SW_EXPECT_TRUE( GBufferLayout::findAttachment( GBufferLayout::kArrAttachment[slot]._pName ) == &GBufferLayout::kArrAttachment[slot] );
     }
-    SW_EXPECT_TRUE( GBufferAttachmentSpec::findAttachment( "SceneColor" ) == nullptr );
+    SW_EXPECT_TRUE( GBufferLayout::findAttachment( "SceneColor" ) == nullptr );
 }
 
 /**
@@ -50,18 +50,18 @@ SW_TEST_CASE( GBufferLayoutTest, PassFormatsComeFromTheLayout )
 SW_TEST_CASE( GBufferLayoutTest, DecodeFollowsTheShaderEncoding )
 {
     vector<GBufferDecodedValue> listValue;
-    GBufferAttachmentSpec::decodeTexel( GBufferAttachmentSpec::kArrAttachment[1], float4{ 0.0f, 0.0f, 0.0f, 0.0f }, listValue );
+    GBufferLayout::decodeTexel( GBufferLayout::kArrAttachment[1], float4{ 0.0f, 0.0f, 0.0f, 0.0f }, listValue );
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( listValue.size() ) );
     SW_EXPECT_EQUAL( 3u, listValue[0]._componentCount );
     SW_EXPECT_NEAR( 1.0f, listValue[0]._value._z, 1.0e-5f );
 
-    GBufferAttachmentSpec::decodeTexel( GBufferAttachmentSpec::kArrAttachment[2], float4{ 0.25f, 0.75f, 0.0f, 1.0f }, listValue );
+    GBufferLayout::decodeTexel( GBufferLayout::kArrAttachment[2], float4{ 0.25f, 0.75f, 0.0f, 1.0f }, listValue );
     SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( listValue.size() ) ); // 금속도 · 거칠기 · 그려짐(쓰지 않는 칸은 뺀다)
     SW_EXPECT_NEAR( 0.25f, listValue[0]._value._x, 1.0e-6f );
     SW_EXPECT_NEAR( 0.75f, listValue[1]._value._x, 1.0e-6f );
     SW_EXPECT_NEAR( 1.0f, listValue[2]._value._x, 1.0e-6f );
 
-    GBufferAttachmentSpec::decodeTexel( GBufferAttachmentSpec::kArrAttachment[0], float4{ 0.5f, 0.5f, 0.5f, 0.0f }, listValue );
+    GBufferLayout::decodeTexel( GBufferLayout::kArrAttachment[0], float4{ 0.5f, 0.5f, 0.5f, 0.0f }, listValue );
     SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( listValue.size() ) );
     SW_EXPECT_NEAR( 0.0f, listValue[3]._value._x, 1.0e-6f ); // Unlit
 }

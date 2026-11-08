@@ -32,6 +32,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    struct CatalogGradient;
+
     /** @brief 곡선 하나입니다. */
     struct CatalogCurve
     {

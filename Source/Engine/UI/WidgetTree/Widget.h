@@ -258,10 +258,10 @@ namespace sw
         friend class PanelWidget;
         friend class WidgetTree;
         friend class UILayoutPass;
-        friend class UIPaintContext;
+        friend struct UIPaintContext;
         friend class UIPointerState;
         friend class UIStylePass;
-        friend class UIStyleTransitionState;
+        friend struct UIStyleTransitionState;
 
         /** @brief 이 위젯과 자손을 @p pTree 에 붙입니다. 번호를 이름에 연결하고 밀려 있던 무효화를 트리에 넘깁니다. */
         void attachToTree( WidgetTree* pTree, PanelWidget* pParent );

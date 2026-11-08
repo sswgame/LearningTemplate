@@ -116,7 +116,7 @@ namespace sw
 
             static bool isSPIRV( ShaderTargetFormat target )
             {
-                const ShaderTargetFormatInfo* const pInfo = ShaderTargetFormatInfo::find( target );
+                const ShaderTargetFormatInfo* const pInfo = ShaderTargetFormatTable::find( target );
                 return pInfo != nullptr && pInfo->_bSpirv != 0;
             }
 

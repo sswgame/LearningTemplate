@@ -10,6 +10,9 @@
 
 namespace sw
 {
+    struct AutomationImageRegion;
+    struct AutomationImageDifference;
+
     /** @struct SW_API AutomationImage @brief 8 비트 RGB 이미지 한 장입니다(PPM P6 를 읽은 값). */
     struct AutomationImage
     {

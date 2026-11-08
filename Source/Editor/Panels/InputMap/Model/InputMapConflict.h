@@ -16,6 +16,8 @@ namespace sw
 
 namespace sw::editor
 {
+    struct InputMapConflictView;
+
     /** @brief 충돌 하나 — 액션 둘이 같은 레이어에서 같은 슬롯을 쓴다. */
     struct InputMapConflict
     {

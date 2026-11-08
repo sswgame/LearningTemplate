@@ -12,6 +12,7 @@
 
 namespace sw
 {
+    struct ShaderReservedBinding;
     enum class ShaderTargetFormat : uint8;
 
     /// @brief 계약 위반 하나입니다. 어느 리소스가 어떻게 어긋났는지 담습니다.

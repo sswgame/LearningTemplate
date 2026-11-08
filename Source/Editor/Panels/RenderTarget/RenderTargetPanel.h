@@ -13,7 +13,7 @@
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Renderer/Pipeline/GBufferAttachmentSpec.h"
+#include "Engine/Renderer/Pipeline/GBufferLayout.h"
 
 // `vector<RenderTargetInfo>` 와 `RenderTargetReadback` 을 멤버로 가지므로 완전한 타입이 필요하다. 전방 선언으로는 안 된다.
 

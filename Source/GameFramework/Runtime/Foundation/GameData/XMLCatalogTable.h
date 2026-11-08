@@ -40,6 +40,9 @@
 
 namespace sw
 {
+    template <typename TCatalog>
+    struct XMLCatalogElement;
+
     /** @brief 표 읽기의 결과입니다. 항목 수로 답하는 루트 읽기는 `_loadedCount` 를, 틀린 원소가 있으면 파일 전체를 물리는 루트 읽기는 `isClean` 을 봅니다. */
     struct SW_GF_API XMLCatalogReadResult
     {

@@ -19,6 +19,8 @@
 
 namespace sw
 {
+    struct ServiceRetentionReport;
+
     /** @brief 레코드에서 기록 시각(UTC 밀리초)을 읽습니다. 읽지 못하면 false 이고 그 레코드는 지우지 않습니다. */
     using ServiceRetentionTimeFn = bool ( * )( const ServiceRecord& record, int64& outTimeMs );
 

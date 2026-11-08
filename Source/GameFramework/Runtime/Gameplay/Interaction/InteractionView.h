@@ -14,6 +14,9 @@
 
 namespace sw
 {
+    struct InteractionCandidate;
+    class ILineOfSightQuery;
+
     class GameObjectManager;
 
     /** @brief 거리와 각을 측정하는 공간입니다. */

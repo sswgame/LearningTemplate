@@ -173,7 +173,7 @@ namespace sw
 
     string_view ShaderCooker::getExtensionForFormat( ShaderTargetFormat format )
     {
-        const ShaderTargetFormatInfo* const pInfo = ShaderTargetFormatInfo::find( format );
+        const ShaderTargetFormatInfo* const pInfo = ShaderTargetFormatTable::find( format );
         if ( pInfo != nullptr )
             return pInfo->_pExtension;
         SW_FATAL( "ShaderCooker::getExtensionForFormat: unknown shader target format %#", static_cast<uint32>( format ) );

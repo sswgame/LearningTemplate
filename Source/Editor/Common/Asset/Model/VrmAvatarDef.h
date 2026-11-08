@@ -142,6 +142,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    struct VrmGltfNames;
+
     /** @brief VRM 모델 하나의 아바타 정보 전부입니다. VRM 이 아니면 비어 있습니다(`isEmpty`). */
     struct VrmAvatarDef
     {

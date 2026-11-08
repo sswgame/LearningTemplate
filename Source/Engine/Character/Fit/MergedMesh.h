@@ -61,6 +61,8 @@ namespace sw
 
 namespace sw
 {
+    class IMeshMergeHooks;
+
     /** @brief 병합 결과입니다. 형상의 `_listTrianglePart` 가 삼각형마다 부품 번호(`_listPart` 순서)입니다. */
     struct SW_API MergedMesh
     {

@@ -402,7 +402,7 @@ namespace sw
                 commandLine.getArgument( CommandLineArgument::COOKED_DIR, cookedDir );
                 IShaderCookService* const pService    = requireShaderCookService( "--verify-shaders" );
                 bool                      bAllCurrent = pService != nullptr;
-                for ( const RHIBackendInfo& info : RHIBackendInfo::kArrInfo )
+                for ( const RHIBackendInfo& info : RHIBackendInfoTable::kArrInfo )
                 {
                     bAllCurrent = pService != nullptr && pService->verifyCookedShaders( cookedDir, info._shaderTarget ) && bAllCurrent;
                 }

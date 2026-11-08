@@ -25,10 +25,10 @@ namespace sw::editor
     };
 
     /**
-     * @struct SW_EDITOR_API EditorCurveEditorState
+     * @struct EditorCurveEditorState
      * @brief 열린 커브 편집기 하나의 상태입니다. 편집은 작업 복사본(`_working`)에 하고, 마치면(드래그를 놓을 때, 메뉴 동작) 호출하는 쪽이 값에 적용합니다.
      */
-    struct EditorCurveEditorState
+    struct SW_EDITOR_API EditorCurveEditorState
     {
         EditorCurveView _view{};
         FloatCurve      _working{};                                       ///< 편집 중인 복사본

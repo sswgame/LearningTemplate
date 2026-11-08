@@ -31,6 +31,8 @@
 
 namespace sw::editor
 {
+    struct OutfitAtlasBakeResult;
+
     /** @brief 명세의 부품 하나입니다(이름과 메시 경로). */
     REFLECT()
     struct OutfitAtlasPartSpec

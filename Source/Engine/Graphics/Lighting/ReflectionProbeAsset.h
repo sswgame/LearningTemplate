@@ -24,6 +24,8 @@
 
 namespace sw
 {
+    struct ReflectionProbeFace;
+
     /** @brief `.reflprobe` 하나의 내용입니다. 파일 머리말을 참고하세요. */
     struct SW_API ReflectionProbeAsset
     {

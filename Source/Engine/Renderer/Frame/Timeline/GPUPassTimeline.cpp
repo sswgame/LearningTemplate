@@ -154,7 +154,7 @@ namespace sw
             int64      gpuNow{ 0 };
             const bool bClockRead = pTimestamps->readGPUClockNanos( gpuNow );
             // 뷰어가 큐 이름 옆에 GPU API 종류를 보여 준다.
-            const RHIBackendInfo* pInfo   = RHIBackendInfo::find( pDevice->getBackendType() );
+            const RHIBackendInfo* pInfo   = RHIBackendInfoTable::find( pDevice->getBackendType() );
             const bool            bOpened = bClockRead && pInfo != nullptr &&
                                  _exporter.openContext( *pBackend, pInfo->_profilerAPI, pDevice->getBackendName(), pDevice, gpuNow );
             if ( bOpened == false )

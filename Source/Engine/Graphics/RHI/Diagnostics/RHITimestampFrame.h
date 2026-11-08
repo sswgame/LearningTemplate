@@ -14,13 +14,13 @@
 namespace sw
 {
     /**
-     * @struct SW_API RHITimestampFrame
+     * @struct RHITimestampFrame
      * @brief 이미 끝난 한 프레임의 타임스탬프입니다(`IRHITimestampProvider::readTimestamps`).
      * @details 슬롯 값은 기준점(그 프레임에서 가장 이른 슬롯) 뒤 마이크로초이고, 기준점 자체는 GPU 시계의 나노초입니다. 엔진 테이블(`GPU.<패스>`)은
      *          차이만 쓰고, 외부 프로파일러(Tracy GPU 타임라인)는 기준점으로 절대 시각을 만들어 CPU 시계와 맞춥니다
      *          (`IRHITimestampProvider::readGPUClockNanos` 와 같은 시계 영역).
      */
-    struct RHITimestampFrame
+    struct SW_API RHITimestampFrame
     {
         vector<float32> _listMicro;        ///< 슬롯마다 기준점 뒤 마이크로초. 기록되지 않은 슬롯은 음수, 읽을 것이 없으면 비어 있다
         int64           _originNanos{ 0 }; ///< 기준점(가장 이른 슬롯)의 GPU 시계 나노초

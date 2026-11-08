@@ -484,7 +484,7 @@ namespace sw
             }
             IocpConnection&   connection = *_listConnection[index];
             ScopedLock<mutex> connectionLock{ connection.getMutex() };
-            connection.openLocked( index, socket, remote, bAccepted, state, *_settings );
+            connection.openLocked( index, socket, remote, bAccepted, state, _settings.get() );
             _openCount.fetch_add( 1, std::memory_order_relaxed );
             pOutConnection = &connection;
             return connection.makeHandle( index );

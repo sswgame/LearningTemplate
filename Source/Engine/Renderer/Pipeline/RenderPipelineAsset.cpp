@@ -10,7 +10,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/Renderer/Pipeline/GBufferAttachmentSpec.h"
+#include "Engine/Renderer/Pipeline/GBufferLayout.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -603,11 +603,11 @@ namespace sw
                 uint32 issueCount{ 0 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
-                    if ( pass._type != RenderPassType::GBuffer || pass._listResolvedColorOutput.size() != GBufferAttachmentSpec::kAttachmentCount )
+                    if ( pass._type != RenderPassType::GBuffer || pass._listResolvedColorOutput.size() != GBufferLayout::kAttachmentCount )
                         continue;
-                    for ( uint32 slot = 0; slot < GBufferAttachmentSpec::kAttachmentCount; ++slot )
+                    for ( uint32 slot = 0; slot < GBufferLayout::kAttachmentCount; ++slot )
                     {
-                        const GBufferAttachmentSpec& spec           = GBufferAttachmentSpec::kArrAttachment[slot];
+                        const GBufferAttachmentSpec& spec           = GBufferLayout::kArrAttachment[slot];
                         const hashed_string&         outputName     = pass._listResolvedColorOutput[slot]._attachment;
                         const RenderPassAttachment*  pAttachment    = findAttachment( desc, outputName.view() );
                         const bool                   bFormatMatches = pAttachment != nullptr && pAttachment->_format == spec._format;
@@ -617,7 +617,7 @@ namespace sw
                         if ( bFormatMatches && bClearMatches )
                             continue;
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.GBufferLayoutMismatch", "[%#] pass '%#': G-buffer slot %# ('%#', %#) must be %# cleared to 0 by the G-buffer layout v%#%#",
-                                         sourcePath, pass._name, slot, outputName.c_str(), spec._pName, getEnumName( spec._format ), GBufferAttachmentSpec::kVersion,
+                                         sourcePath, pass._name, slot, outputName.c_str(), spec._pName, getEnumName( spec._format ), GBufferLayout::kVersion,
                                          pAttachment == nullptr ? " - the attachment is not declared" : ( bFormatMatches ? " - its clear color differs" : " - its format differs" ) );
                         ++issueCount;
                     }

@@ -126,8 +126,11 @@ namespace sw
         ShaderCompilerTool _tool;
         const utf8*        _pExtension; ///< 쿠킹 바이너리 확장자. SPIR-V 둘은 같아야 한다
         uint8              _bSpirv : 1; ///< 리플렉션 · 바인딩 검사가 SPIR-V 를 읽는다(WGSL 꾸러미는 안의 SPIR-V 를 꺼내 읽는다 — `WebGPUShaderContainer::findSpirv`)
+    };
 
-        // 형식 표입니다. 새 대상(WebGPU 의 SPIR-V → WGSL)은 여기와 컴파일러 표에 한 줄씩이다(언리얼 `IShaderFormat` 자리, 기억). */
+    /** @brief 형식 표입니다. 새 대상(WebGPU 의 SPIR-V → WGSL)은 여기와 컴파일러 표에 한 줄씩이다(언리얼 `IShaderFormat` 자리, 기억). 행 타입 안에는 자기 타입의 constexpr 배열을 둘 수 없어 표 타입이 따로다. */
+    struct ShaderTargetFormatTable
+    {
         static constexpr ShaderTargetFormatInfo kArrRow[] = {
             {  ShaderTargetFormat::DXBC_D3D11, ShaderCompilerTool::Fxc, ".dxbc", 0},
             {  ShaderTargetFormat::DXIL_D3D12, ShaderCompilerTool::Dxc, ".dxil", 0},
@@ -155,8 +158,7 @@ namespace sw
             return index == static_cast<size_t>( ShaderTargetFormat::Count );
         }
     };
-
-    static_assert( ShaderTargetFormatInfo::isInEnumOrder(), "ShaderTargetFormatTable needs one row per ShaderTargetFormat, in enumerator order" );
+    static_assert( ShaderTargetFormatTable::isInEnumOrder(), "ShaderTargetFormatTable needs one row per ShaderTargetFormat, in enumerator order" );
 
     /**
      * @struct ShaderMacroDefine

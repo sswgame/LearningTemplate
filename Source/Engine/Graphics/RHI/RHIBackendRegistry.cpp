@@ -48,7 +48,7 @@ namespace sw
                     return true;
 
                 // 이 플랫폼에 없는 백엔드(Linux 의 D3D)는 모듈을 찾지 않는다.
-                const RHIBackendInfo* pInfo = RHIBackendInfo::find( backend );
+                const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
                 if ( pInfo == nullptr || RHIAvailability::isAvailable( backend ) == false )
                     return false;
                 return tryLoadBackendModule( backend, pInfo->_pModuleName );

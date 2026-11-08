@@ -18,6 +18,8 @@
 
 namespace sw
 {
+    struct CharacterLODSectionRule;
+
     enum class XMLRootStatus : uint8;
 } // namespace sw
 

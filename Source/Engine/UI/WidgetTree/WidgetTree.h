@@ -90,10 +90,10 @@ namespace sw
         friend class Widget;
         friend class UIFocusManager;
         friend class UILayoutPass;
-        friend class UIPaintContext;
+        friend struct UIPaintContext;
         friend class UIScreen;
         friend class UIStylePass;
-        friend class UIStyleTransitionState;
+        friend struct UIStyleTransitionState;
 
         /** @brief 번호와 이름을 등록합니다(`Widget::attachToTree` 가 부릅니다). */
         void registerWidget( Widget& widget );

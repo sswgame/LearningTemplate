@@ -85,7 +85,7 @@ namespace sw
         friend class Widget;
         friend class WidgetTree;
         friend class UILayoutPass;
-        friend class UIPaintContext;
+        friend struct UIPaintContext;
 
         vector<unique_ptr<Widget>> _listChild;
         PROPERTY( DisplayName = "Clip Children" )

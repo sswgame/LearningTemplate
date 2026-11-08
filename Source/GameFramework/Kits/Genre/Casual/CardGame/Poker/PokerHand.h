@@ -27,11 +27,11 @@ namespace sw
     };
 
     /**
-     * @struct SW_KIT_API PokerHandValue
+     * @struct PokerHandValue
      * @brief 판정 결과입니다. `_score` 하나로 크기를 비교합니다(족보 << 20 | 비교 숫자 5개 x 4비트).
      * @details 비교 숫자는 먼저 비교할 것부터 담는다. 풀하우스는 트리플과 페어, 투페어는 높은 페어, 낮은 페어, 키커 순이다. 에이스는 14 이다.
      */
-    struct PokerHandValue
+    struct SW_KIT_API PokerHandValue
     {
         Card          _arrBest[5]{};     ///< 고른 5장이다
         uint32        _score{ 0 };       ///< 클수록 센 패이고, 같으면 무승부이다

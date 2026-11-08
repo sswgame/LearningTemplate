@@ -1,5 +1,5 @@
 /**
- * @file GBufferAttachmentSpec.h
+ * @file GBufferLayout.h
  * @brief G버퍼 명세 한 벌(판 번호 있음) — 첨부마다 이름 · 역할 · 포맷 · 클리어 값 · 채널의 뜻과 인코딩. C++ 패스 계약(PSO 포맷), 파이프라인 XML 검증, 디버그 표시(렌더 타깃 창의 값 풀이)가 이 표 하나를 읽는다.
  * @details 셰이더 쪽 쓰기(`SurfaceOutput::pack` — binding_output.hlsli)와 읽기(`PassTexture::loadGbuffer*` — binding_texture.hlsli)는 HLSL 이라 이 표를 include 하지 못한다.
  *          그래서 셰이더는 같은 판 번호(`SW_GBUFFER_LAYOUT_VERSION`, binding_output.hlsli)를 적고 단위 테스트(`GBufferLayoutTest`)가 두 번호를 맞춘다 — 한쪽만 바꾸면 테스트가 진다.
@@ -37,7 +37,7 @@ namespace sw
     };
 
     /** @brief G버퍼 첨부 하나입니다. 순서는 MRT 슬롯(SV_TARGET0 ..) 순서입니다. */
-    struct SW_API GBufferAttachmentSpec
+    struct GBufferAttachmentSpec
     {
         const utf8*         _pName; ///< 파이프라인 XML 의 첨부 이름이자 입력 역할 이름
         RenderPassInputRole _role;
@@ -45,8 +45,22 @@ namespace sw
         float4              _clearColor;
         GBufferChannelSpec  _arrChannel[4];
         uint32              _channelCount;
+    };
 
-        // G버퍼 명세입니다. 파일 머리말 참고.
+    /** @brief 풀어낸 값 하나입니다(디버그 표시가 줄 하나로 보인다). */
+    struct GBufferDecodedValue
+    {
+        const utf8* _pName;
+        float3      _value;
+        uint32      _componentCount; ///< 1 이면 `_value._x` 만, 3 이면 벡터
+    };
+
+    /**
+     * @struct GBufferLayout
+     * @brief G버퍼 명세입니다. 파일 머리말 참고.
+     */
+    struct SW_API GBufferLayout
+    {
         /** @brief 명세의 판입니다. 첨부 · 채널 · 인코딩이 바뀌면 올리고 binding_output.hlsli 의 `SW_GBUFFER_LAYOUT_VERSION` 도 같이 올린다. */
         static constexpr uint32 kVersion = 1;
         /** @brief 첨부 수입니다(G버퍼 패스의 MRT 수). */
@@ -74,13 +88,4 @@ namespace sw
          */
         static void decodeTexel( const GBufferAttachmentSpec& spec, const float4& raw, vector<GBufferDecodedValue>& outListValue );
     };
-
-    /** @brief 풀어낸 값 하나입니다(디버그 표시가 줄 하나로 보인다). */
-    struct GBufferDecodedValue
-    {
-        const utf8* _pName;
-        float3      _value;
-        uint32      _componentCount; ///< 1 이면 `_value._x` 만, 3 이면 벡터
-    };
-
 } // namespace sw

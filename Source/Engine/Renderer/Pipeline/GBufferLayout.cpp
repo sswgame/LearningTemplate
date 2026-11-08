@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Pipeline/GBufferAttachmentSpec.h"
+#include "Engine/Renderer/Pipeline/GBufferLayout.h"
 
 #include "Core/Math/OctahedralNormal.h"
 
 namespace sw
 {
-    const GBufferAttachmentSpec* GBufferAttachmentSpec::findAttachment( string_view name )
+    const GBufferAttachmentSpec* GBufferLayout::findAttachment( string_view name )
     {
         for ( const GBufferAttachmentSpec& spec : kArrAttachment )
         {
@@ -16,7 +16,7 @@ namespace sw
         return nullptr;
     }
 
-    void GBufferAttachmentSpec::decodeTexel( const GBufferAttachmentSpec& spec, const float4& raw, vector<GBufferDecodedValue>& outListValue )
+    void GBufferLayout::decodeTexel( const GBufferAttachmentSpec& spec, const float4& raw, vector<GBufferDecodedValue>& outListValue )
     {
         outListValue.clear();
         const float32 arrRaw[4] = { raw._x, raw._y, raw._z, raw._w };

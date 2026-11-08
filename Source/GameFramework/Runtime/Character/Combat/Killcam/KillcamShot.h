@@ -20,6 +20,9 @@
 
 namespace sw
 {
+    struct KillcamSettings;
+    struct KillcamPose;
+
     struct ProjectileEvent;
 
     /** @brief 한 발이 맞은 것 하나입니다. 출발점에서의 거리 순으로 쌓인다. */

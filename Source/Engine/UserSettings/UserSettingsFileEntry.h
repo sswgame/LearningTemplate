@@ -10,6 +10,7 @@
 
 namespace sw
 {
+    struct UserSettingsWriteEntry;
     struct UserSettingDef;
 
     class UserSettingsSchema;
