@@ -7819,26 +7819,7 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.AddLensTrackTip"
-		       source="Add a lens track (field of view, focus, aperture, lens shift) for the selected binding's camera.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.AddPropertyTrackTip"
-		       source="Add a track that keys one numeric property of a component on the selected object.">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.AddRigSlotTrackTip"
-		       source="Add a track that keys a rig slot weight (PoseModifierComponent)">
-			<origins>
-				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorSequencer.AddTransformTrackTip"
-		       source="Add a track that keys the selected object's position, rotation and scale.">
+		<entry key="EditorSequencer.AddTrackTipFormat" source="Add a {kind} track for the selected binding.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7912,6 +7893,26 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.CopyItem" source="Copy item">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.CopyItemTip" source="Copy the selected span item. Paste puts it at the current frame.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.CopyKeys" source="Copy keys">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.CopyKeysTip" source="Copy the selected keys with their values, tangents and interpolation.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.CreateItemButton" source="Create item">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
@@ -7924,6 +7925,16 @@
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.CurveButton" source="Curve">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.CutCamera" source="Use selected camera">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.CutCameraTip" source="Make the selected camera cut look through the selected binding.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7941,6 +7952,16 @@
 		</entry>
 		<entry key="EditorSequencer.DeleteBindingTip"
 		       source="Delete the selected binding. Remove the items and tracks that use it first.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.DeleteCut" source="Delete cut">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.DeleteCutTip" source="Delete the selected camera cut. The cut just before it grows to fill the gap.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8001,6 +8022,26 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.MoveTrackDown" source="Move down">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.MoveTrackDownTip" source="Move the selected key track one row down.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.MoveTrackUp" source="Move up">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.MoveTrackUpTip" source="Move the selected key track one row up.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.NextKeyTip" source="Go to the next key">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
@@ -8035,6 +8076,26 @@
 		</entry>
 		<entry key="EditorSequencer.OpenCurveTip"
 		       source="Open this channel in the curve editor to shape the interpolation between keys.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.PasteItem" source="Paste item">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.PasteItemTip" source="Paste the copied item so it starts at the current frame. Spawn items cannot be pasted: each spawned object needs its own binding.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.PasteKeys" source="Paste keys">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.PasteKeysTip" source="Paste the copied keys at the current frame, starting at the selected track. Tracks with a different channel count are skipped.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8131,6 +8192,26 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.ShotCameraColumn" source="Camera">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ShotEndColumn" source="End">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ShotLengthColumn" source="Frames">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ShotStartColumn" source="Start">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.SoundLabel" source="Sound">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
@@ -8148,6 +8229,16 @@
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.SpawnedBinding" source="Spawned by the sequence">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.SplitCut" source="Split cut">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.SplitCutTip" source="Split the camera cut under the current frame into two shots with the same camera.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -8174,6 +8265,31 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.TrackIssueChannelCount" source="Wrong channel count for the kind. The file will not load; delete and add the track again.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.TrackIssueKeysOutsideTimeline" source="Some keys are outside the timeline and never play. Move them inside or widen the timeline.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.TrackIssueMissingBinding" source="The track's binding is not in this sequence. The file will not load; delete the track.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.TrackIssueMissingPropertyPath" source="No target path. Playback drives nothing; enter the property or rig slot.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.TrackIssueUnknownKind" source="Unknown track kind. The file will not load; delete the track.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.TrackNameLabel" source="Name">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
@@ -8185,6 +8301,46 @@
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.UnboundBinding" source="Unbound">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ViewRangeFormat" source="First frame %d">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ViewScrollTip" source="Scroll the zoomed view. Shift+wheel over the key strips scrolls too.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ZoomFit" source="Fit">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ZoomFitTip" source="Show the whole timeline.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ZoomIn" source="Zoom in">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ZoomInTip" source="Show fewer frames around the current frame. Ctrl+wheel over the key strips zooms at the pointer.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ZoomOut" source="Zoom out">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ZoomOutTip" source="Show more frames.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>

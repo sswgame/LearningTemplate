@@ -63,6 +63,31 @@ namespace sw
 
         static_assert( isKindTableOrdered(), "kArrSequenceItemKindInfo must be ordered by SequenceItemKind and its required fields must be allowed" );
 
+        /** @brief 키 트랙 종류 표입니다. **종류마다 한 줄이고 순서는 `SequenceTrackKind` 값 순서입니다**(언리얼 Sequencer 의 트랙 에디터 등록 한 줄에 해당). */
+        constexpr SequenceTrackKindInfo kArrSequenceTrackKindInfo[] = {
+            // 종류, 채널 수, 새 이름 머리, 대상 경로를 쓴다
+            { SequenceTrackKind::Transform, kSequenceTransformChannelCount, "Transform", false},
+            {  SequenceTrackKind::Property,                              1,  "Property",  true},
+            {   SequenceTrackKind::RigSlot,                              1,  "Rig Slot",  true},
+            {SequenceTrackKind::CameraLens,      kSequenceLensChannelCount,      "Lens", false},
+        };
+
+        static_assert( SW_COUNT_OF( kArrSequenceTrackKindInfo ) == static_cast<size_t>( SequenceTrackKind::Count ), "SequenceTrackKind 를 늘렸으면 kArrSequenceTrackKindInfo 에도 줄을 더할 것" );
+
+        /** @brief 트랙 종류 표가 값 순서이고 채널 수가 값 버퍼 안인지 확인합니다. */
+        constexpr bool isTrackKindTableOrdered()
+        {
+            for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( kArrSequenceTrackKindInfo ); ++kindIndex )
+            {
+                const SequenceTrackKindInfo& info = kArrSequenceTrackKindInfo[kindIndex];
+                if ( info._kind != static_cast<SequenceTrackKind>( kindIndex ) || info._channelCount == 0 || info._channelCount > kSequenceMaxChannelCount )
+                    return false;
+            }
+            return true;
+        }
+
+        static_assert( isTrackKindTableOrdered(), "kArrSequenceTrackKindInfo must be ordered by SequenceTrackKind with 1..kSequenceMaxChannelCount channels" );
+
         /** @brief 프레임 번호가 `kSequenceFrameLimit` 안이면 true 입니다. 밖이면 오류를 남깁니다(@p pWhat 은 칸 이름). */
         bool isFrameWithinLimit( float64 frame, string_view sourceLabel, const utf8* pWhat )
         {
@@ -362,6 +387,14 @@ namespace sw
         return &kArrSequenceItemKindInfo[kindIndex];
     }
 
+    const SequenceTrackKindInfo* SequenceAsset::findTrackKindInfo( SequenceTrackKind kind )
+    {
+        const int32 kindIndex = static_cast<int32>( kind );
+        if ( kindIndex < 0 || kindIndex >= static_cast<int32>( SequenceTrackKind::Count ) )
+            return nullptr;
+        return &kArrSequenceTrackKindInfo[kindIndex];
+    }
+
     const SequenceBinding* SequenceAsset::findBinding( uint32 bindingID ) const
     {
         if ( bindingID == kSequenceNoBinding )
@@ -455,26 +488,8 @@ namespace sw
 {
     uint32 SequenceKeyTrack::getChannelCount( SequenceTrackKind kind )
     {
-        switch ( kind )
-        {
-            case SequenceTrackKind::Transform:
-            {
-                return kSequenceTransformChannelCount;
-            }
-            case SequenceTrackKind::CameraLens:
-            {
-                return kSequenceLensChannelCount;
-            }
-            case SequenceTrackKind::Property:
-            case SequenceTrackKind::RigSlot:
-            {
-                return 1;
-            }
-            default:
-            {
-                return 0;
-            }
-        }
+        const SequenceTrackKindInfo* pInfo = SequenceAsset::findTrackKindInfo( kind );
+        return pInfo != nullptr ? pInfo->_channelCount : 0;
     }
 
     const utf8* SequenceKeyTrack::getChannelName( uint32 channelIndex ) const

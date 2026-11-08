@@ -115,6 +115,19 @@ namespace sw
         Count           /**< 개수를 세는 용도입니다. 종류가 아닙니다. */
     };
 
+    /**
+     * @brief 키 트랙 종류 하나의 특성입니다. 표의 한 줄입니다(`SequenceAsset::findTrackKindInfo`, 표는 `SequenceAsset.cpp` 의 `kArrSequenceTrackKindInfo`).
+     * @details 새 종류는 값 하나와 이 표의 한 줄이다(static_assert 가 알려 준다) — 채널 수 · 새 이름 · 대상 경로 규칙을 에디터와 파일 검사가 같은 줄에서 읽는다.
+     *          값을 읽고 쓰는 일(`SequenceTimelineUtil::readTrackValues` · `applyTrackValues`)은 종류마다 다른 코드라 그 switch 가 `Count` 를 빠뜨리면 컴파일러가 알린다.
+     */
+    struct SequenceTrackKindInfo
+    {
+        SequenceTrackKind _kind;                                                                                                                                   /**< 종류입니다. 표의 순번과 같아야 합니다. */
+        uint32            _channelCount;                                                                                                                           /**< 채널 수입니다(`SequenceKeyTrack::getChannelCount`). */
+        const utf8*       _pNamePrefix;                                                                                                                            /**< 새 트랙 이름의 머리입니다(에디터가 `Transform 1` 처럼 번호를 붙인다). */
+        bool              _bUsesPropertyPath; /**< `_propertyPath` 로 대상 값을 고르는지입니다(프로퍼티 · 리그 슬롯) — 비어 있으면 재생이 아무것도 몰지 않는다. */ ///< NOLINT(sw-bool-flag): 집합체다(중괄호 초기화 표)
+    };
+
     /** @brief 트랜스폼 트랙의 채널 수입니다(이동 xyz, 회전 xyz, 크기 xyz). */
     constexpr uint32 kSequenceTransformChannelCount = 9;
     /** @brief 렌즈 트랙의 채널 수입니다(화각, 초점 거리, 조리개, 시프트 x, 시프트 y). */
@@ -350,6 +363,8 @@ namespace sw
         static const SequenceItemKindInfo* findItemKindInfo( SequenceItemKind kind );
         /** @brief 종류 표의 줄 수입니다(`SequenceItemKind::Count` 와 같다). 표를 도는 쪽(에디터 메뉴 · 테스트)이 `findItemKindInfo` 와 함께 쓴다. */
         static constexpr uint32 getItemKindCount() { return static_cast<uint32>( SequenceItemKind::Count ); }
+        /** @brief 키 트랙 종류의 특성 줄입니다. 표에 없는 값이면 nullptr 입니다. 표를 도는 쪽(에디터의 트랙 더하기 단추)은 0 부터 `SequenceTrackKind::Count` 까지 묻는다. */
+        static const SequenceTrackKindInfo* findTrackKindInfo( SequenceTrackKind kind );
         /** @brief 그 프레임에 걸쳐 있는 트랙 항목을 채웁니다. */
         void collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outListItem ) const;
 
