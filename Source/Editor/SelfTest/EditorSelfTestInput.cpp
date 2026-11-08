@@ -122,9 +122,18 @@ namespace sw::editor
              */
             static bool isClickPointClipped( const EditorSelfTestMark& mark )
             {
-                const ImGuiWindow* pWindow = ImGui::GetCurrentWindow();
-                const ImVec2       center{ ( mark._min._x + mark._max._x ) * 0.5f, ( mark._min._y + mark._max._y ) * 0.5f };
-                return pWindow->InnerClipRect.Contains( center ) == false; // 표 칸의 ClipRect 가 아니라 창 안쪽 영역 — 모든 칸에 걸친 줄도 맞게 본다
+                const ImGuiWindow* const pWindow = ImGui::GetCurrentWindow();
+                const ImVec2             center{ ( mark._min._x + mark._max._x ) * 0.5f, ( mark._min._y + mark._max._y ) * 0.5f };
+                // 메뉴 막대 층(주 메뉴 막대 · 상태줄 항목)은 창 안쪽 영역(`InnerClipRect` — 메뉴 막대 아래) 밖에 그린다 — 그 층은 메뉴 막대 사각형으로 본다.
+                // 예전에는 상태줄의 Cancel 이 늘 '잘림' 으로 보여 lightprobebakecancel 이 졌다.
+                if ( pWindow->DC.NavLayerCurrent == ImGuiNavLayer_Menu )
+                    return pWindow->MenuBarRect().Contains( center ) == false;
+                if ( pWindow->InnerClipRect.Contains( center ) ) // 표 칸의 ClipRect 가 아니라 창 안쪽 영역 — 모든 칸에 걸친 줄도 맞게 본다
+                    return false;
+                // 막 열린 하위 메뉴(`BeginMenu` 가 true)는 현재 창을 하위 메뉴로 바꾸지만 마지막 항목은 부모 창의 메뉴 머리다 — 부모 창 안이면 보인다.
+                // 예전에는 열린 메뉴 머리가 늘 '잘림' 으로 보여 meshmodifiers 의 범주 클릭이 졌다.
+                const bool bOpenedMenuHeader = ( pWindow->Flags & ImGuiWindowFlags_ChildMenu ) != 0 && pWindow->ParentWindow != nullptr;
+                return bOpenedMenuHeader == false || pWindow->ParentWindow->InnerClipRect.Contains( center ) == false;
             }
 
             /** @brief 바로 앞에 그린 위젯(ImGui "last item")의 레이블입니다. */
