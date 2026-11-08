@@ -16,6 +16,7 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Input/EditorPopupManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -117,6 +118,13 @@ namespace sw::editor
             }
 
             /** @brief 목록의 가장 넓은 종류 표시 폭을 @p inoutWidest 에 모읍니다. 같은 종류가 이어지면 한 번만 잰다. */
+            static void measureBadge( const utf8* pCategory, float32& inoutWidest )
+            {
+                fixed_string<constant::buffer::kMax32> badge;
+                formatstring( badge.data(), badge.capacity(), "[%s]", pCategory );
+                inoutWidest = MathUtil::max( inoutWidest, ImGui::CalcTextSize( badge.c_str() ).x );
+            }
+
             static void measureWidestBadge( const vector<EditorSearchItem>& listItem, float32& inoutWidest )
             {
                 const string* pMeasuredCategory{ nullptr };
@@ -125,9 +133,16 @@ namespace sw::editor
                     if ( pMeasuredCategory != nullptr && *pMeasuredCategory == item._category )
                         continue;
                     pMeasuredCategory = &item._category;
-                    fixed_string<constant::buffer::kMax32> badge;
-                    formatstring( badge.data(), badge.capacity(), "[%s]", item._category.c_str() );
-                    inoutWidest = MathUtil::max( inoutWidest, ImGui::CalcTextSize( badge.c_str() ).x );
+                    measureBadge( item._category.c_str(), inoutWidest );
+                }
+            }
+
+            /** @brief 에셋 종류 전부의 배지를 잽니다 — 파일 색인은 일 스레드에서 늦게 와서, 온 것만 재면 첫 글자를 칠 즈음 이름 열이 한 번 밀린다. */
+            static void measureAssetKindBadges( float32& inoutWidest )
+            {
+                for ( uint32 kindIndex = 0; kindIndex < EditorAssetTypeRegistry::getKindCount(); ++kindIndex )
+                {
+                    measureBadge( EditorAssetTypeRegistry::getKindAt( kindIndex )._pDisplayName, inoutWidest );
                 }
             }
 
@@ -247,8 +262,7 @@ namespace sw::editor
         vector<EditorAssetIndexEntry> listFileEntry;
         if ( _fileIndexJob.take( listFileEntry ) != EditorTaskPoll::Ready )
             return;
-        EditorSearchItem::appendAssets( listFileEntry, _listItem );
-        _badgeFontSize = 0.0f;
+        EditorSearchItem::appendAssets( listFileEntry, _listItem ); // 배지 폭은 그대로다 — 에셋 종류는 미리 다 쟀다(`getWidestBadgeWidth`)
     }
 
     float32 QuickLauncherPopup::getWidestBadgeWidth()
@@ -257,10 +271,17 @@ namespace sw::editor
         if ( _badgeFontSize == fontSize )
             return _widestBadgeWidth;
         _badgeFontSize    = fontSize;
-        _widestBadgeWidth = 0.0f;
-        QuickLauncherPopupInternal::measureWidestBadge( _listItem, _widestBadgeWidth );
-        QuickLauncherPopupInternal::measureWidestBadge( _listTailItem, _widestBadgeWidth );
+        _widestBadgeWidth = measureBadgeColumn( _listItem, _listTailItem );
         return _widestBadgeWidth;
+    }
+
+    float32 QuickLauncherPopup::measureBadgeColumn( const vector<EditorSearchItem>& listItem, const vector<EditorSearchItem>& listTailItem )
+    {
+        float32 widest = 0.0f;
+        QuickLauncherPopupInternal::measureWidestBadge( listItem, widest );
+        QuickLauncherPopupInternal::measureWidestBadge( listTailItem, widest );
+        QuickLauncherPopupInternal::measureAssetKindBadges( widest );
+        return widest;
     }
 
     bool QuickLauncherPopup::drawResults( const vector<const EditorSearchItem*>& listFiltered, bool bIndexOutstanding )
