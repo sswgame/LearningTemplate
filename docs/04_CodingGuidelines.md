@@ -31,8 +31,9 @@ private:
 
 ```cpp
 SW_GLOBAL_VARIABLE( bool, gv_useRenderThread, true, "..." );          // 에디터에서 바꿀 런타임 설정
-SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_stressTestMeshes, 0, "..." );   // 벤치 · 진단. 스크립트가 배포 실행 파일을 몰 때만 SHIPPED
-SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 은 종류와 상관없이 이것 하나
+SW_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshes, 0, "..." );     // 벤치 · 진단. Dev/ · DevTools 에만(린트 dev-only-variables), Shipping 에는 없다
+SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // 일반 변수 extern
+SW_EXTERN_TEST_GLOBAL_VARIABLE( int32, gv_stressTestMeshes );         // 테스트용 변수 extern
 ```
 
 ## 2. 함수 이름 어휘 — [규칙](agents/NamingCpp.md#function-names)

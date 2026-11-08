@@ -5,12 +5,11 @@
         "files": [ "Source/**/*.{cpp,h,inl}" ],
         "macros": [
             { "name": "SW_GLOBAL_VARIABLE", "tag": "", "label": "일반" },
-            { "name": "SW_TEST_GLOBAL_VARIABLE", "tag": "test", "label": "테스트 (Shipping 제외)" },
-            { "name": "SW_TEST_GLOBAL_VARIABLE_SHIPPED", "tag": "test-shipped", "label": "테스트 (Shipping 포함)" }
+            { "name": "SW_TEST_GLOBAL_VARIABLE", "tag": "test", "label": "테스트 (Shipping 제외)" }
         ],
         "argument_index": { "type": 0, "name": 1, "default_value": 2, "description": 3 },
         "name_prefix": "gv_",
-        "type_map": { "sw::string": "string" },
+        "type_map": { "sw::string": "string", "sw::GlobalDiskPath": "string" },
         "default_value_macros": {
             "SW_RHI_BACKEND_DEFAULT": { "file": "Config/Engine/CookContract.json", "key": "default_rhi_backend" }
         }
@@ -20,6 +19,7 @@
         "macro": "SW_REGISTER_ARGUMENT",
         "argument_index": { "name": 0, "default_value": 1, "spelling_start": 3 },
         "max_comment_lines": 3,
+        "empty_string_types": [ "CommandLineDiskPath" ],
         "exclusive_groups": [
             {
                 "id": "rhi",

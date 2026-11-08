@@ -36,6 +36,17 @@ const kMapLiteralToValueKind = new Map([
     [CppTextUtil.LiteralKind.Float, ValueKind.Float],
     [CppTextUtil.LiteralKind.String, ValueKind.String],
 ]);
+const kEmptyValueRe = /^([A-Za-z_][\w:]*)\s*\{\s*\}$/;
+
+/** @brief 인자 기본값 글을 읽습니다. 프로필이 빈 글로 읽으라고 한 형식의 `형식{}` 는 빈 글 인자입니다. */
+function readArgumentDefaultInternal(text, listEmptyStringType) {
+    const literal = CppTextUtil.parseLiteral(text);
+    const match = literal.kind === CppTextUtil.LiteralKind.Expression ? kEmptyValueRe.exec(literal.value) : null;
+    if (match !== null && listEmptyStringType.includes(match[1]))
+        return { kind: CppTextUtil.LiteralKind.String, value: '' };
+    return literal;
+}
+
 const kEnumDefinitionRe = /\benum\s+(?:class|struct)\s+([A-Za-z_]\w*)\s*(?::\s*[A-Za-z_][\w:\s]*?)?\s*\{/g;
 const kReadConcurrency = 32;
 /** @brief 걷지 않는 폴더 이름입니다(빌드 산출물 · 내려받은 것). */
@@ -215,7 +226,7 @@ function parseArgumentText(relativePath, text, profile, mapJson) {
             result.listProblem.push(`${relativePath}:${call.lineNumber}: ${call.macroName} has ${call.listArgument.length} arguments, the profile reads index ${requiredCount - 1}`);
             continue;
         }
-        const defaultLiteral = CppTextUtil.parseLiteral(call.listArgument[index.defaultValue]);
+        const defaultLiteral = readArgumentDefaultInternal(call.listArgument[index.defaultValue], argumentProfile.listEmptyStringType);
         const listSpelling = [];
         for (const spellingText of call.listArgument.slice(index.spellingStart)) {
             const spelling = CppTextUtil.parseStringLiteralSequence(spellingText);

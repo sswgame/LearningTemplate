@@ -191,6 +191,8 @@ function normalizeProfile(raw) {
                 spellingStart: readIndexInternal(argumentIndexJson.spelling_start, 2),
             },
             maxCommentLine: readIndexInternal(argumentJson.max_comment_lines, 3),
+            // 기본값이 `형식{}`(빈 값)인 경로 형식 — 글 인자로 읽는다(`CommandLineDiskPath{}`).
+            listEmptyStringType: readStringListInternal(argumentJson.empty_string_types),
             listExclusiveGroup,
         },
         commandLine: {

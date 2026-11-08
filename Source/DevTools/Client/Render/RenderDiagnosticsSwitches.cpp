@@ -16,6 +16,17 @@
 
 namespace sw
 {
+    namespace RenderDiagnosticsSwitchesInternal
+    {
+        /** @brief Debug 는 늘 죽은 번호를 검사하고, Release 는 성능 측정에 쓰는 빌드라 끈다(필요할 때 켠다). 선언을 하나로 두어 도구(launch-args)가 한 변수로 읽는다. */
+        constexpr BindlessIndexCheck kDefaultBindlessIndexCheck =
+#if defined( SW_DEBUG )
+            BindlessIndexCheck::DeadIndex;
+#else
+            BindlessIndexCheck::Off;
+#endif
+    } // namespace RenderDiagnosticsSwitchesInternal
+
     /** @brief `-gv_gpuAssert=1`: assert 를 가진 셰이더(`RenderPassTraitFlag::kGPUAssertTarget`)를 `SW_GPU_ASSERT_ENABLED` 변형으로 컴파일하고 링 버퍼를 건다 — 틀린 조건을 CPU 가 몇 프레임 뒤 로그로 낸다. */
     SW_TEST_GLOBAL_VARIABLE( bool, gv_gpuAssert, false, "셰이더 assert(SW_GPU_ASSERT) 를 켠다 - assert 를 가진 셰이더가 UAV 링에 기록하고 CPU 가 몇 프레임 뒤 로그로 낸다" );
     /** @brief `-gv_nanCheck=1`: 그래프가 끝난 뒤 주 시점의 부동소수 패스 출력을 컴퓨트로 훑어 NaN · Inf 를 패스 이름과 함께 로그로 낸다(언리얼 r.CheckNaN, DX12 · Vulkan 만). */
@@ -27,11 +38,8 @@ namespace sw
      * @details Debug 는 늘 죽은 번호를 검사한다. Release 는 성능 측정에 쓰는 빌드라(검사는 드로우마다 읽기 잠금 하나) 끄고 필요할 때 켠다.
      *          TraceAbsent 는 "없음" 번호가 셰이더로 가는 자리도 남긴다 — 드라이버가 디스크립터 읽기를 분기 앞으로 끌어올려 디바이스를 잃었을 때 후보를 고른다.
      */
-#if defined( SW_DEBUG )
-    SW_TEST_GLOBAL_VARIABLE( BindlessIndexCheck, gv_validateBindlessIndex, BindlessIndexCheck::DeadIndex, "셰이더에 넘기는 bindless 인덱스 검사 (Off / DeadIndex=죽은 번호, Debug 기본 / TraceAbsent='없음' 번호가 가는 자리까지)" );
-#else
-    SW_TEST_GLOBAL_VARIABLE( BindlessIndexCheck, gv_validateBindlessIndex, BindlessIndexCheck::Off, "셰이더에 넘기는 bindless 인덱스 검사 (Off / DeadIndex=죽은 번호, Debug 기본 / TraceAbsent='없음' 번호가 가는 자리까지)" );
-#endif
+    SW_TEST_GLOBAL_VARIABLE( BindlessIndexCheck, gv_validateBindlessIndex, RenderDiagnosticsSwitchesInternal::kDefaultBindlessIndexCheck,
+                             "셰이더에 넘기는 bindless 인덱스 검사 (Off / DeadIndex=죽은 번호, Debug 기본 / TraceAbsent='없음' 번호가 가는 자리까지)" );
     /** @brief `-gv_lightCulling=<생산자>`: 라이트 그리드 생산자 — None 은 그리드 없이 목록 전체(비교 기준), CPU 는 CPU 클러스터 그리드, GPU(기본 · 배포)는 컴퓨트 그리드. 학습용으로 셋을 나란히 본다. */
     SW_TEST_GLOBAL_VARIABLE( LightGridProducer, gv_lightCulling, LightGridProducer::GPU, "라이트 컬링 (None=그리드 없이 목록 전체, CPU=CPU 클러스터 그리드, GPU=GPU 클러스터 그리드)" );
     /** @brief `-gv_fogDebugView=<보기>`: 안개 패스의 진단 보기. 에디터의 볼륨 안개 창이 이 이름으로 고른다. */

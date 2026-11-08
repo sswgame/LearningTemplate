@@ -91,7 +91,7 @@ test('the SW profile on this repository: every macro call under Source is in the
 
     // 매크로 호출 수를 스캐너와 다른 방법(줄 단위 정규식)으로 센다 — 여러 줄 호출도 첫 줄은 한 줄이다.
     let expectedCount = 0;
-    const callRe = /^\s*SW_(?:TEST_)?GLOBAL_VARIABLE(?:_SHIPPED)?\s*\(\s*[A-Za-z_]/;
+    const callRe = /^\s*SW_(?:TEST_)?GLOBAL_VARIABLE\s*\(\s*[A-Za-z_]/;
     const listPending = [path.join(kRepositoryRoot, 'Source')];
     while (listPending.length > 0) {
         const directoryPath = listPending.pop();
@@ -112,7 +112,7 @@ test('the SW profile on this repository: every macro call under Source is in the
     assert.equal(catalog.listGlobalVariable.length, expectedCount);
 
     const findVariable = (name) => catalog.listGlobalVariable.find((variable) => variable.name === name);
-    assert.equal(findVariable('gv_benchMeshes').valueKind, ValueKind.Integer);
+    assert.equal(findVariable('gv_stressTestMeshes').valueKind, ValueKind.Integer);
     const viewMode = findVariable('gv_viewMode');
     assert.equal(viewMode.valueKind, ValueKind.Enum, 'the view mode is an enum variable, picked by enumerator name');
     assert.equal(viewMode.moduleName, 'Engine');
@@ -120,21 +120,21 @@ test('the SW profile on this repository: every macro call under Source is in the
     assert.ok(viewMode.listEnumerator.includes('Wireframe'));
     const rhiBackend = findVariable('gv_rhiBackend');
     assert.equal(rhiBackend.valueKind, ValueKind.Enum);
-    assert.deepEqual(rhiBackend.listEnumerator, ['DirectX11', 'DirectX12', 'Vulkan', 'OpenGL']);
+    assert.deepEqual(rhiBackend.listEnumerator, ['DirectX11', 'DirectX12', 'Vulkan', 'OpenGL', 'WebGPU']);
     assert.equal(rhiBackend.defaultText, catalog.listExclusiveGroup[0].defaultLabel, 'SW_RHI_BACKEND_DEFAULT resolves through the JSON table');
     assert.equal(findVariable('gv_rhiImmediateSubmit').valueKind, ValueKind.Boolean, 'a call split over several lines is read');
-    assert.equal(findVariable('gv_profileFrames').tag, 'test-shipped');
+    assert.equal(findVariable('gv_profileFrames').tag, 'test');
     assert.equal(findVariable('gv_tracyViewerPath').valueKind, ValueKind.String, 'sw::string maps through the profile type_map');
-    assert.equal(findVariable('gv_benchMeshes').variantName, 'Empty');
+    assert.equal(findVariable('gv_stressTestMeshes').variantName, 'Empty');
 
-    assert.deepEqual(catalog.listTag.map((tagInfo) => tagInfo.tag), ['', 'test', 'test-shipped'], 'tags in profile macro order');
+    assert.deepEqual(catalog.listTag.map((tagInfo) => tagInfo.tag), ['', 'test'], 'tags in profile macro order');
     assert.equal(catalog.listTag[0].label, '일반');
     assert.equal(catalog.listTag.reduce((sum, tagInfo) => sum + tagInfo.count, 0), catalog.listGlobalVariable.length, 'every variable falls in exactly one tag');
 
     const width = catalog.listArgument.find((argument) => argument.name === 'WIDTH');
     assert.deepEqual(width.listSpelling, ['W']);
     assert.equal(width.group, kGeneralGroup);
-    assert.deepEqual(catalog.listArgument.filter((argument) => argument.group === 'rhi').map((argument) => argument.listSpelling[0]), ['dx11', 'dx12', 'vk', 'gl']);
+    assert.deepEqual(catalog.listArgument.filter((argument) => argument.group === 'rhi').map((argument) => argument.listSpelling[0]), ['dx11', 'dx12', 'vk', 'gl', 'wgpu']);
 });
 
 test('rescanFile picks up a new definition and forgets a removed one', async () => {
