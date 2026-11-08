@@ -91,7 +91,8 @@ namespace sw
         , _lastIndirectDrawCallCount{ 0 }
         , _lastPendingPSOBatchCount{ 0 }
         , _capture{ _pDevice, _state._mainView._transientPool, _pipelineResource }
-        , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _autoExposure, _upscale, _fog, _extensionHost, _capture }
+        , _screenRotation{ _pDevice, _psoManager }
+        , _passExecutor{ _pDevice, _pipelineResource, _state, _psoManager, _autoExposure, _upscale, _fog, _extensionHost, _capture, _screenRotation }
         , _host{}
         , _statusMessage{}
         , _status{ FrameRendererStatus::Uninitialized }
@@ -886,6 +887,10 @@ namespace sw
         _upscale.prepareUpscale( _state._mainView, viewportWidth, viewportHeight );
         _postProcessMaterials.prepareView( _state._mainView );
         _capture.ensurePresent( _state._outputWidth, _state._outputHeight );
+        // 주 출력이 화면일 때만 회전 대기 텍스처가 있다(돌리지 않는 장치는 놓기만 한다). 호스트 타깃(에디터 게임 뷰 · 화면 밖 렌더러)은 화면에 쓰지 않는다.
+        // shortcut: 호스트 타깃과 회전이 함께인 실행(회전한 기기의 에디터)은 렌더 스레드 UI 가 돌리지 않고 스왑체인에 쓴다, 그런 호스트가 생기면 대기 텍스처를 장치 논리 크기로 따로 둔다.
+        const bool bScreenOutput = _state._outputRenderTarget == 0;
+        _screenRotation.prepare( bScreenOutput ? _state._outputWidth : 0u, bScreenOutput ? _state._outputHeight : 0u );
     }
 
     void FrameRenderer::releaseTransientResources()
@@ -899,8 +904,9 @@ namespace sw
         {
             _viewResources.releaseViewTransients( *pView );
         }
-        // 캡처도 트랜지언트와 크기가 같아야 한다. 같이 버리고 다음 ensureTransientResources 가 새 크기로 만든다.
+        // 캡처도 트랜지언트와 크기가 같아야 한다. 같이 버리고 다음 ensureTransientResources 가 새 크기로 만든다. 화면 회전 대기 텍스처도 주 출력 크기다.
         _capture.releasePresent();
+        _screenRotation.release();
     }
 
     void FrameRenderer::reportRenderTargetMemory() const

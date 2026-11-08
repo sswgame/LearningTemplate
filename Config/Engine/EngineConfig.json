@@ -13,11 +13,10 @@
     "_patchTrustPublicKeyXHex": "",
     "_patchTrustPublicKeyYHex": "",
     "_textureFormats": {
-        "_target": "Desktop",
         "_listTarget": [
-            { "_name": "Desktop", "_listFamily": [ "BC" ] },
-            { "_name": "Android", "_listFamily": [ "ASTC", "ETC2" ] },
-            { "_name": "Web", "_listFamily": [ "BC", "ASTC", "ETC2" ] }
+            { "_name": "Desktop", "_listPlatform": [ "Windows", "Linux" ], "_listFamily": [ "BC" ] },
+            { "_name": "Android", "_listPlatform": [ "Android" ], "_listFamily": [ "ASTC", "ETC2" ] },
+            { "_name": "Web", "_listPlatform": [ "Web" ], "_listFamily": [ "BC", "ASTC", "ETC2" ] }
         ],
         "_listFamily": [
             { "_name": "BC", "_suffix": "", "_color": "BC7_UNORM", "_normal": "BC5_UNORM", "_mask": "BC4_UNORM", "_hdr": "BC6H_UF16" },

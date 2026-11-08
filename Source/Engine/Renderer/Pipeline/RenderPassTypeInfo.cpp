@@ -484,6 +484,14 @@ namespace sw
                         info._flags          = Flag::kCompute;
                         break;
                     }
+                    case RenderPassType::ScreenRotation:
+                    {
+                        // 스왑체인 이미지에 그리는 출력 패스다 — 백버퍼 포맷 하나에만, 서피스를 돌릴 수 있는 장치에서만 PSO 를 만든다. 원본은 C++ 가 루트 상수 · 엔진 슬롯으로 건다.
+                        info._pDefaultShader   = &EngineDefaultAssets::_shaderScreenRotation;
+                        info._colorTargetCount = 1;
+                        info._flags            = Flag::kOutputPass | Flag::kSurfaceRotation;
+                        break;
+                    }
                 }
                 return info;
             }

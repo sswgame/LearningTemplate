@@ -112,8 +112,8 @@ namespace sw::editor
         [[nodiscard]] static bool cookTextureVariant( string_view sourcePath, string_view outputPath, const TextureImportRule& rule, const TextureFormatFamily& family, TaskManager* pTaskManager = nullptr );
 
         /**
-         * @brief 이 구성의 대상(`EngineConfig::_textureFormats`)이 접미사를 가진 묶음(ASTC · ETC2)을 고르면 모든 원본의 변형을 굽습니다(`App --cook-texture-variants` · `--check-texture-variants`).
-         * @details 임포트한 DDS 곁에 쓰고 원본 폴더의 `import<접미사>.stamp` 로 대조한다(`AssetImportStampUtil`). 곁 파일 규칙으로 팩에 담긴다(`SW_ASSET_COMPANION`). 대상이 BC 뿐이면(데스크톱) 할 일이 없다.
+         * @brief 접미사를 가진 묶음 @p family(ASTC · ETC2 — 모든 배포 대상의 합, `TextureFormatFamily::resolveCookFamilies`)로 모든 원본의 변형을 굽습니다(`App --cook-texture-variants` · `--check-texture-variants`).
+         * @details 임포트한 DDS 곁에 쓰고 원본 폴더의 `import<접미사>.stamp` 로 대조한다(`AssetImportStampUtil`). 곁 파일 규칙으로 팩에 담긴다(`SW_ASSET_COMPANION`).
          */
         [[nodiscard]] static AssetImportSummary cookTextureVariants( string_view resourceRoot, const TextureImportConfig& config, const TextureFormatFamily& family, AssetImportMode mode );
 

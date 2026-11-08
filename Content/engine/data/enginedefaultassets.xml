@@ -73,6 +73,7 @@
                      _shaderDepthHistory="engine/shaders/depth_history.hlsl"
                      _shaderAutoExposure="engine/shaders/auto_exposure.hlsl"
                      _shaderUpscale="engine/shaders/fsr1.hlsl"
+                     _shaderScreenRotation="engine/shaders/screen_rotation.hlsl"
                      _shaderOcclusionTiles="engine/shaders/occlusion_tiles.hlsl"
                      _shaderSSAO="engine/shaders/ssao.hlsl"
                      _shaderContactShadow="engine/shaders/contact_shadow.hlsl"

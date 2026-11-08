@@ -47,9 +47,10 @@ namespace sw
 
 namespace sw
 {
-    AsyncOpenFile::AsyncOpenFile( NativeFileHandle handle, uint64 size, string path )
+    AsyncOpenFile::AsyncOpenFile( NativeFileHandle handle, uint64 baseOffset, uint64 size, string path )
         : _path{ std::move( path ) }
         , _size{ size }
+        , _baseOffset{ baseOffset }
         , _handle{ handle }
         , _pBoundPort{ nullptr }
         , _pMemoryBytes{}
@@ -59,6 +60,7 @@ namespace sw
     AsyncOpenFile::AsyncOpenFile( shared_ptr<const vector<uint8>> pMemoryBytes, string path )
         : _path{ std::move( path ) }
         , _size{ pMemoryBytes->size() }
+        , _baseOffset{ 0 }
         , _handle{ kInvalidNativeFileHandle }
         , _pBoundPort{ nullptr }
         , _pMemoryBytes{ std::move( pMemoryBytes ) }
@@ -113,7 +115,16 @@ namespace sw
             PlatformFileUtil::closeNativeFile( nativeHandle );
             return handle;
         }
-        handle._pOpenFile = sw::make_shared<AsyncOpenFile>( nativeHandle, static_cast<uint64>( size ), pathText );
+        handle._pOpenFile = sw::make_shared<AsyncOpenFile>( nativeHandle, 0u, static_cast<uint64>( size ), pathText );
+        return handle;
+    }
+
+    AsyncFileHandle AsyncFileHandle::openNativeRange( NativeFileHandle nativeHandle, uint64 baseOffset, uint64 size, string_view path )
+    {
+        AsyncFileHandle handle;
+        if ( nativeHandle == kInvalidNativeFileHandle )
+            return handle;
+        handle._pOpenFile = sw::make_shared<AsyncOpenFile>( nativeHandle, baseOffset, size, string( path ) );
         return handle;
     }
 
@@ -158,8 +169,11 @@ namespace sw
             std::memcpy( pDst, _pOpenFile->_pMemoryBytes->data() + offset, size );
             return true;
         }
-        size_t     readBytes{ 0 };
-        const bool bRead = PlatformFileUtil::readNativeFileAt( _pOpenFile->_handle, offset, pDst, size, readBytes );
+        size_t       readBytes{ 0 };
+        const uint64 fileSize = _pOpenFile->_size;
+        if ( offset > fileSize || size > fileSize - offset )
+            return false; // 구간 파일은 OS 파일 끝이 아니라 구간 끝에서 멈춘다
+        const bool bRead = PlatformFileUtil::readNativeFileAt( _pOpenFile->_handle, _pOpenFile->_baseOffset + offset, pDst, size, readBytes );
         return bRead && readBytes == size;
     }
 
@@ -383,6 +397,8 @@ namespace sw
             request._bytesDone = request._size;
             return AsyncIOStatus::Succeeded;
         }
+        // 여기서부터 `_offset` 은 OS 파일 안 위치다 — 세 백엔드가 구간 파일(`openNativeRange`)을 몰라도 된다. 결과의 위치(`_result._offset`)는 위에서 파일 기준으로 적었다.
+        request._offset += request._pFile->_baseOffset;
         return AsyncIOStatus::Pending;
     }
 

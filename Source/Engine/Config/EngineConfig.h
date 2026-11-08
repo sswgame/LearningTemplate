@@ -75,6 +75,8 @@ namespace sw
         PROPERTY()
         string _name{};
         PROPERTY()
+        vector<string> _listPlatform{}; ///< 이 대상을 쓰는 빌드 플랫폼(`build::kPlatformName` — Windows · Linux · Android · Web). 플랫폼 하나는 대상 하나에만 든다
+        PROPERTY()
         vector<string> _listFamily{};
     };
 
@@ -85,9 +87,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY()
-        string _target{}; ///< 이 구성의 대상(`_listTarget` 의 이름) — 쿠킹이 무엇을 굽고 실행이 무엇을 고를지 정한다
-        PROPERTY()
-        vector<TextureFormatTargetSettings> _listTarget{};
+        vector<TextureFormatTargetSettings> _listTarget{}; ///< 실행은 빌드 플랫폼의 대상을 고르고(`findPlatformTarget`), 쿠킹은 모든 대상의 묶음을 굽는다(`resolveCookFamilies`)
         PROPERTY()
         vector<TextureFormatFamilySettings> _listFamily{};
     };

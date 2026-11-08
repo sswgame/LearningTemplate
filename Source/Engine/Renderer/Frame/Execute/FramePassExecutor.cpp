@@ -58,6 +58,7 @@
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
+#include "Engine/Renderer/Frame/Screen/FrameScreenRotation.h"
 #include "Engine/Renderer/Lighting/ShadowFilter.h"
 #include "Engine/Renderer/Pipeline/GBufferLayout.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -181,7 +182,8 @@ namespace sw
     FramePassExecutor::~FramePassExecutor() = default;
 
     FramePassExecutor::FramePassExecutor( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, FrameRenderState& state, FramePSOManager& psoManager,
-                                          FrameAutoExposure& autoExposure, FrameUpscale& upscale, FrameFog& fog, FrameExtensionHost& extensionHost, FrameCapture& capture )
+                                          FrameAutoExposure& autoExposure, FrameUpscale& upscale, FrameFog& fog, FrameExtensionHost& extensionHost, FrameCapture& capture,
+                                          const FrameScreenRotation& screenRotation )
         : _pDevice{ pDevice }
         , _pipelineResource{ pipeline }
         , _state{ state }
@@ -191,6 +193,7 @@ namespace sw
         , _fog{ fog }
         , _extensionHost{ extensionHost }
         , _capture{ capture }
+        , _screenRotation{ screenRotation }
         , _frameGraphExecutor{ pDevice, state, psoManager, fog }
         , _mapFramePassNameToIndex{}
         , _frameGraphContext{}
@@ -1350,6 +1353,7 @@ namespace sw
                 case RenderPassType::ShadowCacheRestore:
                 case RenderPassType::NanCheck:
                 case RenderPassType::IndirectArgsReset:
+                case RenderPassType::ScreenRotation:
                 case RenderPassType::ProbeUpdate:
                 {
                     SW_LOG_WARNING_ID( "FramePassExecutor.UnknownPassType", "Unknown pass type '%#' in '%#'", passType, passName );
@@ -2072,7 +2076,7 @@ namespace sw
             }
             context._pCmd->endRenderPass();
             if ( bCaptureToBack )
-                context._pCmd->blitTexture( dstTarget, 0 );
+                context._pCmd->blitTexture( dstTarget, _screenRotation.getScreenTarget() );
         }
         else
         {
@@ -2111,7 +2115,7 @@ namespace sw
         }
         const bool bLastWriter = isLastSwapchainWriter( input._passDesc );
         if ( target._bCaptureToBack == SW_TRUE && bLastWriter )
-            context._pCmd->blitTexture( target._texture, 0 );
+            context._pCmd->blitTexture( target._texture, _screenRotation.getScreenTarget() );
         if ( target._bCaptureFromOutput == SW_TRUE && bLastWriter )
             _capture.copyPresentFromOutput( *context._pCmd, target._texture, target._width, target._height, target._format );
         drawDevOverlay( context, input._passDesc, target );
@@ -2120,10 +2124,11 @@ namespace sw
     void FramePassExecutor::drawDevOverlay( FramePassContext& context, const RenderGraphPassDesc& passDesc, const PresentTarget& target )
     {
         // 순서가 계약이다: 사진 캡처(캡처 텍스처에 그리기 · 출력에서 복사)가 끝난 뒤, 화면에 나가는 대상에만 그린다 — 사진 · 골든에 개발 겹치기가 들지 않는다.
-        const CanvasDrawList& list         = _state._canvasFrame.getDevOverlay();
-        const bool            bOnScreen    = target._bCapture == SW_FALSE || target._bCaptureToBack == SW_TRUE; // 크기를 덮어쓴 캡처는 화면에 나가지 않는다
-        const bool            bBackBuffer  = target._bCaptureToBack == SW_TRUE || target._texture == 0;         // 호스트 타깃(에디터 게임 뷰)에는 그리지 않는다
-        const bool            bDrawOverlay = list.isEmpty() == false && isLastSwapchainWriter( passDesc ) && _pActiveView == _pMainOutputCanvasView && target._bOwnOutput == SW_FALSE &&
+        const CanvasDrawList&  list         = _state._canvasFrame.getDevOverlay();
+        const bool             bOnScreen    = target._bCapture == SW_FALSE || target._bCaptureToBack == SW_TRUE; // 크기를 덮어쓴 캡처는 화면에 나가지 않는다
+        const RHITextureHandle screen       = _screenRotation.getScreenTarget();                                 // 0 = 스왑체인, 회전한 화면이면 대기 텍스처
+        const bool             bBackBuffer  = target._bCaptureToBack == SW_TRUE || target._texture == screen;    // 호스트 타깃(에디터 게임 뷰)에는 그리지 않는다
+        const bool             bDrawOverlay = list.isEmpty() == false && isLastSwapchainWriter( passDesc ) && _pActiveView == _pMainOutputCanvasView && target._bOwnOutput == SW_FALSE &&
                                   bOnScreen && bBackBuffer && target._width > 0 && target._height > 0;
         if ( bDrawOverlay == false )
             return;
@@ -2131,7 +2136,7 @@ namespace sw
         const RHIPipelineStateHandle pso    = _psoManager.findOutputPSO( RenderPassType::Canvas, format ); // 백버퍼 포맷의 캔버스 PSO 는 셋업이 늘 만든다
         RHIRenderPassBeginInfo       beginInfo{};
         beginInfo._bBindColor        = SW_TRUE;
-        beginInfo._arrColorTarget[0] = 0; // 백버퍼 — 캡처를 옮긴 뒤이거나 처음부터 백버퍼에 그린 프레임이다
+        beginInfo._arrColorTarget[0] = screen; // 화면 — 캡처를 옮긴 뒤이거나 처음부터 화면에 그린 프레임이다
         beginInfo._colorTargetCount  = 1;
         beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
         beginInfo._width             = target._width;
@@ -2408,10 +2413,12 @@ namespace sw
         const bool bCaptureFromOutput = bOwnOutput == false && _state._outputRenderTarget != 0 && _capture.isPresentActive();
 
         PresentTarget target{};
-        target._texture = bOwnOutput ? ownOutput : bCapture ? _capture.getPresentTexture()
-                                                            : _state._outputRenderTarget;
-        target._width   = bOwnOutput ? activeView._outputWidth : _state._outputWidth;
-        target._height  = bOwnOutput ? activeView._outputHeight : _state._outputHeight;
+        // 주 출력이 화면이면 화면 대상이다 — 회전한 휴대 기기 화면이면 논리 크기 대기 텍스처(끝에 FrameScreenRotation 이 스왑체인으로 돌려 옮긴다), 아니면 0(스왑체인).
+        const RHITextureHandle mainOutput = _state._outputRenderTarget != 0 ? _state._outputRenderTarget : _screenRotation.getScreenTarget();
+        target._texture                   = bOwnOutput ? ownOutput : bCapture ? _capture.getPresentTexture()
+                                                                              : mainOutput;
+        target._width                     = bOwnOutput ? activeView._outputWidth : _state._outputWidth;
+        target._height                    = bOwnOutput ? activeView._outputHeight : _state._outputHeight;
         // 백버퍼는 디바이스가 채택한 포맷(Vulkan 은 서피스 협상 결과)이고, 텍스처는 그 텍스처가 기록한 포맷이다.
         target._format             = ( target._texture == 0 ) ? _pDevice->getBackBufferFormat() : _pDevice->getResourceFactory()->getTextureFormat( target._texture );
         target._bOwnOutput         = bOwnOutput ? SW_TRUE : SW_FALSE;

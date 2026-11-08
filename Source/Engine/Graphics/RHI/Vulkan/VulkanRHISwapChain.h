@@ -7,6 +7,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Graphics/RHI/IRHISwapChain.h"
+#include "Engine/Graphics/RHI/RHISurfaceTransform.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
 
@@ -131,8 +132,9 @@ namespace sw
         /**
          * @brief 서피스의 지금 회전(`currentTransform`)이나 고정 크기(`currentExtent`)가 이 스왑체인을 만들 때와 달라졌는지입니다(다시 만들 까닭이 있는가).
          * @details `VK_SUBOPTIMAL_KHR` 만으로 다시 만들지 않는다 — Android 10+ 는 preTransform 이 currentTransform 과 다르면 표시마다 SUBOPTIMAL 을 준다
-         *          (https://developer.android.com/games/optimize/vulkan-prerotation). 엔진은 IDENTITY 로 만들고 합성기가 돌리므로(`create`), 회전한 기기에서
-         *          SUBOPTIMAL 마다 다시 만들면 같은 스왑체인을 프레임마다 다시 만든다. 서피스가 정말 바뀌었을 때만 참이다.
+         *          (https://developer.android.com/games/optimize/vulkan-prerotation). 엔진은 90 · 180 · 270 은 currentTransform 으로 만들어 미리 돌리지만(`create`), 거울 회전 등
+         *          엔진이 돌리지 않는 값은 IDENTITY 로 두고 합성기에 맡겨 SUBOPTIMAL 이 계속 온다 — 그마다 다시 만들면 같은 스왑체인을 프레임마다 다시 만든다.
+         *          서피스가 정말 바뀌었을 때만 참이다: 고정 크기는 논리 크기(`getWidth/Height` — 만들 때의 currentExtent)와, 회전은 만들 때의 currentTransform 과 대조한다.
          */
         [[nodiscard]] bool hasSurfaceChanged( VkPhysicalDevice physicalDevice ) const;
 
@@ -142,10 +144,14 @@ namespace sw
 
         uint32 getImageIndex() const { return _imageIndex; }
         uint32 getImageCount() const { return static_cast<uint32>( _listImage.size() ); }
+        /** @brief 실제 스왑체인 이미지 너비입니다(프레임버퍼 · 렌더 영역 · 블릿). 회전한 서피스면 논리 크기와 맞바뀐다. */
         uint32 getExtentWidth() const { return _extentWidth; }
         uint32 getExtentHeight() const { return _extentHeight; }
-        uint32 getWidth() const override { return _extentWidth; }
-        uint32 getHeight() const override { return _extentHeight; }
+        /** @brief 논리 크기(사용자가 보는 방향)입니다 — 창 크기와 대조한다(`IRHIDevice::resizeSwapChain`). 돌리지 않으면 이미지 크기와 같다. */
+        uint32 getWidth() const override { return _logicalWidth; }
+        uint32 getHeight() const override { return _logicalHeight; }
+        /** @brief 엔진이 이미지를 미리 돌려 써야 하는 각도입니다(만들 때 서피스의 `currentTransform` — `create`). */
+        RHISurfaceTransform getSurfaceTransform() const { return _surfaceTransform; }
         /** @brief VkFormat 값입니다. 헤더에서 Vulkan 열거형을 쓰지 않으려고 uint32 로 보관합니다. */
         uint32 getImageFormat() const { return _imageFormat; }
         /** @brief 실제로 채택된 백버퍼 포맷입니다. 요청과 다를 수 있습니다. */
@@ -186,9 +192,13 @@ namespace sw
         uint32 _imageFormat;
         uint32 _extentWidth;
         uint32 _extentHeight;
+        uint32 _logicalWidth;  ///< 논리 너비(서피스의 currentExtent — 회전 전 방향)
+        uint32 _logicalHeight; ///< 논리 높이
         uint32 _imageIndex;
         /// @brief 만들 때 서피스가 보고한 회전(VkSurfaceTransformFlagBitsKHR 값 — `hasSurfaceChanged` 가 지금 값과 대조한다).
         uint32 _createdTransform;
+        /// @brief 스왑체인의 preTransform 을 엔진 값으로 옮긴 것입니다(Identity 면 엔진이 돌리지 않는다).
+        RHISurfaceTransform _surfaceTransform;
 
         /// @brief 요청한 백버퍼 포맷입니다(계약값 `constant::render::kBackBufferFormat`).
         RHIFormat _requestedFormat;

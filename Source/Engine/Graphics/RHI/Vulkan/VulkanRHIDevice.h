@@ -255,8 +255,14 @@ namespace sw
             caps._bGPUBreadcrumbs       = _breadcrumbMode != VulkanBreadcrumbMode::None ? SW_TRUE : SW_FALSE;
             caps._bAsyncCompute         = _asyncComputeQueue != nullptr ? SW_TRUE : SW_FALSE;
             caps._bGraphicsShaderWrites = _bFragmentStores;
+#if defined( SW_PLATFORM_ANDROID )
+            caps._bSurfacePreRotation = SW_TRUE; // 휴대 기기 화면만 회전한다 — 데스크톱 서피스의 currentTransform 은 늘 IDENTITY 다
+#endif
             return caps;
         }
+
+        /** @brief 스왑체인을 만든 서피스 회전입니다(회전한 Android 화면만 Identity 가 아니다 — `VulkanRHISwapChain::create`). */
+        RHISurfaceTransform getSurfaceTransform() const override { return _swapChain.getSurfaceTransform(); }
 
         /** @brief 깊이 이미지의 aspect 마스크(VkImageAspectFlags)를 반환합니다. */
         uint32 depthAspectMask() const;

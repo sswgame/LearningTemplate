@@ -42,12 +42,45 @@ if(SW_SHIPPING_BUILD)
 	list(APPEND swCookArgs "--game=${SW_ACTIVE_GAME}")
 endif()
 
-add_custom_target(CookAssets
-	COMMAND "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>" ${swCookArgs}
-	WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
-	COMMENT "Cooking scenes, prefabs (XML/JSON) and Resource packs to binary (${SW_COOK_HOST_TARGET} --cook-all)..."
-	VERBATIM
-)
+if(CMAKE_CROSSCOMPILING)
+	# 교차 빌드(Android · 웹)의 App 은 이 기계에서 돌지 않는다 — 호스트 개발 빌드의 App 이 굽는다(ReflectionParser 와 같은 호스트 도구, cmake/Engine/HostTools.cmake).
+	# 팩 내용은 다른 배포 대상과 같다. 대상마다 다른 것은 둘뿐이다:
+	#   - 셰이더 바이너리: 이 빌드의 배포 백엔드(SW_SHIPPING_RHI_BACKEND — Android Vulkan, 웹 WebGPU)를 명령줄 이름(CookContract.json command_line_name)으로 넘긴다.
+	#   - 텍스처: 모든 배포 대상의 형식 변형(ASTC · ETC2 — EngineConfig.json _textureFormats)을 먼저 굽는다(--cook-texture-variants, 에디터 모듈이 있는 개발 빌드의 일).
+	#     팩은 곁 파일 규칙으로 변형을 함께 담고, 실행이 플랫폼의 대상(_listPlatform)에서 장치가 지원하는 첫 묶음을 고른다.
+	# shortcut: 같은 작업 트리의 데스크톱 팩도 구워 둔 변형을 곁 파일로 담는다(배포 크기), 크기가 문제가 되면 PackCooker 가 굽는 대상의 묶음 변형만 담게 한다.
+	if(CMAKE_HOST_WIN32)
+		set(swHostCookAppName "App.exe")
+	elseif(CMAKE_HOST_UNIX)
+		set(swHostCookAppName "App")
+	else()
+		message(FATAL_ERROR "[Cook] unsupported host (Windows or Unix)")
+	endif()
+	set(SW_HOST_COOK_APP "${CMAKE_SOURCE_DIR}/build/Ninja-Release/Bin/${swHostCookAppName}" CACHE FILEPATH "Host development build's App that cooks the packs of a cross build")
+	unset(swHostCookAppName)
+	if(NOT EXISTS "${SW_HOST_COOK_APP}")
+		message(FATAL_ERROR "[Cook] cross build needs the host App at '${SW_HOST_COOK_APP}' to cook its packs.\n"
+			"  Build it first: cmake --build --preset Ninja-Release --target App\n"
+			"  (or set SW_HOST_COOK_APP to another host development build's App)")
+	endif()
+	sw_checkRHIBackendName("${SW_SHIPPING_RHI_BACKEND}")
+	set(swCrossBackendFlag "-${SW_RHI_BACKEND_${SW_SHIPPING_RHI_BACKEND}_COMMAND_LINE_NAME}")
+	add_custom_target(CookAssets
+		COMMAND "${SW_HOST_COOK_APP}" --cook-texture-variants
+		COMMAND "${SW_HOST_COOK_APP}" ${swCookArgs} ${swCrossBackendFlag}
+		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+		COMMENT "Cooking texture variants and Resource packs for ${SW_SHIPPING_RHI_BACKEND} with the host App (${SW_HOST_COOK_APP} --cook-all ${swCrossBackendFlag})..."
+		VERBATIM
+	)
+	unset(swCrossBackendFlag)
+else()
+	add_custom_target(CookAssets
+		COMMAND "$<TARGET_FILE:${SW_COOK_HOST_TARGET}>" ${swCookArgs}
+		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+		COMMENT "Cooking scenes, prefabs (XML/JSON) and Resource packs to binary (${SW_COOK_HOST_TARGET} --cook-all)..."
+		VERBATIM
+	)
+endif()
 set_target_properties(CookAssets PROPERTIES FOLDER "Engine/Scripts")
 
 # 서드파티 고지 — 배포물(Bin · Shipping 패키지)에 함께 놓는다. vcpkg 설치 트리의 `share/<포트>/copyright` 를 이 매니페스트가

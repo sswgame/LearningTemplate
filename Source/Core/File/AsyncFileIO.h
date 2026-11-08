@@ -21,6 +21,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
+#include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -107,6 +108,12 @@ namespace sw
          * @return 열지 못했으면 `isValid() == false` 인 핸들입니다.
          */
         static AsyncFileHandle open( string_view filePath );
+
+        /**
+         * @brief 이미 연 OS 핸들의 구간 [@p baseOffset, @p baseOffset + @p size) 을 파일 하나로 엽니다 — 묶음 안에 압축하지 않고 저장된 파일(APK 의 팩 — `AAsset_openFileDescriptor64`)입니다.
+         * @details 핸들의 주인이 된다(마지막 사본이 닫는다). @p path 는 로그용 이름입니다. 핸들이 없으면 `isValid() == false` 입니다.
+         */
+        static AsyncFileHandle openNativeRange( NativeFileHandle nativeHandle, uint64 baseOffset, uint64 size, string_view path );
 
         /** @brief 메모리에 든 바이트를 파일처럼 엽니다(`MemoryContentFileSource`). @p path 는 로그용 이름입니다. */
         static AsyncFileHandle openMemory( shared_ptr<const vector<uint8>> pBytes, string_view path );
