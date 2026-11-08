@@ -26,6 +26,7 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/ComponentAssetPathUtil.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -168,7 +169,7 @@ namespace sw::editor
     AssetHotReload::AssetHotReload()
         : _pFileWatchDispatcher{ nullptr }
         , _pReferenceTracker{ make_unique<AssetReferenceTracker>() }
-        , _mapAppliedStamp{}
+        , _mapAppliedContentHash{}
         , _cascadeReloadCount{ 0 }
         , _pImportJob{ make_unique<EditorAssetImportJob>() }
         , _listQueuedImport{}
@@ -457,21 +458,20 @@ namespace sw::editor
             (void)reloadChangedAsset( AssetID{ assetID } );
             return;
         }
-        FileStamp stamp{};
-        if ( FileUtil::getFileStamp( diskPath->str(), stamp ) )
-            _mapAppliedStamp[FileUtil::normalizePath( relativePath )] = stamp;
+        const uint64 contentHash = ContentHash::computeFile( diskPath->str() );
+        if ( contentHash != 0 )
+            _mapAppliedContentHash[FileUtil::normalizePath( relativePath )] = contentHash;
         applyChangedFile( relativePath );
     }
 
     bool AssetHotReload::isAlreadyApplied( const string& relativePath )
     {
-        const auto itApplied = _mapAppliedStamp.find( FileUtil::normalizePath( relativePath ) );
-        if ( itApplied == _mapAppliedStamp.end() )
+        const auto itApplied = _mapAppliedContentHash.find( FileUtil::normalizePath( relativePath ) );
+        if ( itApplied == _mapAppliedContentHash.end() )
             return false;
-        FileStamp  stamp{};
-        const bool bSame = FileUtil::getFileStamp( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), relativePath ), stamp ) && stamp == itApplied->second;
+        const bool bSame = ContentHash::computeFile( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), relativePath ) ) == itApplied->second;
         if ( bSame == false )
-            _mapAppliedStamp.erase( itApplied ); // 그 뒤에 바깥에서 또 바뀌었다 — 반영한다
+            _mapAppliedContentHash.erase( itApplied ); // 그 뒤에 바깥에서 또 바뀌었다 — 반영한다
         return bSame;
     }
 

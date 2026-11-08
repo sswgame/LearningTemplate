@@ -191,7 +191,7 @@ namespace sw::editor
             AssetSourceImporterFunc _pfnImport{ nullptr };
         };
 
-        /** @brief 바뀐 파일을 반영합니다(`applyChangedFile`). 에디터가 저장하며 이미 반영한 그 내용이면(`applySavedAsset` 의 도장) 건너뛴다. */
+        /** @brief 바뀐 파일을 반영합니다(`applyChangedFile`). 에디터가 저장하며 이미 반영한 그 내용이면(`applySavedAsset` 의 내용 해시) 건너뛴다. */
         void handleChangedFile( const string& relativePath );
         /** @brief 바뀐 파일의 캐시를 다시 읽고(`reloadChangedAsset`) 그것을 펼쳐 넣은 로드된 에셋을 연쇄로 다시 읽습니다(`reloadDependents`). */
         void applyChangedFile( const string& relativePath );
@@ -200,7 +200,10 @@ namespace sw::editor
          * @details 바뀐 에셋 자신이 아무 캐시에도 없어도 돈다 — 부모 머티리얼을 아무도 직접 쓰지 않아도 그것을 펼친 자식은 로드돼 있다. 순환은 계획이 오류로 멈춘다.
          */
         void reloadDependents( const string& relativePath );
-        /** @brief 파일이 `applySavedAsset` 이 기억한 도장 그대로이면 true 입니다. 달라졌으면 기억을 지우고 false 입니다. */
+        /**
+         * @brief 파일 내용이 `applySavedAsset` 이 기억한 내용 해시 그대로이면 true 입니다. 달라졌으면 기억을 지우고 false 입니다.
+         * @details 도장(크기 · 쓰기 시각)으로 비교하면 저장 바로 뒤 같은 틱에 같은 크기로 바깥에서 다시 쓴 파일을 "이미 반영" 으로 건너뛰었다. 내용으로 본다(`ContentHash::computeFile`).
+         */
         [[nodiscard]] bool isAlreadyApplied( const string& relativePath );
         /** @brief 표의 칸이 "로드할 때 참조를 펼쳐 넣는다" 인 종류면 true 입니다(`AssetInlinesReferencesFunc`). */
         [[nodiscard]] static bool inlinesReferences( string_view assetID );
@@ -220,9 +223,9 @@ namespace sw::editor
 
     private:
         unique_ptr<FileWatchDispatcher>   _pFileWatchDispatcher;
-        unique_ptr<AssetReferenceTracker> _pReferenceTracker;  ///< 에디터 전역의 참조 역색인(연쇄 리로드 · 콘텐츠 브라우저)
-        unordered_map<string, FileStamp>  _mapAppliedStamp;    ///< `applySavedAsset` 이 반영한 파일(루트 기준 경로, 소문자)의 도장
-        uint64                            _cascadeReloadCount; ///< 연쇄로 다시 읽은 에셋의 누적 수
+        unique_ptr<AssetReferenceTracker> _pReferenceTracker;     ///< 에디터 전역의 참조 역색인(연쇄 리로드 · 콘텐츠 브라우저)
+        unordered_map<string, uint64>     _mapAppliedContentHash; ///< `applySavedAsset` 이 반영한 파일(루트 기준 경로, 소문자)의 내용 해시
+        uint64                            _cascadeReloadCount;    ///< 연쇄로 다시 읽은 에셋의 누적 수
         unique_ptr<EditorAssetImportJob>  _pImportJob;
         vector<ImportRequest>             _listQueuedImport;               ///< 아직 잡에 싣지 않은 원본(중복 없음)
         vector<ImportRequest>             _listRunningImport;              ///< 지금 도는 잡의 원본

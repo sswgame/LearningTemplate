@@ -12,6 +12,7 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/ContentHash.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
@@ -37,7 +38,7 @@ namespace sw::editor
         , _previewEffectPath{}
         , _status{}
         , _loadedDiskPath{}
-        , _loadedStamp{}
+        , _loadedContentHash{ 0 }
     {
     }
 
@@ -45,13 +46,13 @@ namespace sw::editor
     {
         _listEmitterRow.clear();
         _previewEffectPath.clear();
-        // 자동 갱신이 볼 도장 — 리소스 id 면 디스크 경로로 푼다(시나리오의 임시 문서는 이미 디스크 경로다).
+        // 자동 갱신이 볼 내용 해시 — 리소스 id 면 디스크 경로로 푼다(시나리오의 임시 문서는 이미 디스크 경로다).
         const std::optional<AbsolutePath> diskPath = AbsolutePath::isStrictAbsolute( assetPath ) ? AbsolutePath::tryMake( assetPath )
                                                                                                  : editor::getSubsystem<AssetPaths>().toDiskPath( assetPath );
         _loadedDiskPath                            = diskPath.has_value() ? diskPath->str() : string{};
-        _loadedStamp                               = FileStamp{};
+        _loadedContentHash                         = 0;
         if ( _loadedDiskPath.empty() == false )
-            (void)updateFileStamp( _loadedDiskPath, _loadedStamp );
+            (void)updateContentHash( _loadedDiskPath, _loadedContentHash );
         // 미리 보기의 표는 씬의 효과와 같은 한 벌을 읽는다(공유 캐시 — 핫 리로드가 떼어 낸 새 객체도 다시 열면 받는다).
         const shared_ptr<const VFXEffectDef> pEffect = SharedAssetCache<VFXEffectDef>::acquire( assetPath );
         if ( pEffect == nullptr )
@@ -74,15 +75,15 @@ namespace sw::editor
 
     bool VFXPreviewModel::pollFileChanged()
     {
-        return _loadedDiskPath.empty() == false && updateFileStamp( _loadedDiskPath, _loadedStamp );
+        return _loadedDiskPath.empty() == false && updateContentHash( _loadedDiskPath, _loadedContentHash );
     }
 
-    bool VFXPreviewModel::updateFileStamp( string_view diskPath, FileStamp& inoutStamp )
+    bool VFXPreviewModel::updateContentHash( string_view diskPath, uint64& inoutHash )
     {
-        FileStamp stamp{};
-        if ( FileUtil::getFileStamp( diskPath, stamp ) == false || stamp == inoutStamp )
+        const uint64 hash = ContentHash::computeFile( diskPath );
+        if ( hash == 0 || hash == inoutHash )
             return false;
-        inoutStamp = stamp;
+        inoutHash = hash;
         return true;
     }
 
