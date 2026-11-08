@@ -14,6 +14,7 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
+#include "Engine/Graphics/Texture/TextureCache.h"
 
 namespace sw
 {
@@ -24,10 +25,11 @@ namespace sw
 
     /**
      * @class Light2DCookieAtlas
-     * @brief 쿠키 텍스처 경로마다 아틀라스 칸 하나를 주고, 텍스처를 텍스처 캐시에서 빌려 둡니다(렌더 스레드).
-     * @details 이번 프레임에 안 쓰인 쿠키는 칸과 텍스처를 돌려준다. 새로 칸을 받거나 텍스처가 다시 읽힌(핫 리로드 · 디바이스 교체) 칸은 그릴 목록에 오른다 —
-     *          `FramePassExecutor::drawLight2DCookieAtlas` 가 그 칸에 텍스처를 옮겨 그린다. 칸이 모자라거나 텍스처를 못 읽으면 오류를 남기고 그 빛은 쿠키 없이 그린다
-     *          (칸 번호를 적지 않는다 — 다른 칸의 쿠키가 비치지 않는다).
+     * @brief 쿠키 텍스처 경로마다 아틀라스 칸 하나를 주고, 텍스처를 텍스처 캐시에 비동기로 요청해 핸들로 쥐어 둡니다(렌더 스레드).
+     * @details 이번 프레임에 안 쓰인 쿠키는 칸과 핸들을 돌려준다. 새로 칸을 받거나 텍스처가 다시 읽힌(핫 리로드 · 디바이스 교체) 칸은 그릴 목록에 오른다 —
+     *          `FramePassExecutor::drawLight2DCookieAtlas` 가 그 칸에 텍스처를 옮겨 그린다. 렌더 스레드는 디스크를 기다리지 않는다 — 읽는 동안 그 빛은 쿠키 없이 그리고,
+     *          준비된 프레임부터 칸 번호를 적는다(언리얼 · 유니티도 스트리밍이 끝날 때까지 쿠키 · 텍스처 없이 그린다). 칸이 모자라거나 텍스처를 못 읽으면 오류를 한 번 남기고
+     *          그 빛은 쿠키 없이 그린다(칸 번호를 적지 않는다 — 다른 칸의 쿠키가 비치지 않는다).
      */
     class SW_API Light2DCookieAtlas
     {
@@ -65,10 +67,14 @@ namespace sw
         struct Entry
         {
             hashed_string    _path{};
-            const Texture2D* _pTexture{ nullptr };
+            TextureHandle    _load{};           ///< 쿠키 텍스처 로드(참조를 쥔다) — 준비되기 전에는 그 빛이 쿠키 없이 그린다
             RHITextureHandle _drawnHandle{ 0 }; ///< 칸에 그린 때의 텍스처 핸들 — 다시 읽기 · 디바이스 교체로 바뀌면 다시 그린다
             uint32           _cell{ 0 };
             uint8            _bUsed{ SW_FALSE };
+            uint8            _bFailureReported{ SW_FALSE }; ///< 못 읽은 쿠키의 오류를 한 번만 남긴다(실패한 핸들을 쥐어 프레임마다 다시 읽지 않는다)
+
+            /** @brief 준비된 쿠키 텍스처입니다. 읽는 중이거나 못 읽었으면 nullptr 입니다. */
+            const Texture2D* findReadyTexture() const { return _load.isReady() ? _load.getOperation()->getTexture() : nullptr; }
         };
 
         /** @brief 비어 있는 칸 번호입니다. 없으면 `kLight2DCookieCellCount` 입니다. */

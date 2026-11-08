@@ -52,13 +52,24 @@ namespace sw
         _bReady = SW_FALSE;
     }
 
-    void LiveShaderSubsystem::onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result )
+    void LiveShaderSubsystem::onShaderRecompiled( const vector<string>& listShaderPath )
     {
+        FrameRenderer* const           pFrameRenderer      = &_frameRendererSubsystem.getFrameRenderer();
+        OffscreenSceneRenderers* const pOffscreenRenderers = &_frameRendererSubsystem.getOffscreenRenderers();
+        // 렌더 스레드에 맡기고 기다리지 않는다 — 렌더 쪽 객체(PSO 캐시 · 패스 자원)는 렌더 스레드가 다음 프레임 기록 전에 고친다. 화면 밖 렌더러는 주 렌더러가 함께 쓰는 PSO 캐시를 다시 채운 뒤다.
         RenderThread* const pRenderThread = _renderThreadSubsystem.findRenderThread();
-        if ( pRenderThread != nullptr )
-            pRenderThread->waitIdle( RHIWaitIdleReason::HotReload );
-        _frameRendererSubsystem.getFrameRenderer().onShaderRecompiled( shaderPath, result );
-        _frameRendererSubsystem.getOffscreenRenderers().onShaderRecompiled( shaderPath, result ); // 주 렌더러가 함께 쓰는 PSO 캐시를 다시 채운 뒤다
+        if ( pRenderThread == nullptr )
+        {
+            // 렌더 스레드가 없으면 패킷을 실행하는 쪽이 없다 — 렌더러를 만지는 스레드가 이 스레드 하나다.
+            pFrameRenderer->onShaderRecompiled( listShaderPath );
+            pOffscreenRenderers->onShaderRecompiled( listShaderPath );
+            return;
+        }
+        pRenderThread->enqueueCommand( SW_DELEGATE_LAMBDA( RenderCommandDelegate, [pFrameRenderer, pOffscreenRenderers, listShaderPath]( IRHIDevice& )
+        {
+            pFrameRenderer->onShaderRecompiled( listShaderPath );
+            pOffscreenRenderers->onShaderRecompiled( listShaderPath );
+        } ) );
     }
 
     span<const utf8* const> LiveShaderSubsystem::getSubsystemDependencies() const

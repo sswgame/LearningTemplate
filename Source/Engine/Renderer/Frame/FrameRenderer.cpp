@@ -755,19 +755,21 @@ namespace sw
         return _psoManager.findDesc( pso, outDesc );
     }
 
-    void FrameRenderer::onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result )
+    void FrameRenderer::onShaderRecompiled( const vector<string>& listShaderPath )
     {
-        if ( result._bSuccess == false || _pDevice == nullptr )
+        if ( listShaderPath.empty() || _pDevice == nullptr )
             return;
 
-        _psoManager.onShaderRecompiled( shaderPath );
+        for ( const string& shaderPath : listShaderPath )
+        {
+            _psoManager.onShaderRecompiled( shaderPath );
+        }
 
         // **PSO 를 실제로 다시 만든다.** 주의: 바인딩 레이아웃만 새로 만들면 PSO 는 바이트코드를 박아 넣은
-        // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다.
+        // 객체라 화면이 시작 때 컴파일된 셰이더 그대로다. 재컴파일 묶음 하나에 한 번만 다시 만든다.
         //
-        // 순서는 loadPipeline 과 같다. 여기 도달하기 전에 ShaderRecompiler 가 ShaderCache 를 비웠고(수동 리로드)
-        // (그래야 새 바이트코드를 집는다) Engine 이 렌더 스레드를 재웠으므로(waitIdle) 안전하다.
-        // 셰이더 편집은 개발 중 가끔 있는 일이라 이때의 스톨은 감수한다.
+        // 순서는 loadPipeline 과 같다. ShaderRecompiler 가 ShaderCache 를 비운 뒤에 알렸고(그래야 새 바이트코드를 집는다), 이 함수는 렌더 스레드가
+        // 프레임을 기록하기 전에 돈다 — GPU 를 기다리지 않는다. 옛 PSO · 트랜지언트는 디바이스가 그것을 쓴 프레임의 GPU 완료 뒤로 미뤄 놓는다(백엔드 해제 큐).
         releasePassResources();
         ensurePassResources();
         ensureTransientResources();
@@ -1055,15 +1057,17 @@ namespace sw
         if ( bBorrowRenderTexture )
         {
             TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-            if ( view._pOutputTexture != nullptr )
-                textures.release( view._outputPath.view() );
             textures.declareRenderTarget( request._renderTexture.view(), request._outputWidth, request._outputHeight );
-            // 렌더 타깃은 읽을 파일이 없어 기다림이 이 스레드의 GPU 생성뿐이라 동기로 둔다(`CanvasTextureLeases::prepareTargets` 와 같다).
-            view._pOutputTexture = textures.acquire( request._renderTexture.view() );
+            // 기다리지 않고 요청한다 — 0 채우기 전송은 진행 중인 프레임 뒤에 실행되므로(전송 계약 3) 이 스레드의 펌프가 끝낸다(`CanvasTextureLeases::prepareTargets` 와 같다).
+            // 옛 경로의 핸들은 덮어쓰며 놓인다(캐시에 돌려준다).
+            view._outputLoad     = textures.request( request._renderTexture.view(), AssetLoadStart::Async );
+            view._pOutputTexture = nullptr;
             view._outputPath     = request._renderTexture;
         }
         if ( bRenderTexture )
         {
+            if ( view._pOutputTexture == nullptr && view._outputLoad.isReady() )
+                view._pOutputTexture = view._outputLoad.getOperation()->getTexture();
             if ( view._pOutputTexture == nullptr || view._pOutputTexture->isRHIValid() == false )
             {
                 view._bRenderThisFrame = SW_FALSE;
@@ -1121,8 +1125,7 @@ namespace sw
         view._shadowCullInput._cullCb.release( _pDevice );
         releaseViewTransparentOrder( view );
         view._commandList.reset();
-        if ( view._pOutputTexture != nullptr && engine::areEngineServicesBound() )
-            engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( view._outputPath.view() );
+        view._outputLoad.reset(); // 핸들이 쥔 참조를 놓는다(캐시에 돌려준다)
         view._pOutputTexture = nullptr;
         view._outputPath     = hashed_string{};
     }

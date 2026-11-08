@@ -1,17 +1,18 @@
 #include "pch.h"
 
-#include "Core/Container/KeyedPendingList.h"
 #include "Core/Container/vector.h"
 #include "Core/Testing/TestFramework.h"
+
+#include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
 
 using namespace sw;
 
 /**
- * @brief [KeyedPendingListTest] 키가 기준값 이하인 항목만 넣은 순서대로 꺼내고, 남는 항목의 순서도 지킨다
+ * @brief [RHIRetireListTest] 키가 기준값 이하인 항목만 넣은 순서대로 꺼내고, 남는 항목의 순서도 지킨다
  */
-SW_TEST_CASE( KeyedPendingListTest, ExtractReadyKeepsInsertionOrder )
+SW_TEST_CASE( RHIRetireListTest, ExtractReadyKeepsInsertionOrder )
 {
-    KeyedPendingList<int32> list;
+    RHIRetireList<int32> list;
     list.push( 1, 5 );
     list.push( 2, 3 );
     list.push( 3, 7 );
@@ -38,15 +39,15 @@ SW_TEST_CASE( KeyedPendingListTest, ExtractReadyKeepsInsertionOrder )
 }
 
 /**
- * @brief [KeyedPendingListTest] swap 으로 통째로 넘겨받은 뒤 extractAll 은 키와 상관없이 넣은 순서대로 모두 꺼낸다
+ * @brief [RHIRetireListTest] swap 으로 통째로 넘겨받은 뒤 extractAll 은 키와 상관없이 넣은 순서대로 모두 꺼낸다
  */
-SW_TEST_CASE( KeyedPendingListTest, SwapThenExtractAllTakesEverything )
+SW_TEST_CASE( RHIRetireListTest, SwapThenExtractAllTakesEverything )
 {
-    KeyedPendingList<int32> list;
+    RHIRetireList<int32> list;
     list.push( 10, 100 );
     list.push( 20, 1 );
 
-    KeyedPendingList<int32> taken;
+    RHIRetireList<int32> taken;
     taken.swap( list );
     SW_EXPECT_TRUE( list.isEmpty() );
     SW_EXPECT_EQUAL( size_t( 2 ), taken.size() );

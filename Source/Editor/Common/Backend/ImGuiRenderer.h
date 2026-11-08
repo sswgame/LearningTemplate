@@ -139,8 +139,8 @@ namespace sw::editor
         uint32 acquireSlot( RHITextureHandle texture, bool bOwned ) SW_REQUIRES_LOCK( _textureMutex );
         /** @brief 칸을 비웁니다. 이 렌더러가 만든 텍스처면 번호와 텍스처도 놓습니다(렌더 스레드). 패널 텍스처의 번호는 텍스처 주인의 파괴가 놓는다. */
         void releaseSlot( IRHIDevice& device, uint32 slotIndex );
-        /** @brief 텍스처 연산 하나를 적용합니다(렌더 스레드, 패스 기록 밖). */
-        void applyTextureOp( IRHIDevice& device, TextureOp& op );
+        /** @brief 텍스처 연산 하나를 적용합니다(렌더 스레드, 패스 기록 밖). 스테이징이 차 다음 프레임에 다시 내야 하면 false 입니다(구간 갱신의 `Busy`). */
+        [[nodiscard]] bool applyTextureOp( IRHIDevice& device, TextureOp& op );
         /** @brief 보조 창의 스왑체인을 만들거나 바꾸거나 부수기 전에 낸 스냅샷이 다 그려지기를 기다립니다(UI 스레드, ImGui 창 훅). */
         void waitDrawnBeforeWindowChange() const;
         /** @brief 그리기 명령의 텍스처 ID 를 이번 프레임의 bindless 번호로 풉니다. 아직 없으면 무효입니다. */

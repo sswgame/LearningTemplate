@@ -12,6 +12,7 @@
 #include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/RHI/Backend/RHIRetireList.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
@@ -65,14 +66,13 @@ namespace sw
         {
             uint64        _handle{ 0 };
             RHIHandleKind _kind{ RHIHandleKind::BindlessResource };
-            uint64        _releaseAfterFrame{ 0 }; ///< 렌더 스레드에 넘긴 프레임 번호(1부터) — 이 프레임이 끝나야 내린다
         };
 
-        mutable mutex  _mutex;
-        vector<Entry>  _listHandle;        ///< `_mutex` 아래
-        atomic<uint64> _queuedFrameCount;  ///< 렌더 스레드에 넘긴 프레임 수(누적)
-        atomic<uint64> _retiredFrameCount; ///< 렌더 스레드가 끝낸 프레임 수(누적, 넘긴 수를 넘지 않는다)
-        atomic<uint64> _gpuIdleWaitCount;  ///< `waitIdle` 이 GPU 를 통째로 기다린 횟수(누적, `getGPUIdleWaitCount`)
+        mutable mutex        _mutex;
+        RHIRetireList<Entry> _listHandle;        ///< `_mutex` 아래. 키 = 렌더 스레드에 넘긴 프레임 번호(1부터) — 이 프레임이 끝나야 내린다
+        atomic<uint64>       _queuedFrameCount;  ///< 렌더 스레드에 넘긴 프레임 수(누적)
+        atomic<uint64>       _retiredFrameCount; ///< 렌더 스레드가 끝낸 프레임 수(누적, 넘긴 수를 넘지 않는다)
+        atomic<uint64>       _gpuIdleWaitCount;  ///< `waitIdle` 이 GPU 를 통째로 기다린 횟수(누적, `getGPUIdleWaitCount`)
 
         RHIDeferredHandleQueue()
             : _mutex{}
@@ -285,7 +285,7 @@ namespace sw
         if ( ( bRenderThreadUp || bFrameInFlight ) && std::this_thread::get_id() != _renderThreadID.load( std::memory_order_relaxed ) )
         {
             ScopedLock<mutex> lock{ _pDeferredHandleQueue->_mutex };
-            _pDeferredHandleQueue->_listHandle.push_back( RHIDeferredHandleQueue::Entry{ handle, kind, queuedFrameCount + 1 } );
+            _pDeferredHandleQueue->_listHandle.push( RHIDeferredHandleQueue::Entry{ handle, kind }, queuedFrameCount + 1 );
             return;
         }
         IRHIResourceFactory* pFactory = getResourceFactory();
@@ -295,13 +295,15 @@ namespace sw
 
     void IRHIDevice::flushDeferredHandleReleases()
     {
-        vector<RHIDeferredHandleQueue::Entry> listHandle;
+        RHIRetireList<RHIDeferredHandleQueue::Entry> listTaken;
         {
             ScopedLock<mutex> lock{ _pDeferredHandleQueue->_mutex };
-            if ( _pDeferredHandleQueue->_listHandle.empty() )
+            if ( _pDeferredHandleQueue->_listHandle.isEmpty() )
                 return;
-            listHandle.swap( _pDeferredHandleQueue->_listHandle );
+            listTaken.swap( _pDeferredHandleQueue->_listHandle );
         }
+        vector<RHIDeferredHandleQueue::Entry> listHandle;
+        listTaken.extractAll( listHandle );
         IRHIResourceFactory* pFactory = getResourceFactory();
         if ( pFactory == nullptr )
             return; // 팩터리가 이미 없다 — 백엔드 자원과 함께 갔다
@@ -333,17 +335,8 @@ namespace sw
         const uint64                          retiredFrameCount = _pDeferredHandleQueue->_retiredFrameCount.load( std::memory_order_acquire );
         vector<RHIDeferredHandleQueue::Entry> listDue;
         {
-            ScopedLock<mutex>                      lock{ _pDeferredHandleQueue->_mutex };
-            vector<RHIDeferredHandleQueue::Entry>& listHandle = _pDeferredHandleQueue->_listHandle;
-            size_t                                 keptCount  = 0;
-            for ( RHIDeferredHandleQueue::Entry& entry : listHandle )
-            {
-                if ( entry._releaseAfterFrame <= retiredFrameCount )
-                    listDue.push_back( entry );
-                else
-                    listHandle[keptCount++] = entry;
-            }
-            listHandle.resize( keptCount );
+            ScopedLock<mutex> lock{ _pDeferredHandleQueue->_mutex };
+            _pDeferredHandleQueue->_listHandle.extractReady( retiredFrameCount, listDue );
         }
         IRHIResourceFactory* pFactory = getResourceFactory();
         if ( pFactory == nullptr )

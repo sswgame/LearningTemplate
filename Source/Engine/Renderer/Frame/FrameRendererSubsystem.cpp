@@ -81,19 +81,28 @@ namespace sw
 
     void FrameRendererSubsystem::onPipelineVariableChanged( GlobalVariableInfo* pVariable )
     {
-        // 렌더 스레드가 지금 파이프라인으로 그리는 중이면 기다린다 — 셰이더 리로드(`LiveShaderSubsystem`)와 같은 자리 바꿈이다(프레임 경로가 아니다).
-        if ( RenderThreadSubsystem* const pRenderThreads = engine::findSubsystem<RenderThreadSubsystem>() )
+        // 렌더 쪽 객체(렌더러 · PSO 캐시)는 렌더 스레드가 다음 프레임 기록 전에 고친다 — 렌더 스레드와 GPU 를 세우지 않는다(셰이더 리로드 `LiveShaderSubsystem` 과 같은 길).
+        // 옛 패스 자원은 디바이스가 그것을 쓴 프레임의 GPU 완료 뒤로 미뤄 놓는다(백엔드 해제 큐).
+        const string           change         = pVariable->_name + "=" + pVariable->getValueAsString();
+        RenderThreadSubsystem* pRenderThreads = engine::findSubsystem<RenderThreadSubsystem>();
+        RenderThread* const    pRenderThread  = pRenderThreads != nullptr ? pRenderThreads->findRenderThread() : nullptr;
+        if ( pRenderThread == nullptr )
         {
-            if ( RenderThread* const pRenderThread = pRenderThreads->findRenderThread() )
-                pRenderThread->waitIdle( RHIWaitIdleReason::PipelineSwitch );
+            applyPipelineChange( change ); // 패킷을 실행하는 쪽이 없다 — 렌더러를 만지는 스레드가 이 스레드 하나다
+            return;
         }
+        pRenderThread->enqueueCommand( SW_DELEGATE_LAMBDA( RenderCommandDelegate, [this, change]( IRHIDevice& )
+        { applyPipelineChange( change ); } ) );
+    }
+
+    void FrameRendererSubsystem::applyPipelineChange( const string& change )
+    {
         // 화면 밖 렌더러는 옛 파이프라인으로 지었고 PSO 캐시를 함께 쓴다 — 내리고 다음 그리기가 새 파이프라인으로 다시 짓는다.
         _offscreenRenderers->shutdown();
         if ( _frameRenderer->selectPipeline() == false )
-            SW_LOG_ERROR_ID( "FrameRenderer.ChangedButPipelineCould", "%# changed to '%#' but the pipeline could not be selected - %#", pVariable->_name.c_str(), pVariable->getValueAsString().c_str(),
-                             _frameRenderer->getStatusMessage().c_str() );
+            SW_LOG_ERROR_ID( "FrameRenderer.ChangedButPipelineCould", "%# but the pipeline could not be selected - %#", change.c_str(), _frameRenderer->getStatusMessage().c_str() );
         else
-            SW_LOG_INFO_ID( "FrameRenderer.ChangedDrawing", "%# changed - drawing with %#", pVariable->_name.c_str(), _frameRenderer->getPipelinePath().c_str() );
+            SW_LOG_INFO_ID( "FrameRenderer.ChangedDrawing", "%# - drawing with %#", change.c_str(), _frameRenderer->getPipelinePath().c_str() );
     }
 
     void FrameRendererSubsystem::shutdownSubsystem()

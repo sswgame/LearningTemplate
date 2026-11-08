@@ -111,16 +111,23 @@ namespace sw
                     _bOverflowReported = SW_TRUE;
                     continue;
                 }
-                const Texture2D* pTexture = pCache->acquire( cookie._texturePath.c_str() );
-                if ( pTexture == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "Light2DCookieAtlas.DLightCookieCould", "2D light cookie '%#' could not be loaded - that light draws without its cookie", cookie._texturePath.c_str() );
-                    continue;
-                }
-                _listEntry.push_back( Entry{ cookie._texturePath, pTexture, RHITextureHandle{ 0 }, cell, SW_FALSE } );
+                // 렌더 스레드는 디스크를 기다리지 않는다 — 요청만 내고, 업로드는 이 스레드의 펌프(`TextureCache::completePendingLoads`)가 한다.
+                Entry entry{};
+                entry._path = cookie._texturePath;
+                entry._load = pCache->request( cookie._texturePath.c_str(), AssetLoadStart::Async );
+                entry._cell = cell;
+                _listEntry.push_back( std::move( entry ) );
                 pEntry = &_listEntry.back();
             }
-            pEntry->_bUsed                               = SW_TRUE;
+            pEntry->_bUsed = SW_TRUE;
+            if ( pEntry->_load.hasFailed() && pEntry->_bFailureReported == SW_FALSE )
+            {
+                SW_LOG_ERROR_ID( "Light2DCookieAtlas.DLightCookieCould", "2D light cookie '%#' could not be loaded (%#) - that light draws without its cookie", cookie._texturePath.c_str(),
+                                 pEntry->_load.getError().c_str() );
+                pEntry->_bFailureReported = SW_TRUE;
+            }
+            if ( pEntry->findReadyTexture() == nullptr )
+                continue; // 읽는 중이거나 못 읽었다 — 칸 번호를 적지 않아 그 빛은 쿠키 없이 그린다
             inoutListLight[cookie._lightIndex]._extra._w = static_cast<float32>( pEntry->_cell );
             _bHasCookies                                 = SW_TRUE;
         }
@@ -133,17 +140,19 @@ namespace sw
                 ++index;
                 continue;
             }
-            pCache->release( _listEntry[index]._path.c_str() );
             _listEntry.erase( _listEntry.begin() + static_cast<std::ptrdiff_t>( index ) );
         }
         // 그릴 칸 — 새 칸, 텍스처가 다시 읽힌 칸(핸들이 바뀜), 아틀라스가 새로 만들어진 프레임의 모든 칸.
         for ( Entry& entry : _listEntry )
         {
-            const RHITextureHandle handle  = entry._pTexture->getHandle();
+            const Texture2D* pTexture = entry.findReadyTexture();
+            if ( pTexture == nullptr )
+                continue;
+            const RHITextureHandle handle  = pTexture->getHandle();
             const bool             bRedraw = bAtlasReborn || bReloaded || handle != entry._drawnHandle;
             if ( bRedraw && handle != 0 )
             {
-                _listPendingDraw.push_back( CellDraw{ entry._cell, entry._pTexture } );
+                _listPendingDraw.push_back( CellDraw{ entry._cell, pTexture } );
                 entry._drawnHandle = handle;
             }
         }
@@ -151,13 +160,7 @@ namespace sw
 
     void Light2DCookieAtlas::release( IRHIDevice* pDevice )
     {
-        TextureCache* pCache = Light2DCookieAtlasInternal::findTextureCache();
-        for ( const Entry& entry : _listEntry )
-        {
-            if ( pCache != nullptr )
-                pCache->release( entry._path.c_str() );
-        }
-        _listEntry.clear();
+        _listEntry.clear(); // 핸들이 쥔 참조를 놓는다
         _listPendingDraw.clear();
         if ( _atlas != nullptr && pDevice != nullptr )
             _atlas->releaseRHI( pDevice );

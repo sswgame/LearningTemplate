@@ -20,7 +20,6 @@ namespace sw
     class FrameRenderer;
     class IRHIDevice;
     struct RenderFramePacket;
-    struct ShaderCompileResult;
 
     /**
      * @class OffscreenSceneRenderers
@@ -45,7 +44,7 @@ namespace sw
         /** @brief 씬 @p sceneKey 의 렌더러를 모두 내립니다(그 씬이 사라졌다). 디바이스의 해제는 GPU 완료 뒤로 미뤄진다 — 이미 낸 프레임이 쓰는 자원을 지금 파괴하지 않는다. */
         void retire( uint32 sceneKey );
         /** @brief 셰이더 핫 리로드를 렌더러마다 알립니다. 주 렌더러가 PSO 캐시를 다시 채운 **뒤에** 부른다(함께 쓰는 캐시의 새 PSO 를 집는다). */
-        void onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result );
+        void onShaderRecompiled( const vector<string>& listShaderPath );
         /** @brief 렌더러를 모두 내립니다(디바이스가 살아 있을 때, 주 렌더러보다 먼저 — 주 렌더러의 PSO 캐시를 빌려 쓴다). */
         void shutdown();
         /** @brief 살아 있는 렌더러 수입니다(진단 · 자동화 감시 값 `Editor.ScenePreviewRenderers`). 어느 스레드에서 읽어도 된다. */

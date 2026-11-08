@@ -172,6 +172,8 @@ namespace sw
         , _tail{ 0 }
         , _pPendingCommand{ nullptr }
         , _bCommandSucceeded{ false }
+        , _queuedCommandMutex{}
+        , _listQueuedCommand{}
     {
     }
 
@@ -531,6 +533,29 @@ namespace sw
         return _bCommandSucceeded;
     }
 
+    void RenderThread::enqueueCommand( RenderCommandDelegate command )
+    {
+        if ( command.isBound() == false )
+            return;
+        ScopedLock<mutex> lock{ _queuedCommandMutex };
+        _listQueuedCommand.push_back( std::move( command ) );
+    }
+
+    void RenderThread::runQueuedCommands()
+    {
+        vector<RenderCommandDelegate> listCommand;
+        {
+            ScopedLock<mutex> lock{ _queuedCommandMutex };
+            if ( _listQueuedCommand.empty() )
+                return;
+            listCommand.swap( _listQueuedCommand );
+        }
+        for ( const RenderCommandDelegate& command : listCommand )
+        {
+            command( *_pDevice );
+        }
+    }
+
     bool RenderThread::executeFrameBody( RenderFramePacket& packet )
     {
         if ( packet._bValid == 0 )
@@ -557,6 +582,7 @@ namespace sw
         // 컨텍스트를 잡지 못한 프레임은 기록하지 않는다(GL 호출이 버려진다). postPresent 통지는 executePacket 이 그래도 보낸다.
         if ( ensureContextOnCurrentThread() == false )
             return false;
+        runQueuedCommands();
 
         const bool          bOffscreen   = packet._outputRenderTarget != 0;
         IRHICommandContext* pFrameStream = _pDevice->getFrameStreamContext();

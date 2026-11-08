@@ -3,6 +3,8 @@
 #include "DevTools/Client/Shader/ShaderRecompiler.h"
 
 #include "Core/Concurrency/mutex.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 #include "DevTools/AssetReload/ReloadTracker.h"
 
@@ -62,9 +64,10 @@ namespace sw
         }
 
         ShaderCache&         shaderCache = engine::getSubsystem<ShaderCache>();
-        uint32               changed     = 0;
-        uint32               failed      = 0;
-        ReloadTracker* const pTracker    = engine::findSubsystem<ReloadTracker>();
+        vector<string>       listChangedPath;
+        uint32               changed  = 0;
+        uint32               failed   = 0;
+        ReloadTracker* const pTracker = engine::findSubsystem<ReloadTracker>();
         for ( const ShaderCompileDesc& desc : listToCompile )
         {
             // 셰이더 DDC 는 켜 둔 채로 돈다. 소스가 안 바뀐 셰이더는 컴파일러 안에서 DDC 에 맞아 컴파일러를
@@ -94,8 +97,7 @@ namespace sw
             ++changed;
             if ( pTracker != nullptr )
                 pTracker->record( ReloadSource::Shader, desc._source.str(), ReloadResult::Reloaded );
-            if ( _onAnyRecompiled.isBound() )
-                _onAnyRecompiled.get()( desc._source.str(), newResult );
+            listChangedPath.emplace_back( desc._source.str() );
         }
 
         if ( changed > 0 )
@@ -107,6 +109,9 @@ namespace sw
             // 다시 맞춘다(Material::isShaderLayoutSynced). 비우지 않으면 맞춘 레이아웃이 옛 셰이더 것 그대로 남는다.
             ShaderReflectionLibrary::clearCache();
         }
+        // 알림은 캐시를 비운 **뒤에** 한다 — 받는 쪽(렌더러)이 PSO 를 다시 만들 때 새 바이트코드를 집는다. 비우기 전에 알리면 렌더 스레드가 그사이 옛 캐시 항목으로 다시 만든다.
+        if ( listChangedPath.empty() == false && _onAnyRecompiled.isBound() )
+            _onAnyRecompiled.get()( listChangedPath );
 
         SW_LOG_INFO_ID( "ShaderRecompiler.ShaderReloadCheckedUpdated", "Shader reload: %# checked, %# updated, %# failed.",
                         static_cast<uint32>( listToCompile.size() ), changed, failed );

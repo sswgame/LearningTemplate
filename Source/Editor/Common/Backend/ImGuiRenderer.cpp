@@ -256,9 +256,15 @@ namespace sw::editor
             ScopedLock<mutex> lock{ _textureMutex };
             _listApplyingOp.swap( _listTextureOp );
         }
-        for ( TextureOp& op : _listApplyingOp )
+        for ( size_t index = 0; index < _listApplyingOp.size(); ++index )
         {
-            applyTextureOp( device, op );
+            if ( applyTextureOp( device, _listApplyingOp[index] ) )
+                continue;
+            // 스테이징이 찼다 — 남은 연산은 낸 순서를 지켜 다음 프레임에 다시 낸다(같은 칸의 갱신 · 파괴가 앞지르지 않게). 그사이 UI 스레드가 낸 것은 그 뒤다.
+            ScopedLock<mutex> lock{ _textureMutex };
+            _listTextureOp.insert( _listTextureOp.begin(), std::make_move_iterator( _listApplyingOp.begin() + static_cast<ptrdiff_t>( index ) ),
+                                   std::make_move_iterator( _listApplyingOp.end() ) );
+            break;
         }
         _listApplyingOp.clear();
 
@@ -545,15 +551,15 @@ namespace sw::editor
         }
     }
 
-    void ImGuiRenderer::applyTextureOp( IRHIDevice& device, TextureOp& op )
+    bool ImGuiRenderer::applyTextureOp( IRHIDevice& device, TextureOp& op )
     {
         IRHIResourceFactory* const pFactory = device.getResourceFactory();
         if ( pFactory == nullptr )
-            return;
+            return true;
         if ( op._kind == TextureOp::Kind::Destroy )
         {
             releaseSlot( device, op._slot ); // 렌더 스레드 · 패스 기록 밖 — 백엔드가 GPU 사용 뒤로 미룬다
-            return;
+            return true;
         }
         if ( op._kind == TextureOp::Kind::Create )
         {
@@ -575,13 +581,13 @@ namespace sw::editor
                 SW_LOG_ERROR_ID( "ImGuiRenderer.TextureCreateFailed", "Failed to create an editor UI texture (%#x%#) - its glyphs are not drawn", op._width, op._height );
                 if ( handle != 0 )
                     pFactory->destroyTexture( handle );
-                return; // 칸은 텍스처 없이 남는다 — 그 ID 의 그리기는 건너뛰고, ImGui 가 파괴를 내면 비운다
+                return true; // 칸은 텍스처 없이 남는다 — 그 ID 의 그리기는 건너뛰고, ImGui 가 파괴를 내면 비운다
             }
             ScopedLock<mutex> lock{ _textureMutex };
             TextureSlot&      slot = _listTextureSlot[op._slot];
             slot._texture          = handle;
             slot._srv              = pFactory->registerBindlessTexture( handle );
-            return;
+            return true;
         }
         RHITextureHandle handle{ 0 };
         {
@@ -595,8 +601,13 @@ namespace sw::editor
         region._y         = op._y;
         region._width     = op._width;
         region._height    = op._height;
-        if ( handle == 0 || RHITransferUtil::uploadTexture2DRegionAndWait( *pFactory, handle, region ) == false )
+        // 등록된 텍스처의 구간 갱신이라 끝남을 기다리지 않는다 — 같은 텍스처의 전송은 낸 순서대로, 뒤에 낼 프레임 커맨드보다 먼저 실행된다(전송 계약 3, `Texture2D` 의 구간 갱신과 같다).
+        const RHITransferSubmit submit = handle != 0 ? pFactory->submitTextureRegionUpload( handle, region ) : RHITransferSubmit{};
+        if ( submit._result == RHISubmitResult::Busy )
+            return false;
+        if ( handle == 0 || submit.isAccepted() == false )
             SW_LOG_ERROR_ONCE_ID( "ImGuiRenderer.TextureUpdateFailed", "Failed to update an editor UI texture region - new glyphs may be missing" );
+        return true;
     }
 
     RHIDescriptorIndex ImGuiRenderer::resolveTexture( uint64 textureID ) const

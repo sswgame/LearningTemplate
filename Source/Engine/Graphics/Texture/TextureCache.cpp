@@ -1120,9 +1120,16 @@ namespace sw
         {
             case Source::RenderTarget:
             {
-                // 렌더 타깃은 올릴 내용이 없다 — 만들고 바로 등록한다.
-                const bool bReady = _pTexture->createRenderTarget( pDevice, getPath(), _renderTargetWidth, _renderTargetHeight, constant::render::kOffscreenColorFormat );
-                return concludeCompletion( *pCache, bReady, outError );
+                // 렌더 타깃은 0 채우기만 올린다 — 파일 · CPU 원본과 같이 제출하고, 블로킹이 아니면 이후 프레임의 펌프가 끝남을 보고 등록한다(진행 중인 프레임을 기다리지 않는다).
+                const Texture2DUploadStep step =
+                    _pTexture->beginRenderTarget( pDevice, getPath(), _renderTargetWidth, _renderTargetHeight, constant::render::kOffscreenColorFormat, bBlocking );
+                if ( step == Texture2DUploadStep::Busy )
+                    return AssetCompletionStep::Busy; // 다음 프레임에 다시 제출한다(텍스처는 지웠다)
+                if ( step == Texture2DUploadStep::Failed )
+                    return concludeCompletion( *pCache, false, outError );
+                if ( bBlocking )
+                    return pollCompletion( true, outError );
+                return AssetCompletionStep::Submitted;
             }
             case Source::File:
             case Source::CPUBytes:

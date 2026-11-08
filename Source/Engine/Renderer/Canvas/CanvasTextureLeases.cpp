@@ -50,15 +50,21 @@ namespace sw
                     pState->_drawnRevision = 0;
                 continue;
             }
-            // 머티리얼과 같은 경로로 캐시에서 빌린다 — 처음 만드는 크기는 위젯의 그리기 크기다. 렌더 타깃은 읽을 파일이 없어(`TextureLoadOperation::runLoad`) 기다림이
-            // 이 스레드의 GPU 생성뿐이라 동기로 둔다 — 핸들로 미루면 같은 생성을 한 프레임 늦게 할 뿐이다(언리얼 렌더 타깃도 렌더 스레드가 그 자리에서 만든다).
-            textures.declareRenderTarget( target._targetPath.view(), width, height );
-            pState->_pTexture      = textures.acquire( target._targetPath.view() );
+            // 머티리얼과 같은 경로로 캐시에 요청한다 — 처음 만드는 크기는 위젯의 그리기 크기다. 렌더 타깃을 그려지기 전 상태로 두는 0 채우기 전송은 진행 중인 프레임 뒤에
+            // 실행되므로(전송 계약 3) 그 자리에서 기다리면 앞 프레임의 GPU 일을 기다린다 — 이 스레드의 펌프가 끝내고, 그 전 프레임은 이 대상을 그리지 않는다.
+            if ( pState->_load.isValid() == false )
+            {
+                textures.declareRenderTarget( target._targetPath.view(), width, height );
+                pState->_load = textures.request( target._targetPath.view(), AssetLoadStart::Async );
+            }
+            if ( pState->_load.isReady() == false )
+                continue; // 만드는 중이거나 만들지 못했다(이유는 캐시가 남겼다 — 실패한 핸들을 쥐어 다시 묻지 않는다)
+            pState->_pTexture      = pState->_load.getOperation()->getTexture();
             pState->_drawnRevision = 0;
-            // 등록 때 한 번 대상 포맷을 셋업 PSO 와 대조한다 — 없으면 거절을 알리고 그리지 않는다(`CanvasRenderer::drawTargets` 는 다른 포맷의 PSO 로 대신 그리지 않는다).
+            // 준비될 때 한 번 대상 포맷을 셋업 PSO 와 대조한다 — 없으면 거절을 알리고 그리지 않는다(`CanvasRenderer::drawTargets` 는 다른 포맷의 PSO 로 대신 그리지 않는다).
             RHIPipelineStateHandle pso{ 0 };
-            const bool             bHasPSO = pState->_pTexture != nullptr && psoCache.findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat(), pso ) && pso != 0;
-            if ( pState->_pTexture != nullptr && bHasPSO == false )
+            const bool             bHasPSO = psoCache.findOutputPSO( RenderPassType::Canvas, pState->_pTexture->getFormat(), pso ) && pso != 0;
+            if ( bHasPSO == false )
                 SW_LOG_ERROR_ID( "Canvas.CanvasTargetFormatNo", "Canvas target '%#' has format %# with no canvas PSO from setup - it is rejected and never drawn (add the format to FramePSOManager::collectOutputPSOJobs)",
                                  target._targetPath.c_str(), static_cast<uint32>( pState->_pTexture->getFormat() ) );
         }
@@ -69,8 +75,7 @@ namespace sw
             CanvasTargetLease& state = _listTarget[index - 1];
             if ( state._bSeen == SW_TRUE )
                 continue;
-            if ( state._pTexture != nullptr && bServices )
-                engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().release( state._path.view() );
+            // 핸들이 쥔 참조를 놓는다(캐시에 돌려준다).
             _listTarget.erase( _listTarget.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
     }
@@ -120,16 +125,8 @@ namespace sw
 
     void CanvasTextureLeases::release()
     {
-        _listPathTexture.clear(); // 경로 이미지의 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다(`Material::releaseTextureAssets` 와 같다)
-        if ( engine::areEngineServicesBound() )
-        {
-            TextureCache& textures = engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>();
-            for ( const CanvasTargetLease& state : _listTarget )
-            {
-                if ( state._pTexture != nullptr )
-                    textures.release( state._path.view() );
-            }
-        }
+        // 경로 이미지 · 렌더 타깃의 참조는 핸들이 쥐었다 — 놓으면 캐시에 돌려준다(`Material::releaseTextureAssets` 와 같다).
+        _listPathTexture.clear();
         _listTarget.clear();
     }
 } // namespace sw
