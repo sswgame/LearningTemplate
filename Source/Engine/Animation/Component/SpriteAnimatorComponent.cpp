@@ -162,11 +162,9 @@ namespace sw
     {
         if ( _bPlaying == SW_FALSE || _bPaused == SW_TRUE )
             return;
-#if !defined( SW_SHIPPING )
-        // 되감는 동안에는 흐르지 않는다 — 애니메이션 시스템이 기록된 프레임을 건다.
-        if ( _pAnimationSystem != nullptr && _pAnimationSystem->getRewind().isScrubbing() )
+        // 관찰자가 평가를 대신하는 동안(되감기)에는 흐르지 않는다 — 애니메이션 시스템 쪽이 기록된 프레임을 건다.
+        if ( _pAnimationSystem != nullptr && _pAnimationSystem->isEvaluationReplaced() )
             return;
-#endif
 
         // 스프라이트의 클립이 바뀌었으면(늦게 붙었다 · 경로를 고쳤다) 구간을 다시 잡는다. 반복 여부는 재생을 시작할 때 정한 그대로다.
         if ( findClip() != _pRangeClip )

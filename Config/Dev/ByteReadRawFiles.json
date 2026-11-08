@@ -14,7 +14,7 @@
         { "_path": "Source/GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.cpp", "_reason": "서명을 확인하는 표의 고정 자리 읽기" },
         { "_path": "Source/Engine/Audio/AudioVorbisDecoder.cpp", "_reason": "바깥 형식(Ogg Vorbis)의 고정 자리 읽기" },
         { "_path": "Source/Engine/Audio/AudioClipDecoder.cpp", "_reason": "바깥 형식(WAV)의 고정 자리 읽기" },
-        { "_path": "Source/Engine/Animation/Scene/AnimationRewind.cpp", "_reason": "같은 실행의 되감기 기록을 프레임마다 푸는 뜨거운 길 - 길이는 기록이 정한다" },
+        { "_path": "Source/Engine/Animation/Scene/Dev/AnimationRewind.cpp", "_reason": "같은 실행의 되감기 기록을 프레임마다 푸는 뜨거운 길 - 길이는 기록이 정한다" },
         { "_path": "Source/Engine/Animation/Codec/Raw/RawAnimationCodec.cpp", "_reason": "프레임마다 표본을 푸는 뜨거운 길 - 범위는 sample 머리에서 ByteReader 규칙으로 맞췄다" },
         { "_path": "Source/Engine/Serialization/Serializer/SerializerUtil.cpp", "_reason": "오프셋을 넘겨 다니는 바이너리 칸 읽기 - 읽을 때마다 남은 길이를 본다" },
         { "_path": "Source/Editor/Common/Asset/Model/ModelImportGeometry.cpp", "_reason": "바깥 형식(glTF 버퍼)의 임포트 - 접근자 범위를 먼저 확인한다" }
