@@ -87,6 +87,14 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 
 케이스 하나는 이럴 때 실패다: 단언 실패 · 단언이 하나도 없음 · 적지 않은 Warning · Error 로그 · 적었는데 나오지 않은 로그 · 다른 스냅숏. 거르개에 맞는 케이스가 없으면 실행이 실패다(샤드가 빈 것은 실패가 아니다). 보고 JSON 은 `Saved/Test/<프로세스>/report.json`(찍힌다).
 
+### 하네스
+
+- 네트워크: Core 엔드포인트는 `LoopbackCluster`, 온라인 키트 끝단은 `OnlineHostTestUtil.h`(`OnlineTestFixture` — 호스트 + 클라이언트 묶음, 키트 DLL 이 include 하고 키트 서버 쪽은 같은 프로토콜 항목의 가짜로 올린다).
+- 그 밖: `AnimationTestUtil` · `RHIFakeDevice` · `FakeFontRasterizer`, 자식 프로세스는 `Core/Process` · 크래시 보고.
+- 온라인 키트는 싣는 게임이 없어 `UnitTests.OnlineKits`(OnlineLoadBot `-test`, Release — 봇이 온라인 키트를 모두 싣는다)가 돌린다.
+- 화면이 있어야 하는 것은 시나리오가 맡는다: `UIPreviewModel`(`editor/uipreview` · `uipreviewdesigner`), 섀도 복사본의 성공 길(핫 리로드 시나리오), 화면이 뜨는 게임 흐름(`loadingscreen`), `Editor/Common` · `Editor/Panels` 의 그리기 코드.
+- 폴더 집계 `py -3 Scripts/dev/TestCoverage.py` 는 테스트가 다른 폴더에 있어도 "없음" 으로 센다 — 실제로 비었는지는 클래스 이름을 테스트에서 찾아 본다.
+
 ## 리플렉션 파서
 
 `ReflectionParser` 는 Engine 을 링크하지 못해 위 틀에 들어가지 못한다. `Test/ReflectionParser/Fixtures/<이름>.h` 하나가 `ReflectionParser.<이름>` 하나이고(`ctest -L nogpu`), 실제 실행 파일을 빌드와 같은 인자로 돌려 헤더 맨 앞의 기대 줄(`// EXPECT-ERROR:` · `EXPECT-GEN:` · `EXPECT-NOT-GEN:` · `EXPECT-TYPE:`)과 대조한다 — 형식은 `RunParserFixture.cmake`. 잘못된 입력을 일부러 담으므로 린트 범위(`Source/`) 밖에 둔다.
@@ -142,7 +150,7 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 - **셰이더**: 소스 정책(개발 실행)은 쿠킹본을 읽지 않는다 — 로컬 캐시(`Bin/Saved/ShaderCache`) → 실시간 컴파일, 컴파일 결과 캐시는 `Bin/Saved/ShaderCompileCache`(언리얼 DDC). 리플렉션도 그 바이트코드에서 실행 중에 만든다. 실시간 컴파일의 기본은 쿠킹과 같은 최적화 코드젠이고 디버그 코드젠은 `-gv_shaderDebugCodegen=1`(RenderDoc, 언리얼 `r.Shaders.Optimize=0`). 쿠킹본 정책(배포 · `-cooked-content`)은 팩의 쿠킹본만 읽는다. 굽기는 `<쿠킹 폴더>/<도메인>/shaders/bin/<백엔드>` 에 쓰고(씬 · 프리팹과 같은 스테이징), 팩 굽기(`--cook-all` · `--cook-packs`)가 늘 바뀐 것만 다시 굽고 판정한 뒤 담는다. 소스 트리의 `shaders/bin` 은 낡은 잔재다(쿠킹본 접미사가 `Cooked` 역할이라 팩이 경고하고 뺀다).
 - **시작 시점의 결정성**: 로딩 화면은 씬 로드 받아들임 알림(`SceneManager::onSceneLoadRequested`, 요청마다 `SceneLoadKind` 필수 — 편집기 · 진단은 `Tool`)에 게임이 붙어 띄우고(언리얼 PreLoadMap), 떠 있는 동안 게임 시간을 멈춘다(`LoadingScreen` 형식). 그래서 시나리오의 첫 프레임은 늘 월드의 첫 틱이다 — 예전에는 로드 시간 · 최소 표시 시간만큼 월드가 로딩 화면 뒤에서 돌았다(cloth 골든을 다시 떴다).
 - **종료 코드**: 표 하나 `Config/Engine/ProcessExitCodes.json` → C++ `ProcessExitCode` · CMake `SW_EXIT_CODE_<이름>`.
-- **남은 일**: 창 바둑판 간격은 창 틀 두께를 Win32 대략 값으로 둔다(`AutomationPerBackend` 의 shortcut) — 모니터가 2.6K×1.5K 보다 작으면 겹친다. 플랫폼 작업 영역 · 창 틀 크기 API 가 생기면 그 값으로.
+- **남은 일**: 바둑판 칸은 모니터 작업 영역을 보지 않는다(창 틀 두께는 `IWindow::tryGetFrameExtents` 로 잰다) — 모니터가 2.6K×1.5K 보다 작으면 겹친다. 플랫폼 작업 영역 API 가 생기면 그 값으로.
 - **겹치는 쓰기를 막은 곳**: 로그 파일은 싱크가 안다(`ILogSink::getLogFilePath` — BugReport · 콘솔 패널이 폴더의 "가장 새 파일" 을 고르지 않는다), 같은 초의 폴더 · 사진 이름은 `FileUtil::reserveUniquePath`(만들기가 곧 자리 잡기), 개발 TLS 인증서는 한 PEM(`devserver.pem`).
 - **시간 기록**: 실행이 끝날 때마다 `[Scenario] <이름> timeline:` 한 줄이 남는다 — 프레임 종류(시작 · 붙잡기 · 단계 · 고정 대기)별 ms 와 무거운 단계 종류, 가장 긴 대기. 단계 사이 초기화는 `stage reset took`. 무엇이 느린지는 새로 재지 말고 이 줄을 모은다. `<WaitUntil>` 이 기다리지 않고 지나가면 `was already true` 가 남는다 — 고정 대기를 조건 대기로 바꿀 때 부정형 단언(일어나지 않음을 보는 것)을 가려낸다.
 - **어디서 시간이 드는가(2026-11-02, Release 전체)**: timeline 줄을 모으면 고정 대기 약 600 초 · 조건 대기 약 440 초 · 기동 약 90 초이고, 단계 재설정(4 초) · 백엔드 교체(13 초)는 작다. 게임 시나리오의 고정 대기는 `fixedDelta` 아래 시뮬레이션 프레임 수라(카메라 · 애니메이션이 자리 잡는 시간 — 골든이 그 순간을 찍는다) 조건 대기로 바꾸지 않는다. 느린 까닭은 프레임 비용이었다 — Shooter3D 체인을 넷이 함께 돌면 포커스 없는 dx11 · dx12 · gl 의 무거운 장면이 프레임 7 → 100 ms 로 느려지고(혼자 · 차례로는 7 ms, 전원 조절을 꺼도 같다), 전체는 함께 225 초 · 차례로 227 초로 같다. 그래서 그 체인은 `-scenario-backend-slots=1`(`Test/Scenario/CMakeLists.txt` 의 `swSequentialScenarioPacks`)로 차례로 돈다 — 시간은 같고 crowd 가 120 초(시한 150 초)에서 20 초가 됐다. 가벼운 체인은 기동이 겹쳐 함께 도는 편이 빠르다. 백엔드 교체 한 번은 0.7 ~ 1 초이고 대부분 네이티브 디바이스 생성(드라이버, 0.3 ~ 0.6 초)이다 — `Backend swap with modules took` 줄이 엔진 · 모듈 몫을, `ImGuiEditor.ShutdownMs` · `EditorContext.ShutdownMs` 가 에디터 몫을 서브시스템별로 나눈다(에디터 몫 1.3 초는 Windows 강제 종료가 `git-lfs` 손자를 남긴 탓이었다, 2026-11-03).

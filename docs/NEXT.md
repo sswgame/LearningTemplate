@@ -21,7 +21,7 @@
 
 설계 정본: [ResourceStructure](ResourceStructure.md). 사용자가 "**Linux 는 큰 작업이 모두 끝난 뒤**" 로 정했다 — 그때까지 `bash Scripts/dev/VerifyBundle.sh --no-linux`(지면 고친 뒤 `--from release|server|shipping` 으로 그 단계부터). 설계는 앞으로의 기능 확장 기준이고, 공유할 수 있는 것은 한 벌 · 변형은 차이만이다. 사용자 지시(2026-11-07): Source 전체 리팩터링(성능 · 공통 · 확장 · 층)과 미완성 기능을 남김없이 끝낸다.
 
-**상태:** `8738843639` 까지 push. 본 트리는 R1 · R3 · R5 일부와 통합 고침(복제 서버 경합 · 서버 리플렉션 코드젠 · 골든)을 더해 서버 단계부터 다시 검증 중이다. 규칙 · 범위는 `.claude/handoff/brief_round6.md` · `brief_round7.md`(Git 밖), 조사 문서는 `.claude/handoff/surveys/`. 합칠 때마다 빌드 · 시나리오 · 골든(그림을 눈으로 본 뒤)을 맞춘다.
+**상태:** `b42033ca6c` 까지 push. 규칙 · 범위는 `.claude/handoff/brief_round6.md` · `brief_round7.md`(Git 밖), 조사 문서는 `.claude/handoff/surveys/`. 합칠 때마다 빌드 · 시나리오 · 골든(그림을 눈으로 본 뒤)을 맞춘다.
 
 **작업자가 못 끝낸 것도 한다(사용자 지시 2026-11-07).** 보고의 "옮기지 못한 목록" 은 통합 때 그 자리에서 처리하거나 다음 작업자 범위에 넣는다 — 인계에 쌓아 두지 않는다.
 
@@ -38,20 +38,10 @@
 - 빌드 속도: 유니티 배치 크기 측정(Release 깨끗한 빌드 12 · 24 · 48)이 남았다.
 - 그 뒤: Empty 게임 이름을 TestBed 로 전수 개명(옛 이름 린트로 막기), S8 측정 6 건, dzn SPIR-V→DXIL 충돌, 웹 · Android 실제 빌드.
 
-**1. 통합 대기(작업자가 끝낸 커밋 — 볼 값은 각 보고).** 6 차 R2 · R3 · R5 · R6 · R7 · R8, 7 차 S1 · S2. 합치면서 함께 할 것:
+**1. 합친 작업자 커밋의 남은 확인.**
 - R2: 스캐폴드 `new-online-kit` 로 키트 하나를 실제로 지어 본다.
 - R7: 게임을 `-cooked-content` 로 띄워 경로를 조립해 읽는 에셋이 빠지지 않는지 본다.
-- R8: Dawn · Tint 를 `ThirdParty/dawn`(vcpkg `dawn[vulkan,d3d12,tint-tools]`)으로, 프리셋은 `Tools/emsdk` · `Tools/Android`(설치 `py -3 Scripts/setup/PlatformSdk.py all`)를 가리키게. 웹 · Android 를 실제로 짓고 고친다. WebGPU 깊이 복사 패스 · bind group 캐시 · 타임스탬프, 브라우저 게임패드 · 포인터 잠금, Android 패드 · intent 명령줄 · pre-rotation.
-
-**1b. 7 차 작업자 범위(2026-11-07 감사 — 본문 · 판단은 [DesignBacklog](DesignBacklog.md) 의 "통합 담당 판단" 절이 정본).**
-- S3 에디터 작업 안전: 자동 저장 · 복구, 이동 트랜잭션 · 폴더 이동, 저장 검색 · 통합 검색, Map Check Fix, Assert 설정, `CallInEditor`, 소스 관리 변경 목록, 배치 고스트 · 표면.
-- S4 시각 저작: 본 마스크 · 소켓 기즈모 · 타일셋 편집기 · 스프라이트 슬라이스 · 안개 도구 · G-buffer 보기 · 명세 · Ability 카탈로그 편집기.
-- S5 연출: 시퀀서 바인딩 · 컷 차선 · 정지 계약 · 트랙 · 컷씬 디버거 · 관통 킬캠 · 잔상 · VFX 미리보기.
-- S6 진단: 버그 리포트 입력 · 리로드 집계 · 성능 산출물 · 게임플레이 디버거들 · 공간 효과 · 이동 제약.
-- S7 표면: 공통 표면 질의 · 날씨 · 침수 → `Wet` · 발자국 · 눈 흔적 · 모래 함몰.
-- S8 측정 · 성능 후보 · 매직 리터럴 집계 · 장르 키트 시연(K1) · 장르 완결 루프 시나리오.
-- S9 `GF_Housing` · S10 `GF_ModSupport`(돌고 있다).
-- 2 차 묶음: 오픈월드 싱글 · 액션 MMO 수직 슬라이스 · 반사 RPC 메타데이터의 실제 경로.
+- R8: 웹 · Android 를 실제로 짓고 고친다(남은 플랫폼 일은 [PlatformTargets](PlatformTargets.md) "남은 일").
 
 **2. 사용자에게 받을 것.** 영수증 · 푸시 · 외부 로그인의 실제 계정과 키(지금은 로컬 가짜 끝점까지 잇는다 — `Config/Server/Online/Providers/`, `Scripts/net/OnlineLocalRun.py`). 새 의존성(인코더 라이브러리)의 라이선스.
 
@@ -71,14 +61,14 @@
 2. 확인한 상태(Debug 빌드 · 단위 · ctest, Release 빌드 · ctest, 오류 · 경고 분류)만 중간중간 origin main 에 푸시한다.
 3. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
 4. 로우폴리 에셋을 실제 게임 품질로(CC0 만, 원본 바이너리는 Git LFS — 사용자 결정). Quaternius 열 팩은 `/AssetLibrary/Quaternius/`(무시)에 받아 두었고, 게임에 쓰는 것만
-   `common/models_raw · textures_raw/quaternius/<묶음>/` 로 옮긴다(credits.md). 농장 · 서부 · 놀이공원 · 투기장 · 나일 소품, HarvestValley 농부 · 마을 사람(외형 · 피팅 · UAL 클립), MeadowVillage 밭 칸은 했다. 새 리소스는 묶음 페이지가 CC0 인 것만 들인다(`Content/common/credits.md` 머리).
+   `common/models_raw · textures_raw/quaternius/<묶음>/` 로 옮긴다(credits.md). 새 리소스는 묶음 페이지가 CC0 인 것만 들인다(`Content/common/credits.md` 머리).
 
 ### 2. 테스트 · 시나리오 공백
 
 | 일 | 내용 |
 |---|---|
 | 흔들리는 게임 골든 | 2026-11-04 Debug · Release 전체 ctest 각 일곱 번과 Release Shooter3D 체인 세 번에서 한 번도 지지 않았다(killcam · cape · bodyviews · useroptions · GL 컨텍스트 잃음 모두). 다시 지면 그 로그의 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다 — GL 컨텍스트 잃음은 GL 디버그 출력(`KHR_debug`)으로 드라이버 리셋인지 VAT 인덱스 드로우인지 가린다 |
-| 남은 단위 테스트 | 폴더 집계(`py -3 Scripts/dev/TestCoverage.py`)는 테스트가 다른 폴더에 있어도 "없음" 으로 센다 — 실제로 비었는지는 클래스 이름을 테스트에서 찾아 본다. 2026-11-05 에 채운 것: 파괴 상태 · 그래프, 외형 해석, 리그 IK, 턴 중계, RESP 저장소, 메시 쪼개기, 시퀀서 · 단축키 · 전역 변수 · 모듈 · 환경설정 · 테스트 실행기 · 문서 패널 · 테마 값 · Sync 탭 Model, UI 레이아웃 · 포커스 · 이벤트, 날씨 · 시계, 조종 시스템 · 의도 기록, 차량 좌석, 행동 트리, 기믹 회로, 어빌리티, 모듈 카탈로그, 프로파일러 · 타일맵 · 데이터 테이블 · 카탈로그 · 콘텐츠 브라우저 · UI 미리보기 Model, 인터랙터, 프리팹 덮어쓰기, 팩 리더, 크래시 보고, 립싱크, 카메라 모드. `UIPreviewModel` 은 화면이 있어야 해 시나리오 `editor/uipreview` · `uipreviewdesigner` 가 맡는다. 장르 키트 Rule 은 모두 채웠다 — 게임이 싣지 않는 키트는 Release `UnitTests`, 게임이 싣는 키트는 `UnitTests.<게임>`, 온라인 키트는 `UnitTests.OnlineKits` 가 돈다(에디터 케이스는 `Scenario.editor` 의 `editor.unitTests`). 크게 남은 것: 화면 없이 도는 패널 Model 밖의 큰 파일(`Editor/Common` · `Editor/Panels` 의 그리기 코드는 시나리오 몫이다). 온라인 키트는 싣는 게임이 없어 `UnitTests.OnlineKits`(OnlineLoadBot `-test`, Release — 봇이 온라인 키트를 모두 싣는다)가 돌린다 — 매칭 · 채팅 거르기 · 라이브 이벤트 · 친구 관계 · 거래 상태 기계 · 우편 · 경제 구매 · 순위 보드 정의 · GM 권한 · 지급은 채웠다, 계정 로그인 저장(가짜 암호 — 연동 · 마지막 로그인 수단 · 탈퇴 유예 포함)과 서버 목록 `ServerListModel`(실패 길 · 루프백 서버로 응답 길)도 채웠다. 2026-11-07: 경제 클라이언트 · 지갑 거울 · 스토어 결제 흐름, 푸시 제공자(FCM · APNs) · 발송기 · 제공자 설정, 티켓 주 키 · 외부 로그인 제공자 설정을 채웠다. 2026-11-06 서비스 층도 채웠다 — 순위표 · 길드 · 매칭 대기열 · 파티 로비 · 채팅 · 친구 · 경제 영수증 · 거래 · 로그인 · 우편함 · 라이브 이벤트 · 서버 디렉터리 · GM, 그리고 외형 선택 · 퀘스트 일지 · 예약 작업 · 보존 쓸기 · 월드 플래그 · 록온 · 대화 러너 · UI 화면 서비스 · UI 애니메이션. 네트워크 하네스는 있다 — Core 엔드포인트는 `LoopbackCluster`, 온라인 키트 끝단은 `OnlineHostTestUtil.h`(`OnlineTestFixture` — 호스트 + 클라이언트 묶음, 키트 DLL 이 include 하고 키트 서버 쪽은 같은 프로토콜 항목의 가짜로 올린다). 하네스는 있다(`AnimationTestUtil` · `RHIFakeDevice` · `FakeFontRasterizer`, 자식 프로세스는 `Core/Process` · 크래시 보고). 2026-11-06 에 더 채운 것: 모듈 의존 그래프 · 언로드 큐 · 섀도 복사본 거절, UI 문서, 가상 입력, 개발 명령, 스프라이트 클립, 캐릭터 데이터 읽개, UI 입력 소비 · 입력 방식, 포인터 잡기 취소, 게임 흐름의 화면 없는 규칙(팁 · UI 없는 로딩 화면 · 타이틀 없는 게임). 별도 프로그램인 `Programs/ReflectionParser`는 fixture 기반 통합 테스트 8개와 CLI 인자 실패 테스트 2개를 둔다(아래 Reflection 조사 참조). 아직 단위 테스트가 없는 곳은 섀도 복사본의 성공 길(실제 모듈 바이너리가 있어야 해 핫 리로드 시나리오가 맡는다), 화면이 뜨는 게임 흐름(시나리오 `loadingscreen` 이 맡는다). 집계의 나머지 "없음" 폴더는 위 안내대로 클래스 이름으로 하나씩 본다 |
+| 남은 단위 테스트 | 폴더 집계(`py -3 Scripts/dev/TestCoverage.py`)는 테스트가 다른 폴더에 있어도 "없음" 으로 센다 — 집계의 "없음" 폴더를 클래스 이름으로 테스트에서 찾아 하나씩 본다(하네스 · 키트 케이스가 도는 곳은 `Test/README.md` "하네스"). 온라인 `AccountTicketConnect` 의 성공 · 만료 · 재시도 길([DesignBacklog](DesignBacklog.md) "구조와 시스템") |
 
 ### 5. 그 뒤
 
