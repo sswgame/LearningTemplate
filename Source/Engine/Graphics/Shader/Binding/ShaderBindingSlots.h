@@ -431,27 +431,30 @@ namespace sw
          * @brief 에뮬 백엔드(DX11 · GL)의 엔진 텍스처 칸 표입니다 — 이 표가 **유일한 원본**이고, 이름 하나가 칸 하나입니다(칸 번호 = 표의 순서).
          * @details 이름은 `g_<이름>Index` 의 `<이름>` 이다(역할 이름 `getRenderPassInputRoleName` 과 렌더러가 선언 밖에서 거는 쿠키 · 노출).
          *          칸을 나눠 쓰지 않으므로 한 패스가 어떤 역할을 함께 읽어도 겹치지 않는다(언리얼 D3D11 RHI 가 셰이더 매개변수마다 레지스터를 두는 것과 같다).
-         *          셰이더 컴파일러가 항목마다 `SW_EMU_SLOT_<이름>=<칸>` 매크로를 모든 컴파일에 넣고(`ShaderCompiler::compileHLSL`) `binding.hlsli` 의
-         *          `Bindless::emulatedSlot` 이 그 매크로를 읽는다 — 손으로 맞춘 둘째 표가 없다. 매크로가 없으면 셰이더가 `#error` 로 멈춘다.
-         *          실행의 바인딩(`FramePassExecutor::commitBindlessTextureBindings`)도 이 표를 돈다.
+         *          셰이더 컴파일러가 항목마다 `SW_EMU_SLOT_<이름>=<칸>` 과 `SW_ENGINE_TEXTURE_INDEX_<칸>=g_<이름>Index` 매크로를 모든 컴파일에 넣는다
+         *          (`ShaderCompiler::appendEngineDefines`). `binding.hlsli` 는 둘째 매크로로 PassCB 의 `uint g_<이름>Index` 필드(네 백엔드)와
+         *          에뮬의 `Bindless::emulatedSlot` 비교를 칸 번호로 펼친다 — 셰이더에 손으로 맞춘 둘째 표가 없어, 셰이더가 읽을 수 있는 엔진 텍스처
+         *          인덱스는 곧 이 표의 항목이다(언리얼 셰이더 매개변수 구조체처럼 한 정의에서 두 쪽이 나온다). 그래서 에뮬의 자홍(`kUnmappedEngineTextureColor`)은
+         *          표 밖 값(루트 상수 등)을 `Bindless::sampleIndex` 에 넘긴 셰이더에서만 날 수 있다. 실행의 바인딩(`FramePassExecutor::commitBindlessTextureBindings`)도 이 표를 돈다.
          */
         namespace emulated
         {
-            inline constexpr const utf8* kSlotMacroPrefix = "SW_EMU_SLOT_";
+            inline constexpr const utf8* kSlotMacroPrefix  = "SW_EMU_SLOT_";
+            inline constexpr const utf8* kIndexMacroPrefix = "SW_ENGINE_TEXTURE_INDEX_"; ///< 뒤에 칸 번호가 붙고 값은 `g_<이름>Index` 다(PassCB 필드 이름).
 
             inline constexpr const utf8* kEngineTextureNames[] = {
-                "ShadowMap",
-                "SourceColor",
-                "GBufferAlbedo",
-                "AmbientOcclusion",
-                "SceneColorCopy",
-                "SceneDepthCopy",
-                "GBufferNormal",
-                "BloomBright",
-                "SceneDepth",
-                "GBufferMaterial",
-                "Light2DCookieAtlas",
-                "AutoExposure",
+                "ShadowMap",          ///< 그림자 깊이
+                "SourceColor",        ///< 패스가 가공할 컬러(직전 패스의 출력)
+                "GBufferAlbedo",      ///< G버퍼 알베도
+                "AmbientOcclusion",   ///< SSAO 결과(AOColor). 없으면 kInvalidIndex — AO 1
+                "SceneColorCopy",     ///< 반투명 앞에 떠 둔 장면 색 사본 — 반투명 패스가 선언했을 때만(water.hlsl 굴절)
+                "SceneDepthCopy",     ///< 반투명 앞에 떠 둔 장면 깊이 사본(R32 실수) — 반투명 패스가 선언했을 때만(water.hlsl 두께)
+                "GBufferNormal",      ///< G버퍼 노멀
+                "BloomBright",        ///< 반해상도 블룸 밝은 부분(BloomDownsample 출력). 없으면 원본에서 직접 구한다
+                "SceneDepth",         ///< 씬 깊이
+                "GBufferMaterial",    ///< G버퍼 머티리얼 칸(금속도 · 거칠기) — 디퍼드 조명(PassTexture::loadGbufferMaterial)
+                "Light2DCookieAtlas", ///< 2D 빛 쿠키 아틀라스 — 쿠키를 쓴 2D 빛이 있는 프레임에만
+                "AutoExposure",       ///< 자동 노출의 이번 EV(1x1 R32) — 톤맵하는 패스에만(post_grade.hlsli). 없으면 EV 0
             };
             static_assert( sizeof( kEngineTextureNames ) / sizeof( kEngineTextureNames[0] ) == kEngineTextureCount, "엔진 텍스처 칸 표와 칸 수(SW_ENGINE_TEXTURE_COUNT)가 다르다" );
 

@@ -736,13 +736,18 @@ namespace sw
 
     void ShaderCompiler::appendEngineDefines( vector<ShaderMacroDefine>& inoutList )
     {
-        // 에뮬 엔진 텍스처 칸 표(shaderslot::emulated) — binding.hlsli 의 Bindless::emulatedSlot 이 읽는다.
+        // 엔진 텍스처 칸 표(shaderslot::emulated) — binding.hlsli 가 PassCB 의 g_<이름>Index 필드와 Bindless::emulatedSlot 을 이 매크로로 펼친다.
         for ( uint32 ordinal = 0; ordinal < shaderslot::kEngineTextureCount; ++ordinal )
         {
-            ShaderMacroDefine define;
-            define._name  = string( shaderslot::emulated::kSlotMacroPrefix ) + shaderslot::emulated::kEngineTextureNames[ordinal];
-            define._value = to_string( ordinal );
-            inoutList.push_back( std::move( define ) );
+            const utf8*       pName = shaderslot::emulated::kEngineTextureNames[ordinal];
+            ShaderMacroDefine slotDefine;
+            slotDefine._name  = string( shaderslot::emulated::kSlotMacroPrefix ) + pName;
+            slotDefine._value = to_string( ordinal );
+            inoutList.push_back( std::move( slotDefine ) );
+            ShaderMacroDefine indexDefine;
+            indexDefine._name  = string( shaderslot::emulated::kIndexMacroPrefix ) + to_string( ordinal );
+            indexDefine._value = string( "g_" ) + pName + "Index";
+            inoutList.push_back( std::move( indexDefine ) );
         }
     }
 
