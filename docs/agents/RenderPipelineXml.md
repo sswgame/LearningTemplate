@@ -84,6 +84,17 @@
 - `MaterialInstance` 는 값 · 텍스처 · 키워드만 덮는다(문턱은 프로퍼티라 덮을 수 있다). 렌더 상태 · `alphaMode` · `renderQueue` 가 다르면 `parent=` 로 자식 머티리얼을 만든다. 드로우마다 PSO 를 가르면 인스턴스를 머티리얼 원소로 합치는 이득을 잃는다(언리얼 Dynamic Instance · 유니티 MaterialPropertyBlock 과 같다, 기억에 의존한 비교).
 - 렌더 칸은 퍼뮤테이션 해시에 섞여 배치 키와 PSO 변형을 가른다(`Material::getRenderFieldsHash`). 칸을 적지 않은 머티리얼의 해시는 define 만의 값이다.
 
+## 화면 속도
+
+TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는 파이프라인이 첨부로 선언한다. 첨부는 `SceneVelocity`(역할 Velocity, `R16G16_FLOAT`, 클리어 0 — G버퍼 명세 `GBufferLayout` 판 2 의 넷째 칸과 같은 값)다.
+
+| 누가 | 어떻게 | 받아 주지 않는 조합(읽기 오류) |
+|---|---|---|
+| 쓰는 패스 | 깊이를 쓰는 불투명 지오메트리 패스(`RenderPassTraitFlag::kWritesVelocity` — GBuffer · ForwardOpaque · ForwardOnlyOpaque)가 `_listOutput` 에 적는다. G버퍼는 넷째 MRT, 포워드는 [색, 속도] 둘째 출력이다. 포워드는 선언이 있을 때만 `SW_PASS_VELOCITY` 로 쓴다 — 깊이 프리패스 뒤의 내부 슬롯도 ForwardOpaque 의 선언을 따른다 | 다른 패스가 적을 때. 포맷 · 클리어 값이 다를 때. 포워드에서 둘째 출력이 아닐 때 |
+| 읽는 패스 | TAA · MotionBlur 의 필수 입력이다(`_listInput`) | 적지 않았을 때 |
+
+그리지 않은 픽셀(하늘)은 속도가 0 이고, 읽는 쪽은 깊이 1 인 픽셀을 지난 뷰-투영으로 카메라 재투영한다. 반투명 · 외곽선 껍질은 속도를 쓰지 않는다(언리얼 기본값과 같다). 속도를 읽는 패스가 없는 파이프라인(2D)은 첨부도 쓰기도 두지 않는다.
+
 ## 컴퓨트 패스
 
 `_type="Compute"` 패스는 셰이더 하나로 효과를 더한다. 선언: 컬러 출력 하나, 입력 최대 둘(깊이 형식 제외 — 깊이는 `SceneDepthCopy` 를 읽는다), 입력과 출력은 겹치지 않는다. 첨부는 RW 텍스처로 묶이고 값은 `compute_pass.hlsli` 의 루트 상수로 받는다. GL 은 묶은 포맷과 셰이더 선언이 같아야 하므로 include 전에 `SW_RW_SLOT0_GL_FORMAT` 을 적는다. 예: `game/empty/pipeline/computepasspipeline.xml`.

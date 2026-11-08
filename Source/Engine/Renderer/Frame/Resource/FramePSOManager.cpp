@@ -300,7 +300,7 @@ namespace sw
             if ( bCapable == false )
                 continue; // 능력이 없는 백엔드는 이 디스패치를 쓰지 않는다(능력 질의로 가린 것이지 실패가 아니다)
             // 셰이더 경로와 define 은 쿠커와 같은 함수가 정한다(셰이더 assert 변형이 define 으로 온다).
-            RenderPassShaderSelection computeShader = selectRenderPassShader( passType, nullptr, engineDefaultAssets );
+            RenderPassShaderSelection computeShader = selectRenderPassShader( passType, nullptr, nullptr, engineDefaultAssets );
             ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
             computeJob._shaderPath                  = std::move( computeShader._shaderPath );
             computeJob._listDefine                  = std::move( computeShader._listDefine );
@@ -312,7 +312,7 @@ namespace sw
         {
             if ( pass._type != RenderPassType::Compute )
                 continue;
-            RenderPassShaderSelection computeShader = selectRenderPassShader( RenderPassType::Compute, &pass, engineDefaultAssets );
+            RenderPassShaderSelection computeShader = selectRenderPassShader( RenderPassType::Compute, &pass, &pass, engineDefaultAssets );
             ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
             computeJob._shaderPath                  = std::move( computeShader._shaderPath );
             computeJob._entryPoint                  = pass._computeEntryPoint;
@@ -661,8 +661,11 @@ namespace sw
     {
         // 파이프라인 패스는 XML 의 값(셰이더 · 진입점 · 렌더 상태 · 퍼뮤테이션 · 타깃)이 그대로 들어간다. 표는 XML 이 비운 셰이더의 기본값, 패스 define, XML 에 없는 내부 슬롯의 값이다.
         // 셰이더와 define 은 쿠커와 **같은 함수**(selectRenderPassShader)로 정한다. 어긋나면 Shipping 에서 매니페스트 미스가 난다.
-        const RenderPassTypeInfo&       info   = getRenderPassTypeInfo( passType );
-        const RenderPassShaderSelection shader = selectRenderPassShader( passType, pPassDesc, engine::getSubsystem<EngineDefaultAssets>() );
+        const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
+        // 내부 슬롯은 대신 그리는 파이프라인 패스의 출력 선언으로 포맷 · 화면 속도 쓰기를 정한다(`_targetSourceType`).
+        const RenderGraphPassDesc* pTargetDesc =
+            ( pPassDesc == nullptr && info._targetSourceType != RenderPassType::Invalid ) ? findPassDescByType( info._targetSourceType ) : pPassDesc;
+        const RenderPassShaderSelection shader = selectRenderPassShader( passType, pPassDesc, pTargetDesc, engine::getSubsystem<EngineDefaultAssets>() );
 
         RHIPipelineStateDesc& desc = outDesc;
         desc                       = RHIPipelineStateDesc{};
@@ -680,9 +683,6 @@ namespace sw
                 desc._topology = RHIPrimitiveTopology::PatchList3;
         }
         desc._listShaderDefine = shader._listDefine;
-        // 내부 슬롯은 대신 그리는 파이프라인 패스의 출력 선언으로 포맷을 정한다(`_targetSourceType`).
-        const RenderGraphPassDesc* pTargetDesc =
-            ( pPassDesc == nullptr && info._targetSourceType != RenderPassType::Invalid ) ? findPassDescByType( info._targetSourceType ) : pPassDesc;
         if ( fillPassRenderTargetFormats( desc, pTargetDesc, pRTVFormatOverride != nullptr ? pRTVFormatOverride : info._pColorFormat, info._colorTargetCount ) == false )
         {
             SW_LOG_ERROR_ID( "FramePSOManager.PassNoRenderTarget", "Pass %# has no render target format (no fixed format, and no color output declaration with a known format) - no PSO is created", passType );

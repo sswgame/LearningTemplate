@@ -53,6 +53,7 @@
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/Resource/ShaderParameterBinder.h"
+#include "Engine/Renderer/Pipeline/GBufferLayout.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Rendering/MeshComponent.h"
@@ -854,6 +855,8 @@ namespace sw
                 return names._sceneColorCopy;
             case RenderPassInputRole::SceneDepthCopy:
                 return names._sceneDepthCopy;
+            case RenderPassInputRole::Velocity:
+                return names._velocity;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -1160,9 +1163,19 @@ namespace sw
         const RenderGraphPassDesc::ResolvedAttachment* pShadowInput = Internal::findInputByRole( input._passDesc, RenderPassInputRole::ShadowMap );
         if ( pShadowInput != nullptr )
             registerPassTexture( context, attachmentNames()._shadowMap, pShadowInput->_attachment );
-        const hashed_string& colorTarget = input._declaredColor[0]._attachment;
-        const float4         sceneClear  = getTargetClearColor( colorTarget );
-        if ( beginColorPass( context, colorTarget, passDepth, sceneClear, colorLoadFor( colorTarget ), colorLoadFor( passDepth ) ) == false )
+        // 선언한 컬러 출력을 모두 연다 — 화면 속도를 선언했으면 [색, 속도] 두 타깃이다(검증 3-3, 셰이더 SV_TARGET0 · 1).
+        const vector<RenderGraphPassDesc::ResolvedAttachment>& declaredColor = input._declaredColor;
+        const uint32                                           colorCount    = static_cast<uint32>( declaredColor.size() ) < kMaxColorAttachments ? static_cast<uint32>( declaredColor.size() ) : kMaxColorAttachments;
+        hashed_string                                          arrNames[kMaxColorAttachments]{};
+        float4                                                 arrClears[kMaxColorAttachments]{};
+        RHIRenderPassLoadOp                                    arrLoads[kMaxColorAttachments]{};
+        for ( uint32 colorIndex = 0; colorIndex < colorCount; ++colorIndex )
+        {
+            arrNames[colorIndex]  = declaredColor[colorIndex]._attachment;
+            arrClears[colorIndex] = getTargetClearColor( arrNames[colorIndex] );
+            arrLoads[colorIndex]  = colorLoadFor( arrNames[colorIndex] );
+        }
+        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, colorCount, passDepth, colorLoadFor( passDepth ) ) == false )
             return;
         const bool bDepthAlreadyWritten = input._passType == RenderPassType::ForwardOpaque && _bHasExecutedDepthPrepass.load() != 0 &&
                                           _psoManager.getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0;
@@ -1173,24 +1186,27 @@ namespace sw
 
     void FramePassExecutor::executeGBufferPass( const PassExecuteInput& input )
     {
-        // 알베도 · 노멀 · 머티리얼은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼)를 따른다.
-        // 한 MRT 패스로 셋 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 컬러 출력 수가 표의 값이 아닌 G버퍼는 검증(3-2)이 거부한다.
+        // 알베도 · 노멀 · 머티리얼 · 속도는 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼, [3] 속도)를 따른다.
+        // 한 MRT 패스로 넷 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 컬러 출력 수가 표의 값이 아닌 G버퍼는 검증(3-2)이 거부한다.
         using Internal                       = FramePassExecutorInternal;
         FramePassContext&    context         = input._context;
         const hashed_string& passDepth       = input._passDepth;
         const hashed_string* pAlbedoTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferAlbedo, 0, nullptr );
         const hashed_string* pNormalTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget );
         const hashed_string* pMaterialTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferMaterial, 2, pNormalTarget );
+        // 화면 속도는 명세의 넷째 슬롯이다(GBufferLayout::kVelocitySlot — 셰이더 SV_TARGET3).
+        const hashed_string* pVelocityTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::Velocity, GBufferLayout::kVelocitySlot, pMaterialTarget );
         const bool           bHasTargets     = pAlbedoTarget != nullptr && pNormalTarget != nullptr && findTransient( *pNormalTarget ) != 0 &&
-                                 pMaterialTarget != nullptr && findTransient( *pMaterialTarget ) != 0;
+                                 pMaterialTarget != nullptr && findTransient( *pMaterialTarget ) != 0 && pVelocityTarget != nullptr && findTransient( *pVelocityTarget ) != 0;
         if ( bHasTargets == false || _psoManager.getEnginePSO( RenderPassType::GBuffer ) == 0 )
             return;
         const hashed_string&      albedoTarget = *pAlbedoTarget;
-        const hashed_string       arrNames[]   = { albedoTarget, *pNormalTarget, *pMaterialTarget };
+        const hashed_string       arrNames[]   = { albedoTarget, *pNormalTarget, *pMaterialTarget, *pVelocityTarget };
         const float4              arrClears[]  = { getTargetClearColor( albedoTarget ), getTargetClearColor( *pNormalTarget ),
-                                                   getTargetClearColor( *pMaterialTarget ) };
-        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ), colorLoadFor( *pMaterialTarget ) };
-        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 3, passDepth, colorLoadFor( passDepth ) ) == false )
+                                                   getTargetClearColor( *pMaterialTarget ), getTargetClearColor( *pVelocityTarget ) };
+        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ), colorLoadFor( *pMaterialTarget ), colorLoadFor( *pVelocityTarget ) };
+        static_assert( sizeof( arrNames ) / sizeof( arrNames[0] ) == GBufferLayout::kAttachmentCount, "G버퍼 MRT 수는 명세의 첨부 수다" );
+        if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, GBufferLayout::kAttachmentCount, passDepth, colorLoadFor( passDepth ) ) == false )
             return;
         drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );
         context._pCmd->endRenderPass();

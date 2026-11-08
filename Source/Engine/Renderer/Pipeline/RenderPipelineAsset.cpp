@@ -585,7 +585,7 @@ namespace sw
                                                          pass._listResolvedColorOutput.size() == expectedGBufferColorCount;
                     if ( bSkipGBufferOutputCheck )
                         continue;
-                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassColorOutputsG", "[%#] pass '%#' (%#): %# color outputs - the G-buffer writes albedo, normal and material (%#) in one MRT pass",
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassColorOutputsG", "[%#] pass '%#' (%#): %# color outputs - the G-buffer writes albedo, normal, material and velocity (%#) in one MRT pass",
                                      sourcePath, pass._name, getEnumName( pass._type ), static_cast<uint32>( pass._listResolvedColorOutput.size() ), expectedGBufferColorCount );
                     ++issueCount;
                 }
@@ -620,6 +620,50 @@ namespace sw
                                          sourcePath, pass._name, slot, outputName.c_str(), spec._pName, getEnumName( spec._format ), GBufferLayout::kVersion,
                                          pAttachment == nullptr ? " - the attachment is not declared" : ( bFormatMatches ? " - its clear color differs" : " - its format differs" ) );
                         ++issueCount;
+                    }
+                }
+                return issueCount;
+            }
+
+            /**
+             * @brief 3-3) 화면 속도 출력(Velocity 역할)은 깊이를 쓰는 불투명 지오메트리 패스(`kWritesVelocity`)만 선언하고, 첨부는 명세의 포맷 · 클리어 값(`GBufferLayout::kVelocitySlot`)이다.
+             * @details 포워드 패스의 셰이더는 색을 `SV_TARGET0`, 속도를 `SV_TARGET1` 에 쓴다(binding_output.hlsli) — 컬러 출력이 [색, 속도] 둘이 아니면 PSO 와 타깃이 어긋난다.
+             *          G버퍼는 명세의 슬롯 순서를 `checkGBufferLayout` 이 본다. 클리어 0 은 "그리지 않은 픽셀 = 움직임 없음" 이고 읽는 쪽(TAA · 모션 블러)은 깊이 1 로 그 픽셀을 가린다.
+             */
+            static uint32 checkVelocityOutputs( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32                       issueCount{ 0 };
+                const GBufferAttachmentSpec& velocitySpec = GBufferLayout::kArrAttachment[GBufferLayout::kVelocitySlot];
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    const vector<RenderGraphPassDesc::ResolvedAttachment>& listColor = pass._listResolvedColorOutput;
+                    for ( size_t outputIndex = 0; outputIndex < listColor.size(); ++outputIndex )
+                    {
+                        if ( static_cast<RenderPassInputRole>( listColor[outputIndex]._role ) != RenderPassInputRole::Velocity )
+                            continue;
+                        const hashed_string& outputName = listColor[outputIndex]._attachment;
+                        if ( getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kWritesVelocity ) == false )
+                        {
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.VelocityWriterType", "[%#] pass '%#' (%#) writes velocity '%#' - only opaque geometry passes that write depth (GBuffer, ForwardOpaque, ForwardOnlyOpaque) do",
+                                             sourcePath, pass._name, getEnumName( pass._type ), outputName.c_str() );
+                            ++issueCount;
+                        }
+                        const RenderPassAttachment* pAttachment = findAttachment( desc, outputName.view() );
+                        const float4                clear       = pAttachment != nullptr ? pAttachment->_clearColor : float4{};
+                        const bool                  bSpecMatch  = pAttachment != nullptr && pAttachment->_format == velocitySpec._format && clear._x == 0.0f && clear._y == 0.0f;
+                        if ( bSpecMatch == false )
+                        {
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.VelocityFormat", "[%#] pass '%#': velocity '%#' must be %# cleared to 0 (G-buffer layout v%#)", sourcePath, pass._name,
+                                             outputName.c_str(), getEnumName( velocitySpec._format ), GBufferLayout::kVersion );
+                            ++issueCount;
+                        }
+                        const bool bForwardShape = pass._type == RenderPassType::GBuffer || ( listColor.size() == 2 && outputIndex == 1 );
+                        if ( bForwardShape == false )
+                        {
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.VelocityOutputSlot", "[%#] pass '%#' (%#): velocity must be the second of exactly two color outputs (color, velocity) - the shader writes SV_TARGET1",
+                                             sourcePath, pass._name, getEnumName( pass._type ) );
+                            ++issueCount;
+                        }
                     }
                 }
                 return issueCount;
@@ -870,6 +914,7 @@ namespace sw
         issueCount += Internal::checkColorOutputLimit( _desc, sourcePath );
         issueCount += Internal::checkOutputDivisors( _desc, sourcePath );
         issueCount += Internal::checkGeometryColorOutputs( _desc, sourcePath );
+        issueCount += Internal::checkVelocityOutputs( _desc, sourcePath );
         issueCount += Internal::checkInputContracts( _desc, sourcePath );
         issueCount += Internal::checkCanvasAndSky( _desc, sourcePath );
         issueCount += Internal::checkMinPostQuality( _desc, sourcePath );

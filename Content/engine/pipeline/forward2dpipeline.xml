@@ -20,8 +20,13 @@
 		<RenderGraphPassDesc _name="HighlightOutline" _op="Remove" />
 		<RenderGraphPassDesc _name="MeshOutline" _op="Remove" />
 		<RenderGraphPassDesc _name="Shadow" _op="Remove" />
+		<!-- 모션 블러가 없어 화면 속도를 쓰지 않는다(첨부 묶음 forwardcolorrenderpass 를 가져오지 않는다) — 출력은 색과 깊이뿐이다. -->
 		<RenderGraphPassDesc _name="ForwardOpaque">
 			<_listInput />
+			<_listOutput>
+				<item>SceneColor</item>
+				<item>SceneDepth</item>
+			</_listOutput>
 		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Transparent">
 			<_listInput>

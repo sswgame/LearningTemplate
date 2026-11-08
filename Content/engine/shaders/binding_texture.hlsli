@@ -205,7 +205,8 @@ SW_DECLARE_ENGINE_TEXTURE( 8 );
 SW_DECLARE_ENGINE_TEXTURE( 9 );
 SW_DECLARE_ENGINE_TEXTURE( 10 );
 SW_DECLARE_ENGINE_TEXTURE( 11 );
-        #if SW_ENGINE_TEXTURE_COUNT != 12
+SW_DECLARE_ENGINE_TEXTURE( 12 );
+        #if SW_ENGINE_TEXTURE_COUNT != 13
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
@@ -321,6 +322,9 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
                 case 11u:                                                  \
                     OP( SW_ENGINE_TEXTURE( 11 ), SW_ENGINE_SAMPLER( 11 ) ) \
                     break;                                                 \
+                case 12u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 12 ), SW_ENGINE_SAMPLER( 12 ) ) \
+                    break;                                                 \
                 default:                                                   \
                     break;                                                 \
             }
@@ -365,6 +369,8 @@ static uint Bindless::emulatedSlot( uint index )
         return 10u;
     if ( index == SW_ENGINE_TEXTURE_INDEX_11 )
         return 11u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_12 )
+        return 12u;
     return kUnmappedEngineTextureSlot;
 }
 
@@ -968,6 +974,16 @@ static float PassTexture::sampleAmbientOcclusion( float2 uv )
     if ( g_AmbientOcclusionIndex == kInvalidIndex )
         return 1.0f;
     return Bindless::sampleIndex( g_AmbientOcclusionIndex, uv ).r;
+}
+/**
+ * @brief 화면 속도(이번 UV - 지난 UV, 역할 Velocity)를 가장 가까운 텍셀로 읽습니다. 속도는 섞으면 가장자리에서 두 물체의 평균이 되어 어느 쪽도 아니다(점 샘플).
+ * @details 패스가 속도를 걸지 않았으면(`g_VelocityIndex` 무효) 0 — 부르는 쪽(TAA · 모션 블러)은 속도를 필수 입력으로 선언하므로 로드 검증이 그 경우를 막는다.
+ */
+static float2 PassTexture::sampleVelocityPoint( float2 uv )
+{
+    if ( g_VelocityIndex == kInvalidIndex )
+        return float2( 0.0f, 0.0f );
+    return Bindless::sampleIndexWith( g_VelocityIndex, SW_SAMPLER_POINT_CLAMP, uv ).rg;
 }
 
 #endif // SW_NATIVE_BINDLESS || !SW_STAGE_COMPUTE

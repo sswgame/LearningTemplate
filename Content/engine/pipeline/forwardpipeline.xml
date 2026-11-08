@@ -44,8 +44,10 @@
 			<_listInput>
 				<item>ShadowMap</item>
 			</_listInput>
+			<!-- 화면 속도(SceneVelocity)를 둘째 컬러 출력으로 쓴다 — 물체마다 지난 월드 행렬 · 스킨 위치로 구한 이번 UV - 지난 UV(binding_output.hlsli). 모션 블러가 읽는다. -->
 			<_listOutput>
 				<item>SceneColor</item>
+				<item>SceneVelocity</item>
 				<item>SceneDepth</item>
 			</_listOutput>
 			<_listPermutation>
@@ -219,8 +221,8 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<!-- 카메라 모션 블러(motion_blur.hlsl) — 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 원본을 그대로 복사한다(같은 포맷).
-		     디퍼드와 같은 자리(피사계 심도 뒤, 톤맵 앞)다. 서 있으면 원본 그대로다. -->
+		<!-- 모션 블러(motion_blur.hlsl) — 화면 속도(카메라 + 물체)로 흐린다. 사용자 설정 graphics.motionBlur 를 끄거나 후처리 품질이 medium 아래면 원본을 그대로 넘긴다(같은 포맷).
+		     디퍼드와 같은 자리(피사계 심도 뒤, 톤맵 앞)다. 카메라와 물체가 모두 서 있으면 원본 그대로다. -->
 		<RenderGraphPassDesc _name="MotionBlur"
 		                     _type="MotionBlur"
 		                     _vertexEntryPoint="VSMain"
@@ -232,6 +234,7 @@
 			<_listInput>
 				<item>DepthOfFieldColor</item>
 				<item>SceneDepth</item>
+				<item>SceneVelocity</item>
 			</_listInput>
 			<_listOutput>
 				<item>MotionBlurColor</item>
