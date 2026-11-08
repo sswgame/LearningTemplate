@@ -37,5 +37,7 @@
 			<_listPermutation />
 		</RenderGraphPassDesc>
 	</_listPass>
-	<_listRenderPassRef />
+	<_listRenderPassRef>
+		<item>engine/renderpass/framecomputerenderpass.xml</item>
+	</_listRenderPassRef>
 </RenderPipelineDesc>

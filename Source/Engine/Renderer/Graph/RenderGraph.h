@@ -12,11 +12,27 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class IRHICommandList;
     class IRHIDevice;
     class TaskManager;
+
+    /**
+     * @enum RenderGraphResourceKind
+     * @brief 그래프가 아는 자원의 수명 종류입니다. 파이프라인 XML 의 `_listResource` 가 `_kind` 로 적습니다(첨부는 늘 Transient).
+     * @details 언리얼 RDG 의 트랜지언트 텍스처 · 외부 자원(`RegisterExternalTexture`) · 추출(`QueueTextureExtraction`)로 잇는 히스토리의 구분과 같다.
+     *          Transient 만 그래프 안에서 쓰고 버리며 메모리를 나눌 후보다. 나머지 둘은 그래프보다 오래 살아 수명이 그래프 전체이고, "쓰지 않고 읽는다" 경고가 없다.
+     */
+    ENUM()
+    enum class RenderGraphResourceKind : uint8
+    {
+        Transient,  ///< 그래프 안에서 쓰고 버리는 첨부입니다. 선언하지 않은 이름의 값입니다.
+        Persistent, ///< 프레임을 넘어 내용이 이어지는 자원입니다(깊이 히스토리 · 가림 타일 · 입자 상태 · 프로브 기록). 이번 프레임에 쓰기 전에 읽으면 지난 프레임 값입니다.
+        External,   ///< 그래프 밖 서브시스템이 갖고 프레임마다 채우는 자원입니다(인스턴스 버퍼 · 라이트 버퍼 · 컬링 결과). 그래프는 접근 순서만 정합니다.
+    };
 
     /**
      * @enum RenderGraphResourceState
@@ -168,6 +184,8 @@ namespace sw
         size_t        _lastPassIndex{ 0 };
         bool          _bWritten{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool          _bRead{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        /// @brief 수명 종류입니다. Transient 가 아니면 구간이 그래프 전체(첫 패스 ~ 마지막 패스)라 다른 자원과 메모리를 나눌 수 없습니다.
+        RenderGraphResourceKind _kind{ RenderGraphResourceKind::Transient };
     };
 } // namespace sw
 
@@ -210,6 +228,14 @@ namespace sw
          */
         bool addPass( hashed_string passName, vector<hashed_string> listInput = {}, vector<hashed_string> listOutput = {},
                       RenderGraphPassExecuteFn execute = {} );
+
+        /**
+         * @brief 자원 @p name 의 수명 종류를 선언합니다. 선언하지 않은 이름은 Transient 입니다. 같은 이름을 다시 선언하면 뒤의 것이 이깁니다.
+         * @details 컴파일 전에 부릅니다. 순서 추론(간선)은 종류와 무관하다 — 종류는 수명(`getResourceLifetimes`)과 "쓰지 않고 읽는다" 경고만 바꾼다.
+         */
+        void declareResource( hashed_string name, RenderGraphResourceKind kind ) { _mapResourceKind[name] = kind; }
+        /** @brief 자원의 선언한 수명 종류입니다. 선언하지 않았으면 Transient 입니다. */
+        RenderGraphResourceKind getResourceKind( hashed_string name ) const;
 
         /**
          * @brief 레벨을 기록하기 직전(직렬 경로에서는 패스마다)에 부를 콜백을 등록합니다. 배리어를 발행하는 용도입니다.
@@ -346,5 +372,7 @@ namespace sw
         /// @brief compile() 이 계산한 리소스 수명입니다(처음과 마지막 사용 패스, 읽힘과 쓰임 여부).
         vector<RenderGraphResourceLifetime>  _listResourceLifetime;
         unordered_map<hashed_string, size_t> _mapResourceLifetimeIndex;
+        /// @brief `declareResource` 가 적은 수명 종류입니다. 없는 이름은 Transient 입니다.
+        unordered_map<hashed_string, RenderGraphResourceKind> _mapResourceKind;
     };
 } // namespace sw

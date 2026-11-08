@@ -9,7 +9,7 @@
 | 파일 | 하는 일 |
 |---|---|
 | `<도메인>/pipeline/*.xml` (`RenderPipelineDesc`) | 첨부, 패스 그래프, 패스별 PSO 설정. 고르는 법은 `-gv_renderPipeline=` 또는 팩 설정 |
-| `engine/renderpass/*.xml` (`RenderPassDesc`) | 여러 파이프라인이 함께 쓰는 첨부 묶음. `_listRenderPassRef` 로 가져오면 읽을 때 `_listAttachment` 앞에 합쳐진다 |
+| `engine/renderpass/*.xml` (`RenderPassDesc`) | 여러 파이프라인이 함께 쓰는 묶음(첨부 · 프레임 자원 · 프레임 패스). `_listRenderPassRef` 로 가져오면 읽을 때 같은 목록 앞에 합쳐진다. 프레임 패스 한 벌은 `framecomputerenderpass.xml` |
 | `engine/renderstate/blendpresets.xml` (`RenderBlendPresetTable`) | 블렌드 프리셋(Opaque · Transparent · Additive · Multiply · Premultiplied). 줄을 더하면 코드 없이 새 프리셋이다 |
 | `*.material` (`MaterialDef`) | 머티리얼. 렌더 상태 칸은 패스와 같은 형식이다(아래 머티리얼 칸) |
 
@@ -87,6 +87,21 @@
 ## 컴퓨트 패스
 
 `_type="Compute"` 패스는 셰이더 하나로 효과를 더한다. 선언: 컬러 출력 하나, 입력 최대 둘(깊이 형식 제외 — 깊이는 `SceneDepthCopy` 를 읽는다), 입력과 출력은 겹치지 않는다. 첨부는 RW 텍스처로 묶이고 값은 `compute_pass.hlsli` 의 루트 상수로 받는다. GL 은 묶은 포맷과 셰이더 선언이 같아야 하므로 include 전에 `SW_RW_SLOT0_GL_FORMAT` 을 적는다. 예: `game/empty/pipeline/computepasspipeline.xml`.
+
+## 프레임 그래프
+
+뷰 그래프(`_listPass`)는 뷰(주 시점 · 추가 뷰)마다 다시 돈다. 프레임에 한 번 모든 뷰의 몫을 기록하는 일(깊이 히스토리 · 가림 타일 · 입자 · 인스턴스 애니메이션 · 모프 · 스킨 · 컬링 · 라이트 그리드 · 볼륨 안개 · 프로브 · 마커)은 프레임 그래프다 — 뷰 그래프보다 먼저 큐에 낸다(`FrameGraphExecutor`). 언리얼 RDG 는 한 그래프에 둘을 넣지만 이 엔진의 뷰 그래프는 뷰마다 다시 돌아 범위를 가른다.
+
+| 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |
+|---|---|---|
+| `_listResource` 의 `RenderGraphResourceDesc` | 프레임 패스가 읽고 쓰는 자원 이름과 `_kind`. 그래프는 버퍼를 만들지 않고 순서만 정한다(주인은 서브시스템) | 이름이 겹침 · 첨부와 겹침. `_kind="Transient"`(첨부의 몫) |
+| `_kind="Persistent"` | 프레임을 넘는 히스토리(깊이 히스토리 · 가림 타일 · 입자 상태 · 프로브). 앞선 쓰기 없이 읽으면 지난 프레임 값이고, 이번 프레임 첫 쓰기보다 앞에 온다 | |
+| `_kind="External"` | 서브시스템이 프레임마다 채우는 버퍼(인스턴스 · 라이트 · 컬링 결과 · 그리드). "쓰지 않고 읽는다" 경고가 없다 | |
+| `_listFramePass` 의 패스 | `_type` 은 프레임 패스 종류(`isFramePassType`). 입출력은 `_listResource` 이름 | 뷰 패스 종류 · 같은 종류 둘 · 자원이 아닌 이름 · 셰이더 · 진입점 · 퍼뮤테이션 칸(셰이더는 표의 것) · `_depthAttachment` · `_minPostQuality` · 뷰 패스와 같은 이름 |
+
+- 선언하지 않은 종류는 PSO 도 없고 돌지 않는다. 그 종류가 채우는 버퍼를 준비하는 쪽(간접 인자를 컬링에 맡김 · GPU 라이트 그리드 · 볼륨 안개 · 프로브 · 스킨 풀)도 PSO 가 없으니 준비하지 않는다(`FramePSOManager::getEnginePSO` 가 선언을 본다).
+- 각 패스는 자기 버퍼의 배리어를 스스로 건다. 깊이 히스토리 패스는 끝에 히스토리를 RW 텍스처 상태로 넘겨 둔다(읽는 쪽 둘 다 RW 텍스처로 읽고, 비동기 컴퓨트 큐는 렌더 타깃 상태를 옮길 수 없다).
+- 뷰 그래프의 패스는 프레임 그래프 결과(컬링 결과 · 그리드)를 입력으로 적지 않는다 — 프레임 그래프가 통째로 앞이다.
 
 ## 선택 스테이지를 쓰는 셰이더
 

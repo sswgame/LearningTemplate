@@ -23,7 +23,7 @@ namespace sw
 
     /**
      * @class CanvasMarkerProjection
-     * @brief GPU 가 투영하는 화면 마커입니다. 기록 전(`prepare`)에 입력 행을 올리고, 컴퓨트 프리패스(`record`)에서 사각형 버퍼의 앵커 원소를 씁니다.
+     * @brief GPU 가 투영하는 화면 마커입니다. 기록 전(`prepare`)에 입력 행을 올리고, 프레임 그래프(`record`)에서 사각형 버퍼의 앵커 원소를 씁니다.
      */
     class SW_API CanvasMarkerProjection
     {
@@ -37,7 +37,7 @@ namespace sw
         /** @brief 마커 입력 행을 만들어 올립니다. 켜진 마커가 없거나 버퍼를 만들지 못하면 마커 수를 0 으로 둡니다(컴퓨트를 돌리지 않는다). */
         void prepare( IRHIDevice& device, const CanvasFrameData& frame );
         /**
-         * @brief 화면 마커 투영 컴퓨트를 기록합니다. 마커 입력이 있는 프레임에만 돌고, 렌더 패스 밖(컴퓨트 프리패스)에서 부릅니다 —
+         * @brief 화면 마커 투영 컴퓨트를 기록합니다. 마커 입력이 있는 프레임에만 돌고, 렌더 패스 밖(프레임 그래프)에서 부릅니다 —
          *        @p quadBuffer 에 올린 앵커 원소 중 켜진 마커의 것을 화면 좌표 · 배율로 덮어쓰고, 캔버스 그리기(셰이더 읽기)를 위해 읽기 상태로 돌려놓는다.
          * @details 인자는 `CanvasRenderer::recordMarkerProjection` 과 같습니다.
          */

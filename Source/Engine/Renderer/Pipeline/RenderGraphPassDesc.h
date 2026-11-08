@@ -10,6 +10,7 @@
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Renderer/Graph/RenderGraph.h"
 
 namespace sw
 {
@@ -106,7 +107,8 @@ namespace sw
          */
         Compute,
 
-        // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
+        // --- 아래는 뷰 패스(`_listPass`)로 쓸 수 없다. 프레임 패스(`isFramePassType` — 깊이 히스토리 · 가림 타일 · 입자 · 애니메이션 · 모프 · 스킨 · 컬링 · 라이트 그리드 ·
+        //     볼륨 안개 · 프로브 · 마커)는 `_listFramePass` 에 선언하고, 나머지는 엔진 내부 PSO 슬롯이라 XML 에 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
         GPUCull,
         /// @brief GPUScene 인스턴스 애니메이션 컴퓨트(instance_animation.hlsl)입니다. 인스턴스마다 다른 각속도로 회전시킵니다.
@@ -123,7 +125,7 @@ namespace sw
         VFXSimulation,
         /// @brief GPU 메시 입자를 메시 인스턴스 배치의 인스턴스 칸에 쓰는 컴퓨트(vfx_mesh_instance.hlsl)입니다. 인스턴스 애니메이션 · 컬링 앞에 돈다.
         VFXMeshInstance,
-        /// @brief 뷰의 지난 프레임 장면 깊이를 R32 실수 RT(깊이 히스토리)로 옮기는 풀스크린(depth_history.hlsl)입니다. 컴퓨트 프리패스 리스트에서 그린다.
+        /// @brief 뷰의 지난 프레임 장면 깊이를 R32 실수 RT(깊이 히스토리)로 옮기는 풀스크린(depth_history.hlsl)입니다. 프레임 그래프 리스트에서 그린다.
         DepthHistory,
         /**
          * @brief 자동 노출의 측정 · 적응 풀스크린(auto_exposure.hlsl)입니다. HDR 원본의 평균 로그 휘도를 재어 지난 EV 에서 목표 EV 로 다가간 값을 뷰의 1x1 R32 실수 RT 에 씁니다.
@@ -151,7 +153,7 @@ namespace sw
         ProbeUpdate,
         /**
          * @brief 화면 마커 투영 컴퓨트(canvas_marker.hlsl)입니다. 마커마다 월드 점을 게임 카메라로 투영해 가시 판정과 함께 캔버스 사각형 버퍼의 앵커 원소(x, y, 배율)에 씁니다(`CanvasRenderer::recordMarkerProjection`).
-         *        캔버스 업로드 뒤 · 캔버스 그리기 앞의 컴퓨트 프리패스에서 `gv_uiMarkerGpuProjection` 로 올린 마커가 있는 프레임에만 돈다.
+         *        캔버스 업로드 뒤 · 캔버스 그리기 앞의 프레임 그래프에서 `gv_uiMarkerGpuProjection` 로 올린 마커가 있는 프레임에만 돈다.
          */
         CanvasMarker,
         /**
@@ -167,10 +169,42 @@ namespace sw
      */
     inline constexpr const utf8* kSwapchainOutputName = "Swapchain";
 
-    /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(내부 슬롯과 Invalid 는 제외합니다). */
-    constexpr bool isPipelinePassType( RenderPassType type )
+    /** @brief 뷰 그래프(`_listPass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 뷰마다 다시 도는 패스입니다(내부 슬롯 · 프레임 패스 · Invalid 는 제외합니다). */
+    constexpr bool isViewPassType( RenderPassType type )
     {
         return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::Compute );
+    }
+
+    /**
+     * @brief 프레임 그래프(`_listFramePass`)의 `_type` 으로 쓸 수 있는 값인지 확인합니다. 프레임에 한 번 모든 뷰의 몫을 기록하는 패스입니다(`FrameGraphExecutor`).
+     * @details 이 목록이 곧 "그래프 앞에 C++ 가 박아 두던 일" 의 전부다. 파이프라인이 선언하지 않은 종류는 PSO 도 없고 돌지 않는다(`FramePSOManager::createPassPSOs`).
+     *          InstanceSort · VFXMeshInstance 는 GPUCull · VFXSimulation 패스 안의 두 번째 디스패치라 따로 선언하지 않는다.
+     */
+    constexpr bool isFramePassType( RenderPassType type )
+    {
+        switch ( type )
+        {
+            case RenderPassType::DepthHistory:
+            case RenderPassType::OcclusionTiles:
+            case RenderPassType::VFXSimulation:
+            case RenderPassType::InstanceAnimation:
+            case RenderPassType::MeshMorph:
+            case RenderPassType::MeshSkin:
+            case RenderPassType::GPUCull:
+            case RenderPassType::LightGrid:
+            case RenderPassType::VolumetricFog:
+            case RenderPassType::ProbeUpdate:
+            case RenderPassType::CanvasMarker:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(뷰 패스 또는 프레임 패스 — 내부 슬롯과 Invalid 는 제외합니다). */
+    constexpr bool isPipelinePassType( RenderPassType type )
+    {
+        return isViewPassType( type ) || isFramePassType( type );
     }
 
     /// @brief 렌더 패스 어태치먼트 하나(이름, 포맷, 첫 사용의 로드 · 저장 동작, 초기값)입니다.
@@ -231,6 +265,23 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 프레임 그래프의 자원 하나(이름, 수명 종류)입니다. 파이프라인 XML 의 `_listResource` 원소입니다.
+     * @details 첨부가 아닌 자원 — 서브시스템이 가진 버퍼(인스턴스 · 라이트 · 컬링 결과)와 프레임을 넘는 히스토리(깊이 히스토리 · 가림 타일 · 입자 상태 · 프로브) — 의 이름이다.
+     *          프레임 패스가 이 이름으로 읽기 · 쓰기를 선언하면 그래프가 순서를 정한다. 그래프는 버퍼를 만들지 않는다(주인은 서브시스템이다 — 언리얼 RDG 의 외부 버퍼 등록과 같다).
+     *          `_kind` 는 Persistent 또는 External 이다(Transient 는 첨부의 몫이라 검증이 막는다).
+     */
+    REFLECT()
+    struct RenderGraphResourceDesc
+    {
+        REFLECT_BODY();
+        PROPERTY( InheritKey )
+        string _name;
+
+        PROPERTY()
+        RenderGraphResourceKind _kind{ RenderGraphResourceKind::External };
+    };
+
     /** @brief 첨부 나눗수(`RenderPassAttachment::_resolutionDivisor`)가 받는 값인지 반환합니다(1, 2, 4). */
     constexpr bool isSupportedResolutionDivisor( uint32 divisor )
     {

@@ -377,3 +377,44 @@ SW_TEST_CASE( RenderGraphTest, TwoSwapchainWritersKeepDeclaredOrder )
     SW_EXPECT_EQUAL( string( "Canvas" ), string( order[2].c_str() ) );
     SW_EXPECT_EQUAL( size_t( 3 ), graph.getExecutionLevels().size() );
 }
+
+/**
+ * @brief [RenderGraphTest] 프레임을 넘는 자원(Persistent · External)은 수명이 그래프 전체라 메모리를 나눌 후보가 아니고, 트랜지언트는 쓰는 패스부터 읽는 패스까지다
+ * @details 히스토리를 트랜지언트처럼 첫 · 마지막 사용 사이만 산다고 보면 앞뒤 빈 구간에 다른 자원이 같은 메모리를 쓰고 다음 프레임이 깨진 히스토리를 읽는다.
+ */
+SW_TEST_CASE( RenderGraphTest, PersistentAndExternalResourcesLiveForTheWholeGraph )
+{
+    RenderGraph         graph;
+    const hashed_string history( "DepthHistory" );
+    const hashed_string lightBuffer( "LightBuffer" );
+    const hashed_string scratch( "Scratch" );
+    graph.declareResource( history, RenderGraphResourceKind::Persistent );
+    graph.declareResource( lightBuffer, RenderGraphResourceKind::External );
+    graph.addPass( hashed_string( "A" ), {}, { hashed_string( "OutA" ) } );
+    graph.addPass( hashed_string( "B" ), { hashed_string( "OutA" ) }, { scratch } );
+    graph.addPass( hashed_string( "C" ), { scratch, history }, { hashed_string( "OutC" ) } ); // 히스토리를 쓰기 전에 읽는다 — 지난 프레임 값
+    graph.addPass( hashed_string( "D" ), { hashed_string( "OutC" ), lightBuffer }, { history } );
+    SW_REQUIRE_TRUE( graph.compile() );
+
+    const RenderGraphResourceLifetime* pHistory = graph.findResourceLifetime( history );
+    SW_REQUIRE_TRUE( pHistory != nullptr );
+    SW_EXPECT_TRUE( pHistory->_kind == RenderGraphResourceKind::Persistent );
+    SW_EXPECT_EQUAL( size_t( 0 ), pHistory->_firstPassIndex );
+    SW_EXPECT_EQUAL( size_t( 3 ), pHistory->_lastPassIndex );
+
+    const RenderGraphResourceLifetime* pLight = graph.findResourceLifetime( lightBuffer );
+    SW_REQUIRE_TRUE( pLight != nullptr );
+    SW_EXPECT_TRUE( pLight->_kind == RenderGraphResourceKind::External );
+    SW_EXPECT_EQUAL( size_t( 0 ), pLight->_firstPassIndex );
+    SW_EXPECT_EQUAL( size_t( 3 ), pLight->_lastPassIndex );
+
+    const RenderGraphResourceLifetime* pScratch = graph.findResourceLifetime( scratch );
+    SW_REQUIRE_TRUE( pScratch != nullptr );
+    SW_EXPECT_TRUE( pScratch->_kind == RenderGraphResourceKind::Transient );
+    SW_EXPECT_EQUAL( size_t( 1 ), pScratch->_firstPassIndex );
+    SW_EXPECT_EQUAL( size_t( 2 ), pScratch->_lastPassIndex );
+
+    // 선언은 clear 와 함께 잊는다 — 다음 파이프라인의 같은 이름은 다시 선언해야 한다.
+    graph.clear();
+    SW_EXPECT_TRUE( graph.getResourceKind( history ) == RenderGraphResourceKind::Transient );
+}

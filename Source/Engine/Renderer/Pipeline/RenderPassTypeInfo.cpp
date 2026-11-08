@@ -450,8 +450,11 @@ namespace sw
                     const bool bOmitted  = row.hasFlag( Flag::kOmittedWhenOff );
                     if ( row.hasFlag( Flag::kSkipsWithoutPostProcess ) != ( bBypasses || bOmitted ) || ( bBypasses && bOmitted ) )
                         return false;
-                    // 컴퓨트 패스는 파이프라인 XML 에 나오지 않고 그래픽스 성질을 갖지 않는다.
-                    if ( row.hasFlag( Flag::kCompute ) && ( isPipelinePassType( row._type ) || row.hasFlag( Flag::kDrawsSceneMeshes | Flag::kGenericFullscreen ) ) )
+                    // 표의 컴퓨트 패스는 뷰 패스가 아니고(프레임 패스 · 내부 슬롯) 그래픽스 성질을 갖지 않는다.
+                    if ( row.hasFlag( Flag::kCompute ) && ( isViewPassType( row._type ) || row.hasFlag( Flag::kDrawsSceneMeshes | Flag::kGenericFullscreen ) ) )
+                        return false;
+                    // 프레임 패스는 표의 셰이더로 돈다(XML 이 셰이더 칸을 비운다 — 검증). 기본 셰이더가 없으면 PSO 도 실행도 없다.
+                    if ( isFramePassType( row._type ) && row._pDefaultShader == nullptr )
                         return false;
                     if ( row.hasFlag( Flag::kRequiresGPUCulling ) && row.hasFlag( Flag::kCompute ) == false )
                         return false;

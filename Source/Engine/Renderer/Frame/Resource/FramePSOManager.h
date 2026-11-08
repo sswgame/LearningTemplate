@@ -76,7 +76,7 @@ namespace sw
         /** @brief 셰이더 핫 리로드 — 소유한 저장소에서 그 셰이더의 바인딩 레이아웃을 무효화합니다. */
         void onShaderRecompiled( string_view shaderPath );
 
-        /** @brief 패스 타입에 해당하는 엔진 PSO 입니다. 없으면 0 입니다. */
+        /** @brief 패스 타입에 해당하는 엔진 PSO 입니다. 없으면 0 입니다. 프레임 패스(`isFramePassType`)는 이 파이프라인이 선언하지 않았으면 0 입니다. */
         RHIPipelineStateHandle getEnginePSO( RenderPassType passType ) const;
         /** @brief 파이프라인 컴퓨트 패스(`RenderPassType::Compute`) @p passName 의 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle findPipelineComputePSO( const hashed_string& passName ) const;

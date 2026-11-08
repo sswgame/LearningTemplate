@@ -132,7 +132,7 @@ namespace sw
         // 패스별 GPU 시간을 보고할 프로파일러다 — 호스트가 건 렌더러 하나만 계측한다(타임스탬프 슬롯 · `GPU.<패스>` 구간이 하나다).
         _state._gpuPassTimeline.bindProfiler( _host._pProfiler );
 
-        if ( FramePrepass::isMeshMorphDiagValid() == false )
+        if ( FrameGraphExecutor::isMeshMorphDiagValid() == false )
         {
             _status        = FrameRendererStatus::Failed;
             _statusMessage = "-gv_meshMorphDebugMode is not a mesh morph diagnostic mode";
@@ -207,6 +207,7 @@ namespace sw
         // 싣고 있으므로(GPUScene.h) 여기서 비우지 않으면 렌더러가 소멸할 때까지 그것들이 살아 있어, 디바이스가 먼저
         // 사라진 뒤 소멸자가 사라진 디바이스에 GPU 자원을 반환하려 한다(해제 후 사용).
         _state._graph.releaseCommandLists();
+        _state._frameGraph.releaseCommandLists();
         if ( _pDevice != nullptr )
             _state._gpuScene.releaseGPU( _pDevice );
         _state._gpuScene.clear();
@@ -221,6 +222,7 @@ namespace sw
         releaseTransientResources();
         releasePassResources();
         _state._graph.clear();
+        _state._frameGraph.clear();
         // 패스 실행의 그래프 실행 상태(이름별 리소스 상태)와 프레임 리스트도 이 디바이스의 것이다.
         _passExecutor.clearDevice();
         _state._frameContext._pCmd = nullptr;
@@ -241,6 +243,7 @@ namespace sw
         _pipelinePath                     = pipelineXMLPath;
         _bCallbacksBound                  = SW_FALSE;
         _state._graph.clear();
+        _state._frameGraph.clear();
         releaseTransientResources();
 
         if ( _pipelineResource.loadFromXMLFile( assetID ) == false )
@@ -454,9 +457,9 @@ namespace sw
     {
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
         // 실제로 그렇게 되었는지는 upload 뒤에 areIndirectCountsGPUFilled() 가 알려 준다.
-        _state._gpuScene.setIndirectCountsFilledByGPU( _passExecutor.getPrepass().usesGPUGeneratedCommands() );
+        _state._gpuScene.setIndirectCountsFilledByGPU( _passExecutor.getFrameGraphExecutor().usesGPUGeneratedCommands() );
         // 모프 풀 오프셋은 배치 테이블에 실려 업로드 시점에 완성되어 있어야 한다.
-        _passExecutor.getPrepass().prepareMeshMorphPool();
+        _passExecutor.getFrameGraphExecutor().prepareMeshMorphPool();
         bool bVertexPool = gv_vertexPool;
         _state._gpuScene.setVertexPoolEnabled( bVertexPool );
         _state._gpuScene.upload( pDevice );
@@ -494,7 +497,7 @@ namespace sw
         _state._canvasRenderer.prepareFrame( *pDevice, _state._canvasFrame, _psoManager.getCache() );
         // 입자 버퍼 · 입자 텍스처 · 입자 PSO 도 같다(투명 패스는 그리기만 한다).
         _psoManager.ensureParticlePSO();
-        _state._particleRenderer.prepareFrame( *pDevice, _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters(), _passExecutor.getPrepass().makeVFXSimulationInput() );
+        _state._particleRenderer.prepareFrame( *pDevice, _state._gpuScene.getParticleBatches(), _state._gpuScene.getVFXMeshEmitters(), _passExecutor.getFrameGraphExecutor().makeVFXSimulationInput() );
 
         if ( _passExecutor.prepareCommandList( pDevice, pCallerName ) == false )
             return false;
@@ -683,6 +686,7 @@ namespace sw
         // 병렬 기록용 커맨드 리스트는 이 디바이스의 것이다. 디바이스가 살아 있을 때 놓는다.
         if ( _pDevice != nullptr )
             _state._graph.releaseCommandLists();
+        _state._frameGraph.releaseCommandLists();
 
         // PSO · 레이아웃 · 머티리얼 폴백 버퍼. 빌려 쓰는 저장소(미리보기 씬 렌더러)는 소유자인 주 렌더러가 놓는다(`FramePSOManager::release`).
         _psoManager.release();

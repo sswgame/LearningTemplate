@@ -18,6 +18,7 @@
 	</_listPass>
 	<_listRenderPassRef>
 		<item>engine/renderpass/defaultrenderpass.xml</item>
+		<item>engine/renderpass/framecomputerenderpass.xml</item>
 		<item>engine/renderpass/forwardcolorrenderpass.xml</item>
 	</_listRenderPassRef>
 	<_listExtensionShader>

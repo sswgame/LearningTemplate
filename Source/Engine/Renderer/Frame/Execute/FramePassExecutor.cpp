@@ -2,7 +2,7 @@
  * @file FramePassExecutor.cpp
  * @brief 렌더 그래프 패스의 실행입니다 — 커맨드 리스트 준비 · 제출, 뷰별 그래프, 패스 종류마다의 기록(풀스크린 · 포워드 · G버퍼 · 투명 · 하늘 · 안개 · TAA · 출력 · 캔버스),
  *        씬 메시 드로우(GPU 배치 · 멀티 드로우), 모듈 확장 패스, 그래프 뒤 NaN 감시.
- * @details 그래프 앞의 프리패스는 `FramePrepass`, 가림 판정은 `OcclusionTiles` 가 맡는다.
+ * @details 프레임 패스의 실행은 `FrameGraphExecutor`, 가림 판정은 `OcclusionTiles` 가 맡는다.
  */
 #include "pch.h"
 
@@ -172,7 +172,9 @@ namespace sw
         , _fog{ fog }
         , _extensionHost{ extensionHost }
         , _capture{ capture }
-        , _prepass{ pDevice, state, psoManager, fog }
+        , _frameGraphExecutor{ pDevice, state, psoManager, fog }
+        , _mapFramePassNameToIndex{}
+        , _frameGraphContext{}
         , _pActiveView{ &state._mainView }
         , _pCmdOwnerDevice{ nullptr }
         , _frameCmd{}
@@ -197,14 +199,14 @@ namespace sw
 
     void FramePassExecutor::ensureResources()
     {
-        _prepass.ensureResources();
+        _frameGraphExecutor.ensureResources();
         if ( _nanCheck.initialize( _pDevice ) == false )
             SW_FATAL( "The NaN check is on but its counters could not be created - see the log above" );
     }
 
     void FramePassExecutor::releaseResources()
     {
-        _prepass.releaseResources();
+        _frameGraphExecutor.releaseResources();
         _nanCheckCommandList.reset();
         _nanCheck.shutdown();
     }
@@ -285,12 +287,10 @@ namespace sw
         }
 #endif
 
-        // GPU 드리븐 프리패스다. **애니메이션이 먼저고 컬링이 나중이다.** 순서가 뒤집히면 컬링이
-        // 이번 프레임에 회전하기 전의 바운드로 판정한다. 컬링은 이번 프레임에 그리는 **모든 뷰**의 슬롯을 돈다.
-        // 깊이 히스토리(뷰마다 지난 장면 깊이의 사본)가 먼저다 — GPU 입자의 깊이 충돌이 읽는다. 이번 프레임 패스가 장면 깊이를 쓰기 전이라 지난 깊이가 남아 있다.
-        // 앞 프레임들의 셰이더 assert 기록이 도착했으면 로그로 낸다(몇 프레임 늦다).
+        // 프레임 그래프(파이프라인 XML 의 `_listFramePass`) — 깊이 히스토리 · 입자 · 변형 · 컬링 · 라이트 그리드 등, 이번 프레임에 그리는 **모든 뷰**의 몫이다.
+        // 순서는 XML 의 자원 읽기 · 쓰기가 정한다. 앞 프레임들의 셰이더 assert · NaN 기록이 도착했으면 로그로 낸다(몇 프레임 늦다).
         _nanCheck.poll();
-        _prepass.record( *_pCmd );
+        recordFrameGraph( pDevice );
         // 월드 공간 UI 의 렌더 텍스처다. 장면 뷰가 그 텍스처를 읽기 전에 먼저 제출하는 프리패스 리스트(같은 큐)로 그린다.
         _state._canvasRenderer.drawTargets( *_pCmd, *pDevice, _state._canvasFrame, _psoManager.getCache() );
         // 2D 빛 쿠키 아틀라스 — 새로 칸을 받은 쿠키만 그 칸에 그린다. 빛 받는 스프라이트 패스가 읽기 전에 같은 프리패스 리스트에서 끝난다.
@@ -333,7 +333,7 @@ namespace sw
         _state._frameContext        = _state._mainSeedScratch;
         _lastRenderedExtraViewCount = renderedExtraCount;
         // 다음 프레임의 깊이 히스토리가 이번 프레임의 장면 깊이와 짝이 되도록 뷰-투영을 적는다.
-        _prepass.rememberDepthHistoryViews();
+        _frameGraphExecutor.rememberDepthHistoryViews();
         return bOk;
     }
 
@@ -707,7 +707,76 @@ namespace sw
             SW_LOG_ERROR_ID( "FramePassExecutor.CallbackBindCompileFailed", "Callback bind compile failed" );
             return false;
         }
+        return bindFramePassCallbacks();
+    }
+
+    bool FramePassExecutor::bindFramePassCallbacks()
+    {
+        RenderGraph& frameGraph = _state._frameGraph;
+        frameGraph.clear();
+        _mapFramePassNameToIndex.clear();
+        _frameGraphContext.reset();
+        for ( const RenderGraphResourceDesc& resource : _pipelineResource.getResources() )
+        {
+            frameGraph.declareResource( hashed_string( resource._name.c_str() ), resource._kind );
+        }
+        const vector<RenderGraphPassDesc>& listFramePass = _pipelineResource.getFramePass();
+        for ( uint32 index = 0; index < static_cast<uint32>( listFramePass.size() ); ++index )
+        {
+            const RenderGraphPassDesc& pass = listFramePass[index];
+            const hashed_string        nameHash( pass._name.c_str() );
+            vector<hashed_string>      listInput;
+            vector<hashed_string>      listOutput;
+            for ( const string& in : pass._listInput )
+            {
+                listInput.emplace_back( in.c_str() );
+            }
+            for ( const string& out : pass._listOutput )
+            {
+                listOutput.emplace_back( out.c_str() );
+            }
+            _mapFramePassNameToIndex[nameHash] = index;
+            frameGraph.addPass( nameHash, std::move( listInput ), std::move( listOutput ),
+                                SW_DELEGATE_METHOD( RenderGraphPassExecuteFn, &FramePassExecutor::onFrameGraphPassExecute, this ) );
+        }
+        // 프레임 패스가 없는 파이프라인(미리보기 · 시험 파이프라인)은 빈 그래프다 — 컬링 · 그리드 등은 PSO 도 없다(`FramePSOManager::getEnginePSO`).
+        if ( listFramePass.empty() )
+            return true;
+        // 배리어는 패스가 자기 버퍼에 스스로 건다 — 프레임 그래프 자원은 순서만 정하므로 레벨 프롤로그를 걸지 않는다.
+        if ( frameGraph.compile() == false )
+        {
+            SW_LOG_ERROR_ID( "FramePassExecutor.FrameGraphCompileFailed", "Frame graph (_listFramePass) could not be compiled - see the cycle report above" );
+            return false;
+        }
         return true;
+    }
+
+    void FramePassExecutor::recordFrameGraph( [[maybe_unused]] IRHIDevice* pDevice )
+    {
+        _frameGraphExecutor.beginFrame();
+        if ( _state._frameGraph.getNodeCount() > 0 && _state._frameGraph.execute( _frameGraphContext, _pCmd ) == false )
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.FrameGraphExecuteFailed", "Frame graph could not run - culling, light grid and skinning results are stale this frame" );
+        _frameGraphExecutor.endFrame( *_pCmd );
+    }
+
+    void FramePassExecutor::onFrameGraphPassExecute( const RenderGraphPassContext& graphContext )
+    {
+        const vector<RenderGraphPassDesc>& listFramePass = _pipelineResource.getFramePass();
+        const auto                         iter          = _mapFramePassNameToIndex.find( graphContext._passName );
+        const bool                         bPassListed   = iter != _mapFramePassNameToIndex.end() && iter->second < listFramePass.size();
+        SW_ASSERT( bPassListed );
+        IRHICommandList* const pCmd = graphContext._pCmdList != nullptr ? graphContext._pCmdList : _pCmd;
+        if ( bPassListed == false || pCmd == nullptr )
+            return;
+        const RenderGraphPassDesc& passDesc = listFramePass[iter->second];
+        utf8                       arrPassName[constant::buffer::kMax64];
+        const size_t               copyLen = MathUtil::min( passDesc._name.size(), sizeof( arrPassName ) - 1 );
+        Memory::copy( arrPassName, passDesc._name.data(), copyLen );
+        arrPassName[copyLen] = '\0';
+        GPUBreadcrumbs::mark( *pCmd, string_view( arrPassName, copyLen ) );
+        pCmd->beginEventMarker( arrPassName );
+        _frameGraphExecutor.executePass( passDesc._type, *pCmd );
+        pCmd->endEventMarker();
     }
 
     void FramePassExecutor::onGraphLevelPrologue( const RenderGraphLevelContext& levelContext )
@@ -1818,7 +1887,7 @@ namespace sw
         // 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
         // 목록**을 읽어 모두 0 번 인스턴스를 그린다. 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
         const GPUCullViewResources& cullView                  = _state._gpuScene.getCullView( context._cullViewIndex );
-        const bool                  bVisibleInstanceListReady = _prepass.isGPUCullingActive() != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
+        const bool                  bVisibleInstanceListReady = _frameGraphExecutor.isGPUCullingActive() != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
                                                cullView._visibleInstances._srv != kInvalidDescriptorIndex;
         if ( bVisibleInstanceListReady )
         {

@@ -78,7 +78,8 @@ namespace sw
             };
 
             /** @brief 간선을 모읍니다 — 1) 같은 리소스의 쓰기 사슬(WAW), 2) 읽기와 그 생산자(RAW), 3) 그 읽기와 생산자 다음 쓰기(WAR). */
-            static void collectDependencyEdges( const vector<RenderGraphNode>& listNode, const vector<size_t>& listActiveIndex, DependencyGraph& outGraph )
+            static void collectDependencyEdges( const vector<RenderGraphNode>& listNode, const vector<size_t>& listActiveIndex,
+                                                const unordered_map<hashed_string, RenderGraphResourceKind>& mapResourceKind, DependencyGraph& outGraph )
             {
                 // 1. 리소스마다 그것을 쓰는 패스를 활성 등록 순서대로 모두 모은다.
                 unordered_map<hashed_string, vector<size_t>> mapResourceWriter;
@@ -117,10 +118,22 @@ namespace sw
 
                         const auto& listWriter    = it->second;
                         size_t      producerIndex = listWriter.front();
+                        bool        bWrittenAhead = false;
                         for ( size_t writerIndex : listWriter )
                         {
                             if ( writerIndex < consumerIndex )
+                            {
                                 producerIndex = writerIndex;
+                                bWrittenAhead = true;
+                            }
+                        }
+                        // 프레임을 넘는 자원을 앞서 쓰는 패스 없이 읽으면 지난 프레임 값을 읽는 것이다(히스토리) — 이번 프레임의 첫 쓰기보다 앞에 와야 한다(WAR).
+                        // 첫 쓰기를 생산자로 잡으면 "읽고 → 쓰는" 히스토리가 순환이 된다.
+                        const auto kindIt = mapResourceKind.find( input );
+                        if ( bWrittenAhead == false && kindIt != mapResourceKind.end() && kindIt->second == RenderGraphResourceKind::Persistent )
+                        {
+                            outGraph.addEdge( consumerIndex, listWriter.front() );
+                            continue;
                         }
                         outGraph.addEdge( producerIndex, consumerIndex );
 
@@ -310,7 +323,7 @@ namespace sw
             return false;
 
         Internal::DependencyGraph graph;
-        Internal::collectDependencyEdges( _listNode, listActiveIndex, graph );
+        Internal::collectDependencyEdges( _listNode, listActiveIndex, _mapResourceKind, graph );
         Internal::scheduleLevels( _listNode, listActiveIndex, graph, _listCompiledExecutionOrder, _listCompiledLevel );
         if ( _listCompiledExecutionOrder.size() != listActiveIndex.size() )
         {
@@ -857,16 +870,34 @@ namespace sw
             }
         }
 
+        // 그래프보다 오래 사는 자원(히스토리 · 서브시스템의 버퍼)은 그래프 전체를 산다 — 앞뒤 패스 사이의 빈 구간도 내용을 지녀 다른 자원과 메모리를 나눌 수 없다.
+        const size_t lastPassIndex = _listCompiledExecutionOrder.empty() ? 0 : _listCompiledExecutionOrder.size() - 1;
+        for ( RenderGraphResourceLifetime& life : _listResourceLifetime )
+        {
+            life._kind = getResourceKind( life._name );
+            if ( life._kind == RenderGraphResourceKind::Transient )
+                continue;
+            life._firstPassIndex = 0;
+            life._lastPassIndex  = lastPassIndex;
+        }
+
         // 아무도 쓰지 않은 것을 읽는 패스는 **지난 프레임 내용이나 0** 을 읽는다. 이미지는 그럴듯하게 나오고
         // 로그는 조용하다. 파이프라인 XML 과 코드가 어긋났을 때 실제로 이렇게 조용히 틀렸다.
+        // 그래프 밖에서 채우는 자원(External)과 지난 프레임 값을 읽는 자원(Persistent)은 선언이 그 읽기를 말한다 — 경고하지 않는다.
         for ( const RenderGraphResourceLifetime& life : _listResourceLifetime )
         {
-            if ( life._bRead && life._bWritten == false )
+            if ( life._kind == RenderGraphResourceKind::Transient && life._bRead && life._bWritten == false )
             {
                 SW_LOG_WARNING_ID( "RenderGraph.ResourceReadButNever", "Resource '%#' is read but never written by any pass — reads stale or zeroed content.",
                                    life._name.c_str() );
             }
         }
+    }
+
+    RenderGraphResourceKind RenderGraph::getResourceKind( hashed_string name ) const
+    {
+        const auto it = _mapResourceKind.find( name );
+        return ( it != _mapResourceKind.end() ) ? it->second : RenderGraphResourceKind::Transient;
     }
 
     const RenderGraphResourceLifetime* RenderGraph::findResourceLifetime( hashed_string name ) const
@@ -887,5 +918,6 @@ namespace sw
         _mapNameToIndex.clear();
         _listResourceLifetime.clear();
         _mapResourceLifetimeIndex.clear();
+        _mapResourceKind.clear();
     }
 } // namespace sw

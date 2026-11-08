@@ -1,16 +1,15 @@
 /**
- * @file FramePrepass.cpp
- * @brief 프레임의 컴퓨트 프리패스 여섯 가지를 정의합니다. 인스턴스 애니메이션, 메시 모프, 메시 스킨, GPU 컬링, 인스턴스 정렬, 라이트 그리드입니다.
- * @details 여섯 가지 모두 그래프(RenderGraph)의 패스가 아니다. 그리기 **전에** 프레임 커맨드 리스트에 직접 기록되고, 그 순서가
- *          곧 GPU 타임라인의 순서다. 애니메이션이 바운드를 바꾸고, 컬링이 그 바운드로 거르고, 정렬이 컬링 결과를
- *          되돌린다. 그래서 순서와 배리어가 한 파일 안에 나란히 보여야 한다.
- *
- *          컴퓨트 패스를 감싸는 래퍼 클래스는 두지 않는다. 각자의 상수 버퍼는 `RHIConstantBuffer` 이고 프레임 데이터(`FrameRenderState::_deform` · 뷰)에 있다.
- *          기록은 `FramePassExecutor` 가 한다. 실시간 프로브 갱신 디스패치도 같은 프리패스 리스트라 여기 둔다.
+ * @file FrameGraphExecutor.cpp
+ * @brief 프레임 패스 종류마다의 실행입니다 — 깊이 히스토리 · 가림 타일 · GPU 입자 · 인스턴스 애니메이션 · 메시 모프 · 메시 스킨 · GPU 컬링(+ 정렬) · 라이트 그리드 ·
+ *        볼륨 안개 · 실시간 프로브 · 화면 마커 투영.
+ * @details 순서는 여기에 없다. 파이프라인 XML 의 `_listFramePass` 가 자원(`_listResource`)의 읽기 · 쓰기로 선언하고 프레임 그래프가 정한다
+ *          (애니메이션 · 모프 · 스킨이 컬링보다 앞 — 컬링이 이번 프레임 바운드로 판정한다 — 은 `InstanceBuffer` · `DeformVertices` 의 쓰기 · 읽기다).
+ *          각 패스는 자기가 쓰는 버퍼의 배리어를 스스로 건다(쓰기 전 UAV, 끝나면 읽기 상태) — 그래프 자원 이름은 순서만 정하고 버퍼를 모른다.
+ *          상수 버퍼는 `RHIConstantBuffer` 이고 프레임 데이터(`FrameRenderState::_deform` · 뷰)에 있다.
  */
 #include "pch.h"
 
-#include "Engine/Renderer/Frame/Execute/FramePrepass.h"
+#include "Engine/Renderer/Frame/Execute/FrameGraphExecutor.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -49,7 +48,7 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE( MeshMorphDiagMode, gv_meshMorphDebugMode, MeshMorphDiagMode::Normal, "메시 모프 진단 (Normal 평소 / ForceOn 강제 켬 / SkipDispatch 디스패치 생략)" );
 
-    FramePrepass::FramePrepass( IRHIDevice* const& pDevice, FrameRenderState& state, FramePSOManager& psoManager, FrameFog& fog )
+    FrameGraphExecutor::FrameGraphExecutor( IRHIDevice* const& pDevice, FrameRenderState& state, FramePSOManager& psoManager, FrameFog& fog )
         : _pDevice{ pDevice }
         , _state{ state }
         , _psoManager{ psoManager }
@@ -59,7 +58,7 @@ namespace sw
     {
     }
 
-    void FramePrepass::ensureResources()
+    void FrameGraphExecutor::ensureResources()
     {
         // 셰이더 assert 링은 PSO 보다 먼저 만든다 — assert 변형 PSO 는 이 버퍼 없이는 돌릴 수 없으므로 만들지 못하면 멈춘다(폴백 없음).
         if ( _gpuAssert.initialize( _pDevice ) == false )
@@ -67,55 +66,119 @@ namespace sw
         // 정렬 디스패치의 t2 자리표 — 순번 표가 없는 뷰도 빈 슬롯으로 디스패치하지 않는다(DX12 는 빈 디스크립터를 읽으면 폴트).
         constexpr uint32 kZeroRank = 0;
         if ( _transparentRankPlaceholder.ensureCapacity( _pDevice, sizeof( uint32 ), 1, RHIBufferUsage::ShaderResource, true, false, &kZeroRank ) == false )
-            SW_LOG_ERROR_ID( "FramePrepass.FailedCreateTransparentRank", "Failed to create the transparent rank placeholder - extra views draw transparency in the main view order" );
+            SW_LOG_ERROR_ID( "FrameGraphExecutor.FailedCreateTransparentRank", "Failed to create the transparent rank placeholder - extra views draw transparency in the main view order" );
         _occlusion.ensurePlaceholder( _pDevice );
     }
 
-    void FramePrepass::releaseResources()
+    void FrameGraphExecutor::releaseResources()
     {
         _transparentRankPlaceholder.release( _pDevice );
         _occlusion.release( _pDevice );
         _gpuAssert.shutdown();
     }
 
-    void FramePrepass::record( IRHICommandList& cmd )
+    void FrameGraphExecutor::beginFrame()
     {
-        _pCmd              = &cmd;
         _bGPUCullingActive = 0;
         _gpuAssert.poll();
-        recordDepthHistories();
-        // GPU 방출기의 입자 시뮬레이션은 인스턴스 애니메이션 · 컬링 **앞**이다 — 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고 컬링이 그 바운드로 거른다.
-        // 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다(VFXGPUSimulation, vfx_simulate.hlsl · vfx_mesh_instance.hlsl).
-        _state._particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassType::VFXSimulation ), _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) );
-        const uint32 animationInstanceCount = static_cast<uint32>( _state._gpuScene.getInstances().size() );
-        dispatchInstanceAnimation( animationInstanceCount );
-        dispatchMeshMorph();
-        dispatchMeshSkin();
-        dispatchCullAndSort( animationInstanceCount );
-        // 라이트 그리드(GPU 생산자) — 조명을 계산하는 패스(포워드 · 디퍼드 · 투명)보다 먼저 끝나야 한다. 이 리스트는 그 패스들의 리스트보다 먼저 큐에 낸다.
-        dispatchLightGrid();
-        // 볼륨 안개 — 라이트 그리드를 읽으므로 그 디스패치 뒤다. 안개 패스(그래프)가 결과를 읽는다.
-        _fog.dispatchVolumetricFog( *_pCmd, _state._lightBuffer, _transparentRankPlaceholder._srv );
-        // 실시간 프로브 갱신 - 라이트 업로드 뒤, 조명 패스(그래프) 앞이다. 프로브 버퍼를 쓴다.
-        dispatchRealtimeProbes();
-        // 화면 마커 투영 — 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스가 읽기 전이면 어디든 되지만 렌더 텍스처 대상 그리기와 같은 자리에 둔다.
-        _state._canvasRenderer.recordMarkerProjection( *_pCmd, _psoManager.getEnginePSO( RenderPassType::CanvasMarker ), _state._gpuScene.getInstanceBuffer(), _state._gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv,
-                                                       _gpuAssert, _state._mainView._settings._viewMode == RenderViewMode::MarkerSlots );
-        // assert 가 켜진 디스패치(컬링 · 모프 · 마커)가 끝났다 — 링을 읽기 버퍼로 복사하는 명령을 넣는다.
-        _gpuAssert.requestReadback( *_pCmd );
+        // 가림 타일 표시는 OcclusionTiles 패스가 다시 켠다. 패스가 없는 파이프라인에서 지난 파이프라인의 표시가 남아 컬링이 낡은 타일을 읽지 않게 비운다.
+        _state._mainView._bOcclusionTilesThisFrame = SW_FALSE;
+        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
+        {
+            pView->_bOcclusionTilesThisFrame = SW_FALSE;
+        }
+    }
+
+    void FrameGraphExecutor::executePass( RenderPassType type, IRHICommandList& cmd )
+    {
+        _pCmd = &cmd;
+        switch ( type )
+        {
+            case RenderPassType::DepthHistory:
+            {
+                recordDepthHistories();
+                break;
+            }
+            case RenderPassType::OcclusionTiles:
+            {
+                recordOcclusionTiles();
+                break;
+            }
+            case RenderPassType::VFXSimulation:
+            {
+                // 메시 입자가 인스턴스 칸에 행렬 · 바운드를 쓰고(VFXMeshInstance — 같은 패스의 두 번째 디스패치), 빌보드 · 띠는 투명 패스가 렌더 입력과 간접 인자를 읽는다.
+                _state._particleRenderer.recordSimulation( *_pCmd, _psoManager.getEnginePSO( RenderPassType::VFXSimulation ), _psoManager.getEnginePSO( RenderPassType::VFXMeshInstance ) );
+                break;
+            }
+            case RenderPassType::InstanceAnimation:
+            {
+                dispatchInstanceAnimation( static_cast<uint32>( _state._gpuScene.getInstances().size() ) );
+                break;
+            }
+            case RenderPassType::MeshMorph:
+            {
+                dispatchMeshMorph();
+                break;
+            }
+            case RenderPassType::MeshSkin:
+            {
+                dispatchMeshSkin();
+                break;
+            }
+            case RenderPassType::GPUCull:
+            {
+                dispatchCullAndSort( static_cast<uint32>( _state._gpuScene.getInstances().size() ) );
+                break;
+            }
+            case RenderPassType::LightGrid:
+            {
+                dispatchLightGrid();
+                break;
+            }
+            case RenderPassType::VolumetricFog:
+            {
+                _fog.dispatchVolumetricFog( *_pCmd, _state._lightBuffer, _transparentRankPlaceholder._srv );
+                break;
+            }
+            case RenderPassType::ProbeUpdate:
+            {
+                dispatchRealtimeProbes();
+                break;
+            }
+            case RenderPassType::CanvasMarker:
+            {
+                // 캔버스 업로드(기록 전)가 올린 앵커 원소를 GPU 가 덮어쓴다. 주 출력 캔버스를 그리는 패스(뷰 그래프)보다 앞이다.
+                _state._canvasRenderer.recordMarkerProjection( *_pCmd, _psoManager.getEnginePSO( RenderPassType::CanvasMarker ), _state._gpuScene.getInstanceBuffer(),
+                                                               _state._gpuScene.getInstanceSRV(), _transparentRankPlaceholder._srv, _gpuAssert,
+                                                               _state._mainView._settings._viewMode == RenderViewMode::MarkerSlots );
+                break;
+            }
+            default:
+            {
+                // 로드 검증(`RenderPipelineAsset::validate`)이 프레임 패스 목록에 다른 종류를 받지 않는다.
+                SW_ASSERT( isFramePassType( type ) );
+                break;
+            }
+        }
         _pCmd = nullptr;
     }
 
-    bool FramePrepass::usesGPUGeneratedCommands() const
+    void FrameGraphExecutor::endFrame( IRHICommandList& cmd )
+    {
+        // assert 가 켜진 디스패치(컬링 · 모프 · 마커)가 끝났다 — 링을 읽기 버퍼로 복사하는 명령을 넣는다.
+        _gpuAssert.requestReadback( cmd );
+    }
+
+    bool FrameGraphExecutor::usesGPUGeneratedCommands() const
     {
         // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
         // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.
         return gv_gpuCulling && _psoManager.getEnginePSO( RenderPassType::GPUCull ) != 0;
     }
 
-    void FramePrepass::dispatchInstanceAnimation( uint32 instanceCount )
+    void FrameGraphExecutor::dispatchInstanceAnimation( uint32 instanceCount )
     {
-        // 컴퓨트 프리패스 둘이다. 인스턴스 애니메이션이 먼저고 컬링이 나중이다. 순서가 뒤집히면 컬링이
+        // 인스턴스 애니메이션이 컬링보다 먼저다(XML 의 `InstanceBuffer` 쓰기 · 읽기). 순서가 뒤집히면 컬링이
         // **이번 프레임에 회전하기 전의** 바운드로 판정한다. 애니메이션이 회전만 바꾸므로 지금 씬에서는
         // 결과가 같지만, 이동을 넣는 순간 한 프레임 늦은 컬링이 된다.
         // 회전을 요청한 인스턴스가 하나도 없으면 디스패치 자체를 건너뛴다. 안 그러면 회전을 쓰지 않는 씬도
@@ -153,12 +216,17 @@ namespace sw
         }
     }
 
-    MeshMorphDiagMode FramePrepass::getEffectiveMeshMorphDiag() const
+    bool FrameGraphExecutor::isDeformPassDeclared() const
+    {
+        return _psoManager.getEnginePSO( RenderPassType::MeshMorph ) != 0 || _psoManager.getEnginePSO( RenderPassType::MeshSkin ) != 0;
+    }
+
+    MeshMorphDiagMode FrameGraphExecutor::getEffectiveMeshMorphDiag() const
     {
         return gv_meshMorphDebugMode;
     }
 
-    bool FramePrepass::isMeshMorphDiagValid()
+    bool FrameGraphExecutor::isMeshMorphDiagValid()
     {
         // 모든 열거자를 나열한다 — 열거자를 더하면 여기서 컴파일 경고가 난다. 범위 밖 값은 Normal 로 바꾸지 않고 알린다.
         switch ( gv_meshMorphDebugMode )
@@ -170,11 +238,11 @@ namespace sw
                 return true;
             }
         }
-        SW_LOG_ERROR_ID( "FramePrepass.GvMeshMorphDebugModeNoMode", "gv_meshMorphDebugMode has no mode for the value %# (Normal, ForceOn or SkipDispatch)", static_cast<uint32>( gv_meshMorphDebugMode ) );
+        SW_LOG_ERROR_ID( "FrameGraphExecutor.GvMeshMorphDebugModeNoMode", "gv_meshMorphDebugMode has no mode for the value %# (Normal, ForceOn or SkipDispatch)", static_cast<uint32>( gv_meshMorphDebugMode ) );
         return false;
     }
 
-    void FramePrepass::prepareMeshMorphPool()
+    void FrameGraphExecutor::prepareMeshMorphPool()
     {
         const MeshMorphDiagMode morphDiag = getEffectiveMeshMorphDiag();
         // 백엔드가 못 하면 풀을 만들지도 않는다. 배치의 base 가 kInvalidBase 로 남아 셰이더가
@@ -183,6 +251,9 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
         if ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == MeshMorphDiagMode::Normal )
+            return;
+        // 결과 버퍼를 채우는 패스가 이 파이프라인에 없다 — 능력이 없을 때와 같이 풀을 만들지 않는다(배치는 레스트 포즈로 그린다).
+        if ( isDeformPassDeclared() == false )
             return;
 
         // 풀은 **배치가 가진 메시**에서 만든다. 스냅샷 배치가 소유권을 가지고 있으므로 이 프레임 동안 살아 있다.
@@ -245,7 +316,7 @@ namespace sw
         SW_PROFILE_COUNT( "RT.Skin.sourceVertices", _state._deform._meshMorphPool.getSkinSourceVertexCount() );
     }
 
-    void FramePrepass::collectSkinInstances()
+    void FrameGraphExecutor::collectSkinInstances()
     {
         FrameMeshDeformState& deform = _state._deform;
         deform._listScratchDrawnSkinSlot.clear();
@@ -271,7 +342,7 @@ namespace sw
         SW_PROFILE_COUNT( "RT.Deform.skinSlots", deform._listScratchSkinSlot.size() );
     }
 
-    void FramePrepass::dispatchMeshMorph()
+    void FrameGraphExecutor::dispatchMeshMorph()
     {
         const MeshMorphDiagMode morphDiag = getEffectiveMeshMorphDiag();
         if ( _pDevice == nullptr || _pCmd == nullptr )
@@ -334,7 +405,7 @@ namespace sw
         _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
     }
 
-    void FramePrepass::dispatchMeshSkin()
+    void FrameGraphExecutor::dispatchMeshSkin()
     {
         if ( _pDevice == nullptr || _pCmd == nullptr )
             return;
@@ -374,7 +445,7 @@ namespace sw
         _pCmd->transitionBuffer( _state._deform._meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::ShaderResource );
     }
 
-    void FramePrepass::computeLODFadeStep()
+    void FrameGraphExecutor::computeLODFadeStep()
     {
         // 전환 진행량은 렌더 프레임 간격(벽시계)에서 센다 — 진행이 게임 시간이 아니라 화면에서 보이는 시간이다. 간격이 길어도(정지 · 히치) 한 프레임에 끝내지 않도록 0.1 초로 막는다.
         constexpr float32 kMaxFrameSeconds = 0.1f;
@@ -392,7 +463,7 @@ namespace sw
         _lodFadeStep           = static_cast<uint32>( MathUtil::clamp( progress, 1.0f, 255.0f ) );
     }
 
-    void FramePrepass::dispatchCullAndSort( uint32 instanceCount )
+    void FrameGraphExecutor::dispatchCullAndSort( uint32 instanceCount )
     {
         // 컬링은 GPUScene 이 "개수를 컴퓨트에 맡겼다" 고 답할 때만 돈다. 그래야 인자의 초기 개수(0)와
         // 디스패치 여부가 절대 어긋나지 않는다. 어긋나면 한쪽은 빈 화면, 다른 쪽은 낡은 목록이다.
@@ -438,7 +509,7 @@ namespace sw
         _bGPUCullingActive = bAllViewsCulled ? 1u : 0u;
     }
 
-    void FramePrepass::dispatchLightGrid()
+    void FrameGraphExecutor::dispatchLightGrid()
     {
         // 생산자가 GPU 인 프레임에만 뷰 수가 0 보다 크다(GPULightBuffer::updateGPUGrid). 그때 PSO 와 버퍼는 이미 확인됐다(selectLightGridProducer, updateGPUGrid) —
         // 여기서 건너뛰면 채우지 않은 그리드를 셰이더가 읽으므로 더 거르지 않는다.
@@ -458,7 +529,7 @@ namespace sw
         _pCmd->transitionBuffer( gridBuffer._buffer, RHIBufferState::ShaderResource );
     }
 
-    bool FramePrepass::canCopyDepthHistory( const FrameViewTarget& view ) const
+    bool FrameGraphExecutor::canCopyDepthHistory( const FrameViewTarget& view ) const
     {
         const bool bHasSource = view._bLastFrameDepthValid == SW_TRUE && view._depthHistory != 0 && view._depthHistoryUAV != kInvalidDescriptorIndex;
         if ( bHasSource == false || _psoManager.getEnginePSO( RenderPassType::DepthHistory ) == 0 )
@@ -466,27 +537,34 @@ namespace sw
         return view._transientPool.find( attachmentNames()._sceneDepth )._texture != 0;
     }
 
-    void FramePrepass::recordDepthHistories()
+    void FrameGraphExecutor::recordDepthHistories()
     {
         if ( _pCmd == nullptr || _pDevice == nullptr )
             return;
-        // 주 시점과 추가 뷰 — 장면 깊이 첨부는 프레임 사이에 그대로 남아 있다(이번 프레임 패스가 쓰기 전이다).
-        // 가림 타일은 옮긴 깊이 히스토리에서 바로 짓는다 — 컬링(dispatchCullAndSort)이 이 뒤에 읽는다. 쉬는 추가 뷰는 컬링하지 않으므로 짓지 않는다.
+        // 주 시점과 추가 뷰 — 장면 깊이 첨부는 프레임 사이에 그대로 남아 있다(이번 프레임 뷰 그래프가 쓰기 전이다).
         recordDepthHistory( _state._mainView );
+        for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
+        {
+            recordDepthHistory( *pView );
+        }
+    }
+
+    void FrameGraphExecutor::recordOcclusionTiles()
+    {
+        if ( _pCmd == nullptr || _pDevice == nullptr )
+            return;
+        // 가림 타일은 옮긴 깊이 히스토리에서 짓는다 — 컬링(GPUCull 패스)이 `OcclusionTiles` 를 읽어 이 뒤에 온다. 쉬는 추가 뷰는 컬링하지 않으므로 짓지 않는다.
         const RHIPipelineStateHandle occlusionPSO = _psoManager.getEnginePSO( RenderPassType::OcclusionTiles );
         _occlusion.record( _pCmd, *_pDevice, occlusionPSO, canCopyDepthHistory( _state._mainView ), _state._mainView );
         _occlusion.requestReadback( _pCmd, _pDevice, _state._mainView );
         for ( unique_ptr<FrameViewTarget>& pView : _state._listExtraView )
         {
-            recordDepthHistory( *pView );
             if ( pView->_bRenderThisFrame == SW_TRUE )
                 _occlusion.record( _pCmd, *_pDevice, occlusionPSO, canCopyDepthHistory( *pView ), *pView );
-            else
-                pView->_bOcclusionTilesThisFrame = SW_FALSE;
         }
     }
 
-    void FramePrepass::recordDepthHistory( FrameViewTarget& target )
+    void FrameGraphExecutor::recordDepthHistory( FrameViewTarget& target )
     {
         if ( canCopyDepthHistory( target ) == false )
             return;
@@ -516,9 +594,11 @@ namespace sw
         _pCmd->setGraphicsRootConstants( 0, 1, &sourceIndex );
         _pCmd->draw( 3, 0 );
         _pCmd->endRenderPass();
+        // 읽는 쪽(가림 타일 · GPU 입자)의 상태로 넘겨 둔다 — 함수 머리말 참고.
+        _pCmd->prepareTextureForUnorderedAccess( target._depthHistory );
     }
 
-    void FramePrepass::rememberDepthHistoryViews()
+    void FrameGraphExecutor::rememberDepthHistoryViews()
     {
         // 장면 깊이 첨부가 있는 뷰만 — 히스토리가 없으면(2D 파이프라인) 짝을 적을 필요가 없다.
         const RenderView& mainView = _state.view( RenderViewType::Main );
@@ -538,7 +618,7 @@ namespace sw
         }
     }
 
-    VFXSimulationFrameInput FramePrepass::makeVFXSimulationInput() const
+    VFXSimulationFrameInput FrameGraphExecutor::makeVFXSimulationInput() const
     {
         VFXSimulationFrameInput input{};
         input._bSimulationPipelineReady = _psoManager.getEnginePSO( RenderPassType::VFXSimulation ) != 0;
@@ -565,7 +645,7 @@ namespace sw
         return input;
     }
 
-    bool FramePrepass::dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView )
+    bool FrameGraphExecutor::dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const FrameViewTarget* pExtraView )
     {
         if ( cullViewIndex >= _state._gpuScene.getCullViewCount() )
             return false;
@@ -680,7 +760,7 @@ namespace sw
         return true;
     }
 
-    void FramePrepass::dispatchRealtimeProbes()
+    void FrameGraphExecutor::dispatchRealtimeProbes()
     {
         if ( _pCmd == nullptr || _state._probeUpdater.isActive() == false )
             return;

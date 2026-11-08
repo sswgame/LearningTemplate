@@ -1,6 +1,6 @@
 /**
  * @file FramePassExecutor.h
- * @brief 한 프레임의 기록과 제출입니다 — 컴퓨트 프리패스(변형 · 컬링 · 라이트 그리드 · 깊이 히스토리 · 가림 타일), 그래프 패스 콜백과 패스별 실행, 드로우, 뷰별 커맨드 리스트 제출.
+ * @brief 한 프레임의 기록과 제출입니다 — 프레임 그래프(변형 · 컬링 · 라이트 그리드 · 깊이 히스토리 · 가림 타일), 그래프 패스 콜백과 패스별 실행, 드로우, 뷰별 커맨드 리스트 제출.
  * @details 렌더러(`FrameRenderer`)가 셋업(스냅샷 받기 · 업로드 · 뷰 준비 · PSO 준비)을 끝낸 뒤 `submitGraph` 를 부르면 여기서 기록이 시작된다.
  *          프레임 데이터(`FrameRenderState`)는 렌더러가 소유하고 이 객체는 참조로 읽는다. 언리얼 `FSceneRenderer::Render` 가 뷰마다 RDG 패스(람다)를 더하고
  *          실행하는 자리와 같다 — 패스는 패스 컨텍스트(`FramePassContext`)와 지금 그리는 뷰(`FrameViewTarget`)만 본다.
@@ -21,7 +21,7 @@
 #include "Engine/Graphics/RHI/RHIStructuredBuffer.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Extension/RenderExtension.h"
-#include "Engine/Renderer/Frame/Execute/FramePrepass.h"
+#include "Engine/Renderer/Frame/Execute/FrameGraphExecutor.h"
 #include "Engine/Renderer/Frame/Extension/FrameExtensionHost.h"
 #include "Engine/Renderer/Frame/FramePassContext.h"
 #include "Engine/Renderer/Frame/FrameRenderState.h"
@@ -76,13 +76,13 @@ namespace sw
         // 2) 셋업이 부르는 준비(기록 전)
         // ------------------------------------------------------------------------------
         /**
-         * @brief 파이프라인 패스와 모듈 확장 패스를 그래프 노드로 묶고 컴파일합니다. 컴파일했으면 true 입니다(렌더러가 "묶였다" 를 적는다).
-         * @details 그래프 콜백은 이 객체의 `onGraphPassExecute` · `onGraphLevelPrologue` 다.
+         * @brief 파이프라인 패스와 모듈 확장 패스를 뷰 그래프 노드로, 프레임 패스를 프레임 그래프 노드로 묶고 컴파일합니다. 둘 다 컴파일했으면 true 입니다(렌더러가 "묶였다" 를 적는다).
+         * @details 뷰 그래프 콜백은 이 객체의 `onGraphPassExecute` · `onGraphLevelPrologue`, 프레임 그래프 콜백은 `onFrameGraphPassExecute` 다.
          */
         [[nodiscard]] bool bindPassCallbacks();
-        /** @brief 프레임 프리패스(그래프 앞에 프리패스 리스트로 기록하는 컴퓨트 · 깊이 히스토리 · 렌더 텍스처)입니다. 렌더러가 업로드 전에 묻는 값(`usesGPUGeneratedCommands` · 모프 풀 · VFX 입력)도 여기에 있다. */
-        FramePrepass&       getPrepass() { return _prepass; }
-        const FramePrepass& getPrepass() const { return _prepass; }
+        /** @brief 프레임 패스의 실행(`_listFramePass` 의 종류마다)입니다. 렌더러가 업로드 전에 묻는 값(`usesGPUGeneratedCommands` · 모프 풀 · VFX 입력)도 여기에 있다. */
+        FrameGraphExecutor&       getFrameGraphExecutor() { return _frameGraphExecutor; }
+        const FrameGraphExecutor& getFrameGraphExecutor() const { return _frameGraphExecutor; }
         /** @brief 이번 프레임 한 뷰의 그림자 패스가 그리는 타일 수입니다(상수 버퍼 링 용량 산정). */
         uint32 computeShadowTileCountPerView() const;
         /**
@@ -125,7 +125,7 @@ namespace sw
          */
         [[nodiscard]] bool prepareCommandList( IRHIDevice* pDevice, const utf8* pCallerName );
         /**
-         * @brief 컴퓨트 프리패스를 기록해 내고, 렌더 텍스처 뷰 · 주 시점 · 화면 사각형 뷰 · 호스트 타깃 뷰 순서로 그래프를 기록해 제출합니다.
+         * @brief 프레임 그래프를 기록해 내고, 렌더 텍스처 뷰 · 주 시점 · 화면 사각형 뷰 · 호스트 타깃 뷰 순서로 그래프를 기록해 제출합니다.
          * @return 주 시점 그래프 실행의 결과
          */
         [[nodiscard]] bool submitGraph( IRHIDevice* pDevice );
@@ -134,7 +134,7 @@ namespace sw
         // 5) 조회
         // ------------------------------------------------------------------------------
         /** @brief 주 시점 가림 타일을 몇 프레임 늦게 되읽은 가장 최근 사본입니다(`FrameRenderer::getOcclusionSnapshot`). 어느 스레드에서 불러도 됩니다. */
-        shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _prepass.getOcclusionSnapshot(); }
+        shared_ptr<const OcclusionTileSnapshot> getOcclusionSnapshot() const { return _frameGraphExecutor.getOcclusionSnapshot(); }
         /** @brief 지난 `submitGraph` 가 낸 씬 간접 드로우 호출 수입니다(모든 패스 합). */
         uint32 getIndirectDrawCallCount() const { return _indirectDrawCallCount.load( std::memory_order_relaxed ); }
         /** @brief 지난 `submitGraph` 가 PSO 가 아직 만드는 중이라 건너뛴 배치 묶음 수입니다. 0 이 아니면 그 프레임은 덜 그린 그림이다. */
@@ -191,6 +191,12 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief RenderGraph 가 패스를 실행할 때 부르는 콜백입니다. */
         void onGraphPassExecute( const RenderGraphPassContext& context );
+        /** @brief 프레임 그래프가 프레임 패스를 실행할 때 부르는 콜백입니다. 서술의 종류로 `FrameGraphExecutor::executePass` 를 부릅니다. */
+        void onFrameGraphPassExecute( const RenderGraphPassContext& context );
+        /** @brief 프레임 패스를 프레임 그래프 노드로 묶고 컴파일합니다(`bindPassCallbacks` 의 뒷부분). 프레임 패스가 없으면 빈 그래프이고 true 입니다. */
+        [[nodiscard]] bool bindFramePassCallbacks();
+        /** @brief 프레임 그래프를 프리패스 리스트(`_pCmd`)에 기록합니다. 뷰 그래프보다 먼저 큐에 내는 리스트다. */
+        void recordFrameGraph( IRHIDevice* pDevice );
         /**
          * @brief 레벨을 기록하기 **직전에** 그 레벨이 만질 자원의 배리어를 미리 발행합니다. 직렬 경로에서는 패스마다 발행합니다.
          * @details 자원 이름으로 실제 텍스처를 찾아 `prepareTextureForShaderRead` 와
@@ -426,11 +432,15 @@ namespace sw
         FrameFog&                  _fog;
         FrameExtensionHost&        _extensionHost;
         FrameCapture&              _capture;
-        /// @brief 그래프 앞의 프리패스 단계(컴퓨트 프리패스 · 깊이 히스토리 · 가림 타일 · 볼륨 안개 · 렌더 텍스처)입니다.
-        FramePrepass _prepass;
+        /// @brief 프레임 패스 종류마다의 실행(깊이 히스토리 · 가림 타일 · 입자 · 변형 · 컬링 · 라이트 그리드 · 볼륨 안개 · 프로브 · 마커)입니다. 순서는 프레임 그래프가 정한다.
+        FrameGraphExecutor _frameGraphExecutor;
+        /// @brief 프레임 그래프 노드 이름 → `_listFramePass` 번호입니다. `bindPassCallbacks` 가 채웁니다.
+        unordered_map<hashed_string, uint32> _mapFramePassNameToIndex;
+        /// @brief 프레임 그래프 실행 상태입니다(뷰 그래프와 따로 — 자원 이름이 다르고 프레임에 한 번 돈다).
+        RenderGraphExecutionContext _frameGraphContext;
         /// @brief 지금 그리는 뷰입니다. 프레임 밖에서는 항상 `FrameRenderState::_mainView` 입니다. 바꾸는 곳은 `renderExtraView` 하나다.
         FrameViewTarget* _pActiveView;
-        /// @brief 컴퓨트 프리패스 리스트와 그것을 만든 디바이스입니다. `_pCmd` 는 프리패스를 기록하는 동안만 그 리스트를 가리킨다.
+        /// @brief 프레임 그래프 리스트와 그것을 만든 디바이스입니다. `_pCmd` 는 프리패스를 기록하는 동안만 그 리스트를 가리킨다.
         IRHIDevice*                 _pCmdOwnerDevice;
         unique_ptr<IRHICommandList> _frameCmd;
         IRHICommandList*            _pCmd;
