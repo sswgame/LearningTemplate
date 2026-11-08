@@ -115,7 +115,7 @@ namespace sw
             static const utf8* getTargetProfile( ShaderStage stage, ShaderTargetFormat targetFormat )
             {
                 const ShaderStageInfo&              info    = getShaderStageInfo( stage );
-                const ShaderTargetFormatInfo* const pFormat = ShaderTargetFormatTable::find( targetFormat );
+                const ShaderTargetFormatInfo* const pFormat = ShaderTargetFormatInfo::find( targetFormat );
                 if ( pFormat != nullptr && pFormat->_tool == ShaderCompilerTool::Fxc )
                     return info._pProfileSm5 != nullptr ? info._pProfileSm5 : getShaderStageInfo( ShaderStage::Vertex )._pProfileSm5;
                 return info._pProfileSm6;
@@ -534,7 +534,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 대상 형식 하나의 DXC 쪽 일입니다. 행 순서는 `ShaderTargetFormat` 과 같습니다. 새 대상은 이 표와 `ShaderTargetFormatTable` 에 한 줄씩이고, 후처리(GL 패치 · 앞으로의 Tint)도 여기에 적습니다. */
+            /** @brief 대상 형식 하나의 DXC 쪽 일입니다. 행 순서는 `ShaderTargetFormat` 과 같습니다. 새 대상은 이 표와 `ShaderTargetFormatInfo` 에 한 줄씩이고, 후처리(GL 패치 · 앞으로의 Tint)도 여기에 적습니다. */
             struct DxcTargetRow
             {
                 ShaderTargetFormat _format;
@@ -816,7 +816,7 @@ namespace sw
 
         const string profile = Internal::getTargetProfile( desc._stage, desc._targetFormat );
 
-        const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatTable::find( desc._targetFormat );
+        const ShaderTargetFormatInfo* const pTargetInfo = ShaderTargetFormatInfo::find( desc._targetFormat );
         const bool                          bFxcTarget  = pTargetInfo != nullptr && pTargetInfo->_tool == ShaderCompilerTool::Fxc;
 #if defined( SW_PLATFORM_WINDOWS )
         if ( bFxcTarget )

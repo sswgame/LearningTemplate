@@ -46,10 +46,10 @@ namespace sw
                 return true;
             }
 
-            /** @brief 쿠킹 표의 줄 하나가 기술자 표(`RHIBackendInfoTable`)의 이름 · 셰이더 타깃과 같은지입니다. */
+            /** @brief 쿠킹 표의 줄 하나가 기술자 표(`RHIBackendInfo`)의 이름 · 셰이더 타깃과 같은지입니다. */
             static constexpr bool matchesBackendInfo( RHIBackend backend, const utf8* pName, ShaderTargetFormat shaderTarget )
             {
-                const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
+                const RHIBackendInfo* pInfo = RHIBackendInfo::find( backend );
                 if ( pInfo == nullptr || pInfo->_shaderTarget != shaderTarget )
                     return false;
                 for ( size_t index = 0;; ++index )
@@ -63,7 +63,7 @@ namespace sw
         };
 
         static_assert( RHIInternal::isTableInEnumOrder(), "Config/Engine/CookContract.json rhi_backends must follow RHIBackend values" );
-        static_assert( std::size( RHIInternal::kArrBackendArgument ) == std::size( RHIBackendInfoTable::kArrInfo ),
+        static_assert( std::size( RHIInternal::kArrBackendArgument ) == std::size( RHIBackendInfo::kArrInfo ),
                        "RHIBackendInfoTable needs one row per Config/Engine/CookContract.json rhi_backends row" );
 #define SW_RHI_BACKEND_INFO_CHECK( Backend, ShaderFolder, ShaderTarget, ... ) \
     static_assert( RHIInternal::matchesBackendInfo( RHIBackend::Backend, #Backend, ShaderTargetFormat::ShaderTarget ), "RHIBackendInfoTable row " #Backend " differs from Config/Engine/CookContract.json" );
@@ -411,7 +411,7 @@ namespace sw
 
     const utf8* RHI::getBackendTypeName( RHIBackend backend )
     {
-        const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
+        const RHIBackendInfo* pInfo = RHIBackendInfo::find( backend );
         return pInfo != nullptr ? pInfo->_pName : "Unknown";
     }
 
@@ -422,7 +422,7 @@ namespace sw
 
     ShaderTargetFormat RHI::getShaderTargetFormat( RHIBackend backend )
     {
-        const RHIBackendInfo* pInfo = RHIBackendInfoTable::find( backend );
+        const RHIBackendInfo* pInfo = RHIBackendInfo::find( backend );
         return pInfo != nullptr ? pInfo->_shaderTarget : ShaderTargetFormat::DXIL_D3D12;
     }
 } // namespace sw

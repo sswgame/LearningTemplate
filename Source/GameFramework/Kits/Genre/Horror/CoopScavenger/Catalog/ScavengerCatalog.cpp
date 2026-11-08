@@ -71,7 +71,7 @@ namespace sw
             Element::of<&ScavengerCatalog::_scrapCatalog>( "Scrap" ),
             Element::of<&ScavengerCatalog::loadMoon>( "Moon" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
 
         // 매입률 점은 남은 날 순서로 둔다. 같은 날이 두 번이면 어느 값인지 모르므로 오류이고 뒤의 것을 버린다.
         VectorUtil::stableSort( _listBuyRate, []( const ScavengerBuyRatePoint& lhs, const ScavengerBuyRatePoint& rhs )

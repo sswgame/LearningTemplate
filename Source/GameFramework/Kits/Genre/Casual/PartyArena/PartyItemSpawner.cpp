@@ -194,7 +194,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&PartyItemSpawner::loadItem>( "Item" ),
         };
-        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool PartyItemSpawner::loadItem( const XMLNode& node, string_view sourceName )

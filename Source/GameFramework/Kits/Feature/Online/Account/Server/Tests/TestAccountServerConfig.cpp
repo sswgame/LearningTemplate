@@ -21,7 +21,7 @@ namespace
             JSONDocument document;
             SW_EXPECT_TRUE( document.tryParse( text ) );
             string     error;
-            const bool bRead = PlatformLoginProviderFactory::readEntry( document.getRoot(), outSettings, error );
+            const bool bRead = PlatformLoginProviderConfig::readEntry( document.getRoot(), outSettings, error );
             SW_EXPECT_EQUAL( bRead, error.empty() ); // 실패면 까닭이 있다
             return bRead;
         }
@@ -131,9 +131,9 @@ SW_TEST_CASE( PlatformLoginProviderConfigTest, FactoryRefusesWhatItCannotBuild )
     settings._name       = "naver";
     settings._kind       = PlatformLoginProviderKind::AccessTokenProfile;
     settings._profileURL = "https://p";
-    SW_EXPECT_TRUE( PlatformLoginProviderFactory::isValidSettings( settings ) );
-    SW_EXPECT_NULL( PlatformLoginProviderFactory::create( settings, nullptr, nullptr ) );
+    SW_EXPECT_TRUE( PlatformLoginProviderConfig::isValidSettings( settings ) );
+    SW_EXPECT_NULL( PlatformLoginProviderConfig::create( settings, nullptr, nullptr ) );
 
     settings._subjectPath.clear();
-    SW_EXPECT_FALSE( PlatformLoginProviderFactory::isValidSettings( settings ) );
+    SW_EXPECT_FALSE( PlatformLoginProviderConfig::isValidSettings( settings ) );
 }

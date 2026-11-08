@@ -19,7 +19,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
-#include "GameFramework/Runtime/Gameplay/Interaction/InteractionSelector.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/InteractionView.h"
 
 namespace sw
 {
@@ -111,7 +111,7 @@ namespace sw
 
     /**
      * @class TurretComponent
-     * @brief 사거리, 시야각, 시야 안에서 태그(`_targetTags`)를 가진 가장 가까운 것을 고르고(`InteractionSelector` 와 같은 방식), 요를 `_turnSpeed` 로 돌립니다.
+     * @brief 사거리, 시야각, 시야 안에서 태그(`_targetTags`)를 가진 가장 가까운 것을 고르고(`InteractionView` 와 같은 방식), 요를 `_turnSpeed` 로 돌립니다.
      *        `_aimTolerance` 안에 들어오면 `_fireInterval` 마다 쏩니다. `_projectileSpeed` 가 0 이면 히트스캔이고(시야 광선이 대상에 닿으면 피해), 0 보다 크면 날아가는 탄입니다.
      * @details 회로의 Enable 노드로 켜고 끈다(오브젝트 켜기). 요는 소유자 로컬 회전의 Y 이다(3D). 스텝은 60 Hz 이다.
      *          날아가는 탄은 대상의 속도(스텝 사이 자리 차이)로 앞을 겨눈다(`computeAim` → `Ballistics`). 언리얼 `SuggestProjectileVelocity` 의 자리다(기억에 의존한 비교).

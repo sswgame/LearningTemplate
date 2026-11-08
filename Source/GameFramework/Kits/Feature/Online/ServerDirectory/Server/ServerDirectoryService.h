@@ -4,7 +4,7 @@
  * @details - 점검과 공지는 영속 테이블(`sd_maintenance`, `sd_notice`)에 있다. 주기(기본 30초)마다 다시 읽고, 다른 서버가 바꿨다는 버스 알림(`notifyChanged`, 바인딩이 부른다)이 오면 바로 읽는다.
  *            버스는 최대 한 번만 배달하므로 주기적인 읽기가 놓친 변경을 메운다. 바꾼 서버는 쓰기가 끝나면 버스 `sd.changed` 를 낸다.
  *          - 보이는 내용(기간 안의 점검과 공지)의 해시가 바뀌면 `takeStatusChange` 가 true 이다. 다시 읽기나 기간 경계에서 바뀌며, 시작과 끝은 다시 읽지 않아도 보이는 내용이 바뀐다. 바인딩이 이 서버의 모든 클라이언트에 알린다.
- *          - 배정은 서버 종류마다 기반 계층의 `ServerRegistryReader` 하나(설정 `_listServerKind`)의 스냅샷으로 고른다. 기반 계층의 `ServerSelection` 규칙을 따른다.
+ *          - 배정은 서버 종류마다 기반 계층의 `ServerRegistryReader` 하나(설정 `_listServerKind`)의 스냅샷으로 고른다. 기반 계층의 `ServerSelectionQuery` 규칙을 따른다.
  *            점검이 걸린 종류는 허용 계정만 배정받으며, 그들은 Maintenance 상태의 서버도 후보가 된다.
  *          - 변경 API 는 클라이언트 네트워크 메서드로 열지 않는다. GM 도구(GF_Admin)는 서버 조립 문맥의 `IServerDirectoryControl` 로 부르고 완료를 `takeControlCompletions` 로 받는다.
  *            같은 프로세스의 다른 코드와 테스트는 `setMaintenance` 등을 직접 부르고 `takeCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다.

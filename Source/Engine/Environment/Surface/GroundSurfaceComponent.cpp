@@ -32,7 +32,7 @@ namespace sw
                 if ( pTable == nullptr )
                     return false;
                 const float3 feet = pScene->getWorldPosition();
-                return SurfaceQuery::sampleBelow( *pManager, pTable, feet + float3{ 0.0f, kProbeLift, 0.0f }, feet - float3{ 0.0f, probeLength, 0.0f }, object.getObjectID(), false, outSample );
+                return SurfaceSample::sampleBelow( *pManager, pTable, feet + float3{ 0.0f, kProbeLift, 0.0f }, feet - float3{ 0.0f, probeLength, 0.0f }, object.getObjectID(), false, outSample );
             }
 
             /** @brief 감시 값 `Surface.GroundKind` 입니다. 대상의 `GroundSurfaceComponent` 가 마지막으로 읽은 표면 종류입니다(디딘 것이 없으면 값이 없다). */
@@ -88,7 +88,7 @@ namespace sw
                     return true;
                 }
                 outReply = formatToString( "surface %# kind=%# source=%# material=%# layer=%# point=%#,%#,%# normal=%#,%#,%# velocity=%#,%#,%# water=%# moveScale=%#", listArgument[0],
-                                           sample._pKind->_name.c_str(), SurfaceQuery::getSourceName( sample._source ), sample._material.c_str(),
+                                           sample._pKind->_name.c_str(), SurfaceSample::getSourceName( sample._source ), sample._material.c_str(),
                                            sample._terrainLayer == SurfaceSample::kNoTerrainLayer ? -1 : static_cast<int32>( sample._terrainLayer ), sample._point._x, sample._point._y,
                                            sample._point._z, sample._normal._x, sample._normal._y, sample._normal._z, sample._surfaceVelocity._x, sample._surfaceVelocity._y,
                                            sample._surfaceVelocity._z, sample._waterDepth, sample._pKind->_moveScale );

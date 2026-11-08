@@ -99,7 +99,7 @@ namespace sw
         _survival.update( deltaTime, gameHours, computeAirTemperature() );
         for ( WesternCarcass& carcass : _listCarcass )
         {
-            WesternHunting::ageCarcass( carcass, gameHours );
+            WesternCarcass::ageCarcass( carcass, gameHours );
         }
         _law.update( deltaTime );
         for ( int32 dayIndex = 0; dayIndex < dayCount; ++dayIndex )
@@ -187,7 +187,7 @@ namespace sw
         kill._weaponID = deed._weapon;
         kill._zoneID   = deed._zone;
         kill._hitCount = deed._hitCount;
-        _listCarcass.push_back( WesternHunting::makeCarcass( *_pCatalog, kill ) );
+        _listCarcass.push_back( WesternCarcass::makeCarcass( *_pCatalog, kill ) );
         return true;
     }
 
@@ -199,7 +199,7 @@ namespace sw
         for ( size_t carcassIndex = _listCarcass.size(); carcassIndex > 0; --carcassIndex )
         {
             WesternPelt pelt;
-            if ( WesternHunting::skin( *_pCatalog, _listCarcass[carcassIndex - 1], nullptr, _random, pelt, listItem ) == false )
+            if ( WesternCarcass::skin( *_pCatalog, _listCarcass[carcassIndex - 1], nullptr, _random, pelt, listItem ) == false )
                 continue;
             _listPelt.push_back( pelt );
             _listCarcass.erase( _listCarcass.begin() + static_cast<ptrdiff_t>( carcassIndex - 1 ) );
@@ -216,7 +216,7 @@ namespace sw
         int32 cents = _centsCarry;
         for ( const WesternPelt& pelt : _listPelt )
         {
-            cents += WesternHunting::computePeltPrice( *_pCatalog, pelt );
+            cents += WesternCarcass::computePeltPrice( *_pCatalog, pelt );
         }
         // 할인 비율만큼 값을 더 쳐준다(음수 할인이면 깎는다). 값이 뒤집히지 않게 0 아래로는 내리지 않는다.
         const float32 honorBonus = MathUtil::max( 0.0f, 2.0f - _honor.computePriceScale() );

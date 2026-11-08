@@ -156,7 +156,7 @@ namespace sw
         const vector<float3>& getRiverPoints() const { return _listRiverPoint; }
         float32               getRiverWidth() const { return _riverWidth; }
         void                  setMaterialPath( string_view path ) { _materialPath = path; }
-        /** @brief 이 액체가 내는 표면 종류 이름입니다. 비면 표의 물 종류다(`SurfaceQuery`) — 용암 호수는 같은 물 질의에 `Lava` 를 낸다. */
+        /** @brief 이 액체가 내는 표면 종류 이름입니다. 비면 표의 물 종류다(`SurfaceSample`) — 용암 호수는 같은 물 질의에 `Lava` 를 낸다. */
         const hashed_string& getSurfaceKind() const { return _surfaceKind; }
         void                 setSurfaceKind( const hashed_string& kind ) { _surfaceKind = kind; }
 

@@ -2,7 +2,7 @@
 
 #include "Engine/Animation/Facial/IVoiceDecoder.h"
 #include "Engine/Audio/AudioClip.h"
-#include "Engine/Audio/AudioClipDecoder.h"
+#include "Engine/Audio/AudioPcm.h"
 #include "Engine/Content/AssetIO.h"
 
 namespace sw
@@ -21,7 +21,7 @@ namespace sw
                 vector<uint8> bytes;
                 AudioPcm      pcm;
                 AudioClipData clip;
-                if ( AssetIO::readBinaryAsset( assetID, bytes ) == false || AudioClipDecoder::decode( assetID.view(), bytes.data(), bytes.size(), pcm ) == false ||
+                if ( AssetIO::readBinaryAsset( assetID, bytes ) == false || AudioPcm::decode( assetID.view(), bytes.data(), bytes.size(), pcm ) == false ||
                      AudioClipData::convertPcm( pcm, clip ) == false )
                     return false;
                 clip.copyMonoSamples( outListSample );

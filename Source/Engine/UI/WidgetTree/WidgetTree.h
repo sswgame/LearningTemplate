@@ -90,10 +90,10 @@ namespace sw
         friend class Widget;
         friend class UIFocusManager;
         friend class UILayoutPass;
-        friend class UIPaintPass;
+        friend class UIPaintContext;
         friend class UIScreen;
         friend class UIStylePass;
-        friend class UIStyleTransition;
+        friend class UIStyleTransitionState;
 
         /** @brief 번호와 이름을 등록합니다(`Widget::attachToTree` 가 부릅니다). */
         void registerWidget( Widget& widget );
@@ -113,7 +113,7 @@ namespace sw
         vector<WidgetID>                                               _listLayoutDirtyRoot; ///< kLayout 이 올라가다 멈춘 위치입니다(레이아웃 경계, 루트).
         vector<WidgetID>                                               _listPaintDirty;
         vector<WidgetID>                                               _listStyleDirty;
-        unordered_set<WidgetID>                                        _uniqueStyleTransition; ///< 스타일 전환 중인 위젯(`UIStyleTransition` 이 진행한다). 집합이라 같은 위젯이 두 번 들어오지 않고 순서는 상관없다.
+        unordered_set<WidgetID>                                        _uniqueStyleTransition; ///< 스타일 전환 중인 위젯(`UIStyleTransitionState` 이 진행한다). 집합이라 같은 위젯이 두 번 들어오지 않고 순서는 상관없다.
         UIFocusManager*                                                _pFocusManager;         ///< 지금 이 트리에 포커스를 둔 관리자입니다(없으면 nullptr 이며, 트리가 지워질 때 알립니다).
         UIScreen*                                                      _pScreen;               ///< 소유한 화면입니다(UIScreen 생성자가 적습니다).
         WidgetID                                                       _focusedWidget;

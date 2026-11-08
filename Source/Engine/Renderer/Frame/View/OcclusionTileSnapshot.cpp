@@ -6,7 +6,7 @@
 
 namespace sw
 {
-    bool OcclusionTileQuery::isSphereOccluded( const OcclusionTileSnapshot& snapshot, const float3& center, float32 radius )
+    bool OcclusionTileSnapshot::isSphereOccluded( const OcclusionTileSnapshot& snapshot, const float3& center, float32 radius )
     {
         if ( snapshot.isValid() == false )
             return false;
@@ -24,7 +24,7 @@ namespace sw
             const float32 y     = center._y + ( ( corner & 2u ) != 0u ? radius : -radius );
             const float32 z     = center._z + ( ( corner & 4u ) != 0u ? radius : -radius );
             const float32 clipW = x * m._14 + y * m._24 + z * m._34 + m._44;
-            if ( clipW <= OcclusionTileQuery::kMinClipW )
+            if ( clipW <= OcclusionTileSnapshot::kMinClipW )
                 return false;
             const float32 ndcX = ( x * m._11 + y * m._21 + z * m._31 + m._41 ) / clipW;
             const float32 ndcY = ( x * m._12 + y * m._22 + z * m._32 + m._42 ) / clipW;
@@ -48,7 +48,7 @@ namespace sw
         const uint32 firstRow    = MathUtil::min( static_cast<uint32>( MathUtil::clamp( minV, 0.0f, 1.0f ) * snapshot._depthHeight ) / snapshot._tileSize, lastRow );
         const uint32 endColumn   = MathUtil::min( static_cast<uint32>( MathUtil::clamp( maxU, 0.0f, 1.0f ) * snapshot._depthWidth ) / snapshot._tileSize, lastColumn );
         const uint32 endRow      = MathUtil::min( static_cast<uint32>( MathUtil::clamp( maxV, 0.0f, 1.0f ) * snapshot._depthHeight ) / snapshot._tileSize, lastRow );
-        const bool   bTooWide    = endColumn - firstColumn >= OcclusionTileQuery::kMaxTestTiles || endRow - firstRow >= OcclusionTileQuery::kMaxTestTiles;
+        const bool   bTooWide    = endColumn - firstColumn >= OcclusionTileSnapshot::kMaxTestTiles || endRow - firstRow >= OcclusionTileSnapshot::kMaxTestTiles;
         if ( bTooWide )
             return false;
 

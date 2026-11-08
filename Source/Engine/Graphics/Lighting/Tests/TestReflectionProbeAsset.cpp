@@ -59,9 +59,9 @@ namespace
         }
 
         /** @brief 축 방향 여섯(면마다 제 방향을 보고 한 색)의 면입니다. 면 행렬은 단위 행렬이고, 면이 한 색이라 어느 픽셀을 읽어도 같습니다. */
-        static void makeFaces( ReflectionProbeFace ( &outArrFace )[ReflectionProbeFilter::kFaceCount], const float3 ( &arrColor )[ReflectionProbeFilter::kFaceCount] )
+        static void makeFaces( ReflectionProbeFace ( &outArrFace )[ReflectionProbeAsset::kFaceCount], const float3 ( &arrColor )[ReflectionProbeAsset::kFaceCount] )
         {
-            const float3 arrForward[ReflectionProbeFilter::kFaceCount] = {
+            const float3 arrForward[ReflectionProbeAsset::kFaceCount] = {
                 float3{ 1.0f,  0.0f,  0.0f},
                 float3{-1.0f,  0.0f,  0.0f},
                 float3{ 0.0f,  1.0f,  0.0f},
@@ -69,7 +69,7 @@ namespace
                 float3{ 0.0f,  0.0f,  1.0f},
                 float3{ 0.0f,  0.0f, -1.0f},
             };
-            for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeFilter::kFaceCount; ++faceIndex )
+            for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeAsset::kFaceCount; ++faceIndex )
             {
                 ReflectionProbeFace& face = outArrFace[faceIndex];
                 face._size                = 2;
@@ -324,26 +324,26 @@ SW_TEST_CASE( ReflectionProbeAssetTest, SaveToFileCreatesTheFolder )
 /** @brief [ReflectionProbeAssetTest] 필터는 틀린 입력을 이유와 함께 거절하고 비운다 — 범위 밖 크기는 텍셀을 잡기 전에 거른다(잡으면 이 테스트가 메모리에서 멈춘다) */
 SW_TEST_CASE( ReflectionProbeAssetTest, FilterRejectsBadInput )
 {
-    ReflectionProbeFace arrFace[ReflectionProbeFilter::kFaceCount];
-    const float3        arrColor[ReflectionProbeFilter::kFaceCount]{};
+    ReflectionProbeFace arrFace[ReflectionProbeAsset::kFaceCount];
+    const float3        arrColor[ReflectionProbeAsset::kFaceCount]{};
     Util::makeFaces( arrFace, arrColor );
 
     const float3         position{};
     ReflectionProbeAsset data = Util::makeAsset();
     string               error;
-    SW_EXPECT_FALSE( ReflectionProbeFilter::makeFromFaces( position, nullptr, 4, 2, 8, data, &error ) );
+    SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, nullptr, 4, 2, 8, data, &error ) );
     SW_EXPECT_FALSE( error.empty() );
     SW_EXPECT_TRUE( data._listTexel.empty() );
 
     error.clear();
-    SW_EXPECT_FALSE( ReflectionProbeFilter::makeFromFaces( position, arrFace, 4, 2, 0, data, &error ) );
+    SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 4, 2, 0, data, &error ) );
     SW_EXPECT_FALSE( error.empty() );
 
     const uint32 arrBadResolution[] = { ReflectionProbeAsset::kMinResolution - 1u, ReflectionProbeAsset::kMaxResolution + 1u, 0xFFFFFFFFu };
     for ( const uint32 resolution : arrBadResolution )
     {
         error.clear();
-        SW_EXPECT_FALSE( ReflectionProbeFilter::makeFromFaces( position, arrFace, resolution, 2, 8, data, &error ) );
+        SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, resolution, 2, 8, data, &error ) );
         SW_EXPECT_FALSE( error.empty() );
         SW_EXPECT_EQUAL( 0u, data._resolution );
     }
@@ -351,20 +351,20 @@ SW_TEST_CASE( ReflectionProbeAssetTest, FilterRejectsBadInput )
     for ( const uint32 levelCount : arrBadLevel )
     {
         error.clear();
-        SW_EXPECT_FALSE( ReflectionProbeFilter::makeFromFaces( position, arrFace, 4, levelCount, 8, data, &error ) );
+        SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 4, levelCount, 8, data, &error ) );
         SW_EXPECT_FALSE( error.empty() );
         SW_EXPECT_EQUAL( 0u, data._levelCount );
     }
 
     arrFace[3]._listPixel.pop_back();
     error.clear();
-    SW_EXPECT_FALSE( ReflectionProbeFilter::makeFromFaces( position, arrFace, 4, 2, 8, data, &error ) );
+    SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 4, 2, 8, data, &error ) );
     SW_EXPECT_FALSE( error.empty() );
 
     arrFace[3]._listPixel.clear();
     arrFace[3]._size = 0;
     error.clear();
-    SW_EXPECT_FALSE( ReflectionProbeFilter::makeFromFaces( position, arrFace, 4, 2, 8, data, &error ) );
+    SW_EXPECT_FALSE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 4, 2, 8, data, &error ) );
     SW_EXPECT_FALSE( error.empty() );
 }
 
@@ -372,13 +372,13 @@ SW_TEST_CASE( ReflectionProbeAssetTest, FilterRejectsBadInput )
 SW_TEST_CASE( ReflectionProbeAssetTest, FilterKeepsAUniformEnvironment )
 {
     const float3        color{ 0.25f, 0.5f, 2.0f };
-    ReflectionProbeFace arrFace[ReflectionProbeFilter::kFaceCount];
-    const float3        arrColor[ReflectionProbeFilter::kFaceCount] = { color, color, color, color, color, color };
+    ReflectionProbeFace arrFace[ReflectionProbeAsset::kFaceCount];
+    const float3        arrColor[ReflectionProbeAsset::kFaceCount] = { color, color, color, color, color, color };
     Util::makeFaces( arrFace, arrColor );
 
     ReflectionProbeAsset data;
     const float3         position{ 4.0f, 5.0f, 6.0f };
-    SW_REQUIRE_TRUE( ReflectionProbeFilter::makeFromFaces( position, arrFace, 8, 3, 16, data ) );
+    SW_REQUIRE_TRUE( ReflectionProbeAsset::makeFromFaces( position, arrFace, 8, 3, 16, data ) );
     SW_EXPECT_TRUE( data.isValid() );
     SW_EXPECT_TRUE( Util::isNear( position, data._capturePosition, 0.0f ) );
     uint32 wrongTexelCount = 0;
@@ -392,8 +392,8 @@ SW_TEST_CASE( ReflectionProbeAssetTest, FilterKeepsAUniformEnvironment )
 /** @brief [ReflectionProbeAssetTest] 단계 0 의 각 방향은 그쪽을 보는 면의 빛이다 */
 SW_TEST_CASE( ReflectionProbeAssetTest, FilterFoldsEachDirectionFromItsFace )
 {
-    ReflectionProbeFace arrFace[ReflectionProbeFilter::kFaceCount];
-    const float3        arrColor[ReflectionProbeFilter::kFaceCount] = {
+    ReflectionProbeFace arrFace[ReflectionProbeAsset::kFaceCount];
+    const float3        arrColor[ReflectionProbeAsset::kFaceCount] = {
         float3{1.0f, 0.0f, 0.0f},
         float3{2.0f, 0.0f, 0.0f},
         float3{3.0f, 0.0f, 0.0f},
@@ -404,7 +404,7 @@ SW_TEST_CASE( ReflectionProbeAssetTest, FilterFoldsEachDirectionFromItsFace )
     Util::makeFaces( arrFace, arrColor );
 
     ReflectionProbeAsset data;
-    SW_REQUIRE_TRUE( ReflectionProbeFilter::makeFromFaces( float3{}, arrFace, 16, 2, 4, data ) );
+    SW_REQUIRE_TRUE( ReflectionProbeAsset::makeFromFaces( float3{}, arrFace, 16, 2, 4, data ) );
     SW_EXPECT_NEAR( 1.0f, data.sampleLevel( 0, float3{ 1.0f, 0.0f, 0.0f } )._x, 0.001f );
     SW_EXPECT_NEAR( 2.0f, data.sampleLevel( 0, float3{ -1.0f, 0.0f, 0.0f } )._x, 0.001f );
     SW_EXPECT_NEAR( 3.0f, data.sampleLevel( 0, float3{ 0.0f, 1.0f, 0.0f } )._x, 0.001f );
@@ -416,8 +416,8 @@ SW_TEST_CASE( ReflectionProbeAssetTest, FilterFoldsEachDirectionFromItsFace )
 /** @brief [ReflectionProbeAssetTest] 거칠수록 빛이 번진다 — 위만 밝은 둘레에서 마지막 단계의 위쪽은 1 보다 어둡고 0 보다 밝다 */
 SW_TEST_CASE( ReflectionProbeAssetTest, RougherLevelsBlurTheLight )
 {
-    ReflectionProbeFace arrFace[ReflectionProbeFilter::kFaceCount];
-    const float3        arrColor[ReflectionProbeFilter::kFaceCount] = {
+    ReflectionProbeFace arrFace[ReflectionProbeAsset::kFaceCount];
+    const float3        arrColor[ReflectionProbeAsset::kFaceCount] = {
         float3{},
         float3{},
         float3{ 1.0f, 1.0f, 1.0f },
@@ -428,7 +428,7 @@ SW_TEST_CASE( ReflectionProbeAssetTest, RougherLevelsBlurTheLight )
     Util::makeFaces( arrFace, arrColor );
 
     ReflectionProbeAsset data;
-    SW_REQUIRE_TRUE( ReflectionProbeFilter::makeFromFaces( float3{}, arrFace, 16, 3, 64, data ) );
+    SW_REQUIRE_TRUE( ReflectionProbeAsset::makeFromFaces( float3{}, arrFace, 16, 3, 64, data ) );
     const float3  up{ 0.0f, 1.0f, 0.0f };
     const float32 sharp = data.sampleLevel( 0, up )._x;
     const float32 rough = data.sampleLevel( 2, up )._x;

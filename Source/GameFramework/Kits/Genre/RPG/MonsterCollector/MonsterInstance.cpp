@@ -26,7 +26,7 @@ namespace sw
                 MonsterGrowthEvent event;
                 event._id    = learn._moveID;
                 event._level = level;
-                if ( MonsterRules::learnMove( catalog, inoutMonster, learn._moveID ) )
+                if ( MonsterInstance::learnMove( catalog, inoutMonster, learn._moveID ) )
                     event._kind = MonsterGrowthEvent::Kind::LearnedMove;
                 else
                     event._kind = MonsterGrowthEvent::Kind::MoveLearnBlocked;
@@ -85,7 +85,7 @@ namespace sw
         io.enumValue( _status, MonsterStatus::Freeze );
         if ( io.isWriting() || io.isOk() == false )
             return;
-        io.check( 1 <= _level && _level <= MonsterCollectorCatalog::kMaxLevel && 0 <= _exp && 0 <= _friendship && _friendship <= MonsterRules::kMaxFriendship && 0 <= _statusTurns && _statusTurns <= MonsterRules::kMaxStatusTurns );
+        io.check( 1 <= _level && _level <= MonsterCollectorCatalog::kMaxLevel && 0 <= _exp && 0 <= _friendship && _friendship <= MonsterInstance::kMaxFriendship && 0 <= _statusTurns && _statusTurns <= MonsterInstance::kMaxStatusTurns );
         for ( const MonsterMoveSlot& slot : _arrMove )
         {
             io.check( 0 <= slot._pp && slot._pp <= slot._ppMax );
@@ -94,12 +94,12 @@ namespace sw
         for ( int32 statIndex = 0; statIndex < kMonsterStatCount; ++statIndex )
         {
             const int32 ev = _arrEv[statIndex];
-            io.check( 0 <= _arrIv[statIndex] && _arrIv[statIndex] <= MonsterRules::kMaxIv && 0 <= ev && ev <= MonsterRules::kMaxEvPerStat && _arrStat[statIndex] >= 1 );
+            io.check( 0 <= _arrIv[statIndex] && _arrIv[statIndex] <= MonsterInstance::kMaxIv && 0 <= ev && ev <= MonsterInstance::kMaxEvPerStat && _arrStat[statIndex] >= 1 );
             evTotal += ev;
         }
         if ( io.isOk() )
         {
-            io.check( evTotal <= MonsterRules::kMaxEvTotal && 0 <= _hp && _hp <= getMaxHP() );
+            io.check( evTotal <= MonsterInstance::kMaxEvTotal && 0 <= _hp && _hp <= getMaxHP() );
         }
     }
 
@@ -115,7 +115,7 @@ namespace sw
         return true;
     }
 
-    int32 MonsterRules::computeStat( MonsterStat stat, int32 baseStat, int32 iv, int32 ev, int32 level, int32 naturePercent )
+    int32 MonsterInstance::computeStat( MonsterStat stat, int32 baseStat, int32 iv, int32 ev, int32 level, int32 naturePercent )
     {
         const int32 clampedLevel = MathUtil::clamp( level, 1, MonsterCollectorCatalog::kMaxLevel );
         const int32 core         = ( 2 * baseStat + MathUtil::clamp( iv, 0, kMaxIv ) + MathUtil::clamp( ev, 0, kMaxEvPerStat ) / 4 ) * clampedLevel / 100;
@@ -124,7 +124,7 @@ namespace sw
         return ( core + 5 ) * naturePercent / 100;
     }
 
-    void MonsterRules::recomputeStats( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster )
+    void MonsterInstance::recomputeStats( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster )
     {
         const MonsterSpeciesDef* pSpecies = catalog.findSpecies( inoutMonster._speciesID );
         if ( pSpecies == nullptr )
@@ -142,7 +142,7 @@ namespace sw
             inoutMonster._hp = MathUtil::clamp( inoutMonster._hp + inoutMonster.getMaxHP() - oldMaxHP, 1, inoutMonster.getMaxHP() );
     }
 
-    MonsterInstance MonsterRules::createMonster( const MonsterCollectorCatalog& catalog, const hashed_string& speciesID, int32 level, GameRandom& random )
+    MonsterInstance MonsterInstance::createMonster( const MonsterCollectorCatalog& catalog, const hashed_string& speciesID, int32 level, GameRandom& random )
     {
         MonsterInstance          monster;
         const MonsterSpeciesDef* pSpecies = catalog.findSpecies( speciesID );
@@ -196,7 +196,7 @@ namespace sw
         return monster;
     }
 
-    void MonsterRules::addEffortValues( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const MonsterSpeciesDef& defeated )
+    void MonsterInstance::addEffortValues( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const MonsterSpeciesDef& defeated )
     {
         int32 total = 0;
         for ( const int32 ev : inoutMonster._arrEv )
@@ -213,13 +213,13 @@ namespace sw
         recomputeStats( catalog, inoutMonster );
     }
 
-    int64 MonsterRules::computeExpYield( const MonsterSpeciesDef& defeated, int32 defeatedLevel, bool bTrainer )
+    int64 MonsterInstance::computeExpYield( const MonsterSpeciesDef& defeated, int32 defeatedLevel, bool bTrainer )
     {
         const int64 base = static_cast<int64>( defeated._baseExp ) * MathUtil::max( 1, defeatedLevel ) / 7;
         return bTrainer ? base * 3 / 2 : base;
     }
 
-    int32 MonsterRules::gainExp( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, int64 amount, vector<MonsterGrowthEvent>& outListEvent )
+    int32 MonsterInstance::gainExp( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, int64 amount, vector<MonsterGrowthEvent>& outListEvent )
     {
         const MonsterSpeciesDef* pSpecies       = catalog.findSpecies( inoutMonster._speciesID );
         const bool               bCannotGainExp = pSpecies == nullptr || amount <= 0 || inoutMonster._level >= MonsterCollectorCatalog::kMaxLevel;
@@ -248,7 +248,7 @@ namespace sw
         return gained;
     }
 
-    bool MonsterRules::learnMove( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& moveID, int32 replaceSlot )
+    bool MonsterInstance::learnMove( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& moveID, int32 replaceSlot )
     {
         const MonsterMoveDef* pMove = catalog.findMove( moveID );
         if ( pMove == nullptr || inoutMonster.findMoveSlot( moveID ) >= 0 )
@@ -272,7 +272,7 @@ namespace sw
         return true;
     }
 
-    hashed_string MonsterRules::findEvolution( const MonsterCollectorCatalog& catalog, const MonsterInstance& monster, const hashed_string& itemID )
+    hashed_string MonsterInstance::findEvolution( const MonsterCollectorCatalog& catalog, const MonsterInstance& monster, const hashed_string& itemID )
     {
         const MonsterSpeciesDef* pSpecies = catalog.findSpecies( monster._speciesID );
         if ( pSpecies == nullptr )
@@ -292,7 +292,7 @@ namespace sw
         return hashed_string{};
     }
 
-    bool MonsterRules::evolve( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& targetSpeciesID )
+    bool MonsterInstance::evolve( const MonsterCollectorCatalog& catalog, MonsterInstance& inoutMonster, const hashed_string& targetSpeciesID )
     {
         const MonsterSpeciesDef* pFrom = catalog.findSpecies( inoutMonster._speciesID );
         const MonsterSpeciesDef* pTo   = catalog.findSpecies( targetSpeciesID );
@@ -306,7 +306,7 @@ namespace sw
         return true;
     }
 
-    void MonsterRules::restore( MonsterInstance& inoutMonster )
+    void MonsterInstance::restore( MonsterInstance& inoutMonster )
     {
         inoutMonster._hp          = inoutMonster.getMaxHP();
         inoutMonster._status      = MonsterStatus::None;
@@ -397,7 +397,7 @@ namespace sw
     {
         for ( MonsterInstance& monster : _listParty )
         {
-            MonsterRules::restore( monster );
+            MonsterInstance::restore( monster );
         }
     }
 

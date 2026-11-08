@@ -3,7 +3,7 @@
  * @brief 킬캠의 기록과 연출 시간표입니다 — 판정이 끝낸 한 발(출발점 · 방향 · 차례대로의 명중 · 쓰러짐)을 값으로 남기고, 그 값만으로 카메라가 탄을 따라가 명중마다 멈추는 길을 셉니다.
  * @details 기록은 판정의 결과다 — 다시 판정하지 않는다(피해 · 물리 · 네트워크를 두 번 돌리지 않는다). 서버 권위 게임은 서버가 정한 명중을 클라이언트가 이 모양으로 받아 연출한다.
  *          히트스캔은 쏜 쪽이 광선의 명중을 차례로 넣고(`addHit`), 날아가는 탄은 시뮬레이션의 사건(`ProjectileEvent`)을 그대로 붙인다(`addProjectileEvent` — 관통탄은 한 걸음의 명중이 여럿이다).
- *          시간표는 순수 함수다(`KillcamTimeline`) — 언리얼 리플레이 킬캠 · 스나이퍼 엘리트의 총알 카메라처럼 "탄 따라가기 → 명중 클로즈업 → 다음 명중" 이고, 길이는 상한에서 자른다.
+ *          시간표는 순수 함수다(`KillcamShot`) — 언리얼 리플레이 킬캠 · 스나이퍼 엘리트의 총알 카메라처럼 "탄 따라가기 → 명중 클로즈업 → 다음 명중" 이고, 길이는 상한에서 자른다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -71,6 +71,18 @@ namespace sw
         float3             _origin;
         float3             _direction;
         float3             _end;
+
+    public:
+        // 기록 한 발의 연출 길이와 순간의 카메라입니다(순수 함수 — 테스트가 그대로 부른다).
+        // 구간: 출발점 → 명중 0 (따라가기) → 명중 0 멈춤 → 명중 1 (따라가기) → ... → 마지막 명중 멈춤. 명중이 없으면 끝 자리까지 따라간다. 길이는 `_maxSeconds` 에서 자른다.
+        /** @brief 연출 길이(초)입니다. */
+        static float32 computeDuration( const KillcamShot& shot, const KillcamSettings& settings );
+        /** @brief @p seconds 의 카메라입니다(0 이하는 시작, 길이 이상은 끝 — `Done`). */
+        static KillcamPose sample( const KillcamShot& shot, const KillcamSettings& settings, float32 seconds );
+
+    private:
+        /** @brief 길이 안(@p seconds 는 0..길이)의 카메라입니다. */
+        static KillcamPose sampleClamped( const KillcamShot& shot, const KillcamSettings& settings, float32 seconds );
     };
 } // namespace sw
 
@@ -114,20 +126,4 @@ namespace sw
         KillcamPhase _phase{ KillcamPhase::Follow };
     };
 
-    /**
-     * @struct KillcamTimeline
-     * @brief 기록 한 발의 연출 길이와 순간의 카메라입니다(순수 함수 — 테스트가 그대로 부른다).
-     * @details 구간: 출발점 → 명중 0 (따라가기) → 명중 0 멈춤 → 명중 1 (따라가기) → ... → 마지막 명중 멈춤. 명중이 없으면 끝 자리까지 따라간다. 길이는 `_maxSeconds` 에서 자른다.
-     */
-    struct SW_GF_API KillcamTimeline
-    {
-        /** @brief 연출 길이(초)입니다. */
-        static float32 computeDuration( const KillcamShot& shot, const KillcamSettings& settings );
-        /** @brief @p seconds 의 카메라입니다(0 이하는 시작, 길이 이상은 끝 — `Done`). */
-        static KillcamPose sample( const KillcamShot& shot, const KillcamSettings& settings, float32 seconds );
-
-    private:
-        /** @brief 길이 안(@p seconds 는 0..길이)의 카메라입니다. */
-        static KillcamPose sampleClamped( const KillcamShot& shot, const KillcamSettings& settings, float32 seconds );
-    };
 } // namespace sw

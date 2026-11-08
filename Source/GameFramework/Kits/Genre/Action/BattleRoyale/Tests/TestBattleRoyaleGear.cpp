@@ -375,7 +375,7 @@ SW_TEST_CASE( BattleRoyaleLootTest, PlacementHonorsChanceAndKind )
     listSpot[3]._position = sw::float2{ 5.0f, 6.0f };
 
     sw::vector<sw::BattleRoyaleGroundItem> listItem( 3 );
-    SW_EXPECT_EQUAL( 2, sw::BattleRoyaleLootPlacement::placeMapLoot( catalog, loot, listSpot, 42, listItem ) );
+    SW_EXPECT_EQUAL( 2, sw::BattleRoyaleGroundItem::placeMapLoot( catalog, loot, listSpot, 42, listItem ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), listItem.size() );
     SW_EXPECT_EQUAL( 0, listItem[0]._spotIndex );
     SW_EXPECT_EQUAL( 4, listItem[0]._count ); // 2 번 굴림 × 2 개
@@ -384,7 +384,7 @@ SW_TEST_CASE( BattleRoyaleLootTest, PlacementHonorsChanceAndKind )
     SW_EXPECT_NEAR( 5.0f, listItem[1]._position._x, kGearTolerance );
 
     const sw::vector<sw::BattleRoyaleLootSpot> listNone;
-    SW_EXPECT_EQUAL( 0, sw::BattleRoyaleLootPlacement::placeMapLoot( catalog, loot, listNone, 42, listItem ) );
+    SW_EXPECT_EQUAL( 0, sw::BattleRoyaleGroundItem::placeMapLoot( catalog, loot, listNone, 42, listItem ) );
     SW_EXPECT_TRUE( listItem.empty() );
 }
 
@@ -399,15 +399,15 @@ SW_TEST_CASE( BattleRoyaleLootTest, RollTableAppendsSorted )
     sw::vector<sw::BattleRoyaleGroundItem> listItem( 1 );
     const sw::float2                       position{ 8.0f, 9.0f };
 
-    SW_EXPECT_EQUAL( 2, sw::BattleRoyaleLootPlacement::rollTableAt( loot, sw::hashed_string( "sorted" ), position, -1, 2, random, listItem ) );
+    SW_EXPECT_EQUAL( 2, sw::BattleRoyaleGroundItem::rollTableAt( loot, sw::hashed_string( "sorted" ), position, -1, 2, random, listItem ) );
     SW_REQUIRE_EQUAL( size_t( 3 ), listItem.size() );
     SW_EXPECT_EQUAL( sw::hashed_string( "amber" ), listItem[1]._itemID );
     SW_EXPECT_EQUAL( sw::hashed_string( "zinc" ), listItem[2]._itemID );
     SW_EXPECT_EQUAL( 2, listItem[2]._count );
     SW_EXPECT_EQUAL( -1, listItem[2]._spotIndex );
 
-    SW_EXPECT_EQUAL( 0, sw::BattleRoyaleLootPlacement::rollTableAt( loot, sw::hashed_string( "ghost" ), position, 0, 5, random, listItem ) );
-    SW_EXPECT_EQUAL( 0, sw::BattleRoyaleLootPlacement::rollTableAt( loot, sw::hashed_string( "sorted" ), position, 0, 0, random, listItem ) );
+    SW_EXPECT_EQUAL( 0, sw::BattleRoyaleGroundItem::rollTableAt( loot, sw::hashed_string( "ghost" ), position, 0, 5, random, listItem ) );
+    SW_EXPECT_EQUAL( 0, sw::BattleRoyaleGroundItem::rollTableAt( loot, sw::hashed_string( "sorted" ), position, 0, 0, random, listItem ) );
     SW_EXPECT_EQUAL( size_t( 3 ), listItem.size() );
 }
 
@@ -427,10 +427,10 @@ SW_TEST_CASE( BattleRoyaleLootTest, PlacementIsStableWhenSpotsAreAppended )
         spot._kind = sw::hashed_string( "chancy" );
     }
     sw::vector<sw::BattleRoyaleGroundItem> listShort;
-    (void)sw::BattleRoyaleLootPlacement::placeMapLoot( catalog, loot, listSpot, 77, listShort );
+    (void)sw::BattleRoyaleGroundItem::placeMapLoot( catalog, loot, listSpot, 77, listShort );
     SW_EXPECT_FALSE( listShort.empty() );
     sw::vector<sw::BattleRoyaleGroundItem> listAgain;
-    (void)sw::BattleRoyaleLootPlacement::placeMapLoot( catalog, loot, listSpot, 77, listAgain );
+    (void)sw::BattleRoyaleGroundItem::placeMapLoot( catalog, loot, listSpot, 77, listAgain );
     SW_REQUIRE_EQUAL( listShort.size(), listAgain.size() );
 
     listSpot.resize( 60 );
@@ -439,7 +439,7 @@ SW_TEST_CASE( BattleRoyaleLootTest, PlacementIsStableWhenSpotsAreAppended )
         listSpot[index]._kind = sw::hashed_string( "chancy" );
     }
     sw::vector<sw::BattleRoyaleGroundItem> listLong;
-    (void)sw::BattleRoyaleLootPlacement::placeMapLoot( catalog, loot, listSpot, 77, listLong );
+    (void)sw::BattleRoyaleGroundItem::placeMapLoot( catalog, loot, listSpot, 77, listLong );
     SW_REQUIRE_TRUE( listLong.size() >= listShort.size() );
     for ( size_t index = 0; index < listShort.size(); ++index )
     {

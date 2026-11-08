@@ -284,7 +284,7 @@ namespace sw
             Element::of<&ElementRuleCatalog::loadStimulus>( "Stimulus" ).uncounted(),
             Element::of<&ElementRuleCatalog::loadStep>( "Step" ).uncounted(),
         };
-        return XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement ).isClean() && bRoot;
+        return XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement ).isClean() && bRoot;
     }
 
     bool ElementRuleCatalog::loadFlag( const XMLNode& node, string_view sourceName )

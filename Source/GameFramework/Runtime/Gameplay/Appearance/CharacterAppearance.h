@@ -83,7 +83,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 펼친 프리셋입니다. 후보를 모두 뽑고 부모와 합친 구체적인 값이며, 해석기(`AppearanceResolver`)의 입력입니다.
+     * @brief 펼친 프리셋입니다. 후보를 모두 뽑고 부모와 합친 구체적인 값이며, 해석기(`ResolvedAppearance`)의 입력입니다.
      * @details `_listSlot` 은 슬롯 테이블의 모든 슬롯을 테이블 순서대로 가진다. 빈 슬롯은 `_itemID` 가 비어 있다.
      */
     struct SW_GF_API CharacterAppearanceSpec

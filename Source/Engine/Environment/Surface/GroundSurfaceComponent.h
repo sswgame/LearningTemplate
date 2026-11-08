@@ -1,6 +1,6 @@
 /**
  * @file GroundSurfaceComponent.h
- * @brief 캐릭터가 디딘 표면을 프레임마다 한 번 읽어(`SurfaceQuery`) 그 종류의 이동 계수를 같은 오브젝트의 캐릭터 컨트롤러에 넘깁니다.
+ * @brief 캐릭터가 디딘 표면을 프레임마다 한 번 읽어(`SurfaceSample`) 그 종류의 이동 계수를 같은 오브젝트의 캐릭터 컨트롤러에 넘깁니다.
  * @details 눈 · 진흙 · 물에서 걷는 속도가 줄어드는 길이다(`CharacterControllerComponent::applyMoveScale`). 읽은 표면(종류 · 형식 · 법선 · 표면 속도 · 물 깊이)은
  *          진단(`surface.probe` · 감시 값 `Surface.GroundKind`)이 그대로 보여 준다 — 이동 디버거가 "왜 느린가" 를 표면 질의와 같은 값으로 설명한다.
  *          질의는 틱 뒤 게임 스레드에서 한다(물리 질의). 표면을 읽기만 하고 높이장 · 충돌을 고치지 않는다.
@@ -10,7 +10,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Environment/Surface/SurfaceQuery.h"
+#include "Engine/Environment/Surface/SurfaceSample.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 

@@ -16,7 +16,7 @@
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresenceTracker.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Service/OnlineProtocolService.h"
-#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
@@ -29,7 +29,7 @@ namespace sw
      * @class TradeServer
      * @brief 거래 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
-    class SW_KIT_SERVER_API TradeServer final : public OnlineProtocolService<TradeServer, TradeProtocol>
+    class SW_KIT_SERVER_API TradeServer final : public OnlineProtocolService<TradeServer, TradeSessionRecord>
     {
     public:
         static constexpr const utf8* kFeatureFlag = "feature.trade_enabled";

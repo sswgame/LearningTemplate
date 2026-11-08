@@ -106,7 +106,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&CropCatalog::loadCrop>( "Crop" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         rebuildItemIndex(); // 인덱스는 한 번에 만들고, 작물마다 다시 만들지 않는다
         return result._loadedCount;
     }

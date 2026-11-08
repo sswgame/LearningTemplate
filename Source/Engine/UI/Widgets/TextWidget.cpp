@@ -9,7 +9,7 @@
 #include "Engine/UI/Input/UIActionGlyphSource.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Layout/UIScale.h"
-#include "Engine/UI/Render/UIPaintPass.h"
+#include "Engine/UI/Render/UIPaintContext.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw

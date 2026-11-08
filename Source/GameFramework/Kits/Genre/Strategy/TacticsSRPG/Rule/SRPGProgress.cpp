@@ -33,7 +33,7 @@ namespace sw
 
 namespace sw
 {
-    SRPGResult SRPGMission::evaluate( const SRPGBattlefield& field, const SRPGMissionRule& rule )
+    SRPGResult SRPGMissionRule::evaluate( const SRPGBattlefield& field, const SRPGMissionRule& rule )
     {
         if ( field.getTurn() <= 0 )
             return SRPGResult::Ongoing;

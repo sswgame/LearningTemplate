@@ -7,8 +7,8 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
-#include "Engine/UI/WidgetTree/UIEventRouter.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
+#include "Engine/UI/WidgetTree/UIWidgetPath.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/UI/Widgets/SliderWidget.h"
@@ -35,12 +35,12 @@ namespace sw
             return false;
         const WidgetTree& tree = ui.findScreen( screen )->getTree();
         UIWidgetPath      path{};
-        if ( UIEventRouter::makePathTo( tree, widget, path ) == false )
+        if ( UIWidgetPath::makePathTo( tree, widget, path ) == false )
             return false;
         UIActionEvent event{};
         event._action = hashed_string( UIActionName::kAccept );
         WidgetID handler{ kInvalidWidgetID };
-        return UIEventRouter::routeActionEvent( tree, path, event, handler ).isHandled();
+        return UIWidgetPath::routeActionEvent( tree, path, event, handler ).isHandled();
     }
 
     bool UIAccessibilityActions::focus( UISystem& ui, uint32 screen, WidgetID widget )

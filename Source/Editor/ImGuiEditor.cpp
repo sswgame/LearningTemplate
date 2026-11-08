@@ -31,7 +31,7 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/GUI/EditorPlayToolbar.h"
-#include "Editor/Common/GUI/EditorUIContext.h"
+#include "Editor/Common/GUI/EditorUIContextState.h"
 #include "Editor/Common/GUI/Panel/EditorPanelDump.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
@@ -556,7 +556,7 @@ namespace sw::editor
         ImGui::CreateContext();
         ImPlot::CreateContext();
         // 확장 DLL 의 ImGui 사본에 이 컨텍스트를 바인딩한다. 확장마다 CMake 가 만든 바인더를 쓴다. EditorModule 자신은 여기서 CreateContext 를 호출했다.
-        EditorUIContext::publish( EditorUIContextState{ ImGui::GetCurrentContext(), ImPlot::GetCurrentContext() } );
+        EditorUIContextState::publish( EditorUIContextState{ ImGui::GetCurrentContext(), ImPlot::GetCurrentContext() } );
 
         SW_LOG_TRACE_ID( "ImGuiEditor.ConfiguringImGuiIO", "Configuring ImGui IO" );
         ImGuiIO& io = ImGui::GetIO();
@@ -583,7 +583,7 @@ namespace sw::editor
     void ImGuiEditor::shutdownImGuiContext()
     {
         // 글꼴 아틀라스는 컨텍스트가 보관한다. 확장 DLL 의 사본에서 먼저 분리한다.
-        EditorUIContext::publish( EditorUIContextState{} );
+        EditorUIContextState::publish( EditorUIContextState{} );
         if ( ImPlot::GetCurrentContext() != nullptr )
             ImPlot::DestroyContext();
         if ( ImGui::GetCurrentContext() != nullptr )

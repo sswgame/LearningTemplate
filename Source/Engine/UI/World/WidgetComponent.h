@@ -18,7 +18,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/WidgetTree/UIPointerState.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
-#include "Engine/UI/World/WorldWidgetPick.h"
+#include "Engine/UI/World/WorldWidgetHit.h"
 
 namespace sw
 {
@@ -185,7 +185,7 @@ namespace sw
         float2 getWorldTextureSize() const;
         /**
          * @brief World 위젯 트리를 배치하고 칠해 렌더 텍스처 목록을 갱신합니다(위젯 컴포넌트 서비스가 UI 갱신의 그리기 뒤에서 부르며, 배율 1, 뷰포트는 텍스처 크기).
-         * @details 내용이 지난번과 같으면 번호를 올리지 않으므로 렌더러가 텍스처를 다시 그리지 않는다. 트리에 다시 잴 위젯도 무효화도 없으면(`UIPaintPass::canReuseOutput`)
+         * @details 내용이 지난번과 같으면 번호를 올리지 않으므로 렌더러가 텍스처를 다시 그리지 않는다. 트리에 다시 잴 위젯도 무효화도 없으면(`UIPaintContext::canReuseOutput`)
          *          칠하기 · 목록 견주기 자체를 건너뛴다 — 카메라에 안 보이는 위젯도 멈춰 있으면 비용이 없다. 안 보이는 위젯을 절두체로 거르지는 않는다: 보는 뷰(게임 카메라 · 에디터 씬 뷰 ·
          *          다른 렌더 텍스처 카메라)를 게임 스레드가 다 알지 못해, 거르면 다른 뷰에서 비어 보이는 텍스처가 생긴다.
          */

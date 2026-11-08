@@ -216,7 +216,7 @@ namespace sw
         _bHasPreviousVelocity = SW_TRUE;
     }
 
-    CoasterRideStats CoasterRideAnalyzer::analyze( const CoasterTrack& track, const CoasterPhysicsParams& params, float32 maxTime )
+    CoasterRideStats CoasterRideStats::analyze( const CoasterTrack& track, const CoasterPhysicsParams& params, float32 maxTime )
     {
         CoasterRideStats stats;
         stats._length    = track.getLength();
@@ -292,7 +292,7 @@ namespace sw
         return stats;
     }
 
-    void CoasterRideAnalyzer::computeRatings( CoasterRideStats& inoutStats, const CoasterRatingWeights& weights )
+    void CoasterRideStats::computeRatings( CoasterRideStats& inoutStats, const CoasterRatingWeights& weights )
     {
         // 강도는 누르는 G, 띄우는 G, 옆 G, 속도로 정한다. 멀미는 옆 G, 뒤집힘, 에어타임, 강도로 정한다. 흥분은 속도, 에어타임, 뒤집힘, 낙하, 길이로 정하고
         // 너무 센 강도는 깎는다(타이쿤처럼 "너무 무서우면 안 탄다"). 계수는 `CoasterRatingWeights`(데이터)다.

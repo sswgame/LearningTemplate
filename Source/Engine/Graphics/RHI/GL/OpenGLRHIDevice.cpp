@@ -9,7 +9,7 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandContext.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHICommandList.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
@@ -946,7 +946,7 @@ namespace sw
         glGetInteger64v( GL_TIMESTAMP, &now );
         if ( now <= 0 )
             return false;
-        outGPUNanos = RHITimestamp::convertTickToNanos( static_cast<uint64>( now ), 1.0 );
+        outGPUNanos = RHITimestampFrame::convertTickToNanos( static_cast<uint64>( now ), 1.0 );
         return true;
     }
 
@@ -1007,7 +1007,7 @@ namespace sw
             readyMask |= makeGPUTimestampSlotBit( slotIndex );
         }
         // GL 타임스탬프는 나노초다.
-        RHITimestamp::resolve( arrTick, readyMask, 1.0, _timestampFrame );
+        RHITimestampFrame::resolve( arrTick, readyMask, 1.0, _timestampFrame );
     }
 
     IRHISwapChain* OpenGLRHIDevice::createSwapChainInternal( const RHISwapChainDesc& desc )

@@ -14,7 +14,7 @@
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestampFrame.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -906,7 +906,7 @@ namespace sw
                 return false;
             ThreadUtil::yield();
         }
-        outGPUNanos = RHITimestamp::convertTickToNanos( tick, constant::time::kNanosecondsPerSecond / static_cast<float64>( _lastTimestampFrequency ) );
+        outGPUNanos = RHITimestampFrame::convertTickToNanos( tick, constant::time::kNanosecondsPerSecond / static_cast<float64>( _lastTimestampFrequency ) );
         return true;
     }
 
@@ -1005,7 +1005,7 @@ namespace sw
             readyMask |= makeGPUTimestampSlotBit( slotIndex );
         }
         _lastTimestampFrequency = disjointData.Frequency;
-        RHITimestamp::resolve( arrTick, readyMask, constant::time::kNanosecondsPerSecond / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
+        RHITimestampFrame::resolve( arrTick, readyMask, constant::time::kNanosecondsPerSecond / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
     }
 
     void D3D11RHIDevice::beginFrameInternal()

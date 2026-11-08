@@ -7,7 +7,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/FileLocalSlotStorage.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreFactory.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreBackend.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/MemoryLocalStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/Tests/LocalStoreContract.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/Local/ThreadedLocalStore.h"
@@ -122,30 +122,30 @@ SW_TEST_CASE( LocalStoreFileTest, FactoryBuildsFileAndMemoryAndRefusesUnknownBac
     const std::optional<AbsolutePath> rootPath = AbsolutePath::tryMake( root );
     SW_REQUIRE_TRUE( rootPath.has_value() );
     string                  error;
-    LocalStoreConfig        settings{ LocalStoreFactory::kFileBackendName, LocalStoreLocation::absolute( *rootPath ) };
-    unique_ptr<ILocalStore> fileStore = LocalStoreFactory::createLocalStore( "UnitGame", settings, context, error );
+    LocalStoreConfig        settings{ LocalStoreBackend::kFileBackendName, LocalStoreLocation::absolute( *rootPath ) };
+    unique_ptr<ILocalStore> fileStore = LocalStoreBackend::createLocalStore( "UnitGame", settings, context, error );
     SW_REQUIRE_TRUE_MSG( fileStore != nullptr, error.c_str() );
     SW_EXPECT_TRUE( test::LocalStoreContract::write( *fileStore, "cfg/a", test::LocalStoreContract::makeText( "1" ) ) == LocalStoreResult::Ok );
     SW_EXPECT_TRUE( FileUtil::isRegularFile( FileUtil::joinPath( root, "cfg/a.swls" ) ) );
 
-    LocalStoreConfig        memorySettings{ LocalStoreFactory::kMemoryBackendName, LocalStoreLocation::memory() };
-    unique_ptr<ILocalStore> memoryStore = LocalStoreFactory::createLocalStore( "UnitGame", memorySettings, context, error );
+    LocalStoreConfig        memorySettings{ LocalStoreBackend::kMemoryBackendName, LocalStoreLocation::memory() };
+    unique_ptr<ILocalStore> memoryStore = LocalStoreBackend::createLocalStore( "UnitGame", memorySettings, context, error );
     SW_REQUIRE_TRUE( memoryStore != nullptr );
     SW_EXPECT_TRUE( test::LocalStoreContract::read( *memoryStore, "cfg/a" )._result == LocalStoreResult::NotFound ); // 따로 사는 메모리
 
     LocalStoreConfig cloudSettings{ "cloud", LocalStoreLocation::memory() };
     error.clear();
-    SW_EXPECT_NULL( LocalStoreFactory::createLocalStore( "UnitGame", cloudSettings, context, error ) );
+    SW_EXPECT_NULL( LocalStoreBackend::createLocalStore( "UnitGame", cloudSettings, context, error ) );
     SW_EXPECT_TRUE( error.find( "cloud" ) != string::npos );
     {
         // 기반 이름은 키트가 덮지 못한다 — 기반 백엔드도 같은 표에 있어 이름 중복으로 거절되고, 등록은 단언으로 멈춘다.
         test::ScopedAssertCapture assertCapture;
         SW_EXPECT_LOG( "Registration.DuplicateName" );
-        const LocalStoreBackendRegistration reserved{ LocalStoreFactory::kFileBackendName, createNeverUsedLocalStorage };
+        const LocalStoreBackendRegistration reserved{ LocalStoreBackend::kFileBackendName, createNeverUsedLocalStorage };
         if constexpr ( test::ScopedAssertCapture::kAssertsAreActive )
             SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
         error.clear();
-        SW_EXPECT_NOT_NULL( LocalStoreFactory::createLocalStore( "UnitGame", settings, context, error ) ); // 기반 파일 백엔드가 그대로 만든다
+        SW_EXPECT_NOT_NULL( LocalStoreBackend::createLocalStore( "UnitGame", settings, context, error ) ); // 기반 파일 백엔드가 그대로 만든다
     }
-    SW_EXPECT_NOT_NULL( LocalStoreFactory::createLocalStore( "UnitGame", settings, context, error ) ); // 거절된 등록이 풀려도 기반 백엔드는 남는다
+    SW_EXPECT_NOT_NULL( LocalStoreBackend::createLocalStore( "UnitGame", settings, context, error ) ); // 거절된 등록이 풀려도 기반 백엔드는 남는다
 }

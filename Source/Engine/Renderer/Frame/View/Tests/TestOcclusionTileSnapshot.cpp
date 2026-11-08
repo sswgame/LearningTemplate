@@ -48,8 +48,8 @@ namespace
 SW_TEST_CASE( OcclusionTileQueryTest, SphereBehindANearTileIsOccludedAndBehindAFarTileIsNot )
 {
     const float3 center{ 0.0f, 0.0f, 40.0f }; // 화면 가운데, 네 타일 안팎을 덮는다
-    SW_EXPECT_TRUE( OcclusionTileQuery::isSphereOccluded( makeSnapshot( kNear ), center, 1.0f ) );
-    SW_EXPECT_FALSE( OcclusionTileQuery::isSphereOccluded( makeSnapshot( kFar ), center, 1.0f ) );
+    SW_EXPECT_TRUE( OcclusionTileSnapshot::isSphereOccluded( makeSnapshot( kNear ), center, 1.0f ) );
+    SW_EXPECT_FALSE( OcclusionTileSnapshot::isSphereOccluded( makeSnapshot( kFar ), center, 1.0f ) );
 }
 
 /**
@@ -65,8 +65,8 @@ SW_TEST_CASE( OcclusionTileQueryTest, OnlyTheCoveredSideIsOccluded )
             snapshot._listTileDepth[static_cast<size_t>( row ) * kColumns + column] = kNear;
         }
     }
-    const bool bLeftOccluded  = OcclusionTileQuery::isSphereOccluded( snapshot, float3{ -8.0f, 0.0f, 40.0f }, 1.0f );
-    const bool bRightOccluded = OcclusionTileQuery::isSphereOccluded( snapshot, float3{ 8.0f, 0.0f, 40.0f }, 1.0f );
+    const bool bLeftOccluded  = OcclusionTileSnapshot::isSphereOccluded( snapshot, float3{ -8.0f, 0.0f, 40.0f }, 1.0f );
+    const bool bRightOccluded = OcclusionTileSnapshot::isSphereOccluded( snapshot, float3{ 8.0f, 0.0f, 40.0f }, 1.0f );
     SW_EXPECT_TRUE( bLeftOccluded != bRightOccluded ); // 한쪽 반쪽 화면에만 벽이 있다
 }
 
@@ -76,14 +76,14 @@ SW_TEST_CASE( OcclusionTileQueryTest, OnlyTheCoveredSideIsOccluded )
 SW_TEST_CASE( OcclusionTileQueryTest, UnknownCasesStayVisible )
 {
     const OcclusionTileSnapshot wall = makeSnapshot( kNear );
-    SW_EXPECT_FALSE( OcclusionTileQuery::isSphereOccluded( wall, float3{ 0.0f, 0.0f, -10.0f }, 1.0f ) );  // 카메라 뒤
-    SW_EXPECT_FALSE( OcclusionTileQuery::isSphereOccluded( wall, float3{ 500.0f, 0.0f, 40.0f }, 1.0f ) ); // 화면 밖
-    SW_EXPECT_FALSE( OcclusionTileQuery::isSphereOccluded( wall, float3{ 0.0f, 0.0f, 40.0f }, 20.0f ) );  // 타일 여덟 줄을 넘게 덮는다
+    SW_EXPECT_FALSE( OcclusionTileSnapshot::isSphereOccluded( wall, float3{ 0.0f, 0.0f, -10.0f }, 1.0f ) );  // 카메라 뒤
+    SW_EXPECT_FALSE( OcclusionTileSnapshot::isSphereOccluded( wall, float3{ 500.0f, 0.0f, 40.0f }, 1.0f ) ); // 화면 밖
+    SW_EXPECT_FALSE( OcclusionTileSnapshot::isSphereOccluded( wall, float3{ 0.0f, 0.0f, 40.0f }, 20.0f ) );  // 타일 여덟 줄을 넘게 덮는다
 
     OcclusionTileSnapshot broken = makeSnapshot( kNear );
     broken._listTileDepth.pop_back(); // 타일 수가 격자와 맞지 않는다
     SW_EXPECT_FALSE( broken.isValid() );
-    SW_EXPECT_FALSE( OcclusionTileQuery::isSphereOccluded( broken, float3{ 0.0f, 0.0f, 40.0f }, 1.0f ) );
+    SW_EXPECT_FALSE( OcclusionTileSnapshot::isSphereOccluded( broken, float3{ 0.0f, 0.0f, 40.0f }, 1.0f ) );
 }
 
 /**

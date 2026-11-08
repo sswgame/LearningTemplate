@@ -56,7 +56,7 @@ namespace sw
             Element::of<&ActionPlatformerCatalog::_bodySettings>( "Body" ),
             Element::of<&ActionPlatformerCatalog::_parryRules>( "Parry" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         // 등급표는 점수를 등급으로 바꾸는 유일한 근거다 — 코드가 대신 정한 표를 쓰지 않는다.
         if ( _grading._listGrade.empty() )
         {

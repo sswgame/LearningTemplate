@@ -653,7 +653,7 @@ namespace sw
             options._pSettings = physics.findSettings();
             options._userData  = getOwner()->getObjectID();
             options._bodyType  = PhysicsBodyType::Kinematic;
-            if ( PhysicsRagdollBuilder::create( *pScene, *_asset, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(), options, _ragdoll ) == false )
+            if ( PhysicsRagdoll::create( *pScene, *_asset, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(), options, _ragdoll ) == false )
             {
                 _asset = nullptr; // 같은 오류를 프레임마다 내지 않는다. 에셋을 고치면 다시 읽는다.
                 return;
@@ -699,7 +699,7 @@ namespace sw
         _listPendingImpulse.clear();
         // 코드가 오브젝트를 순간이동시켰다. 키네마틱 바디도 그 위치로 바로 옮긴다.
         if ( consumeTeleport() )
-            PhysicsRagdollBuilder::driveToPose( *pScene, _ragdoll, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(), 0.0f );
+            PhysicsRagdoll::driveToPose( *pScene, _ragdoll, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(), 0.0f );
         drivePoweredMotors( *pScene );
     }
 
@@ -717,7 +717,7 @@ namespace sw
             view._listBoneName       = span<const hashed_string>{ _listBoneName.data(), _listBoneName.size() };
             view._listParentIndex    = span<const int32>{ listParent.data(), listParent.size() };
             view._listModelSpaceBone = span<const float4x4>{ _listAnimationModel.data(), _listAnimationModel.size() };
-            PhysicsRagdollBuilder::driveToPoseWithMotors( scene, *_asset, _ragdoll, view, _pUnit->getWorldMatrix(), _poweredMaxTorque );
+            PhysicsRagdoll::driveToPoseWithMotors( scene, *_asset, _ragdoll, view, _pUnit->getWorldMatrix(), _poweredMaxTorque );
             _bMotorsDriven = true;
             return;
         }
@@ -725,7 +725,7 @@ namespace sw
         if ( _bMotorsDriven == false )
             return;
         _listAnimationModel.clear();
-        PhysicsRagdollBuilder::driveToPoseWithMotors( scene, *_asset, _ragdoll, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(), 0.0f );
+        PhysicsRagdoll::driveToPoseWithMotors( scene, *_asset, _ragdoll, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(), 0.0f );
         _bMotorsDriven = false;
     }
 
@@ -786,8 +786,8 @@ namespace sw
             return;
         }
         _listPhysicsModel.resize( _pUnit->getSkeleton().getBoneCount() );
-        PhysicsRagdollBuilder::readBoneTransforms( *pScene, _ragdoll, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(),
-                                                   span<float4x4>{ _listPhysicsModel.data(), _listPhysicsModel.size() } );
+        PhysicsRagdoll::readBoneTransforms( *pScene, _ragdoll, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(),
+                                            span<float4x4>{ _listPhysicsModel.data(), _listPhysicsModel.size() } );
         _bHasPhysicsPose = true;
         if ( _state != RagdollState::Ragdoll )
             return;
@@ -806,7 +806,7 @@ namespace sw
     {
         IPhysicsBodyScene3D* pScene = physics.findScene3D();
         if ( pScene != nullptr && _ragdoll.isEmpty() == false )
-            PhysicsRagdollBuilder::destroy( *pScene, _ragdoll );
+            PhysicsRagdoll::destroy( *pScene, _ragdoll );
         _ragdoll       = PhysicsRagdoll{};
         _bMotorsDriven = false; // 관절이 바디와 함께 사라졌다
         _listAnimationModel.clear();

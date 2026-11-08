@@ -243,7 +243,7 @@ namespace sw
         return loadComposed( text, path, ResourceContext::forType( *StaticType() ).withAsset( assetID ), outLayout );
     }
 
-    bool LiveLinkFacePacket::parse( const uint8* pData, size_t size, const LiveLinkFaceLayout& layout, LiveLinkFaceFrame& outFrame, string& outError )
+    bool LiveLinkFaceFrame::parse( const uint8* pData, size_t size, const LiveLinkFaceLayout& layout, LiveLinkFaceFrame& outFrame, string& outError )
     {
         outFrame = LiveLinkFaceFrame{};
         outError.clear();
@@ -296,7 +296,7 @@ namespace sw
         return true;
     }
 
-    void LiveLinkFacePacket::write( const LiveLinkFaceFrame& frame, uint8 version, vector<uint8>& outBytes )
+    void LiveLinkFaceFrame::write( const LiveLinkFaceFrame& frame, uint8 version, vector<uint8>& outBytes )
     {
         outBytes.clear();
         using Internal = LiveLinkFaceInternal;

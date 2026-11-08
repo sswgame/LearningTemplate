@@ -35,18 +35,18 @@ SW_TEST_CASE( PropScatterTest, SectionModelsNeedNamedMaterials )
     sw::PropScatterModel             plain;
     plain._meshID = "common/models/flowers.mesh";
     listModel.push_back( plain );
-    SW_EXPECT_TRUE( sw::PropScatterMath::validateModels( listModel, "", error ) );
+    SW_EXPECT_TRUE( sw::PropScatterPlacement::validateModels( listModel, "", error ) );
 
     sw::vector<sw::PropScatterModel> listMissing{ makeTree( "common/models/tree_a.mesh" ) };
     listMissing[0]._listSection[1]._materialPath.clear();
-    SW_EXPECT_FALSE( sw::PropScatterMath::validateModels( listMissing, "", error ) );
+    SW_EXPECT_FALSE( sw::PropScatterPlacement::validateModels( listMissing, "", error ) );
 
     sw::vector<sw::PropScatterModel> listTwice{ makeTree( "common/models/tree_a.mesh" ) };
     listTwice[0]._listSection[1]._sectionName = "bark_normaltree";
-    SW_EXPECT_FALSE( sw::PropScatterMath::validateModels( listTwice, "", error ) );
+    SW_EXPECT_FALSE( sw::PropScatterPlacement::validateModels( listTwice, "", error ) );
 
     sw::vector<sw::PropScatterModel> listNoMesh( 1 );
-    SW_EXPECT_FALSE( sw::PropScatterMath::validateModels( listNoMesh, "", error ) );
+    SW_EXPECT_FALSE( sw::PropScatterPlacement::validateModels( listNoMesh, "", error ) );
 }
 
 /** @brief [PropScatterTest] 구간 머티리얼과 컴포넌트 머티리얼을 함께 적으면 어느 쪽이 그릴지 모호해 거절한다. 구간 없는 모델만이면 컴포넌트 머티리얼을 받는다 */
@@ -54,12 +54,12 @@ SW_TEST_CASE( PropScatterTest, SectionAndComponentMaterialAreExclusive )
 {
     sw::string                       error;
     sw::vector<sw::PropScatterModel> listTree{ makeTree( "common/models/tree_a.mesh" ) };
-    SW_EXPECT_FALSE( sw::PropScatterMath::validateModels( listTree, "game/park/materials/palette.material", error ) );
+    SW_EXPECT_FALSE( sw::PropScatterPlacement::validateModels( listTree, "game/park/materials/palette.material", error ) );
     SW_EXPECT_FALSE( error.empty() );
 
     sw::vector<sw::PropScatterModel> listPlain( 1 );
     listPlain[0]._meshID = "common/models/flowers.mesh";
-    SW_EXPECT_TRUE( sw::PropScatterMath::validateModels( listPlain, "game/park/materials/palette.material", error ) );
+    SW_EXPECT_TRUE( sw::PropScatterPlacement::validateModels( listPlain, "game/park/materials/palette.material", error ) );
 }
 
 /** @brief [PropScatterTest] 같은 입력이면 같은 배치다 — 구간을 더해도 배치 계산(모델 번호 · 위치)은 바뀌지 않는다 */
@@ -74,8 +74,8 @@ SW_TEST_CASE( PropScatterTest, PlacementIsDeterministic )
     params._mode      = sw::PropScatterMode::Edge;
     sw::vector<sw::PropScatterPlacement> listFirst;
     sw::vector<sw::PropScatterPlacement> listSecond;
-    sw::PropScatterMath::computePlacements( params, listFirst );
-    sw::PropScatterMath::computePlacements( params, listSecond );
+    sw::PropScatterPlacement::computePlacements( params, listFirst );
+    sw::PropScatterPlacement::computePlacements( params, listSecond );
     SW_REQUIRE_TRUE( listFirst.empty() == false );
     SW_REQUIRE_EQUAL( listFirst.size(), listSecond.size() );
     for ( size_t index = 0; index < listFirst.size(); ++index )

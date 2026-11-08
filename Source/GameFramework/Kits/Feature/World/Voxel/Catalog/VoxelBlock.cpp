@@ -132,7 +132,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&VoxelBlockCatalog::loadBlock>( "Block" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         // 얻는 블록은 같은 카탈로그의 블록이어야 한다 — 모든 블록을 읽은 뒤에 본다(앞 블록이 뒤 블록을 가리킬 수 있다).
         bool bDropsKnown = true;
         for ( const VoxelBlockDef& block : getBlocks() )

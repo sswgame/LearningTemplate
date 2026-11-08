@@ -105,7 +105,7 @@ namespace sw
         void fillRect( const float2& position, const float2& size, const CanvasBrush& brush );
         /**
          * @brief 이미지를 칠합니다. 여백(`_nineSliceMargin`)이 있으면 조각 아홉 개(가운데 조각은 늘려 그립니다)로 그리고, 사각형이 여백 합보다 작으면 여백을 비율대로 줄입니다.
-         * @details 줄이는 규칙은 `SpriteMeshBuilder` 의 월드 9-슬라이스와 같다. 크기가 0이 된 조각은 내지 않는다.
+         * @details 줄이는 규칙은 `SlicedSpriteDef` 의 월드 9-슬라이스와 같다. 크기가 0이 된 조각은 내지 않는다.
          */
         void drawImage( const float2& position, const float2& size, const CanvasBrush& brush );
         /**
@@ -153,7 +153,7 @@ namespace sw
         bool hasClip() const { return _listClip.empty() == false; }
         /**
          * @brief 지금까지 `drawGlyph` 가 래스터화 예산(`GlyphCache::getOrCreateGlyph` 의 `Deferred`) 때문에 못 그린 글리프의 수입니다.
-         * @details 그리기 순회가 위젯마다 앞뒤 값을 견줘, 못 그린 글리프가 있는 위젯을 다음 프레임에 다시 칠한다(`UIPaintPass`). 캐시가 빈 글리프 상태로 굳지 않게 하는 길이다.
+         * @details 그리기 순회가 위젯마다 앞뒤 값을 견줘, 못 그린 글리프가 있는 위젯을 다음 프레임에 다시 칠한다(`UIPaintContext`). 캐시가 빈 글리프 상태로 굳지 않게 하는 길이다.
          */
         uint32 getDeferredGlyphCount() const { return _deferredGlyphCount; }
         /**

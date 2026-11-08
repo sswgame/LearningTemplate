@@ -74,7 +74,7 @@ namespace sw
             Element::of<&ParkElementReader::loadCoaster>( "Coaster" ).uncounted(),
         };
         ParkElementReader reader{ *this, layouts };
-        const bool        bElements = XMLCatalogReader::readInTableOrder( reader, root, sourceName, kArrElement ).isClean();
+        const bool        bElements = XMLCatalogReadResult::readInTableOrder( reader, root, sourceName, kArrElement ).isClean();
         return bRoot && bElements && _listPlacement.empty() == false;
     }
 

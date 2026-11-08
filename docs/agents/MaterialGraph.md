@@ -10,7 +10,7 @@
 
 ```
 rim_glow.matgraph.xml                         저작 파일(팩에 들지 않는다)
-  └ MaterialGraphCompiler   위상 정렬(DependencyGraph 깊이 우선) → 형식 검사 → HLSL 조각 펼치기
+  └ MaterialGraphCompileResult위상 정렬(DependencyGraph 깊이 우선) → 형식 검사 → HLSL 조각 펼치기
       ├ shaders/matgraph/<줄기>_<해시>.hlsl    SW_MATERIAL 칸 + evaluateMaterialGraph
       └ materials/.../rim_glow.gen.material    파라미터 칸 · 순열
           └ rim_glow_red.material              _base 로 값만 바꾼다(언리얼 Material Instance)

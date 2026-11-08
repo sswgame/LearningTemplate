@@ -62,7 +62,7 @@ namespace sw
             Element::of<&MonsterHuntCatalog::_mutagenCatalog>( "Mutagen" ),
             Element::of<&MonsterHuntCatalog::loadContract>( "Contract" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         // 약점은 종류(`kind`)에 따라 표식 · 연금술 물건을 가리킨다 — 갈래가 값에 달려 참조 표 한 줄로 적을 수 없어 여기서 본다. 정책은 표와 같다: 깨진 필수 참조는 로드 실패다
         // (예전에는 오류만 남기고 항목을 둔 채 로드가 성공했다).
         bool bReferenced = true;

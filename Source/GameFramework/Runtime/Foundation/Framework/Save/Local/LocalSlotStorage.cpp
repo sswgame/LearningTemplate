@@ -45,13 +45,13 @@ namespace sw
                 vector<uint8> envelopeBytes;
                 completion._result = storage.readSlot( request._slot, envelopeBytes );
                 if ( completion._result == LocalStoreResult::Ok )
-                    completion._result = LocalSlotEnvelope::open( sealContext, envelopeBytes.data(), envelopeBytes.size(), completion._bytes, completion._formatVersion );
+                    completion._result = LocalSealContext::open( sealContext, envelopeBytes.data(), envelopeBytes.size(), completion._bytes, completion._formatVersion );
                 break;
             }
             case LocalStoreOperation::Write:
             {
                 vector<uint8> envelopeBytes;
-                completion._result = LocalSlotEnvelope::seal( sealContext, request._bytes.data(), request._bytes.size(), request._options, envelopeBytes );
+                completion._result = LocalSealContext::seal( sealContext, request._bytes.data(), request._bytes.size(), request._options, envelopeBytes );
                 if ( completion._result == LocalStoreResult::Ok )
                     completion._result = storage.writeSlot( request._slot, envelopeBytes );
                 break;

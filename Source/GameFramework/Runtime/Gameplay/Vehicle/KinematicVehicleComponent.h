@@ -1,7 +1,7 @@
 /**
  * @file KinematicVehicleComponent.h
  * @brief 바디 없는 탈것(카트 · 썰매 · 수레 · 호버 · 광산 수레) 폰의 이동입니다. 의도를 `KinematicVehicleMotor` 에 전달하고 루트를 옮깁니다.
- *        땅 높이는 물리 광선, 표면(구름 저항 · 그립)은 공통 표면 질의(`SurfaceQuery` — 표면 종류 표)에서 읽습니다.
+ *        땅 높이는 물리 광선, 표면(구름 저항 · 그립)은 공통 표면 질의(`SurfaceSample` — 표면 종류 표)에서 읽습니다.
  */
 #pragma once
 #include "Core/Container/vector.h"

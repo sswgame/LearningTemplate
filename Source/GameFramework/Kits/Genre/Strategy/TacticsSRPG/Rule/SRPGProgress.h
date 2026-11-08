@@ -40,23 +40,14 @@ namespace sw
     };
 
     /** @brief 작전 규칙입니다. */
-    struct SRPGMissionRule
+    struct SW_KIT_API SRPGMissionRule
     {
         vector<int2>  _listGoalCell{};
         int32         _turnLimit{ 0 }; ///< 0 이면 제한이 없다. 버티기이면 이 턴을 넘기면 승리하고, 그 밖의 조건이면 이 턴을 넘기면 패배한다
         SRPGObjective _objective{ SRPGObjective::DefeatAll };
         uint8         _bLoseOnCommander{ SW_TRUE }; ///< 아군 지휘관이 격파되면 패배한다
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @struct SRPGMission
-     * @brief 승패를 판정합니다. 패배를 먼저 봅니다. 아군 전멸, 아군 지휘관 격파, 턴 제한 초과는 같은 순간의 승리보다 앞섭니다.
-     */
-    struct SW_KIT_API SRPGMission
-    {
+        // 승패를 판정합니다. 패배를 먼저 봅니다. 아군 전멸, 아군 지휘관 격파, 턴 제한 초과는 같은 순간의 승리보다 앞섭니다.
         static SRPGResult evaluate( const SRPGBattlefield& field, const SRPGMissionRule& rule );
     };
 } // namespace sw

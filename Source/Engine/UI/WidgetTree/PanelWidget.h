@@ -59,7 +59,7 @@ namespace sw
         void         setClipChildren( bool bClip );
         /**
          * @brief 자식 슬롯의 위 변이 자식 순서대로 내려가는(같거나 커지는) 패널이면 true 입니다(세로 상자, 가로 흐름).
-         * @details 그리기가 자르기 안에 들어오는 자식 범위를 이분 탐색으로 찾는다(`UIPaintPass`). 자식의 렌더 변환은 보지 않으므로,
+         * @details 그리기가 자르기 안에 들어오는 자식 범위를 이분 탐색으로 찾는다(`UIPaintContext`). 자식의 렌더 변환은 보지 않으므로,
          *          렌더 변환으로 슬롯에서 멀리 옮긴 자식은 슬롯이 자르기 밖이면 그려지지 않는다.
          */
         virtual bool isChildOrderTopToBottom() const { return false; }
@@ -85,7 +85,7 @@ namespace sw
         friend class Widget;
         friend class WidgetTree;
         friend class UILayoutPass;
-        friend class UIPaintPass;
+        friend class UIPaintContext;
 
         vector<unique_ptr<Widget>> _listChild;
         PROPERTY( DisplayName = "Clip Children" )

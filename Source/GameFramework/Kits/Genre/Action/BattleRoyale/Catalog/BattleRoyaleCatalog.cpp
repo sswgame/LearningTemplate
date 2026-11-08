@@ -54,7 +54,7 @@ namespace sw
             Element::of<&BattleRoyaleCatalog::loadZone>( "Zone" ),
             Element::of<&BattleRoyaleCatalog::loadSupplyDrop>( "SupplyDrop" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         if ( _zone._listPhase.empty() )
             SW_LOG_WARNING_ID( "BattleRoyaleCatalog.NoZonePhasesZone", "%#: no zone phases - the zone never shrinks", sourceName );
         return result._loadedCount;

@@ -103,7 +103,7 @@ namespace sw
             Element::of<&ElementChart::loadRule>( "Rule" ).uncounted(),
             Element::of<&ElementChart::loadStatus>( "Status" ).uncounted(),
         };
-        (void)XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement );
+        (void)XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement );
         return static_cast<uint32>( _listElement.size() );
     }
 

@@ -86,7 +86,7 @@ SW_TEST_CASE( UIStyleSheetVariantTest, ChildSheetMergesByKey )
 
     UIStyleSheetAsset sheet;
     string            error;
-    SW_REQUIRE_TRUE_MSG( UIStyleSheetLoader::parse( flat, "child.uistyle.xml", sheet, error ), error.c_str() );
+    SW_REQUIRE_TRUE_MSG( UIStyleSheetAsset::parse( flat, "child.uistyle.xml", sheet, error ), error.c_str() );
     SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( sheet._listRule.size() ) );
     const UIStyleRule* pPrimary = Util::findRule( sheet, "primary", 0u );
     SW_REQUIRE_NOT_NULL( pPrimary );
@@ -100,7 +100,7 @@ SW_TEST_CASE( UIStyleSheetVariantTest, TypeVariationClonesRulesBeforeItsOwn )
 {
     UIStyleSheetAsset sheet;
     string            error;
-    SW_REQUIRE_TRUE_MSG( UIStyleSheetLoader::parse( R"(<UIStyleSheet _schemaVersion="1">
+    SW_REQUIRE_TRUE_MSG( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="1">
         <TypeVariation _name="danger" _extends="primary" />
         <TypeVariation _name="dangerSmall" _extends="danger" />
         <Rule _selector="ButtonWidget.danger" _backgroundColor="1,0,0,1" />
@@ -108,7 +108,7 @@ SW_TEST_CASE( UIStyleSheetVariantTest, TypeVariationClonesRulesBeforeItsOwn )
         <Rule _selector="ButtonWidget.primary:hover" _backgroundColor="0,1,0,1" />
         <Rule _selector="ButtonWidget.other" _borderWidth="9" />
     </UIStyleSheet>)",
-                                                    "sheet.uistyle.xml", sheet, error ),
+                                                   "sheet.uistyle.xml", sheet, error ),
                          error.c_str() );
     // 적은 넷 + danger 의 복제 둘(primary 둘) + dangerSmall 의 복제 셋(danger 하나, danger 복제 둘)
     SW_REQUIRE_EQUAL( 9u, static_cast<uint32>( sheet._listRule.size() ) );
@@ -136,8 +136,8 @@ SW_TEST_CASE( UIStyleSheetVariantTest, TypeVariationErrors )
 {
     UIStyleSheetAsset sheet;
     string            error;
-    SW_EXPECT_FALSE( UIStyleSheetLoader::parse( R"(<UIStyleSheet _schemaVersion="1"><TypeVariation _name="a" _extends="nope" /><Rule _selector=".b" _borderWidth="1" /></UIStyleSheet>)", "s", sheet, error ) );
+    SW_EXPECT_FALSE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="1"><TypeVariation _name="a" _extends="nope" /><Rule _selector=".b" _borderWidth="1" /></UIStyleSheet>)", "s", sheet, error ) );
     SW_EXPECT_TRUE( error.find( "no rule uses" ) != string::npos );
-    SW_EXPECT_FALSE( UIStyleSheetLoader::parse( R"(<UIStyleSheet _schemaVersion="1"><TypeVariation _name="a" /></UIStyleSheet>)", "s", sheet, error ) );
-    SW_EXPECT_FALSE( UIStyleSheetLoader::parse( R"(<UIStyleSheet _schemaVersion="1"><TypeVariation _name="a" _extends="a" /></UIStyleSheet>)", "s", sheet, error ) );
+    SW_EXPECT_FALSE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="1"><TypeVariation _name="a" /></UIStyleSheet>)", "s", sheet, error ) );
+    SW_EXPECT_FALSE( UIStyleSheetAsset::parse( R"(<UIStyleSheet _schemaVersion="1"><TypeVariation _name="a" _extends="a" /></UIStyleSheet>)", "s", sheet, error ) );
 }

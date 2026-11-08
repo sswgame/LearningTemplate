@@ -43,7 +43,7 @@ namespace sw
 namespace sw
 {
     /** @brief 제공자 하나의 설정입니다. 시간은 밀리초입니다. */
-    struct PlatformLoginProviderConfig
+    struct SW_KIT_SERVER_API PlatformLoginProviderConfig
     {
         vector<string>            _listClientID{};         ///< Oidc 에서 `aud` 로 받아들이는 client id 이다. 플랫폼마다 다를 수 있다
         string                    _name{};                 ///< `[a-z0-9_]` 형식이며 16자 이하이다. 저장 키에 들어간다
@@ -69,14 +69,8 @@ namespace sw
         int64                     _requestTimeoutMs{ 10000 };
         PlatformLoginProviderKind _kind{ PlatformLoginProviderKind::Oidc };
         uint8                     _bRequireNonce{ SW_FALSE }; ///< Oidc 에서 티켓에 `|<nonce>` 가 있고 토큰의 `nonce` 와 같아야 한다
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 설정에서 제공자를 만들고 설정 목록을 읽는 팩토리입니다. */
-    struct SW_KIT_SERVER_API PlatformLoginProviderFactory
-    {
+        // 설정에서 제공자를 만들고 설정 목록을 읽는 팩토리입니다. */
         /** @brief 설정으로 공통 구현을 만듭니다. @p pHTTPClient 는 빌려 쓰며 이 제공자만 응답을 회수합니다. 응답을 다른 쪽과 나누지 않습니다. 설정이 틀리면 nullptr 을 반환합니다. */
         static unique_ptr<IPlatformLoginProvider> create( const PlatformLoginProviderConfig& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
         /**

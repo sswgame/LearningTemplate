@@ -11,8 +11,8 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalogTable.h"
+#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
 
 namespace sw
 {
@@ -65,7 +65,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&CardBattleCatalog::loadCard>( "Card" ),
         };
-        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool CardBattleCatalog::loadCard( const XMLNode& node, string_view sourceName )

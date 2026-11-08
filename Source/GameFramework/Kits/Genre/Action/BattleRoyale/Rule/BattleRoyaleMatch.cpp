@@ -390,7 +390,7 @@ namespace sw
         drop._time = _time;
         (void)_zone.pickPointInside( _random, drop._position );
         if ( _pLootCatalog != nullptr )
-            (void)BattleRoyaleLootPlacement::rollTableAt( *_pLootCatalog, _pCatalog->getSupplyDropSettings()._tableID, drop._position, constant::invalid_index::kInt32, 1, _random, drop._listItem );
+            (void)BattleRoyaleGroundItem::rollTableAt( *_pLootCatalog, _pCatalog->getSupplyDropSettings()._tableID, drop._position, constant::invalid_index::kInt32, 1, _random, drop._listItem );
         _listSupplyDrop.push_back( drop );
         BattleRoyaleEvent event;
         event._kind     = BattleRoyaleEvent::Kind::SupplyDropLanded;

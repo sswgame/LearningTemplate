@@ -154,7 +154,7 @@ namespace sw
             _store.submit( []( IServiceStoreConnection& connection )
             {
                 ServiceStoreRead<vector<ServiceMailCampaign>> read;
-                read._result = ServiceMailCampaignTable::listCampaigns( connection, read._value );
+                read._result = ServiceMailCampaign::listCampaigns( connection, read._value );
                 return read;
             }, [this]( ServiceStoreRead<vector<ServiceMailCampaign>>& read, ServiceStoreCompletion completion )
             { completeCampaignRefresh( read._result, read._value, completion ); } );

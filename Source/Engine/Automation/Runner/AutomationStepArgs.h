@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Automation/Runner/AutomationImageMetric.h"
+#include "Engine/Automation/Runner/AutomationImage.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationTimeLimits.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"

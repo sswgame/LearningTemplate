@@ -29,24 +29,15 @@ namespace sw
 namespace sw
 {
     /** @brief 바닥에 놓인 아이템 한 무더기입니다. */
-    struct BattleRoyaleGroundItem
+    struct SW_KIT_API BattleRoyaleGroundItem
     {
         float2        _position{};
         hashed_string _itemID{};
         int32         _count{ 0 };
         int32         _spotIndex{ constant::invalid_index::kInt32 }; ///< 나온 지점(보급 상자면 −1)
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @struct BattleRoyaleLootPlacement
-     * @brief 배치를 만드는 규칙입니다. 지점마다 난수를 (지점 번호, 시드) 해시로 따로 만들므로, 목록 끝에 지점을 더해도 앞 지점의 아이템은 그대로입니다(중간을 빼면 뒤 지점의 번호가 바뀌어 달라집니다).
-     * @details 지점의 확률(`_chance`)을 넘으면 `_minRolls`..`_maxRolls` 번 테이블을 굴리고, 같은 아이템은 합쳐서 id 사전순으로 놓는다(결정적이다).
-     */
-    struct SW_KIT_API BattleRoyaleLootPlacement
-    {
+        // 배치를 만드는 규칙입니다. 지점마다 난수를 (지점 번호, 시드) 해시로 따로 만들므로, 목록 끝에 지점을 더해도 앞 지점의 아이템은 그대로입니다(중간을 빼면 뒤 지점의 번호가 바뀌어 달라집니다).
+        // 지점의 확률(`_chance`)을 넘으면 `_minRolls`..`_maxRolls` 번 테이블을 굴리고, 같은 아이템은 합쳐서 id 사전순으로 놓는다(결정적이다).
         /** @brief 맵 전체 배치를 @p outListItem 에 채웁니다(앞의 내용은 지웁니다). 모르는 지점 종류는 건너뛰며, 놓은 무더기 수를 반환합니다. */
         static int32 placeMapLoot( const BattleRoyaleCatalog& catalog, const LootCatalog& lootCatalog, const vector<BattleRoyaleLootSpot>& listSpot, uint32 seed,
                                    vector<BattleRoyaleGroundItem>& outListItem );

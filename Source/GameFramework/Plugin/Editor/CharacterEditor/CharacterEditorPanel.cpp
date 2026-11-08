@@ -39,10 +39,10 @@
 #include "Engine/Scene/Scene.h"
 
 #include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorLocalStore.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceResolver.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceSelection.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
 
 #include <imgui.h>
 

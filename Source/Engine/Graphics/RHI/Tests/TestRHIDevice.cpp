@@ -53,13 +53,13 @@ SW_TEST_CASE( RHIDeviceTest, BackendTypeNameQuery )
     SW_EXPECT_EQUAL( string( "Vulkan" ), string( RHI::getBackendTypeName( RHIBackend::Vulkan ) ) );
     SW_EXPECT_EQUAL( string( "OpenGL" ), string( RHI::getBackendTypeName( RHIBackend::OpenGL ) ) );
 
-    for ( const RHIBackendInfo& info : RHIBackendInfoTable::kArrInfo )
+    for ( const RHIBackendInfo& info : RHIBackendInfo::kArrInfo )
     {
         SW_EXPECT_EQUAL( string( info._pName ), string( RHI::getBackendTypeName( info._backend ) ) );
         SW_EXPECT_TRUE( RHI::getShaderTargetFormat( info._backend ) == info._shaderTarget );
         SW_EXPECT_TRUE( RHIAvailability::query( info._backend )._bGPUCulling == info._capabilities._bGPUCulling );
     }
-    const RHIBackend outOfRange = static_cast<RHIBackend>( std::size( RHIBackendInfoTable::kArrInfo ) );
+    const RHIBackend outOfRange = static_cast<RHIBackend>( std::size( RHIBackendInfo::kArrInfo ) );
     SW_EXPECT_EQUAL( string( "Unknown" ), string( RHI::getBackendTypeName( outOfRange ) ) );
     SW_EXPECT_FALSE( RHIAvailability::isAvailable( outOfRange ) );
 }

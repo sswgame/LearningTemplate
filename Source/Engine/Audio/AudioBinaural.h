@@ -12,7 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Audio/AudioPanner.h"
+#include "Engine/Audio/AudioPanDirection.h"
 
 namespace sw
 {

@@ -7,7 +7,7 @@
 
 #include "Engine/Character/CharacterDataCache.h"
 
-#include "GameFramework/Runtime/Gameplay/Appearance/AppearanceResolver.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/ResolvedAppearance.h"
 
 namespace sw
 {

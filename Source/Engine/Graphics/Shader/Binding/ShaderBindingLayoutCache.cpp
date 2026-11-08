@@ -7,10 +7,10 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
+#include "Engine/Graphics/Shader/Binding/ShaderBindingValidatorIssue.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
-#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
 namespace sw
@@ -47,7 +47,7 @@ namespace sw
                     return false;
 
                 // 리플렉션을 얻는 순간 계약과 대조한다. 어긋나면 로그에 이름과 숫자로 남는다(검증 에러는 안 난다).
-                ShaderBindingValidator::validate( outReflection, targetFormat, shaderPath );
+                ShaderBindingValidatorIssue::validate( outReflection, targetFormat, shaderPath );
                 return true;
             }
         };

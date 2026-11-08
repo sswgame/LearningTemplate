@@ -27,8 +27,8 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/EnumName.h"
-#include "Engine/UserSettings/HardwareDetection.h"
-#include "Engine/UserSettings/UserSettingsFile.h"
+#include "Engine/UserSettings/HardwareDetectionResult.h"
+#include "Engine/UserSettings/UserSettingsFileEntry.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
 
 namespace sw
@@ -270,7 +270,7 @@ namespace sw
     bool UserSettingsManager::loadUserJSON( string_view jsonText, string_view sourceName )
     {
         vector<UserSettingsFileEntry> listEntry;
-        if ( UserSettingsFile::parseJSON( jsonText, sourceName, _schema, listEntry ) == false )
+        if ( UserSettingsFileEntry::parseJSON( jsonText, sourceName, _schema, listEntry ) == false )
             return false;
 
         for ( SettingState& state : _listState )
@@ -322,7 +322,7 @@ namespace sw
                 continue;
             listEntry.push_back( UserSettingsWriteEntry{ listSetting[settingIndex], value } );
         }
-        return UserSettingsFile::makeJSON( _schema, listEntry );
+        return UserSettingsFileEntry::makeJSON( _schema, listEntry );
     }
 
     bool UserSettingsManager::saveUserFile( string_view filePath ) const
@@ -352,7 +352,7 @@ namespace sw
 
     string UserSettingsManager::makeDefaultUserFilePath( string_view gameName )
     {
-        return FileUtil::joinPath( UserDataPath::getConfigDirectory( gameName ), UserSettingsFile::kFileName );
+        return FileUtil::joinPath( UserDataPath::getConfigDirectory( gameName ), UserSettingsFileEntry::kFileName );
     }
 
     // ------------------------------------------------------------------------------
@@ -1128,10 +1128,10 @@ namespace sw
             // 실행마다 새 폴더의 빈 자리다(`reserveUniquePath`) - 프로세스 id 파일을 그대로 쓰면 Windows 가 다시 쓴 id 의 옛 실행 설정을 읽었다.
             const string automatedFolder =
                 bAutomatedRun ? FileUtil::reserveUniquePath( formatToString( "%#/Automation/UserSettings/%#", ProcessRoots::get()._saved.str(), Process::getCurrentProcessID() ), {}, true ) : string{};
-            setUserFilePath( bAutomatedRun ? FileUtil::joinPath( automatedFolder, UserSettingsFile::kFileName ) : makeDefaultUserFilePath( gameName ) );
+            setUserFilePath( bAutomatedRun ? FileUtil::joinPath( automatedFolder, UserSettingsFileEntry::kFileName ) : makeDefaultUserFilePath( gameName ) );
         }
         if ( loadUserFile( getUserFilePath() ) == false && bAutomatedRun == false )
-            (void)applyAutoDetectedPreset( HardwareDetection::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
+            (void)applyAutoDetectedPreset( HardwareDetectionResult::probe() ); // 맞는 프리셋이 없으면 기본값 그대로다
         reapplyAll();
         return SubsystemInitResult::Succeeded;
     }

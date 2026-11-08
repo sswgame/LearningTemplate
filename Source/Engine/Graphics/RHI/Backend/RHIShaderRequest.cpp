@@ -7,7 +7,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
-#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 
 namespace sw
 {
@@ -140,7 +140,7 @@ namespace sw
     uint32 RHIShaderRequest::computeConsumedVertexAttributeMask( const vector<uint8>& vertexBytecode, ShaderTargetFormat targetFormat )
     {
         static_assert( constant::render::kVertexAttributeCount <= 32u, "정점 속성 마스크가 uint32 를 넘는다" );
-        const ShaderReflectionData reflection = ShaderReflection::reflect( vertexBytecode, targetFormat );
+        const ShaderReflectionData reflection = ShaderReflectionData::reflect( vertexBytecode, targetFormat );
         uint32                     mask{ 0 };
         for ( uint32 attributeIndex = 0; attributeIndex < constant::render::kVertexAttributeCount; ++attributeIndex )
         {

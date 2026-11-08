@@ -19,7 +19,7 @@
 namespace sw
 {
     /** @brief 캠페인 하나입니다. */
-    struct ServiceMailCampaign
+    struct SW_KIT_SERVER_API ServiceMailCampaign
     {
         vector<ServiceMailAttachment> _listAttachment{};
         string                        _titleKey{};
@@ -32,14 +32,8 @@ namespace sw
         uint8                         _bLiteralText{ SW_FALSE };
 
         bool isActive( int64 nowMs ) const { return _startMs <= nowMs && nowMs < _endMs; }
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 캠페인 레코드 · 수령 표식입니다(저장소 스레드). */
-    struct SW_KIT_SERVER_API ServiceMailCampaignTable
-    {
+        // 캠페인 레코드 · 수령 표식입니다(저장소 스레드). */
         static const hashed_string& getCampaignTable(); ///< "mail_campaign"
         static const hashed_string& getClaimTable();    ///< "mail_campaign_claim"
 

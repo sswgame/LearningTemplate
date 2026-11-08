@@ -13,8 +13,8 @@
 
 namespace sw
 {
-    int32 BattleRoyaleLootPlacement::placeMapLoot( const BattleRoyaleCatalog& catalog, const LootCatalog& lootCatalog, const vector<BattleRoyaleLootSpot>& listSpot, uint32 seed,
-                                                   vector<BattleRoyaleGroundItem>& outListItem )
+    int32 BattleRoyaleGroundItem::placeMapLoot( const BattleRoyaleCatalog& catalog, const LootCatalog& lootCatalog, const vector<BattleRoyaleLootSpot>& listSpot, uint32 seed,
+                                                vector<BattleRoyaleGroundItem>& outListItem )
     {
         outListItem.clear();
         for ( size_t spotIndex = 0; spotIndex < listSpot.size(); ++spotIndex )
@@ -32,8 +32,8 @@ namespace sw
         return static_cast<int32>( outListItem.size() );
     }
 
-    int32 BattleRoyaleLootPlacement::rollTableAt( const LootCatalog& lootCatalog, const hashed_string& tableID, const float2& position, int32 spotIndex, int32 rollCount,
-                                                  GameRandom& random, vector<BattleRoyaleGroundItem>& outListItem )
+    int32 BattleRoyaleGroundItem::rollTableAt( const LootCatalog& lootCatalog, const hashed_string& tableID, const float2& position, int32 spotIndex, int32 rollCount,
+                                               GameRandom& random, vector<BattleRoyaleGroundItem>& outListItem )
     {
         ItemStackList items;
         for ( int32 rollIndex = 0; rollIndex < rollCount; ++rollIndex )

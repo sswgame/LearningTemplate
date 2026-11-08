@@ -62,7 +62,7 @@ namespace sw
         PROPERTY( DisplayName = "Apply Content Scale", Tooltip = "Multiply by the OS window scale (desktop-style UI only)" )
         bool _bApplyContentScale{ false };
         PROPERTY( DisplayName = "Min Touch Target", Min = 0.0, Tooltip = "Smallest touch target (UI units) - a touch that misses every control picks the nearest one whose box grown to this size holds the point" )
-        float32 _minTouchTargetSize{ 48.0f }; ///< Android 48dp · Apple 44pt 지침(기억). 0 이면 넓히지 않는다(`UIEventRouter::hitTestTouch`)
+        float32 _minTouchTargetSize{ 48.0f }; ///< Android 48dp · Apple 44pt 지침(기억). 0 이면 넓히지 않는다(`UIWidgetPath::hitTestTouch`)
         PROPERTY( DisplayName = "Compact Max Width", Min = 0.0, Tooltip = "A screen narrower than this (density-independent pixels: physical width / content scale) is compact - documents relayout with _when=\"screen.compact\"" )
         float32 _compactMaxWidth{ 600.0f }; ///< Android sw600dp 의 경계(기억, dp = 물리 픽셀 / 창 배율). 리소스 태그 축 `screen` 이 이 값으로 compact · regular 를 고른다(`UISystem::syncScreenTags`)
 

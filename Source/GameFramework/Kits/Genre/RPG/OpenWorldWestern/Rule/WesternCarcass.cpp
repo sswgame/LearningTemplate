@@ -1,0 +1,96 @@
+#include "pch.h"
+
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Rule/WesternCarcass.h"
+
+#include "Core/Math/MathUtil.h"
+
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/LootTable.h"
+
+namespace sw
+{
+    int32 WesternCarcass::computePeltStars( const WesternCatalog& catalog, const WesternKill& kill )
+    {
+        const WesternAnimalDef* pAnimal = catalog.findAnimal( kill._animalID );
+        if ( pAnimal == nullptr )
+            return 0;
+        int32                       stars   = pAnimal->_quality;
+        const WesternHuntWeaponDef* pWeapon = catalog.findHuntWeapon( kill._weaponID );
+        if ( pWeapon != nullptr )
+        {
+            if ( pWeapon->_bRuinsPelt != SW_FALSE )
+                return 0;
+            const uint8 sizeBit = static_cast<uint8>( 1u << static_cast<uint32>( pAnimal->_size ) );
+            if ( ( pWeapon->_sizeMask & sizeBit ) == 0 )
+                --stars;
+        }
+        const WesternHitZoneDef* pZone = catalog.findHitZone( kill._zoneID );
+        if ( pZone != nullptr )
+            stars -= pZone->_penalty;
+        stars -= MathUtil::max( 0, kill._hitCount - 1 ) * catalog.getExtraHitPenalty();
+        return MathUtil::clamp( stars, 0, pAnimal->_quality );
+    }
+
+    WesternCarcass WesternCarcass::makeCarcass( const WesternCatalog& catalog, const WesternKill& kill )
+    {
+        WesternCarcass carcass;
+        carcass._animalID = kill._animalID;
+        carcass._stars    = computePeltStars( catalog, kill );
+        return carcass;
+    }
+
+    void WesternCarcass::ageCarcass( WesternCarcass& inoutCarcass, float32 gameHours )
+    {
+        inoutCarcass._ageHours += MathUtil::max( 0.0f, gameHours );
+    }
+
+    int32 WesternCarcass::computeCarcassStars( const WesternCatalog& catalog, const WesternCarcass& carcass )
+    {
+        const WesternAnimalDef* pAnimal = catalog.findAnimal( carcass._animalID );
+        if ( pAnimal == nullptr || carcass._ageHours >= pAnimal->_decayHours )
+            return 0;
+        const int32 spoiled = carcass._ageHours >= pAnimal->_decayHours * 0.5f ? 1 : 0;
+        return MathUtil::max( 0, carcass._stars - spoiled );
+    }
+
+    bool WesternCarcass::isRotten( const WesternCatalog& catalog, const WesternCarcass& carcass )
+    {
+        const WesternAnimalDef* pAnimal = catalog.findAnimal( carcass._animalID );
+        return pAnimal == nullptr || carcass._ageHours >= pAnimal->_decayHours;
+    }
+
+    bool WesternCarcass::skin( const WesternCatalog& catalog, WesternCarcass& inoutCarcass, const LootCatalog* pLoot, GameRandom& random, WesternPelt& outPelt,
+                               ItemStackList& outItems )
+    {
+        if ( inoutCarcass._bSkinned != SW_FALSE || isRotten( catalog, inoutCarcass ) )
+            return false;
+        outPelt._animalID                     = inoutCarcass._animalID;
+        outPelt._stars                        = computeCarcassStars( catalog, inoutCarcass );
+        inoutCarcass._bSkinned                = SW_TRUE;
+        const WesternAnimalDef* pAnimal       = catalog.findAnimal( inoutCarcass._animalID );
+        const bool              bHasLootTable = pLoot != nullptr && pAnimal != nullptr && pAnimal->_lootTable.empty() == false;
+        if ( bHasLootTable )
+            (void)pLoot->roll( pAnimal->_lootTable, random, outItems );
+        return true;
+    }
+
+    int32 WesternCarcass::computePeltPrice( const WesternCatalog& catalog, const WesternPelt& pelt )
+    {
+        const WesternAnimalDef* pAnimal = catalog.findAnimal( pelt._animalID );
+        if ( pAnimal == nullptr )
+            return 0;
+        return static_cast<int32>( MathUtil::round( pAnimal->_peltPrice * catalog.getGradeScale( pelt._stars ) * 100.0f ) );
+    }
+
+    int32 WesternCarcass::computeCarcassPrice( const WesternCatalog& catalog, const WesternCarcass& carcass )
+    {
+        const WesternAnimalDef* pAnimal = catalog.findAnimal( carcass._animalID );
+        if ( pAnimal == nullptr || isRotten( catalog, carcass ) )
+            return 0;
+        // 사체 값에는 고기 값도 들어 있어서 등급이 0이어도 1성 값을 준다. 가죽을 벗긴 사체는 절반이다.
+        const int32   stars = MathUtil::max( 1, computeCarcassStars( catalog, carcass ) );
+        const float32 scale = carcass._bSkinned != SW_FALSE ? 0.5f : 1.0f;
+        return static_cast<int32>( MathUtil::round( pAnimal->_carcassPrice * catalog.getGradeScale( stars ) * scale * 100.0f ) );
+    }
+} // namespace sw

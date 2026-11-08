@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternGameModeComponent.h"
-#include "GameFramework/Runtime/Gameplay/Interaction/InteractionSelector.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/InteractionView.h"
 
 #include <algorithm>
 
@@ -97,7 +97,7 @@ namespace sw
         }
         InteractionView viewer;
         viewer._position = position;
-        const int32 pick = InteractionSelector::selectBest( viewer, listCandidate, nullptr );
+        const int32 pick = InteractionView::selectBest( viewer, listCandidate, nullptr );
         if ( pick < 0 )
             return nullptr;
         WesternDeedComponent*  pPicked = listDeed[static_cast<size_t>( pick )];

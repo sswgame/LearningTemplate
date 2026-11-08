@@ -60,7 +60,7 @@ namespace sw
         void announce( string_view text, UIAnnouncePriority priority );
         /**
          * @brief 화면 스택 @p ui 의 지금 접근성 트리를 @p outSnapshot 에 새로 뽑습니다. 읽는 순서는 입력을 받는 화면의 위에서 아래(입력을 막는 화면 아래는 뺀다), 그다음 오버레이입니다.
-         * @details 화면마다 위젯 트리 순서입니다(`UIAccessibilityTree::appendTree`). 닫는 중인 화면은 뺀다. 화면 스택을 읽기만 한다 — 브리지가 클라이언트의 물음에 답할 때 부른다.
+         * @details 화면마다 위젯 트리 순서입니다(`UIAccessibilitySnapshot::appendTree`). 닫는 중인 화면은 뺀다. 화면 스택을 읽기만 한다 — 브리지가 클라이언트의 물음에 답할 때 부른다.
          */
         static void populateSnapshot( const UISystem& ui, UIAccessibilitySnapshot& outSnapshot );
 

@@ -15,7 +15,7 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/Transfer/RHITransferUtil.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Graphics/Texture/TextureFormatSelection.h"
+#include "Engine/Graphics/Texture/TextureFormatFamily.h"
 
 /**
  * @brief 텍스처를 읽을 때 버리는 위쪽 밉 수입니다. 사용자 설정 `graphics.textureQuality` 선택지의 `targetValue` 가 넣는다(`engine.settings.xml`, 다시 시작해야 반영).
@@ -104,7 +104,7 @@ namespace sw
             case 98: // DXGI_FORMAT_BC7_UNORM
             case 99:
                 return RHIFormat::BC7_UNORM;
-            case DDSFormat::kDxgiASTC4x4Unorm: // 쿠킹한 형식 변형(`TextureFormatSelection`)
+            case DDSFormat::kDxgiASTC4x4Unorm: // 쿠킹한 형식 변형(`TextureFormatFamily`)
                 return RHIFormat::ASTC_4x4_UNORM;
             case DDSFormat::kEngineDxgiETC2RGBA8:
                 return RHIFormat::ETC2_RGBA8_UNORM;
@@ -182,7 +182,7 @@ namespace sw
         AssetLoadScope    loadScope( "Texture", relativePath );
         // 이 장치가 고른 형식 변형이 쿠킹돼 있으면 그것을 읽는다. 접미사가 비면(BC — 데스크톱) 파일을 묻지도 않아 지금까지와 같은 길이다. 변형이 없는 파일(원본 없는 손 DDS)은 그대로 읽고, 장치가 못 쓰는 형식이면 `createTexture2D` 가 오류로 멈춘다.
         const string formatSuffix = Texture2DInternal::findFormatVariantSuffix();
-        const string variantPath  = formatSuffix.empty() ? string{} : TextureFormatSelection::makeVariantPath( relativePath, formatSuffix );
+        const string variantPath  = formatSuffix.empty() ? string{} : TextureFormatFamily::makeVariantPath( relativePath, formatSuffix );
         const bool   bReadVariant = variantPath.empty() == false && AssetIO::hasAsset( AssetID{ variantPath } );
         if ( DDSLoader::loadFromAsset( bReadVariant ? AssetID{ variantPath } : assetID, outImage ) == false || outImage.isValid() == false )
         {

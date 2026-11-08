@@ -6,8 +6,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/UI/WidgetTree/UIEventRouter.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
+#include "Engine/UI/WidgetTree/UIWidgetPath.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw

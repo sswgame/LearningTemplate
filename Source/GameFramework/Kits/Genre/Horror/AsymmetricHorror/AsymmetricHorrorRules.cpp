@@ -52,7 +52,7 @@ namespace sw
             Element::of<&Catalog::loadCategory>( "Category" ).uncounted(),
             Element::of<&Catalog::loadScore>( "Score" ).uncounted(),
         };
-        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool AsymmetricHorrorRulesCatalog::loadCategory( const XMLNode& node, string_view sourceName )

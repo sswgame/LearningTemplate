@@ -114,7 +114,7 @@ namespace sw
             Element::of<&SurvivalHorrorCatalog::loadDocument>( "Document" ),
             Element::of<&SurvivalHorrorCatalog::loadDeduction>( "Deduction" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         return result._loadedCount;
     }
 

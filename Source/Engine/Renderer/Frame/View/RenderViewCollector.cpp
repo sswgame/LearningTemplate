@@ -115,7 +115,7 @@ namespace sw
                 for ( uint32 viewIndex = 0; viewIndex < viewCount; ++viewIndex )
                 {
                     // 첫 화면이 주 시점이다. 가림 타일은 주 시점의 깊이에서 지었으므로 다른 화면에는 쓰지 않는다.
-                    const bool bOccludedInMain = viewIndex == 0 && pMainOcclusion != nullptr && OcclusionTileQuery::isSphereOccluded( *pMainOcclusion, center, radius );
+                    const bool bOccludedInMain = viewIndex == 0 && pMainOcclusion != nullptr && OcclusionTileSnapshot::isSphereOccluded( *pMainOcclusion, center, radius );
                     if ( bOccludedInMain )
                         continue;
                     screenSize = MathUtil::max( screenSize, LODView::computeScreenSize( pView[viewIndex], center, radius ) );

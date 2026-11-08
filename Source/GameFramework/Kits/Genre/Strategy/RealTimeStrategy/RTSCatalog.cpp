@@ -38,7 +38,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&RTSCatalog::loadUnit>( "Unit" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         // 생산자 · 선행 유닛은 참조 표(`engine/settings/datacatalogreferences.xml`)가 보고 없으면 로드를 멈춘다(예전에는 오류만 남기고 로드가 성공했다).
         return result._loadedCount;
     }

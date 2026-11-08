@@ -130,7 +130,7 @@ namespace sw
         return false;
     }
 
-    float32 KillcamTimeline::computeDuration( const KillcamShot& shot, const KillcamSettings& settings )
+    float32 KillcamShot::computeDuration( const KillcamShot& shot, const KillcamSettings& settings )
     {
         using Internal    = KillcamShotInternal;
         float32 seconds   = 0.0f;
@@ -145,7 +145,7 @@ namespace sw
         return MathUtil::min( seconds, settings._maxSeconds );
     }
 
-    KillcamPose KillcamTimeline::sample( const KillcamShot& shot, const KillcamSettings& settings, float32 seconds )
+    KillcamPose KillcamShot::sample( const KillcamShot& shot, const KillcamSettings& settings, float32 seconds )
     {
         const float32 duration = computeDuration( shot, settings );
         KillcamPose   pose     = sampleClamped( shot, settings, MathUtil::clamp( seconds, 0.0f, duration ) );
@@ -155,7 +155,7 @@ namespace sw
         return pose;
     }
 
-    KillcamPose KillcamTimeline::sampleClamped( const KillcamShot& shot, const KillcamSettings& settings, float32 seconds )
+    KillcamPose KillcamShot::sampleClamped( const KillcamShot& shot, const KillcamSettings& settings, float32 seconds )
     {
         using Internal                    = KillcamShotInternal;
         const vector<KillcamHit>& listHit = shot.getHits();

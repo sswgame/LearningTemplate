@@ -6,7 +6,7 @@
 
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Physics/Collision/ContinuousCollision.h"
+#include "Engine/Physics/Collision/SweepHit.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/PhysicsSettings.h"
 
@@ -19,7 +19,7 @@ namespace sw
                            float32& inoutNearest, bool& inoutHit )
         {
             SweepHit hit{};
-            if ( ContinuousCollision::sweepSphere( from, radius, displacement, box, hit ) == false )
+            if ( SweepHit::sweepSphere( from, radius, displacement, box, hit ) == false )
                 return;
             const float32 distance = hit._hitFraction * length;
             if ( inoutHit == false || distance < inoutNearest )

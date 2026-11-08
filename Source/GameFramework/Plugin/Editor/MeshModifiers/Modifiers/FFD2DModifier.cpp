@@ -1,7 +1,7 @@
 /**
  * @file FFD2DModifier.cpp
  * @brief 스프라이트 사각형 메시(XY 평면)에 2 차원 격자 자유 형태 변형(베른슈타인 FFD)을 거는 모디파이어입니다. Z 는 그대로 둡니다.
- * @details 스프라이트 메시(`SpriteMeshBuilder`)는 XY 평면에 폭 · 높이로 놓인 사각형이라, 3 차원 격자(`LatticeModifier`) 대신 XY 만 보는 단순판을 따로 둔다.
+ * @details 스프라이트 메시(`SlicedSpriteDef`)는 XY 평면에 폭 · 높이로 놓인 사각형이라, 3 차원 격자(`LatticeModifier`) 대신 XY 만 보는 단순판을 따로 둔다.
  *          격자 상자 = 입력 정점 상자의 XY. 정규 좌표 (s, t) ∈ [0,1]^2 에서 변형 = (s, t) + Σ_i Σ_j B(i; s) · B(j; t) · D_ij,
  *          D_ij 는 제어점 (i, j) 의 이동량(상자 크기 비율)이다. 베른슈타인 기저는 선형 정밀도가 있어 이동량이 모두 0 이면 정확히 항등이다.
  *          이동량은 `Offsets` 목록에 제어점 순서(i + 해상도X · j)로 dx dy 두 개씩 둔다. 모자란 항목은 0, 넘치는 항목은 버린다 —

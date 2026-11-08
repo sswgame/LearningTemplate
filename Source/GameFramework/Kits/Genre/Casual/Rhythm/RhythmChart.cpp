@@ -213,7 +213,7 @@ namespace sw
             Element::of<&RhythmElementReader::loadNote>( "Note" ).uncounted(),
         };
         RhythmElementReader reader{ *this, {}, {} };
-        bValid                                  = XMLCatalogReader::readInDocumentOrder( reader, root, sourceName, kArrElement ).isClean() && bValid;
+        bValid                                  = XMLCatalogReadResult::readInDocumentOrder( reader, root, sourceName, kArrElement ).isClean() && bValid;
         vector<RhythmBpmChange>&  listBpmChange = reader._listBpmChange;
         const vector<RhythmStop>& listStop      = reader._listStop;
         // `<Bpm>` 이 없으면 루트의 bpm 하나가 처음부터 끝까지의 빠르기다.

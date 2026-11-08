@@ -4,7 +4,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
-#include "Engine/UI/Accessibility/UIAccessibilityTree.h"
+#include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
@@ -63,7 +63,7 @@ namespace sw
         // 포커스는 한 화면에만 있다. 노드 번호는 스냅샷 전체의 번호라 `appendTree` 가 정한 `_focusedNode` 가 그대로 쓰인다.
         const UIFocusManager& focus         = ui.getInputRouter().getFocusManager();
         const WidgetID        focusedWidget = focus.getFocusedTree() == &screen.getTree() ? focus.getFocusedWidget() : kInvalidWidgetID;
-        UIAccessibilityTree::appendTree( screen.getTree(), screen.getHandle(), focusedWidget, inoutSnapshot );
+        UIAccessibilitySnapshot::appendTree( screen.getTree(), screen.getHandle(), focusedWidget, inoutSnapshot );
     }
 
     void UIAccessibilityService::populateSnapshot( const UISystem& ui, UIAccessibilitySnapshot& outSnapshot )

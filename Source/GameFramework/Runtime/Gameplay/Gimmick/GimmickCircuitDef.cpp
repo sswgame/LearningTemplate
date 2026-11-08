@@ -83,7 +83,7 @@ namespace sw
             Element::of<&GimmickCircuitDef::loadNode>( "Node" ).uncounted(),
             Element::of<&GimmickCircuitDef::loadWire>( "Wire" ).uncounted(),
         };
-        return XMLCatalogReader::readInDocumentOrder( *this, root, _sourceName, kArrElement ).isClean() && bRoot;
+        return XMLCatalogReadResult::readInDocumentOrder( *this, root, _sourceName, kArrElement ).isClean() && bRoot;
     }
 
     bool GimmickCircuitDef::loadNode( const XMLNode& element, string_view sourceName )

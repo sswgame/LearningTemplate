@@ -14,7 +14,7 @@ namespace sw
         shared_ptr<const void> parseSheet( string_view text, string_view path, string& outError )
         {
             shared_ptr<UIStyleSheetAsset> sheet = make_shared<UIStyleSheetAsset>();
-            if ( UIStyleSheetLoader::parse( text, path, *sheet, outError ) == false )
+            if ( UIStyleSheetAsset::parse( text, path, *sheet, outError ) == false )
                 return {};
             return sheet;
         }

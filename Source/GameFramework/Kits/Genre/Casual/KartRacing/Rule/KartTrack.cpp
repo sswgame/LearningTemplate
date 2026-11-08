@@ -405,7 +405,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&KartTrackCatalog::loadTrack>( "Track" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         return result._loadedCount;
     }
 

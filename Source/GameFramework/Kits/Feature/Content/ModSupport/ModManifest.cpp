@@ -188,7 +188,7 @@ namespace sw
             Element::of<&ModManifest::readOverride>( "Override" ).uncounted(),
             Element::of<&ModManifest::readLayer>( "Layer" ).uncounted(),
         };
-        if ( XMLCatalogReader::readInDocumentOrder( manifest, root, sourceName, kArrElement ).isClean() == false )
+        if ( XMLCatalogReadResult::readInDocumentOrder( manifest, root, sourceName, kArrElement ).isClean() == false )
             return false;
         for ( const ModDependency& dependency : manifest._listDependency )
         {

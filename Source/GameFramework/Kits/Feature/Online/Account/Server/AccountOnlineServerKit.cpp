@@ -135,7 +135,7 @@ namespace sw
                                                         const IClock& clock, string& outError )
             {
                 vector<PlatformLoginProviderConfig> listSettings;
-                if ( OnlineProviderFile::read<PlatformLoginProviderConfig>( providersFile, trustFile, "_platformProvidersFile", "_platformTrustFile", &PlatformLoginProviderFactory::readEntry,
+                if ( OnlineProviderFile::read<PlatformLoginProviderConfig>( providersFile, trustFile, "_platformProvidersFile", "_platformTrustFile", &PlatformLoginProviderConfig::readEntry,
                                                                             listSettings, outError ) == false )
                     return false;
                 if ( _platformProviders.initialize( listSettings, OnlineProviderFile::getTrustText( trustFile ), clock, outError ) == false )

@@ -1,7 +1,7 @@
 /**
  * @file UIAccessibilityTypes.h
  * @brief 위젯이 스크린 리더(운영체제 접근성 API)에 내보이는 값입니다: 역할, 상태 비트, 이름 · 값 · 범위.
- * @details 위젯이 자기 모습을 `Widget::describeAccessible` 로 이 값에 적고, 접근성 트리(`UIAccessibilityTree`)가 화면의 위젯 트리에서 읽어 모은다.
+ * @details 위젯이 자기 모습을 `Widget::describeAccessible` 로 이 값에 적고, 접근성 트리(`UIAccessibilitySnapshot`)가 화면의 위젯 트리에서 읽어 모은다.
  *          역할 · 상태는 UI 자동화(Windows UI Automation, Linux AT-SPI)가 공통으로 가진 것만 둔다 — 플랫폼 번호로의 바꿈은 각 플랫폼 브리지가 한다.
  */
 #pragma once

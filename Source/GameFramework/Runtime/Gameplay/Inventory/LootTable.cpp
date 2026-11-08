@@ -50,7 +50,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&LootCatalog::loadTable>( "Table" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         for ( const LootTableDef& table : getAll() )
         {
             for ( const LootEntry& entry : table._listEntry )

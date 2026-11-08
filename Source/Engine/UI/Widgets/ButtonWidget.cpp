@@ -4,7 +4,7 @@
 
 #include "Core/String/hashed_string.h"
 
-#include "Engine/UI/Accessibility/UIAccessibilityTree.h"
+#include "Engine/UI/Accessibility/UIAccessibilitySnapshot.h"
 #include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
@@ -127,7 +127,7 @@ namespace sw
     {
         outInfo._role  = AccessibleRole::Button;
         outInfo._bLeaf = true;
-        outInfo._name  = getAccessibleName().empty() ? UIAccessibilityTree::collectLabel( *this ) : getAccessibleName();
+        outInfo._name  = getAccessibleName().empty() ? UIAccessibilitySnapshot::collectLabel( *this ) : getAccessibleName();
         if ( _bPressed )
             outInfo._states |= AccessibleState::kPressed;
     }

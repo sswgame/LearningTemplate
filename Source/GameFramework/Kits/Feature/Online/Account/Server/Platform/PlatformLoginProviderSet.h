@@ -1,7 +1,7 @@
 /**
  * @file PlatformLoginProviderSet.h
  * @brief 설정 목록(`PlatformLoginProviderConfig`)에서 외부 로그인 제공자를 만들고, 제공자마다 쓸 HTTP 클라이언트와 TLS 컨텍스트를 소유합니다.
- * @details - 제공자는 응답을 자기만 회수하므로(`PlatformLoginProviderFactory::create`) 제공자마다 HTTP 클라이언트 하나를 둡니다.
+ * @details - 제공자는 응답을 자기만 회수하므로(`PlatformLoginProviderConfig::create`) 제공자마다 HTTP 클라이언트 하나를 둡니다.
  *            애플 로그인(`AppleSignIn`)은 JWKS 용과 교환 · 철회 용 둘을 둡니다.
  *          - `https://` 주소(JWKS, 프로필 API)의 호스트마다 클라이언트 TLS 컨텍스트를 만듭니다. 서버 체인은 @p trustFile(CA 번들 PEM)로 검증하고 이름도 봅니다.
  *            `https://` 주소가 있는데 신뢰 파일이 없으면 오류입니다. 개발용 인증서로 조용히 바꾸면 실제 제공자에 닿지 못한 채 기동이 끝나기 때문입니다.

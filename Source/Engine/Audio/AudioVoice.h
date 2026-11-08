@@ -14,7 +14,7 @@
 #include "Engine/Audio/AudioBlock.h"
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioClip.h"
-#include "Engine/Audio/AudioPanner.h"
+#include "Engine/Audio/AudioPanDirection.h"
 #include "Engine/Audio/AudioStream.h"
 #include "Engine/Audio/DSP/AudioBiquad.h"
 
@@ -25,7 +25,7 @@ namespace sw
     /**
      * @class AudioVoice
      * @brief 재생 중인 소리 하나입니다.
-     * @details 팬 법칙: 모노 소스는 방향을 `AudioPanner` 가 레이아웃의 채널별 게인으로 바꾼다(스테레오는 등전력, 가운데에서 채널마다 -3 dB).
+     * @details 팬 법칙: 모노 소스는 방향을 `AudioPanDirection` 가 레이아웃의 채널별 게인으로 바꾼다(스테레오는 등전력, 가운데에서 채널마다 -3 dB).
      *          스테레오 소스는 어느 레이아웃에서나 앞 두 채널(FL FR)의 밸런스다. 가운데에서 두 채널이 0 dB 이고, 한쪽으로 갈수록 반대쪽이 줄어든다.
      *          로우패스는 패닝 전에 소스 채널(1 · 2)에 건다. 그래서 필터 비용이 출력 채널 수와 상관없다.
      *          바이노럴 레이아웃의 3D 모노 소리는 패너 게인 대신 HRTF(`AudioBinauralFilter`)가 두 귀 신호를 만들고, 볼륨만 두 채널에 같게 곱한다.

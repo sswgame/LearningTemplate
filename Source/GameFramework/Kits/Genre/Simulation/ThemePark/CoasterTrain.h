@@ -59,7 +59,7 @@ namespace sw
         float32              _stallSpeed{ 0.3f };          ///< 승차 평가에서 이 속도보다 느리면 "거의 멈춤" 으로 본다(m/s)
         float32              _stallSeconds{ 3.0f };        ///< 승차 평가에서 체인, 스테이션, 부스터 밖에서 이 시간 동안 거의 멈춰 있으면 멈춤으로 본다(s)
         float32              _gForceWarmupSeconds{ 0.5f }; ///< 승차 평가에서 출발 직후 이 시간 동안은 G 를 측정하지 않는다(첫 차분이 없기 때문이다, s)
-        CoasterRatingWeights _ratingWeights{};             ///< `CoasterRideAnalyzer::analyze` 가 평가를 낼 때 쓴다
+        CoasterRatingWeights _ratingWeights{};             ///< `CoasterRideStats::analyze` 가 평가를 낼 때 쓴다
     };
 } // namespace sw
 
@@ -142,7 +142,7 @@ namespace sw
      * @brief 한 바퀴를 탄 결과입니다. 평가 셋은 0..10 이며 롤러코스터 타이쿤과 같은 축(흥분, 강도, 멀미)입니다. 식은 단순하게 따로 정했습니다.
      * @details 에어타임은 수직 G 가 0 아래인 시간이고, 뒤집힘은 좌석 위가 땅을 향했다가 돌아온 횟수이며, 낙하는 2 m 넘게 내려간 구간 수이다.
      */
-    struct CoasterRideStats
+    struct SW_KIT_API CoasterRideStats
     {
         float32 _lapTime{ 0.0f };
         float32 _length{ 0.0f };
@@ -161,19 +161,9 @@ namespace sw
         uint32  _inversionCount{ 0 };
         uint8   _bCompleted{ SW_FALSE }; ///< 한 바퀴를 돌아 시작점을 지났는지 나타낸다
         uint8   _bStalled{ SW_FALSE };   ///< 어디선가 멈춰 버렸는지 나타낸다(언덕을 못 넘은 경우)
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @class CoasterRideAnalyzer
-     * @brief 열차를 스테이션에서 띄워 한 바퀴를 시뮬레이션하고 `CoasterRideStats` 를 만듭니다(타이쿤의 "테스트 운행" 에 해당합니다).
-     * @details 실시간 열차와 같은 물리를 쓴다. 시작점은 거리 0 이고 속도 0 에서 출발한다(스테이션과 체인이 끌어 준다). @p maxTime 안에
-     *          한 바퀴를 못 돌거나 3초 넘게 거의 멈춰 있으면(체인, 스테이션, 부스터 밖) 멈춤으로 보고 끝낸다.
-     */
-    struct SW_KIT_API CoasterRideAnalyzer
-    {
+        // 열차를 스테이션에서 띄워 한 바퀴를 시뮬레이션하고 `CoasterRideStats` 를 만듭니다(타이쿤의 "테스트 운행" 에 해당합니다).
+        // 실시간 열차와 같은 물리를 쓴다. 시작점은 거리 0 이고 속도 0 에서 출발한다(스테이션과 체인이 끌어 준다). @p maxTime 안에
         static CoasterRideStats analyze( const CoasterTrack& track, const CoasterPhysicsParams& params, float32 maxTime = 600.0f );
         /** @brief 측정값으로 세 평가를 채웁니다. `analyze` 가 호출하며, 측정을 따로 모은 쪽도 쓸 수 있게 공개합니다. */
         static void computeRatings( CoasterRideStats& inoutStats, const CoasterRatingWeights& weights );

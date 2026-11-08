@@ -7,9 +7,9 @@
 #include "Engine/Audio/AudioBinaural.h"
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioClip.h"
-#include "Engine/Audio/AudioClipDecoder.h"
 #include "Engine/Audio/AudioDownmix.h"
-#include "Engine/Audio/AudioPanner.h"
+#include "Engine/Audio/AudioPanDirection.h"
+#include "Engine/Audio/AudioPcm.h"
 #include "Engine/Audio/IAudioService.h"
 
 namespace
@@ -49,12 +49,12 @@ SW_TEST_CASE( AudioSurroundTest, PannerKeepsEnergyAndIsContinuous )
     for ( const sw::AudioChannelLayout layout : arrLayout )
     {
         float32 arrPrevious[sw::audio::kMaxChannelCount]{};
-        sw::AudioPanner::computeGains( layout, Internal::makeAzimuth( -180.0f ), arrPrevious );
+        sw::AudioPanDirection::computeGains( layout, Internal::makeAzimuth( -180.0f ), arrPrevious );
         float32 maxStep = 0.0f;
         for ( int32 degrees = -179; degrees <= 180; ++degrees )
         {
             float32 arrGain[sw::audio::kMaxChannelCount]{};
-            sw::AudioPanner::computeGains( layout, Internal::makeAzimuth( static_cast<float32>( degrees ) ), arrGain );
+            sw::AudioPanDirection::computeGains( layout, Internal::makeAzimuth( static_cast<float32>( degrees ) ), arrGain );
             SW_EXPECT_NEAR( 1.0f, Internal::computePower( arrGain ), 1e-4f );
             SW_EXPECT_NEAR( 0.0f, arrGain[sw::audio::kLfeChannelIndex], 1e-7f );
             for ( uint32 channelIndex = 0; channelIndex < sw::audio::kMaxChannelCount; ++channelIndex )
@@ -93,14 +93,14 @@ SW_TEST_CASE( AudioSurroundTest, PannerPlacesSpeakersAndSpreads )
     for ( const SpeakerCase& speakerCase : arrCase )
     {
         float32 arrGain[sw::audio::kMaxChannelCount]{};
-        sw::AudioPanner::computeGains( speakerCase._layout, Internal::makeAzimuth( speakerCase._degrees ), arrGain );
+        sw::AudioPanDirection::computeGains( speakerCase._layout, Internal::makeAzimuth( speakerCase._degrees ), arrGain );
         SW_EXPECT_NEAR( 1.0f, arrGain[speakerCase._channelIndex], 1e-4f );
     }
 
     sw::AudioPanDirection spread;
     spread._mode = sw::AudioPanMode::Surround;
     float32 arrSpread[sw::audio::kMaxChannelCount]{};
-    sw::AudioPanner::computeGains( sw::AudioChannelLayout::Surround51, spread, arrSpread );
+    sw::AudioPanDirection::computeGains( sw::AudioChannelLayout::Surround51, spread, arrSpread );
     for ( uint32 channelIndex = 0; channelIndex < 6; ++channelIndex )
     {
         const float32 expected = channelIndex == sw::audio::kLfeChannelIndex ? 0.0f : sw::MathUtil::sqrt( 1.0f / 5.0f );
@@ -110,8 +110,8 @@ SW_TEST_CASE( AudioSurroundTest, PannerPlacesSpeakersAndSpreads )
     // 2D(FrontStereo)는 5.1 에서도 FL · FR 만 쓰고 스테레오와 같은 등전력 값이다.
     float32 arrFront[sw::audio::kMaxChannelCount]{};
     float32 arrStereo[sw::audio::kMaxChannelCount]{};
-    sw::AudioPanner::computeGains( sw::AudioChannelLayout::Surround51, sw::AudioPanDirection::makeStereoPan( 0.3f ), arrFront );
-    sw::AudioPanner::computeGains( sw::AudioChannelLayout::Stereo, sw::AudioPanDirection::makeStereoPan( 0.3f ), arrStereo );
+    sw::AudioPanDirection::computeGains( sw::AudioChannelLayout::Surround51, sw::AudioPanDirection::makeStereoPan( 0.3f ), arrFront );
+    sw::AudioPanDirection::computeGains( sw::AudioChannelLayout::Stereo, sw::AudioPanDirection::makeStereoPan( 0.3f ), arrStereo );
     SW_EXPECT_NEAR( arrStereo[0], arrFront[0], 1e-7f );
     SW_EXPECT_NEAR( arrStereo[1], arrFront[1], 1e-7f );
     SW_EXPECT_NEAR( 0.0f, arrFront[2] + arrFront[4] + arrFront[5], 1e-7f );
@@ -128,7 +128,7 @@ SW_TEST_CASE( AudioSurroundTest, StereoLayoutKeepsTheOldPanLaw )
     {
         const sw::AudioPanDirection direction = Internal::makeAzimuth( degrees );
         float32                     arrGain[sw::audio::kMaxChannelCount]{};
-        sw::AudioPanner::computeGains( sw::AudioChannelLayout::Stereo, direction, arrGain );
+        sw::AudioPanDirection::computeGains( sw::AudioChannelLayout::Stereo, direction, arrGain );
         const float32 theta = ( direction._right + 1.0f ) * sw::MathUtil::kPi * 0.25f;
         SW_EXPECT_NEAR( sw::MathUtil::cos( theta ), arrGain[0], 1e-7f );
         SW_EXPECT_NEAR( sw::MathUtil::sin( theta ), arrGain[1], 1e-7f );
@@ -178,7 +178,7 @@ SW_TEST_CASE( AudioSurroundTest, MultichannelClipKeepsTheCenterChannel )
     sw::AudioWAVEncoder::encodeFloat32( listSample.data(), kFrameCount, 6, sw::AudioChannelLayoutUtil::getChannelMask( sw::AudioChannelLayout::Surround51 ),
                                         sw::audio::kSampleRate, bytes );
     sw::AudioPcm pcm;
-    SW_REQUIRE_TRUE( sw::AudioClipDecoder::decodeWAV( bytes.data(), bytes.size(), pcm ) );
+    SW_REQUIRE_TRUE( sw::AudioPcm::decodeWAV( bytes.data(), bytes.size(), pcm ) );
     SW_EXPECT_EQUAL( 6u, static_cast<uint32>( pcm._channelCount ) );
     sw::AudioClipData clip;
     SW_REQUIRE_TRUE( sw::AudioClipData::convertPcm( pcm, clip ) );

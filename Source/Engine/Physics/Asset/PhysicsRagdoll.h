@@ -62,14 +62,8 @@ namespace sw
         int32 findBodyIndex( PhysicsBodyHandle body ) const;
         /** @brief 바디가 하나도 없으면 true 입니다. */
         bool isEmpty() const { return _listBody.empty(); }
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 래그돌 빌더입니다. 파일 머리말 참고. */
-    struct SW_API PhysicsRagdollBuilder
-    {
+        // 래그돌 빌더입니다. 파일 머리말 참고. */
         /**
          * @brief 에셋의 바디와 관절을 스켈레톤 포즈 위치에 만듭니다(바디는 `createBodies` 로 한 번에 넣습니다).
          * @details 관절로 연결된 바디끼리(`_bCollideJointedBodies` 가 false 일 때)와 에셋이 지정한 쌍은 서로 부딪히지 않는다. 에셋의 뼈가 스켈레톤에 없거나 배열이

@@ -79,7 +79,7 @@ namespace sw
             {
                 uint32  bestFace = 0;
                 float32 bestDot  = -2.0f;
-                for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeFilter::kFaceCount; ++faceIndex )
+                for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeAsset::kFaceCount; ++faceIndex )
                 {
                     const float32 facing = direction.dot( pArrFace[faceIndex]._forward );
                     if ( facing > bestDot )
@@ -301,8 +301,8 @@ namespace sw
 
 namespace sw
 {
-    bool ReflectionProbeFilter::makeFromFaces( const float3& capturePosition, const ReflectionProbeFace* pArrFace, uint32 resolution, uint32 levelCount, uint32 sampleCount,
-                                               ReflectionProbeAsset& outData, string* pOutError )
+    bool ReflectionProbeAsset::makeFromFaces( const float3& capturePosition, const ReflectionProbeFace* pArrFace, uint32 resolution, uint32 levelCount, uint32 sampleCount,
+                                              ReflectionProbeAsset& outData, string* pOutError )
     {
         using Internal = ReflectionProbeAssetInternal;
         outData.clear();

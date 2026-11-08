@@ -12,7 +12,7 @@
 #include "Engine/Automation/AutomationCaptureUtil.h"
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/Runner/AutomationExitCode.h"
-#include "Engine/Automation/Runner/AutomationImageMetric.h"
+#include "Engine/Automation/Runner/AutomationImage.h"
 #include "Engine/Automation/Runner/AutomationRunner.h"
 #include "Engine/Automation/Runner/AutomationRunnerParams.h"
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
@@ -274,7 +274,7 @@ namespace sw
                     return false;
                 }
                 AutomationImageRegion region{};
-                if ( params._region.empty() == false && AutomationImageMetric::tryParseRegion( params._region, region ) == false )
+                if ( params._region.empty() == false && AutomationImage::tryParseRegion( params._region, region ) == false )
                 {
                     outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + params._region + "'";
                     return false;

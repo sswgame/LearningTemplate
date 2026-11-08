@@ -24,7 +24,7 @@ namespace sw
             for ( ServiceRetentionRule& rule : listRule )
             {
                 ServiceRetentionReport   report;
-                const ServiceStoreResult swept = ServiceRetention::sweep( connection, rule, nowMs, settings._maxScanPerRule, settings._maxDeletePerRule, report );
+                const ServiceStoreResult swept = ServiceRetentionRule::sweep( connection, rule, nowMs, settings._maxScanPerRule, settings._maxDeletePerRule, report );
                 sweep._deletedCount += report._deletedCount;
                 if ( report._deletedCount > 0 )
                     SW_LOG_INFO_ID( "ServiceRetentionJob.RetentionSweptTableDeleted", "Retention swept table '%#': deleted %# of %# scanned", rule._table.c_str(), report._deletedCount, report._scannedCount );

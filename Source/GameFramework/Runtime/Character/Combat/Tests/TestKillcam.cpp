@@ -85,32 +85,32 @@ SW_TEST_CASE( KillcamTest, TimelineFollowsThenHoldsEachHit )
     settings._hitHoldSeconds = 0.5f;
     settings._maxSeconds     = 10.0f;
     // 4 m 를 0.4 초, 멈춤 0.5 초, 6 m 를 0.6 초, 멈춤 0.5 초 = 2.0 초
-    SW_EXPECT_NEAR( 2.0f, KillcamTimeline::computeDuration( shot, settings ), 1e-4f );
+    SW_EXPECT_NEAR( 2.0f, KillcamShot::computeDuration( shot, settings ), 1e-4f );
 
-    const KillcamPose start = KillcamTimeline::sample( shot, settings, 0.2f );
+    const KillcamPose start = KillcamShot::sample( shot, settings, 0.2f );
     SW_EXPECT_TRUE( start._phase == KillcamPhase::Follow );
     SW_EXPECT_NEAR( 2.0f, start._bullet._z, 1e-4f ); // 0.2 초 × 10 m/s, 출발 z 0 에서
     SW_EXPECT_EQUAL( 0, start._hitIndex );
     SW_EXPECT_TRUE( start._position._z < start._bullet._z ); // 탄 뒤에서 따라간다
 
-    const KillcamPose hold = KillcamTimeline::sample( shot, settings, 0.6f );
+    const KillcamPose hold = KillcamShot::sample( shot, settings, 0.6f );
     SW_EXPECT_TRUE( hold._phase == KillcamPhase::HitHold );
     SW_EXPECT_EQUAL( 0, hold._hitIndex );
     SW_EXPECT_NEAR( 4.0f, hold._lookAt._z, 1e-4f );
 
-    const KillcamPose second = KillcamTimeline::sample( shot, settings, 1.2f );
+    const KillcamPose second = KillcamShot::sample( shot, settings, 1.2f );
     SW_EXPECT_TRUE( second._phase == KillcamPhase::Follow );
     SW_EXPECT_EQUAL( 1, second._hitIndex );
     SW_EXPECT_NEAR( 7.0f, second._bullet._z, 1e-4f ); // 4 m 에서 0.3 초 더
 
-    const KillcamPose last = KillcamTimeline::sample( shot, settings, 1.8f );
+    const KillcamPose last = KillcamShot::sample( shot, settings, 1.8f );
     SW_EXPECT_TRUE( last._phase == KillcamPhase::HitHold );
     SW_EXPECT_EQUAL( 1, last._hitIndex );
-    SW_EXPECT_TRUE( KillcamTimeline::sample( shot, settings, 2.0f )._phase == KillcamPhase::Done );
+    SW_EXPECT_TRUE( KillcamShot::sample( shot, settings, 2.0f )._phase == KillcamPhase::Done );
 
     settings._maxSeconds = 0.5f; // 길이 상한
-    SW_EXPECT_NEAR( 0.5f, KillcamTimeline::computeDuration( shot, settings ), 1e-4f );
-    SW_EXPECT_TRUE( KillcamTimeline::sample( shot, settings, 0.5f )._phase == KillcamPhase::Done );
+    SW_EXPECT_NEAR( 0.5f, KillcamShot::computeDuration( shot, settings ), 1e-4f );
+    SW_EXPECT_TRUE( KillcamShot::sample( shot, settings, 0.5f )._phase == KillcamPhase::Done );
 }
 
 /** @brief [KillcamTest] 재생은 그 오브젝트의 카메라를 컷 카메라로 걸고 끝나면 푼다. 카메라가 없으면 오류이고, 기록은 고정 용량이다 */

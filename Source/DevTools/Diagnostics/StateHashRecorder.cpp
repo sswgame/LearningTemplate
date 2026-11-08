@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Scene/SceneStateHash.h"
+#include "Engine/Scene/SceneObjectHash.h"
 
 namespace sw
 {

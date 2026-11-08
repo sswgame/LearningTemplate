@@ -20,7 +20,7 @@
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Gameplay/Interaction/InteractionSelector.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/InteractionView.h"
 
 namespace sw
 {

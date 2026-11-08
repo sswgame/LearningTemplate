@@ -141,12 +141,12 @@ namespace sw
 
 namespace sw
 {
-    bool AutomationHangReport::isDeadlineExceeded( float64 elapsedSeconds, float32 limitSeconds, float32 graceSeconds )
+    bool AutomationHangPayload::isDeadlineExceeded( float64 elapsedSeconds, float32 limitSeconds, float32 graceSeconds )
     {
         return elapsedSeconds > static_cast<float64>( limitSeconds ) + static_cast<float64>( graceSeconds );
     }
 
-    uint32 AutomationHangReport::format( const AutomationHangPayload& payload, uint32 elapsedMilliseconds, utf8* pOutText, uint32 capacity )
+    uint32 AutomationHangPayload::format( const AutomationHangPayload& payload, uint32 elapsedMilliseconds, utf8* pOutText, uint32 capacity )
     {
         using Internal = AutomationHangWatchInternal;
         if ( pOutText == nullptr || capacity == 0 )
@@ -235,7 +235,7 @@ namespace sw
         while ( _state.load() == static_cast<uint32>( State::Running ) )
         {
             const float64 elapsedSeconds = static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 - _settings._startSeconds;
-            if ( AutomationHangReport::isDeadlineExceeded( elapsedSeconds, _settings._limitSeconds, _settings._graceSeconds ) )
+            if ( AutomationHangPayload::isDeadlineExceeded( elapsedSeconds, _settings._limitSeconds, _settings._graceSeconds ) )
             {
                 uint32 expected = static_cast<uint32>( State::Running );
                 if ( _state.compare_exchange_strong( expected, static_cast<uint32>( State::Fired ) ) )
@@ -253,7 +253,7 @@ namespace sw
         if ( _snapshot.tryRead( payload ) == false )
             payload = AutomationHangPayload{}; // 한 번도 쓰지 못했거나 갱신 도중에 멈췄다 — 빈 값으로 쓴다
         utf8         arrReport[Internal::kReportCapacity]{};
-        const uint32 length = AutomationHangReport::format( payload, elapsedMilliseconds, arrReport, Internal::kReportCapacity );
+        const uint32 length = AutomationHangPayload::format( payload, elapsedMilliseconds, arrReport, Internal::kReportCapacity );
         if ( payload._reportPath[0] != '\0' )
             (void)FileUtil::writeCrashFile( payload._reportPath, arrReport, length ); // 행 경로 — 못 써도 문맥 · 덤프를 이어 남긴다
         // 크래시와 같은 할당 없는 기록 — 컨텍스트 파일(`Scenario` 키)과 빵부스러기 파일.

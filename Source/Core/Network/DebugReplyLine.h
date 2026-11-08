@@ -2,7 +2,7 @@
  * @file DebugReplyLine.h
  * @brief 서버 디버깅의 "한 줄 답"(개발 명령이 로그 한 줄로 내는 보고)의 길이 상한과, 그 상한을 강제하는 줄 만들기입니다.
  * @details 한 줄 답은 자식 프로세스의 로그 한 줄로 나가 부모의 파이프 읽기를 거친다. 그 길이 상한이 이 파일의 `kMaxBytes` 하나다 —
- *          줄을 쓰는 곳(`SceneStateHash` · `StateHashHistory` · `NetStatsReport` · `NetEmulationReport`)과 읽는 곳, 에디터의 질의 한도가 모두 이 상수를 본다.
+ *          줄을 쓰는 곳(`SceneObjectHash` · `StateHashHistory` · `NetStatsReport` · `NetEmulationReport`)과 읽는 곳, 에디터의 질의 한도가 모두 이 상수를 본다.
  *          길이가 열린 줄은 `makeCapped` 로, 길이가 정해진 줄은 `makeFixed` 로 만든다 — 개별 보고가 상한을 따로 지키지 않는다.
  */
 #pragma once

@@ -124,7 +124,7 @@ namespace sw
         {
             for ( const UIStyleAssignment& assignment : _listRule[ruleIndex]._pRule->_listAssignment )
             {
-                UIStyleSheetLoader::applyAssignment( assignment, style->_value );
+                UIStyleSheetAsset::applyAssignment( assignment, style->_value );
                 style->_setMask |= UIStyleFieldTable::makeBit( assignment._field );
             }
         }

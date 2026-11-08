@@ -244,7 +244,7 @@ namespace sw
         candidate._priority             = interactable.getPriority();
         candidate._bRequiresLineOfSight = pDef->_bLineOfSight;
         float32 distance{ 0.0f };
-        if ( InteractionSelector::isInReach( viewer, candidate, distance ) == false )
+        if ( InteractionView::isInReach( viewer, candidate, distance ) == false )
             return;
         _listCandidate.push_back( candidate );
         _listCandidateComponent.push_back( TComponentHandle<InteractableComponent>{ &interactable } );
@@ -370,7 +370,7 @@ namespace sw
             candidate._position                = pTargetObject->getPrimarySceneComponent() != nullptr ? pTargetObject->getPrimarySceneComponent()->getWorldPosition() : float3{};
             candidate._maxDistance             = pTarget->getDefinition()->_maxDistance * _keepDistanceScale;
             float32 distance{ 0.0f };
-            bKeep = InteractionSelector::isInReach( viewer, candidate, distance );
+            bKeep = InteractionView::isInReach( viewer, candidate, distance );
         }
         if ( bKeep )
             _session.update( deltaTime, bHeld, bPressed );
@@ -381,7 +381,7 @@ namespace sw
     void InteractorComponent::updateFocusAndBegin( GameObjectManager& manager, GameObject& owner, const InteractionView& viewer, bool bPressed )
     {
         const WorldLineOfSightQuery lineOfSight{ manager };
-        const int32                 best = InteractionSelector::selectBest( viewer, _listCandidate, _bUseLineOfSight ? &lineOfSight : nullptr );
+        const int32                 best = InteractionView::selectBest( viewer, _listCandidate, _bUseLineOfSight ? &lineOfSight : nullptr );
         if ( best >= 0 )
         {
             const size_t index = static_cast<size_t>( best );

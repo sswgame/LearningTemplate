@@ -113,7 +113,7 @@ namespace sw
             Element::of<&KartItemCatalog::loadItem>( "Item" ),
             Element::of<&KartItemCatalog::loadRankTable>( "RankTable" ).uncounted(),
         };
-        return XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool KartItemCatalog::loadItem( const XMLNode& node, string_view sourceName )

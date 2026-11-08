@@ -11,9 +11,9 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/UI/Screen/UIScreen.h"
-#include "Engine/UI/WidgetTree/UIEventRouter.h"
 #include "Engine/UI/WidgetTree/UIEvents.h"
 #include "Engine/UI/WidgetTree/UINavigationSolver.h"
+#include "Engine/UI/WidgetTree/UIWidgetPath.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
 #include "Engine/Window/WindowTextInput.h"
@@ -403,7 +403,7 @@ namespace sw
             UIScreen* pScreen = listScreen[index - 1].get();
             if ( pScreen->isClosing() || pScreen->receivesPointer() == false )
                 continue;
-            if ( UIEventRouter::hitTest( pScreen->getTree(), point, path ) )
+            if ( UIWidgetPath::hitTest( pScreen->getTree(), point, path ) )
                 return pScreen;
             if ( pScreen->blocksLowerInput() )
                 return nullptr; // 모달 아래 화면은 클릭을 받지 않는다
@@ -576,7 +576,7 @@ namespace sw
         event._value        = value;
         event._deltaSeconds = _inputDeltaSeconds;
         WidgetID      handler{ kInvalidWidgetID };
-        const UIReply reply = UIEventRouter::routeActionEvent( screen.getTree(), path, event, handler );
+        const UIReply reply = UIWidgetPath::routeActionEvent( screen.getTree(), path, event, handler );
         if ( reply.isHandled() && reply._focusRequest != kInvalidWidgetID )
             (void)_focus.setFocus( screen.getTree(), reply._focusRequest );
         return reply.isHandled();

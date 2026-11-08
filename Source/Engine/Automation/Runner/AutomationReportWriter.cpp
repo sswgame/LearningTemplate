@@ -78,7 +78,7 @@ namespace sw
     {
         if ( _reportPath.empty() )
             return;
-        // 들여쓰기 2 칸 — 행 감시 보고(`AutomationHangReport::format`)와 같은 모양이고 `records` 가 마지막 멤버다(`readReportRecords`).
+        // 들여쓰기 2 칸 — 행 감시 보고(`AutomationHangPayload::format`)와 같은 모양이고 `records` 가 마지막 멤버다(`readReportRecords`).
         string     json;
         JSONWriter writer{ json, 2 };
         writer.beginObject();

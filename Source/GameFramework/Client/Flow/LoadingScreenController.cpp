@@ -46,7 +46,7 @@ namespace sw
             }
         };
 
-        /** @struct TipList @brief 팁 파일의 표 읽기 대상입니다(`XMLCatalogReader` — 모르는 원소도 읽기 오류다). */
+        /** @struct TipList @brief 팁 파일의 표 읽기 대상입니다(`XMLCatalogReadResult` — 모르는 원소도 읽기 오류다). */
         struct TipList
         {
             vector<string> _listTip;
@@ -73,7 +73,7 @@ namespace sw
             static constexpr Element kArrElement[] = {
                 Element::of<&TipList::readTip>( "Tip" ).uncounted(), // 팁이 없는 파일도 맞다 — 팁 위젯을 접는다
             };
-            if ( XMLCatalogReader::readInDocumentOrder( list, root, sourceName, kArrElement ).isClean() == false )
+            if ( XMLCatalogReadResult::readInDocumentOrder( list, root, sourceName, kArrElement ).isClean() == false )
                 return false;
             outListTip = std::move( list._listTip );
             return true;

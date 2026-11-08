@@ -8,7 +8,7 @@
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Environment/Surface/GroundSurfaceComponent.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"
-#include "Engine/Environment/Surface/SurfaceQuery.h"
+#include "Engine/Environment/Surface/SurfaceSample.h"
 #include "Engine/Environment/Water/WaterBodyComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -189,8 +189,8 @@ namespace sw
         SurfaceSample                       ground;
         const GroundSurfaceComponent* const pGround = pOwner->getComponent<GroundSurfaceComponent>();
         const bool                          bGround = pGround != nullptr ? pGround->getGroundKind().empty() == false
-                                                                         : SurfaceQuery::sampleBelow( manager, pTable, feet + float3{ 0.0f, Internal::kProbeLift, 0.0f }, feet - float3{ 0.0f, _probeLength, 0.0f },
-                                                                                                      pOwner->getObjectID(), false, ground );
+                                                                         : SurfaceSample::sampleBelow( manager, pTable, feet + float3{ 0.0f, Internal::kProbeLift, 0.0f }, feet - float3{ 0.0f, _probeLength, 0.0f },
+                                                                                                       pOwner->getObjectID(), false, ground );
         if ( bGround )
         {
             const SurfaceSample& sample = pGround != nullptr ? pGround->getLastSample() : ground;
@@ -228,7 +228,7 @@ namespace sw
                 CharacterRayHit hit;
                 SurfaceSample   touched;
                 if ( CharacterRayHit::raycast3D( manager, waist, direction, pController->getRadius() + _touchDistance, Internal::kAllLayers, pOwner->getObjectID(), hit ) == false ||
-                     SurfaceQuery::resolveHit( manager, pTable, hit, touched ) == false )
+                     SurfaceSample::resolveHit( manager, pTable, hit, touched ) == false )
                     continue;
                 ContactRecord contact;
                 contact._kind        = touched._pKind->_name;

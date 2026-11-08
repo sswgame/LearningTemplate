@@ -73,6 +73,18 @@ namespace sw
          * @details 셰이더 `LightData::sampleReflectionProbe`(lighting.hlsli)와 같은 식이다. 프로브는 찍은 곳에서 본 둘레이므로 그대로 읽으면 찍은 곳에서 먼 표면일수록 가까운 벽의 반사가 어긋난다.
          */
         static float3 computeParallaxDirection( const float3& worldPosition, const float3& reflectDirection, const float3& boxCenter, const float3& boxHalfExtent, const float3& capturePosition );
+
+        // 큐브 면 여섯을 반사 프로브 데이터로 접고 거칠기 단계마다 거르는 CPU 계산입니다(베이크 도구가 GPU 로 찍은 면을 넘긴다). */
+        /** @brief 큐브 면 수입니다. */
+        static constexpr uint32 kFaceCount = 6;
+
+        /**
+         * @brief 면 여섯을 접어 단계 0 을 만들고, 단계 1 부터는 GGX 중요도 표본 @p sampleCount 개로 거릅니다(언리얼 · 카리스 2013 의 "N = V = R" 근사).
+         * @param capturePosition 찍은 위치(면 카메라의 위치와 같다)
+         * @return 면이 비었거나 크기가 다르거나 범위 밖이면 false 이고 이유를 @p pOutError 에 적습니다.
+         */
+        [[nodiscard]] static bool makeFromFaces( const float3& capturePosition, const ReflectionProbeFace* pArrFace, uint32 resolution, uint32 levelCount,
+                                                 uint32 sampleCount, ReflectionProbeAsset& outData, string* pOutError = nullptr );
     };
 } // namespace sw
 
@@ -89,23 +101,5 @@ namespace sw
         uint32         _size{ 0 }; ///< 한 변 픽셀 수
         float4x4       _viewProj{};
         float3         _forward{}; ///< 그 카메라가 보는 방향(길이 1) — 방향마다 면을 고를 때 쓴다
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 큐브 면 여섯을 반사 프로브 데이터로 접고 거칠기 단계마다 거르는 CPU 계산입니다(베이크 도구가 GPU 로 찍은 면을 넘긴다). */
-    struct SW_API ReflectionProbeFilter
-    {
-        /** @brief 큐브 면 수입니다. */
-        static constexpr uint32 kFaceCount = 6;
-
-        /**
-         * @brief 면 여섯을 접어 단계 0 을 만들고, 단계 1 부터는 GGX 중요도 표본 @p sampleCount 개로 거릅니다(언리얼 · 카리스 2013 의 "N = V = R" 근사).
-         * @param capturePosition 찍은 위치(면 카메라의 위치와 같다)
-         * @return 면이 비었거나 크기가 다르거나 범위 밖이면 false 이고 이유를 @p pOutError 에 적습니다.
-         */
-        [[nodiscard]] static bool makeFromFaces( const float3& capturePosition, const ReflectionProbeFace* pArrFace, uint32 resolution, uint32 levelCount,
-                                                 uint32 sampleCount, ReflectionProbeAsset& outData, string* pOutError = nullptr );
     };
 } // namespace sw

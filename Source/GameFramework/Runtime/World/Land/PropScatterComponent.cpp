@@ -31,7 +31,7 @@ namespace sw
             }
             PropScatterPlacement placement;
             placement._position   = position;
-            placement._modelIndex = PropScatterMath::pickModel( params._listModel, pick );
+            placement._modelIndex = PropScatterPlacement::pickModel( params._listModel, pick );
             placement._scale      = params._scaleMin + inoutRandom.nextFloat() * ( params._scaleMax - params._scaleMin );
             placement._yaw        = inoutRandom.nextFloat() * MathUtil::kTwoPi;
             if ( placement._modelIndex >= 0 )
@@ -42,7 +42,7 @@ namespace sw
 
 namespace sw
 {
-    int32 PropScatterMath::pickModel( const vector<PropScatterModel>& listModel, float32 unit )
+    int32 PropScatterPlacement::pickModel( const vector<PropScatterModel>& listModel, float32 unit )
     {
         float32 totalWeight = 0.0f;
         for ( const PropScatterModel& model : listModel )
@@ -67,7 +67,7 @@ namespace sw
         return lastIndex;
     }
 
-    bool PropScatterMath::validateModels( const vector<PropScatterModel>& listModel, string_view componentMaterial, string& outError )
+    bool PropScatterPlacement::validateModels( const vector<PropScatterModel>& listModel, string_view componentMaterial, string& outError )
     {
         for ( size_t modelIndex = 0; modelIndex < listModel.size(); ++modelIndex )
         {
@@ -105,7 +105,7 @@ namespace sw
         return true;
     }
 
-    void PropScatterMath::computePlacements( const PropScatterParams& params, vector<PropScatterPlacement>& outListPlacement )
+    void PropScatterPlacement::computePlacements( const PropScatterParams& params, vector<PropScatterPlacement>& outListPlacement )
     {
         outListPlacement.clear();
         if ( params._mode == PropScatterMode::Rules )
@@ -152,7 +152,7 @@ namespace sw
         }
     }
 
-    void PropScatterMath::computeRulePlacements( const PropScatterParams& params, const IPlacementSurface* pSurface, vector<PropScatterPlacement>& outListPlacement )
+    void PropScatterPlacement::computeRulePlacements( const PropScatterParams& params, const IPlacementSurface* pSurface, vector<PropScatterPlacement>& outListPlacement )
     {
         outListPlacement.clear();
         if ( params._listModel.empty() )
@@ -257,7 +257,7 @@ namespace sw
         if ( pManager == nullptr )
             return;
         string modelError;
-        if ( PropScatterMath::validateModels( _listModel, _materialPath, modelError ) == false )
+        if ( PropScatterPlacement::validateModels( _listModel, _materialPath, modelError ) == false )
         {
             SW_LOG_ERROR_ID( "PropScatter.InvalidModels", "Prop scatter '%#' is not spawned: %#", _propName.c_str(), modelError.c_str() );
             return;
@@ -273,16 +273,16 @@ namespace sw
             if ( pTerrain != nullptr )
             {
                 const TerrainPlacementSurface surface( pTerrain->getHeightfield() );
-                PropScatterMath::computeRulePlacements( params, &surface, listPlacement );
+                PropScatterPlacement::computeRulePlacements( params, &surface, listPlacement );
             }
             else
             {
-                PropScatterMath::computeRulePlacements( params, nullptr, listPlacement );
+                PropScatterPlacement::computeRulePlacements( params, nullptr, listPlacement );
             }
         }
         else
         {
-            PropScatterMath::computePlacements( params, listPlacement );
+            PropScatterPlacement::computePlacements( params, listPlacement );
         }
         _listSpawned.reserve( listPlacement.size() );
         const hashed_string propName( _propName.c_str() );

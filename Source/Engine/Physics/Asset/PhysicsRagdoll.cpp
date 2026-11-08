@@ -72,8 +72,8 @@ namespace sw
         return -1;
     }
 
-    bool PhysicsRagdollBuilder::create( IPhysicsScene3D& scene, const PhysicsAsset& asset, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
-                                        const PhysicsRagdollOptions& options, PhysicsRagdoll& outRagdoll )
+    bool PhysicsRagdoll::create( IPhysicsScene3D& scene, const PhysicsAsset& asset, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
+                                 const PhysicsRagdollOptions& options, PhysicsRagdoll& outRagdoll )
     {
         outRagdoll = PhysicsRagdoll{};
         if ( PhysicsRagdollInternal::isSkeletonValid( skeleton ) == false || asset.validateAgainstSkeleton( skeleton._listBoneName, "ragdoll" ) == false )
@@ -170,7 +170,7 @@ namespace sw
         return true;
     }
 
-    void PhysicsRagdollBuilder::destroy( IPhysicsBodyScene3D& scene, PhysicsRagdoll& inoutRagdoll )
+    void PhysicsRagdoll::destroy( IPhysicsBodyScene3D& scene, PhysicsRagdoll& inoutRagdoll )
     {
         // 바디를 지우면 붙은 관절도 지워진다.
         vector<PhysicsBodyHandle> listValid;
@@ -183,7 +183,7 @@ namespace sw
         inoutRagdoll = PhysicsRagdoll{};
     }
 
-    void PhysicsRagdollBuilder::setBodyType( IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, PhysicsBodyType type )
+    void PhysicsRagdoll::setBodyType( IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, PhysicsBodyType type )
     {
         for ( const PhysicsBodyHandle& body : ragdoll._listBody )
         {
@@ -191,8 +191,8 @@ namespace sw
         }
     }
 
-    void PhysicsRagdollBuilder::driveToPose( IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
-                                             float32 deltaTime )
+    void PhysicsRagdoll::driveToPose( IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton, const float4x4& worldFromModel,
+                                      float32 deltaTime )
     {
         for ( size_t bodyIndex = 0; bodyIndex < ragdoll._listBody.size(); ++bodyIndex )
         {
@@ -212,8 +212,8 @@ namespace sw
         }
     }
 
-    void PhysicsRagdollBuilder::driveToPoseWithMotors( IPhysicsScene3D& scene, const PhysicsAsset& asset, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton,
-                                                       const float4x4& worldFromModel, float32 maxTorque )
+    void PhysicsRagdoll::driveToPoseWithMotors( IPhysicsScene3D& scene, const PhysicsAsset& asset, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton,
+                                                const float4x4& worldFromModel, float32 maxTorque )
     {
         const bool bAssetMismatch = asset._listBody.size() != ragdoll._listBody.size() || ragdoll._listJoint.size() != ragdoll._listBody.size();
         if ( bAssetMismatch )
@@ -242,8 +242,8 @@ namespace sw
         }
     }
 
-    void PhysicsRagdollBuilder::readBoneTransforms( const IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton,
-                                                    const float4x4& worldFromModel, span<float4x4> outListModelSpaceBone )
+    void PhysicsRagdoll::readBoneTransforms( const IPhysicsBodyScene3D& scene, const PhysicsRagdoll& ragdoll, const PhysicsSkeletonView& skeleton,
+                                             const float4x4& worldFromModel, span<float4x4> outListModelSpaceBone )
     {
         const size_t boneCount              = skeleton._listModelSpaceBone.size();
         const bool   bBoneCountDisagreement = outListModelSpaceBone.size() < boneCount || skeleton._listParentIndex.size() != boneCount || ragdoll._listBodyOfBone.size() != boneCount;

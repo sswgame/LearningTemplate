@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    /** @brief 상호작용을 시작할 수 없는 까닭입니다(디버거가 판정 결과를 사유별로 보인다). 거리 · 각 · 시야는 고르는 쪽(`InteractionSelector`)이 따로 본다. */
+    /** @brief 상호작용을 시작할 수 없는 까닭입니다(디버거가 판정 결과를 사유별로 보인다). 거리 · 각 · 시야는 고르는 쪽(`InteractionView`)이 따로 본다. */
     ENUM()
     enum class InteractionBlockReason : uint8
     {

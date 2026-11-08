@@ -10,7 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 
-#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 
 namespace sw
 {

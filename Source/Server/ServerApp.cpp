@@ -34,7 +34,7 @@
 #include "Engine/Observability/ProcessMetrics.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Scene/SceneStateHash.h"
+#include "Engine/Scene/SceneObjectHash.h"
 #include "Engine/Telemetry/CrashReportService.h"
 
 #include "ModuleManager/GameModuleManager.h"

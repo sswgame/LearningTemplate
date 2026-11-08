@@ -35,7 +35,7 @@ namespace sw
      */
     struct ReflectionProbeCapture
     {
-        ReflectionProbeFaceCapture _arrFace[ReflectionProbeFilter::kFaceCount];
+        ReflectionProbeFaceCapture _arrFace[ReflectionProbeAsset::kFaceCount];
         float3                     _capturePosition{};
         uint32                     _resolution{ 0 };  ///< 옥타헤드럴 한 변(프로브의 칸)
         uint32                     _sampleCount{ 0 }; ///< 거르기 표본 수(프로브의 칸)
@@ -43,7 +43,7 @@ namespace sw
 
     /**
      * @class ReflectionProbeBaker
-     * @brief 프로브 위치에 90° 정사각 카메라를 두고 면마다 디퍼드 파이프라인으로 그려 조명 결과(`LitColor`, 후처리 앞의 HDR)를 읽고, CPU 로 접고 거릅니다(`ReflectionProbeFilter`).
+     * @brief 프로브 위치에 90° 정사각 카메라를 두고 면마다 디퍼드 파이프라인으로 그려 조명 결과(`LitColor`, 후처리 앞의 HDR)를 읽고, CPU 로 접고 거릅니다(`ReflectionProbeAsset`).
      * @details 렌더러는 자기 것(`SceneCapture`)이라 주 렌더러의 상태를 건드리지 않는다(`PortraitStudio` 와 같은 격리). 씬은 찍을 씬 그대로다 — 찍는 동안만
      *          카메라 오브젝트 하나를 씬에 두고 활성 게임 카메라로 고른 뒤 지운다(지우면 직접 고른 카메라가 풀려 씬이 레지스트리 규칙으로 다시 고른다 — 찍기 전에
      *          `setActiveGameCamera` 로 직접 고른 카메라가 있었으면 그 선택은 풀린다).

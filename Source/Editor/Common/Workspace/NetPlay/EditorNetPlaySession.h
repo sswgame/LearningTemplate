@@ -27,7 +27,7 @@
  *          - 회선 조절은 그 프로세스의 표준 입력에 `net.emulation …` 을 보낸다(`sendProcessCommand`). 답 줄 가운데 `NetEmulationReport` 줄은 프로세스마다 마지막 것을 보관한다.
  *          - `NetStatsReport` 줄(`net.stats` 의 답 — Profiler 탭이 0.5 초마다 묻는다)도 프로세스마다 마지막 것을 보관한다. 이 줄은 에디터 로그 · 마지막 줄로 옮기지 않는다(Output Log 를 메운다).
  *          - 상태 해시 이력 한 줄(`state.hashline` 의 답, `StateHashHistory::kReportLinePrefix`)도 같다 — Sync 탭이 클라이언트 이력을 이 길로 읽는다.
- *          - 오브젝트별 해시 한 줄(`state.objectline` 의 답, `SceneStateHash::kObjectReportLinePrefix`)도 같다 — `state.objects` 는 여러 줄이라 표준 입력 답으로는 거둘 수 없어 한 줄 판을 따로 둔다.
+ *          - 오브젝트별 해시 한 줄(`state.objectline` 의 답, `SceneObjectHash::kObjectReportLinePrefix`)도 같다 — `state.objects` 는 여러 줄이라 표준 입력 답으로는 거둘 수 없어 한 줄 판을 따로 둔다.
  */
 #pragma once
 #include "Core/Concurrency/thread.h"
@@ -44,7 +44,7 @@
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlayPresetStore.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySettings.h"
 
-#include "Engine/Scene/SceneStateHash.h"
+#include "Engine/Scene/SceneObjectHash.h"
 
 #include <chrono>
 #include <thread>
@@ -127,7 +127,7 @@ namespace sw::editor
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "EditorNetPlaySession";
-        /** @brief 오브젝트별 해시를 묻는 개발 명령입니다(`SceneStateHash` 의 `state.objectline`). */
+        /** @brief 오브젝트별 해시를 묻는 개발 명령입니다(`SceneObjectHash` 의 `state.objectline`). */
         static constexpr const utf8* kObjectHashCommand = "state.objectline";
         /** @brief 이른 답 뒤 다시 묻는 상한입니다 — 멈춘 서버를 따라오는 데 드는 답 수보다 넉넉하고, 끊긴 클라이언트에 끝없이 묻지 않게 한다. */
         static constexpr uint32 kMaxObjectHashReask = 600;

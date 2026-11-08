@@ -114,7 +114,7 @@ namespace sw
         PROPERTY( Required )
         DataPath _animationLODSettings; ///< 애니메이션 LOD 표(`AnimationSystem`, `AnimationLODSettings`)
         PROPERTY( Required )
-        DataPath _characterLODSettings; ///< 조립한 캐릭터 메시의 LOD 표(`CharacterMeshLOD`, `CharacterLODSettings`)
+        DataPath _characterLODSettings; ///< 조립한 캐릭터 메시의 LOD 표(`CharacterLODSettings`, `CharacterLODSettings`)
         PROPERTY( Required )
         DataPath _meshLODSettings; ///< 메시 LOD · 경계 정책(`MeshLODSystem` · `SkeletalMeshComponent`, `MeshLODSettings`)
         PROPERTY( Required )

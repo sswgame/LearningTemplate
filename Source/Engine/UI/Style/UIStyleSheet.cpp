@@ -12,7 +12,7 @@
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
-#include "Engine/UI/Animation/UIStyleTransition.h"
+#include "Engine/UI/Animation/UIStyleTransitionState.h"
 #include "Engine/UI/WidgetTree/PanelWidget.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 
@@ -399,7 +399,7 @@ namespace sw
         return true;
     }
 
-    bool UIStyleSheetLoader::parse( string_view text, string_view path, UIStyleSheetAsset& outSheet, string& outError )
+    bool UIStyleSheetAsset::parse( string_view text, string_view path, UIStyleSheetAsset& outSheet, string& outError )
     {
         using Internal = UIStyleSheetInternal;
         UIStyleSheetAsset sheet{};
@@ -460,7 +460,7 @@ namespace sw
         return true;
     }
 
-    void UIStyleSheetLoader::applyAssignment( const UIStyleAssignment& assignment, WidgetStyle& inoutStyle )
+    void UIStyleSheetAsset::applyAssignment( const UIStyleAssignment& assignment, WidgetStyle& inoutStyle )
     {
         if ( assignment._pProperty == nullptr )
             return;

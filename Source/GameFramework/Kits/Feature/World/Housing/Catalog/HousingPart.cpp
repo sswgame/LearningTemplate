@@ -86,7 +86,7 @@ namespace sw
         static constexpr Element kArrElement[] = {
             Element::of<&HousingPartCatalog::loadPart>( "Part" ),
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement );
         // 스냅 지점 · 판 · 이어받기는 모든 부품을 읽은 뒤에 본다(앞 부품이 뒤 부품의 소켓 종류를 가리킬 수 있다). 하나라도 틀리면 파일 전체를 거절한다 — 틀린 부품을 빼고 쓰면 그 부품의 세이브가 조용히 사라진다.
         vector<string> listProblem;
         for ( const HousingPartDef& part : getParts() )

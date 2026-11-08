@@ -7,7 +7,7 @@
 #include "GameFramework/Runtime/Online/Schedule/ServiceRetentionJob.h"
 #include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Runtime/Online/Store/ServiceRetention.h"
+#include "GameFramework/Runtime/Online/Store/ServiceRetentionRule.h"
 
 using namespace sw;
 
@@ -295,7 +295,7 @@ SW_TEST_CASE( ServiceRetentionTest, DeletesOnlyExpired )
 
     ServiceRetentionRule   rule = rig.makeRule();
     ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetention::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 2, report._deletedCount );
     SW_EXPECT_EQUAL( 4, report._scannedCount );
     SW_EXPECT_EQUAL( SW_TRUE, report._bWrapped );
@@ -313,15 +313,15 @@ SW_TEST_CASE( ServiceRetentionTest, LimitsResumeFromCursor )
     }
     ServiceRetentionRule   rule = rig.makeRule();
     ServiceRetentionReport report;
-    SW_REQUIRE_TRUE( ServiceRetention::sweep( rig._database, rule, kNowMs, 100, 2, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 2, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 2, report._deletedCount );
     SW_EXPECT_EQUAL( 2, rig.count() );
     SW_EXPECT_EQUAL( string( "b" ), rule._cursor );
 
-    SW_REQUIRE_TRUE( ServiceRetention::sweep( rig._database, rule, kNowMs, 1, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 1, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._scannedCount );
     SW_EXPECT_EQUAL( 1, rig.count() );
-    SW_REQUIRE_TRUE( ServiceRetention::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 0, rig.count() );
 }
 
@@ -333,10 +333,10 @@ SW_TEST_CASE( ServiceRetentionTest, FailedCommitDoesNotSkipRecords )
     ServiceRetentionRule   rule = rig.makeRule();
     ServiceRetentionReport report;
     rig._database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( ServiceRetention::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Unavailable );
+    SW_EXPECT_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Unavailable );
     SW_EXPECT_EQUAL( 1, rig.count() );
 
-    SW_REQUIRE_TRUE( ServiceRetention::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
+    SW_REQUIRE_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_EQUAL( 1, report._deletedCount );
     SW_EXPECT_EQUAL( 0, rig.count() );
 }
@@ -347,10 +347,10 @@ SW_TEST_CASE( ServiceRetentionTest, InvalidRuleIsRefused )
     RetentionFixture       rig;
     ServiceRetentionRule   rule = rig.makeRule( 0 );
     ServiceRetentionReport report;
-    SW_EXPECT_TRUE( ServiceRetention::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Invalid );
+    SW_EXPECT_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Invalid );
     rule              = rig.makeRule();
     rule._pfnReadTime = nullptr;
-    SW_EXPECT_TRUE( ServiceRetention::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Invalid );
+    SW_EXPECT_TRUE( ServiceRetentionRule::sweep( rig._database, rule, kNowMs, 100, 100, report ) == ServiceStoreResult::Invalid );
 }
 
 /** @brief [ServiceRetentionTest] 예약 작업: 회차를 차지하면 쓸고 끝을 적는다. 회차 시각을 기준으로 지운다. 규칙이 없으면 등록하지 않고, 틀린 규칙은 거절한다 */

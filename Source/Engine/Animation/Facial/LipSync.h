@@ -166,19 +166,10 @@ namespace sw
     private:
         /** @brief 찾은 루트를 읽습니다. 글 입구(`loadFromXMLText`)와 리소스 입구(`loadFromAsset` — `XMLReadUtil::parseResourceRoot` 로 층 · 다시 읽기 기록 · 접속 대조를 받는다)가 함께 쓴다. */
         [[nodiscard]] bool loadFromRoot( XMLRootStatus status, const XMLNode& root, string_view sourceLabel );
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @struct LipSyncAnalyzer
-     * @brief 음성 분석입니다. 프레임마다 RMS 와 세 대역(바이쿼드 대역 통과) 에너지를 재고, 대역 형태를 비즘 테이블과 비교해 가중치를 냅니다.
-     * @details 입력은 모노 float 샘플이다. 소리 파일을 디코드하는 일(`AudioClipData::copyMonoSamples`)과 일괄 임포트(`LipSyncImport`)는 Audio 쪽에 있다.
-     *          Animation 은 Audio 보다 아래 티어이기 때문이다.
-     */
-    struct SW_API LipSyncAnalyzer
-    {
+    public:
+        // 음성 분석입니다. 프레임마다 RMS 와 세 대역(바이쿼드 대역 통과) 에너지를 재고, 대역 형태를 비즘 테이블과 비교해 가중치를 냅니다.
+        // 입력은 모노 float 샘플이다. 소리 파일을 디코드하는 일(`AudioClipData::copyMonoSamples`)과 일괄 임포트(`LipSyncImport`)는 Audio 쪽에 있다.
         /** @brief 모노 표본을 트랙으로 분석합니다. */
         static void analyze( const vector<float32>& listSample, uint32 sampleRate, const LipSyncSettings& settings, VisemeTrack& outTrack );
         /** @brief 시각 @p time 근처(한 프레임 창)의 RMS 를 반환합니다. 트랙이 없을 때 런타임 진폭 립싱크가 씁니다. */

@@ -438,12 +438,12 @@ namespace sw
         return path;
     }
 
-    float32 LipSyncAnalyzer::computeOpenness( float32 rms, const LipSyncSettings& settings )
+    float32 VisemeTrack::computeOpenness( float32 rms, const LipSyncSettings& settings )
     {
         return MathUtil::saturate( ( rms - settings._silenceRms ) / MathUtil::max( settings._fullRms - settings._silenceRms, 1e-6f ) );
     }
 
-    float32 LipSyncAnalyzer::computeRms( const vector<float32>& listSample, uint32 sampleRate, float32 time, float32 windowSeconds )
+    float32 VisemeTrack::computeRms( const vector<float32>& listSample, uint32 sampleRate, float32 time, float32 windowSeconds )
     {
         const bool bNoRmsWindow = listSample.empty() || sampleRate == 0 || time < 0.0f;
         if ( bNoRmsWindow )
@@ -462,7 +462,7 @@ namespace sw
         return static_cast<float32>( MathUtil::sqrt( sum / static_cast<float64>( MathUtil::max<size_t>( end - begin, 1u ) ) ) );
     }
 
-    bool LipSyncAnalyzer::tryComputeFormants( const float32* pSample, size_t sampleCount, uint32 sampleRate, float2& outFormantHz )
+    bool VisemeTrack::tryComputeFormants( const float32* pSample, size_t sampleCount, uint32 sampleRate, float2& outFormantHz )
     {
         outFormantHz = float2{ 0.0f, 0.0f };
         if ( pSample == nullptr || sampleRate == 0 )
@@ -535,7 +535,7 @@ namespace sw
         return true;
     }
 
-    void LipSyncAnalyzer::analyze( const vector<float32>& listSample, uint32 sampleRate, const LipSyncSettings& settings, VisemeTrack& outTrack )
+    void VisemeTrack::analyze( const vector<float32>& listSample, uint32 sampleRate, const LipSyncSettings& settings, VisemeTrack& outTrack )
     {
         outTrack            = VisemeTrack{};
         outTrack._frameRate = settings._frameRate;

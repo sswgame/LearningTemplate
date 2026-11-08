@@ -4,7 +4,7 @@
  * @details 무엇을 담을지(이 파일)와 어떤 바이트가 되는지(`PackWriter`)를 나눈다. 쿠킹은 엔진 언어 한 곳이다 — 예전 파이썬 쿠커(`CookAssets.py`)가
  *          레이아웃 · 압축 · 증분 기록을 따로 들던 것을 옮겼다.
  *          - 담는 것(쓰는 것만): 도메인 폴더의 파일 중 `PackConfig` 의 제외(전역 · 규칙별 폴더 · 패턴), 셰이더 원본, 다른 백엔드의 셰이더 바이너리, 빌드 타깃이 빼는
- *            종류(`AssetPaths::isExcludedForTarget` — 런타임이 같은 표로 읽지 않는다)를 지나고, **뿌리에서 참조로 닿는 것**(`PackReachability` — 뿌리 규칙은
+ *            종류(`AssetPaths::isExcludedForTarget` — 런타임이 같은 표로 읽지 않는다)를 지나고, **뿌리에서 참조로 닿는 것**(`PackReachResult` — 뿌리 규칙은
  *            `PackConfig::_cookRules`)과, 스테이징 폴더(`<쿠킹 폴더>/<도메인>`)의 쿠킹 산출물. 씬 · 프리팹 쿠킹본은 그 원본이 담길 때만 담고, 셰이더 바이너리 같은 나머지 산출물은 다 담는다.
  *            고르기는 굽는 모든 도메인을 한 번에 본다 — `common` 은 굽는 게임들이 쓰는 것의 합이다(`-game=` 이면 그 게임이 쓰는 것만). 예전에는 폴더째 담아
  *            `common.pack` 이 게임이 쓰지 않는 캐릭터 · 소품까지 들었다(359MB, 빈 게임 팩은 6MB).
@@ -20,7 +20,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Asset/Cook/PackReachability.h"
+#include "Engine/Asset/Cook/PackReachResult.h"
 
 namespace sw
 {

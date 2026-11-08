@@ -6,7 +6,7 @@
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Material/Dev/MaterialGraph.h"
-#include "Engine/Graphics/Material/Dev/MaterialGraphCook.h"
+#include "Engine/Graphics/Material/Dev/MaterialGraphGeneratedPaths.h"
 
 namespace sw::editor
 {
@@ -20,7 +20,7 @@ namespace sw::editor
              */
             static bool importGraph( const AssetPaths& assetPaths, string_view /*relativePath*/ )
             {
-                (void)MaterialGraphCook::refreshAll( assetPaths, assetPaths.getRootFolderPath(), nullptr );
+                (void)MaterialGraphGeneratedPaths::refreshAll( assetPaths, assetPaths.getRootFolderPath(), nullptr );
                 return true;
             }
         };

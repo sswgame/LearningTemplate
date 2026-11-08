@@ -7,7 +7,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Identity/AccountPresence.h"
-#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeProtocol.h"
+#include "GameFramework/Kits/Feature/Online/Trade/Runtime/TradeSessionRecord.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeServer.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeService.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeStateMachine.h"
@@ -134,11 +134,11 @@ namespace
         vector<uint16>      _listKind{};
         vector<TradeNotice> _listReply{};
 
-        const OnlineProtocolEntry& getProtocol() const override { return TradeProtocol::kOnlineEntry; }
+        const OnlineProtocolEntry& getProtocol() const override { return TradeSessionRecord::kOnlineEntry; }
         void                       onServicePush( uint16 kind, BitReader& body ) override
         {
             TradeNotice reply;
-            SW_EXPECT_TRUE( TradeProtocol::MessageTypes::read( body, reply ) == FixedReadResult::Ok );
+            SW_EXPECT_TRUE( TradeSessionRecord::MessageTypes::read( body, reply ) == FixedReadResult::Ok );
             _listKind.push_back( kind );
             _listReply.push_back( std::move( reply ) );
         }
@@ -171,7 +171,7 @@ namespace
             TradeReply reply;
             BitReader  reader( _bodyBytes.data(), static_cast<int32>( _bodyBytes.size() ) );
             SW_EXPECT_TRUE( _bOk == SW_TRUE );
-            SW_EXPECT_TRUE( TradeProtocol::MessageTypes::read( reader, reply ) == FixedReadResult::Ok );
+            SW_EXPECT_TRUE( TradeSessionRecord::MessageTypes::read( reader, reply ) == FixedReadResult::Ok );
             return reply;
         }
     };
@@ -276,7 +276,7 @@ namespace
         const TradeResponseSink& send( int32 slot, uint16 method, const TMessage& message )
         {
             BitWriter body;
-            SW_EXPECT_TRUE( TradeProtocol::MessageTypes::write( body, message ) );
+            SW_EXPECT_TRUE( TradeSessionRecord::MessageTypes::write( body, message ) );
             return sendRaw( slot, method, body );
         }
 
@@ -655,8 +655,8 @@ SW_TEST_CASE( TradeServerTest, FeatureFlagBlocksRequests )
 /** @brief [TradeServerTest] 다시 시도할 공통 범주(저장소 일시 장애)는 요청 층이 기억하지 않아 같은 멱등 키의 거래 명령 재시도가 서비스에 다시 닿고, 끝난 결과는 기억한다 */
 SW_TEST_CASE( TradeServerTest, RetryableReplyReachesTheServiceAgain )
 {
-    test::ReplyRetentionFixture<TradeProtocol, TradeReply> rig;
-    TradeReply                                             finished;
+    test::ReplyRetentionFixture<TradeSessionRecord, TradeReply> rig;
+    TradeReply                                                  finished;
     finished._result = TradeResult::Ok;
     rig.expectFailureReachesService( TradeMethod::Invite::kID, OnlineError::kUnavailable, finished );
 }

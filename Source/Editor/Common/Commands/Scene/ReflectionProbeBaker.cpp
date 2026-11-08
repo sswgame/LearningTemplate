@@ -38,7 +38,7 @@ namespace sw
                 float3 _forward;
                 float3 _up;
             };
-            static constexpr FaceBasis kArrFaceBasis[ReflectionProbeFilter::kFaceCount] = {
+            static constexpr FaceBasis kArrFaceBasis[ReflectionProbeAsset::kFaceCount] = {
                 { float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f }},
                 {float3{ -1.0f, 0.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f }},
                 { float3{ 0.0f, 1.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f }},
@@ -116,8 +116,8 @@ namespace sw
     {
         using Internal = ReflectionProbeBakerInternal;
         outData.clear();
-        ReflectionProbeFace arrFace[ReflectionProbeFilter::kFaceCount];
-        for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeFilter::kFaceCount; ++faceIndex )
+        ReflectionProbeFace arrFace[ReflectionProbeAsset::kFaceCount];
+        for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeAsset::kFaceCount; ++faceIndex )
         {
             const ReflectionProbeFaceCapture& source = capture._arrFace[faceIndex];
             ReflectionProbeFace&              face   = arrFace[faceIndex];
@@ -141,7 +141,7 @@ namespace sw
                 }
             }
         }
-        return ReflectionProbeFilter::makeFromFaces( capture._capturePosition, arrFace, capture._resolution, Internal::kLevelCount, capture._sampleCount, outData, pOutError );
+        return ReflectionProbeAsset::makeFromFaces( capture._capturePosition, arrFace, capture._resolution, Internal::kLevelCount, capture._sampleCount, outData, pOutError );
     }
 
     bool ReflectionProbeBaker::captureProbe( Scene& scene, const ReflectionProbeComponent& probe, ReflectionProbeCapture& outCapture, string* pOutError )
@@ -177,7 +177,7 @@ namespace sw
         outCapture._resolution      = probe.getResolution();
         outCapture._sampleCount     = probe.getBakeSampleCount();
         bool bCaptured              = true;
-        for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeFilter::kFaceCount && bCaptured; ++faceIndex )
+        for ( uint32 faceIndex = 0; faceIndex < ReflectionProbeAsset::kFaceCount && bCaptured; ++faceIndex )
         {
             const Internal::FaceBasis& basis = Internal::kArrFaceBasis[faceIndex];
             pCamera->setLocalPosition( capturePosition );

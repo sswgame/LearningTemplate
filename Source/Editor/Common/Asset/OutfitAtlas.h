@@ -16,7 +16,7 @@
 
 #include "Editor/Common/EditorExports.h"
 
-#include "Engine/Character/Fit/MeshMerger.h"
+#include "Engine/Character/Fit/MergedMesh.h"
 
 namespace sw
 {

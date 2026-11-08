@@ -42,7 +42,7 @@ namespace sw
          */
         PROPERTY()
         vector<AccountSeedEntry> _listSeedTestAccount{};
-        /** @brief 외부 로그인 제공자 설정 JSON 입니다(항목 형식은 `PlatformLoginProviderFactory::readEntry`). 비우면 외부 로그인이 없습니다. */
+        /** @brief 외부 로그인 제공자 설정 JSON 입니다(항목 형식은 `PlatformLoginProviderConfig::readEntry`). 비우면 외부 로그인이 없습니다. */
         PROPERTY()
         string _platformProvidersFile{};
         /** @brief 제공자 HTTPS 를 검증할 CA 번들 PEM 입니다. `https://` 제공자가 있으면 필수입니다. */

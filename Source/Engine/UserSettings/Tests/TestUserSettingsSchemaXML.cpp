@@ -4,7 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Telemetry/TelemetrySchema.h"
-#include "Engine/UserSettings/HardwareDetection.h"
+#include "Engine/UserSettings/HardwareDetectionResult.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
 
 /**

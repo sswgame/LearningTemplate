@@ -104,25 +104,15 @@ namespace sw
 namespace sw
 {
     /** @brief 놓을 것 하나입니다. */
-    struct PropScatterPlacement
+    struct SW_GF_API PropScatterPlacement
     {
         float3  _position{};
         float32 _scale{ 1.0f };
         float32 _yaw{ 0.0f }; ///< 라디안
         int32   _modelIndex{ 0 };
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @struct PropScatterMath
-     * @brief 배치 계산입니다. 같은 입력이면 같은 배치가 나옵니다.
-     * @details 난수는 `DeterministicRandom32`(xorshift32)이며 시드 0 은 거절한다(단언 오류).
-     *          위치마다 난수를 위치 흔들기 둘, 모델, 제외 판정, 크기, 요 순으로 꺼낸다. 제외된 위치는 크기와 요를 꺼내지 않는다.
-     */
-    struct SW_GF_API PropScatterMath
-    {
+        // 배치 계산입니다. 같은 입력이면 같은 배치가 나옵니다.
+        // 난수는 `DeterministicRandom32`(xorshift32)이며 시드 0 은 거절한다(단언 오류).
         /** @brief 배치를 계산합니다. 규칙 모드는 평평한 표면(높이는 영역의 최소 y)을 씁니다. 지형 위 배치는 `computeRulePlacements` 가 합니다. */
         static void computePlacements( const PropScatterParams& params, vector<PropScatterPlacement>& outListPlacement );
         /**

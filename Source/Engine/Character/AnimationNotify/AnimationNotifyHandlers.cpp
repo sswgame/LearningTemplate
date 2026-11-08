@@ -15,7 +15,7 @@
 #include "Engine/Character/Hit/MeleeHitWindow.h"
 #include "Engine/Environment/Surface/SurfaceFootprintSystem.h"
 #include "Engine/Environment/Surface/SurfaceKind.h"
-#include "Engine/Environment/Surface/SurfaceQuery.h"
+#include "Engine/Environment/Surface/SurfaceSample.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -123,7 +123,7 @@ namespace sw
 
             /**
              * @class FootstepHandler
-             * @brief 발 소켓 아래를 공통 표면 질의(`SurfaceQuery`)로 읽어 소리 경로의 `{surface}` 를 그 종류의 발소리 분류로 바꾸고, 씬의 발걸음 반응
+             * @brief 발 소켓 아래를 공통 표면 질의(`SurfaceSample`)로 읽어 소리 경로의 `{surface}` 를 그 종류의 발소리 분류로 바꾸고, 씬의 발걸음 반응
              *        (`SurfaceFootprintSystem` — 종류마다 세기 · 그 종류의 발자국 도장)에 알립니다. 높이장 · 충돌은 고치지 않습니다.
              */
             class FootstepHandler final : public IAnimationNotifyHandler
@@ -144,7 +144,7 @@ namespace sw
                     const shared_ptr<const SurfaceKindTable> pTable   = pManager != nullptr ? SurfaceKindTable::findDefault() : nullptr;
                     CharacterRayHit                          hit;
                     SurfaceSample                            sample;
-                    const bool                               bSampled = pTable != nullptr && context._component.castFromTo( from, to, 0.0f, kAllLayers, hit ) && SurfaceQuery::resolveHit( *pManager, pTable, hit, sample );
+                    const bool                               bSampled = pTable != nullptr && context._component.castFromTo( from, to, 0.0f, kAllLayers, hit ) && SurfaceSample::resolveHit( *pManager, pTable, hit, sample );
                     if ( bSampled == false )
                     {
                         record( context, hashed_string{}, foot, 0, AnimationNotifyPhase::Instant );

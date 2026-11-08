@@ -61,7 +61,7 @@ namespace sw::editor
         /** @brief `U+XXXX` 를 코드포인트로 읽습니다. 형식이 틀리거나 기본 다국어 평면 밖이면 false 입니다. */
         [[nodiscard]] static bool parseCodepoint( string_view text, uint16& outCodepoint );
 
-        // 아이콘 이름 → 글리프입니다. 표는 셸(`ImGuiEditor`)이 들고 글꼴을 세울 때 읽어 여기 게시한다(`EditorUIContext::publish` 와 같은 모양).
+        // 아이콘 이름 → 글리프입니다. 표는 셸(`ImGuiEditor`)이 들고 글꼴을 세울 때 읽어 여기 게시한다(`EditorUIContextState::publish` 와 같은 모양).
         /** @brief 셸이 표 둘을 게시합니다(읽은 뒤). 셸을 내릴 때 nullptr 둘로 거둔다. 표는 게시가 거둘 때까지 살아 있어야 한다. */
         static void publish( const EditorIconGlyphTable* pGlyphTable, const EditorComponentIconTable* pComponentTable );
         /** @brief 게시된 컴포넌트 아이콘 표입니다. 게시 전에 부르면 멈춘다(그리기는 셸이 선 뒤다). */

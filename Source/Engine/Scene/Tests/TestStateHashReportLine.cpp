@@ -1,11 +1,11 @@
-// SceneStateHash · StateHashHistory 의 글 형식 — 이력 한 줄 · 오브젝트 목록(여러 줄 · 틱 · 한 줄 판) 되읽기와 거절, 한 줄 상한, 키트 해시 줄.
+// SceneObjectHash · StateHashHistory 의 글 형식 — 이력 한 줄 · 오브젝트 목록(여러 줄 · 틱 · 한 줄 판) 되읽기와 거절, 한 줄 상한, 키트 해시 줄.
 #include "pch.h"
 
 #include "Core/Network/DebugReplyLine.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Scene/SceneStateHash.h"
+#include "Engine/Scene/SceneObjectHash.h"
 
 using namespace sw;
 
@@ -51,27 +51,27 @@ SW_TEST_CASE( StateHashReportLineTest, DifferingObjectsAreNamed )
         SceneObjectHash{"Spawn Point", 0x3333ull}
     };
     string text;
-    SceneStateHash::writeObjectReport( listLeft, text );
+    SceneObjectHash::writeObjectReport( listLeft, text );
     vector<SceneObjectHash> parsed;
-    SW_REQUIRE_TRUE( SceneStateHash::parseObjectReport( text, parsed ) );
+    SW_REQUIRE_TRUE( SceneObjectHash::parseObjectReport( text, parsed ) );
     SW_REQUIRE_EQUAL( size_t( 3 ), parsed.size() );
     SW_EXPECT_TRUE( parsed[2]._name == "Spawn Point" );
     SW_EXPECT_EQUAL( uint64( 0x3333ull ), parsed[2]._hash );
 
     vector<string> listName;
-    SW_EXPECT_FALSE( SceneStateHash::findDifferingObjects( listLeft, parsed, listName ) );
+    SW_EXPECT_FALSE( SceneObjectHash::findDifferingObjects( listLeft, parsed, listName ) );
     SW_EXPECT_TRUE( listName.empty() );
 
     // Hero 의 해시가 다르고, Door 는 한쪽에만 있다.
     vector<SceneObjectHash> listRight = listLeft;
     listRight[1]._hash                = 0x9999ull;
     listRight.erase( listRight.begin() );
-    SW_EXPECT_TRUE( SceneStateHash::findDifferingObjects( listLeft, listRight, listName ) );
+    SW_EXPECT_TRUE( SceneObjectHash::findDifferingObjects( listLeft, listRight, listName ) );
     SW_REQUIRE_EQUAL( size_t( 2 ), listName.size() );
     SW_EXPECT_TRUE( listName[0] == "Door" );
     SW_EXPECT_TRUE( listName[1] == "Hero" );
 
-    SW_EXPECT_FALSE( SceneStateHash::parseObjectReport( "not a hash line\n", parsed ) );
+    SW_EXPECT_FALSE( SceneObjectHash::parseObjectReport( "not a hash line\n", parsed ) );
     SW_EXPECT_TRUE( parsed.empty() );
 }
 
@@ -85,18 +85,18 @@ SW_TEST_CASE( StateHashReportLineTest, ATickedObjectReportRoundTripsAndRejectsAM
         SceneObjectHash{"Hero", 0x2222ull}
     };
     string text;
-    SceneStateHash::writeTickedObjectReport( 42, listObject, text );
+    SceneObjectHash::writeTickedObjectReport( 42, listObject, text );
     uint64                  tick = 0;
     vector<SceneObjectHash> parsed;
-    SW_REQUIRE_TRUE( SceneStateHash::parseTickedObjectReport( text, tick, parsed ) );
+    SW_REQUIRE_TRUE( SceneObjectHash::parseTickedObjectReport( text, tick, parsed ) );
     SW_EXPECT_EQUAL( uint64( 42 ), tick );
     SW_REQUIRE_EQUAL( size_t( 2 ), parsed.size() );
     SW_EXPECT_TRUE( parsed[1]._name == "Hero" );
 
     string plain;
-    SceneStateHash::writeObjectReport( listObject, plain );
-    SW_EXPECT_FALSE( SceneStateHash::parseTickedObjectReport( plain, tick, parsed ) );
-    SW_EXPECT_FALSE( SceneStateHash::parseTickedObjectReport( "tick x\n", tick, parsed ) );
+    SceneObjectHash::writeObjectReport( listObject, plain );
+    SW_EXPECT_FALSE( SceneObjectHash::parseTickedObjectReport( plain, tick, parsed ) );
+    SW_EXPECT_FALSE( SceneObjectHash::parseTickedObjectReport( "tick x\n", tick, parsed ) );
     SW_EXPECT_TRUE( parsed.empty() );
 }
 
@@ -111,24 +111,24 @@ SW_TEST_CASE( StateHashReportLineTest, AnObjectLineRoundTripsAwkwardNamesInsideA
         SceneObjectHash{"a,b:c%d", 0x2222ull}
     };
     string line;
-    SW_REQUIRE_TRUE( SceneStateHash::writeObjectReportLine( 42, listObject, line ) );
+    SW_REQUIRE_TRUE( SceneObjectHash::writeObjectReportLine( 42, listObject, line ) );
     SW_EXPECT_TRUE( line.find( '\n' ) == string::npos );
     uint64                  tick = 0;
     vector<SceneObjectHash> parsed;
-    SW_REQUIRE_TRUE( SceneStateHash::tryParseObjectReportLine( "[12:00:00][Info] " + line + " (client)", tick, parsed ) );
+    SW_REQUIRE_TRUE( SceneObjectHash::tryParseObjectReportLine( "[12:00:00][Info] " + line + " (client)", tick, parsed ) );
     SW_EXPECT_EQUAL( uint64( 42 ), tick );
     SW_REQUIRE_EQUAL( size_t( 2 ), parsed.size() );
     SW_EXPECT_TRUE( parsed[0]._name == "Door 1" && parsed[0]._hash == 0x1111ull );
     SW_EXPECT_TRUE( parsed[1]._name == "a,b:c%d" && parsed[1]._hash == 0x2222ull );
 
-    SW_REQUIRE_TRUE( SceneStateHash::writeObjectReportLine( 7, {}, line ) );
-    SW_REQUIRE_TRUE( SceneStateHash::tryParseObjectReportLine( line, tick, parsed ) );
+    SW_REQUIRE_TRUE( SceneObjectHash::writeObjectReportLine( 7, {}, line ) );
+    SW_REQUIRE_TRUE( SceneObjectHash::tryParseObjectReportLine( line, tick, parsed ) );
     SW_EXPECT_TRUE( parsed.empty() );
     SW_EXPECT_EQUAL( uint64( 7 ), tick );
 
-    SW_EXPECT_FALSE( SceneStateHash::tryParseObjectReportLine( "no prefix 1 2", tick, parsed ) );
-    SW_EXPECT_FALSE( SceneStateHash::tryParseObjectReportLine( string( SceneStateHash::kObjectReportLinePrefix ) + " 5 zz:Door", tick, parsed ) );
-    SW_EXPECT_FALSE( SceneStateHash::tryParseObjectReportLine( string( SceneStateHash::kObjectReportLinePrefix ) + " 5 00000000000000aa:Do%2", tick, parsed ) );
+    SW_EXPECT_FALSE( SceneObjectHash::tryParseObjectReportLine( "no prefix 1 2", tick, parsed ) );
+    SW_EXPECT_FALSE( SceneObjectHash::tryParseObjectReportLine( string( SceneObjectHash::kObjectReportLinePrefix ) + " 5 zz:Door", tick, parsed ) );
+    SW_EXPECT_FALSE( SceneObjectHash::tryParseObjectReportLine( string( SceneObjectHash::kObjectReportLinePrefix ) + " 5 00000000000000aa:Do%2", tick, parsed ) );
     SW_EXPECT_TRUE( parsed.empty() );
 }
 
@@ -146,26 +146,26 @@ SW_TEST_CASE( StateHashReportLineTest, ALineOverTheLimitIsAnErrorOnBothSides )
         listObject.push_back( SceneObjectHash{ formatToString( "Obj%#", 10000 + index ), index } );
     }
     string line = "stale";
-    SW_EXPECT_FALSE( SceneStateHash::writeObjectReportLine( 1, listObject, line ) );
+    SW_EXPECT_FALSE( SceneObjectHash::writeObjectReportLine( 1, listObject, line ) );
     SW_EXPECT_TRUE( line.empty() ); // 반쯤 쓴 줄을 남기지 않는다
 
     // 상한 안의 목록은 쓰이고 되읽힌다.
     listObject.resize( 20 );
-    SW_REQUIRE_TRUE( SceneStateHash::writeObjectReportLine( 1, listObject, line ) );
+    SW_REQUIRE_TRUE( SceneObjectHash::writeObjectReportLine( 1, listObject, line ) );
     SW_EXPECT_TRUE( line.size() <= DebugReplyLine::kMaxBytes );
     uint64                  tick = 0;
     vector<SceneObjectHash> parsed;
-    SW_EXPECT_TRUE( SceneStateHash::tryParseObjectReportLine( line, tick, parsed ) );
+    SW_EXPECT_TRUE( SceneObjectHash::tryParseObjectReportLine( line, tick, parsed ) );
     SW_EXPECT_EQUAL( size_t( 20 ), parsed.size() );
 
     // 읽는 쪽: 같은 상수를 넘는 줄(유효한 항목이라도)은 거절한다.
-    string tooLong = string( SceneStateHash::kObjectReportLinePrefix ) + " 1 ";
+    string tooLong = string( SceneObjectHash::kObjectReportLinePrefix ) + " 1 ";
     while ( tooLong.size() <= DebugReplyLine::kMaxBytes )
     {
         tooLong += "00000000000000aa:Door,";
     }
     tooLong.pop_back();
-    SW_EXPECT_FALSE( SceneStateHash::tryParseObjectReportLine( tooLong, tick, parsed ) );
+    SW_EXPECT_FALSE( SceneObjectHash::tryParseObjectReportLine( tooLong, tick, parsed ) );
     SW_EXPECT_TRUE( parsed.empty() );
 
     // 이력 한 줄: 최대 샘플 수는 상한 안에 들고, 그보다 많은 샘플은 오류다.

@@ -5,7 +5,7 @@
 
 #include "Editor/Common/Asset/OutfitAtlas.h"
 
-#include "Engine/Character/Fit/MeshMerger.h"
+#include "Engine/Character/Fit/MergedMesh.h"
 
 using namespace sw;
 

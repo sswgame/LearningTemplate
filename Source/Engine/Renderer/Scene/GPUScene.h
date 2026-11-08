@@ -75,7 +75,7 @@ namespace sw
         /**
          * @brief 배치 메시의 메시 공간 경계입니다(언리얼 `FBoxSphereBounds` — 상자 중심 · 그 중심 기준 구 반지름 · 상자 반 크기). 반지름이 0 이면 상자가 없다(구로만 판정).
          * @details 컬링(`gpu_cull.hlsl`)이 인스턴스 월드 행렬로 상자를 옮겨 절두체 · 가림을 판정한다. 컴포넌트 여유(스킨드 · VAT 의 큰 구)는 인스턴스 구 반지름 ÷ 메시 구 반지름(1 이상)을 상자에 곱한다.
-         *          3 성분 벡터는 16 바이트 경계에 둔다(GL std430 — `ShaderBindingValidator`).
+         *          3 성분 벡터는 16 바이트 경계에 둔다(GL std430 — `ShaderBindingValidatorIssue`).
          */
         float3  _localBoundsCenter{};
         float32 _localBoundsRadius{ 0.0f };

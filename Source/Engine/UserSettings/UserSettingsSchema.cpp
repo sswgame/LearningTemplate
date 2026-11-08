@@ -12,7 +12,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
-#include "Engine/UserSettings/HardwareDetection.h"
+#include "Engine/UserSettings/HardwareDetectionResult.h"
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
 
 namespace sw

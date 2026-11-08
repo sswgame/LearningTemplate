@@ -40,7 +40,7 @@ namespace sw
         /// @brief 16비트 부호 있는 정규화 RG(4 B) — G버퍼 법선의 옥타헤드럴 좌표. 셰이더는 `.rg` 가 [-1, 1] 실수다.
         ///        컬러 첨부 지원은 Vulkan 필수 포맷이 아니라 장치 생성 때 조회한다(`PackedTypes.md` P4).
         R16G16_SNORM = 16,
-        // 모바일 · 웹 블록 압축(4x4 블록). 쿠킹한 형식 변형(`TextureFormatSelection`)만 쓴다. 장치 지원은 `IRHIDevice::supportsTextureFormat` 이 답한다 — DX11 · DX12 에는 없다.
+        // 모바일 · 웹 블록 압축(4x4 블록). 쿠킹한 형식 변형(`TextureFormatFamily`)만 쓴다. 장치 지원은 `IRHIDevice::supportsTextureFormat` 이 답한다 — DX11 · DX12 에는 없다.
         ASTC_4x4_UNORM   = 17, ///< 16 B/블록, LDR RGBA
         ETC2_RGBA8_UNORM = 18, ///< 16 B/블록, ETC2 RGB + EAC 알파
         EAC_R11_UNORM    = 19, ///< 8 B/블록, 단일 채널

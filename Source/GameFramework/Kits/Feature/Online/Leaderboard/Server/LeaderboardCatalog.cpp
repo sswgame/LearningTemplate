@@ -20,7 +20,7 @@ namespace sw
             Element::of<&LeaderboardCatalog::loadBoard>( "Board" ),
             Element::of<&LeaderboardCatalog::_listAchievement>( "Achievement" ),
         };
-        return XMLCatalogReader::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInDocumentOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool LeaderboardCatalog::loadBoard( const XMLNode& node, string_view sourceName )

@@ -10,7 +10,7 @@
 #include "Engine/Character/Fit/BodyShape.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitSolver.h"
-#include "Engine/Character/Fit/MeshMerger.h"
+#include "Engine/Character/Fit/MergedMesh.h"
 #include "Engine/Character/Fit/SurfaceBVH.h"
 #include "Engine/Character/Fit/SurfaceTransfer.h"
 #include "Engine/Graphics/Mesh/Mesh.h"

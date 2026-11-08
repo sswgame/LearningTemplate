@@ -188,7 +188,7 @@ namespace sw
             Element::of<&CreatureLifeCatalog::loadSpecies>( "Species" ),
             Element::of<&CreatureLifeCatalog::loadAppeal>( "Appeal" ).uncounted(), // 틀리면 앞의 단계를 그대로 둔다
         };
-        const XMLCatalogReadResult result = XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement );
+        const XMLCatalogReadResult result = XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement );
         rebuildHabitatOrder();
 
         return result._loadedCount;

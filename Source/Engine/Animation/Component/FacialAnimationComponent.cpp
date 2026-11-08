@@ -545,7 +545,7 @@ namespace sw
             {
                 const LipSyncSettings& lipSync       = *_pLipSync;
                 const float32          windowSeconds = 1.0f / MathUtil::max( lipSync._frameRate, 1.0f );
-                const float32          openness      = LipSyncAnalyzer::computeOpenness( LipSyncAnalyzer::computeRms( _listSpeechSample, _speechSampleRate, _speechTime, windowSeconds ), lipSync );
+                const float32          openness      = VisemeTrack::computeOpenness( VisemeTrack::computeRms( _listSpeechSample, _speechSampleRate, _speechTime, windowSeconds ), lipSync );
                 const int32            visemeIndex   = getFacialRig().findVisemeIndex( lipSync._fallbackViseme );
                 if ( visemeIndex >= 0 )
                     addPose( skeletalMesh, _listVisemeTarget[static_cast<size_t>( visemeIndex )], listViseme[static_cast<size_t>( visemeIndex )], openness );

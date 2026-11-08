@@ -190,7 +190,7 @@ namespace sw
                 continue;
             }
             Ray ray{};
-            if ( WorldWidgetPick::makeRay( inverseViewProjection, routed._event._position, viewport._size, ray ) == false )
+            if ( WorldWidgetHit::makeRay( inverseViewProjection, routed._event._position, viewport._size, ray ) == false )
                 continue;
             const bool bHandled = _worldPointer.route( _listComponent, ray, routed._event );
             // 위젯이 처리한 누름 · 뗌은 게임이 받지 않게 소비한다(화면 위젯과 같은 규칙).

@@ -6,7 +6,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
-#include "Engine/Graphics/Shader/Reflection/ShaderReflection.h"
+#include "Engine/Graphics/Shader/Reflection/ShaderReflectionData.h"
 #include "Engine/Graphics/Shader/Reflection/ShaderReflectionLibrary.h"
 
 namespace sw
@@ -108,7 +108,7 @@ namespace sw
             SW_LOG_WARNING_ID( "ShaderCache.RuntimeShaderReflectionFailed", "Runtime shader reflection failed: '%#' (%#)", desc._source.c_str(), result._errorMessage.c_str() );
             return false;
         }
-        outReflection = ShaderReflection::reflect( result._bytecode, desc._targetFormat );
+        outReflection = ShaderReflectionData::reflect( result._bytecode, desc._targetFormat );
         return true;
     }
 } // namespace sw

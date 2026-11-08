@@ -5,7 +5,7 @@
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerRegistryReader.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerSelection.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Directory/ServerSelectionQuery.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
 #include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
@@ -175,40 +175,40 @@ SW_TEST_CASE( ServerDirectoryTest, PortShardIsStablePerAccountAndInRange )
 SW_TEST_CASE( ServerDirectoryTest, CandidateRequiresOpenKindBuildFreshAndSeats )
 {
     const sw::ServerSelectionQuery query = makeQuery( "kr" );
-    SW_EXPECT_TRUE( sw::ServerSelection::isCandidate( makeStatus( 1, "kr", 0, 10 ), query, kNowMs ) );
+    SW_EXPECT_TRUE( sw::ServerSelectionQuery::isCandidate( makeStatus( 1, "kr", 0, 10 ), query, kNowMs ) );
 
     sw::ServerStatus draining = makeStatus( 1, "kr", 0, 10 );
     draining._state           = sw::ServerState::Draining;
-    SW_EXPECT_FALSE( sw::ServerSelection::isCandidate( draining, query, kNowMs ) );
+    SW_EXPECT_FALSE( sw::ServerSelectionQuery::isCandidate( draining, query, kNowMs ) );
     sw::ServerStatus starting = makeStatus( 1, "kr", 0, 10 );
     starting._state           = sw::ServerState::Starting;
-    SW_EXPECT_FALSE( sw::ServerSelection::isCandidate( starting, query, kNowMs ) );
+    SW_EXPECT_FALSE( sw::ServerSelectionQuery::isCandidate( starting, query, kNowMs ) );
 
     sw::ServerStatus maintenance = makeStatus( 1, "kr", 0, 10 );
     maintenance._state           = sw::ServerState::Maintenance;
-    SW_EXPECT_FALSE( sw::ServerSelection::isCandidate( maintenance, query, kNowMs ) );
+    SW_EXPECT_FALSE( sw::ServerSelectionQuery::isCandidate( maintenance, query, kNowMs ) );
     sw::ServerSelectionQuery allowedQuery = query;
     allowedQuery._bIncludeMaintenance     = SW_TRUE;
-    SW_EXPECT_TRUE( sw::ServerSelection::isCandidate( maintenance, allowedQuery, kNowMs ) );
+    SW_EXPECT_TRUE( sw::ServerSelectionQuery::isCandidate( maintenance, allowedQuery, kNowMs ) );
 
     sw::ServerStatus chat  = makeStatus( 1, "kr", 0, 10 );
     chat._descriptor._kind = "chat";
-    SW_EXPECT_FALSE( sw::ServerSelection::isCandidate( chat, query, kNowMs ) );
+    SW_EXPECT_FALSE( sw::ServerSelectionQuery::isCandidate( chat, query, kNowMs ) );
 
     sw::ServerSelectionQuery buildQuery = query;
     buildQuery._buildVersion            = 8;
-    SW_EXPECT_FALSE( sw::ServerSelection::isCandidate( makeStatus( 1, "kr", 0, 10 ), buildQuery, kNowMs ) );
+    SW_EXPECT_FALSE( sw::ServerSelectionQuery::isCandidate( makeStatus( 1, "kr", 0, 10 ), buildQuery, kNowMs ) );
     buildQuery._buildVersion = 7;
-    SW_EXPECT_TRUE( sw::ServerSelection::isCandidate( makeStatus( 1, "kr", 0, 10 ), buildQuery, kNowMs ) );
+    SW_EXPECT_TRUE( sw::ServerSelectionQuery::isCandidate( makeStatus( 1, "kr", 0, 10 ), buildQuery, kNowMs ) );
 
-    SW_EXPECT_TRUE( sw::ServerSelection::isCandidate( makeStatus( 1, "kr", 0, 10 ), query, kNowMs + query._staleMs ) );
-    SW_EXPECT_FALSE( sw::ServerSelection::isCandidate( makeStatus( 1, "kr", 0, 10 ), query, kNowMs + query._staleMs + 1 ) );
+    SW_EXPECT_TRUE( sw::ServerSelectionQuery::isCandidate( makeStatus( 1, "kr", 0, 10 ), query, kNowMs + query._staleMs ) );
+    SW_EXPECT_FALSE( sw::ServerSelectionQuery::isCandidate( makeStatus( 1, "kr", 0, 10 ), query, kNowMs + query._staleMs + 1 ) );
 
     sw::ServerSelectionQuery partyQuery = query;
     partyQuery._seatCount               = 3;
-    SW_EXPECT_TRUE( sw::ServerSelection::isCandidate( makeStatus( 1, "kr", 7, 10 ), partyQuery, kNowMs ) );
-    SW_EXPECT_FALSE( sw::ServerSelection::isCandidate( makeStatus( 1, "kr", 8, 10 ), partyQuery, kNowMs ) );
-    SW_EXPECT_FALSE( sw::ServerSelection::isCandidate( makeStatus( 1, "kr", 0, 0 ), query, kNowMs ) ); // 정원 0 은 받지 않는다(나눗셈도 하지 않는다)
+    SW_EXPECT_TRUE( sw::ServerSelectionQuery::isCandidate( makeStatus( 1, "kr", 7, 10 ), partyQuery, kNowMs ) );
+    SW_EXPECT_FALSE( sw::ServerSelectionQuery::isCandidate( makeStatus( 1, "kr", 8, 10 ), partyQuery, kNowMs ) );
+    SW_EXPECT_FALSE( sw::ServerSelectionQuery::isCandidate( makeStatus( 1, "kr", 0, 0 ), query, kNowMs ) ); // 정원 0 은 받지 않는다(나눗셈도 하지 않는다)
 }
 
 /**
@@ -223,22 +223,22 @@ SW_TEST_CASE( ServerDirectoryTest, PickPrefersSameRegionThenFillThenServerID )
     listStatus.push_back( makeStatus( 40, "kr", 90, 100 ) ); // 3: 같은 지역, 거의 찼다
 
     int32 index = -1;
-    SW_REQUIRE_TRUE( sw::ServerSelection::pickServer( listStatus, makeQuery( "kr" ), kNowMs, index ) );
+    SW_REQUIRE_TRUE( sw::ServerSelectionQuery::pickServer( listStatus, makeQuery( "kr" ), kNowMs, index ) );
     SW_EXPECT_EQUAL( 2, index );
 
     listStatus[2]._load = 26; // 이제 2 가 조금 더 찼다
-    SW_REQUIRE_TRUE( sw::ServerSelection::pickServer( listStatus, makeQuery( "kr" ), kNowMs, index ) );
+    SW_REQUIRE_TRUE( sw::ServerSelectionQuery::pickServer( listStatus, makeQuery( "kr" ), kNowMs, index ) );
     SW_EXPECT_EQUAL( 1, index );
 
-    SW_REQUIRE_TRUE( sw::ServerSelection::pickServer( listStatus, makeQuery( "us" ), kNowMs, index ) );
+    SW_REQUIRE_TRUE( sw::ServerSelectionQuery::pickServer( listStatus, makeQuery( "us" ), kNowMs, index ) );
     SW_EXPECT_EQUAL( 0, index ); // 같은 지역이 없다 — 전체에서 가장 빈 것
 
     sw::ServerSelectionQuery localOnly = makeQuery( "us" );
     localOnly._bAllowOtherRegion       = SW_FALSE;
-    SW_EXPECT_FALSE( sw::ServerSelection::pickServer( listStatus, localOnly, kNowMs, index ) );
+    SW_EXPECT_FALSE( sw::ServerSelectionQuery::pickServer( listStatus, localOnly, kNowMs, index ) );
     SW_EXPECT_EQUAL( -1, index );
 
-    SW_EXPECT_FALSE( sw::ServerSelection::pickServer( {}, makeQuery( "kr" ), kNowMs, index ) );
+    SW_EXPECT_FALSE( sw::ServerSelectionQuery::pickServer( {}, makeQuery( "kr" ), kNowMs, index ) );
     SW_EXPECT_EQUAL( -1, index );
 }
 

@@ -131,7 +131,7 @@ namespace sw::editor
             _lastError = text.empty() ? "no state.objects answer from " + origin._remote.toString() : text;
             return false;
         }
-        if ( SceneStateHash::parseTickedObjectReport( text, outTick, outListObject ) == false )
+        if ( SceneObjectHash::parseTickedObjectReport( text, outTick, outListObject ) == false )
         {
             _lastError = "an answer is not a ticked object hash list (tick <n>, then <hex hash> <name> per line)";
             return false;
@@ -173,7 +173,7 @@ namespace sw::editor
         vector<SceneObjectHash> listRight;
         uint64                  leftTick  = 0;
         uint64                  rightTick = 0;
-        if ( SceneStateHash::parseTickedObjectReport( leftText, leftTick, listLeft ) == false || SceneStateHash::parseTickedObjectReport( rightText, rightTick, listRight ) == false )
+        if ( SceneObjectHash::parseTickedObjectReport( leftText, leftTick, listLeft ) == false || SceneObjectHash::parseTickedObjectReport( rightText, rightTick, listRight ) == false )
         {
             _lastError = "an answer is not a ticked object hash list (tick <n>, then <hex hash> <name> per line)";
             return false;
@@ -190,7 +190,7 @@ namespace sw::editor
             return false;
         }
         vector<string> listName;
-        static_cast<void>( SceneStateHash::findDifferingObjects( listLeft, listRight, listName ) );
+        static_cast<void>( SceneObjectHash::findDifferingObjects( listLeft, listRight, listName ) );
         _listDifferingObject = std::move( listName );
         _objectTick          = leftTick;
         _bObjectComparison   = SW_TRUE;

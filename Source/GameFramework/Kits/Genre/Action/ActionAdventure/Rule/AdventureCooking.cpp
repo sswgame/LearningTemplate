@@ -54,7 +54,7 @@ namespace sw
             Element::of<&AdventureCooking::_effectCatalog>( "Effect" ).uncounted(),
             Element::of<&AdventureCooking::loadIngredient>( "Ingredient" ),
         };
-        return XMLCatalogReader::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
+        return XMLCatalogReadResult::readInTableOrder( *this, root, sourceName, kArrElement )._loadedCount;
     }
 
     bool AdventureCooking::loadIngredient( const XMLNode& node, string_view sourceName )

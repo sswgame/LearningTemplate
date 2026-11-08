@@ -1,7 +1,7 @@
 /**
  * @file AudioClip.h
  * @brief 믹서가 읽는 클립(float 샘플)과, 경로별 클립 캐시(`AudioClipCache`)입니다.
- * @details 디코드는 워커에서 한다(`AudioClipDecoder`는 WAV 와 OGG 를 처리하고, 백엔드가 등록하는 대체 디코더는 Windows 의 Media Foundation 이다).
+ * @details 디코드는 워커에서 한다(`AudioPcm`는 WAV 와 OGG 를 처리하고, 백엔드가 등록하는 대체 디코더는 Windows 의 Media Foundation 이다).
  *          디코드 결과는 float 로 바꿔 캐시에 넣는다. 믹서 스레드는 캐시에서 **찾기만** 하고(`findClip`) 디코드를 기다리지 않는다.
  */
 #pragma once

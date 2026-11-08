@@ -81,7 +81,7 @@ namespace sw
         if ( pEquipment != nullptr )
             AppearanceInputUtil::applyEquipment( *pEquipment, input );
         ResolvedAppearance resolved;
-        AppearanceResolver::resolve( database, input, resolved );
+        ResolvedAppearance::resolve( database, input, resolved );
         if ( _resolveCount > 0 )
             collectDetachEvents( _resolved, resolved );
         _resolved                  = std::move( resolved );

@@ -17,7 +17,7 @@
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreFactory.h"
+#include "GameFramework/Runtime/Foundation/Framework/Save/Local/LocalStoreBackend.h"
 
 #include <optional>
 
@@ -284,9 +284,9 @@ namespace sw
             SW_LOG_ERROR_ID( "LanternVale.ProfileFolderInvalid", "[LanternVale] Profile Folder '%#' must be a relative path under the user data folder", _profileFolder.c_str() );
             return false;
         }
-        const LocalStoreConfig  settings{ string( LocalStoreFactory::kFileBackendName ), *location };
+        const LocalStoreConfig  settings{ string( LocalStoreBackend::kFileBackendName ), *location };
         string                  error;
-        unique_ptr<ILocalStore> pStore = LocalStoreFactory::createLocalStore( "LanternVale", settings, LocalSealContext{}, error );
+        unique_ptr<ILocalStore> pStore = LocalStoreBackend::createLocalStore( "LanternVale", settings, LocalSealContext{}, error );
         if ( pStore == nullptr )
         {
             SW_LOG_ERROR_ID( "LanternVale.ProfileStoreFailed", "[LanternVale] the profile store did not open: %#", error.c_str() );

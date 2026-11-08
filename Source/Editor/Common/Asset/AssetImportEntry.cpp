@@ -19,7 +19,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Graphics/Texture/TextureFormatSelection.h"
+#include "Engine/Graphics/Texture/TextureFormatFamily.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
 #include "ModuleAPI/ABI/EditorAPI.h"
@@ -87,7 +87,7 @@ namespace sw::editor
                         }
                         const TextureFormatSettings& settings = editor::getSubsystem<EngineConfig>()._textureFormats;
                         vector<TextureFormatFamily>  listFamily;
-                        if ( TextureFormatSelection::resolveTarget( settings, settings._target, editor::getSubsystem<TypeRegistry>(), listFamily ) == false )
+                        if ( TextureFormatFamily::resolveTarget( settings, settings._target, editor::getSubsystem<TypeRegistry>(), listFamily ) == false )
                             return -1; // 까닭은 표를 푸는 쪽이 남겼다
                         for ( const TextureFormatFamily& family : listFamily )
                         {

@@ -6,7 +6,7 @@
 #include "Core/Time/Clock.h"
 
 #include "GameFramework/Kits/Feature/Online/Social/Runtime/SocialProtocol.h"
-#include "GameFramework/Kits/Feature/Online/Social/Server/SocialLinkRules.h"
+#include "GameFramework/Kits/Feature/Online/Social/Server/SocialCounts.h"
 #include "GameFramework/Kits/Feature/Online/Social/Server/SocialService.h"
 #include "GameFramework/Runtime/Online/Bus/LocalServerBus.h"
 #include "GameFramework/Runtime/Online/Bus/ServerBus.h"
