@@ -29,6 +29,29 @@ namespace sw
     inline constexpr NativeFileHandle kInvalidNativeFileHandle = -1;
 
     /**
+     * @brief 파일 읽기를 듣는 쪽입니다 — 개발 도구가 디스크 흉내 · 읽기 기록으로 붙는다(`PlatformFileUtil::registerReadObserver`). 파일 계층은 이 인터페이스만 안다.
+     * @details 부르는 스레드(게임 · 워커 · 비동기 IO 스레드)에서 불리므로 구현은 스레드 안전해야 합니다. 언리얼이 `IPlatformFile` 장식 층
+     *          (`FLoggedPlatformFile` · 지연 흉내)을 개발 모듈에서 끼우는 모양과 같다 — 배포본에는 관찰자가 없어 읽기 길은 원자 읽기 하나다.
+     */
+    class SW_API IFileReadObserver
+    {
+    public:
+        IFileReadObserver() = default;
+        /** @brief 가상 소멸자입니다. */
+        virtual ~IFileReadObserver() = default;
+
+        /** @brief 복사를 금지합니다. */
+        IFileReadObserver( const IFileReadObserver& ) = delete;
+        /** @brief 복사 대입을 금지합니다. */
+        IFileReadObserver& operator=( const IFileReadObserver& ) = delete;
+
+        /** @brief 장치에서 @p byteCount 를 읽기 직전에 불립니다(위치 지정 읽기 · 비동기 IO 덩이). 구현이 이 스레드를 재우면 그만큼 읽기가 늦는다. */
+        virtual void recordDeviceRead( size_t byteCount ) = 0;
+        /** @brief 파일 하나를 읽으려고 연 뒤 불립니다. @p byteCount 는 읽은 바이트이고 핸들만 연 경우 0 입니다. */
+        virtual void recordFileOpenedForRead( string_view filePath, size_t byteCount ) = 0;
+    };
+
+    /**
      * @struct PlatformFileUtil
      * @brief stdio 기반 플랫폼 파일 원시 연산 모음입니다.
      */
@@ -112,20 +135,25 @@ namespace sw
         [[nodiscard]] static bool readNativeFileAt( NativeFileHandle handle, uint64 offset, void* pDst, size_t size, size_t& outReadBytes );
 
         /**
-         * @brief 디스크 흉내(`-gv_ioEmulationReadLatencyMs` · `-gv_ioEmulationReadKilobytesPerSecond`, 부하 검증의 하드웨어 프로필)가 켜져 있으면 읽기 한 번만큼 이 스레드를 재웁니다.
-         * @details 읽기 경로(`readNativeFileAt` · `FileUtil::readFile` · `readTextFile`)가 부릅니다. 꺼져 있으면(기본, 배포본은 늘) 아무것도 하지 않습니다.
-         *          느린 디스크의 지연 · 대역폭을 소프트웨어로 흉내 낸 것이라 OS 캐시는 흉내 내지 않습니다. 장치는 하나이고 큐 깊이는 1 입니다 —
-         *          여러 스레드의 읽기가 줄을 서므로 읽기를 나눠 부른다고 빨라지지 않습니다. 대기는 고해상도 마감(`MonotonicClock::sleepUntilNanoseconds`)이라
-         *          1 ms 가 Windows 기본 타이머 주기(약 15.6 ms)로 늘지 않습니다.
+         * @brief 장치에서 @p byteCount 를 읽기 직전에 부릅니다 — 걸린 읽기 관찰자(`IFileReadObserver::recordDeviceRead`)에 알린다.
+         * @details 읽기 경로(`readNativeFileAt`, 비동기 IO 백엔드의 덩이 읽기)가 부릅니다. 관찰자가 없으면(배포본은 늘) 아무것도 하지 않습니다.
          */
-        static void emulateReadDelay( size_t byteCount );
+        static void recordDeviceRead( size_t byteCount );
 
         /**
-         * @brief 파일 하나를 읽으려고 열 때 부릅니다(`FileUtil::readFile` · `readTextFile` · `readStreamTextFile`, 비동기 IO 의 `AsyncFileHandle::open`). 연 횟수를 세고,
-         *        `-gv_ioLogReads=1` 이면 경로 · 바이트 · 스레드를 로그로 남깁니다(언리얼 `-FileOpenLog` 와 같은 진단).
+         * @brief 파일 하나를 읽으려고 열 때 부릅니다(`FileUtil::readFile` · `readTextFile` · `readStreamTextFile`, 비동기 IO 의 `AsyncFileHandle::open`). 연 횟수를 세고
+         *        걸린 읽기 관찰자에 알린다.
          * @param byteCount 읽은 바이트. 핸들만 연 경우(뒤에 위치 지정 읽기가 온다)는 0 입니다.
          */
         static void recordFileOpenedForRead( string_view filePath, size_t byteCount );
+
+        /**
+         * @brief 읽기 관찰자를 겁니다. 이미 다른 관찰자가 걸려 있으면 거절하고 false 입니다(관찰자는 하나다).
+         * @param pObserver 뗄 때까지 살아 있어야 합니다.
+         */
+        [[nodiscard]] static bool registerReadObserver( IFileReadObserver* pObserver );
+        /** @brief @p pObserver 가 걸린 관찰자이면 뗍니다. */
+        static void unregisterReadObserver( IFileReadObserver* pObserver );
 
         /**
          * @brief OS 경계에 들어온 경로가 엄격한 절대 경로인지 봅니다(R2 - 디스크 I/O 는 절대 경로만). 아니면 오류(`File.RelativePath`)를 남기고 false - 부르는 OS 호출은 실패한다.

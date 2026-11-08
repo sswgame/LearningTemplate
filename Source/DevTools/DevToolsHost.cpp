@@ -13,6 +13,7 @@
 #include "DevTools/AssetReload/ReloadTracker.h"
 #include "DevTools/Console/DevConsoleHost.h"
 #include "DevTools/DevToolsClientPart.h"
+#include "DevTools/File/FileReadDiagnostics.h"
 #include "DevTools/Maintenance/SavedRetentionSubsystem.h"
 #include "DevTools/Net/NetLineEmulation.h"
 #include "DevTools/Profiling/FrameStall.h"
@@ -34,6 +35,7 @@ namespace sw
     DevToolsHost::DevToolsHost()
         : _pConsole{}
         , _pContentFolderWatch{ make_unique<ContentFolderWatchService>() }
+        , _pFileReadDiagnostics{ make_unique<FileReadDiagnostics>() }
     {
     }
 
