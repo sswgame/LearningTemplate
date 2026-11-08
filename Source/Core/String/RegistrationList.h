@@ -4,6 +4,7 @@
  *        `NameRegistry` 는 이름 → 값을 소유하는 테이블(중복 거절 또는 덮어쓰기 · 이름 찾기 · 등록 순서 훑기 · 조건 제거)입니다.
  */
 #pragma once
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/IDAllocator.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
@@ -217,6 +218,7 @@ namespace sw
             , _nameCase{ nameCase }
             , _generation{ 0 }
             , _bRequireName{ bRequireName }
+            , _ownerMutex{}
             , _subscriptions{ onRelease }
         {
         }
@@ -466,6 +468,11 @@ namespace sw
          *          (언리얼은 모듈 변경 델리게이트를 방송하지만, 여기서는 정적 등록 중의 방송을 받을 쪽이 없을 수 있어 읽는 쪽이 비교한다).
          */
         uint32 getGeneration() const { return _generation; }
+        /**
+         * @brief 여러 스레드가 만지는 주인이 목록을 고치고 읽을 때 잡는 잠금입니다. 목록은 이 잠금을 스스로 잡지 않는다(잎 잠금 규칙은 주인이 정한다).
+         * @details 함수 정적 목록(`SW_DEFINE_REGISTRATION_LIST`)의 주인은 잠금을 둘 다른 칸이 없다 — 따로 함수 정적 잠금을 두지 않게 목록이 같이 든다.
+         */
+        mutex& getOwnerMutex() const { return _ownerMutex; }
 
     private:
         static constexpr size_t kNotFound = static_cast<size_t>( -1 );
@@ -566,6 +573,7 @@ namespace sw
         NameCase          _nameCase;         ///< 이름 비교가 대소문자를 보는지
         uint32            _generation;       ///< `getGeneration`
         uint8             _bRequireName : 1; ///< 이름 없는 등록을 거절하는지
+        mutable mutex     _ownerMutex;       ///< `getOwnerMutex`
         /** @brief `addSubscribed` 가 낸 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<T> _subscriptions;
     };

@@ -24,19 +24,13 @@ namespace sw
             static constexpr const utf8* kBareCondition = "zoneValue"; ///< 식의 그냥 이름(`target.FireResist`)을 받는 조건
             static constexpr const utf8* kTargetPrefix  = "target.";   ///< 대상 속성을 읽는 이름의 머리
 
-            struct RegistryState
-            {
-                mutex                                       _mutex{};
-                RegistrationList<const ZoneModuleProcessor> _registration{ "ZoneModuleRegistry", RegistrationOrder::Insertion, true };
-            };
+            /** @brief 등록 목록입니다(함수 정적 — 다른 TU · DLL 의 정적 등록자가 먼저 쓴다). 워커가 읽으므로 고치고 읽을 때 목록의 주인 잠금(`getOwnerMutex`)을 잡는다. */
+            static SW_DEFINE_REGISTRATION_LIST( getRegistrations, const ZoneModuleProcessor, "ZoneModuleRegistry", RegistrationOrder::Insertion, true )
 
-            static RegistryState& getRegistry()
+                static const ZoneSample* findSample( const GameplayContext& context )
             {
-                static RegistryState s_state;
-                return s_state;
+                return context.find<ZoneSampleSlot>();
             }
-
-            static const ZoneSample* findSample( const GameplayContext& context ) { return context.find<ZoneSampleSlot>(); }
 
             static float64 readDepth01( const GameplayContext& context, const VocabularyNoParams& /*args*/ )
             {
@@ -226,35 +220,35 @@ namespace sw
 {
     void ZoneModuleRegistry::registerProcessor( const ZoneModuleProcessor* pProcessor )
     {
-        ZoneModuleInternal::RegistryState& state = ZoneModuleInternal::getRegistry();
-        ScopedLock<mutex>                  lock{ state._mutex };
-        (void)state._registration.addLogged( pProcessor, "ZoneModule", pProcessor->getKindName() ); // 거절은 공용 오류 로그가 알린다
+        RegistrationList<const ZoneModuleProcessor>& registrations = ZoneModuleInternal::getRegistrations();
+        ScopedLock<mutex>                            lock{ registrations.getOwnerMutex() };
+        (void)registrations.addLogged( pProcessor, "ZoneModule", pProcessor->getKindName() ); // 거절은 공용 오류 로그가 알린다
     }
 
     void ZoneModuleRegistry::unregisterProcessor( const ZoneModuleProcessor* pProcessor )
     {
-        ZoneModuleInternal::RegistryState& state = ZoneModuleInternal::getRegistry();
-        ScopedLock<mutex>                  lock{ state._mutex };
-        (void)state._registration.remove( pProcessor ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
+        RegistrationList<const ZoneModuleProcessor>& registrations = ZoneModuleInternal::getRegistrations();
+        ScopedLock<mutex>                            lock{ registrations.getOwnerMutex() };
+        (void)registrations.remove( pProcessor ); // 올라 있지 않은 줄을 빼는 것은 할 일이 없다
     }
 
     const ZoneModuleProcessor* ZoneModuleRegistry::find( string_view kindName )
     {
-        ZoneModuleInternal::RegistryState& state = ZoneModuleInternal::getRegistry();
-        ScopedLock<mutex>                  lock{ state._mutex };
-        return state._registration.findByName( kindName );
+        RegistrationList<const ZoneModuleProcessor>& registrations = ZoneModuleInternal::getRegistrations();
+        ScopedLock<mutex>                            lock{ registrations.getOwnerMutex() };
+        return registrations.findByName( kindName );
     }
 
     string ZoneModuleRegistry::joinNames()
     {
-        ZoneModuleInternal::RegistryState& state = ZoneModuleInternal::getRegistry();
-        ScopedLock<mutex>                  lock{ state._mutex };
-        string                             joined;
-        for ( uint32 index = 0; index < state._registration.getCount(); ++index )
+        RegistrationList<const ZoneModuleProcessor>& registrations = ZoneModuleInternal::getRegistrations();
+        ScopedLock<mutex>                            lock{ registrations.getOwnerMutex() };
+        string                                       joined;
+        for ( uint32 index = 0; index < registrations.getCount(); ++index )
         {
             if ( index > 0 )
                 joined += ", ";
-            joined += state._registration.getNameAt( index );
+            joined += registrations.getNameAt( index );
         }
         return joined;
     }
