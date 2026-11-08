@@ -14,6 +14,7 @@
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneSystem.h"
 
 namespace sw
 {
@@ -44,14 +45,12 @@ namespace sw
         , _compiled{}
         , _tracker{}
         , _listCandidateScratch{}
-        , _pendingSeconds{ 0.0f }
         , _age{ 0.0f }
         , _growth{ 0.0f }
         , _bReady{ SW_FALSE }
         , _bOpened{ SW_FALSE }
         , _reserved{ 0 }
     {
-        setCanEverTick( true );
     }
 
     void ZoneVolumeComponent::onRegister( GameObjectManager& manager )
@@ -59,12 +58,14 @@ namespace sw
         Component::onRegister( manager );
         manager.getComponentRegistry().add<ZoneVolumeComponent>( this );
         (void)ZoneOccupantIndex::ensureFor( manager );
+        (void)ZoneSystem::ensureFor( manager );
     }
 
     void ZoneVolumeComponent::onUnregister( GameObjectManager& manager )
     {
         manager.getComponentRegistry().remove<ZoneVolumeComponent>( this );
         ZoneOccupantIndex::releaseIfUnused( manager );
+        ZoneSystem::releaseIfUnused( manager );
         Component::onUnregister( manager );
     }
 
@@ -85,23 +86,6 @@ namespace sw
             _tracker.exitAllOccupants( *pManager, _compiled, source );
         }
         Component::onEndPlay();
-    }
-
-    void ZoneVolumeComponent::onTick( float32 deltaTime )
-    {
-        Component::onTick( deltaTime );
-        GameObject* const        pOwner   = getOwner();
-        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr || _bReady == SW_FALSE || deltaTime <= 0.0f )
-            return;
-        _pendingSeconds += deltaTime;
-        // 물리 자리 읽기와 동작(오브젝트를 만들고 지운다)은 틱 뒤 게임 스레드에서 한다.
-        pManager->executeOrDeferPostTickOnComponent( *this, []( ZoneVolumeComponent& self, GameObjectManager& manager )
-        {
-            const float32 seconds = self._pendingSeconds;
-            self._pendingSeconds  = 0.0f;
-            self.updateZone( manager, seconds );
-        } );
     }
 
     float32 ZoneVolumeComponent::getHorizontalReach() const

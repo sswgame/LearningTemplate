@@ -13,6 +13,7 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Physics/Component/CharacterControllerComponent.h"
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
@@ -22,6 +23,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneProfile.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ZoneSystem.h"
 
 namespace sw
 {
@@ -50,25 +52,21 @@ namespace sw
         , _touchDistance{ 0.15f }
         , _listSurfaceZone{}
         , _listCollision{}
-        , _pendingSeconds{ 0.0f }
     {
-        setCanEverTick( true );
     }
 
-    void ZoneContactComponent::onTick( float32 deltaTime )
+    void ZoneContactComponent::onRegister( GameObjectManager& manager )
     {
-        Component::onTick( deltaTime );
-        GameObject* const        pOwner   = getOwner();
-        GameObjectManager* const pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr || deltaTime <= 0.0f )
-            return;
-        _pendingSeconds += deltaTime;
-        pManager->executeOrDeferPostTickOnComponent( *this, []( ZoneContactComponent& self, GameObjectManager& manager )
-        {
-            const float32 seconds = self._pendingSeconds;
-            self._pendingSeconds  = 0.0f;
-            self.updateContacts( manager, seconds );
-        } );
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<ZoneContactComponent>( this );
+        (void)ZoneSystem::ensureFor( manager );
+    }
+
+    void ZoneContactComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<ZoneContactComponent>( this );
+        ZoneSystem::releaseIfUnused( manager );
+        Component::onUnregister( manager );
     }
 
     void ZoneContactComponent::onEndPlay()
@@ -185,12 +183,15 @@ namespace sw
         CharacterControllerComponent* const pController = pOwner->getComponent<CharacterControllerComponent>();
         vector<ContactRecord>               listContact;
 
-        // 디딤: 같은 오브젝트의 발 표면 질의가 있으면 그 표본을 쓰고(한 프레임에 같은 질의를 두 번 하지 않는다), 없으면 직접 묻는다.
-        SurfaceSample                       ground;
-        const GroundSurfaceComponent* const pGround = pOwner->getComponent<GroundSurfaceComponent>();
-        const bool                          bGround = pGround != nullptr ? pGround->getGroundKind().empty() == false
-                                                                         : SurfaceQuery::sampleBelow( manager, pTable, feet + float3{ 0.0f, Internal::kProbeLift, 0.0f }, feet - float3{ 0.0f, _probeLength, 0.0f },
-                                                                                                      pOwner->getObjectID(), false, ground );
+        // 디딤: 같은 오브젝트의 켜진 발 표면 질의가 있으면 이번 프레임 표본을 먼저 읽게 해 쓰고(한 프레임에 같은 질의를 두 번 하지 않는다 — 표면 서비스는 다시 읽지 않는다), 없으면 직접 묻는다.
+        SurfaceSample           ground;
+        GroundSurfaceComponent* pGround = pOwner->getComponent<GroundSurfaceComponent>();
+        pGround                         = pGround != nullptr && pGround->isActive() && pGround->isPendingDestroy() == false ? pGround : nullptr;
+        if ( pGround != nullptr )
+            pGround->sampleGroundOnce( manager );
+        const bool bGround = pGround != nullptr ? pGround->getGroundKind().empty() == false
+                                                : SurfaceQuery::sampleBelow( manager, pTable, feet + float3{ 0.0f, Internal::kProbeLift, 0.0f }, feet - float3{ 0.0f, _probeLength, 0.0f },
+                                                                             pOwner->getObjectID(), false, ground );
         if ( bGround )
         {
             const SurfaceSample& sample = pGround != nullptr ? pGround->getLastSample() : ground;
