@@ -228,6 +228,43 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             struct EveryPanelProbe
             {
+                static EditorSelfTestStep runEveryPanelDraws( EditorSelfTestContext& context )
+                {
+                    static constexpr uint32 kStepsPerPanel = 2; // 꺼내기 요청(뒤에 정지 대기) → 확인
+                    EditorContext&          editorContext  = editor::getSubsystem<EditorContext>();
+                    EditorPanelManager&     panels         = editorContext.getSubsystem<EditorPanelManager>();
+                    EveryPanelProbe&        probe          = context.getTestState<EveryPanelProbe>();
+                    if ( context.getStepIndex() == 0 )
+                    {
+                        for ( const EditorPanelEntry& entry : panels.getPanels() )
+                        {
+                            if ( entry._pInstance != nullptr )
+                                probe._listItem.push_back( EveryPanelProbe::Item{ entry._id, entry._title, entry._pInstance->isOpen() } );
+                        }
+                        if ( context.expect( probe._listItem.empty() == false, "no editor panel is registered" ) == false )
+                            return EditorSelfTestStep::Done;
+                    }
+                    const uint32 itemIndex = context.getStepIndex() / kStepsPerPanel;
+                    if ( itemIndex >= probe._listItem.size() )
+                        return EditorSelfTestStep::Done;
+                    const EveryPanelProbe::Item& item  = probe._listItem[itemIndex];
+                    const uint32                 phase = context.getStepIndex() % kStepsPerPanel;
+                    if ( phase == 0 )
+                    {
+                        editorContext.getSubsystem<EditorWorkspace>().requestOpenPanelByID( item._id );
+                        return EditorSelfTestStep::WaitSettled; // 도킹 · 첫 그리기 · 패널이 부른 에셋까지 — 프레임 수를 어림하지 않는다
+                    }
+                    // 앞으로 꺼낸 뒤 정지한 화면에 그 창이 그려졌다(지난 프레임에 살아 있고 그린 정점이 있다) — 탭 뒤에 숨거나 바인더가 틀려 다른 ImGui 컨텍스트로 가면 없다.
+                    const ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( item._title.c_str() ).c_str() );
+                    const bool         bDrew   = pWindow != nullptr && pWindow->LastFrameActive >= ImGui::GetFrameCount() - 1 && pWindow->DrawList->VtxBuffer.Size > 0;
+                    const string       what    = "panel did not draw when brought to the front: " + item._id;
+                    (void)context.expect( bDrew, what.c_str() );
+                    if ( item._bWasOpen == false )
+                        (void)panels.setPanelOpen( item._id, false ); // 닫히지 않으면(닫기 확인) 다음 테스트가 그 창을 본다 — 빈 상태로 연 패널은 미저장 편집이 없다
+                    return EditorSelfTestStep::Continue;
+                }
+
+            private:
                 struct Item
                 {
                     string _id;
@@ -236,42 +273,6 @@ namespace sw::editor
                 };
                 vector<Item> _listItem;
             };
-
-            static EditorSelfTestStep runEveryPanelDraws( EditorSelfTestContext& context )
-            {
-                static constexpr uint32 kStepsPerPanel = 2; // 꺼내기 요청(뒤에 정지 대기) → 확인
-                EditorContext&          editorContext  = editor::getSubsystem<EditorContext>();
-                EditorPanelManager&     panels         = editorContext.getSubsystem<EditorPanelManager>();
-                EveryPanelProbe&        probe          = context.getTestState<EveryPanelProbe>();
-                if ( context.getStepIndex() == 0 )
-                {
-                    for ( const EditorPanelEntry& entry : panels.getPanels() )
-                    {
-                        if ( entry._pInstance != nullptr )
-                            probe._listItem.push_back( EveryPanelProbe::Item{ entry._id, entry._title, entry._pInstance->isOpen() } );
-                    }
-                    if ( context.expect( probe._listItem.empty() == false, "no editor panel is registered" ) == false )
-                        return EditorSelfTestStep::Done;
-                }
-                const uint32 itemIndex = context.getStepIndex() / kStepsPerPanel;
-                if ( itemIndex >= probe._listItem.size() )
-                    return EditorSelfTestStep::Done;
-                const EveryPanelProbe::Item& item  = probe._listItem[itemIndex];
-                const uint32                 phase = context.getStepIndex() % kStepsPerPanel;
-                if ( phase == 0 )
-                {
-                    editorContext.getSubsystem<EditorWorkspace>().requestOpenPanelByID( item._id );
-                    return EditorSelfTestStep::WaitSettled; // 도킹 · 첫 그리기 · 패널이 부른 에셋까지 — 프레임 수를 어림하지 않는다
-                }
-                // 앞으로 꺼낸 뒤 정지한 화면에 그 창이 그려졌다(지난 프레임에 살아 있고 그린 정점이 있다) — 탭 뒤에 숨거나 바인더가 틀려 다른 ImGui 컨텍스트로 가면 없다.
-                const ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( item._title.c_str() ).c_str() );
-                const bool         bDrew   = pWindow != nullptr && pWindow->LastFrameActive >= ImGui::GetFrameCount() - 1 && pWindow->DrawList->VtxBuffer.Size > 0;
-                const string       what    = "panel did not draw when brought to the front: " + item._id;
-                (void)context.expect( bDrew, what.c_str() );
-                if ( item._bWasOpen == false )
-                    (void)panels.setPanelOpen( item._id, false ); // 닫히지 않으면(닫기 확인) 다음 테스트가 그 창을 본다 — 빈 상태로 연 패널은 미저장 편집이 없다
-                return EditorSelfTestStep::Continue;
-            }
 
             // ------------------------------------------------------------------------------
             // dock.corePanelsAreDocked: 영역을 밝힌 열린 패널(`IEditorPanel::getDefaultDockSlot`)이 기본 배치에서 실제로 도킹됐는지 확인한다(열린 채 시작하는 도구 패널 포함)
@@ -303,6 +304,101 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             struct DockResizeProbe
             {
+                /**
+                 * @brief 이번 프레임의 메인 뷰포트와 도크 노드를 검사합니다.
+                 * @param bCompareShare false 이면 노드마다 창에 대한 비율을 기준으로 기록하고, true 이면 기록해 둔 기준과 비교합니다.
+                 */
+                static void expectDockFitsViewport( EditorSelfTestContext& context, const IWindow& window, bool bCompareShare )
+                {
+                    constexpr float32 kPixelTolerance = 1.0f;
+                    constexpr float32 kShareTolerance = 0.03f;
+
+                    const ImGuiViewport* pMain = ImGui::GetMainViewport();
+                    (void)context.expect( isNear( pMain->Size.x, static_cast<float32>( window.getWidth() ), kPixelTolerance ) &&
+                                              isNear( pMain->Size.y, static_cast<float32>( window.getHeight() ), kPixelTolerance ),
+                                          "the main viewport does not match the window client size" );
+
+                    const ImGuiDockNode* pRoot = findMainDockspace();
+                    if ( context.expect( pRoot != nullptr && pRoot->Size.x > 0.0f && pRoot->Size.y > 0.0f, "no main dockspace" ) == false )
+                        return;
+
+                    vector<const ImGuiDockNode*> listLeaf;
+                    collectVisibleLeaves( pRoot, listLeaf );
+                    DockResizeProbe& probe = context.getTestState<DockResizeProbe>();
+                    const ImVec2     workMax{ pMain->WorkPos.x + pMain->WorkSize.x, pMain->WorkPos.y + pMain->WorkSize.y };
+                    for ( const ImGuiDockNode* pLeaf : listLeaf )
+                    {
+                        const bool bInside = pLeaf->Pos.x >= pMain->WorkPos.x - kPixelTolerance && pLeaf->Pos.y >= pMain->WorkPos.y - kPixelTolerance &&
+                                             pLeaf->Pos.x + pLeaf->Size.x <= workMax.x + kPixelTolerance && pLeaf->Pos.y + pLeaf->Size.y <= workMax.y + kPixelTolerance;
+                        (void)context.expect( bInside, "a dock node lies outside the main viewport" );
+
+                        const float32 shareX = pLeaf->Size.x / pRoot->Size.x;
+                        const float32 shareY = pLeaf->Size.y / pRoot->Size.y;
+                        if ( bCompareShare == false )
+                        {
+                            probe._listShare.push_back( DockResizeProbe::NodeShare{ pLeaf->ID, shareX, shareY } );
+                            continue;
+                        }
+                        for ( const DockResizeProbe::NodeShare& share : probe._listShare )
+                        {
+                            if ( share._id != pLeaf->ID )
+                                continue;
+                            (void)context.expect( isNear( share._shareX, shareX, kShareTolerance ) && isNear( share._shareY, shareY, kShareTolerance ),
+                                                  "a dock node did not keep its share of the window - side panels kept their pixel size" );
+                        }
+                    }
+                }
+                static EditorSelfTestStep runDockFollowsWindowSize( EditorSelfTestContext& context )
+                {
+                    constexpr uint32 kMaxSettleSteps = 60; // 크기 바꾸기가 닿기를 기다리는 시한(단계)
+                    constexpr uint32 kWideWidth      = 1600;
+                    constexpr uint32 kWideHeight     = 900;
+                    constexpr uint32 kNarrowWidth    = 640; // 에디터 최소 크기보다 작다. 창은 최소 크기에서 멈춰야 한다
+                    constexpr uint32 kNarrowHeight   = 360;
+
+                    MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
+                    IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                    if ( context.expect( pWindow != nullptr, "no active window" ) == false )
+                        return EditorSelfTestStep::Done;
+
+                    DockResizeProbe& probe     = context.getTestState<DockResizeProbe>();
+                    const uint32     stepIndex = context.getStepIndex();
+                    if ( stepIndex == 0 )
+                    {
+                        probe._originalWidth  = pWindow->getWidth();
+                        probe._originalHeight = pWindow->getHeight();
+                        (void)context.expect( pWindow->setDisplayMode( WindowDisplayMode::Windowed, kWideWidth, kWideHeight ), "this platform cannot resize the window" );
+                        return EditorSelfTestStep::Continue;
+                    }
+                    // 단계마다 크기 바꾸기가 다 닿을 때까지 기다린다(프레임 수를 어림하지 않는다). 시한을 넘기면 실패로 적고 다음 단계로 간다.
+                    if ( isWindowSizeApplied( *pWindow ) == false && stepIndex - probe._phaseStartStep < kMaxSettleSteps )
+                        return EditorSelfTestStep::Continue;
+                    (void)context.expect( isWindowSizeApplied( *pWindow ), "the window size did not reach the editor viewport and dockspace" );
+                    probe._phaseStartStep = stepIndex;
+                    ++probe._phase;
+                    if ( probe._phase == 1 )
+                    {
+                        expectDockFitsViewport( context, *pWindow, false );
+                        (void)pWindow->setDisplayMode( WindowDisplayMode::Windowed, kNarrowWidth, kNarrowHeight );
+                        return EditorSelfTestStep::Continue;
+                    }
+                    if ( probe._phase == 2 )
+                    {
+                        expectDockFitsViewport( context, *pWindow, true );
+                        expectTransformBarStaysInSceneView( context );
+                        const uint32 minWidth  = pWindow->getMinimumClientWidth();
+                        const uint32 minHeight = pWindow->getMinimumClientHeight();
+                        (void)context.expect( minWidth > 0 && minHeight > 0, "the editor window has no minimum size" );
+                        (void)context.expect( pWindow->getWidth() >= minWidth && pWindow->getHeight() >= minHeight, "the window shrank below the editor minimum size" );
+                        (void)pWindow->setDisplayMode( WindowDisplayMode::Windowed, probe._originalWidth, probe._originalHeight );
+                        return EditorSelfTestStep::Continue;
+                    }
+
+                    expectDockFitsViewport( context, *pWindow, true ); // 원래 크기로 돌려도 비율이 그대로여야 한다
+                    return EditorSelfTestStep::Done;
+                }
+
+            private:
                 struct NodeShare
                 {
                     ImGuiID _id{ 0 };
@@ -359,51 +455,6 @@ namespace sw::editor
                 collectVisibleLeaves( pNode->ChildNodes[1], outListLeaf );
             }
 
-            /**
-             * @brief 이번 프레임의 메인 뷰포트와 도크 노드를 검사합니다.
-             * @param bCompareShare false 이면 노드마다 창에 대한 비율을 기준으로 기록하고, true 이면 기록해 둔 기준과 비교합니다.
-             */
-            static void expectDockFitsViewport( EditorSelfTestContext& context, const IWindow& window, bool bCompareShare )
-            {
-                constexpr float32 kPixelTolerance = 1.0f;
-                constexpr float32 kShareTolerance = 0.03f;
-
-                const ImGuiViewport* pMain = ImGui::GetMainViewport();
-                (void)context.expect( isNear( pMain->Size.x, static_cast<float32>( window.getWidth() ), kPixelTolerance ) &&
-                                          isNear( pMain->Size.y, static_cast<float32>( window.getHeight() ), kPixelTolerance ),
-                                      "the main viewport does not match the window client size" );
-
-                const ImGuiDockNode* pRoot = findMainDockspace();
-                if ( context.expect( pRoot != nullptr && pRoot->Size.x > 0.0f && pRoot->Size.y > 0.0f, "no main dockspace" ) == false )
-                    return;
-
-                vector<const ImGuiDockNode*> listLeaf;
-                collectVisibleLeaves( pRoot, listLeaf );
-                DockResizeProbe& probe = context.getTestState<DockResizeProbe>();
-                const ImVec2     workMax{ pMain->WorkPos.x + pMain->WorkSize.x, pMain->WorkPos.y + pMain->WorkSize.y };
-                for ( const ImGuiDockNode* pLeaf : listLeaf )
-                {
-                    const bool bInside = pLeaf->Pos.x >= pMain->WorkPos.x - kPixelTolerance && pLeaf->Pos.y >= pMain->WorkPos.y - kPixelTolerance &&
-                                         pLeaf->Pos.x + pLeaf->Size.x <= workMax.x + kPixelTolerance && pLeaf->Pos.y + pLeaf->Size.y <= workMax.y + kPixelTolerance;
-                    (void)context.expect( bInside, "a dock node lies outside the main viewport" );
-
-                    const float32 shareX = pLeaf->Size.x / pRoot->Size.x;
-                    const float32 shareY = pLeaf->Size.y / pRoot->Size.y;
-                    if ( bCompareShare == false )
-                    {
-                        probe._listShare.push_back( DockResizeProbe::NodeShare{ pLeaf->ID, shareX, shareY } );
-                        continue;
-                    }
-                    for ( const DockResizeProbe::NodeShare& share : probe._listShare )
-                    {
-                        if ( share._id != pLeaf->ID )
-                            continue;
-                        (void)context.expect( isNear( share._shareX, shareX, kShareTolerance ) && isNear( share._shareY, shareY, kShareTolerance ),
-                                              "a dock node did not keep its share of the window - side panels kept their pixel size" );
-                    }
-                }
-            }
-
             static void expectTransformBarStaysInSceneView( EditorSelfTestContext& context )
             {
                 constexpr float32  kPixelTolerance       = 1.0f;
@@ -418,103 +469,54 @@ namespace sw::editor
                                       "the transform bar is wider than the scene view" );
             }
 
-            static EditorSelfTestStep runDockFollowsWindowSize( EditorSelfTestContext& context )
-            {
-                constexpr uint32 kMaxSettleSteps = 60; // 크기 바꾸기가 닿기를 기다리는 시한(단계)
-                constexpr uint32 kWideWidth      = 1600;
-                constexpr uint32 kWideHeight     = 900;
-                constexpr uint32 kNarrowWidth    = 640; // 에디터 최소 크기보다 작다. 창은 최소 크기에서 멈춰야 한다
-                constexpr uint32 kNarrowHeight   = 360;
-
-                MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
-                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-                if ( context.expect( pWindow != nullptr, "no active window" ) == false )
-                    return EditorSelfTestStep::Done;
-
-                DockResizeProbe& probe     = context.getTestState<DockResizeProbe>();
-                const uint32     stepIndex = context.getStepIndex();
-                if ( stepIndex == 0 )
-                {
-                    probe._originalWidth  = pWindow->getWidth();
-                    probe._originalHeight = pWindow->getHeight();
-                    (void)context.expect( pWindow->setDisplayMode( WindowDisplayMode::Windowed, kWideWidth, kWideHeight ), "this platform cannot resize the window" );
-                    return EditorSelfTestStep::Continue;
-                }
-                // 단계마다 크기 바꾸기가 다 닿을 때까지 기다린다(프레임 수를 어림하지 않는다). 시한을 넘기면 실패로 적고 다음 단계로 간다.
-                if ( isWindowSizeApplied( *pWindow ) == false && stepIndex - probe._phaseStartStep < kMaxSettleSteps )
-                    return EditorSelfTestStep::Continue;
-                (void)context.expect( isWindowSizeApplied( *pWindow ), "the window size did not reach the editor viewport and dockspace" );
-                probe._phaseStartStep = stepIndex;
-                ++probe._phase;
-                if ( probe._phase == 1 )
-                {
-                    expectDockFitsViewport( context, *pWindow, false );
-                    (void)pWindow->setDisplayMode( WindowDisplayMode::Windowed, kNarrowWidth, kNarrowHeight );
-                    return EditorSelfTestStep::Continue;
-                }
-                if ( probe._phase == 2 )
-                {
-                    expectDockFitsViewport( context, *pWindow, true );
-                    expectTransformBarStaysInSceneView( context );
-                    const uint32 minWidth  = pWindow->getMinimumClientWidth();
-                    const uint32 minHeight = pWindow->getMinimumClientHeight();
-                    (void)context.expect( minWidth > 0 && minHeight > 0, "the editor window has no minimum size" );
-                    (void)context.expect( pWindow->getWidth() >= minWidth && pWindow->getHeight() >= minHeight, "the window shrank below the editor minimum size" );
-                    (void)pWindow->setDisplayMode( WindowDisplayMode::Windowed, probe._originalWidth, probe._originalHeight );
-                    return EditorSelfTestStep::Continue;
-                }
-
-                expectDockFitsViewport( context, *pWindow, true ); // 원래 크기로 돌려도 비율이 그대로여야 한다
-                return EditorSelfTestStep::Done;
-            }
-
             // ------------------------------------------------------------------------------
             // inspector.drawLeavesTheObjectAlone: 좁은 enum(CameraRole : uint8) 바로 뒤의 bool 을 인스펙터가 그리면서 건드리지 않는지 확인한다
             // ------------------------------------------------------------------------------
             struct InspectorProbe
             {
+                static EditorSelfTestStep runInspectorDrawLeavesTheObjectAlone( EditorSelfTestContext& context )
+                {
+                    InspectorProbe& probe         = context.getTestState<InspectorProbe>();
+                    EditorContext&  editorContext = editor::getSubsystem<EditorContext>();
+                    if ( context.getStepIndex() == 0 )
+                    {
+                        GameObjectManager* pManager = getActiveManager( context );
+                        if ( pManager == nullptr )
+                            return EditorSelfTestStep::Done;
+                        GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestCamera" ) );
+                        if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
+                            return EditorSelfTestStep::Done;
+                        CameraComponent* pCamera = pObj->addComponent<CameraComponent>();
+                        if ( context.expect( pCamera != nullptr, "could not add a camera" ) == false )
+                            return EditorSelfTestStep::Done;
+                        pCamera->setRole( CameraRole::Custom );
+                        pCamera->setOrthographic( true );
+                        probe._objectID  = pObj->getObjectID();
+                        probe._xmlBefore = ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } );
+                        (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<InspectorPanel>( true );
+                        editorContext.getSubsystem<EditorWorkspace>().selectGameObject( pObj );
+                        return EditorSelfTestStep::WaitSettled; // 정지는 같은 배치를 두 번 연속 본 뒤라 인스펙터가 적어도 두 번 그렸다
+                    }
+
+                    GameObjectManager* pManager = editor::getActiveObjectManager();
+                    GameObject*        pObj     = ( pManager != nullptr ) ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
+                    if ( context.expect( pObj != nullptr, "the probe object disappeared" ) )
+                    {
+                        const CameraComponent* pCamera = pObj->getComponent<CameraComponent>();
+                        (void)context.expect( pCamera != nullptr && pCamera->getRole() == CameraRole::Custom, "the inspector changed the camera role" );
+                        (void)context.expect( pCamera != nullptr && pCamera->isOrthographic(), "the inspector cleared the bool next to the enum" );
+                        (void)context.expect( ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } ) == probe._xmlBefore, "drawing the inspector changed the object" );
+                    }
+                    const ImGuiWindow* pInspector = ImGui::FindWindowByName( EditorPanelText::makeWindowID( InspectorPanel::kPanelTitle ).c_str() );
+                    (void)context.expect( pInspector != nullptr && pInspector->Hidden == false, "the inspector was not drawn" );
+                    destroyProbeObject( probe._objectID );
+                    return EditorSelfTestStep::Done;
+                }
+
+            private:
                 uint64 _objectID{ 0 };
                 string _xmlBefore;
             };
-
-            static EditorSelfTestStep runInspectorDrawLeavesTheObjectAlone( EditorSelfTestContext& context )
-            {
-                InspectorProbe& probe         = context.getTestState<InspectorProbe>();
-                EditorContext&  editorContext = editor::getSubsystem<EditorContext>();
-                if ( context.getStepIndex() == 0 )
-                {
-                    GameObjectManager* pManager = getActiveManager( context );
-                    if ( pManager == nullptr )
-                        return EditorSelfTestStep::Done;
-                    GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestCamera" ) );
-                    if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
-                        return EditorSelfTestStep::Done;
-                    CameraComponent* pCamera = pObj->addComponent<CameraComponent>();
-                    if ( context.expect( pCamera != nullptr, "could not add a camera" ) == false )
-                        return EditorSelfTestStep::Done;
-                    pCamera->setRole( CameraRole::Custom );
-                    pCamera->setOrthographic( true );
-                    probe._objectID  = pObj->getObjectID();
-                    probe._xmlBefore = ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } );
-                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<InspectorPanel>( true );
-                    editorContext.getSubsystem<EditorWorkspace>().selectGameObject( pObj );
-                    return EditorSelfTestStep::WaitSettled; // 정지는 같은 배치를 두 번 연속 본 뒤라 인스펙터가 적어도 두 번 그렸다
-                }
-
-                GameObjectManager* pManager = editor::getActiveObjectManager();
-                GameObject*        pObj     = ( pManager != nullptr ) ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
-                if ( context.expect( pObj != nullptr, "the probe object disappeared" ) )
-                {
-                    const CameraComponent* pCamera = pObj->getComponent<CameraComponent>();
-                    (void)context.expect( pCamera != nullptr && pCamera->getRole() == CameraRole::Custom, "the inspector changed the camera role" );
-                    (void)context.expect( pCamera != nullptr && pCamera->isOrthographic(), "the inspector cleared the bool next to the enum" );
-                    (void)context.expect( ObjectStateSerializer::saveToXMLString( pObj, ObjectSaveOptions{ SerializePurpose::Snapshot } ) == probe._xmlBefore, "drawing the inspector changed the object" );
-                }
-                const ImGuiWindow* pInspector = ImGui::FindWindowByName( EditorPanelText::makeWindowID( InspectorPanel::kPanelTitle ).c_str() );
-                (void)context.expect( pInspector != nullptr && pInspector->Hidden == false, "the inspector was not drawn" );
-                destroyProbeObject( probe._objectID );
-                return EditorSelfTestStep::Done;
-            }
 
             // ------------------------------------------------------------------------------
             // preview.materialHoldsOneReference: 머티리얼 미리보기는 머티리얼 하나에 참조 하나만 가진다. acquire 와 release 가 짝이 맞아야 한다
@@ -542,67 +544,153 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             struct HierarchyProbe
             {
+                static EditorSelfTestStep runHierarchyTagFilter( EditorSelfTestContext& context )
+                {
+                    // 단계마다 넣을 필터와, 그 필터를 넣은 앞 단계에서 그린 프레임에 보여야 할 루트 수다.
+                    struct FilterCase
+                    {
+                        const utf8* _pFilter;
+                        uint32      _expectedRootCount;
+                    };
+                    constexpr FilterCase kArrFilterCase[] = {
+                        {        "tag:SwSelfTest", 1}, // 부모 태그로 자식 태그를 찾는다
+                        {  "tag:swselftest.child", 1}, // 대소문자를 가리지 않는다
+                        {"tag:SwSelfTest.Missing", 0}, // 없는 태그
+                    };
+                    constexpr uint32 kCaseCount = static_cast<uint32>( sizeof( kArrFilterCase ) / sizeof( kArrFilterCase[0] ) );
+
+                    HierarchyProbe& probe         = context.getTestState<HierarchyProbe>();
+                    EditorContext&  editorContext = editor::getSubsystem<EditorContext>();
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                    HierarchyPanel* pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
+                    if ( context.expect( pHierarchy != nullptr, "no hierarchy panel" ) == false )
+                        return EditorSelfTestStep::Done;
+
+                    const uint32 stepIndex = context.getStepIndex();
+                    if ( stepIndex == 0 )
+                    {
+                        GameObjectManager* pManager = getActiveManager( context );
+                        if ( pManager == nullptr )
+                            return EditorSelfTestStep::Done;
+                        GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestTagged" ) );
+                        if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
+                            return EditorSelfTestStep::Done;
+                        pObj->addTag( TagID::request( "SwSelfTest.Child" ) );
+                        probe._objectID = pObj->getObjectID();
+                    }
+                    else
+                    {
+                        const FilterCase& previous = kArrFilterCase[stepIndex - 1];
+                        string            what{ "unexpected number of roots for " };
+                        what += previous._pFilter;
+                        (void)context.expect( pHierarchy->getVisibleRootCount() == previous._expectedRootCount, what.c_str() );
+                    }
+
+                    if ( stepIndex < kCaseCount )
+                    {
+                        pHierarchy->setFilterText( kArrFilterCase[stepIndex]._pFilter );
+                        return EditorSelfTestStep::Continue;
+                    }
+
+                    pHierarchy->setFilterText( "" );
+                    destroyProbeObject( probe._objectID );
+                    return EditorSelfTestStep::Done;
+                }
+
+            private:
                 uint64 _objectID{ 0 };
             };
-
-            static EditorSelfTestStep runHierarchyTagFilter( EditorSelfTestContext& context )
-            {
-                // 단계마다 넣을 필터와, 그 필터를 넣은 앞 단계에서 그린 프레임에 보여야 할 루트 수다.
-                struct FilterCase
-                {
-                    const utf8* _pFilter;
-                    uint32      _expectedRootCount;
-                };
-                constexpr FilterCase kArrFilterCase[] = {
-                    {        "tag:SwSelfTest", 1}, // 부모 태그로 자식 태그를 찾는다
-                    {  "tag:swselftest.child", 1}, // 대소문자를 가리지 않는다
-                    {"tag:SwSelfTest.Missing", 0}, // 없는 태그
-                };
-                constexpr uint32 kCaseCount = static_cast<uint32>( sizeof( kArrFilterCase ) / sizeof( kArrFilterCase[0] ) );
-
-                HierarchyProbe& probe         = context.getTestState<HierarchyProbe>();
-                EditorContext&  editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
-                HierarchyPanel* pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
-                if ( context.expect( pHierarchy != nullptr, "no hierarchy panel" ) == false )
-                    return EditorSelfTestStep::Done;
-
-                const uint32 stepIndex = context.getStepIndex();
-                if ( stepIndex == 0 )
-                {
-                    GameObjectManager* pManager = getActiveManager( context );
-                    if ( pManager == nullptr )
-                        return EditorSelfTestStep::Done;
-                    GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestTagged" ) );
-                    if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
-                        return EditorSelfTestStep::Done;
-                    pObj->addTag( TagID::request( "SwSelfTest.Child" ) );
-                    probe._objectID = pObj->getObjectID();
-                }
-                else
-                {
-                    const FilterCase& previous = kArrFilterCase[stepIndex - 1];
-                    string            what{ "unexpected number of roots for " };
-                    what += previous._pFilter;
-                    (void)context.expect( pHierarchy->getVisibleRootCount() == previous._expectedRootCount, what.c_str() );
-                }
-
-                if ( stepIndex < kCaseCount )
-                {
-                    pHierarchy->setFilterText( kArrFilterCase[stepIndex]._pFilter );
-                    return EditorSelfTestStep::Continue;
-                }
-
-                pHierarchy->setFilterText( "" );
-                destroyProbeObject( probe._objectID );
-                return EditorSelfTestStep::Done;
-            }
 
             // ------------------------------------------------------------------------------
             // hierarchy.offscreenRootsKeepTheirPlace: 화면 밖의 접힌 루트를 빈 공간으로 대체해도 스크롤 길이가 같고, 맨 아래로 내리면 마지막 루트가 그려지는지 확인한다
             // ------------------------------------------------------------------------------
             struct OffscreenRowProbe
             {
+                static EditorSelfTestStep runHierarchyOffscreenRootsKeepTheirPlace( EditorSelfTestContext& context )
+                {
+                    constexpr uint32 kRootCount = 300;
+
+                    OffscreenRowProbe& probe         = context.getTestState<OffscreenRowProbe>();
+                    EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                    HierarchyPanel*    pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
+                    GameObjectManager* pManager   = editor::getActiveObjectManager();
+                    if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
+                        return EditorSelfTestStep::Done;
+
+                    const uint32 stepIndex = context.getStepIndex();
+                    ImGuiWindow* pTree     = findHierarchyTreeWindow();
+                    bool         bDone     = false;
+                    switch ( stepIndex )
+                    {
+                        case 0:
+                        {
+                            pHierarchy->setFilterText( "" );
+                            for ( uint32 rowIndex = 0; rowIndex < kRootCount; ++rowIndex )
+                            {
+                                GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestRow" ) );
+                                if ( pObj != nullptr )
+                                    probe._listObjectID.push_back( pObj->getObjectID() );
+                            }
+                            (void)context.expect( probe._listObjectID.size() == kRootCount, "could not create the probe rows" );
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 1:
+                        {
+                            return EditorSelfTestStep::Continue; // 행이 모두 그려진(빈 공간 포함) 크기로 스크롤 길이가 정해지게 한다
+                        }
+                        case 2:
+                        {
+                            if ( context.expect( pTree != nullptr, "the hierarchy tree region was not found" ) == false )
+                            {
+                                bDone = true;
+                                break;
+                            }
+                            (void)context.expect( pHierarchy->getDrawnRootCount() < pHierarchy->getVisibleRootCount(), "offscreen roots were drawn anyway" );
+                            probe._scrollMaxWithSkip = pTree->ScrollMax.y;
+                            pHierarchy->setOffscreenRowSkipEnabled( false );
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 3:
+                        {
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 4:
+                        {
+                            // 빈 공간의 높이가 그린 행의 높이와 같아야 스크롤 길이가 같다. 다르면 스크롤이 튄다.
+                            if ( pTree != nullptr )
+                                (void)context.expect( isNear( pTree->ScrollMax.y, probe._scrollMaxWithSkip, 0.5f ), "skipped rows changed the scroll length" );
+                            pHierarchy->setOffscreenRowSkipEnabled( true );
+                            if ( pTree != nullptr )
+                                ImGui::SetScrollY( pTree, pTree->ScrollMax.y ); // 맨 아래로 내린다. 다음 프레임에 반영된다
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 5:
+                        {
+                            return EditorSelfTestStep::Continue;
+                        }
+                        default:
+                        {
+                            (void)context.expect( probe._listObjectID.empty() == false && pHierarchy->getLastDrawnRootID() == probe._listObjectID.back(),
+                                                  "scrolled to the bottom, the last root was not drawn" );
+                            (void)context.expect( pHierarchy->getDrawnRootCount() < pHierarchy->getVisibleRootCount(), "offscreen roots were drawn at the bottom" );
+                            bDone = true;
+                            break;
+                        }
+                    }
+                    if ( bDone == false )
+                        return EditorSelfTestStep::Continue;
+                    pHierarchy->setOffscreenRowSkipEnabled( true );
+                    if ( pTree != nullptr )
+                        ImGui::SetScrollY( pTree, 0.0f );
+                    for ( const uint64 objectID : probe._listObjectID )
+                    {
+                        destroyProbeObject( objectID );
+                    }
+                    return EditorSelfTestStep::Done;
+                }
+
+            private:
                 vector<uint64> _listObjectID;
                 float32        _scrollMaxWithSkip{ 0.0f };
             };
@@ -620,90 +708,6 @@ namespace sw::editor
                         return pWindow;
                 }
                 return nullptr;
-            }
-
-            static EditorSelfTestStep runHierarchyOffscreenRootsKeepTheirPlace( EditorSelfTestContext& context )
-            {
-                constexpr uint32 kRootCount = 300;
-
-                OffscreenRowProbe& probe         = context.getTestState<OffscreenRowProbe>();
-                EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
-                HierarchyPanel*    pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
-                GameObjectManager* pManager   = editor::getActiveObjectManager();
-                if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
-                    return EditorSelfTestStep::Done;
-
-                const uint32 stepIndex = context.getStepIndex();
-                ImGuiWindow* pTree     = findHierarchyTreeWindow();
-                bool         bDone     = false;
-                switch ( stepIndex )
-                {
-                    case 0:
-                    {
-                        pHierarchy->setFilterText( "" );
-                        for ( uint32 rowIndex = 0; rowIndex < kRootCount; ++rowIndex )
-                        {
-                            GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestRow" ) );
-                            if ( pObj != nullptr )
-                                probe._listObjectID.push_back( pObj->getObjectID() );
-                        }
-                        (void)context.expect( probe._listObjectID.size() == kRootCount, "could not create the probe rows" );
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 1:
-                    {
-                        return EditorSelfTestStep::Continue; // 행이 모두 그려진(빈 공간 포함) 크기로 스크롤 길이가 정해지게 한다
-                    }
-                    case 2:
-                    {
-                        if ( context.expect( pTree != nullptr, "the hierarchy tree region was not found" ) == false )
-                        {
-                            bDone = true;
-                            break;
-                        }
-                        (void)context.expect( pHierarchy->getDrawnRootCount() < pHierarchy->getVisibleRootCount(), "offscreen roots were drawn anyway" );
-                        probe._scrollMaxWithSkip = pTree->ScrollMax.y;
-                        pHierarchy->setOffscreenRowSkipEnabled( false );
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 3:
-                    {
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 4:
-                    {
-                        // 빈 공간의 높이가 그린 행의 높이와 같아야 스크롤 길이가 같다. 다르면 스크롤이 튄다.
-                        if ( pTree != nullptr )
-                            (void)context.expect( isNear( pTree->ScrollMax.y, probe._scrollMaxWithSkip, 0.5f ), "skipped rows changed the scroll length" );
-                        pHierarchy->setOffscreenRowSkipEnabled( true );
-                        if ( pTree != nullptr )
-                            ImGui::SetScrollY( pTree, pTree->ScrollMax.y ); // 맨 아래로 내린다. 다음 프레임에 반영된다
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 5:
-                    {
-                        return EditorSelfTestStep::Continue;
-                    }
-                    default:
-                    {
-                        (void)context.expect( probe._listObjectID.empty() == false && pHierarchy->getLastDrawnRootID() == probe._listObjectID.back(),
-                                              "scrolled to the bottom, the last root was not drawn" );
-                        (void)context.expect( pHierarchy->getDrawnRootCount() < pHierarchy->getVisibleRootCount(), "offscreen roots were drawn at the bottom" );
-                        bDone = true;
-                        break;
-                    }
-                }
-                if ( bDone == false )
-                    return EditorSelfTestStep::Continue;
-                pHierarchy->setOffscreenRowSkipEnabled( true );
-                if ( pTree != nullptr )
-                    ImGui::SetScrollY( pTree, 0.0f );
-                for ( const uint64 objectID : probe._listObjectID )
-                {
-                    destroyProbeObject( objectID );
-                }
-                return EditorSelfTestStep::Done;
             }
 
             // ------------------------------------------------------------------------------
@@ -831,118 +835,132 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             struct DPIProbe
             {
-                float32 ( *_pfnSavedDPIScale )( ImGuiViewport* ){ nullptr };
-                float32 _baseScale{ 1.0f };
-                float32 _fakeScale{ 1.5f };       ///< 교체한 창 DPI. 현재 배율에 0.5 를 더한 값이며, 이 PC 가 이미 150 % 여도 바뀐다
-                bool    _bFakeInstalled{ false }; ///< 플랫폼 콜백을 `fakeWindowDPIScale` 로 바꿔 둔 동안 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                DPIProbe()
+                    : _pfnSavedDPIScale{ nullptr }
+                    , _baseScale{ 1.0f }
+                    , _fakeScale{ 1.5f }
 #if defined( SW_PLATFORM_WINDOWS )
-                RECT _originalRect{};
-                RECT _suggestedRect{};
+                    , _originalRect{}
+                    , _suggestedRect{}
 #endif
+                    , _bFakeInstalled{ SW_FALSE }
+                {
+                }
                 /** @brief 테스트가 어떻게 끝나든(시간 초과 · 실행 중단 포함) 콜백이 원래대로 돌아오도록 소멸자가 되돌립니다. 콜백은 이 객체가 있는 동안에만 걸려 있다. */
                 ~DPIProbe() { restorePlatformCallback(); }
+                DPIProbe( const DPIProbe& )            = delete;
+                DPIProbe& operator=( const DPIProbe& ) = delete;
+
+                /** @brief ImGui 의 `Platform_GetWindowDpiScale` 자리에 거는 콜백입니다. 함수 포인터라 상태를 받지 못하므로 지금 도는 테스트의 프로브를 실행기에서 찾습니다. */
+                static float32 fakeWindowDPIScale( ImGuiViewport* pViewport )
+                {
+                    (void)pViewport;
+                    EditorSelfTestContext* pContext = EditorSelfTestRunner::findRunningContext();
+                    const DPIProbe*        pProbe   = pContext != nullptr ? pContext->findTestState<DPIProbe>() : nullptr;
+                    if ( pProbe == nullptr ) // 프로브가 사라지면 소멸자가 콜백을 되돌리므로, 걸려 있는 동안에는 항상 있다
+                        ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+                    return pProbe->_fakeScale;
+                }
+                static EditorSelfTestStep runDPIMonitorScaleFollows( EditorSelfTestContext& context )
+                {
+                    // 단계: 가짜 DPI 걸기 → 배율 확인 · 창 메시지 → 창 크기 확인 · 되돌리기 → 되돌아온 배율 확인. 사이마다 정지를 기다린다 — NewFrame 이 DPI 를 읽고 테마가 따르고
+                    // 창 메시지가 리사이즈를 거치는 데 드는 프레임을 세지 않는다.
+                    constexpr uint32 kCheckScaleStep  = 1;
+                    constexpr uint32 kCheckWindowStep = 2;
+
+                    DPIProbe&        probe      = context.getTestState<DPIProbe>();
+                    ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+                    const uint32     stepIndex  = context.getStepIndex();
+                    if ( stepIndex == 0 )
+                    {
+                        if ( ImGui::GetIO().ConfigDpiScaleFonts == false )
+                            return EditorSelfTestStep::Done; // 배율을 직접 정한 실행(gv_editorUiScale)은 모니터를 따르지 않으므로 확인할 것이 없다
+                        probe._baseScale = EditorThemeUtil::getDPIScale();
+                        probe._fakeScale = probe._baseScale + 0.5f;
+                        probe.installFake( platformIO, &fakeWindowDPIScale );
+                        return EditorSelfTestStep::WaitSettled; // NewFrame 이 뷰포트 DPI 를 다시 읽고, 다음 프레임에 테마가 따른다
+                    }
+                    if ( stepIndex == kCheckScaleStep )
+                    {
+                        // ScaleAllSizes 가 자르므로(ImTrunc) 비례식이 아니라 같은 규칙으로 잰다 - 배율이 1.04 인 화면(Xvfb)에서 6 은 그대로 6 이고 1.54 에서 9 다.
+                        ImGuiStyle scaledStyle{};
+                        scaledStyle.FramePadding.x = SW_THEME_METRIC( "Spacing", "FramePaddingX" ) * SW_THEME_METRIC( "Layout", "Density" );
+                        scaledStyle.ScaleAllSizes( probe._fakeScale );
+                        const float32 expectedPadding = scaledStyle.FramePadding.x;
+                        (void)context.expect( isNear( ImGui::GetMainViewport()->DpiScale, probe._fakeScale, 0.001f ), "the main viewport did not take the window DPI" );
+                        (void)context.expect( isNear( ImGui::GetStyle().FontScaleDpi, probe._fakeScale, 0.001f ), "fonts did not follow the window DPI" );
+                        (void)context.expect( isNear( EditorThemeUtil::getDPIScale(), probe._fakeScale, 0.001f ), "the theme scale did not follow the window DPI" );
+                        (void)context.expect( isNear( ImGui::GetStyle().FramePadding.x, expectedPadding, 0.01f ), formatToString( "%# - padding %# (expected %#)", "frame padding stayed at the old DPI while fonts grew", ImGui::GetStyle().FramePadding.x, expectedPadding ).c_str() );
+                        probe.restorePlatformCallback();
+#if defined( SW_PLATFORM_WINDOWS )
+                        // 창 쪽에는 OS 가 보내는 것과 같은 메시지(새 DPI 와 그 비율만큼 큰 권장 사각형)를 보낸다. SendMessage 로 보내야 하며, PostMessage 로 게시한 WM_DPICHANGED 는 창 프로시저에 닿지 않는다.
+                        HWND hWnd = static_cast<HWND>( IImGuiPlatformBackend::tryGetViewportWin32Handle( ImGui::GetMainViewport() ) );
+                        (void)context.expect( hWnd != nullptr, "the main viewport has no Win32 window handle" );
+                        if ( hWnd != nullptr && GetWindowRect( hWnd, &probe._originalRect ) )
+                        {
+                            probe._suggestedRect        = probe._originalRect;
+                            probe._suggestedRect.right  = probe._originalRect.left + static_cast<LONG>( static_cast<float32>( probe._originalRect.right - probe._originalRect.left ) * probe._fakeScale / probe._baseScale );
+                            probe._suggestedRect.bottom = probe._originalRect.top + static_cast<LONG>( static_cast<float32>( probe._originalRect.bottom - probe._originalRect.top ) * probe._fakeScale / probe._baseScale );
+                            SendMessageW( hWnd, WM_DPICHANGED, MAKEWPARAM( static_cast<WORD>( 96.0f * probe._fakeScale ), static_cast<WORD>( 96.0f * probe._fakeScale ) ), reinterpret_cast<LPARAM>( &probe._suggestedRect ) );
+                        }
+#endif
+                        return EditorSelfTestStep::WaitSettled;
+                    }
+                    if ( stepIndex == kCheckWindowStep )
+                    {
+#if defined( SW_PLATFORM_WINDOWS )
+                        HWND           hWnd = static_cast<HWND>( IImGuiPlatformBackend::tryGetViewportWin32Handle( ImGui::GetMainViewport() ) );
+                        RECT           client{};
+                        EditorContext& editorContext         = editor::getSubsystem<EditorContext>();
+                        const bool     bCanProbeWindowGrowth = hWnd != nullptr && GetClientRect( hWnd, &client ) && editorContext.getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr;
+                        if ( bCanProbeWindowGrowth )
+                        {
+                            const IRHIDevice* pDevice    = editorContext.getSubsystem<EditorRenderViews>().getRHIDevice();
+                            const bool        bGrew      = ( probe._suggestedRect.right - probe._suggestedRect.left ) > ( probe._originalRect.right - probe._originalRect.left );
+                            const bool        bMatchesBb = pDevice->getBackBufferWidth() == static_cast<uint32>( client.right ) &&
+                                                    pDevice->getBackBufferHeight() == static_cast<uint32>( client.bottom );
+                            RECT windowRect{};
+                            (void)GetWindowRect( hWnd, &windowRect );
+                            (void)context.expect( bGrew == false || ( windowRect.right - windowRect.left ) == ( probe._suggestedRect.right - probe._suggestedRect.left ),
+                                                  "WM_DPICHANGED did not move the window to the suggested rectangle" );
+                            (void)context.expect( bMatchesBb, "after WM_DPICHANGED the back buffer does not match the window client area" );
+                            // 원래 창 크기와 DPI 로 되돌린다. 다음 테스트가 커진 창에서 실행되지 않게 하기 위해서다.
+                            SendMessageW( hWnd, WM_DPICHANGED, MAKEWPARAM( static_cast<WORD>( 96.0f * probe._baseScale ), static_cast<WORD>( 96.0f * probe._baseScale ) ), reinterpret_cast<LPARAM>( &probe._originalRect ) );
+                        }
+#endif
+                        return EditorSelfTestStep::WaitSettled;
+                    }
+                    // 실제 DPI 로 돌아왔으므로 테마도 따라 돌아와야 한다. 모니터를 옮겼다가 돌아오는 것과 같다.
+                    (void)context.expect( isNear( EditorThemeUtil::getDPIScale(), probe._baseScale, 0.001f ), "the theme scale did not follow the DPI back" );
+                    return EditorSelfTestStep::Done;
+                }
 
                 void installFake( ImGuiPlatformIO& platformIO, float32 ( *pfnFake )( ImGuiViewport* ) )
                 {
                     _pfnSavedDPIScale                     = platformIO.Platform_GetWindowDpiScale;
                     platformIO.Platform_GetWindowDpiScale = pfnFake;
-                    _bFakeInstalled                       = true;
+                    _bFakeInstalled                       = SW_TRUE;
                 }
 
                 void restorePlatformCallback()
                 {
-                    if ( _bFakeInstalled == false )
+                    if ( _bFakeInstalled == SW_FALSE )
                         return;
-                    _bFakeInstalled = false;
+                    _bFakeInstalled = SW_FALSE;
                     if ( ImGui::GetCurrentContext() != nullptr ) // 에디터가 내려가며 ImGui 컨텍스트가 먼저 사라졌으면 되돌릴 곳도 없다
                         ImGui::GetPlatformIO().Platform_GetWindowDpiScale = _pfnSavedDPIScale;
                 }
+
+            private:
+                float32 ( *_pfnSavedDPIScale )( ImGuiViewport* );
+                float32 _baseScale;
+                float32 _fakeScale; ///< 교체한 창 DPI. 현재 배율에 0.5 를 더한 값이며, 이 PC 가 이미 150 % 여도 바뀐다
+#if defined( SW_PLATFORM_WINDOWS )
+                RECT _originalRect;
+                RECT _suggestedRect;
+#endif
+                uint8 _bFakeInstalled : 1; ///< 플랫폼 콜백을 `fakeWindowDPIScale` 로 바꿔 둔 동안 켜진다
             };
-
-            /** @brief ImGui 의 `Platform_GetWindowDpiScale` 자리에 거는 콜백입니다. 함수 포인터라 상태를 받지 못하므로 지금 도는 테스트의 프로브를 실행기에서 찾습니다. */
-            static float32 fakeWindowDPIScale( ImGuiViewport* pViewport )
-            {
-                (void)pViewport;
-                EditorSelfTestContext* pContext = EditorSelfTestRunner::findRunningContext();
-                const DPIProbe*        pProbe   = pContext != nullptr ? pContext->findTestState<DPIProbe>() : nullptr;
-                if ( pProbe == nullptr ) // 프로브가 사라지면 소멸자가 콜백을 되돌리므로, 걸려 있는 동안에는 항상 있다
-                    ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
-                return pProbe->_fakeScale;
-            }
-
-            static EditorSelfTestStep runDPIMonitorScaleFollows( EditorSelfTestContext& context )
-            {
-                // 단계: 가짜 DPI 걸기 → 배율 확인 · 창 메시지 → 창 크기 확인 · 되돌리기 → 되돌아온 배율 확인. 사이마다 정지를 기다린다 — NewFrame 이 DPI 를 읽고 테마가 따르고
-                // 창 메시지가 리사이즈를 거치는 데 드는 프레임을 세지 않는다.
-                constexpr uint32 kCheckScaleStep  = 1;
-                constexpr uint32 kCheckWindowStep = 2;
-
-                DPIProbe&        probe      = context.getTestState<DPIProbe>();
-                ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-                const uint32     stepIndex  = context.getStepIndex();
-                if ( stepIndex == 0 )
-                {
-                    if ( ImGui::GetIO().ConfigDpiScaleFonts == false )
-                        return EditorSelfTestStep::Done; // 배율을 직접 정한 실행(gv_editorUiScale)은 모니터를 따르지 않으므로 확인할 것이 없다
-                    probe._baseScale = EditorThemeUtil::getDPIScale();
-                    probe._fakeScale = probe._baseScale + 0.5f;
-                    probe.installFake( platformIO, &fakeWindowDPIScale );
-                    return EditorSelfTestStep::WaitSettled; // NewFrame 이 뷰포트 DPI 를 다시 읽고, 다음 프레임에 테마가 따른다
-                }
-                if ( stepIndex == kCheckScaleStep )
-                {
-                    // ScaleAllSizes 가 자르므로(ImTrunc) 비례식이 아니라 같은 규칙으로 잰다 - 배율이 1.04 인 화면(Xvfb)에서 6 은 그대로 6 이고 1.54 에서 9 다.
-                    ImGuiStyle scaledStyle{};
-                    scaledStyle.FramePadding.x = SW_THEME_METRIC( "Spacing", "FramePaddingX" ) * SW_THEME_METRIC( "Layout", "Density" );
-                    scaledStyle.ScaleAllSizes( probe._fakeScale );
-                    const float32 expectedPadding = scaledStyle.FramePadding.x;
-                    (void)context.expect( isNear( ImGui::GetMainViewport()->DpiScale, probe._fakeScale, 0.001f ), "the main viewport did not take the window DPI" );
-                    (void)context.expect( isNear( ImGui::GetStyle().FontScaleDpi, probe._fakeScale, 0.001f ), "fonts did not follow the window DPI" );
-                    (void)context.expect( isNear( EditorThemeUtil::getDPIScale(), probe._fakeScale, 0.001f ), "the theme scale did not follow the window DPI" );
-                    (void)context.expect( isNear( ImGui::GetStyle().FramePadding.x, expectedPadding, 0.01f ), formatToString( "%# - padding %# (expected %#)", "frame padding stayed at the old DPI while fonts grew", ImGui::GetStyle().FramePadding.x, expectedPadding ).c_str() );
-                    probe.restorePlatformCallback();
-#if defined( SW_PLATFORM_WINDOWS )
-                    // 창 쪽에는 OS 가 보내는 것과 같은 메시지(새 DPI 와 그 비율만큼 큰 권장 사각형)를 보낸다. SendMessage 로 보내야 하며, PostMessage 로 게시한 WM_DPICHANGED 는 창 프로시저에 닿지 않는다.
-                    HWND hWnd = static_cast<HWND>( IImGuiPlatformBackend::tryGetViewportWin32Handle( ImGui::GetMainViewport() ) );
-                    (void)context.expect( hWnd != nullptr, "the main viewport has no Win32 window handle" );
-                    if ( hWnd != nullptr && GetWindowRect( hWnd, &probe._originalRect ) )
-                    {
-                        probe._suggestedRect        = probe._originalRect;
-                        probe._suggestedRect.right  = probe._originalRect.left + static_cast<LONG>( static_cast<float32>( probe._originalRect.right - probe._originalRect.left ) * probe._fakeScale / probe._baseScale );
-                        probe._suggestedRect.bottom = probe._originalRect.top + static_cast<LONG>( static_cast<float32>( probe._originalRect.bottom - probe._originalRect.top ) * probe._fakeScale / probe._baseScale );
-                        SendMessageW( hWnd, WM_DPICHANGED, MAKEWPARAM( static_cast<WORD>( 96.0f * probe._fakeScale ), static_cast<WORD>( 96.0f * probe._fakeScale ) ), reinterpret_cast<LPARAM>( &probe._suggestedRect ) );
-                    }
-#endif
-                    return EditorSelfTestStep::WaitSettled;
-                }
-                if ( stepIndex == kCheckWindowStep )
-                {
-#if defined( SW_PLATFORM_WINDOWS )
-                    HWND           hWnd = static_cast<HWND>( IImGuiPlatformBackend::tryGetViewportWin32Handle( ImGui::GetMainViewport() ) );
-                    RECT           client{};
-                    EditorContext& editorContext         = editor::getSubsystem<EditorContext>();
-                    const bool     bCanProbeWindowGrowth = hWnd != nullptr && GetClientRect( hWnd, &client ) && editorContext.getSubsystem<EditorRenderViews>().getRHIDevice() != nullptr;
-                    if ( bCanProbeWindowGrowth )
-                    {
-                        const IRHIDevice* pDevice    = editorContext.getSubsystem<EditorRenderViews>().getRHIDevice();
-                        const bool        bGrew      = ( probe._suggestedRect.right - probe._suggestedRect.left ) > ( probe._originalRect.right - probe._originalRect.left );
-                        const bool        bMatchesBb = pDevice->getBackBufferWidth() == static_cast<uint32>( client.right ) &&
-                                                pDevice->getBackBufferHeight() == static_cast<uint32>( client.bottom );
-                        RECT windowRect{};
-                        (void)GetWindowRect( hWnd, &windowRect );
-                        (void)context.expect( bGrew == false || ( windowRect.right - windowRect.left ) == ( probe._suggestedRect.right - probe._suggestedRect.left ),
-                                              "WM_DPICHANGED did not move the window to the suggested rectangle" );
-                        (void)context.expect( bMatchesBb, "after WM_DPICHANGED the back buffer does not match the window client area" );
-                        // 원래 창 크기와 DPI 로 되돌린다. 다음 테스트가 커진 창에서 실행되지 않게 하기 위해서다.
-                        SendMessageW( hWnd, WM_DPICHANGED, MAKEWPARAM( static_cast<WORD>( 96.0f * probe._baseScale ), static_cast<WORD>( 96.0f * probe._baseScale ) ), reinterpret_cast<LPARAM>( &probe._originalRect ) );
-                    }
-#endif
-                    return EditorSelfTestStep::WaitSettled;
-                }
-                // 실제 DPI 로 돌아왔으므로 테마도 따라 돌아와야 한다. 모니터를 옮겼다가 돌아오는 것과 같다.
-                (void)context.expect( isNear( EditorThemeUtil::getDPIScale(), probe._baseScale, 0.001f ), "the theme scale did not follow the DPI back" );
-                return EditorSelfTestStep::Done;
-            }
 
             static EditorSelfTestStep runUserSettingsPanelDrawsEveryTab( EditorSelfTestContext& context )
             {
@@ -987,14 +1005,14 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( HelpMarker, "widgets.helpMarker", 200, &EditorSelfTestCasesInternal::runHelpMarkerDrawsTheMarker );
     SW_EDITOR_SELF_TEST( PropertyRow, "widgets.propertyRow", 210, &EditorSelfTestCasesInternal::runPropertyRowPlacesTheValueColumn );
     SW_EDITOR_SELF_TEST( CoreDock, "dock.corePanelsAreDocked", 300, &EditorSelfTestCasesInternal::runCorePanelsAreDocked );
-    SW_EDITOR_SELF_TEST( EveryPanel, "panels.everyPanelDraws", 99000, &EditorSelfTestCasesInternal::runEveryPanelDraws );
-    SW_EDITOR_SELF_TEST( DockResize, "dock.followsWindowSize", 310, &EditorSelfTestCasesInternal::runDockFollowsWindowSize );
-    SW_EDITOR_SELF_TEST( InspectorEnum, "inspector.drawLeavesTheObjectAlone", 400, &EditorSelfTestCasesInternal::runInspectorDrawLeavesTheObjectAlone );
+    SW_EDITOR_SELF_TEST( EveryPanel, "panels.everyPanelDraws", 99000, &EditorSelfTestCasesInternal::EveryPanelProbe::runEveryPanelDraws );
+    SW_EDITOR_SELF_TEST( DockResize, "dock.followsWindowSize", 310, &EditorSelfTestCasesInternal::DockResizeProbe::runDockFollowsWindowSize );
+    SW_EDITOR_SELF_TEST( InspectorEnum, "inspector.drawLeavesTheObjectAlone", 400, &EditorSelfTestCasesInternal::InspectorProbe::runInspectorDrawLeavesTheObjectAlone );
     SW_EDITOR_SELF_TEST( MaterialPreview, "preview.materialHoldsOneReference", 500, &EditorSelfTestCasesInternal::runMaterialPreviewHoldsOneReference );
-    SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &EditorSelfTestCasesInternal::runHierarchyTagFilter );
-    SW_EDITOR_SELF_TEST( HierarchyOffscreenRows, "hierarchy.offscreenRootsKeepTheirPlace", 610, &EditorSelfTestCasesInternal::runHierarchyOffscreenRootsKeepTheirPlace );
+    SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &EditorSelfTestCasesInternal::HierarchyProbe::runHierarchyTagFilter );
+    SW_EDITOR_SELF_TEST( HierarchyOffscreenRows, "hierarchy.offscreenRootsKeepTheirPlace", 610, &EditorSelfTestCasesInternal::OffscreenRowProbe::runHierarchyOffscreenRootsKeepTheirPlace );
     SW_EDITOR_SELF_TEST( SceneViewResize, "sceneView.resizeEveryFrame", 700, &EditorSelfTestCasesInternal::runSceneViewResizeEveryFrame );
     SW_EDITOR_SELF_TEST( ProfilerGPUMemory, "profiler.gpuMemoryTab", 800, &EditorSelfTestCasesInternal::runProfilerGPUMemoryTabDrawsTheTracker );
     SW_EDITOR_SELF_TEST( UserSettingsPanel, "userSettings.panelDrawsEveryTab", 900, &EditorSelfTestCasesInternal::runUserSettingsPanelDrawsEveryTab );
-    SW_EDITOR_SELF_TEST( DPIMonitorScale, "dpi.monitorScaleFollows", 950, &EditorSelfTestCasesInternal::runDPIMonitorScaleFollows );
+    SW_EDITOR_SELF_TEST( DPIMonitorScale, "dpi.monitorScaleFollows", 950, &EditorSelfTestCasesInternal::DPIProbe::runDPIMonitorScaleFollows );
 } // namespace sw::editor

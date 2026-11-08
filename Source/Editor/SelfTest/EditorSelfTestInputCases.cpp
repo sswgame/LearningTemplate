@@ -57,6 +57,117 @@ namespace sw::editor
             // --------------------------------------------------------------------------------------------------
             struct TypingProbe
             {
+                void finishTyping( HierarchyPanel* pHierarchy, GameObjectManager* pManager ) const
+                {
+                    ImGui::ClearActiveID(); // 검색 입력란의 입력 상태를 놓는다. 다음 테스트의 키가 이리 오지 않게 한다
+                    if ( pHierarchy != nullptr )
+                        pHierarchy->setFilterText( "" );
+                    EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                    editorContext.getSubsystem<EditorWorkspace>().clearSelection();
+                    GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectByID( _objectID ) : nullptr;
+                    if ( pObj != nullptr )
+                        pManager->destroyGameObject( pObj );
+                    moveMouseAway();
+                }
+                static EditorSelfTestStep runHierarchySearchTyping( EditorSelfTestContext& context )
+                {
+                    EditorContext& editorContext = editor::getSubsystem<EditorContext>();
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                    HierarchyPanel*    pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
+                    GameObjectManager* pManager   = editor::getActiveObjectManager();
+                    if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
+                        return EditorSelfTestStep::Done;
+
+                    TypingProbe& probe = context.getTestState<TypingProbe>();
+                    switch ( probe._phase )
+                    {
+                        case 0:
+                        {
+                            GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestTyped" ) );
+                            if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
+                                return EditorSelfTestStep::Done;
+                            pObj->addTag( TagID::request( "SwSelfTest.Typed" ) );
+                            probe._objectID = pObj->getObjectID();
+                            pHierarchy->setFilterText( "" );
+                            ++probe._phase;
+                            return EditorSelfTestStep::Continue; // 패널이 한 번 그려져 레이블이 생기게 한다
+                        }
+                        case 1:
+                        case 5:
+                        {
+                            // 검색 입력란을 누른다(InputText 는 누를 때 잡힌다). 두 번째(5)는 지운 입력란을 다시 잡는다.
+                            if ( context.expect( pressOnMark( "hierarchy.filter", true ), "the hierarchy search field left no mark" ) == false )
+                            {
+                                probe.finishTyping( pHierarchy, pManager );
+                                return EditorSelfTestStep::Done;
+                            }
+                            ++probe._phase;
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 2:
+                        case 6:
+                        {
+                            if ( probe._phase == 2 )
+                                probe._pressDiagnosis = describeInputTarget( "hierarchy.filter" );
+                            (void)pressOnMark( "hierarchy.filter", false );
+                            ++probe._phase;
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 3:
+                        {
+                            EditorSelfTestInput::typeText( "tag:SwSelfTest" );
+                            ++probe._phase;
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 4:
+                        {
+                            // 글자 이벤트가 마우스 이벤트와 같은 프레임에 들어오면 ImGui 가 다음 프레임으로 흘려 보낸다(io.ConfigInputTrickleEventQueue). 그래서 몇 프레임 기다린다.
+                            if ( pHierarchy->getFilterText() != "tag:SwSelfTest" && probe._waitFrames < TypingProbe::kMaxWaitFrames )
+                            {
+                                ++probe._waitFrames;
+                                return EditorSelfTestStep::Continue;
+                            }
+                            probe._waitFrames = 0;
+                            // 글자가 들어온 프레임에 패널이 입력란, 트리 순서로 그렸다. 글자가 입력란에 도착했는지, 필터가 프로브를 찾았는지 확인한다.
+                            // 실패하면 이유에 누른 뒤와 현재의 입력 대상을 붙인다. 실행 한 번으로 "클릭이 입력란을 못 잡았다" 와 "글자가 안 들어갔다" 를 구분할 수 있다.
+                            string what{ "typing did not reach the search field [after press: " };
+                            what += probe._pressDiagnosis;
+                            what += " | now: ";
+                            what += describeInputTarget( "hierarchy.filter" );
+                            what += "]";
+                            (void)context.expect( pHierarchy->getFilterText() == "tag:SwSelfTest", what.c_str() );
+                            const string rootCountWhat = formatToString( "the typed tag filter did not find the probe object (visible roots %#)", pHierarchy->getVisibleRootCount() );
+                            (void)context.expect( pHierarchy->getVisibleRootCount() == 1, rootCountWhat.c_str() );
+                            // 지우고 없는 이름을 입력한다. 입력 중인 입력란은 ImGui 가 가진 텍스트를 쓰므로, 먼저 놓고 지운 뒤 다시 누른다.
+                            ImGui::ClearActiveID();
+                            pHierarchy->setFilterText( "" );
+                            ++probe._phase;
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 7:
+                        {
+                            probe._hintCountBefore = EditorWidgets::getNoSearchResultHintCount();
+                            EditorSelfTestInput::typeText( "zzSelfTestNoSuchObject" );
+                            ++probe._phase;
+                            return EditorSelfTestStep::Continue;
+                        }
+                        default:
+                        {
+                            if ( pHierarchy->getFilterText() != "zzSelfTestNoSuchObject" && probe._waitFrames < TypingProbe::kMaxWaitFrames )
+                            {
+                                ++probe._waitFrames;
+                                return EditorSelfTestStep::Continue;
+                            }
+                            (void)context.expect( pHierarchy->getFilterText() == "zzSelfTestNoSuchObject", "the second typing did not reach the search field" );
+                            (void)context.expect( pHierarchy->getVisibleRootCount() == 0, "a name that matches nothing still shows roots" );
+                            (void)context.expect( EditorWidgets::getNoSearchResultHintCount() > probe._hintCountBefore, "zero matches did not draw the no-result hint" );
+                            probe.finishTyping( pHierarchy, pManager );
+                            return EditorSelfTestStep::Done;
+                        }
+                    }
+                }
+
+            private:
                 string _pressDiagnosis{}; ///< 누른 프레임 뒤의 입력 대상(`describeInputTarget`). 실패 이유에 붙인다
                 uint64 _objectID{ 0 };
                 uint32 _hintCountBefore{ 0 };
@@ -84,117 +195,6 @@ namespace sw::editor
                               pHoveredWindow != nullptr && pHoveredWindow->Name != nullptr ? pHoveredWindow->Name : "(none)",
                               ImGui::GetIO().WantTextInput ? 1 : 0 );
                 return string{ text.c_str() };
-            }
-
-            static void finishTyping( HierarchyPanel* pHierarchy, GameObjectManager* pManager, const TypingProbe& probe )
-            {
-                ImGui::ClearActiveID(); // 검색 입력란의 입력 상태를 놓는다. 다음 테스트의 키가 이리 오지 않게 한다
-                if ( pHierarchy != nullptr )
-                    pHierarchy->setFilterText( "" );
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                editorContext.getSubsystem<EditorWorkspace>().clearSelection();
-                GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
-                if ( pObj != nullptr )
-                    pManager->destroyGameObject( pObj );
-                moveMouseAway();
-            }
-
-            static EditorSelfTestStep runHierarchySearchTyping( EditorSelfTestContext& context )
-            {
-                EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
-                HierarchyPanel*    pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
-                GameObjectManager* pManager   = editor::getActiveObjectManager();
-                if ( context.expect( pHierarchy != nullptr && pManager != nullptr, "no hierarchy panel or active scene" ) == false )
-                    return EditorSelfTestStep::Done;
-
-                TypingProbe& probe = context.getTestState<TypingProbe>();
-                switch ( probe._phase )
-                {
-                    case 0:
-                    {
-                        GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestTyped" ) );
-                        if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
-                            return EditorSelfTestStep::Done;
-                        pObj->addTag( TagID::request( "SwSelfTest.Typed" ) );
-                        probe._objectID = pObj->getObjectID();
-                        pHierarchy->setFilterText( "" );
-                        ++probe._phase;
-                        return EditorSelfTestStep::Continue; // 패널이 한 번 그려져 레이블이 생기게 한다
-                    }
-                    case 1:
-                    case 5:
-                    {
-                        // 검색 입력란을 누른다(InputText 는 누를 때 잡힌다). 두 번째(5)는 지운 입력란을 다시 잡는다.
-                        if ( context.expect( pressOnMark( "hierarchy.filter", true ), "the hierarchy search field left no mark" ) == false )
-                        {
-                            finishTyping( pHierarchy, pManager, probe );
-                            return EditorSelfTestStep::Done;
-                        }
-                        ++probe._phase;
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 2:
-                    case 6:
-                    {
-                        if ( probe._phase == 2 )
-                            probe._pressDiagnosis = describeInputTarget( "hierarchy.filter" );
-                        (void)pressOnMark( "hierarchy.filter", false );
-                        ++probe._phase;
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 3:
-                    {
-                        EditorSelfTestInput::typeText( "tag:SwSelfTest" );
-                        ++probe._phase;
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 4:
-                    {
-                        // 글자 이벤트가 마우스 이벤트와 같은 프레임에 들어오면 ImGui 가 다음 프레임으로 흘려 보낸다(io.ConfigInputTrickleEventQueue). 그래서 몇 프레임 기다린다.
-                        if ( pHierarchy->getFilterText() != "tag:SwSelfTest" && probe._waitFrames < TypingProbe::kMaxWaitFrames )
-                        {
-                            ++probe._waitFrames;
-                            return EditorSelfTestStep::Continue;
-                        }
-                        probe._waitFrames = 0;
-                        // 글자가 들어온 프레임에 패널이 입력란, 트리 순서로 그렸다. 글자가 입력란에 도착했는지, 필터가 프로브를 찾았는지 확인한다.
-                        // 실패하면 이유에 누른 뒤와 현재의 입력 대상을 붙인다. 실행 한 번으로 "클릭이 입력란을 못 잡았다" 와 "글자가 안 들어갔다" 를 구분할 수 있다.
-                        string what{ "typing did not reach the search field [after press: " };
-                        what += probe._pressDiagnosis;
-                        what += " | now: ";
-                        what += describeInputTarget( "hierarchy.filter" );
-                        what += "]";
-                        (void)context.expect( pHierarchy->getFilterText() == "tag:SwSelfTest", what.c_str() );
-                        const string rootCountWhat = formatToString( "the typed tag filter did not find the probe object (visible roots %#)", pHierarchy->getVisibleRootCount() );
-                        (void)context.expect( pHierarchy->getVisibleRootCount() == 1, rootCountWhat.c_str() );
-                        // 지우고 없는 이름을 입력한다. 입력 중인 입력란은 ImGui 가 가진 텍스트를 쓰므로, 먼저 놓고 지운 뒤 다시 누른다.
-                        ImGui::ClearActiveID();
-                        pHierarchy->setFilterText( "" );
-                        ++probe._phase;
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 7:
-                    {
-                        probe._hintCountBefore = EditorWidgets::getNoSearchResultHintCount();
-                        EditorSelfTestInput::typeText( "zzSelfTestNoSuchObject" );
-                        ++probe._phase;
-                        return EditorSelfTestStep::Continue;
-                    }
-                    default:
-                    {
-                        if ( pHierarchy->getFilterText() != "zzSelfTestNoSuchObject" && probe._waitFrames < TypingProbe::kMaxWaitFrames )
-                        {
-                            ++probe._waitFrames;
-                            return EditorSelfTestStep::Continue;
-                        }
-                        (void)context.expect( pHierarchy->getFilterText() == "zzSelfTestNoSuchObject", "the second typing did not reach the search field" );
-                        (void)context.expect( pHierarchy->getVisibleRootCount() == 0, "a name that matches nothing still shows roots" );
-                        (void)context.expect( EditorWidgets::getNoSearchResultHintCount() > probe._hintCountBefore, "zero matches did not draw the no-result hint" );
-                        finishTyping( pHierarchy, pManager, probe );
-                        return EditorSelfTestStep::Done;
-                    }
-                }
             }
 
             // --------------------------------------------------------------------------------------------------
@@ -279,77 +279,85 @@ namespace sw::editor
             /** @brief 테스트 앞의 테마와 에디터 설정 파일 바이트입니다. 스와치 클릭은 설정 파일을 다시 쓰므로(saveToConfig), 끝나면 바이트째 되돌립니다. */
             struct SwatchProbe
             {
+                SwatchProbe()
+                    : _theme{}
+                    , _configBytes{}
+                    , _bConfigExisted{ SW_FALSE }
+                {
+                }
+
+                static EditorSelfTestStep runThemeSwatch( EditorSelfTestContext& context )
+                {
+                    // 세 번째 스와치(Neon Violet)의 색은 대화상자와 같은 토큰에서 읽는다 — 숫자를 따로 적으면 토큰 값(#RRGGBB 반올림)이 바뀔 때 어긋났다.
+                    const Color violet = SW_THEME_COLOR( "AccentSwatch", "NeonViolet" );
+                    switch ( context.getStepIndex() )
+                    {
+                        case 0:
+                        {
+                            SwatchProbe& probe = context.getTestState<SwatchProbe>();
+                            probe._theme       = EditorThemeUtil::getActiveTheme();
+                            // 파일이 없을 수 있다. Saved/Editor 는 git 이 무시하므로 새 체크아웃에는 없다. 없으면 읽지 않는다. readFile 은 없는 파일을 오류로 남기기 때문이다.
+                            const string configPath = getEditorConfigPath();
+                            probe._bConfigExisted   = ( FileUtil::isRegularFile( configPath ) && FileUtil::readFile( configPath, probe._configBytes ) ) ? SW_TRUE : SW_FALSE;
+                            (void)context.expect( EditorThemeUtil::applyThemeByName( "light" ), "the light theme token set is missing" );
+                            EditorMenuBar::openThemeDialog();
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 1:
+                        {
+                            // 대화상자가 한 번 그려져서 레이블이 생겼다. 떠 있는 창(자기 플랫폼 창)이어도 레이블의 뷰포트를 함께 넣으므로 클릭이 닿는다.
+                            (void)context.expect( findWindowByTitlePart( "Theme & Look and Feel" ) != nullptr, "the theme dialog did not open" );
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 2:
+                        {
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 3:
+                        {
+                            if ( context.expect( pressOnMark( "theme.swatch.violet", true ), "the theme dialog swatch left no mark" ) == false )
+                                break;
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 4:
+                        {
+                            (void)pressOnMark( "theme.swatch.violet", false ); // 버튼은 놓을 때 눌린다. 놓는 위치도 스와치 위여야 한다
+                            return EditorSelfTestStep::Continue;
+                        }
+                        case 5:
+                        {
+                            return EditorSelfTestStep::Continue;
+                        }
+                        default:
+                        {
+                            const Color& accent       = SW_THEME_COLOR( "Base", "Accent" );
+                            const bool   bIsVioletNow = accent._r == violet._r && accent._g == violet._g && accent._b == violet._b;
+                            (void)context.expect( bIsVioletNow, "clicking a swatch in the light theme dialog did not change the accent" );
+                            (void)context.expect( EditorThemeUtil::getActiveTheme()._name == "light", "the swatch switched the theme away from light" );
+                            break;
+                        }
+                    }
+                    // 되돌린다. 사용자의 에디터 설정에 테스트의 테마가 남지 않게 하기 위해서다. 메모리(활성 설정)는 저장으로, 파일은 원래 바이트로 되돌린다. 저장기가 줄 끝과 마지막 줄바꿈을 바꾸기 때문이다.
+                    SwatchProbe& probe = context.getTestState<SwatchProbe>();
+                    EditorMenuBar::closeThemeDialog();
+                    EditorThemeUtil::applyTheme( probe._theme );
+                    EditorThemeUtil::saveToConfig();
+                    if ( probe._bConfigExisted && FileUtil::writeFile( getEditorConfigPath(), probe._configBytes.data(), probe._configBytes.size() ) == false )
+                        (void)context.expect( false, "could not restore the editor config file" );
+                    // 원래 없던 파일은 지운다. 지우지 못하면 테스트 테마가 사용자 설정에 남으므로 위의 쓰기 실패처럼 테스트 실패로 알린다.
+                    if ( probe._bConfigExisted == false && FileUtil::removeFile( getEditorConfigPath() ) == false )
+                        (void)context.expect( false, "could not remove the editor config file the test created" );
+                    moveMouseAway();
+                    return EditorSelfTestStep::Done;
+                }
+
+            private:
                 EditorThemeConfig _theme;
                 vector<uint8>     _configBytes;
-                bool              _bConfigExisted{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                uint8             _bConfigExisted : 1;
             };
 
             static string getEditorConfigPath() { return EditorPreferencesStore::getDefaultFilePath(); }
-
-            static EditorSelfTestStep runThemeSwatch( EditorSelfTestContext& context )
-            {
-                // 세 번째 스와치(Neon Violet)의 색은 대화상자와 같은 토큰에서 읽는다 — 숫자를 따로 적으면 토큰 값(#RRGGBB 반올림)이 바뀔 때 어긋났다.
-                const Color violet = SW_THEME_COLOR( "AccentSwatch", "NeonViolet" );
-                switch ( context.getStepIndex() )
-                {
-                    case 0:
-                    {
-                        SwatchProbe& probe = context.getTestState<SwatchProbe>();
-                        probe._theme       = EditorThemeUtil::getActiveTheme();
-                        // 파일이 없을 수 있다. Saved/Editor 는 git 이 무시하므로 새 체크아웃에는 없다. 없으면 읽지 않는다. readFile 은 없는 파일을 오류로 남기기 때문이다.
-                        const string configPath = getEditorConfigPath();
-                        probe._bConfigExisted   = FileUtil::isRegularFile( configPath ) && FileUtil::readFile( configPath, probe._configBytes );
-                        (void)context.expect( EditorThemeUtil::applyThemeByName( "light" ), "the light theme token set is missing" );
-                        EditorMenuBar::openThemeDialog();
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 1:
-                    {
-                        // 대화상자가 한 번 그려져서 레이블이 생겼다. 떠 있는 창(자기 플랫폼 창)이어도 레이블의 뷰포트를 함께 넣으므로 클릭이 닿는다.
-                        (void)context.expect( findWindowByTitlePart( "Theme & Look and Feel" ) != nullptr, "the theme dialog did not open" );
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 2:
-                    {
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 3:
-                    {
-                        if ( context.expect( pressOnMark( "theme.swatch.violet", true ), "the theme dialog swatch left no mark" ) == false )
-                            break;
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 4:
-                    {
-                        (void)pressOnMark( "theme.swatch.violet", false ); // 버튼은 놓을 때 눌린다. 놓는 위치도 스와치 위여야 한다
-                        return EditorSelfTestStep::Continue;
-                    }
-                    case 5:
-                    {
-                        return EditorSelfTestStep::Continue;
-                    }
-                    default:
-                    {
-                        const Color& accent       = SW_THEME_COLOR( "Base", "Accent" );
-                        const bool   bIsVioletNow = accent._r == violet._r && accent._g == violet._g && accent._b == violet._b;
-                        (void)context.expect( bIsVioletNow, "clicking a swatch in the light theme dialog did not change the accent" );
-                        (void)context.expect( EditorThemeUtil::getActiveTheme()._name == "light", "the swatch switched the theme away from light" );
-                        break;
-                    }
-                }
-                // 되돌린다. 사용자의 에디터 설정에 테스트의 테마가 남지 않게 하기 위해서다. 메모리(활성 설정)는 저장으로, 파일은 원래 바이트로 되돌린다. 저장기가 줄 끝과 마지막 줄바꿈을 바꾸기 때문이다.
-                SwatchProbe& probe = context.getTestState<SwatchProbe>();
-                EditorMenuBar::closeThemeDialog();
-                EditorThemeUtil::applyTheme( probe._theme );
-                EditorThemeUtil::saveToConfig();
-                if ( probe._bConfigExisted && FileUtil::writeFile( getEditorConfigPath(), probe._configBytes.data(), probe._configBytes.size() ) == false )
-                    (void)context.expect( false, "could not restore the editor config file" );
-                // 원래 없던 파일은 지운다. 지우지 못하면 테스트 테마가 사용자 설정에 남으므로 위의 쓰기 실패처럼 테스트 실패로 알린다.
-                if ( probe._bConfigExisted == false && FileUtil::removeFile( getEditorConfigPath() ) == false )
-                    (void)context.expect( false, "could not remove the editor config file the test created" );
-                moveMouseAway();
-                return EditorSelfTestStep::Done;
-            }
 
             // --------------------------------------------------------------------------------------------------
             // hierarchy.visibilityToggleFits: Hierarchy 가시성 토글이 아이콘을 담을 수 있다. 폭이 글꼴과 DPI 배율을 따른다
@@ -357,57 +365,58 @@ namespace sw::editor
             /** @brief 이 테스트가 만든 오브젝트입니다. */
             struct ToggleProbe
             {
+                static EditorSelfTestStep runVisibilityToggleFits( EditorSelfTestContext& context )
+                {
+                    EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
+                    GameObjectManager* pManager      = editor::getActiveObjectManager();
+                    if ( context.expect( pManager != nullptr, "no active scene" ) == false )
+                        return EditorSelfTestStep::Done;
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                    HierarchyPanel* pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
+                    uint64&         objectID   = context.getTestState<ToggleProbe>()._objectID;
+                    const uint32    stepIndex  = context.getStepIndex();
+                    if ( stepIndex == 0 )
+                    {
+                        // 행이 하나는 있어야 토글이 그려진다. 빈 씬에서도 실행되도록 하나 만들고, 앞 테스트가 남긴 검색어를 지운다. 걸러지면 행이 없다.
+                        if ( pHierarchy != nullptr )
+                            pHierarchy->setFilterText( "" );
+                        GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestToggle" ) );
+                        if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
+                            return EditorSelfTestStep::Done;
+                        objectID = pObj->getObjectID();
+                        return EditorSelfTestStep::Continue;
+                    }
+
+                    // 앞 테스트가 연 창이 Hierarchy 를 가렸을 수 있으므로 몇 프레임은 레이블을 기다린다.
+                    constexpr uint32   kMaxMarkWaitStep = 10;
+                    EditorSelfTestMark mark{};
+                    const bool         bMarked = EditorSelfTestMarks::find( "hierarchy.activeToggle", mark );
+                    if ( bMarked == false && stepIndex < kMaxMarkWaitStep )
+                    {
+                        ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( HierarchyPanel::kPanelTitle ).c_str() );
+                        if ( pWindow != nullptr )
+                            ImGui::FocusWindow( pWindow );
+                        return EditorSelfTestStep::Continue;
+                    }
+                    if ( context.expect( bMarked, "the hierarchy visibility toggle left no mark" ) )
+                    {
+                        const float32 width     = mark._max._x - mark._min._x;
+                        const float32 height    = mark._max._y - mark._min._y;
+                        const float32 iconWidth = ImGui::CalcTextSize( SW_EDITOR_ICON( "EyeSlash" ) ).x;
+                        string        what{ "the visibility toggle (" };
+                        what += formatToString( "%# px) is narrower than its icon (%# px)", width, iconWidth );
+                        (void)context.expect( width >= iconWidth, what.c_str() );
+                        (void)context.expect( width + 0.5f >= height, "the visibility toggle is not square - it does not follow the frame height" );
+                    }
+                    GameObject* pObj = pManager->findGameObjectByID( objectID );
+                    if ( pObj != nullptr )
+                        pManager->destroyGameObject( pObj );
+                    return EditorSelfTestStep::Done;
+                }
+
+            private:
                 uint64 _objectID{ 0 };
             };
-
-            static EditorSelfTestStep runVisibilityToggleFits( EditorSelfTestContext& context )
-            {
-                EditorContext&     editorContext = editor::getSubsystem<EditorContext>();
-                GameObjectManager* pManager      = editor::getActiveObjectManager();
-                if ( context.expect( pManager != nullptr, "no active scene" ) == false )
-                    return EditorSelfTestStep::Done;
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
-                HierarchyPanel* pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
-                uint64&         objectID   = context.getTestState<ToggleProbe>()._objectID;
-                const uint32    stepIndex  = context.getStepIndex();
-                if ( stepIndex == 0 )
-                {
-                    // 행이 하나는 있어야 토글이 그려진다. 빈 씬에서도 실행되도록 하나 만들고, 앞 테스트가 남긴 검색어를 지운다. 걸러지면 행이 없다.
-                    if ( pHierarchy != nullptr )
-                        pHierarchy->setFilterText( "" );
-                    GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestToggle" ) );
-                    if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
-                        return EditorSelfTestStep::Done;
-                    objectID = pObj->getObjectID();
-                    return EditorSelfTestStep::Continue;
-                }
-
-                // 앞 테스트가 연 창이 Hierarchy 를 가렸을 수 있으므로 몇 프레임은 레이블을 기다린다.
-                constexpr uint32   kMaxMarkWaitStep = 10;
-                EditorSelfTestMark mark{};
-                const bool         bMarked = EditorSelfTestMarks::find( "hierarchy.activeToggle", mark );
-                if ( bMarked == false && stepIndex < kMaxMarkWaitStep )
-                {
-                    ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( HierarchyPanel::kPanelTitle ).c_str() );
-                    if ( pWindow != nullptr )
-                        ImGui::FocusWindow( pWindow );
-                    return EditorSelfTestStep::Continue;
-                }
-                if ( context.expect( bMarked, "the hierarchy visibility toggle left no mark" ) )
-                {
-                    const float32 width     = mark._max._x - mark._min._x;
-                    const float32 height    = mark._max._y - mark._min._y;
-                    const float32 iconWidth = ImGui::CalcTextSize( SW_EDITOR_ICON( "EyeSlash" ) ).x;
-                    string        what{ "the visibility toggle (" };
-                    what += formatToString( "%# px) is narrower than its icon (%# px)", width, iconWidth );
-                    (void)context.expect( width >= iconWidth, what.c_str() );
-                    (void)context.expect( width + 0.5f >= height, "the visibility toggle is not square - it does not follow the frame height" );
-                }
-                GameObject* pObj = pManager->findGameObjectByID( objectID );
-                if ( pObj != nullptr )
-                    pManager->destroyGameObject( pObj );
-                return EditorSelfTestStep::Done;
-            }
 
             // --------------------------------------------------------------------------------------------------
             // hierarchy.selectedRowLeavesTheToggleVisible: 선택한 행의 선택 배경과 클릭 영역이 가시성 토글을 덮지 않는다
@@ -415,58 +424,59 @@ namespace sw::editor
             /** @brief 이 테스트가 만든 오브젝트입니다. */
             struct RowProbe
             {
+                static EditorSelfTestStep runSelectedRowLeavesTheToggleVisible( EditorSelfTestContext& context )
+                {
+                    constexpr const utf8* kRowTestObjectName = "EditorSelfTestRowProbe";
+                    constexpr uint32      kMaxMarkWaitStep   = 10;
+                    EditorContext&        editorContext      = editor::getSubsystem<EditorContext>();
+                    GameObjectManager*    pManager           = editor::getActiveObjectManager();
+                    if ( context.expect( pManager != nullptr, "no active scene" ) == false )
+                        return EditorSelfTestStep::Done;
+                    (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
+                    HierarchyPanel* pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
+                    uint64&         objectID   = context.getTestState<RowProbe>()._objectID;
+                    const uint32    stepIndex  = context.getStepIndex();
+                    if ( stepIndex == 0 )
+                    {
+                        if ( pHierarchy != nullptr )
+                            pHierarchy->setFilterText( "" );
+                        GameObject* pObj = pManager->createGameObject( hashed_string( kRowTestObjectName ) );
+                        if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
+                            return EditorSelfTestStep::Done;
+                        objectID = pObj->getObjectID();
+                        editorContext.getSubsystem<EditorWorkspace>().selectGameObject( pObj );
+                        return EditorSelfTestStep::Continue;
+                    }
+
+                    EditorSelfTestMark row{};
+                    EditorSelfTestMark toggle{};
+                    const bool         bMarked = EditorSelfTestMarks::find( string( "hierarchy.row." ) + kRowTestObjectName, row ) &&
+                                         EditorSelfTestMarks::find( string( "hierarchy.toggle." ) + kRowTestObjectName, toggle );
+                    if ( bMarked == false && stepIndex < kMaxMarkWaitStep )
+                        return EditorSelfTestStep::Continue;
+                    if ( context.expect( bMarked, "the probe row or its toggle left no mark" ) )
+                    {
+                        string what{ "the selected row starts at x " };
+                        what += formatToString( "%#, over the toggle that ends at x %#", row._min._x, toggle._max._x );
+                        (void)context.expect( toggle._max._x <= row._min._x + 0.5f, what.c_str() );
+                    }
+                    editorContext.getSubsystem<EditorWorkspace>().clearSelection();
+                    GameObject* pObj = pManager->findGameObjectByID( objectID );
+                    if ( pObj != nullptr )
+                        pManager->destroyGameObject( pObj );
+                    return EditorSelfTestStep::Done;
+                }
+
+            private:
                 uint64 _objectID{ 0 };
             };
-
-            static EditorSelfTestStep runSelectedRowLeavesTheToggleVisible( EditorSelfTestContext& context )
-            {
-                constexpr const utf8* kRowTestObjectName = "EditorSelfTestRowProbe";
-                constexpr uint32      kMaxMarkWaitStep   = 10;
-                EditorContext&        editorContext      = editor::getSubsystem<EditorContext>();
-                GameObjectManager*    pManager           = editor::getActiveObjectManager();
-                if ( context.expect( pManager != nullptr, "no active scene" ) == false )
-                    return EditorSelfTestStep::Done;
-                (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen<HierarchyPanel>( true );
-                HierarchyPanel* pHierarchy = editorContext.getSubsystem<EditorPanelManager>().findPanel<HierarchyPanel>();
-                uint64&         objectID   = context.getTestState<RowProbe>()._objectID;
-                const uint32    stepIndex  = context.getStepIndex();
-                if ( stepIndex == 0 )
-                {
-                    if ( pHierarchy != nullptr )
-                        pHierarchy->setFilterText( "" );
-                    GameObject* pObj = pManager->createGameObject( hashed_string( kRowTestObjectName ) );
-                    if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
-                        return EditorSelfTestStep::Done;
-                    objectID = pObj->getObjectID();
-                    editorContext.getSubsystem<EditorWorkspace>().selectGameObject( pObj );
-                    return EditorSelfTestStep::Continue;
-                }
-
-                EditorSelfTestMark row{};
-                EditorSelfTestMark toggle{};
-                const bool         bMarked = EditorSelfTestMarks::find( string( "hierarchy.row." ) + kRowTestObjectName, row ) &&
-                                     EditorSelfTestMarks::find( string( "hierarchy.toggle." ) + kRowTestObjectName, toggle );
-                if ( bMarked == false && stepIndex < kMaxMarkWaitStep )
-                    return EditorSelfTestStep::Continue;
-                if ( context.expect( bMarked, "the probe row or its toggle left no mark" ) )
-                {
-                    string what{ "the selected row starts at x " };
-                    what += formatToString( "%#, over the toggle that ends at x %#", row._min._x, toggle._max._x );
-                    (void)context.expect( toggle._max._x <= row._min._x + 0.5f, what.c_str() );
-                }
-                editorContext.getSubsystem<EditorWorkspace>().clearSelection();
-                GameObject* pObj = pManager->findGameObjectByID( objectID );
-                if ( pObj != nullptr )
-                    pManager->destroyGameObject( pObj );
-                return EditorSelfTestStep::Done;
-            }
         };
     } // namespace
 
-    SW_EDITOR_SELF_TEST( HierarchySearchTyping, "input.hierarchySearchTyping", 1000, &EditorSelfTestInputCasesInternal::runHierarchySearchTyping );
+    SW_EDITOR_SELF_TEST( HierarchySearchTyping, "input.hierarchySearchTyping", 1000, &EditorSelfTestInputCasesInternal::TypingProbe::runHierarchySearchTyping );
     SW_EDITOR_SELF_TEST( TooltipOnHover, "input.tooltipOnHover", 1010, &EditorSelfTestInputCasesInternal::runTooltipOnHover );
-    SW_EDITOR_SELF_TEST( ThemeSwatch, "input.themeSwatch", 1020, &EditorSelfTestInputCasesInternal::runThemeSwatch );
-    SW_EDITOR_SELF_TEST( VisibilityToggleFits, "hierarchy.visibilityToggleFits", 1030, &EditorSelfTestInputCasesInternal::runVisibilityToggleFits );
+    SW_EDITOR_SELF_TEST( ThemeSwatch, "input.themeSwatch", 1020, &EditorSelfTestInputCasesInternal::SwatchProbe::runThemeSwatch );
+    SW_EDITOR_SELF_TEST( VisibilityToggleFits, "hierarchy.visibilityToggleFits", 1030, &EditorSelfTestInputCasesInternal::ToggleProbe::runVisibilityToggleFits );
     SW_EDITOR_SELF_TEST( SelectedRowToggle, "hierarchy.selectedRowLeavesTheToggleVisible", 1040,
-                         &EditorSelfTestInputCasesInternal::runSelectedRowLeavesTheToggleVisible );
+                         &EditorSelfTestInputCasesInternal::RowProbe::runSelectedRowLeavesTheToggleVisible );
 } // namespace sw::editor
