@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/View/FrameViewports.h"
+#include "Engine/Renderer/Frame/Packet/PostProcessMaterialSet.h"
 
 namespace sw
 {
@@ -64,6 +65,11 @@ namespace sw
          */
         void collectExtraViews( RenderFramePacket& packet, const FrameViewports& views, Scene& activeScene, const RenderPacketMainView& mainView, float32 deltaTime,
                                 const FrameRenderer* pFrameRenderer );
+        /**
+         * @brief 주 시점과 추가 뷰의 후처리 블렌더블을 머티리얼로 풀어 뷰 설정에 싣고(`PostProcessMaterialSet`), 이번 프레임에 쓰이지 않은 머티리얼 참조를 놓습니다.
+         * @details 뷰 고르기(`setupMainView` · `collectExtraViews`)가 끝난 **뒤에** 부릅니다 — 블렌더블은 뷰 설정을 만들 때 볼륨을 섞은 값이다.
+         */
+        void resolvePostProcessMaterials( RenderFramePacket& packet );
         /** @brief 마지막 `collectExtraViews` 에서 보임 판정으로 쉰 추가 뷰 수입니다. 진단 읽기입니다(감시 값 `RenderView.HiddenCount` — 게임 스레드). */
         uint32 getLastHiddenViewCount() const { return _lastHiddenViewCount; }
 
@@ -78,6 +84,8 @@ namespace sw
         float64 _renderViewClock;
         /** @brief 마지막 수집에서 보임 판정으로 쉰 추가 뷰 수입니다(`getLastHiddenViewCount`). */
         uint32 _lastHiddenViewCount;
+        /** @brief 뷰의 후처리 블렌더블이 가리키는 머티리얼의 참조와 렌더 사본입니다(`resolvePostProcessMaterials`). */
+        PostProcessMaterialSet _postProcessMaterials;
         /** @brief 주 시점 자동 렌더 배율 조정기입니다(`gv_autoRenderScale`). 처음 켤 때 만듭니다. */
         unique_ptr<RenderScaleAdjuster> _renderScaleAdjuster;
         uint8                           _bAutoRenderScaleActive : 1;

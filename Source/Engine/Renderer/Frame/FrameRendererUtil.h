@@ -576,6 +576,7 @@ namespace sw
         hashed_string _fogVolumeParams{ "g_FogVolumeParams" };
         /// @brief 안개 패스의 진단 보기입니다(`FrameFog::makeDebugParams`, fog.hlsl).
         hashed_string _fogDebugParams{ "g_FogDebugParams" };
+        hashed_string _postProcessMaterial{ "g_PostProcessMaterial" }; ///< 후처리 머티리얼 그리기마다의 무게(x)
         hashed_string _shadowParams{ "g_ShadowParams" };
         /// @brief 방향광 캐스케이드 배치입니다 — x 수, y 칸 배율, z 경계 섞기 폭, w 거리 끝에서 옅어지기 시작하는 깊이. `ViewShadowData::_cascadeLayout`.
         hashed_string _shadowCascadeLayout{ "g_ShadowCascadeLayout" };

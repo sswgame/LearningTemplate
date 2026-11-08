@@ -154,6 +154,8 @@ namespace sw
                     return static_cast<bool>( gv_motionBlur ) == false || bMotionStill;
                 if ( pass._type == RenderPassType::ContactShadow )
                     return bContactShadows == false; // 접촉 그림자를 켠 빛이 없는 프레임 — 마스크가 모두 1 이다
+                if ( pass._type == RenderPassType::PostProcessMaterial )
+                    return settings.drawsPostProcessMaterial( pass._blendableLocation ) == false; // 이 자리에 읽기를 마친 블렌더블이 없다 — 출력이 원본을 가리킨다
                 return false;
             }
         };

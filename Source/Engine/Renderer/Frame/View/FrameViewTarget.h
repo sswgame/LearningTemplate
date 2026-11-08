@@ -30,6 +30,17 @@ namespace sw
      */
     struct FrameViewTarget
     {
+        /** @brief 이번 프레임 이 뷰가 그릴 후처리 머티리얼 하나(PSO · 원소 버퍼 · 텍스처 번호 · 무게 · 자리)입니다. 셋업(`FramePostProcessMaterials::prepareView`)이 정한다. */
+        struct PostProcessMaterialPass
+        {
+            RHIPipelineStateHandle       _pso{ 0 }; ///< 0 이면 PSO 를 만들지 못했다(그 그리기만 빠진다)
+            RHIBufferHandle              _buffer{ 0 };
+            RHIDescriptorIndex           _srv{ kInvalidDescriptorIndex };
+            const RHIDescriptorIndex*    _pTextureSRV{ nullptr }; ///< 에뮬 백엔드의 머티리얼 텍스처 칸(t16..t31) — 뷰 설정의 사본이 프레임 동안 쥔다
+            float32                      _weight{ 0.0f };
+            PostProcessBlendableLocation _location{ PostProcessBlendableLocation::None };
+        };
+
         TransientAttachmentPool     _transientPool;
         RenderView                  _cullInput;   ///< 추가 뷰의 컬링 입력(행렬, 절두체, 자기 컬링 상수 버퍼)
         unique_ptr<IRHICommandList> _commandList; ///< 이 뷰를 직렬로 기록하는 리스트(주 시점은 병렬 경로가 아닐 때만 쓴다)
@@ -96,6 +107,8 @@ namespace sw
         const Texture2D* _pColorGradingLUT{ nullptr };
         /// @brief 이번 프레임 이 뷰가 읽는 블룸 먼지 마스크입니다(읽힌 것만, 없으면 nullptr). LUT 와 같은 규칙이다.
         const Texture2D* _pBloomDirtMask{ nullptr };
+        /// @brief 이번 프레임 이 뷰가 그릴 후처리 머티리얼입니다(설정 `_listPostProcessMaterial` 차례 — 그 자리의 패스가 없는 것은 빠진다). PostProcessMaterial 패스가 자기 자리의 것을 그린다.
+        vector<PostProcessMaterialPass> _listPostProcessMaterialPass;
         /**
          * @brief FSR 1 의 중간 RT(EASU 출력 = Present 뷰포트 크기, RGBA8)와 그 SRV 입니다. 이 뷰가 FSR 로 키울 때만 있다(`prepareUpscale`).
          * @details 크기는 Present 뷰포트(화면 사각형 · 자기 출력)다 — 풀(배율 크기)과 다르고 출력이 바뀌면 다시 만든다.

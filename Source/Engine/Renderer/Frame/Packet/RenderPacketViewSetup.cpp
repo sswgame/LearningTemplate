@@ -30,6 +30,7 @@ namespace sw
         : _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
         , _lastHiddenViewCount{ 0 }
+        , _postProcessMaterials{}
         , _renderScaleAdjuster{ nullptr }
         , _bAutoRenderScaleActive{ SW_FALSE }
         , _bMissingCameraReported{ SW_FALSE }
@@ -47,6 +48,17 @@ namespace sw
     void RenderPacketViewSetup::destroy()
     {
         _renderViewScheduler.reset();
+        _postProcessMaterials.releaseAll();
+    }
+
+    void RenderPacketViewSetup::resolvePostProcessMaterials( RenderFramePacket& packet )
+    {
+        _postProcessMaterials.resolve( packet._mainView );
+        for ( RenderViewRequest& request : packet._listView )
+        {
+            _postProcessMaterials.resolve( request._settings );
+        }
+        _postProcessMaterials.endFrame();
     }
 
     float32 RenderPacketViewSetup::updateAutoRenderScale( float32 deltaTime )
@@ -151,5 +163,7 @@ namespace sw
             RenderViewCollector::removeScreenRectViews( packet._listView );
         else if ( mainView._pSceneViewCamera != nullptr && mainView._pSceneViewCamera != mainView._pCamera )
             RenderViewCollector::appendViewportView( *mainView._pSceneViewCamera, views._scene, mainView._sceneViewMode, packet._listView );
+        // 뷰가 다 정해졌다 — 블렌더블을 머티리얼로 푼다(뷰마다 볼륨을 섞은 값이 다르다).
+        resolvePostProcessMaterials( packet );
     }
 } // namespace sw

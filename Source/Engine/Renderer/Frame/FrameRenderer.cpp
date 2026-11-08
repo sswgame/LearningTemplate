@@ -83,6 +83,7 @@ namespace sw
         , _autoExposure{ _pDevice, _pipelineResource, _psoManager }
         , _upscale{ _pDevice, _pipelineResource, _psoManager }
         , _fog{ _pDevice, _psoManager }
+        , _postProcessMaterials{ _pDevice, _pipelineResource, _psoManager }
         , _extensionHost{ _pDevice, _pipelineResource, _psoManager }
         , _viewResources{ _pDevice, _pipelineResource, _autoExposure, _upscale }
         , _pipelinePath{}
@@ -624,6 +625,7 @@ namespace sw
         context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
         // 지난 프레임 어느 뷰도 묻지 않은 후처리 텍스처를 놓는다 — 이번 프레임의 뷰들이 묻기 전에 한 번.
         _state._postProcessTextures.pruneUnused();
+        _postProcessMaterials.pruneUnused();
         _passExecutor.applyViewPassConstants( context, _state._mainView );
     }
 
@@ -744,6 +746,7 @@ namespace sw
         _state._lensFlare.release( _pDevice );
         _state._cookieAtlas.release( _pDevice );
         _state._postProcessTextures.release();
+        _postProcessMaterials.release();
         _state._shadowCache.releaseLayer( _pDevice );
         // HDRI 텍스처의 참조를 놓는다 — 다음 프레임의 하늘이 새 디바이스에 다시 청한다(경로를 비워 다르게 본다).
         _state._skyHdriLoad  = TextureHandle{};
@@ -838,6 +841,7 @@ namespace sw
         const uint32 viewportWidth  = static_cast<uint32>( static_cast<float32>( width ) * settings._screenRect._z + 0.5f );
         const uint32 viewportHeight = static_cast<uint32>( static_cast<float32>( height ) * settings._screenRect._w + 0.5f );
         _upscale.prepareUpscale( _state._mainView, viewportWidth, viewportHeight );
+        _postProcessMaterials.prepareView( _state._mainView );
         _capture.ensurePresent( _state._outputWidth, _state._outputHeight );
     }
 
@@ -1138,6 +1142,7 @@ namespace sw
         // 이 뷰가 기록할 풀스크린 패스를 고르고 도는 패스의 타깃을 만든다 — 텍스처는 기록 중에 만들 수 없어 셋업에서 한다. 지난 뷰-투영은 그리기(applyViewProjection)가 바꾼다.
         (void)_viewResources.applyViewPassSelection( view, request._viewProj, _state._gpuScene.hasObjectMotion(), _state._frameShadow.hasContactShadows() ); // 추가 뷰의 첨부는 렌더 타깃 목록에 싣지 않는다
         _upscale.prepareUpscale( view, view._outputWidth, view._outputHeight );
+        _postProcessMaterials.prepareView( view );
     }
 
     void FrameRenderer::releaseExtraView( FrameViewTarget& view )

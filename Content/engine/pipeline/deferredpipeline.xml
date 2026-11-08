@@ -32,6 +32,9 @@
 		                      _clearColor="0.12,0.15,0.18,1"
 		                      _loadOp="Clear" />
 		<RenderPassAttachment _name="TonemapColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
+		<!-- 후처리 머티리얼(블렌더블) 출력 — 톤맵 앞은 원본(MotionBlurColor)과, 톤맵 뒤는 원본(TonemapColor)과 같은 형식이어야 그릴 머티리얼이 없는 뷰에서 출력이 원본을 가리킨다(검증 3-6). -->
+		<RenderPassAttachment _name="PostMaterialHDRColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="PostMaterialLDRColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
 	</_listAttachment>
 	<_listPass>
 		<RenderGraphPassDesc _name="Shadow"
@@ -471,6 +474,26 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
+		<!-- 후처리 머티리얼 — 카메라 · 볼륨의 블렌더블(PostProcessValues::_listBlendable)을 자리마다 그린다. 그릴 머티리얼이 없는 뷰는 톤맵 앞 · 뒤 패스가 출력을 원본에 잇고 기록하지 않는다.
+		     톤맵 앞: HDR 장면 색(모션 블러 뒤). 깊이 · G버퍼는 그래프의 "Post Process" 입력 노드가 읽는다. -->
+		<RenderGraphPassDesc _name="PostMaterialBeforeTonemap"
+		                     _type="PostProcessMaterial"
+		                     _blendableLocation="BeforeTonemap"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false">
+			<_listInput>
+				<item>MotionBlurColor</item>
+				<item>SceneDepth</item>
+				<item>GBufferAlbedo</item>
+				<item>GBufferNormal</item>
+				<item>GBufferMaterial</item>
+			</_listInput>
+			<_listOutput>
+				<item>PostMaterialHDRColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
 		<RenderGraphPassDesc _name="Tonemap"
 		                     _type="Tonemap"
 		                     _vertexEntryPoint="VSMain"
@@ -479,10 +502,42 @@
 		                     _bEnableDepthTest="false"
 		                     _bEnableDepthWrite="false">
 			<_listInput>
-				<item>MotionBlurColor</item>
+				<item>PostMaterialHDRColor</item>
 			</_listInput>
 			<_listOutput>
 				<item>TonemapColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<!-- 톤맵 대신: HDR 원본을 읽어 톤맵 출력 위에 무게만큼 덮는다(머티리얼이 자기 곡선으로 낸다). 출력을 톤맵과 함께 써서 늘 돌고, 그릴 것이 없으면 아무것도 하지 않는다. -->
+		<RenderGraphPassDesc _name="PostMaterialReplacingTonemap"
+		                     _type="PostProcessMaterial"
+		                     _blendableLocation="ReplacingTonemap"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false">
+			<_listInput>
+				<item>PostMaterialHDRColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>TonemapColor</item>
+			</_listOutput>
+			<_listPermutation />
+		</RenderGraphPassDesc>
+		<!-- 톤맵 뒤: LDR 색(UI 앞). -->
+		<RenderGraphPassDesc _name="PostMaterialAfterTonemap"
+		                     _type="PostProcessMaterial"
+		                     _blendableLocation="AfterTonemap"
+		                     _cullMode="None"
+		                     _bEnableDepthTest="false"
+		                     _bEnableDepthWrite="false">
+			<_listInput>
+				<item>TonemapColor</item>
+				<item>SceneDepth</item>
+			</_listInput>
+			<_listOutput>
+				<item>PostMaterialLDRColor</item>
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
@@ -494,7 +549,7 @@
 		                     _bEnableDepthTest="false"
 		                     _bEnableDepthWrite="false">
 			<_listInput>
-				<item>TonemapColor</item>
+				<item>PostMaterialLDRColor</item>
 			</_listInput>
 			<_listOutput>
 				<item>Swapchain</item>

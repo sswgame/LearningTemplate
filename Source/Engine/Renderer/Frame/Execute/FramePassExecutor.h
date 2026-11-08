@@ -258,6 +258,12 @@ namespace sw
         void executeDistortionApplyPass( const PassExecuteInput& input );
         /** @brief 화면 공간 반사 패스입니다 — 세기가 있는 후처리 뷰에서만 장면 색 위에 반사를 블렌드합니다. */
         void executeScreenSpaceReflectionPass( const PassExecuteInput& input );
+        /**
+         * @brief 후처리 머티리얼 패스입니다 — 지금 뷰의 그 자리 블렌더블을 목록 차례로 원본 위에 무게만큼 그립니다(머티리얼마다 풀스크린 하나, 원소 버퍼를 g_SwMaterials 로).
+         * @details 톤맵 앞 · 뒤 자리는 원본을 출력에 복사한 뒤 그리고(그릴 것이 없는 뷰는 셋업이 출력을 원본에 이어 기록하지 않는다), 톤맵 대신 자리는 톤맵 출력 위에 바로 그린다.
+         *          shortcut: 같은 자리의 머티리얼은 모두 패스의 원본을 읽는다(앞 머티리얼의 결과를 읽지 않는다 — 언리얼은 이어 읽는다), 이어 읽어야 하는 머티리얼이 생기면 두 타깃을 번갈아 쓴다.
+         */
+        void executePostProcessMaterialPass( const PassExecuteInput& input );
         /** @brief 렌즈 플레어 패스(`RenderPassType::LensFlare`)를 실행합니다. 주 시점이 아니거나 스프라이트가 없으면 그리지 않습니다. 스프라이트는 `LensFlareSpriteBuffer` 가 기록 전에 올렸다. */
         void executeLensFlarePass( const PassExecuteInput& input );
         /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */

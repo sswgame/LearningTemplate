@@ -9,6 +9,8 @@
 #include "Engine/Reflection/PropertyInfo.h"
 #include "Engine/Reflection/PropertyRoleUtil.h"
 #include "Engine/Reflection/TypeInfo.h"
+#include "Engine/Serialization/Serializer/SerializeContext.h"
+#include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Visual/Component/PostProcessVolumeComponent.h"
 
 using namespace sw;
@@ -25,6 +27,29 @@ namespace
         if ( pVolume != nullptr )
             pVolume->setLocalPosition( position );
         return pVolume;
+    }
+
+    /** @brief 경로 · 무게 · 자리의 블렌더블 하나입니다. 경로는 데이터 읽기로만 들어가므로(`DataPath`) 텍스트 처리기로 넣는다. */
+    PostProcessBlendable makeBlendable( const char* pPath, float32 weight, PostProcessBlendableLocation location )
+    {
+        PostProcessBlendable blendable;
+        blendable._weight   = weight;
+        blendable._location = location;
+        const bool bParsed  = SerializerUtil::parseTextValue( MutableValueAddress{ &blendable._materialPath }, hashed_string( "DataPath" ), pPath,
+                                                              SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        SW_EXPECT_TRUE( bParsed );
+        return blendable;
+    }
+
+    /** @brief 목록에서 @p pPath 항목의 무게입니다. 없으면 -1 입니다. */
+    float32 findWeight( const vector<PostProcessBlendable>& listBlendable, const char* pPath )
+    {
+        for ( const PostProcessBlendable& blendable : listBlendable )
+        {
+            if ( blendable._materialPath == string_view( pPath ) )
+                return blendable._weight;
+        }
+        return -1.0f;
     }
 } // namespace
 
@@ -43,8 +68,9 @@ SW_TEST_CASE( PostProcessVolumeTest, OverrideFlagsPairEveryValue )
         expected.append( valueName.substr( 2 ) );
         SW_EXPECT_EQUAL( string_view( expected ), listOverride[index]._name.view() );
         SW_EXPECT_TRUE( listOverride[index]._bIsBitField == SW_TRUE );
-        // 섞을 수 없는 칸은 경로(DataPath)뿐이다 — 섞기가 주소로 골라 절반에서 바꾼다. 다른 형식을 더하면 blendOverrides 에 줄을 더하고 여기를 넓힌다.
-        SW_EXPECT_TRUE( PropertyRoleUtil::isInterpolatable( listValue[index] ) || listValue[index]._typeName.view() == "DataPath" );
+        // 섞을 수 없는 칸은 경로(DataPath)와 후처리 머티리얼 목록뿐이다 — 섞기가 주소로 골라 따로 다룬다. 다른 형식을 더하면 blendOverrides 에 줄을 더하고 여기를 넓힌다.
+        const bool bHandledByAddress = listValue[index]._typeName.view() == "DataPath" || valueName == "_listBlendable";
+        SW_EXPECT_TRUE( PropertyRoleUtil::isInterpolatable( listValue[index] ) || bHandledByAddress );
     }
 }
 
@@ -110,6 +136,62 @@ SW_TEST_CASE( PostProcessVolumeTest, ResolveBlendsOverriddenFieldsByPriority )
     pHigh->setShape( PostProcessVolumeShape::Unbound, float3{}, 0.0f, 0.0f, 0.5f, 1.0f );
     const PostProcessValues swapped = PostProcessVolumeComponent::resolveAt( manager.getComponentRegistry(), float3{}, camera );
     SW_EXPECT_NEAR( 2.0f, swapped._saturation, 1.0e-5f );
+}
+
+/** @brief [PostProcessVolumeTest] 볼륨의 후처리 머티리얼은 더해진다 — 같은 (경로, 자리) 는 무게를 섞고, 새 항목은 볼륨 무게로 들어오며, 카메라의 항목은 남는다 */
+SW_TEST_CASE( PostProcessVolumeTest, VolumeBlendablesAddByWeight )
+{
+    vector<PostProcessBlendable> list;
+    list.push_back( makeBlendable( "engine/materials/postprocess/a.material", 1.0f, PostProcessBlendableLocation::AfterTonemap ) );
+    vector<PostProcessBlendable> volume;
+    volume.push_back( makeBlendable( "engine/materials/postprocess/a.material", 0.0f, PostProcessBlendableLocation::AfterTonemap ) );
+    volume.push_back( makeBlendable( "engine/materials/postprocess/b.material", 0.8f, PostProcessBlendableLocation::BeforeTonemap ) );
+    PostProcessBlendable::blendList( list, volume, 0.5f, false );
+    SW_EXPECT_NEAR( 0.5f, findWeight( list, "engine/materials/postprocess/a.material" ), 1.0e-5f ); // 1 → 0 의 절반
+    SW_EXPECT_NEAR( 0.4f, findWeight( list, "engine/materials/postprocess/b.material" ), 1.0e-5f ); // 0 → 0.8 의 절반
+    SW_EXPECT_TRUE( PostProcessBlendable::hasActive( list, PostProcessBlendableLocation::BeforeTonemap ) );
+    SW_EXPECT_FALSE( PostProcessBlendable::hasActive( list, PostProcessBlendableLocation::ReplacingTonemap ) );
+
+    // 같은 경로라도 자리가 다르면 다른 항목이다. 무게가 0 이 된 항목은 지워진다.
+    vector<PostProcessBlendable> off;
+    off.push_back( makeBlendable( "engine/materials/postprocess/a.material", 0.0f, PostProcessBlendableLocation::AfterTonemap ) );
+    PostProcessBlendable::blendList( list, off, 1.0f, false );
+    SW_EXPECT_NEAR( -1.0f, findWeight( list, "engine/materials/postprocess/a.material" ), 1.0e-5f );
+    SW_EXPECT_NEAR( 0.4f, findWeight( list, "engine/materials/postprocess/b.material" ), 1.0e-5f );
+}
+
+/** @brief [PostProcessVolumeTest] 포즈 블렌드는 앞 카메라에만 있던 머티리얼을 넘어가는 만큼 줄인다 — 다 넘어가면 사라진다 */
+SW_TEST_CASE( PostProcessVolumeTest, PoseBlendFadesMissingBlendables )
+{
+    PostProcessValues from;
+    from._listBlendable.push_back( makeBlendable( "engine/materials/postprocess/a.material", 1.0f, PostProcessBlendableLocation::AfterTonemap ) );
+    PostProcessValues to;
+    to._listBlendable.push_back( makeBlendable( "engine/materials/postprocess/b.material", 1.0f, PostProcessBlendableLocation::AfterTonemap ) );
+    const PostProcessValues quarter = PostProcessValues::blend( from, to, 0.25f );
+    SW_EXPECT_NEAR( 0.75f, findWeight( quarter._listBlendable, "engine/materials/postprocess/a.material" ), 1.0e-5f );
+    SW_EXPECT_NEAR( 0.25f, findWeight( quarter._listBlendable, "engine/materials/postprocess/b.material" ), 1.0e-5f );
+    const PostProcessValues full = PostProcessValues::blend( from, to, 1.0f );
+    SW_EXPECT_NEAR( -1.0f, findWeight( full._listBlendable, "engine/materials/postprocess/a.material" ), 1.0e-5f );
+    SW_EXPECT_NEAR( 1.0f, findWeight( full._listBlendable, "engine/materials/postprocess/b.material" ), 1.0e-5f );
+}
+
+/** @brief [PostProcessVolumeTest] 볼륨은 목록 칸을 켜야 머티리얼을 더한다 — 켜지 않은 볼륨은 카메라 목록 그대로다 */
+SW_TEST_CASE( PostProcessVolumeTest, VolumeBlendablesNeedTheOverrideFlag )
+{
+    GameObjectManager           manager;
+    PostProcessVolumeComponent* pVolume = addVolume( manager, "Volume", float3{} );
+    SW_REQUIRE_NOT_NULL( pVolume );
+    PostProcessValues values;
+    values._listBlendable.push_back( makeBlendable( "engine/materials/postprocess/a.material", 1.0f, PostProcessBlendableLocation::BeforeTonemap ) );
+    PostProcessOverrides overrides;
+    pVolume->setSettings( values, overrides );
+    pVolume->setShape( PostProcessVolumeShape::Unbound, float3{}, 0.0f, 0.0f, 1.0f, 0.0f );
+    SW_EXPECT_TRUE( PostProcessVolumeComponent::resolveAt( manager.getComponentRegistry(), float3{}, PostProcessValues{} )._listBlendable.empty() );
+
+    overrides._bListBlendable = SW_TRUE;
+    pVolume->setSettings( values, overrides );
+    const PostProcessValues resolved = PostProcessVolumeComponent::resolveAt( manager.getComponentRegistry(), float3{}, PostProcessValues{} );
+    SW_EXPECT_NEAR( 1.0f, findWeight( resolved._listBlendable, "engine/materials/postprocess/a.material" ), 1.0e-5f );
 }
 
 /** @brief [PostProcessVolumeTest] 포즈 블렌드는 모든 칸을 섞고, 레터박스는 한쪽에만 있으면 절반에서 바꾼다 */

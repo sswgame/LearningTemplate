@@ -49,9 +49,10 @@ namespace sw
         string                     _hlsl;
         vector<MaterialGraphField> _listField;
         vector<MaterialGraphIssue> _listIssue;
-        uint32                     _contentHash{ 0 };   ///< `_hlsl` 의 해시 — 셰이더 파일 이름에 든다. 새 내용은 새 경로라 옛 PSO · 리플렉션이 섞이지 않는다
-        bool                       _bEmissive{ false }; ///< NOLINT(sw-bool-flag): 집합체다. 자체 발광을 쓴다 — G버퍼에 칸이 없어 포워드로 그린다(`MATERIAL_FORWARD_ONLY`)
-        bool                       _bHair{ false };     ///< NOLINT(sw-bool-flag): 집합체다. 셰이딩 모델 Hair(`SW_MATERIAL_GRAPH_HAIR`) — G버퍼에 칸이 없어 포워드로 그린다
+        uint32                     _contentHash{ 0 };      ///< `_hlsl` 의 해시 — 셰이더 파일 이름에 든다. 새 내용은 새 경로라 옛 PSO · 리플렉션이 섞이지 않는다
+        bool                       _bEmissive{ false };    ///< NOLINT(sw-bool-flag): 집합체다. 자체 발광을 쓴다 — G버퍼에 칸이 없어 포워드로 그린다(`MATERIAL_FORWARD_ONLY`)
+        bool                       _bHair{ false };        ///< NOLINT(sw-bool-flag): 집합체다. 셰이딩 모델 Hair(`SW_MATERIAL_GRAPH_HAIR`) — G버퍼에 칸이 없어 포워드로 그린다
+        bool                       _bPostProcess{ false }; ///< NOLINT(sw-bool-flag): 집합체다. 출력이 `PostProcessOutput` 이다 — PostProcess 영역(post_process_material_graph.hlsli · `MATERIAL_DOMAIN_POST_PROCESS`)
 
         // 파일 머리말 참고.
         /**
@@ -60,6 +61,8 @@ namespace sw
          * @return 문제가 없으면 true 입니다.
          */
         [[nodiscard]] static bool compile( const MaterialGraphDef& graph, string_view sourceName, MaterialGraphCompileResult& outResult );
+        /** @brief @p graph 의 출력 노드가 `PostProcessOutput` 이면 true 입니다 — 후처리 머티리얼(화면 입력을 읽고 풀스크린으로 그린다)이다. */
+        [[nodiscard]] static bool isPostProcessGraph( const MaterialGraphDef& graph );
         /** @brief @p graph 가 `Output` 없이 `GraphOutput` 만 가지면(하위 그래프) true 입니다. 혼자서는 머티리얼이 되지 않습니다. */
         [[nodiscard]] static bool isSubgraph( const MaterialGraphDef& graph );
         /** @brief 생성된 베이스 머티리얼의 글입니다(`.gen.material`). */

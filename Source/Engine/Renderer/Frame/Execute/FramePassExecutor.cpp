@@ -1262,6 +1262,11 @@ namespace sw
                     executeLensFlarePass( input );
                     break;
                 }
+                case RenderPassType::PostProcessMaterial:
+                {
+                    executePostProcessMaterialPass( input );
+                    break;
+                }
                 case RenderPassType::TAA:
                 {
                     executeTAAPass( input );
@@ -1801,6 +1806,55 @@ namespace sw
         context._pCmd->setPipelineState( pso );
         bindForDraw( context, pso, kInvalidDescriptorIndex );
         context._pCmd->draw( 3, 0 );
+        context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executePostProcessMaterialPass( const PassExecuteInput& input )
+    {
+        // 후처리 머티리얼이다(언리얼 Post Process Material). 셋업(`FramePostProcessMaterials::prepareView`)이 뷰마다 PSO · 원소 버퍼를 정해 두었다 — 여기서는 그리기만 한다.
+        const PostProcessBlendableLocation location  = input._passDesc._blendableLocation;
+        const bool                         bReplaces = location == PostProcessBlendableLocation::ReplacingTonemap;
+        const hashed_string&               target    = input._declaredColor[0]._attachment;
+        // 톤맵 앞 · 뒤 자리에 그릴 것이 없는 뷰는 셋업이 출력 이름을 원본에 이었다(`applyViewPassSelection`) — 기록하지 않는다.
+        if ( bReplaces == false && activePool().isForwarded( target ) )
+            return;
+        const vector<FrameViewTarget::PostProcessMaterialPass>& listDraw = _pActiveView->_listPostProcessMaterialPass;
+        const bool                                              bHasDraw = VectorUtil::containsIf( listDraw, [location]( const FrameViewTarget::PostProcessMaterialPass& draw )
+                                                     { return draw._location == location && draw._pso != 0; } );
+        if ( bReplaces && ( bHasDraw == false || _pActiveView->_settings.usesPostProcess() == false ) )
+            return; // 톤맵 출력이 이미 맞다
+        FramePassContext&                              context      = input._context;
+        const RenderGraphPassDesc::ResolvedAttachment* pSourceInput = FramePassExecutorInternal::findInputByRole( input._passDesc, RenderPassInputRole::SourceColor );
+        SW_ASSERT( pSourceInput != nullptr ); // 입력 계약의 필수 역할이다(로드가 검사했다)
+        if ( pSourceInput == nullptr )
+            return;
+        if ( bReplaces == false )
+        {
+            // 출력을 원본으로 채운다 — 머티리얼은 그 위에 무게만큼 섞는다(무게 0.5 면 반만 바뀐다). 둘은 형식 · 크기가 같다(검증 3-6).
+            const RHITextureHandle src = findTransient( pSourceInput->_attachment );
+            const RHITextureHandle dst = findTransient( target );
+            if ( src == 0 || dst == 0 )
+                return;
+            context._pCmd->blitTexture( src, dst );
+            (void)markAttachmentCleared( target );
+        }
+        registerDeclaredInputs( context, input._passDesc );
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) == false )
+            return;
+        setIdentityWorld( context );
+        for ( const FrameViewTarget::PostProcessMaterialPass& draw : listDraw )
+        {
+            if ( draw._location != location || draw._pso == 0 || draw._buffer == 0 || draw._srv == kInvalidDescriptorIndex )
+                continue;
+            // 무게는 그리기마다의 패스 상수다(post_process_material_main.hlsli 의 g_PostProcessMaterial.x). 머티리얼은 원소 하나짜리 버퍼의 0 번이다.
+            context._passValues.setFloat4( passConstantNames()._postProcessMaterial, float4{ draw._weight, 0.0f, 0.0f, 0.0f } );
+            context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, draw._buffer, draw._srv );
+            context._drawMaterialCount = 1u;
+            commitBindlessTextureBindings( context );
+            context._pCmd->setPipelineState( draw._pso );
+            bindForDraw( context, draw._pso, kInvalidDescriptorIndex, draw._pTextureSRV );
+            context._pCmd->draw( 3, 0 );
+        }
         context._pCmd->endRenderPass();
     }
 

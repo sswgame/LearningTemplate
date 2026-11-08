@@ -3,6 +3,7 @@
  * @brief 화면 후처리 값과 칸마다의 덮어쓰기 표시입니다. 카메라 · 후처리 볼륨이 갖고, 렌더 뷰가 섞은 값을 렌더러로 나릅니다.
  */
 #pragma once
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
@@ -13,6 +14,52 @@
 namespace sw
 {
     struct PostProcessOverrides;
+
+    /**
+     * @enum PostProcessBlendableLocation
+     * @brief 후처리 머티리얼이 그려지는 자리입니다(언리얼 Blendable Location). 파이프라인 XML 의 `PostProcessMaterial` 패스가 자리 하나를 맡는다(`_blendableLocation`).
+     * @details None 은 패스 칸의 "적지 않음" 이다 — 그 값의 블렌더블은 그려지지 않는다(검증이 PostProcessMaterial 패스의 None 을 막는다).
+     */
+    ENUM()
+    enum class PostProcessBlendableLocation : uint8
+    {
+        None,             ///< 패스 칸을 적지 않았다
+        BeforeTonemap,    ///< 톤맵 앞 HDR 장면 색(언리얼 Before Tonemapping)
+        AfterTonemap,     ///< 톤맵 뒤 LDR 색(언리얼 After Tonemapping — 기본)
+        ReplacingTonemap, ///< 톤맵 결과를 무게만큼 덮는다 — HDR 원본을 읽어 자기 곡선으로 낸다(언리얼 Replacing the Tonemapper)
+    };
+
+    /**
+     * @struct PostProcessBlendable
+     * @brief 후처리 머티리얼 하나와 그 무게 · 자리입니다(언리얼 FWeightedBlendable). 카메라 · 볼륨의 `PostProcessValues::_listBlendable` 에 든다.
+     * @details 머티리얼은 PostProcess 영역(그래프의 `PostProcessOutput` · 손으로 쓴 `post_process_material.hlsli` 셰이더, define `MATERIAL_DOMAIN_POST_PROCESS`)이다.
+     *          무게 0 은 그리지 않고, 1 미만은 아래 색과 무게만큼 섞는다(프리멀티플라이 블렌드 — `post_process_material_main.hlsli`). 같은 자리의 블렌더블은 목록 차례로 그린다.
+     */
+    REFLECT()
+    struct SW_API PostProcessBlendable
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Post process material (PostProcess domain)" )
+        DataPath _materialPath;
+        PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "How much of the material result covers the colour below; 0 is off" )
+        float32 _weight{ 1.0f };
+        PROPERTY( Tooltip = "Where in the post process chain the material is drawn" )
+        PostProcessBlendableLocation _location{ PostProcessBlendableLocation::AfterTonemap };
+
+        /** @brief 그려질 수 있는 항목인지(경로가 있고 무게가 0 보다 크고 자리가 있다) 반환합니다. */
+        bool isActive() const { return _materialPath.isSet() && _weight > 0.0f && _location != PostProcessBlendableLocation::None; }
+        /** @brief 같은 머티리얼 · 같은 자리의 항목인지 반환합니다(목록 섞기의 열쇠). */
+        bool isSameSlot( const PostProcessBlendable& other ) const;
+        /** @brief @p location 자리에 그려질 항목이 하나라도 있으면 true 입니다. */
+        static bool hasActive( const vector<PostProcessBlendable>& listBlendable, PostProcessBlendableLocation location );
+        /**
+         * @brief @p inoutList 를 @p target 쪽으로 @p alpha 만큼 섞습니다 — 같은 (경로, 자리) 의 무게는 직선으로 섞고, @p target 에만 있는 항목은 무게 0 에서 섞여 들어온다.
+         * @param bFadeMissing @p target 에 없는 항목의 무게를 1 - @p alpha 배로 줄인다(포즈 블렌드 — 다른 카메라로 넘어가면 사라진다). 볼륨은 false 다(더하기만 한다 — 언리얼과 같다).
+         * @details 무게가 0 이 된 항목은 지운다(목록이 프레임마다 자라지 않게).
+         */
+        static void blendList( vector<PostProcessBlendable>& inoutList, const vector<PostProcessBlendable>& target, float32 alpha, bool bFadeMissing );
+    };
 
     /**
      * @struct PostProcessValues
@@ -161,6 +208,13 @@ namespace sw
         PROPERTY( Min = 0.01, Max = 1.0, Tooltip = "Surfaces at or above this roughness get no screen space reflection" )
         float32 _screenSpaceReflectionMaxRoughness{ 0.6f };
 
+        /**
+         * @brief 후처리 머티리얼 목록입니다(언리얼 WeightedBlendables). 볼륨은 켠 볼륨의 항목을 자기 무게로 더하고(`PostProcessBlendable::blendList`), 렌더러는 자리마다의 `PostProcessMaterial` 패스가 그린다.
+         * @details 경로는 게임 스레드가 머티리얼로 풀어 뷰에 싣는다(`PostProcessMaterialSet` — 읽기를 마친 것만). 후처리를 끈 뷰 · 표면 값 보기에서는 그리지 않는다.
+         */
+        PROPERTY( SkipIfEmpty, Tooltip = "Post process materials with their weight and location" )
+        vector<PostProcessBlendable> _listBlendable;
+
         /** @brief 자동 노출이 장면을 측정하는지(최소 EV 가 최대보다 작다) 나타냅니다. 같으면 고정 노출 2^-최소 EV 입니다. */
         bool usesAutoExposure() const { return _autoExposureMinEv < _autoExposureMaxEv; }
 
@@ -296,5 +350,7 @@ namespace sw
         uint8 _bScreenSpaceReflectionThickness : 1;
         PROPERTY()
         uint8 _bScreenSpaceReflectionMaxRoughness : 1;
+        PROPERTY()
+        uint8 _bListBlendable : 1;
     };
 } // namespace sw

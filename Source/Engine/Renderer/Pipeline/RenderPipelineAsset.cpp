@@ -504,6 +504,19 @@ namespace sw
                                      getEnumName( pass._type ) );
                     ++issueCount;
                 }
+                // 후처리 머티리얼의 자리는 그 패스의 칸이다 — 다른 패스가 적으면 실행이 읽지 않고, 그 패스가 비우면 그릴 블렌더블을 고를 수 없다. 셰이더는 머티리얼이 준다.
+                const bool bPostMaterialPass = pass._type == RenderPassType::PostProcessMaterial;
+                if ( bPostMaterialPass != ( pass._blendableLocation != PostProcessBlendableLocation::None ) )
+                {
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassBlendableLocation", "[%#] pass '%#' (%#): _blendableLocation %# - PostProcessMaterial passes name one location, other passes leave it None", sourcePath,
+                                     pass._name, getEnumName( pass._type ), getEnumName( pass._blendableLocation ) );
+                    ++issueCount;
+                }
+                if ( bPostMaterialPass && pass._shaderPath.empty() == false )
+                {
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassPostMaterialShader", "[%#] pass '%#': a PostProcessMaterial pass draws the shaders of its blendable materials - leave _shaderPath empty", sourcePath, pass._name );
+                    ++issueCount;
+                }
                 // 뷰 그래프는 뷰마다 다시 돌고 병렬로 기록한다 — 비동기 큐는 프레임 패스만 받는다(포크 · 조인을 뷰마다 되풀이할 자리가 없다).
                 if ( pass._queue != RHIQueueType::Graphics )
                 {
@@ -908,6 +921,9 @@ namespace sw
                     const RenderGraphPassDesc& pass = desc._listPass[passIndex];
                     if ( getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kBypassesToSource ) == false )
                         continue;
+                    // 톤맵 대신 자리는 원본을 가리키는 끄기가 없다 — 톤맵 출력 위에 그리므로 꺼지면 아무것도 하지 않는다(checkPostProcessMaterialPasses 가 본다).
+                    if ( pass._blendableLocation == PostProcessBlendableLocation::ReplacingTonemap )
+                        continue;
                     const RenderGraphPassDesc::ResolvedAttachment* pSource     = nullptr;
                     uint32                                         sourceCount = 0;
                     for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
@@ -954,6 +970,52 @@ namespace sw
                                              other._name, sourceName, pass._name, getEnumName( pass._type ), outputName );
                             ++issueCount;
                         }
+                    }
+                }
+                return issueCount;
+            }
+
+            /**
+             * @brief 3-8) 후처리 머티리얼 패스는 자리마다 하나다. 톤맵 대신 자리는 출력 하나를 앞의 패스(톤맵)가 이미 썼어야 한다 — 그 위에 무게만큼 덮는다.
+             * @details 같은 자리의 패스가 둘이면 같은 블렌더블을 두 번 그린다. 톤맵 대신 자리의 출력을 아무도 앞에서 쓰지 않으면 무게 1 미만에서 지난 프레임 값과 섞인다.
+             */
+            static uint32 checkPostProcessMaterialPasses( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
+                {
+                    const RenderGraphPassDesc& pass = desc._listPass[passIndex];
+                    if ( pass._type != RenderPassType::PostProcessMaterial || pass._blendableLocation == PostProcessBlendableLocation::None )
+                        continue;
+                    for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
+                    {
+                        const RenderGraphPassDesc& earlier = desc._listPass[earlierIndex];
+                        if ( earlier._type == RenderPassType::PostProcessMaterial && earlier._blendableLocation == pass._blendableLocation )
+                        {
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassPostMaterialLocationTwice", "[%#] passes '%#' and '%#' both take blendable location %# - one PostProcessMaterial pass per location", sourcePath,
+                                             earlier._name, pass._name, getEnumName( pass._blendableLocation ) );
+                            ++issueCount;
+                        }
+                    }
+                    if ( pass._blendableLocation != PostProcessBlendableLocation::ReplacingTonemap )
+                        continue;
+                    if ( pass._listResolvedColorOutput.size() != 1 )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassPostMaterialReplacingOutputs", "[%#] pass '%#': a ReplacingTonemap pass draws over one tonemapped output", sourcePath, pass._name );
+                        ++issueCount;
+                        continue;
+                    }
+                    const string outputName = pass._listResolvedColorOutput[0]._attachment.c_str();
+                    bool         bWritten   = false;
+                    for ( size_t earlierIndex = 0; earlierIndex < passIndex; ++earlierIndex )
+                    {
+                        bWritten = bWritten || VectorUtil::contains( desc._listPass[earlierIndex]._listOutput, outputName );
+                    }
+                    if ( bWritten == false )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassPostMaterialReplacingBase", "[%#] pass '%#': output '%#' is not written by an earlier pass - ReplacingTonemap draws over the tonemap output", sourcePath,
+                                         pass._name, outputName );
+                        ++issueCount;
                     }
                 }
                 return issueCount;
@@ -1037,6 +1099,7 @@ namespace sw
         issueCount += Internal::checkMinPostQuality( _desc, sourcePath );
         issueCount += Internal::checkBypassPasses( _desc, sourcePath );
         issueCount += Internal::checkOmittedPasses( _desc, sourcePath );
+        issueCount += Internal::checkPostProcessMaterialPasses( _desc, sourcePath );
         issueCount += Internal::checkAttachmentStoreOps( _desc, sourcePath );
         if ( issueCount > 0 )
             SW_LOG_ERROR_ID( "RenderPipelineAsset.PipelineValidationFoundIssues", "[%#] Pipeline validation found %# issues - the render result may be wrong or the GPU may die",
