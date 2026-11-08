@@ -10,7 +10,7 @@
 /**
  * @brief [RGB10A2Test] 비트 배치 — R 은 낮은 10 비트, G 는 10..19, B 는 20..29, A 는 위쪽 2 비트(DXGI R10G10B10A2_UNORM)
  */
-SW_TEST_CASE( RGB10A2Test, BitLayoutFollowsDxgi )
+SW_TEST_CASE( RGB10A2Test, BitLayoutFollowsDXGI )
 {
     SW_EXPECT_EQUAL( 0x000003FFu, sw::RGB10A2::fromFloat4( sw::float4{ 1.0f, 0.0f, 0.0f, 0.0f } ).getPacked() );
     SW_EXPECT_EQUAL( 0x000FFC00u, sw::RGB10A2::fromFloat4( sw::float4{ 0.0f, 1.0f, 0.0f, 0.0f } ).getPacked() );

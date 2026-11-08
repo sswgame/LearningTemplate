@@ -200,7 +200,7 @@ namespace sw
         bool isRenderTarget() const { return _bRenderTarget == SW_TRUE; }
 
         /** @brief DDS 가 알려 주는 DXGI 포맷 번호를 RHIFormat 으로 바꿉니다. 대응이 없으면 Unknown 입니다. */
-        static RHIFormat toRHIFormatFromDxgi( uint32 dxgiFormat );
+        static RHIFormat toRHIFormatFromDXGI( uint32 dxgiFormat );
         /**
          * @brief 세 채널 실수(`R32G32B32_FLOAT`) 이미지를 네 채널(`R32G32B32A32_FLOAT`, 알파 1)로 폅니다. 밉 · 층의 바이트가 이어져 있어 텍셀마다 한 번이면 된다.
          * @details 세 채널 실수 텍스처는 D3D · 데스크톱 Vulkan 에만 있고 모바일 Vulkan 은 대개, WebGPU 는 늘 없다 — 그런 장치에 올릴 때 쓴다(`docs/PlatformTargets.md`).

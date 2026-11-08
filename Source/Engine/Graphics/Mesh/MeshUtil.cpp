@@ -44,8 +44,8 @@ namespace sw
             vertex._arrNormal[0]   = source._normal._x;
             vertex._arrNormal[1]   = source._normal._y;
             vertex._arrNormal[2]   = source._normal._z;
-            vertex._arrUv[0]       = source._uv._x;
-            vertex._arrUv[1]       = source._uv._y;
+            vertex._arrUV[0]       = source._uv._x;
+            vertex._arrUV[1]       = source._uv._y;
             vertex._arrColor[0]    = shade * ( 0.55f + 0.45f * MathUtil::abs( source._normal._x ) );
             vertex._arrColor[1]    = shade * ( 0.55f + 0.45f * MathUtil::abs( source._normal._y ) );
             vertex._arrColor[2]    = shade * ( 0.55f + 0.45f * MathUtil::abs( source._normal._z ) );
@@ -80,7 +80,7 @@ namespace sw
          * @note 원점 중심 단위 도형(범위 [-0.5, 0.5])을 전제로 0..1 로 맞춥니다. 곡면은 이 함수를
          *       쓰지 않습니다. 구 · 실린더 옆면은 각도 · 높이를 그대로 쓰는 편이 훨씬 고르게 펼쳐집니다.
          */
-        float2 planarUv( const float3& position, const float3& normal )
+        float2 planarUV( const float3& position, const float3& normal )
         {
             const float3 axis{ MathUtil::abs( normal._x ), MathUtil::abs( normal._y ), MathUtil::abs( normal._z ) };
             if ( axis._x >= axis._y && axis._x >= axis._z )
@@ -105,9 +105,9 @@ namespace sw
             const float3 centroid   = ( a + b + c ) * ( 1.0f / 3.0f );
             const float3 faceNormal = ( normal.dot( centroid ) > 0.0f ) ? normal : ( normal * -1.0f );
 
-            pushTriangle( outList, BuildVertex{ a, faceNormal, planarUv( a, faceNormal ) },
-                          BuildVertex{ b, faceNormal, planarUv( b, faceNormal ) },
-                          BuildVertex{ c, faceNormal, planarUv( c, faceNormal ) } );
+            pushTriangle( outList, BuildVertex{ a, faceNormal, planarUV( a, faceNormal ) },
+                          BuildVertex{ b, faceNormal, planarUV( b, faceNormal ) },
+                          BuildVertex{ c, faceNormal, planarUV( c, faceNormal ) } );
         }
 
         /** @brief 원점 중심 도형의 바깥 방향입니다. 길이가 0 이면 +Y 로 둡니다(극에서만 생깁니다). */
@@ -123,7 +123,7 @@ namespace sw
         }
 
         /** @brief 둘레를 도는 도형의 UV 입니다. u 는 각도 비율, v 는 부르는 쪽이 줍니다(높이 · 극각). */
-        float2 revolvedUv( uint32 slice, uint32 sliceCount, float32 v )
+        float2 revolvedUV( uint32 slice, uint32 sliceCount, float32 v )
         {
             return float2{ static_cast<float32>( slice ) / static_cast<float32>( sliceCount ), v };
         }
@@ -154,10 +154,10 @@ namespace sw
         {
             const float3      side0 = float3{ quad._lower0._x, 0.0f, quad._lower0._z }.normalize();
             const float3      side1 = float3{ quad._lower1._x, 0.0f, quad._lower1._z }.normalize();
-            const BuildVertex sideLower0{ quad._lower0, side0, revolvedUv( slice, sliceCount, vLower ) };
-            const BuildVertex sideLower1{ quad._lower1, side1, revolvedUv( slice + 1, sliceCount, vLower ) };
-            const BuildVertex sideUpper0{ quad._upper0, side0, revolvedUv( slice, sliceCount, vUpper ) };
-            const BuildVertex sideUpper1{ quad._upper1, side1, revolvedUv( slice + 1, sliceCount, vUpper ) };
+            const BuildVertex sideLower0{ quad._lower0, side0, revolvedUV( slice, sliceCount, vLower ) };
+            const BuildVertex sideLower1{ quad._lower1, side1, revolvedUV( slice + 1, sliceCount, vLower ) };
+            const BuildVertex sideUpper0{ quad._upper0, side0, revolvedUV( slice, sliceCount, vUpper ) };
+            const BuildVertex sideUpper1{ quad._upper1, side1, revolvedUV( slice + 1, sliceCount, vUpper ) };
             pushTriangle( outList, sideLower0, sideUpper0, sideLower1 );
             pushTriangle( outList, sideLower1, sideUpper0, sideUpper1 );
         }
@@ -183,7 +183,7 @@ namespace sw
                                             radius * MathUtil::cos( phi ),
                                             radius * MathUtil::sin( phi ) * MathUtil::sin( theta ) };
             const float32 v        = static_cast<float32>( stack ) / static_cast<float32>( stackCount );
-            return BuildVertex{ position, radialNormal( position ), revolvedUv( slice, sliceCount, v ) };
+            return BuildVertex{ position, radialNormal( position ), revolvedUV( slice, sliceCount, v ) };
         }
 
         /** @brief 캡슐 반구를 짓는 데 필요한 모양입니다. */
@@ -213,7 +213,7 @@ namespace sw
             const float3  normal = ( delta.getLengthSquared() > MathUtil::kEpsilon ) ? delta.normalize() : float3{ 0.0f, bTop ? 1.0f : -1.0f, 0.0f };
             const float32 ratio  = static_cast<float32>( stack ) / static_cast<float32>( shape._stackCount );
             const float32 v      = bTop ? ( 0.25f - ratio * 0.25f ) : ( 0.75f + ratio * 0.25f );
-            return BuildVertex{ position, normal, revolvedUv( slice, shape._sliceCount, v ) };
+            return BuildVertex{ position, normal, revolvedUV( slice, shape._sliceCount, v ) };
         }
 
         /**
@@ -531,9 +531,9 @@ namespace sw
             const float3  apexNormal = ( sideNormal0 + sideNormal1 ).normalize();
             const float32 apexU      = ( static_cast<float32>( slice ) + 0.5f ) / static_cast<float32>( sliceCount );
             pushTriangle( listVert, BuildVertex{
-                                        base0, sideNormal0, revolvedUv( slice, sliceCount, 1.0f )
+                                        base0, sideNormal0, revolvedUV( slice, sliceCount, 1.0f )
             },
-                          BuildVertex{ apex, apexNormal, float2{ apexU, 0.0f } }, BuildVertex{ base1, sideNormal1, revolvedUv( slice + 1, sliceCount, 1.0f ) } );
+                          BuildVertex{ apex, apexNormal, float2{ apexU, 0.0f } }, BuildVertex{ base1, sideNormal1, revolvedUV( slice + 1, sliceCount, 1.0f ) } );
             // 밑면은 실제로 평평하다. 면 노멀(-Y)이 맞다.
             pushFlatTriangle( listVert, float3{ 0.0f, -kHalfY, 0.0f }, base1, base0 );
         }

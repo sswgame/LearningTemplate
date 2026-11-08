@@ -17,8 +17,8 @@
 
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushNotificationDispatcher.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/PushProviderSet.h"
+#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HPACK.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/HTTP2Frame.h"
-#include "GameFramework/Kits/Feature/Online/OnlineCore/Server/HTTP/Hpack.h"
 #include "GameFramework/Kits/Feature/Online/OnlineCore/Server/Provider/OnlineProviderFile.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPLink.h"
@@ -34,14 +34,14 @@ using namespace sw;
 namespace
 {
     constexpr AccountID   kAccount   = 42;
-    constexpr const utf8* kFcmEnv    = "SW_TEST_PUSH_FCM_ACCOUNT";
-    constexpr const utf8* kApnsEnv   = "SW_TEST_PUSH_APNS_KEY";
-    constexpr const utf8* kApnsToken = "abcd1234";
-    constexpr const utf8* kFcmToken  = "fcm-device-token";
+    constexpr const utf8* kFCMEnv    = "SW_TEST_PUSH_FCM_ACCOUNT";
+    constexpr const utf8* kAPNSEnv   = "SW_TEST_PUSH_APNS_KEY";
+    constexpr const utf8* kAPNSToken = "abcd1234";
+    constexpr const utf8* kFCMToken  = "fcm-device-token";
     constexpr const utf8* kTopic     = "com.x.game";
 
     /** @brief 가짜 APNs 가 받은 요청 하나입니다. */
-    struct ApnsRequestRecord
+    struct APNSRequestRecord
     {
         string _path{};
         string _authorization{};
@@ -54,13 +54,13 @@ namespace
      * @brief HTTP/2 서버 쪽을 최소로 말하는 가짜 APNs 입니다(TLS 1.3 · ALPN h2). `update` 를 부른 스레드에서 답합니다.
      * @details 연결 서문과 SETTINGS 를 받고, 스트림마다 HEADERS · DATA 를 모아 END_STREAM 에서 답합니다. 쓰는 것은 제품 코드의 프레임 · HPACK 함수입니다(서버 상태 기계만 여기 있다).
      */
-    class FakeApnsServer final : public IStreamHandler
+    class FakeAPNSServer final : public IStreamHandler
     {
     public:
-        vector<ApnsRequestRecord> _listRequest{};
+        vector<APNSRequestRecord> _listRequest{};
         int32                     _status{ 200 };
 
-        ~FakeApnsServer() override
+        ~FakeAPNSServer() override
         {
             if ( _transport != nullptr )
                 _transport->shutdown();
@@ -127,7 +127,7 @@ namespace
         struct Peer
         {
             unique_ptr<HTTPLink>          _link{};
-            HpackDecoder                  _decoder{};
+            HPACKDecoder                  _decoder{};
             vector<uint8>                 _inBytes{};
             unordered_map<uint32, Stream> _mapStream{};
             uint8                         _bPrefaceRead{ SW_FALSE };
@@ -205,7 +205,7 @@ namespace
             if ( streamIt == peer._mapStream.end() )
                 return;
             const vector<HTTPHeader>& listHeader = streamIt->second._listHeader;
-            ApnsRequestRecord&        record     = _listRequest.emplace_back();
+            APNSRequestRecord&        record     = _listRequest.emplace_back();
             record._path                         = findHeaderValue( listHeader, ":path" );
             record._authorization                = findHeaderValue( listHeader, "authorization" );
             record._topic                        = findHeaderValue( listHeader, "apns-topic" );
@@ -213,7 +213,7 @@ namespace
             record._body                         = streamIt->second._body;
             peer._mapStream.erase( streamIt );
             vector<uint8> block;
-            SW_EXPECT_TRUE( HpackEncoder::encode( {
+            SW_EXPECT_TRUE( HPACKEncoder::encode( {
                                                       HTTPHeader{ ":status", to_string( _status ) }
             },
                                                   block ) );
@@ -228,7 +228,7 @@ namespace
     };
 
     /** @brief 가짜 FCM(토큰 주소와 보내기 주소)입니다. 평문 HTTP 입니다 - TLS 길은 APNs 와 영수증 끝단이 지난다. */
-    struct FakeFcmEndpoint
+    struct FakeFCMEndpoint
     {
         HTTPServer     _server{};
         vector<string> _listAuthorization{};
@@ -239,7 +239,7 @@ namespace
         {
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
-            SW_REQUIRE_TRUE( _server.initialize( StreamTransportFactory::createPlatformTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&FakeFcmEndpoint::onRequest>( this ) ) );
+            SW_REQUIRE_TRUE( _server.initialize( StreamTransportFactory::createPlatformTransport(), transportSettings, HTTPServerConfig{}, HTTPRequestFunction::create<&FakeFCMEndpoint::onRequest>( this ) ) );
         }
 
         string makeBaseURL() { return "http://127.0.0.1:" + to_string( static_cast<int32>( _server.getListenPort() ) ); }
@@ -266,8 +266,8 @@ namespace
     /** @brief 제공자 파일 → 제공자 묶음 → 발송기 → 가짜 서버 둘입니다. 선언 순서가 수명이다 - 발송기가 묶음보다, 묶음이 끝점보다 먼저 내려간다. */
     struct PushEndToEndTest
     {
-        FakeApnsServer                              _apns{};
-        FakeFcmEndpoint                             _fcm{};
+        FakeAPNSServer                              _apns{};
+        FakeFCMEndpoint                             _fcm{};
         unique_ptr<test::ScopedEnvironmentVariable> _fcmEnv{};
         unique_ptr<test::ScopedEnvironmentVariable> _apnsEnv{};
         SystemMonotonicClock                        _clock{};
@@ -286,8 +286,8 @@ namespace
             NetPublicKey          publicKey;
             SW_REQUIRE_TRUE( security.createSigningKeyPair( NetSignatureAlgorithm::RsaPkcs1SHA256, fcmKey, publicKey ) );
             SW_REQUIRE_TRUE( security.createSigningKeyPair( NetSignatureAlgorithm::EcdsaP256Sha256, apnsKey, publicKey ) );
-            _fcmEnv  = make_unique<test::ScopedEnvironmentVariable>( kFcmEnv, R"({"project_id":"proj","client_email":"a@b","private_key":")" + test::escapeJSONText( fcmKey ) + R"("})" );
-            _apnsEnv = make_unique<test::ScopedEnvironmentVariable>( kApnsEnv, apnsKey );
+            _fcmEnv  = make_unique<test::ScopedEnvironmentVariable>( kFCMEnv, R"({"project_id":"proj","client_email":"a@b","private_key":")" + test::escapeJSONText( fcmKey ) + R"("})" );
+            _apnsEnv = make_unique<test::ScopedEnvironmentVariable>( kAPNSEnv, apnsKey );
         }
 
         ~PushEndToEndTest() { _providers.shutdown(); }
@@ -299,7 +299,7 @@ namespace
                 {"kind":"fcm","serviceAccountEnvironment":"%#","tokenUrl":"%#/token","sendUrl":"%#"},
                 {"kind":"apns","keyEnvironment":"%#","keyId":"key","teamId":"team","topic":"%#","sendUrl":"https://localhost:%#"}
             ]})",
-                                                  kFcmEnv, fcmURL, fcmURL, kApnsEnv, kTopic, _apns.getPort() );
+                                                  kFCMEnv, fcmURL, fcmURL, kAPNSEnv, kTopic, _apns.getPort() );
             return test::writeScratchText( "push.json", text );
         }
 
@@ -366,8 +366,8 @@ SW_TEST_CASE_F( PushEndToEndTest, ProvidersReachTheirEndpoints )
     string error;
     SW_REQUIRE_TRUE_MSG( assemble( error ), error.c_str() );
     SW_EXPECT_EQUAL( 2, _providers.getProviderCount() );
-    addDevice( "fcm", kFcmToken );
-    addDevice( "apns", kApnsToken );
+    addDevice( "fcm", kFCMToken );
+    addDevice( "apns", kAPNSToken );
     notifyAndWait();
 
     SW_EXPECT_EQUAL( uint64( 2 ), _dispatcher.getStats()._deliveredCount );
@@ -378,11 +378,11 @@ SW_TEST_CASE_F( PushEndToEndTest, ProvidersReachTheirEndpoints )
     SW_REQUIRE_TRUE( document.tryParse( _fcm._listSendBody[0] ) );
     string fcmDeviceToken;
     SW_EXPECT_TRUE( document.getRoot().findPathText( "message.token", fcmDeviceToken ) );
-    SW_EXPECT_EQUAL( string( kFcmToken ), fcmDeviceToken );
+    SW_EXPECT_EQUAL( string( kFCMToken ), fcmDeviceToken );
 
     SW_REQUIRE_EQUAL( size_t( 1 ), _apns._listRequest.size() );
-    const ApnsRequestRecord& request = _apns._listRequest[0];
-    SW_EXPECT_EQUAL( string( "/3/device/" ) + kApnsToken, request._path );
+    const APNSRequestRecord& request = _apns._listRequest[0];
+    SW_EXPECT_EQUAL( string( "/3/device/" ) + kAPNSToken, request._path );
     SW_EXPECT_EQUAL( string( kTopic ), request._topic );
     SW_EXPECT_EQUAL( string( "alert" ), request._pushType );
     SW_EXPECT_TRUE( StringUtil::startsWith( request._authorization, "bearer " ) );
@@ -390,11 +390,11 @@ SW_TEST_CASE_F( PushEndToEndTest, ProvidersReachTheirEndpoints )
 }
 
 /** @brief [PushEndToEndTest] APNs 410 이 전송을 지나 돌아오면 기기를 지워 다음 알림은 그 기기에 가지 않는다 */
-SW_TEST_CASE_F( PushEndToEndTest, ApnsGoneRemovesTheDevice )
+SW_TEST_CASE_F( PushEndToEndTest, APNSGoneRemovesTheDevice )
 {
     string error;
     SW_REQUIRE_TRUE_MSG( assemble( error ), error.c_str() );
-    addDevice( "apns", kApnsToken );
+    addDevice( "apns", kAPNSToken );
     _apns._status = 410;
     notifyAndWait();
     SW_EXPECT_EQUAL( uint64( 1 ), _dispatcher.getStats()._invalidTokenCount );
@@ -411,20 +411,20 @@ SW_TEST_CASE_F( PushEndToEndTest, BadSettingsStopAssembly )
     _apnsEnv.reset();
     string error;
     SW_EXPECT_FALSE( assemble( error ) );
-    SW_EXPECT_TRUE( error.find( kApnsEnv ) != string::npos );
+    SW_EXPECT_TRUE( error.find( kAPNSEnv ) != string::npos );
     SW_EXPECT_EQUAL( 0, _providers.getProviderCount() );
 }
 
 /** @brief [PushKitAssemblyTest] 라이브 운영 키트 조립: 설정 옵션이 고른 제공자로 서버가 서고 오프라인 푸시 창을 내놓는다. 신뢰 파일이 빠지면 서지 않는다 */
 SW_TEST_CASE( PushKitAssemblyTest, KitOptionsSelectTheProviders )
 {
-    FakeApnsServer apns;
+    FakeAPNSServer apns;
     apns.start();
     string       apnsKey;
     NetPublicKey publicKey;
     SW_REQUIRE_TRUE( game::getSubsystem<INetSecurityProvider>().createSigningKeyPair( NetSignatureAlgorithm::EcdsaP256Sha256, apnsKey, publicKey ) );
-    const test::ScopedEnvironmentVariable apnsEnv{ kApnsEnv, apnsKey };
-    const string                          providersFile = test::writeScratchText( "kit-push.json", formatToString( R"({"providers":[{"kind":"apns","keyEnvironment":"%#","keyId":"key","teamId":"team","topic":"%#","sendUrl":"https://localhost:%#"}]})", kApnsEnv, kTopic, apns.getPort() ) );
+    const test::ScopedEnvironmentVariable apnsEnv{ kAPNSEnv, apnsKey };
+    const string                          providersFile = test::writeScratchText( "kit-push.json", formatToString( R"({"providers":[{"kind":"apns","keyEnvironment":"%#","keyId":"key","teamId":"team","topic":"%#","sendUrl":"https://localhost:%#"}]})", kAPNSEnv, kTopic, apns.getPort() ) );
 
     constexpr const utf8* kServerJSON    = R"({ "_listStore": [ { "_name": "local", "_driver": "memory" } ], "_listCache": [ { "_name": "local", "_driver": "memory" } ] })";
     const auto            makeOnlineJSON = [&providersFile]( string_view trustOption )

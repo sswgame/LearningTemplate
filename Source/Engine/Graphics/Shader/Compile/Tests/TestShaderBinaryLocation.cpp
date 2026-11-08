@@ -27,7 +27,7 @@ SW_TEST_CASE( ShaderBinaryLocationTest, BinFolderSitsUnderTheFirstShadersCompone
     SW_EXPECT_EQUAL( makeDX12BinDirectory( "mounted/myshaders/shaders/x.hlsl" ), string( "mounted/myshaders/shaders/bin/" + rhi ) ); // `myshaders` 는 shaders 칸이 아니다
 }
 
-SW_TEST_CASE( ShaderBinaryLocationTest, IdWithoutADomainShadersFolderHasNoLocation )
+SW_TEST_CASE( ShaderBinaryLocationTest, IDWithoutADomainShadersFolderHasNoLocation )
 {
     SW_EXPECT_TRUE( makeDX12BinDirectory( "shaders/x.hlsl" ).empty() );          // 도메인 없음
     SW_EXPECT_TRUE( makeDX12BinDirectory( "engine/myshaders/x.hlsl" ).empty() ); // shaders 칸 없음

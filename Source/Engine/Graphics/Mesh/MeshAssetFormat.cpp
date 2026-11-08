@@ -27,16 +27,16 @@ namespace sw
             /** @brief 정점 플래그의 비트 0 입니다 — 바이탄젠트 부호가 -1 이면 켭니다(탄젠트 w). 나머지 비트는 0 이어야 합니다. */
             static constexpr uint32 kFlagBitangentNegative = 1u;
             /** @brief UV 경계(`_min` · `_max` 의 u · v)입니다 — 머리에 싣고 정점의 `unorm16x2` UV 를 이 사각형 안으로 정규화합니다. */
-            struct UvBounds
+            struct UVBounds
             {
                 float32 _arrMin[2]{};
                 float32 _arrMax[2]{};
             };
 
             /** @brief 정점 목록들의 UV 를 모두 덮는 경계입니다. 목록이 모두 비었으면 0 입니다. */
-            static UvBounds computeUvBounds( const vector<RHIVertex>& listFirst, const vector<MeshLODLevel>& listLevel )
+            static UVBounds computeUVBounds( const vector<RHIVertex>& listFirst, const vector<MeshLODLevel>& listLevel )
             {
-                UvBounds   bounds{};
+                UVBounds   bounds{};
                 bool       bAny    = false;
                 const auto include = [&]( const vector<RHIVertex>& listVertex )
                 {
@@ -44,7 +44,7 @@ namespace sw
                     {
                         for ( uint32 axis = 0; axis < 2; ++axis )
                         {
-                            const float32 value = vertex._arrUv[axis];
+                            const float32 value = vertex._arrUV[axis];
                             if ( MathUtil::isFinite( value ) == false )
                                 continue;
                             bounds._arrMin[axis] = bAny ? MathUtil::min( bounds._arrMin[axis], value ) : value;
@@ -62,7 +62,7 @@ namespace sw
             }
 
             /** @brief UV 경계를 머리 자리에 씁니다(최소 u · v, 최대 u · v). */
-            static void appendUvBounds( vector<uint8>& outBytes, const UvBounds& bounds )
+            static void appendUVBounds( vector<uint8>& outBytes, const UVBounds& bounds )
             {
                 LittleEndianUtil::appendFloat32( outBytes, bounds._arrMin[0] );
                 LittleEndianUtil::appendFloat32( outBytes, bounds._arrMin[1] );
@@ -71,7 +71,7 @@ namespace sw
             }
 
             /** @brief UV 경계를 머리에서 읽습니다. 유한하지 않거나 최대가 최소보다 작으면 false 입니다. */
-            [[nodiscard]] static bool readUvBounds( ByteReader& reader, UvBounds& outBounds )
+            [[nodiscard]] static bool readUVBounds( ByteReader& reader, UVBounds& outBounds )
             {
                 outBounds._arrMin[0] = reader.readFloat32();
                 outBounds._arrMin[1] = reader.readFloat32();
@@ -81,14 +81,14 @@ namespace sw
             }
 
             /** @brief UV 한 성분을 경계 안의 [0, 1] 로 옮겨 `unorm16` 으로 담습니다. 경계 폭이 0 이면 0 입니다. */
-            static uint16 packUv( float32 value, float32 minValue, float32 maxValue )
+            static uint16 packUV( float32 value, float32 minValue, float32 maxValue )
             {
                 const float32 extent = maxValue - minValue;
                 return unorm16::fromFloat( extent > 0.0f ? ( value - minValue ) / extent : 0.0f ).getRaw();
             }
 
             /** @brief `unorm16` UV 한 성분을 경계 안의 값으로 풉니다. */
-            static float32 unpackUv( uint16 raw, float32 minValue, float32 maxValue )
+            static float32 unpackUV( uint16 raw, float32 minValue, float32 maxValue )
             {
                 return minValue + unorm16::fromRaw( raw ).toFloat() * ( maxValue - minValue );
             }
@@ -124,7 +124,7 @@ namespace sw
              * @brief 정점 배열을 씁니다. 탄젠트는 받은 값이 아니라 기준(`Mesh::computeTangents`)으로 구해 싣는다 — 파일의 탄젠트가 런타임 메시와 늘 같다.
              * @details LOD 단계는 단계마다 따로 부른다 — 탄젠트를 묶는 이웃은 같은 단계의 삼각형뿐이다.
              */
-            static void appendVertices( vector<uint8>& outBytes, const vector<RHIVertex>& listSource, const vector<uint32>& listIndex, const UvBounds& uvBounds )
+            static void appendVertices( vector<uint8>& outBytes, const vector<RHIVertex>& listSource, const vector<uint32>& listIndex, const UVBounds& uvBounds )
             {
                 vector<RHIVertex> listVertex = listSource;
                 Mesh::computeTangents( listVertex, listIndex );
@@ -139,7 +139,7 @@ namespace sw
                     appendOctahedral( outBytes, float3{ vertex._arrTangent[0], vertex._arrTangent[1], vertex._arrTangent[2] } );
                     for ( uint32 axis = 0; axis < 2; ++axis )
                     {
-                        LittleEndianUtil::appendUint16( outBytes, packUv( vertex._arrUv[axis], uvBounds._arrMin[axis], uvBounds._arrMax[axis] ) );
+                        LittleEndianUtil::appendUint16( outBytes, packUV( vertex._arrUV[axis], uvBounds._arrMin[axis], uvBounds._arrMax[axis] ) );
                     }
                     for ( const float32 value : vertex._arrColor )
                     {
@@ -171,7 +171,7 @@ namespace sw
             }
 
             /** @brief 낮은 상세 단계 덩어리(`LODS`)를 씁니다 — 단계 수, 단계마다 임계값 · 정점 수 · 인덱스 수 · 정점 · 인덱스. 단계가 없으면 쓰지 않습니다. */
-            static void appendLODChunk( vector<uint8>& outBytes, const vector<MeshLODLevel>& listLevel, const UvBounds& uvBounds )
+            static void appendLODChunk( vector<uint8>& outBytes, const vector<MeshLODLevel>& listLevel, const UVBounds& uvBounds )
             {
                 if ( listLevel.empty() )
                     return;
@@ -192,7 +192,7 @@ namespace sw
              * @brief 낮은 상세 단계 덩어리 내용을 읽습니다. 길이 · 탄젠트가 맞지 않으면 false 입니다.
              * @details 정점 수와 임계값의 뜻(삼각형 · 내려가는 임계값 · 스킨 없는 메시)은 메시가 다시 본다(`Mesh::setLODs`) — 규칙은 한 곳에 둔다.
              */
-            [[nodiscard]] static bool readLODChunk( ByteReader& chunk, const UvBounds& uvBounds, vector<MeshLODLevel>& outListLevel )
+            [[nodiscard]] static bool readLODChunk( ByteReader& chunk, const UVBounds& uvBounds, vector<MeshLODLevel>& outListLevel )
             {
                 const bool bRead = chunk.readCountedList( outListLevel, sizeof( uint32 ) * 3, [&]( MeshLODLevel& level ) -> bool
                 {
@@ -324,7 +324,7 @@ namespace sw
             // 파일의 정점은 압축 배치이고 메모리의 `RHIVertex`(float32 16 개)와 크기가 다르다 — 배치를 바꾸면 `kVersion` 을 올리고 모델을 다시 임포트한다.
             static_assert( MeshAssetFormat::kVertexSize == 3 * sizeof( float32 ) + 2 * sizeof( OctahedralNormal ) + sizeof( unorm16x2 ) + sizeof( unorm8x4 ) + sizeof( uint32 ),
                            "kVertexSize must match the packed layout (position, normal, tangent, uv, color, flags)" );
-            static_assert( MeshAssetFormat::kHeaderSize == 28 + sizeof( UvBounds ), "kHeaderSize must hold the fixed fields and the UV bounds" );
+            static_assert( MeshAssetFormat::kHeaderSize == 28 + sizeof( UVBounds ), "kHeaderSize must hold the fixed fields and the UV bounds" );
             static_assert( MeshAssetFormat::kSkinVertexSize == 4 * sizeof( uint16 ) + 4 * sizeof( float32 ), "kSkinVertexSize must match the skin layout" );
 
             /** @brief 원점에서 가장 먼 정점까지의 거리입니다(`Mesh::getBoundingRadius` 와 같은 정의). */
@@ -344,7 +344,7 @@ namespace sw
              * @brief 정점 @p vertexCount 개를 읽어 풉니다. 잘렸거나 유한하지 않은 위치가 있거나 플래그에 모르는 비트가 있으면 false 입니다.
              * @details 법선 · 탄젠트는 옥타헤드럴을 풀어 단위 길이이고 탄젠트 w 는 플래그에서 ±1 로 복원한다.
              */
-            [[nodiscard]] static bool readVertices( ByteReader& reader, uint32 vertexCount, const UvBounds& uvBounds, vector<RHIVertex>& outListVertex )
+            [[nodiscard]] static bool readVertices( ByteReader& reader, uint32 vertexCount, const UVBounds& uvBounds, vector<RHIVertex>& outListVertex )
             {
                 return reader.readList( outListVertex, vertexCount, MeshAssetFormat::kVertexSize, [&]( RHIVertex& vertex ) -> bool
                 {
@@ -359,7 +359,7 @@ namespace sw
                     vertex._arrNormal[2] = normal._z;
                     for ( uint32 axis = 0; axis < 2; ++axis )
                     {
-                        vertex._arrUv[axis] = unpackUv( reader.readUint16(), uvBounds._arrMin[axis], uvBounds._arrMax[axis] );
+                        vertex._arrUV[axis] = unpackUV( reader.readUint16(), uvBounds._arrMin[axis], uvBounds._arrMax[axis] );
                     }
                     for ( float32& value : vertex._arrColor )
                     {
@@ -453,7 +453,7 @@ namespace sw
             }
 
             /** @brief 정점 · 스킨 뒤의 선택 덩어리를 모두 읽습니다. 모르는 이름 · 길이가 맞지 않는 덩어리 · 같은 덩어리가 두 번 오면 깨진 파일로 보고 false 입니다. */
-            [[nodiscard]] static bool readOptionalChunks( ByteReader& reader, uint32 vertexCount, uint32 indexCount, const UvBounds& uvBounds, MeshAssetData& ioData )
+            [[nodiscard]] static bool readOptionalChunks( ByteReader& reader, uint32 vertexCount, uint32 indexCount, const UVBounds& uvBounds, MeshAssetData& ioData )
             {
                 while ( reader.getRemainingByteCount() > 0 )
                 {
@@ -540,8 +540,8 @@ namespace sw
         LittleEndianUtil::appendFloat32( outBytes, MeshAssetFormatInternal::computeBoundingRadius( data._listVertex ) );
         LittleEndianUtil::appendUint32( outBytes, skinBoneCount );
         // UV 경계는 기본 정점과 모든 LOD 를 덮는다(LOD 의 UV 가 같은 사각형으로 정규화된다).
-        const MeshAssetFormatInternal::UvBounds uvBounds = MeshAssetFormatInternal::computeUvBounds( data._listVertex, data._listLOD );
-        MeshAssetFormatInternal::appendUvBounds( outBytes, uvBounds );
+        const MeshAssetFormatInternal::UVBounds uvBounds = MeshAssetFormatInternal::computeUVBounds( data._listVertex, data._listLOD );
+        MeshAssetFormatInternal::appendUVBounds( outBytes, uvBounds );
 
         MeshAssetFormatInternal::appendVertices( outBytes, data._listVertex, data._listIndex, uvBounds );
         if ( bSkin )
@@ -647,8 +647,8 @@ namespace sw
             return false;
         }
 
-        Internal::UvBounds uvBounds{};
-        if ( Internal::readUvBounds( reader, uvBounds ) == false )
+        Internal::UVBounds uvBounds{};
+        if ( Internal::readUVBounds( reader, uvBounds ) == false )
         {
             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetInvalidUV", "Mesh asset has invalid UV bounds" );
             return false;

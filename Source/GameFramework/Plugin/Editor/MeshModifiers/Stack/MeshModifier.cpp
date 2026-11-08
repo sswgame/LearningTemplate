@@ -341,7 +341,7 @@ namespace sw::editor
         job._pContext          = &context;
         job._pPosition         = inoutMesh._listPosition.data();
         job._pNormal           = inoutMesh.hasNormal() ? inoutMesh._listNormal.data() : nullptr;
-        job._pUV               = inoutMesh.hasUv() ? inoutMesh._listUV.data() : nullptr;
+        job._pUV               = inoutMesh.hasUV() ? inoutMesh._listUV.data() : nullptr;
         job._pColor            = inoutMesh.hasColor() ? inoutMesh._listColor.data() : nullptr;
         job._pWeight           = inoutMesh.hasWeight() ? inoutMesh._listWeight.data() : nullptr;
         job._pOriginalPosition = context._pListOriginalPosition != nullptr ? context._pListOriginalPosition->data() : nullptr;

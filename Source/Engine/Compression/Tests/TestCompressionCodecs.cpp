@@ -84,7 +84,7 @@ SW_TEST_CASE( CompressionCodecTest, ExternalCodecRoundTrip )
 {
     const sw::vector<uint8> listOriginal = makeSampleBuffer( 256 * 1024 );
 
-    sw::Lz4CompressionCodec  lz4;
+    sw::LZ4CompressionCodec  lz4;
     sw::ZstdCompressionCodec zstd;
     sw::ZlibCompressionCodec zlib;
     for ( sw::ICompressionCodec* pCodec : { static_cast<sw::ICompressionCodec*>( &lz4 ), static_cast<sw::ICompressionCodec*>( &zstd ), static_cast<sw::ICompressionCodec*>( &zlib ) } )
@@ -102,7 +102,7 @@ SW_TEST_CASE( CompressionCodecTest, ExternalCodecRoundTrip )
  */
 SW_TEST_CASE( CompressionCodecTest, CodecsRejectSizesTheirLibraryCannotHold )
 {
-    sw::Lz4CompressionCodec  lz4;
+    sw::LZ4CompressionCodec  lz4;
     sw::ZstdCompressionCodec zstd;
     sw::ZlibCompressionCodec zlib;
 

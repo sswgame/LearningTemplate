@@ -80,7 +80,7 @@ namespace sw
         }
 
         /** @brief 담긴 UV 사각형 (u, v, 폭, 높이) 입니다. 셰이더 `InstanceData::computeUvRect` 와 같은 값입니다(양자화 뒤). */
-        float4 getUvRect() const
+        float4 getUVRect() const
         {
             const float32 startU = static_cast<float32>( _uvStart & 0xFFFFu ) / 65535.0f;
             const float32 startV = static_cast<float32>( _uvStart >> 16 ) / 65535.0f;

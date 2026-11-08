@@ -346,9 +346,9 @@ namespace sw
                         RHIVertex vertex       = listVertex[index];
                         if ( pHooks != nullptr )
                         {
-                            const float2 uv  = pHooks->remapUv( piece._source, float2{ vertex._arrUv[0], vertex._arrUv[1] } );
-                            vertex._arrUv[0] = uv._x;
-                            vertex._arrUv[1] = uv._y;
+                            const float2 uv  = pHooks->remapUV( piece._source, float2{ vertex._arrUV[0], vertex._arrUV[1] } );
+                            vertex._arrUV[0] = uv._x;
+                            vertex._arrUV[1] = uv._y;
                         }
                         inoutListVertex.push_back( vertex );
                     }
@@ -413,7 +413,7 @@ namespace sw
             mapVertex.emplace( key, welded );
             outGeometry._listPosition.push_back( Internal::getPosition( vertex ) );
             outGeometry._listNormal.push_back( Internal::getNormal( vertex ) );
-            outGeometry._listUv.push_back( float2{ vertex._arrUv[0], vertex._arrUv[1] } );
+            outGeometry._listUV.push_back( float2{ vertex._arrUV[0], vertex._arrUV[1] } );
             if ( bSkinned )
                 outGeometry._listSkin.push_back( Internal::toInfluence( listSkin[vertexIndex] ) );
             listVertexToWelded[vertexIndex] = welded;

@@ -98,9 +98,9 @@ namespace sw
         void setClipFrame( int32 frame );
 
         /** @brief 클립이 없을 때 보여 줄 UV 사각형 (u, v, 폭, 높이)입니다. 기본은 텍스처 전체입니다. */
-        const float4& getUvRect() const { return _uvRect; }
+        const float4& getUVRect() const { return _uvRect; }
         /** @brief 클립이 없을 때 보여 줄 UV 사각형을 정합니다. 폭이 음수이면 좌우가 뒤집힙니다. */
-        void setUvRect( const float4& uvRect );
+        void setUVRect( const float4& uvRect );
 
         /** @brief 색(곱)입니다. 알파는 불투명도입니다. 기본은 흰색 불투명입니다. */
         const float4& getTint() const { return _tint; }
@@ -132,7 +132,7 @@ namespace sw
         float4 getEffectiveSliceBorder() const;
 
         /** @brief 현재 보이는 UV 사각형입니다. 클립이 있으면 그 프레임의 것, 없으면 `_uvRect` 입니다. */
-        float4 getDisplayedUvRect() const;
+        float4 getDisplayedUVRect() const;
 
     protected:
         /** @brief 양면 스프라이트 사각형입니다(`MeshUtil::createSpriteQuad`. 어느 쪽에서 봐도 텍스처가 뒤집히지 않습니다). */

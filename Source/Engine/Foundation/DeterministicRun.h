@@ -8,7 +8,7 @@
  *          유니티 테스트 프레임워크가 `Time.captureDeltaTime` 으로 시간을 묶는 자리와 같다 — 칸을 늘릴 때는 이 구조체에 한 칸을 더한다(변수마다 setter 를 두지 않는다).
  *          정책은 엔진 서비스 범위의 서브시스템이 든다(예전 함수 정적은 엔진을 다시 세워도 앞 실행의 정책이 남았다). 프레임 고정 시간(`_fixedFrameDelta`)도 여기 있다 —
  *          자동화 실행기 · 시나리오 재생기가 직접 넣고(예전에는 `gv_fixedFrameDelta` 를 이름으로 찾아 넣었다), App 은 읽기만 한다. 사람이 주는 `-gv_fixedFrameDelta` 는
- *          개발 스위치(`Foundation/Dev/FixedFrameDeltaSwitch.cpp`)가 기동 때 옮긴다.
+ *          개발 스위치(`DevTools/Diagnostics/FixedFrameDeltaSwitch.cpp`)가 기동 때 옮긴다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"

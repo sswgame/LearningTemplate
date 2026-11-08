@@ -25,8 +25,8 @@ namespace
             {
                 data._listVertex[vertex]._arrPosition[0] = vertex == 1u ? 1.0f : 0.0f;
                 data._listVertex[vertex]._arrPosition[1] = vertex == 2u ? 1.0f : 0.0f;
-                data._listVertex[vertex]._arrUv[0]       = data._listVertex[vertex]._arrPosition[0];
-                data._listVertex[vertex]._arrUv[1]       = data._listVertex[vertex]._arrPosition[1];
+                data._listVertex[vertex]._arrUV[0]       = data._listVertex[vertex]._arrPosition[0];
+                data._listVertex[vertex]._arrUV[1]       = data._listVertex[vertex]._arrPosition[1];
                 data._listVertex[vertex]._arrNormal[2]   = 1.0f;
                 data._listVertex[vertex]._arrColor[3]    = 1.0f;
             }

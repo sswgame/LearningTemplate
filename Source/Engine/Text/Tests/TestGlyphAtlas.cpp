@@ -234,7 +234,7 @@ SW_TEST_CASE( GlyphAtlasTest, GlyphCacheFrameClockRevivesTheBudgetEveryFrame )
 }
 
 /** @brief [GlyphAtlasTest] MSDF 아틀라스는 텍셀당 4 바이트다 — 페이지 바이트가 네 배이고, 쓴 구간의 업로드는 행마다 너비 × 4 바이트로 나가며 텍셀당 바이트가 업로드에 실린다 */
-SW_TEST_CASE( GlyphAtlasTest, MsdfAtlasStoresFourBytesPerTexel )
+SW_TEST_CASE( GlyphAtlasTest, MSDFAtlasStoresFourBytesPerTexel )
 {
     sw::GlyphAtlas atlas{ sw::GlyphFieldKind::MSDF };
     SW_EXPECT_EQUAL( 4u, atlas.getBytesPerTexel() );
@@ -264,7 +264,7 @@ SW_TEST_CASE( GlyphAtlasTest, MsdfAtlasStoresFourBytesPerTexel )
 }
 
 /** @brief [GlyphAtlasTest] MSDF 캐시는 래스터라이저의 MSDF 길로 글리프를 베이크한다 — 가짜의 MSDF 는 같은 크기 · 베어링에 RGBA 128 이라 아틀라스 자리에 네 배 바이트가 쓰인다 */
-SW_TEST_CASE( GlyphAtlasTest, MsdfCacheUsesTheMsdfRasterizer )
+SW_TEST_CASE( GlyphAtlasTest, MSDFCacheUsesTheMSDFRasterizer )
 {
     sw::test::FakeFontRasterizer rasterizer;
     const sw::FontFaceID         face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );

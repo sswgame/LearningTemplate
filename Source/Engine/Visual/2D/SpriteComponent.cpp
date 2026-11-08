@@ -144,7 +144,7 @@ namespace sw
         refreshDrawModeMesh();
     }
 
-    void SpriteComponent::setUvRect( const float4& uvRect )
+    void SpriteComponent::setUVRect( const float4& uvRect )
     {
         _uvRect = uvRect;
         refreshSpriteFrame();
@@ -209,7 +209,7 @@ namespace sw
         return _sliceBorder;
     }
 
-    float4 SpriteComponent::getDisplayedUvRect() const
+    float4 SpriteComponent::getDisplayedUVRect() const
     {
         const SpriteClipFrame* pFrame = findDisplayedFrame();
         if ( pFrame == nullptr )
@@ -325,7 +325,7 @@ namespace sw
 
     void SpriteComponent::refreshSpriteFrame()
     {
-        setSpriteFrame( getDisplayedUvRect(), _tint );
+        setSpriteFrame( getDisplayedUVRect(), _tint );
     }
 
     bool SpriteComponent::getWorldBounds( float3& outCenter, float32& outRadius ) const

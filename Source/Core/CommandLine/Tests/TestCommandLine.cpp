@@ -170,7 +170,7 @@ SW_TEST_CASE( CommandLineTest, MultiWordArgumentAcceptsOnlyHyphenatedSpelling )
 /**
  * @brief 문자열 키와 UTF-16 파싱
  */
-SW_TEST_CASE( CommandLineTest, StringKeyAndUtf16Parse )
+SW_TEST_CASE( CommandLineTest, StringKeyAndUTF16Parse )
 {
     sw::CommandLineManager cmdManager;
     cmdManager.initialize();

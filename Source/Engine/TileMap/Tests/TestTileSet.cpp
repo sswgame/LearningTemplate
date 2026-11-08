@@ -72,7 +72,7 @@ SW_TEST_CASE( TileSetTest, RuleTilesResolveByNeighborsAndFollowPainting )
     SW_EXPECT_EQUAL( 12, displayedCell( tileSet, cells, kWidth, kHeight, 3, 2, 1.01f ) );
 
     // UV 사각형은 4 × 4 아틀라스의 칸이다(행 우선).
-    const sw::float4 uv = tileSet.computeCellUvRect( 6 );
+    const sw::float4 uv = tileSet.computeCellUVRect( 6 );
     SW_EXPECT_NEAR( 0.5f, uv._x, 1e-6 );
     SW_EXPECT_NEAR( 0.25f, uv._y, 1e-6 );
     SW_EXPECT_NEAR( 0.25f, uv._z, 1e-6 );

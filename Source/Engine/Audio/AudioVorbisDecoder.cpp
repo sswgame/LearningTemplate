@@ -241,7 +241,7 @@ namespace sw
         return sw::make_unique<OGGStreamDecoder>( pVorbis, std::move( listArena ), info.channels, frameCount );
     }
 
-    bool AudioVorbisDecoder::decode( const uint8* pBytes, size_t byteCount, AudioPcm& outPcm )
+    bool AudioVorbisDecoder::decode( const uint8* pBytes, size_t byteCount, AudioPCM& outPCM )
     {
         // 디코더 메모리는 우리 버퍼 한 덩어리에서 나눠 준다(`OGGOpenUtil::openWithArena`).
         vector<uint8> listArena;
@@ -308,14 +308,14 @@ namespace sw
             }
         }
 
-        AudioPcm pcm;
+        AudioPCM pcm;
         pcm._channelMask    = channelMask;
         pcm._channelCount   = static_cast<uint16>( info.channels );
         pcm._sampleRate     = info.sample_rate;
         pcm._bitsPerSample  = 16;
         const uint8* pBegin = reinterpret_cast<const uint8*>( listSample.data() );
         pcm._listData.assign( pBegin, pBegin + listSample.size() * sizeof( int16 ) );
-        outPcm = std::move( pcm );
+        outPCM = std::move( pcm );
         return true;
     }
 } // namespace sw

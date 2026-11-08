@@ -58,8 +58,8 @@ namespace sw
                     vertex._arrNormal[0]   = geometry._listNormal[index]._x;
                     vertex._arrNormal[1]   = geometry._listNormal[index]._y;
                     vertex._arrNormal[2]   = geometry._listNormal[index]._z;
-                    vertex._arrUv[0]       = geometry._listUv[index]._x;
-                    vertex._arrUv[1]       = geometry._listUv[index]._y;
+                    vertex._arrUV[0]       = geometry._listUV[index]._x;
+                    vertex._arrUV[1]       = geometry._listUV[index]._y;
                     for ( float32& channel : vertex._arrColor )
                     {
                         channel = 1.0f;

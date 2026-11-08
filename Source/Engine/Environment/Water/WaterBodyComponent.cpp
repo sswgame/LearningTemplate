@@ -72,8 +72,8 @@ namespace sw
                 vertex._arrPosition[1] = localPosition._y;
                 vertex._arrPosition[2] = localPosition._z;
                 vertex._arrNormal[1]   = 1.0f;
-                vertex._arrUv[0]       = localPosition._x;
-                vertex._arrUv[1]       = localPosition._z;
+                vertex._arrUV[0]       = localPosition._x;
+                vertex._arrUV[1]       = localPosition._z;
                 // UV 가 xz 그대로라 평평한 수면(호수)의 탄젠트는 +x, 손잡이 +1 이다(`Mesh::computeTangents` 가 구하는 값). 강은 높이가 변해 메시가 다시 구한다.
                 vertex._arrTangent[0] = 1.0f;
                 vertex._arrTangent[3] = 1.0f;

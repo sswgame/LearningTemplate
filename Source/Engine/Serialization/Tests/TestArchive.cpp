@@ -262,8 +262,8 @@ SW_TEST_CASE( ArchiveTest, ArchiveChecksumAndCorruptionDetection )
 
     // 2) 바이트 변조 시뮬레이션
     buffer[4] ^= 0xFF; // 페이로드 내부 1바이트 반전
-    const uint32 tamperedCrc = sw::HashUtil::computeCRC32( buffer.data(), buffer.size() - sizeof( uint32 ) );
-    SW_EXPECT_TRUE( crc != tamperedCrc );
+    const uint32 tamperedCRC = sw::HashUtil::computeCRC32( buffer.data(), buffer.size() - sizeof( uint32 ) );
+    SW_EXPECT_TRUE( crc != tamperedCRC );
 }
 
 /**

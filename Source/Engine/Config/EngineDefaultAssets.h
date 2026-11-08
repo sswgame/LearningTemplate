@@ -140,7 +140,7 @@ namespace sw
         PROPERTY( Required )
         DataPath _toonMaterialTemplate; ///< VRM 임포트가 MToon 재질마다 복사하는 툰 머티리얼 견본(`ToonMaterialDef`)
         PROPERTY( Required )
-        DataPath _pbrMaterialTemplate; ///< 일반 glTF 임포트가 금속도 · 거칠기 머티리얼마다 복사하는 PBR 머티리얼 견본(`ModelImportMaterial::writePbrMaterial`)
+        DataPath _pbrMaterialTemplate; ///< 일반 glTF 임포트가 금속도 · 거칠기 머티리얼마다 복사하는 PBR 머티리얼 견본(`ModelImportMaterial::writePBRMaterial`)
 
         PROPERTY( Required )
         DataPath _defaultForwardPipeline; ///< 포워드 렌더 파이프라인(프레임 그래프)

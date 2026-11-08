@@ -66,7 +66,7 @@ namespace sw
      * @class OutfitAtlasHooks
      * @brief 배치(`OutfitAtlasLayout`)대로 부품을 한 머티리얼 그룹으로 모으고 UV 를 아틀라스 안의 자리로 옮기는 병합 훅입니다.
      * @details 배치에 있는 부품은 모두 @p groupName 그룹이 되고, 없는 부품은 자기 이름의 그룹으로 남아 UV 도 그대로다. 옮길 UV 는 0..1 안이어야 한다 —
-     *          타일링 UV 는 아틀라스에 앉힐 수 없어 범위 밖 UV 는 가장자리로 자르고 센다(`getClampedUvCount`; 부르는 쪽이 데이터 오류로 알린다).
+     *          타일링 UV 는 아틀라스에 앉힐 수 없어 범위 밖 UV 는 가장자리로 자르고 센다(`getClampedUVCount`; 부르는 쪽이 데이터 오류로 알린다).
      */
     class SW_EDITOR_API OutfitAtlasHooks final : public IMeshMergeHooks
     {
@@ -74,9 +74,9 @@ namespace sw
         OutfitAtlasHooks( const hashed_string& groupName, uint32 atlasSize, vector<OutfitAtlasRect> listRect );
 
         hashed_string getMaterialGroup( const MeshMergeSource& source ) const override;
-        float2        remapUv( const MeshMergeSource& source, const float2& uv ) const override;
+        float2        remapUV( const MeshMergeSource& source, const float2& uv ) const override;
         /** @brief 지금까지 0..1 밖이라 잘라 낸 UV 수입니다. */
-        uint32 getClampedUvCount() const { return _clampedUvCount; }
+        uint32 getClampedUVCount() const { return _clampedUVCount; }
 
     private:
         const OutfitAtlasRect* findRect( const hashed_string& part ) const;
@@ -85,7 +85,7 @@ namespace sw
         hashed_string           _groupName;
         float32                 _atlasSize;
         vector<OutfitAtlasRect> _listRect;
-        mutable uint32          _clampedUvCount;
+        mutable uint32          _clampedUVCount;
     };
 } // namespace sw
 

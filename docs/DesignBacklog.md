@@ -348,7 +348,7 @@ GameFramework의 모듈·수명주기·서비스·테스트 경계를 현재 코
 
 - [`GameModuleManager`](../Source/ModuleManager/GameModuleManager.cpp)는 개발 빌드에서 게임 모듈을 다시 빌드·교체하고, 언로드 전에 상태를 직렬화해 새 인스턴스에서 복원한다. 이 방식은 C++ 로직 변경의 반복 속도를 높이지만 컴파일·링크가 필요하며, 임의의 상태·작업·외부 포인터까지 보존하는 런타임 코드 편집 기능은 아니다. 배포 빌드는 정적 링크라 개발용 동적 리로드가 없다.
 - 스크립트 언어가 주는 별도 가치는 빌드 없이 새 동작을 작성·실행하거나, 사용자 모드를 지원하거나, 콘텐츠 제작자가 프로그래머 개입 없이 규칙을 조합하는 것이다. 그런 사용자/워크플로 요구가 없다면 언어 런타임, C++ 바인딩, 디버거·프로파일러, 오류 추적, 패키징, 샌드박스와 버전 호환성을 추가 유지하는 비용이 이점보다 크다.
-- 현재 코드에는 제한된 로직을 표현하는 데이터 기반 시스템이 이미 있다: [`BehaviorTreeAsset`](../Source/GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h)의 노드·태스크, [`ConditionExpr`](../Source/Engine/Gameplay/ConditionExpr.h)의 검증·컴파일되는 조건식, [`DialogueGraphAsset`](../Source/Engine/Dialogue/DialogueGraphAsset.h)의 대화 흐름, [`AnimationGraphPlayer`](../Source/Engine/Animation/Graph/AnimationGraphPlayer.h)의 상태 전이. 값·콘텐츠·그래프로 충분히 표현되는 요구는 기존 형식을 확장하고, 일반 프로그래밍 언어를 새로 넣지 않는다.
+- 현재 코드에는 제한된 로직을 표현하는 데이터 기반 시스템이 이미 있다: [`BehaviorTreeAsset`](../Source/GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h)의 노드·태스크, [`ConditionExpr`](../Source/Engine/Behavior/ConditionExpr.h)의 검증·컴파일되는 조건식, [`DialogueGraphAsset`](../Source/Engine/Dialogue/DialogueGraphAsset.h)의 대화 흐름, [`AnimationGraphPlayer`](../Source/Engine/Animation/Graph/AnimationGraphPlayer.h)의 상태 전이. 값·콘텐츠·그래프로 충분히 표현되는 요구는 기존 형식을 확장하고, 일반 프로그래밍 언어를 새로 넣지 않는다.
 - 재검토 조건은 구체적인 실제 기능이 기존 API/에셋 형식으로 표현되지 않고, 반복적으로 C++ 변경·빌드를 요구해 제작 병목을 만든다는 근거다. 그때는 먼저 좁은 목적의 데이터 형식/노드/표현식 확장으로 해결 가능한지 본다. 범용 언어가 꼭 필요하면 그때 Lua 등 후보를 평가하고, 서버 권한·네트워크 결정성·시간/메모리 한도·허용 API·스크립트 버전·세이브 호환·툴링을 포함해 별도 설계한다. 임의의 엔진 포인터를 노출하거나 신뢰하지 않는 스크립트를 권한 제한 없이 실행하는 방식은 허용하지 않는다.
 
 **요약:** 핫 리로드는 프로그래머의 C++ 반복을 빠르게 하는 도구이고, 스크립팅은 콘텐츠 제작자/모드 제작자가 새 로직을 런타임에 작성하게 하는 별도 제품 기능이다. 사용자가 모드 지원을 제안했으므로 모드의 범위는 검토 대상으로 올린다. 단, 콘텐츠 모드는 기존 데이터/에셋 형식으로 먼저 지원하고, Lua 등 VM은 모드가 새 로직을 실제로 저작해야 한다는 요구가 확인될 때만 별도 평가한다.
@@ -375,7 +375,7 @@ GameFramework의 모듈·수명주기·서비스·테스트 경계를 현재 코
 **방향:** 액션의 매개변수·조합은 XML/데이터로 저작하고, 그래프·프로퍼티 패널로 안전하게 편집한다. XML과 에디터는 대안이 아니다. XML이 저장 형식의 정본이고 전용 에디터는 그 형식을 검증하며 조작하는 UX다. 새 C++ 로직을 XML만으로 자동 생성한다고 약속하지 않는다.
 
 - 용어를 나눠 본다. `GameActionCall`/`ActionRegistry`는 행동 트리·대화·스케줄 등이 공유하는 제한된 이름 있는 동작 어휘다. GAS 형태의 `Ability`는 별도의 실행기·복제·수명 모델을 가진다. 양쪽을 단일 "Action" 실행기로 합치지 않는다.
-- **이미 가능한 것:** [`ActionRegistry`](../Source/Engine/Gameplay/ActionRegistry.h)는 이름, 반영된 매개변수 구조체, 실행 함수를 등록한다. 같은 어휘를 텍스트 또는 XML 속성으로 읽고 실행 시 미리 해석한다. [`BehaviorTreePanel`](../Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.h)는 작업 목록을 레지스트리에서 가져와 선택하고, 선택한 동작의 반영된 매개변수를 프로퍼티 그리드로 편집한다. 행동 트리 모델·로더·에디터는 `BehaviorTreeXML`과 `BehaviorTreeNodeParams`를 공유한다. 따라서 “행동 트리 액션을 XML로 쓰거나 편집할 기능이 전혀 없다”는 문제는 아니다.
+- **이미 가능한 것:** [`ActionRegistry`](../Source/Engine/Behavior/ActionRegistry.h)는 이름, 반영된 매개변수 구조체, 실행 함수를 등록한다. 같은 어휘를 텍스트 또는 XML 속성으로 읽고 실행 시 미리 해석한다. [`BehaviorTreePanel`](../Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.h)는 작업 목록을 레지스트리에서 가져와 선택하고, 선택한 동작의 반영된 매개변수를 프로퍼티 그리드로 편집한다. 행동 트리 모델·로더·에디터는 `BehaviorTreeXML`과 `BehaviorTreeNodeParams`를 공유한다. 따라서 “행동 트리 액션을 XML로 쓰거나 편집할 기능이 전혀 없다”는 문제는 아니다.
 - **남은 간극:** 등록된 동작은 결국 C++ 함수다. 기존 XML은 어떤 동작을 어떤 값으로 호출할지 표현하지만, 새 동작의 실행 의미나 복잡한 분기·상태를 XML에서 새로 정의하지 않는다. 현재 RTS 액션 7개는 매개변수 없는 C++ 작업으로 등록돼 있어 `<Action task="rts.attack"/>`처럼 호출은 되지만, XML만으로 공격 규칙을 새로 만들 수는 없다.
 
 **권장 고도화 순서**

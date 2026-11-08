@@ -101,17 +101,17 @@ SW_TEST_CASE( TileMapPaintUtilTest, CellUnderThePointerFloorsTowardNegative )
     SW_EXPECT_EQUAL( -1, TileMapPaintUtil::findCellAt( 5.0f, 5.0f, 0.0f )._x );
 }
 
-SW_TEST_CASE( AtlasGridUtilTest, CellAndUvRoundTrip )
+SW_TEST_CASE( AtlasGridUtilTest, CellAndUVRoundTrip )
 {
-    const float4 rect = AtlasGridUtil::computeCellUvRect( 5, 4, 2 );
+    const float4 rect = AtlasGridUtil::computeCellUVRect( 5, 4, 2 );
     SW_EXPECT_NEAR( 0.25f, rect._x, 1e-5f );
     SW_EXPECT_NEAR( 0.5f, rect._y, 1e-5f );
     SW_EXPECT_NEAR( 0.25f, rect._z, 1e-5f );
     SW_EXPECT_NEAR( 0.5f, rect._w, 1e-5f );
-    SW_EXPECT_EQUAL( 5, AtlasGridUtil::findCellAtUv( rect._x + 0.01f, rect._y + 0.01f, 4, 2 ) );
-    SW_EXPECT_EQUAL( -1, AtlasGridUtil::findCellAtUv( 1.0f, 0.5f, 4, 2 ) );
-    SW_EXPECT_EQUAL( -1, AtlasGridUtil::findCellAtUv( 0.5f, -0.1f, 4, 2 ) );
-    SW_EXPECT_EQUAL( 0, AtlasGridUtil::findCellAtUv( 0.9f, 0.9f, 0, 0 ) ); // 틀린 격자는 한 칸으로 본다
+    SW_EXPECT_EQUAL( 5, AtlasGridUtil::findCellAtUV( rect._x + 0.01f, rect._y + 0.01f, 4, 2 ) );
+    SW_EXPECT_EQUAL( -1, AtlasGridUtil::findCellAtUV( 1.0f, 0.5f, 4, 2 ) );
+    SW_EXPECT_EQUAL( -1, AtlasGridUtil::findCellAtUV( 0.5f, -0.1f, 4, 2 ) );
+    SW_EXPECT_EQUAL( 0, AtlasGridUtil::findCellAtUV( 0.9f, 0.9f, 0, 0 ) ); // 틀린 격자는 한 칸으로 본다
 }
 
 // ---------------------------------------------------------------------- 문서: 값이 바뀌었을 때만 고쳤다고 한다

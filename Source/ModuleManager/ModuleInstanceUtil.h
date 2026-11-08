@@ -47,8 +47,8 @@ namespace sw
          */
         static bool matchesModuleABI( void* pLibraryModule, const ModuleAPISymbols& symbols )
         {
-            const PFN_GetModuleAbiVersion pfnVersion =
-                reinterpret_cast<PFN_GetModuleAbiVersion>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pVersionSymbol ) );
+            const PFN_GetModuleABIVersion pfnVersion =
+                reinterpret_cast<PFN_GetModuleABIVersion>( ModuleLibraryUtil::getDynamicSymbol( pLibraryModule, symbols._pVersionSymbol ) );
             if ( pfnVersion == nullptr || pfnVersion() != kModuleABIVersion )
             {
                 SW_LOG_ERROR_ID( "ModuleInstanceUtil.ModuleABIVersionDiffers", "The %# module ABI version differs (expected %#) - rebuild the engine and the module together.", symbols._pModuleLabel, kModuleABIVersion );

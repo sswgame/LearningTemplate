@@ -19,7 +19,7 @@ SW_TEST_CASE( AudioVorbisTest, DecodesARealOggFile )
     SW_REQUIRE_TRUE( sw::FileUtil::readFile( path, bytes ) );
     SW_REQUIRE_TRUE( bytes.size() > 4 );
 
-    sw::AudioPcm pcm;
+    sw::AudioPCM pcm;
     SW_REQUIRE_TRUE( sw::AudioVorbisDecoder::decode( bytes.data(), bytes.size(), pcm ) );
     SW_EXPECT_TRUE( pcm._channelCount > 0 );
     SW_EXPECT_TRUE( pcm._sampleRate > 0 );

@@ -74,7 +74,7 @@ SW_TEST_CASE_F( CrashReportTest, RegisteredContextReachesTheContextFile )
 /**
  * @brief 경로에 한글이 든 보고 폴더에도 파일이 써진다 — 사용자 이름이 한글이면 `Saved/` 경로도 한글이고, ANSI 로 열면 크래시 경로라 아무 말 없이 하나도 남지 않는다.
  */
-SW_TEST_CASE_F( CrashReportTest, ReportFolderWithANonAsciiNameReceivesTheFiles )
+SW_TEST_CASE_F( CrashReportTest, ReportFolderWithANonASCIINameReceivesTheFiles )
 {
     SW_REQUIRE_FALSE( useReportFolder( "SwCrashReport_한글 폴더" ).empty() );
 

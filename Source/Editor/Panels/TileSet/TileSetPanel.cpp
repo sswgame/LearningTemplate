@@ -423,8 +423,8 @@ namespace sw::editor
             ImGui::Button( label.c_str(), ImVec2{ side, side } );
             return;
         }
-        // 런타임과 같은 셀 해석(`TileSetAsset::computeCellUvRect`)으로 자른다.
-        const float4 uv = TileSetAsset::computeCellUvRect( content, cell );
+        // 런타임과 같은 셀 해석(`TileSetAsset::computeCellUVRect`)으로 자른다.
+        const float4 uv = TileSetAsset::computeCellUVRect( content, cell );
         ImGui::Image( reinterpret_cast<ImTextureID>( pTexture ), ImVec2{ side, side }, ImVec2{ uv._x, uv._y }, ImVec2{ uv._x + uv._z, uv._y + uv._w } );
     }
 

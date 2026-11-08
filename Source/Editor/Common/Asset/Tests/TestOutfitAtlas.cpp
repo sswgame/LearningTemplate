@@ -96,7 +96,7 @@ SW_TEST_CASE( OutfitAtlasTest, PackRefusesWhatDoesNotFit )
 /**
  * @brief [OutfitAtlasTest] 병합 훅 — 배치에 있는 부품은 한 그룹이 되고 UV 가 아틀라스 안의 자리로 옮겨 가며, 없는 부품은 자기 그룹에 UV 도 그대로다. 0..1 밖 UV 는 자르고 센다
  */
-SW_TEST_CASE( OutfitAtlasTest, HooksGroupPartsAndRemapUv )
+SW_TEST_CASE( OutfitAtlasTest, HooksGroupPartsAndRemapUV )
 {
     vector<OutfitAtlasRect> listRect;
     OutfitAtlasRect         torso;
@@ -116,23 +116,23 @@ SW_TEST_CASE( OutfitAtlasTest, HooksGroupPartsAndRemapUv )
     SW_EXPECT_TRUE( hooks.getMaterialGroup( outside ) == hashed_string( "Prop" ) );
 
     // (0, 0) 은 사각형의 왼쪽 위, (1, 1) 은 오른쪽 아래, (0.5, 0.5) 는 한가운데다.
-    const float2 topLeft = hooks.remapUv( inAtlas, float2{ 0.0f, 0.0f } );
+    const float2 topLeft = hooks.remapUV( inAtlas, float2{ 0.0f, 0.0f } );
     SW_EXPECT_NEAR( 64.0f / 256.0f, topLeft._x, 1.0e-6f );
     SW_EXPECT_NEAR( 32.0f / 256.0f, topLeft._y, 1.0e-6f );
-    const float2 bottomRight = hooks.remapUv( inAtlas, float2{ 1.0f, 1.0f } );
+    const float2 bottomRight = hooks.remapUV( inAtlas, float2{ 1.0f, 1.0f } );
     SW_EXPECT_NEAR( 192.0f / 256.0f, bottomRight._x, 1.0e-6f );
     SW_EXPECT_NEAR( 96.0f / 256.0f, bottomRight._y, 1.0e-6f );
-    const float2 middle = hooks.remapUv( inAtlas, float2{ 0.5f, 0.5f } );
+    const float2 middle = hooks.remapUV( inAtlas, float2{ 0.5f, 0.5f } );
     SW_EXPECT_NEAR( 128.0f / 256.0f, middle._x, 1.0e-6f );
-    SW_EXPECT_EQUAL( 0u, hooks.getClampedUvCount() );
+    SW_EXPECT_EQUAL( 0u, hooks.getClampedUVCount() );
 
-    const float2 kept = hooks.remapUv( outside, float2{ 1.5f, -0.25f } );
+    const float2 kept = hooks.remapUV( outside, float2{ 1.5f, -0.25f } );
     SW_EXPECT_NEAR( 1.5f, kept._x, 1.0e-6f );
-    SW_EXPECT_EQUAL( 0u, hooks.getClampedUvCount() ); // 배치에 없는 부품은 UV 를 건드리지 않는다
-    const float2 clamped = hooks.remapUv( inAtlas, float2{ 1.5f, -0.25f } );
+    SW_EXPECT_EQUAL( 0u, hooks.getClampedUVCount() ); // 배치에 없는 부품은 UV 를 건드리지 않는다
+    const float2 clamped = hooks.remapUV( inAtlas, float2{ 1.5f, -0.25f } );
     SW_EXPECT_NEAR( 192.0f / 256.0f, clamped._x, 1.0e-6f );
     SW_EXPECT_NEAR( 32.0f / 256.0f, clamped._y, 1.0e-6f );
-    SW_EXPECT_EQUAL( 1u, hooks.getClampedUvCount() );
+    SW_EXPECT_EQUAL( 1u, hooks.getClampedUVCount() );
 }
 
 /**

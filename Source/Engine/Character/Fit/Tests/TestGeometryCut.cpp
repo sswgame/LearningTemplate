@@ -44,7 +44,7 @@ namespace
                 skin._arrJoint[0]  = static_cast<uint16>( vertex );
                 skin._arrWeight[0] = 1.0f;
                 inoutGeometry._listNormal.push_back( float3::UnitZ );
-                inoutGeometry._listUv.push_back( float2( static_cast<float32>( vertex ), 0.0f ) );
+                inoutGeometry._listUV.push_back( float2( static_cast<float32>( vertex ), 0.0f ) );
                 inoutGeometry._listSkin.push_back( skin );
                 inoutGeometry._listVertexGroup.push_back( static_cast<uint16>( 0 ) );
                 morph._listPositionDelta.push_back( float3{ static_cast<float32>( vertex ), 0.0f, 0.0f } );
@@ -163,7 +163,7 @@ SW_TEST_CASE( GeometryCutTest, ExtractKeepsUsedVerticesInOriginalOrder )
     {
         const uint32 original = vertex + 2u;
         SW_EXPECT_TRUE( out._listPosition[vertex] == source._listPosition[original] );
-        SW_EXPECT_NEAR( static_cast<float32>( original ), out._listUv[vertex]._x, 1.0e-6f );
+        SW_EXPECT_NEAR( static_cast<float32>( original ), out._listUV[vertex]._x, 1.0e-6f );
         SW_EXPECT_EQUAL( static_cast<uint32>( original ), static_cast<uint32>( out._listSkin[vertex]._arrJoint[0] ) );
         SW_EXPECT_NEAR( static_cast<float32>( original ), out._listMorph[0]._listPositionDelta[vertex]._x, 1.0e-6f );
         SW_EXPECT_NEAR( static_cast<float32>( original ), out._listMorph[0]._listNormalDelta[vertex]._y, 1.0e-6f );
@@ -297,8 +297,8 @@ SW_TEST_CASE( GeometryCutTest, AppendFillsMissingOptionalFields )
     SW_REQUIRE_EQUAL( 8u, static_cast<uint32>( target._listNormal.size() ) );
     SW_EXPECT_TRUE( target._listNormal[0] == float3::UnitY );
     SW_EXPECT_TRUE( target._listNormal[4] == float3::UnitZ );
-    SW_EXPECT_NEAR( 0.0f, target._listUv[3]._x, 1.0e-6f );
-    SW_EXPECT_NEAR( 2.0f, target._listUv[6]._x, 1.0e-6f );
+    SW_EXPECT_NEAR( 0.0f, target._listUV[3]._x, 1.0e-6f );
+    SW_EXPECT_NEAR( 2.0f, target._listUV[6]._x, 1.0e-6f );
     SW_EXPECT_NEAR( 0.0f, target._listSkin[0]._arrWeight[0], 1.0e-6f );
     SW_EXPECT_NEAR( 1.0f, target._listSkin[4]._arrWeight[0], 1.0e-6f );
     SW_EXPECT_EQUAL( static_cast<uint32>( CharacterGeometryConstant::kNoGroup ), static_cast<uint32>( target._listVertexGroup[0] ) );
@@ -449,7 +449,7 @@ SW_TEST_CASE( GeometryCutTest, BoundaryLoopFollowsWinding )
 /**
  * @brief [GeometryCutTest] UV 이음매로 갈라진 정점은 한 정점으로 보여 가짜 경계를 만들지 않는다 — 고리에는 처음 본 정점 번호가 나온다
  */
-SW_TEST_CASE( GeometryCutTest, BoundaryLoopWeldsUvSeam )
+SW_TEST_CASE( GeometryCutTest, BoundaryLoopWeldsUVSeam )
 {
     // 사각형 둘이 가운데 열을 위치만 같은 다른 정점(2 · 3 과 4 · 5)으로 나눈다.
     AppearanceGeometry geometry;
@@ -520,13 +520,13 @@ SW_TEST_CASE( GeometryCutTest, CapClosesHoleFacingOutward )
     SW_REQUIRE_EQUAL( 4u, cap.getTriangleCount() );
     SW_EXPECT_NEAR( 1.0f, Util::computeArea( cap ), 1.0e-5f );
     Util::expectNear( float3{ 0.5f, 1.0f, 0.5f }, cap._listPosition[0], 1.0e-5f );
-    SW_EXPECT_NEAR( 0.5f, cap._listUv[0]._x, 1.0e-6f );
-    SW_EXPECT_NEAR( 0.5f, cap._listUv[0]._y, 1.0e-6f );
+    SW_EXPECT_NEAR( 0.5f, cap._listUV[0]._x, 1.0e-6f );
+    SW_EXPECT_NEAR( 0.5f, cap._listUV[0]._y, 1.0e-6f );
     for ( uint32 vertex = 0; vertex < cap.getVertexCount(); ++vertex )
     {
         Util::expectNear( float3::UnitY, cap._listNormal[vertex], 1.0e-5f );
-        SW_EXPECT_TRUE( cap._listUv[vertex]._x >= -1.0e-5f && cap._listUv[vertex]._x <= 1.0f + 1.0e-5f );
-        SW_EXPECT_TRUE( cap._listUv[vertex]._y >= -1.0e-5f && cap._listUv[vertex]._y <= 1.0f + 1.0e-5f );
+        SW_EXPECT_TRUE( cap._listUV[vertex]._x >= -1.0e-5f && cap._listUV[vertex]._x <= 1.0f + 1.0e-5f );
+        SW_EXPECT_TRUE( cap._listUV[vertex]._y >= -1.0e-5f && cap._listUV[vertex]._y <= 1.0f + 1.0e-5f );
     }
     for ( uint32 triangle = 0; triangle < cap.getTriangleCount(); ++triangle )
     {
@@ -608,7 +608,7 @@ SW_TEST_CASE( GeometryCutTest, CapHandlesDegenerateLoop )
     SW_REQUIRE_EQUAL( 1u, AppearanceGeometry::createCaps( collinear, cap ) );
     SW_REQUIRE_TRUE( cap.isValid() );
     SW_EXPECT_TRUE( cap._listNormal[0] == float3::UnitY );
-    for ( const float2& uv : cap._listUv )
+    for ( const float2& uv : cap._listUV )
     {
         SW_EXPECT_TRUE( MathUtil::isFinite( uv._x ) && MathUtil::isFinite( uv._y ) );
     }

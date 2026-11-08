@@ -66,7 +66,7 @@ SW_TEST_CASE( PackManagerTest, PatchReplacesAndRemovesForDomainAndDomainlessKeys
     SW_EXPECT_EQUAL( string( "kept" ), Internal::read( packs, "textures/c.txt" ) );
 }
 
-SW_TEST_CASE( PackManagerTest, FindsDlcDomainPacks )
+SW_TEST_CASE( PackManagerTest, FindsDLCDomainPacks )
 {
     using Internal    = TestPackManagerInternal;
     const string root = test::makeScratchPath( "Packs" );

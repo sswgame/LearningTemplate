@@ -78,7 +78,7 @@ namespace sw::editor
         {
             const cgltf_accessor* _pPosition{ nullptr };
             const cgltf_accessor* _pNormal{ nullptr };
-            const cgltf_accessor* _pUv{ nullptr };
+            const cgltf_accessor* _pUV{ nullptr };
             const cgltf_accessor* _pColor{ nullptr };
             const cgltf_accessor* _pJoint{ nullptr };
             const cgltf_accessor* _pWeight{ nullptr };

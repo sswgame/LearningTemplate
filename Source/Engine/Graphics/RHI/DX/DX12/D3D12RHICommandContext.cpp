@@ -5,7 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 
 #include "Engine/Graphics/RHI/DX/DX12/D3D12RHIDevice.h"
-#include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
+#include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIDrawDiagnostics.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -870,7 +870,7 @@ namespace sw
                     return RHIRenderPassBeginResult::NoBackBuffer; // 그릴 백버퍼가 없다(최소화 · 스왑체인 재생성 중) — 이 패스의 드로우는 알리지 않고 버린다
                 swapChain.transitionTo( commandListForRecord(), D3D12_RESOURCE_STATE_RENDER_TARGET );
                 rtv                                     = swapChain.getCurrentRTV();
-                format                                  = toDxgiFormat( swapChain.getFormat() );
+                format                                  = toDXGIFormat( swapChain.getFormat() );
                 _pState->_bActiveSwapchainRT            = SW_TRUE;
                 _pState->_arrActiveColorTarget[rtCount] = 0;
             }

@@ -106,7 +106,7 @@ namespace sw
         Queued queued;
         queued._requestID = requestID;
         queued._bodyBytes = request._bodyBytes;
-        if ( HpackEncoder::encode( HTTP2ConnectionInternal::makeRequestHeaders( request, url ), queued._listHeaderBlock ) == false )
+        if ( HPACKEncoder::encode( HTTP2ConnectionInternal::makeRequestHeaders( request, url ), queued._listHeaderBlock ) == false )
         {
             pushFailure( requestID, "malformed request header" );
             return;

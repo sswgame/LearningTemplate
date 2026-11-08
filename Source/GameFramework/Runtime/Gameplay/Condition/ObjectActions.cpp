@@ -3,7 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Condition/ObjectActions.h"
 
 #include "Engine/Asset/AssetManager.h"
-#include "Engine/Gameplay/ActionRegistry.h"
+#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

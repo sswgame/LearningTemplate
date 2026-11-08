@@ -18,7 +18,7 @@ namespace sw
     {
         struct TextureFormatSelectionInternal
         {
-            static constexpr string_view kDdsExtension = ".dds";
+            static constexpr string_view kDDSExtension = ".dds";
 
             /** @brief @p settings 의 묶음 하나를 형식 이름까지 풉니다. 모르는 이름이면 오류를 남기고 false 입니다. */
             [[nodiscard]] static bool resolveFamily( const TextureFormatFamilySettings& settings, const TypeRegistry& types, TextureFormatFamily& outFamily )
@@ -39,7 +39,7 @@ namespace sw
             /** @brief 형식 변형 @p suffix 의 곁 파일 경로입니다. 변형 자신의 곁 파일은 없습니다(`a.astc.dds` 에서 다시 따라가지 않는다). */
             static string makeCompanion( string_view assetID, string_view suffix )
             {
-                const string_view stem     = assetID.substr( 0, assetID.size() - MathUtil::min( assetID.size(), kDdsExtension.size() ) );
+                const string_view stem     = assetID.substr( 0, assetID.size() - MathUtil::min( assetID.size(), kDDSExtension.size() ) );
                 const bool        bVariant = StringUtil::endsWith( stem, ".astc" ) || StringUtil::endsWith( stem, ".etc2" );
                 return bVariant ? string{} : TextureFormatFamily::makeVariantPath( assetID, suffix );
             }
@@ -137,7 +137,7 @@ namespace sw
 
     string TextureFormatFamily::makeVariantPath( string_view ddsPath, string_view suffix )
     {
-        constexpr string_view kExtension = TextureFormatSelectionInternal::kDdsExtension;
+        constexpr string_view kExtension = TextureFormatSelectionInternal::kDDSExtension;
         if ( StringUtil::endsWith( ddsPath, kExtension ) == false )
             return {};
         return string( ddsPath.substr( 0, ddsPath.size() - kExtension.size() ) ) + string( suffix ) + string( kExtension );

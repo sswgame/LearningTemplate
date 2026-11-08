@@ -20,7 +20,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ServiceSlot.h"
 
-#include "Engine/Gameplay/ConditionExpr.h"
+#include "Engine/Behavior/ConditionExpr.h"
 
 namespace sw
 {

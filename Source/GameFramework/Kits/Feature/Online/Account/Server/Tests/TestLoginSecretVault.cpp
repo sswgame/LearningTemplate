@@ -31,7 +31,7 @@ namespace
         explicit VaultFixture( uint8 keySeed = 7 )
         {
             _security._bRandomOk = SW_TRUE;
-            _security._bAeadOk   = SW_TRUE;
+            _security._bAEADOk   = SW_TRUE;
             uint8 arrKey[LoginSecretVault::kKeySize];
             LoginSecretVaultTestUtil::fillKey( arrKey, keySeed );
             _vault.initialize( &_security, arrKey );
@@ -45,7 +45,7 @@ SW_TEST_CASE( LoginSecretVaultTest, SealThenOpenRoundTrips )
     VaultFixture  rig;
     vector<uint8> listSealed;
     SW_REQUIRE_TRUE( rig._vault.seal( "refresh-token-abc", "apple", listSealed ) );
-    SW_EXPECT_EQUAL( listSealed.size(), size_t( 1 + NetSecurityConstant::kAeadNonceSize + 17 + NetSecurityConstant::kAeadTagSize ) );
+    SW_EXPECT_EQUAL( listSealed.size(), size_t( 1 + NetSecurityConstant::kAEADNonceSize + 17 + NetSecurityConstant::kAEADTagSize ) );
     SW_EXPECT_EQUAL( listSealed[0], LoginSecretVault::kFormatVersion );
 
     string plain;
@@ -80,14 +80,14 @@ SW_TEST_CASE( LoginSecretVaultTest, TamperedShortOrOtherVersionIsRejected )
     string plain;
 
     vector<uint8> listTampered = listSealed;
-    listTampered[1 + NetSecurityConstant::kAeadNonceSize] ^= 0x01; // 암호문 첫 바이트
+    listTampered[1 + NetSecurityConstant::kAEADNonceSize] ^= 0x01; // 암호문 첫 바이트
     SW_EXPECT_FALSE( rig._vault.open( listTampered, "apple", plain ) );
 
     vector<uint8> listOtherVersion = listSealed;
     listOtherVersion[0]            = static_cast<uint8>( LoginSecretVault::kFormatVersion + 1 );
     SW_EXPECT_FALSE( rig._vault.open( listOtherVersion, "apple", plain ) );
 
-    const vector<uint8> listShort( static_cast<size_t>( NetSecurityConstant::kAeadNonceSize + NetSecurityConstant::kAeadTagSize ), LoginSecretVault::kFormatVersion );
+    const vector<uint8> listShort( static_cast<size_t>( NetSecurityConstant::kAEADNonceSize + NetSecurityConstant::kAEADTagSize ), LoginSecretVault::kFormatVersion );
     SW_EXPECT_FALSE( rig._vault.open( listShort, "apple", plain ) );
     SW_EXPECT_FALSE( rig._vault.open( vector<uint8>{}, "apple", plain ) );
 
@@ -112,10 +112,10 @@ SW_TEST_CASE( LoginSecretVaultTest, NotReadyOrMissingCryptoRefuses )
     rig._security._bRandomOk = SW_FALSE;
     vector<uint8> listNoRandom;
     SW_EXPECT_FALSE( rig._vault.seal( "secret", "apple", listNoRandom ) );
-    rig._security._bAeadOk = SW_FALSE;
+    rig._security._bAEADOk = SW_FALSE;
     SW_EXPECT_FALSE( rig._vault.open( listSealed, "apple", plain ) );
 
-    rig._security._bAeadOk = SW_TRUE;
+    rig._security._bAEADOk = SW_TRUE;
     rig._vault.shutdown();
     SW_EXPECT_FALSE( rig._vault.isReady() );
     SW_EXPECT_FALSE( rig._vault.open( listSealed, "apple", plain ) );

@@ -12,9 +12,9 @@
 #include "Core/String/formatString.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Behavior/GameplayContext.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Gameplay/GameplayContext.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"

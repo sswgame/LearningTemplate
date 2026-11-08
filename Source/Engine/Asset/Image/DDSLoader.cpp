@@ -41,24 +41,24 @@ namespace sw
         constexpr uint32 kD3dFmt_A32B32G32R32F = 116;
 
         // 매핑하는 DXGI 포맷
-        constexpr uint32 kDxgiFormatBC1Unorm          = 71;
-        constexpr uint32 kDxgiFormatBC2Unorm          = 74;
-        constexpr uint32 kDxgiFormatBC3Unorm          = 77;
-        constexpr uint32 kDxgiFormatBC4Unorm          = 80;
-        constexpr uint32 kDxgiFormatBC5Unorm          = 83;
-        constexpr uint32 kDxgiFormatR8G8B8A8Unorm     = 28;
-        constexpr uint32 kDxgiFormatB8G8R8A8Unorm     = 87;
-        constexpr uint32 kDxgiFormatB8G8R8A8UnormSRGB = 91;
-        constexpr uint32 kDxgiFormatB8G8R8X8Unorm     = 88;
-        constexpr uint32 kDxgiFormatR32G32B32A32Float = 2;
-        constexpr uint32 kDxgiFormatR16G16B16A16Float = 10;
-        constexpr uint32 kDxgiFormatR32G32Float       = 16;
-        constexpr uint32 kDxgiFormatR16G16Float       = 34;
-        constexpr uint32 kDxgiFormatR32Float          = 41;
-        constexpr uint32 kDxgiFormatR16Float          = 54;
+        constexpr uint32 kDXGIFormatBC1Unorm          = 71;
+        constexpr uint32 kDXGIFormatBC2Unorm          = 74;
+        constexpr uint32 kDXGIFormatBC3Unorm          = 77;
+        constexpr uint32 kDXGIFormatBC4Unorm          = 80;
+        constexpr uint32 kDXGIFormatBC5Unorm          = 83;
+        constexpr uint32 kDXGIFormatR8G8B8A8Unorm     = 28;
+        constexpr uint32 kDXGIFormatB8G8R8A8Unorm     = 87;
+        constexpr uint32 kDXGIFormatB8G8R8A8UnormSRGB = 91;
+        constexpr uint32 kDXGIFormatB8G8R8X8Unorm     = 88;
+        constexpr uint32 kDXGIFormatR32G32B32A32Float = 2;
+        constexpr uint32 kDXGIFormatR16G16B16A16Float = 10;
+        constexpr uint32 kDXGIFormatR32G32Float       = 16;
+        constexpr uint32 kDXGIFormatR16G16Float       = 34;
+        constexpr uint32 kDXGIFormatR32Float          = 41;
+        constexpr uint32 kDXGIFormatR16Float          = 54;
 
         // DXGI_FORMAT_UNKNOWN. 어떤 이미지도 이 포맷일 수 없으므로 "못 알아봤다" 의 표시로 쓴다.
-        constexpr uint32 kDxgiFormatUnknown = 0;
+        constexpr uint32 kDXGIFormatUnknown = 0;
 
 #pragma pack( push, 1 )
         struct DDSPixelFormatHeader
@@ -105,24 +105,24 @@ namespace sw
         {
             /** @brief FourCC 코드 하나가 가리키는 DXGI 포맷의 표입니다. 이름의 정본은 `Config/Editor/DdsFormats.json` 이고 테스트가 이 표와 견준다. */
             static constexpr DDSLegacyFourCC kArrFourCCRow[] = {
-                {         kFourCC_DXT1,          kDxgiFormatBC1Unorm},
-                {         kFourCC_DXT2,          kDxgiFormatBC2Unorm},
-                {         kFourCC_DXT3,          kDxgiFormatBC2Unorm},
-                {         kFourCC_DXT4,          kDxgiFormatBC3Unorm},
-                {         kFourCC_DXT5,          kDxgiFormatBC3Unorm},
-                {         kFourCC_ATI1,          kDxgiFormatBC4Unorm},
-                {         kFourCC_BC4U,          kDxgiFormatBC4Unorm},
-                {         kFourCC_ATI2,          kDxgiFormatBC5Unorm},
-                {         kFourCC_BC5U,          kDxgiFormatBC5Unorm},
-                {         kD3dFmt_R16F,          kDxgiFormatR16Float},
-                {      kD3dFmt_G16R16F,       kDxgiFormatR16G16Float},
-                {kD3dFmt_A16B16G16R16F, kDxgiFormatR16G16B16A16Float},
-                {         kD3dFmt_R32F,          kDxgiFormatR32Float},
-                {      kD3dFmt_G32R32F,       kDxgiFormatR32G32Float},
-                {kD3dFmt_A32B32G32R32F, kDxgiFormatR32G32B32A32Float},
+                {         kFourCC_DXT1,          kDXGIFormatBC1Unorm},
+                {         kFourCC_DXT2,          kDXGIFormatBC2Unorm},
+                {         kFourCC_DXT3,          kDXGIFormatBC2Unorm},
+                {         kFourCC_DXT4,          kDXGIFormatBC3Unorm},
+                {         kFourCC_DXT5,          kDXGIFormatBC3Unorm},
+                {         kFourCC_ATI1,          kDXGIFormatBC4Unorm},
+                {         kFourCC_BC4U,          kDXGIFormatBC4Unorm},
+                {         kFourCC_ATI2,          kDXGIFormatBC5Unorm},
+                {         kFourCC_BC5U,          kDXGIFormatBC5Unorm},
+                {         kD3dFmt_R16F,          kDXGIFormatR16Float},
+                {      kD3dFmt_G16R16F,       kDXGIFormatR16G16Float},
+                {kD3dFmt_A16B16G16R16F, kDXGIFormatR16G16B16A16Float},
+                {         kD3dFmt_R32F,          kDXGIFormatR32Float},
+                {      kD3dFmt_G32R32F,       kDXGIFormatR32G32Float},
+                {kD3dFmt_A32B32G32R32F, kDXGIFormatR32G32B32A32Float},
             };
 
-            /** @brief 압축 계열 FourCC 와 D3DFMT 정수 코드를 DXGI 포맷으로 바꿉니다. 모르는 코드는 `kDxgiFormatUnknown`(호출한 쪽의 포맷 검사가 실패로 끝낸다)입니다. */
+            /** @brief 압축 계열 FourCC 와 D3DFMT 정수 코드를 DXGI 포맷으로 바꿉니다. 모르는 코드는 `kDXGIFormatUnknown`(호출한 쪽의 포맷 검사가 실패로 끝낸다)입니다. */
             static uint32 findDXGIFormatOfFourCC( uint32 fourCC )
             {
                 for ( const DDSLegacyFourCC& row : kArrFourCCRow )
@@ -130,7 +130,7 @@ namespace sw
                     if ( row._fourCC == fourCC )
                         return row._dxgiFormat;
                 }
-                return kDxgiFormatUnknown;
+                return kDXGIFormatUnknown;
             }
 
             /**
@@ -139,17 +139,17 @@ namespace sw
              *          R8G8B8A8 로 읽는다(알파 바이트는 그 파일이 쓴 값이다).
              */
             static constexpr DDSLegacyRGBMask kArrRGBMaskRow[] = {
-                {32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, kDxgiFormatR8G8B8A8Unorm},
-                {32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0x00000000, kDxgiFormatR8G8B8A8Unorm},
-                {32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000, kDxgiFormatB8G8R8A8Unorm},
-                {32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0x00000000, kDxgiFormatB8G8R8X8Unorm},
+                {32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000, kDXGIFormatR8G8B8A8Unorm},
+                {32, 0x000000FF, 0x0000FF00, 0x00FF0000, 0x00000000, kDXGIFormatR8G8B8A8Unorm},
+                {32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000, kDXGIFormatB8G8R8A8Unorm},
+                {32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0x00000000, kDXGIFormatB8G8R8X8Unorm},
             };
 
             /**
-             * @brief 옛 머리의 RGB 마스크를 DXGI 포맷으로 바꿉니다. 표에 없는 모양은 `kDxgiFormatUnknown` 입니다.
+             * @brief 옛 머리의 RGB 마스크를 DXGI 포맷으로 바꿉니다. 표에 없는 모양은 `kDXGIFormatUnknown` 입니다.
              * @details BGRA 계열이면 호출한 쪽이 포맷으로 `_bIsBgra` 를 켠다(`bBgraFormat`) — 여기서 따로 정하지 않는다.
              */
-            static uint32 findDxgiFormatOfRGBMasks( const DDSPixelFormatHeader& pixelFormat )
+            static uint32 findDXGIFormatOfRGBMasks( const DDSPixelFormatHeader& pixelFormat )
             {
                 for ( const DDSLegacyRGBMask& row : kArrRGBMaskRow )
                 {
@@ -158,7 +158,7 @@ namespace sw
                     if ( bSame )
                         return row._dxgiFormat;
                 }
-                return kDxgiFormatUnknown;
+                return kDXGIFormatUnknown;
             }
 
             /**
@@ -191,10 +191,10 @@ namespace sw
                 {                             95, 4, 4, 16}, // BC6H_UF16
                 {                             98, 4, 4, 16}, // BC7_UNORM
                 {                             99, 4, 4, 16}, // BC7_UNORM_SRGB
-                {   DDSFormat::kDxgiASTC4x4Unorm, 4, 4, 16},
-                {DDSFormat::kEngineDxgiETC2RGBA8, 4, 4, 16},
-                {   DDSFormat::kEngineDxgiEACR11, 4, 4,  8},
-                {  DDSFormat::kEngineDxgiEACRG11, 4, 4, 16},
+                {   DDSFormat::kDXGIASTC4x4Unorm, 4, 4, 16},
+                {DDSFormat::kEngineDXGIETC2RGBA8, 4, 4, 16},
+                {   DDSFormat::kEngineDXGIEACR11, 4, 4,  8},
+                {  DDSFormat::kEngineDXGIEACRG11, 4, 4, 16},
             };
 
             /** @brief @p dxgiFormat 의 블록 크기 줄입니다. 표에 없으면 nullptr 입니다(읽기가 거절한다). */
@@ -320,25 +320,25 @@ namespace sw
         }
         else if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatFourCCFlag ) != 0 )
         {
-            // 모르는 코드는 포맷을 정하지 않는다. 아래 `kDxgiFormatUnknown` 검사가 실패로 끝낸다.
+            // 모르는 코드는 포맷을 정하지 않는다. 아래 `kDXGIFormatUnknown` 검사가 실패로 끝낸다.
             image._dxgiFormat = DDSLoaderInternal::findDXGIFormatOfFourCC( pHeader->_pixelFormat._fourCC );
         }
         else if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatRGBFlag ) != 0 )
         {
-            image._dxgiFormat = DDSLoaderInternal::findDxgiFormatOfRGBMasks( pHeader->_pixelFormat );
+            image._dxgiFormat = DDSLoaderInternal::findDXGIFormatOfRGBMasks( pHeader->_pixelFormat );
         }
         // 옛 머리의 큐브 맵은 caps2 가 면 여섯을 말한다(DX10 머리는 위에서 misc 플래그로 정했다).
         if ( dataOffset == sizeof( uint32 ) + sizeof( DDSFileHeader ) && ( pHeader->_caps2 & DDSFormat::kCaps2CubemapFlag ) != 0 )
             image._layerCount = 6;
 
-        const bool bBgraFormat = image._dxgiFormat == kDxgiFormatB8G8R8A8Unorm || image._dxgiFormat == kDxgiFormatB8G8R8X8Unorm ||
-                                 image._dxgiFormat == kDxgiFormatB8G8R8A8UnormSRGB;
+        const bool bBgraFormat = image._dxgiFormat == kDXGIFormatB8G8R8A8Unorm || image._dxgiFormat == kDXGIFormatB8G8R8X8Unorm ||
+                                 image._dxgiFormat == kDXGIFormatB8G8R8A8UnormSRGB;
         if ( bBgraFormat )
             image._bIsBgra = SW_TRUE;
 
         // **못 알아본 포맷은 실패다.** `_dxgiFormat == 0` 인 채로 true 를 돌려주면 알아보지 못한 이미지가
         // "성공적으로 로드된 이미지" 로 흘러 나간다(`isValid()` 도 포맷을 본다).
-        if ( image._dxgiFormat == kDxgiFormatUnknown )
+        if ( image._dxgiFormat == kDXGIFormatUnknown )
         {
             SW_LOG_ERROR_ID(
                 "DDS.UnsupportedFormat", "Unsupported DDS pixel format (pfFlags=0x%#, fourCC=0x%#, rgbBits=%#) — cannot determine a DXGI format.",

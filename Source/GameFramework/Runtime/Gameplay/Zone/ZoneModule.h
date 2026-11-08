@@ -16,9 +16,9 @@
 #include "Core/Math/Math.h"
 #include "Core/Name/hashed_string.h"
 
-#include "Engine/Gameplay/ActionRegistry.h"
-#include "Engine/Gameplay/ConditionExpr.h"
-#include "Engine/Gameplay/GameplayContext.h"
+#include "Engine/Behavior/ActionRegistry.h"
+#include "Engine/Behavior/ConditionExpr.h"
+#include "Engine/Behavior/GameplayContext.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"

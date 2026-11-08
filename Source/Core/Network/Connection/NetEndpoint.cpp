@@ -399,11 +399,11 @@ namespace sw
             {
                 writer.writeBlob( _credentials._arrToken, _credentials._tokenSize );
                 // 증명은 세션 비밀로 유도한 키로 빈 데이터를 봉인한 태그다. AAD가 이 응답의 솔트, 챌린지 값, 공개 키, 토큰이라 다른 응답에 옮겨 붙일 수 없다.
-                uint8 arrTag[NetSecurityConstant::kAeadTagSize]{};
+                uint8 arrTag[NetSecurityConstant::kAEADTagSize]{};
                 (void)NetPacketSealer::computeProofTag( *_settings._security._pProvider, _settings._security._algorithm, _credentials._secret, slot._clientSalt,
                                                         slot._serverSalt, slot._security->_keyPair._arrPublicKey, _credentials._arrToken, _credentials._tokenSize,
                                                         arrTag ); // 실패하면 0 태그가 나가고, 서버가 증명 실패로 거절한다.
-                writer.writeBytes( arrTag, NetSecurityConstant::kAeadTagSize );
+                writer.writeBytes( arrTag, NetSecurityConstant::kAEADTagSize );
             }
         }
         sendFramed( slot._address, _protocolID );
@@ -422,7 +422,7 @@ namespace sw
         if ( isEncrypted() && slot._security != nullptr )
         {
             writer.writeBytes( slot._security->_keyPair._arrPublicKey, NetSecurityConstant::kX25519KeySize );
-            writer.writeBytes( slot._security->_arrKeyConfirmTag, NetSecurityConstant::kAeadTagSize );
+            writer.writeBytes( slot._security->_arrKeyConfirmTag, NetSecurityConstant::kAEADTagSize );
         }
         sendFramed( slot._address, _protocolID );
     }
@@ -432,11 +432,11 @@ namespace sw
         INetSecurityProvider& provider    = *_settings._security._pProvider;
         const bool            bTokenBound = _settings._security._pAuthenticator != nullptr;
         uint8                 arrClientPublic[NetSecurityConstant::kX25519KeySize]{};
-        uint8                 arrProof[NetSecurityConstant::kAeadTagSize]{};
+        uint8                 arrProof[NetSecurityConstant::kAEADTagSize]{};
         vector<uint8>         listToken;
         bool                  bRead = reader.readBytes( arrClientPublic, NetSecurityConstant::kX25519KeySize );
         if ( bTokenBound )
-            bRead = bRead && reader.readBlob( listToken, NetSecurityConstant::kMaxTokenSize ) && reader.readBytes( arrProof, NetSecurityConstant::kAeadTagSize );
+            bRead = bRead && reader.readBlob( listToken, NetSecurityConstant::kMaxTokenSize ) && reader.readBytes( arrProof, NetSecurityConstant::kAEADTagSize );
         if ( bRead == false || reader.hasOverflowed() )
         {
             ++_rejectedPacketCount;
@@ -475,9 +475,9 @@ namespace sw
     {
         NetSlotSecurity& security = *slot._security;
         uint8            arrServerPublic[NetSecurityConstant::kX25519KeySize]{};
-        uint8            arrTag[NetSecurityConstant::kAeadTagSize]{};
+        uint8            arrTag[NetSecurityConstant::kAEADTagSize]{};
         // 키 확인으로 서버가 같은 키(같은 세션 비밀과 같은 공유 비밀)를 가졌는지 본다. 다르면 중간자이거나 비밀이 틀린 것이다.
-        const bool bOk = reader.readBytes( arrServerPublic, NetSecurityConstant::kX25519KeySize ) && reader.readBytes( arrTag, NetSecurityConstant::kAeadTagSize ) &&
+        const bool bOk = reader.readBytes( arrServerPublic, NetSecurityConstant::kX25519KeySize ) && reader.readBytes( arrTag, NetSecurityConstant::kAEADTagSize ) &&
                          NetPacketSealer::deriveClientKeys( *_settings._security._pProvider, _settings._security._algorithm, arrServerPublic,
                                                             _bHasCredentials == SW_TRUE ? &_credentials._secret : nullptr, slot._clientSalt, slot._serverSalt, _protocolID,
                                                             security ) &&
@@ -510,7 +510,7 @@ namespace sw
             _plainWriter.clear();
             _plainWriter.writeBits( _bDebugHold == SW_TRUE ? 1u : 0u, 1 ); // 디버거 대기 비트. 평문 첫 비트이므로 함께 봉인된다.
             const int32 maxBytes =
-                slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetEndpointInternal::kHeaderSize - NetPacketSealer::kSecureHeadSize - NetSecurityConstant::kAeadTagSize : 0;
+                slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetEndpointInternal::kHeaderSize - NetPacketSealer::kSecureHeadSize - NetSecurityConstant::kAEADTagSize : 0;
             slot._connection.writePacket( nowSeconds, _plainWriter, maxBytes, _settings._keepAliveInterval, _settings._maxUnreliableAgeSeconds );
             const int32 sentBytes = sendSealed( slot, PacketType::Payload, _plainWriter.getBytes().data(), _plainWriter.getByteCount() );
             slot._sendCredit -= static_cast<float64>( sentBytes );

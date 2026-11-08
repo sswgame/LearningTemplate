@@ -298,12 +298,12 @@ FourCC 표기: FourCC 는 "Four-Character Code" 의 약어 **CC** 를 품는다 
 | HPACK | OnlineCore/Server/HTTP/Hpack.h · HpackHuffmanTable.h · HpackStaticTable.h | HpackDecoder, HpackEncoder | 11 | RFC 7541 |
 | APNs / FCM | LiveOps/Server/Push/Provider/Apns/ · Fcm/ (폴더 + 파일) | ApnsPushProvider, FcmPushProvider | 26 | `APNSPushProvider` · `FCMPushProvider` |
 | AEAD | — | INetAead, NetAeadAlgorithm, createAead, _sendAead | 12 | |
-| AT-SPI | Engine/UI/Accessibility/AtSpiMapping.h · Linux/AtSpiAccessibilityBridge.h | AtSpiBridge, AtSpiState | 9 | `ATSPIMapping` |
-| UIA | Engine/UI/Accessibility/Windows/UiaAccessibilityBridge.h | UiaAccessibilityBridge | 3(우리 것) | Uia* Win32 API 는 바깥 이름 |
+| AT-SPI | Engine/UI/Accessibility/ATSPIMapping.h · Linux/ATSPIAccessibilityBridge.h | ATSPIBridge, ATSPIState | 9 | `ATSPIMapping` |
+| UIA | Engine/UI/Accessibility/Windows/UIAAccessibilityBridge.h | UiaAccessibilityBridge | 3(우리 것) | Uia* Win32 API 는 바깥 이름 |
 | LZ4 | Engine/Compression/EngineCompressionCodecs.h | Lz4CompressionCodec | 1 | |
 | RLE | Core/Compression/BuiltinCompressionCodecs.h | RleCompressionCodec, makeRleSettings | 4 | |
-| OS | Editor/Common/Backend/ImGuiOsInputFilter.h | ImGuiOsInputFilter | 1 | `ImGuiOSInputFilter` |
-| PBR | Editor/Common/Asset/Tests/TestModelImportPbr.cpp | ModelImportPbrMaterial, readPbrMaterial, bPbrSections | 12 | |
+| OS | Editor/Common/Backend/ImGuiOSInputFilter.h | ImGuiOsInputFilter | 1 | `ImGuiOSInputFilter` |
+| PBR | Editor/Common/Asset/Tests/TestModelImportPBR.cpp | ModelImportPbrMaterial, readPbrMaterial, bPbrSections | 12 | |
 | PCM | — | AudioPcm, convertPcm, kTagPcm, bUnsupportedPcmLayout | 12 | |
 | DPI | — | DpiScale, FontScaleDpi | 3(우리 것) | ImGui ConfigDpi* · GetDpiForWindow 는 바깥 |
 | UTF | — | Utf8ToUtf16…, StringUtilUtf8Validation, roundTripUtf8 | 약 14 | 형식 `utf8` 은 소문자 첫 낱말이라 OK |

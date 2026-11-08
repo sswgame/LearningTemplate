@@ -238,8 +238,8 @@ SW_TEST_CASE( DDSLoaderTest, InconsistentHeadersFail )
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( tooManyMips.data(), tooManyMips.size(), image ) );
     const vector<uint8> emptyArray = makeDx10DDS( 28, 32, 0 );
     SW_EXPECT_FALSE( DDSLoader::loadFromMemory( emptyArray.data(), emptyArray.size(), image ) );
-    const vector<uint8> unknownDxgi = makeDx10DDS( 11, 64 ); // R16G16B16A16_UNORM — 크기 표에 없다
-    SW_EXPECT_FALSE( DDSLoader::loadFromMemory( unknownDxgi.data(), unknownDxgi.size(), image ) );
+    const vector<uint8> unknownDXGI = makeDx10DDS( 11, 64 ); // R16G16B16A16_UNORM — 크기 표에 없다
+    SW_EXPECT_FALSE( DDSLoader::loadFromMemory( unknownDXGI.data(), unknownDXGI.size(), image ) );
     SW_EXPECT_FALSE( image.isValid() );
 }
 
@@ -249,7 +249,7 @@ SW_TEST_CASE( DDSLoaderTest, InconsistentHeadersFail )
 SW_TEST_CASE( DDSLoaderTest, FormatSizeTableCoversTheLegacyTables )
 {
     const vector<DDSFormatSize> listSize    = DDSLoader::getFormatSizeTable();
-    const auto                  countOfDxgi = [&listSize]( uint32 dxgiFormat )
+    const auto                  countOfDXGI = [&listSize]( uint32 dxgiFormat )
     {
         uint32 count = 0;
         for ( const DDSFormatSize& row : listSize )
@@ -260,17 +260,17 @@ SW_TEST_CASE( DDSLoaderTest, FormatSizeTableCoversTheLegacyTables )
     };
     for ( const DDSFormatSize& row : listSize )
     {
-        SW_EXPECT_TRUE_MSG( countOfDxgi( row._dxgiFormat ) == 1, "duplicate DXGI " + to_string( row._dxgiFormat ) );
+        SW_EXPECT_TRUE_MSG( countOfDXGI( row._dxgiFormat ) == 1, "duplicate DXGI " + to_string( row._dxgiFormat ) );
         SW_EXPECT_TRUE( row._blockBytes > 0 );
         SW_EXPECT_TRUE( ( row._blockWidth == 1 && row._blockHeight == 1 ) || ( row._blockWidth == 4 && row._blockHeight == 4 ) );
     }
     for ( const DDSLegacyFourCC& row : DDSLoader::getLegacyFourCCTable() )
     {
-        SW_EXPECT_TRUE_MSG( countOfDxgi( row._dxgiFormat ) == 1, "legacy FourCC maps to DXGI " + to_string( row._dxgiFormat ) + " which has no size" );
+        SW_EXPECT_TRUE_MSG( countOfDXGI( row._dxgiFormat ) == 1, "legacy FourCC maps to DXGI " + to_string( row._dxgiFormat ) + " which has no size" );
     }
     for ( const DDSLegacyRGBMask& row : DDSLoader::getLegacyRGBMaskTable() )
     {
-        SW_EXPECT_TRUE_MSG( countOfDxgi( row._dxgiFormat ) == 1, "legacy RGB mask maps to DXGI " + to_string( row._dxgiFormat ) + " which has no size" );
+        SW_EXPECT_TRUE_MSG( countOfDXGI( row._dxgiFormat ) == 1, "legacy RGB mask maps to DXGI " + to_string( row._dxgiFormat ) + " which has no size" );
     }
 }
 

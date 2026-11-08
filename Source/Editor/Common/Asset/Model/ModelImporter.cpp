@@ -251,9 +251,9 @@ namespace sw::editor
                 ModelImportUtil::MergedMesh body;
                 const bool                  bSections = listSectionMaterialName.empty() == false;
                 // 머티리얼(구간 머티리얼 · 텍스처 PBR 머티리얼 하나)이 색 계수를 가지면 정점에 굽지 않는다 — 두 번 곱한다(정적 모델과 같은 규칙)
-                const bool bPbrMaterial  = bSections == false && rule._bImportMaterials == SW_TRUE && ModelImportMaterial::findTexturedPbrMaterial( data ) != nullptr;
-                body._bBakeMaterialColor = bSections == false && bPbrMaterial == false;
-                if ( bPbrMaterial && ModelImportMaterial::readPbrMaterial( data, sourcePath, outResult ) == false )
+                const bool bPBRMaterial  = bSections == false && rule._bImportMaterials == SW_TRUE && ModelImportMaterial::findTexturedPBRMaterial( data ) != nullptr;
+                body._bBakeMaterialColor = bSections == false && bPBRMaterial == false;
+                if ( bPBRMaterial && ModelImportMaterial::readPBRMaterial( data, sourcePath, outResult ) == false )
                     return false;
                 vector<const cgltf_node*>     listStack( listRoot.rbegin(), listRoot.rend() );
                 unordered_map<string, uint32> mapStemUse;
@@ -525,7 +525,7 @@ namespace sw::editor
                 const bool                  bSections = listSectionMaterialName.empty() == false;
                 ModelImportUtil::MergedMesh merged;
                 // 머티리얼(구간 머티리얼 · 텍스처 PBR 머티리얼 하나)이 색 계수를 가지면 정점에 굽지 않는다 — 두 번 곱한다
-                merged._bBakeMaterialColor = bSections == false && ( rule._bImportMaterials == SW_FALSE || ModelImportMaterial::findTexturedPbrMaterial( data ) == nullptr );
+                merged._bBakeMaterialColor = bSections == false && ( rule._bImportMaterials == SW_FALSE || ModelImportMaterial::findTexturedPBRMaterial( data ) == nullptr );
                 for ( const cgltf_node* pRoot : listRoot )
                 {
                     if ( ModelImportGeometry::appendNode( *pRoot, merged ) == false )
@@ -542,8 +542,8 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "ModelImporter.GlTFNoTrianglesDefault", "glTF '%#' has no triangles in its default scene (%# primitives skipped)", sourcePath, merged._skippedPrimitiveCount );
                     return false;
                 }
-                // 일반 glTF 의 PBR 머티리얼(텍스처)은 임포트가 모델 옆 머티리얼로 옮긴다(`ModelImportMaterial::writePbrMaterial`).
-                if ( bSections == false && rule._bImportMaterials == SW_TRUE && ModelImportMaterial::readPbrMaterial( data, sourcePath, outResult ) == false ) // 스킨드 모델도 같은 규칙(readSkinnedModel)
+                // 일반 glTF 의 PBR 머티리얼(텍스처)은 임포트가 모델 옆 머티리얼로 옮긴다(`ModelImportMaterial::writePBRMaterial`).
+                if ( bSections == false && rule._bImportMaterials == SW_TRUE && ModelImportMaterial::readPBRMaterial( data, sourcePath, outResult ) == false ) // 스킨드 모델도 같은 규칙(readSkinnedModel)
                     return false;
 
                 ModelImportGeometry::applyRule( rule, merged );
@@ -790,8 +790,8 @@ namespace sw::editor
         if ( ModelImportMaterial::readToonMaterials( data, sourcePath, outResult._listToonMaterial, outResult._listIgnoredMaterialKey ) == false ||
              ModelImportVrm::readVrmAvatar( data, sourcePath, outResult ) == false )
             return false;
-        const bool bPbrSections = outResult._listToonMaterial.empty() && rule._bImportMaterials == SW_TRUE;
-        if ( bPbrSections && ModelImportMaterial::readSectionPbrMaterials( data, sourcePath, outResult ) == false )
+        const bool bPBRSections = outResult._listToonMaterial.empty() && rule._bImportMaterials == SW_TRUE;
+        if ( bPBRSections && ModelImportMaterial::readSectionPBRMaterials( data, sourcePath, outResult ) == false )
             return false;
         // 구간을 나누는 머티리얼 표(툰 또는 PBR)의 이름 — 비어 있으면 구간 없는 메시다.
         vector<string> listSectionMaterialName;
@@ -799,7 +799,7 @@ namespace sw::editor
         {
             listSectionMaterialName.push_back( toon._name );
         }
-        for ( const ModelImportPbrMaterial& pbr : outResult._listPbrMaterial )
+        for ( const ModelImportPBRMaterial& pbr : outResult._listPBRMaterial )
         {
             listSectionMaterialName.push_back( pbr._name );
         }
@@ -862,7 +862,7 @@ namespace sw::editor
         }
         if ( ModelImportMaterial::writeMaterialSections( assetPaths, result, sourcePath, sideFolder ) == false )
             return false;
-        if ( ModelImportMaterial::writePbrMaterial( assetPaths, result, sourcePath, sideFolder ) == false )
+        if ( ModelImportMaterial::writePBRMaterial( assetPaths, result, sourcePath, sideFolder ) == false )
             return false;
         if ( Internal::writeFractureAsset( result, rule, sourcePath, outputPath ) == false )
             return false;

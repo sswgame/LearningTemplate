@@ -12,7 +12,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
-#include "Engine/Audio/AudioPcm.h"
+#include "Engine/Audio/AudioPCM.h"
 #include "Engine/Audio/AudioRenderListener.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Foundation/EngineServices.h"

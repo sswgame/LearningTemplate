@@ -11,7 +11,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioDownmix.h"
-#include "Engine/Audio/AudioPcm.h"
+#include "Engine/Audio/AudioPCM.h"
 #include "Engine/Audio/AudioStream.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/Graph/AudioGraph.h"
@@ -75,11 +75,11 @@ namespace sw
 
 namespace sw
 {
-    bool AudioClipData::convertPcm( const AudioPcm& pcm, AudioClipData& outClip )
+    bool AudioClipData::convertPCM( const AudioPCM& pcm, AudioClipData& outClip )
     {
         const uint32 bytesPerSample        = pcm._bitsPerSample / 8u;
-        const bool   bUnsupportedPcmLayout = pcm._channelCount == 0 || pcm._sampleRate == 0 || bytesPerSample == 0 || bytesPerSample > 4;
-        if ( bUnsupportedPcmLayout )
+        const bool   bUnsupportedPCMLayout = pcm._channelCount == 0 || pcm._sampleRate == 0 || bytesPerSample == 0 || bytesPerSample > 4;
+        if ( bUnsupportedPCMLayout )
             return false;
         if ( pcm._bFloat == SW_TRUE && bytesPerSample != 4 )
             return false;
@@ -277,9 +277,9 @@ namespace sw
             return nullptr; // 이 호스트의 패키지에 없는 종류 — 없는 것으로 친다(위 requestClip 과 같다)
         if ( StringUtil::endsWith( pathView, AudioGraphDef::kExtension, true ) )
             return decodeGraph( path );
-        AudioPcm pcm;
+        AudioPCM pcm;
         bool     bDecoded = false;
-        if ( AudioPcm::isSupportedExtension( pathView ) )
+        if ( AudioPCM::isSupportedExtension( pathView ) )
         {
             vector<uint8> bytes;
             const bool    bRead = AssetIO::readBinaryAsset( assetID, bytes ); // 낱개 파일 허용 정책은 AssetIO 한 곳이 본다
@@ -299,7 +299,7 @@ namespace sw
                         return pClip;
                     }
                 }
-                bDecoded = AudioPcm::decode( pathView, bytes.data(), bytes.size(), pcm );
+                bDecoded = AudioPCM::decode( pathView, bytes.data(), bytes.size(), pcm );
             }
         }
         // 공통 디코더가 못 읽는 WAV(ADPCM 등)와 다른 형식(MP3 등)은 백엔드의 대체 디코더에 넘긴다. OGG 는 넘기지 않는다(Media Foundation 은 Vorbis 를 모른다).
@@ -313,7 +313,7 @@ namespace sw
         }
 
         shared_ptr<AudioClipData> pClip = make_shared<AudioClipData>();
-        if ( AudioClipData::convertPcm( pcm, *pClip ) == false || pClip->_frameCount == 0 )
+        if ( AudioClipData::convertPCM( pcm, *pClip ) == false || pClip->_frameCount == 0 )
         {
             SW_LOG_WARNING_ID( "AudioClipCache.UnsupportedSampleFormat", "Unsupported sample format: %#", pathView );
             return nullptr;

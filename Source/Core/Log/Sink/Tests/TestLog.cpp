@@ -343,14 +343,14 @@ SW_TEST_CASE( LogTest, LogMacrosFormatArguments )
 /**
  * @brief [LogTest] 비-UTF8(ANSI/CP949) 문자열 전달 시에도 안전하게 처리됨
  */
-SW_TEST_CASE( LogTest, NonUtf8FallbackSafety )
+SW_TEST_CASE( LogTest, NonUTF8FallbackSafety )
 {
     LogCapture capture;
     SW_REQUIRE_TRUE( capture.isAttached() );
 
     // 유효하지 않은 UTF-8 바이트 시퀀스 (0xFF, 0xFE 등)
-    const utf8 invalidUtf8Bytes[] = { '[', 'T', 'e', 's', 't', 'L', 'o', 'g', ']', ' ', 'B', 'a', 'd', ':', static_cast<utf8>( 0xFF ), static_cast<utf8>( 0xFE ), '\0' };
-    SW_LOG_INFO_ID( "TestLog.InvalidUtf8Probe", "%#", invalidUtf8Bytes );
+    const utf8 invalidUTF8Bytes[] = { '[', 'T', 'e', 's', 't', 'L', 'o', 'g', ']', ' ', 'B', 'a', 'd', ':', static_cast<utf8>( 0xFF ), static_cast<utf8>( 0xFE ), '\0' };
+    SW_LOG_INFO_ID( "TestLog.InvalidUtf8Probe", "%#", invalidUTF8Bytes );
 
     SW_REQUIRE_EQUAL( 1u, capture.getCount() );
     SW_EXPECT_TRUE( sw::StringUtil::startsWith( capture.getEntries()[0]._message, "[TestLog] Bad:" ) );
@@ -520,7 +520,7 @@ SW_TEST_CASE( LogTest, OutputsBeyondTheCapAreRejectedNotSilentlyIgnored )
  * @details 한 바이트만 틀려도 줄 전체를 로캘 변환하면, 아무도 `setlocale` 을 부르지 않아 C 로캘이라 Windows 에서는 멀쩡한 한글까지
  *          바이트마다 다른 글자로 깨지고 glibc 에서는 변환이 실패해 줄이 통째로 빈다.
  */
-SW_TEST_CASE( LogTest, InvalidUtf8ByteIsEscapedNotTheWholeLine )
+SW_TEST_CASE( LogTest, InvalidUTF8ByteIsEscapedNotTheWholeLine )
 {
     sw::AsyncLogSink logger( sw::test::makeScratchPath( "sink.log" ) ); // 기본 파일 장치도 케이스 폴더에 쓴다
     logger.initialize();

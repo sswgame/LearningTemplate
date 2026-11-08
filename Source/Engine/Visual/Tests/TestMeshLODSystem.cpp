@@ -37,8 +37,8 @@ namespace
                 listVertex[index]._arrPosition[0] = arrPosition[index][0];
                 listVertex[index]._arrPosition[1] = arrPosition[index][1];
                 listVertex[index]._arrNormal[2]   = 1.0f;
-                listVertex[index]._arrUv[0]       = arrPosition[index][0];
-                listVertex[index]._arrUv[1]       = 1.0f - arrPosition[index][1];
+                listVertex[index]._arrUV[0]       = arrPosition[index][0];
+                listVertex[index]._arrUV[1]       = 1.0f - arrPosition[index][1];
                 listVertex[index]._arrColor[3]    = 1.0f;
             }
             return listVertex;

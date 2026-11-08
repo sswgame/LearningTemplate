@@ -10,7 +10,7 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Gameplay/ActionRegistry.h"
+#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"

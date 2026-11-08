@@ -49,11 +49,11 @@ namespace sw::editor
         /**
          * @brief 규칙의 형식을 DXGI 형식으로 바꿉니다. 규칙은 이미 푼 형식(`TextureImportFormat`)을 들므로 실패가 없다 — 모르는 이름은 설정 로드가 거절했다.
          * @details sRGB 짝이 없는 형식(BC4 · BC5 · BC6H · R16G16B16A16_FLOAT · R8)은 @p bSRGB 와 무관하게 UNORM 이며, 원본 바이트를 곡선 없이 그대로 옮긴다.
-         *          번호는 이름 표 하나(`TextureImportFormatUtil::getDxgiFormat`)에서 온다 — 에셋 규칙과 대조하는 테스트가 같은 표를 읽는다.
+         *          번호는 이름 표 하나(`TextureImportFormatUtil::getDXGIFormat`)에서 온다 — 에셋 규칙과 대조하는 테스트가 같은 표를 읽는다.
          */
         [[nodiscard]] DXGI_FORMAT resolveFormatInternal( TextureImportFormat format, bool bSRGB )
         {
-            return static_cast<DXGI_FORMAT>( TextureImportFormatUtil::getDxgiFormat( format, bSRGB ) );
+            return static_cast<DXGI_FORMAT>( TextureImportFormatUtil::getDXGIFormat( format, bSRGB ) );
         }
 
         /**
@@ -511,13 +511,13 @@ namespace sw::editor
         };
 
         /** @brief 변형 DDS 머리에 적을 형식 번호입니다(`DDSFormat`). 인코더가 만드는 형식만 받습니다. */
-        [[nodiscard]] uint32 variantDxgiFormatInternal( RHIFormat format )
+        [[nodiscard]] uint32 variantDXGIFormatInternal( RHIFormat format )
         {
             if ( format == RHIFormat::ASTC_4x4_UNORM )
-                return DDSFormat::kDxgiASTC4x4Unorm;
+                return DDSFormat::kDXGIASTC4x4Unorm;
             if ( format == RHIFormat::ETC2_RGBA8_UNORM )
-                return DDSFormat::kEngineDxgiETC2RGBA8;
-            return format == RHIFormat::EAC_R11_UNORM ? DDSFormat::kEngineDxgiEACR11 : DDSFormat::kEngineDxgiEACRG11;
+                return DDSFormat::kEngineDXGIETC2RGBA8;
+            return format == RHIFormat::EAC_R11_UNORM ? DDSFormat::kEngineDXGIEACR11 : DDSFormat::kEngineDXGIEACRG11;
         }
     } // namespace
 
@@ -579,7 +579,7 @@ namespace sw::editor
             return false;
         const uint32 width    = static_cast<uint32>( metadata.width );
         const uint32 rowBytes = ( width + 3 ) / 4 * getRHIFormatBlockInfo( format )._blockBytes;
-        return ImageFileWriter::writeDDS( outputPath, payload, width, static_cast<uint32>( metadata.height ), static_cast<uint32>( metadata.mipLevels ), variantDxgiFormatInternal( format ), rowBytes );
+        return ImageFileWriter::writeDDS( outputPath, payload, width, static_cast<uint32>( metadata.height ), static_cast<uint32>( metadata.mipLevels ), variantDXGIFormatInternal( format ), rowBytes );
     }
 
     AssetImportSummary TextureImporter::cookTextureVariants( string_view resourceRoot, const TextureImportConfig& config, const TextureFormatFamily& family, AssetImportMode mode )

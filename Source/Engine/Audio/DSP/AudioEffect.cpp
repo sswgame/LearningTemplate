@@ -7,7 +7,7 @@
 
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioMixerDef.h"
-#include "Engine/Audio/AudioPcm.h"
+#include "Engine/Audio/AudioPCM.h"
 #include "Engine/Audio/AudioTypes.h"
 #include "Engine/Audio/DSP/AudioBiquad.h"
 #include "Engine/Audio/DSP/AudioFFT.h"
@@ -561,10 +561,10 @@ namespace sw
                     return false;
                 }
                 vector<uint8> bytes;
-                AudioPcm      pcm;
+                AudioPCM      pcm;
                 AudioClipData clip;
-                const bool    bDecoded = AssetIO::readBinaryAsset( AssetID{ path.get() }, bytes ) && AudioPcm::decode( path.get(), bytes.data(), bytes.size(), pcm ) &&
-                                      AudioClipData::convertPcm( pcm, clip );
+                const bool    bDecoded = AssetIO::readBinaryAsset( AssetID{ path.get() }, bytes ) && AudioPCM::decode( path.get(), bytes.data(), bytes.size(), pcm ) &&
+                                      AudioClipData::convertPCM( pcm, clip );
                 if ( bDecoded == false || clip._frameCount == 0 )
                 {
                     SW_LOG_ERROR_ID( "AudioEffect.ConvolutionReverbCouldNotRead", "ConvolutionReverb could not read the impulse response '%#'", path.get() );

@@ -55,10 +55,10 @@ SW_TEST_CASE( EditorTexturePipelineTest, DDSFormatFileMatchesTheImportTable )
     for ( const TextureImportFormat format : kArrFormat )
     {
         const string name{ TextureImportFormatUtil::getName( format ) };
-        SW_EXPECT_TRUE_MSG( findName( TextureImportFormatUtil::getDxgiFormat( format, false ) ) == name, "import table name differs from DdsFormats.json: " + name );
+        SW_EXPECT_TRUE_MSG( findName( TextureImportFormatUtil::getDXGIFormat( format, false ) ) == name, "import table name differs from DdsFormats.json: " + name );
         for ( const bool bSRGB : { false, true } )
         {
-            const uint32 dxgiFormat = TextureImportFormatUtil::getDxgiFormat( format, bSRGB );
+            const uint32 dxgiFormat = TextureImportFormatUtil::getDXGIFormat( format, bSRGB );
             SW_EXPECT_TRUE_MSG( findName( dxgiFormat ).empty() == false, "import writes DXGI " + to_string( dxgiFormat ) + " which DdsFormats.json does not name" );
             SW_EXPECT_TRUE_MSG( hasSize( dxgiFormat ), "import writes DXGI " + to_string( dxgiFormat ) + " which DDSLoader cannot size" );
         }

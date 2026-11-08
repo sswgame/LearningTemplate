@@ -15,8 +15,8 @@
 #include "Core/Name/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Content/AssetTypeRegistry.h"
-#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 

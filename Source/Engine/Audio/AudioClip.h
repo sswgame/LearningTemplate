@@ -1,7 +1,7 @@
 /**
  * @file AudioClip.h
  * @brief 믹서가 읽는 클립(float 샘플)과, 경로별 클립 캐시(`AudioClipCache`)입니다.
- * @details 디코드는 워커에서 한다(`AudioPcm`는 WAV 와 OGG 를 처리하고, 백엔드가 등록하는 대체 디코더는 Windows 의 Media Foundation 이다).
+ * @details 디코드는 워커에서 한다(`AudioPCM`는 WAV 와 OGG 를 처리하고, 백엔드가 등록하는 대체 디코더는 Windows 의 Media Foundation 이다).
  *          디코드 결과는 float 로 바꿔 캐시에 넣는다. 믹서 스레드는 캐시에서 **찾기만** 하고(`findClip`) 디코드를 기다리지 않는다.
  */
 #pragma once
@@ -25,7 +25,7 @@
 
 namespace sw
 {
-    struct AudioPcm;
+    struct AudioPCM;
 
     class AudioGraph;
     class AudioStreamSource;
@@ -71,7 +71,7 @@ namespace sw
          *        명시 다운믹스(ITU-R BS.775, `AudioDownmix`)해 스테레오로 줄입니다.
          * @return 형식이 비었거나(채널이나 샘플레이트가 0) 비트 수를 모르거나, 3 채널 이상인데 배치를 모르면(높이 채널, 마스크 비트 부족) false 를 반환합니다.
          */
-        [[nodiscard]] static bool convertPcm( const AudioPcm& pcm, AudioClipData& outClip );
+        [[nodiscard]] static bool convertPCM( const AudioPCM& pcm, AudioClipData& outClip );
         /** @brief 채널을 평균해 모노 샘플로 바꿉니다(립싱크 분석에 씁니다). 스트리밍 클립은 샘플이 없어 빈 결과입니다. */
         void copyMonoSamples( vector<float32>& outListSample ) const;
     };
@@ -80,7 +80,7 @@ namespace sw
 namespace sw
 {
     /** @brief 공통 디코더가 다루지 않는 형식(MP3 등)을 디코드하는 백엔드 함수입니다. @p path 는 리소스 상대 경로이거나 절대 경로입니다. */
-    using AudioFallbackDecodeFunction = bool ( * )( const AssetID& assetID, AudioPcm& outPcm );
+    using AudioFallbackDecodeFunction = bool ( * )( const AssetID& assetID, AudioPCM& outPCM );
 
     /**
      * @class AudioClipCache

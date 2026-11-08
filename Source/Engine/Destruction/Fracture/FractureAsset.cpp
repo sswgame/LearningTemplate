@@ -94,7 +94,7 @@ namespace sw
                     {
                         value = reader.readFloat32();
                     }
-                    for ( float32& value : vertex._arrUv )
+                    for ( float32& value : vertex._arrUV )
                     {
                         value = reader.readFloat32();
                     }
@@ -238,7 +238,7 @@ namespace sw
             {
                 writer.writeFloat32( value );
             }
-            for ( const float32 value : vertex._arrUv )
+            for ( const float32 value : vertex._arrUV )
             {
                 writer.writeFloat32( value );
             }

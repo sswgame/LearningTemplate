@@ -230,9 +230,9 @@ namespace sw
         /** @brief 타일 한 셀의 월드 크기입니다. */
         float32 getTileSize() const { return _content._tileSize; }
         /** @brief 아틀라스 셀의 UV 사각형 (u, v, 폭, 높이) 입니다. */
-        float4 computeCellUvRect( int32 cell ) const { return computeCellUvRect( _content, cell ); }
+        float4 computeCellUVRect( int32 cell ) const { return computeCellUVRect( _content, cell ); }
         /** @brief @p content 의 아틀라스 셀 UV 사각형입니다(에디터가 저장 전 사본으로 그린다 — 런타임과 같은 셀 해석). */
-        static float4 computeCellUvRect( const TileSetContent& content, int32 cell );
+        static float4 computeCellUVRect( const TileSetContent& content, int32 cell );
 
         /** @brief 브러시 목록입니다. */
         const vector<TileBrush>& getBrushes() const { return _content._listBrush; }

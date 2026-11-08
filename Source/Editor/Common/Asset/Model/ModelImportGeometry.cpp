@@ -260,7 +260,7 @@ namespace sw::editor
             else if ( attribute.type == cgltf_attribute_type_normal )
                 accessors._pNormal = attribute.data;
             else if ( attribute.type == cgltf_attribute_type_texcoord && attribute.index == 0 )
-                accessors._pUv = attribute.data;
+                accessors._pUV = attribute.data;
             else if ( attribute.type == cgltf_attribute_type_color && attribute.index == 0 )
                 accessors._pColor = attribute.data;
             else if ( attribute.type == cgltf_attribute_type_joints && attribute.index == 0 )
@@ -297,13 +297,13 @@ namespace sw::editor
         const cgltf_size vertexCount = accessors._pPosition->count;
         vector<float32>  listPosition;
         vector<float32>  listNormal;
-        vector<float32>  listUv;
+        vector<float32>  listUV;
         vector<float32>  listColor;
         vector<float32>  listWeight;
         const cgltf_size colorComponentCount = accessors._pColor != nullptr ? cgltf_num_components( accessors._pColor->type ) : 0;
         const bool       bSkinnedPrimitive   = pSkin != nullptr && accessors._pJoint != nullptr && accessors._pWeight != nullptr;
         const bool       bAttributesRead     = ModelImportUtil::unpackFloats( accessors._pPosition, 3, listPosition ) && unpackOptionalFloats( accessors._pNormal, 3, vertexCount, listNormal ) &&
-                                     unpackOptionalFloats( accessors._pUv, 2, vertexCount, listUv ) &&
+                                     unpackOptionalFloats( accessors._pUV, 2, vertexCount, listUV ) &&
                                      unpackOptionalFloats( accessors._pColor, colorComponentCount, vertexCount, listColor ) &&
                                      ( bSkinnedPrimitive == false || unpackOptionalFloats( accessors._pWeight, ModelImportUtil::kInfluenceCount, vertexCount, listWeight ) );
         if ( bAttributesRead == false )
@@ -322,8 +322,8 @@ namespace sw::editor
                 vertex._bHasNormal = vertex._normal.getLength() > MathUtil::kEpsilon;
             }
 
-            if ( listUv.empty() == false )
-                vertex._uv = float2{ listUv[vertexIndex * 2], listUv[vertexIndex * 2 + 1] };
+            if ( listUV.empty() == false )
+                vertex._uv = float2{ listUV[vertexIndex * 2], listUV[vertexIndex * 2 + 1] };
 
             // COLOR_0 는 vec3 이거나 vec4 다. vec3 이면 알파는 1 이고, 색이 없는 원본은 흰색(곱의 항등원)이다.
             float32 arrColor[4]{ 1.0f, 1.0f, 1.0f, 1.0f };
@@ -540,8 +540,8 @@ namespace sw::editor
         vertex._arrNormal[0]   = normal._x;
         vertex._arrNormal[1]   = normal._y;
         vertex._arrNormal[2]   = normal._z;
-        vertex._arrUv[0]       = source._uv._x;
-        vertex._arrUv[1]       = source._uv._y;
+        vertex._arrUV[0]       = source._uv._x;
+        vertex._arrUV[1]       = source._uv._y;
         vertex._arrColor[0]    = source._color._x;
         vertex._arrColor[1]    = source._color._y;
         vertex._arrColor[2]    = source._color._z;

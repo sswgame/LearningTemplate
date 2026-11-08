@@ -390,7 +390,7 @@ namespace sw
         return true;
     }
 
-    float4 TileSetAsset::computeCellUvRect( const TileSetContent& content, int32 cell )
+    float4 TileSetAsset::computeCellUVRect( const TileSetContent& content, int32 cell )
     {
         const int32   column = ( content._columnCount > 0 ) ? cell % content._columnCount : 0;
         const int32   row    = ( content._columnCount > 0 ) ? cell / content._columnCount : 0;

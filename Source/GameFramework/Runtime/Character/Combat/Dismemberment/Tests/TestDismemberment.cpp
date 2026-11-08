@@ -20,7 +20,7 @@ namespace
                 {
                     geometry._listPosition.push_back( float3{ static_cast<float32>( column ), static_cast<float32>( row ), 0.0f } );
                     geometry._listNormal.push_back( float3{ 0.0f, 0.0f, -1.0f } );
-                    geometry._listUv.push_back( float2{ 0.0f, 0.0f } );
+                    geometry._listUV.push_back( float2{ 0.0f, 0.0f } );
                 }
             }
             geometry._listIndex = { 0, 1, 2, 1, 3, 2, 2, 3, 4, 3, 5, 4 };

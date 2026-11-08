@@ -17,7 +17,7 @@ namespace sw::editor
     {
         /**
          * @brief 형식 표의 한 줄입니다 — DXGI 이름(로그에 쓰는 이름)과, 임포터가 써 내는 DXGI 번호와 sRGB 짝을 함께 든다.
-         * @details sRGB 짝이 없으면 `_srgbName` 이 비고 `_srgbDxgiFormat` 이 `_dxgiFormat` 과 같다. 번호는 `dxgiformat.h` 의 값이다(이 파일은 DirectXTex 를 끌어오지 않는다).
+         * @details sRGB 짝이 없으면 `_srgbName` 이 비고 `_srgbDXGIFormat` 이 `_dxgiFormat` 과 같다. 번호는 `dxgiformat.h` 의 값이다(이 파일은 DirectXTex 를 끌어오지 않는다).
          */
         struct TextureImportFormatName
         {
@@ -25,7 +25,7 @@ namespace sw::editor
             TextureImportFormat _format;
             uint32              _dxgiFormat;
             string_view         _srgbName;
-            uint32              _srgbDxgiFormat;
+            uint32              _srgbDXGIFormat;
         };
         static constexpr TextureImportFormatName kArrTextureImportFormatName[] = {
             {         "BC1_UNORM",               TextureImportFormat::BC1, 71,      "BC1_UNORM_SRGB", 72},
@@ -177,10 +177,10 @@ namespace sw::editor
         return findFormatEntryInternal( format )._dxgiName;
     }
 
-    uint32 TextureImportFormatUtil::getDxgiFormat( TextureImportFormat format, bool bSRGB )
+    uint32 TextureImportFormatUtil::getDXGIFormat( TextureImportFormat format, bool bSRGB )
     {
         const TextureImportFormatName& entry = findFormatEntryInternal( format );
-        return bSRGB ? entry._srgbDxgiFormat : entry._dxgiFormat;
+        return bSRGB ? entry._srgbDXGIFormat : entry._dxgiFormat;
     }
 
     TextureFormatUsage TextureImportFormatUtil::getUsage( TextureImportFormat format )

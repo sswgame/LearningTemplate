@@ -1,0 +1,45 @@
+/**
+ * @file RHIDxgiTearing.h
+ * @brief DXGI 티어링 허용 여부 질의입니다(DX11, DX12 공유).
+ *
+ * [왜 필요한가]
+ * `Present( 0, 0 )` 만으로는 VSync 가 꺼지지 않습니다. 플립 모델 스왑체인이라도 창이 DWM 합성을 거치는
+ * 동안에는 런타임이 vblank 에 맞춰 프레임을 넘겨 주고, 그래서 동기화 간격 0 으로도 화면 주사율에
+ * **정확히** 붙습니다(165Hz 면 6061us). 주의: 창이 포그라운드인지에 따라 붙기도 하고 안 붙기도 해서
+ * 프레임 시간 측정이 들쭉날쭉해집니다.
+ *
+ * 실제로 끄려면 두 가지가 **같이** 필요합니다:
+ *   1) 스왑체인을 `DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING` 으로 만들고(ResizeBuffers 에도 같은 플래그),
+ *   2) `Present( 0, DXGI_PRESENT_ALLOW_TEARING )` 으로 표시합니다.
+ * 둘 중 하나만 있으면 DXGI 가 `DXGI_ERROR_INVALID_CALL` 을 반환합니다.
+ */
+#pragma once
+#include "Core/Foundation/Types.h"
+
+#include "Engine/Foundation/EnginePlatformHeaders.h"
+
+#if defined( SW_PLATFORM_WINDOWS )
+
+    #include <dxgi1_5.h>
+
+namespace sw
+{
+    /**
+     * @brief 이 시스템이 티어링 허용 표시를 지원하는지 묻습니다.
+     * @details `IDXGIFactory5` 가 없거나(구형 런타임) 질의가 실패하면 false 입니다. 그때는 VSync 를 끄라는
+     *          요청이 와도 스왑체인 플래그를 붙이지 않습니다. 지원하지 않는데 붙이면 생성 자체가 실패합니다.
+     */
+    inline bool queryDXGIAllowTearing()
+    {
+        Microsoft::WRL::ComPtr<IDXGIFactory5> factory;
+        if ( FAILED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) || factory == nullptr )
+            return false;
+
+        BOOL bAllowTearing{ FALSE };
+        if ( FAILED( factory->CheckFeatureSupport( DXGI_FEATURE_PRESENT_ALLOW_TEARING, &bAllowTearing, sizeof( bAllowTearing ) ) ) )
+            return false;
+
+        return bAllowTearing != FALSE;
+    }
+} // namespace sw
+#endif

@@ -466,7 +466,7 @@ namespace sw
         const float32  size = getTileSet().getTileSize();
         const float3   local{ ( static_cast<float32>( x ) + 0.5f ) * size, -( static_cast<float32>( y ) + 0.5f ) * size, 0.0f };
         const float4x4 world = SpriteInstanceBatch::makeQuadWorld( local, size, size ) * _lastOwnerWorld;
-        const float4   uv    = getTileSet().computeCellUvRect( pVisual->computeCellAt( _elapsedSeconds ) );
+        const float4   uv    = getTileSet().computeCellUVRect( pVisual->computeCellAt( _elapsedSeconds ) );
         pBatch->setEntry( entry, world, uv, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
     }
 

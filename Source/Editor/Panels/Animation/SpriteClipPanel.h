@@ -75,7 +75,7 @@ namespace sw::editor
     private:
         SpriteClipModel      _model;
         EditorThumbnailCache _atlasThumbnail;
-        float2               _dragStartUv;     ///< 아틀라스 끌기를 시작한 uv
+        float2               _dragStartUV;     ///< 아틀라스 끌기를 시작한 uv
         int32                _dragEdge;        ///< 끄는 가장자리(`SpriteFrameEdge`). -1 이면 사각형 끌기거나 끌지 않는다
         uint8                _bAtlasPress : 1; ///< 아틀라스 위에서 눌러 아직 떼지 않았다
         uint8                _bEdgeMoved  : 1; ///< 이번 끌기에서 가장자리가 옮겨졌다(뗄 때 되돌리기 하나)

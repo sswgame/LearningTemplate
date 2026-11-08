@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Scripts/lint/FolderLayout.py
+
+파일 자리 규칙(`docs/agents/FolderLayout.md` 4 절)을 경로로 막는다 — 표는 `Config/Dev/FolderLayout.json`.
+  1. 잡동사니 폴더 이름(`Util` · `Utility` · `Helpers` · `Misc` …) 금지 — 하는 일(Encoding · Algorithm · Hash …)로 묶는다.
+  2. `Dev/` 폴더는 엔진 쪽 금지 — 개발 기능은 `Source/DevTools/`(언리얼 Developer 모듈 자리). DevTools 가 볼 수 없는 모듈 안(게임 · 호스트 · 정적 라이브러리 내부)만
+     `_devFolderAllowed` 에 까닭과 함께 둔다.
+  3. 기능 폴더의 `Component/` 에는 컴포넌트(`*Component` · 허용 끝말)만 — 씬 서비스 · 질의 · 검사는 `<기능>/Scene/`.
+
+**왜 린트인가.** 폴더 자리는 형식이 말하지 못한다. 기준표 없이 "처음 쓰는 쪽" · 이름 낱말로 자리를 정해 RegistrationList(String 폴더) · StringUtil(Container) 같은
+어긋남이 쌓였다(FolderMoves 13 절, 2026-11-08 전수 조사). 저장소 전체 경로만 보므로 빠르다.
+"""
+
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
+
+from common.ExitCode import ExitCode  # noqa: E402
+from common.Paths import getProjectRoot  # noqa: E402
+
+kConfigPath = "Config/Dev/FolderLayout.json"
+
+
+def checkFolderLayout(projectRoot: Path, listPath: list[str] | None = None) -> list[str]:
+    table = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
+    banned = {name.lower(): reason for name, reason in table["_bannedFolderNames"].items()}
+    devAllowed = tuple(table["_devFolderAllowed"])
+    componentRoots = tuple(table["_componentFolderModel"])
+    componentSuffixes = tuple(table["_componentSuffixes"])
+    if listPath is None:
+        listPath = subprocess.run(["git", "ls-files", "Source"], cwd=projectRoot, capture_output=True, text=True, encoding="utf-8").stdout.splitlines()
+    listProblem: list[str] = []
+    seenFolder: set[str] = set()
+    for relative in listPath:
+        parts = relative.split("/")
+        for index, folder in enumerate(parts[:-1]):
+            prefix = "/".join(parts[: index + 1]) + "/"
+            if prefix in seenFolder:
+                continue
+            if folder.lower() in banned:
+                seenFolder.add(prefix)
+                listProblem.append(f"{prefix}: 잡동사니 폴더 '{folder}' — {banned[folder.lower()]}")
+            elif folder == "Dev" and not prefix.startswith(devAllowed):
+                seenFolder.add(prefix)
+                listProblem.append(f"{prefix}: 엔진 쪽 `Dev/` 폴더 — 개발 기능은 Source/DevTools/ 로(DevTools 가 볼 수 없는 모듈 안이면 {kConfigPath} 의 _devFolderAllowed 에 까닭과 함께)")
+        if "Component" in parts[:-1] and "Tests" not in parts and not relative.startswith(componentRoots):
+            stem = parts[-1].split(".")[0]
+            if not stem.endswith(componentSuffixes):
+                listProblem.append(f"{relative}: `Component/` 에는 컴포넌트만 — 씬 서비스 · 질의 · 검사는 `<기능>/Scene/`(FolderLayout 4 절)")
+    return listProblem
+
+
+def main() -> int:
+    listProblem = checkFolderLayout(getProjectRoot())
+    for problem in listProblem:
+        print(f"  - {problem}")
+    print(f"[FolderLayout] {'OK' if not listProblem else f'FAIL {len(listProblem)}건'}")
+    return ExitCode.Passed if not listProblem else ExitCode.Violation
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -11,7 +11,7 @@
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
-#include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/Resp/RespEphemeralStore.h"
+#include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPEphemeralStore.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Online/Cache/MemoryEphemeralStore.h"
 #include "GameFramework/Runtime/Online/Security/NetSecurity.h"
@@ -24,7 +24,7 @@ namespace sw
         struct CacheStoreFactoryInternal
         {
             /** @brief RESP 저장소에 주는 운영 시계입니다. 상태가 없어 저장소들이 나눠 쓴다. */
-            static const SystemMonotonicClock& getRespClock()
+            static const SystemMonotonicClock& getRESPClock()
             {
                 static const SystemMonotonicClock s_clock{};
                 return s_clock;
@@ -74,18 +74,18 @@ namespace sw
 namespace sw
 {
     /**
-     * @class RespEphemeralStoreDriver
+     * @class RESPEphemeralStoreDriver
      * @brief 캐시 키트의 캐시 드라이버입니다 — 이 키트의 모듈 서브시스템(`SW_MODULE_SUBSYSTEM( Engine, … )`)이고 `IEphemeralStoreDriver` 로 공개된다.
      * @details "memory" 캐시의 데이터(같은 프로세스의 저장소끼리 나눠 쓴다)와 그 시계를 값으로 든다 — 예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)이었다. 저장소는 이 데이터를
      *          주소로 들므로 키트가 내려가기(자식 범위가 걷히기) 전에 소멸해야 한다(서버 조립이 그렇게 한다 — 저장소 코드도 이 키트에 있다).
      *          `IEphemeralStoreDriver` 는 상속하지 않는다 — 서브시스템이 가진 어댑터 멤버가 구현하고, 등록이 그 멤버를 공개한다(`getPublishedPart`).
      */
-    class RespEphemeralStoreDriver final : public ISubsystem
+    class RESPEphemeralStoreDriver final : public ISubsystem
     {
     public:
         static constexpr const utf8* kSubsystemName = "RespEphemeralStoreDriver";
 
-        RespEphemeralStoreDriver()
+        RESPEphemeralStoreDriver()
             : _memoryClock{}
             , _memoryDatabase{ _memoryClock }
             , _driver{ *this }
@@ -111,7 +111,7 @@ namespace sw
         class Driver final : public IEphemeralStoreDriver
         {
         public:
-            explicit Driver( RespEphemeralStoreDriver& owner )
+            explicit Driver( RESPEphemeralStoreDriver& owner )
                 : _owner{ owner }
             {
             }
@@ -122,7 +122,7 @@ namespace sw
             }
 
         private:
-            RespEphemeralStoreDriver& _owner;
+            RESPEphemeralStoreDriver& _owner;
         };
 
         SystemMonotonicClock    _memoryClock;    ///< "memory" 캐시의 시계 — 데이터보다 먼저 만들어지고 나중에 사라진다(선언 순서)
@@ -130,13 +130,13 @@ namespace sw
         Driver                  _driver;         ///< `IEphemeralStoreDriver` 로 공개되는 부분
     };
 
-    SW_MODULE_SUBSYSTEM( Engine, RespEphemeralStoreDriver, IEphemeralStoreDriver );
+    SW_MODULE_SUBSYSTEM( Engine, RESPEphemeralStoreDriver, IEphemeralStoreDriver );
 
-    unique_ptr<IEphemeralStore> RespEphemeralStoreDriver::createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError )
+    unique_ptr<IEphemeralStore> RESPEphemeralStoreDriver::createEphemeralStore( string_view driverName, string_view endpoint, string_view secret, string& outError )
     {
         if ( driverName == kMemoryStoreDriverName )
             return make_unique<MemoryEphemeralStore>( &_memoryDatabase );
-        if ( driverName != CacheEndpoint::kRespDriverName )
+        if ( driverName != CacheEndpoint::kRESPDriverName )
         {
             outError = "cache driver '" + string( driverName ) + "' is not in this build (memory, resp)";
             return nullptr;
@@ -151,7 +151,7 @@ namespace sw
             if ( tlsContext == nullptr )
                 return nullptr;
         }
-        RespStoreConfig settings;
+        RESPStoreConfig settings;
         settings._address   = parsed._address;
         settings._keyPrefix = parsed._keyPrefix;
         settings._timeoutMs = parsed._timeoutMs;
@@ -175,7 +175,7 @@ namespace sw
         transportSettings._ioThreadCount      = 1;
         transportSettings._maxConnections     = 4;
         transportSettings._idleTimeoutSeconds = 0.0; // 캐시 연결은 조용해도 유지한다. 구독 연결이 그렇다
-        unique_ptr<RespEphemeralStore> store  = make_unique<RespEphemeralStore>( CacheStoreFactoryInternal::getRespClock() );
+        unique_ptr<RESPEphemeralStore> store  = make_unique<RESPEphemeralStore>( CacheStoreFactoryInternal::getRESPClock() );
         if ( store->initialize( std::move( transport ), transportSettings, settings, std::move( tlsContext ), outError ) == false )
             return nullptr;
         return store;
@@ -193,7 +193,7 @@ namespace sw
             outError = "cache endpoint needs host:port";
             return false;
         }
-        if ( PlatformSocketUtil::resolveAddress( address, kDefaultRespPort, outEndpoint._address ) == false )
+        if ( PlatformSocketUtil::resolveAddress( address, kDefaultRESPPort, outEndpoint._address ) == false )
         {
             outError = "cache endpoint '" + string( address ) + "' is not a host:port that resolves to IPv4";
             return false;

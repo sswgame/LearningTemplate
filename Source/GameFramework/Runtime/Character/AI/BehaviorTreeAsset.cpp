@@ -4,10 +4,10 @@
 
 #include "Core/String/StringUtil.h"
 
+#include "Engine/Behavior/ActionRegistry.h"
+#include "Engine/Behavior/BehaviorTreeSchema.h"
+#include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Gameplay/ActionRegistry.h"
-#include "Engine/Gameplay/BehaviorTreeSchema.h"
-#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/Reflection.h"

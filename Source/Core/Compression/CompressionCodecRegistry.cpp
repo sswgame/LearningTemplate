@@ -138,7 +138,7 @@ namespace sw
     void CompressionCodecRegistry::registerBuiltinCodecs()
     {
         _mapCodec[CompressionCodecType::None] = make_unique<NullCompressionCodec>();
-        _mapCodec[CompressionCodecType::RLE]  = make_unique<RleCompressionCodec>();
+        _mapCodec[CompressionCodecType::RLE]  = make_unique<RLECompressionCodec>();
     }
 
 } // namespace sw

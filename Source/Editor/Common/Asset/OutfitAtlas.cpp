@@ -102,7 +102,7 @@ namespace sw
         : _groupName{ groupName }
         , _atlasSize{ static_cast<float32>( atlasSize ) }
         , _listRect{ std::move( listRect ) }
-        , _clampedUvCount{ 0 }
+        , _clampedUVCount{ 0 }
     {
     }
 
@@ -121,7 +121,7 @@ namespace sw
         return findRect( source._name ) != nullptr ? _groupName : source._name;
     }
 
-    float2 OutfitAtlasHooks::remapUv( const MeshMergeSource& source, const float2& uv ) const
+    float2 OutfitAtlasHooks::remapUV( const MeshMergeSource& source, const float2& uv ) const
     {
         const OutfitAtlasRect* pRect = findRect( source._name );
         if ( pRect == nullptr || _atlasSize <= 0.0f )
@@ -129,7 +129,7 @@ namespace sw
         const float32 clampedU = MathUtil::saturate( uv._x );
         const float32 clampedV = MathUtil::saturate( uv._y );
         if ( clampedU != uv._x || clampedV != uv._y )
-            ++_clampedUvCount;
+            ++_clampedUVCount;
         return float2{ ( static_cast<float32>( pRect->_x ) + clampedU * static_cast<float32>( pRect->_width ) ) / _atlasSize,
                        ( static_cast<float32>( pRect->_y ) + clampedV * static_cast<float32>( pRect->_height ) ) / _atlasSize };
     }

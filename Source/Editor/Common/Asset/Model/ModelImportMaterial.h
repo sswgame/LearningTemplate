@@ -37,12 +37,12 @@ namespace sw::editor
                                                      vector<string>& outListIgnored );
 
         /**
-         * @brief 일반 glTF(VRM 아님)에 머티리얼이 여럿이고 그중 기본색 텍스처가 있는 것이 있으면 모든 머티리얼을 @p inoutResult 의 `_listPbrMaterial` 에 읽습니다(glTF 순서).
+         * @brief 일반 glTF(VRM 아님)에 머티리얼이 여럿이고 그중 기본색 텍스처가 있는 것이 있으면 모든 머티리얼을 @p inoutResult 의 `_listPBRMaterial` 에 읽습니다(glTF 순서).
          * @details 그런 모델은 머티리얼마다 구간이 된다(언리얼 · 유니티 · Godot 의 머티리얼 슬롯 · 서브메시 · 서피스와 같다 — 첫 머티리얼만 쓰면 나머지 면이 엉뚱한 텍스처로 그려진다).
          *          텍스처 없는 머티리얼만 여럿이면 지금처럼 색을 정점에 구운 메시 하나다(구간 없음). 이름은 glTF 이름(없으면 `material<번호>`)의 파일 이름 꼴이다.
          * @return 원본이 가리키는 바깥 이미지 파일을 읽지 못하면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool readSectionPbrMaterials( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
+        [[nodiscard]] static bool readSectionPBRMaterials( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
 
         /**
          * @brief 합친 메시의 삼각형을 (머티리얼, 1인칭 가시성) 묶음마다 이어 놓고 구간 표를 만듭니다. 메시는 한 벌이다 — 구간은 그 메시의 정점 범위다(`MeshSection`).
@@ -69,28 +69,28 @@ namespace sw::editor
         /**
          * @brief 머티리얼 구간의 머티리얼(VRM 은 툰, 일반 glTF 는 PBR)과 그 텍스처 원본을 씁니다. 구간 자체는 본 메시(`<y>.mesh`)의 `SECT` 덩어리다 — 구간 메시를 따로 쓰지 않는다.
          * @details 머티리얼 값은 공유 저장소에 한 벌(`writeSharedMaterial`)이고 슬롯은 `<옆 폴더>/materials/<머티리얼>.material` 한 줄이다(엔진 툰 · PBR 머티리얼이 부모다). 같은 머티리얼의 구간 여럿(1인칭 가시성이 다른)은 파일 하나를 쓴다.
-         *          PBR 구간의 텍스처는 `writePbrMaterial` 과 같은 규칙이다. 내장 이미지는 공유 원본으로 꺼낸다(`writeEmbeddedImage`).
+         *          PBR 구간의 텍스처는 `writePBRMaterial` 과 같은 규칙이다. 내장 이미지는 공유 원본으로 꺼낸다(`writeEmbeddedImage`).
          *          머티리얼은 텍스처 임포트(`App --import-textures`)가 만들 DDS 를 가리킨다. 원본은 텍스처 임포트의 스탬프가 지킨다.
          */
         [[nodiscard]] static bool writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder );
 
         /**
          * @brief 일반 glTF 의 첫 금속도 · 거칠기 머티리얼(기본색 텍스처가 있는 것)을 읽어 @p inoutResult 의 `_pbrMaterial` 에 담습니다. 없으면 아무것도 하지 않습니다.
-         * @details 구간 없는 메시(정적 · 스킨드)의 머티리얼이다 — 텍스처 머티리얼이 있는데 머티리얼이 여럿인 모델은 구간으로 나뉘어(`readSectionPbrMaterials`) 여기에 오지 않는다.
+         * @details 구간 없는 메시(정적 · 스킨드)의 머티리얼이다 — 텍스처 머티리얼이 있는데 머티리얼이 여럿인 모델은 구간으로 나뉘어(`readSectionPBRMaterials`) 여기에 오지 않는다.
          * @return 원본이 가리키는 바깥 이미지 파일을 읽지 못하면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool readPbrMaterial( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
+        [[nodiscard]] static bool readPBRMaterial( const cgltf_data& data, string_view sourcePath, ModelImportResult& inoutResult );
         /** @brief 기본색 텍스처가 있는 첫 금속도 · 거칠기 머티리얼입니다(구간 없는 메시가 PBR 머티리얼로 옮기는 것). 없으면 nullptr 입니다. */
-        [[nodiscard]] static const cgltf_material* findTexturedPbrMaterial( const cgltf_data& data );
+        [[nodiscard]] static const cgltf_material* findTexturedPBRMaterial( const cgltf_data& data );
         /**
          * @brief 읽은 PBR 머티리얼의 내장 텍스처 원본(`writeEmbeddedImage`)과 머티리얼(`writeSharedMaterial`)을 씁니다.
          * @details 텍스처 이름 꼬리가 텍스처 임포트 규칙을 고른다(`_normal` → BC5 선형, `_orm` → 선형). 머티리얼은 엔진 PBR 견본(`EngineDefaultAssets::_pbrMaterialTemplate`)을 부모로 다른 칸만 적는다.
          */
-        [[nodiscard]] static bool writePbrMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder );
+        [[nodiscard]] static bool writePBRMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder );
         /** @brief glTF 머티리얼 하나를 PBR 머티리얼 값으로 읽습니다(@p rawName 이 머티리얼 · 텍스처 파일 이름의 바탕이다). 바깥 이미지 파일을 못 읽으면 false 입니다. */
-        [[nodiscard]] static bool readPbrMaterialValues( const cgltf_material& material, const string& rawName, string_view sourcePath, ModelImportPbrMaterial& outPbr );
-        /** @brief PBR 머티리얼 하나의 텍스처 원본과 머티리얼(슬롯 `<옆 폴더>/materials/<@p fileStem>.material` + 공유 값)을 씁니다(`writePbrMaterial` 의 몸). */
-        [[nodiscard]] static bool writePbrMaterialFile( const AssetPaths& assetPaths, const ModelImportPbrMaterial& pbr, string_view fileStem, string_view sourcePath, string_view sideFolder );
+        [[nodiscard]] static bool readPBRMaterialValues( const cgltf_material& material, const string& rawName, string_view sourcePath, ModelImportPBRMaterial& outPBR );
+        /** @brief PBR 머티리얼 하나의 텍스처 원본과 머티리얼(슬롯 `<옆 폴더>/materials/<@p fileStem>.material` + 공유 값)을 씁니다(`writePBRMaterial` 의 몸). */
+        [[nodiscard]] static bool writePBRMaterialFile( const AssetPaths& assetPaths, const ModelImportPBRMaterial& pbr, string_view fileStem, string_view sourcePath, string_view sideFolder );
         /** @brief glTF 이미지 하나의 원본 바이트를 읽습니다(내장은 그대로, 바깥 파일은 원본 옆에서). 바깥 파일을 못 읽으면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool readImageBytes( const cgltf_image& image, string_view sourcePath, ModelImportTexture& outTexture );
 

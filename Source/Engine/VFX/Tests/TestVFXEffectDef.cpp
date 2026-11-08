@@ -78,24 +78,24 @@ namespace
             SW_EXPECT_TRUE_MSG( emitter.validate( "test" ), pWhat );
         }
 
-        static string makeCurveXml( const utf8* pTag )
+        static string makeCurveXML( const utf8* pTag )
         {
             // 키를 일부러 뒤집어 적는다 — 읽기가 정렬한다.
             return string( "<" ) + pTag + "><_listKey><FloatCurveKey _time=\"1\" _value=\"0\"/><FloatCurveKey _time=\"0\" _value=\"1\"/></_listKey></" + pTag + ">";
         }
 
         /** @brief 방출기 하나의 효과 문서입니다. @p attributes 를 방출기 원소에 그대로 넣습니다. */
-        static string makeEffectXml( string_view attributes )
+        static string makeEffectXML( string_view attributes )
         {
             string xml = "<VFXEffectDef><_listEmitter><VFXEmitterDef ";
             xml += string( attributes );
             xml += ">";
-            xml += makeCurveXml( "_sizeOverLife" );
+            xml += makeCurveXML( "_sizeOverLife" );
             xml += "<_colorOverLife>";
-            xml += makeCurveXml( "_red" );
-            xml += makeCurveXml( "_green" );
-            xml += makeCurveXml( "_blue" );
-            xml += makeCurveXml( "_alpha" );
+            xml += makeCurveXML( "_red" );
+            xml += makeCurveXML( "_green" );
+            xml += makeCurveXML( "_blue" );
+            xml += makeCurveXML( "_alpha" );
             xml += "</_colorOverLife></VFXEmitterDef></_listEmitter></VFXEffectDef>";
             return xml;
         }
@@ -132,7 +132,7 @@ SW_TEST_CASE( VFXEffectDefTest, VariantMergesEmittersByName )
     string parent = "<VFXEffectDef><_listEmitter>";
     for ( const utf8* pName : { "Sparks", "Smoke" } )
     {
-        string       one   = Util::makeEffectXml( string( "_name=\"" ) + pName + "\" _texturePath=\"game/vfx/spark.dds\" _maxParticles=\"64\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" );
+        string       one   = Util::makeEffectXML( string( "_name=\"" ) + pName + "\" _texturePath=\"game/vfx/spark.dds\" _maxParticles=\"64\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" );
         const size_t first = one.find( "<VFXEmitterDef " );
         const size_t last  = one.find( "</VFXEmitterDef>" ) + string_view( "</VFXEmitterDef>" ).size();
         parent += one.substr( first, last - first );
@@ -441,7 +441,7 @@ SW_TEST_CASE( VFXEffectDefTest, EffectValidationRules )
 SW_TEST_CASE( VFXEffectDefTest, LoadReadsTheDocumentAndSortsCurves )
 {
     const string path = test::makeScratchPath( "valid.vfx.xml" );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( path, Util::makeEffectXml( Util::kValidAttributes ) ) );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( path, Util::makeEffectXML( Util::kValidAttributes ) ) );
 
     VFXEffectDef effect;
     SW_REQUIRE_TRUE( effect.loadFromDiskFile( path ) );
@@ -463,9 +463,9 @@ SW_TEST_CASE( VFXEffectDefTest, UnknownAttributeLeavesAnEmptyEffect )
 {
     SW_EXPECT_LOG( "Serialization.OrphanValue" );
     const string goodPath = test::makeScratchPath( "good.vfx.xml" );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( goodPath, Util::makeEffectXml( Util::kValidAttributes ) ) );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( goodPath, Util::makeEffectXML( Util::kValidAttributes ) ) );
     const string badPath = test::makeScratchPath( "bad.vfx.xml" );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( badPath, Util::makeEffectXml( string( Util::kValidAttributes ) + " _notAField=\"1\"" ) ) );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( badPath, Util::makeEffectXML( string( Util::kValidAttributes ) + " _notAField=\"1\"" ) ) );
 
     VFXEffectDef effect;
     SW_REQUIRE_TRUE( effect.loadFromDiskFile( goodPath ) );
@@ -478,7 +478,7 @@ SW_TEST_CASE( VFXEffectDefTest, MissingRequiredFieldLeavesAnEmptyEffect )
 {
     SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     const string path = test::makeScratchPath( "partial.vfx.xml" );
-    SW_REQUIRE_TRUE( Util::writeScratchFile( path, Util::makeEffectXml( "_name=\"Sparks\" _duration=\"1\" _spawnRate=\"40\"" ) ) );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( path, Util::makeEffectXML( "_name=\"Sparks\" _duration=\"1\" _spawnRate=\"40\"" ) ) );
     VFXEffectDef effect;
     SW_EXPECT_FALSE( effect.loadFromDiskFile( path ) );
     SW_EXPECT_TRUE( effect._listEmitter.empty() );
@@ -516,7 +516,7 @@ SW_TEST_CASE( VFXEffectDefTest, PoolTooSmallWarnsButLoads )
     SW_EXPECT_LOG( "VFXEffectDef.VFXEmitterMayNeed" );
     const string path = test::makeScratchPath( "pool.vfx.xml" );
     SW_REQUIRE_TRUE( Util::writeScratchFile(
-        path, Util::makeEffectXml( "_name=\"Sparks\" _texturePath=\"game/vfx/spark.dds\" _maxParticles=\"2\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" ) ) );
+        path, Util::makeEffectXML( "_name=\"Sparks\" _texturePath=\"game/vfx/spark.dds\" _maxParticles=\"2\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" ) ) );
     VFXEffectDef effect;
     SW_EXPECT_TRUE( effect.loadFromDiskFile( path ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( effect._listEmitter.size() ) );
@@ -530,7 +530,7 @@ SW_TEST_CASE( VFXEffectDefTest, SharedCacheGivesOneObjectAndReloadDetaches )
 {
     const test::ScopedScratchDomain domain;
     const string                    id = test::ScopedScratchDomain::makeID( "sparks.vfx.xml" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "sparks.vfx.xml" ), Util::makeEffectXml( Util::kValidAttributes ) ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "sparks.vfx.xml" ), Util::makeEffectXML( Util::kValidAttributes ) ) );
 
     const shared_ptr<const VFXEffectDef> pHeld  = SharedAssetCache<VFXEffectDef>::acquire( id );
     const shared_ptr<const VFXEffectDef> pAgain = SharedAssetCache<VFXEffectDef>::acquire( id );
@@ -539,7 +539,7 @@ SW_TEST_CASE( VFXEffectDefTest, SharedCacheGivesOneObjectAndReloadDetaches )
     SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( pHeld->_listEmitter.size() ) );
     SW_EXPECT_EQUAL( 64u, pHeld->_listEmitter[0]._maxParticles );
 
-    string       changed = Util::makeEffectXml( Util::kValidAttributes );
+    string       changed = Util::makeEffectXML( Util::kValidAttributes );
     const size_t at      = changed.find( "_maxParticles=\"64\"" );
     SW_REQUIRE_TRUE( at != string::npos );
     changed.replace( at, string_view( "_maxParticles=\"64\"" ).size(), "_maxParticles=\"128\"" );

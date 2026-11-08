@@ -47,7 +47,7 @@ SW_TEST_CASE( HashUtilTest, CombineMatchesBoostFormula )
 /**
  * @brief [HashUtilTest] FNV-1a 기저 · 소수는 명세 값이다(64 비트 기저의 끝 자리까지)
  */
-SW_TEST_CASE( HashUtilTest, FnvConstantsAreTheSpecValues )
+SW_TEST_CASE( HashUtilTest, FNVConstantsAreTheSpecValues )
 {
     SW_EXPECT_EQUAL( uint32{ 2166136261u }, sw::HashUtil::kFNVOffset32 );
     SW_EXPECT_EQUAL( uint32{ 16777619u }, sw::HashUtil::kFNVPrime32 );
@@ -93,7 +93,7 @@ SW_TEST_CASE( HashUtilTest, DefaultHashUsesComputeHash )
  * @brief [HashUtilTest] 문자열 해시는 FNV-1a 의 알려진 값과 같다(32 · 64 비트, 대소문자 구분)
  * @details 알려진 값은 FNV 명세의 테스트 벡터다. 쿠킹 산출물 · 팩 해시 · 저장 파일의 문자열 키가 이 값으로 디스크에 남으므로 바뀌면 안 된다.
  */
-SW_TEST_CASE( HashUtilTest, StringHashMatchesFnvKnownValues )
+SW_TEST_CASE( HashUtilTest, StringHashMatchesFNVKnownValues )
 {
     SW_EXPECT_EQUAL( sw::HashUtil::kFNVOffset64, sw::HashUtil::computeStringHash64( "", 0, false ) );
     SW_EXPECT_EQUAL( sw::HashUtil::kFNVOffset32, sw::HashUtil::computeStringHash32( "", 0, false ) );
@@ -139,7 +139,7 @@ SW_TEST_CASE( HashUtilTest, WideCharStringHashIsNotTruncatedToOneByte )
  * @details `char` 의 부호성은 구현 정의이고 UTF-8 의 0x80 이상 바이트는 signed char 에서 음수다. 대소문자 무시 경로만 부호 확장되면 같은 바이트가
  *          경로에 따라 다른 값으로 해싱되고, `char` 가 unsigned 인 플랫폼에서는 해시 자체가 달라진다.
  */
-SW_TEST_CASE( HashUtilTest, NonAsciiBytesAreHashedAsUnsigned )
+SW_TEST_CASE( HashUtilTest, NonASCIIBytesAreHashedAsUnsigned )
 {
     // "가" = EA B0 80 — 모든 바이트가 signed char 에서 음수다. 비-ASCII 에는 대소문자가 없으므로 두 해시 경로가 같은 값을 내야 한다.
     const sw::string korean{ "\xEA\xB0\x80" };

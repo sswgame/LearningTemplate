@@ -38,6 +38,8 @@ from lint.FeatureReferences import checkFeatureReferences  # noqa: E402
 from lint.FrameIntern import checkFrameIntern  # noqa: E402
 from lint.TickSceneWalk import checkTickSceneWalk  # noqa: E402
 from lint.NamingWords import checkNamingWords  # noqa: E402
+from lint.Acronyms import checkAcronyms  # noqa: E402
+from lint.FolderLayout import checkFolderLayout  # noqa: E402
 from lint.PlatformChains import checkPlatformChains  # noqa: E402
 from lint.DevOnlyVariables import checkDevOnlyVariables  # noqa: E402
 from lint.ServerUIIncludes import checkServerUIIncludes  # noqa: E402
@@ -176,6 +178,22 @@ def main(argv: list[str] | None = None) -> int:
         hasErrors = True
         print(f"[NamingWords] FAIL — 표에 없는 이름 단어 {len(listNamingProblem)}건")
         for problem in listNamingProblem:
+            print(f"  - {problem}")
+
+    # --- 약어 표기(이름은 형식이 막지 못한다 — Acronyms.py 머리말)
+    listAcronymProblem = checkAcronyms(projectRoot)
+    if listAcronymProblem:
+        hasErrors = True
+        print(f"[Acronyms] FAIL — 약어 표기 어긋남 {len(listAcronymProblem)}건(Config/Dev/Acronyms.json)")
+        for problem in listAcronymProblem:
+            print(f"  - {problem}")
+
+    # --- 파일 자리(잡동사니 폴더 · 엔진 쪽 Dev/ · Component 폴더 — FolderLayout.py 머리말)
+    listFolderProblem = checkFolderLayout(projectRoot)
+    if listFolderProblem:
+        hasErrors = True
+        print(f"[FolderLayout] FAIL — 파일 자리 어긋남 {len(listFolderProblem)}건(Config/Dev/FolderLayout.json)")
+        for problem in listFolderProblem:
             print(f"  - {problem}")
 
     # --- 플랫폼 #if 사슬(전처리 갈래는 형식이 막지 못한다 — PlatformChains.py 머리말)

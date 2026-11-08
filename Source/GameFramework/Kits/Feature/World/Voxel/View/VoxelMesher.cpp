@@ -59,7 +59,7 @@ namespace sw
             }
 
             /** @brief 면 UV 입니다. 옆면은 위쪽이 v 0이어서 텍스처의 윗줄이 블록의 위쪽이 되고, 윗면과 아랫면은 X 가 u, Z 가 v 입니다. */
-            static float2 computeCornerUv( VoxelFace face, const VoxelCoord& corner, const float2& uvMin, const float2& uvMax )
+            static float2 computeCornerUV( VoxelFace face, const VoxelCoord& corner, const float2& uvMin, const float2& uvMax )
             {
                 float32 u = 0.0f;
                 float32 v = 0.0f;
@@ -92,7 +92,7 @@ namespace sw
                 const VoxelCoord      front  = worldCoord + normal;
                 float2                uvMin;
                 float2                uvMax;
-                world.getCatalog()->computeTileUv( block._arrFaceTile[static_cast<int32>( face )], uvMin, uvMax );
+                world.getCatalog()->computeTileUV( block._arrFaceTile[static_cast<int32>( face )], uvMin, uvMax );
                 const float32 faceShade = getFaceShadeValue( face );
 
                 // 꼭짓점 0~3은 (u, v) 의 (0,0), (1,0), (1,1), (0,1) 에 해당한다.
@@ -111,7 +111,7 @@ namespace sw
                     VoxelMeshVertex& vertex = arrVertex[cornerIndex];
                     vertex._position        = toFloat3( worldCoord + cornerOffset ) - toFloat3( chunkOrigin );
                     vertex._normal          = toFloat3( normal );
-                    vertex._uv              = computeCornerUv( face, cornerOffset, uvMin, uvMax );
+                    vertex._uv              = computeCornerUV( face, cornerOffset, uvMin, uvMax );
                     vertex._color           = float4{ block._color._x * shade, block._color._y * shade, block._color._z * shade, block._color._w };
                 }
                 // 그늘이 0-2 대각선 쪽으로 쏠렸으면 1-3 대각선으로 자른다. 순환 순서라 감김 방향은 그대로이다.

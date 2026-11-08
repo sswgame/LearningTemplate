@@ -62,7 +62,7 @@ namespace sw
     {
         vector<float3>              _listPosition{};
         vector<float3>              _listNormal{};
-        vector<float2>              _listUv{};
+        vector<float2>              _listUV{};
         vector<uint32>              _listIndex{};
         vector<SkinInfluence>       _listSkin{};
         vector<uint16>              _listVertexGroup{};

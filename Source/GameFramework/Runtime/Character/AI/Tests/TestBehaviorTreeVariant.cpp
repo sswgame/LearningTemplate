@@ -78,7 +78,7 @@ SW_TEST_CASE( BehaviorTreeVariantTest, LeavesUseSharedVocabulary )
 }
 
 /** @brief [BehaviorTreeVariantTest] `_base` 트리에서 `id` 가 같은 노드만 바꾸고 새 가지를 앞에 끼운다. 모르는 동작은 로드 오류다 */
-SW_TEST_CASE( BehaviorTreeVariantTest, BaseTreeReplacesBranchById )
+SW_TEST_CASE( BehaviorTreeVariantTest, BaseTreeReplacesBranchByID )
 {
     XTestSource source;
     source._listFile.push_back( { "base.bt.xml", XTestUtil::kBaseTree } );

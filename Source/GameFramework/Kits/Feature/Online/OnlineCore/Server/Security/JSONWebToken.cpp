@@ -224,7 +224,7 @@ namespace sw
         return true;
     }
 
-    string JwksKeyCache::writeJwk( const NetPublicKey& publicKey, string_view keyID )
+    string JWKSKeyCache::writeJwk( const NetPublicKey& publicKey, string_view keyID )
     {
         string     jwk;
         JSONWriter writer{ jwk };
@@ -261,13 +261,13 @@ namespace sw
         return jwk;
     }
 
-    JwksKeyCache::JwksKeyCache()
+    JWKSKeyCache::JWKSKeyCache()
         : _listEntry{}
         , _fetchedAtMs{ 0 }
     {
     }
 
-    bool JwksKeyCache::replaceFromJwks( string_view jwksJSON, int64 nowMs )
+    bool JWKSKeyCache::replaceFromJWKS( string_view jwksJSON, int64 nowMs )
     {
         using Internal = JSONWebTokenInternal;
         JSONDocument document;
@@ -311,7 +311,7 @@ namespace sw
         return true;
     }
 
-    const NetPublicKey* JwksKeyCache::findKey( string_view keyID ) const
+    const NetPublicKey* JWKSKeyCache::findKey( string_view keyID ) const
     {
         const Entry* pEntry = VectorUtil::findBy<&Entry::_keyID>( _listEntry, keyID );
         return pEntry != nullptr ? &pEntry->_publicKey : nullptr;

@@ -39,7 +39,7 @@ namespace
     }
 
     /** @brief `dxgi` 칸을 읽습니다(없거나 틀리면 0 — DXGI_FORMAT_UNKNOWN 이라 어떤 줄과도 맞지 않는다). */
-    uint32 readDxgi( const JSONValue& row )
+    uint32 readDXGI( const JSONValue& row )
     {
         const std::optional<uint32> dxgi = row.get( "dxgi" ).read<uint32>();
         return dxgi.has_value() ? *dxgi : 0u;
@@ -65,7 +65,7 @@ SW_TEST_CASE( DDSFormatFileTest, MatchesTheLoaderTables )
     {
         for ( size_t index = 0; index < formats.size(); ++index )
         {
-            if ( readDxgi( formats.at( index ) ) == dxgiFormat && formats.at( index ).get( "name" ).asString().empty() == false )
+            if ( readDXGI( formats.at( index ) ) == dxgiFormat && formats.at( index ).get( "name" ).asString().empty() == false )
                 return true;
         }
         return false;
@@ -111,7 +111,7 @@ SW_TEST_CASE( DDSFormatFileTest, MatchesTheLoaderTables )
                 SW_REQUIRE_TRUE_MSG( d3dFormat.has_value(), "a legacy_fourcc row has neither fourcc nor d3dfmt" );
                 code = *d3dFormat;
             }
-            bFound = code == loaderRow._fourCC && readDxgi( row ) == loaderRow._dxgiFormat;
+            bFound = code == loaderRow._fourCC && readDXGI( row ) == loaderRow._dxgiFormat;
         }
         SW_EXPECT_TRUE_MSG( bFound, "DDSLoader FourCC row " + to_string( loaderRow._fourCC ) + " -> " + to_string( loaderRow._dxgiFormat ) + " is not in DdsFormats.json" );
     }
@@ -130,7 +130,7 @@ SW_TEST_CASE( DDSFormatFileTest, MatchesTheLoaderTables )
                                readHex( row.get( "a" ), arrMask[3] );
             SW_REQUIRE_TRUE_MSG( bRead, "a legacy_rgb_masks row has a mask that is not 0x hex" );
             bFound = row.get( "bits" ).read<uint32>() == loaderRow._bitCount && arrMask[0] == loaderRow._rMask && arrMask[1] == loaderRow._gMask &&
-                     arrMask[2] == loaderRow._bMask && arrMask[3] == loaderRow._aMask && readDxgi( row ) == loaderRow._dxgiFormat;
+                     arrMask[2] == loaderRow._bMask && arrMask[3] == loaderRow._aMask && readDXGI( row ) == loaderRow._dxgiFormat;
         }
         SW_EXPECT_TRUE_MSG( bFound, "DDSLoader RGB mask row -> DXGI " + to_string( loaderRow._dxgiFormat ) + " is not in DdsFormats.json" );
     }
@@ -138,7 +138,7 @@ SW_TEST_CASE( DDSFormatFileTest, MatchesTheLoaderTables )
     // Texture2D 가 읽는 번호는 모두 이름 · 크기가 있다(DXGI 번호는 0 ~ 132 안이다) — 이름이 없으면 검증이 `DXGI_<번호>` 로 적고 규칙이 그 형식을 적을 길이 없다
     for ( uint32 dxgiFormat = 1; dxgiFormat <= 132; ++dxgiFormat )
     {
-        if ( Texture2D::toRHIFormatFromDxgi( dxgiFormat ) == RHIFormat::Unknown )
+        if ( Texture2D::toRHIFormatFromDXGI( dxgiFormat ) == RHIFormat::Unknown )
             continue;
         SW_EXPECT_TRUE_MSG( hasName( dxgiFormat ), "Texture2D reads DXGI " + to_string( dxgiFormat ) + " but DdsFormats.json has no name for it" );
         SW_EXPECT_TRUE_MSG( hasSize( dxgiFormat ), "Texture2D reads DXGI " + to_string( dxgiFormat ) + " but DDSLoader has no block size for it" );

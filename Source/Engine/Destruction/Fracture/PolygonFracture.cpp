@@ -143,8 +143,8 @@ namespace sw
                 vertex._arrPosition[0] = point._x;
                 vertex._arrPosition[1] = point._y;
                 vertex._arrNormal[2]   = normalZ;
-                vertex._arrUv[0]       = extent._x > 0.0f ? ( point._x - boundsMin._x ) / extent._x : 0.0f;
-                vertex._arrUv[1]       = extent._y > 0.0f ? 1.0f - ( point._y - boundsMin._y ) / extent._y : 0.0f;
+                vertex._arrUV[0]       = extent._x > 0.0f ? ( point._x - boundsMin._x ) / extent._x : 0.0f;
+                vertex._arrUV[1]       = extent._y > 0.0f ? 1.0f - ( point._y - boundsMin._y ) / extent._y : 0.0f;
                 for ( float32& channel : vertex._arrColor )
                 {
                     channel = 1.0f;

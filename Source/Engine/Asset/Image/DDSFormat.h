@@ -31,10 +31,10 @@ namespace sw
         /** @brief DX10 머리 misc 플래그 D3D11_RESOURCE_MISC_TEXTURECUBE(배열 원소마다 면 여섯)입니다. */
         static constexpr uint32 kDx10MiscTextureCubeFlag = 0x4u;
         /** @brief DX10 머리 형식 번호 DXGI_FORMAT_ASTC_4X4_UNORM 입니다(옛 dxgiformat.h · NVTT 와 같은 값 — 기억에 의존). 쿠킹한 형식 변형만 쓴다. */
-        static constexpr uint32 kDxgiASTC4x4Unorm = 134;
+        static constexpr uint32 kDXGIASTC4x4Unorm = 134;
         /** @brief 쿠킹한 형식 변형 전용 번호입니다. DXGI 에 ETC2 · EAC 가 없어 엔진이 정한다 — 파일은 이 엔진의 쿠킹본뿐이라 바깥 도구와 맞출 일이 없다. */
-        static constexpr uint32 kEngineDxgiETC2RGBA8 = 1001;
-        static constexpr uint32 kEngineDxgiEACR11    = 1002;
-        static constexpr uint32 kEngineDxgiEACRG11   = 1003;
+        static constexpr uint32 kEngineDXGIETC2RGBA8 = 1001;
+        static constexpr uint32 kEngineDXGIEACR11    = 1002;
+        static constexpr uint32 kEngineDXGIEACRG11   = 1003;
     };
 } // namespace sw

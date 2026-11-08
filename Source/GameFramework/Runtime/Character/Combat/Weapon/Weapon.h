@@ -15,7 +15,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
-#include "Engine/Gameplay/ConditionExpr.h"
+#include "Engine/Behavior/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Format/StateIO.h"
 

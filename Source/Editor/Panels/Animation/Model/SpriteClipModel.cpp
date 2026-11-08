@@ -204,7 +204,7 @@ namespace sw::editor
         for ( int32 cell = 0; cell < cellCount; ++cell )
         {
             SpriteClipFrame frame{};
-            frame._uvRect = AtlasGridUtil::computeCellUvRect( cell, _sliceColumns, _sliceRows );
+            frame._uvRect = AtlasGridUtil::computeCellUVRect( cell, _sliceColumns, _sliceRows );
             _clip._listFrame.push_back( frame );
         }
         _selectedFrame = _clip.getFrameCount() - 1;
@@ -340,13 +340,13 @@ namespace sw::editor
 
     SpriteClipModel::AtlasPickResult SpriteClipModel::pickAtlasCell( float32 u, float32 v, bool bAddFrame )
     {
-        const int32 cell = AtlasGridUtil::findCellAtUv( u, v, _sliceColumns, _sliceRows );
+        const int32 cell = AtlasGridUtil::findCellAtUV( u, v, _sliceColumns, _sliceRows );
         if ( cell < 0 )
             return AtlasPickResult::None;
         const bool bAdded = bAddFrame || Internal::isValidIndex( _clip._listFrame, _selectedFrame ) == false;
         if ( bAdded )
             addFrame();
-        _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect = AtlasGridUtil::computeCellUvRect( cell, _sliceColumns, _sliceRows );
+        _clip._listFrame[static_cast<size_t>( _selectedFrame )]._uvRect = AtlasGridUtil::computeCellUVRect( cell, _sliceColumns, _sliceRows );
         return bAdded ? AtlasPickResult::AddedFrame : AtlasPickResult::EditedFrame;
     }
 

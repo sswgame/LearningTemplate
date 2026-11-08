@@ -137,10 +137,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @class JwksKeyCache
+     * @class JWKSKeyCache
      * @brief 발급자 하나의 JWKS 키(kid에서 공개 키로 가는 맵) 캐시입니다. 받은 시각과 다시 받을 시각을 보관합니다.
      */
-    class SW_KIT_SERVER_API JwksKeyCache
+    class SW_KIT_SERVER_API JWKSKeyCache
     {
     public:
         /** @brief 공개 키를 JWK(JSON 객체 문자열)로 씁니다. 테스트의 가짜 JWKS 에 씁니다. */
@@ -152,10 +152,10 @@ namespace sw
             NetPublicKey _publicKey{};
         };
 
-        JwksKeyCache();
+        JWKSKeyCache();
 
         /** @brief JWKS 문자열(`{"keys":[…]}`)로 키를 교체합니다. RSA(n, e)와 EC P-256(x, y) 서명 키만 읽고 다른 키는 건너뜁니다. 읽은 키가 하나도 없으면 false 를 반환하고 이전 키를 그대로 둡니다. */
-        [[nodiscard]] bool  replaceFromJwks( string_view jwksJSON, int64 nowMs );
+        [[nodiscard]] bool  replaceFromJWKS( string_view jwksJSON, int64 nowMs );
         const NetPublicKey* findKey( string_view keyID ) const;
         int32               getKeyCount() const { return static_cast<int32>( _listEntry.size() ); }
         int64               getFetchedAtMs() const { return _fetchedAtMs; }

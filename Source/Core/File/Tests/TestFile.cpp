@@ -362,7 +362,7 @@ SW_TEST_CASE( FileTest, FailedWriteReportsFalseAndKeepsOriginal )
  * @details Windows 에서 좁은 문자 경로는 실행 파일 매니페스트(activeCodePage=UTF-8)가 없으면 ANSI 코드 페이지(CP949)로 해석된다. 경로 API 마다
  *          해석이 다르면 사용자 폴더 이름이 한글일 때 `exists` 는 있다고 하는데 읽기는 "File not found" 가 된다.
  */
-SW_TEST_CASE( FileTest, NonAsciiPathRoundTrips )
+SW_TEST_CASE( FileTest, NonASCIIPathRoundTrips )
 {
     const sw::string dir = sw::test::makeScratchPath( "SwUnicodePath_한글폴더" );
     SW_EXPECT_TRUE( sw::FileUtil::ensureDirectoryExists( dir ) );

@@ -221,24 +221,24 @@ namespace sw
         const float32          overlap    = Internal::kBarOverlapPixels * unit;
         const float32          barZ       = eye._z + pCamera->getNearPlane() * Internal::kBarNearPlaneScale;
         const float4           black{ 0.0f, 0.0f, 0.0f, 1.0f };
-        const float4           fullUv{ 0.0f, 0.0f, 1.0f, 1.0f };
+        const float4           fullUV{ 0.0f, 0.0f, 1.0f, 1.0f };
         if ( bShowX )
         {
             // 띠 폭은 정수 픽셀이다 — 안쪽 가장자리가 기준 해상도 × 배율의 가장자리와 같은 화면 픽셀에 떨어진다.
             const float32 barWidth = static_cast<float32>( _layout._barWidthPixels ) * unit + overlap;
             const float32 offsetX  = halfWidth + overlap - barWidth * 0.5f;
-            _barBatch.setEntry( 0, SpriteInstanceBatch::makeQuadWorld( float3{ eye._x - offsetX, eye._y, barZ }, barWidth, 2.0f * ( halfHeight + overlap ) ), fullUv,
+            _barBatch.setEntry( 0, SpriteInstanceBatch::makeQuadWorld( float3{ eye._x - offsetX, eye._y, barZ }, barWidth, 2.0f * ( halfHeight + overlap ) ), fullUV,
                                 black );
-            _barBatch.setEntry( 1, SpriteInstanceBatch::makeQuadWorld( float3{ eye._x + offsetX, eye._y, barZ }, barWidth, 2.0f * ( halfHeight + overlap ) ), fullUv,
+            _barBatch.setEntry( 1, SpriteInstanceBatch::makeQuadWorld( float3{ eye._x + offsetX, eye._y, barZ }, barWidth, 2.0f * ( halfHeight + overlap ) ), fullUV,
                                 black );
         }
         if ( bShowY )
         {
             const float32 barHeight = static_cast<float32>( _layout._barHeightPixels ) * unit + overlap;
             const float32 offsetY   = halfHeight + overlap - barHeight * 0.5f;
-            _barBatch.setEntry( 2, SpriteInstanceBatch::makeQuadWorld( float3{ eye._x, eye._y - offsetY, barZ }, 2.0f * ( halfWidth + overlap ), barHeight ), fullUv,
+            _barBatch.setEntry( 2, SpriteInstanceBatch::makeQuadWorld( float3{ eye._x, eye._y - offsetY, barZ }, 2.0f * ( halfWidth + overlap ), barHeight ), fullUV,
                                 black );
-            _barBatch.setEntry( 3, SpriteInstanceBatch::makeQuadWorld( float3{ eye._x, eye._y + offsetY, barZ }, 2.0f * ( halfWidth + overlap ), barHeight ), fullUv,
+            _barBatch.setEntry( 3, SpriteInstanceBatch::makeQuadWorld( float3{ eye._x, eye._y + offsetY, barZ }, 2.0f * ( halfWidth + overlap ), barHeight ), fullUV,
                                 black );
         }
     }

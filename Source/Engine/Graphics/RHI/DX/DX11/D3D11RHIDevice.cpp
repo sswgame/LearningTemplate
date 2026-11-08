@@ -18,15 +18,15 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
-    #include "Engine/Graphics/RHI/DX/RHIDxgiTearing.h"
+    #include "Engine/Graphics/RHI/DX/DXGITearing.h"
     #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
     #include <thread>
 
     #include "Engine/Foundation/EnginePlatformHeaders.h"
     #include "Engine/Config/EngineDefaultAssets.h"
-    #include "Engine/Graphics/RHI/DX/RHIDxgiAdapter.h"
-    #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
-    #include "Engine/Graphics/RHI/DX/RHIDxgiMemoryBudget.h"
+    #include "Engine/Graphics/RHI/DX/DXGIAdapter.h"
+    #include "Engine/Graphics/RHI/DX/DXGIFormat.h"
+    #include "Engine/Graphics/RHI/DX/DXGIMemoryBudget.h"
     #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -465,7 +465,7 @@ namespace sw
 
     bool D3D11RHIDevice::queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )
     {
-        return queryDxgiMemoryBudget( _memoryAdapter.Get(), outBudget );
+        return queryDXGIMemoryBudget( _memoryAdapter.Get(), outBudget );
     }
 
     bool D3D11RHIDevice::isBindlessIndexLive( RHIBindlessIndexSpace space, RHIDescriptorIndex index ) const
@@ -506,7 +506,7 @@ namespace sw
         swapChainDesc.BufferCount                        = ( desc._bufferCount < 2 ) ? 2 : desc._bufferCount;
         swapChainDesc.BufferDesc.Width                   = desc._width;
         swapChainDesc.BufferDesc.Height                  = desc._height;
-        swapChainDesc.BufferDesc.Format                  = toDxgiFormat( desc._format );
+        swapChainDesc.BufferDesc.Format                  = toDXGIFormat( desc._format );
         swapChainDesc.BufferDesc.RefreshRate.Numerator   = kDefaultNumerator;
         swapChainDesc.BufferDesc.RefreshRate.Denominator = kDefaultDenominator;
         swapChainDesc.BufferUsage                        = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -519,7 +519,7 @@ namespace sw
         // VSync 를 끄려면 티어링 허용 스왑체인이어야 한다. 동기화 간격 0 만으로는 DWM 합성이
         // vblank 에 맞춰 넘겨 주므로 화면 주사율에 그대로 붙는다(RHIDxgiTearing.h).
         // VSync 는 실행 중에도 바뀌므로(`IRHIDevice::setVSync`) 지원하면 늘 티어링 허용으로 만든다 — 켜진 VSync 는 Present( 1, 0 ) 이다.
-        const bool bAllowTearing = queryDxgiAllowTearing();
+        const bool bAllowTearing = queryDXGIAllowTearing();
         swapChainDesc.Flags      = bAllowTearing ? static_cast<UINT>( DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING ) : 0u;
 
         UINT createDeviceFlags{ 0 };
@@ -541,7 +541,7 @@ namespace sw
         if ( desc._bSoftwareAdapter == false )
         {
             if ( SUCCEEDED( CreateDXGIFactory1( IID_PPV_ARGS( factory.GetAddressOf() ) ) ) )
-                adapter = findDxgiPreferredAdapter( factory.Get(), desc._bPreferMinimumPower );
+                adapter = findDXGIPreferredAdapter( factory.Get(), desc._bPreferMinimumPower );
             if ( adapter == nullptr )
             {
                 SW_LOG_ERROR_ID( "D3D11.NoHardwareAdapter", "No hardware DXGI adapter (IDXGIFactory6 high-performance enumeration found none)" );

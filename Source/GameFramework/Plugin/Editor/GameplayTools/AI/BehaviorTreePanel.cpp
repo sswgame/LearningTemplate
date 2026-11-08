@@ -19,8 +19,8 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Behavior/ActionRegistry.h"
 #include "Engine/Content/AssetPaths.h"
-#include "Engine/Gameplay/ActionRegistry.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"

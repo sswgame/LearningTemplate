@@ -28,8 +28,8 @@ namespace sw
             vertex._arrNormal[0]   = normal._x;
             vertex._arrNormal[1]   = normal._y;
             vertex._arrNormal[2]   = normal._z;
-            vertex._arrUv[0]       = u;
-            vertex._arrUv[1]       = v;
+            vertex._arrUV[0]       = u;
+            vertex._arrUV[1]       = v;
             vertex._arrColor[0]    = 1.0f;
             vertex._arrColor[1]    = 1.0f;
             vertex._arrColor[2]    = 1.0f;

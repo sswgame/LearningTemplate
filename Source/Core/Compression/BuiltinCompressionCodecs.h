@@ -41,19 +41,19 @@ namespace sw
 namespace sw
 {
     /**
-     * @class RleCompressionCodec
+     * @class RLECompressionCodec
      * @brief 엔진에 내장된 빠른 RLE(Run-Length Encoding) 코덱입니다.
      * @details 외부 라이브러리 없이 동작하는 가벼운 바이트 단위 RLE 입니다. 제어 바이트의 최상위 비트로 반복 런과 리터럴 런을 구분합니다.
      */
-    class SW_API RleCompressionCodec final : public ICompressionCodec
+    class SW_API RLECompressionCodec final : public ICompressionCodec
     {
     public:
-        RleCompressionCodec()                                            = default;
-        virtual ~RleCompressionCodec() override                          = default;
-        RleCompressionCodec( const RleCompressionCodec& )                = default;
-        RleCompressionCodec& operator=( const RleCompressionCodec& )     = default;
-        RleCompressionCodec( RleCompressionCodec&& ) noexcept            = default;
-        RleCompressionCodec& operator=( RleCompressionCodec&& ) noexcept = default;
+        RLECompressionCodec()                                            = default;
+        virtual ~RLECompressionCodec() override                          = default;
+        RLECompressionCodec( const RLECompressionCodec& )                = default;
+        RLECompressionCodec& operator=( const RLECompressionCodec& )     = default;
+        RLECompressionCodec( RLECompressionCodec&& ) noexcept            = default;
+        RLECompressionCodec& operator=( RLECompressionCodec&& ) noexcept = default;
 
         virtual CompressionCodecType getCodecType() const override;
         virtual const utf8*          getCodecName() const override;

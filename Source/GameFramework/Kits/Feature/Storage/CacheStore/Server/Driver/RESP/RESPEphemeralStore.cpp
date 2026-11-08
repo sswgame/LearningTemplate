@@ -1,0 +1,815 @@
+#include "pch.h"
+
+#include "GameFramework/Kits/Feature/Storage/CacheStore/Server/Driver/RESP/RESPEphemeralStore.h"
+
+#include "Core/Algorithm/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
+#include "Core/Network/Security/INetSecurityProvider.h"
+#include "Core/Time/MonotonicClock.h"
+
+#include <algorithm>
+
+namespace sw
+{
+    namespace
+    {
+        struct RESPEphemeralStoreInternal
+        {
+            static constexpr int64 kFirstBackoffMs = 100; ///< 두 번째 실패부터의 첫 대기(`ExponentialBackoff`)
+
+            // 단계 번호다. 한 요청의 몇 번째 명령인지를 나타내며, 답 순서는 연결이 지킨다.
+            static constexpr uint32 kStepFirst          = 0;
+            static constexpr uint32 kStepSecond         = 1;
+            static constexpr uint32 kStepThird          = 2;
+            static constexpr uint32 kStepFourth         = 3;
+            static constexpr uint32 kStepCompareUnwatch = 2;
+            static constexpr uint32 kStepCompareMulti   = 3;
+            static constexpr uint32 kStepCompareWrite   = 4;
+            static constexpr uint32 kStepCompareExec    = 5;
+
+            static bool isWrongType( const RESPValue& value ) { return value.isError() && value.getText().substr( 0, 9 ) == "WRONGTYPE"; }
+
+            static void sleepOneMillisecond() { MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + constant::time::kNanosecondsPerMillisecond ); }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    RESPEphemeralStore::RESPEphemeralStore( const IClock& clock )
+        : _clock{ clock }
+        , _streamEvents{ *this }
+        , _settings{}
+        , _transportSettings{}
+        , _mutex{}
+        , _commandConnection{ false }
+        , _subscribeConnection{ true }
+        , _listMessage{}
+        , _listRecordScratch{}
+        , _listPushScratch{}
+        , _listChannel{}
+        , _listOperation{}
+        , _transport{}
+        , _tlsContext{}
+        , _nextCommandConnectNanoseconds{ 0 }
+        , _nextSubscribeConnectNanoseconds{ 0 }
+        , _commandBackoff{ RESPEphemeralStoreInternal::kFirstBackoffMs }
+        , _subscribeBackoff{ RESPEphemeralStoreInternal::kFirstBackoffMs }
+        , _requestIDAllocator{}
+        , _subscriptionAckCount{ 0 }
+        , _subscriptionSentCount{ 0 }
+        , _blockingRequestID{ 0 }
+        , _bInitialized{ SW_FALSE }
+        , _bShutdown{ SW_FALSE }
+    {
+    }
+
+    RESPEphemeralStore::~RESPEphemeralStore()
+    {
+        shutdown();
+    }
+
+    bool RESPEphemeralStore::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportConfig& transportSettings, const RESPStoreConfig& settings,
+                                         unique_ptr<ITLSContext> tlsContext, string& outError )
+    {
+        SW_ASSERT( _bInitialized == SW_FALSE );
+        if ( transport == nullptr )
+        {
+            outError = "RESP store needs a stream transport";
+            return false;
+        }
+        if ( settings._address.isValid() == false )
+        {
+            outError = "RESP store needs a host:port endpoint";
+            return false;
+        }
+        _settings.set( settings );
+        _transportSettings.set( transportSettings );
+        _transport.set( std::move( transport ) );
+        _tlsContext.set( std::move( tlsContext ) );
+        if ( _transport->initialize( &_streamEvents, _transportSettings.get() ) == false )
+        {
+            outError = "RESP store could not start its stream transport";
+            _transport.reset();
+            _settings.reset();
+            _transportSettings.reset();
+            _tlsContext.reset();
+            return false;
+        }
+        _bInitialized = SW_TRUE;
+        ScopedLock<mutex> lock{ _mutex };
+        (void)ensureCommandConnection(); // 연결 실패는 물러섬 뒤 다음 요청이 다시 시도한다
+        return true;
+    }
+
+    uint64 RESPEphemeralStore::submit( const EphemeralRequest& request )
+    {
+        const uint64 requestID      = _requestIDAllocator.allocate();
+        Operation&   operation      = _listOperation.emplace_back();
+        operation._request          = request;
+        operation._reply._requestID = requestID;
+        operation._reply._operation = request._operation;
+        if ( _bInitialized == SW_FALSE || _bShutdown == SW_TRUE )
+        {
+            finishOperation( operation, EphemeralResult::Unavailable );
+            return requestID;
+        }
+        if ( request.isWellFormed() == false )
+        {
+            finishOperation( operation, EphemeralResult::Invalid );
+            return requestID;
+        }
+        if ( request._operation == EphemeralOperation::ScoreRange && request._count <= 0 )
+        {
+            finishOperation( operation, EphemeralResult::Ok );
+            return requestID;
+        }
+        // 비교 후 쓰기가 GET 답을 기다리는 동안은 내보내지 않는다. 막힘이 풀리면 `sendDeferredOperations` 가 맡긴 순서대로 보낸다.
+        if ( _blockingRequestID == 0 )
+            sendOperation( operation );
+        return requestID;
+    }
+
+    int32 RESPEphemeralStore::pollReplies( vector<EphemeralReply>& outListReply )
+    {
+        if ( _bInitialized == SW_TRUE && _bShutdown == SW_FALSE )
+        {
+            pumpTransport();
+            vector<RESPReplyRecord> listRecord;
+            {
+                ScopedLock<mutex> lock{ _mutex };
+                _commandConnection.takeReplyRecords( listRecord );
+            }
+            for ( const RESPReplyRecord& record : listRecord )
+            {
+                Operation* pOperation = findOperation( record._tag._requestID );
+                if ( pOperation == nullptr || pOperation->_bDone == SW_TRUE )
+                    continue;
+                if ( record._bFailed == SW_TRUE )
+                    failOperation( *pOperation );
+                else
+                    handleReply( *pOperation, record._tag._step, record._value );
+            }
+            abortTimedOutRequests();
+        }
+        int32 replyCount = 0;
+        while ( _listOperation.empty() == false && _listOperation.front()._bDone == SW_TRUE )
+        {
+            outListReply.push_back( std::move( _listOperation.front()._reply ) );
+            _listOperation.pop_front();
+            ++replyCount;
+        }
+        return replyCount;
+    }
+
+    void RESPEphemeralStore::subscribe( string_view channel )
+    {
+        const bool bCannotSubscribe = _bInitialized == SW_FALSE || _bShutdown == SW_TRUE || EphemeralRequest::isValidKey( channel ) == false;
+        if ( bCannotSubscribe )
+            return;
+        uint64 targetAckCount = 0;
+        {
+            // 채널 목록은 다시 연결할 때 잠금 아래에서 다시 구독하며 읽는다(`ensureSubscribeConnection`) — 고치는 것도 잠금 아래에서 한다.
+            ScopedLock<mutex> lock{ _mutex };
+            // 이미 구독한 채널이면 정렬 · 중복 제거 뒤 개수가 그대로다(채널은 수십 이하, 다시 구독하는 순서는 상관없다).
+            const size_t channelCount = _listChannel.size();
+            _listChannel.emplace_back( channel );
+            VectorUtil::sortUnique( _listChannel );
+            if ( _listChannel.size() == channelCount )
+                return;
+            if ( _subscribeConnection.getState() == RESPConnectionState::Closed )
+            {
+                (void)ensureSubscribeConnection(); // 열리면 모든 채널을 다시 구독한다. 이 채널도 포함한다
+            }
+            else
+            {
+                RESPCommand command{ "SUBSCRIBE" };
+                command.addText( makeKey( channel ) );
+                if ( _subscribeConnection.sendCommand( *_transport.get(), command, RESPCommandTag{} ) )
+                    ++_subscriptionSentCount;
+            }
+            targetAckCount = _subscriptionSentCount;
+        }
+        waitForSubscriptionAck( targetAckCount );
+    }
+
+    void RESPEphemeralStore::unsubscribe( string_view channel )
+    {
+        uint64 targetAckCount = 0;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            if ( VectorUtil::removeFirst( _listChannel, channel ) == 0 )
+                return;
+            if ( _subscribeConnection.getState() == RESPConnectionState::Closed )
+                return;
+            RESPCommand command{ "UNSUBSCRIBE" };
+            command.addText( makeKey( channel ) );
+            if ( _subscribeConnection.sendCommand( *_transport.get(), command, RESPCommandTag{} ) )
+                ++_subscriptionSentCount;
+            targetAckCount = _subscriptionSentCount;
+        }
+        waitForSubscriptionAck( targetAckCount );
+    }
+
+    int32 RESPEphemeralStore::pollMessages( vector<EphemeralMessage>& outListMessage )
+    {
+        if ( _bInitialized == SW_TRUE && _bShutdown == SW_FALSE )
+        {
+            pumpTransport();
+            vector<RESPValue> listValue;
+            {
+                ScopedLock<mutex> lock{ _mutex };
+                if ( _listChannel.empty() == false )
+                    (void)ensureSubscribeConnection(); // 연결 실패는 물러섬 뒤 다음 펌프가 다시 시도한다
+                _subscribeConnection.takePushValues( listValue );
+            }
+            for ( const RESPValue& value : listValue )
+            {
+                handlePushValue( value );
+            }
+        }
+        const int32 messageCount = static_cast<int32>( _listMessage.size() );
+        for ( EphemeralMessage& message : _listMessage )
+        {
+            outListMessage.push_back( std::move( message ) );
+        }
+        _listMessage.clear();
+        return messageCount;
+    }
+
+    void RESPEphemeralStore::shutdown()
+    {
+        if ( _bInitialized == SW_FALSE || _bShutdown == SW_TRUE )
+            return;
+        _bShutdown = SW_TRUE;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _commandConnection.closeForShutdown( *_transport.get() );
+            _subscribeConnection.closeForShutdown( *_transport.get() );
+        }
+        for ( Operation& operation : _listOperation )
+        {
+            if ( operation._bDone == SW_FALSE )
+                failOperation( operation );
+        }
+        _transport->shutdown(); // 콜백이 우리 락을 잡으므로 락 밖에서 호출한다
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _listChannel.clear();
+        }
+        _listMessage.clear();
+        _blockingRequestID = 0;
+    }
+
+    void RESPEphemeralStore::onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
+    {
+        (void)remote;
+        (void)bAccepted;
+        ScopedLock<mutex> lock{ _mutex };
+        // 물러섬은 여기서 풀지 않는다 - 연결만 받고 AUTH 를 거절하거나 바로 닫는 서버를 대기 없이 두드리게 된다. 답을 받으면(`onStreamReceived`) 푼다.
+        if ( _commandConnection.handleOpened( *_transport.get(), handle ) == false )
+            (void)_subscribeConnection.handleOpened( *_transport.get(), handle );
+    }
+
+    void RESPEphemeralStore::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
+    {
+        _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
+        ScopedLock<mutex> lock{ _mutex };
+        // 받다가 연결을 끊은 경우(AUTH 거절 · 깨진 답)도 물러선다 - 닫힘 콜백은 이미 비운 손잡이로 와서 물러섬을 잡지 못한다. 안 그러면 구독 연결은 폴링마다 다시 접속한다.
+        const int64 nowNanoseconds = _clock.nowNanoseconds();
+        if ( _commandConnection.handleReceived( *_transport.get(), handle, pData, size ) )
+        {
+            if ( _commandConnection.getState() == RESPConnectionState::Closed )
+                _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
+            else
+                _commandBackoff.reset();
+            return;
+        }
+        if ( _subscribeConnection.handleReceived( *_transport.get(), handle, pData, size ) == false )
+            return;
+        if ( _subscribeConnection.getState() == RESPConnectionState::Closed )
+        {
+            _subscriptionAckCount            = _subscriptionSentCount; // 오지 않을 확인은 기다리지 않는다
+            _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
+        }
+        else
+        {
+            _subscribeBackoff.reset();
+        }
+    }
+
+    void RESPEphemeralStore::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
+    {
+        _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
+        ScopedLock<mutex> lock{ _mutex };
+        const int64       nowNanoseconds = _clock.nowNanoseconds();
+        if ( _commandConnection.handleClosed( handle, reason ) )
+        {
+            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
+            return;
+        }
+        if ( _subscribeConnection.handleClosed( handle, reason ) )
+        {
+            _subscriptionAckCount            = _subscriptionSentCount; // 오지 않을 확인은 기다리지 않는다
+            _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
+        }
+    }
+
+    void RESPEphemeralStore::pumpTransport()
+    {
+        if ( _transportSettings->_ioThreadCount == 0 )
+            (void)_transport->pollIO( 0 );
+    }
+
+    RESPEphemeralStore::Operation* RESPEphemeralStore::findOperation( uint64 requestID )
+    {
+        if ( _listOperation.empty() )
+            return nullptr;
+        const uint64 firstRequestID = _listOperation.front()._reply._requestID;
+        if ( requestID < firstRequestID || requestID - firstRequestID >= _listOperation.size() )
+            return nullptr;
+        return &_listOperation[static_cast<size_t>( requestID - firstRequestID )];
+    }
+
+    void RESPEphemeralStore::sendDeferredOperations()
+    {
+        for ( Operation& operation : _listOperation )
+        {
+            if ( _blockingRequestID != 0 )
+                return;
+            if ( operation._bDone == SW_TRUE || operation._bSent == SW_TRUE )
+                continue;
+            sendOperation( operation );
+        }
+    }
+
+    void RESPEphemeralStore::sendOperation( Operation& operation )
+    {
+        operation._bSent             = SW_TRUE;
+        operation._sentAtNanoseconds = _clock.nowNanoseconds();
+        bool bConnected              = false;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            bConnected = ensureCommandConnection();
+        }
+        if ( bConnected == false )
+        {
+            finishOperation( operation, EphemeralResult::Unavailable ); // 백오프 중이므로 기다리게 하지 않는다
+            return;
+        }
+        const EphemeralRequest& request = operation._request;
+        const string            key     = makeKey( request._key );
+        switch ( request._operation )
+        {
+            case EphemeralOperation::Get:
+            {
+                sendCommand( operation, RESPCommand{ "GET" }.addText( key ), RESPEphemeralStoreInternal::kStepFirst );
+                break;
+            }
+            case EphemeralOperation::Set:
+            {
+                RESPCommand command{ "SET" };
+                command.addText( key ).addBytes( request._value );
+                if ( request._ttlMs > 0 )
+                    command.addText( "PX" ).addInteger( request._ttlMs );
+                if ( request._condition == EphemeralCondition::IfAbsent )
+                    command.addText( "NX" );
+                else if ( request._condition == EphemeralCondition::IfPresent )
+                    command.addText( "XX" );
+                sendCommand( operation, command, RESPEphemeralStoreInternal::kStepFirst );
+                break;
+            }
+            case EphemeralOperation::Erase:
+            {
+                sendCommand( operation, RESPCommand{ "DEL" }.addText( key ), RESPEphemeralStoreInternal::kStepFirst );
+                break;
+            }
+            case EphemeralOperation::CompareAndSet:
+            case EphemeralOperation::CompareAndErase:
+            {
+                // WATCH 는 이 연결의 상태이므로 GET 답을 볼 때까지 뒤 요청을 내보내지 않는다.
+                _blockingRequestID = operation._reply._requestID;
+                sendCommand( operation, RESPCommand{ "WATCH" }.addText( key ), RESPEphemeralStoreInternal::kStepFirst );
+                sendCommand( operation, RESPCommand{ "GET" }.addText( key ), RESPEphemeralStoreInternal::kStepSecond );
+                break;
+            }
+            case EphemeralOperation::Increment:
+            {
+                if ( request._ttlMs <= 0 )
+                {
+                    sendCommand( operation, RESPCommand{ "INCRBY" }.addText( key ).addInteger( request._delta ), RESPEphemeralStoreInternal::kStepFirst );
+                    break;
+                }
+                // 새로 생긴 키에만 만료를 건다. 키가 없을 때만 0을 만료와 함께 두고 더하며, 한 트랜잭션으로 처리하므로 Lua 가 필요 없다.
+                sendCommand( operation, RESPCommand{ "MULTI" }, RESPEphemeralStoreInternal::kStepFirst );
+                sendCommand( operation, RESPCommand{ "SET" }.addText( key ).addText( "0" ).addText( "PX" ).addInteger( request._ttlMs ).addText( "NX" ),
+                             RESPEphemeralStoreInternal::kStepSecond );
+                sendCommand( operation, RESPCommand{ "INCRBY" }.addText( key ).addInteger( request._delta ), RESPEphemeralStoreInternal::kStepThird );
+                sendCommand( operation, RESPCommand{ "EXEC" }, RESPEphemeralStoreInternal::kStepFourth );
+                break;
+            }
+            case EphemeralOperation::Expire:
+            {
+                if ( request._ttlMs <= 0 )
+                    sendCommand( operation, RESPCommand{ "DEL" }.addText( key ), RESPEphemeralStoreInternal::kStepFirst );
+                else
+                    sendCommand( operation, RESPCommand{ "PEXPIRE" }.addText( key ).addInteger( request._ttlMs ), RESPEphemeralStoreInternal::kStepFirst );
+                break;
+            }
+            case EphemeralOperation::ScoreSet:
+            {
+                sendCommand( operation, RESPCommand{ "ZADD" }.addText( key ).addInteger( request._score ).addText( request._member ),
+                             RESPEphemeralStoreInternal::kStepFirst );
+                break;
+            }
+            case EphemeralOperation::ScoreAdd:
+            {
+                sendCommand( operation, RESPCommand{ "ZINCRBY" }.addText( key ).addInteger( request._score ).addText( request._member ),
+                             RESPEphemeralStoreInternal::kStepFirst );
+                break;
+            }
+            case EphemeralOperation::ScoreRemove:
+            {
+                sendCommand( operation, RESPCommand{ "ZREM" }.addText( key ).addText( request._member ), RESPEphemeralStoreInternal::kStepFirst );
+                break;
+            }
+            case EphemeralOperation::ScoreRank:
+            {
+                sendCommand( operation, RESPCommand{ "ZREVRANK" }.addText( key ).addText( request._member ), RESPEphemeralStoreInternal::kStepFirst );
+                sendCommand( operation, RESPCommand{ "ZSCORE" }.addText( key ).addText( request._member ), RESPEphemeralStoreInternal::kStepSecond );
+                break;
+            }
+            case EphemeralOperation::ScoreRange:
+            {
+                const int64 stopIndex = static_cast<int64>( request._offset ) + request._count - 1;
+                sendCommand( operation,
+                             RESPCommand{ "ZREVRANGE" }.addText( key ).addInteger( request._offset ).addInteger( stopIndex ).addText( "WITHSCORES" ),
+                             RESPEphemeralStoreInternal::kStepFirst );
+                break;
+            }
+            case EphemeralOperation::Publish:
+            {
+                sendCommand( operation, RESPCommand{ "PUBLISH" }.addText( key ).addBytes( request._value ), RESPEphemeralStoreInternal::kStepFirst );
+                break;
+            }
+        }
+    }
+
+    void RESPEphemeralStore::sendCommand( Operation& operation, const RESPCommand& command, uint32 step )
+    {
+        if ( operation._bDone == SW_TRUE )
+            return;
+        bool bSent = false;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            bSent = _commandConnection.sendCommand( *_transport.get(), command, RESPCommandTag{ operation._reply._requestID, step } );
+        }
+        if ( bSent )
+            ++operation._awaitingReplyCount;
+        else
+            failOperation( operation );
+    }
+
+    void RESPEphemeralStore::handleReply( Operation& operation, uint32 step, const RESPValue& value )
+    {
+        --operation._awaitingReplyCount;
+        EphemeralReply& reply = operation._reply;
+        switch ( operation._request._operation )
+        {
+            case EphemeralOperation::Get:
+            {
+                if ( value.isNull() || RESPEphemeralStoreInternal::isWrongType( value ) )
+                    reply._result = EphemeralResult::NotFound; // 정렬 집합 키는 값으로는 없는 것이다. 메모리 구현과 같다
+                else if ( value._type != RespType::BulkString )
+                    reply._result = EphemeralResult::Invalid;
+                else
+                    reply._value = value._bytes;
+                break;
+            }
+            case EphemeralOperation::Set:
+            {
+                if ( value.isNull() )
+                    reply._result = EphemeralResult::Conflict;
+                else if ( value.isText( "OK" ) == false )
+                    reply._result = EphemeralResult::Invalid;
+                break;
+            }
+            case EphemeralOperation::Erase:
+            case EphemeralOperation::Expire:
+            case EphemeralOperation::ScoreRemove:
+            {
+                if ( value._type != RespType::Integer )
+                    reply._result = EphemeralResult::Invalid;
+                else if ( value._integer == 0 )
+                    reply._result = EphemeralResult::NotFound;
+                break;
+            }
+            case EphemeralOperation::CompareAndSet:
+            case EphemeralOperation::CompareAndErase:
+            {
+                handleCompareReply( operation, step, value );
+                break;
+            }
+            case EphemeralOperation::Increment:
+            {
+                handleIncrementReply( operation, step, value );
+                break;
+            }
+            case EphemeralOperation::ScoreSet:
+            {
+                if ( value._type != RespType::Integer )
+                    reply._result = EphemeralResult::Invalid; // WRONGTYPE
+                break;
+            }
+            case EphemeralOperation::ScoreAdd:
+            {
+                int64 score = 0;
+                if ( value.tryReadIntegerText( score ) == false )
+                {
+                    reply._result = EphemeralResult::Invalid;
+                    break;
+                }
+                reply._integer = score;
+                reply._score   = score;
+                break;
+            }
+            case EphemeralOperation::ScoreRank:
+            {
+                handleScoreRankReply( operation, step, value );
+                break;
+            }
+            case EphemeralOperation::ScoreRange:
+            {
+                if ( value._type != RespType::Array || value._listElement.size() % 2 != 0 )
+                {
+                    reply._result = EphemeralResult::Invalid;
+                    break;
+                }
+                for ( size_t index = 0; index < value._listElement.size(); index += 2 )
+                {
+                    EphemeralScoredMember& member = reply._listMember.emplace_back();
+                    member._member                = string( value._listElement[index].getText() );
+                    if ( value._listElement[index + 1].tryReadIntegerText( member._score ) == false )
+                    {
+                        reply._result = EphemeralResult::Invalid;
+                        reply._listMember.clear();
+                        break;
+                    }
+                }
+                break;
+            }
+            case EphemeralOperation::Publish:
+            {
+                if ( value._type == RespType::Integer )
+                    reply._integer = value._integer;
+                else
+                    reply._result = EphemeralResult::Invalid;
+                break;
+            }
+        }
+        if ( operation._awaitingReplyCount == 0 && operation._bDone == SW_FALSE )
+            operation._bDone = SW_TRUE;
+    }
+
+    void RESPEphemeralStore::handleIncrementReply( Operation& operation, uint32 step, const RESPValue& value )
+    {
+        EphemeralReply& reply          = operation._reply;
+        const bool      bSingleCommand = operation._request._ttlMs <= 0;
+        if ( bSingleCommand )
+        {
+            if ( value._type == RespType::Integer )
+                reply._integer = value._integer;
+            else
+                reply._result = EphemeralResult::Invalid; // 정수가 아닌 값이거나 범위를 넘었다
+            return;
+        }
+        if ( step != RESPEphemeralStoreInternal::kStepFourth )
+            return; // MULTI 와 QUEUED 의 답이다
+        const bool bExecuted = value._type == RespType::Array && value._listElement.size() == 2;
+        if ( bExecuted == false || value._listElement[1]._type != RespType::Integer )
+        {
+            reply._result = EphemeralResult::Invalid;
+            return;
+        }
+        reply._integer = value._listElement[1]._integer;
+    }
+
+    void RESPEphemeralStore::handleScoreRankReply( Operation& operation, uint32 step, const RESPValue& value )
+    {
+        EphemeralReply& reply = operation._reply;
+        if ( reply._result != EphemeralResult::Ok )
+            return;
+        if ( value.isNull() )
+        {
+            reply._result = EphemeralResult::NotFound;
+            return;
+        }
+        if ( step == RESPEphemeralStoreInternal::kStepFirst )
+        {
+            if ( value._type == RespType::Integer )
+                reply._integer = value._integer;
+            else
+                reply._result = EphemeralResult::Invalid; // WRONGTYPE
+            return;
+        }
+        int64 score = 0;
+        if ( value.tryReadIntegerText( score ) )
+            reply._score = score;
+        else
+            reply._result = EphemeralResult::Invalid;
+    }
+
+    void RESPEphemeralStore::handleCompareReply( Operation& operation, uint32 step, const RESPValue& value )
+    {
+        EphemeralReply& reply = operation._reply;
+        if ( step == RESPEphemeralStoreInternal::kStepSecond ) // GET 의 답이다. 다음 명령을 정한다
+        {
+            const bool bMatches = value._type == RespType::BulkString && value._bytes == operation._request._expected;
+            if ( bMatches == false )
+            {
+                reply._result = EphemeralResult::Conflict;
+                sendCommand( operation, RESPCommand{ "UNWATCH" }, RESPEphemeralStoreInternal::kStepCompareUnwatch );
+            }
+            else
+            {
+                const string key = makeKey( operation._request._key );
+                sendCommand( operation, RESPCommand{ "MULTI" }, RESPEphemeralStoreInternal::kStepCompareMulti );
+                if ( operation._request._operation == EphemeralOperation::CompareAndSet )
+                {
+                    RESPCommand command{ "SET" };
+                    command.addText( key ).addBytes( operation._request._value );
+                    if ( operation._request._ttlMs > 0 )
+                        command.addText( "PX" ).addInteger( operation._request._ttlMs );
+                    sendCommand( operation, command, RESPEphemeralStoreInternal::kStepCompareWrite );
+                }
+                else
+                {
+                    sendCommand( operation, RESPCommand{ "DEL" }.addText( key ), RESPEphemeralStoreInternal::kStepCompareWrite );
+                }
+                sendCommand( operation, RESPCommand{ "EXEC" }, RESPEphemeralStoreInternal::kStepCompareExec );
+            }
+            // 이 요청의 명령은 모두 전송됐으므로 뒤 요청이 이어서 나가도 WATCH 사이에 끼지 않는다.
+            if ( _blockingRequestID == operation._reply._requestID )
+            {
+                _blockingRequestID = 0;
+                sendDeferredOperations();
+            }
+            return;
+        }
+        if ( step == RESPEphemeralStoreInternal::kStepCompareExec && value.isNull() )
+            reply._result = EphemeralResult::Conflict; // WATCH 뒤에 다른 곳에서 값을 바꿨다
+        else if ( step == RESPEphemeralStoreInternal::kStepCompareExec && value._type != RespType::Array )
+            reply._result = EphemeralResult::Invalid;
+    }
+
+    void RESPEphemeralStore::finishOperation( Operation& operation, EphemeralResult result )
+    {
+        operation._reply._result      = result;
+        operation._awaitingReplyCount = 0;
+        operation._bDone              = SW_TRUE;
+    }
+
+    void RESPEphemeralStore::failOperation( Operation& operation )
+    {
+        operation._reply._value.clear();
+        operation._reply._listMember.clear();
+        finishOperation( operation, EphemeralResult::Unavailable );
+        if ( _blockingRequestID == operation._reply._requestID )
+        {
+            _blockingRequestID = 0;
+            if ( _bShutdown == SW_FALSE )
+                sendDeferredOperations();
+        }
+    }
+
+    bool RESPEphemeralStore::ensureCommandConnection()
+    {
+        if ( _commandConnection.getState() != RESPConnectionState::Closed )
+            return true;
+        if ( _clock.nowNanoseconds() < _nextCommandConnectNanoseconds )
+            return false;
+        const RESPCommand authCommand = makeAuthCommand();
+        const bool        bAuth       = _settings->_password.empty() == false;
+        if ( _commandConnection.beginConnect( *_transport.get(), _settings->_address, _tlsContext.get().get(), bAuth ? &authCommand : nullptr ) )
+            return true;
+        _nextCommandConnectNanoseconds = _clock.nowNanoseconds() + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
+        return false;
+    }
+
+    bool RESPEphemeralStore::ensureSubscribeConnection()
+    {
+        if ( _subscribeConnection.getState() != RESPConnectionState::Closed )
+            return true;
+        if ( _clock.nowNanoseconds() < _nextSubscribeConnectNanoseconds )
+            return false;
+        const RESPCommand authCommand = makeAuthCommand();
+        const bool        bAuth       = _settings->_password.empty() == false;
+        if ( _subscribeConnection.beginConnect( *_transport.get(), _settings->_address, _tlsContext.get().get(), bAuth ? &authCommand : nullptr ) == false )
+        {
+            _nextSubscribeConnectNanoseconds = _clock.nowNanoseconds() + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
+            return false;
+        }
+        // 새 연결에는 구독이 없으므로 채널을 모두 다시 구독한다. 끊긴 동안의 메시지는 받지 못하며, 배달은 최대 한 번이다.
+        for ( const string& channel : _listChannel )
+        {
+            RESPCommand command{ "SUBSCRIBE" };
+            command.addText( makeKey( channel ) );
+            if ( _subscribeConnection.sendCommand( *_transport.get(), command, RESPCommandTag{} ) )
+                ++_subscriptionSentCount;
+        }
+        return true;
+    }
+
+    void RESPEphemeralStore::abortTimedOutRequests()
+    {
+        const int64 timeoutNanoseconds = _settings->_timeoutMs * constant::time::kNanosecondsPerMillisecond;
+        const int64 nowNanoseconds     = _clock.nowNanoseconds();
+        bool        bExpired           = false;
+        for ( const Operation& operation : _listOperation )
+        {
+            if ( operation._bDone == SW_TRUE || operation._bSent == SW_FALSE )
+                continue;
+            bExpired = nowNanoseconds - operation._sentAtNanoseconds > timeoutNanoseconds;
+            break; // 답은 보낸 순서대로 오므로 가장 오래된 것만 보면 된다
+        }
+        if ( bExpired == false )
+            return;
+        vector<RESPReplyRecord> listRecord;
+        {
+            ScopedLock<mutex> lock{ _mutex };
+            _commandConnection.abort( *_transport.get(), "request timed out" );
+            _commandConnection.takeReplyRecords( listRecord );
+            // 시한 초과는 서버 쪽 문제이므로 바로 다시 연결하지 않는다.
+            _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
+        }
+        for ( const RESPReplyRecord& record : listRecord )
+        {
+            Operation* pOperation = findOperation( record._tag._requestID );
+            if ( pOperation != nullptr && pOperation->_bDone == SW_FALSE )
+                failOperation( *pOperation );
+        }
+    }
+
+    void RESPEphemeralStore::handlePushValue( const RESPValue& value )
+    {
+        _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
+        if ( value._type != RespType::Array || value._listElement.size() < 3 )
+            return;
+        const RESPValue& kind = value._listElement[0];
+        if ( kind.isText( "subscribe" ) || kind.isText( "unsubscribe" ) )
+        {
+            ++_subscriptionAckCount;
+            return;
+        }
+        if ( kind.isText( "message" ) == false )
+            return;
+        const string_view channel = value._listElement[1].getText();
+        if ( channel.substr( 0, _settings->_keyPrefix.size() ) != _settings->_keyPrefix )
+            return;
+        EphemeralMessage& message = _listMessage.emplace_back();
+        message._channel          = string( channel.substr( _settings->_keyPrefix.size() ) );
+        message._bytes            = value._listElement[2]._bytes;
+    }
+
+    void RESPEphemeralStore::waitForSubscriptionAck( uint64 targetAckCount )
+    {
+        _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
+        const Deadline    deadline = Deadline::afterMilliseconds( _settings->_timeoutMs );
+        vector<RESPValue> listValue;
+        while ( _subscriptionAckCount < targetAckCount && deadline.isExpired() == false )
+        {
+            pumpTransport();
+            listValue.clear();
+            {
+                ScopedLock<mutex> lock{ _mutex };
+                _subscribeConnection.takePushValues( listValue );
+                if ( _subscribeConnection.getState() == RESPConnectionState::Closed )
+                    _subscriptionAckCount = MathUtil::max( _subscriptionAckCount, _subscriptionSentCount );
+            }
+            for ( const RESPValue& value : listValue )
+            {
+                handlePushValue( value );
+            }
+            if ( _subscriptionAckCount < targetAckCount )
+                RESPEphemeralStoreInternal::sleepOneMillisecond();
+        }
+        if ( _subscriptionAckCount < targetAckCount )
+            SW_LOG_WARNING_ID( "RespEphemeralStore.RESPSubscriptionNotConfirmed", "RESP subscription was not confirmed within %# ms", _settings->_timeoutMs );
+    }
+
+    string RESPEphemeralStore::makeKey( string_view key ) const
+    {
+        string prefixed = _settings->_keyPrefix;
+        prefixed.append( key.data(), key.size() );
+        return prefixed;
+    }
+
+    RESPCommand RESPEphemeralStore::makeAuthCommand() const
+    {
+        RESPCommand command{ "AUTH" };
+        if ( _settings->_userName.empty() == false )
+            command.addText( _settings->_userName );
+        command.addText( _settings->_password );
+        return command;
+    }
+} // namespace sw

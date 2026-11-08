@@ -576,12 +576,12 @@ SW_TEST_CASE( StringTest, FixedStringModernFeatures )
 SW_TEST_CASE( StringTest, UnicodeConversionRoundTrip )
 {
     // 한글, 이모지, 특수문자
-    const utf8*       kOriginalUtf8 = "안녕하세요 Engine 🚀 (SW_Engine)";
-    const sw::wstring utf16Str      = sw::StringUtil::utf8ToUTF16( kOriginalUtf8 );
+    const utf8*       kOriginalUTF8 = "안녕하세요 Engine 🚀 (SW_Engine)";
+    const sw::wstring utf16Str      = sw::StringUtil::utf8ToUTF16( kOriginalUTF8 );
     SW_EXPECT_FALSE( utf16Str.empty() );
 
-    const sw::string roundTripUtf8 = sw::StringUtil::utf16ToUTF8( utf16Str.c_str() );
-    SW_EXPECT_EQUAL( sw::string_view( kOriginalUtf8 ), sw::string_view( roundTripUtf8.c_str() ) );
+    const sw::string roundTripUTF8 = sw::StringUtil::utf16ToUTF8( utf16Str.c_str() );
+    SW_EXPECT_EQUAL( sw::string_view( kOriginalUTF8 ), sw::string_view( roundTripUTF8.c_str() ) );
 }
 
 /**
@@ -600,7 +600,7 @@ SW_TEST_CASE( StringTest, StringBuilderComplexFormatting )
 /**
  * @brief [StringTest] StringUtil::isValidUTF8 종합 유효성 및 경계/오류 시퀀스 검증
  */
-SW_TEST_CASE( StringTest, StringUtilUtf8Validation )
+SW_TEST_CASE( StringTest, StringUtilUTF8Validation )
 {
     // 1) Null 및 빈 문자열
     SW_EXPECT_FALSE( sw::StringUtil::isValidUTF8( nullptr ) );
@@ -648,7 +648,7 @@ SW_TEST_CASE( StringTest, StringUtilUtf8Validation )
 /**
  * @brief [StringTest] CRC32 및 공백 트림 유틸리티 검증
  */
-SW_TEST_CASE( StringTest, StringUtilCrcAndTransform )
+SW_TEST_CASE( StringTest, StringUtilCRCAndTransform )
 {
     // CRC32 체크섬 계산 검증
     const uint32 crc1 = sw::HashUtil::computeCRC32( "123456789", 9 );
@@ -1224,7 +1224,7 @@ SW_TEST_CASE( StringTest, StristrStopsAtTerminator )
  *          `strcmp` 규약(부호 없는 바이트 비교)의 반대이고, 대소문자 구분 경로는 `uint8` 로
  *          비교하므로 두 모드가 서로 다른 순서를 낸다. 문자열 해시 쪽은 `TestHashUtil.cpp` 가 든다.
  */
-SW_TEST_CASE( StringTest, NonAsciiBytesAreUnsigned )
+SW_TEST_CASE( StringTest, NonASCIIBytesAreUnsigned )
 {
     // "가" = EA B0 80 — 모든 바이트가 signed char 에서 음수다.
     const sw::string korean{ "\xEA\xB0\x80" };
@@ -1495,7 +1495,7 @@ SW_TEST_CASE( StringTest, WideCaseMappingAndEqualsMatchNarrow )
  * @details `utf8ToUTF16` 이 검증 없이 비트만 이어 붙이면 선두가 될 수 없는 바이트가 U+0000 이 되어 Win32 경로 API 에서 문자열이
  *          거기서 끊기고, 연속 바이트를 확인하지 않으면 잘린 시퀀스 뒤의 ASCII(`/` · `.`)를 삼킨다.
  */
-SW_TEST_CASE( StringTest, Utf8ToUtf16ReplacesInvalidBytesWithoutSwallowing )
+SW_TEST_CASE( StringTest, UTF8ToUTF16ReplacesInvalidBytesWithoutSwallowing )
 {
     SW_EXPECT_LOG( "StringUtil.InvalidUTF8" ); // 변환마다 나는 경고가 이 테스트가 보려는 동작이다
     // 선두가 될 수 없는 바이트 → U+FFFD, 뒤의 ASCII 는 그대로
@@ -1597,7 +1597,7 @@ namespace
  * @brief [StringTest] 0 채움은 부호 뒤에 붙고, 부호 있는 열거형은 음수로 찍히고, 버퍼 끝에서는 UTF-8 글자 경계에서 자른다.
  * @details 틀리면 "%05d" 로 -42 가 "00-42", 열거형 -1 이 18446744073709551615 가 되고, 버퍼 끝에 걸친 한글 한 글자가 깨진 바이트로 남는다.
  */
-SW_TEST_CASE( StringTest, FormatSignPaddingSignedEnumAndUtf8Truncation )
+SW_TEST_CASE( StringTest, FormatSignPaddingSignedEnumAndUTF8Truncation )
 {
     sw::fixed_string<sw::constant::buffer::kMax64> text;
     sw::formatstring( text.data(), text.capacity(), "%05d", -42 );
@@ -1665,7 +1665,7 @@ SW_TEST_CASE( StringTest, FloatParsersAcceptOnlyFiniteNumbersWithOneSign )
  * @brief [StringTest] 잘못된 UTF-8 바이트만 백슬래시 + `xNN` 으로 바뀌고 올바른 글자(한글 포함)는 그대로다 — 로그 한 줄이 통째로 깨지지 않는다
  * @details 한 바이트만 틀려도 줄 전체를 로캘 변환하면 C 로캘이라 Windows 에서는 한글까지 깨지고 glibc 에서는 줄이 빈다.
  */
-SW_TEST_CASE( StringTest, EscapeInvalidUtf8KeepsValidText )
+SW_TEST_CASE( StringTest, EscapeInvalidUTF8KeepsValidText )
 {
     const sw::string mixed = sw::StringUtil::escapeInvalidUTF8( "\xED\x95\x9C\xEA\xB8\x80 \xFF ok \xC3" ); // "한글 <FF> ok <잘린 2바이트>"
     SW_EXPECT_EQUAL( sw::string_view( "\xED\x95\x9C\xEA\xB8\x80 \\xFF ok \\xC3" ), sw::string_view( mixed.c_str() ) );
@@ -1925,7 +1925,7 @@ SW_TEST_CASE( StringTest, FixedStringTryAssignAndAppend )
  * @brief [StringTest] decodeUTF8 · appendUTF8 는 글자 단위로 왕복하고, 잘못된 바이트는 U+FFFD 로 읽고도 앞으로 나아간다
  * @details 의사 로컬라이제이션 · 메시지 포맷이 글자 단위로 글을 바꾼다 — 바이트 단위로 바꾸면 한글 · 이모지가 깨진다.
  */
-SW_TEST_CASE( StringTest, Utf8DecodeAndAppendRoundTrip )
+SW_TEST_CASE( StringTest, UTF8DecodeAndAppendRoundTrip )
 {
     const sw::string_view kText = "a\xC3\xA9\xEA\xB0\x80\xF0\x9F\x9A\x80"; // a é 가 🚀
     size_t                offset{ 0 };

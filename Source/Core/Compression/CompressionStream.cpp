@@ -14,7 +14,7 @@ namespace sw
     {
         /** @brief 레지스트리가 없을 때 쓰는 내장 코덱입니다(Core 만 링크하는 도구 경로용). */
         NullCompressionCodec s_nullCodec;
-        RleCompressionCodec  s_rleCodec;
+        RLECompressionCodec  s_rleCodec;
 
         struct CompressionStreamInternal
         {

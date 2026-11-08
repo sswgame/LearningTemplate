@@ -58,7 +58,7 @@ namespace sw
         {
             if ( response._requestID != _jwksRequestID )
                 continue;
-            const bool bReplaced = response.isSuccess() && _keyCache.replaceFromJwks( response.getBodyText(), nowMs.count() );
+            const bool bReplaced = response.isSuccess() && _keyCache.replaceFromJWKS( response.getBodyText(), nowMs.count() );
             if ( bReplaced == false )
                 SW_LOG_WARNING_ID( "OidcLoginProvider.JWKSFetchFailed", "JWKS fetch for '%#' failed: %#", _settings._name.c_str(), response._bTransportFailed == SW_TRUE ? response._failureText.c_str() : "bad response" );
             _bLastFetchFailed = bReplaced ? SW_FALSE : SW_TRUE;
@@ -71,7 +71,7 @@ namespace sw
         const bool bWantFirst = _keyCache.hasKeys() == false && _listPending.empty() == false;
         const bool bFetchKeys = _jwksRequestID == 0 && ( bStale || bWantFirst ) && bMayFetch;
         if ( bFetchKeys )
-            startJwksFetch( nowMs );
+            startJWKSFetch( nowMs );
 
         for ( size_t pendingIndex = 0; pendingIndex < _listPending.size(); )
         {
@@ -91,7 +91,7 @@ namespace sw
                 if ( bAlreadyWaited == false && bCanRefetch )
                 {
                     if ( _jwksRequestID == 0 )
-                        startJwksFetch( nowMs );
+                        startJWKSFetch( nowMs );
                     pending._waitedFetchGeneration = _fetchGeneration + 1;
                     ++pendingIndex;
                     continue;
@@ -107,7 +107,7 @@ namespace sw
         }
     }
 
-    void OidcLoginProvider::startJwksFetch( UnixMilliseconds nowMs )
+    void OidcLoginProvider::startJWKSFetch( UnixMilliseconds nowMs )
     {
         HTTPClientRequest request;
         request._url       = _settings._jwksURL;

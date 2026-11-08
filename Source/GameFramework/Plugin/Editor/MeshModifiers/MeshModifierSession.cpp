@@ -85,8 +85,8 @@ namespace sw::editor
                     vertex._arrNormal[0]   = normal._x;
                     vertex._arrNormal[1]   = normal._y;
                     vertex._arrNormal[2]   = normal._z;
-                    vertex._arrUv[0]       = uv._x;
-                    vertex._arrUv[1]       = uv._y;
+                    vertex._arrUV[0]       = uv._x;
+                    vertex._arrUV[1]       = uv._y;
                     vertex._arrColor[0]    = color._x;
                     vertex._arrColor[1]    = color._y;
                     vertex._arrColor[2]    = color._z;
@@ -480,7 +480,7 @@ namespace sw::editor
             return;
         }
         // 텍스처를 읽는 모디파이어가 있으면 프로그램이 정점 UV 표를 싣는다(원본 UV 와 같다 - UV 를 바꾸는 모디파이어는 GPU 로 못 옮기는 쪽이다)
-        const vector<float2>* pListUV = _previewMesh.hasUv() ? &_previewMesh._listUV : nullptr;
+        const vector<float2>* pListUV = _previewMesh.hasUV() ? &_previewMesh._listUV : nullptr;
         if ( MeshModifierGPUProgram::make( _stack, evaluation, listInputBounds, &listInputWeight, static_cast<uint32>( _previewMesh._listPosition.size() ), pListUV, _listGPUProgram ) )
         {
             // 정점 색을 칠하는 모디파이어(Paint 색 대상)가 있으면 GPU 메시의 정점 스트림 색을 CPU 결과로 덮는다 - 모프 풀은 위치 · 법선 · 탄젠트만 바꾸고 색은 정점 스트림에서 읽는다.
@@ -774,7 +774,7 @@ namespace sw::editor
             const RHIVertex& vertex      = _sourceData._listVertex[index];
             outMesh._listPosition[index] = float3{ vertex._arrPosition };
             outMesh._listNormal[index]   = float3{ vertex._arrNormal };
-            outMesh._listUV[index]       = float2{ vertex._arrUv[0], vertex._arrUv[1] };
+            outMesh._listUV[index]       = float2{ vertex._arrUV[0], vertex._arrUV[1] };
             outMesh._listColor[index]    = float4{ vertex._arrColor[0], vertex._arrColor[1], vertex._arrColor[2], vertex._arrColor[3] };
         }
     }

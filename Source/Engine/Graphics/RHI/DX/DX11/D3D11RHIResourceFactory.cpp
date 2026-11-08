@@ -10,8 +10,8 @@
 #include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
+#include "Engine/Graphics/RHI/DX/DXGIFormat.h"
 #include "Engine/Graphics/RHI/DX/RHIDxRenderState.h"
-#include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -361,7 +361,7 @@ namespace sw
         }
 
         RHITextureMipSpan arrMip[constant::render::kMaxTextureMipCount]{};
-        const uint32      mipCount = resolveTextureUploadMips( desc, fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height,
+        const uint32      mipCount = resolveTextureUploadMips( desc, fromDXGIFormat( texDesc.Format ), texDesc.Width, texDesc.Height,
                                                                texDesc.MipLevels, arrMip, constant::render::kMaxTextureMipCount );
         if ( mipCount == 0 )
         {
@@ -426,7 +426,7 @@ namespace sw
         D3D11_TEXTURE2D_DESC texDesc{};
         pRecord->_texture->GetDesc( &texDesc );
         uint32 rowBytes{ 0 };
-        if ( validateTextureRegionUpload( fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height, texDesc.MipLevels, texDesc.ArraySize, desc, rowBytes ) == false )
+        if ( validateTextureRegionUpload( fromDXGIFormat( texDesc.Format ), texDesc.Width, texDesc.Height, texDesc.MipLevels, texDesc.ArraySize, desc, rowBytes ) == false )
             return RHITransferSubmit::rejected();
 
         const UINT   subresource = D3D11CalcSubresource( desc._mip, desc._arraySlice, texDesc.MipLevels );
@@ -528,7 +528,7 @@ namespace sw
         // 깊이는 typeless 로 만들어져 DXGI 역변환이 Unknown 을 준다. 레코드 플래그로 되돌린다.
         if ( pRecord->_bDepth != SW_FALSE )
             return RHIFormat::D24_UNORM_S8_UINT;
-        return fromDxgiFormat( texDesc.Format );
+        return fromDXGIFormat( texDesc.Format );
     }
 
     RHITransferSubmit D3D11RHIResourceFactory::submitTextureReadback( RHITextureHandle texture, uint32 mip, uint32 arraySlice, RHITextureMipSpan& outLayout )
@@ -550,7 +550,7 @@ namespace sw
         }
         // 깊이는 typeless(R24G8)로 만들어져 있다. 같은 포맷의 스테이징으로 통째로 복사하고 가져갈 때 0..1 float32 로 바꾼다(kRHIDepthReadbackFormat).
         const bool      bDepth       = pRecord->_bDepth != SW_FALSE;
-        const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : fromDxgiFormat( texDesc.Format );
+        const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : fromDXGIFormat( texDesc.Format );
         if ( computeRHITextureMipLayout( layoutFormat, texDesc.Width, texDesc.Height, mip, outLayout ) == false )
         {
             SW_LOG_ERROR_ID( "D3D11.SubmitTextureReadbackUnsupportedFormatX", "submitTextureReadback: unsupported format for %#x%# mip %#", texDesc.Width, texDesc.Height, mip );
@@ -612,7 +612,7 @@ namespace sw
         texDesc.MipLevels = desc._mipLevels;
         texDesc.ArraySize = desc._arraySize;
         // DSV 와 그림자 샘플링용 깊이 SRV 를 둘 다 만들 수 있게 typeless 로 만든다.
-        texDesc.Format             = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDxgiFormat( desc._format );
+        texDesc.Format             = bDepth ? DXGI_FORMAT_R24G8_TYPELESS : toDXGIFormat( desc._format );
         texDesc.SampleDesc.Count   = 1;
         texDesc.SampleDesc.Quality = 0;
         texDesc.Usage              = D3D11_USAGE_DEFAULT;
@@ -654,7 +654,7 @@ namespace sw
             for ( uint32 slice = 0; slice < desc._arraySize; ++slice )
             {
                 D3D11_RENDER_TARGET_VIEW_DESC rtvDesc{};
-                rtvDesc.Format                         = toDxgiFormat( desc._format );
+                rtvDesc.Format                         = toDXGIFormat( desc._format );
                 rtvDesc.ViewDimension                  = bSliced ? D3D11_RTV_DIMENSION_TEXTURE2DARRAY : D3D11_RTV_DIMENSION_TEXTURE2D;
                 rtvDesc.Texture2DArray.MipSlice        = 0;
                 rtvDesc.Texture2DArray.FirstArraySlice = slice;
@@ -677,7 +677,7 @@ namespace sw
             for ( uint32 slice = 0; slice < desc._arraySize; ++slice )
             {
                 D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
-                dsvDesc.Format                         = toDxgiFormat( constant::render::kDepthStencilFormat );
+                dsvDesc.Format                         = toDXGIFormat( constant::render::kDepthStencilFormat );
                 dsvDesc.ViewDimension                  = bSliced ? D3D11_DSV_DIMENSION_TEXTURE2DARRAY : D3D11_DSV_DIMENSION_TEXTURE2D;
                 dsvDesc.Texture2DArray.MipSlice        = 0;
                 dsvDesc.Texture2DArray.FirstArraySlice = slice;
@@ -700,7 +700,7 @@ namespace sw
             // 밉은 텍스처가 가진 전부다(-1). 서술체의 0 은 D3D11 에서 "전체 체인" 이라 숫자로 옮기면 안 된다.
             constexpr UINT                  kAllMips = static_cast<UINT>( -1 );
             D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc{};
-            srvDesc.Format = bDepth ? DXGI_FORMAT_R24_UNORM_X8_TYPELESS : toDxgiFormat( desc._format );
+            srvDesc.Format = bDepth ? DXGI_FORMAT_R24_UNORM_X8_TYPELESS : toDXGIFormat( desc._format );
             switch ( desc._dimension )
             {
                 case RHITextureDimension::Texture2DArray:
@@ -937,11 +937,11 @@ namespace sw
                 return 0;
             }
             pso._topology = request._bHasTessellation != SW_FALSE ? D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-            // 입력 레이아웃은 메시 정점 형식의 공용 테이블에서 셰이더가 읽는 속성만 골라 만든다(`fillDxgiInputElements` — DX12 와 같은 함수, Vulkan · GL 도 같은 규칙).
+            // 입력 레이아웃은 메시 정점 형식의 공용 테이블에서 셰이더가 읽는 속성만 골라 만든다(`fillDXGIInputElements` — DX12 와 같은 함수, Vulkan · GL 도 같은 규칙).
             // 정점 입력이 없는 셰이더(SV_VertexID 로 정점을 만든다)는 빈 레이아웃이라 정점 버퍼 없이 그린다.
             const uint32             consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::DXBC_D3D11 );
             D3D11_INPUT_ELEMENT_DESC arrInputElement[constant::render::kVertexAttributeCount]{};
-            const uint32             elementCount = fillDxgiInputElements<D3D11_INPUT_PER_VERTEX_DATA, D3D11_INPUT_PER_INSTANCE_DATA>( desc._meshVertexFormat, consumedMask, arrInputElement );
+            const uint32             elementCount = fillDXGIInputElements<D3D11_INPUT_PER_VERTEX_DATA, D3D11_INPUT_PER_INSTANCE_DATA>( desc._meshVertexFormat, consumedMask, arrInputElement );
             pso._vertexLayout                     = RHIVertexLayout{ RHIShaderRequest::toVertexSlotMask( consumedMask ), desc._meshVertexFormat };
             if ( elementCount > 0 &&
                  isHrSuccess( _pDevice->_device->CreateInputLayout( arrInputElement, elementCount, vsResult._bytecode.data(), vsResult._bytecode.size(), pso._inputLayout.GetAddressOf() ), "CreateInputLayout" ) == false )
