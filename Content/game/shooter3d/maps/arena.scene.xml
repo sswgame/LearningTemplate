@@ -617,6 +617,7 @@
 					                          _bActive="true"
 					                          _effectPrefab="game/shooter3d/prefabs/effect.prefab.xml"
 					                          _tracerPrefab="game/shooter3d/prefabs/tracer.prefab.xml"
+					                          _autoPlayPrefab="game/shooter3d/prefabs/autoplay_ai.prefab.xml"
 					                          _player="50"
 					                          _arenaHalfSize="20"
 					                          _pacingProfile="game/shooter3d/data/arena.director.xml"

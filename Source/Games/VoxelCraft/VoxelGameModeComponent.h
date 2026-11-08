@@ -89,6 +89,8 @@ namespace sw
     private:
         PROPERTY( Category = "Prefabs" )
         AssetRef<PrefabAsset> _chunkPrefab;
+        PROPERTY( Required, Category = "Prefabs", DisplayName = "Auto Play Controller", Tooltip = "AI controller (with its behavior tree) that takes the player pawn while auto play is on" )
+        AssetRef<PrefabAsset> _autoPlayPrefab;
         PROPERTY( Category = "Scene", DisplayName = "Player", Tooltip = "Object with the VoxelPlayerComponent" )
         GameObjectHandle _player;
         PROPERTY( Category = "World", DisplayName = "Terrain Seed", Tooltip = "Same seed, same island" )

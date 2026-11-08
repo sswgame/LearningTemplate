@@ -116,6 +116,7 @@ namespace sw
     ShooterGameModeComponent::ShooterGameModeComponent()
         : _effectPrefab{}
         , _tracerPrefab{}
+        , _autoPlayPrefab{}
         , _listEnemyKind{}
         , _eliteEnemyKind{}
         , _player{}
@@ -544,10 +545,13 @@ namespace sw
         {
             if ( pAIObject == nullptr )
             {
-                pAIObject = manager.createGameObject( hashed_string( "ShooterAutoPlay" ) );
-                if ( pAIObject == nullptr || pAIObject->addComponent<ShooterAutoAimControllerComponent>() == nullptr )
+                // 조종자와 그 행동 트리는 프리팹 데이터다(스켈레톤 적의 `enemy_ai.prefab.xml` 과 같은 길). 스폰한 것은 정리할 목록에 든다.
+                pAIObject = spawnPrefab( manager, _autoPlayPrefab.path(), "ShooterAutoPlay" );
+                if ( pAIObject == nullptr || pAIObject->getComponent<ShooterAutoAimControllerComponent>() == nullptr )
+                {
+                    SW_LOG_ERROR_ID( "ShooterGameMode.AutoPlayPrefabInvalid", "Auto play controller prefab '%#' did not spawn a ShooterAutoAimControllerComponent", _autoPlayPrefab.path() );
                     return;
-                trackSpawned( *pAIObject );
+                }
                 _autoPlayController = pAIObject->getHandle();
             }
             ShooterAutoAimControllerComponent* pAI = pAIObject->getComponent<ShooterAutoAimControllerComponent>();

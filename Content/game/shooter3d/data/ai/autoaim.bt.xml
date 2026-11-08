@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 자동 플레이 조종자(ShooterAutoAimControllerComponent)의 판단. 감각이 적는 것:
+  CirclePoint(아레나 가운데를 도는 나선의 앞 점, 판이 아니거나 플레이어가 쓰러졌으면 지운다) · HasEnemy · AimPoint(보이는 적 가운데 가장 가까운 가슴,
+  보이는 적이 없으면 가장 가까운 가슴) · TargetVisible · TargetDistance · AimError(조준 요 오차의 크기, rad) · WeaponIndex · RifleAmmo · ShotgunAmmo,
+  조종자 칸의 문턱 AimTolerance · EngageDistance · CloseRangeDistance · MeleeReach(플레이어의 근접 거리) · Melee(근접도 칠지).
+  - 판이 아니면 서고 초점을 지운다.
+  - 늘 나선의 앞 점으로 간다. 적이 없으면 Patrol, 있으면 Aim 으로 그 가슴을 바라본다.
+  - 보이고 조준 오차가 문턱 안이며 교전 거리 안이면 Fire(쏜다). 근접을 켰고 손 닿는 거리면 Melee 도 누른다(보이지 않는 적에는 탄을 버리지 않는다).
+  - 가까우면 산탄총(Weapon2), 멀면 소총(Weapon1) — 탄이 남은 쪽만, 이미 든 무기면 누르지 않는다.
+  상태 이름(ai.state, 감시 값 AI.State): Patrol · Aim · Fire.
+-->
+<BehaviorTree>
+	<Selector id="root" name="AutoAim">
+		<Sequence id="inactive" name="Inactive">
+			<Condition test="!hasBlackboard(CirclePoint)"/>
+			<Action name="Wait" task="ai.stop"/>
+			<Action task="ai.clearFocus"/>
+		</Sequence>
+		<Sequence id="active" name="Active">
+			<Action name="Circle" task="ai.moveTo" key="CirclePoint"/>
+			<Selector id="target" name="Target">
+				<Sequence id="patrol" name="Patrol">
+					<Condition test="!blackboard(HasEnemy)"/>
+					<Action name="Patrol" task="ai.state" state="Patrol"/>
+					<Action task="ai.clearFocus"/>
+				</Sequence>
+				<Sequence id="engage" name="Engage">
+					<Action name="Aim" task="ai.state" state="Aim"/>
+					<Action task="ai.focus" key="AimPoint"/>
+					<ForceSuccess>
+						<Sequence id="fire" name="Fire">
+							<Condition test="blackboard(TargetVisible) &amp;&amp; blackboard(AimError) &lt; blackboard(AimTolerance) &amp;&amp; blackboard(TargetDistance) &lt; blackboard(EngageDistance)"/>
+							<Action name="Fire" task="ai.state" state="Fire"/>
+							<Action task="ai.press" button="Fire"/>
+						</Sequence>
+					</ForceSuccess>
+					<ForceSuccess>
+						<Sequence id="melee" name="Melee">
+							<Condition test="blackboard(Melee) &amp;&amp; blackboard(TargetVisible) &amp;&amp; blackboard(AimError) &lt; blackboard(AimTolerance) &amp;&amp; blackboard(TargetDistance) &lt; blackboard(MeleeReach)"/>
+							<Action task="ai.press" button="Melee"/>
+						</Sequence>
+					</ForceSuccess>
+					<Selector id="weapon" name="Weapon">
+						<Sequence id="shotgun" name="Shotgun">
+							<Condition test="blackboard(TargetDistance) &lt; blackboard(CloseRangeDistance) &amp;&amp; blackboard(WeaponIndex) != 1 &amp;&amp; blackboard(ShotgunAmmo) > 0"/>
+							<Action task="ai.press" button="Weapon2"/>
+						</Sequence>
+						<Sequence id="rifle" name="Rifle">
+							<Condition test="blackboard(TargetDistance) >= blackboard(CloseRangeDistance) &amp;&amp; blackboard(WeaponIndex) != 0 &amp;&amp; blackboard(RifleAmmo) > 0"/>
+							<Action task="ai.press" button="Weapon1"/>
+						</Sequence>
+					</Selector>
+				</Sequence>
+			</Selector>
+		</Sequence>
+	</Selector>
+</BehaviorTree>

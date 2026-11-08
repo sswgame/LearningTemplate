@@ -150,6 +150,7 @@
 					<VoxelGameModeComponent _componentName="VoxelGameModeComponent"
 					                        _bActive="true"
 					                        _chunkPrefab="game/voxelcraft/prefabs/chunk.prefab.xml"
+					                        _autoPlayPrefab="game/voxelcraft/prefabs/autoplay_ai.prefab.xml"
 					                        _player="3"
 					                        _terrainSeed="20261003"
 					                        _chunkBuildsPerFrame="4"

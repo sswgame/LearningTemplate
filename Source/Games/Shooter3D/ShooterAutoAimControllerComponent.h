@@ -1,6 +1,6 @@
 /**
  * @file ShooterAutoAimControllerComponent.h
- * @brief Shooter3D 의 자동 플레이 — 플레이어 폰에 빙의하는 AI 조종자입니다(가까운 적을 겨눠 쏘고, 아레나 가운데를 돌며, 거리로 무기를 고른다).
+ * @brief Shooter3D 의 자동 플레이 — 플레이어 폰에 빙의하는 AI 조종자의 감각입니다. 판단(돌기 · 겨누기 · 쏘기 · 무기 고르기)은 행동 트리 데이터(`data/ai/autoaim.bt.xml`)입니다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -14,11 +14,13 @@ namespace sw
 {
     /**
      * @class ShooterAutoAimControllerComponent
-     * @brief 자동 플레이가 켜지면 디렉터가 세워 플레이어 폰에 빙의시킵니다(`gv_shooterAutoPlay` · 에디터 툴바 스위치 하나 — 끄면 플레이어 조종자가 다시 쥔다).
-     * @details 몸(`ShooterPlayerComponent`)에는 자동 플레이 분기가 없습니다 — 이 조종자가 사람과 같은 의도(이동 · 조종 회전 · `Fire` · `Weapon1` · `Weapon2`)를 냅니다.
-     *          가장 가까운 적의 가슴에 초점을 두고(조종 회전은 `_turnRate` 로 돈다 — 표적이 바뀌어도 시점이 튀지 않게), 조준 오차가 3° 안이고 `_engageDistance`
-     *          안이면 쏩니다. `_closeRangeDistance` 안이면 산탄총, 밖이면 소총(탄이 있을 때). 이동은 아레나 가운데를 도는 나선(접선 + 안쪽)의 앞 점으로 곧장 갑니다 — 가운데 가까이에서는 그 점이 도착 거리 안이라 선다.
-     *          적 목록 · 상자는 디렉터가 앞 프레임에 적은 것을 읽습니다(조종 단계 — 틱 전, 게임 스레드).
+     * @brief 자동 플레이가 켜지면 디렉터가 `prefabs/autoplay_ai.prefab.xml` 로 세워 플레이어 폰에 빙의시킵니다(`gv_shooterAutoPlay` · 에디터 툴바 스위치 하나 — 끄면 플레이어 조종자가 다시 쥔다).
+     * @details 몸(`ShooterPlayerComponent`)에는 자동 플레이 분기가 없습니다 — 트리가 사람과 같은 의도(이동 · 조종 회전 · `Fire` · `Melee` · `Weapon1` · `Weapon2`)를 냅니다.
+     *          감각은 블랙보드에 사실과 문턱을 적습니다: `CirclePoint`(아레나 가운데를 도는 나선 — 접선 + 안쪽 — 의 앞 점, 판이 아니거나 플레이어가 쓰러졌으면 지운다) · `HasEnemy` ·
+     *          `AimPoint`(보이는 적 가운데 가장 가까운 가슴, 보이는 적이 없으면 가장 가까운 가슴) · `TargetVisible` · `TargetDistance` · `AimError`(조준 요 오차의 크기) ·
+     *          `WeaponIndex` · `RifleAmmo` · `ShotgunAmmo` 와 칸의 `AimTolerance` · `EngageDistance` · `CloseRangeDistance` · `MeleeReach` · `Melee`.
+     *          조종 회전은 `_turnRate` 로 돈다 — 표적이 바뀌어도 시점이 튀지 않게. 적 목록 · 상자는 디렉터가 앞 프레임에 적은 것을 읽습니다(조종 단계 — 틱 전, 게임 스레드).
+     *          언리얼 `AAIController` + BT 서비스(감각) + 트리(판단)와 같은 나눔이다 — 스켈레톤 적(`ShooterEnemyAIControllerComponent`)과 같은 모양.
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Auto Aim Controller", Tooltip = "AI controller that aims, shoots, picks weapons and circles the arena with the player pawn when auto play is on" )
     class ShooterAutoAimControllerComponent : public AIControllerComponent
@@ -33,14 +35,14 @@ namespace sw
         void setMelee( bool bMelee ) { _bMelee = bMelee ? SW_TRUE : SW_FALSE; }
 
     protected:
-        void think( const ControlFrameContext& context, const PawnComponent& pawn ) override;
+        void updateBlackboard( const ControlFrameContext& context, const PawnComponent& pawn ) override;
 
     private:
         PROPERTY( Category = "Auto Play", DisplayName = "Engage Distance", Tooltip = "Shoots at enemies inside this distance", Min = 0.0, Units = m )
         float32 _engageDistance;
         PROPERTY( Category = "Auto Play", DisplayName = "Close Range Distance", Tooltip = "Inside this distance the shotgun, outside it the rifle", Min = 0.0, Units = m )
         float32 _closeRangeDistance;
-        PROPERTY( Category = "Auto Play", DisplayName = "Aim Tolerance", Tooltip = "Fires when the aim is off by less than this", Min = 0.0, Units = rad )
+        PROPERTY( Category = "Auto Play", DisplayName = "Aim Tolerance", Tooltip = "Fires when the aim is off by less than this (blackboard AimTolerance)", Min = 0.0, Units = rad )
         float32 _aimTolerance;
         PROPERTY( Category = "Auto Play", DisplayName = "Chest Height", Tooltip = "Fraction of the enemy's height aimed at", Min = 0.0, Max = 1.0, Units = ratio )
         float32 _chestHeight;

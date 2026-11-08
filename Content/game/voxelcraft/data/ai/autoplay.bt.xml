@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VoxelCraft 자동 플레이 조종자(VoxelAutoPlayControllerComponent)의 판단. 감각이 적는 것:
+  Playing(판이 시작됐고 시간이 흐른다) · FocusPoint(천천히 도는 시선의 점) · WalkTarget(앞의 걷는 점) · Blocked(앞 블록이 막았다) · InWater,
+  CycleTime · PreviousCycleTime(한 주기 안의 이번 · 지난 판단 시각) 과 조종자 칸 BreakStart · BreakEnd · PlaceAt.
+  - 판이 아니면 아무것도 바꾸지 않는다(누르던 버튼 · 목적지 그대로).
+  - 시선의 점을 보고 앞의 점으로 걷는다. 막혔거나 물 속이면 Jump 를 누르고 있는다(물에서는 위로 헤엄).
+  - 주기의 BreakStart ~ BreakEnd 에 Voxel.Break 를 누르고 있고, PlaceAt 을 지나는 판단 한 번에 Voxel.Place 를 누른다.
+  버튼 이름은 플레이어(VoxelPlayerComponent)가 씬 데이터에서 받은 이름과 같다(maps/island.scene.xml 의 _jumpButton · _breakButton · _placeButton).
+  상태 이름(ai.state, 감시 값 AI.State)은 시나리오 automation/ai.scenario.xml 의 데이터다: Walk · Break · Place(놓는 한 판단).
+-->
+<BehaviorTree>
+	<Selector id="root" name="AutoPlay">
+		<Sequence id="notPlaying" name="NotPlaying">
+			<Condition test="!blackboard(Playing)"/>
+		</Sequence>
+		<Sequence id="play" name="Play">
+			<Action name="Look" task="ai.focus" key="FocusPoint"/>
+			<Action name="Walk" task="ai.moveTo" key="WalkTarget"/>
+			<Selector id="jump" name="Jump">
+				<Sequence name="HoldJump">
+					<Condition test="blackboard(Blocked) || blackboard(InWater)"/>
+					<Action task="ai.hold" button="Jump" held="true"/>
+				</Sequence>
+				<Action name="ReleaseJump" task="ai.hold" button="Jump" held="false"/>
+			</Selector>
+			<Selector id="break" name="Break">
+				<Sequence name="HoldBreak">
+					<Condition test="blackboard(CycleTime) > blackboard(BreakStart) &amp;&amp; blackboard(CycleTime) &lt; blackboard(BreakEnd)"/>
+					<Action task="ai.hold" button="Voxel.Break" held="true"/>
+				</Sequence>
+				<Action name="ReleaseBreak" task="ai.hold" button="Voxel.Break" held="false"/>
+			</Selector>
+			<Selector id="state" name="State">
+				<Sequence id="place" name="Place">
+					<Condition test="blackboard(PreviousCycleTime) &lt; blackboard(PlaceAt) &amp;&amp; blackboard(CycleTime) >= blackboard(PlaceAt)"/>
+					<Action task="ai.press" button="Voxel.Place"/>
+					<Action name="Place" task="ai.state" state="Place"/>
+				</Sequence>
+				<Sequence id="breaking" name="Breaking">
+					<Condition test="blackboard(CycleTime) > blackboard(BreakStart) &amp;&amp; blackboard(CycleTime) &lt; blackboard(BreakEnd)"/>
+					<Action name="Break" task="ai.state" state="Break"/>
+				</Sequence>
+				<Action name="Walk" task="ai.state" state="Walk"/>
+			</Selector>
+		</Sequence>
+	</Selector>
+</BehaviorTree>

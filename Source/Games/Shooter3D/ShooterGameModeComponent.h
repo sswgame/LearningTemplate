@@ -230,6 +230,8 @@ namespace sw
         AssetRef<PrefabAsset> _effectPrefab;
         PROPERTY( Category = "Prefabs", Tooltip = "Pooled box stretched along each shot" )
         AssetRef<PrefabAsset> _tracerPrefab;
+        PROPERTY( Required, Category = "Prefabs", DisplayName = "Auto Play Controller", Tooltip = "AI controller (with its behavior tree) that takes the player pawn while auto play is on" )
+        AssetRef<PrefabAsset> _autoPlayPrefab;
         PROPERTY( Category = "Enemies", DisplayName = "Enemies", Tooltip = "Enemy kinds the regular spawns cycle through (seeded by the spawn order)" )
         vector<ShooterEnemyKind> _listEnemyKind;
         PROPERTY( Category = "Enemies", DisplayName = "Elite Enemy", Tooltip = "Enemy kind of the elite encounter" )

@@ -1,0 +1,9 @@
+<Prefab formatVersion="0" name="ShooterAutoPlay">
+	<GameObject _schemaVersion="0" _name="ShooterAutoPlay" _bActive="true">
+		<_listComponent>
+			<ShooterAutoAimControllerComponent _componentName="ShooterAutoAimControllerComponent"
+			                                   _bActive="true"
+			                                   _behaviorTree="game/shooter3d/data/ai/autoaim.bt.xml" />
+		</_listComponent>
+	</GameObject>
+</Prefab>
