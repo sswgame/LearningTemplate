@@ -90,7 +90,7 @@ namespace
 
         TradeCompletion confirm( AccountID accountID, const TradeSnapshot& trade )
         {
-            const int32  sideIndex = trade.findSideIndex( accountID );
+            const int32  sideIndex = trade.findSideIndex( accountID ).value();
             const uint64 tag       = _nextTag++;
             _service.confirm( accountID, trade._tradeID, trade._arrSide[sideIndex]._offerRevision, trade._arrSide[1 - sideIndex]._offerRevision, UnixMilliseconds{ _nowMs }, tag );
             return take( tag );

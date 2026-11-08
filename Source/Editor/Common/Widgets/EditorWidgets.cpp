@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/String/StringUtil.h"
 #include "Core/String/formatString.h"
 
@@ -548,6 +549,15 @@ namespace sw::editor
             return;
         ImGui::Separator();
         ImGui::TextDisabled( "%s", pText );
+    }
+
+    string EditorWidgets::makeStatusText( const Error& error )
+    {
+        if ( error.detail().empty() )
+            return string( error.message() );
+        StringBuilder text;
+        text.appendFormat( "%#: %#", error.message(), error.detail() );
+        return string( text.view() );
     }
 
     bool EditorWidgets::drawSearchField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, float32 width,

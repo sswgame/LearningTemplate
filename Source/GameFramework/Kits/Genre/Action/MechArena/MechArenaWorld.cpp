@@ -836,8 +836,8 @@ namespace sw
         // 맞은 뒤의 반응(다운치 · 경직 · 넉백 · 종류)은 탄에 베끼지 않고 슬롯을 가리킨다(`findProjectileSlot`).
         projectile._position         = origin;
         projectile._previousPosition = origin;
-        projectile._payload          = static_cast<uint32>( _pMechCatalog->findMechIndex( pilot.getMech()->_id ) ) * kSlotStride + static_cast<uint32>( slotIndex );
-        (void)_projectiles.spawn( projectile ); // 탄 id 는 쓰지 않는다
+        projectile._payload          = static_cast<uint32>( _pMechCatalog->findMechIndex( pilot.getMech()->_id ).value() ) * kSlotStride + static_cast<uint32>( slotIndex ); // 조종사의 기체는 카탈로그에서 왔다
+        (void)_projectiles.spawn( projectile );                                                                                                                              // 탄 id 는 쓰지 않는다
     }
 
     const MechWeaponSlotDef* MechArenaWorld::findProjectileSlot( uint32 payload ) const
@@ -1004,7 +1004,7 @@ namespace sw
             entry._boostHeat     = pilot._boost.getRatio();
             entry._downRatio     = pMech->_downMax > 0.0f ? MathUtil::saturate( 1.0f - pilot._healthMachine.getPoise() / pMech->_downMax ) : 0.0f;
             entry._team          = pilot._team;
-            entry._mechIndex     = _pMechCatalog != nullptr ? _pMechCatalog->findMechIndex( pMech->_id ) : constant::invalid_index::kInt32;
+            entry._mechIndex     = _pMechCatalog != nullptr ? _pMechCatalog->findMechIndex( pMech->_id ).value() : constant::invalid_index::kInt32; // 조종사의 기체는 카탈로그에서 왔다
             entry._mode          = pilot._mode;
             entry._lockTarget    = pilot._lockOn.hasTarget() ? static_cast<int32>( pilot._lockOn.getTarget() ) - 1 : constant::invalid_index::kInt32;
             entry._comboStage    = pilot._comboStage;

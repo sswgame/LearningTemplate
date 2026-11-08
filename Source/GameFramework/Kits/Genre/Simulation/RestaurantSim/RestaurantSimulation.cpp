@@ -165,10 +165,10 @@ namespace sw
             if ( order._cook == staffIndex )
                 order._cook = constant::invalid_index::kInt32; // 남은 시간은 다음 요리사가 이어받는다
         }
-        const int32 customerIndex = findCustomerIndex( staff._taskCustomer );
-        if ( customerIndex >= 0 && staff._role != StaffRole::Cook )
+        const optional<int32> customerIndex = findCustomerIndex( staff._taskCustomer );
+        if ( customerIndex.has_value() && staff._role != StaffRole::Cook )
         {
-            RestaurantCustomer& customer = _listCustomer[static_cast<size_t>( customerIndex )];
+            RestaurantCustomer& customer = _listCustomer[static_cast<size_t>( *customerIndex )];
             customer._bServing           = SW_FALSE;
             customer._bCheckingOut       = SW_FALSE;
         }
@@ -477,7 +477,7 @@ namespace sw
         for ( const StaffMember& staff : _listStaff )
         {
             // 맡은 일이 있는 직원은 고용 중이고 그 손님이 있다(`fireStaff` 가 풀어 준다). 레벨은 곡선 안이다.
-            const bool bTaskValid  = staff._taskCustomer < 0 || ( staff._bHired != SW_FALSE && findCustomerIndex( staff._taskCustomer ) >= 0 );
+            const bool bTaskValid  = staff._taskCustomer < 0 || ( staff._bHired != SW_FALSE && findCustomerIndex( staff._taskCustomer ).has_value() );
             const bool bLevelValid = _pStaffCurve == nullptr || staff._level.getLevel() <= _pStaffCurve->getMaxLevel();
             if ( bTaskValid == false || bLevelValid == false )
                 return false;
@@ -485,8 +485,8 @@ namespace sw
         for ( const KitchenOrder& order : _listOrder )
         {
             // 주문은 요리를 기다리는 손님의 것이다. 계산이 끝난 손님의 주문은 나르면 먹기로 되돌아가 또 계산한다.
-            const int32 customerIndex = findCustomerIndex( order._customerID );
-            if ( customerIndex < 0 || _listCustomer[static_cast<size_t>( customerIndex )]._state != CustomerState::WaitingFood )
+            const optional<int32> customerIndex = findCustomerIndex( order._customerID );
+            if ( customerIndex.has_value() == false || _listCustomer[static_cast<size_t>( *customerIndex )]._state != CustomerState::WaitingFood )
                 return false;
             const DishDef* pDish = _pCatalog->findDish( order._dishID );
             if ( pDish == nullptr || order._quality > pDish->getMaxQuality() )
@@ -633,12 +633,12 @@ namespace sw
             staff._busyMinutes -= kStepMinutes;
             if ( staff._busyMinutes > 0.0f )
                 continue;
-            const int32 customerIndex = findCustomerIndex( staff._taskCustomer );
-            staff._taskCustomer       = constant::invalid_index::kInt32;
-            staff._busyMinutes        = 0.0f;
-            if ( customerIndex < 0 )
+            const optional<int32> customerIndex = findCustomerIndex( staff._taskCustomer );
+            staff._taskCustomer                 = constant::invalid_index::kInt32;
+            staff._busyMinutes                  = 0.0f;
+            if ( customerIndex.has_value() == false )
                 continue;
-            RestaurantCustomer& customer = _listCustomer[static_cast<size_t>( customerIndex )];
+            RestaurantCustomer& customer = _listCustomer[static_cast<size_t>( *customerIndex )];
             if ( customer._bServing != SW_FALSE )
             {
                 customer._bServing = SW_FALSE;
@@ -759,10 +759,11 @@ namespace sw
         {
             if ( order._bReady == SW_FALSE )
                 continue;
-            const int32 customerIndex = findCustomerIndex( order._customerID );
-            if ( customerIndex < 0 || _listCustomer[static_cast<size_t>( customerIndex )]._bServing != SW_FALSE )
+            const optional<int32> foundCustomer = findCustomerIndex( order._customerID );
+            if ( foundCustomer.has_value() == false || _listCustomer[static_cast<size_t>( *foundCustomer )]._bServing != SW_FALSE )
                 continue;
-            const int32 serverIndex = findIdleStaff( StaffRole::Server );
+            const int32 customerIndex = *foundCustomer;
+            const int32 serverIndex   = findIdleStaff( StaffRole::Server );
             if ( serverIndex < 0 )
                 return;
             StaffMember& server                                           = _listStaff[static_cast<size_t>( serverIndex )];
@@ -920,14 +921,14 @@ namespace sw
         }
     }
 
-    int32 RestaurantSimulation::findCustomerIndex( int32 customerID ) const
+    optional<int32> RestaurantSimulation::findCustomerIndex( int32 customerID ) const
     {
         for ( int32 customerIndex = 0; customerIndex < static_cast<int32>( _listCustomer.size() ); ++customerIndex )
         {
             if ( _listCustomer[static_cast<size_t>( customerIndex )]._id == customerID )
                 return customerIndex;
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     int32 RestaurantSimulation::findIdleStaff( StaffRole role ) const

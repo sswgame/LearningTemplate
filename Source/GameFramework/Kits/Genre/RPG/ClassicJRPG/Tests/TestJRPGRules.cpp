@@ -689,8 +689,8 @@ SW_TEST_CASE_F( JRPGRulesTest, AddMember )
     SW_EXPECT_EQUAL( 1, _party.getMember( 2 )._level.getLevel() );
     SW_EXPECT_EQUAL( 3, _party.addMember( "c", "C", "mage" ) );
     SW_EXPECT_EQUAL( -1, _party.addMember( "d", "D", "mage" ) ); // 정원 4
-    SW_EXPECT_EQUAL( 3, _party.findMemberIndex( "c" ) );
-    SW_EXPECT_EQUAL( -1, _party.findMemberIndex( "d" ) );
+    SW_EXPECT_EQUAL( 3, _party.findMemberIndex( "c" ).value() );
+    SW_EXPECT_FALSE( _party.findMemberIndex( "d" ).has_value() );
 }
 
 /**

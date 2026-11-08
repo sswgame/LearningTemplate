@@ -418,9 +418,9 @@ namespace sw
             static bool emitDetachedPart( const ItemVisualDef& visual, const Entry& entry, const AppearancePartDef& part, const AppearancePlacement& placement, int32 stageIndex,
                                           ResolvedAppearance& out )
             {
-                const bool  bHitOff    = entry._pRequest != nullptr && VectorUtil::contains( entry._pRequest->_listDetachedPart, part._name );
-                const int32 breakIndex = part._breakStage.empty() ? constant::invalid_index::kInt32 : visual.findDamageStageIndex( part._breakStage );
-                const bool  bStageOff  = breakIndex >= 0 && stageIndex >= breakIndex;
+                const bool            bHitOff    = entry._pRequest != nullptr && VectorUtil::contains( entry._pRequest->_listDetachedPart, part._name );
+                const optional<int32> breakIndex = part._breakStage.empty() ? optional<int32>{} : visual.findDamageStageIndex( part._breakStage );
+                const bool            bStageOff  = breakIndex.has_value() && stageIndex >= *breakIndex;
                 if ( bHitOff && part._bBreakable == SW_FALSE )
                     addTrace( out, AppearanceTraceStep::Damage, entry._owner, "part '%#' is not breakable - detach request ignored", part._name.c_str() );
                 const bool bDetached = part._bBreakable == SW_TRUE && ( bHitOff || bStageOff );

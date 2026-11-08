@@ -91,8 +91,8 @@ SW_TEST_CASE( CardDeckTest, TakeByIDKeepsRemainingOrder )
     SW_EXPECT_TRUE( taken == makeCard( 12, 2, 3 ) );
     SW_EXPECT_TRUE( collectIDs( pile ) == sw::vector<uint16>( { 10, 11, 13, 14 } ) );
     SW_EXPECT_FALSE( pile.takeByID( 12, taken ) );
-    SW_EXPECT_EQUAL( -1, pile.findIndexByID( 12 ) );
-    SW_EXPECT_EQUAL( 2, pile.findIndexByID( 13 ) );
+    SW_EXPECT_FALSE( pile.findIndexByID( 12 ).has_value() );
+    SW_EXPECT_EQUAL( 2, pile.findIndexByID( 13 ).value() );
 
     const sw::Card removed = pile.removeAt( 0 );
     SW_EXPECT_EQUAL( uint16( 10 ), removed._id );

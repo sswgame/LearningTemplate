@@ -811,11 +811,9 @@ namespace sw::editor
     void GimmickGraphPanel::editConnect( GimmickCircuitComponent& circuit, int32 fromNode, string_view fromPort, int32 toNode, string_view toPort )
     {
         const ObjectSnapshot before = beginEdit( circuit );
-        int32                wireID = 0;
-        string               error;
-        if ( _model.addWire( fromNode, fromPort, toNode, toPort, wireID, error ) == false )
+        if ( const expected<int32> wireID = _model.addWire( fromNode, fromPort, toNode, toPort ); wireID.has_value() == false )
         {
-            _statusText = error;
+            _statusText = EditorWidgets::makeStatusText( wireID.error() );
             return;
         }
         commitEdit( circuit, before, "Add Gimmick Wire" );
@@ -824,10 +822,9 @@ namespace sw::editor
     void GimmickGraphPanel::editRename( GimmickCircuitComponent& circuit, int32 nodeID, const string& newID )
     {
         const ObjectSnapshot before = beginEdit( circuit );
-        string               error;
-        if ( _model.renameNode( nodeID, hashed_string( newID ), error ) == false )
+        if ( const expected<void> renamed = _model.renameNode( nodeID, hashed_string( newID ) ); renamed.has_value() == false )
         {
-            _statusText = error;
+            _statusText = EditorWidgets::makeStatusText( renamed.error() );
             return;
         }
         commitEdit( circuit, before, "Rename Gimmick Node" );

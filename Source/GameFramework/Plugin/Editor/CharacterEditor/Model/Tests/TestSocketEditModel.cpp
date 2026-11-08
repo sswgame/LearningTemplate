@@ -38,8 +38,7 @@ namespace
         /** @brief hand 를 부모로 한 소켓 grip 하나가 든 모델입니다. */
         static void addGrip( SocketEditModel& model )
         {
-            string error;
-            SW_REQUIRE_TRUE( model.addSocket( hashed_string( "grip" ), hashed_string( "hand" ), hashed_string{}, error ) );
+            SW_REQUIRE_TRUE( model.addSocket( hashed_string( "grip" ), hashed_string( "hand" ), hashed_string{} ).has_value() );
         }
     };
     using Util = SocketEditModelTestUtil;
@@ -58,8 +57,7 @@ SW_TEST_CASE( SocketEditModelTest, UnitTransformRoundTripsThroughTheParentBone )
     SW_EXPECT_TRUE( Util::isNear( parentUnit, bones._listModel[1] ) );
 
     const float4x4 target = float4x4::makeTrs( float3{ 0.3f, 1.2f, -0.4f }, quaternion::makeFromYawPitchRoll( float3{ 0.2f, 0.1f, 0.0f } ), float3{ 1.0f } );
-    string         error;
-    SW_REQUIRE_TRUE( model.setUnitTransform( hashed_string( "grip" ), target, parentUnit, false, error ) );
+    SW_REQUIRE_TRUE( model.setUnitTransform( hashed_string( "grip" ), target, parentUnit, false ).has_value() );
     pGrip = model.findSocket( hashed_string( "grip" ) );
     float4x4 unit{};
     SW_REQUIRE_TRUE( model.getSockets().computeSocketTransform( *pGrip, bones, unit ) );
@@ -76,11 +74,10 @@ SW_TEST_CASE( SocketEditModelTest, GizmoDragIsOneUndoStep )
     SocketEditModel          model;
     Util::addGrip( model );
     const float3 before = model.findSocket( hashed_string( "grip" ) )->_translation;
-    string       error;
     for ( uint32 step = 1; step <= 5; ++step )
     {
         const float4x4 target = float4x4::makeTrs( float3{ 0.1f * static_cast<float32>( step ), 1.0f, 0.0f }, quaternion::Identity, float3{ 1.0f } );
-        SW_REQUIRE_TRUE( model.setUnitTransform( hashed_string( "grip" ), target, bones._listModel[1], true, error ) );
+        SW_REQUIRE_TRUE( model.setUnitTransform( hashed_string( "grip" ), target, bones._listModel[1], true ).has_value() );
     }
     model.endContinuousEdit();
     SW_EXPECT_TRUE( model.isDirty() );
@@ -95,10 +92,10 @@ SW_TEST_CASE( SocketEditModelTest, GizmoDragIsOneUndoStep )
 // 없는 소켓은 표를 바꾸지 않고 이유를 남긴다.
 SW_TEST_CASE( SocketEditModelTest, UnknownSocketIsRefused )
 {
-    SocketEditModel model;
-    string          error;
-    SW_EXPECT_FALSE( model.setUnitTransform( hashed_string( "nothing" ), float4x4::Identity, float4x4::Identity, true, error ) );
-    SW_EXPECT_FALSE( error.empty() );
+    SocketEditModel      model;
+    const expected<void> missing = model.setUnitTransform( hashed_string( "nothing" ), float4x4::Identity, float4x4::Identity, true );
+    SW_REQUIRE_FALSE( missing.has_value() );
+    SW_EXPECT_TRUE( missing.error().kind() == ErrorKind::NotFound );
     SW_EXPECT_FALSE( model.canUndo() );
 }
 
@@ -109,8 +106,7 @@ SW_TEST_CASE( SocketEditModelTest, GizmoEditSurvivesSaveAndReload )
     SocketEditModel          model;
     Util::addGrip( model );
     const float4x4 target = float4x4::makeTrs( float3{ 0.25f, 1.5f, 0.1f }, quaternion::makeFromYawPitchRoll( float3{ 0.0f, 0.3f, 0.0f } ), float3{ 1.0f } );
-    string         error;
-    SW_REQUIRE_TRUE( model.setUnitTransform( hashed_string( "grip" ), target, bones._listModel[1], false, error ) );
+    SW_REQUIRE_TRUE( model.setUnitTransform( hashed_string( "grip" ), target, bones._listModel[1], false ).has_value() );
     SocketEditModel reloaded;
     SW_REQUIRE_TRUE( reloaded.loadFromXMLText( model.saveToXMLText(), "test" ) );
     const SocketDef* pGrip = reloaded.findSocket( hashed_string( "grip" ) );

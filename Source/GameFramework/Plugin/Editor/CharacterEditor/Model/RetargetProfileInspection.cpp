@@ -171,42 +171,29 @@ namespace sw::editor
         };
     } // namespace
 
-    bool RetargetProfileInspection::inspect( const RetargetProfile& profile, RetargetProfileInspection& outInspection, string& outError )
+    expected<void> RetargetProfileInspection::inspect( const RetargetProfile& profile, RetargetProfileInspection& outInspection )
     {
         // 스켈레톤은 런타임과 같은 공유 캐시의 한 벌을 읽는다(빈 경로는 읽지 않는다 — nullptr).
         const shared_ptr<const Skeleton> pSourceSkeleton = SharedAssetCache<Skeleton>::acquire( profile.getSourceSkeletonPath() );
         const shared_ptr<const Skeleton> pTargetSkeleton = SharedAssetCache<Skeleton>::acquire( profile.getTargetSkeletonPath() );
-        return inspect( profile, pSourceSkeleton.get(), pTargetSkeleton.get(), outInspection, outError );
+        return inspect( profile, pSourceSkeleton.get(), pTargetSkeleton.get(), outInspection );
     }
 
-    bool RetargetProfileInspection::inspect( const RetargetProfile& profile, const Skeleton* pSourceSkeleton, const Skeleton* pTargetSkeleton, RetargetProfileInspection& outInspection, string& outError )
+    expected<void> RetargetProfileInspection::inspect( const RetargetProfile& profile, const Skeleton* pSourceSkeleton, const Skeleton* pTargetSkeleton, RetargetProfileInspection& outInspection )
     {
         using Internal = RetargetProfileInspectionInternal;
         outInspection  = RetargetProfileInspection{};
-        outError.clear();
         if ( pSourceSkeleton == nullptr )
-        {
-            outError = "The source skeleton could not be read";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "The source skeleton could not be read", profile.getSourceSkeletonPath() } );
         if ( pTargetSkeleton == nullptr )
-        {
-            outError = "The target skeleton could not be read";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "The target skeleton could not be read", profile.getTargetSkeletonPath() } );
         Internal::collectProblems( profile, *pSourceSkeleton, *pTargetSkeleton, outInspection._listProblem );
         if ( outInspection._listProblem.empty() == false )
-        {
-            outError = outInspection._listProblem.front();
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::NotFound, "The profile names a bone or field the skeletons do not have", outInspection._listProblem.front() } );
         // 런타임과 같은 검사 하나 — 묶이지 않으면 저장해도 쓸 수 없다. 이름은 위에서 다 봤으니 여기 오면 까닭은 리타기터의 로그에 있다.
         PoseRetargeter retargeter;
         if ( retargeter.initialize( profile, *pSourceSkeleton, *pTargetSkeleton, nullptr ) == false )
-        {
-            outError = "The profile does not bind to the two skeletons - see the log";
-            return false;
-        }
+            return unexpected( Error{ ErrorKind::InvalidArgument, "The profile does not bind to the two skeletons - see the log" } );
         outInspection._heightRatio           = retargeter.getHeightRatio();
         outInspection._mappedTargetBoneCount = retargeter.getMappedBoneCount();
         outInspection._targetBoneCount       = pTargetSkeleton->getBoneCount();
@@ -219,6 +206,6 @@ namespace sw::editor
             outInspection._listChain.push_back( inspection );
         }
         Internal::collectWarnings( profile, *pSourceSkeleton, *pTargetSkeleton, outInspection._listWarning );
-        return true;
+        return {};
     }
 } // namespace sw::editor

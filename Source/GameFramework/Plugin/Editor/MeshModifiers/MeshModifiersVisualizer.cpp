@@ -486,11 +486,11 @@ namespace sw::editor
                 listOffset[index * 2 + 1] += delta._y;
                 if ( session.isMirrorEditing() )
                 {
-                    const uint32 axis   = session.getMirrorAxis();
-                    const int32  mirror = ModifierGizmoLogic::findMirrorIndex2D( pointIndex, _countX, _countY, axis );
-                    if ( mirror >= 0 && mirror != pointIndex )
+                    const uint32          axis   = session.getMirrorAxis();
+                    const optional<int32> mirror = ModifierGizmoLogic::findMirrorIndex2D( pointIndex, _countX, _countY, axis );
+                    if ( mirror.has_value() && *mirror != pointIndex )
                     {
-                        const size_t mirrorIndex = static_cast<size_t>( mirror );
+                        const size_t mirrorIndex = static_cast<size_t>( *mirror );
                         listOffset[mirrorIndex * 2] += axis == 0 ? -delta._x : delta._x;
                         listOffset[mirrorIndex * 2 + 1] += axis == 1 ? -delta._y : delta._y;
                     }

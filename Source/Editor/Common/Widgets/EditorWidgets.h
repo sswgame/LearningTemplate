@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 
@@ -137,6 +138,8 @@ namespace sw::editor
 
         /** @brief 문구가 비어 있지 않으면 구분선과 흐린 상태 문구를 그립니다. */
         static void drawPanelStatus( const utf8* pText );
+        /** @brief 편집 모델의 실패를 상태 줄 글로 만듭니다 — "문장: 대상"(대상이 없으면 문장만). */
+        static string makeStatusText( const Error& error );
 
         /**
          * @brief C 버퍼를 쓰는 검색 필드를 그립니다. width 가 0 이면 사용 가능한 너비, 음수면 한 줄 전체입니다.

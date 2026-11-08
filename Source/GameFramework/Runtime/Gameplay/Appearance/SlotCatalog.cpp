@@ -71,14 +71,14 @@ namespace sw
         return report.getErrors().size() == errorCountBefore;
     }
 
-    int32 SlotCatalog::findSlotIndex( const hashed_string& slot ) const
+    optional<int32> SlotCatalog::findSlotIndex( const hashed_string& slot ) const
     {
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
             if ( _listSlot[index]._name == slot )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     const SlotOccupancyDef* SlotCatalog::findOccupancy( const hashed_string& id ) const

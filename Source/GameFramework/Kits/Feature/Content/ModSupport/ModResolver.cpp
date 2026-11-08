@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Content/ModSupport/ModResolver.h"
 
 #include "Core/Algorithm/VectorUtil.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Log/Logger.h"
 
 namespace sw
@@ -11,16 +12,14 @@ namespace sw
     {
         struct ModResolverInternal
         {
-            static constexpr size_t kNotFound = static_cast<size_t>( -1 );
-
-            static size_t findIndex( const vector<ModManifest>& listManifest, string_view id )
+            static optional<size_t> findIndex( const vector<ModManifest>& listManifest, string_view id )
             {
                 for ( size_t index = 0; index < listManifest.size(); ++index )
                 {
                     if ( listManifest[index]._id == id )
                         return index;
                 }
-                return kNotFound;
+                return nullopt;
             }
 
             /** @brief 한 모드만 보는 검사(판 범위 · 덮어쓰기 허락 · 의존 · 충돌)입니다. */
@@ -53,8 +52,8 @@ namespace sw
                 }
                 for ( const ModDependency& dependency : manifest._listDependency )
                 {
-                    const size_t dependencyIndex = findIndex( listManifest, dependency._id );
-                    if ( dependencyIndex == kNotFound )
+                    const optional<size_t> foundDependency = findIndex( listManifest, dependency._id );
+                    if ( foundDependency.has_value() == false )
                     {
                         if ( dependency._bOptional )
                             continue;
@@ -62,6 +61,7 @@ namespace sw
                                          dependency._minVersion.toString() );
                         return false;
                     }
+                    const size_t dependencyIndex = *foundDependency;
                     if ( listManifest[dependencyIndex]._version < dependency._minVersion )
                     {
                         SW_LOG_ERROR_ID( "ModResolver.DependencyTooOld", "Mod '%#' needs mod '%#' %# or later, but %# is enabled", manifest._id, dependency._id,
@@ -71,7 +71,7 @@ namespace sw
                 }
                 for ( const string& conflictID : manifest._listConflict )
                 {
-                    if ( findIndex( listManifest, conflictID ) != kNotFound )
+                    if ( findIndex( listManifest, conflictID ).has_value() )
                     {
                         SW_LOG_ERROR_ID( "ModResolver.Conflict", "Mod '%#' cannot be enabled together with mod '%#'", manifest._id, conflictID );
                         return false;
@@ -102,7 +102,7 @@ namespace sw
         }
         for ( size_t index = 0; index < listManifest.size(); ++index )
         {
-            if ( Internal::findIndex( listManifest, listManifest[index]._id ) != index )
+            if ( Internal::findIndex( listManifest, listManifest[index]._id ).value() != index ) // 자기 자신은 늘 찾는다 — 앞에 같은 id 가 있으면 그 번호다
             {
                 SW_LOG_ERROR_ID( "ModResolver.DuplicateID", "Mod '%#' is enabled twice", listManifest[index]._id );
                 return false;
@@ -115,7 +115,7 @@ namespace sw
         vector<uint8> listPlaced( listManifest.size(), 0 );
         while ( outListOrder.size() < listManifest.size() )
         {
-            size_t nextIndex = Internal::kNotFound;
+            optional<size_t> nextIndex;
             for ( size_t index = 0; index < listManifest.size(); ++index )
             {
                 if ( listPlaced[index] != 0 )
@@ -123,14 +123,14 @@ namespace sw
                 bool bReady = true;
                 for ( const ModDependency& dependency : listManifest[index]._listDependency )
                 {
-                    const size_t dependencyIndex = Internal::findIndex( listManifest, dependency._id );
-                    if ( dependencyIndex != Internal::kNotFound && listPlaced[dependencyIndex] == 0 )
+                    const optional<size_t> dependencyIndex = Internal::findIndex( listManifest, dependency._id );
+                    if ( dependencyIndex.has_value() && listPlaced[*dependencyIndex] == 0 )
                         bReady = false;
                 }
-                if ( bReady && ( nextIndex == Internal::kNotFound || Internal::isLower( listManifest[index], listManifest[nextIndex] ) ) )
+                if ( bReady && ( nextIndex.has_value() == false || Internal::isLower( listManifest[index], listManifest[*nextIndex] ) ) )
                     nextIndex = index;
             }
-            if ( nextIndex == Internal::kNotFound )
+            if ( nextIndex.has_value() == false )
             {
                 for ( size_t index = 0; index < listManifest.size(); ++index )
                 {
@@ -143,8 +143,8 @@ namespace sw
                 outListOrder.clear();
                 return false;
             }
-            listPlaced[nextIndex] = 1;
-            outListOrder.push_back( nextIndex );
+            listPlaced[*nextIndex] = 1;
+            outListOrder.push_back( *nextIndex );
         }
 
         // 같은 리소스를 덮어쓰는 두 모드 — 뒤(위) 모드가 앞 모드에 직접 의존할 때만 받는다. 아니면 어느 쪽이 이길지가 우선순위 숫자의 우연이 된다.

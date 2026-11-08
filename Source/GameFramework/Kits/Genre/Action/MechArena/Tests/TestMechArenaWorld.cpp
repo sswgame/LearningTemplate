@@ -697,7 +697,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, MechSwapWaitsForTheNextSortie )
     MechArenaSnapshot snapshot;
     _world.makeSnapshot( snapshot ); // 옛 기체에는 무기가 없고 새 기체의 0 번은 주무기다
     SW_REQUIRE_EQUAL( size_t( 2 ), snapshot._listPilot.size() );
-    SW_EXPECT_EQUAL( _mechs.findMechIndex( hashed_string( "sniper" ) ), snapshot._listPilot[0]._mechIndex );
+    SW_EXPECT_EQUAL( _mechs.findMechIndex( hashed_string( "sniper" ) ).value(), snapshot._listPilot[0]._mechIndex );
     SW_EXPECT_EQUAL( 0, snapshot._listPilot[0]._magazineAmmo );
 
     const vector<uint8> listSaved = writeBytes( _world );
@@ -987,7 +987,7 @@ SW_TEST_CASE( MechArenaTest, CatalogReadsMechsAndSkills )
     SW_EXPECT_NEAR( 2.0f, pSkill->_modifier.getScale( hashed_string( "attack" ) ), kMechTolerance );
 
     SW_EXPECT_NULL( catalog.findMech( hashed_string( "none" ) ) );
-    SW_EXPECT_EQUAL( -1, catalog.findMechIndex( hashed_string( "none" ) ) );
+    SW_EXPECT_FALSE( catalog.findMechIndex( hashed_string( "none" ) ).has_value() );
 
     MechRangeClass rangeClass = MechRangeClass::Mid;
     SW_EXPECT_TRUE( MechCatalog::parseRangeClass( "Far", rangeClass ) );

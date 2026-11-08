@@ -46,15 +46,14 @@ namespace sw::editor
                 context.expect( root >= 0 && wait >= 0, "the model rejected a Selector with a Wait child" );
                 string                text = model.write();
                 BehaviorTreeEditModel reread;
-                string                error;
-                context.expect( reread.parse( text, error ), "the model could not read what it wrote" );
+                context.expect( reread.parse( text ).has_value(), "the model could not read what it wrote" );
                 context.expect( reread.write() == text, "writing the re-read tree gave a different text" );
 
                 // 칸은 종류마다의 스키마(`BehaviorTreeNodeParams.h`)로 읽고 쓴다 — 열거 이름 · 불리언 · 기본값 생략이 같은 글로 돌아온다.
                 const string_view     kAuthored = "<BehaviorTree><Selector name=\"Root\" reactive=\"true\"><BlackboardCondition test=\"blackboard(Threat) &gt; 2\" abort=\"LowerPriority\">"
                                                   "<MoveTo key=\"Goal\"/></BlackboardCondition></Selector></BehaviorTree>";
                 BehaviorTreeEditModel authored;
-                context.expect( authored.parse( kAuthored, error ), "the model could not read a hand-written tree" );
+                context.expect( authored.parse( kAuthored ).has_value(), "the model could not read a hand-written tree" );
                 const BehaviorTreeEditNode*             pRoot      = authored.find( authored.getRootID() );
                 const BehaviorTreeEditNode*             pCondition = pRoot != nullptr && pRoot->_listChild.size() == 1 ? authored.find( pRoot->_listChild[0] ) : nullptr;
                 const BehaviorTreeEditNode*             pMove      = pCondition != nullptr && pCondition->_listChild.size() == 1 ? authored.find( pCondition->_listChild[0] ) : nullptr;
@@ -65,16 +64,16 @@ namespace sw::editor
                                      pDecorator->_abort == BehaviorAbortMode::LowerPriority && pMoveTo != nullptr && pMoveTo->_key == "Goal" && pMoveTo->_repathDistance == 0.5f;
                 context.expect( bFields, "the node fields were not read through the schema" );
                 BehaviorTreeEditModel rewritten;
-                context.expect( rewritten.parse( authored.write(), error ) && rewritten.write() == authored.write(), "a hand-written tree did not survive write and read" );
+                context.expect( rewritten.parse( authored.write() ).has_value() && rewritten.write() == authored.write(), "a hand-written tree did not survive write and read" );
                 context.expect( authored.write().find( "repathDistance" ) == string::npos, "a default value was written out" );
 
                 // 하위 트리 복제는 바로 뒤 형제로 들어가고, 붙여 넣기는 고른 부모의 맨 뒤 자식이다. 루트 복제 · 잎 아래 붙이기는 모델을 그대로 둔다.
-                const int32 copy = model.duplicateSubtree( wait, error );
-                context.expect( copy >= 0 && model.find( root )->_listChild.size() == 2 && model.find( root )->_listChild[1] == copy, "duplicating a Wait did not add it right after the original" );
-                const int32 pasted = model.pasteSubtree( root, model.writeSubtree( wait ), -1, error );
-                context.expect( pasted >= 0 && model.find( root )->_listChild.back() == pasted, "pasting a subtree did not append it under the parent" );
+                const expected<int32> copy = model.duplicateSubtree( wait );
+                context.expect( copy.has_value() && model.find( root )->_listChild.size() == 2 && model.find( root )->_listChild[1] == *copy, "duplicating a Wait did not add it right after the original" );
+                const expected<int32> pasted = model.pasteSubtree( root, model.writeSubtree( wait ), -1 );
+                context.expect( pasted.has_value() && model.find( root )->_listChild.back() == *pasted, "pasting a subtree did not append it under the parent" );
                 const uint32 nodeCount = model.getNodeCount();
-                context.expect( model.duplicateSubtree( root, error ) < 0 && model.pasteSubtree( wait, model.writeSubtree( wait ), -1, error ) < 0 && model.getNodeCount() == nodeCount,
+                context.expect( model.duplicateSubtree( root ).has_value() == false && model.pasteSubtree( wait, model.writeSubtree( wait ), -1 ).has_value() == false && model.getNodeCount() == nodeCount,
                                 "duplicating the root or pasting under a leaf changed the tree" );
                 return EditorSelfTestStep::Done;
             }

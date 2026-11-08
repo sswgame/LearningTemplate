@@ -435,18 +435,18 @@ namespace sw
 
     const AppearanceDamageStageDef* ItemVisualDef::findDamageStage( const hashed_string& name ) const
     {
-        const int32 index = findDamageStageIndex( name );
-        return index >= 0 ? &_listDamageStage[static_cast<size_t>( index )] : nullptr;
+        const optional<int32> index = findDamageStageIndex( name );
+        return index.has_value() ? &_listDamageStage[static_cast<size_t>( *index )] : nullptr;
     }
 
-    int32 ItemVisualDef::findDamageStageIndex( const hashed_string& name ) const
+    optional<int32> ItemVisualDef::findDamageStageIndex( const hashed_string& name ) const
     {
         for ( size_t index = 0; index < _listDamageStage.size(); ++index )
         {
             if ( _listDamageStage[index]._name == name )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     int32 ItemVisualDef::computeDamageStageIndex( float32 damage ) const

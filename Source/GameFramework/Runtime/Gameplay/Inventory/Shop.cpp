@@ -25,14 +25,14 @@ namespace sw
         {
             static int32 roundPrice( float32 value ) { return MathUtil::max( 0, static_cast<int32>( MathUtil::round( value ) ) ); }
 
-            static int32 findSaturationIndex( const ShopRuntime& runtime, const hashed_string& itemID )
+            static optional<int32> findSaturationIndex( const ShopRuntime& runtime, const hashed_string& itemID )
             {
                 for ( size_t index = 0; index < runtime._listSaturatedItem.size(); ++index )
                 {
                     if ( runtime._listSaturatedItem[index] == itemID )
                         return static_cast<int32>( index );
                 }
-                return constant::invalid_index::kInt32;
+                return nullopt;
             }
         };
     } // namespace
@@ -261,10 +261,11 @@ namespace sw
         const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return ShopResult::UnknownShop;
-        const int32 stockIndex       = findStockIndex( *pShop, itemID );
-        const bool  bUnknownShopItem = stockIndex < 0 || _pItemCatalog == nullptr || _pItemCatalog->find( itemID ) == nullptr;
+        const optional<int32> foundStock       = findStockIndex( *pShop, itemID );
+        const bool            bUnknownShopItem = foundStock.has_value() == false || _pItemCatalog == nullptr || _pItemCatalog->find( itemID ) == nullptr;
         if ( bUnknownShopItem )
             return ShopResult::UnknownItem;
+        const int32 stockIndex = *foundStock;
         if ( count <= 0 )
             return ShopResult::InvalidCount;
         const ShopStockDef& stock = pShop->_listStock[static_cast<size_t>( stockIndex )];
@@ -288,7 +289,7 @@ namespace sw
             return result;
         const ShopDef* pShop      = _pShopCatalog->find( shopID );
         ShopRuntime*   pRuntime   = findRuntime( shopID );
-        const int32    stockIndex = findStockIndex( *pShop, itemID );
+        const int32    stockIndex = findStockIndex( *pShop, itemID ).value(); // evaluateBuy 가 진열을 확인했다
         const int64    total      = static_cast<int64>( computeBuyPrice( shopID, itemID ) ) * count;
         if ( wallet.trySpend( pShop->_currency, total ) == false )
             return ShopResult::NotEnoughMoney;
@@ -336,14 +337,14 @@ namespace sw
             *pOutReceived = total;
         if ( pShop->_saturation > 0.0f )
         {
-            int32 saturationIndex = ShopInternal::findSaturationIndex( *pRuntime, itemID );
-            if ( saturationIndex < 0 )
+            optional<int32> saturationIndex = ShopInternal::findSaturationIndex( *pRuntime, itemID );
+            if ( saturationIndex.has_value() == false )
             {
                 saturationIndex = static_cast<int32>( pRuntime->_listSaturatedItem.size() );
                 pRuntime->_listSaturatedItem.push_back( itemID );
                 pRuntime->_listSellFactor.push_back( 1.0f );
             }
-            float32& factor = pRuntime->_listSellFactor[static_cast<size_t>( saturationIndex )];
+            float32& factor = pRuntime->_listSellFactor[static_cast<size_t>( *saturationIndex )];
             factor          = MathUtil::max( pShop->_minSellFactor, factor - pShop->_saturation * static_cast<float32>( count ) );
         }
         _eventBuffer.push( ShopEvent{ shopID, itemID, total, count, ShopEvent::Kind::Sold } );
@@ -394,10 +395,10 @@ namespace sw
         const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return constant::invalid_index::kInt32;
-        const int32 stockIndex = findStockIndex( *pShop, itemID );
-        if ( stockIndex < 0 )
+        const optional<int32> stockIndex = findStockIndex( *pShop, itemID );
+        if ( stockIndex.has_value() == false )
             return constant::invalid_index::kInt32;
-        const int32 basePrice = computeBasePrice( pShop->_listStock[static_cast<size_t>( stockIndex )] );
+        const int32 basePrice = computeBasePrice( pShop->_listStock[static_cast<size_t>( *stockIndex )] );
         return ShopInternal::roundPrice( static_cast<float32>( basePrice ) * pShop->_buyMultiplier * pRuntime->_buyModifier );
     }
 
@@ -426,8 +427,8 @@ namespace sw
         const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pShop == nullptr || pRuntime == nullptr )
             return 0;
-        const int32 stockIndex = findStockIndex( *pShop, itemID );
-        return stockIndex >= 0 ? pRuntime->_listStockCount[static_cast<size_t>( stockIndex )] : 0;
+        const optional<int32> stockIndex = findStockIndex( *pShop, itemID );
+        return stockIndex.has_value() ? pRuntime->_listStockCount[static_cast<size_t>( *stockIndex )] : 0;
     }
 
     float32 ShopState::getSellFactor( const hashed_string& shopID, const hashed_string& itemID ) const
@@ -435,8 +436,8 @@ namespace sw
         const ShopRuntime* pRuntime = findRuntime( shopID );
         if ( pRuntime == nullptr )
             return 1.0f;
-        const int32 saturationIndex = ShopInternal::findSaturationIndex( *pRuntime, itemID );
-        return saturationIndex >= 0 ? pRuntime->_listSellFactor[static_cast<size_t>( saturationIndex )] : 1.0f;
+        const optional<int32> saturationIndex = ShopInternal::findSaturationIndex( *pRuntime, itemID );
+        return saturationIndex.has_value() ? pRuntime->_listSellFactor[static_cast<size_t>( *saturationIndex )] : 1.0f;
     }
 
     bool ShopState::isUnlocked( const ShopStockDef& stock ) const
@@ -462,14 +463,14 @@ namespace sw
         return const_cast<ShopRuntime*>( static_cast<const ShopState*>( this )->findRuntime( shopID ) );
     }
 
-    int32 ShopState::findStockIndex( const ShopDef& shop, const hashed_string& itemID ) const
+    optional<int32> ShopState::findStockIndex( const ShopDef& shop, const hashed_string& itemID ) const
     {
         for ( size_t index = 0; index < shop._listStock.size(); ++index )
         {
             if ( shop._listStock[index]._itemID == itemID )
                 return static_cast<int32>( index );
         }
-        return constant::invalid_index::kInt32;
+        return nullopt;
     }
 
     int32 ShopState::computeBasePrice( const ShopStockDef& stock ) const
