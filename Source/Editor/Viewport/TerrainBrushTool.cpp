@@ -99,24 +99,6 @@ namespace sw::editor
                 TerrainBrushTarget          _target{ TerrainBrushTarget::Height };
             };
 
-            struct State
-            {
-                TerrainBrushSettings       _settings{};
-                Stroke                     _stroke{};
-                vector<TerrainBrushSample> _listSample; ///< 프레임마다 지우고 채우는 재사용 버퍼(UI 스레드 하나만 쓴다)
-                GameObjectHandle           _lastEdited{};
-                GameObjectHandle           _lastHovered{};         ///< 마지막으로 브러시 레이가 닿은 지형(크기 바꾸기 대상의 다음 후보)
-                uint32                     _resizeResolution{ 0 }; ///< 설정 창이 고른 새 해상도(0 이면 지금 해상도를 보인다)
-                bool                       _bStroking{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool                       _bUnsaved{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool                       _bHit{ false };         ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                int32                      _activeFrame{ -1 };     ///< 도구가 마지막으로 돈 ImGui 프레임(감시 값 `Editor.TerrainBrushToolActive`)
-                uint32                     _strokeCount{ 0 };
-            };
-
-            /** @brief 브러시 도구의 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
-            static State& getState() { return getEditorState<State>(); }
-
             /** @brief 레이 위 점 @p t 가 지형 위로 얼마나 떠 있는지 봅니다. 지형 밖이면 false 입니다. */
             [[nodiscard]] static bool findSignedHeight( const GameObjectManager& manager, const Ray& ray, float32 t, float32& outAbove )
             {
@@ -254,207 +236,6 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 되돌리기 자료의 한쪽(@p bAfter)을 지형에 다시 씁니다. 지형이 사라졌으면 아무것도 하지 않습니다. */
-            static void applyRecord( const EditRecord& record, bool bAfter )
-            {
-                TerrainComponent* pTerrain = findTerrain( record._object );
-                if ( pTerrain == nullptr )
-                    return;
-                // 크기가 바뀐 지형(다시 읽은 에셋 · 크기 바꾸기 뒤)이면 사각형이 맞지 않아 쓰지 않는다.
-                const TerrainHeightfield& heightfield = pTerrain->getHeightfield();
-                bool                      bWritten    = false;
-                switch ( record._target )
-                {
-                    case TerrainBrushTarget::LayerWeight:
-                    {
-                        vector<SurfaceLayerWeights> listWeight;
-                        bWritten = heightfield.readSplatWeights( listWeight ) &&
-                                   pasteRect( bAfter ? record._listWeightAfter : record._listWeightBefore, heightfield.getSplatWidth(), record._rect, listWeight ) &&
-                                   pTerrain->writeLayerWeights( listWeight, record._rect );
-                        break;
-                    }
-                    case TerrainBrushTarget::Hole:
-                    {
-                        vector<uint8> listHole;
-                        bWritten = heightfield.readHoleCells( listHole ) &&
-                                   pasteRect( bAfter ? record._listHoleAfter : record._listHoleBefore, heightfield.getResolution() - 1, record._rect, listHole ) &&
-                                   pTerrain->writeHoles( listHole, record._rect );
-                        break;
-                    }
-                    case TerrainBrushTarget::Height:
-                    {
-                        vector<float32> listHeight = heightfield.getHeightSamples();
-                        bWritten                   = pasteRect( bAfter ? record._listHeightAfter : record._listHeightBefore, heightfield.getResolution(), record._rect, listHeight ) &&
-                                   pTerrain->writeHeights( listHeight, record._rect );
-                        break;
-                    }
-                }
-                if ( bWritten == false )
-                {
-                    SW_LOG_WARNING_ID( "TerrainBrushTool.TerrainEditNotUndone", "Terrain edit was not undone or redone - the terrain no longer has the edited size" );
-                    return;
-                }
-                getState()._bUnsaved = true;
-            }
-
-            /** @brief 크기 바꾸기 자료의 한쪽(@p bAfter)을 지형에 씁니다. 지형이 사라졌으면 아무것도 하지 않습니다. */
-            static void applyResizeRecord( const ResizeRecord& record, bool bAfter )
-            {
-                TerrainComponent* pTerrain = findTerrain( record._object );
-                if ( pTerrain == nullptr )
-                    return;
-                const bool bWritten = bAfter ? pTerrain->replaceHeightfield( record._resolutionAfter, record._listHeightAfter, record._listHoleAfter )
-                                             : pTerrain->replaceHeightfield( record._resolutionBefore, record._listHeightBefore, record._listHoleBefore );
-                if ( bWritten )
-                    getState()._bUnsaved = true;
-            }
-
-            /** @brief 지형 @p terrain 을 해상도 @p resolution 으로 다시 표본화하고 되돌리기 하나(`Resize Terrain`)를 남깁니다. */
-            static bool resizeTerrain( State& state, TerrainComponent& terrain, uint32 resolution )
-            {
-                const TerrainHeightfield& heightfield = terrain.getHeightfield();
-                shared_ptr<ResizeRecord>  record      = make_shared<ResizeRecord>();
-                record->_object                       = terrain.getOwner()->getHandle();
-                record->_resolutionBefore             = heightfield.getResolution();
-                record->_listHeightBefore             = heightfield.getHeightSamples();
-                record->_listHoleBefore               = heightfield.getHoleCells();
-                if ( terrain.resampleHeightfield( resolution ) == false )
-                    return false;
-                record->_resolutionAfter = heightfield.getResolution();
-                record->_listHeightAfter = heightfield.getHeightSamples();
-                record->_listHoleAfter   = heightfield.getHoleCells();
-                EditorTransaction::push( SW_UNDO_STEP( TerrainBrushToolInternal::applyResizeRecord, *record, false ),
-                                         SW_UNDO_STEP( TerrainBrushToolInternal::applyResizeRecord, *record, true ), "Resize Terrain" );
-                state._lastEdited = record->_object;
-                state._bUnsaved   = true;
-                return true;
-            }
-
-            /** @brief 드래그를 시작합니다. 지형 값 전부를 사본과 편집 전 사본으로 복사합니다. */
-            static bool beginStroke( State& state, TerrainComponent& terrain, const float3& hit )
-            {
-                const TerrainBrushTarget  target      = TerrainBrush::getTarget( state._settings._mode );
-                const TerrainHeightfield& heightfield = terrain.getHeightfield();
-                Stroke&                   stroke      = state._stroke;
-                stroke                                = Stroke{};
-                stroke._object                        = terrain.getOwner()->getHandle();
-                stroke._target                        = target;
-                stroke._flattenHeight                 = hit._y;
-                switch ( target )
-                {
-                    case TerrainBrushTarget::LayerWeight:
-                    {
-                        if ( heightfield.readSplatWeights( stroke._listWeight ) == false )
-                            return false;
-                        stroke._listWeightBefore = stroke._listWeight;
-                        break;
-                    }
-                    case TerrainBrushTarget::Hole:
-                    {
-                        if ( heightfield.readHoleCells( stroke._listHole ) == false )
-                            return false;
-                        stroke._listHoleBefore = stroke._listHole;
-                        break;
-                    }
-                    case TerrainBrushTarget::Height:
-                    {
-                        stroke._listHeight       = heightfield.getHeightSamples();
-                        stroke._listHeightBefore = stroke._listHeight;
-                        break;
-                    }
-                }
-                state._bStroking = true;
-                return true;
-            }
-
-            /** @brief 이번 프레임의 브러시를 사본에 적용하고 바뀐 사각형만 지형에 씁니다. */
-            static void applyStroke( State& state, TerrainComponent& terrain, const float3& hit, float32 deltaTime )
-            {
-                Stroke&          stroke = state._stroke;
-                TerrainBrushGrid grid{};
-                if ( makeGrid( terrain.getHeightfield(), stroke._target, grid ) == false )
-                    return;
-                TerrainBrush::collectSamples( float2{ hit._x, hit._z }, grid, state._settings, state._listSample );
-                if ( state._listSample.empty() )
-                    return;
-                TerrainSampleRect frameRect{};
-                for ( const TerrainBrushSample& sample : state._listSample )
-                {
-                    frameRect.include( sample._sampleX, sample._sampleZ );
-                }
-                bool bChanged = false;
-                switch ( stroke._target )
-                {
-                    case TerrainBrushTarget::LayerWeight:
-                    {
-                        bChanged = TerrainBrush::applyLayerWeight( stroke._listWeight, grid._resolution, state._listSample, state._settings, deltaTime ) &&
-                                   terrain.writeLayerWeights( stroke._listWeight, frameRect );
-                        break;
-                    }
-                    case TerrainBrushTarget::Hole:
-                    {
-                        bChanged = TerrainBrush::applyHole( stroke._listHole, grid._resolution, state._listSample, state._settings ) && terrain.writeHoles( stroke._listHole, frameRect );
-                        break;
-                    }
-                    case TerrainBrushTarget::Height:
-                    {
-                        bChanged = TerrainBrush::applyHeight( stroke._listHeight, grid._resolution, state._listSample, state._settings, stroke._flattenHeight, deltaTime ) &&
-                                   terrain.writeHeights( stroke._listHeight, frameRect );
-                        break;
-                    }
-                }
-                if ( bChanged == false )
-                    return;
-                stroke._rect.include( frameRect._minX, frameRect._minZ );
-                stroke._rect.include( frameRect._maxX, frameRect._maxZ );
-                state._lastEdited = stroke._object;
-                state._bUnsaved   = true;
-            }
-
-            /** @brief 드래그를 마칩니다. 바뀐 것이 있으면 닿은 사각형의 전 · 후 값으로 되돌리기 하나를 남깁니다. */
-            static void endStroke( State& state )
-            {
-                Stroke&    stroke  = state._stroke;
-                const bool bRecord = stroke._rect.isEmpty() == false && findTerrain( stroke._object ) != nullptr;
-                if ( bRecord )
-                {
-                    shared_ptr<EditRecord> record = make_shared<EditRecord>();
-                    record->_object               = stroke._object;
-                    record->_rect                 = stroke._rect;
-                    record->_target               = stroke._target;
-                    const TerrainHeightfield& hf  = findTerrain( stroke._object )->getHeightfield();
-                    const utf8*               pName{ "Sculpt Terrain" };
-                    switch ( stroke._target )
-                    {
-                        case TerrainBrushTarget::LayerWeight:
-                        {
-                            extractRect( stroke._listWeightBefore, hf.getSplatWidth(), stroke._rect, record->_listWeightBefore );
-                            extractRect( stroke._listWeight, hf.getSplatWidth(), stroke._rect, record->_listWeightAfter );
-                            pName = "Paint Terrain";
-                            break;
-                        }
-                        case TerrainBrushTarget::Hole:
-                        {
-                            extractRect( stroke._listHoleBefore, hf.getResolution() - 1, stroke._rect, record->_listHoleBefore );
-                            extractRect( stroke._listHole, hf.getResolution() - 1, stroke._rect, record->_listHoleAfter );
-                            pName = "Paint Terrain Holes";
-                            break;
-                        }
-                        case TerrainBrushTarget::Height:
-                        {
-                            extractRect( stroke._listHeightBefore, hf.getResolution(), stroke._rect, record->_listHeightBefore );
-                            extractRect( stroke._listHeight, hf.getResolution(), stroke._rect, record->_listHeightAfter );
-                            break;
-                        }
-                    }
-                    EditorTransaction::push( SW_UNDO_STEP( TerrainBrushToolInternal::applyRecord, *record, false ),
-                                             SW_UNDO_STEP( TerrainBrushToolInternal::applyRecord, *record, true ), pName );
-                    ++state._strokeCount;
-                }
-                stroke           = Stroke{};
-                state._bStroking = false;
-            }
-
             /** @brief 지금 높이를 `.heightfield` 형식으로 절대 경로에 씁니다(높이는 지형의 높이 범위로 양자화). 높이장이 없으면 false 입니다. */
             [[nodiscard]] static bool saveHeightfield( const TerrainComponent& terrain, string_view filePath )
             {
@@ -480,136 +261,168 @@ namespace sw::editor
                 const std::optional<AbsolutePath> splatFile = FileUtil::requireAbsolutePath( filePath );
                 return splatFile.has_value() && data.saveToFile( *splatFile );
             }
+        };
 
-            /** @brief 마지막으로 고친 지형의 높이장과 스플랫을 원래 에셋 경로에 씁니다. */
-            static void saveLastEdited( State& state )
+        /**
+         * @class TerrainBrushToolState
+         * @brief 브러시 도구의 상태와 그 상태를 바꾸는 일(드래그 · 크기 바꾸기 · 저장 · 설정 창)입니다. 에디터 범위의 상태 저장소가 소유한다(`get`).
+         */
+        class TerrainBrushToolState
+        {
+        public:
+            TerrainBrushToolState();
+
+            /** @brief 지금 에디터 범위의 브러시 도구 상태입니다. */
+            static TerrainBrushToolState& get() { return getEditorState<TerrainBrushToolState>(); }
+
+            /** @brief 브러시 원 · 설정 창을 그리고 드래그를 처리합니다(`TerrainBrushTool::process`). */
+            void process( const EditorViewportVisualizerArgs& args )
             {
-                TerrainComponent* pTerrain = findTerrain( state._lastEdited );
+                _bHit              = SW_FALSE;
+                _activeFrame       = ImGui::GetFrameCount();
+                const bool bUsable = args._pObjectManager != nullptr && args._pViewProj != nullptr && args._bFlat2D == false;
+                if ( bUsable == false )
+                {
+                    if ( _bStroking )
+                        endStroke();
+                    return;
+                }
+
+                const ImVec2 mouse        = ImGui::GetMousePos();
+                const bool   bInsideX     = mouse.x >= args._canvasPos._x && mouse.x <= args._canvasPos._x + args._canvasSize._x;
+                const bool   bInsideY     = mouse.y >= args._canvasPos._y && mouse.y <= args._canvasPos._y + args._canvasSize._y;
+                const bool   bMouseInside = bInsideX && bInsideY && ImGui::IsWindowHovered();
+                const bool   bEditable    = EditorPlaySession::areSceneEditsAllowed();
+
+                Ray        ray;
+                float3     hit{};
+                const bool bRay = EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray );
+                _bHit           = ( bRay && TerrainBrushToolInternal::traceTerrain( *args._pObjectManager, ray, hit ) ) ? SW_TRUE : SW_FALSE;
+                if ( _bHit )
+                {
+                    const TerrainComponent* pHovered = TerrainComponent::findTerrainAt( *args._pObjectManager, hit._x, hit._z );
+                    if ( pHovered != nullptr && pHovered->getOwner() != nullptr )
+                        _lastHovered = pHovered->getOwner()->getHandle();
+                }
+
+                if ( _bHit )
+                {
+                    EditorProjectedLineRenderer renderer{ args._pDrawList, *args._pViewProj, args._canvasPos, args._canvasSize };
+                    const float4                color{ 1.0f, 0.85f, 0.2f, 1.0f };
+                    TerrainBrushToolInternal::drawCircle( renderer, *args._pObjectManager, hit, _settings._radius, color );
+                    const float32 inner = _settings._radius * ( 1.0f - MathUtil::saturate( _settings._falloff ) );
+                    if ( inner > 0.0f )
+                        TerrainBrushToolInternal::drawCircle( renderer, *args._pObjectManager, hit, inner, float4{ color._x, color._y, color._z, 0.5f } );
+                }
+
+                // 지형 위에 있거나 칠하는 중이면 마우스를 가져간다 — 클릭 선택과 기즈모가 물러난다.
+                const bool bClaim = bEditable && ( _bStroking || ( bMouseInside && _bHit && args._bGizmoDragging == false ) );
+                if ( bClaim )
+                    EditorViewportMouseClaim::acquire( this );
+                else
+                    EditorViewportMouseClaim::release( this );
+
+                // 칠하는 양은 세기 × 경과 시간입니다. 경과는 엔진 프레임의 실제 경과를 씁니다(씬 뷰 카메라와 같은 시계). ImGui 의 경과는 벽시계라
+                // 고정 프레임 시간으로 도는 시나리오에서도 프레임 비용을 따라 바뀌고, 프레임이 빠른 Release 에서는 같은 드래그가 덜 칠합니다.
+                const float32 deltaTime = editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
+                if ( _bStroking )
+                {
+                    TerrainComponent* pTerrain   = TerrainBrushToolInternal::findTerrain( _stroke._object );
+                    const bool        bStillDown = ImGui::IsMouseDown( ImGuiMouseButton_Left ) && bEditable && pTerrain != nullptr;
+                    if ( bStillDown == false )
+                        endStroke();
+                    else if ( _bHit )
+                        applyStroke( *pTerrain, hit, deltaTime );
+                }
+                else if ( bClaim && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
+                {
+                    TerrainComponent* pTerrain = TerrainComponent::findTerrainAt( *args._pObjectManager, hit._x, hit._z );
+                    if ( pTerrain != nullptr && beginStroke( *pTerrain, hit ) )
+                        applyStroke( *pTerrain, hit, deltaTime );
+                }
+
+                drawSettingsWindow( args );
+            }
+
+            TerrainBrushSettings& getSettings() { return _settings; }
+
+            /** @brief 되돌리기 자료의 한쪽(@p bAfter)을 지형에 다시 씁니다. 지형이 사라졌으면 아무것도 하지 않습니다. */
+            static void applyRecord( const TerrainBrushToolInternal::EditRecord& record, bool bAfter )
+            {
+                TerrainComponent* pTerrain = TerrainBrushToolInternal::findTerrain( record._object );
                 if ( pTerrain == nullptr )
                     return;
-                bool                              bSaved          = true;
-                const std::optional<AbsolutePath> heightfieldPath = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getHeightfieldPath() ); // 쓰기다 - 읽기 해석이 아니라 쓸 자리
-                if ( heightfieldPath.has_value() == false || saveHeightfield( *pTerrain, heightfieldPath->str() ) == false )
+                // 크기가 바뀐 지형(다시 읽은 에셋 · 크기 바꾸기 뒤)이면 사각형이 맞지 않아 쓰지 않는다.
+                const TerrainHeightfield& heightfield = pTerrain->getHeightfield();
+                bool                      bWritten    = false;
+                switch ( record._target )
                 {
-                    SW_LOG_ERROR_ID( "TerrainBrushTool.TerrainHeightfieldNotSaved", "Terrain heightfield '%#' was not saved", pTerrain->getHeightfieldPath().c_str() );
-                    bSaved = false;
-                }
-                if ( pTerrain->getLayerWeightsPath().empty() == false )
-                {
-                    const std::optional<AbsolutePath> splatPath = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getLayerWeightsPath() );
-                    if ( splatPath.has_value() == false || saveSplat( *pTerrain, splatPath->str() ) == false )
+                    case TerrainBrushTarget::LayerWeight:
                     {
-                        SW_LOG_ERROR_ID( "TerrainBrushTool.TerrainSplatNotSaved", "Terrain splat '%#' was not saved", pTerrain->getLayerWeightsPath().c_str() );
-                        bSaved = false;
+                        vector<SurfaceLayerWeights> listWeight;
+                        bWritten = heightfield.readSplatWeights( listWeight ) &&
+                                   TerrainBrushToolInternal::pasteRect( bAfter ? record._listWeightAfter : record._listWeightBefore, heightfield.getSplatWidth(), record._rect, listWeight ) &&
+                                   pTerrain->writeLayerWeights( listWeight, record._rect );
+                        break;
+                    }
+                    case TerrainBrushTarget::Hole:
+                    {
+                        vector<uint8> listHole;
+                        bWritten = heightfield.readHoleCells( listHole ) &&
+                                   TerrainBrushToolInternal::pasteRect( bAfter ? record._listHoleAfter : record._listHoleBefore, heightfield.getResolution() - 1, record._rect, listHole ) &&
+                                   pTerrain->writeHoles( listHole, record._rect );
+                        break;
+                    }
+                    case TerrainBrushTarget::Height:
+                    {
+                        vector<float32> listHeight = heightfield.getHeightSamples();
+                        bWritten                   = TerrainBrushToolInternal::pasteRect( bAfter ? record._listHeightAfter : record._listHeightBefore, heightfield.getResolution(), record._rect, listHeight ) &&
+                                   pTerrain->writeHeights( listHeight, record._rect );
+                        break;
                     }
                 }
-                if ( bSaved )
+                if ( bWritten == false )
                 {
-                    state._bUnsaved = false;
-                    SW_LOG_INFO_ID( "TerrainBrushTool.TerrainSaved", "Terrain saved: %#", pTerrain->getHeightfieldPath().c_str() );
+                    SW_LOG_WARNING_ID( "TerrainBrushTool.TerrainEditNotUndone", "Terrain edit was not undone or redone - the terrain no longer has the edited size" );
+                    return;
                 }
+                get()._bUnsaved = SW_TRUE;
             }
 
-            /** @brief 크기 바꾸기 대상입니다. 마지막으로 고친 지형, 없으면 마지막으로 브러시가 닿은 지형입니다. */
-            static TerrainComponent* findResizeTarget( const State& state )
+            /** @brief 크기 바꾸기 자료의 한쪽(@p bAfter)을 지형에 씁니다. 지형이 사라졌으면 아무것도 하지 않습니다. */
+            static void applyResizeRecord( const TerrainBrushToolInternal::ResizeRecord& record, bool bAfter )
             {
-                TerrainComponent* pEdited = findTerrain( state._lastEdited );
-                return pEdited != nullptr ? pEdited : findTerrain( state._lastHovered );
-            }
-
-            /**
-             * @brief 해상도 줄입니다. 대상 지형(`findResizeTarget`, 없으면 비활성)의 해상도를 고르고 `Resize` 로 다시 표본화합니다.
-             * @details 고를 수 있는 해상도는 청크 칸의 배수 + 1 가운데 `TerrainComponent::isResolutionUsable` 이 받는 것뿐이다 — 나뉘지 않는 값을 쓸 수 없다.
-             */
-            static void drawResizeControls( State& state )
-            {
-                TerrainComponent* pTerrain = findResizeTarget( state );
-                ImGui::BeginDisabled( pTerrain == nullptr || state._bStroking );
-                const uint32 current = pTerrain != nullptr ? pTerrain->getHeightfield().getResolution() : 0u;
-                if ( state._resizeResolution == 0 || pTerrain == nullptr )
-                    state._resizeResolution = current;
-                const string preview = state._resizeResolution > 0 ? to_string( state._resizeResolution ) : string{ "-" };
-                EditorChrome::setNextItemWidthColumns( 16.0f );
-                if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Resolution" ), "Resolution" ), preview.c_str() ) )
-                {
-                    for ( uint32 resolution = 2; pTerrain != nullptr && resolution <= kMaxResolution; ++resolution )
-                    {
-                        if ( pTerrain->isResolutionUsable( resolution ) == false )
-                            continue;
-                        const string label = to_string( resolution ) + ( resolution == current ? " (current)" : "" );
-                        if ( ImGui::Selectable( label.c_str(), resolution == state._resizeResolution ) )
-                            state._resizeResolution = resolution;
-                    }
-                    ImGui::EndCombo();
-                }
-                ImGui::SameLine();
-                ImGui::BeginDisabled( state._resizeResolution == current );
-                if ( ImGui::Button( SW_LOCKEY( "EdText", "Resize" ) ) && pTerrain != nullptr )
-                    (void)resizeTerrain( state, *pTerrain, state._resizeResolution ); // 실패는 지형이 알린다
-                ImGui::EndDisabled();
-                ImGui::EndDisabled();
-                if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) )
-                    ImGui::SetTooltip( "%s", SW_LOCKEY( "EdTip", "TerrainResample" ) );
-            }
-
-            /** @brief 브러시 설정 창입니다(모드 · 반경 · 세기 · 감쇠 · 레이어 · 해상도 · 저장). */
-            static void drawSettingsWindow( State& state, const EditorViewportVisualizerArgs& args )
-            {
-                ImGui::SetNextWindowPos( ImVec2{ args._canvasPos._x + 12.0f, args._canvasPos._y + 48.0f }, ImGuiCond_FirstUseEver );
-                if ( ImGui::Begin( "Terrain Brush###TerrainBrushTool", nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
-                {
-                    static const utf8* const s_arrModeName[] = { "Raise", "Lower", "Flatten", "Paint Layer", "Smooth", "Cut Hole", "Fill Hole" };
-                    static_assert( static_cast<size_t>( IM_ARRAYSIZE( s_arrModeName ) ) == static_cast<size_t>( TerrainBrushMode::Count ), "Terrain brush mode names follow TerrainBrushMode" );
-                    int32 mode = static_cast<int32>( state._settings._mode );
-                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Mode" ) );
-                    if ( ImGui::Combo( "##Mode", &mode, s_arrModeName, IM_ARRAYSIZE( s_arrModeName ) ) )
-                        state._settings._mode = static_cast<TerrainBrushMode>( mode );
-                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Radius" ) );
-                    ImGui::SliderFloat( "##Radius", &state._settings._radius, 0.5f, 64.0f, "%.1f m" );
-                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Strength" ) );
-                    ImGui::SliderFloat( "##Strength", &state._settings._strength, 0.05f, 60.0f, "%.2f /s", ImGuiSliderFlags_Logarithmic );
-                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Falloff" ) );
-                    ImGui::SliderFloat( "##Falloff", &state._settings._falloff, 0.0f, 1.0f, "%.2f" );
-                    if ( state._settings._mode == TerrainBrushMode::PaintLayer )
-                    {
-                        int32 layer = static_cast<int32>( state._settings._layerIndex );
-                        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Layer" ) );
-                        if ( ImGui::SliderInt( "##Layer", &layer, 0, static_cast<int32>( kLayerCount ) - 1 ) )
-                            state._settings._layerIndex = static_cast<uint32>( layer );
-                    }
-                    drawResizeControls( state );
-                    ImGui::BeginDisabled( findTerrain( state._lastEdited ) == nullptr );
-                    if ( ImGui::Button( state._bUnsaved ? "Save Terrain *" : "Save Terrain" ) )
-                        saveLastEdited( state );
-                    ImGui::EndDisabled();
-                    if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) )
-                        ImGui::SetTooltip( "%s", SW_LOCKEY( "EdTip", "TerrainWriteAssets" ) );
-                }
-                ImGui::End();
+                TerrainComponent* pTerrain = TerrainBrushToolInternal::findTerrain( record._object );
+                if ( pTerrain == nullptr )
+                    return;
+                const bool bWritten = bAfter ? pTerrain->replaceHeightfield( record._resolutionAfter, record._listHeightAfter, record._listHoleAfter )
+                                             : pTerrain->replaceHeightfield( record._resolutionBefore, record._listHeightBefore, record._listHoleBefore );
+                if ( bWritten )
+                    get()._bUnsaved = SW_TRUE;
             }
 
             [[nodiscard]] static bool readStrokeCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( getState()._strokeCount );
+                outValue = static_cast<float64>( get()._strokeCount );
                 return true;
             }
 
             [[nodiscard]] static bool readHit( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = getState()._bHit ? 1.0 : 0.0;
+                outValue = get()._bHit ? 1.0 : 0.0;
                 return true;
             }
 
             [[nodiscard]] static bool readToolActive( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = getState()._activeFrame + 1 >= ImGui::GetFrameCount() ? 1.0 : 0.0;
+                outValue = get()._activeFrame + 1 >= ImGui::GetFrameCount() ? 1.0 : 0.0;
                 return true;
             }
 
             /** @brief 크기 바꾸기 대상 지형의 높이장 해상도입니다(대상이 없으면 0). 시나리오가 `terrain.resize` 가 받아들여졌는지 읽는다. */
             [[nodiscard]] static bool readResolution( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const TerrainComponent* pTerrain = findResizeTarget( getState() );
+                const TerrainComponent* pTerrain = get().findResizeTarget();
                 outValue                         = pTerrain != nullptr ? static_cast<float64>( pTerrain->getHeightfield().getResolution() ) : 0.0;
                 return true;
             }
@@ -621,7 +434,7 @@ namespace sw::editor
                     return false;
                 static const utf8* const s_arrModeName[] = { "raise", "lower", "flatten", "paint", "smooth", "hole", "fill" };
                 static_assert( static_cast<size_t>( IM_ARRAYSIZE( s_arrModeName ) ) == static_cast<size_t>( TerrainBrushMode::Count ), "Terrain brush command names follow TerrainBrushMode" );
-                TerrainBrushSettings settings   = getState()._settings;
+                TerrainBrushSettings settings   = get()._settings;
                 bool                 bKnownMode = false;
                 for ( uint32 index = 0; index < IM_ARRAYSIZE( s_arrModeName ); ++index )
                 {
@@ -639,12 +452,12 @@ namespace sw::editor
                 const bool bRadiusBad   = listArgument.size() > 1 && StringUtil::parseFloat( listArgument[1], settings._radius ) == false;
                 const bool bStrengthBad = listArgument.size() > 2 && StringUtil::parseFloat( listArgument[2], settings._strength ) == false;
                 float32    layer        = static_cast<float32>( settings._layerIndex );
-                const bool bLayerBad    = listArgument.size() > 3 && ( StringUtil::parseFloat( listArgument[3], layer ) == false || layer < 0.0f || layer >= static_cast<float32>( kLayerCount ) );
+                const bool bLayerBad    = listArgument.size() > 3 && ( StringUtil::parseFloat( listArgument[3], layer ) == false || layer < 0.0f || layer >= static_cast<float32>( TerrainBrushToolInternal::kLayerCount ) );
                 const bool bAnyBad      = bRadiusBad || bStrengthBad || bLayerBad;
                 if ( bAnyBad )
                     return false;
                 settings._layerIndex = static_cast<uint32>( layer );
-                getState()._settings = settings;
+                get()._settings      = settings;
                 outReply             = "terrain brush " + listArgument[0];
                 return true;
             }
@@ -656,15 +469,15 @@ namespace sw::editor
                 const bool bParsed = listArgument.size() == 1 && StringUtil::parseFloat( listArgument[0], value ) && value >= 2.0f;
                 if ( bParsed == false )
                     return false;
-                State&            state    = getState();
-                TerrainComponent* pTerrain = findResizeTarget( state );
+                TerrainBrushToolState& state    = get();
+                TerrainComponent*      pTerrain = state.findResizeTarget();
                 if ( pTerrain == nullptr )
                 {
                     outReply = "no terrain to resize (brush or hover a terrain first)";
                     return false;
                 }
                 const uint32 resolution = static_cast<uint32>( value );
-                if ( resizeTerrain( state, *pTerrain, resolution ) == false )
+                if ( state.resizeTerrain( *pTerrain, resolution ) == false )
                 {
                     outReply = "terrain resize to " + listArgument[0] + " failed (resolution - 1 must be a multiple of the chunk cells)";
                     return false;
@@ -673,7 +486,290 @@ namespace sw::editor
                 outReply                = "terrain resized to " + listArgument[0];
                 return true;
             }
+
+        private:
+            /** @brief 지형 @p terrain 을 해상도 @p resolution 으로 다시 표본화하고 되돌리기 하나(`Resize Terrain`)를 남깁니다. */
+            bool resizeTerrain( TerrainComponent& terrain, uint32 resolution )
+            {
+                const TerrainHeightfield&                          heightfield = terrain.getHeightfield();
+                shared_ptr<TerrainBrushToolInternal::ResizeRecord> record      = make_shared<TerrainBrushToolInternal::ResizeRecord>();
+                record->_object                                                = terrain.getOwner()->getHandle();
+                record->_resolutionBefore                                      = heightfield.getResolution();
+                record->_listHeightBefore                                      = heightfield.getHeightSamples();
+                record->_listHoleBefore                                        = heightfield.getHoleCells();
+                if ( terrain.resampleHeightfield( resolution ) == false )
+                    return false;
+                record->_resolutionAfter = heightfield.getResolution();
+                record->_listHeightAfter = heightfield.getHeightSamples();
+                record->_listHoleAfter   = heightfield.getHoleCells();
+                EditorTransaction::push( SW_UNDO_STEP( TerrainBrushToolState::applyResizeRecord, *record, false ),
+                                         SW_UNDO_STEP( TerrainBrushToolState::applyResizeRecord, *record, true ), "Resize Terrain" );
+                _lastEdited = record->_object;
+                _bUnsaved   = SW_TRUE;
+                return true;
+            }
+
+            /** @brief 드래그를 시작합니다. 지형 값 전부를 사본과 편집 전 사본으로 복사합니다. */
+            bool beginStroke( TerrainComponent& terrain, const float3& hit )
+            {
+                const TerrainBrushTarget          target      = TerrainBrush::getTarget( _settings._mode );
+                const TerrainHeightfield&         heightfield = terrain.getHeightfield();
+                TerrainBrushToolInternal::Stroke& stroke      = _stroke;
+                stroke                                        = TerrainBrushToolInternal::Stroke{};
+                stroke._object                                = terrain.getOwner()->getHandle();
+                stroke._target                                = target;
+                stroke._flattenHeight                         = hit._y;
+                switch ( target )
+                {
+                    case TerrainBrushTarget::LayerWeight:
+                    {
+                        if ( heightfield.readSplatWeights( stroke._listWeight ) == false )
+                            return false;
+                        stroke._listWeightBefore = stroke._listWeight;
+                        break;
+                    }
+                    case TerrainBrushTarget::Hole:
+                    {
+                        if ( heightfield.readHoleCells( stroke._listHole ) == false )
+                            return false;
+                        stroke._listHoleBefore = stroke._listHole;
+                        break;
+                    }
+                    case TerrainBrushTarget::Height:
+                    {
+                        stroke._listHeight       = heightfield.getHeightSamples();
+                        stroke._listHeightBefore = stroke._listHeight;
+                        break;
+                    }
+                }
+                _bStroking = SW_TRUE;
+                return true;
+            }
+
+            /** @brief 이번 프레임의 브러시를 사본에 적용하고 바뀐 사각형만 지형에 씁니다. */
+            void applyStroke( TerrainComponent& terrain, const float3& hit, float32 deltaTime )
+            {
+                TerrainBrushToolInternal::Stroke& stroke = _stroke;
+                TerrainBrushGrid                  grid{};
+                if ( TerrainBrushToolInternal::makeGrid( terrain.getHeightfield(), stroke._target, grid ) == false )
+                    return;
+                TerrainBrush::collectSamples( float2{ hit._x, hit._z }, grid, _settings, _listSample );
+                if ( _listSample.empty() )
+                    return;
+                TerrainSampleRect frameRect{};
+                for ( const TerrainBrushSample& sample : _listSample )
+                {
+                    frameRect.include( sample._sampleX, sample._sampleZ );
+                }
+                bool bChanged = false;
+                switch ( stroke._target )
+                {
+                    case TerrainBrushTarget::LayerWeight:
+                    {
+                        bChanged = TerrainBrush::applyLayerWeight( stroke._listWeight, grid._resolution, _listSample, _settings, deltaTime ) &&
+                                   terrain.writeLayerWeights( stroke._listWeight, frameRect );
+                        break;
+                    }
+                    case TerrainBrushTarget::Hole:
+                    {
+                        bChanged = TerrainBrush::applyHole( stroke._listHole, grid._resolution, _listSample, _settings ) && terrain.writeHoles( stroke._listHole, frameRect );
+                        break;
+                    }
+                    case TerrainBrushTarget::Height:
+                    {
+                        bChanged = TerrainBrush::applyHeight( stroke._listHeight, grid._resolution, _listSample, _settings, stroke._flattenHeight, deltaTime ) &&
+                                   terrain.writeHeights( stroke._listHeight, frameRect );
+                        break;
+                    }
+                }
+                if ( bChanged == false )
+                    return;
+                stroke._rect.include( frameRect._minX, frameRect._minZ );
+                stroke._rect.include( frameRect._maxX, frameRect._maxZ );
+                _lastEdited = stroke._object;
+                _bUnsaved   = SW_TRUE;
+            }
+
+            /** @brief 드래그를 마칩니다. 바뀐 것이 있으면 닿은 사각형의 전 · 후 값으로 되돌리기 하나를 남깁니다. */
+            void endStroke()
+            {
+                TerrainBrushToolInternal::Stroke& stroke  = _stroke;
+                const bool                        bRecord = stroke._rect.isEmpty() == false && TerrainBrushToolInternal::findTerrain( stroke._object ) != nullptr;
+                if ( bRecord )
+                {
+                    shared_ptr<TerrainBrushToolInternal::EditRecord> record = make_shared<TerrainBrushToolInternal::EditRecord>();
+                    record->_object                                         = stroke._object;
+                    record->_rect                                           = stroke._rect;
+                    record->_target                                         = stroke._target;
+                    const TerrainHeightfield& hf                            = TerrainBrushToolInternal::findTerrain( stroke._object )->getHeightfield();
+                    const utf8*               pName{ "Sculpt Terrain" };
+                    switch ( stroke._target )
+                    {
+                        case TerrainBrushTarget::LayerWeight:
+                        {
+                            TerrainBrushToolInternal::extractRect( stroke._listWeightBefore, hf.getSplatWidth(), stroke._rect, record->_listWeightBefore );
+                            TerrainBrushToolInternal::extractRect( stroke._listWeight, hf.getSplatWidth(), stroke._rect, record->_listWeightAfter );
+                            pName = "Paint Terrain";
+                            break;
+                        }
+                        case TerrainBrushTarget::Hole:
+                        {
+                            TerrainBrushToolInternal::extractRect( stroke._listHoleBefore, hf.getResolution() - 1, stroke._rect, record->_listHoleBefore );
+                            TerrainBrushToolInternal::extractRect( stroke._listHole, hf.getResolution() - 1, stroke._rect, record->_listHoleAfter );
+                            pName = "Paint Terrain Holes";
+                            break;
+                        }
+                        case TerrainBrushTarget::Height:
+                        {
+                            TerrainBrushToolInternal::extractRect( stroke._listHeightBefore, hf.getResolution(), stroke._rect, record->_listHeightBefore );
+                            TerrainBrushToolInternal::extractRect( stroke._listHeight, hf.getResolution(), stroke._rect, record->_listHeightAfter );
+                            break;
+                        }
+                    }
+                    EditorTransaction::push( SW_UNDO_STEP( TerrainBrushToolState::applyRecord, *record, false ),
+                                             SW_UNDO_STEP( TerrainBrushToolState::applyRecord, *record, true ), pName );
+                    ++_strokeCount;
+                }
+                stroke     = TerrainBrushToolInternal::Stroke{};
+                _bStroking = SW_FALSE;
+            }
+
+            /** @brief 마지막으로 고친 지형의 높이장과 스플랫을 원래 에셋 경로에 씁니다. */
+            void saveLastEdited()
+            {
+                TerrainComponent* pTerrain = TerrainBrushToolInternal::findTerrain( _lastEdited );
+                if ( pTerrain == nullptr )
+                    return;
+                bool                              bSaved          = true;
+                const std::optional<AbsolutePath> heightfieldPath = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getHeightfieldPath() ); // 쓰기다 - 읽기 해석이 아니라 쓸 자리
+                if ( heightfieldPath.has_value() == false || TerrainBrushToolInternal::saveHeightfield( *pTerrain, heightfieldPath->str() ) == false )
+                {
+                    SW_LOG_ERROR_ID( "TerrainBrushTool.TerrainHeightfieldNotSaved", "Terrain heightfield '%#' was not saved", pTerrain->getHeightfieldPath().c_str() );
+                    bSaved = false;
+                }
+                if ( pTerrain->getLayerWeightsPath().empty() == false )
+                {
+                    const std::optional<AbsolutePath> splatPath = editor::getSubsystem<AssetPaths>().toDiskPath( pTerrain->getLayerWeightsPath() );
+                    if ( splatPath.has_value() == false || TerrainBrushToolInternal::saveSplat( *pTerrain, splatPath->str() ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "TerrainBrushTool.TerrainSplatNotSaved", "Terrain splat '%#' was not saved", pTerrain->getLayerWeightsPath().c_str() );
+                        bSaved = false;
+                    }
+                }
+                if ( bSaved )
+                {
+                    _bUnsaved = SW_FALSE;
+                    SW_LOG_INFO_ID( "TerrainBrushTool.TerrainSaved", "Terrain saved: %#", pTerrain->getHeightfieldPath().c_str() );
+                }
+            }
+
+            /** @brief 크기 바꾸기 대상입니다. 마지막으로 고친 지형, 없으면 마지막으로 브러시가 닿은 지형입니다. */
+            TerrainComponent* findResizeTarget() const
+            {
+                TerrainComponent* pEdited = TerrainBrushToolInternal::findTerrain( _lastEdited );
+                return pEdited != nullptr ? pEdited : TerrainBrushToolInternal::findTerrain( _lastHovered );
+            }
+
+            /**
+             * @brief 해상도 줄입니다. 대상 지형(`findResizeTarget`, 없으면 비활성)의 해상도를 고르고 `Resize` 로 다시 표본화합니다.
+             * @details 고를 수 있는 해상도는 청크 칸의 배수 + 1 가운데 `TerrainComponent::isResolutionUsable` 이 받는 것뿐이다 — 나뉘지 않는 값을 쓸 수 없다.
+             */
+            void drawResizeControls()
+            {
+                TerrainComponent* pTerrain = findResizeTarget();
+                ImGui::BeginDisabled( pTerrain == nullptr || _bStroking );
+                const uint32 current = pTerrain != nullptr ? pTerrain->getHeightfield().getResolution() : 0u;
+                if ( _resizeResolution == 0 || pTerrain == nullptr )
+                    _resizeResolution = current;
+                const string preview = _resizeResolution > 0 ? to_string( _resizeResolution ) : string{ "-" };
+                EditorChrome::setNextItemWidthColumns( 16.0f );
+                if ( EditorWidgets::beginCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Resolution" ), "Resolution" ), preview.c_str() ) )
+                {
+                    for ( uint32 resolution = 2; pTerrain != nullptr && resolution <= TerrainBrushToolInternal::kMaxResolution; ++resolution )
+                    {
+                        if ( pTerrain->isResolutionUsable( resolution ) == false )
+                            continue;
+                        const string label = to_string( resolution ) + ( resolution == current ? " (current)" : "" );
+                        if ( ImGui::Selectable( label.c_str(), resolution == _resizeResolution ) )
+                            _resizeResolution = resolution;
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::SameLine();
+                ImGui::BeginDisabled( _resizeResolution == current );
+                if ( ImGui::Button( SW_LOCKEY( "EdText", "Resize" ) ) && pTerrain != nullptr )
+                    (void)resizeTerrain( *pTerrain, _resizeResolution ); // 실패는 지형이 알린다
+                ImGui::EndDisabled();
+                ImGui::EndDisabled();
+                if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) )
+                    ImGui::SetTooltip( "%s", SW_LOCKEY( "EdTip", "TerrainResample" ) );
+            }
+
+            /** @brief 브러시 설정 창입니다(모드 · 반경 · 세기 · 감쇠 · 레이어 · 해상도 · 저장). */
+            void drawSettingsWindow( const EditorViewportVisualizerArgs& args )
+            {
+                ImGui::SetNextWindowPos( ImVec2{ args._canvasPos._x + 12.0f, args._canvasPos._y + 48.0f }, ImGuiCond_FirstUseEver );
+                if ( ImGui::Begin( "Terrain Brush###TerrainBrushTool", nullptr, ImGuiWindowFlags_AlwaysAutoResize ) )
+                {
+                    static const utf8* const s_arrModeName[] = { "Raise", "Lower", "Flatten", "Paint Layer", "Smooth", "Cut Hole", "Fill Hole" };
+                    static_assert( static_cast<size_t>( IM_ARRAYSIZE( s_arrModeName ) ) == static_cast<size_t>( TerrainBrushMode::Count ), "Terrain brush mode names follow TerrainBrushMode" );
+                    int32 mode = static_cast<int32>( _settings._mode );
+                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Mode" ) );
+                    if ( ImGui::Combo( "##Mode", &mode, s_arrModeName, IM_ARRAYSIZE( s_arrModeName ) ) )
+                        _settings._mode = static_cast<TerrainBrushMode>( mode );
+                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Radius" ) );
+                    ImGui::SliderFloat( "##Radius", &_settings._radius, 0.5f, 64.0f, "%.1f m" );
+                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Strength" ) );
+                    ImGui::SliderFloat( "##Strength", &_settings._strength, 0.05f, 60.0f, "%.2f /s", ImGuiSliderFlags_Logarithmic );
+                    EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Falloff" ) );
+                    ImGui::SliderFloat( "##Falloff", &_settings._falloff, 0.0f, 1.0f, "%.2f" );
+                    if ( _settings._mode == TerrainBrushMode::PaintLayer )
+                    {
+                        int32 layer = static_cast<int32>( _settings._layerIndex );
+                        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Layer" ) );
+                        if ( ImGui::SliderInt( "##Layer", &layer, 0, static_cast<int32>( TerrainBrushToolInternal::kLayerCount ) - 1 ) )
+                            _settings._layerIndex = static_cast<uint32>( layer );
+                    }
+                    drawResizeControls();
+                    ImGui::BeginDisabled( TerrainBrushToolInternal::findTerrain( _lastEdited ) == nullptr );
+                    if ( ImGui::Button( _bUnsaved ? "Save Terrain *" : "Save Terrain" ) )
+                        saveLastEdited();
+                    ImGui::EndDisabled();
+                    if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled ) )
+                        ImGui::SetTooltip( "%s", SW_LOCKEY( "EdTip", "TerrainWriteAssets" ) );
+                }
+                ImGui::End();
+            }
+
+        private:
+            TerrainBrushSettings             _settings;
+            TerrainBrushToolInternal::Stroke _stroke;
+            vector<TerrainBrushSample>       _listSample; ///< 프레임마다 지우고 채우는 재사용 버퍼(UI 스레드 하나만 쓴다)
+            GameObjectHandle                 _lastEdited;
+            GameObjectHandle                 _lastHovered;      ///< 마지막으로 브러시 레이가 닿은 지형(크기 바꾸기 대상의 다음 후보)
+            uint32                           _resizeResolution; ///< 설정 창이 고른 새 해상도(0 이면 지금 해상도를 보인다)
+            int32                            _activeFrame;      ///< 도구가 마지막으로 돈 ImGui 프레임(감시 값 `Editor.TerrainBrushToolActive`)
+            uint32                           _strokeCount;
+            uint8                            _bStroking : 1;
+            uint8                            _bUnsaved  : 1;
+            uint8                            _bHit      : 1;
         };
+
+        TerrainBrushToolState::TerrainBrushToolState()
+            : _settings{}
+            , _stroke{}
+            , _listSample{}
+            , _lastEdited{}
+            , _lastHovered{}
+            , _resizeResolution{ 0 }
+            , _activeFrame{ -1 }
+            , _strokeCount{ 0 }
+            , _bStroking{ 0 }
+            , _bUnsaved{ 0 }
+            , _bHit{ 0 }
+        {
+        }
+
         /** @brief 붓질 기록을 되돌리기 단계 인자로 씁니다(`UndoStep` — 리로드를 넘는 데이터). */
         void writeUndoArg( Archive& archive, const TerrainBrushToolInternal::EditRecord& record )
         {
@@ -719,89 +815,24 @@ namespace sw::editor
 
     TerrainBrushSettings& TerrainBrushTool::getSettings()
     {
-        return TerrainBrushToolInternal::getState()._settings;
+        return TerrainBrushToolState::get().getSettings();
     }
 
     void TerrainBrushTool::process( const EditorViewportVisualizerArgs& args )
     {
-        using Internal         = TerrainBrushToolInternal;
-        Internal::State& state = Internal::getState();
-        state._bHit            = false;
-        state._activeFrame     = ImGui::GetFrameCount();
-        const bool bUsable     = args._pObjectManager != nullptr && args._pViewProj != nullptr && args._bFlat2D == false;
-        if ( bUsable == false )
-        {
-            if ( state._bStroking )
-                Internal::endStroke( state );
-            return;
-        }
-
-        const ImVec2 mouse        = ImGui::GetMousePos();
-        const bool   bInsideX     = mouse.x >= args._canvasPos._x && mouse.x <= args._canvasPos._x + args._canvasSize._x;
-        const bool   bInsideY     = mouse.y >= args._canvasPos._y && mouse.y <= args._canvasPos._y + args._canvasSize._y;
-        const bool   bMouseInside = bInsideX && bInsideY && ImGui::IsWindowHovered();
-        const bool   bEditable    = EditorPlaySession::areSceneEditsAllowed();
-
-        Ray        ray;
-        float3     hit{};
-        const bool bRay = EditorViewportProjectionUtil::makeMouseRay( args._pViewProj->invert(), args._canvasPos, args._canvasSize, ray );
-        state._bHit     = bRay && Internal::traceTerrain( *args._pObjectManager, ray, hit );
-        if ( state._bHit )
-        {
-            const TerrainComponent* pHovered = TerrainComponent::findTerrainAt( *args._pObjectManager, hit._x, hit._z );
-            if ( pHovered != nullptr && pHovered->getOwner() != nullptr )
-                state._lastHovered = pHovered->getOwner()->getHandle();
-        }
-
-        if ( state._bHit )
-        {
-            EditorProjectedLineRenderer renderer{ args._pDrawList, *args._pViewProj, args._canvasPos, args._canvasSize };
-            const float4                color{ 1.0f, 0.85f, 0.2f, 1.0f };
-            Internal::drawCircle( renderer, *args._pObjectManager, hit, state._settings._radius, color );
-            const float32 inner = state._settings._radius * ( 1.0f - MathUtil::saturate( state._settings._falloff ) );
-            if ( inner > 0.0f )
-                Internal::drawCircle( renderer, *args._pObjectManager, hit, inner, float4{ color._x, color._y, color._z, 0.5f } );
-        }
-
-        // 지형 위에 있거나 칠하는 중이면 마우스를 가져간다 — 클릭 선택과 기즈모가 물러난다.
-        const bool bClaim = bEditable && ( state._bStroking || ( bMouseInside && state._bHit && args._bGizmoDragging == false ) );
-        if ( bClaim )
-            EditorViewportMouseClaim::acquire( &state );
-        else
-            EditorViewportMouseClaim::release( &state );
-
-        // 칠하는 양은 세기 × 경과 시간입니다. 경과는 엔진 프레임의 실제 경과를 씁니다(씬 뷰 카메라와 같은 시계). ImGui 의 경과는 벽시계라
-        // 고정 프레임 시간으로 도는 시나리오에서도 프레임 비용을 따라 바뀌고, 프레임이 빠른 Release 에서는 같은 드래그가 덜 칠합니다.
-        const float32 deltaTime = editor::getSubsystem<GameTimeScale>().getUnscaledDeltaTime();
-        if ( state._bStroking )
-        {
-            TerrainComponent* pTerrain   = Internal::findTerrain( state._stroke._object );
-            const bool        bStillDown = ImGui::IsMouseDown( ImGuiMouseButton_Left ) && bEditable && pTerrain != nullptr;
-            if ( bStillDown == false )
-                Internal::endStroke( state );
-            else if ( state._bHit )
-                Internal::applyStroke( state, *pTerrain, hit, deltaTime );
-        }
-        else if ( bClaim && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left ) )
-        {
-            TerrainComponent* pTerrain = TerrainComponent::findTerrainAt( *args._pObjectManager, hit._x, hit._z );
-            if ( pTerrain != nullptr && Internal::beginStroke( state, *pTerrain, hit ) )
-                Internal::applyStroke( state, *pTerrain, hit, deltaTime );
-        }
-
-        Internal::drawSettingsWindow( state, args );
+        TerrainBrushToolState::get().process( args );
     }
 
     SW_AUTOMATION_WATCH( editorTerrainBrushStrokeCount, "Editor.TerrainBrushStrokeCount", "Terrain brush drags that finished and left an undo entry",
-                         &TerrainBrushToolInternal::readStrokeCount );
+                         &TerrainBrushToolState::readStrokeCount );
     SW_AUTOMATION_WATCH( editorTerrainBrushHit, "Editor.TerrainBrushHit", "1 when the mouse ray hit a terrain in the last terrain tool frame",
-                         &TerrainBrushToolInternal::readHit );
+                         &TerrainBrushToolState::readHit );
     SW_AUTOMATION_WATCH( editorTerrainBrushToolActive, "Editor.TerrainBrushToolActive", "1 when the terrain tool (scene view Terrain toggle) ran this or the last frame",
-                         &TerrainBrushToolInternal::readToolActive );
+                         &TerrainBrushToolState::readToolActive );
     SW_AUTOMATION_WATCH( editorTerrainResolution, "Editor.TerrainResolution", "Height samples per side of the terrain the resize control targets (0 when there is none)",
-                         &TerrainBrushToolInternal::readResolution );
+                         &TerrainBrushToolState::readResolution );
     SW_DEV_COMMAND( TerrainBrush, "terrain.brush", "terrain.brush <raise|lower|flatten|paint|smooth|hole|fill> [radius] [strength] [layer]",
-                    "Set the terrain brush of the scene view terrain tool", &TerrainBrushToolInternal::runBrush );
+                    "Set the terrain brush of the scene view terrain tool", &TerrainBrushToolState::runBrush );
     SW_DEV_COMMAND( TerrainResize, "terrain.resize", "terrain.resize <resolution>", "Resample the last edited (or hovered) terrain to a new resolution, undoable",
-                    &TerrainBrushToolInternal::runResize );
+                    &TerrainBrushToolState::runResize );
 } // namespace sw::editor
