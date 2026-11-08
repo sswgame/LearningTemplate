@@ -10,7 +10,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Catalog/MetroidvaniaCatalog.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 
 namespace sw
 {

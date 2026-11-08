@@ -3,6 +3,7 @@
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
@@ -14,7 +15,6 @@
 #include "Engine/Physics/Component/RigidBodyComponent.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 
 #include "Games/Shooter3D/ShooterAnimationParameter.h"

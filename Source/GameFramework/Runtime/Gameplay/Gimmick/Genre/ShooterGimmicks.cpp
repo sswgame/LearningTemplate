@@ -16,7 +16,6 @@
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Ballistics.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameEventUtil.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/Genre/GenreGimmickUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickDamageUtil.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickSensorComponent.h"
@@ -186,7 +185,7 @@ namespace sw
         for ( size_t targetIndex = 0; targetIndex < _listTarget.size(); ++targetIndex )
         {
             float32 hit = 0.0f;
-            if ( RayMath::intersectSphere( ray, _listTarget[targetIndex]._position, _hitRadius + projectile._radius, best, hit ) == false )
+            if ( Ray::intersectSphere( ray, _listTarget[targetIndex]._position, _hitRadius + projectile._radius, best, hit ) == false )
                 continue;
             best             = hit;
             bFound           = true;

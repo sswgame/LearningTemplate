@@ -2,11 +2,11 @@
 
 #include "Games/ThemeParkTycoon/CoasterCarComponent.h"
 
+#include "Core/Math/OrientationUtil.h"
+
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Visual/Component/MeshComponent.h"
-
-#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
 
 #include "Games/ThemeParkTycoon/ParkGameModeComponent.h"
 

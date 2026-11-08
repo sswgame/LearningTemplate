@@ -12,8 +12,8 @@
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerFacility.h"
 #include "GameFramework/Kits/Genre/Horror/CoopScavenger/Rule/ScavengerQuota.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 #include <limits>
 

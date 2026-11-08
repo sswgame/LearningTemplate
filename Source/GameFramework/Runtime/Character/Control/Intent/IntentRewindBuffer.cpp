@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Intent/IntentRewindBuffer.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h"
+#include "GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h"
 
 namespace sw
 {

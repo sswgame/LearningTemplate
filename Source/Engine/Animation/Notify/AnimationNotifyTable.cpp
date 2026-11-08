@@ -5,7 +5,6 @@
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/String/StringUtil.h"
 
-#include "Engine/Animation/Notify/AnimationNotifyHandlers.h"
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -243,7 +242,7 @@ namespace sw
     AnimationNotifyHandlerRegistry::AnimationNotifyHandlerRegistry()
         : _registry{}
     {
-        (void)AnimationNotifyHandlerUtil::registerBuiltInHandlers( *this );
+        (void)AnimationNotifyHandlerRegistry::registerBuiltInHandlers( *this );
     }
 
     AnimationNotifyHandlerRegistry::~AnimationNotifyHandlerRegistry() = default;

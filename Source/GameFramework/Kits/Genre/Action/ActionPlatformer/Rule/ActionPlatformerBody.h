@@ -18,7 +18,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionPlatformer/Catalog/ActionPlatformerCatalog.h"
 #include "GameFramework/Runtime/Character/Movement/PlatformerMotor2D.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 
 namespace sw
 {

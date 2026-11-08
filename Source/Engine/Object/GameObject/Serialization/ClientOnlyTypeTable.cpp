@@ -1,13 +1,12 @@
 #include "pch.h"
 
-#include "Engine/Object/GameObject/Serialization/ClientOnlyTypeTable.h"
-
 #include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw

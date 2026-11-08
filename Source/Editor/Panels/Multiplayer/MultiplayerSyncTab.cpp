@@ -10,9 +10,9 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
-#include "Editor/Common/Workspace/EditorStateHashCompare.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
+#include "Editor/Common/Workspace/NetPlay/EditorStateHashCompare.h"
 #include "Editor/Panels/Multiplayer/Model/MultiplayerSyncModel.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 

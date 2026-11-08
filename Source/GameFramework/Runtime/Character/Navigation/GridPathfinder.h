@@ -12,7 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/GridOpenEntry.h"
+#include "GameFramework/Runtime/Foundation/Grid/GridOpenEntry.h"
 
 namespace sw
 {

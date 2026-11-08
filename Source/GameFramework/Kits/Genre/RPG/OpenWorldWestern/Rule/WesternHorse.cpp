@@ -9,7 +9,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Catalog/WesternCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/DepletingValue.h"
+#include "GameFramework/Runtime/Foundation/GameData/DepletingValue.h"
 
 namespace sw
 {

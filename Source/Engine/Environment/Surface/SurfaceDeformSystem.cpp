@@ -191,7 +191,7 @@ namespace sw
         }
         if ( ensureGrid( def, to ) == false )
             return;
-        // 띠의 앞은 from → to 다(요 규칙 YawUtil: atan2( x, z )).
+        // 띠의 앞은 from → to 다(요 규칙 OrientationUtil: atan2( x, z )).
         _grid.applyStamp( def, ( from._x + to._x ) * 0.5f, ( from._z + to._z ) * 0.5f, MathUtil::atan2( deltaX, deltaZ ), length, 0.0f );
         ++_stampCount;
     }

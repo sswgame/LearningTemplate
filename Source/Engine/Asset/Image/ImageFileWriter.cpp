@@ -8,7 +8,7 @@
 #include "Core/String/StringUtil.h"
 
 #include "Engine/Asset/Image/DDSFormat.h"
-#include "Engine/Compression/ZlibCompressionCodec.h"
+#include "Engine/Compression/EngineCompressionCodecs.h"
 
 namespace sw
 {

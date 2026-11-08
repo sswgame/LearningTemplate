@@ -2,7 +2,7 @@
  * @file GhostEncounter.h
  * @brief 방 하나의 유령 싸움을 구현합니다. 유령 상태(숨음, 나타남, 공격, 기절, 흡입 중, 잡힘), 손전등 원뿔(각과 거리), 모아 쏘는 스트로브,
  *        청소기 흡입 줄다리기(유령 체력, 도망 방향, 반대로 당길 때의 보너스 피해와 서지 게이지, 끌려감, 강화 단계)를 다룹니다.
- * @details 유령의 위치는 게임이 움직이고 `setGhostPosition` 으로 알린다. 이 클래스는 규칙만 가진다. 원뿔 판정은 기반 `RayMath::isInFlatCone`
+ * @details 유령의 위치는 게임이 움직이고 `setGhostPosition` 으로 알린다. 이 클래스는 규칙만 가진다. 원뿔 판정은 기반 `OrientationUtil::isInFlatCone`
  *          (높이를 무시하는 XZ 원뿔)을 쓴다. 흡입 중 도망 방향은 시드를 고정한 `GameRandom` 이 정하므로, 같은 시드와 같은 입력이면 같은 싸움이 된다.
  */
 #pragma once
@@ -19,7 +19,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
 {

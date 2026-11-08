@@ -48,7 +48,7 @@
 #include "Engine/Visual/MeshInstanceBatch.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 #include "Games/Empty/Client/Dev/StressTestCombatComponent.h"
 #include "Games/Empty/Client/Dev/StressTestMoverComponent.h"

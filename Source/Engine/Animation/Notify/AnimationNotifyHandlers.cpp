@@ -1,9 +1,7 @@
 #include "pch.h"
 
-#include "Engine/Animation/Notify/AnimationNotifyHandlers.h"
-
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/YawUtil.h"
+#include "Core/Math/OrientationUtil.h"
 #include "Core/String/StringUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
@@ -157,7 +155,7 @@ namespace sw
                     // 발자국 방향은 몸의 앞(루트의 +Z)이다 — 발 뼈의 축은 리그마다 다르다.
                     float4x4 root;
                     (void)context._component.findSocketWorldTransform( hashed_string{}, root ); // 빈 이름은 루트 변환을 담고 false 다(선언 설명)
-                    pManager->getSubsystem<SurfaceFootprintSystem>().addFootstep( *sample._pKind, sample._point, YawUtil::fromWorld( root ) );
+                    pManager->getSubsystem<SurfaceFootprintSystem>().addFootstep( *sample._pKind, sample._point, OrientationUtil::computeYawFromWorld( root ) );
                     record( context, sample._pKind->_name, sample._point, sample._objectID, AnimationNotifyPhase::Instant );
                 }
 
@@ -371,7 +369,7 @@ namespace sw
 
 namespace sw
 {
-    bool AnimationNotifyHandlerUtil::registerBuiltInHandlers( AnimationNotifyHandlerRegistry& registry )
+    bool AnimationNotifyHandlerRegistry::registerBuiltInHandlers( AnimationNotifyHandlerRegistry& registry )
     {
         registry.registerHandler( hashed_string( "PlaySound" ), make_unique<AnimationNotifyHandlersInternal::PlaySoundHandler>() );
         registry.registerHandler( hashed_string( "SpawnPrefab" ), make_unique<AnimationNotifyHandlersInternal::SpawnPrefabHandler>() );

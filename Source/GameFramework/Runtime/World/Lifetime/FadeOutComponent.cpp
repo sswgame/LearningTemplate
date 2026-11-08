@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Visual/2D/SpriteComponent.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/Time/LifeSpanUtil.h"
+#include "GameFramework/Runtime/World/Lifetime/LifeSpanUtil.h"
 
 namespace sw
 {

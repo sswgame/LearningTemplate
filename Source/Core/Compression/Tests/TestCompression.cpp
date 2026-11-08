@@ -1,10 +1,9 @@
 #include "pch.h"
 
+#include "Core/Compression/BuiltinCompressionCodecs.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Compression/CompressionStream.h"
 #include "Core/Compression/ICompressionCodec.h"
-#include "Core/Compression/NullCompressionCodec.h"
-#include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Subscription.h"

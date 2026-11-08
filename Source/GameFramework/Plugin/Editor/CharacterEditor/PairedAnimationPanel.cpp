@@ -3,7 +3,7 @@
 #include "GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/YawUtil.h"
+#include "Core/Math/OrientationUtil.h"
 #include "Core/String/StringUtil.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -398,7 +398,7 @@ namespace sw::editor
             const PairedAnimationRoleDef& role     = listRole[roleIndex];
             const bool                    bAligned = role._bAnchor == false && role._align != PairedAnimationAlign::None;
             const float3                  current  = pRoot->getWorldPosition();
-            const float32                 yaw      = YawUtil::fromWorld( pRoot->getWorldMatrix() );
+            const float32                 yaw      = OrientationUtil::computeYawFromWorld( pRoot->getWorldMatrix() );
             const bool                    bMoved   = ( current - slot._placedPosition ).getLength() > PairedAnimationPanelInternal::kMovedToleranceMeters ||
                                 MathUtil::abs( MathUtil::wrapAngle( yaw - slot._placedYaw ) ) > PairedAnimationPanelInternal::kMovedToleranceRadians;
             if ( bAligned && bMoved )
@@ -411,7 +411,7 @@ namespace sw::editor
             _model.computeRoleTarget( roleIndex, anchorPosition, anchorYaw, target, targetYaw );
             pRoot->setWorldTransform( PairedAnimationPanelInternal::makeWorld( target, targetYaw ) );
             slot._placedPosition = pRoot->getWorldPosition();
-            slot._placedYaw      = YawUtil::fromWorld( pRoot->getWorldMatrix() );
+            slot._placedYaw      = OrientationUtil::computeYawFromWorld( pRoot->getWorldMatrix() );
 
             SkeletalAnimatorComponent* pAnimator = pObject->getComponent<SkeletalAnimatorComponent>();
             if ( pAnimator != nullptr )

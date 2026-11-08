@@ -23,7 +23,7 @@
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorIntensity.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 
 namespace sw
 {

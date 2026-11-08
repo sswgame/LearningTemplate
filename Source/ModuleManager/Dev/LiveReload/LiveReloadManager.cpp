@@ -1,0 +1,1100 @@
+#include "pch.h"
+
+#include "ModuleManager/Dev/LiveReload/LiveReloadManager.h"
+
+#include "Core/Event/EventDispatcher.h"
+#include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
+#include "Core/Module/ModuleLibraryUtil.h"
+#include "Core/Path/AbsolutePath.h"
+#include "Core/Registry/RegistrationList.h"
+#include "Core/String/StringUtil.h"
+#include "Core/Task/TaskManager.h"
+
+#include "DevTools/FileWatch/IFileWatcher.h"
+
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Module/EngineABIStamp.h"
+#include "Engine/Module/ModuleTypeRegistry.h"
+#include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Scene/SceneManager.h"
+
+#include "ModuleManager/Dev/LiveReload/ModuleCallGuard.h"
+#include "ModuleManager/Dev/LiveReload/ModuleLibraryPatch.h"
+#include "ModuleManager/Dev/LiveReload/ShadowCopyName.h"
+
+#include "sw/config/ConfigConstants.h"
+
+namespace sw
+{
+    namespace
+    {
+        struct LiveReloadManagerInternal
+        {
+            /**
+             * @brief 두 모듈 이름이 같은 모듈 파일을 가리키는지 봅니다.
+             * @details Windows 파일 시스템은 대소문자를 가리지 않아 'gameframework' 도 GameFramework.dll 을 엽니다. 그래서 거기서는 대소문자를
+             *          무시하고 비교합니다. 그렇지 않으면 철자만 바꿔 공용 모듈 거절을 지나갑니다. 리눅스는 파일 이름이 대소문자를 가리므로 그대로 비교합니다.
+             */
+            static bool isSameModuleName( string_view lhs, string_view rhs )
+            {
+#if defined( SW_PLATFORM_WINDOWS )
+                return StringUtil::equals( lhs, rhs, true );
+#else
+                return lhs == rhs;
+#endif
+            }
+
+            /**
+             * @brief 모듈 @p pModule 이 의존 @p dependencyName 을 @p pExpected 라이브러리에 묶었는지 봅니다.
+             * @param dependencyFileName (Windows) 모듈의 import 표가 그 의존을 부르는 이름입니다(세대 이름 — `ModuleShadowCopy::writeShadowCopy`).
+             * @param pOutActual   모듈이 실제로 묶인 쪽입니다(로그용). 그 의존을 import 하지 않으면 nullptr 입니다.
+             * @param pOutExpected 비교한 기준입니다(로그용).
+             * @return 아직 묶이지 않았거나 @p pExpected 에 묶였으면 true 입니다.
+             * @details 리눅스는 import 표에서 결속을 읽을 수 없어서, 의존 모듈마다 박힌 스탬프 상수를 모듈의 검색 범위(자기 + 자기 의존)에서
+             *          찾습니다. `dlsym( pModule, ... )` 이 돌려주는 주소는 그 모듈이 **실제로 묶인** 의존의 것입니다.
+             */
+            static bool isBoundTo( void* pModule, string_view dependencyName, string_view dependencyFileName, void* pExpected, const void*& pOutActual,
+                                   const void*& pOutExpected )
+            {
+#if defined( SW_PLATFORM_WINDOWS )
+                (void)dependencyName;
+                pOutExpected = pExpected;
+                pOutActual   = ModuleLibraryUtil::findBoundImportLibrary( pModule, dependencyFileName );
+                return pOutActual == nullptr || pOutActual == pOutExpected;
+#elif defined( SW_PLATFORM_LINUX )
+                (void)dependencyFileName;
+                const string stampSymbolName = string{ "sw_moduleEngineABIStamp_" } + string{ dependencyName };
+                pOutExpected                 = ModuleLibraryUtil::getDynamicSymbol( pExpected, stampSymbolName );
+                pOutActual                   = nullptr;
+                // 스탬프가 없는 모듈(정적 링크 · 스탬프를 박기 전 빌드)은 가릴 방법이 없다. 어긋남으로 보지 않는다.
+                if ( pOutExpected == nullptr )
+                    return true;
+                pOutActual = ModuleLibraryUtil::getDynamicSymbol( pModule, stampSymbolName );
+                return pOutActual == nullptr || pOutActual == pOutExpected;
+#else
+                (void)pModule;
+                (void)dependencyName;
+                (void)dependencyFileName;
+                (void)pExpected;
+                pOutActual   = nullptr;
+                pOutExpected = nullptr;
+                return true;
+#endif
+            }
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    LiveReloadManager::LiveReloadManager()
+        : _mapModule{}
+        , _dependencyGraph{}
+        , _listSharedModule{}
+        , _fileWatcher{ IFileWatcher::createNative() }
+        , _buildStampPath{}
+        , _seenBuildToken{}
+        , _buildMutex{}
+        , _buildNotice{}
+        , _onBeforeCommitBatch{}
+        , _reloadHolds{}
+        , _flushWorkers{}
+        , _listCallbackRegistration{}
+        , _callbackIDAllocator{}
+        , _deferredUnloadQueue{ kMaxDeferredUnloadBatchCount }
+        , _completedReloadCount{ 0 }
+        , _bReloadGraphBroken{ SW_FALSE }
+        , _bBuildStampPending{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+        // 지운 수일 뿐이다. 아직 매핑된 사본은 다음 시작이나 종료의 정리가 지운다.
+        (void)ShadowCopyName::removeStaleCopies( ModuleLibraryUtil::getModuleDirectory() );
+    }
+
+    LiveReloadManager::~LiveReloadManager()
+    {
+        shutdown();
+    }
+
+    void LiveReloadManager::shutdown()
+    {
+        // 남은 구독은 무효로 만든다 — 주인이 나중에 놓아도 아무것도 풀지 않는다(칸은 아래 기록 비우기와 함께 사라진다).
+        // 아래 언로드가 콜백을 부르지 않도록 칸도 지금 비운다(매니저가 내려가는 중이라 다시 설 인스턴스가 없다).
+        detachAllSubscriptions();
+        for ( const CallbackRegistration& registration : _listCallbackRegistration )
+        {
+            clearSlot( registration );
+        }
+        _listCallbackRegistration.clear();
+        _onBeforeCommitBatch.removeAll();
+        _reloadHolds.removeAll();
+
+        // 지운 수일 뿐이다. 아직 매핑된 사본은 다음 시작이나 종료의 정리가 지운다.
+        (void)ShadowCopyName::removeStaleCopies( ModuleLibraryUtil::getModuleDirectory() );
+
+        if ( _fileWatcher != nullptr )
+        {
+            _fileWatcher->stopWatching();
+            _fileWatcher.reset();
+        }
+
+        // 언로드를 미룬 옛 라이브러리를 먼저 언로드한다. 그것들은 같은 배치의 미룬 라이브러리나 **지금 살아 있는** 라이브러리에 바인딩돼 있으므로, 살아
+        // 있는 모듈을 먼저 언로드하면 옛 라이브러리의 정적 소멸자가 언로드된 코드로 점프할 수 있다.
+        _deferredUnloadQueue.unloadAll();
+
+        if ( _bReloadGraphBroken == SW_TRUE )
+        {
+            for ( auto& [moduleName, pModuleRecord] : _mapModule )
+            {
+                ModuleRecord& moduleRecord = *pModuleRecord;
+                unloadModule( moduleRecord );
+            }
+            clearRecords();
+            unloadSharedModules();
+            return;
+        }
+
+        vector<string> listName;
+        _dependencyGraph.getModuleNames( listName );
+
+        vector<string> listOrder;
+        if ( _dependencyGraph.sortByDependency( listName, listOrder ) == false )
+        {
+            SW_LOG_ERROR_ID( "LiveReloadManager.TopologicalSortFailedDuring", "Topological sort failed during shutdown — unloading in arbitrary order" );
+            for ( auto& [name, pContext] : _mapModule )
+            {
+                ModuleRecord& context = *pContext;
+                unloadModule( context );
+            }
+            clearRecords();
+            unloadSharedModules();
+            return;
+        }
+
+        // 역순으로 언로드한다. 의존하는 모듈을 먼저 언로드하고, 그다음 기반 모듈을 언로드한다.
+        for ( auto it = listOrder.rbegin(); it != listOrder.rend(); ++it )
+        {
+            auto mapIt = _mapModule.find( *it );
+            if ( mapIt != _mapModule.end() )
+                unloadModule( *mapIt->second );
+        }
+        clearRecords();
+        unloadSharedModules();
+    }
+
+    bool LiveReloadManager::loadSharedModule( string_view moduleName )
+    {
+        for ( const auto& [registeredName, pRegisteredRecord] : _mapModule )
+        {
+            (void)pRegisteredRecord;
+            if ( LiveReloadManagerInternal::isSameModuleName( registeredName, moduleName ) )
+            {
+                SW_LOG_ERROR_ID( "LiveReloadManager.ModuleAlreadyRegisteredReload", "Module %# is already registered for reload - it cannot also be a shared module that never unloads", moduleName );
+                return false;
+            }
+        }
+        for ( const SharedLibrary& loaded : _listSharedModule )
+        {
+            if ( LiveReloadManagerInternal::isSameModuleName( loaded._name, moduleName ) )
+                return true;
+        }
+
+        const string modulePath = ModuleLibraryUtil::findModuleLibraryPath( moduleName );
+        if ( FileUtil::exists( modulePath ) == false )
+        {
+            SW_LOG_INFO_ID( "LiveReloadManager.SharedModuleNotBuilt", "Shared module %# is not built (Bin/Modules · Bin) — nothing links it", moduleName );
+            return true;
+        }
+
+        // 섀도 복사본과 같은 이유로 로드하기 **전에** 스탬프를 확인한다. 스탬프가 없거나 다르면 정적 초기화가 돌기 전에 거절한다.
+        vector<uint8> bytes;
+        if ( ModuleShadowCopy::readModuleFile( modulePath, bytes ) == false )
+        {
+            SW_LOG_ERROR_ID( "LiveReloadManager.FailedReadSharedModule", "Failed to read the shared module %# (locked)", modulePath );
+            return false;
+        }
+        string moduleStamp;
+        if ( ModuleLibraryPatch::findEngineABIStamp( bytes, moduleStamp ) == false || moduleStamp != engine::getEngineABIStamp() )
+        {
+            SW_LOG_ERROR_ID( "LiveReloadManager.SharedModuleBuiltAgainst", "Shared module %# was built against different engine headers than the running engine (module '%#', engine %#) — rebuild them together",
+                             moduleName, moduleStamp, engine::getEngineABIStamp() );
+            return false;
+        }
+        if ( ModuleShadowCopy::rejectsDelayImports( moduleName, modulePath, bytes ) )
+            return false;
+
+        // 불변 조건: 여기서 전역 헤드는 비어 있다(등록할 때마다 비운다). 로드하면 이 모듈의 정적 등록기만 매달린다.
+        const optional<AbsolutePath> sharedPath    = AbsolutePath::tryMake( modulePath );
+        void* const                  pSharedHandle = sharedPath.has_value() ? ModuleLibraryUtil::loadLibraryAt( *sharedPath ) : nullptr;
+        if ( pSharedHandle == nullptr )
+        {
+            SW_LOG_ERROR_ID( "LiveReloadManager.FailedLoadSharedModule", "Failed to load the shared module %#", modulePath );
+            return false;
+        }
+        // 라이브러리는 남긴다(정적 초기화가 이미 돌았다) — 실패는 기동을 멈춘다.
+        _listSharedModule.push_back( SharedLibrary{ string{ moduleName }, pSharedHandle } );
+        if ( engine::registerModuleTypes( moduleName ) == false )
+            return false;
+        SW_LOG_INFO_ID( "LiveReloadManager.SharedModuleLoaded", "Shared module loaded: %#", moduleName );
+        return true;
+    }
+
+    bool LiveReloadManager::registerModule( string_view moduleName, const vector<string>& listDependsOn )
+    {
+        // 공용 모듈(GameFramework)은 키트 · 게임보다 오래 산다는 전제가 그 함수 정적(데이터 표 캐시 · 카탈로그 · 서비스 표)의 근거다.
+        // 리로드 대상(_mapModule)에 오르는 길은 여기 하나뿐이므로, 공용 모듈을 내리거나 다시 올리는 길을 여기서 막는다.
+        for ( const SharedLibrary& shared : _listSharedModule )
+        {
+            if ( LiveReloadManagerInternal::isSameModuleName( shared._name, moduleName ) )
+            {
+                SW_LOG_ERROR_ID( "LiveReloadManager.SharedModuleOutlivesModules", "Shared module %# outlives the modules that link it and cannot be registered for reload or unload", moduleName );
+                return false;
+            }
+        }
+
+        const string moduleDir = ModuleLibraryUtil::getModuleDirectory();
+        if ( FileUtil::isDirectory( moduleDir ) == false )
+        {
+            SW_LOG_ERROR_ID( "LiveReloadManager.ModuleDirectoryDoesNot", "Module directory does not exist: %#", moduleDir );
+            return false;
+        }
+        // 바깥 빌드의 신호는 모듈 폴더의 성공 스탬프다(`update`). 감시는 첫 등록이 한 번 건다 — 모듈이 없는 프로세스(테스트)는 감시 스레드를 띄우지 않는다.
+        const bool bWatchModuleFolder = _fileWatcher != nullptr && _fileWatcher->isWatching() == false;
+        if ( bWatchModuleFolder )
+        {
+            _buildStampPath = FileUtil::joinPath( moduleDir, config::kFileModuleBuildStamp );
+            if ( readBuildToken( _buildStampPath, _seenBuildToken ) == false )
+                SW_LOG_WARNING_ID( "LiveReloadManager.MissingOutsideBuildsNot", "%# is missing - outside builds are not reloaded until the build tree is configured (sw_addModuleBuildStamp)", _buildStampPath );
+            if ( _fileWatcher->startWatching( moduleDir, false ) == false )
+                SW_LOG_ERROR_ID( "LiveReloadManager.FailedWatchModuleDirectory", "Failed to watch the module directory %# - outside builds are not reloaded", moduleDir );
+        }
+
+        // 의존 목록은 로드 **전에** 둔다 — 섀도 복사본이 의존 모듈의 import 를 그 의존의 지금 이름으로 바꿀 때 읽는다.
+        _dependencyGraph.setDependsOn( moduleName, listDependsOn );
+        ModuleRecord& moduleRecord       = getOrCreateRecord( moduleName );
+        moduleRecord._moduleName         = moduleName;
+        moduleRecord._tempModulePath     = "";
+        moduleRecord._originalModulePath = ModuleLibraryUtil::findModuleLibraryPath( moduleName );
+        if ( loadShadowCopyModule( moduleRecord ) )
+        {
+            if ( verifyModuleBindings() == false )
+                markGraphBroken( "a module is bound to a stale dependency image after registration" );
+            return true;
+        }
+
+        // commit 은 새 핸들을 컨텍스트에 넣은 뒤 onAfterReload 가 그래프를 막아도 실패를 돌려준다. 그대로 지우면 라이브러리 · 등록한 타입 ·
+        // 섀도 파일이 프로세스 끝까지 남으므로, 등록을 거두기 전에 평소처럼 내린다.
+        if ( moduleRecord._pLibraryModule != nullptr )
+            unloadModule( moduleRecord );
+        _mapModule.erase( string( moduleName ) );
+        _dependencyGraph.removeModule( moduleName );
+        return false;
+    }
+
+    void LiveReloadManager::triggerReload( string_view moduleName )
+    {
+        if ( _bReloadGraphBroken == SW_TRUE )
+        {
+            SW_LOG_ERROR_ID( "LiveReloadManager.ReloadGraphBrokenRestart", "Reload graph is broken — restart the process (ignored %#)", moduleName );
+            return;
+        }
+
+        auto iter = _mapModule.find( string( moduleName ) );
+        if ( iter == _mapModule.end() )
+            return;
+
+        ModuleRecord& context = *iter->second;
+        SW_LOG_INFO_ID( "LiveReload.ManualQueued", "Manual Live Reload queued for %# (debounce %#ms)...",
+                        moduleName, kMtimeDebounceMs );
+        context._debounceStamp = FileStamp{};
+        (void)FileUtil::getFileStamp( context._originalModulePath, context._debounceStamp ); // 빌드 도중이라 없으면 빈 도장 - 다음 확인에서 도장이 달라 다시 기다린다
+        context._debounceTimer.resetTimer();
+        context._debounceTimer.startTimer();
+        context._bMtimeDebouncing = true;
+        context._bForceReload     = true;
+    }
+
+    void LiveReloadManager::notifyBuildStarted()
+    {
+        ScopedLock<mutex> lock{ _buildMutex };
+        _buildNotice._bInProgress = true;
+    }
+
+    void LiveReloadManager::notifyBuildFinished( bool bSucceeded, string_view targetName )
+    {
+        ScopedLock<mutex> lock{ _buildMutex };
+        _buildNotice._bInProgress      = false;
+        _buildNotice._bFinishedPending = true;
+        _buildNotice._bSucceeded       = bSucceeded;
+        _buildNotice._targetName       = string( targetName );
+    }
+
+    bool LiveReloadManager::consumeBuildNotice()
+    {
+        BuildNotice notice;
+        {
+            ScopedLock<mutex> lock{ _buildMutex };
+            notice                         = _buildNotice;
+            _buildNotice._bFinishedPending = false;
+        }
+        if ( notice._bFinishedPending )
+        {
+            if ( notice._bSucceeded == false )
+            {
+                // 실패한 빌드가 다시 쓴 모듈은 반쯤 완성된 집합일 수 있으므로 로드하지 않는다. 파일은 그대로라 다음에 성공한 빌드의 변경과 함께 로드된다.
+                for ( auto& [name, pContext] : _mapModule )
+                {
+                    ModuleRecord& context = *pContext;
+                    if ( context._bMtimeDebouncing || context._bForceReload )
+                        SW_LOG_WARNING_ID( "LiveReloadManager.BuildFailedNotReloaded", "Build failed - %# is not reloaded from its partial output", context._moduleName );
+                    context._bMtimeDebouncing = false;
+                    context._bForceReload     = false;
+                }
+            }
+            else if ( notice._targetName.empty() == false && _mapModule.find( notice._targetName ) != _mapModule.end() )
+            {
+                triggerReload( notice._targetName );
+            }
+        }
+        return notice._bInProgress;
+    }
+
+    void LiveReloadManager::update()
+    {
+        vector<FileChangeEvent> listEvent;
+
+        BLOCK( "Poll File Events" )
+        {
+            if ( _fileWatcher != nullptr )
+            {
+                const FileWatchPollResult poll = _fileWatcher->pollEvents( listEvent );
+                if ( poll._bWatchLost )
+                    SW_LOG_ERROR_ID( "LiveReloadManager.ModuleDirectoryWatchingStopped", "Module directory watching stopped - outside builds are not reloaded until the process restarts" );
+            }
+        }
+
+        // 바깥 빌드는 모듈 DLL 의 쓰기가 아니라 성공 스탬프로 본다 — 연쇄 빌드가 모듈을 하나씩 다시 쓰는 도중의 반쯤 링크된 집합을 올리지 않는다.
+        // 이벤트는 깨우는 데만 쓰고 스탬프의 내용을 비교한다(넘쳐서 합성 리스캔이 와도, 이름이 바뀌며 써도 같다). 스탬프는 빌드마다 새 시각 글을 쓰므로(`WriteModuleBuildStamp.cmake`)
+        // 내용이 다르면 새 빌드다 — 쓰기 시각 비교는 같은 틱 · 같은 크기의 두 쓰기를 같다고 봤다.
+        if ( listEvent.empty() == false )
+        {
+            string     currentToken;
+            const bool bStampChanged = readBuildToken( _buildStampPath, currentToken ) && currentToken != _seenBuildToken;
+            if ( bStampChanged )
+            {
+                _seenBuildToken     = std::move( currentToken );
+                _bBuildStampPending = SW_TRUE;
+            }
+        }
+
+        // 이 프로세스가 시작한 빌드가 도는 동안은 변경을 모아 두기만 한다. 연쇄 빌드의 반쯤 완성된 집합을 로드하지 않기 위해서다(`notifyBuildStarted`).
+        const bool bBuildInProgress = consumeBuildNotice();
+        if ( _bBuildStampPending == SW_TRUE && bBuildInProgress == false )
+        {
+            _bBuildStampPending = SW_FALSE;
+            for ( auto& [name, pContext] : _mapModule )
+            {
+                ModuleRecord& context = *pContext;
+                FileStamp     sourceStamp{};
+                if ( FileUtil::getFileStamp( context._originalModulePath, sourceStamp ) == false || sourceStamp == context._loadedSourceStamp )
+                    continue; // 없으면(빌드가 아직 쓰는 중) 바뀐 것으로 보지 않는다
+                SW_LOG_TRACE_ID( "LiveReloadManager.ModuleBuildStampChanged", "Module build stamp changed — queuing reload for %#", context._moduleName );
+                context._bPendingReload = true;
+            }
+        }
+        for ( auto& [name, pContext] : _mapModule )
+        {
+            ModuleRecord& context = *pContext;
+            if ( context._bMtimeDebouncing == false || bBuildInProgress )
+                continue;
+
+            context._debounceTimer.updateTimer();
+            const float32 elapsedSec = context._debounceTimer.getTotalTime();
+            if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / constant::time::kMillisecondsPerSecond )
+                continue;
+
+            FileStamp  sourceStamp{};
+            const bool bReadable = FileUtil::getFileStamp( context._originalModulePath, sourceStamp );
+            // 바깥 링커가 쓰는 중인지는 알릴 길이 없어 조용해지기를 시간 창(`kMtimeDebounceMs`)으로 기다린다 — 바깥 도구의 쓰기만 시간으로 거르는 자리.
+            if ( bReadable == false || sourceStamp != context._debounceStamp ) // 없으면(빌드가 쓰는 중) 더 기다린다
+            {
+                context._debounceStamp = sourceStamp;
+                context._debounceTimer.resetTimer();
+                context._debounceTimer.startTimer();
+                continue;
+            }
+
+            context._bMtimeDebouncing = false;
+            const bool bForce         = context._bForceReload.exchange( false );
+            if ( bForce || sourceStamp != context._loadedSourceStamp )
+            {
+                SW_LOG_TRACE_ID( "LiveReloadManager.FileWatcherSettledQueuingReload", "FileWatcher settled — queuing reload for %#", context._moduleName );
+                context._bPendingReload = true;
+            }
+        }
+
+        if ( _bReloadGraphBroken == SW_TRUE )
+            return;
+        // 잡혀 있으면 대기 표시(`_bPendingReload`)를 그대로 둔다 — 풀린 첫 갱신에서 리로드된다.
+        if ( _reloadHolds.broadcastUntil( []( bool bHold )
+        { return bHold; } ) )
+            return;
+
+        vector<string> listPendingRoot;
+        BLOCK( "Collect Pending Reloads" )
+        {
+            for ( auto& [name, pContext] : _mapModule )
+            {
+                ModuleRecord& context = *pContext;
+                if ( context._bPendingReload )
+                {
+                    context._bPendingReload = false;
+                    listPendingRoot.push_back( context._moduleName );
+                }
+            }
+        }
+
+        BLOCK( "Reload Cascade" )
+        {
+            vector<string> listSubgraph;
+            for ( const string& root : listPendingRoot )
+            {
+                _dependencyGraph.collectDependentClosure( root, listSubgraph );
+            }
+            if ( listSubgraph.empty() == false )
+                reloadCascade( listSubgraph );
+        }
+    }
+
+    Subscription LiveReloadManager::setOnBeforeReload( string_view moduleName, OnBeforeReloadDelegate delegate )
+    {
+        getOrCreateRecord( moduleName )._onBeforeReload = std::move( delegate );
+        return issueSlotSubscription( moduleName, CallbackSlot::BeforeReload );
+    }
+
+    Subscription LiveReloadManager::setOnAfterReload( string_view moduleName, OnAfterReloadDelegate delegate )
+    {
+        getOrCreateRecord( moduleName )._onAfterReload = std::move( delegate );
+        return issueSlotSubscription( moduleName, CallbackSlot::AfterReload );
+    }
+
+    Subscription LiveReloadManager::setOnReloadFault( string_view moduleName, OnReloadFaultDelegate delegate )
+    {
+        getOrCreateRecord( moduleName )._onReloadFault = std::move( delegate );
+        return issueSlotSubscription( moduleName, CallbackSlot::ReloadFault );
+    }
+
+    Subscription LiveReloadManager::setOnValidateLibrary( string_view moduleName, OnValidateLibraryDelegate delegate )
+    {
+        getOrCreateRecord( moduleName )._onValidateLibrary = std::move( delegate );
+        return issueSlotSubscription( moduleName, CallbackSlot::ValidateLibrary );
+    }
+
+    Subscription LiveReloadManager::addOnBeforeCommitBatch( OnBeforeCommitBatchDelegate delegate )
+    {
+        return _onBeforeCommitBatch.add( delegate );
+    }
+
+    Subscription LiveReloadManager::addReloadHold( ReloadHoldDelegate delegate )
+    {
+        return _reloadHolds.add( delegate );
+    }
+
+    Subscription LiveReloadManager::setFlushWorkers( FlushWorkersDelegate delegate )
+    {
+        _flushWorkers = std::move( delegate );
+        return issueSlotSubscription( string_view{}, CallbackSlot::FlushWorkers );
+    }
+
+    Subscription LiveReloadManager::issueSlotSubscription( string_view moduleName, CallbackSlot slot )
+    {
+        // 같은 칸을 다시 걸면 앞 등록은 표에서 빠진다 — 앞 구독이 나중에 풀려도 새로 건 것을 지우지 않는다.
+        for ( size_t index = 0; index < _listCallbackRegistration.size(); ++index )
+        {
+            const CallbackRegistration& registration = _listCallbackRegistration[index];
+            if ( registration._slot == slot && registration._moduleName == moduleName )
+            {
+                _listCallbackRegistration.erase( _listCallbackRegistration.begin() + static_cast<ptrdiff_t>( index ) );
+                break;
+            }
+        }
+        const uint64 id = _callbackIDAllocator.allocate();
+        _listCallbackRegistration.push_back( { id, string( moduleName ), slot } );
+        return issueSubscription( id );
+    }
+
+    void LiveReloadManager::releaseSubscription( uint64 id )
+    {
+        for ( size_t index = 0; index < _listCallbackRegistration.size(); ++index )
+        {
+            if ( _listCallbackRegistration[index]._id != id )
+                continue;
+            const CallbackRegistration registration = _listCallbackRegistration[index];
+            _listCallbackRegistration.erase( _listCallbackRegistration.begin() + static_cast<ptrdiff_t>( index ) );
+            // 마지막 구독이 풀리면 저장소도 놓는다 — 구독은 기동 뒤에 걸리므로 남은 저장소가 종료 누수 보고(엔진 종료)에 늘어난 블록으로 찍혔다(호스트가 관리자보다 먼저 내려간다).
+            if ( _listCallbackRegistration.empty() )
+                _listCallbackRegistration.shrink_to_fit(); // `= {}` 는 버퍼를 남긴다(initializer_list 대입)
+            clearSlot( registration );
+            return;
+        }
+    }
+
+    void LiveReloadManager::clearSlot( const CallbackRegistration& registration )
+    {
+        if ( registration._slot == CallbackSlot::FlushWorkers )
+        {
+            _flushWorkers = {};
+            return;
+        }
+        // 기록이 이미 지워졌으면(그래프 비우기) 비울 칸도 없다.
+        const auto recordIt = _mapModule.find( registration._moduleName );
+        if ( recordIt == _mapModule.end() )
+            return;
+        ModuleRecord& record = *recordIt->second;
+        switch ( registration._slot )
+        {
+            case CallbackSlot::BeforeReload:
+            {
+                record._onBeforeReload = {};
+                break;
+            }
+            case CallbackSlot::AfterReload:
+            {
+                record._onAfterReload = {};
+                break;
+            }
+            case CallbackSlot::ReloadFault:
+            {
+                record._onReloadFault = {};
+                break;
+            }
+            case CallbackSlot::ValidateLibrary:
+            {
+                record._onValidateLibrary = {};
+                break;
+            }
+            case CallbackSlot::FlushWorkers:
+            {
+                break;
+            }
+        }
+    }
+
+    void LiveReloadManager::markGraphBroken( string_view reason )
+    {
+        _bReloadGraphBroken = SW_TRUE;
+        (void)reason;
+        SW_LOG_ERROR_ID( "LiveReloadManager.ReloadGraphBrokenRestart2", "Reload graph broken (%#) — restart the process; further live reloads are disabled",
+                         reason );
+    }
+
+    bool LiveReloadManager::verifyModuleBindings() const
+    {
+        bool bAllBound = true;
+        for ( const auto& [moduleName, pModuleRecord] : _mapModule )
+        {
+            const ModuleRecord& moduleRecord = *pModuleRecord;
+            if ( moduleRecord._pLibraryModule == nullptr )
+                continue;
+            for ( const string& dependencyName : _dependencyGraph.getDependsOn( moduleName ) )
+            {
+                // 이 매니저가 로드하지 않은 의존(Engine 처럼 처음부터 링크된 것)은 교체되지 않으므로 검사할 것이 없다.
+                const auto dependencyIt = _mapModule.find( dependencyName );
+                if ( dependencyIt == _mapModule.end() || dependencyIt->second->_pLibraryModule == nullptr )
+                    continue;
+
+                const void*                   pActual{ nullptr };
+                const void*                   pExpected{ nullptr };
+                const ShadowLibraryNameState& dependencyLibraryName = dependencyIt->second->_libraryName;
+                const string                  dependencyFileName    = dependencyLibraryName._loaded.empty() ? ModuleLibraryUtil::formatSharedLibraryName( dependencyName ) : dependencyLibraryName._loaded;
+                if ( LiveReloadManagerInternal::isBoundTo( moduleRecord._pLibraryModule, dependencyName, dependencyFileName, dependencyIt->second->_pLibraryModule, pActual,
+                                                           pExpected ) )
+                    continue;
+
+                SW_LOG_ERROR_ID( "LiveReloadManager.ModuleBoundStaleImage", "Module %# is bound to a stale %# image (bound %#, current %#)", moduleName, dependencyName, pActual, pExpected );
+                bAllBound = false;
+            }
+        }
+        return bAllBound;
+    }
+
+    void* LiveReloadManager::getModuleHandle( string_view moduleName ) const
+    {
+        auto it = _mapModule.find( string( moduleName ) );
+        return it != _mapModule.end() ? it->second->_pLibraryModule : nullptr;
+    }
+
+    LiveReloadManager::ModuleRecord& LiveReloadManager::getOrCreateRecord( string_view moduleName )
+    {
+        _dependencyGraph.ensureModule( moduleName );
+        unique_ptr<ModuleRecord>& pRecord = _mapModule[string( moduleName )];
+        if ( pRecord == nullptr )
+            pRecord = make_unique<ModuleRecord>();
+        return *pRecord;
+    }
+
+    void LiveReloadManager::clearRecords()
+    {
+        // `clear()` 는 용량을 남긴다. 이 관리자는 엔진의 종료 누수 보고 뒤에 사라지므로, 기준선 뒤 모듈 등록이 키운 표를 여기서 놓는다.
+        _mapModule.clear();
+        _mapModule.shrink_to_fit();
+        _dependencyGraph.clear();
+    }
+
+    void LiveReloadManager::populateShadowCopyParams( const ModuleRecord& context, ShadowCopyParams& outParams ) const
+    {
+        outParams._moduleName              = context._moduleName;
+        outParams._originalModulePath      = context._originalModulePath;
+        outParams._bReplacingLoadedLibrary = context._pLibraryModule != nullptr;
+
+        // 이 매니저가 올리지 않은 의존(공용 GameFramework · Engine)은 넣지 않는다 — 원래 이름 그대로 이미 올라온 라이브러리에 묶인다.
+        for ( const string& dependencyName : _dependencyGraph.getDependsOn( context._moduleName ) )
+        {
+            const auto dependencyIt = _mapModule.find( dependencyName );
+            if ( dependencyIt != _mapModule.end() )
+                outParams._listDependencyLibrary.push_back( ShadowCopyModuleLibrary{ dependencyIt->first, &dependencyIt->second->_libraryName } );
+        }
+
+        outParams._listRegisteredLibrary.reserve( _mapModule.size() );
+        for ( const auto& [registeredName, pRegisteredRecord] : _mapModule )
+        {
+            const ModuleRecord& registeredRecord = *pRegisteredRecord;
+            outParams._listRegisteredLibrary.push_back( ShadowCopyModuleLibrary{ registeredName, &registeredRecord._libraryName } );
+        }
+    }
+
+    bool LiveReloadManager::loadShadowCopyModule( ModuleRecord& context )
+    {
+        PreparedShadow prepared;
+        if ( prepareShadowCopy( context, prepared ) == false )
+            return false;
+        if ( commitShadowCopy( context, prepared ) )
+            return true;
+        abortShadowCopy( context, prepared );
+        return false;
+    }
+
+    bool LiveReloadManager::readBuildToken( string_view stampPath, string& outToken )
+    {
+        outToken.clear();
+        return stampPath.empty() == false && FileUtil::readOptionalTextFile( stampPath, outToken ) == OptionalFileRead::Read && outToken.empty() == false;
+    }
+
+    bool LiveReloadManager::prepareShadowCopy( ModuleRecord& context, PreparedShadow& outShadow )
+    {
+        outShadow = {};
+        BLOCK( "Check Original Module" )
+        {
+            if ( FileUtil::exists( context._originalModulePath ) == false )
+            {
+                SW_LOG_ERROR_ID( "LiveReloadManager.OriginalModuleNotFound", "Original module not found: %#", context._originalModulePath.c_str() );
+                return false;
+            }
+        }
+
+        outShadow._sourceMtime = 0;
+        outShadow._sourceStamp = FileStamp{};
+        if ( FileUtil::getFileStamp( context._originalModulePath, outShadow._sourceStamp ) )
+            outShadow._sourceMtime = outShadow._sourceStamp._writeTime / static_cast<uint64>( FileUtil::kFileTimeTicksPerSecond );
+        else
+            SW_LOG_WARNING_ID( "LiveReloadManager.CannotReadTimeNext", "Cannot read the time of %# - the next build stamp check reloads it again", context._originalModulePath );
+
+        BLOCK( "Create Shadow Copy" )
+        {
+            // 원본을 대조하고 세대 이름을 붙여 복사본으로 쓴다. 로드하기 **전이라** 대조에 걸린 모듈의 정적 초기화는 돌지 않는다.
+            ShadowCopyParams params;
+            populateShadowCopyParams( context, params );
+            params._sourceMtime = outShadow._sourceMtime;
+            if ( ModuleShadowCopy::writeShadowCopy( params, context._libraryName, outShadow._tempPath ) == false )
+                return false;
+        }
+
+        BLOCK( "Load Dynamic Library" )
+        {
+            // 불변 조건: engine::registerModuleTypes 가 로드할 때마다 전역 헤드를 nullptr 로 비우므로, 여기에 들어올 때 세 헤드는
+            // 항상 nullptr 이다(연쇄 교체의 두 번째 모듈 이후도 마찬가지다). abort 는 이 스냅샷을 되돌리므로, 정상 상태에서는
+            // nullptr 로 되돌리는 것이 올바른 결과다.
+            outShadow._previousHeads = engine::peekGlobalRegistrarHeads();
+
+            // 교체 라이브러리의 정적 등록자는 옛 라이브러리가 도는 동안 돈다 — 같은 이름의 등록(개발 명령 · 감시 값 · 시나리오 단계 · 에디터 등록)을 거절하지 않고 대체하게 한다.
+            // 첫 로드는 진짜 중복(두 모듈이 같은 이름을 정의)이 있을 수 있으니 거절을 그대로 둔다.
+            const optional<AbsolutePath> shadowPath = AbsolutePath::tryMake( outShadow._tempPath );
+            if ( shadowPath.has_value() == false )
+            {
+                outShadow._pHandle = nullptr;
+            }
+            else if ( context._pLibraryModule != nullptr )
+            {
+                RegistrationReloadScope reloadScope;
+                outShadow._pHandle = ModuleLibraryUtil::loadLibraryAt( *shadowPath );
+            }
+            else
+            {
+                outShadow._pHandle = ModuleLibraryUtil::loadLibraryAt( *shadowPath );
+            }
+            if ( outShadow._pHandle == nullptr )
+            {
+                context._libraryName._current = context._libraryName._loaded;
+                SW_LOG_ERROR_ID( "LiveReloadManager.FailedLoadDynamicLibrary", "Failed to load dynamic library (keeping old): %#", outShadow._tempPath.c_str() );
+                ModuleShadowCopy::removeArtifacts( outShadow._tempPath );
+                outShadow = {};
+                return false;
+            }
+
+            outShadow._heads = engine::peekGlobalRegistrarHeads();
+            engine::setGlobalRegistrarHeads( engine::ModuleRegistrarHeads{} );
+        }
+
+        BLOCK( "Check Registrar Module" )
+        {
+            // 새 이미지의 등록자가 모두 이 모듈 것이어야 커밋이 그 이름으로 올리고 내린다. 아니면 적용 전에 거절한다(옛 라이브러리는 그대로).
+            if ( engine::verifyModuleRegistrars( context._moduleName, outShadow._heads ) == false )
+            {
+                abortShadowCopy( context, outShadow );
+                outShadow = {};
+                return false;
+            }
+        }
+
+        BLOCK( "Validate New Image" )
+        {
+            // 옛 라이브러리가 아직 도는 동안 호스트가 새 라이브러리를 거절할 수 있는 지점이다. 거절은 적용 전 실패라 옛 라이브러리를 두고 그래프를 막지 않는다.
+            // 새 라이브러리의 코드가 불리므로 onAfterReload 와 같이 지킨다.
+            if ( context._onValidateLibrary.isBound() )
+            {
+                bool        bAccepted{ false };
+                uint32      faultCode{ 0 };
+                void* const pNewHandle = outShadow._pHandle;
+                const bool  bCompleted = ModuleCallGuard::run(
+                    SW_DELEGATE_LAMBDA( Delegate<void()>, [&context, &bAccepted, pNewHandle]()
+                 {
+                    bAccepted = context._onValidateLibrary( pNewHandle );
+                } ),
+                    faultCode );
+                if ( bCompleted == false || bAccepted == false )
+                {
+                    const utf8* pResult = ( context._pLibraryModule != nullptr ) ? "keeping the old module" : "it is not loaded";
+                    if ( bCompleted == false )
+                        SW_LOG_ERROR_ID( "LiveReloadManager.ModuleFaultedCodeX", "Module %# faulted (code 0x%#) while the host checked it — %#", context._moduleName,
+                                         Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), pResult );
+                    else
+                        SW_LOG_ERROR_ID( "LiveReloadManager.ModuleRejectedHostBefore", "Module %# was rejected by the host before it took over — %#", context._moduleName, pResult );
+                    abortShadowCopy( context, outShadow );
+                    outShadow = {};
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    bool LiveReloadManager::commitShadowCopy( ModuleRecord& context, PreparedShadow& prepared )
+    {
+        if ( prepared._pHandle == nullptr )
+            return false;
+
+        const string previousTempModule = context._tempModulePath;
+        void*        pPreviousHandle    = context._pLibraryModule;
+
+        BLOCK( "Swap Module Handles" )
+        {
+            // onBeforeReload 가 모듈 자원을 건드리기 전에 워커가 옛 라이브러리에서 빠져나와 있어야 한다.
+            if ( pPreviousHandle != nullptr && flushTasksBeforeUnload() == false )
+                return false;
+
+            if ( context._onBeforeReload.isBound() && pPreviousHandle != nullptr )
+                context._onBeforeReload();
+
+            if ( pPreviousHandle != nullptr )
+            {
+                // onBefore 뒤에 남은 작업을 비운다. 이미 모듈을 내렸으면 교체를 계속하고, 제한 시간을 넘기면 그래프를 깨진 상태로 표시만 한다.
+                flushTasksBeforeUnload();
+                engine::unregisterModuleTypes( context._moduleName );
+            }
+
+            context._pLibraryModule      = prepared._pHandle;
+            context._tempModulePath      = prepared._tempPath;
+            context._loadedSourceStamp   = prepared._sourceStamp;
+            context._libraryName._loaded = context._libraryName._current;
+            prepared._pHandle            = nullptr;
+            prepared._tempPath.clear();
+
+            engine::registerModuleTypes( context._moduleName, prepared._heads );
+            prepared._heads = engine::ModuleRegistrarHeads{};
+
+            invokeAfterReload( context );
+
+            // 옛 라이브러리는 바로 언로드하지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(핸들을 잃지 않는다).
+            if ( pPreviousHandle != nullptr )
+                _deferredUnloadQueue.deferUnload( context._moduleName, pPreviousHandle, previousTempModule );
+        }
+
+        if ( _bReloadGraphBroken == SW_TRUE )
+        {
+            SW_LOG_ERROR_ID( "LiveReloadManager.ModuleCommittedButOnAfter", "Module %# committed but onAfter marked the graph broken",
+                             context._moduleName );
+            return false;
+        }
+
+        SW_LOG_INFO_ID( "LiveReloadManager.ModuleLoadedShadow", "Module loaded (shadow: %#)", context._tempModulePath.c_str() );
+        return true;
+    }
+
+    void LiveReloadManager::invokeAfterReload( ModuleRecord& context )
+    {
+        // 새 라이브러리의 코드가 처음 도는 지점이다. 여기서 죽으면 에디터째 종료되어 저장하지 않은 작업을 잃으므로 보호한다.
+        if ( context._onAfterReload.isBound() == false )
+            return;
+        uint32     faultCode{ 0 };
+        const bool bCompleted = ModuleCallGuard::run(
+            SW_DELEGATE_LAMBDA( Delegate<void()>, [&context]()
+        {
+            context._onAfterReload( context._pLibraryModule );
+        } ),
+            faultCode );
+        if ( bCompleted == false )
+        {
+            SW_LOG_ERROR_ID( "LiveReloadManager.ModuleFaultedCodeX2", "Module %# faulted (code 0x%#) while starting after the reload — dropping what it handed out; save your work and restart",
+                             context._moduleName, Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
+            markGraphBroken( "a module faulted in onAfterReload" );
+            if ( context._onReloadFault.isBound() )
+                context._onReloadFault( faultCode );
+        }
+    }
+
+    bool LiveReloadManager::runAfterReload( string_view moduleName )
+    {
+        const auto it = _mapModule.find( string( moduleName ) );
+        if ( it == _mapModule.end() || it->second->_pLibraryModule == nullptr )
+        {
+            SW_LOG_ERROR_ID( "LiveReloadManager.ModuleNotLoadedNothing", "Module %# is not loaded - nothing to start", moduleName );
+            return false;
+        }
+        invokeAfterReload( *it->second );
+        return _bReloadGraphBroken == SW_FALSE;
+    }
+
+    void LiveReloadManager::abortShadowCopy( ModuleRecord& context, PreparedShadow& prepared )
+    {
+        context._libraryName._current = context._libraryName._loaded;
+        if ( prepared._pHandle != nullptr )
+        {
+            engine::setGlobalRegistrarHeads( prepared._previousHeads );
+            ModuleLibraryUtil::unloadDynamicLibrary( prepared._pHandle );
+            prepared._pHandle = nullptr;
+        }
+
+        prepared._heads         = engine::ModuleRegistrarHeads{};
+        prepared._previousHeads = engine::ModuleRegistrarHeads{};
+        ModuleShadowCopy::removeArtifacts( prepared._tempPath );
+        prepared._tempPath.clear();
+        prepared._sourceMtime = 0;
+        prepared._sourceStamp = FileStamp{};
+    }
+
+    void LiveReloadManager::unloadModule( ModuleRecord& context )
+    {
+        if ( context._onBeforeReload.isBound() && context._pLibraryModule != nullptr )
+            context._onBeforeReload();
+
+        if ( context._pLibraryModule != nullptr )
+        {
+            SW_LOG_INFO_ID( "LiveReloadManager.UnloadingModuleHandle", "Unloading module %# (handle=%#)", context._moduleName.c_str(), context._pLibraryModule );
+            flushTasksBeforeUnload();
+
+            engine::unregisterModuleTypes( context._moduleName );
+            ModuleLibraryUtil::unloadDynamicLibrary( context._pLibraryModule );
+            context._pLibraryModule = nullptr;
+        }
+
+        ModuleShadowCopy::removeArtifacts( context._tempModulePath );
+        context._tempModulePath.clear();
+    }
+
+    void LiveReloadManager::unloadSharedModules()
+    {
+        if ( _listSharedModule.empty() )
+            return;
+        // 서비스가 이미 내려갔으면 등록을 제 이름으로 해제할 곳이 없다 — 라이브러리를 두면 정적 등록이 남은 채로 프로세스가 끝난다(예전 동작).
+        if ( engine::areEngineServicesBound() == false )
+        {
+            _listSharedModule.clear();
+            return;
+        }
+        flushTasksBeforeUnload();
+        for ( auto it = _listSharedModule.rbegin(); it != _listSharedModule.rend(); ++it )
+        {
+            SW_LOG_INFO_ID( "LiveReloadManager.UnloadingSharedModuleHandle", "Unloading shared module %# (handle=%#)", it->_name.c_str(), it->_pHandle );
+            engine::unregisterModuleTypes( it->_name );
+            ModuleLibraryUtil::unloadDynamicLibrary( it->_pHandle );
+            it->_pHandle = nullptr;
+        }
+        _listSharedModule.clear();
+    }
+
+    bool LiveReloadManager::flushTasksBeforeUnload()
+    {
+        const bool bDrained = flushWorkersBeforeUnload();
+        // 큐에 든 이벤트는 그것을 넣은 모듈의 vtable(소멸자 · 타입)을 가진다 — 워커를 비운 지금 배달하고 비워, 내려간 코드를 가리키는 이벤트가 남지 않게 한다.
+        // 그 모듈의 구독자는 인스턴스와 함께 이미 풀렸으므로 남은 구독자(엔진 · 다른 모듈)만 받는다.
+        if ( engine::areEngineServicesBound() )
+        {
+            if ( EventDispatcher* const pEventDispatcher = engine::findSubsystem<EventDispatcher>() )
+                pEventDispatcher->processEvents();
+        }
+        return bDrained;
+    }
+
+    bool LiveReloadManager::flushWorkersBeforeUnload()
+    {
+        // App 경로에서는 _flushWorkers(= GameModuleManager::flushRenderWorkers)가 실제로 비우고, 아래 폴백은 헤드리스 · 테스트에서만
+        // 돈다. 제한 시간 상수는 양쪽이 함께 쓴다.
+
+        // onBeforeReload 는 모듈에서 시작된 작업을 멈춰야 한다. 실행 중인 태스크를 비워 콜백이 옛 라이브러리에 들어가지 못하게 한다.
+        // clear() 는 부르지 않는다. 그러면 관계없는 GPUScene · 씬 로드 작업까지 버리고 onTaskFinished 정리를 건너뛴다.
+        if ( engine::areEngineServicesBound() )
+            engine::getSubsystem<SceneManager>().cancelPendingAsyncLoads();
+
+        // 렌더 스레드는 TaskManager 밖에서 돈다. Present 훅이 모듈 코드를 실행 중일 수 있으므로 먼저 비운다.
+        if ( _flushWorkers.isBound() )
+        {
+            _flushWorkers();
+            if ( _bReloadGraphBroken == SW_TRUE )
+                return false;
+            return true;
+        }
+
+        // 엔진 전체 대기가 맞다 — 모듈 코드는 어떤 태스크든 가상 함수 · 델리게이트로 들어올 수 있어 낸 쪽으로 가를 수 없다(`GameModuleManager::flushRenderWorkers` 의 같은 주석).
+        if ( engine::areEngineServicesBound() )
+        {
+            engine::getSubsystem<TaskManager>().waitAll( "LiveReloadManager::pollBeforeUnload" );
+        }
+        return _bReloadGraphBroken == SW_FALSE;
+    }
+
+    bool LiveReloadManager::prepareCascade( const vector<string>& listOrder, vector<PreparedEntry>& outListPrepared )
+    {
+        outListPrepared.reserve( listOrder.size() );
+        for ( const string& name : listOrder )
+        {
+            auto found = _mapModule.find( name );
+            if ( found == _mapModule.end() )
+                continue;
+            PreparedEntry entry;
+            entry._pRecord = found->second.get();
+            if ( prepareShadowCopy( *entry._pRecord, entry._shadow ) == false )
+            {
+                SW_LOG_ERROR_ID( "LiveReloadManager.CascadePrepareFailedAborting", "Cascade prepare failed for %# — aborting, previous modules kept", name );
+                return false;
+            }
+            outListPrepared.push_back( std::move( entry ) );
+        }
+        return true;
+    }
+
+    void LiveReloadManager::abortPrepared( vector<PreparedEntry>& inoutListPrepared, size_t firstIndex )
+    {
+        for ( size_t moduleIndex = firstIndex; moduleIndex < inoutListPrepared.size(); ++moduleIndex )
+        {
+            abortShadowCopy( *inoutListPrepared[moduleIndex]._pRecord, inoutListPrepared[moduleIndex]._shadow );
+        }
+    }
+
+    bool LiveReloadManager::commitCascade( vector<PreparedEntry>& inoutListPrepared )
+    {
+        size_t committed{ 0 };
+        for ( size_t moduleIndex = 0; moduleIndex < inoutListPrepared.size(); ++moduleIndex )
+        {
+            PreparedEntry& entry = inoutListPrepared[moduleIndex];
+            if ( _bReloadGraphBroken == SW_TRUE )
+            {
+                SW_LOG_ERROR_ID( "LiveReloadManager.CascadeAbortBeforeCommit", "Cascade abort before commit of %# — graph already broken", entry._pRecord->_moduleName );
+                abortPrepared( inoutListPrepared, moduleIndex );
+                if ( committed > 0 )
+                    markGraphBroken( "partial cascade commit" );
+                return false;
+            }
+
+            if ( commitShadowCopy( *entry._pRecord, entry._shadow ) )
+            {
+                ++committed;
+                continue;
+            }
+
+            SW_LOG_ERROR_ID( "LiveReloadManager.CascadeCommitFailedAborting", "Cascade commit failed for %# — aborting remaining commits", entry._pRecord->_moduleName );
+            abortPrepared( inoutListPrepared, moduleIndex );
+            if ( committed > 0 || _bReloadGraphBroken == SW_FALSE )
+                markGraphBroken( "partial cascade commit" );
+            return false;
+        }
+        return true;
+    }
+
+    void LiveReloadManager::reloadCascade( const vector<string>& listSubgraphName )
+    {
+        vector<string> listOrder;
+        if ( _dependencyGraph.sortByDependency( listSubgraphName, listOrder ) == false )
+        {
+            markGraphBroken( "dependency cycle" );
+            return;
+        }
+        if ( listOrder.empty() )
+            return;
+
+        SW_LOG_TRACE_ID( "LiveReloadManager.CascadeReloadCount", "Cascade reload count=%#", static_cast<uint32>( listOrder.size() ) );
+
+        vector<PreparedEntry> listPrepared;
+        if ( prepareCascade( listOrder, listPrepared ) == false )
+        {
+            abortPrepared( listPrepared, 0 );
+            return;
+        }
+
+        // 배치 직전 콜백의 거절은 적용 전 실패다. 아무것도 언로드하지 않았으니 새 라이브러리만 버리고 옛 라이브러리로 계속 돈다.
+        // 나중에 더한 것(바깥 층)부터 부르고 처음 거절에서 멈춘다. 콜백이 자기 구독을 놓아도 그 항목은 순회가 끝난 뒤 빠진다.
+        const bool bCommitAccepted = _onBeforeCommitBatch.broadcastUntilReverse( []( bool bAccepted )
+        { return bAccepted == false; }, listOrder ) == false;
+        if ( bCommitAccepted == false )
+        {
+            SW_LOG_ERROR_ID( "LiveReloadManager.CascadeReloadRefusedBefore", "Cascade reload refused before the first commit — keeping the previous modules" );
+            abortPrepared( listPrepared, 0 );
+            return;
+        }
+
+        _deferredUnloadQueue.beginBatch();
+        if ( commitCascade( listPrepared ) == false )
+            return;
+
+        // 새 라이브러리가 모두 로드됐다. 의존 모듈이 옛 라이브러리에 바인딩돼 있으면, 옛 라이브러리를 언로드한 지금 거기로 점프하는 코드가 죽는다. 여기서 막는다.
+        if ( verifyModuleBindings() == false )
+        {
+            markGraphBroken( "a module is bound to a stale dependency image after the cascade" );
+            return;
+        }
+        if ( _bReloadGraphBroken == SW_FALSE ) // 리로드 직후 콜백의 결함도 그래프를 막는다 — 그런 리로드는 성공으로 세지 않는다
+            ++_completedReloadCount;
+    }
+
+    LiveReloadManager::ModuleRecord::ModuleRecord() noexcept
+        : _onBeforeReload{}
+        , _onAfterReload{}
+        , _onReloadFault{}
+        , _onValidateLibrary{}
+        , _moduleName{}
+        , _originalModulePath{}
+        , _tempModulePath{}
+        , _libraryName{}
+        , _pLibraryModule{ nullptr }
+        , _loadedSourceStamp{}
+        , _debounceStamp{}
+        , _debounceTimer{}
+        , _bPendingReload{ false }
+        , _bMtimeDebouncing{ false }
+        , _bForceReload{ false }
+    {
+    }
+} // namespace sw

@@ -28,8 +28,8 @@
 #include "sw/config/ConfigConstants.h"
 
 #if SW_WITH_DYNAMIC_MODULES
-    #include "ModuleManager/LiveReload/LiveReloadManager.h"
-    #include "ModuleManager/LiveReload/ModuleCompiler.h"
+    #include "ModuleManager/Dev/LiveReload/LiveReloadManager.h"
+    #include "ModuleManager/Dev/LiveReload/ModuleCompiler.h"
 #endif
 
 namespace sw

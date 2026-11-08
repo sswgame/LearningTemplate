@@ -5,16 +5,16 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/StateIO.h"
+#include "Engine/Serialization/Format/Tests/StateBytesTestUtil.h"
 
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorCatalog.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorEncounter.h"
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/SurvivalHorrorSession.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
-#include "GameFramework/Runtime/Foundation/Utility/Tests/StateBytesTestUtil.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/GridInventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 #include <utility>
 

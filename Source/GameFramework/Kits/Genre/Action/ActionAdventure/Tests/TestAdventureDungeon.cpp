@@ -7,9 +7,9 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureDungeon.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 // AdventureDungeonTest — 던전 규칙: 작은 열쇠 · 보스 열쇠 · 조건 문, 던전마다 따로 세는 열쇠, 상자 보상과 지도 · 나침반, 스위치 · 눌림판 · 시간제 · 횃불 그룹, 상태 왕복과 깨진 바이트, 카탈로그 거절.
 // 결함: 저장에 없는 던전이 지금 진행을 그대로 물려받았다(새 상태여야 한다) · 겹친 문 · 상자 · 장치 id 를 말없이 받았다. 키트 GF_ActionAdventure(nogpu).

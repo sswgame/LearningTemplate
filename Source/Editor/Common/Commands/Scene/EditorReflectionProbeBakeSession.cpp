@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Commands/Scene/EditorReflectionProbeBakeSession.h"
 
-#include "Editor/Common/Commands/Scene/EditorBakeOutputPath.h"
+#include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 #include "Editor/Common/Commands/Scene/ReflectionProbeBaker.h"
 #include "Editor/Common/Task/EditorBackgroundTask.h"
 #include "Editor/Common/Workspace/EditorContext.h"

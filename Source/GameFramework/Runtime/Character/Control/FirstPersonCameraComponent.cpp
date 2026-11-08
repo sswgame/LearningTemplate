@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Character/Control/FirstPersonCameraComponent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -14,7 +15,6 @@
 #include "GameFramework/Runtime/Character/Camera/CameraUserSettings.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
 
 namespace sw
 {

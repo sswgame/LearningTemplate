@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "Engine/Compression/ZstdCompressionCodec.h"
-
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
+
+#include "Engine/Compression/EngineCompressionCodecs.h"
 
 // ZSTD_customMem · ZSTD_createCCtx_advanced · ZSTD_createDCtx_advanced 는 zstd.h 의 정적 링크 전용 절에 있다(공유 라이브러리도 내보낸다).
 

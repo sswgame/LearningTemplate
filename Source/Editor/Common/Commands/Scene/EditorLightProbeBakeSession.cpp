@@ -5,7 +5,7 @@
 #include "Core/String/StringUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Commands/Scene/EditorBakeOutputPath.h"
+#include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
 #include "Editor/Common/Workspace/EditorFrameStep.h"

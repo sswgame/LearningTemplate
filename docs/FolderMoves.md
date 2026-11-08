@@ -128,17 +128,17 @@
 
 | 현재 경로 | 새 경로 | 까닭 | include 수 |
 | --- | --- | --- | --- |
-| GameFramework/Runtime/Foundation/Utility/Math/RayMath.h | Core/Math/Ray.h 에 합침 | 광선 ↔ 기본 도형 판정 — Core/Math/Ray 의 일(Core 만 씀). `SW_GF_API` → `SW_API` | 11 |
-| GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h | Core/Math/OrientationUtil.h (YawUtil 을 합침) | 앞 · 위 방향 → 오일러, 요 구하기 — 같은 일(9 절) | 15 |
-| GameFramework/Runtime/Foundation/Utility/Random/ValueNoise.h | Core/Math/ValueNoise.h | 시드 고정 노이즈 — 범용 수학 | 3 |
-| GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h | GameFramework/Runtime/Foundation/Random/GameRandom.h | 게임 규칙 난수(GF 에 남는다). `Utility` 폴더 해체 | 54 |
-| GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h · FacingDir.h · GridOpenEntry.h | GameFramework/Runtime/Foundation/Grid/ | 〃 | 21 · 3 · 3 |
-| GameFramework/Runtime/Foundation/Utility/Time/LifeSpanUtil.h | GameFramework/Runtime/World/Lifetime/LifeSpanUtil.h | 수명이 다하면 지우는 컴포넌트 도우미 — FadeOutComponent · PrefabPool 옆 | 2 |
-| GameFramework/Runtime/Foundation/Utility/DepletingValue.h | GameFramework/Runtime/Foundation/GameData/DepletingValue.h | 깎이는 수치(체력 · 내구도) — StatBlock 옆 | 21 |
-| GameFramework/Runtime/Foundation/Utility/ConfigRangeUtil.h | GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h | 규칙 설정 구조체의 범위 검사 — 데이터 읽기 | 30 |
-| GameFramework/Runtime/World/Query/GameConditions.h · GameFlags.h · ObjectActions.h | GameFramework/Runtime/Gameplay/Condition/ | 조건 · 동작 어휘 — WorldQuery(기하)와 다른 일, Engine/Gameplay 의 GF 쪽 | 16 · 32 · 1 |
-| GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h | GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h | 색마다 머티리얼 인스턴스 캐시 — 표현 창구(I*Sink)가 아니다 | 13 |
-| Editor/Common/Workspace/EditorStateHashCompare.h | Editor/Common/Workspace/NetPlay/EditorStateHashCompare.h | Multiplayer 창 Sync 탭 — 짝(EditorNetProfilerHistory · EditorRemoteInspector)이 NetPlay | 3 |
+| Core/Math/Ray.h | Core/Math/Ray.h 에 합침 | 광선 ↔ 기본 도형 판정 — Core/Math/Ray 의 일(Core 만 씀). `SW_GF_API` → `SW_API` | 11 |
+| Core/Math/OrientationUtil.h | Core/Math/OrientationUtil.h (YawUtil 을 합침) | 앞 · 위 방향 → 오일러, 요 구하기 — 같은 일(9 절) | 15 |
+| GameFramework/Runtime/Foundation/Random/ValueNoise.h | Core/Math/ValueNoise.h | 시드 고정 노이즈 — 범용 수학 | 3 |
+| GameFramework/Runtime/Foundation/Random/GameRandom.h | GameFramework/Runtime/Foundation/Random/GameRandom.h | 게임 규칙 난수(GF 에 남는다). `Utility` 폴더 해체 | 54 |
+| GameFramework/Runtime/Foundation/Grid/GridTopology.h · FacingDir.h · GridOpenEntry.h | GameFramework/Runtime/Foundation/Grid/ | 〃 | 21 · 3 · 3 |
+| GameFramework/Runtime/World/Lifetime/LifeSpanUtil.h | GameFramework/Runtime/World/Lifetime/LifeSpanUtil.h | 수명이 다하면 지우는 컴포넌트 도우미 — FadeOutComponent · PrefabPool 옆 | 2 |
+| GameFramework/Runtime/Foundation/GameData/DepletingValue.h | GameFramework/Runtime/Foundation/GameData/DepletingValue.h | 깎이는 수치(체력 · 내구도) — StatBlock 옆 | 21 |
+| GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h | GameFramework/Runtime/Foundation/GameData/ConfigRangeUtil.h | 규칙 설정 구조체의 범위 검사 — 데이터 읽기 | 30 |
+| GameFramework/Runtime/Gameplay/Condition/GameConditions.h · GameFlags.h · ObjectActions.h | GameFramework/Runtime/Gameplay/Condition/ | 조건 · 동작 어휘 — WorldQuery(기하)와 다른 일, Engine/Gameplay 의 GF 쪽 | 16 · 32 · 1 |
+| GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h | GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h | 색마다 머티리얼 인스턴스 캐시 — 표현 창구(I*Sink)가 아니다 | 13 |
+| Editor/Common/Workspace/NetPlay/EditorStateHashCompare.h | Editor/Common/Workspace/NetPlay/EditorStateHashCompare.h | Multiplayer 창 Sync 탭 — 짝(EditorNetProfilerHistory · EditorRemoteInspector)이 NetPlay | 3 |
 | Editor/Common/EditorUtil.h | 둘로: `makePythonScriptCommand` → Editor/Common/Task/EditorExternalToolJob.h, `appendCategoryBadge` → Editor/Common/Widgets/EditorWidgets.h | 잡동사니 Util — 하는 일이 둘 | 6 |
 | ModuleManager/LiveReload/*(8 헤더) | ModuleManager/Dev/LiveReload/ | 개발 전용 — `Dev/` 패턴 하나로(8 절) | 각 1~5 |
 | App/AppDevTools.h `bindRenderThreadHooks` | DevTools/Client/Render/(디바이스 제거 시험) | 개발 명령 `rhi.removeDevice` — 백엔드 교체기와 함께 10 절 | 3 |
@@ -218,20 +218,20 @@
 
 | 합칠 파일 | 합친 파일 | 까닭 | 줄 수 합(헤더) | include 수 |
 | --- | --- | --- | --- | --- |
-| Engine/Animation/Rig/RigIKNodes.h · RigConstraintNodes.h · RigSecondaryNodes.h | Engine/Animation/Rig/RigBuiltinNodes.h | 각각 `registerNodes` 선언 하나(18 줄), RigAsset.cpp 만 씀. .cpp 셋(800 줄+)은 빌드 시간 때문에 둔다 | 54 | 2 · 2 · 2 |
-| Core/Compression/NullCompressionCodec.h · RleCompressionCodec.h | Core/Compression/BuiltinCompressionCodecs.h | 내장 코덱 둘, 같은 두 .cpp 만 씀 | 78 | 4 · 4 |
-| Engine/Compression/Lz4CompressionCodec.h · ZstdCompressionCodec.h · ZlibCompressionCodec.h | Engine/Compression/EngineCompressionCodecs.h (EngineCompressionCodecUtil.h 도 합침) | 등록 목록 하나만 씀. 헤더는 ThirdParty 를 안 넣으니 합쳐도 됨, .cpp 는 라이브러리별로 둔다 | 125 | 3 · 3 · 5 |
-| Core/Foundation/BitFlagTrait.h | Core/Foundation/EnumUtil.h | 23 줄 기본 템플릿, EnumUtil.h 만 include | 23 | 1 |
-| Engine/Localization/CurrencyInfo.h | Engine/Localization/CultureInfo.h | 구조체 하나(20 줄), CultureInfo 만 씀 | 20 | 2 |
-| Engine/Profiling/IProfilerMemoryOutput.h | Engine/Profiling/IProfilerBackend.h | 인터페이스 23 줄, IProfilerBackend.h 만 include | 23 | 1 |
-| Engine/Module/ModuleUnloadStageSubsystem.h | Engine/Module/ModuleLoadStageSubsystem.h | 기동 · 종료 짝 — 쓰는 곳이 Load 쪽 하나 | 37 | 2 |
-| ModuleManager/ModuleStateStore.h | ModuleManager/ModuleLoaderSubsystem.h | 24 줄, ModuleLoaderSubsystem 만 씀 | 24 | 2 |
-| Engine/Sequencer/SequenceSpanTracks.h | Engine/Sequencer/SequenceAsset.h 의 선언 절 | extern 셋(17 줄), SequenceAsset.cpp 만 씀 | 17 | 2 |
-| Engine/Serialization/Serializer/SerializeReflectAny.h | Engine/Serialization/Serializer/SerializeContext.h | 함수 선언 하나(21 줄), SerializeContext.cpp 만 씀 | 21 | 2 |
-| Engine/Object/GameObject/Serialization/ClientOnlyTypeTable.h | Engine/Object/GameObject/Serialization/ObjectStateSerializer.h | 22 줄, ObjectStateSerializer.cpp 만 씀 | 22 | 2 |
-| Engine/Animation/Notify/AnimationNotifyHandlers.h | (Animation/Notify 로 옮긴 뒤) AnimationNotifyTable.h | 31 줄, AnimationNotifyTable.cpp 만 씀 | 31 | 2 |
-| Editor/Common/Commands/Scene/EditorBakeOutputPath.h · EditorBakeRunState.h | Editor/Common/Commands/Scene/EditorBakeSession.h | 라이트 · 반사 프로브 굽기 세션 둘이 같이 쓰는 경로 · 진행 상태 | 69 | 3 · 3 |
-| Core/Math/YawUtil.h + GF Utility/Math/OrientationUtil.h | Core/Math/OrientationUtil.h | 둘 다 회전 ↔ 방향 변환(32 + 26 줄) — 같은 일이 두 타깃에 | 58 | 5 · 15 |
+| Engine/Animation/Rig/RigBuiltinNodes.h · RigConstraintNodes.h · RigSecondaryNodes.h | Engine/Animation/Rig/RigBuiltinNodes.h | 각각 `registerNodes` 선언 하나(18 줄), RigAsset.cpp 만 씀. .cpp 셋(800 줄+)은 빌드 시간 때문에 둔다 | 54 | 2 · 2 · 2 |
+| Core/Compression/BuiltinCompressionCodecs.h · RleCompressionCodec.h | Core/Compression/BuiltinCompressionCodecs.h | 내장 코덱 둘, 같은 두 .cpp 만 씀 | 78 | 4 · 4 |
+| Engine/Compression/EngineCompressionCodecs.h · ZstdCompressionCodec.h · ZlibCompressionCodec.h | Engine/Compression/EngineCompressionCodecs.h (EngineCompressionCodecUtil.h 도 합침) | 등록 목록 하나만 씀. 헤더는 ThirdParty 를 안 넣으니 합쳐도 됨, .cpp 는 라이브러리별로 둔다 | 125 | 3 · 3 · 5 |
+| Core/Foundation/EnumUtil.h | Core/Foundation/EnumUtil.h | 23 줄 기본 템플릿, EnumUtil.h 만 include | 23 | 1 |
+| Engine/Localization/CultureInfo.h | Engine/Localization/CultureInfo.h | 구조체 하나(20 줄), CultureInfo 만 씀 | 20 | 2 |
+| Engine/Profiling/IProfilerBackend.h | Engine/Profiling/IProfilerBackend.h | 인터페이스 23 줄, IProfilerBackend.h 만 include | 23 | 1 |
+| Engine/Module/ModuleLoadStageSubsystem.h | Engine/Module/ModuleLoadStageSubsystem.h | 기동 · 종료 짝 — 쓰는 곳이 Load 쪽 하나 | 37 | 2 |
+| ModuleManager/ModuleLoaderSubsystem.h | ModuleManager/ModuleLoaderSubsystem.h | 24 줄, ModuleLoaderSubsystem 만 씀 | 24 | 2 |
+| Engine/Sequencer/SequenceAsset.h | Engine/Sequencer/SequenceAsset.h 의 선언 절 | extern 셋(17 줄), SequenceAsset.cpp 만 씀 | 17 | 2 |
+| Engine/Serialization/Serializer/SerializeContext.h | Engine/Serialization/Serializer/SerializeContext.h | 함수 선언 하나(21 줄), SerializeContext.cpp 만 씀 | 21 | 2 |
+| Engine/Object/GameObject/Serialization/ObjectStateSerializer.h | Engine/Object/GameObject/Serialization/ObjectStateSerializer.h | 22 줄, ObjectStateSerializer.cpp 만 씀 | 22 | 2 |
+| Engine/Animation/Notify/AnimationNotifyTable.h | (Animation/Notify 로 옮긴 뒤) AnimationNotifyTable.h | 31 줄, AnimationNotifyTable.cpp 만 씀 | 31 | 2 |
+| Editor/Common/Commands/Scene/EditorBakeSession.h · EditorBakeRunState.h | Editor/Common/Commands/Scene/EditorBakeSession.h | 라이트 · 반사 프로브 굽기 세션 둘이 같이 쓰는 경로 · 진행 상태 | 69 | 3 · 3 |
+| Core/Math/OrientationUtil.h + GF Utility/Math/OrientationUtil.h | Core/Math/OrientationUtil.h | 둘 다 회전 ↔ 방향 변환(32 + 26 줄) — 같은 일이 두 타깃에 | 58 | 5 · 15 |
 
 **합치지 않는 것(까닭):**
 
@@ -300,8 +300,8 @@ FourCC 표기: FourCC 는 "Four-Character Code" 의 약어 **CC** 를 품는다 
 | AEAD | — | INetAead, NetAeadAlgorithm, createAead, _sendAead | 12 | |
 | AT-SPI | Engine/UI/Accessibility/AtSpiMapping.h · Linux/AtSpiAccessibilityBridge.h | AtSpiBridge, AtSpiState | 9 | `ATSPIMapping` |
 | UIA | Engine/UI/Accessibility/Windows/UiaAccessibilityBridge.h | UiaAccessibilityBridge | 3(우리 것) | Uia* Win32 API 는 바깥 이름 |
-| LZ4 | Engine/Compression/Lz4CompressionCodec.h | Lz4CompressionCodec | 1 | |
-| RLE | Core/Compression/RleCompressionCodec.h | RleCompressionCodec, makeRleSettings | 4 | |
+| LZ4 | Engine/Compression/EngineCompressionCodecs.h | Lz4CompressionCodec | 1 | |
+| RLE | Core/Compression/BuiltinCompressionCodecs.h | RleCompressionCodec, makeRleSettings | 4 | |
 | OS | Editor/Common/Backend/ImGuiOsInputFilter.h | ImGuiOsInputFilter | 1 | `ImGuiOSInputFilter` |
 | PBR | Editor/Common/Asset/Tests/TestModelImportPbr.cpp | ModelImportPbrMaterial, readPbrMaterial, bPbrSections | 12 | |
 | PCM | — | AudioPcm, convertPcm, kTagPcm, bUnsupportedPcmLayout | 12 | |

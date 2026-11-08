@@ -8,10 +8,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Compression/EngineCompressionCodecUtil.h"
-#include "Engine/Compression/Lz4CompressionCodec.h"
-#include "Engine/Compression/ZlibCompressionCodec.h"
-#include "Engine/Compression/ZstdCompressionCodec.h"
+#include "Engine/Compression/EngineCompressionCodecs.h"
 
 namespace
 {

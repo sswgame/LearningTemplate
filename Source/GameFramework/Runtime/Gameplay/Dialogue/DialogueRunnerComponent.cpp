@@ -13,8 +13,8 @@
 #include "Engine/Presentation/ISubtitleSink.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/World/Query/GameConditions.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 
 namespace sw
 {

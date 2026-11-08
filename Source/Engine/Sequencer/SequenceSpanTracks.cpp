@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "Engine/Sequencer/SequenceSpanTracks.h"
-
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -17,6 +15,7 @@
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Presentation/ISoundPlayer.h"
 #include "Engine/Presentation/ISubtitleSink.h"
+#include "Engine/Sequencer/SequenceAsset.h"
 
 namespace sw
 {

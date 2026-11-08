@@ -8,9 +8,9 @@
 
 #include "Engine/Reflection/EnumName.h"
 
+#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 namespace sw
 {

@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Compression/Lz4CompressionCodec.h"
-
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryBlock.h"
+
+#include "Engine/Compression/EngineCompressionCodecs.h"
 
 #include <lz4.h>
 #include <lz4hc.h>

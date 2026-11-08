@@ -4,6 +4,7 @@
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -12,7 +13,6 @@
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
 
 namespace sw
 {

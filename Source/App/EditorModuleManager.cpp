@@ -18,7 +18,7 @@
     #include "Core/File/FileUtil.h"
     #include "Core/Module/ModuleLibraryUtil.h"
     #include "Core/Path/AbsolutePath.h"
-    #include "ModuleManager/LiveReload/LiveReloadManager.h"
+    #include "ModuleManager/Dev/LiveReload/LiveReloadManager.h"
 #endif
 
 namespace sw

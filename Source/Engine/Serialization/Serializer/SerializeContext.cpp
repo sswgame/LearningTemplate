@@ -20,7 +20,6 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/AssetRefBase.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
-#include "Engine/Serialization/Serializer/SerializeReflectAny.h"
 
 #include <cmath>
 

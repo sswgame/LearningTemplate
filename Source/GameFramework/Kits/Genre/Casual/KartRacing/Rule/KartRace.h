@@ -32,7 +32,7 @@
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Character/Movement/KinematicVehicleMotor.h"
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Foundation/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Match/MatchPhase.h"
 
 namespace sw

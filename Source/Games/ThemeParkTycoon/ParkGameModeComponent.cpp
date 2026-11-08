@@ -4,6 +4,7 @@
 
 #include "Core/Encoding/FourCCUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Automation/Watch/AutomationComponentWatch.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -22,8 +23,7 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 #include "Games/ThemeParkTycoon/CoasterCarComponent.h"
 #include "Games/ThemeParkTycoon/FlatRideComponent.h"

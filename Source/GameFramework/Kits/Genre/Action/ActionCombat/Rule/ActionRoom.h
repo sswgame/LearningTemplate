@@ -19,7 +19,7 @@
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ResolvedShot.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/FacingDir.h"
+#include "GameFramework/Runtime/Foundation/Grid/FacingDir.h"
 
 namespace sw
 {

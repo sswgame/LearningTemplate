@@ -11,7 +11,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/ModuleCatalog.h"
 
-#include "ModuleManager/LiveReload/LiveReloadManager.h"
+#include "ModuleManager/Dev/LiveReload/LiveReloadManager.h"
 #include "ModuleManager/ModuleCatalogLoader.h"
 #include "ModuleManager/ModuleLoaderSubsystem.h"
 

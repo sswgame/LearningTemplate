@@ -1,7 +1,6 @@
 #include "pch.h"
 
-#include "Core/Compression/RleCompressionCodec.h"
-
+#include "Core/Compression/BuiltinCompressionCodecs.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw

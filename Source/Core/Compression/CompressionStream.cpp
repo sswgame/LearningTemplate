@@ -2,9 +2,8 @@
 
 #include "Core/Compression/CompressionStream.h"
 
+#include "Core/Compression/BuiltinCompressionCodecs.h"
 #include "Core/Compression/CompressionCodecRegistry.h"
-#include "Core/Compression/NullCompressionCodec.h"
-#include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"

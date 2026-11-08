@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Compression/ZlibCompressionCodec.h"
-
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+
+#include "Engine/Compression/EngineCompressionCodecs.h"
 
 #include <zlib.h>
 

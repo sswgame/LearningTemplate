@@ -3,6 +3,7 @@
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OrientationUtil.h"
 #include "Core/Math/Ray.h"
 #include "Core/String/StringBuilder.h"
 
@@ -34,11 +35,10 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/GameSound.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/IHUDViewModelBinder.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 #include "Games/Shooter3D/ShooterAvatarComponent.h"
 #include "Games/Shooter3D/ShooterBodyMovementComponent.h"
@@ -435,7 +435,7 @@ namespace sw
             const ControlIntent& intent       = pPawn->getIntent();
             float3               aimDirection = pCamera->getLook().getForward();
             if ( bJustPressed && intent._bTriggerLook )
-                aimDirection = RayMath::computeLookDirection( intent._triggerYaw, intent._triggerPitch );
+                aimDirection = OrientationUtil::computeLookDirection( intent._triggerYaw, intent._triggerPitch );
             fireWeapon( *pGameMode, *pCamera, aimDirection, bJustPressed );
         }
         if ( _bMeleeActive == SW_TRUE )
@@ -712,7 +712,7 @@ namespace sw
         for ( const ShooterArenaBox& box : gameMode.getBoxes() )
         {
             float32 distance = 0.0f;
-            if ( RayMath::intersectAABB( ray, box._min, box._max, nearest, distance ) && distance < nearest )
+            if ( Ray::intersectAABB( ray, box._min, box._max, nearest, distance ) && distance < nearest )
                 nearest = distance;
         }
         // 바닥
@@ -871,7 +871,7 @@ namespace sw
         // 칼날은 눈에서 시선 앞으로 뻗은 선이고, 창 동안 요로 호를 그린다. 시선은 서버 · 클라이언트가 같은 의도에서 온다.
         const float32 fraction = MathUtil::min( _meleeElapsed / _meleeDuration, 1.0f );
         const float32 yaw      = pCamera->getLook().getYaw() + ( fraction - 0.5f ) * _meleeArc;
-        const float3  forward  = RayMath::computeLookDirection( yaw, pCamera->getLook().getPitch() );
+        const float3  forward  = OrientationUtil::computeLookDirection( yaw, pCamera->getLook().getPitch() );
         const float3  eye      = getEyePosition();
         MeleeHit::makeBlade( eye + forward * ( _meleeReach * 0.25f ), eye + forward * _meleeReach, Internal::kMeleeBladeSamples, _listMeleeCurrent );
 

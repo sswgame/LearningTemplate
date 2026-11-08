@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 
 #include "Core/Math/MathUtil.h"
+#include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Input/IInputCaptureQuery.h"
@@ -17,7 +18,6 @@
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
 
 namespace sw
 {

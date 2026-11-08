@@ -4,7 +4,7 @@
 
 #include "Core/Algorithm/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/YawUtil.h"
+#include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
@@ -79,7 +79,7 @@ namespace sw
 
     void MotionWarpingComponent::setWarpTargetFromTransform( const hashed_string& name, const float4x4& worldTransform )
     {
-        setWarpTarget( name, worldTransform.getTranslation(), YawUtil::fromWorld( worldTransform ) );
+        setWarpTarget( name, worldTransform.getTranslation(), OrientationUtil::computeYawFromWorld( worldTransform ) );
     }
 
     void MotionWarpingComponent::clearWarpTarget( const hashed_string& name )
@@ -158,9 +158,9 @@ namespace sw
             }
             if ( window._bRotation )
             {
-                const float32    currentYaw   = YawUtil::fromWorld( world );
-                const float32    frameYaw     = YawUtil::fromRotation( inoutFrame._rotation );
-                const float32    remainingYaw = YawUtil::fromRotation( remaining._rotation );
+                const float32    currentYaw   = OrientationUtil::computeYawFromWorld( world );
+                const float32    frameYaw     = OrientationUtil::computeYawFromRotation( inoutFrame._rotation );
+                const float32    remainingYaw = OrientationUtil::computeYawFromRotation( remaining._rotation );
                 const float32    needed       = MathUtil::wrapAngle( pTarget->_yaw - currentYaw - frameYaw - remainingYaw );
                 const quaternion turn         = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, needed * fraction );
                 inoutFrame._rotation          = ( inoutFrame._rotation * turn ).normalize();

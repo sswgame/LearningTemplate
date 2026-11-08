@@ -31,8 +31,8 @@
 
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/MaterialTintCache.h"
 
 #include "Games/AbilityArena/ArenaUnitComponent.h"
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "ModuleManager/ModuleStateStore.h"
+#include "ModuleManager/ModuleLoaderSubsystem.h"
 
 namespace sw
 {

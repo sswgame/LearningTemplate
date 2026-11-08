@@ -3,7 +3,7 @@
 #include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
 
 #include "Core/Math/MathUtil.h"
-#include "Core/Math/YawUtil.h"
+#include "Core/Math/OrientationUtil.h"
 
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/AnimationPlayer.h"
@@ -127,7 +127,7 @@ namespace sw
         const SceneComponent*            pRoot   = pAnchor != nullptr ? PairedAnimationSessionInternal::findRoot( *pAnchor ) : nullptr;
         if ( pRoot == nullptr )
             return false;
-        PairedAnimationDef::computeAlignTarget( pRoot->getWorldPosition(), YawUtil::fromWorld( pRoot->getWorldMatrix() ), roleDef, outPosition, outYaw );
+        PairedAnimationDef::computeAlignTarget( pRoot->getWorldPosition(), OrientationUtil::computeYawFromWorld( pRoot->getWorldMatrix() ), roleDef, outPosition, outYaw );
         return true;
     }
 

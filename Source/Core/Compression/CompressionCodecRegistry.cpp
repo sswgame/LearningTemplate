@@ -6,8 +6,7 @@
 
 #include "Core/Compression/CompressionCodecRegistry.h"
 
-#include "Core/Compression/NullCompressionCodec.h"
-#include "Core/Compression/RleCompressionCodec.h"
+#include "Core/Compression/BuiltinCompressionCodecs.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Log/Logger.h"
 

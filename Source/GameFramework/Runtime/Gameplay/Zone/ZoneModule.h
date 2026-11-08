@@ -21,8 +21,8 @@
 #include "Engine/Gameplay/GameplayContext.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneProfile.h"
-#include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 namespace sw
 {

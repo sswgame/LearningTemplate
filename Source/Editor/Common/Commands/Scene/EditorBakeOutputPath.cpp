@@ -1,8 +1,8 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/Scene/EditorBakeOutputPath.h"
-
 #include "Core/String/StringUtil.h"
+
+#include "Editor/Common/Commands/Scene/EditorBakeSession.h"
 
 namespace sw::editor
 {

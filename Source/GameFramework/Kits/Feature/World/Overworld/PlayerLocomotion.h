@@ -9,7 +9,7 @@
 #include "Engine/Serialization/Format/StateIO.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/FacingDir.h"
+#include "GameFramework/Runtime/Foundation/Grid/FacingDir.h"
 
 namespace sw
 {

@@ -6,8 +6,8 @@
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
-#include "GameFramework/Runtime/World/Query/GameConditions.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameConditions.h"
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 
 using namespace sw;
 

@@ -5,7 +5,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
-#include "Engine/Compression/ZlibCompressionCodec.h"
+#include "Engine/Compression/EngineCompressionCodecs.h"
 
 using namespace sw;
 

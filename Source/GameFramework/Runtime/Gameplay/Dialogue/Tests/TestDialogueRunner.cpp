@@ -7,8 +7,8 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Runtime/Gameplay/Condition/GameFlags.h"
 #include "GameFramework/Runtime/Gameplay/Dialogue/DialogueRunnerComponent.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 using namespace sw;
 

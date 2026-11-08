@@ -16,7 +16,7 @@
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
-#include "GameFramework/Runtime/Foundation/Utility/Grid/GridTopology.h"
+#include "GameFramework/Runtime/Foundation/Grid/GridTopology.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
 namespace sw
