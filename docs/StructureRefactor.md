@@ -60,9 +60,6 @@
 ### T9 생성 계약
 - `ReflectionSchema`: `ReflectionSchema` 는 include 경로로 막지 못한다(Core 가 `Source` 루트를 준다) — 목록 밖 Engine 헤더 include 를 막으려면 루트를 층별로 나눠야 한다.
 
-### T10 폴백 — 남은 것
-- `RHI::getShaderTargetFormat` 이 모르는 백엔드에 DXIL 을 돌려준다.
-
 ## 5. 남은 확인
 
 - 배포 구성(통합에서 한 번): `py -3 -m Scripts shipping-check` — `Ninja-Shipping` · `Ninja-Shipping-Server` 를 짓고(쿠킹 포함), 배포 App 을 몇 초 돌려 창 닫기로 0 종료, 서버를 몇 초 돌린 뒤 종료 신호(Ctrl+Break · SIGTERM)로 0 종료, 배포 App 의 `-scenario` 가 기동 오류인지(배포 구성은 자동화 실행기 · 테스트용 변수를 짓지 않는다) 보고 로그의 [Error] · [Warning] 을 모아 찍는다. CTest 가 아닌 이유: 프리셋마다 빌드 폴더가 달라 한 ctest 트리에 담기지 않는다.
