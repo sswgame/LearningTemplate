@@ -4,7 +4,7 @@
 
 #include "Core/Foundation/Constants.h"
 
-#if defined( SW_PLATFORM_WINDOWS ) && defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Memory/Memory.h"
 
     #include "Engine/UI/Accessibility/UIAccessibilityActions.h"

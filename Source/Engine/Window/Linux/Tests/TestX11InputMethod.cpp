@@ -6,7 +6,7 @@
 
 #include "Engine/Window/Linux/X11InputMethod.h"
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_LINUX )
     #include <clocale>
 
 using namespace sw;

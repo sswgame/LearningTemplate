@@ -10,7 +10,7 @@
 #include "Engine/Window/Linux/X11Window.h"
 #include "Engine/Window/WindowPlatform.h"
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_LINUX )
 
 namespace sw
 {

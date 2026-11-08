@@ -18,4 +18,4 @@ game = ["DevTools", "Editor", "ModuleManager", "App", "Server", "Programs", "Gam
 editorextension = ["ModuleManager", "App", "Server", "Games", "Programs"]
 # 전용 서버 구성은 오디오 · 렌더러 · 런타임 UI · 클라이언트 전용 소스 헤더를 읽지 않는다 — 이음매는 `IEngineAudioDriver` · `ISoundPlayer` · `IEngineRenderDriver` · `IEngineUIDriver` 와 게임 코드의 창구다.
 # Server 타깃 구성의 모든 타깃이 더 받는다(`sw_applyTargetLayerGate`). 게임 모듈의 `Client/` 는 게임마다 폴더라 여기 적지 않고 린트 `server-ui` 가 본다.
-serverbuild = ["Engine/Audio", "Engine/Renderer", "Engine/UI", "GameFramework/Client", "DevTools/Client"]
+serverbuild = ["Engine/Audio", "Engine/Renderer", "Engine/UI", "Engine/Window/Linux", "Engine/Input/Linux", "GameFramework/Client", "DevTools/Client"]

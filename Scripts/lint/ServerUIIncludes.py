@@ -81,14 +81,13 @@ def findEngineProblems(listSource: Iterable[tuple[str, str]], listUnbuiltFolder:
     listUnbuiltPrefix = [f"Source/Engine/{folder}/" for folder in listUnbuiltFolder]
     unbuiltInclude = re.compile(r'^\s*#\s*include\s+"((?:' + "|".join(re.escape(f"Engine/{folder}/") for folder in listUnbuiltFolder) + r')[^"]+|[^"]*/Client/[^"]+)"', re.M)
     exempt = table["_exemptPaths"]
-    platformFolders = table["_platformFolders"]
     listProblem: list[str] = []
     for path, text in listSource:
         if not path.startswith(kEngineScanRoots) or any(path.startswith(prefix) for prefix in listUnbuiltPrefix) or "/Client/" in path:
             continue
         for match in unbuiltInclude.finditer(text):
             listProblem.append(f"{path}: 서버도 짓는 엔진 코드가 서버가 짓지 않는 헤더 `{match.group(1)}` 를 include 한다 — 창구(IEngineUIDriver · IEngineRenderDriver · IEngineAudioDriver · ISoundPlayer · IShaderCookService · IDevToolsClientPart …)로 부른다")
-        bExempt = any(path.startswith(prefix) for prefix in exempt) or any(part in platformFolders for part in path.split("/")[:-1])
+        bExempt = any(path.startswith(prefix) for prefix in exempt)
         if not bExempt and kClientGuard.search(text):
             listProblem.append(f"{path}: 서버도 짓는 엔진 코드에 `SW_WITH_CLIENT_CODE` 구역이 있다 — 클라이언트 일은 서버가 짓지 않는 폴더 · `Client/` 에 두고 창구로 부른다(예외는 {kEngineConfigPath})")
     return listProblem
@@ -125,13 +124,15 @@ def runSelfCheck() -> None:
              ("Source/GameFramework/Plugin/Editor/X/A.cpp", bad), ("Source/Games/X/Client/A.cpp", '#include "Engine/Audio/AudioEngine.h"\n'),
              ("Source/GameFramework/Runtime/X/A.cpp", '#include "Engine/Presentation/UILayer.h"\n')]
     assert findProblems(clean) == [], "클라이언트 · 에디터 · 창구는 통과한다"
-    table = {"_exemptPaths": {"Source/Core/Foundation/BuildInfo.h": "이유"}, "_platformFolders": ["Linux"]}
+    table = {"_exemptPaths": {"Source/Core/Foundation/BuildInfo.h": "이유"}}
     guard = '#if defined( SW_WITH_CLIENT_CODE )\nint a;\n#endif\n'
     assert len(findEngineProblems([("Source/Engine/Scene/A.cpp", '#include "Engine/UI/UISystem.h"\n')], ["Renderer", "UI"], table)) == 1, "엔진 → UI"
     assert len(findEngineProblems([("Source/DevTools/A.cpp", '#include "DevTools/Client/DebugHUD/DebugHUD.h"\n')], ["Renderer", "UI"], table)) == 1, "개발 도구 → Client"
     assert len(findEngineProblems([("Source/Engine/Scene/A.cpp", guard)], ["Renderer", "UI"], table)) == 1, "엔진 클라이언트 구역"
+    # 플랫폼 폴더도 예외가 아니다 — 서버가 짓지 않는 플랫폼 구현은 폴더째 빠지고(`Window/Linux`), 서버 대체는 `Headless` 폴더가 정의한다.
+    assert len(findEngineProblems([("Source/Engine/Window/Windows/A.cpp", guard)], ["Renderer", "UI"], table)) == 1, "플랫폼 폴더 클라이언트 구역"
     cleanEngine = [("Source/Engine/UI/A.cpp", '#include "Engine/Renderer/X.h"\n'), ("Source/Engine/Window/Linux/A.cpp", guard), ("Source/DevTools/Client/A.cpp", guard)]
-    assert findEngineProblems(cleanEngine, ["Renderer", "UI"], table) == [], "짓지 않는 폴더 · 플랫폼 폴더 · Client 는 통과한다"
+    assert findEngineProblems(cleanEngine, ["Renderer", "UI", "Window/Linux"], table) == [], "짓지 않는 폴더 · Client 는 통과한다"
 
 
 def main(argv: Sequence[str] | None = None) -> int:

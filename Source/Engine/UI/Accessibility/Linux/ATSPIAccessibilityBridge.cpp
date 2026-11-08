@@ -5,7 +5,7 @@
 #include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_ATSPI )
+#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_ATSPI )
 
     #include "Core/Container/string.h"
     #include "Core/Container/vector.h"

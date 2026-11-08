@@ -10,7 +10,7 @@
 #include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/WindowMonitor.h"
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_LINUX )
     #include "Core/Foundation/X11Headers.h"
 
     #include <X11/XKBlib.h>

@@ -51,6 +51,11 @@ foreach(swUnbuiltFolder IN LISTS SW_UNBUILT_ENGINE_FOLDERS)
 	message(STATUS "[Engine] ${SW_TARGET_TYPE} target: Engine/${swUnbuiltFolder} is not built")
 endforeach()
 
+# 창 없는 서버의 창 · 입력 · 클립보드(`Window/Headless` · `Input/Headless`)는 서버만 짓는다 — 클라이언트는 플랫폼 폴더(`Window/Linux` …)가 같은 함수를 정의한다.
+# 구성 매크로(`SW_WITH_CLIENT_CODE`)로 파일 안을 가르지 않고 폴더째 고른다(언리얼 `UE_SERVER` 대신 모듈 · 폴더를 빼는 쪽과 같다).
+if(NOT SW_TARGET_TYPE STREQUAL "Server")
+	sw_excludeUnbuiltSources(ENGINE_SOURCES "/Source/Engine/(Window|Input)/Headless/.*\\.(c|cpp)$")
+endif()
 
 # 개발 전용 소스(기능 폴더의 단위 테스트 · 개발 명령)는 배포 구성이 짓지 않는다.
 if(SW_SHIPPING_BUILD)

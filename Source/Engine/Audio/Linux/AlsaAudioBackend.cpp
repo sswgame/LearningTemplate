@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
+#if defined( SW_PLATFORM_LINUX )
     #include "Engine/Audio/Linux/AlsaAudioBackend.h"
 
     #include "Core/Concurrency/atomic.h"
