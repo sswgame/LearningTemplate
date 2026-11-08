@@ -9,7 +9,7 @@
 #include "Engine/2D/SpriteComponent.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Rendering/MeshComponent.h"
+#include "Engine/Visual/Component/MeshComponent.h"
 
 namespace sw::editor
 {

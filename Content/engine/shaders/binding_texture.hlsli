@@ -377,6 +377,10 @@ static uint Bindless::emulatedSlot( uint index )
         return 12u;
     if ( index == SW_ENGINE_TEXTURE_INDEX_13 )
         return 13u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_14 )
+        return 14u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_15 )
+        return 15u;
     return kUnmappedEngineTextureSlot;
 }
 

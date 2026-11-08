@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  화면 공간 반사(RenderPassType::ScreenSpaceReflection, screen_space_reflection.hlsl) — 디퍼드 파이프라인에서 레이어 SSR 의 무한 볼륨이 세기 1 을 건다.
+  켠 그림은 끈 그림과 달라야 하고(패스가 그리지 않거나 맞히지 못하면 같다), 끄면 처음 그림으로 돌아와야 한다(세기 0 은 패스를 그리지 않는다 — 장면 색 그대로).
+  같은 디퍼드 실행에서 렌즈 플레어도 본다 — 디퍼드는 반해상도 밝은 부분(BloomBright)을 읽는 길이라 포워드(postprocess_bloomlens)와 코드 길이 다르다.
+  실행: ctest -R Scenario.game.empty.postprocess_ssr
+-->
+<Scenario name="game.empty.postprocess_ssr" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/postprocessvolume.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="1"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="40"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Screenshot file="ppssr_off.ppm"/>
+
+	<DevCommand line="scene.layer SSR on"/>
+	<Wait frames="10"/>
+	<Screenshot file="ppssr_on.ppm"/>
+	<DevCommand line="scene.layer SSR off"/>
+	<Wait frames="10"/>
+	<Screenshot file="ppssr_back.ppm"/>
+
+	<DevCommand line="scene.layer BloomLamp on"/>
+	<Wait frames="10"/>
+	<Screenshot file="ppssr_lamp.ppm"/>
+	<DevCommand line="scene.layer LensFlare on"/>
+	<Wait frames="10"/>
+	<Screenshot file="ppssr_flare.ppm"/>
+
+	<Wait frames="5"/>
+	<ExpectImagesDiffer first="ppssr_off.ppm" second="ppssr_on.ppm" region="0,0.5,1,1" minDiffering="0.05"/>
+	<ExpectImagesDiffer first="ppssr_off.ppm" second="ppssr_back.ppm" region="0,0,1,1" minDiffering="0" maxDiffering="0.001"/>
+	<ExpectImagesDiffer first="ppssr_lamp.ppm" second="ppssr_flare.ppm" region="0,0,1,1" minDiffering="0.02"/>
+	<ExpectImage file="ppssr_on.ppm" golden="ppssr_on"/>
+	<ExpectImage file="ppssr_flare.ppm" golden="ppssr_deferred_flare"/>
+	<Pass/>
+</Scenario>

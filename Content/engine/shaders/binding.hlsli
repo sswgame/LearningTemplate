@@ -224,9 +224,39 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_ShadowCascade2;
     float4 g_ShadowCascade3;
     float4 g_BloomParams;
-    float4 g_CameraGrade; // 카메라별 색 보정 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기(CameraPostProcessValues, post_grade.hlsli)
+    float4 g_CameraGrade; // 카메라별 색 보정 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기(PostProcessValues, post_grade.hlsli)
     float4 g_CameraFrame; // 카메라별 화면 틀 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(color_vision.hlsli, 렌더 텍스처 뷰는 0)
-    float4 g_CameraLens;  // 카메라별 피사계 심도 — x 초점 거리(m), y 착란원 반지름 배율(px, 반지름 = y · |1 - x / 깊이|), z 반지름 상한(px), w 켬 1 · 끔 0(depth_of_field.hlsl)
+    // 컬러 그레이딩(post_grade.hlsli, C++ PostGradeConstants) — 화이트 밸런스 3x3 행(xyz), 범위(그림자 · 중간 · 밝은 부분)마다 채도 · 대비 · 감마 · 게인 · 오프셋 rgb(전역을 미리 합쳤다),
+    // (그림자 끝 휘도, 밝은 부분 시작 휘도, 켬 1 · 끔 0, 0), (LUT 한 변 N — 0 이면 없음, LUT 세기, 0, 0). 톤맵하는 패스만 읽는다
+    float4 g_GradeWhiteBalance0;
+    float4 g_GradeWhiteBalance1;
+    float4 g_GradeWhiteBalance2;
+    float4 g_GradeShadowsSaturation;
+    float4 g_GradeShadowsContrast;
+    float4 g_GradeShadowsGamma;
+    float4 g_GradeShadowsGain;
+    float4 g_GradeShadowsOffset;
+    float4 g_GradeMidtonesSaturation;
+    float4 g_GradeMidtonesContrast;
+    float4 g_GradeMidtonesGamma;
+    float4 g_GradeMidtonesGain;
+    float4 g_GradeMidtonesOffset;
+    float4 g_GradeHighlightsSaturation;
+    float4 g_GradeHighlightsContrast;
+    float4 g_GradeHighlightsGamma;
+    float4 g_GradeHighlightsGain;
+    float4 g_GradeHighlightsOffset;
+    float4 g_GradeParams;
+    float4 g_GradeLUT;
+    // 렌즈 · 필름(post_grade.hlsli, C++ PostProcessValues) — (색수차 세기, 색수차 시작 반경, 렌즈 왜곡, 선명화) · (필름 그레인 세기, 그레인 크기 px, 0, 0). 톤맵하는 패스만 읽는다
+    float4 g_LensParams;
+    float4 g_GrainParams;
+    // 블룸 렌즈(post_bloom.hlsli, C++ PostProcessValues) — (먼지 마스크 세기 — 마스크가 없으면 0, 플레어 세기, 고스트 간격, 헤일로 반지름) · (플레어 색 rgb, 0). 블룸을 더하는 패스만 읽는다
+    float4 g_BloomLens;
+    float4 g_FlareTint;
+    // 화면 공간 반사(screen_space_reflection.hlsl, C++ PostProcessValues) — (세기, 최대 거리 m, 두께 m, 최대 거칠기). ScreenSpaceReflection 패스만 읽는다
+    float4 g_SSRParams;
+    float4 g_CameraLens; // 카메라별 피사계 심도 — x 초점 거리(m), y 착란원 반지름 배율(px, 반지름 = y · |1 - x / 깊이|), z 반지름 상한(px), w 켬 1 · 끔 0(depth_of_field.hlsl)
     float4 g_OutlineColor;
     float4 g_OutlineParams;
     float4 g_SourceTexel; // xy = 1 / 원본(SourceColor 역할 입력) 크기, zw = 그 크기. 원본이 없는 패스는 프레임 크기 — 반해상도 첨부를 읽는 패스가 비켜 읽는 거리
@@ -252,9 +282,9 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     float4 g_FogDebugParams; // 안개 진단 보기(C++ FrameFog::makeDebugParams) — x 보기(0 없음 · 1 비교 · 2 산란 단면 · 3 투과율 단면), y 단면 조각, z 비교 경계 uv.x. 안개 패스만 읽는다
     // 엔진 텍스처 인덱스 g_<이름>Index — 이름은 C++ 표 shaderslot::emulated::kEngineTextureNames 하나가 정하고 컴파일러가 SW_ENGINE_TEXTURE_INDEX_<칸> 으로 넣는다.
     // 손으로 적지 않는다: 표에 없는 엔진 텍스처 인덱스가 생기면 에뮬 백엔드(DX11 · GL)가 칸을 몰라 자홍을 낸다(뜻은 표의 주석). 걸려 있지 않은 역할은 kInvalidIndex 다.
-    // 아래 14 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
-#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_13 ) || defined( SW_ENGINE_TEXTURE_INDEX_14 ) || SW_ENGINE_TEXTURE_COUNT != 14
-    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 14 fields below"
+    // 아래 16 줄은 SW_ENGINE_TEXTURE_COUNT 와 같은 수다.
+#if !defined( SW_ENGINE_TEXTURE_INDEX_0 ) || !defined( SW_ENGINE_TEXTURE_INDEX_15 ) || defined( SW_ENGINE_TEXTURE_INDEX_16 ) || SW_ENGINE_TEXTURE_COUNT != 16
+    #error "SW_ENGINE_TEXTURE_INDEX_* missing or count changed - ShaderCompiler::appendEngineDefines injects them from shaderslot::emulated::kEngineTextureNames; match the 16 fields below"
 #endif
     uint  SW_ENGINE_TEXTURE_INDEX_0;
     uint  SW_ENGINE_TEXTURE_INDEX_1;
@@ -270,6 +300,8 @@ SW_DECLARE_CBUFFER( PassCB, SW_SLOT_PASS_CB )
     uint  SW_ENGINE_TEXTURE_INDEX_11;
     uint  SW_ENGINE_TEXTURE_INDEX_12;
     uint  SW_ENGINE_TEXTURE_INDEX_13;
+    uint  SW_ENGINE_TEXTURE_INDEX_14;
+    uint  SW_ENGINE_TEXTURE_INDEX_15;
     uint  g_Flags;
     uint  g_SwInstancesIndex;          // 인스턴스 구조버퍼가 걸려 있으면 유효, kInvalidIndex 면 g_World 폴백 (풀스크린·픽스처)
     uint  g_SwInstanceCount;           // 인스턴스 버퍼 원소 수 — 범위 밖 인덱스를 막는다 (DX12 루트 SRV 는 경계 검사가 없다)

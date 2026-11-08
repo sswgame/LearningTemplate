@@ -49,6 +49,7 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameAutoExposure.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameFog.h"
+#include "Engine/Renderer/Frame/PostProcess/FramePostGrade.h"
 #include "Engine/Renderer/Frame/PostProcess/FrameUpscale.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
@@ -443,9 +444,9 @@ namespace sw
         // 원본 텍셀의 기본값은 프레임 텍셀이다. 원본 역할 입력을 바인딩하는 패스가 그 첨부의 실제 크기로 덮는다(registerPassTexture).
         context._passValues.setFloat4( passConstantNames()._sourceTexel,
                                        float4{ outlineY, outlineZ, static_cast<float32>( pool.getWidth() ), static_cast<float32>( pool.getHeight() ) } );
-        // 카메라별 후처리 값(CameraPostProcessValues)도 뷰마다다. 중립 값(노출 0, 배율 1, 비네트 · 레터박스 0)이면 셰이더 결과가 전역 값과 같다.
-        const CameraPostProcessValues& post = view._settings._postProcess;
-        float4                         bloomParams{ kDefaultBloomParams };
+        // 카메라별 후처리 값(PostProcessValues)도 뷰마다다. 중립 값(노출 0, 배율 1, 비네트 · 레터박스 0)이면 셰이더 결과가 전역 값과 같다.
+        const PostProcessValues& post = view._settings._postProcess;
+        float4                   bloomParams{ kDefaultBloomParams };
         bloomParams._y *= MathUtil::max( 0.0f, post._bloomScale );
         context._passValues.setFloat4( passConstantNames()._bloomParams, bloomParams );
         // 노출 배율 = 보정 2^EV × (자동 노출을 재지 않는 카메라의 고정 노출 2^-EV). 측정하는 카메라는 셰이더가 이번 EV(`g_AutoExposureIndex`)를 더 곱한다.
@@ -459,6 +460,42 @@ namespace sw
         const bool    bScreenOutput   = view._pOutputTexture == nullptr;
         const float32 colorVisionMode = bScreenOutput ? static_cast<float32>( _state._canvasFrame._colorVisionMode ) : 0.0f;
         context._passValues.setFloat4( passConstantNames()._cameraFrame, float4{ MathUtil::max( 0.0f, post._letterboxAspectRatio ), viewAspect, colorVisionMode, 0.0f } );
+        // 컬러 그레이딩(post_grade.hlsli) — 화이트 밸런스 · 범위 보정 · LUT. LUT 는 세기가 있는 후처리 뷰만 묻는다(안 쓰는 경로를 읽지 않는다). 띠 모양이 아니면 데이터 오류라 걸지 않는다.
+        const bool       bWantsLUT = view._settings.usesPostProcess() && post._colorGradingLUTIntensity > 0.0f;
+        const Texture2D* pLUT      = bWantsLUT ? _state._postProcessTextures.findReady( post._colorGradingLUT, "colour grading LUT" ) : nullptr;
+        if ( pLUT != nullptr && PostGradeConstants::isLUTStrip( pLUT->getWidth(), pLUT->getHeight() ) == false )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ColorGradingLUTShape", "Colour grading LUT '%#' is %#x%# - it must be an N*N wide, N tall strip (e.g. 256x16); the LUT is left out",
+                                  post._colorGradingLUT.c_str(), pLUT->getWidth(), pLUT->getHeight() );
+            pLUT = nullptr;
+        }
+        view._pColorGradingLUT         = pLUT;
+        const PostGradeConstants grade = PostGradeConstants::make( post, pLUT != nullptr ? pLUT->getHeight() : 0u );
+        for ( uint32 row = 0; row < 3; ++row )
+        {
+            context._passValues.setFloat4( passConstantNames()._arrGradeWhiteBalance[row], grade._arrWhiteBalance[row] );
+        }
+        static_assert( PassConstantNames::kGradeRangeConstantCount == PostGradeConstants::kRangeCount * PostGradeConstants::kRangeFieldCount, "그레이딩 범위 상수 이름 수가 상수 배치와 다르다" );
+        for ( uint32 index = 0; index < PassConstantNames::kGradeRangeConstantCount; ++index )
+        {
+            context._passValues.setFloat4( passConstantNames()._arrGradeRange[index], grade._arrRange[index] );
+        }
+        context._passValues.setFloat4( passConstantNames()._gradeParams, grade._params );
+        context._passValues.setFloat4( passConstantNames()._gradeLUT, grade._lut );
+        // 렌즈 · 필름(post_grade.hlsli) — 모두 0 이면 셰이더가 원본을 다시 읽지 않는다. 범위는 칸의 Min · Max 와 같게 자른다(데이터 오류가 화면 밖을 읽지 않게).
+        context._passValues.setFloat4( passConstantNames()._lensParams, float4{ MathUtil::max( 0.0f, post._chromaticAberrationIntensity ), MathUtil::saturate( post._chromaticAberrationStart ),
+                                                                                MathUtil::clamp( post._lensDistortion, -1.0f, 1.0f ), MathUtil::max( 0.0f, post._sharpen ) } );
+        context._passValues.setFloat4( passConstantNames()._grainParams, float4{ MathUtil::saturate( post._filmGrainIntensity ), MathUtil::max( 1.0f, post._filmGrainSize ), 0.0f, 0.0f } );
+        // 블룸 렌즈(post_bloom.hlsli) — 먼지 마스크는 LUT 와 같이 세기가 있는 후처리 뷰만 묻고, 읽힌 마스크가 없으면 세기를 0 으로 보낸다(셰이더가 읽지 않는다).
+        const bool       bWantsDirt = view._settings.usesPostProcess() && post._bloomDirtMaskIntensity > 0.0f;
+        const Texture2D* pDirt      = bWantsDirt ? _state._postProcessTextures.findReady( post._bloomDirtMask, "bloom dirt mask" ) : nullptr;
+        view._pBloomDirtMask        = pDirt;
+        context._passValues.setFloat4( passConstantNames()._bloomLens, float4{ pDirt != nullptr ? post._bloomDirtMaskIntensity : 0.0f, MathUtil::max( 0.0f, post._lensFlareIntensity ),
+                                                                               MathUtil::saturate( post._lensFlareGhostSpacing ), MathUtil::saturate( post._lensFlareHaloWidth ) } );
+        context._passValues.setFloat4( passConstantNames()._flareTint, float4{ post._lensFlareTint._x, post._lensFlareTint._y, post._lensFlareTint._z, 0.0f } );
+        context._passValues.setFloat4( passConstantNames()._ssrParams, float4{ MathUtil::saturate( post._screenSpaceReflectionIntensity ), MathUtil::max( 0.0f, post._screenSpaceReflectionMaxDistance ),
+                                                                               MathUtil::max( 0.0f, post._screenSpaceReflectionThickness ),
+                                                                               MathUtil::saturate( post._screenSpaceReflectionMaxRoughness ) } );
         // 피사계 심도(depth_of_field.hlsl) — 얇은 렌즈의 착란원. 지름 / 센서 높이 = 센서 높이 · s² / ( 4 · N · 초점 거리 ) · |1 - 초점 거리 / 깊이|
         // (s = 1 / tan( fovY / 2 ) 라 초점 길이 = 센서 높이 · s / 2, 구경 = 초점 길이 / N, 초점 길이가 초점 거리보다 훨씬 짧다고 본다). y 는 그 반지름을 화면 높이 px 로 바꾼 배율이다.
         // 조리개 0(핀홀) · 직교 · 후처리를 끈 뷰는 패스를 기록하지 않는다(applyViewPassSelection). 그때는 배율을 0 으로 두고 w 도 0 이다(셰이더는 w 를 읽지 않는다).
@@ -910,6 +947,8 @@ namespace sw
         // 라이트는 **패스 종류를 가리지 않는다.** 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
         // 그래서 인스턴스 버퍼(지오메트리 패스 전용)와 달리 여기서 모든 패스에 바인딩한다.
         registerLightBuffer( context );
+        // 후처리 텍스처(LUT · 먼지 마스크)도 패스를 가리지 않는다 — 톤맵이 Tonemap 패스에도 후처리 체인(Present)에도 있고, 파이프라인 XML 이 자리를 정한다.
+        registerPostProcessTextures( context );
 
         // 이 패스가 바인딩할 뎁스다. 파이프라인 XML 의 `_depthAttachment` 가 기준이고, 비어 있으면
         // 뎁스 없이 연다. "이 패스는 일부러 뎁스를 쓰지 않는다" 를 선언으로 표현할 수 있어야 한다.
@@ -1004,6 +1043,11 @@ namespace sw
                 case RenderPassType::Fog:
                 {
                     executeFogPass( input );
+                    break;
+                }
+                case RenderPassType::ScreenSpaceReflection:
+                {
+                    executeScreenSpaceReflectionPass( input );
                     break;
                 }
                 case RenderPassType::TAA:
@@ -1423,6 +1467,29 @@ namespace sw
         bindForDraw( context, pso, kInvalidDescriptorIndex );
         if ( bVolume )
             context._pCmd->bindStructuredBuffer( _fog.getFogVolumeBuffer()._srv, shaderslot::kPassBuffer );
+        context._pCmd->draw( 3, 0 );
+        context._pCmd->endRenderPass();
+    }
+
+    void FramePassExecutor::executeScreenSpaceReflectionPass( const PassExecuteInput& input )
+    {
+        // 화면 공간 반사다. 맞은 자리의 장면 색 사본을 선언한 컬러 출력(장면 색) 위에 프리멀티플라이 블렌드한다(screen_space_reflection.hlsl).
+        // 세기 0 · 후처리를 끈 뷰(CCTV) · 표면 값 보기(usesPostProcess 가 거른다)에서는 그리지 않는다 — 출력이 입력의 위(블렌드)라 "그리지 않음" 은 아무것도 하지 않는 것이다(안개와 같다).
+        const RenderViewSettings&    settings = _pActiveView->_settings;
+        const RHIPipelineStateHandle pso      = _psoManager.getEnginePSO( RenderPassType::ScreenSpaceReflection );
+        const bool                   bDraws   = settings.usesPostProcess() && settings._postProcess._screenSpaceReflectionIntensity > 0.0f && pso != 0;
+        if ( bDraws == false )
+            return;
+
+        FramePassContext&    context = input._context;
+        const hashed_string& target  = input._declaredColor[0]._attachment;
+        registerDeclaredInputs( context, input._passDesc );
+        if ( beginColorPass( context, target, hashed_string{}, getTargetClearColor( target ), colorLoadFor( target ), RHIRenderPassLoadOp::Load ) == false )
+            return;
+        setIdentityWorld( context );
+        commitBindlessTextureBindings( context );
+        context._pCmd->setPipelineState( pso );
+        bindForDraw( context, pso, kInvalidDescriptorIndex );
         context._pCmd->draw( 3, 0 );
         context._pCmd->endRenderPass();
     }
@@ -1904,6 +1971,16 @@ namespace sw
                                                       cullView._visibleInstances._buffer, cullView._visibleInstances._srv );
             context._passValues.setUint( passConstantNames()._swVisibleSlotCount, _state._gpuScene.getVisibleSlotCount() );
         }
+    }
+
+    void FramePassExecutor::registerPostProcessTextures( FramePassContext& context )
+    {
+        // 뷰의 후처리 텍스처는 셋업이 이번 프레임에 읽힌 것만 골라 두었다(`applyViewPassConstants`). 걸린 것이 없으면 셰이더는 그 효과를 끈 상수를 받았다.
+        const FrameViewTarget& view = *_pActiveView;
+        if ( view._pColorGradingLUT != nullptr )
+            context._resourceRegistry.registerTexture( attachmentNames()._colorGradingLUT, view._pColorGradingLUT->getHandle(), view._pColorGradingLUT->getSRV() );
+        if ( view._pBloomDirtMask != nullptr )
+            context._resourceRegistry.registerTexture( attachmentNames()._bloomDirtMask, view._pBloomDirtMask->getHandle(), view._pBloomDirtMask->getSRV() );
     }
 
     void FramePassExecutor::registerLightBuffer( FramePassContext& context )

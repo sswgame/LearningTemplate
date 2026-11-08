@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  후처리 볼륨(PostProcessVolumeComponent) — 레이어 Volume 을 켜면 카메라를 감싼 상자 볼륨(채도 0, 우선순위 1)이 무한 볼륨(채도 2 · 비네트, 우선순위 0)을 덮어 회색이 되고,
+  카메라가 상자의 블렌드 반경 밖으로 나가면 무한 볼륨만 남아 짙은 색 · 비네트가 된다. 볼륨이 섞이지 않으면(덮어쓰기 · 우선순위 · 거리 무게 중 하나가 틀리면) 세 장 중 둘이 같아 진다.
+  결정적: 애니메이션 없는 무대(maps/postprocessvolume), 고정 프레임 시간, 카메라는 순간이동으로만 옮긴다.
+  실행: ctest -R Scenario.game.empty.postprocess_volume
+-->
+<Scenario name="game.empty.postprocess_volume" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/postprocessvolume.scene.xml"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="40"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Screenshot file="ppvolume_off.ppm"/>
+
+	<DevCommand line="scene.layer Volume on"/>
+	<Wait frames="10"/>
+	<Screenshot file="ppvolume_inside.ppm"/>
+
+	<!-- 상자(반 크기 1 m)에서 블렌드 반경(2 m)보다 멀리 — 무한 볼륨만 남는다 -->
+	<DevCommand line="teleport GameCamera 0 1.6 -10"/>
+	<Wait frames="10"/>
+	<Screenshot file="ppvolume_outside.ppm"/>
+
+	<Wait frames="5"/>
+	<ExpectImagesDiffer first="ppvolume_off.ppm" second="ppvolume_inside.ppm" region="0.1,0.1,0.9,0.9" minDiffering="0.3"/>
+	<ExpectImagesDiffer first="ppvolume_inside.ppm" second="ppvolume_outside.ppm" region="0.1,0.1,0.9,0.9" minDiffering="0.3"/>
+	<ExpectImage file="ppvolume_inside.ppm" golden="ppvolume_inside"/>
+	<ExpectImage file="ppvolume_outside.ppm" golden="ppvolume_outside"/>
+	<Pass/>
+</Scenario>

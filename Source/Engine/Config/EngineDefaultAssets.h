@@ -205,6 +205,8 @@ namespace sw
         PROPERTY( Required )
         DataPath _shaderDistortionApply; ///< 화면 왜곡 적용(풀스크린) — 장면 색 사본을 왜곡 오프셋만큼 비껴 읽는다
         PROPERTY( Required )
+        DataPath _shaderScreenSpaceReflection; ///< 화면 공간 반사(디퍼드) — G버퍼 노멀로 반사한 광선을 장면 깊이에 대고 나아가 장면 색 위에 블렌드한다
+        PROPERTY( Required )
         DataPath _shaderVolumetricFog; ///< 볼륨 안개(컴퓨트) — froxel 마다 라이트 산란을 구해 깊이 방향으로 누적한다
         PROPERTY( Required )
         DataPath _shaderProbeUpdate; ///< 실시간 라이트 프로브 갱신(컴퓨트) — 프로브마다 복셀로 광선을 쏘아 SH9 를 갱신한다

@@ -237,6 +237,8 @@ namespace sw
         void executeDistortionPass( const PassExecuteInput& input );
         /** @brief 화면 왜곡 적용 — 장면 색 사본을 오프셋만큼 비껴 읽어 장면 색에 쓴다. 왜곡이 없는 뷰는 기록하지 않는다(출력이 이미 맞다). */
         void executeDistortionApplyPass( const PassExecuteInput& input );
+        /** @brief 화면 공간 반사 패스입니다 — 세기가 있는 후처리 뷰에서만 장면 색 위에 반사를 블렌드합니다. */
+        void executeScreenSpaceReflectionPass( const PassExecuteInput& input );
         /** @brief TAA 와 히스토리 갱신입니다. 후처리를 끈 뷰와 컷 프레임은 원본을 넘깁니다. */
         void executeTAAPass( const PassExecuteInput& input );
         /** @brief 최종 출력(백버퍼 · 캡처 · 렌더 텍스처)으로의 블릿입니다. 화면 사각형 · 정수 업스케일 뷰포트를 적용합니다. */
@@ -308,6 +310,8 @@ namespace sw
          *          패스라 `registerInstanceBuffer` 를 거치지 않는데, 라이트는 바로 거기서 필요하다.
          */
         void registerLightBuffer( FramePassContext& context );
+        /** @brief 지금 그리는 뷰가 이번 프레임에 읽는 후처리 텍스처(컬러 그레이딩 LUT · 블룸 먼지 마스크)를 역할 이름으로 겁니다. 셋업이 고른 것만 건다. */
+        void registerPostProcessTextures( FramePassContext& context );
         /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 이름으로 등록합니다. */
         void registerMaterialBuffer( FramePassContext& context, const GPUMeshBatchBinding& binding, RHIPipelineStateHandle pso );
         /** @brief 씬 메시를 그립니다. GPUScene 이 올라가 있으면 drawGPUBatches 로 넘기고, 아니면 상태만 맞춥니다. */

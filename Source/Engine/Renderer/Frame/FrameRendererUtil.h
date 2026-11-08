@@ -504,6 +504,10 @@ namespace sw
         hashed_string _light2DCookieAtlas{ "Light2DCookieAtlas" };
         /// 자동 노출의 이번 프레임 EV(1x1, 뷰의 `_arrAutoExposure`) — 톤맵하는 패스가 `g_AutoExposureIndex` 로 읽는다. 렌더러가 소유한 텍스처다.
         hashed_string _autoExposure{ "AutoExposure" };
+        /// 컬러 그레이딩 LUT(뷰의 후처리 값 `_colorGradingLUT`, `FramePostProcessTextureSet`) — 톤맵하는 패스가 `g_ColorGradingLUTIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
+        hashed_string _colorGradingLUT{ "ColorGradingLUT" };
+        /// 블룸 먼지 마스크(뷰의 후처리 값 `_bloomDirtMask`) — 블룸을 더하는 패스가 `g_BloomDirtMaskIndex` 로 읽는다. 텍스처 캐시가 소유한 텍스처다.
+        hashed_string _bloomDirtMask{ "BloomDirtMask" };
     };
 } // namespace sw
 
@@ -560,12 +564,33 @@ namespace sw
         hashed_string _arrShadowCascade[shaderslot::kShadowCascadeMax]{ hashed_string{ "g_ShadowCascade0" }, hashed_string{ "g_ShadowCascade1" },
                                                                         hashed_string{ "g_ShadowCascade2" }, hashed_string{ "g_ShadowCascade3" } };
         hashed_string _bloomParams{ "g_BloomParams" };
-        /// @brief 카메라별 색 보정입니다 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기. `CameraPostProcessValues`, post_grade.hlsli.
+        /// @brief 카메라별 색 보정입니다 — x 노출 배율(2^EV), y 채도, z 대비, w 비네트 세기. `PostProcessValues`, post_grade.hlsli.
         hashed_string _cameraGrade{ "g_CameraGrade" };
         /// @brief 카메라별 화면 틀입니다 — x 레터박스로 남길 가로/세로 비율(0 = 없음), y 지금 뷰의 가로/세로 비율, z 색각 보정 방식(화면 출력 뷰만, 렌더 텍스처는 0). post_grade.hlsli.
         hashed_string _cameraFrame{ "g_CameraFrame" };
         /// @brief 카메라별 피사계 심도입니다 — x 초점 거리(m), y 착란원 반지름 배율(px), z 반지름 상한(px), w 켬(1) · 끔(0, 끈 뷰는 패스를 기록하지 않아 셰이더는 읽지 않는다). depth_of_field.hlsl.
         hashed_string _cameraLens{ "g_CameraLens" };
+        /// @brief 컬러 그레이딩 화이트 밸런스 행 셋입니다(`PostGradeConstants::_arrWhiteBalance`, post_grade.hlsli).
+        hashed_string _arrGradeWhiteBalance[3]{ hashed_string{ "g_GradeWhiteBalance0" }, hashed_string{ "g_GradeWhiteBalance1" }, hashed_string{ "g_GradeWhiteBalance2" } };
+        /// @brief 컬러 그레이딩 범위 상수입니다 — 범위(그림자 · 중간 · 밝은 부분)마다 채도 · 대비 · 감마 · 게인 · 오프셋(`PostGradeConstants::_arrRange` 와 같은 차례).
+        /// @brief 컬러 그레이딩 범위 상수의 수입니다(`PostGradeConstants::kRangeCount * kRangeFieldCount`, FramePassExecutor 가 static_assert 로 맞춘다).
+        static constexpr uint32 kGradeRangeConstantCount = 15;
+        hashed_string           _arrGradeRange[kGradeRangeConstantCount]{ hashed_string{ "g_GradeShadowsSaturation" }, hashed_string{ "g_GradeShadowsContrast" }, hashed_string{ "g_GradeShadowsGamma" },
+                                                                          hashed_string{ "g_GradeShadowsGain" }, hashed_string{ "g_GradeShadowsOffset" }, hashed_string{ "g_GradeMidtonesSaturation" },
+                                                                          hashed_string{ "g_GradeMidtonesContrast" }, hashed_string{ "g_GradeMidtonesGamma" }, hashed_string{ "g_GradeMidtonesGain" },
+                                                                          hashed_string{ "g_GradeMidtonesOffset" }, hashed_string{ "g_GradeHighlightsSaturation" }, hashed_string{ "g_GradeHighlightsContrast" },
+                                                                          hashed_string{ "g_GradeHighlightsGamma" }, hashed_string{ "g_GradeHighlightsGain" }, hashed_string{ "g_GradeHighlightsOffset" } };
+        /// @brief 컬러 그레이딩 범위 경계 · 켬(`PostGradeConstants::_params`)과 LUT 크기 · 세기(`_lut`)입니다.
+        hashed_string _gradeParams{ "g_GradeParams" };
+        hashed_string _gradeLUT{ "g_GradeLUT" };
+        /// @brief 렌즈 효과(색수차 세기 · 시작 반경 · 렌즈 왜곡 · 선명화)와 필름 그레인(세기 · 크기 px)입니다. post_grade.hlsli 의 `CameraGrade::applyLens` · `applyFilmGrain`.
+        hashed_string _lensParams{ "g_LensParams" };
+        hashed_string _grainParams{ "g_GrainParams" };
+        /// @brief 블룸 렌즈(먼지 마스크 세기 · 플레어 세기 · 고스트 간격 · 헤일로 반지름)와 플레어 색입니다. post_bloom.hlsli 의 `Bloom::computeLensFlare` · `applyDirt`.
+        hashed_string _bloomLens{ "g_BloomLens" };
+        hashed_string _flareTint{ "g_FlareTint" };
+        /// @brief 화면 공간 반사(세기 · 최대 거리 · 두께 · 최대 거칠기)입니다. screen_space_reflection.hlsl.
+        hashed_string _ssrParams{ "g_SSRParams" };
         hashed_string _outlineColor{ "g_OutlineColor" };
         hashed_string _outlineParams{ "g_OutlineParams" };
         hashed_string _sourceTexel{ "g_SourceTexel" };

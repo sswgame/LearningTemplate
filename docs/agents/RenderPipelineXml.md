@@ -112,6 +112,24 @@ TAA · 모션 블러가 읽는 물체별 화면 속도(이번 UV - 지난 UV)는
 
 `_type="Compute"` 패스는 셰이더 하나로 효과를 더한다. 선언: 컬러 출력 하나, 입력 최대 둘(깊이 형식 제외 — 깊이는 `SceneDepthCopy` 를 읽는다), 입력과 출력은 겹치지 않는다. 첨부는 RW 텍스처로 묶이고 값은 `compute_pass.hlsli` 의 루트 상수로 받는다. GL 은 묶은 포맷과 셰이더 선언이 같아야 하므로 include 전에 `SW_RW_SLOT0_GL_FORMAT` 을 적는다. 예: `game/empty/pipeline/computepasspipeline.xml`.
 
+## 후처리 값 · 볼륨
+
+뷰마다의 후처리 값은 `PostProcessValues` 한 벌이다(`Engine/Graphics/View`). 카메라 값이 바탕이고, 카메라가 선 자리의 `PostProcessVolumeComponent` 들이 우선순위가 낮은 것부터 **덮어쓴 칸만** 섞는다(`PostProcessVolumeComponent::resolveAt`, 뷰 수집 `RenderViewCollector`). 언리얼 Post Process Volume 과 같은 칸이다 — 모양(Box · Sphere · Unbound), Priority, Blend Weight, Blend Radius(모양 밖으로 1 → 0), 칸마다 `bOverride_*`(여기서는 `PostProcessOverrides::_b<칸>`). 언리얼과 달리 카메라 값이 볼륨 아래다 — 카메라 값은 프리셋 · 포즈 블렌드가 쓰는 샷의 룩이다.
+
+| 할 일 | 고칠 곳 |
+|---|---|
+| 값 칸을 더한다 | `PostProcessValues` 에 칸, `PostProcessOverrides` 에 같은 차례로 `_b<칸>` 비트와 생성자 줄. 섞기 · 포즈 블렌드는 리플렉션으로 따라온다(테스트 `PostProcessVolumeTest.OverrideFlagsPairEveryValue` 가 짝을 본다). 섞을 수 없는 형식(경로)은 `blendOverrides` 에 주소로 고르는 줄을 더한다(절반에서 바꾼다) |
+| 셰이더가 읽는다 | 기본값은 지금 그림을 바꾸지 않는 중립이어야 한다. 패스 상수는 `FramePassExecutor::applyViewPassConstants` 가 뷰마다 채운다 |
+| 텍스처를 가리킨다(LUT · 먼지 마스크) | 칸은 `DataPath`, 로드는 `FramePostProcessTextureSet::findReady`(비동기 — 읽는 동안 그 효과는 빠진다), 셰이더 칸은 엔진 텍스처 표(`shaderslot::emulated::kEngineTextureNames`)의 이름이다. 에뮬(DX11 · GL)의 엔진 텍스처 칸은 GL 유닛 0..15 안이라 둘이 더 남는다 |
+
+컬러 그레이딩은 톤맵하는 셰이더(Tonemap 패스 · 후처리 체인 `SW_POST_TONEMAP`) 안의 함수다 — 노출 → 화이트 밸런스 · 범위 보정(선형 HDR) → 톤맵 곡선 → LUT → 채도 · 대비 · 비네트 · 레터박스. 언리얼은 그레이딩을 LUT 하나로 구워(PostProcessCombineLUTs) 톤맵이 읽지만, 여기서는 뷰마다 값이 적어 굽는 패스(왕복 하나)를 두지 않고 픽셀마다 푼다. 값이 모두 중립이면 C++ 가 켬 상수를 0 으로 두어 셰이더가 건너뛴다. 후처리를 끈 뷰(`SW_PASS_FLAG_SKIP_POST`)는 톤맵만 한다.
+
+렌즈 왜곡 · 색수차 · 선명화 · 필름 그레인도 같은 셰이더 안이다(언리얼도 색수차 · 그레인 · 선명화를 톤맵 패스에서 한다). 앞의 셋은 원본을 다시 읽어야 해서 원본을 읽는 자리(`CameraGrade::applyLens`), 그레인은 LUT 뒤다. 패스를 따로 두지 않는 까닭은 왕복 하나(720p 약 57 us)다. 세기가 모두 0 이면 원본을 다시 읽지 않는다. 후처리 체인(`post_chain.hlsl`)은 렌즈를 블룸 앞에서, 단계 파이프라인의 Tonemap 패스는 블룸 뒤 원본에서 하므로 렌즈를 켠 두 파이프라인의 그림은 조금 다르다.
+
+블룸 먼지 마스크 · 렌즈 플레어는 블룸을 더하는 함수(`post_bloom.hlsli`) 안이다 — 전용 Bloom 패스와 후처리 체인이 같은 코드를 쓴다. 플레어는 밝은 부분을 화면 가운데에 대해 뒤집은 선 위의 고스트 넷과 헤일로 고리에서 다시 읽는다(반해상도 밝은 부분 `BloomBright` 가 있으면 그것을, 없으면 원본에서 구한다). 언리얼처럼 블룸 다운샘플 사슬의 여러 단을 쓰지 않는다 — 단이 하나라 고스트가 덜 흐리다.
+
+화면 공간 반사(`ScreenSpaceReflection`, 디퍼드)는 안개와 같은 모양이다 — 장면 색 사본 · 깊이 · G버퍼 노멀을 읽어 장면 색 **위에 블렌드**하고, 세기 0 · 후처리를 끈 뷰에서는 그리지 않는다(전용 실행). 꺼진 효과의 다른 길(`kBypassesToSource` — 출력 이름이 원본을 가리킴)은 출력을 그 패스만 써야 해서(로드 검증) 반투명이 같은 장면 색에 그리는 자리에는 쓸 수 없다. HZB 가 없어 광선은 같은 걸음으로 나아간다(언리얼은 HZB 로 빈 칸을 건너뛴다) — HZB 를 더하면 `classifyRayPoint` 의 걸음을 밉 단으로 바꾼다.
+
 ## 선택 스테이지를 쓰는 셰이더
 
 - 소스는 패스 셰이더 한 파일이다. 머티리얼 변형은 머티리얼 셰이더의 정점 출력으로 만들어져 신호가 맞지 않아 머티리얼 셰이더 패스에는 쓸 수 없다.

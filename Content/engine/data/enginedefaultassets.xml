@@ -83,6 +83,7 @@
                      _shaderFog="engine/shaders/fog.hlsl"
                      _shaderDistortion="engine/shaders/distortion.hlsl"
                      _shaderDistortionApply="engine/shaders/distortion_apply.hlsl"
+                     _shaderScreenSpaceReflection="engine/shaders/screen_space_reflection.hlsl"
                      _shaderVolumetricFog="engine/shaders/volumetric_fog.hlsl"
                      _shaderProbeUpdate="engine/shaders/probe_update.hlsl"
                      _shaderCanvasMarker="engine/shaders/canvas_marker.hlsl"
