@@ -15,9 +15,11 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/SurfaceExposureSystem.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 namespace sw
@@ -114,17 +116,27 @@ namespace sw
     {
     }
 
+    void SurfaceExposureComponent::onRegister( GameObjectManager& manager )
+    {
+        Component::onRegister( manager );
+        manager.getComponentRegistry().add<SurfaceExposureComponent>( this );
+        (void)SurfaceExposureSystem::ensureFor( manager );
+    }
+
+    void SurfaceExposureComponent::onUnregister( GameObjectManager& manager )
+    {
+        manager.getComponentRegistry().remove<SurfaceExposureComponent>( this );
+        SurfaceExposureSystem::releaseIfUnused( manager );
+        Component::onUnregister( manager );
+    }
+
     void SurfaceExposureComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        GameObject*        pOwner   = getOwner();
-        GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        if ( pManager == nullptr || deltaTime <= 0.0f )
-            return;
-        // 물리 질의와 외형의 표면 쓰기는 틱(워커) 밖에서 한다 — 쌓은 시간을 틱 뒤 게임 스레드가 한 번에 쓴다.
-        _pendingSeconds += deltaTime;
-        pManager->executeOrDeferPostTickOnComponent( *this, []( SurfaceExposureComponent& self, GameObjectManager& manager )
-        { self.applyExposure( manager ); } );
+        // 물리 질의와 외형의 표면 쓰기는 틱(워커) 밖에서 한다 — 쌓은 시간을 시스템이 틱 뒤 게임 스레드에서 한 번에 쓴다.
+        // 틱이 도는 동안만(플레이) 시간이 쌓이므로 편집 모드에서는 시스템이 돌아도 아무것도 바꾸지 않는다.
+        if ( deltaTime > 0.0f )
+            _pendingSeconds += deltaTime;
     }
 
     void SurfaceExposureComponent::applyExposure( GameObjectManager& manager )
