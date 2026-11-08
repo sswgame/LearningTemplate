@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(skin): 밝은 피부. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="SkinLight" _base="engine/materials/library/skin/base.material">
+	<_properties>
+		<item name="_color" defaultValue="0.92 0.72 0.62 1" />
+	</_properties>
+</MaterialDef>

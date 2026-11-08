@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 갈래 바탕: 돌 — fbm 얼룩 · 결 · 거친 노멀. 젖은 돌은 _wetness. -->
+<MaterialDef formatVersion="0" name="AppearanceStone" _base="engine/materials/library/appearance.material">
+	<_properties>
+		<item name="_color" defaultValue="0.55 0.54 0.52 1" />
+		<item name="_secondaryColor" defaultValue="0.3 0.3 0.29 1" />
+		<item name="_roughness" defaultValue="0.8" />
+		<item name="_patternScale" defaultValue="6" />
+		<item name="_patternAmount" defaultValue="0.6" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+			<item>MATERIAL_PATTERN_STONE</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDef>

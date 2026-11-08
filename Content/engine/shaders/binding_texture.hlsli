@@ -210,7 +210,8 @@ SW_DECLARE_ENGINE_TEXTURE( 13 );
 SW_DECLARE_ENGINE_TEXTURE( 14 );
 SW_DECLARE_ENGINE_TEXTURE( 15 );
 SW_DECLARE_ENGINE_TEXTURE( 16 );
-        #if SW_ENGINE_TEXTURE_COUNT != 17
+SW_DECLARE_ENGINE_TEXTURE( 17 );
+        #if SW_ENGINE_TEXTURE_COUNT != 18
             #error "SW_ENGINE_TEXTURE_COUNT changed - match the declarations above and SW_ENGINE_TEXTURE_SWITCH"
         #endif
 
@@ -341,6 +342,9 @@ static float4 Bindless::sampleSlotWith( Texture2D slotTexture, uint samplerID, f
                 case 16u:                                                  \
                     OP( SW_ENGINE_TEXTURE( 16 ), SW_ENGINE_SAMPLER( 16 ) ) \
                     break;                                                 \
+                case 17u:                                                  \
+                    OP( SW_ENGINE_TEXTURE( 17 ), SW_ENGINE_SAMPLER( 17 ) ) \
+                    break;                                                 \
                 default:                                                   \
                     break;                                                 \
             }
@@ -395,6 +399,8 @@ static uint Bindless::emulatedSlot( uint index )
         return 15u;
     if ( index == SW_ENGINE_TEXTURE_INDEX_16 )
         return 16u;
+    if ( index == SW_ENGINE_TEXTURE_INDEX_17 )
+        return 17u;
     return kUnmappedEngineTextureSlot;
 }
 
@@ -944,13 +950,18 @@ static float4 PassTexture::sampleGbufferMaterial( float2 uv )
 {
     return Bindless::sampleIndex( g_GBufferMaterialIndex, uv );
 }
-/** @brief G버퍼 머티리얼 칸을 읽어 푼다 — 쓰는 쪽은 12 절 SurfaceOutput::encodeGbufferMaterial 하나다(r 금속도, g 거칠기, a "그려졌다" 표시: 클리어 0, 그려지면 1). */
-static void PassTexture::loadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic, out bool outDrawn )
+/** @brief G버퍼 머티리얼 칸을 읽어 푼다 — 쓰는 쪽은 12 절 SurfaceOutput::encodeGbufferMaterial 하나다(r 금속도, g 거칠기, b 반사율, a 머티리얼 가림). */
+static void PassTexture::loadGbufferMaterial( float2 uv, out float outRoughness, out float outMetallic, out float outSpecular, out float outOcclusion )
 {
     const float4 encoded = PassTexture::sampleGbufferMaterial( uv );
     outMetallic          = encoded.r;
     outRoughness         = encoded.g;
-    outDrawn             = encoded.a >= 0.5f;
+    outSpecular          = encoded.b;
+    outOcclusion         = encoded.a;
+}
+static float4 PassTexture::sampleGbufferCustomData( float2 uv )
+{
+    return Bindless::sampleIndex( g_GBufferCustomDataIndex, uv );
 }
 static float4 PassTexture::sampleDepth( float2 uv )
 {

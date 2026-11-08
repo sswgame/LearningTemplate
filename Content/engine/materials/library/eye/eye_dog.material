@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(eye): 개 — 둥근 동공 · 갈색 · 반사판. 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="EyeDog" _base="engine/materials/library/eye/base.material">
+	<_properties>
+		<item name="_layerColor" defaultValue="0.3 0.17 0.07 1" />
+		<item name="_irisRadius" defaultValue="0.6" />
+		<item name="_pupilMaxRadius" defaultValue="0.55" />
+		<item name="_glowColor" defaultValue="0.8 1 0.5 1" />
+	</_properties>
+</MaterialDef>

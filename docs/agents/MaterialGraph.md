@@ -97,7 +97,7 @@ layered_stone.matgraph.xml     Output + Layer 노드 목록(노드 차례가 층
 
 ## 출력과 조명
 
-`Output` 의 핀은 `material_graph.hlsli` 의 `MaterialGraphOutput` 칸과 이름이 같다. 조명은 `pbr_lit` 과 같은 뼈대의 기본 PBR 이다. 자체 발광을 잇거나 값을 적으면 `SW_MATERIAL_EMISSIVE` 훅을 쓰고, G버퍼에 칸이 없어 생성된 머티리얼이 `MATERIAL_FORWARD_ONLY` 를 함께 적는다(툰과 같은 길). 빛을 받는 식은 `Output` 의 설정 `ShadingModel` 이 고른다 — `DefaultLit`(기본 PBR) · `Hair`(`hair_shading.hlsli` Marschner 근사, 언리얼 Shading Model 의 Hair 자리). `Hair` 는 생성물에 `SW_MATERIAL_GRAPH_HAIR` 를 적고 칸 `_hairShift` · `_hairScatter` · `_hairStrandAxis`(0 탄젠트 · 1 바이탄젠트가 가닥)를 덧붙이며 G버퍼 칸이 없어 `MATERIAL_FORWARD_ONLY` 다. 그 밖의 이름은 `BadValue` 다. 새 모델은 이 설정의 값 하나와 `material_graph.hlsli` 의 조명 훅 선택 · `material_graph_main.hlsli` 의 몸통을 잇는다.
+`Output` 의 핀은 `material_graph.hlsli` 의 `MaterialGraphOutput` 칸과 이름이 같다. 조명은 `pbr_lit` 과 같은 뼈대의 기본 PBR 이다. 자체 발광을 잇거나 값을 적으면 `SW_MATERIAL_EMISSIVE` 훅을 쓴다. 디퍼드에서는 G버퍼 패스가 발광을 장면 색에 미리 적어 디퍼드로 그린다(G버퍼 명세 판 3). 빛을 다르게 받는 셰이딩 모델(피부 · 천 · 코트 · 비등방 · 박막 · 털 · 눈)은 손으로 쓴 외형 셰이더 `appearance_lit.hlsl` 과 라이브러리 `engine/materials/library/` 에 있고, 디퍼드 번호 표는 `shading_model_ids.hlsli` 다. 그래프 `Output` 의 셰이딩 모델 설정은 W13 의 Hair 설정과 합칠 때 그 번호 표로 넓힌다.
 
 ## 오류
 

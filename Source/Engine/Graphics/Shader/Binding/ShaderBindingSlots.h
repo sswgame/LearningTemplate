@@ -401,8 +401,8 @@ namespace sw
         static_assert( kInstanceBuffer == 4, "t0..t3 은 비어 있고 띠는 인스턴스 버퍼 t4 부터다 — 띠를 내리면 DX12 테이블 · Vulkan 범위 · GL SSBO 번호가 함께 움직인다" );
         static_assert( kEngineTexture0 >= kMaterialTexture0 + kMaterialTextureCount && kEngineTexture0 >= vk::kRangeSize,
                        "엔진 텍스처 칸(에뮬)은 t 띠 · 머티리얼 칸 위다 — DX11 SRV 128 칸 안이고, GL 은 유닛을 칸 번호로 옮긴다" );
-        static_assert( SW_SLOT_ENGINE_TEX16 == SW_SLOT_ENGINE_TEX0 + 16 && kEngineTextureCount == 17 && kEngineTextureCount <= kMaterialTexture0,
-                       "엔진 텍스처 칸은 연속 17 칸이고 GL 유닛(칸 번호)이 머티리얼 유닛(16..)과 겹치지 않아야 한다 (binding.hlsli 의 선언 14 줄과 같다)" );
+        static_assert( SW_SLOT_ENGINE_TEX17 == SW_SLOT_ENGINE_TEX0 + 17 && kEngineTextureCount == 18 && kEngineTextureCount <= kMaterialTexture0,
+                       "엔진 텍스처 칸은 연속 18 칸이고 GL 유닛(칸 번호)이 머티리얼 유닛(16..)과 겹치지 않아야 한다 (binding.hlsli 의 선언 14 줄과 같다)" );
         static_assert( kMaterialBuffer == kInstanceBuffer + 1, "머티리얼 데이터 버퍼는 인스턴스 버퍼 바로 다음이어야 한다" );
         static_assert( kMaterialTexture0 == vk::kRangeSize && kSRVSlotCount <= kMaterialTexture0,
                        "머티리얼 텍스처 슬롯(에뮬)은 Vulkan t 밴드 바로 뒤에 둔다 — DX12 테이블 · Vulkan t 밴드 밖이고 SRV 띠가 자라도 겹치지 않는다" );
@@ -467,6 +467,7 @@ namespace sw
                 "ColorGradingLUT",    ///< 컬러 그레이딩 LUT(가로 N² × 세로 N 띠, PostProcessValues::_colorGradingLUT) — 톤맵하는 패스에, 읽힌 LUT 가 있는 뷰만
                 "BloomDirtMask",      ///< 블룸 먼지 마스크(PostProcessValues::_bloomDirtMask) — 블룸을 더하는 패스에, 읽힌 마스크가 있는 뷰만
                 "ContactShadow",      ///< 접촉 그림자 마스크(ContactShadow 패스 출력, 채널 넷 = 빛 넷) — 조명 · 포워드 불투명이 선언했을 때만. 없으면 1(가림 없음)
+                "GBufferCustomData",  ///< G버퍼 사용자 칸(셰이딩 모델 번호마다의 값) — 디퍼드 조명(PassTexture::sampleGbufferCustomData)
             };
             static_assert( sizeof( kEngineTextureNames ) / sizeof( kEngineTextureNames[0] ) == kEngineTextureCount, "엔진 텍스처 칸 표와 칸 수(SW_ENGINE_TEXTURE_COUNT)가 다르다" );
 

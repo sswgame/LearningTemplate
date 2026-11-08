@@ -1097,6 +1097,8 @@ namespace sw
                 return names._distortion;
             case RenderPassInputRole::ContactShadow:
                 return names._contactShadow;
+            case RenderPassInputRole::GBufferCustomData:
+                return names._gbufferCustomData;
             case RenderPassInputRole::Invalid:
             case RenderPassInputRole::Count:
                 return names._sourceColor;
@@ -1547,26 +1549,30 @@ namespace sw
 
     void FramePassExecutor::executeGBufferPass( const PassExecuteInput& input )
     {
-        // 알베도 · 노멀 · 머티리얼 · 속도는 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서([0] 알베도, [1] 노멀, [2] 머티리얼, [3] 속도)를 따른다.
-        // 한 MRT 패스로 넷 다 쓴다(네 백엔드 모두 MRT 를 보장한다). 컬러 출력 수가 표의 값이 아닌 G버퍼는 검증(3-2)이 거부한다.
+        // 알베도 · 노멀 · 머티리얼 · 속도 · 사용자 칸 · 장면 색은 역할로 고른다(첨부의 `_role` 또는 원본 이름). 역할이 없으면 선언 순서(GBufferLayout 의 MRT 순서)다.
+        // 한 MRT 패스로 여섯 다 쓴다(네 백엔드 모두 MRT 8 장을 보장한다). 컬러 출력 수가 표의 값이 아닌 G버퍼는 검증(3-2)이 거부한다. 장면 색에는 자체 발광을 미리 적는다.
         using Internal                       = FramePassExecutorInternal;
         FramePassContext&    context         = input._context;
         const hashed_string& passDepth       = input._passDepth;
         const hashed_string* pAlbedoTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferAlbedo, 0, nullptr );
         const hashed_string* pNormalTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferNormal, 1, pAlbedoTarget );
         const hashed_string* pMaterialTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferMaterial, 2, pNormalTarget );
-        // 화면 속도는 명세의 넷째 슬롯이다(GBufferLayout::kVelocitySlot — 셰이더 SV_TARGET3).
+        // 화면 속도는 명세의 넷째 슬롯이다(GBufferLayout::kVelocitySlot — 셰이더 SV_TARGET3). 사용자 칸 · 장면 색(자체 발광)이 뒤를 잇는다(SV_TARGET4 · 5).
         const hashed_string* pVelocityTarget = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::Velocity, GBufferLayout::kVelocitySlot, pMaterialTarget );
+        const hashed_string* pCustomTarget   = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::GBufferCustomData, GBufferLayout::kVelocitySlot + 1, pVelocityTarget );
+        const hashed_string* pSceneTarget    = Internal::pickColorOutput( input._declaredColor, RenderPassInputRole::SourceColor, GBufferLayout::kVelocitySlot + 2, pCustomTarget );
         const bool           bHasTargets     = pAlbedoTarget != nullptr && pNormalTarget != nullptr && findTransient( *pNormalTarget ) != 0 &&
-                                 pMaterialTarget != nullptr && findTransient( *pMaterialTarget ) != 0 && pVelocityTarget != nullptr && findTransient( *pVelocityTarget ) != 0;
+                                 pMaterialTarget != nullptr && findTransient( *pMaterialTarget ) != 0 && pVelocityTarget != nullptr && findTransient( *pVelocityTarget ) != 0 &&
+                                 pCustomTarget != nullptr && findTransient( *pCustomTarget ) != 0 && pSceneTarget != nullptr && findTransient( *pSceneTarget ) != 0;
         if ( bHasTargets == false || _psoManager.getEnginePSO( RenderPassType::GBuffer ) == 0 )
             return;
         const hashed_string&      albedoTarget = *pAlbedoTarget;
-        const hashed_string       arrNames[]   = { albedoTarget, *pNormalTarget, *pMaterialTarget, *pVelocityTarget };
-        const float4              arrClears[]  = { getTargetClearColor( albedoTarget ), getTargetClearColor( *pNormalTarget ),
-                                                   getTargetClearColor( *pMaterialTarget ), getTargetClearColor( *pVelocityTarget ) };
-        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ), colorLoadFor( *pMaterialTarget ), colorLoadFor( *pVelocityTarget ) };
-        static_assert( sizeof( arrNames ) / sizeof( arrNames[0] ) == GBufferLayout::kAttachmentCount, "G버퍼 MRT 수는 명세의 첨부 수다" );
+        const hashed_string       arrNames[]   = { albedoTarget, *pNormalTarget, *pMaterialTarget, *pVelocityTarget, *pCustomTarget, *pSceneTarget };
+        const float4              arrClears[]  = { getTargetClearColor( albedoTarget ), getTargetClearColor( *pNormalTarget ), getTargetClearColor( *pMaterialTarget ),
+                                                   getTargetClearColor( *pVelocityTarget ), getTargetClearColor( *pCustomTarget ), getTargetClearColor( *pSceneTarget ) };
+        const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget ), colorLoadFor( *pNormalTarget ), colorLoadFor( *pMaterialTarget ),
+                                                   colorLoadFor( *pVelocityTarget ), colorLoadFor( *pCustomTarget ), colorLoadFor( *pSceneTarget ) };
+        static_assert( sizeof( arrNames ) / sizeof( arrNames[0] ) == GBufferLayout::kAttachmentCount, "G버퍼 패스의 MRT 는 GBufferLayout 의 첨부 수다" );
         if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, GBufferLayout::kAttachmentCount, passDepth, colorLoadFor( passDepth ) ) == false )
             return;
         drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::GBuffer ), input._bTransparentBatch );

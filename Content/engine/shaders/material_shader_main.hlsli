@@ -283,6 +283,31 @@ static PixelContext PixelContext::make( MaterialInterpolants input, bool bFrontF
     return context;
 }
 
+    // 자체 발광 — 포워드 조명은 빛에 더하고, G버퍼는 셰이딩 값에 싣는다(장면 색에 미리 적힌다). G버퍼에 발광 칸이 있어 발광 머티리얼도 디퍼드로 그린다.
+    #if defined( SW_MATERIAL_EMISSIVE )
+void PixelContext::addEmissive( inout float3 inoutLit )
+{
+    inoutLit += computeMaterialEmissive( this );
+}
+    #else
+void PixelContext::addEmissive( inout float3 inoutLit )
+{
+}
+    #endif
+
+    // G버퍼에 적을 셰이딩 모델 번호 — 조명 없는 머티리얼은 Unlit, 나머지는 기본 PBR(디퍼드 조명이 그 번호로 푼다).
+    #if defined( SW_MATERIAL_UNLIT )
+static uint PixelContext::getShadingModel()
+{
+    return SW_SHADING_MODEL_ID_UNLIT;
+}
+    #else
+static uint PixelContext::getShadingModel()
+{
+    return SW_SHADING_MODEL_ID_DEFAULT_LIT;
+}
+    #endif
+
     // 조명 훅의 선택을 풀어 색을 낸다 — 훅 정의 · 기본 PBR · 조명 없음 중 셰이더가 고른 하나다.
     #if defined( SW_MATERIAL_CUSTOM_LIGHTING )
 float4 PixelContext::computeSelectedLighting( MaterialSurface surface )
@@ -308,16 +333,6 @@ static void PixelContext::addRimLight( float3 normal, inout float3 inoutLit )
 }
         #else
 static void PixelContext::addRimLight( float3 normal, inout float3 inoutLit )
-{
-}
-        #endif
-        #if defined( SW_MATERIAL_EMISSIVE )
-void PixelContext::addEmissive( inout float3 inoutLit )
-{
-    inoutLit += computeMaterialEmissive( this );
-}
-        #else
-void PixelContext::addEmissive( inout float3 inoutLit )
 {
 }
         #endif
@@ -381,9 +396,12 @@ void PSMain( MaterialInterpolants input )
      * 알파를 쓰는지는 퍼뮤테이션이 정한다: 반투명 머티리얼만 MATERIAL_BLEND_TRANSLUCENT 를 가져 불투명 변형에서 머티리얼 알파가 새지 않는다.
      */
     #if defined( SW_PASS_GBUFFER )
+/** @brief G버퍼 — 조명 없이 표면과 셰이딩 값(번호 · 발광)을 적는다. 발광은 장면 색에 미리 적혀 디퍼드 조명이 더한다(발광 머티리얼도 디퍼드다). */
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
-    return SurfaceOutput::store( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic );
+    SurfaceShading shading = SurfaceShading::make( PixelContext::getShadingModel() );
+    addEmissive( shading._emissive );
+    return SurfaceOutput::store( float4( 0.0f, 0.0f, 0.0f, 0.0f ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic, shading );
 }
     #elif defined( SW_PASS_DISTORTION )
 /** @brief 왜곡 누적 패스 — 조명 없이 왜곡 훅의 화면 UV 오프셋만 낸다. 보기 모드는 받지 않는다(패스가 값 보기에서 돌지 않는다). */
@@ -395,14 +413,15 @@ SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
     #elif defined( MATERIAL_BLEND_TRANSLUCENT )
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
-    return SurfaceOutput::store( computeSelectedLighting( surface ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic );
+    return SurfaceOutput::store( computeSelectedLighting( surface ), surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic,
+                                 SurfaceShading::make( PixelContext::getShadingModel() ) );
 }
     #else
 SurfaceOutput PixelContext::storeSurface( MaterialSurface surface )
 {
     float4 lit = computeSelectedLighting( surface );
     lit.a      = 1.0f;
-    return SurfaceOutput::store( lit, surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic );
+    return SurfaceOutput::store( lit, surface._albedo, surface._normal, _worldPosition, surface._roughness, surface._metallic, SurfaceShading::make( PixelContext::getShadingModel() ) );
 }
     #endif
 

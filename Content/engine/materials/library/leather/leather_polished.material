@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(leather): 광낸 가죽(코트). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="LeatherPolished" _base="engine/materials/library/leather/base.material">
+	<_properties>
+		<item name="_color" defaultValue="0.12 0.07 0.05 1" />
+		<item name="_coatWeight" defaultValue="0.7" />
+		<item name="_coatRoughness" defaultValue="0.15" />
+		<item name="_patternAmount" defaultValue="0.3" />
+	</_properties>
+</MaterialDef>

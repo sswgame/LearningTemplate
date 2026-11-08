@@ -1067,9 +1067,11 @@ namespace sw
             text.append( " group=\"Graph\"/>\n" );
         }
         text.append( "\t</_properties>\n\t<_permutations quality=\"High\" shaderLOD=\"300\" usage=\"StaticMesh\">\n\t\t<_alwaysDefines>\n\t\t\t<item>MATERIAL_DOMAIN_SURFACE</item>\n" );
-        // 자체 발광은 G버퍼에 칸이 없다 — 디퍼드가 이 배치를 빼고 ForwardOnlyOpaque 가 그린다(툰과 같은 길).
-        if ( result._bEmissive || result._bHair )
-            text.append( "\t\t\t<item>MATERIAL_FORWARD_ONLY</item>\n" );
+        // 자체 발광은 디퍼드로도 그린다 — G버퍼 패스가 장면 색에 미리 적는다(G버퍼 명세 판 3). 포워드 전용을 적지 않는다.
+        // 머리카락(Hair)은 아직 포워드 전용이다 — 다른 셰이딩 모델과 달리 G버퍼 사용자 칸 뜻을 정하지 않았다.
+        if ( result._bHair )
+            text.append( "			<item>MATERIAL_FORWARD_ONLY</item>
+" );
         text.append( "\t\t</_alwaysDefines>\n\t\t<_multiCompiles>\n\t\t\t<item name=\"FogMode\" selected=\"FOG_OFF\">\n\t\t\t\t<_options>\n\t\t\t\t\t<item>FOG_OFF</item>\n\t\t\t\t\t<item>FOG_LINEAR</item>\n\t\t\t\t\t<item>FOG_EXP</item>\n\t\t\t\t</_options>\n\t\t\t</item>\n\t\t</_multiCompiles>\n" );
         text.append( "\t</_permutations>\n</MaterialDef>\n" );
         return text;

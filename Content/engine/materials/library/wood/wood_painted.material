@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 외형 라이브러리 프리셋(wood): 칠한 나무(벗겨짐). 값만 바꾼다 — 셰이더 변형은 갈래 바탕과 같다. -->
+<MaterialDef formatVersion="0" name="WoodPainted" _base="engine/materials/library/wood/base.material">
+	<_properties>
+		<item name="_layerColor" defaultValue="0.55 0.1 0.08 1" />
+		<item name="_patternAmount" defaultValue="0.75" />
+		<item name="_coatWeight" defaultValue="0.3" />
+	</_properties>
+</MaterialDef>
