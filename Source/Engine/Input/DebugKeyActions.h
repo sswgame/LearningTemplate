@@ -89,7 +89,7 @@ namespace sw
         static constexpr const utf8* kUserBindingsFileName = "debugkeys.xml";
         /**
          * @brief 사용자 설정 파일 경로 @p userSettingsFilePath 와 같은 폴더의 사용자 바인딩 파일 경로입니다. 설정 파일 경로가 비었으면(테스트, 헤드리스) 빈 경로입니다.
-         * @details 자동화가 `-gv_userSettingsFile` 로 사용자 폴더를 피하면 이 파일도 같이 피한다.
+         * @details 자동화가 사용자 설정 파일 자리를 옮기면(무인 실행 · `-gv_userSettingsFile`) 이 파일도 같이 옮겨 간다.
          */
         static string makeUserBindingsPath( string_view userSettingsFilePath );
         /**
