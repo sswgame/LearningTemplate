@@ -117,8 +117,8 @@ namespace sw
         const bool bInvalidLink = link._fromIndex < 0 || link._toIndex < 0 || link._fromIndex == link._toIndex;
         if ( bInvalidLink )
             return false;
-        string conditionError; // 틀린 조건은 부르는 쪽이 어느 연결인지 함께 경고한다
-        if ( ConditionExpr::tryCompile( condition, link._requires, conditionError ) == false )
+        // 틀린 조건은 부르는 쪽이 어느 연결인지 함께 경고한다
+        if ( ConditionExpr::tryCompile( condition, link._requires ).has_value() == false )
         {
             link._bInvalidCondition = SW_TRUE;
             outbInvalidCondition    = true;

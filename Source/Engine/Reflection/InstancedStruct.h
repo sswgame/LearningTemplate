@@ -7,6 +7,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -95,9 +96,9 @@ namespace sw
         static void splitArguments( string_view text, vector<string_view>& outListToken );
         /**
          * @brief 글 인자를 칸에 읽습니다.
-         * @return 칸이 모자라거나, 모르는 이름이거나, 읽지 못한 값 · 범위 밖 값 · 빠진 필수 칸이 있으면 @p outError 에 까닭을 적고 false 입니다.
+         * @return 칸이 모자라거나, 모르는 이름이거나, 읽지 못한 값 · 범위 밖 값 · 빠진 필수 칸이 있으면 그 까닭입니다.
          */
-        [[nodiscard]] static bool read( void* pInstance, const TypeInfo& typeInfo, const vector<string_view>& listToken, string& outError );
+        [[nodiscard]] static expected<void> read( void* pInstance, const TypeInfo& typeInfo, const vector<string_view>& listToken );
         /** @brief 기본값과 다른 칸을 `이름=값` 으로 이어 씁니다(`read` 의 짝). 필수 칸은 늘 씁니다. 편집기가 칸을 고친 뒤 글로 되돌립니다. */
         [[nodiscard]] static string write( const void* pInstance, const void* pDefaults, const TypeInfo& typeInfo );
     };

@@ -8,6 +8,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Foundation/Expected.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -133,15 +134,15 @@ namespace sw
 
         /** @brief 글을 읽습니다. 모르는 이름 · 틀린 칸이면 오류 로그(`GameAction.Invalid`)를 남기고 false 이며 호출은 비어 있습니다. */
         [[nodiscard]] static bool compileText( string_view text, string_view sourceName, GameActionCall& outCall );
-        /** @brief 로그를 남기지 않는 `compileText` 입니다. 틀리면 까닭을 @p outError 에 적습니다. */
-        [[nodiscard]] static bool tryCompileText( string_view text, GameActionCall& outCall, string& outError );
+        /** @brief 로그를 남기지 않는 `compileText` 입니다. 틀리면 그 까닭입니다. */
+        [[nodiscard]] static expected<void> tryCompileText( string_view text, GameActionCall& outCall );
         /** @brief 이미 읽은 칸으로 호출을 만듭니다. 칸을 XML 속성으로 읽는 행동 트리가 씁니다. @p params 는 @p entry 의 칸 구조체여야 합니다. */
         [[nodiscard]] static GameActionCall make( const ActionEntry& entry, const InstancedStruct& params );
 
         /** @brief 글 @p text 의 이름 부분입니다(`flag.set(a)` → `flag.set`). */
         [[nodiscard]] static string_view getCallName( string_view text );
-        /** @brief 글을 칸 값으로 풉니다. 편집기가 칸을 보이려고 부릅니다. 틀리면 false 이고 @p outParams 는 비어 있습니다. */
-        [[nodiscard]] static bool tryReadFields( string_view text, const ActionEntry*& outEntry, InstancedStruct& outParams, string& outError );
+        /** @brief 글을 칸 값으로 풉니다. 편집기가 칸을 보이려고 부릅니다. 틀리면 그 까닭이고 @p outParams 는 비어 있습니다. */
+        [[nodiscard]] static expected<void> tryReadFields( string_view text, const ActionEntry*& outEntry, InstancedStruct& outParams );
         /** @brief 칸 값을 글로 되돌립니다(`tryReadFields` 의 짝). 기본값과 같은 칸은 쓰지 않습니다. */
         [[nodiscard]] static string formatText( const ActionEntry& entry, const InstancedStruct& params );
 

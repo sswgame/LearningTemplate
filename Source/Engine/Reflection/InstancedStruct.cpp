@@ -103,7 +103,7 @@ namespace sw
         } );
     }
 
-    bool InstancedStructText::read( void* pInstance, const TypeInfo& typeInfo, const vector<string_view>& listToken, string& outError )
+    expected<void> InstancedStructText::read( void* pInstance, const TypeInfo& typeInfo, const vector<string_view>& listToken )
     {
         using Internal                       = InstancedStructInternal;
         const SerializeContext& context      = SerializeContext::getDefault( SerializePurpose::Authoring );
@@ -126,32 +126,21 @@ namespace sw
                         propIndex = index;
                 }
                 if ( propIndex == listProperty.size() )
-                {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "'%#' is not a field of %#", name, typeInfo._name.c_str() );
-                    outError = string( errorBuilder.view() );
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::NotFound, "not a field of the type", name }.appendDetail( " in " ).appendDetail( typeInfo._name.c_str() ) );
             }
             else
             {
                 propIndex = nextPositional;
                 if ( propIndex >= listProperty.size() )
-                {
-                    StringBuilder<constant::buffer::kMax256> errorBuilder;
-                    errorBuilder.appendFormat( "too many arguments for %# at '%#'", typeInfo._name.c_str(), token );
-                    outError = string( errorBuilder.view() );
-                    return false;
-                }
+                    return unexpected( Error{ ErrorKind::InvalidArgument, "too many arguments", typeInfo._name.c_str() }.appendDetail( " at '" ).appendDetail( token ).appendDetail( "'" ) );
                 if ( Internal::findTextList( listProperty[propIndex], context ) == nullptr )
                     ++nextPositional;
             }
             if ( Internal::applyToken( listProperty[propIndex], pInstance, value, context ) == false )
             {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "'%#' cannot be read as %# of %#", value, XMLFields::getAttributeName( listProperty[propIndex] ).c_str(), typeInfo._name.c_str() );
-                outError = string( errorBuilder.view() );
-                return false;
+                StringBuilder<constant::buffer::kMax256> detailBuilder;
+                detailBuilder.appendFormat( "'%#' as %# of %#", value, XMLFields::getAttributeName( listProperty[propIndex] ).c_str(), typeInfo._name.c_str() );
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a value cannot be read as its field", detailBuilder.view() } );
             }
             listWritten[propIndex] = 1;
         }
@@ -164,19 +153,11 @@ namespace sw
                 continue;
             }
             if ( listProperty[index]._metadata->_bRequired != SW_FALSE )
-            {
-                StringBuilder<constant::buffer::kMax256> errorBuilder;
-                errorBuilder.appendFormat( "%# needs '%#'", typeInfo._name.c_str(), XMLFields::getAttributeName( listProperty[index] ).c_str() );
-                outError = string( errorBuilder.view() );
-                return false;
-            }
+                return unexpected( Error{ ErrorKind::InvalidArgument, "a required field is missing", typeInfo._name.c_str() }.appendDetail( "." ).appendDetail( XMLFields::getAttributeName( listProperty[index] ).c_str() ) );
         }
         if ( listRangeError.empty() == false )
-        {
-            outError = listRangeError.front();
-            return false;
-        }
-        return true;
+            return unexpected( Error{ ErrorKind::InvalidArgument, "a field is out of range", listRangeError.front() } );
+        return {};
     }
 
     string InstancedStructText::write( const void* pInstance, const void* pDefaults, const TypeInfo& typeInfo )

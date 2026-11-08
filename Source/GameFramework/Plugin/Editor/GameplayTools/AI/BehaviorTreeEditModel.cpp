@@ -272,11 +272,10 @@ namespace sw::editor
             const auto addConditionIssue = [&]( const string& text )
             {
                 ConditionExpr expr;
-                string        error;
                 if ( text.empty() )
                     outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "Write a condition" } );
-                else if ( ConditionExpr::tryCompile( text, expr, error ) == false )
-                    outListIssue.push_back( BehaviorTreeEditIssue{ node._id, error } );
+                else if ( const expected<void> compiled = ConditionExpr::tryCompile( text, expr ); compiled.has_value() == false )
+                    outListIssue.push_back( BehaviorTreeEditIssue{ node._id, string( compiled.error().detail().data(), compiled.error().detail().size() ) } );
             };
             if ( const BehaviorActionParams* pAction = node._params.find<BehaviorActionParams>(); pAction != nullptr )
             {
