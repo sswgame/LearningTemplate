@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Runtime/Gameplay/Ability/MovementConstraint.h"
 #include "GameFramework/Runtime/Gameplay/Zone/JumpEscapeReactionComponent.h"
+#include "GameFramework/Runtime/Gameplay/Zone/ScreenReactionComponent.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneModule.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneOccupantIndex.h"
 #include "GameFramework/Runtime/Gameplay/Zone/ZoneProfile.h"
@@ -285,6 +286,64 @@ SW_TEST_CASE( ZoneTest, LoadRejectsWhatItCannotRun )
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), compiled.getModules().size() );
 }
 
+/** @brief [ZoneTest] 표면 도장 모듈: 도장 칸(크기 · 깊이 · 메워지는 속도)이 빠지거나 규칙에 어긋나면(메워지지 않음 · 테두리 반쪽 · 모르는 모양 · 자리) 로드 실패, 식 깊이는 받는다 */
+SW_TEST_CASE( ZoneTest, SurfaceStampModuleChecksTheStamp )
+{
+    ZoneFixture         fixture;
+    ZoneCompiledProfile compiled;
+    const auto          compileOne = [&]( const ZoneModuleDef& module )
+    {
+        ZoneProfile profile;
+        profile._listModule.push_back( module );
+        return compiled.compile( profile, "test", &fixture._catalog );
+    };
+
+    SW_EXPECT_LOG( "Zone.ParamMissing" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "a", "SurfaceStamp", {
+                                                                                   { "size", "1,1,0"},
+                                                                                   {"depth",  "0.06"}
+    } ) ) );
+    SW_EXPECT_LOG( "Surface.StampFillMissing" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "b", "SurfaceStamp", {
+                                                                                   {     "size", "1,1,0"},
+                                                                                   {    "depth",  "0.06"},
+                                                                                   {"fillSpeed",     "0"}
+    } ) ) );
+    SW_EXPECT_LOG( "Surface.StampRimHalf" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "c", "SurfaceStamp", {
+                                                                                   {     "size", "1,1,0"},
+                                                                                   {    "depth",  "0.06"},
+                                                                                   {"fillSpeed",  "0.02"},
+                                                                                   {"rimHeight",  "0.03"}
+    } ) ) );
+    SW_EXPECT_LOG( "Zone.ChoiceInvalid" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "d", "SurfaceStamp", {
+                                                                                   {    "shape", "Square"},
+                                                                                   {     "size",  "1,1,0"},
+                                                                                   {    "depth",   "0.06"},
+                                                                                   {"fillSpeed",   "0.02"}
+    } ) ) );
+    SW_EXPECT_LOG( "Zone.ChoiceInvalid" );
+    SW_EXPECT_FALSE( compileOne( ZoneFixture::makeModule( "e", "SurfaceStamp", {
+                                                                                   {       "at",  "Feet"},
+                                                                                   {     "size", "1,1,0"},
+                                                                                   {    "depth",  "0.06"},
+                                                                                   {"fillSpeed",  "0.02"}
+    } ) ) );
+
+    // 안쪽일수록 깊은 깔때기 — 깊이는 위치 값의 식이다(대상 없는 검사 문맥에서는 0 이라 빈 도장으로 지난다).
+    SW_EXPECT_TRUE( compileOne( ZoneFixture::makeModule( "funnel", "SurfaceStamp", {
+                                                                                       {    "shape",             "Funnel"},
+                                                                                       {       "at",             "Center"},
+                                                                                       {     "size",              "2,0,0"},
+                                                                                       {    "depth", "0.12 * zoneDepth01"},
+                                                                                       {"fillSpeed",               "0.05"},
+                                                                                       {"spinSpeed",                "1.5"},
+                                                                                       { "armCount",                  "3"}
+    } ) ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), compiled.getModules().size() );
+}
+
 /** @brief [ZoneTest] 배치 덮어쓰기 — 이름으로 칸 하나만 고치고, 빼고, 더한다. 없는 이름을 빼면 오류다 */
 SW_TEST_CASE( ZoneTest, PlacementOverridesWorkByName )
 {
@@ -366,4 +425,35 @@ SW_TEST_CASE( ZoneTest, ZoneSystemRunsRegisteredZoneComponents )
     SW_REQUIRE_TRUE( pSystem != nullptr );          // 첫 지역 컴포넌트가 등록될 때 붙는다
     pSystem->runFramePass( manager, 1.0f / 60.0f ); // 컨트롤러 · 어빌리티가 없는 몸 — 할 일 없이 지난다
     SW_EXPECT_EQUAL( 0u, pEscape->getEscapeCount() );
+}
+
+/** @brief [ZoneTest] 화면 반응: 태그(기본 State.Poisoned)가 있으면 페이드 인 시간(0.5 초) 동안 가중치가 1 로 오르고, 태그가 사라지면 페이드 아웃(1 초) 동안 0 으로 내린다. 시간이 0 이면 그대로다 */
+SW_TEST_CASE( ZoneTest, ScreenReactionFadesWithTag )
+{
+    ZoneFixture              fixture;
+    GameObject*              pHero   = fixture._pHero->getOwner();
+    ScreenReactionComponent* pScreen = pHero->addComponent<ScreenReactionComponent>();
+    SW_REQUIRE_TRUE( pScreen != nullptr );
+    ZoneSystem* pSystem = ZoneSystem::find( fixture._manager );
+    SW_REQUIRE_TRUE( pSystem != nullptr ); // 화면 반응도 지역 프레임 시스템을 붙인다
+    const float32 step = 0.1f;
+
+    pSystem->runFramePass( fixture._manager, step );
+    SW_EXPECT_NEAR( 0.0f, pScreen->getWeight(), 1.0e-6f ); // 태그 없음
+
+    fixture._pHero->getOwnedTagCounts().updateCount( "State.Poisoned"_tag, 1 );
+    pSystem->runFramePass( fixture._manager, step );
+    SW_EXPECT_NEAR( 0.2f, pScreen->getWeight(), 1.0e-5f ); // 0.1 / 0.5
+    pSystem->runFramePass( fixture._manager, 0.0f );
+    SW_EXPECT_NEAR( 0.2f, pScreen->getWeight(), 1.0e-5f ); // 일시정지 — 옮기지 않는다
+    for ( int32 index = 0; index < 10; ++index )
+        pSystem->runFramePass( fixture._manager, step );
+    SW_EXPECT_NEAR( 1.0f, pScreen->getWeight(), 1.0e-6f );
+
+    fixture._pHero->getOwnedTagCounts().updateCount( "State.Poisoned"_tag, -1 );
+    pSystem->runFramePass( fixture._manager, step );
+    SW_EXPECT_NEAR( 0.9f, pScreen->getWeight(), 1.0e-5f ); // 0.1 / 1
+    for ( int32 index = 0; index < 20; ++index )
+        pSystem->runFramePass( fixture._manager, step );
+    SW_EXPECT_NEAR( 0.0f, pScreen->getWeight(), 1.0e-6f );
 }

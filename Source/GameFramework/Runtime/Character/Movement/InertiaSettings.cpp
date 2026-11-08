@@ -19,4 +19,13 @@ namespace sw
             return -speed / deltaTime;
         return acceleration - ( speedAfter > 0.0f ? 1.0f : ( speedAfter < 0.0f ? -1.0f : 0.0f ) ) * rollingDeceleration;
     }
+
+    float32 InertiaSettings::limitDriveAcceleration( float32 driveAcceleration, float32 speed ) const
+    {
+        if ( _maxPower <= 0.0f )
+            return driveAcceleration;
+        // 일률 P = F·v — 빠를수록 같은 출력이 내는 힘이 줄어든다.
+        const float32 powerLimited = _maxPower / ( _mass * MathUtil::max( MathUtil::abs( speed ), kPowerMinSpeed ) );
+        return MathUtil::min( driveAcceleration, powerLimited );
+    }
 } // namespace sw
