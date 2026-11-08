@@ -717,9 +717,12 @@ namespace sw
     void GameObjectManager::postLoadComponent( Component& comp )
     {
         if ( _deferredRegistrationDepth != 0 )
+        {
+            comp.markPostLoadPending();
             _listDeferredPostLoad.push_back( comp.getHandle() );
+        }
         else
-            comp.onPostLoad();
+            comp.dispatchPostLoad();
     }
 
     void GameObjectManager::endDeferredRegistration()
@@ -774,7 +777,7 @@ namespace sw
                 return false;
             Component* pComp = manager.resolveComponent( _listPostLoad[_postLoadCursor++] );
             if ( pComp != nullptr && pComp->isPendingDestroy() == false )
-                pComp->onPostLoad();
+                pComp->dispatchPostLoad();
             ++calledCount;
         }
         return true;

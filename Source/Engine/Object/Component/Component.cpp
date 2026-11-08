@@ -26,6 +26,7 @@ namespace sw
         , _bIsSceneComponent{ SW_FALSE }
         , _bHasBegunPlay{ SW_FALSE }
         , _bRegistered{ SW_FALSE }
+        , _bPostLoadPending{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _poolEntrySlot{ kNotInPoolEntry }
         , _listSubTick{}
@@ -56,6 +57,12 @@ namespace sw
             return;
         _bRegistered = SW_TRUE;
         onRegister( manager );
+    }
+
+    void Component::dispatchPostLoad()
+    {
+        _bPostLoadPending = SW_FALSE;
+        onPostLoad();
     }
 
     void Component::dispatchUnregister( GameObjectManager& manager )

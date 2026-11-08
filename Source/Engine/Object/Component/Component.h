@@ -393,6 +393,16 @@ namespace sw
         /** @brief `onRegister` 가 불렸고 `onUnregister` 는 아직 불리지 않았으면 true 입니다. */
         bool isRegistered() const { return _bRegistered == SW_TRUE; }
         /**
+         * @brief 저장된 상태를 읽었고 `onPostLoad` 가 같은 배치 끝에 올 것이라 기록합니다. 매니저(`GameObjectManager::postLoadComponent`)만 부른다.
+         * @details 씬을 짓는 배치는 등록을 모두 마친 뒤 로드 뒤 처리를 부른다. 그 사이의 `onRegister` 는 이 표시를 보고 무거운 리소스 빌드를 `onPostLoad` 에 맡긴다
+         *          (언리얼은 `PostLoad` 가 `OnRegister` 보다 먼저라 렌더 상태를 한 번 짓는다 — 여기는 `onPostLoad` 가 같은 배치의 등록을 봐야 해서 순서가 반대다).
+         */
+        void markPostLoadPending() { _bPostLoadPending = SW_TRUE; }
+        /** @brief 로드 뒤 표시를 지우고 `onPostLoad` 를 부릅니다(게임 스레드). 직접 부르지 말고 매니저나 직렬화기를 거친다. */
+        void dispatchPostLoad();
+        /** @brief 이 컴포넌트의 `onPostLoad` 가 아직 오지 않았고 곧 온다면 true 입니다. `onRegister` 가 같은 빌드를 두 번 하지 않게 본다. */
+        bool isPostLoadPending() const { return _bPostLoadPending == SW_TRUE; }
+        /**
          * @brief 소유 GameObject 에서 떨어지기 직전에 불립니다. 등록(`onRegister`) 한 번마다 **정확히 한 번** 불립니다.
          * @details 해체는 `GameObjectManager::destroyComponentInstance` 하나를 거치므로 구현이 멱등일 필요는 없다.
          */
@@ -611,7 +621,8 @@ namespace sw
         uint8        _bIsSceneComponent : 1; ///< SceneComponent 생성자가 세운다
         uint8        _bHasBegunPlay     : 1; ///< onBeginPlay 가 불렸고 onEndPlay 는 아직 불리지 않았다. `dispatchBeginPlay` 와 `dispatchEndPlay` 만 바꾼다
         uint8        _bRegistered       : 1; ///< onRegister 가 불렸고 onUnregister 는 아직 불리지 않았다. `dispatchRegister` 와 `dispatchUnregister` 만 바꾼다
-        uint8        _reservedFlags     : 4;
+        uint8        _bPostLoadPending  : 1; ///< 상태를 읽었고 `onPostLoad` 가 배치 끝에 온다. `markPostLoadPending` 과 `dispatchPostLoad` 만 바꾼다
+        uint8        _reservedFlags     : 3;
         /**
          * @brief `_pPoolEntry` 의 버킷 안 위치입니다. 버킷에 없으면 `kNotInPoolEntry` 입니다. 제거를 O(1) 로 하려고 둡니다.
          * @details 플래그(4 B) 뒤, `_listSubTick` 앞의 정렬 패딩에 들어간다. 앞쪽으로 옮기면 객체가 커진다. 저장소의 `_mutex` 아래에서만 바뀐다.

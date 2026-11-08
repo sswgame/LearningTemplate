@@ -783,7 +783,7 @@ namespace sw
                 if ( pManager != nullptr )
                     pManager->postLoadComponent( *pComp ); // 씬을 짓는 배치 안이면 등록과 함께 배치 끝까지 미룬다
                 else
-                    pComp->onPostLoad();
+                    pComp->dispatchPostLoad();
             }
         }
 

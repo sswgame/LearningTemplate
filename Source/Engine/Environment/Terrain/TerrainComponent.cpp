@@ -182,8 +182,8 @@ namespace sw
         SceneComponent::onRegister( manager );
         manager.getComponentRegistry().add<TerrainComponent>( this ); // `findTerrainAt` 이 씬을 훑지 않고 본다
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
-        if ( _heightfieldPath.empty() == false )
-            (void)reloadTerrain(); // 실패는 안에서 알린다. 그리지 않을 뿐이다.
+        if ( _heightfieldPath.empty() == false && isPostLoadPending() == false ) // 로드한 지형은 `onPostLoad` 가 한 번 짓는다
+            (void)reloadTerrain();                                               // 실패는 안에서 알린다. 그리지 않을 뿐이다.
     }
 
     void TerrainComponent::onUnregister( GameObjectManager& manager )
