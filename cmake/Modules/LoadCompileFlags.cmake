@@ -11,6 +11,7 @@
 include("${CMAKE_CURRENT_LIST_DIR}/Architecture/DetectArchitecture.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Architecture/ARM64.cmake")
 include("${CMAKE_CURRENT_LIST_DIR}/Architecture/X64.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/Architecture/WASM32.cmake")
 
 # 플랫폼은 Windows · Linux · Android · Web 넷이다(Android · Web 은 앞문만 있고 백엔드는 아직 없다). macOS 는 지원하지 않는다 — 플랫폼 매크로(SW_PLATFORM_*)를 정할 모듈이 없으므로 여기서 멈춘다.
 if(APPLE)

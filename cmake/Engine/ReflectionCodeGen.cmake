@@ -69,6 +69,43 @@ function(sw_scanReflectionHeaders OUT_HEADERS OUT_OTHERS TARGET_NAME EXCLUDE_REG
 endfunction()
 
 # 파서 인자(`sw_addReflectionStep` 의 ARG_* 와 경로 변수를 읽는다 — 그 함수에서만 부른다).
+# 파서에 넘길 빌드 대상 인자(`--target-arg`) — 타깃 매크로(플랫폼 · 아키텍처 · 클라이언트/서버 코드)와, 교차 빌드면 트리플 · sysroot · 시스템 헤더.
+# 파서는 호스트에서 지어 대상(웹 · Android)을 읽으므로 자기 매크로로 추측하지 않는다(언리얼 UHT 도 대상 정의를 받는다). 값은 컴파일러가 받는 것과 같은 출처다.
+function(sw_collectReflectionTargetArgs OUT_VAR)
+	set(listArg "")
+	foreach(swFlagLib IN ITEMS sw_global_options ${sw_flag_libraries})
+		get_target_property(listDef ${swFlagLib} INTERFACE_COMPILE_DEFINITIONS)
+		if(NOT listDef)
+			continue()
+		endif()
+		foreach(def IN LISTS listDef)
+			if(def MATCHES "^SW_(PLATFORM_[A-Z]+|X64|ARM64|WASM32|WITH_[A-Z]+_CODE)$")
+				list(APPEND listArg "-D${def}")
+			endif()
+		endforeach()
+	endforeach()
+	list(REMOVE_DUPLICATES listArg)
+	if(CMAKE_CROSSCOMPILING)
+		if(CMAKE_CXX_COMPILER_TARGET)
+			list(APPEND listArg "--target=${CMAKE_CXX_COMPILER_TARGET}")
+		elseif(EMSCRIPTEN)
+			list(APPEND listArg "--target=wasm32-unknown-emscripten") # emcc 는 트리플을 CMake 에 알리지 않는다
+		else()
+			message(FATAL_ERROR "[Reflection] cross build without CMAKE_CXX_COMPILER_TARGET - the parser cannot read the target's headers")
+		endif()
+		if(CMAKE_SYSROOT)
+			list(APPEND listArg "--sysroot=${CMAKE_SYSROOT}")
+		endif()
+		# 대상 컴파일러의 시스템 헤더. 컴파일러 내장 헤더(lib/clang/<판>)는 빼고 파서(libclang)의 것을 쓴다 — 두 판이 섞이면 내장 매크로가 어긋난다.
+		foreach(dir IN LISTS CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES)
+			if(NOT dir MATCHES "/lib/clang/[0-9]")
+				list(APPEND listArg "-isystem${dir}")
+			endif()
+		endforeach()
+	endif()
+	set(${OUT_VAR} ${listArg} PARENT_SCOPE)
+endfunction()
+
 function(sw_makeReflectionParserArgs OUT_VAR TARGET_NAME)
 	set(parserArgs "")
 
@@ -82,6 +119,13 @@ function(sw_makeReflectionParserArgs OUT_VAR TARGET_NAME)
 	list(APPEND parserArgs "--emit-templates" "${swEmitTemplatesDir}")
 
 	list(APPEND parserArgs "--module" "${ARG_MODULE}")
+	sw_collectReflectionTargetArgs(listTargetArg)
+	if(NOT listTargetArg)
+		message(FATAL_ERROR "[Reflection] no target macros found on sw_global_options / sw_flag_libraries (${TARGET_NAME})")
+	endif()
+	foreach(targetArg IN LISTS listTargetArg)
+		list(APPEND parserArgs "--target-arg" "${targetArg}")
+	endforeach()
 	# 설정은 절대 경로로 넘긴다(파서가 작업 폴더 · 프로젝트 루트를 추측하지 않는다). 로컬 parser_config.json · toolchain_config.json 은 그 옆이다.
 	list(APPEND parserArgs "--config" "${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}")
 
