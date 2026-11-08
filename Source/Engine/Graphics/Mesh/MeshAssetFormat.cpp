@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 
+#include "Core/Algorithm/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/NormalizedInt.h"
@@ -115,6 +116,8 @@ namespace sw
             static constexpr uint32 kMorphDeltaSize = 4 + 6 * 4;
             /** @brief 구간 덩어리의 이름입니다. */
             static constexpr uint8 kArrSectionChunk[4] = { 'S', 'E', 'C', 'T' };
+            /** @brief 구간 날 이름 덩어리의 이름입니다(`SECT` 뒤 — 구간마다 원본 머티리얼 · 메시 이름). */
+            static constexpr uint8 kArrSectionSourceChunk[4] = { 'S', 'S', 'R', 'C' };
             /** @brief 낮은 상세 단계 덩어리의 이름입니다. */
             static constexpr uint8 kArrLODChunk[4] = { 'L', 'O', 'D', 'S' };
             /** @brief 스킨드 메시의 낮은 상세 단계 스킨 덩어리의 이름입니다(`LODS` 덩어리 뒤에 온다). */
@@ -299,6 +302,49 @@ namespace sw
                 finishChunk( outBytes, lengthOffset );
             }
 
+            static void appendString( vector<uint8>& outBytes, string_view text )
+            {
+                LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( text.size() ) );
+                outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
+            }
+
+            /**
+             * @brief 구간 날 이름 덩어리(`SSRC`)를 씁니다 — 구간 수, 구간마다 머티리얼 이름 · 메시 이름. 날 이름이 있는 구간이 없으면 쓰지 않습니다(옛 파일과 같은 바이트).
+             * @details 덩어리를 따로 두어 판을 올리지 않는다 — 옛 `.mesh` 는 이 덩어리 없이 그대로 읽힌다.
+             */
+            static void appendSectionSourceChunk( vector<uint8>& outBytes, const vector<MeshSection>& listSection )
+            {
+                const bool bAnySource = VectorUtil::containsIf( listSection, []( const MeshSection& section )
+                { return section.hasSourceNames(); } );
+                if ( bAnySource == false )
+                    return;
+                const size_t lengthOffset = beginChunk( outBytes, kArrSectionSourceChunk );
+                LittleEndianUtil::appendUint32( outBytes, static_cast<uint32>( listSection.size() ) );
+                for ( const MeshSection& section : listSection )
+                {
+                    appendString( outBytes, section._sourceMaterial.c_str() );
+                    appendString( outBytes, section._sourceNode.c_str() );
+                }
+                finishChunk( outBytes, lengthOffset );
+            }
+
+            /** @brief 구간 날 이름 덩어리를 읽습니다. 구간 덩어리 뒤에 와야 하고 구간 수가 같아야 합니다. */
+            [[nodiscard]] static bool readSectionSourceChunk( ByteReader& chunk, vector<MeshSection>& inoutListSection )
+            {
+                if ( inoutListSection.empty() || chunk.readUint32() != static_cast<uint32>( inoutListSection.size() ) )
+                    return false;
+                for ( MeshSection& section : inoutListSection )
+                {
+                    string_view material;
+                    string_view node;
+                    if ( chunk.readStringView( material ) == false || chunk.readStringView( node ) == false )
+                        return false;
+                    section._sourceMaterial = hashed_string( string( material ) );
+                    section._sourceNode     = hashed_string( string( node ) );
+                }
+                return chunk.isFullyRead();
+            }
+
             /** @brief 구간 덩어리 내용을 읽습니다. 길이 · 범위 · 가시성 값이 맞지 않으면 false 입니다(범위와 이름 중복은 `Mesh::setSections` 가 다시 본다). */
             [[nodiscard]] static bool readSectionChunk( ByteReader& chunk, uint32 indexCount, vector<MeshSection>& outListSection )
             {
@@ -465,11 +511,12 @@ namespace sw
                     }
                     const bool   bMorph      = Memory::compare( pChunkName, kArrMorphChunk, 4 ) == 0;
                     const bool   bSection    = Memory::compare( pChunkName, kArrSectionChunk, 4 ) == 0;
+                    const bool   bSource     = Memory::compare( pChunkName, kArrSectionSourceChunk, 4 ) == 0;
                     const bool   bLOD        = Memory::compare( pChunkName, kArrLODChunk, 4 ) == 0;
                     const bool   bLODSkin    = Memory::compare( pChunkName, kArrLODSkinChunk, 4 ) == 0;
                     const uint32 chunkLength = reader.readUint32();
                     const uint8* pChunk      = nullptr;
-                    const bool   bKnownChunk = bMorph || bSection || bLOD || bLODSkin;
+                    const bool   bKnownChunk = bMorph || bSection || bSource || bLOD || bLODSkin;
                     if ( bKnownChunk == false || reader.readView( chunkLength, pChunk ) == false )
                     {
                         SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetUnknownTruncated", "Mesh asset has an unknown or truncated chunk" );
@@ -490,6 +537,15 @@ namespace sw
                         if ( readLODSkinChunk( chunk, ioData._skinBinding.getBoneCount(), ioData._listLOD ) == false )
                         {
                             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetMalformedLOD2", "Mesh asset has a malformed LOD skin chunk (it must follow the LOD chunk and match its levels)" );
+                            return false;
+                        }
+                        continue;
+                    }
+                    if ( bSource )
+                    {
+                        if ( readSectionSourceChunk( chunk, ioData._listSection ) == false )
+                        {
+                            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetMalformedSectionSource", "Mesh asset has a malformed section source chunk (it must follow the section chunk and match its count)" );
                             return false;
                         }
                         continue;
@@ -595,6 +651,7 @@ namespace sw
         }
         // 선택 덩어리 — 구간(있을 때), 낮은 상세 단계(있을 때).
         MeshAssetFormatInternal::appendSectionChunk( outBytes, data._listSection );
+        MeshAssetFormatInternal::appendSectionSourceChunk( outBytes, data._listSection );
         MeshAssetFormatInternal::appendLODChunk( outBytes, data._listLOD, uvBounds );
         MeshAssetFormatInternal::appendLODSkinChunk( outBytes, data._listLOD );
     }

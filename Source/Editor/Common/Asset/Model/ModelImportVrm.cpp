@@ -202,7 +202,8 @@ namespace sw::editor
         listMeshSection.reserve( listSection.size() );
         for ( const ModelImportSection& section : listSection )
         {
-            listMeshSection.push_back( MeshSection{ hashed_string( section._sectionName ), section._firstIndex, section._indexCount, section._personVisibility } );
+            listMeshSection.push_back( MeshSection{ hashed_string( section._sectionName ), section._firstIndex, section._indexCount, section._personVisibility,
+                                                    hashed_string( section._sourceMaterial ), hashed_string( section._sourceNode ) } );
         }
         return listMeshSection;
     }

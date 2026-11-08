@@ -52,6 +52,12 @@ namespace sw::editor
          *          오버드로 최적화를 묶음마다 따로 한다. 삼각형이 없는 묶음은 빠진다. 구간 이름은 머티리얼 파일 이름이고, 가시성이 둘 다가 아니면 `_tp` · `_fp` 를 붙인다.
          */
         static void populateMaterialSections( ModelImportUtil::MergedMesh& inoutBody, const cgltf_data& data, const vector<string>& listMaterialName, ModelImportResult& inoutResult );
+        /**
+         * @brief 다시 임포트할 때 날 이름(머티리얼 · 메시)과 가시성이 같은 앞 구간의 이름을 이어받습니다. 이어받은 구간 수를 돌려줍니다.
+         * @details 구간 이름은 머티리얼 파일 이름(겹치면 번호)이라 원본에서 머티리얼 하나가 늘거나 이름이 바뀌면 다른 구간의 번호까지 밀린다 — 외형 데이터(`<Section name>` · 별칭 ·
+         *          염색 include)는 그 이름을 짚으므로 날 이름으로 앞 이름을 지킨다(언리얼 FBX 다시 임포트가 머티리얼 슬롯 이름으로 슬롯을 맞추는 자리). 다른 새 구간이 이미 쓰는 이름은 받지 않는다.
+         */
+        static uint32 keepPreviousSectionNames( vector<ModelImportSection>& inoutListSection, const vector<MeshSection>& listPrevious );
 
         /** @brief glTF 메시의 VRM 1인칭 가시성을 찾습니다. 적지 않은 메시(와 nullptr)는 Auto 입니다. 이름은 아바타 임포터가 쓴 규칙(makeMeshName)과 같습니다. */
         [[nodiscard]] static VrmFirstPersonMode findFirstPersonMode( const cgltf_data& data, const VrmAvatarDef& avatar, const cgltf_mesh* pMesh );
