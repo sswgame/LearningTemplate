@@ -16,10 +16,12 @@
 namespace sw
 {
     /**
-     * @brief `-gv_gpuBreadcrumbs=0`: 패스마다 GPU 표지를 남기지 않는다(기본은 개발 빌드에서 켬). 끄면 DX12 의 DRED 자동 브레드크럼과 Vulkan 의 체크포인트 확장도 켜지 않는다.
-     * @details 디바이스를 만들기 **전에** 읽는다(DRED 설정은 디바이스 생성 전에만 켤 수 있다). Shipping 은 등록되지 않아 늘 끔.
+     * @brief `-gv_gpuBreadcrumbs=0|1`: 패스마다 GPU 표지를 남길지 정한다(기본은 개발 구성에서 켬 · 배포 구성에서 끔). 끄면 DX12 의 DRED 자동 브레드크럼과 Vulkan 의 체크포인트 확장도 켜지 않는다.
+     * @details 디바이스를 만들기 **전에** 읽는다(DRED 설정은 디바이스 생성 전에만 켤 수 있다). 배포본에도 둔다 — 플레이어 기계의 디바이스 소실을 좇을 때 실행 인자로 켠다
+     *          (언리얼 `-gpucrashdebugging` · `r.GPUCrashDebugging` 이 배포 구성에서도 같은 일을 한다).
      */
-    SW_TEST_GLOBAL_VARIABLE( bool, gv_gpuBreadcrumbs, true, "GPU 브레드크럼(패스마다 GPU 표지 · DX12 DRED 자동 브레드크럼 · Vulkan 체크포인트)을 켠다 - 디바이스 소실 때 마지막 패스 이름을 보고한다 (개발 빌드)" );
+    constexpr bool kGPUBreadcrumbsByDefault = build::kShipping == false;
+    SW_GLOBAL_VARIABLE( bool, gv_gpuBreadcrumbs, kGPUBreadcrumbsByDefault, "GPU 브레드크럼(패스마다 GPU 표지 · DX12 DRED 자동 브레드크럼 · Vulkan 체크포인트)을 켠다 - 디바이스 소실 때 마지막 패스 이름을 보고한다 (기본: 개발 구성 켬 · 배포 끔)" );
 
     uint32 GPUBreadcrumbLog::registerPass( string_view name )
     {
@@ -52,7 +54,7 @@ namespace sw
 
     bool GPUBreadcrumbs::isEnabled()
     {
-        return build::kShipping == false && static_cast<bool>( gv_gpuBreadcrumbs ); // 배포본은 표지도 DRED 도 체크포인트도 켜지 않는다
+        return gv_gpuBreadcrumbs;
     }
 
     uint32 GPUBreadcrumbs::registerPass( string_view name )
